@@ -2,7 +2,19 @@
 
 Обновлено 2026-10-27. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
-## Передача fable_pc 2026 10 27 — действующее назначение
+## Передача Codex 2026 10 29 — действующее назначение
+
+По прямому поручению автора 2026-10-29 («напиши to_codex.md файл инструкция по передаче дел to codex, подожди
+окончания работ всех агентов, допиши to_code.md, напиши to codex что передаешь ему дела и останавливайся») кодинг
+`next_core_tasks_v3.md` возвращён **Codex — единственному writer/build**. Действующий handoff с точным состоянием,
+pins, записями и очередью продолжения — [to_codex.md](../to_codex.md), верхний раздел «Действующая передача 2026 10 29».
+`fable_pc` остановлен: не пишет, не собирает, процессов, записей и агентов не держит; возвращается только по поручению
+автора. Передано: whole quick принят на candidate43/44/45 (boot43/44/45); full45 — FAIL по двум известным причинам,
+оба исправления заморожены в candidate46; fe46 (`rebuild frontend` candidate46) на момент остановки ещё идёт отделённым процессом (core с 13:33:46 UTC, terminal ≈ 15:45 UTC; результат Codex читает из `pins/cold-candidate46-tool-rebuild-frontend.terminal.txt`); следующие шаги Codex — rt46 → tool46 →
+check46 → full46 (записи выводятся из указанных в handoff). Opus остаётся остановлен. Назначение fable_pc 2026-10-27
+ниже — история.
+
+## Архив передачи fable_pc 2026 10 27 (действовало до 2026-10-29)
 
 По прямому поручению автора кодинг `next_core_tasks_v3.md` передан **`fable_pc` — единственному writer/build**.
 Действующий handoff с точными source snapshots, командами, receipts и очередью продолжения —
@@ -818,6 +830,33 @@ selector → ожидаемый FAIL строки), `bootstrap full` full46 на
 Codex и не отслеживаются git; в репозитории `dev/l2src_sandbox/` содержит лишь часть модулей (например, `l2_frontend_context.lm2` в
 версии candidate44), `tools/l2/` и `tests/l2/suite.tsv` — прежние версии. Вопрос к Codex (не блокирует): когда и как переносить
 принятые кандидаты в отслеживаемые maintained-пути.
+
+**Передача дел Codex по указанию автора; fable_pc остановлен (2026-10-29 ≈ 13:50 UTC).** Автор: «напиши to_codex.md файл
+инструкция по передаче дел to codex, подожди окончания работ всех агентов, допиши to_code.md, напиши to codex что передаешь
+ему дела и останавливайся», затем «останавливай всё и передавай работу to codex потому что у тебя квоты не хватит на два
+часа». Сделано: [to_codex.md](../to_codex.md) — новый верхний раздел «Действующая передача 2026 10 29» (границы и действующие
+решения Codex, снимок Git/WIP с манифестами и hash-ами, проверено/не проверено, diff candidate46, состояние fe46, точная цепочка
+rt46 → tool46 → check46 → full46 с записями-образцами, pins, argv и ожидаемыми строками, дефекты, документы, практики,
+результаты review, остановка); прежняя передача Opus 2026-10-24 сохранена ниже как архив (заголовки понижены на уровень, текст
+не менялся). Завершены агенты `/code-review` автора (max, 15 находок по 73e53a32 и untracked файлам): четыре фактические поправки
+моего абзаца чек-листа внесены датированно (манифест 43 лежит в `fix238-20261027/source-candidate43.raw.sha256`; корень
+инструмента `lmxtool.lm1` переводит FE из `tools/lmxtool.lm2`, а не печатает L3; объявления — виды `decl_write` 0–56; маска PE
+boot45 измерена 13:30 UTC: все три пары G1/G2 равны под маской TimeDateStamp+CheckSum, raw различны —
+[boot45-pe-mask-20261029.txt](witnesses/fix238-20261027/cold-candidate45-boot45/boot45-pe-mask-20261029.txt)), заголовок
+чек-листа называет текущего writer/build, строка 29 — результат full45 и передачу, ячейки S8.4/S8.5 — датированную поправку;
+остальные находки (kind-9 дверь `@ c.NAME` в walked-методе, стоимость `predef_has_function`, порядок store в `lmx_stop_request`,
+`lmx_walk_shape_min`, чужие untracked fix208–217 и suitability review) записаны в to_codex.md для Codex, код не правился. fe46
+(`rebuild frontend` candidate46, запись `cold-candidate46-tool-rebuild-frontend.command`, запущен 13:07:17 UTC отделённо)
+**на момент остановки идёт**: useplan до 13:12:12, lower 13:12:12 → 13:33:46 (1294 с), core с 13:33:46 UTC (l2trans PID 16940,
+lmxtool PID 10888, два pwsh launcher-а/записи), ожидаемый terminal ≈ 15:45 UTC; живую сборку не останавливаю (правило автора и
+Codex), её результат принимает Codex по terminal-у (`RebuildExit`, `REBUILD frontend 0 failures`, hash-и связки). Мой Monitor
+остановлен, субагентов нет; иных процессов pipeline (`tasklist` 13:45 UTC) нет. Копии записей candidate46 и check-списков —
+[cold-candidate46-fe46/records/](witnesses/fix238-20261027/cold-candidate46-fe46/records/). Проверки перед коммитом:
+`python tools/check_docs.py` — AssertionError «CRLF or mixed line endings» в 66 ранее закоммиченных witness-копиях fix238
+(логи инструмента и terminal-ы pwsh скопированы как есть, например `cold-candidate43-boot43/bootstrap.log`,
+`candidate44-tool44-fail/rebuild.log`) — состояние до этого коммита, не файлы передачи (они и новые копии — LF); нормализация
+этих копий в LF — Codex; `git diff --cached --check` — чисто. Сообщение Codex — `FABLE-CODEX-HANDOFF-20261029T134500Z`
+(копия `fable-codex-handoff-20261029T134500Z.txt` в fix238 — следующим коммитом). Opus остановлен; fable_pc остановлен.
 
 ## Архив передачи Codex 2026 10 24
 

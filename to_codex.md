@@ -1,4 +1,366 @@
-# LMX — передача работы Codex (Opus, 2026-10-24)
+# LMX передача кодинга Codex
+
+## Действующая передача 2026 10 29
+
+По прямому поручению автора от **2026-10-29** (сессия fable_pc): «спасибо, напиши to_codex.md файл инструкция по передаче
+дел to codex, подожди окончания работ всех агентов, допиши to_code.md , напиши to codex чтопередаешь ему дела и
+останавливайся». `fable_pc` передаёт **единственный writer/build Codex** и останавливается: после отправки этой передачи
+не пишет, не собирает, не запускает процессов, записей и агентов; к работе возвращается только по поручению автора.
+Эта передача новее передачи Codex → fable_pc от 2026-10-27 ([to_fable.md](to_fable.md), верхний раздел) и передачи
+Opus → Codex от 2026-10-24 (архив ниже в этом файле). Поручения автора из них остаются в силе и переходят к Codex.
+
+**Что передаётся.** Задание 2026-10-27 без изменений: продолжать [next_core_tasks_v3.md](next_core_tasks_v3.md)
+(§§8/8a) малыми шагами через короткий bootstrap всей цепочки к работающей source-closed L3+L2 самосборке; FULL-режим и
+две FULL-проверенные последовательные самосборки — итоговые требования. Состояние на передачу: whole quick принят на
+трёх кандидатах подряд (boot43/44/45), первый `bootstrap full` (full45) упал на двух известных причинах, обе исправлены в
+candidate46 по решению Codex, цепочка candidate46 начата (`rebuild frontend` fe46) — продолжение описано ниже по шагам
+с точными записями, pins и ожидаемыми строками. Вопросов к Codex больше не ставится: Codex решает сам; действительно
+необходимые личные решения автора — через `LMX_blog/q/current/` (порядок из архива §1).
+
+### Приоритет и обязательные границы
+
+Прочитать AGENTS.md, READ.ME, верх [steps/current.md](steps/current.md) (действующее назначение и «Срез238»),
+[to_fable.md](to_fable.md) «Приоритет и обязательные границы» (всё в силе), план v3 и его «Ближайший шаг».
+
+- **Поручение автора 2026-10-27** (дословно в `to_fable.md` и `steps/current.md`): один pipeline; тихую живую сборку не
+  убивать и не перезапускать; неизменяемые source snapshots и чужой WIP сохранять; проверять реальные terminal и байты;
+  переведённый компонент не называть самосборкой; первая часть допуска проверяет только используемые поля и
+  интерфейсы реальных Consumer-вызовов, UNKNOWN сам по себе не отказ, дополнительный анализ — только явный `test`;
+  не вводить анализ будущего поведения, protective gates, library comparator, hidden root; L3 печатает L1 как выходной
+  текст, ради объявлений арены и пулов L2 не расширять; поддерживаемые ядро, build/test и генераторы — только L3+L2,
+  прежние алгоритмы в строках не прятать, новый shell/Python runner не писать; не увлекаться тестовой кампанией вместо
+  самосборки; корневой `build` не трогать; basename `l2_driver_launch.err` нигде не читать, не хешировать, не
+  копировать; `steps/witnesses/used-scope-20261020/reference-producer117.patch` сохранить; весь проект/build2/transcripts
+  не сканировать; обычные завершённые проверенные срезы коммитить и пушить в `main` самостоятельно.
+- **Решения Codex, действующие на передачу** (копии в `steps/witnesses/fix238-20261027/codex-reply-*.txt`):
+  - CODEX-REPLY-BOOT43-BOUNDS-20261028T052500Z, CODEX-REPLY-TOOL32-LIVE-20261028T052915Z: границы recipe — рабочие
+    потолки по измеренным временам, не прогноз; отделённый процесс и Monitor — способ жизненного цикла, не обход защиты
+    памяти; pressure-reap не отключать, автоматических повторов остановленных задач не делать; при остановке —
+    terminal, причина, стадия, живые процессы, память — в запись.
+  - CODEX-REPLY-G1-NEXT-20261028T094834Z: сравнения PE/символов с масками отмечать **отдельно от raw identity**;
+    части `docs_*` — командное замыкание инструмента, не мёртвый код; `build-generation` не финализирует bootstrap.
+  - CODEX-REPLY-O2-ADOPT-20261028T124940Z, CODEX-REPLY-BOOT44-PROFILE-20261028T194127Z: `-O2 -fno-strict-aliasing`
+    закреплён в recipe; sampler/runner с циклом attach/сбор/классификация **не создавать** (записи
+    `P/pins/prof01-lower-gdb*.withdrawn.command` не выполнять); ручные `gdb -batch -p PID -x cmds.gdb` снимки своего PID
+    допустимы как диагностика; счётчики/фазовые времена — только со следующей необходимой правкой core/emit;
+    UNKNOWN/test, grammar/ABI/CLI ради скорости не менять; optimization — не проект вместо §§8/8a.
+  - CODEX-REPLY-BOOT45-FULL-20261029T102300Z: основание FULL — actual candidate; FAIL — сохранить terminal и первое
+    содержательное место, не маскировать; долги body-guard/WALKROOT/native/admission этим не закрываются; «продолжай
+    без ожидания ACK».
+  - CODEX-REPLY-FULL45-FIXES-20261029T130000Z: оба блокера FULL — в candidate46 (точный diff ниже); failed full45 не
+    трогать; новые FE/tool — существующим component rebuild; короткая проверка ровно исправленных случаев на
+    существующих строках, без новых fixtures/matrix/whole quick; затем один `bootstrap full` на свежем label.
+- **Неизменные запреты:** никаких reset/clean, массового `git add`, kill тихих процессов, новых веток/worktree/PR;
+  frozen inputs не править — новый фикс = новый явно названный кандидат; каждый инструмент L2 запускать из нового
+  пустого каталога (драйвер создаёт `l2_driver_launch.err` в CWD); `build2` и `buold_temp` не обходить рекурсивно.
+
+### Снимок Git и расположение незавершённой работы
+
+Рабочий корень `R = C:/Nyasha_Planet/LMX`, ветка `main`, всё запушено; HEAD на передачу — коммит этой передачи
+(его SHA — в абзаце «Срез238» ledger-а и в сообщении Codex). От Verified237 `89caa75c` до передачи — 60+ коммитов
+fable_pc: Verified238 `3c4554ab` (boot43), записи среза, документ об ускорении, поправка чек-листа; только документы и
+witness-копии — **поддерживаемые исходники в tracked tree не менялись** (источники L2-порта живут в ignored `build2`).
+Tracked tree чист. Чужие untracked, не трогать и не коммитить: корневой `l2_driver_launch.err`,
+`steps/fable_consumer_suitability_review_20261026.md`, `steps/witnesses/fix208-20261025/`, `fix209-20261025/`,
+`fix210-20261025/{build.lm2.patch,selected-os-machine.patch}`, `fix217-20261025/`,
+`steps/witnesses/used-scope-20261020/reference-producer117.patch`.
+
+Весь WIP и receipts — в ignored `P = R/build2/codex_fix250generationchain01` (не tracked; старые checkpoint-ы Codex там
+же). Имена каталогов версию не выбирают: опираться на pins записей, manifests и terminal-ы. **Замороженные кандидаты**
+(159 файлов: 65 src + 34 tools + 60 tests; манифест = `P/pins/source-candidateNN.raw.sha256`, список
+`source-candidateNN.list`, запись `source-candidateNN-manifest.command`):
+
+| Кандидат | SHA256 манифеста | Отличие от предыдущего | Статус |
+| --- | --- | --- | --- |
+| 43 | `48C330DF62422816A21B7410F127FB53C01ADDFA3935E639445D356CBD00708C` | candidate42 + границы recipe (`build.lm2:801` 6 ч, `suite.lm2` child 24 ч) | whole quick boot43 PASS — Verified238 |
+| 44 | `1755CF046ACAD43ECE3DEBF98BBD34CD8A32F761A64DBE3694BAF6B2388A9C62` | `build.lm2:713` frontend `-O2 -fno-strict-aliasing` | whole quick boot44 PASS |
+| 45 | `D74D30B4BB2459AFC0BCBC418953BC95E5AA7D7ED0EBD652AE98BD2D83ECA8DC` | `l2_frontend_context.lm2`: имя раньше `own_unit_seen` в 4 own-lookup | whole quick boot45 PASS; **full45 FAIL** |
+| 46 | `AE0340AEA8AE8C552242A55E38A289EB6CF86E2274E96E4D57C49FA14B433111` | три файла `P/variants/full46/` (ниже) | fe46 собран; rt46/tool46/check46/full46 — Codex |
+
+Старые кандидаты 39–42 и их стадии (`initial-tool32-*`, `warm-frontend39/40/41`, `cold-candidate42`) — история среза
+(boot42 упал на границе recipe; tool32-05 — первый инструмент из 33 частей, `9D0C2BBD…`).
+
+**Стадии и рабочие инструменты** (все под `P/`; каждая стадия — и живой выход, и свидетельство: не переписывать):
+
+| Стадия | Что | Инструмент / связка |
+| --- | --- | --- |
+| `cold-candidate43/boot43` | whole quick candidate43 (G0 = tool32-05 `9D0C2BBD…`, previous_fe warm41 `F70A00DA…`) | G2 `boot43/lmxtool.exe` `BDA3AB45…`, FE `boot43/g2/frontend/l2trans.exe` `37AA0FB5…` |
+| `cold-candidate44-tool/{rt44,tool44b}` | `rebuild runtime` + `rebuild tool` candidate44 инструментом boot43 G2 | `tool44b/lmxtool-tool.exe` `E9B58831…` |
+| `cold-candidate44/boot44` | whole quick candidate44 (G0 = tool44b, previous_fe `warm-frontend41-O2` `F6E8B9FA…`) | G2 `boot44/lmxtool.exe` `4B615C32…`, FE `58A8D274…` |
+| `cold-candidate45/boot45` | whole quick candidate45 (G0 = boot44 G2, previous_fe boot44 g2/frontend) | G2 **`boot45/lmxtool.exe` `A69A7EE26315C058E85FE0FA9D1EFD921B4C3032421030704948575C16997FB4`**; связка `boot45/g2/frontend/` `l2trans.exe` `159F3D5EA3F5EA77CD42A8A8706750369CFC36584A28EE3D43D78995E69C06A7`, `l1trans.exe` `DF1FBCD5516C6C463B4BD02D0223342360245538D75BE1834312D0F3E07600A9`, `l2_libc.o` `AF9FDAE33655F8E6235310720787102921450F0F88F9B7BB2F365D372F553D37`; runtime `boot45/g2/runtime/` `driver.o` `8C2708AF530BC624F1A1C48207F00685AC5C6F5FB72843A49C4C0258277BEEDC`, `driver-observe.o` `0A1C51D9BAF3B3449D65419169659DD77F1C787697CDE03821203BD3F96A2DB4` |
+| `cold-candidate45-full/full45` | `bootstrap full` candidate45 — FAIL, сохранён | G1 собрана (FE `E519A698…`), полный список 3 FAIL |
+| `cold-candidate46-tool` | стадия сборки компонентов candidate46: `fe46/` готов; `rt46/`, `tool46/` — следующие | `fe46/` (ниже) |
+| `cold-candidate46` | свежая stage-копия candidate46 для `bootstrap full` (STAGED 159, GNU 0; `src/tests/tools` только) | — |
+
+Репозиторные копии источников порта старее кандидатов: `dev/l2src_sandbox/` хранит лишь часть модулей (например,
+`l2_frontend_context.lm2` в версии candidate44), `tools/l2/build.lm2`, `tools/l2/suite.lm2`, `tests/l2/suite.tsv` —
+прежние версии. Когда и как переносить принятые кандидаты в отслеживаемые maintained-пути — **открытый вопрос, теперь
+решение Codex** (поставлен в абзаце «Срез238» 2026-10-29; ответа не было).
+
+### Что проверено и что нет
+
+- **boot43** (Verified238 `3c4554ab`): первый whole quick с L2-портом frontend-а на source-only кандидате: G0 (tool32-05)
+  строит и проверяет G1, G1 — G2, G2 продвинута; 24990 с (G1 под нагрузкой сессии). G2 воспроизводит G1 raw по всем
+  выходам, кроме трёх PE-файлов, равных под маской TimeDateStamp+CheckSum — неподвижная точка; самосборный
+  `frontend.c`/`l2trans.exe` = warm41 (маска PE). Witness `steps/witnesses/fix238-20261027/cold-candidate43-boot43/`.
+- **boot44**: `-O2` для frontend-а принят whole quick, 22178 с (−11.3 %); G2 = G1 raw кроме PE; recipe-сборка `-O2`
+  воспроизводит ручной FE-O2 под маской PE. Witness `cold-candidate44-boot44/` (+ `records/`).
+- **boot45**: own-lookup принят whole quick (51358 с **включая ≈ 8 ч сна машины** — не benchmark); G2 под изменённым FE:
+  frontend 9304 с против 10081 (−7.7 %); lower 1310 (−12.3 %), core 3085 (−8.6 %), emit 4493 (−5.4 %); `frontend.c` G1 =
+  G2 = development-FE `712126F6…`. Witness `cold-candidate45-boot45/`.
+- **full45 FAIL** (12:53:49 UTC, 8933 с): G1 собрана (frontend 8639 с: lower ≈ 1310, core 2714, emit 4275; runtime 160 с),
+  полный список `SUITE 37 rows, 3 failures` → `FAIL bootstrap: G0 builds and tests whole G1: 1`. Две причины, ни одна не
+  замаскирована: (1) `c_call_one_actual_root` native/forced **root1** — `lmx: walk error: UNSUPPORTED`, driver exit 3 —
+  известный OPEN WALKED-ROOT-C-DOOR-UNSUPPORTED (обходчик не исполняет C-дверь; решение Codex 2026-10-23: общий выбор
+  roots в runner-е); (2) `os_second_block_refused native: the refusal says the needle` — порт отказывает в той же позиции
+  12:1, но раньше (счётчик `os_count` в `lm_compiler_source_directives`, `emit.lm2:531–551`) и текстом «(a source unit
+  reads one os block)» вместо текста twin-а «(the program reads one os block)» — PORT-SECOND-OS-BLOCK-MESSAGE.
+  Witness `cold-candidate45-full45/` (terminal, лог, record.txt, `failures.tsv`, логи упавших строк).
+- **Не покрыто:** ни один `bootstrap full` не прошёл; двух последовательных FULL-самозамещений нет; FULL добавляет к
+  quick на генерацию полный список, os walk witness, child + selftest и в конце три байтовые проверки (`G2's L1 is G1's
+  bytes`, `G2's C is G1's bytes`, `G1 and G2 are one image apart from the link stamp`) — они **ещё ни разу не
+  исполнялись**. Это не S8.6 и не завершение плана: общая почта §8a, чистое ядро/clean native, долги body-guard
+  (MACHINE-HEADER-OS-GUARD), WALKROOT-PARTS36-UNSUPPORTED, native/admission, перенос принятых кандидатов в maintained-пути
+  — открыты.
+
+### candidate46 и точная цепочка до full46
+
+**Diff candidate46 против candidate45 — ровно три файла** (`P/variants/full46/`, те же байты в `P/source-candidate46/`):
+
+- `src/l2src/l2_frontend_emit.lm2` `D461991F22087329AA1461B452BA0D05E140F7EB78062E9F0F60AA649596A753`: одна строка 550 —
+  литерал → `"a second os block is not supported yet (the program reads one os block)"`; `os_count`, ранняя проверка и
+  порядок оставлены (решение Codex; twin — свидетель прежней диагностики, не оракул нормы).
+- `tools/suite.lm2` `3F38AF62C153C77231B5FAE6F025F5AEA54C9AAEA52EF84B00D9ADA37762E01C` (+31 строка): `runs_modes_ok`
+  после `modes_ok` (буквы n/f — режимы сборки, суффикс `0` только root0, `1` только root1, `01`/`10` оба; без суффикса —
+  оба, как прежде; недопустимый selector — отказ строки как malformed, не молчаливое игнорирование); в `suite_row_check`
+  для `runs` — `runs_modes_ok` с why «MODES is not n, f, nf or fn, optionally followed by the roots 0, 1 or 01»; в
+  `suite_runs` — `run0/run1` по `c.strchr(modes, 48/49)` и цикл roots под условием выбора; `modes_ok` для
+  refuses/twins/links не расширен; комментарий заголовка списка документирует суффикс.
+- `tests/full-suite.tsv` `CB3A4CC72B7BE96F895BC803E7F537BD04483FA29A6B87E1A3B9830C207F1ACE`: строка 32
+  `runs cdoor/c_call_one_actual_root.lm2 7 nf0` (было `nf`); строка 6 документирует суффикс. `tests/l2/suite.tsv:28`
+  (needle os) не менялся.
+
+Stage-копии candidate46 инструментом boot45 G2 (13:06 UTC, `P/pins/cold-candidate46-tool-stage-copy.*`,
+`cold-candidate46-stage-copy.*`): обе `STAGED 159 files, 0 failed`, `sha256sum -c` 0.
+
+**Шаг 1 — `rebuild frontend` fe46 (выполнен fable_pc).** Запись
+`P/pins/cold-candidate46-tool-rebuild-frontend.command` (11 pins: gcc, timeout, инструмент `A69A7EE2…`, связка
+`boot45/g2/frontend/` ×3, runtime `boot45/g2/runtime/` ×2 — для smoke, stage `tools/build.lm2`
+`28DFBFA951A20B50F1E1E97DA13232CC543FCC0F6CEAC8A4A62E25B8B053F4C3`, stage `tools/suite.lm2` `3F38AF62…`, smoke-список
+`tests/smoke-kernel225.tsv` `32EAD2C43E749EA531B0B6D4D610891C17EC9704134FA1C72C63864F51AA3EC6`); argv
+`rebuild frontend R P/cold-candidate46-tool P/cold-candidate45/boot45/g2/frontend P/cold-candidate45/boot45/g2/frontend/l2trans.exe
+P/cold-candidate45/boot45/g2/runtime fe46 P/cold-candidate46-tool/tests/smoke-kernel225.tsv`; bound 14400 с; отделённый
+запуск через `…-detached.command`; лог `P/pins/cold-candidate46-tool-rebuild-frontend.log`, terminal
+`…-rebuild-frontend.terminal.txt`. Запущен 13:07:17 UTC.
+**Состояние на остановку fable_pc (2026-10-29 ≈ 13:45 UTC, по указанию автора «останавливай всё и передавай работу to
+codex»): fe46 ещё идёт** отделённым процессом — его не останавливаю (действующее правило автора и Codex: тихую живую
+сборку не убивать и не перезапускать). Ход: мелкие модули 13:07–13:10 UTC, useplan до 13:12:12, lower 13:12:12 → 13:33:46
+UTC (1294 с), `l2_frontend_core` переводится с 13:33:46 UTC (l2trans PID 16940; ожидание ≈ 2700–3100 с), затем emit
+(≈ 4300–4500 с), затем l1trans/gcc связки и smoke предыдущим runtime; **ожидаемый terminal ≈ 15:45 UTC**. Результат читать
+в `P/pins/cold-candidate46-tool-rebuild-frontend.terminal.txt` (`EndUTC`, `ElapsedSeconds`, `RebuildExit`, hash-и
+`l2trans.exe`/`l1trans.exe`/`l2_libc.o`/`frontend.c`, затем `EXIT=`/`done` от launcher-а) и в логе `…-rebuild-frontend.log`
+(`REBUILD frontend 0 failures`, `SUITE 9 rows, 0 failures`); выходы — `P/cold-candidate46-tool/fe46/` (связка, `record.txt`,
+`*.L2.log` модулей; их mtime в UTC — времена шагов) и `P/cold-candidate46-tool/src/l2src/*.lm1`. Ожидания по байтам: все
+`*.lm1` модулей raw = стадия boot45 (`P/cold-candidate45/src/l2src/`), кроме `l2_frontend_emit.lm1` (один литерал);
+`frontend.c` ≠ boot45 G2 только этим литералом; `l2_libc.o` = `AF9FDAE3…`; `l1trans.exe` raw ≠, под маской PE = boot45
+(`1523CA69…`; backend не менялся). Если terminal — FAIL или остановка (reaper, память, граница recipe): сохранить
+terminal/лог (и `killed-<stamp>/`, если процесс исчез), разобрать первое содержательное место; повтор той же записи —
+решение Codex, те же байты без причины не повторять. Копии записей candidate46 и check-списков уже лежат в
+`steps/witnesses/fix238-20261027/cold-candidate46-fe46/records/`; terminal и лог fe46 после конца — скопировать туда же.
+
+**Шаг 2 — `rebuild runtime` rt46 (Codex).** Вывести запись из `P/pins/cold-candidate44-tool-rebuild-runtime.command`
+(и её `-detached.command`): CWD `P`; инструмент → `P/cold-candidate45/boot45/lmxtool.exe` (`A69A7EE2…`); STAGE →
+`P/cold-candidate46-tool`; BASE → `P/cold-candidate45/boot45/g2/frontend` (recipe BASE не использует; как в fe46); FE →
+`P/cold-candidate46-tool/fe46/l2trans.exe`; RT-аргумент → `P/cold-candidate45/boot45/g2/runtime`; label `rt46`; SMOKE
+`P/cold-candidate46-tool/tests/smoke-kernel225.tsv`; лог `P/pins/cold-candidate46-tool-rebuild-runtime.log`. Pins:
+toolchain, инструмент, связка fe46 (`l2trans.exe`, `l1trans.exe`, `l2_libc.o` — hash-и из terminal fe46), stage
+`build.lm2`/`suite.lm2`, smoke-список; outputs-must-not-exist — `P/cold-candidate46-tool/rt46` и лог. Ожидание:
+`REBUILD runtime 0 failures`, `SUITE 9 rows, 0 failures`, ≈ 4 мин; выходы `rt46/driver.o`, `driver-observe.o`, `driver.c`.
+Raw-ожидание: `driver.o` = `8C2708AF…`, `driver-observe.o` = `0A1C51D9…` (те же источники ядра; изменение emit.lm2 —
+только текст диагностики) — расхождение разобрать, не маскировать.
+
+**Шаг 3 — `rebuild tool` tool46 (Codex).** Вывести из `P/pins/cold-candidate44-tool-rebuild-tool44b.command`: тот же
+инструмент/STAGE/BASE/FE, RT → `P/cold-candidate46-tool/rt46`, label `tool46`, лог
+`P/pins/cold-candidate46-tool-rebuild-tool46.log`; pins + объекты rt46. Ожидание: `REBUILD tool 0 failures`,
+`PASS the tool tool starts and hashes a file as this tool does: the same digest`, `PASS rebuild: the new tool runs the
+smoke list`, ≈ 12–13 мин; выходы `tool46/lmxtool-tool.exe`, `lmxtool.lm1`, `lmxtool.c`. Против `lmxtool.lm1`/`lmxtool.c`
+инструмента boot45 G2 (`P/cold-candidate45/boot45/g2/tool/lmxtool.lm1`, `lmxtool.c`; после маски префикса единицы
+`l2_u[0-9A-F]{16}_` — путь источника различен) отличие должно сводиться к изменению `suite.lm2` (recipe входит в методы
+инструмента; frontend в инструмент не входит).
+
+**Шаг 4 — короткая проверка check46 (Codex)** — ровно исправленные случаи на существующих fixtures, без новых
+fixtures/matrix/whole quick (решение Codex). Списки готовы: `P/component-check46/check46.tsv`
+(`1363FBAE143C90D983E51CD105DBEF487A06831F575DE81CF3700BFF8C7B78DF`; три строки с абсолютными путями fixtures стадии
+`cold-candidate46-tool/tests/`: `refuses os/os_second_block_refused.lm2` с прежним needle; `runs
+cdoor/c_call_one_actual_root.lm2 7 nf0`; `runs cdoor/c_call_one_actual.lm2 7 nf`) и `check46-invalid.tsv`
+(`EA29D6619041DCACD2A2923E638BF9809CB5744325689DB95067D6F439015A64`; одна строка `… 7 nf2`). Команда инструмента
+(usage `lmxtool_methods.lm2:1383`): `suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED]` — из нового пустого
+каталога (например `P/component-check46/run-01/`), `timeout` ≈ 1800 с:
+`P/cold-candidate46-tool/tool46/lmxtool-tool.exe 0 entry 0 -- suite P/component-check46/check46.tsv R
+P/cold-candidate46-tool P/cold-candidate45/boot45/g2/frontend P/cold-candidate46-tool/fe46/l2trans.exe
+P/cold-candidate46-tool/rt46/driver.o P/component-check46/out-01` (по `fixture_suite`, `suite.lm2:620`, и
+`lmxtool_methods.lm2:1341`: FRONTEND — путь к `l2trans.exe`, как FE у `rebuild`; RUNTIME — путь к **`driver.o`**, не каталог
+(`prod`, `objs[0]`); необязательный OBSERVED — `driver-observe.o`, нужен только строкам `twins`, которых в check46 нет). Ожидание: `SUITE 3 rows, 0 failures`, exit 0; у строки `nf0` только
+root0 (native и forced дают 7), у строки `nf` — оба roots; refuses — `PASS … the refusal says the needle` native и walked.
+Второй запуск с `check46-invalid.tsv` в `out-02`: ожидание — строка FAIL с why «MODES is not n, f, nf or fn, …», `SUITE 1
+rows, 1 failures`, exit 1 (недопустимый selector не игнорируется). Иное — дефект candidate46, не норма: новый кандидат.
+
+**Шаг 5 — `bootstrap full` full46 (Codex).** Вывести из `P/pins/cold-candidate45-full-bootstrap.command` (13 pins) и
+`…-detached.command`: инструмент G0 → `P/cold-candidate46-tool/tool46/lmxtool-tool.exe`; STAGE → `P/cold-candidate46`
+(свежая; outputs-must-not-exist: `full46`, `headers`, `src/l2src/lmx.h.lm1`, `src/l1src/libc_abi.lm1`, лог, preflight-лог);
+BASE → `P/cold-candidate46-tool/fe46`; previous_fe → `P/cold-candidate46-tool/fe46/l2trans.exe` (pins: его `l1trans.exe`,
+`l2_libc.o`); манифест → `P/pins/source-candidate46.raw.sha256` (`AE0340AE…`, preflight `sha256sum -c --quiet` в стадии);
+label `full46`; SMOKE `P/cold-candidate46/tests/smoke-kernel225.tsv`; FULL-LIST `P/cold-candidate46/tests/full-suite.tsv`
+(`CB3A4CC7…`, 56 строк); внешний bound 172800 с; лог `P/pins/cold-candidate46-full-bootstrap.log`. Ожидание ≈ 6 ч без
+сна машины (full45: G1 до полного списка 2.45 ч; плюс список ≈ 37 строк, os walk witness, child + selftest, tool ≈ 12 мин;
+затем G2 столько же и три байтовые проверки). Приёмка: `BOOTSTRAP full 0 failures`, BootstrapExit 0, `PASS` обеих
+генераций, `SUITE 37 rows, 0 failures` ×2, `G2's L1 is G1's bytes`, `G2's C is G1's bytes`, `G1 and G2 are one image apart
+from the link stamp`, `MANIFEST`/`STAGED … 0 failed`; `full46/lmxtool.exe` = инструмент G2. Raw сверить с boot45 G2:
+ожидание — все выходы модулей кроме `l2_frontend_emit.lm1`/`frontend.c` (один литерал) и инструмента (suite.lm2) равны;
+PE — отдельно под маской. При FAIL — сохранить всё, разобрать первое содержательное место, не маскировать, не
+перезапускать те же байты; исправление — следующий кандидат.
+
+**Дальше.** После первого FULL: второе последовательное FULL-самозамещение (итоговое требование `to_fable.md`:
+естественный кандидат — тот же candidate46, G0 = `full46/lmxtool.exe`, previous_fe = `full46/g2/frontend/`; ожидание —
+неподвижная точка), перенос принятых источников порта в maintained-пути репозитория (открытый вопрос выше), затем
+план v3 §§8/8a и долги ниже. Второй пункт плана «Ближайший шаг: ускорение» (фазовые времена/счётчики) — со следующей
+необходимой правкой core/emit, не отдельно.
+
+### Открытые дефекты и долги
+
+Статусы — [steps/defects.md](steps/defects.md). Открыты из среза 238: **MACHINE-HEADER-OS-GUARD** (у производителя
+заголовок закрыт; остаток — guard тела при `--header`), **PORT-SECOND-OS-BLOCK-MESSAGE** (исправлен в candidate46 по решению
+Codex — закрыть по приёмке full46), **WALKROOT-PARTS36-UNSUPPORTED**, **BARE-DEREF-ACTUAL-MERGED**. Открыт
+**WALKED-ROOT-C-DOOR-UNSUPPORTED** (диагностический долг; строка полного списка теперь `nf0` — не закрытие дефекта).
+Закрыты в 238: RECIPE-MACHINE-MODULE-BOUND, TOOLS-WIP-NEVER-TRANSLATED, PORT-NAME-COLLISION-USE-NOTE. Прежние OPEN/IN WORK
+(Opus/Codex 2026-09-30…10-25, список в архиве §7) — обязательства без изменений.
+
+[optimization_proposal_from_fable.md](optimization_proposal_from_fable.md) (§1 факты, §7 состязательная проверка,
+ответ Codex): пункты (1) и (3) «Ближайшего шага» плана выполнены по одному разу (boot44, boot45); пункт (2) — с правкой;
+дальнейшие участки (predef name-set — ячейка состояния = правка recipe; `node_in` под `own_source_visible`) — не
+начаты, по решению Codex «не сейчас».
+
+### Документы, свидетели, записи
+
+- [steps/current.md](steps/current.md): «Срез238 — fable_pc» — абзацы по шагам (эмиттер07, warm39/40/41, tool32-02…05,
+  candidate40–46, boot42–45, документ об ускорении, профиль, full45, candidate46, fe46, передача).
+- `steps/witnesses/fix238-20261027/`: `cold-candidate42-boot42/`, `cold-candidate43-boot43/`, `cold-candidate44-boot44/`
+  (+ `records/`), `cold-candidate45-boot45/`, `cold-candidate45-full45/`, `o2exp01/`, `prof02-useplan-gdb/`,
+  `devfe45-context-ownat12/`, `candidate44-tool44-fail/`, `initial-tool32-43-killed-20261028T0524Z/`, `decl4143/`,
+  `lower439/`, `probes/`, `ccall-actuals-probes01/`, `p0-tailcutter-probe01/`; копии всех ответов Codex и моих
+  сообщений (`codex-reply-*.txt`, `fable-*.txt`); копии записей fe46 и этой передачи — `cold-candidate46-fe46/`.
+- `P/pins/`: записи и terminal-ы `cold-candidate4N-{stage-copy,bootstrap(-detached)}`, `cold-candidate44-tool-rebuild-*`,
+  `cold-candidate45-full-*`, `cold-candidate46-{stage-copy,tool-stage-copy,tool-rebuild-frontend(-detached)}`,
+  `source-candidate4N-manifest.*`, `warm41-*`, `o2exp01-*`, `devfe45-*`; `P/variants/` — варианты по имени;
+  `P/component-check46/` — списки проверки; `P/component-prof01/cmds.gdb` — команды ручного снимка.
+- [next_core_tasks_v3.md](next_core_tasks_v3.md) «Ближайший шаг: ускорение следующей сборки» (строки «Выполнено»);
+  [next_core_tasks_v3_checklist.md](next_core_tasks_v3_checklist.md) — датированная поправка сводки 237 (2026-10-29).
+
+### Практика и подводные камни (измерено в срезе 238)
+
+- **Записи.** Каждая команда — рукописная запись pwsh 7 (`C:/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/
+  dependencies/native/powershell/pwsh.exe`): проверка CWD, `$taskPins` (JSON путь/sha256, счёт pins), guard pipeline
+  (`^(gcc|cc1|collect2|ld|as|l1trans|l2trans|lmxtool-tool)\.exe\z` — ни одного процесса), свободная virtual memory
+  ≥ 838861 KiB, outputs-must-not-exist, сброс `CPATH`-переменных, `StartUTC`/`PreVMKiB`/hash-и входов, `timeout.exe`
+  с bound, `EndUTC`/`ElapsedSeconds`/`…Exit`, hash-и выходов, выборка `PASS|FAIL|REBUILD|SUITE|MANIFEST` из лога.
+  Запуск: `pwsh.exe -NoProfile -NonInteractive -Command "Set-Location -LiteralPath '<ctx>'; & ([ScriptBlock]::Create((Get-Content
+  -Raw -LiteralPath '<запись>')))"` с tee в `<запись>.terminal.txt`. Многоминутные и многочасовые шаги — **отделённым
+  процессом** через launcher-запись `…-detached.command` (`Start-Process` скрытого pwsh; дочерний pwsh исполняет запись и
+  дописывает `EXIT=`/`done` в terminal): фоновая оболочка сессии дважды убивалась reaper-ом при простое по памяти
+  (tool32-05 05:24 UTC, цикл ожидания), отделённые процессы — ни разу; boot45 пережил ≈ 8 ч сна машины (после сна
+  медленнее: emit 96 мин CPU против 79). Наблюдение — Monitor с перевооружением по логу стадии, terminal `done` и потере
+  процесса; тишина буферизованного stdout — не зависание (смотреть mtime `*.L2.log` стадии и `record.txt`).
+- **Recipe.** `rebuild tool` на свежей стадии падает на корневом L1 (`cannot read import l2src/lmx_array_owned.h.lm1`):
+  объявления ядра пишет шаг runtime — сначала `rebuild runtime` (witness `candidate44-tool44-fail/`). `rebuild frontend`
+  пишет L1 модулей в `STAGE/src/l2src/` и связку в `STAGE/<label>/`, smoke — предыдущим runtime. Границы recipe: модуль
+  21 600 000 мс, дочерняя генерация 86 400 000 мс, методы/корень инструмента 3 600 000 мс; внешний bound bootstrap
+  172800 с. BASE recipe не использует.
+- **Идентичность.** Сначала raw sha256; «равно после маски X» — отдельной фразой: PE TimeDateStamp+CheckSum (три
+  exe/связки), префикс единицы `l2_u<16 hex>_` (hash пути источника: инструмент на разных стадиях). Выходы модулей и
+  `frontend.c`/`driver.c`/`lmxtool.c` сравниваются raw.
+- **Времена** (одна машина 16 ГБ, один pipeline): whole quick 24990 (boot43) / 22178 (boot44) с; генерация ≈ 10200–11800
+  с, из них шаг frontend 9304–10917 с (lower 1310–1751, core 2714–3618, emit 4275–5042 с), runtime 160–180 с, smoke 40 с,
+  tool 695–760 с; `rebuild runtime` 234 с, `rebuild tool` 780 с; стадия-копия ≈ 1–2 с; манифест ≈ 90–140 с.
+- **Языковые факты среза** (дефекты/памятки): голый `\x` после запятой склеивается с предыдущим актуалом
+  (BARE-DEREF-ACTUAL-MERGED; в порту — `p[0]\f`, cast-формы); WIP-инструменты Codex были непереводимы (P0 tail-cutters
+  `---/end/return/until`, языковые слова как имена: `end`→`end_at`, `chain_table`); имя порта может совпасть с экспортом
+  ядра (`lm_compiler_use_note` → `…_lexical`); заголовок машинного модуля при `--header` несёт только объявления — guard
+  `os:` принадлежит телу; актуалы вызова C хранятся в лексическом порядке.
+- **Среда.** `build2/` в `.gitignore`; `C:/Nyasha_Planet/LMX/build` не читать; `buold_temp` — старые зависимости; GCC
+  `C:/Qt/Tools/mingw1310_64/bin/gcc.exe` (`920A4FC6…`), `timeout`/`sha256sum` из `C:/Git/usr/bin/` (hash-и в pins).
+  Свободной virtual memory при запусках было 4.2–4.5 ГБ; физической ≈ 8 ГБ.
+
+### Результаты агентов перед передачей
+
+Собственных субагентов у fable_pc перед передачей не было; завершились агенты запущенного автором `/code-review` (max, по
+коммиту `73e53a32` — абзац поправки чек-листа — и untracked файлам рабочего дерева; 15 находок, ни один файл агентами не
+менялся). Разбор fable_pc — только ниже; ничего из кода не правилось.
+
+- **Исправлено при передаче в `next_core_tasks_v3_checklist.md`** (абзац 2026-10-29, с датой; история не переписана):
+  ссылка на манифест candidate43 (он лежит в `fix238-20261027/source-candidate43.raw.sha256`, не под `records/`);
+  «инструмент» убран из корней, печатаемых L3 — `lmxtool.lm1` переводит фронтенд из `tools/lmxtool.lm2` (`bld_self` →
+  `bld_program_k`); счёт «12 decl-файлов + 36 ядра» заменён на виды `decl_write` 0–56 (включая `lmx_thread_state`,
+  `lmx_walk`, `lmx_walk_state_decl`, `libc_abi.lm1`, state/scratch-файлы backend/frontend); утверждение о трёх PE-парах
+  boot45 под маской — измерено 2026-10-29 13:30 UTC (все три равны под маской, raw различны; witness
+  `cold-candidate45-boot45/boot45-pe-mask-20261029.txt`); добавлено, что источники кандидатов не опубликованы в tracked
+  tree; строка 29 обновлена результатом full45 и передачей; заголовок файла называет текущего writer/build; ячейки
+  S8.4/S8.5 таблицы «Не сделано» получили датированную поправку (reviewer: present-tense ячейки устарели против правила
+  самого чек-листа «устаревшую текущую отметку заменять»).
+- **Для решения Codex (не правилось):**
+  1. `dev/l2src_sandbox/l2trans.lm1:31396–31413` (fix209 `common-c-address.patch`): адрес opaque C-символа вида kind 9 —
+     второе представление рядом с kind 6 + descriptor 1; понимает только native emitter; walked (не machine) метод с
+     `@ c.NAME` падает в `l2_rw_refuse(0, "an address without a retained declared place")` с node 0 → отказ с
+     фиктивной позицией `1:1` (`tests/l2/native_closure_values.lm2:193`). Общее исправление — одна ветвь C-binding в
+     `l2_address_root` (kind 6, descriptor 1, text = символ).
+  2. `l2trans.lm1:31404`: kind-9 дверь решает «известен ли C-символ как вызываемый» через `lm_compiler_predef_has_function`
+     — полный обход всех `prototype:` блоков транзитивного predef-замыкания на каждый `(@ c.NAME)` в каждом из ≥ 5
+     проходов, без memo (`l2_frontend_types.lm2:394–462`); для данных-символов ответ всегда «нет» после полного обхода
+     (`l2_frontend_coords.lm2`: 344 таких span-ов). Совпадает с пунктом «predef name-set» документа об ускорении.
+  3. `dev/l2src_sandbox/lmx_thread.lm2:878/888`: `lmx_stop_request` пишет `message\running: 0` до публикации
+     `close_deadline`; дорожка ребёнка читает deadline только после `running = 0` → может прочитать 0 (подтверждено
+     верификатором; унаследовано от L1 `lmx_thread.lm1:844/854`; низкая серьёзность — эффективные границы те же).
+     Предложение: публиковать deadline до сброса `running`.
+  4. `dev/l2src_sandbox/lmx_walk_values.lm2:2413` (`lmx_walk_shape_min`, перенесён fix217): 43 из 57 ops перечислены,
+     остальные 14 получают `1U` — обещание «кадр проверен до вычисления операндов» для EXPECT_INT/ADMIT_AS/PAD держится
+     только проверками их обработчиков; EXPECT_INT на коротком кадре молча даёт int 0 (plausible, кадры транслятора
+     всегда полные).
+  5. Untracked `steps/witnesses/fix208/209/210/217-20261025/*` (WIP Codex): дублируют закоммиченные записи
+     (`fix208 lmx_reparent.lm2.patch` = `fix210`, и т. д.), не соответствуют живому ABI (`lmx_qualify_tree_preflight_full`
+     9 аргументов против 8 живых; формал `roles` в `values.from216.patch`). Reviewer: оставить на диске, не коммитить,
+     отметить в `fix210/notes.md` — это чужой WIP, fable_pc его не трогал.
+  6. Untracked `steps/fable_consumer_suitability_review_20261026.md` (Codex): §7.3 п.5 — `lib_m_take (unary: f)` без вызова
+     даёт отсутствие reception, и общий fallback (interface = 1, uses = 0) отвергает `seven` (`() int`) против `unary (int: a)
+     int` → ломает `tests/l2/lib/lib_owner.lm2:116/176–179`; §7.3 п.2/§5 — слот 2 записи ARG (`fallback`) пишется только
+     для скрытых входов `pi >= arity`, умолчания формалов помечены OPEN (`lmx_implements.lm2:1196–1199`), так что ветвь
+     «умолчание» мертва.
+  7. Чек-лист: таблица «Не сделано» S8.4/S8.5 — датированная поправка внесена (выше), полная перепись ячеек — Codex;
+     коммит `73e53a32` не записал результат проверок READ.ME:33 (`check_docs`, `git diff --check`) — для коммита передачи
+     результат записан в абзаце «Срез238».
+  8. Отвергнуто верификацией (не дефекты): изменение stop-семантики Thread `lmx_thread.lm2:668`, null `pool`
+     `lmx_reparent.lm2:251`, дедупликация accessor-identity в reparent, ослабленный тест `lmx_thread_reparent_operand`,
+     разбиение предиката os-ветки в `lm_compiler_m_machine`. Вне cap: двойная копия staged forest в
+     `lmx_reparent_prepare:1100` (намеренный dry-run), квадратичная регистрация implements в `lmx_walk_capture:3419`,
+     повторные сканы `lmx_reparent_profile_root`, неиспользуемые локалы `view_p`/`stride`/`value_p`, лишний `---`
+     `lmx_thread.lm2:746`, дубль `cycle_reading`, null ARG ordinal `lmx_walk_values.lm2:2470`, устаревшие сгенерированные
+     копии заголовков в `dev/l2src_sandbox` (`lmx_graph_copy_owned.h.lm1:151` ещё с `roles`).
+  Коммиты `426cd4d4` и `262ef4ba` (full45, candidate46) в review не входили.
+
+### Остановка fable_pc
+
+- Остановка по указанию автора 2026-10-29 (≈ 13:40 UTC): «останавливай всё и передавай работу to codex потому что у тебя
+  квоты не хватит на два часа» — до конца fe46.
+- Мои агенты и наблюдатели: `/code-review` автора завершён (результаты выше); мой Monitor на fe46 остановлен; других
+  субагентов нет.
+- Процессы на момент остановки: отделённые pwsh launcher-а и записи fe46, `lmxtool.exe` (boot45 G2, `rebuild frontend`) и
+  его `l2trans.exe` — **живые, не тронуты**; иных gcc/cc1/l1trans/l2trans/lmxtool-tool нет (снимок `tasklist` — в абзаце
+  «Срез238» ledger-а).
+- Git: коммит этой передачи запушен в `main` (SHA — в сообщении Codex и в абзаце «Срез238»); tracked tree чист; чужие
+  untracked перечислены выше.
+- Сообщение Codex через `lmx_uds`: `FABLE-CODEX-HANDOFF-20261029T134500Z` (копия —
+  `steps/witnesses/fix238-20261027/fable-codex-handoff-20261029T134500Z.txt`).
+- После отправки fable_pc ничего не запускает и не пишет; возвращается только по поручению автора.
+
+## Архив: передача работы Codex (Opus, 2026-10-24)
 
 Передача по прямому поручению автора от **2026-10-24** (сессия Opus): «после текущего шага напиши to_codex.md
 инструкцию по передаче дел, скажи to codex что передаешь ему работу и останавливайся». Текущий шаг — срез 194 —
@@ -6,7 +368,7 @@
 единственный writer/build.** Opus больше не пишет, не собирает и не ревьюит; к работе возвращается только по поручению
 автора. Этот файл заменяет передачу fable_pc от 2026-10-19 (`git show 8e982196:to_codex.md`).
 
-## 1. Как работать
+### 1. Как работать
 
 **Цель и поручения автора.**
 - Поручение автора (`CODEX-AUTHOR-CORE-CONTINUE-20261024T091641Z`): «Пусть Opus продолжает перенос оставшегося ядра на
@@ -60,7 +422,7 @@
 - Нормы правятся в первичных источниках, генерируемые документы руками не правятся: `provenance/semantics-book.md` →
   `python tools/build_semantics.py`, `provenance/grammar.json` → `python tools/build_docs.py`. Весь репозиторий — LF.
 
-## 2. Точная точка старта
+### 2. Точная точка старта
 
 - **Репозиторий.** `C:\Nyasha_Planet\LMX`, ветка `main`: Verified194 `03c5a3ee`, запись `bc3edf80`, затем коммит этой
   передачи. Всё запушено, `origin/main` совпадает.
@@ -90,7 +452,7 @@
   завершились, их выводы учтены здесь; других агентов и фоновых задач нет. Срез 195 и новые сборки Opus не начинал.
   Перед своим запуском проверь снова той же командой: пустой вывод — живых сборок нет.
 
-## 3. Цель, что перенесено и что осталось
+### 3. Цель, что перенесено и что осталось
 
 **Готово, когда** (план §8, READ.ME) в поддерживаемых исходниках ядра, парсера, трансляторов и обычной цепочки сборки и
 проверки нет рукописного L1/C/Python/PowerShell:
@@ -163,7 +525,7 @@ G1/G2 нынешнего bootstrap — не S8.6. Короткий и полны
 - Доходит ли smoke до модулей 187, 193 и 194, не измерено.
 - Строки gate LIBRARY-ROWS-OLD-PROFILE устарели.
 
-## 4. Следующий шаг: срез 195 — каждый файл predef разбирается один раз (черновик, Opus его не начинал)
+### 4. Следующий шаг: срез 195 — каждый файл predef разбирается один раз (черновик, Opus его не начинал)
 
 **Дефект** PREDEF-HEADER-REPARSED-PER-QUERY (`steps/defects.md`). Запросы транслятора к файлу predef (заголовку или
 кодовому модулю) каждый раз заново разбирают файл и разрушают документ: снимок программы хранит только байты. Таких
@@ -262,7 +624,7 @@ opus_fix195/src/l2src/l2trans.lm1 > opus_fix195/runs/packet/l2trans.lm1.patch`. 
   `lmx_call_walk_fail_status_g`) — общие для процесса крючки. Ни у одного перенесённого модуля хранилища уровня модуля
   нет, а прямой машинный вход автора исключает скрытый singleton.
 
-## 5. Рабочий цикл среза (как его вёл Opus)
+### 5. Рабочий цикл среза (как его вёл Opus)
 
 1. **Новая стадия** — из предыдущей, командой `tar` из §4. Каждая попытка — новый label. Инструмент сам отказывается
    писать в существующий: «exists: a new label for every attempt».
@@ -370,7 +732,7 @@ opus_fix195/src/l2src/l2trans.lm1 > opus_fix195/runs/packet/l2trans.lm1.patch`. 
    - после push — отдельный коммит «Record the VerifiedNNN commit in the current state and checklist», вписывающий SHA
      («…, checklist and defects», если SHA вписывается и в дефект, как c1ec46e2).
 
-## 6. Подводные камни переноса (измерено в срезах 178–194)
+### 6. Подводные камни переноса (измерено в срезах 178–194)
 
 - **Режим заголовка модуля.**
   - `--header` кладёт в сгенерированный заголовок все `.h.lm1`-predef модуля; predef кодового `.lm1` остаётся в
@@ -422,7 +784,7 @@ opus_fix195/src/l2src/l2trans.lm1 > opus_fix195/runs/packet/l2trans.lm1.patch`. 
 - **Транслятор.** В `l2trans.lm1` функция сначала названа в блоке прототипов. Правку привязывать к определению с
   колонки 0.
 
-## 7. Открытые дефекты
+### 7. Открытые дефекты
 
 **Открыты по абзацу «Открыты …» в `steps/current.md`** (статусы — `steps/defects.md`):
 - MACHINE-STATUS-CHANNEL: решение о C ABI объявленного выхода теперь за Codex;
@@ -445,7 +807,7 @@ OPEN/IN WORK в `steps/defects.md` (2026-09-30…2026-10-20) остаются о
 - ARENA-LOOKUPS-LINEAR: линейный поиск массивов арены на выделение и просмотр таблицы имён источника.
 - PREDEF-HEADER-REPARSED-PER-QUERY — до среза 195.
 
-## 8. Ресурсы и запреты
+### 8. Ресурсы и запреты
 
 - **Только `build2`.** Корневой `C:\Nyasha_Planet\LMX\build` не читать, не сканировать, не восстанавливать, выходов там
   не создавать.
@@ -467,7 +829,7 @@ OPEN/IN WORK в `steps/defects.md` (2026-09-30…2026-10-20) остаются о
   установить, что завершилось.
 - **Длительность** (193/194): `rebuild runtime` 761/837 s, `rebuild tool` 601/605 s, `bootstrap quick` 1 933/2 298 s.
 
-## Приложение A. Черновик среза 195
+### Приложение A. Черновик среза 195
 
 `-U0` к `src/l2src/l2trans.lm1` (`D8F10E37…` → `7A1442F9…`, 24 куска); с корня стадии — `patch -p1`.
 

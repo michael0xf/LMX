@@ -793,6 +793,32 @@ reads one os block)»; в twin-е счётчика в source directives нет (
 новый текст нормой и поправить строку списка; (б) общий выбор запускаемых roots для `runs`-строк (малое расширение `suite.lm2`, правка
 tools → candidate + rebuild инструмента) либо иное решение по строке `c_call_one_actual_root`.
 
+**Codex: оба блокера FULL исправлять в candidate46 и продолжать FULL (CODEX-REPLY-FULL45-FIXES-20261029T130000Z,
+[копия](witnesses/fix238-20261027/codex-reply-full45-fixes-20261029T130000Z.txt)).** (1) OS: одна строка литерала в
+`lm_compiler_source_directives` (`emit.lm2:550`) → «a second os block is not supported yet (the program reads one os block)»;
+`suite.tsv:28` и позицию не менять; `os_count`, раннюю проверку и порядок оставить (twin — свидетель прежней диагностики, не оракул
+нормы; нынешнее ограничение одного os-блока не объявлять вечной нормой). (2) C-door root: минимальный общий selector запускаемых roots
+для `runs`-строк в `tools/suite.lm2`: буквы n/f — режимы сборки, суффикс цифр — roots (`0` только root0, `1` только root1, `01`/`10` оба;
+без суффикса — оба, как прежде); строке `c_call_one_actual_root` — `nf0` (оба режима сборки, exit 7); без исключений по имени/голове;
+недопустимый selector не игнорируется молча; `modes_ok` для refuses/twins/links не расширять. Порядок: failed full45 не трогать; candidate46
+с точно этим diff + документы; нужные новые FE/tool — существующим component rebuild (unchanged runtime/support допустимы как входы с
+pins); короткая проверка ровно исправленных случаев на существующих строках (OS-отказ с прежним needle; C-door root0=7 в native/forced;
+обычная строка без суффикса — оба roots), без новых fixtures/matrix/whole quick; затем один `bootstrap full` на свежем label. **Сделано:**
+вариант `variants/full46/` — `l2_frontend_emit.lm2` D461991F… (одна строка 550), `suite.lm2` 3F38AF62… (+31 строка: `runs_modes_ok`
+после `modes_ok`; в `suite_row_check` для runs — `runs_modes_ok` с новым why-текстом; в `suite_runs` — `run0/run1` по цифрам MODES
+(`c.strchr(modes, 48/49)`), цикл roots под условием выбора; комментарии заголовка), `full-suite.tsv` CB3A4CC7… (строка 32 `nf` → `nf0`;
+строка 6 документирует суффикс); `source-candidate46` = candidate45 + три файла (манифест 89.7 с, 159 files 0 failed, raw **AE0340AE…**;
+diff против candidate45 — ровно три файла); stage-копии инструментом boot45 G2: `cold-candidate46-tool` (rebuild + проверка) и
+`cold-candidate46` (FULL), обе STAGED 159, GNU 0. **`rebuild frontend` (label fe46) запущен 13:07:17 UTC** отделённо (запись
+`cold-candidate46-tool-rebuild-frontend.command`, 11 pins: инструмент A69A7EE2…, связка previous_fe boot45 G2 159F3D5E…/DF1FBCD5…/AF9FDAE3…,
+runtime boot45 G2 для smoke, stage `build.lm2` 28DFBFA9… и новый `suite.lm2`, smoke-список; bound 14400 с; ≈ 2.4 ч). Далее: `rebuild
+runtime` (rt46, новым FE), `rebuild tool` (tool46), короткая проверка (список из трёх существующих строк + отдельная строка с недопустимым
+selector → ожидаемый FAIL строки), `bootstrap full` full46 на `cold-candidate46` с G0 = tool46, previous_fe = fe46. Замечание: каталог
+`build2/` в `.gitignore` — источники L2-порта (`l2_frontend_*.lm2`, порт-recipe) живут только в замороженных candidate-каталогах WIP
+Codex и не отслеживаются git; в репозитории `dev/l2src_sandbox/` содержит лишь часть модулей (например, `l2_frontend_context.lm2` в
+версии candidate44), `tools/l2/` и `tests/l2/suite.tsv` — прежние версии. Вопрос к Codex (не блокирует): когда и как переносить
+принятые кандидаты в отслеживаемые maintained-пути.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

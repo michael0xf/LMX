@@ -19,7 +19,31 @@ check46 → full46 (записи выводятся из указанных в h
 его результат тогда ещё не был принят; завершение и продолжение описаны ниже. Один успешный штатный FULL содержит оба требуемых проверенных поколения G1/G2 и
 обе замены; дополнительный неизменный FULL автоматически не назначается (уточнение маршрута в `to_codex.md`).
 
-### Продолжение Codex 2026-10-29 — компоненты48 приняты, FULL ещё не принят
+### Продолжение Codex 2026-10-29 — штатный FULL48 подтверждён
+
+`P = build2/codex_fix250generationchain01`. Опубликованный source48
+(`6dfe7bfa`,159 входов в `selfbuild/`) прошёл один
+обычный `bootstrap full` из новой source-only стадии. Старт16:24:09UTC,
+финальный receipt22:27:20UTC29, native parent actualexit0:
+`BOOTSTRAP full 0 failures`. G0 построил и проверил G1; реальный новый G1
+tool `158ACF5C…` построил и проверил G2. У каждого поколения полный список37/0,
+OSWALK0 и selftest0; оба bundle действительно заменили рабочий инструмент.
+После второй замены прошли сравнения tool L1/C и PE-image с маской только
+прежних link timestamp/checksum. Финальный G2 tool `A6D5EC40…`, frontend
+`E9873EBE…`, backend `519A37A4…`; рабочий tool raw-равен G2. Команды, source/
+compiler/runtime/program pins, числовые журналы, consumed snapshots и границы —
+[срез241](witnesses/fix241-20261029/notes.md). Второй неизменный FULL не нужен.
+
+Это подтверждает штатный whole-FULL протокол выбранного пакета L3/L2; полная
+нормативная приёмка §8/S8.6 ещё зависит от открытых common CALL/default,
+used-interface/UNKNOWN и uniform native/Q49. Почта §8a/T01–T26 не завершена.
+Частные source49 и source50 пока не скомпилированы и не опубликованы.
+Следующий connected срез — существующий component/short-bootstrap маршрут;
+точные подготовленные inputs49, bridge нового L3 writer и live handle —
+`P/pins/codex-active-checkpoint-20261029.md`. Codex остаётся единственным
+writer/build, goal active; Fable/Opus остановлены.
+
+### Компонентный этап48 — история до результата FULL241
 
 `P = build2/codex_fix250generationchain01`. `fe46` завершился в 15:33:26 UTC: frontend построен,
 но команда целиком **FAIL** (`SUITE 9 rows, 15 failures`, exit1). Все положительные smoke-сборки остановились
@@ -51,7 +75,7 @@ cached `diff --check` чист. Дальше: публикация провер�
 2026-10-29 в16:24:09UTC** из source-only `P/cold-candidate48` (159/0, четыре generated/output targets отсутствовали).
 Новый G0 — tool48 `4ECFF786…`, previous FE — fe46 `7C907E69…`. Точные pins/argv —
 `P/pins/cold-candidate48-full-bootstrap.md`, stdout/stderr — одноимённый `.log`; живой handle проверять по checkpoint.
-G1/G2 и FULL ещё не приняты. Общий допуск,
+На том компонентном этапе G1/G2 и FULL ещё не были приняты; результат FULL — выше. Общий допуск,
 uniform native, полная source closure/S8.6 и почта §8a остаются открытыми; отдельный PASS их не закрывает.
 
 ## Архив передачи fable_pc 2026 10 27 (действовало до 2026-10-29)

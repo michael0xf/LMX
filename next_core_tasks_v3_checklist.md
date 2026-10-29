@@ -1,6 +1,6 @@
 # Чеклист реализации LMX
 
-Обновлено 2026-10-26. Ближайшая цель — **работающий проект и настоящая самосборка L3 + L2**, не максимальное число проверок. Это параллельная сводка к [плану v3](next_core_tasks_v3.md), а не новый план или предварительный gate. Поддерживает Codex, единственный writer/build с передачи 2026-10-24 ([to_codex.md](to_codex.md)); до неё — Opus.
+Обновлено 2026-10-29 (уточнение сводки 237 ниже; остальное — 2026-10-26). Ближайшая цель — **работающий проект и настоящая самосборка L3 + L2**, не максимальное число проверок. Это параллельная сводка к [плану v3](next_core_tasks_v3.md), а не новый план или предварительный gate. Поддерживает Codex, единственный writer/build с передачи 2026-10-24 ([to_codex.md](to_codex.md)); до неё — Opus.
 
 Уточнение автора от 2026-10-24: объявления арены и пулов генерировать на L3 как строки L1, без нового механизма в L2 ([дословный источник](LMX_blog/2026-10-24.md)). Прежний вопрос Codex о машинной C-раскладке снят. Генерация ещё не реализована этим изменением документов; отметки готовности не повышаются. Следующий результат — самосборка, не расширение системы или тестовой кампании. Срез185 (Verified185 `3a5c6919`, E20) её реализует: `lmx.h.lm1` целиком, `lmx_arena_blocks.h.lm1` и `lmx_arena.h.lm1` пишет код L3 сборки (`decls_write_all`), и короткий bootstrap прошёл с ними.
 
@@ -14,6 +14,20 @@ prelink L1/C и post-completion object equality. G2language/GNU170 провер�
 stage83+expected2+canonical83+lists2; selected headers8/20/40 сгенерированы.
 1525 frontend definitions и52 backend алгоритма плюс OS/main остаются L1.
 Это не S8.6; common used-interface/UNKNOWN, clean native/Q49 и mail OPEN.
+
+**Уточнение сводки по актуальному срезу (2026-10-29, fable_pc; история выше не переписана).** Строки «1525 frontend definitions и 52
+backend алгоритма плюс OS/main остаются L1» описывают состояние 237 и устарели: в замороженных источниках candidate43/44/45
+(`steps/witnesses/fix238-20261027/cold-candidate4N-boot4N/records/source-candidate4N.raw.sha256`) нет ни одного поддерживаемого
+`.lm1`/`.c`/`.py`/`.ps1` входа — 156 `.lm2` и 3 `.tsv`; actual `tools/build.lm2` переводит ordinary-L2 модулями весь frontend (21 машинный
+модуль: `p0_own`, `p0_text`, `p0_scan`, `l2_machine_types`, `p0_parser`, `l2_copy_uses`, `l2_frontend_{helpers,alloc,values,views,context,
+types,coords,resolve,intern,useplan,lower,core,emit}`, `l2_receiving_source`, `l2_consumer_uses`), backend (`l1_backend_{platform_win,
+platform_posix,text,state_helpers,emit}`, включая `l1_translate`/`l1_cli_main`), `l2_libc`, ядро (35 модулей) и `l2_driver`; L3 печатает
+объявления (12 frontend/backend decl-файлов, 36 ядра) и корни (`frontend-source.lm1`, `backend-source.lm1`, `l2_eternal_driver.lm1`,
+инструмент) как строки L1. Receipts: whole quick `BOOTSTRAP quick 0 failures` boot43 (2026-10-28 12:36 UTC, candidate43), boot44
+(19:35 UTC, candidate44 = recipe `-O2`), boot45 (2026-10-29 10:18 UTC, candidate45 = own-lookup); в каждом G1 и G2 воспроизводят
+`frontend.c`, `l2_libc.o`, `driver.o`, `driver-observe.o`, `lmxtool.lm1`/`.c` байт в байт, три PE-файла bundle равны под маской stamp.
+Это ещё не S8.6/FULL и не закрытие common used-interface/UNKNOWN, clean native/Q49, mail: `bootstrap full` на candidate45 (full45)
+запущен 2026-10-29 10:24:56 UTC и отмечается только по действительному результату.
 
 - **Реализовано** — указанная узкая возможность есть в просмотренном коде и наблюдалась в реальном запуске. Это не закрывает целый родительский этап.
 - **Частично** — механизм есть, но весь требуемый маршрут не закончен или не подтверждён. Остаток указан явно; отсутствие проверки не выдаётся за доказанное отсутствие кода.

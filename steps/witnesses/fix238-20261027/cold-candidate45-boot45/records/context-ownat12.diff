@@ -1,0 +1,19 @@
+399c399,402
+<         if: lm_compiler_own_unit_seen(i, mi) != 0 && c.lm_compiler_text_same(own_name_cell[0][i], t)
+---
+>         # The cheap name compare first, the unit-visibility walk (m_code_file, source_definition_method, callable_source_node, vis_ok --
+>         # reads only) after it: the same rows satisfy both, so the result is the same; own_unit_seen runs for same-name rows only
+>         # (prof02 gdb snapshots 1, 2 sat in this walk under own_at). The same order in own_find_last, own_at and own_lexical below.
+>         if: c.lm_compiler_text_same(own_name_cell[0][i], t) && lm_compiler_own_unit_seen(i, mi) != 0
+514c517
+<         if: i != own_excl_cell[0] && lm_compiler_own_unit_seen(i, mi) != 0 && c.lm_compiler_text_same(own_name_cell[0][i], t)
+---
+>         if: i != own_excl_cell[0] && c.lm_compiler_text_same(own_name_cell[0][i], t) && lm_compiler_own_unit_seen(i, mi) != 0
+553c556
+<         if: i != own_excl_cell[0] && lm_compiler_own_unit_seen(i, mi) != 0 && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0
+---
+>         if: i != own_excl_cell[0] && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && lm_compiler_own_unit_seen(i, mi) != 0
+896c899
+<         if: lm_compiler_own_unit_seen(i, mi) != 0 && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0
+---
+>         if: c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && lm_compiler_own_unit_seen(i, mi) != 0

@@ -740,6 +740,23 @@ G1 boot45 (под previous_fe boot44 G2): мелкие модули 20:02 → 20
 context.lm1, frontend.c и два PE-файла). Шаг runtime G1 начался 07:12:33 UTC; G2 (под FE с изменением own-lookup — его модульные
 времена и есть измерение) ≈ 2.7 ч → terminal ≈ 10:15 UTC.
 
+**boot45 terminal: `BOOTSTRAP quick 0 failures`, BootstrapExit 0 (2026-10-29 10:18:08 UTC) — candidate45 (own-lookup: имя раньше
+`own_unit_seen`) принят whole quick; G2 продвинута (working-bundle = bundle g2; `boot45/lmxtool.exe` = инструмент G2 A69A7EE2…).** Wall
+51358 с включает ≈ 8 ч сна системы — не benchmark. Parent: `PASS bootstrap: G0 builds and tests whole G1`, `PASS G1: the tested whole
+bundle is working`, `PASS bootstrap: actual G1 builds and tests whole G2`, `PASS G2: the tested whole bundle is working`, `MANIFEST 306
+files, 0 failed`, `STAGED 306 files, 0 failed`. **G2 — первая генерация под FE с изменением** (G1 FE, = development-FE под маской PE):
+шаг frontend 07:28:08 → 10:03:12 = **9304 с** (boot44 G2 под FE без изменения: 10081 с, −7.7 %); модули (boot44 в скобках):
+p0_*→resolve 78 с (104), resolve 89 с (113), useplan 153 с (161), lower 1310 с (1493, −12.3 %), core 3085 с (3375, −8.6 %), emit 4493 с
+(4748, −5.4 %); runtime 159 с, smoke 40 с, tool 695 с; генерация 10200 с (11061, −7.8 %). Машина после сна работала медленнее
+(emit G1 — 96 мин CPU против 79 у того же кода до сна), поэтому выигрыш, вероятно, занижен; useplan −5 % против −7.6 % у
+development-FE до сна. Raw identity: G2 = G1 по `frontend.c` (712126F6… = `component-devfe45/frontend.c`), `l2_libc.o`, `driver.o`,
+`driver-observe.o` (три последних raw = boot44), `lmxtool.lm1`, `lmxtool.c`; `frontend.c` ≠ boot44 ровно четырьмя условиями. Отдельно под
+маской PE TimeDateStamp+CheckSum: `l2trans.exe` G2 = G1 = `component-devfe45/l2trans.exe` (3E57BD04…) — recipe воспроизвёл
+development-FE. Witness [cold-candidate45-boot45/](witnesses/fix238-20261027/cold-candidate45-boot45/) (terminal, оба лога, record.txt
+шагов g1/g2, bundles, tool_works, mtime-списки UTC, записи candidate45, diff варианта; 32 файла). FULL не покрыт; OPEN прежние.
+Пункты (1) и (3) порядка b0ba15ad выполнены по одному разу; дальше — вопрос Codex: следующий локальный участок по фактам (predef
+name-set — нужна ячейка состояния = правка recipe; либо `node_in` под `own_source_visible`) или шаг самосборки `bootstrap full`.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

@@ -774,6 +774,25 @@ generations in …/full45`, `GENERATION step frontend`; lmxtool PID 16952, l2tra
 полный список (56 строк) новым FE/runtime, os walk witness, сборку child + selftest, а в конце — проверки `G2's L1 is G1's bytes`, `G2's C is
 G1's bytes`, `G1 and G2 are one image apart from the link stamp`. Ожидание terminal ≈ 16:30 UTC (две генерации по ≈ 2.8–3 ч).
 
+**full45 terminal: `BOOTSTRAP full 1 failures`, BootstrapExit 1 (12:53:49 UTC, 8933 с) — G1 собрана (frontend 8639 с: lower ≈ 1310,
+core 2714, emit 4275 с — под FE boot45 G2 без сна машины −14 % к boot44; runtime 12:48:55 → 12:51:35), полный список:
+`SUITE 37 rows, 3 failures` → `FAIL generation full: the full list with the new frontend and runtime: failures 3` → `FAIL bootstrap:
+G0 builds and tests whole G1: 1`.** Witness [cold-candidate45-full45/](witnesses/fix238-20261027/cold-candidate45-full45/) (terminal, лог,
+record.txt frontend/runtime/suite, `failures.tsv`, логи упавших строк, hash-и p.lm1/p.c/p-prod.exe, записи). Три FAIL, две причины:
+(1) **`c_call_one_actual_root native root1` и `forced root1`: `driver exit 3`, `lmx: walk error: UNSUPPORTED`** (root0 даёт 7 в обоих
+режимах) — известный OPEN дефект WALKED-ROOT-C-DOOR-UNSUPPORTED (срез 171; решение Codex 2026-10-23: ожидание root1 для корня с
+C-дверью ошибочно, обходчик не исполняет C-дверь; минимальное исправление ожидания — общий выбор запускаемых roots в runner-е, не
+исключение по имени; runner тогда не расширялся по поручению автора; «пока набор корней не задаётся, root1 этой строки красные в полном
+списке»). FULL блокируется этим долгом по конструкции списка. (2) **`os_second_block_refused native: the refusal says the needle`**:
+строка `tests/l2/suite.tsv:28` ждёт `os_second_block_refused.lm2:12:1: a second os block is not supported yet (the program reads one os
+block)` (текст twin-а `l2trans.lm1:5065`, `translate_unit`, role 3); порт отказывает в той же позиции 12:1, но раньше и другим текстом —
+`lm_compiler_source_directives` (`l2_frontend_emit.lm2:531–551`) считает os-блоки источника (`os_count > 1`) и говорит «(a source unit
+reads one os block)»; в twin-е счётчика в source directives нет (его `l2_source_directives` os-блоки не считает) — расхождение порта
+(второе место порта `emit.lm2:745` повторяет текст twin-а). Дефект PORT-SECOND-OS-BLOCK-MESSAGE (OPEN). Ни одна строка не маскируется;
+перезапуск FULL только после решения Codex: (а) текст/место отказа — выровнять порт по twin-у (одна строка `emit.lm2:550`) или признать
+новый текст нормой и поправить строку списка; (б) общий выбор запускаемых roots для `runs`-строк (малое расширение `suite.lm2`, правка
+tools → candidate + rebuild инструмента) либо иное решение по строке `c_call_one_actual_root`.
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

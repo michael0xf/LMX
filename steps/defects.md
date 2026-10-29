@@ -65,6 +65,18 @@ MACHINE-HEADER-OS-GUARD на шаге header-L1.
 Закрыт 2026-10-28 03:35 UTC: инструмент candidate42 (tools-tailcut13 + core09) собран FE warm41 (`tool32-04-*`, `lmxtool-tool.exe`
 3E05BA99…) и работает (`works`: SameDigestLine 1); stage-copy candidate42 этим инструментом — 159 файлов, 0 failed.
 
+### PORT-SECOND-OS-BLOCK-MESSAGE — 2026-10-29, fable_pc (срез 238, `bootstrap full` full45 на candidate45, строка `refuses os/os_second_block_refused.lm2`), OPEN
+
+Порт frontend-а отказывает программе с двумя os-блоками в той же позиции, что twin (`os_second_block_refused.lm2:12:1`), но
+другим текстом и в другом месте: `lm_compiler_source_directives` (`src/l2src/l2_frontend_emit.lm2:531–551`) считает os-блоки
+источника (`os_count > 1`) и печатает «a second os block is not supported yet (a source unit reads one os block)»; twin
+(`dev/l2src_sandbox/l2trans.lm1:5065`, `translate_unit`, role 3) печатает «… (the program reads one os block)» и в source
+directives os-блоки не считает; второе место порта (`emit.lm2:745`, `lm_compiler_translate_unit`) повторяет текст twin-а, но
+первым срабатывает счётчик. Строка `tests/l2/suite.tsv:28` ждёт текст twin-а → в full45 `FAIL os_second_block_refused native: the
+refusal says the needle` (`failures.tsv`, witness `cold-candidate45-full45/failing-rows/os_second_block_refused-native.log`).
+Решение нормы (какой текст и какое место отказа — twin-а или порта с учётом частей) — Codex; минимальная правка порта — одна строка
+`emit.lm2:550`.
+
 ### WALKROOT-PARTS36-UNSUPPORTED — 2026-10-28, fable_pc (срез 238, witness `ordinary-source-parts36` с warm40 FE-O1), OPEN
 
 Witness `main.lm2` + `part.lm2` (директивы include/define в части, os-выбор `part_step`, root-поле части `initial`),
@@ -910,6 +922,8 @@ roots, не исключение по имени fixture или c.-голове�
 расширять runner вместо переноса). Пока набор корней не задаётся, root1 этой
 строки красные в полном списке, и это ошибка ожидания, а не рабочее C-тело.
 Отказ без места — отдельный диагностический долг.
+
+2026-10-29 (fable_pc, full45): первый `bootstrap full` с L2-портом frontend-а (candidate45) упал на этом долге по конструкции списка — `c_call_one_actual_root native/forced root1: driver exit 3`, `lmx: walk error: UNSUPPORTED` (`steps/witnesses/fix238-20261027/cold-candidate45-full45/failing-rows/`); root0 даёт 7. FULL не пройдёт, пока набор запускаемых roots строки не задаётся общим способом или строка не изменена по решению Codex.
 
 ### ARENA-RELEASE-QUADRATIC — 2026-10-23, Opus (срез 171, закрытие `lmxtool`), FIXED Verified171 `ed525146`
 

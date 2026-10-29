@@ -1,0 +1,89 @@
+# Unselected ordinary L2 port of check_docs.py exact opening assertions.
+# The three strings below are the original expected bytes, not a new norm.
+# Normal text reads retain BOM and normalize CR/CRLF as read_text(utf-8) does.
+
+fn: dc_text_file (@: path char; @@: out char; @: out_count size_t) int
+    @: raw char 0
+    size_t: count 0U
+    int: failed 0
+    out[0]: 0
+    out_count[0]: 0U
+    raw: file_read(path, @ count)
+    if: raw = 0
+        return: 1
+    failed: dt_text(raw, count, 0, out, out_count)
+    c.free(raw)
+    return: failed
+end: dc_text_file
+
+fn: dc_paragraphs (@: data char; size_t: count) size_t
+    size_t: at 0U
+    size_t: found 0U
+    size_t: result 1U
+    while: at < count
+        found: dt_find(data, count, at, "\n\n", 2U)
+        if: found = (cast: (size_t) -1)
+            break
+        result: result + 1U
+        at: found + 2U
+    ---
+    return: result
+end: dc_paragraphs
+
+fn: dc_author_opening (@: ru char; size_t: count) int
+    @: expected char 0
+    size_t: paragraph 0U
+    size_t: first 0U
+    size_t: last 0U
+    size_t: expected_count 0U
+    while: paragraph < 3U
+        if: paragraph = 0U
+            expected: "**Lingvamyxa (далее LMX) — язык, в котором программа — лексический лес примитивных массивов, связанный в динамический граф.** Эта организация самоподобно повторяется на уровне локальных акторов с физической адресацией в памяти и далее — на уровне дальних межмашинных сообщений с комплексной адресацией."
+        else:
+            if: paragraph = 1U
+                expected: "**И данные, и исполняемые тела являются массивами**, представленными одними и теми же простыми универсальными структурами; каждое исполняемое тело — полноценное абстрактное выражение."
+            else:
+                expected: "**Типизация аналитическая, на уровне лексических ветвей.** Допуск любого кандидата в аргументы любого выражения сначала проверяет используемые поля и их интерфейсы для реальных Consumer-вызовов; дополнительную аналитическую часть (`test`) программист явно задаёт в принимающем выражении. Протестированные кандидаты и проверяющие выражения однозначно идентифицируются своими физическими адресами."
+            ---
+        ---
+        last: dt_find(ru, count, first, "\n\n", 2U)
+        if: last = (cast: (size_t) -1)
+            if: paragraph < 2U
+                return: 1
+            last: count
+        ---
+        expected_count: c.strlen(expected)
+        if: last - first != expected_count || c.memcmp(ru + first, expected, expected_count) != 0
+            return: 1
+        first: last
+        if: last < count
+            first: first + 2U
+        paragraph: paragraph + 1U
+    ---
+    return: 0
+end: dc_author_opening
+
+fn: docs_opening_check (@: repo char) int
+    @: ru_path char txt_path(repo, "docs/LMX_semantics.ru.md")
+    @: en_path char txt_path(repo, "docs/LMX_semantics.en.md")
+    @: ru char 0
+    @: en char 0
+    size_t: ru_count 0U
+    size_t: en_count 0U
+    int: failed 0
+    if: ru_path = 0 || en_path = 0
+        failed: 1
+    if: failed = 0
+        failed: dc_text_file(ru_path, @ ru, @ ru_count)
+    if: failed = 0
+        failed: dc_author_opening(ru, ru_count)
+    if: failed = 0
+        failed: dc_text_file(en_path, @ en, @ en_count)
+    if: failed = 0 && dc_paragraphs(ru, ru_count) != dc_paragraphs(en, en_count)
+        failed: 1
+    c.free(ru_path)
+    c.free(en_path)
+    c.free(ru)
+    c.free(en)
+    return: failed
+end: docs_opening_check

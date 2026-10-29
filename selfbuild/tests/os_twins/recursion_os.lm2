@@ -1,0 +1,19 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: a recursive method of the selected os branch, as
+# recursion_unit.lm2's. os_fact(3) is 6 (win; os_fact(1) = 1) or 12 (default; os_fact(1) = 2).
+# Entry os_fact(3) + 1: 7 for win, 13 for default.
+os:
+    win:
+        fn: os_fact (int: n) int
+            if: n <= 1
+                return: 1
+            return: n * os_fact(n - 1)
+        end: os_fact
+    default:
+        fn: os_fact (int: n) int
+            if: n <= 1
+                return: 2
+            return: n * os_fact(n - 1)
+        end: os_fact
+end: os
+sendMessage: exit(exit_code: os_fact(3) + 1; stdout: ""; stderr: "")
+return

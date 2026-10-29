@@ -1,0 +1,25 @@
+# The os block selects its branch before anything is read for its meaning (L2 section 20; the author,
+# LMX_blog/2026-10-23.md: the unselected branch's platform includes and names are not required, not hidden by a
+# late #ifdef). The root calls os_win_only, which only the selected win branch declares; the default branch holds a
+# header no platform has (a unique sentinel) and its own os_common, and nothing named os_win_only. Translating the
+# default branch too refuses the root's call (unknown method: the gate's translate-then-hide control); including its
+# header fails the C compile (the gate's header control, the same sentinel in the selected branch). Names declared
+# nowhere in an unselected branch: os_unselected_invalid.lm2. Exit 7: 4 from os_win_only, 3 from win's os_common
+# (the default one gives 9).
+os:
+    win:
+        fn: os_win_only () int
+            return: 4
+        end: os_win_only
+        fn: os_common () int
+            return: 3
+        end: os_common
+    default:
+        include: "<l2_os_sentinel_missing_header_171.h>"
+        fn: os_common () int
+            return: 9
+        end: os_common
+end: os
+int: code (os_win_only() + os_common())
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

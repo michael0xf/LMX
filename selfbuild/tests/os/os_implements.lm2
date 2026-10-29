@@ -1,0 +1,23 @@
+# Ordinary admission at a real receiving place (L2 section 20; the author, LMX_blog/2026-10-23.md): the selected win
+# branch's os_take requires a B, and the root's A implements B (it has B's field a), so the call is admitted and
+# reads A's a through the receiving map -- 3 + 4. The default branch requires an A instead; nothing compares the
+# two. Exit 7.
+A:
+    int: a 3
+    int: b 4
+end: A
+B:
+    int: a 0
+end: B
+os:
+    win:
+        fn: os_take (B: p) int
+            return: p\a + 4
+        end: os_take
+    default:
+        fn: os_take (A: p) int
+            return: p\b + 3
+        end: os_take
+end: os
+sendMessage: exit(exit_code: os_take(A); stdout: ""; stderr: "")
+return

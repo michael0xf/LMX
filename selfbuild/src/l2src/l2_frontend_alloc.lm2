@@ -1,0 +1,462 @@
+# Ordinary L2 compiler allocation and text helpers.
+# Aliases below address the same existing compiler cells; no new state or ownership.
+predef: "l2src/l2_application.h.lm1"
+predef: "l2src/l2_frontend_helpers.h.lm1"
+include: "<stddef.h>" "<stdint.h>" "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
+
+fn: lm_compiler_xmalloc (size_t: n) @: void
+    @: fail_left_cell int (cast: (@: int) (@ c.l2_fail_left))
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    @: alloc_n_cell int (cast: (@: int) (@ c.l2_alloc_n))
+    @: alloc_live_cell int (cast: (@: int) (@ c.l2_alloc_live))
+    @: alloc_fail_at_cell int (cast: (@: int) (@ c.l2_alloc_fail_at))
+    @: alloc_fail_kind_cell int (cast: (@: int) (@ c.l2_alloc_fail_kind))
+    @: alloc_kind_cell int (cast: (@: int) (@ c.l2_alloc_kind))
+    @: p void
+    if: n = 0U
+        return: (cast: (@: void) (0))
+    if: fail_left_cell[0] > 0
+        fail_left_cell[0]: fail_left_cell[0] - 1
+        if: fail_left_cell[0] = 0
+            alloc_err_cell[0]: 1
+            alloc_fail_at_cell[0]: alloc_n_cell[0] + 1
+            alloc_fail_kind_cell[0]: alloc_kind_cell[0]
+            return: (cast: (@: void) (0))
+        ---
+    p: c.malloc(n)
+    if: p = 0
+        alloc_err_cell[0]: 1
+        alloc_fail_at_cell[0]: alloc_n_cell[0] + 1
+        alloc_fail_kind_cell[0]: alloc_kind_cell[0]
+        return: (cast: (@: void) (0))
+    alloc_n_cell[0]: alloc_n_cell[0] + 1
+    alloc_live_cell[0]: alloc_live_cell[0] + 1
+    return: (cast: (@: void) (p))
+end: lm_compiler_xmalloc
+
+fn: lm_compiler_xfree (@: p void) int
+    @: free_n_cell int (cast: (@: int) (@ c.l2_free_n))
+    @: alloc_live_cell int (cast: (@: int) (@ c.l2_alloc_live))
+    if: p = 0
+        return: (cast: (int) (0))
+    c.free(p)
+    free_n_cell[0]: free_n_cell[0] + 1
+    if: alloc_live_cell[0] > 0
+        alloc_live_cell[0]: alloc_live_cell[0] - 1
+    return: (cast: (int) (0))
+end: lm_compiler_xfree
+
+fn: lm_compiler_prep_drop (@: acts c.L2Tx; @: hides c.L2Tx) int
+    if: acts != 0
+        lm_compiler_xfree((cast: (@: void) acts))
+    if: hides != 0
+        lm_compiler_xfree((cast: (@: void) hides))
+    return: (cast: (int) (1))
+end: lm_compiler_prep_drop
+
+fn: lm_compiler_decode_triple_body (const: (@: t c.LmP0Text); @@: outp char; @: outn size_t) int
+    @: buf char 0
+    size_t: nfen
+    size_t: n
+    size_t: i 0U
+    size_t: o 0U
+    size_t: run
+    size_t: emitn
+    size_t: k
+    char: qch
+    if: outp = 0 || outn = 0
+        return: (cast: (int) (1))
+    \outp: 0
+    \outn: 0U
+    nfen: c.lm_compiler_triple_fence_n(t)
+    if: nfen = 0U || t = 0 || t\data = 0
+        return: (cast: (int) (1))
+    n: t\length - nfen - nfen
+    if: n = 0U
+        return: (cast: (int) (0))
+    buf: (cast: (@: char) lm_compiler_xmalloc(n + 1U))
+    if: buf = 0
+        return: (cast: (int) (1))
+    qch: t\data[0]
+    while: i < n
+        if: t\data[nfen + i] = qch
+            run: 0U
+            while: i + run < n && t\data[nfen + i + run] = qch
+                run: run + 1U
+            emitn: run
+            if: run >= 4U
+                emitn: run - 1U
+            k: 0U
+            while: k < emitn
+                buf[o]: qch
+                o: o + 1U
+                k: k + 1U
+            i: i + run
+            continue
+        buf[o]: t\data[nfen + i]
+        o: o + 1U
+        i: i + 1U
+    buf[o]: 0
+    \outp: buf
+    \outn: o
+    return: (cast: (int) (0))
+end: lm_compiler_decode_triple_body
+
+fn: lm_compiler_cnt_keep (const: (@: src c.LmP0Text)) @: c.LmP0Text
+    @: cnt_n_cell int (cast: (@: int) (@ c.l2_cnt_n))
+    @: cnt_cap_cell int (cast: (@: int) (@ c.l2_cnt_cap))
+    @@@: cnt_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_cnt))
+    int: i 0
+    int: cap
+    size_t: psz
+    size_t: nb
+    size_t: len
+    @@: nn c.LmP0Text 0
+    @: kept c.LmP0Text 0
+    @: bytes char 0
+    if: src = 0 || src\data = 0 || src\length = 0U
+        return: (cast: (@: c.LmP0Text) (0))
+    while: i < cnt_n_cell[0]
+        if: c.lm_compiler_text_same(cnt_cell[0][i], src)
+            return: (cast: (@: c.LmP0Text) (cnt_cell[0][i]))
+        i: i + 1
+    ---
+    cap: cnt_cap_cell[0]
+    if: cnt_n_cell[0] >= cap
+        if: cap < 1
+            cap: 4
+        ---
+        if: cap > (c.INT_MAX / 2)
+            return: (cast: (@: c.LmP0Text) (0))
+        cap: cap * 2
+        psz: sizeof(@: char)
+        if: c.lm_compiler_mul_ok((cast: (size_t) cap), psz) = 0
+            return: (cast: (@: c.LmP0Text) (0))
+        nb: (cast: (size_t) cap) * psz
+        nn: (cast: (@@: c.LmP0Text) lm_compiler_xmalloc(nb))
+        if: nn = 0
+            return: (cast: (@: c.LmP0Text) (0))
+        c.memset((cast: (@: void) nn), 0, nb)
+        if: cnt_cell[0] != 0 && cnt_n_cell[0] > 0
+            c.memcpy((cast: (@: void) nn), (cast: (@: void) cnt_cell[0]), (cast: (size_t) cnt_n_cell[0]) * psz)
+        ---
+        if: cnt_cell[0] != 0
+            lm_compiler_xfree((cast: (@: void) cnt_cell[0]))
+        ---
+        cnt_cell[0]: nn
+        cnt_cap_cell[0]: cap
+    ---
+    len: src\length
+    bytes: (cast: (@: char) lm_compiler_xmalloc(len + 1U))
+    kept: (cast: (@: c.LmP0Text) lm_compiler_xmalloc(c.sizeof(c.LmP0Text)))
+    if: bytes = 0 || kept = 0
+        if: bytes != 0
+            lm_compiler_xfree((cast: (@: void) bytes))
+        ---
+        if: kept != 0
+            lm_compiler_xfree((cast: (@: void) kept))
+        ---
+        return: (cast: (@: c.LmP0Text) (0))
+    ---
+    c.memcpy(bytes, src\data, len)
+    bytes[len]: 0
+    kept\data: bytes
+    kept\length: len
+    cnt_cell[0][cnt_n_cell[0]]: kept
+    cnt_n_cell[0]: cnt_n_cell[0] + 1
+    return: (cast: (@: c.LmP0Text) (kept))
+end: lm_compiler_cnt_keep
+
+fn: lm_compiler_cnt_free () int
+    @: cnt_n_cell int (cast: (@: int) (@ c.l2_cnt_n))
+    @: cnt_cap_cell int (cast: (@: int) (@ c.l2_cnt_cap))
+    @@@: cnt_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_cnt))
+    int: i 0
+    while: i < cnt_n_cell[0]
+        if: cnt_cell[0][i] != 0
+            if: cnt_cell[0][i]\data != 0
+                lm_compiler_xfree((cast: (@: void) cnt_cell[0][i]\data))
+            ---
+            lm_compiler_xfree((cast: (@: void) cnt_cell[0][i]))
+        ---
+        i: i + 1
+    ---
+    if: cnt_cell[0] != 0
+        lm_compiler_xfree((cast: (@: void) cnt_cell[0]))
+    ---
+    cnt_cell[0]: 0
+    cnt_n_cell[0]: 0
+    cnt_cap_cell[0]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_cnt_free
+
+fn: lm_compiler_text_clone (const: (@: t c.LmP0Text)) @: c.LmP0Text
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    @: r c.LmP0Text
+    @: bytes char
+    size_t: text_length
+    if: t = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    text_length: t\length
+    if: text_length > (cast: (size_t) -1) - c.sizeof(c.LmP0Text) - 1U
+        alloc_err_cell[0]: 2
+        return: (cast: (@: c.LmP0Text) (0))
+    r: (cast: (@: c.LmP0Text) lm_compiler_xmalloc(c.sizeof(c.LmP0Text) + text_length + 1U))
+    if: r = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    bytes: (cast: (@: char) r) + c.sizeof(c.LmP0Text)
+    r\data: bytes
+    r\length: text_length
+    c.memcpy(bytes, t\data, text_length)
+    bytes[text_length]: 0
+    return: (cast: (@: c.LmP0Text) (r))
+end: lm_compiler_text_clone
+
+fn: lm_compiler_bound_alloc (size_t: n; size_t: size) @: void
+    @: alloc_kind_cell int (cast: (@: int) (@ c.l2_alloc_kind))
+    @: bnd_mem_n_cell int (cast: (@: int) (@ c.l2_bnd_mem_n))
+    @: bnd_mem_cap_cell int (cast: (@: int) (@ c.l2_bnd_mem_cap))
+    @@@: bnd_mem_cell void (cast: (@@@: void) (@ c.l2_bnd_mem))
+    @: p void
+    @@: grown void
+    int: cap
+    if: n = 0U || size = 0U || c.lm_compiler_mul_ok(n, size) = 0
+        return: (cast: (@: void) (0))
+    if: bnd_mem_n_cell[0] >= bnd_mem_cap_cell[0]
+        cap: bnd_mem_cap_cell[0] * 2
+        if: cap < 64
+            cap: 64
+        grown: (cast: (@@: void) c.realloc((cast: (@: void) bnd_mem_cell[0]), (cast: (size_t) cap) * sizeof(@: void)))
+        if: grown = 0
+            return: (cast: (@: void) (0))
+        bnd_mem_cell[0]: grown
+        bnd_mem_cap_cell[0]: cap
+    ---
+    alloc_kind_cell[0]: 5
+    p: lm_compiler_xmalloc(n * size)
+    if: p = 0
+        return: (cast: (@: void) (0))
+    c.memset(p, 0, n * size)
+    bnd_mem_cell[0][bnd_mem_n_cell[0]]: p
+    bnd_mem_n_cell[0]: bnd_mem_n_cell[0] + 1
+    return: (cast: (@: void) (p))
+end: lm_compiler_bound_alloc
+
+fn: lm_compiler_alloc_note (const: (@: what char)) int
+    @: alloc_n_cell int (cast: (@: int) (@ c.l2_alloc_n))
+    @@: alloc_trace_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_alloc_trace))
+    const: @@(room_tag_cell char (cast: (const: @@(char)) (@ c.l2_room_tag)))
+    if: alloc_trace_cell[0] = 0
+        return: (cast: (int) (0))
+    if: room_tag_cell[0] = 0
+        c.fprintf(alloc_trace_cell[0], "%d room %s\n", alloc_n_cell[0] + 1, what)
+        return: (cast: (int) (0))
+    c.fprintf(alloc_trace_cell[0], "%d %s %s\n", alloc_n_cell[0] + 1, room_tag_cell[0], what)
+    return: (cast: (int) (0))
+end: lm_compiler_alloc_note
+
+fn: lm_compiler_text_room (size_t: need; @: local char; size_t: cap) @: char
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    @: ltx_n_cell int (cast: (@: int) (@ c.l2_ltx_n))
+    @: ltx_cap_cell int (cast: (@: int) (@ c.l2_ltx_cap))
+    @@@: ltx_cell char (cast: (@@@: char) (@ c.l2_ltx))
+    @: made char
+    @: grown void
+    int: want
+    size_t: psz
+    if: need <= cap && local != 0
+        return: (cast: (@: char) (local))
+    if: ltx_n_cell[0] >= ltx_cap_cell[0]
+        want: c.lm_compiler_cap_next(ltx_cap_cell[0], ltx_n_cell[0] + 1)
+        if: want < 0
+            alloc_err_cell[0]: 2
+            return: (cast: (@: char) (0))
+        psz: sizeof(@: char)
+        lm_compiler_alloc_note("vector")
+        grown: lm_compiler_vec_grow((cast: (@: void) ltx_cell[0]), ltx_n_cell[0], want, psz)
+        if: grown = 0
+            return: (cast: (@: char) (0))
+        ltx_cell[0]: (cast: (@@: char) grown)
+        ltx_cap_cell[0]: want
+    ---
+    lm_compiler_alloc_note("buffer")
+    made: (cast: (@: char) lm_compiler_xmalloc(need))
+    if: made = 0
+        return: (cast: (@: char) (0))
+    ltx_cell[0][ltx_n_cell[0]]: made
+    ltx_n_cell[0]: ltx_n_cell[0] + 1
+    return: (cast: (@: char) (made))
+end: lm_compiler_text_room
+
+fn: lm_compiler_tok_text (const: (@: t c.LmP0Text); @: dest char; size_t: cap) int
+    @: buf char 0
+    size_t: n 0U
+    int: rc
+    if: t = 0 || t\data = 0 || dest = 0 || cap = 0U
+        return: (cast: (int) (1))
+    if: c.lm_compiler_triple_q(t) != 0
+        if: lm_compiler_decode_triple_body(t, @ buf, @ n) != 0
+            return: (cast: (int) (1))
+        if: buf = 0
+            return: (cast: (int) (c.lm_compiler_fmt_l1_string(dest, cap, "", 0U)))
+        rc: c.lm_compiler_fmt_l1_string(dest, cap, buf, n)
+        lm_compiler_xfree((cast: (@: void) buf))
+        return: (cast: (int) (rc))
+    if: t\length + 1U > cap
+        return: (cast: (int) (1))
+    c.memcpy(dest, t\data, t\length)
+    dest[t\length]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_tok_text
+
+fn: lm_compiler_tx_room (@: t c.L2Tx; size_t: more) int
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    const: @@(room_tag_cell char (cast: (const: @@(char)) (@ c.l2_room_tag)))
+    size_t: len
+    size_t: need
+    size_t: cap
+    @: grown char
+    const: (@: previous char room_tag_cell[0])
+    if: t = 0 || t\data = 0
+        return: (cast: (int) (1))
+    len: c.lm_compiler_tx_len(t)
+    if: more > (cast: (size_t) -1) - len - 1U
+        alloc_err_cell[0]: 2
+        return: (cast: (int) (1))
+    need: len + more + 1U
+    if: need <= t\cap
+        return: (cast: (int) (0))
+    cap: t\cap
+    if: cap < 64U
+        cap: 64U
+    while: cap < need
+        if: cap > (cast: (size_t) -1) / 2U
+            cap: need
+        else:
+            cap: cap * 2U
+        ---
+    ---
+    if: room_tag_cell[0] = 0
+        room_tag_cell[0]: "text-growth"
+    grown: lm_compiler_text_room(cap, 0, 0U)
+    room_tag_cell[0]: previous
+    if: grown = 0
+        return: (cast: (int) (1))
+    c.memcpy(grown, t\data, len + 1U)
+    t\data: grown
+    t\cap: cap
+    return: (cast: (int) (0))
+end: lm_compiler_tx_room
+
+fn: lm_compiler_tx_catn (@: t c.L2Tx; const: (@: a char); size_t: n) int
+    size_t: len
+    if: t = 0 || (a = 0 && n != 0U) || lm_compiler_tx_room(t, n) != 0
+        return: (cast: (int) (1))
+    len: c.lm_compiler_tx_len(t)
+    if: n != 0U
+        c.memcpy(t\data + len, a, n)
+    t\len: len + n
+    t\data[t\len]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_tx_catn
+
+fn: lm_compiler_tx_cat (@: t c.L2Tx; const: (@: a char)) int
+    if: a = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (lm_compiler_tx_catn(t, a, c.strlen(a))))
+end: lm_compiler_tx_cat
+
+fn: lm_compiler_tx_set (@: t c.L2Tx; const: (@: a char)) int
+    if: a = 0 || c.lm_compiler_tx_clear(t) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (lm_compiler_tx_cat(t, a)))
+end: lm_compiler_tx_set
+
+fn: lm_compiler_tx_join (@: t c.L2Tx; const: (@: p1 char); const: (@: p2 char); const: (@: p3 char); const: (@: p4 char); const: (@: p5 char)) int
+    if: c.lm_compiler_tx_clear(t) != 0
+        return: (cast: (int) (1))
+    if: p1 != 0 && lm_compiler_tx_cat(t, p1) != 0
+        return: (cast: (int) (1))
+    if: p2 != 0 && lm_compiler_tx_cat(t, p2) != 0
+        return: (cast: (int) (1))
+    if: p3 != 0 && lm_compiler_tx_cat(t, p3) != 0
+        return: (cast: (int) (1))
+    if: p4 != 0 && lm_compiler_tx_cat(t, p4) != 0
+        return: (cast: (int) (1))
+    if: p5 != 0 && lm_compiler_tx_cat(t, p5) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_tx_join
+
+fn: lm_compiler_tx_wrapn (@: t c.L2Tx; const: (@: p0 char); const: (@: a char); size_t: n; const: (@: p1 char)) int
+    if: c.lm_compiler_tx_clear(t) != 0
+        return: (cast: (int) (1))
+    if: p0 != 0 && lm_compiler_tx_cat(t, p0) != 0
+        return: (cast: (int) (1))
+    if: lm_compiler_tx_catn(t, a, n) != 0
+        return: (cast: (int) (1))
+    if: p1 != 0 && lm_compiler_tx_cat(t, p1) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_tx_wrapn
+
+fn: lm_compiler_prefix_levels (@: dest c.L2Tx; size_t: levels; const: (@: a char); const: (@: b char); size_t: n) int
+    size_t: i 0U
+    if: a = 0 || c.lm_compiler_tx_clear(dest) != 0
+        return: (cast: (int) (1))
+    while: i < levels
+        if: lm_compiler_tx_cat(dest, "\\") != 0
+            return: (cast: (int) (1))
+        i: i + 1U
+    ---
+    if: lm_compiler_tx_cat(dest, a) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (lm_compiler_tx_catn(dest, b, n)))
+end: lm_compiler_prefix_levels
+
+fn: lm_compiler_tok_tx (@: t c.L2Tx; const: (@: a c.LmP0Text)) int
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    @: buf char 0
+    size_t: n 0U
+    int: rc
+    if: t = 0 || a = 0 || a\data = 0 || c.lm_compiler_tx_clear(t) != 0
+        return: (cast: (int) (1))
+    if: c.lm_compiler_triple_q(a) != 0
+        if: lm_compiler_decode_triple_body(a, @ buf, @ n) != 0
+            return: (cast: (int) (1))
+        if: n > ((cast: (size_t) -1) - 3U) / 4U
+            lm_compiler_xfree((cast: (@: void) buf))
+            alloc_err_cell[0]: 2
+            return: (cast: (int) (1))
+        if: lm_compiler_tx_room(t, n * 4U + 3U) != 0
+            lm_compiler_xfree((cast: (@: void) buf))
+            return: (cast: (int) (1))
+        if: buf = 0
+            rc: c.lm_compiler_fmt_l1_string(t\data, t\cap, "", 0U)
+        else:
+            rc: c.lm_compiler_fmt_l1_string(t\data, t\cap, buf, n)
+            lm_compiler_xfree((cast: (@: void) buf))
+        ---
+        t\len: (cast: (size_t) -1)
+        return: (cast: (int) (rc))
+    ---
+    return: (cast: (int) (lm_compiler_tx_catn(t, (cast: (const: @: char) a\data), (cast: (size_t) a\length))))
+end: lm_compiler_tok_tx
+
+fn: lm_compiler_vec_grow (@: old void; int: used; int: cap; size_t: esz) @: void
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    @: alloc_kind_cell int (cast: (@: int) (@ c.l2_alloc_kind))
+    @: made void
+    if: cap <= 0 || used < 0 || used > cap || c.lm_compiler_mul_ok((cast: (size_t) cap), esz) = 0
+        alloc_err_cell[0]: 2
+        return: (cast: (@: void) (0))
+    alloc_kind_cell[0]: 5
+    made: lm_compiler_xmalloc((cast: (size_t) cap) * esz)
+    if: made = 0
+        return: (cast: (@: void) (0))
+    if: used > 0 && old != 0
+        c.memcpy(made, old, (cast: (size_t) used) * esz)
+    if: old != 0
+        lm_compiler_xfree(old)
+    return: (cast: (@: void) (made))
+end: lm_compiler_vec_grow

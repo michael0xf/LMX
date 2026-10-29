@@ -1,0 +1,251 @@
+# Unselected ordinary L2 source port of tools/build_semantics.py.
+# This part reads protected source snapshots and chapter spans. Not a complete
+# provenance checker or CLI replacement and has not been translated/run.
+# Input is strict UTF-8 with CR/CRLF normalized by dt_text(drop_bom=0).
+
+# The common native pathname API: 1 regular file, 2 another existing
+# kind, 0 absent/stat failure, -1 no memory/invalid input. The Windows
+# adapter follows the target with native Unicode paths, not narrow stat.
+fn: sem_file_kind (@: path char) int
+    int: kind 0
+    if: path = 0
+        return: -1
+    kind: os_path_kind(path)
+    if: kind > 1
+        return: 2
+    return: kind
+end: sem_file_kind
+
+# Same external-file-or-snapshot provenance policy as the existing renderer.
+# The exact raw buffer is compared, snapshotted, hashed and split; never hash
+# a second unrelated read. Offsets point into the returned raw buffer and
+# exclude line endings/one initial UTF8 BOM. Caller owns all three results.
+# Parent makes the archive directory in render mode before calling this.
+# 0 success, 1 missing/changed/invalid/no memory/I/O error.
+fn: semantics_source_read (@: preferred char; @: snapshot char; int: check_mode; @: expected_sha char; size_t: expected_sha_count; @@: out_raw char; @: out_size size_t; @@: out_starts size_t; @@: out_lengths size_t; @: out_lines size_t; @: digest char) int
+    @: selected char snapshot
+    @: raw char 0
+    @: saved char 0
+    @: starts size_t 0
+    @: lengths size_t 0
+    size_t: raw_count 0U
+    size_t: saved_count 0U
+    size_t: lines 0U
+    size_t: limit (cast: (size_t) -1)
+    int: preferred_kind 0
+    int: snapshot_kind 0
+    int: failed 0
+    if: preferred = 0 || snapshot = 0 || out_raw = 0 || out_size = 0 || out_starts = 0 || out_lengths = 0 || out_lines = 0 || digest = 0
+        return: 1
+    out_raw[0]: 0
+    out_size[0]: 0U
+    out_starts[0]: 0
+    out_lengths[0]: 0
+    out_lines[0]: 0U
+    preferred_kind: sem_file_kind(preferred)
+    if: preferred_kind < 0
+        return: 1
+    if: preferred_kind = 1
+        selected: preferred
+    raw: file_read(selected, @ raw_count)
+    if: raw = 0
+        return: 1
+    snapshot_kind: sem_file_kind(snapshot)
+    if: snapshot_kind < 0
+        failed: 1
+    if: snapshot_kind > 0
+        saved: file_read(snapshot, @ saved_count)
+        if: saved = 0
+            failed: 1
+        else:
+            if: saved_count != raw_count || c.memcmp(saved, raw, raw_count) != 0
+                failed: 1
+            ---
+        ---
+    ---
+    c.free(saved)
+    if: check_mode != 0 && snapshot_kind != 1
+        failed: 1
+    if: failed = 0 && check_mode = 0
+        failed: file_write(snapshot, raw, raw_count)
+    if: failed = 0
+        failed: sha256_bytes(raw, raw_count, digest)
+    if: failed = 0 && check_mode != 0
+        if: expected_sha = 0 || expected_sha_count != 64U
+            failed: 1
+        else:
+            if: c.memcmp(digest, expected_sha, 64U) != 0
+                failed: 1
+            ---
+        ---
+    ---
+    if: failed = 0
+        failed: dt_lines(raw, raw_count, 1, 0, 0, 0U, @ lines)
+    limit: limit / c.sizeof(c.size_t)
+    if: lines >= limit
+        failed: 1
+    if: failed = 0
+        starts: c.calloc(lines + 1U, c.sizeof(c.size_t))
+        lengths: c.calloc(lines + 1U, c.sizeof(c.size_t))
+        if: starts = 0 || lengths = 0
+            failed: 1
+        ---
+    ---
+    if: failed = 0
+        failed: dt_lines(raw, raw_count, 1, starts, lengths, lines, @ lines)
+    if: failed != 0
+        c.free(starts)
+        c.free(lengths)
+        c.free(raw)
+        return: 1
+    ---
+    out_raw[0]: raw
+    out_size[0]: raw_count
+    out_starts[0]: starts
+    out_lengths[0]: lengths
+    out_lines[0]: lines
+    return: 0
+end: semantics_source_read
+
+# Next exact re.M '^@@ (.+)$' header. The header's trailing LF is not consumed.
+# 1 found, 0 absent. Offsets are bytes in the caller-owned complete book.
+fn: sem_next_header (@: data char; size_t: count; size_t: begin; @: header_at size_t; @: header_end size_t) int
+    size_t: scan begin
+    size_t: found 0U
+    size_t: line_end 0U
+    while: scan < count
+        found: dt_find(data, count, scan, "@@ ", 3U)
+        if: found = (cast: (size_t) -1)
+            return: 0
+        if: (found = 0U || data[found - 1U] = (cast: (char) 10)) && count - found > 3U && data[found + 3U] != (cast: (char) 10)
+            line_end: dt_find(data, count, found + 3U, "\n", 1U)
+            if: line_end = (cast: (size_t) -1)
+                line_end: count
+            ---
+            header_at[0]: found
+            header_end[0]: line_end
+            return: 1
+        ---
+        scan: found + 1U
+    ---
+    return: 0
+end: sem_next_header
+
+# Four pipe-delimited header fields, each with Python Unicode strip. Stored
+# as [start,length] pairs: id, RU title, EN title, source_sections/origin.
+fn: sem_header_fields (@: data char; size_t: header_at; size_t: header_end; @: fields size_t) int
+    size_t: column_at header_at + 3U
+    size_t: column_end 0U
+    size_t: found 0U
+    size_t: trim_begin 0U
+    size_t: trim_end 0U
+    size_t: column 0U
+    while: column < 4U
+        found: dt_find(data, header_end, column_at, "|", 1U)
+        if: (column < 3U && found = (cast: (size_t) -1)) || (column = 3U && found != (cast: (size_t) -1))
+            return: 1
+        ---
+        column_end: found
+        if: column = 3U
+            column_end: header_end
+        if: dt_trim(data + column_at, column_end - column_at, 1, 1, @ trim_begin, @ trim_end) != 0
+            return: 1
+        ---
+        fields[2U * column]: column_at + trim_begin
+        fields[2U * column + 1U]: trim_end - trim_begin
+        column_at: column_end
+        if: column < 3U
+            column_at: column_at + 1U
+        column: column + 1U
+    ---
+    return: 0
+end: sem_header_fields
+
+# Caller owns flat 12-cell chapter rows. First8 cells are header fields,
+# then [RU start,length,EN start,length]. No strings are rewritten or copied.
+# Retains exact marker, nonempty chapter collection and duplicate-id checks.
+fn: semantics_book_read (@: data char; size_t: count; @@: out size_t; @: chapter_count size_t) int
+    @: chapters size_t 0
+    @: row size_t 0
+    size_t: number 0U
+    size_t: header_at 0U
+    size_t: header_end 0U
+    size_t: next_at 0U
+    size_t: next_end 0U
+    size_t: scan 0U
+    size_t: at 0U
+    size_t: prior 0U
+    size_t: en_at 0U
+    size_t: body_end 0U
+    size_t: trim_begin 0U
+    size_t: trim_end 0U
+    size_t: limit (cast: (size_t) -1)
+    int: failed 0
+    int: has_next 0
+    if: data = 0 || out = 0 || chapter_count = 0
+        return: 1
+    out[0]: 0
+    chapter_count[0]: 0U
+    if: dj_utf8(data, count) != 0
+        return: 1
+    while: sem_next_header(data, count, scan, @ header_at, @ header_end) != 0
+        number: number + 1U
+        scan: header_end
+    ---
+    limit: limit / c.sizeof(c.size_t) / 12U
+    if: number = 0U || number > limit
+        return: 1
+    chapters: c.calloc(12U * number, c.sizeof(c.size_t))
+    if: chapters = 0
+        return: 1
+    sem_next_header(data, count, 0U, @ header_at, @ header_end)
+    while: at < number && failed = 0
+        row: chapters + 12U * at
+        failed: sem_header_fields(data, header_at, header_end, row)
+        has_next: sem_next_header(data, count, header_end, @ next_at, @ next_end)
+        body_end: count
+        if: has_next != 0
+            body_end: next_at
+        if: failed = 0
+            if: body_end - header_end < 6U || c.memcmp(data + header_end, "\n[RU]\n", 6U) != 0
+                failed: 1
+            else:
+                en_at: dt_find(data, body_end, header_end + 6U, "\n[EN]\n", 6U)
+                if: en_at = (cast: (size_t) -1)
+                    failed: 1
+                ---
+            ---
+        ---
+        if: failed = 0
+            failed: dt_trim(data + header_end + 6U, en_at - header_end - 6U, 1, 1, @ trim_begin, @ trim_end)
+            row[8]: header_end + 6U + trim_begin
+            row[9]: trim_end - trim_begin
+            if: failed = 0
+                failed: dt_trim(data + en_at + 6U, body_end - en_at - 6U, 1, 1, @ trim_begin, @ trim_end)
+                row[10]: en_at + 6U + trim_begin
+                row[11]: trim_end - trim_begin
+            ---
+        ---
+        header_at: next_at
+        header_end: next_end
+        at: at + 1U
+    ---
+    at: 0U
+    while: at < number && failed = 0
+        row: chapters + 12U * at
+        prior: 0U
+        while: prior < at && failed = 0
+            if: chapters[12U * prior + 1U] = row[1] && c.memcmp(data + chapters[12U * prior], data + row[0], row[1]) = 0
+                failed: 1
+            prior: prior + 1U
+        ---
+        at: at + 1U
+    ---
+    if: failed != 0
+        c.free(chapters)
+        return: 1
+    ---
+    out[0]: chapters
+    chapter_count[0]: number
+    return: 0
+end: semantics_book_read

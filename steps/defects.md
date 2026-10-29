@@ -4,6 +4,19 @@
 
 ## Текущие и недавно закрытые
 
+### DOCS-L3-SEMANTICS-VERIFY-EXIT — 2026-10-29, Codex (срез239, существующий `docs verify semantics` boot45 G2), OPEN
+
+Языковой tool boot45 G2 (`A69A7EE2…`) с опубликованными неизменными source-bytes candidate45 возвращает exit1
+как для `docs check`, так и для изолированного `docs verify semantics`. Последний режим содержит только первую
+семантическую фазу общего checker-а (`selfbuild/tools/docs_check.lm2:39–62`, `docs_control.lm2:86`); более поздние
+grammar/link/EOL проверки этим запуском не подтверждены. Конкретная фаза отказа не печатается, хотя внутренний
+`phase` предусмотрен. Предпочтённые авторские исходники побайтно совпадают с архивами `provenance/semantics-sources/`
+(SHA256 `BDB1A641…`/`D4BB1E70…`), поэтому изменённые внешние source-bytes не объясняют отказ. Команды, tool hash,
+логи и границы — [пакет239](witnesses/fix239-20261029/notes.md).
+
+Это наблюдаемый отказ существующей перенесённой tooling-ветки, не повод заменять её Python fallback или выдавать
+docs check за PASS. Диагноз/минимальное исправление — Codex; живой fe46 и очередь full46 не перезапускаются ради него.
+
 ### RECIPE-MACHINE-MODULE-BOUND — 2026-10-28, fable_pc (срез 238, bootstrap quick candidate42, G0 → G1 frontend), CLOSED 2026-10-28 12:36 UTC — boot43 (cold candidate43, recipe-bounds10: 21 600 000 мс на машинный модуль, 86 400 000 мс на child) прошёл `BOOTSTRAP quick 0 failures`; максимальный модуль emit 6001 с, child G2 11815 с — границы не достигнуты
 
 Located limit recipe: `bld_machine_module` (tools/build.lm2:801) ограничивает перевод одного машинного модуля

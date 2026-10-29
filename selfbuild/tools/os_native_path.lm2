@@ -1,0 +1,25 @@
+# Unselected shared native pathname conversion of the existing L2 tools.
+# Bodies are moved verbatim from lmxtool, not a new layout/parser/ABI.
+# The main tool and its child both compile this ordinary source part.
+include: "<stdlib.h>"
+os:
+    win:
+        include: "<windows.h>"
+        fn: os_native (@: s char) @: c.void
+            int: n c.MultiByteToWideChar(c.CP_UTF8, c.MB_ERR_INVALID_CHARS, s, -1, 0, 0)
+            @: w c.WCHAR 0
+            if: n <= 0
+                return: 0
+            w: c.calloc((cast: (size_t) n), c.sizeof(c.WCHAR))
+            if: w = 0
+                return: 0
+            if: c.MultiByteToWideChar(c.CP_UTF8, c.MB_ERR_INVALID_CHARS, s, -1, w, n) != n
+                c.free(w)
+                return: 0
+            return: (cast: (@: void) w)
+        end: os_native
+    default:
+        fn: os_native (@: s char) @: c.void
+            return: (cast: (@: void) txt_dup(s))
+        end: os_native
+end: os

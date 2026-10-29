@@ -1,0 +1,249 @@
+# Unselected ordinary L2 equality for the semantic provenance inventory.
+# Compares decoded strings, ordered arrays and unordered last-key-wins objects.
+# Generated counters are integers bounded by file_read's existing text limit;
+# saved numeric spelling/booleans follow json.loads/Python numeric equality.
+# This is not byte equality and does not impose ordering on saved object keys.
+
+# Byte-length key lookup; embedded NUL cannot alias a shorter property.
+# Documents have already passed dj_document. Last duplicate key wins.
+fn: de_property (@: data char; size_t: count; size_t: object_at; @: key char; size_t: key_count; @: first size_t; @: last size_t) int
+    @: decoded char 0
+    size_t: decoded_count 0U
+    size_t: pos dj_ws(data, count, object_at + 1U)
+    size_t: value_at 0U
+    size_t: value_after 0U
+    int: found 0
+    if: object_at >= count || data[object_at] != (cast: (char) 123)
+        return: -1
+    while: pos < count && data[pos] != (cast: (char) 125)
+        if: dj_string(data, count, pos, @ decoded, @ decoded_count, @ pos) != 0
+            return: -1
+        pos: dj_ws(data, count, pos)
+        if: pos >= count || data[pos] != (cast: (char) 58)
+            c.free(decoded)
+            return: -1
+        value_at: dj_ws(data, count, pos + 1U)
+        if: dj_span(data, count, value_at, @ value_after) = 0
+            c.free(decoded)
+            return: -1
+        if: decoded_count = key_count && c.memcmp(decoded, key, key_count) = 0
+            first[0]: value_at
+            last[0]: value_after
+            found: 1
+        c.free(decoded)
+        decoded: 0
+        pos: dj_ws(data, count, value_after)
+        if: pos < count && data[pos] = (cast: (char) 44)
+            pos: dj_ws(data, count, pos + 1U)
+        else:
+            if: pos >= count || data[pos] != (cast: (char) 125)
+                return: -1
+            break
+        ---
+    ---
+    return: found
+end: de_property
+
+fn: de_uint (@: data char; size_t: first; size_t: last; @: value size_t) int
+    size_t: pos first
+    size_t: result 0U
+    size_t: digit 0U
+    size_t: limit (cast: (size_t) -1)
+    int: negative 0
+    if: pos < last && data[pos] = (cast: (char) 45)
+        negative: 1
+        pos: pos + 1U
+    if: pos >= last
+        return: 0
+    while: pos < last
+        if: data[pos] < (cast: (char) 48) || data[pos] > (cast: (char) 57)
+            return: 0
+        digit: (cast: (size_t) (data[pos] - (cast: (char) 48)))
+        if: result > (limit - digit) / 10U
+            return: 0
+        result: result * 10U + digit
+        pos: pos + 1U
+    ---
+    if: negative != 0 && result != 0U
+        return: 0
+    value[0]: result
+    return: 1
+end: de_uint
+
+# Actual integer tokens are exact, not rounded through double. A token with
+# fraction/exponent is first rounded to binary64, as json.loads does by default.
+# Overflow/underflow of that float are numeric results, not schema errors.
+fn: de_number_with_float (@: expected char; size_t: efirst; size_t: elast; @: actual char; size_t: afirst; size_t: alast; int: actual_kind; c.double: number) int
+    size_t: wanted 0U
+    size_t: got 0U
+    size_t: scan afirst
+    @: spelling char 0
+    @: stopped char 0
+    int: floating 0
+    int: same 0
+    if: de_uint(expected, efirst, elast, @ wanted) = 0
+        return: 0
+    if: actual_kind = 5
+        return: (cast: (int) (wanted = 1U))
+    if: actual_kind = 6
+        return: (cast: (int) (wanted = 0U))
+    if: actual_kind != 4
+        return: 0
+    while: scan < alast
+        if: actual[scan] = (cast: (char) 46) || actual[scan] = (cast: (char) 101) || actual[scan] = (cast: (char) 69)
+            floating: 1
+        scan: scan + 1U
+    ---
+    if: floating = 0
+        if: de_uint(actual, afirst, alast, @ got) = 0
+            return: 0
+        return: (cast: (int) (wanted = got))
+    ---
+    spelling: txt_ndup(actual + afirst, alast - afirst)
+    if: spelling = 0
+        return: -1
+    number: (cast: (c.double) c.strtod(spelling, @ stopped))
+    if: stopped = spelling + (alast - afirst) && wanted <= text_limit() && number = (cast: (c.double) wanted)
+        same: 1
+    c.free(spelling)
+    return: same
+end: de_number_with_float
+
+# Existing native scalar formal, not a by-value language-double local.
+fn: de_number (@: expected char; size_t: efirst; size_t: elast; @: actual char; size_t: afirst; size_t: alast; int: actual_kind) int
+    return: de_number_with_float(expected, efirst, elast, actual, afirst, alast, actual_kind, (cast: (c.double) 0))
+end: de_number
+
+# For each key on both sides, compare the final value once in the first pass
+# and verify membership in the reverse pass. Earlier duplicate values do not
+# count as extra keys. No strcmp is used for decoded JSON member names.
+fn: de_object (@: expected char; size_t: expected_count; size_t: expected_at; @: actual char; size_t: actual_count; size_t: actual_at) int
+    @: data char expected
+    @: other char actual
+    @: key char 0
+    size_t: count expected_count
+    size_t: other_count actual_count
+    size_t: object_at expected_at
+    size_t: other_at actual_at
+    size_t: pos 0U
+    size_t: key_count 0U
+    size_t: first 0U
+    size_t: last 0U
+    size_t: own_first 0U
+    size_t: own_last 0U
+    size_t: member_after 0U
+    int: phase 0
+    int: found 0
+    int: same 0
+    while: phase < 2
+        pos: dj_ws(data, count, object_at + 1U)
+        while: pos < count && data[pos] != (cast: (char) 125)
+            if: dj_string(data, count, pos, @ key, @ key_count, @ pos) != 0
+                return: -1
+            pos: dj_ws(data, count, pos)
+            if: pos >= count || data[pos] != (cast: (char) 58)
+                c.free(key)
+                return: -1
+            pos: dj_ws(data, count, pos + 1U)
+            if: dj_span(data, count, pos, @ member_after) = 0
+                c.free(key)
+                return: -1
+            found: de_property(other, other_count, other_at, key, key_count, @ first, @ last)
+            if: found != 1
+                c.free(key)
+                if: found < 0
+                    return: -1
+                return: 0
+            ---
+            if: phase = 0
+                found: de_property(data, count, object_at, key, key_count, @ own_first, @ own_last)
+                if: found != 1
+                    c.free(key)
+                    return: -1
+                same: de_value(data, count, own_first, own_last, other, other_count, first, last)
+                if: same != 1
+                    c.free(key)
+                    return: same
+                ---
+            ---
+            c.free(key)
+            key: 0
+            pos: dj_ws(data, count, member_after)
+            if: pos < count && data[pos] = (cast: (char) 44)
+                pos: dj_ws(data, count, pos + 1U)
+            ---
+        ---
+        data: actual
+        count: actual_count
+        object_at: actual_at
+        other: expected
+        other_count: expected_count
+        other_at: expected_at
+        phase: phase + 1
+    ---
+    return: 1
+end: de_object
+
+fn: de_value (@: expected char; size_t: expected_count; size_t: efirst; size_t: elast; @: actual char; size_t: actual_count; size_t: afirst; size_t: alast) int
+    @: evalue char 0
+    @: avalue char 0
+    size_t: ecount 0U
+    size_t: acount 0U
+    size_t: eafter 0U
+    size_t: aafter 0U
+    size_t: epos 0U
+    size_t: apos 0U
+    int: ekind 0
+    int: akind 0
+    int: same 0
+    if: elast - efirst = alast - afirst && c.memcmp(expected + efirst, actual + afirst, elast - efirst) = 0
+        return: 1
+    ekind: dj_span(expected, expected_count, efirst, @ eafter)
+    akind: dj_span(actual, actual_count, afirst, @ aafter)
+    if: ekind = 0 || akind = 0 || eafter != elast || aafter != alast
+        return: -1
+    if: ekind = 4
+        return: de_number(expected, efirst, elast, actual, afirst, alast, akind)
+    if: ekind != akind
+        return: 0
+    if: ekind = 1
+        if: dj_string(expected, expected_count, efirst, @ evalue, @ ecount, @ eafter) != 0
+            return: -1
+        if: dj_string(actual, actual_count, afirst, @ avalue, @ acount, @ aafter) != 0
+            c.free(evalue)
+            return: -1
+        same: (cast: (int) (ecount = acount && c.memcmp(evalue, avalue, ecount) = 0))
+        c.free(evalue)
+        c.free(avalue)
+        return: same
+    ---
+    if: ekind = 2
+        return: de_object(expected, expected_count, efirst, actual, actual_count, afirst)
+    if: ekind = 3
+        epos: dj_ws(expected, expected_count, efirst + 1U)
+        apos: dj_ws(actual, actual_count, afirst + 1U)
+        while: expected[epos] != (cast: (char) 93) && actual[apos] != (cast: (char) 93)
+            if: dj_span(expected, expected_count, epos, @ eafter) = 0 || dj_span(actual, actual_count, apos, @ aafter) = 0
+                return: -1
+            same: de_value(expected, expected_count, epos, eafter, actual, actual_count, apos, aafter)
+            if: same != 1
+                return: same
+            if: dj_array_next(expected, expected_count, eafter, @ epos) != 0 || dj_array_next(actual, actual_count, aafter, @ apos) != 0
+                return: -1
+        ---
+        return: (cast: (int) (expected[epos] = (cast: (char) 93) && actual[apos] = (cast: (char) 93)))
+    ---
+    # Different spellings of true/false/null do not exist in standard JSON.
+    return: 0
+end: de_value
+
+# 1 equal,0 mismatch,-1 invalid/I/O/allocation. Caller reports ordinary exit1.
+fn: docs_inventory_equal (@: expected char; size_t: expected_count; @: actual char; size_t: actual_count) int
+    size_t: efirst 0U
+    size_t: elast 0U
+    size_t: afirst 0U
+    size_t: alast 0U
+    if: dj_document(expected, expected_count, @ efirst, @ elast) != 2 || dj_document(actual, actual_count, @ afirst, @ alast) != 2
+        return: -1
+    return: de_value(expected, expected_count, efirst, elast, actual, actual_count, afirst, alast)
+end: docs_inventory_equal

@@ -1,0 +1,385 @@
+# Unselected ordinary L2 documentation-tool part; not yet compiled or run.
+# Port of the SequenceMatcher path used by tools/build_semantics.py:
+# isjunk=None, autojunk=False. Lines have explicit byte lengths. No generic
+# LCS, prefix stripping, junk filtering or alternative diff is substituted.
+# CPython 3.14 difflib.py 7E447DB5885DD050B1D2EA7C8CB4357490B01342823DD6B956AAA441B47C077E.
+# Changes: ordinary L2 arrays replace Python dictionaries/lists; exact byte
+# equality replaces Python string equality after the caller's UTF-8 split;
+# only the used no-junk/no-autojunk mode and opcode result are retained.
+# Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
+#
+# PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
+#
+# 1. This LICENSE AGREEMENT is between the Python Software Foundation
+# ("PSF"), and the Individual or Organization ("Licensee") accessing and
+# otherwise using this software ("Python") in source or binary form and
+# its associated documentation.
+#
+# 2. Subject to the terms and conditions of this License Agreement, PSF hereby
+# grants Licensee a nonexclusive, royalty-free, world-wide license to reproduce,
+# analyze, test, perform and/or display publicly, prepare derivative works,
+# distribute, and otherwise use Python alone or in any derivative version,
+# provided, however, that PSF's License Agreement and PSF's notice of copyright,
+# i.e., "Copyright (c) 2001 Python Software Foundation; All Rights Reserved"
+# are retained in Python alone or in any derivative version prepared by Licensee.
+#
+# 3. In the event Licensee prepares a derivative work that is based on
+# or incorporates Python or any part thereof, and wants to make
+# the derivative work available to others as provided herein, then
+# Licensee hereby agrees to include in any such work a brief summary of
+# the changes made to Python.
+#
+# 4. PSF is making Python available to Licensee on an "AS IS"
+# basis. PSF MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR
+# IMPLIED. BY WAY OF EXAMPLE, BUT NOT LIMITATION, PSF MAKES NO AND
+# DISCLAIMS ANY REPRESENTATION OR WARRANTY OF MERCHANTABILITY OR FITNESS
+# FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF PYTHON WILL NOT
+# INFRINGE ANY THIRD PARTY RIGHTS.
+#
+# 5. PSF SHALL NOT BE LIABLE TO LICENSEE OR ANY OTHER USERS OF PYTHON
+# FOR ANY INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES OR LOSS AS
+# A RESULT OF MODIFYING, DISTRIBUTING, OR OTHERWISE USING PYTHON,
+# OR ANY DERIVATIVE THEREOF, EVEN IF ADVISED OF THE POSSIBILITY THEREOF.
+#
+# 6. This License Agreement will automatically terminate upon a material
+# breach of its terms and conditions.
+#
+# 7. Nothing in this License Agreement shall be deemed to create any
+# relationship of agency, partnership, or joint venture between PSF and
+# Licensee. This License Agreement does not grant permission to use PSF
+# trademarks or trade name in a trademark sense to endorse or promote
+# products or services of Licensee, or any third party.
+#
+# 8. By copying, installing or otherwise using Python, Licensee
+# agrees to be bound by the terms and conditions of this License
+# Agreement.
+
+fn: dm_line_equal (@@: left char; @: left_lengths size_t; size_t: left_at; @@: right char; @: right_lengths size_t; size_t: right_at) int
+    if: left_lengths[left_at] != right_lengths[right_at]
+        return: 0
+    if: left_lengths[left_at] = 0U
+        return: 1
+    if: c.memcmp(left[left_at], right[right_at], left_lengths[left_at]) = 0
+        return: 1
+    return: 0
+end: dm_line_equal
+
+fn: dm_hash_line (@: data char; size_t: count) unsigned
+    unsigned: hash 2166136261U
+    size_t: scan 0U
+    while: scan < count
+        hash: (hash ^ ((cast: (unsigned) data[scan]) & 255U)) * 16777619U
+        scan: scan + 1U
+    ---
+    return: hash
+end: dm_hash_line
+
+# Increasing B occurrence chains, including blank and popular lines. A local
+# dictionary avoids scanning every B line per key. Hash collisions always
+# compare the complete bytes; the relation is exact, never hash-only.
+fn: dm_chains (@@: left char; @: left_lengths size_t; size_t: left_count; @@: right char; @: right_lengths size_t; size_t: right_count; @: heads size_t; @: following size_t) int
+    @: chain_table size_t 0
+    size_t: left_at 0U
+    size_t: right_at right_count
+    size_t: table_count 2U
+    size_t: bucket 0U
+    size_t: limit (cast: (size_t) -1)
+    limit: limit / c.sizeof(c.size_t) / 4U
+    if: right_count >= limit
+        return: 1
+    while: table_count < 2U * (right_count + 1U)
+        table_count: table_count * 2U
+    chain_table: c.calloc(table_count, c.sizeof(c.size_t))
+    if: chain_table = 0
+        return: 1
+    while: right_at > 0U
+        right_at: right_at - 1U
+        bucket: (cast: (size_t) dm_hash_line(right[right_at], right_lengths[right_at])) & (table_count - 1U)
+        while: chain_table[bucket] != 0U
+            if: dm_line_equal(right, right_lengths, right_at, right, right_lengths, chain_table[bucket] - 1U) != 0
+                break
+            bucket: (bucket + 1U) & (table_count - 1U)
+        ---
+        following[right_at]: (cast: (size_t) -1)
+        if: chain_table[bucket] != 0U
+            following[right_at]: chain_table[bucket] - 1U
+        chain_table[bucket]: right_at + 1U
+    ---
+    while: left_at < left_count
+        heads[left_at]: (cast: (size_t) -1)
+        bucket: (cast: (size_t) dm_hash_line(left[left_at], left_lengths[left_at])) & (table_count - 1U)
+        while: chain_table[bucket] != 0U
+            if: dm_line_equal(left, left_lengths, left_at, right, right_lengths, chain_table[bucket] - 1U) != 0
+                heads[left_at]: chain_table[bucket] - 1U
+                break
+            bucket: (bucket + 1U) & (table_count - 1U)
+        ---
+        left_at: left_at + 1U
+    ---
+    c.free(chain_table)
+    return: 0
+end: dm_chains
+
+# Same increasing i/j order and strictly-greater update as find_longest_match.
+# work_a and work_b are distinct rows of right_count+1 size_t cells.
+fn: dm_longest (@@: left char; @: left_lengths size_t; @@: right char; @: right_lengths size_t; size_t: right_count; @: heads size_t; @: following size_t; size_t: left_lo; size_t: left_hi; size_t: right_lo; size_t: right_hi; @: work_a size_t; @: work_b size_t; @: found size_t) int
+    @: previous size_t work_a
+    @: current size_t work_b
+    @: swap_row size_t 0
+    size_t: left_at left_lo
+    size_t: right_at 0U
+    size_t: run 0U
+    size_t: best_left left_lo
+    size_t: best_right right_lo
+    size_t: best_count 0U
+    c.memset(previous, 0, (right_count + 1U) * c.sizeof(c.size_t))
+    while: left_at < left_hi
+        c.memset(current, 0, (right_count + 1U) * c.sizeof(c.size_t))
+        right_at: heads[left_at]
+        while: right_at != (cast: (size_t) -1)
+            if: right_at >= right_hi
+                break
+            if: right_at >= right_lo
+                run: previous[right_at] + 1U
+                current[right_at + 1U]: run
+                if: run > best_count
+                    best_left: left_at - run + 1U
+                    best_right: right_at - run + 1U
+                    best_count: run
+                ---
+            ---
+            right_at: following[right_at]
+        ---
+        swap_row: previous
+        previous: current
+        current: swap_row
+        left_at: left_at + 1U
+    ---
+    while: best_left > left_lo && best_right > right_lo
+        if: dm_line_equal(left, left_lengths, best_left - 1U, right, right_lengths, best_right - 1U) = 0
+            break
+        best_left: best_left - 1U
+        best_right: best_right - 1U
+        best_count: best_count + 1U
+    ---
+    while: best_left + best_count < left_hi && best_right + best_count < right_hi
+        if: dm_line_equal(left, left_lengths, best_left + best_count, right, right_lengths, best_right + best_count) = 0
+            break
+        best_count: best_count + 1U
+    ---
+    found[0]: best_left
+    found[1]: best_right
+    found[2]: best_count
+    return: 0
+end: dm_longest
+
+# Lexicographic triples, followed by adjacency collapse on BOTH axes and the
+# one (len(a),len(b),0) sentinel. Sorting is local; no callback or global state.
+fn: dm_sort_merge (@: triples size_t; size_t: count; size_t: left_count; size_t: right_count) size_t
+    size_t: at 1U
+    size_t: insert_at 0U
+    size_t: scan 0U
+    size_t: x 0U
+    size_t: y 0U
+    size_t: run 0U
+    size_t: old_x 0U
+    size_t: old_y 0U
+    size_t: old_run 0U
+    size_t: used 0U
+    int: later 0
+    while: at < count
+        x: triples[3U * at]
+        y: triples[3U * at + 1U]
+        run: triples[3U * at + 2U]
+        insert_at: at
+        while: insert_at > 0U
+            scan: 3U * (insert_at - 1U)
+            later: (cast: (int) (triples[scan] > x || (triples[scan] = x && (triples[scan + 1U] > y || (triples[scan + 1U] = y && triples[scan + 2U] > run)))))
+            if: later = 0
+                break
+            triples[scan + 3U]: triples[scan]
+            triples[scan + 4U]: triples[scan + 1U]
+            triples[scan + 5U]: triples[scan + 2U]
+            insert_at: insert_at - 1U
+        ---
+        triples[3U * insert_at]: x
+        triples[3U * insert_at + 1U]: y
+        triples[3U * insert_at + 2U]: run
+        at: at + 1U
+    ---
+    at: 0U
+    while: at < count
+        x: triples[3U * at]
+        y: triples[3U * at + 1U]
+        run: triples[3U * at + 2U]
+        if: old_x + old_run = x && old_y + old_run = y
+            old_run: old_run + run
+        else:
+            if: old_run != 0U
+                triples[3U * used]: old_x
+                triples[3U * used + 1U]: old_y
+                triples[3U * used + 2U]: old_run
+                used: used + 1U
+            ---
+            old_x: x
+            old_y: y
+            old_run: run
+        ---
+        at: at + 1U
+    ---
+    if: old_run != 0U
+        triples[3U * used]: old_x
+        triples[3U * used + 1U]: old_y
+        triples[3U * used + 2U]: old_run
+        used: used + 1U
+    ---
+    triples[3U * used]: left_count
+    triples[3U * used + 1U]: right_count
+    triples[3U * used + 2U]: 0U
+    return: used + 1U
+end: dm_sort_merge
+
+# Result: flat [tag,i1,i2,j1,j2] cells owned by the caller. Tags: replace1,
+# delete2, insert3, equal4. Indices are zero-based half-open, including empty
+# insertion/deletion spans. 0 success, 1 allocation/size/input failure.
+fn: docs_match_opcodes (@@: left char; @: left_lengths size_t; size_t: left_count; @@: right char; @: right_lengths size_t; size_t: right_count; @@: out size_t; @: out_count size_t) int
+    @: heads size_t 0
+    @: following size_t 0
+    @: work_a size_t 0
+    @: work_b size_t 0
+    @: queue size_t 0
+    @: triples size_t 0
+    @: result size_t 0
+    @: found size_t 0
+    size_t: bound left_count
+    size_t: limit (cast: (size_t) -1)
+    size_t: queued 0U
+    size_t: matches 0U
+    size_t: used 0U
+    size_t: left_lo 0U
+    size_t: left_hi 0U
+    size_t: right_lo 0U
+    size_t: right_hi 0U
+    size_t: x 0U
+    size_t: y 0U
+    size_t: run 0U
+    size_t: at 0U
+    size_t: previous_left 0U
+    size_t: previous_right 0U
+    size_t: tag 0U
+    int: failed 0
+    if: out = 0 || out_count = 0
+        return: 1
+    out[0]: 0
+    out_count[0]: 0U
+    if: (left_count != 0U && (left = 0 || left_lengths = 0)) || (right_count != 0U && (right = 0 || right_lengths = 0))
+        return: 1
+    ---
+    limit: limit / c.sizeof(c.size_t) / 10U
+    if: left_count >= limit || right_count >= limit
+        return: 1
+    if: right_count < bound
+        bound: right_count
+    bound: bound + 1U
+    heads: c.calloc(left_count + 1U, c.sizeof(c.size_t))
+    following: c.calloc(right_count + 1U, c.sizeof(c.size_t))
+    work_a: c.calloc(right_count + 1U, c.sizeof(c.size_t))
+    work_b: c.calloc(right_count + 1U, c.sizeof(c.size_t))
+    queue: c.calloc(4U * bound, c.sizeof(c.size_t))
+    triples: c.calloc(3U * bound, c.sizeof(c.size_t))
+    result: c.calloc(10U * bound, c.sizeof(c.size_t))
+    found: c.calloc(3U, c.sizeof(c.size_t))
+    if: heads = 0 || following = 0 || work_a = 0 || work_b = 0 || queue = 0 || triples = 0 || result = 0 || found = 0
+        failed: 1
+    ---
+    if: failed = 0
+        failed: dm_chains(left, left_lengths, left_count, right, right_lengths, right_count, heads, following)
+    ---
+    if: failed = 0
+        queue[0]: 0U
+        queue[1]: left_count
+        queue[2]: 0U
+        queue[3]: right_count
+        queued: 1U
+        while: queued > 0U
+            queued: queued - 1U
+            left_lo: queue[4U * queued]
+            left_hi: queue[4U * queued + 1U]
+            right_lo: queue[4U * queued + 2U]
+            right_hi: queue[4U * queued + 3U]
+            dm_longest(left, left_lengths, right, right_lengths, right_count, heads, following, left_lo, left_hi, right_lo, right_hi, work_a, work_b, found)
+            x: found[0]
+            y: found[1]
+            run: found[2]
+            if: run != 0U
+                triples[3U * matches]: x
+                triples[3U * matches + 1U]: y
+                triples[3U * matches + 2U]: run
+                matches: matches + 1U
+                if: left_lo < x && right_lo < y
+                    queue[4U * queued]: left_lo
+                    queue[4U * queued + 1U]: x
+                    queue[4U * queued + 2U]: right_lo
+                    queue[4U * queued + 3U]: y
+                    queued: queued + 1U
+                ---
+                if: x + run < left_hi && y + run < right_hi
+                    queue[4U * queued]: x + run
+                    queue[4U * queued + 1U]: left_hi
+                    queue[4U * queued + 2U]: y + run
+                    queue[4U * queued + 3U]: right_hi
+                    queued: queued + 1U
+                ---
+            ---
+        ---
+        matches: dm_sort_merge(triples, matches, left_count, right_count)
+        while: at < matches
+            x: triples[3U * at]
+            y: triples[3U * at + 1U]
+            run: triples[3U * at + 2U]
+            tag: 0U
+            if: previous_left < x && previous_right < y
+                tag: 1U
+            else:
+                if: previous_left < x
+                    tag: 2U
+                else:
+                    if: previous_right < y
+                        tag: 3U
+                    ---
+                ---
+            ---
+            if: tag != 0U
+                result[5U * used]: tag
+                result[5U * used + 1U]: previous_left
+                result[5U * used + 2U]: x
+                result[5U * used + 3U]: previous_right
+                result[5U * used + 4U]: y
+                used: used + 1U
+            ---
+            previous_left: x + run
+            previous_right: y + run
+            if: run != 0U
+                result[5U * used]: 4U
+                result[5U * used + 1U]: x
+                result[5U * used + 2U]: previous_left
+                result[5U * used + 3U]: y
+                result[5U * used + 4U]: previous_right
+                used: used + 1U
+            ---
+            at: at + 1U
+        ---
+        out[0]: result
+        out_count[0]: used
+        result: 0
+    ---
+    c.free(heads)
+    c.free(following)
+    c.free(work_a)
+    c.free(work_b)
+    c.free(queue)
+    c.free(triples)
+    c.free(result)
+    c.free(found)
+    return: failed
+end: docs_match_opcodes

@@ -1,0 +1,183 @@
+# S8.1 witness, the owner: two instances of library A and one of library B, constructed in the owner's arena by the
+# constructions the build selects (`--provider lib_a_new --provider lib_b_new --provider lib_c_new --provider
+# lib_m_new`), each admitted by its model, then called interleaved through the instances' own callables. Each
+# instance keeps its own count: read after the calls, and written once through A1's admitted map, which A1's own
+# method then reads and A2's does not.
+# Library C's method takes an input the owner's model of it does not describe. try_c's written call
+# `c1\lib_c_next()` cannot be formed for that method, so the admission of C's instance to LibC is refused where
+# try_c binds it: try_c's implicit `implements`, which its handler takes (30).
+# Library M's methods receive their formals themselves, at their entry, by M's own records; the owner's model of M
+# describes lib_m_bump's input by the owner's Model, which has y alone, and lib_m_take's by `nullary`. try_m builds a
+# Point (pad, y, x, next) and a Leaf (v, pad, w) for its reference while it runs: no translation saw them and M's
+# model together. M's formal receives the Point, and its reference's Leaf as M's Node, by M's own model and its
+# reference's declared pointee; the method reads and writes through the maps that gives, and try_m reads the Point
+# and the Leaf back. These methods have no C call, so they run walked too. A refusal at M's entry is the call's
+# implicit `implements`, which the caller's handler takes: try_n's Thin (pad, y) has no x (33); try_k's Far holds a
+# Bare (v, pad) with no w, refused before M's body writes the Far's y (34, the y still 2). try_f binds M's instance
+# although M's lib_m_take takes a callable of another description, since M's body does not call it, and passes
+# `seven` (3); plus1 calls the `seven` it receives (8).
+# Success is 7; 11..16 name the call that saw another value, 17 a count, 18 two instances that are one, 19 the write
+# A1's method did not see, 20 a write that reached A2, 21 a C instance that was not refused, 22 a Point or Leaf M's
+# method did not read or write by its fields' names, 23 a Thin that M's formal received, 24 a Far that M's formal
+# received or whose y M's body wrote, 25 a refused binding of M or another callable result.
+include: "<stdio.h>"
+LibA:
+    int: count 0
+    fn: lib_a_next () int
+end: LibA
+LibB:
+    int: count 0
+    fn: lib_b_next () int
+end: LibB
+LibC:
+    int: count 0
+    fn: lib_c_next () int
+end: LibC
+Leaf:
+    int: v 6
+    int: pad 3
+    int: w 4
+end: Leaf
+Point:
+    int: pad 9
+    int: y 2
+    int: x 1
+    @: next Leaf 0
+end: Point
+Thin:
+    int: pad 5
+    int: y 6
+end: Thin
+Bare:
+    int: v 8
+    int: pad 2
+end: Bare
+Far:
+    int: pad 7
+    int: y 2
+    int: x 1
+    @: next Bare 0
+end: Far
+Model:
+    int: y 0
+end: Model
+fn: nullary () int
+LibM:
+    int: count 0
+    fn: lib_m_bump (Model: m) int
+    fn: lib_m_take (nullary: f) int
+end: LibM
+fn: lib_a_new () LibA
+fn: lib_b_new () LibB
+fn: lib_c_new () LibC
+fn: lib_m_new () LibM
+fn: seven () int
+    return: 7
+fn: plus1 (nullary: f) int
+    return: f() + 1
+fn: try_c () int
+    int: r 0
+    @: c1 LibC lib_c_new()
+    r: c1\lib_c_next()
+    catch: implements ()
+        r: 30
+    ---
+return: r
+fn: try_m () int
+    @: m1 LibM lib_m_new()
+    p: merge: Point
+    q: merge: Leaf
+    p\next: q
+    int: r m1\lib_m_bump(p)
+return: (r * 10000 + p\y * 100 + p\x * 10 + p\pad) * 100 + q\w
+fn: try_n () int
+    int: r 0
+    @: m2 LibM lib_m_new()
+    q: merge: Thin
+    r: m2\lib_m_bump(q)
+    catch: implements ()
+        r: 33
+    ---
+return: r
+fn: try_k () int
+    int: r 0
+    @: m4 LibM lib_m_new()
+    f: merge: Far
+    g: merge: Bare
+    f\next: g
+    r: m4\lib_m_bump(f)
+    catch: implements ()
+        r: 34
+    ---
+return: r * 100 + f\y
+fn: try_f () int
+    int: r 0
+    @: m3 LibM lib_m_new()
+    r: m3\lib_m_take(seven) * 10 + plus1(seven)
+    catch: implements ()
+        r: 25
+    ---
+return: r
+fn: run () int
+    @: a1 LibA lib_a_new()
+    @: a2 LibA lib_a_new()
+    @: b1 LibB lib_b_new()
+    int: v1 a1\lib_a_next()
+    int: v2 a2\lib_a_next()
+    int: v3 b1\lib_b_next()
+    int: v4 a1\lib_a_next()
+    int: v5 b1\lib_b_next()
+    int: v6 a2\lib_a_next()
+    int: c1 a1\count
+    int: c2 a2\count
+    int: c3 b1\count
+    c.printf("S81 calls A1=%d A2=%d B1=%d A1=%d B1=%d A2=%d\n", v1, v2, v3, v4, v5, v6)
+    c.printf("S81 counts A1=%d A2=%d B1=%d\n", c1, c2, c3)
+    if: v1 != 41
+        return: 11
+    if: v2 != 41
+        return: 12
+    if: v3 != 42
+        return: 13
+    if: v4 != 42
+        return: 14
+    if: v5 != 43
+        return: 15
+    if: v6 != 42
+        return: 16
+    if: c1 != 42 || c2 != 42 || c3 != 43
+        return: 17
+    if: a1 = a2
+        return: 18
+    a1\count: 100
+    int: v7 a1\lib_a_next()
+    int: v8 a2\lib_a_next()
+    c.printf("S81 after A1 count 100: A1=%d A2=%d\n", v7, v8)
+    if: v7 != 101
+        return: 19
+    if: v8 != 43
+        return: 20
+    int: vc try_c()
+    c.printf("S81 C refused at its binding: %d\n", vc)
+    if: vc != 30
+        return: 21
+    int: vm try_m()
+    c.printf("S81 runtime candidate r=%d p.y=%d p.x=%d p.pad=%d q.w=%d\n", vm / 1000000, (vm / 10000) % 100, (vm / 1000) % 10, (vm / 100) % 10, vm % 100)
+    if: vm != 142421910
+        return: 22
+    int: vn try_n()
+    c.printf("S81 a Thin without x refused where M receives it: %d\n", vn)
+    if: vn != 33
+        return: 23
+    int: vk try_k()
+    c.printf("S81 a Far whose Bare has no w refused before M's body: %d y=%d\n", vk / 100, vk % 100)
+    if: vk != 3402
+        return: 24
+    int: vf try_f()
+    c.printf("S81 seven taken by a formal M's body does not call: %d, called by plus1: %d\n", vf / 10, vf % 10)
+    if: vf != 38
+        return: 25
+    return: 7
+int: ok run()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

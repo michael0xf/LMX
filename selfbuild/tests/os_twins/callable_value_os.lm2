@@ -1,0 +1,27 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: the selected os branch's method as a callable value. placed
+# takes os_note's contract as its formal q and calls it; os_note writes the unit's trace. As in
+# callable_value_unit.lm2: r1 is 3, trace 3 (win) or 4 (default). Entry r1 + seen() + 1: 7 for win, 8 for default.
+int: trace 0
+os:
+    win:
+        fn: os_note (int: a) int
+            node\trace: node\trace * 10 + a
+            return: a
+        end: os_note
+    default:
+        fn: os_note (int: a) int
+            node\trace: node\trace * 10 + a + 1
+            return: a
+        end: os_note
+end: os
+fn: placed (os_note: q; int: x) int
+    int: r 0
+    r: q(x)
+    return: r
+end: placed
+fn: seen () int
+    return: node\trace
+end: seen
+int: r1 placed(os_note 3)
+sendMessage: exit(exit_code: r1 + seen() + 1; stdout: ""; stderr: "")
+return

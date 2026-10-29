@@ -1,0 +1,815 @@
+predef: "l2src/lmx_post.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_message.h.lm1"
+predef: "l2src/lmx_manager_running.h.lm1"
+include: "<stdlib.h>"
+
+# lmx_post.lm2 - the real mailbox algorithms, with explicit owners.
+#
+# The mailbox distinguishes a LETTER from an EXECUTABLE OBJECT, and it does it the
+# way this kernel distinguishes everything: by the array of the arena the address
+# falls into.  Nothing is stored on a letter to say that it is one -- a child
+# carries no type tag (lmx.h, spec 2 and 6.5) -- so `is this a letter, is this an
+# object` is asked of the address, through lmx_implements.  That is why this
+# module works with lmx_message without adding anything to it: what the mailbox
+# needs is the letter's ADDRESS, its running/success flags (read where a turn
+# boundary reads them) and its graph root.  The existing envelope fields already carry that.
+#
+# Model 27: sending, publishing, receiving and executing are five different steps, and this
+# unit holds two of them apart: ACCEPT puts a target in a lane, and PUBLISH (the end-turn
+# boundary's first act, spec 19.29.4.1) is what makes a turn's prepared outgoing visible.
+# "Успешное завершение turn публикует подготовленный outbox", and a turn that failed
+# "discards its staged outbox, but not already published graph/own-field writes".
+#
+# Those two steps are why accept into LMX_POST_OUTBOX goes to the STAGED queue and not to the
+# outbox: during a turn nothing of it is outgoing yet, and a reader of the outbox must not see
+# a target that a failing turn is about to take apart.  The three lanes are the whole state:
+# inbox (admitted, to be taken), outbox (published, a transport's business) and staged (this
+# turn's preparation, nobody else's).
+#
+# Every lane is FIFO, and that is spec, not convenience: "publish successful FIFO outbox"
+# (19.29.4.1), and model 27 -- "FIFO задаётся порядком admission у конкретного получателя".
+# Admission order is the order a reader sees, so a node is appended at the tail and taken
+# from the head; the tail link is what keeps appending free of a list scan.
+#
+# Queue-node storage is the mailbox's own typed pool (lmx_pool).  The pool adds
+# chunks of LmxPostLink nodes and registers each chunk as one more array interval of
+# the POST_LINK domain, so a node is classified by the address it lands in -- and no
+# node is ever malloc'd, neither per node nor per mailbox.  A pool never takes a
+# node back, so a node released by lmx_post_take goes on this mailbox's free list
+# and is handed out again: without that list a long-running mailbox would grow the
+# pool without end, which is what makes the free list part of the mechanism and not
+# an optimisation.
+#
+# The arena is the context of every act that touches the pool or asks the table a
+# question, so those acts name it: init (the pool's first chunk), accept (a node,
+# and the target's domain), close (the pool back to the arena).  take, count, publish
+# and discard ask nothing of either, so they keep their signatures -- which is what
+# lets a lane perform the end-turn boundary without holding an arena.  The mailbox
+# stores no arena of its own.
+
+# The monitor's owner is the current OS-lane ID from the existing platform service.
+# It is nonzero/unique while the OS thread lives; no mutable module/TLS token is needed.
+# Reentry/depth and the one acquire/release gate still belong to this mailbox.
+
+fn: lmx_post_inbox_data (@: box c.LmxPost) @: c.LmxPostInboxSlot
+    @: da c.LmxPostInboxSlotDynamicArray
+    @: base c.LmxPostInboxSlotArray
+    if: box = 0
+        return: 0
+    da: @ box\inbox
+    base: (cast: (@: c.LmxPostInboxSlotArray) da)
+    return: (cast: (@: c.LmxPostInboxSlot) base\data)
+end: lmx_post_inbox_data
+
+
+fn: lmx_post_inbox_cap (@: box c.LmxPost) size_t
+    @: da c.LmxPostInboxSlotDynamicArray
+    if: box = 0
+        return: 0U
+    da: @ box\inbox
+    return: (cast: (size_t) da\capacity)
+end: lmx_post_inbox_cap
+
+
+sub: lmx_post_inbox_set_data (@: box c.LmxPost; @: data c.LmxPostInboxSlot)
+    @: da c.LmxPostInboxSlotDynamicArray
+    @: base c.LmxPostInboxSlotArray
+    if: box = 0
+        return
+    da: @ box\inbox
+    base: (cast: (@: c.LmxPostInboxSlotArray) da)
+    base\data: data
+    return
+end: lmx_post_inbox_set_data
+
+
+sub: lmx_post_inbox_set_len (@: box c.LmxPost; size_t: len)
+    @: da c.LmxPostInboxSlotDynamicArray
+    @: base c.LmxPostInboxSlotArray
+    if: box = 0
+        return
+    da: @ box\inbox
+    base: (cast: (@: c.LmxPostInboxSlotArray) da)
+    base\len: len
+    return
+end: lmx_post_inbox_set_len
+
+
+sub: lmx_post_inbox_set_cap (@: box c.LmxPost; size_t: capacity)
+    @: da c.LmxPostInboxSlotDynamicArray
+    if: box = 0
+        return
+    da: @ box\inbox
+    da\capacity: capacity
+    return
+end: lmx_post_inbox_set_cap
+
+
+
+fn: lmx_post_monitor_enter (@: box c.LmxPost) int
+    size_t: self
+    int: acquired 0
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    self: (cast: (size_t) c.lmx_manager_running_thread_id())
+    if: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), c.__ATOMIC_RELAXED) = self
+        box\inbox_monitor_depth: box\inbox_monitor_depth + 1U
+        return: c.LMX_POST_OK
+    ---
+    while: acquired = 0
+        if: c.__atomic_load_n((cast: (@: int) (@ box\inbox_monitor_held)), c.__ATOMIC_RELAXED) = 0
+            if: c.__atomic_exchange_n((cast: (@: int) (@ box\inbox_monitor_held)), 1, c.__ATOMIC_ACQUIRE) = 0
+                acquired: 1
+            ---
+        ---
+    ---
+    c.__atomic_store_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), self, c.__ATOMIC_RELAXED)
+    box\inbox_monitor_depth: 1U
+    return: c.LMX_POST_OK
+end: lmx_post_monitor_enter
+
+
+fn: lmx_post_monitor_leave (@: box c.LmxPost) int
+    size_t: self
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    self: (cast: (size_t) c.lmx_manager_running_thread_id())
+    if: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), c.__ATOMIC_RELAXED) != self || box\inbox_monitor_depth = 0U
+        return: c.LMX_POST_INVALID
+    box\inbox_monitor_depth: box\inbox_monitor_depth - 1U
+    if: box\inbox_monitor_depth != 0U
+        return: c.LMX_POST_OK
+    ---
+    c.__atomic_store_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), 0U, c.__ATOMIC_RELAXED)
+    c.__atomic_store_n((cast: (@: int) (@ box\inbox_monitor_held)), 0, c.__ATOMIC_RELEASE)
+    return: c.LMX_POST_OK
+end: lmx_post_monitor_leave
+
+
+# Grow the private inbox backing while its monitor is held.  No backing address escapes the
+# mailbox, so moving it is permitted: unread addresses are copied in logical FIFO order and the
+# new ring is normalised to head 0 / tail count.  Capacity follows 2, 3, 4, 6, 9...; allocation
+# refusal is reported as FULL and leaves the old ring untouched.
+fn: lmx_post_inbox_grow (@: box c.LmxPost) int
+    @: old_slots c.LmxPostInboxSlot
+    @: grown c.LmxPostInboxSlot
+    size_t: old_capacity
+    size_t: step
+    size_t: new_capacity
+    size_t: i 0U
+    size_t: from
+    @: src_slot c.LmxPostInboxSlot
+    @: dst_slot c.LmxPostInboxSlot
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    old_capacity: lmx_post_inbox_cap(box)
+    old_slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    if: box\inbox_count != 0U && (old_slots = 0 || old_capacity = 0U)
+        return: c.LMX_POST_INVALID
+    if: old_capacity < c.LMX_POST_INBOX_MIN_CAPACITY
+        new_capacity: c.LMX_POST_INBOX_MIN_CAPACITY
+    else:
+        step: old_capacity / 2U
+        if: step = 0U
+            step: 1U
+        ---
+        if: old_capacity > (cast: (size_t) -1) - step
+            return: c.LMX_POST_FULL
+        new_capacity: old_capacity + step
+    ---
+    if: new_capacity > ((cast: (size_t) -1) / c.sizeof(c.LmxPostInboxSlot))
+        return: c.LMX_POST_FULL
+    grown: (cast: (@: c.LmxPostInboxSlot) c.calloc(new_capacity, c.sizeof(c.LmxPostInboxSlot)))
+    if: grown = 0
+        return: c.LMX_POST_FULL
+    while: i < box\inbox_count
+        from: ((cast: (size_t) box\inbox_head) + i) % old_capacity
+        src_slot: old_slots + from
+        dst_slot: grown + i
+        dst_slot\target: src_slot\target
+        dst_slot\source_arena: src_slot\source_arena
+        i: i + 1U
+    ---
+    c.free((cast: (@: void) old_slots))
+    lmx_post_inbox_set_data(box, grown)
+    lmx_post_inbox_set_cap(box, new_capacity)
+    lmx_post_inbox_set_len(box, (cast: (size_t) box\inbox_count))
+    box\inbox_head: 0U
+    box\inbox_tail: (cast: (ulong) box\inbox_count)
+    return: c.LMX_POST_OK
+end: lmx_post_inbox_grow
+
+
+# Give the collector a stable copy of the unread addresses without exposing the backing array or
+# moving this module's monitor into the collector.  Allocation failure leaves the mailbox intact;
+# the caller owns a non-null returned snapshot and releases it with free.
+fn: lmx_post_snapshot_inbox (@: box c.LmxPost; @@: out size_t; @: count size_t) int
+    @: slots c.LmxPostInboxSlot
+    @: copy size_t
+    size_t: n
+    size_t: i 0U
+    @: src_slot c.LmxPostInboxSlot
+    if: box = 0 || out = 0 || count = 0
+        return: c.LMX_POST_INVALID
+    \out: 0
+    \count: 0U
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: c.LMX_POST_INVALID
+    ---
+    if: box\inbox_count != 0U && (lmx_post_inbox_data(box) = 0 || lmx_post_inbox_cap(box) = 0U)
+        lmx_post_monitor_leave(box)
+        return: c.LMX_POST_INVALID
+    ---
+    n: (cast: (size_t) box\inbox_count)
+    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    copy: 0
+    if: n != 0U
+        if: n > (cast: (size_t) -1) / c.sizeof(c.size_t)
+            lmx_post_monitor_leave(box)
+            return: c.LMX_POST_FULL
+        ---
+        copy: (cast: (@: size_t) c.malloc(n * c.sizeof(c.size_t)))
+        if: copy = 0
+            lmx_post_monitor_leave(box)
+            return: c.LMX_POST_FULL
+        ---
+    ---
+    while: i < n
+        src_slot: slots + (((cast: (size_t) box\inbox_head) + i) % lmx_post_inbox_cap(box))
+        copy[i]: (cast: (size_t) src_slot\target)
+        i: i + 1U
+    ---
+    lmx_post_monitor_leave(box)
+    \out: copy
+    \count: n
+    return: c.LMX_POST_OK
+end: lmx_post_snapshot_inbox
+
+
+fn: lmx_post_admits (@: arena c.LmxArena; @: target void) int
+    int: kind
+    if: target = 0
+        return: c.LMX_POST_REFUSED
+    kind: c.lmx_domain_kind(arena, target)
+    if: kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        return: c.LMX_POST_OK
+    return: c.LMX_POST_REFUSED
+end: lmx_post_admits
+
+
+# One queue node: from the free list when the mailbox has one, otherwise from the
+# pool, which adds a chunk when the last chunk is full.  A zero answer is the
+# mailbox's only failure mode, and lmx_post_accept turns it into LMX_POST_FULL.
+fn: lmx_post_new_node (@: arena c.LmxArena; @: box c.LmxPost) @: c.LmxPostLink
+    @: link c.LmxPostLink
+    if: box = 0
+        return: 0
+    if: box\free_nodes != 0
+        link: (cast: (@: c.LmxPostLink) box\free_nodes)
+        box\free_nodes: link\next
+        link\next: 0
+        return: link
+    link: (cast: (@: c.LmxPostLink) c.lmx_pool_take(arena, @ box\nodes))
+    return: link
+end: lmx_post_new_node
+
+
+fn: lmx_post_init (@: arena c.LmxArena; @: box c.LmxPost) int
+    @: nodes c.LmxPool
+    @: api c.LmxPostApi
+    if: arena = 0 || box = 0
+        return: c.LMX_POST_INVALID
+    nodes: @ box\nodes
+    api: @ box\api
+    # THE INBOX RING: private movable metadata, deliberately outside the graph arena.  It starts
+    # at two slots and later grows under the mailbox monitor without touching the receiver's arena.
+    lmx_post_inbox_set_data(box, (cast: (@: c.LmxPostInboxSlot) c.calloc(c.LMX_POST_INBOX_MIN_CAPACITY, c.sizeof(c.LmxPostInboxSlot))))
+    lmx_post_inbox_set_cap(box, c.LMX_POST_INBOX_MIN_CAPACITY)
+    lmx_post_inbox_set_len(box, 0U)
+    box\inbox_head: 0U
+    box\inbox_tail: 0U
+    box\inbox_count: 0U
+    box\inbox_monitor_owner: 0U
+    box\inbox_monitor_depth: 0U
+    box\inbox_monitor_held: 0
+    box\outbox: 0
+    box\outbox_tail: 0
+    box\staged: 0
+    box\staged_tail: 0
+    box\free_nodes: 0
+    box\outbox_count: 0U
+    box\staged_count: 0U
+    if: lmx_post_inbox_data(box) = 0
+        lmx_post_inbox_set_cap(box, 0U)
+        return: c.LMX_POST_INVALID
+    ---
+    # The pool refuses to open over one that already holds a chunk, and a mailbox may
+    # be a by-value local whose memory is whatever was on the stack.  So the pool's
+    # own fields are cleared before it is opened: that check is the pool guarding
+    # itself, and without this the open fails on garbage and the mailbox is left
+    # holding an uninitialised pool.  The arena is the caller's and is already open:
+    # a by-value arena is cleared and opened by whoever made it (lmx_arena_open).
+    nodes\head: 0
+    nodes\tail: 0
+    nodes\stride: 0U
+    nodes\chunk_capacity: 0U
+    nodes\kind: 0
+    nodes\type: 0
+    if: c.lmx_pool_open(arena, nodes, c.sizeof(c.LmxPostLink), c.LMX_POST_NODE_CHUNK, c.LMX_DOMAIN_KIND_POST_LINK, c.LMX_DOMAIN_POST_LINK) != 0
+        c.free(lmx_post_inbox_data(box))
+        lmx_post_inbox_set_data(box, 0)
+        lmx_post_inbox_set_cap(box, 0U)
+        return: c.LMX_POST_INVALID
+    api\accept: (cast: (c.LmxPostAccept) c.lmx_post_accept)
+    api\take: (cast: (c.LmxPostTake) c.lmx_post_take)
+    api\count: (cast: (c.LmxPostCount) c.lmx_post_count)
+    api\close: (cast: (c.LmxPostClose) c.lmx_post_close)
+    return: c.LMX_POST_OK
+end: lmx_post_init
+
+
+# The mailbox's interface, handed out as one table.  A caller that holds this holds
+# the mailbox's API and nothing else; the thread's mail API is a separate table that
+# delegates here (lmx_thread.lm1).
+fn: lmx_post_api (@: box c.LmxPost) @: c.LmxPostApi
+    if: box = 0
+        return: 0
+    @: api c.LmxPostApi (@ box\api)
+    return: api
+end: lmx_post_api
+
+
+# Accept one target into one lane.  The check is the discrimination itself: an
+# address of no known domain is refused, not queued and complained about later.
+#
+# An incoming target is appended to the inbox and is visible at once -- admission is what a
+# receiver sees.  An outgoing target is appended to the STAGED queue and is visible to nobody
+# but its own turn until the boundary publishes it.
+fn: lmx_post_accept (@: arena c.LmxArena; @: box c.LmxPost; @: target void; int: lane) int
+    @: link c.LmxPostLink
+    ulong: tail_read
+    @: slots c.LmxPostInboxSlot
+    size_t: item
+    int: rc
+    @: slot c.LmxPostInboxSlot
+    if: box = 0 || (lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX)
+        return: c.LMX_POST_INVALID
+    if: lmx_post_admits(arena, target) != c.LMX_POST_OK
+        return: c.LMX_POST_REFUSED
+    # THE INBOX: the one cross-lane collection.  The mailbox's reentrant monitor makes the
+    # capacity check, slot reservation, publication and count update one operation.  No node,
+    # free list or allocation is touched, and the lock does not escape this module.
+    if: lane = c.LMX_POST_INBOX
+        if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+            return: c.LMX_POST_INVALID
+        ---
+        if: lmx_post_inbox_data(box) = 0
+            lmx_post_monitor_leave(box)
+            return: c.LMX_POST_INVALID
+        ---
+        if: box\inbox_count >= lmx_post_inbox_cap(box)
+            rc: lmx_post_inbox_grow(box)
+            if: rc != c.LMX_POST_OK
+                lmx_post_monitor_leave(box)
+                return: rc
+            ---
+        ---
+        tail_read: (cast: (ulong) box\inbox_tail)
+        if: lmx_post_inbox_cap(box) = 0U
+            lmx_post_monitor_leave(box)
+            return: c.LMX_POST_INVALID
+        ---
+        slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+        item: (cast: (size_t) tail_read) % lmx_post_inbox_cap(box)
+        slot: slots + item
+        slot\target: target
+        slot\source_arena: 0U
+        box\inbox_tail: (tail_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+        box\inbox_count: (cast: (size_t) box\inbox_count) + 1U
+        lmx_post_monitor_leave(box)
+        return: c.LMX_POST_OK
+    ---
+    link: lmx_post_new_node(arena, box)
+    if: link = 0
+        return: c.LMX_POST_FULL
+    ---
+    link\target: target
+    link\next: 0
+    if: box\staged_tail = 0
+        box\staged: link
+    else:
+        box\staged_tail\next: link
+    ---
+    box\staged_tail: link
+    box\staged_count: box\staged_count + 1U
+    return: c.LMX_POST_OK
+end: lmx_post_accept
+
+
+# Cross-arena producer delivery publishes one inseparable pair under THIS module's sole monitor.
+# It does not touch the receiver arena: the receiver owner claims source_arena on take, immediately
+# before exposing the target. A capacity refusal publishes nothing and leaves source ownership
+# untouched. This keeps both synchronization and pending-delivery ownership in the mail collection.
+fn: lmx_post_accept_transfer (@: arena c.LmxArena; @: box c.LmxPost; @: target void; @: source_arena c.LmxArena) int
+    ulong: tail_read
+    @: slots c.LmxPostInboxSlot
+    size_t: item
+    int: rc
+    @: slot c.LmxPostInboxSlot
+    if: arena = 0 || box = 0 || target = 0
+        return: c.LMX_POST_INVALID
+    if: source_arena != 0 && source_arena != arena
+        if: lmx_post_admits(source_arena, target) != c.LMX_POST_OK
+            return: c.LMX_POST_REFUSED
+        ---
+    else:
+        if: lmx_post_admits(arena, target) != c.LMX_POST_OK
+            return: c.LMX_POST_REFUSED
+        ---
+    ---
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: c.LMX_POST_INVALID
+    ---
+    if: lmx_post_inbox_data(box) = 0
+        lmx_post_monitor_leave(box)
+        return: c.LMX_POST_INVALID
+    ---
+    if: box\inbox_count >= lmx_post_inbox_cap(box)
+        rc: lmx_post_inbox_grow(box)
+        if: rc != c.LMX_POST_OK
+            lmx_post_monitor_leave(box)
+            return: rc
+        ---
+    ---
+    tail_read: (cast: (ulong) box\inbox_tail)
+    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    item: (cast: (size_t) tail_read) % lmx_post_inbox_cap(box)
+    slot: slots + item
+    slot\target: target
+    if: source_arena != arena
+        slot\source_arena: source_arena
+    else:
+        slot\source_arena: 0U
+    ---
+    box\inbox_tail: (tail_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+    box\inbox_count: (cast: (size_t) box\inbox_count) + 1U
+    lmx_post_monitor_leave(box)
+    return: c.LMX_POST_OK
+end: lmx_post_accept_transfer
+
+
+# Take the oldest target out of a lane. For a foreign inbox entry the receiver owner first
+# attaches the published donor arena; until that succeeds the inseparable target/donor pair
+# remains queued. Outbox nodes are returned to this mailbox's free list for reuse.
+#
+# The staged lane is not takeable: narrowing a turn's preparation one item at a time is not
+# a step the model has -- it is published whole or discarded whole (lmx_post_publish,
+# lmx_post_discard).
+fn: lmx_post_take_inbox (@: arena c.LmxArena; @: box c.LmxPost) @: void
+    @: target void
+    @: letter c.LmxMsg 0
+    ulong: head_read
+    @: slots c.LmxPostInboxSlot
+    size_t: item
+    @: source_arena c.LmxArena
+    @: slot c.LmxPostInboxSlot
+    if: box = 0
+        return: 0
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: lmx_post_inbox_data(box) = 0
+        lmx_post_monitor_leave(box)
+        return: 0
+    ---
+    head_read: (cast: (ulong) box\inbox_head)
+    if: box\inbox_count = 0U
+        lmx_post_monitor_leave(box)
+        return: 0
+    ---
+    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    item: (cast: (size_t) head_read) % lmx_post_inbox_cap(box)
+    slot: slots + item
+    source_arena: (cast: (@: c.LmxArena) slot\source_arena)
+    if: source_arena != 0
+        # Only the receiver owner supplies its arena. A raw/direct take cannot expose a foreign
+        # letter, and attach refusal leaves the exact pair at the head for a later retry/close.
+        if: arena = 0 || c.lmx_arena_attach(arena, source_arena) != 0
+            lmx_post_monitor_leave(box)
+            return: 0
+        ---
+        slot\source_arena: 0U
+    ---
+    target: (cast: (@: void) slot\target)
+    slot\target: 0U
+    box\inbox_head: (head_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+    box\inbox_count: (cast: (size_t) box\inbox_count) - 1U
+    lmx_post_monitor_leave(box)
+    # A PLAIN LETTER IS DELIVERED HERE, and delivery is its completion: the system sets its
+    # `success` to 1 at the receiver owner's take, after the attach, when the receiver owns it
+    # (author, LMX_blog 2026-09-22).  Only an exact plain-letter range: an executable Thread
+    # passed through the mailbox keeps its flag, which only its own program sets.  A take with no
+    # receiver arena is not an owner's take and cannot classify the letter, so it writes nothing.
+    if: arena != 0 && target != 0 && c.lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_MSG_RECORD && c.lmx_domain_type(arena, target) = c.LMX_DOMAIN_MSG_RECORD
+        letter: (cast: (@: c.LmxMsg) target)
+        letter\success: 1
+    ---
+    return: target
+end: lmx_post_take_inbox
+
+
+fn: lmx_post_take_owned (@: arena c.LmxArena; @: box c.LmxPost; int: lane) @: void
+    if: lane = c.LMX_POST_INBOX
+        return: lmx_post_take_inbox(arena, box)
+    ---
+    return: lmx_post_take(box, lane)
+end: lmx_post_take_owned
+
+
+fn: lmx_post_take (@: box c.LmxPost; int: lane) @: void
+    @: link c.LmxPostLink
+    @: target void
+    if: box = 0 || (lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX)
+        return: 0
+    if: lane = c.LMX_POST_INBOX
+        return: lmx_post_take_inbox(0, box)
+    ---
+    link: (cast: (@: c.LmxPostLink) box\outbox)
+    if: link = 0
+        return: 0
+    ---
+    # The only lane left here is the OUTBOX, and it is OWNER-LOCAL by the model: a turn takes
+    # from what an earlier successful turn published, and no other lane touches it -- which is
+    # why it may stay a plain list while the inbox could not.
+    box\outbox: link\next
+    if: box\outbox = 0
+        box\outbox_tail: 0
+    ---
+    box\outbox_count: box\outbox_count - 1U
+    target: (cast: (@: void) link\target)
+    link\target: 0
+    link\next: box\free_nodes
+    box\free_nodes: link
+    return: target
+end: lmx_post_take
+
+
+fn: lmx_post_count (@: box c.LmxPost; int: lane) size_t
+    size_t: count
+    if: box = 0
+        return: 0U
+    if: lane = c.LMX_POST_INBOX
+        if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+            return: 0U
+        count: (cast: (size_t) box\inbox_count)
+        lmx_post_monitor_leave(box)
+        return: count
+    if: lane = c.LMX_POST_OUTBOX
+        return: (cast: (size_t) box\outbox_count)
+    if: lane = c.LMX_POST_STAGED
+        return: (cast: (size_t) box\staged_count)
+    return: 0U
+end: lmx_post_count
+
+
+# The end-turn boundary, success: the whole staged queue joins the tail of the outbox in ONE
+# step, so the order across turns stays admission order and not a single node is touched.  A
+# mailbox with nothing staged publishes nothing and answers OK -- a turn that sent nothing is
+# not an error.
+fn: lmx_post_publish (@: box c.LmxPost) int
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    if: box\staged = 0
+        return: c.LMX_POST_OK
+    ---
+    if: box\outbox_tail = 0
+        box\outbox: box\staged
+    else:
+        box\outbox_tail\next: box\staged
+    ---
+    box\outbox_tail: box\staged_tail
+    box\outbox_count: box\outbox_count + box\staged_count
+    box\staged: 0
+    box\staged_tail: 0
+    box\staged_count: 0U
+    return: c.LMX_POST_OK
+end: lmx_post_publish
+
+
+# The end-turn boundary, failure: what the turn prepared is taken apart -- its nodes go back
+# on the free list and nothing of it is ever seen.  What an EARLIER successful turn published
+# is not touched (spec 19.29.4.1: "failure discards its staged outbox, but not already
+# published graph/own-field writes"), and neither is anything already in the inbox.
+fn: lmx_post_discard (@: box c.LmxPost) int
+    @: link c.LmxPostLink
+    @: next c.LmxPostLink
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    link: (cast: (@: c.LmxPostLink) box\staged)
+    while: link != 0
+        next: (cast: (@: c.LmxPostLink) link\next)
+        link\target: 0
+        link\next: box\free_nodes
+        box\free_nodes: link
+        link: next
+    ---
+    box\staged: 0
+    box\staged_tail: 0
+    box\staged_count: 0U
+    return: c.LMX_POST_OK
+end: lmx_post_discard
+
+
+# Close the mailbox: every chunk of the node pool is unregistered from the arena's
+# index and released, and the mailbox is left empty and openable again.
+fn: lmx_post_close (@: arena c.LmxArena; @: box c.LmxPost) int
+    @: slots c.LmxPostInboxSlot
+    size_t: item
+    @: source_arena c.LmxArena
+    @: empty_blocks c.LmxArenaBlock 0
+    @: slot c.LmxPostInboxSlot
+    if: box = 0
+        return: c.LMX_POST_INVALID
+    if: box\inbox_count != 0U && (lmx_post_inbox_data(box) = 0 || lmx_post_inbox_cap(box) = 0U)
+        return: c.LMX_POST_INVALID
+    ---
+    # Closing is quiescent. Discard pending imported letters one by one; after each successful
+    # release advance the ring immediately, so any later malformed arena refusal leaves every
+    # still-owned pair reachable for retry/diagnosis rather than losing it with the backing.
+    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    while: box\inbox_count != 0U
+        item: (cast: (size_t) box\inbox_head) % lmx_post_inbox_cap(box)
+        slot: slots + item
+        source_arena: (cast: (@: c.LmxArena) slot\source_arena)
+        if: source_arena != 0
+            # Release walks the block list before its disposer can reject a cycle. Preflight the
+            # exact donor without mutation so malformed ownership leaves this pair and backing
+            # intact for diagnosis/repair instead of hanging or partly closing the mailbox.
+            empty_blocks: 0
+            if: c.lmx_arena_blocks_can_move(@ empty_blocks, @ source_arena\blocks) != c.LMX_ARENA_BLOCKS_OK
+                return: c.LMX_POST_INVALID
+            ---
+            if: c.lmx_arena_release(source_arena) != 0
+                return: c.LMX_POST_INVALID
+            ---
+        ---
+        slot\target: 0U
+        slot\source_arena: 0U
+        box\inbox_head: (box\inbox_head + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+        box\inbox_count: (cast: (size_t) box\inbox_count) - 1U
+    ---
+    c.lmx_pool_release(arena, @ box\nodes)
+    c.free(lmx_post_inbox_data(box))
+    lmx_post_inbox_set_data(box, 0)
+    lmx_post_inbox_set_cap(box, 0U)
+    box\inbox_head: 0U
+    box\inbox_tail: 0U
+    box\inbox_monitor_owner: 0U
+    box\inbox_monitor_depth: 0U
+    box\inbox_monitor_held: 0
+    box\outbox: 0
+    box\outbox_tail: 0
+    box\staged: 0
+    box\staged_tail: 0
+    box\free_nodes: 0
+    box\inbox_count: 0U
+    box\outbox_count: 0U
+    box\staged_count: 0U
+    return: c.LMX_POST_OK
+end: lmx_post_close
+
+
+
+# -177 c2: selective-receive cursor over the inbox ring (admission order).
+# Mutant: take at cursor removes the head always / wrong index -> RED.
+
+fn: lmx_post_cursor_open (@: box c.LmxPost; @: cur c.LmxPostCursor) int
+    if: box = 0 || cur = 0
+        return: c.LMX_POST_INVALID
+    ---
+    cur\box: box
+    cur\index: 0U
+    cur\has_current: 0
+    cur\open: 1
+    return: c.LMX_POST_OK
+end: lmx_post_cursor_open
+
+
+fn: lmx_post_cursor_next (@: cur c.LmxPostCursor) @: void
+    @: box c.LmxPost 0
+    @: slots c.LmxPostInboxSlot 0
+    @: slot c.LmxPostInboxSlot 0
+    size_t: item 0U
+    size_t: cap 0U
+    @: target void 0
+    if: cur = 0 || cur\open = 0 || cur\box = 0
+        return: 0
+    ---
+    box: (cast: (@: c.LmxPost) cur\box)
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: cur\has_current != 0
+        cur\index: cur\index + 1U
+    ---
+    if: cur\index >= box\inbox_count || lmx_post_inbox_data(box) = 0
+        cur\has_current: 0
+        lmx_post_monitor_leave(box)
+        return: 0
+    ---
+    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    cap: lmx_post_inbox_cap(box)
+    item: (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
+    slot: slots + item
+    target: (cast: (@: void) slot\target)
+    cur\has_current: 1
+    lmx_post_monitor_leave(box)
+    return: target
+end: lmx_post_cursor_next
+
+
+fn: lmx_post_cursor_take (@: arena c.LmxArena; @: cur c.LmxPostCursor) @: void
+    @: box c.LmxPost 0
+    @: slots c.LmxPostInboxSlot 0
+    @: slot c.LmxPostInboxSlot 0
+    @: dst c.LmxPostInboxSlot 0
+    @: src c.LmxPostInboxSlot 0
+    @: letter c.LmxMsg 0
+    @: source_arena c.LmxArena 0
+    @: target void 0
+    size_t: cap 0U
+    size_t: i 0U
+    size_t: from 0U
+    size_t: to 0U
+    size_t: item 0U
+    if: cur = 0 || cur\open = 0 || cur\box = 0 || cur\has_current = 0
+        return: 0
+    ---
+    box: (cast: (@: c.LmxPost) cur\box)
+    if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
+        return: 0
+    ---
+    if: cur\index >= box\inbox_count || lmx_post_inbox_data(box) = 0
+        cur\has_current: 0
+        lmx_post_monitor_leave(box)
+        return: 0
+    ---
+    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    cap: lmx_post_inbox_cap(box)
+    item: (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
+    slot: slots + item
+    source_arena: (cast: (@: c.LmxArena) slot\source_arena)
+    if: source_arena != 0
+        if: arena = 0 || c.lmx_arena_attach(arena, source_arena) != 0
+            lmx_post_monitor_leave(box)
+            return: 0
+        ---
+        slot\source_arena: 0U
+    ---
+    target: (cast: (@: void) slot\target)
+    # Compact: shift later unread slots down by one in admission order.
+    i: cur\index
+    while: i + 1U < box\inbox_count
+        from: (cast: (size_t) ((box\inbox_head + (cast: (ulong) (i + 1U))) % (cast: (ulong) cap)))
+        to: (cast: (size_t) ((box\inbox_head + (cast: (ulong) i)) % (cast: (ulong) cap)))
+        src: slots + from
+        dst: slots + to
+        dst\target: src\target
+        dst\source_arena: src\source_arena
+        i: i + 1U
+    ---
+    # Clear the vacated tail slot.
+    to: (cast: (size_t) ((box\inbox_head + (cast: (ulong) (box\inbox_count - 1U))) % (cast: (ulong) cap)))
+    dst: slots + to
+    dst\target: 0U
+    dst\source_arena: 0U
+    box\inbox_count: (cast: (size_t) box\inbox_count) - 1U
+    if: box\inbox_count = 0U
+        box\inbox_head: 0U
+        box\inbox_tail: 0U
+    else:
+        box\inbox_tail: (box\inbox_head + (cast: (ulong) box\inbox_count)) % (cast: (ulong) cap)
+    ---
+    # After take, the next letter (if any) now sits at the same index; next will advance.
+    cur\has_current: 0
+    lmx_post_monitor_leave(box)
+    if: arena != 0 && target != 0 && c.lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_MSG_RECORD && c.lmx_domain_type(arena, target) = c.LMX_DOMAIN_MSG_RECORD
+        letter: (cast: (@: c.LmxMsg) target)
+        letter\success: 1
+    ---
+    return: target
+end: lmx_post_cursor_take
+
+
+sub: lmx_post_cursor_close (@: cur c.LmxPostCursor)
+    if: cur = 0
+        return
+    ---
+    cur\box: 0
+    cur\index: 0U
+    cur\has_current: 0
+    cur\open: 0
+    return
+end: lmx_post_cursor_close

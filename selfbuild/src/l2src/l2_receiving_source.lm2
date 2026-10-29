@@ -1,0 +1,152 @@
+# Receiving declarations retain their active receiver/arguments tree.
+# The ordinary prepared-source filter omits disabled fields, as in declaration
+# analysis; disabled syntax is not an additional runtime contract operand.
+# Only the prepared contract leaf's exact source identity is replaced by
+# its already selected address expression. Names and default expressions
+# are copied as syntax, never rebound or executed during this construction.
+predef: "l2src/l2_application.h.lm1"
+predef: "l2src/l2_receiving_source_abi.h.lm1"
+
+fn: receiving_word_count (@: source_node c.LmP0Node; @: word c.LmP0Text) int
+    if: source_node = 0 || source_node\as = 0 || word = 0
+        return: 0
+    @: data c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) source_node\as)
+    if: source_node\kind = c.LM_P0_NODE_ATOM || source_node\kind = c.LM_P0_NODE_DISABLED
+        return: (cast: (int) (data\atom = word))
+    @: body c.LmP0Structure 0
+    @: trailer c.LmP0Trailer 0
+    int: count 0
+    if: source_node\kind = c.LM_P0_NODE_FRAME && data\frame != 0
+        @: application c.LmP0Frame (cast: (@: c.LmP0Frame) data\frame)
+        count: (cast: (int) (application\head = word))
+        body: application\body
+        trailer: application\trailer
+    else:
+        if: source_node\kind = c.LM_P0_NODE_STRUCTURE && data\structure != 0
+            body: data\structure
+            trailer: body\trailer
+        ---
+    ---
+    @: field c.LmP0Field 0
+    if: body != 0
+        field: c.lm_compiler_next_active(body\first_field)
+    while: field != 0 && count < 2
+        count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
+        field: c.lm_compiler_next_active(field\next)
+    ---
+    if: trailer != 0 && count < 2
+        count: count + (cast: (int) (trailer\spelling = word))
+        body: trailer\body
+        field: 0
+        if: body != 0
+            field: c.lm_compiler_next_active(body\first_field)
+        while: field != 0 && count < 2
+            count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
+            field: c.lm_compiler_next_active(field\next)
+        ---
+    ---
+    return: count
+end: receiving_word_count
+
+fn: receiving_resolved (@: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
+    int: status 1
+    if: model >= 0 && callable < 0
+        status: c.lm_compiler_rw_ns_value_at(parent, model, declaring, home, 2, out)
+    if: callable >= 0 && model < 0
+        status: c.lm_compiler_rw_callable_operand(parent, callable, out)
+    if: status = 0
+        selected[0]: out[0]
+    return: status
+end: receiving_resolved
+
+fn: receiving_source_body (@: body c.LmP0Structure; @: trailer c.LmP0Trailer; @: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
+    @: field c.LmP0Field 0
+    int: width 0
+    int: at 0
+    int: child 0
+    if: body != 0
+        field: c.lm_compiler_next_active(body\first_field)
+    while: field != 0
+        width: width + 1
+        field: c.lm_compiler_next_active(field\next)
+    ---
+    if: trailer != 0
+        width: width + 1
+    if: c.lm_compiler_rw_plain(parent, width, out) != 0
+        return: 1
+    if: body != 0
+        field: c.lm_compiler_next_active(body\first_field)
+    while: field != 0
+        if: receiving_source_node((cast: (@: c.LmP0Node) field\value), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.lm_compiler_rw_put(out[0], at, child) != 0
+            return: 1
+        at: at + 1
+        field: c.lm_compiler_next_active(field\next)
+    ---
+    if: trailer != 0
+        if: receiving_source_application((cast: (@: c.LmP0Text) trailer\spelling), (cast: (@: c.LmP0Structure) trailer\body), (cast: (@: c.LmP0Trailer) 0), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.lm_compiler_rw_source_facet(child, "LMX_WALK_SOURCE_TRAILER") != 0 || c.lm_compiler_rw_put(out[0], at, child) != 0
+            return: 1
+        ---
+    ---
+    return: 0
+end: receiving_source_body
+
+fn: receiving_source_application (@: head c.LmP0Text; @: body c.LmP0Structure; @: trailer c.LmP0Trailer; @: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
+    int: operands 0
+    int: receiver 0
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_SOURCE_INERT", 2, out) != 0 || c.lm_compiler_rw_source_name(out[0], head) != 0
+        return: 1
+    if: word != 0 && head = word
+        if: receiving_resolved(word, model, callable, declaring, home, out[0], @ receiver, selected) != 0 || c.lm_compiler_rw_put(out[0], 0, receiver) != 0
+            return: 1
+        ---
+    ---
+    if: receiving_source_body(body, trailer, word, model, callable, declaring, home, out[0], @ operands, selected) != 0
+        return: 1
+    return: c.lm_compiler_rw_put(out[0], 1, operands)
+end: receiving_source_application
+
+fn: receiving_source_node (@: source_node c.LmP0Node; @: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
+    if: source_node = 0 || source_node\as = 0 || out = 0
+        return: 1
+    @: data c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) source_node\as)
+    if: source_node\kind = c.LM_P0_NODE_ATOM || source_node\kind = c.LM_P0_NODE_DISABLED
+        if: word != 0 && data\atom = word
+            return: receiving_resolved(word, model, callable, declaring, home, parent, out, selected)
+        return: c.lm_compiler_rw_source_atom(data\atom, parent, out)
+    if: source_node\kind = c.LM_P0_NODE_STRUCTURE && data\structure != 0
+        @: structure c.LmP0Structure (cast: (@: c.LmP0Structure) data\structure)
+        return: receiving_source_body(structure, (cast: (@: c.LmP0Trailer) structure\trailer), word, model, callable, declaring, home, parent, out, selected)
+    if: source_node\kind = c.LM_P0_NODE_FRAME && data\frame != 0
+        @: application c.LmP0Frame (cast: (@: c.LmP0Frame) data\frame)
+        return: receiving_source_application((cast: (@: c.LmP0Text) application\head), (cast: (@: c.LmP0Structure) application\body), (cast: (@: c.LmP0Trailer) application\trailer), word, model, callable, declaring, home, parent, out, selected)
+    return: 1
+end: receiving_source_node
+
+# A selected semantic receiver needs one genuine source location. Reused or
+# synthetic contract text is not permission to perform a spelling lookup.
+# model/callable have already been resolved in the explicit declaring scope;
+# home is only the owner of copy-use dependencies, never a runtime code base.
+fn: lm_compiler_receiving_source (@: source c.LmP0Node; @: contract c.L2TypeContract; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
+    @: leaf c.L2TypeContract contract
+    @: word c.LmP0Text 0
+    if: source = 0 || out = 0 || selected = 0 || (model >= 0 && callable >= 0)
+        return: 1
+    selected[0]: -1
+    while: leaf != 0 && leaf\kind != 0
+        leaf: leaf\operand
+    ---
+    # An anonymous callable receiver already has its ordinary declaration
+    # occurrence, including its own args/result declarations. Borrow it;
+    # never flatten its fn syntax or invent a leaf from an ABI pointer.
+    if: callable >= 0 && leaf = 0
+        return: receiving_resolved(word, model, callable, declaring, home, parent, out, selected)
+    if: model >= 0 || callable >= 0
+        if: leaf = 0 || leaf\word = 0
+            return: 1
+        word: leaf\word
+        if: receiving_word_count(source, word) != 1
+            return: 1
+        ---
+    ---
+    return: receiving_source_node(source, word, model, callable, declaring, home, parent, out, selected)
+end: lm_compiler_receiving_source

@@ -1,0 +1,47 @@
+# The machine profile's bitwise operations (L2 section 21) on real values: & | ^ << >> on unsigned, a shift
+# count of another type (int), C precedence (+ above << above & above ^ above |, comparisons below the
+# shifts), and int operands. The entry exits 7; 81.. names the first wrong value. Under --walk-methods bits
+# stays native: the walker does not evaluate these operators yet (BITWISE-OPERATORS-NOT-CLASSIFIED, OPEN).
+fn: bits (unsigned: a; unsigned: b; int: n) int
+    unsigned: x a & b
+    if: x != 0x00F000F0U
+        return: 81
+    if: (a | b) != 0xFFF0FFF0U
+        return: 82
+    if: (a ^ b) != 0xFF00FF00U
+        return: 83
+    if: (1U << n) != 32U
+        return: 84
+    if: (a >> 28) != 15U
+        return: 85
+    if: (1U | 2U ^ 3U & 6U) != 1U
+        return: 86
+    if: (1U << 2U + 1U) != 8U
+        return: 87
+    if: 8U >> 1U != 4U
+        return: 88
+    return: 0
+end: bits
+
+fn: ints (int: m) int
+    if: (m & 3) != 2
+        return: 89
+    if: (m | 1) != 0 - 5
+        return: 90
+    if: (m ^ m) != 0
+        return: 91
+    return: 0
+end: ints
+
+fn: run () int
+    int: r bits(0xF0F0F0F0U, 0x0FF00FF0U, 5)
+    if: r != 0
+        return: r
+    r: ints(0 - 6)
+    if: r != 0
+        return: r
+    return: 7
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,18 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: a method above the os block calls the selected branch's
+# method below it, as method_above_unit.lm2's method calls the unit's. early(3) = os_twice(3) + 1: 7 for win,
+# 8 for default.
+fn: early (int: v) int
+    return: os_twice(v) + 1
+end: early
+os:
+    win:
+        fn: os_twice (int: x) int
+            return: x + x
+        end: os_twice
+    default:
+        fn: os_twice (int: x) int
+            return: 2 * x + 1
+        end: os_twice
+end: os
+sendMessage: exit(exit_code: early(3); stdout: ""; stderr: "")
+return

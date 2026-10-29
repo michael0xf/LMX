@@ -1,0 +1,147 @@
+# Owned scalar Array record. This includes Array<@T>: its descriptor type is
+# LMX_TYPE_ARRAY_OF_POINTER_BASE + type-id(T), while each backing pointer cell
+# is classified by LMX_TYPE_POINTER_BASE + type-id(T). An empty Array is a real
+# typed descriptor with size 0 and data 0; it is distinct from a null reference
+# and has no backing interval. Descriptor and backing are TWO arrays of the arena,
+# each with its own descriptor and its own entry in the index; the arena allocates
+# both and owns both, and no owner-local range list exists. The backing has exactly
+# `size` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
+# its explicit arguments. The build writes its header, lmx_array_owned.h.lm1, with the seven exports;
+# lmx_array_new_physical_profiled is the module's own. The records it reads and writes (LmxArena, LmxArray, Lmx) and
+# the pointer-cell callbacks' types are in the kernel's headers that L3 code of the recipe writes as L1 text
+# (decls_write_all, tools/l2/build.lm2); the arena's acts (lmx_arena_*), the interned table's (lmx_chars_init) and the
+# graph's cell address (lmx_graph_cell_in) are the kernel's C functions, called through the C door.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_chars.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+include: "<stdlib.h>"
+
+# An Array of one element type: TWO arrays of the arena.  The descriptor is a cell of the
+# array of Array descriptors for that type (6.5's all_array_of_T), and the backing is the
+# array of element cells it points at.  The arena allocates both and owns both, each has
+# its own descriptor in the index, and a refusal anywhere reverts the arena to the mark
+# taken before the first one -- an Array never survives half made.
+fn: lmx_array_new_owned (int: type; size_t: count; @: arena c.LmxArena) @: c.LmxArray
+    return: lmx_array_new_profiled(type, count, arena, 0)
+end: lmx_array_new_owned
+
+fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx; size_t: pointer_stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write; @: parent c.Lmx) @: c.LmxArray
+    size_t: stride 0U
+    int: base_type c.lmx_type_base(type)
+    int: element_type c.lmx_type_element(type)
+    @: desc c.LmxArray 0
+    @: va c.VoidArray 0
+    @: backing void 0
+    ulong: ulong_probe 0U
+    if: arena = 0 || element_type = c.LMX_TYPE_NONE
+        return: 0
+    if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
+        stride: c.sizeof(c.char)
+        # D-63: the interned char table (lmx_chars_init) and an ordinary char array's own
+        # backing share the one (KIND_PRIMITIVE, TYPE_CHAR) pool of this arena, and
+        # lmx_char_cell can only ever find the table in that pool's FIRST chunk.  Laying
+        # the table out here, before this array's own backing ever claims that pool,
+        # keeps the table first regardless of which char array a program declares first.
+        # A no-op once the table already exists (its own ordinary "already laid out"
+        # refusal); never refuses THIS array's own construction either way.
+        if: array_profile = 0 && type = base_type
+            c.lmx_chars_init(arena)
+        ---
+    else:
+        if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+            stride: c.sizeof(c.char)
+        else:
+            if: base_type = c.LMX_TYPE_ARRAY_OF_INT
+                stride: c.sizeof(c.int)
+            else:
+                if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+                    stride: c.sizeof(c.size_t)
+                else:
+                    if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
+                        stride: c.sizeof(ulong_probe)
+                    ---
+                    if: base_type != c.LMX_TYPE_ARRAY_OF_ULONG && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                        return: 0
+                    # Exact parallel domains: descriptor Array<@T> and each
+                    # backing @T cell carry the same closed-unit T id.
+                    if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                        if: pointer_stride = 0U || read = 0 || write = 0
+                            return: 0
+                        ---
+                        stride: pointer_stride
+                    ---
+                ---
+            ---
+        ---
+    ---
+    if: count != 0U && count > ((cast: (size_t) -1) / stride)
+        return: 0
+    # The descriptor is one cell of the array of Array descriptors of this type; the
+    # backing is `count` consecutive cells of the array of that element type.  Both are
+    # the arena's arrays: found if the arena has them, made here if it does not.
+    desc: (cast: (@: LmxArray) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+    if: desc = 0
+        return: 0
+    desc\parent: parent
+    desc\native: 0
+    # The header's by-value VoidArray is written through its address.
+    va: @ desc\array
+    va\size: count
+    va\data: 0
+    if: count != 0U
+        if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+            backing: (cast: (@: void) c.lmx_arena_pointer_cells_profiled(arena, element_type, array_profile, stride, read, write, count))
+        else:
+            backing: (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, array_profile, count))
+        ---
+        if: backing = 0
+            return: 0
+        va\data: backing
+    ---
+    return: desc
+end: lmx_array_new_physical_profiled
+
+fn: lmx_array_new_profiled (int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx) @: c.LmxArray
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 0)
+end: lmx_array_new_profiled
+
+# A lexical child is constructed with its actual graph parent. Neither a
+# later alias store nor the allocation profile reparents an existing Array.
+fn: lmx_array_new_child_profiled (@: parent c.Lmx; int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx) @: c.LmxArray
+    if: parent = 0
+        return: 0
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, parent)
+end: lmx_array_new_child_profiled
+
+# Array<@T> uses the exact physical T * backing contract supplied by its
+# closed unit. The value is a full Lmx graph header; the element
+# cells are selected by address and pool, not by per-cell metadata.
+fn: lmx_array_new_typed_profiled (int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write) @: c.LmxArray
+    if: c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
+        return: 0
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, 0)
+end: lmx_array_new_typed_profiled
+
+fn: lmx_array_new_typed_child_profiled (@: parent c.Lmx; int: type; size_t: count; @: arena c.LmxArena; @: array_profile c.Lmx; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write) @: c.LmxArray
+    if: parent = 0 || c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0
+        return: 0
+    return: lmx_array_new_physical_profiled(type, count, arena, array_profile, stride, read, write, parent)
+end: lmx_array_new_typed_child_profiled
+
+# A backing element is addressed with its actual arena-pool stride.
+fn: lmx_array_cell_in (@: arena c.LmxArena; @: array c.LmxArray; size_t: index) @: void
+    if: arena = 0 || (cast: (int) c.lmx_range_classify(arena, (cast: (@: void) array))) != c.LMX_KIND_ARRAY
+        return: 0
+    return: (cast: (@: void) c.lmx_graph_cell_in(arena, array, index))
+end: lmx_array_cell_in
+
+# Compatibility boundary for callers that specifically require a positive
+# count. Generic graph code uses lmx_array_new_owned.
+fn: lmx_array_new_positive_owned (int: type; size_t: count; @: arena c.LmxArena) @: c.LmxArray
+    if: count = 0U
+        return: 0
+    return: lmx_array_new_owned(type, count, arena)
+end: lmx_array_new_positive_owned

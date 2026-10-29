@@ -1,0 +1,377 @@
+# Unselected L2 port of check_docs.py's parser inventory assertions.
+# Order remains imported files, their origins, then source-tree coverage.
+# Reads and hashes use one retained raw buffer; origins compare actual bytes.
+# The native text/FS/path parts must be selected with this part. No old script
+# is invoked and no successful translation or filesystem run is claimed.
+
+fn: pi_array (@: data char; size_t: count; size_t: object_at; @: key char; @: first size_t) int
+    size_t: after 0U
+    if: dj_property(data, count, object_at, key, first, @ after) != 1
+        return: 1
+    if: first[0] >= count || data[first[0]] != (cast: (char) 91)
+        return: 1
+    first[0]: dj_ws(data, count, first[0] + 1U)
+    return: 0
+end: pi_array
+
+# Filesystem strings cannot silently truncate at an escaped JSON NUL.
+fn: pi_path_string (@: data char; size_t: count; size_t: object_at; @: key char; @@: out char) int
+    size_t: path_count 0U
+    int: failed dc_string(data, count, object_at, key, out, @ path_count)
+    if: failed = 0 && c.strlen(out[0]) != path_count
+        failed: 1
+    if: failed != 0
+        c.free(out[0])
+        out[0]: 0
+    return: failed
+end: pi_path_string
+
+fn: pi_origins (@: data char; size_t: count; size_t: file_at; @: raw char; size_t: raw_count) int
+    size_t: pos 0U
+    size_t: after 0U
+    size_t: source_count 0U
+    @: root char 0
+    @: path char 0
+    @: full char 0
+    @: source char 0
+    int: kind 0
+    int: failed pi_array(data, count, file_at, "origins", @ pos)
+    while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
+        if: dj_span(data, count, pos, @ after) != 2
+            failed: 1
+            break
+        failed: pi_path_string(data, count, pos, "root", @ root)
+        if: failed = 0
+            failed: pi_path_string(data, count, pos, "path", @ path)
+        if: failed = 0
+            full: os_path_join(root, path)
+            if: full = 0
+                failed: 1
+            else:
+                kind: os_path_kind(full)
+                if: kind < 0
+                    failed: 1
+                if: kind = 1
+                    source: file_read(full, @ source_count)
+                    if: source = 0
+                        failed: 1
+                    else:
+                        if: source_count != raw_count || c.memcmp(source, raw, raw_count) != 0
+                            failed: 1
+                        ---
+                    ---
+                ---
+            ---
+        ---
+        c.free(root)
+        c.free(path)
+        c.free(full)
+        c.free(source)
+        root: 0
+        path: 0
+        full: 0
+        source: 0
+        if: failed = 0
+            failed: dj_array_next(data, count, after, @ pos)
+    ---
+    return: failed
+end: pi_origins
+
+fn: pi_import (@: repo char; @: data char; size_t: count; size_t: file_at) int
+    @: path char 0
+    @: full char 0
+    @: raw char 0
+    @: expected char 0
+    @: digest char 0
+    size_t: raw_count 0U
+    size_t: expected_count 0U
+    size_t: first 0U
+    size_t: after 0U
+    int: failed pi_path_string(data, count, file_at, "path", @ path)
+    if: failed = 0
+        full: os_path_join(repo, path)
+        digest: c.calloc(65U, 1U)
+        if: full = 0 || digest = 0
+            failed: 1
+        ---
+    ---
+    if: failed = 0
+        raw: file_read(full, @ raw_count)
+        if: raw = 0
+            failed: 1
+        ---
+    if: failed = 0
+        if: dj_property(data, count, file_at, "bytes", @ first, @ after) != 1
+            failed: 1
+        else:
+            if: dc_counter(data, count, first, after, raw_count) = 0
+                failed: 1
+            ---
+        ---
+    ---
+    if: failed = 0
+        failed: sha256_bytes(raw, raw_count, digest)
+    if: failed = 0
+        failed: dc_string(data, count, file_at, "sha256", @ expected, @ expected_count)
+        if: failed = 0
+            if: expected_count != 64U || c.memcmp(expected, digest, 64U) != 0
+                failed: 1
+            ---
+        ---
+    ---
+    if: failed = 0
+        failed: pi_origins(data, count, file_at, raw, raw_count)
+    c.free(path)
+    c.free(full)
+    c.free(raw)
+    c.free(expected)
+    c.free(digest)
+    return: failed
+end: pi_import
+
+# The published inventory's stage identifiers are strings, with explicit byte
+# lengths (including an embedded NUL label, which is not a filesystem path).
+# Gather eagerly from ALL files/origins with that stage, not by root. The
+# original set comprehension reads every origin's stage before rglob begins.
+# A counted list preserves set membership without a new hash/cache subsystem.
+fn: pi_represented (@: data char; size_t: count; size_t: files_at; @: stage char; size_t: stage_count; @@@: out char; @: out_count size_t) int
+    size_t: file_pos dj_ws(data, count, files_at + 1U)
+    size_t: file_after 0U
+    size_t: origin_pos 0U
+    size_t: origin_after 0U
+    size_t: candidate_count 0U
+    size_t: path_count 0U
+    size_t: used 0U
+    size_t: capacity 0U
+    @@: paths char 0
+    @: kinds unsigned 0
+    @: candidate char 0
+    @: path char 0
+    int: same 0
+    int: failed 0
+    out[0]: 0
+    out_count[0]: 0U
+    while: failed = 0 && file_pos < count && data[file_pos] != (cast: (char) 93)
+        if: dj_span(data, count, file_pos, @ file_after) != 2 || pi_array(data, count, file_pos, "origins", @ origin_pos) != 0
+            failed: 1
+            break
+        while: failed = 0 && origin_pos < count && data[origin_pos] != (cast: (char) 93)
+            if: dj_span(data, count, origin_pos, @ origin_after) != 2
+                failed: 1
+                break
+            if: dc_string(data, count, origin_pos, "stage", @ candidate, @ candidate_count) != 0
+                failed: 1
+                break
+            same: (cast: (int) (candidate_count = stage_count && c.memcmp(candidate, stage, stage_count) = 0))
+            c.free(candidate)
+            candidate: 0
+            if: same != 0
+                if: dc_string(data, count, origin_pos, "path", @ path, @ path_count) != 0
+                    failed: 1
+                else:
+                    if: c.strlen(path) != path_count || fs_entry_append(@ paths, @ kinds, @ used, @ capacity, path, 0U) != 0
+                        failed: 1
+                    else:
+                        path: 0
+                    ---
+                ---
+                c.free(path)
+                path: 0
+            ---
+            if: failed = 0
+                failed: dj_array_next(data, count, origin_after, @ origin_pos)
+        ---
+        if: failed = 0
+            failed: dj_array_next(data, count, file_after, @ file_pos)
+    ---
+    c.free(candidate)
+    c.free(path)
+    if: failed != 0
+        fs_entries_free(paths, kinds, used)
+        return: 1
+    out[0]: paths
+    out_count[0]: used
+    c.free(kinds)
+    return: 0
+end: pi_represented
+
+fn: pi_member (@@: represented char; size_t: count; @: relative char) int
+    size_t: at 0U
+    while: at < count
+        if: c.strcmp(represented[at], relative) = 0
+            return: 1
+        at: at + 1U
+    ---
+    return: 0
+end: pi_member
+
+os:
+    win:
+        fn: pi_lmx_name (@: name char) int
+            size_t: name_count c.strlen(name)
+            size_t: at 0U
+            unsigned: byte 0U
+            @: suffix char ".lmx"
+            if: name_count < 4U
+                return: 0
+            while: at < 4U
+                byte: (cast: (unsigned) name[name_count - 4U + at]) & 255U
+                if: byte >= 65U && byte <= 90U
+                    byte: byte + 32U
+                if: byte != ((cast: (unsigned) suffix[at]) & 255U)
+                    return: 0
+                at: at + 1U
+            ---
+            return: 1
+        end: pi_lmx_name
+    default:
+        fn: pi_lmx_name (@: name char) int
+            return: txt_ends(name, ".lmx")
+        end: pi_lmx_name
+end: os
+
+# rglob emits matching names of any kind, but does not recursively enter
+# symbolic-link directories. Windows junctions are NOT all symlinks.
+# An OS scandir failure is ignored as in glob; internal allocation is not.
+fn: pi_walk (@: base char; @: relative char; @@: represented char; size_t: represented_count) int
+    @: directory char os_path_join(base, relative)
+    @: child char 0
+    @@: names char 0
+    @: kinds unsigned 0
+    size_t: entries 0U
+    size_t: at 0U
+    int: scanned 0
+    int: failed 0
+    if: directory = 0
+        return: 1
+    scanned: os_directory_entries(directory, @ names, @ kinds, @ entries)
+    c.free(directory)
+    if: scanned < 0
+        return: 1
+    if: scanned > 0
+        return: 0
+    while: at < entries && failed = 0
+        if: pi_lmx_name(names[at]) != 0
+            child: txt_path(relative, names[at])
+            if: child = 0
+                failed: 1
+            else:
+                if: pi_member(represented, represented_count, child) != 1
+                    failed: 1
+                ---
+            ---
+            c.free(child)
+            child: 0
+        ---
+        at: at + 1U
+    ---
+    at: 0U
+    while: at < entries && failed = 0
+        if: (kinds[at] & 2U) != 0U && (kinds[at] & 4U) = 0U
+            child: txt_path(relative, names[at])
+            if: child = 0
+                failed: 1
+            else:
+                failed: pi_walk(base, child, represented, represented_count)
+            ---
+            c.free(child)
+            child: 0
+        ---
+        at: at + 1U
+    ---
+    fs_entries_free(names, kinds, entries)
+    return: failed
+end: pi_walk
+
+fn: pi_sources (@: data char; size_t: count; size_t: root; size_t: files_at) int
+    size_t: pos 0U
+    size_t: after 0U
+    size_t: stage_count 0U
+    size_t: represented_count 0U
+    @@: represented char 0
+    @: base char 0
+    @: stage char 0
+    int: kind 0
+    int: failed pi_array(data, count, root, "sources", @ pos)
+    while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
+        if: dj_span(data, count, pos, @ after) != 2
+            failed: 1
+            break
+        failed: pi_path_string(data, count, pos, "root", @ base)
+        if: failed = 0
+            kind: os_path_kind(base)
+            if: kind < 0
+                failed: 1
+            if: kind = 2
+                failed: dc_string(data, count, pos, "stage", @ stage, @ stage_count)
+                if: failed = 0
+                    failed: pi_represented(data, count, files_at, stage, stage_count, @ represented, @ represented_count)
+                if: failed = 0
+                    failed: pi_walk(base, "tests", represented, represented_count)
+                ---
+            ---
+        ---
+        c.free(base)
+        c.free(stage)
+        fs_entries_free(represented, 0, represented_count)
+        base: 0
+        stage: 0
+        represented: 0
+        represented_count: 0U
+        if: failed = 0
+            failed: dj_array_next(data, count, after, @ pos)
+    ---
+    return: failed
+end: pi_sources
+
+fn: docs_parser_inventory_check (@: repo char; @: imported size_t) int
+    @: path char 0
+    @: data char 0
+    size_t: count 0U
+    size_t: root 0U
+    size_t: after 0U
+    size_t: files_at 0U
+    size_t: files_after 0U
+    size_t: pos 0U
+    int: failed 0
+    if: repo = 0 || imported = 0
+        return: 1
+    imported[0]: 0U
+    path: txt_path(repo, "provenance/parser-tests.json")
+    if: path != 0
+        data: file_read(path, @ count)
+    if: data = 0
+        failed: 1
+    if: failed = 0
+        if: dj_document(data, count, @ root, @ after) != 2
+            failed: 1
+        else:
+            if: dj_property(data, count, root, "files", @ files_at, @ files_after) != 1
+                failed: 1
+            else:
+                if: data[files_at] != (cast: (char) 91)
+                    failed: 1
+                ---
+            ---
+        ---
+    ---
+    if: failed = 0
+        pos: dj_ws(data, count, files_at + 1U)
+        while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
+            if: dj_span(data, count, pos, @ after) != 2
+                failed: 1
+                break
+            failed: pi_import(repo, data, count, pos)
+            if: failed = 0
+                imported[0]: imported[0] + 1U
+                failed: dj_array_next(data, count, after, @ pos)
+            ---
+        ---
+    ---
+    if: failed = 0
+        failed: pi_sources(data, count, root, files_at)
+    c.free(path)
+    c.free(data)
+    return: failed
+end: docs_parser_inventory_check
+

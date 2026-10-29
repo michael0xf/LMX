@@ -1,0 +1,290 @@
+# Concrete written call observations retain the ordinary compiler source
+# environment. No runtime graph or name-binding registry is built here.
+predef: "l2src/l2_application.h.lm1"
+predef: "l2src/l2_consumer_uses_abi.h.lm1"
+include: "<string.h>"
+include: "<stdio.h>"
+include: "<limits.h>"
+
+fn: consumer_site_same (@: a c.L2SourceSite; @: b c.L2SourceSite) int
+    if: a = 0 || b = 0
+        return: 0
+    if: a\method != b\method || a\source_method != b\source_method || a\current_method != b\current_method || a\source != b\source || a\excluded != b\excluded || a\visibility != b\visibility || a\visible_at != b\visible_at || a\unevaluated != b\unevaluated || a\scope_count != b\scope_count
+        return: 0
+    int: i 0
+    while: i < a\scope_count
+        if: a\scopes[i] != b\scopes[i]
+            return: 0
+        i: i + 1
+    ---
+    return: 1
+end: consumer_site_same
+
+# changed reports a new concrete occurrence or a changed CHECK signature.
+# Only source identity and the complete saved environment select a row.
+# Different calls/contexts remain distinct even when they share a field.
+fn: lm_compiler_consumer_call_note (@: fact c.L2PathFact; const: (@: source_node c.LmP0Node); int: method; int: signature; int: formal; int: frozen; @: changed int) int
+    if: changed = 0
+        return: 1
+    changed[0]: 0
+    if: fact = 0 || source_node = 0
+        return: 1
+    c.L2SourceSite: snapshot
+    @: saved c.L2SourceSite @ snapshot
+    c.memset((cast: (@: void) saved), 0, c.sizeof(c.L2SourceSite))
+    if: c.lm_compiler_source_save(saved) != 0
+        c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+        return: 1
+    @: entry c.L2ConsumerCallUse (cast: (@: c.L2ConsumerCallUse) fact\calls)
+    while: entry != 0
+        if: entry\method = method && entry\source = source_node && consumer_site_same((cast: (@: c.L2SourceSite) entry\use_site), saved) != 0
+            if: entry\signature != signature || entry\formal != formal
+                if: frozen != 0
+                    c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+                    return: 2
+                entry\signature: signature
+                entry\formal: formal
+                changed[0]: 1
+            ---
+            c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+            return: 0
+        ---
+        entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+    ---
+    if: frozen != 0
+        c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+        return: 2
+    entry: (cast: (@: c.L2ConsumerCallUse) c.lm_compiler_bound_alloc(1U, c.sizeof(c.L2ConsumerCallUse)))
+    @: retained c.L2SourceSite (cast: (@: c.L2SourceSite) c.lm_compiler_bound_alloc(1U, c.sizeof(c.L2SourceSite)))
+    if: entry = 0 || retained = 0
+        c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+        return: 1
+    c.memcpy((cast: (@: void) retained), (cast: (@: void) saved), c.sizeof(c.L2SourceSite))
+    entry\method: method
+    entry\source_method: saved\source_method
+    entry\source: source_node
+    entry\signature: signature
+    entry\formal: formal
+    entry\use_site: retained
+    entry\next: fact\calls
+    fact\calls: entry
+    changed[0]: 1
+    return: 0
+end: lm_compiler_consumer_call_note
+
+# Rows themselves belong to the binding's ordinary allocation ledger. Only
+# source_save's separately owned scope arrays need this explicit release.
+fn: lm_compiler_consumer_calls_release (@: first c.L2ConsumerCallUse) int
+    @: entry c.L2ConsumerCallUse first
+    while: entry != 0
+        @: saved c.L2SourceSite (cast: (@: c.L2SourceSite) entry\use_site)
+        if: saved != 0
+            c.lm_compiler_xfree((cast: (@: void) saved\scopes))
+            saved\scopes: 0
+            saved\scope_count: 0
+        ---
+        entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+    ---
+    return: 0
+end: lm_compiler_consumer_calls_release
+
+# This demand state participates in the existing exact source-plan fixed
+# point. Serialize borrowed identities and values, never allocation addresses
+# of newly created metadata rows, which would change on every replay.
+fn: lm_compiler_consumer_calls_snapshot (@: facts c.L2PathFact; @: out c.L2Tx) int
+    @: fact c.L2PathFact facts
+    @: text char (cast: (@: char) c.lm_compiler_bound_alloc(192U, c.sizeof(c.char)))
+    if: text = 0
+        return: 1
+    while: fact != 0
+        @: entry c.L2ConsumerCallUse (cast: (@: c.L2ConsumerCallUse) fact\calls)
+        while: entry != 0
+            @: saved c.L2SourceSite (cast: (@: c.L2SourceSite) entry\use_site)
+            if: saved = 0
+                return: 1
+            if: c.snprintf(text, 192U, "cu%p:%p:%p\n", (cast: (@: void) fact\source), (cast: (@: void) fact\input_symbol), (cast: (@: void) entry\source)) < 0 || c.lm_compiler_tx_cat(out, text) != 0
+                return: 1
+            if: c.lm_compiler_source_plan_numbers(out, "CU", fact\method, fact\source_method, fact\source_use, entry\method, entry\signature, entry\formal) != 0 || c.lm_compiler_source_plan_numbers(out, "CS", saved\method, saved\source_method, saved\current_method, saved\excluded, saved\visibility, saved\unevaluated) != 0
+                return: 1
+            if: c.snprintf(text, 192U, "cs%p:%zu:%d\n", (cast: (@: void) saved\source), saved\visible_at, saved\scope_count) < 0 || c.lm_compiler_tx_cat(out, text) != 0
+                return: 1
+            int: i 0
+            while: i < saved\scope_count
+                if: c.snprintf(text, 192U, "cx%p\n", (cast: (@: void) saved\scopes[i])) < 0 || c.lm_compiler_tx_cat(out, text) != 0
+                    return: 1
+                i: i + 1
+            ---
+            entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+        ---
+        fact: (cast: (@: c.L2PathFact) fact\next)
+    ---
+    return: 0
+end: lm_compiler_consumer_calls_snapshot
+
+# The final two cells of a row are deliberately absent until the real
+# result/exits producers supply them. A CALL pointer is not their proof.
+# [row-count, (coverage-field-coordinate, Consumer-code, written-CALL,
+#              result-receivers, required-exits)*]. All references are ordinary
+# graph edges. Copy/qualification must retain their declaring closure; an
+# OP/CALL alone is not a proved saved FN leaf or an immutable passport.
+fn: lm_compiler_consumer_call_cells (@: scope c.L2UseScope; @@: edges c.L2UsePlanEdge) int
+    int: count 0
+    if: scope = 0 || scope\state != 2
+        return: 1
+    int: i scope\first
+    int: limit scope\first + scope\count
+    while: i < limit
+        @: edge c.L2UsePlanEdge edges[i]
+        if: edge != 0 && edge\called != 0
+            @: entry c.L2ConsumerCallUse (cast: (@: c.L2ConsumerCallUse) edge\calls)
+            while: entry != 0
+                if: count >= (c.INT_MAX - 1) / 5
+                    return: -1
+                count: count + 1
+                entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+            ---
+        ---
+        i: i + 1
+    ---
+    return: 1 + 5 * count
+end: lm_compiler_consumer_call_cells
+
+# Prefer the CALL of this exact construction view. An absent external
+# dependency can name its one ordinary source construction. A present but
+# ambiguous/unbound projection never retries the original as a substitute.
+fn: consumer_call_site (@: sites c.L2ExpressionSite; int: kind; int: index; @: use c.L2ConsumerCallUse) @: c.L2ExpressionSite
+    @: found c.L2ExpressionSite 0
+    @: site c.L2ExpressionSite sites
+    while: site != 0
+        if: site\role = 4 && site\method = use\method && site\node = use\source && site\count = 1
+            if: site\view_kind = kind && site\view_index = index
+                return: site
+        ---
+        site: (cast: (@: c.L2ExpressionSite) site\allocated_next)
+    ---
+    site: sites
+    while: site != 0
+        if: site\role = 4 && site\method = use\method && site\node = use\source && site\count = 1 && site\view_kind = 0
+            if: found != 0
+                return: 0
+            found: site
+        ---
+        site: (cast: (@: c.L2ExpressionSite) site\allocated_next)
+    ---
+    return: found
+end: consumer_call_site
+
+# Resolve only existing construction roots. This is not a runtime name
+# lookup: the identity is (view, declaring method) and physical GraphPlace.
+# A projection's main root aliases target; nested definitions use their own
+# source aliases. Only a real external normal source uses the supplied unit.
+fn: consumer_build_cursor (@: roots c.L2SourceContainer; int: actual_kind; int: actual_index; @: site c.L2ExpressionSite; @: place c.L2GraphPlace; const: (@: cursor char); @: out c.FILE) int
+    @: selected c.L2SourceContainer 0
+    @: root c.L2SourceContainer roots
+    @: local char (cast: (@: char) c.lm_compiler_bound_alloc(256U, c.sizeof(c.char)))
+    c.L2Tx: transaction
+    @: expression c.L2Tx @ transaction
+    if: site = 0 || cursor = 0 || local = 0 || (place != 0 && place\method != site\method)
+        return: 1
+    if: site\view_kind = actual_kind && (actual_index < 0 || site\view_index = actual_index)
+        while: root != 0
+            if: root\root != 0 && root\source_mi = site\method && root\view_kind = site\view_kind && root\view_index = site\view_index && root\inert = 0
+                if: selected != 0 || root\shell_state != 2
+                    return: 1
+                selected: root
+            ---
+            root: (cast: (@: c.L2SourceContainer) root\allocated_next)
+        ---
+    ---
+    if: c.fprintf(out, "        @: Lmx %s ", cursor) < 0
+        return: 1
+    if: selected != 0
+        if: c.fprintf(out, "l2_sc%zu", selected\id) < 0
+            return: 1
+        ---
+    else:
+        if: site\view_kind != 0
+            return: 1
+        expression: (cast: (@: c.L2Tx) c.lm_compiler_tx_local(expression, (cast: (@: char) local), 256U))
+        if: expression = 0 || c.lm_compiler_occ_expr(site\method, "l2_entry_unit", expression) != 0 || c.fputs(expression\data, out) < 0
+            return: 1
+    ---
+    if: c.fputs("\n", out) < 0 || c.lm_compiler_emit_graph_holder(place, cursor, "        ") != 0 || c.fprintf(out, "        if: %s = 0\n            return: 1\n", cursor) < 0
+        return: 1
+    return: 0
+end: consumer_build_cursor
+
+# End-of-view fixup. PLACE already bound both endpoints; every method's
+# frames have been attached before this runs. Never refer to a private
+# l2_rw temporary belonging to another method's builder or execute the CALL.
+fn: lm_compiler_consumer_calls_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @@: edges c.L2UsePlanEdge; @: levels int; @: roots c.L2SourceContainer; @: out c.FILE) int
+    @: site c.L2ExpressionSite sites
+    # Compiler binding-owned raw text storage, not a language Array or an
+    # added graph dependency of these direct machine entry points.
+    @: scratch char (cast: (@: char) c.lm_compiler_bound_alloc(288U, c.sizeof(c.char)))
+    if: scratch = 0
+        return: 1
+    @: record_name char scratch
+    @: uses_name char scratch + 64
+    @: code_name char scratch + 128
+    @: call_name char scratch + 208
+    while: site != 0
+        @: plan c.L2AdmissionPlan (cast: (@: c.L2AdmissionPlan) site\admission)
+        if: site\role = 3 && site\view_kind = kind && (index < 0 || site\view_index = index) && site\state = 1 && site\place != 0 && plan != 0
+            @: scope c.L2UseScope (cast: (@: c.L2UseScope) plan\scope)
+            int: cells lm_compiler_consumer_call_cells(scope, edges)
+            if: cells < 0
+                return: 1
+            if: cells > 1
+                if: c.snprintf(record_name, 64U, "l2_cc_record%d", site\temp) < 0 || c.snprintf(uses_name, 64U, "l2_cc_uses%d", site\temp) < 0
+                    return: 1
+                if: consumer_build_cursor(roots, kind, index, site, (cast: (@: c.L2GraphPlace) site\place), (cast: (@: char) record_name), out) != 0
+                    return: 1
+                if: c.fprintf(out, "        @: Lmx %s lmx_arena_ref_struct(%s, 5U)\n        if: %s = 0 || lmx_walk_store_size(l2_program_arena, %s, 0U, %dU) != c.LMX_WALK_OK\n            return: 1\n", uses_name, record_name, uses_name, uses_name, (cells - 1) / 5) < 0
+                    return: 1
+                int: i scope\first
+                int: limit scope\first + scope\count
+                int: offset 1
+                while: i < limit
+                    @: edge c.L2UsePlanEdge edges[i]
+                    if: edge != 0 && edge\called != 0
+                        int: j scope\first
+                        int: ordinal 0
+                        while: j < i
+                            if: levels[j] = levels[i]
+                                ordinal: ordinal + 1
+                            j: j + 1
+                        ---
+                        int: coordinate c.lm_compiler_use_scope_level_at(scope, levels[i])
+                        if: coordinate < 0 || ordinal > (c.INT_MAX - coordinate - 1) / 2
+                            return: 1
+                        coordinate: coordinate + 1 + 2 * ordinal
+                        @: use c.L2ConsumerCallUse (cast: (@: c.L2ConsumerCallUse) edge\calls)
+                        while: use != 0
+                            if: offset >= cells || c.fprintf(out, "        if: lmx_walk_store_size(l2_program_arena, %s, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", uses_name, offset, coordinate) < 0
+                                return: 1
+                            @: called c.L2ExpressionSite consumer_call_site(sites, (cast: (int) site\view_kind), (cast: (int) site\view_index), use)
+                            if: called != 0 && called\state = 1 && called\place != 0 && called\value_type = use\signature
+                                if: c.snprintf(code_name, 80U, "l2_cc_code%d_%d", site\temp, offset) < 0 || c.snprintf(call_name, 80U, "l2_cc_call%d_%d", site\temp, offset) < 0
+                                    return: 1
+                                if: consumer_build_cursor(roots, kind, index, called, 0, (cast: (@: char) code_name), out) != 0 || consumer_build_cursor(roots, kind, index, called, (cast: (@: c.L2GraphPlace) called\place), (cast: (@: char) call_name), out) != 0
+                                    return: 1
+                                if: c.fprintf(out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", uses_name, offset + 1, code_name, uses_name, offset + 2, call_name) < 0
+                                    return: 1
+                            ---
+                            # Missing/ambiguous CALL and missing demands stay
+                            # null, not an ABI-only admission or a made-up call.
+                            offset: offset + 5
+                            use: (cast: (@: c.L2ConsumerCallUse) use\next)
+                        ---
+                    ---
+                    i: i + 1
+                ---
+                if: offset != cells
+                    return: 1
+            ---
+        ---
+        site: (cast: (@: c.L2ExpressionSite) site\allocated_next)
+    ---
+    return: 0
+end: lm_compiler_consumer_calls_emit

@@ -1,0 +1,120 @@
+# Unselected ordinary L2 scanner for check_docs.py's authored-link fences.
+# It implements that fixed regex, not a Markdown parser or language grammar.
+# Inputs are normalized validated UTF-8; line anchors mean LF only.
+
+# Next closing run of exactly width backticks. Suffix Unicode whitespace is
+# greedy; $ is EOF or just before LF. -1 invalid,0 absent,1 found.
+fn: dl_fence_close (@: data char; size_t: count; size_t: begin; size_t: width; @: after size_t) int
+    size_t: scan begin
+    size_t: first 0U
+    size_t: run 0U
+    size_t: pos 0U
+    size_t: point_width 0U
+    size_t: last_lf 0U
+    unsigned: point 0U
+    int: has_lf 0
+    while: scan < count
+        first: dp_line_marker(data, count, scan, "```", 3U)
+        if: first = (cast: (size_t) -1)
+            return: 0
+        run: 0U
+        while: run < count - first && data[first + run] = (cast: (char) 96)
+            run: run + 1U
+        if: run = width
+            pos: first + run
+            has_lf: 0
+            while: pos < count
+                point_width: dt_point(data, count, pos, @ point)
+                if: point_width = 0U
+                    return: -1
+                if: dt_space(point) = 0
+                    break
+                if: point = 10U
+                    last_lf: pos
+                    has_lf: 1
+                pos: pos + point_width
+            ---
+            if: pos = count
+                after[0]: count
+                return: 1
+            if: has_lf != 0
+                after[0]: last_lf
+                return: 1
+            ---
+        ---
+        scan: first + run
+    ---
+    return: 0
+end: dl_fence_close
+
+# Opening capture is greedy, body lazy: try run lengths L,L-1,...,3, and for
+# each length take the first valid closer. A later L-closer beats an early
+# (L-1)-closer. Opening-line trailing text is allowed; closing text is not.
+fn: dl_next_fence (@: data char; size_t: count; size_t: begin; @: first size_t; @: after size_t) int
+    size_t: scan begin
+    size_t: opening 0U
+    size_t: run 0U
+    size_t: width 0U
+    int: found 0
+    if: data = 0 || first = 0 || after = 0 || begin > count
+        return: -1
+    while: scan < count
+        opening: dp_line_marker(data, count, scan, "```", 3U)
+        if: opening = (cast: (size_t) -1)
+            return: 0
+        run: 0U
+        while: run < count - opening && data[opening + run] = (cast: (char) 96)
+            run: run + 1U
+        width: run
+        while: width >= 3U
+            found: dl_fence_close(data, count, opening + width, width, after)
+            if: found < 0
+                return: -1
+            if: found = 1
+                first[0]: opening
+                return: 1
+            width: width - 1U
+        ---
+        scan: opening + run
+    ---
+    return: 0
+end: dl_next_fence
+
+# Nonoverlapping substitutions over the original text, followed by a returned
+# contiguous buffer. Subsequent links may cross the removed fence boundary.
+fn: docs_links_strip_fences (@: data char; size_t: count; @@: out char; @: out_count size_t) int
+    @: stream c.FILE 0
+    size_t: scan 0U
+    size_t: first 0U
+    size_t: after 0U
+    int: found 0
+    int: failed 0
+    if: data = 0 || out = 0 || out_count = 0
+        return: 1
+    out[0]: 0
+    out_count[0]: 0U
+    stream: c.tmpfile()
+    if: stream = 0
+        return: 1
+    while: scan < count && failed = 0
+        found: dl_next_fence(data, count, scan, @ first, @ after)
+        if: found < 0
+            failed: 1
+            break
+        if: found = 0
+            break
+        failed: dg_bytes(stream, data + scan, first - scan)
+        scan: after
+    ---
+    if: failed = 0
+        failed: dg_bytes(stream, data + scan, count - scan)
+    if: failed = 0
+        failed: db_stream_read(stream, out, out_count)
+    if: c.fclose(stream) != 0
+        failed: 1
+    if: failed != 0
+        c.free(out[0])
+        out[0]: 0
+        out_count[0]: 0U
+    return: failed
+end: docs_links_strip_fences

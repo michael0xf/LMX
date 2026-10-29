@@ -1,0 +1,346 @@
+# Unselected L2 port of tools/check_docs.py check_eol/check_ctrl. Both checks
+# consume the same binary NUL-delimited Git listing; no line/string parser is
+# allowed to erase filenames, tabs, LF or NUL from that result.
+# The selected absolute git executable and an existing private output directory
+# are explicit inputs. No shell, Python helper or second test runner is used.
+
+fn: ce_white (unsigned: byte) int
+    if: byte = 32U || (byte >= 9U && byte <= 13U)
+        return: 1
+    return: 0
+end: ce_white
+
+fn: ce_word (@: data char; size_t: first; size_t: last; @: word char) int
+    size_t: count c.strlen(word)
+    if: last - first = count && c.memcmp(data + first, word, count) = 0
+        return: 1
+    return: 0
+end: ce_word
+
+os:
+    win:
+        fn: ce_path_separator (unsigned: byte) int
+            return: (cast: (int) (byte = 47U || byte = 92U))
+        end: ce_path_separator
+        fn: ce_path_drive (@: data char; size_t: count) int
+            return: (cast: (int) (count > 1U && data[1U] = (cast: (char) 58)))
+        end: ce_path_drive
+        fn: ce_build_component (@: data char; size_t: count) int
+            size_t: at 0U
+            unsigned: byte 0U
+            @: word char "build"
+            if: count != 5U
+                return: 0
+            while: at < count
+                byte: (cast: (unsigned) data[at]) & 255U
+                if: byte >= 65U && byte <= 90U
+                    byte: byte + 32U
+                if: byte != ((cast: (unsigned) word[at]) & 255U)
+                    return: 0
+                at: at + 1U
+            ---
+            return: 1
+        end: ce_build_component
+    default:
+        fn: ce_path_separator (unsigned: byte) int
+            return: (cast: (int) (byte = 47U))
+        end: ce_path_separator
+        fn: ce_path_drive (@: data char; size_t: count) int
+            return: 0
+        end: ce_path_drive
+        fn: ce_build_component (@: data char; size_t: count) int
+            return: ce_word(data, 0U, count, "build")
+        end: ce_build_component
+end: os
+
+# No exemption is invented for a protected input. Refuse before running Git's
+# --eol (which itself reads working files), rather than omitting that input and
+# later claiming that all tracked files passed. git ls-files -z reads names
+# from the index, not the file bodies. Git paths are repository-relative.
+fn: ce_readable_name (@: data char; size_t: count) int
+    size_t: pos 0U
+    size_t: base 0U
+    size_t: first_component count
+    size_t: scan 0U
+    unsigned: byte 0U
+    @: blocked char "l2_driver_launch.err"
+    if: count = 0U || ce_path_separator((cast: (unsigned) data[0]) & 255U) != 0 || ce_path_drive(data, count) != 0
+        return: 0
+    while: pos < count
+        byte: (cast: (unsigned) data[pos]) & 255U
+        if: byte = 0U
+            return: 0
+        if: ce_path_separator(byte) != 0
+            if: pos = base || ce_word(data, base, pos, ".") != 0 || ce_word(data, base, pos, "..") != 0
+                return: 0
+            if: base = 0U
+                first_component: pos
+            base: pos + 1U
+        ---
+        pos: pos + 1U
+    ---
+    if: base = count || ce_word(data, base, count, ".") != 0 || ce_word(data, base, count, "..") != 0
+        return: 0
+    if: ce_build_component(data, first_component) != 0
+        return: 0
+    if: count - base = c.strlen(blocked)
+        scan: 0U
+        while: base + scan < count
+            byte: (cast: (unsigned) data[base + scan]) & 255U
+            if: byte >= 65U && byte <= 90U
+                byte: byte + 32U
+            if: byte != ((cast: (unsigned) blocked[scan]) & 255U)
+                break
+            scan: scan + 1U
+        ---
+        if: base + scan = count
+            return: 0
+        ---
+    ---
+    return: 1
+end: ce_readable_name
+
+fn: ce_names_preflight (@: data char; size_t: count) int
+    size_t: first 0U
+    size_t: after 0U
+    if: data = 0 || dj_utf8(data, count) != 0
+        return: 1
+    while: first < count
+        after: first
+        while: after < count && data[after] != (cast: (char) 0)
+            after: after + 1U
+        if: after = count
+            return: 1
+        if: after > first && ce_readable_name(data + first, after - first) = 0
+            c.fputs("DOCS-EOL: tracked input is outside the permitted read scope\n", c.stderr)
+            return: 1
+        ---
+        first: after + 1U
+    ---
+    return: 0
+end: ce_names_preflight
+
+# offsets: index[first,last], work[first,last], path[first,last], attr-exempt.
+# The first TAB separates the head from the complete (possibly tab/LF) path.
+fn: ce_record (@: data char; size_t: first; size_t: last; @: offsets size_t) int
+    size_t: tab first
+    size_t: pos first
+    size_t: word_after 0U
+    size_t: fields 0U
+    while: tab < last && data[tab] != (cast: (char) 9)
+        tab: tab + 1U
+    if: tab = last || dj_utf8(data + first, last - first) != 0
+        return: 1
+    offsets[4U]: tab + 1U
+    offsets[5U]: last
+    offsets[6U]: 0U
+    if: ce_readable_name(data + tab + 1U, last - tab - 1U) = 0
+        return: 1
+    while: pos < tab
+        while: pos < tab && ce_white((cast: (unsigned) data[pos]) & 255U) != 0
+            pos: pos + 1U
+        if: pos = tab
+            break
+        word_after: pos
+        while: word_after < tab && ce_white((cast: (unsigned) data[word_after]) & 255U) = 0
+            word_after: word_after + 1U
+        if: fields < 2U
+            offsets[2U * fields]: pos
+            offsets[2U * fields + 1U]: word_after
+        else:
+            if: dt_find(data, word_after, pos, "-text", 5U) != (cast: (size_t) -1)
+                offsets[6U]: 1U
+            ---
+        ---
+        fields: fields + 1U
+        pos: word_after
+    ---
+    if: fields < 2U
+        return: 1
+    return: 0
+end: ce_record
+
+fn: ce_diagnostic (@: data char; size_t: first; size_t: last; @: path char; @: note char; @: bad size_t) int
+    if: bad[0] < 12U
+        c.fputs("DOCS-EOL ", c.stderr)
+        if: c.fwrite(data + first, 1U, last - first, c.stderr) != last - first
+            return: 1
+        c.fprintf(c.stderr, " %s%s\n", path, note)
+    bad[0]: bad[0] + 1U
+    return: 0
+end: ce_diagnostic
+
+fn: ce_endings (@: data char; size_t: count; @: tracked size_t; @: offsets size_t) int
+    size_t: first 0U
+    size_t: after 0U
+    size_t: bad 0U
+    @: path char 0
+    int: failed 0
+    tracked[0]: 0U
+    while: first < count && failed = 0
+        after: first
+        while: after < count && data[after] != (cast: (char) 0)
+            after: after + 1U
+        if: after = count
+            return: 1
+        if: after = first
+            first: after + 1U
+            continue
+        tracked[0]: tracked[0] + 1U
+        if: ce_record(data, first, after, offsets) != 0
+            return: 1
+        if: offsets[6U] = 0U && ce_word(data, offsets[0U], offsets[1U], "i/none") = 0
+            path: txt_ndup(data + offsets[4U], offsets[5U] - offsets[4U])
+            if: path = 0
+                return: 1
+            if: ce_word(data, offsets[0U], offsets[1U], "i/-text") != 0
+                failed: ce_diagnostic(data, offsets[0U], offsets[1U], path, " (git reads it as binary; explicit -text is required for a binary)", @ bad)
+            else:
+                if: ce_word(data, offsets[0U], offsets[1U], "i/lf") = 0
+                    failed: ce_diagnostic(data, offsets[0U], offsets[1U], path, "", @ bad)
+                if: failed = 0 && (ce_word(data, offsets[2U], offsets[3U], "w/crlf") != 0 || ce_word(data, offsets[2U], offsets[3U], "w/mixed") != 0)
+                    failed: ce_diagnostic(data, offsets[2U], offsets[3U], path, " (working copy is not LF)", @ bad)
+                if: failed = 0 && ce_word(data, offsets[2U], offsets[3U], "w/-text") != 0
+                    failed: ce_diagnostic(data, offsets[2U], offsets[3U], path, " (git reads the working copy as binary)", @ bad)
+                ---
+            ---
+            c.free(path)
+            path: 0
+        ---
+        first: after + 1U
+    ---
+    if: bad > 0U
+        c.fprintf(c.stderr, "DOCS-EOL failed: %zu findings\n", bad)
+        return: 1
+    return: failed
+end: ce_endings
+
+fn: ce_controls (@: repo char; @: data char; size_t: count; @: offsets size_t) int
+    size_t: first 0U
+    size_t: after 0U
+    size_t: size 0U
+    size_t: at 0U
+    size_t: line 1U
+    size_t: bad 0U
+    unsigned: byte 0U
+    int: hit 0
+    @: path char 0
+    @: full char 0
+    @: raw char 0
+    while: first < count
+        after: first
+        while: after < count && data[after] != (cast: (char) 0)
+            after: after + 1U
+        if: after = count
+            return: 1
+        if: after = first
+            first: after + 1U
+            continue
+        if: ce_record(data, first, after, offsets) != 0
+            return: 1
+        if: offsets[6U] = 0U
+            path: txt_ndup(data + offsets[4U], offsets[5U] - offsets[4U])
+            if: path = 0
+                return: 1
+            if: txt_starts(path, "dev/mixa_sandbox/") = 0
+                full: txt_path(repo, path)
+                if: full != 0
+                    raw: file_read(full, @ size)
+                if: raw = 0
+                    c.free(full)
+                    c.free(path)
+                    return: 1
+                at: 0U
+                line: 1U
+                hit: 0
+                while: at < size
+                    byte: (cast: (unsigned) raw[at]) & 255U
+                    if: byte = 10U
+                        line: line + 1U
+                        hit: 0
+                    else:
+                        if: hit = 0 && byte < 32U && byte != 9U && byte != 13U
+                            if: bad < 12U
+                                c.fprintf(c.stderr, "DOCS-CTRL %s:%zu byte %u\n", path, line, byte)
+                            bad: bad + 1U
+                            hit: 1
+                        ---
+                    ---
+                    at: at + 1U
+                ---
+                c.free(raw)
+                c.free(full)
+                raw: 0
+                full: 0
+            ---
+            c.free(path)
+            path: 0
+        ---
+        first: after + 1U
+    ---
+    if: bad > 0U
+        c.fprintf(c.stderr, "DOCS-CTRL failed: %zu findings\n", bad)
+        return: 1
+    return: 0
+end: ce_controls
+
+fn: docs_eol_check (@: repo char; @: git char; @: private_out char; @: tracked size_t) int
+    @@: args char 0
+    @: offsets size_t 0
+    @: out char 0
+    @: err char 0
+    @: raw char 0
+    size_t: count 0U
+    int: detail 0
+    int: failed 1
+    if: repo = 0 || git = 0 || private_out = 0 || tracked = 0
+        return: 1
+    tracked[0]: 0U
+    out: txt_path(private_out, "docs-eol.stdout")
+    err: txt_path(private_out, "docs-eol.stderr")
+    args: c.calloc(7U, sizeof(@: char))
+    offsets: c.calloc(7U, c.sizeof(c.size_t))
+    if: out != 0 && err != 0 && args != 0 && offsets != 0
+        args[0U]: git
+        args[1U]: "-C"
+        args[2U]: repo
+        args[3U]: "ls-files"
+        args[4U]: "-z"
+        args[5U]: 0
+        failed: os_run(git, args, 5, repo, out, err, 0U, @ detail)
+        if: failed = 0 && detail = 0
+            raw: file_read(out, @ count)
+            failed: ce_names_preflight(raw, count)
+        else:
+            failed: 1
+        ---
+        c.free(raw)
+        raw: 0
+        if: failed = 0
+            args[4U]: "--eol"
+            args[5U]: "-z"
+            args[6U]: 0
+            detail: 0
+            failed: os_run(git, args, 6, repo, out, err, 0U, @ detail)
+            if: failed = 0 && detail = 0
+                raw: file_read(out, @ count)
+                if: raw = 0
+                    failed: 1
+                else:
+                    failed: ce_endings(raw, count, tracked, offsets)
+                    if: failed = 0
+                        failed: ce_controls(repo, raw, count, offsets)
+                    ---
+                ---
+            else:
+                failed: 1
+            ---
+        ---
+    ---
+    c.free(raw)
+    c.free(out)
+    c.free(err)
+    c.free(args)
+    c.free(offsets)
+    return: failed
+end: docs_eol_check

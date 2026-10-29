@@ -1,0 +1,559 @@
+# Fresh, unexposed entries in one exclusively held Message's storage, and the reads and writes of a cell's value. Each
+# entry is a cell of one of the arena's arrays: the arena allocates it, owns it and classifies it, and there is no
+# owner-local range list anywhere.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
+# its explicit arguments. The build writes its header, lmx_value_owned.h.lm1, with the exports;
+# lmx_value_allocate_owned is the module's own (no caller). lmx_value_context_copy is also declared by lmx_value.h.lm1,
+# which the walker's and the call's headers read. The records it reads and writes (LmxArena, Lmx, LmxOp, LmxPool,
+# LmxChunk, LmxWalkValue) and the pointer-cell callbacks' types are in the kernel's headers that L3 code of the recipe
+# writes as L1 text (decls_write_all, tools/l2/build.lm2); the arena's acts (lmx_arena_*, lmx_range_*,
+# lmx_pointer_pool_in), the pools' (lmx_pool_chunk_at, lmx_chunk_data), the graph's (lmx_graph_ref_cell_in), the
+# interned table's (lmx_chars_init) and the C library's are the kernel's C functions, called through the C door.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_value.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdlib.h>" "<stdio.h>"
+
+# Activation values and both backends share the complete explicit context.
+# This value operation has no dependency on interpreter implementation.
+sub: lmx_value_context_copy (@: out c.LmxWalkValue; @: source c.LmxWalkValue)
+    if: out != 0
+        if: source = 0
+            out\model: 0
+            out\references: 0
+            out\referent: 0
+        else:
+            out\model: source\model
+            out\references: source\references
+            out\referent: source\referent
+        ---
+    ---
+end: lmx_value_context_copy
+
+# A cell of one of the arena's arrays (Lingvamyxa_spec.txt 2, 6.5): the arena hands it out
+# from its array of that kind and type -- the array is made on the first request and grows
+# by adding chunks, so a cell's address never moves.  What a constructor gets back is the
+# address of the cell inside that array; stride, kind and type belong to the array, and the
+# arena's index answers them for any address in it.  There is no owner-local list and no
+# per-value array: the array is the arena's and the type is the array's.
+fn: lmx_value_allocate_owned (@: arena c.LmxArena; size_t: stride; int: kind; int: type) @: void
+    if: arena = 0 || stride = 0U
+        return: 0
+    return: (cast: (@: void) c.lmx_arena_take(arena, stride, kind, type))
+end: lmx_value_allocate_owned
+
+# Initial root construction, not reparenting of an existing occurrence. The
+# header lives in the STRUCT domain (SPEC 2: only a Structure target has
+# array/parent/native); its child-pointer array is a separate CHILDREN range opened
+# later by lmx_arena_refs_open_owned.
+fn: lmx_node_new_owned (@: arena c.LmxArena) @: c.Lmx
+    return: lmx_node_new_profiled(arena, 0)
+end: lmx_node_new_owned
+
+fn: lmx_node_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: c.Lmx
+    return: lmx_node_new_role_profiled(arena, value_profile, c.LMX_POOL_ROLE_PLAIN)
+end: lmx_node_new_profiled
+
+fn: lmx_node_new_role_profiled (@: arena c.LmxArena; @: value_profile c.Lmx; unsigned: role) @: c.Lmx
+    return: lmx_node_new_physical_role_profiled(arena, c.LMX_TYPE_STRUCT, value_profile, role)
+end: lmx_node_new_role_profiled
+
+fn: lmx_node_new_physical_role_profiled (@: arena c.LmxArena; int: physical_type; @: value_profile c.Lmx; unsigned: role) @: c.Lmx
+    @: value c.Lmx (cast: (@: c.Lmx) c.lmx_arena_take_struct_physical_role(arena, physical_type, value_profile, role))
+    @: va c.VoidArray 0
+    if: value != 0
+        value\parent: 0
+        va: @ value\array
+        va\size: 0U
+        va\data: 0
+        value\native: 0
+    ---
+    return: value
+end: lmx_node_new_physical_role_profiled
+
+fn: lmx_struct_new_owned (@: parent c.Lmx; @: arena c.LmxArena) @: c.Lmx
+    return: lmx_struct_new_profiled(parent, arena, 0)
+end: lmx_struct_new_owned
+
+fn: lmx_struct_new_profiled (@: parent c.Lmx; @: arena c.LmxArena; @: value_profile c.Lmx) @: c.Lmx
+    return: lmx_struct_new_role_profiled(parent, arena, value_profile, c.LMX_POOL_ROLE_PLAIN)
+end: lmx_struct_new_profiled
+
+fn: lmx_struct_new_role_profiled (@: parent c.Lmx; @: arena c.LmxArena; @: value_profile c.Lmx; unsigned: role) @: c.Lmx
+    return: lmx_struct_new_physical_role_profiled(parent, arena, c.LMX_TYPE_STRUCT, value_profile, role)
+end: lmx_struct_new_role_profiled
+
+fn: lmx_struct_new_physical_role_profiled (@: parent c.Lmx; @: arena c.LmxArena; int: physical_type; @: value_profile c.Lmx; unsigned: role) @: c.Lmx
+    @: value c.Lmx 0
+    if: parent = 0
+        return: 0
+    value: lmx_node_new_physical_role_profiled(arena, physical_type, value_profile, role)
+    if: value != 0
+        value\parent: parent
+    ---
+    return: value
+end: lmx_struct_new_physical_role_profiled
+
+fn: lmx_field_place_new (@: arena c.LmxArena; @: owner c.Lmx; size_t: field) @: c.Lmx
+    @@: cell void (cast: (@@: void) c.lmx_graph_ref_cell_in(arena, owner, field))
+    @: place c.Lmx 0
+    @: place_profile c.Lmx 0
+    @: va c.VoidArray 0
+    if: cell = 0
+        return: 0
+    place_profile: (cast: (@: c.Lmx) c.lmx_range_profile(arena, (cast: (@: void) cell)))
+    place: lmx_struct_new_profiled(owner, arena, place_profile)
+    if: place = 0
+        return: 0
+    va: @ place\array
+    va\size: 1U
+    va\data: (cast: (@: void) cell)
+    return: place
+end: lmx_field_place_new
+
+fn: lmx_op_new_owned (@: arena c.LmxArena; int: code) @: c.LmxOp
+    return: lmx_op_new_profiled(arena, code, 0)
+end: lmx_op_new_owned
+
+fn: lmx_op_new_profiled (@: arena c.LmxArena; int: code; @: value_profile c.Lmx) @: c.LmxOp
+    return: lmx_op_new_physical_profiled(arena, code, c.LMX_DOMAIN_OP, value_profile)
+end: lmx_op_new_profiled
+
+fn: lmx_op_new_physical_profiled (@: arena c.LmxArena; int: code; int: physical_type; @: value_profile c.Lmx) @: c.LmxOp
+    if: c.lmx_type_base(physical_type) != c.LMX_DOMAIN_OP
+        return: 0
+    @: value c.LmxOp (cast: (@: c.LmxOp) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, physical_type, value_profile))
+    if: value != 0
+        value\code: code
+    ---
+    return: value
+end: lmx_op_new_physical_profiled
+
+fn: lmx_int_new_owned (@: arena c.LmxArena) @: void
+    return: lmx_int_new_profiled(arena, 0)
+end: lmx_int_new_owned
+
+fn: lmx_int_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_INT, value_profile)
+end: lmx_int_new_profiled
+
+# One typed initial-fill path for ordinary and immutable scalar storage.
+# Pointer-family cells use their separate exact callbacks/stride route.
+fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @: value_profile c.Lmx) @: void
+    int: base_type c.lmx_type_base(physical_type)
+    if: arena = 0
+        return: 0
+    if: base_type = c.LMX_TYPE_INT
+        int: zero_int 0
+        @: cell_int int (cast: (@: int) c.lmx_arena_take_profiled(arena, c.sizeof(zero_int), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        if: cell_int != 0
+            \cell_int: 0
+        ---
+        return: (cast: (@: void) cell_int)
+    ---
+    if: base_type = c.LMX_TYPE_CHAR
+        @: cell_char char 0
+        if: physical_type = c.LMX_TYPE_CHAR && value_profile = 0 && c.lmx_chars_init(arena) != 0 && (cast: (@: c.LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) = 0
+            return: 0
+        cell_char: (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        if: cell_char != 0
+            \cell_char: 0
+        ---
+        return: (cast: (@: void) cell_char)
+    ---
+    if: base_type = c.LMX_TYPE_SIZE_T
+        size_t: zero_size 0U
+        @: cell_size size_t (cast: (@: size_t) c.lmx_arena_take_profiled(arena, c.sizeof(zero_size), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        if: cell_size != 0
+            \cell_size: 0U
+        ---
+        return: (cast: (@: void) cell_size)
+    ---
+    if: base_type = c.LMX_TYPE_UNSIGNED
+        unsigned: zero_unsigned 0U
+        @: cell_unsigned unsigned (cast: (@: unsigned) c.lmx_arena_take_profiled(arena, c.sizeof(zero_unsigned), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        if: cell_unsigned != 0
+            \cell_unsigned: 0U
+        ---
+        return: (cast: (@: void) cell_unsigned)
+    ---
+    if: base_type = c.LMX_TYPE_ULONG
+        ulong: zero_ulong 0U
+        @: cell_ulong ulong (cast: (@: ulong) c.lmx_arena_take_profiled(arena, c.sizeof(zero_ulong), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        if: cell_ulong != 0
+            \cell_ulong: 0U
+        ---
+        return: (cast: (@: void) cell_ulong)
+    ---
+    if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
+        char: zero_uchar '\0'
+        @: cell_uchar char (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero_uchar), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        if: cell_uchar != 0
+            \cell_uchar: '\0'
+        ---
+        return: (cast: (@: void) cell_uchar)
+    ---
+    if: base_type = c.LMX_TYPE_CHAR_PTR
+        @: zero_charptr char 0
+        @@: cell_charptr char (cast: (@@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero_charptr), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        if: cell_charptr != 0
+            \cell_charptr: 0
+        ---
+        return: (cast: (@: void) cell_charptr)
+    ---
+    return: 0
+end: lmx_scalar_new_physical_profiled
+
+# The first CHAR interval remains the immutable literal table. Mutable cells
+# follow it in the same typed arena pool and have independent stable addresses.
+fn: lmx_char_new_owned (@: arena c.LmxArena) @: void
+    return: lmx_char_new_profiled(arena, 0)
+end: lmx_char_new_owned
+
+fn: lmx_char_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_CHAR, value_profile)
+end: lmx_char_new_profiled
+
+fn: lmx_char_store_known (@: cell void; int: value) int
+    @: p char 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@: char) cell)
+    \p: (cast: (char) value)
+    return: 0
+end: lmx_char_store_known
+
+fn: lmx_size_new_owned (@: arena c.LmxArena) @: void
+    return: lmx_size_new_profiled(arena, 0)
+end: lmx_size_new_owned
+
+fn: lmx_size_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_SIZE_T, value_profile)
+end: lmx_size_new_profiled
+
+fn: lmx_unsigned_new_owned (@: arena c.LmxArena) @: void
+    return: lmx_unsigned_new_profiled(arena, 0)
+end: lmx_unsigned_new_owned
+
+fn: lmx_unsigned_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_UNSIGNED, value_profile)
+end: lmx_unsigned_new_profiled
+
+fn: lmx_ulong_new_owned (@: arena c.LmxArena) @: void
+    return: lmx_ulong_new_profiled(arena, 0)
+end: lmx_ulong_new_owned
+
+fn: lmx_ulong_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_ULONG, value_profile)
+end: lmx_ulong_new_profiled
+
+fn: lmx_uchar_new_owned (@: arena c.LmxArena) @: void
+    return: lmx_uchar_new_profiled(arena, 0)
+end: lmx_uchar_new_owned
+
+fn: lmx_uchar_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_UNSIGNED_CHAR, value_profile)
+end: lmx_uchar_new_profiled
+
+fn: lmx_charptr_new_owned (@: arena c.LmxArena) @: void
+    return: lmx_charptr_new_profiled(arena, 0)
+end: lmx_charptr_new_owned
+
+fn: lmx_charptr_new_profiled (@: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_CHAR_PTR, value_profile)
+end: lmx_charptr_new_profiled
+
+fn: lmx_charptr_value_known (@: cell void) @: char
+    @@: p char 0
+    if: cell = 0
+        return: 0
+    p: (cast: (@@: char) cell)
+    return: \p
+end: lmx_charptr_value_known
+
+fn: lmx_charptr_store_known (@: cell void; @: value char) int
+    @@: p char 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@@: char) cell)
+    \p: value
+    return: 0
+end: lmx_charptr_store_known
+
+fn: lmx_pointer_new_owned (int: type; @: arena c.LmxArena) @: void
+    return: lmx_pointer_new_profiled(type, arena, 0)
+end: lmx_pointer_new_owned
+
+fn: lmx_pointer_new_profiled (int: type; @: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    return: lmx_pointer_new_typed_profiled(type, arena, value_profile, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)
+end: lmx_pointer_new_profiled
+
+fn: lmx_pointer_new_typed_profiled (int: type; @: arena c.LmxArena; @: value_profile c.Lmx; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write) @: void
+    return: (cast: (@: void) c.lmx_arena_pointer_cells_profiled(arena, type, value_profile, stride, read, write, 1U))
+end: lmx_pointer_new_typed_profiled
+
+# The exact ABI of an L2 graph reference cell, independent of the pool/profile that owns this particular address.
+# Foreign C99 pointer pools can share its numeric type; those remain valid for their own consumers, not for a graph
+# reference whose declaration was built with lmx_pointer_new_profiled.
+fn: lmx_pointer_cell_canonical (@: arena c.LmxArena; @: cell void) int
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell))
+    if: pool = 0
+        return: 0
+    return: (cast: (int) (pool\stride = sizeof(@: void) && pool\pointer_read = c.lmx_arena_pointer_void_read && pool\pointer_write = c.lmx_arena_pointer_void_write))
+end: lmx_pointer_cell_canonical
+
+# The value of a pointer cell the construction PROMISED at this slot (a reference declaration `@: T x`, a reference
+# field, a dynamic input of reference type), of the storage type `type` the construction gave it (POINTER_BASE + the
+# closed type id, the pool's type -- the translator spells it at the read from the declaration, l2_ptr_cell_type): the
+# one read of every native consumer of such a cell -- the working value loaded at entry, a field path's step through
+# a reference field, a hidden input's cell.  A slot holding no pointer cell of this arena -- nothing, or something
+# that is not a pointer cell -- or a pointer cell of another type or physical ABI (a present cell of another pool, physically put
+# there) is a broken promise, said and stopped here as the generated program says its other invariants (an absent
+# number's place, a missing own cell), never answered as 0: 0 is what a PRESENT pointer cell of that type holding
+# nothing answers, the valid nothing whose use is the implicit `interpreter` throw at the reader.  The expected type
+# comes from the reader, never from the cell found in the slot.  Generated L2 cells have the canonical void-pointer
+# stride and accessors of lmx_pointer_new_profiled.  An imported sealed cell with that same ABI can be read through
+# this arena's range index; no local owner is required.  lmx_pointer_value_in keeps its 0-for-either
+# contract for callers that classify the cell themselves (the copier, the walker).
+fn: lmx_pointer_value_promised (@: arena c.LmxArena; @: cell void; int: type) @: void
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell))
+    if: pool = 0
+        c.fprintf(c.l1_stderr(), "lmx: invariant: a reference slot holds no pointer cell\n")
+        c.abort()
+    ---
+    if: pool\type != type
+        c.fprintf(c.l1_stderr(), "lmx: invariant: a reference slot holds a pointer cell of another type\n")
+        c.abort()
+    ---
+    if: lmx_pointer_cell_canonical(arena, cell) = 0
+        c.fprintf(c.l1_stderr(), "lmx: invariant: a reference slot holds a pointer cell of another ABI\n")
+        c.abort()
+    ---
+    return: (cast: (@: void) pool\pointer_read(cell))
+end: lmx_pointer_value_promised
+
+fn: lmx_pointer_store_in (@: arena c.LmxArena; @: cell void; @: value void) int
+    return: lmx_pointer_store_context_in(arena, cell, value, 0)
+end: lmx_pointer_store_in
+
+fn: lmx_pointer_cell_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkValue
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell))
+    @: chunk c.LmxChunk 0
+    @: contexts c.LmxWalkValue 0
+    size_t: index 0U
+    if: pool = 0
+        return: 0
+    chunk: (cast: (@: c.LmxChunk) c.lmx_pool_chunk_at(pool, cell))
+    if: chunk = 0 || chunk\value_contexts = 0
+        return: 0
+    contexts: (cast: (@: c.LmxWalkValue) chunk\value_contexts)
+    index: ((cast: (size_t) cell) - (cast: (size_t) c.lmx_chunk_data(chunk))) / (cast: (size_t) pool\stride)
+    return: contexts + index
+end: lmx_pointer_cell_context
+
+fn: lmx_pointer_store_context_in (@: arena c.LmxArena; @: cell void; @: raw void; @: context c.LmxWalkValue) int
+    if: (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell)) = 0
+        return: 1
+    return: lmx_value_cell_store(arena, cell, 0, raw, context, 0)
+end: lmx_pointer_store_context_in
+
+# A resolved pointer cell,irrespective of the syntax/backend that selected it.
+# Snapshot the giving state before the only physical write;it may alias either
+# destination owner. Owned storage keeps the pool's exact C object contract.
+fn: lmx_value_charptr_read (@: cell void) @: void
+    return: (cast: (@: void) lmx_charptr_value_known(cell))
+end: lmx_value_charptr_read
+
+fn: lmx_value_charptr_write (@: cell void; @: value void) int
+    return: lmx_charptr_store_known(cell, (cast: (@: char) value))
+end: lmx_value_charptr_write
+
+# Resolve the physical object once. The logical pointer depth does not turn a
+# graph's void * field into an allocated T * object, or vice versa. Callback
+# selection is shared by native writes and ordinary native/walked value loads.
+fn: lmx_value_cell_access (@: arena c.LmxArena; @: cell void; @: read c.LmxPointerCellRead; @: write c.LmxPointerCellWrite) int
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, cell))
+    if: cell = 0 || read = 0 || write = 0
+        return: 1
+    if: pool = 0 || pool\kind = c.LMX_DOMAIN_KIND_SCRATCH
+        return: 0
+    if: pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF
+        # The domain fixes the physical void * object. Its logical type
+        # may be REFS, Lmx or Array; that does not change this storage ABI.
+        if: pool\stride != sizeof(@: void)
+            return: 1
+        read[0]: c.lmx_arena_pointer_void_read
+        write[0]: c.lmx_arena_pointer_void_write
+        return: 0
+    if: pool\kind != c.LMX_KIND_PRIMITIVE
+        return: 1
+    if: c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR
+        if: pool\stride != sizeof(@: char)
+            return: 1
+        read[0]: c.lmx_value_charptr_read
+        write[0]: c.lmx_value_charptr_write
+        return: 0
+    if: c.lmx_type_base(pool\type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(pool\type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
+        return: 1
+    read[0]: pool\pointer_read
+    write[0]: pool\pointer_write
+    return: 0
+end: lmx_value_cell_access
+
+fn: lmx_value_cell_store (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkValue; @: raw void; @: context c.LmxWalkValue; c.LmxPointerCellWrite: write) int
+    # Ordinary graph writes retain the physical cell's full type even
+    # through an ordinary projected receiving view.
+    if: c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
+        return: 1
+    return: lmx_value_cell_fill(arena, cell, owner, raw, context, write)
+end: lmx_value_cell_store
+
+# Construction-only initial fill/fixup before publication. Both physical
+# families use the same exact C callback and saved value-context operation.
+fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkValue; @: raw void; @: context c.LmxWalkValue; c.LmxPointerCellWrite: write) int
+    c.LmxPointerCellRead: read 0
+    @: stored c.LmxWalkValue lmx_pointer_cell_context(arena, cell)
+    c.LmxWalkValue: saved
+    int: status 0
+    if: lmx_value_cell_access(arena, cell, @ read, @ write) != 0
+        return: 1
+    if: write = 0
+        return: 1
+    lmx_value_context_copy(@ saved, context)
+    status: write(cell, raw)
+    if: status = 0
+        lmx_value_context_copy(stored, @ saved)
+        if: owner != stored
+            lmx_value_context_copy(owner, @ saved)
+    ---
+    return: status
+end: lmx_value_cell_fill
+
+fn: lmx_pointer_fill_in (@: arena c.LmxArena; @: cell void; @: raw void; @: context c.LmxWalkValue) int
+    if: (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell)) = 0
+        return: 1
+    return: lmx_value_cell_fill(arena, cell, 0, raw, context, 0)
+end: lmx_pointer_fill_in
+
+fn: lmx_value_address_context (@: arena c.LmxArena; @: cell void; @: address c.LmxWalkValue) @: c.LmxWalkValue
+    if: cell != 0 && address != 0 && address\ref = cell && address\referent != 0
+        return: (cast: (@: c.LmxWalkValue) address\referent)
+    return: lmx_pointer_cell_context(arena, cell)
+end: lmx_value_address_context
+
+fn: lmx_pointer_value_known (@: cell void) @: void
+    @@: p void 0
+    if: cell = 0
+        return: 0
+    p: (cast: (@@: void) cell)
+    return: \p
+end: lmx_pointer_value_known
+
+fn: lmx_pointer_store_known (@: cell void; @: value void) int
+    @@: p void 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@@: void) cell)
+    \p: value
+    return: 0
+end: lmx_pointer_store_known
+
+# Closed-unit type proof supplies the type, not a process-global catalog.
+# Explicit raw/unknown addresses are outside these helper preconditions.
+fn: lmx_char_value_known (@: cell void) int
+    @: p char 0
+    if: cell = 0
+        return: -1
+    p: (cast: (@: char) cell)
+    # Numeric value follows C char promotion; byte-table indices are a storage detail.
+    return: (cast: (int) \p)
+end: lmx_char_value_known
+
+fn: lmx_ulong_value_known (@: cell void) ulong
+    @: p ulong 0
+    if: cell = 0
+        return: 0U
+    p: (cast: (@: ulong) cell)
+    return: \p
+end: lmx_ulong_value_known
+
+fn: lmx_ulong_store_known (@: cell void; ulong: value) int
+    @: p ulong 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@: ulong) cell)
+    \p: value
+    return: 0
+end: lmx_ulong_store_known
+
+fn: lmx_uchar_value_known (@: cell void) unsigned
+    @: p char 0
+    if: cell = 0
+        return: 0U
+    p: (cast: (@: char) cell)
+    return: (cast: (unsigned) ((cast: (int) \p) & 255))
+end: lmx_uchar_value_known
+
+fn: lmx_uchar_store_known (@: cell void; unsigned: value) int
+    @: p char 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@: char) cell)
+    \p: (cast: (char) (value & 255U))
+    return: 0
+end: lmx_uchar_store_known
+
+fn: lmx_int_value_known (@: cell void) int
+    @: p int 0
+    if: cell = 0
+        return: 0
+    p: (cast: (@: int) cell)
+    return: \p
+end: lmx_int_value_known
+
+fn: lmx_int_store_known (@: cell void; int: value) int
+    @: p int 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@: int) cell)
+    \p: value
+    return: 0
+end: lmx_int_store_known
+
+fn: lmx_size_value_known (@: cell void) size_t
+    @: p size_t 0
+    if: cell = 0
+        return: 0U
+    p: (cast: (@: size_t) cell)
+    return: \p
+end: lmx_size_value_known
+
+fn: lmx_size_store_known (@: cell void; size_t: value) int
+    @: p size_t 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@: size_t) cell)
+    \p: value
+    return: 0
+end: lmx_size_store_known
+
+fn: lmx_unsigned_value_known (@: cell void) unsigned
+    @: p unsigned 0
+    if: cell = 0
+        return: 0U
+    p: (cast: (@: unsigned) cell)
+    return: \p
+end: lmx_unsigned_value_known
+
+fn: lmx_unsigned_store_known (@: cell void; unsigned: value) int
+    @: p unsigned 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@: unsigned) cell)
+    \p: value
+    return: 0
+end: lmx_unsigned_store_known

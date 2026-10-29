@@ -1,0 +1,55 @@
+# Two os branches with full method bodies (L2 section 20; OPUS-CODEX-20261022-OSBRANCH). Each branch has its
+# own locals and its own include; the default branch declares the same methods in another order; a common
+# method calls an os method and an os method calls another. The entry exits 6 + os_marker(): 7 when the C
+# translation unit compiled the win branch, 8 for the default one.
+os:
+    win:
+        include: "<windows.h>"
+        fn: os_add (int: a; int: b) int
+            int: sum a
+            sum: sum + b
+            return: sum
+        end: os_add
+        fn: os_twice (int: x) int
+            return: os_add(x, x)
+        end: os_twice
+        fn: os_marker () int
+            unsigned: pid c.GetCurrentProcessId()
+            if: pid = 0U
+                return: 0
+            return: 1
+        end: os_marker
+    default:
+        include: "<unistd.h>"
+        fn: os_marker () int
+            int: pid c.getpid()
+            if: pid <= 0
+                return: 0
+            return: 2
+        end: os_marker
+        fn: os_twice (int: x) int
+            int: doubled os_add(x, 0)
+            doubled: doubled + x
+            return: doubled
+        end: os_twice
+        fn: os_add (int: a; int: b) int
+            return: a + b
+        end: os_add
+end: os
+
+fn: common (int: v) int
+    return: os_twice(v) + os_add(1, 0)
+end: common
+
+fn: run () int
+    int: m os_marker()
+    if: m = 0
+        return: 80
+    if: common(3) != 7
+        return: 81
+    if: os_add(40, 2) != 42
+        return: 82
+    return: 6 + m
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

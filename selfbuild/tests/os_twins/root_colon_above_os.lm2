@@ -1,0 +1,23 @@
+# CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: a root colon call above the declaration. `os_bump: 3` calls
+# the selected os branch's os_bump (visible both ways, l2_unit_names_method), as root_colon_above_unit.lm2 calls
+# the unit's; it never declares a named Structure os_bump (the census once missed the branch: entry 4).
+# Entry count() + 4: 7 for win, 8 for default.
+int: hits 0
+os_bump: 3
+os:
+    win:
+        fn: os_bump (int: v) int
+            node\hits: node\hits + v
+            return: 0
+        end: os_bump
+    default:
+        fn: os_bump (int: v) int
+            node\hits: node\hits + v + 1
+            return: 0
+        end: os_bump
+end: os
+fn: count () int
+    return: node\hits
+end: count
+sendMessage: exit(exit_code: count() + 4; stdout: ""; stderr: "")
+return

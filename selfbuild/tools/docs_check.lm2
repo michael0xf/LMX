@@ -1,0 +1,66 @@
+# Unselected ordinary L2 controller for the existing check_docs main route.
+# All algorithms/assertions live in the accompanying L2 parts. External Git
+# remains a chosen executable, not an interpreter for the former checker.
+# Paths, including the two preferred source paths, are explicit inputs.
+# Selection, native Windows paths and actual equivalence runs remain pending.
+
+fn: docs_check_all (@: repo char; @: preferred_l1 char; @: preferred_older char; @: git char; @: private_out char) int
+    size_t: chapters 0U
+    size_t: sections 0U
+    size_t: examples 0U
+    size_t: imported 0U
+    size_t: tracked 0U
+    int: phase 0
+    int: failed 0
+    if: repo = 0 || preferred_l1 = 0 || preferred_older = 0 || git = 0 || private_out = 0
+        return: 1
+    failed: docs_semantics_build(repo, preferred_l1, preferred_older, 1, @ chapters, @ phase)
+    if: failed = 0
+        failed: docs_grammar_check(repo, @ sections, @ examples)
+    if: failed = 0
+        failed: docs_opening_check(repo)
+    if: failed = 0
+        failed: docs_parser_inventory_check(repo, @ imported)
+    if: failed = 0
+        failed: docs_authored_links_check(repo)
+    if: failed = 0
+        failed: docs_eol_check(repo, git, private_out, @ tracked)
+    if: failed = 0
+        if: c.printf("OK: %zu paired semantic chapters, 14 implements cases, both source snapshots; %zu paired grammar sections, %zu verbatim source excerpts, %zu imported files, links, exact semantic opening; line endings LF in the index for all %zu tracked files (verbatim imports exempt)\n", chapters, sections, examples, imported, tracked) < 0
+            failed: 1
+        ---
+    ---
+    return: failed
+end: docs_check_all
+
+# Existing tool subcommand dispatch, not a second build/test runner. Keep the
+# three former entrypoints distinct: grammar render, semantics render/verify,
+# and the complete checker. Only the full checker prints its own summary.
+fn: docs_cli (@@: args char; int: count) int
+    size_t: chapters 0U
+    int: phase 0
+    int: failed 0
+    int: check_mode 0
+    @: action char "Rendered"
+    if: count >= 8 && c.strcmp(args[2], "check") = 0
+        failed: docs_check_all(args[3], args[4], args[5], args[6], args[7])
+        return: (cast: (int) (failed != 0))
+    if: count >= 6 && c.strcmp(args[2], "render") = 0 && c.strcmp(args[3], "grammar") = 0
+        failed: docs_grammar_build(args[4], args[5])
+        return: (cast: (int) (failed != 0))
+    if: count >= 7 && (c.strcmp(args[2], "render") = 0 || c.strcmp(args[2], "verify") = 0) && c.strcmp(args[3], "semantics") = 0
+        if: c.strcmp(args[2], "verify") = 0
+            check_mode: 1
+            action: "Verified"
+        ---
+        failed: docs_semantics_build(args[4], args[5], args[6], check_mode, @ chapters, @ phase)
+        if: failed = 0
+            if: c.printf("%s %zu paired semantic chapters, 14 implements cases and both verbatim source snapshots.\n", action, chapters) < 0
+                failed: 1
+            ---
+        ---
+        return: (cast: (int) (failed != 0))
+    ---
+    c.fputs("lmxtool: usage: docs render grammar REPO OUTDIR | docs render|verify semantics REPO L1 OLDER | docs check REPO L1 OLDER GIT PRIVATE_OUT\n", c.stderr)
+    return: 2
+end: docs_cli

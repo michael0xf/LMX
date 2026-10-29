@@ -1,0 +1,251 @@
+# SHA-256 (FIPS 180-4) of bytes in memory or read from a file in chunks, in the L2 machine profile (L2 spec 17,
+# 21: unsigned is the target's 32-bit C unsigned, so + wraps modulo 2^32). A program part: methods only; the
+# program that uses it includes <stdio.h>, <stdlib.h> and <string.h>.
+
+fn: sha_rotr (unsigned: x; int: n) unsigned
+    return: (x >> n) | (x << (32 - n))
+end: sha_rotr
+
+fn: sha_byte (@: p char; size_t: i) unsigned
+    return: (cast: (unsigned) p[i]) & 255U
+end: sha_byte
+
+# The big-endian word at p[off .. off + 3].
+fn: sha_word (@: p char; size_t: off) unsigned
+    return: (sha_byte(p, off) << 24) | (sha_byte(p, off + 1U) << 16) | (sha_byte(p, off + 2U) << 8) | sha_byte(p, off + 3U)
+end: sha_word
+
+fn: sha_put32 (@: p char; size_t: off; unsigned: v) int
+    p[off]: (cast: (char) ((v >> 24) & 255U))
+    p[off + 1U]: (cast: (char) ((v >> 16) & 255U))
+    p[off + 2U]: (cast: (char) ((v >> 8) & 255U))
+    p[off + 3U]: (cast: (char) (v & 255U))
+    return: 0
+end: sha_put32
+
+fn: sha_init (@: h unsigned) int
+    h[0]: 0x6a09e667U
+    h[1]: 0xbb67ae85U
+    h[2]: 0x3c6ef372U
+    h[3]: 0xa54ff53aU
+    h[4]: 0x510e527fU
+    h[5]: 0x9b05688cU
+    h[6]: 0x1f83d9abU
+    h[7]: 0x5be0cd19U
+    return: 0
+end: sha_init
+
+fn: sha_k (@: k unsigned) int
+    k[0]: 0x428a2f98U
+    k[1]: 0x71374491U
+    k[2]: 0xb5c0fbcfU
+    k[3]: 0xe9b5dba5U
+    k[4]: 0x3956c25bU
+    k[5]: 0x59f111f1U
+    k[6]: 0x923f82a4U
+    k[7]: 0xab1c5ed5U
+    k[8]: 0xd807aa98U
+    k[9]: 0x12835b01U
+    k[10]: 0x243185beU
+    k[11]: 0x550c7dc3U
+    k[12]: 0x72be5d74U
+    k[13]: 0x80deb1feU
+    k[14]: 0x9bdc06a7U
+    k[15]: 0xc19bf174U
+    k[16]: 0xe49b69c1U
+    k[17]: 0xefbe4786U
+    k[18]: 0x0fc19dc6U
+    k[19]: 0x240ca1ccU
+    k[20]: 0x2de92c6fU
+    k[21]: 0x4a7484aaU
+    k[22]: 0x5cb0a9dcU
+    k[23]: 0x76f988daU
+    k[24]: 0x983e5152U
+    k[25]: 0xa831c66dU
+    k[26]: 0xb00327c8U
+    k[27]: 0xbf597fc7U
+    k[28]: 0xc6e00bf3U
+    k[29]: 0xd5a79147U
+    k[30]: 0x06ca6351U
+    k[31]: 0x14292967U
+    k[32]: 0x27b70a85U
+    k[33]: 0x2e1b2138U
+    k[34]: 0x4d2c6dfcU
+    k[35]: 0x53380d13U
+    k[36]: 0x650a7354U
+    k[37]: 0x766a0abbU
+    k[38]: 0x81c2c92eU
+    k[39]: 0x92722c85U
+    k[40]: 0xa2bfe8a1U
+    k[41]: 0xa81a664bU
+    k[42]: 0xc24b8b70U
+    k[43]: 0xc76c51a3U
+    k[44]: 0xd192e819U
+    k[45]: 0xd6990624U
+    k[46]: 0xf40e3585U
+    k[47]: 0x106aa070U
+    k[48]: 0x19a4c116U
+    k[49]: 0x1e376c08U
+    k[50]: 0x2748774cU
+    k[51]: 0x34b0bcb5U
+    k[52]: 0x391c0cb3U
+    k[53]: 0x4ed8aa4aU
+    k[54]: 0x5b9cca4fU
+    k[55]: 0x682e6ff3U
+    k[56]: 0x748f82eeU
+    k[57]: 0x78a5636fU
+    k[58]: 0x84c87814U
+    k[59]: 0x8cc70208U
+    k[60]: 0x90befffaU
+    k[61]: 0xa4506cebU
+    k[62]: 0xbef9a3f7U
+    k[63]: 0xc67178f2U
+    return: 0
+end: sha_k
+
+# One 64-byte block p[off .. off + 63] into the state h; w is the 64-word schedule.
+fn: sha_block (@: h unsigned; @: k unsigned; @: w unsigned; @: p char; size_t: off) int
+    int: i 0
+    unsigned: a h[0]
+    unsigned: b h[1]
+    unsigned: cc h[2]
+    unsigned: d h[3]
+    unsigned: e h[4]
+    unsigned: f h[5]
+    unsigned: g h[6]
+    unsigned: hh h[7]
+    unsigned: s0 0U
+    unsigned: s1 0U
+    unsigned: t1 0U
+    unsigned: t2 0U
+    while: i < 16
+        w[i]: sha_word(p, off + (cast: (size_t) (i * 4)))
+        i: i + 1
+    while: i < 64
+        s0: sha_rotr(w[i - 15], 7) ^ sha_rotr(w[i - 15], 18) ^ (w[i - 15] >> 3)
+        s1: sha_rotr(w[i - 2], 17) ^ sha_rotr(w[i - 2], 19) ^ (w[i - 2] >> 10)
+        w[i]: w[i - 16] + s0 + w[i - 7] + s1
+        i: i + 1
+    i: 0
+    while: i < 64
+        s1: sha_rotr(e, 6) ^ sha_rotr(e, 11) ^ sha_rotr(e, 25)
+        t1: hh + s1 + ((e & f) ^ ((e ^ 0xffffffffU) & g)) + k[i] + w[i]
+        s0: sha_rotr(a, 2) ^ sha_rotr(a, 13) ^ sha_rotr(a, 22)
+        t2: s0 + ((a & b) ^ (a & cc) ^ (b & cc))
+        hh: g
+        g: f
+        f: e
+        e: d + t1
+        d: cc
+        cc: b
+        b: a
+        a: t1 + t2
+        i: i + 1
+    h[0]: h[0] + a
+    h[1]: h[1] + b
+    h[2]: h[2] + cc
+    h[3]: h[3] + d
+    h[4]: h[4] + e
+    h[5]: h[5] + f
+    h[6]: h[6] + g
+    h[7]: h[7] + hh
+    return: 0
+end: sha_block
+
+# The padding of the last r bytes rest[0 .. r - 1] (r < 64) of a message of n bytes into the state h, then the
+# digest as 64 lowercase hex digits and a NUL in out[0 .. 64]: 0, or 1 (no memory; out untouched). The bit length
+# n * 8 is 64-bit (n >> 29 and n << 3), so a message of 2^32 bytes and more keeps its high bits.
+fn: sha_finish (@: h unsigned; @: k unsigned; @: w unsigned; @: rest char; size_t: r; size_t: n; @: out char) int
+    @: tail char c.calloc(128U, 1U)
+    @: hex char "0123456789abcdef"
+    size_t: tn 64U
+    int: i 0
+    int: q 0
+    if: tail = 0
+        return: 1
+    if: r > 0U
+        c.memcpy(tail, rest, r)
+    tail[r]: (cast: (char) 0x80)
+    if: r >= 56U
+        tn: 128U
+    sha_put32(tail, tn - 8U, (cast: (unsigned) (n >> 29)))
+    sha_put32(tail, tn - 4U, (cast: (unsigned) (n << 3)))
+    sha_block(h, k, w, tail, 0U)
+    if: tn = 128U
+        sha_block(h, k, w, tail, 64U)
+    while: i < 8
+        q: 0
+        while: q < 8
+            out[i * 8 + q]: hex[(cast: (int) ((h[i] >> (28 - 4 * q)) & 15U))]
+            q: q + 1
+        i: i + 1
+    out[64]: (cast: (char) 0)
+    c.free(tail)
+    return: 0
+end: sha_finish
+
+# The digest of data[0 .. n - 1] as 64 lowercase hex digits and a NUL in out[0 .. 64].
+# 0 = written; 1 = no memory (out untouched).
+fn: sha256_bytes (@: data char; size_t: n; @: out char) int
+    @: h unsigned c.calloc(8U, c.sizeof(c.unsigned))
+    @: k unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    @: w unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    size_t: off 0U
+    int: r 1
+    if: h != 0 && k != 0 && w != 0
+        sha_init(h)
+        sha_k(k)
+        while: n - off >= 64U
+            sha_block(h, k, w, data, off)
+            off: off + 64U
+        r: sha_finish(h, k, w, data + off, n - off, n, out)
+    ---
+    c.free(h)
+    c.free(k)
+    c.free(w)
+    return: r
+end: sha256_bytes
+
+# The digest of the bytes of the open file f, from where it stands to its end, read chunk bytes at a time (the
+# memory is the chunk's, whatever the file's size; the byte count is a size_t, 64-bit here), as 64 lowercase hex
+# digits and a NUL in out[0 .. 64]: 0, or 1 (no memory, a read error, or chunk 0; out untouched).
+fn: sha256_stream (@: f c.FILE; size_t: chunk; @: out char) int
+    @: h unsigned c.calloc(8U, c.sizeof(c.unsigned))
+    @: k unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    @: w unsigned c.calloc(64U, c.sizeof(c.unsigned))
+    @: buf char 0
+    size_t: carry 0U
+    size_t: got 0U
+    size_t: avail 0U
+    size_t: off 0U
+    size_t: n 0U
+    int: more 1
+    int: r 1
+    if: chunk > 0U
+        buf: c.malloc(chunk + 64U)
+    if: f != 0 && h != 0 && k != 0 && w != 0 && buf != 0
+        sha_init(h)
+        sha_k(k)
+        while: more != 0
+            got: c.fread(buf + carry, 1U, chunk, f)
+            n: n + got
+            avail: carry + got
+            off: 0U
+            while: avail - off >= 64U
+                sha_block(h, k, w, buf, off)
+                off: off + 64U
+            carry: avail - off
+            if: carry > 0U && off > 0U
+                c.memmove(buf, buf + off, carry)
+            if: got = 0U
+                more: 0
+        ---
+        if: c.ferror(f) = 0
+            r: sha_finish(h, k, w, buf, carry, n, out)
+    ---
+    c.free(h)
+    c.free(k)
+    c.free(w)
+    c.free(buf)
+    return: r
+end: sha256_stream

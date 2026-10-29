@@ -1,0 +1,913 @@
+# Unselected Windows native pathname primitives for the existing tool adapter.
+# No new C struct/layout or language grammar: reparse bytes are the documented
+# FSCTL_GET_REPARSE_POINT result on the Windows ULONG4/USHORT2/WCHAR2 LE ABI.
+# ntifs.h4394-4418 is the format reference, not a kernel-mode include dependency.
+# Native query results keep their OS error before cleanup.
+# 0 success,1 OS error,-1 allocation/encoding; readlink2 unsupported reparse tag.
+# Non-strict scalar UTF-8 port of CPython3.14 ntpath.py join/split/normpath
+# and realpath(strict=False). Changes: owned heap strings/vectors instead of
+# Python objects; counted native queries and explicit OS/internal outcomes.
+# join uses Unicode16 full lower; deep-link seen keys use native normcase.
+# This adapter does not claim Python's lone-surrogate pathname domain.
+# Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
+#
+# PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
+#
+# 1. This LICENSE AGREEMENT is between the Python Software Foundation
+# ("PSF"), and the Individual or Organization ("Licensee") accessing and
+# otherwise using this software ("Python") in source or binary form and
+# its associated documentation.
+#
+# 2. Subject to the terms and conditions of this License Agreement, PSF hereby
+# grants Licensee a nonexclusive, royalty-free, world-wide license to reproduce,
+# analyze, test, perform and/or display publicly, prepare derivative works,
+# distribute, and otherwise use Python alone or in any derivative version,
+# provided, however, that PSF's License Agreement and PSF's notice of copyright,
+# i.e., "Copyright (c) 2001 Python Software Foundation; All Rights Reserved"
+# are retained in Python alone or in any derivative version prepared by Licensee.
+#
+# 3. In the event Licensee prepares a derivative work that is based on
+# or incorporates Python or any part thereof, and wants to make
+# the derivative work available to others as provided herein, then
+# Licensee hereby agrees to include in any such work a brief summary of
+# the changes made to Python.
+#
+# 4. PSF is making Python available to Licensee on an "AS IS"
+# basis. PSF MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR
+# IMPLIED. BY WAY OF EXAMPLE, BUT NOT LIMITATION, PSF MAKES NO AND
+# DISCLAIMS ANY REPRESENTATION OR WARRANTY OF MERCHANTABILITY OR FITNESS
+# FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF PYTHON WILL NOT
+# INFRINGE ANY THIRD PARTY RIGHTS.
+#
+# 5. PSF SHALL NOT BE LIABLE TO LICENSEE OR ANY OTHER USERS OF PYTHON
+# FOR ANY INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES OR LOSS AS
+# A RESULT OF MODIFYING, DISTRIBUTING, OR OTHERWISE USING PYTHON,
+# OR ANY DERIVATIVE THEREOF, EVEN IF ADVISED OF THE POSSIBILITY THEREOF.
+#
+# 6. This License Agreement will automatically terminate upon a material
+# breach of its terms and conditions.
+#
+# 7. Nothing in this License Agreement shall be deemed to create any
+# relationship of agency, partnership, or joint venture between PSF and
+# Licensee. This License Agreement does not grant permission to use PSF
+# trademarks or trade name in a trademark sense to endorse or promote
+# products or services of Licensee, or any third party.
+#
+# 8. By copying, installing or otherwise using Python, Licensee
+# agrees to be bound by the terms and conditions of this License
+# Agreement.
+os:
+    win:
+        include: "<windows.h>" "<winioctl.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
+
+        fn: fpw_u16 (@: bytes char; size_t: at) unsigned
+            unsigned: lo (cast: (unsigned) bytes[at]) & 255U
+            unsigned: hi (cast: (unsigned) bytes[at + 1U]) & 255U
+            return: lo | (hi << 8)
+        end: fpw_u16
+
+        fn: fpw_u32 (@: bytes char; size_t: at) unsigned
+            unsigned: lo fpw_u16(bytes, at)
+            unsigned: hi fpw_u16(bytes, at + 2U)
+            return: lo | (hi << 16)
+        end: fpw_u32
+
+        # Counted UTF-16 is not borrowed as a NUL-terminated string. Invalid
+        # or embedded-NUL path text must not become a different existing path.
+        # Valid scalar filenames preserve their exact UTF-8 bytes.
+        fn: fpw_from_counted (@: wide c.WCHAR; size_t: count; @@: out char) int
+            @: text char 0
+            size_t: at 0U
+            int: needed 0
+            out[0]: 0
+            if: count = 0U
+                text: c.calloc(1U, 1U)
+                if: text = 0
+                    return: -1
+                out[0]: text
+                return: 0
+            if: count > (cast: (size_t) c.INT_MAX)
+                return: -1
+            while: at < count
+                if: (cast: (unsigned) wide[at]) = 0U
+                    return: -1
+                at: at + 1U
+            ---
+            needed: c.WideCharToMultiByte(c.CP_UTF8, c.WC_ERR_INVALID_CHARS, wide, (cast: (int) count), 0, 0, 0, 0)
+            if: needed <= 0
+                return: -1
+            text: c.malloc((cast: (size_t) needed) + 1U)
+            if: text = 0
+                return: -1
+            if: c.WideCharToMultiByte(c.CP_UTF8, c.WC_ERR_INVALID_CHARS, wide, (cast: (int) count), text, needed, 0, 0) != needed
+                c.free(text)
+                return: -1
+            text[(cast: (size_t) needed)]: (cast: (char) 0)
+            out[0]: text
+            return: 0
+        end: fpw_from_counted
+
+        fn: fpw_finalpath (@: path char; @@: out char; @: error unsigned) int
+            @: wpath c.void 0
+            @: handle c.void c.INVALID_HANDLE_VALUE
+            @: buffer c.WCHAR 0
+            unsigned: capacity 256U
+            unsigned: got 0U
+            int: result 0
+            out[0]: 0
+            error[0]: 0U
+            wpath: os_native(path)
+            if: wpath = 0
+                return: -1
+            # Match the original native query's access0/share0 contract.
+            handle: c.CreateFileW(wpath, 0U, 0U, 0, c.OPEN_EXISTING, c.FILE_FLAG_BACKUP_SEMANTICS, 0)
+            if: handle = c.INVALID_HANDLE_VALUE
+                error[0]: (cast: (unsigned) c.GetLastError())
+                result: 1
+            while: result = 0
+                buffer: c.calloc((cast: (size_t) capacity), c.sizeof(c.WCHAR))
+                if: buffer = 0
+                    result: -1
+                    break
+                got: c.GetFinalPathNameByHandleW(handle, buffer, capacity, 0U)
+                if: got = 0U
+                    error[0]: (cast: (unsigned) c.GetLastError())
+                    result: 1
+                    break
+                if: got < capacity
+                    result: fpw_from_counted(buffer, (cast: (size_t) got), out)
+                    break
+                ---
+                c.free(buffer)
+                buffer: 0
+                if: got = (cast: (unsigned) -1)
+                    result: -1
+                    break
+                capacity: got + 1U
+            ---
+            if: handle != c.INVALID_HANDLE_VALUE
+                c.CloseHandle(handle)
+            c.free(buffer)
+            c.free(wpath)
+            return: result
+        end: fpw_finalpath
+
+        fn: fpw_findleaf (@: path char; @@: out char; @: error unsigned) int
+            @: wpath c.void 0
+            @: fd c.WIN32_FIND_DATAW 0
+            @: handle c.void c.INVALID_HANDLE_VALUE
+            @: leaf c.WCHAR 0
+            size_t: count 0U
+            int: result 0
+            out[0]: 0
+            error[0]: 0U
+            wpath: os_native(path)
+            fd: c.calloc(1U, c.sizeof(c.WIN32_FIND_DATAW))
+            if: wpath = 0 || fd = 0
+                result: -1
+            if: result = 0
+                handle: c.FindFirstFileW(wpath, fd)
+                if: handle = c.INVALID_HANDLE_VALUE
+                    error[0]: (cast: (unsigned) c.GetLastError())
+                    result: 1
+                else:
+                    leaf: (cast: (@: c.WCHAR) fd\cFileName)
+                    while: (cast: (unsigned) leaf[count]) != 0U
+                        count: count + 1U
+                    result: fpw_from_counted(leaf, count, out)
+                ---
+            ---
+            if: handle != c.INVALID_HANDLE_VALUE
+                c.FindClose(handle)
+            c.free(wpath)
+            c.free(fd)
+            return: result
+        end: fpw_findleaf
+
+        # kind1=symlink,2=mount point,0=unsupported. Only Substitute is read;
+        # PrintName, Reserved and unused Flags do not become acceptance gates.
+        fn: fpw_readlink (@: path char; @@: out char; @: kind int; @: error unsigned) int
+            @: wpath c.void 0
+            @: handle c.void c.INVALID_HANDLE_VALUE
+            @: buffer char 0
+            @: returned c.DWORD 0
+            @: wide c.WCHAR 0
+            size_t: got 0U
+            size_t: payload 0U
+            size_t: bound 0U
+            size_t: base 0U
+            size_t: offset 0U
+            size_t: target_bytes 0U
+            size_t: units 0U
+            unsigned: tag 0U
+            int: result 0
+            out[0]: 0
+            kind[0]: 0
+            error[0]: 0U
+            wpath: os_native(path)
+            buffer: c.malloc(16384U)
+            returned: c.calloc(1U, c.sizeof(c.DWORD))
+            if: wpath = 0 || buffer = 0 || returned = 0
+                result: -1
+            if: result = 0
+                handle: c.CreateFileW(wpath, 0U, 0U, 0, c.OPEN_EXISTING, c.FILE_FLAG_OPEN_REPARSE_POINT | c.FILE_FLAG_BACKUP_SEMANTICS, 0)
+                if: handle = c.INVALID_HANDLE_VALUE
+                    error[0]: (cast: (unsigned) c.GetLastError())
+                    result: 1
+                ---
+            ---
+            if: result = 0
+                if: c.DeviceIoControl(handle, c.FSCTL_GET_REPARSE_POINT, 0, 0U, buffer, 16384U, returned, 0) = 0
+                    error[0]: (cast: (unsigned) c.GetLastError())
+                    result: 1
+                ---
+            ---
+            if: result = 0
+                got: (cast: (size_t) returned[0])
+                if: got < 8U || got > 16384U
+                    result: 1
+                    error[0]: (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
+                else:
+                    tag: fpw_u32(buffer, 0U)
+                    payload: (cast: (size_t) fpw_u16(buffer, 4U))
+                    if: payload > got - 8U
+                        result: 1
+                        error[0]: (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
+                    else:
+                        bound: 8U + payload
+                        if: tag = (cast: (unsigned) c.IO_REPARSE_TAG_SYMLINK)
+                            base: 20U
+                            kind[0]: 1
+                        else:
+                            if: tag = (cast: (unsigned) c.IO_REPARSE_TAG_MOUNT_POINT)
+                                base: 16U
+                                kind[0]: 2
+                            else:
+                                result: 2
+                            ---
+                        ---
+                    ---
+                ---
+            ---
+            if: result = 0
+                if: bound < base
+                    result: 1
+                else:
+                    offset: (cast: (size_t) fpw_u16(buffer, 8U))
+                    target_bytes: (cast: (size_t) fpw_u16(buffer, 10U))
+                    if: offset % 2U != 0U || target_bytes % 2U != 0U || offset > bound - base
+                        result: 1
+                    else:
+                        if: target_bytes > bound - base - offset
+                            result: 1
+                        ---
+                    ---
+                ---
+                if: result != 0
+                    error[0]: (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
+                ---
+            ---
+            if: result = 0
+                units: target_bytes / 2U
+                wide: c.calloc(units + 1U, c.sizeof(c.WCHAR))
+                if: wide = 0
+                    result: -1
+                else:
+                    c.memcpy(wide, buffer + base + offset, target_bytes)
+                    # CPython's native readlink changes the NT prefix \??\
+                    # into the Win32 extended prefix \\?\, not into an
+                    # ordinary drive/UNC pathname.
+                    if: units > 4U && (cast: (unsigned) wide[0U]) = 92U && (cast: (unsigned) wide[1U]) = 63U && (cast: (unsigned) wide[2U]) = 63U && (cast: (unsigned) wide[3U]) = 92U
+                        wide[1U]: (cast: (c.WCHAR) 92U)
+                    result: fpw_from_counted(wide, units, out)
+                ---
+            ---
+            if: handle != c.INVALID_HANDLE_VALUE
+                c.CloseHandle(handle)
+            c.free(wpath)
+            c.free(buffer)
+            c.free(returned)
+            c.free(wide)
+            return: result
+        end: fpw_readlink
+
+        fn: fpw_separator (unsigned: byte) int
+            return: (cast: (int) (byte = 47U || byte = 92U))
+        end: fpw_separator
+
+        fn: fpw_slashes (@: path char) @: char
+            @: copy char txt_dup(path)
+            size_t: at 0U
+            if: copy = 0
+                return: 0
+            while: copy[at] != (cast: (char) 0)
+                if: copy[at] = (cast: (char) 47)
+                    copy[at]: (cast: (char) 92)
+                at: at + 1U
+            ---
+            return: copy
+        end: fpw_slashes
+
+        # Original byte slices, but colon-at-WCHAR1 follows the native
+        # splitroot contract. A supplementary point occupies two WCHARs.
+        fn: fpw_parts (@: path char; @: drive_after size_t; @: tail_at size_t) int
+            size_t: count c.strlen(path)
+            size_t: first 0U
+            size_t: second 0U
+            size_t: width 0U
+            unsigned: point 0U
+            unsigned: byte 0U
+            drive_after[0]: 0U
+            tail_at[0]: 0U
+            if: count = 0U
+                return: 0
+            if: fpw_separator((cast: (unsigned) path[0U]) & 255U) != 0
+                if: count > 1U && fpw_separator((cast: (unsigned) path[1U]) & 255U) != 0
+                    first: 2U
+                    if: count >= 8U && path[2U] = (cast: (char) 63) && fpw_separator((cast: (unsigned) path[3U]) & 255U) != 0 && fpw_separator((cast: (unsigned) path[7U]) & 255U) != 0
+                        if: (((cast: (unsigned) path[4U]) & 255U) | 32U) = 117U && (((cast: (unsigned) path[5U]) & 255U) | 32U) = 110U && (((cast: (unsigned) path[6U]) & 255U) | 32U) = 99U
+                            first: 8U
+                        ---
+                    ---
+                    while: first < count && fpw_separator((cast: (unsigned) path[first]) & 255U) = 0
+                        first: first + 1U
+                    if: first = count
+                        drive_after[0]: count
+                        tail_at[0]: count
+                        return: 0
+                    second: first + 1U
+                    while: second < count && fpw_separator((cast: (unsigned) path[second]) & 255U) = 0
+                        second: second + 1U
+                    drive_after[0]: second
+                    tail_at[0]: second
+                    if: second < count
+                        tail_at[0]: second + 1U
+                    return: 0
+                ---
+                tail_at[0]: 1U
+                return: 0
+            ---
+            width: dt_point(path, count, 0U, @ point)
+            if: width = 0U
+                return: 1
+            if: point <= 65535U && width < count && path[width] = (cast: (char) 58)
+                drive_after[0]: width + 1U
+                tail_at[0]: width + 1U
+                if: width + 1U < count && fpw_separator((cast: (unsigned) path[width + 1U]) & 255U) != 0
+                    tail_at[0]: width + 2U
+                ---
+            ---
+            return: 0
+        end: fpw_parts
+
+        fn: fpw_isabs (@: path char) int
+            size_t: count c.strlen(path)
+            size_t: width 0U
+            unsigned: point 0U
+            if: count > 1U && fpw_separator((cast: (unsigned) path[0U]) & 255U) != 0 && fpw_separator((cast: (unsigned) path[1U]) & 255U) != 0
+                return: 1
+            if: count = 0U
+                return: 0
+            width: dt_point(path, count, 0U, @ point)
+            if: width = 0U
+                return: 0
+            if: width + 1U < count && path[width] = (cast: (char) 58) && fpw_separator((cast: (unsigned) path[width + 1U]) & 255U) != 0
+                return: 1
+            return: 0
+        end: fpw_isabs
+
+        fn: os_path_join (@: base char; @: tail char) @: char
+            size_t: bn 0U
+            size_t: tn 0U
+            size_t: bd 0U
+            size_t: bt 0U
+            size_t: td 0U
+            size_t: tt 0U
+            size_t: used 0U
+            size_t: dn 0U
+            size_t: limit (cast: (size_t) -1)
+            @: drive char base
+            @: out char 0
+            int: same 0
+            if: base = 0 || tail = 0
+                return: 0
+            bn: c.strlen(base)
+            tn: c.strlen(tail)
+            if: fpw_parts(base, @ bd, @ bt) != 0 || fpw_parts(tail, @ td, @ tt) != 0
+                return: 0
+            if: tn > limit - 4U || bn > limit - tn - 4U
+                return: 0
+            if: tt = td && td > 0U
+                same: uc_lower_equal(base, bd, tail, td)
+                if: same < 0
+                    return: 0
+                if: same = 0
+                    return: txt_dup(tail)
+                ---
+            ---
+            dn: bd
+            if: td > 0U
+                drive: tail
+                dn: td
+            ---
+            out: c.malloc(bn + tn + 4U)
+            if: out = 0
+                return: 0
+            if: tt > td
+                # A rooted RHS inherits the drive only when its own is empty.
+                c.memcpy(out, drive, dn)
+                used: dn
+                out[used]: tail[td]
+                used: used + 1U
+                c.memcpy(out + used, tail + tt, tn - tt)
+                used: used + tn - tt
+            else:
+                c.memcpy(out, drive, dn)
+                used: dn
+                if: bt > bd
+                    out[used]: base[bd]
+                    used: used + 1U
+                else:
+                    # UNC drive plus relative path needs one separator.
+                    if: dn > 0U && (bn > bt || tn > tt)
+                        if: fpw_separator((cast: (unsigned) drive[dn - 1U]) & 255U) = 0 && drive[dn - 1U] != (cast: (char) 58)
+                            out[used]: (cast: (char) 92)
+                            used: used + 1U
+                        ---
+                    ---
+                ---
+                c.memcpy(out + used, base + bt, bn - bt)
+                used: used + bn - bt
+                if: bn > bt && fpw_separator((cast: (unsigned) base[bn - 1U]) & 255U) = 0
+                    out[used]: (cast: (char) 92)
+                    used: used + 1U
+                c.memcpy(out + used, tail + tt, tn - tt)
+                used: used + tn - tt
+            ---
+            out[used]: (cast: (char) 0)
+            return: out
+        end: os_path_join
+
+        # split returns a caller-owned head and the byte index of the original
+        # tail. Trim only the tail-head's separators, never the drive/root.
+        fn: fpw_split (@: path char; @@: head char; @: tail_at size_t) int
+            size_t: count c.strlen(path)
+            size_t: drive 0U
+            size_t: first 0U
+            size_t: after count
+            size_t: trim 0U
+            head[0]: 0
+            if: fpw_parts(path, @ drive, @ first) != 0
+                return: 1
+            while: after > first && fpw_separator((cast: (unsigned) path[after - 1U]) & 255U) = 0
+                after: after - 1U
+            tail_at[0]: after
+            trim: after
+            while: trim > first && fpw_separator((cast: (unsigned) path[trim - 1U]) & 255U) != 0
+                trim: trim - 1U
+            head[0]: txt_ndup(path, trim)
+            if: head[0] = 0
+                return: 1
+            return: 0
+        end: fpw_split
+
+        fn: os_path_dirname (@: path char) @: char
+            @: head char 0
+            size_t: tail 0U
+            if: fpw_split(path, @ head, @ tail) != 0
+                return: 0
+            return: head
+        end: os_path_dirname
+
+        fn: fpw_norm (@: input char) @: char
+            @: path char fpw_slashes(input)
+            @: part char 0
+            @: out char 0
+            @@: parts char 0
+            @: kinds unsigned 0
+            size_t: count 0U
+            size_t: drive 0U
+            size_t: first 0U
+            size_t: pos 0U
+            size_t: after 0U
+            size_t: used 0U
+            size_t: n 0U
+            size_t: capacity 0U
+            size_t: at 0U
+            size_t: part_count 0U
+            int: failed 0
+            if: path = 0
+                return: 0
+            count: c.strlen(path)
+            failed: fpw_parts(path, @ drive, @ first)
+            pos: first
+            while: failed = 0 && pos <= count
+                after: pos
+                while: after < count && path[after] != (cast: (char) 92)
+                    after: after + 1U
+                if: after > pos
+                    part: txt_ndup(path + pos, after - pos)
+                    if: part = 0
+                        failed: 1
+                        break
+                    if: c.strcmp(part, ".") != 0
+                        if: c.strcmp(part, "..") = 0 && n > 0U && c.strcmp(parts[n - 1U], "..") != 0
+                            n: n - 1U
+                            c.free(parts[n])
+                            parts[n]: 0
+                        else:
+                            if: c.strcmp(part, "..") != 0 || n > 0U || first = drive
+                                failed: fs_entry_append(@ parts, @ kinds, @ n, @ capacity, part, 0U)
+                                if: failed = 0
+                                    part: 0
+                                ---
+                            ---
+                        ---
+                    ---
+                    c.free(part)
+                    part: 0
+                ---
+                if: after = count
+                    break
+                pos: after + 1U
+            ---
+            if: failed = 0 && count <= (cast: (size_t) -1) - 2U
+                out: c.malloc(count + 2U)
+                if: out = 0
+                    failed: 1
+                else:
+                    c.memcpy(out, path, first)
+                    used: first
+                    while: at < n
+                        if: at > 0U
+                            out[used]: (cast: (char) 92)
+                            used: used + 1U
+                        part_count: c.strlen(parts[at])
+                        c.memcpy(out + used, parts[at], part_count)
+                        used: used + part_count
+                        at: at + 1U
+                    ---
+                    if: used = 0U
+                        out[used]: (cast: (char) 46)
+                        used: used + 1U
+                    out[used]: (cast: (char) 0)
+                ---
+            else:
+                failed: 1
+            ---
+            fs_entries_free(parts, kinds, n)
+            c.free(path)
+            c.free(part)
+            if: failed != 0
+                c.free(out)
+                return: 0
+            return: out
+        end: fpw_norm
+
+        # normcase is exactly the native invariant lowercase route used by
+        # ntpath._readlink_deep, NOT Python str.lower from os_path_join.
+        fn: fpw_normcase (@: path char; @@: out char; @: error unsigned) int
+            @: spelling char fpw_slashes(path)
+            @: wide c.void 0
+            @: mapped c.WCHAR 0
+            int: needed 0
+            int: result 0
+            out[0]: 0
+            error[0]: 0U
+            if: spelling = 0
+                return: -1
+            if: spelling[0] = (cast: (char) 0)
+                out[0]: spelling
+                return: 0
+            wide: os_native(spelling)
+            if: wide = 0
+                result: -1
+            if: result = 0
+                needed: c.LCMapStringEx(c.LOCALE_NAME_INVARIANT, c.LCMAP_LOWERCASE, wide, -1, 0, 0, 0, 0, 0)
+                if: needed <= 0
+                    error[0]: (cast: (unsigned) c.GetLastError())
+                    result: 1
+                else:
+                    mapped: c.calloc((cast: (size_t) needed), c.sizeof(c.WCHAR))
+                    if: mapped = 0
+                        result: -1
+                    ---
+                ---
+            ---
+            if: result = 0
+                if: c.LCMapStringEx(c.LOCALE_NAME_INVARIANT, c.LCMAP_LOWERCASE, wide, -1, mapped, needed, 0, 0, 0) != needed
+                    error[0]: (cast: (unsigned) c.GetLastError())
+                    result: 1
+                else:
+                    result: fpw_from_counted(mapped, (cast: (size_t) (needed - 1)), out)
+                ---
+            ---
+            c.free(spelling)
+            c.free(wide)
+            c.free(mapped)
+            return: result
+        end: fpw_normcase
+
+        fn: fpw_deep_stops (unsigned: error) int
+            return: (cast: (int) (error = 1U || error = 2U || error = 3U || error = 5U || error = 21U || error = 32U || error = 50U || error = 67U || error = 87U || error = 4390U || error = 4392U || error = 4393U))
+        end: fpw_deep_stops
+
+        fn: fpw_final_stops (unsigned: error) int
+            return: (cast: (int) (error = 1U || error = 2U || error = 3U || error = 5U || error = 21U || error = 32U || error = 50U || error = 53U || error = 65U || error = 67U || error = 87U || error = 123U || error = 161U || error = 1005U || error = 1920U || error = 1921U))
+        end: fpw_final_stops
+
+        # Operation-local seen keys, not an arbitrary link-count limit. A
+        # relative target is meaningful here only for an actual symlink.
+        fn: fpw_deep (@: input char; @@: out char; @: error unsigned) int
+            @: path char txt_dup(input)
+            @: key char 0
+            @: target char 0
+            @: parent char 0
+            @: joined char 0
+            @: next_path char 0
+            @@: seen char 0
+            size_t: count 0U
+            size_t: capacity 0U
+            size_t: at 0U
+            int: kind 0
+            int: result 0
+            int: found 0
+            out[0]: 0
+            error[0]: 0U
+            if: path = 0
+                return: -1
+            while: result = 0
+                result: fpw_normcase(path, @ key, error)
+                if: result != 0
+                    break
+                at: 0U
+                found: 0
+                while: at < count
+                    if: c.strcmp(seen[2U * at], key) = 0
+                        found: 1
+                        break
+                    at: at + 1U
+                ---
+                if: found != 0
+                    break
+                if: fp_seen_add(@ seen, @ count, @ capacity, key) != 0
+                    result: -1
+                    break
+                c.free(key)
+                key: 0
+                result: fpw_readlink(path, @ target, @ kind, error)
+                if: result = 2
+                    result: 0
+                    break
+                if: result = 1
+                    if: fpw_deep_stops(error[0]) != 0
+                        result: 0
+                    break
+                if: result != 0
+                    break
+                if: fpw_isabs(target) = 0
+                    if: kind != 1
+                        break
+                    parent: os_path_dirname(path)
+                    if: parent != 0
+                        joined: os_path_join(parent, target)
+                    if: joined != 0
+                        next_path: fpw_norm(joined)
+                    c.free(parent)
+                    parent: 0
+                    c.free(joined)
+                    joined: 0
+                    if: next_path = 0
+                        result: -1
+                        break
+                    c.free(target)
+                    target: next_path
+                    next_path: 0
+                ---
+                c.free(path)
+                path: target
+                target: 0
+            ---
+            if: result = 0
+                out[0]: path
+                path: 0
+            c.free(path)
+            c.free(key)
+            c.free(target)
+            c.free(parent)
+            c.free(joined)
+            c.free(next_path)
+            fp_seen_free(seen, count)
+            return: result
+        end: fpw_deep
+
+        # Find the resolvable prefix, retaining the unresolved suffix and the
+        # original native query error. Unexpected OS errors still propagate.
+        fn: fpw_nonstrict (@: input char; @@: out char; @: error unsigned) int
+            @: path char txt_dup(input)
+            @: tail char txt_dup("")
+            @: target char 0
+            @: head char 0
+            @: name char 0
+            @: next_tail char 0
+            size_t: tail_at 0U
+            unsigned: query_error 0U
+            unsigned: deep_error 0U
+            unsigned: leaf_error 0U
+            int: result 0
+            int: leaf_result 0
+            out[0]: 0
+            error[0]: 0U
+            if: path = 0 || tail = 0
+                result: -1
+            while: result = 0 && path[0] != (cast: (char) 0)
+                result: fpw_finalpath(path, @ target, @ query_error)
+                if: result = 0
+                    if: tail[0] != (cast: (char) 0)
+                        out[0]: os_path_join(target, tail)
+                    else:
+                        out[0]: target
+                        target: 0
+                    ---
+                    if: out[0] = 0
+                        result: -1
+                    break
+                ---
+                if: result < 0
+                    break
+                if: fpw_final_stops(query_error) = 0
+                    error[0]: query_error
+                    break
+                result: fpw_deep(path, @ target, @ deep_error)
+                if: result < 0
+                    break
+                if: result = 0 && c.strcmp(target, path) != 0
+                    if: tail[0] != (cast: (char) 0)
+                        out[0]: os_path_join(target, tail)
+                    else:
+                        out[0]: target
+                        target: 0
+                    ---
+                    if: out[0] = 0
+                        result: -1
+                    break
+                ---
+                # The original catches OSError from deep readlink and keeps
+                # walking upward; allocation/encoding failures are not caught.
+                c.free(target)
+                target: 0
+                result: 0
+                if: query_error = 1U || query_error = 5U || query_error = 32U || query_error = 50U || query_error = 87U || query_error = 1920U || query_error = 1921U
+                    leaf_result: fpw_findleaf(path, @ name, @ leaf_error)
+                    if: leaf_result < 0
+                        result: -1
+                        break
+                    ---
+                ---
+                if: fpw_split(path, @ head, @ tail_at) != 0
+                    result: -1
+                    break
+                if: name = 0
+                    name: txt_dup(path + tail_at)
+                if: name = 0
+                    result: -1
+                    break
+                if: head[0] != (cast: (char) 0) && name[0] = (cast: (char) 0)
+                    out[0]: txt_cat(head, tail)
+                    if: out[0] = 0
+                        result: -1
+                    break
+                if: tail[0] != (cast: (char) 0)
+                    next_tail: os_path_join(name, tail)
+                else:
+                    next_tail: txt_dup(name)
+                ---
+                if: next_tail = 0
+                    result: -1
+                    break
+                c.free(path)
+                path: head
+                head: 0
+                c.free(name)
+                name: 0
+                c.free(tail)
+                tail: next_tail
+                next_tail: 0
+            ---
+            if: result = 0 && out[0] = 0
+                out[0]: tail
+                tail: 0
+            c.free(path)
+            c.free(tail)
+            c.free(target)
+            c.free(head)
+            c.free(name)
+            c.free(next_tail)
+            return: result
+        end: fpw_nonstrict
+
+        # Same counted-path interface as the POSIX adapter. A successful
+        # result is owned, scalar UTF-8, and has an explicit byte count.
+        fn: os_path_resolve_nonstrict (@: input char; size_t: input_count; @@: out char; @: out_count size_t) int
+            @: initial char 0
+            @: path char 0
+            @: cwd char 0
+            @: folded char 0
+            @: joined char 0
+            @: target char 0
+            @: stripped char 0
+            unsigned: initial_error 0U
+            unsigned: query_error 0U
+            size_t: count 0U
+            int: had_prefix 0
+            int: result 0
+            if: input = 0 || out = 0 || out_count = 0
+                return: 1
+            out[0]: 0
+            out_count[0]: 0U
+            if: input_count = (cast: (size_t) -1) || c.memchr(input, 0, input_count) != 0
+                return: 1
+            initial: txt_ndup(input, input_count)
+            if: initial != 0
+                path: fpw_norm(initial)
+            cwd: os_cwd()
+            if: initial = 0 || path = 0 || cwd = 0
+                result: -1
+            if: result = 0
+                result: fpw_normcase(path, @ folded, @ query_error)
+            if: result = 0 && c.strcmp(folded, "nul") = 0
+                target: txt_dup("\\\\.\\NUL")
+                if: target = 0
+                    result: -1
+                ---
+            else:
+                if: result = 0
+                    count: c.strlen(path)
+                    if: count >= 4U && c.memcmp(path, "\\\\?\\", 4U) = 0
+                        had_prefix: 1
+                    if: had_prefix = 0 && fpw_isabs(path) = 0
+                        joined: os_path_join(cwd, path)
+                        if: joined = 0
+                            result: -1
+                        else:
+                            c.free(path)
+                            path: joined
+                            joined: 0
+                        ---
+                    ---
+                ---
+                if: result = 0
+                    result: fpw_finalpath(path, @ target, @ initial_error)
+                    if: result = 1
+                        result: fpw_nonstrict(path, @ target, @ query_error)
+                    ---
+                ---
+                if: result = 0 && had_prefix = 0
+                    count: c.strlen(target)
+                    if: count >= 4U && c.memcmp(target, "\\\\?\\", 4U) = 0
+                        if: count >= 8U && c.memcmp(target, "\\\\?\\UNC\\", 8U) = 0
+                            stripped: txt_cat("\\\\", target + 8U)
+                        else:
+                            stripped: txt_dup(target + 4U)
+                        ---
+                        if: stripped = 0
+                            result: -1
+                        else:
+                            result: fpw_finalpath(stripped, @ joined, @ query_error)
+                            if: result = 0
+                                if: c.strcmp(joined, target) = 0
+                                    c.free(target)
+                                    target: stripped
+                                    stripped: 0
+                                ---
+                            else:
+                                if: result = 1
+                                    if: query_error = initial_error
+                                        c.free(target)
+                                        target: stripped
+                                        stripped: 0
+                                    ---
+                                    result: 0
+                                ---
+                            ---
+                        ---
+                    ---
+                ---
+            ---
+            if: result = 0
+                out[0]: target
+                out_count[0]: c.strlen(target)
+                target: 0
+            c.free(initial)
+            c.free(path)
+            c.free(cwd)
+            c.free(folded)
+            c.free(joined)
+            c.free(target)
+            c.free(stripped)
+            if: result != 0
+                return: 1
+            return: 0
+        end: os_path_resolve_nonstrict
+end: os
+

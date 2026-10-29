@@ -1,0 +1,49 @@
+# Unselected shared binary file opener/remover of the ordinary L2 tools.
+# os_native is provided by os_native_path.lm2 in BOTH tool and child closures.
+# Only the pathname is UTF-16 on Windows; no ccs= contents conversion.
+include: "<stdio.h>" "<stdlib.h>"
+os:
+    win:
+        include: "<windows.h>"
+        fn: os_file_open (@: path char; @: mode char) @: c.FILE
+            @: wpath c.void 0
+            @: wmode c.void 0
+            @: stream c.FILE 0
+            if: path = 0 || mode = 0 || path[0] = (cast: (char) 0) || mode[0] = (cast: (char) 0)
+                return: 0
+            wpath: os_native(path)
+            wmode: os_native(mode)
+            if: wpath != 0 && wmode != 0
+                stream: c._wfopen(wpath, wmode)
+            c.free(wpath)
+            c.free(wmode)
+            return: stream
+        end: os_file_open
+
+        # Remove the named entry itself, without resolving/following it first.
+        # Preserve the ordinary CRT return value; no missing-file exemption.
+        fn: os_file_remove (@: path char) int
+            @: wide c.void 0
+            int: result -1
+            if: path = 0
+                return: -1
+            wide: os_native(path)
+            if: wide = 0
+                return: -1
+            result: c._wremove(wide)
+            c.free(wide)
+            return: result
+        end: os_file_remove
+    default:
+        fn: os_file_open (@: path char; @: mode char) @: c.FILE
+            if: path = 0 || mode = 0 || path[0] = (cast: (char) 0) || mode[0] = (cast: (char) 0)
+                return: 0
+            return: (cast: (@: c.FILE) c.fopen(path, mode))
+        end: os_file_open
+
+        fn: os_file_remove (@: path char) int
+            if: path = 0
+                return: -1
+            return: (cast: (int) c.remove(path))
+        end: os_file_remove
+end: os

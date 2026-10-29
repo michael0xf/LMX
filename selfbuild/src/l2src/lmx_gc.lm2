@@ -1,0 +1,67 @@
+predef: "l2src/lmx_gc_graph.lm1"
+predef: "l2src/lmx_post.lm1"
+include: "<stdlib.h>"
+
+# The Thread's explicit roots use the same physical graph marker as every
+# other graph client. No mark failure is allowed to perform a partial sweep.
+fn: lmx_gc_mark (@: arena c.LmxArena; @: t c.LmxThread) unsigned
+    if: arena = 0 || t = 0
+        return: 0U
+    unsigned: gen c.lmx_arena_generation_next(arena)
+    if: gen = 0U
+        return: 0U
+    int: status c.LMX_GC_OK
+    @: message c.LmxMsg c.lmx_thread_message(t)
+    status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, (cast: (@: void) t), gen, 0))
+    status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, (cast: (@: void) message), gen, 0))
+    status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, (cast: (@: void) t\mail), gen, 0))
+    status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, (cast: (@: void) t\slot), gen, 0))
+    status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, t\children, gen, 0))
+    if: message != 0
+        status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, (cast: (@: void) message\graph), gen, 0))
+    ---
+    @: mail c.LmxPost t\mail
+    if: mail != 0
+        @: nodes c.LmxPool @ mail\nodes
+        status: c.lmx_gc_note(status, c.lmx_gc_mark_pool(arena, nodes, gen))
+        # The inbox backing is movable and outside the arena. Its own monitor
+        # supplies a snapshot; the collector does not take the monitor itself.
+        @: inbox_values size_t 0
+        size_t: inbox_count 0U
+        int: inbox_status c.lmx_post_snapshot_inbox(mail, @ inbox_values, @ inbox_count)
+        if: inbox_status != c.LMX_POST_OK
+            status: c.lmx_gc_note(status, c.LMX_GC_INVALID)
+        else:
+            size_t: inbox_index 0U
+            while: inbox_index < inbox_count
+                status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, (cast: (@: void) inbox_values[inbox_index]), gen, 0))
+                inbox_index: inbox_index + 1U
+            ---
+            c.free((cast: (@: void) inbox_values))
+        ---
+    ---
+    # The record may be outside this arena. Its sole children Array and the
+    # physical child values are explicit roots, not a hidden companion chain.
+    size_t: child_index 0U
+    while: child_index < c.lmx_thread_child_count(t)
+        @: child c.LmxThread c.lmx_thread_child_at(t, child_index)
+        status: c.lmx_gc_note(status, c.lmx_gc_mark_value(arena, (cast: (@: void) child), gen, 0))
+        child_index: child_index + 1U
+    ---
+    if: status != c.LMX_GC_OK
+        return: 0U
+    return: gen
+end: lmx_gc_mark
+
+fn: lmx_gc_collect (@: arena c.LmxArena; @: t c.LmxThread) int
+    if: arena = 0 || t = 0
+        return: c.LMX_GC_INVALID
+    if: arena\simple != 0U
+        return: c.LMX_GC_OK
+    unsigned: gen lmx_gc_mark(arena, t)
+    if: gen = 0U
+        return: c.LMX_GC_PARTIAL
+    if: c.lmx_gc_sweep(arena, gen) != c.LMX_GC_OK
+        return: c.LMX_GC_INVALID
+    return: c.LMX_GC_OK
+end: lmx_gc_collect

@@ -1,0 +1,220 @@
+# Unselected ordinary L2 documentation-tool part, not yet compiled or run.
+# Length-aware text operations for the existing semantics renderer/checker.
+# No Unicode normalization, embedded-NUL truncation or ASCII-only strip.
+# Space/linebreak sets checked against CPython3.14 Objects/unicodetype_db.h
+# functions _PyUnicode_IsWhitespace and _PyUnicode_IsLinebreak:
+# https://raw.githubusercontent.com/python/cpython/3.14/Objects/unicodetype_db.h
+# Copyright (c) 2001 Python Software Foundation; All Rights Reserved.
+# PSF2 agreement is retained in adjacent docs_matcher.lm2. Changes: the
+# scalar sets are expressed as ordinary L2 predicates; decoding/spans are L2.
+
+# One strict UTF-8 scalar: byte width, or 0 for invalid/incomplete input.
+fn: dt_point (@: data char; size_t: count; size_t: at; @: point unsigned) size_t
+    size_t: width 0U
+    size_t: scan 0U
+    unsigned: lead 0U
+    unsigned: value 0U
+    unsigned: least 0U
+    unsigned: byte 0U
+    if: data = 0 || point = 0 || at >= count
+        return: 0U
+    lead: (cast: (unsigned) data[at]) & 255U
+    if: lead < 128U
+        point[0]: lead
+        return: 1U
+    ---
+    if: lead >= 194U && lead <= 223U
+        width: 2U
+        least: 128U
+        value: lead & 31U
+    else:
+        if: lead >= 224U && lead <= 239U
+            width: 3U
+            least: 2048U
+            value: lead & 15U
+        else:
+            if: lead < 240U || lead > 244U
+                return: 0U
+            ---
+            width: 4U
+            least: 65536U
+            value: lead & 7U
+        ---
+    ---
+    if: width > count - at
+        return: 0U
+    scan: 1U
+    while: scan < width
+        byte: (cast: (unsigned) data[at + scan]) & 255U
+        if: byte < 128U || byte > 191U
+            return: 0U
+        value: (value << 6) | (byte & 63U)
+        scan: scan + 1U
+    ---
+    if: value < least || value > 1114111U || (value >= 55296U && value <= 57343U)
+        return: 0U
+    point[0]: value
+    return: width
+end: dt_point
+
+fn: dt_space (unsigned: point) int
+    if: (point >= 9U && point <= 13U) || (point >= 28U && point <= 32U)
+        return: 1
+    if: point = 133U || point = 160U || point = 5760U || (point >= 8192U && point <= 8202U) || point = 8232U || point = 8233U || point = 8239U || point = 8287U || point = 12288U
+        return: 1
+    return: 0
+end: dt_space
+
+fn: dt_linebreak (unsigned: point) int
+    if: (point >= 10U && point <= 13U) || (point >= 28U && point <= 30U) || point = 133U || point = 8232U || point = 8233U
+        return: 1
+    return: 0
+end: dt_linebreak
+
+# Strict read_text UTF-8/newline behavior; an optional one initial BOM is only
+# for utf-8-sig source snapshots. Hash/snapshot selection uses the RAW buffer,
+# not this normalized copy. Caller owns out[0], including its final NUL.
+fn: dt_text (@: raw char; size_t: count; int: drop_bom; @@: out char; @: out_count size_t) int
+    @: result char 0
+    size_t: scan 0U
+    size_t: used 0U
+    size_t: width 0U
+    unsigned: point 0U
+    if: raw = 0 || out = 0 || out_count = 0 || count = (cast: (size_t) -1)
+        return: 1
+    out[0]: 0
+    out_count[0]: 0U
+    result: c.malloc(count + 1U)
+    if: result = 0
+        return: 1
+    if: drop_bom != 0 && count >= 3U && ((cast: (unsigned) raw[0]) & 255U) = 239U && ((cast: (unsigned) raw[1]) & 255U) = 187U && ((cast: (unsigned) raw[2]) & 255U) = 191U
+        scan: 3U
+    ---
+    while: scan < count
+        width: dt_point(raw, count, scan, @ point)
+        if: width = 0U
+            c.free(result)
+            return: 1
+        ---
+        if: point = 13U
+            result[used]: (cast: (char) 10)
+            used: used + 1U
+            scan: scan + 1U
+            if: scan < count && raw[scan] = (cast: (char) 10)
+                scan: scan + 1U
+            ---
+        else:
+            c.memcpy(result + used, raw + scan, width)
+            used: used + width
+            scan: scan + width
+        ---
+    ---
+    result[used]: (cast: (char) 0)
+    out[0]: result
+    out_count[0]: used
+    return: 0
+end: dt_text
+
+# Unicode strip/rstrip spans in the original validated byte sequence. The two
+# modes independently trim leading/trailing whitespace. An empty result is
+# represented by a valid empty half-open byte interval.
+fn: dt_trim (@: data char; size_t: count; int: trim_left; int: trim_right; @: begin size_t; @: after size_t) int
+    size_t: scan 0U
+    size_t: width 0U
+    size_t: first count
+    size_t: last 0U
+    unsigned: point 0U
+    int: seen 0
+    if: data = 0 || begin = 0 || after = 0
+        return: 1
+    while: scan < count
+        width: dt_point(data, count, scan, @ point)
+        if: width = 0U
+            return: 1
+        if: dt_space(point) = 0
+            if: seen = 0
+                first: scan
+                seen: 1
+            ---
+            last: scan + width
+        ---
+        scan: scan + width
+    ---
+    begin[0]: 0U
+    after[0]: count
+    if: trim_left != 0
+        begin[0]: first
+    if: trim_right != 0
+        after[0]: last
+    if: after[0] < begin[0]
+        after[0]: begin[0]
+    return: 0
+end: dt_trim
+
+# Python str.splitlines without keepends, after optional utf-8-sig BOM.
+# Counts with starts=lengths=0; a second pass fills caller-owned arrays.
+# CRLF is one boundary, all Unicode linebreaks count, and there is no extra
+# final empty line. Embedded NUL remains ordinary line content.
+fn: dt_lines (@: data char; size_t: count; int: drop_bom; @: starts size_t; @: lengths size_t; size_t: capacity; @: line_count size_t) int
+    size_t: scan 0U
+    size_t: line_at 0U
+    size_t: width 0U
+    size_t: used 0U
+    unsigned: point 0U
+    int: fill 0
+    if: data = 0 || line_count = 0 || (starts = 0 && lengths != 0) || (starts != 0 && lengths = 0)
+        return: 1
+    line_count[0]: 0U
+    fill: (cast: (int) (starts != 0))
+    if: drop_bom != 0 && count >= 3U && ((cast: (unsigned) data[0]) & 255U) = 239U && ((cast: (unsigned) data[1]) & 255U) = 187U && ((cast: (unsigned) data[2]) & 255U) = 191U
+        scan: 3U
+        line_at: scan
+    ---
+    while: scan < count
+        width: dt_point(data, count, scan, @ point)
+        if: width = 0U
+            return: 1
+        if: dt_linebreak(point) != 0
+            if: used = (cast: (size_t) -1) || (fill != 0 && used >= capacity)
+                return: 1
+            if: fill != 0
+                starts[used]: line_at
+                lengths[used]: scan - line_at
+            ---
+            used: used + 1U
+            scan: scan + width
+            if: point = 13U && scan < count && data[scan] = (cast: (char) 10)
+                scan: scan + 1U
+            ---
+            line_at: scan
+        else:
+            scan: scan + width
+        ---
+    ---
+    if: line_at < count
+        if: used = (cast: (size_t) -1) || (fill != 0 && used >= capacity)
+            return: 1
+        if: fill != 0
+            starts[used]: line_at
+            lengths[used]: count - line_at
+        ---
+        used: used + 1U
+    ---
+    line_count[0]: used
+    return: 0
+end: dt_lines
+
+# Literal byte search, with explicit lengths and SIZE_MAX meaning no match.
+fn: dt_find (@: data char; size_t: count; size_t: begin; @: needle char; size_t: needle_count) size_t
+    size_t: scan begin
+    if: begin > count || needle_count > count - begin
+        return: (cast: (size_t) -1)
+    if: needle_count = 0U
+        return: begin
+    while: scan <= count - needle_count
+        if: c.memcmp(data + scan, needle, needle_count) = 0
+            return: scan
+        scan: scan + 1U
+    ---
+    return: (cast: (size_t) -1)
+end: dt_find

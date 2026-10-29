@@ -1,0 +1,178 @@
+# Compiler used-copy inventory, not runtime binding or permission metadata.
+# Role1 is an executable lexical read; role2 carries a receiving contract.
+# Both roles require the same graph copy/remap, and equal paths JOIN roles.
+include: "<stdlib.h>" "<string.h>" "<limits.h>" "<stdint.h>"
+
+fn: copy_int_room (@@: values int; int: capacity) int
+    if: values = 0 || capacity < 0 || (cast: (size_t) capacity) > c.SIZE_MAX / sizeof(int)
+        return: 1
+    @: resized int (cast: (@: int) c.realloc((cast: (@: void) values[0]), (cast: (size_t) capacity) * sizeof(int)))
+    if: resized = 0
+        return: 1
+    values[0]: resized
+    return: 0
+end: copy_int_room
+
+# Existing source-use names are borrowed for the compiler invocation. No
+# name is resolved here: home/base/tags/values were already selected.
+fn: lm_compiler_use_note (int: home; int: base; @: tags int; @: vals int; int: len; @: text char; size_t: tlen; int: role; @: count int; @: capacity int; @@: homes int; @@: bases int; @@: offsets int; @@: lengths int; @@: roles int; @@@: texts char; @@: text_lengths size_t; @: slot_count int; @: slot_capacity int; @@: slots int; @@: slot_tags int; @: revision int; int: sealed) int
+    if: home < 0 || len <= 0 || tags = 0 || vals = 0
+        return: 0
+    if: role < 1 || role > 3 || (tlen != 0U && text = 0) || count = 0 || capacity = 0 || homes = 0 || bases = 0 || offsets = 0 || lengths = 0 || roles = 0 || texts = 0 || text_lengths = 0 || slot_count = 0 || slot_capacity = 0 || slots = 0 || slot_tags = 0
+        return: 1
+    if: count[0] < 0 || capacity[0] < count[0] || slot_count[0] < 0 || slot_capacity[0] < slot_count[0]
+        return: 1
+    if: revision = 0 || revision[0] < 0
+        return: 1
+    int: k 0
+    while: k < count[0]
+        if: homes[0][k] = home && bases[0][k] = base && lengths[0][k] = len && text_lengths[0][k] = tlen
+            int: same 1
+            int: j 0
+            while: j < len
+                if: slots[0][offsets[0][k] + j] != vals[j] || slot_tags[0][offsets[0][k] + j] != tags[j]
+                    same: 0
+                j: j + 1
+            ---
+            if: same != 0 && tlen != 0U && c.memcmp((cast: (@: void) texts[0][k]), (cast: (@: void) text), tlen) != 0
+                same: 0
+            if: same != 0
+                int: joined roles[0][k] | role
+                if: joined != roles[0][k]
+                    if: sealed != 0
+                        return: 2
+                    if: revision[0] = c.INT_MAX
+                        return: 3
+                    roles[0][k]: joined
+                    revision[0]: revision[0] + 1
+                ---
+                return: 0
+            ---
+        ---
+        k: k + 1
+    ---
+    # The revision belongs only to persistent source facts, never to the
+    # rebuilt MUR table. Logical changes after the common close are refused.
+    if: sealed != 0
+        return: 2
+    if: revision[0] = c.INT_MAX
+        return: 3
+    if: count[0] >= capacity[0]
+        if: capacity[0] > (c.INT_MAX - 16) / 2
+            return: 1
+        int: grown capacity[0] * 2 + 16
+        if: (cast: (size_t) grown) > c.SIZE_MAX / sizeof(@: char) || (cast: (size_t) grown) > c.SIZE_MAX / c.sizeof(c.size_t)
+            return: 1
+        if: copy_int_room(homes, grown) != 0 || copy_int_room(bases, grown) != 0 || copy_int_room(offsets, grown) != 0 || copy_int_room(lengths, grown) != 0 || copy_int_room(roles, grown) != 0
+            return: 1
+        @@: resized_texts char (cast: (@@: char) c.realloc((cast: (@: void) texts[0]), (cast: (size_t) grown) * sizeof(@: char)))
+        if: resized_texts = 0
+            return: 1
+        texts[0]: resized_texts
+        @: resized_lengths size_t (cast: (@: size_t) c.realloc((cast: (@: void) text_lengths[0]), (cast: (size_t) grown) * c.sizeof(c.size_t)))
+        if: resized_lengths = 0
+            return: 1
+        text_lengths[0]: resized_lengths
+        capacity[0]: grown
+    ---
+    if: len > c.INT_MAX - slot_count[0]
+        return: 1
+    int: needed slot_count[0] + len
+    if: needed > slot_capacity[0]
+        if: needed > (c.INT_MAX - 32) / 2
+            return: 1
+        int: grown_slots needed * 2 + 32
+        if: copy_int_room(slots, grown_slots) != 0 || copy_int_room(slot_tags, grown_slots) != 0
+            return: 1
+        slot_capacity[0]: grown_slots
+    ---
+    int: at count[0]
+    homes[0][at]: home
+    bases[0][at]: base
+    offsets[0][at]: slot_count[0]
+    lengths[0][at]: len
+    roles[0][at]: role
+    texts[0][at]: text
+    text_lengths[0][at]: tlen
+    int: j 0
+    while: j < len
+        slots[0][slot_count[0] + j]: vals[j]
+        slot_tags[0][slot_count[0] + j]: tags[j]
+        j: j + 1
+    ---
+    slot_count[0]: needed
+    count[0]: count[0] + 1
+    revision[0]: revision[0] + 1
+    return: 0
+end: lm_compiler_use_note
+
+# Same algorithm for completed physical paths. Identity has no role in it:
+# a contract and a real read of one place retain BOTH meanings after dedup.
+fn: lm_compiler_record_note (int: selector; @: path int; int: len; int: role; @: count int; @: capacity int; @@: selectors int; @@: offsets int; @@: lengths int; @@: roles int; @: slot_count int; @: slot_capacity int; @@: slots int) int
+    if: role < 1 || role > 3 || len < 0 || (len != 0 && path = 0) || count = 0 || capacity = 0 || selectors = 0 || offsets = 0 || lengths = 0 || roles = 0 || slot_count = 0 || slot_capacity = 0 || slots = 0
+        return: 1
+    if: count[0] < 0 || capacity[0] < count[0] || slot_count[0] < 0 || slot_capacity[0] < slot_count[0]
+        return: 1
+    int: k 0
+    while: k < count[0]
+        if: selectors[0][k] = selector && lengths[0][k] = len
+            int: same 1
+            int: j 0
+            while: j < len
+                if: slots[0][offsets[0][k] + j] != path[j]
+                    same: 0
+                j: j + 1
+            ---
+            if: same != 0
+                roles[0][k]: roles[0][k] | role
+                return: 0
+            ---
+        ---
+        k: k + 1
+    ---
+    if: count[0] >= capacity[0]
+        if: capacity[0] > (c.INT_MAX - 16) / 2
+            return: 1
+        int: grown capacity[0] * 2 + 16
+        if: copy_int_room(selectors, grown) != 0 || copy_int_room(offsets, grown) != 0 || copy_int_room(lengths, grown) != 0 || copy_int_room(roles, grown) != 0
+            return: 1
+        capacity[0]: grown
+    ---
+    if: len > c.INT_MAX - slot_count[0]
+        return: 1
+    int: needed slot_count[0] + len
+    if: needed > slot_capacity[0]
+        if: needed > (c.INT_MAX - 32) / 2
+            return: 1
+        int: grown_slots needed * 2 + 32
+        if: copy_int_room(slots, grown_slots) != 0
+            return: 1
+        slot_capacity[0]: grown_slots
+    ---
+    int: at count[0]
+    selectors[0][at]: selector
+    offsets[0][at]: slot_count[0]
+    lengths[0][at]: len
+    roles[0][at]: role
+    int: j 0
+    while: j < len
+        slots[0][slot_count[0] + j]: path[j]
+        j: j + 1
+    ---
+    slot_count[0]: needed
+    count[0]: count[0] + 1
+    return: 0
+end: lm_compiler_record_note
+
+# Unknown metadata never proves independence. Empty completed inventory does.
+fn: lm_compiler_has_lexical (@: roles int; int: count) int
+    if: count < 0 || (count != 0 && roles = 0)
+        return: 1
+    int: k 0
+    while: k < count
+        if: roles[k] < 1 || roles[k] > 3 || (roles[k] & 1) != 0
+            return: 1
+        k: k + 1
+    ---
+    return: 0
+end: lm_compiler_has_lexical

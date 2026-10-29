@@ -1,0 +1,1682 @@
+# Merge and receiving composition in L2 (plan S8.3).
+# The operation-local copy/projection maps, explicit arenas, publication and rollback retain their existing contracts.
+# Public C ABI declarations are ordinary L1 output of the existing L3 recipe, not a new L2 construct.
+predef: "l2src/lmx_merge_owned.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdlib.h>" "<string.h>" "<limits.h>"
+
+# See lmx_merge_owned.h.lm1 for the contract. Nothing here searches for an
+# owner, consults a registry or carries a range list: an operand
+# is admitted by classification -- the source arena's table answers STRUCT, and
+# anything else (a METHOD record, a primitive cell, an address no array of that
+# arena contains) is refused.
+# Spelling transport is separate from admission; it follows original owning
+# places and never selects a value or computes an override correspondence.
+
+# Direct child count of a live Structure. array.size counts child slots only.
+fn: lmx_merge_width (@: x c.Lmx) size_t
+    @: part_x_array c.VoidArray 0
+    if: x = 0
+        return: 0U
+    if: x != 0
+        part_x_array: (cast: (@: c.VoidArray) (@ x\array))
+    ---
+    return: (cast: (size_t) (part_x_array\size))
+end: lmx_merge_width
+
+# Checked accumulation of a direct child count. result\array.size is a size_t:
+# the total must not wrap SIZE_MAX, and there is no fixed cap anywhere.
+fn: lmx_merge_add_width (@: total size_t; @: x c.Lmx) int
+    size_t: w lmx_merge_width(x)
+    size_t: sum 0U
+    if: total = 0
+        return: 1
+    if: w > ((cast: (size_t) -1) - \total)
+        return: 1
+    # Decide on a local and store only on success: a refused add must leave the
+    # caller's total exactly as it was, or a later guard sees a poisoned value.
+    sum: \total + w
+    \total: sum
+    return: 0
+end: lmx_merge_add_width
+
+# A direct executable child is a bare operation/role record or a frame whose
+# first child is one. Nested callable values are data of this Structure; their
+# own code is not this Structure's body. This check is deliberately conservative
+# for native reuse: an unknown direct operation prevents reuse.
+fn: lmx_merge_code_child (@: arena c.LmxArena; @: value void) int
+    int: kind
+    @: head void 0
+    if: value = 0
+        return: 0
+    kind: c.lmx_range_classify(arena, value)
+    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE
+        return: 1
+    if: kind != c.LMX_KIND_STRUCT
+        return: 0
+    head: c.lmx_graph_value_in(arena, (cast: (@: c.Lmx) value), 0U)
+    if: head = 0
+        return: 0
+    kind: c.lmx_range_classify(arena, head)
+    return: (cast: (int) (kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE))
+end: lmx_merge_code_child
+
+fn: lmx_merge_has_code (@: arena c.LmxArena; @: value c.Lmx) int
+    @: part_value_array c.VoidArray 0
+    size_t: i 0U
+    if: value = 0
+        return: 0
+    # A compiled empty named Structure may have a native no-op trampoline.
+    # Native is an implementation of its body, not evidence that the body
+    # contains an executable child. A data-only operand cannot replace an
+    # earlier body just because it was compiled.
+    if: value != 0
+        part_value_array: (cast: (@: c.VoidArray) (@ value\array))
+    ---
+    while: i < part_value_array\size
+        if: lmx_merge_code_child(arena, c.lmx_graph_value_in(arena, value, i)) != 0
+            return: 1
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_merge_has_code
+
+# A merge keeps every data child but only the direct executable children of
+# the last operand (or appended body) that supplies code. The source's field
+# ordinal remains unchanged for the correspondence table; this predicate
+# governs only the fresh result's placed sequence.
+fn: lmx_merge_keep_child (@: arena c.LmxArena; @: source c.Lmx; size_t: field; size_t: source_index; size_t: selected_index) int
+    if: source_index = selected_index
+        return: 1
+    ---
+    return: (cast: (int) (lmx_merge_code_child(arena, c.lmx_graph_value_in(arena, source, field)) = 0))
+end: lmx_merge_keep_child
+
+fn: lmx_merge_add_kept_width (@: total size_t; @: arena c.LmxArena; @: source c.Lmx; size_t: source_index; size_t: selected_index) int
+    @: part_source_array c.VoidArray 0
+    size_t: j 0U
+    size_t: n 0U
+    if: total = 0 || source = 0
+        return: 1
+    ---
+    if: source != 0
+        part_source_array: (cast: (@: c.VoidArray) (@ source\array))
+    ---
+    while: j < part_source_array\size
+        if: lmx_merge_keep_child(arena, source, j, source_index, selected_index) != 0
+            n: n + 1U
+        ---
+        j: j + 1U
+    ---
+    if: n > ((cast: (size_t) -1) - \total)
+        return: 1
+    ---
+    \total: \total + n
+    return: 0
+end: lmx_merge_add_kept_width
+
+# A model slot that a native implementation already addresses can accept a
+# scalar replacement without changing that implementation only when the new
+# cell has the same machine domain and element type. Array shapes and
+# Structure/reference projections require their own proof.
+fn: lmx_merge_native_pair_safe (@: arena c.LmxArena; @: model c.Lmx; size_t: target; @: source c.Lmx; size_t: field) int
+    @: part_model_array c.VoidArray 0
+    @: part_source_array c.VoidArray 0
+    @: before void 0
+    @: after void 0
+    int: kind
+    int: ty
+    if: model != 0
+        part_model_array: (cast: (@: c.VoidArray) (@ model\array))
+    ---
+    if: source != 0
+        part_source_array: (cast: (@: c.VoidArray) (@ source\array))
+    ---
+    if: model = 0 || source = 0 || target >= part_model_array\size || field >= part_source_array\size
+        return: 0
+    before: c.lmx_graph_value_in(arena, model, target)
+    after: c.lmx_graph_value_in(arena, source, field)
+    if: before = after
+        return: 1
+    if: before = 0 || after = 0
+        return: 0
+    if: lmx_merge_code_child(arena, before) != 0 || lmx_merge_code_child(arena, after) != 0
+        return: 0
+    kind: c.lmx_range_classify(arena, before)
+    ty: c.lmx_range_type_of(arena, before)
+    if: kind != c.lmx_range_classify(arena, after) || ty != c.lmx_range_type_of(arena, after) || c.lmx_range_stride(arena, before) != c.lmx_range_stride(arena, after)
+        return: 0
+    if: kind = c.LMX_KIND_PRIMITIVE || kind = c.LMX_DOMAIN_KIND_PRIMITIVE
+        if: ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_UNSIGNED_CHAR || ty = c.LMX_TYPE_ULONG
+            return: 1
+        ---
+    ---
+    return: 0
+end: lmx_merge_native_pair_safe
+
+# One pair's value, copied from `src`'s own field `field` into `dst`'s own slot
+# `target_slot` -- the one step every override (lmx_merge_profiles_owned's map path) and
+# every merge-into pair (lmx_merge_into_profiles_owned, K1's -194 к.3) does, shared so the
+# two callers never drift. `src`/`dst` are already-copied (destination-arena) Structures;
+# neither bound is asked here -- both callers validate field/slot range before calling.
+fn: lmx_merge_apply_pair (@: arena c.LmxArena; @: src c.Lmx; size_t: field; @: dst c.Lmx; size_t: target_slot) int
+    @@: slot void 0
+    @: value void 0
+    slot: c.lmx_graph_ref_cell_in(arena, src, field)
+    if: slot = 0
+        return: c.LMX_MERGE_INVALID
+    value: \slot
+    if: c.lmx_graph_ref_store_in(arena, dst, target_slot, value) != 0
+        return: c.LMX_MERGE_INVALID
+    return: c.LMX_MERGE_OK
+end: lmx_merge_apply_pair
+
+
+# The parent of a composition's fresh root: it takes the model's place in the copy, so
+# its parent is the one the copier gave the model's copy (the copy of the model's
+# structural parent, an exact retained-profile parent's own address, or zero), climbing
+# past any ancestor that is itself an operand root absorbed into the result (an operand
+# lying in the model's lexical chain).  Each absorbed root is passed at most once.
+fn: lmx_merge_lexical (@@: roots c.Lmx; @@: copies c.Lmx; size_t: nroots) @: c.Lmx
+    @: up c.Lmx 0
+    size_t: k 0U
+    size_t: steps 0U
+    int: absorbed 1
+    if: roots = 0 || copies = 0 || nroots = 0U || copies[0] = 0
+        return: 0
+    up: copies[0]\parent
+    while: up != 0 && absorbed != 0 && steps <= nroots
+        absorbed: 0
+        k: 0U
+        while: k < nroots
+            if: copies[k] = up && copies[k] != roots[k]
+                absorbed: 1
+            k: k + 1U
+        ---
+        if: absorbed != 0
+            up: up\parent
+        steps: steps + 1U
+    ---
+    return: up
+end: lmx_merge_lexical
+
+# A subsequent merge must not lose the selected model's previously proved
+# execution projection merely because graph copy gives its root a fresh
+# identity. First admit the completed result through the actual model copy,
+# then compose that address relation with the original model's exec map.
+# No code body is selected here: the caller invokes this only while the model
+# remains the selected body. The result's self-view stays positional.
+fn: lmx_merge_carry_model_exec (@: src_arena c.LmxArena; @: model c.Lmx; @: dst_arena c.LmxArena; @: result c.Lmx; @: model_copy c.Lmx) int
+    @: source_self c.LmxImplEntry
+    int: answer
+    if: src_arena = 0 || dst_arena = 0 || model = 0 || result = 0 || model_copy = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    # Exact immutable/profile retention did not copy the occurrence at all.
+    # Its original self projection remains attached to that same address.
+    if: model = result && model = model_copy
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    source_self: c.lmx_implements_find(src_arena, model, model)
+    if: source_self = 0 || source_self\exec_map = 0
+        return: c.LMX_IMPLEMENTS_YES
+    ---
+    answer: c.lmx_implements_register_map(dst_arena, result, model_copy, 0, 0U, 0)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    ---
+    return: c.lmx_implements_exec_compose_copy(src_arena, model, dst_arena, result, model_copy)
+end: lmx_merge_carry_model_exec
+
+# Register the physical receiving edge when its layout position is decided.
+# Repeated references to the same original binding keep its first/model
+# occurrence; later placements are aliases, not new copies of that binding.
+# Exact retained cells have no copy-map entry and are never redirected.
+fn: lmx_merge_receive_slot (@: source_arena c.LmxArena; @: target_arena c.LmxArena; @: source void; @: target void; @: relocated c.LmxCopyMap; @: projection c.LmxCopyMap; @: pending c.LmxCopyMap; int: carry_name) int
+    @: copied void c.lmx_copy_map_get(relocated, source)
+    if: source = 0 || target = 0
+        return: c.LMX_MERGE_INVALID
+    if: copied != 0 && c.lmx_copy_map_get(projection, copied) = 0
+        if: c.lmx_copy_map_put(projection, copied, target) != 0
+            return: c.LMX_MERGE_NOMEM
+        ---
+    ---
+    if: carry_name != 0
+        return: c.lmx_copy_name_prepare(source_arena, target_arena, source, target, pending)
+    return: c.LMX_MERGE_OK
+end: lmx_merge_receive_slot
+
+# The worker of every fresh merge: the result and every copied cell in the pools of dst_profile (0 = the ordinary
+# merge; a Structure of dst_arena = a merge made under a qualified profile, RR2a).
+fn: lmx_merge_used_relocated_profiled_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: use_anchor c.Lmx; @: use_sel size_t; @: use_slot size_t; @: use_len size_t; size_t: use_count; size_t: use_slots; @@: overrides c.LmxMergePair; size_t: override_count; @: dst_profile c.Lmx; @@: out c.Lmx; @: relocated_out c.LmxCopyMap) int
+    c.LmxCopyMap: pending
+    c.LmxCopyMap: relocated
+    c.LmxCopyMap: projection
+    @: mark c.LmxArenaBlock 0
+    size_t: impl_mark 0U
+    @@: roots c.Lmx 0
+    @@: copies c.Lmx 0
+    @: result c.Lmx 0
+    @: src c.Lmx 0
+    @: copied c.Lmx 0
+    @@: slot void 0
+    @: value void 0
+    size_t: total 0U
+    size_t: nroots 0U
+    size_t: nslots 0U
+    size_t: i 0U
+    size_t: j 0U
+    size_t: code_source 0U
+    size_t: at 0U
+    int: status c.LMX_MERGE_OK
+    int: cst 0
+    size_t: model_w 0U
+    size_t: unmatched 0U
+    size_t: p 0U
+    size_t: q 0U
+    int: paired 0
+    int: use_map 0
+    int: from_body 0
+    int: keep_model_native 1
+    int: model_code_selected 1
+    int: map_answer c.LMX_IMPLEMENTS_YES
+    @: lexical c.Lmx 0
+    @: pair_source c.Lmx 0
+    c.memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
+    c.memset((cast: (@: void) @ projection), 0, c.sizeof(c.LmxCopyMap))
+    if: relocated_out != 0
+        c.memset((cast: (@: void) relocated_out), 0, c.sizeof(c.LmxCopyMap))
+    if: out != 0
+        \out: 0
+    if: operands = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || out = 0
+        return: c.LMX_MERGE_INVALID
+    use_map: 0
+    if: overrides != 0 && override_count != 0U
+        use_map: 1
+    ---
+    # Every operand must be a live Structure of the source arena. A raw address or
+    # a non-Structure is refused, never retained.
+    i: 0U
+    while: i < count
+        if: operands[i] = 0
+            return: c.LMX_MERGE_INVALID
+        if: c.lmx_range_classify(src_arena, (cast: (@: void) operands[i])) != c.LMX_KIND_STRUCT
+            return: c.LMX_MERGE_INVALID
+        ---
+        i: i + 1U
+    ---
+    # A use's selector names an operand, whose lexical parent anchors the use -- never the appended body.
+    i: 0U
+    while: i < use_count
+        if: use_sel = 0 || use_sel[i] > count
+            return: c.LMX_MERGE_INVALID
+        i: i + 1U
+    ---
+    if: body != 0
+        if: c.lmx_range_classify(src_arena, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
+            return: c.LMX_MERGE_INVALID
+    ---
+    # Data-only specialization preserves the model's code and its slot layout.
+    # Later executable children (or a native-only later body) require the whole-
+    # body selection path, so they must never inherit the model implementation.
+    i: 1U
+    while: i < count
+        if: lmx_merge_has_code(src_arena, operands[i]) != 0
+            keep_model_native: 0
+            model_code_selected: 0
+            code_source: i
+        i: i + 1U
+    ---
+    if: body != 0 && lmx_merge_has_code(src_arena, body) != 0
+        keep_model_native: 0
+        model_code_selected: 0
+        code_source: count
+    # Model slots keep their positions under the override map. A same-domain
+    # scalar replacement keeps the model implementation valid; Array shape,
+    # Structure and pointer cases need a separate projection/address proof.
+    if: use_map != 0
+        p: 0U
+        while: p < override_count
+            pair_source: 0
+            if: overrides[p]\operand = count
+                pair_source: body
+            else:
+                if: overrides[p]\operand > 0U && overrides[p]\operand < count
+                    pair_source: operands[overrides[p]\operand]
+                ---
+            ---
+            if: pair_source = 0 || overrides[p]\field >= lmx_merge_width(pair_source)
+                keep_model_native: 0
+            else:
+                if: overrides[p]\model_slot < lmx_merge_width(operands[0]) && lmx_merge_native_pair_safe(src_arena, operands[0], (cast: (size_t) (overrides[p]\model_slot)), pair_source, (cast: (size_t) (overrides[p]\field))) = 0
+                    keep_model_native: 0
+                ---
+            ---
+            p: p + 1U
+        ---
+    ---
+    # Width of the result: flat append of every operand+body, or model width plus
+    # unmatched later-operand fields plus body (Q21 = A override map).
+    if: use_map = 0
+        i: 0U
+        while: i < count
+            if: lmx_merge_add_kept_width(@ total, src_arena, operands[i], i, code_source) != 0
+                return: c.LMX_MERGE_INVALID
+            i: i + 1U
+        ---
+        if: body != 0
+            if: lmx_merge_add_kept_width(@ total, src_arena, body, count, code_source) != 0
+                return: c.LMX_MERGE_INVALID
+        ---
+    else:
+        if: lmx_merge_add_kept_width(@ model_w, src_arena, operands[0], 0U, code_source) != 0
+            return: c.LMX_MERGE_INVALID
+        ---
+        total: model_w
+        # Pass 1: structural validity of the source each pair names (K1 1a: `operand =
+        # count` means the body, admitted only when a body was given) and K1 1c: no two
+        # pairs share a source. Target-slot bounds (1b) need `total`, computed below --
+        # that check is pass 2, after this loop.
+        p: 0U
+        while: p < override_count
+            if: overrides[p]\operand > count
+                return: c.LMX_MERGE_INVALID
+            if: overrides[p]\operand = 0U
+                return: c.LMX_MERGE_INVALID
+            from_body: (cast: (int) (overrides[p]\operand = count))
+            if: from_body != 0
+                if: body = 0
+                    return: c.LMX_MERGE_INVALID
+                if: overrides[p]\field >= lmx_merge_width(body)
+                    return: c.LMX_MERGE_INVALID
+                ---
+                if: lmx_merge_keep_child(src_arena, body, (cast: (size_t) (overrides[p]\field)), count, code_source) = 0
+                    return: c.LMX_MERGE_INVALID
+                ---
+            else:
+                if: overrides[p]\field >= lmx_merge_width((cast: (@: c.Lmx) (operands[overrides[p]\operand])))
+                    return: c.LMX_MERGE_INVALID
+                if: lmx_merge_keep_child(src_arena, (cast: (@: c.Lmx) (operands[overrides[p]\operand])), (cast: (size_t) (overrides[p]\field)), (cast: (size_t) (overrides[p]\operand)), code_source) = 0
+                    return: c.LMX_MERGE_INVALID
+                ---
+            ---
+            q: 0U
+            while: q < p
+                if: overrides[q]\operand = overrides[p]\operand && overrides[q]\field = overrides[p]\field
+                    return: c.LMX_MERGE_INVALID
+                q: q + 1U
+            ---
+            p: p + 1U
+        ---
+        # Unmatched width: every later operand's field (as today), and (1a) every body
+        # field, that is not some pair's source. The model's own width is never appended
+        # or counted here -- a pair may OVERRIDE a model slot, but the model is always
+        # placed in full (below).
+        unmatched: 0U
+        i: 1U
+        while: i < count
+            j: 0U
+            while: j < lmx_merge_width(operands[i])
+                if: lmx_merge_keep_child(src_arena, operands[i], j, i, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
+                paired: 0
+                p: 0U
+                while: p < override_count
+                    if: overrides[p]\operand = i && overrides[p]\field = j
+                        paired: 1
+                    ---
+                    p: p + 1U
+                ---
+                if: paired = 0
+                    unmatched: unmatched + 1U
+                ---
+                j: j + 1U
+            ---
+            i: i + 1U
+        ---
+        if: body != 0
+            j: 0U
+            while: j < lmx_merge_width(body)
+                if: lmx_merge_keep_child(src_arena, body, j, count, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
+                paired: 0
+                p: 0U
+                while: p < override_count
+                    if: overrides[p]\operand = count && overrides[p]\field = j
+                        paired: 1
+                    ---
+                    p: p + 1U
+                ---
+                if: paired = 0
+                    unmatched: unmatched + 1U
+                ---
+                j: j + 1U
+            ---
+        ---
+        if: unmatched > ((cast: (size_t) -1) - total)
+            return: c.LMX_MERGE_INVALID
+        total: total + unmatched
+        # Pass 2 (1b): a pair's target must be a slot the merge places -- the model's own
+        # width, or an earlier operand's or the body's own appended field. Overrides are
+        # applied LAST (below, after every base/append write), so "placed before it" is
+        # simply "within the final width."
+        p: 0U
+        while: p < override_count
+            if: overrides[p]\model_slot >= total
+                return: c.LMX_MERGE_INVALID
+            p: p + 1U
+        ---
+    ---
+    # From here the destination is all-or-nothing: the mark is the arena's own
+    # head, and every refusal below reverts to it.
+    mark: c.lmx_arena_mark(dst_arena)
+    impl_mark: dst_arena\impl_len
+    c.memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
+    # One operation over every root: all the operands plus the body, sharing a
+    # single operation-local map, so an object reachable from two operands is
+    # copied once.
+    # malloc, not calloc: the instrumented test builds redefine malloc and free
+    # as a pair, so a calloc here would be freed by a counted free and read as a
+    # phantom leak. Zeroed explicitly instead.
+    nslots: count
+    if: body != 0
+        if: count = (cast: (size_t) -1)
+            c.lmx_arena_impl_truncate(dst_arena, impl_mark)
+            c.lmx_arena_revert(dst_arena, mark)
+            return: c.LMX_MERGE_INVALID
+        nslots: count + 1U
+    if: nslots > ((cast: (size_t) -1) / sizeof(@: void))
+        c.lmx_arena_impl_truncate(dst_arena, impl_mark)
+        c.lmx_arena_revert(dst_arena, mark)
+        return: c.LMX_MERGE_INVALID
+    roots: (cast: (@@: c.Lmx) c.malloc(nslots * sizeof(@: void)))
+    copies: (cast: (@@: c.Lmx) c.malloc(nslots * sizeof(@: void)))
+    if: roots = 0 || copies = 0
+        if: roots != 0
+            c.free((cast: (@: void) roots))
+        if: copies != 0
+            c.free((cast: (@: void) copies))
+        c.lmx_arena_impl_truncate(dst_arena, impl_mark)
+        c.lmx_arena_revert(dst_arena, mark)
+        return: c.LMX_MERGE_NOMEM
+    c.memset((cast: (@: void) roots), 0, nslots * sizeof(@: void))
+    c.memset((cast: (@: void) copies), 0, nslots * sizeof(@: void))
+    i: 0U
+    while: i < count
+        roots[nroots]: operands[i]
+        nroots: nroots + 1U
+        i: i + 1U
+    ---
+    if: body != 0
+        roots[nroots]: body
+        nroots: nroots + 1U
+    # A composition builds a fresh root and the copy absorbs the operand roots into it
+    # (lmx_graph_copy_many_profiles_staged's `absorb`): every link the copy makes to a
+    # copied operand root -- a copied ancestor's slot that held the model, a back edge, a
+    # child's parent -- names the result, never a discarded intermediate root.
+    if: count != 1U || body != 0 || use_map != 0
+        result: c.lmx_node_new_profiled(dst_arena, dst_profile)
+        if: result = 0
+            status: c.LMX_MERGE_NOMEM
+    ---
+    if: nroots != 0U && status = c.LMX_MERGE_OK
+        # A merge constructs NEW mutable storage; it is not a storage clone
+        # that preserves an operand's immutable physical family. Retained
+        # independent immutable references still bypass copying unchanged.
+        cst: (cast: (int) c.lmx_graph_copy_many_used_constructed_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, result, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, copies, @ pending, dst_profile, @ relocated, c.LMX_TYPE_STRUCT))
+        if: cst = c.LMX_GRAPH_COPY_NOMEM
+            status: c.LMX_MERGE_NOMEM
+        if: cst = c.LMX_GRAPH_COPY_UNSUPPORTED
+            status: c.LMX_MERGE_UNSUPPORTED
+        if: cst != c.LMX_GRAPH_COPY_OK && cst != c.LMX_GRAPH_COPY_NOMEM && cst != c.LMX_GRAPH_COPY_UNSUPPORTED
+            status: c.LMX_MERGE_INVALID
+    ---
+    # With one operand and no composition, the copier's completed occurrence
+    # is the result. Reassembling its children under another root would lose
+    # native and leave self/back edges pointing at an orphan copy-root.  Its
+    # parent is the copier's: the copy of the model's structural parent, an
+    # exact retained-profile parent's own address, or zero -- parent links are
+    # rewritten inside the copy, and the place that executes the merge gives
+    # none (the author, LMX_blog/2026-10-05.md#merge-parent).
+    # Exact-profile retention is still the copier's decision: never reparent
+    # or modify an operand it deliberately retained by physical identity.
+    if: status = c.LMX_MERGE_OK && count = 1U && body = 0 && use_map = 0
+        result: copies[0]
+        map_answer: lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0])
+        if: map_answer != c.LMX_IMPLEMENTS_YES
+            c.lmx_copy_names_finish(@ pending, 0)
+            c.lmx_graph_copy_map_dispose(@ relocated)
+            c.lmx_arena_impl_truncate(dst_arena, impl_mark)
+            c.lmx_arena_revert(dst_arena, mark)
+            c.free((cast: (@: void) roots))
+            c.free((cast: (@: void) copies))
+            if: map_answer = c.LMX_IMPLEMENTS_UNKNOWN
+                return: c.LMX_MERGE_NOMEM
+            ---
+            return: c.LMX_MERGE_INVALID
+        ---
+        c.lmx_copy_names_finish(@ pending, 1)
+        if: relocated_out != 0
+            c.memcpy((cast: (@: void) relocated_out), (cast: (@: void) @ relocated), c.sizeof(c.LmxCopyMap))
+            c.memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
+        ---
+        c.lmx_graph_copy_map_dispose(@ relocated)
+        \out: result
+        c.free((cast: (@: void) roots))
+        c.free((cast: (@: void) copies))
+        return: c.LMX_MERGE_OK
+    ---
+    # General composition builds its result root in the destination arena (above, before
+    # the copy). Direct executable children come only from the last code-bearing
+    # operand/body. A model implementation can be reused for data-only later
+    # operands/body when its address contract remains proved; selected later
+    # native transfer and callable-result execution are separate pending steps.
+    # Nested occurrences keep the native words carried by the ordinary copier.
+    # The fresh root takes the model's place in the copy: its parent is the parent the
+    # copier gave the model's copy (lmx_merge_lexical).
+    if: status = c.LMX_MERGE_OK
+        lexical: lmx_merge_lexical(roots, copies, nroots)
+        if: c.lmx_copy_map_init(@ projection) != 0
+            status: c.LMX_MERGE_NOMEM
+        i: 0U
+        while: i < nroots && status = c.LMX_MERGE_OK
+            if: roots[i] != copies[i] && c.lmx_copy_map_put(@ projection, (cast: (@: void) copies[i]), (cast: (@: void) result)) != 0
+                status: c.LMX_MERGE_NOMEM
+            i: i + 1U
+        ---
+    ---
+    # An empty merge is a valid result: a fresh Structure with the common header
+    # and no slots. Opening a zero-slot branch is not the same thing and is not
+    # attempted.
+    if: status = c.LMX_MERGE_OK && total != 0U
+        if: c.lmx_arena_refs_open_profiled(dst_arena, result, total, dst_profile) != 0
+            status: c.LMX_MERGE_NOMEM
+    ---
+    # Slots. Null map: each operand's children in order, then body (flat append).
+    # Non-null map (Q21 = A): model children first; pairs overwrite model slots
+    # with the operand field's value (reference replace, no extra slot); unmatched
+    # later-operand fields append; body fields append.
+    if: status = c.LMX_MERGE_OK && use_map = 0
+        i: 0U
+        while: i < count && status = c.LMX_MERGE_OK
+            src: operands[i]
+            copied: copies[i]
+            if: copied = 0
+                status: c.LMX_MERGE_INVALID
+            ---
+            j: 0U
+            while: j < lmx_merge_width(src) && status = c.LMX_MERGE_OK
+                if: lmx_merge_keep_child(src_arena, src, j, i, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
+                slot: c.lmx_graph_ref_cell_in(dst_arena, copied, j)
+                if: slot = 0
+                    status: c.LMX_MERGE_INVALID
+                else:
+                    value: \slot
+                    if: c.lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
+                        status: c.LMX_MERGE_INVALID
+                    ---
+                    if: status = c.LMX_MERGE_OK
+                        status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) c.lmx_graph_ref_cell_in(src_arena, src, j)), (cast: (@: void) c.lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
+                    ---
+                    at: at + 1U
+                ---
+                j: j + 1U
+            ---
+            i: i + 1U
+        ---
+    ---
+    if: status = c.LMX_MERGE_OK && use_map != 0
+        copied: copies[0]
+        if: copied = 0
+            status: c.LMX_MERGE_INVALID
+        ---
+        j: 0U
+        while: j < lmx_merge_width(operands[0]) && status = c.LMX_MERGE_OK
+            if: lmx_merge_keep_child(src_arena, operands[0], j, 0U, code_source) = 0
+                j: j + 1U
+                continue
+            ---
+            slot: c.lmx_graph_ref_cell_in(dst_arena, copied, j)
+            if: slot = 0
+                status: c.LMX_MERGE_INVALID
+            else:
+                value: \slot
+                if: c.lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
+                    status: c.LMX_MERGE_INVALID
+                ---
+                if: status = c.LMX_MERGE_OK
+                    status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) c.lmx_graph_ref_cell_in(src_arena, operands[0], j)), (cast: (@: void) c.lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
+                ---
+                at: at + 1U
+            ---
+            j: j + 1U
+        ---
+        if: at != model_w
+            status: c.LMX_MERGE_INVALID
+        ---
+        # Unpaired later-operand fields append first, in operand order, so an override
+        # (applied last, below) can target the slot one of them places -- 1b.
+        i: 1U
+        while: i < count && status = c.LMX_MERGE_OK
+            copied: copies[i]
+            if: copied = 0
+                status: c.LMX_MERGE_INVALID
+            ---
+            j: 0U
+            while: j < lmx_merge_width(operands[i]) && status = c.LMX_MERGE_OK
+                if: lmx_merge_keep_child(src_arena, operands[i], j, i, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
+                paired: 0
+                p: 0U
+                while: p < override_count
+                    if: overrides[p]\operand = i && overrides[p]\field = j
+                        paired: 1
+                    ---
+                    p: p + 1U
+                ---
+                if: paired = 0
+                    slot: c.lmx_graph_ref_cell_in(dst_arena, copied, j)
+                    if: slot = 0
+                        status: c.LMX_MERGE_INVALID
+                    else:
+                        value: \slot
+                        if: c.lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
+                            status: c.LMX_MERGE_INVALID
+                        ---
+                        if: status = c.LMX_MERGE_OK
+                            status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) c.lmx_graph_ref_cell_in(src_arena, operands[i], j)), (cast: (@: void) c.lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
+                        ---
+                        at: at + 1U
+                    ---
+                ---
+                j: j + 1U
+            ---
+            i: i + 1U
+        ---
+        # 1a: unpaired body fields append the same way, after every operand.
+        if: status = c.LMX_MERGE_OK && body != 0
+            copied: copies[count]
+            if: copied = 0
+                status: c.LMX_MERGE_INVALID
+            ---
+            j: 0U
+            while: j < lmx_merge_width(body) && status = c.LMX_MERGE_OK
+                if: lmx_merge_keep_child(src_arena, body, j, count, code_source) = 0
+                    j: j + 1U
+                    continue
+                ---
+                paired: 0
+                p: 0U
+                while: p < override_count
+                    if: overrides[p]\operand = count && overrides[p]\field = j
+                        paired: 1
+                    ---
+                    p: p + 1U
+                ---
+                if: paired = 0
+                    slot: c.lmx_graph_ref_cell_in(dst_arena, copied, j)
+                    if: slot = 0
+                        status: c.LMX_MERGE_INVALID
+                    else:
+                        value: \slot
+                        if: c.lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
+                            status: c.LMX_MERGE_INVALID
+                        ---
+                        if: status = c.LMX_MERGE_OK
+                            status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) c.lmx_graph_ref_cell_in(src_arena, body, j)), (cast: (@: void) c.lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
+                        ---
+                        at: at + 1U
+                    ---
+                ---
+                j: j + 1U
+            ---
+        ---
+        # Overrides apply LAST, in array (operand) order: a pair always wins over
+        # whatever base or append write placed a value at its target slot first -- this
+        # is what lets a pair target a model slot (specialization) or an already-
+        # appended slot (1b) uniformly, and lets two pairs share a target with the later
+        # operand winning (T1's own ruling, unaffected: the array is still walked in the
+        # translator's own operand order).
+        p: 0U
+        while: p < override_count && status = c.LMX_MERGE_OK
+            if: overrides[p]\operand = count
+                copied: copies[count]
+            else:
+                copied: copies[overrides[p]\operand]
+            ---
+            if: copied = 0
+                status: c.LMX_MERGE_INVALID
+            else:
+                if: lmx_merge_apply_pair(dst_arena, copied, (cast: (size_t) (overrides[p]\field)), result, (cast: (size_t) (overrides[p]\model_slot))) != c.LMX_MERGE_OK
+                    status: c.LMX_MERGE_INVALID
+                ---
+                if: status = c.LMX_MERGE_OK
+                    status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) c.lmx_graph_ref_cell_in(src_arena, roots[overrides[p]\operand], overrides[p]\field)), (cast: (@: void) c.lmx_graph_ref_cell_in(dst_arena, result, overrides[p]\model_slot)), @ relocated, @ projection, @ pending, 0)
+                ---
+            ---
+            p: p + 1U
+        ---
+    ---
+    if: status = c.LMX_MERGE_OK && body != 0 && use_map = 0
+        copied: copies[count]
+        if: copied = 0
+            status: c.LMX_MERGE_INVALID
+        j: 0U
+        while: j < lmx_merge_width(body) && status = c.LMX_MERGE_OK
+            if: lmx_merge_keep_child(src_arena, body, j, count, code_source) = 0
+                j: j + 1U
+                continue
+            ---
+            slot: c.lmx_graph_ref_cell_in(dst_arena, copied, j)
+            if: slot = 0
+                status: c.LMX_MERGE_INVALID
+            else:
+                value: \slot
+                if: c.lmx_graph_ref_store_in(dst_arena, result, at, value) != 0
+                    status: c.LMX_MERGE_INVALID
+                ---
+                if: status = c.LMX_MERGE_OK
+                    status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) c.lmx_graph_ref_cell_in(src_arena, body, j)), (cast: (@: void) c.lmx_graph_ref_cell_in(dst_arena, result, at)), @ relocated, @ projection, @ pending, 1)
+                ---
+                at: at + 1U
+            ---
+            j: j + 1U
+        ---
+    ---
+    if: status = c.LMX_MERGE_OK && at != total
+        status: c.LMX_MERGE_INVALID
+    if: status = c.LMX_MERGE_OK
+        cst: c.lmx_graph_copy_project_mapped(dst_arena, @ relocated, @ projection, result)
+        if: cst = c.LMX_GRAPH_COPY_NOMEM
+            status: c.LMX_MERGE_NOMEM
+        if: cst != c.LMX_GRAPH_COPY_OK && cst != c.LMX_GRAPH_COPY_NOMEM
+            status: c.LMX_MERGE_INVALID
+    ---
+    if: status = c.LMX_MERGE_OK && model_code_selected != 0
+        map_answer: lmx_merge_carry_model_exec(src_arena, operands[0], dst_arena, result, copies[0])
+        if: map_answer = c.LMX_IMPLEMENTS_NO
+            keep_model_native: 0
+        ---
+        if: map_answer = c.LMX_IMPLEMENTS_UNKNOWN
+            status: c.LMX_MERGE_NOMEM
+        ---
+    ---
+    # 1d is the copy's own act now: a nested Structure child of the result, copied as part
+    # of an operand's or the body's subtree, had its parent set to that root's copy, and
+    # the copy's absorb pass names the result instead -- for every copied Structure, not
+    # only the result's direct children -- so a later merge/copy of `result` finds it
+    # inside its own subtree.
+    if: status = c.LMX_MERGE_OK
+        result\parent: lexical
+        if: keep_model_native != 0
+            result\native: copies[0]\native
+        ---
+    if: status = c.LMX_MERGE_OK && relocated_out != 0
+        cst: c.lmx_graph_copy_map_project(@ relocated, @ projection)
+        if: cst != c.LMX_GRAPH_COPY_OK
+            status: c.LMX_MERGE_INVALID
+        ---
+    ---
+    c.lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_MERGE_OK)))
+    if: status = c.LMX_MERGE_OK && relocated_out != 0
+        c.memcpy((cast: (@: void) relocated_out), (cast: (@: void) @ relocated), c.sizeof(c.LmxCopyMap))
+        c.memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
+    ---
+    c.lmx_graph_copy_map_dispose(@ relocated)
+    c.lmx_copy_map_dispose(@ projection)
+    if: status != c.LMX_MERGE_OK
+        # Nothing stays: the arena drops every block added since the mark --
+        # the copies, the result root and its slots -- and retires each one's
+        # index entry with it. Sources are never written.
+        result: 0
+        c.lmx_arena_impl_truncate(dst_arena, impl_mark)
+        c.lmx_arena_revert(dst_arena, mark)
+    ---
+    if: status = c.LMX_MERGE_OK
+        \out: result
+    c.free((cast: (@: void) roots))
+    c.free((cast: (@: void) copies))
+    return: status
+end: lmx_merge_used_relocated_profiled_owned
+
+# Existing callers use the same worker without retaining its transient map.
+# There is no second copy/composition algorithm or Model-specific route.
+fn: lmx_merge_used_profiled_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: use_anchor c.Lmx; @: use_sel size_t; @: use_slot size_t; @: use_len size_t; size_t: use_count; size_t: use_slots; @@: overrides c.LmxMergePair; size_t: override_count; @: dst_profile c.Lmx; @@: out c.Lmx) int
+    return: lmx_merge_used_relocated_profiled_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, dst_profile, out, 0)
+end: lmx_merge_used_profiled_owned
+
+# A merge whose copied code uses nothing of its operands' lexical chains: the chains are
+# copied as their links only (lmx_merge_used_owned).
+fn: lmx_merge_used_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: use_anchor c.Lmx; @: use_sel size_t; @: use_slot size_t; @: use_len size_t; size_t: use_count; size_t: use_slots; @@: overrides c.LmxMergePair; size_t: override_count; @@: out c.Lmx) int
+    return: lmx_merge_used_profiled_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, 0, out)
+end: lmx_merge_used_owned
+
+fn: lmx_merge_profiles_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: overrides c.LmxMergePair; size_t: override_count; @@: out c.Lmx) int
+    return: lmx_merge_used_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0U, 0U, overrides, override_count, out)
+end: lmx_merge_profiles_owned
+
+# A fresh merge made under a qualified profile (RR2a, steps/qualifier-receivers-20261010.md): the result and every
+# copied cell live in the pools of dst_profile, a Structure of dst_arena.  Retention of the operands' own qualified
+# branches is the same as lmx_merge_profiles_owned's.  The caller preflights (lmx_qualify_tree_preflight_full), sets
+# the root free of a lexical parent when the value is independent, and seals (lmx_arena_seal_profile) before it
+# publishes the result.
+fn: lmx_merge_qualified_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: overrides c.LmxMergePair; size_t: override_count; @: dst_profile c.Lmx; @@: out c.Lmx) int
+    return: lmx_merge_used_profiled_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0U, 0U, overrides, override_count, dst_profile, out)
+end: lmx_merge_qualified_owned
+
+fn: lmx_merge_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: overrides c.LmxMergePair; size_t: override_count; @@: out c.Lmx) int
+    return: lmx_merge_profiles_owned(operands, count, body, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
+end: lmx_merge_owned
+
+fn: lmx_merge_profiled_owned (@@: operands c.Lmx; size_t: count; @: body c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: retain_profile c.Lmx; @@: overrides c.LmxMergePair; size_t: override_count; @@: out c.Lmx) int
+    if: retain_profile = 0
+        return: lmx_merge_profiles_owned(operands, count, body, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
+    return: lmx_merge_profiles_owned(operands, count, body, src_arena, dst_arena, @ retain_profile, 1U, overrides, override_count, out)
+end: lmx_merge_profiled_owned
+
+# -194 к.3, Q26.1 / Q1 ("merge into an existing target" -- the flat primitive T5's part-
+# recursion will call once per part, and the own-field write `o\inner: a`'s own form):
+# `op`'s fields are copied and written INTO `target`'s ALREADY-EXISTING slots -- unlike
+# lmx_merge_owned, nothing is built fresh, `target` keeps its address and its own parent
+# untouched, and the pair map is not a specialization/append mix but a required, EXACT
+# bijection: `target`'s own layout is fixed once built (no slot is ever added after
+# construction, L2 spec §2), so every field of `op` must land in some existing slot of
+# `target` (fable: unmatched is INVALID, not appended) and no two pairs may share a
+# source field or a target slot. A slot of `target` no pair names is simply untouched --
+# this is a specialization of some of `target`'s fields, not a replacement of the whole.
+fn: lmx_merge_into_profiles_owned (@: target c.Lmx; @: op c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @@: pairs c.LmxMergePair; size_t: pair_count) int
+    c.LmxCopyMap: pending
+    c.LmxCopyMap: relocated
+    c.LmxCopyMap: projection
+    @: mark c.LmxArenaBlock 0
+    size_t: impl_mark 0U
+    @@: roots c.Lmx 0
+    @@: copies c.Lmx 0
+    @: copied_op c.Lmx 0
+    size_t: op_w 0U
+    size_t: target_w 0U
+    size_t: p 0U
+    size_t: q 0U
+    int: cst 0
+    int: status c.LMX_MERGE_OK
+    c.memset((cast: (@: void) @ relocated), 0, c.sizeof(c.LmxCopyMap))
+    c.memset((cast: (@: void) @ projection), 0, c.sizeof(c.LmxCopyMap))
+    if: target = 0 || op = 0 || src_arena = 0 || dst_arena = 0 || pairs = 0 || pair_count = 0U
+        return: c.LMX_MERGE_INVALID
+    if: c.lmx_range_classify(dst_arena, (cast: (@: void) target)) != c.LMX_KIND_STRUCT || c.lmx_graph_node_in(dst_arena, (cast: (@: void) target)) = 0
+        return: c.LMX_MERGE_INVALID
+    if: c.lmx_range_classify(src_arena, (cast: (@: void) op)) != c.LMX_KIND_STRUCT
+        return: c.LMX_MERGE_INVALID
+    op_w: lmx_merge_width(op)
+    target_w: lmx_merge_width(target)
+    if: target_w != 0U && c.lmx_graph_cell_in(dst_arena, target, 0U) = 0
+        return: c.LMX_MERGE_INVALID
+    # Exactly one pair per field of op (a bijection onto a subset of target's slots): the
+    # count must match op's own width, and no two pairs may repeat a source field or a
+    # target slot -- with that and the count equal, every field of op is covered exactly
+    # once (pigeonhole: pair_count distinct values in [0, op_w) exhausts [0, op_w)).
+    if: pair_count != op_w
+        return: c.LMX_MERGE_INVALID
+    p: 0U
+    while: p < pair_count
+        if: pairs[p]\field >= op_w || pairs[p]\model_slot >= target_w
+            return: c.LMX_MERGE_INVALID
+        q: 0U
+        while: q < p
+            if: pairs[q]\field = pairs[p]\field || pairs[q]\model_slot = pairs[p]\model_slot
+                return: c.LMX_MERGE_INVALID
+            q: q + 1U
+        ---
+        p: p + 1U
+    ---
+    # From here the destination is all-or-nothing, as lmx_merge_owned: the mark is the
+    # arena's own head, every refusal below reverts to it. `target` itself is NOT reverted
+    # -- it already existed before this call, only what this call adds (op's own copy) is
+    # new state; the fields this call actually wrote are the only ones the caller may have
+    # observed change, and even those are only ever written after every admission check
+    # above has already passed.
+    mark: c.lmx_arena_mark(dst_arena)
+    impl_mark: dst_arena\impl_len
+    c.memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
+    roots: (cast: (@@: c.Lmx) c.malloc(sizeof(@: void)))
+    copies: (cast: (@@: c.Lmx) c.malloc(sizeof(@: void)))
+    if: roots = 0 || copies = 0
+        if: roots != 0
+            c.free((cast: (@: void) roots))
+        if: copies != 0
+            c.free((cast: (@: void) copies))
+        c.lmx_arena_impl_truncate(dst_arena, impl_mark)
+        c.lmx_arena_revert(dst_arena, mark)
+        return: c.LMX_MERGE_NOMEM
+    roots[0]: op
+    cst: (cast: (int) c.lmx_graph_copy_many_used_constructed_staged(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, target, 0, 0, 0, 0, 0U, 0U, copies, @ pending, 0, @ relocated, c.LMX_TYPE_STRUCT))
+    if: cst = c.LMX_GRAPH_COPY_NOMEM
+        status: c.LMX_MERGE_NOMEM
+    if: cst = c.LMX_GRAPH_COPY_UNSUPPORTED
+        status: c.LMX_MERGE_UNSUPPORTED
+    if: cst != c.LMX_GRAPH_COPY_OK && cst != c.LMX_GRAPH_COPY_NOMEM && cst != c.LMX_GRAPH_COPY_UNSUPPORTED
+        status: c.LMX_MERGE_INVALID
+    ---
+    copied_op: copies[0]
+    if: status = c.LMX_MERGE_OK && copied_op = 0
+        status: c.LMX_MERGE_INVALID
+    ---
+    if: status = c.LMX_MERGE_OK
+        if: c.lmx_copy_map_init(@ projection) != 0
+            status: c.LMX_MERGE_NOMEM
+        if: status = c.LMX_MERGE_OK && copied_op != op && c.lmx_copy_map_put(@ projection, (cast: (@: void) copied_op), (cast: (@: void) target)) != 0
+            status: c.LMX_MERGE_NOMEM
+    ---
+    p: 0U
+    while: p < pair_count && status = c.LMX_MERGE_OK
+        status: lmx_merge_receive_slot(src_arena, dst_arena, (cast: (@: void) c.lmx_graph_ref_cell_in(src_arena, op, pairs[p]\field)), (cast: (@: void) c.lmx_graph_ref_cell_in(dst_arena, target, pairs[p]\model_slot)), @ relocated, @ projection, @ pending, 0)
+        p: p + 1U
+    ---
+    if: status = c.LMX_MERGE_OK
+        # No existing target cell is visited or changed by projection. The
+        # whole copied footprint is finalized before the first target write.
+        cst: c.lmx_graph_copy_project_mapped(dst_arena, @ relocated, @ projection, 0)
+        if: cst = c.LMX_GRAPH_COPY_NOMEM
+            status: c.LMX_MERGE_NOMEM
+        if: cst != c.LMX_GRAPH_COPY_OK && cst != c.LMX_GRAPH_COPY_NOMEM
+            status: c.LMX_MERGE_INVALID
+    ---
+    p: 0U
+    while: p < pair_count && status = c.LMX_MERGE_OK
+        if: lmx_merge_apply_pair(dst_arena, copied_op, (cast: (size_t) (pairs[p]\field)), target, (cast: (size_t) (pairs[p]\model_slot))) != c.LMX_MERGE_OK
+            status: c.LMX_MERGE_INVALID
+        ---
+        p: p + 1U
+    ---
+    # 1d's own fix (-194 к.2) is the copy's act here too: the copy absorbed op's root into
+    # `target`, so a nested Structure child this call writes into target's slots has
+    # `target` as its parent, and no link reaches op's discarded copy-root.
+    c.lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_MERGE_OK)))
+    c.lmx_graph_copy_map_dispose(@ relocated)
+    c.lmx_copy_map_dispose(@ projection)
+    if: status != c.LMX_MERGE_OK
+        c.lmx_arena_impl_truncate(dst_arena, impl_mark)
+        c.lmx_arena_revert(dst_arena, mark)
+    ---
+    c.free((cast: (@: void) roots))
+    c.free((cast: (@: void) copies))
+    return: status
+end: lmx_merge_into_profiles_owned
+
+fn: lmx_merge_into_owned (@: target c.Lmx; @: op c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: pairs c.LmxMergePair; size_t: pair_count) int
+    return: lmx_merge_into_profiles_owned(target, op, src_arena, dst_arena, 0, 0U, pairs, pair_count)
+end: lmx_merge_into_owned
+
+# -174 c3: Model: m = merge(Model, empty) as one kernel PRIM over lmx_merge_owned.
+# Lives here (not walk.lm1) so walk selftests do not link merge.o. Declared in lmx_walk.h.lm1.
+# Opus: LmxPrimitive.fn = lmx_walk_merge_model; owner = (cast: (@: Lmx) program_arena);
+# PRIM [prim, record, model]; null override map (-161 c1 arity). Result Structure in \out.
+# Mutant: drop this / leave \out 0 -> Model: m yields 0 RED.
+# Status: 0=OK; 1=FAIL (bad call); 2=THROW_MERGE (admission refused) -- numbers match
+# LMX_PRIMITIVE_* (no primitive.h predef here -- link closure). -177 c5 / D-55.
+fn: lmx_walk_merge_model (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    @: arena c.LmxArena 0
+    @: model c.Lmx 0
+    @: result c.Lmx 0
+    @: op0 c.Lmx 0
+    int: status
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 1U
+        return: 1
+    ---
+    arena: (cast: (@: c.LmxArena) owner)
+    model: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[0]))
+    if: model = 0 || c.lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+        return: 2
+    ---
+    op0: model
+    status: lmx_merge_owned(@ op0, 1U, 0, arena, arena, 0, 0U, @ result)
+    if: status != c.LMX_MERGE_OK || result = 0
+        return: 2
+    ---
+    \out: (cast: (@: void) result)
+    return: 0
+end: lmx_walk_merge_model
+
+# -194 к.6 (K2): pairs[0..n-1], each a calloc'd LmxMergePair, freed by
+# lmx_walk_merge_pairs_free -- the same array-of-pointers shape the kernel's own
+# LmxMergePair** already takes everywhere else (T1/T2's own translator emission, K1's
+# own selftests).
+sub: lmx_walk_merge_pairs_free (@@: pairs c.LmxMergePair; size_t: n)
+    size_t: p 0U
+    if: pairs = 0
+        return
+    while: p < n
+        if: pairs[p] != 0
+            c.free((cast: (@: void) pairs[p]))
+        ---
+        p: p + 1U
+    ---
+    c.free((cast: (@: void) pairs))
+end: lmx_walk_merge_pairs_free
+
+# D1 (Codex, accepted 2026-09-28): the pairs are the PRIM's own operands, no map Structure -- `n` pairs of three size
+# cells, (model_slot, operand, field), from `cells`, decoded into the LmxMergePair** shape lmx_merge_owned and
+# lmx_merge_into_owned take.  n = 0 decodes to \out_pairs = 0 / \out_count = 0U, not a refusal -- "no pairs" is the
+# flat-append merge's own case; the caller decides whether zero pairs is valid for what it does.  Returns 0 OK, 1 a
+# cell that is not a size cell, or NOMEM.
+fn: lmx_walk_merge_pairs_cells (@: arena c.LmxArena; @@: cells void; size_t: n; @@@: out_pairs c.LmxMergePair; @: out_count size_t) int
+    size_t: p 0U
+    size_t: i 0U
+    @@: pairs c.LmxMergePair 0
+    @: one c.LmxMergePair 0
+    \out_pairs: 0
+    \out_count: 0U
+    if: n = 0U
+        return: 0
+    if: cells = 0
+        return: 1
+    while: i < 3U * n
+        if: cells[i] = 0
+            return: 1
+        i: i + 1U
+    ---
+    pairs: (cast: (@@: c.LmxMergePair) c.calloc(n, sizeof(@: void)))
+    if: pairs = 0
+        return: 1
+    ---
+    p: 0U
+    while: p < n
+        one: (cast: (@: c.LmxMergePair) c.calloc(1U, c.sizeof(c.LmxMergePair)))
+        if: one = 0
+            lmx_walk_merge_pairs_free(pairs, p)
+            return: 1
+        ---
+        one\model_slot: c.lmx_size_value_known(cells[p * 3U])
+        one\operand: c.lmx_size_value_known(cells[p * 3U + 1U])
+        one\field: c.lmx_size_value_known(cells[p * 3U + 2U])
+        pairs[p]: one
+        p: p + 1U
+    ---
+    \out_pairs: pairs
+    \out_count: n
+    return: 0
+end: lmx_walk_merge_pairs_cells
+
+# The copier decides retention by actual identity. Layout is then taken from
+# the held descriptor, or from genuine direct-operand producer evidence; a
+# merge declaration is evidence only for a newly constructed result.
+fn: lmx_merge_result_layout (@: arena c.LmxArena; @: result c.Lmx; @@: operands c.Lmx; size_t: count; @: fresh void; @: direct_source void) int
+    size_t: i 0U
+    @: layout void fresh
+    if: result = 0 || operands = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    # A complete graph copy may already carry its actual physical-layout
+    # evidence. It is evidence of THIS result, not a receiving Model guess.
+    # Do not replace it with a synthetic constructor token or republish its
+    # self record and lose the copied admission proof.
+    if: c.lmx_implements_layout(arena, result) != 0
+        return: c.LMX_IMPLEMENTS_YES
+    while: i < count
+        if: result = operands[i]
+            layout: c.lmx_implements_layout(arena, result)
+            if: layout = 0 && count = 1U
+                layout: direct_source
+            break
+        i: i + 1U
+    ---
+    if: layout = 0
+        return: c.LMX_IMPLEMENTS_YES
+    return: c.lmx_implements_register_map(arena, result, result, 0, 0U, layout)
+end: lmx_merge_result_layout
+
+# RR2c-2b (critical_qualifier_receivers_bug): the exact profile an operand is RETAINED by -- shared by address, not
+# copied -- or 0.  Retention is the independent immutable branch's (docs #composition, #eternal): the operand's profile
+# when the operand lies in a qualified tree whose root is free of a lexical parent -- the root itself or a Structure
+# inside it, static or made at run time -- found by walking the parent links while they stay in the profile.  A
+# qualified value under a lexical parent (`immutable` without `independent`) is copied as any value is, and so is every
+# unprofiled operand.  One reading for the native emission (l2_emit_merge_profile) and the walk (lmx_walk_merge_map).
+fn: lmx_merge_retain_profile (@: arena c.LmxArena; @: operand c.Lmx) @: c.Lmx
+    @: selected_profile c.Lmx
+    @: p c.Lmx operand
+    if: arena = 0 || operand = 0
+        return: 0
+    selected_profile: c.lmx_range_profile(arena, (cast: (@: void) operand))
+    if: selected_profile = 0
+        return: 0
+    while: p\parent != 0 && c.lmx_range_profile(arena, (cast: (@: void) p\parent)) = selected_profile
+        p: p\parent
+    ---
+    if: p\parent != 0
+        return: 0
+    return: selected_profile
+end: lmx_merge_retain_profile
+
+# RR2d-2 (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the walked merge operand written
+# as a TYPED DECLARATION -- `int: value newValue` -- is a fresh Structure of one cell of the declaration's kind holding
+# the walked value (the native emission's l2_emit_merge_typed_operand): PRIM [kind, value], kind the translator's own
+# type code (0 int, 1 char, 2 size_t, 3 unsigned, 36 ulong), value a cell of that kind the walk evaluated.  PRIM [kind]
+# alone -- a declaration written without a value, `int: w` -- declares the cell and writes nothing into it: an unknown
+# value, a cell in memory (the author, q56), as the native emission allocates and stores nothing; the cell's zero fill
+# is the arena's act, no initializer of the language.  \out = the Structure, which the merge then copies as it copies
+# every operand; status 1 on a malformed call or an unknown kind.
+fn: lmx_walk_field_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    @: arena c.LmxArena 0
+    @: graph_node c.Lmx 0
+    @: cell void 0
+    size_t: kind 0U
+    int: store 0
+    if: out != 0
+        \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 1U || nargs > 2U || refs[0] = 0 || (nargs = 2U && refs[1] = 0)
+        return: 1
+    if: nargs = 2U
+        store: 1
+    arena: (cast: (@: c.LmxArena) owner)
+    kind: c.lmx_size_value_known(refs[0])
+    graph_node: c.lmx_node_new_owned(arena)
+    if: graph_node = 0 || c.lmx_arena_refs_open_owned(arena, graph_node, 1U) != 0
+        return: 1
+    if: kind = 0U
+        cell: c.lmx_int_new_owned(arena)
+        if: cell = 0 || (store != 0 && c.lmx_int_store_known(cell, c.lmx_int_value_known(refs[1])) != 0)
+            return: 1
+        ---
+    ---
+    if: kind = 1U
+        cell: c.lmx_char_new_owned(arena)
+        if: cell = 0 || (store != 0 && c.lmx_char_store_known(cell, c.lmx_char_value_known(refs[1])) != 0)
+            return: 1
+        ---
+    ---
+    if: kind = 2U
+        cell: c.lmx_size_new_owned(arena)
+        if: cell = 0 || (store != 0 && c.lmx_size_store_known(cell, c.lmx_size_value_known(refs[1])) != 0)
+            return: 1
+        ---
+    ---
+    if: kind = 3U
+        cell: c.lmx_unsigned_new_owned(arena)
+        if: cell = 0 || (store != 0 && c.lmx_unsigned_store_known(cell, c.lmx_unsigned_value_known(refs[1])) != 0)
+            return: 1
+        ---
+    ---
+    if: kind = 36U
+        cell: c.lmx_ulong_new_owned(arena)
+        if: cell = 0 || (store != 0 && c.lmx_ulong_store_known(cell, c.lmx_ulong_value_known(refs[1])) != 0)
+            return: 1
+        ---
+    ---
+    if: cell = 0 || c.lmx_graph_ref_store_in(arena, graph_node, 0U, cell) != 0
+        return: 1
+    \out: (cast: (@: void) graph_node)
+    return: 0
+end: lmx_walk_field_map
+
+# Fresh merge uses ordinary PRIM_PUB inputs: pair count P, qualified-branch count Q and use-cell
+# count T (three size_t inputs, none packed into another), boxed fresh and direct-source tokens,
+# N operands, body, 3P pair cells, the program's Q qualified branch roots, then T use cells:
+# records [anchor, k, len, len slots], the uses of the operands' copied code (READ-FIELD-CLOSURE).
+# nargs = N + 6 + 3P + Q + T, every span checked before it is read.  No input names a parent: the result's
+# is the copy's own (lmx_merge_profiles_owned), whatever place reaches the merge, and the
+# copied lexical chain keeps each independent: const: immutable branch itself -- its exact
+# profile is retained as an operand's is, as a callable merge's copy retains them (docs
+# #composition). The token is optional producer metadata, never a model.
+# Only successful construction publishes its fresh identity correspondence.
+# \out = the successful result (fresh or legitimately retained).
+# Status: 0 OK, 1 a malformed call or conflicting producer metadata (bad nargs, a non-Structure operand/body, a
+# malformed pairs Structure), 2 THROW_MERGE (lmx_merge_owned itself refused -- an
+# override the translator's own static checks should have already ruled out, same as
+# lmx_walk_merge_model's own admission-refusal case).
+fn: lmx_walk_merge_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    return: lmx_walk_merge_run(owner, refs, nargs, dest, out, 0U, 0, 0U, 0, 0U)
+end: lmx_walk_merge_map
+
+# The selected executable source is still an ordinary merge operand. The
+# extra three cells carry its ordinal, the translator's already proved 2n
+# correspondence, and its width. Both dispatch modes compose that relation
+# with the source's own exec map before publishing the new Structure.
+fn: lmx_walk_merge_selected_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) owner)
+    size_t: core
+    size_t: np
+    size_t: nq
+    size_t: nt
+    size_t: op_count
+    size_t: selected
+    size_t: width
+    @: map size_t
+    @: source c.Lmx
+    @: result c.Lmx
+    int: status
+    if: refs = 0 || out = 0 || nargs < 10U || refs[nargs - 3U] = 0 || refs[nargs - 2U] = 0 || refs[nargs - 1U] = 0
+        return: 1
+    core: nargs - 3U
+    if: refs[0] = 0 || refs[1] = 0 || refs[2] = 0
+        return: 1
+    np: c.lmx_size_value_known(refs[0])
+    nq: c.lmx_size_value_known(refs[1])
+    nt: c.lmx_size_value_known(refs[2])
+    if: np > (core - 6U) / 3U || nq > core - 6U - 3U * np || nt > core - 6U - 3U * np - nq
+        return: 1
+    op_count: core - 6U - 3U * np - nq - nt
+    selected: c.lmx_size_value_known(refs[nargs - 3U])
+    map: (cast: (@: size_t) c.lmx_charptr_value_known(refs[nargs - 2U]))
+    width: c.lmx_size_value_known(refs[nargs - 1U])
+    # The explicit body is the source immediately after the ordinary operands.
+    # Its coordinate is op_count, in the same retained-argument sequence.
+    if: selected > op_count || map = 0 || width = 0U || refs[5U + selected] = 0
+        return: 1
+    source: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[5U + selected]))
+    status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, leaf_slots, leaf_count, opaque_ids, opaque_count)
+    if: status != 0
+        return: status
+    result: (cast: (@: c.Lmx) \out)
+    if: source = 0 || result = 0 || c.lmx_implements_register_map(arena, result, source, map, width, 0) != c.LMX_IMPLEMENTS_YES || c.lmx_implements_exec_compose_copy(arena, source, arena, result, source) != c.LMX_IMPLEMENTS_YES
+        \out: 0
+        return: 1
+    result\native: source\native
+    return: 0
+end: lmx_walk_merge_selected_run
+
+fn: lmx_walk_merge_selected_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    return: lmx_walk_merge_selected_run(owner, refs, nargs, dest, out, 0U, 0, 0U, 0, 0U)
+end: lmx_walk_merge_selected_map
+
+# RR2d (critical_qualifier_receivers_bug, steps/qualifier-receivers-20261010.md): the walked merge under the qualifier
+# chain -- its own PRIM entry, so an unqualified merge keeps its exact inputs and graph shape.  After the ordinary
+# inputs a trailer: L leaf slots (the result slots holding callables, the copy's and the proof's method leaves), O
+# opaque pointer type ids, then L, O and the qualifier bits (1 independent, 2 const -- the
+# binding's contract, nothing here -- 4 immutable), every count checked against nargs before it is read.  The steps
+# are the native emission's (l2_emit_stmts): independent frees the fresh root of its lexical parent; immutable copies
+# the completed result's SUBTREE under a fresh profile (lmx_graph_copy_qualified_leaves_owned), the copy is the value
+# whose layout is proved, then the full preflight proves the tree and the profile's pools and the holder's are
+# sealed -- all before publication.  A failed qualification is a failed primitive (status 1).
+fn: lmx_walk_merge_qualified_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; int: selected) int
+    size_t: bits 0U
+    size_t: no 0U
+    size_t: nl 0U
+    size_t: core 0U
+    size_t: i 0U
+    @: slots size_t 0
+    @: ids int 0
+    int: status
+    if: out != 0
+        \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 10U
+        return: 1
+    if: refs[nargs - 1U] = 0 || refs[nargs - 2U] = 0 || refs[nargs - 3U] = 0
+        return: 1
+    bits: c.lmx_size_value_known(refs[nargs - 1U])
+    no: c.lmx_size_value_known(refs[nargs - 2U])
+    nl: c.lmx_size_value_known(refs[nargs - 3U])
+    if: no > nargs - 10U || nl > nargs - 10U - no
+        return: 1
+    core: nargs - 3U - nl - no
+    slots: (cast: (@: size_t) c.calloc(nl + 1U, c.sizeof(c.size_t)))
+    ids: (cast: (@: int) c.calloc(no + 1U, c.sizeof(c.int)))
+    if: slots = 0 || ids = 0
+        c.free((cast: (@: void) slots))
+        c.free((cast: (@: void) ids))
+        return: 1
+    ---
+    while: i < nl
+        if: refs[core + i] = 0
+            c.free((cast: (@: void) slots))
+            c.free((cast: (@: void) ids))
+            return: 1
+        ---
+        slots[i]: c.lmx_size_value_known(refs[core + i])
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < no
+        if: refs[core + nl + i] = 0
+            c.free((cast: (@: void) slots))
+            c.free((cast: (@: void) ids))
+            return: 1
+        ---
+        ids[i]: (cast: (int) c.lmx_size_value_known(refs[core + nl + i]))
+        i: i + 1U
+    ---
+    if: selected != 0
+        status: lmx_walk_merge_selected_run(owner, refs, core, dest, out, bits, slots, nl, ids, no)
+    else:
+        status: lmx_walk_merge_run(owner, refs, core, dest, out, bits, slots, nl, ids, no)
+    c.free((cast: (@: void) slots))
+    c.free((cast: (@: void) ids))
+    return: status
+end: lmx_walk_merge_qualified_run
+
+fn: lmx_walk_merge_qualified_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    return: lmx_walk_merge_qualified_run(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, 0)
+end: lmx_walk_merge_qualified_map
+
+fn: lmx_walk_merge_selected_qualified_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    return: lmx_walk_merge_qualified_run(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, 1)
+end: lmx_walk_merge_selected_qualified_map
+
+# The walked merge, with or without the qualifiers (bits 0: none; see lmx_walk_merge_qualified_map).
+fn: lmx_walk_merge_run (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; size_t: bits; @: leaf_slots size_t; size_t: leaf_count; @: opaque_ids int; size_t: opaque_count) int
+    @: part_result_array c.VoidArray 0
+    int: layout_status c.LMX_IMPLEMENTS_YES
+    c.LmxCopyMap: qpending
+    @: qhold c.Lmx 0
+    @: qprofile c.Lmx 0
+    @: qcopy c.Lmx 0
+    @@: leaves c.Lmx 0
+    size_t: li 0U
+    int: qfail 0
+    int: qstaged 0
+    @: arena c.LmxArena 0
+    @@: operands c.Lmx 0
+    size_t: op_count 0U
+    @: body c.Lmx 0
+    size_t: np 0U
+    size_t: nq 0U
+    size_t: nt 0U
+    size_t: nu 0U
+    size_t: ns 0U
+    size_t: at 0U
+    size_t: j 0U
+    size_t: len 0U
+    size_t: opk 0U
+    @@: ua c.Lmx 0
+    @: uk size_t 0
+    @: us size_t 0
+    @: ul size_t 0
+    @: layout void 0
+    @: direct_source void 0
+    @@: pairs c.LmxMergePair 0
+    size_t: pair_count 0U
+    @@: retain_profiles c.Lmx 0
+    size_t: retain_count 0U
+    @: selected_profile c.Lmx 0
+    size_t: i 0U
+    @: result c.Lmx 0
+    int: status
+    if: out != 0
+        \out: 0
+    c.memset((cast: (@: void) @ qpending), 0, c.sizeof(c.LmxCopyMap))
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 7U
+        return: 1
+    ---
+    arena: (cast: (@: c.LmxArena) owner)
+    if: refs[0] = 0 || refs[1] = 0 || refs[2] = 0
+        return: 1
+    ---
+    np: c.lmx_size_value_known(refs[0])
+    nq: c.lmx_size_value_known(refs[1])
+    nt: c.lmx_size_value_known(refs[2])
+    # Three independent counts: each is checked against what nargs leaves before it is used, so no product or sum wraps.
+    if: np > (nargs - 6U) / 3U
+        return: 1
+    ---
+    if: nq > nargs - 6U - 3U * np
+        return: 1
+    ---
+    if: nt > nargs - 6U - 3U * np - nq
+        return: 1
+    ---
+    op_count: nargs - 6U - 3U * np - nq - nt
+    layout: (cast: (@: void) c.lmx_charptr_value_known(refs[3]))
+    direct_source: (cast: (@: void) c.lmx_charptr_value_known(refs[4]))
+    if: op_count = 0U
+        return: 1
+    ---
+    i: 0U
+    while: i < op_count
+        if: refs[5U + i] = 0
+            return: 1
+        if: c.lmx_pointer_value_known(refs[5U + i]) = 0
+            return: 2
+        if: c.lmx_range_classify(arena, c.lmx_pointer_value_known(refs[5U + i])) != c.LMX_KIND_STRUCT
+            return: 1
+        ---
+        i: i + 1U
+    ---
+    body: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[5U + op_count]))
+    if: body != 0 && c.lmx_range_classify(arena, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    if: lmx_walk_merge_pairs_cells(arena, refs + 6U + op_count, np, @ pairs, @ pair_count) != 0
+        return: 1
+    ---
+    i: 0U
+    while: i < nq
+        if: refs[6U + op_count + 3U * np + i] = 0 || c.lmx_range_classify(arena, c.lmx_pointer_value_known(refs[6U + op_count + 3U * np + i])) != c.LMX_KIND_STRUCT
+            lmx_walk_merge_pairs_free(pairs, pair_count)
+            return: 1
+        ---
+        i: i + 1U
+    ---
+    # K2b (-202): an operand's profile says whether the copier RETAINS it (shares by
+    # address, lmx_graph_copy_owned.lm1:462-470) instead of deep-copying it. Classified
+    # by the arena alone (lmx_merge_retain_profile: the profile of a parentless qualified
+    # tree, RR2c-2b; a qualified value under a lexical parent is copied), never a translator-side inventory of which
+    # operand was a named/qualified receiver -- most operands carry no profile at all (0,
+    # skipped); those that do are collected exactly as the native emission does
+    # (l2trans.lm1:20390-20399), just read from the arena at call time instead of known
+    # statically. Duplicates across operands are kept, not deduplicated -- the copier
+    # treats retain_profiles as a plain membership scan, idempotently.
+    # One operation-local array holds decoded pointer payloads and retained profiles.
+    # refs itself is value storage, not an array of Structure payloads.
+    operands: (cast: (@@: c.Lmx) c.calloc(2U * op_count + nq, sizeof(@: void)))
+    if: operands = 0
+        lmx_walk_merge_pairs_free(pairs, pair_count)
+        return: 1
+    ---
+    retain_profiles: operands + op_count
+    i: 0U
+    while: i < op_count
+        operands[i]: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[5U + i]))
+        selected_profile: lmx_merge_retain_profile(arena, operands[i])
+        if: selected_profile != 0
+            retain_profiles[retain_count]: selected_profile
+            retain_count: retain_count + 1U
+        ---
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < nq
+        selected_profile: c.lmx_range_profile(arena, c.lmx_pointer_value_known(refs[6U + op_count + 3U * np + i]))
+        if: selected_profile != 0
+            retain_profiles[retain_count]: selected_profile
+            retain_count: retain_count + 1U
+        ---
+        i: i + 1U
+    ---
+    # The use records fill the tail exactly: [anchor, k, len, len slots].  A present anchor input names the unit of
+    # the running code by a Structure of its lexical tree -- the walk passes the activation's own occurrence (SELF),
+    # so a copy of the code that runs elsewhere names its copy's unit and no frame holds the unit itself -- and the
+    # record is anchored at that tree's root, an explicit source Structure, with k 0; an anchor input left empty
+    # selects the lexical parent of operand k, 1 <= k <= the operand count (lmx_graph_copy_many_used_staged).  k,
+    # len and every slot are present inputs, each checked against its size_t witness by the walk before this reads
+    # it (lmx_walk_actuals); len >= 1 and the record ends inside the tail.  The first pass validates and counts, the
+    # arrays are sized from it.
+    at: 6U + op_count + 3U * np + nq
+    i: 0U
+    while: i < nt
+        if: nt - i < 3U || refs[at + i + 1U] = 0 || refs[at + i + 2U] = 0
+            c.free((cast: (@: void) operands))
+            lmx_walk_merge_pairs_free(pairs, pair_count)
+            return: 1
+        opk: c.lmx_size_value_known(refs[at + i + 1U])
+        len: c.lmx_size_value_known(refs[at + i + 2U])
+        if: len = 0U || len > nt - i - 3U
+            c.free((cast: (@: void) operands))
+            lmx_walk_merge_pairs_free(pairs, pair_count)
+            return: 1
+        if: refs[at + i] != 0
+            if: opk != 0U || c.lmx_pointer_value_known(refs[at + i]) = 0 || c.lmx_range_classify(arena, c.lmx_pointer_value_known(refs[at + i])) != c.LMX_KIND_STRUCT
+                c.free((cast: (@: void) operands))
+                lmx_walk_merge_pairs_free(pairs, pair_count)
+                return: 1
+            ---
+        else:
+            if: opk = 0U || opk > op_count
+                c.free((cast: (@: void) operands))
+                lmx_walk_merge_pairs_free(pairs, pair_count)
+                return: 1
+            ---
+        ---
+        j: 0U
+        while: j < len
+            if: refs[at + i + 3U + j] = 0
+                c.free((cast: (@: void) operands))
+                lmx_walk_merge_pairs_free(pairs, pair_count)
+                return: 1
+            j: j + 1U
+        ---
+        nu: nu + 1U
+        ns: ns + len
+        i: i + 3U + len
+    ---
+    if: nu != 0U
+        ua: (cast: (@@: c.Lmx) c.calloc(nu, sizeof(@: void)))
+        uk: (cast: (@: size_t) c.calloc(nu, c.sizeof(c.size_t)))
+        us: (cast: (@: size_t) c.calloc(ns, c.sizeof(c.size_t)))
+        ul: (cast: (@: size_t) c.calloc(nu, c.sizeof(c.size_t)))
+        if: ua = 0 || uk = 0 || us = 0 || ul = 0
+            c.free((cast: (@: void) ua))
+            c.free((cast: (@: void) uk))
+            c.free((cast: (@: void) us))
+            c.free((cast: (@: void) ul))
+            c.free((cast: (@: void) operands))
+            lmx_walk_merge_pairs_free(pairs, pair_count)
+            return: 1
+        ---
+        i: 0U
+        nu: 0U
+        ns: 0U
+        while: i < nt
+            if: refs[at + i] != 0
+                ua[nu]: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[at + i]))
+                while: ua[nu]\parent != 0
+                    ua[nu]: ua[nu]\parent
+                ---
+            ---
+            uk[nu]: c.lmx_size_value_known(refs[at + i + 1U])
+            len: c.lmx_size_value_known(refs[at + i + 2U])
+            ul[nu]: len
+            j: 0U
+            while: j < len
+                us[ns + j]: c.lmx_size_value_known(refs[at + i + 3U + j])
+                j: j + 1U
+            ---
+            ns: ns + len
+            nu: nu + 1U
+            i: i + 3U + len
+        ---
+    ---
+    status: lmx_merge_used_owned(operands, op_count, body, arena, arena, retain_profiles, retain_count, ua, uk, us, ul, nu, ns, pairs, pair_count, @ result)
+    c.free((cast: (@: void) ua))
+    c.free((cast: (@: void) uk))
+    c.free((cast: (@: void) us))
+    c.free((cast: (@: void) ul))
+    # RR2d: the qualifiers, in the native emission's order.  independent: the fresh root free of its lexical parent.
+    if: status = c.LMX_MERGE_OK && result != 0 && (bits & 1U) != 0U
+        result\parent: 0
+    # immutable: the completed result's subtree copied under a fresh profile (made under a holder node whose pools are
+    # sealed with the branch's: a retained profile node must live in a sealed pool), with callable fields' saved
+    # bodies copied and checked like the rest of the graph; the copy is the value published and proved.
+    if: status = c.LMX_MERGE_OK && result != 0 && (bits & 4U) != 0U
+        qhold: c.lmx_node_new_owned(arena)
+        if: qhold != 0
+            qprofile: c.lmx_node_new_profiled(arena, qhold)
+        leaves: (cast: (@@: c.Lmx) c.calloc(leaf_count + 1U, sizeof(@: void)))
+        if: qprofile = 0 || leaves = 0
+            qfail: 1
+        while: qfail = 0 && li < leaf_count
+            if: result != 0
+                part_result_array: (cast: (@: c.VoidArray) (@ result\array))
+            ---
+            if: leaf_slots = 0 || leaf_slots[li] >= (part_result_array\size)
+                qfail: 1
+            else:
+                leaves[li]: (cast: (@: c.Lmx) c.lmx_graph_value_in(arena, result, leaf_slots[li]))
+            ---
+            li: li + 1U
+        ---
+        if: qfail = 0 && (c.lmx_graph_copy_qualified_leaves_staged(result, arena, arena, retain_profiles, retain_count, qprofile, leaves, leaf_count, @ qcopy, @ qpending) != c.LMX_GRAPH_COPY_OK || qcopy = 0)
+            qfail: 1
+        if: qfail = 0
+            qstaged: 1
+            result: qcopy
+    ---
+    if: status = c.LMX_MERGE_OK && result != 0 && qfail = 0
+        layout_status: lmx_merge_result_layout(arena, result, operands, op_count, layout, direct_source)
+    ---
+    # The proof of the tree and the seals, after the layout proof, before publication (l2_emit_qualify_result).
+    if: status = c.LMX_MERGE_OK && result != 0 && qfail = 0 && layout_status = c.LMX_IMPLEMENTS_YES && (bits & 4U) != 0U
+        if: c.lmx_qualify_tree_preflight_full(arena, result, retain_profiles, retain_count, leaves, leaf_count, opaque_ids, opaque_count) != c.LMX_QUALIFY_OK || c.lmx_arena_seal_profile(arena, qprofile) != 0 || c.lmx_arena_seal_profile(arena, qhold) != 0
+            qfail: 1
+        ---
+    ---
+    if: qstaged != 0
+        c.lmx_copy_names_finish(@ qpending, (cast: (int) (status = c.LMX_MERGE_OK && result != 0 && qfail = 0 && layout_status = c.LMX_IMPLEMENTS_YES)))
+    ---
+    c.free((cast: (@: void) leaves))
+    c.free((cast: (@: void) operands))
+    lmx_walk_merge_pairs_free(pairs, pair_count)
+    if: status != c.LMX_MERGE_OK || result = 0
+        return: 2
+    ---
+    if: qfail != 0 || layout_status != c.LMX_IMPLEMENTS_YES
+        return: 1
+    \out: (cast: (@: void) result)
+    return: 0
+end: lmx_walk_merge_run
+
+# -194 к.6 (K2): merge INTO an existing target, `o\inner: a` (Q26.1). Node (Opus/T3; D1 2026-09-28: the map inline):
+# generic PRIM [prim, record, catch, target, op, P, 3P pair cells] -- nargs = 3 + 3P, pairs REQUIRED
+# (K1 к.3's own bijection rule refuses an absent/empty map for anything but a
+# zero-field op, so there is no "flat merge-into" case to special-case here). \out is 0:
+# an own-field write is a statement (Q26.1), never a value. Status: 0 OK, 1 a malformed
+# call (bad nargs, a non-Structure target/op, a malformed or absent pairs Structure), 2
+# THROW_MERGE (lmx_merge_into_owned itself refused -- an unmatched op field or a
+# duplicate pair the translator's own static checks should have already ruled out).
+fn: lmx_walk_merge_into_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    @: arena c.LmxArena 0
+    @: target c.Lmx 0
+    @: op c.Lmx 0
+    size_t: np 0U
+    @@: pairs c.LmxMergePair 0
+    size_t: pair_count 0U
+    int: status
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 3U
+        return: 1
+    ---
+    arena: (cast: (@: c.LmxArena) owner)
+    target: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[0]))
+    op: (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[1]))
+    if: refs[2] = 0
+        return: 1
+    ---
+    np: c.lmx_size_value_known(refs[2])
+    if: nargs != 3U + 3U * np
+        return: 1
+    ---
+    if: target = 0 || c.lmx_range_classify(arena, (cast: (@: void) target)) != c.LMX_KIND_STRUCT
+        return: 1
+    if: op = 0 || c.lmx_range_classify(arena, (cast: (@: void) op)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    if: lmx_walk_merge_pairs_cells(arena, refs + 3U, np, @ pairs, @ pair_count) != 0 || pairs = 0
+        return: 1
+    ---
+    status: lmx_merge_into_owned(target, op, arena, arena, pairs, pair_count)
+    lmx_walk_merge_pairs_free(pairs, pair_count)
+    if: status != c.LMX_MERGE_OK
+        return: 2
+    return: 0
+end: lmx_walk_merge_into_map

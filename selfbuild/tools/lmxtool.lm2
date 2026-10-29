@@ -1,0 +1,32 @@
+# The unchanged ordinary message root calls the generated native methods unit.
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+predef: "l2src/lmxtool_methods.lm1"
+
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+receiveMessage: m
+size_t: n length(m\mainArgs)
+size_t: i 0U
+size_t: j 0U
+size_t: len 0U
+@@: args char c.calloc(n + 1U, sizeof(@: char))
+@: buf char 0
+int: rc 2
+while: i < n && args != 0
+    len: length(m\mainArgs[i])
+    buf: c.malloc(len + 1U)
+    j: 0U
+    while: buf != 0 && j < len
+        buf[j]: m\mainArgs[i][j]
+        j: j + 1U
+    if: buf != 0
+        buf[len]: (cast: (char) 0)
+    args[i]: buf
+    i: i + 1U
+if: args != 0
+    rc: c.tool_main(args, (cast: (int) n))
+sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
+return

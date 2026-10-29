@@ -1,0 +1,257 @@
+# Unselected ordinary L2 authored-document link check from check_docs.py.
+# Fixed six groups only. Fixtures are not recursively added to documentation.
+# Fence substitution happens first; regex-like link captures scan the resulting
+# contiguous text, including captures crossing a removed fence boundary.
+# Native path join/dirname/non-strict resolution are shared OS adapter inputs.
+
+fn: dl_target (@: path char; @: target char; size_t: count) int
+    @: parent char 0
+    @: file char 0
+    @: joined char 0
+    @: dest char 0
+    @: text char 0
+    @: needle char 0
+    size_t: split 0U
+    size_t: anchor 0U
+    size_t: dest_count 0U
+    size_t: text_count 0U
+    size_t: anchor_count 0U
+    size_t: limit (cast: (size_t) -1)
+    int: failed 0
+    int: kind 0
+    if: dt_find(target, count, 0U, "://", 3U) != (cast: (size_t) -1)
+        return: 0
+    while: split < count && target[split] != (cast: (char) 35)
+        split: split + 1U
+    anchor: count
+    if: split < count
+        anchor: split + 1U
+    if: split = 0U
+        dest: txt_dup(path)
+        if: dest = 0
+            failed: 1
+        ---
+    else:
+        if: c.memchr(target, 0, split) != 0
+            failed: 1
+        else:
+            parent: os_path_dirname(path)
+            file: txt_ndup(target, split)
+            if: parent = 0 || file = 0
+                failed: 1
+            else:
+                joined: os_path_join(parent, file)
+                if: joined = 0
+                    failed: 1
+                else:
+                    failed: os_path_resolve_nonstrict(joined, c.strlen(joined), @ dest, @ dest_count)
+                ---
+            ---
+        ---
+    ---
+    if: failed = 0
+        kind: os_path_kind(dest)
+        if: kind <= 0
+            failed: 1
+        ---
+    if: failed = 0 && anchor < count
+        anchor_count: count - anchor
+        if: anchor_count > limit - 6U
+            failed: 1
+        else:
+            needle: c.malloc(anchor_count + 6U)
+            if: needle = 0
+                failed: 1
+            else:
+                c.memcpy(needle, "id=\"", 4U)
+                c.memcpy(needle + 4U, target + anchor, anchor_count)
+                needle[4U + anchor_count]: (cast: (char) 34)
+                needle[5U + anchor_count]: (cast: (char) 0)
+                failed: dc_text_file(dest, @ text, @ text_count)
+                if: failed = 0
+                    if: dt_find(text, text_count, 0U, needle, anchor_count + 5U) = (cast: (size_t) -1)
+                        failed: 1
+                    ---
+                ---
+            ---
+        ---
+    ---
+    c.free(parent)
+    c.free(file)
+    c.free(joined)
+    c.free(dest)
+    c.free(text)
+    c.free(needle)
+    return: failed
+end: dl_target
+
+fn: dl_document (@: path char) int
+    @: original char 0
+    @: stripped char 0
+    size_t: original_count 0U
+    size_t: count 0U
+    size_t: scan 0U
+    size_t: first 0U
+    size_t: after 0U
+    int: failed dc_text_file(path, @ original, @ original_count)
+    if: failed = 0
+        failed: docs_links_strip_fences(original, original_count, @ stripped, @ count)
+    while: failed = 0 && scan < count
+        first: dt_find(stripped, count, scan, "](", 2U)
+        if: first = (cast: (size_t) -1)
+            break
+        first: first + 2U
+        after: first
+        while: after < count && stripped[after] != (cast: (char) 41)
+            after: after + 1U
+        if: after = count
+            break
+        if: after > first
+            failed: dl_target(path, stripped + first, after - first)
+        scan: after + 1U
+    ---
+    c.free(original)
+    c.free(stripped)
+    return: failed
+end: dl_document
+
+os:
+    win:
+        # The fixed ASCII README*.md/*.md patterns have no special Unicode
+        # case expansions. Do not fold the filename or alter native spelling.
+        fn: dl_name_matches (@: name char; int: readme) int
+            size_t: count c.strlen(name)
+            size_t: at 0U
+            size_t: first 0U
+            unsigned: byte 0U
+            @: prefix char "readme"
+            @: suffix char ".md"
+            if: count < 3U || (readme != 0 && count < 9U)
+                return: 0
+            if: readme != 0
+                while: at < 6U
+                    byte: (cast: (unsigned) name[at]) & 255U
+                    if: byte >= 65U && byte <= 90U
+                        byte: byte + 32U
+                    if: byte != ((cast: (unsigned) prefix[at]) & 255U)
+                        return: 0
+                    at: at + 1U
+                ---
+            ---
+            at: 0U
+            first: count - 3U
+            while: at < 3U
+                byte: (cast: (unsigned) name[first + at]) & 255U
+                if: byte >= 65U && byte <= 90U
+                    byte: byte + 32U
+                if: byte != ((cast: (unsigned) suffix[at]) & 255U)
+                    return: 0
+                at: at + 1U
+            ---
+            return: 1
+        end: dl_name_matches
+    default:
+        fn: dl_name_matches (@: name char; int: readme) int
+            if: txt_ends(name, ".md") = 0
+                return: 0
+            if: readme != 0 && txt_starts(name, "README") = 0
+                return: 0
+            return: 1
+        end: dl_name_matches
+end: os
+
+# A matching directory is not silently removed: the ordinary text read fails,
+# as it did for a Path.glob result. Names keep native enumeration order.
+fn: dl_group (@: directory char; int: readme; @@@: paths char; @@: path_kinds unsigned; @: path_count size_t; @: path_capacity size_t) int
+    @@: names char 0
+    @: kinds unsigned 0
+    @: path char 0
+    size_t: count 0U
+    size_t: at 0U
+    int: failed 0
+    int: scanned os_directory_entries(directory, @ names, @ kinds, @ count)
+    if: scanned < 0
+        return: 1
+    if: scanned > 0
+        return: 0
+    while: at < count && failed = 0
+        if: dl_name_matches(names[at], readme) != 0
+            path: os_path_join(directory, names[at])
+            if: path = 0
+                failed: 1
+            else:
+                failed: fs_entry_append(paths, path_kinds, path_count, path_capacity, path, 0U)
+                if: failed = 0
+                    path: 0
+                ---
+            ---
+            c.free(path)
+            path: 0
+        ---
+        at: at + 1U
+    ---
+    fs_entries_free(names, kinds, count)
+    return: failed
+end: dl_group
+
+fn: docs_authored_links_check (@: repo char) int
+    @: path char 0
+    @@: paths char 0
+    @: kinds unsigned 0
+    size_t: count 0U
+    size_t: capacity 0U
+    size_t: at 0U
+    int: failed 0
+    int: group 0
+    if: repo = 0
+        return: 1
+    # The old docs list materializes all six groups before its first read.
+    failed: dl_group(repo, 1, @ paths, @ kinds, @ count, @ capacity)
+    while: failed = 0 && group < 3
+        if: group = 0
+            path: txt_path(repo, "docs")
+        else:
+            if: group = 1
+                path: txt_path(repo, "steps")
+            else:
+                path: txt_path(repo, "claude_chat")
+            ---
+        ---
+        if: path = 0
+            failed: 1
+        else:
+            failed: dl_group(path, 0, @ paths, @ kinds, @ count, @ capacity)
+        ---
+        c.free(path)
+        path: 0
+        group: group + 1
+    ---
+    if: failed = 0
+        path: txt_path(repo, "AGENTS.md")
+        if: path = 0
+            failed: 1
+        else:
+            failed: fs_entry_append(@ paths, @ kinds, @ count, @ capacity, path, 0U)
+            if: failed = 0
+                path: 0
+            ---
+        ---
+        c.free(path)
+        path: 0
+    ---
+    if: failed = 0
+        path: txt_path(repo, "tests/parser")
+        if: path = 0
+            failed: 1
+        else:
+            failed: dl_group(path, 1, @ paths, @ kinds, @ count, @ capacity)
+        ---
+        c.free(path)
+    ---
+    while: failed = 0 && at < count
+        failed: dl_document(paths[at])
+        at: at + 1U
+    fs_entries_free(paths, kinds, count)
+    return: failed
+end: docs_authored_links_check
+

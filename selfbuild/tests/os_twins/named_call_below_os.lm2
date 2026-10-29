@@ -1,0 +1,27 @@
+# OPUS-CODEX-20261022-OSBRANCH, CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z: the selected os branch's
+# methods are the unit's own, visible both ways (l2_unit_names_method). A named Structure's body calls, in the
+# colon form, os_bump declared below it, as named_call_below_unit.lm2 calls the unit's os_bump. Counter runs
+# once: os_bump adds n (win) or n + 1 (default) to the unit's hits. Entry count() + 4: 7 for win, 8 for default.
+int: hits 0
+Counter:
+    int: n 3
+    os_bump: n
+return
+os:
+    win:
+        fn: os_bump (int: v) int
+            node\hits: node\hits + v
+            return: 0
+        end: os_bump
+    default:
+        fn: os_bump (int: v) int
+            node\hits: node\hits + v + 1
+            return: 0
+        end: os_bump
+end: os
+fn: count () int
+    return: node\hits
+end: count
+call: Counter
+sendMessage: exit(exit_code: count() + 4; stdout: ""; stderr: "")
+return

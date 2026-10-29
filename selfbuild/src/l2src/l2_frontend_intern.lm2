@@ -1,0 +1,799 @@
+# Ordinary L2 frontend signature interning and source directive ledgers.
+# Address aliases borrow the existing compiler cells; they do not copy state.
+predef: "l1src/p0.h.lm1"
+predef: "l2src/l2_frontend_helpers.h.lm1"
+predef: "l2src/l2_frontend_alloc.h.lm1"
+predef: "l2src/l2_frontend_values.h.lm1"
+predef: "l2src/l2_frontend_views.h.lm1"
+predef: "l2src/l2_frontend_types.h.lm1"
+predef: "l2src/l2_frontend_resolve.h.lm1"
+include: "<stddef.h>" "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+# Original: l2src/l2trans.lm1:4855
+fn: lm_compiler_intern_reserve (unsigned: need) int
+    @: cell_intern_cap unsigned (cast: (@: unsigned) (@ c.l2_intern_cap))
+    @: cell_alloc_err int (cast: (@: int) (@ c.l2_alloc_err))
+    @: cell_alloc_kind int (cast: (@: int) (@ c.l2_alloc_kind))
+    @: cell_intern_n unsigned (cast: (@: unsigned) (@ c.l2_intern_n))
+    @@: cell_it_ar int (cast: (@@: int) (@ c.l2_it_ar))
+    @@: cell_it_dyn int (cast: (@@: int) (@ c.l2_it_dyn))
+    @@: cell_it_ret int (cast: (@@: int) (@ c.l2_it_ret))
+    @@: cell_it_throws int (cast: (@@: int) (@ c.l2_it_throws))
+    @@: cell_it_tmi int (cast: (@@: int) (@ c.l2_it_tmi))
+    @@@: cell_it_n char (cast: (@@@: char) (@ c.l2_it_n))
+    @@@: cell_it_nl size_t (cast: (@@@: size_t) (@ c.l2_it_nl))
+    @@@: cell_it_ty int (cast: (@@@: int) (@ c.l2_it_ty))
+    @@@: cell_it_hn char (cast: (@@@: char) (@ c.l2_it_hn))
+    @@@: cell_it_hnl size_t (cast: (@@@: size_t) (@ c.l2_it_hnl))
+    @@@: cell_it_hty int (cast: (@@@: int) (@ c.l2_it_hty))
+    size_t: cap
+    size_t: need_u
+    size_t: nbp
+    size_t: nbi
+    size_t: psz
+    unsigned: i
+    @: nar int 0
+    @: ndyn int 0
+    @: nret int 0
+    @: nthrows int 0
+    @: ntmi int 0
+    @@: nn char 0
+    @@: nnl size_t 0
+    @@: nty int 0
+    @@: nhn char 0
+    @@: nhnl size_t 0
+    @@: nhty int 0
+    if: need <= cell_intern_cap[0]
+        return: (cast: (int) (0))
+    need_u: (cast: (size_t) need)
+    cap: (cast: (size_t) cell_intern_cap[0])
+    if: cap < 1U
+        cap: 4U
+    while: cap < need_u
+        if: cap > ((cast: (size_t) -1) / 2U)
+            cell_alloc_err[0]: 2
+            return: (cast: (int) (1))
+        cap: cap * 2U
+    if: cap > (cast: (size_t) (cast: (unsigned) -1))
+        cap: need_u
+    psz: sizeof(@: char)
+    if: c.lm_compiler_mul_ok(cap, psz) = 0 || c.lm_compiler_mul_ok(cap, (cast: (size_t) (c.sizeof(c.int)))) = 0
+        cell_alloc_err[0]: 2
+        return: (cast: (int) (1))
+    nbp: cap * psz
+    nbi: cap * c.sizeof(c.int)
+    cell_alloc_kind[0]: 7
+    nar: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    ndyn: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    nret: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    nthrows: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    ntmi: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    nn: (cast: (@@: char) c.lm_compiler_xmalloc(nbp))
+    nnl: (cast: (@@: size_t) c.lm_compiler_xmalloc(nbp))
+    nty: (cast: (@@: int) c.lm_compiler_xmalloc(nbp))
+    nhn: (cast: (@@: char) c.lm_compiler_xmalloc(nbp))
+    nhnl: (cast: (@@: size_t) c.lm_compiler_xmalloc(nbp))
+    nhty: (cast: (@@: int) c.lm_compiler_xmalloc(nbp))
+    if: nar = 0 || ndyn = 0 || nret = 0 || nthrows = 0 || ntmi = 0 || nn = 0 || nnl = 0 || nty = 0 || nhn = 0 || nhnl = 0 || nhty = 0
+        if: nar != 0
+            c.lm_compiler_xfree((cast: (@: void) nar))
+        if: ndyn != 0
+            c.lm_compiler_xfree((cast: (@: void) ndyn))
+        if: nret != 0
+            c.lm_compiler_xfree((cast: (@: void) nret))
+        if: nthrows != 0
+            c.lm_compiler_xfree((cast: (@: void) nthrows))
+        if: ntmi != 0
+            c.lm_compiler_xfree((cast: (@: void) ntmi))
+        if: nn != 0
+            c.lm_compiler_xfree((cast: (@: void) nn))
+        if: nnl != 0
+            c.lm_compiler_xfree((cast: (@: void) nnl))
+        if: nty != 0
+            c.lm_compiler_xfree((cast: (@: void) nty))
+        if: nhn != 0
+            c.lm_compiler_xfree((cast: (@: void) nhn))
+        if: nhnl != 0
+            c.lm_compiler_xfree((cast: (@: void) nhnl))
+        if: nhty != 0
+            c.lm_compiler_xfree((cast: (@: void) nhty))
+        return: (cast: (int) (1))
+    c.memset((cast: (@: void) nar), 0, nbi)
+    c.memset((cast: (@: void) ndyn), 0, nbi)
+    c.memset((cast: (@: void) nret), 0, nbi)
+    c.memset((cast: (@: void) nthrows), 0, nbi)
+    c.memset((cast: (@: void) ntmi), 0, nbi)
+    c.memset((cast: (@: void) nn), 0, nbp)
+    c.memset((cast: (@: void) nnl), 0, nbp)
+    c.memset((cast: (@: void) nty), 0, nbp)
+    c.memset((cast: (@: void) nhn), 0, nbp)
+    c.memset((cast: (@: void) nhnl), 0, nbp)
+    c.memset((cast: (@: void) nhty), 0, nbp)
+    i: 0U
+    while: i < cell_intern_n[0]
+        nar[i]: cell_it_ar[0][i]
+        ndyn[i]: cell_it_dyn[0][i]
+        nret[i]: cell_it_ret[0][i]
+        nthrows[i]: cell_it_throws[0][i]
+        ntmi[i]: cell_it_tmi[0][i]
+        nn[i]: cell_it_n[0][i]
+        nnl[i]: cell_it_nl[0][i]
+        nty[i]: cell_it_ty[0][i]
+        nhn[i]: cell_it_hn[0][i]
+        nhnl[i]: cell_it_hnl[0][i]
+        nhty[i]: cell_it_hty[0][i]
+        i: i + 1U
+    if: cell_it_ar[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_ar[0]))
+    if: cell_it_dyn[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_dyn[0]))
+    if: cell_it_ret[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_ret[0]))
+    if: cell_it_throws[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_throws[0]))
+    if: cell_it_tmi[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_tmi[0]))
+    if: cell_it_n[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_n[0]))
+    if: cell_it_nl[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_nl[0]))
+    if: cell_it_ty[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_ty[0]))
+    if: cell_it_hn[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_hn[0]))
+    if: cell_it_hnl[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_hnl[0]))
+    if: cell_it_hty[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_it_hty[0]))
+    cell_it_ar[0]: nar
+    cell_it_dyn[0]: ndyn
+    cell_it_ret[0]: nret
+    cell_it_throws[0]: nthrows
+    cell_it_tmi[0]: ntmi
+    cell_it_n[0]: nn
+    cell_it_nl[0]: nnl
+    cell_it_ty[0]: nty
+    cell_it_hn[0]: nhn
+    cell_it_hnl[0]: nhnl
+    cell_it_hty[0]: nhty
+    cell_intern_cap[0]: (cast: (unsigned) cap)
+    return: (cast: (int) (0))
+end: lm_compiler_intern_reserve
+
+# Original: l2src/l2trans.lm1:4989
+fn: lm_compiler_intern_match (unsigned: s; int: ar; const: (@: n0 char); size_t: l0; int: t0; const: (@: n1 char); size_t: l1; int: t1; const: (@: n2 char); size_t: l2n; int: t2; const: (@: n3 char); size_t: l3; int: t3) int
+    @: cell_intern_n unsigned (cast: (@: unsigned) (@ c.l2_intern_n))
+    @@: cell_it_ar int (cast: (@@: int) (@ c.l2_it_ar))
+    @@: cell_it_dyn int (cast: (@@: int) (@ c.l2_it_dyn))
+    @@: cell_it_ret int (cast: (@@: int) (@ c.l2_it_ret))
+    @@: cell_it_throws int (cast: (@@: int) (@ c.l2_it_throws))
+    @@@: cell_it_n char (cast: (@@@: char) (@ c.l2_it_n))
+    @@@: cell_it_nl size_t (cast: (@@@: size_t) (@ c.l2_it_nl))
+    @@@: cell_it_ty int (cast: (@@@: int) (@ c.l2_it_ty))
+    @@: ns char
+    @: nl size_t
+    @: nt int
+    # The proof helper stores the ordinary int-return/no-throw contract.
+    if: s >= cell_intern_n[0] || cell_it_ar[0][s] != ar || cell_it_dyn[0][s] != 0 || cell_it_ret[0][s] != 0 || cell_it_throws[0][s] != 0
+        return: (cast: (int) (0))
+    ns: (cast: (@@: char) cell_it_n[0][s])
+    nl: cell_it_nl[0][s]
+    nt: cell_it_ty[0][s]
+    if: ar >= 1 && (ns = 0 || nl = 0 || nt = 0 || t0 != nt[0] || l0 != nl[0] || c.memcmp(n0, ns[0], l0) != 0)
+        return: (cast: (int) (0))
+    if: ar >= 2 && (t1 != nt[1] || l1 != nl[1] || c.memcmp(n1, ns[1], l1) != 0)
+        return: (cast: (int) (0))
+    if: ar >= 3 && (t2 != nt[2] || l2n != nl[2] || c.memcmp(n2, ns[2], l2n) != 0)
+        return: (cast: (int) (0))
+    if: ar >= 4 && (t3 != nt[3] || l3 != nl[3] || c.memcmp(n3, ns[3], l3) != 0)
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_intern_match
+
+# Original: l2src/l2trans.lm1:5009
+fn: lm_compiler_intern_store (int: ar; const: (@: n0 char); size_t: l0; int: t0; const: (@: n1 char); size_t: l1; int: t1; const: (@: n2 char); size_t: l2n; int: t2; const: (@: n3 char); size_t: l3; int: t3) unsigned
+    @: cell_intern_n unsigned (cast: (@: unsigned) (@ c.l2_intern_n))
+    @: cell_alloc_err int (cast: (@: int) (@ c.l2_alloc_err))
+    @: cell_alloc_kind int (cast: (@: int) (@ c.l2_alloc_kind))
+    @@: cell_it_ar int (cast: (@@: int) (@ c.l2_it_ar))
+    @@: cell_it_dyn int (cast: (@@: int) (@ c.l2_it_dyn))
+    @@: cell_it_ret int (cast: (@@: int) (@ c.l2_it_ret))
+    @@: cell_it_throws int (cast: (@@: int) (@ c.l2_it_throws))
+    @@: cell_it_tmi int (cast: (@@: int) (@ c.l2_it_tmi))
+    @@@: cell_it_n char (cast: (@@@: char) (@ c.l2_it_n))
+    @@@: cell_it_nl size_t (cast: (@@@: size_t) (@ c.l2_it_nl))
+    @@@: cell_it_ty int (cast: (@@@: int) (@ c.l2_it_ty))
+    @@@: cell_it_hn char (cast: (@@@: char) (@ c.l2_it_hn))
+    @@@: cell_it_hnl size_t (cast: (@@@: size_t) (@ c.l2_it_hnl))
+    @@@: cell_it_hty int (cast: (@@@: int) (@ c.l2_it_hty))
+    unsigned: i 0U
+    unsigned: s
+    size_t: psz
+    @@: ns char 0
+    @: nl size_t 0
+    @: nt int 0
+    while: i < cell_intern_n[0]
+        if: lm_compiler_intern_match(i, ar, n0, l0, t0, n1, l1, t1, n2, l2n, t2, n3, l3, t3)
+            return: (cast: (unsigned) (i + 1U))
+        i: i + 1U
+    if: ar < 1 || ar > 4
+        return: (cast: (unsigned) (0U))
+    if: cell_intern_n[0] = (cast: (unsigned) -1)
+        cell_alloc_err[0]: 2
+        return: (cast: (unsigned) (0U))
+    if: lm_compiler_intern_reserve(cell_intern_n[0] + 1U) != 0
+        return: (cast: (unsigned) (0U))
+    psz: sizeof(@: char)
+    if: c.lm_compiler_mul_ok((cast: (size_t) ar), psz) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.size_t)))) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.int)))) = 0
+        cell_alloc_err[0]: 2
+        return: (cast: (unsigned) (0U))
+    cell_alloc_kind[0]: 3
+    ns: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) ar) * psz))
+    nl: (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.size_t)))))
+    nt: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.int)))))
+    if: ns = 0 || nl = 0 || nt = 0
+        if: ns != 0
+            c.lm_compiler_xfree((cast: (@: void) ns))
+        if: nl != 0
+            c.lm_compiler_xfree((cast: (@: void) nl))
+        if: nt != 0
+            c.lm_compiler_xfree((cast: (@: void) nt))
+        return: (cast: (unsigned) (0U))
+    if: ar >= 1
+        ns[0]: (cast: (@: char) n0)
+        nl[0]: l0
+        nt[0]: t0
+    if: ar >= 2
+        ns[1]: (cast: (@: char) n1)
+        nl[1]: l1
+        nt[1]: t1
+    if: ar >= 3
+        ns[2]: (cast: (@: char) n2)
+        nl[2]: l2n
+        nt[2]: t2
+    if: ar >= 4
+        ns[3]: (cast: (@: char) n3)
+        nl[3]: l3
+        nt[3]: t3
+    s: cell_intern_n[0]
+    cell_it_ar[0][s]: ar
+    cell_it_dyn[0][s]: 0
+    cell_it_ret[0][s]: 0
+    cell_it_throws[0][s]: 0
+    cell_it_tmi[0][s]: 0 - 1
+    cell_it_n[0][s]: (cast: (@: char) ns)
+    cell_it_nl[0][s]: nl
+    cell_it_ty[0][s]: nt
+    cell_it_hn[0][s]: 0
+    cell_it_hnl[0][s]: 0
+    cell_it_hty[0][s]: 0
+    cell_intern_n[0]: cell_intern_n[0] + 1U
+    return: (cast: (unsigned) (cell_intern_n[0]))
+end: lm_compiler_intern_store
+
+# Original: l2src/l2trans.lm1:5074
+fn: lm_compiler_intern_pair (const: (@: a char); size_t: na; const: (@: b char); size_t: nb) unsigned
+    return: (cast: (unsigned) (lm_compiler_intern_store(2, a, na, 0, b, nb, 0, 0, 0U, 0, 0, 0U, 0)))
+end: lm_compiler_intern_pair
+
+# Original: l2src/l2trans.lm1:5077
+fn: lm_compiler_intern_eq_mi (unsigned: s; int: mi) int
+    @: cell_intern_n unsigned (cast: (@: unsigned) (@ c.l2_intern_n))
+    @@: cell_it_ar int (cast: (@@: int) (@ c.l2_it_ar))
+    @@: cell_m_arity int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: cell_it_dyn int (cast: (@@: int) (@ c.l2_it_dyn))
+    @@: cell_m_dyn int (cast: (@@: int) (@ c.l2_m_dyn))
+    @@: cell_it_ret int (cast: (@@: int) (@ c.l2_it_ret))
+    @@: cell_m_ret int (cast: (@@: int) (@ c.l2_m_ret))
+    @@: cell_it_throws int (cast: (@@: int) (@ c.l2_it_throws))
+    @@: cell_m_throws int (cast: (@@: int) (@ c.l2_m_throws))
+    @@: cell_it_tmi int (cast: (@@: int) (@ c.l2_it_tmi))
+    @@@: cell_it_n char (cast: (@@@: char) (@ c.l2_it_n))
+    @@@: cell_it_nl size_t (cast: (@@@: size_t) (@ c.l2_it_nl))
+    @@@: cell_it_ty int (cast: (@@@: int) (@ c.l2_it_ty))
+    @@@: cell_it_hn char (cast: (@@@: char) (@ c.l2_it_hn))
+    @@@: cell_it_hnl size_t (cast: (@@@: size_t) (@ c.l2_it_hnl))
+    @@@: cell_it_hty int (cast: (@@@: int) (@ c.l2_it_hty))
+    int: k
+    @: nm c.LmP0Text
+    @@: ns char
+    @: nl size_t
+    @: nt int
+    @@: hs char
+    @: hl size_t
+    @: ht int
+    if: s >= cell_intern_n[0] || mi < 0
+        return: (cast: (int) (0))
+    if: cell_it_ar[0][s] != cell_m_arity[0][mi] || cell_it_dyn[0][s] != cell_m_dyn[0][mi] || cell_it_ret[0][s] != cell_m_ret[0][mi] || cell_it_throws[0][s] != cell_m_throws[0][mi]
+        return: (cast: (int) (0))
+    if: c.lm_compiler_throws_same(cell_it_tmi[0][s], mi) = 0
+        return: (cast: (int) (0))
+    ns: (cast: (@@: char) cell_it_n[0][s])
+    nl: cell_it_nl[0][s]
+    nt: cell_it_ty[0][s]
+    hs: (cast: (@@: char) cell_it_hn[0][s])
+    hl: cell_it_hnl[0][s]
+    ht: cell_it_hty[0][s]
+    k: 0
+    while: k < cell_m_arity[0][mi]
+        nm: c.lm_compiler_fn(mi, k)
+        if: nm = 0 || nm\data = 0 || ns = 0 || nl = 0 || nt = 0
+            return: (cast: (int) (0))
+        if: c.lm_compiler_ft(mi, k) != nt[k]
+            return: (cast: (int) (0))
+        if: nm\length != nl[k] || c.memcmp((cast: (const: @: void) (nm\data)), ns[k], nl[k]) != 0
+            return: (cast: (int) (0))
+        k: k + 1
+    k: 0
+    while: k < cell_m_dyn[0][mi]
+        nm: c.lm_compiler_dn(mi, k)
+        if: nm = 0 || nm\data = 0 || hs = 0 || hl = 0 || ht = 0
+            return: (cast: (int) (0))
+        if: c.lm_compiler_dt(mi, k) != ht[k]
+            return: (cast: (int) (0))
+        if: nm\length != hl[k] || c.memcmp((cast: (const: @: void) (nm\data)), hs[k], hl[k]) != 0
+            return: (cast: (int) (0))
+        k: k + 1
+    return: (cast: (int) (1))
+end: lm_compiler_intern_eq_mi
+
+# Original: l2src/l2trans.lm1:5120
+fn: lm_compiler_intern_store_mi (int: mi) unsigned
+    @: cell_intern_n unsigned (cast: (@: unsigned) (@ c.l2_intern_n))
+    @: cell_alloc_err int (cast: (@: int) (@ c.l2_alloc_err))
+    @@: cell_m_arity int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: cell_m_dyn int (cast: (@@: int) (@ c.l2_m_dyn))
+    @@@: cell_it_n char (cast: (@@@: char) (@ c.l2_it_n))
+    @@@: cell_it_nl size_t (cast: (@@@: size_t) (@ c.l2_it_nl))
+    @@@: cell_it_ty int (cast: (@@@: int) (@ c.l2_it_ty))
+    @@@: cell_it_hn char (cast: (@@@: char) (@ c.l2_it_hn))
+    @@@: cell_it_hnl size_t (cast: (@@@: size_t) (@ c.l2_it_hnl))
+    @@@: cell_it_hty int (cast: (@@@: int) (@ c.l2_it_hty))
+    @: cell_alloc_kind int (cast: (@: int) (@ c.l2_alloc_kind))
+    @@: cell_it_ar int (cast: (@@: int) (@ c.l2_it_ar))
+    @@: cell_it_dyn int (cast: (@@: int) (@ c.l2_it_dyn))
+    @@: cell_it_ret int (cast: (@@: int) (@ c.l2_it_ret))
+    @@: cell_m_ret int (cast: (@@: int) (@ c.l2_m_ret))
+    @@: cell_it_throws int (cast: (@@: int) (@ c.l2_it_throws))
+    @@: cell_m_throws int (cast: (@@: int) (@ c.l2_m_throws))
+    @@: cell_it_tmi int (cast: (@@: int) (@ c.l2_it_tmi))
+    unsigned: i 0U
+    unsigned: s
+    int: k
+    int: ar
+    int: dyn
+    size_t: psz
+    @: nm c.LmP0Text
+    @@: ns char 0
+    @: nl size_t 0
+    @: nt int 0
+    @@: hs char 0
+    @: hl size_t 0
+    @: ht int 0
+    while: i < cell_intern_n[0]
+        if: lm_compiler_intern_eq_mi(i, mi)
+            return: (cast: (unsigned) (i + 1U))
+        i: i + 1U
+    if: cell_intern_n[0] = (cast: (unsigned) -1)
+        cell_alloc_err[0]: 2
+        return: (cast: (unsigned) (0U))
+    if: lm_compiler_intern_reserve(cell_intern_n[0] + 1U) != 0
+        return: (cast: (unsigned) (0U))
+    ar: cell_m_arity[0][mi]
+    dyn: cell_m_dyn[0][mi]
+    psz: sizeof(@: char)
+    s: cell_intern_n[0]
+    cell_it_n[0][s]: 0
+    cell_it_nl[0][s]: 0
+    cell_it_ty[0][s]: 0
+    cell_it_hn[0][s]: 0
+    cell_it_hnl[0][s]: 0
+    cell_it_hty[0][s]: 0
+    if: ar > 0
+        if: c.lm_compiler_mul_ok((cast: (size_t) ar), psz) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.size_t)))) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.int)))) = 0
+            cell_alloc_err[0]: 2
+            return: (cast: (unsigned) (0U))
+        cell_alloc_kind[0]: 3
+        ns: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) ar) * psz))
+        nl: (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.size_t)))))
+        nt: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.int)))))
+        if: ns = 0 || nl = 0 || nt = 0
+            if: ns != 0
+                c.lm_compiler_xfree((cast: (@: void) ns))
+            if: nl != 0
+                c.lm_compiler_xfree((cast: (@: void) nl))
+            if: nt != 0
+                c.lm_compiler_xfree((cast: (@: void) nt))
+            return: (cast: (unsigned) (0U))
+        k: 0
+        while: k < ar
+            nm: c.lm_compiler_fn(mi, k)
+            if: nm = 0 || nm\data = 0
+                c.lm_compiler_xfree((cast: (@: void) ns))
+                c.lm_compiler_xfree((cast: (@: void) nl))
+                c.lm_compiler_xfree((cast: (@: void) nt))
+                return: (cast: (unsigned) (0U))
+            ns[k]: (cast: (@: char) nm\data)
+            nl[k]: nm\length
+            nt[k]: c.lm_compiler_ft(mi, k)
+            k: k + 1
+        ---
+    if: dyn > 0
+        if: c.lm_compiler_mul_ok((cast: (size_t) dyn), psz) = 0 || c.lm_compiler_mul_ok((cast: (size_t) dyn), (cast: (size_t) (c.sizeof(c.size_t)))) = 0 || c.lm_compiler_mul_ok((cast: (size_t) dyn), (cast: (size_t) (c.sizeof(c.int)))) = 0
+            cell_alloc_err[0]: 2
+            if: ns != 0
+                c.lm_compiler_xfree((cast: (@: void) ns))
+            if: nl != 0
+                c.lm_compiler_xfree((cast: (@: void) nl))
+            if: nt != 0
+                c.lm_compiler_xfree((cast: (@: void) nt))
+            return: (cast: (unsigned) (0U))
+        cell_alloc_kind[0]: 3
+        hs: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) dyn) * psz))
+        hl: (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) dyn) * c.sizeof(c.size_t)))))
+        ht: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) dyn) * c.sizeof(c.int)))))
+        if: hs = 0 || hl = 0 || ht = 0
+            if: ns != 0
+                c.lm_compiler_xfree((cast: (@: void) ns))
+            if: nl != 0
+                c.lm_compiler_xfree((cast: (@: void) nl))
+            if: nt != 0
+                c.lm_compiler_xfree((cast: (@: void) nt))
+            if: hs != 0
+                c.lm_compiler_xfree((cast: (@: void) hs))
+            if: hl != 0
+                c.lm_compiler_xfree((cast: (@: void) hl))
+            if: ht != 0
+                c.lm_compiler_xfree((cast: (@: void) ht))
+            return: (cast: (unsigned) (0U))
+        k: 0
+        while: k < dyn
+            nm: c.lm_compiler_dn(mi, k)
+            if: nm = 0 || nm\data = 0
+                c.lm_compiler_xfree((cast: (@: void) ns))
+                c.lm_compiler_xfree((cast: (@: void) nl))
+                c.lm_compiler_xfree((cast: (@: void) nt))
+                c.lm_compiler_xfree((cast: (@: void) hs))
+                c.lm_compiler_xfree((cast: (@: void) hl))
+                c.lm_compiler_xfree((cast: (@: void) ht))
+                return: (cast: (unsigned) (0U))
+            hs[k]: (cast: (@: char) nm\data)
+            hl[k]: nm\length
+            ht[k]: c.lm_compiler_dt(mi, k)
+            k: k + 1
+        ---
+    cell_it_ar[0][s]: ar
+    cell_it_dyn[0][s]: dyn
+    cell_it_ret[0][s]: cell_m_ret[0][mi]
+    cell_it_throws[0][s]: cell_m_throws[0][mi]
+    cell_it_tmi[0][s]: mi
+    cell_it_n[0][s]: (cast: (@: char) ns)
+    cell_it_nl[0][s]: nl
+    cell_it_ty[0][s]: nt
+    cell_it_hn[0][s]: (cast: (@: char) hs)
+    cell_it_hnl[0][s]: hl
+    cell_it_hty[0][s]: ht
+    cell_intern_n[0]: cell_intern_n[0] + 1U
+    return: (cast: (unsigned) (cell_intern_n[0]))
+end: lm_compiler_intern_store_mi
+
+# Original: l2src/l2trans.lm1:5240
+fn: lm_compiler_intern_mi (int: mi) unsigned
+    if: mi < 0
+        return: (cast: (unsigned) (0U))
+    return: (cast: (unsigned) (lm_compiler_intern_store_mi(mi)))
+end: lm_compiler_intern_mi
+
+# Original: l2src/l2trans.lm1:5421
+fn: lm_compiler_pd_free () int
+    @@@: cell_pd c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pd))
+    @: cell_pd_n int (cast: (@: int) (@ c.l2_pd_n))
+    @: cell_pd_cap int (cast: (@: int) (@ c.l2_pd_cap))
+    if: cell_pd[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_pd[0]))
+    ---
+    cell_pd[0]: 0
+    cell_pd_n[0]: 0
+    cell_pd_cap[0]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_pd_free
+
+# Original: l2src/l2trans.lm1:5430
+fn: lm_compiler_def_free () int
+    @@@: cell_def c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_def))
+    @: cell_def_n int (cast: (@: int) (@ c.l2_def_n))
+    @: cell_def_cap int (cast: (@: int) (@ c.l2_def_cap))
+    if: cell_def[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_def[0]))
+    ---
+    cell_def[0]: 0
+    cell_def_n[0]: 0
+    cell_def_cap[0]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_def_free
+
+# Original: l2src/l2trans.lm1:5439
+fn: lm_compiler_inc_free () int
+    @@@: cell_inc c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_inc))
+    @: cell_inc_n int (cast: (@: int) (@ c.l2_inc_n))
+    @: cell_inc_cap int (cast: (@: int) (@ c.l2_inc_cap))
+    if: cell_inc[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) cell_inc[0]))
+    ---
+    cell_inc[0]: 0
+    cell_inc_n[0]: 0
+    cell_inc_cap[0]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_inc_free
+
+# Original: l2src/l2trans.lm1:5590
+fn: lm_compiler_pd_push (const: (@: t c.LmP0Text); const: (@: path char); const: (@: at c.LmP0Node)) int
+    @: cell_pd_cap int (cast: (@: int) (@ c.l2_pd_cap))
+    @: cell_pd_n int (cast: (@: int) (@ c.l2_pd_n))
+    @@@: cell_pd c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pd))
+    int: cap
+    size_t: nb
+    size_t: psz
+    @@: nn c.LmP0Text 0
+    if: t = 0
+        return: (cast: (int) (c.lm_compiler_error(path, at, "unsupported argument")))
+    t: c.lm_compiler_predef_import(t, path)
+    if: t = 0
+        return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "cannot hold the predef path")))
+    cap: cell_pd_cap[0]
+    if: cell_pd_n[0] >= cap
+        if: cap < 1
+            cap: 4
+        ---
+        if: cap > (c.INT_MAX / 2)
+            return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
+        cap: cap * 2
+        psz: sizeof(@: char)
+        if: c.lm_compiler_mul_ok((cast: (size_t) cap), psz) = 0
+            return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
+        nb: (cast: (size_t) cap) * psz
+        nn: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
+        if: nn = 0
+            return: (cast: (int) (c.lm_compiler_error(path, at, "out of memory")))
+        c.memset((cast: (@: void) nn), 0, nb)
+        if: cell_pd[0] != 0 && cell_pd_n[0] > 0
+            c.memcpy((cast: (@: void) nn), (cast: (@: void) cell_pd[0]), (cast: (size_t) cell_pd_n[0]) * psz)
+        ---
+        if: cell_pd[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) cell_pd[0]))
+        ---
+        cell_pd[0]: nn
+        cell_pd_cap[0]: cap
+    ---
+    cell_pd[0][cell_pd_n[0]]: (cast: (@: c.LmP0Text) t)
+    cell_pd_n[0]: cell_pd_n[0] + 1
+    return: (cast: (int) (0))
+end: lm_compiler_pd_push
+
+# Original: l2src/l2trans.lm1:5629
+fn: lm_compiler_def_push (const: (@: item c.LmP0Node); const: (@: path char)) int
+    @: cell_def_cap int (cast: (@: int) (@ c.l2_def_cap))
+    @: cell_def_n int (cast: (@: int) (@ c.l2_def_n))
+    @@@: cell_def c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_def))
+    int: cap
+    size_t: nb
+    size_t: psz
+    @@: nn c.LmP0Node 0
+    if: item = 0
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    cap: cell_def_cap[0]
+    if: cell_def_n[0] >= cap
+        if: cap < 1
+            cap: 4
+        ---
+        if: cap > (c.INT_MAX / 2)
+            return: (cast: (int) (c.lm_compiler_error(path, item, "size overflow")))
+        cap: cap * 2
+        psz: sizeof(@: char)
+        if: c.lm_compiler_mul_ok((cast: (size_t) cap), psz) = 0
+            return: (cast: (int) (c.lm_compiler_error(path, item, "size overflow")))
+        nb: (cast: (size_t) cap) * psz
+        nn: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc(nb))
+        if: nn = 0
+            return: (cast: (int) (c.lm_compiler_error(path, item, "out of memory")))
+        c.memset((cast: (@: void) nn), 0, nb)
+        if: cell_def[0] != 0 && cell_def_n[0] > 0
+            c.memcpy((cast: (@: void) nn), (cast: (@: void) cell_def[0]), (cast: (size_t) cell_def_n[0]) * psz)
+        ---
+        if: cell_def[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) cell_def[0]))
+        ---
+        cell_def[0]: nn
+        cell_def_cap[0]: cap
+    ---
+    cell_def[0][cell_def_n[0]]: (cast: (@: c.LmP0Node) item)
+    cell_def_n[0]: cell_def_n[0] + 1
+    return: (cast: (int) (0))
+end: lm_compiler_def_push
+
+# Original: l2src/l2trans.lm1:5665
+fn: lm_compiler_inc_push (const: (@: t c.LmP0Text); const: (@: path char); const: (@: at c.LmP0Node)) int
+    @: cell_inc_cap int (cast: (@: int) (@ c.l2_inc_cap))
+    @: cell_inc_n int (cast: (@: int) (@ c.l2_inc_n))
+    @@@: cell_inc c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_inc))
+    int: cap
+    size_t: nb
+    size_t: psz
+    @@: nn c.LmP0Text 0
+    if: t = 0
+        return: (cast: (int) (c.lm_compiler_error(path, at, "unsupported argument")))
+    cap: cell_inc_cap[0]
+    if: cell_inc_n[0] >= cap
+        if: cap < 1
+            cap: 4
+        ---
+        if: cap > (c.INT_MAX / 2)
+            return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
+        cap: cap * 2
+        psz: sizeof(@: char)
+        if: c.lm_compiler_mul_ok((cast: (size_t) cap), psz) = 0
+            return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
+        nb: (cast: (size_t) cap) * psz
+        nn: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
+        if: nn = 0
+            return: (cast: (int) (c.lm_compiler_error(path, at, "out of memory")))
+        c.memset((cast: (@: void) nn), 0, nb)
+        if: cell_inc[0] != 0 && cell_inc_n[0] > 0
+            c.memcpy((cast: (@: void) nn), (cast: (@: void) cell_inc[0]), (cast: (size_t) cell_inc_n[0]) * psz)
+        ---
+        if: cell_inc[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) cell_inc[0]))
+        ---
+        cell_inc[0]: nn
+        cell_inc_cap[0]: cap
+    ---
+    cell_inc[0][cell_inc_n[0]]: (cast: (@: c.LmP0Text) t)
+    cell_inc_n[0]: cell_inc_n[0] + 1
+    return: (cast: (int) (0))
+end: lm_compiler_inc_push
+
+# Original: l2src/l2trans.lm1:5701
+fn: lm_compiler_take_predef (const: (@: item c.LmP0Node); const: (@: path char)) int
+    @: f c.LmP0Field
+    if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    if: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (item\as\frame\body))) != 1
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_quoted((cast: (const: @: c.LmP0Text) (f\value\as\atom))) = 0
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    return: (cast: (int) (lm_compiler_pd_push((cast: (const: @: c.LmP0Text) (f\value\as\atom)), path, item)))
+end: lm_compiler_take_predef
+
+# Original: l2src/l2trans.lm1:5713
+fn: lm_compiler_take_profile (const: (@: item c.LmP0Node); const: (@: path char)) int
+    @: cell_profile_runtime int (cast: (@: int) (@ c.l2_profile_runtime))
+    @: f c.LmP0Field
+    if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (item\as\frame\body))) != 1
+        return: (cast: (int) (c.lm_compiler_error(path, item, "a profile names one profile")))
+    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (f\value\as\atom)), "runtime") = 0
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unknown profile")))
+    cell_profile_runtime[0]: 1
+    return: (cast: (int) (0))
+end: lm_compiler_take_profile
+
+# Original: l2src/l2trans.lm1:5723
+fn: lm_compiler_take_define (const: (@: item c.LmP0Node); const: (@: path char)) int
+    @: f c.LmP0Field
+    int: n 0
+    if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0 || item\as\frame\trailer != 0 || item\as\frame\body\trailer != 0
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    while: f != 0
+        if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+            return: (cast: (int) (c.lm_compiler_error(path, item, "define accepts flat L1 tokens")))
+        n: n + 1
+        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+    ---
+    if: n < 2
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    return: (cast: (int) (lm_compiler_def_push(item, path)))
+end: lm_compiler_take_define
+
+# Original: l2src/l2trans.lm1:5739
+fn: lm_compiler_write_defines (@: out c.FILE) int
+    @: cell_def_n int (cast: (@: int) (@ c.l2_def_n))
+    @@@: cell_def c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_def))
+    int: i 0
+    @: f c.LmP0Field
+    if: out = 0
+        return: (cast: (int) (1))
+    while: i < cell_def_n[0]
+        if: c.fputs("define:", out) < 0
+            return: (cast: (int) (1))
+        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (cell_def[0][i]\as\frame\body\first_field)))
+        while: f != 0
+            if: c.fputs(" ", out) < 0 || c.lm_compiler_write_text(out, (cast: (const: @: c.LmP0Text) (f\value\as\atom))) != 0
+                return: (cast: (int) (1))
+            f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+        ---
+        if: c.fputs("\n", out) < 0
+            return: (cast: (int) (1))
+        i: i + 1
+    ---
+    if: cell_def_n[0] != 0 && c.fputs("\n", out) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_write_defines
+
+# Original: l2src/l2trans.lm1:5761
+fn: lm_compiler_take_include (const: (@: item c.LmP0Node); const: (@: path char)) int
+    @: f c.LmP0Field
+    if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    if: f = 0
+        return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+    while: f != 0
+        if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_quoted((cast: (const: @: c.LmP0Text) (f\value\as\atom))) = 0
+            return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
+        if: lm_compiler_inc_push((cast: (const: @: c.LmP0Text) (f\value\as\atom)), path, item) != 0
+            return: (cast: (int) (1))
+        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+    return: (cast: (int) (0))
+end: lm_compiler_take_include
+
+# Original: l2src/l2trans.lm1:17759
+fn: lm_compiler_intern_prove (const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    @: cell_m_n int (cast: (@: int) (@ c.l2_m_n))
+    @@: cell_m_sig unsigned (cast: (@@: unsigned) (@ c.l2_m_sig))
+    @: cell_intern_again unsigned (cast: (@: unsigned) (@ c.l2_intern_again))
+    @: cell_alloc_err int (cast: (@: int) (@ c.l2_alloc_err))
+    @: cell_intern_swap unsigned (cast: (@: unsigned) (@ c.l2_intern_swap))
+    @@: cell_m_arity int (cast: (@@: int) (@ c.l2_m_arity))
+    @@@: cell_m_f0 c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_m_f0))
+    @@@: cell_m_f1 c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_m_f1))
+    @: cell_intern_probe unsigned (cast: (@: unsigned) (@ c.l2_intern_probe))
+    @: cell_sigv unsigned (cast: (@: unsigned) (@ c.l2_sigv))
+    unsigned: id
+    int: two
+    if: c.lm_compiler_mul3_ok(2U, 3U, 4U) = 0
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern broken")))
+    if: c.lm_compiler_mul3_ok((cast: (size_t) -1), 2U, 1U) != 0
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern broken")))
+    if: cell_m_n[0] = 0
+        return: (cast: (int) (0))
+    id: cell_m_sig[0][0]
+    cell_intern_again[0]: lm_compiler_intern_mi(0)
+    if: cell_intern_again[0] = 0U && cell_alloc_err[0] = 2
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "size overflow")))
+    if: cell_intern_again[0] = 0U && cell_alloc_err[0] != 0
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "out of memory")))
+    if: id = 0U || cell_intern_again[0] != id
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern broken")))
+    cell_intern_swap[0]: 0U
+    two: 0
+    if: cell_m_arity[0][0] = 2 && cell_m_f0[0][0] != 0 && cell_m_f1[0][0] != 0
+        two: 1
+    if: two != 0 && c.lm_compiler_text_same(cell_m_f0[0][0], cell_m_f1[0][0]) = 0
+        cell_intern_swap[0]: lm_compiler_intern_pair((cast: (const: @: char) (cell_m_f1[0][0]\data)), (cast: (size_t) (cell_m_f1[0][0]\length)), (cast: (const: @: char) (cell_m_f0[0][0]\data)), (cast: (size_t) (cell_m_f0[0][0]\length)))
+    if: two != 0 && cell_intern_swap[0] = 0U && cell_alloc_err[0] = 2
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "size overflow")))
+    if: two != 0 && cell_intern_swap[0] = 0U && cell_alloc_err[0] != 0
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "out of memory")))
+    if: two != 0 && c.lm_compiler_text_same(cell_m_f0[0][0], cell_m_f1[0][0]) = 0 && (cell_intern_swap[0] = 0U || cell_intern_swap[0] = id)
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern failed to distinguish swapped formals")))
+    cell_intern_probe[0]: lm_compiler_intern_pair("a", 1U, "b", 1U)
+    if: cell_intern_probe[0] = 0U && cell_alloc_err[0] = 2
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "size overflow")))
+    if: cell_intern_probe[0] = 0U && cell_alloc_err[0] != 0
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "out of memory")))
+    if: cell_intern_probe[0] = 0U
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern broken")))
+    # D-107 (REVIEW 59c74b3, fable_pc): the probe is the contract of two int inputs `a`, `b` and an
+    # int result; whether the unit's first method IS that contract is the interner's own equality
+    # (l2_intern_eq_mi: arity, input types, result, throws, names) -- not a look at two names and one
+    # type, which took `fn: zz (int: a; int: b) size_t` for the probe's and refused the unit.
+    if: two != 0 && lm_compiler_intern_eq_mi(cell_intern_probe[0] - 1U, 0) != 0 && cell_intern_probe[0] != id
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern failed memcmp of equal names")))
+    if: two != 0 && lm_compiler_intern_eq_mi(cell_intern_probe[0] - 1U, 0) = 0 && cell_intern_probe[0] = id
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern false-equal distinct contracts")))
+    cell_sigv[0]: id
+    return: (cast: (int) (0))
+end: lm_compiler_intern_prove

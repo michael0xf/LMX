@@ -1,0 +1,3324 @@
+# Ordinary L2 frontend helpers; declarations come from the existing L3 recipe.
+# One inherited descriptor-word cache cell is explicit; no new state/context/registry.
+predef: "l2src/l2_application.h.lm1"
+include: "<stddef.h>" "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
+
+fn: lm_compiler_text_eq (const: (@: text c.LmP0Text); const: (@: s char)) int
+    size_t: n
+    if: text = 0 || s = 0
+        return: (cast: (int) (0))
+    n: c.strlen(s)
+    if: text\data = 0
+        return: (cast: (int) (n = 0U))
+    return: (cast: (int) (text\length = n && c.memcmp(text\data, s, n) = 0))
+end: lm_compiler_text_eq
+
+fn: lm_compiler_ignored (const: (@: source_node c.LmP0Node)) int
+    if: source_node = 0
+        return: (cast: (int) (1))
+    if: source_node\kind = c.LM_P0_NODE_DISABLED
+        return: (cast: (int) (1))
+    if: (source_node\flags & (c.LM_P0_NODE_INACTIVE | c.LM_P0_NODE_MIX)) != 0U
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_ignored
+
+fn: lm_compiler_msg_copy (const: (@: s char)) @: char
+    @: p char
+    size_t: n
+    if: s = 0
+        return: (cast: (@: char) (0))
+    n: c.strlen(s)
+    p: (cast: (@: char) c.malloc(n + 1U))
+    if: p = 0
+        return: (cast: (@: char) (0))
+    c.memcpy((cast: (@: void) p), s, n + 1U)
+    return: (cast: (@: char) (p))
+end: lm_compiler_msg_copy
+
+fn: lm_compiler_msg_drop (@: p char) @: char
+    if: p != 0
+        c.free((cast: (@: void) p))
+    return: (cast: (@: char) (0))
+end: lm_compiler_msg_drop
+
+fn: lm_compiler_msg_text (const: (@: p char)) const: @: char
+    if: p = 0
+        return: (cast: (const: @: char) (""))
+    return: (cast: (const: @: char) (p))
+end: lm_compiler_msg_text
+
+fn: lm_compiler_node_in (const: (@: n c.LmP0Node); const: (@: x c.LmP0Node)) int
+    if: n = 0 || x = 0
+        return: (cast: (int) (0))
+    if: n = x
+        return: (cast: (int) (1))
+    if: n\as = 0
+        return: (cast: (int) (0))
+    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0
+        if: lm_compiler_struct_has((cast: (const: @: c.LmP0Structure) n\as\frame\body), x) != 0
+            return: (cast: (int) (1))
+        if: n\as\frame\trailer != 0
+            return: (cast: (int) (lm_compiler_struct_has((cast: (const: @: c.LmP0Structure) n\as\frame\trailer\body), x)))
+        return: (cast: (int) (0))
+    if: n\kind = c.LM_P0_NODE_STRUCTURE
+        return: (cast: (int) (lm_compiler_struct_has((cast: (const: @: c.LmP0Structure) n\as\structure), x)))
+    return: (cast: (int) (0))
+end: lm_compiler_node_in
+
+fn: lm_compiler_struct_has (const: (@: s c.LmP0Structure); const: (@: x c.LmP0Node)) int
+    @: f c.LmP0Field
+    if: s = 0
+        return: (cast: (int) (0))
+    f: s\first_field
+    while: f != 0
+        if: lm_compiler_node_in((cast: (const: @: c.LmP0Node) f\value), x) != 0
+            return: (cast: (int) (1))
+        f: f\next
+    ---
+    if: s\trailer != 0
+        return: (cast: (int) (lm_compiler_struct_has((cast: (const: @: c.LmP0Structure) s\trailer\body), x)))
+    return: (cast: (int) (0))
+end: lm_compiler_struct_has
+
+fn: lm_compiler_act_tx (@: base c.L2Tx; int: i) @: c.L2Tx
+    if: base = 0 || i < 0
+        return: (cast: (@: c.L2Tx) (0))
+    return: (cast: (@: c.L2Tx) (base + i))
+end: lm_compiler_act_tx
+
+fn: lm_compiler_mul_ok (size_t: n; size_t: sz) int
+    if: sz = 0U
+        return: (cast: (int) (1))
+    if: n > ((cast: (size_t) -1) / sz)
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_mul_ok
+
+fn: lm_compiler_mul3_ok (size_t: a; size_t: b; size_t: c) int
+    size_t: p
+    if: lm_compiler_mul_ok(a, b) = 0
+        return: (cast: (int) (0))
+    p: a * b
+    if: lm_compiler_mul_ok(p, c) = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_mul3_ok
+
+fn: lm_compiler_path_is_lm2 (const: (@: path char)) int
+    size_t: n
+    if: path = 0
+        return: (cast: (int) (0))
+    n: c.strlen(path)
+    if: n < 4U
+        return: (cast: (int) (0))
+    if: path[n - 4U] != 46
+        return: (cast: (int) (0))
+    if: path[n - 3U] != 108 && path[n - 3U] != 76
+        return: (cast: (int) (0))
+    if: path[n - 2U] != 109 && path[n - 2U] != 77
+        return: (cast: (int) (0))
+    if: path[n - 1U] != 50
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_path_is_lm2
+
+fn: lm_compiler_next_active (@: field c.LmP0Field) @: c.LmP0Field
+    while: field != 0 && lm_compiler_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    return: (cast: (@: c.LmP0Field) (field))
+end: lm_compiler_next_active
+
+fn: lm_compiler_count_active_tail (@: field c.LmP0Field) int
+    int: n 0
+    field: lm_compiler_next_active(field)
+    while: field != 0
+        n: n + 1
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    return: (cast: (int) (n))
+end: lm_compiler_count_active_tail
+
+fn: lm_compiler_count_active (const: (@: body c.LmP0Structure)) int
+    if: body = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_count_active_tail((cast: (@: c.LmP0Field) body\first_field))))
+end: lm_compiler_count_active
+
+fn: lm_compiler_digits (const: (@: text c.LmP0Text)) int
+    size_t: i
+    if: text = 0 || text\data = 0 || text\length = 0U
+        return: (cast: (int) (0))
+    if: text\length > 1U && text\data[0] = 48
+        return: (cast: (int) (0))
+    i: 0U
+    while: i < text\length
+        if: text\data[i] < 48 || text\data[i] > 57
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) (1))
+end: lm_compiler_digits
+
+fn: lm_compiler_num (const: (@: text c.LmP0Text)) int
+    size_t: n
+    size_t: i
+    int: base 10
+    int: d
+    if: text = 0 || text\data = 0 || text\length = 0U
+        return: (cast: (int) (0))
+    n: text\length
+    if: text\data[n - 1U] = 85 || text\data[n - 1U] = 117
+        n: n - 1U
+    if: n = 0U
+        return: (cast: (int) (0))
+    if: n > 1U && text\data[0] = 48
+        base: 8
+        if: text\data[1] = 120 || text\data[1] = 88
+            base: 16
+            i: 2U
+            if: i = n
+                return: (cast: (int) (0))
+        ---
+    ---
+    if: base = 10 || base = 8
+        i: 0U
+    ---
+    while: i < n
+        d: -1
+        if: text\data[i] >= 48 && text\data[i] <= 57
+            d: text\data[i] - 48
+        if: text\data[i] >= 65 && text\data[i] <= 70
+            d: text\data[i] - 65 + 10
+        if: text\data[i] >= 97 && text\data[i] <= 102
+            d: text\data[i] - 97 + 10
+        if: d < 0 || d >= base
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) (1))
+end: lm_compiler_num
+
+fn: lm_compiler_num_value_span (const: (@: text c.LmP0Text); size_t: start; size_t: stop; @: out size_t) int
+    size_t: i start
+    size_t: acc 0U
+    size_t: digit 0U
+    size_t: base 10U
+    if: text = 0 || text\data = 0 || out = 0 || start >= stop || stop > text\length
+        return: (cast: (int) (0))
+    if: stop - start > 1U && text\data[start] = 48
+        base: 8U
+        if: text\data[start + 1U] = 120 || text\data[start + 1U] = 88
+            base: 16U
+            i: start + 2U
+            if: i >= stop
+                return: (cast: (int) (0))
+        ---
+    ---
+    while: i < stop
+        digit: (cast: (size_t) -1)
+        if: text\data[i] >= 48 && text\data[i] <= 57
+            digit: (cast: (size_t) (text\data[i] - 48))
+        if: text\data[i] >= 65 && text\data[i] <= 70
+            digit: (cast: (size_t) (text\data[i] - 65 + 10))
+        if: text\data[i] >= 97 && text\data[i] <= 102
+            digit: (cast: (size_t) (text\data[i] - 97 + 10))
+        if: digit >= base || acc > (((cast: (size_t) -1) - digit) / base)
+            return: (cast: (int) (0))
+        acc: acc * base + digit
+        i: i + 1U
+    ---
+    \out: acc
+    return: (cast: (int) (1))
+end: lm_compiler_num_value_span
+
+fn: lm_compiler_num_value (const: (@: text c.LmP0Text); @: out size_t) int
+    size_t: stop
+    if: lm_compiler_num(text) = 0 || out = 0
+        return: (cast: (int) (0))
+    stop: text\length
+    if: text\data[stop - 1U] = 85 || text\data[stop - 1U] = 117
+        stop: stop - 1U
+    return: (cast: (int) (lm_compiler_num_value_span(text, 0U, stop, out)))
+end: lm_compiler_num_value
+
+fn: lm_compiler_octal_digits (const: (@: text c.LmP0Text)) int
+    size_t: n
+    size_t: i 0U
+    if: text = 0 || text\data = 0 || text\length = 0U
+        return: (cast: (int) (0))
+    n: text\length
+    if: text\data[n - 1U] = 85 || text\data[n - 1U] = 117
+        n: n - 1U
+    if: n = 0U
+        return: (cast: (int) (0))
+    while: i < n
+        if: text\data[i] < 48 || text\data[i] > 55
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) (1))
+end: lm_compiler_octal_digits
+
+fn: lm_compiler_signed_num (const: (@: text c.LmP0Text)) int
+    size_t: i 1U
+    if: text = 0 || text\data = 0 || text\length < 2U || text\data[0] != 45
+        return: (cast: (int) (0))
+    if: text\length > 2U && text\data[1] = 48
+        return: (cast: (int) (0))
+    while: i < text\length
+        if: text\data[i] < 48 || text\data[i] > 57
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) (1))
+end: lm_compiler_signed_num
+
+fn: lm_compiler_int_fits (const: (@: text c.LmP0Text)) int
+    size_t: value 0U
+    if: lm_compiler_num_value(text, @ value) = 0
+        return: (cast: (int) (0))
+    if: text\data[text\length - 1U] = 85 || text\data[text\length - 1U] = 117
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) (value <= (cast: (size_t) c.INT_MAX)))))
+end: lm_compiler_int_fits
+
+fn: lm_compiler_int_literal_bits (const: (@: text c.LmP0Text); @: out_bits size_t) int
+    size_t: i 1U
+    size_t: acc 0U
+    size_t: d 0U
+    size_t: lim
+    int: v 0
+    if: text = 0 || out_bits = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_num(text) != 0
+        if: lm_compiler_int_fits(text) = 0
+            return: (cast: (int) (2))
+        \out_bits: lm_compiler_literal_value(text)
+        return: (cast: (int) (1))
+    if: lm_compiler_signed_num(text) = 0
+        return: (cast: (int) (0))
+    lim: (cast: (size_t) c.INT_MAX) + 1U
+    while: i < text\length
+        d: (cast: (size_t) (text\data[i] - 48))
+        if: acc > (lim - d) / 10U
+            return: (cast: (int) (2))
+        acc: acc * 10U + d
+        i: i + 1U
+    ---
+    if: acc > lim
+        return: (cast: (int) (2))
+    if: acc = lim
+        v: 0 - c.INT_MAX - 1
+    else:
+        v: 0 - (cast: (int) acc)
+    ---
+    \out_bits: (cast: (size_t) v)
+    return: (cast: (int) (1))
+end: lm_compiler_int_literal_bits
+
+fn: lm_compiler_lit_kind_from_ft (int: ft) int
+    if: ft = 0
+        return: (cast: (int) (0))
+    if: ft = 1
+        return: (cast: (int) (1))
+    if: ft = 2
+        return: (cast: (int) (2))
+    if: ft = 34
+        return: (cast: (int) (3))
+    if: ft = 36
+        return: (cast: (int) (4))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_lit_kind_from_ft
+
+fn: lm_compiler_lit_kind_from_own (int: oty) int
+    # Own/loc storage uses 0 for int (same hole as dynamic inputs).
+    if: oty = 0 || oty = 3
+        return: (cast: (int) (0))
+    if: oty = 1
+        return: (cast: (int) (1))
+    if: oty = 2
+        return: (cast: (int) (2))
+    if: oty = 6
+        return: (cast: (int) (3))
+    if: oty = 36
+        return: (cast: (int) (4))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_lit_kind_from_own
+
+fn: lm_compiler_lit_kind_from_ret (int: mret) int
+    if: mret = 0
+        return: (cast: (int) (0))
+    if: mret = 1
+        return: (cast: (int) (1))
+    if: mret = 2
+        return: (cast: (int) (2))
+    if: mret = 33
+        return: (cast: (int) (3))
+    if: mret = 36
+        return: (cast: (int) (4))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_lit_kind_from_ret
+
+fn: lm_compiler_u32_fits (const: (@: text c.LmP0Text)) int
+    size_t: value 0U
+    if: lm_compiler_num_value(text, @ value) = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) (value <= (cast: (size_t) (cast: (unsigned) -1))))))
+end: lm_compiler_u32_fits
+
+fn: lm_compiler_char_digit_fits (const: (@: text c.LmP0Text)) int
+    size_t: bits 0U
+    int: value
+    if: lm_compiler_int_literal_bits(text, @ bits) != 1
+        return: (cast: (int) (0))
+    value: (cast: (int) bits)
+    return: (cast: (int) ((cast: (int) (value >= c.CHAR_MIN && value <= c.CHAR_MAX))))
+end: lm_compiler_char_digit_fits
+
+fn: lm_compiler_size_t_fits_text (const: (@: text c.LmP0Text)) int
+    size_t: value 0U
+    return: (cast: (int) (lm_compiler_num_value(text, @ value)))
+end: lm_compiler_size_t_fits_text
+
+fn: lm_compiler_literal_fits_kind (const: (@: text c.LmP0Text); int: kind) int
+    if: kind < 0 || text = 0
+        return: (cast: (int) (1))
+    if: kind = 0
+        return: (cast: (int) (lm_compiler_int_fits(text)))
+    if: kind = 1
+        return: (cast: (int) (lm_compiler_char_digit_fits(text)))
+    if: kind = 2
+        return: (cast: (int) (lm_compiler_size_t_fits_text(text)))
+    if: kind = 3
+        return: (cast: (int) (lm_compiler_u32_fits(text)))
+    if: kind = 4
+        return: (cast: (int) (lm_compiler_u32_fits(text)))
+    return: (cast: (int) (1))
+end: lm_compiler_literal_fits_kind
+
+fn: lm_compiler_block_until (const: (@: stmt c.LmP0Node)) @: c.LmP0Structure
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_STRUCTURE || stmt\as = 0 || stmt\as\structure = 0 || stmt\as\structure\trailer = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    if: stmt\as\structure\trailer\spelling = 0 || lm_compiler_text_eq((cast: (const: @: c.LmP0Text) stmt\as\structure\trailer\spelling), "until") = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    return: (cast: (@: c.LmP0Structure) (stmt\as\structure\trailer\body))
+end: lm_compiler_block_until
+
+fn: lm_compiler_end_named (const: (@: frame c.LmP0Frame); const: (@: name char)) int
+    @: field c.LmP0Field
+    if: frame = 0 || frame\trailer = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "end") = 0
+        return: (cast: (int) (0))
+    if: frame\trailer\body = 0
+        return: (cast: (int) (0))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) frame\trailer\body\first_field))
+    if: field = 0 || lm_compiler_next_active((cast: (@: c.LmP0Field) field\next)) != 0
+        return: (cast: (int) (0))
+    if: field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_text_eq((cast: (const: @: c.LmP0Text) field\value\as\atom), name)))
+end: lm_compiler_end_named
+
+fn: lm_compiler_fn_close (const: (@: frame c.LmP0Frame); const: (@: name c.LmP0Text); const: (@: head char)) int
+    @: field c.LmP0Field
+    @: actual c.LmP0Text
+    if: frame = 0
+        return: (cast: (int) (1))
+    if: frame\trailer = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "return")
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "end") = 0
+        return: (cast: (int) (1))
+    if: frame\trailer\body = 0
+        return: (cast: (int) (1))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) frame\trailer\body\first_field))
+    if: field = 0 || lm_compiler_next_active((cast: (@: c.LmP0Field) field\next)) != 0
+        return: (cast: (int) (1))
+    if: field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (1))
+    actual: field\value\as\atom
+    if: name != 0 && lm_compiler_text_same(actual, name)
+        return: (cast: (int) (0))
+    if: head != 0 && lm_compiler_text_eq(actual, head)
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_fn_close
+
+fn: lm_compiler_source_ret_tr (const: (@: frame c.LmP0Frame)) @: c.LmP0Structure
+    if: frame = 0 || frame\trailer = 0 || frame\trailer\spelling = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "return") = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    return: (cast: (@: c.LmP0Structure) (frame\trailer\body))
+end: lm_compiler_source_ret_tr
+
+fn: lm_compiler_frame_head (const: (@: source_node c.LmP0Node); const: (@: name char)) int
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_text_eq((cast: (const: @: c.LmP0Text) source_node\as\frame\head), name)))
+end: lm_compiler_frame_head
+
+fn: lm_compiler_empty_struct (const: (@: source_node c.LmP0Node)) int
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_STRUCTURE || source_node\as = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_count_active((cast: (const: @: c.LmP0Structure) source_node\as\structure)) = 0))
+end: lm_compiler_empty_struct
+
+fn: lm_compiler_triple_fence_n (const: (@: t c.LmP0Text)) size_t
+    int: q
+    if: t = 0 || t\data = 0 || t\length < 6U
+        return: (cast: (size_t) (0U))
+    q: (cast: (int) t\data[0])
+    if: q != 34 && q != 39
+        return: (cast: (size_t) (0U))
+    if: t\data[1] != t\data[0] || t\data[2] != t\data[0]
+        return: (cast: (size_t) (0U))
+    if: t\data[t\length - 1U] != t\data[0] || t\data[t\length - 2U] != t\data[0] || t\data[t\length - 3U] != t\data[0]
+        return: (cast: (size_t) (0U))
+    return: (cast: (size_t) (3U))
+end: lm_compiler_triple_fence_n
+
+fn: lm_compiler_triple_q (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_triple_fence_n(t) = 0U
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) t\data[0])))
+end: lm_compiler_triple_q
+
+fn: lm_compiler_quoted (const: (@: t c.LmP0Text)) int
+    if: t = 0 || t\data = 0 || t\length < 2U
+        return: (cast: (int) (0))
+    if: lm_compiler_triple_q(t) != 0
+        return: (cast: (int) (1))
+    if: t\data[0] != 34 || t\data[t\length - 1U] != 34
+        return: (cast: (int) (0))
+    if: t\length >= 6U && t\data[1] = 34 && t\data[2] = 34
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_quoted
+
+fn: lm_compiler_fmt_l1_string (@: dest char; size_t: cap; const: (@: data char); size_t: n) int
+    size_t: i 0U
+    size_t: o 0U
+    int: ch
+    size_t: need
+    if: dest = 0 || cap < 3U
+        return: (cast: (int) (1))
+    dest[o]: 34
+    o: o + 1U
+    while: i < n
+        if: data = 0
+            return: (cast: (int) (1))
+        ch: (cast: (int) data[i])
+        if: ch < 0
+            ch: ch + 256
+        need: 1U
+        if: ch = 34 || ch = 92 || ch = 10 || ch = 13 || ch = 63
+            need: 2U
+        else:
+            if: ch < 32 || ch > 126
+                need: 4U
+            ---
+        ---
+        if: o + need + 2U > cap
+            return: (cast: (int) (1))
+        if: ch = 34
+            dest[o]: 92
+            dest[o + 1U]: 34
+            o: o + 2U
+            i: i + 1U
+            continue
+        if: ch = 92
+            dest[o]: 92
+            dest[o + 1U]: 92
+            o: o + 2U
+            i: i + 1U
+            continue
+        if: ch = 10
+            dest[o]: 92
+            dest[o + 1U]: 110
+            o: o + 2U
+            i: i + 1U
+            continue
+        if: ch = 13
+            dest[o]: 92
+            dest[o + 1U]: 114
+            o: o + 2U
+            i: i + 1U
+            continue
+        if: ch = 63
+            dest[o]: 92
+            dest[o + 1U]: 63
+            o: o + 2U
+            i: i + 1U
+            continue
+        if: ch < 32 || ch > 126
+            dest[o]: 92
+            dest[o + 1U]: (cast: (char) (48 + (ch / 64)))
+            dest[o + 2U]: (cast: (char) (48 + ((ch / 8) % 8)))
+            dest[o + 3U]: (cast: (char) (48 + (ch % 8)))
+            o: o + 4U
+            i: i + 1U
+            continue
+        dest[o]: (cast: (char) ch)
+        o: o + 1U
+        i: i + 1U
+    dest[o]: 34
+    dest[o + 1U]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_fmt_l1_string
+
+fn: lm_compiler_write_text (@: out c.FILE; const: (@: t c.LmP0Text)) int
+    if: out = 0 || t = 0 || t\data = 0
+        return: (cast: (int) (1))
+    if: t\length = 0U
+        return: (cast: (int) (0))
+    if: c.fwrite(t\data, 1U, t\length, out) != t\length
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_write_text
+
+fn: lm_compiler_root_method_head (const: (@: head c.LmP0Text)) int
+    return: (cast: (int) ((cast: (int) (lm_compiler_text_eq(head, "fn") || lm_compiler_text_eq(head, "sub")))))
+end: lm_compiler_root_method_head
+
+fn: lm_compiler_method_declaration_name (const: (@: source_node c.LmP0Node)) @: c.LmP0Text
+    if: lm_compiler_root_method_head(lm_compiler_app_head(source_node)) = 0 || lm_compiler_count_active(lm_compiler_app_actuals(source_node)) <= 1
+        return: (cast: (@: c.LmP0Text) (0))
+    return: (cast: (@: c.LmP0Text) (lm_compiler_os_fn_name(source_node)))
+end: lm_compiler_method_declaration_name
+
+fn: lm_compiler_source_parent_body (const: (@: body c.LmP0Structure); const: (@: source_node c.LmP0Node)) @: c.LmP0Structure
+    @: field c.LmP0Field
+    @: item c.LmP0Node
+    @: found c.LmP0Structure
+    if: body = 0 || source_node = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
+    while: field != 0
+        item: field\value
+        if: item = source_node
+            return: (cast: (@: c.LmP0Structure) ((cast: (@: c.LmP0Structure) body)))
+        if: item != 0 && item\as != 0
+            found: 0
+            if: item\kind = c.LM_P0_NODE_STRUCTURE
+                found: lm_compiler_source_parent_body((cast: (const: @: c.LmP0Structure) item\as\structure), source_node)
+            if: item\kind = c.LM_P0_NODE_FRAME && item\as\frame != 0
+                found: lm_compiler_source_parent_body((cast: (const: @: c.LmP0Structure) item\as\frame\body), source_node)
+            if: found != 0
+                return: (cast: (@: c.LmP0Structure) (found))
+            ---
+        ---
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    ---
+    return: (cast: (@: c.LmP0Structure) (0))
+end: lm_compiler_source_parent_body
+
+fn: lm_compiler_source_inline_member (const: (@: body c.LmP0Structure); const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    @: item c.LmP0Node
+    if: body = 0 || source_node = 0
+        return: (cast: (int) (0))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
+    while: field != 0
+        item: field\value
+        if: item = source_node
+            return: (cast: (int) (1))
+        if: item != 0 && item\as != 0
+            if: item\kind = c.LM_P0_NODE_STRUCTURE && lm_compiler_source_inline_member((cast: (const: @: c.LmP0Structure) item\as\structure), source_node) != 0
+                return: (cast: (int) (1))
+            if: item\kind = c.LM_P0_NODE_FRAME && item\as\frame != 0 && lm_compiler_frame_head(item, "catch") = 0 && lm_compiler_frame_head(item, "fn") = 0 && lm_compiler_frame_head(item, "fm") = 0 && lm_compiler_frame_head(item, "sub") = 0 && lm_compiler_source_inline_member((cast: (const: @: c.LmP0Structure) item\as\frame\body), source_node) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_source_inline_member
+
+fn: lm_compiler_receiver_word (const: (@: t c.LmP0Text)) int
+    return: (cast: (int) ((cast: (int) (lm_compiler_text_eq(t, "sendMessage") || lm_compiler_text_eq(t, "receiveMessage") || lm_compiler_text_eq(t, "adopt") || lm_compiler_text_eq(t, "call") || lm_compiler_text_eq(t, "merge") || lm_compiler_text_eq(t, "table") || lm_compiler_text_eq(t, "catch") || lm_compiler_text_eq(t, "throw") || lm_compiler_text_eq(t, "throws") || lm_compiler_text_eq(t, "until") || lm_compiler_text_eq(t, "end") || lm_compiler_text_eq(t, "sub") || lm_compiler_text_eq(t, "fm") || lm_compiler_text_eq(t, "synchronized") || lm_compiler_text_eq(t, "length") || lm_compiler_text_eq(t, "cast")))))
+end: lm_compiler_receiver_word
+
+fn: lm_compiler_retained_body (const: (@: fr c.LmP0Frame)) int
+    return: (cast: (int) ((cast: (int) (fr != 0 && fr\body != 0))))
+end: lm_compiler_retained_body
+
+fn: lm_compiler_tree_branch_root (const: (@: n c.LmP0Node); const: (@: t c.LmP0Text)) int
+    @: f c.LmP0Field
+    if: n = 0 || n\kind != c.LM_P0_NODE_FRAME || n\as = 0 || n\as\frame = 0 || n\as\frame\body = 0
+        return: (cast: (int) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) n\as\frame\body\first_field))
+    if: lm_compiler_frame_head(n, "()") != 0
+        return: (cast: (int) ((cast: (int) (f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && lm_compiler_text_same((cast: (const: @: c.LmP0Text) f\value\as\atom), t) != 0))))
+    if: lm_compiler_frame_head(n, "independent") = 0 && lm_compiler_frame_head(n, "const") = 0 && lm_compiler_frame_head(n, "immutable") = 0
+        return: (cast: (int) (0))
+    while: f != 0
+        if: lm_compiler_tree_branch_root((cast: (const: @: c.LmP0Node) f\value), t) != 0
+            return: (cast: (int) (1))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_tree_branch_root
+
+fn: lm_compiler_ns_field_word (const: (@: h c.LmP0Text)) int
+    if: h = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq(h, "size_t") || lm_compiler_text_eq(h, "int") || lm_compiler_text_eq(h, "unsigned") || lm_compiler_text_eq(h, "ulong") || lm_compiler_text_eq(h, "char")
+        return: (cast: (int) (1))
+    return: (cast: (int) ((cast: (int) (lm_compiler_text_eq(h, "[]") || lm_compiler_text_eq(h, "()") || lm_compiler_text_eq(h, "fn")))))
+end: lm_compiler_ns_field_word
+
+fn: lm_compiler_ident_word (const: (@: t c.LmP0Text)) int
+    size_t: i
+    unsigned: ch
+    if: t = 0 || t\data = 0 || t\length = 0U
+        return: (cast: (int) (0))
+    ch: (cast: (unsigned) t\data[0])
+    if: ch != 95U && (ch < 65U || ch > 90U) && (ch < 97U || ch > 122U)
+        return: (cast: (int) (0))
+    i: 1U
+    while: i < t\length
+        ch: (cast: (unsigned) t\data[i])
+        if: ch != 95U && (ch < 65U || ch > 90U) && (ch < 97U || ch > 122U) && (ch < 48U || ch > 57U)
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) (1))
+end: lm_compiler_ident_word
+
+fn: lm_compiler_ident (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_ident_word(t) = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq(t, "fn") || lm_compiler_text_eq(t, "int") || lm_compiler_text_eq(t, "return") || lm_compiler_text_eq(t, "if") || lm_compiler_text_eq(t, "else") || lm_compiler_text_eq(t, "while") || lm_compiler_text_eq(t, "for") || lm_compiler_text_eq(t, "node")
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_ident
+
+fn: lm_compiler_text_same (const: (@: a c.LmP0Text); const: (@: b c.LmP0Text)) int
+    if: a = 0 || b = 0 || a\data = 0 || b\data = 0
+        return: (cast: (int) (0))
+    if: a\length != b\length
+        return: (cast: (int) (0))
+    return: (cast: (int) (c.memcmp(a\data, b\data, a\length) = 0))
+end: lm_compiler_text_same
+
+fn: lm_compiler_own_ty_word (int: ty) @: char
+    if: ty = 0
+        return: (cast: (@: char) ("int"))
+    if: ty = 1
+        return: (cast: (@: char) ("char"))
+    if: ty = 2
+        return: (cast: (@: char) ("size_t"))
+    if: ty = 3
+        return: (cast: (@: char) ("unsigned"))
+    if: ty = 36
+        return: (cast: (@: char) ("ulong"))
+    return: (cast: (@: char) ("?"))
+end: lm_compiler_own_ty_word
+
+fn: lm_compiler_conversion_refused_msg (@: dest char; int: from_ty; int: to_ty) int
+    if: dest = 0
+        return: (cast: (int) (1))
+    if: c.snprintf(dest, 256U, "conversion %s -> %s: converters not ported yet (S7)", lm_compiler_own_ty_word(from_ty), lm_compiler_own_ty_word(to_ty)) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_conversion_refused_msg
+
+fn: lm_compiler_write_c_name (@: out c.FILE; const: (@: t c.LmP0Text)) int
+    c.LmP0Text: name
+    if: t = 0 || lm_compiler_c_stmt_door(t) = 0
+        return: (cast: (int) (lm_compiler_write_text(out, t)))
+    name\data: t\data + 2U
+    name\length: t\length - 2U
+    return: (cast: (int) (lm_compiler_write_text(out, @ name)))
+end: lm_compiler_write_c_name
+
+fn: lm_compiler_app_head (const: (@: n c.LmP0Node)) @: c.LmP0Text
+    if: n = 0 || n\as = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0
+        return: (cast: (@: c.LmP0Text) (n\as\frame\head))
+    if: n\kind = c.LM_P0_NODE_ATOM && n\as\atom != 0 && (lm_compiler_ident_word((cast: (const: @: c.LmP0Text) n\as\atom)) != 0 || lm_compiler_c_stmt_door((cast: (const: @: c.LmP0Text) n\as\atom)) != 0)
+        return: (cast: (@: c.LmP0Text) (n\as\atom))
+    return: (cast: (@: c.LmP0Text) (0))
+end: lm_compiler_app_head
+
+fn: lm_compiler_app_actuals (const: (@: n c.LmP0Node)) @: c.LmP0Structure
+    if: n = 0 || n\as = 0 || n\kind != c.LM_P0_NODE_FRAME || n\as\frame = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    return: (cast: (@: c.LmP0Structure) (n\as\frame\body))
+end: lm_compiler_app_actuals
+
+fn: lm_compiler_unit_word (const: (@: t c.LmP0Text)) int
+    return: (cast: (int) ((cast: (int) (lm_compiler_text_eq(t, "predef") || lm_compiler_text_eq(t, "define") || lm_compiler_text_eq(t, "include") || lm_compiler_text_eq(t, "profile") || lm_compiler_text_eq(t, "prototype") || lm_compiler_text_eq(t, "os")))))
+end: lm_compiler_unit_word
+
+fn: lm_compiler_exact_ident (const: (@: t c.LmP0Text); @: out c.LmP0Text) int
+    if: t = 0 || t\data = 0 || out = 0 || t\length < 3U || t\data[0] != 96 || t\data[t\length - 1U] != 96
+        return: (cast: (int) (0))
+    out\data: t\data + 1U
+    out\length: t\length - 2U
+    return: (cast: (int) (lm_compiler_ident_word(out)))
+end: lm_compiler_exact_ident
+
+fn: lm_compiler_bind_spelling (const: (@: t c.LmP0Text)) int
+    c.LmP0Text: v
+    if: lm_compiler_ident_word(t) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (lm_compiler_exact_ident(t, @ v)))
+end: lm_compiler_bind_spelling
+
+fn: lm_compiler_bind_at (const: (@: at c.LmP0Node); const: (@: t c.LmP0Text)) const: @: c.LmP0Node
+    @: f c.LmP0Field
+    const: (@: n c.LmP0Node)
+    if: at = 0 || t = 0 || at\kind != c.LM_P0_NODE_FRAME || at\as = 0 || at\as\frame = 0 || at\as\frame\body = 0
+        return: (cast: (const: @: c.LmP0Node) (at))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) at\as\frame\body\first_field))
+    while: f != 0
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom = t
+            return: (cast: (const: @: c.LmP0Node) (f\value))
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME
+            n: lm_compiler_bind_at((cast: (const: @: c.LmP0Node) f\value), t)
+            if: n != f\value
+                return: (cast: (const: @: c.LmP0Node) (n))
+            ---
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    ---
+    return: (cast: (const: @: c.LmP0Node) (at))
+end: lm_compiler_bind_at
+
+fn: lm_compiler_address_depth (const: (@: head c.LmP0Text)) int
+    size_t: i 0U
+    if: head = 0 || head\data = 0 || head\length = 0U || head\length > (cast: (size_t) c.INT_MAX)
+        return: (cast: (int) (0))
+    while: i < head\length
+        if: head\data[i] != 64
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) ((cast: (int) head\length)))
+end: lm_compiler_address_depth
+
+fn: lm_compiler_emit_address_marks (@: out c.FILE; int: depth) int
+    int: i 0
+    if: out = 0 || depth < 1
+        return: (cast: (int) (1))
+    while: i < depth
+        if: c.fputc(64, out) = c.EOF
+            return: (cast: (int) (1))
+        i: i + 1
+    return: (cast: (int) (0))
+end: lm_compiler_emit_address_marks
+
+fn: lm_compiler_core_pointer_type (const: (@: word c.LmP0Text); int: depth; @: out_ty int) int
+    if: out_ty = 0 || word = 0
+        return: (cast: (int) (2))
+    \out_ty: 0
+    if: depth = 1 && lm_compiler_text_eq(word, "char")
+        \out_ty: 12
+        return: (cast: (int) (0))
+    if: depth = 1 && lm_compiler_text_eq(word, "size_t")
+        \out_ty: 9
+        return: (cast: (int) (0))
+    if: depth = 1 && lm_compiler_text_eq(word, "int")
+        \out_ty: 11
+        return: (cast: (int) (0))
+    if: depth = 1 && lm_compiler_text_eq(word, "void")
+        \out_ty: 16
+        return: (cast: (int) (0))
+    if: depth = 1 && lm_compiler_text_eq(word, "unsigned")
+        \out_ty: 25
+        return: (cast: (int) (0))
+    if: depth = 1 && lm_compiler_text_eq(word, "ulong")
+        \out_ty: 38
+        return: (cast: (int) (0))
+    if: depth = 2 && lm_compiler_text_eq(word, "char")
+        \out_ty: 17
+        return: (cast: (int) (0))
+    if: depth = 2 && lm_compiler_text_eq(word, "size_t")
+        \out_ty: 20
+        return: (cast: (int) (0))
+    if: depth = 2 && lm_compiler_text_eq(word, "int")
+        \out_ty: 19
+        return: (cast: (int) (0))
+    if: depth = 2 && lm_compiler_text_eq(word, "void")
+        \out_ty: 18
+        return: (cast: (int) (0))
+    if: depth = 2 && lm_compiler_text_eq(word, "unsigned")
+        \out_ty: 24
+        return: (cast: (int) (0))
+    if: depth = 2 && lm_compiler_text_eq(word, "ulong")
+        \out_ty: 39
+        return: (cast: (int) (0))
+    return: (cast: (int) (2))
+end: lm_compiler_core_pointer_type
+
+fn: lm_compiler_kernel_ptr_word (const: (@: word c.LmP0Text); @: out_ty int) int
+    if: out_ty = 0 || word = 0
+        return: (cast: (int) (1))
+    \out_ty: 0
+    if: lm_compiler_text_eq(word, "char")
+        \out_ty: 3
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_kernel_ptr_word
+
+fn: lm_compiler_application (const: (@: source_node c.LmP0Node)) @: c.LmP0Frame
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0
+        return: (cast: (@: c.LmP0Frame) (0))
+    return: (cast: (@: c.LmP0Frame) (source_node\as\frame))
+end: lm_compiler_application
+
+fn: lm_compiler_application_site_slot (const: (@: source c.LmP0Node); int: method; @@: index c.L2ApplicationSite; size_t: capacity) size_t
+    size_t: h (((cast: (size_t) source) >> 4) * 2654435761U) ^ ((cast: (size_t) (cast: (unsigned) method)) * 40503U)
+    h: h & (capacity - 1U)
+    while: index[h] != 0 && (index[h]\source != source || index[h]\method != method)
+        h: (h + 1U) & (capacity - 1U)
+    ---
+    return: (cast: (size_t) (h))
+end: lm_compiler_application_site_slot
+
+fn: lm_compiler_desc_word () @: c.LmP0Text
+    # Same inherited cache cell; no new storage or compiler-context object.
+    @@: descriptor_cell c.LmP0Text (cast: (@@: c.LmP0Text) (@ c.l2_desc_word_cell))
+    if: descriptor_cell[0] = 0
+        descriptor_cell[0]: (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+        if: descriptor_cell[0] = 0
+            return: 0
+        @: created c.LmP0Text descriptor_cell[0]
+        created\data: "c.LmxArray"
+        created\length: 10U
+    ---
+    return: descriptor_cell[0]
+end: lm_compiler_desc_word
+
+fn: lm_compiler_contract_levels (@: contract c.L2TypeContract) int
+    int: depth 0
+    while: contract != 0 && contract\kind = 1
+        depth: depth + 1
+        contract: contract\operand
+    ---
+    return: (cast: (int) (depth))
+end: lm_compiler_contract_levels
+
+fn: lm_compiler_contract_bare_chain (@: contract c.L2TypeContract) int
+    if: contract = 0 || contract\kind != 1
+        return: (cast: (int) (0))
+    while: contract != 0 && contract\kind = 1
+        contract: contract\operand
+    ---
+    return: (cast: (int) ((cast: (int) (contract = 0))))
+end: lm_compiler_contract_bare_chain
+
+fn: lm_compiler_declaration_carry (const: (@: declaration c.L2Declaration)) @: c.LmP0Field
+    @: d c.L2Declaration (cast: (@: c.L2Declaration) declaration)
+    if: d = 0 || d\name = 0 || d\source = 0
+        return: (cast: (@: c.LmP0Field) (0))
+    @: carry_as c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) (@ d\carry_as))
+    @: carry_node c.LmP0Node (cast: (@: c.LmP0Node) (@ d\carry_node))
+    @: carry_field c.LmP0Field (cast: (@: c.LmP0Field) (@ d\carry_field))
+    carry_as\atom: d\name
+    carry_node\kind: c.LM_P0_NODE_ATOM
+    carry_node\span: d\source\span
+    carry_node\as: @ d\carry_as
+    carry_field\value: @ d\carry_node
+    carry_field\next: 0
+    return: (cast: (@: c.LmP0Field) (@ d\carry_field))
+end: lm_compiler_declaration_carry
+
+fn: lm_compiler_chain_levels (const: (@: stmt c.LmP0Node)) int
+    int: levels 0
+    @: first c.LmP0Field
+    while: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && lm_compiler_frame_head(stmt, "[]") != 0
+        levels: levels + 1
+        if: stmt\as\frame\body = 0 || lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) != 1
+            return: (cast: (int) (levels))
+        first: lm_compiler_next_active((cast: (@: c.LmP0Field) stmt\as\frame\body\first_field))
+        if: first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_FRAME
+            return: (cast: (int) (levels))
+        stmt: first\value
+    ---
+    return: (cast: (int) (levels))
+end: lm_compiler_chain_levels
+
+fn: lm_compiler_contract_leaf (@: contract c.L2TypeContract; @: depth int; @: qualified int) @: c.LmP0Text
+    \depth: 0
+    \qualified: 0
+    while: contract != 0 && contract\kind != 0
+        if: contract\kind = 2
+            \depth: \depth + contract\depth
+        else:
+            if: contract\kind = 3
+                \qualified: 1
+            else:
+                return: (cast: (@: c.LmP0Text) (0))
+            ---
+        ---
+        contract: contract\operand
+    ---
+    if: contract = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    return: (cast: (@: c.LmP0Text) (contract\word))
+end: lm_compiler_contract_leaf
+
+fn: lm_compiler_os_item_ok (const: (@: item c.LmP0Node)) int
+    @: h c.LmP0Text lm_compiler_app_head(item)
+    return: (cast: (int) ((cast: (int) (lm_compiler_root_method_head(h) != 0 || lm_compiler_text_eq(h, "include") != 0 || lm_compiler_text_eq(h, "define") != 0 || lm_compiler_text_eq(h, "predef") != 0))))
+end: lm_compiler_os_item_ok
+
+fn: lm_compiler_os_fn_name (const: (@: fn_node c.LmP0Node)) @: c.LmP0Text
+    @: f c.LmP0Field
+    if: fn_node = 0 || fn_node\as = 0 || fn_node\as\frame = 0 || fn_node\as\frame\body = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) fn_node\as\frame\body\first_field))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (@: c.LmP0Text) (0))
+    return: (cast: (@: c.LmP0Text) (f\value\as\atom))
+end: lm_compiler_os_fn_name
+
+fn: lm_compiler_os_branch_method (const: (@: branch c.LmP0Node); const: (@: name c.LmP0Text)) const: @: c.LmP0Node
+    @: f c.LmP0Field
+    if: branch = 0 || name = 0 || branch\as = 0 || branch\as\frame = 0 || branch\as\frame\body = 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) branch\as\frame\body\first_field))
+    while: f != 0
+        if: lm_compiler_root_method_head(lm_compiler_app_head((cast: (const: @: c.LmP0Node) f\value))) != 0 && lm_compiler_os_fn_name((cast: (const: @: c.LmP0Node) f\value)) != 0 && lm_compiler_text_same(lm_compiler_os_fn_name((cast: (const: @: c.LmP0Node) f\value)), name) != 0
+            return: (cast: (const: @: c.LmP0Node) (f\value))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    return: (cast: (const: @: c.LmP0Node) (0))
+end: lm_compiler_os_branch_method
+
+fn: lm_compiler_os_branch_for (int: mask; int: target) int
+    if: mask = 0
+        return: (cast: (int) (0))
+    if: target = 1 && (mask = 1 || mask = 3)
+        return: (cast: (int) (1))
+    if: mask = 2 || mask = 3
+        return: (cast: (int) (2))
+    return: (cast: (int) (3))
+end: lm_compiler_os_branch_for
+
+fn: lm_compiler_os_root_branches (const: (@: root c.LmP0Node)) int
+    @: field c.LmP0Field
+    @: b c.LmP0Field
+    int: wins 0
+    int: defaults 0
+    if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE || root\as = 0 || root\as\structure = 0
+        return: (cast: (int) (0))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) root\as\structure\first_field))
+    while: field != 0 && lm_compiler_text_eq(lm_compiler_app_head((cast: (const: @: c.LmP0Node) field\value)), "os") = 0
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    ---
+    if: field = 0
+        return: (cast: (int) (0))
+    if: field\value != 0 && field\value\kind = c.LM_P0_NODE_FRAME && field\value\as != 0 && field\value\as\frame != 0 && field\value\as\frame\body != 0
+        b: lm_compiler_next_active((cast: (@: c.LmP0Field) field\value\as\frame\body\first_field))
+        while: b != 0
+            if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) b\value), "win") != 0
+                wins: 1
+            if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) b\value), "default") != 0
+                defaults: 2
+            b: lm_compiler_next_active((cast: (@: c.LmP0Field) b\next))
+        ---
+    ---
+    if: wins + defaults = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (wins + defaults))
+end: lm_compiler_os_root_branches
+
+# These existing source-unit directives carry no runtime DATA/code slot.
+# This predicate is used only at an actual unit root, not for named fields.
+fn: lm_compiler_unit_directive (const: (@: item c.LmP0Node)) int
+    @: head c.LmP0Text lm_compiler_app_head(item)
+    return: (cast: (int) (lm_compiler_text_eq(head, "include") != 0 || lm_compiler_text_eq(head, "define") != 0 || lm_compiler_text_eq(head, "predef") != 0))
+end: lm_compiler_unit_directive
+
+fn: lm_compiler_os_selected_branch (const: (@: item c.LmP0Node)) const: @: c.LmP0Node
+    @: b c.LmP0Field
+    int: wins 0
+    int: defaults 0
+    int: selected 0
+    if: item = 0 || item\kind != c.LM_P0_NODE_FRAME || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    # The branch belongs to this actual source Frame, not the main file's
+    # cached selector. A default-only source still has the ordinary fallback.
+    b: lm_compiler_next_active((cast: (@: c.LmP0Field) item\as\frame\body\first_field))
+    while: b != 0
+        if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) b\value), "win") != 0
+            wins: 1
+        if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) b\value), "default") != 0
+            defaults: 2
+        b: lm_compiler_next_active((cast: (@: c.LmP0Field) b\next))
+    selected: lm_compiler_os_branch_for(wins + defaults, lm_compiler_os_target())
+    b: lm_compiler_next_active((cast: (@: c.LmP0Field) item\as\frame\body\first_field))
+    while: b != 0
+        if: selected = 1 && lm_compiler_frame_head((cast: (const: @: c.LmP0Node) b\value), "win") != 0
+            return: (cast: (const: @: c.LmP0Node) (b\value))
+        if: selected = 2 && lm_compiler_frame_head((cast: (const: @: c.LmP0Node) b\value), "default") != 0
+            return: (cast: (const: @: c.LmP0Node) (b\value))
+        b: lm_compiler_next_active((cast: (@: c.LmP0Field) b\next))
+    return: (cast: (const: @: c.LmP0Node) (0))
+end: lm_compiler_os_selected_branch
+
+# One borrowed return pointer visits the selected source branch without
+# relinking P0 fields. check_os rejects nested OS Frames at the unit level.
+fn: lm_compiler_unit_cursor_field_until (@: field c.LmP0Field; @@: resume c.LmP0Field; @: stop c.LmP0Field) @: c.LmP0Field
+    const: (@: branch c.LmP0Node)
+    while: field != 0 || resume[0] != 0
+        if: field = 0
+            field: resume[0]
+            resume[0]: 0
+        if: stop != 0 && field = stop
+            return: field
+        if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) field\value), "os") != 0
+            resume[0]: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+            branch: lm_compiler_os_selected_branch((cast: (const: @: c.LmP0Node) field\value))
+            field: 0
+            if: branch != 0
+                field: lm_compiler_next_active((cast: (@: c.LmP0Field) branch\as\frame\body\first_field))
+            continue
+        if: lm_compiler_unit_directive((cast: (const: @: c.LmP0Node) field\value)) != 0
+            field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+            continue
+        return: field
+    ---
+    return: 0
+end: lm_compiler_unit_cursor_field_until
+
+fn: lm_compiler_unit_cursor_field (@: field c.LmP0Field; @@: resume c.LmP0Field) @: c.LmP0Field
+    return: lm_compiler_unit_cursor_field_until(field, resume, 0)
+end: lm_compiler_unit_cursor_field
+
+fn: lm_compiler_part_source_body (const: (@: body c.LmP0Structure)) int
+    @: part_loaded_cell int (cast: (@: int) (@ c.l2_part_loaded))
+    @@@: part_doc_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_part_doc))
+    const: (@: root c.LmP0Node)
+    int: at 0
+    if: body = 0
+        return: 0
+    while: at < part_loaded_cell[0]
+        root: c.lm_p0_document_root((cast: (const: @: c.LmP0Document) part_doc_cell[0][at]))
+        if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0 && root\as\structure = body
+            return: 1
+        at: at + 1
+    return: 0
+end: lm_compiler_part_source_body
+
+# Each span stays a contiguous range of original fields. A directive or OS
+# Frame ends that range; the cursor resumes at the next selected range.
+fn: lm_compiler_unit_span_count (@: first c.LmP0Field) int
+    @: field c.LmP0Field lm_compiler_next_active(first)
+    int: count 0
+    while: field != 0 && lm_compiler_unit_directive((cast: (const: @: c.LmP0Node) field\value)) = 0 && lm_compiler_frame_head((cast: (const: @: c.LmP0Node) field\value), "os") = 0
+        count: count + 1
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    return: count
+end: lm_compiler_unit_span_count
+
+# Membership and later body passes borrow the same selected physical fields.
+# Only retained part roots are units; nested DATA retains its normal members.
+fn: lm_compiler_body_has_source (const: (@: body c.LmP0Structure); const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    @: resume c.LmP0Field 0
+    int: unit_body
+    if: body = 0 || source_node = 0
+        return: 0
+    unit_body: lm_compiler_part_source_body(body)
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
+    while: field != 0 || resume != 0
+        if: unit_body != 0
+            field: lm_compiler_unit_cursor_field(field, @ resume)
+            if: field = 0
+                break
+        ---
+        if: field\value = source_node
+            return: 1
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    return: 0
+end: lm_compiler_body_has_source
+
+# An OS-only part makes the output target-dependent even when the main unit
+# has no OS Frame. Inspect retained actual roots, without borrowing one as
+# the main unit's os_node or combining branch masks from unrelated units.
+fn: lm_compiler_program_has_os () int
+    const: (@@: os_node_cell c.LmP0Node (cast: (const: @@: c.LmP0Node) (@ c.l2_os_node)))
+    @: part_loaded_cell int (cast: (@: int) (@ c.l2_part_loaded))
+    @@@: part_doc_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_part_doc))
+    const: (@: root c.LmP0Node)
+    int: at 0
+    if: os_node_cell[0] != 0
+        return: 1
+    while: at < part_loaded_cell[0]
+        root: c.lm_p0_document_root((cast: (const: @: c.LmP0Document) part_doc_cell[0][at]))
+        if: lm_compiler_os_root_branches(root) != 0
+            return: 1
+        at: at + 1
+    return: 0
+end: lm_compiler_program_has_os
+
+fn: lm_compiler_graph_code () int
+    return: (cast: (int) (42))
+end: lm_compiler_graph_code
+
+fn: lm_compiler_prim_code_name (int: ty) @: char
+    if: ty = 0
+        return: (cast: (@: char) ("int"))
+    if: ty = 1
+        return: (cast: (@: char) ("char"))
+    if: ty = 2
+        return: (cast: (@: char) ("size_t"))
+    if: ty = 34
+        return: (cast: (@: char) ("unsigned"))
+    if: ty = 36
+        return: (cast: (@: char) ("ulong"))
+    if: ty = 8
+        return: (cast: (@: char) ("void"))
+    return: (cast: (@: char) (0))
+end: lm_compiler_prim_code_name
+
+fn: lm_compiler_table_header () const: @: char
+    return: (cast: (const: @: char) ("fn: table (@: source Lmx; @: name Lmx; @: columns Lmx; @: rows Lmx) Lmx"))
+end: lm_compiler_table_header
+
+fn: lm_compiler_payload_same (const: (@: a c.LmP0Text); const: (@: b c.LmP0Text)) int
+    const: (@: ad char)
+    const: (@: bd char)
+    size_t: an
+    size_t: bn
+    if: a = 0 || b = 0 || a\data = 0 || b\data = 0
+        return: (cast: (int) (0))
+    ad: a\data
+    an: a\length
+    bd: b\data
+    bn: b\length
+    if: an >= 2U && ad[0] = 96 && ad[an - 1U] = 96
+        ad: ad + 1U
+        an: an - 2U
+    if: bn >= 2U && bd[0] = 96 && bd[bn - 1U] = 96
+        bd: bd + 1U
+        bn: bn - 2U
+    if: an != bn
+        return: (cast: (int) (0))
+    return: (cast: (int) (c.memcmp(ad, bd, an) = 0))
+end: lm_compiler_payload_same
+
+fn: lm_compiler_value_argument_extent (@: values c.L2ValueSpan; int: n; int: start) int
+    int: cursor start + 1
+    if: values = 0 || n < 1 || start < 0 || start >= n
+        return: (cast: (int) (0))
+    @: start_value c.L2ValueSpan values + start
+    if: start_value\grammar = 0
+        return: (cast: (int) (0))
+    while: cursor < n
+        @: cursor_value c.L2ValueSpan values + cursor
+        if: cursor_value\grammar != 0
+            return: (cast: (int) (cursor - start))
+        if: cursor >= n - 1
+            return: (cast: (int) (0))
+        @: next_value c.L2ValueSpan values + cursor + 1
+        if: next_value\grammar = 0
+            return: (cast: (int) (0))
+        cursor: cursor + 2
+    ---
+    return: (cast: (int) (cursor - start))
+end: lm_compiler_value_argument_extent
+
+fn: lm_compiler_value_argument_ref (@: values c.L2ValueSpan; int: n; const: (@: at c.LmP0Node); @: out c.L2ValueSpan) int
+    int: k 0
+    int: count 0
+    if: out = 0 || n < 0 || (n > 0 && values = 0)
+        return: (cast: (int) (1))
+    lm_compiler_value_span_ref(out, 0, 0)
+    out\node: (cast: (@: c.LmP0Node) at)
+    if: n = 1
+        c.memcpy(out, values, c.sizeof(c.L2ValueSpan))
+        return: (cast: (int) (0))
+    while: k < n
+        @: element c.L2ValueSpan values + k
+        if: element\count < 1 || count > c.INT_MAX - element\count
+            return: (cast: (int) (1))
+        count: count + element\count
+        k: k + 1
+    ---
+    if: n > 0
+        out\first: values\first
+        out\node: values\node
+    out\count: count
+    out\grammar: 3
+    out\values: values
+    out\value_n: n
+    return: (cast: (int) (0))
+end: lm_compiler_value_argument_ref
+
+fn: lm_compiler_value_actual_written (@: plan c.L2ApplicationActuals; int: rank) @: c.L2ApplicationActual
+    int: k 0
+    if: plan = 0 || rank < 0 || rank >= plan\written_count
+        return: (cast: (@: c.L2ApplicationActual) (0))
+    while: k < plan\count
+        @: element c.L2ApplicationActual (cast: (@: c.L2ApplicationActual) (plan\actuals + k))
+        if: element\rank = rank
+            return: (cast: (@: c.L2ApplicationActual) (plan\actuals + k))
+        k: k + 1
+    ---
+    return: (cast: (@: c.L2ApplicationActual) (0))
+end: lm_compiler_value_actual_written
+
+fn: lm_compiler_arg_fields (@: a c.LmP0Field; int: span; @: out_n int) @: c.LmP0Field
+    @: v c.LmP0Node
+    \out_n: 0
+    if: a = 0 || a\value = 0
+        return: (cast: (@: c.LmP0Field) (0))
+    v: a\value
+    if: span = 0
+        if: v\as = 0 || v\as\frame = 0 || v\as\frame\body = 0
+            return: (cast: (@: c.LmP0Field) (0))
+        \out_n: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) v\as\frame\body))
+        return: (cast: (@: c.LmP0Field) (lm_compiler_next_active((cast: (@: c.LmP0Field) v\as\frame\body\first_field))))
+    if: span = 1 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0
+        \out_n: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) v\as\structure))
+        return: (cast: (@: c.LmP0Field) (lm_compiler_next_active((cast: (@: c.LmP0Field) v\as\structure\first_field))))
+    \out_n: span
+    return: (cast: (@: c.LmP0Field) (a))
+end: lm_compiler_arg_fields
+
+fn: lm_compiler_convert_colname (int: k) const: @: char
+    if: k = 0
+        return: (cast: (const: @: char) ("from"))
+    if: k = 1
+        return: (cast: (const: @: char) ("to"))
+    if: k = 2
+        return: (cast: (const: @: char) ("forbidden"))
+    if: k = 3
+        return: (cast: (const: @: char) ("receiver"))
+    return: (cast: (const: @: char) ("impl"))
+end: lm_compiler_convert_colname
+
+fn: lm_compiler_prim_colname (int: k) const: @: char
+    if: k = 0
+        return: (cast: (const: @: char) ("class"))
+    if: k = 1
+        return: (cast: (const: @: char) ("cell"))
+    return: (cast: (const: @: char) ("convert"))
+end: lm_compiler_prim_colname
+
+fn: lm_compiler_prefix_sign (const: (@: t c.LmP0Text)) int
+    if: t = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq(t, "-")
+        return: (cast: (int) (1))
+    if: lm_compiler_text_eq(t, "+")
+        return: (cast: (int) (2))
+    return: (cast: (int) (0))
+end: lm_compiler_prefix_sign
+
+fn: lm_compiler_prefix_frame (const: (@: source_node c.LmP0Node)) int
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0 || source_node\as\frame\body = 0 || source_node\as\frame\trailer != 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) source_node\as\frame\head))))
+end: lm_compiler_prefix_frame
+
+fn: lm_compiler_prefix_rest (@: span c.L2ValueSpan; @: rest c.L2ValueSpan) int
+    @: f c.LmP0Field
+    if: span = 0 || rest = 0 || span\count < 2
+        return: (cast: (int) (1))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) span\first))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) f\value\as\atom)) = 0
+        return: (cast: (int) (1))
+    if: span\operand != 0
+        c.memcpy(rest, span\operand, c.sizeof(c.L2ValueSpan))
+        return: (cast: (int) (0))
+    lm_compiler_value_span_ref(rest, lm_compiler_next_active((cast: (@: c.LmP0Field) f\next)), (cast: (int) (span\count - 1)))
+    if: rest\first = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_prefix_rest
+
+fn: lm_compiler_native_zero (@: tok c.L2ValueSpan; int: lo; int: hi) int
+    if: lo != hi
+        return: (cast: (int) (0))
+    @: selected c.LmP0Node lm_compiler_span_node(tok, lo)
+    if: selected = 0
+        return: (cast: (int) (0))
+    selected: lm_compiler_span_node(tok, lo)
+    if: selected\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (0))
+    selected: lm_compiler_span_node(tok, lo)
+    if: selected\as = 0
+        return: (cast: (int) (0))
+    selected: lm_compiler_span_node(tok, lo)
+    if: selected\as\atom = 0
+        return: (cast: (int) (0))
+    selected: lm_compiler_span_node(tok, lo)
+    return: (cast: (int) (lm_compiler_text_eq((cast: (const: @: c.LmP0Text) selected\as\atom), "0")))
+end: lm_compiler_native_zero
+
+fn: lm_compiler_reference_fields (@@: first c.LmP0Field; @: n int) int
+    @: f c.LmP0Field lm_compiler_next_active(\first)
+    while: \n = 1 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as != 0 && f\value\as\structure != 0 && lm_compiler_count_active((cast: (const: @: c.LmP0Structure) f\value\as\structure)) > 0
+        \n: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) f\value\as\structure))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\value\as\structure\first_field))
+    ---
+    \first: f
+    return: (cast: (int) (0))
+end: lm_compiler_reference_fields
+
+fn: lm_compiler_reference_atom (@: first c.LmP0Field; int: n) @: c.LmP0Text
+    lm_compiler_reference_fields(@ first, @ n)
+    if: n != 1 || first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    return: (cast: (@: c.LmP0Text) (first\value\as\atom))
+end: lm_compiler_reference_atom
+
+fn: lm_compiler_reference_null_literal (@: first c.LmP0Field; int: n) int
+    int: neg 0
+    int: uns 0
+    size_t: mag 1U
+    lm_compiler_reference_fields(@ first, @ n)
+    if: n != 1 || first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || first\value\as\atom = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) first\value\as\atom), @ neg, @ mag, @ uns) != 0 && mag = 0U
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_reference_null_literal
+
+fn: lm_compiler_d105_own_key (int: own) int
+    return: (cast: (int) (-2 - own))
+end: lm_compiler_d105_own_key
+
+fn: lm_compiler_lit_field_kind (const: (@: fld c.LmP0Node)) int
+    if: lm_compiler_frame_head(fld, "size_t")
+        return: (cast: (int) (0))
+    if: lm_compiler_frame_head(fld, "char")
+        return: (cast: (int) (1))
+    if: lm_compiler_frame_head(fld, "int")
+        return: (cast: (int) (7))
+    if: lm_compiler_frame_head(fld, "unsigned")
+        return: (cast: (int) (8))
+    if: lm_compiler_frame_head(fld, "ulong")
+        return: (cast: (int) (9))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_lit_field_kind
+
+fn: lm_compiler_ns_computed_decl (const: (@: fld c.LmP0Node)) int
+    @: g c.LmP0Field
+    size_t: bits 0U
+    if: fld = 0 || lm_compiler_lit_field_kind(fld) < 0 || fld\as\frame\body = 0 || lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fld\as\frame\body)) < 2
+        return: (cast: (int) (0))
+    g: lm_compiler_next_active((cast: (@: c.LmP0Field) fld\as\frame\body\first_field))
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || lm_compiler_bind_spelling((cast: (const: @: c.LmP0Text) g\value\as\atom)) = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fld\as\frame\body)) > 2
+        return: (cast: (int) (1))
+    g: lm_compiler_next_active((cast: (@: c.LmP0Field) g\next))
+    if: g = 0 || g\value = 0
+        return: (cast: (int) (0))
+    if: g\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (1))
+    if: lm_compiler_num((cast: (const: @: c.LmP0Text) g\value\as\atom)) != 0 || lm_compiler_int_literal_bits((cast: (const: @: c.LmP0Text) g\value\as\atom), @ bits) != 0 || lm_compiler_char_literal((cast: (const: @: c.LmP0Text) g\value\as\atom)) >= 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_ns_computed_decl
+
+fn: lm_compiler_ref_tail_node (const: (@: stmt c.LmP0Node)) const: @: c.LmP0Node
+    @: f c.LmP0Field
+    if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: (cast: (const: @: c.LmP0Node) (stmt))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) stmt\as\frame\body\first_field))
+    if: f = 0 || f\value = 0
+        return: (cast: (const: @: c.LmP0Node) (stmt))
+    return: (cast: (const: @: c.LmP0Node) (f\value))
+end: lm_compiler_ref_tail_node
+
+fn: lm_compiler_receive_msg_shape (const: (@: stmt c.LmP0Node); @@: out_name c.LmP0Text; @@: out_model c.LmP0Text) int
+    @: fr c.LmP0Frame
+    @: only c.LmP0Field
+    @: second c.LmP0Field
+    if: out_name = 0
+        return: (cast: (int) (1))
+    \out_name: 0
+    if: out_model != 0
+        \out_model: 0
+    if: stmt = 0 || lm_compiler_app_head(stmt) = 0 || lm_compiler_text_eq(lm_compiler_app_head(stmt), "receiveMessage") = 0
+        return: (cast: (int) (1))
+    # K03: the bare word is its application with no name: it binds none.
+    if: stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
+        return: (cast: (int) (2))
+    fr: stmt\as\frame
+    if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || (lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fr\body)) != 1 && lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fr\body)) != 2)
+        return: (cast: (int) (2))
+    only: lm_compiler_next_active((cast: (@: c.LmP0Field) fr\body\first_field))
+    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0 || only\value\as\atom = 0 || lm_compiler_bind_spelling((cast: (const: @: c.LmP0Text) only\value\as\atom)) = 0
+        return: (cast: (int) (2))
+    if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fr\body)) = 2
+        second: lm_compiler_next_active((cast: (@: c.LmP0Field) only\next))
+        if: second = 0 || second\value = 0 || second\value\kind != c.LM_P0_NODE_ATOM || second\value\as = 0 || second\value\as\atom = 0 || lm_compiler_ident((cast: (const: @: c.LmP0Text) second\value\as\atom)) = 0
+            return: (cast: (int) (2))
+        \out_name: only\value\as\atom
+        if: out_model != 0
+            \out_model: second\value\as\atom
+        return: (cast: (int) (0))
+    \out_name: only\value\as\atom
+    return: (cast: (int) (0))
+end: lm_compiler_receive_msg_shape
+
+fn: lm_compiler_msg_ref_ty () int
+    return: (cast: (int) (29))
+end: lm_compiler_msg_ref_ty
+
+fn: lm_compiler_ptr_cell_type (int: code; @: dest char) int
+    if: dest = 0
+        return: (cast: (int) (1))
+    if: code = lm_compiler_msg_ref_ty()
+        return: (cast: (int) ((cast: (int) (c.sprintf(dest, "c.LMX_TYPE_MSG_REF") < 0))))
+    return: (cast: (int) ((cast: (int) (c.sprintf(dest, "c.LMX_TYPE_POINTER_BASE + %d", code) < 0))))
+end: lm_compiler_ptr_cell_type
+
+fn: lm_compiler_ft_of_own (int: oty) int
+    if: oty = 3
+        return: (cast: (int) (34))
+    if: lm_compiler_oc_is_pointer(oty) != 0
+        return: (cast: (int) (lm_compiler_oc_ft(oty)))
+    return: (cast: (int) (oty))
+end: lm_compiler_ft_of_own
+
+fn: lm_compiler_oc_pointer (int: ft) int
+    return: (cast: (int) (1000 + 2 * ft))
+end: lm_compiler_oc_pointer
+
+fn: lm_compiler_oc_parray (int: ft) int
+    return: (cast: (int) (1001 + 2 * ft))
+end: lm_compiler_oc_parray
+
+fn: lm_compiler_oc_darray () int
+    return: (cast: (int) (44))
+end: lm_compiler_oc_darray
+
+fn: lm_compiler_oc_is_pointer (int: oty) int
+    return: (cast: (int) ((cast: (int) (oty >= 1000 && (oty - 1000) % 2 = 0))))
+end: lm_compiler_oc_is_pointer
+
+fn: lm_compiler_oc_is_parray (int: oty) int
+    return: (cast: (int) ((cast: (int) (oty >= 1000 && (oty - 1000) % 2 = 1))))
+end: lm_compiler_oc_is_parray
+
+fn: lm_compiler_oc_is_ref (int: oty) int
+    return: (cast: (int) ((cast: (int) (oty >= 1000))))
+end: lm_compiler_oc_is_ref
+
+fn: lm_compiler_oc_ft (int: oty) int
+    return: (cast: (int) ((oty - 1000) / 2))
+end: lm_compiler_oc_ft
+
+fn: lm_compiler_dt_of_own (int: oty) int
+    if: oty < 0 || lm_compiler_own_store_helper(oty) = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (oty + 1))
+end: lm_compiler_dt_of_own
+
+fn: lm_compiler_own_of_dt (int: dt) int
+    if: dt <= 0
+        return: (cast: (int) (-1))
+    return: (cast: (int) (dt - 1))
+end: lm_compiler_own_of_dt
+
+fn: lm_compiler_own_num_ctype (int: ty) const: @: char
+    if: ty = 0
+        return: (cast: (const: @: char) ("int"))
+    if: ty = 1
+        return: (cast: (const: @: char) ("char"))
+    if: ty = 2
+        return: (cast: (const: @: char) ("size_t"))
+    if: ty = 3
+        return: (cast: (const: @: char) ("unsigned"))
+    if: ty = 36
+        return: (cast: (const: @: char) ("ulong"))
+    return: (cast: (const: @: char) (0))
+end: lm_compiler_own_num_ctype
+
+fn: lm_compiler_name_before (const: (@: a c.LmP0Text); const: (@: b c.LmP0Text)) int
+    size_t: n
+    if: a = 0 || b = 0 || a\data = 0 || b\data = 0
+        return: (cast: (int) (0))
+    n: a\length
+    if: b\length < n
+        n: b\length
+    if: c.memcmp(a\data, b\data, n) < 0
+        return: (cast: (int) (1))
+    if: c.memcmp(a\data, b\data, n) > 0
+        return: (cast: (int) (0))
+    if: a\length < b\length
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_name_before
+
+fn: lm_compiler_source_text (const: (@: original c.LmP0Text); const: (@: view c.LmP0Text)) int
+    c.LmP0Text: base
+    int: levels
+    if: original = 0 || view = 0
+        return: (cast: (int) (0))
+    if: original\data = view\data && original\length = view\length
+        return: (cast: (int) (1))
+    if: lm_compiler_deref_name(original, @ base, @ levels) = 0
+        return: (cast: (int) ((cast: (int) (base\data = view\data && base\length = view\length))))
+    # The root of a head `name\f` (l2_scan_head_root): the same bytes, the head going on with the path's `\`.
+    if: original\data != 0 && original\data = view\data && view\length > 0U && view\length < original\length && original\data[view\length] = 92
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_source_text
+
+fn: lm_compiler_field_index_group (@: open c.LmP0Field; int: available; @: part c.L2ValueSpan; @@: after c.LmP0Field) int
+    @: field c.LmP0Field
+    int: used 1
+    int: depth 1
+    if: open = 0 || open\value = 0 || open\value\kind != c.LM_P0_NODE_ATOM || lm_compiler_text_eq((cast: (const: @: c.LmP0Text) open\value\as\atom), "[") = 0
+        return: (cast: (int) (0))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) open\next))
+    lm_compiler_value_span_ref(part, field, 0)
+    if: field = 0
+        return: (cast: (int) (0))
+    while: used < available && field != 0
+        if: field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM
+            if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) field\value\as\atom), "[") != 0
+                depth: depth + 1
+            if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) field\value\as\atom), "]") != 0
+                depth: depth - 1
+                if: depth = 0
+                    if: used = 1
+                        return: (cast: (int) (0))
+                    part\count: used - 1
+                    \after: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+                    return: (cast: (int) (used + 1))
+                ---
+            ---
+        ---
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+        used: used + 1
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_field_index_group
+
+fn: lm_compiler_occ_run (@: field c.LmP0Field) int
+    @: p1 c.LmP0Field
+    @: p2 c.LmP0Field
+    @: p3 c.LmP0Field
+    @: p4 c.LmP0Field
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_is_slash((cast: (const: @: c.LmP0Text) field\value\as\atom)) = 0
+        return: (cast: (int) (0))
+    p1: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    if: p1 = 0 || p1\value = 0 || p1\value\kind != c.LM_P0_NODE_ATOM || p1\value\as = 0 || lm_compiler_text_eq((cast: (const: @: c.LmP0Text) p1\value\as\atom), "[") = 0
+        return: (cast: (int) (0))
+    p2: lm_compiler_next_active((cast: (@: c.LmP0Field) p1\next))
+    if: p2 = 0 || p2\value = 0 || p2\value\kind != c.LM_P0_NODE_ATOM || p2\value\as = 0 || lm_compiler_num((cast: (const: @: c.LmP0Text) p2\value\as\atom)) = 0
+        return: (cast: (int) (0))
+    p3: lm_compiler_next_active((cast: (@: c.LmP0Field) p2\next))
+    if: p3 = 0 || p3\value = 0 || p3\value\kind != c.LM_P0_NODE_ATOM || p3\value\as = 0 || lm_compiler_text_eq((cast: (const: @: c.LmP0Text) p3\value\as\atom), "]") = 0
+        return: (cast: (int) (0))
+    p4: lm_compiler_next_active((cast: (@: c.LmP0Field) p3\next))
+    if: p4 = 0 || p4\value = 0 || p4\value\kind != c.LM_P0_NODE_ATOM || p4\value\as = 0 || lm_compiler_ident((cast: (const: @: c.LmP0Text) p4\value\as\atom)) = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (5))
+end: lm_compiler_occ_run
+
+fn: lm_compiler_positive_decimal (const: (@: t c.LmP0Text)) size_t
+    size_t: n 0U
+    size_t: i 0U
+    size_t: digit
+    if: t = 0 || t\data = 0 || t\length = 0U
+        return: (cast: (size_t) (0U))
+    while: i < t\length
+        if: t\data[i] < 48 || t\data[i] > 57
+            return: (cast: (size_t) (0U))
+        digit: (cast: (size_t) (t\data[i] - 48))
+        if: n > (((cast: (size_t) -1) - digit) / 10U)
+            return: (cast: (size_t) (0U))
+        n: n * 10U + digit
+        i: i + 1U
+    ---
+    return: (cast: (size_t) (n))
+end: lm_compiler_positive_decimal
+
+fn: lm_compiler_literal_value (const: (@: t c.LmP0Text)) size_t
+    size_t: n 0U
+    if: lm_compiler_num_value(t, @ n) = 0
+        return: (cast: (size_t) (0U))
+    return: (cast: (size_t) (n))
+end: lm_compiler_literal_value
+
+fn: lm_compiler_array_count_is (const: (@: t c.LmP0Text)) int
+    size_t: value 0U
+    return: (cast: (int) (lm_compiler_num_value(t, @ value)))
+end: lm_compiler_array_count_is
+
+fn: lm_compiler_unimpl_numeric (const: (@: stmt c.LmP0Node)) const: @: char
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: (cast: (const: @: char) (0))
+    if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) != 1 && lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) != 2
+        return: (cast: (const: @: char) (0))
+    if: lm_compiler_frame_head(stmt, "float")
+        return: (cast: (const: @: char) ("by-value float local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "short")
+        return: (cast: (const: @: char) ("by-value short local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "signed")
+        return: (cast: (const: @: char) ("by-value signed local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "_Bool")
+        return: (cast: (const: @: char) ("by-value _Bool local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "double")
+        return: (cast: (const: @: char) ("by-value double local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "long")
+        return: (cast: (const: @: char) ("by-value long local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "llong")
+        return: (cast: (const: @: char) ("by-value llong local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "ullong")
+        return: (cast: (const: @: char) ("by-value ullong local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "uint")
+        return: (cast: (const: @: char) ("by-value uint local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "u8") || lm_compiler_frame_head(stmt, "u16") || lm_compiler_frame_head(stmt, "u32") || lm_compiler_frame_head(stmt, "u64")
+        return: (cast: (const: @: char) ("by-value unsigned fixed-width local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "i8") || lm_compiler_frame_head(stmt, "i16") || lm_compiler_frame_head(stmt, "i32") || lm_compiler_frame_head(stmt, "i64")
+        return: (cast: (const: @: char) ("by-value signed fixed-width local not yet implemented"))
+    if: lm_compiler_frame_head(stmt, "wchar_t")
+        return: (cast: (const: @: char) ("by-value wchar_t local not yet implemented"))
+    return: (cast: (const: @: char) (0))
+end: lm_compiler_unimpl_numeric
+
+fn: lm_compiler_own_is_array (int: ty) int
+    if: ty = 4 || ty = 5 || ty = 7 || ty = 8 || ty = 37 || ty = lm_compiler_oc_darray() || lm_compiler_oc_is_parray(ty) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_own_is_array
+
+fn: lm_compiler_own_is_pointer (int: ty) int
+    return: (cast: (int) (lm_compiler_oc_is_pointer(ty)))
+end: lm_compiler_own_is_pointer
+
+fn: lm_compiler_deref_name (const: (@: text c.LmP0Text); @: base c.LmP0Text; @: levels int) int
+    size_t: lead 0U
+    if: text = 0 || text\data = 0
+        return: (cast: (int) (1))
+    while: lead < text\length && text\data[lead] = 92
+        lead: lead + 1U
+    if: lead = 0U || lead = text\length || lead > (cast: (size_t) c.INT_MAX)
+        return: (cast: (int) (1))
+    base\data: text\data + lead
+    base\length: text\length - lead
+    if: lm_compiler_ident(base) = 0
+        return: (cast: (int) (1))
+    \levels: (cast: (int) lead)
+    return: (cast: (int) (0))
+end: lm_compiler_deref_name
+
+fn: lm_compiler_own_store_ty (int: dty) int
+    if: dty = 3
+        return: (cast: (int) (0))
+    if: dty = 6
+        return: (cast: (int) (3))
+    return: (cast: (int) (dty))
+end: lm_compiler_own_store_ty
+
+sub: lm_compiler_expr_place_path_print (@: out c.FILE; @: place c.L2GraphPlace)
+    if: place\parent != 0
+        lm_compiler_expr_place_path_print(out, (cast: (@: c.L2GraphPlace) place\parent))
+        c.fprintf(out, "/")
+    ---
+    c.fprintf(out, "%zu", place\child)
+    return
+end: lm_compiler_expr_place_path_print
+
+fn: lm_compiler_is_plus (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_text_eq(t, "+") || lm_compiler_text_eq(t, "/") || lm_compiler_text_eq(t, "-") || lm_compiler_text_eq(t, "*") || lm_compiler_text_eq(t, "%")
+        return: (cast: (int) (1))
+    if: lm_compiler_text_eq(t, "&") || lm_compiler_text_eq(t, "|") || lm_compiler_text_eq(t, "^") || lm_compiler_text_eq(t, "<<") || lm_compiler_text_eq(t, ">>")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_is_plus
+
+fn: lm_compiler_is_cmp (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_text_eq(t, "<") || lm_compiler_text_eq(t, ">") || lm_compiler_text_eq(t, "=") || lm_compiler_text_eq(t, "!=") || lm_compiler_text_eq(t, "<=") || lm_compiler_text_eq(t, ">=")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_is_cmp
+
+fn: lm_compiler_is_andor (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_text_eq(t, "&&") || lm_compiler_text_eq(t, "||")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_is_andor
+
+fn: lm_compiler_is_brack (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_text_eq(t, "[") || lm_compiler_text_eq(t, "]")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_is_brack
+
+fn: lm_compiler_is_slash (const: (@: t c.LmP0Text)) int
+    if: t = 0 || t\length != 1U
+        return: (cast: (int) (0))
+    if: t\data[0] != 92
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_is_slash
+
+fn: lm_compiler_c_stmt_door (const: (@: t c.LmP0Text)) int
+    if: t = 0 || t\data = 0 || t\length <= 2U || t\data[0] != 99 || t\data[1] != 46
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_c_stmt_door
+
+fn: lm_compiler_is_binop (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_is_plus(t) || lm_compiler_is_cmp(t) || lm_compiler_is_andor(t)
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_is_binop
+
+fn: lm_compiler_is_or_atom (const: (@: source_node c.LmP0Node)) int
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_text_eq((cast: (const: @: c.LmP0Text) source_node\as\atom), "||")))
+end: lm_compiler_is_or_atom
+
+fn: lm_compiler_is_and_atom (const: (@: source_node c.LmP0Node)) int
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_text_eq((cast: (const: @: c.LmP0Text) source_node\as\atom), "&&")))
+end: lm_compiler_is_and_atom
+
+fn: lm_compiler_advance (@: f c.LmP0Field; int: k) @: c.LmP0Field
+    int: i 0
+    while: i < k && f != 0
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+        i: i + 1
+    return: (cast: (@: c.LmP0Field) (f))
+end: lm_compiler_advance
+
+fn: lm_compiler_span_or (@: field c.LmP0Field; int: n) int
+    @: f c.LmP0Field
+    int: i 0
+    f: lm_compiler_next_active(field)
+    while: i < n && f != 0
+        if: i > 0 && lm_compiler_is_or_atom((cast: (const: @: c.LmP0Node) f\value))
+            return: (cast: (int) (i))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+        i: i + 1
+    return: (cast: (int) (i))
+end: lm_compiler_span_or
+
+fn: lm_compiler_span_and (@: field c.LmP0Field; int: n) int
+    @: f c.LmP0Field
+    int: i 0
+    f: lm_compiler_next_active(field)
+    while: i < n && f != 0
+        if: i > 0 && lm_compiler_is_and_atom((cast: (const: @: c.LmP0Node) f\value))
+            return: (cast: (int) (i))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+        i: i + 1
+    return: (cast: (int) (i))
+end: lm_compiler_span_and
+
+fn: lm_compiler_payload_eq (const: (@: atom c.LmP0Text); const: (@: s char)) int
+    const: (@: data char)
+    size_t: n
+    size_t: sl
+    if: atom = 0 || atom\data = 0 || s = 0
+        return: (cast: (int) (0))
+    data: atom\data
+    n: atom\length
+    if: n >= 2U && data[0] = 96 && data[n - 1U] = 96
+        data: data + 1U
+        n: n - 2U
+    sl: c.strlen(s)
+    if: n != sl
+        return: (cast: (int) (0))
+    return: (cast: (int) (c.memcmp(data, s, n) = 0))
+end: lm_compiler_payload_eq
+
+fn: lm_compiler_implements_arg_atom (const: (@: source_node c.LmP0Node); @: out c.LmP0Text) int
+    if: source_node = 0 || out = 0 || source_node\kind != c.LM_P0_NODE_ATOM || source_node\as = 0 || source_node\as\atom = 0
+        return: (cast: (int) (0))
+    out\data: source_node\as\atom\data
+    out\length: source_node\as\atom\length
+    return: (cast: (int) (1))
+end: lm_compiler_implements_arg_atom
+
+fn: lm_compiler_char_literal (const: (@: t c.LmP0Text)) int
+    if: t = 0 || t\data = 0 || t\length != 3U
+        return: (cast: (int) (0 - 1))
+    if: t\data[0] != 39 || t\data[2] != 39
+        return: (cast: (int) (0 - 1))
+    return: (cast: (int) ((cast: (int) (cast: (unsigned char) t\data[1]))))
+end: lm_compiler_char_literal
+
+fn: lm_compiler_implicit_name (int: g) const: @: char
+    if: g = 1
+        return: (cast: (const: @: char) ("merge"))
+    if: g = 2
+        return: (cast: (const: @: char) ("implements"))
+    if: g = 3
+        return: (cast: (const: @: char) ("convert"))
+    if: g = 4
+        return: (cast: (const: @: char) ("interpreter"))
+    if: g = 5
+        return: (cast: (const: @: char) ("adopt"))
+    if: g = 6
+        return: (cast: (const: @: char) ("independent"))
+    if: g = 7
+        return: (cast: (const: @: char) ("call"))
+    return: (cast: (const: @: char) (0))
+end: lm_compiler_implicit_name
+
+fn: lm_compiler_scope_block (const: (@: source_node c.LmP0Node)) @: c.LmP0Structure
+    @: f c.LmP0Field
+    int: k 1
+    if: source_node = 0 || source_node\as = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    if: source_node\kind = c.LM_P0_NODE_STRUCTURE
+        return: (cast: (@: c.LmP0Structure) (source_node\as\structure))
+    if: source_node\kind != c.LM_P0_NODE_FRAME || source_node\as\frame = 0 || source_node\as\frame\body = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    if: lm_compiler_frame_head(source_node, "else")
+        return: (cast: (@: c.LmP0Structure) (source_node\as\frame\body))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) source_node\as\frame\body\first_field))
+    if: lm_compiler_frame_head(source_node, "catch")
+        k: 3
+    if: lm_compiler_frame_head(source_node, "for")
+        k: 5
+    if: k = 1
+        return: (cast: (@: c.LmP0Structure) (0))
+    while: f != 0 && k > 1
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+        k: k - 1
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    return: (cast: (@: c.LmP0Structure) (f\value\as\structure))
+end: lm_compiler_scope_block
+
+fn: lm_compiler_catch_name (const: (@: cf c.LmP0Node)) @: c.LmP0Text
+    @: f c.LmP0Field
+    if: lm_compiler_frame_head(cf, "catch") = 0 || cf\as\frame\body = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) cf\as\frame\body\first_field))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    return: (cast: (@: c.LmP0Text) (f\value\as\atom))
+end: lm_compiler_catch_name
+
+fn: lm_compiler_catch_params (const: (@: cf c.LmP0Node)) @: c.LmP0Structure
+    @: f c.LmP0Field
+    if: lm_compiler_frame_head(cf, "catch") = 0 || cf\as\frame\body = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) cf\as\frame\body\first_field))
+    if: f != 0
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    return: (cast: (@: c.LmP0Structure) (f\value\as\structure))
+end: lm_compiler_catch_params
+
+fn: lm_compiler_catch_body (const: (@: cf c.LmP0Node)) @: c.LmP0Structure
+    return: (cast: (@: c.LmP0Structure) (lm_compiler_scope_block(cf)))
+end: lm_compiler_catch_body
+
+fn: lm_compiler_block_catch (const: (@: blk c.LmP0Structure); const: (@: tname c.LmP0Text); const: (@: cname char); @: out_idx int) @: c.LmP0Node
+    @: f c.LmP0Field
+    @: nm c.LmP0Text
+    int: i 0
+    if: out_idx != 0
+        \out_idx: 0
+    if: blk = 0
+        return: (cast: (@: c.LmP0Node) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) blk\first_field))
+    while: f != 0
+        if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) f\value), "catch")
+            i: i + 1
+            nm: lm_compiler_catch_name((cast: (const: @: c.LmP0Node) f\value))
+            if: nm != 0 && ((tname != 0 && lm_compiler_text_same(nm, tname) != 0) || (cname != 0 && lm_compiler_text_eq(nm, cname) != 0))
+                if: out_idx != 0
+                    \out_idx: i
+                return: (cast: (@: c.LmP0Node) (f\value))
+            ---
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    return: (cast: (@: c.LmP0Node) (0))
+end: lm_compiler_block_catch
+
+fn: lm_compiler_block_has_catch (const: (@: blk c.LmP0Structure)) int
+    @: f c.LmP0Field
+    if: blk = 0
+        return: (cast: (int) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) blk\first_field))
+    while: f != 0
+        if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) f\value), "catch")
+            return: (cast: (int) (1))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    return: (cast: (int) (0))
+end: lm_compiler_block_has_catch
+
+fn: lm_compiler_host_is_body (const: (@: host c.LmP0Node); const: (@: body c.LmP0Structure)) int
+    @: field c.LmP0Field
+    if: host = 0 || body = 0 || host\as = 0
+        return: (cast: (int) (0))
+    if: host\kind = c.LM_P0_NODE_STRUCTURE && host\as\structure = body
+        return: (cast: (int) (1))
+    if: host\kind = c.LM_P0_NODE_FRAME && host\as\frame != 0 && host\as\frame\body = body
+        return: (cast: (int) (1))
+    # A receiver's body may be a Structure operand after its header operands.
+    if: host\kind = c.LM_P0_NODE_FRAME && host\as\frame != 0 && host\as\frame\body != 0
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) host\as\frame\body\first_field))
+        while: field != 0
+            if: field\value != 0 && field\value\kind = c.LM_P0_NODE_STRUCTURE && field\value\as != 0 && field\value\as\structure = body
+                return: (cast: (int) (1))
+            field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+        ---
+    return: (cast: (int) (0))
+end: lm_compiler_host_is_body
+
+fn: lm_compiler_value_null_literal (@: value c.L2ValueSpan) int
+    int: negative
+    int: unsigned_literal
+    size_t: magnitude
+    if: value = 0 || value\grammar = 0 || value\node = 0 || value\count < 1
+        return: (cast: (int) (0))
+    if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
+        return: (cast: (int) (lm_compiler_value_null_literal((cast: (@: c.L2ValueSpan) value\values))))
+    if: value\count != 1 || value\node\kind != c.LM_P0_NODE_ATOM || value\node\as = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) (lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) value\node\as\atom), @ negative, @ magnitude, @ unsigned_literal) != 0 && magnitude = 0U))))
+end: lm_compiler_value_null_literal
+
+fn: lm_compiler_atoms_len (@: f c.LmP0Field; int: cnt) size_t
+    @: g c.LmP0Field
+    size_t: n 0U
+    int: i 0
+    g: lm_compiler_next_active(f)
+    while: g != 0 && (cnt < 0 || i < cnt)
+        if: g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && g\value\as\atom != 0
+            n: n + g\value\as\atom\length
+        g: lm_compiler_next_active((cast: (@: c.LmP0Field) g\next))
+        i: i + 1
+    ---
+    return: (cast: (size_t) (n))
+end: lm_compiler_atoms_len
+
+fn: lm_compiler_path_rhs (const: (@: body c.LmP0Structure); int: kind; @: out_v size_t) int
+    @: f c.LmP0Field
+    const: (@: t c.LmP0Text)
+    int: cv
+    int: st
+    if: body = 0 || lm_compiler_count_active(body) != 1
+        return: (cast: (int) (1))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (1))
+    t: f\value\as\atom
+    if: kind = 7
+        st: lm_compiler_int_literal_bits(t, out_v)
+        if: st != 1
+            return: (cast: (int) (1))
+        return: (cast: (int) (0))
+    if: (kind = 0 || kind = 8 || kind = 9) && lm_compiler_num(t) = 0
+        return: (cast: (int) (1))
+    if: kind = 0 || kind = 8 || kind = 9
+        \out_v: lm_compiler_literal_value(t)
+        return: (cast: (int) (0))
+    cv: lm_compiler_char_literal(t)
+    if: cv < 0
+        return: (cast: (int) (1))
+    \out_v: (cast: (size_t) cv)
+    return: (cast: (int) (0))
+end: lm_compiler_path_rhs
+
+fn: lm_compiler_seg_at (const: (@: pd char); size_t: pn; int: i; @: off size_t; @: len size_t) int
+    size_t: j 0U
+    size_t: start 0U
+    int: seen 0
+    if: pd = 0
+        return: (cast: (int) (1))
+    while: j < pn
+        if: pd[j] = 92 && seen = i
+            \off: start
+            \len: j - start
+            return: (cast: (int) (0))
+        if: pd[j] = 92
+            seen: seen + 1
+            start: j + 1U
+        j: j + 1U
+    ---
+    if: seen != i
+        return: (cast: (int) (1))
+    \off: start
+    \len: pn - start
+    return: (cast: (int) (0))
+end: lm_compiler_seg_at
+
+fn: lm_compiler_name_is_seg (const: (@: name c.LmP0Text); const: (@: pd char); size_t: off; size_t: len) int
+    if: name = 0 || name\data = 0 || pd = 0 || len = 0U
+        return: (cast: (int) (0))
+    if: name\length != len
+        return: (cast: (int) (0))
+    return: (cast: (int) (c.memcmp(name\data, pd + off, len) = 0))
+end: lm_compiler_name_is_seg
+
+fn: lm_compiler_seg_split (const: (@: pd char); size_t: off; size_t: len; @: out_occ int; @: out_off size_t; @: out_len size_t) int
+    size_t: j
+    int: occ 0
+    int: digits 0
+    \out_occ: 0 - 1
+    \out_off: off
+    \out_len: len
+    if: pd = 0 || len = 0U || off + len < off
+        return: (cast: (int) (1))
+    if: pd[off] != 91
+        return: (cast: (int) (0))
+    j: off + 1U
+    while: j < off + len && pd[j] >= 48 && pd[j] <= 57
+        occ: occ * 10 + (cast: (int) (pd[j] - 48))
+        j: j + 1U
+        digits: digits + 1
+    ---
+    if: digits = 0 || j + 1U >= off + len || pd[j] != 93
+        return: (cast: (int) (1))
+    \out_occ: occ
+    \out_off: j + 1U
+    \out_len: off + len - (j + 1U)
+    return: (cast: (int) (0))
+end: lm_compiler_seg_split
+
+fn: lm_compiler_seg_occurrence (const: (@: pd char); size_t: off; size_t: len; @: out int) int
+    size_t: o off
+    size_t: l len
+    if: lm_compiler_seg_split(pd, off, len, out, @ o, @ l) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_seg_occurrence
+
+fn: lm_compiler_after_bracket (@: at c.LmP0Field) @: c.LmP0Field
+    @: f c.LmP0Field at
+    while: f != 0
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0 && f\value\as\atom\data != 0 && f\value\as\atom\length = 1U && f\value\as\atom\data[0] = 93
+            return: (cast: (@: c.LmP0Field) (lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    ---
+    return: (cast: (@: c.LmP0Field) (at))
+end: lm_compiler_after_bracket
+
+fn: lm_compiler_path_root_text (const: (@: pd char); size_t: pn; @: out c.LmP0Text) int
+    size_t: off 0U
+    size_t: len 0U
+    if: out = 0 || pd = 0 || pn = 0U || lm_compiler_seg_at(pd, pn, 0, @ off, @ len) != 0 || len = 0U
+        return: (cast: (int) (1))
+    out\data: (cast: (@: char) (pd + off))
+    out\length: len
+    return: (cast: (int) (0))
+end: lm_compiler_path_root_text
+
+fn: lm_compiler_path_root_binding_ft (const: (@: path c.L2Path); int: mi) int
+    if: path = 0 || path\root_ft = -2
+        return: (cast: (int) (-1))
+    return: (cast: (int) (path\root_ft))
+end: lm_compiler_path_root_binding_ft
+
+fn: lm_compiler_num_kind (int: ty) int
+    if: ty = 2
+        return: (cast: (int) (0))
+    if: ty = 1
+        return: (cast: (int) (1))
+    if: ty = 0
+        return: (cast: (int) (7))
+    if: ty = 3
+        return: (cast: (int) (8))
+    if: ty = 36
+        return: (cast: (int) (9))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_num_kind
+
+fn: lm_compiler_path_step (const: (@: path c.L2Path); int: i) @: c.L2PathStep
+    if: path = 0 || path\steps = 0 || i < 0 || i >= path\n
+        return: (cast: (@: c.L2PathStep) (0))
+    return: (cast: (@: c.L2PathStep) (path\steps + i))
+end: lm_compiler_path_step
+
+fn: lm_compiler_path_step_clear (@: step c.L2PathStep) int
+    step\locus: 0
+    step\kind: 0 - 1
+    step\row: 0 - 1
+    step\nsrow: 0 - 1
+    step\own: 0 - 1
+    step\ns: 0 - 1
+    step\formal: 0 - 1
+    step\node_host: 0 - 1
+    step\node_scope: 0
+    step\ent: 0 - 1
+    step\pointee: 0 - 1
+    step\host_ns: 0 - 1
+    step\host_res: 0 - 1
+    step\host_bm: 0 - 1
+    step\host_bh: 0 - 1
+    step\host_part: 0 - 1
+    step\view_model: 0 - 1
+    step\model_context: 0 - 1
+    step\model_step: -1
+    step\model_input: -1
+    step\cell_ft: 0 - 1
+    step\address_ft: -1
+    step\cell_const: 0
+    step\segocc: 0 - 1
+    step\off: 0U
+    step\len: 0U
+    step\node: 0
+    lm_compiler_value_span_ref((cast: (@: c.L2ValueSpan) (@ step\index)), 0, 0)
+    step\level: 0
+    step\elem_ty: 0 - 1
+    step\elem_model: 0 - 1
+    return: (cast: (int) (0))
+end: lm_compiler_path_step_clear
+
+fn: lm_compiler_path_same_grammar (const: (@: before c.L2Path); const: (@: path c.L2Path)) int
+    const: (@: a c.L2PathStep)
+    const: (@: b c.L2PathStep)
+    int: i 0
+    if: before = 0 || path = 0 || before\n < 0 || before\n != path\n || before\text = 0 || path\text = 0 || before\length != path\length || before\names != path\names || before\indexed != path\indexed || before\run_count != path\run_count || before\names_run != path\names_run || before\source_first != path\source_first || before\flat != path\flat || c.memcmp(before\text, path\text, path\length) != 0
+        return: (cast: (int) (0))
+    if: path\n > 0 && (before\steps = 0 || path\steps = 0)
+        return: (cast: (int) (0))
+    while: i < path\n
+        a: before\steps + i
+        b: path\steps + i
+        if: a\off != b\off || a\len != b\len || a\node != b\node || (a\locus = 7) != (b\locus = 7)
+            return: (cast: (int) (0))
+        if: b\locus = 7
+            const: (@: a_index c.L2ValueSpan (cast: (const: @: c.L2ValueSpan) (@ a\index)))
+            const: (@: b_index c.L2ValueSpan (cast: (const: @: c.L2ValueSpan) (@ b\index)))
+            if: a_index\first != b_index\first || a_index\count != b_index\count || a_index\node != b_index\node
+                return: (cast: (int) (0))
+        ---
+        i: i + 1
+    ---
+    return: (cast: (int) (1))
+end: lm_compiler_path_same_grammar
+
+fn: lm_compiler_path_machine_index (const: (@: path c.L2Path)) int
+    int: i 0
+    if: path = 0 || path\steps = 0
+        return: (cast: (int) (0))
+    while: i < path\n
+        @: selected_step c.L2PathStep (cast: (@: c.L2PathStep) (path\steps + i))
+        if: selected_step\locus = 7 && selected_step\address_ft >= 0
+            return: (cast: (int) (1))
+        i: i + 1
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_path_machine_index
+
+fn: lm_compiler_path_root_contract (const: (@: path c.L2Path)) @: c.L2TypeContract
+    if: path = 0 || path\root_ft = -2
+        return: (cast: (@: c.L2TypeContract) (0))
+    return: (cast: (@: c.L2TypeContract) (path\root_level))
+end: lm_compiler_path_root_contract
+
+fn: lm_compiler_path_fail_step (const: (@: path c.L2Path)) @: c.L2PathStep
+    if: path = 0 || path\steps = 0 || path\fail_why = 0 || path\fail_seg < 1 || path\fail_seg > path\n
+        return: (cast: (@: c.L2PathStep) (0))
+    return: (cast: (@: c.L2PathStep) (path\steps + (path\fail_seg - 1)))
+end: lm_compiler_path_fail_step
+
+fn: lm_compiler_path_record_root (const: (@: path c.L2Path); @: out c.LmP0Text) int
+    size_t: cut 0U
+    if: path = 0 || out = 0 || path\text = 0 || path\length = 0U
+        return: (cast: (int) (1))
+    while: cut < path\length && path\text[cut] != 92
+        cut: cut + 1U
+    ---
+    if: cut = 0U
+        return: (cast: (int) (1))
+    out\data: (cast: (@: char) path\text)
+    out\length: cut
+    return: (cast: (int) (0))
+end: lm_compiler_path_record_root
+
+fn: lm_compiler_path_step_text (const: (@: path c.L2Path); int: i; @: out c.LmP0Text) int
+    @: step c.L2PathStep lm_compiler_path_step(path, i)
+    if: step = 0 || out = 0 || path\text = 0
+        return: (cast: (int) (1))
+    out\data: (cast: (@: char) (path\text + step\off))
+    out\length: step\len
+    return: (cast: (int) (0))
+end: lm_compiler_path_step_text
+
+fn: lm_compiler_path_fail_node (const: (@: path c.L2Path); @: first c.LmP0Field) @: c.LmP0Node
+    @: step c.L2PathStep lm_compiler_path_fail_step(path)
+    if: step != 0 && step\node != 0
+        return: (cast: (@: c.LmP0Node) (step\node))
+    if: first != 0
+        return: (cast: (@: c.LmP0Node) (first\value))
+    return: (cast: (@: c.LmP0Node) (0))
+end: lm_compiler_path_fail_node
+
+fn: lm_compiler_path_leaf_node (const: (@: path c.L2Path); @: first c.LmP0Field) @: c.LmP0Node
+    @: step c.L2PathStep 0
+    if: path != 0 && path\n > 0 && path\steps != 0
+        step: path\steps + (path\n - 1)
+    if: step != 0 && step\node != 0
+        return: (cast: (@: c.LmP0Node) (step\node))
+    if: first != 0
+        return: (cast: (@: c.LmP0Node) (first\value))
+    return: (cast: (@: c.LmP0Node) (0))
+end: lm_compiler_path_leaf_node
+
+fn: lm_compiler_path_leaf_struct (const: (@: path c.L2Path)) int
+    if: path = 0 || path\fail_why != 0 || (path\leaf_kind != 2 && path\leaf_kind != 3)
+        return: (cast: (int) (0 - 1))
+    return: (cast: (int) (path\leaf_model))
+end: lm_compiler_path_leaf_struct
+
+fn: lm_compiler_path_model_child (const: (@: step c.L2PathStep); int: req) int
+    return: (cast: (int) ((cast: (int) (step != 0 && (step\kind = 2 || step\kind = 3) && (step\locus = 1 || step\locus = 2) && step\view_model != -1 && step\ent = req))))
+end: lm_compiler_path_model_child
+
+fn: lm_compiler_kind_cell_ty (int: kind) int
+    if: kind = 0
+        return: (cast: (int) (2))
+    if: kind = 1
+        return: (cast: (int) (1))
+    if: kind = 7
+        return: (cast: (int) (0))
+    if: kind = 8
+        return: (cast: (int) (3))
+    if: kind = 9
+        return: (cast: (int) (36))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_kind_cell_ty
+
+fn: lm_compiler_path_field_has_value (int: kind) int
+    if: kind = 2 || kind = 3 || kind = 4 || kind = 5 || kind = 6 || kind = 10 || kind = 11 || kind = 12
+        return: (cast: (int) (1))
+    return: (cast: (int) ((cast: (int) (lm_compiler_kind_cell_ty(kind) >= 0))))
+end: lm_compiler_path_field_has_value
+
+fn: lm_compiler_dec_literal (const: (@: t c.LmP0Text); @: out_v size_t) int
+    size_t: v 0U
+    size_t: i 0U
+    size_t: digit
+    if: t = 0 || t\data = 0 || t\length = 0U || out_v = 0
+        return: (cast: (int) (1))
+    while: i < t\length
+        if: t\data[i] < 48 || t\data[i] > 57
+            return: (cast: (int) (1))
+        digit: (cast: (size_t) (t\data[i] - 48))
+        if: v > (((cast: (size_t) -1) - digit) / 10U)
+            return: (cast: (int) (1))
+        v: v * 10U + digit
+        i: i + 1U
+    ---
+    \out_v: v
+    return: (cast: (int) (0))
+end: lm_compiler_dec_literal
+
+fn: lm_compiler_end_text (const: (@: frame c.LmP0Frame); const: (@: name c.LmP0Text)) int
+    @: field c.LmP0Field
+    if: frame = 0 || frame\trailer = 0 || name = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "end") = 0
+        return: (cast: (int) (0))
+    if: frame\trailer\body = 0
+        return: (cast: (int) (0))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) frame\trailer\body\first_field))
+    if: field = 0 || lm_compiler_next_active((cast: (@: c.LmP0Field) field\next)) != 0
+        return: (cast: (int) (0))
+    if: field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_text_same((cast: (const: @: c.LmP0Text) field\value\as\atom), name)))
+end: lm_compiler_end_text
+
+fn: lm_compiler_type_nodes_same (const: (@: a c.LmP0Node); const: (@: b c.LmP0Node)) int
+    @: fa c.LmP0Field
+    @: fb c.LmP0Field
+    if: a = 0 && b = 0
+        return: (cast: (int) (1))
+    if: a = 0 || b = 0
+        return: (cast: (int) (0))
+    if: a\kind != b\kind
+        return: (cast: (int) (0))
+    if: a\kind = c.LM_P0_NODE_ATOM
+        if: a\as = 0 || b\as = 0
+            return: (cast: (int) (0))
+        return: (cast: (int) (lm_compiler_text_same((cast: (const: @: c.LmP0Text) a\as\atom), (cast: (const: @: c.LmP0Text) b\as\atom))))
+    if: a\kind = c.LM_P0_NODE_FRAME
+        if: a\as = 0 || b\as = 0 || a\as\frame = 0 || b\as\frame = 0
+            return: (cast: (int) (0))
+        if: lm_compiler_text_same((cast: (const: @: c.LmP0Text) a\as\frame\head), (cast: (const: @: c.LmP0Text) b\as\frame\head)) = 0
+            return: (cast: (int) (0))
+        if: a\as\frame\body = 0 && b\as\frame\body = 0
+            return: (cast: (int) (1))
+        if: a\as\frame\body = 0 || b\as\frame\body = 0
+            return: (cast: (int) (0))
+        if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) a\as\frame\body)) != lm_compiler_count_active((cast: (const: @: c.LmP0Structure) b\as\frame\body))
+            return: (cast: (int) (0))
+        fa: lm_compiler_next_active((cast: (@: c.LmP0Field) a\as\frame\body\first_field))
+        fb: lm_compiler_next_active((cast: (@: c.LmP0Field) b\as\frame\body\first_field))
+        while: fa != 0 && fb != 0
+            if: lm_compiler_type_nodes_same((cast: (const: @: c.LmP0Node) fa\value), (cast: (const: @: c.LmP0Node) fb\value)) = 0
+                return: (cast: (int) (0))
+            fa: lm_compiler_next_active((cast: (@: c.LmP0Field) fa\next))
+            fb: lm_compiler_next_active((cast: (@: c.LmP0Field) fb\next))
+        ---
+        return: (cast: (int) (1))
+    if: a\kind = c.LM_P0_NODE_STRUCTURE
+        if: a\as = 0 || b\as = 0 || a\as\structure = 0 || b\as\structure = 0
+            return: (cast: (int) (0))
+        if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) a\as\structure)) != lm_compiler_count_active((cast: (const: @: c.LmP0Structure) b\as\structure))
+            return: (cast: (int) (0))
+        fa: lm_compiler_next_active((cast: (@: c.LmP0Field) a\as\structure\first_field))
+        fb: lm_compiler_next_active((cast: (@: c.LmP0Field) b\as\structure\first_field))
+        while: fa != 0 && fb != 0
+            if: lm_compiler_type_nodes_same((cast: (const: @: c.LmP0Node) fa\value), (cast: (const: @: c.LmP0Node) fb\value)) = 0
+                return: (cast: (int) (0))
+            fa: lm_compiler_next_active((cast: (@: c.LmP0Field) fa\next))
+            fb: lm_compiler_next_active((cast: (@: c.LmP0Field) fb\next))
+        ---
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_type_nodes_same
+
+fn: lm_compiler_fn_part_source (const: (@: fn_node c.LmP0Node); int: index) const: @: c.LmP0Node
+    @: field c.LmP0Field
+    int: i 0
+    if: fn_node = 0 || lm_compiler_frame_head(fn_node, "fn") = 0 || fn_node\as = 0 || fn_node\as\frame = 0 || fn_node\as\frame\body = 0 || index < 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) fn_node\as\frame\body\first_field))
+    while: i < index && field != 0
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+        i: i + 1
+    ---
+    if: field = 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    return: (cast: (const: @: c.LmP0Node) (field\value))
+end: lm_compiler_fn_part_source
+
+fn: lm_compiler_fn_var_source (const: (@: fn_node c.LmP0Node)) const: @: c.LmP0Node
+    const: (@: vars c.LmP0Node)
+    if: fn_node = 0 || lm_compiler_frame_head(fn_node, "fn") = 0 || fn_node\as = 0 || fn_node\as\frame = 0 || fn_node\as\frame\body = 0 || lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fn_node\as\frame\body)) != 5
+        return: (cast: (const: @: c.LmP0Node) (0))
+    vars: lm_compiler_fn_part_source(fn_node, 3)
+    if: vars = 0 || vars\kind != c.LM_P0_NODE_STRUCTURE || vars\as = 0 || vars\as\structure\trailer != 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    return: (cast: (const: @: c.LmP0Node) (vars))
+end: lm_compiler_fn_var_source
+
+fn: lm_compiler_fn_body_source (const: (@: fn_node c.LmP0Node)) const: @: c.LmP0Node
+    int: count
+    if: fn_node = 0 || lm_compiler_frame_head(fn_node, "fn") = 0 || fn_node\as = 0 || fn_node\as\frame = 0 || fn_node\as\frame\body = 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    count: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fn_node\as\frame\body))
+    if: count != 4 && count != 5
+        return: (cast: (const: @: c.LmP0Node) (0))
+    return: (cast: (const: @: c.LmP0Node) (lm_compiler_fn_part_source(fn_node, count - 1)))
+end: lm_compiler_fn_body_source
+
+fn: lm_compiler_ty_number (int: ty) int
+    if: ty = -10 || ty = 0 || ty = 1 || ty = 2 || ty = 34 || ty = 36
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_ty_number
+
+fn: lm_compiler_path_kind_ft (int: kind) int
+    if: kind = 0
+        return: (cast: (int) (2))
+    if: kind = 1
+        return: (cast: (int) (1))
+    if: kind = 7
+        return: (cast: (int) (0))
+    if: kind = 8
+        return: (cast: (int) (34))
+    if: kind = 9
+        return: (cast: (int) (36))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_path_kind_ft
+
+fn: lm_compiler_m2_atom_run (@: first c.LmP0Field; int: n) int
+    int: i 0
+    @: f c.LmP0Field first
+    while: i < n
+        if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+            return: (cast: (int) (0))
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+        i: i + 1
+    ---
+    return: (cast: (int) (1))
+end: lm_compiler_m2_atom_run
+
+fn: lm_compiler_m2_alloc (size_t: rows; size_t: cols) @: int
+    if: lm_compiler_mul_ok(rows + 1U, cols + 1U) = 0 || lm_compiler_mul_ok((rows + 1U) * (cols + 1U), c.sizeof(c.int)) = 0
+        return: (cast: (@: int) (0))
+    return: (cast: (@: int) ((cast: (@: int) c.calloc((rows + 1U) * (cols + 1U), c.sizeof(c.int)))))
+end: lm_compiler_m2_alloc
+
+fn: lm_compiler_struct_call_direct_name (@: operand c.L2ValueSpan) @: c.LmP0Text
+    if: operand = 0 || operand\count != 1 || operand\node = 0 || operand\node\kind != c.LM_P0_NODE_ATOM || operand\node\as = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    return: (cast: (@: c.LmP0Text) (operand\node\as\atom))
+end: lm_compiler_struct_call_direct_name
+
+fn: lm_compiler_tx_open (@: t c.L2Tx; @: local char; size_t: cap) int
+    if: t = 0 || local = 0 || cap = 0U
+        return: (cast: (int) (1))
+    t\data: local
+    t\len: 0U
+    t\cap: cap
+    local[0]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_tx_open
+
+fn: lm_compiler_tx_len (@: t c.L2Tx) size_t
+    if: t\len = (cast: (size_t) -1)
+        t\len: c.strlen(t\data)
+    return: (cast: (size_t) (t\len))
+end: lm_compiler_tx_len
+
+fn: lm_compiler_tx_clear (@: t c.L2Tx) int
+    if: t = 0 || t\data = 0
+        return: (cast: (int) (1))
+    t\len: 0U
+    t\data[0]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_tx_clear
+
+fn: lm_compiler_tx_local (@: t c.L2Tx; @: local char; size_t: cap) @: c.L2Tx
+    if: lm_compiler_tx_open(t, local, cap) != 0
+        return: (cast: (@: c.L2Tx) (0))
+    return: (cast: (@: c.L2Tx) (t))
+end: lm_compiler_tx_local
+
+fn: lm_compiler_head_rebase_body (@: body c.LmP0Structure; const: (@: origin c.LmP0Span)) int
+    @: field c.LmP0Field
+    if: body = 0
+        return: (cast: (int) (0))
+    field: body\first_field
+    while: field != 0
+        lm_compiler_head_rebase_node((cast: (@: c.LmP0Node) field\value), origin)
+        field: field\next
+    if: body\trailer != 0
+        lm_compiler_head_rebase_body((cast: (@: c.LmP0Structure) body\trailer\body), origin)
+    return: (cast: (int) (0))
+end: lm_compiler_head_rebase_body
+
+fn: lm_compiler_head_rebase_node (@: source_node c.LmP0Node; const: (@: origin c.LmP0Span)) int
+    @: frame c.LmP0Frame
+    if: source_node = 0 || origin = 0
+        return: (cast: (int) (0))
+    if: source_node\span != 0
+        if: source_node\span\line = 1U
+            source_node\span\column: source_node\span\column + origin\column - 1U
+        source_node\span\line: source_node\span\line + origin\line - 1U
+        source_node\span\offset: source_node\span\offset + origin\offset
+    if: source_node\as = 0
+        return: (cast: (int) (0))
+    if: source_node\kind = c.LM_P0_NODE_STRUCTURE
+        return: (cast: (int) (lm_compiler_head_rebase_body((cast: (@: c.LmP0Structure) source_node\as\structure), origin)))
+    if: source_node\kind = c.LM_P0_NODE_FRAME
+        frame: source_node\as\frame
+        if: frame != 0
+            lm_compiler_head_rebase_body((cast: (@: c.LmP0Structure) frame\body), origin)
+            if: frame\trailer != 0 && (frame\body = 0 || frame\trailer != frame\body\trailer)
+                lm_compiler_head_rebase_body((cast: (@: c.LmP0Structure) frame\trailer\body), origin)
+            ---
+        ---
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_head_rebase_node
+
+fn: lm_compiler_glued_after (@: close c.LmP0Field; @: after c.LmP0Field) int
+    if: close = 0 || after = 0 || close\value = 0 || after\value = 0 || close\value\span = 0 || after\value\span = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) (after\value\span\offset = close\value\span\offset + 1U))))
+end: lm_compiler_glued_after
+
+fn: lm_compiler_named_selector_in_text (const: (@: t c.LmP0Text)) int
+    size_t: i 0U
+    size_t: j
+    unsigned: ch
+    if: t = 0 || t\data = 0 || lm_compiler_quoted(t) != 0
+        return: (cast: (int) (0))
+    while: i + 3U < t\length
+        if: t\data[i] = 91
+            j: i + 1U
+            while: j < t\length && t\data[j] >= 48 && t\data[j] <= 57
+                j: j + 1U
+            if: j > i + 1U && j + 1U < t\length && t\data[j] = 93
+                ch: (cast: (unsigned) t\data[j + 1U])
+                if: ch = 95U || (ch >= 65U && ch <= 90U) || (ch >= 97U && ch <= 122U)
+                    return: (cast: (int) (1))
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_named_selector_in_text
+
+fn: lm_compiler_place_step (const: (@: place c.L2ArrayPlace); int: k; @: part c.L2ValueSpan) int
+    @: step c.L2PathStep
+    int: i 0
+    int: seen 0
+    if: place = 0 || part = 0 || k < 0 || k >= place\steps
+        return: (cast: (int) (1))
+    const: (@: path_view c.L2Path (cast: (const: @: c.L2Path) (@ place\path)))
+    if: path_view\steps = 0
+        return: (cast: (int) (1))
+    while: i < path_view\n
+        step: path_view\steps + i
+        if: step\locus = 7
+            if: seen = k
+                \part: step\index
+                return: (cast: (int) (0))
+            seen: seen + 1
+        i: i + 1
+    return: (cast: (int) (1))
+end: lm_compiler_place_step
+
+fn: lm_compiler_address_operand_span (@: span c.L2ValueSpan; @: operand c.L2ValueSpan) int
+    if: span = 0
+        return: (cast: (int) (2))
+    if: lm_compiler_rw_address_rest(span, operand) = 0
+        return: (cast: (int) (0))
+    if: span\count = 1 && span\node != 0
+        if: lm_compiler_frame_head((cast: (const: @: c.LmP0Node) span\node), "@") != 0 && span\grammar != 0
+            if: span\values = 0 || span\value_n != 1
+                return: (cast: (int) (1))
+            c.memcpy(operand, span\values, c.sizeof(c.L2ValueSpan))
+            return: (cast: (int) (0))
+        ---
+    ---
+    return: (cast: (int) (2))
+end: lm_compiler_address_operand_span
+
+fn: lm_compiler_ctype_word (const: (@: t c.LmP0Text)) int
+    return: (cast: (int) (lm_compiler_text_eq(t, "unsigned") || lm_compiler_text_eq(t, "signed") || lm_compiler_text_eq(t, "long") || lm_compiler_text_eq(t, "short") || lm_compiler_text_eq(t, "int") || lm_compiler_text_eq(t, "char") || lm_compiler_text_eq(t, "double")))
+end: lm_compiler_ctype_word
+
+fn: lm_compiler_text_is_bytes (const: (@: a c.LmP0Text); const: (@: d char); size_t: n) int
+    if: a = 0 || a\data = 0 || d = 0 || a\length != n
+        return: (cast: (int) (0))
+    return: (cast: (int) (c.memcmp(a\data, d, n) = 0))
+end: lm_compiler_text_is_bytes
+
+fn: lm_compiler_cap_next (int: cap; int: need) int
+    int: n cap
+    if: n < 16
+        n: 16
+    while: n < need
+        if: n > c.INT_MAX / 2
+            return: (cast: (int) (0 - 1))
+        n: n * 2
+    ---
+    return: (cast: (int) (n))
+end: lm_compiler_cap_next
+
+sub: lm_compiler_anchor_add (@: set int; @: n int; int: ns)
+    int: i 0
+    if: ns < 0
+        return
+    while: i < \n
+        if: set[i] = ns
+            return
+        i: i + 1
+    ---
+    set[\n]: ns
+    \n: \n + 1
+end: lm_compiler_anchor_add
+
+fn: lm_compiler_call_receiver (int: idx; int: formal; int: hid) int
+    if: formal >= 0 && hid >= 0
+        return: (cast: (int) (hid))
+    return: (cast: (int) (idx))
+end: lm_compiler_call_receiver
+
+fn: lm_compiler_path_file (const: (@: path char)) const: @: char
+    const: (@: base char path)
+    const: (@: cut char 0)
+    cut: c.strrchr(base, 47)
+    if: cut != 0
+        base: cut + 1
+    cut: c.strrchr(base, 92)
+    if: cut != 0
+        base: cut + 1
+    return: (cast: (const: @: char) (base))
+end: lm_compiler_path_file
+
+fn: lm_compiler_tramp_store (int: cls) const: @: char
+    if: cls = 2
+        return: (cast: (const: @: char) ("lmx_size_store_known"))
+    if: cls = 3
+        return: (cast: (const: @: char) ("lmx_unsigned_store_known"))
+    if: cls = 4
+        return: (cast: (const: @: char) ("lmx_ulong_store_known"))
+    return: (cast: (const: @: char) ("lmx_int_store_known"))
+end: lm_compiler_tramp_store
+
+sub: lm_compiler_rw_name (int: t; @: dest char)
+    if: t < 0
+        c.sprintf(dest, "l2_entry_unit")
+    else:
+        c.sprintf(dest, "l2_rw%d", t)
+    ---
+end: lm_compiler_rw_name
+
+fn: lm_compiler_rw_num_ty (int: ty) int
+    if: ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_rw_num_ty
+
+fn: lm_compiler_rw_numeric_declaration (const: (@: declaration c.L2Declaration)) int
+    @: word c.LmP0Text
+    int: depth
+    int: qualified
+    if: declaration = 0 || declaration\contract = 0
+        return: (cast: (int) (0))
+    word: lm_compiler_contract_leaf((cast: (@: c.L2TypeContract) declaration\contract), @ depth, @ qualified)
+    if: word = 0 || depth != 0 || qualified != 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq(word, "int") || lm_compiler_text_eq(word, "char") || lm_compiler_text_eq(word, "size_t") || lm_compiler_text_eq(word, "unsigned") || lm_compiler_text_eq(word, "ulong")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_rw_numeric_declaration
+
+fn: lm_compiler_rw_num_lit (const: (@: t c.LmP0Text); @: neg int; @: mag size_t; @: usuf int) int
+    size_t: i 0U
+    size_t: stop
+    size_t: v 0U
+    \neg: 0
+    \mag: 0U
+    \usuf: 0
+    if: t = 0 || t\data = 0 || t\length = 0U
+        return: (cast: (int) (0))
+    stop: t\length
+    if: t\data[stop - 1U] = 85 || t\data[stop - 1U] = 117
+        \usuf: 1
+        stop: stop - 1U
+    ---
+    if: t\data[0] = 45
+        \neg: 1
+        i: 1U
+    ---
+    if: i >= stop || (\neg != 0 && \usuf != 0)
+        return: (cast: (int) (0))
+    if: \neg != 0
+        if: lm_compiler_signed_num(t) = 0
+            return: (cast: (int) (0))
+    ---
+    if: \neg = 0 && lm_compiler_num(t) = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_num_value_span(t, i, stop, @ v) = 0
+        return: (cast: (int) (0))
+    \mag: v
+    return: (cast: (int) (1))
+end: lm_compiler_rw_num_lit
+
+fn: lm_compiler_rw_char_lit (const: (@: t c.LmP0Text); @: value int) int
+    if: t = 0 || t\data = 0 || t\length < 3U || t\data[0] != 39 || t\data[t\length - 1U] != 39
+        return: (cast: (int) (0))
+    if: t\length = 3U && t\data[1] != 92 && t\data[1] != 39
+        \value: (cast: (int) t\data[1]) & 255
+        return: (cast: (int) (1))
+    if: t\length != 4U || t\data[1] != 92
+        return: (cast: (int) (0))
+    if: t\data[2] = 48
+        \value: 0
+        return: (cast: (int) (1))
+    if: t\data[2] = 110
+        \value: 10
+        return: (cast: (int) (1))
+    if: t\data[2] = 116
+        \value: 9
+        return: (cast: (int) (1))
+    if: t\data[2] = 92 || t\data[2] = 39
+        \value: (cast: (int) t\data[2])
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_rw_char_lit
+
+fn: lm_compiler_rw_split (@: tok c.L2ValueSpan; int: lo; int: hi) int
+    int: k lo + 1
+    int: best lo + 1
+    int: bestp 99
+    int: p
+    while: k < hi
+        @: selected c.LmP0Node lm_compiler_span_node(tok, k)
+        p: lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) selected\as\atom))
+        if: p <= bestp
+            bestp: p
+            best: k
+        ---
+        k: k + 2
+    ---
+    return: (cast: (int) (best))
+end: lm_compiler_rw_split
+
+fn: lm_compiler_rw_unify (int: a; int: b) int
+    if: a = 1
+        a: 0
+        if: c.CHAR_MAX > c.INT_MAX
+            a: 3
+    ---
+    if: b = 1
+        b: 0
+        if: c.CHAR_MAX > c.INT_MAX
+            b: 3
+    ---
+    if: a = 0 - 3 || b = 0 - 3
+        return: (cast: (int) (0 - 3))
+    if: a = b
+        return: (cast: (int) (a))
+    if: a < 0 && b < 0
+        return: (cast: (int) (0 - 2))
+    if: a < 0
+        return: (cast: (int) (b))
+    if: b < 0
+        return: (cast: (int) (a))
+    return: (cast: (int) (0 - 3))
+end: lm_compiler_rw_unify
+
+fn: lm_compiler_span_node (@: spans c.L2ValueSpan; int: index) @: c.LmP0Node
+    @: element c.L2ValueSpan spans + index
+    return: (cast: (@: c.LmP0Node) (element\node))
+end: lm_compiler_span_node
+
+fn: lm_compiler_value_span_ref (@: span c.L2ValueSpan; @: first c.LmP0Field; int: count) int
+    c.memset(span, 0, c.sizeof(c.L2ValueSpan))
+    span\first: first
+    span\count: count
+    if: first != 0
+        span\node: first\value
+    return: (cast: (int) (0))
+end: lm_compiler_value_span_ref
+
+fn: lm_compiler_primary_values (@: value c.L2ValueSpan; @: n int) @: c.L2ValueSpan
+    \n: 0
+    if: value = 0
+        return: (cast: (@: c.L2ValueSpan) (0))
+    if: value\values != 0
+        \n: value\value_n
+        return: (cast: (@: c.L2ValueSpan) (value\values))
+    if: value\primary != 0
+        \n: value\primary\body_n
+        return: (cast: (@: c.L2ValueSpan) (value\primary\body))
+    if: value\node != 0 && value\node\kind = c.LM_P0_NODE_FRAME && value\node\as != 0 && value\node\as\frame != 0 && lm_compiler_count_active((cast: (const: @: c.LmP0Structure) value\node\as\frame\body)) > 0
+        \n: -1
+    return: (cast: (@: c.L2ValueSpan) (0))
+end: lm_compiler_primary_values
+
+fn: lm_compiler_primary_slice (@: value c.L2ValueSpan; int: start; int: width; @: out c.L2ValueSpan) int
+    int: n
+    @: values c.L2ValueSpan lm_compiler_primary_values(value, @ n)
+    if: n < 0 || start < 0 || start > n
+        return: (cast: (int) (1))
+    if: width < 0
+        width: n - start
+    if: width > n - start
+        return: (cast: (int) (1))
+    if: width = 0
+        return: (cast: (int) (lm_compiler_value_argument_ref(0, 0, (cast: (const: @: c.LmP0Node) value\node), out)))
+    return: (cast: (int) (lm_compiler_value_argument_ref(values + start, width, (cast: (const: @: c.LmP0Node) value\node), out)))
+end: lm_compiler_primary_slice
+
+fn: lm_compiler_value_spans_expression (@: spans c.L2ValueSpan; int: n) int
+    int: k 0
+    @: source_node c.LmP0Node
+    if: spans = 0 || n < 1 || (n % 2) = 0
+        return: (cast: (int) (0))
+    while: k < n
+        @: element c.L2ValueSpan spans + k
+        source_node: element\node
+        if: (k % 2) = 1 && (source_node = 0 || source_node\kind != c.LM_P0_NODE_ATOM || source_node\as = 0 || lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) source_node\as\atom)) = 0)
+            return: (cast: (int) (0))
+        k: k + 1
+    ---
+    return: (cast: (int) (1))
+end: lm_compiler_value_spans_expression
+
+fn: lm_compiler_use_place_below (@: place c.L2GraphPlace; @: stop c.L2GraphPlace; @: s int) int
+    int: n
+    if: place = stop
+        return: (cast: (int) (0))
+    if: place = 0 || place\child > (cast: (size_t) c.INT_MAX)
+        return: (cast: (int) (0 - 1))
+    n: lm_compiler_use_place_below((cast: (@: c.L2GraphPlace) place\parent), stop, s)
+    if: n < 0
+        return: (cast: (int) (0 - 1))
+    if: s != 0
+        s[n]: (cast: (int) place\child)
+    return: (cast: (int) (n + 1))
+end: lm_compiler_use_place_below
+
+fn: lm_compiler_catalog_extent_valid (const: (@: catalog c.L2D105Catalog)) int
+    const: (@: row c.L2D105CatalogRow)
+    const: (@: plan c.L2D105Plan)
+    size_t: at 1U
+    size_t: count 0U
+    if: catalog = 0 || catalog\ready = 0 || catalog\extent < 1U || catalog\extent > (cast: (size_t) c.INT_MAX)
+        return: (cast: (int) (0))
+    row: catalog\first
+    while: row != 0
+        plan: row\plan
+        if: count >= catalog\count || plan = 0 || plan\ready = 0 || plan\physical_width < 0 || plan\physical_width > c.INT_MAX / 2 || at > catalog\extent || catalog\extent - at < 3U || (cast: (size_t) plan\physical_width) > (catalog\extent - at - 3U) / 2U
+            return: (cast: (int) (0))
+        at: at + 3U + (cast: (size_t) plan\physical_width) * 2U
+        count: count + 1U
+        row: row\next
+    ---
+    return: (cast: (int) ((cast: (int) (at = catalog\extent && count = catalog\count))))
+end: lm_compiler_catalog_extent_valid
+
+fn: lm_compiler_reference_extent_valid (const: (@: catalog c.L2D105Catalog)) int
+    const: (@: row c.L2D105CatalogRow)
+    const: (@: plan c.L2D105Plan)
+    const: (@: step c.L2D105Step)
+    size_t: count 0U
+    int: j
+    if: catalog = 0 || catalog\ready = 0 || catalog\reference_count > ((cast: (size_t) c.INT_MAX) - 1U) / 3U
+        return: (cast: (int) (0))
+    row: catalog\required_first
+    while: row != 0
+        plan: row\plan
+        if: plan = 0 || plan\ready = 0 || plan\width < 0 || plan\width > c.INT_MAX / 2
+            return: (cast: (int) (0))
+        const: (@: steps_view c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
+        if: steps_view\size != (cast: (size_t) (plan\width * 2)) || (steps_view\size != 0U && steps_view\data = 0)
+            return: (cast: (int) (0))
+        j: 0
+        while: j < plan\width
+            step: steps_view\data + j
+            const: (@: requirement_view c.L2SchemaField (cast: (const: @: c.L2SchemaField) (@ step\requirement)))
+            if: requirement_view\kind = 10 && requirement_view\pointee >= 0
+                if: count >= catalog\reference_count
+                    return: (cast: (int) (0))
+                count: count + 1U
+            ---
+            j: j + 1
+        ---
+        row: row\next
+    ---
+    return: (cast: (int) ((cast: (int) (count = catalog\reference_count))))
+end: lm_compiler_reference_extent_valid
+
+fn: lm_compiler_rw_take_index (const: (@: t c.LmP0Text); @: at size_t; @: out_v size_t) int
+    size_t: i
+    size_t: v 0U
+    size_t: digit
+    i: \at
+    if: t = 0 || i >= t\length || t\data[i] != 91
+        return: (cast: (int) (1))
+    i: i + 1U
+    if: i >= t\length || t\data[i] < 48 || t\data[i] > 57
+        return: (cast: (int) (1))
+    while: i < t\length && t\data[i] >= 48 && t\data[i] <= 57
+        digit: (cast: (size_t) (t\data[i] - 48))
+        if: v > (((cast: (size_t) -1) - digit) / 10U)
+            return: (cast: (int) (1))
+        v: v * 10U + digit
+        i: i + 1U
+    ---
+    if: i >= t\length || t\data[i] != 93
+        return: (cast: (int) (1))
+    \out_v: v
+    \at: i + 1U
+    return: (cast: (int) (0))
+end: lm_compiler_rw_take_index
+
+fn: lm_compiler_rw_has_slash (const: (@: t c.LmP0Text)) int
+    size_t: i 0U
+    if: t = 0 || t\data = 0
+        return: (cast: (int) (0))
+    while: i < t\length
+        if: t\data[i] = 92
+            return: (cast: (int) (1))
+        i: i + 1U
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_rw_has_slash
+
+fn: lm_compiler_rw_prec (const: (@: t c.LmP0Text)) int
+    if: lm_compiler_text_eq(t, "||")
+        return: (cast: (int) (1))
+    if: lm_compiler_text_eq(t, "&&")
+        return: (cast: (int) (2))
+    if: lm_compiler_text_eq(t, "|")
+        return: (cast: (int) (3))
+    if: lm_compiler_text_eq(t, "^")
+        return: (cast: (int) (4))
+    if: lm_compiler_text_eq(t, "&")
+        return: (cast: (int) (5))
+    if: lm_compiler_text_eq(t, "=") || lm_compiler_text_eq(t, "!=")
+        return: (cast: (int) (6))
+    if: lm_compiler_text_eq(t, "<") || lm_compiler_text_eq(t, ">") || lm_compiler_text_eq(t, "<=") || lm_compiler_text_eq(t, ">=")
+        return: (cast: (int) (7))
+    if: lm_compiler_text_eq(t, "<<") || lm_compiler_text_eq(t, ">>")
+        return: (cast: (int) (8))
+    if: lm_compiler_text_eq(t, "+") || lm_compiler_text_eq(t, "-")
+        return: (cast: (int) (9))
+    if: lm_compiler_text_eq(t, "*") || lm_compiler_text_eq(t, "/") || lm_compiler_text_eq(t, "%")
+        return: (cast: (int) (10))
+    return: (cast: (int) (0))
+end: lm_compiler_rw_prec
+
+fn: lm_compiler_rw_prec_compares (int: p) int
+    return: (cast: (int) ((cast: (int) (p = 6 || p = 7))))
+end: lm_compiler_rw_prec_compares
+
+fn: lm_compiler_rw_prec_machine (int: p) int
+    return: (cast: (int) ((cast: (int) (p = 3 || p = 4 || p = 5 || p = 8))))
+end: lm_compiler_rw_prec_machine
+
+fn: lm_compiler_rw_address_rest (@: span c.L2ValueSpan; @: rest c.L2ValueSpan) int
+    @: f c.LmP0Field lm_compiler_next_active((cast: (@: c.LmP0Field) span\first))
+    if: span\count < 2 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || lm_compiler_text_eq((cast: (const: @: c.LmP0Text) f\value\as\atom), "@") = 0
+        return: (cast: (int) (1))
+    if: span\operand != 0
+        c.memcpy(rest, span\operand, c.sizeof(c.L2ValueSpan))
+        return: (cast: (int) (0))
+    lm_compiler_value_span_ref(rest, lm_compiler_next_active((cast: (@: c.LmP0Field) f\next)), (cast: (int) (span\count - 1)))
+    if: rest\first = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_rw_address_rest
+
+fn: lm_compiler_mcap_ty_ok (int: ty) int
+    if: ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_mcap_ty_ok
+
+fn: lm_compiler_mcap_new_helper (int: ty) @: char
+    if: ty = 1
+        return: (cast: (@: char) ("lmx_char_new_owned"))
+    if: ty = 2
+        return: (cast: (@: char) ("lmx_size_new_owned"))
+    if: ty = 3
+        return: (cast: (@: char) ("lmx_unsigned_new_owned"))
+    if: ty = 36
+        return: (cast: (@: char) ("lmx_ulong_new_owned"))
+    return: (cast: (@: char) ("lmx_int_new_owned"))
+end: lm_compiler_mcap_new_helper
+
+fn: lm_compiler_mcap_value_helper (int: ty) const: @: char
+    if: ty = 1
+        return: (cast: (const: @: char) ("lmx_char_value_known"))
+    if: ty = 2
+        return: (cast: (const: @: char) ("lmx_size_value_known"))
+    if: ty = 3
+        return: (cast: (const: @: char) ("lmx_unsigned_value_known"))
+    if: ty = 36
+        return: (cast: (const: @: char) ("lmx_ulong_value_known"))
+    return: (cast: (const: @: char) ("lmx_int_value_known"))
+end: lm_compiler_mcap_value_helper
+
+fn: lm_compiler_receiver_frame (const: (@: stmt c.LmP0Node); @@: out_name c.LmP0Text) @: c.LmP0Node
+    @: f c.LmP0Field
+    @: g c.LmP0Field
+    if: out_name != 0
+        \out_name: 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0 || stmt\as\frame\trailer != 0
+        return: (cast: (@: c.LmP0Node) (0))
+    if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) stmt\as\frame\head), "@") = 0 || lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) != 2
+        return: (cast: (@: c.LmP0Node) (0))
+    f: lm_compiler_next_active((cast: (@: c.LmP0Field) stmt\as\frame\body\first_field))
+    g: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || lm_compiler_ident((cast: (const: @: c.LmP0Text) f\value\as\atom)) = 0
+        return: (cast: (@: c.LmP0Node) (0))
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_FRAME || g\value\as = 0 || g\value\as\frame = 0 || g\value\as\frame\head = 0 || g\value\as\frame\trailer != 0
+        return: (cast: (@: c.LmP0Node) (0))
+    if: out_name != 0
+        \out_name: f\value\as\atom
+    return: (cast: (@: c.LmP0Node) (g\value))
+end: lm_compiler_receiver_frame
+
+fn: lm_compiler_call_node_body (const: (@: source_node c.LmP0Node)) @: c.LmP0Structure
+    if: source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0
+        return: (cast: (@: c.LmP0Structure) (source_node\as\frame\body))
+    return: (cast: (@: c.LmP0Structure) (0))
+end: lm_compiler_call_node_body
+
+fn: lm_compiler_ret_own (int: code) int
+    if: code = 33
+        return: (cast: (int) (3))
+    return: (cast: (int) (code))
+end: lm_compiler_ret_own
+
+fn: lm_compiler_held_result_receive (int: mi; @: field c.LmP0Field; int: n; int: number; const: (@: path char)) int
+    # The receiving type never manufactures invocation syntax. A bare held
+    # callable remains its address, including inside numeric expressions.
+    return: (cast: (int) (0))
+end: lm_compiler_held_result_receive
+
+fn: lm_compiler_held_result_span (int: mi; @: span c.L2ValueSpan; const: (@: path char)) int
+    c.L2ValueSpan: rest
+    if: span = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_prefix_rest(span, @ rest) = 0
+        return: (cast: (int) (lm_compiler_held_result_span(mi, @ rest, path)))
+    if: span\count != 1 || span\node = 0
+        return: (cast: (int) (0))
+    if: span\node\kind = c.LM_P0_NODE_STRUCTURE && span\node\as != 0 && span\node\as\structure != 0
+        return: (cast: (int) (lm_compiler_held_result_receive(mi, (cast: (@: c.LmP0Field) span\node\as\structure\first_field), lm_compiler_count_active((cast: (const: @: c.LmP0Structure) span\node\as\structure)), 1, path)))
+    return: (cast: (int) (lm_compiler_held_result_receive(mi, (cast: (@: c.LmP0Field) span\first), 1, 1, path)))
+end: lm_compiler_held_result_span
+
+fn: lm_compiler_pap_bind (const: (@: source_node c.LmP0Node); @@: name c.LmP0Text; @@: lit c.LmP0Text) int
+    @: fr c.LmP0Frame
+    @: only c.LmP0Field
+    size_t: bits 0U
+    if: name = 0 || lit = 0
+        return: (cast: (int) (1))
+    \name: 0
+    \lit: 0
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0
+        return: (cast: (int) (1))
+    fr: source_node\as\frame
+    if: fr\head = 0 || lm_compiler_ident((cast: (const: @: c.LmP0Text) fr\head)) = 0 || fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || lm_compiler_count_active((cast: (const: @: c.LmP0Structure) fr\body)) != 1
+        return: (cast: (int) (1))
+    only: lm_compiler_next_active((cast: (@: c.LmP0Field) fr\body\first_field))
+    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0 || only\value\as\atom = 0
+        return: (cast: (int) (1))
+    if: lm_compiler_int_literal_bits((cast: (const: @: c.LmP0Text) only\value\as\atom), @ bits) != 1
+        return: (cast: (int) (1))
+    \name: fr\head
+    \lit: only\value\as\atom
+    return: (cast: (int) (0))
+end: lm_compiler_pap_bind
+
+fn: lm_compiler_pap_is_bind (const: (@: source_node c.LmP0Node)) int
+    @: nm c.LmP0Text 0
+    @: lit c.LmP0Text 0
+    if: lm_compiler_pap_bind(source_node, @ nm, @ lit) != 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_pap_is_bind
+
+fn: lm_compiler_frames_handle (int: kind) const: @: char
+    if: kind = 1
+        return: (cast: (const: @: char) ("l2_rw"))
+    return: (cast: (const: @: char) ("l2_sc"))
+end: lm_compiler_frames_handle
+
+fn: lm_compiler_own_publish_helper (int: ty) @: char
+    if: ty = 0
+        return: (cast: (@: char) ("lmx_publish_int"))
+    if: ty = 1
+        return: (cast: (@: char) ("lmx_publish_char"))
+    if: ty = 2
+        return: (cast: (@: char) ("lmx_publish_size"))
+    if: ty = 3
+        return: (cast: (@: char) ("lmx_publish_unsigned"))
+    if: ty = 36
+        return: (cast: (@: char) ("lmx_publish_ulong"))
+    if: lm_compiler_own_is_pointer(ty) != 0
+        return: (cast: (@: char) ("lmx_publish_pointer"))
+    return: (cast: (@: char) (0))
+end: lm_compiler_own_publish_helper
+
+fn: lm_compiler_own_store_helper (int: ty) @: char
+    if: ty = 0
+        return: (cast: (@: char) ("lmx_int_store_known"))
+    if: ty = 1
+        return: (cast: (@: char) ("lmx_char_store_known"))
+    if: ty = 2
+        return: (cast: (@: char) ("lmx_size_store_known"))
+    if: ty = 3
+        return: (cast: (@: char) ("lmx_unsigned_store_known"))
+    if: ty = 36
+        return: (cast: (@: char) ("lmx_ulong_store_known"))
+    if: lm_compiler_own_is_pointer(ty) != 0
+        return: (cast: (@: char) ("lmx_pointer_store_known"))
+    return: (cast: (@: char) (0))
+end: lm_compiler_own_store_helper
+
+fn: lm_compiler_addr_tail (@: f c.LmP0Field; @@: out_name c.LmP0Field; @@: out_after c.LmP0Field) int
+    @: p1 c.LmP0Field
+    @: p2 c.LmP0Field
+    if: out_name = 0 || out_after = 0
+        return: (cast: (int) (1))
+    \out_name: 0
+    \out_after: 0
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: (cast: (int) (1))
+    if: lm_compiler_text_eq((cast: (const: @: c.LmP0Text) f\value\as\atom), "@") = 0
+        return: (cast: (int) (1))
+    p1: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
+    if: p1 = 0 || p1\value = 0 || p1\value\kind != c.LM_P0_NODE_ATOM || p1\value\as = 0
+        return: (cast: (int) (1))
+    if: lm_compiler_ident((cast: (const: @: c.LmP0Text) p1\value\as\atom)) = 0
+        return: (cast: (int) (1))
+    # In `@ value\field`, address-taking covers the complete postfix path.
+    # Do not consume only `@ value` and strand the following separator.
+    p2: lm_compiler_next_active((cast: (@: c.LmP0Field) p1\next))
+    if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && (lm_compiler_is_slash((cast: (const: @: c.LmP0Text) p2\value\as\atom)) || lm_compiler_text_eq((cast: (const: @: c.LmP0Text) p2\value\as\atom), "["))
+        return: (cast: (int) (1))
+    \out_name: p1
+    \out_after: p2
+    return: (cast: (int) (0))
+end: lm_compiler_addr_tail
+
+fn: lm_compiler_skip_span (@: a c.LmP0Field; int: span) @: c.LmP0Field
+    int: i 0
+    while: i < span && a != 0
+        a: lm_compiler_next_active((cast: (@: c.LmP0Field) a\next))
+        i: i + 1
+    ---
+    return: (cast: (@: c.LmP0Field) (a))
+end: lm_compiler_skip_span
+
+fn: lm_compiler_qual_word (const: (@: h c.LmP0Text)) int
+    if: h = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_text_eq(h, "independent") != 0
+        return: (cast: (int) (1))
+    if: lm_compiler_text_eq(h, "const") != 0
+        return: (cast: (int) (2))
+    if: lm_compiler_text_eq(h, "immutable") != 0
+        return: (cast: (int) (4))
+    return: (cast: (int) (0))
+end: lm_compiler_qual_word
+
+fn: lm_compiler_merge_host (const: (@: stmt c.LmP0Node)) @: c.LmP0Node
+    @: cur c.LmP0Node (cast: (@: c.LmP0Node) stmt)
+    @: f c.LmP0Field
+    while: cur != 0 && cur\kind = c.LM_P0_NODE_FRAME && cur\as != 0 && cur\as\frame != 0 && cur\as\frame\body != 0
+        f: lm_compiler_next_active((cast: (@: c.LmP0Field) cur\as\frame\body\first_field))
+        if: f = 0 || f\value = 0 || lm_compiler_qual_word(lm_compiler_app_head((cast: (const: @: c.LmP0Node) f\value))) = 0 || lm_compiler_count_active((cast: (const: @: c.LmP0Structure) cur\as\frame\body)) != 1
+            return: (cast: (@: c.LmP0Node) (cur))
+        cur: f\value
+    ---
+    return: (cast: (@: c.LmP0Node) (cur))
+end: lm_compiler_merge_host
+
+fn: lm_compiler_schema_kind (int: schema) int
+    if: schema = -1
+        return: (cast: (int) (0))
+    if: schema >= 0
+        return: (cast: (int) (1))
+    if: schema <= (0 - 1500000000)
+        return: (cast: (int) (3))
+    return: (cast: (int) (2))
+end: lm_compiler_schema_kind
+
+fn: lm_compiler_schema_index (int: schema) int
+    if: lm_compiler_schema_kind(schema) = 3
+        return: (cast: (int) ((0 - 1500000000) - schema))
+    if: lm_compiler_schema_kind(schema) = 2
+        return: (cast: (int) (-2 - schema))
+    return: (cast: (int) (schema))
+end: lm_compiler_schema_index
+
+fn: lm_compiler_schema_merge (int: result) int
+    if: result < 0
+        return: (cast: (int) (-1))
+    return: (cast: (int) (-2 - result))
+end: lm_compiler_schema_merge
+
+fn: lm_compiler_own_nsf_kind (int: oty) int
+    if: oty = 0
+        return: (cast: (int) (7))
+    if: oty = 1
+        return: (cast: (int) (1))
+    if: oty = 2
+        return: (cast: (int) (0))
+    if: oty = 3
+        return: (cast: (int) (8))
+    if: oty = 36
+        return: (cast: (int) (9))
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_own_nsf_kind
+
+fn: lm_compiler_fields_may_live_int_bin_range (@: first c.LmP0Field; @: stop c.LmP0Field) int
+    @: field c.LmP0Field lm_compiler_next_active(first)
+    @: source_node c.LmP0Node
+    int: p
+    while: field != 0 && field != stop
+        source_node: field\value
+        if: source_node != 0 && source_node\as != 0
+            # A machine operator is retained as its written source, not as a
+            # physical OP a later write could turn into DIV/MOD.
+            p: 0
+            if: source_node\kind = c.LM_P0_NODE_ATOM && source_node\as\atom != 0
+                p: lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) source_node\as\atom))
+            if: p >= 6 && lm_compiler_rw_prec_machine(p) = 0
+                return: (cast: (int) (1))
+            if: source_node\kind = c.LM_P0_NODE_STRUCTURE && source_node\as\structure != 0 && lm_compiler_fields_may_live_int_bin((cast: (@: c.LmP0Field) source_node\as\structure\first_field)) != 0
+                return: (cast: (int) (1))
+            if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as\frame != 0
+                if: source_node\as\frame\body != 0 && lm_compiler_fields_may_live_int_bin((cast: (@: c.LmP0Field) source_node\as\frame\body\first_field)) != 0
+                    return: (cast: (int) (1))
+                if: source_node\as\frame\trailer != 0 && source_node\as\frame\trailer\body != 0 && lm_compiler_fields_may_live_int_bin((cast: (@: c.LmP0Field) source_node\as\frame\trailer\body\first_field)) != 0
+                    return: (cast: (int) (1))
+            ---
+        ---
+        field: lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_fields_may_live_int_bin_range
+
+# Existing first-only callers retain their ordinary nested DATA scan.
+fn: lm_compiler_fields_may_live_int_bin (@: first c.LmP0Field) int
+    return: lm_compiler_fields_may_live_int_bin_range(first, 0)
+end: lm_compiler_fields_may_live_int_bin
+
+fn: lm_compiler_body_may_live_int_bin (const: (@: body c.LmP0Structure); @: first c.LmP0Field) int
+    @: field c.LmP0Field
+    @: stop c.LmP0Field
+    @: resume c.LmP0Field 0
+    int: count
+    if: body = 0
+        return: 0
+    if: lm_compiler_part_source_body(body) = 0
+        return: lm_compiler_fields_may_live_int_bin(first)
+    field: lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
+    while: field != 0 || resume != 0
+        field: lm_compiler_unit_cursor_field(field, @ resume)
+        if: field = 0
+            break
+        count: lm_compiler_unit_span_count(field)
+        stop: lm_compiler_skip_span(field, count)
+        if: lm_compiler_fields_may_live_int_bin_range(field, stop) != 0
+            return: 1
+        field: stop
+    ---
+    return: 0
+end: lm_compiler_body_may_live_int_bin
+
+fn: lm_compiler_merge_body_typed_null (const: (@: decl c.L2Declaration)) int
+    if: decl = 0 || decl\candidate_count != 1
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_reference_null_literal((cast: (@: c.LmP0Field) decl\candidate), (cast: (int) (decl\candidate_count)))))
+end: lm_compiler_merge_body_typed_null
+
+fn: lm_compiler_emit_os_target_guard (@: out c.FILE) int
+    if: lm_compiler_os_target() = 1
+        if: c.fputs("os:\n    default:\n        int: l2_os_target_guard c.l2_os_translated_for_win\nend: os\n\n", out) < 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (0))
+    ---
+    if: c.fputs("os:\n    win:\n        int: l2_os_target_guard c.l2_os_translated_for_the_default_platform\nend: os\n\n", out) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_emit_os_target_guard
+
+fn: lm_compiler_construct_name_ok (const: (@: s char)) int
+    size_t: i 0U
+    int: ch
+    if: s = 0 || s[0] = 0 || c.strncmp(s, "l2_", 3U) = 0 || c.strncmp(s, "lmx_", 4U) = 0
+        return: (cast: (int) (0))
+    while: s[i] != 0
+        ch: (cast: (int) (cast: (c.uchar) s[i]))
+        if: (ch < 97 || ch > 122) && (ch < 65 || ch > 90) && ch != 95 && (i = 0U || ch < 48 || ch > 57)
+            return: (cast: (int) (0))
+        i: i + 1U
+    ---
+    return: (cast: (int) (1))
+end: lm_compiler_construct_name_ok
+
+os:
+    win:
+        fn: lm_compiler_os_target () int
+            return: (cast: (int) (1))
+        end: lm_compiler_os_target
+    default:
+        fn: lm_compiler_os_target () int
+            return: (cast: (int) (2))
+        end: lm_compiler_os_target
+end: os

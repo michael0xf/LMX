@@ -1,4 +1,16 @@
-# Canonical inputs for the short bootstrap
+# Historical canonical inputs through slice237
+
+The selected normal source root is now the tracked
+[selfbuild package](../../../selfbuild/README.md), published unchanged from
+whole-quick-accepted candidate45. Its one relative manifest selects all159
+L3/L2 source/tool/test inputs while preserving the stage's src/tools/tests
+layout. Use its existing manifest/stage-copy/bootstrap commands; these six
+older lists are historical evidence, not a second current source route or
+an error-path fallback. No old generated header/body/object may fill a failed
+generation. Candidate46 remains pending and is not part of that baseline.
+
+The dated selections and results below remain historical, including uses of
+the word current relative to their recorded slice.
 
 These six lists are maintained input data for the existing `lmxtool manifest`
 and `stage-copy` commands, not a new preparation runner. Cold219 executed this

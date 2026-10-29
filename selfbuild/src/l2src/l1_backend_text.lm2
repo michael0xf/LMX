@@ -1,0 +1,1679 @@
+# Ordinary L2 writer, text and path helpers for the L1-to-C translator.
+# P0 and three automatic raw-buffer records are declaration-only L3 output.
+predef: "l1src/p0.h.lm1"
+predef: "l1src/l1_backend_scratch.h.lm1"
+include: "<stddef.h>" "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+# Original: l1src/l1trans.lm1:173
+fn: l1_text_eq (const: (@: text c.LmP0Text); const: (@: s char)) int
+    size_t: n
+    if: text = 0 || s = 0
+        return: (cast: (int) (0))
+    n: c.strlen(s)
+    if: text\data = 0
+        return: (cast: (int) (n = 0U))
+    return: (cast: (int) (text\length = n && c.memcmp(text\data, s, n) = 0))
+end: l1_text_eq
+
+# Original: l1src/l1trans.lm1:182
+fn: l1_head_is (const: (@: text c.LmP0Text); const: (@: s char)) int
+    size_t: start 0U
+    size_t: n 0U
+    size_t: sn 0U
+    if: text = 0 || text\data = 0 || s = 0
+        return: (cast: (int) (0))
+    n: text\length
+    if: n >= 2U && text\data[0] = 96 && text\data[n - 1U] = 96
+        start: 1U
+        n: n - 2U
+    ---
+    sn: c.strlen(s)
+    if: n != sn
+        return: (cast: (int) (0))
+    if: n = 0U
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.memcmp(text\data + start, s, n) = 0))
+end: l1_head_is
+
+# Original: l1src/l1trans.lm1:200
+fn: l1_ident_is_reserved (const: (@: text c.LmP0Text)) int
+    if: l1_head_is(text, "C") || l1_head_is(text, "L1") || l1_head_is(text, "L2") || l1_head_is(text, "L3")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_ident_is_reserved
+
+# Original: l1src/l1trans.lm1:205
+fn: l1_span_is_reserved (const: (@: data char); size_t: start; size_t: n) int
+    if: data = 0
+        return: (cast: (int) (0))
+    if: n = 1U && data[start] = 67
+        return: (cast: (int) (1))
+    if: n = 2U && data[start] = 76 && (data[start + 1U] = 49 || data[start + 1U] = 50 || data[start + 1U] = 51)
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_span_is_reserved
+
+# Original: l1src/l1trans.lm1:214
+fn: l1_text_starts (const: (@: text c.LmP0Text); const: (@: s char)) int
+    size_t: n
+    if: text = 0 || text\data = 0 || s = 0
+        return: (cast: (int) (0))
+    n: c.strlen(s)
+    if: text\length < n
+        return: (cast: (int) (0))
+    return: (cast: (int) (c.memcmp(text\data, s, n) = 0))
+end: l1_text_starts
+
+# Original: l1src/l1trans.lm1:306
+fn: l1_is_keyword (const: (@: text c.LmP0Text)) int
+    if: l1_text_eq(text, "fn")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "sub")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "external")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "include")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "import")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "predef")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "os")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "prototype")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "return")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "end")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "L1")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "L2")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "L3")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "if")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "else")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "while")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "for")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "break")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "continue")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "switch")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "case")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "default")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "goto")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "throw")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "catch")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "finally")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "throws")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "immutable")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "thread_local")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_is_keyword
+
+# Original: l1src/l1trans.lm1:367
+fn: l1_ident_to_buf (@: dst char; size_t: cap; const: (@: text c.LmP0Text)) int
+    size_t: start 0U
+    size_t: n 0U
+    if: dst = 0 || cap < 2U || text = 0 || text\data = 0
+        return: (cast: (int) (1))
+    n: text\length
+    if: n >= 2U && text\data[0] = 96 && text\data[n - 1U] = 96
+        start: 1U
+        n: n - 2U
+    ---
+    if: n + 1U >= cap
+        return: (cast: (int) (1))
+    c.memcpy(dst, text\data + start, n)
+    dst[n]: 0
+    return: (cast: (int) (0))
+end: l1_ident_to_buf
+
+# Original: l1src/l1trans.lm1:416
+fn: l1_is_payload_int (const: (@: text c.LmP0Text)) int
+    if: l1_text_eq(text, "int") || l1_text_eq(text, "unsigned") || l1_text_eq(text, "long") || l1_text_eq(text, "short") || l1_text_eq(text, "size_t") || l1_text_eq(text, "char")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_is_payload_int
+
+# Original: l1src/l1trans.lm1:435
+fn: l1_count_catch_params (const: (@: params c.LmP0Structure)) int
+    @: field c.LmP0Field
+    int: n 0
+    if: params = 0
+        return: (cast: (int) (0))
+    field: params\first_field
+    while: field != 0
+        if: l1_node_ignored((cast: (const: @: c.LmP0Node) field\value)) = 0
+            n: n + 1
+        ---
+        field: field\next
+    return: (cast: (int) (n))
+end: l1_count_catch_params
+
+# Original: l1src/l1trans.lm1:713
+fn: l1_write_text (@: out c.FILE; const: (@: text c.LmP0Text)) int
+    if: out = 0 || text = 0 || text\data = 0
+        return: (cast: (int) (1))
+    if: text\length = 0U
+        return: (cast: (int) (0))
+    if: c.fwrite(text\data, 1U, text\length, out) != text\length
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_write_text
+
+# Original: l1src/l1trans.lm1:722
+fn: l1_write_cstr (@: out c.FILE; const: (@: s char)) int
+    if: out = 0 || s = 0
+        return: (cast: (int) (1))
+    if: c.fputs(s, out) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_write_cstr
+
+# Original: l1src/l1trans.lm1:729
+fn: l1_write_span (@: out c.FILE; const: (@: data char); size_t: n) int
+    if: out = 0
+        return: (cast: (int) (1))
+    if: n = 0U
+        return: (cast: (int) (0))
+    if: data = 0
+        return: (cast: (int) (1))
+    if: c.fwrite(data, 1U, n, out) != n
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_write_span
+
+# Original: l1src/l1trans.lm1:740
+fn: l1_write_type_spelling (@: out c.FILE; const: (@: text c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    if: l1_ident_is_reserved(text) != 0
+        return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+    if: l1_text_eq(text, "ulong")
+        return: (cast: (int) (l1_write_cstr(out, "unsigned long")))
+    if: l1_text_eq(text, "u8")
+        return: (cast: (int) (l1_write_cstr(out, "uint8_t")))
+    if: l1_text_eq(text, "u16")
+        return: (cast: (int) (l1_write_cstr(out, "uint16_t")))
+    if: l1_text_eq(text, "u32")
+        return: (cast: (int) (l1_write_cstr(out, "uint32_t")))
+    if: l1_text_eq(text, "u64")
+        return: (cast: (int) (l1_write_cstr(out, "uint64_t")))
+    if: l1_text_eq(text, "i8")
+        return: (cast: (int) (l1_write_cstr(out, "int8_t")))
+    if: l1_text_eq(text, "i16")
+        return: (cast: (int) (l1_write_cstr(out, "int16_t")))
+    if: l1_text_eq(text, "i32")
+        return: (cast: (int) (l1_write_cstr(out, "int32_t")))
+    if: l1_text_eq(text, "i64")
+        return: (cast: (int) (l1_write_cstr(out, "int64_t")))
+    return: (cast: (int) (l1_write_text(out, text)))
+end: l1_write_type_spelling
+
+# Original: l1src/l1trans.lm1:763
+fn: l1_write_ident (@: out c.FILE; const: (@: text c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    size_t: start 0U
+    size_t: n 0U
+    if: l1_ident_is_reserved(text) != 0
+        return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+    if: text = 0 || text\data = 0
+        return: (cast: (int) (1))
+    n: text\length
+    if: n >= 2U && text\data[0] = 96 && text\data[n - 1U] = 96
+        start: 1U
+        n: n - 2U
+    ---
+    return: (cast: (int) (l1_write_span(out, (cast: (const: @: char) text\data + start), n)))
+end: l1_write_ident
+
+# Original: l1src/l1trans.lm1:777
+fn: l1_error (const: (@: path char); const: (@: source_node c.LmP0Node); const: (@: msg char)) int
+    size_t: line 0U
+    size_t: column 0U
+    if: source_node != 0
+        line: source_node\span\line
+        column: source_node\span\column
+    if: path = 0
+        path: ""
+    c.fprintf(c.stderr, "l1trans error: %s:%zu:%zu: %s\n", path, line, column, msg)
+    return: (cast: (int) (1))
+end: l1_error
+
+# Original: l1src/l1trans.lm1:788
+fn: l1_node_ignored (const: (@: source_node c.LmP0Node)) int
+    if: source_node = 0
+        return: (cast: (int) (1))
+    if: source_node\kind = c.LM_P0_NODE_DISABLED
+        return: (cast: (int) (1))
+    if: (source_node\flags & (c.LM_P0_NODE_INACTIVE | c.LM_P0_NODE_MIX)) != 0U
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_node_ignored
+
+# Original: l1src/l1trans.lm1:797
+fn: l1_first_active_field (const: (@: source_node c.LmP0Node)) @: c.LmP0Field
+    @: field c.LmP0Field
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0 || source_node\as\frame\body = 0
+        return: (cast: (@: c.LmP0Field) (0))
+    field: source_node\as\frame\body\first_field
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    return: (cast: (@: c.LmP0Field) (field))
+end: l1_first_active_field
+
+# Original: l1src/l1trans.lm1:806
+fn: l1_error_if_extra_fields (@: field c.LmP0Field; const: (@: path char); const: (@: source_node c.LmP0Node); const: (@: msg char)) int
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field != 0 && field\value != 0
+        return: (cast: (int) (l1_error(path, source_node, msg)))
+    return: (cast: (int) (0))
+end: l1_error_if_extra_fields
+
+# Original: l1src/l1trans.lm1:813
+fn: l1_pointer_pointee_is_const_frame (const: (@: source_node c.LmP0Node)) int
+    @: inner c.LmP0Field
+    if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0
+        return: (cast: (int) (0))
+    if: l1_pointer_depth((cast: (const: @: c.LmP0Text) source_node\as\frame\head)) = 0U
+        return: (cast: (int) (0))
+    inner: l1_first_active_field(source_node)
+    if: inner = 0 || inner\value = 0 || inner\value\kind != c.LM_P0_NODE_FRAME || inner\value\as = 0 || inner\value\as\frame = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (l1_text_eq((cast: (const: @: c.LmP0Text) inner\value\as\frame\head), "const")))
+end: l1_pointer_pointee_is_const_frame
+
+# Original: l1src/l1trans.lm1:824
+fn: l1_nodes_adjacent (const: (@: a c.LmP0Node); const: (@: b c.LmP0Node)) int
+    if: a = 0 || b = 0 || a\span = 0 || b\span = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (a\span\offset + a\span\length = b\span\offset))
+end: l1_nodes_adjacent
+
+# Original: l1src/l1trans.lm1:829
+fn: l1_glue_pair (const: (@: a c.LmP0Text); const: (@: b c.LmP0Text)) int
+    if: l1_text_eq(a, "<") && l1_text_eq(b, "<")
+        return: (cast: (int) (1))
+    if: l1_text_eq(a, ">") && l1_text_eq(b, ">")
+        return: (cast: (int) (1))
+    if: l1_text_eq(a, "=") && l1_text_eq(b, "=")
+        return: (cast: (int) (1))
+    if: l1_text_eq(a, "-") && l1_text_eq(b, ">")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_glue_pair
+
+# Original: l1src/l1trans.lm1:840
+fn: l1_scan_l1 (const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    if: l1_node_ignored(source_node)
+        return: (cast: (int) (0))
+    if: source_node = 0
+        return: (cast: (int) (0))
+    if: source_node\kind = c.LM_P0_NODE_STRUCTURE
+        field: source_node\as\structure\first_field
+        while: field != 0
+            if: l1_scan_l1((cast: (const: @: c.LmP0Node) field\value))
+                return: (cast: (int) (1))
+            field: field\next
+        return: (cast: (int) (0))
+    if: source_node\kind = c.LM_P0_NODE_FRAME
+        if: l1_text_eq((cast: (const: @: c.LmP0Text) source_node\as\frame\head), "L1")
+            return: (cast: (int) (1))
+        return: (cast: (int) (0))
+    return: (cast: (int) (0))
+end: l1_scan_l1
+
+# Original: l1src/l1trans.lm1:859
+fn: l1_discard_temp (@: out c.FILE; const: (@: tmp char)) int
+    if: out != 0
+        c.fclose(out)
+    if: tmp != 0
+        c.remove(tmp)
+    return: (cast: (int) (1))
+end: l1_discard_temp
+
+# Original: l1src/l1trans.lm1:877
+fn: l1_slash_prefix_len (const: (@: text c.LmP0Text)) size_t
+    size_t: i 0U
+    if: text = 0 || text\data = 0
+        return: (cast: (size_t) (0U))
+    while: i < text\length && text\data[i] = 92
+        i: i + 1U
+    return: (cast: (size_t) (i))
+end: l1_slash_prefix_len
+
+# Original: l1src/l1trans.lm1:885
+fn: l1_pointer_depth (const: (@: text c.LmP0Text)) size_t
+    size_t: i 0U
+    if: text = 0 || text\data = 0 || text\length = 0U
+        return: (cast: (size_t) (0U))
+    while: i < text\length
+        if: text\data[i] != 64
+            return: (cast: (size_t) (0U))
+        i: i + 1U
+    return: (cast: (size_t) (i))
+end: l1_pointer_depth
+
+# Original: l1src/l1trans.lm1:895
+fn: l1_emit_stars (@: out c.FILE; size_t: n) int
+    while: n != 0U
+        if: l1_write_cstr(out, "*") != 0
+            return: (cast: (int) (1))
+        n: n - 1U
+    return: (cast: (int) (0))
+end: l1_emit_stars
+
+# Original: l1src/l1trans.lm1:902
+fn: l1_emit_prefixed_path (@: out c.FILE; const: (@: text c.LmP0Text); size_t: deref; const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    size_t: split
+    if: out = 0 || text = 0 || text\data = 0 || deref = 0U || deref >= text\length
+        return: (cast: (int) (l1_error(path, source_node, "prefix dereference expects an operand")))
+    split: deref
+    while: split < text\length && text\data[split] != 92
+        split: split + 1U
+    if: split = deref || l1_span_is_reserved((cast: (const: @: char) text\data), deref, split - deref) != 0
+        return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+    if: l1_write_cstr(out, "(") != 0 || l1_emit_stars(out, deref) != 0 || l1_write_span(out, (cast: (const: @: char) text\data + deref), split - deref) != 0 || l1_write_cstr(out, ")") != 0
+        return: (cast: (int) (1))
+    if: split < text\length
+        return: (cast: (int) (l1_c_ident_from(out, text, split, path, source_node)))
+    return: (cast: (int) (0))
+end: l1_emit_prefixed_path
+
+# Original: l1src/l1trans.lm1:917
+fn: l1_c_ident_from (@: out c.FILE; const: (@: text c.LmP0Text); size_t: start; const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    size_t: i
+    size_t: from
+    size_t: stop
+    int: skip_first 0
+    int: first_seg 1
+    if: text = 0 || text\data = 0
+        return: (cast: (int) (0))
+    if: start >= text\length
+        return: (cast: (int) (0))
+    stop: text\length
+    if: stop - start >= 2U && text\data[start] = 96 && text\data[stop - 1U] = 96
+        start: start + 1U
+        stop: stop - 1U
+    ---
+    skip_first: 0
+    if: l1_text_starts(text, "c.") && start = 2U
+        skip_first: 1
+    ---
+    from: start
+    i: start
+    first_seg: 1
+    while: i < stop
+        if: text\data[i] = 92
+            if: i > from
+                if: first_seg = 0 || skip_first = 0
+                    if: l1_span_is_reserved((cast: (const: @: char) text\data), from, i - from) != 0
+                        return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+                    ---
+                ---
+                if: l1_write_span(out, (cast: (const: @: char) text\data + from), i - from) != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
+            if: l1_write_cstr(out, "->") != 0
+                return: (cast: (int) (1))
+            i: i + 1U
+            from: i
+            first_seg: 0
+            continue
+        ---
+        i: i + 1U
+    if: from >= stop
+        return: (cast: (int) (0))
+    if: first_seg = 0 || skip_first = 0
+        if: l1_span_is_reserved((cast: (const: @: char) text\data), from, stop - from) != 0
+            return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+        ---
+    ---
+    return: (cast: (int) (l1_write_span(out, (cast: (const: @: char) text\data + from), stop - from)))
+end: l1_c_ident_from
+
+# Original: l1src/l1trans.lm1:968
+fn: l1_c_atom_nested_receiver (const: (@: text c.LmP0Text); size_t: start) int
+    size_t: i
+    size_t: k
+    int: depth
+    int: in_str
+    int: in_chr
+    int: esc
+    int: slot
+    unsigned: ch
+    c.LmL1NestedScratch: scratch
+    if: text = 0 || text\data = 0
+        return: (cast: (int) (0))
+    k: 0U
+    while: k < 64U
+        scratch\qmark[k]: 0
+        k: k + 1U
+    i: start
+    depth: 0
+    in_str: 0
+    in_chr: 0
+    esc: 0
+    while: i < text\length
+        ch: (cast: (unsigned) (cast: (uchar) text\data[i]))
+        if: esc != 0
+            esc: 0
+            i: i + 1U
+            continue
+        if: in_str != 0
+            if: ch = 92U
+                esc: 1
+            ---
+            if: ch != 92U && ch = 34U
+                in_str: 0
+            ---
+            i: i + 1U
+            continue
+        if: in_chr != 0
+            if: ch = 92U
+                esc: 1
+            ---
+            if: ch != 92U && ch = 39U
+                in_chr: 0
+            ---
+            i: i + 1U
+            continue
+        if: ch = 34U
+            in_str: 1
+            i: i + 1U
+            continue
+        if: ch = 39U
+            in_chr: 1
+            i: i + 1U
+            continue
+        if: ch = 40U
+            depth: depth + 1
+            i: i + 1U
+            continue
+        if: ch = 41U
+            if: depth > 0
+                depth: depth - 1
+            ---
+            i: i + 1U
+            continue
+        if: ch = 63U
+            slot: depth
+            if: slot > 63
+                slot: 63
+            ---
+            scratch\qmark[slot]: scratch\qmark[slot] + 1
+            i: i + 1U
+            continue
+        if: ch = 58U
+            slot: depth
+            if: slot > 63
+                slot: 63
+            ---
+            if: scratch\qmark[slot] > 0
+                scratch\qmark[slot]: scratch\qmark[slot] - 1
+            else:
+                return: (cast: (int) (1))
+            ---
+            i: i + 1U
+            continue
+        i: i + 1U
+    return: (cast: (int) (0))
+end: l1_c_atom_nested_receiver
+
+# Original: l1src/l1trans.lm1:1054
+fn: l1_c_ident (@: out c.FILE; const: (@: text c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    size_t: start 0U
+    if: text = 0 || text\data = 0
+        return: (cast: (int) (0))
+    if: l1_text_starts(text, "c.") && text\length > 2U
+        start: 2U
+    if: start < text\length && (text\data[start] = 34 || text\data[start] = 39)
+        return: (cast: (int) (l1_write_span(out, (cast: (const: @: char) text\data + start), (cast: (size_t) text\length - start))))
+    if: start = 2U && l1_c_atom_nested_receiver(text, start) != 0
+        return: (cast: (int) (l1_error(path, source_node, "compact c. call cannot contain a nested L1 receiver")))
+    if: start = 0U && l1_ident_is_reserved(text) != 0
+        return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+    ---
+    return: (cast: (int) (l1_c_ident_from(out, text, start, path, source_node)))
+
+# The old first semantic layer resolves the otherwise ambiguous colon frame in
+# exactly this way: an indexed/field-follow head is an assignment target, and
+# a c.* head is one when it contains a path dot beyond the `c.` namespace.
+# A plain `c.name:` remains a C call.
+end: l1_c_ident
+
+# Original: l1src/l1trans.lm1:1073
+fn: l1_head_looks_assignable_target (const: (@: head c.LmP0Text)) int
+    size_t: i 0U
+    if: head = 0 || head\data = 0
+        return: (cast: (int) (0))
+    while: i < head\length
+        if: head\data[i] = 91 || head\data[i] = 92
+            return: (cast: (int) (1))
+        if: i >= 2U && head\data[i] = 46 && l1_text_starts(head, "c.")
+            return: (cast: (int) (1))
+        i: i + 1U
+    return: (cast: (int) (0))
+end: l1_head_looks_assignable_target
+
+# Original: l1src/l1trans.lm1:1085
+fn: l1_emit_c99_string (@: out c.FILE; const: (@: data char); size_t: n) int
+    size_t: i 0U
+    unsigned: b
+    c.LmL1StringScratch: scratch
+    if: l1_write_cstr(out, "\"") != 0
+        return: (cast: (int) (1))
+    while: i < n
+        b: (cast: (unsigned) (cast: (uchar) data[i]))
+        if: b = 34U
+            if: l1_write_cstr(out, "\\\"") != 0
+                return: (cast: (int) (1))
+            i: i + 1U
+            continue
+        ---
+        if: b = 63U
+            if: l1_write_cstr(out, "\\?") != 0
+                return: (cast: (int) (1))
+            i: i + 1U
+            continue
+        ---
+        if: b = 92U
+            if: l1_write_cstr(out, "\\\\") != 0
+                return: (cast: (int) (1))
+            i: i + 1U
+            continue
+        ---
+        if: b = 10U
+            if: l1_write_cstr(out, "\\n") != 0
+                return: (cast: (int) (1))
+            i: i + 1U
+            continue
+        ---
+        if: b = 13U
+            if: l1_write_cstr(out, "\\r") != 0
+                return: (cast: (int) (1))
+            i: i + 1U
+            continue
+        ---
+        if: b < 32U || b > 126U
+            scratch\oct[0]: 92
+            scratch\oct[1]: (cast: (char) (48 + (b / 64U)))
+            scratch\oct[2]: (cast: (char) (48 + ((b / 8U) % 8U)))
+            scratch\oct[3]: (cast: (char) (48 + (b % 8U)))
+            scratch\oct[4]: 0
+            if: l1_write_cstr(out, (cast: (const: @: char) scratch\oct)) != 0
+                return: (cast: (int) (1))
+            i: i + 1U
+            continue
+        ---
+        if: l1_write_span(out, data + i, 1U) != 0
+            return: (cast: (int) (1))
+        i: i + 1U
+    return: (cast: (int) (l1_write_cstr(out, "\"")))
+end: l1_emit_c99_string
+
+# Original: l1src/l1trans.lm1:1139
+fn: l1_python_triple_quote (const: (@: text c.LmP0Text)) int
+    if: text = 0 || text\data = 0 || text\length < 6U
+        return: (cast: (int) (0))
+    if: text\data[0] != text\data[1] || text\data[1] != text\data[2]
+        return: (cast: (int) (0))
+    if: text\data[0] != 34 && text\data[0] != 39
+        return: (cast: (int) (0))
+    if: text\data[text\length - 3U] != text\data[0] || text\data[text\length - 2U] != text\data[0] || text\data[text\length - 1U] != text\data[0]
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) text\data[0])))
+end: l1_python_triple_quote
+
+# Original: l1src/l1trans.lm1:1150
+fn: l1_emit_triple_body (@: out c.FILE; const: (@: data char); size_t: n; int: q) int
+    @: buf char 0
+    size_t: i 0U
+    size_t: o 0U
+    size_t: run
+    size_t: emitn
+    size_t: k
+    unsigned: qc
+    int: err
+    if: n = 0U
+        return: (cast: (int) (l1_emit_c99_string(out, "", 0U)))
+    if: data = 0
+        return: (cast: (int) (1))
+    buf: (cast: (@: char) c.malloc(n + 1U))
+    if: buf = 0
+        return: (cast: (int) (1))
+    qc: (cast: (unsigned) q)
+    while: i < n
+        if: (cast: (unsigned) (cast: (uchar) data[i])) = qc
+            run: 0U
+            while: i + run < n && (cast: (unsigned) (cast: (uchar) data[i + run])) = qc
+                run: run + 1U
+            emitn: run
+            if: run >= 4U
+                emitn: run - 1U
+            k: 0U
+            while: k < emitn
+                buf[o]: (cast: (char) q)
+                o: o + 1U
+                k: k + 1U
+            i: i + run
+            continue
+        buf[o]: data[i]
+        o: o + 1U
+        i: i + 1U
+    buf[o]: 0
+    err: l1_emit_c99_string(out, buf, o)
+    c.free((cast: (@: void) buf))
+    return: (cast: (int) (err))
+end: l1_emit_triple_body
+
+# Original: l1src/l1trans.lm1:1190
+fn: l1_source_is_eq_fence (const: (@: src char); size_t: n; size_t: off) int
+    size_t: i
+    size_t: eq 0U
+    if: src = 0 || off >= n
+        return: (cast: (int) (0))
+    if: off != 0U && src[off - 1U] != 10 && src[off - 1U] != 13
+        return: (cast: (int) (0))
+    if: src[off] != 61
+        return: (cast: (int) (0))
+    i: off
+    while: i < n && src[i] = 61
+        eq: eq + 1U
+        i: i + 1U
+    if: eq < 3U
+        return: (cast: (int) (0))
+    while: i < n && (src[i] = 32 || src[i] = 9)
+        i: i + 1U
+    if: i >= n || src[i] = 10 || src[i] = 13
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_source_is_eq_fence
+
+# Original: l1src/l1trans.lm1:1324
+fn: l1_assign_index_close (const: (@: text c.LmP0Text); size_t: open; @: out_close size_t) int
+    size_t: i
+    size_t: depth 0U
+    int: quote 0
+    int: escape 0
+    unsigned: ch
+    if: text = 0 || text\data = 0 || out_close = 0 || open >= text\length || text\data[open] != 91
+        return: (cast: (int) (0))
+    i: open
+    while: i < text\length
+        ch: (cast: (unsigned) (cast: (uchar) text\data[i]))
+        if: quote != 0
+            if: escape != 0
+                escape: 0
+            else:
+                if: ch = 92U
+                    escape: 1
+                else:
+                    if: ch = (cast: (unsigned) quote)
+                        quote: 0
+                    ---
+                ---
+            ---
+            i: i + 1U
+            continue
+        if: ch = 34U || ch = 39U
+            quote: (cast: int ch)
+            i: i + 1U
+            continue
+        if: ch = 91U
+            depth: depth + 1U
+        else:
+            if: ch = 93U
+                if: depth = 0U
+                    return: (cast: (int) (0))
+                depth: depth - 1U
+                if: depth = 0U
+                    out_close[0]: i
+                    return: (cast: (int) (1))
+                ---
+            ---
+        ---
+        i: i + 1U
+    return: (cast: (int) (0))
+end: l1_assign_index_close
+
+# Original: l1src/l1trans.lm1:1494
+fn: l1_last_active_field (const: (@: body c.LmP0Structure)) @: c.LmP0Field
+    @: field c.LmP0Field
+    @: last c.LmP0Field 0
+    if: body = 0
+        return: (cast: (@: c.LmP0Field) (0))
+    field: body\first_field
+    while: field != 0
+        if: l1_node_ignored((cast: (const: @: c.LmP0Node) field\value)) = 0
+            last: field
+        ---
+        field: field\next
+    return: (cast: (@: c.LmP0Field) (last))
+end: l1_last_active_field
+
+# Original: l1src/l1trans.lm1:1811
+fn: l1_active_field (@: field c.LmP0Field; @: stop c.LmP0Field) @: c.LmP0Field
+    while: field != 0 && field != stop && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field = stop
+        return: (cast: (@: c.LmP0Field) (0))
+    return: (cast: (@: c.LmP0Field) (field))
+end: l1_active_field
+
+# Original: l1src/l1trans.lm1:1818
+fn: l1_emit_atom_c (@: out c.FILE; const: (@: t c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    if: l1_text_eq(t, "\\")
+        return: (cast: (int) (l1_write_cstr(out, "->")))
+    if: l1_text_eq(t, "@")
+        return: (cast: (int) (l1_write_cstr(out, "&")))
+    return: (cast: (int) (l1_c_ident(out, t, path, source_node)))
+end: l1_emit_atom_c
+
+# Original: l1src/l1trans.lm1:1825
+fn: l1_is_unary_prefix_atom (const: (@: text c.LmP0Text)) int
+    if: l1_text_eq(text, "!") || l1_text_eq(text, "~") || l1_text_eq(text, "@")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_is_unary_prefix_atom
+
+# Original: l1src/l1trans.lm1:1830
+fn: l1_is_infix_atom (const: (@: text c.LmP0Text)) int
+    if: l1_text_eq(text, "+") || l1_text_eq(text, "-") || l1_text_eq(text, "*") || l1_text_eq(text, "/") || l1_text_eq(text, "%")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "<") || l1_text_eq(text, ">") || l1_text_eq(text, "=") || l1_text_eq(text, "&") || l1_text_eq(text, "|") || l1_text_eq(text, "^")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "!=") || l1_text_eq(text, "<=") || l1_text_eq(text, ">=") || l1_text_eq(text, "==")
+        return: (cast: (int) (1))
+    if: l1_text_eq(text, "&&") || l1_text_eq(text, "||") || l1_text_eq(text, "<<") || l1_text_eq(text, ">>")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_is_infix_atom
+
+# Original: l1src/l1trans.lm1:1841
+fn: l1_is_incdec_atom (const: (@: text c.LmP0Text)) int
+    if: l1_text_eq(text, "++") || l1_text_eq(text, "--")
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_is_incdec_atom
+
+# Original: l1src/l1trans.lm1:2173
+fn: l1_emit_include (@: out c.FILE; const: (@: frame c.LmP0Frame); const: (@: path char)) int
+    @: field c.LmP0Field
+    const: (@: source_node c.LmP0Node)
+    const: (@: atom c.LmP0Text)
+    size_t: start 0U
+    size_t: n 0U
+    if: frame = 0 || frame\body = 0
+        return: (cast: (int) (l1_error(path, 0, "include without body")))
+    field: frame\body\first_field
+    while: field != 0
+        source_node: field\value
+        if: l1_node_ignored(source_node) = 0
+            if: source_node = 0 || source_node\kind != c.LM_P0_NODE_ATOM
+                return: (cast: (int) (l1_error(path, source_node, "include expects a string header")))
+            atom: source_node\as\atom
+            if: atom = 0 || atom\data = 0
+                return: (cast: (int) (l1_error(path, source_node, "include expects a string header")))
+            start: 0U
+            n: atom\length
+            if: n >= 2U && atom\data[0] = 34 && atom\data[n - 1U] = 34
+                start: 1U
+                n: n - 2U
+            ---
+            if: l1_write_cstr(out, "#include ") != 0
+                return: (cast: (int) (1))
+            if: n >= 2U && atom\data[start] = 60 && atom\data[start + n - 1U] = 62
+                if: l1_write_span(out, (cast: (const: @: char) atom\data + start), n) != 0
+                    return: (cast: (int) (1))
+                ---
+            else:
+                if: l1_write_cstr(out, "\"") != 0
+                    return: (cast: (int) (1))
+                if: l1_write_span(out, (cast: (const: @: char) atom\data + start), n) != 0
+                    return: (cast: (int) (1))
+                if: l1_write_cstr(out, "\"") != 0
+                    return: (cast: (int) (1))
+            ---
+            if: l1_write_cstr(out, "\n") != 0
+                return: (cast: (int) (1))
+        ---
+        field: field\next
+    return: (cast: (int) (0))
+end: l1_emit_include
+
+# Original: l1src/l1trans.lm1:2447
+fn: l1_write_bracket_extent (@: out c.FILE; const: (@: head c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    size_t: n
+    size_t: off 1U
+    if: head = 0 || head\data = 0 || head\length < 2U
+        return: (cast: (int) (1))
+    if: head\data[0] != 91 || head\data[head\length - 1U] != 93
+        return: (cast: (int) (1))
+    n: head\length - 2U
+    if: n = 0U
+        return: (cast: (int) (0))
+    if: n > 2U && head\data[1] = 99 && head\data[2] = 46
+        off: 3U
+        n: n - 2U
+    ---
+    if: off = 1U && l1_span_is_reserved((cast: (const: @: char) head\data), off, n) != 0
+        return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+    ---
+    return: (cast: (int) (l1_write_span(out, (cast: (const: @: char) head\data + off), n)))
+end: l1_write_bracket_extent
+
+# Original: l1src/l1trans.lm1:2859
+fn: l1_emit_goto (@: out c.FILE; const: (@: frame c.LmP0Frame); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    const: (@: target c.LmP0Node)
+    if: frame = 0
+        return: (cast: (int) (1))
+    field: 0
+    if: frame\body != 0
+        field: frame\body\first_field
+    ---
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (l1_error(path, source_node, "goto expects a label name")))
+    target: field\value
+    field: field\next
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field != 0
+        return: (cast: (int) (l1_error(path, (cast: (const: @: c.LmP0Node) field\value), "goto expects exactly one label name")))
+    if: l1_ident_is_reserved((cast: (const: @: c.LmP0Text) target\as\atom)) != 0
+        return: (cast: (int) (l1_error(path, target, "reserved L1 name")))
+    if: l1_write_cstr(out, "    goto ") != 0
+        return: (cast: (int) (1))
+    if: l1_write_ident(out, (cast: (const: @: c.LmP0Text) target\as\atom), path, target) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (l1_write_cstr(out, ";\n")))
+end: l1_emit_goto
+
+# Original: l1src/l1trans.lm1:3167
+fn: l1_emit_catch_params (@: out c.FILE; const: (@: params c.LmP0Structure); const: (@: path char)) int
+    @: field c.LmP0Field
+    const: (@: param_frame c.LmP0Frame)
+    @: name_field c.LmP0Field
+    int: slot 0
+    if: params = 0
+        return: (cast: (int) (0))
+    field: params\first_field
+    while: field != 0
+        if: l1_node_ignored((cast: (const: @: c.LmP0Node) field\value)) = 0
+            if: field\value = 0 || field\value\kind != c.LM_P0_NODE_FRAME
+                return: (cast: (int) (l1_error(path, (cast: (const: @: c.LmP0Node) field\value), "catch parameters expect type: name bindings")))
+            param_frame: field\value\as\frame
+            name_field: 0
+            if: param_frame\body != 0
+                name_field: param_frame\body\first_field
+            ---
+            while: name_field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) name_field\value))
+                name_field: name_field\next
+            if: name_field = 0 || name_field\value = 0 || name_field\value\kind != c.LM_P0_NODE_ATOM
+                return: (cast: (int) (l1_error(path, (cast: (const: @: c.LmP0Node) field\value), "catch parameter expects a name")))
+            if: slot >= 8
+                return: (cast: (int) (l1_error(path, (cast: (const: @: c.LmP0Node) field\value), "catch payload is limited to 8 arguments")))
+            if: l1_write_cstr(out, "        ") != 0
+                return: (cast: (int) (1))
+            if: l1_write_type_spelling(out, (cast: (const: @: c.LmP0Text) param_frame\head), path, (cast: (const: @: c.LmP0Node) field\value)) != 0
+                return: (cast: (int) (1))
+            if: l1_write_cstr(out, " ") != 0
+                return: (cast: (int) (1))
+            if: l1_write_ident(out, (cast: (const: @: c.LmP0Text) name_field\value\as\atom), path, (cast: (const: @: c.LmP0Node) name_field\value)) != 0
+                return: (cast: (int) (1))
+            if: l1_is_payload_int((cast: (const: @: c.LmP0Text) param_frame\head)) = 0
+                return: (cast: (int) (l1_error(path, (cast: (const: @: c.LmP0Node) field\value), "unsupported throw payload type")))
+            if: c.fprintf(out, " = (") < 0
+                return: (cast: (int) (1))
+            if: l1_write_type_spelling(out, (cast: (const: @: c.LmP0Text) param_frame\head), path, (cast: (const: @: c.LmP0Node) field\value)) != 0
+                return: (cast: (int) (1))
+            if: c.fprintf(out, ")l1_throw_payload[%d];\n", slot) < 0
+                return: (cast: (int) (1))
+            slot: slot + 1
+        ---
+        field: field\next
+    return: (cast: (int) (0))
+end: l1_emit_catch_params
+
+# Original: l1src/l1trans.lm1:4166
+fn: l1_copy_quoted (const: (@: atom c.LmP0Text); @: buf char; size_t: cap) int
+    size_t: start 0U
+    size_t: n 0U
+    if: atom = 0 || atom\data = 0 || buf = 0 || cap < 2U
+        return: (cast: (int) (1))
+    n: atom\length
+    if: n >= 2U && atom\data[0] = 34 && atom\data[n - 1U] = 34
+        start: 1U
+        n: n - 2U
+    ---
+    if: n + 1U >= cap
+        return: (cast: (int) (1))
+    c.memcpy(buf, atom\data + start, n)
+    buf[n]: 0
+    return: (cast: (int) (0))
+end: l1_copy_quoted
+
+# Original: l1src/l1trans.lm1:4182
+fn: l1_path_is_bare (const: (@: s char)) int
+    size_t: i 0U
+    if: s = 0 || s[0] = 0
+        return: (cast: (int) (0))
+    if: s[0] = 47 || s[0] = 92
+        return: (cast: (int) (0))
+    if: s[1] != 0 && s[1] = 58
+        return: (cast: (int) (0))
+    ---
+    while: s[i] != 0
+        if: s[i] = 47 || s[i] = 92
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) (1))
+end: l1_path_is_bare
+
+# Original: l1src/l1trans.lm1:4197
+fn: l1_resolve_bare_import (@: buf char; size_t: cap; const: (@: source_path char); const: (@: file_name char)) int
+    size_t: path_length 0U
+    size_t: slash 0U
+    size_t: i 0U
+    size_t: n 0U
+    if: buf = 0 || cap < 2U || file_name = 0
+        return: (cast: (int) (1))
+    n: c.strlen(file_name)
+    if: source_path = 0 || source_path[0] = 0
+        if: n + 1U >= cap
+            return: (cast: (int) (1))
+        c.strcpy(buf, file_name)
+        return: (cast: (int) (0))
+    path_length: c.strlen(source_path)
+    while: i < path_length
+        if: source_path[i] = 47 || source_path[i] = 92
+            slash: i + 1U
+        i: i + 1U
+    if: slash = 0U
+        if: source_path[1] != 0 && source_path[1] = 58
+            if: 2U + n >= cap
+                return: (cast: (int) (1))
+            c.memcpy(buf, source_path, 2U)
+            c.strcpy(buf + 2U, file_name)
+            return: (cast: (int) (0))
+        ---
+        if: n + 1U >= cap
+            return: (cast: (int) (1))
+        c.strcpy(buf, file_name)
+        return: (cast: (int) (0))
+    if: slash + n >= cap
+        return: (cast: (int) (1))
+    c.memcpy(buf, source_path, slash)
+    c.strcpy(buf + slash, file_name)
+    return: (cast: (int) (0))
+
+# Actual-length compiler path strings use the existing length/data descriptor.
+end: l1_resolve_bare_import
+
+# Original: l1src/l1trans.lm1:4234
+fn: l1_path_capacity (size_t: a; size_t: b) size_t
+    size_t: maximum (cast: (size_t) -1)
+    if: b > maximum - 2U || a > maximum - b - 2U
+        return: (cast: (size_t) (0U))
+    return: (cast: (size_t) (a + b + 2U))
+end: l1_path_capacity
+
+# Original: l1src/l1trans.lm1:4240
+sub: l1_path_text_delete (@: text c.LmP0Text)
+    if: text != 0
+        c.free((cast: (@: void) text\data))
+        c.free(text)
+    ---
+end: l1_path_text_delete
+
+# Original: l1src/l1trans.lm1:4247
+fn: l1_import_path_text (const: (@: atom c.LmP0Text); const: (@: source_path char)) @: c.LmP0Text
+    @: result c.LmP0Text
+    @: decoded char
+    @: resolved char
+    size_t: capacity
+    size_t: source_length 0U
+    if: atom = 0 || atom\data = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    capacity: l1_path_capacity((cast: (size_t) atom\length), 0U)
+    if: capacity = 0U
+        return: (cast: (@: c.LmP0Text) (0))
+    decoded: (cast: (@: char) c.malloc(capacity))
+    if: decoded = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    if: l1_copy_quoted(atom, decoded, capacity) != 0
+        c.free(decoded)
+        return: (cast: (@: c.LmP0Text) (0))
+    if: l1_path_is_bare(decoded) != 0
+        if: source_path != 0
+            source_length: c.strlen(source_path)
+        capacity: l1_path_capacity(source_length, (cast: (size_t) c.strlen(decoded)))
+        if: capacity = 0U
+            c.free(decoded)
+            return: (cast: (@: c.LmP0Text) (0))
+        resolved: (cast: (@: char) c.malloc(capacity))
+        if: resolved = 0
+            c.free(decoded)
+            return: (cast: (@: c.LmP0Text) (0))
+        if: l1_resolve_bare_import(resolved, capacity, source_path, decoded) != 0
+            c.free(resolved)
+            c.free(decoded)
+            return: (cast: (@: c.LmP0Text) (0))
+        c.free(decoded)
+        decoded: resolved
+    ---
+    result: (cast: (@: c.LmP0Text) c.malloc(c.sizeof(c.LmP0Text)))
+    if: result = 0
+        c.free(decoded)
+        return: (cast: (@: c.LmP0Text) (0))
+    result\data: decoded
+    result\length: c.strlen(decoded)
+    return: (cast: (@: c.LmP0Text) (result))
+end: l1_import_path_text
+
+# Original: l1src/l1trans.lm1:4346
+fn: l1_write_ifdef_condition (@: out c.FILE; const: (@: head c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    size_t: start 0U
+    size_t: n 0U
+    if: head = 0 || head\data = 0
+        return: (cast: (int) (l1_error(path, source_node, "ifdef branch expects a non-empty condition")))
+    n: head\length
+    if: n >= 2U && head\data[0] = 96 && head\data[n - 1U] = 96
+        start: 1U
+        n: n - 2U
+    ---
+    if: n = 0U
+        return: (cast: (int) (l1_error(path, source_node, "ifdef branch expects a non-empty condition")))
+    if: l1_ident_is_reserved(head) != 0
+        return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+    ---
+    if: l1_write_span(out, (cast: (const: @: char) head\data + start), n) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_write_ifdef_condition
+
+# Original: l1src/l1trans.lm1:4380
+fn: l1_ident_same (const: (@: a c.LmP0Text); const: (@: b c.LmP0Text)) int
+    size_t: sa 0U
+    size_t: na 0U
+    size_t: sb 0U
+    size_t: nb 0U
+    if: a = 0 || a\data = 0 || b = 0 || b\data = 0
+        return: (cast: (int) (0))
+    na: a\length
+    nb: b\length
+    if: na >= 2U && a\data[0] = 96 && a\data[na - 1U] = 96
+        sa: 1U
+        na: na - 2U
+    ---
+    if: nb >= 2U && b\data[0] = 96 && b\data[nb - 1U] = 96
+        sb: 1U
+        nb: nb - 2U
+    ---
+    if: na != nb
+        return: (cast: (int) (0))
+    if: na = 0U
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.memcmp(a\data + sa, b\data + sb, na) = 0))
+end: l1_ident_same
+
+# Original: l1src/l1trans.lm1:4403
+fn: l1_validate_fn_close (const: (@: frame c.LmP0Frame); const: (@: name c.LmP0Text); const: (@: head char); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    @: nxt c.LmP0Field
+    const: (@: actual c.LmP0Text)
+    if: frame = 0 || frame\trailer = 0
+        return: (cast: (int) (0))
+    if: l1_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "return")
+        return: (cast: (int) (0))
+    if: l1_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "end") = 0
+        return: (cast: (int) (0))
+    if: frame\trailer\body = 0
+        return: (cast: (int) (l1_error(path, source_node, "end trailer expects exactly one target name")))
+    field: frame\trailer\body\first_field
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (l1_error(path, source_node, "end trailer expects exactly one target name")))
+    nxt: field\next
+    while: nxt != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) nxt\value))
+        nxt: nxt\next
+    if: nxt != 0
+        return: (cast: (int) (l1_error(path, source_node, "end trailer expects exactly one target name")))
+    actual: field\value\as\atom
+    if: name != 0 && l1_ident_same(actual, name)
+        return: (cast: (int) (0))
+    if: head != 0 && l1_text_eq(actual, head)
+        return: (cast: (int) (0))
+    return: (cast: (int) (l1_error(path, source_node, "end target does not match close target")))
+end: l1_validate_fn_close
+
+# Original: l1src/l1trans.lm1:4432
+fn: l1_validate_end_trailer (const: (@: frame c.LmP0Frame); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    const: (@: actual c.LmP0Text)
+    if: frame = 0 || frame\trailer = 0
+        return: (cast: (int) (0))
+    if: l1_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "end") = 0
+        return: (cast: (int) (0))
+    if: frame\trailer\body = 0
+        return: (cast: (int) (l1_error(path, source_node, "end trailer expects exactly one target name")))
+    field: frame\trailer\body\first_field
+    if: field = 0 || field\next != 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (l1_error(path, source_node, "end trailer expects exactly one target name")))
+    actual: field\value\as\atom
+    if: l1_ident_same(actual, (cast: (const: @: c.LmP0Text) frame\head)) = 0
+        return: (cast: (int) (l1_error(path, source_node, "end target does not match close target")))
+    return: (cast: (int) (0))
+end: l1_validate_end_trailer
+
+# Original: l1src/l1trans.lm1:4509
+fn: l1_emit_define_repl_structure (@: out c.FILE; const: (@: body c.LmP0Structure); const: (@: path char); const: (@: owner c.LmP0Node)) int
+    @: field c.LmP0Field
+    const: (@: source_node c.LmP0Node)
+    const: (@: atom c.LmP0Text)
+    size_t: start 0U
+    size_t: n 0U
+    int: first 1
+    if: l1_write_cstr(out, "(") != 0
+        return: (cast: (int) (1))
+    field: 0
+    if: body != 0
+        field: body\first_field
+    ---
+    while: field != 0
+        if: l1_node_ignored((cast: (const: @: c.LmP0Node) field\value)) = 0
+            source_node: field\value
+            if: source_node = 0
+                return: (cast: (int) (l1_error(path, owner, "define receiver expects atom tokens")))
+            if: first = 0
+                if: l1_write_cstr(out, " ") != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
+            first: 0
+            if: source_node\kind = c.LM_P0_NODE_STRUCTURE
+                if: l1_emit_define_repl_structure(out, (cast: (const: @: c.LmP0Structure) source_node\as\structure), path, source_node) != 0
+                    return: (cast: (int) (1))
+                ---
+            else:
+                if: source_node\kind != c.LM_P0_NODE_ATOM
+                    return: (cast: (int) (l1_error(path, source_node, "define receiver expects atom tokens")))
+                atom: source_node\as\atom
+                if: atom = 0 || atom\data = 0
+                    return: (cast: (int) (l1_error(path, source_node, "define receiver expects atom tokens")))
+                start: 0U
+                n: atom\length
+                if: n >= 2U && atom\data[0] = 96 && atom\data[n - 1U] = 96
+                    start: 1U
+                    n: n - 2U
+                ---
+                if: l1_ident_is_reserved(atom) != 0
+                    return: (cast: (int) (l1_error(path, source_node, "reserved L1 name")))
+                ---
+                if: l1_write_span(out, (cast: (const: @: char) atom\data + start), n) != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
+        ---
+        field: field\next
+    ---
+    return: (cast: (int) (l1_write_cstr(out, ")")))
+end: l1_emit_define_repl_structure
+
+# Original: l1src/l1trans.lm1:4720
+fn: l1_path_is_lm1 (const: (@: path char)) int
+    size_t: n 0U
+    int: c 0
+    if: path = 0
+        return: (cast: (int) (0))
+    n: c.strlen(path)
+    if: n < 4U
+        return: (cast: (int) (0))
+    if: path[n - 4U] != 46
+        return: (cast: (int) (0))
+    c: (cast: (int) path[n - 3U])
+    if: c >= 65 && c <= 90
+        c: c + 32
+    ---
+    if: c != 108
+        return: (cast: (int) (0))
+    c: (cast: (int) path[n - 2U])
+    if: c >= 65 && c <= 90
+        c: c + 32
+    ---
+    if: c != 109
+        return: (cast: (int) (0))
+    if: path[n - 1U] != 49
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: l1_path_is_lm1
+
+# Original: l1src/l1trans.lm1:4746
+fn: l1_path_is_lm2 (const: (@: path char)) int
+    size_t: n 0U
+    int: c 0
+    if: path = 0
+        return: (cast: (int) (0))
+    n: c.strlen(path)
+    if: n < 4U
+        return: (cast: (int) (0))
+    if: path[n - 4U] != 46
+        return: (cast: (int) (0))
+    c: (cast: (int) path[n - 3U])
+    if: c >= 65 && c <= 90
+        c: c + 32
+    ---
+    if: c != 108
+        return: (cast: (int) (0))
+    c: (cast: (int) path[n - 2U])
+    if: c >= 65 && c <= 90
+        c: c + 32
+    ---
+    if: c != 109
+        return: (cast: (int) (0))
+    if: path[n - 1U] != 50
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: l1_path_is_lm2
+
+# Original: l1src/l1trans.lm1:4772
+fn: l1_text_is_receiver (const: (@: text c.LmP0Text)) int
+    return: (cast: (int) (l1_ident_is_reserved(text)))
+end: l1_text_is_receiver
+
+# Original: l1src/l1trans.lm1:5023
+fn: l1_imp_find (@: tab c.LmP0Text; int: n; const: (@: path char)) int
+    int: i 0
+    size_t: path_length c.strlen(path)
+    @: entry c.LmP0Text
+    while: i < n
+        entry: tab + i
+        if: entry\length = path_length && c.memcmp(entry\data, path, path_length) = 0
+            return: (cast: (int) (i))
+        i: i + 1
+    return: (cast: (int) (-1))
+
+# The active stack and completed set contain length/data string descriptors.
+# Growth failure leaves the old table, count and entries intact.
+end: l1_imp_find
+
+# Original: l1src/l1trans.lm1:5522
+fn: l1_hdr_kind_label (int: kind) @: char
+    if: kind = 102
+        return: (cast: (@: char) ("typedef"))
+    if: kind = 101
+        return: (cast: (@: char) ("enum"))
+    return: (cast: (@: char) ("struct"))
+end: l1_hdr_kind_label
+
+# Original: l1src/l1trans.lm1:5559
+fn: l1_hdr_name_list_has (@: tab char; int: n; const: (@: name char)) int
+    int: i 0
+    size_t: off 0U
+    if: name = 0
+        return: (cast: (int) (0))
+    while: i < n
+        if: c.strcmp(tab + off, name) = 0
+            return: (cast: (int) (1))
+        off: off + c.strlen(tab + off) + 1U
+        i: i + 1
+    return: (cast: (int) (0))
+end: l1_hdr_name_list_has
+
+# Original: l1src/l1trans.lm1:5571
+fn: l1_hdr_name_list_add (@: tab char; @: n int; size_t: cap; const: (@: name char)) int
+    size_t: used 0U
+    size_t: len 0U
+    int: i 0
+    if: name = 0
+        return: (cast: (int) (1))
+    if: l1_hdr_name_list_has(tab, n[0], name) != 0
+        return: (cast: (int) (0))
+    while: i < n[0]
+        used: used + c.strlen(tab + used) + 1U
+        i: i + 1
+    len: c.strlen(name)
+    if: used + len + 1U >= cap
+        return: (cast: (int) (1))
+    c.memcpy(tab + used, name, len + 1U)
+    n[0]: n[0] + 1
+    return: (cast: (int) (0))
+end: l1_hdr_name_list_add
+
+# Original: l1src/l1trans.lm1:5589
+fn: l1_path_is_h_lm1 (const: (@: path char)) int
+    size_t: n 0U
+    int: c0 0
+    int: c1 0
+    int: c2 0
+    if: path = 0
+        return: (cast: (int) (0))
+    if: l1_path_is_lm1(path) = 0
+        return: (cast: (int) (0))
+    n: c.strlen(path)
+    if: n < 6U
+        return: (cast: (int) (0))
+    c0: (cast: (int) path[n - 6U])
+    c1: (cast: (int) path[n - 5U])
+    c2: (cast: (int) path[n - 4U])
+    if: c0 >= 65 && c0 <= 90
+        c0: c0 + 32
+    ---
+    if: c1 >= 65 && c1 <= 90
+        c1: c1 + 32
+    ---
+    if: c0 != 46 || c1 != 104 || c2 != 46
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: l1_path_is_h_lm1
+
+# Original: l1src/l1trans.lm1:5614
+fn: l1_path_norm_into (@: dst char; size_t: cap; const: (@: src char); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    size_t: i 0U
+    size_t: o 0U
+    size_t: start 0U
+    size_t: seg 0U
+    size_t: n 0U
+    if: dst = 0 || cap < 2U || src = 0
+        return: (cast: (int) (l1_error(path, source_node, "invalid path")))
+    n: c.strlen(src)
+    while: i < n
+        while: i < n && (src[i] = 47 || src[i] = 92)
+            i: i + 1U
+        if: i = n
+            break
+        start: i
+        while: i < n && src[i] != 47 && src[i] != 92
+            i: i + 1U
+        seg: i - start
+        if: seg = 1U && src[start] = 46
+            continue
+        if: seg = 2U && src[start] = 46 && src[start + 1U] = 46
+            if: o = 0U || (o = 2U && dst[1] = 58)
+                return: (cast: (int) (l1_error(path, source_node, "source outside the unit root")))
+            while: o > 0U && dst[o - 1U] != 47
+                o: o - 1U
+            if: o > 0U
+                o: o - 1U
+            continue
+        ---
+        if: o != 0U
+            if: o + 1U >= cap
+                return: (cast: (int) (l1_error(path, source_node, "path too long")))
+            dst[o]: 47
+            o: o + 1U
+        ---
+        if: seg >= cap - o
+            return: (cast: (int) (l1_error(path, source_node, "path too long")))
+        c.memcpy(dst + o, src + start, seg)
+        o: o + seg
+    ---
+    dst[o]: 0
+    if: o = 0U
+        return: (cast: (int) (l1_error(path, source_node, "source outside the unit root")))
+    return: (cast: (int) (0))
+end: l1_path_norm_into
+
+# Original: l1src/l1trans.lm1:5659
+fn: l1_ascii_ieq_prefix (const: (@: a char); const: (@: b char); size_t: n) int
+    size_t: i 0U
+    int: ca 0
+    int: cb 0
+    while: i < n
+        ca: (cast: (int) a[i])
+        cb: (cast: (int) b[i])
+        if: ca >= 65 && ca <= 90
+            ca: ca + 32
+        ---
+        if: cb >= 65 && cb <= 90
+            cb: cb + 32
+        ---
+        if: ca = 92
+            ca: 47
+        ---
+        if: cb = 92
+            cb: 47
+        ---
+        if: ca != cb
+            return: (cast: (int) (0))
+        i: i + 1U
+    return: (cast: (int) (1))
+end: l1_ascii_ieq_prefix
+
+# Original: l1src/l1trans.lm1:5747
+fn: l1_write_guard_escape (@: out c.FILE; const: (@: unit_id char)) int
+    size_t: i 0U
+    unsigned: b 0U
+    c.LmL1GuardScratch: scratch
+    if: unit_id = 0
+        return: (cast: (int) (1))
+    while: unit_id[i] != 0
+        b: ((cast: (unsigned) unit_id[i]) & 255U)
+        if: (b >= 48U && b <= 57U) || (b >= 65U && b <= 90U) || (b >= 97U && b <= 122U)
+            if: l1_write_span(out, unit_id + i, 1U) != 0
+                return: (cast: (int) (1))
+            ---
+        else:
+            if: b = 95U
+                if: l1_write_cstr(out, "_5F") != 0
+                    return: (cast: (int) (1))
+                ---
+            else:
+                c.snprintf((cast: (@: char) scratch\hex), 8U, "_%02X", b)
+                if: l1_write_cstr(out, (cast: (const: @: char) scratch\hex)) != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
+        ---
+        i: i + 1U
+    return: (cast: (int) (0))
+end: l1_write_guard_escape
+
+# Original: l1src/l1trans.lm1:5774
+fn: l1_hdr_frame_name (const: (@: frame c.LmP0Frame)) @: c.LmP0Text
+    @: field c.LmP0Field
+    if: frame = 0 || frame\body = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    field: frame\body\first_field
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (@: c.LmP0Text) (0))
+    return: (cast: (@: c.LmP0Text) (field\value\as\atom))
+end: l1_hdr_frame_name
+
+# Original: l1src/l1trans.lm1:5785
+fn: l1_hdr_validate_end_name (const: (@: frame c.LmP0Frame); const: (@: name c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    if: frame = 0 || frame\trailer = 0
+        return: (cast: (int) (0))
+    if: l1_text_eq((cast: (const: @: c.LmP0Text) frame\trailer\spelling), "end") = 0
+        return: (cast: (int) (0))
+    if: frame\trailer\body = 0
+        return: (cast: (int) (l1_error(path, source_node, "end trailer expects exactly one target name")))
+    field: frame\trailer\body\first_field
+    if: field = 0 || field\next != 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (l1_error(path, source_node, "end trailer expects exactly one target name")))
+    if: name = 0 || l1_ident_same((cast: (const: @: c.LmP0Text) field\value\as\atom), name) = 0
+        return: (cast: (int) (l1_error(path, source_node, "end target does not match type name")))
+    return: (cast: (int) (0))
+end: l1_hdr_validate_end_name
+
+# Original: l1src/l1trans.lm1:5800
+fn: l1_hdr_fields_structure (const: (@: frame c.LmP0Frame)) @: c.LmP0Structure
+    @: field c.LmP0Field
+    if: frame = 0 || frame\body = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    field: frame\body\first_field
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field = 0
+        return: (cast: (@: c.LmP0Structure) (0))
+    field: field\next
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_STRUCTURE
+        return: (cast: (@: c.LmP0Structure) (0))
+    return: (cast: (@: c.LmP0Structure) (field\value\as\structure))
+end: l1_hdr_fields_structure
+
+# Original: l1src/l1trans.lm1:5966
+fn: l1_emit_hdr_struct_forward (@: out c.FILE; const: (@: name c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    if: l1_write_cstr(out, "typedef struct ") != 0
+        return: (cast: (int) (1))
+    if: l1_write_ident(out, name, path, source_node) != 0
+        return: (cast: (int) (1))
+    if: l1_write_cstr(out, " ") != 0
+        return: (cast: (int) (1))
+    if: l1_write_ident(out, name, path, source_node) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (l1_write_cstr(out, ";\n")))
+end: l1_emit_hdr_struct_forward
+
+# Original: l1src/l1trans.lm1:6006
+fn: l1_emit_hdr_enum (@: out c.FILE; const: (@: frame c.LmP0Frame); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    const: (@: name c.LmP0Text)
+    @: body c.LmP0Structure
+    @: field c.LmP0Field
+    const: (@: nnode c.LmP0Node)
+    const: (@: vnode c.LmP0Node)
+    int: first 1
+    name: l1_hdr_frame_name(frame)
+    if: name = 0
+        return: (cast: (int) (l1_error(path, source_node, "enum missing name")))
+    if: l1_hdr_validate_end_name(frame, name, path, source_node) != 0
+        return: (cast: (int) (1))
+    body: l1_hdr_fields_structure(frame)
+    if: l1_write_cstr(out, "typedef enum ") != 0
+        return: (cast: (int) (1))
+    if: l1_write_ident(out, name, path, source_node) != 0
+        return: (cast: (int) (1))
+    if: l1_write_cstr(out, " {\n") != 0
+        return: (cast: (int) (1))
+    if: body != 0
+        field: body\first_field
+        while: field != 0
+            while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+                field: field\next
+            if: field = 0
+                break
+            ---
+            nnode: field\value
+            field: field\next
+            while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+                field: field\next
+            if: field = 0
+                return: (cast: (int) (l1_error(path, nnode, "enum enumerator missing value")))
+            vnode: field\value
+            field: field\next
+            if: nnode = 0 || nnode\kind != c.LM_P0_NODE_ATOM || vnode = 0 || vnode\kind != c.LM_P0_NODE_ATOM
+                return: (cast: (int) (l1_error(path, nnode, "enum enumerator expects name and value atoms")))
+            if: first = 0
+                if: l1_write_cstr(out, ",\n") != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
+            first: 0
+            if: l1_write_cstr(out, "    ") != 0
+                return: (cast: (int) (1))
+            if: l1_write_ident(out, (cast: (const: @: c.LmP0Text) nnode\as\atom), path, nnode) != 0
+                return: (cast: (int) (1))
+            if: l1_write_cstr(out, " = ") != 0
+                return: (cast: (int) (1))
+            if: l1_write_text(out, (cast: (const: @: c.LmP0Text) vnode\as\atom)) != 0
+                return: (cast: (int) (1))
+        ---
+    ---
+    if: l1_write_cstr(out, "\n} ") != 0
+        return: (cast: (int) (1))
+    if: l1_write_ident(out, name, path, source_node) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (l1_write_cstr(out, ";\n\n")))
+end: l1_emit_hdr_enum
+
+# Original: l1src/l1trans.lm1:6127
+fn: l1_hdr_fnptr_parts (const: (@: frame c.LmP0Frame); @@: name_out c.LmP0Node; @@: params_out c.LmP0Node; @@: ret_out c.LmP0Node) int
+    @: field c.LmP0Field
+    if: frame = 0 || frame\body = 0 || name_out = 0 || params_out = 0 || ret_out = 0
+        return: (cast: (int) (1))
+    name_out[0]: 0
+    params_out[0]: 0
+    ret_out[0]: 0
+    field: frame\body\first_field
+    while: field != 0
+        if: l1_node_ignored((cast: (const: @: c.LmP0Node) field\value)) = 0
+            if: name_out[0] = 0
+                name_out[0]: field\value
+            else:
+                if: params_out[0] = 0
+                    params_out[0]: field\value
+                else:
+                    if: ret_out[0] = 0
+                        ret_out[0]: field\value
+                    else:
+                        return: (cast: (int) (1))
+        ---
+        field: field\next
+    if: name_out[0] = 0 || params_out[0] = 0 || ret_out[0] = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_hdr_fnptr_parts
+
+# Original: l1src/l1trans.lm1:6464
+fn: l1_emit_hdr_type_alias (@: out c.FILE; const: (@: frame c.LmP0Frame); const: (@: path char); const: (@: source_node c.LmP0Node)) int
+    @: field c.LmP0Field
+    const: (@: name c.LmP0Text)
+    const: (@: tnode c.LmP0Node)
+    if: frame = 0 || frame\body = 0
+        return: (cast: (int) (l1_error(path, source_node, "type alias missing name")))
+    field: frame\body\first_field
+    while: field != 0 && l1_node_ignored((cast: (const: @: c.LmP0Node) field\value))
+        field: field\next
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: (cast: (int) (l1_error(path, source_node, "type alias missing name")))
+    name: field\value\as\atom
+    if: l1_write_cstr(out, "typedef") != 0
+        return: (cast: (int) (1))
+    field: field\next
+    while: field != 0
+        if: l1_node_ignored((cast: (const: @: c.LmP0Node) field\value)) = 0
+            tnode: field\value
+            if: tnode = 0 || tnode\kind != c.LM_P0_NODE_ATOM
+                return: (cast: (int) (l1_error(path, tnode, "type alias expects type name atoms")))
+            if: l1_write_cstr(out, " ") != 0
+                return: (cast: (int) (1))
+            if: l1_write_type_spelling(out, (cast: (const: @: c.LmP0Text) tnode\as\atom), path, tnode) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        field: field\next
+    ---
+    if: l1_write_cstr(out, " ") != 0
+        return: (cast: (int) (1))
+    if: l1_write_ident(out, name, path, source_node) != 0
+        return: (cast: (int) (1))
+    if: l1_write_cstr(out, ";\n") != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: l1_emit_hdr_type_alias

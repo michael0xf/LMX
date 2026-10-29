@@ -1,0 +1,27 @@
+# c_call_one_actual.lm2 at the root: `p: c.strdup(s)` and `q: c.malloc(4U)` written in the unit's own body are the C
+# calls, their results received by the root's references p and q (ASSIGN-VOID-TO-TYPED-REF, slice 170's root
+# repro `s: c.malloc(4U)`). Exit 7.
+include: "<stdlib.h>"
+include: "<string.h>"
+@: s char "abc"
+@: p char 0
+@: q char 0
+int: code 7
+p: c.strdup(s)
+if: p = 0
+    code: 80
+if: code = 7 && c.strcmp(p, "abc") != 0
+    code: 81
+q: c.malloc(4U)
+if: q = 0
+    code: 82
+if: code = 7
+    q[0]: p[2]
+    q[1]: (cast: (char) 0)
+    if: c.strcmp(q, "c") != 0
+        code: 83
+---
+c.free(q)
+c.free(p)
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

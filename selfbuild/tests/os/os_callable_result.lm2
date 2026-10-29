@@ -1,0 +1,20 @@
+# An os method whose result is a callable (a fn header in its result place): the selected branch's os_make
+# makes add5, and the root calls it -- 5 + 2. Exit 7.
+os:
+    win:
+        fn: os_make (int: n) fn: (int: x) int
+            fn: addN (int: x) int
+                return: n + x
+            return: addN
+        end: os_make
+    default:
+        fn: os_make (int: n) fn: (int: x) int
+            fn: addN (int: x) int
+                return: n + x
+            return: addN
+        end: os_make
+end: os
+@: add5 os_make(5)
+int: r (add5: 2)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

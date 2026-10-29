@@ -1,0 +1,277 @@
+# Unselected ordinary L2 port of build_semantics.py excerpt/body_text.
+# Uses the existing text/Unicode/paired-scanner helpers and checked byte writer.
+# No CLI, file publication, or Python execution fallback is introduced here.
+
+# Caller owns returned bytes and keeps the FILE. Signed C-long position stays
+# in the already supported private formal, never an unsupported c.long local.
+fn: db_stream_at (@: stream c.FILE; c.long: position; @@: out char; @: out_count size_t) int
+    @: data char 0
+    size_t: count 0U
+    if: position < 0
+        return: 1
+    count: (cast: (size_t) position)
+    if: count = (cast: (size_t) -1)
+        return: 1
+    data: c.calloc(count + 1U, 1U)
+    if: data = 0
+        return: 1
+    if: c.fseek(stream, (cast: (c.long) 0), c.SEEK_SET) != 0 || c.fread(data, 1U, count, stream) != count
+        c.free(data)
+        return: 1
+    ---
+    out[0]: data
+    out_count[0]: count
+    return: 0
+end: db_stream_at
+
+fn: db_stream_read (@: stream c.FILE; @@: out char; @: out_count size_t) int
+    if: stream = 0 || out = 0 || out_count = 0
+        return: 1
+    out[0]: 0
+    out_count[0]: 0U
+    if: c.fflush(stream) != 0
+        return: 1
+    return: db_stream_at(stream, (cast: (c.long) c.ftell(stream)), out, out_count)
+end: db_stream_read
+
+# Exact ASCII punctuation/keys with Unicode-Nd decimal runs. Return1 found,
+# 0 none,-1 invalid. Only a complete regex match is returned; malformed '{{'
+# remains ordinary text here and is rejected by the final expanded-body check.
+fn: db_excerpt_next (@: data char; size_t: count; size_t: begin; @: first size_t; @: after size_t; @: source_key int; @: a size_t; @: b size_t; @: overflow int) int
+    size_t: scan begin
+    size_t: found 0U
+    size_t: at 0U
+    size_t: a_end 0U
+    size_t: b_end 0U
+    int: key 0
+    int: has_a 0
+    int: has_b 0
+    int: overflow_a 0
+    int: overflow_b 0
+    if: data = 0 || first = 0 || after = 0 || source_key = 0 || a = 0 || b = 0 || overflow = 0 || begin > count
+        return: -1
+    while: scan < count
+        found: dt_find(data, count, scan, "{{", 2U)
+        if: found = (cast: (size_t) -1)
+            return: 0
+        key: 0
+        if: count - found >= 5U && c.memcmp(data + found, "{{l1:", 5U) = 0
+            key: 1
+            at: found + 5U
+        else:
+            if: count - found >= 8U && c.memcmp(data + found, "{{older:", 8U) = 0
+                key: 2
+                at: found + 8U
+            ---
+        ---
+        if: key != 0
+            has_a: dt_decimal_run(data, count, at, a, @ a_end, @ overflow_a)
+            if: has_a < 0
+                return: -1
+            if: has_a = 1 && a_end < count && data[a_end] = (cast: (char) 45)
+                has_b: dt_decimal_run(data, count, a_end + 1U, b, @ b_end, @ overflow_b)
+                if: has_b < 0
+                    return: -1
+                if: has_b = 1 && count - b_end >= 2U && c.memcmp(data + b_end, "}}", 2U) = 0
+                    first[0]: found
+                    after[0]: b_end + 2U
+                    source_key[0]: key
+                    overflow[0]: overflow_a | overflow_b
+                    return: 1
+                ---
+            ---
+        ---
+        scan: found + 1U
+    ---
+    return: 0
+end: db_excerpt_next
+
+# Exact inclusive source excerpt, joining line slices with LF and no trailing LF.
+# Range and allocation/line-view validity are established by the caller/reader.
+fn: db_source_lines (@: out c.FILE; @: raw char; @: starts size_t; @: lengths size_t; size_t: a; size_t: b) int
+    size_t: line a - 1U
+    while: line < b
+        if: line != a - 1U && c.fputc(10, out) < 0
+            return: 1
+        if: dg_bytes(out, raw + starts[line], lengths[line]) != 0
+            return: 1
+        line: line + 1U
+    ---
+    return: 0
+end: db_source_lines
+
+# A nonrecursive re.sub: only original-body matches are visited. The final '{{'
+# check also sees markers in inserted verbatim source, exactly as the old script.
+# Overflow is a guaranteed out-of-range source index, not a truncated integer.
+fn: docs_semantics_expand (@: body char; size_t: count; @: l1 char; @: l1_starts size_t; @: l1_lengths size_t; size_t: l1_lines; @: older char; @: older_starts size_t; @: older_lengths size_t; size_t: older_lines; @@: out char; @: out_count size_t) int
+    @: stream c.FILE 0
+    @: result char 0
+    size_t: result_count 0U
+    size_t: cursor 0U
+    size_t: first 0U
+    size_t: after 0U
+    size_t: a 0U
+    size_t: b 0U
+    size_t: lines 0U
+    int: key 0
+    int: overflow 0
+    int: found 0
+    int: failed 0
+    if: body = 0 || l1 = 0 || l1_starts = 0 || l1_lengths = 0 || older = 0 || older_starts = 0 || older_lengths = 0 || out = 0 || out_count = 0
+        return: 1
+    out[0]: 0
+    out_count[0]: 0U
+    stream: c.tmpfile()
+    if: stream = 0
+        return: 1
+    while: failed = 0
+        found: db_excerpt_next(body, count, cursor, @ first, @ after, @ key, @ a, @ b, @ overflow)
+        if: found < 0
+            failed: 1
+            break
+        if: found = 0
+            break
+        lines: l1_lines
+        if: key = 2
+            lines: older_lines
+        if: overflow != 0 || a < 1U || a > b || b > lines
+            failed: 1
+            break
+        if: dg_bytes(stream, body + cursor, first - cursor) != 0 || dg_literal(stream, "```text\n") != 0
+            failed: 1
+            break
+        if: key = 1
+            failed: db_source_lines(stream, l1, l1_starts, l1_lengths, a, b)
+        else:
+            failed: db_source_lines(stream, older, older_starts, older_lengths, a, b)
+        ---
+        if: failed = 0
+            failed: dg_literal(stream, "\n```")
+        cursor: after
+    ---
+    if: failed = 0
+        failed: dg_bytes(stream, body + cursor, count - cursor)
+    if: failed = 0
+        failed: db_stream_read(stream, @ result, @ result_count)
+    if: c.fclose(stream) != 0
+        failed: 1
+    if: failed = 0 && dt_find(result, result_count, 0U, "{{", 2U) != (cast: (size_t) -1)
+        failed: 1
+    if: failed != 0
+        c.free(result)
+        return: 1
+    ---
+    out[0]: result
+    out_count[0]: result_count
+    return: 0
+end: docs_semantics_expand
+
+# Next ^### (UnicodeNd+)\. match, including those inside code fences.
+# first marks '### ', digits_end marks '.', after is one byte beyond '.'.
+fn: db_case_next (@: data char; size_t: count; size_t: begin; @: first size_t; @: digits_end size_t; @: after size_t) int
+    size_t: scan begin
+    size_t: found 0U
+    size_t: end_at 0U
+    size_t: value 0U
+    int: overflow 0
+    int: matched 0
+    while: scan < count
+        found: dp_line_marker(data, count, scan, "### ", 4U)
+        if: found = (cast: (size_t) -1)
+            return: 0
+        matched: dt_decimal_run(data, count, found + 4U, @ value, @ end_at, @ overflow)
+        if: matched < 0
+            return: -1
+        if: matched = 1 && end_at < count && data[end_at] = (cast: (char) 46)
+            first[0]: found
+            digits_end[0]: end_at
+            after[0]: end_at + 1U
+            return: 1
+        ---
+        scan: found + 4U
+    ---
+    return: 0
+end: db_case_next
+
+# Validate capture SPELLINGS, not their numeric values: exactly "1".."14".
+# Leadingzero/Unicode digit spellings must not be normalized into those strings.
+fn: db_cases_validate (@: data char; size_t: count) int
+    size_t: scan 0U
+    size_t: first 0U
+    size_t: end_at 0U
+    size_t: after 0U
+    size_t: width 0U
+    int: expected 1
+    int: found 0
+    while: 1
+        found: db_case_next(data, count, scan, @ first, @ end_at, @ after)
+        if: found < 0
+            return: 1
+        if: found = 0
+            break
+        if: expected > 14
+            return: 1
+        width: end_at - first - 4U
+        if: expected < 10
+            if: width != 1U || data[first + 4U] != (cast: (char) (48 + expected))
+                return: 1
+            ---
+        else:
+            if: width != 2U || data[first + 4U] != (cast: (char) 49) || data[first + 5U] != (cast: (char) (48 + expected - 10))
+                return: 1
+            ---
+        ---
+        expected: expected + 1
+        scan: after
+    ---
+    if: expected != 15
+        return: 1
+    return: 0
+end: db_cases_validate
+
+# A second pass inserts anchors only after the complete capture list passed.
+fn: docs_semantics_cases (@: body char; size_t: count; @@: out char; @: out_count size_t) int
+    @: stream c.FILE 0
+    @: result char 0
+    size_t: result_count 0U
+    size_t: cursor 0U
+    size_t: first 0U
+    size_t: end_at 0U
+    size_t: after 0U
+    int: expected 1
+    int: found 0
+    int: failed 0
+    if: body = 0 || out = 0 || out_count = 0
+        return: 1
+    out[0]: 0
+    out_count[0]: 0U
+    if: db_cases_validate(body, count) != 0
+        return: 1
+    stream: c.tmpfile()
+    if: stream = 0
+        return: 1
+    while: failed = 0
+        found: db_case_next(body, count, cursor, @ first, @ end_at, @ after)
+        if: found <= 0
+            if: found < 0
+                failed: 1
+            break
+        if: dg_bytes(stream, body + cursor, first - cursor) != 0 || c.fprintf(stream, "<a id=\"admission-case-%d\"></a>\n", expected) < 0 || dg_bytes(stream, body + first, after - first) != 0
+            failed: 1
+        expected: expected + 1
+        cursor: after
+    ---
+    if: failed = 0
+        failed: dg_bytes(stream, body + cursor, count - cursor)
+    if: failed = 0
+        failed: db_stream_read(stream, @ result, @ result_count)
+    if: c.fclose(stream) != 0
+        failed: 1
+    if: failed != 0
+        c.free(result)
+        return: 1
+    ---
+    out[0]: result
+    out_count[0]: result_count
+    return: 0
+end: docs_semantics_cases

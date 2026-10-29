@@ -1,0 +1,47 @@
+# Ordinary L2 bodies in an os branch, executed natively and genuinely walked (CODEX-AUTHOR-OS-WALK-BODY-
+# 20261023T001133Z): os_mix has parameters and locals, calls the os method os_twice, writes its own field
+# `last` twice and returns it; the caller reads the published `os_mix\last` after the call. The win branch
+# gives r1 = 6 + 40 + 1 = 47 and r2 = 10 + 10 + 1 = 21; the default branch adds 2, not 1. The entry exits
+# r1 - 40: 7 for win, 8 for default.
+os:
+    win:
+        fn: os_twice (int: x) int
+            int: d x + x
+            return: d
+        end: os_twice
+        fn: os_mix (int: a; int: b) int
+            int: last 0
+            int: t os_twice(a)
+            last: t + b * 10
+            last: last + 1
+            return: last
+        end: os_mix
+    default:
+        fn: os_mix (int: a; int: b) int
+            int: last 0
+            int: t os_twice(a)
+            last: t + 10 * b
+            last: last + 2
+            return: last
+        end: os_mix
+        fn: os_twice (int: x) int
+            int: d 2 * x
+            return: d
+        end: os_twice
+end: os
+
+fn: run () int
+    int: r1 os_mix(3, 4)
+    int: seen 0
+    int: r2 0
+    seen: os_mix\last
+    r2: os_mix(5, 1)
+    if: seen != r1
+        return: 81
+    if: r2 != r1 - 26
+        return: 82
+    return: r1 - 40
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,31 @@
+# RR2c-2b (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md; LMX_blog/q/immutable-root-parent.md):
+# `immutable` over a merge WITHOUT `independent`, in a method -- the value is built under its own profile, proved and
+# sealed before publication, its root keeping its ordinary lexical parent (the copy of the lexical chain), which the
+# qualification neither freezes nor requires to be immutable (docs #qualification).  Its fields read as any merge
+# result's; a later merge over it COPIES it (retention by reference is the parentless branch's): the copy is written,
+# the immutable value stays.  `const: immutable:` is the same value under a protected binding.  Exit 7; 81..84 name
+# the failing read.
+Integer:
+    int: value 0
+end: Integer
+Extra:
+    int: more 2
+end: Extra
+fn: m () int
+    b: immutable: merge(Integer  int: value 7)
+    if: b\value != 7
+        return: 81
+    c: merge(b; Extra)
+    c\value: 8
+    if: c\value * 10 + c\more != 82 || b\value != 7
+        return: 82
+    d: immutable: merge(Integer; (int: value 9))
+    if: d\value != 9
+        return: 83
+    e: const: immutable: merge(Integer  int: value 4)
+    if: e\value != 4
+        return: 84
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

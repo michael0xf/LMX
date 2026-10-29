@@ -18,6 +18,13 @@ L1 is generated intermediate code before C99, not the language of the
 target self-build. The goal is L3 self-build with explicit L2 insertions,
 then unified Message mail; see [v3 §§3, 8, 8a](next_core_tasks_v3.md).
 
+The normal source-selection root is the tracked [selfbuild package](selfbuild/README.md).
+The existing language manifest/stage-copy route preserves its src/tools/tests
+layout before generation; older sandbox snapshots and six-list preparation
+are historical evidence, not an active header/body fallback. Publishing a
+whole-quick-accepted source baseline does not itself close FULL, clean/native,
+admission, clean-clone G0, or mail requirements.
+
 A receiver and its argument Structure are formed by one algorithm before
 classifying the head as declaration, assignment, call, or operation. One
 expression resolver applies in every consuming position. A consumer checks

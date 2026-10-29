@@ -1,0 +1,12 @@
+# The unit twin of sub_call_os.lm2: the unit's own sub, called twice. Entry 7.
+int: hits 0
+sub: os_tick ()
+    node\hits: node\hits + 1
+end: os_tick
+fn: count () int
+    return: node\hits
+end: count
+os_tick()
+os_tick()
+sendMessage: exit(exit_code: count() + 5; stdout: ""; stderr: "")
+return

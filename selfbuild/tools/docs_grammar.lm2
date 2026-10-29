@@ -1,0 +1,245 @@
+# Unselected ordinary L2 migration of tools/build_docs.py.
+# The reviewed JSON is data, not code. No Python/C algorithm fallback is used.
+# Not yet translated, executed, or selected by the running source90 bootstrap.
+
+fn: dg_bytes (@: out c.FILE; @: data char; size_t: count) int
+    if: count != 0U && c.fwrite(data, 1U, count, out) != count
+        return: 1
+    return: 0
+end: dg_bytes
+
+fn: dg_literal (@: out c.FILE; @: data char) int
+    return: dg_bytes(out, data, c.strlen(data))
+end: dg_literal
+
+# A list item starts with its separator, never an unconditional final LF.
+# Empty items count too. This preserves the old '\n'.join(out) byte protocol.
+fn: dg_item (@: out c.FILE; @: items size_t) int
+    if: items[0] != 0U && c.fputc(10, out) < 0
+        return: 1
+    items[0]: items[0] + 1U
+    return: 0
+end: dg_item
+
+# A string field, or the scalar spelling needed by an existing f-string.
+# Missing and JSON null remain distinct; null/booleans spell None/True/False.
+# Unsupported containers are an input-schema error, never silent truncation.
+fn: dg_field (@: out c.FILE; @: data char; size_t: count; size_t: object_at; @: key char; @: missing char; int: string_only) int
+    size_t: first 0U
+    size_t: last 0U
+    size_t: decoded_n 0U
+    @: decoded char 0
+    int: found dj_property(data, count, object_at, key, @ first, @ last)
+    int: kind 0
+    int: result 1
+    if: found < 0
+        return: 1
+    if: found = 0
+        if: missing = 0
+            return: 1
+        return: dg_literal(out, missing)
+    ---
+    kind: dj_span(data, count, first, @ last)
+    if: kind = 1
+        if: dj_string(data, count, first, @ decoded, @ decoded_n, @ last) != 0
+            return: 1
+        ---
+        result: dg_bytes(out, decoded, decoded_n)
+        c.free(decoded)
+        return: result
+    ---
+    if: string_only != 0
+        return: 1
+    if: kind = 4
+        return: dg_bytes(out, data + first, last - first)
+    if: kind = 5
+        return: dg_literal(out, "True")
+    if: kind = 6
+        return: dg_literal(out, "False")
+    if: kind = 7
+        return: dg_literal(out, "None")
+    return: 1
+end: dg_field
+
+fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: section_count size_t; @: example_count size_t) int
+    size_t: root_at 0U
+    size_t: root_after 0U
+    size_t: sections_at 0U
+    size_t: sections_after 0U
+    size_t: section_at 0U
+    size_t: section_after 0U
+    size_t: language_at 0U
+    size_t: language_after 0U
+    size_t: examples_at 0U
+    size_t: examples_after 0U
+    size_t: example_at 0U
+    size_t: example_after 0U
+    size_t: origin_at 0U
+    size_t: origin_after 0U
+    size_t: items 0U
+    int: examples_found 0
+    int: origin_found 0
+    @: default_label char "Source excerpt"
+    if: out = 0 || section_count = 0 || example_count = 0 || (c.strcmp(lang, "ru") != 0 && c.strcmp(lang, "en") != 0)
+        return: 1
+    if: dj_document(data, count, @ root_at, @ root_after) != 2 || dj_property(data, count, root_at, "sections", @ sections_at, @ sections_after) != 1 || data[sections_at] != (cast: (char) 91)
+        return: 1
+    ---
+    section_count[0]: 0U
+    example_count[0]: 0U
+    if: dg_item(out, @ items) != 0
+        return: 1
+    if: c.strcmp(lang, "ru") = 0
+        default_label: "Исходный фрагмент"
+        if: dg_literal(out, "# Грамматика LMX") != 0
+            return: 1
+        ---
+    else:
+        if: dg_literal(out, "# LMX grammar") != 0
+            return: 1
+        ---
+    ---
+    if: dg_item(out, @ items) != 0
+        return: 1
+    section_at: dj_ws(data, count, sections_at + 1U)
+    while: section_at < count && data[section_at] != (cast: (char) 93)
+        if: dj_span(data, count, section_at, @ section_after) != 2 || dj_property(data, count, section_at, lang, @ language_at, @ language_after) != 1 || data[language_at] != (cast: (char) 123)
+            return: 1
+        if: dg_item(out, @ items) != 0 || dg_literal(out, "- [") != 0 || dg_field(out, data, count, section_at, "number", 0, 0) != 0 || dg_literal(out, ". ") != 0 || dg_field(out, data, count, language_at, "title", 0, 1) != 0 || dg_literal(out, "](#") != 0 || dg_field(out, data, count, section_at, "id", 0, 1) != 0 || dg_literal(out, ")") != 0
+            return: 1
+        if: dj_array_next(data, count, section_after, @ section_at) != 0
+            return: 1
+    ---
+    if: dg_item(out, @ items) != 0
+        return: 1
+    section_at: dj_ws(data, count, sections_at + 1U)
+    while: section_at < count && data[section_at] != (cast: (char) 93)
+        if: dj_span(data, count, section_at, @ section_after) != 2 || dj_property(data, count, section_at, lang, @ language_at, @ language_after) != 1 || data[language_at] != (cast: (char) 123)
+            return: 1
+        if: dg_item(out, @ items) != 0 || dg_literal(out, "<a id=\"") != 0 || dg_field(out, data, count, section_at, "id", 0, 1) != 0 || dg_literal(out, "\"></a>") != 0 || dg_item(out, @ items) != 0
+            return: 1
+        if: dg_item(out, @ items) != 0 || dg_literal(out, "## ") != 0 || dg_field(out, data, count, section_at, "number", 0, 0) != 0 || dg_literal(out, ". ") != 0 || dg_field(out, data, count, language_at, "title", 0, 1) != 0 || dg_item(out, @ items) != 0
+            return: 1
+        if: dg_item(out, @ items) != 0 || dg_field(out, data, count, language_at, "text", 0, 1) != 0 || dg_item(out, @ items) != 0
+            return: 1
+        section_count[0]: section_count[0] + 1U
+        examples_found: dj_property(data, count, section_at, "examples", @ examples_at, @ examples_after)
+        if: examples_found < 0
+            return: 1
+        if: examples_found != 0
+            if: data[examples_at] != (cast: (char) 91)
+                return: 1
+            example_at: dj_ws(data, count, examples_at + 1U)
+            while: example_at < count && data[example_at] != (cast: (char) 93)
+                if: dj_span(data, count, example_at, @ example_after) != 2
+                    return: 1
+                if: dg_item(out, @ items) != 0 || dg_literal(out, "**") != 0 || dg_field(out, data, count, example_at, lang, default_label, 0) != 0 || dg_literal(out, "** — ") != 0
+                    return: 1
+                origin_found: dj_property(data, count, example_at, "origin", @ origin_at, @ origin_after)
+                if: origin_found < 0
+                    return: 1
+                if: origin_found != 0
+                    if: dg_field(out, data, count, example_at, "origin", 0, 0) != 0
+                        return: 1
+                    ---
+                else:
+                    if: dg_literal(out, "`Lingvamyxa_spec.txt`, ") != 0 || dg_field(out, data, count, example_at, "start", "None", 0) != 0 || dg_literal(out, "–") != 0 || dg_field(out, data, count, example_at, "end", "None", 0) != 0
+                        return: 1
+                    ---
+                ---
+                if: dg_literal(out, ".") != 0 || dg_item(out, @ items) != 0 || dg_item(out, @ items) != 0 || dg_literal(out, "````text") != 0 || dg_item(out, @ items) != 0 || dg_field(out, data, count, example_at, "text", 0, 1) != 0 || dg_item(out, @ items) != 0 || dg_literal(out, "````") != 0 || dg_item(out, @ items) != 0
+                    return: 1
+                example_count[0]: example_count[0] + 1U
+                if: dj_array_next(data, count, example_after, @ example_at) != 0
+                    return: 1
+            ---
+        ---
+        if: dj_array_next(data, count, section_after, @ section_at) != 0
+            return: 1
+    ---
+    return: 0
+end: dg_render
+
+# Publish only a completely rendered temporary stream, using ordinary stdio.
+fn: dg_publish (@: rendered c.FILE; @: path char) int
+    @: out c.FILE 0
+    @: buffer char c.malloc(65536U)
+    size_t: got 0U
+    int: result 1
+    if: buffer = 0 || c.fflush(rendered) != 0
+        c.free(buffer)
+        return: 1
+    ---
+    if: c.fseek(rendered, 0, 0) != 0
+        c.free(buffer)
+        return: 1
+    ---
+    path_make_parent(path)
+    out: os_file_open(path, "wb")
+    if: out != 0
+        result: 0
+        got: c.fread(buffer, 1U, 65536U, rendered)
+        while: got != 0U && result = 0
+            result: dg_bytes(out, buffer, got)
+            if: result = 0
+                got: c.fread(buffer, 1U, 65536U, rendered)
+            ---
+        ---
+        if: c.ferror(rendered) != 0
+            result: 1
+        if: c.fclose(out) != 0
+            result: 1
+        ---
+    ---
+    c.free(buffer)
+    return: result
+end: dg_publish
+
+# repo supplies provenance/grammar.json; outdir is the explicit docs directory.
+# Both renders complete before either destination is opened. No old renderer runs.
+fn: docs_grammar_build (@: repo char; @: outdir char) int
+    @: input_path char txt_path(repo, "provenance/grammar.json")
+    @: ru_path char txt_path(outdir, "LMX_grammar.ru.md")
+    @: en_path char txt_path(outdir, "LMX_grammar.en.md")
+    @: data char 0
+    @: ru c.FILE 0
+    @: en c.FILE 0
+    size_t: count 0U
+    size_t: sections_ru 0U
+    size_t: sections_en 0U
+    size_t: examples_ru 0U
+    size_t: examples_en 0U
+    int: result 1
+    if: input_path = 0 || ru_path = 0 || en_path = 0
+        c.free(input_path)
+        c.free(ru_path)
+        c.free(en_path)
+        return: 1
+    ---
+    data: file_read(input_path, @ count)
+    if: data != 0
+        ru: c.tmpfile()
+        en: c.tmpfile()
+        if: ru != 0 && en != 0
+            if: dg_render(data, count, "ru", ru, @ sections_ru, @ examples_ru) = 0 && dg_render(data, count, "en", en, @ sections_en, @ examples_en) = 0 && sections_ru = sections_en && examples_ru = examples_en
+                result: dg_publish(ru, ru_path)
+                if: result = 0
+                    result: dg_publish(en, en_path)
+                ---
+            ---
+        ---
+    ---
+    if: ru != 0 && c.fclose(ru) != 0
+        result: 1
+    if: en != 0 && c.fclose(en) != 0
+        result: 1
+    if: result = 0
+        if: c.printf("%u paired sections; %u source excerpts\n", (cast: (unsigned) sections_ru), (cast: (unsigned) examples_ru)) < 0
+            result: 1
+    ---
+    c.free(data)
+    c.free(input_path)
+    c.free(ru_path)
+    c.free(en_path)
+    return: result
+end: docs_grammar_build

@@ -1,0 +1,18 @@
+# Ordinary L2 default-platform bodies; native getcwd conversion stays with the target header.
+include: "<stddef.h>" "<stdio.h>" "<unistd.h>"
+
+fn: l1_replace_file (const: (@: tmp char); const: (@: out_path char)) int
+    if: c.rename(tmp, out_path) != 0
+        return: (cast: (int) 1)
+    return: (cast: (int) 0)
+end: l1_replace_file
+
+fn: l1_getcwd (@: buffer char; size_t: size) @: char
+    return: (cast: (@: char) c.getcwd(buffer, size))
+end: l1_getcwd
+
+fn: l1_path_is_absolute (const: (@: path char)) int
+    if: path = 0 || path[0] = 0
+        return: (cast: (int) 0)
+    return: (cast: (int) (path[0] = 47))
+end: l1_path_is_absolute

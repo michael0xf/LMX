@@ -1,0 +1,22 @@
+# Ordinary admission refuses at the real receiving place (L2 section 20; the author, LMX_blog/2026-10-23.md): the
+# selected win branch's os_take requires a B, which has a field b, and the root's A has none; the refusal is the
+# ordinary one of that call, decided by the selected branch alone (the default branch, requiring an A, is not
+# translated here).
+A:
+    int: a 3
+end: A
+B:
+    int: b 0
+end: B
+os:
+    win:
+        fn: os_take (B: p) int
+            return: p\b
+        end: os_take
+    default:
+        fn: os_take (A: p) int
+            return: p\a
+        end: os_take
+end: os
+sendMessage: exit(exit_code: os_take(A); stdout: ""; stderr: "")
+return

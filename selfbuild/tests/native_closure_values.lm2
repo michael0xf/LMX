@@ -1,0 +1,600 @@
+# Existing bounded reparent/Thread/Root witnesses under one final kernel input closure.
+# Only each former main is renamed; its callbacks and all assertions are preserved.
+include: "<stdio.h>" "<string.h>" "<errno.h>"
+predef: "l2src/lmx_root.lm1"
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_manager_running.lm1"
+predef: "l2src/lmx_process_deadline.lm1"
+
+# Exact int * pointer objects, not void ** aliases. No callback counter globals.
+fn: probe_read (@: cell void) @: void
+    @@: pointer int (cast: (@@: int) cell)
+    return: (cast: (@: void) (\pointer))
+
+fn: probe_write (@: cell void; @: value void) int
+    @@: pointer int (cast: (@@: int) cell)
+    \pointer: (cast: (@: int) value)
+    return: 0
+
+fn: make_thread (@: arena c.LmxArena) @: c.LmxThread
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(arena))
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    @: mail c.LmxPost (cast: (@: c.LmxPost) c.lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) c.lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: graph = 0 || t = 0 || mail = 0 || slot = 0
+        return: 0
+    if: c.lmx_post_init(arena, mail) != 0 || c.lmx_schedule_init(slot, arena, (cast: (@: void) t), 1000U) != 0
+        return: 0
+    if: c.lmx_thread_init(arena, t, graph, mail, slot) != 0 || c.lmx_thread_children_open(t, arena) != 0
+        return: 0
+    return: t
+
+fn: reparent_values (int: argc; @@: argv char) int
+    c.LmxArena: donor
+    c.LmxArena: moved
+    c.LmxArena: destination
+    c.memset((cast: (@: void) (@ donor)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ moved)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ donor) != 0 || c.lmx_arena_open(@ moved) != 0 || c.lmx_arena_open(@ destination) != 0
+        return: 1
+    @: owner c.LmxThread make_thread(@ donor)
+    @: child c.LmxThread make_thread(@ moved)
+    @: next c.LmxThread make_thread(@ destination)
+    if: owner = 0 || child = 0 || next = 0 || c.lmx_thread_child_add(owner, child, @ donor) != 0
+        return: 2
+    @: seal c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ donor))
+    @: source c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_LMX, 2U, @ donor, seal))
+    @: numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_child_profiled(source, c.LMX_TYPE_ARRAY_OF_INT, 2U, @ donor, seal))
+    @: source_pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_typed_child_profiled(source, c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 2048, 1U, @ donor, seal, sizeof(@: int), c.probe_read, c.probe_write))
+    if: seal = 0 || source = 0 || numbers = 0 || source_pointers = 0
+        return: 3
+    @: old0 int (cast: (@: int) c.lmx_array_cell_in(@ donor, numbers, 0U))
+    @: old1 int (cast: (@: int) c.lmx_array_cell_in(@ donor, numbers, 1U))
+    @@: old_pointer int (cast: (@@: int) c.lmx_array_cell_in(@ donor, source_pointers, 0U))
+    \old0: argc + 10
+    \old1: argc + 28
+    \old_pointer: old1
+    if: c.lmx_arena_ref_store(source, 0U, (cast: (@: void) numbers)) != 0 || c.lmx_arena_ref_store(source, 1U, (cast: (@: void) source_pointers)) != 0
+        return: 4
+    if: c.lmx_qualify_tree_preflight_full(@ donor, source, 0, 0U, 0, 0U, 0, 0U) != 0 || c.lmx_arena_seal_profile(@ donor, seal) != 0
+        return: 5
+    if: c.lmx_range_import_profile(@ moved, @ donor, seal) != 0
+        return: 6
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(child))
+    @: graph c.Lmx message\graph
+    @: local c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_ref_new_child_profiled(graph, c.LMX_TYPE_ARRAY_OF_LMX, 2U, @ moved, 0))
+    @: pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_typed_child_profiled(source, c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 2048, 2U, @ moved, 0, sizeof(@: int), c.probe_read, c.probe_write))
+    if: local = 0 || pointers = 0 || c.lmx_arena_refs_open_owned(@ moved, graph, 1U) != 0
+        return: 7
+    if: c.lmx_arena_ref_store(graph, 0U, (cast: (@: void) local)) != 0 || c.lmx_arena_ref_store(local, 0U, (cast: (@: void) source)) != 0 || c.lmx_arena_ref_store(local, 1U, (cast: (@: void) pointers)) != 0
+        return: 8
+    @@: slot0 int (cast: (@@: int) c.lmx_array_cell_in(@ moved, pointers, 0U))
+    @@: slot1 int (cast: (@@: int) c.lmx_array_cell_in(@ moved, pointers, 1U))
+    \slot0: old1
+    \slot1: old0
+    int: lost c.lmx_reparent_preflight(child, next)
+    int: prepared c.lmx_reparent_prepare(child, next)
+    if: lost != c.LMX_REPARENT_OWNER || prepared != 0
+        return: 9
+    int: failed 0
+    @: copied c.Lmx (cast: (@: c.Lmx) c.lmx_graph_value_in(@ moved, local, 0U))
+    @: new_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ moved, copied, 0U))
+    if: copied = 0 || copied = source || new_numbers = 0 || new_numbers = numbers || pointers\parent != copied || c.lmx_thread_parent(child) != owner
+        failed: failed + 1
+    @: first int \slot0
+    @: second int \slot1
+    if: first != (cast: (@: int) c.lmx_array_cell_in(@ moved, new_numbers, 1U)) || second != (cast: (@: int) c.lmx_array_cell_in(@ moved, new_numbers, 0U))
+        failed: failed + 1
+    int: adopted c.lmx_thread_adopt(child, next)
+    if: adopted != 0 || c.lmx_thread_parent(child) != next || c.lmx_thread_child_count(owner) != 0U
+        failed: failed + 1
+    if: c.lmx_post_close(@ donor, owner\mail) != 0 || c.lmx_arena_release(@ donor) != 0
+        return: 10
+    int: before \first
+    \first: argc + 56
+    @: retained_pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ moved, copied, 1U))
+    @@: retained_slot int (cast: (@@: int) c.lmx_array_cell_in(@ moved, retained_pointers, 0U))
+    @: retained int \retained_slot
+    int: after \retained
+    int: other \second
+    if: before != argc + 28 || after != argc + 56 || other != argc + 10 || retained != first
+        failed: failed + 1
+    c.printf("REPARENT lost=%d prepared=%d adopted=%d before=%d after=%d other=%d\n", lost, prepared, adopted, before, after, other)
+    if: c.lmx_post_close(@ moved, child\mail) != 0 || c.lmx_post_close(@ destination, next\mail) != 0 || c.lmx_arena_release(@ moved) != 0 || c.lmx_arena_release(@ destination) != 0
+        failed: failed + 1
+    c.printf("REPARENT failed=%d\n", failed)
+    return: failed
+
+# Existing one-lane witness plus actual Thread-current bindings and a generic C lvalue address.
+# No module counter/context and no root is constructed by the library or callback.
+fn: lane_body (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result_context c.LmxWalkValue) int
+    @: graph c.Lmx (cast: (@: c.Lmx) owner)
+    @: value int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_ref_value(graph, 1U))
+    @: id int (cast: (@: int) c.lmx_arena_ref_value(graph, 2U))
+    @: binding int (cast: (@: int) c.lmx_arena_ref_value(graph, 3U))
+    \binding: (cast: (int) (c.lmx_thread_current() = t))
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(t))
+    \value: \value + 1
+    \id: (cast: (int) c.lmx_manager_running_thread_id())
+    message\success: 1
+    message\running: 0
+    if: out != 0
+        \out: dest
+    return: 0
+
+fn: lane_thread (@: arena c.LmxArena; @: graph c.Lmx) @: c.LmxThread
+    @: t c.LmxThread (cast: (@: c.LmxThread) c.lmx_arena_take(arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    @: mail c.LmxPost (cast: (@: c.LmxPost) c.lmx_arena_take(arena, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) c.lmx_arena_take(arena, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+    if: t = 0 || mail = 0 || slot = 0
+        return: 0
+    if: c.lmx_post_init(arena, mail) != 0 || c.lmx_schedule_init(slot, arena, (cast: (@: void) t), 1000U) != 0
+        return: 0
+    if: c.lmx_thread_init(arena, t, graph, mail, slot) != 0 || c.lmx_thread_children_open(t, arena) != 0
+        return: 0
+    return: t
+
+fn: thread_values (int: argc; @@: argv char) int
+    c.LmxArena: pa
+    c.LmxArena: ca
+    c.LmxManager: manager
+    c.LmxProcessDeadline: watchdog
+    c.memset((cast: (@: void) (@ pa)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ ca)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ manager)), 0, c.sizeof(c.LmxManager))
+    if: c.lmx_arena_open(@ pa) != 0 || c.lmx_arena_open(@ ca) != 0
+        return: 1
+    @: pg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ pa))
+    @: cg c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ ca))
+    @: value int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    @: id int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    @: binding int (cast: (@: int) c.lmx_int_new_owned(@ ca))
+    if: pg = 0 || cg = 0 || value = 0 || id = 0 || binding = 0 || c.lmx_arena_refs_open_owned(@ pa, pg, 1U) != 0 || c.lmx_arena_refs_open_owned(@ ca, cg, 4U) != 0
+        return: 2
+    \value: argc + 41
+    \id: 0
+    \binding: 0
+    @: parent c.LmxThread lane_thread(@ pa, pg)
+    @: child c.LmxThread lane_thread(@ ca, cg)
+    if: parent = 0 || child = 0
+        return: 3
+    if: c.lmx_arena_ref_store(cg, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(cg, 1U, (cast: (@: void) child)) != 0 || c.lmx_arena_ref_store(cg, 2U, (cast: (@: void) id)) != 0 || c.lmx_arena_ref_store(cg, 3U, (cast: (@: void) binding)) != 0 || c.lmx_arena_ref_store(pg, 0U, (cast: (@: void) child)) != 0
+        return: 4
+    cg\native: (cast: (c.LmxEntry) c.lane_body)
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) child\slot)
+    if: c.lmx_thread_child_add(parent, child, @ pa) != 0 || c.lmx_manager_running_init(@ manager) != 0 || c.lmx_manager_running_add(@ manager, slot) != 0 || c.lmx_schedule_wait(slot, c.lmx_clock_ticks()) != 0
+        return: 5
+    int: main_id (cast: (int) c.lmx_manager_running_thread_id())
+    if: c.lmx_thread_current() != 0
+        return: 6
+    if: c.lmx_thread_enter(parent) != 0
+        return: 8
+    int: main_binding (cast: (int) (c.lmx_thread_current() = parent))
+    if: c.lmx_thread_leave(parent) != 0 || main_binding != 1 || c.lmx_thread_current() != 0
+        return: 9
+    if: c.lmx_process_deadline_arm(@ watchdog, c.lmx_clock_word() + 10000U) != 0
+        return: 7
+    int: failed 0
+    if: c.lmx_manager_running_round(@ manager, 1U, c.lmx_clock_ticks()) != 0 || c.lmx_manager_running_close(@ manager) != 0
+        failed: failed + 1
+    if: c.lmx_process_deadline_disarm(@ watchdog) != 0
+        failed: failed + 1
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(child))
+    int: actual \value
+    int: worker_id \id
+    int: ready (cast: (int) message\handoff_ready)
+    int: count (cast: (int) c.lmx_manager_running_count(@ manager))
+    if: actual != argc + 42 || worker_id = 0 || worker_id = main_id || message\running != 0 || message\success != 1 || ready != 1 || slot\lane != 0 || count != 1 || c.lmx_manager_running_lane_ended(slot) != 1 || c.lmx_thread_current() != 0
+        failed: failed + 1
+    int: worker_binding \binding
+    @: errno_cell int (cast: (@: int) (@ c.errno))
+    \errno_cell: argc + 60
+    int: errno_read (cast: (int) c.errno)
+    \errno_cell: errno_read + 1
+    int: errno_after (cast: (int) c.errno)
+    int: take_null (cast: (int) c.lmx_walk_mail_take(0, 0, 0U, 0, 0, 0, 0, 0, 0))
+    int: receive_null (cast: (int) c.lmx_walk_receive_if(0, 0, 0U, 0, 0, 0, 0, 0, 0))
+    if: worker_binding != 1 || errno_read != argc + 60 || errno_after != argc + 61 || take_null != 1 || receive_null != 1
+        failed: failed + 1
+    c.printf("THREAD main-binding=%d worker-binding=%d errno-before=%d errno-after=%d take-null=%d receive-null=%d\n", main_binding, worker_binding, errno_read, errno_after, take_null, receive_null)
+    c.printf("RUNNING value=%d expected=%d main=%d worker=%d ready=%d count=%d\n", actual, argc + 42, main_id, worker_id, ready, count)
+    if: c.lmx_thread_child_remove(parent, child) != 0 || c.lmx_arena_ref_store(pg, 0U, 0) != 0 || c.lmx_thread_mail_close(@ ca, child) != 0 || c.lmx_thread_mail_close(@ pa, parent) != 0 || c.lmx_arena_release(@ ca) != 0 || c.lmx_arena_release(@ pa) != 0
+        failed: failed + 1
+    c.printf("RUNNING failed=%d\n", failed)
+    return: failed
+
+# The existing synthetic C host entry is a C door, NOT a general walked/native-callable proof.
+# State remains in the explicit current Thread's real graph, no module counter/context.
+fn: root_step (@: reserved_parent c.Lmx) int
+    @: thread c.LmxThread (cast: (@: c.LmxThread) c.lmx_thread_current())
+    if: thread = 0 || reserved_parent != 0
+        return: 1
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_thread_message(thread))
+    @: graph c.Lmx (cast: (@: c.Lmx) message\graph)
+    @: value int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    if: value = 0
+        return: 1
+    \value: \value + 1
+    return: 0
+
+fn: root_values (int: argc; @@: argv char) int
+    c.LmxRoot: root
+    c.memset((cast: (@: void) (@ root)), 0, c.sizeof(c.LmxRoot))
+    if: c.lmx_root_open_graph(@ root, c.root_step, (cast: (ulong) (argc + 999)), 2U) != 0
+        return: 1
+    @: arena c.LmxArena (cast: (@: c.LmxArena) c.lmx_root_arena(@ root))
+    @: thread c.LmxThread (cast: (@: c.LmxThread) c.lmx_root_thread(@ root))
+    @: message c.LmxMsg (cast: (@: c.LmxMsg) c.lmx_root_message(@ root))
+    @: graph c.Lmx (cast: (@: c.Lmx) message\graph)
+    @: value int (cast: (@: int) c.lmx_int_new_owned(arena))
+    @: other int (cast: (@: int) c.lmx_int_new_owned(arena))
+    if: arena = 0 || thread = 0 || value = 0 || other = 0
+        return: 2
+    \value: argc + 41
+    \other: argc + 99
+    if: c.lmx_arena_ref_store(graph, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(graph, 1U, (cast: (@: void) other)) != 0
+        return: 3
+    int: before \value
+    int: turn_status (cast: (int) c.lmx_root_turn(@ root, c.lmx_clock_ticks()))
+    @: reread int (cast: (@: int) c.lmx_arena_ref_value(graph, 0U))
+    int: after \reread
+    int: other_after \other
+    int: failed 0
+    if: before != argc + 41 || turn_status != 0 || reread != value || after != argc + 42 || other_after != argc + 99 || c.lmx_root_state(@ root) != c.LMX_ROOT_OPEN || c.lmx_thread_current() != 0
+        failed: failed + 1
+    @: temporary_probe c.FILE c.tmpfile()
+    int: temporary_errno (cast: (int) c.errno)
+    int: temporary_null (cast: (int) (temporary_probe = 0))
+    if: temporary_probe != 0
+        c.fclose(temporary_probe)
+    # A deterministic artifact in this fresh run directory, not a kernel/report fallback.
+    @: report c.FILE c.fopen("root-report.txt", "w+b")
+    @: report_bytes char (cast: (@: char) c.calloc(16384U, 1U))
+    size_t: report_size 0U
+    int: report_has_fields 0
+    int: report_has_value 0
+    @: expected_bytes char (cast: (@: char) c.calloc(48U, 1U))
+    c.printf("ROOT streams temp-null=%d temp-errno=%d chosen-null=%d bytes-null=%d expected-null=%d\n", temporary_null, temporary_errno, (cast: (int) (report = 0)), (cast: (int) (report_bytes = 0)), (cast: (int) (expected_bytes = 0)))
+    if: report = 0 || report_bytes = 0 || expected_bytes = 0
+        failed: failed + 1
+    else:
+        c.snprintf(expected_bytes, 48U, " int %d", argc + 42)
+        if: c.lmx_root_report(arena, 0, (cast: (@: void) report)) != 0
+            failed: failed + 1
+        c.rewind(report)
+        report_size: (cast: (size_t) c.fread((cast: (@: void) report_bytes), 1U, 16383U, report))
+        report_bytes[report_size]: 0
+        c.printf("ROOT report-bytes=%u error=%d eof=%d\n", (cast: (unsigned) report_size), (cast: (int) c.ferror(report)), (cast: (int) c.feof(report)))
+        c.fwrite((cast: (@: void) report_bytes), 1U, report_size, c.stdout)
+        report_has_fields: (cast: (int) (c.strstr(report_bytes, " fields 2:") != 0))
+        report_has_value: (cast: (int) (c.strstr(report_bytes, expected_bytes) != 0))
+        if: report_size = 0U || report_has_fields != 1 || report_has_value != 1
+            failed: failed + 1
+    ---
+    if: report != 0
+        c.fclose(report)
+    c.free((cast: (@: void) report_bytes))
+    c.free((cast: (@: void) expected_bytes))
+    c.printf("ROOT before=%d after=%d other=%d turn=%d same=%d report-fields=%d report-value=%d\n", before, after, other_after, turn_status, (cast: (int) (reread = value)), report_has_fields, report_has_value)
+    int: close_status (cast: (int) c.lmx_root_close(@ root))
+    if: close_status != 0 || c.lmx_root_state(@ root) != c.LMX_ROOT_CLOSED || c.lmx_root_thread(@ root) != 0 || c.lmx_thread_current() != 0
+        failed: failed + 1
+    c.printf("ROOT close=%d failed=%d\n", close_status, failed)
+    return: failed
+
+fn: walker_value_values (int: argc; @@: argv char) int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 1
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    if: graph = 0 || c.lmx_arena_refs_open_owned(@ arena, graph, 3U) != 0
+        c.lmx_arena_release(@ arena)
+        return: 2
+    int: initial argc + 40
+    size_t: wide_expected (cast: (size_t) -2)
+    if: c.lmx_walk_store_int(@ arena, graph, 0U, initial) != 0 || c.lmx_walk_store_size(@ arena, graph, 1U, wide_expected) != 0 || c.lmx_walk_store_char(@ arena, graph, 2U, argc + 64) != 0
+        c.lmx_arena_release(@ arena)
+        return: 3
+    @: cell void (cast: (@: void) c.lmx_graph_value_in(@ arena, graph, 0U))
+    @: wide_cell void (cast: (@: void) c.lmx_graph_value_in(@ arena, graph, 1U))
+    @: char_cell void (cast: (@: void) c.lmx_graph_value_in(@ arena, graph, 2U))
+    c.LmxWalkValue: snapshot
+    c.LmxWalkValue: reread
+    c.LmxWalkValue: null_value
+    c.LmxWalkValue: char_value
+    c.LmxWalkValue: absent
+    size_t: before 0U
+    size_t: after 0U
+    size_t: saved 0U
+    size_t: wide_before 0U
+    size_t: wide_after 0U
+    size_t: char_after 0U
+    size_t: temp_char 0U
+    int: ty 0
+    int: failed 0
+    if: c.lmx_walk_load_numeric(@ arena, cell, @ before) != 0 || c.lmx_walk_value_cell(@ arena, cell, @ snapshot) != 0
+        failed: failed + 1
+    if: c.lmx_walk_store_numeric_into(@ arena, cell, (cast: (size_t) (initial + 1))) != 0 || c.lmx_walk_value_cell(@ arena, cell, @ reread) != 0
+        failed: failed + 1
+    if: c.lmx_walk_value_number(@ snapshot, @ saved, @ ty) != 0 || ty != c.LMX_TYPE_INT || c.lmx_walk_value_number(@ reread, @ after, @ ty) != 0 || ty != c.LMX_TYPE_INT
+        failed: failed + 1
+    if: before != (cast: (size_t) initial) || saved != before || after != before + 1U
+        failed: failed + 1
+    if: c.lmx_walk_load_numeric(@ arena, wide_cell, @ wide_before) != 0 || c.lmx_walk_store_numeric_into(@ arena, wide_cell, wide_expected - 1U) != 0 || c.lmx_walk_load_numeric(@ arena, wide_cell, @ wide_after) != 0
+        failed: failed + 1
+    if: wide_before != wide_expected || wide_after != wide_expected - 1U
+        failed: failed + 1
+    c.lmx_walk_value_clear(@ absent)
+    c.lmx_walk_value_ref(@ null_value, c.LMX_TYPE_POINTER_BASE + 4096, 0)
+    @: null_storage void (cast: (@: void) c.lmx_walk_value_storage(@ null_value))
+    int: null_present (cast: (int) (null_storage != 0))
+    int: held_null (cast: (int) (c.lmx_pointer_value_known(null_storage) = 0))
+    if: null_present != 1 || held_null != 1 || c.lmx_walk_value_storage(@ absent) != 0
+        failed: failed + 1
+    int: char_refused (cast: (int) c.lmx_walk_store_numeric_into(@ arena, char_cell, 17U))
+    if: char_refused != c.LMX_WALK_INVALID || c.lmx_walk_load_numeric(@ arena, char_cell, @ char_after) != 0 || char_after != (cast: (size_t) (argc + 64))
+        failed: failed + 1
+    if: c.lmx_walk_value_num(@ char_value, c.LMX_TYPE_CHAR, (cast: (size_t) (initial + 2))) != 0 || c.lmx_walk_value_number(@ char_value, @ temp_char, @ ty) != 0 || ty != c.LMX_TYPE_CHAR || temp_char != (cast: (size_t) (initial + 2))
+        failed: failed + 1
+    int: sum 0
+    int: add_status (cast: (int) c.lmx_walk_native_int_bin_apply(c.LMX_WALK_OP_ADD, initial, 1, @ sum))
+    int: overflow_status (cast: (int) c.lmx_walk_native_int_bin_apply(c.LMX_WALK_OP_ADD, c.INT_MAX, 1, @ sum))
+    int: division_status (cast: (int) c.lmx_walk_native_int_bin_apply(c.LMX_WALK_OP_DIV, initial, 0, @ sum))
+    if: add_status != 0 || sum != initial + 1 || overflow_status != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER || division_status != overflow_status
+        failed: failed + 1
+    c.printf("WALK-VALUE before=%u after=%u saved=%u wide-before=%zu wide-after=%zu null-present=%d held-null=%d\n", (cast: (unsigned) before), (cast: (unsigned) after), (cast: (unsigned) saved), (cast: (size_t) wide_before), (cast: (size_t) wide_after), null_present, held_null)
+    c.printf("WALK-VALUE char-refused=%d char=%u temporary-char=%u sum=%d overflow=%d division=%d failed=%d\n", char_refused, (cast: (unsigned) char_after), (cast: (unsigned) temp_char), sum, overflow_status, division_status, failed)
+    c.lmx_arena_release(@ arena)
+    return: failed
+end: walker_value_values
+
+# One actual graph exercises the moved classifier/source-mark/throws boundary.
+# It uses existing typed cells and the same explicit frame, without program bind.
+fn: walker_boundary_values (int: argc) int
+    c.LmxArena: arena
+    c.LmxWalkContext: context
+    c.LmxWalkFrame: activation
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    c.memset((cast: (@: void) (@ activation)), 0, c.sizeof(c.LmxWalkFrame))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 1
+    activation\arena: @ arena
+    activation\context: @ context
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    @: callable c.Lmx (cast: (@: c.Lmx) c.lmx_walk_plain(@ arena, graph, 1U))
+    @: header c.Lmx (cast: (@: c.Lmx) c.lmx_walk_plain(@ arena, callable, 2U))
+    @: typed c.LmxOp (cast: (@: c.LmxOp) c.lmx_op_new_profiled(@ arena, c.LMX_WALK_OP_THROWS, graph))
+    size_t: key (cast: (size_t) (c.LMX_WALK_NAME_DECLARED + argc))
+    if: graph = 0 || callable = 0 || header = 0 || typed = 0
+        c.lmx_arena_release(@ arena)
+        return: 2
+    if: c.lmx_graph_ref_store_in(@ arena, callable, 0U, header) != 0 || c.lmx_graph_ref_store_in(@ arena, header, 0U, typed) != 0 || c.lmx_walk_store_size(@ arena, header, 1U, key) != 0
+        c.lmx_arena_release(@ arena)
+        return: 3
+    int: failed 0
+    int: before (cast: (int) c.lmx_walk_code_in(@ arena, typed))
+    int: kind (cast: (int) c.lmx_walk_kind(@ activation, typed))
+    if: before != c.LMX_WALK_OP_THROWS || kind != c.LMX_DOMAIN_KIND_OP || context\classified != 1U
+        failed: failed + 1
+    if: c.lmx_walk_role_in(@ arena, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_role(@ activation, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_head(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_node(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_op(@ activation, header) != c.LMX_WALK_OP_THROWS || c.lmx_walk_bare(@ activation, typed) != 1 || c.lmx_walk_bare(@ activation, header) != 0
+        failed: failed + 1
+    if: c.lmx_walk_throws_node(@ arena, callable) != header || c.lmx_walk_declared_count(@ arena, callable) != 1U
+        failed: failed + 1
+    size_t: declared 0U
+    size_t: ordinal 0U
+    size_t: implicit_key 0U
+    size_t: implicit_ordinal 0U
+    if: c.lmx_walk_key_from_ordinal(@ arena, callable, 1U, @ declared) != 0 || declared != key || c.lmx_walk_ordinal_from_key(@ arena, callable, key, @ ordinal) != 0 || ordinal != 1U
+        failed: failed + 1
+    if: c.lmx_walk_key_from_ordinal(@ arena, callable, 2U, @ implicit_key) != 0 || implicit_key != 1U || c.lmx_walk_ordinal_from_key(@ arena, callable, implicit_key, @ implicit_ordinal) != 0 || implicit_ordinal != 2U
+        failed: failed + 1
+    int: missing (cast: (int) c.lmx_walk_ordinal_from_key(@ arena, callable, key + 1U, @ ordinal))
+    int: boundary (cast: (int) c.lmx_walk_boundary_status(@ arena, callable, c.LMX_WALK_THROWN + (cast: (int) key)))
+    if: missing != c.LMX_WALK_INVALID || boundary != c.LMX_WALK_THROWN + 1 || c.lmx_walk_boundary_status(@ arena, callable, c.LMX_WALK_OK) != c.LMX_WALK_OK
+        failed: failed + 1
+    int: marked (cast: (int) c.lmx_walk_source_mark(@ arena, header, 1))
+    int: after (cast: (int) c.lmx_walk_code_in(@ arena, typed))
+    if: marked != 0 || after != c.LMX_WALK_OP_COUNT + before || c.lmx_walk_role_in(@ arena, typed) != c.LMX_WALK_OP_THROWS || c.lmx_walk_source_mark(@ arena, header, c.LMX_WALK_SOURCE_COUNT) != c.LMX_WALK_INVALID
+        failed: failed + 1
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_range_pool(@ arena, typed))
+    if: pool = 0 || c.lmx_pool_seal(pool) != 0
+        failed: failed + 1
+    int: sealed_mark (cast: (int) c.lmx_walk_source_mark(@ arena, header, 2))
+    if: sealed_mark != c.LMX_WALK_INVALID || c.lmx_walk_code_in(@ arena, typed) != after
+        failed: failed + 1
+    c.printf("WALK-BOUNDARY key=%zu ordinal=%zu implicit=%zu/%zu missing=%d boundary=%d classified=%zu\n", declared, ordinal, implicit_key, implicit_ordinal, missing, boundary, (cast: (size_t) context\classified))
+    c.printf("WALK-BOUNDARY code=%d->%d mark=%d sealed-mark=%d failed=%d\n", before, after, marked, sealed_mark, failed)
+    c.lmx_arena_release(@ arena)
+    return: failed
+end: walker_boundary_values
+
+# Physical-family foundation only: explicit C-door construction/initial fill,
+# then the existing guarded mutation and common copy APIs. This is not an
+# immutable receiver/admission or walked native-helper-body proof.
+fn: physical_negative_values (int: argc) int
+    c.LmxArena: arena
+    c.LmxArena: destination
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0 || c.lmx_arena_open(@ destination) != 0
+        return: 1
+    int: immutable_struct c.lmx_type_immutable(c.LMX_TYPE_STRUCT)
+    int: immutable_int c.lmx_type_immutable(c.LMX_TYPE_INT)
+    int: immutable_array c.lmx_type_immutable(c.LMX_TYPE_ARRAY_OF_INT)
+    int: immutable_list c.lmx_type_immutable(c.LMX_TYPE_ARRAY_OF_LMX)
+    int: immutable_pointer c.lmx_type_immutable(c.LMX_TYPE_POINTER_BASE + 2048)
+    @: graph c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_physical_role_profiled(@ arena, immutable_struct, 0, c.LMX_POOL_ROLE_PLAIN))
+    @: scalar int (cast: (@: int) c.lmx_scalar_new_physical_profiled(@ arena, immutable_int, 0))
+    @: numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_child_profiled(graph, immutable_array, 2U, @ arena, 0))
+    @: list void c.lmx_list_new_sized_profiled(immutable_list, 5U, @ arena, 0)
+    @: pointer_a void c.lmx_pointer_new_typed_profiled(immutable_pointer, @ arena, 0, sizeof(@: int), c.probe_read, c.probe_write)
+    @: pointer_b void c.lmx_pointer_new_typed_profiled(immutable_pointer, @ arena, 0, sizeof(@: int), c.probe_read, c.probe_write)
+    if: graph = 0 || scalar = 0 || numbers = 0 || list = 0 || pointer_a = 0 || pointer_b = 0
+        return: 2
+    if: c.lmx_arena_refs_open_owned(@ arena, graph, 6U) != 0
+        return: 3
+    @: number0 int (cast: (@: int) c.lmx_array_cell_in(@ arena, numbers, 0U))
+    @: number1 int (cast: (@: int) c.lmx_array_cell_in(@ arena, numbers, 1U))
+    @@: list_cells void (cast: (@@: void) c.lmx_list_data(list))
+    # All explicit initial fills precede publication/ordinary mutation below.
+    if: c.lmx_int_store_known(scalar, argc + 40) != 0 || c.lmx_int_store_known(number0, argc + 40) != 0 || c.lmx_int_store_known(number1, argc + 41) != 0
+        return: 4
+    list_cells[0]: (cast: (@: void) graph)
+    list_cells[1]: list
+    if: c.lmx_pointer_fill_in(@ arena, pointer_a, (cast: (@: void) number1), 0) != 0 || c.lmx_pointer_fill_in(@ arena, pointer_b, (cast: (@: void) number1), 0) != 0
+        return: 5
+    if: c.lmx_graph_ref_fill_in(@ arena, graph, 0U, (cast: (@: void) scalar)) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 1U, (cast: (@: void) numbers)) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 2U, list) != 0
+        return: 6
+    if: c.lmx_graph_ref_fill_in(@ arena, graph, 3U, pointer_a) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 4U, pointer_b) != 0 || c.lmx_graph_ref_fill_in(@ arena, graph, 5U, (cast: (@: void) graph)) != 0
+        return: 7
+    int: failed 0
+    int: header_type c.lmx_range_type_of(@ arena, graph)
+    int: slot_type c.lmx_range_type_of(@ arena, c.lmx_graph_cell_in(@ arena, graph, 0U))
+    int: scalar_type c.lmx_range_type_of(@ arena, scalar)
+    int: array_type c.lmx_range_type_of(@ arena, numbers)
+    int: element_type c.lmx_range_type_of(@ arena, number1)
+    int: list_type c.lmx_range_type_of(@ arena, list)
+    int: list_element_type c.lmx_range_type_of(@ arena, (cast: (@: void) list_cells))
+    int: pointer_type c.lmx_range_type_of(@ arena, pointer_a)
+    if: header_type != immutable_struct || slot_type != c.lmx_type_immutable(c.LMX_TYPE_REFS) || scalar_type != immutable_int || array_type != immutable_array || element_type != immutable_int
+        failed: failed + 1
+    if: list_type != immutable_list || list_element_type != c.lmx_type_immutable(c.LMX_TYPE_LMX) || c.lmx_range_classify(@ arena, list) != c.LMX_KIND_LIST || pointer_type != immutable_pointer || c.lmx_range_type_of(@ arena, pointer_b) != immutable_pointer
+        failed: failed + 1
+    if: c.lmx_range_profile(@ arena, graph) != 0 || c.lmx_range_sealed_profile(@ arena, graph) != 0 || c.lmx_list_cap(list) <= c.lmx_list_len(list)
+        failed: failed + 1
+    @: removed void (cast: (@: void) graph)
+    size_t: old_capacity c.lmx_list_cap(list)
+    int: scalar_write c.lmx_walk_store_numeric_into(@ arena, scalar, 99U)
+    int: reference_write c.lmx_graph_ref_store_in(@ arena, graph, 0U, (cast: (@: void) numbers))
+    int: pointer_write c.lmx_pointer_store_in(@ arena, pointer_a, (cast: (@: void) scalar))
+    int: appended c.lmx_list_append_owned(list, (cast: (@: void) graph), @ arena)
+    int: removed_status c.lmx_list_remove_owned(list, 0U, @ removed, @ arena)
+    int: scalar_bytes c.lmx_range_write_overlaps_profile(@ arena, (cast: (@: void) ((cast: (@: char) scalar) + 1U)), 1U, 0, 0, 0U)
+    int: array_bytes c.lmx_range_write_overlaps_profile(@ arena, (cast: (@: void) ((cast: (@: char) number1) + 1U)), 1U, 0, 0, 0U)
+    if: scalar_write != c.LMX_WALK_INVALID || reference_write != 1 || pointer_write != 1 || appended != c.LMX_LIST_INVALID || removed_status != c.LMX_LIST_INVALID || scalar_bytes != 1 || array_bytes != 1
+        failed: failed + 1
+    if: c.lmx_int_value_known(scalar) != argc + 40 || c.lmx_graph_value_in(@ arena, graph, 0U) != (cast: (@: void) scalar) || c.lmx_pointer_value_in(@ arena, pointer_a) != (cast: (@: void) number1)
+        failed: failed + 1
+    if: c.lmx_list_len(list) != 5U || c.lmx_list_cap(list) != old_capacity || c.lmx_list_data(list) != (cast: (@: void) list_cells) || c.lmx_list_value(list, 0U) != (cast: (@: void) graph) || c.lmx_list_value(list, 1U) != list || removed != (cast: (@: void) graph)
+        failed: failed + 1
+    @: mutable_list void c.lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, @ arena)
+    if: mutable_list = 0
+        return: 8
+    size_t: initial_capacity c.lmx_list_cap(mutable_list)
+    if: c.lmx_list_append_owned(mutable_list, (cast: (@: void) graph), @ arena) != 0 || c.lmx_list_append_owned(mutable_list, (cast: (@: void) numbers), @ arena) != 0 || c.lmx_list_append_owned(mutable_list, list, @ arena) != 0
+        failed: failed + 1
+    if: c.lmx_list_cap(mutable_list) <= initial_capacity || c.lmx_list_len(mutable_list) != 3U || c.lmx_list_value(mutable_list, 0U) != (cast: (@: void) graph) || c.lmx_list_value(mutable_list, 1U) != (cast: (@: void) numbers) || c.lmx_list_value(mutable_list, 2U) != list
+        failed: failed + 1
+    if: c.lmx_list_remove_owned(mutable_list, 1U, @ removed, @ arena) != 0 || removed != (cast: (@: void) numbers) || c.lmx_list_len(mutable_list) != 2U || c.lmx_list_value(mutable_list, 1U) != list
+        failed: failed + 1
+    @: copied_root c.Lmx 0
+    int: copy_status c.lmx_graph_copy_owned(graph, @ arena, @ destination, @ copied_root)
+    if: copy_status != c.LMX_GRAPH_COPY_OK || copied_root = 0
+        c.printf("PHYSICAL-NEGATIVE copy-status=%d failed=%d\n", copy_status, failed)
+        return: 9
+    @: copied_scalar int (cast: (@: int) c.lmx_graph_value_in(@ destination, copied_root, 0U))
+    @: copied_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ destination, copied_root, 1U))
+    @: copied_list void c.lmx_graph_value_in(@ destination, copied_root, 2U)
+    @: copied_pointer_a void c.lmx_graph_value_in(@ destination, copied_root, 3U)
+    @: copied_pointer_b void c.lmx_graph_value_in(@ destination, copied_root, 4U)
+    @: copied_number0 int (cast: (@: int) c.lmx_array_cell_in(@ destination, copied_numbers, 0U))
+    @: copied_number1 int (cast: (@: int) c.lmx_array_cell_in(@ destination, copied_numbers, 1U))
+    int: sharing (cast: (int) (copied_pointer_a != copied_pointer_b && c.lmx_pointer_value_in(@ destination, copied_pointer_a) = (cast: (@: void) copied_number1) && c.lmx_pointer_value_in(@ destination, copied_pointer_b) = (cast: (@: void) copied_number1)))
+    int: cycles (cast: (int) (c.lmx_graph_value_in(@ destination, copied_root, 5U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 0U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 1U) = copied_list))
+    if: copied_root = graph || copied_scalar = scalar || copied_numbers = numbers || copied_list = list || copied_pointer_a = pointer_a || copied_number1 = number1 || sharing != 1 || cycles != 1
+        failed: failed + 1
+    if: c.lmx_range_type_of(@ destination, copied_root) != immutable_struct || c.lmx_range_type_of(@ destination, c.lmx_graph_cell_in(@ destination, copied_root, 0U)) != slot_type || c.lmx_range_type_of(@ destination, copied_scalar) != immutable_int || c.lmx_range_type_of(@ destination, copied_numbers) != immutable_array || c.lmx_range_type_of(@ destination, copied_number1) != immutable_int
+        failed: failed + 1
+    if: c.lmx_range_type_of(@ destination, copied_list) != immutable_list || c.lmx_range_type_of(@ destination, c.lmx_list_data(copied_list)) != list_element_type || c.lmx_range_type_of(@ destination, copied_pointer_a) != immutable_pointer || c.lmx_range_type_of(@ destination, copied_pointer_b) != immutable_pointer
+        failed: failed + 1
+    # Explicit receiving construction is not the ordinary storage-copy above:
+    # build a fresh mutable graph from the negative source, then construct a
+    # new immutable result from that workspace. No existing object is retagged.
+    c.LmxCopyMap: construction_pending
+    c.LmxCopyMap: construction_map
+    c.memset((cast: (@: void) (@ construction_pending)), 0, c.sizeof(c.LmxCopyMap))
+    c.memset((cast: (@: void) (@ construction_map)), 0, c.sizeof(c.LmxCopyMap))
+    @: mutable_root c.Lmx 0
+    int: constructed (cast: (int) c.lmx_graph_copy_many_used_constructed_staged(@ graph, 1U, @ arena, @ destination, 0, 0U, 0, 0, 0, 0, 0, 0U, 0U, @ mutable_root, @ construction_pending, 0, @ construction_map, c.LMX_TYPE_STRUCT))
+    c.lmx_copy_names_finish(@ construction_pending, (cast: (int) (constructed = c.LMX_GRAPH_COPY_OK)))
+    c.lmx_graph_copy_map_dispose(@ construction_map)
+    if: constructed != c.LMX_GRAPH_COPY_OK || mutable_root = 0
+        c.printf("PHYSICAL-CONSTRUCTION mutable-status=%d\n", constructed)
+        return: 10
+    @: mutable_scalar int (cast: (@: int) c.lmx_graph_value_in(@ destination, mutable_root, 0U))
+    @: mutable_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ destination, mutable_root, 1U))
+    @: mutable_pointer void c.lmx_graph_value_in(@ destination, mutable_root, 3U)
+    if: c.lmx_range_type_of(@ destination, mutable_root) != c.LMX_TYPE_STRUCT || c.lmx_range_type_of(@ destination, mutable_scalar) != c.LMX_TYPE_INT || c.lmx_range_type_of(@ destination, mutable_numbers) != c.LMX_TYPE_ARRAY_OF_INT || c.lmx_range_type_of(@ destination, mutable_pointer) != c.LMX_TYPE_POINTER_BASE + 2048
+        failed: failed + 1
+    int: mutable_write (cast: (int) c.lmx_walk_store_numeric_into(@ destination, mutable_scalar, (cast: (size_t) (argc + 50))))
+    if: mutable_write != 0 || c.lmx_int_value_known(mutable_scalar) != argc + 50 || c.lmx_int_value_known(scalar) != argc + 40
+        failed: failed + 1
+    @: construction_profile c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(@ destination))
+    @: constructed_root c.Lmx 0
+    int: qualified (cast: (int) c.lmx_graph_copy_qualified_leaves_staged(mutable_root, @ destination, @ destination, 0, 0U, construction_profile, 0, 0U, @ constructed_root, @ construction_pending))
+    c.lmx_copy_names_finish(@ construction_pending, (cast: (int) (qualified = c.LMX_GRAPH_COPY_OK)))
+    if: construction_profile = 0 || qualified != c.LMX_GRAPH_COPY_OK || constructed_root = 0
+        c.printf("PHYSICAL-CONSTRUCTION immutable-status=%d\n", qualified)
+        return: 11
+    @: constructed_scalar int (cast: (@: int) c.lmx_graph_value_in(@ destination, constructed_root, 0U))
+    @: constructed_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ destination, constructed_root, 1U))
+    @: constructed_list void c.lmx_graph_value_in(@ destination, constructed_root, 2U)
+    @: constructed_pointer_a void c.lmx_graph_value_in(@ destination, constructed_root, 3U)
+    @: constructed_pointer_b void c.lmx_graph_value_in(@ destination, constructed_root, 4U)
+    @: constructed_number1 int (cast: (@: int) c.lmx_array_cell_in(@ destination, constructed_numbers, 1U))
+    int: constructed_sharing (cast: (int) (constructed_pointer_a != constructed_pointer_b && c.lmx_pointer_value_in(@ destination, constructed_pointer_a) = (cast: (@: void) constructed_number1) && c.lmx_pointer_value_in(@ destination, constructed_pointer_b) = (cast: (@: void) constructed_number1)))
+    int: constructed_cycles (cast: (int) (c.lmx_graph_value_in(@ destination, constructed_root, 5U) = (cast: (@: void) constructed_root) && c.lmx_list_value(constructed_list, 0U) = (cast: (@: void) constructed_root) && c.lmx_list_value(constructed_list, 1U) = constructed_list))
+    int: constructed_header_type (cast: (int) c.lmx_range_type_of(@ destination, constructed_root))
+    int: constructed_slot_type (cast: (int) c.lmx_range_type_of(@ destination, c.lmx_graph_cell_in(@ destination, constructed_root, 0U)))
+    if: constructed_header_type != immutable_struct || constructed_slot_type != slot_type || c.lmx_range_type_of(@ destination, constructed_scalar) != immutable_int || c.lmx_range_type_of(@ destination, constructed_numbers) != immutable_array || c.lmx_range_type_of(@ destination, constructed_number1) != immutable_int || c.lmx_range_type_of(@ destination, constructed_list) != immutable_list || c.lmx_range_type_of(@ destination, c.lmx_list_data(constructed_list)) != list_element_type || c.lmx_range_type_of(@ destination, constructed_pointer_a) != immutable_pointer
+        failed: failed + 1
+    if: c.lmx_range_sealed_profile(@ destination, constructed_root) != 0 || c.lmx_range_profile(@ destination, constructed_root) != construction_profile || constructed_sharing != 1 || constructed_cycles != 1
+        failed: failed + 1
+    int: constructed_write (cast: (int) c.lmx_walk_store_numeric_into(@ destination, constructed_scalar, 99U))
+    int: constructed_pointer_write (cast: (int) c.lmx_pointer_store_in(@ destination, constructed_pointer_a, (cast: (@: void) constructed_scalar)))
+    int: constructed_reference_write (cast: (int) c.lmx_graph_ref_store_in(@ destination, constructed_root, 0U, (cast: (@: void) constructed_numbers)))
+    if: constructed_write != c.LMX_WALK_INVALID || constructed_pointer_write != 1 || constructed_reference_write != 1 || c.lmx_int_value_known(constructed_scalar) != argc + 50 || c.lmx_int_value_known(constructed_number1) != argc + 41 || c.lmx_int_value_known(mutable_scalar) != argc + 50
+        failed: failed + 1
+    c.printf("PHYSICAL-CONSTRUCTION statuses=%d/%d types=%d/%d mutable-write=%d immutable-writes=%d/%d/%d values=%d/%d sharing=%d cycles=%d unsealed=%d failed=%d\n", constructed, qualified, constructed_header_type, constructed_slot_type, mutable_write, constructed_write, constructed_pointer_write, constructed_reference_write, (cast: (int) c.lmx_int_value_known(constructed_scalar)), (cast: (int) c.lmx_int_value_known(constructed_number1)), constructed_sharing, constructed_cycles, (cast: (int) (c.lmx_range_sealed_profile(@ destination, constructed_root) = 0)), failed)
+    c.printf("PHYSICAL-NEGATIVE types root=%d/slots=%d scalar=%d array=%d/elements=%d list=%d/elements=%d pointer=%d\n", header_type, slot_type, scalar_type, array_type, element_type, list_type, list_element_type, pointer_type)
+    c.printf("PHYSICAL-NEGATIVE writes scalar=%d reference=%d pointer=%d append=%d remove=%d byte-spans=%d/%d list=%zu/%zu mutable=%zu/%zu\n", scalar_write, reference_write, pointer_write, appended, removed_status, scalar_bytes, array_bytes, (cast: (size_t) c.lmx_list_len(list)), old_capacity, (cast: (size_t) c.lmx_list_len(mutable_list)), (cast: (size_t) c.lmx_list_cap(mutable_list)))
+    int: released c.lmx_arena_release(@ arena)
+    sharing: (cast: (int) (copied_pointer_a != copied_pointer_b && c.lmx_pointer_value_in(@ destination, copied_pointer_a) = (cast: (@: void) copied_number1) && c.lmx_pointer_value_in(@ destination, copied_pointer_b) = (cast: (@: void) copied_number1)))
+    cycles: (cast: (int) (c.lmx_graph_value_in(@ destination, copied_root, 5U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 0U) = (cast: (@: void) copied_root) && c.lmx_list_value(copied_list, 1U) = copied_list))
+    if: released != 0 || sharing != 1 || cycles != 1 || c.lmx_int_value_known(copied_scalar) != argc + 40 || c.lmx_int_value_known(copied_number0) != argc + 40 || c.lmx_int_value_known(copied_number1) != argc + 41
+        failed: failed + 1
+    c.printf("PHYSICAL-NEGATIVE copied=%d/%d/%d sharing=%d cycles=%d source-close=%d failed=%d\n", (cast: (int) c.lmx_int_value_known(copied_scalar)), (cast: (int) c.lmx_int_value_known(copied_number0)), (cast: (int) c.lmx_int_value_known(copied_number1)), sharing, cycles, released, failed)
+    c.lmx_arena_release(@ destination)
+    return: failed
+end: physical_negative_values
+
+fn: main (int: argc; @@: argv char) int
+    int: reparent_result reparent_values(argc, argv)
+    int: thread_result thread_values(argc, argv)
+    int: root_result root_values(argc, argv)
+    int: walker_value_result walker_value_values(argc, argv)
+    int: walker_boundary_result walker_boundary_values(argc)
+    int: physical_result physical_negative_values(argc)
+    int: failed 0
+    if: reparent_result != 0
+        failed: failed + 1
+    if: thread_result != 0
+        failed: failed + 1
+    if: root_result != 0
+        failed: failed + 1
+    if: walker_value_result != 0
+        failed: failed + 1
+    if: walker_boundary_result != 0
+        failed: failed + 1
+    if: physical_result != 0
+        failed: failed + 1
+    c.printf("NATIVE-CLOSURE reparent=%d thread=%d root=%d failed=%d\n", reparent_result, thread_result, root_result, failed)
+    c.printf("NATIVE-CLOSURE walker-values=%d\n", walker_value_result)
+    c.printf("NATIVE-CLOSURE walker-boundary=%d\n", walker_boundary_result)
+    c.printf("NATIVE-CLOSURE physical-negative-values=%d\n", physical_result)
+    return: failed

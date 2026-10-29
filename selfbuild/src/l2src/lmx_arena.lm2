@@ -1,0 +1,804 @@
+# The manager of the arena. Lingvamyxa_spec.txt 2, 6.5; Mikhail, 2026-09-17: "У нас есть
+# арена (там менеджер)".
+#
+# It is the only writer of the index (through lmx_range_add / lmx_range_drop), the only
+# holder of the arena's arrays (the descriptors linked through LmxPool.next) and the only
+# owner of the arena's storage (the block list of lmx_arena_blocks).  Ownership and typing
+# move together: a block's storage IS the interval it registered, so a block never leaves
+# the list with its entry still in the index, and no entry ever names storage no arena
+# holds -- and every array the list holds is live as well, because the block that carries
+# an array's descriptor record goes with the array (lmx_arena_drop takes the array off
+# the list as that block leaves).
+#
+# A by-value arena must be cleared before it is opened; opening a non-empty one is
+# refused, exactly as a pool refuses to be opened twice.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
+# its explicit arguments. The arena's record (LmxArena), the rows of its index (LmxRange), the correspondences of its
+# `implements` table and the prototypes the kernel calls are in lmx_arena.h.lm1, which L3 code of the recipe writes as
+# L1 text (decls_write_all in tools/l2/build.lm2, the author's route of 2026-10-24). The arrays' acts (lmx_pool_*,
+# lmx_chunk_*), the block list's (lmx_arena_blocks_*), the index's (lmx_range_*) and the graph's lmx_graph_node_in are
+# the kernel's C functions, called through the C door; the block list's and the index's modules come before the
+# manager in the kernel's translation unit.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+include: "<stdlib.h>"
+include: "<stdint.h>"
+
+# The arena's index: its rows, their count and its room, through the address of the arena's by-value dynamic array.
+fn: lmx_arena_index_data (@: arena c.LmxArena) @: c.LmxRange
+    @: da c.LmxRangeDynamicArray 0
+    @: base c.LmxRangeArray 0
+    if: arena = 0
+        return: 0
+    da: @ arena\index
+    base: (cast: (@: LmxRangeArray) da)
+    return: (cast: (@: LmxRange) base\data)
+end: lmx_arena_index_data
+
+fn: lmx_arena_index_len (@: arena c.LmxArena) size_t
+    @: da c.LmxRangeDynamicArray 0
+    @: base c.LmxRangeArray 0
+    if: arena = 0
+        return: 0U
+    da: @ arena\index
+    base: (cast: (@: LmxRangeArray) da)
+    return: (cast: (size_t) base\len)
+end: lmx_arena_index_len
+
+fn: lmx_arena_index_cap (@: arena c.LmxArena) size_t
+    @: da c.LmxRangeDynamicArray 0
+    if: arena = 0
+        return: 0U
+    da: @ arena\index
+    return: (cast: (size_t) da\capacity)
+end: lmx_arena_index_cap
+
+sub: lmx_arena_index_set_data (@: arena c.LmxArena; @: data c.LmxRange)
+    @: da c.LmxRangeDynamicArray 0
+    @: base c.LmxRangeArray 0
+    if: arena = 0
+        return
+    da: @ arena\index
+    base: (cast: (@: LmxRangeArray) da)
+    base\data: data
+    return
+end: lmx_arena_index_set_data
+
+sub: lmx_arena_index_set_len (@: arena c.LmxArena; size_t: len)
+    @: da c.LmxRangeDynamicArray 0
+    @: base c.LmxRangeArray 0
+    if: arena = 0
+        return
+    da: @ arena\index
+    base: (cast: (@: LmxRangeArray) da)
+    base\len: len
+    return
+end: lmx_arena_index_set_len
+
+sub: lmx_arena_index_set_cap (@: arena c.LmxArena; size_t: capacity)
+    @: da c.LmxRangeDynamicArray 0
+    if: arena = 0
+        return
+    da: @ arena\index
+    da\capacity: capacity
+    return
+end: lmx_arena_index_set_cap
+
+fn: lmx_arena_open (@: arena c.LmxArena) int
+    if: arena = 0
+        return: 1
+    if: arena\blocks != 0 || arena\arrays != 0 || lmx_arena_index_data(arena) != 0
+        return: 1
+    if: lmx_arena_index_len(arena) != 0U || lmx_arena_index_cap(arena) != 0U
+        return: 1
+    if: arena\impl != 0 || arena\impl_len != 0U || arena\impl_cap != 0U
+        return: 1
+    arena\generation: 0U
+    arena\simple: 0U
+    arena\source_view: 0U
+    return: 0
+end: lmx_arena_open
+
+# This arena is a disposable read-only classification union for graph copy.
+# Unlike a live Message arena it can inspect unsealed foreign lexical context;
+# no allocation or ownership transfer may target it.
+fn: lmx_arena_open_source_view (@: arena c.LmxArena) int
+    if: lmx_arena_open(arena) != 0
+        return: 1
+    arena\source_view: 1U
+    return: 0
+end: lmx_arena_open_source_view
+
+# Letter-scale arena: open, mark simple, pre-reserve a small fixed index so a
+# short letter does not pay full GC / unbounded growth. The address->descriptor
+# index, array descriptors and address stability are the same acts as a full arena.
+fn: lmx_arena_open_simple (@: arena c.LmxArena) int
+    if: lmx_arena_open(arena) != 0
+        return: 1
+    arena\simple: 1U
+    # Eight intervals cover a typical letter (Message + a few arrays); further
+    # growth is still allowed up to a small cap in lmx_range_reserve for simple.
+    if: c.lmx_range_reserve(arena, 8U) != 0
+        arena\simple: 0U
+        return: 1
+    return: 0
+end: lmx_arena_open_simple
+
+# The arena's ordinary array of this kind and type, or null when it has none yet.
+# Pointer-domain cells have physical access contracts: this lookup selects only
+# the canonical void * representation, never a typed T * pool with the same
+# unit-local numeric type.
+fn: lmx_arena_find (@: arena c.LmxArena; int: kind; int: type) @: c.LmxPool
+    return: lmx_arena_find_profiled(arena, kind, type, 0)
+end: lmx_arena_find
+
+fn: lmx_arena_find_profiled (@: arena c.LmxArena; int: kind; int: type; @: pool_profile c.Lmx) @: c.LmxPool
+    @: pool c.LmxPool 0
+    if: arena = 0
+        return: 0
+    pool: (cast: (@: LmxPool) arena\arrays)
+    while: pool != 0
+        if: pool\kind = kind && pool\type = type && pool\profile = pool_profile && pool\role = c.LMX_POOL_ROLE_PLAIN && (kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || (pool\stride = sizeof(@: void) && pool\pointer_read = c.lmx_arena_pointer_void_read && pool\pointer_write = c.lmx_arena_pointer_void_write))
+            return: pool
+        pool: (cast: (@: LmxPool) pool\next)
+    ---
+    return: 0
+end: lmx_arena_find_profiled
+
+# An array joins the arena: its descriptor is linked into the arena's list of its N arrays,
+# and the block that carries the descriptor -- when the array has one of its own -- joins
+# the arena's block list, so the arena owns what describes it.  The descriptor is in no
+# list: lmx_pool_make_profiled has just made it, lmx_pool_open_profiled takes only an
+# array with no chunk (one never opened, or released, which unlinks it), and the sweep
+# unlinks every array of a block it frees (D-43).  Constant time: the list is not walked.
+fn: lmx_arena_array (@: arena c.LmxArena; @: array c.LmxPool; @: record c.LmxArenaBlock) int
+    if: arena = 0 || array = 0 || arena\source_view != 0U
+        return: 1
+    if: record != 0
+        if: c.lmx_arena_blocks_push(@ arena\blocks, record) != c.LMX_ARENA_BLOCKS_OK
+            return: 1
+        ---
+    ---
+    array\next: arena\arrays
+    arena\arrays: array
+    return: 0
+end: lmx_arena_array
+
+# An array leaves the arena's list: it is no longer one of the arena's N arrays.  Its
+# intervals are retired one by one by the caller (a chunk at a time), because only the
+# caller knows which chunk is going.
+fn: lmx_arena_array_drop (@: arena c.LmxArena; @: array c.LmxPool) int
+    @@: slot c.LmxPool 0
+    @: pool c.LmxPool 0
+    if: arena = 0 || array = 0
+        return: 1
+    slot: @ arena\arrays
+    pool: \slot
+    while: pool != 0
+        if: pool = array
+            \slot: pool\next
+            pool\next: 0
+            return: 0
+        ---
+        slot: @ pool\next
+        pool: \slot
+    ---
+    return: 1
+end: lmx_arena_array_drop
+
+# One interval [base, base + bytes) of one array joins the arena's index.  This is the
+# insertion into the table -- the manager's act, and the only one.
+fn: lmx_arena_span (@: arena c.LmxArena; @: array c.LmxPool; @: base void; size_t: bytes) int
+    if: arena = 0 || array = 0 || base = 0 || bytes = 0U || arena\source_view != 0U
+        return: 1
+    if: bytes % (cast: (size_t) array\stride) != 0U
+        return: 1
+    return: c.lmx_range_add(arena, array, base, (cast: (@: void) ((cast: (@: char) base) + bytes)))
+end: lmx_arena_span
+
+# One block leaves the arena: its interval leaves the index FIRST, then the block leaves
+# the list.  The interval is exactly [base, base + n), because a block of the arena holds
+# the very storage it registered; a block that registered nothing (the record carrying an
+# array's descriptor) drops as a miss and nothing else happens.
+#
+# The block that CARRIES a descriptor goes with its array: as the block leaves, the array
+# it describes leaves the arena's list of its N arrays too, so the arena never keeps a
+# descriptor whose record it has given up -- whether the block is dropped by a revert or
+# by a release.  Every other block drops as a MISS on that walk: a payload block's base is
+# storage and not a descriptor, and the walk only compares addresses (it never
+# dereferences what it compares), so a block that carries no descriptor leaves exactly as
+# it did before.  A miss is not a failure here: the block's own removal is what this call
+# reports, and that is the same answer either way.
+#
+# The addresses are compared as integers (C99 7.18.1.4 gives uintptr_t, but a system header's typedef names no L2
+# local -- `c.uintptr_t: lo 0` is an unresolved name -- so size_t holds them, as the index's module does).
+fn: lmx_arena_drop (@: arena c.LmxArena; @: block c.LmxArenaBlock) int
+    @: pool c.LmxPool 0
+    @: next_pool c.LmxPool 0
+    @: chunk c.LmxChunk 0
+    @: next_chunk c.LmxChunk 0
+    @: member c.LmxArenaBlock 0
+    @: tail c.LmxArenaBlock 0
+    size_t: lo 0U
+    size_t: hi 0U
+    size_t: at 0U
+    if: arena = 0 || block = 0
+        return: 1
+    if: c.lmx_arena_blocks_tail(arena\blocks, @ tail) != c.LMX_ARENA_BLOCKS_OK
+        return: 1
+    member: (cast: (@: LmxArenaBlock) arena\blocks)
+    while: member != 0 && member != block
+        member: (cast: (@: LmxArenaBlock) member\next)
+    ---
+    if: member = 0
+        return: 1
+    lo: (cast: (size_t) block\base)
+    hi: lo + (cast: (size_t) block\n)
+    if: hi < lo
+        return: 1
+    # All owners detach through this operation, before any disposer runs.
+    # A chunk's record and payload are separate blocks. Either one leaving
+    # unlinks that chunk, so an old pool never keeps a freed head/tail.
+    # An embedded pool follows the containing block, not just an equal base.
+    pool: (cast: (@: LmxPool) arena\arrays)
+    while: pool != 0
+        next_pool: (cast: (@: LmxPool) pool\next)
+        at: (cast: (size_t) pool)
+        if: block\base != 0 && block\n != 0U && at >= lo && at < hi
+            lmx_arena_array_drop(arena, pool)
+            pool\head: 0
+            pool\tail: 0
+            pool\chain_gen: pool\chain_gen + 1U
+            pool\next: 0
+            pool\stride: 0U
+            pool\chunk_capacity: 0U
+            pool\kind: 0
+            pool\type: 0
+            pool\profile: 0
+            pool\sealed: 0U
+        else:
+            chunk: (cast: (@: LmxChunk) pool\head)
+            while: chunk != 0
+                next_chunk: (cast: (@: LmxChunk) chunk\next)
+                if: (cast: (@: void) c.lmx_chunk_data(chunk)) = block\base || (cast: (@: void) chunk) = block\base
+                    c.lmx_pool_chunk_drop(pool, chunk)
+                ---
+                chunk: next_chunk
+            ---
+        ---
+        pool: next_pool
+    ---
+    if: block\base != 0 && block\n != 0U
+        c.lmx_range_drop(arena, block\base, (cast: (@: void) ((cast: (@: char) block\base) + (cast: (size_t) block\n))))
+    ---
+    return: c.lmx_arena_blocks_remove(@ arena\blocks, block)
+end: lmx_arena_drop
+
+# A restore point: the arena's block list as it stands now.  The list is a stack, so the
+# mark is simply its head.
+fn: lmx_arena_mark (@: arena c.LmxArena) @: c.LmxArenaBlock
+    if: arena = 0
+        return: 0
+    return: (cast: (@: LmxArenaBlock) arena\blocks)
+end: lmx_arena_mark
+
+# Drop every block added since the mark, retiring each one's interval first.  Blocks the
+# arena already held before the mark are untouched, so a construction that fails leaves
+# no half-made array behind and disturbs nothing that was already there -- "the whole, or
+# nothing", exactly as merge and graph copy require.
+fn: lmx_arena_revert (@: arena c.LmxArena; @: mark c.LmxArenaBlock) int
+    @: block c.LmxArenaBlock 0
+    if: arena = 0
+        return: 1
+    while: arena\blocks != 0 && arena\blocks != mark
+        block: (cast: (@: LmxArenaBlock) arena\blocks)
+        if: lmx_arena_drop(arena, block) != 0
+            return: 1
+        # drop is detach-only, also used by GC. Dispose this now unlinked
+        # singleton with the same ownership/disposer contract as release.
+        if: c.lmx_arena_blocks_dispose_all(@ block) != c.LMX_ARENA_BLOCKS_OK
+            return: 1
+    ---
+    # D-105: a correspondence of a value the revert took back leaves with it.
+    lmx_arena_impl_prune(arena)
+    return: 0
+end: lmx_arena_revert
+
+# A cell of the arena's ordinary array of this kind and type.  The array is the arena's own: it is
+# found among the arena's N arrays, or MADE when the arena has none of that kind and type
+# yet.  So a mutable value is an element of the big array of its type (Mikhail,
+# 2026-09-17: "N массивов где лежат дескрипторы или примитивные значения") and never an
+# array of its own -- which is what keeps the index one line per array instead of one per
+# value.
+fn: lmx_arena_take_n (@: arena c.LmxArena; size_t: stride; int: kind; int: type; size_t: count) @: void
+    return: lmx_arena_take_n_profiled(arena, stride, kind, type, 0, count)
+end: lmx_arena_take_n
+
+fn: lmx_arena_take_n_profiled (@: arena c.LmxArena; size_t: stride; int: kind; int: type; @: pool_profile c.Lmx; size_t: count) @: void
+    @: array c.LmxPool 0
+    if: arena = 0 || stride = 0U || count = 0U || arena\source_view != 0U
+        return: 0
+    if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@: void) pool_profile)) != c.LMX_KIND_STRUCT
+        return: 0
+    if: count > ((cast: (size_t) -1) / stride)
+        return: 0
+    # A generic request for a pointer-domain cell is physically a void * cell.
+    # Typed T * cells have their own access contract and may share only the
+    # numeric type, not the C representation. Both routes use the same
+    # full physical pool selection below.
+    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+        if: stride != sizeof(@: void)
+            return: 0
+        ---
+        return: lmx_arena_pointer_cells_profiled(arena, type, pool_profile, stride, c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, count)
+    ---
+    array: lmx_arena_find_profiled(arena, kind, type, pool_profile)
+    if: array = 0
+        # The first request of that kind and type creates the array with exactly the room
+        # it asks for; every later request of the same kind and type is seated there.
+        array: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, count * stride, stride, kind, type, pool_profile))
+        if: array = 0
+            return: 0
+        ---
+        return: (cast: (@: void) c.lmx_chunk_data(array\head))
+    ---
+    if: (cast: (size_t) array\stride) != stride
+        return: 0
+    return: (cast: (@: void) c.lmx_pool_take_n(arena, array, count))
+end: lmx_arena_take_n_profiled
+
+fn: lmx_arena_take (@: arena c.LmxArena; size_t: stride; int: kind; int: type) @: void
+    return: lmx_arena_take_n(arena, stride, kind, type, 1U)
+end: lmx_arena_take
+
+# Seal every array of this arena that carries the exact nonzero profile -- a qualified branch's own pools -- so
+# no cell of them is handed out again (lmx_pool_take_n refuses a sealed array); the index and every address are
+# unchanged, and arrays of any other profile, the unprofiled ones included, are untouched.  The prologue of a
+# generated program seals a static branch this way through the index; a value qualified at run time (RR2a,
+# steps/qualifier-receivers-20261010.md) seals here, after lmx_qualify_tree_preflight_full and before publication.
+# 0 when at least one array carried the profile; 1 for a null arena or profile, or when no array carries it.
+fn: lmx_arena_seal_profile (@: arena c.LmxArena; @: pool_profile c.Lmx) int
+    @: pool c.LmxPool 0
+    int: found 0
+    if: arena = 0 || pool_profile = 0
+        return: 1
+    pool: (cast: (@: LmxPool) arena\arrays)
+    while: pool != 0
+        if: pool\profile = pool_profile
+            if: c.lmx_pool_seal(pool) != 0
+                return: 1
+            found: 1
+        ---
+        pool: (cast: (@: LmxPool) pool\next)
+    ---
+    if: found = 0
+        return: 1
+    return: 0
+end: lmx_arena_seal_profile
+
+fn: lmx_arena_take_profiled (@: arena c.LmxArena; size_t: stride; int: kind; int: type; @: pool_profile c.Lmx) @: void
+    return: lmx_arena_take_n_profiled(arena, stride, kind, type, pool_profile, 1U)
+end: lmx_arena_take_profiled
+
+# Receiver results keep their role in the physical pool, not in graph fields
+# or the source-name inventory. A copied Structure can request this same role
+# in the destination arena without moving or retyping any existing address.
+fn: lmx_arena_take_struct_role (@: arena c.LmxArena; @: pool_profile c.Lmx; unsigned: role) @: c.Lmx
+    return: lmx_arena_take_struct_physical_role(arena, c.LMX_TYPE_STRUCT, pool_profile, role)
+end: lmx_arena_take_struct_role
+
+fn: lmx_arena_take_struct_physical_role (@: arena c.LmxArena; int: physical_type; @: pool_profile c.Lmx; unsigned: role) @: c.Lmx
+    @: pool c.LmxPool 0
+    if: c.lmx_type_base(physical_type) != c.LMX_TYPE_STRUCT
+        return: 0
+    if: role = c.LMX_POOL_ROLE_PLAIN
+        return: (cast: (@: Lmx) lmx_arena_take_profiled(arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, physical_type, pool_profile))
+    if: role != c.LMX_POOL_ROLE_FN || arena = 0 || arena\source_view != 0U
+        return: 0
+    if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@: void) pool_profile)) != c.LMX_KIND_STRUCT
+        return: 0
+    pool: (cast: (@: LmxPool) arena\arrays)
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_STRUCT && pool\type = physical_type && pool\profile = pool_profile && pool\role = role && pool\stride = c.sizeof(c.Lmx)
+            return: (cast: (@: Lmx) c.lmx_pool_take_n(arena, pool, 1U))
+        pool: (cast: (@: LmxPool) pool\next)
+    ---
+    pool: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, c.sizeof(c.Lmx), c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, physical_type, pool_profile))
+    if: pool = 0
+        return: 0
+    pool\role: role
+    return: (cast: (@: Lmx) c.lmx_chunk_data(pool\head))
+end: lmx_arena_take_struct_physical_role
+
+fn: lmx_arena_pointer_void_read (@: cell void) @: void
+    @@: p void 0
+    if: cell = 0
+        return: 0
+    p: (cast: (@@: void) cell)
+    return: \p
+end: lmx_arena_pointer_void_read
+
+fn: lmx_arena_pointer_void_write (@: cell void; @: value void) int
+    @@: p void 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@@: void) cell)
+    \p: value
+    return: 0
+end: lmx_arena_pointer_void_write
+
+fn: lmx_arena_pointer_cells_profiled (@: arena c.LmxArena; int: type; @: pool_profile c.Lmx; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write; size_t: count) @: void
+    @: pool c.LmxPool 0
+    @: cell void 0
+    size_t: i 0U
+    if: arena = 0 || arena\source_view != 0U || c.lmx_type_base(type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0 || count = 0U || count > ((cast: (size_t) -1) / stride)
+        return: 0
+    if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@: void) pool_profile)) != c.LMX_KIND_STRUCT
+        return: 0
+    # The numeric type is unit-local. Two C99 pointer types (or two distinct
+    # access contracts) may use the same number in one arena after import.
+    # Keep their cells in separate arrays; the address index identifies the
+    # physical pool for every later read, copy, walk and collection.
+    pool: (cast: (@: LmxPool) arena\arrays)
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = type && pool\profile = pool_profile && pool\stride = stride && pool\pointer_read = read && pool\pointer_write = write
+            break
+        ---
+        pool: (cast: (@: LmxPool) pool\next)
+    ---
+    if: pool = 0
+        pool: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, count * stride, stride, c.LMX_KIND_PRIMITIVE, type, pool_profile))
+        if: pool = 0
+            return: 0
+        ---
+        cell: (cast: (@: void) c.lmx_chunk_data(pool\head))
+        pool\pointer_read: read
+        pool\pointer_write: write
+    else:
+        cell: (cast: (@: void) c.lmx_pool_take_n(arena, pool, count))
+        if: cell = 0
+            return: 0
+        ---
+    ---
+    while: i < count
+        if: write((cast: (@: void) ((cast: (@: char) cell) + i * stride)), 0) != 0
+            return: 0
+        i: i + 1U
+    ---
+    return: cell
+end: lmx_arena_pointer_cells_profiled
+
+# An arena-local primitive owner is the arena object, not a cell in one of its
+# arrays. Attaching the arrays transfers that ownership too. This is a
+# representation fixup after a successful transfer, not a graph edge or a
+# reason to copy the primitive's signature/subject.
+sub: lmx_arena_rehome_primitive_owners (@: arena c.LmxArena; @: other c.LmxArena)
+    @: pool c.LmxPool 0
+    @: chunk c.LmxChunk 0
+    @: records c.LmxPrimitive 0
+    @: record c.LmxPrimitive 0
+    size_t: i 0U
+    size_t: n 0U
+    pool: (cast: (@: LmxPool) other\arrays)
+    while: pool != 0
+        if: pool\kind = c.LMX_DOMAIN_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_DOMAIN_PRIMITIVE && pool\stride = c.sizeof(c.LmxPrimitive)
+            chunk: (cast: (@: LmxChunk) c.lmx_pool_chunk_head(pool))
+            while: chunk != 0
+                records: (cast: (@: LmxPrimitive) c.lmx_chunk_data(chunk))
+                n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
+                i: 0U
+                while: i < n
+                    record: records + i
+                    if: record\owner = (cast: (@: Lmx) other)
+                        record\owner: (cast: (@: Lmx) arena)
+                    ---
+                    i: i + 1U
+                ---
+                chunk: (cast: (@: LmxChunk) chunk\next)
+            ---
+        ---
+        pool: (cast: (@: LmxPool) pool\next)
+    ---
+end: lmx_arena_rehome_primitive_owners
+
+# Another arena attaches to this one.  The whole act is "increase the number of arrays and
+# do not worry about the addresses": the attached arena's intervals join this index (their
+# addresses are unchanged, so every entry still names the very same interval and the very
+# same descriptor -- only the table that holds it changes), its arrays join this arena's
+# list of its N arrays, and its blocks join this arena's block list, so ONE arena owns
+# both and after this call the attached arena is empty.  Nothing is copied and nothing
+# moves, which is what attaching exists for.  A refusal part-way takes back exactly the
+# entries this call added and disturbs nothing else.
+fn: lmx_arena_attach (@: arena c.LmxArena; @: other c.LmxArena) int
+    @: entry c.LmxRange 0
+    @: present c.LmxRange 0
+    @: inserted c.LmxRange 0
+    @: pool c.LmxPool 0
+    @: next c.LmxPool 0
+    @: new_owner c.LmxArena 0
+    size_t: index 0U
+    size_t: scan 0U
+    size_t: needed 0U
+    size_t: added 0U
+    int: exact 0
+    if: arena = 0 || other = 0 || arena\source_view != 0U || other\source_view != 0U
+        return: 1
+    if: arena = other
+        return: 1
+    if: lmx_arena_index_len(other) = 0U && other\arrays = 0 && other\blocks = 0
+        return: 0
+    # The final ownership-list splice is fallible on malformed/intersecting lists. Preflight it
+    # before adding one range, relinking one Array or clearing one donor field; after this succeeds
+    # the same owner-exclusive lists cannot change until the final constant-time splice.
+    if: c.lmx_arena_blocks_can_move(@ arena\blocks, @ other\blocks) != c.LMX_ARENA_BLOCKS_OK
+        return: 1
+    # D-105: the donor's `implements` correspondences name its values, whose addresses do not
+    # change -- they join this arena's table.  Room first, so a refusal disturbs nothing.
+    if: other\impl_len != 0U && lmx_arena_impl_room(arena, (cast: (size_t) arena\impl_len) + (cast: (size_t) other\impl_len)) != 0
+        return: 1
+    # The index is sorted by address, not insertion order. Validate all of
+    # the donor's intervals and reserve their room before changing one row;
+    # length alone cannot identify which rows an attempted attach inserted.
+    index: 0U
+    while: index < lmx_arena_index_len(other)
+        entry: lmx_arena_index_data(other) + index
+        if: entry\array = 0 || entry\owner = 0 || entry\lo = 0 || entry\hi <= entry\lo
+            return: 1
+        new_owner: (cast: (@: LmxArena) entry\owner)
+        if: new_owner = other
+            new_owner: arena
+        ---
+        if: new_owner != arena && entry\array\sealed = 0U
+            return: 1
+        exact: 0
+        scan: 0U
+        while: scan < lmx_arena_index_len(arena)
+            present: lmx_arena_index_data(arena) + scan
+            if: entry\lo < present\hi && entry\hi > present\lo
+                if: entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && new_owner = present\owner
+                    exact: 1
+                else:
+                    return: 1
+                ---
+                break
+            ---
+            scan: scan + 1U
+        ---
+        if: exact = 0
+            if: needed = (cast: (size_t) -1)
+                return: 1
+            needed: needed + 1U
+        ---
+        index: index + 1U
+    ---
+    if: needed > (cast: (size_t) -1) - lmx_arena_index_len(arena) || needed > (cast: (size_t) -1) / c.sizeof(c.LmxRange)
+        return: 1
+    if: needed != 0U
+        inserted: (cast: (@: LmxRange) c.calloc(needed, c.sizeof(c.LmxRange)))
+        if: inserted = 0 || c.lmx_range_reserve(arena, lmx_arena_index_len(arena) + needed) != 0
+            c.free((cast: (@: void) inserted))
+            return: 1
+        ---
+    ---
+    index: 0U
+    while: index < lmx_arena_index_len(other)
+        entry: lmx_arena_index_data(other) + index
+        # Ownership of local arrays transfers; borrowed views keep their
+        # original owner. Exact pre-existing destination rows are untouched.
+        new_owner: (cast: (@: LmxArena) entry\owner)
+        if: new_owner = other
+            new_owner: arena
+        ---
+        present: (cast: (@: LmxRange) c.lmx_range_entry_at(arena, entry\lo))
+        exact: (cast: (int) (present != 0 && entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && new_owner = present\owner))
+        if: exact = 0
+            if: c.lmx_range_add_view(arena, new_owner, entry\array, entry\lo, entry\hi) != 0
+                while: added != 0U
+                    added: added - 1U
+                    present: inserted + added
+                    c.lmx_range_drop(arena, present\lo, present\hi)
+                ---
+                c.free((cast: (@: void) inserted))
+                return: 1
+            ---
+            present: inserted + added
+            present\lo: entry\lo
+            present\hi: entry\hi
+            added: added + 1U
+        ---
+        index: index + 1U
+    ---
+    c.free((cast: (@: void) inserted))
+    # The arrays follow the entries, and the storage follows the arrays: after this the
+    # attached arena holds nothing at all.
+    lmx_arena_rehome_primitive_owners(arena, other)
+    pool: (cast: (@: LmxPool) other\arrays)
+    while: pool != 0
+        next: (cast: (@: LmxPool) pool\next)
+        pool\next: arena\arrays
+        arena\arrays: pool
+        pool: next
+    ---
+    other\arrays: 0
+    lmx_arena_index_set_len(other, 0U)
+    if: lmx_arena_index_data(other) != 0
+        c.free((cast: (@: void) lmx_arena_index_data(other)))
+    ---
+    lmx_arena_index_set_data(other, 0)
+    lmx_arena_index_set_cap(other, 0U)
+    other\generation: 0U
+    other\simple: 0U
+    other\source_view: 0U
+    index: 0U
+    while: index < other\impl_len
+        arena\impl[arena\impl_len]: other\impl[index]
+        arena\impl_len: arena\impl_len + 1U
+        index: index + 1U
+    ---
+    if: other\impl != 0
+        c.free((cast: (@: void) other\impl))
+    ---
+    other\impl: 0
+    other\impl_len: 0U
+    other\impl_cap: 0U
+    return: c.lmx_arena_blocks_move_all(@ arena\blocks, @ other\blocks)
+end: lmx_arena_attach
+
+# Release everything the arena owns: its blocks, its index and its implements table go
+# whole.  The arrays live inside those blocks, so nothing else is freed.  No interval is
+# retired one by one, as lmx_arena_drop retires a block that leaves a living arena: its
+# source-name rows live in this arena's own pools and go with them, and the index goes
+# with its entries -- a retirement per block searched the index, scanned every name row
+# and shifted the index, quadratic over a large arena (ARENA-RELEASE-QUADRATIC).
+fn: lmx_arena_release (@: arena c.LmxArena) int
+    int: status 0
+    if: arena = 0
+        return: 1
+    status: c.lmx_arena_blocks_dispose_all(@ arena\blocks)
+    arena\arrays: 0
+    if: lmx_arena_index_data(arena) != 0
+        c.free((cast: (@: void) lmx_arena_index_data(arena)))
+    ---
+    lmx_arena_index_set_data(arena, 0)
+    lmx_arena_index_set_len(arena, 0U)
+    lmx_arena_index_set_cap(arena, 0U)
+    lmx_arena_impl_truncate(arena, 0U)
+    if: arena\impl != 0
+        c.free((cast: (@: void) arena\impl))
+    ---
+    arena\impl: 0
+    arena\impl_len: 0U
+    arena\impl_cap: 0U
+    arena\generation: 0U
+    arena\simple: 0U
+    arena\source_view: 0U
+    return: status
+end: lmx_arena_release
+
+# The next mark generation for a collection pass.  Bumping is the whole act: a chunk's stamp
+# is compared with this value, so a pass never clears anything and never walks a chunk twice.
+# Zero is never returned -- a freshly cleared chunk holds zero and must not match the first
+# pass's stamp.
+fn: lmx_arena_generation_next (@: arena c.LmxArena) unsigned
+    if: arena = 0
+        return: 0U
+    # Letter-scale arenas have no GC pass (Mikhail 19.09 simplified).
+    if: arena\simple != 0U
+        return: 0U
+    arena\generation: arena\generation + 1U
+    if: arena\generation = 0U
+        arena\generation: 1U
+    ---
+    return: (cast: (unsigned) arena\generation)
+end: lmx_arena_generation_next
+
+# D-105: room for `need` correspondences in the arena's `implements` table (malloc'd, grown by
+# doubling like the index).  0 = there is room.
+fn: lmx_arena_impl_room (@: arena c.LmxArena; size_t: need) int
+    size_t: capacity 0U
+    @: grown c.LmxImplEntry 0
+    if: arena = 0
+        return: 1
+    if: need <= arena\impl_cap
+        return: 0
+    capacity: (cast: (size_t) arena\impl_cap)
+    if: capacity = 0U
+        capacity: 8U
+    ---
+    while: capacity < need
+        if: capacity > ((cast: (size_t) -1) / 2U)
+            return: 1
+        ---
+        capacity: capacity * 2U
+    ---
+    if: capacity > ((cast: (size_t) -1) / c.sizeof(c.LmxImplEntry))
+        return: 1
+    grown: (cast: (@: LmxImplEntry) c.realloc((cast: (@: void) arena\impl), capacity * c.sizeof(c.LmxImplEntry)))
+    if: grown = 0
+        return: 1
+    arena\impl: grown
+    arena\impl_cap: capacity
+    return: 0
+end: lmx_arena_impl_room
+
+# D-105: drop every correspondence whose value, model or admitting frame no longer classifies as a live
+# Structure of this arena. Before a GC sweep, lmx_gc_mark_impl keeps a live value's
+# required model; an unretained admitting frame still retires its own record. A static map is the program's, outside the arena; a computed
+# map belongs to its entry and is freed at retirement. Run where storage leaves -- the sweep, after its blocks are gone, and
+# a revert -- so an entry never outlives its value by one pass: the next Structure at that address
+# starts with no correspondence.  Order is kept (lookups scan the table).
+sub: lmx_arena_impl_truncate (@: arena c.LmxArena; size_t: keep)
+    size_t: i 0U
+    @: e c.LmxImplEntry 0
+    if: arena = 0 || keep >= arena\impl_len
+        return
+    i: keep
+    while: i < arena\impl_len
+        e: (cast: (@: LmxImplEntry) arena\impl) + i
+        lmx_arena_impl_contract_release((cast: (@: LmxImplContract) e\contract))
+        if: e\owned_map != 0 && e\map != 0
+            c.free((cast: (@: void) e\map))
+        ---
+        if: e\exec_map != 0
+            c.free((cast: (@: void) e\exec_map))
+        ---
+        i: i + 1U
+    ---
+    arena\impl_len: keep
+end: lmx_arena_impl_truncate
+
+sub: lmx_arena_impl_prune (@: arena c.LmxArena)
+    size_t: i 0U
+    size_t: kept 0U
+    @: e c.LmxImplEntry 0
+    if: arena = 0 || arena\impl = 0
+        return
+    while: i < arena\impl_len
+        e: (cast: (@: LmxImplEntry) arena\impl) + i
+        if: c.lmx_graph_node_in(arena, (cast: (@: void) e\value)) != 0 && c.lmx_graph_node_in(arena, (cast: (@: void) e\req)) != 0 && (e\frame = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) e\frame)) != 0)
+            if: kept != i
+                arena\impl[kept]: arena\impl[i]
+            ---
+            kept: kept + 1U
+        else:
+            lmx_arena_impl_contract_release((cast: (@: LmxImplContract) e\contract))
+            if: e\owned_map != 0 && e\map != 0
+                c.free((cast: (@: void) e\map))
+            ---
+            if: e\exec_map != 0
+                c.free((cast: (@: void) e\exec_map))
+            ---
+        ---
+        i: i + 1U
+    ---
+    arena\impl_len: kept
+end: lmx_arena_impl_prune
+
+# Stored-entry ownership only. Moves of the arena index transfer ownership;
+# scratch/view copies never retain or release a borrowed contract pointer.
+sub: lmx_arena_impl_contract_retain (@: contract c.LmxImplContract)
+    if: contract != 0
+        contract\owners: contract\owners + 1U
+    ---
+end: lmx_arena_impl_contract_retain
+
+# The facts' storage is the contract's by-value dynamic array; its data is read through the address of that member.
+sub: lmx_arena_impl_contract_release (@: contract c.LmxImplContract)
+    @: facts c.LmxImplContractFactDynamicArray 0
+    @: list c.LmxImplContractFactArray 0
+    if: contract = 0
+        return
+    if: contract\owners > 1U
+        contract\owners: contract\owners - 1U
+        return
+    facts: @ contract\facts
+    list: (cast: (@: LmxImplContractFactArray) facts)
+    if: list\data != 0
+        c.free((cast: (@: void) list\data))
+    c.free((cast: (@: void) contract))
+end: lmx_arena_impl_contract_release

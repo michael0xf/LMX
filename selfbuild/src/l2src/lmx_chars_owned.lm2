@@ -1,0 +1,44 @@
+# Fresh complete byte table in exclusively held Message storage. The caller
+# chooses its canonical table and retains it through actual graph roots.
+# Published bytes are immutable. Creation does not choose a Message or a root.
+# The table is one array of the arena: the arena allocates it, owns it and
+# classifies it; no owner-local range list exists.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
+# its explicit arguments. The build writes its header, lmx_chars_owned.h.lm1, with the two exports. The records it
+# reads (LmxArena) are in the kernel's headers that L3 code of the recipe writes as L1 text (decls_write_all,
+# tools/l2/build.lm2); the arena's acts (lmx_arena_*) are the kernel's C functions, called through the C door.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdlib.h>"
+
+# The character table of a Message: 256 consecutive cells of the arena's array of char
+# primitives, filled with byte encodings 0..255. Immutable literals and temporary
+# values may share these cells; mutable declared fields instead use fresh typed
+# cells allocated and stored by lmx_value_owned. The array is the arena's:
+# the first table makes it with exactly the 256 cells asked for, and every later table
+# takes 256 more cells of the SAME array -- one more interval of it, one more entry naming
+# the same descriptor, never an array of its own.  The storage is the arena's, the
+# descriptor says KIND_PRIMITIVE / CHAR, and the arena's index names that descriptor for
+# every cell.
+fn: lmx_chars_new_owned (@: arena c.LmxArena) @: char
+    size_t: index 0U
+    @: chars char 0
+    if: arena = 0
+        return: 0
+    chars: (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
+    if: chars = 0
+        return: 0
+    while: index < 256U
+        chars[index]: (cast: (char) index)
+        index: index + 1U
+    ---
+    return: chars
+end: lmx_chars_new_owned
+
+# chars is null or the live base returned by construction, not a validator.
+fn: lmx_char_cell_known (@: chars char; int: value) @: void
+    if: chars = 0 || value < 0 || value > 255
+        return: 0
+    return: (cast: (@: void) (chars + value))
+end: lmx_char_cell_known

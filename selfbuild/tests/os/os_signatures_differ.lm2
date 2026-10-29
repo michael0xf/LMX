@@ -1,0 +1,35 @@
+# The same method names with other signatures in the branches (L2 section 20; the author, LMX_blog/2026-10-23.md):
+# another result type (os_size), other formal types, names and order (os_pair), declared throw exits in one branch
+# only (os_check). Nothing compares the branches: the root's calls are admitted by the selected branch's
+# declarations alone -- on win os_size(3) is 3 and os_pair(2 1) is 2 + 1 -- and the default branch, whose os_pair
+# takes (size_t: k; int: m), is not translated here. Exit 3 + 3 + 1 = 7.
+os:
+    win:
+        fn: os_size (int: n) int
+            return: n
+        end: os_size
+        fn: os_pair (int: n; size_t: k) int
+            return: n + (cast: (int) k)
+        end: os_pair
+        fn: os_check (int: n) int
+            throws: Bad
+            if: n < 0
+                throw: Bad(n)
+            return: n
+        end: os_check
+    default:
+        fn: os_size (int: n) unsigned
+            return: (cast: (unsigned) n)
+        end: os_size
+        fn: os_pair (size_t: k; int: m) int
+            return: m
+        end: os_pair
+        fn: os_check (char: c) int
+            return: 0
+        end: os_check
+end: os
+int: a os_size(3)
+int: b os_pair(2 1)
+int: code (a + b + 1)
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

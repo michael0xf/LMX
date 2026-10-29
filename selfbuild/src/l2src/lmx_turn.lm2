@@ -1,0 +1,102 @@
+predef: "l2src/lmx_turn.h.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_clock.lm1"
+
+# One end-turn outcome controls both staged mail and child publication.
+fn: lmx_turn_outcome (@: t c.LmxThread) int
+    @: message c.LmxMsg
+    message: c.lmx_thread_message(t)
+    if: message = 0
+        return: c.LMX_TURN_INVALID
+    if: message\running = 0 && message\success = 0
+        return: c.LMX_TURN_FAILED
+    return: c.LMX_TURN_SUCCESS
+
+fn: lmx_turn_cycle_reading (ulong: v) ulong
+    return: v
+
+fn: lmx_turn_end (@: t c.LmxThread; ulong: now) int
+    return: lmx_turn_end_status(t, now, c.LMX_TURN_BODY_OK)
+
+fn: lmx_turn_boundary_fail (@: t c.LmxThread) int
+    return: c.LMX_TURN_INVALID
+
+fn: lmx_turn_end_status (@: t c.LmxThread; ulong: now; int: body_status) int
+    int: outcome
+    @: arena c.LmxArena
+    size_t: mark
+    ulong: reading
+    ulong: stamp
+    @: slot c.LmxSchedule
+    @: band c.LmxArena
+    @: mail c.LmxPost
+    int: overdue
+    @: message c.LmxMsg
+    reading: lmx_turn_cycle_reading(now)
+    message: c.lmx_thread_message(t)
+    if: message = 0
+        return: c.LMX_TURN_INVALID
+    mail: t\mail
+    if: mail = 0
+        return: lmx_turn_boundary_fail(t)
+    ---
+    outcome: lmx_turn_outcome(t)
+    if: outcome = c.LMX_TURN_SUCCESS && body_status != c.LMX_TURN_BODY_OK
+        outcome: c.LMX_TURN_FAILED
+    ---
+    if: outcome = c.LMX_TURN_FAILED
+        c.lmx_post_discard(mail)
+        c.lmx_child_drop_prepared(t)
+    else:
+        c.lmx_post_publish(mail)
+        band: 0
+        slot: t\slot
+        if: slot != 0
+            band: slot\arena
+        ---
+        if: c.lmx_child_publish_prepared(t, band) != c.LMX_CHILD_OK
+            return: lmx_turn_boundary_fail(t)
+        ---
+    ---
+    # A parentless record has no liveness handshake. Otherwise answer or age
+    # the same low-32 cycle reading; a zero stamp is represented by one.
+    if: c.lmx_thread_parent(t) != 0 && c.lmx_thread_alive_cell(t) != 0
+        mark: c.__atomic_load_n(c.lmx_thread_alive_cell(t), c.__ATOMIC_RELAXED)
+        if: mark = 0U
+            stamp: reading
+            if: stamp = 0U
+                stamp: 1U
+            ---
+            c.__atomic_store_n(c.lmx_thread_alive_cell(t), (cast: (size_t) stamp), c.__ATOMIC_RELAXED)
+        else:
+            overdue: 0
+            slot: t\slot
+            if: slot != 0 && slot\limit != 0U
+                if: reading - (cast: (ulong) mark) >= slot\limit
+                    overdue: 1
+                ---
+            ---
+            if: overdue != 0
+                message\running: 0
+                message\handoff_ready: 1
+            ---
+        ---
+    ---
+    c.lmx_poll_answer_children(t, reading)
+    if: message\running = 0
+        # A boundary asks for stops, not a closure deadline. The close itself
+        # publishes the one deadline shared by the whole family later.
+        c.lmx_stop_children(t, reading, 0U)
+    ---
+    arena: 0
+    slot: t\slot
+    if: slot != 0
+        arena: slot\arena
+    ---
+    if: arena = 0
+        return: c.LMX_TURN_OK
+    if: c.lmx_gc_collect(arena, t) = c.LMX_GC_PARTIAL
+        return: lmx_turn_boundary_fail(t)
+    return: c.LMX_TURN_OK

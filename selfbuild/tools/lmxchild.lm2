@@ -1,0 +1,185 @@
+# lmxchild: the child the L2 runner's self-test starts (tools/l2/lmxtool.lm2 `selftest DIR CHILD`), a small
+# program of its own so that a process run waits only for the process contract, not for lmxtool's start.
+# Commands after `--`: echo-args ARGS... (`ARGC n`, then `ARG i <hex of its UTF-8 bytes>` for each, as the
+# platform parses this process's command line), exit-with N, streams (OUT-LINE on stdout, ERR-LINE on
+# stderr), cwd (`CWD <the working directory>`), sleep-touch MS PATH (sleeps MS milliseconds, then creates
+# PATH). The os branches repeat lmxtool's methods of the same names: a program part holds no os block yet (P3).
+# Part: text.lm2. Link: -lshell32 on Windows.
+include: "<stdio.h>"
+include: "<stdlib.h>"
+include: "<string.h>"
+
+os:
+    win:
+        include: "<windows.h>"
+        include: "<shellapi.h>"
+        # The platform's API text as UTF-8 on the heap, or 0.
+        fn: os_from_native (@: p c.void) @: char
+            @: w c.WCHAR (cast: (@: c.WCHAR) p)
+            int: n c.WideCharToMultiByte(c.CP_UTF8, 0, w, -1, 0, 0, 0, 0)
+            @: s char 0
+            if: n <= 0
+                return: 0
+            s: c.malloc((cast: (size_t) n))
+            if: s = 0
+                return: 0
+            if: c.WideCharToMultiByte(c.CP_UTF8, 0, w, -1, s, n, 0, 0) != n
+                c.free(s)
+                return: 0
+            return: s
+        end: os_from_native
+        fn: os_sleep_ms (unsigned: ms) int
+            c.Sleep(ms)
+            return: 0
+        end: os_sleep_ms
+        # This process's working directory as UTF-8 on the heap, or 0.
+        fn: os_cwd () @: char
+            unsigned: n c.GetCurrentDirectoryW(0U, 0)
+            @: w c.WCHAR 0
+            @: s char 0
+            if: n = 0U
+                return: 0
+            w: c.calloc((cast: (size_t) n), c.sizeof(c.WCHAR))
+            if: w = 0
+                return: 0
+            if: c.GetCurrentDirectoryW(n, w) = 0U
+                c.free(w)
+                return: 0
+            s: os_from_native((cast: (@: void) w))
+            c.free(w)
+            return: s
+        end: os_cwd
+        # The arguments this process was given after `--`, as the platform parses its command line: a line
+        # `ARGC n` and a line `ARG i <hex of its UTF-8 bytes>` for each. 0 printed, 1 not.
+        fn: os_args_print () int
+            @: count int c.calloc(1U, c.sizeof(c.int))
+            @@: list c.WCHAR 0
+            @: s char 0
+            @: hex char 0
+            int: i 0
+            int: at -1
+            if: count = 0
+                return: 1
+            list: c.CommandLineToArgvW(c.GetCommandLineW(), count)
+            if: list = 0
+                c.free(count)
+                return: 1
+            while: i < count[0] && at < 0
+                s: os_from_native((cast: (@: void) list[i]))
+                if: s != 0 && c.strcmp(s, "--") = 0
+                    at: i + 1
+                c.free(s)
+                i: i + 1
+            ---
+            if: at < 0
+                at: count[0]
+            c.printf("ARGC %d\n", count[0] - at)
+            i: at
+            while: i < count[0]
+                s: os_from_native((cast: (@: void) list[i]))
+                if: s = 0
+                    c.LocalFree(list)
+                    c.free(count)
+                    return: 1
+                hex: txt_hex(s, c.strlen(s))
+                c.printf("ARG %d %s\n", i - at, hex)
+                c.free(hex)
+                c.free(s)
+                i: i + 1
+            ---
+            c.LocalFree(list)
+            c.free(count)
+            return: 0
+        end: os_args_print
+    default:
+        include: "<unistd.h>"
+        fn: os_from_native (@: p c.void) @: char
+            return: txt_dup((cast: (@: char) p))
+        end: os_from_native
+        fn: os_sleep_ms (unsigned: ms) int
+            unsigned: left ms
+            while: left > 0U
+                if: left >= 1000U
+                    c.usleep(999000U)
+                    left: left - 999U
+                if: left < 1000U && left > 0U
+                    c.usleep(left * 1000U)
+                    left: 0U
+            ---
+            return: 0
+        end: os_sleep_ms
+        fn: os_cwd () @: char
+            size_t: cap 256U
+            @: s char 0
+            while: cap < 1048576U
+                s: c.malloc(cap)
+                if: s = 0
+                    return: 0
+                if: c.getcwd(s, cap) != 0
+                    return: s
+                c.free(s)
+                cap: 2U * cap
+            return: 0
+        end: os_cwd
+        # This platform hands main its arguments unparsed: there is no other view of them to print.
+        fn: os_args_print () int
+            return: 1
+        end: os_args_print
+end: os
+
+fn: child_main (@@: args char; int: n) int
+    @: here char 0
+    @: f c.FILE 0
+    if: n >= 2 && c.strcmp(args[1], "echo-args") = 0
+        return: os_args_print()
+    if: n >= 3 && c.strcmp(args[1], "exit-with") = 0
+        return: c.atoi(args[2])
+    if: n >= 2 && c.strcmp(args[1], "streams") = 0
+        c.fputs("OUT-LINE\n", c.stdout)
+        c.fputs("ERR-LINE\n", c.stderr)
+        return: 0
+    if: n >= 2 && c.strcmp(args[1], "cwd") = 0
+        here: os_cwd()
+        if: here = 0
+            return: 1
+        c.printf("CWD %s\n", here)
+        c.free(here)
+        return: 0
+    if: n >= 4 && c.strcmp(args[1], "sleep-touch") = 0
+        os_sleep_ms((cast: (unsigned) c.atoi(args[2])))
+        f: os_file_open(args[3], "wb")
+        if: f != 0
+            c.fclose(f)
+        return: 0
+    c.fprintf(c.stderr, "lmxchild: usage: echo-args ARGS... | exit-with N | streams | cwd | sleep-touch MS PATH\n")
+    return: 2
+end: child_main
+
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+receiveMessage: m
+size_t: n length(m\mainArgs)
+size_t: i 0U
+size_t: j 0U
+size_t: len 0U
+@@: args char c.calloc(n + 1U, sizeof(@: char))
+@: buf char 0
+int: rc 2
+while: i < n && args != 0
+    len: length(m\mainArgs[i])
+    buf: c.malloc(len + 1U)
+    j: 0U
+    while: buf != 0 && j < len
+        buf[j]: m\mainArgs[i][j]
+        j: j + 1U
+    if: buf != 0
+        buf[len]: (cast: (char) 0)
+    args[i]: buf
+    i: i + 1U
+if: args != 0
+    rc: child_main(args, (cast: (int) n))
+sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
+return

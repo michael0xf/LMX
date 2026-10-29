@@ -1,0 +1,260 @@
+# Unselected source port of the fixed paired-body regex checks in
+# tools/build_semantics.py. This is not a Markdown parser or a CLI yet.
+# Inputs are validated UTF8 with ordinary text-mode CR/CRLF normalization.
+# Byte spans preserve the exact Python string matches, including embedded NUL.
+
+# Next line whose prefix is marker, at/after begin; SIZE_MAX if absent.
+fn: dp_line_marker (@: data char; size_t: count; size_t: begin; @: marker char; size_t: width) size_t
+    size_t: at begin
+    size_t: newline 0U
+    if: at > count || width = 0U
+        return: (cast: (size_t) -1)
+    if: at > 0U && at < count && data[at - 1U] != (cast: (char) 10)
+        newline: dt_find(data, count, at, "\n", 1U)
+        if: newline = (cast: (size_t) -1)
+            return: (cast: (size_t) -1)
+        at: newline + 1U
+    ---
+    while: at < count
+        if: count - at >= width && c.memcmp(data + at, marker, width) = 0
+            return: at
+        newline: dt_find(data, count, at, "\n", 1U)
+        if: newline = (cast: (size_t) -1)
+            return: (cast: (size_t) -1)
+        at: newline + 1U
+    ---
+    return: (cast: (size_t) -1)
+end: dp_line_marker
+
+# 1 code-block full match (?ms)^ + three-backticks + .*? + ^ + three-backticks
+# 2 heading-prefix full match ^#+ space
+# 3 anchor capture <a id="([^"]+)"
+# 4 link capture ]\(([^)]+)\)
+# Return1 found,0 absent,-1 bad kind/arguments; after advances past full match.
+fn: dp_match (@: data char; size_t: count; size_t: begin; int: kind; @: first size_t; @: last size_t; @: after size_t) int
+    size_t: at begin
+    size_t: found 0U
+    size_t: end_at 0U
+    size_t: start 0U
+    @: prefix char 0
+    @: closer char 0
+    size_t: width 0U
+    if: data = 0 || first = 0 || last = 0 || after = 0 || begin > count || kind < 1 || kind > 4
+        return: -1
+    if: kind = 1
+        found: dp_line_marker(data, count, at, "```", 3U)
+        if: found = (cast: (size_t) -1)
+            return: 0
+        end_at: dp_line_marker(data, count, found + 3U, "```", 3U)
+        if: end_at = (cast: (size_t) -1)
+            return: 0
+        first[0]: found
+        last[0]: end_at + 3U
+        after[0]: end_at + 3U
+        return: 1
+    ---
+    if: kind = 2
+        while: at < count
+            found: dp_line_marker(data, count, at, "#", 1U)
+            if: found = (cast: (size_t) -1)
+                return: 0
+            end_at: found
+            while: end_at < count && data[end_at] = (cast: (char) 35)
+                end_at: end_at + 1U
+            ---
+            if: end_at < count && data[end_at] = (cast: (char) 32)
+                first[0]: found
+                last[0]: end_at + 1U
+                after[0]: end_at + 1U
+                return: 1
+            ---
+            at: end_at
+        ---
+        return: 0
+    ---
+    prefix: "<a id=\""
+    closer: "\""
+    width: 7U
+    if: kind = 4
+        prefix: "]("
+        closer: ")"
+        width: 2U
+    ---
+    while: at < count
+        found: dt_find(data, count, at, prefix, width)
+        if: found = (cast: (size_t) -1)
+            return: 0
+        start: found + width
+        end_at: dt_find(data, count, start, closer, 1U)
+        if: end_at = (cast: (size_t) -1)
+            return: 0
+        if: end_at > start
+            first[0]: start
+            last[0]: end_at
+            after[0]: end_at + 1U
+            return: 1
+        ---
+        at: found + 1U
+    ---
+    return: 0
+end: dp_match
+
+# Streaming form of re.sub(([._])(ru|en)(?=\.md), separator + LANG).
+# pending1..4 emits L,A,N,G after the separator; 256 means end, NUL is byte0.
+# Literal LANG in the input compares equal to a normalized language token.
+fn: dp_link_byte (@: data char; size_t: count; @: at size_t; @: pending int) unsigned
+    unsigned: byte 0U
+    int: step pending[0]
+    if: step != 0
+        pending[0]: step + 1
+        if: step = 4
+            pending[0]: 0
+            return: 71U
+        if: step = 1
+            return: 76U
+        if: step = 2
+            return: 65U
+        return: 78U
+    ---
+    if: at[0] >= count
+        return: 256U
+    byte: (cast: (unsigned) data[at[0]]) & 255U
+    if: count - at[0] >= 6U && (byte = 46U || byte = 95U)
+        if: (c.memcmp(data + at[0] + 1U, "ru.md", 5U) = 0 || c.memcmp(data + at[0] + 1U, "en.md", 5U) = 0)
+            at[0]: at[0] + 3U
+            pending[0]: 1
+            return: byte
+        ---
+    ---
+    at[0]: at[0] + 1U
+    return: byte
+end: dp_link_byte
+
+fn: dp_links_equal (@: a char; size_t: na; @: b char; size_t: nb) int
+    size_t: ia 0U
+    size_t: ib 0U
+    int: pa 0
+    int: pb 0
+    unsigned: ca 0U
+    unsigned: cb 0U
+    while: 1
+        ca: dp_link_byte(a, na, @ ia, @ pa)
+        cb: dp_link_byte(b, nb, @ ib, @ pb)
+        if: ca != cb
+            return: 0
+        if: ca = 256U
+            return: 1
+    ---
+end: dp_links_equal
+
+# Ordered findall equality for the four fixed match shapes.
+fn: dp_matches_equal (@: a char; size_t: na; @: b char; size_t: nb; int: kind) int
+    size_t: ia 0U
+    size_t: ib 0U
+    size_t: a0 0U
+    size_t: a1 0U
+    size_t: b0 0U
+    size_t: b1 0U
+    int: ma 0
+    int: mb 0
+    while: 1
+        ma: dp_match(a, na, ia, kind, @ a0, @ a1, @ ia)
+        mb: dp_match(b, nb, ib, kind, @ b0, @ b1, @ ib)
+        if: ma < 0 || mb < 0
+            return: -1
+        if: ma != mb
+            return: 0
+        if: ma = 0
+            return: 1
+        if: kind = 4
+            if: dp_links_equal(a + a0, a1 - a0, b + b0, b1 - b0) = 0
+                return: 0
+            ---
+        else:
+            if: a1 - a0 != b1 - b0 || c.memcmp(a + a0, b + b0, a1 - a0) != 0
+                return: 0
+            ---
+        ---
+    ---
+end: dp_matches_equal
+
+fn: dp_paragraphs (@: data char; size_t: count) size_t
+    size_t: scan 0U
+    size_t: found 0U
+    size_t: number 1U
+    while: scan < count
+        found: dt_find(data, count, scan, "\n\n", 2U)
+        if: found = (cast: (size_t) -1)
+            return: number
+        number: number + 1U
+        scan: found + 2U
+    ---
+    return: number
+end: dp_paragraphs
+
+# Same boolean search as ]\([^)]*[._]opposite\.md: no final ')' is required.
+fn: dp_wrong_language (@: data char; size_t: count; int: ru) int
+    size_t: scan 0U
+    size_t: found 0U
+    size_t: end_at 0U
+    @: dotted char ".en.md"
+    @: underscored char "_en.md"
+    if: ru = 0
+        dotted: ".ru.md"
+        underscored: "_ru.md"
+    ---
+    while: scan < count
+        found: dt_find(data, count, scan, "](", 2U)
+        if: found = (cast: (size_t) -1)
+            return: 0
+        found: found + 2U
+        end_at: dt_find(data, count, found, ")", 1U)
+        if: end_at = (cast: (size_t) -1)
+            end_at: count
+        if: dt_find(data, end_at, found, dotted, 6U) != (cast: (size_t) -1) || dt_find(data, end_at, found, underscored, 6U) != (cast: (size_t) -1)
+            return: 1
+        ---
+        scan: end_at
+        if: scan < count
+            scan: scan + 1U
+    ---
+    return: 0
+end: dp_wrong_language
+
+# Original assertion order, after body expansion/admission-case insertion:
+# paragraph,code,heading,anchor,wrong-RU,wrong-EN,normalized-link lists.
+# Return0 pass,1 mismatch,-1 invalid; failed_kind carries 1..7 on mismatch.
+fn: docs_semantics_pair_check (@: ru char; size_t: nru; @: en char; size_t: nen; @: failed_kind int) int
+    int: kind 1
+    int: equal 0
+    if: ru = 0 || en = 0 || failed_kind = 0
+        return: -1
+    failed_kind[0]: 0
+    if: dp_paragraphs(ru, nru) != dp_paragraphs(en, nen)
+        failed_kind[0]: 1
+        return: 1
+    ---
+    while: kind <= 3
+        equal: dp_matches_equal(ru, nru, en, nen, kind)
+        if: equal < 0
+            return: -1
+        if: equal = 0
+            failed_kind[0]: kind + 1
+            return: 1
+        ---
+        kind: kind + 1
+    ---
+    if: dp_wrong_language(ru, nru, 1) != 0
+        failed_kind[0]: 5
+        return: 1
+    if: dp_wrong_language(en, nen, 0) != 0
+        failed_kind[0]: 6
+        return: 1
+    equal: dp_matches_equal(ru, nru, en, nen, 4)
+    if: equal < 0
+        return: -1
+    if: equal = 0
+        failed_kind[0]: 7
+        return: 1
+    return: 0
+end: docs_semantics_pair_check

@@ -17,6 +17,13 @@ candidate46 по решению Codex, цепочка candidate46 начата (
 с точными записями, pins и ожидаемыми строками. Вопросов к Codex больше не ставится: Codex решает сам; действительно
 необходимые личные решения автора — через `LMX_blog/q/current/` (порядок из архива §1).
 
+**Приём Codex, 2026-10-29.** Автор возобновил goal; Codex проверил `status=active` и переключил существующую часовую
+автоматизацию `lmx-goal` на контроль своей работы и состояния goal. Единственный writer/build теперь Codex. На приёме
+fe46 ещё не terminal: процессы `lmxtool` PID10888 и `l2trans` PID16940 живы, перевод core продолжается; CPU транслятора
+растёт. Это подтверждённое ожидание текущего pipeline, не основание перезапускать запись или запускать rt46 заранее.
+Принимать fe46 только по фактическому terminal/выходам. Уточнения текущего маршрута ниже внесены Codex; исторические
+результаты boot43/44/45 и failed full45 не меняются.
+
 ### Приоритет и обязательные границы
 
 Прочитать AGENTS.md, READ.ME, верх [steps/current.md](steps/current.md) (действующее назначение и «Срез238»),
@@ -75,7 +82,7 @@ Tracked tree чист. Чужие untracked, не трогать и не ком�
 | 43 | `48C330DF62422816A21B7410F127FB53C01ADDFA3935E639445D356CBD00708C` | candidate42 + границы recipe (`build.lm2:801` 6 ч, `suite.lm2` child 24 ч) | whole quick boot43 PASS — Verified238 |
 | 44 | `1755CF046ACAD43ECE3DEBF98BBD34CD8A32F761A64DBE3694BAF6B2388A9C62` | `build.lm2:713` frontend `-O2 -fno-strict-aliasing` | whole quick boot44 PASS |
 | 45 | `D74D30B4BB2459AFC0BCBC418953BC95E5AA7D7ED0EBD652AE98BD2D83ECA8DC` | `l2_frontend_context.lm2`: имя раньше `own_unit_seen` в 4 own-lookup | whole quick boot45 PASS; **full45 FAIL** |
-| 46 | `AE0340AEA8AE8C552242A55E38A289EB6CF86E2274E96E4D57C49FA14B433111` | три файла `P/variants/full46/` (ниже) | fe46 собран; rt46/tool46/check46/full46 — Codex |
+| 46 | `AE0340AEA8AE8C552242A55E38A289EB6CF86E2274E96E4D57C49FA14B433111` | три файла `P/variants/full46/` (ниже) | fe46 ещё идёт; его приёмка и rt46/tool46/check46/full46 — Codex |
 
 Старые кандидаты 39–42 и их стадии (`initial-tool32-*`, `warm-frontend39/40/41`, `cold-candidate42`) — история среза
 (boot42 упал на границе recipe; tool32-05 — первый инструмент из 33 частей, `9D0C2BBD…`).
@@ -89,7 +96,7 @@ Tracked tree чист. Чужие untracked, не трогать и не ком�
 | `cold-candidate44/boot44` | whole quick candidate44 (G0 = tool44b, previous_fe `warm-frontend41-O2` `F6E8B9FA…`) | G2 `boot44/lmxtool.exe` `4B615C32…`, FE `58A8D274…` |
 | `cold-candidate45/boot45` | whole quick candidate45 (G0 = boot44 G2, previous_fe boot44 g2/frontend) | G2 **`boot45/lmxtool.exe` `A69A7EE26315C058E85FE0FA9D1EFD921B4C3032421030704948575C16997FB4`**; связка `boot45/g2/frontend/` `l2trans.exe` `159F3D5EA3F5EA77CD42A8A8706750369CFC36584A28EE3D43D78995E69C06A7`, `l1trans.exe` `DF1FBCD5516C6C463B4BD02D0223342360245538D75BE1834312D0F3E07600A9`, `l2_libc.o` `AF9FDAE33655F8E6235310720787102921450F0F88F9B7BB2F365D372F553D37`; runtime `boot45/g2/runtime/` `driver.o` `8C2708AF530BC624F1A1C48207F00685AC5C6F5FB72843A49C4C0258277BEEDC`, `driver-observe.o` `0A1C51D9BAF3B3449D65419169659DD77F1C787697CDE03821203BD3F96A2DB4` |
 | `cold-candidate45-full/full45` | `bootstrap full` candidate45 — FAIL, сохранён | G1 собрана (FE `E519A698…`), полный список 3 FAIL |
-| `cold-candidate46-tool` | стадия сборки компонентов candidate46: `fe46/` готов; `rt46/`, `tool46/` — следующие | `fe46/` (ниже) |
+| `cold-candidate46-tool` | стадия сборки компонентов candidate46: `fe46/` ещё строится; `rt46/`, `tool46/` — после приёмки | `fe46/` (ниже) |
 | `cold-candidate46` | свежая stage-копия candidate46 для `bootstrap full` (STAGED 159, GNU 0; `src/tests/tools` только) | — |
 
 Репозиторные копии источников порта старее кандидатов: `dev/l2src_sandbox/` хранит лишь часть модулей (например,
@@ -143,7 +150,7 @@ Tracked tree чист. Чужие untracked, не трогать и не ком�
 Stage-копии candidate46 инструментом boot45 G2 (13:06 UTC, `P/pins/cold-candidate46-tool-stage-copy.*`,
 `cold-candidate46-stage-copy.*`): обе `STAGED 159 files, 0 failed`, `sha256sum -c` 0.
 
-**Шаг 1 — `rebuild frontend` fe46 (выполнен fable_pc).** Запись
+**Шаг 1 — `rebuild frontend` fe46 (запущен fable_pc, приёмка Codex после terminal).** Запись
 `P/pins/cold-candidate46-tool-rebuild-frontend.command` (11 pins: gcc, timeout, инструмент `A69A7EE2…`, связка
 `boot45/g2/frontend/` ×3, runtime `boot45/g2/runtime/` ×2 — для smoke, stage `tools/build.lm2`
 `28DFBFA951A20B50F1E1E97DA13232CC543FCC0F6CEAC8A4A62E25B8B053F4C3`, stage `tools/suite.lm2` `3F38AF62…`, smoke-список
@@ -220,11 +227,14 @@ from the link stamp`, `MANIFEST`/`STAGED … 0 failed`; `full46/lmxtool.exe` = �
 PE — отдельно под маской. При FAIL — сохранить всё, разобрать первое содержательное место, не маскировать, не
 перезапускать те же байты; исправление — следующий кандидат.
 
-**Дальше.** После первого FULL: второе последовательное FULL-самозамещение (итоговое требование `to_fable.md`:
-естественный кандидат — тот же candidate46, G0 = `full46/lmxtool.exe`, previous_fe = `full46/g2/frontend/`; ожидание —
-неподвижная точка), перенос принятых источников порта в maintained-пути репозитория (открытый вопрос выше), затем
-план v3 §§8/8a и долги ниже. Второй пункт плана «Ближайший шаг: ускорение» (фазовые времена/счётчики) — со следующей
-необходимой правкой core/emit, не отдельно.
+**Дальше (уточнение Codex, 2026-10-29).** Один штатный успешный `bootstrap full` уже строит и полностью проверяет
+два последовательных поколения G1/G2 с обеими фактическими заменами; именно это требует S8.6 в плане v3. После full46
+сверить эти факты, source closure и публикацию принятых maintained-источников, затем продолжать незакрытые зависимости
+§§8/8a и долги ниже. Второй целый FULL на неизменных байтах автоматически не назначается: он добавил бы ещё два
+поколения без отдельного требования. Повтор всей цепочки нужен после соответствующего изменения или для конкретного
+недостающего доказательства, включая предусмотренную планом проверку после почтового среза. Один зелёный FULL сам по
+себе не закрывает source closure, clean/native/admission или почту. Второй пункт плана «Ближайший шаг: ускорение»
+(фазовые времена/счётчики) — со следующей необходимой правкой core/emit, не отдельно.
 
 ### Открытые дефекты и долги
 

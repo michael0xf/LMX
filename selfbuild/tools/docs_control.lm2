@@ -1,0 +1,245 @@
+# Unselected ordinary L2 controller for tools/build_semantics.py.
+# repo and preferred source names are explicit resolved native pathnames.
+# No old-language renderer/checker is executed. CLI/recipe selection is pending.
+
+# os_mkdir alone treats EEXIST as success even for a regular file. The old
+# archive.mkdir(exist_ok=True) requires a directory, including after a race.
+fn: ds_archive (@: path char) int
+    int: kind os_path_kind(path)
+    if: kind = 2
+        return: 0
+    if: kind != 0
+        return: 1
+    if: os_mkdir(path) = 0 && os_path_kind(path) = 2
+        return: 0
+    return: 1
+end: ds_archive
+
+fn: ds_encoded_path (@: path char; @@: out char; @: out_count size_t) int
+    @: stream c.FILE 0
+    int: failed 0
+    out[0]: 0
+    out_count[0]: 0U
+    stream: c.tmpfile()
+    if: stream = 0
+        return: 1
+    failed: dj_write_string(stream, path, c.strlen(path))
+    if: failed = 0
+        failed: db_stream_read(stream, out, out_count)
+    if: c.fclose(stream) != 0
+        failed: 1
+    if: failed != 0
+        c.free(out[0])
+        out[0]: 0
+        out_count[0]: 0U
+    return: failed
+end: ds_encoded_path
+
+# In check mode path is saved[key]['path'] itself, not a newly resolved path.
+# Keep its complete validated JSON value, not only a string or C-string prefix.
+# The expected hash is a decoded length-bearing string, never strlen-based.
+fn: ds_saved_source (@: saved char; size_t: saved_count; size_t: saved_root; @: key char; @@: path_json char; @: path_count size_t; @@: digest char; @: digest_count size_t) int
+    size_t: object_at 0U
+    size_t: object_after 0U
+    size_t: first 0U
+    size_t: last 0U
+    size_t: after 0U
+    int: failed 0
+    path_json[0]: 0
+    path_count[0]: 0U
+    digest[0]: 0
+    digest_count[0]: 0U
+    if: dj_property(saved, saved_count, saved_root, key, @ object_at, @ object_after) != 1
+        return: 1
+    if: object_at >= saved_count || saved[object_at] != (cast: (char) 123)
+        return: 1
+    if: dj_property(saved, saved_count, object_at, "sha256", @ first, @ last) != 1
+        return: 1
+    if: dj_string(saved, saved_count, first, digest, digest_count, @ after) != 0 || after != last
+        failed: 1
+    if: failed = 0
+        if: dj_property(saved, saved_count, object_at, "path", @ first, @ last) != 1
+            failed: 1
+        else:
+            path_json[0]: txt_ndup(saved + first, last - first)
+            if: path_json[0] = 0
+                failed: 1
+            else:
+                path_count[0]: last - first
+            ---
+        ---
+    ---
+    if: failed != 0
+        c.free(path_json[0])
+        c.free(digest[0])
+        path_json[0]: 0
+        digest[0]: 0
+        path_count[0]: 0U
+        digest_count[0]: 0U
+    return: failed
+end: ds_saved_source
+
+# Source/snapshot checks, chapters and all pair assertions precede doc writes.
+# RU is checked/written before EN; inventory is checked/written only afterwards.
+# 0 success,1 refusal/I/O/allocation. phase is an internal diagnostic location,
+# not a replacement collection of CLI exit codes. Check does not publish files.
+fn: docs_semantics_build (@: repo char; @: preferred_l1 char; @: preferred_older char; int: check_mode; @: out_chapters size_t; @: phase int) int
+    @: archive char 0
+    @: inventory_path char 0
+    @: book_path char 0
+    @: ru_path char 0
+    @: en_path char 0
+    @: l1_snapshot char 0
+    @: older_snapshot char 0
+    @: saved char 0
+    @: l1_path_json char 0
+    @: older_path_json char 0
+    @: l1_expected char 0
+    @: older_expected char 0
+    @: l1_digest char 0
+    @: older_digest char 0
+    @: l1 char 0
+    @: older char 0
+    @: l1_starts size_t 0
+    @: l1_lengths size_t 0
+    @: older_starts size_t 0
+    @: older_lengths size_t 0
+    @: book_raw char 0
+    @: book char 0
+    @: rows size_t 0
+    @@: bodies char 0
+    @: body_lengths size_t 0
+    @: inventory char 0
+    size_t: saved_count 0U
+    size_t: saved_root 0U
+    size_t: saved_after 0U
+    size_t: l1_path_count 0U
+    size_t: older_path_count 0U
+    size_t: l1_expected_count 0U
+    size_t: older_expected_count 0U
+    size_t: l1_size 0U
+    size_t: older_size 0U
+    size_t: l1_lines 0U
+    size_t: older_lines 0U
+    size_t: book_raw_count 0U
+    size_t: book_count 0U
+    size_t: chapters 0U
+    size_t: failed_chapter 0U
+    size_t: inventory_count 0U
+    int: failed 0
+    int: failed_kind 0
+    int: language_phase 0
+    int: metadata_failed 0
+    if: repo = 0 || preferred_l1 = 0 || preferred_older = 0 || out_chapters = 0 || phase = 0
+        return: 1
+    out_chapters[0]: 0U
+    phase[0]: 1
+    archive: txt_path(repo, "provenance/semantics-sources")
+    inventory_path: txt_path(repo, "provenance/semantics-inventory.json")
+    book_path: txt_path(repo, "provenance/semantics-book.md")
+    ru_path: txt_path(repo, "docs/LMX_semantics.ru.md")
+    en_path: txt_path(repo, "docs/LMX_semantics.en.md")
+    l1_snapshot: txt_path(repo, "provenance/semantics-sources/l1.txt")
+    older_snapshot: txt_path(repo, "provenance/semantics-sources/older.txt")
+    l1_digest: c.calloc(65U, 1U)
+    older_digest: c.calloc(65U, 1U)
+    if: archive = 0 || inventory_path = 0 || book_path = 0 || ru_path = 0 || en_path = 0 || l1_snapshot = 0 || older_snapshot = 0 || l1_digest = 0 || older_digest = 0
+        failed: 1
+    if: failed = 0 && check_mode = 0
+        failed: ds_archive(archive)
+    if: failed = 0 && check_mode != 0
+        saved: file_read(inventory_path, @ saved_count)
+        if: saved = 0 || dj_document(saved, saved_count, @ saved_root, @ saved_after) != 2
+            failed: 1
+        ---
+    ---
+    if: failed = 0
+        phase[0]: 2
+        if: check_mode != 0
+            metadata_failed: ds_saved_source(saved, saved_count, saved_root, "l1", @ l1_path_json, @ l1_path_count, @ l1_expected, @ l1_expected_count)
+        else:
+            failed: ds_encoded_path(preferred_l1, @ l1_path_json, @ l1_path_count)
+        ---
+        if: failed = 0
+            failed: semantics_source_read(preferred_l1, l1_snapshot, check_mode, l1_expected, l1_expected_count, @ l1, @ l1_size, @ l1_starts, @ l1_lengths, @ l1_lines, l1_digest)
+        ---
+        if: metadata_failed != 0
+            failed: 1
+    ---
+    if: failed = 0
+        phase[0]: 3
+        if: check_mode != 0
+            metadata_failed: ds_saved_source(saved, saved_count, saved_root, "older", @ older_path_json, @ older_path_count, @ older_expected, @ older_expected_count)
+        else:
+            failed: ds_encoded_path(preferred_older, @ older_path_json, @ older_path_count)
+        ---
+        if: failed = 0
+            failed: semantics_source_read(preferred_older, older_snapshot, check_mode, older_expected, older_expected_count, @ older, @ older_size, @ older_starts, @ older_lengths, @ older_lines, older_digest)
+        ---
+        if: metadata_failed != 0
+            failed: 1
+    ---
+    if: failed = 0
+        phase[0]: 4
+        book_raw: file_read(book_path, @ book_raw_count)
+        if: book_raw = 0
+            failed: 1
+        else:
+            failed: dt_text(book_raw, book_raw_count, 0, @ book, @ book_count)
+        ---
+        if: failed = 0
+            failed: semantics_book_read(book, book_count, @ rows, @ chapters)
+        ---
+    ---
+    if: failed = 0
+        phase[0]: 5
+        failed: docs_semantics_prepare(book, rows, chapters, l1, l1_starts, l1_lengths, l1_lines, older, older_starts, older_lengths, older_lines, @ bodies, @ body_lengths, @ failed_chapter, @ failed_kind)
+    if: failed = 0
+        phase[0]: 6
+        failed: docs_semantics_language(ru_path, book, rows, chapters, bodies, body_lengths, 0, check_mode, @ language_phase)
+    if: failed = 0
+        phase[0]: 7
+        failed: docs_semantics_language(en_path, book, rows, chapters, bodies, body_lengths, 1, check_mode, @ language_phase)
+    if: failed = 0
+        phase[0]: 8
+        failed: docs_semantics_inventory(book, rows, chapters, l1_path_json, l1_path_count, older_path_json, older_path_count, l1_digest, older_digest, l1, l1_starts, l1_lengths, l1_lines, older, older_starts, older_lengths, older_lines, @ inventory, @ inventory_count)
+        if: failed = 0
+            if: check_mode != 0
+                if: docs_inventory_equal(inventory, inventory_count, saved, saved_count) != 1
+                    failed: 1
+                ---
+            else:
+                failed: file_write(inventory_path, inventory, inventory_count)
+            ---
+        ---
+    ---
+    if: failed = 0
+        out_chapters[0]: chapters
+        phase[0]: 0
+    docs_semantics_bodies_free(bodies, body_lengths, chapters)
+    c.free(archive)
+    c.free(inventory_path)
+    c.free(book_path)
+    c.free(ru_path)
+    c.free(en_path)
+    c.free(l1_snapshot)
+    c.free(older_snapshot)
+    c.free(saved)
+    c.free(l1_path_json)
+    c.free(older_path_json)
+    c.free(l1_expected)
+    c.free(older_expected)
+    c.free(l1_digest)
+    c.free(older_digest)
+    c.free(l1)
+    c.free(older)
+    c.free(l1_starts)
+    c.free(l1_lengths)
+    c.free(older_starts)
+    c.free(older_lengths)
+    c.free(book_raw)
+    c.free(book)
+    c.free(rows)
+    c.free(inventory)
+    return: failed
+end: docs_semantics_build

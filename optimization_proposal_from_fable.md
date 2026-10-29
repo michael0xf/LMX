@@ -22,6 +22,7 @@
 | `l2_frontend_useplan` / lower / core / emit | **FE-O2** G1 boot44 (ручная связка `-O2`) | — | 161 / 1472 / 3497 / 4710 с (×1.16 / ×1.19 / ×1.035 / ×1.07 к FE-O1 без нагрузки) | boot44 G1, mtime stage (witness cold-candidate44-boot44/) |
 | `l2_frontend_useplan` / lower / core / emit | **`-O2` FE G1 boot44** (собран recipe candidate44) | — | 161 / 1493 / 3375 / 4748 с; шаг frontend 10081 с; генерация 11061 с | boot44 G2 |
 | Весь bootstrap quick | boot43 (recipe `-O1`) → boot44 (recipe `-O2`, previous_fe FE-O2) | — | 24990 с → **22178 с (−11.3 %)** | terminal-ы boot43/boot44 |
+| useplan / lower / core / emit | **FE G1 boot45** (`-O2` + own-lookup: имя раньше `own_unit_seen`, вариант context-ownat12) | — | 153 / 1310 / 3085 / 4493 с (−5 / −12.3 / −8.6 / −5.4 % к boot44 G2); шаг frontend 9304 с (−7.7 %); генерация 10200 с | boot45 G2 (после сна системы — машина медленнее, выигрыш занижен) |
 | `l2_frontend_resolve` (225 719 Б) | warm41 FE-O1 | 0.23 МБ | 130 с | boot43 G0 |
 | 14 малых модулей frontend (p0_*, helpers, alloc, values, views, context, types, coords, intern, machine_types, copy_uses) | warm41 FE-O1 | 15–138 КБ каждый | 0–32 с каждый, 2.5 мин вместе | boot43 G0 |
 | Библиотека методов инструмента (34 части, 1.11 МБ) | warm40/41 FE-O1 | 1.11 МБ | 677 с, 694 с, 721 с | `tool32-0{4,5}-methods-L2.terminal.txt`, probe11 |
@@ -111,6 +112,8 @@
 6. **Эмиссия** (`emit_ns_cells/refs` фильтруют nsf-строки по namespace; циклы по телам методов — полный проход own-строк на метод; `emit_ns_seeds` — nsf на структуру; Codex §3.1): списки строк на namespace/метод, включая внешние/захваченные own; после измерения доли emission.
 
 **Выгода**: если на core/emit доминируют именно O(S×own_n)/O(D²) участки (с чем согласуется 20–60-кратная разница КБ/с между малыми и крупными модулями), устранение 1–2 из них может снять заметную долю часа; коэффициент до измерения не обещается. **Цена каждого шага**: правка одного модуля порта → seed-перевод (62–84 мин) → warm FE → инструмент → whole quick; поэтому один участок за раз, с проверкой выходов байт-в-байт (для чистых изменений поиска/ёмкости) по уже сделанным переводам (core09, emit08, lower01 — хеши есть).
+
+- **Выполнено (2026-10-29)**: по пяти ручным снимкам gdb (prof02) — три из пяти внутри циклов own-lookup `context.lm2`, где `own_unit_seen(i, mi)` (обход m_code_file/m_part, source_definition_method, vis_ok) вычислялось раньше дешёвого `text_same(own_name[i], t)`; в четырёх циклах (`own_find`, `own_find_last`, `own_at`, `own_lexical`) операнды `&&` поменяны местами (семантически нейтрально: те же строки, тот же порядок, нет побочных эффектов). Development-FE: useplan 145.8 с против 157.8 с, те же байты; candidate45 принят whole quick boot45 (`BOOTSTRAP quick 0 failures`): G2 под новым FE — lower −12.3 %, core −8.6 %, emit −5.4 %, шаг frontend −7.7 %; witness `devfe45-context-ownat12/`, `cold-candidate45-boot45/`.
 
 ### 4.3. Флаги C-компиляции frontend-а: один измеримый эксперимент
 

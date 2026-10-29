@@ -90,6 +90,7 @@ L1 допускается только как генерируемый пром�
    Изменение только поиска/ёмкости проверять по прежним результатам и generated
    bytes; отличие разобрать, не скрывать. Более рискованные fixed-point/worklist
    переписывания не первые; анализ и основания допуска не расширять.
+   **Выполнено один раз 2026-10-29 (fable_pc):** по пяти ручным снимкам gdb на коротком useplan — порядок конъюнкции в четырёх own-lookup циклах `context.lm2` (имя раньше `own_unit_seen`; контекст/вхождения/порядок/совпадения сохранены); development-FE: те же байты, useplan 145.8 с против 157.8 с; candidate45 принят whole quick boot45 (`BOOTSTRAP quick 0 failures`), G2 под новым FE: lower −12.3 %, core −8.6 %, emit −5.4 %, frontend −7.7 %; witness `steps/witnesses/fix238-20261027/{prof02-useplan-gdb,devfe45-context-ownat12,cold-candidate45-boot45}/`.
 4. **Короткий рабочий цикл — существующий component rebuild, приёмка кандидата —
    whole quick новым producer.** Не запускать отдельный whole прогон после каждого
    счётчика. Backend/tool flags, header/copy/hash мелочи и разделение крупных

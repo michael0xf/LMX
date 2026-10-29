@@ -2,7 +2,8 @@
 # relative to the list's directory (or absolute) --
 #   runs     SOURCE  ENTRY   MODES  [PARTS]  the program (and the comma-separated PARTS), built natively (n) and
 #                                    with --walk-methods (f), gives ENTRY with the production runtime at the root
-#                                    and with walkroot 1;
+#                                    and with walkroot 1 (MODES may end with the roots it runs: 0 root0 only,
+#                                    1 root1 only, 01 both -- the default without a suffix);
 #   refuses  SOURCE  NEEDLE  MODES   the translation (native n, walked f) exits 1 and its log has NEEDLE;
 #   twins    SOURCE  ENTRY   MODES  TWIN  NAMES   SOURCE and its twin TWIN, each built and linked with the
 #                                    production and the observed runtime, both give ENTRY at the root and with
@@ -182,6 +183,23 @@ fn: modes_ok (@: m char) int
     return: 0
 end: modes_ok
 
+# MODES of a runs row: the build modes (n, f, nf or fn) optionally followed by the roots the program runs: 0
+# (root0 only), 1 (root1 only), 01 or 10 (both -- the default without a suffix). 1 valid. Only runs rows take
+# the suffix; refuses, twins and links keep modes_ok (a root flag does not apply to them).
+fn: runs_modes_ok (@: m char) int
+    size_t: p 0U
+    if: m = 0
+        return: 0
+    while: m[p] = (cast: (char) 110) || m[p] = (cast: (char) 102)
+        p: p + 1U
+    ---
+    if: p = 0U || p > 2U || (p = 2U && m[0] = m[1])
+        return: 0
+    if: m[p] = (cast: (char) 0) || c.strcmp(m + p, "0") = 0 || c.strcmp(m + p, "1") = 0 || c.strcmp(m + p, "01") = 0 || c.strcmp(m + p, "10") = 0
+        return: 1
+    return: 0
+end: runs_modes_ok
+
 # A comma-separated list with no empty item. 1 valid.
 fn: names_ok (@: s char) int
     size_t: n 0U
@@ -232,8 +250,8 @@ fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
         if: parse_entry(fld[2], entry) != 0
             why[0]: "ENTRY is no decimal C int"
             return: 1
-        if: modes_ok(fld[3]) = 0
-            why[0]: "MODES is not n, f, nf or fn"
+        if: runs_modes_ok(fld[3]) = 0
+            why[0]: "MODES is not n, f, nf or fn, optionally followed by the roots 0, 1 or 01"
             return: 1
         if: nf = 5 && names_ok(fld[4]) = 0
             why[0]: "PARTS is no comma-separated list"
@@ -322,10 +340,21 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
     int: m 0
     int: x 0
     int: root 0
+    int: run0 1
+    int: run1 1
     if: tags = 0 || objs = 0 || res = 0 || lp = 0
         return: 1
     tags[0]: "prod"
     objs[0]: prod
+    # The roots the row runs (runs_modes_ok): a digit in MODES selects; no digit -- root0 and root1 as before.
+    if: (cast: (@: char) (c.strchr(modes, 48))) != 0 || (cast: (@: char) (c.strchr(modes, 49))) != 0
+        run0: 0
+        run1: 0
+        if: (cast: (@: char) (c.strchr(modes, 48))) != 0
+            run0: 1
+        if: (cast: (@: char) (c.strchr(modes, 49))) != 0
+            run1: 1
+    ---
     while: m < 2
         mode: "native"
         flag: 0
@@ -340,10 +369,12 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
             f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat(mode, ": built")), txt_cat3("step ", txt_int(x), txt_cat3(" kind ", txt_int(res[0]), txt_cat(" exit ", txt_int(res[1])))), cls, cls_build(x, res), lp[0], fl)
             root: 0
             while: x = 0 && root < 2
-                log: txt_cat3(dir, "/run-root", txt_cat(txt_int(root), ".log"))
-                x: bld_run(txt_path(dir, "p-prod.exe"), entry, root, dir, log, rec)
-                f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat3(mode, " root", txt_cat(txt_int(root), txt_cat(": gives ", txt_int(entry))))), txt_cat("driver exit ", txt_int(x)), cls, cls_run(x), log, fl)
-                x: 0
+                if: (root = 0 && run0 != 0) || (root = 1 && run1 != 0)
+                    log: txt_cat3(dir, "/run-root", txt_cat(txt_int(root), ".log"))
+                    x: bld_run(txt_path(dir, "p-prod.exe"), entry, root, dir, log, rec)
+                    f: f + ccheck(x = 0, txt_cat3(name, " ", txt_cat3(mode, " root", txt_cat(txt_int(root), txt_cat(": gives ", txt_int(entry))))), txt_cat("driver exit ", txt_int(x)), cls, cls_run(x), log, fl)
+                    x: 0
+                ---
                 root: root + 1
             ---
         ---

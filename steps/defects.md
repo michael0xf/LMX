@@ -4,7 +4,7 @@
 
 ## Текущие и недавно закрытые
 
-### DOCS-L3-SEMANTICS-VERIFY-EXIT — 2026-10-29, Codex (срез239, существующий `docs verify semantics` boot45 G2), OPEN
+### DOCS-L3-SEMANTICS-VERIFY-EXIT — 2026-10-29, Codex (срез239, существующий `docs verify semantics` boot45 G2), IN WORK срез240: actual semantics PASS, публикация исправления следует
 
 Языковой tool boot45 G2 (`A69A7EE2…`) с опубликованными неизменными source-bytes candidate45 возвращает exit1
 как для `docs check`, так и для изолированного `docs verify semantics`. Последний режим содержит только первую
@@ -24,7 +24,25 @@ docs check за PASS. Диагноз/минимальное исправлени
 source-candidate48: общий `os_file_temporary` в существующем L2 OS-адаптере и11 callers (7 docs-файлов), без изменения
 assertions. Windows создаёт уникальный файл в приватном CWD и открывает бинарный поток с удалением на последнем
 close; default сохраняет обычный tmpfile. Диагностический вывод уже вычисленной фазы также сохранён. Candidate48
-ещё не переводился и не исполнялся; статус остаётся OPEN до реального результата новым инструментом.
+на том этапе ещё не переводился и не исполнялся.
+
+Продолжение [срез240](witnesses/fix240-20261029/notes.md): tool48 `4ECFF786…` построен из exact source48
+`514564A9…`, прошёл собственный smoke9/0; фактический `docs verify semantics` — exit0,35 пар глав,
+14 документальных cases, оба прежних source snapshots. Временных `lmx*.tmp` в проверенных приватных CWD нет.
+Это исполненное исправление Windows-ветки; default-платформа не объявляется проверенной. Полный docs-check
+прошёл дальше до старых EOL/control assertions; отдельные проблемы оформления свидетельств ниже исправляются
+без ослабления checker-а. Закрывающий SHA следует после публикации этого проверенного исходного среза.
+
+### DOCS-WITNESS-WORKTREE-FORMAT — 2026-10-29, Codex (срез240, полный docs-check tool48), IN WORK срез240
+
+После исправления tmpfile полный checker выявил66 CRLF/mixed рабочих копий журналов с indexLF и пять строк
+с ANSI ESC в одном старом терминале. Прежний Python требует те же LF/control правила: нового требования нет.
+66 файлов восстановлены к опубликованному LF обычным formatter-ом с keepdate/keep-bom; исходные raw сохранены
+в частном архиве. Полный Git diff этих66 был пуст. Для ANSI-терминала исходные байты сохранены в base64 с
+независимо проверенным decoded SHA256 `141D67AE…`; только ESC представлен в текстовой копии как `\x1b`.
+Результаты запусков, код checker-а, assertions и `.gitattributes` не менялись. Точные пути, hashes и оставшиеся
+границы — [срез240](witnesses/fix240-20261029/notes.md); итоговый полный docs-check tool48 — actualexit0,
+35/27 пар разделов,44 source excerpts,615 imports, links/EOL/control. Закрывающий SHA следует после коммита среза.
 
 ### RECIPE-MACHINE-MODULE-BOUND — 2026-10-28, fable_pc (срез 238, bootstrap quick candidate42, G0 → G1 frontend), CLOSED 2026-10-28 12:36 UTC — boot43 (cold candidate43, recipe-bounds10: 21 600 000 мс на машинный модуль, 86 400 000 мс на child) прошёл `BOOTSTRAP quick 0 failures`; максимальный модуль emit 6001 с, child G2 11815 с — границы не достигнуты
 

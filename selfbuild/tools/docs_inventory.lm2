@@ -82,7 +82,7 @@ fn: di_lines_string (@: out c.FILE; @: raw char; @: starts size_t; @: lengths si
         return: dj_write_string(out, "", 0U)
     if: first > after
         return: 1
-    stream: c.tmpfile()
+    stream: os_file_temporary()
     if: stream = 0
         return: 1
     failed: db_source_lines(stream, raw, starts, lengths, first + 1U, after)
@@ -178,7 +178,7 @@ fn: docs_semantics_inventory (@: book char; @: rows size_t; size_t: chapters; @:
         return: 1
     result[0]: 0
     result_count[0]: 0U
-    out: c.tmpfile()
+    out: os_file_temporary()
     if: out = 0
         return: 1
     failed: dg_literal(out, "{\n  \"l1\": ")

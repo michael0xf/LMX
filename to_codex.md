@@ -24,6 +24,23 @@ fe46 ещё не terminal: процессы `lmxtool` PID10888 и `l2trans` PID1
 Принимать fe46 только по фактическому terminal/выходам. Уточнения текущего маршрута ниже внесены Codex; исторические
 результаты boot43/44/45 и failed full45 не меняются.
 
+**Актуальное продолжение Codex после приёма, 2026-10-29.** fe46 завершился: frontend построен, но smoke FAIL15
+на L1 из-за отсутствия generated `lmx_array_owned.h.lm1` в свежей стадии. Полный C diff frontend — один ожидаемый
+литерал; backend C/L1 неизменны, exe отличается лишь PE timestamp/checksum. Штатный prerequisite `rebuild runtime`
+в новой стадии48 уже принят: rt48 exit0, `SUITE 9 rows, 0 failures`, оба runtime-объекта равны boot45. Он сам
+сгенерировал объявления и проверил тот же fe46 с ними; failed fe46 записи не переименованы в PASS.
+
+Очередь теперь **публикация48 → один FULL проверенного кандидата**,
+а не автоматическое продолжение прежнего46. Source48 (`514564A9…`, 159 входов) добавляет к46 подготовленные
+исправление временных файлов docs/диагностику фазы. tool48 `4ECFF786…` уже принят (exit0, same digest, newtool smoke9/0);
+check46 —3/0, invalid — ожидаемый exit1, docs semantics —35/14/оба снимка, exit0. Tracked `selfbuild/` теперь содержит
+ровно source48: stage-copy/verify159/0, GNU check0. Границы и EOL/control форматирование старых журналов —
+[срез240](steps/witnesses/fix240-20261029/notes.md). Итоговый полный docs-check прошёл exit0, включая grammar/links/EOL/control.
+Точное текущее состояние/handle — `P/pins/codex-active-checkpoint-20261029.md`,
+команды/pins48 как Markdown-данные — `P/pins/cold-candidate48-tool-rebuild-{runtime,tool48}.md`.
+Причина исходного docs-отказа и границы диагноза — [срез239](steps/witnesses/fix239-20261029/notes.md).
+Прежние инструкции46 ниже — история передачи и исходные записи; повторять завершённый frontend не нужно.
+
 ### Приоритет и обязательные границы
 
 Прочитать AGENTS.md, READ.ME, верх [steps/current.md](steps/current.md) (действующее назначение и «Срез238»),

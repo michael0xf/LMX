@@ -218,8 +218,8 @@ fn: docs_grammar_build (@: repo char; @: outdir char) int
     ---
     data: file_read(input_path, @ count)
     if: data != 0
-        ru: c.tmpfile()
-        en: c.tmpfile()
+        ru: os_file_temporary()
+        en: os_file_temporary()
         if: ru != 0 && en != 0
             if: dg_render(data, count, "ru", ru, @ sections_ru, @ examples_ru) = 0 && dg_render(data, count, "en", en, @ sections_en, @ examples_en) = 0 && sections_ru = sections_en && examples_ru = examples_en
                 result: dg_publish(ru, ru_path)

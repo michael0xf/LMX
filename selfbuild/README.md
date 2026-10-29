@@ -10,13 +10,16 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 files. `inputs.sha256` binds those exact bytes with paths relative to this
 directory. Generated L1/C, headers, objects and executables are not inputs.
 
-The published baseline is candidate45, unchanged from the accepted whole
-quick [boot45](../steps/witnesses/fix238-20261027/cold-candidate45-boot45/).
+The selected snapshot is candidate48, derived from the accepted whole-quick
+[boot45](../steps/witnesses/fix238-20261027/cold-candidate45-boot45/) baseline45.
+It changes11 selected files: the diagnostic/root-selector/full-row fixes46
+and the existing docs tools' Windows temporary-stream fix plus phase output.
 Input-list SHA-256:
 `E6FFBCFB4C4F8C2CA670961F1D22EEED25E1275F5086FEF0EE01517C494364AF`.
 Input-manifest SHA-256:
-`D74D30B4BB2459AFC0BCBC418953BC95E5AA7D7ED0EBD652AE98BD2D83ECA8DC`.
-The publication record is [slice239](../steps/witnesses/fix239-20261029/notes.md).
+`514564A99268D980EC7CD4A32F756E32AF4DADC7695705DDA8D965CF6F676B7A`.
+The original unchanged publication is [slice239](../steps/witnesses/fix239-20261029/notes.md);
+current component results and exact changes are [slice240](../steps/witnesses/fix240-20261029/notes.md).
 
 ## Normal source selection
 
@@ -47,9 +50,13 @@ Candidate45 passed whole quick; its first FULL attempt is the preserved
 [full45 failure](../steps/witnesses/fix238-20261027/cold-candidate45-full45/):
 two erroneous positive walked-root expectations for a C-door root and one
 diagnostic-literal mismatch. They are not hidden or reclassified as PASS.
-Candidate46 changes only that literal, the existing runs-row root selector,
-and the full-list row. It remains a separate frozen candidate awaiting its
-component/check/FULL results and is not silently included in this baseline.
+Candidate48 includes those fixes explicitly. Its runtime and tool component
+rebuilds passed the existing9-row smoke lists; the three focused46 cases
+passed, and the invalid root selector was rejected as expected. Its new
+tool verified35 paired semantic chapters and both original source snapshots.
+The earlier fresh-stage frontend smoke failure (missing generated runtime
+headers) is preserved; the normal runtime prerequisite generated those
+headers and passed smoke with that same frontend. Whole FULL remains pending.
 
 Publishing these bytes removes their sole residence in ignored WIP. It does
 not by itself provide a clean-clone platform G0, prove every consumed include

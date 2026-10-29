@@ -22,7 +22,7 @@ The normal source-selection root is the tracked [selfbuild package](selfbuild/RE
 The existing language manifest/stage-copy route preserves its src/tools/tests
 layout before generation; older sandbox snapshots and six-list preparation
 are historical evidence, not an active header/body fallback. Publishing a
-whole-quick-accepted source baseline does not itself close FULL, clean/native,
+source package and accepting its components does not itself close FULL, clean/native,
 admission, clean-clone G0, or mail requirements.
 
 A receiver and its argument Structure are formed by one algorithm before

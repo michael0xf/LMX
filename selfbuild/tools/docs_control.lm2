@@ -20,7 +20,7 @@ fn: ds_encoded_path (@: path char; @@: out char; @: out_count size_t) int
     int: failed 0
     out[0]: 0
     out_count[0]: 0U
-    stream: c.tmpfile()
+    stream: os_file_temporary()
     if: stream = 0
         return: 1
     failed: dj_write_string(stream, path, c.strlen(path))
@@ -216,6 +216,9 @@ fn: docs_semantics_build (@: repo char; @: preferred_l1 char; @: preferred_older
     if: failed = 0
         out_chapters[0]: chapters
         phase[0]: 0
+    if: failed != 0
+        c.fprintf(c.stderr, "docs semantics: phase=%d chapter=%zu kind=%d language_phase=%d\n", phase[0], failed_chapter, failed_kind, language_phase)
+    ---
     docs_semantics_bodies_free(bodies, body_lengths, chapters)
     c.free(archive)
     c.free(inventory_path)

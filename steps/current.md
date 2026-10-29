@@ -757,6 +757,23 @@ development-FE. Witness [cold-candidate45-boot45/](witnesses/fix238-20261027/col
 Пункты (1) и (3) порядка b0ba15ad выполнены по одному разу; дальше — вопрос Codex: следующий локальный участок по фактам (predef
 name-set — нужна ячейка состояния = правка recipe; либо `node_in` под `own_source_visible`) или шаг самосборки `bootstrap full`.
 
+**Codex: следующий шаг — `bootstrap full` на неизменном candidate45; запущен 10:24:56 UTC (label full45).** CODEX-REPLY-BOOT45-FULL-20261029T102300Z
+([копия](witnesses/fix238-20261027/codex-reply-boot45-full-20261029T102300Z.txt)): вариант (б); ещё одну необязательную
+оптимизацию (predef/node_in) сейчас не начинать; boot45 проверен read-only (terminal, child record G1 tool 50580210… / FE A1D5008E…,
+шесть raw hash-ей G2 = bundle, working tool A69A7EE2…, frontend.c G1 = G2 = 712126F6…); длительность со сном — не benchmark. Основание
+FULL — actual candidate (recipe уже переводит backend platform/text/state/emit и корень L3; `suite.lm2:1320–1464` содержит FULL list +
+os witness + selftest + tool, настоящие G1→G2 и promotions) — следующий существующий сквозной режим, не test campaign; отдельных
+gate-ов перед ним не нужно; FAIL — сохранить terminal/первое содержательное место, не маскировать; прежние долги (body-guard, WALKROOT,
+native/admission) этим не закрываются; сводку checklist237 поправить по реально перенесённым путям, не переписывая историю; без
+ожидания ACK. Сделано: свежий stage `cold-candidate45-full` (stage-copy инструментом boot45 G2 A69A7EE2…, STAGED 159, GNU 0; boot45 не
+перезаписывается); запись `cold-candidate45-full-bootstrap.command` (13 pins: toolchain 7, связка previous_fe `boot45/g2/frontend/`
+`l2trans.exe` 159F3D5E… + `l1trans.exe` DF1FBCD5… + `l2_libc.o` AF9FDAE3…, raw D74D30B4…, full list `tests/full-suite.tsv` AD37D6F2… (56
+строк), инструмент A69A7EE2…); argv `bootstrap full REPO STAGE BASE PREVIOUS_FE full45 smoke-kernel225.tsv full-suite.tsv`; preflight GNU 0,
+PreVMKiB 4475784; отделённый запуск через launcher; лог `pins/cold-candidate45-full-bootstrap.log` (`BOOTSTRAP full: two whole source-built
+generations in …/full45`, `GENERATION step frontend`; lmxtool PID 16952, l2trans PID 16552). FULL добавляет к quick на каждую генерацию:
+полный список (56 строк) новым FE/runtime, os walk witness, сборку child + selftest, а в конце — проверки `G2's L1 is G1's bytes`, `G2's C is
+G1's bytes`, `G1 and G2 are one image apart from the link stamp`. Ожидание terminal ≈ 16:30 UTC (две генерации по ≈ 2.8–3 ч).
+
 ## Архив передачи Codex 2026 10 24
 
 По прямому поручению автора (сессия Opus, 2026-10-24): «после текущего шага напиши to_codex.md инструкцию по передаче

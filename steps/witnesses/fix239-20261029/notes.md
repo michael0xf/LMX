@@ -78,3 +78,45 @@ Publication acceptance is the unchanged159 source bytes bound to whole-quick
 boot45, not a claim that all repository/tooling checks pass. FULL, the language
 documentation verifier failure, clean-clone G0, clean/native/admission,
 S8.6 and mail remain open. The live fe46 queue is unchanged.
+
+## Runtime localization and isolated pending repair
+
+Three narrow GDB runs of the same existing `docs verify semantics` command
+read existing output parameters/return values, without changing program
+arguments, values, returns or assertions. No debugger attached to fe46.
+The native executable remains boot45 G2 A69A7EE2..., not a rebuilt test binary.
+
+1. [Controller return](docs-phase-gdb.log): `result=1 phase=5`.
+2. [Preparation return](docs-prepare-gdb.log): 35chapters, failure at chapter0,
+   kind0 (before the paired-body assertion assigns its kind).
+3. [Actual CRT result](docs-tmpfile-gdb.log): `msvcrt.dll!tmpfile` returns NULL
+   to `docs_semantics_expand`; the original program then exits1 normally.
+
+The pointer arguments were read at exact native-function entry using the
+documented [Windows x64 calling convention](https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170)
+and checked generated signatures/disassembly. These are diagnostic runs,
+not performance samples or normal-run elapsed benchmarks. An initial GDB
+`-ex` quoting attempt failed before launching any inferior; command files
+avoided that host quoting problem. The three launched inferiors all completed
+with their original exit1.
+
+Microsoft documents that this CRT [tmpfile](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/tmpfile?view=msvc-170)
+creates its file at the drive root. No permissions are elevated to make that
+work. The pending repair uses the existing ordinary L2 OS-adapter part:
+`GetTempFileNameW` with zero uniqueness argument creates the tool's own file
+in its private CWD, and `_wfopen` binary modeD delegates removal to the final
+close ([name creation](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettempfilenamew),
+[stream mode](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fopen-wfopen?view=msvc-170)).
+Only creation-success/open-failure removes the just-created empty file.
+All11 existing callers close non-null streams; no UTF-8 contents conversion
+or changed assertions are introduced. The default platform keeps tmpfile.
+
+Pending source-candidate48 = frozen47 plus this OS helper and11 mechanical
+caller replacements in7 docs files (8 changed files,159 selected inputs).
+Its manifest SHA256 is
+`514564A99268D980EC7CD4A32F756E32AF4DADC7695705DDA8D965CF6F676B7A`.
+Existing language manifest/stage-copy both report159/0; independent GNU
+verification returns0. The source-only cold-candidate48-tool stage is ready.
+This is NOT a translated/run/accepted repair: retain OPEN until runtime/tool
+rebuild with acceptedfe46 and the same existing docs verifier succeed.
+Frozen46/47 and the tracked accepted45 package remain unchanged.

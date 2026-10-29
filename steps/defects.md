@@ -17,6 +17,15 @@ grammar/link/EOL проверки этим запуском не подтвер�
 Это наблюдаемый отказ существующей перенесённой tooling-ветки, не повод заменять её Python fallback или выдавать
 docs check за PASS. Диагноз/минимальное исправление — Codex; живой fe46 и очередь full46 не перезапускаются ради него.
 
+Локализация Codex, 2026-10-29: три узких запуска того же verifier под GDB показали `phase=5`, затем
+`chapter=0/kind=0`, затем первый `msvcrt.dll!tmpfile` вернул NULL непосредственно в `docs_semantics_expand`.
+Значения/возвраты программы не подменялись; проверяемый текст ещё не дошёл до pair assertions. На Windows MSVCRT
+`tmpfile` выбирает корень диска, не приватный рабочий каталог инструмента. Исправление подготовлено в отдельном
+source-candidate48: общий `os_file_temporary` в существующем L2 OS-адаптере и11 callers (7 docs-файлов), без изменения
+assertions. Windows создаёт уникальный файл в приватном CWD и открывает бинарный поток с удалением на последнем
+close; default сохраняет обычный tmpfile. Диагностический вывод уже вычисленной фазы также сохранён. Candidate48
+ещё не переводился и не исполнялся; статус остаётся OPEN до реального результата новым инструментом.
+
 ### RECIPE-MACHINE-MODULE-BOUND — 2026-10-28, fable_pc (срез 238, bootstrap quick candidate42, G0 → G1 frontend), CLOSED 2026-10-28 12:36 UTC — boot43 (cold candidate43, recipe-bounds10: 21 600 000 мс на машинный модуль, 86 400 000 мс на child) прошёл `BOOTSTRAP quick 0 failures`; максимальный модуль emit 6001 с, child G2 11815 с — границы не достигнуты
 
 Located limit recipe: `bld_machine_module` (tools/build.lm2:801) ограничивает перевод одного машинного модуля

@@ -121,8 +121,9 @@ fn: lm_compiler_consumer_calls_snapshot (@: facts c.L2PathFact; @: out c.L2Tx) i
     return: 0
 end: lm_compiler_consumer_calls_snapshot
 
-# The final two cells of a row are deliberately absent until the real
-# result/exits producers supply them. A CALL pointer is not their proof.
+# Result receivers come only from an explicit, directly owning ADMIT_AS.
+# Other result contexts and exit routes stay unavailable until their actual
+# producers retain them. A CALL pointer or return header is not their proof.
 # [row-count, (coverage-field-coordinate, Consumer-code, written-CALL,
 #              result-receivers, required-exits)*]. All references are ordinary
 # graph edges. Copy/qualification must retain their declaring closure; an
@@ -214,6 +215,126 @@ fn: consumer_build_cursor (@: roots c.L2SourceContainer; int: actual_kind; int: 
     return: 0
 end: consumer_build_cursor
 
+# FILL has constructed both endpoints and PLACE has bound the exact formal
+# entry while its producer's projection was active. Reuse that location,
+# never reconstruct a projected slot from a formal ordinal or search body.
+# The extra edge borrows the SAME canonical selected entry receiving record;
+# it does not change record.parent or construct a second receiving graph.
+fn: lm_compiler_formal_receiving_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @: roots c.L2SourceContainer; @: out c.FILE) int
+    @: entry_site c.L2ExpressionSite sites
+    @: receiving_site c.L2ExpressionSite 0
+    @: storage char 0
+    @: entry_name char 0
+    @: record_name char 0
+    c.L2ReferenceSource: source
+    c.L2AdmissionPlan: key
+    size_t: serial 0U
+    int: mi
+    int: formal
+    int: model
+    while: entry_site != 0
+        if: entry_site\role = 5 && entry_site\view_kind = kind && (index < 0 || entry_site\view_index = index) && entry_site\state = 1 && entry_site\place != 0
+            mi: (cast: (int) entry_site\value_type)
+            formal: (cast: (int) entry_site\count)
+            # This validates declared method/formal bounds before either
+            # input_model or reception_formal interprets special input keys.
+            if: c.lm_compiler_reception_source(mi, formal, @ source) != 0
+                return: 1
+            if: c.lm_compiler_reception_formal(mi, formal) != 0
+                model: c.lm_compiler_input_model(mi, formal)
+                if: c.lm_compiler_admission_key(model, @ source, 0, -1, mi, formal, @ key) != 0
+                    return: 1
+                # An aggregate index=-1 is a pass filter, never a lookup key.
+                receiving_site: c.lm_compiler_admission_site((cast: (int) entry_site\view_kind), (cast: (int) entry_site\view_index), (cast: (int) entry_site\method), @ key)
+                if: receiving_site != 0 && receiving_site\state = 1 && receiving_site\place != 0
+                    if: storage = 0
+                        storage: (cast: (@: char) c.lm_compiler_bound_alloc(160U, c.sizeof(c.char)))
+                        if: storage = 0
+                            return: 1
+                        entry_name: storage
+                        record_name: storage + 80
+                    ---
+                    if: c.snprintf(entry_name, 80U, "l2_formal_entry%zu", serial) < 0 || c.snprintf(record_name, 80U, "l2_formal_record%zu", serial) < 0
+                        return: 1
+                    if: consumer_build_cursor(roots, kind, index, entry_site, (cast: (@: c.L2GraphPlace) entry_site\place), entry_name, out) != 0 || consumer_build_cursor(roots, kind, index, receiving_site, (cast: (@: c.L2GraphPlace) receiving_site\place), record_name, out) != 0
+                        return: 1
+                    if: c.fprintf(out, "        if: lmx_arena_ref_store(%s, 3U, (cast: (@: void) %s)) != 0\n            return: 1\n", entry_name, record_name) < 0
+                        return: 1
+                    serial: serial + 1U
+                ---
+            ---
+        ---
+        entry_site: (cast: (@: c.L2ExpressionSite) entry_site\allocated_next)
+    ---
+    return: 0
+end: lm_compiler_formal_receiving_emit
+
+# AST identity narrows the search; it does not establish a receiving edge.
+# The producer names the ADMIT_AS and PLACE binds its ordinary owning links:
+# slot1 owns the record and slot3 owns this exact CALL. Class records, nested
+# expressions, borrowed attachments and ambiguous constructions do not pass.
+fn: consumer_result_operation (@: sink c.L2ExpressionSite; @: called c.L2ExpressionSite) @: c.L2GraphPlace
+    if: sink = 0 || called = 0 || sink\role != 3 || called\role != 4 || sink\state != 1 || called\state != 1 || sink\place = 0 || called\place = 0
+        return: 0
+    if: sink\view_kind != called\view_kind || sink\view_index != called\view_index || sink\method != called\method
+        return: 0
+    @: plan c.L2AdmissionPlan (cast: (@: c.L2AdmissionPlan) sink\admission)
+    if: plan = 0 || plan\receiving_operation_temp < 0 || plan\receiving_operation_place = 0
+        return: 0
+    @: source c.L2ReferenceSource @ plan\source
+    if: source\origin != called\node || source\origin_count != 1 || source\origin_method != called\method
+        return: 0
+    @: record c.L2GraphPlace (cast: (@: c.L2GraphPlace) sink\place)
+    @: call_place c.L2GraphPlace (cast: (@: c.L2GraphPlace) called\place)
+    @: operation c.L2GraphPlace (cast: (@: c.L2GraphPlace) plan\receiving_operation_place)
+    if: record\parent != operation || record\child != 1U || call_place\parent != operation || call_place\child != 3U
+        return: 0
+    return: operation
+end: consumer_result_operation
+
+# These are references to already constructed receiving operations. The
+# comparator may read their receiving operands, never execute the CALL or
+# ADMIT_AS candidate. Zero matches means unavailable, not a discarded result.
+fn: consumer_results_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @: roots c.L2SourceContainer; @: called c.L2ExpressionSite; const: (@: uses_name char); int: temp; int: offset; @: out c.FILE) int
+    @: sink c.L2ExpressionSite sites
+    int: count 0
+    while: sink != 0
+        if: consumer_result_operation(sink, called) != 0
+            if: count >= c.INT_MAX - 1
+                return: 1
+            count: count + 1
+        ---
+        sink: (cast: (@: c.L2ExpressionSite) sink\allocated_next)
+    ---
+    if: count = 0
+        return: 0
+    @: storage char (cast: (@: char) c.lm_compiler_bound_alloc(160U, c.sizeof(c.char)))
+    if: storage = 0
+        return: 1
+    @: results_name char storage
+    @: operation_name char storage + 80
+    if: c.snprintf(results_name, 80U, "l2_cc_results%d_%d", temp, offset) < 0
+        return: 1
+    if: c.fprintf(out, "        @: Lmx %s lmx_walk_plain_profiled(l2_program_arena, %s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: %s = 0 || lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 0U, %dU) != c.LMX_WALK_OK\n            return: 1\n", results_name, uses_name, count + 1, uses_name, results_name, uses_name, offset + 3, results_name, results_name, count) < 0
+        return: 1
+    sink: sites
+    int: at 1
+    while: sink != 0
+        @: operation c.L2GraphPlace consumer_result_operation(sink, called)
+        if: operation != 0
+            if: c.snprintf(operation_name, 80U, "l2_cc_receiver%d_%d_%d", temp, offset, at) < 0 || consumer_build_cursor(roots, kind, index, sink, operation, operation_name, out) != 0
+                return: 1
+            if: c.fprintf(out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", results_name, at, operation_name) < 0
+                return: 1
+            at: at + 1
+        ---
+        sink: (cast: (@: c.L2ExpressionSite) sink\allocated_next)
+    ---
+    if: at != count + 1
+        return: 1
+    return: 0
+end: consumer_results_emit
+
 # End-of-view fixup. PLACE already bound both endpoints; every method's
 # frames have been attached before this runs. Never refer to a private
 # l2_rw temporary belonging to another method's builder or execute the CALL.
@@ -271,9 +392,11 @@ fn: lm_compiler_consumer_calls_emit (@: sites c.L2ExpressionSite; int: kind; int
                                     return: 1
                                 if: c.fprintf(out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", uses_name, offset + 1, code_name, uses_name, offset + 2, call_name) < 0
                                     return: 1
+                                if: consumer_results_emit(sites, kind, index, roots, called, uses_name, (cast: (int) site\temp), offset, out) != 0
+                                    return: 1
                             ---
-                            # Missing/ambiguous CALL and missing demands stay
-                            # null, not an ABI-only admission or a made-up call.
+                            # Missing/ambiguous CALL, other result contexts
+                            # and absent exit facts remain null, never proof.
                             offset: offset + 5
                             use: (cast: (@: c.L2ConsumerCallUse) use\next)
                         ---

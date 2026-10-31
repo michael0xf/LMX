@@ -289,6 +289,8 @@ fn: lmx_pointer_new_owned (int: type; @: arena c.LmxArena) @: void
 end: lmx_pointer_new_owned
 
 fn: lmx_pointer_new_profiled (int: type; @: arena c.LmxArena; @: value_profile c.Lmx) @: void
+    if: c.lmx_type_base(type) = c.LMX_TYPE_CHAR_PTR
+        return: lmx_pointer_new_typed_profiled(type, arena, value_profile, sizeof(@: char), c.lmx_arena_pointer_char_read, c.lmx_arena_pointer_char_write)
     return: lmx_pointer_new_typed_profiled(type, arena, value_profile, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)
 end: lmx_pointer_new_profiled
 
@@ -303,6 +305,8 @@ fn: lmx_pointer_cell_canonical (@: arena c.LmxArena; @: cell void) int
     @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell))
     if: pool = 0
         return: 0
+    if: c.lmx_type_base((cast: (int) pool\type)) = c.LMX_TYPE_CHAR_PTR
+        return: (cast: (int) (pool\stride = sizeof(@: char) && pool\pointer_read = c.lmx_arena_pointer_char_read && pool\pointer_write = c.lmx_arena_pointer_char_write))
     return: (cast: (int) (pool\stride = sizeof(@: void) && pool\pointer_read = c.lmx_arena_pointer_void_read && pool\pointer_write = c.lmx_arena_pointer_void_write))
 end: lmx_pointer_cell_canonical
 
@@ -355,6 +359,53 @@ fn: lmx_pointer_cell_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkVal
     return: contexts + index
 end: lmx_pointer_cell_context
 
+# Inverse of the existing arena cell/companion relation, including imported
+# ranges. Metadata addresses need no registry or entries in the graph-copy map.
+fn: lmx_value_context_cell_in (@: arena c.LmxArena; @: context c.LmxWalkValue) @: void
+    @: entry c.LmxRange 0
+    @: pool c.LmxPool 0
+    @: chunk c.LmxChunk 0
+    @: contexts c.LmxWalkValue 0
+    @: cell void 0
+    size_t: index 0U
+    size_t: address (cast: (size_t) context)
+    size_t: first 0U
+    size_t: offset 0U
+    size_t: ordinal 0U
+    size_t: stride 0U
+    size_t: context_stride c.sizeof(c.LmxWalkValue)
+    if: arena = 0 || context = 0
+        return: 0
+    ---
+    while: index < c.lmx_arena_index_len(arena)
+        entry: c.lmx_arena_index_data(arena) + index
+        pool: (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, (cast: (@: void) entry\lo)))
+        if: pool != 0
+            stride: (cast: (size_t) pool\stride)
+            # Use the same published chunk accessor as the forward lookup.
+            chunk: (cast: (@: c.LmxChunk) c.lmx_pool_chunk_at(pool, (cast: (@: void) entry\lo)))
+            if: chunk != 0 && chunk\value_contexts != 0
+                contexts: (cast: (@: c.LmxWalkValue) chunk\value_contexts)
+                first: (cast: (size_t) contexts)
+                if: address >= first
+                    offset: address - first
+                    if: offset % context_stride = 0U
+                        ordinal: offset / context_stride
+                        if: ordinal < c.lmx_chunk_cells(chunk, stride)
+                            cell: (cast: (@: void) ((cast: (@: char) c.lmx_chunk_data(chunk)) + ordinal * stride))
+                            if: lmx_pointer_cell_context(arena, cell) = context
+                                return: cell
+                            ---
+                        ---
+                    ---
+                ---
+            ---
+        ---
+        index: index + 1U
+    ---
+    return: 0
+end: lmx_value_context_cell_in
+
 fn: lmx_pointer_store_context_in (@: arena c.LmxArena; @: cell void; @: raw void; @: context c.LmxWalkValue) int
     if: (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell)) = 0
         return: 1
@@ -391,17 +442,19 @@ fn: lmx_value_cell_access (@: arena c.LmxArena; @: cell void; @: read c.LmxPoint
         return: 0
     if: pool\kind != c.LMX_KIND_PRIMITIVE
         return: 1
+    # Explicit callbacks describe the actual pointer object, including an
+    # imported typed CHAR_PTR pool. Do not reinterpret it through char **.
+    if: c.lmx_type_reference_cell((cast: (int) pool\type)) != 0 && pool\stride != 0U && pool\pointer_read != 0 && pool\pointer_write != 0
+        read[0]: pool\pointer_read
+        write[0]: pool\pointer_write
+        return: 0
     if: c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR
         if: pool\stride != sizeof(@: char)
             return: 1
         read[0]: c.lmx_value_charptr_read
         write[0]: c.lmx_value_charptr_write
         return: 0
-    if: c.lmx_type_base(pool\type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(pool\type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
-        return: 1
-    read[0]: pool\pointer_read
-    write[0]: pool\pointer_write
-    return: 0
+    return: 1
 end: lmx_value_cell_access
 
 fn: lmx_value_cell_store (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkValue; @: raw void; @: context c.LmxWalkValue; c.LmxPointerCellWrite: write) int

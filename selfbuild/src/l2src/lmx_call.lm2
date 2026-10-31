@@ -3,6 +3,7 @@
 predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -41,6 +42,39 @@ fn: lmx_call_note_walk_fail (int: st) int
     c.abort()
     return: 0
 end: lmx_call_note_walk_fail
+
+# An executed native access consumes one already installed numeric place.
+# Query adapters may return an unavailable sentinel; an actual typed access
+# must preserve the operation error before any pointer or null-path use.
+fn: lmx_call_index (@: arena c.LmxArena; @: data c.Lmx; @: code c.Lmx; size_t: edge) size_t
+    size_t: slot (cast: (size_t) -1)
+    int: answer
+    int: status c.lmx_implements_code_slot(arena, data, code, edge, @ slot, @ answer)
+    if: status != c.LMX_WALK_OK
+        lmx_call_note_walk_fail(status)
+        c.abort()
+        return: (cast: (size_t) -1)
+    if: answer = c.LMX_IMPLEMENTS_UNKNOWN
+        lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)
+        c.abort()
+        return: (cast: (size_t) -1)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)
+        c.abort()
+        return: (cast: (size_t) -1)
+    return: slot
+end: lmx_call_index
+
+# This is an actual graph-payload read, not a receiving proof. A non-null
+# foreign/unregistered payload has no graph-domain interpretation yet.
+# Explicit raw C ABI input/result storage does not use this graph path.
+fn: lmx_call_cell (@: arena c.LmxArena; @: cell void) @: void
+    if: cell != 0 && c.lmx_domain_kind(arena, cell) = c.LMX_KIND_NONE
+        lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)
+        c.abort()
+        return: 0
+    return: cell
+end: lmx_call_cell
 
 sub: lmx_publish_guard (@: arena c.LmxArena; @: cell void; int: guard; @@: roots c.Lmx; size_t: count)
     if: guard != 0 && (c.lmx_range_has_root_profile(arena, cell, roots, count) != 0 || c.lmx_range_sealed_profile(arena, cell) != 0)
@@ -181,12 +215,12 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
     if: c.lmx_msg_poll_escape() != 0
         \out: 0
         status: 0
-        c.lmx_value_context_copy(@ result_context, 0)
+        c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
     if: lmx_result_context != 0
         # Do not clear an aliased caller input before the selected entry consumes it.
-        c.lmx_value_context_copy(lmx_result_context, 0)
+        c.memset((cast: (@: void) lmx_result_context), 0, c.sizeof(c.LmxWalkValue))
         if: status = 0
-            c.lmx_value_context_copy(lmx_result_context, @ result_context)
+            c.memcpy((cast: (@: void) lmx_result_context), (cast: (const: @: void) (@ result_context)), c.sizeof(c.LmxWalkValue))
         ---
     ---
     return: status

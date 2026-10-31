@@ -50,6 +50,13 @@ fn: lmx_type_base (int: physical_type) int
     return: physical_type
 end: lmx_type_base
 
+# A primitive reference cell keeps its actual logical type. Graph and Array
+# nodes have a different kind; their type numbers also name boxed references.
+fn: lmx_type_reference_cell (int: physical_type) int
+    int: base_type lmx_type_base(physical_type)
+    return: base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR || (base_type >= c.LMX_TYPE_POINTER_BASE && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+end: lmx_type_reference_cell
+
 fn: lmx_type_immutable (int: physical_type) int
     if: physical_type = c.INT_MIN || physical_type = c.LMX_TYPE_NONE
         return: c.LMX_TYPE_NONE
@@ -343,7 +350,7 @@ end: lmx_range_interval_pool
 fn: lmx_pointer_pool_in (@: arena c.LmxArena; @: cell void) @: c.LmxPool
     @: pool c.LmxPool 0
     pool: lmx_range_cell_pool(arena, cell)
-    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || lmx_type_base((cast: (int) pool\type)) < c.LMX_TYPE_POINTER_BASE || lmx_type_base((cast: (int) pool\type)) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || lmx_type_reference_cell((cast: (int) pool\type)) = 0 || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
         return: 0
     return: pool
 end: lmx_pointer_pool_in

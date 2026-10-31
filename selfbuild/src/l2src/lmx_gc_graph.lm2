@@ -69,6 +69,7 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
     @: contexts c.LmxWalkValue 0
     @: context c.LmxWalkValue 0
     @: held void 0
+    @: referent_owner void 0
     int: status 0
     status: c.LMX_GC_OK
     if: pool = 0 || chunk = 0 || lmx_gc_scalar(pool) != 0
@@ -112,7 +113,16 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
                         context: contexts + index
                         status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\model), gen, depth + 1))
                         status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\references), gen, depth + 1))
-                        status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\referent), gen, depth + 1))
+                        # A cell companion is outside the indexed payload.
+                        # Keep its actual indexed owner, not just that metadata
+                        # address. Unresolved scratch/activation contexts retain
+                        # their existing mark behavior and lifetime boundary.
+                        referent_owner: c.lmx_value_context_cell_in(arena, (cast: (@: c.LmxWalkValue) context\referent))
+                        if: referent_owner != 0
+                            status: lmx_gc_note(status, lmx_gc_mark_value(arena, referent_owner, gen, depth + 1))
+                        else:
+                            status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) context\referent), gen, depth + 1))
+                        ---
                     ---
                 else:
                     if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR

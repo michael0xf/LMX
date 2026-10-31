@@ -336,11 +336,11 @@ fn: lm_compiler_own_slot_at (int: k; @: dest char) int
     if: field = 0 || dest = 0
         return: (cast: (int) (1))
     if: field\holder = 0 && own_mi_cell[0][k] = cur_mi_cell[0] && c.lm_compiler_m_is_split(cur_mi_cell[0]) != 0
-        return: (cast: (int) ((cast: (int) (c.sprintf(dest, "l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU)", field\child) < 0))))
+        return: (cast: (int) ((cast: (int) (c.sprintf(dest, "l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU)", field\child) < 0))))
     if: field\holder != 0
         return: (cast: (int) ((cast: (int) (c.sprintf(dest, "l2_gp%zu, %zuU", field\holder\id, field\child) < 0))))
     if: own_mi_cell[0][k] = cur_mi_cell[0]
-        return: (cast: (int) ((cast: (int) (c.sprintf(dest, "self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU)", field\child) < 0))))
+        return: (cast: (int) ((cast: (int) (c.sprintf(dest, "self, lmx_call_index(l2_call_arena, self, l2_call_code, %zuU)", field\child) < 0))))
     ---
     return: (cast: (int) ((cast: (int) (c.sprintf(dest, "%s, %zuU", lm_compiler_own_ctr(k), field\child) < 0))))
 end: lm_compiler_own_slot_at

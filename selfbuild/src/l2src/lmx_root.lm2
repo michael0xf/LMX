@@ -1262,23 +1262,50 @@ fn: lmx_root_exit_admit (@: arena c.LmxArena; @: model c.Lmx; @: letter c.Lmx; @
     @: out c.LmxArray 0
     @: err c.LmxArray 0
     @: sender_cell void 0
+    @: code_cell void 0
+    c.LmxImplEntry: identity
+    int: status
+    int: answer
     if: arena = 0 || model = 0 || letter = 0 || done = 0
         return: c.LMX_ROOT_INVALID
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) letter)) = 0 || c.lmx_domain_kind(arena, (cast: (@: void) letter)) != c.LMX_KIND_STRUCT
+        return: c.LMX_ROOT_INVALID
     @: letter_fields c.VoidArray (cast: (@: c.VoidArray) (@ letter\array))
-    if: letter_fields\size < 2U || c.lmx_range_classify(arena, c.lmx_arena_ref_value(letter, 1U)) != c.LMX_KIND_STRUCT
+    payload: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, letter, 1U))
+    if: letter_fields\size < 2U || payload = 0 || c.lmx_domain_kind(arena, (cast: (@: void) payload)) != c.LMX_KIND_STRUCT
         return: c.LMX_ROOT_INVALID
     ---
-    payload: c.lmx_arena_ref_struct(letter, 1U)
-    if: c.lmx_implements_receiver_view(arena, payload, model, model, 0) != c.LMX_IMPLEMENTS_YES
+    # The host protocol explicitly specifies these three physical positions.
+    # Receive that exact interface through the common operation. Unavailable
+    # facts alone do not refuse it; the host then reads its actual fields.
+    c.memset((cast: (@: void) (@ identity)), 0, c.sizeof(c.LmxImplEntry))
+    status: c.lmx_implements_admit_receiving(arena, payload, model, @ identity, 0, @ answer)
+    if: status != c.LMX_WALK_OK || answer = c.LMX_IMPLEMENTS_NO
         return: c.LMX_ROOT_INVALID
     ---
-    out: (cast: (@: c.LmxArray) c.lmx_arena_ref_value(payload, 1U))
-    err: (cast: (@: c.LmxArray) c.lmx_arena_ref_value(payload, 2U))
+    code_cell: c.lmx_graph_value_in(arena, payload, 0U)
+    out: (cast: (@: c.LmxArray) c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, payload, 1U)))
+    err: (cast: (@: c.LmxArray) c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, payload, 2U)))
+    if: code_cell = 0 || c.lmx_domain_kind(arena, code_cell) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(c.lmx_domain_type(arena, code_cell)) != c.LMX_TYPE_INT || c.lmx_range_stride(arena, code_cell) != c.sizeof(c.int)
+        return: c.LMX_ROOT_INVALID
+    if: out = 0 || err = 0 || c.lmx_domain_kind(arena, (cast: (@: void) out)) != c.LMX_KIND_ARRAY || c.lmx_domain_kind(arena, (cast: (@: void) err)) != c.LMX_KIND_ARRAY
+        return: c.LMX_ROOT_INVALID
+    if: c.lmx_type_base(c.lmx_domain_type(arena, (cast: (@: void) out))) != c.LMX_TYPE_ARRAY_OF_CHAR || c.lmx_type_base(c.lmx_domain_type(arena, (cast: (@: void) err))) != c.LMX_TYPE_ARRAY_OF_CHAR
+        return: c.LMX_ROOT_INVALID
     @: out_fields c.VoidArray (cast: (@: c.VoidArray) (@ out\array))
     @: err_fields c.VoidArray (cast: (@: c.VoidArray) (@ err\array))
+    if: out_fields\size != 0U && (c.lmx_graph_backing_cell_in(arena, (cast: (@: c.Lmx) out), 0U) = 0 || c.lmx_range_stride(arena, out_fields\data) != c.sizeof(c.char))
+        return: c.LMX_ROOT_INVALID
+    if: err_fields\size != 0U && (c.lmx_graph_backing_cell_in(arena, (cast: (@: c.Lmx) err), 0U) = 0 || c.lmx_range_stride(arena, err_fields\data) != c.sizeof(c.char))
+        return: c.LMX_ROOT_INVALID
+    # The sender is a real pointer cell; validate it before allocating host
+    # copies so a bad field cannot leave those temporary buffers behind.
+    sender_cell: c.lmx_graph_value_in(arena, letter, 0U)
+    if: sender_cell = 0 || c.lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(c.lmx_domain_type(arena, sender_cell)) < c.LMX_TYPE_POINTER_BASE || c.lmx_range_stride(arena, sender_cell) != sizeof(@: void)
+        return: c.LMX_ROOT_INVALID
     @: output c.LmxCharArray (cast: (@: c.LmxCharArray) (@ done\out))
     @: error_output c.LmxCharArray (cast: (@: c.LmxCharArray) (@ done\err))
-    done\exit_code: c.lmx_int_value_known(c.lmx_arena_ref_value(payload, 0U))
+    done\exit_code: c.lmx_int_value_known(code_cell)
     # D-66: out/err\array.data point into the letter's own arena, unreachable to the collector the
     # instant this call returns (the taken letter is held only by lmx_root_host_take's own
     # locals, not any graph root the collector's mark walk reaches) -- copy the bytes into
@@ -1314,10 +1341,6 @@ fn: lmx_root_exit_admit (@: arena c.LmxArena; @: model c.Lmx; @: letter c.Lmx; @
     # directly -- classified before reading through it, so a raw address left there (the old
     # shape) is a located refusal, not a misread (this is also the commit's own mutant: put the
     # raw address back -> classify fails -> INVALID, RED across the eternal-runs suite).
-    sender_cell: c.lmx_arena_ref_value(letter, 0U)
-    if: sender_cell = 0 || c.lmx_domain_kind(arena, sender_cell) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(c.lmx_domain_type(arena, sender_cell)) < c.LMX_TYPE_POINTER_BASE
-        return: c.LMX_ROOT_INVALID
-    ---
     done\sender: c.lmx_pointer_value_known(sender_cell)
     return: c.LMX_ROOT_OK
 end: lmx_root_exit_admit

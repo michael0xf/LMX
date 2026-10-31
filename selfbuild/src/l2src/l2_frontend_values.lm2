@@ -46,7 +46,7 @@ end: lm_compiler_ft_set
 fn: lm_compiler_emit_empty_return (int: mi; const: (@: ind char)) int
     @@: m_throws_cell int (cast: (@@: int) (@ c.l2_m_throws))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    if: m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0
+    if: c.lm_compiler_m_machine(mi) = 0 || (m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0)
         return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sreturn: 0\n", ind) < 0))))
     return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sreturn\n", ind) < 0))))
 end: lm_compiler_emit_empty_return
@@ -2359,7 +2359,8 @@ end: lm_compiler_mad_hdr_arity
 
 fn: lm_compiler_emit_mad_inputs () int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    if: c.fputs("fn: l2_mad_inputs (@: LmxArena arena; @: Lmx code; @@: void args; size_t: n; @@: void sup; size_t: ns; @@: void all; size_t: cap; @: size_t count) int\n    @: Lmx part 0\n    size_t: k 0U\n    size_t: w 0U\n    \\count: 0U\n    part: lmx_graph_ref_struct_in(arena, code, lmx_implements_exec_index(arena, code, 0U))\n    if: part = 0\n        return: 1\n    w: part\\array.size\n    if: w < n || w > cap || ns > w - n\n        return: 1\n    while: k < w\n        all[k]: 0\n        if: k < n\n            all[k]: args[k]\n        if: k >= n && k - n < ns\n            all[k]: sup[k - n]\n        k: k + 1U\n    ---\n    \\count: w\n    return: 0\nend: l2_mad_inputs\n\n", out_cell[0]) < 0
+    # Keep the adapter's existing call shape, not another emitted L1 algorithm.
+    if: c.fputs("# Legacy compiler adapter; the selected SOURCE input projection is supported L2.\nfn: l2_mad_inputs (@: LmxArena arena; @: Lmx code; @@: void args; size_t: n; @@: void sup; size_t: ns; @@: void all; size_t: cap; @: size_t count) int\n    return: lmx_callable_input_refs(arena, code, args, n, sup, ns, all, cap, count)\nend: l2_mad_inputs\n\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_mad_inputs

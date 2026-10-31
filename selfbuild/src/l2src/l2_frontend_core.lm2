@@ -1543,8 +1543,6 @@ fn: lm_compiler_emit_ret_tr (int: mi; const: (@: ind char); const: (@: body c.Lm
     if: body = 0 || ind = 0
         return: (cast: (int) (0))
     n: c.lm_compiler_count_active(body)
-    if: c.lm_compiler_reference_source((cast: (@: c.LmP0Field) (body\first_field)), n, mi, @ source) != 0
-        return: (cast: (int) (1))
     # In a throwing callable the return is the status, and a trailer, like a `return:` in the
     # body, returns 0: its value goes to the normal output.  A value is never a status.
     if: m_ret_cell[0][mi] = 8
@@ -1556,11 +1554,13 @@ fn: lm_compiler_emit_ret_tr (int: mi; const: (@: ind char); const: (@: body c.Lm
         return: (cast: (int) (c.lm_compiler_emit_empty_return(mi, ind)))
     if: n = 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_nsty_get(mi, 0 - 1) >= 0
-        pret: c.lm_compiler_emit_return_path(mi, (cast: (@: c.LmP0Field) (body\first_field)), n, ind, (cast: (const: @: c.LmP0Node) (body\first_field\value)))
-        if: pret = 1
-            return: (cast: (int) (1))
-        ---
+    pret: c.lm_compiler_emit_return_path(mi, (cast: (@: c.LmP0Field) (body\first_field)), n, ind, (cast: (const: @: c.LmP0Node) (body\first_field\value)))
+    if: pret = 3
+        return: 0
+    if: pret = 1
+        return: 1
+    if: c.lm_compiler_reference_source((cast: (@: c.LmP0Field) (body\first_field)), n, mi, @ source) != 0
+        return: 1
     if: pret = 2
         pret: c.lm_compiler_emit_ret_convert(mi, body, (cast: (const: @: c.LmP0Node) (body\first_field\value)), ind, tok_cell[0])
         if: pret = 1
@@ -1580,9 +1580,11 @@ fn: lm_compiler_emit_ret_tr (int: mi; const: (@: ind char); const: (@: body c.Lm
     # §7b: the value is evaluated above; what is marked is published before the return (book §14).
     if: c.lm_compiler_emit_publish(ind) != 0
         return: (cast: (int) (1))
-    if: (m_throws_cell[0] = 0 || m_throws_cell[0][mi] = 0) && c.fprintf(out_cell[0], "%sreturn: %s\n", ind, tok_cell[0]\data) < 0
+    if: c.lm_compiler_m_machine(mi) = 0 && c.fprintf(out_cell[0], "%sif: l2_result_context != 0\n%s    l2_result_context\\present: 1\n%s---\n", ind, ind, ind) < 0
         return: (cast: (int) (1))
-    if: m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0 && c.fprintf(out_cell[0], "%sl2_out_result[0]: %s\n%sreturn: 0\n", ind, tok_cell[0]\data, ind) < 0
+    if: (c.lm_compiler_m_machine(mi) != 0 && (m_throws_cell[0] = 0 || m_throws_cell[0][mi] = 0)) && c.fprintf(out_cell[0], "%sreturn: %s\n", ind, tok_cell[0]\data) < 0
+        return: (cast: (int) (1))
+    if: (c.lm_compiler_m_machine(mi) = 0 || (m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0)) && c.fprintf(out_cell[0], "%sl2_out_result[0]: %s\n%sreturn: 0\n", ind, tok_cell[0]\data, ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_ret_tr
@@ -1934,7 +1936,7 @@ fn: lm_compiler_library_checks (const: (@: path char)) int
     while: i < m_n_cell[0]
         if: c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_entry") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_build") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_thread") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_unit") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_graph") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_qualified_roots") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_qualified_count") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_program_qualified_at") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_library_open") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_library_runtime") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_library_root") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_library_opened") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_library_message") || c.lm_compiler_text_eq(m_name_cell[0][i], "l2_library_unit")
             return: (cast: (int) (c.lm_compiler_error(path, m_node_cell[0][i], "reserved library symbol")))
-        if: c.lm_compiler_machine_module() = 0 && i != e_cell[0] && c.lm_compiler_m_nsof(i) < 0 && (m_dyn_cell[0][i] != 0 || c.lm_compiler_throws_declared(i) != 0)
+        if: c.lm_compiler_machine_module() = 0 && i != e_cell[0] && c.lm_compiler_m_nsof(i) < 0 && c.lm_compiler_throws_declared(i) != 0
             return: (cast: (int) (c.lm_compiler_error(path, m_node_cell[0][i], "unsupported library ABI")))
         i: i + 1
     ---
@@ -2122,16 +2124,20 @@ fn: lm_compiler_emit_foreign_formal (@: out c.FILE; int: ty; int: mi; int: fi; i
     int: i ty - 100
     c.L2FrontendScratchChar64: ref_own_storage
     @: ref_own char (cast: (@: char) ref_own_storage\buffer)
+    c.L2FrontendScratchChar64: received_own_storage
+    @: received_own char (cast: (@: char) received_own_storage\buffer)
     c.L2Tx: ref_tx
     @: ref c.L2Tx c.lm_compiler_tx_local(@ ref_tx, ref_own, 64U)
     if: out = 0 || i < 0 || i >= foreign_n_cell[0]
         return: (cast: (int) (1))
-    if: arg != 0 && (ref = 0 || lm_compiler_tramp_ref(mi, fi, ref) != 0)
+    if: arg != 0 && (ref = 0 || c.snprintf(received_own, 64U, "l2_received_refs[%d]", fi) < 0 || c.lm_compiler_tx_set(ref, received_own) != 0)
         return: (cast: (int) (1))
     # The trampoline input (l2_emit_formal): a foreign value is read from the typed storage its
     # reference addresses, through the typed pointer declared for it (arg 2).
     # A foreign pointer is loaded once from its pointer-value storage.
     if: arg = 2 && foreign_depth_cell[0][i] = 0
+        if: c.fprintf(out, "    if: l2_received[%d].present = 0 || l2_received[%d].kind != c.LMX_WALK_VALUE_FOREIGN || l2_received_refs[%d] = 0\n        lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)\n        return: 0\n    ---\n", fi, fi, fi) < 0
+            return: 1
         if: c.fputs("    @: ", out) < 0 || c.lm_compiler_write_text(out, foreign_name_cell[0][i]) != 0 || c.fprintf(out, " l2_b%d (cast: (@: ", fi) < 0 || c.lm_compiler_write_text(out, foreign_name_cell[0][i]) != 0 || c.fprintf(out, ") %s)\n", ref\data) < 0
             return: (cast: (int) (1))
         ---
@@ -4051,6 +4057,7 @@ end: lm_compiler_dt_of_source
 fn: lm_compiler_emit_work_decl (int: k) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
     c.L2FrontendScratchChar1024: load_own_storage
     @: load_own char (cast: (@: char) load_own_storage\buffer)
     c.L2Tx: load_tx
@@ -4072,15 +4079,21 @@ fn: lm_compiler_emit_work_decl (int: k) int
         return: (cast: (int) (1))
     # A number's cell is never empty where it is held: an empty one is a place a partial copy does not hold
     # (READ-FIELD-CLOSURE), and its read is refused, never read as nothing (Codex -28 review point 3).
+    # Once a published place is declared, its addresses enter the activation's
+    # publication table (lm_compiler_emit_publish_table, the same planner).
     if: cty != 0
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "    %s: %s\n    if: %s_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    %s: %s\n    int: %s_dirty 0\n", cty, cq_name\data, cq_name\data, k, cq_name\data, load\data, cq_name\data) < 0))))
+        if: c.fprintf(out_cell[0], "    %s: %s\n    if: %s_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    %s: %s\n    int: %s_dirty 0\n", cty, cq_name\data, cq_name\data, k, cq_name\data, load\data, cq_name\data) < 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)))
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) = 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(own_ty_cell[0][k]), 0, (cast: (const: @: char) (cq_name\data)), dcl) != 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "    %s\n    %s: %s\n    int: %s_dirty 0\n    LmxWalkValue: %s\n    lmx_walk_value_clear(@ %s)\n", dcl\data, cq_name\data, load\data, cq_name\data, cwv_name\data, cwv_name\data) < 0
         return: (cast: (int) (1))
     if: c.lm_compiler_own_is_slot(k) != 0
         return: (cast: (int) (0))
-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "    lmx_value_context_copy(@ %s, lmx_pointer_cell_context(l2_program_arena, %s_from[0]))\n", cwv_name\data, cq_name\data) < 0))))
+    if: c.fprintf(out_cell[0], "    lmx_value_context_copy(@ %s, lmx_pointer_cell_context(l2_program_arena, %s_from[0]))\n", cwv_name\data, cq_name\data) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)))
 end: lm_compiler_emit_work_decl
 
 # Original: l2src/l2trans.lm1:7670
@@ -6091,6 +6104,8 @@ fn: lm_compiler_source_plan_snapshot_bytes (@: out c.L2Tx) int
         if: admission != 0
             admission_source: @ admission\source
             admission_catalog: @ admission\catalog
+            if: lm_compiler_source_plan_numbers(out, "ao", (cast: (int) (admission\receiving_operation_temp >= 0)), 0, 0, 0, 0, 0) != 0 || lm_compiler_source_plan_place(out, (cast: (const: @: c.L2GraphPlace) admission\receiving_operation_place)) != 0
+                return: (cast: (int) (1))
             if: lm_compiler_source_plan_numbers(out, "A", (cast: (int) (admission\requirement)), (cast: (int) (admission\mode)), (cast: (int) (admission\own)), (cast: (int) (admission\target_method)), (cast: (int) (admission\target_key)), 0) != 0 || c.snprintf(text, 96U, "a%p\n", (cast: (@: void) admission\target_symbol)) < 0 || c.lm_compiler_tx_cat(out, text) != 0
                 return: (cast: (int) (1))
             if: lm_compiler_source_plan_numbers(out, "v", (cast: (int) (admission_source\schema)), (cast: (int) (admission_source\layout)), (cast: (int) (admission_source\method)), (cast: (int) (admission_source\place)), (cast: (int) (admission_source\origin_method)), 0) != 0 || lm_compiler_source_plan_path(out, (cast: (const: @: c.L2PathFact) (admission_source\path))) != 0 || c.snprintf(text, 96U, "C%zu:%zu\n", admission_catalog\count, admission_catalog\extent) < 0 || c.lm_compiler_tx_cat(out, text) != 0
@@ -6247,10 +6262,10 @@ fn: lm_compiler_expr_site_note_role (const: (@: at c.LmP0Node); int: count; int:
             return: (cast: (int) (status))
         if: site\temp = \out
             return: (cast: (int) (status))
-        if: role != 4 && site\state = 0 && c.lm_compiler_expr_temp_below((cast: (int) (site\temp)), (cast: (int) (\out))) != 0
+        if: role != 4 && role != 5 && site\state = 0 && c.lm_compiler_expr_temp_below((cast: (int) (site\temp)), (cast: (int) (\out))) != 0
             site\temp: \out
             return: (cast: (int) (status))
-        if: role != 4 && site\state = 0 && c.lm_compiler_expr_temp_below((cast: (int) (\out)), (cast: (int) (site\temp))) != 0
+        if: role != 4 && role != 5 && site\state = 0 && c.lm_compiler_expr_temp_below((cast: (int) (\out)), (cast: (int) (site\temp))) != 0
             return: (cast: (int) (status))
         site\state: 3
         return: (cast: (int) (status))
@@ -6337,6 +6352,8 @@ fn: lm_compiler_expr_sites_bind () int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: site c.L2ExpressionSite expr_sites_cell[0]
     @: temp c.L2ConstructionTemp
+    @: operation c.L2ConstructionTemp
+    @: admission c.L2AdmissionPlan
     @: place c.L2GraphPlace
     while: site != 0
         if: site\state = 0
@@ -6351,6 +6368,18 @@ fn: lm_compiler_expr_sites_bind () int
             else:
                 site\state: 1
                 site\place: place
+            ---
+            admission: site\admission
+            if: site\role = 3 && admission != 0
+                admission\receiving_operation_place: 0
+                # Bind only the operation explicitly named by its producer,
+                # with the record's existing owning attachment at slot1.
+                if: site\state = 1 && admission\receiving_operation_temp >= 0 && temp\parent = admission\receiving_operation_temp && temp\slot = 1
+                    operation: c.lm_compiler_construct_find(admission\receiving_operation_temp)
+                    if: operation != 0
+                        admission\receiving_operation_place: lm_compiler_construct_place(operation)
+                    ---
+                ---
             ---
         ---
         site: site\allocated_next
@@ -7137,9 +7166,9 @@ fn: lm_compiler_emit_graph_places (int: mi) int
             if: place\parent = 0
                 # The root is where the occurrence's places hang (l2_m_code_rooted): the code occurrence, or the data
                 # when the occurrence is its own data.
-                if: c.lm_compiler_m_code_rooted(mi) != 0 && c.fprintf(out_cell[0], "    l2_gp%zu: lmx_arena_ref_struct(l2_call_code, lmx_implements_exec_index(l2_call_arena, l2_call_code, %zuU))\n", place\id, place\child) < 0
+                if: c.lm_compiler_m_code_rooted(mi) != 0 && c.fprintf(out_cell[0], "    l2_gp%zu: lmx_arena_ref_struct(l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU))\n", place\id, place\child) < 0
                     return: (cast: (int) (1))
-                if: c.lm_compiler_m_code_rooted(mi) = 0 && c.fprintf(out_cell[0], "    l2_gp%zu: lmx_arena_ref_struct(self, lmx_implements_code_index(l2_call_arena, self, l2_call_code, %zuU))\n", place\id, place\child) < 0
+                if: c.lm_compiler_m_code_rooted(mi) = 0 && c.fprintf(out_cell[0], "    l2_gp%zu: lmx_arena_ref_struct(self, lmx_call_index(l2_call_arena, self, l2_call_code, %zuU))\n", place\id, place\child) < 0
                     return: (cast: (int) (1))
                 ---
             else:
@@ -8343,11 +8372,16 @@ end: lm_compiler_emit_ns_ref
 # Original: l2src/l2trans.lm1:14244
 fn: lm_compiler_emit_constructed_layout (int: model; const: (@: value char); const: (@: req char); const: (@: ind char)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    int: id tn_cell[0]
     c.L2FrontendScratchChar128: token_storage
     @: token char (cast: (@: char) token_storage\buffer)
     if: c.lm_compiler_layout_token(model, token) != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sif: lmx_implements_register_map(l2_program_arena, %s, %s, 0, 0U, %s) != c.LMX_IMPLEMENTS_YES\n", ind, value, req, token) < 0
+    tn_cell[0]: tn_cell[0] + 1
+    if: c.fprintf(out_cell[0], "%sint: l2_layout_answer%d c.LMX_IMPLEMENTS_UNKNOWN\n%sint: l2_layout_status%d lmx_implements_register_map(l2_program_arena, %s, %s, 0, 0U, %s, @ l2_layout_answer%d)\n", ind, id, ind, id, value, req, token, id) < 0
+        return: (cast: (int) (1))
+    if: c.fprintf(out_cell[0], "%sif: l2_layout_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_layout_status%d)\n%s---\n%sif: l2_layout_answer%d = c.LMX_IMPLEMENTS_NO\n", ind, id, ind, id, ind, ind, id) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_emit_invariant(ind, "a constructed Structure did not record its layout")))
 end: lm_compiler_emit_constructed_layout
@@ -10183,7 +10217,7 @@ fn: lm_compiler_admit_return (int: mi; @: first c.LmP0Field; int: n; const: (@: 
         if: cmi >= 0
             cand: c.lm_compiler_nsty_get(cmi, 0 - 1)
             # RECEPTION-EDGE-DEBTS (f): a call's result of opaque type is admitted when the program runs (below).
-            if: cand < 0 && m_ret_cell[0][cmi] = 16
+            if: cand < 0 && c.lm_compiler_return_opaque(first, n, mi) != 0
                 if: c.lm_compiler_d105_note(mi, mi, 0 - 1, first, n, at) != 0
                     return: (cast: (int) (1))
                 return: (cast: (int) (lm_compiler_admit_site(mi)))
@@ -12011,33 +12045,9 @@ end: lm_compiler_hidden_forward
 
 # Original: l2src/l2trans.lm1:20757
 fn: lm_compiler_emit_formal_contexts (int: mi) int
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    int: k 0
-    c.L2FrontendScratchChar64: fv_own_storage
-    @: fv_own char (cast: (@: char) fv_own_storage\buffer)
-    c.L2Tx: fv_tx
-    @: fv c.L2Tx c.lm_compiler_tx_local(@ fv_tx, fv_own, 64U)
-    c.L2FrontendScratchChar64: pn_own_storage
-    @: pn_own char (cast: (@: char) pn_own_storage\buffer)
-    c.L2Tx: pn_tx
-    @: pn c.L2Tx c.lm_compiler_tx_local(@ pn_tx, pn_own, 64U)
-    if: fv = 0 || pn = 0
-        return: (cast: (int) (1))
-    while: k < m_arity_cell[0][mi] + m_dyn_cell[0][mi]
-        if: k >= m_arity_cell[0][mi] && c.lm_compiler_dyn_fwd(mi, k - m_arity_cell[0][mi]) != 0
-            k: k + 1
-            continue
-        if: c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, k))) > 0
-            if: c.lm_compiler_tx_clear(fv) != 0 || c.lm_compiler_tx_input_cname(fv, "l2_fv", mi, k, "") != 0 || c.lm_compiler_tx_clear(pn) != 0 || c.lm_compiler_tx_input_cname(pn, "l2_p", mi, k, "") != 0
-                return: (cast: (int) (1))
-            if: c.fprintf(out_cell[0], "    LmxWalkValue: %s\n    lmx_walk_value_clear(@ %s)\n    if: l2_input_values != 0 && l2_input_values[%d].present != 0\n        if: l2_input_values[%d].kind != c.LMX_WALK_VALUE_REFERENCE || l2_input_values[%d].ref != (cast: (@: void) %s)\n            lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n        lmx_value_context_copy(@ %s, l2_input_values + %d)\n    ---\n", fv\data, fv\data, k, k, k, pn\data, fv\data, k) < 0
-                return: (cast: (int) (1))
-            ---
-        ---
-        k: k + 1
-    return: (cast: (int) (0))
+    # Every reference, including a C pointee, lives in the canonical Value.
+    # Retained by-value FOREIGN parameters need no reference shadow.
+    return: 0
 end: lm_compiler_emit_formal_contexts
 
 # Original: l2src/l2trans.lm1:20834
@@ -13390,7 +13400,7 @@ fn: lm_compiler_emit_tramp_lex (int: i; int: k) int
     # lives through the typed call, outside the conditional block.
     if: (kind = 2 || (own >= 0 && c.lm_compiler_own_is_pointer(own_ty_cell[0][own]) != 0)) && c.fprintf(out_cell[0], "    @: void l2_hpointer%d 0\n", k) < 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "    @: void l2_href%d refs[%d]\n    if: l2_href%d = 0\n        @@: void l2_txp%d lmx_arena_ref_cell(lmx_call_code", k, k, k, k) < 0
+    if: c.fprintf(out_cell[0], "    @: void l2_href%d 0\n    if: %dU < nargs\n        l2_href%d: refs[%d]\n    ---\n    if: %dU < nargs && lmx_input_values = 0 && l2_href%d = 0\n        @@: void l2_txp%d lmx_graph_ref_cell_in(lmx_call_arena, lmx_call_code", k, k, k, k, k, k, k) < 0
         return: (cast: (int) (1))
     while: depth > 0
         if: c.fputs("\\parent", out_cell[0]) < 0
@@ -13591,7 +13601,7 @@ fn: lm_compiler_emit_formal (int: ft; int: mi; int: idx; int: arg) int
     if: idx >= m_arity_cell[0][mi] && c.lm_compiler_dyn_fwd(mi, idx - m_arity_cell[0][mi]) != 0
         if: arg = 0 && (c.lm_compiler_tx_input_cname(ref, "l2_pr", mi, idx, "") != 0 || c.fprintf(out_cell[0], "; @: void %s", ref\data) < 0)
             return: (cast: (int) (1))
-        if: arg = 1 && c.fprintf(out_cell[0], ", refs[%d]", idx) < 0
+        if: arg = 1 && c.fprintf(out_cell[0], ", l2_received_refs[%d]", idx) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     ---
@@ -13668,70 +13678,48 @@ fn: lm_compiler_emit_sig_with_position (int: mi; c.long: mark) int
     c.L2Tx: declaration_tx
     @: declaration c.L2Tx c.lm_compiler_tx_local(@ declaration_tx, declaration_own, 1024U)
     ret_ty: c.lm_compiler_sig_ret(mi)
-    if: c.fputs(" (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; @: LmxWalkValue l2_input_values; @: LmxWalkValue l2_result_context", out_cell[0]) < 0
+    if: c.fputs(" (@: Lmx node; @: Lmx self; @: LmxArena l2_call_arena; @: Lmx l2_call_code; @@: void l2_input_refs; @: LmxWalkValue l2_input_values; @: LmxWalkValue l2_result_context", out_cell[0]) < 0
         return: (cast: (int) (1))
     while: j < m_arity_cell[0][mi]
-        if: lm_compiler_emit_formal((cast: (int) (c.lm_compiler_ft(mi, j))), mi, j, 0) != 0
+        if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_ft(mi, j))) != 0 && lm_compiler_emit_formal((cast: (int) (c.lm_compiler_ft(mi, j))), mi, j, 0) != 0
             return: (cast: (int) (1))
         j: j + 1
     j: 0
     while: j < m_dyn_cell[0][mi]
-        # A hidden formal that spells nothing is a signature that quietly lacks a parameter.
-        mark: (cast: (c.long) c.ftell(out_cell[0]))
-        if: lm_compiler_emit_formal((cast: (int) (c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, j))))), mi, m_arity_cell[0][mi] + j, 0) != 0
-            return: (cast: (int) (1))
-        if: c.ftell(out_cell[0]) = mark
-            return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][mi], "dynamic input type has no formal spelling")))
+        if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, j))))) != 0
+            # Only exact by-value FOREIGN transport retains a C parameter.
+            mark: (cast: (c.long) c.ftell(out_cell[0]))
+            if: lm_compiler_emit_formal((cast: (int) (c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, j))))), mi, m_arity_cell[0][mi] + j, 0) != 0
+                return: (cast: (int) (1))
+            if: c.ftell(out_cell[0]) = mark
+                return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][mi], "dynamic input type has no formal spelling")))
+        ---
         j: j + 1
-    # Declared-throw ABI: the outputs follow every input, the normal result
-    # first and the throw payload last, and the control status is the return.
-    # A callable that cannot throw keeps its direct return unchanged.
-    if: m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0
-        if: ret_ty = 1 && c.fputs("; @: char l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty = 2 && c.fputs("; @: size_t l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty = 33 && c.fputs("; @: unsigned l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty = 36 && c.fputs("; @: ulong l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty = 3 && c.fputs("; @@: char l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty = 16 && c.fputs("; @@: void l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty = 35 && c.fputs("; const: @@(char l2_out_result)", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty = 32 && c.fputs("; @@@: char l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: ret_ty >= 100 && (c.lm_compiler_value_decl_text(ret_ty, 1, "l2_out_result", declaration) != 0 || c.fprintf(out_cell[0], "; %s", declaration\data) < 0)
-            return: (cast: (int) (1))
-        if: c.lm_compiler_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && c.fputs("; @: int l2_out_result", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        if: c.fputs("; @@: Lmx l2_out_throw) int", out_cell[0]) < 0
-            return: (cast: (int) (1))
-        return: (cast: (int) (0))
-    ---
-    if: ret_ty = 1 && c.fputs(") char", out_cell[0]) < 0
+    # Every ordinary graph body returns only its control status. The normal
+    # value has exact typed out-storage, independently of declared exits.
+    if: ret_ty = 1 && c.fputs("; @: char l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty = 2 && c.fputs(") size_t", out_cell[0]) < 0
+    if: ret_ty = 2 && c.fputs("; @: size_t l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty = 33 && c.fputs(") unsigned", out_cell[0]) < 0
+    if: ret_ty = 33 && c.fputs("; @: unsigned l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty = 36 && c.fputs(") ulong", out_cell[0]) < 0
+    if: ret_ty = 36 && c.fputs("; @: ulong l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty = 3 && c.fputs(") @: char", out_cell[0]) < 0
+    if: ret_ty = 3 && c.fputs("; @@: char l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty = 16 && c.fputs(") @: void", out_cell[0]) < 0
+    if: ret_ty = 16 && c.fputs("; @@: void l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty = 35 && c.fputs(") const: @(char)", out_cell[0]) < 0
+    if: ret_ty = 35 && c.fputs("; const: @@(char l2_out_result)", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty = 32 && c.fputs(") @@: char", out_cell[0]) < 0
+    if: ret_ty = 32 && c.fputs("; @@@: char l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: ret_ty >= 100 && c.lm_compiler_emit_foreign_return(out_cell[0], ret_ty) != 0
+    if: ret_ty >= 100 && (c.lm_compiler_value_decl_text(ret_ty, 1, "l2_out_result", declaration) != 0 || c.fprintf(out_cell[0], "; %s", declaration\data) < 0)
         return: (cast: (int) (1))
-    if: ret_ty = 8 && c.fputs(")", out_cell[0]) < 0
+    if: c.lm_compiler_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && c.fputs("; @: int l2_out_result", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && c.fputs(") int", out_cell[0]) < 0
+    if: m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0 && c.fputs("; @@: Lmx l2_out_throw", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    if: c.fputs(") int", out_cell[0]) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_sig_with_position
@@ -14082,18 +14070,72 @@ end: lm_compiler_emit_dyn_call
 fn: lm_compiler_emit_tramp_call (int: i; int: n; int: thr; int: cls; const: (@: values char)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     int: k 0
-    if: lm_compiler_write_sym(out_cell[0], i) != 0 || c.fprintf(out_cell[0], "(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code, %s, lmx_result_context", values) < 0
+    const: (@: references char "refs")
+    if: n > 0
+        references: "l2_received_refs"
+    if: lm_compiler_write_sym(out_cell[0], i) != 0 || c.fprintf(out_cell[0], "(lmx_call_code\\parent, l2_self, lmx_call_arena, lmx_call_code, %s, %s, @ l2_actual_result", references, values) < 0
         return: (cast: (int) (1))
     while: k < n
-        if: lm_compiler_emit_formal((cast: (int) (c.lm_compiler_input_ft(i, k))), i, k, 1) != 0
+        if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(i, k))) != 0 && lm_compiler_emit_formal((cast: (int) (c.lm_compiler_input_ft(i, k))), i, k, 1) != 0
             return: (cast: (int) (1))
         k: k + 1
-    if: thr != 0 && cls != 0 && c.fputs(", @ l2_tv", out_cell[0]) < 0
+    if: cls != 0 && c.fputs(", @ l2_tv", out_cell[0]) < 0
         return: (cast: (int) (1))
     if: thr != 0 && c.fputs(", @ l2_tt", out_cell[0]) < 0
         return: (cast: (int) (1))
     return: (cast: (int) ((cast: (int) (c.fputs(")", out_cell[0]) < 0))))
 end: lm_compiler_emit_tramp_call
+
+# Capture transport independently of whether any formal needs a Structure view.
+# A supplied array is authoritative, including explicit absent slots. Raw C
+# storage is decoded only when that whole array is unavailable at the boundary.
+fn: lm_compiler_emit_tramp_value_inputs (int: i; int: n) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    int: k 0
+    int: ft
+    int: descriptor
+    c.L2FrontendScratchChar96: type_storage
+    @: type char (cast: (@: char) type_storage\buffer)
+    c.L2FrontendScratchChar64: raw_ref_storage
+    @: raw_ref_text char (cast: (@: char) raw_ref_storage\buffer)
+    c.L2Tx: raw_ref_tx
+    @: raw_ref c.L2Tx c.lm_compiler_tx_local(@ raw_ref_tx, raw_ref_text, 64U)
+    if: n <= 0
+        return: 0
+    if: raw_ref = 0
+        return: 1
+    if: c.fprintf(out_cell[0], "    []: LmxWalkValue l2_received %d\n    []: @(void) l2_received_refs %d\n    int: l2_input_status 0\n    if: lmx_input_values != 0\n        l2_input_status: lmx_walk_values_project(lmx_input_values, refs, nargs, 0U, l2_received, l2_received_refs, %dU)\n        if: l2_input_status != c.LMX_WALK_OK\n            lmx_call_note_walk_fail(l2_input_status)\n            return: 0\n        ---\n    else:\n", n, n, n) < 0
+        return: 1
+    while: k < n
+        if: lm_compiler_tramp_ref(i, k, raw_ref) != 0
+            return: 1
+        if: c.fprintf(out_cell[0], "        lmx_walk_value_clear(@ l2_received[%d])\n        if: %dU < nargs\n", k, k) < 0
+            return: 1
+        ft: c.lm_compiler_formal_raw(c.lm_compiler_input_ft(i, k))
+        descriptor: c.lm_compiler_input_is_descriptor(i, k)
+        if: ft >= 100 && c.lm_compiler_pointer_depth(ft) = 0
+            if: c.fprintf(out_cell[0], "            if: %s != 0\n                l2_input_status: lmx_walk_value_foreign(@ l2_received[%d], %s)\n                if: l2_input_status != c.LMX_WALK_OK\n                    lmx_call_note_walk_fail(l2_input_status)\n                    return: 0\n                ---\n            ---\n", raw_ref\data, k, raw_ref\data) < 0
+                return: 1
+            ---
+        else:
+            if: c.lm_compiler_emit_input_value_type(ft, descriptor, type) = 0
+                if: c.fprintf(out_cell[0], "            l2_input_status: lmx_walk_value_load(lmx_call_arena, %s, %s, @ l2_received[%d])\n            if: l2_input_status != c.LMX_WALK_OK\n                lmx_call_note_walk_fail(l2_input_status)\n                return: 0\n            ---\n", raw_ref\data, type, k) < 0
+                    return: 1
+                ---
+            else:
+                # Missing C-layout information is a raw-transport limitation,
+                # not a rejection of an ordinary supplied full Value.
+                if: c.fprintf(out_cell[0], "            if: %s != 0\n                lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)\n                return: 0\n            ---\n", raw_ref\data) < 0
+                    return: 1
+            ---
+        ---
+        if: c.fprintf(out_cell[0], "        ---\n        l2_received_refs[%d]: lmx_walk_value_storage(@ l2_received[%d])\n", k, k) < 0
+            return: 1
+        k: k + 1
+    if: c.fputs("    ---\n", out_cell[0]) < 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_tramp_value_inputs
 
 # Original: l2src/l2trans.lm1:23440
 fn: lm_compiler_emit_tramp_receptions (int: i; int: n) int
@@ -14117,7 +14159,7 @@ fn: lm_compiler_emit_tramp_receptions (int: i; int: n) int
         kind: 2
         index: c.lm_compiler_method_body_result(i)
     ---
-    if: c.fprintf(out_cell[0], "    @: LmxArena l2_call_arena lmx_call_arena\n    @: LmxArena l2_program_arena lmx_call_arena\n    @: Lmx l2_call_code lmx_call_code\n    @: Lmx l2_reception_model 0\n    int: l2_reception 0\n    []: LmxWalkValue l2_received %d\n    if: lmx_input_values != 0\n        memcpy((cast: (@: void) l2_received), (cast: (@: void) lmx_input_values), %dU * c.sizeof(c.LmxWalkValue))\n    else:\n        memset((cast: (@: void) l2_received), 0, %dU * c.sizeof(c.LmxWalkValue))\n    ---\n", n, n, n) < 0
+    if: c.fputs("    @: LmxArena l2_call_arena lmx_call_arena\n    @: LmxArena l2_program_arena lmx_call_arena\n    @: Lmx l2_call_code lmx_call_code\n    @: Lmx l2_reception_model 0\n    int: l2_reception 0\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     while: k < m_arity_cell[0][i]
         if: lm_compiler_reception_formal(i, k) != 0
@@ -14130,7 +14172,7 @@ fn: lm_compiler_emit_tramp_receptions (int: i; int: n) int
                 return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][i], "internal: a formal's entry reception has no retained record")))
             if: c.lm_compiler_emit_live_code_place((cast: (@: c.L2GraphPlace) (site\place)), "    ", @ place_tmp) != 0
                 return: (cast: (int) (1))
-            if: c.fprintf(out_cell[0], "    if: l2_received[%d].present = 0\n        lmx_walk_value_ref(@ l2_received[%d], c.LMX_TYPE_LMX, lmx_pointer_value_known(refs[%d]))\n    ---\n    l2_reception: lmx_walk_value_admit(l2_program_arena, @ l2_received[%d], l2_reception_model, l2_cp%d)\n    if: l2_reception != c.LMX_WALK_OK && l2_reception != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n        lmx_call_note_walk_fail(l2_reception)\n    if: l2_reception != c.LMX_WALK_OK\n        \\out: 0\n        return: %d\n", k, k, k, k, place_tmp, status) < 0
+            if: c.fprintf(out_cell[0], "    l2_reception: lmx_walk_value_admit(l2_program_arena, @ l2_received[%d], l2_reception_model, l2_cp%d)\n    if: l2_reception != c.LMX_WALK_OK && l2_reception != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n        lmx_call_note_walk_fail(l2_reception)\n    if: l2_reception != c.LMX_WALK_OK\n        \\out: 0\n        return: %d\n    ---\n    l2_received_refs[%d]: lmx_walk_value_storage(@ l2_received[%d])\n", k, place_tmp, status, k, k) < 0
                 return: (cast: (int) (1))
             ---
         ---
@@ -14150,12 +14192,17 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
     int: n m_arity_cell[0][i] + m_dyn_cell[0][i]
     int: cls c.lm_compiler_tramp_class(i)
     int: rt c.lm_compiler_sig_ret(i)
+    int: actual_ft c.lm_compiler_ret_ft(i)
+    int: descriptor 0
+    int: reference_result 0
     int: thr 0
     const: (@: values char "lmx_input_values")
     c.L2FrontendScratchChar1024: declaration_own_storage
     @: declaration_own char (cast: (@: char) declaration_own_storage\buffer)
     c.L2Tx: declaration_tx
     @: declaration c.L2Tx c.lm_compiler_tx_local(@ declaration_tx, declaration_own, 1024U)
+    c.L2FrontendScratchChar96: result_type_storage
+    @: result_type char (cast: (@: char) result_type_storage\buffer)
     if: m_throws_cell[0] != 0 && m_throws_cell[0][i] != 0
         thr: 1
     ---
@@ -14171,7 +14218,7 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
     # Structure for `call: code data`; node is the code's parent (l2_emit_tramp_call).
     if: c.fprintf(out_cell[0], "    @: Lmx l2_self (cast: (@: Lmx) owner)\n") < 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "    if: nargs != %dU || out = 0", n) < 0
+    if: c.fprintf(out_cell[0], "    if: nargs < %dU || nargs > %dU || out = 0", m_arity_cell[0][i], n) < 0
         return: (cast: (int) (1))
     # A call that reads no result passes dest = 0 and the method's number is dropped, as a walked call drops it
     # (lmx_walk_call_prim_dispatch). Only a foreign by-value result needs its exact destination storage.
@@ -14186,9 +14233,11 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
             return: (cast: (int) (1))
         k: k + 1
     ---
+    if: lm_compiler_emit_tramp_value_inputs(i, n) != 0
+        return: 1
     k: 0
     while: k < n
-        if: lm_compiler_emit_formal((cast: (int) (c.lm_compiler_input_ft(i, k))), i, k, 2) != 0
+        if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(i, k))) != 0 && lm_compiler_emit_formal((cast: (int) (c.lm_compiler_input_ft(i, k))), i, k, 2) != 0
             return: (cast: (int) (1))
         k: k + 1
     ---
@@ -14196,12 +14245,12 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
     # (l2_emit_tramp_receptions); its body takes the received values.
     if: lm_compiler_emit_tramp_receptions(i, n) != 0
         return: (cast: (int) (1))
-    if: lm_compiler_reception_count(i) != 0
+    if: n > 0
         values: "l2_received"
     # Invoke the typed body first. A stopped Message supplies no value, so
     # neither initialized scalar placeholders nor uninitialized foreign storage
     # may be copied to the caller. Only normal completion reaches result stores.
-    if: c.fputs("    \\out: 0\n", out_cell[0]) < 0
+    if: c.fputs("    \\out: 0\n    LmxWalkValue: l2_actual_result\n    lmx_walk_value_clear(@ l2_actual_result)\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     if: cls != 0
         k: rt
@@ -14210,23 +14259,46 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
         if: c.lm_compiler_value_decl_text(k, 0, "l2_tv", declaration) != 0 || c.fprintf(out_cell[0], "    %s\n", declaration\data) < 0
             return: (cast: (int) (1))
     ---
-    if: thr != 0 && c.fputs("    @: Lmx l2_tt 0\n    int: l2_ts 0\n    l2_ts: ", out_cell[0]) < 0
+    if: thr != 0 && c.fputs("    @: Lmx l2_tt 0\n", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: thr = 0 && cls != 0 && c.fputs("    l2_tv: ", out_cell[0]) < 0
-        return: (cast: (int) (1))
-    if: thr = 0 && cls = 0 && c.fputs("    ", out_cell[0]) < 0
+    if: c.fputs("    int: l2_ts 0\n    l2_ts: ", out_cell[0]) < 0
         return: (cast: (int) (1))
     if: lm_compiler_emit_tramp_call(i, n, thr, cls, values) != 0 || c.fputs("\n    if: lmx_msg_poll_escape() != 0\n        return: 0\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     if: thr != 0 && c.fputs("    if: l2_ts != 0\n        \\out: (cast: (@: void) l2_tt)\n        return: l2_ts\n", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: rt = 1 && c.fputs("    if: dest != 0\n        lmx_char_store_known(dest, (cast: (int) l2_tv))\n        \\out: dest\n", out_cell[0]) < 0
+    if: thr = 0 && c.fputs("    if: l2_ts != 0\n        return: l2_ts\n", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: rt != 1 && cls >= 1 && cls <= 4 && c.fprintf(out_cell[0], "    if: dest != 0\n        %s(dest, l2_tv)\n        \\out: dest\n", c.lm_compiler_tramp_store(cls)) < 0
+    # The body marks only a real valued exit. Normal fall-through is absent,
+    # never an initialized ABI placeholder. Store/pack the actual declared type.
+    if: cls != 0 && c.fputs("    if: l2_actual_result.present != 0\n", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: cls = 5 && c.fputs("    \\out: (cast: (@: void) l2_tv)\n", out_cell[0]) < 0
+    if: rt = 1 && c.fputs("        if: dest != 0\n            lmx_char_store_known(dest, (cast: (int) l2_tv))\n            \\out: dest\n", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: cls = 6 && (c.lm_compiler_value_decl_text(rt, 1, "l2_rv", declaration) != 0 || c.fprintf(out_cell[0], "    %s (cast: (@: ", declaration\data) < 0 || c.lm_compiler_write_text(out_cell[0], foreign_name_cell[0][rt - 100]) != 0 || c.fputs(") dest)\n    \\l2_rv: l2_tv\n    \\out: dest\n", out_cell[0]) < 0)
+    if: rt != 1 && cls >= 1 && cls <= 4 && c.fprintf(out_cell[0], "        if: dest != 0\n            %s(dest, l2_tv)\n            \\out: dest\n", c.lm_compiler_tramp_store(cls)) < 0
+        return: (cast: (int) (1))
+    if: cls = 5 && c.fputs("        \\out: (cast: (@: void) l2_tv)\n", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    if: cls = 6 && (c.lm_compiler_value_decl_text(rt, 1, "l2_rv", declaration) != 0 || c.fprintf(out_cell[0], "        %s (cast: (@: ", declaration\data) < 0 || c.lm_compiler_write_text(out_cell[0], foreign_name_cell[0][rt - 100]) != 0 || c.fputs(") dest)\n        \\l2_rv: l2_tv\n        \\out: dest\n        lmx_walk_value_foreign(@ l2_actual_result, dest)\n", out_cell[0]) < 0)
+        return: (cast: (int) (1))
+    if: cls >= 1 && cls <= 5
+        descriptor: (cast: (int) (c.lm_compiler_input_model(i, -1) >= 0 || rt = 16))
+        reference_result: (cast: (int) (descriptor != 0 || c.lm_compiler_pointer_depth(actual_ft) > 0 || actual_ft = c.lm_compiler_array_desc_ty()))
+        if: c.lm_compiler_emit_input_value_type(actual_ft, descriptor, result_type) != 0
+            return: (cast: (int) (1))
+        if: c.fputs("        if: l2_actual_result.kind = 0\n", out_cell[0]) < 0
+            return: 1
+        if: reference_result != 0 && c.fprintf(out_cell[0], "            lmx_walk_value_ref_context(@ l2_actual_result, %s, (cast: (@: void) l2_tv), @ l2_actual_result)\n", result_type) < 0
+            return: (cast: (int) (1))
+        if: reference_result = 0 && c.fprintf(out_cell[0], "            if: lmx_walk_value_num(@ l2_actual_result, %s, (cast: (size_t) l2_tv)) != c.LMX_WALK_OK\n                lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", result_type) < 0
+            return: (cast: (int) (1))
+        ---
+        if: c.fputs("        ---\n", out_cell[0]) < 0
+            return: 1
+    ---
+    if: cls != 0 && c.fputs("    ---\n", out_cell[0]) < 0
+        return: (cast: (int) (1))
+    if: c.fputs("    if: lmx_result_context != 0\n        memcpy((cast: (@: void) lmx_result_context), (cast: (const: @: void) (@ l2_actual_result)), c.sizeof(c.LmxWalkValue))\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     if: c.fputs("    return: 0\nend: ", out_cell[0]) < 0 || lm_compiler_write_sym(out_cell[0], i) != 0 || c.fputs("_tr\n\n", out_cell[0]) < 0
         return: (cast: (int) (1))
@@ -15254,7 +15326,7 @@ fn: lm_compiler_rw_catalog_frame (int: parent; const: (@: catalog c.L2D105Catalo
 end: lm_compiler_rw_catalog_frame
 
 # Original: l2src/l2trans.lm1:25988
-fn: lm_compiler_rw_receiving_record (int: parent; int: req; @: source c.L2ReferenceSource; int: full_receiver; int: uses_own; int: tmi; int: tk; @: out int) int
+fn: lm_compiler_rw_receiving_record (int: parent; int: operation_temp; int: req; @: source c.L2ReferenceSource; int: full_receiver; int: uses_own; int: tmi; int: tk; @: out int) int
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     @@@: ruse_e_edge_cell c.L2UsePlanEdge (cast: (@@@: c.L2UsePlanEdge) (@ c.l2_ruse_e_edge))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
@@ -15286,6 +15358,8 @@ fn: lm_compiler_rw_receiving_record (int: parent; int: req; @: source c.L2Refere
         mode: 2
     if: c.lm_compiler_admission_key(req, source, full_receiver, uses_own, tmi, tk, @ admission) != 0 || c.lm_compiler_d105_catalog(req, source, tmi, tk, full_receiver, @ catalog) != 0
         return: (cast: (int) (1))
+    admission\receiving_operation_temp: operation_temp
+    admission\receiving_operation_place: 0
     admission\scope: scope
     call_cells: c.lm_compiler_consumer_call_cells(scope, ruse_e_edge_cell[0])
     if: call_cells < 1 || lm_compiler_rw_plain(parent, 6, out) != 0 || lm_compiler_rw_catalog_frame((cast: (int) (\out)), @ catalog, @ templates) != 0 || lm_compiler_rw_put((cast: (int) (\out)), 0, templates) != 0 || lm_compiler_rw_reference_contracts((cast: (int) (\out)), @ catalog, @ references) != 0 || lm_compiler_rw_put((cast: (int) (\out)), 3, references) != 0 || lm_compiler_rw_plain((cast: (int) (\out)), call_cells, @ call_uses) != 0 || lm_compiler_rw_put((cast: (int) (\out)), 5, call_uses) != 0
@@ -15350,7 +15424,7 @@ fn: lm_compiler_rw_call_class_receiving (const: (@: source_node c.LmP0Node); int
                             return: (cast: (int) (1))
                         count: count + 1
                     else:
-                        if: c.lm_compiler_reference_source_value(value, rw_mi_cell[0], @ source) != 0 || lm_compiler_rw_receiving_record(records, req, @ source, 0, -1, head, k, @ record) != 0 || lm_compiler_rw_put(records, at, record) != 0
+                        if: c.lm_compiler_reference_source_value(value, rw_mi_cell[0], @ source) != 0 || lm_compiler_rw_receiving_record(records, -1, req, @ source, 0, -1, head, k, @ record) != 0 || lm_compiler_rw_put(records, at, record) != 0
                             return: (cast: (int) (1))
                         at: at + 1
                     ---
@@ -15384,7 +15458,7 @@ fn: lm_compiler_rw_call_class_receiving (const: (@: source_node c.LmP0Node); int
                         source\origin: source_node
                         source\origin_count: 0
                         source\origin_method: rw_mi_cell[0]
-                        if: lm_compiler_rw_receiving_record(records, req, @ source, 0, -1, head, m_arity_cell[0][head] + k, @ record) != 0 || lm_compiler_rw_put(records, at, record) != 0
+                        if: lm_compiler_rw_receiving_record(records, -1, req, @ source, 0, -1, head, m_arity_cell[0][head] + k, @ record) != 0 || lm_compiler_rw_put(records, at, record) != 0
                             return: (cast: (int) (1))
                         at: at + 1
                     ---
@@ -16719,7 +16793,7 @@ fn: lm_compiler_emit_mad_call () int
         return: (cast: (int) (0))
     if: c.lm_compiler_emit_mad_inputs() != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(lmx_call_arena, l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_status: lmx_call_prim_values(lmx_call_arena, l2_code, lmx_call_unary_data(lmx_call_arena, l2_code), l2_all, l2_n, dest, out, 0, lmx_result_context)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", (cast: (int) (c.lm_compiler_mad_max_inputs())), c.lm_compiler_mad_max_inputs()) < 0
+    if: c.fprintf(out_cell[0], "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    []: LmxWalkValue l2_values %d\n    @: LmxWalkValue l2_forward 0\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(lmx_call_arena, l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    if: lmx_input_values != 0\n        int: l2_copy_status lmx_walk_values_project(lmx_input_values, refs, nargs, 1U, l2_values, l2_all, l2_n)\n        if: l2_copy_status != c.LMX_WALK_OK\n            lmx_call_note_walk_fail(l2_copy_status)\n        l2_forward: l2_values\n    ---\n    l2_status: lmx_call_prim_values(lmx_call_arena, l2_code, lmx_call_unary_data(lmx_call_arena, l2_code), l2_all, l2_n, dest, out, l2_forward, lmx_result_context)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", (cast: (int) (c.lm_compiler_mad_max_inputs())), (cast: (int) (c.lm_compiler_mad_max_inputs())), c.lm_compiler_mad_max_inputs()) < 0
         return: (cast: (int) (1))
     # Item 6 of the interpreter-throw closure, the walked route (steps/interpreter-throw-20261010.md): under the walk
     # the adapter is the PRIM of the held call, and the walker reads a PRIM's status in the primitive protocol
@@ -16817,8 +16891,17 @@ fn: lm_compiler_emit_mad_construct_one (int: mi) int
             # Stage this actual reference for the joint graph copy.
             if: c.lm_compiler_schema_kind(mcap_ns_cell[0][k]) != 0 && c.lm_compiler_mad_cap_emit_walk(1 + ci, slot) != 0
                 return: (cast: (int) (1))
-            if: c.lm_compiler_schema_kind(mcap_ns_cell[0][k]) = 0 && c.fprintf(out_cell[0], "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (@: char) (c.lm_compiler_mcap_new_helper(ty))), (cast: (@: char) (c.lm_compiler_own_store_helper(ty))), c.lm_compiler_mcap_value_helper(ty), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
-                return: (cast: (int) (1))
+            if: c.lm_compiler_schema_kind(mcap_ns_cell[0][k]) = 0
+                if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_value_ft_of_own(ty))) = 0
+                    if: c.fprintf(out_cell[0], "    if: lmx_walk_value_materialize((cast: (@: LmxArena) owner), (lmx_input_values + %uU), @ l2_mad_cell) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+                        return: 1
+                    ---
+                else:
+                    if: c.fprintf(out_cell[0], "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (@: char) (c.lm_compiler_mcap_new_helper(ty))), (cast: (@: char) (c.lm_compiler_own_store_helper(ty))), c.lm_compiler_mcap_value_helper(ty), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+                        return: 1
+                    ---
+                ---
+            ---
             ci: ci + 1
         ---
         k: k + 1
@@ -17225,7 +17308,7 @@ fn: lm_compiler_t7_make_sig (int: site) int
     if: c.fprintf(out_cell[0], "fn: l2_t7_make_%d (@: Lmx l2_t7_at", site) < 0
         return: (cast: (int) (1))
     while: j < t7_nb_cell[0][site]
-        if: t7b_how_cell[0][t7_b0_cell[0][site] + j] != 0 && c.fprintf(out_cell[0], "; int: l2_t7b%d", j) < 0
+        if: t7b_how_cell[0][t7_b0_cell[0][site] + j] != 0 && c.fprintf(out_cell[0], "; @: LmxWalkValue l2_t7b%d", j) < 0
             return: (cast: (int) (1))
         j: j + 1
     ---
@@ -17251,7 +17334,7 @@ fn: lm_compiler_t7_emit_construct (int: site) int
         return: (cast: (int) (1))
     j: 0
     while: j < nv
-        if: c.fprintf(out_cell[0], ", lmx_int_value_known(refs[%uU])", (cast: (unsigned) (1 + j))) < 0
+        if: c.fprintf(out_cell[0], ", (lmx_input_values + %uU)", (cast: (unsigned) (1 + j))) < 0
             return: (cast: (int) (1))
         j: j + 1
     ---
@@ -17331,7 +17414,7 @@ fn: lm_compiler_t7_emit_make (int: site; const: (@: ind char)) int
         slot: t7b_slot_cell[0][at]
         if: how = 0 && c.fprintf(out_cell[0], "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, %d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, val, site, (cast: (unsigned) slot), site, ind) < 0
             return: (cast: (int) (1))
-        if: how != 0 && c.fprintf(out_cell[0], "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, l2_t7b%d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, j, site, (cast: (unsigned) slot), site, ind) < 0
+        if: how != 0 && c.fprintf(out_cell[0], "%sif: lmx_walk_value_materialize(l2_program_arena, l2_t7b%d, @ l2_t7c%d) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, j, site, site, (cast: (unsigned) slot), site, ind) < 0
             return: (cast: (int) (1))
         j: j + 1
     ---

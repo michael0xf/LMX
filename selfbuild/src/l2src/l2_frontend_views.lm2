@@ -509,6 +509,9 @@ fn: lm_compiler_admission_key (int: req; @: source c.L2ReferenceSource; int: mod
     if: source = 0 || out = 0
         return: (cast: (int) (1))
     c.memset((cast: (@: void) out), 0, c.sizeof(c.L2AdmissionPlan))
+    # Only an actual ADMIT_AS producer can supply this provenance later.
+    # A callable-class record has the same carrier but no receiving operation.
+    out\receiving_operation_temp: -1
     out\requirement: req
     out\mode: mode
     out\own: own

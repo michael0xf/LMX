@@ -148,7 +148,7 @@ fn: lmx_pool_add_chunk (@: arena c.LmxArena; @: pool c.LmxPool; size_t: want) in
     if: capacity > ((cast: (size_t) -1) / pool\stride)
         return: 1
     bytes: capacity * pool\stride
-    if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(pool\type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+    if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell((cast: (int) pool\type)) != 0
         if: capacity > (((cast: (size_t) -1) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
             return: 1
         context_bytes: capacity * c.sizeof(c.LmxWalkValue)
@@ -438,7 +438,7 @@ fn: lmx_pool_make_profiled (@: arena c.LmxArena; size_t: bytes; size_t: stride; 
     if: bytes % stride != 0U
         return: 0
     count: bytes / stride
-    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell(type) != 0
         if: count > (((cast: (size_t) -1) - c.sizeof(c.LmxPool) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
             return: 0
         context_bytes: count * c.sizeof(c.LmxWalkValue)

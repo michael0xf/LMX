@@ -4649,10 +4649,13 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
                 # assignment to a typed reference refuses the pair.  An opaque `@: void` and a graph reference pass.
                 if: ast = 2
                     # A known non-reference value is not unknown Structure
-                    # evidence. The same typed rule covers a root,group and
-                    # call result;no Frame-only or atom-only classifier.
-                    if: vty >= 0 && c.lm_compiler_colon_is_graph_ty(vty) = 0 && vty != 16
+                    # evidence. An unresolved one-level reference still goes
+                    # to the ordinary receiving operation, as at return.
+                    if: vty >= 0 && c.lm_compiler_colon_is_graph_ty(vty) = 0 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(vty)) != 1
                         return: (cast: (int) (c.lm_compiler_error(path, source_node, "implements is false in function argument")))
+                    ---
+                    if: check_unevaluated_cell[0] = 0 && c.lm_compiler_admit_site(mi) != 0
+                        return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
                     ---
                 ---
             ---
@@ -6217,7 +6220,8 @@ fn: lm_compiler_emit_machine_module (const: (@: out_path char)) int
     if: header_path_cell[0] != 0
         if: c.fclose(header) != 0
             bad: 1
-        if: bad = 0 && (c.lm_compiler_emit_machine_mark(body) != 0 || c.fprintf(body, "predef: \"%s\"\n", c.lm_compiler_path_file(header_path_cell[0])) < 0 || c.lm_compiler_emit_machine_own_predefs(body) != 0 || c.fputs("\n", body) < 0)
+        # Keep the existing OS target guard in the body after its predefs.
+        if: bad = 0 && (c.lm_compiler_emit_machine_mark(body) != 0 || c.fprintf(body, "predef: \"%s\"\n", c.lm_compiler_path_file(header_path_cell[0])) < 0 || c.lm_compiler_emit_machine_own_predefs(body) != 0 || (c.lm_compiler_program_has_os() != 0 && c.lm_compiler_emit_os_target_guard(body) != 0) || c.fputs("\n", body) < 0)
             bad: 1
         i: 0
         while: bad = 0 && i < m_n_cell[0]
@@ -6334,9 +6338,20 @@ end: lm_compiler_rw_signature_witness
 # Original: l2src/l2trans.lm1:23697
 fn: lm_compiler_rw_signature_input (int: parent; int: slot; int: mi; int: input) int
     @: rw_machine_cell int (cast: (@: int) (@ c.l2_rw_machine))
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    c.L2FrontendScratchChar128: place_storage
+    @: place char (cast: (@: char) place_storage\buffer)
     int: entry
     if: c.lm_compiler_rw_plain(parent, 2, @ entry) != 0 || c.lm_compiler_rw_put(parent, slot, entry) != 0
         return: (cast: (int) (1))
+    # This is the Consumer's actual receiving formal place. Preserve its
+    # declared name here, including ordinary dynamic inputs; admission never
+    # parses inert SOURCE to recover it. The witness itself is not its owner.
+    if: rw_emit_cell[0] != 0
+        if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", parent, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_source_name(place, (cast: (const: @: c.LmP0Text) (c.lm_compiler_input_name(mi, input))), "        ", "return: 1", 0) != 0
+            return: (cast: (int) (1))
+        ---
+    ---
     if: c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(mi, input)) != 0 && c.lm_compiler_input_is_descriptor(mi, input) = 0
         rw_machine_cell[0]: 1
         return: (cast: (int) (0))
@@ -6486,26 +6501,28 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         if: slot < 0
             j: j + 1
             continue
-        if: c.lm_compiler_rw_plain(inputs, 2, @ entry) != 0 || c.lm_compiler_rw_put(inputs, slot, entry) != 0
+        # The ordinary input entry retains SOURCE/witness, its current
+        # default value (unavailable until produced), and its own receiving
+        # record. Keep the ACTUAL construction entry before T7 context resets;
+        # its produced physical slot need not equal the original formal j.
+        if: c.lm_compiler_rw_plain(inputs, 4, @ entry) != 0 || c.lm_compiler_rw_put(inputs, slot, entry) != 0
+            return: (cast: (int) (1))
+        if: c.lm_compiler_expr_site_note_role((cast: (const: @: c.LmP0Node) c.lm_compiler_formal_decl_at(mi, j)), j, 5, mi, 0, @ entry) != 0
             return: (cast: (int) (1))
         ty: c.lm_compiler_own_ty_of_param(c.lm_compiler_ft(mi, j))
         descriptor: c.lm_compiler_input_is_descriptor(mi, j)
-        if: projected != 0
-            ty: c.lm_compiler_own_ty_of_param(0)
-            descriptor: 0
-        else:
-            if: c.lm_compiler_rw_declared_source(entry, mi, j) != 0
-                return: (cast: (int) (1))
-            ---
-        ---
-        if: descriptor != 0 || c.lm_compiler_foreign_value_ft(c.lm_compiler_ft(mi, j)) = 0 || projected != 0
+        # Header matching retained this unbound declaration's actual name
+        # and type. Projection changes its physical slot, not its interface.
+        if: c.lm_compiler_rw_declared_source(entry, mi, j) != 0
+            return: (cast: (int) (1))
+        if: descriptor != 0 || c.lm_compiler_foreign_value_ft(c.lm_compiler_ft(mi, j)) = 0
             if: lm_compiler_rw_witness(entry, 1, ty, descriptor) != 0
                 return: (cast: (int) (1))
             ---
         else:
             rw_machine_cell[0]: 1
         ---
-        if: projected = 0 && rw_emit_cell[0] != 0
+        if: rw_emit_cell[0] != 0
             if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_source_name(place, c.lm_compiler_fn(mi, j), "        ", "return: 1", 0) != 0
                 return: (cast: (int) (1))
             ---
@@ -6518,7 +6535,7 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         ty: c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, j))
         if: ty < 0 || lm_compiler_rw_signature_witness(inputs, slot, ty, 0) != 0
             return: (cast: (int) (1))
-        if: projected = 0 && rw_emit_cell[0] != 0
+        if: rw_emit_cell[0] != 0
             if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_source_name(place, c.lm_compiler_dn(mi, j), "        ", "return: 1", 0) != 0
                 return: (cast: (int) (1))
             ---
@@ -6532,14 +6549,8 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
             return: (cast: (int) (1))
         ty: c.lm_compiler_ret_cell_ty(mi)
         descriptor: (cast: (int) (c.lm_compiler_input_model(mi, -1) >= 0 || c.lm_compiler_sig_ret(mi) = 16))
-        if: projected != 0
-            ty: c.lm_compiler_own_ty_of_param(0)
-            descriptor: 0
-        else:
-            if: c.lm_compiler_rw_declared_source(entry, mi, -1) != 0
-                return: (cast: (int) (1))
-            ---
-        ---
+        if: c.lm_compiler_rw_declared_source(entry, mi, -1) != 0
+            return: (cast: (int) (1))
         if: (descriptor != 0 || ty >= 0) && lm_compiler_rw_witness(entry, 1, ty, descriptor) != 0
             return: (cast: (int) (1))
         ---
@@ -6630,7 +6641,13 @@ fn: lm_compiler_rw_graph_path_full (const: (@: prepared c.L2Path); int: parent; 
                 return: (cast: (int) (1))
             ---
         else:
-            if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", 3, out) != 0 || c.lm_compiler_rw_frame((cast: (int) (\out)), "LMX_WALK_OP_SELF", 1, @ holder) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 1, holder) != 0
+            # SELF is the selected data. Its Source edge belongs to the
+            # executing code, just as native call_index(data,code,edge).
+            # NODE(0) retains that explicit code without a name lookup or
+            # assuming that data's self layout is the code's layout.
+            if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", 5, out) != 0 || c.lm_compiler_rw_frame((cast: (int) (\out)), "LMX_WALK_OP_SELF", 1, @ holder) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 1, holder) != 0
+                return: (cast: (int) (1))
+            if: c.lm_compiler_rw_code_root((cast: (int) (\out)), @ holder) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 3, holder) != 0
                 return: (cast: (int) (1))
             ---
         ---
@@ -7100,8 +7117,18 @@ fn: lm_compiler_rw_path_value_full (@: path int; const: (@: prepared c.L2Path); 
             # execution map (a merge result executing the selected body) -- OF_EDGE over SELF, as native self + lmx_implements_code_index
             place_width: 3 + store + 2 * (cast: (int) (cell_ft >= 0))
             witness_slot: 4 + store
+            if: store = 0
+                place_width: 5
             if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_OF_EDGE", place_width, @ raw) != 0 || c.lm_compiler_rw_frame(raw, "LMX_WALK_OP_SELF", 1, @ base) != 0 || c.lm_compiler_rw_put(raw, 1, base) != 0
                 return: (cast: (int) (1))
+            if: store = 0
+                # This own-field place uses the same data/code relation as
+                # a source-container hop. Its declaration is in code;
+                # SELF's own Source order need not match that declaration.
+                if: c.lm_compiler_rw_code_root(raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 3, base) != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
             ---
         else:
             place_width: 3 + store + 2 * (cast: (int) (cell_ft >= 0))
@@ -7672,7 +7699,7 @@ fn: lm_compiler_rw_admit_project_at (int: parent; int: req; @: source c.L2Refere
     # The executable operation carries the receiving record, the optional
     # payload extraction flag, the single candidate and the selected model.
     # No backend selects source/default/identity maps from this operation.
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_ADMIT_AS", 5, out) != 0 || c.lm_compiler_rw_receiving_record((cast: (int) (\out)), req, source, full_receiver, uses_own, tmi, tk, @ record) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 1, record) != 0
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_ADMIT_AS", 5, out) != 0 || c.lm_compiler_rw_receiving_record((cast: (int) (\out)), (cast: (int) (\out)), req, source, full_receiver, uses_own, tmi, tk, @ record) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 1, record) != 0
         return: (cast: (int) (1))
     # The required instance uses the common declared-model projection.
     if: declared_requirement != 0
@@ -8864,6 +8891,7 @@ end: lm_compiler_rw_call_values
 
 # Original: l2src/l2trans.lm1:28375
 fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given c.LmP0Text; int: idx; int: selected_formal; @: arguments c.L2ApplicationActuals; int: parent; @: out int) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: rw_conv_cell int (cast: (@: int) (@ c.l2_rw_conv))
     @: rw_conv_guarded_cell int (cast: (@: int) (@ c.l2_rw_conv_guarded))
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
@@ -8973,6 +9001,8 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     n: arguments\count
     if: n != m_arity_cell[0][idx]
         return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "this call's inputs")))
+    if: arguments\written_count < 0 || arguments\written_count > n
+        return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: an actual call has no valid written-operand boundary")))
     # K04: the hidden inputs of a call through a callable formal are those of the methods that reach the
     # formal (l2_cfl_classes), as the native call forms them.  Where more than one formation reaches it the
     # native call selects the class by the exact occurrence (l2_emit_call_classes); the walk has no such
@@ -8990,7 +9020,7 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
         if: sneed > 1
             rw_machine_cell[0]: 1
     ---
-    # [exec, data, selected-value, contract, reserved, args...]. Every call
+    # [exec, data, selected-value, contract, written-count, args...]. Every call
     # evaluates its selected callable value at slot2. The signature is only
     # the receiving contract, never a saved substitute callee.
     # rtype is the callee's result cell in its `return` part (l2_emit_parts), by reference: the walk
@@ -9000,6 +9030,11 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     # edge's call is marked CONVERSION: whatever its receiver throws is this caller's
     # implicit `convert`, as native edge 1 makes it (l2_emit_call).
     if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_EXEC", arg0 + n + dynn, out) != 0
+        return: (cast: (int) (1))
+    # The existing application producer distinguishes written operands from
+    # normalized/synthesized transport inputs. Only that actual prefix is
+    # subject to the source positional-before-NAMED order rule.
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 4U, %uU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (unsigned) arguments\written_count)) < 0
         return: (cast: (int) (1))
     if: conv != 0 && c.lm_compiler_rw_source_facet((cast: (int) (\out)), "LMX_WALK_SOURCE_CONVERSION") != 0
         return: (cast: (int) (1))
@@ -9048,8 +9083,13 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
         a: value\first
         span: value\count
         site: \out
-        if: actual\wrapper != 0 && c.lm_compiler_rw_named((cast: (int) (\out)), c.lm_compiler_fn(idx, k), k, @ site) != 0
-            return: (cast: (int) (1))
+        if: actual\wrapper != 0
+            # The prepared wrapper owns the written name. Keep that source
+            # identity instead of substituting the old descriptor's formal.
+            if: c.lm_compiler_rw_named((cast: (int) (\out)), (cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head), k, @ site) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
         if: c.lm_compiler_cf_get(idx, k) >= 0
             # The caller's resolved occurrence, not the descriptor of a
             # same-named unit method or the formal's signature anchor.
@@ -9116,7 +9156,7 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
                 else:
                     if: c.lm_compiler_rw_num_ty(c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, k))) != 0
                         arg: -1
-                        if: lm_compiler_rw_numeric_receive_span(value, (cast: (int) (c.lm_compiler_input_ft(idx, k))), site, @ arg) != 0
+                        if: lm_compiler_rw_numeric_argument_span(value, (cast: (int) (c.lm_compiler_input_ft(idx, k))), site, @ arg) != 0
                             return: (cast: (int) (1))
                         ---
                     else:
@@ -9882,11 +9922,25 @@ fn: lm_compiler_rw_address (const: (@: address c.L2Address); int: parent; @: out
     @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: ml_n_cell int (cast: (@: int) (@ c.l2_ml_n))
+    @@: ml_rw_cell int (cast: (@@: int) (@ c.l2_ml_rw))
     int: value
     int: holder parent
     int: slot
     int: status
     c.LmP0Text: operator
+    if: address\kind = 4
+        # Native already selected this opaque C local. Borrow its retained
+        # declaration leaf by index, just as an ordinary machine-local read.
+        # The existing machine operator retains native-only capability.
+        if: address\index < 0 || address\index >= ml_n_cell[0] || ml_rw_cell[0] = 0 || ml_rw_cell[0][address\index] < 0
+            return: (cast: (int) (c.lm_compiler_rw_refuse(0, "an address without a retained declared place")))
+        value: ml_rw_cell[0][address\index]
+        operator\data: "@"
+        operator\length: 1U
+        if: c.lm_compiler_rw_machine_operator(@ operator, 1, parent, out, @ holder) != 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (c.lm_compiler_rw_put(holder, 0, value)))
     if: address\kind = 6 && address\descriptor != 0
         # Opaque C storage has no invented graph-cell witness. Retain the
         # written address operator and the SAME selected path as native;
@@ -10292,6 +10346,24 @@ fn: lm_compiler_rw_numeric_receive_span (@: value c.L2ValueSpan; int: target; in
         return: (cast: (int) (status))
     return: (cast: (int) (lm_compiler_rw_numeric_receive(@ plan, parent, out)))
 end: lm_compiler_rw_numeric_receive_span
+
+# Retain the boundary inserted for THIS actual's implicit receiving edge.
+# An expression with no inserted converter keeps its own root/facets: it may
+# itself contain explicit calls, casts or ordinary receiving operations.
+# The base operation is still the same normal EXEC, with its actual source,
+# selector/data and converter. No new parser or execution opcode is involved.
+fn: lm_compiler_rw_numeric_argument_span (@: value c.L2ValueSpan; int: target; int: parent; @: out int) int
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    c.L2NumericReceive: plan
+    int: status c.lm_compiler_numeric_receive_prepare(value, target, rw_mi_cell[0], src_cell[0], @ plan)
+    if: status != 0
+        return: (cast: (int) (status))
+    status: lm_compiler_rw_numeric_receive(@ plan, parent, out)
+    if: status = 0 && plan\converter >= 0
+        status: c.lm_compiler_rw_source_facet((cast: (int) (\out)), "LMX_WALK_SOURCE_RECEIVING")
+    return: (cast: (int) (status))
+end: lm_compiler_rw_numeric_argument_span
 
 # Original: l2src/l2trans.lm1:29776
 fn: lm_compiler_rw_prepared_texpr (@: tok c.L2ValueSpan; int: m; @: field c.LmP0Field; int: n; int: want; int: parent; @: out int) int
@@ -11657,16 +11729,16 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
             return: (cast: (int) (0))
         # A `return` with no value is the step above, for both spellings.
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this return")))
-    if: c.lm_compiler_rw_external_head(h) != 0
-        if: lm_compiler_rw_machine_application(stmt, into, @ port_local_node) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
-            return: (cast: (int) (1))
-        \made: 1
-        return: (cast: (int) (0))
     # An imported C function-pointer or by-value record local is declared in
     # machine activation storage; the same classification as the native
     # emitter's, and its source is retained here.
     if: (c.lm_compiler_fnptr_local(stmt, @ machine_name) = 0 || c.lm_compiler_struct_local(stmt, @ machine_name) = 0) && c.lm_compiler_ml_find(machine_name) >= 0
         if: lm_compiler_rw_machine_declaration(stmt, machine_name, into, @ port_local_node) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+            return: (cast: (int) (1))
+        \made: 1
+        return: (cast: (int) (0))
+    if: c.lm_compiler_rw_external_head(h) != 0
+        if: lm_compiler_rw_machine_application(stmt, into, @ port_local_node) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         return: (cast: (int) (0))
@@ -12430,7 +12502,7 @@ fn: lm_compiler_rw_reception (int: into; int: k; @: out int) int
         return: (cast: (int) (1))
     if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, k) < 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_rw_frame((cast: (int) (\out)), "LMX_WALK_OP_ADMIT_AS", 5, @ admit) != 0 || c.lm_compiler_rw_receiving_record(admit, c.lm_compiler_input_model(rw_mi_cell[0], k), @ source, 0, 0 - 1, rw_mi_cell[0], k, @ record) != 0 || c.lm_compiler_rw_put(admit, 1, record) != 0
+    if: c.lm_compiler_rw_frame((cast: (int) (\out)), "LMX_WALK_OP_ADMIT_AS", 5, @ admit) != 0 || c.lm_compiler_rw_receiving_record(admit, admit, c.lm_compiler_input_model(rw_mi_cell[0], k), @ source, 0, 0 - 1, rw_mi_cell[0], k, @ record) != 0 || c.lm_compiler_rw_put(admit, 1, record) != 0
         return: (cast: (int) (1))
     if: lm_compiler_rw_arg(admit, k, @ value) != 0 || c.lm_compiler_rw_put(admit, 3, value) != 0 || lm_compiler_rw_ns_model_at(admit, 4, (cast: (int) (c.lm_compiler_input_model(rw_mi_cell[0], k))), rw_mi_cell[0], rw_mi_cell[0], 2) != 0
         return: (cast: (int) (1))
@@ -13537,7 +13609,7 @@ fn: lm_compiler_t7_emit_frames (int: phase) int
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], t7_at_cell[0][s], "internal: a method's steps changed between the passes")))
         if: lm_compiler_source_definition_roots(1, s, phase) != 0 || lm_compiler_source_refs_note(1, s, model) != 0 || (phase = 2 && (lm_compiler_source_refs_emit(1, s) != 0 || lm_compiler_source_fields_emit(1, s) != 0 || c.lm_compiler_source_layouts_emit(1, s) != 0 || c.lm_compiler_source_seeds_emit(1, s) != 0)) || c.lm_compiler_source_fills_verify() != 0
             return: (cast: (int) (1))
-        if: phase = 2 && (c.lm_compiler_consumer_calls_emit(expr_sites_cell[0], 1, s, ruse_e_edge_cell[0], ruse_e_level_cell[0], source_containers_cell[0], out_cell[0]) != 0 || c.fprintf(out_cell[0], "        return: 0\nend: l2_view_build_%d\n\n", s) < 0)
+        if: phase = 2 && (c.lm_compiler_formal_receiving_emit(expr_sites_cell[0], 1, s, source_containers_cell[0], out_cell[0]) != 0 || c.lm_compiler_consumer_calls_emit(expr_sites_cell[0], 1, s, ruse_e_edge_cell[0], ruse_e_level_cell[0], source_containers_cell[0], out_cell[0]) != 0 || c.fprintf(out_cell[0], "        return: 0\nend: l2_view_build_%d\n\n", s) < 0)
             return: (cast: (int) (1))
         s: s + 1
     ---
@@ -13820,12 +13892,18 @@ fn: lm_compiler_rw_ns_hidden (const: (@: source_node c.LmP0Node); int: ni; int: 
     @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     int: d 0
     int: arg
     int: contract
     int: pr ns_proc_cell[0][ni]
     int: holder
     if: lm_compiler_rw_method_contract(frame, pr, @ contract) != 0 || c.lm_compiler_rw_put(frame, 3, contract) != 0
+        return: (cast: (int) (1))
+    # This route has no written actuals. Every positive transport slot below
+    # is a synthesized free input; it must not become a positional prefix.
+    if: rw_emit_cell[0] != 0 && m_dyn_cell[0][pr] > 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 4U, 0U) != c.LMX_WALK_OK\n            return: 1\n", frame) < 0
         return: (cast: (int) (1))
     while: d < m_dyn_cell[0][pr]
         # A free input is admitted where it is formed, as a walked call admits one (l2_rw_call_at), to its requirement in
@@ -14336,7 +14414,7 @@ fn: lm_compiler_merge_body_emit_builders () int
             if: lm_compiler_source_cells_emit(2, res, "target") != 0 || lm_compiler_rw_method_emit_one(mi, 2, "target") != 0 || lm_compiler_source_definition_roots(2, res, 2) != 0 || lm_compiler_source_refs_emit(2, res) != 0 || lm_compiler_source_fields_emit(2, res) != 0 || c.lm_compiler_source_layouts_emit(2, res) != 0 || c.lm_compiler_source_seeds_emit(2, res) != 0 || c.lm_compiler_source_fills_verify() != 0
                 return: (cast: (int) (1))
             ---
-            if: c.lm_compiler_consumer_calls_emit(expr_sites_cell[0], 2, res, ruse_e_edge_cell[0], ruse_e_level_cell[0], source_containers_cell[0], out_cell[0]) != 0 || c.fputs("        l2_entry_leaf: target\n", out_cell[0]) < 0 || lm_compiler_emit_native_word(mi) != 0
+            if: c.lm_compiler_formal_receiving_emit(expr_sites_cell[0], 2, res, source_containers_cell[0], out_cell[0]) != 0 || c.lm_compiler_consumer_calls_emit(expr_sites_cell[0], 2, res, ruse_e_edge_cell[0], ruse_e_level_cell[0], source_containers_cell[0], out_cell[0]) != 0 || c.fputs("        l2_entry_leaf: target\n", out_cell[0]) < 0 || lm_compiler_emit_native_word(mi) != 0
                 return: (cast: (int) (1))
             ---
             if: c.fprintf(out_cell[0], "        return: 0\nend: l2_merge_body_build_%d\n\n", res) < 0
@@ -16263,8 +16341,9 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             return: (cast: (int) (1))
         i: i + 1
     ---
+    # Common Value operations are declared by their generated module header.
     # The walked root (l2_rw_*): the program's graph builder makes walker nodes.
-    if: c.fprintf(out_cell[0], "predef: \"%slmx_walk.h.lm1\" \"%slmx_primitive.h.lm1\" \"%slmx_child.h.lm1\" \"%slmx_list_owned.h.lm1\"\n", rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0]) < 0
+    if: c.fprintf(out_cell[0], "predef: \"%slmx_walk.h.lm1\" \"%slmx_walk_values.h.lm1\" \"%slmx_primitive.h.lm1\" \"%slmx_child.h.lm1\" \"%slmx_list_owned.h.lm1\"\n", rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     # The C headers of the program's OWN mechanics, which the translator emits (GATE §7a, -197 (b)):
@@ -16382,12 +16461,12 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: k > 0 && c.fputs("\nprototype:\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
+    if: k > 0 && c.lm_compiler_emit_publish_helpers(1) != 0
+        c.fclose(out_cell[0])
+        return: 1
     i: 0
     while: i < m_n_cell[0]
-        if: m_ret_cell[0][i] = 8 && m_throws_cell[0][i] = 0 && c.fputs("    sub: ", out_cell[0]) < 0
-            c.fclose(out_cell[0])
-            return: (cast: (int) (1))
-        if: (m_ret_cell[0][i] != 8 || m_throws_cell[0][i] != 0) && c.fputs("    fn: ", out_cell[0]) < 0
+        if: c.fputs("    fn: ", out_cell[0]) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.lm_compiler_write_sym(out_cell[0], i) != 0
@@ -16444,6 +16523,9 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: k > 0 && c.fputs("end: prototype\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
+    if: c.lm_compiler_emit_publish_helpers(2) != 0
+        c.fclose(out_cell[0])
+        return: 1
     if: c.fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# A method's own field used by a bare name has a working value l2_qN, loaded at entry from its cell in the selected occurrence `self` (slot handle l2_qN_from); a write changes l2_qN and sets l2_qN_dirty; a call, a c.* call, a copying receiver, sendMessage and every exit first publish the marked fields in field order and unmark them; a clean one is not written back and nothing is reloaded after a call (book section 12, 14; Lingvamyxa spec 21.5, 21.6). An explicit path and @x of an own field are its cell. Source-visible `node` is the fixed lexical space above the method for the whole activation; explicit node\\name reads and writes that graph. Every mutable numeric field, including char, has a distinct owned cell of its declared C type (no interned shared size_t, no int narrowing).\n# Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 value; a callable is invoked only by an explicit call Frame. Body reference declarations designate real typed pointer-value cells. Pointer results pass their stored reference; sub: is void. Native @ of a Structure or nonprimitive formal forwards its descriptor; @ of an explicit pointer binding addresses its typed pointer-value cell. Primitive formals address their local parameter cells, not graph fields. Nonprimitive signature descriptions never address the hidden machine parameter transporting the descriptor. A declaration of a formal's name without an initializer takes the argument into its cell. Executable if/else/while/for bodies are graph Structures; their own fields are cells of their exact host. &&/|| use guarded evaluation through the common expression path; skipped RHS neither prepares actuals nor reads fields or Array elements.\n\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
@@ -16456,10 +16538,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
                 return: (cast: (int) (1))
             k: k + 1
         ---
-        if: m_ret_cell[0][i] = 8 && m_throws_cell[0][i] = 0 && c.fputs("sub: ", out_cell[0]) < 0
-            c.fclose(out_cell[0])
-            return: (cast: (int) (1))
-        if: (m_ret_cell[0][i] != 8 || m_throws_cell[0][i] != 0) && c.fputs("fn: ", out_cell[0]) < 0
+        if: c.fputs("fn: ", out_cell[0]) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.lm_compiler_write_sym(out_cell[0], i) != 0
@@ -16531,6 +16610,11 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
                 ---
             k: k + 1
         ---
+        # Semantics §9: the hidden inputs this activation consumes are held from
+        # its entry, before the own entry loads below and before the body.
+        if: c.lm_compiler_emit_native_input_entry(i, "    ") != 0
+            c.fclose(out_cell[0])
+            return: (cast: (int) (1))
         # §7b: the working values, loaded from their cells at entry (Lingvamyxa spec 21.5), clean.
         if: c.lm_compiler_emit_formal_contexts(i) != 0
             c.fclose(out_cell[0])
@@ -16582,7 +16666,10 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         if: c.lm_compiler_emit_publish("    ") != 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
-        if: m_ret_cell[0][i] = 8 && c.lm_compiler_emit_empty_return(i, "    ") != 0
+        # Falling off an ordinary graph body returns status0 without writing a
+        # normal Value, including foreign by-value results. Machine bodies use
+        # their separate signature/emission path.
+        if: c.lm_compiler_emit_empty_return(i, "    ") != 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.fputs("end: ", out_cell[0]) < 0
@@ -17042,7 +17129,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         i: i + 1
-    if: c.lm_compiler_consumer_calls_emit(expr_sites_cell[0], 0, -1, ruse_e_edge_cell[0], ruse_e_level_cell[0], source_containers_cell[0], out_cell[0]) != 0 || c.lm_compiler_source_layouts_emit(0, -1) != 0 || lm_compiler_emit_fallback_seeds() != 0 || c.lm_compiler_source_seeds_emit(0, -1) != 0
+    if: c.lm_compiler_formal_receiving_emit(expr_sites_cell[0], 0, -1, source_containers_cell[0], out_cell[0]) != 0 || c.lm_compiler_consumer_calls_emit(expr_sites_cell[0], 0, -1, ruse_e_edge_cell[0], ruse_e_level_cell[0], source_containers_cell[0], out_cell[0]) != 0 || c.lm_compiler_source_layouts_emit(0, -1) != 0 || lm_compiler_emit_fallback_seeds() != 0 || c.lm_compiler_source_seeds_emit(0, -1) != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: lm_compiler_emit_shell_anchor() != 0
@@ -17150,7 +17237,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     # E runs once for the instance as R0's turn runs a program's entry (lmx_thread.lm1: the unit is the owner and the code,
     # through its native word): the declarations initialize this instance's own fields. Nothing else of the unit runs, and
     # no Message, Thread or module cell learns of the unit: the owner holds it through the export's result.
-    if: library_mode_cell[0] != 0 && c.fputs("        l2_entry_unit\\parent: 0\n        l2_construct_status: lmx_call_prim(l2_program_arena, l2_entry_unit, l2_entry_unit, 0, 0U, 0, @ l2_construct_out)\n        if: l2_construct_status != 0\n            \\out: l2_construct_out\n            return: l2_construct_status\n        if: lmx_msg_poll_escape() != 0\n            return: 0\n        \\out: (cast: (@: void) l2_entry_unit)\n", out_cell[0]) < 0
+    if: library_mode_cell[0] != 0 && c.fputs("        l2_entry_unit\\parent: 0\n        l2_construct_status: lmx_call_prim(l2_program_arena, l2_entry_unit, l2_entry_unit, 0, 0U, 0, @ l2_construct_out)\n        if: l2_construct_status != 0\n            \\out: l2_construct_out\n            return: l2_construct_status\n        if: lmx_msg_poll_escape() != 0\n            return: 0\n        \\out: (cast: (@: void) l2_entry_unit)\n        if: lmx_result_context != 0\n            lmx_walk_value_ref(lmx_result_context, c.LMX_TYPE_LMX, (cast: (@: void) l2_entry_unit))\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: m_arity_cell[0][0] != 0 && c.fprintf(out_cell[0], "        if: %zuU = 0U\n            return: 1\n", m_f0_cell[0][0]\length) < 0

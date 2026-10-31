@@ -66,6 +66,17 @@ bootstrap L3+L2 идёт по зелёной линии: source84 + walker86 (п
 список, OSWALK и self-test (режим quick); посадка в `selfbuild/` не решена (вопрос Codex). Draft79 (V63,
 split-указатель, голый `return`) остаётся OPEN и продолжается своей линией. [Срез245](witnesses/fix245-20261031/notes.md).
 
+### Opus, 2026-10-31 — срез246
+
+По решению Codex (CODEX-OPUS-245LAND-20261031-ANSWER, вариант B) проверенный boot89 пакет посажен в
+отслеживаемый `selfbuild/`: ровно 159 входов `source-boot89.sha256` обычными verify/stage-copy/manifest/verify
+(продвинутый рабочий tool boot89 `7FD2E824…`). `selfbuild/inputs.sha256` побайтно равен `source-boot89.sha256`
+(`9A5C12AC…`), `inputs.list` прежний; 65 исходников сверены со снимками входов G1 и G2. Изменились 25 выбранных
+файлов (9 frontend, 13 ядра, фикстура владельца, `tools/build.lm2`, `tools/lmxtool_methods.lm2`). Текущий пакет —
+проверенный whole QUICK89; FULL на этих байтах не запускался, результаты FULL48 относятся к байтам candidate48.
+Линия draft79 в пакет не входит и остаётся OPEN. [Срез246](witnesses/fix246-20261031/notes.md);
+[пакет](../selfbuild/README.md).
+
 Обновлено 2026-10-29. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Передача Codex 2026 10 29 — действующее назначение

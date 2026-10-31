@@ -130,9 +130,9 @@ fn: lmx_arena_open_simple (@: arena c.LmxArena) int
 end: lmx_arena_open_simple
 
 # The arena's ordinary array of this kind and type, or null when it has none yet.
-# Pointer-domain cells have physical access contracts: this lookup selects only
-# the canonical void * representation, never a typed T * pool with the same
-# unit-local numeric type.
+# Reference cells have physical access contracts: this lookup selects the
+# default representation of their type, never another typed T * pool with the
+# same unit-local numeric type.
 fn: lmx_arena_find (@: arena c.LmxArena; int: kind; int: type) @: c.LmxPool
     return: lmx_arena_find_profiled(arena, kind, type, 0)
 end: lmx_arena_find
@@ -143,8 +143,19 @@ fn: lmx_arena_find_profiled (@: arena c.LmxArena; int: kind; int: type; @: pool_
         return: 0
     pool: (cast: (@: LmxPool) arena\arrays)
     while: pool != 0
-        if: pool\kind = kind && pool\type = type && pool\profile = pool_profile && pool\role = c.LMX_POOL_ROLE_PLAIN && (kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || (pool\stride = sizeof(@: void) && pool\pointer_read = c.lmx_arena_pointer_void_read && pool\pointer_write = c.lmx_arena_pointer_void_write))
-            return: pool
+        if: pool\kind = kind && pool\type = type && pool\profile = pool_profile && pool\role = c.LMX_POOL_ROLE_PLAIN
+            if: kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_reference_cell(type) = 0
+                return: pool
+            if: c.lmx_type_base(type) = c.LMX_TYPE_CHAR_PTR
+                if: pool\stride = sizeof(@: char) && pool\pointer_read = c.lmx_arena_pointer_char_read && pool\pointer_write = c.lmx_arena_pointer_char_write
+                    return: pool
+                ---
+            else:
+                if: pool\stride = sizeof(@: void) && pool\pointer_read = c.lmx_arena_pointer_void_read && pool\pointer_write = c.lmx_arena_pointer_void_write
+                    return: pool
+                ---
+            ---
+        ---
         pool: (cast: (@: LmxPool) pool\next)
     ---
     return: 0
@@ -327,11 +338,15 @@ fn: lmx_arena_take_n_profiled (@: arena c.LmxArena; size_t: stride; int: kind; i
         return: 0
     if: count > ((cast: (size_t) -1) / stride)
         return: 0
-    # A generic request for a pointer-domain cell is physically a void * cell.
-    # Typed T * cells have their own access contract and may share only the
-    # numeric type, not the C representation. Both routes use the same
-    # full physical pool selection below.
-    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) >= c.LMX_TYPE_POINTER_BASE && c.lmx_type_base(type) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+    # The physical C object follows the default reference ABI. CHAR_PTR is
+    # a char * object; other graph reference cells are void * objects.
+    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell(type) != 0
+        if: c.lmx_type_base(type) = c.LMX_TYPE_CHAR_PTR
+            if: stride != sizeof(@: char)
+                return: 0
+            ---
+            return: lmx_arena_pointer_cells_profiled(arena, type, pool_profile, stride, c.lmx_arena_pointer_char_read, c.lmx_arena_pointer_char_write, count)
+        ---
         if: stride != sizeof(@: void)
             return: 0
         ---
@@ -432,11 +447,28 @@ fn: lmx_arena_pointer_void_write (@: cell void; @: value void) int
     return: 0
 end: lmx_arena_pointer_void_write
 
+fn: lmx_arena_pointer_char_read (@: cell void) @: void
+    @@: p char 0
+    if: cell = 0
+        return: 0
+    p: (cast: (@@: char) cell)
+    return: (cast: (@: void) p[0])
+end: lmx_arena_pointer_char_read
+
+fn: lmx_arena_pointer_char_write (@: cell void; @: value void) int
+    @@: p char 0
+    if: cell = 0
+        return: 1
+    p: (cast: (@@: char) cell)
+    p[0]: (cast: (@: char) value)
+    return: 0
+end: lmx_arena_pointer_char_write
+
 fn: lmx_arena_pointer_cells_profiled (@: arena c.LmxArena; int: type; @: pool_profile c.Lmx; size_t: stride; c.LmxPointerCellRead: read; c.LmxPointerCellWrite: write; size_t: count) @: void
     @: pool c.LmxPool 0
     @: cell void 0
     size_t: i 0U
-    if: arena = 0 || arena\source_view != 0U || c.lmx_type_base(type) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(type) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || stride = 0U || read = 0 || write = 0 || count = 0U || count > ((cast: (size_t) -1) / stride)
+    if: arena = 0 || arena\source_view != 0U || c.lmx_type_reference_cell(type) = 0 || stride = 0U || read = 0 || write = 0 || count = 0U || count > ((cast: (size_t) -1) / stride)
         return: 0
     if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@: void) pool_profile)) != c.LMX_KIND_STRUCT
         return: 0

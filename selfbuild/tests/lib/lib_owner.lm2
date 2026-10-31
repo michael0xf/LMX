@@ -3,6 +3,8 @@
 # lib_m_new`), each admitted by its model, then called interleaved through the instances' own callables. Each
 # instance keeps its own count: read after the calls, and written once through A1's admitted map, which A1's own
 # method then reads and A2's does not.
+# The same small witness also reads all three states after A2 changes, and
+# compares the addresses obtained through each instance's installed field map.
 # Library C's method takes an input the owner's model of it does not describe. try_c's written call
 # `c1\lib_c_next()` cannot be formed for that method, so the admission of C's instance to LibC is refused where
 # try_c binds it: try_c's implicit `implements`, which its handler takes (30).
@@ -19,7 +21,8 @@
 # Success is 7; 11..16 name the call that saw another value, 17 a count, 18 two instances that are one, 19 the write
 # A1's method did not see, 20 a write that reached A2, 21 a C instance that was not refused, 22 a Point or Leaf M's
 # method did not read or write by its fields' names, 23 a Thin that M's formal received, 24 a Far that M's formal
-# received or whose y M's body wrote, 25 a refused binding of M or another callable result.
+# received or whose y M's body wrote, 25 a refused binding of M or another callable result,
+# 26 a shared mutable count place, 27 state changed in another instance after A2's call.
 include: "<stdio.h>"
 LibA:
     int: count 0
@@ -122,6 +125,15 @@ fn: run () int
     @: a1 LibA lib_a_new()
     @: a2 LibA lib_a_new()
     @: b1 LibB lib_b_new()
+    @: pa1 int @ a1\count
+    @: pa2 int @ a2\count
+    @: pb1 int @ b1\count
+    int: same_a pa1 = pa2
+    int: same_ab pa1 = pb1
+    int: same_ba pa2 = pb1
+    c.printf("S81 count places equal A1/A2=%d A1/B1=%d A2/B1=%d\n", same_a, same_ab, same_ba)
+    if: same_a != 0 || same_ab != 0 || same_ba != 0
+        return: 26
     int: v1 a1\lib_a_next()
     int: v2 a2\lib_a_next()
     int: v3 b1\lib_b_next()
@@ -157,6 +169,12 @@ fn: run () int
         return: 19
     if: v8 != 43
         return: 20
+    int: final_a1 a1\count
+    int: final_a2 a2\count
+    int: final_b1 b1\count
+    c.printf("S81 after A2 increment: A1=%d A2=%d B1=%d\n", final_a1, final_a2, final_b1)
+    if: final_a1 != 101 || final_a2 != 43 || final_b1 != 43
+        return: 27
     int: vc try_c()
     c.printf("S81 C refused at its binding: %d\n", vc)
     if: vc != 30

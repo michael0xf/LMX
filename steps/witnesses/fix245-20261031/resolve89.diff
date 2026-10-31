@@ -1,0 +1,19 @@
+--- a/src/l2src/l2_frontend_resolve.lm2
++++ b/src/l2src/l2_frontend_resolve.lm2
+@@ -1374,0 +1375 @@
++    @: selected c.L2Path 0
+@@ -1378 +1379,13 @@
+-        return: (cast: (int) (lm_compiler_value_span_type(tok + lo, mi, exact_type)))
++        a: lm_compiler_value_span_type(tok + lo, mi, exact_type)
++        # An operand whose selected path stands on an opaque C root has that
++        # root's explicit C contract, as the numeric receiver, CHECK and
++        # emission give the same path alone: its member's exact type belongs
++        # to C reception (-12), so the fold below keeps an expression over it
++        # an opaque C one. The prepared verdict is borrowed, as there.
++        if: a = -99 && exact_type != 0 && \exact_type = -1
++            b: lm_compiler_value_span_path(tok + lo, mi, @ selected)
++            if: (b = 0 || b = 2) && selected != 0 && selected\n > 0 && c.lm_compiler_path_root_raw_c(selected, mi) != 0
++                \exact_type: -12
++            ---
++        ---
++        return: (cast: (int) (a))

@@ -4,6 +4,26 @@
 
 ## Текущие и недавно закрытые
 
+### MACHINE-C-MEMBER-ARITHMETIC-UNKNOWN-TYPE — 2026-10-31, Opus (срез245, boot88 G1 runtime, шаг 5), FIXED в build2 green89 resolve `25769A60` (не выпущено)
+
+boot88 (зелёная линия: source84 + walker86, G0 tool84) построил G1 frontend и остановился в G1 runtime на шаге 5:
+`lmx_pool.lm2:150:12: assignment value has unknown type` (`bytes: capacity * pool\stride`). Перепись ядра этим G1
+frontend (census88-kernel) — 6 из 36 модулей, один класс: арифметика над членом указателя на структуру `c.*` в
+machine-методе (lmx_pool :150, lmx_range :620, lmx_implements :2926, lmx_graph_copy_owned :540, lmx_reparent :202,
+lmx_walk_values :715); исходники инструментов переводятся. Причина: own-числовые поля с 80b идут маршрутом числового
+приёма (`lm_compiler_emit_received_span_full` → `lm_compiler_numeric_receive_prepare`; 48/49c — простой eval), а
+свёртка `lm_compiler_value_expr_type` оставляет выражение непрозрачным C (exact -12), только если каждая сторона —
+число или имеет явный непрозрачный контракт; путь на непрозрачном C-корне (`lm_compiler_path_root_raw_c`) получал
+-99 без exact, хотя приёмник (правило одиночного пути в prepare), CHECK и выпуск дают тому же пути непрозрачный
+C-контракт. Исправление green89 (`l2_frontend_resolve.lm2` `4553D128` → `25769A60`, только тело): в базе свёртки
+операнд -99 без exact, чей подготовленный путь (заимствованный вердикт `lm_compiler_value_span_path`, статус 0/2)
+стоит членами на raw-C корне, получает exact -12; одиночные пути не меняются, неизвестные имена языка роли не
+получают, отдельной ветки для machine нет. FE89g (part build только resolve; `.h.lm1` resolve побайтно прежний):
+census89g-kernel — 36/36; 38 выходов 30 прежде проходивших модулей побайтно равны; весь выпуск ядра отличается от
+выпуска 49c только скобками. boot89 (тот же этап + green89): `BOOTSTRAP quick 0 failures` — G1 и G2 построены,
+проверены smoke225 и продвинуты; G1 и G2 — один образ с точностью до метки линковки. В линию draft79 green89 ещё
+не внесён. [Срез245](witnesses/fix245-20261031/notes.md).
+
 ### DRAFT79-OWNER-POINTER-CONTEXT-STACK-POINTEE — 2026-10-31, Opus (срез244, owner73c на FE87 + RT87), OPEN
 
 На когерентной линии87 (draft79 + 82/83/84/86) owner73c во всех четырёх режимах одинаково: S81…V59 как на FE84,

@@ -4,6 +4,36 @@
 
 ## Текущие и недавно закрытые
 
+### WALK-ENTRY-UNHANDED-INPUT-REFUSED — 2026-10-31, Opus (срез243, owner73b forced на FE84 + RT83), FIXED в build2 walker86 (не выпущено)
+
+owner73b forced root0/root1 — `lmx: walk error: INVALID` (exit3) сразу после первой строки S81. Native `run`
+(`l2_m19`) вызывает walked `lib_a_next` библиотеки hidden55 через модель LibA (`fn: lib_a_next () int`):
+`lmx_call_prim_values(…, 0, 0U, …)` → `lmx_walk_call_prim_dispatch`, nargs0. Метод сам потребляет скрытый вход
+`count` (ARG_ENTRY с лексическим запасным источником). gdb (`P/pins/gdb84-owner-forced-04.gdb`): dispatch
+nargs=0 → args_open → snapshot → `lmx_call_note_walk_fail(1)`. `lmx_walk_entry_node` при снимке входа (load0)
+отказывал ARG_ENTRY с `index >= f\nargs` (stage83 `src/l2src/lmx_walk_values.lm2:1817`); ARG-место и ARG-чтение
+отказывают так же. Native-трамплин того же метода принимает nargs в [записанные, транспорт] и дополняет
+`l2_received` отсутствующими входами; вход метода берёт запасной источник (RU §12: потребляющий метод формирует
+значение из тех же источников, включая собственный лексический поиск). Исправление86: `lmx_walk_args_open_values`
+берёт ширину входов активации из собственного args-заголовка выбранного fn (часть0: записанные формалы, затем
+скрытые входы; внутренний `lmx_walk_input_width`); вход, который вызывающий не подал, — нулевой вход фрейма
+(«Zero is an absent input», `lmx_walk.h.lm1`), как поданный отсутствующим. Потребляемый скрытый вход получает
+лексический запасной источник при входе, пересылаемый идёт дальше отсутствующим. Нижнюю границу трамплина (число
+записанных) walker, как и прежде, не проверяет: её обеспечивает связывание вызова. FE84 + RT86w3: owner73c forced
+root0/root1 — 7, вывод побайтно равен native; held78 — 7/2/1 во всех четырёх режимах.
+
+### OWNER73B-V64-STORE-REBINDS — 2026-10-31, Opus (срез243, owner73b native на FE84 + RT83), FIXED фикстурой owner73c (build2)
+
+owner73b native root0/root1 — exit28 (ожидалось7): `V64 used-copy values partial-y=42->42`. Проверка писала
+`lmx_walk_store_int(context_destination, partial_candidate, 2U, 44)` и ждала44 в прежней ячейке `partial_y_cell`.
+`lmx_walk_store_int` берёт новую ячейку и перепривязывает слот (`lmx_graph_ref_store_in`) — так его использует и
+селфтест ядра (`dev/l2src_sandbox/tests/lmx_exec_projection_copy_test.h:63–84`), а запись на месте там —
+`lmx_int_store_known` (:195). Ожидание фикстуры не совпадает с API; в `steps/` правила о V64 нет. owner73c
+(`variants/runtime-callable73c/lib_owner.lm2` `04518DAC…`, строка `pins/owner-values73c-callable-hidden55.tsv`
+`560351C9…`) пишет на месте `lmx_int_store_known(partial_y_cell, 44)`; независимость частичной копии от
+источника, улучшенной и целой копий проверяется по-прежнему. FE84 + RT86w3: `partial-y=42->44`, далее
+V69/V73/S81 — 7 во всех четырёх режимах.
+
 ### NATIVE-DEFAULT-SENTINEL-MEMBER-TARGET — 2026-10-31, Opus (срез242, owner73 на FE81 + RT71), FIXED в build2 Lower82 (не выпущено)
 
 Lower81 `lm_compiler_emit_native_input_default` писал защиту рекурсии скрытого default как
@@ -51,17 +81,18 @@ native-слов, их тела обходятся walker-ом.
 объявление: `src/l2src/lmx_implements.h.lm1:406`, `headers/l2src/lmx_implements.lm1.h:140`. FE83 + RT83: CC
 owner73b native без ошибок (значения строки ещё не получены, см. ниже).
 
-### SUITE-PROGRAM-CC-BOUND — 2026-10-31, Opus (срез242, owner73b на FE82 + RT71), IN WORK срез242 (83)
+### SUITE-PROGRAM-CC-BOUND — 2026-10-31, Opus (срез242, owner73b на FE82 + RT71), FIXED в build2 writer83b (не выпущено; подтверждено в срезе243)
 
 Компиляция программы строки owner73b (`lib_owner` p.c16543281 байт, `-O2 -fstrict-aliasing`) оба раза снята общей
 границей шага900 с: `INFRA step 3 kind 2 exit 900000` (native03:04:55→03:20, forced03:20:15→03:35:15Z). Граница
 `l2_timeout_ms` у `bld_program_k` относится только к шагу L2; CC шёл через `bld_step` (900 с). По решению Codex
 (CODEX-OPUS-83CCTIME-20261031-ANSWER) writer83b ограничивает собственный CC программы существующим
 `bld_step_t(…, 3600000U)`; флаги, строки, L2/L1/link/run границы не меняются. FE83 + RT83 (writer83b): CC owner73b
-native без ошибок, но снят и новой границей (05:47:37→06:47:38Z), `p.o` пуст; пик cc1 private5.1 GB. Открыто до
-результата PUBLISH-CALL-CODE-SIZE.
+native без ошибок, но снят и новой границей (05:47:37→06:47:38Z), `p.o` пуст; пик cc1 private5.1 GB. FE84
+(PUBLISH-CALL-CODE-SIZE) + RT83: CC owner73b native 09:00:21→09:04:58Z, forced 09:05:20→09:10:02Z, 0 ошибок —
+в пределах той же границы.
 
-### PUBLISH-CALL-CODE-SIZE — 2026-10-31, Opus (срез242, измерение owner73b на FE82/FE83), IN WORK (84)
+### PUBLISH-CALL-CODE-SIZE — 2026-10-31, Opus (срез242, измерение owner73b на FE82/FE83), FIXED в build2 Useplan84/Core84 (не выпущено; срез243)
 
 Метод `try_dynamic_m` (`variants/runtime-callable73b/lib_owner.lm2:207-603`, ≈400 строк) даёт native `l2_m15`
 36194 строки L1 и построитель графа `frames15` 29888 строк; во всей программе7061 вызов `l2_m15_publishNN(…)`
@@ -72,7 +103,9 @@ owner60 — 3762794 байт, CC34 с. Вызовы publish —10614945 байт
 адресов активации, заполняемая при объявлении каждого места; helper-ы принимают её, захватывают handle-ы слотов до
 первого publisher и читают каждое место приведением к исходному точному типу адреса; граница передаёт только
 таблицу. Dirty-only публикация, её момент при call/exit, порядок полей и snapshot-семантика не меняются;
-`frames15` этим не уменьшается.
+`frames15` этим не уменьшается. FE84 (Useplan84 `44A96E1D…`, Core84 `60421B9B…`, writer84 `3D4F4E71…`;
+Lower83/Emit83 переиспользованы точно) + RT83: p.lm1 owner73b 16969548 → 6805971 байт, p.c 16543281 → 6371233;
+CC native 277 с, forced 282 с, 0 ошибок; held78 — 7/2/1 во всех четырёх режимах.
 
 ### DOCS-CHECK-PRIVATE-OUT-SILENT — 2026-10-31, Opus (срез242, `docs check` G2 FULL48 `A6D5EC40…`), OPEN
 

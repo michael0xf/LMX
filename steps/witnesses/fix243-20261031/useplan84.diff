@@ -1,0 +1,162 @@
+--- stage83/src/l2src/l2_frontend_useplan.lm2
++++ frontend84/src/l2src/l2_frontend_useplan.lm2
+@@ -489 +489,5 @@
+-fn: lm_compiler_publish_signature (int: mi; int: first; int: stop; int: declaration) int
++# The publication table of an activation holds, per published working place
++# in own-field order, the addresses of its dirty flag, its slot handle and its
++# working value, and of a reference's context. A place's entries follow the
++# same planner (publish_fast) as its helper and its boundaries.
++fn: lm_compiler_publish_entries (int: k) int
+@@ -490,0 +495,19 @@
++    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) != 0
++        return: 4
++    return: 3
++end: lm_compiler_publish_entries
++
++fn: lm_compiler_publish_offset (int: mi; int: k) int
++    int: j 0
++    int: o 0
++    while: j < k
++        if: lm_compiler_publish_fast(mi, j) != 0
++            o: o + lm_compiler_publish_entries(j)
++        j: j + 1
++    ---
++    return: o
++end: lm_compiler_publish_offset
++
++# Every boundary of the activation passes its one table; the helpers take it
++# instead of an address per place.
++fn: lm_compiler_publish_signature (int: mi; int: first; int: stop; int: declaration) int
+@@ -492,7 +514,0 @@
+-    int: k first
+-    const: (@: cty char 0)
+-    c.L2FrontendScratchChar64: name_storage
+-    @: name char (cast: (@: char) name_storage\buffer)
+-    c.L2FrontendScratchChar1024: declaration_storage
+-    c.L2Tx: declaration_tx
+-    @: dcl c.L2Tx c.lm_compiler_tx_local(@ declaration_tx, (cast: (@: char) declaration_storage\buffer), 1024U)
+@@ -501 +517 @@
+-    if: c.fputs("fn: ", out_cell[0]) < 0 || lm_compiler_publish_name(mi, first) != 0 || c.fputs(" (@: LmxArena l2_pa; @@: Lmx l2_pr; size_t: l2_pn", out_cell[0]) < 0
++    if: c.fputs("fn: ", out_cell[0]) < 0 || lm_compiler_publish_name(mi, first) != 0 || c.fputs(" (@: LmxArena l2_pa; @@: Lmx l2_pr; size_t: l2_pn; @@: void l2_pt", out_cell[0]) < 0
+@@ -503,17 +518,0 @@
+-    while: k < stop
+-        if: lm_compiler_publish_fast(mi, k) != 0
+-            if: c.fprintf(out_cell[0], "; @: int l2_pd%d; @@: void l2_pf%d; ", k, k) < 0
+-                return: 1
+-            if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) != 0
+-                if: c.snprintf(name, 64U, "l2_pv%d", k) < 0 || c.lm_compiler_tx_clear(dcl) != 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(own_ty_cell[0][k]), 1, name, dcl) != 0 || c.fputs((cast: (const: @: char) dcl\data), out_cell[0]) < 0 || c.fprintf(out_cell[0], "; @: LmxWalkValue l2_pc%d", k) < 0
+-                    return: 1
+-                ---
+-            else:
+-                cty: c.lm_compiler_own_num_ctype(own_ty_cell[0][k])
+-                if: cty = 0 || c.fprintf(out_cell[0], "@: %s l2_pv%d", cty, k) < 0
+-                    return: 1
+-                ---
+-            ---
+-        ---
+-        k: k + 1
+-    ---
+@@ -522,0 +522,42 @@
++# Emitted by the work declaration of each cached place, in own-field order,
++# right after that place is declared: the method's first published place
++# declares the table, every published place stores its addresses. The slot
++# handle's own address is stored, so a boundary reads its current value.
++fn: lm_compiler_emit_publish_table (int: mi; int: k) int
++    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
++    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
++    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
++    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
++    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
++    int: o
++    c.L2FrontendScratchChar64: cq_name_own_storage
++    @: cq_name_own char (cast: (@: char) cq_name_own_storage\buffer)
++    c.L2Tx: cq_name_tx
++    @: cq_name c.L2Tx c.lm_compiler_tx_local(@ cq_name_tx, cq_name_own, 64U)
++    c.L2FrontendScratchChar64: cwv_name_own_storage
++    @: cwv_name_own char (cast: (@: char) cwv_name_own_storage\buffer)
++    c.L2Tx: cwv_name_tx
++    @: cwv_name c.L2Tx c.lm_compiler_tx_local(@ cwv_name_tx, cwv_name_own, 64U)
++    if: mi < 0 || k < 0 || k >= own_n_cell[0] || c.lm_compiler_m_machine(mi) != 0
++        return: 0
++    # Only a place cached by this very activation is declared here; any other
++    # activation would plan the table its helpers do not read.
++    if: c.lm_compiler_own_cached(mi, k) = 0
++        return: (cast: (int) (c.lm_compiler_error(src_cell[0], own_decl_cell[0][k], "internal: a working place is declared outside its activation")))
++    if: lm_compiler_publish_fast(mi, k) = 0
++        return: 0
++    o: lm_compiler_publish_offset(mi, k)
++    if: o = 0 && c.fprintf(out_cell[0], "    []: @(void) l2_pt %d\n", lm_compiler_publish_offset(mi, own_n_cell[0])) < 0
++        return: 1
++    if: c.lm_compiler_tx_clear(cq_name) != 0 || lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0
++        return: 1
++    if: c.fprintf(out_cell[0], "    l2_pt[%d]: (cast: (@: void) (@ %s_dirty))\n    l2_pt[%d]: (cast: (@: void) (@ %s_from))\n    l2_pt[%d]: (cast: (@: void) (@ %s))\n", o, cq_name\data, o + 1, cq_name\data, o + 2, cq_name\data) < 0
++        return: 1
++    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) != 0
++        if: c.lm_compiler_tx_clear(cwv_name) != 0 || lm_compiler_tx_own_cname(cwv_name, "l2_wv", k, "") != 0 || c.fprintf(out_cell[0], "    l2_pt[%d]: (cast: (@: void) (@ %s))\n", o + 3, cwv_name\data) < 0
++            return: 1
++        ---
++    ---
++    return: 0
++end: lm_compiler_emit_publish_table
++
+@@ -533,0 +575 @@
++    int: o
+@@ -534,0 +577,4 @@
++    const: (@: cty char 0)
++    c.L2FrontendScratchChar1024: type_storage
++    c.L2Tx: type_tx
++    @: type_text c.L2Tx c.lm_compiler_tx_local(@ type_tx, (cast: (@: char) type_storage\buffer), 1024U)
+@@ -548,0 +595,4 @@
++                    # The slot handles are taken at the boundary, before any
++                    # publisher runs, as the former by-value arguments were;
++                    # each table element is cast back to the exact address
++                    # type it was stored from (CODEX-OPUS-84PUBLISH review).
+@@ -549,0 +600,11 @@
++                    o: lm_compiler_publish_offset(mi, first)
++                    while: k < stop
++                        if: lm_compiler_publish_fast(mi, k) != 0
++                            if: c.fprintf(out_cell[0], "    @@: void l2_pf%d ((cast: (@@@: void) (l2_pt[%d])))[0]\n", k, o + 1) < 0
++                                return: 1
++                            o: o + lm_compiler_publish_entries(k)
++                        ---
++                        k: k + 1
++                    ---
++                    k: first
++                    o: lm_compiler_publish_offset(mi, first)
+@@ -554 +615,3 @@
+-                                if: c.fprintf(out_cell[0], "    %s(l2_pd%d, l2_pa, l2_pf%d[0], (cast: (@: void) (\\l2_pv%d)), l2_pc%d, %d, 1, l2_pr, l2_pn)\n", helper, k, k, k, k, k) < 0
++                                if: c.lm_compiler_tx_clear(type_text) != 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(own_ty_cell[0][k]), 1, 0, type_text) != 0
++                                    return: 1
++                                if: c.fprintf(out_cell[0], "    %s((cast: (@: int) (l2_pt[%d])), l2_pa, l2_pf%d[0], (cast: (@: void) (((cast: (%s) (l2_pt[%d])))[0])), (cast: (@: LmxWalkValue) (l2_pt[%d])), %d, 1, l2_pr, l2_pn)\n", helper, o, k, (cast: (const: @: char) type_text\data), o + 2, o + 3, k) < 0
+@@ -557,0 +621,3 @@
++                                cty: c.lm_compiler_own_num_ctype(own_ty_cell[0][k])
++                                if: cty = 0
++                                    return: 1
+@@ -559 +625 @@
+-                                    if: c.fprintf(out_cell[0], "    %s(l2_pd%d, l2_pa, l2_pf%d[0], (cast: (int) (\\l2_pv%d)), %d, 1, l2_pr, l2_pn)\n", helper, k, k, k, k) < 0
++                                    if: c.fprintf(out_cell[0], "    %s((cast: (@: int) (l2_pt[%d])), l2_pa, l2_pf%d[0], (cast: (int) (((cast: (@: %s) (l2_pt[%d])))[0])), %d, 1, l2_pr, l2_pn)\n", helper, o, k, cty, o + 2, k) < 0
+@@ -563 +629 @@
+-                                    if: c.fprintf(out_cell[0], "    %s(l2_pd%d, l2_pa, l2_pf%d[0], (\\l2_pv%d), %d, 1, l2_pr, l2_pn)\n", helper, k, k, k, k) < 0
++                                    if: c.fprintf(out_cell[0], "    %s((cast: (@: int) (l2_pt[%d])), l2_pa, l2_pf%d[0], (((cast: (@: %s) (l2_pt[%d])))[0]), %d, 1, l2_pr, l2_pn)\n", helper, o, k, cty, o + 2, k) < 0
+@@ -567,0 +634 @@
++                            o: o + lm_compiler_publish_entries(k)
+@@ -592 +658,0 @@
+-    int: member
+@@ -630,14 +696,3 @@
+-            member: k
+-            while: member < stop
+-                if: lm_compiler_publish_fast(work_mi_cell[0], member) != 0
+-                    if: c.lm_compiler_tx_clear(cq_name) != 0 || lm_compiler_tx_own_cname(cq_name, "l2_q", member, "") != 0 || c.fprintf(out_cell[0], ", (@ %s_dirty), %s_from, (@ %s)", cq_name\data, cq_name\data, cq_name\data) < 0
+-                        return: 1
+-                    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][member]) != 0
+-                        if: c.lm_compiler_tx_clear(cwv_name) != 0 || lm_compiler_tx_own_cname(cwv_name, "l2_wv", member, "") != 0 || c.fprintf(out_cell[0], ", (@ %s)", cwv_name\data) < 0
+-                            return: 1
+-                        ---
+-                    ---
+-                ---
+-                member: member + 1
+-            ---
+-            if: c.fputs(")\n", out_cell[0]) < 0
++            # The activation's publication table (lm_compiler_emit_publish_table)
++            # holds this group's addresses; the helper reads them here.
++            if: c.fputs(", l2_pt)\n", out_cell[0]) < 0

@@ -1,0 +1,62 @@
+--- coherent85-before/src/l2src/lmx_walk_values.lm2
++++ coherent85/src/l2src/lmx_walk_values.lm2
+@@ -1090,0 +1091,33 @@
++# The activation's input width is its selected callee's own receiving
++# interface (RU section 12: the needed pass-through names are part of the
++# signature): a fn's args part lists the written formals, then the hidden
++# inputs. A call formed by a model hands only the inputs that model describes;
++# each input it does not hand is the frame's zero input, absent as one handed
++# absent, so a consumed hidden input takes its own lexical fallback at entry
++# and a forwarded one goes on absent. The native trampoline receives into the
++# same width. A fn without an args part declares no input to widen by.
++fn: lmx_walk_input_width (@: f c.LmxWalkFrame; @: out size_t) int
++    @: code c.Lmx 0
++    @: pool c.LmxPool 0
++    @: header c.Lmx 0
++    if: f = 0 || out = 0
++        return: c.LMX_WALK_INVALID
++    out[0]: f\nargs
++    code: f\code
++    if: code = 0 || c.lmx_range_classify((cast: (@: c.LmxArena) f\arena), (cast: (@: void) code)) != c.LMX_KIND_STRUCT
++        return: c.LMX_WALK_OK
++    pool: c.lmx_range_cell_pool((cast: (@: c.LmxArena) f\arena), (cast: (@: void) code))
++    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
++        return: c.LMX_WALK_OK
++    @: fields c.VoidArray @ code\array
++    if: fields\size != 4U
++        return: c.LMX_WALK_INVALID
++    header: c.lmx_graph_ref_struct_in((cast: (@: c.LmxArena) f\arena), code, 0U)
++    if: header = 0
++        return: c.LMX_WALK_OK
++    @: header_fields c.VoidArray @ header\array
++    if: header_fields\size > out[0]
++        out[0]: header_fields\size
++    return: c.LMX_WALK_OK
++end: lmx_walk_input_width
++
+@@ -1096 +1129,6 @@
+-    if: f\nargs = 0U
++    size_t: width 0U
++    int: status
++    status: lmx_walk_input_width(f, @ width)
++    if: status != c.LMX_WALK_OK
++        return: status
++    if: width = 0U
+@@ -1098 +1136 @@
+-    if: f\args = 0
++    if: f\nargs != 0U && f\args = 0
+@@ -1099,0 +1138,2 @@
++    if: width > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue)
++        return: c.LMX_WALK_NOMEM
+@@ -1102 +1142 @@
+-    if: c.lmx_scratch_take(scratch, f\nargs * c.sizeof(c.LmxWalkValue), @ room) != c.LMX_SCRATCH_OK
++    if: c.lmx_scratch_take(scratch, width * c.sizeof(c.LmxWalkValue), @ room) != c.LMX_SCRATCH_OK
+@@ -1106,2 +1146,2 @@
+-    c.memset(room, 0, f\nargs * c.sizeof(c.LmxWalkValue))
+-    if: c.lmx_scratch_take(scratch, f\nargs * c.sizeof(room), @ room) != c.LMX_SCRATCH_OK
++    c.memset(room, 0, width * c.sizeof(c.LmxWalkValue))
++    if: c.lmx_scratch_take(scratch, width * c.sizeof(room), @ room) != c.LMX_SCRATCH_OK
+@@ -1108,0 +1149 @@
++    c.memset(room, 0, width * c.sizeof(room))
+@@ -1123,0 +1165 @@
++    f\nargs: width

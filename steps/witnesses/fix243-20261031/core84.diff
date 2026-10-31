@@ -1,0 +1,17 @@
+--- stage83/src/l2src/l2_frontend_core.lm2
++++ frontend84/src/l2src/l2_frontend_core.lm2
+@@ -4059,0 +4060 @@
++    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
+@@ -4080,0 +4082,2 @@
++    # Once a published place is declared, its addresses enter the activation's
++    # publication table (lm_compiler_emit_publish_table, the same planner).
+@@ -4082 +4085,3 @@
+-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "    %s: %s\n    if: %s_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    %s: %s\n    int: %s_dirty 0\n", cty, cq_name\data, cq_name\data, k, cq_name\data, load\data, cq_name\data) < 0))))
++        if: c.fprintf(out_cell[0], "    %s: %s\n    if: %s_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    %s: %s\n    int: %s_dirty 0\n", cty, cq_name\data, cq_name\data, k, cq_name\data, load\data, cq_name\data) < 0
++            return: (cast: (int) (1))
++        return: (cast: (int) (c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)))
+@@ -4089 +4094,3 @@
+-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "    lmx_value_context_copy(@ %s, lmx_pointer_cell_context(l2_program_arena, %s_from[0]))\n", cwv_name\data, cq_name\data) < 0))))
++    if: c.fprintf(out_cell[0], "    lmx_value_context_copy(@ %s, lmx_pointer_cell_context(l2_program_arena, %s_from[0]))\n", cwv_name\data, cq_name\data) < 0
++        return: (cast: (int) (1))
++    return: (cast: (int) (c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)))

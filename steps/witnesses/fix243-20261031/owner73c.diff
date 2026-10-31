@@ -1,0 +1,7 @@
+--- runtime-callable73b/lib_owner.lm2
++++ runtime-callable73c/lib_owner.lm2
+@@ -564 +564,3 @@
+-    if: c.lmx_walk_store_int(context_destination, partial_candidate, 2U, 44) != c.LMX_WALK_OK
++    # Write the partial copy's own y cell in place (lmx_walk_store_int would
++    # rebind the slot to a new cell): the other copies and the source keep 42/43.
++    if: c.lmx_int_store_known(partial_y_cell, 44) != 0

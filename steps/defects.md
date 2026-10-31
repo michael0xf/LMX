@@ -4,6 +4,59 @@
 
 ## Текущие и недавно закрытые
 
+### DRAFT79-OWNER-POINTER-CONTEXT-STACK-POINTEE — 2026-10-31, Opus (срез244, owner73c на FE87 + RT87), OPEN
+
+На когерентной линии87 (draft79 + 82/83/84/86) owner73c во всех четырёх режимах одинаково: S81…V59 как на FE84,
+затем `V63 copy failure=11 status=3` → exit28 (на FE84 + RT86w3 — 7). `lmx_graph_copy_owned` корня V63 возвращает
+UNSUPPORTED. Ручной gdb (`P/pins/gdb87-owner-v63-0[1-6].gdb`): единственное срабатывание — `lmx_copy_value` (+1440)
+из `lmx_copy_reference_fill`; отвергнутое значение — адрес стека потока (прогон06: v=0xfb979ffaf8, rsp=0xfb979eb900),
+то есть сырая ссылка (граф-копия :2258, kind NONE), достигнутая как цель ссылки. Проверки referent не виноваты
+(7 ненулевых `lmx_value_context_cell_in` разрешены; запись контекста со стековым referent — 0 срабатываний). Ядро
+86w → 87 почти не изменилось (walker: eval_result, publish, work_make, новый graph_value_ref; value_owned —
+только выделение `lmx_pointer_pool_promised`); граф-копия, materialize, value_load/value_cell побайтно равны. Иначе
+выпускается native-код фикстуры: FE84 пишет own `owner_address` через `lmx_value_cell_store(…, контекст 0, …)`,
+FE87 (полный приём draft79) — полной WV-записью с контекстом поля-источника и `lmx_walk_value_store_with_writer`.
+gdb08/09: ячейка-ссылка, входящая в `lmx_copy_reference_fill` с этим адресом, — own-поле с именем `arena` типа
+`LMX_TYPE_POINTER_BASE`+101 (`@: c.LmxArena`), kind1, как `@: arena c.LmxArena (cast: (@: c.LmxArena)
+c.l2_call_arena)` в `try_dynamic_m` (`lib_owner.lm2:211`); её цель — арена активации на стеке потока. На линии87
+корень V63 доходит до этой ячейки. Решение Codex (CODEX-OPUS-87V63-20261031-ANSWER): это граница владения, не
+огульная правка — не гасить контексты у правой части `c.*` и не учить граф-копию принимать память стека;
+закрепить родительское ребро до этой ячейки и производителя 84→87 этого поля, следующим шагом линии draft79.
+Bootstrap идёт по зелёной линии84 + walker86.
+
+### DRAFT79-BARE-RETURN-CHECKER — 2026-10-31, Opus (срез244, computed-absence79 на FE85/FE87), OPEN
+
+`unit_computed_absence_receiving.lm2:11:9: unsupported body` (atom=return): голый `return` внутри `if:` типизированного
+обычного `fn: produce (int: absent) int`. По Codex (CODEX-OPUS-85FIND-20261031-ANSWER) отказ — общая проверка
+Emitter `lm_compiler_check_word_stmt` (:5127–5132, из check_body :5268–5272): ветка return без записанного
+аргумента отвергает `mi != entry && declared_return != void`, хотя производители (Lower :17981–17988, хвост Core
+:1548–1554, граф Emitter :11603–11611, `emit_empty_return`) уже реализуют возврат без значения обычного callable
+(machine0). Исправлять общую проверку по установленной классификации machine, не по имени/телу/фикстуре.
+
+### SPLIT-POINTER-PLACE-NOT-ADMITTED — 2026-10-31, Opus (срез244, no-candidate79 на FE85/FE87), OPEN
+
+`unit_no_candidate_selected_pointer.lm2:12:5: split call not supported yet: Code assigns p, a reference, whose data
+place is not admitted yet`: Coords `split_data_row` (:856–880, предикат :867) допускает только own_num_ctype или
+source_definition_ns; типизированная ссылка → Core `split_class` 2 → `split_staged`. По Codex — подключить
+типизированную ссылку как обязательное место данных через существующий общий допуск/карту split (split_data_row →
+split_rep/name_ix → split_place → `l2_cpt` → `lmx_implements_places`), без огульного допуска Array/graph-ссылок; ветка
+no-candidate без записи уже есть в Emitter (:11763–11769, SOURCE_INERT).
+
+### DRAFT79-LOWER-WV-NAME-DOUBLED — 2026-10-31, Opus (срез244, held78/owner73c на FE85 + RT85b), FIXED в build2 Lower87 (не выпущено)
+
+draft79 `lm_compiler_own_work_store_value` заполнял имя рабочего значения `wv` для каждого типа (для нового memcpy
+WV после записи) и ещё раз в ветке указателя; построитель дописывает, поэтому для own-указателя выпускалось
+`l2_wvK_<n>l2_wvK_<n>`: held78 `p.c:1128 'l2_wv8_copyl2_wv8_copy' undeclared`, owner73c lib_m native CC — то же.
+Lower87 (`3965C9C2…`) не заполняет `wv` повторно; изменение только тела, объявления Lower прежние. FE87 (ONLY Lower87,
+Useplan/Core/Emit FE85 переиспользованы точно) + RT87: held78 — 7/2/1 во всех четырёх режимах.
+
+### DRAFT79-WALKER-GRAPH-VALUE-REF-UNTYPED — 2026-10-31, Opus (срез244, RT85 на stage85), FIXED в build2 walker D04DEC9D (не выпущено)
+
+RT85 остановился на трансляции walker: `lmx_walk_values.lm2:467:13: assignment value has unknown type` — draft79
+`lmx_walk_graph_value_ref` возвращал `value\ref` by-value LmxWalkValue. Исправление — форма самого файла:
+`return: (cast: (@: void) value\ref)`, как `(cast: (@: void) saved\ref)` в `lmx_walk_value_materialize`. RT85b exit0;
+RT87 побайтно равен RT85b (driver.o `1ECED7AF…`).
+
 ### WALK-ENTRY-UNHANDED-INPUT-REFUSED — 2026-10-31, Opus (срез243, owner73b forced на FE84 + RT83), FIXED в build2 walker86 (не выпущено)
 
 owner73b forced root0/root1 — `lmx: walk error: INVALID` (exit3) сразу после первой строки S81. Native `run`

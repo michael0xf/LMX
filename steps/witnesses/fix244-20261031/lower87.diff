@@ -1,0 +1,7 @@
+--- stage85/src/l2src/l2_frontend_lower.lm2
++++ coherent85/src/l2src/l2_frontend_lower.lm2
+@@ -2372 +2372,3 @@
+-        if: lm_compiler_pointer_cell_needed(ft) != 0 || c.snprintf(writer, 96U, "l2_u%08X%08X_pc%d_write", module_hash_a_cell[0], module_hash_b_cell[0], ft) < 0 || c.lm_compiler_tx_own_cname(wv, "l2_wv", k, "") != 0 || c.snprintf(owner, 96U, "(@ %s)", wv\data) < 0
++        # wv already holds this field's working-value name (filled above for
++        # every type); filling it again would append a second copy.
++        if: lm_compiler_pointer_cell_needed(ft) != 0 || c.snprintf(writer, 96U, "l2_u%08X%08X_pc%d_write", module_hash_a_cell[0], module_hash_b_cell[0], ft) < 0 || c.snprintf(owner, 96U, "(@ %s)", wv\data) < 0

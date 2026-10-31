@@ -1,0 +1,4 @@
+set pagination off
+set confirm off
+disassemble lmx_value_context_cell_in
+disassemble lmx_copy_project_context

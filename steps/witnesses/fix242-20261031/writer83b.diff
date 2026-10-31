@@ -1,0 +1,32 @@
+--- generator62/tools/build.lm2
++++ frontend83/tools/build.lm2
+@@ -154 +154,2 @@
+-# l2_timeout_ms bounds only the L2 translation; later steps keep their ordinary limits.
++# l2_timeout_ms bounds only the L2 translation; the compile has its own hour bound
++# below; the other steps keep their ordinary limits.
+@@ -231 +232,3 @@
+-    if: bld_step(rec, a, n + 4, src, lp[0], res) != 0
++    # The program's own compile is bounded by an hour (CODEX-OPUS-83CCTIME): a
++    # generated program's C can outgrow the ordinary step bound of bld_step.
++    if: bld_step_t(rec, a, n + 4, src, lp[0], res, 3600000U) != 0
+@@ -1200 +1203,3 @@
+-    if: c.fputs("\nprototype:\n    # The same current invocation binder used by admission, with captured heads.\n    # All output buffers belong to caller activation scratch; no map is cached.\n    fn: lmx_callable_bind_written (@: LmxArena arena; @: Lmx selected_args; @: Lmx written_call; size_t: first; size_t: transport_count; size_t: written_count; @: int actual_named; @@: VoidArray actual_names; size_t: actual_capacity; @: size_t map; size_t: map_capacity; @: size_t source_indices; size_t: source_capacity; @: LmxImplEntry out; @: int out_answer) int\nend: prototype\n", f) < 0
++    if: c.fputs("\nprototype:\n    # The same current invocation binder used by admission, with captured heads.\n    # All output buffers belong to caller activation scratch; no map is cached.\n    # contract_inputs bind the normalized suffix by name; 0 leaves it unbound.\n    fn: lmx_callable_bind_written (@: LmxArena arena; @: Lmx selected_args; @: Lmx written_call; size_t: first; size_t: transport_count; size_t: written_count; @: Lmx contract_inputs; @: int actual_named; @@: VoidArray actual_names; size_t: actual_capacity; @: size_t map; size_t: map_capacity; @: size_t source_indices; size_t: source_capacity; @: LmxImplEntry out; @: int out_answer) int\nend: prototype\n", f) < 0
++        return: 1
++    if: c.fputs("\nprototype:\n    # The selected formal's own current receiving record, reached numerically.\n    # A legacy, partial or missing entry stays unavailable (answer UNKNOWN).\n    fn: lmx_callable_source_receiving (@: LmxArena arena; @: Lmx selected_args; size_t: index; @@: Lmx out; @: int out_answer) int\nend: prototype\n", f) < 0
+@@ -1998 +2003 @@
+-    @@: implements_names char c.calloc(58U, sizeof(@: char))
++    @@: implements_names char c.calloc(59U, sizeof(@: char))
+@@ -2491,0 +2497 @@
++    implements_names[58]: "lmx_callable_source_receiving"
+@@ -2735 +2741 @@
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 58, 0) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 59, 0) != 0
+@@ -3245 +3251 @@
+-    @@: frontend_lower_names char c.calloc(439U, sizeof(@: char))
++    @@: frontend_lower_names char c.calloc(440U, sizeof(@: char))
+@@ -4864,0 +4871 @@
++    frontend_lower_names[439]: "lm_compiler_emit_native_input_entry"
+@@ -5897 +5904 @@
+-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_lower", frontend_lower_names, 439, 1) != 0
++        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_lower", frontend_lower_names, 440, 1) != 0

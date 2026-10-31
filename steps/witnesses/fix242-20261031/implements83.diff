@@ -1,0 +1,63 @@
+--- stage71/src/l2src/lmx_implements.lm2
++++ kernel83/src/l2src/lmx_implements.lm2
+@@ -2165 +2165,4 @@
+-fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: actual_named int; @@: actual_names c.VoidArray; size_t: actual_capacity; @: map size_t; size_t: map_capacity; @: source_indices size_t; size_t: source_capacity; @: out c.LmxImplEntry; @: out_answer int) int
++# The normalized suffix after that prefix (the hidden inputs an EXEC carries)
++# binds only with the Consumer contract's inputs; without them it stays MAX.
++fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: contract_inputs c.Lmx; @: actual_named int; @@: actual_names c.VoidArray; size_t: actual_capacity; @: map size_t; size_t: map_capacity; @: source_indices size_t; size_t: source_capacity; @: out c.LmxImplEntry; @: out_answer int) int
++    @: wanted c.VoidArray 0
+@@ -2170,0 +2174,2 @@
++    size_t: contract_count 0U
++    size_t: contract_physical (cast: (size_t) -1)
+@@ -2255,0 +2261,47 @@
++    # Each suffix operand keeps the identity its producer retained: the
++    # Consumer contract's own input at the same SOURCE ordinal. That input's
++    # name selects the selected callable's formal through the common named
++    # matcher, never through an equal ordinal of the two signatures. An absent
++    # (NULL) suffix operand still occupies the formal it names.
++    if: contract_inputs != 0 && written_count < transport_count && lmx_callable_source_count(arena, contract_inputs, @ contract_count) != 0
++        contract_count: 0U
++    while: contract_inputs != 0 && i < transport_count
++        wanted: 0
++        source_index: (cast: (size_t) -1)
++        physical: (cast: (size_t) -1)
++        row_answer: c.LMX_IMPLEMENTS_UNKNOWN
++        if: i < contract_count
++            status: lmx_implements_exec_coordinate(arena, contract_inputs, i, @ contract_physical, @ row_answer)
++            if: status != c.LMX_WALK_OK
++                return: status
++            if: row_answer = c.LMX_IMPLEMENTS_YES
++                wanted: lmx_implements_place_name(arena, contract_inputs, contract_physical)
++            row_answer: c.LMX_IMPLEMENTS_UNKNOWN
++        ---
++        if: wanted != 0
++            status: lmx_callable_named_formal(arena, selected_args, wanted, @ source_index, @ physical, @ row_answer)
++            if: status != c.LMX_WALK_OK
++                return: status
++        ---
++        if: row_answer = c.LMX_IMPLEMENTS_NO
++            out_answer[0]: c.LMX_IMPLEMENTS_NO
++            return: c.LMX_WALK_OK
++        if: row_answer != c.LMX_IMPLEMENTS_YES
++            uncertain: 1
++        source_indices[first + i]: source_index
++        if: physical != (cast: (size_t) -1)
++            j: 0U
++            while: j < i
++                if: source_index != (cast: (size_t) -1) && source_indices[first + j] = source_index
++                    out_answer[0]: c.LMX_IMPLEMENTS_NO
++                    return: c.LMX_WALK_OK
++                if: map[first + j] = physical
++                    uncertain: 1
++                j: j + 1U
++            ---
++            map[first + i]: physical
++        else:
++            uncertain: 1
++        ---
++        i: i + 1U
++    ---
+@@ -2394 +2446,2 @@
+-    status: lmx_callable_bind_written(arena, args, written_call, first, transport_count, written_count, actual_named, actual_names, width, map, width * 2U, sources, width, out, @ answer)
++    # Admission inspects the written prefix only; no suffix identity is bound.
++    status: lmx_callable_bind_written(arena, args, written_call, first, transport_count, written_count, 0, actual_named, actual_names, width, map, width * 2U, sources, width, out, @ answer)

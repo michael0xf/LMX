@@ -1,0 +1,41 @@
+--- frontend82/src/l2src/l2_frontend_lower.lm2
++++ frontend83/src/l2src/l2_frontend_lower.lm2
+@@ -7430,0 +7431,38 @@
++# Semantics §9 (RU 464-466): a hidden input this activation consumes is held
++# from its entry, before the own entry loads and the body change its source.
++# The same default reader and filters as a read: a supplied input keeps its
++# value, a forward-only one stays unread, and an input outside the native
++# input route (native_input_place_type) is left to the route that reads it.
++fn: lm_compiler_emit_native_input_entry (int: mi; const: (@: ind char)) int
++    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
++    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
++    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
++    c.L2FrontendScratchChar96: type_storage
++    @: type char (cast: (@: char) type_storage\buffer)
++    int: fi
++    int: ft
++    int: mode
++    int: depth
++    int: slot
++    int: kind
++    int: own
++    int: guarded 0
++    if: mi < 0 || ind = 0 || c.lm_compiler_m_machine(mi) != 0
++        return: 0
++    fi: m_arity_cell[0][mi]
++    while: fi < m_arity_cell[0][mi] + m_dyn_cell[0][mi]
++        ft: c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))
++        if: lm_compiler_dyn_fwd(mi, fi - m_arity_cell[0][mi]) = 0 && lm_compiler_hid_source(mi, fi - m_arity_cell[0][mi], 1, @ mode, @ depth, @ slot, @ kind, @ own) = 0 && lm_compiler_native_input_place_type(mi, fi, ft, ind, type) = 0
++            if: guarded = 0
++                if: c.fprintf(out_cell[0], "%sif: l2_input_values = 0 || l2_input_refs = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, ind, ind, ind) < 0
++                    return: 1
++                guarded: 1
++            ---
++            if: lm_compiler_emit_native_input_default(mi, fi, ft, ind) != 0
++                return: 1
++        ---
++        fi: fi + 1
++    ---
++    return: 0
++end: lm_compiler_emit_native_input_entry
++

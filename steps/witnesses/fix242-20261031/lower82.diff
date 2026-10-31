@@ -1,0 +1,42 @@
+--- base81/src/l2src/l2_frontend_lower.lm2
++++ frontend82/src/l2src/l2_frontend_lower.lm2
+@@ -7391 +7391,3 @@
+-    if: c.fprintf(out_cell[0], "%sif: l2_input_refs[%d] = 0\n%s    if: l2_input_values[%d].present < 0\n%s        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s        return: 0\n%s    ---\n%s    l2_input_values[%d].present: -1\n%s    @: Lmx l2_dfh%d l2_call_code\n", ind, fi, ind, fi, ind, ind, ind, ind, fi, ind, t) < 0
++    # The sentinel is a field of an element of the input records: written
++    # through that element's address, as the walker writes its own sentinel.
++    if: c.fprintf(out_cell[0], "%sif: l2_input_refs[%d] = 0\n%s    @: LmxWalkValue l2_dfi%d (cast: (@: LmxWalkValue) (l2_input_values + %d))\n%s    if: l2_dfi%d\\present < 0\n%s        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s        return: 0\n%s    ---\n%s    l2_dfi%d\\present: -1\n%s    @: Lmx l2_dfh%d l2_call_code\n", ind, fi, ind, t, fi, ind, t, ind, ind, ind, ind, t, ind, t) < 0
+@@ -7394 +7396 @@
+-        if: c.fprintf(out_cell[0], "%sif: l2_dfh%d = 0\n%s    l2_input_values[%d].present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n%sl2_dfh%d: l2_dfh%d\\parent\n", deep, t, deep, fi, deep, deep, deep, deep, t, t) < 0
++        if: c.fprintf(out_cell[0], "%sif: l2_dfh%d = 0\n%s    l2_dfi%d\\present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n%sl2_dfh%d: l2_dfh%d\\parent\n", deep, t, deep, t, deep, deep, deep, deep, t, t) < 0
+@@ -7398 +7400 @@
+-    if: c.fprintf(out_cell[0], "%s@@: void l2_dfs%d lmx_graph_ref_cell_in(l2_call_arena, l2_dfh%d, %uU)\n%sif: l2_dfs%d = 0\n%s    l2_input_values[%d].present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", deep, t, t, (cast: (unsigned) slot), deep, t, deep, fi, deep, deep, deep) < 0
++    if: c.fprintf(out_cell[0], "%s@@: void l2_dfs%d lmx_graph_ref_cell_in(l2_call_arena, l2_dfh%d, %uU)\n%sif: l2_dfs%d = 0\n%s    l2_dfi%d\\present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", deep, t, t, (cast: (unsigned) slot), deep, t, deep, t, deep, deep, deep) < 0
+@@ -7403 +7405 @@
+-        if: c.fprintf(out_cell[0], "%sif: %s != c.LMX_WALK_OK\n%s    l2_input_values[%d].present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", deep, select_status, deep, fi, deep, deep, deep) < 0
++        if: c.fprintf(out_cell[0], "%sif: %s != c.LMX_WALK_OK\n%s    l2_dfi%d\\present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", deep, select_status, deep, t, deep, deep, deep) < 0
+@@ -7420 +7422 @@
+-    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dfv%d\n%sint: l2_dft%d lmx_walk_place_load(l2_call_arena, @ l2_dfp%d, @ l2_dfv%d)\n%sl2_input_values[%d].present: 0\n%sif: l2_dft%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dft%d)\n%s    return: 0\n%s---\n", deep, t, deep, t, t, t, deep, fi, deep, t, deep, t, deep, deep) < 0
++    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dfv%d\n%sint: l2_dft%d lmx_walk_place_load(l2_call_arena, @ l2_dfp%d, @ l2_dfv%d)\n%sl2_dfi%d\\present: 0\n%sif: l2_dft%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dft%d)\n%s    return: 0\n%s---\n", deep, t, deep, t, t, t, deep, t, deep, t, deep, t, deep, deep) < 0
+@@ -8179,0 +8182,3 @@
++    # A graph place's code is spelled as its source type `Lmx *`, as every
++    # other consumer spells it; the place itself keeps its loaded type.
++    int: spelled c.lm_compiler_formal_raw(type)
+@@ -8198 +8203 @@
+-    if: lm_compiler_tx_temp(dest, t) != 0 || c.lm_compiler_value_decl_text(type, 0, (cast: (const: @: char) (dest\data)), declaration) != 0
++    if: lm_compiler_tx_temp(dest, t) != 0 || c.lm_compiler_value_decl_text(spelled, 0, (cast: (const: @: char) (dest\data)), declaration) != 0
+@@ -8205,2 +8210,2 @@
+-        if: c.lm_compiler_pointer_depth(type) > 0
+-            if: c.lm_compiler_pointer_decl_text(type, 0, 0, type_text) != 0 || c.lm_compiler_tx_join(dest, "(cast: (", (cast: (const: @: char) type_text\data), ") ", record, ".ref)") != 0
++        if: c.lm_compiler_pointer_depth(spelled) > 0
++            if: c.lm_compiler_pointer_decl_text(spelled, 0, 0, type_text) != 0 || c.lm_compiler_tx_join(dest, "(cast: (", (cast: (const: @: char) type_text\data), ") ", record, ".ref)") != 0
+@@ -8212 +8217 @@
+-            if: c.lm_compiler_pointer_decl_text(type, 1, 0, type_text) != 0 || c.lm_compiler_tx_join(dest, "((cast: (", (cast: (const: @: char) type_text\data), ") lmx_walk_value_storage(@ ", record, "))[0])") != 0
++            if: c.lm_compiler_pointer_decl_text(spelled, 1, 0, type_text) != 0 || c.lm_compiler_tx_join(dest, "((cast: (", (cast: (const: @: char) type_text\data), ") lmx_walk_value_storage(@ ", record, "))[0])") != 0
+@@ -8219,2 +8224,2 @@
+-    if: c.lm_compiler_pointer_depth(type) > 0
+-        if: c.lm_compiler_pointer_decl_text(type, 0, 0, type_text) != 0 || c.fprintf(out_cell[0], "%s%s (cast: (%s) (l2_cv%d.ref))\n", ind, declaration\data, type_text\data, t) < 0
++    if: c.lm_compiler_pointer_depth(spelled) > 0
++        if: c.lm_compiler_pointer_decl_text(spelled, 0, 0, type_text) != 0 || c.fprintf(out_cell[0], "%s%s (cast: (%s) (l2_cv%d.ref))\n", ind, declaration\data, type_text\data, t) < 0
+@@ -8226 +8231 @@
+-        if: c.lm_compiler_type_parts(type, @ word, @ depth, @ qualified) != 0 || c.fprintf(out_cell[0], "%ssize_t: l2_array_number%d\n%sint: l2_array_type%d\n%sif: lmx_walk_value_number(@ l2_cv%d, @ l2_array_number%d, @ l2_array_type%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n%s%s (cast: (", ind, t, ind, t, ind, t, t, t, ind, ind, ind, declaration\data) < 0 || c.lm_compiler_write_text(out_cell[0], @ word) != 0 || c.fprintf(out_cell[0], ") l2_array_number%d)\n", t) < 0
++        if: c.lm_compiler_type_parts(spelled, @ word, @ depth, @ qualified) != 0 || c.fprintf(out_cell[0], "%ssize_t: l2_array_number%d\n%sint: l2_array_type%d\n%sif: lmx_walk_value_number(@ l2_cv%d, @ l2_array_number%d, @ l2_array_type%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n%s%s (cast: (", ind, t, ind, t, ind, t, t, t, ind, ind, ind, declaration\data) < 0 || c.lm_compiler_write_text(out_cell[0], @ word) != 0 || c.fprintf(out_cell[0], ") l2_array_number%d)\n", t) < 0

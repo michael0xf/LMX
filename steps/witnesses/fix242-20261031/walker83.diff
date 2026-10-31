@@ -1,0 +1,94 @@
+--- stage71/src/l2src/lmx_walk_values.lm2
++++ kernel83/src/l2src/lmx_walk_values.lm2
+@@ -3255,0 +3256,3 @@
++# The normalized suffix after the written prefix (the hidden inputs this EXEC
++# hands on) is evaluated once after every written operand, in slot order. A
++# NULL suffix slot is an input handed absent: its Value stays absent.
+@@ -3288 +3291 @@
+-    if: written_count = 0U
++    if: transport_count = 0U
+@@ -3290 +3293 @@
+-    if: actual_named = 0 || actual_names = 0 || actual_capacity < first + written_count
++    if: written_count != 0U && (actual_named = 0 || actual_names = 0 || actual_capacity < first + written_count)
+@@ -3292 +3295 @@
+-    if: written_count > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue)
++    if: transport_count > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue)
+@@ -3294 +3297 @@
+-    status: c.lmx_scratch_take(scratch, written_count * c.sizeof(c.LmxWalkValue), @ room)
++    status: c.lmx_scratch_take(scratch, transport_count * c.sizeof(c.LmxWalkValue), @ room)
+@@ -3300 +3303 @@
+-    c.memset(room, 0, written_count * c.sizeof(c.LmxWalkValue))
++    c.memset(room, 0, transport_count * c.sizeof(c.LmxWalkValue))
+@@ -3366,0 +3370,14 @@
++    while: i < transport_count
++        current: values + i
++        payload: c.lmx_graph_value_in(arena, code, first + i)
++        if: payload != 0
++            if: lmx_walk_op(f, payload) = c.LMX_WALK_OP_NONE
++                status: lmx_walk_value_cell(arena, payload, current)
++            else:
++                status: c.lmx_walk_eval(f, payload, current)
++            ---
++            if: status != c.LMX_WALK_OK
++                return: status
++        ---
++        i: i + 1U
++    ---
+@@ -3376,0 +3394,3 @@
++# A written operand occupies its formal as 1. A normalized suffix input (the
++# EXEC's hidden inputs after the written prefix) occupies it as 2, also when
++# it was handed absent: that absence travels on to the selected entry.
+@@ -3380 +3400 @@
+-fn: lmx_walk_scatter_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; size_t: written_count; @: current c.LmxImplEntry; @: source_indices size_t; size_t: source_capacity; @: written_values c.LmxWalkValue; @@: out_values c.LmxWalkValue; @@: out_occupied int; @: out_count size_t) int
++fn: lmx_walk_scatter_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: current c.LmxImplEntry; @: source_indices size_t; size_t: source_capacity; @: written_values c.LmxWalkValue; @@: out_values c.LmxWalkValue; @@: out_occupied int; @: out_count size_t) int
+@@ -3406 +3426,3 @@
+-    if: written_count != 0U
++    if: written_count > transport_count
++        return: c.LMX_WALK_INVALID
++    if: transport_count != 0U
+@@ -3411 +3433 @@
+-        if: first > current\n || written_count > current\n - first
++        if: first > current\n || transport_count > current\n - first
+@@ -3434 +3456 @@
+-    while: i < written_count
++    while: i < transport_count
+@@ -3444,0 +3467,2 @@
++        if: i >= written_count
++            occupied[source_index]: 2
+@@ -4303 +4327,3 @@
+-fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: actual_named int; @@: actual_names c.VoidArray; size_t: width; @: map size_t; @: sources size_t; @: written c.LmxWalkValue; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
++# contract_inputs are the Consumer contract's inputs: the only identity of
++# the normalized suffix the EXEC carries after its written prefix.
++fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: contract_inputs c.Lmx; @: actual_named int; @@: actual_names c.VoidArray; size_t: width; @: map size_t; @: sources size_t; @: written c.LmxWalkValue; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
+@@ -4342 +4368 @@
+-    status: c.lmx_callable_bind_written((cast: (@: c.LmxArena) f\arena), inputs, code, first, transport_count, written_count, actual_named, actual_names, width, map, width * 2U, sources, width, binding_p, @ answer)
++    status: c.lmx_callable_bind_written((cast: (@: c.LmxArena) f\arena), inputs, code, first, transport_count, written_count, contract_inputs, actual_named, actual_names, width, map, width * 2U, sources, width, binding_p, @ answer)
+@@ -4349 +4375 @@
+-    status: lmx_walk_scatter_written(f, inputs, code, first, written_count, binding_p, sources, width, written, @ values, @ occupied, @ count)
++    status: lmx_walk_scatter_written(f, inputs, code, first, transport_count, written_count, binding_p, sources, width, written, @ values, @ occupied, @ count)
+@@ -4371,0 +4398,7 @@
++        received: values + i
++        # A hidden input handed absent travels as an absent full Value with no
++        # storage (ref 0): the selected entry resolves it from its current
++        # instance (semantics §9), never a zero/null forced here.
++        if: received\present = 0 && occupied[i] = 2
++            i: i + 1U
++            continue
+@@ -4375 +4407,0 @@
+-        received: values + i
+@@ -4393 +4425 @@
+-fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; size_t: first; size_t: transport_count; int: op; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
++fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; size_t: first; size_t: transport_count; int: op; @: contract_inputs c.Lmx; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
+@@ -4426,2 +4458,4 @@
+-    # data projection. Do not drop them and substitute a formal default.
+-    if: written_count != transport_count
++    # data projection. Do not drop them and substitute a formal default:
++    # each is evaluated and bound by its Consumer contract input, the only
++    # identity it has. Without that contract the suffix cannot be bound.
++    if: written_count != transport_count && contract_inputs = 0
+@@ -4463 +4497 @@
+-    return: lmx_walk_selected_ready_values(f, code, callee, first, transport_count, written_count, actual_named, actual_names, width, map, sources, written, refs_out, values_out, out_count)
++    return: lmx_walk_selected_ready_values(f, code, callee, first, transport_count, written_count, contract_inputs, actual_named, actual_names, width, map, sources, written, refs_out, values_out, out_count)
+@@ -4591 +4625 @@
+-            status: lmx_walk_selected_values(f, code, callee, arg_at, n, op, @ refs, @ values, @ input_count)
++            status: lmx_walk_selected_values(f, code, callee, arg_at, n, op, inputs, @ refs, @ values, @ input_count)

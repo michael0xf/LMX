@@ -4,6 +4,85 @@
 
 ## Текущие и недавно закрытые
 
+### NATIVE-DEFAULT-SENTINEL-MEMBER-TARGET — 2026-10-31, Opus (срез242, owner73 на FE81 + RT71), FIXED в build2 Lower82 (не выпущено)
+
+Lower81 `lm_compiler_emit_native_input_default` писал защиту рекурсии скрытого default как
+`l2_input_values[i].present: …`. Для L1 это не цель присваивания (корневое имя, `[i]` или `\field`, но не
+`[i].field`): FE81 на существующей строке owner73 — `lib_a native` L1 exit1. Lower82 берёт адрес элемента входной
+записи (`@: LmxWalkValue l2_dfiN (cast: …) (l2_input_values + i)`) и пишет `l2_dfiN\present`, как walker пишет
+свой sentinel (`own\present` в `lmx_walk_place`). FE82 на owner73b (та же строка с двумя локальными мостами
+CODEX-OPUS-81ANS): все четыре библиотеки lib_a/b/c/m — L1 и CC без ошибок. [Срез242](witnesses/fix242-20261031/notes.md).
+
+### PLACE-VALUE-GRAPH-CODE-SPELLING — 2026-10-31, Opus (срез242, held78 на FE81 + RT71), FIXED в build2 Lower82 (не выпущено)
+
+`lm_compiler_emit_place_value_full` объявлял значение graph place сырым графовым кодом42, у которого нет
+C-написания; шаг возвращал1 без located-диагностики: held78 FE81 L2 `internal: a refusal said nothing` в обоих
+вариантах. Lower82 пишет тип через `lm_compiler_formal_raw` (`Lmx *`), как остальные потребители; само место
+сохраняет загруженный тип. FE82: held78 native и forced собраны (L2/L1/CC PASS).
+
+### NATIVE-HIDDEN-DEFAULT-READ-LATE — 2026-10-31, Opus (срез242, held78 на FE82 + RT71), FIXED в build2 Lower83/Emit83 (не выпущено)
+
+Семантика RU §9 (`docs/LMX_semantics.ru.md:464-466`): потребляемое активацией скрытое имя удерживается с её входа.
+Native default reader Lower82 читал лексический default лениво, при первом чтении — после `node\source: 2` тела
+`probe`: held78 native root0 `V78 held-forward result=2 copied=2 original=1`, exit82 вместо7. Исправление83
+(уточнение Codex CODEX-OPUS-81ANS-20261031T023640Z): `lm_compiler_emit_native_input_entry` в Lower вызывается
+Emit при входе, до загрузки own-полей и тела, тем же default reader и фильтрами; forward-only вход не читается,
+поданный сохраняет значение, без eager чтения неиспользуемых входов и initialized-флагов. FE83 + RT83: held78 native
+root0 `result=7 copied=2 original=1`.
+
+### WALK-HIDDEN-SUFFIX-REFUSED — 2026-10-31, Opus (срез242, held78 на FE82 + RT71), FIXED в build2 implements83/walker83 (не выпущено)
+
+`lmx_walk_selected_values` отказывал любому EXEC, у которого после записанного префикса (slot4) есть
+нормализованный суффикс скрытых входов (`written_count != transport_count` → UNSUPPORTED): held78 native root1 и
+forced root0/root1 — `lmx: walk error: UNSUPPORTED`. Исправление83 (CODEX-OPUS-83SUFFIX): общий
+`lmx_callable_bind_written` связывает каждый суффикс по имени входа Consumer-контракта на том же SOURCE-ординале
+через существующий `lmx_callable_named_formal` (не по равенству ординалов); walker вычисляет суффикс один раз
+после записанных операндов, scatter помечает занятость2, отсутствующий вход идёт полным absent Value с ref0 к
+обычному разрешению на входе выбранного callee. Admission-ветка (`source_binding`) суффикс не связывает. FE83 +
+RT83: held78 native root1, forced root0/root1 — `result=7 copied=2 original=1`; в forced `invoke`/`probe` без
+native-слов, их тела обходятся walker-ом.
+
+### CALLABLE-SOURCE-RECEIVING-UNDECLARED — 2026-10-31, Opus (срез242, owner73b на FE82 + RT71), FIXED в build2 writer83b/RT83 (не выпущено)
+
+Строка owner73b вызывает через C-дверь `lmx_callable_source_receiving`. Символ в `rt71/driver.o` глобален (`T`,
+как и прочие функции машинных модулей), но публичный заголовок RT71 (`lmx_implements.h.lm1`, `.lm1.h`) его не
+объявляет: `p.c:26072:21` (forced `26084`) `implicit declaration of function 'lmx_callable_source_receiving'`.
+Исправление83 — в L3 writer: прототип в `decl_implements` и имя `implements_names[58]` (59). RT83 перегенерировал
+объявление: `src/l2src/lmx_implements.h.lm1:406`, `headers/l2src/lmx_implements.lm1.h:140`. FE83 + RT83: CC
+owner73b native без ошибок (значения строки ещё не получены, см. ниже).
+
+### SUITE-PROGRAM-CC-BOUND — 2026-10-31, Opus (срез242, owner73b на FE82 + RT71), IN WORK срез242 (83)
+
+Компиляция программы строки owner73b (`lib_owner` p.c16543281 байт, `-O2 -fstrict-aliasing`) оба раза снята общей
+границей шага900 с: `INFRA step 3 kind 2 exit 900000` (native03:04:55→03:20, forced03:20:15→03:35:15Z). Граница
+`l2_timeout_ms` у `bld_program_k` относится только к шагу L2; CC шёл через `bld_step` (900 с). По решению Codex
+(CODEX-OPUS-83CCTIME-20261031-ANSWER) writer83b ограничивает собственный CC программы существующим
+`bld_step_t(…, 3600000U)`; флаги, строки, L2/L1/link/run границы не меняются. FE83 + RT83 (writer83b): CC owner73b
+native без ошибок, но снят и новой границей (05:47:37→06:47:38Z), `p.o` пуст; пик cc1 private5.1 GB. Открыто до
+результата PUBLISH-CALL-CODE-SIZE.
+
+### PUBLISH-CALL-CODE-SIZE — 2026-10-31, Opus (срез242, измерение owner73b на FE82/FE83), IN WORK (84)
+
+Метод `try_dynamic_m` (`variants/runtime-callable73b/lib_owner.lm2:207-603`, ≈400 строк) даёт native `l2_m15`
+36194 строки L1 и построитель графа `frames15` 29888 строк; во всей программе7061 вызов `l2_m15_publishNN(…)`
+(публикация грязных own-полей перед вызовом, по16 на helper). p.lm1115697 строк,166 fn; для сравнения p.c
+owner60 — 3762794 байт, CC34 с. Вызовы publish —10614945 байт (63% p.lm1, 1503 байта на вызов): каждый передаёт
+по месту `(@ l2_qK_dirty), l2_qK_from, (@ l2_qK)[, (@ l2_wvK)]`, одни и те же адреса на всех границах активации.
+Выбранное локальное улучшение84 (CODEX-OPUS-84PUBLISH-20261031-REVIEW: семантических возражений нет): одна таблица
+адресов активации, заполняемая при объявлении каждого места; helper-ы принимают её, захватывают handle-ы слотов до
+первого publisher и читают каждое место приведением к исходному точному типу адреса; граница передаёт только
+таблицу. Dirty-only публикация, её момент при call/exit, порядок полей и snapshot-семантика не меняются;
+`frames15` этим не уменьшается.
+
+### DOCS-CHECK-PRIVATE-OUT-SILENT — 2026-10-31, Opus (срез242, `docs check` G2 FULL48 `A6D5EC40…`), OPEN
+
+Полный `docs check` с ещё не существующим каталогом PRIVATE_OUT через18 с возвращает exit1 без единой
+диагностики (`P/pins/docs242-check.log`: только итог драйвера). Отдельный `docs verify semantics` тех же входов —
+exit0. EOL-фаза (`selfbuild/tools/docs_check_eol.lm2`, `docs_eol_check`) запускает `git ls-files` с выводом в
+`PRIVATE_OUT/docs-eol.stdout`; каталог она не создаёт, и отказ `os_run` возвращается молча. Срез241 создал свой
+`docs241-out-01` заранее. Обход по существующему контракту — создать пустой свежий каталог до запуска
+(`docs242-check-02.command`); исправление — диагностика или создание каталога в самой фазе, отдельным срезом.
+
 ### DOCS-L3-SEMANTICS-VERIFY-EXIT — 2026-10-29, Codex (срез239, существующий `docs verify semantics` boot45 G2), FIXED 6dfe7bfa2d3d22768f82d15be67466690f29456a (срез240, Windows)
 
 Языковой tool boot45 G2 (`A69A7EE2…`) с опубликованными неизменными source-bytes candidate45 возвращает exit1

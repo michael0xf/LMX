@@ -69,8 +69,15 @@ width from the selected fn's own args part (part0: the written formals, then the
 module-internal `lmx_walk_input_width`, same physical access as the walker's vars/body parts). An
 input the caller did not hand is the frame's zero input — absent, as one handed absent — so a
 consumed hidden input takes its fallback at entry and a forwarded one goes on absent. A fn without an
-args part widens nothing. The walker still does not check the trampoline's lower bound (the written
-count); call binding provides it. The same change is applied to the coherent85 walker
+args part widens nothing. Two boundaries stay OPEN (Codex CODEX-OPUS-243-20261031-REVIEW): the
+trampoline's lower bound (the written count; the native trampoline requires `nargs >= m_arity`,
+stage83 `l2_frontend_core.lm2:14214`, Core84 :14221) is
+supplied by call binding for bound calls but not on the direct runtime path `lmx_call_prim_values`
+(`lmx_call.lm2:199–213`) → `lmx_walk_call_prim_dispatch` → activate → args_open, where walker86 also
+pads missing written slots — no native/walk direct-entry input-contract parity is claimed; and the
+width is the raw part0 extent (`header.array.size`), not the projected SOURCE width
+(`source_count`/input_refs) — equal for ordinary generated headers, projected runtime FN input layouts
+not covered, no counterexample pinned. The same change is applied to the coherent85 walker
 ([walker86-coherent85.diff](walker86-coherent85.diff): `1BA9A35B…` → `8B704430…`) for the 85 chain.
 
 ## RT86w3 and suites86w-03

@@ -4,6 +4,44 @@
 
 ## Текущие и недавно закрытые
 
+### NATIVE-RAW-DEREF-NULL-HOLDER-UNCHECKED — 2026-11-01, Opus (срез247, сырой нативный маршрут DEREF на FE93 + RT92), FIXED в build2 coherent94 (не выпущено)
+
+Сырой нативный маршрут того же обычного управляемого DEREF (Lower `lm_compiler_emit_indirect_value`: `DECL NEXT
+\NAME`; берётся, когда у операнда или его потребителя нет полного значения) и сырая запись через держатель
+(`lm_compiler_emit_indirect_location`, затем store) держатель не проверяли: нулевой держатель — не `interpreter`, как у
+DEREF walker-а (`lmx_walk_value_deref_place`; LMX_semantics #exceptions). RED на FE93 + RT92: no-candidate94
+(no-candidate79 + `read_null_raw`: `if: \hole = 0` под `catch: interpreter` → 4; `read_null_checked` → 8) — native
+root0/root1 `driver exit -1073741819` (0xC0000005) до вывода, forced — 7; no-candidate95 (+ `write_null_raw`: `\hole: 5`
+без своего обработчика, обработчик вызывающего → 16) — native `lmx: walk error: INVALID` (exit 3), forced — 7. Codex
+(CODEX-OPUS-THROWDEREF93-20261101-ANSWER01): сырая запись того же языкового DEREF проверяет фактический держатель перед
+каждым физическим разыменованием, финальным тоже, существующим неявным `interpreter`; нуль, загруженный из валидного
+держателя, — значение, пока его самого не разыменуют; `--machine` и сырые операции C ABI сохраняют контракт машинной
+памяти; скан эффектов переиспользует одну классификацию. Исправление coherent94 (Lower `99605615`, Emit `C35CE51A`):
+`emit_indirect_value` получает `mi` и `checked` (`lm_compiler_indirect_managed` всего DEREF у вызывающего) и при
+checked выпускает `if: <держатель> = 0` + `lm_compiler_emit_null_use` перед чтением каждого шага, финальным тоже;
+`emit_indirect_location` проверяет держатель записываемого места после адреса и до значения; `head_path_effect` Emit
+классифицирует сырую голову записи так же (`lm_compiler_indirect_head_raises`, дописана в конец модуля). `.h.lm1` Emit
+побайтно прежний, у Lower меняется одна строка — прототип `emit_indirect_value`. Оставлены без изменений явно: сырое
+индексное место (`p[i]`, kind 8) и маршрут слова-разыменования `lm_compiler_prefix_deref`. FE94 + RT92: no-candidate95
+и no-candidate94 — 7 в native и forced, root0/root1 (`null-write=16 null-raw=4 null-checked=8`); no-candidate79, held78,
+computed-absence79 и owner73c (V63) — 0 failed. [Срез247](witnesses/fix247-20261101/notes.md).
+
+### NATIVE-DEREF-RAISE-WITHOUT-STATUS-CHANNEL — 2026-11-01, Opus (срез247, no-candidate79 native на FE92 + RT92), FIXED в build2 coherent93 (не выпущено)
+
+no-candidate79 native на FE92 + RT92: `p.c:485: 'l2_out_throw' undeclared` в `l2_m3` (split `Code`). Lower
+`lm_compiler_emit_indirect_span_full` выпускает `\p` (кешированное рабочее значение split-строки) проверенным DEREF
+walker-а `lmx_walk_value_deref_place`, который для нулевого держателя даёт THROWN + INTERPRETER (LMX_semantics
+#exceptions), и публикует `interpreter` через `l2_out_throw`; но `m_throws` (`lm_compiler_body_throws`) префиксное
+разыменование не классифицировал: сканер полей не начинает пробег с атома-оператора, оба сканера подготовленных
+значений спускались только в операнд. Дефект не split-специфичен. Исправление coherent93 (Lower `C5358793`, Emit
+`7887932D`, writer93 `1C6A9974`): одна классификация `lm_compiler_indirect_managed(levels, source_type, mi)` — прежние
+пробы `emit_indirect_span_full`, которая теперь спрашивает её; эффекты Emit отмечают каждое такое разыменование
+(сканер полей — у `\`, не начинающего пробег; оба сканера подготовленных значений — у операнда `\`); writer93
+экспортирует классификацию. Классификация консервативна: где Lower берёт сырой маршрут, метод несёт неиспользуемый
+канал. Новые функции дописаны в конец модулей: `.h.lm1` Emit побайтно прежний, у Lower одна новая строка. FE93 +
+RT92: no-candidate79 native и forced — 7 (root0/root1); held78, computed-absence79 и owner73c (V63) — 0 failed.
+[Срез247](witnesses/fix247-20261101/notes.md).
+
 ### MACHINE-C-MEMBER-ARITHMETIC-UNKNOWN-TYPE — 2026-10-31, Opus (срез245, boot88 G1 runtime, шаг 5), FIXED в build2 green89 resolve `25769A60` (не выпущено)
 
 boot88 (зелёная линия: source84 + walker86, G0 tool84) построил G1 frontend и остановился в G1 runtime на шаге 5:
@@ -24,7 +62,7 @@ census89g-kernel — 36/36; 38 выходов 30 прежде проходивш
 проверены smoke225 и продвинуты; G1 и G2 — один образ с точностью до метки линковки. В линию draft79 green89 ещё
 не внесён. [Срез245](witnesses/fix245-20261031/notes.md).
 
-### DRAFT79-OWNER-POINTER-CONTEXT-STACK-POINTEE — 2026-10-31, Opus (срез244, owner73c на FE87 + RT87), OPEN
+### DRAFT79-OWNER-POINTER-CONTEXT-STACK-POINTEE — 2026-10-31, Opus (срез244, owner73c на FE87 + RT87), FIXED в build2 coherent92 (не выпущено)
 
 На когерентной линии87 (draft79 + 82/83/84/86) owner73c во всех четырёх режимах одинаково: S81…V59 как на FE84,
 затем `V63 copy failure=11 status=3` → exit28 (на FE84 + RT86w3 — 7). `lmx_graph_copy_owned` корня V63 возвращает
@@ -44,7 +82,21 @@ c.l2_call_arena)` в `try_dynamic_m` (`lib_owner.lm2:211`); её цель — а
 закрепить родительское ребро до этой ячейки и производителя 84→87 этого поля, следующим шагом линии draft79.
 Bootstrap идёт по зелёной линии84 + walker86.
 
-### DRAFT79-BARE-RETURN-CHECKER — 2026-10-31, Opus (срез244, computed-absence79 на FE85/FE87), OPEN
+Срез247 (gdb87, прогоны 10 и 13): копия `context_root` идёт через контекст `context_outer_cell` — его model и
+references (узел N, под Structure own-мест `try_dynamic_m`, где лежит и own-ячейка `arena`). Производитель 84→87 —
+устаревший компаньон указательной ячейки: `lmx_walk_value_materialize` пишет новую ячейку в опубликованную ячейку
+`box`, а компаньон хранит контекст `p`; каждое следующее чтение места `\box_cell` раздаёт его ячейкам V59,
+`context_owner_cell` и `context_outer_cell`. FE84 скрывал это записью `owner_address` с контекстом 0. Решение Codex
+(CODEX-OPUS-V63EDGE-20261031-ANSWER01, CODEX-OPUS-V63A-20261031-ANSWER01): (a) метаданные физической указательной
+ячейки привязаны к ссылке, с которой она записана: общая запись ставит отметку, а обе загрузки walker-а и native-шаг
+Lower присоединяют метаданные компаньона только при совпадении — через одну экспортированную функцию
+`lmx_value_loaded_context`; (b) N — законные данные контракта ссылки, замыкание full-used свидетельствуется через
+`lmx_graph_copy_many_used_staged` следующим шагом. coherent92 (`lmx_value_owned` `875B594B`, `lmx_walk_values`
+`9347AD82`, `lmx_reparent` `70F9C0A5`, writer92 `C46B3A57`, Lower `9A4F013A`): owner73c во всех четырёх режимах —
+`V63 copy values y=43 source-y=42 x-slot=1 y-slot=2 refs=1 owner-alias=1`, `failed=0` и 7 (FE92 + RT92 и FE93 +
+RT92). [Срез247](witnesses/fix247-20261101/notes.md).
+
+### DRAFT79-BARE-RETURN-CHECKER — 2026-10-31, Opus (срез244, computed-absence79 на FE85/FE87), FIXED в build2 coherent89 Emit `B9580244` (не выпущено)
 
 `unit_computed_absence_receiving.lm2:11:9: unsupported body` (atom=return): голый `return` внутри `if:` типизированного
 обычного `fn: produce (int: absent) int`. По Codex (CODEX-OPUS-85FIND-20261031-ANSWER) отказ — общая проверка
@@ -52,8 +104,11 @@ Emitter `lm_compiler_check_word_stmt` (:5127–5132, из check_body :5268–527
 аргумента отвергает `mi != entry && declared_return != void`, хотя производители (Lower :17981–17988, хвост Core
 :1548–1554, граф Emitter :11603–11611, `emit_empty_return`) уже реализуют возврат без значения обычного callable
 (machine0). Исправлять общую проверку по установленной классификации machine, не по имени/телу/фикстуре.
+Срез247: проверка отвергает только machine-функцию с результатом — точное дополнение того, что Lower/Core выпускают
+через `emit_empty_return`; граф Emitter выпускает `LMX_WALK_OP_RET`. FE92 + RT92 и FE93 + RT92: computed-absence79 —
+7 в native и forced, root0/root1. [Срез247](witnesses/fix247-20261101/notes.md).
 
-### SPLIT-POINTER-PLACE-NOT-ADMITTED — 2026-10-31, Opus (срез244, no-candidate79 на FE85/FE87), OPEN
+### SPLIT-POINTER-PLACE-NOT-ADMITTED — 2026-10-31, Opus (срез244, no-candidate79 на FE85/FE87), FIXED в build2 coherent92 Coords `E6D90C71` + coherent93 (не выпущено)
 
 `unit_no_candidate_selected_pointer.lm2:12:5: split call not supported yet: Code assigns p, a reference, whose data
 place is not admitted yet`: Coords `split_data_row` (:856–880, предикат :867) допускает только own_num_ctype или
@@ -61,6 +116,10 @@ source_definition_ns; типизированная ссылка → Core `split_
 типизированную ссылку как обязательное место данных через существующий общий допуск/карту split (split_data_row →
 split_rep/name_ix → split_place → `l2_cpt` → `lmx_implements_places`), без огульного допуска Array/graph-ссылок; ветка
 no-candidate без записи уже есть в Emitter (:11763–11769, SOURCE_INERT).
+Срез247: `split_data_row` допускает типизированную ссылку на не-графовые данные (указатель; не Array и не
+граф-ссылка); 65 потребителей в шести модулях от типа не зависят. FE92 + RT92: forced 7 (root0/root1), native —
+отказ CC (`l2_out_throw` undeclared, NATIVE-DEREF-RAISE-WITHOUT-STATUS-CHANNEL выше); FE93 + RT92: native и
+forced 7. [Срез247](witnesses/fix247-20261101/notes.md).
 
 ### DRAFT79-LOWER-WV-NAME-DOUBLED — 2026-10-31, Opus (срез244, held78/owner73c на FE85 + RT85b), FIXED в build2 Lower87 (не выпущено)
 

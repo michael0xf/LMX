@@ -1,0 +1,38 @@
+--- a/unit_no_candidate_selected_pointer.lm2
++++ b/unit_no_candidate_selected_pointer.lm2
+@@ -5,3 +5,4 @@
+-# DEREF does (LMX_semantics.ru.md #exceptions): read by a condition (the raw
+-# native route) and stored into a cell (the checked route); each block's
+-# handler takes it.
++# DEREF does (LMX_semantics.ru.md #exceptions): written through by a method
++# with no handler of its own (the raw store; its caller's handler takes it),
++# read by a condition (the raw native route) and stored into a cell (the
++# checked route); each block's handler takes it.
+@@ -21,0 +23,14 @@
++fn: write_null_raw () int
++    @: hole int 0
++    \hole: 5
++    return: 50
++end: write_null_raw
++fn: write_null_caught () int
++    int: got 1
++    ---
++        got: write_null_raw()
++    ---
++    catch: interpreter ()
++        got: 16
++    return: got
++end: write_null_caught
+@@ -44,2 +59,2 @@
+-fn: observe_values (int: first; int: second; int: preserved; int: raw; int: checked) int
+-    c.printf("V79 no-candidate first=%d second=%d preserved=%d null-raw=%d null-checked=%d\n", first, second, preserved, raw, checked)
++fn: observe_values (int: first; int: second; int: preserved; int: written; int: raw; int: checked) int
++    c.printf("V79 no-candidate first=%d second=%d preserved=%d null-write=%d null-raw=%d null-checked=%d\n", first, second, preserved, written, raw, checked)
+@@ -58,0 +74 @@
++int: null_write write_null_caught()
+@@ -61 +77 @@
+-int: reported observe_values(first_seen, second_seen, preserved, null_raw, null_checked)
++int: reported observe_values(first_seen, second_seen, preserved, null_write, null_raw, null_checked)
+@@ -63 +79 @@
+-if: first_seen = 11 && second_seen = 13 && preserved = 1 && null_raw = 4 && null_checked = 8 && reported = 0
++if: first_seen = 11 && second_seen = 13 && preserved = 1 && null_write = 16 && null_raw = 4 && null_checked = 8 && reported = 0

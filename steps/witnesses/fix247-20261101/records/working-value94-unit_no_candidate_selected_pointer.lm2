@@ -1,0 +1,66 @@
+# A first declaration without a candidate, like a repeat, does not write.
+# The actual pointer belongs to explicit selected data, not the code's slot.
+# Existing no-value receiving rule: LMX_semantics.ru.md #dynamic, #method-parts.
+# A null holder raises `interpreter` when it is dereferenced, as the walker's
+# DEREF does (LMX_semantics.ru.md #exceptions): read by a condition (the raw
+# native route) and stored into a cell (the checked route); each block's
+# handler takes it.
+include: "<stdio.h>"
+int: first_number 11
+int: second_number 13
+int: seen 0
+Data:
+    @: p int
+end: Data
+Code:
+    @: p int
+    node\seen: \p
+end: Code
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+fn: read_null_raw () int
+    @: hole int 0
+    int: got 1
+    ---
+        if: \hole = 0
+            got: 50
+    ---
+    catch: interpreter ()
+        got: 4
+    return: got
+end: read_null_raw
+fn: read_null_checked () int
+    @: hole int 0
+    int: got 1
+    ---
+        node\seen: \hole
+        got: 50
+    ---
+    catch: interpreter ()
+        got: 8
+    return: got
+end: read_null_checked
+fn: observe_values (int: first; int: second; int: preserved; int: raw; int: checked) int
+    c.printf("V79 no-candidate first=%d second=%d preserved=%d null-raw=%d null-checked=%d\n", first, second, preserved, raw, checked)
+    return: 0
+end: observe_values
+Data\p: @ first_number
+call: Code Data
+int: first_seen read_seen()
+int: preserved 0
+if: Data\p = @ first_number
+    preserved: 1
+Data\p: @ second_number
+call: Code Data
+int: second_seen read_seen()
+if: Data\p != @ second_number
+    preserved: 0
+int: null_raw read_null_raw()
+int: null_checked read_null_checked()
+int: reported observe_values(first_seen, second_seen, preserved, null_raw, null_checked)
+int: result 81
+if: first_seen = 11 && second_seen = 13 && preserved = 1 && null_raw = 4 && null_checked = 8 && reported = 0
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

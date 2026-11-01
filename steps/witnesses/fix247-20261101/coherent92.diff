@@ -1,0 +1,115 @@
+--- a/src/l2src/lmx_value_owned.lm2
++++ b/src/l2src/lmx_value_owned.lm2
+@@ -36,0 +37,13 @@
++# A physical companion, or a full Value standing as a place's context,
++# describes the reference it was stored with (lmx_value_cell_fill records it).
++# It qualifies a reference just read from that place only while it records the
++# same reference (a present null is ref 0); otherwise the read is an ordinary
++# typed REF without model, references or referent. The one rule of the
++# walker's value and place loads and of the native typed dereference; a
++# context-only temporary is never passed here.
++fn: lmx_value_loaded_context (@: context c.LmxWalkValue; @: raw void) @: c.LmxWalkValue
++    if: context = 0 || context\present = 0 || context\kind != c.LMX_WALK_VALUE_REFERENCE || context\ref != raw
++        return: 0
++    return: context
++end: lmx_value_loaded_context
++
+@@ -476,0 +490,5 @@
++# The physical companion's metadata describes the reference it was stored
++# with: after the write succeeds it records that reference (present, kind,
++# ref; a present null is ref 0), so a later raw write of another reference
++# leaves it describing nothing loaded from the cell. Context 0 still clears
++# the metadata. An owner that is not the companion keeps its own Value.
+@@ -489,0 +508,5 @@
++        if: stored != 0
++            stored\present: 1
++            stored\kind: c.LMX_WALK_VALUE_REFERENCE
++            stored\ref: raw
++        ---
+--- a/src/l2src/lmx_walk_values.lm2
++++ b/src/l2src/lmx_walk_values.lm2
+@@ -400 +400,3 @@
+-# A reference payload is loaded once using its proved pointer-cell accessors.
++# A reference payload is loaded once using its proved pointer-cell accessors;
++# the cell's companion qualifies it only while it records that reference
++# (lmx_value_loaded_context).
+@@ -406,0 +409 @@
++    @: raw void 0
+@@ -414 +417,2 @@
+-        return: lmx_walk_value_ref_context(out, ty, read(storage), c.lmx_pointer_cell_context(arena, storage))
++        raw: read(storage)
++        return: lmx_walk_value_ref_context(out, ty, raw, c.lmx_value_loaded_context(c.lmx_pointer_cell_context(arena, storage), raw))
+@@ -1210,0 +1215,5 @@
++# The place's context is snapshot, its recorded reference with it, before the
++# load (out may alias it). After a raw read it is laid over the loaded REF only
++# while it records that same reference; otherwise the REF keeps what the value
++# load attached from the cell's own validated companion. A descriptor place
++# loads no raw content: its address is the reference.
+@@ -1213,0 +1223,3 @@
++    @: source c.LmxWalkValue lmx_walk_place_context(arena, place)
++    c.LmxWalkValue: stamp_storage
++    @: stamp c.LmxWalkValue @ stamp_storage
+@@ -1215 +1227,7 @@
+-    c.lmx_value_context_copy(context, lmx_walk_place_context(arena, place))
++    c.lmx_value_context_copy(context, source)
++    lmx_walk_value_clear(stamp)
++    if: source != 0
++        stamp\present: source\present
++        stamp\kind: source\kind
++        stamp\ref: source\ref
++    ---
+@@ -1222 +1240,4 @@
+-        c.lmx_value_context_copy(out, context)
++        if: place\descriptor != 0 || c.lmx_value_loaded_context(stamp, (cast: (@: void) out\ref)) != 0
++            c.lmx_value_context_copy(out, context)
++        ---
++    ---
+--- a/src/l2src/lmx_reparent.lm2
++++ b/src/l2src/lmx_reparent.lm2
+@@ -1089,0 +1090 @@
++    @: stamped c.LmxWalkValue
+@@ -1152,0 +1154,8 @@
++        ---
++        # A relocated reference keeps the metadata stored with it: a pointer
++        # cell's companion that recorded the old target now records the new
++        # one (lmx_value_cell_fill). Companion members and Structure slots
++        # have no companion of their own.
++        stamped: c.lmx_pointer_cell_context((cast: (@: c.LmxArena) edit\view), slot)
++        if: stamped != 0 && stamped\present != 0 && stamped\ref = (cast: (@: void) edit\before)
++            stamped\ref: (cast: (@: void) edit\after)
+--- a/src/l2src/l2_frontend_lower.lm2
++++ b/src/l2src/l2_frontend_lower.lm2
+@@ -4041 +4041,4 @@
+-        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%slmx_value_context_copy(@ l2_cv%d, lmx_value_address_context(l2_program_arena, (cast: (@: void) %s), @ l2_cv%d))\n%s%s \\%s\n", ind, next, ind, next, ind, next, name, t, ind, declaration\data, name) < 0
++        # The step's context is the full record of the address context -- its metadata and the reference it
++        # records -- snapshot before the one typed dereference; it qualifies the loaded pointer only while it
++        # records that pointer (lmx_value_loaded_context, the walker's own rule), else the step is a plain REF.
++        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n%s@: LmxWalkValue l2_ixc%d lmx_value_address_context(l2_program_arena, (cast: (@: void) %s), @ l2_cv%d)\n%sif: l2_ixc%d != 0\n%s    c.memcpy((cast: (@: void) (@ l2_cv%d)), (cast: (@: void) l2_ixc%d), c.sizeof(c.LmxWalkValue))\n%s---\n%s%s \\%s\n", ind, next, ind, next, ind, next, name, t, ind, next, ind, next, next, ind, ind, declaration\data, name) < 0
+@@ -4043 +4046 @@
+-        if: c.fprintf(out_cell[0], "%slmx_walk_value_ref_context(@ l2_cv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) %s), @ l2_cv%d)\n", ind, next, step_type, next_name, next) < 0
++        if: c.fprintf(out_cell[0], "%slmx_walk_value_ref_context(@ l2_cv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) %s), lmx_value_loaded_context(@ l2_cv%d, (cast: (@: void) %s)))\n", ind, next, step_type, next_name, next, next_name) < 0
+--- a/src/l2src/l2_frontend_coords.lm2
++++ b/src/l2src/l2_frontend_coords.lm2
+@@ -855,0 +856,4 @@
++# A place of explicit data: a number, a source definition, or a typed
++# reference to non-graph data (its cell holds the reference; the data's place
++# row addresses that cell like a number's). Array and graph references still
++# need the implements admission of their data place (split_staged).
+@@ -867 +871,6 @@
+-    if: ns_split_any_cell[0] = 0 || oi < 0 || oi >= own_n_cell[0] || (c.lm_compiler_own_num_ctype(own_ty_cell[0][oi]) = 0 && c.lm_compiler_source_definition_ns(oi) < 0)
++    int: typed_reference 0
++    if: ns_split_any_cell[0] = 0 || oi < 0 || oi >= own_n_cell[0]
++        return: (cast: (int) (0))
++    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) = 0 && c.lm_compiler_own_is_graph(own_ty_cell[0][oi]) = 0
++        typed_reference: 1
++    if: c.lm_compiler_own_num_ctype(own_ty_cell[0][oi]) = 0 && c.lm_compiler_source_definition_ns(oi) < 0 && typed_reference = 0
+--- a/tools/build.lm2
++++ b/tools/build.lm2
+@@ -2002 +2002 @@
+-    @@: value_names char c.calloc(61U, sizeof(@: char))
++    @@: value_names char c.calloc(62U, sizeof(@: char))
+@@ -2701,0 +2702 @@
++    value_names[61]: "lmx_value_loaded_context"
+@@ -2739 +2740 @@
+-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 61, 1) != 0
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 62, 1) != 0

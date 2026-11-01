@@ -1,0 +1,86 @@
+--- a/src/l2src/l2_frontend_lower.lm2
++++ b/src/l2src/l2_frontend_lower.lm2
+@@ -3905 +3905,3 @@
+-    if: full_value = 0 || mi < 0 || ind = 0 || levels < 1 || c.lm_compiler_m_machine(mi) != 0
++    # Finish all availability probes before evaluating the operand: the
++    # classification the throw-channel analysis shares.
++    if: full_value = 0 || ind = 0 || lm_compiler_indirect_managed(levels, source_type, mi) = 0
+@@ -3909 +3910,0 @@
+-    # Finish all availability probes before evaluating the operand.
+@@ -3912,2 +3912,0 @@
+-        if: step_type < 0 || c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(step_type)) != 0 || c.lm_compiler_emit_input_value_type(step_type, 0, type) != 0
+-            return: lm_compiler_emit_indirect_span(operand, levels, source_type, mi, ind, dest, context)
+@@ -18500,0 +18500,22 @@
++
++# A raw dereference whose every step is a walker input value, in a method that
++# is not a machine function, is the graph's DEREF: a null holder raises
++# `interpreter` (LMX_semantics #exceptions). Lower takes the checked walker route
++# only for such a dereference (lm_compiler_emit_indirect_span_full, when its
++# operand also has a full value); the throw-channel analysis marks every one, so
++# every method that may raise there has the status channel.
++fn: lm_compiler_indirect_managed (int: levels; int: source_type; int: mi) int
++    c.L2FrontendScratchChar96: type_storage
++    @: type char (cast: (@: char) type_storage\buffer)
++    int: step_type source_type
++    int: i 0
++    if: mi < 0 || levels < 1 || c.lm_compiler_m_machine(mi) != 0
++        return: 0
++    while: i < levels
++        step_type: c.lm_compiler_indirect_type(step_type)
++        if: step_type < 0 || c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(step_type)) != 0 || c.lm_compiler_emit_input_value_type(step_type, 0, type) != 0
++            return: 0
++        i: i + 1
++    ---
++    return: 1
++end: lm_compiler_indirect_managed
+--- a/src/l2src/l2_frontend_emit.lm2
++++ b/src/l2src/l2_frontend_emit.lm2
+@@ -14930,0 +14931,2 @@
++        if: lm_compiler_indirect_span_raises(span, mi) != 0
++            return: (cast: (int) (1))
+@@ -15037,0 +15040,4 @@
++                # No run starts at an operator atom; the raw dereference
++                # prefix still raises where Lower checks its holder.
++                if: c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (v\as\atom))) != 0 && lm_compiler_fields_indirect_raises(f, left, mi) != 0
++                    return: (cast: (int) (1))
+@@ -15065,0 +15072,2 @@
++                if: lm_compiler_indirect_span_raises(value, mi) != 0
++                    return: (cast: (int) (1))
+@@ -17460,0 +17469,27 @@
++# A raw dereference raises `interpreter` on a null holder wherever Lower lowers
++# it as the checked walker DEREF (LMX_semantics #exceptions);
++# lm_compiler_indirect_managed is that one classification, so the method gets
++# the status channel. A dereference without a pointer contract is Lower's
++# diagnostic.
++fn: lm_compiler_indirect_span_raises (@: span c.L2ValueSpan; int: mi) int
++    c.L2ValueSpan: operand
++    int: levels 0
++    int: source_type -1
++    int: result_type -1
++    if: span = 0 || span\operand = 0 || span\node = 0 || span\node\kind != c.LM_P0_NODE_ATOM || span\node\as = 0 || c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (span\node\as\atom))) = 0
++        return: 0
++    if: c.lm_compiler_indirect_span(span, mi, @ operand, @ levels, @ source_type, @ result_type) != 0
++        return: 0
++    return: c.lm_compiler_indirect_managed(levels, source_type, mi)
++end: lm_compiler_indirect_span_raises
++
++# The field scan meets the same dereference as its prefix atom: the common value
++# grammar prepares its one operand, then it is classified as above.
++fn: lm_compiler_fields_indirect_raises (@: first c.LmP0Field; int: count; int: mi) int
++    c.L2ValueSpan: span
++    int: raises 0
++    if: c.lm_compiler_value_span_prepare(first, count, @ span) > 1
++        raises: lm_compiler_indirect_span_raises(@ span, mi)
++    c.lm_compiler_value_span_release(@ span)
++    return: raises
++end: lm_compiler_fields_indirect_raises
+--- a/tools/build.lm2
++++ b/tools/build.lm2
+@@ -3256 +3256 @@
+-    @@: frontend_lower_names char c.calloc(442U, sizeof(@: char))
++    @@: frontend_lower_names char c.calloc(443U, sizeof(@: char))
+@@ -4880,0 +4881 @@
++    frontend_lower_names[442]: "lm_compiler_indirect_managed"
+@@ -5913 +5914 @@
+-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_lower", frontend_lower_names, 442, 1) != 0
++        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_lower", frontend_lower_names, 443, 1) != 0

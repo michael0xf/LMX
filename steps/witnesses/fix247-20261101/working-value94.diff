@@ -1,0 +1,42 @@
+--- a/unit_no_candidate_selected_pointer.lm2
++++ b/unit_no_candidate_selected_pointer.lm2
+@@ -3,0 +4,4 @@
++# A null holder raises `interpreter` when it is dereferenced, as the walker's
++# DEREF does (LMX_semantics.ru.md #exceptions): read by a condition (the raw
++# native route) and stored into a cell (the checked route); each block's
++# handler takes it.
+@@ -18,2 +22,24 @@
+-fn: observe_values (int: first; int: second; int: preserved) int
+-    c.printf("V79 no-candidate first=%d second=%d preserved=%d\n", first, second, preserved)
++fn: read_null_raw () int
++    @: hole int 0
++    int: got 1
++    ---
++        if: \hole = 0
++            got: 50
++    ---
++    catch: interpreter ()
++        got: 4
++    return: got
++end: read_null_raw
++fn: read_null_checked () int
++    @: hole int 0
++    int: got 1
++    ---
++        node\seen: \hole
++        got: 50
++    ---
++    catch: interpreter ()
++        got: 8
++    return: got
++end: read_null_checked
++fn: observe_values (int: first; int: second; int: preserved; int: raw; int: checked) int
++    c.printf("V79 no-candidate first=%d second=%d preserved=%d null-raw=%d null-checked=%d\n", first, second, preserved, raw, checked)
+@@ -33 +59,3 @@
+-int: reported observe_values(first_seen, second_seen, preserved)
++int: null_raw read_null_raw()
++int: null_checked read_null_checked()
++int: reported observe_values(first_seen, second_seen, preserved, null_raw, null_checked)
+@@ -35 +63 @@
+-if: first_seen = 11 && second_seen = 13 && preserved = 1 && reported = 0
++if: first_seen = 11 && second_seen = 13 && preserved = 1 && null_raw = 4 && null_checked = 8 && reported = 0

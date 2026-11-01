@@ -1,0 +1,10 @@
+--- a/src/l2src/l2_frontend_emit.lm2
++++ b/src/l2src/l2_frontend_emit.lm2
+@@ -5128 +5128,3 @@
+-    # (plan §3); a method with a result returns a value.
++    # (plan §3).  An ordinary callable may also finish without a value, inside `if:` too: its producers lower that
++    # (the statement `return` and Core's trailer take m_ret 8 or machine 0, emit_empty_return); only a machine
++    # function with a result has to return one.
+@@ -5130 +5132 @@
+-        if: mi != e_cell[0] && m_ret_cell[0][mi] != 8
++        if: mi != e_cell[0] && m_ret_cell[0][mi] != 8 && c.lm_compiler_m_machine(mi) != 0

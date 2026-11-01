@@ -1,0 +1,63 @@
+--- a/src/l2src/l2_frontend_lower.lm2
++++ b/src/l2src/l2_frontend_lower.lm2
+@@ -3695 +3695 @@
+-    if: place\descriptor = 0 && lm_compiler_emit_indirect_value(0, ty, ind, (cast: (const: @: char) (base\data)), current, base, @ current) != 0
++    if: place\descriptor = 0 && lm_compiler_emit_indirect_value(0, ty, mi, 0, ind, (cast: (const: @: char) (base\data)), current, base, @ current) != 0
+@@ -3726 +3726 @@
+-                if: lm_compiler_emit_indirect_value(1, address_type, ind, (cast: (const: @: char) (cell\data + 1U)), selected, base, @ next_context) != 0
++                if: lm_compiler_emit_indirect_value(1, address_type, mi, 0, ind, (cast: (const: @: char) (cell\data + 1U)), selected, base, @ next_context) != 0
+@@ -3773 +3773 @@
+-    return: (cast: (int) (lm_compiler_emit_indirect_value(1, (cast: (int) ((place\type))), ind, (cast: (const: @: char) (cell\data)), selected, dest, context)))
++    return: (cast: (int) (lm_compiler_emit_indirect_value(1, (cast: (int) ((place\type))), mi, 0, ind, (cast: (const: @: char) (cell\data)), selected, dest, context)))
+@@ -3870 +3870 @@
+-    return: (cast: (int) (lm_compiler_emit_indirect_value(levels, source_type, ind, (cast: (const: @: char) (value\data)), source_context, dest, context)))
++    return: (cast: (int) (lm_compiler_emit_indirect_value(levels, source_type, mi, lm_compiler_indirect_managed(levels, source_type, mi), ind, (cast: (const: @: char) (value\data)), source_context, dest, context)))
+@@ -3930 +3930 @@
+-        return: lm_compiler_emit_indirect_value(levels, source_type, ind, (cast: (const: @: char) value\data), source_context, dest, context)
++        return: lm_compiler_emit_indirect_value(levels, source_type, mi, lm_compiler_indirect_managed(levels, source_type, mi), ind, (cast: (const: @: char) value\data), source_context, dest, context)
+@@ -3965,0 +3966 @@
++    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+@@ -3971,0 +3973 @@
++    int: checked
+@@ -3982 +3984,8 @@
+-    return: (cast: (int) (lm_compiler_emit_indirect_value((cast: (int) (place\levels - 1)), (cast: (int) (place\source_type)), ind, (cast: (const: @: char) (value\data)), source_context, address, context)))
++    checked: lm_compiler_indirect_managed((cast: (int) (place\levels)), (cast: (int) (place\source_type)), mi)
++    if: lm_compiler_emit_indirect_value((cast: (int) (place\levels - 1)), (cast: (int) (place\source_type)), mi, checked, ind, (cast: (const: @: char) (value\data)), source_context, address, context) != 0
++        return: (cast: (int) (1))
++    # The written place is the last DEREF: its holder is checked before the
++    # value, as the walker's PUT forms its DEREF place before its value.
++    if: checked != 0 && (c.fprintf(out_cell[0], "%sif: %s = 0\n", ind, address\data) < 0 || lm_compiler_emit_null_use(mi, ind) != 0 || c.fprintf(out_cell[0], "%s---\n", ind) < 0)
++        return: (cast: (int) (1))
++    return: (cast: (int) (0))
+@@ -3986 +3995 @@
+-fn: lm_compiler_emit_indirect_value (int: levels; int: source_type; const: (@: ind char); const: (@: value char); int: source_context; @: dest c.L2Tx; @: context int) int
++fn: lm_compiler_emit_indirect_value (int: levels; int: source_type; int: mi; int: checked; const: (@: ind char); const: (@: value char); int: source_context; @: dest c.L2Tx; @: context int) int
+@@ -4032,0 +4042,6 @@
++        # An ordinary managed DEREF (lm_compiler_indirect_managed) checks its
++        # actual holder right before each physical read, the final one too, as
++        # the walker's DEREF does: a null holder raises `interpreter`. A null
++        # LOADED by a step is a value; only its own dereference raises.
++        if: checked != 0 && (c.fprintf(out_cell[0], "%sif: %s = 0\n", ind, name) < 0 || lm_compiler_emit_null_use(mi, ind) != 0 || c.fprintf(out_cell[0], "%s---\n", ind) < 0)
++            return: (cast: (int) (1))
+--- a/src/l2src/l2_frontend_emit.lm2
++++ b/src/l2src/l2_frontend_emit.lm2
+@@ -14980 +14980,3 @@
+-            return: (cast: (int) (0))
++            # A raw dereference head writes through its holder, which
++            # Lower's lm_compiler_emit_indirect_location checks.
++            return: (cast: (int) (lm_compiler_indirect_head_raises(stmt, mi)))
+@@ -17495,0 +17498,14 @@
++
++# A raw dereference write head `\p: v` raises `interpreter` on a null holder
++# where Lower checks it: the shared classification of the whole DEREF. A head
++# that is no dereference raises nothing here.
++fn: lm_compiler_indirect_head_raises (const: (@: stmt c.LmP0Node); int: mi) int
++    c.L2Address: place
++    int: raises 0
++    if: c.lm_compiler_indirect_head(stmt, @ place) != 0
++        return: 0
++    if: c.lm_compiler_indirect_resolve(mi, @ place) = 0
++        raises: c.lm_compiler_indirect_managed((cast: (int) (place\levels)), (cast: (int) (place\source_type)), mi)
++    c.lm_compiler_address_release(@ place)
++    return: raises
++end: lm_compiler_indirect_head_raises

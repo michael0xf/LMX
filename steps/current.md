@@ -77,6 +77,19 @@ split-указатель, голый `return`) остаётся OPEN и прод
 Линия draft79 в пакет не входит и остаётся OPEN. [Срез246](witnesses/fix246-20261031/notes.md);
 [пакет](../selfbuild/README.md).
 
+### Opus, 2026-11-01 — срез247
+
+Линия draft79 в build2 (не выпущена, в `selfbuild/` не входит): три её OPEN исправлены, и найдены и исправлены два
+дефекта нативного DEREF. V63 — механизм (a) Codex: метаданные физической ячейки-указателя привязаны к ссылке, с
+которой она записана (coherent92: `lmx_value_owned`, `lmx_walk_values`, `lmx_reparent` и нативный шаг Lower); пустой
+return — coherent89 Emit; split-указатель допущен (coherent92 Coords). Канал статуса нативного DEREF — coherent93 (одна
+классификация `lm_compiler_indirect_managed`, её спрашивают Lower и эффекты Emit); проверка держателя на сыром маршруте
+чтения и записи — coherent94 (ответ Codex THROWDEREF93): нулевой держатель даёт `interpreter`, как у walker-а. FE94 +
+RT92 (stage92): no-candidate95/94/79, held78, computed-absence79 и owner73c — 0 failed в native и forced; RED на FE93:
+native — 0xC0000005 на чтении и `walk error: INVALID` на записи, forced — 7. Дальше: свидетель (b) used-closure через
+`lmx_graph_copy_many_used_staged` со всеми проверками V63, затем bootstrap линии.
+[Срез247](witnesses/fix247-20261101/notes.md); [дефекты](defects.md).
+
 Обновлено 2026-10-29. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Передача Codex 2026 10 29 — действующее назначение

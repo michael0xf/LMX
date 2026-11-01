@@ -1,0 +1,15 @@
+--- variants/runtime-callable73d/lib_owner.lm2
++++ variants/runtime-callable73e/lib_owner.lm2
+@@ -666,2 +666,5 @@
+-    @: closure_entry c.LmxImplEntry c.lmx_implements_find(closure_destination, closure_copied_candidate, closure_copied_model)
+-    if: closure_entry = 0 || c.lmx_implements_at_last(closure_destination, closure_entry, 0U, x_cell) != c.LMX_WALK_OK || c.lmx_implements_at_last(closure_destination, closure_entry, 2U, y_cell) != c.LMX_WALK_OK || \x_cell != 1U || \y_cell != 2U
++    # p's own Model has the one field y (source position 0); the runtime
++    # graph holds y at slot 2. The source's correspondence first, then the
++    # copy's through the copied candidate and Model.
++    @: closure_source_entry c.LmxImplEntry c.lmx_implements_find(arena, value_graph, closure_model)
++    if: closure_source_entry = 0 || c.lmx_implements_at_last(arena, closure_source_entry, 0U, y_cell) != c.LMX_WALK_OK || \y_cell != 2U
+@@ -668,0 +672,4 @@
++        return: 29
++    @: closure_entry c.LmxImplEntry c.lmx_implements_find(closure_destination, closure_copied_candidate, closure_copied_model)
++    if: closure_entry = 0 || c.lmx_implements_at_last(closure_destination, closure_entry, 0U, y_cell) != c.LMX_WALK_OK || \y_cell != 2U
++        c.printf("V63 used-closure failure=17\n")

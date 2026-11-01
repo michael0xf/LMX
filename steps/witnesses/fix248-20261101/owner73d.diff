@@ -1,0 +1,106 @@
+--- variants/runtime-callable73c/lib_owner.lm2
++++ variants/runtime-callable73d/lib_owner.lm2
+@@ -575,0 +576,103 @@
++    # V63's used closure (Codex V63EDGE (b)): p's own cell holds p's
++    # legitimate Value -- the runtime graph with the Model declaration and N,
++    # the reference-contract graph of p's receiving instruction, whose
++    # structural parents climb to this activation's own Structure, where the
++    # own `arena` holds the stack arena. The root has V63's five fields with
++    # p's Model and N. The whole copy (lmx_graph_copy_owned) asks for the
++    # whole lexical chain and keeps refusing it; the used copy
++    # (lmx_graph_copy_many_used_staged, no use coordinates) copies the root
++    # whole and its lexical ancestors only in the places it uses.
++    @@: p_cell void (cast: (@@: void) (@ p))
++    if: p_cell = 0 || c.lmx_walk_value_cell(arena, (cast: (@: void) p_cell), to_value) != c.LMX_WALK_OK || to_value\present = 0 || to_value\ref != (cast: (@: void) value_graph) || to_value\model = 0 || to_value\references = 0
++        c.printf("V63 used-closure failure=1\n")
++        return: 29
++    @: closure_model c.Lmx (cast: (@: c.Lmx) to_value\model)
++    @: closure_references c.Lmx (cast: (@: c.Lmx) to_value\references)
++    c.lmx_walk_value_clear(from_value)
++    if: c.lmx_walk_value_ref_parts(from_value, c.LMX_TYPE_LMX, (cast: (@: void) value_graph), closure_model, closure_references) != c.LMX_WALK_OK || c.lmx_walk_value_materialize(arena, from_value, box_cell) != c.LMX_WALK_OK
++        c.printf("V63 used-closure failure=2\n")
++        return: 29
++    @: closure_owner_cell void \box_cell
++    @: closure_owner c.LmxWalkValue c.lmx_pointer_cell_context(arena, closure_owner_cell)
++    if: closure_owner_cell = 0 || closure_owner = 0 || c.lmx_value_context_cell_in(arena, closure_owner) != closure_owner_cell
++        c.printf("V63 used-closure failure=3\n")
++        return: 29
++    @@: closure_address void (cast: (@@: void) closure_owner_cell)
++    @@@: closure_address_cell void @ closure_address
++    int: closure_address_type c.lmx_range_type_of(arena, (cast: (@: void) closure_address_cell))
++    if: c.lmx_walk_value_load(arena, (cast: (@: void) closure_address_cell), closure_address_type, address_value) != c.LMX_WALK_OK || address_value\present = 0 || address_value\kind != c.LMX_WALK_VALUE_REFERENCE || address_value\ref != closure_owner_cell
++        c.printf("V63 used-closure failure=4\n")
++        return: 29
++    address_value\referent: closure_owner
++    if: c.lmx_walk_value_materialize(arena, address_value, box_cell) != c.LMX_WALK_OK
++        c.printf("V63 used-closure failure=5\n")
++        return: 29
++    @: closure_outer_cell void \box_cell
++    @: closure_root c.Lmx c.lmx_node_new_owned(arena)
++    if: closure_root = 0 || c.lmx_arena_refs_open_owned(arena, closure_root, 5U) != 0
++        c.printf("V63 used-closure failure=6\n")
++        return: 29
++    if: c.lmx_graph_ref_fill_in(arena, closure_root, 0U, closure_outer_cell) != 0 || c.lmx_graph_ref_fill_in(arena, closure_root, 1U, closure_owner_cell) != 0 || c.lmx_graph_ref_fill_in(arena, closure_root, 2U, (cast: (@: void) value_graph)) != 0 || c.lmx_graph_ref_fill_in(arena, closure_root, 3U, (cast: (@: void) closure_model)) != 0 || c.lmx_graph_ref_fill_in(arena, closure_root, 4U, (cast: (@: void) closure_references)) != 0
++        c.printf("V63 used-closure failure=7\n")
++        return: 29
++    c.LmxArena: whole_closure_arena
++    c.memset((cast: (@: void) (@ whole_closure_arena)), 0, c.sizeof(c.LmxArena))
++    @: whole_destination c.LmxArena @ whole_closure_arena
++    @: whole_copy c.Lmx 0
++    @@: whole_copy_cell c.Lmx @ whole_copy
++    if: c.lmx_arena_open(whole_destination) != 0
++        c.printf("V63 used-closure failure=8\n")
++        return: 29
++    int: whole_status c.lmx_graph_copy_owned(closure_root, arena, whole_destination, whole_copy_cell)
++    if: c.lmx_arena_release(whole_destination) != 0
++        c.printf("V63 used-closure failure=9\n")
++        return: 29
++    c.LmxArena: closure_copy_arena
++    c.memset((cast: (@: void) (@ closure_copy_arena)), 0, c.sizeof(c.LmxArena))
++    @: closure_destination c.LmxArena @ closure_copy_arena
++    if: c.lmx_arena_open(closure_destination) != 0
++        c.printf("V63 used-closure failure=10\n")
++        return: 29
++    []: (@: c.Lmx) closure_sources 1
++    []: (@: c.Lmx) closure_outs 1
++    closure_sources[0]: closure_root
++    closure_outs[0]: 0
++    @@: closure_sources_data c.Lmx @ closure_sources[0]
++    @@: closure_outs_data c.Lmx @ closure_outs[0]
++    c.LmxCopyMap: closure_pending
++    c.memset((cast: (@: void) (@ closure_pending)), 0, c.sizeof(c.LmxCopyMap))
++    int: used_status c.lmx_graph_copy_many_used_staged(closure_sources_data, 1U, arena, closure_destination, 0, 0U, 0, 0, 0, 0, 0, 0U, 0U, closure_outs_data, @ closure_pending)
++    c.lmx_copy_names_finish(@ closure_pending, (cast: (int) (used_status = c.LMX_GRAPH_COPY_OK)))
++    @: closure_copy c.Lmx closure_outs[0]
++    if: used_status != c.LMX_GRAPH_COPY_OK || closure_copy = 0 || closure_copy = closure_root
++        c.printf("V63 used-closure failure=11 whole=%d used=%d\n", whole_status, used_status)
++        return: 29
++    @: closure_copied_outer void c.lmx_graph_value_in(closure_destination, closure_copy, 0U)
++    @: closure_copied_inner void c.lmx_graph_value_in(closure_destination, closure_copy, 1U)
++    @: closure_copied_candidate c.Lmx c.lmx_graph_node_in(closure_destination, c.lmx_graph_value_in(closure_destination, closure_copy, 2U))
++    @: closure_copied_model c.Lmx c.lmx_graph_node_in(closure_destination, c.lmx_graph_value_in(closure_destination, closure_copy, 3U))
++    @: closure_copied_references c.Lmx c.lmx_graph_node_in(closure_destination, c.lmx_graph_value_in(closure_destination, closure_copy, 4U))
++    @: closure_outer_context c.LmxWalkValue c.lmx_pointer_cell_context(closure_destination, closure_copied_outer)
++    @: closure_inner_context c.LmxWalkValue c.lmx_pointer_cell_context(closure_destination, closure_copied_inner)
++    if: closure_copied_outer = 0 || closure_copied_inner = 0 || closure_copied_candidate = 0 || closure_copied_model = 0 || closure_copied_references = 0 || closure_copied_outer = closure_outer_cell || closure_copied_inner = closure_owner_cell || closure_copied_candidate = value_graph || closure_copied_model = closure_model || closure_copied_references = closure_references || closure_outer_context = 0 || closure_inner_context = 0
++        c.printf("V63 used-closure failure=12\n")
++        return: 29
++    if: c.lmx_walk_value_cell(closure_destination, closure_copied_outer, to_value) != c.LMX_WALK_OK || to_value\present = 0 || to_value\kind != c.LMX_WALK_VALUE_REFERENCE || to_value\type != closure_address_type || to_value\ref != closure_copied_inner || to_value\referent != closure_inner_context || closure_outer_context\referent != closure_inner_context || c.lmx_value_context_cell_in(closure_destination, closure_outer_context\referent) != closure_copied_inner || closure_inner_context\model != closure_copied_model || closure_inner_context\references != closure_copied_references
++        c.printf("V63 used-closure failure=13\n")
++        return: 29
++    if: c.lmx_walk_value_cell(closure_destination, closure_copied_inner, to_value) != c.LMX_WALK_OK || to_value\present = 0 || to_value\type != c.LMX_TYPE_LMX || to_value\ref != (cast: (@: void) closure_copied_candidate) || to_value\model != closure_copied_model || to_value\references != closure_copied_references
++        c.printf("V63 used-closure failure=14\n")
++        return: 29
++    @: closure_entry c.LmxImplEntry c.lmx_implements_find(closure_destination, closure_copied_candidate, closure_copied_model)
++    if: closure_entry = 0 || c.lmx_implements_at_last(closure_destination, closure_entry, 0U, x_cell) != c.LMX_WALK_OK || c.lmx_implements_at_last(closure_destination, closure_entry, 2U, y_cell) != c.LMX_WALK_OK || \x_cell != 1U || \y_cell != 2U
++        c.printf("V63 used-closure failure=15\n")
++        return: 29
++    size_t: closure_y_slot \y_cell
++    if: c.lmx_walk_store_int(closure_destination, closure_copied_candidate, closure_y_slot, 45) != c.LMX_WALK_OK
++        c.printf("V63 used-closure failure=16\n")
++        return: 29
++    int: closure_y c.lmx_int_value_known(c.lmx_graph_value_in(closure_destination, closure_copied_candidate, closure_y_slot))
++    int: closure_source_y c.lmx_int_value_known(c.lmx_graph_value_in(arena, value_graph, 2U))
++    c.printf("V63 used-closure whole=%d used=%d y=%d source-y=%d refs=1 owner-alias=%d\n", whole_status, used_status, closure_y, closure_source_y, (cast: (int) (closure_outer_context\referent = closure_inner_context)))
++    if: whole_status != c.LMX_GRAPH_COPY_UNSUPPORTED || closure_y != 45 || closure_source_y != 42 || c.lmx_arena_release(closure_destination) != 0
++        return: 29

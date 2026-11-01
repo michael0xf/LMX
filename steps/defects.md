@@ -96,6 +96,16 @@ Lower присоединяют метаданные компаньона тол�
 `V63 copy values y=43 source-y=42 x-slot=1 y-slot=2 refs=1 owner-alias=1`, `failed=0` и 7 (FE92 + RT92 и FE93 +
 RT92). [Срез247](witnesses/fix247-20261101/notes.md).
 
+Срез248 (свидетель (b), owner73e на FE94 + RT92, только фикстура): корень с пятью полями V63, построенный из
+собственной ячейки `p` (её законные Model и N). Используемая копия `lmx_graph_copy_many_used_staged` (used=1, без
+координат использования) — OK и проходит применимые проверки V63: новые корень, ячейки, кандидат, Model и N, одна
+карта перенаправления, обратимость referent/владельца, соответствие Model `p` у источника и копии, запись в копию
+без изменения источника. Полная `lmx_graph_copy_owned` того же корня — UNSUPPORTED. Уточнённый контракт копии:
+`lmx_graph_copy_owned` требует всю лексическую цепочку и остаётся UNSUPPORTED там, где она доходит до арены активации
+на стеке; используемая копия берёт выбранный корень целиком (пять полей, полезные данные, Model, N и строки контракта),
+а лексических родителей — только в используемых местах, и до этой арены здесь не доходит. Во всех четырёх режимах
+`V63 used-closure whole=3 used=0 y=45 source-y=42 refs=1 owner-alias=1`. [Срез248](witnesses/fix248-20261101/notes.md).
+
 ### DRAFT79-BARE-RETURN-CHECKER — 2026-10-31, Opus (срез244, computed-absence79 на FE85/FE87), FIXED в build2 coherent89 Emit `B9580244` (не выпущено)
 
 `unit_computed_absence_receiving.lm2:11:9: unsupported body` (atom=return): голый `return` внутри `if:` типизированного

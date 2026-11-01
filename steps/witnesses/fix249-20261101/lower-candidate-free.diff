@@ -1,0 +1,8 @@
+--- a/src/l2src/l2_frontend_lower.lm2
++++ b/src/l2src/l2_frontend_lower.lm2
+@@ -17019,2 +17292,3 @@
+-            # A candidate-free repeat retains the existing pointer value.
+-            if: declaration != 0 && own_decl_cell[0][oi] != stmt && declaration\candidate_count = 0 && lm_compiler_reference_implicit_model(declaration) < 0 && c.lm_compiler_reference_implicit_method(declaration, mi) < 0
++            # No written or implicit candidate means no body write, including
++            # the first declaration. The selected entry snapshot stays current.
++            if: declaration != 0 && declaration\candidate_count = 0 && lm_compiler_reference_implicit_model(declaration) < 0 && c.lm_compiler_reference_implicit_method(declaration, mi) < 0

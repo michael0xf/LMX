@@ -2639,6 +2639,14 @@ fn: lm_compiler_scan_head_root (int: mi; const: (@: t c.LmP0Text); @: seen int) 
 end: lm_compiler_scan_head_root
 
 # Original: l2src/l2trans.lm1:10339
+# Slice 255 (design 4.5 B2a): a numeric lexical source makes the name a runtime-typed free input (the dynamic type FREE); a
+# reference or Structure source keeps its closed type (schema, admission).
+fn: lm_compiler_dyn_source_dt (int: oty) int
+    if: c.lm_compiler_rw_num_ty(oty) != 0
+        return: (cast: (int) (c.lm_compiler_free_dt()))
+    return: (cast: (int) (c.lm_compiler_dt_of_own(oty)))
+end: lm_compiler_dyn_source_dt
+
 fn: lm_compiler_scan_ident (int: mi; const: (@: t c.LmP0Text); @: seen int) int
     @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
     @: hr_on_cell int (cast: (@: int) (@ c.l2_hr_on))
@@ -2705,7 +2713,7 @@ fn: lm_compiler_scan_ident (int: mi; const: (@: t c.LmP0Text); @: seen int) int
     # it is declared at, read and written there.  A named Structure's procedure too: a procedure without arguments,
     # «that is, a procedure with hidden arguments» (the author, 2026-09-28, OPUS-CODEX-20260928-08).
     if: oi >= 0 && c.lm_compiler_own_unit_seen(oi, mi) != 0 && c.lm_compiler_dt_of_own(own_ty_cell[0][oi]) != 0
-        return: (cast: (int) (c.lm_compiler_dyn_add(mi, t, c.lm_compiler_dt_of_own(own_ty_cell[0][oi]))))
+        return: (cast: (int) (c.lm_compiler_dyn_add(mi, t, lm_compiler_dyn_source_dt(own_ty_cell[0][oi]))))
     if: oi >= 0 && c.lm_compiler_own_unit_seen(oi, mi) != 0
         if: c.lm_compiler_own_off(mi, oi) = (cast: (size_t) -1)
             return: (cast: (int) (1))
@@ -2715,7 +2723,7 @@ fn: lm_compiler_scan_ident (int: mi; const: (@: t c.LmP0Text); @: seen int) int
         return: (cast: (int) (0))
     if: oi >= 0 && m_uses_cell[0][c.lm_compiler_own_off(mi, oi)] != 0 && c.lm_compiler_dt_of_own(own_ty_cell[0][oi]) != 0 && (seen = 0 || seen[oi] = 0)
         m_pre_cell[0][c.lm_compiler_own_off(mi, oi)]: 1
-        ty: c.lm_compiler_dt_of_own(own_ty_cell[0][oi])
+        ty: lm_compiler_dyn_source_dt(own_ty_cell[0][oi])
         return: (cast: (int) (c.lm_compiler_dyn_add(mi, t, ty)))
     if: oi >= 0 && m_uses_cell[0][c.lm_compiler_own_off(mi, oi)] != 0
         return: (cast: (int) (0))
@@ -4438,7 +4446,7 @@ fn: lm_compiler_eval_cond (@: field c.LmP0Field; int: n; int: mi; const: (@: ind
     @: scratch c.L2Tx @ scratch_tx
     if: dest = 0 || c.lm_compiler_tx_open(scratch, scratch_own, 1024U) != 0
         return: (cast: (int) (1))
-    if: lm_compiler_eval_fields(field, n, mi, ind, scratch) != 0
+    if: lm_compiler_eval_test(field, n, mi, ind, scratch) != 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_bool_set(ind, dest, (cast: (const: @: char) (scratch\data)))))
 end: lm_compiler_eval_cond
@@ -7509,9 +7517,11 @@ fn: lm_compiler_emit_native_input_default (int: mi; int: fi; int: ft; const: (@:
         return: 0
     if: slot < 0 || depth < 0
         return: c.lm_compiler_error(src_cell[0], m_node_cell[0][mi], "internal: a hidden input's lexical cell has no place")
-    status: lm_compiler_native_input_place_type(mi, fi, ft, ind, type)
-    if: status != 0
-        return: 1
+    if: c.lm_compiler_ft_is_free(ft) = 0
+        status: lm_compiler_native_input_place_type(mi, fi, ft, ind, type)
+        if: status != 0
+            return: 1
+    ---
     array_source: (cast: (int) (kind = 5 || kind = 6))
     graph_source: (cast: (int) (kind = 2 || kind = 3 || kind = 4 || kind = 12))
     if: own >= 0
@@ -7597,7 +7607,7 @@ fn: lm_compiler_emit_native_input_entry (int: mi; const: (@: ind char)) int
             if: c.fprintf(out_cell[0], "%sif: l2_input_values != 0 && l2_input_values[%d].kind = c.LMX_WALK_VALUE_FREE\n%s    lmx_activation_resolve_input(l2_call_arena, %dU, l2_input_refs, l2_input_values, %dU)\n%s---\n", ind, fi, ind, fi, m_arity_cell[0][mi] + m_dyn_cell[0][mi], ind) < 0
                 return: 1
             ---
-        if: lm_compiler_dyn_fwd(mi, fi - m_arity_cell[0][mi]) = 0 && lm_compiler_hid_source(mi, fi - m_arity_cell[0][mi], 1, @ mode, @ depth, @ slot, @ kind, @ own) = 0 && lm_compiler_native_input_place_type(mi, fi, ft, ind, type) = 0
+        if: lm_compiler_dyn_fwd(mi, fi - m_arity_cell[0][mi]) = 0 && lm_compiler_hid_source(mi, fi - m_arity_cell[0][mi], 1, @ mode, @ depth, @ slot, @ kind, @ own) = 0 && (c.lm_compiler_ft_is_free(ft) != 0 || lm_compiler_native_input_place_type(mi, fi, ft, ind, type) = 0)
             if: guarded = 0
                 if: c.fprintf(out_cell[0], "%sif: l2_input_values = 0 || l2_input_refs = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, ind, ind, ind) < 0
                     return: 1
@@ -7617,6 +7627,8 @@ end: lm_compiler_emit_native_input_entry
 # The raw entry is not wired until the remaining input paths migrate together.
 fn: lm_compiler_emit_native_input_read (int: mi; int: fi; int: ft; const: (@: ind char); @: dest c.L2Tx; @: context int; @: full_value c.L2Tx) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
@@ -7650,6 +7662,23 @@ fn: lm_compiler_emit_native_input_read (int: mi; int: fi; int: ft; const: (@: in
     reference: c.lm_compiler_pointer_depth(ft)
     if: ft >= 100 && reference = 0
         return: 2
+    # Slice 255 (design 4.5 B2a): a free input is runtime-typed -- a full consumer takes its complete record (the lexical
+    # default read first, as for every input); it has no typed raw projection: a raw consumer is a located limit of B2a.
+    if: c.lm_compiler_ft_is_free(ft) != 0
+        if: full_value = 0
+            return: c.lm_compiler_error(src_cell[0], m_node_cell[0][mi], "a free name is read where a typed native value is required (B2a: receive it into a typed local first)")
+        t: tn_cell[0]
+        tn_cell[0]: t + 1
+        if: c.fprintf(out_cell[0], "%sif: l2_input_values = 0 || l2_input_refs = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n%sLmxWalkValue: l2_cv%d\n", ind, ind, ind, ind, ind, t) < 0
+            return: 1
+        if: lm_compiler_emit_native_input_default(mi, fi, ft, ind) != 0
+            return: 1
+        if: c.fprintf(out_cell[0], "%sc.memcpy((cast: (@: void) (@ l2_cv%d)), (cast: (@: void) (l2_input_values + %d)), c.sizeof(c.LmxWalkValue))\n", ind, t, fi) < 0
+            return: 1
+        if: c.lm_compiler_tx_clear(dest) != 0 || c.snprintf(record, 64U, "@ l2_cv%d", t) < 0 || c.lm_compiler_tx_set(full_value, record) != 0
+            return: 1
+        return: 0
+    ---
     # Finish every availability probe before emitting runtime statements.
     if: pointer = 0 || raw = 0 || c.lm_compiler_emit_input_value_type(ft, (cast: (int) (c.lm_compiler_input_is_descriptor(mi, fi))), type) != 0
         return: 2
@@ -7790,15 +7819,30 @@ fn: lm_compiler_native_input_place_type (int: mi; int: fi; int: ft; const: (@: i
     return: 0
 end: lm_compiler_native_input_place_type
 
-fn: lm_compiler_emit_native_input_place (int: mi; int: fi; int: ft; const: (@: ind char); @: place int) int
+# The activation's input place of the given type text -- a type constant, or (slice 255, a free input) the runtime type
+# of the value the place receives.
+fn: lm_compiler_emit_native_input_place_text (int: mi; int: fi; const: (@: type char); const: (@: ind char); @: place int) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    c.L2FrontendScratchChar96: type_storage
-    @: type char (cast: (@: char) type_storage\buffer)
     int: t
     int: width
+    if: place = 0 || type = 0 || mi < 0 || ind = 0
+        return: 1
+    place[0]: -1
+    width: m_arity_cell[0][mi] + m_dyn_cell[0][mi]
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ip%d\n%sint: l2_ips%d lmx_walk_values_arg_place(l2_call_arena, l2_input_values, l2_input_refs, %dU, %dU, %s, @ l2_ip%d)\n%sif: l2_ips%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_ips%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, width, fi, type, t, ind, t, ind, t, ind, ind) < 0
+        return: 1
+    place[0]: t
+    return: 0
+end: lm_compiler_emit_native_input_place_text
+
+fn: lm_compiler_emit_native_input_place (int: mi; int: fi; int: ft; const: (@: ind char); @: place int) int
+    c.L2FrontendScratchChar96: type_storage
+    @: type char (cast: (@: char) type_storage\buffer)
     int: status
     if: place != 0
         place[0]: -1
@@ -7807,13 +7851,7 @@ fn: lm_compiler_emit_native_input_place (int: mi; int: fi; int: ft; const: (@: i
     status: lm_compiler_native_input_place_type(mi, fi, ft, ind, type)
     if: status != 0
         return: status
-    width: m_arity_cell[0][mi] + m_dyn_cell[0][mi]
-    t: tn_cell[0]
-    tn_cell[0]: t + 1
-    if: c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ip%d\n%sint: l2_ips%d lmx_walk_values_arg_place(l2_call_arena, l2_input_values, l2_input_refs, %dU, %dU, %s, @ l2_ip%d)\n%sif: l2_ips%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_ips%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, width, fi, type, t, ind, t, ind, t, ind, ind) < 0
-        return: 1
-    place[0]: t
-    return: 0
+    return: lm_compiler_emit_native_input_place_text(mi, fi, type, ind, place)
 end: lm_compiler_emit_native_input_place
 
 # The RHS is an already evaluated complete Value. Snapshot it before target
@@ -7834,9 +7872,11 @@ fn: lm_compiler_emit_native_input_store (int: mi; int: fi; int: ft; const: (@: i
     int: status
     if: value_record = 0 || value_record[0] = 0
         return: 2
-    status: lm_compiler_native_input_place_type(mi, fi, ft, ind, type)
-    if: status != 0
-        return: status
+    if: c.lm_compiler_ft_is_free(ft) = 0
+        status: lm_compiler_native_input_place_type(mi, fi, ft, ind, type)
+        if: status != 0
+            return: status
+    ---
     snapshot: tn_cell[0]
     tn_cell[0]: snapshot + 1
     if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_isv%d\n%sc.memcpy((cast: (@: void) (@ l2_isv%d)), (cast: (@: void) %s), c.sizeof(c.LmxWalkValue))\n", ind, snapshot, ind, snapshot, value_record) < 0
@@ -7845,7 +7885,14 @@ fn: lm_compiler_emit_native_input_store (int: mi; int: fi; int: ft; const: (@: i
     if: lm_compiler_bump_ind(ind, @ deep) != 0 || c.fprintf(out_cell[0], "%sif: l2_isv%d.present != 0\n", ind, snapshot) < 0
         return: 1
     ind: deep
-    status: lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
+    # Slice 255 (design 4.5 B2a): a free input's place is typed by the value it receives.
+    if: c.lm_compiler_ft_is_free(ft) != 0
+        if: c.snprintf(type, 96U, "(cast: (int) l2_isv%d.type)", snapshot) < 0
+            return: 1
+        status: lm_compiler_emit_native_input_place_text(mi, fi, type, ind, @ place)
+    else:
+        status: lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
+    ---
     if: status != 0
         return: 1
     if: c.snprintf(place_name, 64U, "l2_ip%d", place) < 0 || c.snprintf(record_name, 64U, "@ l2_isv%d", snapshot) < 0
@@ -8124,6 +8171,307 @@ fn: lm_compiler_array_place_view (@: out c.L2ArrayPlace; int: status; int: allow
 end: lm_compiler_array_place_view
 
 # Original: l2src/l2trans.lm1:26758
+# Slice 255 (design 4.5 B2a): the dynamic expression -- an operation over a runtime-typed operand runs through the kernel's
+# shared operation lmx_walk_value_bin on complete value records, as the walker runs it; its result is a record and has no
+# typed raw projection (dest is left empty; full_value names the record).  Comparisons are LT/EQ with the swap and the
+# negation of rw_bin (`a != b` is 1 - (a = b); `a <= b` is 1 - (b < a); `a >= b` is 1 - (a < b); `a > b` is b < a).  The
+# logical connectives, the machine (bitwise, shift) operators and a prefix sign over a runtime-typed operand are located
+# limits of B2a.  A numeric or character literal operand is a contextual literal (lmx_walk_value_lit): it takes the other
+# operand's type in the operation.
+fn: lm_compiler_emit_dyn_operand_full (@: tok c.L2ValueSpan; int: lo; int: hi; int: mi; const: (@: ind char); @: record c.L2Tx) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: leaf c.L2ValueSpan
+    int: lit 0
+    int: neg 0
+    int: usuf 0
+    int: ch 0
+    int: t
+    size_t: mag 0U
+    c.L2FrontendScratchChar1024: raw_storage
+    @: raw_own char (cast: (@: char) raw_storage\buffer)
+    c.L2Tx: raw_tx
+    @: raw c.L2Tx c.lm_compiler_tx_local(@ raw_tx, raw_own, 1024U)
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    if: record = 0 || raw = 0 || c.lm_compiler_tx_clear(record) != 0
+        return: 1
+    if: lo < hi
+        return: lm_compiler_emit_dyn_values_full(tok, lo, hi, mi, ind, raw, record)
+    leaf: tok + lo
+    if: leaf\count = 1 && leaf\node != 0 && leaf\node\kind = c.LM_P0_NODE_ATOM && leaf\node\as != 0
+        if: c.lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) (leaf\node\as\atom)), @ neg, @ mag, @ usuf) != 0
+            lit: 1
+        else:
+            if: c.lm_compiler_rw_char_lit((cast: (const: @: c.LmP0Text) (leaf\node\as\atom)), @ ch) != 0
+                lit: 1
+                neg: 0
+                usuf: 0
+                mag: (cast: (size_t) ch)
+            ---
+        ---
+    ---
+    if: lit != 0
+        t: tn_cell[0]
+        tn_cell[0]: t + 1
+        if: neg != 0
+            if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dl%d\n%slmx_walk_value_lit(@ l2_dl%d, 0U - %zuU, %d)\n", ind, t, ind, t, mag, usuf) < 0
+                return: 1
+            ---
+        else:
+            if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dl%d\n%slmx_walk_value_lit(@ l2_dl%d, %zuU, %d)\n", ind, t, ind, t, mag, usuf) < 0
+                return: 1
+        ---
+        if: c.snprintf(name, 64U, "@ l2_dl%d", t) < 0 || c.lm_compiler_tx_set(record, name) != 0
+            return: 1
+        return: 0
+    ---
+    if: lm_compiler_emit_native_span_full(leaf, mi, ind, raw, 0, record) != 0
+        return: 1
+    if: record\data[0] = 0
+        return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (leaf\node)), "an operand beside a runtime-typed value has no value record (B2a)")
+    # An operand must be present.
+    return: lm_compiler_emit_full_present_use(ind, (cast: (const: @: char) record\data))
+end: lm_compiler_emit_dyn_operand_full
+
+fn: lm_compiler_emit_dyn_values_full (@: tok c.L2ValueSpan; int: lo; int: hi; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: op c.LmP0Node
+    const: (@: code char 0)
+    int: best
+    int: prec
+    int: swap 0
+    int: negate 0
+    int: t
+    int: r
+    c.L2FrontendScratchChar64: left_storage
+    @: left_own char (cast: (@: char) left_storage\buffer)
+    c.L2Tx: left_tx
+    @: left c.L2Tx c.lm_compiler_tx_local(@ left_tx, left_own, 64U)
+    c.L2FrontendScratchChar64: right_storage
+    @: right_own char (cast: (@: char) right_storage\buffer)
+    c.L2Tx: right_tx
+    @: right c.L2Tx c.lm_compiler_tx_local(@ right_tx, right_own, 64U)
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    if: dest = 0 || full_value = 0 || left = 0 || right = 0 || c.lm_compiler_tx_clear(dest) != 0 || c.lm_compiler_tx_clear(full_value) != 0
+        return: 1
+    if: lo = hi
+        return: lm_compiler_emit_dyn_operand_full(tok, lo, hi, mi, ind, full_value)
+    best: c.lm_compiler_rw_split(tok, lo, hi)
+    op: c.lm_compiler_span_node(tok, best)
+    prec: c.lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) (op\as\atom)))
+    if: prec = 1 || prec = 2
+        return: c.lm_compiler_error(src_cell[0], op, "a runtime-typed value in a logical connective (B2a: receive it into a typed local first)")
+    if: c.lm_compiler_rw_prec_machine(prec) != 0
+        return: c.lm_compiler_error(src_cell[0], op, "a runtime-typed value in a machine operation (B2a: receive it into a typed local first)")
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "+")
+        code: "c.LMX_WALK_OP_ADD"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "-")
+        code: "c.LMX_WALK_OP_SUB"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "*")
+        code: "c.LMX_WALK_OP_MUL"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "/")
+        code: "c.LMX_WALK_OP_DIV"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "%")
+        code: "c.LMX_WALK_OP_MOD"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "<")
+        code: "c.LMX_WALK_OP_LT"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "=")
+        code: "c.LMX_WALK_OP_EQ"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), ">")
+        code: "c.LMX_WALK_OP_LT"
+        swap: 1
+    ---
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "!=")
+        code: "c.LMX_WALK_OP_EQ"
+        negate: 1
+    ---
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "<=")
+        code: "c.LMX_WALK_OP_LT"
+        swap: 1
+        negate: 1
+    ---
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), ">=")
+        code: "c.LMX_WALK_OP_LT"
+        negate: 1
+    ---
+    if: code = 0
+        return: c.lm_compiler_error(src_cell[0], op, "this operator over a runtime-typed value")
+    if: lm_compiler_emit_dyn_operand_full(tok, lo, best - 1, mi, ind, left) != 0 || lm_compiler_emit_dyn_operand_full(tok, best + 1, hi, mi, ind, right) != 0
+        return: 1
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: swap != 0
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dv%d\n%sint: l2_ds%d lmx_walk_value_bin(%s, %s, %s, @ l2_dv%d)\n", ind, t, ind, t, code, right\data, left\data, t) < 0
+            return: 1
+        ---
+    else:
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dv%d\n%sint: l2_ds%d lmx_walk_value_bin(%s, %s, %s, @ l2_dv%d)\n", ind, t, ind, t, code, left\data, right\data, t) < 0
+            return: 1
+    ---
+    # The operation's own faults are the language's implicit throws: an int overflow or a zero divisor (interpreter), two
+    # numbers of different types (convert); anything else is a malformed operand.
+    if: c.fprintf(out_cell[0], "%sif: l2_ds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER\n", ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "interpreter", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_ds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_ds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_ds%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, ind, ind) < 0
+        return: 1
+    if: negate != 0
+        r: tn_cell[0]
+        tn_cell[0]: r + 1
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_dn%d\n%sif: lmx_walk_value_num(@ l2_dn%d, c.LMX_TYPE_INT, (cast: (size_t) (l2_dv%d.number = 0))) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, r, ind, r, t, ind, ind, ind) < 0
+            return: 1
+        if: c.snprintf(name, 64U, "@ l2_dn%d", r) < 0
+            return: 1
+        ---
+    else:
+        if: c.snprintf(name, 64U, "@ l2_dv%d", t) < 0
+            return: 1
+    ---
+    return: c.lm_compiler_tx_set(full_value, name)
+end: lm_compiler_emit_dyn_values_full
+
+# A prepared value span (an expression over children, or one leaf) evaluated dynamically into a record.
+fn: lm_compiler_emit_dyn_span_full (@: span c.L2ValueSpan; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    if: span = 0 || dest = 0 || full_value = 0
+        return: 1
+    if: span\values != 0 && (span\grammar = 3 || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (span\node)), "@") = 0) && c.lm_compiler_value_spans_expression((cast: (@: c.L2ValueSpan) (span\values)), (cast: (int) (span\value_n))) != 0
+        if: span\grammar != 3 && c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node))) != 0
+            return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (span\node)), "a prefix sign over a runtime-typed value (B2a: write 0 - x)")
+        return: lm_compiler_emit_dyn_values_full((cast: (@: c.L2ValueSpan) (span\values)), 0, (cast: (int) (span\value_n - 1)), mi, ind, dest, full_value)
+    if: c.lm_compiler_tx_clear(dest) != 0
+        return: 1
+    return: lm_compiler_emit_dyn_operand_full(span, 0, 0, mi, ind, full_value)
+end: lm_compiler_emit_dyn_span_full
+
+# Slice 255 (design 4.5 B2a): the reception of a runtime-typed value by a place of the target type -- the one runtime
+# admission (lmx_walk_value_receive): a number of the place's base type (a contextual literal takes it), a reference of the
+# place's type; anything else is the implicit `convert` throw.  dest is the typed C view of the received record; full_value
+# names the record.
+fn: lm_compiler_emit_dyn_receive_full (@: value c.L2ValueSpan; int: target; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    c.L2FrontendScratchChar96: type_storage
+    @: type char (cast: (@: char) type_storage\buffer)
+    c.L2FrontendScratchChar1024: pointer_storage
+    @: pointer_text char (cast: (@: char) pointer_storage\buffer)
+    c.L2Tx: pointer_tx
+    @: pointer c.L2Tx c.lm_compiler_tx_local(@ pointer_tx, pointer_text, 1024U)
+    c.L2FrontendScratchChar64: record_storage
+    @: record_text char (cast: (@: char) record_storage\buffer)
+    c.L2Tx: record_tx
+    @: record c.L2Tx c.lm_compiler_tx_local(@ record_tx, record_text, 64U)
+    c.L2FrontendScratchChar1024: scratch_storage
+    @: scratch_text char (cast: (@: char) scratch_storage\buffer)
+    c.L2Tx: scratch_tx
+    @: scratch c.L2Tx c.lm_compiler_tx_local(@ scratch_tx, scratch_text, 1024U)
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    int: t
+    int: raw
+    if: dest = 0 || value = 0 || record = 0 || scratch = 0 || pointer = 0 || ind = 0 || mi < 0
+        return: 1
+    if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
+        return: 1
+    raw: c.lm_compiler_formal_raw(target)
+    if: raw = 8 || (raw >= 100 && c.lm_compiler_pointer_depth(raw) = 0) || c.lm_compiler_emit_input_value_type(raw, 0, type) != 0
+        return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "a runtime-typed value received by a place without a value type (B2a)")
+    if: lm_compiler_emit_dyn_span_full(value, mi, ind, scratch, record) != 0
+        return: 1
+    if: record\data[0] = 0
+        return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "a runtime-typed value without a value record (B2a)")
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive(%s, %s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record\data, type, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_rs%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_rs%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, ind, ind) < 0
+        return: 1
+    if: c.snprintf(name, 64U, "l2_rv%d", t) < 0
+        return: 1
+    # Reference storage is a void* cell: cast its value, not a punning T** load (as emit_native_input_read).
+    if: c.lm_compiler_pointer_depth(raw) > 0
+        if: c.lm_compiler_pointer_decl_text(raw, 0, 0, pointer) != 0 || c.lm_compiler_tx_join(dest, "(cast: (", (cast: (const: @: char) pointer\data), ") ", name, ".ref)") != 0
+            return: 1
+        ---
+    else:
+        if: c.lm_compiler_pointer_decl_text(raw, 1, 0, pointer) != 0 || c.lm_compiler_tx_join(dest, "((cast: (", (cast: (const: @: char) pointer\data), ") lmx_walk_value_storage(@ ", name, "))[0])") != 0
+            return: 1
+    ---
+    if: full_value != 0 && (c.snprintf(name, 64U, "@ l2_rv%d", t) < 0 || c.lm_compiler_tx_set(full_value, name) != 0)
+        return: 1
+    return: 0
+end: lm_compiler_emit_dyn_receive_full
+
+# The fields of a statement evaluated dynamically into one record (a write through a free name: its literal is contextual).
+fn: lm_compiler_eval_dyn_fields (@: field c.LmP0Field; int: n; int: mi; const: (@: ind char); @: record c.L2Tx) int
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: tok c.L2ValueSpan
+    int: m
+    int: status
+    c.L2FrontendScratchChar1024: scratch_storage
+    @: scratch_text char (cast: (@: char) scratch_storage\buffer)
+    c.L2Tx: scratch_tx
+    @: scratch c.L2Tx c.lm_compiler_tx_local(@ scratch_tx, scratch_text, 1024U)
+    if: record = 0 || scratch = 0 || field = 0 || n < 1
+        return: 1
+    tok: c.lm_compiler_value_spans(field, n, @ m)
+    if: tok = 0
+        return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (field\value)), "cannot prepare the written expression")
+    status: lm_compiler_emit_dyn_values_full(tok, 0, m - 1, mi, ind, scratch, record)
+    c.lm_compiler_value_spans_release(tok, m)
+    return: status
+end: lm_compiler_eval_dyn_fields
+
+# A condition: a runtime-typed one is the number of its value, zero or not (as the walker's IF); any other as before.
+fn: lm_compiler_eval_test (@: field c.LmP0Field; int: n; int: mi; const: (@: ind char); @: dest c.L2Tx) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @: tok c.L2ValueSpan
+    int: m
+    int: exact -1
+    int: kind 0
+    int: t
+    int: status
+    c.L2FrontendScratchChar64: record_storage
+    @: record_text char (cast: (@: char) record_storage\buffer)
+    c.L2Tx: record_tx
+    @: record c.L2Tx c.lm_compiler_tx_local(@ record_tx, record_text, 64U)
+    c.L2FrontendScratchChar1024: scratch_storage
+    @: scratch_text char (cast: (@: char) scratch_storage\buffer)
+    c.L2Tx: scratch_tx
+    @: scratch c.L2Tx c.lm_compiler_tx_local(@ scratch_tx, scratch_text, 1024U)
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && field != 0 && n >= 1 && record != 0 && scratch != 0
+        tok: c.lm_compiler_value_spans(field, n, @ m)
+        if: tok != 0
+            kind: c.lm_compiler_value_expr_type(tok, 0, m - 1, mi, @ exact)
+            if: kind = -20
+                status: lm_compiler_emit_dyn_values_full(tok, 0, m - 1, mi, ind, scratch, record)
+                c.lm_compiler_value_spans_release(tok, m)
+                if: status != 0
+                    return: 1
+                t: tn_cell[0]
+                tn_cell[0]: t + 1
+                if: c.fprintf(out_cell[0], "%ssize_t: l2_dcn%d 0U\n%sint: l2_dct%d 0\n%sif: lmx_walk_value_number(%s, @ l2_dcn%d, @ l2_dct%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, t, ind, t, ind, record\data, t, t, ind, ind, ind) < 0
+                    return: 1
+                if: c.snprintf(name, 64U, "(l2_dcn%d != 0U)", t) < 0
+                    return: 1
+                return: c.lm_compiler_tx_set(dest, name)
+            ---
+            c.lm_compiler_value_spans_release(tok, m)
+        ---
+    ---
+    return: lm_compiler_eval_fields(field, n, mi, ind, dest)
+end: lm_compiler_eval_test
+
 fn: lm_compiler_numeric_receive_prepare (@: value c.L2ValueSpan; int: target; int: mi; const: (@: path char); @: plan c.L2NumericReceive) int
     @: cv_used_cell int (cast: (@: int) (@ c.l2_cv_used))
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
@@ -8162,6 +8510,11 @@ fn: lm_compiler_numeric_receive_prepare (@: value c.L2ValueSpan; int: target; in
     ---
     plan\kind: c.lm_compiler_value_span_type(value, mi, @ exact)
     plan\source_ft: exact
+    # Slice 255 (design 4.5 B2a): a runtime-typed source is received at run time (lmx_walk_value_receive in the emitter);
+    # no static compatibility or converter decision applies to it.
+    if: plan\kind = -20
+        plan\source_ft: c.lm_compiler_free_own()
+        return: (cast: (int) (0))
     if: exact = 8
         return: (cast: (int) (c.lm_compiler_error(path, at, "a callable without a result has no value")))
     if: plan\kind = -5 || plan\kind = -15
@@ -8250,6 +8603,8 @@ fn: lm_compiler_emit_numeric_receive_full (@: plan c.L2NumericReceive; int: mi; 
         return: (cast: (int) (1))
     if: full_value != 0 && input_full = 0
         return: 1
+    if: c.lm_compiler_ft_is_free((cast: (int) plan\source_ft)) != 0
+        return: lm_compiler_emit_dyn_receive_full((cast: (@: c.L2ValueSpan) plan\value), (cast: (int) plan\target_ft), mi, ind, dest, full_value)
     # The current callable value is read BEFORE any effects of the source.
     if: plan\converter >= 0 && lm_compiler_emit_convert_capture((cast: (int) (plan\converter)), ind, @ self) != 0
         return: (cast: (int) (1))
@@ -9550,10 +9905,18 @@ fn: lm_compiler_hid_own_lex (int: m; int: k) int
     if: m < 0 || m >= m_n_cell[0] || k < 0 || k >= m_dyn_cell[0][m]
         return: (cast: (int) (0 - 1))
     nm: c.lm_compiler_dn(m, k)
-    if: nm = 0 || (c.lm_compiler_rw_num_ty(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))) = 0 && c.lm_compiler_own_is_pointer(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))) = 0) || lm_compiler_dyn_reads(m, k) = 0
+    if: nm = 0 || lm_compiler_dyn_reads(m, k) = 0
+        return: (cast: (int) (0 - 1))
+    # Slice 255 (design 4.5 B2a): a free input's lexical source has its own type -- the default reads it as it is; a
+    # numeric or pointer source only (an Array cannot travel as a value).
+    if: c.lm_compiler_own_is_free(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))) = 0 && c.lm_compiler_rw_num_ty(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))) = 0 && c.lm_compiler_own_is_pointer(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))) = 0
         return: (cast: (int) (0 - 1))
     child: c.lm_compiler_own_lexical(m, nm)
-    if: child < 0 || c.lm_compiler_own_is_slot(child) != 0 || own_ty_cell[0][child] != c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))
+    if: child < 0 || c.lm_compiler_own_is_slot(child) != 0
+        return: (cast: (int) (0 - 1))
+    if: c.lm_compiler_own_is_free(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))) = 0 && own_ty_cell[0][child] != c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))
+        return: (cast: (int) (0 - 1))
+    if: c.lm_compiler_own_is_free(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, k))) != 0 && c.lm_compiler_rw_num_ty(own_ty_cell[0][child]) = 0 && c.lm_compiler_own_is_pointer(own_ty_cell[0][child]) = 0
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (child))
 end: lm_compiler_hid_own_lex
@@ -11413,6 +11776,7 @@ end: lm_compiler_emit_native_values
 
 fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi; int: mi; const: (@: ind char); @: dest c.L2Tx; @: context int; @: full_value c.L2Tx) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     int: best
     int: prec
     int: status
@@ -11445,6 +11809,13 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
         return: (cast: (int) (1))
     if: full_value != 0 && mi >= 0 && c.lm_compiler_m_machine(mi) = 0
         consume_full: 1
+    # Slice 255 (design 4.5 B2a): a runtime-typed expression runs through the kernel's shared operation; a raw consumer of
+    # one is a located limit of B2a.
+    if: lo < hi && mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_value_expr_type(tok, lo, hi, mi, @ exact) = -20
+        if: consume_full = 0
+            return: c.lm_compiler_error(src_cell[0], c.lm_compiler_span_node(tok, lo), "a runtime-typed expression where a typed native value is required (B2a: receive it into a typed local first)")
+        return: lm_compiler_emit_dyn_values_full(tok, lo, hi, mi, ind, dest, full_value)
+    ---
     if: lo = hi
         return: (cast: (int) (lm_compiler_emit_native_span_full(tok + lo, mi, ind, dest, context, full_value)))
     best: c.lm_compiler_rw_split(tok, lo, hi)
@@ -14898,6 +15269,8 @@ fn: lm_compiler_emit_ccall_value (@: value c.L2ValueSpan; int: mi; const: (@: in
             ---
         ---
         kind: c.lm_compiler_value_span_type(@ operand, mi, @ type)
+        if: kind = -20
+            return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) ((operand\node))), "a runtime-typed value as the actual of a C call (B2a: receive it into a typed local first)")
         if: type = 0 || type = 1
             if: c.lm_compiler_tx_open(boxt, boxt_own, 64U) != 0 || lm_compiler_new_temp(ind, boxt) != 0 || c.fprintf(out_cell[0], "%s%s: %s\n", ind, boxt\data, piece\data) < 0 || c.lm_compiler_tx_set(piece, (cast: (const: @: char) (boxt\data))) != 0
                 return: (cast: (int) (1))
@@ -17805,7 +18178,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             while: k < n
                 last: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (last\next)))
                 k: k + 1
-            if: lm_compiler_eval_fields((cast: (@: c.LmP0Field) (fr\body\first_field)), n - 1, mi, ind, tok_cell[0]) != 0
+            if: lm_compiler_eval_test((cast: (@: c.LmP0Field) (fr\body\first_field)), n - 1, mi, ind, tok_cell[0]) != 0
                 return: (cast: (int) (1))
             if: c.fprintf(out_cell[0], "%sif: %s\n", ind, tok_cell[0]\data) < 0
                 return: (cast: (int) (1))
@@ -18356,13 +18729,21 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             if: c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))) = 0
                 if: store_full = 0 || c.lm_compiler_tx_clear(store_full) != 0
                     return: 1
-                if: c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))) > 0
-                    if: lm_compiler_emit_reference_value_at_context_full((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), (cast: (int) (c.lm_compiler_input_ft(mi, fi))), (cast: (int) (c.lm_compiler_input_model(mi, fi))), -1, mi, ind, tok_cell[0], -1, 0, @ store_context, store_full) != 0
+                # Slice 255 (design 4.5 B2a): a write through a free name -- the dynamic value (a literal is contextual) is received
+                # by the input's place of its current type (lmx_walk_value_store -> lmx_walk_value_receive).
+                if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, fi)) != 0
+                    if: lm_compiler_eval_dyn_fields((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi, ind, store_full) != 0
                         return: 1
                     ---
                 else:
-                    if: lm_compiler_emit_received_span_full((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), (cast: (int) (c.lm_compiler_input_ft(mi, fi))), (cast: (int) (c.lm_compiler_input_model(mi, fi))), stmt, mi, ind, tok_cell[0], store_full) != 0
-                        return: 1
+                    if: c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))) > 0
+                        if: lm_compiler_emit_reference_value_at_context_full((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), (cast: (int) (c.lm_compiler_input_ft(mi, fi))), (cast: (int) (c.lm_compiler_input_model(mi, fi))), -1, mi, ind, tok_cell[0], -1, 0, @ store_context, store_full) != 0
+                            return: 1
+                        ---
+                    else:
+                        if: lm_compiler_emit_received_span_full((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), (cast: (int) (c.lm_compiler_input_ft(mi, fi))), (cast: (int) (c.lm_compiler_input_model(mi, fi))), stmt, mi, ind, tok_cell[0], store_full) != 0
+                            return: 1
+                        ---
                     ---
                 ---
                 if: lm_compiler_emit_native_input_store(mi, fi, (cast: (int) c.lm_compiler_input_ft(mi, fi)), ind, (cast: (const: @: char) store_full\data)) != 0

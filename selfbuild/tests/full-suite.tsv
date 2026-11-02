@@ -57,3 +57,7 @@ links	lib/lib_owner.lm2	7	nf	lib/lib_a.lm2=lib_a_new,lib/lib_b.lm2=lib_b_new,lib
 # Slice 254 (design 4.5 B1): free names resolve through the chain of activation records, the nearest current binding
 # first; a data field the activation does not use is no binding.
 runs	dyn/free_name_chain.lm2	7	nf
+# Slice 255 (design 4.5 B2a): a free name is runtime-typed -- one callee reached from bindings of different types; a write
+# through the name, a return, a typed local, a typed formal and a condition receive the value by the kernel's one admission;
+# a mismatch is the implicit `convert` throw, caught by the caller.
+runs	dyn/free_value_types.lm2	7	nf

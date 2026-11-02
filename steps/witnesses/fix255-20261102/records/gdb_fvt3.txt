@@ -1,0 +1,42 @@
+set pagination off
+break lmx_call_prim_values
+commands
+silent
+printf "CALL prim_values\n"
+continue
+end
+break lmx_walk_value_receive
+commands
+silent
+printf "RECV ty=%d present=%d kind=%d vtype=%d\n", $rdx, *(int*)($rcx), *(int*)($rcx+4), *(int*)($rcx+8)
+bt 3
+continue
+end
+break lmx_walk_value_bin
+commands
+silent
+printf "BIN op=%d a(kind=%d type=%d) b(kind=%d type=%d)\n", $rcx, *(int*)($rdx+4), *(int*)($rdx+8), *(int*)($r8+4), *(int*)($r8+8)
+bt 3
+continue
+end
+break lmx_walk_values_arg_place
+commands
+silent
+printf "ARGPLACE\n"
+bt 3
+continue
+end
+break lmx_walk_value_store_with_writer
+commands
+silent
+printf "STORE\n"
+bt 3
+continue
+end
+break lmx_call_note_walk_fail
+commands
+printf "FAIL status=%d\n", $rcx
+bt 8
+end
+run
+quit

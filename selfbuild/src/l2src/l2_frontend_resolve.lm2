@@ -1405,6 +1405,12 @@ fn: lm_compiler_value_expr_type (@: tok c.L2ValueSpan; int: lo; int: hi; int: mi
         return: (cast: (int) (a))
     if: b <= 0 - 15 && b >= 0 - 17
         return: (cast: (int) (b))
+    # Slice 255 (design 4.5 B2a): a runtime-typed operand makes the expression runtime-typed; the kernel's shared
+    # operation types it when the values meet (a contextual literal takes the other operand's type there).
+    if: a = 0 - 20 || b = 0 - 20
+        if: exact_type != 0
+            \exact_type: c.lm_compiler_free_own()
+        return: (cast: (int) (0 - 20))
     # A text in a comparison or in arithmetic; a reference in arithmetic.
     if: p >= 3 && (a = 0 - 6 || b = 0 - 6)
         return: (cast: (int) (0 - 16))

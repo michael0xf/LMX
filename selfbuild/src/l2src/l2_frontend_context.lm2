@@ -791,8 +791,10 @@ fn: lm_compiler_dyn_add (int: mi; const: (@: t c.LmP0Text); int: ty) int
         return: (cast: (int) (0))
     k: c.lm_compiler_dyn_find(mi, t)
     if: k >= 0
+        # Slice 255 (design 4.5 B2a): a second type for the name is no refusal -- a free input is typed by its value at run
+        # time and the closure's type is not read for it; the first recorded type stays for the closure's bookkeeping.
         if: ty != 0 && c.lm_compiler_dt(mi, k) != 0 && c.lm_compiler_dt(mi, k) != ty
-            return: (cast: (int) (1))
+            return: (cast: (int) (0))
         if: ty != 0 && c.lm_compiler_dt_set(mi, k, ty) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))

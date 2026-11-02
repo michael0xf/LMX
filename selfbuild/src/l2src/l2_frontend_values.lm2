@@ -2066,6 +2066,9 @@ end: lm_compiler_value_spans_release
 fn: lm_compiler_value_type_kind (int: type; @: exact_type int) int
     if: exact_type != 0
         \exact_type: type
+    # Slice 255 (design 4.5 B2a): a runtime-typed free value is the kind -20 (exact FREE).
+    if: c.lm_compiler_ft_is_free(type) != 0
+        return: (cast: (int) (-20))
     if: lm_compiler_pointer_depth(type) > 0
         return: (cast: (int) (-5))
     if: c.lm_compiler_prim_code_name(type) = 0

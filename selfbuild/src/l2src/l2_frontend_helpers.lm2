@@ -1506,6 +1506,9 @@ fn: lm_compiler_oc_ft (int: oty) int
 end: lm_compiler_oc_ft
 
 fn: lm_compiler_dt_of_own (int: oty) int
+    # The free own type (45) is the free dynamic type (46): slice 255.
+    if: oty = 45
+        return: (cast: (int) (46))
     if: oty < 0 || lm_compiler_own_store_helper(oty) = 0
         return: (cast: (int) (0))
     return: (cast: (int) (oty + 1))
@@ -3311,6 +3314,26 @@ fn: lm_compiler_construct_name_ok (const: (@: s char)) int
     ---
     return: (cast: (int) (1))
 end: lm_compiler_construct_name_ok
+
+# Slice 255 (design 4.5 B2a): the runtime-typed free input -- a hidden input without a schema or capture, whose type is the
+# type of the value its binding holds at run time.  Its own-type code 45 and its dynamic-type code 46 stand in no table of
+# numbers, pointers or arrays of this translator; the kernel's value functions (lmx_walk_value_bin, lmx_walk_value_receive)
+# type its uses when the values meet.
+fn: lm_compiler_free_own () int
+    return: (cast: (int) (45))
+end: lm_compiler_free_own
+
+fn: lm_compiler_free_dt () int
+    return: (cast: (int) (46))
+end: lm_compiler_free_dt
+
+fn: lm_compiler_own_is_free (int: oty) int
+    return: (cast: (int) ((cast: (int) (oty = 45))))
+end: lm_compiler_own_is_free
+
+fn: lm_compiler_ft_is_free (int: ft) int
+    return: (cast: (int) ((cast: (int) (ft = 45))))
+end: lm_compiler_ft_is_free
 
 os:
     win:

@@ -18,6 +18,20 @@
 подтверждены выборками attempt03, их «один участок за раз» заменён этим дизайном.
 
 Статус: дизайн и порядок реализации; реализация идёт по решениям Codex (срезы 250–253, ниже §6.1).
+Редакция 14 (2026-11-02 ~11:15 UTC, срез 255, по третьей фокусной сюите и наблюдаемому walk'у свидетеля): в §4.5
+«Реализация B2» — пункт «Принимающие места walker'а»: число у walker'а принимают три места, а не одно — место входа или
+поля (`lmx_walk_value_store_with_writer`: SET_ARG, PUT), рабочая ячейка локала (SET) и место результата (RET); SET сравнивал
+тип значения с типом ячейки сырым равенством (INVALID), RET не принимал вовсе (несовпадение всплывало у вызывающего) — оба
+идут через `lmx_walk_value_receive` (fix05: `lmx_walk_result_receive` читает witness результата у контракта кода кадра так же,
+как `lmx_walk_call_in` читает его у вызова; implicit `convert` поднимается в кадре callee, как у нативного твина).
+Диагностика: `lmxtool os-walk-witness` с наблюдаемым runtime печатает `LMX_OBSERVE WALK_BODY <имя>` при входе в каждое
+walked-тело — порядок тел до ошибки называет отказавший метод (запись `pins/tp117-obs.command`).
+Редакция 13 (2026-11-02 ~10:40 UTC, срез 255, начало B2 по решению Codex после B1): §4.5 получает блок «Реализация B2:
+B2a (срез 255) / B2b (срез 256)» — runtime-типизированный свободный вход сквозь оба исполнителя (тип из значения; ядро:
+`lmx_walk_value_bin`, `lmx_walk_value_receive`, `lmx_walk_value_lit`, `lmx_walk_values_arg_place` без статического типа;
+frontend: вид FREE, пустой witness walked-заголовка, запись вместо типизированного чтения, динамическое выражение через
+операции ядра, воронка приёма `numeric_receive` → `lmx_walk_value_receive`), контекстный литерал, именованный отказ приёма
+(implicit `convert`), located-границы B2a и свидетель `tests/dyn/free_value_types.lm2`; B2b — удаление замыкания.
 Редакция 12 (2026-11-02 ~09:00 UTC, срез 254, по фикстуре и gdb после boot116b): в §4.5 «Записи активаций» — вход нативной
 активации читает массивы, в которые его сгенерированная обёртка `l2_mN_tr` спроецировала входы вызывающего
 (`lmx_walk_values_project`), а не массивы трамплина ядра: `lmx_activation_resolve_input(arena, k, refs, values, width)` получает их
@@ -741,7 +755,99 @@ frontend (`lmx_walk_input_width` читает только записанные 
   <own>_from[0]), 0)` сразу после объявления рабочей ячейки, то же чтение, что у входной загрузки поля; форма с адресом
   рабочей ячейки/записи (`l2_q*`, `l2_fpv*`) остаётся допустимой (хранилище + тип либо полная запись `LmxWalkValue`),
   семантика та же.
-- **Что остаётся на B2** (обязательная часть B, не факультатив; до неё B не завершён и C не открывается): ширина и типы
+- **Реализация B2: B2a (срез 255, tp117; запись `steps/witnesses/fix255-20261102/notes.md`) и B2b (срез 256).** Решение Codex
+  (2026-11-02 ~09:15Z, приём B1): обязательный runtime-typed free value; собственные свободные имена без dyn/type замыканий; все
+  потребители через общие функции ядра (значение/операция/допуск); статический ARG witness для runtime-типизированного
+  свободного входа не требуется; без lexical-only запрета, без угадывания типа по использованию, без приведения всего к
+  int/size_t, без перевода положительных caller-only фикстур в отказы; реальные receiving/C-ABI контракты проверяются в
+  момент операции с действительным именованным отказом. Разбивка на два среза — моя: B2a делает транспорт и потребителей
+  runtime-типизированного значения при ещё работающем замыкании (его типы для свободных входов игнорируются), B2b снимает
+  замыкание; C открывается после фактического транспорта B2a и закрытия B2b.
+  - **Свободный вход (B2a).** Предикат `lm_compiler_input_free(mi, k)`: скрытый вход (k ≥ арности) без схемы и capture —
+    тот же предикат, по которому вызывающий ставит маркер FREE (`input_schema = -1`, `free_admit = 0`, не capture-хост).
+    Его тип в frontend — код FREE (`lm_compiler_free_ft()` = 45: не число, не указатель, не массив ни в одной таблице кодов;
+    `input_ft` отдаёт его вместо типа замыкания); вид выражения с таким операндом — FREE (`value_type_kind`/`value_expr_type`
+    = -20, поглощающий: `quote + 1`, `quote < x`, `(quote)`, `- quote` — FREE). Входы со схемой/capture (Structure,
+    модель, A3) — прежний типизированный путь (не свободные значения, а ссылки с допуском implements).
+  - **Ядро (lmx_walk_values).** `lmx_walk_value_bin(op, @a, @b, @out)` — одна бинарная операция для walker'а
+    (`lmx_walk_eval` вызывает её) и нативного кода: присутствие, EQ ссылок, числовые проекции, целочисленные
+    продвижения C99, int через `lmx_walk_native_int_bin_apply` (переполнение — implicit `interpreter`), остальные типы как
+    прежде; разные типы операндов — implicit `convert` throw (THROWN + LMX_WALK_NAME_CONVERT; было INVALID; статически
+    смешанные типы frontend отказывает как «mixed numeric types (a conversion)» — то же слово). `lmx_walk_value_receive(@v,
+    ty, @out)` — приём значения типизированным местом: совпадение базового типа после адаптации литерала — копия с типом
+    места; иначе `convert` throw (именованный отказ контракта приёма; статические конверторы программы `lm_stg_convert_*`
+    остаются делом трансляции статически типизированных значений). `lmx_walk_value_lit(@out, величина, U)` — контекстный
+    литерал: число типа LMX_TYPE_NONE, величина в `wide`, флаг U в `natural`; в `value_bin`/`receive` принимает (после
+    продвижений) тип другого операнда/места — правило `rw_unify` для литералов (-1/-2), применённое в момент, когда тип
+    известен; один — int (U: unsigned). `lmx_walk_value_number` читает NONE как `wide`. `lmx_walk_values_arg_place` с
+    `ty = LMX_TYPE_NONE` (нет статического witness): тип из присутствующего значения, иначе из ячейки входа
+    (`lmx_walk_value_cell`), отсутствие без значения — INVALID («a missing input», как документировано);
+    `lmx_walk_value_store_with_writer` — через `receive` (место свободного входа типизировано текущим значением: запись
+    другого типа — `convert`). Walker: ARG без witness и с default — место типа значения default; операнд-LIT рядом с
+    не-LIT операндом адаптивен (значение LIT становится контекстным литералом) — для статически типизированных программ это
+    пусто (их литералы уже унифицированы frontend'ом с другим операндом), для FREE даёт литералу тип значения.
+    Экспорт: имена `lmx_walk_value_lit`, `lmx_walk_value_receive`, `lmx_walk_value_bin` в списке `walk_value_names`
+    (141 → 144; `tools/build.lm2` меняется → новый G0 tool117).
+  - **Принимающие места walker'а (fix05, ред. 14).** Число у walker'а принимают три места, и все три идут через одну
+    операцию приёма `lmx_walk_value_receive`: место входа или поля (`lmx_walk_value_store_with_writer` — SET_ARG, PUT; так с
+    начала B2a), рабочая ячейка локала (SET в `lmx_walk_eval_result`: ячейка типа `work\ty` принимает значение на месте;
+    раньше — сырое равенство типов, INVALID) и место результата (RET: `lmx_walk_result_receive(f, value)` — witness
+    результата читается у контракта кода кадра `f\code` так же, как `lmx_walk_call_in` читает его у вызова:
+    `lmx_implements_exec_slot(…, 1U)` → часть return → `lmx_callable_source_entry` → `lmx_walk_witness_type`; принимаются
+    числа, ссылочный результат и код без читаемой части return проходят как прежде). Несовпадение — implicit `convert` в
+    кадре callee (его pads, затем pads вызывающего) — как у нативного твина, который принимает значение при `return:`
+    (`emit_dyn_receive_full`). Приём формалов (`lmx_walk_receive`: SET_ARG вида receiving → `lmx_walk_arg_write` →
+    `store_with_writer`) уже шёл через ту же операцию. Найдено третьей фокусной сюитой среза 255: forced-свидетель отказывал
+    INVALID в `outer5` (`got: leaf_int()` — size_t-значение в int-локал, ожидался пойманный `convert`); метод назвал порядок
+    walked-тел — `lmxtool os-walk-witness` с наблюдаемым runtime (`LMX_OBSERVE WALK_BODY <имя>` при входе в каждое
+    walked-тело; запись `pins/tp117-obs.command`), а gdb-трасса (`commands`-точки на receive/bin/arg_place/store и на
+    `lmx_call_note_walk_fail`) показала вход без приёма перед отказом. Внутренняя fn ядра — без экспорта (список
+    `walk_value_names` остаётся 144), tool117 остаётся G0.
+  - **Walked-заголовок и чтение.** Для свободного входа `rw_header_parts` ставит запись заголовка в два поля без ячейки
+    witness (слот пуст), `rw_input_witness` (child 3 узла ARG) и `rw_arg_fb` — пустой witness: `lmx_walk_witness_type(0)` =
+    NONE → `lmx_walk_arg_place(…, NONE)` = runtime-тип. `rw_tyof` для вида FREE — −1 (как неизвестный), `rw_bin` при
+    FREE-операнде не отмечает «retained integer site» (иначе нативный int-путь прочёл бы FREE как int).
+  - **Нативное чтение.** `emit_native_input_read` для FREE: без `lmx_walk_values_arg_place`/`lmx_walk_place_load`/raw;
+    запись `l2_cvN` = копия `l2_input_values[k]` (full consumer); raw-потребитель без записи — located отказ
+    «a free name is read where a typed native value is required». Лексический default (`emit_native_input_default`) —
+    тип лексического источника (`hid_own_lex` для FREE не сравнивает тип источника с типом замыкания); его store создаёт
+    место типом записи (`emit_native_input_store`: `l2_isvN.type`). Запись через свободное имя (`quote: …`) — динамическое
+    выражение → `emit_native_input_store` (место типа значения, `receive` в ядре).
+  - **Динамическое выражение** `lm_compiler_emit_dyn_values_full(tok, lo, hi, …)`: операнды — записи (`emit_native_span_full`
+    даёт запись любого листа; числовой литерал — `lmx_walk_value_lit`), операция — `lmx_walk_value_bin` с кодом OP (`!=`,
+    `<=`, `>`, `>=` как в `rw_bin`: EQ/LT, перестановка, отрицание `1 - r`), статус ≠ OK — `lmx_call_note_walk_fail` /
+    implicit throw (`emit_implicit_throw`); результат — запись, raw пуст (протокол «dest пуст, запись есть»).
+    Потребители: воронка `numeric_receive_prepare` (вид FREE → `source_ft` = FREE, без статических проверок совместимости)
+    и `emit_numeric_receive_full` (FREE → динамическое выражение + `lmx_walk_value_receive(@rec, <тип места>, @out)` →
+    raw = типизированный вид `out`, запись = `@ out`) — ею идут: объявление/присваивание типизированного локала и поля
+    (18168/18191/18307), return (`emit_normal_return_full` → `emit_received_span_full`), actual формала метода
+    (`emit_call_arguments_full`), индекс (size_t). Условие `if`/`while`: запись → `lmx_walk_value_number` → `≠ 0`.
+  - **Замыкание в B2a.** Остаётся работать (D-105, capture, callable formals), но: `dyn_add` не отказывает конфликт типов
+    (первый тип остаётся, для свободных входов он не читается), `dyn_site_callee` не отказывает `incompatible entry
+    signature` для свободного входа, `dyn_typed` сохраняется (имя без привязки и без лексического источника где бы то ни было
+    — отказ трансляции «unresolved name»; снимается в B2b вместе с замыканием, тогда по книге — runtime-недопустимость
+    вызова).
+  - **Located-границы B2a** (отказы трансляции с именем места, не runtime): нетипизированный локал от runtime-значения
+    (`twice: quote + quote` — нужен тип слова: `int: twice quote + quote`; FREE-типизированные собственные ячейки — B2b),
+    свободное значение как actual C-двери (`c.f(quote)` — через типизированный локал), в `&&`/`||`, как индекс, в
+    машинных операциях (сдвиги, битовые), префиксный знак. В корпусе таких мест нет (перепись: единственные фикстуры со
+    скрытыми входами — twins hidden_input и dyn/free_name_chain; инструменты самосборки свободных имён не читают).
+  - **Свидетель B2a** `tests/dyn/free_value_types.lm2` (строка full-suite.tsv `runs … 7 nf`): один callee `leaf`
+    (`quote: quote + quote` — запись через свободное имя и операция) достигается из `outer` (int 3 → 6) и `outer2` (size_t
+    65U через пересылающий `mid2` → 130U) — разные допустимые типы одного входа; `leaf_int () int: return: quote` — return
+    в типизированное место (int-вызывающий — 3); `leaf_local () int: int: twice quote + quote; return: twice` — запись в
+    типизированный локал; `leaf_arg () int: return: show(quote)` с `show (int: v) int` — actual формала; `leaf_size ()
+    size_t: return: quote` для size_t-вызывающего; условие `if: quote < 100` в теле с size_t-привязкой (литерал адаптивен);
+    отрицательная ветвь: size_t-привязка → `leaf_int` (int-место) — implicit `convert` поймана `catch: convert` у
+    вызывающего (именованный отказ контракта приёма). native↔walker — твины hidden_input/forward_header и режимы n/f
+    фикстуры; chain65 (`free_name_chain`) — как есть.
+  - **B2b (срез 256).** Удаление `dyn_close`, `cfl_close`, `cfa_apply`, `dyk_close`, `anchor_close`, `dyn_step`,
+    `dyn_typed`, `wait_*`, `note_call`, `d105a_close`, `ide_*` в части типов и пересылки свободных имён (D-105/схемы
+    Structure-входов остаются там, где они не о свободных числовых именах); заголовок callee = формалы + собственные
+    свободные имена (`dyn_local`); `dyn_fwd`-пересылка исчезает (пересылающий метод не имеет входа); FREE-типизированные
+    собственные ячейки (локал от runtime-значения — запись `LmxWalkValue`), снятие located-границ выше; имя без привязки —
+    runtime-недопустимость вызова (книга :727/:777).
+- **Что оставалось на B2 после B1** (текст среза 254; обязательная часть B, не факультатив; до неё B не завершён и C не открывается): ширина и типы
   скрытых входов из замыкания (`dyn_close`, `dyn_step`, `dyk_close`, `anchor_close`, `d105a_close`, `ide_*`, `wait_*`,
   `note_call`, `cfl_close`, `cfa_apply`) — удаляются; заголовок callee = формалы + собственные свободные имена
   (`dyn_local`); свободный вход без статического witness — место `LmxWalkValue`, тип из значения; все потребители

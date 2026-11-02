@@ -332,7 +332,27 @@ fn: lmx_walk_value_foreign (@: value c.LmxWalkValue; @: storage void) int
     return: c.LMX_WALK_OK
 end: lmx_walk_value_foreign
 
+# Slice 255 (design 4.5 B2a): a contextual literal -- a number with no type of its own (LMX_TYPE_NONE; the magnitude in
+# `wide`, the U spelling in `natural`).  It takes the type of the operand or of the place it meets (lmx_walk_value_bin,
+# lmx_walk_value_receive), as the frontend's rw_unify types a literal statically from its neighbour; alone it is an int (U:
+# unsigned).  Native code emits it for a literal in a runtime-typed expression; the walker makes one of a LIT operand beside a
+# non-literal operand.
+fn: lmx_walk_value_lit (@: out c.LmxWalkValue; size_t: magnitude; int: usuf) int
+    if: out = 0
+        return: c.LMX_WALK_INVALID
+    lmx_walk_value_clear(out)
+    out\present: 1
+    out\kind: c.LMX_WALK_VALUE_NUMBER
+    out\type: c.LMX_TYPE_NONE
+    out\wide: magnitude
+    out\natural: (cast: (unsigned) usuf)
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_lit
+
 fn: lmx_walk_value_num (@: out c.LmxWalkValue; int: ty; size_t: number) int
+    # A number with no type is a contextual literal (slice 255).
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_NONE
+        return: lmx_walk_value_lit(out, number, 0)
     lmx_walk_value_clear(out)
     out\present: 1
     out\kind: c.LMX_WALK_VALUE_NUMBER
@@ -346,6 +366,10 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
         return: c.LMX_WALK_INVALID
     \ty: value\type
     base_type: c.lmx_type_base(value\type)
+    # A contextual literal (LMX_TYPE_NONE, slice 255): its magnitude.
+    if: base_type = c.LMX_TYPE_NONE
+        \number: value\wide
+        return: c.LMX_WALK_OK
     if: base_type = c.LMX_TYPE_INT
         \number: (cast: (size_t) value\number)
     else:
@@ -371,6 +395,85 @@ fn: lmx_walk_value_number (@: value c.LmxWalkValue; @: number size_t; @: ty int)
     ---
     return: c.LMX_WALK_OK
 end: lmx_walk_value_number
+
+# The C99 integer promotion of a numeric base type: char and unsigned char become int (unsigned where they do not fit).
+fn: lmx_walk_value_promoted (int: ty) int
+    ty: c.lmx_type_base(ty)
+    if: ty = c.LMX_TYPE_CHAR
+        ty: c.LMX_TYPE_INT
+        if: c.CHAR_MAX > c.INT_MAX
+            ty: c.LMX_TYPE_UNSIGNED
+    ---
+    if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+        ty: c.LMX_TYPE_INT
+        if: c.UCHAR_MAX > c.INT_MAX
+            ty: c.LMX_TYPE_UNSIGNED
+    ---
+    return: ty
+end: lmx_walk_value_promoted
+
+# A contextual literal takes the type `ty` (LMX_TYPE_NONE: its own default); any other number is copied as it is.
+fn: lmx_walk_value_adopt (@: value c.LmxWalkValue; int: ty; @: out c.LmxWalkValue) int
+    size_t: magnitude 0U
+    if: value = 0 || out = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_INVALID
+    if: c.lmx_type_base(value\type) != c.LMX_TYPE_NONE
+        if: out != value
+            c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+        return: c.LMX_WALK_OK
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_NONE
+        ty: c.LMX_TYPE_INT
+        if: value\natural != 0U
+            ty: c.LMX_TYPE_UNSIGNED
+    ---
+    magnitude: value\wide
+    return: lmx_walk_value_num(out, ty, magnitude)
+end: lmx_walk_value_adopt
+
+# A present number becomes a contextual literal of its magnitude (the walker's LIT operand beside a non-literal operand).
+sub: lmx_walk_value_contextual (@: value c.LmxWalkValue)
+    size_t: number 0U
+    int: ty 0
+    int: usuf 0
+    if: value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
+        return
+    if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK
+        return
+    ty: c.lmx_type_base(ty)
+    if: ty = c.LMX_TYPE_UNSIGNED || ty = c.LMX_TYPE_SIZE_T || ty = c.LMX_TYPE_ULONG
+        usuf: 1
+    lmx_walk_value_lit(value, number, usuf)
+    return
+end: lmx_walk_value_contextual
+
+# Slice 255 (design 4.5 B2a): the reception of a complete value by a place of type `ty` -- the one runtime admission of a
+# runtime-typed value at a typed receiving place (a typed local or field, a return, a formal, a C-ABI actual, a store into a
+# free input's place).  A number of the same base type, after a contextual literal has taken the place's type, or a reference
+# of the same type is received with the place's type; anything else is the language's implicit `convert` throw -- the named
+# refusal of a receiving contract -- never INVALID.  An absent value or a null argument is malformed (INVALID).
+fn: lmx_walk_value_receive (@: value c.LmxWalkValue; int: ty; @: out c.LmxWalkValue) int
+    c.LmxWalkValue: taken
+    @: taken_p c.LmxWalkValue @ taken
+    int: status
+    if: value = 0 || out = 0 || c.lmx_type_base(ty) = c.LMX_TYPE_NONE || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_NUMBER
+        status: lmx_walk_value_adopt(value, ty, taken_p)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: c.lmx_type_base(taken_p\type) != c.lmx_type_base(ty)
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        taken_p\type: ty
+        c.memcpy((cast: (@: void) out), (cast: (@: void) taken_p), c.sizeof(c.LmxWalkValue))
+        return: c.LMX_WALK_OK
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE
+        if: c.lmx_type_base(value\type) != c.lmx_type_base(ty)
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        if: out != value
+            c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+        return: c.LMX_WALK_OK
+    return: c.LMX_WALK_INVALID
+end: lmx_walk_value_receive
 
 # Both native and walked prefix signs consume the same actual numeric value.
 # Promotion changes the result type, not the operand's stored type.
@@ -600,6 +703,77 @@ fn: lmx_walk_native_int_bin_apply (int: op; int: left; int: right; @: result int
         return: c.LMX_WALK_OK
     return: c.LMX_WALK_INVALID
 end: lmx_walk_native_int_bin_apply
+
+# Slice 255 (design 4.5 B2a): the one binary operation of both executors over two complete values -- ADD, SUB, MUL, DIV, MOD,
+# LT, EQ.  Presence; EQ of two references; the numeric projections; the C99 integer promotions; a contextual literal takes
+# the other operand's promoted type (two literals: int, or unsigned when one is U-spelled); an int operation runs through
+# lmx_walk_native_int_bin_apply (its overflow and zero divisor are THROWN + LMX_WALK_NAME_INTERPRETER: the walker raises its
+# interpreter fault from them, native code its implicit throw); the other types compute in their own width as before.  Two
+# numbers of different types are the language's implicit `convert` throw (the frontend refuses the static case as "mixed
+# numeric types (a conversion)"), not INVALID; malformed operands stay INVALID.
+fn: lmx_walk_value_bin (int: op; @: value c.LmxWalkValue; @: other c.LmxWalkValue; @: out c.LmxWalkValue) int
+    size_t: ua 0U
+    size_t: ub 0U
+    size_t: wv 0U
+    int: a 0
+    int: b 0
+    int: status 0
+    int: native_num_result 0
+    if: op != c.LMX_WALK_OP_ADD && op != c.LMX_WALK_OP_SUB && op != c.LMX_WALK_OP_MUL && op != c.LMX_WALK_OP_DIV && op != c.LMX_WALK_OP_MOD && op != c.LMX_WALK_OP_LT && op != c.LMX_WALK_OP_EQ
+        return: c.LMX_WALK_INVALID
+    if: value = 0 || other = 0 || out = 0 || value\present = 0 || other\present = 0
+        return: c.LMX_WALK_INVALID
+    if: op = c.LMX_WALK_OP_EQ && (value\kind = c.LMX_WALK_VALUE_REFERENCE || other\kind = c.LMX_WALK_VALUE_REFERENCE)
+        if: value\kind != c.LMX_WALK_VALUE_REFERENCE || other\kind != c.LMX_WALK_VALUE_REFERENCE
+            return: c.LMX_WALK_INVALID
+        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (value\ref = other\ref)))
+    ---
+    if: lmx_walk_value_number(value, @ ua, @ a) != c.LMX_WALK_OK || lmx_walk_value_number(other, @ ub, @ b) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    # C99 integer promotions concern representation, not storage family.
+    # Operand cells retain their full physical IDs; this is a new result.
+    a: lmx_walk_value_promoted(a)
+    b: lmx_walk_value_promoted(b)
+    if: a = c.LMX_TYPE_NONE && b = c.LMX_TYPE_NONE
+        a: c.LMX_TYPE_INT
+        if: value\natural != 0U || other\natural != 0U
+            a: c.LMX_TYPE_UNSIGNED
+        b: a
+    ---
+    if: a = c.LMX_TYPE_NONE
+        a: b
+    if: b = c.LMX_TYPE_NONE
+        b: a
+    if: a != b
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: a = c.LMX_TYPE_INT
+        status: lmx_walk_native_int_bin_apply(op, (cast: (int) ua), (cast: (int) ub), @ native_num_result)
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) native_num_result))
+    ---
+    if: op = c.LMX_WALK_OP_LT
+        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ua < ub)))
+    if: op = c.LMX_WALK_OP_EQ
+        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ua = ub)))
+    if: op = c.LMX_WALK_OP_ADD
+        wv: ua + ub
+    if: op = c.LMX_WALK_OP_SUB
+        wv: ua - ub
+    if: op = c.LMX_WALK_OP_MUL
+        wv: ua * ub
+    # -170 c1 / D-58: a zero divisor in a complete operation raises the implicit interpreter throw.
+    if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
+        if: ub = 0U
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        if: op = c.LMX_WALK_OP_DIV
+            wv: ua / ub
+        else:
+            wv: ua % ub
+        ---
+    ---
+    return: lmx_walk_value_num(out, a, wv)
+end: lmx_walk_value_bin
 
 fn: lmx_walk_witness_type (@: arena c.LmxArena; @: witness void) int
     int: kind (cast: (int) c.lmx_domain_kind(arena, witness))
@@ -1182,6 +1356,19 @@ fn: lmx_walk_values_arg_place (@: arena c.LmxArena; @: owned c.LmxWalkValue; @@:
     if: k >= width || inputs = 0 || owned = 0
         return: c.LMX_WALK_INVALID
     @: item c.LmxWalkValue (owned + k)
+    # Slice 255 (design 4.5 B2a): no static witness (LMX_TYPE_NONE) -- the place has the type of the value it holds: the
+    # present record's, else the input cell's; an absent input without a value is a missing input (INVALID).
+    if: ty = c.LMX_TYPE_NONE
+        if: item\present = 0
+            if: inputs[k] = 0
+                return: c.LMX_WALK_INVALID
+            status: lmx_walk_value_cell(arena, inputs[k], item)
+            if: status != c.LMX_WALK_OK
+                return: status
+            inputs[k]: lmx_walk_value_storage(item)
+        ---
+        ty: item\type
+    ---
     if: item\present != 0 && item\type != ty
         return: c.LMX_WALK_INVALID
     if: item\present = 0
@@ -1279,6 +1466,8 @@ end: lmx_walk_value_store
 # The physical writer may describe a native typed working cell. Admission,
 # numeric storage, pointer context and write barriers remain the same operation.
 fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value c.LmxWalkValue; c.LmxPointerCellWrite: write) int
+    c.LmxWalkValue: received
+    @: received_p c.LmxWalkValue @ received
     size_t: number 0U
     int: ty 0
     int: status 0
@@ -1292,7 +1481,12 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
             return: c.LMX_WALK_INVALID
         return: (cast: (int) c.lmx_value_cell_store(arena, place\address, place\context, value\ref, value, write))
     ---
-    if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK || ty != place\type
+    # Slice 255 (design 4.5 B2a): the place receives the value by the one admission -- a contextual literal takes the
+    # place's type, a number of another type is the implicit `convert` throw (lmx_walk_value_receive).
+    status: lmx_walk_value_receive(value, place\type, received_p)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: lmx_walk_value_number(received_p, @ number, @ ty) != c.LMX_WALK_OK || ty != place\type
         return: c.LMX_WALK_INVALID
     status: lmx_walk_store_numeric_raw((cast: (@: void) place\address), ty, number)
     if: status = c.LMX_WALK_OK && place\context != 0
@@ -1897,7 +2091,9 @@ fn: lmx_walk_entry_node (@: f c.LmxWalkFrame; @: operand c.Lmx; @@: entries c.Lm
             return: c.LMX_WALK_INVALID
         index: c.lmx_size_value_known(c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), operand, 1U))
         current_type: lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), operand, 3U))
-        if: index >= f\nargs || f\args = 0 || entries = 0 || current_type = 0
+        # Slice 255 (design 4.5 B2a): a witness type of NONE is a free input without a static witness -- typed by its value
+        # when the place is made (lmx_walk_values_arg_place); two entries of one input must still agree.
+        if: index >= f\nargs || f\args = 0 || entries = 0
             return: c.LMX_WALK_INVALID
         if: entries[index] = 0
             entries[index]: operand
@@ -2821,6 +3017,9 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
             own\present: 0
             if: status != c.LMX_WALK_OK
                 return: status
+            # Slice 255 (design 4.5 B2a): without a static witness the place is typed by the default's value.
+            if: type = c.LMX_TYPE_NONE
+                type: holder_p\type
             status: lmx_walk_arg_place(f, index, type, out)
             if: status != c.LMX_WALK_OK
                 return: status
@@ -4991,6 +5190,43 @@ end: lmx_walk_prim
 
 # The evaluator preserves its temporary result and all original physical-place ordering.
 
+# Slice 255 (design 4.5 B2a): the result place is a receiving place.  The value a RET evaluated is admitted by the kernel's
+# one admission (lmx_walk_value_receive) into the selected code's declared result type -- the one witness of its contract's
+# return part, read as the call site reads it (lmx_walk_call_in) -- as the native twin receives it at its return; a mismatch
+# is the implicit `convert` throw raised at the RET, in the callee's own frame (its pads first, then the caller's).  B2a
+# admits numbers; a reference result passes as before.  A code without a readable one-witness return part (a contractless
+# split entry, a void part) receives nothing: the value passes as before.
+fn: lmx_walk_result_receive (@: f c.LmxWalkFrame; @: value c.LmxWalkValue) int
+    c.LmxWalkValue: received
+    @: returns c.Lmx 0
+    @: header_source void 0
+    @: witness void 0
+    size_t: return_slot 0U
+    size_t: return_count 0U
+    int: answer 0
+    int: ty 0
+    int: status c.LMX_WALK_OK
+    if: f = 0 || value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER || f\code = 0
+        return: c.LMX_WALK_OK
+    if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) f\code)) = 0
+        return: c.LMX_WALK_OK
+    if: c.lmx_implements_exec_slot((cast: (@: c.LmxArena) f\arena), f\code, 1U, @ return_slot, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_YES
+        return: c.LMX_WALK_OK
+    returns: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), f\code, return_slot))
+    if: returns = 0 || c.lmx_callable_source_count((cast: (@: c.LmxArena) f\arena), returns, @ return_count) != 0 || return_count != 1U
+        return: c.LMX_WALK_OK
+    if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), returns, 0U, @ header_source, @ witness) != 0 || witness = 0
+        return: c.LMX_WALK_OK
+    ty: c.lmx_type_base(lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness))
+    if: ty = c.LMX_TYPE_NONE || ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
+        return: c.LMX_WALK_OK
+    status: lmx_walk_value_receive(value, ty, @ received)
+    if: status != c.LMX_WALK_OK
+        return: status
+    c.memcpy((cast: (@: void) value), (cast: (@: void) (@ received)), c.sizeof(c.LmxWalkValue))
+    return: c.LMX_WALK_OK
+end: lmx_walk_result_receive
+
 fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalkValue) int
     c.LmxWalkValue: value
     @: value_p c.LmxWalkValue @ value
@@ -5251,8 +5487,12 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
                 return: c.LMX_WALK_INVALID
             ---
         else:
-            if: lmx_walk_value_number(@ value, @ wv, @ a) != c.LMX_WALK_OK || a != work\ty
-                return: c.LMX_WALK_INVALID
+            # Slice 255 (design 4.5 B2a): the working number cell is a receiving place -- the kernel's one admission
+            # (lmx_walk_value_receive, in place: the received value replaces the evaluated one); a mismatch is the
+            # statement's implicit `convert` throw, not INVALID.
+            status: lmx_walk_value_receive(@ value, work\ty, @ value)
+            if: status != c.LMX_WALK_OK
+                return: status
             ---
         ---
         c.memcpy((cast: (@: void) (@ work\value)), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
@@ -5291,98 +5531,17 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U), @ other)
         if: status != c.LMX_WALK_OK
             return: status
-        if: value_p\present = 0 || other_p\present = 0
-            return: c.LMX_WALK_INVALID
-        if: op = c.LMX_WALK_OP_EQ && (value_p\kind = c.LMX_WALK_VALUE_REFERENCE || other_p\kind = c.LMX_WALK_VALUE_REFERENCE)
-            if: value_p\kind != c.LMX_WALK_VALUE_REFERENCE || other_p\kind != c.LMX_WALK_VALUE_REFERENCE
-                return: c.LMX_WALK_INVALID
-            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (value_p\ref = other_p\ref)))
-        ---
-        if: lmx_walk_value_number(@ value, @ ua, @ a) != c.LMX_WALK_OK || lmx_walk_value_number(@ other, @ ub, @ b) != c.LMX_WALK_OK
-            return: c.LMX_WALK_INVALID
-        # C99 integer promotions concern representation, not storage family.
-        # Operand cells retain their full physical IDs; this is a new result.
-        a: c.lmx_type_base(a)
-        b: c.lmx_type_base(b)
-        if: a = c.LMX_TYPE_CHAR
-            a: c.LMX_TYPE_INT
-            if: c.CHAR_MAX > c.INT_MAX
-                a: c.LMX_TYPE_UNSIGNED
-        ---
-        if: b = c.LMX_TYPE_CHAR
-            b: c.LMX_TYPE_INT
-            if: c.CHAR_MAX > c.INT_MAX
-                b: c.LMX_TYPE_UNSIGNED
-        ---
-        if: a = c.LMX_TYPE_UNSIGNED_CHAR
-            a: c.LMX_TYPE_INT
-            if: c.UCHAR_MAX > c.INT_MAX
-                a: c.LMX_TYPE_UNSIGNED
-        ---
-        if: b = c.LMX_TYPE_UNSIGNED_CHAR
-            b: c.LMX_TYPE_INT
-            if: c.UCHAR_MAX > c.INT_MAX
-                b: c.LMX_TYPE_UNSIGNED
-        ---
-        if: a != b
-            return: c.LMX_WALK_INVALID
-        if: a = c.LMX_TYPE_INT && (op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ)
-            status: lmx_walk_native_int_bin_apply(op, (cast: (int) ua), (cast: (int) ub), @ native_num_result)
-            if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-                return: lmx_walk_fault(f)
-            if: status != c.LMX_WALK_OK
-                return: status
-            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) native_num_result))
-        ---
-        if: op = c.LMX_WALK_OP_LT
-            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ua < ub)))
-        if: op = c.LMX_WALK_OP_EQ
-            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ua = ub)))
-        if: op = c.LMX_WALK_OP_ADD
-            if: a = c.LMX_TYPE_INT
-                wv: (cast: (size_t) ((cast: (int) ua) + (cast: (int) ub)))
-            else:
-                wv: ua + ub
-            ---
-            return: lmx_walk_value_num(out, a, wv)
-        ---
-        if: op = c.LMX_WALK_OP_SUB
-            if: a = c.LMX_TYPE_INT
-                wv: (cast: (size_t) ((cast: (int) ua) - (cast: (int) ub)))
-            else:
-                wv: ua - ub
-            ---
-            return: lmx_walk_value_num(out, a, wv)
-        ---
-        # -170 c1 / D-58: MUL/DIV/MOD. Mutant: MUL as ADD -> RED.
-        # A zero divisor in a complete operation raises the implicit interpreter throw.
-        if: op = c.LMX_WALK_OP_MUL
-            if: a = c.LMX_TYPE_INT
-                wv: (cast: (size_t) ((cast: (int) ua) * (cast: (int) ub)))
-            else:
-                wv: ua * ub
-            ---
-            return: lmx_walk_value_num(out, a, wv)
-        ---
-        if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
-            if: ub = 0U
-                return: lmx_walk_fault(f)
-            ---
-            if: a = c.LMX_TYPE_INT
-                if: op = c.LMX_WALK_OP_DIV
-                    wv: (cast: (size_t) ((cast: (int) ua) / (cast: (int) ub)))
-                else:
-                    wv: (cast: (size_t) ((cast: (int) ua) % (cast: (int) ub)))
-                ---
-            else:
-                if: op = c.LMX_WALK_OP_DIV
-                    wv: ua / ub
-                else:
-                    wv: ua % ub
-                ---
-            ---
-            return: lmx_walk_value_num(out, a, wv)
-        ---
+        # Slice 255 (design 4.5 B2a): one shared operation for both executors (lmx_walk_value_bin).  A LIT operand beside a
+        # non-literal operand is contextual: it takes the other operand's type in the operation (a statically typed program
+        # has already unified it with that operand; a runtime-typed operand types it now).
+        if: lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)) = c.LMX_WALK_OP_LIT && lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)) != c.LMX_WALK_OP_LIT
+            lmx_walk_value_contextual(value_p)
+        if: lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)) = c.LMX_WALK_OP_LIT && lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)) != c.LMX_WALK_OP_LIT
+            lmx_walk_value_contextual(other_p)
+        status: lmx_walk_value_bin(op, value_p, other_p, out)
+        if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            return: lmx_walk_fault(f)
+        return: status
     if: op = c.LMX_WALK_OP_IF
         status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ value)
         if: status != c.LMX_WALK_OK
@@ -5441,6 +5600,10 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         frame_result: @ f\result
         if: code_fields\size > 1U
             status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), frame_result)
+            if: status != c.LMX_WALK_OK
+                return: status
+            # Slice 255 (design 4.5 B2a): the result place receives the value (lmx_walk_result_receive).
+            status: lmx_walk_result_receive(f, frame_result)
             if: status != c.LMX_WALK_OK
                 return: status
         ---

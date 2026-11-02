@@ -6341,6 +6341,15 @@ fn: lm_compiler_rw_signature_witness (int: parent; int: slot; int: ty; int: desc
     return: (cast: (int) (lm_compiler_rw_witness(entry, 1, ty, descriptor)))
 end: lm_compiler_rw_signature_witness
 
+# Slice 255 (design 4.5 B2a): the header entry of a free input -- two fields, no witness cell: the walker's
+# lmx_walk_witness_type of the empty slot is LMX_TYPE_NONE, and lmx_walk_values_arg_place types the place by its value.
+fn: lm_compiler_rw_signature_free (int: parent; int: slot) int
+    int: entry
+    if: c.lm_compiler_rw_plain(parent, 2, @ entry) != 0 || c.lm_compiler_rw_put(parent, slot, entry) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_rw_signature_free
+
 # Original: l2src/l2trans.lm1:23697
 fn: lm_compiler_rw_signature_input (int: parent; int: slot; int: mi; int: input) int
     @: rw_machine_cell int (cast: (@: int) (@ c.l2_rw_machine))
@@ -6358,6 +6367,9 @@ fn: lm_compiler_rw_signature_input (int: parent; int: slot; int: mi; int: input)
             return: (cast: (int) (1))
         ---
     ---
+    # Slice 255 (design 4.5 B2a): a free input's signature entry has no static witness.
+    if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, input)) != 0
+        return: (cast: (int) (0))
     if: c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(mi, input)) != 0 && c.lm_compiler_input_is_descriptor(mi, input) = 0
         rw_machine_cell[0]: 1
         return: (cast: (int) (0))
@@ -6459,6 +6471,9 @@ fn: lm_compiler_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
     # A foreign by-value input is native C storage with no graph cell. Its
     # witness place stays empty, as its place in the method's own declared
     # part does, and the body that transports it is native-only.
+    # Slice 255 (design 4.5 B2a): a free input's ARG carries no static witness (the slot stays empty).
+    if: callable < 0 && model < 0 && c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, j)) != 0
+        return: (cast: (int) (0))
     if: callable < 0 && model < 0 && c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(mi, j)) != 0
         rw_machine_cell[0]: 1
         return: (cast: (int) (0))
@@ -6539,8 +6554,17 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
     while: j < m_dyn_cell[0][mi]
         slot: n + j
         ty: c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, j))
-        if: ty < 0 || lm_compiler_rw_signature_witness(inputs, slot, ty, 0) != 0
+        if: ty < 0
             return: (cast: (int) (1))
+        # Slice 255 (design 4.5 B2a): a free input has no static witness.
+        if: c.lm_compiler_own_is_free(ty) != 0
+            if: lm_compiler_rw_signature_free(inputs, slot) != 0
+                return: (cast: (int) (1))
+            ---
+        else:
+            if: lm_compiler_rw_signature_witness(inputs, slot, ty, 0) != 0
+                return: (cast: (int) (1))
+        ---
         if: rw_emit_cell[0] != 0
             if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_source_name(place, c.lm_compiler_dn(mi, j), "        ", "return: 1", 0) != 0
                 return: (cast: (int) (1))
@@ -10194,6 +10218,14 @@ fn: lm_compiler_rw_bin (@: tok c.L2ValueSpan; int: lo; int: hi; int: ty; int: pa
     if: bestp != 6 || c.lm_compiler_own_is_pointer(left_ty) = 0 || c.lm_compiler_own_is_pointer(right_ty) = 0
         left_ty: ot
         right_ty: ot
+    # Slice 255 (design 4.5 B2a): an operation over a runtime-typed operand -- its literals are typed int here (the kernel's
+    # shared operation retypes a literal beside a non-literal operand by that operand's value) and it is no retained integer
+    # site: the native emission runs it through lmx_walk_value_bin, not the int path.
+    if: c.lm_compiler_value_expr_type(tok, lo, hi, rw_mi_cell[0], @ machine_type) = -20
+        ot: 0 - 20
+        left_ty: 0
+        right_ty: 0
+    ---
     # `+` or `-` whose result is a reference is C address arithmetic.
     if: bestp = 9 && c.lm_compiler_oc_is_ref(ty) != 0
         return: (cast: (int) (lm_compiler_rw_machine_offset(tok, lo, best, hi, parent, out)))
@@ -15317,11 +15349,29 @@ fn: lm_compiler_body_path_effects (const: (@: body c.LmP0Structure); int: mi) in
     return: 0
 end: lm_compiler_body_path_effects
 
+# Slice 255 (design 4.5 B2a): a method with a free input -- a hidden input without a schema or capture -- may raise the
+# implicit throws of its runtime-typed operations and receptions (interpreter, convert): it has the status channel.
+fn: lm_compiler_body_free_inputs (int: mi) int
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
+    int: k 0
+    if: mi < 0 || c.lm_compiler_mad_host_of(mi) >= 0
+        return: (cast: (int) (0))
+    while: k < m_dyn_cell[0][mi]
+        if: c.lm_compiler_input_schema(mi, m_arity_cell[0][mi] + k) = -1
+            return: (cast: (int) (1))
+        k: k + 1
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_body_free_inputs
+
 fn: lm_compiler_body_throws (const: (@: body c.LmP0Structure); int: mi) int
     int: raises
     if: body = 0
         return: (cast: (int) (0))
     if: c.lm_compiler_throws_declared(mi) > 0
+        return: (cast: (int) (1))
+    if: lm_compiler_body_free_inputs(mi) != 0
         return: (cast: (int) (1))
     raises: lm_compiler_body_path_effects(body, mi)
     c.lm_compiler_vis_method(mi)

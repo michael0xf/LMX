@@ -1,0 +1,115 @@
+# Slice 255 (design 4.5 B2a; Codex's B2 directive after B1): a free name is runtime-typed -- its type is the type of the value
+# the nearest binding holds, read where the value is used (the chain of activation records of slice 254 finds the binding).
+# One callee is reached from bindings of different types: leaf_cond compares the value with a literal (contextual: it takes
+# the value's type) from outer3 (int) and outer4 (size_t); leaf writes through the name from both (quote: quote + quote --
+# the kernel's one operation and the activation's own place: a bare write changes the activation's input value only, Q52).
+# leaf_twice / leaf_twice_size write through the name and return the written value into an int / a size_t place (the
+# latter reached through the forwarder mid2, which binds nothing); leaf_int returns the value into an int place, leaf_local
+# writes it into a typed local, leaf_arg hands it to a typed formal -- every receiving place admits the value by the kernel's
+# one admission (lmx_walk_value_receive); a mismatch (outer5: a size_t value at leaf_int's int return) is the implicit
+# `convert` throw, the named refusal of the receiving contract, caught by the caller.  Entry 7; 81.. name the failing check.
+int: quote 11
+sub: leaf ()
+    quote: quote + quote
+end: leaf
+fn: leaf_twice () int
+    quote: quote + quote
+    return: quote
+end: leaf_twice
+fn: leaf_twice_size () size_t
+    quote: quote + quote
+    return: quote
+end: leaf_twice_size
+fn: leaf_int () int
+    return: quote
+end: leaf_int
+fn: leaf_local () int
+    int: twice quote + quote
+    return: twice
+end: leaf_local
+fn: show (int: v) int
+    return: v + 1
+end: show
+fn: leaf_arg () int
+    return: show(quote)
+end: leaf_arg
+fn: leaf_size () size_t
+    return: quote
+end: leaf_size
+fn: leaf_cond () int
+    if: quote < 100
+        return: 1
+    return: 2
+end: leaf_cond
+fn: mid2 () size_t
+    return: leaf_twice_size()
+end: mid2
+fn: outer () int
+    int: quote
+    quote: 3
+    leaf()
+    if: quote != 3
+        return: 80
+    return: leaf_twice()
+end: outer
+fn: outer2 () int
+    size_t: quote
+    quote: 65U
+    leaf()
+    if: quote != 65U
+        return: 0
+    if: mid2() != 130U
+        return: 0
+    return: 1
+end: outer2
+fn: outer3 () int
+    int: quote
+    quote: 3
+    if: leaf_int() != 3
+        return: 83
+    if: leaf_local() != 6
+        return: 84
+    if: leaf_arg() != 4
+        return: 85
+    if: leaf_cond() != 1
+        return: 86
+    return: 0
+end: outer3
+fn: outer4 () int
+    size_t: quote
+    quote: 65U
+    if: leaf_size() != 65U
+        return: 87
+    if: leaf_cond() != 1
+        return: 88
+    return: 0
+end: outer4
+fn: outer5 () int
+    size_t: quote
+    quote: 65U
+    int: got 0
+    ---
+        got: leaf_int()
+        catch: convert ()
+            got: 89
+    ---
+    return: got
+end: outer5
+fn: m () int
+    int: r 0
+    if: outer() != 6
+        return: 81
+    if: outer2() != 1
+        return: 82
+    r: outer3()
+    if: r != 0
+        return: r
+    r: outer4()
+    if: r != 0
+        return: r
+    if: outer5() != 89
+        return: 90
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

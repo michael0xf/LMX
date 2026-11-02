@@ -3589,6 +3589,9 @@ fn: lm_compiler_check_value_convert_core (const: (@: value c.LmP0Node); int: fro
         return: (cast: (int) (c.lm_compiler_error(path, value, "a reference where a number is asked")))
     if: from_ft = 8 || c.lm_compiler_prim_code_name(from_ft) = 0
         return: (cast: (int) (0))
+    # A receiving place without a primitive type word (a runtime-typed free input, slice 255) receives at run time.
+    if: c.lm_compiler_prim_code_name(to_ft) = 0
+        return: (cast: (int) (0))
     if: c.strcmp((cast: (const: @: char) (c.lm_compiler_prim_code_name(from_ft))), c.lm_compiler_prim_code_name(to_ft)) = 0
         return: (cast: (int) (0))
     cok: c.lm_compiler_colon_types_compatible(to_ft, from_ft)
@@ -3665,6 +3668,9 @@ fn: lm_compiler_check_ret_kind (int: mi; const: (@: body c.LmP0Structure); const
     if: only = 0 || only\value = 0 || c.lm_compiler_colon_value_ty(only, mi, @ vt) != 0
         return: (cast: (int) (0))
     if: vt = 0 - 10 || vt = 0 - 12 || vt = 8 || c.lm_compiler_prim_code_name(vt) != 0
+        return: (cast: (int) (0))
+    # Slice 255 (design 4.5 B2a): a runtime-typed value is received by the result place at run time.
+    if: c.lm_compiler_ft_is_free(vt) != 0
         return: (cast: (int) (0))
     return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (only\value)), "return value has incompatible type")))
 end: lm_compiler_check_ret_kind
@@ -4619,6 +4625,19 @@ fn: lm_compiler_dyn_local (const: (@: path char)) int
 end: lm_compiler_dyn_local
 
 # Original: l2src/l2trans.lm1:8452
+# Slice 255 (design 4.5 B2a): the hidden input k of method m is free -- without a schema (a model, a Structure declaration in
+# sight, an anchored coordinate space) and not a capture of a callable merge: the input its caller marks LMX_WALK_VALUE_FREE
+# (lm_compiler_emit_call_hides) and the callee resolves from the chain of activation records.  Its type is its value's.
+fn: lm_compiler_dyn_free (int: m; int: k) int
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
+    if: m < 0 || k < 0 || k >= m_dyn_cell[0][m]
+        return: (cast: (int) (0))
+    if: c.lm_compiler_mad_host_of(m) >= 0
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) (c.lm_compiler_input_schema(m, m_arity_cell[0][m] + k) = -1))))
+end: lm_compiler_dyn_free
+
 fn: lm_compiler_dyn_site_callee (const: (@: site c.L2SourceSite); int: cidx; int: fi; const: (@: path char); @: changed int) int
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
@@ -4726,7 +4745,8 @@ fn: lm_compiler_dyn_site_callee (const: (@: site c.L2SourceSite); int: cidx; int
         # to a typed reference use has the same receiving-edge conversion/admission as the explicit analogue,
         # provided actual reference depth/type is correct."): a caller's `@: void` under a name its reader uses as a
         # graph reference is admitted where the input is formed, as an opaque actual to a Structure formal is.
-        if: sdt != 0 && ty != 0 && sdt != ty && (ty != c.lm_compiler_graph_dt() || c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(sdt)) != 16)
+        # Slice 255 (design 4.5 B2a): a free input takes bindings of any type -- its type is the value's at run time.
+        if: sdt != 0 && ty != 0 && sdt != ty && lm_compiler_dyn_free(cidx, k) = 0 && (ty != c.lm_compiler_graph_dt() || c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(sdt)) != 16)
             return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (site\source)), "incompatible entry signature")))
         if: sdt != 0 && ty = 0
             if: c.lm_compiler_dt_set(cidx, k, sdt) != 0
@@ -4943,6 +4963,10 @@ fn: lm_compiler_dyn_typed (const: (@: path char)) int
                 if: c.lm_compiler_dn(m, k) != 0
                     c.fprintf((cast: (@: c.FILE) (c.l1_stderr())), "l2trans detail: unresolved dynamic=%.*s\n", (cast: (int) lm_compiler_port249_0_LmP0Text_length((cast: (const: @: c.LmP0Text) (c.lm_compiler_dn(m, k))))), lm_compiler_port249_0_LmP0Text_data((cast: (const: @: c.LmP0Text) (c.lm_compiler_dn(m, k)))))
                 return: (cast: (int) (c.lm_compiler_error((cast: (const: @: char) (c.lm_compiler_method_src(m, path))), lm_compiler_free_name_at(m, k, m_node_cell[0][m]), "unresolved name")))
+            # Slice 255 (design 4.5 B2a): a free input is runtime-typed from here on -- its dynamic type is FREE (46), read
+            # by input_ft as the own type 45; the closure's type for it is not consulted by the emission.
+            if: lm_compiler_dyn_free(m, k) != 0 && c.lm_compiler_dt(m, k) != c.lm_compiler_free_dt() && c.lm_compiler_dt_set(m, k, c.lm_compiler_free_dt()) != 0
+                return: (cast: (int) (1))
             k: k + 1
         m: m + 1
     return: (cast: (int) (0))

@@ -6,39 +6,36 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-`inputs.list` selects 161 maintained inputs: 65 source, 34 tool and 62 test
+`inputs.list` selects 162 maintained inputs: 65 source, 34 tool and 63 test
 files. `inputs.sha256` binds those exact bytes with paths relative to this
 directory. Generated L1/C, headers, objects and executables are not inputs.
 
-The selected snapshot is the source of the whole quick bootstrap boot117a
-([slice255](../steps/witnesses/fix255-20261102/notes.md)): source-tp117 —
-the boot116c package of [slice254](../steps/witnesses/fix254-20261102/notes.md)
-with the third semantic slice of the Fable line, tp117 (design §4.5, step
-B2a: the runtime-typed free value — a free name's type is the type of the
-value its nearest binding holds, read where the value is used; the kernel's
-one binary operation, one reception and contextual literal
-(`lmx_walk_value_bin`, `lmx_walk_value_receive`, `lmx_walk_value_lit`), the
-ARG place without a static witness, every receiving place of a number
-admitting through the one reception (the input place, the walker's working
-cell and its result), a mismatch the implicit `convert`; the frontend's FREE
-kind, the empty walked witness, the record-only native read, the dynamic
-expression and the receiving funnel;
-[design](../optimization_design_from_fable.md)). Relative to the previous
-package, boot116c, it changes 10 selected files — the kernel module
-`lmx_walk_values`, seven frontend modules (`l2_frontend_helpers`, `_values`,
-`_resolve`, `_context`, `_core`, `_emit`, `_lower`), `tools/build.lm2` and
-`tests/full-suite.tsv` — and adds the fixture
-`tests/dyn/free_value_types.lm2` (one callee reached from int and size_t
-bindings, writes through the free name, receptions into typed places, a
-caught `convert`), so the input list grows by one line. The landing is
-slice255, by the rule of Codex's answer to FABLE-RESULT-S3-20261102T0100Z
-(the whole tested set after an actual quick PASS). G0 of boot117a is tool117
-(`CFD04412…`), the promoted working tool is boot117a's G2 (`4E1D96D4…`).
-Input-list SHA-256: `661F983D1F3455EB588B661083A6BB40046C671688CA09D8A9530DF88D8E8B8A`.
-Input-manifest SHA-256 (byte-equal to boot117a's `source-boot117a.sha256` and
-to `source-tp117.sha256`):
-`FC9659DF3F4E572FE13FDC3D23488FCFA9EBD41F423A39850B78157CA52D001B`.
-The previous packages: boot116c is slice254 (manifest `DC4E8C62…`; 9 files
+The selected snapshot is the source of the whole quick bootstrap boot118a
+([slice256](../steps/witnesses/fix256-20261102/notes.md)): source-tp118 —
+the boot117a package of [slice255](../steps/witnesses/fix255-20261102/notes.md)
+with the first step of B2b of the Fable line, tp118 (design §4.5, B2b-1: the
+consumers of a runtime-typed value by the general runtime semantics — a
+prefix sign through the kernel's unary operation on the record, the logical
+connectives judging each side by its number with a real short circuit, a
+C-door actual received into the prototype's declared parameter type by the
+one admission, a machine index received into size_t, a cast from the record,
+a typed leaf materialized beside a free operand; the walker's result place
+receiving references; [design](../optimization_design_from_fable.md)).
+Relative to the previous package, boot117a, it changes 4 selected files —
+the kernel module `lmx_walk_values`, the frontend modules
+`l2_frontend_lower` and `_resolve`, and `tests/full-suite.tsv` — and adds the
+fixture `tests/dyn/free_value_consumers.lm2` (the consumers above from an int
+and a size_t binding, the C-door `convert` caught), so the input list grows
+by one line. The landing is slice256, by the rule of Codex's answer to
+FABLE-RESULT-S3-20261102T0100Z (the whole tested set after an actual quick
+PASS). `tools/build.lm2` is unchanged, so G0 of boot118a is boot117a's G2
+working tool (`4E1D96D4…`); the promoted working tool is boot118a's G2
+(`3E5F1A18…`). Input-list SHA-256: `DA5FDA3613B82B1E1B14D6681C12DE79FD5EC2CD265FCFFCA85FD2CE6E00C00D`.
+Input-manifest SHA-256 (byte-equal to boot118a's `source-boot118a.sha256` and
+to `source-tp118.sha256`):
+`1016F41DDF4ECB153E92FD8A93B47710A8963D9F892AAD085D8BC712295B4454`.
+The previous packages: boot117a is slice255 (manifest `FC9659DF…`; 10 files
+over boot116c and one new fixture); boot116c is slice254 (manifest `DC4E8C62…`; 9 files
 over boot115f and one new fixture); boot115f is slice253 (manifest `48F66AF0…`; 19 files
 over boot114, the input list unchanged); boot114 is slice252 (manifest `FE3FDA29…`; 6 files
 over boot112 — tp113 and tp114), boot112 is slice251 (manifest `7FA43F9E…`; 15 files

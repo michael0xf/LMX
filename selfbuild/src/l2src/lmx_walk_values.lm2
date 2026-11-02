@@ -5193,9 +5193,11 @@ end: lmx_walk_prim
 # Slice 255 (design 4.5 B2a): the result place is a receiving place.  The value a RET evaluated is admitted by the kernel's
 # one admission (lmx_walk_value_receive) into the selected code's declared result type -- the one witness of its contract's
 # return part, read as the call site reads it (lmx_walk_call_in) -- as the native twin receives it at its return; a mismatch
-# is the implicit `convert` throw raised at the RET, in the callee's own frame (its pads first, then the caller's).  B2a
-# admits numbers; a reference result passes as before.  A code without a readable one-witness return part (a contractless
-# split entry, a void part) receives nothing: the value passes as before.
+# is the implicit `convert` throw raised at the RET, in the callee's own frame (its pads first, then the caller's).  Numbers
+# are received by numeric witnesses and, since slice 256 (B2b-1), references by reference witnesses -- LMX for a Structure,
+# DESC for an Array, the pointer code of a typed pointer, CHAR_PTR for a text; the other pairings pass as before (the graph's
+# typed null literal stands where a reference is declared), as does a reference without a type.  A code without a readable
+# one-witness return part (a contractless split entry, a void part) receives nothing: the value passes as before.
 fn: lmx_walk_result_receive (@: f c.LmxWalkFrame; @: value c.LmxWalkValue) int
     c.LmxWalkValue: received
     @: returns c.Lmx 0
@@ -5205,8 +5207,11 @@ fn: lmx_walk_result_receive (@: f c.LmxWalkFrame; @: value c.LmxWalkValue) int
     size_t: return_count 0U
     int: answer 0
     int: ty 0
+    int: reference_witness 0
     int: status c.LMX_WALK_OK
-    if: f = 0 || value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER || f\code = 0
+    if: f = 0 || value = 0 || value\present = 0 || f\code = 0
+        return: c.LMX_WALK_OK
+    if: value\kind != c.LMX_WALK_VALUE_NUMBER && value\kind != c.LMX_WALK_VALUE_REFERENCE
         return: c.LMX_WALK_OK
     if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) f\code)) = 0
         return: c.LMX_WALK_OK
@@ -5218,7 +5223,13 @@ fn: lmx_walk_result_receive (@: f c.LmxWalkFrame; @: value c.LmxWalkValue) int
     if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), returns, 0U, @ header_source, @ witness) != 0 || witness = 0
         return: c.LMX_WALK_OK
     ty: c.lmx_type_base(lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness))
-    if: ty = c.LMX_TYPE_NONE || ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
+    if: ty = c.LMX_TYPE_NONE
+        return: c.LMX_WALK_OK
+    if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
+        reference_witness: 1
+    if: value\kind = c.LMX_WALK_VALUE_NUMBER && reference_witness != 0
+        return: c.LMX_WALK_OK
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE && (reference_witness = 0 || c.lmx_type_base(value\type) = c.LMX_TYPE_NONE)
         return: c.LMX_WALK_OK
     status: lmx_walk_value_receive(value, ty, @ received)
     if: status != c.LMX_WALK_OK

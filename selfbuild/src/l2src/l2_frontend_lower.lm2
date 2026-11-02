@@ -3705,6 +3705,7 @@ fn: lm_compiler_emit_raw_index_location (const: (@: place c.L2Address); int: mi;
     int: k lm_compiler_port_address_path_names(place)
     int: ty place\source_type
     int: address_type
+    int: index_exact -1
     c.L2FrontendScratchChar64: owner_storage
     @: owner char (cast: (@: char) owner_storage\buffer)
     @: step c.L2PathStep
@@ -3716,8 +3717,19 @@ fn: lm_compiler_emit_raw_index_location (const: (@: place c.L2Address); int: mi;
         return: (cast: (int) (1))
     while: k < lm_compiler_port_address_path_n(place)
         step: lm_compiler_port_address_path_steps(place) + k
-        if: step\locus != 7 || lm_compiler_emit_native_span_present((cast: (@: c.L2ValueSpan) (@ step\index)), mi, ind, index) != 0
+        if: step\locus != 7
             return: (cast: (int) (1))
+        # Slice 256 (design 4.5 B2b-1): a runtime-typed index is received into size_t by the one admission (the index place's
+        # type), as a graph Array's index is through the receiving funnel.
+        if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_value_span_type((cast: (@: c.L2ValueSpan) (@ step\index)), mi, @ index_exact) = -20
+            if: lm_compiler_emit_dyn_receive_full((cast: (@: c.L2ValueSpan) (@ step\index)), 2, mi, ind, index, 0) != 0
+                return: (cast: (int) (1))
+            ---
+        else:
+            if: lm_compiler_emit_native_span_present((cast: (@: c.L2ValueSpan) (@ step\index)), mi, ind, index) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
         if: c.lm_compiler_tx_join(cell, (cast: (const: @: char) (base\data)), "[", (cast: (const: @: char) (index\data)), "]", 0) != 0
             return: (cast: (int) (1))
         if: place\descriptor != 0
@@ -8170,6 +8182,197 @@ fn: lm_compiler_array_place_view (@: out c.L2ArrayPlace; int: status; int: allow
     return: (cast: (int) (0))
 end: lm_compiler_array_place_view
 
+# Slice 256 (design 4.5 B2b-1): a prefix sign over a runtime-typed operand -- the kernel's unary operation on the operand's
+# record (lmx_walk_value_unary, as the native sign over a record): the result is a record, raw stays empty.
+fn: lm_compiler_emit_dyn_unary_record (int: mi; int: sign; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    c.L2FrontendScratchChar64: operand_storage
+    @: operand_text char (cast: (@: char) operand_storage\buffer)
+    c.L2Tx: operand_tx
+    @: operand c.L2Tx c.lm_compiler_tx_local(@ operand_tx, operand_text, 64U)
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    const: (@: op char 0)
+    int: t
+    if: full_value = 0 || dest = 0 || operand = 0 || ind = 0 || mi < 0 || full_value\data[0] = 0 || (sign != 1 && sign != 2)
+        return: 1
+    if: c.lm_compiler_tx_set(operand, (cast: (const: @: char) full_value\data)) != 0 || c.lm_compiler_tx_clear(dest) != 0 || c.lm_compiler_tx_clear(full_value) != 0
+        return: 1
+    op: "c.LMX_WALK_OP_POS"
+    if: sign = 1
+        op: "c.LMX_WALK_OP_NEG"
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_du%d\n%sint: l2_dus%d lmx_walk_value_unary(%s, %s, @ l2_du%d)\n%sif: l2_dus%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dus%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, op, operand\data, t, ind, t, ind, t, ind, ind) < 0
+        return: 1
+    if: c.snprintf(name, 64U, "@ l2_du%d", t) < 0
+        return: 1
+    return: c.lm_compiler_tx_set(full_value, name)
+end: lm_compiler_emit_dyn_unary_record
+
+# Slice 256 (design 4.5 B2b-1): the reception of an already evaluated record by a place of the target type -- the one
+# admission (lmx_walk_value_receive) over a record the caller holds (a C-door actual already read); dest is the typed C view
+# of the received record, full_value (when asked) names it.  As lm_compiler_emit_dyn_receive_full, without the evaluation.
+fn: lm_compiler_emit_dyn_receive_record (const: (@: record char); int: target; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    c.L2FrontendScratchChar96: type_storage
+    @: type char (cast: (@: char) type_storage\buffer)
+    c.L2FrontendScratchChar1024: pointer_storage
+    @: pointer_text char (cast: (@: char) pointer_storage\buffer)
+    c.L2Tx: pointer_tx
+    @: pointer c.L2Tx c.lm_compiler_tx_local(@ pointer_tx, pointer_text, 1024U)
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    int: t
+    int: raw
+    if: dest = 0 || record = 0 || record[0] = 0 || pointer = 0 || ind = 0 || mi < 0
+        return: 1
+    if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
+        return: 1
+    if: c.lm_compiler_tx_clear(dest) != 0
+        return: 1
+    raw: c.lm_compiler_formal_raw(target)
+    if: raw = 8 || (raw >= 100 && c.lm_compiler_pointer_depth(raw) = 0) || c.lm_compiler_emit_input_value_type(raw, 0, type) != 0
+        return: 1
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive(%s, %s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record, type, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_rs%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_rs%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, ind, ind) < 0
+        return: 1
+    if: c.snprintf(name, 64U, "l2_rv%d", t) < 0
+        return: 1
+    if: c.lm_compiler_pointer_depth(raw) > 0
+        if: c.lm_compiler_pointer_decl_text(raw, 0, 0, pointer) != 0 || c.lm_compiler_tx_join(dest, "(cast: (", (cast: (const: @: char) pointer\data), ") ", name, ".ref)") != 0
+            return: 1
+        ---
+    else:
+        if: c.lm_compiler_pointer_decl_text(raw, 1, 0, pointer) != 0 || c.lm_compiler_tx_join(dest, "((cast: (", (cast: (const: @: char) pointer\data), ") lmx_walk_value_storage(@ ", name, "))[0])") != 0
+            return: 1
+    ---
+    if: full_value != 0 && (c.snprintf(name, 64U, "@ l2_rv%d", t) < 0 || c.lm_compiler_tx_set(full_value, name) != 0)
+        return: 1
+    return: 0
+end: lm_compiler_emit_dyn_receive_record
+
+# Slice 256 (design 4.5 B2b-1): the declared type of the k-th parameter of a C function's prototype in one predef document
+# (the `prototype` frames, then the documents it predefs), read as lm_compiler_predef_file_result_ty reads the result: 0 --
+# no such prototype here; 1 -- found, out_ft its parameter's type; 2 -- the prototype found without such a parameter.
+fn: lm_compiler_cproto_param_file (const: (@: name c.LmP0Text); const: (@: quoted c.LmP0Text); int: k; @: out_ft int) int
+    size_t: n
+    @: path char 0
+    @: document c.LmP0Document 0
+    const: (@: root c.LmP0Node)
+    @: f c.LmP0Field
+    @: pf c.LmP0Field
+    @: nf c.LmP0Field
+    @: pp c.LmP0Field
+    @: pa c.LmP0Field
+    @: first c.LmP0Field
+    @: item c.LmP0Node
+    @: decl c.LmP0Node
+    @: fa c.LmP0Text 0
+    @: last_cf_req_cell int (cast: (@: int) (@ c.l2_last_cf_req))
+    @@: last_cf_anon_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_last_cf_anon))
+    @: saved_anon c.LmP0Node 0
+    int: saved_req 0
+    int: found 0
+    int: i
+    int: ty 0
+    if: out_ft = 0 || name = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
+        return: (cast: (int) (0))
+    n: quoted\length - 2U
+    path: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    if: path = 0
+        return: (cast: (int) (0))
+    c.memcpy(path, quoted\data + 1U, n)
+    path[n]: 0
+    document: c.lm_compiler_snap_document(path)
+    if: document != 0
+        root: c.lm_p0_document_root(document)
+        if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
+            f: c.lm_compiler_next_active(root\as\structure\first_field)
+            while: f != 0 && found = 0
+                item: f\value
+                if: c.lm_compiler_frame_head(item, "prototype") && item\as\frame\body != 0
+                    pf: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    while: pf != 0 && found = 0
+                        decl: pf\value
+                        if: (c.lm_compiler_frame_head(decl, "fn") || c.lm_compiler_frame_head(decl, "sub")) && decl\as\frame\body != 0
+                            nf: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                            if: nf != 0 && nf\value != 0 && nf\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_text_same(nf\value\as\atom, name)
+                                found: 2
+                                pp: c.lm_compiler_next_active(nf\next)
+                                if: pp != 0 && pp\value != 0 && pp\value\kind = c.LM_P0_NODE_STRUCTURE && pp\value\as != 0 && pp\value\as\structure != 0
+                                    pa: c.lm_compiler_next_active(pp\value\as\structure\first_field)
+                                    i: 0
+                                    while: pa != 0 && i < k
+                                        pa: c.lm_compiler_next_active(pa\next)
+                                        i: i + 1
+                                    ---
+                                    if: pa != 0 && pa\value != 0
+                                        # The one parser of a formal's declaration (the method header's), its two state cells kept.
+                                        saved_req: last_cf_req_cell[0]
+                                        saved_anon: last_cf_anon_cell[0]
+                                        if: lm_compiler_typed_formal((cast: (const: @: c.LmP0Node) (pa\value)), path, @ fa, @ ty) = 0
+                                            \out_ft: ty
+                                            found: 1
+                                        ---
+                                        last_cf_req_cell[0]: saved_req
+                                        last_cf_anon_cell[0]: saved_anon
+                                    ---
+                                ---
+                            ---
+                        ---
+                        pf: c.lm_compiler_next_active(pf\next)
+                    ---
+                ---
+                if: found = 0 && c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
+                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    while: first != 0 && found = 0
+                        if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                            found: lm_compiler_cproto_param_file(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), k, out_ft)
+                        first: c.lm_compiler_next_active(first\next)
+                    ---
+                ---
+                f: c.lm_compiler_next_active(f\next)
+            ---
+        ---
+    ---
+    c.lm_compiler_xfree((cast: (@: void) path))
+    return: (cast: (int) (found))
+end: lm_compiler_cproto_param_file
+
+# The declared type of the k-th parameter of the C function a `c.` head names, from the program's predef documents; -1 when no
+# prototype declares it (a C function the door passes without a prototype names no type for its actuals).
+fn: lm_compiler_cproto_param_ft (const: (@: head c.LmP0Text); int: k) int
+    @: pd_n_cell int (cast: (@: int) (@ c.l2_pd_n))
+    @@@: pd_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pd))
+    c.LmP0Text: name
+    int: i 0
+    int: st
+    int: ft 0 - 1
+    if: head = 0 || head\data = 0 || k < 0
+        return: (cast: (int) (0 - 1))
+    name\data: head\data
+    name\length: head\length
+    if: c.lm_compiler_c_stmt_door(head) != 0
+        name\data: head\data + 2U
+        name\length: head\length - 2U
+    ---
+    while: i < pd_n_cell[0]
+        st: lm_compiler_cproto_param_file(@ name, pd_cell[0][i], k, @ ft)
+        if: st = 1
+            return: (cast: (int) (ft))
+        if: st = 2
+            return: (cast: (int) (0 - 1))
+        i: i + 1
+    ---
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_cproto_param_ft
+
 # Original: l2src/l2trans.lm1:26758
 # Slice 255 (design 4.5 B2a): the dynamic expression -- an operation over a runtime-typed operand runs through the kernel's
 # shared operation lmx_walk_value_bin on complete value records, as the walker runs it; its result is a record and has no
@@ -8188,6 +8391,10 @@ fn: lm_compiler_emit_dyn_operand_full (@: tok c.L2ValueSpan; int: lo; int: hi; i
     int: usuf 0
     int: ch 0
     int: t
+    int: view 0
+    int: m 0
+    int: status
+    @: tokp c.L2ValueSpan
     size_t: mag 0U
     c.L2FrontendScratchChar1024: raw_storage
     @: raw_own char (cast: (@: char) raw_storage\buffer)
@@ -8227,10 +8434,29 @@ fn: lm_compiler_emit_dyn_operand_full (@: tok c.L2ValueSpan; int: lo; int: hi; i
             return: 1
         return: 0
     ---
+    # Slice 256 (design 4.5 B2b-1): a prefix sign over an operand -- the operand's values evaluated dynamically, then the
+    # kernel's unary operation on the record (lmx_walk_value_unary).
+    if: leaf\count = 1 && leaf\node != 0 && c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (leaf\node))) != 0 && leaf\node\as\frame\body != 0
+        tokp: c.lm_compiler_value_fields((cast: (@: c.LmP0Field) (leaf\node\as\frame\body\first_field)), (cast: (int) c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (leaf\node\as\frame\body)))), @ m)
+        if: tokp = 0 || m < 1
+            return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (leaf\node)), "cannot prepare the operand of a prefix sign")
+        status: lm_compiler_emit_dyn_values_full(tokp, 0, m - 1, mi, ind, raw, record)
+        c.lm_compiler_value_spans_release(tokp, m)
+        if: status != 0
+            return: 1
+        return: lm_compiler_emit_dyn_unary_record(mi, (cast: (int) c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (leaf\node)))), ind, raw, record)
     if: lm_compiler_emit_native_span_full(leaf, mi, ind, raw, 0, record) != 0
         return: 1
+    # Slice 256 (design 4.5 B2b-1): a typed leaf without a record (a machine view) is materialized from its typed raw into a
+    # record, as a material leaf is (lm_compiler_emit_material_value_full); an opaque C value has no type to materialize.
+    if: record\data[0] = 0 && raw\data[0] != 0
+        view: lm_compiler_numeric_c_view_type(leaf, mi)
+        if: view >= 0 && lm_compiler_emit_material_value_full(mi, view, 0, ind, raw, -1, record) = 1
+            return: 1
+        ---
+    ---
     if: record\data[0] = 0
-        return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (leaf\node)), "an operand beside a runtime-typed value has no value record (B2a)")
+        return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (leaf\node)), "an operand beside a runtime-typed value has no value record (an opaque C value: receive it into a typed local first)")
     # An operand must be present.
     return: lm_compiler_emit_full_present_use(ind, (cast: (const: @: char) record\data))
 end: lm_compiler_emit_dyn_operand_full
@@ -8265,9 +8491,9 @@ fn: lm_compiler_emit_dyn_values_full (@: tok c.L2ValueSpan; int: lo; int: hi; in
     op: c.lm_compiler_span_node(tok, best)
     prec: c.lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) (op\as\atom)))
     if: prec = 1 || prec = 2
-        return: c.lm_compiler_error(src_cell[0], op, "a runtime-typed value in a logical connective (B2a: receive it into a typed local first)")
+        return: c.lm_compiler_error(src_cell[0], op, "internal: a logical connective reached the dynamic expression (its value is int)")
     if: c.lm_compiler_rw_prec_machine(prec) != 0
-        return: c.lm_compiler_error(src_cell[0], op, "a runtime-typed value in a machine operation (B2a: receive it into a typed local first)")
+        return: c.lm_compiler_error(src_cell[0], op, "a runtime-typed value in a machine operation (B2b: the bitwise and shift operators follow in slice 257)")
     if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "+")
         code: "c.LMX_WALK_OP_ADD"
     if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "-")
@@ -8343,7 +8569,10 @@ fn: lm_compiler_emit_dyn_span_full (@: span c.L2ValueSpan; int: mi; const: (@: i
         return: 1
     if: span\values != 0 && (span\grammar = 3 || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (span\node)), "@") = 0) && c.lm_compiler_value_spans_expression((cast: (@: c.L2ValueSpan) (span\values)), (cast: (int) (span\value_n))) != 0
         if: span\grammar != 3 && c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node))) != 0
-            return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (span\node)), "a prefix sign over a runtime-typed value (B2a: write 0 - x)")
+            # Slice 256 (design 4.5 B2b-1): the sign is the kernel's unary operation on the operand's record.
+            if: lm_compiler_emit_dyn_values_full((cast: (@: c.L2ValueSpan) (span\values)), 0, (cast: (int) (span\value_n - 1)), mi, ind, dest, full_value) != 0
+                return: 1
+            return: lm_compiler_emit_dyn_unary_record(mi, (cast: (int) c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node)))), ind, dest, full_value)
         return: lm_compiler_emit_dyn_values_full((cast: (@: c.L2ValueSpan) (span\values)), 0, (cast: (int) (span\value_n - 1)), mi, ind, dest, full_value)
     if: c.lm_compiler_tx_clear(dest) != 0
         return: 1
@@ -10186,6 +10415,11 @@ fn: lm_compiler_prep_context_full (const: (@: source_node c.LmP0Node); int: mi; 
                 ---
             ---
         ---
+        # Slice 256 (design 4.5 B2b-1): a runtime-typed group (a record, no raw) takes the kernel's unary operation.
+        if: full_value != 0 && s2\data[0] = 0 && full_value\data[0] != 0
+            if: context != 0
+                context[0]: -1
+            return: lm_compiler_emit_dyn_unary_record(mi, (cast: (int) c.lm_compiler_prefix_frame(source_node)), ind, dest, full_value)
         if: c.lm_compiler_prefix_frame(source_node) = 1
             t: c.lm_compiler_tx_join(dest, "(- (", (cast: (const: @: char) (s2\data)), "))", 0, 0)
         else:
@@ -11699,6 +11933,9 @@ fn: lm_compiler_emit_native_span_full (@: span c.L2ValueSpan; int: mi; const: (@
         ---
         if: status != 0
             return: (cast: (int) (1))
+        # Slice 256 (design 4.5 B2b-1): a runtime-typed operand (a record, no raw) takes the kernel's unary operation.
+        if: full_value != 0 && piece\data[0] = 0 && full_value\data[0] != 0
+            return: lm_compiler_emit_dyn_unary_record(mi, (cast: (int) c.lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) span\node\as\atom))), ind, dest, full_value)
         sign: c.lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) span\node\as\atom))
         if: sign = 1
             status: c.lm_compiler_tx_join(dest, "(- (", (cast: (const: @: char) piece\data), "))", 0, 0)
@@ -11789,6 +12026,7 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
     @: op c.LmP0Node
     @: value c.L2ValueSpan
     @: deep char 0
+    int: side_exact -1
     c.L2FrontendScratchChar1024: piece_own_storage
     @: piece_own char (cast: (@: char) piece_own_storage\buffer)
     c.L2FrontendScratchChar1024: buffer_own_storage
@@ -11834,7 +12072,7 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
             if: operand_full = 0 || lm_compiler_emit_native_values_full(tok, lo, best - 1, mi, ind, piece, 0, operand_full) != 0
                 return: 1
             if: operand_full\data[0] != 0
-                if: numeric_capture != 0
+                if: numeric_capture != 0 || piece\data[0] = 0
                     status: lm_compiler_emit_full_number_operand(ind, (cast: (const: @: char) operand_full\data), piece)
                 else:
                     status: lm_compiler_emit_full_present_use(ind, (cast: (const: @: char) operand_full\data))
@@ -11846,8 +12084,15 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
                 all_captured: 0
             ---
         else:
-            if: lm_compiler_emit_native_values(tok, lo, best - 1, mi, ind, piece, 0) != 0
-                return: 1
+            # Slice 256 (design 4.5 B2b-1): a runtime-typed side of a connective is its record's number (lmx_walk_value_number).
+            if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_value_expr_type(tok, lo, best - 1, mi, @ side_exact) = -20
+                if: lm_compiler_emit_native_values_full(tok, lo, best - 1, mi, ind, piece, 0, operand_full) != 0 || lm_compiler_emit_full_number_operand(ind, (cast: (const: @: char) operand_full\data), piece) != 0
+                    return: 1
+                ---
+            else:
+                if: lm_compiler_emit_native_values(tok, lo, best - 1, mi, ind, piece, 0) != 0
+                    return: 1
+                ---
             ---
         ---
         if: c.lm_compiler_bool_set(ind, (cast: (const: @: char) (dest\data)), (cast: (const: @: char) (piece\data))) != 0
@@ -11863,7 +12108,7 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
             if: lm_compiler_emit_native_values_full(tok, best + 1, hi, mi, deep, piece, 0, operand_full) != 0
                 return: 1
             if: operand_full\data[0] != 0
-                if: numeric_capture != 0
+                if: numeric_capture != 0 || piece\data[0] = 0
                     status: lm_compiler_emit_full_number_operand(deep, (cast: (const: @: char) operand_full\data), piece)
                 else:
                     status: lm_compiler_emit_full_present_use(deep, (cast: (const: @: char) operand_full\data))
@@ -11875,8 +12120,14 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
                 all_captured: 0
             ---
         else:
-            if: lm_compiler_emit_native_values(tok, best + 1, hi, mi, deep, piece, 0) != 0
-                return: 1
+            if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_value_expr_type(tok, best + 1, hi, mi, @ side_exact) = -20
+                if: lm_compiler_emit_native_values_full(tok, best + 1, hi, mi, deep, piece, 0, operand_full) != 0 || lm_compiler_emit_full_number_operand(deep, (cast: (const: @: char) operand_full\data), piece) != 0
+                    return: 1
+                ---
+            else:
+                if: lm_compiler_emit_native_values(tok, best + 1, hi, mi, deep, piece, 0) != 0
+                    return: 1
+                ---
             ---
         ---
         if: c.lm_compiler_bool_set(deep, (cast: (const: @: char) (dest\data)), (cast: (const: @: char) (piece\data))) != 0
@@ -12505,6 +12756,10 @@ fn: lm_compiler_emit_primary_value_full (@: value c.L2ValueSpan; int: mi; const:
                 ---
             ---
             if: source_type >= 0 && source_type != 8 && c.lm_compiler_prim_code_name(c.lm_compiler_formal_raw(source_type)) != 0
+                numeric_cast: 1
+            ---
+            # Slice 256 (design 4.5 B2b-1): a runtime-typed operand is cast from its record by the record's type at run time.
+            if: source_kind = -20
                 numeric_cast: 1
             ---
         ---
@@ -15270,7 +15525,17 @@ fn: lm_compiler_emit_ccall_value (@: value c.L2ValueSpan; int: mi; const: (@: in
         ---
         kind: c.lm_compiler_value_span_type(@ operand, mi, @ type)
         if: kind = -20
-            return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) ((operand\node))), "a runtime-typed value as the actual of a C call (B2a: receive it into a typed local first)")
+            # Slice 256 (design 4.5 B2b-1): a runtime-typed actual is received into the C function's declared parameter type
+            # (its prototype among the predef documents) by the one admission -- the C ABI contract checked at the call, a
+            # mismatch the implicit `convert`.  A C function without a declared prototype names no type for its actuals.
+            type: lm_compiler_cproto_param_ft((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), ordinal)
+            if: type < 0
+                return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) ((operand\node))), "a runtime-typed value as the actual of a C call without a declared prototype: the C contract names no type for it")
+            if: actual_full\data[0] = 0
+                return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) ((operand\node))), "a runtime-typed value without a value record")
+            if: lm_compiler_emit_dyn_receive_record((cast: (const: @: char) actual_full\data), type, mi, ind, piece, 0) != 0
+                return: 1
+            kind: type
         if: type = 0 || type = 1
             if: c.lm_compiler_tx_open(boxt, boxt_own, 64U) != 0 || lm_compiler_new_temp(ind, boxt) != 0 || c.fprintf(out_cell[0], "%s%s: %s\n", ind, boxt\data, piece\data) < 0 || c.lm_compiler_tx_set(piece, (cast: (const: @: char) (boxt\data))) != 0
                 return: (cast: (int) (1))

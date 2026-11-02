@@ -1405,6 +1405,15 @@ fn: lm_compiler_value_expr_type (@: tok c.L2ValueSpan; int: lo; int: hi; int: mi
         return: (cast: (int) (a))
     if: b <= 0 - 15 && b >= 0 - 17
         return: (cast: (int) (b))
+    # Slice 256 (design 4.5 B2b-1): a logical connective has the int value of its truth whatever its operands' types; a
+    # runtime-typed side is judged by its number at run time, each side in turn and the right one only when the left does
+    # not decide (lm_compiler_emit_native_values_full).
+    if: (p = 1 || p = 2) && (a = 0 - 20 || b = 0 - 20)
+        if: a = 0 - 3 || b = 0 - 3
+            return: (cast: (int) (0 - 3))
+        if: exact_type != 0
+            \exact_type: 0
+        return: (cast: (int) (0))
     # Slice 255 (design 4.5 B2a): a runtime-typed operand makes the expression runtime-typed; the kernel's shared
     # operation types it when the values meet (a contextual literal takes the other operand's type there).
     if: a = 0 - 20 || b = 0 - 20

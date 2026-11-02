@@ -1,0 +1,101 @@
+# Slice 256 (design 4.5 B2b-1; Codex's B2b directive after B2a): the consumers of a runtime-typed value by the general
+# runtime semantics -- a prefix sign (the kernel's unary operation on the record), the logical connectives (each side judged
+# by its number, the right side not evaluated when the left decides: `marks` stays 0), a C-door actual received into the
+# prototype's declared parameter type by the one admission (lmx_type_base takes an int: the size_t binding is the implicit
+# `convert`, caught), a machine index received into size_t (the char at 2U), a cast of the record, and a reference
+# returned by a walked method (a typed pointer: the result place receives references too).  quote is bound as int (3) by outer
+# and as size_t (2U) by outer2.  Entry 7; 81.. name the failing check.
+predef: "l2src/lmx_arena.h.lm1"
+int: quote 11
+int: marks 0
+sub: mark ()
+    marks: marks + 1
+end: mark
+fn: hit () int
+    mark()
+    return: 1
+end: hit
+fn: neg () int
+    return: -(quote)
+end: neg
+fn: both () int
+    if: quote > 1 && quote < 100
+        return: 1
+    return: 0
+end: both
+fn: either () int
+    if: quote = 65 || quote > 100
+        return: 1
+    return: 0
+end: either
+fn: shortcut () int
+    if: quote > 100 && hit() = 1
+        return: 90
+    return: marks
+end: shortcut
+fn: door () int
+    return: c.lmx_type_base(quote)
+end: door
+fn: cast_it () size_t
+    return: (cast: (size_t) quote)
+end: cast_it
+fn: at () char
+    @: s char "abcdef"
+    return: s[quote]
+end: at
+fn: pick (@: p int) @: int
+    return: p
+end: pick
+fn: outer () int
+    int: quote
+    quote: 3
+    if: neg() != 0 - 3
+        return: 81
+    if: both() != 1
+        return: 82
+    if: either() != 0
+        return: 83
+    if: shortcut() != 0
+        return: 84
+    if: door() != 3
+        return: 85
+    if: cast_it() != 3U
+        return: 86
+    @: q int 0
+    q: pick(@ marks)
+    if: q = 0
+        return: 87
+    if: \q != 0
+        return: 87
+    return: 0
+end: outer
+fn: outer2 () int
+    size_t: quote
+    int: got 0
+    quote: 2U
+    if: (cast: (int) at()) != 99
+        return: 88
+    if: both() != 1
+        return: 89
+    ---
+        got: door()
+        catch: convert ()
+            got: 91
+    ---
+    if: got != 91
+        return: 92
+    if: cast_it() != 2U
+        return: 93
+    return: 0
+end: outer2
+fn: m () int
+    int: r outer()
+    if: r != 0
+        return: r
+    r: outer2()
+    if: r != 0
+        return: r
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

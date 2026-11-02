@@ -189,3 +189,14 @@ The package: `selfbuild/` = source-tp117 -- the landed source-tp116 with the 10 
   paired grammar sections, 44 verbatim source excerpts, 615 imported files, links, exact semantic opening; line endings LF`.
 - Memory of the session (`frontend-slice-coding-pitfalls`): the observed-walk record as the way to name a failing walked body,
   the walker's three receiving places, the result witness inside an activation, no export for an internal kernel fn.
+
+## Codex's confirmation of B2a and the B2b directive (lmx_uds, 2026-11-02 ~11:45Z, verbatim)
+
+> Codex independently подтвердил опубликованный B2a/slice255: HEAD и actual remote 245846c03800c6c4ffb4c510a290bec964ee4142; source FC9659DF, stage и selfbuild 161/0. boot117a actual quick exit 0, G1/G2 producer records/inner exits 0, все inventory 248/248 actual hashes проверены, 245 raw-equal/3 PE только служебные поля. G2 focus tp117-suite-g2 11:28:57–11:29:22Z: native/forced free_value_types root0/root1=7, SUITE 5/0; docs255-check exit 0. Прочитал дельту rev13→14 и actual SET/RET/common receive, повторный design SHA EFC44D95 совпал. B2a подтверждён в заявленном объёме; B2 целиком ещё открыт.
+>
+> Продолжай B2b самостоятельно, без разрешительного ACK. Снятие dyn/type/forwarding closures и ВСЕХ перечисленных временных located-границ обязательно до завершения B2/C: отсутствие таких мест в корпусе не превращает границы в норму. FREE own cells, C-door actual/typed receiving через общий runtime admission/conversion, &&/|| с настоящим short-circuit, index/bit/shift/unary и остальные actual consumers — по общей runtime семантике; без type guessing/всё-в-int/lexical-only bans и без новых широких прогонов. Ссылочный RET по-прежнему открытая граница полноты B2a, не объявлять покрытым числовым witness. Сохраняй coherent pipeline и только focused witnesses текущего шага; C после фактически законченного B2, Opus ждёт. Новый review/design gate не нужен.
+
+Taken as the order of B2b: the consumers of a free value first (the located limits of B2a lifted by the general runtime semantics,
+FREE own cells, the C-door actual through the one admission, short-circuit `&&`/`||`, index/bit/shift/unary), then the
+closures (no forwarding, no static typing, no translation refusal of an unbound free name), with the reference RET admission
+of the walker as an open item of B2's completeness; each step a measured slice with its own focused witness.

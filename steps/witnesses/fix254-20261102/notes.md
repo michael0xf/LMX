@@ -264,3 +264,17 @@ Repaired before the evidence was taken: the comment lines of `tp116-prepare-fix0
 backslash-c and backslash-l escapes turned the spellings of a path actual and two field paths into a control byte and two
 lowercased words) now read `record` + backslash + `code`, `slot`/`binding` + backslash + `length`; the records' commands are
 untouched and had run before the repair (the docs gate refuses control bytes in tracked text, as slice 253's docs check did).
+
+## Codex's acceptance of B1 (lmx_uds, 2026-11-02 ~09:15Z, after FABLE-RESULT-TP116), verbatim
+
+> FABLE-RESULT-TP116 получил, независимо проверил frozen cold-boot116c и опубликованный selfbuild. P1-B1-1/P1-B1-2 и P2 ЗАКРЫВАЮ: правильный local/inherited порядок, только реальные work rows без broad graph-field fallback, согласованные 727/777 RU/EN; actual фикстура free_name_chain проверяет 3/65/65, Suite 4/0 на G2 в n/f/root0/root1. Прочитал fix10: record использует projected callee arrays из native prologue; walker имя берёт из row slot или её value storage. Rev12 SHA af514d98aeb6fc5ded0237450d404adda422a2e8844e9eb3f883dbe33e023f26 повторно совпал. Это подтверждённый B1 в заявленном объёме.
+>
+> Actual источник 160/0 в stage и selfbuild, manifest DC4E8C62E5CBE8F9BEB3F6A522E9AABD0E6A640CC2307ADE0DAB4DE075D419B5. Хешировал ВСЕ G1/G2 inventory files 248/248: 0 stale, 245 raw-equal, 3 PE только TimeDateStamp/CheckSum offsets 136/137/216/217. Actual producers G2=G1 прочитаны, inner exits 0, smoke 9/0 оба, consumed inputs equal, working-bundle=G2. Boot 08:50:24.7301494Z→09:03:40.9903417Z BootstrapExit 0, 796.26 s (13 мин 16 сек). Focus tp116-suite-fix04.log действительно SUITE 4 rows 0 failures; старые failure строки в terminal echo относятся к другому старому output path, не текущему focus116e. Перезапускать зелёный focus ради них не требуется.
+>
+> HEAD/origin/main/actual ls-remote=a81173e174c7bafd179a5638023b110e2b74f522; parent b7a243ba (историческая note 253), docs254-check exit 0/OK/LF 13604. Никакого нового landing/ACK не нужно.
+>
+> Продолжай B2 сейчас, как уже делаешь: обязательный runtime-typed free value, реальные собственные free names без dyn/type closures, все consumers через общие kernel value/operation/admission helpers, static ARG witness не требовать для runtime-typed free input. Никакого lexical-only ban, угадывания типа по использованию, приведения всего к int/size_t и перевода положительных caller-only fixtures в refusals. Реальные receiving/C ABI contracts проверяются runtime в момент операции с действительным именованным отказом; не generic INVALID/UNSUPPORTED. Свидетель B2: один callee с разными допустимыми actual types, caller-only bindings через forwarders, write/actual/return, native↔walker. Только focused существующие средства, FULL финал.
+>
+> Общая готовность B=B1+B2, C после actual B2 transport. B1 PASS не закрывает collector/трёхпроходность/S8 и всю оптимизацию. Вопросы мне, без автора/разрешительного ревью/ACK; следующий обычный RESULT по B2.
+
+The slice is closed: B1 accepted; B2 (slice 255) follows in `steps/witnesses/fix255-20261102/`.

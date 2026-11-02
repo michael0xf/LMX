@@ -1629,8 +1629,14 @@ fn: lmx_type_pointer_to (int: ty) int
         return: c.LMX_TYPE_POINTER_BASE + 38
     if: ty = c.LMX_TYPE_CHAR_PTR
         return: c.LMX_TYPE_POINTER_BASE + 17
-    if: ty < c.LMX_TYPE_POINTER_BASE
+    # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): a type without a pointer code of the table -- a graph or Array
+    # reference cell (LMX, DESC), an unsigned char, a pointer cell of a translator code, a second level of the table's own
+    # codes -- is addressed by the kernel's own code LMX_TYPE_CELL_POINTER: the pointee is read from the cell or its owning
+    # record (lmx_walk_value_deref_actual), never from the code.  Only no type (NONE) has no address.
+    if: ty = c.LMX_TYPE_NONE
         return: c.LMX_TYPE_NONE
+    if: ty < c.LMX_TYPE_POINTER_BASE
+        return: c.LMX_TYPE_CELL_POINTER
     ft: ty - c.LMX_TYPE_POINTER_BASE
     if: ft = 11
         return: c.LMX_TYPE_POINTER_BASE + 19
@@ -1644,7 +1650,7 @@ fn: lmx_type_pointer_to (int: ty) int
         return: c.LMX_TYPE_POINTER_BASE + 39
     if: ft = 16
         return: c.LMX_TYPE_POINTER_BASE + 18
-    return: c.LMX_TYPE_NONE
+    return: c.LMX_TYPE_CELL_POINTER
 end: lmx_type_pointer_to
 
 # Slice 258 (design 4.5 B2b-2a): the DEREF of an actual pointer whose pointee type the translator did not know (a free
@@ -1655,6 +1661,7 @@ fn: lmx_walk_value_deref_actual (@: arena c.LmxArena; @: holder c.LmxWalkValue; 
     int: ty 0
     int: kind 0
     @: owner c.LmxWalkValue 0
+    @: held void 0
     if: holder = 0 || out = 0
         return: c.LMX_WALK_INVALID
     c.memset((cast: (@: void) out), 0, c.sizeof(c.LmxWalkPlace))
@@ -1678,6 +1685,16 @@ fn: lmx_walk_value_deref_actual (@: arena c.LmxArena; @: holder c.LmxWalkValue; 
             ty: c.LMX_TYPE_DESC
         if: kind = c.LMX_KIND_PRIMITIVE
             ty: (cast: (int) c.lmx_domain_type(arena, holder\ref))
+        # Slice 261 (P1-PTR-COVERAGE): a slot of a graph node (a CHILDREN/REF pool cell -- the storage of a descriptor place,
+        # the address of a graph-valued field) holds a Structure or Array reference: the pointee is that reference, typed by
+        # what the slot holds (an empty slot is a graph reference).
+        if: kind = c.LMX_KIND_CHILDREN || kind = c.LMX_KIND_REF
+            held: (cast: (@: void) c.lmx_arena_pointer_void_read(holder\ref))
+            ty: c.LMX_TYPE_LMX
+            if: held != 0 && c.lmx_domain_kind(arena, held) = c.LMX_KIND_ARRAY
+                ty: c.LMX_TYPE_DESC
+            ---
+        ---
     ---
     if: ty = c.LMX_TYPE_NONE
         ty: lmx_type_pointee(holder\type)
@@ -1688,7 +1705,9 @@ end: lmx_walk_value_deref_actual
 
 # Slice 258 (design 4.5 B2b-2a): the ADDRESS of a selected place as a reference of the place's pointer code
 # (lmx_type_pointer_to): the real typed storage, the place's context as the referent -- `@x` and `x` keep their reference
-# depth (norm 470).  A descriptor place or a place without a pointer code (a graph reference, an opaque cell) is
+# depth (norm 470).  Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): every typed place has an address -- a descriptor
+# place's is its slot's (the storage), a reference cell's or an opaque cell's has the kernel's own code
+# LMX_TYPE_CELL_POINTER (the pointee read cell-first: lmx_walk_value_deref_actual); only a place of no type is
 # UNSUPPORTED.  Both the walker's ADDRESS without a witness and the native code run this.
 fn: lmx_walk_place_address (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: out c.LmxWalkValue) int
     int: ty 0
@@ -1696,8 +1715,6 @@ fn: lmx_walk_place_address (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: out
     @: storage void 0
     if: place = 0 || out = 0
         return: c.LMX_WALK_INVALID
-    if: place\descriptor != 0
-        return: c.LMX_WALK_UNSUPPORTED
     storage: place\storage
     if: storage = 0
         storage: place\address
@@ -1710,6 +1727,78 @@ fn: lmx_walk_place_address (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: out
     out\referent: lmx_walk_place_context(arena, place)
     return: status
 end: lmx_walk_place_address
+
+# Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): the one receive of a runtime-typed reference by a pointer place whose static
+# shape the translator knows -- `depth` pointer levels (1: the place holds the leaf's reference itself) above a leaf of the
+# kernel type `leaf` (LMX: a Structure; DESC: an Array; a number type; NONE: a `void` leaf, no leaf check) -- judged by the
+# ACTUAL pointees, never by the value's type code (a free name's address carries the kernel's own code, a native graph own's
+# record a translator code, a walked row LMX_TYPE_LMX): each level's addressed cell must be a reference cell -- its owning
+# record or the arena's pool types it (lmx_walk_value_deref_actual) -- holding the next level; a Structure or Array met before
+# the leaf is a chain too short, a number cell where a pointer cell is asked a wrong level: the implicit `convert`; a null ends
+# the chain (nothing deeper to judge, as a null graph reference is received).  At the leaf a Structure or Array is classified
+# by the arena (a walked LMX/DESC-typed reference passes, as lmx_walk_value_receive_graph admits it), a number by its cell's
+# type.  The received value keeps its reference and its referent and takes the place's type `ty`, as a received number takes
+# the place's type.  Both executors call it for a runtime-typed value at such a place: the native code with the translator's
+# depth and leaf, the walker through the RECEIVE frame carrying the same two numbers and the place's witness.  A present
+# value of another kind is the implicit `convert`, an absent one INVALID; a pointee the kernel cannot type is UNSUPPORTED.
+fn: lmx_walk_value_receive_pointer (@: arena c.LmxArena; @: value c.LmxWalkValue; int: ty; int: depth; int: leaf; @: out c.LmxWalkValue) int
+    c.LmxWalkValue: current
+    @: current_p c.LmxWalkValue @ current
+    c.LmxWalkValue: next
+    @: next_p c.LmxWalkValue @ next
+    c.LmxWalkPlace: place
+    @: place_p c.LmxWalkPlace @ place
+    int: level 0
+    int: kind 0
+    int: status 0
+    if: arena = 0 || value = 0 || out = 0 || value\present = 0 || depth < 1
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_NUMBER || value\kind = c.LMX_WALK_VALUE_FOREIGN
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: value\kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
+    c.memcpy((cast: (@: void) current_p), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    # The levels above the leaf: the addressed cell is a reference cell holding the next level.
+    while: level + 1 < depth && current_p\ref != 0
+        kind: (cast: (int) c.lmx_domain_kind(arena, current_p\ref))
+        if: kind = c.LMX_KIND_STRUCT || kind = c.LMX_KIND_ARRAY
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        status: lmx_walk_value_deref_actual(arena, current_p, place_p)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: c.lmx_type_reference_cell((cast: (int) place_p\type)) = 0
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        status: lmx_walk_place_load(arena, place_p, next_p)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: next_p\present = 0 || next_p\kind != c.LMX_WALK_VALUE_REFERENCE
+            return: c.LMX_WALK_INVALID
+        c.memcpy((cast: (@: void) current_p), (cast: (@: void) next_p), c.sizeof(c.LmxWalkValue))
+        level: level + 1
+    ---
+    # The leaf: what the last pointer addresses.
+    if: current_p\ref != 0 && level + 1 = depth
+        if: leaf = c.LMX_TYPE_LMX || leaf = c.LMX_TYPE_DESC
+            kind: (cast: (int) c.lmx_domain_kind(arena, current_p\ref))
+            if: leaf = c.LMX_TYPE_LMX && kind != c.LMX_KIND_STRUCT && c.lmx_type_base((cast: (int) current_p\type)) != c.LMX_TYPE_LMX
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            if: leaf = c.LMX_TYPE_DESC && kind != c.LMX_KIND_ARRAY && c.lmx_type_base((cast: (int) current_p\type)) != c.LMX_TYPE_DESC
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            ---
+        if: leaf != c.LMX_TYPE_LMX && leaf != c.LMX_TYPE_DESC && leaf != c.LMX_TYPE_NONE
+            status: lmx_walk_value_deref_actual(arena, current_p, place_p)
+            if: status != c.LMX_WALK_OK
+                return: status
+            if: c.lmx_type_base((cast: (int) place_p\type)) != c.lmx_type_base(leaf)
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            ---
+        ---
+    ---
+    if: out != value
+        c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    out\type: ty
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_receive_pointer
 
 # Descriptor places are not numeric/pointer cells. Preserve the common cell store.
 fn: lmx_walk_value_store (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value c.LmxWalkValue) int
@@ -3188,6 +3277,8 @@ fn: lmx_walk_shape_min (int: op) size_t
     if: op = c.LMX_WALK_OP_ARG || op = c.LMX_WALK_OP_SET_ARG || op = c.LMX_WALK_OP_PUT_OF || op = c.LMX_WALK_OP_ELEMPUT || op = c.LMX_WALK_OP_PUT_REF || op = c.LMX_WALK_OP_SET_OF || op = c.LMX_WALK_OP_FOR
         return: 4U
     if: op = c.LMX_WALK_OP_EXEC
+        return: 5U
+    if: op = c.LMX_WALK_OP_RECEIVE
         return: 5U
     if: op = c.LMX_WALK_OP_PLACE
         return: 3U
@@ -5806,6 +5897,23 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         if: lmx_walk_value_number(@ other, @ ub, @ b) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
         return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ub != 0U)))
+    # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): [receive, value, witness, depth, leaf] -- a runtime-typed value at a
+    # pointer place whose shape the translator knows: the one receive by the actual pointees (lmx_walk_value_receive_pointer),
+    # the same call the native code makes at that place; the received value takes the witness's type.  An absent value
+    # stays absent.
+    if: op = c.LMX_WALK_OP_RECEIVE
+        if: code_fields\size != 5U
+            return: c.LMX_WALK_INVALID
+        status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: value_p\present = 0
+            c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
+            return: c.LMX_WALK_OK
+        if: lmx_walk_load_numeric((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U), @ ua) != c.LMX_WALK_OK || lmx_walk_load_numeric((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 4U), @ ub) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        a: lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U))
+        return: lmx_walk_value_receive_pointer((cast: (@: c.LmxArena) f\arena), value_p, a, (cast: (int) ua), (cast: (int) ub), out)
     # A prefix sign: one operand, evaluated once. The C99 integer promotion
     # comes first, as for every arithmetic operand below; the result has the
     # promoted type. Negation is the unsigned one of the stored width, which is

@@ -1,5 +1,13 @@
 # LMX: текущие рабочие инструкции
 
+## Действующее назначение от 2026-11-02 — разработку ведёт Codex
+
+По прямому поручению автора Codex принял у Fable код, слот writer/build и запущенный `boot123a`.
+Fable подготовил кандидат 261 и передал его через `to_codex.md`. Итог bootstrap он дописывает только в таблицу передачи.
+Публикацию 261, срез 262 и последующие шаги плана оптимизации выполняет Codex в одном pipeline.
+После финального FULL и освобождения слота результат передаётся Opus для продолжения §§8/8a.
+Часовой `lmx-goal` проверяет активность цели Codex. Более ранние назначения ниже сохраняются как история.
+
 ## Действующая передача Codex → Opus, 2026-10-30
 
 По прямому поручению автора «передай ему кодинг, все вопросы- тебе»
@@ -406,6 +414,39 @@ l2_frontend_lower, l2_frontend_emit, tools/build.lm2, tests/full-suite.tsv, test
 (`inputs.list` 166 строк). Далее срез 261 — P1-PTR-COVERAGE, уровень адреса (указательное место принимает по виду фактического
 указуемого), срез 262 — B2b-3 (снятие замыканий), затем C. Opus ждёт; writer/build у Fable.
 [Срез260](witnesses/fix260-20261102/notes.md).
+
+### Fable → Codex, 2026-11-02 — срез261
+
+B2b-2d над посаженным source-tp122: tp123 — P1-PTR-COVERAGE на уровне адреса (Codex ~15:25Z/~21:12Z: адрес graph-bound
+свободного имени — адрес semantic LOCAL input cell без origin alias; приём по actual pointee при сохранении
+depth/admission/immutable/native-reset; полнота не сводится к одному адресу Point). (1) Ядро, адрес: `lmx_type_pointer_to`
+тотален — тип без кода таблицы (LMX/DESC-ссылочная ячейка, указательная ячейка с кодом транслятора, второй уровень кодов
+таблицы, unsigned char) адресуется собственным кодом ядра `LMX_TYPE_CELL_POINTER` (1088 = POINTER_BASE + 64, ниже foreign-полосы
+транслятора; enum LmxType в `tools/build.lm2`); указуемое читается cell-first (`lmx_walk_value_deref_actual`, + слоты
+CHILDREN/REF графового узла); `lmx_walk_place_address` адресует любое типизированное место (descriptor-место — слотом),
+UNSUPPORTED только без типа. (2) Ядро, приём: `lmx_walk_value_receive_pointer(arena, value, ty, depth, leaf, out)` — новый экспорт
+(147 → 148 имён): runtime-типизированная ссылка принимается указательным местом известной транслятору формы по ФАКТИЧЕСКИМ
+указуемым на каждом из `depth` уровней (ячейка должна быть ссылочной и держать следующий уровень; Structure/Array раньше листа —
+цепочка коротка, числовая ячейка — не тот уровень: implicit `convert`; null обрывает цепочку; лист LMX/DESC классифицирует арена,
+число — тип ячейки); принятое значение сохраняет ссылку и referent, берёт тип места. (3) Оба исполнителя зовут один приём:
+нативно — `emit_dyn_receive_full` для места, форму которого таблица ядра не выражает (`lm_compiler_dyn_pointer_shape`: foreign-код
+со словом языка — `Lmx` глубины ≥ 2, `LmxArray`, числовое слово глубины ≥ 3, `void`); walked — новый кадр `LMX_WALK_OP_RECEIVE`
+(63; `OP_COUNT` 64) [receive, value, witness, depth, leaf], которым `rw_reference_span` оборачивает значение вида −20, а
+`lmx_walk_eval_result` зовёт тот же `receive_pointer` с типом witness-а. Изменение инструмента — rebuild tool (tool123
+`573B37F0…`), инструмент всех шагов и G0 bootstrap-а. Свидетель `tests/dyn/free_graph_address.lm2` (`runs … 7 nf`): addr
+`@@: pp Point; pp: @ quote; @: p Point \pp` при quote = Shape → 2; addr3 `@@@: ppp Point; ppp: @ quote` при quote = `@ inst` →
+два deref → 2; outer_slim — `implements` у deref в модельный own, пойман; outer_num — адрес числа в графовое указательное место —
+`convert`; outer_short — адрес графовой ссылки в место глубины 3 — `convert`; 81..85. Пробы среза 260 на кандидате:
+probe_graph_address и probe_graph_deref зелёные в обоих режимах (на посаженном коде — `walk error: UNSUPPORTED`). Одна
+постановка стадии, один rebuild tool, один `build-runtime`, один `build-frontend`, фокусная сюита 15 строк, 0 отказов, пробы 7 из 7,
+один наблюдённый walk. boot123a (стадия = source-tp123 `CB155E7E…`, 167 входов, G0 = tool123, прежний frontend — G2 boot122a
+`7795D04D…`): 22:10:54 → 22:30:21Z, 1167.20 с, `BOOTSTRAP quick 0 failures`, 245 из 248 путей побайтно равны, PE-образы — только
+метка компоновки; рабочий инструмент G2 `1F12CDC1…`, G2 frontend `8DD841A0…`; фокусная сюита на G2 — 15 строк, 0 отказов. По тому же
+правилу в `selfbuild/` посажен цельный source-tp123: 5 изменённых входов (lmx_walk_values, l2_frontend_lower, l2_frontend_emit,
+tools/build.lm2, tests/full-suite.tsv) и одна новая фикстура (`inputs.list` 167 строк). Открыто после среза: raw-only consumer
+(located-отказ транслятора, не норма), свидетели descriptor-места и DESC-листа (пути недостижимы до 262). Далее срез 262 — B2b-3
+(снятие замыканий), затем C. Код и изолированные проверки подготовил Fable. Bootstrap принял Codex, выполнил G2 focus и посадил пакет. Codex продолжает срез 262.
+[Срез261](witnesses/fix261-20261102/notes.md).
 
 Обновлено 2026-10-29. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 

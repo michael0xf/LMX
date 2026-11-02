@@ -6,40 +6,41 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-`inputs.list` selects 166 maintained inputs: 65 source, 34 tool and 67 test
+`inputs.list` selects 167 maintained inputs: 65 source, 34 tool and 68 test
 files. `inputs.sha256` binds those exact bytes with paths relative to this
 directory. Generated L1/C, headers, objects and executables are not inputs.
 
-The selected snapshot is the source of the whole quick bootstrap boot122a
-([slice260](../steps/witnesses/fix260-20261102/notes.md)): source-tp122 —
-the boot121a package of [slice259](../steps/witnesses/fix259-20261102/notes.md)
-with B2b-2c of the Fable line and Codex's P1-NUMERIC-KIND, tp122 (design §4.5,
-revision 21: a free value received by a place with a receiving model — a
-modelled own or a modelled formal — is received as a graph reference by the
-one graph receive `lmx_walk_value_receive_graph` (by the actual pointee, not by
-a type code) and admitted against the model at run time by the same
-`implements` operation the typed program's places use; the kernel's one binary
-and unary operation refuse a present operand of another kind by the named
-implicit `convert`, a contextual 0 beside a reference is the null test;
+The selected snapshot is the source of the whole quick bootstrap boot123a
+([slice261](../steps/witnesses/fix261-20261102/notes.md)): source-tp123 —
+the boot122a package of [slice260](../steps/witnesses/fix260-20261102/notes.md)
+with B2b-2d of the Fable line, P1-PTR-COVERAGE at the address level, tp123
+(design §4.5, revision 22: the address of a free name whose place is a graph or
+Array reference cell, a pointer cell of a translator code or an element place
+is a reference with the kernel's own pointer code `LMX_TYPE_CELL_POINTER`, its
+pointee read from the cell or its owning record, never from the code; a typed
+pointer place receives such an address by the ACTUAL pointees at every level by
+the one receive `lmx_walk_value_receive_pointer`, natively and through the
+walker's RECEIVE frame — a chain too short, a number cell where a pointer cell
+is asked or a value of another kind is the implicit `convert`;
 [design](../optimization_design_from_fable.md)).  Relative to the previous
-package, boot121a, it changes 6 selected files — the kernel module
+package, boot122a, it changes 5 selected files — the kernel module
 `lmx_walk_values`, the frontend modules `l2_frontend_lower` and
-`l2_frontend_emit`, `tools/build.lm2` (one kernel export), `tests/full-suite.tsv`
-and the slice-259 fixture `tests/dyn/free_machine_ops.lm2` (a free pointer in a
-numeric operation, the null test) — and adds the fixture
-`tests/dyn/free_model_admit.lm2` (a free name bound to a graph, to a graph
-without the model's fields, to a number and to a pointer to a graph, received by
-a modelled own and a modelled formal), so the input list grows by one line.  The
-landing is slice260, by the rule of Codex's answer to
-FABLE-RESULT-S3-20261102T0100Z (the whole tested set after an actual quick
-PASS). `tools/build.lm2` changed, so G0 of boot122a is the candidate's rebuilt
-tool tool122 (`27707BF3…`, `rebuild tool` from the stage with boot121a's G2);
-the promoted working tool is boot122a's G2 (`1B9F2BA5…`).
-Input-list SHA-256: `D4F79139B5DC62F779B28912A39FAA8CD7C8224C84091E38F1763CB508D511C2`.
-Input-manifest SHA-256 (byte-equal to boot122a's `source-boot122a.sha256` and
-to `source-tp122.sha256`):
-`8F34D77F064F00E41E1012DF3973815F4921192307BC065E1DD4CE0C22B4F7A0`.
-The previous packages: boot121a is slice259 (manifest `BBCCB259…`; 6 files
+`l2_frontend_emit`, `tools/build.lm2` (the type code, the walker op, one kernel
+export) and `tests/full-suite.tsv` — and adds the fixture
+`tests/dyn/free_graph_address.lm2` (the address of a free name bound to a graph
+reference received at depth two and three, the admission at the deref, the
+implicit convert for a number's address and for a chain too short), so the
+input list grows by one line.  The landing is slice261, by the rule of Codex's
+answer to FABLE-RESULT-S3-20261102T0100Z (the whole tested set after an actual
+quick PASS). `tools/build.lm2` changed, so G0 of boot123a is the candidate's
+rebuilt tool tool123 (`573B37F0…`, `rebuild tool` from the stage with boot122a's G2);
+the promoted working tool is boot123a's G2 (`1F12CDC1…`).
+Input-list SHA-256: `E15CBADA72CAB753303EE0C200B3D4FD55B9DB60ED8941E8BA93E2DFB6988D07`.
+Input-manifest SHA-256 (byte-equal to boot123a's `source-boot123a.sha256` and
+to `source-tp123.sha256`):
+`CB155E7E4E4D557B83A92164AA2066B32B68570307E2F6D0EA961632CBDD58B5`.
+The previous packages: boot122a is slice260 (manifest `8F34D77F…`; 6 files
+over boot121a and one new fixture); boot121a is slice259 (manifest `BBCCB259…`; 6 files
 over boot120a and one new fixture); boot120a is slice258 (manifest `55C1CC2D…`; 7 files
 over boot119a and one new fixture); boot119a is slice257 (manifest `900AB284…`; 4 files
 over boot118a and one new fixture); boot118a is slice256 (manifest `1016F41D…`; 4 files

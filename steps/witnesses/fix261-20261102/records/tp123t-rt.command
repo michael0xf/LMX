@@ -1,0 +1,36 @@
+try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+# tp123t (fable_pc, slice 261): the isolated runtime build of the candidate's kernel (label TP_LABEL) with the candidate's
+# rebuilt tool tool123 (573B37F0, tp123-tool: tools/build.lm2 with LMX_TYPE_CELL_POINTER, LMX_WALK_OP_RECEIVE and the export
+# lmx_walk_value_receive_pointer) and boot122a's G2 frontend (7795D04D): the stage's declaration headers are rewritten first, then
+# the kernel's L2 modules, the driver, the C headers and the driver objects, all under cold-tp123/<label>.  Fresh CWD.  Parameters:
+# TP_LABEL, TP_TRY.
+$p='C:\Nyasha_Planet\LMX\build2\codex_fix250generationchain01'
+$P2='C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01'
+$R='C:/Nyasha_Planet/LMX'
+$label=$env:TP_LABEL; $try=$env:TP_TRY
+if (-not $label -or -not $try) { throw 'parameters TP_LABEL TP_TRY' }
+$tool="$p\cold-tp123\tool123\lmxtool-tool.exe"
+$fe="$p\cold-boot122a\quick122a\g2\frontend\l2trans.exe"
+$term="$p\pins\tp123t-rt-$try.terminal.txt"
+$run="$p\tp123t-rt-$try-run-01"
+$live=Get-CimInstance Win32_Process -Filter "Name = 'l2trans.exe' OR Name = 'l1trans.exe' OR Name = 'cc1.exe' OR Name = 'lmxtool-tool.exe' OR Name = 'lmxtool.exe'"
+if ($live) { $live | Select-Object ProcessId,Name | Out-String | Write-Output; throw 'pipeline already live' }
+if (Test-Path -LiteralPath $run) { throw 'CWDexists' }
+if (Test-Path -LiteralPath "$p\cold-tp123\$label") { throw 'outputexists' }
+if (Test-Path -LiteralPath $term) { throw 'terminalexists' }
+function ShaTp([string]$f) { (Get-FileHash -Algorithm SHA256 -LiteralPath $f).Hash.ToLowerInvariant() }
+if ((ShaTp $tool) -ne '573b37f0211119d874c8bea82eca3509ea294faa1dfd0739d7611fdc6066716f') { throw 'working tool hash' }
+if ((ShaTp $fe) -ne '7795d04dd1807f45dde3fec7fef92d670099169372e4beb7b72866d6c419e784') { throw 'frontend hash' }
+New-Item -ItemType Directory -Path $run | Out-Null
+Set-Location -LiteralPath $run
+Remove-Item Env:CPATH,Env:C_INCLUDE_PATH,Env:CPLUS_INCLUDE_PATH,Env:LIBRARY_PATH,Env:OBJC_INCLUDE_PATH -ErrorAction SilentlyContinue
+Add-Content -LiteralPath $term -Value ('StartUTC ' + [DateTime]::UtcNow.ToString('o') + ' label ' + $label + ' walk_values.lm2 ' + (ShaTp "$p\cold-tp123\src\l2src\lmx_walk_values.lm2") + ' driver.lm2 ' + (ShaTp "$p\cold-tp123\src\l2src\l2_driver.lm2") + ' build.lm2 ' + (ShaTp "$p\cold-tp123\tools\build.lm2")) -Encoding utf8
+& 'C:\Git\usr\bin\timeout.exe' '3600' $tool 0 entry 0 -- build-runtime $R "$P2/cold-tp123" "$P2/cold-candidate48/full48/g2/frontend" "$P2/cold-boot122a/quick122a/g2/frontend/l2trans.exe" $label *> "$p\pins\tp123t-rt-$try.log"
+$e=$LASTEXITCODE
+Add-Content -LiteralPath $term -Value ('EndUTC ' + [DateTime]::UtcNow.ToString('o') + ' RuntimeExit ' + $e) -Encoding utf8
+foreach ($f in @("$p\cold-tp123\$label\driver.o", "$p\cold-tp123\$label\driver-observe.o", "$p\cold-tp123\src\l2src\lmx.h.lm1", "$p\cold-tp123\src\l2src\lmx_walk_values.h.lm1")) {
+  if (Test-Path -LiteralPath $f) { Add-Content -LiteralPath $term -Value ('out ' + (ShaTp $f) + ' ' + $f + ' bytes ' + (Get-Item -LiteralPath $f).Length) -Encoding utf8 } else { Add-Content -LiteralPath $term -Value ('out MISSING ' + $f) -Encoding utf8 }
+}
+if (Test-Path -LiteralPath "$p\cold-tp123\$label\record.txt") { Get-Content -LiteralPath "$p\cold-tp123\$label\record.txt" | Select-Object -Last 6 | ForEach-Object { Add-Content -LiteralPath $term -Value ('  record: ' + $_) -Encoding utf8 } }
+Write-Output ('RT123 ' + $label + ' exit=' + $e)
+exit $e

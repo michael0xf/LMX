@@ -82,3 +82,8 @@ runs	dyn/free_machine_ops.lm2	7	nf
 # graph with the fields (Shape as Point), a graph without them (the implicit implements), a number (the implicit convert), a
 # free pointer to a graph reference dereferenced into a modelled own (the deref level of the pointer coverage).
 runs	dyn/free_model_admit.lm2	7	nf
+# Slice 261 (design 4.5 B2b-2d; P1-PTR-COVERAGE, the address level): the address of a free name bound to a graph reference
+# (the kernel's own pointer code: the pointee is read from the cell, never from the code) received by typed pointer places at
+# depth two and three by the actual pointees in both executors; the admission of the deref'd graph at the modelled own stays;
+# a number's address at a graph pointer place and a graph reference's address at a depth-three place are the implicit convert.
+runs	dyn/free_graph_address.lm2	7	nf

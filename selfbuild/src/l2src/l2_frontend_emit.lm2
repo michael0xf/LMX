@@ -7836,6 +7836,43 @@ fn: lm_compiler_rw_reference_value (@: first c.LmP0Field; int: n; int: ty; int: 
     return: (cast: (int) (status))
 end: lm_compiler_rw_reference_value
 
+# Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE; the textual twin of lower's lm_compiler_dyn_pointer_shape, for the
+# walked RECEIVE frame): the shape of a pointer place the kernel's pointer-code table cannot express
+# -- a translator (foreign) code whose word is a type of the language: `Lmx` (a model's reference; depth 2 and more -- depth 1
+# is the graph place, lmx_walk_value_receive_graph), `LmxArray` (an Array's descriptor), a number word at depth 3 and more,
+# `void` -- as the kernel's one receive by the actual pointees wants it: the pointer depth and the leaf's kernel type name
+# (LMX, DESC, the number's, NONE for `void`: no leaf check).  0 when the place is not such a pointer: the kernel-table codes
+# keep the one receive by code (lmx_walk_value_receive), a C door's record type is a foreign value.
+fn: lm_compiler_rw_dyn_pointer_shape (int: raw; @: out_depth int; @: leaf char) int
+    @: foreign_n_cell int (cast: (@: int) (@ c.l2_foreign_n))
+    @@: foreign_depth_cell int (cast: (@@: int) (@ c.l2_foreign_depth))
+    @@: foreign_raw_c_cell int (cast: (@@: int) (@ c.l2_foreign_raw_c))
+    @@@: foreign_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_foreign_name))
+    int: fi raw - 100
+    if: out_depth = 0 || leaf = 0 || raw < 100 || fi >= foreign_n_cell[0] || foreign_raw_c_cell[0][fi] != 0 || foreign_depth_cell[0][fi] < 1
+        return: 0
+    if: c.lm_compiler_colon_is_graph_ty(raw) != 0
+        return: 0
+    \out_depth: foreign_depth_cell[0][fi]
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "Lmx")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_LMX") >= 0))
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "LmxArray")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_DESC") >= 0))
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "int")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_INT") >= 0))
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "char")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_CHAR") >= 0))
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "size_t")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_SIZE_T") >= 0))
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "unsigned")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_UNSIGNED") >= 0))
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "ulong")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_ULONG") >= 0))
+    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "void")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_NONE") >= 0))
+    return: 0
+end: lm_compiler_rw_dyn_pointer_shape
+
 # Original: l2src/l2trans.lm1:27188
 fn: lm_compiler_rw_reference_span (@: value c.L2ValueSpan; int: ty; int: parent; @: out int) int
     @@: here_node_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_here_node))
@@ -7843,9 +7880,16 @@ fn: lm_compiler_rw_reference_span (@: value c.L2ValueSpan; int: ty; int: parent;
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     int: source_ty
+    int: span_ft 0
+    int: depth 0
+    int: inner 0
+    int: frame 0
     c.L2FrontendScratchChar128: cell_type_storage
     @: cell_type char (cast: (@: char) cell_type_storage\buffer)
+    c.L2FrontendScratchChar32: leaf_storage
+    @: leaf char (cast: (@: char) leaf_storage\buffer)
     if: value = 0 || value\grammar = 0
         return: (cast: (int) (c.lm_compiler_rw_refuse(here_node_cell[0], "a reference value without prepared grammar")))
     if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
@@ -7858,6 +7902,22 @@ fn: lm_compiler_rw_reference_span (@: value c.L2ValueSpan; int: ty; int: parent;
         if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, lmx_pointer_new_profiled(%s, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))) != 0\n            return: 1\n", (cast: (int) (\out)), cell_type, (cast: (int) (\out))) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
+    # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): a runtime-typed value (kind -20) at a pointer place whose shape the
+    # kernel's pointer-code table cannot express is received by the actual pointees in the walked body too: the RECEIVE
+    # frame [receive, value, witness, depth, leaf] carries the place's typed cell and the translator's depth and leaf to the
+    # one kernel receive the native code calls at that place (lmx_walk_value_receive_pointer).
+    if: c.lm_compiler_value_span_type(value, rw_mi_cell[0], @ span_ft) = -20 && lm_compiler_rw_dyn_pointer_shape(c.lm_compiler_ft_of_own(ty), @ depth, leaf) != 0
+        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_RECEIVE", 5, out) != 0
+            return: (cast: (int) (1))
+        frame: (cast: (int) (\out))
+        if: lm_compiler_rw_witness(frame, 2, ty, 0) != 0
+            return: (cast: (int) (1))
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 4U, (cast: (size_t) c.%s)) != c.LMX_WALK_OK\n            return: 1\n", frame, depth, frame, leaf) < 0
+            return: (cast: (int) (1))
+        if: lm_compiler_rw_evaluate_span(value, ty, frame, @ inner) != 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (c.lm_compiler_rw_put(frame, 1, inner)))
+    ---
     # The receiving checker already closed the object-pointer conversion.
     # Keep the candidate's actual return-cell type until structural admission;
     # ADMIT produces the same held reference, not a numeric conversion.

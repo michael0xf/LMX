@@ -1,0 +1,108 @@
+# Slice 261 (design 4.5 B2b-2d; P1-PTR-COVERAGE, the address level): the address of a free name bound to a graph reference is
+# a runtime-typed reference to the activation's input cell (the kernel's own pointer code LMX_TYPE_CELL_POINTER: the pointee is
+# read from the cell, never from the code), received by a typed pointer place by the ACTUAL pointees at every level in both
+# executors (lmx_walk_value_receive_pointer: the native code and the walked body's RECEIVE frame make the same call).  addr takes
+# `@ quote` into `@@: pp Point` and reads Shape's y through `\pp` (2); addr3 takes the address of a free name bound to a pointer
+# to a graph reference into `@@@: ppp Point` and reads through two derefs (2); the admission of the deref'd graph at the
+# modelled own stays (outer_slim: Slim through the address is the implicit `implements`, caught); a number's address at a graph
+# pointer place (outer_num) and a graph reference's address at a depth-three place (outer_short: the chain is too short) are
+# the implicit `convert`, caught.  Bindings through formals (`fn: outer (Point: p)`, `@: quote Point p`) as in
+# free_model_admit.  Entry 7; 81.. name the failing check.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+Slim:
+    int: pad 5
+end: Slim
+Thin:
+    int: pad 0
+end: Thin
+int: quote 11
+fn: addr () int
+    @@: pp Point 0
+    pp: @ quote
+    @: p Point \pp
+    return: p\y
+end: addr
+fn: addr3 () int
+    @@@: ppp Point 0
+    ppp: @ quote
+    @@: pp Point \ppp
+    @: p Point \pp
+    return: p\y
+end: addr3
+fn: outer (Point: p) int
+    @: quote Point p
+    if: addr() != 2
+        return: 81
+    return: 0
+end: outer
+fn: outer_ptr (Point: p) int
+    @: inst Point p
+    @@: quote Point 0
+    quote: @ inst
+    if: addr3() != 2
+        return: 82
+    return: 0
+end: outer_ptr
+fn: outer_slim (Thin: t) int
+    @: quote Thin t
+    int: got 0
+    ---
+        got: addr()
+        catch: implements ()
+            got: 90
+    ---
+    if: got != 90
+        return: 83
+    return: 0
+end: outer_slim
+fn: outer_num () int
+    int: quote 5
+    int: got 0
+    ---
+        got: addr()
+        catch: convert ()
+            got: 91
+    ---
+    if: got != 91
+        return: 84
+    return: 0
+end: outer_num
+fn: outer_short (Point: p) int
+    @: quote Point p
+    int: got 0
+    ---
+        got: addr3()
+        catch: convert ()
+            got: 92
+    ---
+    if: got != 92
+        return: 85
+    return: 0
+end: outer_short
+fn: m () int
+    int: r outer(Shape)
+    if: r != 0
+        return: r
+    r: outer_ptr(Shape)
+    if: r != 0
+        return: r
+    r: outer_slim(Slim)
+    if: r != 0
+        return: r
+    r: outer_num()
+    if: r != 0
+        return: r
+    r: outer_short(Shape)
+    if: r != 0
+        return: r
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

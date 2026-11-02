@@ -1,0 +1,64 @@
+include: "<stddef.h>"
+predef: "l2src/lmx.h.lm1"
+predef: "l2src/lmx_value.h.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+
+# Common selected-Structure call boundary. The chosen native word alone selects native versus walk.
+# No installed backend registry or mutable module/current-call state is used.
+# Declared-width argument/result storage and explicit value context use the same physical ABI in both routes.
+# Admission and ordinary physical maps belong to the Consumer; dispatch does not search for providers or infer types.
+# node is the selected code occurrence's lexical parent, data is its explicitly selected owner/self.
+#
+# The host's nullary transport is separate from language unary-call data selection: a direct root executes its complete
+# program graph over itself. Return is status; an activation int is an explicit output, never a turn verdict.
+# The caller receives the actual selected route even if the called body changes its native word.
+fnptr: LmxCallEntry (@: Lmx node) int
+
+define: LMX_CALL_OK 0
+define: LMX_CALL_INVALID 1
+define: LMX_CALL_NOT_CALLABLE 2
+define: LMX_CALL_ROUTE_NATIVE 0
+define: LMX_CALL_ROUTE_WALK 1
+define: LMX_CALL_ROUTE_REFUSED 2
+define: LMX_CALL_WALK_ERR_LO 1
+define: LMX_CALL_WALK_ERR_HI 7
+define: LMX_CALL_WALK_THROWN 8
+
+prototype:
+    # The arena's domain question only: no separate callable shape.
+    fn: lmx_call_ready (@: LmxArena arena; @: Lmx callable) int
+    fn: lmx_call_node (@: Lmx callable) @: Lmx
+    # Pure status conversion. Errors1..7 and malformed statuses abort (X1).
+    # An encoded walked throw returns its selected-callee ordinal. Nothing is remembered.
+    fn: lmx_call_note_walk_fail (int: st) int
+    # One executed native edge through the SAME installed numeric map.
+    # data=code selects its own execution projection. No admission or names.
+    fn: lmx_call_index (@: LmxArena arena; @: Lmx data; @: Lmx code; size_t: edge) size_t
+    # Actual graph payload only; raw C ABI storage is separate.
+    fn: lmx_call_cell (@: LmxArena arena; @: void cell) @: void
+    # value is a required int output; a nonzero status promises no activation result.
+    fn: lmx_call0_mode (@: LmxArena arena; @: Lmx callable; @: int route; @: int value) int
+    fn: lmx_call0 (@: LmxArena arena; @: Lmx callable; @: int value) int
+    # The ordinary explicit code/data transport. refs[k] is declared-width value storage; null storage means absent.
+    # A pointer's present-null value is not absence. Status and value are separate.
+    # Stop returns status0 with out absent; the caller must unwind on poll_escape before consuming result storage.
+    fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    fn: lmx_call_prim_values (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    # The activation chain (slice 254, design 4.5): a record is pushed by whoever enters an activation and popped when it
+    # ends; a native frame registers its own working cells (storage and type, or a complete LmxWalkValue record).
+    fn: lmx_activation_push (@: LmxArena arena; @: LmxActivation record; int: kind; @: Lmx code; @@: void refs; @: void values; size_t: width; @: void frame) int
+    fn: lmx_activation_pop (@: LmxArena arena; @: LmxActivation record) void
+    fn: lmx_activation_bind (@: LmxArena arena; @: void name; size_t: length; @: void storage; int: type; @: void value) int
+    # The two statically linked ordinary walker entries. No installation/registration or callback-identity lookup.
+    fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable; @: int value) int
+    fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int
+    # Publish an already-computed dirty value through its admitted physical place.
+    # The write guard rejects a qualified/sealed place; failed stores abort as the caller's broken promise.
+    # No re-evaluation, repeated admission or module-local data graph is performed here.
+    fn: lmx_publish_int (@: int dirty; @: LmxArena arena; @: void cell; int: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
+    fn: lmx_publish_char (@: int dirty; @: LmxArena arena; @: void cell; int: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
+    fn: lmx_publish_size (@: int dirty; @: LmxArena arena; @: void cell; size_t: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
+    fn: lmx_publish_unsigned (@: int dirty; @: LmxArena arena; @: void cell; unsigned: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
+    fn: lmx_publish_ulong (@: int dirty; @: LmxArena arena; @: void cell; ulong: value; int: k; int: guard; @@: Lmx roots; size_t: count) void
+    fn: lmx_publish_pointer (@: int dirty; @: LmxArena arena; @: void cell; @: void raw; @: LmxWalkValue context; int: k; int: guard; @@: Lmx roots; size_t: count) void
+end: prototype

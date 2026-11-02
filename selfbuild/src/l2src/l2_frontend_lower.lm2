@@ -7591,6 +7591,12 @@ fn: lm_compiler_emit_native_input_entry (int: mi; const: (@: ind char)) int
     fi: m_arity_cell[0][mi]
     while: fi < m_arity_cell[0][mi] + m_dyn_cell[0][mi]
         ft: c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))
+        # Slice 254 (design 4.5 B1): an input the caller left free is resolved first, once, from the chain of activation
+        # records; resolved, it is a present input below; not, it is absent and its lexical source (the default) reads.
+        if: lm_compiler_dyn_fwd(mi, fi - m_arity_cell[0][mi]) = 0
+            if: c.fprintf(out_cell[0], "%sif: l2_input_values != 0 && l2_input_values[%d].kind = c.LMX_WALK_VALUE_FREE\n%s    lmx_activation_resolve_input(l2_call_arena, %dU, l2_input_refs, l2_input_values, %dU)\n%s---\n", ind, fi, ind, fi, m_arity_cell[0][mi] + m_dyn_cell[0][mi], ind) < 0
+                return: 1
+            ---
         if: lm_compiler_dyn_fwd(mi, fi - m_arity_cell[0][mi]) = 0 && lm_compiler_hid_source(mi, fi - m_arity_cell[0][mi], 1, @ mode, @ depth, @ slot, @ kind, @ own) = 0 && lm_compiler_native_input_place_type(mi, fi, ft, ind, type) = 0
             if: guarded = 0
                 if: c.fprintf(out_cell[0], "%sif: l2_input_values = 0 || l2_input_refs = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, ind, ind, ind) < 0
@@ -10165,6 +10171,14 @@ fn: lm_compiler_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: s
         full_record: 0
         if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0
             full_record: (cast: (int) (c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(hid, m_arity_cell[0][hid] + ai))) = 0))
+        # Slice 254 (design 4.5 B1): a free input without a schema or capture is not formed here -- the callee resolves it
+        # once at its entry from the chain of activation records (lmx_activation_resolve_input); the record travels marked
+        # LMX_WALK_VALUE_FREE, absent until then.  An input with a schema (a model, a capture) keeps the formed path.
+        if: full_record != 0 && c.lm_compiler_input_schema(hid, m_arity_cell[0][hid] + ai) = -1 && lm_compiler_free_admit(hid, ai) = 0 && c.lm_compiler_mad_host_of(hid) < 0
+            if: c.lm_compiler_tx_set(c.lm_compiler_act_tx(hides, ai), "ABSENT") != 0 || c.fprintf(out_cell[0], "%slmx_walk_value_free_mark(%s)\n", ind, value_record) < 0
+                return: (cast: (int) (1))
+            ai: ai + 1
+            continue
         if: full_record != 0
             if: lm_compiler_hidden_from_context_record(mi, hid, ai, self_t, ind, (cast: (@: c.L2Tx) c.lm_compiler_act_tx(hides, ai)), source_node, @ context, value_record, @ record_written) != 0
                 return: 1
@@ -16653,6 +16667,7 @@ fn: lm_compiler_emit_ns_exec_at (int: ni; int: mi; const: (@: source_node c.LmP0
     @: nso_n_cell int (cast: (@: int) (@ c.l2_nso_n))
     @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     int: k nso_n_cell[0]
@@ -16716,6 +16731,13 @@ fn: lm_compiler_emit_ns_exec_at (int: ni; int: mi; const: (@: source_node c.LmP0
             return: 1
         if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0
             full_record: (cast: (int) (c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(pr, j))) = 0))
+        # Slice 254 (design 4.5 B1): a free input without a schema or capture is left to the callee's entry (as at a fn call,
+        # lm_compiler_emit_call_hides): marked free, absent until the callee resolves it from the chain.
+        if: full_record != 0 && c.lm_compiler_input_schema(pr, m_arity_cell[0][pr] + j) = -1 && lm_compiler_free_admit(pr, j) = 0 && c.lm_compiler_mad_host_of(pr) < 0
+            if: c.fprintf(out_cell[0], "%slmx_walk_value_free_mark(%s)\n%sl2_nsr%d[%d]: lmx_walk_value_storage(%s)\n", ind, value_dest, ind, k, j, value_dest) < 0
+                return: (cast: (int) (1))
+            j: j + 1
+            continue
         if: full_record != 0
             if: lm_compiler_hidden_from_context_record(mi, pr, j, -1, ind, hv, source_node, @ context, value_dest, @ record_written) != 0
                 return: 1

@@ -1,0 +1,49 @@
+# Slice 254 (design 4.5 B1; Codex's review P1-B1-1, P1-B1-2): a free name resolves through the chain of activation
+# records, the nearest current binding first, and a data field the activation does not use is no binding.
+# outer binds quote 65 and calls mid; mid binds its own quote 3 and calls leaf: leaf reads 3, mid's binding being nearer.
+# outer2 binds quote 65 and calls mid2, which only forwards: leaf reads 65.
+# outer3 binds quote 65 and calls holder, whose body does not use the unit's field quote (11): leaf reads 65 -- the unused
+# field of holder's data is no binding, and outer3's is the nearest one.
+# Entry 7; 81..83 name the failing read.  (One type for the name throughout, int: a free input's type is still the closure's in B1, two types at one
+# entry are an incompatible entry signature, and a char returned as int needs a conversion receiver; B2 lifts the first.)
+int: quote 11
+fn: leaf () int
+    return: quote
+end: leaf
+fn: mid () int
+    int: quote
+    quote: 3
+    return: leaf()
+end: mid
+fn: outer () int
+    int: quote
+    quote: 65
+    return: mid()
+end: outer
+fn: mid2 () int
+    return: leaf()
+end: mid2
+fn: outer2 () int
+    int: quote
+    quote: 65
+    return: mid2()
+end: outer2
+fn: holder () int
+    return: leaf()
+end: holder
+fn: outer3 () int
+    int: quote
+    quote: 65
+    return: holder()
+end: outer3
+fn: m () int
+    if: outer() != 3
+        return: 81
+    if: outer2() != 65
+        return: 82
+    if: outer3() != 65
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

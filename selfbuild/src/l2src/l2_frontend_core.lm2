@@ -4070,6 +4070,7 @@ end: lm_compiler_dt_of_source
 # Original: l2src/l2trans.lm1:7641
 fn: lm_compiler_emit_work_decl (int: k) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
     c.L2FrontendScratchChar1024: load_own_storage
@@ -4141,6 +4142,13 @@ fn: lm_compiler_emit_work_decl (int: k) int
         ---
     ---
     if: c.fprintf(out_cell[0], "    int: %s_dirty 0\n", cq_name\data) < 0
+        return: 1
+    # Slice 254 (design 4.5 B1): a used own field is a binding of this activation for the free inputs of the callees
+    # entered from it (lmx_activation_resolve): its place in the graph with the place's domain type -- the same read
+    # as the entry load above, and current at every call because what is marked is published before each one
+    # (lm_compiler_emit_publish, book 12).  The name is the program's literal; the record is the trampoline's
+    # (lmx_call_prim_values / lmx_call0_mode), gone with the activation.
+    if: c.fprintf(out_cell[0], "    lmx_activation_bind(l2_program_arena, (cast: (@: void) \"%.*s\"), %uU, (cast: (@: void) %s_from[0]), lmx_domain_type(l2_program_arena, %s_from[0]), 0)\n", (cast: (int) (own_name_cell[0][k]\length)), own_name_cell[0][k]\data, (cast: (unsigned) (own_name_cell[0][k]\length)), cq_name\data, cq_name\data) < 0
         return: 1
     # Once a published place is declared, its addresses enter the activation's
     # publication table (lm_compiler_emit_publish_table, the same planner).

@@ -9194,6 +9194,11 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
             d: d + 1
             continue
         ---
+        # Slice 254 (design 4.5 B1): a free input without a schema or capture has no operand here -- handed absent, the
+        # walker's binder marks it free and the callee resolves it once at its entry from the chain of activation records.
+        if: c.lm_compiler_input_schema(hid, m_arity_cell[0][hid] + d) = -1 && c.lm_compiler_free_admit(hid, d) = 0 && c.lm_compiler_mad_host_of(hid) < 0
+            d: d + 1
+            continue
         holder: \out
         if: lm_compiler_rw_hidden_admit((cast: (int) (\out)), rw_mi_cell[0], hid, d, @ holder, source_node) != 0
             return: (cast: (int) (1))
@@ -13897,6 +13902,7 @@ end: lm_compiler_rw_struct_call
 fn: lm_compiler_rw_ns_hidden (const: (@: source_node c.LmP0Node); int: ni; int: frame) int
     @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
@@ -13915,6 +13921,11 @@ fn: lm_compiler_rw_ns_hidden (const: (@: source_node c.LmP0Node); int: ni; int: 
         # A free input is admitted where it is formed, as a walked call admits one (l2_rw_call_at), to its requirement in
         # the space of the occurrence this EXEC selects (l2_rw_admit_project); a declared input keeps the record of its
         # declaration.
+        # Slice 254 (design 4.5 B1): a free input without a schema or capture has no operand here (as at a walked call,
+        # lm_compiler_rw_call_arguments): the callee resolves it at its entry from the chain of activation records.
+        if: c.lm_compiler_input_schema(pr, m_arity_cell[0][pr] + d) = -1 && c.lm_compiler_free_admit(pr, d) = 0 && c.lm_compiler_mad_host_of(pr) < 0
+            d: d + 1
+            continue
         holder: frame
         if: c.lm_compiler_free_admit(pr, d) != 0
             if: lm_compiler_rw_hidden_admit(frame, rw_mi_cell[0], pr, d, @ holder, source_node) != 0

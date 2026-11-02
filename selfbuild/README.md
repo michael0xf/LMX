@@ -6,38 +6,40 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-`inputs.list` selects 159 maintained inputs: 65 source, 34 tool and 60 test
+`inputs.list` selects 160 maintained inputs: 65 source, 34 tool and 61 test
 files. `inputs.sha256` binds those exact bytes with paths relative to this
 directory. Generated L1/C, headers, objects and executables are not inputs.
 
-The selected snapshot is the source of the whole quick bootstrap boot115f
-([slice253](../steps/witnesses/fix253-20261102/notes.md)): source-tp115 —
-the boot114 package of [slice252](../steps/witnesses/fix252-20261102/notes.md)
-(the Opus line's full100 with the Fable line's frontend optimization slices
-tp110–tp114 over it) with the first semantic slice of the Fable line, tp115
-(design §4.4: the kernel's code links as the index's side storage, the native
-reset on a write of code climbing the code edges only, the lifetime of the
-records with the index entry including the retirement of Array owners in a
-shared REF interval, the write/reset/link path prepared before the physical
-write and committed after it, the arena passed to `lmx_arena_ref_store` by
-every actual and generated caller, the driver's start-up self-check;
-[design](../optimization_design_from_fable.md), [profile](../build_performance_profile_from_fable.md)).
-Relative to the previous package, boot114, it changes 19 selected files:
-nine kernel modules (`lmx_arena_refs`, `lmx_range`, `lmx_arena`,
-`lmx_value_owned`, `lmx_walk_values`, `lmx_call`, `lmx_array_ref_owned`,
-`lmx_graph_copy_owned`, `lmx_thread`), `lmx_root`, `l2_driver`,
-`l2_consumer_uses`, five frontend modules (`l2_frontend_emit`, `_values`,
-`_core`, `_lower`, `_useplan`), `tests/native_closure_values.lm2` and
-`tools/build.lm2`; the input list is unchanged. The landing is slice253, by
-the rule of Codex's answer to FABLE-RESULT-S3-20261102T0100Z (the whole
-tested set after an actual quick PASS), after Codex's review of the actual
-code of the earlier attempt boot115d was answered by fix05 (and
-boot115e's translation refusal by fix06). Input-list SHA-256:
-`E6FFBCFB4C4F8C2CA670961F1D22EEED25E1275F5086FEF0EE01517C494364AF`.
-Input-manifest SHA-256 (byte-equal to boot115f's `source-boot115f.sha256` and
-to `source-tp115.sha256`):
-`48F66AF0082628BE340DB193A3E943BE430E93739E796463C03E3DD86CB2D997`.
-The previous packages: boot114 is slice252 (manifest `FE3FDA29…`; 6 files
+The selected snapshot is the source of the whole quick bootstrap boot116c
+([slice254](../steps/witnesses/fix254-20261102/notes.md)): source-tp116 —
+the boot115f package of [slice253](../steps/witnesses/fix253-20261102/notes.md)
+with the second semantic slice of the Fable line, tp116 (design §4.5, step
+B1: the activation chain — a record per activation of either executor,
+chained from the arena; one shared resolver of a callee's free names in the
+book's order, its written formals, its own working cells, then the free
+inputs it inherited, nearest record first; a free input the caller does not
+form travels marked and is resolved once at the callee's entry, absent and
+read from its lexical source when no record binds it; the native frame binds
+its used own fields by their graph place; the driver's start-up self-check of
+the chain; [design](../optimization_design_from_fable.md),
+[profile](../build_performance_profile_from_fable.md)). Relative to the
+previous package, boot115f, it changes 9 selected files — three kernel
+modules (`lmx_arena`, `lmx_call`, `lmx_walk_values`), `l2_driver`, three
+frontend modules (`l2_frontend_lower`, `_core`, `_emit`), `tools/build.lm2`
+and `tests/full-suite.tsv` — and adds the fixture
+`tests/dyn/free_name_chain.lm2` (free names through the chain, the nearest
+binding first, an unused data field no binding), so the input list grows by
+one line. The landing is slice254, by the rule of Codex's answer to
+FABLE-RESULT-S3-20261102T0100Z (the whole tested set after an actual quick
+PASS), after Codex's review of the slice's WIP (P1-B1-1, P1-B1-2) was
+answered before any build. G0 of boot116c is tool116 (`E8AD9AA2…`), the
+promoted working tool is boot116c's G2 (`18C898AC…`). Input-list
+SHA-256: `A4415DAA4BAB1701F3398C7EE8B36A95EB58DCF76C1DFDC97FF2FFED92F6B89C`.
+Input-manifest SHA-256 (byte-equal to boot116c's `source-boot116c.sha256` and
+to `source-tp116.sha256`):
+`DC4E8C62E5CBE8F9BEB3F6A522E9AABD0E6A640CC2307ADE0DAB4DE075D419B5`.
+The previous packages: boot115f is slice253 (manifest `48F66AF0…`; 19 files
+over boot114, the input list unchanged); boot114 is slice252 (manifest `FE3FDA29…`; 6 files
 over boot112 — tp113 and tp114), boot112 is slice251 (manifest `7FA43F9E…`; 15 files
 over boot89 — 9 inherited from full100, 8 of tp112), boot89 is
 [slice246](../steps/witnesses/fix246-20261031/notes.md)

@@ -794,6 +794,118 @@ sub: code_links_check ()
     return
 end: code_links_check
 
+# Slice 254 (design 4.5 B1): the activation chain and its resolver, on a private arena, over synthetic records: a
+# callable whose args header names its inputs; a native record with a present input; a forwarder's record with
+# nothing; the entered activation's free input resolves through the forwarder to the first binding; an unknown name is
+# absent; a registered working cell of a native frame resolves; the records leave in order and the chain is empty.
+sub: activation_check ()
+    c.LmxArena: arena
+    @: a c.LmxArena 0
+    @: root c.Lmx 0
+    @: fnode c.Lmx 0
+    @: header c.Lmx 0
+    @: gnode c.Lmx 0
+    @: gheader c.Lmx 0
+    c.LmxActivation: ra
+    c.LmxActivation: rb
+    c.LmxActivation: rc
+    c.LmxActivation: rd
+    @: vals c.LmxWalkValue 0
+    @: gvals c.LmxWalkValue 0
+    c.LmxWalkValue: found
+    @: fp c.LmxWalkValue @ found
+    @: v0 c.LmxWalkValue 0
+    @: g0 c.LmxWalkValue 0
+    int: cellv 5
+    @: fe4 c.Lmx 0
+    @: fe2 c.Lmx 0
+    c.LmxActivation: rf
+    c.LmxActivation: rg
+    c.LmxActivation: rw
+    c.LmxActivation: rh
+    c.LmxWalkFrame: fr
+    @: frp c.LmxWalkFrame @ fr
+    c.LmxWalkWork: row
+    @: rp c.LmxWalkWork @ row
+    int: cellx 9
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    vals: (cast: (@: c.LmxWalkValue) c.calloc(2U, c.sizeof(c.LmxWalkValue)))
+    gvals: (cast: (@: c.LmxWalkValue) c.calloc(1U, c.sizeof(c.LmxWalkValue)))
+    if: vals = 0 || gvals = 0
+        check(0, "activation chain: two input arrays allocate")
+        return
+    c.memset((cast: (@: void) fp), 0, c.sizeof(c.LmxWalkValue))
+    v0: vals
+    g0: gvals
+    a: @ arena
+    if: c.lmx_arena_open(a) != 0
+        check(0, "activation chain: a private arena opens")
+        return
+    check((cast: (int) (a\activation = 0)), "activation chain: an open arena has no activation")
+    root: (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    fnode: (cast: (@: c.Lmx) c.lmx_struct_new_role_profiled(root, a, 0, c.LMX_POOL_ROLE_FN))
+    gnode: (cast: (@: c.Lmx) c.lmx_struct_new_role_profiled(root, a, 0, c.LMX_POOL_ROLE_FN))
+    if: root = 0 || fnode = 0 || gnode = 0 || c.lmx_arena_refs_open_owned(a, fnode, 4U) != 0 || c.lmx_arena_refs_open_owned(a, gnode, 4U) != 0
+        check(0, "activation chain: two callables allocate")
+        c.lmx_arena_release(a)
+        return
+    header: (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    gheader: (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    if: header = 0 || gheader = 0 || c.lmx_arena_refs_open_owned(a, header, 2U) != 0 || c.lmx_arena_refs_open_owned(a, gheader, 1U) != 0
+        check(0, "activation chain: two args headers allocate")
+        c.lmx_arena_release(a)
+        return
+    check((cast: (int) (c.lmx_arena_ref_store(a, fnode, 0U, (cast: (@: void) header)) = 0 && c.lmx_arena_ref_store(a, gnode, 0U, (cast: (@: void) gheader)) = 0)), "activation chain: the headers stand in part 0")
+    check((cast: (int) (c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 0U)), "x", 1U) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 1U)), "y", 1U) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(gheader, 0U)), "x", 1U) = 0)), "activation chain: the header cells carry their spellings")
+    check((cast: (int) (c.lmx_walk_value_num(v0, c.LMX_TYPE_INT, 7U) = c.LMX_WALK_OK)), "activation chain: the caller's input x is 7")
+    check((cast: (int) (c.lmx_activation_push(a, @ ra, 2, fnode, 0, (cast: (@: void) vals), 2U, 0) = 0 && a\activation = (cast: (@: void) (@ ra)))), "activation chain: the caller's record is current")
+    check((cast: (int) (c.lmx_activation_push(a, @ rb, 2, 0, 0, 0, 0U, 0) = 0 && rb\parent = (cast: (@: c.LmxActivation) (@ ra)))), "activation chain: a forwarder's record follows with nothing in it")
+    c.lmx_walk_value_free_mark(g0)
+    check((cast: (int) (c.lmx_activation_push(a, @ rc, 2, gnode, 0, (cast: (@: void) gvals), 1U, 0) = 0)), "activation chain: the callee's record is current")
+    check((cast: (int) (c.lmx_activation_resolve_input(a, 0U, 0, 0, 0U) = 1 && g0\present != 0 && g0\number = 7 && g0\kind = c.LMX_WALK_VALUE_NUMBER)), "activation chain: the callee's free input x resolves through the forwarder to the caller's 7")
+    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rb)), (cast: (@: void) "z"), 1U, fp) = 0 && fp\present = 0)), "activation chain: an unbound name is absent")
+    check((cast: (int) (c.lmx_activation_bind(a, (cast: (@: void) "q"), 1U, (cast: (@: void) (@ cellv)), c.LMX_TYPE_INT, 0) = 0)), "activation chain: the callee registers a working cell q")
+    check((cast: (int) (c.lmx_activation_push(a, @ rd, 2, 0, 0, 0, 0U, 0) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), (cast: (@: void) "q"), 1U, fp) = 1 && fp\present != 0 && fp\number = 5)), "activation chain: a nested activation resolves the registered cell q to 5")
+    cellv: 6
+    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), (cast: (@: void) "q"), 1U, fp) = 1 && fp\number = 6)), "activation chain: a working cell is read at the resolution, not at the registration")
+    # The order within one record (book :729/:779; Codex P1-B1-1): a written formal -- an args header entry of four
+    # fields -- before a working cell; a working cell before an inherited free input (an entry of two fields).
+    fe4: (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    fe2: (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    if: fe4 = 0 || fe2 = 0 || c.lmx_arena_refs_open_owned(a, fe4, 4U) != 0 || c.lmx_arena_refs_open_owned(a, fe2, 2U) != 0
+        check(0, "activation chain: two header entries allocate")
+    else:
+        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@: void) fe4)) = 0 && c.lmx_arena_ref_store(a, header, 1U, (cast: (@: void) fe2)) = 0)), "activation chain: x has a formal's header entry, y a free input's")
+        check((cast: (int) (c.lmx_activation_input_formal(a, fnode, 0U) = 1 && c.lmx_activation_input_formal(a, fnode, 1U) = 0 && c.lmx_activation_input_formal(a, gnode, 0U) = 0)), "activation chain: the header tells a formal from a free input by its entry")
+        check((cast: (int) (c.lmx_activation_push(a, @ rf, 2, fnode, 0, (cast: (@: void) vals), 2U, 0) = 0 && c.lmx_activation_bind(a, (cast: (@: void) "x"), 1U, (cast: (@: void) (@ cellx)), c.LMX_TYPE_INT, 0) = 0 && c.lmx_activation_push(a, @ rg, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a record with the formal x 7 and a working cell x 9, then its callee's record")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), (cast: (@: void) "x"), 1U, fp) = 1 && fp\number = 7)), "activation chain: the written formal x is the nearest binding of its record")
+        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@: void) fe2)) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), (cast: (@: void) "x"), 1U, fp) = 1 && fp\number = 9)), "activation chain: the working cell x shadows the inherited free input x of its record")
+        # A walker frame's record (kind 1): the rows its entry loaded are its working cells; the other fields of its
+        # data node are no binding (Codex P1-B1-2).
+        c.memset((cast: (@: void) frp), 0, c.sizeof(c.LmxWalkFrame))
+        c.memset((cast: (@: void) rp), 0, c.sizeof(c.LmxWalkWork))
+        rp\slot: c.lmx_arena_ref_cell(header, 1U)
+        frp\work: (cast: (@: void) rp)
+        frp\nwork: 1U
+        check((cast: (int) (c.lmx_walk_value_num((cast: (@: c.LmxWalkValue) (@ rp\value)), c.LMX_TYPE_INT, 4U) = c.LMX_WALK_OK && c.lmx_activation_push(a, @ rw, 1, 0, 0, 0, 0U, (cast: (@: void) frp)) = 0 && c.lmx_activation_push(a, @ rh, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a walker frame's record with the row y 4, then its callee's record")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), (cast: (@: void) "y"), 1U, fp) = 1 && fp\number = 4)), "activation chain: the walker's row y resolves for its callee")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), (cast: (@: void) "x"), 1U, fp) = 1 && fp\number = 9)), "activation chain: a name the walker frame holds no row of climbs to the native caller's working cell")
+        c.lmx_activation_pop(a, @ rh)
+        c.lmx_activation_pop(a, @ rw)
+        c.lmx_activation_pop(a, @ rg)
+        c.lmx_activation_pop(a, @ rf)
+    ---
+    c.lmx_activation_pop(a, @ rd)
+    c.lmx_activation_pop(a, @ rc)
+    c.lmx_activation_pop(a, @ rb)
+    c.lmx_activation_pop(a, @ ra)
+    check((cast: (int) (a\activation = 0 && rc\bindings = 0)), "activation chain: the records leave in order and the chain is empty")
+    check((cast: (int) (c.lmx_arena_release(a) = 0)), "activation chain: the arena releases")
+    c.free((cast: (@: void) vals))
+    c.free((cast: (@: void) gvals))
+    return
+end: activation_check
+
 fn: dispatch_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
     @@: dispatch_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.dispatch_arena))
     @: dispatch_calls_cell int (cast: (@: int) (@ c.dispatch_calls))
@@ -3333,6 +3445,8 @@ fn: main (int: argc; @@: argv char) int
     ---
     phase_cell[0]: "code links"
     code_links_check()
+    phase_cell[0]: "activation chain"
+    activation_check()
     phase_cell[0]: "generated program"
     status: c.l2_generated_main(pargc_cell[0], pargv_cell[0])
     check((cast: (int) (launches_cell[0] = 1)), "generated main launched the host exactly once")

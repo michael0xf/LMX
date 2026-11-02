@@ -184,3 +184,24 @@ private arena) before its own main — not visible in the smoke list's wall time
 boot115f (fix01–fix06: three translation refusals, one C compile error, the reset's `parent` climb, Codex's P1-A/P1-B) are
 the cost of the slice, 5 to 15 minutes each; standalone module translations caught two of the six before a bootstrap. The remaining targets of the frontend step are the ones named above (method-name scans, the
 owner memo's re-check, the M2 pass).
+
+## The second semantic slice (tp116, boot116): the activation chain costs no measurable time
+
+tp116 (design §4.5, B1) adds to every activation of either executor a record pushed and popped in the C frame of the
+trampoline or the walker (a memset and six stores), to every native method's prologue one `lmx_activation_bind` per used
+own field (a C-heap list grown by doubling, freed with the record) and one `if` per consumed hidden input, and to every
+call site with a hidden input that has no schema a `lmx_walk_value_free_mark` in place of the formed value; the resolver
+runs once per free input at the callee's entry, by text comparison of the names of the records up the chain. The
+bootstrap boot116c's wall time is boot115f's within the machine's drift: 796 s against 962 s; the frontend step (the
+self-build of the frontend, unchanged in what it does for its own code -- the frontend has no hidden inputs) 248 s and
+246 s, the runtime step 34 s and 34 s. The driver's start-up self-check grows from 38 to 60 checks. The cost of the slice is
+again the attempts, not the product: ten stagings, seven isolated runtime builds (8 s to a refusal, about 55 s to a pass) and
+three bootstraps -- the isolated `build-runtime` of the new tool over the stage is the cheap conclusive check of a
+kernel change, and the standalone module translations the cheap check of a frontend change; both ran before boot116. What
+neither catches is a run-time fault of the driver's own self-check: boot116 built G1 (frontend, runtime, tool) and every
+smoke program crashed at start-up on a memset through a pointer local not yet assigned (a text slip of the slice's own
+editing); relinking one built smoke program against the fixed driver.o (two seconds) showed the fix before boot116b, which
+passed. What the bootstrap's smoke list does not run either is the slice's own fixture: the focus suite on boot116b's G2 gave it
+81 in both modes, and gdb on the built program found the resolver right and the method reading other arrays than the record
+held (its generated wrapper projects the caller's); the walker side named a field's value storage, not its cell. Both are
+fix10; the forced program relinked against the new driver.o passed at once, the native one needed the new frontend -- boot116c.

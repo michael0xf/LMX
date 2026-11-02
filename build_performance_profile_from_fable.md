@@ -115,6 +115,48 @@ Lower/fe110/01: 10 samples between 22:12:36 and 22:21:18Z — 5 in the owning-me
 itself (the linear walk of `l2_declarations`), 2 in `lm_compiler_head_source_node` (every head-expression document
 searched by `node_in`, from `own_source_visible`). None in predef lookups any more (attempt03's 4 of 4 were there).
 
+## S3b (tp113): the method-name index — measured as back-to-back pairs
+
+The design's slice table (§6) numbered its contents S1–S9 by candidate; the candidates actually built diverge from it after
+tp110: tp111 = node-keyed memos, tp112 = contract and own-name indexes, tp113 = method-name index, tp114 = owner memo
+without re-check, predef file index, fact index (all exact, outputs byte-equal to G1). The semantic slices of the table
+(explicit throws, one collection pass, kernel code links, …) start after these; their numbers follow the candidates.
+
+fe113 (`P/cold-tp113/fe113/l2trans.exe`, `6038F156…`): `site_method` and `find_method` over a method-name index valid per
+a method-table generation. Slice 252 notes. The same machine runs slower in this hour than at 00:42Z (fe112's Lower 111.7 s
+against its own 95.9 s before), so from here each candidate is measured right next to the previous frontend:
+
+| module | fe113 wall s | fe112 wall s (next run) | ratio | outputs |
+|---|---|---|---|---|
+| l2_frontend_lower | 94.6 | 111.7 | 0.85 | both same-as-G1 |
+| l2_frontend_core | 122.4 | 135.9 | 0.90 | both same-as-G1 |
+| l2_frontend_emit | 154.4 | 165.4 | 0.93 | both same-as-G1 |
+| l2_frontend_useplan | 6.6 | — (fe111 7.9) | | both same-as-G1 |
+
+Stack samples with fe113 (10): 4 in the owner memo's re-check (`node_in` over the owner's tree in
+`contract_source_begin_at`), 2 in `predef_file_define`, 1 in `predef_file_result_ty`, 1 in `source_parent_body` under
+`method_duplicate`, 1 in `use_fact_find`, 1 in `path_fact_note_bytes`; none in the method-name scans any more. The first
+three are tp114's targets.
+
+## S3c (tp114): owner memo without the tree re-check, predef file index, fact index — paired with fe113
+
+fe114 (`P/cold-tp114/fe114/l2trans.exe`, `0DB4B5D1…`; slice 252 notes): the owner memo is trusted by three generations
+(method count, method-table generation, document generation bumped by every document destroy) instead of a walk of the
+owner's tree per query; the predef `define`/prototype lookups read a per-file index merged with the file's imports in
+document order; `use_fact_find` reads a (method, source) index of the path facts. Measured right after fe113:
+
+| module | fe114 wall s | fe113 wall s (next run) | ratio | outputs |
+|---|---|---|---|---|
+| l2_frontend_useplan | 3.1 | 6.6 (try 01) | 0.47 | both same-as-G1 |
+| l2_frontend_lower | 70.8 | 92.4 | 0.77 | both same-as-G1 |
+| l2_frontend_core | 74.5 | 105.0 | 0.71 | both same-as-G1 |
+| l2_frontend_emit | 55.5 | 129.2 | 0.43 | both same-as-G1 |
+
+Chained against the G1 frontend in the same tree (G1 1426.8 s for Lower; fe112 14.9x at 00:42Z; fe113 0.85 of fe112;
+fe114 0.77 of fe113), Lower is about 23x faster than G1's frontend; the machine's hour-to-hour drift (about 15 percent) is
+the uncertainty of the chain. tool114 (`rebuild tool`) took 92 s with boot112's G2 frontend as the producer against
+1230 s for tool113 with full100's G1 frontend (Codex's pointer, 2026-11-02).
+
 ## The whole short bootstrap with the S3 frontend (boot112)
 
 `bootstrap quick` of the S1–S3 sources (stage cold-boot112 = source-tp112, 159 inputs) with G0 = tool112 and the previous
@@ -125,6 +167,7 @@ failures each), `BOOTSTRAP quick 0 failures`; G1 = G2 apart from the PE link sta
 |---|---|---|---|---|
 | boot98 (slice 249, draft79 line) | 49c / FE94 (no indexes) | 18196 | — | 8273 |
 | boot112 (slice 251) | fe112 (S1–S3) | 1159 | 421 | 424 |
+| boot114 (slice 252) | fe114 (S1–S3c) | 969 | 324 | 316 |
 
 The frontend step translates all 23 frontend/backend modules, writes `frontend.c`/`backend.c` and compiles them; the
 runtime step (kernel L2 → L1 → C headers, two objects) took 48 s and 47 s, the tool step 104 s and 105 s; the smoke list

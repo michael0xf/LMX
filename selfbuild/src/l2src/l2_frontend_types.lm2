@@ -280,6 +280,14 @@ fn: lm_compiler_predef_file_define (const: (@: name c.LmP0Text); const: (@: quot
     c.memcpy(path, quoted\data + 1U, n)
     path[n]: 0
     document: lm_compiler_snap_document(path)
+    # tp114: the document's rows from the predef file index (lm_compiler_pfx_*, module end) merged by position with
+    # its predef items -- the same items in the same order as the scan below, which runs only when the index could
+    # not be built (allocation failure).
+    if: document != 0 && lm_compiler_pfx_ready(document) = 0
+        found: lm_compiler_pfx_define(name, document, path, any)
+        c.lm_compiler_xfree((cast: (@: void) path))
+        return: (cast: (@: c.LmP0Text) (found))
+    ---
     if: document != 0
         root: c.lm_p0_document_root(document)
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
@@ -537,6 +545,12 @@ fn: lm_compiler_predef_file_result_ty (const: (@: name c.LmP0Text); const: (@: q
     c.memcpy(path, quoted\data + 1U, n)
     path[n]: 0
     document: lm_compiler_snap_document(path)
+    # tp114: as in lm_compiler_predef_file_define -- the index's rows of this document, merged with its predef items.
+    if: document != 0 && lm_compiler_pfx_ready(document) = 0
+        found: lm_compiler_pfx_result_ty(name, document, path, out_ty)
+        c.lm_compiler_xfree((cast: (@: void) path))
+        return: (cast: (int) (found))
+    ---
     if: document != 0
         root: c.lm_p0_document_root(document)
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
@@ -1441,7 +1455,7 @@ fn: lm_compiler_snap_document (const: (@: path char)) @: c.LmP0Document
     if: snap_doc_cell[0][i] = 0
         if: c.lm_p0_parse_bytes(data, n, @ document) != 0 || document = 0
             if: document != 0
-                c.lm_p0_document_destroy(document)
+                lm_compiler_types_doc_destroy(document)
             return: (cast: (@: c.LmP0Document) (0))
         ---
         snap_doc_cell[0][i]: document
@@ -1836,3 +1850,368 @@ fn: lm_compiler_pdx_kind (const: (@: name c.LmP0Text); int: want) int
     ---
     return: (cast: (int) (0))
 end: lm_compiler_pdx_kind
+
+# tp114: every document destroy of this module goes through here and bumps l2_doc_gen: a destroyed document's node
+# addresses may be reused by the next parse, so the memos keyed by node addresses (l2_omemo_* in l2_frontend_context)
+# forget everything by this generation at their next use instead of re-checking a remembered node against its tree.
+fn: lm_compiler_types_doc_destroy (@: document c.LmP0Document) int
+    @: doc_gen_cell int (cast: (@: int) (@ c.l2_doc_gen))
+    doc_gen_cell[0]: doc_gen_cell[0] + 1
+    c.lm_p0_document_destroy(document)
+    return: (cast: (int) (0))
+end: lm_compiler_types_doc_destroy
+
+# tp114: the predef file index -- for each snap document asked about, the root items the define and result-type lookups
+# read, as rows in document order: kind 1 a `define` item with a body (name = its first atom), kind 2 a `fn`/`sub`
+# declaration with a body inside a `prototype` frame (name = its first atom), kind 3 a `predef` item with a body (no
+# name). Rows are bucketed by (document, name bytes) -- the predef rows by the document alone -- each bucket a chain in
+# row order (bucket/tail/next). A lookup merges the name's chain and the document's predef chain by row ordinal, so it
+# meets the same items in the same order as the scan of every root item and recurses into the same imports at the same
+# points. Valid for one set of snap documents: l2_snap_gen is bumped where snap documents are destroyed
+# (lm_compiler_snap_free in l2_frontend_emit). A failure to build leaves the index empty and the scan runs.
+fn: lm_compiler_pfx_hash (@: document c.LmP0Document; const: (@: t c.LmP0Text)) unsigned
+    size_t: k (cast: (size_t) document)
+    unsigned: h (cast: (unsigned) (k / 8U + k / 4096U))
+    size_t: i 0U
+    h: h * 16777619U + 2166136261U
+    if: t = 0 || t\data = 0
+        return: (cast: (unsigned) (h))
+    while: i < t\length
+        h: h * 16777619U + (cast: (unsigned) (cast: (uchar) t\data[i]))
+        i: i + 1U
+    ---
+    return: (cast: (unsigned) (h))
+end: lm_compiler_pfx_hash
+
+fn: lm_compiler_pfx_insert (int: r) int
+    @: cap_cell int (cast: (@: int) (@ c.l2_pfx_cap))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_pfx_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_pfx_tail))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_pfx_next))
+    @@@: docp_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_pfx_docp))
+    @@@: name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pfx_name))
+    int: b
+    next_cell[0][r]: -1
+    b: (cast: (int) (lm_compiler_pfx_hash(docp_cell[0][r], name_cell[0][r]) % (cast: (unsigned) cap_cell[0])))
+    if: bucket_cell[0][b] < 0
+        bucket_cell[0][b]: r
+    else:
+        next_cell[0][tail_cell[0][b]]: r
+    ---
+    tail_cell[0][b]: r
+    return: (cast: (int) (0))
+end: lm_compiler_pfx_insert
+
+# Empties the index when the snap documents changed. Returns 0.
+fn: lm_compiler_pfx_sync () int
+    @: snap_gen_cell int (cast: (@: int) (@ c.l2_snap_gen))
+    @: gen_cell int (cast: (@: int) (@ c.l2_pfx_gen))
+    @: n_cell int (cast: (@: int) (@ c.l2_pfx_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_pfx_cap))
+    @: doc_n_cell int (cast: (@: int) (@ c.l2_pfx_doc_n))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_pfx_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_pfx_tail))
+    if: gen_cell[0] != snap_gen_cell[0]
+        if: bucket_cell[0] != 0 && cap_cell[0] > 0
+            c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+            c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+        ---
+        n_cell[0]: 0
+        doc_n_cell[0]: 0
+        gen_cell[0]: snap_gen_cell[0]
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_pfx_sync
+
+# Room for one more row: the row arrays and the buckets are reallocated (rows copied, chains rebuilt) when full.
+fn: lm_compiler_pfx_room () int
+    @: n_cell int (cast: (@: int) (@ c.l2_pfx_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_pfx_cap))
+    @: rows_cell int (cast: (@: int) (@ c.l2_pfx_rows))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_pfx_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_pfx_tail))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_pfx_next))
+    @@@: node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_pfx_node))
+    @@@: docp_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_pfx_docp))
+    @@@: name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pfx_name))
+    @@: kind_cell int (cast: (@@: int) (@ c.l2_pfx_kind))
+    @@: node_old c.LmP0Node node_cell[0]
+    @@: docp_old c.LmP0Document docp_cell[0]
+    @@: name_old c.LmP0Text name_cell[0]
+    @: kind_old int kind_cell[0]
+    int: cap
+    int: i 0
+    if: bucket_cell[0] != 0 && (n_cell[0] + 1) * 2 <= cap_cell[0] && n_cell[0] + 1 <= rows_cell[0]
+        return: (cast: (int) (0))
+    cap: 1024
+    while: cap < (n_cell[0] + 1) * 4
+        cap: cap * 2
+    if: bucket_cell[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) bucket_cell[0]))
+    if: tail_cell[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) tail_cell[0]))
+    if: next_cell[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) next_cell[0]))
+    bucket_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    tail_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    next_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    node_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    docp_cell[0]: (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    name_cell[0]: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    kind_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    if: bucket_cell[0] = 0 || tail_cell[0] = 0 || next_cell[0] = 0 || node_cell[0] = 0 || docp_cell[0] = 0 || name_cell[0] = 0 || kind_cell[0] = 0
+        cap_cell[0]: 0
+        rows_cell[0]: 0
+        n_cell[0]: 0
+        return: (cast: (int) (1))
+    ---
+    c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
+    c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
+    cap_cell[0]: cap
+    rows_cell[0]: cap
+    while: i < n_cell[0]
+        node_cell[0][i]: node_old[i]
+        docp_cell[0][i]: docp_old[i]
+        name_cell[0][i]: name_old[i]
+        kind_cell[0][i]: kind_old[i]
+        lm_compiler_pfx_insert(i)
+        i: i + 1
+    ---
+    if: node_old != 0
+        c.lm_compiler_xfree((cast: (@: void) node_old))
+    if: docp_old != 0
+        c.lm_compiler_xfree((cast: (@: void) docp_old))
+    if: name_old != 0
+        c.lm_compiler_xfree((cast: (@: void) name_old))
+    if: kind_old != 0
+        c.lm_compiler_xfree((cast: (@: void) kind_old))
+    return: (cast: (int) (0))
+end: lm_compiler_pfx_room
+
+fn: lm_compiler_pfx_add_row (@: document c.LmP0Document; @: at c.LmP0Node; @: name c.LmP0Text; int: kind) int
+    @: n_cell int (cast: (@: int) (@ c.l2_pfx_n))
+    @@@: node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_pfx_node))
+    @@@: docp_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_pfx_docp))
+    @@@: name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pfx_name))
+    @@: kind_cell int (cast: (@@: int) (@ c.l2_pfx_kind))
+    if: lm_compiler_pfx_room() != 0
+        return: (cast: (int) (1))
+    node_cell[0][n_cell[0]]: at
+    docp_cell[0][n_cell[0]]: document
+    name_cell[0][n_cell[0]]: name
+    kind_cell[0][n_cell[0]]: kind
+    lm_compiler_pfx_insert(n_cell[0])
+    n_cell[0]: n_cell[0] + 1
+    return: (cast: (int) (0))
+end: lm_compiler_pfx_add_row
+
+# The document is indexed (0), or the index is empty and the scan must run (1): on any failure the whole index is dropped.
+fn: lm_compiler_pfx_ready (@: document c.LmP0Document) int
+    @: n_cell int (cast: (@: int) (@ c.l2_pfx_n))
+    @: doc_n_cell int (cast: (@: int) (@ c.l2_pfx_doc_n))
+    @: doc_cap_cell int (cast: (@: int) (@ c.l2_pfx_doc_cap))
+    @@@: doc_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_pfx_doc))
+    @@: docs_old c.LmP0Document 0
+    const: (@: root c.LmP0Node)
+    @: f c.LmP0Field
+    @: pf c.LmP0Field
+    @: first c.LmP0Field
+    @: item c.LmP0Node
+    @: decl c.LmP0Node
+    int: i 0
+    int: cap
+    int: failed 0
+    if: document = 0
+        return: (cast: (int) (1))
+    lm_compiler_pfx_sync()
+    while: i < doc_n_cell[0]
+        if: doc_cell[0][i] = document
+            return: (cast: (int) (0))
+        i: i + 1
+    ---
+    if: doc_cell[0] = 0 || doc_n_cell[0] + 1 > doc_cap_cell[0]
+        cap: 64
+        while: cap < doc_n_cell[0] + 1
+            cap: cap * 2
+        docs_old: doc_cell[0]
+        doc_cell[0]: (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+        if: doc_cell[0] = 0
+            doc_cell[0]: docs_old
+            return: (cast: (int) (1))
+        if: docs_old != 0
+            c.memcpy((cast: (@: void) doc_cell[0]), (cast: (const: @: void) docs_old), (cast: (size_t) doc_n_cell[0]) * sizeof(@: void))
+            c.lm_compiler_xfree((cast: (@: void) docs_old))
+        ---
+        doc_cap_cell[0]: cap
+    ---
+    root: c.lm_p0_document_root(document)
+    if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
+        f: c.lm_compiler_next_active(root\as\structure\first_field)
+        while: f != 0 && failed = 0
+            item: f\value
+            if: c.lm_compiler_frame_head(item, "define") && item\as\frame\body != 0
+                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                    failed: lm_compiler_pfx_add_row(document, item, (cast: (@: c.LmP0Text) (first\value\as\atom)), 1)
+                ---
+            ---
+            if: failed = 0 && c.lm_compiler_frame_head(item, "prototype") && item\as\frame\body != 0
+                pf: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                while: pf != 0 && failed = 0
+                    decl: pf\value
+                    if: (c.lm_compiler_frame_head(decl, "fn") || c.lm_compiler_frame_head(decl, "sub")) && decl\as\frame\body != 0
+                        first: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                        if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                            failed: lm_compiler_pfx_add_row(document, decl, (cast: (@: c.LmP0Text) (first\value\as\atom)), 2)
+                        ---
+                    ---
+                    pf: c.lm_compiler_next_active(pf\next)
+                ---
+            ---
+            if: failed = 0 && c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
+                failed: lm_compiler_pfx_add_row(document, item, 0, 3)
+            f: c.lm_compiler_next_active(f\next)
+        ---
+    ---
+    if: failed != 0
+        # half-indexed rows must not be met by a lookup: drop everything, the scan serves this query
+        n_cell[0]: 0
+        doc_n_cell[0]: 0
+        lm_compiler_pfx_reset_chains()
+        return: (cast: (int) (1))
+    ---
+    doc_cell[0][doc_n_cell[0]]: document
+    doc_n_cell[0]: doc_n_cell[0] + 1
+    return: (cast: (int) (0))
+end: lm_compiler_pfx_ready
+
+fn: lm_compiler_pfx_reset_chains () int
+    @: cap_cell int (cast: (@: int) (@ c.l2_pfx_cap))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_pfx_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_pfx_tail))
+    if: bucket_cell[0] != 0 && cap_cell[0] > 0
+        c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+        c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_pfx_reset_chains
+
+# The first row of the chain of (document, name); name 0 selects the document's predef chain. -1 when there is none.
+fn: lm_compiler_pfx_first (@: document c.LmP0Document; const: (@: name c.LmP0Text)) int
+    @: n_cell int (cast: (@: int) (@ c.l2_pfx_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_pfx_cap))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_pfx_bucket))
+    int: b
+    if: n_cell[0] = 0 || bucket_cell[0] = 0 || cap_cell[0] <= 0
+        return: (cast: (int) (-1))
+    b: (cast: (int) (lm_compiler_pfx_hash(document, name) % (cast: (unsigned) cap_cell[0])))
+    return: (cast: (int) (bucket_cell[0][b]))
+end: lm_compiler_pfx_first
+
+fn: lm_compiler_pfx_step (int: r) int
+    @: n_cell int (cast: (@: int) (@ c.l2_pfx_n))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_pfx_next))
+    if: r < 0 || r >= n_cell[0] || next_cell[0] = 0
+        return: (cast: (int) (-1))
+    return: (cast: (int) (next_cell[0][r]))
+end: lm_compiler_pfx_step
+
+# The define lookup over the index: the scan's acceptance of a `define` item and its recursion into `predef` imports, in
+# document order (the merge by row ordinal of the name's chain and the predef chain). Returns the kept count text or 0.
+fn: lm_compiler_pfx_define (const: (@: name c.LmP0Text); @: document c.LmP0Document; const: (@: path char); int: any) @: c.LmP0Text
+    @@@: node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_pfx_node))
+    @@@: docp_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_pfx_docp))
+    @@@: name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pfx_name))
+    @@: kind_cell int (cast: (@@: int) (@ c.l2_pfx_kind))
+    @: found c.LmP0Text 0
+    @: item c.LmP0Node
+    @: first c.LmP0Field
+    @: second c.LmP0Field
+    int: d lm_compiler_pfx_first(document, name)
+    int: p lm_compiler_pfx_first(document, 0)
+    while: (d >= 0 || p >= 0) && found = 0
+        if: p < 0 || (d >= 0 && d < p)
+            if: kind_cell[0][d] = 1 && docp_cell[0][d] = document && c.lm_compiler_text_same(name_cell[0][d], name)
+                item: node_cell[0][d]
+                if: c.lm_compiler_count_active(item\as\frame\body) = 2 || (any != 0 && c.lm_compiler_count_active(item\as\frame\body) > 2)
+                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    second: 0
+                    if: first != 0
+                        second: c.lm_compiler_next_active(first\next)
+                    ---
+                    if: second != 0 && second\value != 0 && second\value\kind = c.LM_P0_NODE_ATOM && (any != 0 || c.lm_compiler_array_count_is(second\value\as\atom) != 0)
+                        found: c.lm_compiler_cnt_keep(second\value\as\atom)
+                    ---
+                ---
+            ---
+            d: lm_compiler_pfx_step(d)
+        else:
+            if: kind_cell[0][p] = 3 && docp_cell[0][p] = document
+                item: node_cell[0][p]
+                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                while: first != 0 && found = 0
+                    if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                        found: lm_compiler_predef_file_define(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), any)
+                    first: c.lm_compiler_next_active(first\next)
+                ---
+            ---
+            p: lm_compiler_pfx_step(p)
+        ---
+    ---
+    return: (cast: (@: c.LmP0Text) (found))
+end: lm_compiler_pfx_define
+
+# The result-type lookup over the index: the scan's reading of the first `fn`/`sub` declaration of the name inside the
+# `prototype` frames and its recursion into `predef` imports, in document order. Returns 0 (none), 1 or 2 as the scan.
+fn: lm_compiler_pfx_result_ty (const: (@: name c.LmP0Text); @: document c.LmP0Document; const: (@: path char); @: out_ty int) int
+    @@@: node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_pfx_node))
+    @@@: docp_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_pfx_docp))
+    @@@: name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pfx_name))
+    @@: kind_cell int (cast: (@@: int) (@ c.l2_pfx_kind))
+    @: item c.LmP0Node
+    @: decl c.LmP0Node
+    @: nf c.LmP0Field
+    @: pp c.LmP0Field
+    @: rtf c.LmP0Field
+    @: rtnode c.LmP0Node
+    @: first c.LmP0Field
+    int: found 0
+    int: d lm_compiler_pfx_first(document, name)
+    int: p lm_compiler_pfx_first(document, 0)
+    while: (d >= 0 || p >= 0) && found = 0
+        if: p < 0 || (d >= 0 && d < p)
+            if: kind_cell[0][d] = 2 && docp_cell[0][d] = document && c.lm_compiler_text_same(name_cell[0][d], name)
+                decl: node_cell[0][d]
+                nf: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                pp: c.lm_compiler_next_active(nf\next)
+                rtf: 0
+                if: pp != 0
+                    rtf: c.lm_compiler_next_active(pp\next)
+                rtnode: 0
+                if: rtf != 0
+                    rtnode: rtf\value
+                found: 1
+                if: c.lm_compiler_frame_head(decl, "sub")
+                    \out_ty: 8
+                else:
+                    if: lm_compiler_ret_type_node(rtnode, out_ty) != 0
+                        found: 2
+                    ---
+                ---
+            ---
+            d: lm_compiler_pfx_step(d)
+        else:
+            if: kind_cell[0][p] = 3 && docp_cell[0][p] = document
+                item: node_cell[0][p]
+                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                while: first != 0 && found = 0
+                    if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                        found: lm_compiler_predef_file_result_ty(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), out_ty)
+                    first: c.lm_compiler_next_active(first\next)
+                ---
+            ---
+            p: lm_compiler_pfx_step(p)
+        ---
+    ---
+    return: (cast: (int) (found))
+end: lm_compiler_pfx_result_ty

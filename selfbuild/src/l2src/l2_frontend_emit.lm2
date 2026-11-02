@@ -588,6 +588,7 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     @: bseq_n_cell int (cast: (@: int) (@ c.l2_bseq_n))
     @: letter_model_n_cell int (cast: (@: int) (@ c.l2_letter_model_n))
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @: m_gen_cell int (cast: (@: int) (@ c.l2_m_gen))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     const: (@@: ruse_unit_cell c.LmP0Structure (cast: (const: @@: c.LmP0Structure) (@ c.l2_ruse_unit)))
     @: loop_depth_cell int (cast: (@: int) (@ c.l2_loop_depth))
@@ -656,6 +657,9 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     pad_seq_cell[0]: 0
     bseq_n_cell[0]: 0
     letter_model_n_cell[0]: 0
+    # tp113: a new method table begins -- the method-name index (l2_mix_*) forgets the rows of the old one by this
+    # generation at its next use (meth_free below bumps it again when the table's storage goes).
+    m_gen_cell[0]: m_gen_cell[0] + 1
     m_n_cell[0]: 0
     own_n_cell[0]: 0
     c.lm_compiler_own_free()
@@ -867,7 +871,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     if: c.lm_compiler_path_is_lm2(in_path) = 0
@@ -882,7 +886,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     module_hash_a_cell[0]: 2166136261U
@@ -921,7 +925,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     # The program (steps/table-receiver.md §8, Q46): the source and the files named after it at the call.
@@ -945,7 +949,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     if: c.lm_compiler_unit_from_root(root, in_path, @ unit) != 0
@@ -959,7 +963,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     if: lm_compiler_translate_unit(unit, in_path) != 0
@@ -973,7 +977,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     if: c.lm_compiler_translation_failed(in_path, here_node_cell[0]) != 0
@@ -987,7 +991,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     # A conversion's receiver is a method of the program from the start (Q33; §8): one translation, where a
@@ -1008,7 +1012,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
             c.lm_compiler_ns_procs_free()
             c.lm_compiler_ns_def_free()
             c.lm_compiler_bound_free()
-            c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+            lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
             tok_cell[0]: 0
             return: (cast: (int) (c.lm_compiler_said_or(in_path, 0, d_emit, "translation failed")))
         # A fatal query may leave an early analysis path directly, before a
@@ -1021,7 +1025,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         c.lm_compiler_ns_procs_free()
         c.lm_compiler_ns_def_free()
         c.lm_compiler_bound_free()
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0]: 0
         return: (cast: (int) (1))
     # A fatal query may leave an early analysis path directly, before a
@@ -1034,7 +1038,7 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
     c.lm_compiler_ns_procs_free()
     c.lm_compiler_ns_def_free()
     c.lm_compiler_bound_free()
-    c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+    lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
     tok_cell[0]: 0
     return: (cast: (int) (0))
 end: lm_compiler_translate
@@ -1093,7 +1097,7 @@ fn: lm_compiler_parts_read () int
                 diag_n_cell[0]: diag_n_cell[0] + 1
             ---
             if: document != 0
-                c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
+                lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
             return: (cast: (int) (1))
         part_doc_cell[0][k]: document
         part_loaded_cell[0]: k + 1
@@ -15987,7 +15991,7 @@ fn: lm_compiler_snap_free () int
     int: i 0
     while: i < snap_n_cell[0]
         if: snap_doc_cell[0][i] != 0
-            c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (snap_doc_cell[0][i])))
+            lm_compiler_emit_snap_destroy((cast: (@: c.LmP0Document) (snap_doc_cell[0][i])))
         c.lm_compiler_xfree((cast: (@: void) snap_path_cell[0][i]))
         c.lm_compiler_xfree((cast: (@: void) snap_data_cell[0][i]))
         i: i + 1
@@ -17509,3 +17513,24 @@ fn: lm_compiler_indirect_head_raises (const: (@: stmt c.LmP0Node); int: mi) int
     c.lm_compiler_address_release(@ place)
     return: raises
 end: lm_compiler_indirect_head_raises
+
+# tp114: every document destroy of this module goes through here and bumps l2_doc_gen: a destroyed document's node
+# addresses may be reused by the next parse, so the memos keyed by node addresses (l2_omemo_* in l2_frontend_context)
+# forget everything by this generation at their next use instead of re-checking a remembered node against its tree.
+fn: lm_compiler_emit_doc_destroy (@: document c.LmP0Document) int
+    @: doc_gen_cell int (cast: (@: int) (@ c.l2_doc_gen))
+    doc_gen_cell[0]: doc_gen_cell[0] + 1
+    c.lm_p0_document_destroy(document)
+    return: (cast: (int) (0))
+end: lm_compiler_emit_doc_destroy
+
+# tp114: the snap documents (the predef files) leave here; besides l2_doc_gen this bumps l2_snap_gen, by which the predef
+# file index (l2_pfx_* in l2_frontend_types) forgets its rows and documents.
+fn: lm_compiler_emit_snap_destroy (@: document c.LmP0Document) int
+    @: doc_gen_cell int (cast: (@: int) (@ c.l2_doc_gen))
+    @: snap_gen_cell int (cast: (@: int) (@ c.l2_snap_gen))
+    doc_gen_cell[0]: doc_gen_cell[0] + 1
+    snap_gen_cell[0]: snap_gen_cell[0] + 1
+    c.lm_p0_document_destroy(document)
+    return: (cast: (int) (0))
+end: lm_compiler_emit_snap_destroy

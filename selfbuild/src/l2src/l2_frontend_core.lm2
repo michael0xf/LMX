@@ -524,7 +524,7 @@ fn: lm_compiler_release () int
     tb_cell0_cell[0]: 0
     tb_nrow_cell[0]: 0
     tb_cap_cell[0]: 0
-    c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (tb_sig_cell[0])))
+    lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (tb_sig_cell[0])))
     tb_sig_cell[0]: 0
     i: 0
     c.free((cast: (@: void) m_walkable_cell[0]))
@@ -933,6 +933,7 @@ end: lm_compiler_slot_reserve
 
 # Original: l2src/l2trans.lm1:2463
 fn: lm_compiler_meth_free () int
+    @: m_gen_cell int (cast: (@: int) (@ c.l2_m_gen))
     @@@: m_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_m_name))
     @@@: m_f0_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_m_f0))
     @@@: m_f1_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_m_f1))
@@ -1021,6 +1022,9 @@ fn: lm_compiler_meth_free () int
     sn_cell[0]: 0
     st_cell[0]: 0
     slot_cap_cell[0]: 0
+    # tp113: the method table is gone -- the method-name index (l2_mix_*, read in context and values) forgets its rows by
+    # this generation at its next use.
+    m_gen_cell[0]: m_gen_cell[0] + 1
     m_n_cell[0]: 0
     m_cap_cell[0]: 0
     return: (cast: (int) (0))
@@ -2299,14 +2303,14 @@ fn: lm_compiler_table_formals () int
     int: fn0 foreign_n_cell[0]
     if: tb_sig_cell[0] != 0
         c.lm_compiler_foreign_truncate(fn0)
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (sig)))
+        lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (sig)))
         return: (cast: (int) (0))
     # The header's types (`@: Lmx`) are the receiver's, not the unit's: reading them leaves the unit's
     # foreign types as they were -- an index of l2_foreign_intern is emitted (LMX_TYPE_POINTER_BASE + i),
     # and the tables are read before the unit, at the start of its translation.
     if: c.lm_p0_parse_string((cast: (const: @: char) (c.lm_compiler_table_header())), (cast: (@@: c.LmP0Document) (@ sig))) != 0 || sig = 0
         c.lm_compiler_foreign_truncate(fn0)
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (sig)))
+        lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (sig)))
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: the header of the receiver table does not parse")))
     root: c.lm_p0_document_root((cast: (const: @: c.LmP0Document) (sig)))
     f: 0
@@ -2314,14 +2318,14 @@ fn: lm_compiler_table_formals () int
         f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (root\as\structure\first_field)))
     if: f = 0 || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (f\value)), "fn") = 0 || f\value\as\frame\body = 0
         c.lm_compiler_foreign_truncate(fn0)
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (sig)))
+        lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (sig)))
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: the header of the receiver table is not a method header")))
     f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\value\as\frame\body\first_field)))
     if: f != 0
         f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0 || f\value\as\structure = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (f\value\as\structure))) != 4
         c.lm_compiler_foreign_truncate(fn0)
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (sig)))
+        lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (sig)))
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: the receiver table does not declare four formals")))
     p: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\value\as\structure\first_field)))
     while: p != 0 && k < 4
@@ -2329,7 +2333,7 @@ fn: lm_compiler_table_formals () int
         ty: 0
         if: c.lm_compiler_typed_formal((cast: (const: @: c.LmP0Node) (p\value)), src_cell[0], @ fa, @ ty) != 0
             c.lm_compiler_foreign_truncate(fn0)
-            c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (sig)))
+            lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (sig)))
             return: (cast: (int) (1))
         tb_formal_cell[k]: fa
         k: k + 1
@@ -2337,7 +2341,7 @@ fn: lm_compiler_table_formals () int
     tb_sig_cell[0]: sig
     sig: 0
     c.lm_compiler_foreign_truncate(fn0)
-    c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (sig)))
+    lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (sig)))
     return: (cast: (int) (0))
 end: lm_compiler_table_formals
 
@@ -2748,6 +2752,7 @@ end: lm_compiler_call_actual_fields
 
 # Original: l2src/l2trans.lm1:5427
 fn: lm_compiler_bound_free () int
+    @: pf_gen_cell int (cast: (@: int) (@ c.l2_pf_gen))
     @@: path_facts_cell c.L2PathFact (cast: (@@: c.L2PathFact) (@ c.l2_path_facts))
     @: uses_ready_cell int (cast: (@: int) (@ c.l2_uses_ready))
     @@: d105_plans_cell c.L2D105Plan (cast: (@@: c.L2D105Plan) (@ c.l2_d105_plans))
@@ -2786,6 +2791,8 @@ fn: lm_compiler_bound_free () int
         c.lm_compiler_consumer_calls_release((cast: (@: c.L2ConsumerCallUse) (fact\calls)))
         fact: fact\next
     ---
+    # tp114: the facts are gone -- the fact index (l2_pfi_*, read in values) forgets them by this generation at its next use.
+    pf_gen_cell[0]: pf_gen_cell[0] + 1
     path_facts_cell[0]: 0
     path_facts_tail_cell[0]: 0
     source_revision_cell[0]: 0U
@@ -3498,7 +3505,7 @@ fn: lm_compiler_parts_free () int
     @@: part_ns_cell int (cast: (@@: int) (@ c.l2_part_ns))
     int: k 0
     while: k < part_loaded_cell[0]
-        c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (part_doc_cell[0][k])))
+        lm_compiler_core_doc_destroy((cast: (@: c.LmP0Document) (part_doc_cell[0][k])))
         k: k + 1
     ---
     c.free((cast: (@: void) part_doc_cell[0]))
@@ -17774,3 +17781,13 @@ fn: lm_compiler_frames_note (int: kind; size_t: id) int
 end: lm_compiler_frames_note
 
 
+
+# tp114: every document destroy of this module goes through here and bumps l2_doc_gen: a destroyed document's node
+# addresses may be reused by the next parse, so the memos keyed by node addresses (l2_omemo_* in l2_frontend_context)
+# forget everything by this generation at their next use instead of re-checking a remembered node against its tree.
+fn: lm_compiler_core_doc_destroy (@: document c.LmP0Document) int
+    @: doc_gen_cell int (cast: (@: int) (@ c.l2_doc_gen))
+    doc_gen_cell[0]: doc_gen_cell[0] + 1
+    c.lm_p0_document_destroy(document)
+    return: (cast: (int) (0))
+end: lm_compiler_core_doc_destroy

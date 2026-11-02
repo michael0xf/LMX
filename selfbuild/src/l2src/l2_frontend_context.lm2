@@ -1208,17 +1208,12 @@ fn: lm_compiler_contract_source_begin_at (const: (@: site c.LmP0Node); int: owne
     if: site = 0 || (site = here_node_cell[0] && (owner < 0 || owner = here_mi_cell[0]))
         return: (cast: (int) (0))
     if: owner < 0
-        # tp111: the owning method of a site is memoized (l2_omemo_*: site -> owner, -1 for none; -3 = no entry).
-        # The memo forgets everything when the method table changes (l2_m_n) and when a head-expression document is
-        # destroyed (lm_compiler_head_expression_dispose: its node addresses may be reused); a remembered owner is
-        # re-checked against its source before it is trusted, so a site that left that tree is searched again.
+        # tp111/tp114: the owning method of a site is memoized (l2_omemo_*: site -> owner, -1 for none; -3 = no entry).
+        # The memo forgets everything when the method table changes (its count l2_m_n or its generation l2_m_gen) and
+        # when any document is destroyed (l2_doc_gen, bumped by every lm_p0_document_destroy of the frontend; a
+        # destroyed document's node addresses may be reused), so an entry is the current owner of the node at that
+        # address and is trusted without the walk of the owner's tree that tp111 re-checked it with.
         owner: lm_compiler_omemo_get(site)
-        if: owner >= 0
-            source: lm_compiler_callable_source_node(owner)
-            if: source = 0 || c.lm_compiler_node_in(source, site) = 0
-                owner: -3
-            ---
-        ---
         if: owner = -3
             owner: -1
             while: i < m_n_cell[0]
@@ -1875,15 +1870,24 @@ fn: lm_compiler_site_method (int: mi; const: (@: t c.LmP0Text)) int
     int: i 0
     int: best -1
     int: best_depth -1
+    int: linear 0
     if: t = 0
         return: (cast: (int) (-1))
-    while: i < m_n_cell[0]
+    # tp113: the rows of t's bucket in row order (lm_compiler_mix_*, module end) instead of every row; the text_same and
+    # method_visible_at filters and the selection below are the scan's, so the chosen row is the scan's. Without the index
+    # (allocation failure, -2) the scan runs over every row as before.
+    i: lm_compiler_mix_first(t)
+    if: i = -2
+        linear: 1
+        i: 0
+    ---
+    while: i >= 0 && (linear = 0 || i < m_n_cell[0])
         if: c.lm_compiler_text_same(m_name_cell[0][i], t) != 0 && lm_compiler_method_visible_at(i, mi) != 0
             if: best < 0 || c.lm_compiler_method_depth(i) > best_depth || (lm_compiler_method_source_scope(m_node_cell[0][best]) != lm_compiler_method_source_scope(m_node_cell[0][i]) && c.lm_compiler_source_parent_body(lm_compiler_method_source_scope(m_node_cell[0][best]), m_node_cell[0][i]) != 0)
                 best: i
                 best_depth: c.lm_compiler_method_depth(i)
             ---
-        i: i + 1
+        i: lm_compiler_mix_step(i, linear)
     ---
     return: (cast: (int) (best))
 end: lm_compiler_site_method
@@ -2190,14 +2194,20 @@ fn: lm_compiler_omemo_get (const: (@: at c.LmP0Node)) int
     @: cap_cell int (cast: (@: int) (@ c.l2_omemo_cap))
     @: memo_m_n_cell int (cast: (@: int) (@ c.l2_omemo_m_n))
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @: memo_gen_cell int (cast: (@: int) (@ c.l2_omemo_gen))
+    @: m_gen_cell int (cast: (@: int) (@ c.l2_m_gen))
+    @: memo_doc_gen_cell int (cast: (@: int) (@ c.l2_omemo_doc_gen))
+    @: doc_gen_cell int (cast: (@: int) (@ c.l2_doc_gen))
     @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_omemo_key))
     @@: val_cell int (cast: (@@: int) (@ c.l2_omemo_val))
     int: i
-    if: memo_m_n_cell[0] != m_n_cell[0]
+    if: memo_m_n_cell[0] != m_n_cell[0] || memo_gen_cell[0] != m_gen_cell[0] || memo_doc_gen_cell[0] != doc_gen_cell[0]
         if: n_cell[0] != 0 && key_cell[0] != 0 && cap_cell[0] > 0
             c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap_cell[0]) * sizeof(@: void))
         n_cell[0]: 0
         memo_m_n_cell[0]: m_n_cell[0]
+        memo_gen_cell[0]: m_gen_cell[0]
+        memo_doc_gen_cell[0]: doc_gen_cell[0]
         return: (cast: (int) (-3))
     if: at = 0 || n_cell[0] = 0 || key_cell[0] = 0 || cap_cell[0] <= 0
         return: (cast: (int) (-3))
@@ -2450,3 +2460,118 @@ fn: lm_compiler_oix_after (int: r) int
         return: (cast: (int) (-1))
     return: (cast: (int) (next_cell[0][r]))
 end: lm_compiler_oix_after
+
+# tp113: the method-name index -- the l2_m_name rows bucketed by the name's bytes (FNV), each bucket a chain in row
+# order (bucket/tail/next), built incrementally up to l2_m_n and valid for one method table: l2_m_gen is bumped where
+# l2_m_n is reset (lm_compiler_meth_free in core, the per-unit reset of translate_unit in emit). A row with a null name
+# is in no chain; text_same never admits it. The chain of a name holds every row text_same could admit, in row order, so
+# a reader that keeps its filters sees the rows the scan of every row saw. The same five helpers, under the prefix
+# lm_compiler_vmix_, serve lm_compiler_find_method in l2_frontend_values (internal helpers are per module; the state
+# cells are one).
+fn: lm_compiler_mix_hash (const: (@: t c.LmP0Text)) unsigned
+    unsigned: h 2166136261U
+    size_t: i 0U
+    if: t = 0 || t\data = 0
+        return: (cast: (unsigned) (0U))
+    while: i < t\length
+        h: h * 16777619U + (cast: (unsigned) (cast: (uchar) t\data[i]))
+        i: i + 1U
+    ---
+    return: (cast: (unsigned) (h))
+end: lm_compiler_mix_hash
+
+fn: lm_compiler_mix_insert (int: r) int
+    @@@: m_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_m_name))
+    @: cap_cell int (cast: (@: int) (@ c.l2_mix_cap))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_mix_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_mix_tail))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_mix_next))
+    int: b
+    next_cell[0][r]: -1
+    if: m_name_cell[0][r] = 0
+        return: (cast: (int) (0))
+    b: (cast: (int) (lm_compiler_mix_hash(m_name_cell[0][r]) % (cast: (unsigned) cap_cell[0])))
+    if: bucket_cell[0][b] < 0
+        bucket_cell[0][b]: r
+    else:
+        next_cell[0][tail_cell[0][b]]: r
+    ---
+    tail_cell[0][b]: r
+    return: (cast: (int) (0))
+end: lm_compiler_mix_insert
+
+fn: lm_compiler_mix_sync () int
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @: m_gen_cell int (cast: (@: int) (@ c.l2_m_gen))
+    @: n_cell int (cast: (@: int) (@ c.l2_mix_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_mix_cap))
+    @: rows_cell int (cast: (@: int) (@ c.l2_mix_rows))
+    @: gen_cell int (cast: (@: int) (@ c.l2_mix_gen))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_mix_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_mix_tail))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_mix_next))
+    int: cap
+    if: gen_cell[0] != m_gen_cell[0] || n_cell[0] > m_n_cell[0]
+        if: bucket_cell[0] != 0 && cap_cell[0] > 0
+            c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+            c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+        ---
+        n_cell[0]: 0
+        gen_cell[0]: m_gen_cell[0]
+    ---
+    if: m_n_cell[0] <= n_cell[0]
+        return: (cast: (int) (0))
+    if: bucket_cell[0] = 0 || m_n_cell[0] * 2 > cap_cell[0] || m_n_cell[0] > rows_cell[0]
+        cap: 1024
+        while: cap < m_n_cell[0] * 4
+            cap: cap * 2
+        if: bucket_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) bucket_cell[0]))
+        if: tail_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) tail_cell[0]))
+        if: next_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) next_cell[0]))
+        bucket_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        tail_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        next_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        if: bucket_cell[0] = 0 || tail_cell[0] = 0 || next_cell[0] = 0
+            cap_cell[0]: 0
+            rows_cell[0]: 0
+            n_cell[0]: 0
+            return: (cast: (int) (1))
+        ---
+        c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
+        c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
+        cap_cell[0]: cap
+        rows_cell[0]: cap
+        n_cell[0]: 0
+    ---
+    while: n_cell[0] < m_n_cell[0]
+        lm_compiler_mix_insert(n_cell[0])
+        n_cell[0]: n_cell[0] + 1
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_mix_sync
+
+fn: lm_compiler_mix_first (const: (@: t c.LmP0Text)) int
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_mix_cap))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_mix_bucket))
+    int: b
+    if: t = 0 || m_n_cell[0] = 0
+        return: (cast: (int) (-1))
+    if: lm_compiler_mix_sync() != 0 || bucket_cell[0] = 0 || cap_cell[0] <= 0
+        return: (cast: (int) (-2))
+    b: (cast: (int) (lm_compiler_mix_hash(t) % (cast: (unsigned) cap_cell[0])))
+    return: (cast: (int) (bucket_cell[0][b]))
+end: lm_compiler_mix_first
+
+fn: lm_compiler_mix_step (int: r; int: linear) int
+    @: n_cell int (cast: (@: int) (@ c.l2_mix_n))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_mix_next))
+    if: linear != 0
+        return: (cast: (int) (r + 1))
+    if: r < 0 || r >= n_cell[0] || next_cell[0] = 0
+        return: (cast: (int) (-1))
+    return: (cast: (int) (next_cell[0][r]))
+end: lm_compiler_mix_step

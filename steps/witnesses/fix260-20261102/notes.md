@@ -147,5 +147,11 @@ next slice's isolated builds and bootstrap take G0 = boot122a's G2 working tool 
 
 ## Evidence and the docs check
 
-`pins/docs260.command` ([record](records/docs260.command)): the raw manifest of the listed originals under P
-(`evidence.list` → `evidence.sha256`) and its verify.
+`pins/docs260.command` ([record](records/docs260.command)): the raw manifest of the 229 listed originals under P
+(`evidence.list` → `evidence.sha256`) and its verify, exit 0; 194 LF copies of the text records in [records/](records/).
+Commit `a4694ed3` «Land the boot122a-tested tp122 runtime admission of a free value at a modelled place and the kernel's kind
+rule in selfbuild (slice260)» (own files only: the design, `selfbuild/`, `steps/current.md`, this directory).
+`pins/docs260-check.command` ([record](records/docs260-check.command)): the ordinary full docs check with the slice files in the
+Git index, exit 0 (21:02:36-21:03:04Z): `OK: 35 paired semantic chapters, 14 implements cases, both source snapshots; 27 paired grammar sections, 44 verbatim source excerpts, 615 imported files, links, exact semantic opening; line endings LF in the index for all 14715 tracked files (verbatim imports exempt)`.
+The ledger (steps/defects.md) gains the entry NUMERIC-KIND-PRESENT-OPERAND (Codex's P1-NUMERIC-KIND, FIXED by this slice) in the
+records commit.

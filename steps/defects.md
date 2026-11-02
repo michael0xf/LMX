@@ -2853,6 +2853,25 @@ one value`. Так же объявление уже отказывает `a decl
 [долге M3](tickets/unique-name-reference-migration-20261014.md#m3-stale-k03-oracles).
 
 <a id="bitwise-operators-not-classified"></a>
+<a id="numeric-kind-present-operand"></a>
+### NUMERIC-KIND-PRESENT-OPERAND — 2026-11-02, Codex (P1-NUMERIC-KIND, ответ на FABLE-RESULT-TP121; найдено по коду frozen boot121a), FIXED срез260 `a4694ed3` (boot122a)
+
+Общая операция ядра `lmx_walk_value_bin` (её зовут обходчик и нативный runtime-типизированный путь) при PRESENT операнде
+другого вида — ссылка вместо числа (например `quote & 1U` при `@: quote int` у caller-а) — возвращала механический
+LMX_WALK_INVALID («walk error: INVALID», exit 3) вместо именованного контракта: книга :777 — несовместимость типов в
+операции/приёме есть implicit `convert`; числовой приём уже давал CONVERT при reference→number. Ни UNKNOWN frontend-тип, ни слово
+FREE не основание статически отклонять такой callee.
+
+Исправление (срез 260, Fable; [запись](witnesses/fix260-20261102/notes.md)): в `lmx_walk_value_bin` и `lmx_walk_value_unary`
+PRESENT операнд вида REFERENCE/FOREIGN там, где нужно число, — `LMX_WALK_THROWN + LMX_WALK_NAME_CONVERT` до операции (runtime-
+двойник статических «a reference where a number is asked» / «arithmetic on a reference» / «a reference compared by order»);
+EQ: две ссылки — сравнение (как было), ссылка и контекстный литерал 0 (`lmx_walk_value_null_literal`: NONE-типизированное число
+0, что оставляют `lmx_walk_value_contextual` и dyn-путь) — null-тест ссылки, как типизированная программа пишет `p = 0`; ссылка
+и иное число — `convert`; отсутствующий/неразрешённый операнд — по-прежнему механический INVALID. Та же граница у модельного
+места: `lmx_walk_admit_in` при числе в модельном own давал INVALID → теперь `convert` через общий приём графового места
+`lmx_walk_value_receive_graph`. Свидетели: `tests/dyn/free_machine_ops.lm2` outer_ref (104..109),
+`tests/dyn/free_model_admit.lm2` outer_num (85); пробы «до» — `tp121-probe` в записи среза.
+
 ### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 `b5c920aa` (классификация, native); обходчик FIXED срез259 `d8ddf134` (boot121a); OPEN — отказ до операции C в типизированном нативном пути, унарная `~`
 
 Машинный профиль L2 включает битовые операции (`docs/L2_spec_en.md`, раздел

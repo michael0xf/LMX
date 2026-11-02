@@ -1,6 +1,6 @@
 try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
 # tp115 fix02 (fable_pc): boot115's G1 runtime step refused lmx_arena_refs.lm2:515 -- a path `link\holder` passed as the
-# actual of an L2 call (`lmx_code_reset_from(arena, link\holder)`) is typed unknown, as tp114 learned for `firstalue`; the
+# actual of an L2 call (`lmx_code_reset_from(arena, link\holder)`) is typed unknown, as tp114 learned for `first\value`; the
 # variant casts it (`(cast: (@: c.Lmx) (link\holder))`) and gives lmx_range_side_release a local for the entry it frees.
 # The stage cold-tp115 takes the 19 files again from the variant (stage-copy over the existing stage), and
 # tp115-changed.sha256 / source-tp115.sha256 are recomputed and verified. Working tool 6619A503 (boot114's G2), fresh CWDs.

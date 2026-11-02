@@ -366,3 +366,15 @@ and the acceptance boundary (quick, not FULL; boot115d as the evidence of the pr
 and the failed attempts' receipts, tool115 and tool115e, boot115d's working tool and compare) and `evidence.sha256`
 (`docs253.command`: manifest + verify), LF copies of the text records in `records/` (248 files). Design document
 revisions 8 and 9; `steps/current.md` slice-253 entry; `build_performance_profile_from_fable.md` boot115f row.
+
+## The docs check: one control byte in a record comment; docs253b
+
+Commit `6ad874ea` (slice 253; parent `48a5ca4f`, origin had nothing new) was pushed; `docs253-check` then exited 1:
+`DOCS-CTRL steps/witnesses/fix253-20261102/records/tp115-prepare-fix02.command:3 byte 11` -- the description line of the fix02
+stage record had a vertical-tab byte (0x0B) where the path spelling `first` + backslash + `v` + `alue` was meant (the record's
+text had gone through a non-raw Python string, which turned the backslash-v pair into the control character; the record ran
+unaffected, the byte is in a comment). The byte is repaired in the pins original and in the LF copy here; `docs253b.command`
+rewrote `evidence.sha256` over the repaired original and verified it (2 steps, 06:23:01Z); `docs253b-check` exit 0:
+`OK: 35 paired semantic chapters, 14 implements cases, both source snapshots; 27 paired grammar sections, 44 verbatim source
+excerpts, 615 imported files, links, exact semantic opening; line endings LF in the index for all 13392 tracked files`. The
+repair is the second commit of the slice (evidence.sha256, the record copy, this note).

@@ -125,5 +125,11 @@ sources change (`tools/build.lm2`), so the next slice's isolated builds and boot
 
 ## Evidence and the docs check
 
-`pins/docs259.command` ([record](records/docs259.command)): the raw manifest of the listed originals under P
-(`evidence.list` → `evidence.sha256`) and its verify.
+`pins/docs259.command` ([record](records/docs259.command)): the raw manifest of the 142 listed originals under P
+(`evidence.list` → `evidence.sha256`) and its verify, exit 0 (19:45:27Z); 110 LF copies of the text records in [records/](records/).
+Commit `d8ddf134` «Land the boot121a-tested tp121 bitwise and shift operators as operations of the one kernel binary operation in
+selfbuild (slice259)» (own files only: the design, `selfbuild/`, `steps/current.md`, this directory).
+`pins/docs259-check.command` ([record](records/docs259-check.command)): the ordinary full docs check with the slice files in the
+Git index, exit 0 (19:46:01-19:46:28Z): `OK: 35 paired semantic chapters, 14 implements cases, both source snapshots; 27 paired grammar sections, 44 verbatim source excerpts, 615 imported files, links, exact semantic opening; line endings LF in the index for all 14515 tracked files (verbatim imports exempt)`.
+The ledger entry `BITWISE-OPERATORS-NOT-CLASSIFIED` (steps/defects.md) records this slice's status (the walker part closed; the
+typed native path's pre-operation refusal and unary `~` remain) in the records commit.

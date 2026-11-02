@@ -2853,7 +2853,7 @@ one value`. Так же объявление уже отказывает `a decl
 [долге M3](tickets/unique-name-reference-migration-20261014.md#m3-stale-k03-oracles).
 
 <a id="bitwise-operators-not-classified"></a>
-### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 `b5c920aa` (классификация, native); OPEN — обходчик
+### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 `b5c920aa` (классификация, native); обходчик FIXED срез259 `d8ddf134` (boot121a); OPEN — отказ до операции C в типизированном нативном пути, унарная `~`
 
 Машинный профиль L2 включает битовые операции (`docs/L2_spec_en.md`, раздел
 о машинном профиле), но общий классификатор выражений обходчика их не знает.
@@ -2889,6 +2889,17 @@ native `f` и исправления НЕ свидетельствует; отк
 переполнения знакового сдвига влево; унарная `~` («unsupported body» на
 объявлении, [воспроизведение](witnesses/l2tools170-20261023/defects/unary_not.lm2)). Вычисление обходчиком — изменение ядра (коды операций
 `lmx_walk`), оно ждёт kernel gate на L2.
+
+Срез 259 (Fable, 2026-11-02; `d8ddf134`, boot121a, [запись](witnesses/fix259-20261102/notes.md)): вычисление обходчиком
+сделано — коды операций `LMX_WALK_OP_BAND 58`, `BOR 59`, `BXOR 60`, `SHL 61`, `SHR 62` (`LMX_WALK_OP_COUNT 63`) в
+`tools/build.lm2`; одна общая бинарная операция ядра `lmx_walk_value_bin` (продвижения C99, сдвиг — раздельно; счётчик вне
+[0, ширина типа левого) и переполнение знакового сдвига влево — implicit `interpreter` ДО операции; разные типы — implicit
+`convert`) — её зовут обходчик (`lmx_walk_eval`) и нативный runtime-типизированный путь; walked типизированный путь
+(`lm_compiler_rw_machine_bitwise`) печатает настоящие кадры [op, left, right] вместо SOURCE_MACHINE, так что тело с битовой
+операцией исполняется обходчиком под `--walk-methods` (свидетели: `tests/bits/bit_values.lm2` — наблюдённый walk тел `bits` и
+`ints`; `tests/dyn/free_machine_ops.lm2` — свободный операнд, 81..103). Остаётся: типизированный НАТИВНЫЙ путь — оператор C
+на месте без отказа до операции для счётчика вне диапазона и знакового переполнения (машинный контракт L2 §21; обходчик и
+runtime-типизированный путь отказывают); унарная `~` — не в `l2_rw_prec`.
 
 <a id="put-writes-direct-structure-slot"></a>
 ### PUT-WRITES-DIRECT-STRUCTURE-SLOT — 2026-10-15, Opus (причина и норма — Codex, OPUS-CODEX-20261015-03/-04), FIXED cc9b89d7

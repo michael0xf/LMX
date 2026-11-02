@@ -232,4 +232,9 @@ record and the pointee cell, not through the table.
 ## Evidence and the docs check
 
 `pins/docs258.command` ([record](records/docs258.command)): the raw manifest of the 424 listed originals under P
-(`evidence.list` → `evidence.sha256`) and its verify.
+(`evidence.list` → `evidence.sha256`) and its verify, exit 0 (18:26:10Z).  Commit `12cac7fc` «Land the boot120a-tested
+tp120 runtime-typed deref, write and address of a free name in selfbuild (slice258)» (own files only: the design, `selfbuild/`,
+`steps/current.md`, this directory, `LMX_blog/2026-11-02.md`).  `pins/docs258-check.command` ([record](records/docs258-check.command)):
+the ordinary full docs check with the slice files in the Git index, exit 0 (18:27:41-18:30:36Z): `OK: 35 paired semantic
+chapters, 14 implements cases, both source snapshots; 27 paired grammar sections, 44 verbatim source excerpts, 615 imported
+files, links, exact semantic opening; line endings LF in the index for all 14399 tracked files (verbatim imports exempt)`.

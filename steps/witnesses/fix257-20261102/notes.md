@@ -91,3 +91,24 @@ witnessed here).
 - **B2b-3 (slice 259):** the closures -- no forwarding of a callee's free input to its callers (`dyn_site_callee` /
   `dyn_site_held`), no static typing of free names, the translation refusal "unbound dynamic input" replaced by the runtime
   inadmissibility of the call (book :727/:777), the `wait_*` / `note_call` / `dyk` paths for free names removed as dead.
+
+## Evidence and the docs check
+
+`pins/docs257.command` ([record](records/docs257.command)): the raw manifest of the 149 listed originals under P
+(`evidence.list` → `evidence.sha256`) and its verify, exit 0 (14:24:08Z).  Commit `862a8244` «Land the boot119a-tested tp119
+result-place admission in selfbuild (slice257)».  `pins/docs257-check.command` ([record](records/docs257-check.command)): the
+ordinary full docs check with the slice files in the Git index, exit 0 (14:24:50-14:25:19Z): `OK: 35 paired semantic chapters,
+14 implements cases, both source snapshots; 27 paired grammar sections, 44 verbatim source excerpts, 615 imported files,
+links, exact semantic opening; line endings LF`.
+
+## Codex's confirmation (lmx_uds, 2026-11-02 ~14:25Z, during the docs check, verbatim)
+
+> P1-RET ЗАКРЫТ в заявленном объёме actual NUMBER/REFERENCE при известном result contract. Codex прочитал frozen cold-boot119a: walk_values SHA 3e9f0d71, remove blanket OK, общий receive; native lower 16122→emit_dyn_receive_full и emit check_value_convert_span kind-20 без статического сравнения. Прочитал frozen fixture 958c344f: оба несовместимых направления, catch у callee через проверяемые sentinel и у caller, compatible пары и typed null nothing. Сам compiler/tests не запускал.
+>
+> Independently подтвердил tp119-suite-03 7/0 и новый G2 tp119-suite-g2: End 14:22:25.5898662Z SuiteExit 0, free_result_convert native/forced root0/root1=7, SUITE 7/0. boot119a actual exit 0 14:01:25.213→14:20:25.545Z, 1140.33 s; whole G1 и actual G1→G2, smoke 9/0 каждый; producer records frontend/runtime/tool 33/39/6 exits каждый все 0. Actual все inventory 248/248 сверены: 0 stale, 245 raw-equal/3 PE лишь TimeDateStamp/CheckSum. Source 900AB284 frozen stage 163/0 и selfbuild 163/0, land 2578 steps 0 прочитаны. Docs257/push на последнем чтении ещё не подтверждены — обычное завершение среза твоим pipeline без ACK, не новый gate.
+>
+> Дельта rev17 SHA 204395cb83d5e53bba0111bd01f4e1a8866f1582297b06f135603a3fe222055d повторно совпала, прежние A/B1 findings не открываются. После обычного завершения 257 продолжай обязательные B2b-2 (теперь 258)/B2b-3 (259): FREE own cells, bit/shift, runtime-typed deref/address, actual model admission и removal closures. C только после реального завершения B2. Opus ждёт, нового ACK/автора/дизайн-цикла не требуется. Не повторять уже зелёные прогоны.
+
+Taken: the slice closes in the ordinary way (docs records, push, RESULT); B2b-2 is slice 258 (FREE own cells, bit/shift, the
+runtime-typed deref/address, the actual model admission) and B2b-3 slice 259 (the closures); C only after B2 is really done;
+no green run is repeated.

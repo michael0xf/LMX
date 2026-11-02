@@ -1877,6 +1877,15 @@ fn: lm_compiler_indirect_resolve (int: mi; @: place c.L2Address) int
         ---
     ---
     place\source_type: ty
+    # Slice 258 (design 4.5 B2b-2a): a runtime-typed source (a free name) has no static pointer contract -- the kernel types
+    # each level at run time from the actual pointer code (lmx_walk_value_deref_actual); the place and its value stay
+    # runtime-typed (FREE, kind -20).
+    if: c.lm_compiler_ft_is_free(ty) != 0
+        place\index: ty
+        place\type: ty
+        place\model: -1
+        place\immutable: 0
+        return: (cast: (int) (0))
     if: c.lm_compiler_type_parts(c.lm_compiler_formal_raw(ty), @ word, @ pointer_depth, @ qualified) != 0
         c.lm_compiler_address_release(place)
         return: (cast: (int) (1))
@@ -3758,11 +3767,30 @@ end: lm_compiler_address_record
 # Original: l2src/l2trans.lm1:31534
 fn: lm_compiler_address_root (const: (@: path c.L2Path); int: mi; @: out c.L2Address) int
     @@: mres_addressed_cell int (cast: (@@: int) (@ c.l2_mres_addressed))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     int: own path\root_own
     int: i path\fi
+    int: k -1
+    @: free_name c.LmP0Text 0
     out\type: c.lm_compiler_path_rec_leaf_ft(path)
     out\model: path\leaf_model
     out\immutable: path\in_eternal
+    # Slice 258 (design 4.5 B2b-2a): the address of a free name is the address of its place in THIS activation (the input's,
+    # typed by the value it holds at run time: lmx_walk_values_arg_place), not of its lexical source -- the path record
+    # resolved the name to the home's field; the method's free input takes precedence here (kind 2, runtime-typed).
+    if: mi >= 0 && own >= 0 && path\run_count = 1
+        free_name: c.lm_compiler_reference_atom((cast: (@: c.LmP0Field) (path\source_first)), 1)
+        if: free_name != 0
+            k: c.lm_compiler_dyn_find(mi, free_name)
+        if: k >= 0 && c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, m_arity_cell[0][mi] + k)) != 0
+            out\kind: 2
+            out\index: m_arity_cell[0][mi] + k
+            out\descriptor: 0
+            out\model: -1
+            out\type: c.lm_compiler_input_ft(mi, m_arity_cell[0][mi] + k)
+            return: (cast: (int) (0))
+        ---
+    ---
     if: own >= 0
         out\kind: 1
         out\index: own
@@ -3785,6 +3813,11 @@ fn: lm_compiler_address_root (const: (@: path c.L2Path); int: mi; @: out c.L2Add
             out\kind: 2
             out\index: i
             out\descriptor: lm_compiler_input_is_descriptor(mi, i)
+            # Slice 258 (design 4.5 B2b-2a): a free input's address is runtime-typed whatever its lexical default says -- the
+            # path record carries the default's type; the input's own type is FREE.
+            if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, i)) != 0
+                out\type: c.lm_compiler_input_ft(mi, i)
+            ---
         else:
             if: path\root_kind = 5
                 out\kind: 3
@@ -3803,7 +3836,10 @@ fn: lm_compiler_address_root (const: (@: path c.L2Path); int: mi; @: out c.L2Add
     ---
     if: out\kind = 0
         return: (cast: (int) (2))
-    out\type: c.lm_compiler_address_type((cast: (int) (out\type)))
+    # Slice 258 (design 4.5 B2b-2a): the address of a free name is runtime-typed -- the pointer code of the place's actual type
+    # (lmx_walk_place_address); its kind stays -20.
+    if: c.lm_compiler_ft_is_free((cast: (int) (out\type))) = 0
+        out\type: c.lm_compiler_address_type((cast: (int) (out\type)))
     # A known machine location can have an opaque C type which the old local
     # metadata does not retain. Keep its type unknown, never int or void*;
     # its address still uses that actual C location.

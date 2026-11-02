@@ -2,8 +2,10 @@
 # every present runtime-typed value by the kernel's one admission (lmx_walk_result_receive -> lmx_walk_value_receive), as the
 # native return does.  A number returned where a pointer is declared (as_pointer from outer_number) and a pointer returned
 # where an int is declared (as_int from outer_pointer) are the implicit `convert` throw raised at the callee's return --
-# caught by the callee's own pad when it has one (as_pointer_pad then returns the address of `other`, as_int_pad 99: values
-# only the handler's path produces; a handler's bare write to a free name would stay activation-local, Q52), else by the
+# caught by the callee's own pad when it has one (as_pointer_pad then returns @(node\other), the UNIT's cell -- `@ other` would
+# be the address of its own activation's local copy of the hidden input, dead after the return (the author, 2026-11-02) --,
+# as_int_pad 99: values only the handler's path produces; a handler's bare write to a free name stays activation-local, Q52),
+# else by the
 # caller.  The compatible pairings pass: the int binding by the int result, the pointer binding by the pointer result, the
 # graph's typed null literal by the pointer result (nothing).  quote is bound as int (5) by outer_number and as a pointer to
 # marks (1) by outer_pointer.  Entry 7; 81.. name the failing check.
@@ -27,7 +29,7 @@ fn: as_pointer_pad () @: int
             caught: 1
     ---
     if: caught != 0
-        return: @ other
+        return: @(node\other)
     return: 0
 end: as_pointer_pad
 fn: as_int_pad () int

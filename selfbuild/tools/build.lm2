@@ -2022,7 +2022,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(144U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(146U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2356,6 +2356,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[141]: "lmx_walk_value_lit"
     walk_value_names[142]: "lmx_walk_value_receive"
     walk_value_names[143]: "lmx_walk_value_bin"
+    # Slice 258 (design 4.5 B2b-2a): the runtime-typed deref and address a generated program calls through the one kernel.
+    walk_value_names[144]: "lmx_walk_value_deref_actual"
+    walk_value_names[145]: "lmx_walk_place_address"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2810,7 +2813,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 144, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 146, 1)
 end: bld_kernel_l2
 
 # L3 declaration writer; all executable algorithm bodies are ordinary L2.

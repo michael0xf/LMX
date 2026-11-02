@@ -1,0 +1,155 @@
+# Slice 258 (design 4.5 B2b-2a; Codex's norm of 2026-11-02 ~13:25Z; the author's ruling of 2026-11-02 on `@x`): the deref
+# `\quote`, the write `\quote: v` and the address `@ quote` of a free name are runtime-typed -- the kernel types them at run
+# time from the actual value: the record owning an addressed payload or the pointee cell first, the pointer code's algebra
+# for other storage (lmx_walk_value_deref_actual, lmx_walk_place_address; the walker's DEREF/ADDRESS without a witness and the
+# native code run the same operations).  read_int / read_size read through a pointer binding into an int / a size_t result
+# (the other pointee is the implicit `convert`, caught by the caller); bump (a sub: its free input is resolved as a fn's is)
+# writes through the free pointer into the caller's declaration cell -- observed through the pointer (read_int: 6), while the
+# caller's bare working `cell` keeps 5 until its own next write (the book: no automatic reload; docs/LMX_semantics.en.md:487-491,
+# :500, :538); depth takes the address of a pointer binding (int**) and reads back through typed locals;
+# mixed keeps a C-door call so that its body stays native under --walk-methods while its callers are walked; next_level
+# dereferences a free name bound to an int** into a typed int* local.  A hidden input is a LOCAL of the activation (the
+# author: «переменные становятся локальными и мы их передаем скрытыми аргументами ... это локальный адрес; не локальный
+# только @(node\x)»): deep reads a number binding through `@ quote`; local_nine writes `quote: 9` (Q52) and reads 9 through
+# `@ quote` while the caller keeps 7; lexical, with no binding anywhere, addresses its own copy of the unit's field (11 -> 12)
+# and the unit's `quote` stays 11; unit_quote returns `@(node\quote)`, the unit's cell, written through from m (13).  Bindings:
+# outer_int `@: quote int` to cell 5, outer_size `@: quote size_t` to cell 7U, outer_number `int: quote 7`, outer_pp
+# `@@: quote int` to cellp -> cell 9.  Entry 7; 81.. name the failing check.
+predef: "l2src/lmx_arena.h.lm1"
+int: quote 11
+int: marks 1
+fn: read_int () int
+    return: \quote
+end: read_int
+fn: read_size () size_t
+    return: \quote
+end: read_size
+sub: bump ()
+    \quote: \quote + 1
+end: bump
+fn: mixed () int
+    int: one c.lmx_type_base(1)
+    return: \quote + one
+end: mixed
+fn: next_level () int
+    @: p int \quote
+    return: \p
+end: next_level
+fn: depth () int
+    @@: pp int 0
+    pp: @ quote
+    @: p int \pp
+    return: \p
+end: depth
+fn: deep () int
+    @: p int 0
+    p: @ quote
+    return: \p
+end: deep
+fn: local_nine () int
+    quote: 9
+    @: p int 0
+    p: @ quote
+    return: \p
+end: local_nine
+fn: lexical () int
+    @: p int 0
+    p: @ quote
+    \p: \p + 1
+    return: \p
+end: lexical
+fn: unit_quote () @: int
+    return: @(node\quote)
+end: unit_quote
+fn: outer_int () int
+    @: quote int 0
+    int: cell 5
+    size_t: got 0U
+    quote: @ cell
+    if: read_int() != 5
+        return: 81
+    bump()
+    if: read_int() != 6
+        return: 82
+    if: cell != 5
+        return: 98
+    if: depth() != 6
+        return: 83
+    if: mixed() != 7
+        return: 84
+    ---
+        got: read_size()
+        catch: convert ()
+            got: 90U
+    ---
+    if: got != 90U
+        return: 85
+    return: 0
+end: outer_int
+fn: outer_size () int
+    @: quote size_t 0
+    size_t: cell 7U
+    int: got 0
+    quote: @ cell
+    if: read_size() != 7U
+        return: 86
+    bump()
+    if: read_size() != 8U
+        return: 87
+    if: cell != 7U
+        return: 99
+    ---
+        got: read_int()
+        catch: convert ()
+            got: 91
+    ---
+    if: got != 91
+        return: 88
+    return: 0
+end: outer_size
+fn: outer_number () int
+    int: quote 7
+    if: deep() != 7
+        return: 89
+    if: local_nine() != 9
+        return: 92
+    if: quote != 7
+        return: 93
+    return: 0
+end: outer_number
+fn: outer_pp () int
+    int: cell 9
+    @: cellp int @ cell
+    @@: quote int 0
+    quote: @ cellp
+    if: next_level() != 9
+        return: 90
+    return: 0
+end: outer_pp
+fn: m () int
+    int: r outer_int()
+    if: r != 0
+        return: r
+    r: outer_size()
+    if: r != 0
+        return: r
+    r: outer_number()
+    if: r != 0
+        return: r
+    r: outer_pp()
+    if: r != 0
+        return: r
+    if: lexical() != 12
+        return: 94
+    if: node\quote != 11
+        return: 95
+    @: e int unit_quote()
+    if: \e != 11
+        return: 96
+    \e: 13
+    if: node\quote != 13
+        return: 97
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

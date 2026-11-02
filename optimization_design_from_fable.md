@@ -18,6 +18,76 @@
 подтверждены выборками attempt03, их «один участок за раз» заменён этим дизайном.
 
 Статус: дизайн и порядок реализации; реализация идёт по решениям Codex (срезы 250–253, ниже §6.1).
+Редакция 19 (2026-11-02 ~18:10 UTC, срез 258 = tp120, B2b-2a; запись `steps/witnesses/fix258-20261102/notes.md`): (1) Адрес
+свободного имени — решение автора (2026-11-02, через Codex; дословно в `LMX_blog/2026-11-02.md`): «...у нас даже из области
+видимости (динам и лекс) переменные становятся локальными и мы их передаем скрытыми аргументами, то есть и в таком случае это
+локальный адрес!!! Не локальй только @(node\x)» — скрытый вход (из динамического или лексического контекста) есть ЛОКАЛ
+активации; `@x` — адрес этого локала. Снято из ред. 18: «адрес настоящего хранилища привязки» (origin-alias отвергнут автором:
+ни ячейка caller-а, ни лексический источник через `@x` не подменяются); явный `@(node\x)` адресует внешнее место по написанному
+пути; bare write `x: v` и `@x` — одна локальная переменная (Q52) с actual типом/глубиной и сроком жизни активации (адрес не
+продлевает жизнь, не становится скрытым полем/замыканием, не адрес carrier/copy); статический shortcut `@unitfield` для скрытого
+входа не сохраняется и при лексическом fallback. Представление (Codex: «реальная типизированная semantic activation cell, общий
+native/walker place/address/deref/store путь»): запись входа активации (`LmxWalkValue` в `l2_received` нативного кадра /
+`f\argown` walker-а) и есть эта ячейка — место `lmx_walk_values_arg_place` над её payload с записью как `context` места (так
+уже устроен адрес типизированного формала, `emit_native_input_address`); `lmx_walk_place_address` даёт REFERENCE кода указателя
+actual типа места с записью-владельцем как referent; deref через такой указатель выводит тип указуемого сначала из
+записи-владельца (`lmx_walk_value_deref_actual`: `referent`, чьё storage = адресуемый payload), затем из ячейки арены, затем из
+алгебры кодов; запись через него — общий `lmx_walk_value_store` (`place\address` — payload записи, запись — owner контекста в
+`lmx_value_cell_fill`; `lmx_value_cell_access` даёт plain `void**` чтение/запись хранилищу вне пулов). Транслятор: скан `@field`
+поля юнита, видимого методом, регистрирует тот же скрытый вход, что и чтение имени (`lm_compiler_scan_ident`: тип с ячейкой
+значения → `dyn_add`; Array остаётся местом поля); `emit_free_input_address` печатает default-пролог входа, `arg_place(…,
+LMX_TYPE_NONE)` и `lmx_walk_place_address` (только full consumer; raw — located отказ); `rw_address` печатает ADDRESS без
+witness; actual указательного формала с kind −20 (адрес свободного имени, свободное значение) принимается кодом указателя
+формала в момент исполнения (`emit_call_arguments_full` → `emit_dyn_receive_full`, как числовой формал и как ссылочный RET среза
+257); bare write литерала в свободное имя (`quote: 9`) не сравнивается статически — место принимает любое значение одним
+приёмом при записи (`check_receiving_value_at`: FREE target). Свидетели: `tests/dyn/free_pointer_paths.lm2` — depth (адрес
+указательной привязки — int**, обратно через типизированные локалы), deep (адрес числовой привязки), local_nine (`quote: 9`,
+затем 9 через `@ quote`; caller хранит 7), lexical (без привязки где бы то ни было — адрес своей копии поля юнита, 11→12; поле
+юнита — 11), unit_quote (`@(node\quote)` — ячейка юнита, запись 13 через неё из m); `tests/dyn/free_result_convert.lm2` (срез
+257): `return: @ other` → `return: @(node\other)` — явное внешнее место по норме автора (прежнее `@ other` — адрес копии callee,
+мёртвый после возврата; проверки P1-RET convert/compatible/null сохранены); `free_value_consumers.lm2` `pick(@ marks)` — адрес
+локала outer, живой на время вызова. (2) Дефект B1 (срез 254) в обоих исполнителях: ядро ключевало callable ролью пула FN,
+которую эмиттер даёт только головам `fn` (`lm_compiler_fn_parts_on`; четыре части: header, result, vars, body); `sub` —
+обычная (PLAIN) Structure трёх частей (header, vars, body), walker активирует её как собственное тело
+(`lmx_walk_activate_values`). Следствия: нативно `lmx_activation_input_name`/`input_formal` ничего не находили для sub — его
+свободный вход никогда не разрешался по цепочке и читал лексический источник (`bump` свидетеля: копия поля юнита, затем deref
+числа — INVALID; gdb: вызова `lmx_activation_resolve` не было); walked — диспетчер вызова шёл путём actuals
+(`selected_signature` 0) и не помечал несформированный скрытый вход FREE, так что `lmx_walk_entry_resolve` его пропускал и
+snapshot входа читал лексический источник. Исправлено: резолвер принимает обе формы (заголовок args — часть 0 обеих);
+`lmx_walk_actuals_values` помечает такой вход FREE (нет written child, absent, запись заголовка из двух полей), как путь
+сигнатуры. (3) Правило книги, встреченное свидетелем: запись 6 через свободный указатель попадает в ячейку объявления
+caller-а, а голое рабочее `cell` caller-а читает 5 в обоих исполнителях — публикация только перед передачей управления,
+без автоматического перечитывания (docs/LMX_semantics :487–:491, :500 «`@x` в обеих активациях адресует ту же ячейку
+объявления», :538); не дефект: свидетель наблюдает запись через указатель (`read_int()` = 6) и закрепляет правило (голая копия
+хранит 5). (4) P1-PTR-COVERAGE (Codex, 2026-11-02 ~15:25Z) остаётся ОТКРЫТЫМ: таблица `lmx_type_pointee`/`lmx_type_pointer_to`
+— не полное покрытие и не норма; `lmx_walk_place_address` над descriptor/графовым местом (`LMX`/`DESC`) — UNSUPPORTED как
+открытый implementation gap текущего B2, не принятая граница (книга разрешает `@` произвольной глубины; норма 470: `@A`
+Structure — ячейка, не descriptor); следующий уровень известного указателя — через запись-владельца и ячейку (cell-first).
+Инструмент: `tools/build.lm2` экспортирует `lmx_walk_value_deref_actual`/`lmx_walk_place_address` (144 → 146) — rebuild tool
+(tool120 `443C27BB…`), инструмент всех шагов и G0 boot120a.
+
+Редакция 18 (2026-11-02 ~15:00 UTC, срез 258 = tp120, B2b-2a; запись `steps/witnesses/fix258-20261102/notes.md`): (1) deref
+`\x`, запись `\x: v` и адрес `@ x` свободного имени — runtime-типизированный путь по норме Codex (ред. 16): алгебра кодов
+указателей ядра — `lmx_type_pointee(code)` / `lmx_type_pointer_to(type)` (единая таблица кодов, которые транслятор пишет как
+`LMX_TYPE_POINTER_BASE + код формала`: `lm_compiler_core_pointer_type`/`type_parts` — её compile-time образ; opaque `void*`,
+foreign C-тип, графовая ссылка — без pointee/pointer кода: `LMX_WALK_UNSUPPORTED`, существующий runtime отказ, без выдуманного
+типа); общие операции `lmx_walk_value_deref_actual(arena, holder, place)` (тип указуемого из actual pointer code holder-а →
+`LmxWalkPlace`; null holder — implicit `interpreter`) и `lmx_walk_place_address(arena, place, value)` (REFERENCE кода указателя
+на actual тип места, адрес настоящего хранилища, контекст места как referent — норма 470: `@x` и `x` не теряют уровень ссылки);
+walker-овские DEREF/ADDRESS без статического witness (пустой слот 2 — так frontend пишет кадры для свободного источника) зовут
+их; нативный код печатает те же helper-ы (`emit_free_indirect_span_full`, `emit_free_indirect_store` →
+`lmx_walk_value_store` с допуском/immutable/native-reset в момент записи, `emit_free_input_address` — место входа активации
+по `lmx_walk_values_arg_place` без статического типа); frontend: `indirect_resolve`/`address_root` оставляют FREE источнику
+kind −20 вместо статического pointer contract (ранее located «the dereference operand has no pointer contract»). (2) «FREE
+own cells» сняты как пункт: по правилу автора (bafca4c, docs/new_parts/assignment_is_not_declaration) `twice: quote + quote`
+без слова типа — не локал, а bare write в свободное имя `twice` (Q52, activation-local); без привязки где бы то ни было и без
+лексического источника вызов недопустим в момент исполнения — правило B2b-3; сегодняшний статический отказ «return value has
+incompatible type» на чтении такого имени (probe tp119-obs-02, 14:37Z) снимается вместе с замыканием (срез 260). Located
+«нужен тип слова» среза 255 — не граница, а язык: локал объявляется словом типа и принимает runtime-значение одним приёмом.
+(3) Машинные операции (битовые, сдвиг) над свободным операндом — срез 259 вместе со свободным значением в место с моделью:
+коды операций walker-а живут в `tools/build.lm2` (заголовок `lmx_walk.h.lm1`: `LMX_WALK_OP_*`, COUNT 58) — новые коды
+BAND/BOR/BXOR/SHL/SHR = изменение инструмента (rebuild tool, новый G0) до bootstrap-а. Нумерация: 258 = B2b-2a, 259 = B2b-2b,
+260 = B2b-3 (замыкания).
 Редакция 17 (2026-11-02 ~14:30 UTC, срез 257 = tp119, P1-RET по ответу Codex на TP118; запись
 `steps/witnesses/fix257-20261102/notes.md`): (1) ядро — `lmx_walk_result_receive` проводит каждое присутствующее
 NUMBER/REFERENCE значение через `lmx_walk_value_receive` при известном witness результата; оба blanket-прохода (число в
@@ -923,15 +993,23 @@ frontend (`lmx_walk_input_width` читает только записанные 
     Structure-формал — динамический кандидат, чей допуск требует канала статуса вызывающего (правило допуска Structure, не
     среза; свидетель перешёл на указатель); форма формала-указателя `@: имя тип`; тип параметра прототипа читался
     `own_decl_ty` как unsigned — читается `typed_formal`.
-    **Остаётся** (B2b-2, срез 258): FREE-типизированные собственные ячейки (`twice: quote + quote` без слова типа — запись
-    `LmxWalkValue` в нативном коде; у walker-а строка `work` без типа, типизируемая первым значением) и машинные операции
-    (битовые, сдвиг) над свободным операндом — общая операция ядра `lmx_walk_value_machine` с продвижениями C99; deref `\x`
-    и адрес `@ x` свободного указателя — runtime-типизированный путь (ред. 16, норма Codex): общая операция ядра при
-    достигнутом deref выводит тип указуемого из actual pointer type/descriptor и даёт `LmxWalkPlace`
-    (`lmx_walk_value_deref_place`), нативный код печатает вызов того же helper; `@x` — адрес настоящего места x с его actual
-    type/depth (норма 470: `@x` и `x` не теряют уровень ссылки); opaque `void*` без выдуманного pointee type — существующий
-    runtime отказ либо явный контракт/cast; свидетель — pointer binding разных actual pointee types, read/write/address-depth,
-    n/f/mixed; свободное значение в место с моделью (допуск `implements` в момент приёма). (B2b-3, срез 259): замыкания — без
+    **Снято** (ред. 18): «FREE-типизированные собственные ячейки» — по bafca4c (assignment is not a declaration) `twice: quote
+    + quote` без слова типа есть bare write в свободное имя, не локал: без привязки и лексического источника — runtime-
+    недопустимость вызова (правило B2b-3, срез 260); типизированный локал (`int: twice quote + quote`) — язык, не граница.
+    **Остаётся** (B2b-2b, срез 259): машинные операции (битовые, сдвиг) над свободным операндом — общая операция ядра
+    `lmx_walk_value_machine` с продвижениями C99 (коды в `tools/build.lm2` → rebuild tool); свободное значение в место с
+    моделью. **Реализовано** (B2b-2a, срез 258, tp120; запись `steps/witnesses/fix258-20261102/notes.md`): deref `\x`,
+    запись `\x: v` и адрес `@ x` свободного имени — runtime-типизированный путь (ред. 16/19): общая операция ядра при достигнутом
+    deref выводит тип указуемого из записи-владельца payload-а (referent), ячейки арены или actual pointer code и даёт
+    `LmxWalkPlace` (`lmx_walk_value_deref_actual` → `lmx_walk_value_deref_place`), нативный код печатает вызов того же helper;
+    `@x` — адрес ЛОКАЛА активации (решение автора 2026-11-02: скрытый вход — локал; `@(node\x)` — внешнее место): REFERENCE кода
+    указателя actual типа места входа (`lmx_walk_place_address`, запись входа — referent; норма 470: `@x` и `x` не теряют уровень
+    ссылки); opaque `void*`/descriptor место без выдуманного кода — существующий runtime отказ (P1-PTR-COVERAGE открыт);
+    свидетель `tests/dyn/free_pointer_paths.lm2` — pointer binding разных actual pointee types (int*, size_t*), read/write (sub
+    `bump`: ядро принимает трёхчастный plain callable в резолвере и в walked-диспетчере — дефект B1 исправлен; запись через
+    указатель наблюдается через указатель, голая рабочая копия caller-а хранит прежнее значение — правило публикации книги
+    :487–:491), depth/deep/local_nine/lexical/unit_quote, n/f/mixed (тело с C-дверью остаётся нативным в --walk-methods).
+    (B2b-3, срез 260): замыкания — без
     пересылки свободных имён
     (`dyn_site_callee`/`dyn_site_held` не добавляют вход вызывающему для свободного входа callee), без статической
     типизации, отказ трансляции «unbound dynamic input» для свободного входа → runtime-недопустимость вызова (книга

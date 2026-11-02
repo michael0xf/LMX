@@ -1457,6 +1457,142 @@ fn: lmx_walk_value_deref_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; i
     return: c.LMX_WALK_OK
 end: lmx_walk_value_deref_place
 
+# Slice 258 (design 4.5 B2b-2a): the algebra of the pointer codes the translator spells -- LMX_TYPE_POINTER_BASE + the
+# formal's code (lm_compiler_ptr_cell_type; the codes of lm_compiler_core_pointer_type: 11 int*, 12 char*, 3 const char*,
+# 9 size_t*, 25 unsigned*, 38 ulong*, 16 void*; 19 int**, 17 char**, 20 size_t**, 24 unsigned**, 39 ulong**, 18 void**) --
+# read at run time where the translator had no type: a free pointer's deref and a free place's address.  The pointee of a
+# text (CHAR_PTR) is a char.  An opaque pointee (void*, a foreign C type, a graph reference) and a place without a pointer
+# code have no value type here: LMX_TYPE_NONE, the caller's runtime refusal -- never an invented type.
+fn: lmx_type_pointee (int: code) int
+    int: ft 0
+    code: c.lmx_type_base(code)
+    if: code = c.LMX_TYPE_CHAR_PTR
+        return: c.LMX_TYPE_CHAR
+    if: code < c.LMX_TYPE_POINTER_BASE
+        return: c.LMX_TYPE_NONE
+    ft: code - c.LMX_TYPE_POINTER_BASE
+    if: ft = 11
+        return: c.LMX_TYPE_INT
+    if: ft = 12 || ft = 3
+        return: c.LMX_TYPE_CHAR
+    if: ft = 9
+        return: c.LMX_TYPE_SIZE_T
+    if: ft = 25
+        return: c.LMX_TYPE_UNSIGNED
+    if: ft = 38
+        return: c.LMX_TYPE_ULONG
+    if: ft = 19
+        return: c.LMX_TYPE_POINTER_BASE + 11
+    if: ft = 17
+        return: c.LMX_TYPE_POINTER_BASE + 12
+    if: ft = 20
+        return: c.LMX_TYPE_POINTER_BASE + 9
+    if: ft = 24
+        return: c.LMX_TYPE_POINTER_BASE + 25
+    if: ft = 39
+        return: c.LMX_TYPE_POINTER_BASE + 38
+    if: ft = 18
+        return: c.LMX_TYPE_POINTER_BASE + 16
+    return: c.LMX_TYPE_NONE
+end: lmx_type_pointee
+
+fn: lmx_type_pointer_to (int: ty) int
+    int: ft 0
+    ty: c.lmx_type_base(ty)
+    if: ty = c.LMX_TYPE_INT
+        return: c.LMX_TYPE_POINTER_BASE + 11
+    if: ty = c.LMX_TYPE_CHAR
+        return: c.LMX_TYPE_POINTER_BASE + 12
+    if: ty = c.LMX_TYPE_SIZE_T
+        return: c.LMX_TYPE_POINTER_BASE + 9
+    if: ty = c.LMX_TYPE_UNSIGNED
+        return: c.LMX_TYPE_POINTER_BASE + 25
+    if: ty = c.LMX_TYPE_ULONG
+        return: c.LMX_TYPE_POINTER_BASE + 38
+    if: ty = c.LMX_TYPE_CHAR_PTR
+        return: c.LMX_TYPE_POINTER_BASE + 17
+    if: ty < c.LMX_TYPE_POINTER_BASE
+        return: c.LMX_TYPE_NONE
+    ft: ty - c.LMX_TYPE_POINTER_BASE
+    if: ft = 11
+        return: c.LMX_TYPE_POINTER_BASE + 19
+    if: ft = 12
+        return: c.LMX_TYPE_POINTER_BASE + 17
+    if: ft = 9
+        return: c.LMX_TYPE_POINTER_BASE + 20
+    if: ft = 25
+        return: c.LMX_TYPE_POINTER_BASE + 24
+    if: ft = 38
+        return: c.LMX_TYPE_POINTER_BASE + 39
+    if: ft = 16
+        return: c.LMX_TYPE_POINTER_BASE + 18
+    return: c.LMX_TYPE_NONE
+end: lmx_type_pointer_to
+
+# Slice 258 (design 4.5 B2b-2a): the DEREF of an actual pointer whose pointee type the translator did not know (a free
+# pointer): the place is typed by the holder's actual pointer code (lmx_type_pointee), the same selection as a typed DEREF's
+# (lmx_walk_value_deref_place: a null holder is the implicit `interpreter` throw).  An opaque pointee is UNSUPPORTED -- the
+# existing runtime refusal, no invented type.  Both the walker's DEREF without a witness and the native code run this.
+fn: lmx_walk_value_deref_actual (@: arena c.LmxArena; @: holder c.LmxWalkValue; @: out c.LmxWalkPlace) int
+    int: ty 0
+    int: kind 0
+    @: owner c.LmxWalkValue 0
+    if: holder = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    c.memset((cast: (@: void) out), 0, c.sizeof(c.LmxWalkPlace))
+    if: holder\present = 0 || holder\kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
+    # The record owning the addressed payload first: the address of a free name (lmx_walk_place_address) refers to the
+    # activation's input record -- the typed semantic cell of that local (the author, 2026-11-02: a hidden input is a local of
+    # the activation, `@x` its local address) -- as its referent; the record's actual type is the pointee's (a number's, or a
+    # pointer cell's: the next level of a known pointer).
+    owner: holder\referent
+    if: holder\ref != 0 && owner != 0 && (owner\kind = c.LMX_WALK_VALUE_NUMBER || owner\kind = c.LMX_WALK_VALUE_REFERENCE) && lmx_walk_value_storage(owner) = holder\ref
+        ty: owner\type
+    # The actual pointee cell first (P1-PTR-COVERAGE): a cell of the arena's pools tells its own kind and exact type -- a
+    # Structure, an Array, a number, a pointer cell (the next level of a known pointer); the pointer-code table only for
+    # storage outside the pools (a free input's own record, machine storage).
+    if: holder\ref != 0
+        kind: (cast: (int) c.lmx_domain_kind(arena, holder\ref))
+        if: kind = c.LMX_KIND_STRUCT
+            ty: c.LMX_TYPE_LMX
+        if: kind = c.LMX_KIND_ARRAY
+            ty: c.LMX_TYPE_DESC
+        if: kind = c.LMX_KIND_PRIMITIVE
+            ty: (cast: (int) c.lmx_domain_type(arena, holder\ref))
+    ---
+    if: ty = c.LMX_TYPE_NONE
+        ty: lmx_type_pointee(holder\type)
+    if: ty = c.LMX_TYPE_NONE
+        return: c.LMX_WALK_UNSUPPORTED
+    return: lmx_walk_value_deref_place(arena, holder, ty, out)
+end: lmx_walk_value_deref_actual
+
+# Slice 258 (design 4.5 B2b-2a): the ADDRESS of a selected place as a reference of the place's pointer code
+# (lmx_type_pointer_to): the real typed storage, the place's context as the referent -- `@x` and `x` keep their reference
+# depth (norm 470).  A descriptor place or a place without a pointer code (a graph reference, an opaque cell) is
+# UNSUPPORTED.  Both the walker's ADDRESS without a witness and the native code run this.
+fn: lmx_walk_place_address (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: out c.LmxWalkValue) int
+    int: ty 0
+    int: status 0
+    @: storage void 0
+    if: place = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    if: place\descriptor != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    storage: place\storage
+    if: storage = 0
+        storage: place\address
+    if: storage = 0
+        return: c.LMX_WALK_INVALID
+    ty: lmx_type_pointer_to((cast: (int) place\type))
+    if: ty = c.LMX_TYPE_NONE
+        return: c.LMX_WALK_UNSUPPORTED
+    status: lmx_walk_value_ref(out, ty, storage)
+    out\referent: lmx_walk_place_context(arena, place)
+    return: status
+end: lmx_walk_place_address
+
 # Descriptor places are not numeric/pointer cells. Preserve the common cell store.
 fn: lmx_walk_value_store (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value c.LmxWalkValue) int
     c.LmxPointerCellWrite: write c.lmx_pointer_store_known
@@ -3031,7 +3167,14 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
         status: c.lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ holder)
         if: status != c.LMX_WALK_OK
             return: status
-        status: lmx_walk_value_deref_place((cast: (@: c.LmxArena) f\arena), @ holder, lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)), out)
+        # Slice 258 (design 4.5 B2b-2a): without a static witness (a free pointer) the pointee type is the holder's actual
+        # pointer code's (lmx_walk_value_deref_actual).
+        witness: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)
+        if: witness = 0
+            status: lmx_walk_value_deref_actual((cast: (@: c.LmxArena) f\arena), @ holder, out)
+        else:
+            status: lmx_walk_value_deref_place((cast: (@: c.LmxArena) f\arena), @ holder, lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness), out)
+        ---
         if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
             return: lmx_walk_fault(f)
         return: status
@@ -3862,6 +4005,8 @@ end: lmx_walk_argument_storage
 fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t: n; @: contract c.Lmx; @: receiver c.Lmx; @: order size_t; @@@: refs_out void; @@: values_out c.LmxWalkValue) int
     @: room void 0
     @: child void 0
+    @: entry c.Lmx 0
+    @: entry_fields c.VoidArray 0
     @: values c.LmxWalkValue 0
     @: received c.LmxWalkValue 0
     @: witness void 0
@@ -3952,6 +4097,21 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
             ---
         ---
         received: values + at
+        # Slice 258 (design 4.5 B1 fix): a hidden input the caller does not form -- no written child (the call site puts none
+        # for a free input, lm_compiler_rw_call_arguments), absent, the contract's header entry of two fields (a written formal
+        # has four) -- travels marked LMX_WALK_VALUE_FREE: the callee resolves it at its entry from the chain of activations
+        # (lmx_walk_entry_resolve), as the signature path marks it (lmx_walk_selected_ready_values).  This path serves a
+        # plain-role callable (a `sub`): before, its free input stayed an ordinary absent one and the entry's snapshot read the
+        # lexical source whatever the caller bound.
+        if: status = c.LMX_WALK_OK && child = 0 && received\present = 0
+            entry: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, at))
+            if: entry != 0
+                entry_fields: @ entry\array
+                if: entry_fields\size = 2U
+                    received\kind: c.LMX_WALK_VALUE_FREE
+                ---
+            ---
+        ---
         if: status = c.LMX_WALK_OK && received\present != 0
             if: receiver != 0
                 if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), contract, at, @ header_source, @ witness) != 0
@@ -5380,7 +5540,12 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             return: status
         if: place_p\descriptor = 0 && place_p\address = 0 && place_p\storage = 0
             return: c.LMX_WALK_INVALID
-        a: lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U))
+        # Slice 258 (design 4.5 B2b-2a): without a static witness (the address of a free name) the reference has the pointer
+        # code of the place's actual type (lmx_walk_place_address).
+        want: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)
+        if: want = 0
+            return: lmx_walk_place_address((cast: (@: c.LmxArena) f\arena), @ place, out)
+        a: lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), want)
         if: place_p\storage != 0
             status: lmx_walk_value_ref(out, a, (cast: (@: void) place_p\storage))
         else:
@@ -5921,11 +6086,23 @@ fn: lmx_activation_input_name (@: arena c.LmxArena; @: code c.Lmx; size_t: k) @:
     if: arena = 0 || code = 0 || c.lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
         return: 0
     pool: (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) code)))
-    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
+    if: pool = 0
         return: 0
     @: fields c.VoidArray @ code\array
-    if: fields\size != 4U
-        return: 0
+    # A `fn` is a FN-role Structure of four parts (header, result, vars, body: lm_compiler_fn_parts_on gives the role to `fn`
+    # heads); a `sub` is an ordinary (PLAIN) Structure of three (header, vars, body), activated by the walker as its own body
+    # (lmx_walk_activate_values).  The args header is part 0 of both.  Slice 258: keyed by the FN role since slice 254, a
+    # sub's free input was never resolved from the chain -- it read its lexical source whatever the caller bound (the
+    # fixture's `bump` wrote the unit field's copy, then dereferenced a number: INVALID).
+    if: pool\role = c.LMX_POOL_ROLE_FN
+        if: fields\size != 4U
+            return: 0
+        ---
+    else:
+        if: fields\size != 3U
+            return: 0
+        ---
+    ---
     header: c.lmx_graph_ref_struct_in(arena, code, 0U)
     if: header = 0
         return: 0
@@ -5955,11 +6132,23 @@ fn: lmx_activation_input_formal (@: arena c.LmxArena; @: code c.Lmx; size_t: k) 
     if: arena = 0 || code = 0 || c.lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
         return: 0
     pool: (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) code)))
-    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
+    if: pool = 0
         return: 0
     @: fields c.VoidArray @ code\array
-    if: fields\size != 4U
-        return: 0
+    # A `fn` is a FN-role Structure of four parts (header, result, vars, body: lm_compiler_fn_parts_on gives the role to `fn`
+    # heads); a `sub` is an ordinary (PLAIN) Structure of three (header, vars, body), activated by the walker as its own body
+    # (lmx_walk_activate_values).  The args header is part 0 of both.  Slice 258: keyed by the FN role since slice 254, a
+    # sub's free input was never resolved from the chain -- it read its lexical source whatever the caller bound (the
+    # fixture's `bump` wrote the unit field's copy, then dereferenced a number: INVALID).
+    if: pool\role = c.LMX_POOL_ROLE_FN
+        if: fields\size != 4U
+            return: 0
+        ---
+    else:
+        if: fields\size != 3U
+            return: 0
+        ---
+    ---
     header: c.lmx_graph_ref_struct_in(arena, code, 0U)
     if: header = 0
         return: 0

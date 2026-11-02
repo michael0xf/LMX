@@ -1305,6 +1305,18 @@ fn: lm_compiler_check_receiving_value_at (const: (@: stmt c.LmP0Node); @: first 
                 return: (cast: (int) (1))
         ---
     ---
+    # Slice 258 (design 4.5 B2b-2a; the rule of slice 257 for the return): a runtime-typed value -- a free name's value, its
+    # deref or its address -- where a pointer is declared is admitted at run time by the one receive (lmx_walk_value_receive
+    # with the place's pointer code, lm_compiler_emit_dyn_receive_full); no static comparison.  A place with a receiving model
+    # keeps its admission path (slice 259).
+    if: receiving_model < 0 && c.lm_compiler_pointer_depth(target_ty) > 0 && c.lm_compiler_ft_is_free(value_ty) != 0
+        return: (cast: (int) (0))
+    # Slice 258 (the author, 2026-11-02: a hidden input is a local of the activation -- a bare write to it is activation-local,
+    # Q52 -- and types are judged at run time): a free name's place receives ANY value by the one admission at the store
+    # (lmx_walk_value_store -> lmx_walk_value_receive by the record's actual type: a contextual literal takes the place's type,
+    # a number of another type is the implicit `convert`); no static comparison with the free type (the target's dt is FREE).
+    if: receiving_model < 0 && c.lm_compiler_ft_is_free(target_ty) != 0
+        return: (cast: (int) (0))
     # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): a call whose
     # callee has no result (value_ty = 8, l2_colon_simple_ty's own void code,
     # the same one a real sub or a void-returning predef gives) refuses with
@@ -9662,6 +9674,12 @@ fn: lm_compiler_rw_indirect (const: (@: base c.LmP0Text); int: levels; int: sour
         if: c.lm_compiler_rw_machine_local(base, out) = 0
             return: (cast: (int) (0))
         return: (cast: (int) (c.lm_compiler_rw_refuse(0, "a dereference without a retained binding")))
+    # Slice 258 (design 4.5 B2b-2a): a runtime-typed pointer: the DEREF frame carries no static witness -- the walker types the
+    # place from the holder's actual pointer code (lmx_walk_value_deref_actual).
+    if: c.lm_compiler_ft_is_free(source_type) != 0
+        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_DEREF", 3, out) != 0 || lm_compiler_rw_indirect(base, levels - 1, source_type, (cast: (int) (\out)), @ child) != 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 1, child)))
     while: i < levels
         ty: c.lm_compiler_indirect_type(ty)
         if: ty < 0
@@ -9685,6 +9703,11 @@ fn: lm_compiler_rw_indirect_location (const: (@: place c.L2Address); int: levels
             return: (cast: (int) (lm_compiler_rw_path_value_rec((lm_compiler_port249_1_L2Address_operand_node(place)), (cast: (const: @: c.L2Path) (@ place\path)), parent, out)))
         c.memcpy(@ operand, @ place\operand, c.sizeof(c.L2ValueSpan))
         return: (cast: (int) (lm_compiler_rw_span(@ operand, (cast: (int) (c.lm_compiler_own_ty_of_param((cast: (int) (place\source_type))))), parent, out)))
+    # Slice 258 (design 4.5 B2b-2a): a runtime-typed pointer's written place: the DEREF frame without a static witness.
+    if: c.lm_compiler_ft_is_free(ty) != 0
+        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_DEREF", 3, out) != 0 || lm_compiler_rw_indirect_location(place, levels - 1, (cast: (int) (\out)), @ child) != 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 1, child)))
     while: i < levels
         ty: c.lm_compiler_indirect_type(ty)
         if: ty < 0
@@ -9714,6 +9737,11 @@ fn: lm_compiler_rw_indirect_span (@: operand c.L2ValueSpan; int: levels; int: so
     int: child
     if: levels = 0
         return: (cast: (int) (lm_compiler_rw_span(operand, (cast: (int) (c.lm_compiler_own_ty_of_param(source_type))), parent, out)))
+    # Slice 258 (design 4.5 B2b-2a): a runtime-typed pointer: the DEREF frame without a static witness.
+    if: c.lm_compiler_ft_is_free(source_type) != 0
+        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_DEREF", 3, out) != 0 || lm_compiler_rw_indirect_span(operand, levels - 1, source_type, (cast: (int) (\out)), @ child) != 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 1, child)))
     while: i < levels
         ty: c.lm_compiler_indirect_type(ty)
         if: ty < 0
@@ -9994,7 +10022,12 @@ fn: lm_compiler_rw_address (const: (@: address c.L2Address); int: parent; @: out
         if: lm_compiler_rw_machine_path(address, @ operator, 0, 0, holder, @ value) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (c.lm_compiler_rw_put(holder, 0, value)))
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0 || lm_compiler_rw_witness((cast: (int) (\out)), 2, (cast: (int) (c.lm_compiler_own_ty_of_param((cast: (int) (address\type))))), 0) != 0
+    # Slice 258 (design 4.5 B2b-2a; the author, 2026-11-02, via Codex: a hidden input is a local of the activation, `@x` its
+    # local address): the address of a free name carries no static witness -- the walker gives the reference the pointer code
+    # of the input place's actual type (lmx_walk_place_address), the same operation the native code calls.
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0
+        return: (cast: (int) (1))
+    if: c.lm_compiler_ft_is_free((cast: (int) (address\type))) = 0 && lm_compiler_rw_witness((cast: (int) (\out)), 2, (cast: (int) (c.lm_compiler_own_ty_of_param((cast: (int) (address\type))))), 0) != 0
         return: (cast: (int) (1))
     holder: \out
     if: address\kind = 8

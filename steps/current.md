@@ -315,6 +315,39 @@ P1-RET из ответа Codex на FABLE-RESULT-TP118 (ссылочный RET �
 моделью), B2b-3 (срез 259: снятие замыканий), затем C. Opus ждёт; writer/build у Fable.
 [Срез257](witnesses/fix257-20261102/notes.md).
 
+### Fable, 2026-11-02 — срез258
+
+B2b-2a над посаженным source-tp119: tp120. Runtime-типизированные deref `\x`, запись `\x: v` и адрес `@ x` свободного имени.
+Ядро — `lmx_type_pointee`/`lmx_type_pointer_to` (алгебра кодов указателей транслятора; не полное покрытие и не норма —
+P1-PTR-COVERAGE Codex остаётся открытым), `lmx_walk_value_deref_actual` (тип указуемого: сначала запись-владелец payload-а
+(referent), затем ячейка арены, затем алгебра; null — implicit `interpreter`), `lmx_walk_place_address` (REFERENCE кода
+указателя actual типа места, запись-владелец — referent; descriptor-место — UNSUPPORTED, открытый gap); walker-овские
+DEREF/ADDRESS без witness зовут их, нативный код печатает те же helper-ы. Решение автора (2026-11-02, через Codex; дословно в
+`LMX_blog/2026-11-02.md`): скрытый вход — ЛОКАЛ активации, `@x` — его локальный адрес; внешнее место — только явный
+`@(node\x)`; предложение origin-alias отвергнуто. Представление — запись входа активации и есть типизированная ячейка локала
+(`lmx_walk_values_arg_place` над payload с записью как context; `lmx_value_cell_fill` пишет через owner). Фронтенд: скан `@field`
+регистрирует тот же скрытый вход, что и чтение; `emit_free_input_address` (default-пролог, `arg_place(…, LMX_TYPE_NONE)`,
+`lmx_walk_place_address`; raw — located отказ); `rw_address` без witness; actual указательного формала kind −20 принимается кодом
+формала в момент исполнения (`emit_dyn_receive_full`); FREE target не сравнивается статически (приём при записи);
+`indirect_resolve`/`address_root` оставляют FREE источнику kind −20. Найдено и исправлено: дефект B1 (срез 254) в обоих
+исполнителях — ядро ключевало callable ролью пула FN (только головы `fn`, четыре части); `sub` (PLAIN, три части) не разрешал
+свободный вход по цепочке ни нативно (`lmx_activation_input_name`), ни walked (путь actuals не помечал вход FREE). Встречено
+правило книги (:487–:491, :500, :538): запись через указатель в ячейку объявления caller-а наблюдается через указатель/явный
+путь, голая рабочая копия не перечитывается — свидетель следует книге. Снято: «FREE own cells» (bafca4c, Q52). `tools/build.lm2`:
+два экспорта (144 → 146) — rebuild tool (tool120 `443C27BB…`), инструмент всех шагов и G0 bootstrap-а. Свидетели
+`tests/dyn/free_pointer_paths.lm2` (`runs … 7 nf`: read_int/read_size/bump(sub)/mixed/next_level/depth/deep/local_nine/lexical/
+unit_quote; 81..99) и `tests/dyn/free_result_convert.lm2` (`return: @(node\other)`). Четырнадцать постановок стадии (fix01–fix14),
+шесть `build-runtime` (rt120…rt120f), двенадцать `build-frontend` (fe120…fe120l), пятнадцать прогонов фокусной сюиты; сюита-15
+fe120l+rt120f: 8 строк, 0 отказов; наблюдаемый walk — тело m walked. boot120a (стадия = source-tp120 `55C1CC2D…`, 164
+входа, G0 = tool120, прежний frontend — G2 boot119a `1249DB48…`): 18:04:33 → 18:22:38Z, 1085 с, `BOOTSTRAP quick 0 failures`,
+245 из 248 путей побайтно равны, PE-образы — только метка компоновки; рабочий инструмент G2 `51F4F022…`; фокусная
+сюита на G2 — 8 строк, 0 отказов. По тому же правилу в `selfbuild/` посажен цельный source-tp120: 7 изменённых входов (lmx_walk_values,
+l2_frontend_resolve, l2_frontend_lower, l2_frontend_emit, tools/build.lm2, tests/full-suite.tsv, tests/dyn/free_result_convert.lm2)
+и одна новая фикстура (`inputs.list` 164 строки). Далее B2b-2b (срез 259: машинные операции над свободным операндом — коды
+операций в `tools/build.lm2`, свободное значение в место с моделью, P1-PTR-COVERAGE: графовые/descriptor места), B2b-3 (срез
+260: снятие замыканий), затем C. Opus ждёт; writer/build у Fable.
+[Срез258](witnesses/fix258-20261102/notes.md).
+
 Обновлено 2026-10-29. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Передача Codex 2026 10 29 — действующее назначение

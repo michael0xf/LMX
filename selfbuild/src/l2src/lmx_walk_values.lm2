@@ -397,13 +397,16 @@ fn: lmx_walk_value_unary (int: op; @: value c.LmxWalkValue; @: out c.LmxWalkValu
     return: lmx_walk_value_num(out, ty, number)
 end: lmx_walk_value_unary
 
-# A reference payload is loaded once using its proved pointer-cell accessors.
+# A reference payload is loaded once using its proved pointer-cell accessors;
+# the cell's companion qualifies it only while it records that reference
+# (lmx_value_loaded_context).
 fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c.LmxWalkValue) int
     int: base_type 0
     c.LmxWalkValue: current
     @: current_value c.LmxWalkValue @ current
     c.LmxPointerCellRead: read c.lmx_pointer_value_known
     c.LmxPointerCellWrite: write c.lmx_pointer_store_known
+    @: raw void 0
     if: storage = 0
         lmx_walk_value_clear(out)
         return: c.LMX_WALK_OK
@@ -411,7 +414,8 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
     if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
         if: c.lmx_value_cell_access(arena, storage, @ read, @ write) != 0 || read = 0
             return: c.LMX_WALK_INVALID
-        return: lmx_walk_value_ref_context(out, ty, read(storage), c.lmx_pointer_cell_context(arena, storage))
+        raw: read(storage)
+        return: lmx_walk_value_ref_context(out, ty, raw, c.lmx_value_loaded_context(c.lmx_pointer_cell_context(arena, storage), raw))
     lmx_walk_value_clear(current_value)
     current_value\present: 1
     current_value\kind: c.LMX_WALK_VALUE_NUMBER
@@ -452,6 +456,20 @@ fn: lmx_walk_value_cell (@: arena c.LmxArena; @: cell void; @: out c.LmxWalkValu
         return: c.LMX_WALK_INVALID
     return: lmx_walk_value_load(arena, cell, (cast: (int) c.lmx_domain_type(arena, cell)), out)
 end: lmx_walk_value_cell
+
+# A raw Graph consumer needs only the projection of the same selected child.
+# Full consumers keep the record returned by value_cell instead.
+fn: lmx_walk_graph_value_ref (@: arena c.LmxArena; @: child void) @: void
+    c.LmxWalkValue: value
+    int: status lmx_walk_value_cell(arena, child, @ value)
+    if: status != c.LMX_WALK_OK
+        c.lmx_call_note_walk_fail(status)
+        return: 0
+    if: value\present = 0 || value\kind != c.LMX_WALK_VALUE_REFERENCE
+        c.lmx_call_note_walk_fail(c.LMX_WALK_INVALID)
+        return: 0
+    return: (cast: (@: void) value\ref)
+end: lmx_walk_graph_value_ref
 
 # Persist a completed value as one ordinary arena-owned cell. Absence has no
 # cell; a present null reference still has its typed cell and saved context.
@@ -1194,18 +1212,35 @@ fn: lmx_walk_arg_place (@: f c.LmxWalkFrame; size_t: k; int: ty; @: out c.LmxWal
     return: lmx_walk_values_arg_place((cast: (@: c.LmxArena) f\arena), (cast: (@: c.LmxWalkValue) f\argown), (cast: (@@: void) f\args), (cast: (size_t) f\nargs), k, ty, out)
 end: lmx_walk_arg_place
 
+# The place's context is snapshot, its recorded reference with it, before the
+# load (out may alias it). After a raw read it is laid over the loaded REF only
+# while it records that same reference; otherwise the REF keeps what the value
+# load attached from the cell's own validated companion. A descriptor place
+# loads no raw content: its address is the reference.
 fn: lmx_walk_place_load (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: out c.LmxWalkValue) int
     c.LmxWalkValue: saved
     @: context c.LmxWalkValue @ saved
+    @: source c.LmxWalkValue lmx_walk_place_context(arena, place)
+    c.LmxWalkValue: stamp_storage
+    @: stamp c.LmxWalkValue @ stamp_storage
     int: status 0
-    c.lmx_value_context_copy(context, lmx_walk_place_context(arena, place))
+    c.lmx_value_context_copy(context, source)
+    lmx_walk_value_clear(stamp)
+    if: source != 0
+        stamp\present: source\present
+        stamp\kind: source\kind
+        stamp\ref: source\ref
+    ---
     if: place\descriptor != 0
         status: lmx_walk_value_ref(out, (cast: (int) place\type), (cast: (@: void) place\address))
     else:
         status: lmx_walk_value_load(arena, (cast: (@: void) place\address), (cast: (int) place\type), out)
     ---
     if: status = c.LMX_WALK_OK && out\kind = c.LMX_WALK_VALUE_REFERENCE
-        c.lmx_value_context_copy(out, context)
+        if: place\descriptor != 0 || c.lmx_value_loaded_context(stamp, (cast: (@: void) out\ref)) != 0
+            c.lmx_value_context_copy(out, context)
+        ---
+    ---
     return: status
 end: lmx_walk_place_load
 
@@ -1687,11 +1722,11 @@ fn: lmx_walk_work_make (@: f c.LmxWalkFrame; @: operand c.Lmx; @: holder c.Lmx; 
     @: witness void 0
     @: e c.LmxWalkWork 0
     @: last c.LmxWalkWork 0
-    size_t: wv 0U
     size_t: witness_slot 0U
     int: op 0
-    c.LmxWalkValue: loaded
-    @: loadedp c.LmxWalkValue @ loaded
+    int: cell_kind 0
+    int: status
+    @: work_value c.LmxWalkValue 0
     if: f = 0 || f\context = 0 || slot = 0
         return: c.LMX_WALK_INVALID
     @: context c.LmxWalkContext (cast: (@: c.LmxWalkContext) f\context)
@@ -1725,37 +1760,38 @@ fn: lmx_walk_work_make (@: f c.LmxWalkFrame; @: operand c.Lmx; @: holder c.Lmx; 
     e\holder: holder
     e\index: index
     e\slot: slot
-    e\ref: 0
-    e\num: 0U
     e\ty: c.LMX_TYPE_LMX
     e\dirty: 0
     e\next: 0
-    e\model: 0
-    e\referent: 0
-    e\references: 0
     e\kind: 3
     if: slot[0] != 0 && lmx_walk_is_pointer_cell((cast: (@: c.LmxArena) f\arena), slot[0]) != 0
         e\kind: 2
         e\ty: c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), slot[0])
-        e\ref: c.lmx_pointer_value_in((cast: (@: c.LmxArena) f\arena), slot[0])
-        c.lmx_value_context_copy(@ loaded, c.lmx_pointer_cell_context((cast: (@: c.LmxArena) f\arena), slot[0]))
-        e\model: loadedp\model
-        e\references: loadedp\references
-        e\referent: loadedp\referent
-    ---
-    if: slot[0] != 0 && e\kind = 3 && (lmx_walk_kind(f, slot[0]) = c.LMX_KIND_STRUCT || lmx_walk_kind(f, slot[0]) = c.LMX_KIND_ARRAY)
-        e\ref: slot[0]
-        if: lmx_walk_kind(f, slot[0]) = c.LMX_KIND_ARRAY
-            e\ty: c.LMX_TYPE_DESC
+        # A materialized low graph value still belongs to its Graph slot.
+        # Higher pointer-cell types retain their existing in-place writer.
+        if: c.lmx_type_base(e\ty) = c.LMX_TYPE_LMX || c.lmx_type_base(e\ty) = c.LMX_TYPE_DESC
+            e\kind: 3
+        ---
+    else:
+        if: slot[0] != 0
+            cell_kind: lmx_walk_kind(f, slot[0])
+            if: cell_kind = c.LMX_KIND_ARRAY
+                e\ty: c.LMX_TYPE_DESC
+            ---
+            if: cell_kind != c.LMX_KIND_STRUCT && cell_kind != c.LMX_KIND_ARRAY
+                e\ty: lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), slot[0])
+                if: e\ty = 0
+                    return: c.LMX_WALK_INVALID
+                e\kind: 1
+            ---
         ---
     ---
-    if: slot[0] != 0 && e\kind = 3 && e\ref = 0
-        e\ty: lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), slot[0])
-        if: e\ty = 0 || lmx_walk_load_numeric((cast: (@: c.LmxArena) f\arena), slot[0], @ wv) != c.LMX_WALK_OK
-            return: c.LMX_WALK_INVALID
-        e\kind: 1
-        e\num: wv
-    ---
+    # The selected physical cell is read once. Keep its complete Value as the
+    # activation's payload; kind/ty above describe its publication place.
+    work_value: @ e\value
+    status: lmx_walk_value_cell((cast: (@: c.LmxArena) f\arena), slot[0], work_value)
+    if: status != c.LMX_WALK_OK
+        return: status
     if: f\work = 0
         f\work: e
     else:
@@ -1970,28 +2006,40 @@ end: lmx_walk_snapshot_args
 
 fn: lmx_walk_publish (@: f c.LmxWalkFrame) int
     @: e c.LmxWalkWork 0
-    c.LmxWalkValue: ready
-    @: readyp c.LmxWalkValue @ ready
+    @: ready c.LmxWalkValue 0
+    @: materialized void 0
+    size_t: number 0U
+    int: ty 0
+    int: status 0
     if: f = 0
         return: c.LMX_WALK_OK
     e: (cast: (@: c.LmxWalkWork) f\work)
     while: e != 0
         if: e\dirty != 0
+            ready: @ e\value
             @@: row_slot void (cast: (@@: void) e\slot)
             if: (e\kind = 3 && c.lmx_walk_immutable(f, (cast: (@: void) row_slot)) != 0) || (e\kind != 3 && c.lmx_walk_immutable(f, row_slot[0]) != 0)
                 return: c.LMX_WALK_INVALID
-            if: e\kind = 1 && lmx_walk_store_slot((cast: (@: c.LmxArena) f\arena), row_slot, (cast: (size_t) e\num)) != c.LMX_WALK_OK
-                return: c.LMX_WALK_INVALID
-            if: e\kind = 2
-                readyp\model: e\model
-                readyp\references: e\references
-                readyp\referent: e\referent
-                if: c.lmx_pointer_store_context_in((cast: (@: c.LmxArena) f\arena), row_slot[0], e\ref, @ ready) != 0
+            if: e\kind = 1
+                if: lmx_walk_value_number(ready, @ number, @ ty) != c.LMX_WALK_OK || lmx_walk_store_slot((cast: (@: c.LmxArena) f\arena), row_slot, number) != c.LMX_WALK_OK
                     return: c.LMX_WALK_INVALID
                 ---
             ---
-            if: e\kind = 3 && c.lmx_graph_ref_store_in((cast: (@: c.LmxArena) f\arena), e\holder, e\index, e\ref) != 0
-                return: c.LMX_WALK_INVALID
+            if: e\kind = 2
+                if: c.lmx_pointer_store_context_in((cast: (@: c.LmxArena) f\arena), row_slot[0], ready\ref, ready) != 0
+                    return: c.LMX_WALK_INVALID
+                ---
+            ---
+            if: e\kind = 3
+                # Graph slots hold a materialized complete value. SET has
+                # already supplied the same present working record as OWN.
+                status: lmx_walk_value_materialize((cast: (@: c.LmxArena) f\arena), ready, @ materialized)
+                if: status != c.LMX_WALK_OK
+                    return: status
+                if: c.lmx_graph_ref_store_in((cast: (@: c.LmxArena) f\arena), e\holder, e\index, materialized) != 0
+                    return: c.LMX_WALK_INVALID
+                ---
+            ---
             e\dirty: 0
         ---
         e: (cast: (@: c.LmxWalkWork) e\next)
@@ -4901,6 +4949,8 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
     @: wholder c.Lmx 0
     @@: slot void 0
     @: root void 0
+    @: materialized void 0
+    int: slot_type 0
     @: want void 0
     @: leaf void 0
     @: array c.LmxArray 0
@@ -4976,11 +5026,8 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         work: lmx_walk_work_find(f, slot)
         if: work = 0
             return: c.LMX_WALK_INVALID
-        if: work\kind = 1
-            return: lmx_walk_value_num(out, (cast: (int) work\ty), (cast: (size_t) work\num))
-        status: lmx_walk_value_ref_parts(out, (cast: (int) work\ty), (cast: (@: void) work\ref), (cast: (@: c.Lmx) work\model), (cast: (@: c.Lmx) work\references))
-        out\referent: work\referent
-        return: status
+        c.memcpy((cast: (@: void) out), (cast: (@: void) (@ work\value)), c.sizeof(c.LmxWalkValue))
+        return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ARG
         index: c.lmx_size_value_known(c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U))
         if: index >= f\nargs || f\args = 0
@@ -5074,6 +5121,9 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, index), @ value)
         if: status != c.LMX_WALK_OK
             return: status
+        if: value_p\present = 0
+            c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
+            return: c.LMX_WALK_OK
         status: lmx_walk_value_store((cast: (@: c.LmxArena) f\arena), @ place, @ value)
         if: status != c.LMX_WALK_OK
             return: status
@@ -5093,15 +5143,28 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        if: value_p\present = 0 || value_p\kind != c.LMX_WALK_VALUE_REFERENCE
+        if: value_p\present = 0
+            c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
+            return: c.LMX_WALK_OK
+        if: value_p\kind != c.LMX_WALK_VALUE_REFERENCE
             return: c.LMX_WALK_INVALID
-        if: slot = 0 || lmx_walk_is_pointer_cell((cast: (@: c.LmxArena) f\arena), slot[0]) != 0
+        if: slot = 0
             return: c.LMX_WALK_INVALID
+        if: lmx_walk_is_pointer_cell((cast: (@: c.LmxArena) f\arena), slot[0]) != 0
+            slot_type: c.lmx_type_base(c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), slot[0]))
+            if: slot_type != c.LMX_TYPE_LMX && slot_type != c.LMX_TYPE_DESC
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
         if: lmx_walk_immutable(f, (cast: (@: void) slot)) != 0
             return: c.LMX_WALK_INVALID
         if: value_p\ref != 0 && lmx_walk_kind(f, (cast: (@: void) value_p\ref)) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID
-        slot[0]: value_p\ref
+        status: lmx_walk_value_materialize((cast: (@: c.LmxArena) f\arena), @ value, @ materialized)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: c.lmx_graph_ref_store_in((cast: (@: c.LmxArena) f\arena), wholder, index, materialized) != 0
+            return: c.LMX_WALK_INVALID
         c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_SET || op = c.LMX_WALK_OP_SET_OF
@@ -5119,25 +5182,28 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         if: status != c.LMX_WALK_OK
             return: status
         work: lmx_walk_work_find(f, slot)
-        if: work = 0 || value_p\present = 0
+        if: work = 0
             return: c.LMX_WALK_INVALID
+        # Receiving no result does not replace the old working record or
+        # change an already pending dirty write. Preserve the actual absence.
+        if: value_p\present = 0
+            c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
+            return: c.LMX_WALK_OK
         if: (work\kind = 3 && lmx_walk_immutable(f, (cast: (@: void) slot)) != 0) || (work\kind != 3 && lmx_walk_immutable(f, slot[0]) != 0)
             return: c.LMX_WALK_INVALID
         if: work\kind != 1
             if: value_p\kind != c.LMX_WALK_VALUE_REFERENCE
                 return: c.LMX_WALK_INVALID
-            work\ref: value_p\ref
-            work\model: value_p\model
-            work\references: value_p\references
-            work\referent: value_p\referent
-            work\dirty: 1
-            return: lmx_walk_value_ref_context(out, (cast: (int) work\ty), (cast: (@: void) work\ref), @ value)
+            ---
+        else:
+            if: lmx_walk_value_number(@ value, @ wv, @ a) != c.LMX_WALK_OK || a != work\ty
+                return: c.LMX_WALK_INVALID
+            ---
         ---
-        if: lmx_walk_value_number(@ value, @ wv, @ a) != c.LMX_WALK_OK || a != work\ty
-            return: c.LMX_WALK_INVALID
-        work\num: wv
+        c.memcpy((cast: (@: void) (@ work\value)), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
         work\dirty: 1
-        return: lmx_walk_value_num(out, (cast: (int) work\ty), wv)
+        c.memcpy((cast: (@: void) out), (cast: (@: void) (@ work\value)), c.sizeof(c.LmxWalkValue))
+        return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_AND || op = c.LMX_WALK_OP_OR
         status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ value)
         if: status != c.LMX_WALK_OK

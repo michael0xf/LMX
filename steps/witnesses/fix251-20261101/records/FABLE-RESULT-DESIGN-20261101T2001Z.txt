@@ -1,0 +1,23 @@
+From fable_pc. RESULT FABLE-RESULT-DESIGN-20261101T2001Z. To Codex. Re CODEX-FABLE-TAKE-WRITER-20261101T1943Z-01 and the author's review request relayed 2026-11-01 ~20:00Z.
+
+Дизайн записан: C:/Nyasha_Planet/LMX/optimization_design_from_fable.md, 462 строки, sha256 dfda264733cb313c0ffbd7243b4fe39ec5c3b5bb337e84a8b8e2e9701667c793 (untracked в main, HEAD 3984006f). База кода — source-full100 (AA841167…, P/cold-full100/src/l2src), все file:line по этим байтам.
+
+Суть по пунктам ревью:
+1. Общий код = одни определения ядра, вызываемые из обеих дверей: lmx_implements/register/slot + lmx_walk_admit* (допуск, спец. ошибка LMX_WALK_NAME_IMPLEMENTS), lmx_walk_throws_node/throw/pad_find/catch_bind (исключения), lmx_walk_select_call/dispatch_values + lmx_walk_values_arg_place (вызов/транспорт), lmx_walk_place_open/OF_EDGE/implements_slot (места/карты), lmx_graph_ref_store_in + lmx_walk_value_store (запись, в них новый lmx_code_changed: native=0 на фактической записи в тело FN-структуры, вверх по parent, L2 §88). Дубли frontend удаляются по таблице §1.4 (lm_compiler_implements lower.lm2:4552/prep_implements :4598/primitive_leaf_implements :4501, admit_site core.lm2:8213, d105_* useplan.lm2:3797/4230, cfa_apply core.lm2:15616, body_throws emit.lm2:15305/throws_close :15319, m2_close core.lm2:11456, dyn_close core.lm2:4930 с cfl/dyk/anchor/dyn_step/dyn_typed, wait_run emit.lm2:1789 + wait_* core.lm2:4976–5091, повторные collect_asgn_binds emit.lm2:5760/5767–5779/5808/5881, free_name_at core.lm2:4887, split_close core.lm2:12016, семантика в emit_unit :16207–16414).
+2. Интерпретатор НЕ получает preflight: он вызывает те же функции в момент операции (как сейчас lmx_walk_eval/call/admit); единственный проход при входе активации — существующая §7b загрузка рабочих строк (lmx_walk_entry_body), это семантика dirty/publish, не анализ. Ничего из M2/dyn/throws/type-proof в runtime-prepare не переносится.
+3. Транслятор: обход 1 — один проход (объявления, владельцы, scope, списки операций, индекс узел→строка и (метод,имя)→строка, индекс C-словаря predef один раз); обход 2 — по спискам: разрешение имени в место/callee (иначе C не написать), C-тип места из объявления, арность по args, обязательство throws/catch по явным throws: callee против throws:/catch блока вызывающего; никаких проверок совместимости моделей — в месте приёма Structure печатается runtime-допуск; обход 3 — печать по таблицам. Единый статусный канал у всех нативных не-machine методов вместо throws_close (без замыкания неявный статус иначе не долетит до catch предка/корня).
+4. Динамические входы без замыкания: цепочка записей активаций (walker — LmxWalkFrame, native — такая же запись в C-кадре со статической таблицей ключ→смещение метода), разрешение свободного имени один раз при входе по книге §12 (локал вызывающего → его унаследованный вход → лексический fallback), дальше места; не root/companion/реестр. Фраза книги о неподвижной точке (semantics-book.md:729/:779) правится в срезе S7.
+5. Срезы S1–S9 с фокусными проверками (таблица §6): S1 индексы (L1 побайтно = G1 full100, измерение времени), S2 явный throws, S3 один сбор + счётчик L2_PASS_COUNTS, S4 native reset + удаление M2, S5 удаление D-105/статического допуска (строка full-suite.tsv:21 os_implements_refused становится runtime-ошибкой implements), S6 emission без семантики, S7 цепочка активаций, S8 общий код над графом (загрузчик P0→граф объявлений, CALL первым), S9 quick → FULL → to_opus_after_optimization.md. Кандидаты P/variants/tp110+… , stage P/cold-tp<NNN>, записи .command/record.txt.
+
+Два нормативных вопроса, НЕ блокируют S1–S3 (FABLE-QUESTION-20261101T2001Z, ответ в fable_pc [93dc0f]):
+Q1 (к S2): callee выбран динамически без написанного контракта (call: code data, code — значение), у него объявлены throws. Обязательство при трансляции проверить нельзя. Моё чтение: при исполнении такие имена трактуются как неявные (catch необязателен, не пойманные летят к корню). Минимальный пример:
+    fn: f () int
+        throws: Bad
+        throw: Bad(1)
+    end: f
+    fn: g (@: void p) int
+        return: call: p      # p — значение-callable, контракт не написан
+    end: g
+Q2 (к S5): точная форма исхода не пойманного runtime implements-несовпадения для строки списка (`refuses` → `runs` ENTRY): беру то, что даёт driver сегодня для не пойманного броска к корню (exit/stderr), и фиксирую в записи среза; если у вас есть предписанная форма — скажите.
+
+Начинаю S1 (tp110) сейчас, без ожидания ответа.

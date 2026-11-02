@@ -9,7 +9,18 @@ include: "<stddef.h>" "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
 fn: lm_compiler_head_source_node (const: (@: source_node c.LmP0Node)) const: @: c.LmP0Node
     @@: head_expressions_cell c.L2HeadExpression (cast: (@@: c.L2HeadExpression) (@ c.l2_head_expressions))
     @: expression c.L2HeadExpression
+    const: (@: start c.LmP0Node source_node)
+    @: known c.LmP0Node 0
     int: found 1
+    # tp111: the answer for a node is memoized (l2_hmemo_*: node -> the node this walk ends at, the node itself when
+    # no head-expression document holds it). A new head expression is a new document with new nodes, so an entry
+    # stays right while its node lives; lm_compiler_head_expression_dispose clears the memo when a document is
+    # destroyed (its node addresses may be reused). An empty list answers as the loop would, without the memo.
+    if: source_node = 0 || head_expressions_cell[0] = 0
+        return: (cast: (const: @: c.LmP0Node) (source_node))
+    known: lm_compiler_hmemo_get(start)
+    if: known != 0
+        return: (cast: (const: @: c.LmP0Node) (known))
     while: source_node != 0 && found != 0
         found: 0
         expression: head_expressions_cell[0]
@@ -20,6 +31,8 @@ fn: lm_compiler_head_source_node (const: (@: source_node c.LmP0Node)) const: @: 
             expression: expression\allocated_next
         ---
     ---
+    if: source_node != 0
+        lm_compiler_hmemo_put(start, (cast: (@: c.LmP0Node) source_node))
     return: (cast: (const: @: c.LmP0Node) (source_node))
 end: lm_compiler_head_source_node
 
@@ -1471,3 +1484,101 @@ fn: lm_compiler_mres_decl (int: mi; const: (@: stmt c.LmP0Node)) int
         return: (cast: (int) (-1))
     return: (cast: (int) (lm_compiler_mres_of_own(lm_compiler_own_find_decl(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), stmt))))
 end: lm_compiler_mres_decl
+
+# tp111: the head-source memo -- open addressing on the node address, keys and values in the frontend state
+# (l2_hmemo_key/_val/_cap/_n), half load, grown by doubling; cleared by lm_compiler_head_expression_dispose.
+fn: lm_compiler_hmemo_slot (const: (@: at c.LmP0Node); int: cap) int
+    size_t: k (cast: (size_t) at)
+    return: (cast: (int) ((k / 8U + k / 4096U) % (cast: (size_t) cap)))
+end: lm_compiler_hmemo_slot
+
+fn: lm_compiler_hmemo_get (const: (@: at c.LmP0Node)) @: c.LmP0Node
+    @: n_cell int (cast: (@: int) (@ c.l2_hmemo_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_hmemo_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hmemo_key))
+    @@@: val_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hmemo_val))
+    int: i
+    if: at = 0 || n_cell[0] = 0 || key_cell[0] = 0 || cap_cell[0] <= 0
+        return: (cast: (@: c.LmP0Node) (0))
+    i: lm_compiler_hmemo_slot(at, cap_cell[0])
+    while: key_cell[0][i] != 0
+        if: key_cell[0][i] = at
+            return: (cast: (@: c.LmP0Node) (val_cell[0][i]))
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    return: (cast: (@: c.LmP0Node) (0))
+end: lm_compiler_hmemo_get
+
+fn: lm_compiler_hmemo_grow () int
+    @: n_cell int (cast: (@: int) (@ c.l2_hmemo_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_hmemo_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hmemo_key))
+    @@@: val_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hmemo_val))
+    @@: old_key c.LmP0Node key_cell[0]
+    @@: old_val c.LmP0Node val_cell[0]
+    int: old_cap cap_cell[0]
+    int: cap 1024
+    int: i 0
+    int: j
+    if: old_cap > 0
+        cap: old_cap * 2
+    key_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: key_cell[0] = 0
+        key_cell[0]: old_key
+        return: (cast: (int) (1))
+    val_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: val_cell[0] = 0
+        c.lm_compiler_xfree((cast: (@: void) key_cell[0]))
+        key_cell[0]: old_key
+        val_cell[0]: old_val
+        return: (cast: (int) (1))
+    c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
+    c.memset((cast: (@: void) val_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
+    cap_cell[0]: cap
+    n_cell[0]: 0
+    while: i < old_cap
+        if: old_key[i] != 0
+            j: lm_compiler_hmemo_slot(old_key[i], cap)
+            while: key_cell[0][j] != 0
+                j: j + 1
+                if: j >= cap
+                    j: 0
+            ---
+            key_cell[0][j]: old_key[i]
+            val_cell[0][j]: old_val[i]
+            n_cell[0]: n_cell[0] + 1
+        i: i + 1
+    ---
+    if: old_key != 0
+        c.lm_compiler_xfree((cast: (@: void) old_key))
+    if: old_val != 0
+        c.lm_compiler_xfree((cast: (@: void) old_val))
+    return: (cast: (int) (0))
+end: lm_compiler_hmemo_grow
+
+fn: lm_compiler_hmemo_put (const: (@: at c.LmP0Node); @: value c.LmP0Node) int
+    @: n_cell int (cast: (@: int) (@ c.l2_hmemo_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_hmemo_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hmemo_key))
+    @@@: val_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hmemo_val))
+    int: i
+    if: at = 0 || value = 0
+        return: (cast: (int) (0))
+    if: key_cell[0] = 0 || (n_cell[0] + 1) * 2 > cap_cell[0]
+        if: lm_compiler_hmemo_grow() != 0
+            return: (cast: (int) (1))
+        ---
+    i: lm_compiler_hmemo_slot(at, cap_cell[0])
+    while: key_cell[0][i] != 0 && key_cell[0][i] != at
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    if: key_cell[0][i] = 0
+        key_cell[0][i]: (cast: (@: c.LmP0Node) at)
+        n_cell[0]: n_cell[0] + 1
+    val_cell[0][i]: value
+    return: (cast: (int) (0))
+end: lm_compiler_hmemo_put

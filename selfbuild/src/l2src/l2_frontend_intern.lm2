@@ -489,12 +489,16 @@ fn: lm_compiler_pd_free () int
     @@@: cell_pd c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pd))
     @: cell_pd_n int (cast: (@: int) (@ c.l2_pd_n))
     @: cell_pd_cap int (cast: (@: int) (@ c.l2_pd_cap))
+    @: cell_pdx_built int (cast: (@: int) (@ c.l2_pdx_built))
     if: cell_pd[0] != 0
         c.lm_compiler_xfree((cast: (@: void) cell_pd[0]))
     ---
     cell_pd[0]: 0
     cell_pd_n[0]: 0
     cell_pd_cap[0]: 0
+    # The predef declaration index (l2_frontend_types, lm_compiler_pdx_ready) was built over this list: the next
+    # query rebuilds it over the next unit's list.
+    cell_pdx_built[0]: 0
     return: (cast: (int) (0))
 end: lm_compiler_pd_free
 

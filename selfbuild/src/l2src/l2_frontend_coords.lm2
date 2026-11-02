@@ -853,6 +853,10 @@ fn: lm_compiler_ns_tail_rank (int: ns) int
     return: (cast: (int) (count))
 end: lm_compiler_ns_tail_rank
 
+# A place of explicit data: a number, a source definition, or a typed
+# reference to non-graph data (its cell holds the reference; the data's place
+# row addresses that cell like a number's). Array and graph references still
+# need the implements admission of their data place (split_staged).
 fn: lm_compiler_split_data_row (int: oi) int
     @: ns_split_any_cell int (cast: (@: int) (@ c.l2_ns_split_any))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
@@ -864,7 +868,12 @@ fn: lm_compiler_split_data_row (int: oi) int
     @@: ns_split_cell int (cast: (@@: int) (@ c.l2_ns_split))
     int: fid
     int: ni
-    if: ns_split_any_cell[0] = 0 || oi < 0 || oi >= own_n_cell[0] || (c.lm_compiler_own_num_ctype(own_ty_cell[0][oi]) = 0 && c.lm_compiler_source_definition_ns(oi) < 0)
+    int: typed_reference 0
+    if: ns_split_any_cell[0] = 0 || oi < 0 || oi >= own_n_cell[0]
+        return: (cast: (int) (0))
+    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) = 0 && c.lm_compiler_own_is_graph(own_ty_cell[0][oi]) = 0
+        typed_reference: 1
+    if: c.lm_compiler_own_num_ctype(own_ty_cell[0][oi]) = 0 && c.lm_compiler_source_definition_ns(oi) < 0 && typed_reference = 0
         return: (cast: (int) (0))
     if: own_host_cell[0][oi] != 0
         fid: c.lm_compiler_for_find(own_host_cell[0][oi])

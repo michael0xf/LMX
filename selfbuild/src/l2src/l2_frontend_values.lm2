@@ -1749,11 +1749,25 @@ fn: lm_compiler_address_release (@: address c.L2Address) int
 end: lm_compiler_address_release
 
 fn: lm_compiler_head_expression_dispose (@: expression c.L2HeadExpression) int
+    @: hmemo_n_cell int (cast: (@: int) (@ c.l2_hmemo_n))
+    @: hmemo_cap_cell int (cast: (@: int) (@ c.l2_hmemo_cap))
+    @@@: hmemo_key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hmemo_key))
+    @: omemo_n_cell int (cast: (@: int) (@ c.l2_omemo_n))
+    @: omemo_cap_cell int (cast: (@: int) (@ c.l2_omemo_cap))
+    @@@: omemo_key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_omemo_key))
     if: expression != 0
         lm_compiler_value_spans_release((cast: (@: c.L2ValueSpan) (expression\values)), (cast: (int) (expression\value_n)))
         lm_compiler_path_release((cast: (@: c.L2Path) (@ expression\prepared)))
         c.lm_p0_document_destroy(expression\document)
         c.lm_compiler_xfree((cast: (@: void) expression))
+        # tp111: the document's node addresses may be reused -- the memos keyed by node address (the head-source
+        # memo of l2_frontend_views, the owner memo of l2_frontend_context) forget everything here.
+        if: hmemo_n_cell[0] != 0 && hmemo_key_cell[0] != 0 && hmemo_cap_cell[0] > 0
+            c.memset((cast: (@: void) hmemo_key_cell[0]), 0, (cast: (size_t) hmemo_cap_cell[0]) * sizeof(@: void))
+        hmemo_n_cell[0]: 0
+        if: omemo_n_cell[0] != 0 && omemo_key_cell[0] != 0 && omemo_cap_cell[0] > 0
+            c.memset((cast: (@: void) omemo_key_cell[0]), 0, (cast: (size_t) omemo_cap_cell[0]) * sizeof(@: void))
+        omemo_n_cell[0]: 0
     ---
     return: (cast: (int) (0))
 end: lm_compiler_head_expression_dispose

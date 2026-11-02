@@ -279,6 +279,9 @@ fn: lm_compiler_rb_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Decla
     result\extent: 0
     result\allocated_next: declarations_cell[0]
     declarations_cell[0]: result
+    lm_compiler_dmap_put(source_node, result)
+    lm_compiler_dord_put(result)
+    lm_compiler_cmap_index(result)
     if: result\contract = 0
         return: (cast: (@: c.L2Declaration) (0))
     return: (cast: (@: c.L2Declaration) (result))
@@ -833,10 +836,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     if: depth > 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0
         inner_contract: lm_compiler_previous_reference_contract(source_node, (cast: (const: @: c.LmP0Text) (first\value\as\atom)))
         if: inner_contract != 0
-            result: declarations_cell[0]
-            while: result != 0 && result\source != source_node
-                result: result\allocated_next
-            ---
+            result: lm_compiler_dmap_get(source_node)
             if: result = 0
                 result: (cast: (@: c.L2Declaration) c.lm_compiler_xmalloc((cast: (size_t) (c.sizeof(c.L2Declaration)))))
                 if: result = 0
@@ -844,6 +844,8 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
                 c.memset((cast: (@: void) result), 0, (cast: (size_t) (c.sizeof(c.L2Declaration))))
                 result\allocated_next: declarations_cell[0]
                 declarations_cell[0]: result
+                lm_compiler_dmap_put(source_node, result)
+                lm_compiler_dord_put(result)
             ---
             result\source: (cast: (@: c.LmP0Node) source_node)
             result\contract: inner_contract
@@ -859,6 +861,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
                 ---
             ---
             result\extent: 0
+            lm_compiler_cmap_index(result)
             return: (cast: (@: c.L2Declaration) (result))
         ---
     ---
@@ -869,10 +872,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     if: depth = 0 && n = 1 && first\value\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) (frame\head))) = 0 && c.lm_compiler_prim_type_word((cast: (const: @: c.LmP0Text) (frame\head))) = 0 && c.lm_compiler_bind_spelling((cast: (const: @: c.LmP0Text) (frame\head))) != 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "[]") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "const") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "immutable") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "independent") = 0
         if: lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (first\value)), @ contract, @ candidate, @ count) != 0
             inner_contract: lm_compiler_previous_reference_contract(source_node, (cast: (const: @: c.LmP0Text) (frame\head)))
-            result: declarations_cell[0]
-            while: result != 0 && result\source != source_node
-                result: result\allocated_next
-            ---
+            result: lm_compiler_dmap_get(source_node)
             if: result = 0
                 result: (cast: (@: c.L2Declaration) c.lm_compiler_xmalloc((cast: (size_t) (c.sizeof(c.L2Declaration)))))
                 if: result = 0
@@ -880,6 +880,8 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
                 c.memset((cast: (@: void) result), 0, (cast: (size_t) (c.sizeof(c.L2Declaration))))
                 result\allocated_next: declarations_cell[0]
                 declarations_cell[0]: result
+                lm_compiler_dmap_put(source_node, result)
+                lm_compiler_dord_put(result)
             ---
             result\source: (cast: (@: c.LmP0Node) source_node)
             result\contract: contract
@@ -892,15 +894,15 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
             result\candidate: candidate
             result\candidate_count: count
             result\extent: 0
+            lm_compiler_cmap_index(result)
             return: (cast: (@: c.L2Declaration) (result))
         ---
     ---
-    result: declarations_cell[0]
-    while: result != 0
-        if: result\source = source_node
-            return: (cast: (@: c.L2Declaration) (result))
-        result: result\allocated_next
-    ---
+    # tp111: the declaration of a source node is found in the node-keyed map (l2_dmap_*), filled at every insertion
+    # into l2_declarations and emptied when that list is (lm_compiler_application_free leaves its head 0).
+    result: lm_compiler_dmap_get(source_node)
+    if: result != 0
+        return: (cast: (@: c.L2Declaration) (result))
     if: depth != 0
         kind: 2
     if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "[]") != 0
@@ -1088,6 +1090,9 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     result\extent: extent
     result\allocated_next: declarations_cell[0]
     declarations_cell[0]: result
+    lm_compiler_dmap_put(source_node, result)
+    lm_compiler_dord_put(result)
+    lm_compiler_cmap_index(result)
     return: (cast: (@: c.L2Declaration) (result))
 end: lm_compiler_declaration
 
@@ -4664,3 +4669,377 @@ fn: lm_compiler_merge_typed_decl (@: f c.LmP0Field; int: span) @: c.LmP0Node
 end: lm_compiler_merge_typed_decl
 
 
+
+# tp111: the declaration map -- source node -> its newest L2Declaration in l2_declarations (the record the list
+# walk found first). Open addressing on the node address, keys and values in the frontend state
+# (l2_dmap_key/_val/_cap/_n), half load, grown by doubling. The list is the truth: every insertion into it goes
+# through lm_compiler_dmap_put, and a list emptied by lm_compiler_application_free (head 0) empties the map at
+# the next use.
+fn: lm_compiler_dmap_slot (const: (@: at c.LmP0Node); int: cap) int
+    size_t: k (cast: (size_t) at)
+    return: (cast: (int) ((k / 8U + k / 4096U) % (cast: (size_t) cap)))
+end: lm_compiler_dmap_slot
+
+fn: lm_compiler_dmap_sync () int
+    @@: declarations_cell c.L2Declaration (cast: (@@: c.L2Declaration) (@ c.l2_declarations))
+    @: decl_gen_cell int (cast: (@: int) (@ c.l2_decl_gen))
+    @: dmap_gen_cell int (cast: (@: int) (@ c.l2_dmap_gen))
+    @: n_cell int (cast: (@: int) (@ c.l2_dmap_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_dmap_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_dmap_key))
+    if: dmap_gen_cell[0] != decl_gen_cell[0] || (declarations_cell[0] = 0 && n_cell[0] != 0)
+        dmap_gen_cell[0]: decl_gen_cell[0]
+        if: key_cell[0] != 0 && cap_cell[0] > 0
+            c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap_cell[0]) * sizeof(@: void))
+        n_cell[0]: 0
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_dmap_sync
+
+fn: lm_compiler_dmap_get (const: (@: at c.LmP0Node)) @: c.L2Declaration
+    @: n_cell int (cast: (@: int) (@ c.l2_dmap_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_dmap_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_dmap_key))
+    @@@: val_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_dmap_val))
+    int: i
+    lm_compiler_dmap_sync()
+    if: at = 0 || n_cell[0] = 0 || key_cell[0] = 0 || cap_cell[0] <= 0
+        return: (cast: (@: c.L2Declaration) (0))
+    i: lm_compiler_dmap_slot(at, cap_cell[0])
+    while: key_cell[0][i] != 0
+        if: key_cell[0][i] = at
+            return: (cast: (@: c.L2Declaration) (val_cell[0][i]))
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    return: (cast: (@: c.L2Declaration) (0))
+end: lm_compiler_dmap_get
+
+fn: lm_compiler_dmap_grow () int
+    @: n_cell int (cast: (@: int) (@ c.l2_dmap_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_dmap_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_dmap_key))
+    @@@: val_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_dmap_val))
+    @@: old_key c.LmP0Node key_cell[0]
+    @@: old_val c.L2Declaration val_cell[0]
+    int: old_cap cap_cell[0]
+    int: cap 1024
+    int: i 0
+    int: j
+    if: old_cap > 0
+        cap: old_cap * 2
+    key_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: key_cell[0] = 0
+        key_cell[0]: old_key
+        return: (cast: (int) (1))
+    val_cell[0]: (cast: (@@: c.L2Declaration) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: val_cell[0] = 0
+        c.lm_compiler_xfree((cast: (@: void) key_cell[0]))
+        key_cell[0]: old_key
+        val_cell[0]: old_val
+        return: (cast: (int) (1))
+    c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
+    c.memset((cast: (@: void) val_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
+    cap_cell[0]: cap
+    n_cell[0]: 0
+    while: i < old_cap
+        if: old_key[i] != 0
+            j: lm_compiler_dmap_slot(old_key[i], cap)
+            while: key_cell[0][j] != 0
+                j: j + 1
+                if: j >= cap
+                    j: 0
+            ---
+            key_cell[0][j]: old_key[i]
+            val_cell[0][j]: old_val[i]
+            n_cell[0]: n_cell[0] + 1
+        i: i + 1
+    ---
+    if: old_key != 0
+        c.lm_compiler_xfree((cast: (@: void) old_key))
+    if: old_val != 0
+        c.lm_compiler_xfree((cast: (@: void) old_val))
+    return: (cast: (int) (0))
+end: lm_compiler_dmap_grow
+
+fn: lm_compiler_dmap_put (const: (@: at c.LmP0Node); @: value c.L2Declaration) int
+    @: n_cell int (cast: (@: int) (@ c.l2_dmap_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_dmap_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_dmap_key))
+    @@@: val_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_dmap_val))
+    int: i
+    lm_compiler_dmap_sync()
+    if: at = 0 || value = 0
+        return: (cast: (int) (0))
+    if: key_cell[0] = 0 || (n_cell[0] + 1) * 2 > cap_cell[0]
+        if: lm_compiler_dmap_grow() != 0
+            return: (cast: (int) (1))
+        ---
+    i: lm_compiler_dmap_slot(at, cap_cell[0])
+    while: key_cell[0][i] != 0 && key_cell[0][i] != at
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    if: key_cell[0][i] = 0
+        key_cell[0][i]: (cast: (@: c.LmP0Node) at)
+        n_cell[0]: n_cell[0] + 1
+    val_cell[0][i]: value
+    return: (cast: (int) (0))
+end: lm_compiler_dmap_put
+
+# tp112: the contract index -- contract -> the declarations whose contract chain or asserted chain holds it
+# (l2_cmap_*: open addressing on the contract address, each key heads a chain of entries (declaration, next)), and the
+# creation ordinal of every declaration (l2_dord_*: the list l2_declarations is only ever prepended, so list order is
+# descending ordinal). lm_compiler_contract_source_node (l2_frontend_context) reads both: the candidates of a contract,
+# each re-checked against its current chains, folded newest first exactly as the list walk did. Everything is emptied
+# when l2_declarations is (lm_compiler_application_free leaves its head 0), like the declaration map.
+fn: lm_compiler_cmap_wsync () int
+    @@: declarations_cell c.L2Declaration (cast: (@@: c.L2Declaration) (@ c.l2_declarations))
+    @: decl_gen_cell int (cast: (@: int) (@ c.l2_decl_gen))
+    @: cmap_gen_cell int (cast: (@: int) (@ c.l2_cmap_gen))
+    @: n_cell int (cast: (@: int) (@ c.l2_cmap_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_cmap_cap))
+    @@@: key_cell c.L2TypeContract (cast: (@@@: c.L2TypeContract) (@ c.l2_cmap_key))
+    @: ent_n_cell int (cast: (@: int) (@ c.l2_cmap_ent_n))
+    @: dord_n_cell int (cast: (@: int) (@ c.l2_dord_n))
+    @: dord_cap_cell int (cast: (@: int) (@ c.l2_dord_cap))
+    @: dord_seq_cell int (cast: (@: int) (@ c.l2_dord_seq))
+    @@@: dord_key_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_dord_key))
+    if: cmap_gen_cell[0] != decl_gen_cell[0] || (declarations_cell[0] = 0 && (n_cell[0] != 0 || ent_n_cell[0] != 0 || dord_n_cell[0] != 0))
+        cmap_gen_cell[0]: decl_gen_cell[0]
+        if: key_cell[0] != 0 && cap_cell[0] > 0
+            c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap_cell[0]) * sizeof(@: void))
+        n_cell[0]: 0
+        ent_n_cell[0]: 0
+        if: dord_key_cell[0] != 0 && dord_cap_cell[0] > 0
+            c.memset((cast: (@: void) dord_key_cell[0]), 0, (cast: (size_t) dord_cap_cell[0]) * sizeof(@: void))
+        dord_n_cell[0]: 0
+        dord_seq_cell[0]: 0
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_cmap_wsync
+
+fn: lm_compiler_dord_slot (@: at c.L2Declaration; int: cap) int
+    size_t: k (cast: (size_t) at)
+    return: (cast: (int) ((k / 8U + k / 4096U) % (cast: (size_t) cap)))
+end: lm_compiler_dord_slot
+
+fn: lm_compiler_dord_grow () int
+    @: n_cell int (cast: (@: int) (@ c.l2_dord_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_dord_cap))
+    @@@: key_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_dord_key))
+    @@: val_cell int (cast: (@@: int) (@ c.l2_dord_val))
+    @@: old_key c.L2Declaration key_cell[0]
+    @: old_val int val_cell[0]
+    int: old_cap cap_cell[0]
+    int: cap 1024
+    int: i 0
+    int: j
+    if: old_cap > 0
+        cap: old_cap * 2
+    key_cell[0]: (cast: (@@: c.L2Declaration) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: key_cell[0] = 0
+        key_cell[0]: old_key
+        return: (cast: (int) (1))
+    val_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    if: val_cell[0] = 0
+        c.lm_compiler_xfree((cast: (@: void) key_cell[0]))
+        key_cell[0]: old_key
+        val_cell[0]: old_val
+        return: (cast: (int) (1))
+    c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
+    c.memset((cast: (@: void) val_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
+    cap_cell[0]: cap
+    n_cell[0]: 0
+    while: i < old_cap
+        if: old_key[i] != 0
+            j: lm_compiler_dord_slot(old_key[i], cap)
+            while: key_cell[0][j] != 0
+                j: j + 1
+                if: j >= cap
+                    j: 0
+            ---
+            key_cell[0][j]: old_key[i]
+            val_cell[0][j]: old_val[i]
+            n_cell[0]: n_cell[0] + 1
+        i: i + 1
+    ---
+    if: old_key != 0
+        c.lm_compiler_xfree((cast: (@: void) old_key))
+    if: old_val != 0
+        c.lm_compiler_xfree((cast: (@: void) old_val))
+    return: (cast: (int) (0))
+end: lm_compiler_dord_grow
+
+fn: lm_compiler_dord_put (@: at c.L2Declaration) int
+    @: n_cell int (cast: (@: int) (@ c.l2_dord_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_dord_cap))
+    @: seq_cell int (cast: (@: int) (@ c.l2_dord_seq))
+    @@@: key_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_dord_key))
+    @@: val_cell int (cast: (@@: int) (@ c.l2_dord_val))
+    int: i
+    lm_compiler_cmap_wsync()
+    if: at = 0
+        return: (cast: (int) (0))
+    if: key_cell[0] = 0 || (n_cell[0] + 1) * 2 > cap_cell[0]
+        if: lm_compiler_dord_grow() != 0
+            return: (cast: (int) (1))
+        ---
+    i: lm_compiler_dord_slot(at, cap_cell[0])
+    while: key_cell[0][i] != 0 && key_cell[0][i] != at
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    if: key_cell[0][i] = 0
+        key_cell[0][i]: at
+        n_cell[0]: n_cell[0] + 1
+        seq_cell[0]: seq_cell[0] + 1
+        val_cell[0][i]: seq_cell[0]
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_dord_put
+
+fn: lm_compiler_cmap_slot (@: at c.L2TypeContract; int: cap) int
+    size_t: k (cast: (size_t) at)
+    return: (cast: (int) ((k / 8U + k / 4096U) % (cast: (size_t) cap)))
+end: lm_compiler_cmap_slot
+
+fn: lm_compiler_cmap_grow () int
+    @: n_cell int (cast: (@: int) (@ c.l2_cmap_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_cmap_cap))
+    @@@: key_cell c.L2TypeContract (cast: (@@@: c.L2TypeContract) (@ c.l2_cmap_key))
+    @@: head_cell int (cast: (@@: int) (@ c.l2_cmap_head))
+    @@: old_key c.L2TypeContract key_cell[0]
+    @: old_head int head_cell[0]
+    int: old_cap cap_cell[0]
+    int: cap 1024
+    int: i 0
+    int: j
+    if: old_cap > 0
+        cap: old_cap * 2
+    key_cell[0]: (cast: (@@: c.L2TypeContract) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: key_cell[0] = 0
+        key_cell[0]: old_key
+        return: (cast: (int) (1))
+    head_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    if: head_cell[0] = 0
+        c.lm_compiler_xfree((cast: (@: void) key_cell[0]))
+        key_cell[0]: old_key
+        head_cell[0]: old_head
+        return: (cast: (int) (1))
+    c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
+    c.memset((cast: (@: void) head_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
+    cap_cell[0]: cap
+    n_cell[0]: 0
+    while: i < old_cap
+        if: old_key[i] != 0
+            j: lm_compiler_cmap_slot(old_key[i], cap)
+            while: key_cell[0][j] != 0
+                j: j + 1
+                if: j >= cap
+                    j: 0
+            ---
+            key_cell[0][j]: old_key[i]
+            head_cell[0][j]: old_head[i]
+            n_cell[0]: n_cell[0] + 1
+        i: i + 1
+    ---
+    if: old_key != 0
+        c.lm_compiler_xfree((cast: (@: void) old_key))
+    if: old_head != 0
+        c.lm_compiler_xfree((cast: (@: void) old_head))
+    return: (cast: (int) (0))
+end: lm_compiler_cmap_grow
+
+# One entry (declaration, next) of a contract's chain; the chain head is stored as index + 1 (0 = empty chain).
+fn: lm_compiler_cmap_add (@: contract c.L2TypeContract; @: at c.L2Declaration) int
+    @: n_cell int (cast: (@: int) (@ c.l2_cmap_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_cmap_cap))
+    @@@: key_cell c.L2TypeContract (cast: (@@@: c.L2TypeContract) (@ c.l2_cmap_key))
+    @@: head_cell int (cast: (@@: int) (@ c.l2_cmap_head))
+    @: ent_n_cell int (cast: (@: int) (@ c.l2_cmap_ent_n))
+    @: ent_cap_cell int (cast: (@: int) (@ c.l2_cmap_ent_cap))
+    @@@: ent_decl_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_cmap_ent_decl))
+    @@: ent_next_cell int (cast: (@@: int) (@ c.l2_cmap_ent_next))
+    @@: new_decl c.L2Declaration 0
+    @: new_next int 0
+    int: i
+    int: e
+    int: cap
+    if: contract = 0 || at = 0
+        return: (cast: (int) (0))
+    if: key_cell[0] = 0 || (n_cell[0] + 1) * 2 > cap_cell[0]
+        if: lm_compiler_cmap_grow() != 0
+            return: (cast: (int) (1))
+        ---
+    i: lm_compiler_cmap_slot(contract, cap_cell[0])
+    while: key_cell[0][i] != 0 && key_cell[0][i] != contract
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    if: key_cell[0][i] = 0
+        key_cell[0][i]: contract
+        head_cell[0][i]: 0
+        n_cell[0]: n_cell[0] + 1
+    ---
+    # already in this chain: nothing to add
+    e: head_cell[0][i]
+    while: e > 0
+        if: ent_decl_cell[0][e - 1] = at
+            return: (cast: (int) (0))
+        e: ent_next_cell[0][e - 1]
+    ---
+    if: ent_decl_cell[0] = 0 || ent_n_cell[0] >= ent_cap_cell[0]
+        cap: 4096
+        if: ent_cap_cell[0] > 0
+            cap: ent_cap_cell[0] * 2
+        new_decl: (cast: (@@: c.L2Declaration) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+        if: new_decl = 0
+            return: (cast: (int) (1))
+        new_next: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        if: new_next = 0
+            c.lm_compiler_xfree((cast: (@: void) new_decl))
+            return: (cast: (int) (1))
+        if: ent_n_cell[0] > 0
+            c.memcpy((cast: (@: void) new_decl), (cast: (const: @: void) ent_decl_cell[0]), (cast: (size_t) ent_n_cell[0]) * sizeof(@: void))
+            c.memcpy((cast: (@: void) new_next), (cast: (const: @: void) ent_next_cell[0]), (cast: (size_t) ent_n_cell[0]) * c.sizeof(c.int))
+        ---
+        if: ent_decl_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) ent_decl_cell[0]))
+        if: ent_next_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) ent_next_cell[0]))
+        ent_decl_cell[0]: new_decl
+        ent_next_cell[0]: new_next
+        ent_cap_cell[0]: cap
+    ---
+    e: ent_n_cell[0]
+    ent_decl_cell[0][e]: at
+    ent_next_cell[0][e]: head_cell[0][i]
+    head_cell[0][i]: e + 1
+    ent_n_cell[0]: e + 1
+    return: (cast: (int) (0))
+end: lm_compiler_cmap_add
+
+fn: lm_compiler_cmap_index (@: at c.L2Declaration) int
+    @: contract c.L2TypeContract
+    lm_compiler_cmap_wsync()
+    if: at = 0
+        return: (cast: (int) (0))
+    contract: at\contract
+    while: contract != 0
+        if: lm_compiler_cmap_add(contract, at) != 0
+            return: (cast: (int) (1))
+        contract: contract\operand
+    ---
+    contract: at\asserted_contract
+    while: contract != 0
+        if: lm_compiler_cmap_add(contract, at) != 0
+            return: (cast: (int) (1))
+        contract: contract\operand
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_cmap_index

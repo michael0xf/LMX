@@ -34,6 +34,19 @@ sub: lmx_value_context_copy (@: out c.LmxWalkValue; @: source c.LmxWalkValue)
     ---
 end: lmx_value_context_copy
 
+# A physical companion, or a full Value standing as a place's context,
+# describes the reference it was stored with (lmx_value_cell_fill records it).
+# It qualifies a reference just read from that place only while it records the
+# same reference (a present null is ref 0); otherwise the read is an ordinary
+# typed REF without model, references or referent. The one rule of the
+# walker's value and place loads and of the native typed dereference; a
+# context-only temporary is never passed here.
+fn: lmx_value_loaded_context (@: context c.LmxWalkValue; @: raw void) @: c.LmxWalkValue
+    if: context = 0 || context\present = 0 || context\kind != c.LMX_WALK_VALUE_REFERENCE || context\ref != raw
+        return: 0
+    return: context
+end: lmx_value_loaded_context
+
 # A cell of one of the arena's arrays (Lingvamyxa_spec.txt 2, 6.5): the arena hands it out
 # from its array of that kind and type -- the array is made on the first request and grows
 # by adding chunks, so a cell's address never moves.  What a constructor gets back is the
@@ -323,7 +336,9 @@ end: lmx_pointer_cell_canonical
 # stride and accessors of lmx_pointer_new_profiled.  An imported sealed cell with that same ABI can be read through
 # this arena's range index; no local owner is required.  lmx_pointer_value_in keeps its 0-for-either
 # contract for callers that classify the cell themselves (the copier, the walker).
-fn: lmx_pointer_value_promised (@: arena c.LmxArena; @: cell void; int: type) @: void
+# Shared physical promise validation, without reading the selected payload.
+# The ordinary promised read and native full-Value seed use the same checks.
+fn: lmx_pointer_pool_promised (@: arena c.LmxArena; @: cell void; int: type) @: c.LmxPool
     @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell))
     if: pool = 0
         c.fprintf(c.l1_stderr(), "lmx: invariant: a reference slot holds no pointer cell\n")
@@ -337,6 +352,11 @@ fn: lmx_pointer_value_promised (@: arena c.LmxArena; @: cell void; int: type) @:
         c.fprintf(c.l1_stderr(), "lmx: invariant: a reference slot holds a pointer cell of another ABI\n")
         c.abort()
     ---
+    return: pool
+end: lmx_pointer_pool_promised
+
+fn: lmx_pointer_value_promised (@: arena c.LmxArena; @: cell void; int: type) @: void
+    @: pool c.LmxPool lmx_pointer_pool_promised(arena, cell, type)
     return: (cast: (@: void) pool\pointer_read(cell))
 end: lmx_pointer_value_promised
 
@@ -467,6 +487,11 @@ end: lmx_value_cell_store
 
 # Construction-only initial fill/fixup before publication. Both physical
 # families use the same exact C callback and saved value-context operation.
+# The physical companion's metadata describes the reference it was stored
+# with: after the write succeeds it records that reference (present, kind,
+# ref; a present null is ref 0), so a later raw write of another reference
+# leaves it describing nothing loaded from the cell. Context 0 still clears
+# the metadata. An owner that is not the companion keeps its own Value.
 fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkValue; @: raw void; @: context c.LmxWalkValue; c.LmxPointerCellWrite: write) int
     c.LmxPointerCellRead: read 0
     @: stored c.LmxWalkValue lmx_pointer_cell_context(arena, cell)
@@ -480,6 +505,11 @@ fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkVa
     status: write(cell, raw)
     if: status = 0
         lmx_value_context_copy(stored, @ saved)
+        if: stored != 0
+            stored\present: 1
+            stored\kind: c.LMX_WALK_VALUE_REFERENCE
+            stored\ref: raw
+        ---
         if: owner != stored
             lmx_value_context_copy(owner, @ saved)
     ---

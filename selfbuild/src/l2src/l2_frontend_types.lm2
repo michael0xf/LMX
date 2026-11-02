@@ -239,16 +239,15 @@ fn: lm_compiler_predef_file_has_type (const: (@: name c.LmP0Text); const: (@: qu
 end: lm_compiler_predef_file_has_type
 
 fn: lm_compiler_predef_has_type (const: (@: name c.LmP0Text)) int
-    @: pd_n_cell int (cast: (@: int) (@ c.l2_pd_n))
-    @@@: pd_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pd))
-    int: i 0
+    @: want_fnptr_cell int (cast: (@: int) (@ c.l2_want_fnptr))
     if: name = 0
         return: (cast: (int) (0))
-    while: i < pd_n_cell[0]
-        if: lm_compiler_predef_file_has_type(name, pd_cell[0][i]) != 0
-            return: (cast: (int) (1))
-        i: i + 1
-    ---
+    # S1 (optimization_design_from_fable.md 4.1): the answer comes from the predef declaration index, built once over the
+    # predef closure of the unit (lm_compiler_pdx_kind), not from a walk of every predef document on every question.
+    if: lm_compiler_pdx_kind(name, 1) != 0
+        return: (cast: (int) (1))
+    if: want_fnptr_cell[0] != 0 && lm_compiler_pdx_kind(name, 2) != 0
+        return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_predef_has_type
 
@@ -444,17 +443,11 @@ fn: lm_compiler_predef_file_has_function (const: (@: name c.LmP0Text); const: (@
 end: lm_compiler_predef_file_has_function
 
 fn: lm_compiler_predef_has_function (const: (@: name c.LmP0Text)) int
-    @: pd_n_cell int (cast: (@: int) (@ c.l2_pd_n))
-    @@@: pd_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pd))
-    int: i 0
     if: name = 0
         return: (cast: (int) (0))
-    while: i < pd_n_cell[0]
-        if: lm_compiler_predef_file_has_function(name, pd_cell[0][i]) != 0
-            return: (cast: (int) (1))
-        i: i + 1
-    ---
-    return: (cast: (int) (0))
+    # S1 (optimization_design_from_fable.md 4.1): one index question (lm_compiler_pdx_kind) instead of a walk of the
+    # predef closure per call.
+    return: (cast: (int) (lm_compiler_pdx_kind(name, 3)))
 end: lm_compiler_predef_has_function
 
 fn: lm_compiler_ret_type_word (const: (@: word c.LmP0Text); int: depth; int: is_const; @: out_ty int) int
@@ -1455,3 +1448,391 @@ fn: lm_compiler_snap_document (const: (@: path char)) @: c.LmP0Document
     ---
     return: (cast: (@: c.LmP0Document) (snap_doc_cell[0][i]))
 end: lm_compiler_snap_document
+
+# S1 (optimization_design_from_fable.md 3, 4.1): the predef declaration index. One table over the predef closure of the
+# unit -- name -> {struct, fnptr, prototype fn/sub} -- built once per predef list and consulted by
+# lm_compiler_predef_has_type, lm_compiler_predef_has_function and through them lm_compiler_predef_has_fnptr,
+# lm_compiler_predef_receiver and lm_compiler_is_known. The per-document walkers lm_compiler_predef_file_has_type and
+# lm_compiler_predef_file_has_function keep their closure semantics for their remaining callers. The two closures differ
+# as they did there: a function is seen through `predef:` edges only, a struct or fnptr through `predef:` and the mapped
+# `include: "*.lm1.h"` edges, and a `c.` spelling of a type matches the type (lm_compiler_predef_file_has_type). The
+# index holds the atoms of the documents themselves, which the snapshot cache (lm_compiler_snap_document) keeps for the
+# whole run; it is rebuilt when the predef list changes (another unit: lm_compiler_pd_free clears l2_pdx_built; a later
+# predef: l2_pd_n differs).
+fn: lm_compiler_pdx_hash (const: (@: name c.LmP0Text)) unsigned
+    unsigned: h 2166136261U
+    size_t: i 0U
+    if: name = 0 || name\data = 0
+        return: (cast: (unsigned) (0U))
+    while: i < name\length
+        h: h * 16777619U + (cast: (unsigned) (cast: (uchar) name\data[i]))
+        i: i + 1U
+    ---
+    return: (cast: (unsigned) (h))
+end: lm_compiler_pdx_hash
+
+fn: lm_compiler_pdx_find (const: (@: name c.LmP0Text)) int
+    @: pdx_cap_cell int (cast: (@: int) (@ c.l2_pdx_cap))
+    @@@: pdx_key_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pdx_key))
+    unsigned: h
+    int: i
+    int: steps 0
+    if: name = 0 || name\data = 0 || pdx_cap_cell[0] <= 0 || pdx_key_cell[0] = 0
+        return: (cast: (int) (0 - 1))
+    h: lm_compiler_pdx_hash(name)
+    i: (cast: (int) (h % (cast: (unsigned) pdx_cap_cell[0])))
+    while: steps < pdx_cap_cell[0]
+        if: pdx_key_cell[0][i] = 0
+            return: (cast: (int) (0 - 1))
+        if: c.lm_compiler_text_same(pdx_key_cell[0][i], name) != 0
+            return: (cast: (int) (i))
+        i: i + 1
+        if: i >= pdx_cap_cell[0]
+            i: 0
+        steps: steps + 1
+    ---
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_pdx_find
+
+# kind 1: struct, 2: fnptr, 3: prototype fn/sub. The table keeps at most half its capacity filled.
+fn: lm_compiler_pdx_add (const: (@: name c.LmP0Text); int: kind) int
+    @: pdx_cap_cell int (cast: (@: int) (@ c.l2_pdx_cap))
+    @: pdx_n_cell int (cast: (@: int) (@ c.l2_pdx_n))
+    @@@: pdx_key_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pdx_key))
+    @@: pdx_type_cell int (cast: (@@: int) (@ c.l2_pdx_type))
+    @@: pdx_fnptr_cell int (cast: (@@: int) (@ c.l2_pdx_fnptr))
+    @@: pdx_fn_cell int (cast: (@@: int) (@ c.l2_pdx_fn))
+    unsigned: h
+    int: i
+    int: steps 0
+    int: at 0 - 1
+    if: name = 0 || name\data = 0 || pdx_cap_cell[0] <= 0 || pdx_key_cell[0] = 0
+        return: (cast: (int) (1))
+    h: lm_compiler_pdx_hash(name)
+    i: (cast: (int) (h % (cast: (unsigned) pdx_cap_cell[0])))
+    while: steps < pdx_cap_cell[0] && at < 0
+        if: pdx_key_cell[0][i] = 0
+            if: pdx_n_cell[0] * 2 >= pdx_cap_cell[0]
+                return: (cast: (int) (1))
+            pdx_key_cell[0][i]: (cast: (@: c.LmP0Text) name)
+            pdx_type_cell[0][i]: 0
+            pdx_fnptr_cell[0][i]: 0
+            pdx_fn_cell[0][i]: 0
+            pdx_n_cell[0]: pdx_n_cell[0] + 1
+            at: i
+        ---
+        if: at < 0 && c.lm_compiler_text_same(pdx_key_cell[0][i], name) != 0
+            at: i
+        if: at < 0
+            i: i + 1
+            if: i >= pdx_cap_cell[0]
+                i: 0
+            steps: steps + 1
+        ---
+    ---
+    if: at < 0
+        return: (cast: (int) (1))
+    if: kind = 1
+        pdx_type_cell[0][at]: 1
+    if: kind = 2
+        pdx_fnptr_cell[0][at]: 1
+    if: kind = 3
+        pdx_fn_cell[0][at]: 1
+    return: (cast: (int) (0))
+end: lm_compiler_pdx_add
+
+fn: lm_compiler_pdx_snap_index (const: (@: document c.LmP0Document)) int
+    @: snap_n_cell int (cast: (@: int) (@ c.l2_snap_n))
+    @@@: snap_doc_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_snap_doc))
+    int: i 0
+    if: document = 0
+        return: (cast: (int) (0 - 1))
+    while: i < snap_n_cell[0]
+        if: snap_doc_cell[0][i] = document
+            return: (cast: (int) (i))
+        i: i + 1
+    ---
+    return: (cast: (int) (0 - 1))
+end: lm_compiler_pdx_snap_index
+
+# The visited set of one closure walk: a mark per snapshot index, grown to the index met. 1: seen before; 0: marked now;
+# -1: no memory.
+fn: lm_compiler_pdx_seen (@@: seen int; @: seen_cap int; int: idx) int
+    @: grown int
+    int: cap
+    if: seen = 0 || seen_cap = 0 || idx < 0
+        return: (cast: (int) (0 - 1))
+    if: idx >= seen_cap[0]
+        cap: seen_cap[0]
+        if: cap < 16
+            cap: 16
+        while: cap <= idx
+            if: cap > c.INT_MAX / 2
+                return: (cast: (int) (0 - 1))
+            cap: cap * 2
+        ---
+        grown: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        if: grown = 0
+            return: (cast: (int) (0 - 1))
+        c.memset((cast: (@: void) grown), 0, (cast: (size_t) cap) * c.sizeof(c.int))
+        if: seen[0] != 0
+            c.memcpy((cast: (@: void) grown), (cast: (@: void) seen[0]), (cast: (size_t) seen_cap[0]) * c.sizeof(c.int))
+            c.lm_compiler_xfree((cast: (@: void) seen[0]))
+        ---
+        seen[0]: grown
+        seen_cap[0]: cap
+    ---
+    if: seen[0][idx] != 0
+        return: (cast: (int) (1))
+    seen[0][idx]: 1
+    return: (cast: (int) (0))
+end: lm_compiler_pdx_seen
+
+# One document of the closure and what it reaches. types_pass 0 collects prototype fn/sub names through `predef:` edges;
+# types_pass 1 collects struct and fnptr names through `predef:` and mapped `include:` edges -- the two reachabilities of
+# lm_compiler_predef_file_has_function and lm_compiler_predef_file_has_type. insert 0 only counts the declarations met
+# (count), insert 1 adds them to the index. 0: done; 1: no memory or a full table.
+fn: lm_compiler_pdx_walk (const: (@: quoted c.LmP0Text); int: types_pass; @@: seen int; @: seen_cap int; int: insert; @: count int) int
+    size_t: n
+    @: path char 0
+    @: document c.LmP0Document 0
+    const: (@: root c.LmP0Node)
+    @: f c.LmP0Field
+    @: first c.LmP0Field
+    @: pf c.LmP0Field
+    @: nf c.LmP0Field
+    @: item c.LmP0Node
+    @: decl c.LmP0Node
+    @: inc c.LmP0Field
+    @: q c.LmP0Text
+    @: mapped c.LmP0Text 0
+    @: mapped_data char 0
+    int: rc 0
+    int: mark
+    if: count = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
+        return: (cast: (int) (0))
+    n: quoted\length - 2U
+    path: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    if: path = 0
+        return: (cast: (int) (1))
+    c.memcpy(path, quoted\data + 1U, n)
+    path[n]: 0
+    document: lm_compiler_snap_document(path)
+    if: document = 0
+        c.lm_compiler_xfree((cast: (@: void) path))
+        return: (cast: (int) (0))
+    mark: lm_compiler_pdx_seen(seen, seen_cap, lm_compiler_pdx_snap_index(document))
+    if: mark != 0
+        c.lm_compiler_xfree((cast: (@: void) path))
+        if: mark < 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (0))
+    ---
+    root: c.lm_p0_document_root(document)
+    if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
+        f: c.lm_compiler_next_active(root\as\structure\first_field)
+        while: f != 0 && rc = 0
+            item: f\value
+            if: types_pass != 0 && (c.lm_compiler_frame_head(item, "struct") || c.lm_compiler_frame_head(item, "fnptr")) && item\as\frame\body != 0
+                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                    count[0]: count[0] + 1
+                    if: insert != 0 && c.lm_compiler_frame_head(item, "struct") && lm_compiler_pdx_add((cast: (const: @: c.LmP0Text) (first\value\as\atom)), 1) != 0
+                        rc: 1
+                    if: insert != 0 && c.lm_compiler_frame_head(item, "fnptr") && lm_compiler_pdx_add((cast: (const: @: c.LmP0Text) (first\value\as\atom)), 2) != 0
+                        rc: 1
+                ---
+            ---
+            if: types_pass = 0 && c.lm_compiler_frame_head(item, "prototype") && item\as\frame\body != 0
+                pf: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                while: pf != 0 && rc = 0
+                    decl: pf\value
+                    if: (c.lm_compiler_frame_head(decl, "fn") || c.lm_compiler_frame_head(decl, "sub")) && decl\as\frame\body != 0
+                        nf: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                        if: nf != 0 && nf\value != 0 && nf\value\kind = c.LM_P0_NODE_ATOM
+                            count[0]: count[0] + 1
+                            if: insert != 0 && lm_compiler_pdx_add((cast: (const: @: c.LmP0Text) (nf\value\as\atom)), 3) != 0
+                                rc: 1
+                        ---
+                    ---
+                    pf: c.lm_compiler_next_active(pf\next)
+                ---
+            ---
+            if: c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
+                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                while: first != 0 && rc = 0
+                    if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
+                        rc: lm_compiler_pdx_walk((cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), types_pass, seen, seen_cap, insert, count)
+                    first: c.lm_compiler_next_active(first\next)
+                ---
+            ---
+            if: types_pass != 0 && c.lm_compiler_frame_head(item, "include") && item\as\frame\body != 0
+                inc: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                while: inc != 0 && rc = 0
+                    if: inc\value != 0 && inc\value\kind = c.LM_P0_NODE_ATOM
+                        q: inc\value\as\atom
+                        if: q != 0 && q\data != 0 && q\length > 8U && q\data[0] = 34 && c.memcmp(q\data + q\length - 7U, ".lm1.h\"", 7U) = 0
+                            mapped_data: (cast: (@: char) c.lm_compiler_xmalloc(q\length + 1U))
+                            mapped: (cast: (@: c.LmP0Text) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Text)))
+                            if: mapped_data != 0 && mapped != 0
+                                c.memcpy(mapped_data, q\data, q\length)
+                                c.memcpy(mapped_data + (cast: (size_t) (q\length)) - 7U, ".h.lm1\"", 7U)
+                                mapped_data[q\length]: 0
+                                mapped\data: mapped_data
+                                mapped\length: q\length
+                                rc: lm_compiler_pdx_walk((cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(mapped, path))), types_pass, seen, seen_cap, insert, count)
+                            else:
+                                rc: 1
+                            ---
+                            if: mapped_data != 0
+                                c.lm_compiler_xfree((cast: (@: void) mapped_data))
+                            if: mapped != 0
+                                c.lm_compiler_xfree((cast: (@: void) mapped))
+                            mapped_data: 0
+                            mapped: 0
+                        ---
+                    ---
+                    inc: c.lm_compiler_next_active(inc\next)
+                ---
+            ---
+            f: c.lm_compiler_next_active(f\next)
+        ---
+    ---
+    c.lm_compiler_xfree((cast: (@: void) path))
+    return: (cast: (int) (rc))
+end: lm_compiler_pdx_walk
+
+fn: lm_compiler_pdx_release () int
+    @: pdx_built_cell int (cast: (@: int) (@ c.l2_pdx_built))
+    @: pdx_n_cell int (cast: (@: int) (@ c.l2_pdx_n))
+    @: pdx_cap_cell int (cast: (@: int) (@ c.l2_pdx_cap))
+    @@@: pdx_key_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pdx_key))
+    @@: pdx_type_cell int (cast: (@@: int) (@ c.l2_pdx_type))
+    @@: pdx_fnptr_cell int (cast: (@@: int) (@ c.l2_pdx_fnptr))
+    @@: pdx_fn_cell int (cast: (@@: int) (@ c.l2_pdx_fn))
+    if: pdx_key_cell[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) pdx_key_cell[0]))
+    if: pdx_type_cell[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) pdx_type_cell[0]))
+    if: pdx_fnptr_cell[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) pdx_fnptr_cell[0]))
+    if: pdx_fn_cell[0] != 0
+        c.lm_compiler_xfree((cast: (@: void) pdx_fn_cell[0]))
+    pdx_key_cell[0]: 0
+    pdx_type_cell[0]: 0
+    pdx_fnptr_cell[0]: 0
+    pdx_fn_cell[0]: 0
+    pdx_n_cell[0]: 0
+    pdx_cap_cell[0]: 0
+    pdx_built_cell[0]: 0
+    return: (cast: (int) (0))
+end: lm_compiler_pdx_release
+
+# The index is current for the predef list of the unit (the same list: its count and its storage). Otherwise it is built
+# anew: one counting pass over both closures sizes the table, one inserting pass fills it. 0: current; 1: no memory
+# (the question then answers "not found", as the walkers did on a failed allocation; l2_alloc_err is set by the
+# allocator).
+fn: lm_compiler_pdx_ready () int
+    @: pd_n_cell int (cast: (@: int) (@ c.l2_pd_n))
+    @@@: pd_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pd))
+    @: pdx_built_cell int (cast: (@: int) (@ c.l2_pdx_built))
+    @: pdx_cap_cell int (cast: (@: int) (@ c.l2_pdx_cap))
+    @: pdx_pd_n_cell int (cast: (@: int) (@ c.l2_pdx_pd_n))
+    @@@: pdx_pd0_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pdx_pd0))
+    @@@: pdx_key_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pdx_key))
+    @@: pdx_type_cell int (cast: (@@: int) (@ c.l2_pdx_type))
+    @@: pdx_fnptr_cell int (cast: (@@: int) (@ c.l2_pdx_fnptr))
+    @@: pdx_fn_cell int (cast: (@@: int) (@ c.l2_pdx_fn))
+    @: seen int 0
+    int: seen_cap 0
+    int: count 0
+    int: cap
+    int: i
+    int: pass 0
+    int: types_pass
+    int: rc 0
+    size_t: nb
+    if: pdx_built_cell[0] != 0 && pdx_pd_n_cell[0] = pd_n_cell[0] && pdx_pd0_cell[0] = pd_cell[0]
+        return: (cast: (int) (0))
+    lm_compiler_pdx_release()
+    while: pass < 2 && rc = 0
+        if: pass = 1
+            cap: 16
+            while: cap <= count * 2 + 2
+                if: cap > c.INT_MAX / 4
+                    rc: 1
+                    break
+                cap: cap * 2
+            ---
+            if: rc = 0
+                nb: (cast: (size_t) cap) * sizeof(@: char)
+                pdx_key_cell[0]: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
+                pdx_type_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+                pdx_fnptr_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+                pdx_fn_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+                if: pdx_key_cell[0] = 0 || pdx_type_cell[0] = 0 || pdx_fnptr_cell[0] = 0 || pdx_fn_cell[0] = 0
+                    rc: 1
+                else:
+                    c.memset((cast: (@: void) pdx_key_cell[0]), 0, nb)
+                    c.memset((cast: (@: void) pdx_type_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
+                    c.memset((cast: (@: void) pdx_fnptr_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
+                    c.memset((cast: (@: void) pdx_fn_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
+                    pdx_cap_cell[0]: cap
+                ---
+            ---
+        ---
+        count: 0
+        types_pass: 0
+        while: types_pass < 2 && rc = 0
+            if: seen != 0
+                c.memset((cast: (@: void) seen), 0, (cast: (size_t) seen_cap) * c.sizeof(c.int))
+            i: 0
+            while: i < pd_n_cell[0] && rc = 0
+                rc: lm_compiler_pdx_walk(pd_cell[0][i], types_pass, @ seen, @ seen_cap, pass, @ count)
+                i: i + 1
+            ---
+            types_pass: types_pass + 1
+        ---
+        pass: pass + 1
+    ---
+    if: seen != 0
+        c.lm_compiler_xfree((cast: (@: void) seen))
+    if: rc != 0
+        lm_compiler_pdx_release()
+        return: (cast: (int) (1))
+    pdx_built_cell[0]: 1
+    pdx_pd_n_cell[0]: pd_n_cell[0]
+    pdx_pd0_cell[0]: pd_cell[0]
+    return: (cast: (int) (0))
+end: lm_compiler_pdx_ready
+
+# want 1: a struct; 2: a fnptr; 3: a prototype fn/sub. For 1 and 2 the `c.` spelling of the name asks for the name
+# without it, as lm_compiler_predef_file_has_type matched it.
+fn: lm_compiler_pdx_kind (const: (@: name c.LmP0Text); int: want) int
+    @@: pdx_type_cell int (cast: (@@: int) (@ c.l2_pdx_type))
+    @@: pdx_fnptr_cell int (cast: (@@: int) (@ c.l2_pdx_fnptr))
+    @@: pdx_fn_cell int (cast: (@@: int) (@ c.l2_pdx_fn))
+    c.LmP0Text: suffix
+    int: i
+    if: name = 0 || name\data = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_pdx_ready() != 0
+        return: (cast: (int) (0))
+    i: lm_compiler_pdx_find(name)
+    if: i >= 0 && want = 1 && pdx_type_cell[0][i] != 0
+        return: (cast: (int) (1))
+    if: i >= 0 && want = 2 && pdx_fnptr_cell[0][i] != 0
+        return: (cast: (int) (1))
+    if: i >= 0 && want = 3 && pdx_fn_cell[0][i] != 0
+        return: (cast: (int) (1))
+    if: want != 3 && name\length > 2U && name\data[0] = 99 && name\data[1] = 46
+        suffix\data: name\data + 2U
+        suffix\length: name\length - 2U
+        i: lm_compiler_pdx_find(@ suffix)
+        if: i >= 0 && want = 1 && pdx_type_cell[0][i] != 0
+            return: (cast: (int) (1))
+        if: i >= 0 && want = 2 && pdx_fnptr_cell[0][i] != 0
+            return: (cast: (int) (1))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_pdx_kind

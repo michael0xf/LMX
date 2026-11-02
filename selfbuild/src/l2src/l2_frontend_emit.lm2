@@ -5125,9 +5125,11 @@ fn: lm_compiler_check_word_stmt (const: (@: stmt c.LmP0Node); const: (@: w c.LmP
     if: na != 0
         return: (cast: (int) (2))
     # No written argument.  A bare `return` ends the walked root (mi = E): its value is its last evaluated expression
-    # (plan §3); a method with a result returns a value.
+    # (plan §3).  An ordinary callable may also finish without a value, inside `if:` too: its producers lower that
+    # (the statement `return` and Core's trailer take m_ret 8 or machine 0, emit_empty_return); only a machine
+    # function with a result has to return one.
     if: c.lm_compiler_text_eq(w, "return")
-        if: mi != e_cell[0] && m_ret_cell[0][mi] != 8
+        if: mi != e_cell[0] && m_ret_cell[0][mi] != 8 && c.lm_compiler_m_machine(mi) != 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported body")))
         return: (cast: (int) (0))
     if: c.lm_compiler_text_eq(w, "sendMessage")
@@ -11760,9 +11762,9 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     oi: c.lm_compiler_own_ref_decl(stmt, rw_mi_cell[0])
     if: oi >= 0
         declaration: c.lm_compiler_declaration(stmt)
-        # Repeating a reference declaration without a candidate checks its
-        # place but does not clear it. Retain the source act as inert code.
-        if: declaration != 0 && own_decl_cell[0][oi] != stmt && declaration\candidate_count = 0 && c.lm_compiler_reference_implicit_model(declaration) < 0 && c.lm_compiler_reference_implicit_method(declaration, rw_mi_cell[0]) < 0
+        # A reference declaration without a written or implicit candidate
+        # checks its place without a body write, first act or repeat alike.
+        if: declaration != 0 && declaration\candidate_count = 0 && c.lm_compiler_reference_implicit_model(declaration) < 0 && c.lm_compiler_reference_implicit_method(declaration, rw_mi_cell[0]) < 0
             if: lm_compiler_rw_source_node(stmt, into, "LMX_WALK_OP_SOURCE_INERT", @ port_local_node) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
                 return: (cast: (int) (1))
             \made: 1
@@ -14926,6 +14928,8 @@ fn: lm_compiler_value_path_effects (@: span c.L2ValueSpan; int: mi) int
     if: span\prepared != 0
         return: (cast: (int) (lm_compiler_prepared_path_effects((cast: (const: @: c.L2Path) (span\prepared)), mi, 0)))
     if: span\operand != 0
+        if: lm_compiler_indirect_span_raises(span, mi) != 0
+            return: (cast: (int) (1))
         return: (cast: (int) (lm_compiler_value_path_effects((cast: (@: c.L2ValueSpan) (span\operand)), mi)))
     if: span\primary != 0
         return: (cast: (int) (lm_compiler_node_path_effects_value((cast: (@: c.LmP0Node) (span\node)), span, mi, 0)))
@@ -14973,7 +14977,9 @@ fn: lm_compiler_head_path_effect (const: (@: stmt c.LmP0Node); int: mi) int
         return: (cast: (int) (1))
     if: expression != 0
         if: expression\path_status != 0 || lm_compiler_port249_1_L2HeadExpression_prepared_n(expression) < 1
-            return: (cast: (int) (0))
+            # A raw dereference head writes through its holder, which
+            # Lower's lm_compiler_emit_indirect_location checks.
+            return: (cast: (int) (lm_compiler_indirect_head_raises(stmt, mi)))
         status: c.lm_compiler_path_prepared_view((cast: (const: @: c.L2Path) (@ expression\prepared)), path)
         if: status != 0
             return: (cast: (int) (1))
@@ -15033,6 +15039,10 @@ fn: lm_compiler_fields_path_effects (@: first c.LmP0Field; int: count; int: mi; 
                     left: left - skip
                     continue
                 ---
+                # No run starts at an operator atom; the raw dereference
+                # prefix still raises where Lower checks its holder.
+                if: c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (v\as\atom))) != 0 && lm_compiler_fields_indirect_raises(f, left, mi) != 0
+                    return: (cast: (int) (1))
             ---
             if: lm_compiler_node_path_effects(v, mi, host) != 0
                 return: (cast: (int) (1))
@@ -15061,6 +15071,8 @@ fn: lm_compiler_fields_path_effects_values (@: values c.L2ValueSpan; int: n; int
             ---
         else:
             if: value\operand != 0
+                if: lm_compiler_indirect_span_raises(value, mi) != 0
+                    return: (cast: (int) (1))
                 if: lm_compiler_fields_path_effects_values((cast: (@: c.L2ValueSpan) (value\operand)), 1, mi, 0, 0) != 0
                     return: (cast: (int) (1))
                 ---
@@ -17456,3 +17468,44 @@ fn: lm_compiler_cli_main (int: argc; @@: argv char) int
 end: lm_compiler_cli_main
 
 
+# A raw dereference raises `interpreter` on a null holder wherever Lower lowers
+# it as the checked walker DEREF (LMX_semantics #exceptions);
+# lm_compiler_indirect_managed is that one classification, so the method gets
+# the status channel. A dereference without a pointer contract is Lower's
+# diagnostic.
+fn: lm_compiler_indirect_span_raises (@: span c.L2ValueSpan; int: mi) int
+    c.L2ValueSpan: operand
+    int: levels 0
+    int: source_type -1
+    int: result_type -1
+    if: span = 0 || span\operand = 0 || span\node = 0 || span\node\kind != c.LM_P0_NODE_ATOM || span\node\as = 0 || c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (span\node\as\atom))) = 0
+        return: 0
+    if: c.lm_compiler_indirect_span(span, mi, @ operand, @ levels, @ source_type, @ result_type) != 0
+        return: 0
+    return: c.lm_compiler_indirect_managed(levels, source_type, mi)
+end: lm_compiler_indirect_span_raises
+
+# The field scan meets the same dereference as its prefix atom: the common value
+# grammar prepares its one operand, then it is classified as above.
+fn: lm_compiler_fields_indirect_raises (@: first c.LmP0Field; int: count; int: mi) int
+    c.L2ValueSpan: span
+    int: raises 0
+    if: c.lm_compiler_value_span_prepare(first, count, @ span) > 1
+        raises: lm_compiler_indirect_span_raises(@ span, mi)
+    c.lm_compiler_value_span_release(@ span)
+    return: raises
+end: lm_compiler_fields_indirect_raises
+
+# A raw dereference write head `\p: v` raises `interpreter` on a null holder
+# where Lower checks it: the shared classification of the whole DEREF. A head
+# that is no dereference raises nothing here.
+fn: lm_compiler_indirect_head_raises (const: (@: stmt c.LmP0Node); int: mi) int
+    c.L2Address: place
+    int: raises 0
+    if: c.lm_compiler_indirect_head(stmt, @ place) != 0
+        return: 0
+    if: c.lm_compiler_indirect_resolve(mi, @ place) = 0
+        raises: c.lm_compiler_indirect_managed((cast: (int) (place\levels)), (cast: (int) (place\source_type)), mi)
+    c.lm_compiler_address_release(@ place)
+    return: raises
+end: lm_compiler_indirect_head_raises

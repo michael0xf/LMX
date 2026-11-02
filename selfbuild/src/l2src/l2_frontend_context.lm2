@@ -384,24 +384,25 @@ fn: lm_compiler_own_find (int: mi; const: (@: t c.LmP0Text)) int
     int: i 0
     if: t = 0
         return: (cast: (int) (-1))
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         if: own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], t) && own_host_cell[0][i] = 0
             return: (cast: (int) (i))
         if: own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], t) && lm_compiler_scope_has(own_host_cell[0][i])
             return: (cast: (int) (i))
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     ---
     # A unit field is an own field of the entry E, whose occurrence is the unit:
     # visible through the callable's node chain from below its declaration.
     # Prefer a method/body occurrence above; only then fall back to it.
-    i: 0
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         # The cheap name compare first, the unit-visibility walk (m_code_file, source_definition_method, callable_source_node, vis_ok --
         # reads only) after it: the same rows satisfy both, so the result is the same; own_unit_seen runs for same-name rows only
         # (prof02 gdb snapshots 1, 2 sat in this walk under own_at). The same order in own_find_last, own_at and own_lexical below.
         if: c.lm_compiler_text_same(own_name_cell[0][i], t) && lm_compiler_own_unit_seen(i, mi) != 0
             return: (cast: (int) (i))
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     return: (cast: (int) (-1))
 end: lm_compiler_own_find
 
@@ -496,13 +497,14 @@ fn: lm_compiler_own_find_last (int: mi; const: (@: t c.LmP0Text)) int
     int: hit -1
     if: t = 0
         return: (cast: (int) (-1))
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         if: i != own_excl_cell[0] && c.lm_compiler_text_same(own_name_cell[0][i], t)
             if: own_mi_cell[0][i] = mi && (own_host_cell[0][i] = 0 || lm_compiler_scope_has(own_host_cell[0][i]))
                 if: lm_compiler_own_binding_after(i, hit) != 0
                     hit: i
         ---
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     if: hit >= 0
         return: (cast: (int) (hit))
     # A unit field is an own field of the entry E, whose occurrence is the
@@ -512,13 +514,13 @@ fn: lm_compiler_own_find_last (int: mi; const: (@: t c.LmP0Text)) int
     # falls back to it this same way; an assignment target needs the same
     # fallback its own-name lookup lacked -- no new mechanism, this function's
     # sibling already has it.
-    i: 0
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         if: i != own_excl_cell[0] && c.lm_compiler_text_same(own_name_cell[0][i], t) && lm_compiler_own_unit_seen(i, mi) != 0
             if: c.lm_compiler_own_source_after(i, hit) != 0
                 hit: i
         ---
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     return: (cast: (int) (hit))
 end: lm_compiler_own_find_last
 
@@ -532,12 +534,13 @@ fn: lm_compiler_own_local_at (int: mi; const: (@: t c.LmP0Text); const: (@: at c
     int: hit -1
     if: t = 0
         return: (cast: (int) (-1))
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         if: i != own_excl_cell[0] && own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && (lm_compiler_scope_has(own_host_cell[0][i]) != 0 || lm_compiler_own_same_activation(i, mi) != 0)
             if: lm_compiler_own_source_visible(i, mi, at) != 0 && lm_compiler_own_binding_after(i, hit) != 0
                 hit: i
         ---
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     if: hit >= 0
         return: (cast: (int) (hit))
     return: (cast: (int) (-1))
@@ -551,13 +554,13 @@ fn: lm_compiler_own_at (int: mi; const: (@: t c.LmP0Text); const: (@: at c.LmP0N
     int: hit lm_compiler_own_local_at(mi, t, at)
     if: hit >= 0
         return: (cast: (int) (hit))
-    i: 0
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         if: i != own_excl_cell[0] && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && lm_compiler_own_unit_seen(i, mi) != 0
             if: c.lm_compiler_own_source_after(i, hit) != 0
                 hit: i
         ---
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     return: (cast: (int) (hit))
 end: lm_compiler_own_at
 
@@ -579,10 +582,11 @@ fn: lm_compiler_own_host_at (int: mi; const: (@: t c.LmP0Text); const: (@: host 
     int: hit -1
     if: mi < 0 || t = 0
         return: (cast: (int) (-1))
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         if: i != own_excl_cell[0] && own_mi_cell[0][i] = mi && own_host_cell[0][i] = host && c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && lm_compiler_own_source_visible(i, mi, at) != 0 && c.lm_compiler_own_source_after(i, hit) != 0
             hit: i
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     return: (cast: (int) (hit))
 end: lm_compiler_own_host_at
 
@@ -895,12 +899,13 @@ fn: lm_compiler_own_lexical (int: mi; const: (@: t c.LmP0Text)) int
     scope_n_cell[0]: 0
     own_excl_cell[0]: -1
     lm_compiler_vis_method(mi)
-    while: i < own_n_cell[0]
+    i: lm_compiler_oix_first(t)
+    while: i >= 0
         if: c.lm_compiler_text_same(own_name_cell[0][i], t) != 0 && lm_compiler_own_unit_seen(i, mi) != 0
             if: c.lm_compiler_own_source_after(i, own) != 0
                 own: i
         ---
-        i: i + 1
+        i: lm_compiler_oix_after(i)
     restored: lm_compiler_source_restore(@ saved)
     @: saved_view c.L2SourceSite (cast: (@: c.L2SourceSite) (@ saved))
     c.lm_compiler_xfree((cast: (@: void) saved_view\scopes))
@@ -1093,13 +1098,44 @@ end: lm_compiler_ns_source_rank
 
 fn: lm_compiler_contract_source_node (@: value c.L2TypeContract) const: @: c.LmP0Node
     @@: declarations_cell c.L2Declaration (cast: (@@: c.L2Declaration) (@ c.l2_declarations))
+    @: cmap_n_cell int (cast: (@: int) (@ c.l2_cmap_n))
+    @: cmap_cap_cell int (cast: (@: int) (@ c.l2_cmap_cap))
+    @@@: cmap_key_cell c.L2TypeContract (cast: (@@@: c.L2TypeContract) (@ c.l2_cmap_key))
+    @@: cmap_head_cell int (cast: (@@: int) (@ c.l2_cmap_head))
+    @@@: ent_decl_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_cmap_ent_decl))
+    @@: ent_next_cell int (cast: (@@: int) (@ c.l2_cmap_ent_next))
+    @@@: csn_buf_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_csn_buf))
+    @@: csn_ord_cell int (cast: (@@: int) (@ c.l2_csn_ord))
+    @: decl_gen_cell int (cast: (@: int) (@ c.l2_decl_gen))
+    @: cmap_gen_cell int (cast: (@: int) (@ c.l2_cmap_gen))
     const: (@: best c.LmP0Node 0)
-    @: declaration c.L2Declaration declarations_cell[0]
+    @: declaration c.L2Declaration 0
     @: contract c.L2TypeContract
     int: matched
+    int: i
+    int: e
+    int: k 0
+    int: j
+    int: pick
     if: value = 0
         return: (cast: (const: @: c.LmP0Node) (0))
-    while: declaration != 0
+    # tp112: the candidates come from the contract index (l2_cmap_*, written by l2_frontend_resolve at every declaration
+    # creation and contract rewrite); each is re-checked against its current chains exactly as the list walk tested it,
+    # then the fold runs newest first (descending creation ordinal l2_dord_*, the order of l2_declarations). An empty
+    # list or an empty index answers 0, as the walk did.
+    if: declarations_cell[0] = 0 || cmap_gen_cell[0] != decl_gen_cell[0] || cmap_n_cell[0] = 0 || cmap_key_cell[0] = 0 || cmap_cap_cell[0] <= 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    i: lm_compiler_cmap_rslot(value, cmap_cap_cell[0])
+    while: cmap_key_cell[0][i] != 0 && cmap_key_cell[0][i] != value
+        i: i + 1
+        if: i >= cmap_cap_cell[0]
+            i: 0
+    ---
+    if: cmap_key_cell[0][i] = 0
+        return: (cast: (const: @: c.LmP0Node) (0))
+    e: cmap_head_cell[0][i]
+    while: e > 0
+        declaration: ent_decl_cell[0][e - 1]
         matched: 0
         contract: declaration\contract
         while: contract != 0
@@ -1114,11 +1150,34 @@ fn: lm_compiler_contract_source_node (@: value c.L2TypeContract) const: @: c.LmP
             contract: contract\operand
         ---
         if: matched != 0
-            if: best = 0 || c.lm_compiler_node_in(best, declaration\source) != 0
-                best: declaration\source
+            j: 0
+            while: j < k && csn_buf_cell[0][j] != declaration
+                j: j + 1
+            if: j = k
+                if: lm_compiler_csn_room(k + 1) != 0
+                    return: (cast: (const: @: c.LmP0Node) (0))
+                csn_buf_cell[0][k]: declaration
+                csn_ord_cell[0][k]: lm_compiler_dord_rget(declaration)
+                k: k + 1
             ---
         ---
-        declaration: declaration\allocated_next
+        e: ent_next_cell[0][e - 1]
+    ---
+    while: k > 0
+        pick: 0
+        j: 1
+        while: j < k
+            if: csn_ord_cell[0][j] > csn_ord_cell[0][pick]
+                pick: j
+            j: j + 1
+        ---
+        declaration: csn_buf_cell[0][pick]
+        if: best = 0 || c.lm_compiler_node_in(best, declaration\source) != 0
+            best: declaration\source
+        ---
+        csn_buf_cell[0][pick]: csn_buf_cell[0][k - 1]
+        csn_ord_cell[0][pick]: csn_ord_cell[0][k - 1]
+        k: k - 1
     ---
     return: (cast: (const: @: c.LmP0Node) (best))
 end: lm_compiler_contract_source_node
@@ -1149,15 +1208,30 @@ fn: lm_compiler_contract_source_begin_at (const: (@: site c.LmP0Node); int: owne
     if: site = 0 || (site = here_node_cell[0] && (owner < 0 || owner = here_mi_cell[0]))
         return: (cast: (int) (0))
     if: owner < 0
-        while: i < m_n_cell[0]
-            source: lm_compiler_callable_source_node(i)
-            if: source != 0 && c.lm_compiler_node_in(source, site) != 0
-                if: owner_node = 0 || c.lm_compiler_node_in(owner_node, source) != 0
-                    owner: i
-                    owner_node: source
-                ---
+        # tp111: the owning method of a site is memoized (l2_omemo_*: site -> owner, -1 for none; -3 = no entry).
+        # The memo forgets everything when the method table changes (l2_m_n) and when a head-expression document is
+        # destroyed (lm_compiler_head_expression_dispose: its node addresses may be reused); a remembered owner is
+        # re-checked against its source before it is trusted, so a site that left that tree is searched again.
+        owner: lm_compiler_omemo_get(site)
+        if: owner >= 0
+            source: lm_compiler_callable_source_node(owner)
+            if: source = 0 || c.lm_compiler_node_in(source, site) = 0
+                owner: -3
             ---
-            i: i + 1
+        ---
+        if: owner = -3
+            owner: -1
+            while: i < m_n_cell[0]
+                source: lm_compiler_callable_source_node(i)
+                if: source != 0 && c.lm_compiler_node_in(source, site) != 0
+                    if: owner_node = 0 || c.lm_compiler_node_in(owner_node, source) != 0
+                        owner: i
+                        owner_node: source
+                    ---
+                ---
+                i: i + 1
+            ---
+            lm_compiler_omemo_put(site, owner)
         ---
     ---
     if: lm_compiler_source_save(saved) != 0
@@ -2102,3 +2176,277 @@ end: lm_compiler_has_own_ty
 fn: lm_compiler_mres_find (int: mi; const: (@: t c.LmP0Text)) int
     return: (cast: (int) (c.lm_compiler_mres_of_own(lm_compiler_resolved_own(mi, t))))
 end: lm_compiler_mres_find
+
+# tp111: the owner memo of lm_compiler_contract_source_begin_at -- open addressing on the site address, keys and
+# int values in the frontend state (l2_omemo_key/_val/_cap/_n), valid for one method table (l2_omemo_m_n = l2_m_n
+# it was filled under), half load, grown by doubling; cleared by lm_compiler_head_expression_dispose too.
+fn: lm_compiler_omemo_slot (const: (@: at c.LmP0Node); int: cap) int
+    size_t: k (cast: (size_t) at)
+    return: (cast: (int) ((k / 8U + k / 4096U) % (cast: (size_t) cap)))
+end: lm_compiler_omemo_slot
+
+fn: lm_compiler_omemo_get (const: (@: at c.LmP0Node)) int
+    @: n_cell int (cast: (@: int) (@ c.l2_omemo_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_omemo_cap))
+    @: memo_m_n_cell int (cast: (@: int) (@ c.l2_omemo_m_n))
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_omemo_key))
+    @@: val_cell int (cast: (@@: int) (@ c.l2_omemo_val))
+    int: i
+    if: memo_m_n_cell[0] != m_n_cell[0]
+        if: n_cell[0] != 0 && key_cell[0] != 0 && cap_cell[0] > 0
+            c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap_cell[0]) * sizeof(@: void))
+        n_cell[0]: 0
+        memo_m_n_cell[0]: m_n_cell[0]
+        return: (cast: (int) (-3))
+    if: at = 0 || n_cell[0] = 0 || key_cell[0] = 0 || cap_cell[0] <= 0
+        return: (cast: (int) (-3))
+    i: lm_compiler_omemo_slot(at, cap_cell[0])
+    while: key_cell[0][i] != 0
+        if: key_cell[0][i] = at
+            return: (cast: (int) (val_cell[0][i]))
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    return: (cast: (int) (-3))
+end: lm_compiler_omemo_get
+
+fn: lm_compiler_omemo_grow () int
+    @: n_cell int (cast: (@: int) (@ c.l2_omemo_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_omemo_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_omemo_key))
+    @@: val_cell int (cast: (@@: int) (@ c.l2_omemo_val))
+    @@: old_key c.LmP0Node key_cell[0]
+    @: old_val int val_cell[0]
+    int: old_cap cap_cell[0]
+    int: cap 1024
+    int: i 0
+    int: j
+    if: old_cap > 0
+        cap: old_cap * 2
+    key_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: key_cell[0] = 0
+        key_cell[0]: old_key
+        return: (cast: (int) (1))
+    val_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    if: val_cell[0] = 0
+        c.lm_compiler_xfree((cast: (@: void) key_cell[0]))
+        key_cell[0]: old_key
+        val_cell[0]: old_val
+        return: (cast: (int) (1))
+    c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
+    c.memset((cast: (@: void) val_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
+    cap_cell[0]: cap
+    n_cell[0]: 0
+    while: i < old_cap
+        if: old_key[i] != 0
+            j: lm_compiler_omemo_slot(old_key[i], cap)
+            while: key_cell[0][j] != 0
+                j: j + 1
+                if: j >= cap
+                    j: 0
+            ---
+            key_cell[0][j]: old_key[i]
+            val_cell[0][j]: old_val[i]
+            n_cell[0]: n_cell[0] + 1
+        i: i + 1
+    ---
+    if: old_key != 0
+        c.lm_compiler_xfree((cast: (@: void) old_key))
+    if: old_val != 0
+        c.lm_compiler_xfree((cast: (@: void) old_val))
+    return: (cast: (int) (0))
+end: lm_compiler_omemo_grow
+
+fn: lm_compiler_omemo_put (const: (@: at c.LmP0Node); int: owner) int
+    @: n_cell int (cast: (@: int) (@ c.l2_omemo_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_omemo_cap))
+    @@@: key_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_omemo_key))
+    @@: val_cell int (cast: (@@: int) (@ c.l2_omemo_val))
+    int: i
+    if: at = 0
+        return: (cast: (int) (0))
+    if: key_cell[0] = 0 || (n_cell[0] + 1) * 2 > cap_cell[0]
+        if: lm_compiler_omemo_grow() != 0
+            return: (cast: (int) (1))
+        ---
+    i: lm_compiler_omemo_slot(at, cap_cell[0])
+    while: key_cell[0][i] != 0 && key_cell[0][i] != at
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    if: key_cell[0][i] = 0
+        key_cell[0][i]: (cast: (@: c.LmP0Node) at)
+        n_cell[0]: n_cell[0] + 1
+    val_cell[0][i]: owner
+    return: (cast: (int) (0))
+end: lm_compiler_omemo_put
+
+# tp112: readers of the contract index and the ordinal map that l2_frontend_resolve writes (same state cells).
+fn: lm_compiler_cmap_rslot (@: at c.L2TypeContract; int: cap) int
+    size_t: k (cast: (size_t) at)
+    return: (cast: (int) ((k / 8U + k / 4096U) % (cast: (size_t) cap)))
+end: lm_compiler_cmap_rslot
+
+fn: lm_compiler_dord_rget (@: at c.L2Declaration) int
+    @: n_cell int (cast: (@: int) (@ c.l2_dord_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_dord_cap))
+    @@@: key_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_dord_key))
+    @@: val_cell int (cast: (@@: int) (@ c.l2_dord_val))
+    size_t: k (cast: (size_t) at)
+    int: i
+    if: at = 0 || n_cell[0] = 0 || key_cell[0] = 0 || cap_cell[0] <= 0
+        return: (cast: (int) (0))
+    i: (cast: (int) ((k / 8U + k / 4096U) % (cast: (size_t) cap_cell[0])))
+    while: key_cell[0][i] != 0
+        if: key_cell[0][i] = at
+            return: (cast: (int) (val_cell[0][i]))
+        i: i + 1
+        if: i >= cap_cell[0]
+            i: 0
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_dord_rget
+
+# Scratch of the contract-source fold: at least n candidates.
+fn: lm_compiler_csn_room (int: n) int
+    @: cap_cell int (cast: (@: int) (@ c.l2_csn_cap))
+    @@@: buf_cell c.L2Declaration (cast: (@@@: c.L2Declaration) (@ c.l2_csn_buf))
+    @@: ord_cell int (cast: (@@: int) (@ c.l2_csn_ord))
+    @@: new_buf c.L2Declaration 0
+    @: new_ord int 0
+    int: cap 64
+    if: n <= cap_cell[0] && buf_cell[0] != 0
+        return: (cast: (int) (0))
+    while: cap < n
+        cap: cap * 2
+    new_buf: (cast: (@@: c.L2Declaration) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    if: new_buf = 0
+        return: (cast: (int) (1))
+    new_ord: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    if: new_ord = 0
+        c.lm_compiler_xfree((cast: (@: void) new_buf))
+        return: (cast: (int) (1))
+    if: buf_cell[0] != 0 && cap_cell[0] > 0
+        c.memcpy((cast: (@: void) new_buf), (cast: (const: @: void) buf_cell[0]), (cast: (size_t) cap_cell[0]) * sizeof(@: void))
+        c.memcpy((cast: (@: void) new_ord), (cast: (const: @: void) ord_cell[0]), (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+        c.lm_compiler_xfree((cast: (@: void) buf_cell[0]))
+        c.lm_compiler_xfree((cast: (@: void) ord_cell[0]))
+    ---
+    buf_cell[0]: new_buf
+    ord_cell[0]: new_ord
+    cap_cell[0]: cap
+    return: (cast: (int) (0))
+end: lm_compiler_csn_room
+
+# tp112: the own-name index -- name hash -> the chain of own rows carrying that name, in ascending row order (the
+# order every own lookup walked). Rows are only appended (lm_compiler_own_add) until lm_compiler_own_free starts the
+# table over and bumps l2_own_gen; the index follows: it forgets on a new generation, indexes the rows added since
+# its last use, and rebuilds when it outgrows its buckets. A row with no name is left out, as text_same refused it.
+fn: lm_compiler_oix_hash (const: (@: t c.LmP0Text)) unsigned
+    unsigned: h 2166136261U
+    size_t: i 0U
+    if: t = 0 || t\data = 0
+        return: (cast: (unsigned) (0U))
+    while: i < t\length
+        h: h * 16777619U + (cast: (unsigned) (cast: (uchar) t\data[i]))
+        i: i + 1U
+    ---
+    return: (cast: (unsigned) (h))
+end: lm_compiler_oix_hash
+
+fn: lm_compiler_oix_insert (int: r) int
+    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    @: cap_cell int (cast: (@: int) (@ c.l2_oix_cap))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_oix_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_oix_tail))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_oix_next))
+    int: b
+    next_cell[0][r]: -1
+    if: own_name_cell[0][r] = 0
+        return: (cast: (int) (0))
+    b: (cast: (int) (lm_compiler_oix_hash(own_name_cell[0][r]) % (cast: (unsigned) cap_cell[0])))
+    if: bucket_cell[0][b] < 0
+        bucket_cell[0][b]: r
+    else:
+        next_cell[0][tail_cell[0][b]]: r
+    ---
+    tail_cell[0][b]: r
+    return: (cast: (int) (0))
+end: lm_compiler_oix_insert
+
+fn: lm_compiler_oix_sync () int
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @: own_gen_cell int (cast: (@: int) (@ c.l2_own_gen))
+    @: n_cell int (cast: (@: int) (@ c.l2_oix_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_oix_cap))
+    @: rows_cell int (cast: (@: int) (@ c.l2_oix_rows))
+    @: gen_cell int (cast: (@: int) (@ c.l2_oix_gen))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_oix_bucket))
+    @@: tail_cell int (cast: (@@: int) (@ c.l2_oix_tail))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_oix_next))
+    int: cap
+    if: gen_cell[0] != own_gen_cell[0] || n_cell[0] > own_n_cell[0]
+        if: bucket_cell[0] != 0 && cap_cell[0] > 0
+            c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+            c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
+        ---
+        n_cell[0]: 0
+        gen_cell[0]: own_gen_cell[0]
+    ---
+    if: own_n_cell[0] <= n_cell[0]
+        return: (cast: (int) (0))
+    if: bucket_cell[0] = 0 || own_n_cell[0] * 2 > cap_cell[0] || own_n_cell[0] > rows_cell[0]
+        cap: 1024
+        while: cap < own_n_cell[0] * 4
+            cap: cap * 2
+        if: bucket_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) bucket_cell[0]))
+        if: tail_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) tail_cell[0]))
+        if: next_cell[0] != 0
+            c.lm_compiler_xfree((cast: (@: void) next_cell[0]))
+        bucket_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        tail_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        next_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        if: bucket_cell[0] = 0 || tail_cell[0] = 0 || next_cell[0] = 0
+            cap_cell[0]: 0
+            rows_cell[0]: 0
+            n_cell[0]: 0
+            return: (cast: (int) (1))
+        ---
+        c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
+        c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
+        cap_cell[0]: cap
+        rows_cell[0]: cap
+        n_cell[0]: 0
+    ---
+    while: n_cell[0] < own_n_cell[0]
+        lm_compiler_oix_insert(n_cell[0])
+        n_cell[0]: n_cell[0] + 1
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_oix_sync
+
+fn: lm_compiler_oix_first (const: (@: t c.LmP0Text)) int
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_oix_cap))
+    @@: bucket_cell int (cast: (@@: int) (@ c.l2_oix_bucket))
+    int: b
+    if: t = 0 || own_n_cell[0] = 0
+        return: (cast: (int) (-1))
+    if: lm_compiler_oix_sync() != 0 || bucket_cell[0] = 0 || cap_cell[0] <= 0
+        return: (cast: (int) (-1))
+    b: (cast: (int) (lm_compiler_oix_hash(t) % (cast: (unsigned) cap_cell[0])))
+    return: (cast: (int) (bucket_cell[0][b]))
+end: lm_compiler_oix_first
+
+fn: lm_compiler_oix_after (int: r) int
+    @: n_cell int (cast: (@: int) (@ c.l2_oix_n))
+    @@: next_cell int (cast: (@@: int) (@ c.l2_oix_next))
+    if: r < 0 || r >= n_cell[0] || next_cell[0] = 0
+        return: (cast: (int) (-1))
+    return: (cast: (int) (next_cell[0][r]))
+end: lm_compiler_oix_after

@@ -778,6 +778,7 @@ end: lm_compiler_e_free
 
 # Original: l2src/l2trans.lm1:2334
 fn: lm_compiler_own_free () int
+    @: own_gen_cell int (cast: (@: int) (@ c.l2_own_gen))
     @@: own_reuses_cell c.L2OwnReuse (cast: (@@: c.L2OwnReuse) (@ c.l2_own_reuses))
     @@: rw_bseq_cell int (cast: (@@: int) (@ c.l2_rw_bseq))
     @: rw_bseq_n_cell int (cast: (@: int) (@ c.l2_rw_bseq_n))
@@ -848,6 +849,8 @@ fn: lm_compiler_own_free () int
     m_pre_cell[0]: 0
     own_n_cell[0]: 0
     own_cap_cell[0]: 0
+    # tp112: the own table starts over -- the name index of l2_frontend_context (l2_oix_*) forgets it by this generation.
+    own_gen_cell[0]: own_gen_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_own_free
 
@@ -1545,8 +1548,8 @@ fn: lm_compiler_emit_ret_tr (int: mi; const: (@: ind char); const: (@: body c.Lm
     n: c.lm_compiler_count_active(body)
     # In a throwing callable the return is the status, and a trailer, like a `return:` in the
     # body, returns 0: its value goes to the normal output.  A value is never a status.
-    if: m_ret_cell[0][mi] = 8
-        if: n != 0
+    if: m_ret_cell[0][mi] = 8 || (n = 0 && c.lm_compiler_m_machine(mi) = 0)
+        if: m_ret_cell[0][mi] = 8 && n != 0
             return: (cast: (int) (1))
         # §7b: a return is an exit -- what is marked is published before it (book §14).
         if: c.lm_compiler_emit_publish(ind) != 0
@@ -2200,6 +2203,7 @@ end: lm_compiler_application_sites_free
 
 # Original: l2src/l2trans.lm1:4678
 fn: lm_compiler_application_free () int
+    @: decl_gen_cell int (cast: (@: int) (@ c.l2_decl_gen))
     @: value_revision_cell size_t (cast: (@: size_t) (@ c.l2_value_revision))
     @@: declarations_cell c.L2Declaration (cast: (@@: c.L2Declaration) (@ c.l2_declarations))
     @@: contracts_cell c.L2TypeContract (cast: (@@: c.L2TypeContract) (@ c.l2_contracts))
@@ -2209,6 +2213,9 @@ fn: lm_compiler_application_free () int
     @: expression c.L2HeadExpression
     lm_compiler_application_sites_free()
     value_revision_cell[0]: 0U
+    # tp112: the declarations, contracts and head expressions below are freed -- the maps keyed by them (l2_dmap_*,
+    # l2_cmap_*, l2_dord_*) forget everything by this generation at their next use.
+    decl_gen_cell[0]: decl_gen_cell[0] + 1
     while: declarations_cell[0] != 0
         declaration: declarations_cell[0]
         declarations_cell[0]: declaration\allocated_next
@@ -4074,25 +4081,62 @@ fn: lm_compiler_emit_work_decl (int: k) int
     @: cwv_name_own char (cast: (@: char) cwv_name_own_storage\buffer)
     c.L2Tx: cwv_name_tx
     @: cwv_name c.L2Tx c.lm_compiler_tx_local(@ cwv_name_tx, cwv_name_own, 64U)
+    c.L2FrontendScratchChar96: physical_type_storage
+    @: physical_type char (cast: (@: char) physical_type_storage\buffer)
     const: (@: cty char c.lm_compiler_own_num_ctype(own_ty_cell[0][k]))
-    if: c.lm_compiler_own_cell_load(k, load) != 0 || c.lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0 || c.lm_compiler_tx_own_cname(cwv_name, "l2_wv", k, "") != 0
+    if: c.lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0 || c.lm_compiler_tx_own_cname(cwv_name, "l2_wv", k, "") != 0
         return: (cast: (int) (1))
     # A number's cell is never empty where it is held: an empty one is a place a partial copy does not hold
     # (READ-FIELD-CLOSURE), and its read is refused, never read as nothing (Codex -28 review point 3).
+    if: cty != 0
+        if: c.fprintf(out_cell[0], "    %s: %s\n    if: %s_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    ---\n", cty, cq_name\data, cq_name\data, k) < 0
+            return: 1
+        ---
+    else:
+        if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) = 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(own_ty_cell[0][k]), 0, (cast: (const: @: char) cq_name\data), dcl) != 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(own_ty_cell[0][k]), 0, 0, load) != 0
+            return: 1
+        if: c.fprintf(out_cell[0], "    %s\n", dcl\data) < 0
+            return: 1
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "    LmxWalkValue: %s\n", cwv_name\data) < 0
+        return: 1
+    if: c.lm_compiler_own_is_slot(k) != 0
+        if: c.fprintf(out_cell[0], "    int: %s_status lmx_walk_value_cell(l2_program_arena, %s_from[0], @ %s)\n", cwv_name\data, cq_name\data, cwv_name\data) < 0
+            return: 1
+        ---
+    else:
+        # Retain the old physical reference-cell promise without reading its
+        # payload. The common Value operation below performs that read once.
+        if: cty = 0
+            if: c.lm_compiler_ptr_cell_type(c.lm_compiler_oc_ft(own_ty_cell[0][k]), physical_type) != 0 || c.fprintf(out_cell[0], "    lmx_pointer_pool_promised(l2_program_arena, %s_from[0], %s)\n", cq_name\data, physical_type) < 0
+                return: 1
+            ---
+        ---
+        if: c.fprintf(out_cell[0], "    int: %s_status lmx_walk_value_load(l2_program_arena, %s_from[0], lmx_domain_type(l2_program_arena, %s_from[0]), @ %s)\n", cwv_name\data, cq_name\data, cq_name\data, cwv_name\data) < 0
+            return: 1
+        ---
+    ---
+    if: cty != 0
+        if: c.fprintf(out_cell[0], "    size_t: %s_number 0U\n    int: %s_type 0\n    if: %s_status = c.LMX_WALK_OK\n        %s_status: lmx_walk_value_number(@ %s, @ %s_number, @ %s_type)\n    ---\n", cwv_name\data, cwv_name\data, cwv_name\data, cwv_name\data, cwv_name\data, cwv_name\data, cwv_name\data) < 0
+            return: 1
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "    if: %s_status != c.LMX_WALK_OK\n        lmx_call_note_walk_fail(%s_status)\n        return: 0\n    ---\n", cwv_name\data, cwv_name\data) < 0
+        return: 1
+    if: cty != 0
+        if: c.fprintf(out_cell[0], "    %s: (cast: (%s) %s_number)\n", cq_name\data, cty, cwv_name\data) < 0
+            return: 1
+        ---
+    else:
+        if: c.fprintf(out_cell[0], "    %s: (cast: (%s) %s.ref)\n", cq_name\data, load\data, cwv_name\data) < 0
+            return: 1
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "    int: %s_dirty 0\n", cq_name\data) < 0
+        return: 1
     # Once a published place is declared, its addresses enter the activation's
     # publication table (lm_compiler_emit_publish_table, the same planner).
-    if: cty != 0
-        if: c.fprintf(out_cell[0], "    %s: %s\n    if: %s_from[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d reads an absent place\\n\")\n        c.abort()\n    %s: %s\n    int: %s_dirty 0\n", cty, cq_name\data, cq_name\data, k, cq_name\data, load\data, cq_name\data) < 0
-            return: (cast: (int) (1))
-        return: (cast: (int) (c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)))
-    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) = 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(own_ty_cell[0][k]), 0, (cast: (const: @: char) (cq_name\data)), dcl) != 0
-        return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "    %s\n    %s: %s\n    int: %s_dirty 0\n    LmxWalkValue: %s\n    lmx_walk_value_clear(@ %s)\n", dcl\data, cq_name\data, load\data, cq_name\data, cwv_name\data, cwv_name\data) < 0
-        return: (cast: (int) (1))
-    if: c.lm_compiler_own_is_slot(k) != 0
-        return: (cast: (int) (0))
-    if: c.fprintf(out_cell[0], "    lmx_value_context_copy(@ %s, lmx_pointer_cell_context(l2_program_arena, %s_from[0]))\n", cwv_name\data, cq_name\data) < 0
-        return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)))
 end: lm_compiler_emit_work_decl
 
@@ -13945,7 +13989,8 @@ fn: lm_compiler_machine_validate () int
         found: 0
         i: 0
         while: i < m_n_cell[0]
-            if: c.lm_compiler_m_machine(i) != 0 && c.lm_compiler_text_eq(m_name_cell[0][i], machine_names_cell[0][k]) != 0
+            # tp112: the name compare first (pure, cheap), the unit walk of m_machine only for the rows that carry the name.
+            if: c.lm_compiler_text_eq(m_name_cell[0][i], machine_names_cell[0][k]) != 0 && c.lm_compiler_m_machine(i) != 0
                 found: 1
             i: i + 1
         ---

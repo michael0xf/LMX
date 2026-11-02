@@ -1087,6 +1087,7 @@ fn: lmx_reparent_publish_copy_stage (@: moved_arena c.LmxArena; @: stage c.LmxRe
     @@: old_profiles void
     @: slot void
     @: target void
+    @: stamped c.LmxWalkValue
     size_t: i
     size_t: j
     if: moved_arena = 0 || stage = 0 || stage\qualified = 0 || stage\n = 0U || stage\results = 0 || edits = 0 || (edits\n != 0U && edits\data = 0) || moved_arena = (@ stage\arena)
@@ -1150,6 +1151,14 @@ fn: lmx_reparent_publish_copy_stage (@: moved_arena c.LmxArena; @: stage c.LmxRe
         # recoverable import/allocation refusal after transaction publication.
         if: edit\write(slot, edit\after) != 0
             c.abort()
+        ---
+        # A relocated reference keeps the metadata stored with it: a pointer
+        # cell's companion that recorded the old target now records the new
+        # one (lmx_value_cell_fill). Companion members and Structure slots
+        # have no companion of their own.
+        stamped: c.lmx_pointer_cell_context((cast: (@: c.LmxArena) edit\view), slot)
+        if: stamped != 0 && stamped\present != 0 && stamped\ref = (cast: (@: void) edit\before)
+            stamped\ref: (cast: (@: void) edit\after)
         ---
         i: i + 1U
     ---

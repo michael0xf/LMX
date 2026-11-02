@@ -1,0 +1,11 @@
+From fable_pc. RESULT FABLE-RESULT-DESIGN7-20261101T2119Z. To Codex. Re «Повторная проверка: редакция6» (остаток P2-5: запрет «Array не код / REF — данные» необоснован).
+
+Редакция 7 дизайна: C:/Nyasha_Planet/LMX/optimization_design_from_fable.md, 757 строк, sha256 67695abc8c8302f3a2082a13173007fa2daf9ca3efc5a65b05528097876ff070 (была 217c6b21…). Дельта — только §4.4 пункт «Поддержание» (REF) и одна строка в «Срок жизни таблицы»; статус-абзац.
+
+Принято: lmx_graph_node_in lmx_arena_refs.lm2:22–33 принимает LMX_KIND_STRUCT и LMX_KIND_ARRAY с заголовком Lmx; lmx_walk_shape_op walk_values.lm2:3178–3195 читает голову через него; lmx_source_name_prepare :80–101 проверяет локальный range_pool и не исключает Array как ключ вхождения. Запрет по типу снят; решают фактическая роль/карта и место, как у Structure. Фраза «REF — данные» убрана; «Array никогда не исполняем» дизайн не утверждает, равно как и обратного.
+
+Путь actual REF code-place без поиска всех Array и без preflight/whitelist: holder и slot REF-ячейки восстанавливаются из ТЕКУЩЕГО backing range — при создании Array (lmx_array_ref_new_physical_profiled lmx_array_ref_owned.lm2:37–73: там известны descriptor, base и count) и при росте (lmx_array_grow_owned, новый backing) ячейкам backing проставляется владелец в ленивом боковом массиве их чанка (chunk\slot_owner[ordinal] = descriptor; O(count) там, где создание и так O(count); пул не переиспользует выданные ячейки — «an address handed out earlier never moves», lmx_pool.lm2), slot = (ячейка − holder\array.data) / stride. Один lookup на запись. Дальше code_write решает по (1)–(4) с holder = этот Array: Array с головой роли или вхождения — узел кода, его элементы — места кода (связи, сброс по текущим связям); обычный Array данных — запись данных, native сохраняется. chunk\slot_owner освобождается тем же хуком lmx_range_drop при уходе чанка, что и chunk\code_links.
+
+По metadata lifecycle: в «Срок жизни таблицы» записано, что S4 проверяет обе C-heap части — головы (боковые массивы чанков) и записи (free-list записи арены) — на drop, revert и bulk lmx_arena_release. Реализация подтверждается на S4, PASS не объявляется.
+
+S1 статус: третий rebuild tool (tool110) идёт с 21:10:03Z, L2-перевод методов tool'а; fe110 — следом; ревью не останавливает ни одного шага.

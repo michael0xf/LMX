@@ -675,6 +675,8 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
     @: cwv_name c.L2Tx c.lm_compiler_tx_local(@ cwv_name_tx, cwv_name_own, 64U)
     c.L2FrontendScratchChar96: guard_storage
     @: guard char (cast: (@: char) guard_storage\buffer)
+    c.L2FrontendScratchChar256: graph_slot_storage
+    @: graph_slot char (cast: (@: char) graph_slot_storage\buffer)
     # A machine function has no cell to publish to (l2_m_machine).
     if: work_mi_cell[0] < 0 || ind = 0 || c.lm_compiler_m_machine(work_mi_cell[0]) != 0
         return: (cast: (int) (0))
@@ -715,7 +717,20 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
                 return: (cast: (int) (1))
             if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) != 0 && c.lm_compiler_tx_join(cctx_text, "(@ ", (cast: (const: @: char) (cwv_name\data)), ")", 0, 0) != 0
                 return: (cast: (int) (1))
-            if: lm_compiler_own_cell_store_context(work_mi_cell[0], k, deep, (cast: (const: @: char) (cval_text\data)), (cast: (const: @: char) (cctx_text\data))) != 0 || c.fprintf(out_cell[0], "%s%s_dirty: 0\n%s---\n", deep, cq_name\data, ind) < 0
+            if: c.lm_compiler_own_is_slot(k) != 0
+                # WV is the completed value here, not a context-only pair.
+                # Preserve protection before allocating its physical cell.
+                if: lm_compiler_emit_own_write_guard(work_mi_cell[0], k, deep) != 0 || c.lm_compiler_own_slot_at(k, graph_slot) != 0
+                    return: 1
+                if: c.fprintf(out_cell[0], "%s@: void l2_published_cell 0\n%sint: l2_publish_status lmx_walk_value_materialize(l2_program_arena, @ %s, @ l2_published_cell)\n%sif: l2_publish_status != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_publish_status)\n%s    return: 0\n%s---\n%sif: lmx_arena_ref_store(%s, l2_published_cell) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", deep, deep, cwv_name\data, deep, deep, deep, deep, deep, graph_slot, deep, k, deep, deep) < 0
+                    return: 1
+                ---
+            else:
+                if: lm_compiler_own_cell_store_context(work_mi_cell[0], k, deep, (cast: (const: @: char) (cval_text\data)), (cast: (const: @: char) (cctx_text\data))) != 0
+                    return: 1
+                ---
+            ---
+            if: c.fprintf(out_cell[0], "%s%s_dirty: 0\n%s---\n", deep, cq_name\data, ind) < 0
                 return: (cast: (int) (1))
         ---
         k: k + 1
@@ -1413,6 +1428,10 @@ end: lm_compiler_model_root_own
 
 # Original: l2src/l2trans.lm1:18231
 fn: lm_compiler_model_inst (int: mi; int: ni; const: (@: ind char); @: dest c.L2Tx) int
+    return: lm_compiler_model_inst_full(mi, ni, ind, dest, 0, 0)
+end: lm_compiler_model_inst
+
+fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest c.L2Tx; @: context int; @: full_value c.L2Tx) int
     @@: mres_own_cell int (cast: (@@: int) (@ c.l2_mres_own))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @: work_mi_cell int (cast: (@: int) (@ c.l2_work_mi))
@@ -1422,7 +1441,19 @@ fn: lm_compiler_model_inst (int: mi; int: ni; const: (@: ind char); @: dest c.L2
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @@@: ns_at_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_at))
     @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar64: record_storage
+    @: record char (cast: (@: char) record_storage\buffer)
+    c.L2FrontendScratchChar32: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
     int: oi
+    int: status
+    int: t
+    if: context != 0
+        context[0]: -1
+    if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
+        return: 1
     if: dest = 0
         return: (cast: (int) (1))
     # K02c: a merge result's schema (tagged) is instanced by the result itself -- the Structure its own slot holds,
@@ -1434,33 +1465,65 @@ fn: lm_compiler_model_inst (int: mi; int: ni; const: (@: ind char); @: dest c.L2
         # The method being EMITTED may hold the result as a working value not yet published to its cell (the root
         # admitting its own `copy` for a callee's input): the instance is that value, whichever method mi names.
         if: c.lm_compiler_own_cached(work_mi_cell[0], oi) != 0
+            if: full_value != 0
+                return: (cast: (int) c.lm_compiler_own_load_context_full(oi, work_mi_cell[0], ind, dest, context, full_value))
             if: c.lm_compiler_tx_set(dest, "(cast: (@: Lmx) ") != 0
                 return: (cast: (int) (1))
             return: (cast: (int) (lm_compiler_tx_own_cname(dest, "l2_q", oi, ")")))
-        return: (cast: (int) (lm_compiler_emit_graph_field_value(oi, ind, dest)))
-    if: ni < 0 || ni >= ns_n_cell[0]
-        return: (cast: (int) (1))
-    if: ns_local_cell[0][ni] < 0
-        return: (cast: (int) (lm_compiler_type_inst(ni, dest)))
-    if: recv_unit_cell[0] != 0
-        oi: lm_compiler_model_root_own(ni)
-        if: oi < 0 || c.lm_compiler_tx_clear(dest) != 0
-            return: (cast: (int) (c.lm_compiler_error(src_cell[0], ns_at_cell[0][ni], "internal: a receiving local model has no source field")))
-        return: (cast: (int) (lm_compiler_occ_field_expr_append(oi, recv_unit_cell[0], dest)))
-    if: ns_parent_cell[0][ni] >= 0
-        if: lm_compiler_model_inst(mi, ns_parent_cell[0][ni], ind, dest) != 0
-            return: (cast: (int) (1))
-        return: (cast: (int) (lm_compiler_model_child(ni, dest)))
+        ---
+        status: lm_compiler_emit_graph_field_value(oi, ind, dest)
+    else:
+        if: ni < 0 || ni >= ns_n_cell[0]
+            return: 1
+        if: ns_local_cell[0][ni] < 0
+            status: lm_compiler_type_inst(ni, dest)
+        else:
+            if: recv_unit_cell[0] != 0
+                oi: lm_compiler_model_root_own(ni)
+                if: oi < 0 || c.lm_compiler_tx_clear(dest) != 0
+                    return: (cast: (int) c.lm_compiler_error(src_cell[0], ns_at_cell[0][ni], "internal: a receiving local model has no source field"))
+                status: lm_compiler_occ_field_expr_append(oi, recv_unit_cell[0], dest)
+            else:
+                if: ns_parent_cell[0][ni] >= 0
+                    if: lm_compiler_model_inst(mi, ns_parent_cell[0][ni], ind, dest) != 0
+                        return: 1
+                    status: lm_compiler_model_child(ni, dest)
+                else:
+                    oi: lm_compiler_model_root_own(ni)
+                    if: oi < 0
+                        return: 1
+                    if: mi = work_mi_cell[0] && c.lm_compiler_own_cached(mi, oi) != 0
+                        if: full_value != 0
+                            return: (cast: (int) c.lm_compiler_own_load_context_full(oi, work_mi_cell[0], ind, dest, context, full_value))
+                        if: c.lm_compiler_tx_set(dest, "(cast: (@: Lmx) ") != 0
+                            return: 1
+                        return: lm_compiler_tx_own_cname(dest, "l2_q", oi, ")")
+                    ---
+                    status: lm_compiler_emit_graph_field_value(oi, ind, dest)
+                ---
+            ---
+        ---
     ---
-    oi: lm_compiler_model_root_own(ni)
-    if: oi < 0
-        return: (cast: (int) (1))
-    if: mi = work_mi_cell[0] && c.lm_compiler_own_cached(mi, oi) != 0
-        if: c.lm_compiler_tx_set(dest, "(cast: (@: Lmx) ") != 0
-            return: (cast: (int) (1))
-        return: (cast: (int) (lm_compiler_tx_own_cname(dest, "l2_q", oi, ")")))
-    return: (cast: (int) (lm_compiler_emit_graph_field_value(oi, ind, dest)))
-end: lm_compiler_model_inst
+    if: status != 0 || full_value = 0 || mi < 0 || ind = 0
+        return: status
+    if: c.lm_compiler_m_machine(mi) != 0
+        return: 0
+    # Decode the one selected source object, including an existing low box.
+    # It is not uniformly a fresh target-model constructor.
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.snprintf(name, 32U, "l2_t%d", t) < 0 || c.snprintf(record, 64U, "@ l2_cv%d", t) < 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%s@: void l2_model_value%d (cast: (@: void) (%s))\n%sLmxWalkValue: l2_cv%d\n%sint: l2_model_status%d lmx_walk_value_cell(l2_program_arena, l2_model_value%d, @ l2_cv%d)\n", ind, t, dest\data, ind, t, ind, t, t, t) < 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_model_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_model_status%d)\n%s    return: 0\n%s---\n%s@: Lmx %s (cast: (@: Lmx) l2_cv%d.ref)\n", ind, t, ind, t, ind, ind, ind, name, t) < 0
+        return: 1
+    if: c.lm_compiler_tx_set(dest, name) != 0 || c.lm_compiler_tx_set(full_value, record) != 0
+        return: 1
+    if: context != 0
+        context[0]: t
+    return: 0
+end: lm_compiler_model_inst_full
 
 # Original: l2src/l2trans.lm1:18627
 fn: lm_compiler_pad_of (const: (@: blk c.LmP0Structure)) int

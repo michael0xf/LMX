@@ -2853,6 +2853,30 @@ one value`. Так же объявление уже отказывает `a decl
 [долге M3](tickets/unique-name-reference-migration-20261014.md#m3-stale-k03-oracles).
 
 <a id="bitwise-operators-not-classified"></a>
+<a id="free-address-reference-place-unsupported"></a>
+### FREE-ADDRESS-REFERENCE-PLACE-UNSUPPORTED — 2026-11-02, Codex (P1-PTR-COVERAGE, уровень адреса; ~15:25Z, ~20:05Z, ~21:12Z по коду frozen boot120a–boot122a), FIXED срез261 `8d9e025c` (boot123a)
+
+Адрес свободного имени (`@ quote`, `lmx_walk_place_address`; норма: `@x` — адрес semantic LOCAL input cell активации, без
+origin alias) давал механический UNSUPPORTED, когда место входа — графовая или Array-ссылочная ячейка (LMX/DESC), указательная
+ячейка с кодом транслятора (`LMX_TYPE_POINTER_BASE + 100…`, глубина ≥ 2) или второй уровень кодов таблицы (`lmx_type_pointer_to`
+— неполная таблица, `return: LMX_TYPE_NONE`), и для descriptor-места (`place\descriptor != 0`): «walk error: UNSUPPORTED», exit 3,
+в обоих исполнителях (probe_graph_address среза 260). Книга разрешает `@` произвольной глубины (норма 470: `@A` Structure — ячейка,
+не descriptor); таблица кодов — implementation gap, не граница языка. Приём такого адреса типизированным указательным местом
+(`@@: pp Point`) сравнивал коды (`lmx_walk_value_receive`), а код места — foreign-код транслятора, которого ядро не выводит.
+
+Исправление (срез 261, Fable; [запись](witnesses/fix261-20261102/notes.md)): `lmx_type_pointer_to` тотален — тип без кода таблицы
+адресуется собственным кодом ядра `LMX_TYPE_CELL_POINTER` (1088 = POINTER_BASE + 64, ниже foreign-полосы транслятора); указуемое
+читается cell-first (`lmx_walk_value_deref_actual`; слоты CHILDREN/REF типизируются тем, что держат); `lmx_walk_place_address`
+адресует любое типизированное место (descriptor-место — слотом), UNSUPPORTED только без типа. Приём — один для обоих
+исполнителей по ФАКТИЧЕСКИМ указуемым на каждом уровне, не по коду: `lmx_walk_value_receive_pointer(arena, value, ty, depth,
+leaf, out)` (экспорт; `tools/build.lm2` 147 → 148 имён, tool123) — нативно из `emit_dyn_receive_full` (форма места от
+`lm_compiler_dyn_pointer_shape`: foreign-код со словом языка), walked — кадр `LMX_WALK_OP_RECEIVE` [receive, value, witness,
+depth, leaf] (`rw_reference_span`, `lmx_walk_eval_result`); цепочка коротка / числовая ячейка вместо указательной / иной вид
+значения — implicit `convert`, null проходит, нетипизируемое указуемое — UNSUPPORTED. Свидетель `tests/dyn/free_graph_address.lm2`
+(addr глубина 2, addr3 глубина 3, outer_slim `implements` у deref, outer_num/outer_short `convert`; 81..85); пробы среза 260
+probe_graph_address/probe_graph_deref зелёные на tp123. Открыто: raw-only consumer (located-отказ «a runtime-typed address where a
+typed native value is required» — не норма), свидетели descriptor-места и DESC-листа (пути недостижимы до среза 262).
+
 <a id="numeric-kind-present-operand"></a>
 ### NUMERIC-KIND-PRESENT-OPERAND — 2026-11-02, Codex (P1-NUMERIC-KIND, ответ на FABLE-RESULT-TP121; найдено по коду frozen boot121a), FIXED срез260 `a4694ed3` (boot122a)
 

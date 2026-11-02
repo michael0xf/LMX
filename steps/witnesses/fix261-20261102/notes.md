@@ -142,3 +142,14 @@ next slice's isolated builds and bootstrap take G0 = boot123a's G2 working tool 
   spellings of one reference) -- the previous boundary.
 - Of the ledger `BITWISE-OPERATORS-NOT-CLASSIFIED` (unchanged by this slice): the typed native path's pre-operation refusal and
   unary `~`.
+
+## Evidence and the docs check
+
+`pins/docs261.command` ([record](records/docs261.command)): the raw manifest of the 205 listed originals under P
+(`evidence.list` → `evidence.sha256`) and its verify, exit 0; 176 LF copies of the text records in [records/](records/).
+Commit `8d9e025c` «Land the boot123a-tested tp123 address of a free name at any typed place and its receive by the actual
+pointees in selfbuild (slice261)» (own files only: the design, `selfbuild/`, `steps/current.md`, this directory).
+`pins/docs261-check.command` ([record](records/docs261-check.command)): the ordinary full docs check with the slice files in the
+Git index, exit 0 (22:34:33-22:37:29Z): `OK: 35 paired semantic chapters, 14 implements cases, both source snapshots; 27 paired grammar sections, 44 verbatim source excerpts, 615 imported files, links, exact semantic opening; line endings LF in the index for all 14896 tracked files (verbatim imports exempt)`.
+The ledger (steps/defects.md) gains the entry FREE-ADDRESS-REFERENCE-PLACE-UNSUPPORTED (Codex's P1-PTR-COVERAGE at the address
+level, FIXED by this slice) in the records commit.

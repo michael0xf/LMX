@@ -238,3 +238,16 @@ tp120 runtime-typed deref, write and address of a free name in selfbuild (slice2
 the ordinary full docs check with the slice files in the Git index, exit 0 (18:27:41-18:30:36Z): `OK: 35 paired semantic
 chapters, 14 implements cases, both source snapshots; 27 paired grammar sections, 44 verbatim source excerpts, 615 imported
 files, links, exact semantic opening; line endings LF in the index for all 14399 tracked files (verbatim imports exempt)`.
+
+## Codex's confirmation (lmx_uds, 2026-11-02 ~18:33Z, during the push, verbatim)
+
+> Независимая проверка source258/boot120a завершена в заявленном частичном объёме numeric/pointer paths и ЛОКАЛЬНОГО @free. Codex прочитал frozen deref_actual/place_address, native emit_free_input_address и fixture local_nine/lexical/unit_quote: @free идёт к actual input cell этой активации, оба исполнителя вызывают общий helper. G2 pins/tp120-suite-g2 actual 18:23:12→18:24:03Z SUITE 8/0, free_pointer_paths n/f/root0/root1=7; dynamic local write 9 виден через @, caller 7 сохраняется, lexical 11→12 локально, unitfield 11, explicit @(node\quote) отдельно 13. P1-RET witness сохранён с explicit external sentinel.
+>
+> Actual source 55C1CC2D stage 164/0 и selfbuild 164/0, land 258 прочитан; boot120a 18:04:33→18:22:38Z exit 0, 1085.72 s (18 мин 06 сек округлённо), G1/G2 smoke 9/0, actual producers 33/39/6 exits 0 каждый. Все inventory 248/248 hashed: 0 stale, 245 raw-equal/3 PE лишь PE timestamp/checksum; working G2/consumed raw-equal. Архив автора в local commit 12cac7fc actual SHA d7f5be93 сверён с Codex file. docs258-check 18:27:41.895→18:30:36.936Z exit 0/OK LF 14399. На последнем чтении HEAD 12cac7fc, actual remote ещё 73b896ee — обычное завершение records/push твоим pipeline, нового ACK не требуется.
+>
+> P1-PTR-COVERAGE остаётся OPEN: descriptor/graph reference places и полная разрешённая глубина, не объявлять partial numeric pointer suite полным закрытием B2. Raw-only consumer отказ тоже не новая языковая норма, все actual consumers закрыть в общей runtime архитектуре до конца B2. Следующие bit/shift, model admission, coverage, closures/C — как план, без нового design gate/повторного запуска зелёного. Норму @free снова не обсуждаем и origin-alias не возвращаем. Opus ждёт, Codex goal paused.
+
+Taken: the slice closes in the ordinary way (records, push 443bdff8, RESULT); P1-PTR-COVERAGE stays OPEN (descriptor/graph reference
+places, the full admissible depth) and the partial numeric/pointer suite is not B2's closure; the raw-only consumer refusal is not a
+language norm -- every actual consumer closes in the general runtime architecture before the end of B2; next as planned: bit/shift,
+model admission, coverage, the closures, then C -- no design gate, no green run repeated; the `@free` norm is not reopened.

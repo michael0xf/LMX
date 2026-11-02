@@ -72,3 +72,8 @@ runs	dyn/free_result_convert.lm2	7	nf
 # kernel's pointer-code algebra -- pointer bindings of two pointee types, a write through the free pointer, the address of a
 # pointer binding (a pointer to pointer) and of a number binding, a native body among walked ones.
 runs	dyn/free_pointer_paths.lm2	7	nf
+# Slice 259 (design 4.5 B2b-2b): the bitwise and shift operators over a free operand run through the kernel's one binary
+# operation in both executors (the walker's codes BAND/BOR/BXOR/SHL/SHR; the walked body evaluates the same frames): the
+# C99 promotions, a shift count of its own type, the implicit interpreter throw for a count outside [0, width) or an
+# overflowing signed left shift, the implicit convert for two types, a sub's bare write, the typed walked path.
+runs	dyn/free_machine_ops.lm2	7	nf

@@ -10877,9 +10877,11 @@ end: lm_compiler_rw_machine_offset
 
 # Original: l2src/l2trans.lm1:30445
 fn: lm_compiler_rw_machine_bitwise (@: tok c.L2ValueSpan; int: lo; int: best; int: hi; int: ty; int: prec; int: parent; @: out int) int
-    int: body
-    int: child
+    int: left
+    int: right
     int: right_ty ty
+    @: op c.LmP0Text
+    const: (@: code char 0)
     if: c.lm_compiler_oc_is_ref(ty) != 0
         return: (cast: (int) (c.lm_compiler_rw_refuse(c.lm_compiler_span_node(tok, best), "a bitwise operation on a reference")))
     if: prec = 8
@@ -10891,13 +10893,32 @@ fn: lm_compiler_rw_machine_bitwise (@: tok c.L2ValueSpan; int: lo; int: best; in
         if: right_ty = 0 - 2
             right_ty: 3
     ---
-    if: c.lm_compiler_rw_machine_operator(lm_compiler_port249_1_LmP0Node_as_atom((cast: (const: @: c.LmP0Node) (c.lm_compiler_span_node(tok, best)))), 2, parent, out, @ body) != 0
+    # Slice 259 (design 4.5 B2b-2b; the ledger BITWISE-OPERATORS-NOT-CLASSIFIED, its walker part): a bitwise or shift operator
+    # is an executable operation of the walked body -- [op, left, right], evaluated by the kernel's one shared binary operation
+    # with the C99 promotions (lmx_walk_value_bin: & | ^ over one type, a shift count of its own type, the result of the left's
+    # type) -- no longer a retained machine source (LMX_WALK_OP_SOURCE_MACHINE) that kept the whole body native under
+    # --walk-methods.  The native body keeps C's operator in place (lm_compiler_emit_native_values_full: no retained integer
+    # site); the native runtime-typed expression calls the same kernel operation (lm_compiler_emit_dyn_values_full).
+    op: lm_compiler_port249_1_LmP0Node_as_atom((cast: (const: @: c.LmP0Node) (c.lm_compiler_span_node(tok, best))))
+    if: c.lm_compiler_text_eq(op, "&")
+        code: "LMX_WALK_OP_BAND"
+    if: c.lm_compiler_text_eq(op, "|")
+        code: "LMX_WALK_OP_BOR"
+    if: c.lm_compiler_text_eq(op, "^")
+        code: "LMX_WALK_OP_BXOR"
+    if: c.lm_compiler_text_eq(op, "<<")
+        code: "LMX_WALK_OP_SHL"
+    if: c.lm_compiler_text_eq(op, ">>")
+        code: "LMX_WALK_OP_SHR"
+    if: code = 0
+        return: (cast: (int) (c.lm_compiler_rw_refuse(c.lm_compiler_span_node(tok, best), "this operator")))
+    if: c.lm_compiler_rw_frame(parent, code, 3, out) != 0
         return: (cast: (int) (1))
-    if: lm_compiler_rw_bin(tok, lo, best - 1, ty, body, @ child) != 0 || c.lm_compiler_rw_put(body, 0, child) != 0
+    if: lm_compiler_rw_bin(tok, lo, best - 1, ty, (cast: (int) (\out)), @ left) != 0 || lm_compiler_rw_bin(tok, best + 1, hi, right_ty, (cast: (int) (\out)), @ right) != 0
         return: (cast: (int) (1))
-    if: lm_compiler_rw_bin(tok, best + 1, hi, right_ty, body, @ child) != 0
+    if: c.lm_compiler_rw_put((cast: (int) (\out)), 1, left) != 0
         return: (cast: (int) (1))
-    return: (cast: (int) (c.lm_compiler_rw_put(body, 1, child)))
+    return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 2, right)))
 end: lm_compiler_rw_machine_bitwise
 
 # Original: l2src/l2trans.lm1:30481

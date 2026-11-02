@@ -6,41 +6,41 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-`inputs.list` selects 164 maintained inputs: 65 source, 34 tool and 65 test
+`inputs.list` selects 165 maintained inputs: 65 source, 34 tool and 66 test
 files. `inputs.sha256` binds those exact bytes with paths relative to this
 directory. Generated L1/C, headers, objects and executables are not inputs.
 
-The selected snapshot is the source of the whole quick bootstrap boot120a
-([slice258](../steps/witnesses/fix258-20261102/notes.md)): source-tp120 —
-the boot119a package of [slice257](../steps/witnesses/fix257-20261102/notes.md)
-with B2b-2a of the Fable line, tp120 (design §4.5, revision 19: the
-runtime-typed deref, write and address of a free name — the kernel types the
-pointee from the record owning the addressed payload, the actual pointee cell
-or the pointer code's algebra (`lmx_walk_value_deref_actual`,
-`lmx_walk_place_address`), the walker's DEREF/ADDRESS without a witness and the
-native code calling the same operations; the author's ruling of 2026-11-02: a
-hidden input is a local of the activation and `@x` is that local's address,
-only `@(node\x)` names the outer place; the B1 defect fixed in both executors —
-a `sub` is a plain-role three-part callable, keyed before by the FN role only;
-[design](../optimization_design_from_fable.md)).  Relative to the previous
-package, boot119a, it changes 7 selected files — the kernel module
-`lmx_walk_values`, the frontend modules `l2_frontend_resolve`,
-`l2_frontend_lower` and `l2_frontend_emit`, `tools/build.lm2` (two kernel
-exports), `tests/full-suite.tsv` and the slice-257 fixture
-`tests/dyn/free_result_convert.lm2` (`return: @(node\other)`) — and adds the
-fixture `tests/dyn/free_pointer_paths.lm2` (the deref, write and address of a
-free pointer and of a free number, the local's address after a bare write, the
-lexical hidden input, the explicit unit cell), so the input list grows by one
-line.  The landing is slice258, by the rule of Codex's answer to
+The selected snapshot is the source of the whole quick bootstrap boot121a
+([slice259](../steps/witnesses/fix259-20261102/notes.md)): source-tp121 —
+the boot120a package of [slice258](../steps/witnesses/fix258-20261102/notes.md)
+with B2b-2b of the Fable line, tp121 (design §4.5, revision 20: the machine
+profile's bitwise and shift operators as executable operations of the kernel's
+one shared binary operation `lmx_walk_value_bin` — the walker's codes
+BAND/BOR/BXOR/SHL/SHR, the C99 promotions (a shift's operands promoted apart),
+the machine contract's refusals before the operation in both executors (a count
+outside [0, width), an overflowing signed left shift — the implicit
+`interpreter`; two types — the implicit `convert`); the walker evaluates the
+codes, the native runtime-typed expression calls the same operation, the walked
+typed bitwise path emits real frames so that such a body is walked under
+--walk-methods; [design](../optimization_design_from_fable.md)).  Relative to
+the previous package, boot120a, it changes 6 selected files — the kernel module
+`lmx_walk_values`, the frontend modules `l2_frontend_lower` and
+`l2_frontend_emit`, `tools/build.lm2` (the five op codes, `LMX_WALK_OP_COUNT`
+63), `tests/full-suite.tsv` and the header of `tests/bits/bit_values.lm2` — and
+adds the fixture `tests/dyn/free_machine_ops.lm2` (the operators over a free
+operand bound as unsigned, int and size_t, a free count, two free names, a
+sub's bare write, the widths 32 and 64, the refusals caught), so the input list
+grows by one line.  The landing is slice259, by the rule of Codex's answer to
 FABLE-RESULT-S3-20261102T0100Z (the whole tested set after an actual quick
-PASS). `tools/build.lm2` changed, so G0 of boot120a is the candidate's rebuilt
-tool tool120 (`443C27BB…`, `rebuild tool` from the stage with boot119a's G2);
-the promoted working tool is boot120a's G2 (`51F4F022…`).
-Input-list SHA-256: `D80B9C762C391D818791636577CBC6A51B01B3D5532137ACFFD9E0149B0AAC23`.
-Input-manifest SHA-256 (byte-equal to boot120a's `source-boot120a.sha256` and
-to `source-tp120.sha256`):
-`55C1CC2D0B1FDBAD2AD5E1E2B71E845EF67C16A89C6DC287F46597DFEEED7D4F`.
-The previous packages: boot119a is slice257 (manifest `900AB284…`; 4 files
+PASS). `tools/build.lm2` changed, so G0 of boot121a is the candidate's rebuilt
+tool tool121 (`7F9C3DBB…`, `rebuild tool` from the stage with boot120a's G2);
+the promoted working tool is boot121a's G2 (`4DD5D706…`).
+Input-list SHA-256: `FAA15B8FDB3CE0D7380FAEBD46435E043B4A3AD8F99F4106DC877B4795F1CE30`.
+Input-manifest SHA-256 (byte-equal to boot121a's `source-boot121a.sha256` and
+to `source-tp121.sha256`):
+`BBCCB25929EFF89F1C7352C39A70B06F1CE1BBBB8AAAFBF23F05AF51972196DE`.
+The previous packages: boot120a is slice258 (manifest `55C1CC2D…`; 7 files
+over boot119a and one new fixture); boot119a is slice257 (manifest `900AB284…`; 4 files
 over boot118a and one new fixture); boot118a is slice256 (manifest `1016F41D…`; 4 files
 over boot117a and one new fixture); boot117a is slice255 (manifest `FC9659DF…`; 10 files
 over boot116c and one new fixture); boot116c is slice254 (manifest `DC4E8C62…`; 9 files

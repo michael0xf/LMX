@@ -1,7 +1,7 @@
 # The machine profile's bitwise operations (L2 section 21) on real values: & | ^ << >> on unsigned, a shift
 # count of another type (int), C precedence (+ above << above & above ^ above |, comparisons below the
-# shifts), and int operands. The entry exits 7; 81.. names the first wrong value. Under --walk-methods bits
-# stays native: the walker does not evaluate these operators yet (BITWISE-OPERATORS-NOT-CLASSIFIED, OPEN).
+# shifts), and int operands. The entry exits 7; 81.. names the first wrong value. Under --walk-methods bits and ints are
+# walked: the walker evaluates these operators since slice 259 (BAND/BOR/BXOR/SHL/SHR, the one shared binary operation).
 fn: bits (unsigned: a; unsigned: b; int: n) int
     unsigned: x a & b
     if: x != 0x00F000F0U

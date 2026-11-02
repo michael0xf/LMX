@@ -648,6 +648,27 @@ fn: lmx_walk_native_numeric_lit (@: arena c.LmxArena; @: code c.Lmx; int: expect
     return: c.LMX_WALK_OK
 end: lmx_walk_native_numeric_lit
 
+# Slice 259 (design 4.5 B2b-2b): the bit width of a numeric type's machine representation (C99: the bits of its largest
+# value, counted) -- the range of a shift count is [0, width of the left operand's promoted type).
+fn: lmx_type_width (int: ty) int
+    size_t: all 0U
+    int: width 0
+    ty: c.lmx_type_base(ty)
+    if: ty = c.LMX_TYPE_INT || ty = c.LMX_TYPE_UNSIGNED
+        all: (cast: (size_t) c.UINT_MAX)
+    if: ty = c.LMX_TYPE_SIZE_T
+        all: c.SIZE_MAX
+    if: ty = c.LMX_TYPE_ULONG
+        all: (cast: (size_t) c.ULONG_MAX)
+    if: ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_UNSIGNED_CHAR
+        all: (cast: (size_t) c.UCHAR_MAX)
+    while: all != 0U
+        all: all >> 1
+        width: width + 1
+    ---
+    return: width
+end: lmx_type_width
+
 fn: lmx_walk_native_int_bin_check (@: arena c.LmxArena; @: code c.Lmx; @: op int) int
     int: current 0
     if: arena = 0 || code = 0 || op = 0 || c.lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
@@ -701,6 +722,31 @@ fn: lmx_walk_native_int_bin_apply (int: op; int: left; int: right; @: result int
     if: op = c.LMX_WALK_OP_EQ
         \result: (cast: (int) (left = right))
         return: c.LMX_WALK_OK
+    # Slice 259 (design 4.5 B2b-2b; the ledger BITWISE-OPERATORS-NOT-CLASSIFIED): the bitwise operators on the promoted int
+    # operands as C's; a shift whose count is outside [0, width) and a signed left shift that does not fit (a negative left,
+    # a bit carried past the sign) are the machine contract's undefined operations: the implicit `interpreter` throw before
+    # the operation, as a signed ADD's overflow.  A right shift of a negative int is the platform's (C99: implementation-defined),
+    # as the native engine's operator.
+    if: op = c.LMX_WALK_OP_BAND
+        \result: left & right
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_BOR
+        \result: left | right
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_BXOR
+        \result: left ^ right
+        return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_SHL || op = c.LMX_WALK_OP_SHR
+        if: right < 0 || right >= lmx_type_width(c.LMX_TYPE_INT)
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        if: op = c.LMX_WALK_OP_SHL
+            if: left < 0 || left > (c.INT_MAX >> right)
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            \result: left << right
+        else:
+            \result: left >> right
+        ---
+        return: c.LMX_WALK_OK
     return: c.LMX_WALK_INVALID
 end: lmx_walk_native_int_bin_apply
 
@@ -719,7 +765,7 @@ fn: lmx_walk_value_bin (int: op; @: value c.LmxWalkValue; @: other c.LmxWalkValu
     int: b 0
     int: status 0
     int: native_num_result 0
-    if: op != c.LMX_WALK_OP_ADD && op != c.LMX_WALK_OP_SUB && op != c.LMX_WALK_OP_MUL && op != c.LMX_WALK_OP_DIV && op != c.LMX_WALK_OP_MOD && op != c.LMX_WALK_OP_LT && op != c.LMX_WALK_OP_EQ
+    if: op != c.LMX_WALK_OP_ADD && op != c.LMX_WALK_OP_SUB && op != c.LMX_WALK_OP_MUL && op != c.LMX_WALK_OP_DIV && op != c.LMX_WALK_OP_MOD && op != c.LMX_WALK_OP_LT && op != c.LMX_WALK_OP_EQ && op != c.LMX_WALK_OP_BAND && op != c.LMX_WALK_OP_BOR && op != c.LMX_WALK_OP_BXOR && op != c.LMX_WALK_OP_SHL && op != c.LMX_WALK_OP_SHR
         return: c.LMX_WALK_INVALID
     if: value = 0 || other = 0 || out = 0 || value\present = 0 || other\present = 0
         return: c.LMX_WALK_INVALID
@@ -734,6 +780,20 @@ fn: lmx_walk_value_bin (int: op; @: value c.LmxWalkValue; @: other c.LmxWalkValu
     # Operand cells retain their full physical IDs; this is a new result.
     a: lmx_walk_value_promoted(a)
     b: lmx_walk_value_promoted(b)
+    # Slice 259 (design 4.5 B2b-2b): a shift's operands are promoted apart (C99 6.5.7): the result has the left's promoted
+    # type, the count keeps its own; a contextual left literal is an int, or an unsigned by its suffix.  A count outside
+    # [0, width of the left's type) is the machine contract's undefined shift: the implicit `interpreter` throw before the
+    # operation in both executors (the ledger BITWISE-OPERATORS-NOT-CLASSIFIED); a negative count is outside as a size_t.
+    if: op = c.LMX_WALK_OP_SHL || op = c.LMX_WALK_OP_SHR
+        if: a = c.LMX_TYPE_NONE
+            a: c.LMX_TYPE_INT
+            if: value\natural != 0U
+                a: c.LMX_TYPE_UNSIGNED
+        ---
+        if: ub >= (cast: (size_t) lmx_type_width(a))
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        b: a
+    ---
     if: a = c.LMX_TYPE_NONE && b = c.LMX_TYPE_NONE
         a: c.LMX_TYPE_INT
         if: value\natural != 0U || other\natural != 0U
@@ -762,6 +822,16 @@ fn: lmx_walk_value_bin (int: op; @: value c.LmxWalkValue; @: other c.LmxWalkValu
         wv: ua - ub
     if: op = c.LMX_WALK_OP_MUL
         wv: ua * ub
+    if: op = c.LMX_WALK_OP_BAND
+        wv: ua & ub
+    if: op = c.LMX_WALK_OP_BOR
+        wv: ua | ub
+    if: op = c.LMX_WALK_OP_BXOR
+        wv: ua ^ ub
+    if: op = c.LMX_WALK_OP_SHL
+        wv: ua << ub
+    if: op = c.LMX_WALK_OP_SHR
+        wv: ua >> ub
     # -170 c1 / D-58: a zero divisor in a complete operation raises the implicit interpreter throw.
     if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
         if: ub = 0U
@@ -3060,7 +3130,7 @@ fn: lmx_walk_shape_min (int: op) size_t
         return: 2U
     if: op = c.LMX_WALK_OP_OWN_OF || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_OF_EDGE || op = c.LMX_WALK_OP_DEREF || op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_PUT || op = c.LMX_WALK_OP_SET || op = c.LMX_WALK_OP_ADDRESS || op = c.LMX_WALK_OP_GUARD || op = c.LMX_WALK_OP_NAMED || op = c.LMX_WALK_OP_THROW || op = c.LMX_WALK_OP_PRIM || op = c.LMX_WALK_OP_PRIM_PUB
         return: 3U
-    if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ || op = c.LMX_WALK_OP_AND || op = c.LMX_WALK_OP_OR
+    if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ || op = c.LMX_WALK_OP_BAND || op = c.LMX_WALK_OP_BOR || op = c.LMX_WALK_OP_BXOR || op = c.LMX_WALK_OP_SHL || op = c.LMX_WALK_OP_SHR || op = c.LMX_WALK_OP_AND || op = c.LMX_WALK_OP_OR
         return: 3U
     if: op = c.LMX_WALK_OP_IF || op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_UNTIL
         return: 3U
@@ -5696,7 +5766,7 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         if: status != c.LMX_WALK_OK
             return: status
         return: lmx_walk_value_unary(op, @ value, out)
-    if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ
+    if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ || op = c.LMX_WALK_OP_BAND || op = c.LMX_WALK_OP_BOR || op = c.LMX_WALK_OP_BXOR || op = c.LMX_WALK_OP_SHL || op = c.LMX_WALK_OP_SHR
         status: lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
@@ -5705,11 +5775,14 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             return: status
         # Slice 255 (design 4.5 B2a): one shared operation for both executors (lmx_walk_value_bin).  A LIT operand beside a
         # non-literal operand is contextual: it takes the other operand's type in the operation (a statically typed program
-        # has already unified it with that operand; a runtime-typed operand types it now).
-        if: lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)) = c.LMX_WALK_OP_LIT && lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)) != c.LMX_WALK_OP_LIT
-            lmx_walk_value_contextual(value_p)
-        if: lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)) = c.LMX_WALK_OP_LIT && lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)) != c.LMX_WALK_OP_LIT
-            lmx_walk_value_contextual(other_p)
+        # has already unified it with that operand; a runtime-typed operand types it now).  Slice 259: not across a shift --
+        # its operands are typed apart (C99 6.5.7): the left literal keeps its type, the count its own.
+        if: op != c.LMX_WALK_OP_SHL && op != c.LMX_WALK_OP_SHR
+            if: lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)) = c.LMX_WALK_OP_LIT && lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)) != c.LMX_WALK_OP_LIT
+                lmx_walk_value_contextual(value_p)
+            if: lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)) = c.LMX_WALK_OP_LIT && lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)) != c.LMX_WALK_OP_LIT
+                lmx_walk_value_contextual(other_p)
+        ---
         status: lmx_walk_value_bin(op, value_p, other_p, out)
         if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
             return: lmx_walk_fault(f)

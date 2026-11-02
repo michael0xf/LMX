@@ -8711,8 +8711,21 @@ fn: lm_compiler_emit_dyn_values_full (@: tok c.L2ValueSpan; int: lo; int: hi; in
     prec: c.lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) (op\as\atom)))
     if: prec = 1 || prec = 2
         return: c.lm_compiler_error(src_cell[0], op, "internal: a logical connective reached the dynamic expression (its value is int)")
-    if: c.lm_compiler_rw_prec_machine(prec) != 0
-        return: c.lm_compiler_error(src_cell[0], op, "a runtime-typed value in a machine operation (B2b: the bitwise and shift operators follow in slice 257)")
+    # Slice 259 (design 4.5 B2b-2b): the machine profile's bitwise and shift operators over a runtime-typed operand run through
+    # the same shared operation as the arithmetic ones (lmx_walk_value_bin with the walker's codes): the C99 promotions, a shift
+    # count of its own type and the result of the left's type; a count outside [0, width) or an overflowing signed left shift
+    # is the implicit `interpreter` throw, two numbers of different types the implicit `convert` (the ledger
+    # BITWISE-OPERATORS-NOT-CLASSIFIED: the refusal before the operation in both engines).
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "&")
+        code: "c.LMX_WALK_OP_BAND"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "|")
+        code: "c.LMX_WALK_OP_BOR"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "^")
+        code: "c.LMX_WALK_OP_BXOR"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "<<")
+        code: "c.LMX_WALK_OP_SHL"
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), ">>")
+        code: "c.LMX_WALK_OP_SHR"
     if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "+")
         code: "c.LMX_WALK_OP_ADD"
     if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (op\as\atom)), "-")

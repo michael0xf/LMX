@@ -1163,6 +1163,11 @@ fn: lm_compiler_check_value_convert_span (@: value c.L2ValueSpan; int: target; i
     kind: c.lm_compiler_value_span_type(value, mi, @ source_type)
     if: alloc_err_cell[0] != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "cannot type a receiving value")))
+    # Slice 257 (design 4.5 B2b; P1-RET): a runtime-typed value where a pointer is declared is received at run time by the one
+    # admission (lmx_walk_value_receive with the place's pointer code, lm_compiler_emit_dyn_receive_full); no static
+    # compatibility applies to it -- a free name has the type of its binding's value, not of its lexical default.
+    if: kind = -20
+        return: (cast: (int) (0))
     if: kind = -3
         return: (cast: (int) (c.lm_compiler_error(path, at, "mixed numeric types (a conversion)")))
     if: kind = -15

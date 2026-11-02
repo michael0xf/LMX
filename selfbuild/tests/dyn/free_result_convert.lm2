@@ -1,0 +1,108 @@
+# Slice 257 (design 4.5 B2b; P1-RET of Codex's answer to FABLE-RESULT-TP118): the declared result of a walked method receives
+# every present runtime-typed value by the kernel's one admission (lmx_walk_result_receive -> lmx_walk_value_receive), as the
+# native return does.  A number returned where a pointer is declared (as_pointer from outer_number) and a pointer returned
+# where an int is declared (as_int from outer_pointer) are the implicit `convert` throw raised at the callee's return --
+# caught by the callee's own pad when it has one (as_pointer_pad then returns the address of `other`, as_int_pad 99: values
+# only the handler's path produces; a handler's bare write to a free name would stay activation-local, Q52), else by the
+# caller.  The compatible pairings pass: the int binding by the int result, the pointer binding by the pointer result, the
+# graph's typed null literal by the pointer result (nothing).  quote is bound as int (5) by outer_number and as a pointer to
+# marks (1) by outer_pointer.  Entry 7; 81.. name the failing check.
+int: quote 11
+int: marks 1
+int: other 2
+fn: as_pointer () @: int
+    return: quote
+end: as_pointer
+fn: as_int () int
+    return: quote
+end: as_int
+fn: nothing () @: int
+    return: 0
+end: nothing
+fn: as_pointer_pad () @: int
+    int: caught 0
+    ---
+        return: quote
+        catch: convert ()
+            caught: 1
+    ---
+    if: caught != 0
+        return: @ other
+    return: 0
+end: as_pointer_pad
+fn: as_int_pad () int
+    int: caught 0
+    ---
+        return: quote
+        catch: convert ()
+            caught: 1
+    ---
+    if: caught != 0
+        return: 99
+    return: 98
+end: as_int_pad
+fn: outer_number () int
+    int: quote
+    int: got 0
+    @: q int 0
+    quote: 5
+    if: as_int() != 5
+        return: 81
+    ---
+        q: as_pointer()
+        catch: convert ()
+            got: 1
+    ---
+    if: got != 1
+        return: 82
+    if: q != 0
+        return: 83
+    q: as_pointer_pad()
+    if: q = 0
+        return: 84
+    if: \q != 2
+        return: 85
+    if: as_int_pad() != 5
+        return: 86
+    return: 0
+end: outer_number
+fn: outer_pointer () int
+    @: quote int 0
+    int: got 0
+    @: q int 0
+    quote: @ marks
+    q: as_pointer()
+    if: q = 0
+        return: 87
+    if: \q != 1
+        return: 88
+    ---
+        got: as_int()
+        catch: convert ()
+            got: 2
+    ---
+    if: got != 2
+        return: 89
+    if: as_int_pad() != 99
+        return: 90
+    q: as_pointer_pad()
+    if: q = 0
+        return: 91
+    if: \q != 1
+        return: 92
+    q: nothing()
+    if: q != 0
+        return: 93
+    return: 0
+end: outer_pointer
+fn: m () int
+    int: r outer_number()
+    if: r != 0
+        return: r
+    r: outer_pointer()
+    if: r != 0
+        return: r
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -16115,6 +16115,12 @@ fn: lm_compiler_emit_reference_receive_span_full (@: span c.L2ValueSpan; int: ty
         return: c.lm_compiler_tx_set(value, "0")
     if: c.lm_compiler_value_null_literal(span) != 0
         return: lm_compiler_emit_reference_null_full(ty, mi, ind, value, context, full_value)
+    # Slice 257 (design 4.5 B2b; P1-RET): a runtime-typed value where a pointer is declared -- a free name's value, typed by its
+    # binding at run time -- is received by the one admission (lmx_walk_value_receive with the place's pointer code,
+    # lm_compiler_emit_dyn_receive_full), as a numeric place receives it; a mismatch is the implicit `convert`.  A place with a
+    # receiving model keeps its admission path.
+    if: model < 0 && asserted_model < 0 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(ty)) > 0 && c.lm_compiler_value_span_type(span, mi, @ material_source_ft) = -20
+        return: lm_compiler_emit_dyn_receive_full(span, ty, mi, ind, value, full_value)
     if: lm_compiler_reference_source_value(span, mi, @ source) != 0
         return: (cast: (int) (1))
     if: model >= 0 || asserted_model >= 0

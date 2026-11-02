@@ -376,6 +376,37 @@ SOURCE_MACHINE — тело с битовой операцией исполня�
 Fable.
 [Срез259](witnesses/fix259-20261102/notes.md).
 
+### Fable, 2026-11-02 — срез260
+
+B2b-2c над посаженным source-tp121: tp122, плюс P1-NUMERIC-KIND Codex (сообщение после FABLE-RESULT-TP121, дословно в записи).
+(1) Ядро: PRESENT операнд другого вида (ссылка, foreign) там, где нужно число — implicit `convert` до операции в
+`lmx_walk_value_bin`/`_unary` (книга :777), не механический INVALID; EQ: две ссылки — сравнение, ссылка и контекстный 0 — null-тест
+(`lmx_walk_value_null_literal`), ссылка и иное число — `convert`. (2) Свободное значение в месте С моделью приёма — модельный own
+(`@: m Point quote`) и модельный формал (`bump(quote)`) — принимается в момент исполнения: `check_receiving_value_at` лишь отмечает
+канал статуса, `emit_reference_receive_span_full` печатает общий runtime-приём и допуск к модели той же `emit_admit`
+(`lmx_implements_admit_receiving`, implicit `implements`); свободный actual модельного формала не судится статически, передаётся
+графовая ссылка, приём формала допускает её у входа; walked путь (`ADMIT_AS` → `lmx_walk_admit_in`) получил правило вида (число →
+`convert`). (3) ОДИН приём графового места — новый экспорт ядра `lmx_walk_value_receive_graph(arena, value, out)`: ссылка на
+Structure по ФАКТИЧЕСКОМУ указуемому (`lmx_range_classify`), не по коду типа (нативная запись графового own несёт
+`LMX_TYPE_POINTER_BASE + 100`, walked строка — `LMX_TYPE_LMX`; первая попытка через `lmx_walk_value_receive(…, LMX)` бросала
+`convert` на настоящем Shape); `tools/build.lm2` 146 → 147 имён — rebuild tool (tool122 `27707BF3…`), инструмент шагов после fix03
+и G0 bootstrap-а. Побочно закрыт уровень deref P1-PTR-COVERAGE (свободный указатель на графовую ссылку → модельный own);
+уровень адреса (`pp: @ quote` при графовой привязке — `lmx_walk_place_address` UNSUPPORTED) открыт → срез 261. Свидетели:
+`tests/dyn/free_model_admit.lm2` (`runs … 7 nf`: Shape как Point → 2 через take и pass; Slim → `implements` пойман; число →
+`convert`; outer_ptr — deref; 81..86) и `tests/dyn/free_machine_ops.lm2` (outer_ref: `@: quote int` в `quote & 7` и `quote < 100` →
+`convert` пойман, `quote = 0` — null-тест; 104..109). Пробы на посаженном коде записаны (tp121-probe-01: отказы «assignment value
+has incompatible type», «implements is false in function argument», `walk error: INVALID`). Четыре постановки стадии (fix01–fix04:
+fix02 — tail cutter, fix03 — приём по указуемому, fix04 — outer_ptr), один rebuild tool, два `build-runtime`, три `build-frontend`,
+три фокусных сюиты (последняя 14 строк, 0 отказов), три прогона проб (6 из 7 зелёные; probe_graph_address — UNSUPPORTED, срез
+261), один наблюдённый walk (все тела walked с ожидаемыми счётчиками). boot122a (стадия = source-tp122 `8F34D77F…`, 166 входов,
+G0 = tool122, прежний frontend — G2 boot121a `2537E3B3…`): 20:42:20 → 21:00:03Z, 1063 с, `BOOTSTRAP quick 0 failures`,
+245 из 248 путей побайтно равны, PE-образы — только метка компоновки; рабочий инструмент G2 `1B9F2BA5…`; фокусная сюита
+на G2 — 14 строк, 0 отказов. По тому же правилу в `selfbuild/` посажен цельный source-tp122: 6 изменённых входов (lmx_walk_values,
+l2_frontend_lower, l2_frontend_emit, tools/build.lm2, tests/full-suite.tsv, tests/dyn/free_machine_ops.lm2) и одна новая фикстура
+(`inputs.list` 166 строк). Далее срез 261 — P1-PTR-COVERAGE, уровень адреса (указательное место принимает по виду фактического
+указуемого), срез 262 — B2b-3 (снятие замыканий), затем C. Opus ждёт; writer/build у Fable.
+[Срез260](witnesses/fix260-20261102/notes.md).
+
 Обновлено 2026-10-29. Это точка входа в **текущую** работу, а не журнал всех прежних запусков. Предыдущая редакция с датированными checkpoint доступна в Git (`0e0a2978:steps/current.md`); подробные долги и свидетельства остаются в [плане v3](../next_core_tasks_v3.md), [тикетах](tickets/README.md) и [дефектах](defects.md). Прежние планы сохранены в истории Git.
 
 ## Передача Codex 2026 10 29 — действующее назначение

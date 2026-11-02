@@ -1311,6 +1311,12 @@ fn: lm_compiler_check_receiving_value_at (const: (@: stmt c.LmP0Node); @: first 
     # keeps its admission path (slice 259).
     if: receiving_model < 0 && c.lm_compiler_pointer_depth(target_ty) > 0 && c.lm_compiler_ft_is_free(value_ty) != 0
         return: (cast: (int) (0))
+    # Slice 260 (design 4.5 B2b-2c): a runtime-typed value at a place WITH a receiving model is admitted at run time -- received as
+    # the graph reference by the one receive (lmx_walk_value_receive with LMX: a number is the implicit `convert`), then admitted
+    # against the model where the typed program admits (lmx_implements_admit_receiving: a graph without the model's fields is the
+    # implicit `implements`); the method takes the implicit status channel (lm_compiler_admit_site).  No static comparison.
+    if: receiving_model >= 0 && c.lm_compiler_ft_is_free(value_ty) != 0
+        return: (cast: (int) (c.lm_compiler_admit_site(mi)))
     # Slice 258 (the author, 2026-11-02: a hidden input is a local of the activation -- a bare write to it is activation-local,
     # Q52 -- and types are judged at run time): a free name's place receives ANY value by the one admission at the store
     # (lmx_walk_value_store -> lmx_walk_value_receive by the record's actual type: a contextual literal takes the place's type,
@@ -4671,8 +4677,10 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
                 if: ast = 2
                     # A known non-reference value is not unknown Structure
                     # evidence. An unresolved one-level reference still goes
-                    # to the ordinary receiving operation, as at return.
-                    if: vty >= 0 && c.lm_compiler_colon_is_graph_ty(vty) = 0 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(vty)) != 1
+                    # to the ordinary receiving operation, as at return.  Slice 260 (design 4.5 B2b-2c): a runtime-typed actual (a
+                    # free name's value) is not judged statically: the formal's own reception admits the graph it holds at the
+                    # callee's entry (a number is the implicit `convert`).
+                    if: vty >= 0 && c.lm_compiler_ft_is_free(vty) = 0 && c.lm_compiler_colon_is_graph_ty(vty) = 0 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(vty)) != 1
                         return: (cast: (int) (c.lm_compiler_error(path, source_node, "implements is false in function argument")))
                     ---
                     if: check_unevaluated_cell[0] = 0 && c.lm_compiler_admit_site(mi) != 0

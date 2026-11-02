@@ -8,7 +8,10 @@
 # implicit `interpreter` throw -- before the operation, caught by the caller.  The free name `quote` is bound by the callers
 # as unsigned (outer_bits), int (outer_ints) and size_t (outer_wide); `marks` has no binding and is read lexically (3); widen
 # is a sub whose bare write `quote: quote << 1` is activation-local (Q52: the caller keeps its value); typed_walked has no
-# free operand (the typed walked path of the same operators).  Entry 7; 81.. name the failing check.
+# free operand (the typed walked path of the same operators).  Slice 260 (P1-NUMERIC-KIND, Codex): outer_ref binds `quote` to a
+# pointer -- the free POINTER in a numeric operation (low_bits) and under the order comparison (below) is the implicit `convert`
+# before the operation, caught by the caller; `quote = 0` (is_null) is the null test of the free reference (false bound to a
+# cell, true bound to the null pointer).  Entry 7; 81.. name the failing check.
 int: quote 11
 int: marks 3
 fn: mask () unsigned
@@ -138,6 +141,41 @@ fn: outer_wide () int
         return: 102
     return: 0
 end: outer_wide
+fn: is_null () int
+    if: quote = 0
+        return: 1
+    return: 0
+end: is_null
+fn: below () int
+    if: quote < 100
+        return: 1
+    return: 2
+end: below
+fn: outer_ref () int
+    @: quote int 0
+    int: cell 5
+    int: got 0
+    if: is_null() != 1
+        return: 104
+    quote: @ cell
+    if: is_null() != 0
+        return: 105
+    ---
+        got: low_bits()
+        catch: convert ()
+            got: 106
+    ---
+    if: got != 106
+        return: 107
+    ---
+        got: below()
+        catch: convert ()
+            got: 108
+    ---
+    if: got != 108
+        return: 109
+    return: 0
+end: outer_ref
 fn: m () int
     int: r outer_bits()
     if: r != 0
@@ -146,6 +184,9 @@ fn: m () int
     if: r != 0
         return: r
     r: outer_wide()
+    if: r != 0
+        return: r
+    r: outer_ref()
     if: r != 0
         return: r
     if: typed_walked(171U, 4) != 10U

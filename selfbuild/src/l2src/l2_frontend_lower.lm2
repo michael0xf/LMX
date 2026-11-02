@@ -8837,21 +8837,41 @@ fn: lm_compiler_emit_dyn_receive_full (@: value c.L2ValueSpan; int: target; int:
     @: name char (cast: (@: char) name_storage\buffer)
     int: t
     int: raw
+    int: graph 0
     if: dest = 0 || value = 0 || record = 0 || scratch = 0 || pointer = 0 || ind = 0 || mi < 0
         return: 1
     if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
         return: 1
     raw: c.lm_compiler_formal_raw(target)
-    if: raw = 8 || (raw >= 100 && c.lm_compiler_pointer_depth(raw) = 0) || c.lm_compiler_emit_input_value_type(raw, 0, type) != 0
+    if: raw = 8 || (raw >= 100 && c.lm_compiler_pointer_depth(raw) = 0)
         return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "a runtime-typed value received by a place without a value type (B2a)")
+    # Slice 260 (design 4.5 B2b-2c): a graph place receives a graph reference -- the kernel types a Structure reference LMX
+    # (lmx_walk_value_ref), not by a pointer code.
+    if: c.lm_compiler_colon_is_graph_ty(raw) != 0
+        graph: 1
+        if: c.sprintf(type, "c.LMX_TYPE_LMX") < 0
+            return: 1
+        ---
+    else:
+        if: c.lm_compiler_emit_input_value_type(raw, 0, type) != 0
+            return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "a runtime-typed value received by a place without a value type (B2a)")
+    ---
     if: lm_compiler_emit_dyn_span_full(value, mi, ind, scratch, record) != 0
         return: 1
     if: record\data[0] = 0
         return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "a runtime-typed value without a value record (B2a)")
     t: tn_cell[0]
     tn_cell[0]: t + 1
-    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive(%s, %s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record\data, type, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
-        return: 1
+    # Slice 260 (design 4.5 B2b-2c): a graph place receives by the kernel's actual pointee (lmx_walk_value_receive_graph: a native
+    # graph own's record carries a translator pointer code, a walked row LMX_TYPE_LMX; a number is the implicit `convert`).
+    if: graph != 0
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive_graph(l2_program_arena, %s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record\data, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+                return: 1
+        ---
+    else:
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive(%s, %s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record\data, type, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+                return: 1
+    ---
     if: c.fprintf(out_cell[0], "%sif: l2_rs%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_rs%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, ind, ind) < 0
         return: 1
     if: c.snprintf(name, 64U, "l2_rv%d", t) < 0
@@ -11545,6 +11565,11 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
                 if: er = 2 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(c.lm_compiler_ft(idx, t))) > 0 && c.lm_compiler_value_span_type(value, mi, @ span_ft) = -20
                     er: lm_compiler_emit_dyn_receive_full(value, (cast: (int) (c.lm_compiler_ft(idx, t))), mi, ind, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t))), actual_full)
             ---
+            # Slice 260 (design 4.5 B2b-2c): a runtime-typed actual of a modelled formal is passed as the graph reference it holds
+            # (the one receive with LMX: a number is the implicit `convert`); the formal's own reception admits it against the
+            # model at the callee's entry, as it admits a typed actual.
+            if: er = 2 && occ_mi < 0 && c.lm_compiler_nsty_get(idx, t) >= 0 && c.lm_compiler_value_span_type(value, mi, @ span_ft) = -20
+                er: lm_compiler_emit_dyn_receive_full(value, (cast: (int) (c.lm_compiler_ft(idx, t))), mi, ind, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t))), actual_full)
             if: er = 1
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             if: occ_mi < 0 && er = 2 && lm_compiler_emit_native_span(value, mi, ind, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t))), @ actual_context) != 0
@@ -16360,6 +16385,18 @@ fn: lm_compiler_emit_reference_receive_span_full (@: span c.L2ValueSpan; int: ty
     # receiving model keeps its admission path.
     if: model < 0 && asserted_model < 0 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(ty)) > 0 && c.lm_compiler_value_span_type(span, mi, @ material_source_ft) = -20
         return: lm_compiler_emit_dyn_receive_full(span, ty, mi, ind, value, full_value)
+    # Slice 260 (design 4.5 B2b-2c): the same runtime-typed value at a graph place WITH a receiving model -- received as the graph
+    # reference by the one receive (a number is the implicit `convert`), then admitted against the model by the admission the
+    # typed program's places use (lm_compiler_emit_admit: lmx_implements_admit_receiving, the implicit `implements`).
+    if: (model >= 0 || asserted_model >= 0) && c.lm_compiler_colon_is_graph_ty(c.lm_compiler_formal_raw(ty)) != 0 && c.lm_compiler_value_span_type(span, mi, @ material_source_ft) = -20
+        if: lm_compiler_emit_dyn_receive_full(span, ty, mi, ind, value, full_value) != 0
+            return: 1
+        if: asserted_model >= 0 && lm_compiler_emit_admit(mi, asserted_model, (cast: (const: @: char) (value\data)), ind) != 0
+            return: 1
+        if: model >= 0 && model != asserted_model && lm_compiler_emit_admit(mi, model, (cast: (const: @: char) (value\data)), ind) != 0
+            return: 1
+        return: 0
+    ---
     if: lm_compiler_reference_source_value(span, mi, @ source) != 0
         return: (cast: (int) (1))
     if: model >= 0 || asserted_model >= 0

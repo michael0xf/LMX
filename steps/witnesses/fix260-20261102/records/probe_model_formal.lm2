@@ -1,0 +1,27 @@
+# Probe B (slice 260): a free name bound to the unit's Shape, passed to a modelled formal.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+int: quote 11
+fn: bump (Point: p) int
+    return: p\y
+end: bump
+fn: pass () int
+    return: bump(quote)
+end: pass
+fn: outer (Point: p) int
+    @: quote Point p
+    return: pass()
+end: outer
+fn: m () int
+    if: outer(Shape) != 2
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

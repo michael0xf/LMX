@@ -1,0 +1,104 @@
+# Slice 260 (design 4.5 B2b-2c): a free (runtime-typed) value received by a place WITH a receiving model is admitted at run
+# time, in both executors -- received as the graph reference by the kernel's one receive (lmx_walk_value_receive with LMX: a
+# number is the implicit `convert`), then admitted against the model by the admission the typed program's places use
+# (lmx_implements_admit_receiving: a graph without the model's fields is the implicit `implements`).  take receives the free
+# `quote` into a modelled own (`@: m Point quote`); pass hands it to the modelled formal of bump, whose own reception admits it
+# at the entry.  outer binds `quote` to the unit's Shape (y, x: a Point) through its formal: take reads 2, pass reads 2;
+# outer_slim binds it to Slim (pad only): take and pass are the implicit `implements`, caught; outer_num binds a number: take
+# is the implicit `convert`, caught; outer_ptr binds `quote` to a pointer to its own graph reference (`@@: quote Point`, `quote:
+# @ inst`) and through dereferences it into a modelled own (`@: m Point \quote`): the deref typed by the owning record and
+# admitted by the actual pointee (the deref level of P1-PTR-COVERAGE; the address of a graph-bound free name is the next
+# slice).  Entry 7; 81.. name the failing check.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+Slim:
+    int: pad 5
+end: Slim
+Thin:
+    int: pad 0
+end: Thin
+int: quote 11
+fn: take () int
+    @: m Point quote
+    return: m\y
+end: take
+fn: bump (Point: p) int
+    return: p\y
+end: bump
+fn: pass () int
+    return: bump(quote)
+end: pass
+fn: outer (Point: p) int
+    @: quote Point p
+    if: take() != 2
+        return: 81
+    if: pass() != 2
+        return: 82
+    return: 0
+end: outer
+fn: outer_slim (Thin: t) int
+    @: quote Thin t
+    int: got 0
+    ---
+        got: take()
+        catch: implements ()
+            got: 90
+    ---
+    if: got != 90
+        return: 83
+    ---
+        got: pass()
+        catch: implements ()
+            got: 91
+    ---
+    if: got != 91
+        return: 84
+    return: 0
+end: outer_slim
+fn: through () int
+    @: m Point \quote
+    return: m\y
+end: through
+fn: outer_ptr (Point: p) int
+    @: inst Point p
+    @@: quote Point 0
+    quote: @ inst
+    if: through() != 2
+        return: 86
+    return: 0
+end: outer_ptr
+fn: outer_num () int
+    int: quote 5
+    int: got 0
+    ---
+        got: take()
+        catch: convert ()
+            got: 92
+    ---
+    if: got != 92
+        return: 85
+    return: 0
+end: outer_num
+fn: m () int
+    int: r outer(Shape)
+    if: r != 0
+        return: r
+    r: outer_slim(Slim)
+    if: r != 0
+        return: r
+    r: outer_num()
+    if: r != 0
+        return: r
+    r: outer_ptr(Shape)
+    if: r != 0
+        return: r
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

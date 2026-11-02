@@ -1,0 +1,27 @@
+# Probe F (slice 260, P1-PTR-COVERAGE): a free name bound to a pointer to a graph reference, dereferenced into a typed local.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+int: quote 11
+fn: through () int
+    @: p Point \quote
+    return: p\y
+end: through
+fn: outer (Point: p) int
+    @: inst Point p
+    @@: quote Point 0
+    quote: @ inst
+    return: through()
+end: outer
+fn: m () int
+    if: outer(Shape) != 2
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

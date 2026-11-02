@@ -1,0 +1,24 @@
+# Probe G (slice 260): a free number received by a modelled own -- the implicit convert, caught by the caller.
+Point:
+    int: y 2
+    int: x 1
+end: Point
+int: quote 11
+fn: take () int
+    @: m Point quote
+    return: m\y
+end: take
+fn: m () int
+    int: quote 5
+    int: got 0
+    ---
+        got: take()
+        catch: convert ()
+            got: 90
+    ---
+    if: got != 90
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

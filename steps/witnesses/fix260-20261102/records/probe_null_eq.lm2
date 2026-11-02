@@ -1,0 +1,42 @@
+# Probe D (slice 260): a free pointer compared with 0 (the null path) and by order (convert).
+int: quote 11
+fn: is_null () int
+    if: quote = 0
+        return: 1
+    return: 0
+end: is_null
+fn: below () int
+    if: quote < 100
+        return: 1
+    return: 2
+end: below
+fn: outer_null () int
+    @: quote int 0
+    return: is_null()
+end: outer_null
+fn: outer_cell () int
+    @: quote int 0
+    int: cell 5
+    int: got 0
+    quote: @ cell
+    if: is_null() != 0
+        return: 82
+    ---
+        got: below()
+        catch: convert ()
+            got: 91
+    ---
+    if: got != 91
+        return: 83
+    return: 0
+end: outer_cell
+fn: m () int
+    int: r outer_cell()
+    if: r != 0
+        return: r
+    if: outer_null() != 1
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

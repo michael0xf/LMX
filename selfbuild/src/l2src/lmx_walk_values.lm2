@@ -475,13 +475,47 @@ fn: lmx_walk_value_receive (@: value c.LmxWalkValue; int: ty; @: out c.LmxWalkVa
     return: c.LMX_WALK_INVALID
 end: lmx_walk_value_receive
 
+# Slice 260 (design 4.5 B2b-2c): the one receive of a graph place -- a Structure reference by the kernel's actual pointee, not by a
+# type code: a native graph own's record carries the translator's pointer code (LMX_TYPE_POINTER_BASE + its Lmx code), a walked
+# row or a typed place carries LMX_TYPE_LMX; both are the same reference when the referent is a Structure of the arena.  A
+# number or a foreign value at a graph place, or a reference to anything but a Structure, is the type mismatch -- the implicit
+# `convert` (the book :777; P1-NUMERIC-KIND); the null reference is admitted (present, ref 0).  The received value is typed LMX;
+# the admission against the place's model follows (lmx_implements_admit_receiving natively, lmx_walk_value_admit walked).
+fn: lmx_walk_value_receive_graph (@: arena c.LmxArena; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
+    if: arena = 0 || value = 0 || out = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_NUMBER || value\kind = c.LMX_WALK_VALUE_FOREIGN
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: value\kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
+    if: value\ref != 0 && c.lmx_type_base(value\type) != c.LMX_TYPE_LMX && c.lmx_range_classify(arena, value\ref) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: out != value
+        c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    out\type: c.LMX_TYPE_LMX
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_receive_graph
+
 # Both native and walked prefix signs consume the same actual numeric value.
 # Promotion changes the result type, not the operand's stored type.
+# Slice 260 (P1-NUMERIC-KIND): a present contextual literal 0 -- the NONE-typed number a statically typed program writes as the
+# null literal beside a reference (`p = 0`) and lmx_walk_value_contextual leaves for the operation to type.
+fn: lmx_walk_value_null_literal (@: value c.LmxWalkValue) int
+    if: value = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: 0
+    if: c.lmx_type_base(value\type) != c.LMX_TYPE_NONE
+        return: 0
+    return: (cast: (int) (value\wide = 0U))
+end: lmx_walk_value_null_literal
+
 fn: lmx_walk_value_unary (int: op; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
     size_t: number 0U
     int: ty 0
     if: op != c.LMX_WALK_OP_NEG && op != c.LMX_WALK_OP_POS
         return: c.LMX_WALK_INVALID
+    # Slice 260 (P1-NUMERIC-KIND): a present reference or foreign value under a sign is the type mismatch -- the implicit `convert`.
+    if: value != 0 && value\present != 0 && (value\kind = c.LMX_WALK_VALUE_REFERENCE || value\kind = c.LMX_WALK_VALUE_FOREIGN)
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK
         return: c.LMX_WALK_INVALID
     ty: c.lmx_type_base(ty)
@@ -770,10 +804,24 @@ fn: lmx_walk_value_bin (int: op; @: value c.LmxWalkValue; @: other c.LmxWalkValu
     if: value = 0 || other = 0 || out = 0 || value\present = 0 || other\present = 0
         return: c.LMX_WALK_INVALID
     if: op = c.LMX_WALK_OP_EQ && (value\kind = c.LMX_WALK_VALUE_REFERENCE || other\kind = c.LMX_WALK_VALUE_REFERENCE)
-        if: value\kind != c.LMX_WALK_VALUE_REFERENCE || other\kind != c.LMX_WALK_VALUE_REFERENCE
-            return: c.LMX_WALK_INVALID
-        return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (value\ref = other\ref)))
+        if: value\kind = c.LMX_WALK_VALUE_REFERENCE && other\kind = c.LMX_WALK_VALUE_REFERENCE
+            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (value\ref = other\ref)))
+        # Slice 260 (P1-NUMERIC-KIND, Codex 2026-11-02): one reference beside a number.  A contextual literal 0 (the NONE-typed
+        # literal a statically typed program writes as `p = 0`, lmx_walk_value_contextual) is the null test of the reference,
+        # as the typed program's null literal is a typed null reference; any other number beside a reference is the language's
+        # type mismatch in the operation -- the implicit `convert` (the book :777), not a malformed operand.
+        if: value\kind = c.LMX_WALK_VALUE_REFERENCE && lmx_walk_value_null_literal(other) != 0
+            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (value\ref = 0)))
+        if: other\kind = c.LMX_WALK_VALUE_REFERENCE && lmx_walk_value_null_literal(value) != 0
+            return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (other\ref = 0)))
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     ---
+    # Slice 260 (P1-NUMERIC-KIND): a PRESENT operand of another kind where a number is asked -- a reference or a foreign value in
+    # the arithmetic, the order comparison, the bitwise and shift operators -- is the implicit `convert` before the operation,
+    # the runtime twin of the typed program's refusals («a reference where a number is asked», «arithmetic on a reference», «a
+    # reference compared by order»); an unresolved or malformed operand stays the mechanical INVALID.
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE || value\kind = c.LMX_WALK_VALUE_FOREIGN || other\kind = c.LMX_WALK_VALUE_REFERENCE || other\kind = c.LMX_WALK_VALUE_FOREIGN
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     if: lmx_walk_value_number(value, @ ua, @ a) != c.LMX_WALK_OK || lmx_walk_value_number(other, @ ub, @ b) != c.LMX_WALK_OK
         return: c.LMX_WALK_INVALID
     # C99 integer promotions concern representation, not storage family.
@@ -3099,8 +3147,11 @@ fn: lmx_walk_admit_in (@: f c.LmxWalkFrame; @: receiver c.Lmx; @: code c.Lmx; @:
         return: status
     if: out\present = 0
         return: c.LMX_WALK_OK
-    if: out\kind != c.LMX_WALK_VALUE_REFERENCE
-        return: c.LMX_WALK_INVALID
+    # Slice 260 (design 4.5 B2b-2c; P1-NUMERIC-KIND): the admitted value is received as a graph reference first -- a present
+    # number or foreign value, or a reference to no Structure, is the implicit `convert`, not a malformed operand.
+    status: lmx_walk_value_receive_graph((cast: (@: c.LmxArena) f\arena), out, out)
+    if: status != c.LMX_WALK_OK
+        return: status
     if: payload_from_letter != 0U && out\ref != 0
         if: lmx_walk_kind(f, (cast: (@: void) out\ref)) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID

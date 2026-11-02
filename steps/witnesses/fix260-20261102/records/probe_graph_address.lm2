@@ -1,0 +1,27 @@
+# Probe E (slice 260, P1-PTR-COVERAGE): the address of a free name bound to a graph reference, read back through a typed local.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+int: quote 11
+fn: addr () int
+    @@: pp Point 0
+    pp: @ quote
+    @: p Point \pp
+    return: p\y
+end: addr
+fn: outer (Point: p) int
+    @: quote Point p
+    return: addr()
+end: outer
+fn: m () int
+    if: outer(Shape) != 2
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

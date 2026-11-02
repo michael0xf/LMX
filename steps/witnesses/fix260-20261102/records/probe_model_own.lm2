@@ -1,0 +1,25 @@
+# Probe A (slice 260): a free name bound by the caller (through its graph formal) to the unit's Shape, received by a modelled own.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+int: quote 11
+fn: take () int
+    @: m Point quote
+    return: m\y
+end: take
+fn: outer (Point: p) int
+    @: quote Point p
+    return: take()
+end: outer
+fn: m () int
+    if: outer(Shape) != 2
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

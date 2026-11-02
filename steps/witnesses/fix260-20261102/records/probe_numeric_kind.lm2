@@ -1,0 +1,21 @@
+# Probe C (slice 260, P1-NUMERIC-KIND): a free pointer in a bitwise operation -- the implicit convert, caught by the caller.
+int: quote 11
+fn: low_bits () int
+    return: quote & 7
+end: low_bits
+fn: m () int
+    @: quote int 0
+    int: cell 5
+    int: got 0
+    quote: @ cell
+    ---
+        got: low_bits()
+        catch: convert ()
+            got: 90
+    ---
+    if: got != 90
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

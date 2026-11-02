@@ -101,6 +101,7 @@ fn: lmx_arena_open (@: arena c.LmxArena) int
     arena\generation: 0U
     arena\simple: 0U
     arena\source_view: 0U
+    arena\reset_gen: 0U
     return: 0
 end: lmx_arena_open
 
@@ -638,6 +639,20 @@ fn: lmx_arena_attach (@: arena c.LmxArena; @: other c.LmxArena) int
                 c.free((cast: (@: void) inserted))
                 return: 1
             ---
+            # The interval's code links follow its entry into this index (design 4.4): the donor keeps none.
+            present: (cast: (@: LmxRange) c.lmx_range_entry_at(arena, entry\lo))
+            if: present != 0
+                present\links: entry\links
+                present\slot_owner: entry\slot_owner
+                present\holder: entry\holder
+                present\side_cells: entry\side_cells
+                present\side_stride: entry\side_stride
+                entry\links: 0
+                entry\slot_owner: 0
+                entry\holder: 0
+                entry\side_cells: 0U
+                entry\side_stride: 0U
+            ---
             present: inserted + added
             present\lo: entry\lo
             present\hi: entry\hi
@@ -666,6 +681,11 @@ fn: lmx_arena_attach (@: arena c.LmxArena; @: other c.LmxArena) int
     other\generation: 0U
     other\simple: 0U
     other\source_view: 0U
+    # The code links' visit marks moved with the entries: the reset generation goes on above the larger of the two.
+    if: other\reset_gen > arena\reset_gen
+        arena\reset_gen: other\reset_gen
+    ---
+    other\reset_gen: 0U
     index: 0U
     while: index < other\impl_len
         arena\impl[arena\impl_len]: other\impl[index]
@@ -693,6 +713,8 @@ fn: lmx_arena_release (@: arena c.LmxArena) int
         return: 1
     status: c.lmx_arena_blocks_dispose_all(@ arena\blocks)
     arena\arrays: 0
+    # The code links of every interval go with the index (design 4.4): C heap, never a block of the list above.
+    c.lmx_range_side_release(arena)
     if: lmx_arena_index_data(arena) != 0
         c.free((cast: (@: void) lmx_arena_index_data(arena)))
     ---
@@ -709,6 +731,7 @@ fn: lmx_arena_release (@: arena c.LmxArena) int
     arena\generation: 0U
     arena\simple: 0U
     arena\source_view: 0U
+    arena\reset_gen: 0U
     return: status
 end: lmx_arena_release
 

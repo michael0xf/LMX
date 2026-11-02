@@ -65,6 +65,10 @@ fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: cou
         backing: (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_REF, element_type, array_profile, count))
         if: backing = 0
             return: 0
+        # The cells of this backing are this Array's slots: the shared REF interval records their owner first, so a
+        # slot cell alone recovers (holder, slot) (lmx_range_slot_holder; design 4.4); a refusal leaves no backing.
+        if: c.lmx_range_slot_owner_set(arena, backing, count, (cast: (@: c.Lmx) desc)) != 0
+            return: 0
         array\data: backing
     ---
     return: desc

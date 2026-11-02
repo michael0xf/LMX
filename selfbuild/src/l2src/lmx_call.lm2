@@ -95,6 +95,9 @@ sub: lmx_publish_int (@: dirty int; @: arena c.LmxArena; @: cell void; int: valu
     lmx_publish_guard(arena, cell, guard, roots, count)
     if: c.lmx_int_store_known(cell, value) != 0
         lmx_publish_failed(k)
+    else:
+        c.lmx_code_changed_cell(arena, cell)
+    ---
     \dirty: 0
     return
 end: lmx_publish_int
@@ -105,6 +108,9 @@ sub: lmx_publish_char (@: dirty int; @: arena c.LmxArena; @: cell void; int: val
     lmx_publish_guard(arena, cell, guard, roots, count)
     if: c.lmx_char_store_known(cell, value) != 0
         lmx_publish_failed(k)
+    else:
+        c.lmx_code_changed_cell(arena, cell)
+    ---
     \dirty: 0
     return
 end: lmx_publish_char
@@ -115,6 +121,9 @@ sub: lmx_publish_size (@: dirty int; @: arena c.LmxArena; @: cell void; size_t: 
     lmx_publish_guard(arena, cell, guard, roots, count)
     if: c.lmx_size_store_known(cell, value) != 0
         lmx_publish_failed(k)
+    else:
+        c.lmx_code_changed_cell(arena, cell)
+    ---
     \dirty: 0
     return
 end: lmx_publish_size
@@ -125,6 +134,9 @@ sub: lmx_publish_unsigned (@: dirty int; @: arena c.LmxArena; @: cell void; unsi
     lmx_publish_guard(arena, cell, guard, roots, count)
     if: c.lmx_unsigned_store_known(cell, value) != 0
         lmx_publish_failed(k)
+    else:
+        c.lmx_code_changed_cell(arena, cell)
+    ---
     \dirty: 0
     return
 end: lmx_publish_unsigned
@@ -135,6 +147,9 @@ sub: lmx_publish_ulong (@: dirty int; @: arena c.LmxArena; @: cell void; ulong: 
     lmx_publish_guard(arena, cell, guard, roots, count)
     if: c.lmx_ulong_store_known(cell, value) != 0
         lmx_publish_failed(k)
+    else:
+        c.lmx_code_changed_cell(arena, cell)
+    ---
     \dirty: 0
     return
 end: lmx_publish_ulong

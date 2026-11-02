@@ -722,7 +722,7 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
                 # Preserve protection before allocating its physical cell.
                 if: lm_compiler_emit_own_write_guard(work_mi_cell[0], k, deep) != 0 || c.lm_compiler_own_slot_at(k, graph_slot) != 0
                     return: 1
-                if: c.fprintf(out_cell[0], "%s@: void l2_published_cell 0\n%sint: l2_publish_status lmx_walk_value_materialize(l2_program_arena, @ %s, @ l2_published_cell)\n%sif: l2_publish_status != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_publish_status)\n%s    return: 0\n%s---\n%sif: lmx_arena_ref_store(%s, l2_published_cell) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", deep, deep, cwv_name\data, deep, deep, deep, deep, deep, graph_slot, deep, k, deep, deep) < 0
+                if: c.fprintf(out_cell[0], "%s@: void l2_published_cell 0\n%sint: l2_publish_status lmx_walk_value_materialize(l2_program_arena, @ %s, @ l2_published_cell)\n%sif: l2_publish_status != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_publish_status)\n%s    return: 0\n%s---\n%sif: lmx_arena_ref_store(l2_program_arena, %s, l2_published_cell) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", deep, deep, cwv_name\data, deep, deep, deep, deep, deep, graph_slot, deep, k, deep, deep) < 0
                     return: 1
                 ---
             else:
@@ -758,7 +758,7 @@ fn: lm_compiler_own_cell_store_context (int: mi; int: k0; const: (@: ind char); 
     if: c.lm_compiler_own_is_slot(k) != 0
         if: c.lm_compiler_own_slot_at(k, at) != 0
             return: (cast: (int) (1))
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(%s, (cast: (@: void) (%s))) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, at, val, ind, k, ind, ind) < 0))))
+        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(l2_program_arena, %s, (cast: (@: void) (%s))) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, at, val, ind, k, ind, ind) < 0))))
     ---
     helper: c.lm_compiler_own_store_helper(own_ty_cell[0][k])
     if: helper = 0
@@ -2532,7 +2532,7 @@ fn: lm_compiler_emit_reference_cells (const: (@: catalog c.L2D105Catalog); const
                 token: c.lm_compiler_schema_token_slot((cast: (int) (plan\requirement)))
                 if: count >= catalog\reference_count || token < 0 || target >= ns_n_cell[0]
                     return: (cast: (int) (c.lm_compiler_error(src_cell[0], here_node_cell[0], "internal: a prepared reference has no declared model address")))
-                if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_charptr(l2_program_arena, %s, %zuU, l2_layout_tokens + %d) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, %s, %zuU, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(%s, %zuU, (cast: (@: void) %s[%d])) != 0\n%s    %s\n", ind, frame, at, token, frame, at + 1U, j, frame, at + 2U, lm_compiler_rw_types_nsp(), target, ind, failure) < 0
+                if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_charptr(l2_program_arena, %s, %zuU, l2_layout_tokens + %d) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, %s, %zuU, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_program_arena, %s, %zuU, (cast: (@: void) %s[%d])) != 0\n%s    %s\n", ind, frame, at, token, frame, at + 1U, j, frame, at + 2U, lm_compiler_rw_types_nsp(), target, ind, failure) < 0
                     return: (cast: (int) (1))
                 at: at + 3U
                 count: count + 1U

@@ -258,7 +258,7 @@ fn: lm_compiler_formal_receiving_emit (@: sites c.L2ExpressionSite; int: kind; i
                         return: 1
                     if: consumer_build_cursor(roots, kind, index, entry_site, (cast: (@: c.L2GraphPlace) entry_site\place), entry_name, out) != 0 || consumer_build_cursor(roots, kind, index, receiving_site, (cast: (@: c.L2GraphPlace) receiving_site\place), record_name, out) != 0
                         return: 1
-                    if: c.fprintf(out, "        if: lmx_arena_ref_store(%s, 3U, (cast: (@: void) %s)) != 0\n            return: 1\n", entry_name, record_name) < 0
+                    if: c.fprintf(out, "        if: lmx_arena_ref_store(l2_program_arena, %s, 3U, (cast: (@: void) %s)) != 0\n            return: 1\n", entry_name, record_name) < 0
                         return: 1
                     serial: serial + 1U
                 ---
@@ -315,7 +315,7 @@ fn: consumer_results_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @
     @: operation_name char storage + 80
     if: c.snprintf(results_name, 80U, "l2_cc_results%d_%d", temp, offset) < 0
         return: 1
-    if: c.fprintf(out, "        @: Lmx %s lmx_walk_plain_profiled(l2_program_arena, %s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: %s = 0 || lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 0U, %dU) != c.LMX_WALK_OK\n            return: 1\n", results_name, uses_name, count + 1, uses_name, results_name, uses_name, offset + 3, results_name, results_name, count) < 0
+    if: c.fprintf(out, "        @: Lmx %s lmx_walk_plain_profiled(l2_program_arena, %s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: %s = 0 || lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 0U, %dU) != c.LMX_WALK_OK\n            return: 1\n", results_name, uses_name, count + 1, uses_name, results_name, uses_name, offset + 3, results_name, results_name, count) < 0
         return: 1
     sink: sites
     int: at 1
@@ -324,7 +324,7 @@ fn: consumer_results_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @
         if: operation != 0
             if: c.snprintf(operation_name, 80U, "l2_cc_receiver%d_%d_%d", temp, offset, at) < 0 || consumer_build_cursor(roots, kind, index, sink, operation, operation_name, out) != 0
                 return: 1
-            if: c.fprintf(out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", results_name, at, operation_name) < 0
+            if: c.fprintf(out, "        if: lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", results_name, at, operation_name) < 0
                 return: 1
             at: at + 1
         ---
@@ -390,7 +390,7 @@ fn: lm_compiler_consumer_calls_emit (@: sites c.L2ExpressionSite; int: kind; int
                                     return: 1
                                 if: consumer_build_cursor(roots, kind, index, called, 0, (cast: (@: char) code_name), out) != 0 || consumer_build_cursor(roots, kind, index, called, (cast: (@: c.L2GraphPlace) called\place), (cast: (@: char) call_name), out) != 0
                                     return: 1
-                                if: c.fprintf(out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", uses_name, offset + 1, code_name, uses_name, offset + 2, call_name) < 0
+                                if: c.fprintf(out, "        if: lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", uses_name, offset + 1, code_name, uses_name, offset + 2, call_name) < 0
                                     return: 1
                                 if: consumer_results_emit(sites, kind, index, roots, called, uses_name, (cast: (int) site\temp), offset, out) != 0
                                     return: 1

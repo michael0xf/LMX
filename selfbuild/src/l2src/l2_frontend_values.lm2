@@ -2125,7 +2125,7 @@ end: lm_compiler_d105_ints
 
 fn: lm_compiler_emit_receiving_cells (const: (@: frame char); const: (@: catalog char); const: (@: coverage char); int: mode; const: (@: references char); const: (@: source_context char); const: (@: ind char); const: (@: failure char)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(%s, 0U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, 1U, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 2U, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(%s, 3U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(%s, 4U, (cast: (@: void) %s)) != 0\n%s    %s\n", ind, frame, catalog, frame, coverage, frame, mode, frame, references, frame, source_context, ind, failure) < 0))))
+    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(l2_program_arena, %s, 0U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(l2_program_arena, %s, 1U, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 2U, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_program_arena, %s, 3U, (cast: (@: void) %s)) != 0 || lmx_arena_ref_store(l2_program_arena, %s, 4U, (cast: (@: void) %s)) != 0\n%s    %s\n", ind, frame, catalog, frame, coverage, frame, mode, frame, references, frame, source_context, ind, failure) < 0))))
 end: lm_compiler_emit_receiving_cells
 
 fn: lm_compiler_ruse_grow (@@: row_table int; int: have; int: want) int
@@ -2249,9 +2249,9 @@ fn: lm_compiler_emit_send (int: k; int: proto; @: prefix char; @: count_arr int;
         return: (cast: (int) (1))
     j: 0
     while: j < nf
-        if: kind_arr[off_arr[k] + j] = 1 && c.fprintf(out_cell[0], "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        l2_send_fail()\n", j, j, j) < 0
+        if: kind_arr[off_arr[k] + j] = 1 && c.fprintf(out_cell[0], "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(a, p, %dU, cell) != 0\n        l2_send_fail()\n", j, j, j) < 0
             return: (cast: (int) (1))
-        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(out_cell[0], "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text))) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
+        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(out_cell[0], "    if: refs[%d] = 0\n        l2_send_fail()\n    source_text: (cast: (@: LmxArray) lmx_pointer_value_known(refs[%d]))\n    if: source_text = 0 || lmx_domain_kind(lmx_call_arena, (cast: (@: void) source_text)) != c.LMX_KIND_ARRAY || lmx_type_base(lmx_domain_type(lmx_call_arena, (cast: (@: void) source_text))) != c.LMX_TYPE_ARRAY_OF_CHAR || (source_text\\array.size != 0U && source_text\\array.data = 0)\n        l2_send_fail()\n    text: lmx_array_new_child_profiled(p, c.LMX_TYPE_ARRAY_OF_CHAR, (source_text\\array.size), a, 0)\n    if: text = 0 || lmx_arena_ref_store(a, p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n    if: source_text\\array.size != 0U\n        memcpy((text\\array.data), (source_text\\array.data), (source_text\\array.size))\n    ---\n", j, j, j) < 0
             return: (cast: (int) (1))
         j: j + 1
     ---
@@ -2261,7 +2261,7 @@ fn: lm_compiler_emit_send (int: k; int: proto; @: prefix char; @: count_arr int;
     # the letter, and its domain would then disagree with a receiving field's own prototype cell at
     # admission, D-56's real cause). Same cell type D-52's kind-10/11 cells get from
     # l2_ptr_cell_type (LMX_TYPE_MSG_REF) so a receiver's `m\sender` field agrees.
-    if: c.fprintf(out_cell[0], "    cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        l2_send_fail()\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n") < 0
+    if: c.fprintf(out_cell[0], "    cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(a, g, 0U, cell) != 0 || lmx_arena_ref_store(a, g, 1U, (cast: (@: void) p)) != 0\n        l2_send_fail()\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n") < 0
         return: (cast: (int) (1))
     if: has_ref != 0
         if: c.fprintf(out_cell[0], "    if: lmx_service_post(lmx_child_service(t), lmx_pointer_value_known(refs[%d]), m, a) != c.LMX_SERVICE_OK\n        l2_send_fail()\n    return: 0\n", nf) < 0
@@ -2421,7 +2421,7 @@ end: lm_compiler_num_read_text
 
 fn: lm_compiler_mad_cap_emit_walk (int: ri; int: slot) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    if: c.fprintf(out_cell[0], "    l2_mad_cell: lmx_pointer_value_known(refs[%uU])\n    if: lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (unsigned) ri), (cast: (unsigned) slot)) < 0
+    if: c.fprintf(out_cell[0], "    l2_mad_cell: lmx_pointer_value_known(refs[%uU])\n    if: lmx_arena_ref_store((cast: (@: LmxArena) owner), l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (unsigned) ri), (cast: (unsigned) slot)) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_mad_cap_emit_walk

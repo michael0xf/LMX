@@ -56,7 +56,7 @@ fn: reparent_values (int: argc; @@: argv char) int
     \old0: argc + 10
     \old1: argc + 28
     \old_pointer: old1
-    if: c.lmx_arena_ref_store(source, 0U, (cast: (@: void) numbers)) != 0 || c.lmx_arena_ref_store(source, 1U, (cast: (@: void) source_pointers)) != 0
+    if: c.lmx_arena_ref_store(@ donor, source, 0U, (cast: (@: void) numbers)) != 0 || c.lmx_arena_ref_store(@ donor, source, 1U, (cast: (@: void) source_pointers)) != 0
         return: 4
     if: c.lmx_qualify_tree_preflight_full(@ donor, source, 0, 0U, 0, 0U, 0, 0U) != 0 || c.lmx_arena_seal_profile(@ donor, seal) != 0
         return: 5
@@ -68,7 +68,7 @@ fn: reparent_values (int: argc; @@: argv char) int
     @: pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_array_new_typed_child_profiled(source, c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 2048, 2U, @ moved, 0, sizeof(@: int), c.probe_read, c.probe_write))
     if: local = 0 || pointers = 0 || c.lmx_arena_refs_open_owned(@ moved, graph, 1U) != 0
         return: 7
-    if: c.lmx_arena_ref_store(graph, 0U, (cast: (@: void) local)) != 0 || c.lmx_arena_ref_store(local, 0U, (cast: (@: void) source)) != 0 || c.lmx_arena_ref_store(local, 1U, (cast: (@: void) pointers)) != 0
+    if: c.lmx_arena_ref_store(@ moved, graph, 0U, (cast: (@: void) local)) != 0 || c.lmx_arena_ref_store(@ moved, local, 0U, (cast: (@: void) source)) != 0 || c.lmx_arena_ref_store(@ moved, local, 1U, (cast: (@: void) pointers)) != 0
         return: 8
     @@: slot0 int (cast: (@@: int) c.lmx_array_cell_in(@ moved, pointers, 0U))
     @@: slot1 int (cast: (@@: int) c.lmx_array_cell_in(@ moved, pointers, 1U))
@@ -161,7 +161,7 @@ fn: thread_values (int: argc; @@: argv char) int
     @: child c.LmxThread lane_thread(@ ca, cg)
     if: parent = 0 || child = 0
         return: 3
-    if: c.lmx_arena_ref_store(cg, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(cg, 1U, (cast: (@: void) child)) != 0 || c.lmx_arena_ref_store(cg, 2U, (cast: (@: void) id)) != 0 || c.lmx_arena_ref_store(cg, 3U, (cast: (@: void) binding)) != 0 || c.lmx_arena_ref_store(pg, 0U, (cast: (@: void) child)) != 0
+    if: c.lmx_arena_ref_store(@ ca, cg, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(@ ca, cg, 1U, (cast: (@: void) child)) != 0 || c.lmx_arena_ref_store(@ ca, cg, 2U, (cast: (@: void) id)) != 0 || c.lmx_arena_ref_store(@ ca, cg, 3U, (cast: (@: void) binding)) != 0 || c.lmx_arena_ref_store(@ ca, pg, 0U, (cast: (@: void) child)) != 0
         return: 4
     cg\native: (cast: (c.LmxEntry) c.lane_body)
     @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) child\slot)
@@ -201,7 +201,7 @@ fn: thread_values (int: argc; @@: argv char) int
         failed: failed + 1
     c.printf("THREAD main-binding=%d worker-binding=%d errno-before=%d errno-after=%d take-null=%d receive-null=%d\n", main_binding, worker_binding, errno_read, errno_after, take_null, receive_null)
     c.printf("RUNNING value=%d expected=%d main=%d worker=%d ready=%d count=%d\n", actual, argc + 42, main_id, worker_id, ready, count)
-    if: c.lmx_thread_child_remove(parent, child) != 0 || c.lmx_arena_ref_store(pg, 0U, 0) != 0 || c.lmx_thread_mail_close(@ ca, child) != 0 || c.lmx_thread_mail_close(@ pa, parent) != 0 || c.lmx_arena_release(@ ca) != 0 || c.lmx_arena_release(@ pa) != 0
+    if: c.lmx_thread_child_remove(parent, child) != 0 || c.lmx_arena_ref_store(@ pa, pg, 0U, 0) != 0 || c.lmx_thread_mail_close(@ ca, child) != 0 || c.lmx_thread_mail_close(@ pa, parent) != 0 || c.lmx_arena_release(@ ca) != 0 || c.lmx_arena_release(@ pa) != 0
         failed: failed + 1
     c.printf("RUNNING failed=%d\n", failed)
     return: failed
@@ -235,7 +235,7 @@ fn: root_values (int: argc; @@: argv char) int
         return: 2
     \value: argc + 41
     \other: argc + 99
-    if: c.lmx_arena_ref_store(graph, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(graph, 1U, (cast: (@: void) other)) != 0
+    if: c.lmx_arena_ref_store(arena, graph, 0U, (cast: (@: void) value)) != 0 || c.lmx_arena_ref_store(arena, graph, 1U, (cast: (@: void) other)) != 0
         return: 3
     int: before \value
     int: turn_status (cast: (int) c.lmx_root_turn(@ root, c.lmx_clock_ticks()))

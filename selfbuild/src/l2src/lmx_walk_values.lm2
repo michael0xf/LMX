@@ -1297,6 +1297,11 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
     status: lmx_walk_store_numeric_raw((cast: (@: void) place\address), ty, number)
     if: status = c.LMX_WALK_OK && place\context != 0
         c.lmx_value_context_copy(place\context, 0)
+    ---
+    # A number written into a cell that stands in a place of code drops the words above it (design 4.4).
+    if: status = c.LMX_WALK_OK
+        c.lmx_code_changed_cell(arena, (cast: (@: void) place\address))
+    ---
     return: status
 end: lmx_walk_value_store_with_writer
 

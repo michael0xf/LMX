@@ -1746,6 +1746,12 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
                 \status: c.LMX_GRAPH_COPY_NOMEM
                 return: 0
             mutable_fresh: (cast: (@: void) c.lmx_chunk_data(fresh_pool\head))
+            # The fresh child array is this copy's: its interval names the copy (design 4.4).
+            if: c.lmx_range_holder_set(dst_arena, mutable_fresh, dst) != 0
+                c.free((cast: (@: void) cells))
+                \status: c.LMX_GRAPH_COPY_NOMEM
+                return: 0
+            ---
         ---
         if: immutable_missing != 0U
             fresh_pool: c.lmx_pool_make_profiled(dst_arena, immutable_missing * sizeof(@: void), sizeof(@: void), c.LMX_KIND_CHILDREN, c.lmx_type_immutable(c.LMX_TYPE_REFS), target_profile)
@@ -1754,6 +1760,11 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
                 \status: c.LMX_GRAPH_COPY_NOMEM
                 return: 0
             immutable_fresh: (cast: (@: void) c.lmx_chunk_data(fresh_pool\head))
+            if: c.lmx_range_holder_set(dst_arena, immutable_fresh, dst) != 0
+                c.free((cast: (@: void) cells))
+                \status: c.LMX_GRAPH_COPY_NOMEM
+                return: 0
+            ---
         ---
         i: 0U
         if: src != 0

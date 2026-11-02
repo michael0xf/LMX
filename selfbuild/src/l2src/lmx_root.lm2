@@ -943,7 +943,7 @@ fn: lmx_root_host_make (@: host c.LmxThread; @: graph c.Lmx; @: launch c.LmxRoot
             return: 1
         ---
         branch: (cast: (@: c.Lmx) launch\settings(arena, profile_value))
-        if: branch = 0 || c.lmx_arena_ref_store(graph, c.LMX_ROOT_HOST_SETTINGS, (cast: (@: void) branch)) != 0
+        if: branch = 0 || c.lmx_arena_ref_store(arena, graph, c.LMX_ROOT_HOST_SETTINGS, (cast: (@: void) branch)) != 0
             return: 1
         ---
         launch\branch: branch
@@ -1102,7 +1102,7 @@ fn: lmx_root_launch_result (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRo
     ---
     message: lmx_root_message(root)
     graph: message\graph
-    if: graph = 0 || c.lmx_arena_ref_store(graph, c.LMX_ROOT_HOST_LAUNCH, (cast: (@: void) at)) != 0
+    if: graph = 0 || c.lmx_arena_ref_store(lmx_root_arena(root), graph, c.LMX_ROOT_HOST_LAUNCH, (cast: (@: void) at)) != 0
         return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not open\n"), out, err)
     ---
     # THE HOST'S FIRST TURN: it makes R0, published at the turn's end.
@@ -1161,11 +1161,11 @@ fn: lmx_root_launch_result (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRo
         slots[ai]: (cast: (@: void) main_arg)
         ai: ai + 1
     ---
-    if: c.lmx_arena_ref_store(letter_payload, 0U, (cast: (@: void) main_args)) != 0
+    if: c.lmx_arena_ref_store(letter_at, letter_payload, 0U, (cast: (@: void) main_args)) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
     cell: c.lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, letter_at)
-    if: cell = 0 || c.lmx_pointer_store_known(cell, (cast: (@: void) message)) != 0 || c.lmx_arena_ref_store(letter_graph, 0U, cell) != 0 || c.lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) letter_payload)) != 0
+    if: cell = 0 || c.lmx_pointer_store_known(cell, (cast: (@: void) message)) != 0 || c.lmx_arena_ref_store(letter_at, letter_graph, 0U, cell) != 0 || c.lmx_arena_ref_store(letter_at, letter_graph, 1U, (cast: (@: void) letter_payload)) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
     letter\running: 1
@@ -1248,7 +1248,7 @@ fn: lmx_root_exit_model (@: arena c.LmxArena) @: c.Lmx
     if: model = 0 || code = 0 || out = 0 || err = 0 || c.lmx_arena_refs_open_owned(arena, model, 3U) != 0
         return: 0
     ---
-    if: c.lmx_arena_ref_store(model, 0U, code) != 0 || c.lmx_arena_ref_store(model, 1U, (cast: (@: void) out)) != 0 || c.lmx_arena_ref_store(model, 2U, (cast: (@: void) err)) != 0
+    if: c.lmx_arena_ref_store(arena, model, 0U, code) != 0 || c.lmx_arena_ref_store(arena, model, 1U, (cast: (@: void) out)) != 0 || c.lmx_arena_ref_store(arena, model, 2U, (cast: (@: void) err)) != 0
         return: 0
     ---
     return: model
@@ -1403,7 +1403,7 @@ fn: lmx_root_settings (@: arena c.LmxArena; @: profile_value c.Lmx) @: c.Lmx
         return: 0
     ---
     text: c.lmx_array_new_child_profiled(branch, c.LMX_TYPE_ARRAY_OF_CHAR, n, arena, profile_value)
-    if: text = 0 || c.lmx_arena_ref_store(branch, 0U, (cast: (@: void) text)) != 0
+    if: text = 0 || c.lmx_arena_ref_store(arena, branch, 0U, (cast: (@: void) text)) != 0
         c.free((cast: (@: void) cwd_bytes))
         return: 0
     ---

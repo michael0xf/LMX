@@ -8405,7 +8405,7 @@ fn: lm_compiler_emit_ns_ref (int: ref; const: (@: parent char); int: slot; const
         return: (cast: (int) (1))
     if: live != 0 && c.lm_compiler_emit_invariant(ind, "a method's named Structure reference did not copy") != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) l2_hres%d)) != 0\n", ind, parent, (cast: (unsigned) slot), id) < 0
+    if: c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(l2_program_arena, %s, %uU, (cast: (@: void) l2_hres%d)) != 0\n", ind, parent, (cast: (unsigned) slot), id) < 0
         return: (cast: (int) (1))
     if: live = 0 && c.fprintf(out_cell[0], "%s    return: 1\n", ind) < 0
         return: (cast: (int) (1))
@@ -8750,7 +8750,7 @@ fn: lm_compiler_emit_method_atom_at (int: oi; const: (@: holder char); size_t: c
             j: j + 1
         fx: fx + 1
     ---
-    if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_entry_leaf, %zuU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", child) < 0
+    if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_entry_leaf, %zuU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", child) < 0
         return: (cast: (int) (1))
     # The owning slot names the field, as a model's does (l2_emit_ns_names); the Structure keeps its own name.
     if: c.snprintf(owning, 64U, "lmx_arena_ref_cell(l2_entry_leaf, %zuU)", child) >= 64 || c.lm_compiler_emit_source_name(owning, own_name_cell[0][oi], "        ", "return: 1", 0) != 0
@@ -14407,7 +14407,7 @@ fn: lm_compiler_rw_put (int: source_node; int: slot; int: child) int
     if: rw_emit_cell[0] = 0
         return: (cast: (int) (0))
     c.lm_compiler_rw_name(source_node, parent)
-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", parent, slot, child) < 0))))
+    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", parent, slot, child) < 0))))
 end: lm_compiler_rw_put
 
 # Original: l2src/l2trans.lm1:23676
@@ -16945,11 +16945,11 @@ fn: lm_compiler_emit_mad_construct_one (int: mi) int
                 return: (cast: (int) (1))
             if: c.lm_compiler_schema_kind(mcap_ns_cell[0][k]) = 0
                 if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_value_ft_of_own(ty))) = 0
-                    if: c.fprintf(out_cell[0], "    if: lmx_walk_value_materialize((cast: (@: LmxArena) owner), (lmx_input_values + %uU), @ l2_mad_cell) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+                    if: c.fprintf(out_cell[0], "    if: lmx_walk_value_materialize((cast: (@: LmxArena) owner), (lmx_input_values + %uU), @ l2_mad_cell) != c.LMX_WALK_OK || lmx_arena_ref_store((cast: (@: LmxArena) owner), l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
                         return: 1
                     ---
                 else:
-                    if: c.fprintf(out_cell[0], "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (@: char) (c.lm_compiler_mcap_new_helper(ty))), (cast: (@: char) (c.lm_compiler_own_store_helper(ty))), c.lm_compiler_mcap_value_helper(ty), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+                    if: c.fprintf(out_cell[0], "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store((cast: (@: LmxArena) owner), l2_madc, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (@: char) (c.lm_compiler_mcap_new_helper(ty))), (cast: (@: char) (c.lm_compiler_own_store_helper(ty))), c.lm_compiler_mcap_value_helper(ty), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
                         return: 1
                     ---
                 ---
@@ -17464,9 +17464,9 @@ fn: lm_compiler_t7_emit_make (int: site; const: (@: ind char)) int
         how: t7b_how_cell[0][at]
         val: t7b_val_cell[0][at]
         slot: t7b_slot_cell[0][at]
-        if: how = 0 && c.fprintf(out_cell[0], "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, %d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, val, site, (cast: (unsigned) slot), site, ind) < 0
+        if: how = 0 && c.fprintf(out_cell[0], "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, %d) != 0 || lmx_arena_ref_store(l2_program_arena, l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, val, site, (cast: (unsigned) slot), site, ind) < 0
             return: (cast: (int) (1))
-        if: how != 0 && c.fprintf(out_cell[0], "%sif: lmx_walk_value_materialize(l2_program_arena, l2_t7b%d, @ l2_t7c%d) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, j, site, site, (cast: (unsigned) slot), site, ind) < 0
+        if: how != 0 && c.fprintf(out_cell[0], "%sif: lmx_walk_value_materialize(l2_program_arena, l2_t7b%d, @ l2_t7c%d) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_program_arena, l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, j, site, site, (cast: (unsigned) slot), site, ind) < 0
             return: (cast: (int) (1))
         j: j + 1
     ---

@@ -5269,9 +5269,9 @@ fn: lm_compiler_emit_throw (const: (@: stmt c.LmP0Node); int: mi; const: (@: ind
             newf: "lmx_unsigned_new_owned"
         if: ty = 36
             newf: "lmx_ulong_new_owned"
-        if: newf != 0 && c.fprintf(out_cell[0], "%sif: l2_tp%d != 0\n%s    l2_tc%d: %s(l2_program_arena)\n%sif: l2_tp%d != 0 && l2_tc%d = 0\n%s    l2_tp%d: 0\n%sif: l2_tp%d != 0 && (%s(l2_tc%d, %s) != 0 || lmx_arena_ref_store(l2_tp%d, %dU, l2_tc%d) != 0)\n", ind, t, ind, t, newf, ind, t, t, ind, t, ind, t, c.lm_compiler_own_store_helper(ty), t, tok_cell[0]\data, t, k, t) < 0
+        if: newf != 0 && c.fprintf(out_cell[0], "%sif: l2_tp%d != 0\n%s    l2_tc%d: %s(l2_program_arena)\n%sif: l2_tp%d != 0 && l2_tc%d = 0\n%s    l2_tp%d: 0\n%sif: l2_tp%d != 0 && (%s(l2_tc%d, %s) != 0 || lmx_arena_ref_store(l2_program_arena, l2_tp%d, %dU, l2_tc%d) != 0)\n", ind, t, ind, t, newf, ind, t, t, ind, t, ind, t, c.lm_compiler_own_store_helper(ty), t, tok_cell[0]\data, t, k, t) < 0
             return: (cast: (int) (1))
-        if: newf = 0 && c.fprintf(out_cell[0], "%sif: l2_tp%d != 0 && lmx_arena_ref_store(l2_tp%d, %dU, (cast: (@: void) %s)) != 0\n", ind, t, t, k, tok_cell[0]\data) < 0
+        if: newf = 0 && c.fprintf(out_cell[0], "%sif: l2_tp%d != 0 && lmx_arena_ref_store(l2_program_arena, l2_tp%d, %dU, (cast: (@: void) %s)) != 0\n", ind, t, t, k, tok_cell[0]\data) < 0
             return: (cast: (int) (1))
         if: c.lm_compiler_emit_invariant(ind, "a throw payload refused its field") != 0
             return: (cast: (int) (1))
@@ -13708,7 +13708,7 @@ fn: lm_compiler_mad_emit (int: mi; const: (@: ind char)) int
                         return: 1
                     if: oi < 0 && lm_compiler_tok_formal_context_full(mi, fi, ind, cv, 0, full) != 0
                         return: 1
-                    if: c.fprintf(out_cell[0], "%sif: lmx_walk_value_materialize(l2_program_arena, %s, @ l2_mad_cell) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, full\data, (cast: (unsigned) slot), ind) < 0
+                    if: c.fprintf(out_cell[0], "%sif: lmx_walk_value_materialize(l2_program_arena, %s, @ l2_mad_cell) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_program_arena, l2_madc, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, full\data, (cast: (unsigned) slot), ind) < 0
                         return: 1
                     ---
                 else:
@@ -13718,7 +13718,7 @@ fn: lm_compiler_mad_emit (int: mi; const: (@: ind char)) int
                         return: 1
                     if: oi < 0 && lm_compiler_tok_formal_context(mi, fi, ind, cv, 0) != 0
                         return: 1
-                    if: c.fprintf(out_cell[0], "%sl2_mad_cell: %s(l2_program_arena)\n%sif: l2_mad_cell = 0 || %s(l2_mad_cell, %s) != 0 || lmx_arena_ref_store(l2_madc, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, (cast: (@: char) (c.lm_compiler_mcap_new_helper(ty))), ind, c.lm_compiler_own_store_helper(ty), cv\data, (cast: (unsigned) slot), ind) < 0
+                    if: c.fprintf(out_cell[0], "%sl2_mad_cell: %s(l2_program_arena)\n%sif: l2_mad_cell = 0 || %s(l2_mad_cell, %s) != 0 || lmx_arena_ref_store(l2_program_arena, l2_madc, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, (cast: (@: char) (c.lm_compiler_mcap_new_helper(ty))), ind, c.lm_compiler_own_store_helper(ty), cv\data, (cast: (unsigned) slot), ind) < 0
                         return: 1
                     ---
                 ---
@@ -14434,7 +14434,7 @@ fn: lm_compiler_mad_cap_emit (int: mi; int: j; const: (@: tgt char); const: (@: 
         return: (cast: (int) (1))
     if: c.lm_compiler_schema_kind(mcap_ns_cell[0][j]) != 2 && input < 0 && lm_compiler_source_emit_admit(mi, model, mcap_ns_cell[0][j], mcap_name_cell[0][j], -1, (cast: (const: @: char) (src\data)), ind, m_node_cell[0][mi]) != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sl2_mad_cell: (cast: (@: void) %s)\n%sif: lmx_arena_ref_store(%s, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, src\data, ind, tgt, (cast: (unsigned) slot), ind) < 0
+    if: c.fprintf(out_cell[0], "%sl2_mad_cell: (cast: (@: void) %s)\n%sif: lmx_arena_ref_store(l2_program_arena, %s, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, src\data, ind, tgt, (cast: (unsigned) slot), ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_mad_cap_emit

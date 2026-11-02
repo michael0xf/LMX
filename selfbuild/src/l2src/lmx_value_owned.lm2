@@ -495,12 +495,27 @@ end: lmx_value_cell_store
 fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkValue; @: raw void; @: context c.LmxWalkValue; c.LmxPointerCellWrite: write) int
     c.LmxPointerCellRead: read 0
     @: stored c.LmxWalkValue lmx_pointer_cell_context(arena, cell)
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, cell))
+    @: old void 0
+    @: record c.LmxCodeLink 0
+    int: code 0
+    int: slot_cell 0
     c.LmxWalkValue: saved
     int: status 0
     if: lmx_value_cell_access(arena, cell, @ read, @ write) != 0
         return: 1
     if: write = 0
         return: 1
+    # A CHILDREN/REF cell is a slot of a graph node: this write is one of the three physical rebindings of a child
+    # (design 4.4), prepared before the write -- a refusal writes nothing -- and committed after it; any other cell
+    # takes a value, and its own places of code are asked after the write.
+    if: pool != 0 && (pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF)
+        slot_cell: 1
+        old: c.lmx_arena_pointer_void_read(cell)
+        if: c.lmx_code_rebind_prepare(arena, cell, old, raw, @ record, @ code) != 0
+            return: 1
+        ---
+    ---
     lmx_value_context_copy(@ saved, context)
     status: write(cell, raw)
     if: status = 0
@@ -512,6 +527,16 @@ fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkVa
         ---
         if: owner != stored
             lmx_value_context_copy(owner, @ saved)
+        ---
+        if: slot_cell != 0
+            status: (cast: (int) c.lmx_code_rebind_commit(arena, cell, old, raw, record))
+        else:
+            c.lmx_code_changed_cell(arena, cell)
+        ---
+    else:
+        if: slot_cell != 0
+            c.lmx_code_rebind_abandon(record)
+        ---
     ---
     return: status
 end: lmx_value_cell_fill

@@ -168,8 +168,19 @@ failures each), `BOOTSTRAP quick 0 failures`; G1 = G2 apart from the PE link sta
 | boot98 (slice 249, draft79 line) | 49c / FE94 (no indexes) | 18196 | — | 8273 |
 | boot112 (slice 251) | fe112 (S1–S3) | 1159 | 421 | 424 |
 | boot114 (slice 252) | fe114 (S1–S3c) | 969 | 324 | 316 |
+| boot115f (slice 253, tp115 = the kernel's code links) | boot114's G2 frontend (= fe114's sources self-built) | 962 | 308 | 308 |
 
 The frontend step translates all 23 frontend/backend modules, writes `frontend.c`/`backend.c` and compiles them; the
 runtime step (kernel L2 → L1 → C headers, two objects) took 48 s and 47 s, the tool step 104 s and 105 s; the smoke list
-about 40 s per generation. The remaining targets of the frontend step are the ones named above (method-name scans, the
+about 40 s per generation.
+
+## The first semantic slice (tp115, boot115f): no frontend time at stake
+
+tp115 changes the kernel (design §4.4: the code links, the native reset on a write of code, the lifetime of the records,
+the failure-atomic write path of fix05) and the frontend only in what it emits (`lmx_arena_ref_store(l2_program_arena,
+…)`), so the frontend step's time is the previous slice's and is not measured as a pair; the runtime step (kernel L2 → L1 →
+C) took 36 s and 36 s, and every program now runs the driver's start-up self-check of the code links (38 checks on a
+private arena) before its own main — not visible in the smoke list's wall time at this scale. The six attempts boot115…
+boot115f (fix01–fix06: three translation refusals, one C compile error, the reset's `parent` climb, Codex's P1-A/P1-B) are
+the cost of the slice, 5 to 15 minutes each; standalone module translations caught two of the six before a bootstrap. The remaining targets of the frontend step are the ones named above (method-name scans, the
 owner memo's re-check, the M2 pass).

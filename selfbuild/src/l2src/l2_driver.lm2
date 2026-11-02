@@ -11,6 +11,7 @@ predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_array_ref_owned.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>" "<stdint.h>"
 
 define: driver_program l2_driver_program
@@ -430,8 +431,8 @@ fn: shape_swap_values (@: arena c.LmxArena; @: holder c.Lmx) int
                 found: 1
             else:
                 previous: c.lmx_arena_ref_value(holder, first)
-                c.lmx_arena_ref_store(holder, first, child)
-                c.lmx_arena_ref_store(holder, i, previous)
+                c.lmx_arena_ref_store(arena, holder, first, child)
+                c.lmx_arena_ref_store(arena, holder, i, previous)
                 return: 1
             ---
         ---
@@ -673,6 +674,126 @@ sub: check (int: ok; const: (@: label char))
     ---
 end: check
 
+# Slice 253 (design 4.4): the kernel's code links and the native reset, on a private arena, before the program runs.
+# A frame installed in a root: installing a code child resets the holder and the holders above it by code edges; a data
+# install keeps every word, and a code child under a data holder does not reach the root above the data edge; a value
+# written into a cell standing in a place of code resets its holders, a cell that left its place no longer does; a
+# holder made after a mark takes its records away with its storage at the revert; a reset through a cycle of code
+# edges ends; an Array descriptor leaving while the shared REF interval of its backing lives takes its owner marks and
+# records with it, and the other Array of that interval keeps working.
+sub: code_links_check ()
+    c.LmxArena: arena
+    @: a c.LmxArena 0
+    @: root c.Lmx 0
+    @: holder c.Lmx 0
+    @: child c.Lmx 0
+    @: data c.Lmx 0
+    @: later c.Lmx 0
+    @: cell void 0
+    @: mark c.LmxArenaBlock 0
+    @: h1 c.Lmx 0
+    @: h2 c.Lmx 0
+    @: cell2 void 0
+    @: ar8 c.Lmx 0
+    @: arb c.Lmx 0
+    @: arc c.Lmx 0
+    @: frame2 c.Lmx 0
+    @@: cellb void 0
+    @@: cellc void 0
+    size_t: slot_out 0U
+    c.LmxEntry: word (cast: (c.LmxEntry) c.stop_first)
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    a: @ arena
+    if: c.lmx_arena_open(a) != 0
+        check(0, "code links: a private arena opens")
+        return
+    root: (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
+    if: root = 0 || c.lmx_arena_refs_open_owned(a, root, 2U) != 0
+        check(0, "code links: the root Structure opens with two slots")
+        c.lmx_arena_release(a)
+        return
+    root\native: word
+    holder: (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    check((cast: (int) (holder != 0 && root\native != 0)), "code links: a frame's head install is construction and keeps the parent's native")
+    if: holder = 0
+        c.lmx_arena_release(a)
+        return
+    check((cast: (int) (c.lmx_arena_ref_store(a, root, 0U, (cast: (@: void) holder)) = 0 && root\native = 0)), "code links: installing an operation into the root is a write of code")
+    root\native: word
+    holder\native: word
+    child: (cast: (@: c.Lmx) c.lmx_walk_frame(a, holder, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (child != 0 && holder\native != 0 && root\native != 0)), "code links: making a frame under a holder writes nothing into it")
+    data: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 2U))
+    cell: (cast: (@: void) c.lmx_int_new_owned(a))
+    if: child = 0 || data = 0 || cell = 0
+        check(0, "code links: a child frame, a data Structure and an int cell allocate")
+        c.lmx_arena_release(a)
+        return
+    check((cast: (int) (c.lmx_arena_ref_store(a, holder, 1U, (cast: (@: void) child)) = 0 && holder\native = 0 && root\native = 0)), "code links: installing a code child resets the holder's native and the holders above it")
+    data\native: word
+    root\native: word
+    check((cast: (int) (c.lmx_arena_ref_store(a, root, 1U, (cast: (@: void) data)) = 0 && root\native != 0)), "code links: installing a data Structure into the root keeps its native")
+    check((cast: (int) (c.lmx_arena_ref_store(a, data, 0U, cell) = 0 && data\native != 0 && root\native != 0)), "code links: a data install keeps native")
+    later: (cast: (@: c.Lmx) c.lmx_walk_frame(a, data, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (later != 0 && c.lmx_arena_ref_store(a, data, 1U, (cast: (@: void) later)) = 0 && data\native = 0 && root\native != 0)), "code links: a code child under a data holder resets the holder, not the root above the data edge")
+    data\native: word
+    holder\native: word
+    check((cast: (int) (c.lmx_arena_ref_store(a, holder, 2U, cell) = 0 && holder\native = 0 && root\native = 0)), "code links: a cell installed as an operand of code resets")
+    holder\native: word
+    root\native: word
+    c.lmx_code_changed_cell(a, cell)
+    check((cast: (int) (holder\native = 0 && root\native = 0 && data\native != 0)), "code links: a value written into an operand cell resets its holders and the holders above them, not a data holder")
+    check((cast: (int) (c.lmx_arena_ref_store(a, holder, 2U, 0) = 0)), "code links: an operand slot clears")
+    holder\native: word
+    root\native: word
+    c.lmx_code_changed_cell(a, cell)
+    check((cast: (int) (holder\native != 0 && root\native != 0)), "code links: a cell that left its place of code no longer resets")
+    mark: (cast: (@: c.LmxArenaBlock) c.lmx_arena_mark(a))
+    later: (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (later != 0 && c.lmx_arena_ref_store(a, later, 1U, cell) = 0)), "code links: a cell installs as an operand of a holder made after the mark")
+    check((cast: (int) (c.lmx_arena_ref_store(a, root, 0U, (cast: (@: void) later)) = 0)), "code links: the later holder stands in the root's place of code")
+    check((cast: (int) (c.lmx_arena_revert(a, mark) = 0)), "code links: the arena reverts to the mark")
+    root\native: word
+    c.lmx_code_changed_cell(a, cell)
+    check((cast: (int) (root\native != 0)), "code links: the reverted holder's record left with its storage")
+    # A cycle of code edges: two operations holding each other; a value written into an operand of one resets both, once.
+    h1: (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    h2: (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    cell2: (cast: (@: void) c.lmx_int_new_owned(a))
+    if: h1 = 0 || h2 = 0 || cell2 = 0
+        check(0, "code links: two frames and a cell for the cycle allocate")
+        c.lmx_arena_release(a)
+        return
+    check((cast: (int) (c.lmx_arena_ref_store(a, h1, 1U, (cast: (@: void) h2)) = 0 && c.lmx_arena_ref_store(a, h2, 1U, (cast: (@: void) h1)) = 0 && c.lmx_arena_ref_store(a, h2, 2U, cell2) = 0)), "code links: a cycle of two operations builds")
+    h1\native: word
+    h2\native: word
+    c.lmx_code_changed_cell(a, cell2)
+    check((cast: (int) (h1\native = 0 && h2\native = 0)), "code links: a reset through a cycle of code edges ends and reaches both")
+    # Two Arrays whose backings share one REF interval: the pool's chunk step is the first request's count (eight), so
+    # the second Array fills a new chunk's first two cells and the third, made after a mark, the next two; each
+    # descriptor is its own one-cell chunk.  The third's descriptor leaves with the revert while the second lives.
+    ar8: (cast: (@: c.Lmx) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 8U, a))
+    arb: (cast: (@: c.Lmx) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, a))
+    frame2: (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 2U))
+    mark: (cast: (@: c.LmxArenaBlock) c.lmx_arena_mark(a))
+    arc: (cast: (@: c.Lmx) c.lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 2U, a))
+    if: ar8 = 0 || arb = 0 || arc = 0 || frame2 = 0
+        check(0, "code links: three reference Arrays and a frame allocate")
+        c.lmx_arena_release(a)
+        return
+    cellb: (cast: (@@: void) c.lmx_arena_ref_cell(arb, 0U))
+    cellc: (cast: (@@: void) c.lmx_arena_ref_cell(arc, 0U))
+    check((cast: (int) (cellb != 0 && cellc != 0 && c.lmx_range_entry_at(a, (cast: (@: void) cellb)) = c.lmx_range_entry_at(a, (cast: (@: void) cellc)))), "code links: the second and third Arrays' backings share one REF interval")
+    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@: void) cellc), @ slot_out) = arc && slot_out = 0U)), "code links: a REF cell names its Array and slot")
+    check((cast: (int) (c.lmx_arena_ref_store(a, arc, 0U, (cast: (@: void) frame2)) = 0 && c.lmx_range_links_of(a, (cast: (@: void) frame2)) != 0)), "code links: an operation installed in the third Array is recorded")
+    check((cast: (int) (c.lmx_arena_revert(a, mark) = 0)), "code links: the arena reverts to the mark before the third Array")
+    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@: void) cellc), @ slot_out) = 0)), "code links: the departed Array's cells in the shared REF interval have no owner")
+    check((cast: (int) (c.lmx_range_links_of(a, (cast: (@: void) frame2)) = 0)), "code links: the record naming the departed Array left with it")
+    check((cast: (int) (c.lmx_range_slot_holder(a, (cast: (@: void) cellb), @ slot_out) = arb && c.lmx_arena_ref_store(a, arb, 1U, cell) = 0)), "code links: the surviving Array of the shared interval keeps its owner and takes a store")
+    check((cast: (int) (c.lmx_arena_release(a) = 0)), "code links: the arena releases with its side storage")
+    return
+end: code_links_check
+
 fn: dispatch_probe (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
     @@: dispatch_arena_cell c.LmxArena (cast: (@@: c.LmxArena) (@ c.dispatch_arena))
     @: dispatch_calls_cell int (cast: (@: int) (@ c.dispatch_calls))
@@ -797,7 +918,7 @@ fn: dispatch_install (@: arena c.LmxArena; @: graph c.Lmx; int: original_slot; i
                     return: 1
                 copy\parent: holder
                 copy\native: (cast: (c.LmxEntry) c.dispatch_probe)
-                if: c.lmx_arena_ref_store(holder, 0U, (cast: (@: void) copy)) != 0
+                if: c.lmx_arena_ref_store(arena, holder, 0U, (cast: (@: void) copy)) != 0
                     return: 1
                 dispatch_selected_cell[0]: copy
             ---
@@ -814,7 +935,7 @@ fn: dispatch_install (@: arena c.LmxArena; @: graph c.Lmx; int: original_slot; i
         value: c.lmx_int_new_owned(arena)
         if: dispatch_payload_cell[0] = 0 || value = 0
             return: 1
-        if: c.lmx_int_store_known(value, 91) != 0 || c.lmx_arena_ref_store(dispatch_payload_cell[0], 0U, value) != 0
+        if: c.lmx_int_store_known(value, 91) != 0 || c.lmx_arena_ref_store(arena, dispatch_payload_cell[0], 0U, value) != 0
             return: 1
         ---
     ---
@@ -1450,11 +1571,11 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         holder_fields\size: width + 1U
         i: 0U
         while: i < width
-            if: c.lmx_arena_ref_store(holder, i, original[i]) != 0
+            if: c.lmx_arena_ref_store(arena, holder, i, original[i]) != 0
                 return: 0
             i: i + 1U
         ---
-        return: (cast: (int) (c.lmx_arena_ref_store(holder, width, 0) = 0))
+        return: (cast: (int) (c.lmx_arena_ref_store(arena, holder, width, 0) = 0))
     if: c.strcmp(gargv_cell[0][at + 1], "size-path") = 0
         path_at: at + 2
         child: shape_path(arena, graph, @ path_at, 0)
@@ -1578,19 +1699,19 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
             outer: c.lmx_arena_ref_value(holder, i + 1U)
             if: c.lmx_arena_ref_value(holder, i) != outer
                 found_int: 1
-            if: c.lmx_arena_ref_store(holder, i, outer) != 0
+            if: c.lmx_arena_ref_store(arena, holder, i, outer) != 0
                 return: 0
             i: i + 1U
         while: i > k
             outer: c.lmx_arena_ref_value(holder, i - 1U)
             if: c.lmx_arena_ref_value(holder, i) != outer
                 found_int: 1
-            if: c.lmx_arena_ref_store(holder, i, outer) != 0
+            if: c.lmx_arena_ref_store(arena, holder, i, outer) != 0
                 return: 0
             i: i - 1U
         if: c.lmx_arena_ref_value(holder, k) != child
             found_int: 1
-        if: c.lmx_arena_ref_store(holder, k, child) != 0
+        if: c.lmx_arena_ref_store(arena, holder, k, child) != 0
             return: 0
         check((cast: (int) (found_int != 0)), "move-path-field actually changes reference order")
         return: found_int
@@ -1624,7 +1745,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (frame != 0 && c.lmx_pointer_pool_in(arena, frame) != extended)), "replace-pointer-abi makes another pool of the same numeric type")
         if: frame = 0 || c.lmx_pointer_pool_in(arena, frame) = extended
             return: 0
-        if: c.lmx_arena_ref_store(holder, (cast: (size_t) arg(last_at)), frame) != 0
+        if: c.lmx_arena_ref_store(arena, holder, (cast: (size_t) arg(last_at)), frame) != 0
             return: 0
         if: c.strcmp(gargv_cell[0][at + 1], "replace-pointer-abi") = 0
             return: 1
@@ -1654,7 +1775,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         frame: c.lmx_pointer_new_typed_profiled(extended\type, arena, extended\profile, 2U * sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write)
         if: frame = 0
             return: 0
-        return: (cast: (int) (c.lmx_arena_ref_store(holder, (cast: (size_t) arg(last_at)), frame) = 0))
+        return: (cast: (int) (c.lmx_arena_ref_store(arena, holder, (cast: (size_t) arg(last_at)), frame) = 0))
     ---
     if: c.strcmp(gargv_cell[0][at + 1], "swap-root-fields") = 0
         check((cast: (int) (at + 3 < gargc_cell[0] && arg(at + 2) >= 0 && arg(at + 3) >= 0)), "swap-root-fields names two nonnegative positions")
@@ -1671,7 +1792,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
         check((cast: (int) (child != 0 && outer != 0 && child != outer)), "swap-root-fields changes two actual distinct objects")
         if: child = 0 || outer = 0 || child = outer
             return: 0
-        if: c.lmx_arena_ref_store(graph, i, outer) != 0 || c.lmx_arena_ref_store(graph, k, child) != 0
+        if: c.lmx_arena_ref_store(arena, graph, i, outer) != 0 || c.lmx_arena_ref_store(arena, graph, k, child) != 0
             return: 0
         return: 1
     if: c.strcmp(gargv_cell[0][at + 1], "reparent-add") = 0
@@ -1715,7 +1836,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
                     outer: c.lmx_arena_ref_value(holder, 19U)
                     if: frame != 0 && outer != 0 && c.lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT
                         check((cast: (int) (frame != outer)), "late collapse starts from two distinct occurrences")
-                        c.lmx_arena_ref_store(holder, 19U, frame)
+                        c.lmx_arena_ref_store(arena, holder, 19U, frame)
                         return: 1
                     ---
                 ---
@@ -1765,8 +1886,8 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
                 while: k < graph_fields\size
                     outer: c.lmx_arena_ref_value(graph, k)
                     if: outer != 0 && c.lmx_domain_kind(arena, outer) = c.LMX_KIND_STRUCT && shape_source_role((cast: (@: c.Lmx) outer), arena) = c.LMX_WALK_SOURCE_ORDINARY && shape_node_op(outer, arena) = c.LMX_WALK_OP_SET
-                        c.lmx_arena_ref_store(graph, i, outer)
-                        c.lmx_arena_ref_store(graph, k, child)
+                        c.lmx_arena_ref_store(arena, graph, i, outer)
+                        c.lmx_arena_ref_store(arena, graph, k, child)
                         return: 1
                     k: k + 1U
                 ---
@@ -1805,8 +1926,8 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
                     holder_fields: @ holder\array
                 ---
                 if: holder_fields\size >= 3U
-                    c.lmx_arena_ref_store(holder, 1U, 0)
-                    c.lmx_arena_ref_store(holder, 2U, 0)
+                    c.lmx_arena_ref_store(arena, holder, 1U, 0)
+                    c.lmx_arena_ref_store(arena, holder, 2U, 0)
                     found_int: 1
                 ---
             ---
@@ -1826,7 +1947,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
                 ---
                 if: holder_fields\size != 0U
                     while: k < holder_fields\size
-                        c.lmx_arena_ref_store(holder, k, 0)
+                        c.lmx_arena_ref_store(arena, holder, k, 0)
                         k: k + 1U
                     ---
                     return: 1
@@ -1857,7 +1978,7 @@ fn: shape_mutate (@: arena c.LmxArena; @: graph c.Lmx) int
             while: k < holder_fields\size
                 child: c.lmx_arena_ref_value(holder, k)
                 if: shape_node_op(child, arena) = c.LMX_WALK_OP_SET
-                    c.lmx_arena_ref_store(holder, k, outer)
+                    c.lmx_arena_ref_store(arena, holder, k, outer)
                     found_int: 1
                     k: holder_fields\size
                 ---
@@ -2866,7 +2987,7 @@ fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
     if: c.lmx_arena_refs_open_owned(letter_arena, letter_graph, 2U) != 0 || c.lmx_arena_refs_open_owned(letter_arena, payload, 1U) != 0
         return: 1
     ---
-    if: c.lmx_int_store_known(ncell, 1) != 0 || c.lmx_arena_ref_store(payload, 0U, ncell) != 0
+    if: c.lmx_int_store_known(ncell, 1) != 0 || c.lmx_arena_ref_store(letter_arena, payload, 0U, ncell) != 0
         return: 1
     ---
     # The sender is a pointer cell holding the peer's own address (author's Q26.2 ruling -- the
@@ -2875,7 +2996,7 @@ fn: driver_before_turn (@: root c.LmxRoot; @: r0 c.LmxMsg) int
     if: sender_cell = 0 || c.lmx_pointer_store_known(sender_cell, (cast: (@: void) l2_ref_peer_cell[0])) != 0
         return: 1
     ---
-    if: c.lmx_arena_ref_store(letter_graph, 0U, sender_cell) != 0 || c.lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) payload)) != 0
+    if: c.lmx_arena_ref_store(letter_arena, letter_graph, 0U, sender_cell) != 0 || c.lmx_arena_ref_store(letter_arena, letter_graph, 1U, (cast: (@: void) payload)) != 0
         return: 1
     ---
     letter\running: 1
@@ -3210,6 +3331,8 @@ fn: main (int: argc; @@: argv char) int
             return: 2
         ---
     ---
+    phase_cell[0]: "code links"
+    code_links_check()
     phase_cell[0]: "generated program"
     status: c.l2_generated_main(pargc_cell[0], pargv_cell[0])
     check((cast: (int) (launches_cell[0] = 1)), "generated main launched the host exactly once")

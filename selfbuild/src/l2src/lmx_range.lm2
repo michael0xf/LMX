@@ -249,6 +249,12 @@ fn: lmx_range_add_view (@: arena c.LmxArena; @: owner c.LmxArena; @: array c.Lmx
         entry\owner: slot\owner
         entry\chunk: slot\chunk
         entry\chunk_gen: slot\chunk_gen
+        entry\links: slot\links
+        entry\slot_owner: slot\slot_owner
+        entry\holder: slot\holder
+        entry\side_cells: slot\side_cells
+        entry\side_stride: slot\side_stride
+        entry\kind: slot\kind
         index: index - 1U
     ---
     entry: c.lmx_arena_index_data(arena) + at
@@ -258,6 +264,17 @@ fn: lmx_range_add_view (@: arena c.LmxArena; @: owner c.LmxArena; @: array c.Lmx
     entry\owner: owner
     entry\chunk: 0
     entry\chunk_gen: 0U
+    entry\links: 0
+    entry\slot_owner: 0
+    entry\holder: 0
+    entry\side_cells: 0U
+    entry\side_stride: 0U
+    entry\kind: 0
+    # The array's stride and kind, kept here because at drop time the array record may already be freed.
+    if: array != 0
+        entry\side_stride: (cast: (size_t) array\stride)
+        entry\kind: array\kind
+    ---
     c.lmx_arena_index_set_len(arena, c.lmx_arena_index_len(arena) + 1U)
     return: 0
 end: lmx_range_add_view
@@ -277,6 +294,8 @@ fn: lmx_range_drop (@: arena c.LmxArena; @: lo void; @: hi void) int
             # Spelling keys/text must retire while this storage is still
             # registered and readable, before its address can be reused.
             c.lmx_source_names_drop(arena, lo, hi)
+            # The interval's code links go the same way, while its cells are still readable (design 4.4).
+            lmx_range_side_drop(arena, entry)
             while: index + 1U < c.lmx_arena_index_len(arena)
                 next: entry + 1
                 entry\lo: next\lo
@@ -285,6 +304,12 @@ fn: lmx_range_drop (@: arena c.LmxArena; @: lo void; @: hi void) int
                 entry\owner: next\owner
                 entry\chunk: next\chunk
                 entry\chunk_gen: next\chunk_gen
+                entry\links: next\links
+                entry\slot_owner: next\slot_owner
+                entry\holder: next\holder
+                entry\side_cells: next\side_cells
+                entry\side_stride: next\side_stride
+                entry\kind: next\kind
                 index: index + 1U
                 entry: next
             ---
@@ -294,6 +319,12 @@ fn: lmx_range_drop (@: arena c.LmxArena; @: lo void; @: hi void) int
             entry\owner: 0
             entry\chunk: 0
             entry\chunk_gen: 0U
+            entry\links: 0
+            entry\slot_owner: 0
+            entry\holder: 0
+            entry\side_cells: 0U
+            entry\side_stride: 0U
+            entry\kind: 0
             c.lmx_arena_index_set_len(arena, c.lmx_arena_index_len(arena) - 1U)
             return: 0
         index: index + 1U
@@ -778,3 +809,370 @@ fn: lmx_range_unimport_profile (@: arena c.LmxArena; @: wanted c.Lmx) int
     ---
     return: 0
 end: lmx_range_unimport_profile
+
+# ---- Code links (slice 253, design 4.4): the side storage of an interval ---------------------------------------------
+#
+# A cell that stands in a place of code is linked to that place: the chain of (holder, slot) records of one cell hangs
+# from the entry of the cell's interval -- the lazily made `links` array of heads, one per cell ordinal -- and the
+# records are C-heap nodes of that chain and of no other list.  The interval of a Structure's child array also names
+# that Structure (`holder`), and an interval of the shared REF pool names the Array owning each of its cells
+# (`slot_owner`), so a slot cell alone recovers the (holder, slot) it is.  None of this is graph storage: the
+# collector neither marks nor sweeps it, copy and merge do not see it, the arena's block list does not hold it.  It
+# lives exactly as long as its entry: lmx_range_drop frees it while the cells are still registered and readable (the
+# records naming a dropped child array as their holder go first), lmx_range_side_release frees it for a bulk release
+# and lmx_arena_attach moves it with the entry.  The stride and the kind are the array's, copied at the insertion of
+# the entry (`side_stride`, `kind`): at drop time the entry's array record may already be freed.
+
+fn: lmx_range_side_cells (@: entry c.LmxRange; size_t: stride) size_t
+    if: entry = 0 || stride = 0U
+        return: 0U
+    return: ((cast: (size_t) entry\hi) - (cast: (size_t) entry\lo)) / stride
+end: lmx_range_side_cells
+
+# The ordinal of `cell` in its entry, or (size_t) -1 when the entry has no side storage or the cell is past it.
+fn: lmx_range_side_ordinal (@: entry c.LmxRange; @: cell void) size_t
+    size_t: ordinal 0U
+    if: entry = 0 || cell = 0 || entry\side_stride = 0U || entry\side_cells = 0U
+        return: (cast: (size_t) -1)
+    if: (cast: (size_t) cell) < (cast: (size_t) entry\lo)
+        return: (cast: (size_t) -1)
+    ordinal: ((cast: (size_t) cell) - (cast: (size_t) entry\lo)) / entry\side_stride
+    if: ordinal >= entry\side_cells
+        return: (cast: (size_t) -1)
+    return: ordinal
+end: lmx_range_side_ordinal
+
+# The side storage of an entry comes into being with its first use: the cell count follows from the interval and the
+# stride kept since the entry's insertion.
+fn: lmx_range_side_open (@: entry c.LmxRange) int
+    size_t: stride 0U
+    if: entry = 0 || entry\side_stride = 0U
+        return: 1
+    if: entry\side_cells != 0U
+        return: 0
+    stride: entry\side_stride
+    entry\side_cells: lmx_range_side_cells(entry, stride)
+    if: entry\side_cells = 0U
+        return: 1
+    return: 0
+end: lmx_range_side_open
+
+fn: lmx_range_holder_set (@: arena c.LmxArena; @: base void; @: holder c.Lmx) int
+    @: entry c.LmxRange 0
+    if: arena = 0 || base = 0
+        return: 1
+    entry: lmx_range_entry_at(arena, base)
+    if: entry = 0 || entry\lo != base || lmx_range_side_open(entry) != 0
+        return: 1
+    entry\holder: holder
+    return: 0
+end: lmx_range_holder_set
+
+# The (holder, slot) a slot cell is: the Structure whose child array the cell's interval is, or the Array owning the
+# cell in the shared REF pool; 0 when the cell is no slot of a graph node this index knows.
+fn: lmx_range_slot_holder (@: arena c.LmxArena; @: cell void; @: slot size_t) @: c.Lmx
+    @: entry c.LmxRange 0
+    @: owner c.Lmx 0
+    @: va c.VoidArray 0
+    size_t: ordinal 0U
+    if: arena = 0 || cell = 0 || slot = 0
+        return: 0
+    entry: lmx_range_entry_at(arena, cell)
+    if: entry = 0 || entry\side_cells = 0U
+        return: 0
+    ordinal: lmx_range_side_ordinal(entry, cell)
+    if: ordinal = (cast: (size_t) -1)
+        return: 0
+    if: entry\holder != 0
+        \slot: ordinal
+        return: entry\holder
+    ---
+    if: entry\slot_owner = 0
+        return: 0
+    owner: entry\slot_owner[ordinal]
+    if: owner = 0
+        return: 0
+    va: @ owner\array
+    if: va\data = 0 || (cast: (size_t) cell) < (cast: (size_t) va\data)
+        return: 0
+    \slot: ((cast: (size_t) cell) - (cast: (size_t) va\data)) / entry\side_stride
+    return: owner
+end: lmx_range_slot_holder
+
+# One record, PREPARED before the write it will describe: `child` is to stand in slot `slot` of `holder`, a place of
+# code.  The entry's heads are made here too, so the write that follows allocates nothing (lmx_range_link_commit).  A
+# child this index does not own gets no record (`out` 0; an imported view is another arena's cell), which is not a
+# failure; 1 only when the C heap refuses -- and then nothing has been written.
+fn: lmx_range_link_prepare (@: arena c.LmxArena; @: child void; @: holder c.Lmx; size_t: slot; @@: out c.LmxCodeLink) int
+    @: entry c.LmxRange 0
+    @: link c.LmxCodeLink 0
+    size_t: ordinal 0U
+    if: arena = 0 || child = 0 || holder = 0 || out = 0
+        return: 1
+    \out: 0
+    entry: lmx_range_entry_at(arena, child)
+    if: entry = 0 || entry\owner != (cast: (@: void) arena)
+        return: 0
+    if: lmx_range_side_open(entry) != 0
+        return: 0
+    ordinal: lmx_range_side_ordinal(entry, child)
+    if: ordinal = (cast: (size_t) -1)
+        return: 0
+    if: entry\links = 0
+        entry\links: (cast: (@@: c.LmxCodeLink) c.calloc(entry\side_cells, sizeof(@: void)))
+        if: entry\links = 0
+            return: 1
+        ---
+    ---
+    link: (cast: (@: c.LmxCodeLink) c.malloc(c.sizeof(c.LmxCodeLink)))
+    if: link = 0
+        return: 1
+    link\child: child
+    link\holder: holder
+    link\slot: slot
+    link\next: 0
+    link\mark: 0U
+    link\work: 0
+    \out: link
+    return: 0
+end: lmx_range_link_prepare
+
+# The prepared record joins its child's chain, after the write.  No allocation: the heads exist since the preparation.
+fn: lmx_range_link_commit (@: arena c.LmxArena; @: record c.LmxCodeLink) int
+    @: entry c.LmxRange 0
+    @: child void 0
+    size_t: ordinal 0U
+    if: record = 0
+        return: 0
+    child: record\child
+    entry: lmx_range_entry_at(arena, child)
+    if: entry = 0 || entry\links = 0
+        c.free((cast: (@: void) record))
+        return: 1
+    ordinal: lmx_range_side_ordinal(entry, child)
+    if: ordinal = (cast: (size_t) -1)
+        c.free((cast: (@: void) record))
+        return: 1
+    record\next: entry\links[ordinal]
+    entry\links[ordinal]: record
+    return: 0
+end: lmx_range_link_commit
+
+# A prepared record whose write did not happen.
+sub: lmx_range_link_abandon (@: record c.LmxCodeLink)
+    if: record != 0
+        c.free((cast: (@: void) record))
+    ---
+    return
+end: lmx_range_link_abandon
+
+# Remove the records of `child` naming `holder`: exactly the one of slot `slot`, or every one when `any_slot`.
+fn: lmx_range_link_cut (@: arena c.LmxArena; @: child void; @: holder c.Lmx; size_t: slot; int: any_slot) int
+    @: entry c.LmxRange 0
+    @@: at c.LmxCodeLink 0
+    @: link c.LmxCodeLink 0
+    size_t: ordinal 0U
+    if: arena = 0 || child = 0 || holder = 0
+        return: 1
+    entry: lmx_range_entry_at(arena, child)
+    if: entry = 0 || entry\links = 0
+        return: 0
+    ordinal: lmx_range_side_ordinal(entry, child)
+    if: ordinal = (cast: (size_t) -1)
+        return: 0
+    at: entry\links + ordinal
+    link: \at
+    while: link != 0
+        if: link\holder = holder && (any_slot != 0 || link\slot = slot)
+            \at: link\next
+            c.free((cast: (@: void) link))
+            if: any_slot = 0
+                return: 0
+            ---
+        else:
+            at: @ link\next
+        ---
+        link: \at
+    ---
+    return: 0
+end: lmx_range_link_cut
+
+fn: lmx_range_link_remove (@: arena c.LmxArena; @: child void; @: holder c.Lmx; size_t: slot) int
+    return: lmx_range_link_cut(arena, child, holder, slot, 0)
+end: lmx_range_link_remove
+
+# The chain of the places of code `child` stands in, or 0.
+fn: lmx_range_links_of (@: arena c.LmxArena; @: child void) @: c.LmxCodeLink
+    @: entry c.LmxRange 0
+    size_t: ordinal 0U
+    if: arena = 0 || child = 0
+        return: 0
+    entry: lmx_range_entry_at(arena, child)
+    if: entry = 0 || entry\links = 0
+        return: 0
+    ordinal: lmx_range_side_ordinal(entry, child)
+    if: ordinal = (cast: (size_t) -1)
+        return: 0
+    return: entry\links[ordinal]
+end: lmx_range_links_of
+
+# Free one entry's side storage: every chain, the heads and the owners.
+sub: lmx_range_side_free (@: entry c.LmxRange)
+    @: link c.LmxCodeLink 0
+    @: next c.LmxCodeLink 0
+    size_t: i 0U
+    if: entry = 0
+        return
+    if: entry\links != 0
+        while: i < entry\side_cells
+            link: entry\links[i]
+            while: link != 0
+                next: link\next
+                c.free((cast: (@: void) link))
+                link: next
+            ---
+            i: i + 1U
+        ---
+        c.free((cast: (@: void) entry\links))
+    ---
+    if: entry\slot_owner != 0
+        c.free((cast: (@: void) entry\slot_owner))
+    ---
+    entry\links: 0
+    entry\slot_owner: 0
+    entry\holder: 0
+    entry\side_cells: 0U
+    entry\side_stride: 0U
+    return
+end: lmx_range_side_free
+
+# The Array owning `count` cells of a REF backing from `base`.  A cell changing owner takes the old owner's records of
+# its child away (no path re-backs an Array today; the rule holds for one that will).  1 when the C heap refuses.
+fn: lmx_range_slot_owner_set (@: arena c.LmxArena; @: base void; size_t: count; @: owner c.Lmx) int
+    @: entry c.LmxRange 0
+    @: old c.Lmx 0
+    @@: cells void 0
+    size_t: first 0U
+    size_t: i 0U
+    if: arena = 0 || base = 0 || count = 0U
+        return: 1
+    entry: lmx_range_entry_at(arena, base)
+    if: entry = 0 || lmx_range_side_open(entry) != 0
+        return: 1
+    first: lmx_range_side_ordinal(entry, base)
+    if: first = (cast: (size_t) -1) || count > entry\side_cells - first
+        return: 1
+    if: entry\slot_owner = 0
+        entry\slot_owner: (cast: (@@: c.Lmx) c.calloc(entry\side_cells, sizeof(@: void)))
+        if: entry\slot_owner = 0
+            return: 1
+        ---
+    ---
+    cells: (cast: (@@: void) entry\lo)
+    while: i < count
+        old: entry\slot_owner[first + i]
+        if: old != 0 && old != owner && cells[first + i] != 0
+            lmx_range_link_cut(arena, cells[first + i], old, 0U, 1)
+        ---
+        entry\slot_owner[first + i]: owner
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_range_slot_owner_set
+
+# An interval of Array descriptors leaves: each descriptor's backing cells in a still-registered REF interval lose their
+# owner, and the children standing in them lose the records naming the descriptor as their holder -- while the
+# descriptors are still readable, so a shared REF interval never names a freed Array (P1-A of Codex's review of
+# slice 253).  A backing whose own interval already left has no entry and nothing to retire; an untaken descriptor
+# cell is zero (the chunks are calloc'd) and has no backing.
+sub: lmx_range_descriptors_retire (@: arena c.LmxArena; @: entry c.LmxRange)
+    @: desc c.Lmx 0
+    @: va c.VoidArray 0
+    @: backing c.LmxRange 0
+    @@: cells void 0
+    @: data void 0
+    size_t: size 0U
+    size_t: stride 0U
+    size_t: n 0U
+    size_t: i 0U
+    size_t: k 0U
+    size_t: first 0U
+    if: arena = 0 || entry = 0 || entry\side_stride = 0U
+        return
+    stride: entry\side_stride
+    n: lmx_range_side_cells(entry, stride)
+    while: i < n
+        desc: (cast: (@: c.Lmx) ((cast: (@: char) entry\lo) + i * stride))
+        va: @ desc\array
+        data: va\data
+        size: va\size
+        if: data != 0 && size != 0U
+            backing: lmx_range_entry_at(arena, data)
+            if: backing != 0 && backing != entry && backing\slot_owner != 0
+                first: lmx_range_side_ordinal(backing, data)
+                if: first != (cast: (size_t) -1)
+                    cells: (cast: (@@: void) data)
+                    k: 0U
+                    while: k < size && first + k < backing\side_cells
+                        if: backing\slot_owner[first + k] = desc
+                            backing\slot_owner[first + k]: 0
+                            if: cells[k] != 0
+                                lmx_range_link_cut(arena, cells[k], desc, 0U, 1)
+                            ---
+                        ---
+                        k: k + 1U
+                    ---
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    return
+end: lmx_range_descriptors_retire
+
+# An interval leaves the index: a departing interval of Array descriptors retires their owners first; the children its
+# slots still hold lose the records naming this holder (the cells are registered and readable until the caller frees
+# the block; a child whose own interval already left has no chain); then the side storage goes.
+sub: lmx_range_side_drop (@: arena c.LmxArena; @: entry c.LmxRange)
+    @@: cells void 0
+    @: child void 0
+    @: holder c.Lmx 0
+    size_t: n 0U
+    size_t: i 0U
+    if: entry = 0
+        return
+    if: entry\kind = c.LMX_KIND_ARRAY
+        lmx_range_descriptors_retire(arena, entry)
+    ---
+    if: entry\holder != 0 || entry\slot_owner != 0
+        n: entry\side_cells
+        cells: (cast: (@@: void) entry\lo)
+        while: i < n
+            child: cells[i]
+            holder: entry\holder
+            if: holder = 0
+                holder: entry\slot_owner[i]
+            ---
+            if: child != 0 && holder != 0
+                lmx_range_link_cut(arena, child, holder, 0U, 1)
+            ---
+            i: i + 1U
+        ---
+    ---
+    lmx_range_side_free(entry)
+    return
+end: lmx_range_side_drop
+
+# Bulk: every entry's side storage goes with the index (lmx_arena_release).
+sub: lmx_range_side_release (@: arena c.LmxArena)
+    @: entry c.LmxRange 0
+    size_t: index 0U
+    if: arena = 0 || c.lmx_arena_index_data(arena) = 0
+        return
+    while: index < c.lmx_arena_index_len(arena)
+        entry: c.lmx_arena_index_data(arena) + index
+        lmx_range_side_free(entry)
+        index: index + 1U
+    ---
+    return
+end: lmx_range_side_release

@@ -2096,10 +2096,10 @@ fn: lm_compiler_emit_ns_refs (int: k) int
         if: nsf_owner_cell[0][fx] = k && nsf_kind_cell[0][fx] = 3 && ns_eternal_cell[0][nsf_ref_cell[0][fx]] < 0 && ns_payload_pass_cell[0] != 1
             if: c.fprintf(out_cell[0], "        l2_mops[0U]: l2_nsp[%d]\n        l2_mbody: 0\n        l2_mkn: 0U\n", nsf_ref_cell[0][fx]) < 0 || c.lm_compiler_emit_keep("        ", "l2_mkeep", "l2_mkn") != 0
                 return: (cast: (int) (1))
-            if: c.fprintf(out_cell[0], "        l2_mstatus: lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, l2_program_arena, l2_program_arena, l2_mkeep, l2_mkn, 0, 0U, @ l2_mresult)\n        if: l2_mstatus != 0 || l2_mresult = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_mresult)) != 0\n            return: 1\n        if: l2_mresult\\parent = l2_nsp[%d] || (l2_nsp[%d]\\parent = 0 && l2_mresult\\parent != 0)\n            return: 1\n        if: l2_nsp[%d]\\parent != 0 && (l2_mresult\\parent = 0 || l2_mresult\\parent = l2_nsp[%d]\\parent)\n            return: 1\n", k, (cast: (unsigned) oi), k, nsf_ref_cell[0][fx], nsf_ref_cell[0][fx], nsf_ref_cell[0][fx]) < 0
+            if: c.fprintf(out_cell[0], "        l2_mstatus: lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, l2_program_arena, l2_program_arena, l2_mkeep, l2_mkn, 0, 0U, @ l2_mresult)\n        if: l2_mstatus != 0 || l2_mresult = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_program_arena, l2_nsp[%d], %uU, (cast: (@: void) l2_mresult)) != 0\n            return: 1\n        if: l2_mresult\\parent = l2_nsp[%d] || (l2_nsp[%d]\\parent = 0 && l2_mresult\\parent != 0)\n            return: 1\n        if: l2_nsp[%d]\\parent != 0 && (l2_mresult\\parent = 0 || l2_mresult\\parent = l2_nsp[%d]\\parent)\n            return: 1\n", k, (cast: (unsigned) oi), k, nsf_ref_cell[0][fx], nsf_ref_cell[0][fx], nsf_ref_cell[0][fx]) < 0
                 return: (cast: (int) (1))
         ---
-        if: nsf_owner_cell[0][fx] = k && nsf_kind_cell[0][fx] = 3 && ns_eternal_cell[0][nsf_ref_cell[0][fx]] >= 0 && ns_payload_pass_cell[0] != 2 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", k, (cast: (unsigned) oi), nsf_ref_cell[0][fx]) < 0
+        if: nsf_owner_cell[0][fx] = k && nsf_kind_cell[0][fx] = 3 && ns_eternal_cell[0][nsf_ref_cell[0][fx]] >= 0 && ns_payload_pass_cell[0] != 2 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_nsp[%d], %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", k, (cast: (unsigned) oi), nsf_ref_cell[0][fx]) < 0
             return: (cast: (int) (1))
         if: nsf_owner_cell[0][fx] = k && nsf_kind_cell[0][fx] = 3 && ns_eternal_cell[0][nsf_ref_cell[0][fx]] >= 0 && ns_parent_cell[0][nsf_ref_cell[0][fx]] < 0 && ns_payload_pass_cell[0] != 2 && c.fprintf(out_cell[0], "        if: l2_nsp[%d]\\parent != 0\n            return: 1\n", nsf_ref_cell[0][fx]) < 0
             return: (cast: (int) (1))
@@ -2111,7 +2111,7 @@ fn: lm_compiler_emit_ns_refs (int: k) int
         if: nsf_owner_cell[0][fx] = k && nsf_kind_cell[0][fx] = 4 && ns_payload_pass_cell[0] != 2 && m_node_cell[0][nsf_ref_cell[0][fx]] != nsf_source_cell[0][fx]
             if: c.fputs("        l2_entry_leaf: ", out_cell[0]) < 0 || lm_compiler_emit_build_occ(nsf_ref_cell[0][fx]) != 0 || c.fputs("\n        if: l2_entry_leaf = 0\n", out_cell[0]) < 0 || c.lm_compiler_emit_invariant("        ", "a field path reads an absent place") != 0
                 return: (cast: (int) (1))
-            if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
+            if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_nsp[%d], %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
                 return: (cast: (int) (1))
             ---
         fx: fx + 1
@@ -2215,7 +2215,7 @@ fn: lm_compiler_source_shell_emit (@: row c.L2SourceContainer; const: (@: root c
         ---
         if: row\width > 0 && c.fprintf(out_cell[0], "        if: lmx_arena_refs_open_profiled(l2_program_arena, l2_sc%zu, %uU, %s) != 0\n            return: 1\n", row\id, (cast: (unsigned) row\width), port_profile) < 0
             return: (cast: (int) (1))
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_sc%zu, %uU, (cast: (@: void) l2_sc%zu)) != 0\n            return: 1\n", owner\id, (cast: (unsigned) field\slot), row\id) < 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_sc%zu, %uU, (cast: (@: void) l2_sc%zu)) != 0\n            return: 1\n", owner\id, (cast: (unsigned) field\slot), row\id) < 0
             return: (cast: (int) (1))
         # The owning edge names the declaration; the fn occurrence itself
         # retains its receiver head. Both names belong to existing addresses.
@@ -3623,7 +3623,7 @@ fn: lm_compiler_emit_one_nest (int: nest; const: (@: parent char); int: slot; co
         return: (cast: (int) (1))
     if: live != 0 && c.lm_compiler_emit_ns_names(nest, mine, ind, "c.abort()", "return: 0") != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) %s)) != 0\n", ind, parent, (cast: (unsigned) slot), mine) < 0
+    if: c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(l2_program_arena, %s, %uU, (cast: (@: void) %s)) != 0\n", ind, parent, (cast: (unsigned) slot), mine) < 0
         return: (cast: (int) (1))
     if: live = 0 && c.fprintf(out_cell[0], "%s    return: 1\n", ind) < 0
         return: (cast: (int) (1))
@@ -3743,7 +3743,7 @@ fn: lm_compiler_emit_method_fields_at (int: oi; const: (@: holder char); size_t:
                 return: (cast: (int) (1))
             j: j + 1
         if: nsf_owner_cell[0][fx] = ni && nsf_kind_cell[0][fx] = 4
-            if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) ", (cast: (unsigned) j)) < 0 || lm_compiler_emit_build_occ(nsf_ref_cell[0][fx]) != 0 || c.fputs(")) != 0\n            return: 1\n", out_cell[0]) < 0
+            if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_fkid, %uU, (cast: (@: void) ", (cast: (unsigned) j)) < 0 || lm_compiler_emit_build_occ(nsf_ref_cell[0][fx]) != 0 || c.fputs(")) != 0\n            return: 1\n", out_cell[0]) < 0
                 return: (cast: (int) (1))
             j: j + 1
         if: nsf_owner_cell[0][fx] = ni && nsf_kind_cell[0][fx] = 2
@@ -3763,7 +3763,7 @@ fn: lm_compiler_emit_method_fields_at (int: oi; const: (@: holder char); size_t:
     ---
     if: c.lm_compiler_emit_ns_names(ni, "l2_fkid", "        ", "return: 1", 0) != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(%s, %zuU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", holder, child) < 0
+    if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, %s, %zuU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", holder, child) < 0
         return: (cast: (int) (1))
     # The owning slot names the field, as a model's does (l2_emit_ns_names); the Structure keeps its own name.
     if: c.snprintf(owning, 320U, "lmx_arena_ref_cell(%s, %zuU)", holder, child) >= 320 || c.lm_compiler_emit_source_name(owning, own_name_cell[0][oi], "        ", "return: 1", 0) != 0
@@ -3920,7 +3920,7 @@ fn: lm_compiler_rw_model_input (int: from_node; int: input; int: parent; @: out 
     if: rw_emit_cell[0] != 0
         if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", index, input) < 0
             return: (cast: (int) (1))
-        if: c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_receiving_pair\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: 0\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim) < 0
+        if: c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_receiving_pair\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: 0\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim) < 0
             return: (cast: (int) (1))
     ---
     if: lm_compiler_rw_contract(prim, 2, 0, 1, @ contract, @ inputs) != 0 || lm_compiler_rw_signature_witness(inputs, 0, 0, 1) != 0 || lm_compiler_rw_signature_witness(inputs, 1, 2, 0) != 0
@@ -6303,7 +6303,7 @@ fn: lm_compiler_rw_source_frame (@: row c.L2SourceContainer; int: parent; const:
     c.lm_compiler_rw_name(parent, pn)
     if: c.lm_compiler_frames_note(0, (cast: (size_t) (row\id))) != 0 || c.fprintf(out_cell[0], "        @: Lmx l2_rw%d l2_sc%zu\n        l2_rw%d\\parent: %s\n", t, row\id, t, pn) < 0
         return: (cast: (int) (1))
-    if: code != 0 && c.fprintf(out_cell[0], "        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, code, t, t, t, t) < 0
+    if: code != 0 && c.fprintf(out_cell[0], "        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_program_arena, l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, code, t, t, t, t) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_rw_source_frame
@@ -6317,7 +6317,7 @@ fn: lm_compiler_rw_witness (int: parent; int: slot; int: ty; int: descriptor) in
     if: rw_emit_cell[0] = 0
         return: (cast: (int) (0))
     if: descriptor != 0
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", parent, slot, parent) < 0))))
+        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", parent, slot, parent) < 0))))
     if: ty < 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, %dU)\n        if: l2_entry_slot = 0\n            return: 1\n", parent, slot) < 0
@@ -6417,7 +6417,7 @@ fn: lm_compiler_declared_graph_witness (const: (@: holder char); int: slot; int:
     if: holder = 0 || slot < 0
         return: (cast: (int) (1))
     if: callable >= 0
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) ", holder, slot) < 0 || lm_compiler_emit_build_occ(callable) != 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) ", holder, slot) < 0 || lm_compiler_emit_build_occ(callable) != 0
             return: (cast: (int) (1))
         return: (cast: (int) ((cast: (int) (c.fputs(")) != 0\n            return: 1\n", out_cell[0]) < 0))))
     ---
@@ -7055,7 +7055,7 @@ fn: lm_compiler_rw_path_value_full (@: path int; const: (@: prepared c.L2Path); 
         ---
         if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
             return: (cast: (int) (1))
-        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), uslot) < 0
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), uslot) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     ---
@@ -7348,7 +7348,7 @@ fn: lm_compiler_rw_reference_model_full (const: (@: prepared c.L2Path); @: path 
             return: (cast: (int) (1))
         if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
             return: (cast: (int) (1))
-        return: (cast: (int) ((cast: (int) (rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, c.lm_compiler_rw_types_nsp(), req) < 0))))
+        return: (cast: (int) ((cast: (int) (rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, c.lm_compiler_rw_types_nsp(), req) < 0))))
     ---
     return: (cast: (int) (lm_compiler_rw_selected_model_tail_full(prepared, path, field_level, req, root, parent, out)))
 end: lm_compiler_rw_reference_model_full
@@ -7600,7 +7600,7 @@ fn: lm_compiler_rw_ns_value_at (int: parent; int: req; int: callee; int: home; i
         ---
         if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
             return: (cast: (int) (1))
-        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), unit_slot) < 0
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), unit_slot) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     ---
@@ -7667,7 +7667,7 @@ fn: lm_compiler_rw_ns_model_at (int: parent; int: slot; int: req; int: callee; i
     ---
     if: c.lm_compiler_use_model_at(home, req, role) != 0
         return: (cast: (int) (1))
-    return: (cast: (int) ((cast: (int) (rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", parent, slot, c.lm_compiler_rw_types_nsp(), req) < 0))))
+    return: (cast: (int) ((cast: (int) (rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, %dU, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", parent, slot, c.lm_compiler_rw_types_nsp(), req) < 0))))
 end: lm_compiler_rw_ns_model_at
 
 # Original: l2src/l2trans.lm1:27031
@@ -7712,7 +7712,7 @@ fn: lm_compiler_rw_admit_project_at (int: parent; int: req; @: source c.L2Refere
         # A write must retain its declared receiving requirement after the
         # field's current value is replaced. The original declaration is an
         # existing graph node, not an auxiliary runtime model.
-        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, c.lm_compiler_rw_types_nsp(), req) < 0
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 4U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, c.lm_compiler_rw_types_nsp(), req) < 0
             return: (cast: (int) (1))
         ---
     ---
@@ -7752,7 +7752,7 @@ fn: lm_compiler_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: 
     ---
     if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0 || c.lm_compiler_use_unit_child(7, ni) != 0
         return: (cast: (int) (1))
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), rec, (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out))) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), rec, (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out))) < 0
         return: (cast: (int) (1))
     if: model_path != 0
         if: lm_compiler_rw_path_requirement(model_path, ni, (cast: (int) (\out)), @ selected_model) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 4, selected_model) != 0
@@ -7806,7 +7806,7 @@ fn: lm_compiler_rw_reference_span (@: value c.L2ValueSpan; int: ty; int: parent;
         # type, an Array's descriptor reference.
         if: c.lm_compiler_ptr_cell_type(c.lm_compiler_value_ft_of_own(ty), cell_type) != 0 || c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
             return: (cast: (int) (1))
-        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, lmx_pointer_new_profiled(%s, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))) != 0\n            return: 1\n", (cast: (int) (\out)), cell_type, (cast: (int) (\out))) < 0
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, lmx_pointer_new_profiled(%s, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))) != 0\n            return: 1\n", (cast: (int) (\out)), cell_type, (cast: (int) (\out))) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     # The receiving checker already closed the object-pointer conversion.
@@ -7982,7 +7982,7 @@ fn: lm_compiler_rw_take (const: (@: stmt c.LmP0Node); int: into; @: out int) int
     if: c.lm_compiler_rw_frame(holder, "LMX_WALK_OP_PRIM", 3, @ prim) != 0
         return: (cast: (int) (1))
     # lmx_walk_mail_take reads no owner either: the record is owned by its home arena, as the send's (l2_rw_send).
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_mail_take\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_mail_take\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim) < 0
         return: (cast: (int) (1))
     if: lm_compiler_rw_contract(prim, 0, own_ty_cell[0][oi], 0, @ contract, @ inputs) != 0 || c.lm_compiler_rw_primitive_contract(prim, contract) != 0
         return: (cast: (int) (1))
@@ -8039,7 +8039,7 @@ fn: lm_compiler_rw_model (const: (@: stmt c.LmP0Node); const: (@: h c.LmP0Text);
     source\place: -1
     if: lm_compiler_rw_write(into, oi, (cast: (const: @: char) (c.lm_compiler_rw_bind_op(oi))), out, @ vs) != 0 || lm_compiler_rw_admit_project((cast: (int) (\out)), ni, @ source, 0, -1, -1, -1, @ admission, 0) != 0 || c.lm_compiler_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0 || c.lm_compiler_use_unit_child(7, ni) != 0
         return: (cast: (int) (1))
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_program_arena, l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
         return: (cast: (int) (1))
     if: lm_compiler_rw_contract(prim, 1, 0, 1, @ contract, @ inputs) != 0 || lm_compiler_rw_signature_witness(inputs, 0, 0, 1) != 0 || c.lm_compiler_rw_primitive_contract(prim, contract) != 0
         return: (cast: (int) (1))
@@ -8176,7 +8176,7 @@ fn: lm_compiler_rw_merge_prim (const: (@: stmt c.LmP0Node); int: res; int: paren
     ---
     if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", n + 9 + 3 * np + ebr_n_cell[0] + nt + 3 * selected + qx, @ prim) != 0
         return: (cast: (int) (1))
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, rec, prim, prim, prim, prim) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, rec, prim, prim, prim, prim) < 0
         return: (cast: (int) (1))
     if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 4U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 5U, %dU) != c.LMX_WALK_OK\n            return: 1\n", prim, np, prim, ebr_n_cell[0], prim, nt) < 0
         return: (cast: (int) (1))
@@ -8250,7 +8250,7 @@ fn: lm_compiler_rw_merge_prim (const: (@: stmt c.LmP0Node); int: res; int: paren
         held_n_cell[0]: held_n_cell[0] + 1
         if: c.fprintf(out_cell[0], "        if: l2_merge_body_build_%d(%s, l2_entry_unit, l2_program_arena) != 0\n            return: 1\n", res, bnode) < 0
             return: (cast: (int) (1))
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", prim, n + 8, bnode) < 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", prim, n + 8, bnode) < 0
             return: (cast: (int) (1))
         ---
     if: np > 0
@@ -8269,7 +8269,7 @@ fn: lm_compiler_rw_merge_prim (const: (@: stmt c.LmP0Node); int: res; int: paren
     # unit is its copy, passes the same branches.
     q: 0
     while: q < ebr_n_cell[0]
-        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_program_qualified_at(%dU))) != 0\n            return: 1\n", prim, n + 9 + 3 * np + q, q) < 0
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, %dU, (cast: (@: void) l2_program_qualified_at(%dU))) != 0\n            return: 1\n", prim, n + 9 + 3 * np + q, q) < 0
             return: (cast: (int) (1))
         q: q + 1
     ---
@@ -8348,7 +8348,7 @@ fn: lm_compiler_rw_merge_typed_operand (const: (@: d c.LmP0Node); int: parent; @
         nin: 2
     if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM", 3 + nin, out) != 0
         return: (cast: (int) (1))
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_field_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), own) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_field_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 3U, %dU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), own) < 0
         return: (cast: (int) (1))
     if: nin = 2
         if: lm_compiler_rw_texpr((cast: (@: c.LmP0Field) (decl\candidate)), (cast: (int) (decl\candidate_count)), own, (cast: (int) (\out)), @ vnode) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 4, vnode) != 0
@@ -8431,7 +8431,7 @@ fn: lm_compiler_rw_cell (int: source_node; int: oi) int
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], t7_at_cell[0][t7_walk_cell[0] - 1], "a callable merge whose body reads a cell held in a nested body of a method or a program part is not built yet")))
         if: rw_emit_cell[0] = 0
             return: (cast: (int) (0))
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", source_node) < 0 || c.lm_compiler_emit_graph_unit_place((cast: (@: c.L2GraphPlace) (field\holder))) != 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) ", source_node) < 0 || c.lm_compiler_emit_graph_unit_place((cast: (@: c.L2GraphPlace) (field\holder))) != 0
             return: (cast: (int) (1))
         return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], ")) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, field\child) < 0))))
     ---
@@ -8442,7 +8442,7 @@ fn: lm_compiler_rw_cell (int: source_node; int: oi) int
     # Fixed construction-time holders use the same physical edge chain as
     # runtime OF addressing, rooted at their actual owning occurrence.
     if: field\holder != 0
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", source_node) < 0 || lm_compiler_emit_graph_build_place((cast: (@: c.L2GraphPlace) (field\holder)), own_mi_cell[0][oi]) != 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) ", source_node) < 0 || lm_compiler_emit_graph_build_place((cast: (@: c.L2GraphPlace) (field\holder)), own_mi_cell[0][oi]) != 0
             return: (cast: (int) (1))
         return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], ")) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, field\child) < 0))))
     if: own_mi_cell[0][oi] = rw_mi_cell[0]
@@ -8452,18 +8452,18 @@ fn: lm_compiler_rw_cell (int: source_node; int: oi) int
     # a method of that part (Q52: the callee's lexical source, book :1196).
     k: c.lm_compiler_m_file(own_mi_cell[0][oi])
     if: k >= 0 && part_ns_cell[0][k] >= 0 && own_mi_cell[0][oi] = ns_proc_cell[0][part_ns_cell[0][k]]
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, part_ns_cell[0][k], source_node, field\child) < 0))))
+        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, part_ns_cell[0][k], source_node, field\child) < 0))))
     if: rw_type_base_cell[0] != 0
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, source_node, field\child) < 0))))
+        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, source_node, field\child) < 0))))
     # The foreign field is a child of its actual declared owner's occurrence,
     # not a same-numbered child of the unit. The constructor already owns that
     # instance; closure retains/retargets this physical reference normally.
     if: own_mi_cell[0][oi] != e_cell[0]
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", source_node) < 0 || lm_compiler_emit_build_occ(own_mi_cell[0][oi]) != 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) ", source_node) < 0 || lm_compiler_emit_build_occ(own_mi_cell[0][oi]) != 0
             return: (cast: (int) (1))
         return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], ")) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, field\child) < 0))))
     ---
-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, source_node, field\child) < 0))))
+    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", source_node, source_node, field\child) < 0))))
 end: lm_compiler_rw_cell
 
 # Original: l2src/l2trans.lm1:27903
@@ -8514,7 +8514,7 @@ fn: lm_compiler_rw_output_operand (int: parent; int: oi; int: declaration; @: ou
         if: c.lm_compiler_rw_cached(oi) != 0
             role: "LMX_WALK_OP_OWN"
         c.lm_compiler_rw_name(parent, pn)
-        if: c.fprintf(out_cell[0], "        l2_rw%d\\parent: %s\n        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, pn, t, role, t, t, t, t) < 0
+        if: c.fprintf(out_cell[0], "        l2_rw%d\\parent: %s\n        @: void l2_rw_op%d lmx_walk_role_cell(l2_program_arena, c.%s, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d)))\n        if: l2_rw_op%d = 0 || lmx_arena_ref_store(l2_program_arena, l2_rw%d, 0U, l2_rw_op%d) != 0\n            return: 1\n", t, pn, t, role, t, t, t, t) < 0
             return: (cast: (int) (1))
         ---
     ---
@@ -9246,7 +9246,7 @@ fn: lm_compiler_rw_method_occurrence (int: candidate; int: parent; @: out int) i
         return: (cast: (int) (lm_compiler_rw_callee_at(parent, own_mi_cell[0][own], own, out)))
     if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0 || c.lm_compiler_use_unit_child(1, candidate) != 0
         return: (cast: (int) (1))
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (unsigned) c.lm_compiler_occ_slot(candidate))) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (unsigned) c.lm_compiler_occ_slot(candidate))) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_rw_method_occurrence
@@ -9502,11 +9502,11 @@ fn: lm_compiler_rw_callee_at (int: parent; int: idx; int: oi; @: out int) int
     if: field = 0
         return: (cast: (int) (1))
     if: field\holder != 0
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", \out) < 0 || lm_compiler_emit_graph_build_place((cast: (@: c.L2GraphPlace) (field\holder)), idx) != 0 || c.fputs(")) != 0\n            return: 1\n", out_cell[0]) < 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) ", \out) < 0 || lm_compiler_emit_graph_build_place((cast: (@: c.L2GraphPlace) (field\holder)), idx) != 0 || c.fputs(")) != 0\n            return: 1\n", out_cell[0]) < 0
             return: (cast: (int) (1))
         ---
     else:
-        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", \out) < 0 || lm_compiler_emit_build_occ(idx) != 0 || c.fputs(")) != 0\n            return: 1\n", out_cell[0]) < 0
+        if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) ", \out) < 0 || lm_compiler_emit_build_occ(idx) != 0 || c.fputs(")) != 0\n            return: 1\n", out_cell[0]) < 0
             return: (cast: (int) (1))
         ---
     ---
@@ -9982,7 +9982,7 @@ fn: lm_compiler_rw_address (const: (@: address c.L2Address); int: parent; @: out
                     slot: c.lm_compiler_ebr_unit_slot((cast: (int) (ns_eternal_cell[0][address\index])))
                 if: c.lm_compiler_rw_frame(holder, "LMX_WALK_OP_AT", 3, @ value) != 0 || c.lm_compiler_use_unit_child(3, (cast: (int) (address\index))) != 0
                     return: (cast: (int) (1))
-                status: (cast: (int) (rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", value, value, slot) < 0))
+                status: (cast: (int) (rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", value, value, slot) < 0))
             else:
                 if: address\kind != 6
                     return: (cast: (int) (c.lm_compiler_rw_refuse(0, "an address without a retained declared place")))
@@ -10506,7 +10506,7 @@ fn: lm_compiler_rw_send (@: stmt c.LmP0Node; int: into; @: out int) int
     ---
     # The send entry reads no owner: a generated primitive's owner is its home arena (lmx_arena.lm1,
     # lmx_arena_rehome_primitive_owners), never the unit, so a qualified branch retains no edge to mutable data here.
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_msend%d\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), k, (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out))) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_msend%d\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), k, (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out))) < 0
         return: (cast: (int) (1))
     if: c.lm_compiler_rw_plain((cast: (int) (\out)), 1 + has_ref, @ source_body) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 2, source_body) != 0
         return: (cast: (int) (1))
@@ -10736,7 +10736,7 @@ fn: lm_compiler_rw_body (@: body c.LmP0Structure; int: parent; int: slot) int
     ---
     if: bad = 0 && row != 0 && construct_phase_cell[0] = 1
         row\temp: t
-    if: bad = 0 && shell >= 0 && rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n", t, shell) < 0
+    if: bad = 0 && shell >= 0 && rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n", t, shell) < 0
         bad: 1
     if: bad = 0 && shell < 0 && (lm_compiler_rw_stmts_in(body, first, t, 0, row, @ made) != 0 || c.lm_compiler_rw_put(parent, slot, t) != 0)
         bad: 1
@@ -11291,7 +11291,7 @@ fn: lm_compiler_fill_method_expr (int: oi) int
     if: lm_compiler_rw_expr(f, span, host, @ port_local_node) != 0
         return: (cast: (int) (1))
     c.lm_compiler_rw_name(host, bn)
-    if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(%s, 0U, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", bn, port_local_node) < 0
+    if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, %s, 0U, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", bn, port_local_node) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_fill_method_expr
@@ -11358,7 +11358,7 @@ fn: lm_compiler_emit_expr_keep (int: oi) int
         ---
     if: bad = 0 && lm_compiler_rw_expr(f, span, host, @ port_local_node) != 0
         bad: 1
-    if: bad = 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(host, 0U, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n    ---\nreturn: 0\nend: l2_kx%d\n\n", port_local_node, oi) < 0
+    if: bad = 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, host, 0U, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n    ---\nreturn: 0\nend: l2_kx%d\n\n", port_local_node, oi) < 0
         bad: 1
     rw_mi_cell[0]: saved_mi
     cur_mi_cell[0]: saved_cur
@@ -11693,7 +11693,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
             return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a named Structure written through an evaluated holder")))
         if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PUT_REF", 4, @ port_local_node) != 0
             return: (cast: (int) (1))
-        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", port_local_node, port_local_node, c.lm_compiler_ns_unit_slot(named)) < 0
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", port_local_node, port_local_node, c.lm_compiler_ns_unit_slot(named)) < 0
             return: (cast: (int) (1))
         if: lm_compiler_rw_reference_receive_at((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))))), (cast: (int) (c.lm_compiler_graph_own())), named, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 3, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
@@ -12650,7 +12650,7 @@ fn: lm_compiler_rw_t7_build (int: site; int: parent; @: out int) int
         ---
         j: j + 1
     ---
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, cname, prim, prim, prim, prim) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, cname, prim, prim, prim, prim) < 0
         return: (cast: (int) (1))
     if: lm_compiler_rw_contract(prim, 1 + nv, 0, 1, @ contract, @ inputs) != 0 || lm_compiler_rw_signature_witness(inputs, 0, 0, 1) != 0
         return: (cast: (int) (1))
@@ -12763,7 +12763,7 @@ fn: lm_compiler_rw_mad_build (int: mi; int: parent; @: out int) int
         ---
         k: k + 1
     ---
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, cname, prim, prim, prim, prim) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, prim, cname, prim, prim, prim, prim) < 0
         return: (cast: (int) (1))
     if: lm_compiler_rw_contract(prim, 1 + nc, 0, 1, @ contract, @ inputs) != 0 || lm_compiler_rw_signature_witness(inputs, 0, 0, 1) != 0
         return: (cast: (int) (1))
@@ -13153,7 +13153,7 @@ fn: lm_compiler_rw_mad_call_arguments (const: (@: source_node c.LmP0Node); int: 
     # Item 6 of the interpreter-throw closure, the walked route: the record binds the walked variant of the adapter,
     # which says the model's throw in the primitive protocol (THROWN + the key of the name) for the walker to land on
     # the pad of that key; the native site keeps l2_mad_call and routes its status itself (l2_prep_held_call).
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), "l2_mad_call_prim", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out))) < 0
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), "l2_mad_call_prim", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out))) < 0
         return: (cast: (int) (1))
     # In a walked method the held callable's name is a hidden input (Q52): ARG, else the root's own field.
     # In a definition its method returns the caller may leave that input absent: the definition then
@@ -14469,15 +14469,15 @@ fn: lm_compiler_emit_shell_anchor () int
             wide: 3
             if: ej >= 0
                 wide: 4
-            if: c.fputs("        l2_entry_leaf: ", out_cell[0]) < 0 || lm_compiler_emit_build_occ(mi) != 0 || c.fprintf(out_cell[0], "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_fkid: lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.%s, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_fkid = 0\n            return: 1\n        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_fkid, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_fkid, 2U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", op, (cast: (unsigned) wide), k) < 0
+            if: c.fputs("        l2_entry_leaf: ", out_cell[0]) < 0 || lm_compiler_emit_build_occ(mi) != 0 || c.fprintf(out_cell[0], "\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_fkid: lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.%s, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_fkid = 0\n            return: 1\n        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_fkid, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_program_arena, l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_program_arena, l2_fkid, 2U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", op, (cast: (unsigned) wide), k) < 0
                 return: (cast: (int) (1))
-            if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", (cast: (unsigned) at)) < 0
+            if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", (cast: (unsigned) at)) < 0
                 return: (cast: (int) (1))
             if: ej >= 0
-                if: c.fprintf(out_cell[0], "        @: Lmx l2_shell_else%d lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.LMX_WALK_OP_ELSE, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_shell_else%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_shell_else%d)) != 0 || lmx_arena_ref_store(l2_fkid, 3U, (cast: (@: void) l2_shell_else%d)) != 0\n            return: 1\n", ej, ej, (cast: (unsigned) (at + 1)), ej, ej) < 0
+                if: c.fprintf(out_cell[0], "        @: Lmx l2_shell_else%d lmx_walk_frame_profiled(l2_program_arena, l2_entry_leaf, c.LMX_WALK_OP_ELSE, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_shell_else%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_program_arena, l2_entry_leaf, %uU, (cast: (@: void) l2_shell_else%d)) != 0 || lmx_arena_ref_store(l2_program_arena, l2_fkid, 3U, (cast: (@: void) l2_shell_else%d)) != 0\n            return: 1\n", ej, ej, (cast: (unsigned) (at + 1)), ej, ej) < 0
                     return: (cast: (int) (1))
                 if: for_uchild_cell[0][ej] = 0 - 3
-                    if: c.fprintf(out_cell[0], "        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_shell_else%d, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_shell_else%d)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n", ej, ej, ej) < 0
+                    if: c.fprintf(out_cell[0], "        l2_pst: lmx_walk_plain_profiled(l2_program_arena, l2_shell_else%d, 1U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_shell_else%d)))\n        if: l2_pst = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_program_arena, l2_pst, 0U, (cast: (@: void) l2_b%d)) != 0\n            return: 1\n", ej, ej, ej) < 0
                         return: (cast: (int) (1))
                     ---
                 else:
@@ -14485,7 +14485,7 @@ fn: lm_compiler_emit_shell_anchor () int
                         return: (cast: (int) (1))
                     ---
                 ---
-                if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_shell_else%d, 1U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", ej) < 0
+                if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_shell_else%d, 1U, (cast: (@: void) l2_pst)) != 0\n            return: 1\n", ej) < 0
                     return: (cast: (int) (1))
                 ---
             ---
@@ -16873,7 +16873,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
                 return: (cast: (int) (1))
             ---
         ---
-        if: c.fprintf(out_cell[0], "        if: l2_entry_leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", (cast: (unsigned) c.lm_compiler_m_width(i)), (cast: (unsigned) (c.lm_compiler_occ_slot(i)))) < 0
+        if: c.fprintf(out_cell[0], "        if: l2_entry_leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_program_arena, l2_entry_unit, %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", (cast: (unsigned) c.lm_compiler_m_width(i)), (cast: (unsigned) (c.lm_compiler_occ_slot(i)))) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.lm_compiler_fn_parts_on(i) != 0
@@ -16988,15 +16988,15 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         # Every owned typed range reachable inside a qualified branch is
         # admitted through the Message classifier. No per-node flag, no
         # name, no registry: the admitted RANGE is the metadata.
-        if: ns_parent_cell[0][k] < 0 && ns_eternal_cell[0][k] < 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) (c.lm_compiler_ns_unit_slot(k))), k) < 0
+        if: ns_parent_cell[0][k] < 0 && ns_eternal_cell[0][k] < 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) (c.lm_compiler_ns_unit_slot(k))), k) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         # One ordinary physical reference publishes the qualified root; the root
         # remains independent and its exact profile is recoverable from its address.
-        if: ns_parent_cell[0][k] < 0 && ns_eternal_cell[0][k] >= 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\parent != 0\n            return: 1\n        l2_ebr%u: l2_nsp[%d]\n", (cast: (unsigned) (c.lm_compiler_ebr_unit_slot(ns_eternal_cell[0][k]))), k, k, (cast: (unsigned) ns_eternal_cell[0][k]), k) < 0
+        if: ns_parent_cell[0][k] < 0 && ns_eternal_cell[0][k] >= 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_entry_unit, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\parent != 0\n            return: 1\n        l2_ebr%u: l2_nsp[%d]\n", (cast: (unsigned) (c.lm_compiler_ebr_unit_slot(ns_eternal_cell[0][k]))), k, k, (cast: (unsigned) ns_eternal_cell[0][k]), k) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
-        if: ns_parent_cell[0][k] >= 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\parent != l2_nsp[%d]\n            return: 1\n", ns_parent_cell[0][k], (cast: (unsigned) c.lm_compiler_ns_field_in_parent(k)), k, k, ns_parent_cell[0][k]) < 0
+        if: ns_parent_cell[0][k] >= 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_nsp[%d], %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n        if: l2_nsp[%d]\\parent != l2_nsp[%d]\n            return: 1\n", ns_parent_cell[0][k], (cast: (unsigned) c.lm_compiler_ns_field_in_parent(k)), k, k, ns_parent_cell[0][k]) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: lm_compiler_emit_ns_cells(k) != 0
@@ -17039,7 +17039,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         if: for_nkid_cell[0][k] > 0 && c.fprintf(out_cell[0], "        if: lmx_arena_refs_open_profiled(l2_program_arena, l2_fkid, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid))) != 0\n            return: 1\n", (cast: (unsigned) for_nkid_cell[0][k])) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
-        if: for_uchild_cell[0][k] >= 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", (cast: (unsigned) for_uchild_cell[0][k])) < 0
+        if: for_uchild_cell[0][k] >= 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_entry_leaf, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", (cast: (unsigned) for_uchild_cell[0][k])) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.fprintf(out_cell[0], "        l2_entry_leaf: l2_fkid\n") < 0

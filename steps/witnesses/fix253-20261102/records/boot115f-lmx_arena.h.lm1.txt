@@ -1,0 +1,306 @@
+predef: "l2src/lmx.h.lm1"
+predef: "lmx_arena_blocks.h.lm1"
+
+# The arena of a Message (Lingvamyxa_spec.txt 2, 6.5).  Mikhail, 2026-09-17, verbatim:
+# "У нас есть арена (там менеджер) она предоставляет N массивов и таблицу
+# адрес->дескриптор содержимого для типизации void *, также может присоединять другую
+# арену. ЧТО ЕЩЁ НАДО?"
+#
+# So one object holds three things and the manager of the arena is the only writer of
+# each:  what the arena OWNS (its block list), its N arrays (the typed service arrays,
+# each of which IS its descriptor), and the index that answers, for an address, the
+# descriptor of the array containing it.
+#
+# The arrays never move, so the index's ENTRIES are what is ordered and bisected, never
+# the arrays.  An entry carries no type: stride, kind and type belong to the array the
+# entry names.  Nothing outside this module writes the index, and nothing at all gates
+# writing into the cells themselves -- code that holds a reference and has determined
+# its type once writes straight into the cell, because a cell's address never changes.
+# D-105 (the author's Q39, 2026-09-27; steps/d105-index-table.md; Codex, 2026-09-28): one address
+# correspondence of the `implements` table.  `value` was admitted to the named Structure `req`; the entry is a
+# view of where req's field j is in the value (lmx_implements_at) -- never a Structure made for it:
+#   frame, at, n: the size cells frame[at .. at + n) of the admitting walk frame (ADMIT_AS), read in place;
+#   map, n:       the translator's static map of that pair of types (a native admission), compiled metadata;
+#   neither:      positional identity correspondence, not physical-layout evidence;
+#                 with `holes`, an empty physical slot is not carried (item 738).
+# The frame cells and the map carry TWO targets per required field (K01): the ordinal half at
+# [j] -- the value's field named as req's field j, at its own occurrence -- and the last half at
+# [n + j], which is what a bare `name` reaches (the value's last occurrence of that name,
+# lmx_implements_at_last).  `n` stays the semantic width of req in both halves' indexing.
+# The entry holds `value` weakly: it never keeps the value alive, and it leaves in the pass that frees it
+# (lmx_arena_impl_prune) -- an address that comes back must not inherit another value's correspondence.
+# Immutable, typed dependencies of a receiving contract. These are arena
+# bookkeeping, not executable graph fields or a saved ancestor graph. Values
+# of primitive cells are deliberately absent; names never participate here.
+struct: LmxImplContractFact
+    @: Lmx owner
+    size_t: field
+    int: kind
+    int: type
+    size_t: extent
+    @: Lmx child
+    @: Lmx reference
+    @: void cell
+    int: executable
+end: LmxImplContractFact
+struct: LmxImplContractFactArray
+    size_t: len
+    @: LmxImplContractFact data
+end: LmxImplContractFactArray
+struct: LmxImplContractFactDynamicArray
+    LmxImplContractFactArray: array
+    size_t: capacity
+end: LmxImplContractFactDynamicArray
+struct: LmxImplContract
+    LmxImplContractFactDynamicArray: facts
+    size_t: owners
+    int: interface
+end: LmxImplContract
+
+struct: LmxImplEntry
+    @: Lmx value
+    @: Lmx req
+    # Non-owning module-lifetime schema identity, never dereferenced or classified.
+    # Required models and identity maps do not establish this token; zero is unknown.
+    @: void layout
+    @: Lmx frame
+    size_t: at
+    @: size_t map
+    size_t: n
+    int: holes
+    # 0: address map only; 1: one Consumer's used paths; 2: full receiving
+    # proof. A new Consumer rechecks state 1, while state 2 is stable after
+    # checked graph mutations. This is not a property of the physical holes.
+    int: reception_proof
+    # Managed immutable typed requirement dependencies. Temporary entry
+    # copies borrow this pointer; only stored arena entries retain it.
+    @: LmxImplContract contract
+    # A computed correspondence owns its copied map outside the graph. Static
+    # module maps and frame-backed views leave this zero.
+    int: owned_map
+    # The code selected for this value may use source ordinals different from
+    # the value's physical slots. Only the self entry carries this proved
+    # execution projection; its ordinary self-view above stays positional.
+    @: size_t exec_map
+    size_t: exec_n
+end: LmxImplEntry
+
+struct: LmxArena
+    @: LmxArenaBlock blocks
+    @: LmxPool arrays
+    # Sorted address index as one DynamicArray of LmxRange (Q18). len = live entries;
+    # capacity = allocated room. Storage is malloc/realloc, not an arena typed array.
+    LmxRangeDynamicArray: index
+    # The mark generation of the last collection pass (lmx_gc).  The pass bumps it and stamps
+    # every chunk it walks, so "is this reachable" is one comparison per chunk and nothing has
+    # to be cleared between passes.  It is the arena's own bookkeeping, like the index: no
+    # caller reads it, and only the collection pass writes it.
+    unsigned: generation
+    # 1 = letter-scale arena (Mikhail 19.09 simplified): same index + array
+    # descriptors + address stability; no GC pass; no multi-chunk growth per array.
+    # Cleared by release / left 0 after attach empties the donor.
+    unsigned: simple
+    # Disposable classification-only union for a graph-copy source. It may
+    # inspect foreign mutable ranges but owns none of their cells; it cannot
+    # allocate, attach, or be attached to a live Message arena.
+    unsigned: source_view
+    # D-105: the `implements` table's address correspondences (LmxImplEntry) -- malloc'd like
+    # the index, `impl_len` live entries of room for `impl_cap`.  Written only by
+    # lmx_implements_register and lmx_arena_impl_prune; attach moves the donor's.
+    @: LmxImplEntry impl
+    size_t: impl_len
+    # The reset generation of the code links (slice 253, lmx_code_reset_from): the records a reset takes carry it as
+    # their visit mark, so a reset over cycles and shared subgraphs ends without allocating.  Attach keeps the larger.
+    size_t: reset_gen
+    size_t: impl_cap
+end: LmxArena
+
+prototype:
+    # Zero the arena.  A by-value arena must be cleared before it is opened; opening a
+    # non-empty one is refused, exactly as a pool refuses to be opened twice.
+    fn: lmx_arena_open (@: LmxArena arena) int
+    # Letter-scale open (POLL 19.29.7.1 / Mikhail 19.09): same LmxArena, primed
+    # small index capacity; GC and multi-chunk growth are refused. Index,
+    # array descriptors and address stability are unchanged.
+    fn: lmx_arena_open_simple (@: LmxArena arena) int
+    fn: lmx_arena_open_source_view (@: LmxArena arena) int
+    # The arena's array of this kind and type, or null when it has none yet.
+    fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool
+    # The same lookup with an exact physical receiver-profile identity.  profile=0 is the
+    # ordinary unqualified array and is what lmx_arena_find selects.
+    fn: lmx_arena_find_profiled (@: LmxArena arena; int: kind; int: type; @: Lmx profile) @: LmxPool
+    # A cell (or `count` consecutive cells) of the arena's array of this kind and type:
+    # the array is found among the arena's N arrays, or MADE when the arena has none of
+    # that kind and type yet.  A mutable value is therefore an element of THAT array --
+    # never an array of its own.
+    fn: lmx_arena_take (@: LmxArena arena; size_t: stride; int: kind; int: type) @: void
+    fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void
+    fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void
+    fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void
+    # Same Lmx representation, but a distinct typed Structure pool for the
+    # result of a receiver. Ordinary allocation always selects role 0.
+    fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx
+    fn: lmx_arena_take_struct_physical_role (@: LmxArena arena; int: physical_type; @: Lmx profile; unsigned: role) @: Lmx
+    # A run of pointer-object cells in the primitive pool of this exact
+    # physical type/profile. Access callbacks belong to the pool, not to
+    # names or individual cells. A mismatched existing pool is refused.
+    fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void
+    fn: lmx_arena_pointer_void_read (@: void cell) @: void
+    fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int
+    fn: lmx_arena_pointer_char_read (@: void cell) @: void
+    fn: lmx_arena_pointer_char_write (@: void cell; @: void value) int
+    # An array joins: the descriptor is linked into the arena's arrays and the block
+    # carrying the descriptor (when there is one) joins the arena's block list.  The
+    # interval is registered by lmx_arena_span, which the same caller does next.
+    fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int
+    # An array leaves the arena's list (it is no longer one of its N arrays).  Its
+    # intervals are retired by lmx_range_drop, one per chunk.
+    fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int
+    # One interval [base, base + bytes) of one array joins the arena's index.  This IS
+    # the insertion into the table, and only the arena's manager performs it.
+    fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int
+    # Detach one block: its interval leaves the index first, then the block leaves the
+    # list.  Ownership and typing never disagree -- and the block that CARRIES a
+    # descriptor goes with the array it describes: the array leaves the arena's list of
+    # its N arrays as that block leaves the block list, so the arena never keeps a
+    # descriptor whose record it gave up.  Every other block drops as a miss on that
+    # walk (the walk only compares addresses and dereferences nothing).
+    fn: lmx_arena_drop (@: LmxArena arena; @: LmxArenaBlock node) int
+    # A restore point: the arena's block list as it stands now (the list is a stack, so
+    # the mark is simply its head).  A construction that must be all-or-nothing takes a
+    # mark first and reverts to it on failure.
+    fn: lmx_arena_mark (@: LmxArena arena) @: LmxArenaBlock
+    # Another arena attaches to this one: its intervals join this index, its arrays join
+    # this arena's N arrays and its blocks join this arena's list, so one arena owns both.
+    # Nothing moves, so every address and every live pointer still answers -- which is the
+    # whole point of attaching rather than copying (Mikhail, 2026-09-17: "также может
+    # присоединять другую арену"; "увеличиваем просто число массивов и не паримся, чтобы
+    # ареса не переезжали").  The attached arena is left empty.
+    # A primitive record whose owner is exactly the donor arena is rebound to
+    # the receiver arena as part of the transfer. A record owned by a graph
+    # subject keeps that subject's address; a refused attach changes neither.
+    fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
+    # Drop every block added since the mark, retiring each one's interval.  Blocks the
+    # arena already held before the mark are untouched, and nothing that survived the
+    # mark is disturbed: this is how merge and graph copy keep "the whole, or nothing".
+    # The arrays the marked construction added go with those blocks (lmx_arena_drop), so
+    # a revert leaves the list of the N arrays exactly as the mark found it.
+    fn: lmx_arena_revert (@: LmxArena arena; @: LmxArenaBlock mark) int
+    # Release everything the arena owns, retiring every entry it holds.
+    fn: lmx_arena_release (@: LmxArena arena) int
+    # The next mark generation for a collection pass.  Never zero: a freshly cleared chunk
+    # holds zero, and the first pass must not read that as its own stamp.
+    fn: lmx_arena_generation_next (@: LmxArena arena) unsigned
+    # D-105: drop every `implements` correspondence whose value, model or table no longer
+    # classifies as a live Structure of this arena -- run where storage leaves (the sweep,
+    # a revert), before any address can be handed out again.
+    fn: lmx_arena_impl_prune (@: LmxArena arena) void
+    # Retire records added after a failed copy/merge, including their owned maps.
+    fn: lmx_arena_impl_truncate (@: LmxArena arena; size_t: keep) void
+    # D-105: room for `need` correspondences in that table.  0 = there is room.
+    fn: lmx_arena_impl_room (@: LmxArena arena; size_t: need) int
+    fn: lmx_arena_impl_contract_retain (@: LmxImplContract contract) void
+    fn: lmx_arena_impl_contract_release (@: LmxImplContract contract) void
+
+    # The index itself: the arena's index of its arrays, one entry per interval.  An
+    # entry names an array and its interval; the entries are bisected, never walked,
+    # and only the arena's manager inserts or retires one.
+    fn: lmx_range_reserve (@: LmxArena arena; size_t: need) int
+    # Read-only address-interval lookup, including an interior field address.
+    # Unlike classify it does not prove that a cell was handed out; callers
+    # must check the aligned cell start separately before using its storage.
+    fn: lmx_range_entry_at (@: LmxArena arena; @: void p) @: LmxRange
+    fn: lmx_range_add (@: LmxArena arena; @: LmxPool array; @: void lo; @: void hi) int
+    # Insert a range view while preserving its true owner.  Used by arena attach and by
+    # transitive import; ordinary allocation always uses lmx_range_add (owner=arena).
+    fn: lmx_range_add_view (@: LmxArena arena; @: LmxArena owner; @: LmxPool array; @: void lo; @: void hi) int
+    fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
+    # Code links (slice 253, design 4.4): the index's side storage of an interval -- the Structure owning a child
+    # array (holder_set), the Array owning each cell of a REF backing (slot_owner_set), the (holder, slot) a slot
+    # cell is (slot_holder), one record per installation of a child in a place of code (link_add, link_remove,
+    # links_of) and the bulk release with the index (side_release).  A dropped interval retires its own in
+    # lmx_range_drop, while its cells are still registered and readable.
+    fn: lmx_range_holder_set (@: LmxArena arena; @: void base; @: Lmx holder) int
+    fn: lmx_range_slot_owner_set (@: LmxArena arena; @: void base; size_t: count; @: Lmx owner) int
+    fn: lmx_range_slot_holder (@: LmxArena arena; @: void cell; @: size_t slot) @: Lmx
+    # A record is PREPARED before the write it describes (the heads and the record are allocated then; 1 refuses with
+    # nothing written) and COMMITTED after it (no allocation); ABANDON frees a record whose write did not happen.
+    fn: lmx_range_link_prepare (@: LmxArena arena; @: void child; @: Lmx holder; size_t: slot; @@: LmxCodeLink out) int
+    fn: lmx_range_link_commit (@: LmxArena arena; @: LmxCodeLink record) int
+    fn: lmx_range_link_abandon (@: LmxCodeLink record) void
+    fn: lmx_range_link_remove (@: LmxArena arena; @: void child; @: Lmx holder; size_t: slot) int
+    fn: lmx_range_links_of (@: LmxArena arena; @: void child) @: LmxCodeLink
+    fn: lmx_range_side_release (@: LmxArena arena) void
+    # Import every sealed range visible in `source` as non-owning views.  The operation is
+    # idempotent and transitive, preserves each entry's true owner, and never links foreign
+    # arrays into the borrower's local array/ownership lists.
+    fn: lmx_range_import (@: LmxArena arena; @: LmxArena source) int
+    # Narrow form for a profiled copy/merge: import only sealed ranges whose array carries
+    # this exact nonzero physical profile.  Unrelated sealed profiles stay unclassified.
+    fn: lmx_range_import_profile (@: LmxArena arena; @: LmxArena source; @: Lmx profile) int
+    # Scratch copy-source only: classify all typed cells in source, including
+    # mutable lexical context. No ownership or runtime import is transferred.
+    fn: lmx_range_import_source_view (@: LmxArena arena; @: LmxArena source) int
+    # Remove only borrowed index intervals of one physical profile. The true
+    # owner's local ranges are never retired by this operation. Call while the
+    # foreign owner's ranges are still live, before releasing its arena.
+    fn: lmx_range_unimport_profile (@: LmxArena arena; @: Lmx profile) int
+    # Seal every array carrying this exact nonzero profile (a qualified branch's pools); 0, or 1 when none does.
+    fn: lmx_arena_seal_profile (@: LmxArena arena; @: Lmx profile) int
+    # What the table answers for an EXACT LIVE CELL START: how to read the cell, and
+    # which array it came from. An interior address, an aligned spare-capacity address
+    # and an address in a registered but still empty chunk answer nothing. The range is
+    # bisected first; its lo plus the descriptor's stride identify the cell, and that
+    # range's own chunk count decides whether the cell has been handed out.
+    fn: lmx_range_classify (@: LmxArena arena; @: void p) int
+    fn: lmx_range_type_of (@: LmxArena arena; @: void p) int
+    # Full signed physical identity; NONE=0, positive T and distinct immutable -T.
+    fn: lmx_type_base (int: physical_type) int
+    fn: lmx_type_reference_cell (int: physical_type) int
+    fn: lmx_type_immutable (int: physical_type) int
+    fn: lmx_type_is_immutable (int: physical_type) int
+    fn: lmx_type_storage_like (int: owner_type; int: element_type) int
+    fn: lmx_type_element (int: array_type) int
+    fn: lmx_range_write_exact_blocked (@: LmxArena arena; @: void p; @: Lmx exact_profile; @@: Lmx roots; size_t: root_count) int
+    fn: lmx_range_stride (@: LmxArena arena; @: void p) size_t
+    # Exact live-cell descriptor, including a range imported for read-only
+    # source classification. The local-only lmx_range_pool remains the
+    # allocator/GC ownership query.
+    fn: lmx_range_cell_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # Read an already allocated typed pointer cell through its pool's exact
+    # callback. Classification/read does not depend on allocation helpers.
+    fn: lmx_pointer_pool_in (@: LmxArena arena; @: void cell) @: LmxPool
+    fn: lmx_pointer_value_in (@: LmxArena arena; @: void cell) @: void
+    # The descriptor of the array containing the address: what code casts and writes
+    # through ("_Получив дескриптор типа код сразу делает приведение типа указателя и
+    # пишет напрямую в ячейку_ _Это обязательно_"), or null when no array has it.
+    fn: lmx_range_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # Allocator-only containing-interval lookup. Unlike lmx_range_pool, this accepts
+    # spare capacity and an empty registered chunk; it exists so lmx_pool_take_n can
+    # verify ownership before handing out the first cell. It is local-only and is not
+    # a type/classification result.
+    fn: lmx_range_interval_pool (@: LmxArena arena; @: void p) @: LmxPool
+    # The true owner and physical receiver-profile identity found through the same range
+    # lookup.  Imported views answer their foreign owner/profile.  lmx_range_pool remains
+    # strictly local so allocator and GC ownership can never adopt an imported range.
+    fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena
+    fn: lmx_range_profile (@: LmxArena arena; @: void p) @: Lmx
+    # The mark of a qualified value read from the index alone: the cell's profile when it is nonzero and the
+    # cell's array is sealed (a static branch after the prologue, a run-time branch after lmx_arena_seal_profile);
+    # 0 for an unprofiled, an unsealed or an absent cell.  Imported views answer as their owner's array does.
+    fn: lmx_range_sealed_profile (@: LmxArena arena; @: void p) @: Lmx
+    # Compare an address's exact type domain to the domains of physical roots.
+    # Neither ownership nor sealing establishes such a match.
+    fn: lmx_range_has_root_profile (@: LmxArena arena; @: void p; @@: Lmx roots; size_t: count) int
+    # Write barrier, not a type query: test every live byte touched by one store,
+    # including interior addresses and explicitly imported range views.  An
+    # overflowing byte span is conservatively rejected. Spare capacity is not live.
+    fn: lmx_range_write_overlaps_profile (@: LmxArena arena; @: void p; size_t: bytes; @: Lmx exact_profile; @@: Lmx roots; size_t: root_count) int
+    # FABLE-134: address of the by-value index DynamicArray / its fixed base (offsetof 0).
+    fn: lmx_arena_index_data (@: LmxArena arena) @: LmxRange
+    fn: lmx_arena_index_len (@: LmxArena arena) size_t
+    fn: lmx_arena_index_cap (@: LmxArena arena) size_t
+    fn: lmx_arena_index_set_data (@: LmxArena arena; @: LmxRange data) void
+    fn: lmx_arena_index_set_len (@: LmxArena arena; size_t: len) void
+    fn: lmx_arena_index_set_cap (@: LmxArena arena; size_t: capacity) void
+end: prototype

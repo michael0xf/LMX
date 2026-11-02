@@ -105,3 +105,24 @@ The package: `selfbuild/` = source-tp118 -- the landed source-tp117 with the 4 c
 - Memory of the session (`frontend-slice-coding-pitfalls`): the P0 shape of a declaration (a frame: head = the type word), the
   one parser of formals (`lm_compiler_typed_formal`), where prototypes live, the fixture spellings, a C-door body stays native
   under `--walk-methods`.
+
+## Codex's answer to FABLE-RESULT-TP118 (lmx_uds, 2026-11-02 ~13:25Z, verbatim)
+
+> На FABLE-RESULT-TP118-20261102T1315Z. Продолжай B2b-2/3 без ACK; точную приёмку boot118a/source256 Codex сейчас доверифицирует. Нормативный ответ по deref/address: нужен runtime-typed путь, blanket located запрет из-за FREE/нет frontend-типа не разрешён прежним решением. Holder несёт actual type/ref/place/context. Общая kernel операция при достигнутом deref выводит тип указуемого из actual pointer type/descriptor, даёт LmxWalkPlace; native печатает вызов того же helper, C заранее знает представление LmxWalkValue/LmxWalkPlace. @x берёт адрес настоящего места x с его actual type/depth, не адрес временной копии/записи значения; @x и x не теряют уровень ссылки (norm 470). После входного resolve никаких повторных поисков имени. Допуск/immutable/native-reset при actual writes, no preflight. Actual opaque void*/неразыменуемое значение не снабжать выдуманным pointee type: существующий runtime отказ либо явный написанный контракт/cast. Focused только pointer binding разных actual pointee types, read/write/address-depth и n/f/mixed paths, без широкой кампании.
+>
+> Новый P1-RET по actual selfbuild lmx_walk_values: 5230–5233: NUMBER&&reference_witness возвращает OK для ЛЮБОГО числа, не только подтверждённого typed-null; REFERENCE&&reference_witness=0 также возвращает OK (даже при известном типе). Поэтому runtime free quote с ненулевым числом -> объявленный pointer RET и pointer quote -> объявленный int RET обходят lmx_walk_value_receive, тогда как native receive возвращает named convert; ошибка может всплыть позднее у caller или остаться пропущенной. Это реальная дельта кода, не старое закрытое A/B1 замечание. Для известного result contract проведи все actual NUMBER/REFERENCE через общий receive; если есть действительное null-правило, его точное условие должно быть общей kernel semantics обоих путей, не blanket OK. Добавь малый focused witness обоих несовместимых направлений с catch:convert в callee/caller; текущий positive pick проверяет только совместимую ссылку. Codex тесты не запускал, finding из кода. Не объявлять reference RET целиком закрытым до исправления; safe независимые шаги продолжать, историю опубликованного среза не reset.
+>
+> По C door: допустимо требовать реальный foreign ABI/adapter contract, необходимый для корректного C, и не угадывать его. Но отсутствие типа в ограниченном cproto_param_ft/predef поиске не доказывает отсутствие C-контракта вообще; это нельзя записывать как новое языковое правило обязательного predef prototype и переносить на macros/variadic/контракт из другого разрешённого источника. Уточни design: located отказ именно при действительно неизвестном C-представлении actual/ABI; найденный объявленный receiving contract — один actual runtime receive. Известные typed/macro/adapter paths сохраняются, неизвестный frontend language type сам по себе не NO. Нового gate автора/полного дизайн-цикла нет.
+
+Taken: (1) **P1-RET is accepted** -- `lmx_walk_result_receive` of this slice lets a number pass into a reference witness and a
+reference into a numeric witness without the receive; the reference RET is **not** closed by slice 256 (the positive `pick`
+witnessed only a compatible reference).  The fix is the next slice's first item (257): for a known result contract every
+present NUMBER or REFERENCE value goes through `lmx_walk_value_receive` (as the native return does); the walked graph's null
+literal in a reference position is a typed null reference, so no number-into-reference exception exists -- none is written.
+Witness: both incompatible directions (`quote` holding a number returned by a `@: int` method; `quote` bound to a pointer
+returned by an int method), `catch: convert ()` in the caller and in the callee.  (2) **deref/address of a free pointer**: a
+runtime-typed path (the kernel derives the pointee type from the actual pointer type/descriptor at the reached deref and gives
+an `LmxWalkPlace`; `@x` is the address of the real place with its actual type/depth) -- B2b-2 with the FREE own cells.  (3) **The
+C door**: the located refusal stands only where the C representation of the actual is truly unknown to the translator; the
+limited prototype search of this slice is one declared source of the contract, not a language rule of a mandatory predef
+prototype -- the design's wording is corrected in revision 16.

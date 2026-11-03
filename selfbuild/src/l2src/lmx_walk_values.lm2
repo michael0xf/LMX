@@ -1579,7 +1579,8 @@ end: lmx_walk_cell_place
 # Admit one written field requirement over the actual held root, then expose
 # its physical place. No free-name binding or lexical type is looked up here.
 # Both OF with a named selector and native path emission call this operation.
-fn: lmx_walk_value_named_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; @: name char; @: out c.LmxWalkPlace) int
+# Slice 272: a written selection keeps the field's coordinates for its store (lmx_walk_value_field_store).
+fn: lmx_walk_value_field_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; @: name char; @: out c.LmxWalkPlace; @@: out_root c.Lmx; @: out_index size_t) int
     if: arena = 0 || holder = 0 || out = 0 || name = 0
         return: c.LMX_WALK_INVALID
     if: holder\present = 0
@@ -1601,6 +1602,10 @@ fn: lmx_walk_value_named_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; @
     @: physical void c.lmx_graph_cell_in(arena, root, index)
     if: physical = 0
         return: c.LMX_WALK_INVALID
+    if: out_root != 0
+        out_root[0]: root
+    if: out_index != 0
+        out_index[0]: index
     if: c.lmx_domain_kind(arena, physical) = c.LMX_KIND_PRIMITIVE
         return: lmx_walk_cell_place(arena, physical, physical, out)
     if: c.lmx_range_stride(arena, physical) != sizeof(@: void)
@@ -1609,6 +1614,10 @@ fn: lmx_walk_value_named_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; @
     if: slot[0] = 0 && c.lmx_implements_holes(arena, root) != 0
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
     return: lmx_walk_cell_place(arena, slot[0], physical, out)
+end: lmx_walk_value_field_place
+
+fn: lmx_walk_value_named_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; @: name char; @: out c.LmxWalkPlace) int
+    return: lmx_walk_value_field_place(arena, holder, name, out, 0, 0)
 end: lmx_walk_value_named_place
 
 fn: lmx_walk_graph_cell_place (@: arena c.LmxArena; @@: slot void; int: desc_ok; @: out c.LmxWalkPlace) int
@@ -1924,8 +1933,16 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
         return: c.LMX_WALK_INVALID
     int: base_type c.lmx_type_base(place\type)
     if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
+        # Slice 272: another kind of value is the implicit `convert` before the write (the book :777); the contextual literal 0
+        # is the present null, as a typed program writes `p: 0`.
         if: value\kind != c.LMX_WALK_VALUE_REFERENCE
-            return: c.LMX_WALK_INVALID
+            if: lmx_walk_value_null_literal(value) = 0
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            status: lmx_walk_value_ref(received_p, place\type, 0)
+            if: status != c.LMX_WALK_OK
+                return: status
+            return: (cast: (int) c.lmx_value_cell_store(arena, place\address, place\context, 0, received_p, write))
+        ---
         return: (cast: (int) c.lmx_value_cell_store(arena, place\address, place\context, value\ref, value, write))
     ---
     # Slice 255 (design 4.5 B2a): the place receives the value by the one admission -- a contextual literal takes the
@@ -1945,6 +1962,59 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
     ---
     return: status
 end: lmx_walk_value_store_with_writer
+
+# Slice 272: the write of a field selected by name from a runtime-typed holder.  The book (L3, construction): a path with a tail
+# passes the value to the existing field after the ordinary admission.  A reference is admitted to the declared model of the
+# field's slot, as typed code does at its statement.  A field holding a Structure or an Array receives a value of the same kind
+# and, for an Array, of the same element type; what it holds is the slot's own descriptor or the low cell a former write left
+# there.  A descriptor place is rebound as PUT_REF rebinds its slot.
+fn: lmx_walk_value_field_store (@: arena c.LmxArena; @: root c.Lmx; size_t: index; @: place c.LmxWalkPlace; @: value c.LmxWalkValue) int
+    c.LmxWalkValue: current
+    @: current_p c.LmxWalkValue @ current
+    @: raw void 0
+    @: held void 0
+    int: base
+    int: kind
+    int: status
+    if: arena = 0 || root = 0 || place = 0 || value = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE && value\ref != 0
+        status: c.lmx_implements_receive_cell(arena, c.lmx_graph_cell_in(arena, root, index), value\ref)
+        if: status != c.LMX_WALK_OK
+            return: status
+        base: c.lmx_type_base(place\type)
+        kind: (cast: (int) c.lmx_domain_kind(arena, value\ref))
+        if: base = c.LMX_TYPE_DESC
+            held: place\address
+            if: place\descriptor = 0
+                status: lmx_walk_place_load(arena, place, current_p)
+                if: status != c.LMX_WALK_OK
+                    return: status
+                held: current_p\ref
+            ---
+            if: kind != c.LMX_KIND_ARRAY || (held != 0 && c.lmx_domain_type(arena, value\ref) != c.lmx_domain_type(arena, held))
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            ---
+        ---
+        if: base = c.LMX_TYPE_LMX && kind != c.LMX_KIND_STRUCT && (place\descriptor = 0 || place\address != 0 || kind != c.LMX_KIND_ARRAY)
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    ---
+    if: place\descriptor = 0
+        return: lmx_walk_value_store(arena, place, value)
+    if: value\kind != c.LMX_WALK_VALUE_REFERENCE
+        if: lmx_walk_value_null_literal(value) = 0
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        ---
+    else:
+        status: lmx_walk_value_materialize(arena, value, @ raw)
+        if: status != c.LMX_WALK_OK
+            return: status
+        ---
+    ---
+    if: c.lmx_graph_ref_store_in(arena, root, index, raw) != 0
+        return: c.LMX_WALK_INVALID
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_field_store
 
 fn: lmx_value_array_place (@: arena c.LmxArena; @: array c.LmxArray; size_t: index; @: out c.LmxWalkPlace) int
     int: type 0
@@ -1976,6 +2046,28 @@ fn: lmx_value_array_place (@: arena c.LmxArena; @: array c.LmxArray; size_t: ind
     ---
     return: c.LMX_WALK_OK
 end: lmx_value_array_place
+
+# The C size of one cell of a kernel type; 0 for a type that has no cell.
+fn: lmx_walk_type_size (int: ty) size_t
+    unsigned: probe_unsigned 0U
+    ulong: probe_long 0U
+    size_t: probe_size 0U
+    @: probe_pointer void 0
+    int: base c.lmx_type_base(ty)
+    if: base = c.LMX_TYPE_CHAR || base = c.LMX_TYPE_UNSIGNED_CHAR
+        return: c.sizeof(c.char)
+    if: base = c.LMX_TYPE_INT
+        return: c.sizeof(c.int)
+    if: base = c.LMX_TYPE_UNSIGNED
+        return: c.sizeof(probe_unsigned)
+    if: base = c.LMX_TYPE_SIZE_T
+        return: c.sizeof(probe_size)
+    if: base = c.LMX_TYPE_ULONG
+        return: c.sizeof(probe_long)
+    if: base = c.LMX_TYPE_LMX || base = c.LMX_TYPE_DESC || base = c.LMX_TYPE_CHAR_PTR || base >= c.LMX_TYPE_POINTER_BASE
+        return: c.sizeof(probe_pointer)
+    return: 0U
+end: lmx_walk_type_size
 
 # INDEX consumes an already evaluated reference and received size_t index.
 # Array cells use the descriptor's actual element metadata. Machine pointers
@@ -2009,21 +2101,7 @@ fn: lmx_walk_value_index_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; s
     ty: c.lmx_type_base((cast: (int) out\type))
     stride: c.lmx_range_stride(arena, holder\ref)
     if: stride = 0U
-        if: ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_UNSIGNED_CHAR
-            stride: c.sizeof(c.char)
-        if: ty = c.LMX_TYPE_INT
-            stride: c.sizeof(c.int)
-        if: ty = c.LMX_TYPE_UNSIGNED
-            unsigned: probe_unsigned 0U
-            stride: c.sizeof(probe_unsigned)
-        if: ty = c.LMX_TYPE_SIZE_T
-            stride: c.sizeof(index)
-        if: ty = c.LMX_TYPE_ULONG
-            ulong: probe 0U
-            stride: c.sizeof(probe)
-        if: ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR || ty >= c.LMX_TYPE_POINTER_BASE
-            stride: c.sizeof(target)
-        ---
+        stride: lmx_walk_type_size(ty)
     ---
     if: stride = 0U
         return: c.LMX_WALK_UNSUPPORTED
@@ -2044,6 +2122,75 @@ fn: lmx_walk_value_index_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; s
     out\context: c.lmx_value_address_context(arena, target, 0)
     return: c.LMX_WALK_OK
 end: lmx_walk_value_index_place
+
+# Slice 272: C sizeof of a value whose type is known only at run time, a free name: the size of its actual type's cell. A
+# reference is one pointer cell. Reading the record evaluates nothing. A contextual literal or a foreign by-value object has no
+# kernel cell size here.
+fn: lmx_walk_value_size (@: value c.LmxWalkValue; @: out size_t) int
+    @: probe_pointer void 0
+    size_t: size 0U
+    if: value = 0 || out = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE
+        \out: c.sizeof(probe_pointer)
+        return: c.LMX_WALK_OK
+    if: value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_UNSUPPORTED
+    size: lmx_walk_type_size((cast: (int) value\type))
+    if: size = 0U
+        return: c.LMX_WALK_UNSUPPORTED
+    \out: size
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_size
+
+# Slice 272: the machine cast of a runtime-typed value to a pointer (L2 section 20: not a checked conversion). A reference gives
+# its address, a number is taken as an address, as C casts them. A foreign by-value object has no such cast: the implicit `convert`.
+fn: lmx_walk_value_cast_address (@: value c.LmxWalkValue; @@: out void) int
+    size_t: number 0U
+    int: ty 0
+    if: value = 0 || out = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE
+        out[0]: value\ref
+        return: c.LMX_WALK_OK
+    if: value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: lmx_walk_value_number(value, @ number, @ ty) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    out[0]: (cast: (@: void) number)
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_cast_address
+
+# Slice 272: the operand of a machine cast of a runtime-typed value to a number: a number as it is, a reference's address as a
+# size_t number, as C casts a pointer. A foreign by-value object has no such cast: the implicit `convert`.
+fn: lmx_walk_value_cast_operand (@: value c.LmxWalkValue; @: out c.LmxWalkValue) int
+    if: value = 0 || out = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE
+        return: lmx_walk_value_num(out, c.LMX_TYPE_SIZE_T, (cast: (size_t) value\ref))
+    if: value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: out != value
+        c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_cast_operand
+
+# Slice 272: `length` of a runtime-typed value is the element count of the actual Array (the book, arrays).  Any other value is
+# the implicit `convert`; a present null is the implicit `interpreter`, as a typed Array value's null use.
+fn: lmx_walk_value_length (@: arena c.LmxArena; @: value c.LmxWalkValue; @: out size_t) int
+    if: arena = 0 || value = 0 || out = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: value\ref = 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    if: c.lmx_domain_kind(arena, value\ref) != c.LMX_KIND_ARRAY
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    @: array c.LmxArray (cast: (@: c.LmxArray) value\ref)
+    @: fields c.VoidArray @ array\array
+    out[0]: (cast: (size_t) fields\size)
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_length
 
 fn: lmx_walk_arg_write (@: f c.LmxWalkFrame; size_t: k; int: ty; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
     c.LmxWalkPlace: local
@@ -3864,26 +4011,6 @@ fn: lmx_walk_projection (@: f c.LmxWalkFrame; @: operand void; int: closed; @: o
     return: lmx_walk_projection_at(f, operand, closed, 0, out)
 end: lmx_walk_projection
 
-fn: lmx_walk_array_from (@: f c.LmxWalkFrame; @: operand void; int: write; @@: out c.LmxArray) int
-    c.LmxWalkValue: value
-    @: value_p c.LmxWalkValue @ value
-    int: status
-    \out: 0
-    status: c.lmx_walk_eval(f, operand, @ value)
-    if: status != c.LMX_WALK_OK
-        return: status
-    if: value_p\present = 0 || value_p\kind != c.LMX_WALK_VALUE_REFERENCE
-        return: c.LMX_WALK_INVALID
-    if: value_p\ref = 0
-        return: lmx_walk_fault(f)
-    if: lmx_walk_kind(f, (cast: (@: void) value_p\ref)) != c.LMX_KIND_ARRAY || c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (value_p\ref)) = 0
-        return: c.LMX_WALK_INVALID
-    if: write != 0 && c.lmx_walk_immutable(f, (value_p\ref)) != 0
-        return: c.LMX_WALK_INVALID
-    \out: (cast: (@: c.LmxArray) value_p\ref)
-    return: c.LMX_WALK_OK
-end: lmx_walk_array_from
-
 fn: lmx_walk_empty (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) int
     @: value c.Lmx c.lmx_node_new_owned((cast: (@: c.LmxArena) f\arena))
     if: value = 0
@@ -4584,13 +4711,16 @@ end: lmx_walk_exec_data
 
 fn: lmx_walk_index (@: f c.LmxWalkFrame; @: operand void; @: out size_t) int
     c.LmxWalkValue: value
-    @: value_p c.LmxWalkValue @ value
+    c.LmxWalkValue: taken
+    @: taken_p c.LmxWalkValue @ taken
     int: status c.lmx_walk_eval(f, operand, @ value)
     if: status != c.LMX_WALK_OK
         return: status
-    if: value_p\present = 0 || value_p\kind != c.LMX_WALK_VALUE_NUMBER || c.lmx_type_base((cast: (int) value_p\type)) != c.LMX_TYPE_SIZE_T
-        return: c.LMX_WALK_INVALID
-    \out: value_p\wide
+    # Slice 272: the one reception of a machine index, as native: another number or a reference is the implicit `convert`.
+    status: lmx_walk_value_receive(@ value, c.LMX_TYPE_SIZE_T, taken_p)
+    if: status != c.LMX_WALK_OK
+        return: status
+    \out: taken_p\wide
     return: c.LMX_WALK_OK
 end: lmx_walk_index
 
@@ -5828,6 +5958,31 @@ fn: lmx_walk_result_receive (@: f c.LmxWalkFrame; @: value c.LmxWalkValue) int
     return: c.LMX_WALK_OK
 end: lmx_walk_result_receive
 
+# Slice 272: a place frame whose selector is a field name, not a physical index.
+fn: lmx_walk_field_selector (@: f c.LmxWalkFrame; @: frame void) int
+    int: op lmx_walk_node(f, frame)
+    if: op != c.LMX_WALK_OP_OF && op != c.LMX_WALK_OP_PUT_OF
+        return: 0
+    @: selector void c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) frame), 2U)
+    if: selector = 0
+        return: 0
+    return: (cast: (int) (c.lmx_type_base(c.lmx_domain_type((cast: (@: c.LmxArena) f\arena), selector)) = c.LMX_TYPE_CHAR_PTR))
+end: lmx_walk_field_selector
+
+# Slice 272: the target of a write through a name selector: one selection of the held root's field, its coordinates kept for the store.
+fn: lmx_walk_field_target (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkPlace; @@: out_root c.Lmx; @: out_index size_t) int
+    c.LmxWalkValue: holder
+    @: holder_p c.LmxWalkValue @ holder
+    @: arena c.LmxArena (cast: (@: c.LmxArena) f\arena)
+    int: status lmx_walk_projection_at(f, c.lmx_graph_value_in(arena, code, 1U), 0, 0, @ holder)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status: lmx_walk_value_field_place(arena, holder_p, c.lmx_charptr_value_known(c.lmx_graph_value_in(arena, code, 2U)), out, out_root, out_index)
+    if: status = c.LMX_WALK_OK && c.lmx_walk_immutable(f, holder_p\ref) != 0
+        return: c.LMX_WALK_INVALID
+    return: status
+end: lmx_walk_field_target
+
 fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalkValue) int
     c.LmxWalkValue: value
     @: value_p c.LmxWalkValue @ value
@@ -5845,8 +6000,9 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
     int: slot_type 0
     @: want void 0
     @: leaf void 0
-    @: array c.LmxArray 0
+    @: write_target void 0
     size_t: index 0U
+    size_t: field_index 0U
     size_t: ua 0U
     size_t: ub 0U
     size_t: wv 0U
@@ -5860,7 +6016,6 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
     @: holder_fields c.VoidArray 0
     @: root_graph c.Lmx 0
     @: root_fields c.VoidArray 0
-    @: array_fields c.VoidArray 0
     @@: args void 0
     @: frame_result c.LmxWalkValue 0
     if: f = 0 || operand = 0 || out = 0
@@ -6006,10 +6161,15 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         # Select the physical place exactly once, then receive the value_p\
         # Fixed AT has no source evaluation; OF/DEREF/ELEM retain target-first
         # ordering. No write occurs before the complete RHS succeeds.
+        write_target: operand
         if: op = c.LMX_WALK_OP_PUT
-            status: lmx_walk_place(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), 1, @ place)
+            write_target: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)
+        ---
+        # Slice 272: a name selector keeps the selected field's coordinates for the store of the written value.
+        if: lmx_walk_field_selector(f, write_target) != 0
+            status: lmx_walk_field_target(f, (cast: (@: c.Lmx) write_target), @ place, @ wholder, @ field_index)
         else:
-            status: lmx_walk_place(f, operand, 1, @ place)
+            status: lmx_walk_place(f, write_target, 1, @ place)
         ---
         if: status != c.LMX_WALK_OK
             return: status
@@ -6031,7 +6191,11 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         if: value_p\present = 0
             c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
             return: c.LMX_WALK_OK
-        status: lmx_walk_value_store((cast: (@: c.LmxArena) f\arena), @ place, @ value)
+        if: wholder != 0
+            status: lmx_walk_value_field_store((cast: (@: c.LmxArena) f\arena), wholder, field_index, @ place, @ value)
+        else:
+            status: lmx_walk_value_store((cast: (@: c.LmxArena) f\arena), @ place, @ value)
+        ---
         if: status != c.LMX_WALK_OK
             return: status
         if: place_p\descriptor != 0
@@ -6308,11 +6472,15 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             return: lmx_walk_value_num(out, c.LMX_TYPE_INT, 0U)
         return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (c.lmx_int_value_known(leaf) = c.lmx_int_value_known(want))))
     if: op = c.LMX_WALK_OP_LENGTH
-        status: lmx_walk_array_from(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), 0, @ array)
+        status: c.lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        array_fields: @ array\array
-        return: lmx_walk_value_num(out, c.LMX_TYPE_SIZE_T, (cast: (size_t) array_fields\size))
+        status: lmx_walk_value_length((cast: (@: c.LmxArena) f\arena), @ value, @ ua)
+        if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+            return: lmx_walk_fault(f)
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_value_num(out, c.LMX_TYPE_SIZE_T, ua)
     if: op = c.LMX_WALK_OP_PAD
         return: c.LMX_WALK_OK
     return: c.LMX_WALK_INVALID

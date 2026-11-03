@@ -21,6 +21,13 @@
 Автор передаёт реализацию Opus по [to_opus.md](to_opus.md); Codex остаётся
 консультантом. Первоначальное назначение Fable и старые очереди ниже исторические.
 
+Редакция 31 (2026-11-03 UTC, Opus, срез 272). Свободное значение у потребителей с
+известным C ABI; запись поля по имени от FREE-значения проходит допуск к модели слота
+(`lmx_implements_receive_cell`, модель объявления теперь есть и у ссылочного поля) и перепривязывает
+прямой слот; `length` читает фактический Array; свидетели адреса и записи descriptor/DESC-места.
+boot134b G1/G2 сверены, G2 focus 36/0, G2-наблюдение 22 пройденных тела.
+[Срез 272](steps/witnesses/fix272-20261103/notes.md).
+
 Редакция 30 (2026-11-03 UTC, Opus, срез 271). Написанный INDEX на удержанном
 FREE-значении сохраняется до достигнутой операции; native и walker выбирают его
 фактическое место общим `lmx_walk_value_index_place`. Array — обычная привязка
@@ -39,7 +46,7 @@ FREE-значении сохраняется до достигнутой опе�
 | §4.2 throws | Общий reached-call obligation действует263/264, implicit status исправлен268. В maintained emit ещё есть body_throws_stmts/body_throws/throws_close: удаление прогноза и общий статический/динамический контракт обязательны. |
 | §4.3 M2/call | 264 удалил44 forecast functions и M2-state. check_struct_call/check_call_data теперь удерживают реальные operands/site, inert=0; оставшиеся имена функций не означают прежний сертификат тела. |
 | §4.4 native reset | Kernel253: actual cell-to-code links и prepare→write→commit; ordinary data writes сохраняют native. Общая финальная интеграция и роли ещё проверяются по consumers. |
-| §4.5 free inputs | 254 resolver;255–261 runtime consumers;262 удалил transitive name/type worklist, заголовок задаётся собственными свободными именами выбранного callee. 270 named paths;271 INDEX. Raw-only, descriptor/DESC witnesses и оставшиеся place consumers открыты. |
+| §4.5 free inputs | 254 resolver;255–261 runtime consumers;262 удалил transitive name/type worklist, заголовок задаётся собственными свободными именами выбранного callee. 270 named paths;271 INDEX;272 known C ABI, named field store, length, descriptor/DESC witnesses. Source-occurrence и оставшиеся place consumers открыты. |
 | §4.6 D-105/admission | 260 graph receive,263–266 actual call/data admission,270 named reception. Полное устранение proof-only/UNKNOWN/preflight остатка ещё не объявлено. |
 | §4.7 split/immutable forecasts | 264 снял address-escape и immutable-call forecasts; copy_calls_verify/check_immutable_calls отсутствуют. split_close теперь упаковывает declared place rows, а не предсказывает будущие тела. Общая классификация/collector остаётся. |
 | §4.8 walker | Достигнутые operations используют общий runtime; нет права предварительно обходить будущие ветви/тела. Полная замена оставшихся подготовительных семантических дублей открыта. |

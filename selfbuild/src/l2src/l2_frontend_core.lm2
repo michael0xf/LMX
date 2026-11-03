@@ -14200,6 +14200,16 @@ fn: lm_compiler_emit_ns_names (int: ni; const: (@: holder char); const: (@: ind 
                     return: 1
                 ---
             ---
+            # Slice 272: a reference field's declared Structure belongs to its slot as well: a write by name from a runtime-typed
+            # holder is admitted to it (lmx_walk_value_field_store).
+            if: nsf_kind_cell[0][fx] = 10 && c.lm_compiler_nsf_pointee(fx) >= 0
+                int: pointee_token c.lm_compiler_schema_token_slot(c.lm_compiler_nsf_pointee(fx))
+                if: pointee_token >= 0
+                    if: c.fprintf(output[0], "%sif: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) %s), (cast: (@: void) (l2_layout_tokens + %d))) != 0\n", ind, key, pointee_token) < 0 || c.lm_compiler_emit_source_failure(ind, fail, fail2) != 0
+                        return: 1
+                    ---
+                ---
+            ---
             if: nsf_kind_cell[0][fx] = 0 || nsf_kind_cell[0][fx] = 1 || nsf_kind_cell[0][fx] = 5 || nsf_kind_cell[0][fx] = 6 || nsf_kind_cell[0][fx] = 7 || nsf_kind_cell[0][fx] = 8 || nsf_kind_cell[0][fx] = 9 || (nsf_kind_cell[0][fx] >= 10 && nsf_fname_cell[0][fx] != 0)
                 if: c.sprintf(key, "lmx_arena_ref_value(%s, %uU)", holder, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_source_name(key, nsf_fname_cell[0][fx], ind, fail, fail2) != 0
                     return: (cast: (int) (1))

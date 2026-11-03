@@ -233,3 +233,12 @@ hashed, 245 raw-equal and 3 PE metadata-only. This is a whole-pipeline
 measurement, not a controlled translation-speed comparison; no cause is
 claimed for the difference from boot132c's 879.95 s.
 [Commands, results and hashes](steps/witnesses/fix271-20261103/notes.md).
+
+## Slice272 / boot134b (Opus, 2026-11-03)
+
+Whole quick 1105.43 s: 15:07:14.6776444Z–15:25:40.1074512Z, both generations
+smoke 9/0. G2 focus 36/0, 231.30 s: 15:26:32.8514172Z–15:30:24.1524334Z.
+Source 188/B9CCD9A5; all 248 artifact paths per generation independently
+hashed, 245 raw-equal and 3 PE metadata-only. This is a whole-pipeline
+measurement, not a controlled translation-speed comparison.
+[Commands, results and hashes](steps/witnesses/fix272-20261103/notes.md).

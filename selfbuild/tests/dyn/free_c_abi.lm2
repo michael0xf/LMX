@@ -1,0 +1,168 @@
+# Slice 272: a free (runtime-typed) value at raw consumers whose C contract is known.  A predef document's declaration, body-less
+# at its root or in a prototype frame, names a C door call's parameter and result types: the actual is received by the parameter's
+# type, a declared result beside or into a free name is a typed value record.  A machine cast of a free value reads the record,
+# to a pointer and to a number.  C sizeof of a free name is the size of its actual value's cell.  Both executors receive a machine
+# index by one admission: another number is the implicit `convert`.  A U literal beside a free operand keeps its spelling in the
+# walked body too.  Bodies with a C door or a cast to a pointer stay native under --walk-methods; m and the outer_ methods walk.
+# Entry 7; 81.. name the failing check.
+predef: "l1src/libc_abi.lm1"
+predef: "l2src/lmx_arena.h.lm1"
+int: quote 11
+fn: door_length () size_t
+    return: c.strlen(quote)
+end: door_length
+fn: door_write () int
+    int: source 7
+    c.memcpy(@ quote, @ source, c.sizeof(source))
+    return: quote
+end: door_write
+fn: beside_result () int
+    return: quote + c.lmx_type_base(2)
+end: beside_result
+fn: into_number () int
+    quote: c.lmx_type_base(7)
+    return: quote
+end: into_number
+fn: into_pointer () char
+    @: text char "abc"
+    quote: c.strchr(text, 98)
+    return: \quote
+end: into_pointer
+fn: same_pointer (@: text char) int
+    if: quote = c.strchr(text, 98)
+        return: 1
+    return: 0
+end: same_pointer
+fn: to_pointer () int
+    @: p int (cast: (@: int) quote)
+    return: \p
+end: to_pointer
+fn: number_to_pointer () size_t
+    @: p void (cast: (@: void) quote)
+    return: (cast: (size_t) p)
+end: number_to_pointer
+fn: to_number () size_t
+    return: (cast: (size_t) quote)
+end: to_number
+fn: size_of () size_t
+    return: c.sizeof(quote)
+end: size_of
+fn: index_value () int
+    []: int a 3
+    a[quote]: 7
+    a[quote + 1U]: a[quote]
+    return: a[quote + 1U]
+end: index_value
+fn: plus_u () size_t
+    return: quote + 1U
+end: plus_u
+fn: outer_text () int
+    @: quote char "abcdefg"
+    if: door_length() != 7U
+        return: 81
+    if: c.sizeof(quote) != size_of()
+        return: 82
+    return: 0
+end: outer_text
+fn: outer_write () int
+    int: quote 5
+    if: door_write() != 7
+        return: 83
+    if: quote != 5
+        return: 84
+    if: c.sizeof(quote) != size_of()
+        return: 85
+    return: 0
+end: outer_write
+fn: outer_result () int
+    int: quote 5
+    if: beside_result() != 7
+        return: 86
+    if: into_number() != 7
+        return: 87
+    return: 0
+end: outer_result
+fn: outer_found () int
+    @: quote char "x"
+    if: (cast: (int) into_pointer()) != 98
+        return: 88
+    return: 0
+end: outer_found
+fn: outer_same () int
+    @: text char "abc"
+    @: quote char c.strchr(text, 98)
+    if: same_pointer(text) != 1
+        return: 89
+    return: 0
+end: outer_same
+fn: outer_cast () int
+    int: cell 7
+    @: quote void (cast: (@: void) (@ cell))
+    if: to_pointer() != 7
+        return: 91
+    if: to_number() != (cast: (size_t) (@ cell))
+        return: 92
+    return: 0
+end: outer_cast
+fn: outer_cast_number () int
+    size_t: quote 16U
+    if: number_to_pointer() != 16U
+        return: 93
+    if: to_number() != 16U
+        return: 94
+    if: c.sizeof(quote) != size_of()
+        return: 95
+    return: 0
+end: outer_cast_number
+fn: outer_index () int
+    size_t: quote 1U
+    if: index_value() != 7
+        return: 96
+    if: plus_u() != 2U
+        return: 97
+    return: 0
+end: outer_index
+fn: outer_index_int () int
+    int: quote 1
+    int: got 0
+    ---
+        got: index_value()
+        catch: convert ()
+            got: 90
+    ---
+    if: got != 90
+        return: 98
+    return: 0
+end: outer_index_int
+fn: m () int
+    int: r outer_text()
+    if: r != 0
+        return: r
+    r: outer_write()
+    if: r != 0
+        return: r
+    r: outer_result()
+    if: r != 0
+        return: r
+    r: outer_found()
+    if: r != 0
+        return: r
+    r: outer_same()
+    if: r != 0
+        return: r
+    r: outer_cast()
+    if: r != 0
+        return: r
+    r: outer_cast_number()
+    if: r != 0
+        return: r
+    r: outer_index()
+    if: r != 0
+        return: r
+    r: outer_index_int()
+    if: r != 0
+        return: r
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -3076,6 +3076,10 @@ no activation value is not supported yet` (`l2_colon_hidden_write`). Грани�
 дефект общего разрешения роли головы и пути (K03), а не исключение для
 `node` и не частное правило M1 для голого атома.
 
+2026-11-03, срез 272: запись тем же путём через свободное имя (`quote\A: B`) идёт по
+этой норме в обоих исполнителях ([запись среза](witnesses/fix272-20261103/notes.md)).
+Типизированный путь по-прежнему читается как вызов; дефект остаётся открытым.
+
 <a id="own-literal-address-initial-value"></a>
 ### OWN-LITERAL-ADDRESS-INITIAL-VALUE — 2026-10-14, Codex, OPEN
 

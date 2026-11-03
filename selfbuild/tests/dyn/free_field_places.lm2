@@ -1,0 +1,149 @@
+# Slice 272: a field selected by name from a runtime-typed holder, the same store in native and walker.  A path with a tail passes
+# the value to the existing field after the ordinary admission (the book, construction): a Structure is admitted to the model the
+# slot declares, so that a typed reader finds it; `implements` at the write when it does not fit, the slot keeping its value; a
+# number at a reference field is `convert`, the literal 0 the present null.  The address of an Array field's descriptor slot and
+# `length` of a runtime-typed value read the actual value.  No write here changes code: free_slot_rebind.lm2 rebinds direct slots.
+# Entry 7; 81.. name the failing check.
+Inner:
+    int: y 3
+end: Inner
+Other:
+    int: y 7
+end: Other
+Wrong:
+    int: z 1
+end: Wrong
+Box:
+    Inner: ref
+    []: int items 7
+end: Box
+int: quote 11
+int: slot 0
+sub: put_ref ()
+    quote\ref: Other
+end: put_ref
+sub: put_ref_wrong ()
+    quote\ref: Wrong
+end: put_ref_wrong
+sub: put_ref_number ()
+    quote\ref: 5
+end: put_ref_number
+sub: put_ref_null ()
+    quote\ref: 0
+end: put_ref_null
+fn: read_ref () int
+    return: quote\ref\y
+end: read_ref
+fn: ref_address () int
+    @@: pp Inner 0
+    pp: @ (quote\ref)
+    @: p Inner \pp
+    return: p\y
+end: ref_address
+fn: size_items () size_t
+    return: length(quote\items)
+end: size_items
+fn: size_self () size_t
+    return: length(quote)
+end: size_self
+fn: slot_element () int
+    return: slot[0U][1U]
+end: slot_element
+fn: slot_size () size_t
+    return: length(\slot)
+end: slot_size
+fn: through_slot () int
+    @: slot void (cast: (@: void) (@ (quote\items)))
+    if: slot_element() != 7
+        return: 81
+    if: slot_size() != 7U
+        return: 82
+    return: 0
+end: through_slot
+fn: outer_address () int
+    Box\items[1U]: 7
+    @: quote Box Box
+    return: through_slot()
+end: outer_address
+fn: outer_ref () int
+    @: quote Box Box
+    int: caught 0
+    put_ref()
+    if: Box\ref\y != 7 || read_ref() != 7 || ref_address() != 7
+        return: 83
+    ---
+        put_ref_wrong()
+        catch: implements ()
+            caught: 1
+    ---
+    if: caught != 1 || Box\ref\y != 7
+        return: 84
+    ---
+        put_ref_number()
+        catch: convert ()
+            caught: 2
+    ---
+    if: caught != 2 || read_ref() != 7
+        return: 85
+    put_ref_null()
+    ---
+        caught: read_ref()
+        catch: interpreter ()
+            caught: 3
+    ---
+    if: caught != 3
+        return: 86
+    if: size_items() != 7U
+        return: 87
+    return: 0
+end: outer_ref
+fn: outer_array () int
+    []: int quote 5
+    if: size_self() != 5U
+        return: 88
+    return: 0
+end: outer_array
+fn: outer_number () int
+    int: quote 5
+    size_t: caught 0U
+    ---
+        caught: size_self()
+        catch: convert ()
+            caught: 1U
+    ---
+    if: caught != 1U
+        return: 89
+    return: 0
+end: outer_number
+fn: outer_structure () int
+    @: quote Inner Inner
+    size_t: caught 0U
+    ---
+        caught: size_self()
+        catch: convert ()
+            caught: 1U
+    ---
+    if: caught != 1U
+        return: 90
+    return: 0
+end: outer_structure
+fn: m () int
+    int: status outer_address()
+    if: status != 0
+        return: status
+    status: outer_ref()
+    if: status != 0
+        return: status
+    status: outer_array()
+    if: status != 0
+        return: status
+    status: outer_number()
+    if: status != 0
+        return: status
+    status: outer_structure()
+    if: status != 0
+        return: status
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

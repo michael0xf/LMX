@@ -1,0 +1,105 @@
+# Slice 272: a slot holding a Structure or an Array directly, written by name from a runtime-typed holder.  It is rebound as PUT_REF
+# rebinds it, after the ordinary admission: a Structure to the model the slot declares (`implements` when it does not fit, the slot
+# keeping its value), an Array by an Array of the same element type, anything else `convert`.  Typed readers see the written value.
+# A rebinding of a named Structure's slot is a write of code: the runtime drops the native words above it, so the bodies after the
+# first write run walked in the native build too, and none of them holds a machine operation.  Entry 7; 81.. name the failing check.
+Other:
+    int: y 7
+end: Other
+Wrong:
+    int: z 1
+end: Wrong
+Fresh:
+    []: int items 3
+end: Fresh
+Bytes:
+    []: char items 2
+end: Bytes
+Box:
+    kid:
+        int: y 3
+    end: kid
+    []: int items 7
+end: Box
+int: quote 11
+sub: put_kid ()
+    quote\kid: Other
+end: put_kid
+sub: put_kid_wrong ()
+    quote\kid: Wrong
+end: put_kid_wrong
+fn: read_kid () int
+    return: quote\kid\y
+end: read_kid
+fn: kid_address () int
+    @@: pp Other 0
+    pp: @ (quote\kid)
+    @: p Other \pp
+    return: p\y
+end: kid_address
+sub: put_items ()
+    quote\items: Fresh\items
+end: put_items
+sub: put_items_struct ()
+    quote\items: Other
+end: put_items_struct
+sub: put_items_bytes ()
+    quote\items: Bytes\items
+end: put_items_bytes
+fn: read_items () int
+    return: quote\items[1U]
+end: read_items
+fn: size_items () size_t
+    return: length(quote\items)
+end: size_items
+fn: outer_kid () int
+    @: quote Box Box
+    int: caught 0
+    put_kid()
+    if: Box\kid\y != 7 || read_kid() != 7 || kid_address() != 7
+        return: 81
+    ---
+        put_kid_wrong()
+        catch: implements ()
+            caught: 1
+    ---
+    if: caught != 1 || read_kid() != 7
+        return: 82
+    return: 0
+end: outer_kid
+fn: outer_items () int
+    @: quote Box Box
+    int: caught 0
+    if: size_items() != 7U
+        return: 83
+    Fresh\items[1U]: 7
+    put_items()
+    if: Box\items[1U] != 7 || read_items() != 7 || size_items() != 3U
+        return: 84
+    ---
+        put_items_struct()
+        catch: convert ()
+            caught: 1
+    ---
+    if: caught != 1
+        return: 85
+    ---
+        put_items_bytes()
+        catch: convert ()
+            caught: 2
+    ---
+    if: caught != 2 || read_items() != 7
+        return: 86
+    return: 0
+end: outer_items
+fn: m () int
+    int: status outer_kid()
+    if: status != 0
+        return: status
+    status: outer_items()
+    if: status != 0
+        return: status
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

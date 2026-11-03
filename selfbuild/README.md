@@ -6,8 +6,17 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 185 inputs (65 source files, 34 tools and
-86 tests). Slice271 keeps a written INDEX on a held free value until the
+The selected package contains 188 inputs (65 source files, 34 tools and
+89 tests). Slice272 gives a free value its remaining known consumers. A C call
+with a declaration in a predef document takes it as an actual and gives its
+declared result beside it; cast, `c.sizeof`, index and `length` read the actual
+value. A field selected by name from a free holder is written after the ordinary
+admission: a Structure against the model the slot declares, `implements` when it
+does not fit and the slot keeps its value; a number is `convert`, the literal 0 a
+present null; a slot holding a Structure or an Array directly is rebound by a
+value of the same kind. Native and walker share `lmx_walk_value_field_store`.
+
+Slice271 keeps a written INDEX on a held free value until the
 reached operation. Native and walker select its actual place through the one
 kernel operation `lmx_walk_value_index_place`: an Array uses its descriptor's
 metadata, a machine pointer uses the same actual classification as DEREF. Read,
@@ -25,22 +34,22 @@ Native and walker share actual named-place selection, reception and store.
 A consumed numeric receiver uses one prepared expression and the common
 runtime value receiver. There is no separate var parser or hidden graph.
 
-The whole quick bootstrap took 1119.42 seconds; G1 and G2 each passed 9 smoke
-rows. G2 passed 33 focused rows. Separate G2 observation checked 7 genuinely
-walked bodies with exact counts on both roots, including 12 executions of
-read_int, and native walks none of them. All 185 published source hashes equal
-the frozen tested input byte for byte. The 248 generation inventories are
-identical: 245 raw-equal files and 3 PE files differing only in link metadata.
-[Sources and checks](../steps/witnesses/fix271-20261103/notes.md).
+The whole quick bootstrap took 1105.43 seconds; G1 and G2 each passed 9 smoke
+rows. G2 passed 36 focused rows. Separate G2 observation checked 22 genuinely
+walked bodies with exact counts on both roots, and native walks none of them.
+All 188 published source hashes equal the frozen tested input byte for byte. The
+248 generation inventories are identical: 245 raw-equal files and 3 PE files
+differing only in link metadata.
+[Sources and checks](../steps/witnesses/fix272-20261103/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `b789659816eb2bdd6bf0b51562e40693b0d6144e6c5b4aecfcd42e07b101782b` |
-| Input manifest | `66b15db1b3ba4543c11cf99cd49f27c10677302e45b97f0b756fa38f0c43b5c8` |
-| Working tool | `743fa9d478db1e18719140fd63a9e254b646ba28cd0762b9293470b2e2371850` |
-| G2 frontend | `71f8b555695cbf8195ad5105d22a795e3d1ca5f5577f5700afe608a2f0b744d9` |
-| Production runtime | `b27649dc650501c116e4e1162739f3c6c8cbbec70e7e3390d95d0512dc9dbcd0` |
-| Observation runtime | `9dd49f04fb886b14fa8b76b39ffa5f1affdd5a42e94a89a6d3c9ada4edb3c8a8` |
+| Input list | `69b70ac8b9ffbc4618fc5d0ddce43e74857c4f561baf5050447832913c700ee4` |
+| Input manifest | `b9ccd9a50c72e4d0dcd14193ee70c797671a60ec720f1324f91149394a08722b` |
+| Working tool | `f4b4ae5db4b47b05a306a4f6b0794a30f67d2de2db1f4c0e8bb4ec8c420e56e5` |
+| G2 frontend | `c2ea29ac1de629a67dff67464f2cc9c77a32db95d3ad7f80d866087d3cd81fa2` |
+| Production runtime | `4ec41ad7c5f9627d988dd0fdd0d92f5c5110197fb30c90a8e5bf38a335c299c7` |
+| Observation runtime | `05f9d39593efd7e203f153426e59a50ae1a8cf856c22c06546d4f04f1f19e180` |
 
 [Slice 270](../steps/witnesses/fix270-20261103/notes.md) contained 184 inputs,
 manifest `B9AF771A…`, tested on the frozen `E4D1E376…`: 182 files raw-equal,
@@ -107,20 +116,20 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot133a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-tp133/tool133b/lmxtool-tool.exe` (`9FC96760…`, built by `rebuild tool`
-from this package's tool sources with boot132c's G2 frontend and runtime),
-previous frontend `cold-boot132c/quick132c/g2/frontend/l2trans.exe`
-(`FA22765B…`, the G2 frontend of slice270) with its adjacent backend
-(`A407720C…`) and libc (`AF9FDAE3…`), and BASE
+boot134b selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-tp134/tool134c/lmxtool-tool.exe` (`861FB1EF…`, built by `rebuild tool`
+from this package's tool sources with boot133a's G2 frontend and runtime),
+previous frontend `cold-boot133a/quick133a/g2/frontend/l2trans.exe`
+(`71F8B555…`, the G2 frontend of slice271) with its adjacent backend
+(`DCD388FB…`) and libc (`AF9FDAE3…`), and BASE
 `cold-candidate48/full48/g2/frontend`. Its promoted working tool is
-`cold-boot133a/quick133a/lmxtool.exe` (`743FA9D4…`), the G2 tool, with
+`cold-boot134b/quick134b/lmxtool.exe` (`F4B4AE5D…`), the G2 tool, with
 `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot133a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-03, 12:08:22–12:27:02Z, 1119 s): `BOOTSTRAP quick 0 failures`. G0
+boot134b passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-03, 15:07:14–15:25:40Z, 1105 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's

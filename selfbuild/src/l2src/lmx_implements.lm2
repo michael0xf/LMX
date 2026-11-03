@@ -4470,27 +4470,39 @@ sub: lmx_implements_call_places_close (@: arena c.LmxArena; @: scope c.LmxCallPl
     ---
 end: lmx_implements_call_places_close
 
-# Receive a reached Structure write into the selected data field. Its
-# declaration belongs to the slot and survives earlier assignments there.
+# Receive a reached reference write into a physical field slot. Its
+# declaration belongs to the slot and survives earlier assignments there:
+# a reference to anything but a Structure does not fit it, the implicit `convert`.
+fn: lmx_implements_receive_cell (@: arena c.LmxArena; @: cell void; @: value void) int
+    if: arena = 0
+        return: c.LMX_WALK_INVALID
+    if: cell = 0 || value = 0
+        return: c.LMX_WALK_OK
+    @: row c.LmxSourceName c.lmx_source_places(arena, cell)
+    if: row = 0 || row\model_layout = 0
+        return: c.LMX_WALK_OK
+    @: model c.Lmx lmx_implements_model_for_layout(arena, (cast: (@: void) row\model_layout))
+    if: model = 0
+        return: c.LMX_WALK_UNSUPPORTED
+    if: c.lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status lmx_implements_admit_receiving_templates(arena, (cast: (@: c.Lmx) value), model, 0, 0U, 0, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer = c.LMX_IMPLEMENTS_NO
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+    return: c.LMX_WALK_OK
+end: lmx_implements_receive_cell
+
+# Receive a reached Structure write into the selected data field of an open call scope.
 fn: lmx_implements_receive_data_field (@: arena c.LmxArena; @: data c.Lmx; size_t: slot; @: value c.Lmx) int
     if: arena = 0 || data = 0
         return: c.LMX_WALK_INVALID
     @: scope c.LmxCallPlaces arena\call_places
     if: scope = 0 || scope\data != data || value = 0
         return: c.LMX_WALK_OK
-    @: row c.LmxSourceName c.lmx_source_places(arena, (cast: (@: void) c.lmx_graph_cell_in(arena, data, slot)))
-    if: row = 0 || row\model_layout = 0
-        return: c.LMX_WALK_OK
-    @: model c.Lmx lmx_implements_model_for_layout(arena, (cast: (@: void) row\model_layout))
-    if: model = 0
-        return: c.LMX_WALK_UNSUPPORTED
-    int: answer c.LMX_IMPLEMENTS_UNKNOWN
-    int: status lmx_implements_admit_receiving_templates(arena, value, model, 0, 0U, 0, @ answer)
-    if: status != c.LMX_WALK_OK
-        return: status
-    if: answer = c.LMX_IMPLEMENTS_NO
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
-    return: c.LMX_WALK_OK
+    return: lmx_implements_receive_cell(arena, (cast: (@: void) c.lmx_graph_cell_in(arena, data, slot)), (cast: (@: void) value))
 end: lmx_implements_receive_data_field
 
 fn: lmx_implements_places (@: arena c.LmxArena; @: data c.Lmx; @: tokens char; @: slot_table size_t; @: out size_t) int

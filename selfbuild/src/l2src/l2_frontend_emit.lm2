@@ -7002,7 +7002,13 @@ fn: lm_compiler_rw_primary_value (@: value c.L2ValueSpan; int: parent; @: out in
     if: role = 2
         if: c.lm_compiler_primary_array_value(value, rw_mi_cell[0], @ operand) != 0
             return: (cast: (int) (c.lm_compiler_rw_refuse((cast: (const: @: c.LmP0Node) (value\node)), "an Array value")))
-        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || lm_compiler_rw_evaluate_span(@ operand, (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_array_desc_ty()))), (cast: (int) (\out)), @ child) != 0
+        # Slice 272: a runtime-typed Array is evaluated as it is.
+        int: exact_type -1
+        type: (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_array_desc_ty())))
+        if: c.lm_compiler_value_span_type(@ operand, rw_mi_cell[0], @ exact_type) = -20
+            type: c.lm_compiler_free_own()
+        ---
+        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0 || lm_compiler_rw_evaluate_span(@ operand, type, (cast: (int) (\out)), @ child) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 1, child)))
     if: c.lm_compiler_primary_cast_value(value, @ type, 0, @ operand) != 0
@@ -10326,6 +10332,21 @@ fn: lm_compiler_rw_span (@: span c.L2ValueSpan; int: ty; int: parent; @: out int
     return: (cast: (int) (status))
 end: lm_compiler_rw_span
 
+# Slice 272: the receiving type of one side of an operation over a runtime-typed operand: a U literal keeps its spelling in the
+# ordinary LIT carrier (FREE: lm_compiler_rw_tlit), as native makes lmx_walk_value_lit of it; any other side is typed int here.
+fn: lm_compiler_rw_dyn_side_ty (@: tok c.L2ValueSpan; int: lo; int: hi) int
+    @: leaf c.L2ValueSpan tok + lo
+    int: neg 0
+    int: usuf 0
+    size_t: mag 0U
+    if: lo = hi && leaf\count = 1 && leaf\node != 0 && leaf\node\kind = c.LM_P0_NODE_ATOM && leaf\node\as != 0
+        if: c.lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) (leaf\node\as\atom)), @ neg, @ mag, @ usuf) != 0 && usuf != 0
+            return: c.lm_compiler_free_own()
+        ---
+    ---
+    return: 0
+end: lm_compiler_rw_dyn_side_ty
+
 # Original: l2src/l2trans.lm1:29573
 fn: lm_compiler_rw_bin (@: tok c.L2ValueSpan; int: lo; int: hi; int: ty; int: parent; @: out int) int
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
@@ -10377,8 +10398,8 @@ fn: lm_compiler_rw_bin (@: tok c.L2ValueSpan; int: lo; int: hi; int: ty; int: pa
     # site: the native emission runs it through lmx_walk_value_bin, not the int path.
     if: c.lm_compiler_value_expr_type(tok, lo, hi, rw_mi_cell[0], @ machine_type) = -20
         ot: 0 - 20
-        left_ty: 0
-        right_ty: 0
+        left_ty: lm_compiler_rw_dyn_side_ty(tok, lo, best - 1)
+        right_ty: lm_compiler_rw_dyn_side_ty(tok, best + 1, hi)
     ---
     # `+` or `-` whose result is a reference is C address arithmetic.
     if: bestp = 9 && c.lm_compiler_oc_is_ref(ty) != 0

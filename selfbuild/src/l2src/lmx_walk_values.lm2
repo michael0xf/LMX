@@ -1977,6 +1977,74 @@ fn: lmx_value_array_place (@: arena c.LmxArena; @: array c.LmxArray; size_t: ind
     return: c.LMX_WALK_OK
 end: lmx_value_array_place
 
+# INDEX consumes an already evaluated reference and received size_t index.
+# Array cells use the descriptor's actual element metadata. Machine pointers
+# use the same actual pointee classifier as DEREF; no lexical type is invented.
+fn: lmx_walk_value_index_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; size_t: index; @: out c.LmxWalkPlace) int
+    int: status
+    int: kind
+    int: ty
+    size_t: stride 0U
+    size_t: offset 0U
+    @: target void 0
+    @: owner c.LmxWalkValue 0
+    @: interval c.LmxRange 0
+    if: holder = 0 || out = 0 || holder\present = 0
+        return: c.LMX_WALK_INVALID
+    if: holder\kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: holder\ref = 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    kind: (cast: (int) c.lmx_domain_kind(arena, holder\ref))
+    if: kind = c.LMX_KIND_ARRAY
+        return: lmx_value_array_place(arena, (cast: (@: c.LmxArray) holder\ref), index, out)
+    if: kind = c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    status: lmx_walk_value_deref_actual(arena, holder, out)
+    if: status != c.LMX_WALK_OK || index = 0U
+        return: status
+    owner: holder\referent
+    if: owner != 0 && lmx_walk_value_storage(owner) = holder\ref
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    ty: c.lmx_type_base((cast: (int) out\type))
+    stride: c.lmx_range_stride(arena, holder\ref)
+    if: stride = 0U
+        if: ty = c.LMX_TYPE_CHAR || ty = c.LMX_TYPE_UNSIGNED_CHAR
+            stride: c.sizeof(c.char)
+        if: ty = c.LMX_TYPE_INT
+            stride: c.sizeof(c.int)
+        if: ty = c.LMX_TYPE_UNSIGNED
+            unsigned: probe_unsigned 0U
+            stride: c.sizeof(probe_unsigned)
+        if: ty = c.LMX_TYPE_SIZE_T
+            stride: c.sizeof(index)
+        if: ty = c.LMX_TYPE_ULONG
+            ulong: probe 0U
+            stride: c.sizeof(probe)
+        if: ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR || ty >= c.LMX_TYPE_POINTER_BASE
+            stride: c.sizeof(target)
+        ---
+    ---
+    if: stride = 0U
+        return: c.LMX_WALK_UNSUPPORTED
+    if: index > c.SIZE_MAX / stride
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    offset: index * stride
+    if: (cast: (size_t) holder\ref) > c.SIZE_MAX - offset
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    target: (cast: (@: void) ((cast: (@: char) holder\ref) + offset))
+    interval: c.lmx_range_entry_at(arena, holder\ref)
+    if: interval != 0
+        if: c.lmx_range_entry_at(arena, target) != interval || c.lmx_range_type_of(arena, target) != out\type
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        ---
+    ---
+    out\address: target
+    out\storage: target
+    out\context: c.lmx_value_address_context(arena, target, 0)
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_index_place
+
 fn: lmx_walk_arg_write (@: f c.LmxWalkFrame; size_t: k; int: ty; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
     c.LmxWalkPlace: local
     @: place c.LmxWalkPlace @ local
@@ -3522,13 +3590,15 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
             return: lmx_walk_fault(f)
         return: status
     if: op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_ELEMPUT
-        status: lmx_walk_array_from(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), write, @ array)
+        status: c.lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ holder)
         if: status != c.LMX_WALK_OK
             return: status
         status: lmx_walk_index(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U), @ index)
         if: status != c.LMX_WALK_OK
             return: status
-        status: lmx_value_array_place((cast: (@: c.LmxArena) f\arena), array, index, out)
+        status: lmx_walk_value_index_place((cast: (@: c.LmxArena) f\arena), @ holder, index, out)
+        if: status = c.LMX_WALK_OK && write != 0 && c.lmx_walk_immutable(f, holder_p\ref) != 0
+            return: c.LMX_WALK_INVALID
         if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
             return: lmx_walk_fault(f)
         return: status

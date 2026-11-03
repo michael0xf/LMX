@@ -1,0 +1,154 @@
+# Slice 271: a held hidden input supplies the actual Array or pointer.
+# The same INDEX place is read, written and addressed in native and walker.
+int: quote 0
+size_t: at 0U
+fn: read_int () int
+    return: quote[at]
+end: read_int
+fn: read_size () size_t
+    return: quote[at]
+end: read_size
+sub: write_nine ()
+    quote[at]: 9
+end: write_nine
+fn: address_int () int
+    @: p int @ quote[at]
+    \p: 12
+    return: \p
+end: address_int
+fn: outer_pointer () int
+    int: cell 5
+    @: quote int @ cell
+    size_t: at 0U
+    if: read_int() != 5
+        return: 81
+    write_nine()
+    if: read_int() != 9
+        return: 82
+    if: address_int() != 12 || read_int() != 12
+        return: 83
+    if: cell != 5
+        return: 84
+    return: 0
+end: outer_pointer
+fn: outer_size () int
+    size_t: cell 4294967296U
+    @: quote size_t @ cell
+    size_t: at 0U
+    if: read_size() != 4294967296U
+        return: 85
+    int: caught 0
+    ---
+        caught: read_int()
+        catch: convert ()
+            caught: 90
+    ---
+    if: caught != 90
+        return: 86
+    return: 0
+end: outer_size
+fn: outer_array () int
+    []: int quote 3
+    quote[0U]: 3
+    quote[1U]: 4
+    quote[2U]: 7
+    size_t: at 1U
+    if: read_int() != 4
+        return: 87
+    write_nine()
+    if: read_int() != 9
+        return: 88
+    if: address_int() != 12 || read_int() != 12
+        return: 89
+    at: 3U
+    int: caught 0
+    ---
+        caught: read_int()
+        catch: interpreter ()
+            caught: 90
+    ---
+    if: caught != 90
+        return: 91
+    return: 0
+end: outer_array
+fn: outer_number () int
+    int: quote 7
+    size_t: at 0U
+    int: caught 0
+    ---
+        caught: read_int()
+        catch: convert ()
+            caught: 90
+    ---
+    if: caught != 90
+        return: 92
+    return: 0
+end: outer_number
+# Neither the caller nor a forwarder needs to read the Array to bind it.
+sub: relay_nine ()
+    write_nine()
+end: relay_nine
+fn: outer_array_only () int
+    []: int quote 2
+    size_t: at 1U
+    relay_nine()
+    if: read_int() != 9
+        return: 93
+    return: 0
+end: outer_array_only
+fn: outer_pointer_offset () int
+    []: int cells 3
+    cells[0U]: 3
+    cells[1U]: 17
+    cells[2U]: 7
+    @: quote int @ cells[0U]
+    size_t: at 1U
+    if: read_int() != 17
+        return: 94
+    if: address_int() != 12 || read_int() != 12
+        return: 95
+    return: 0
+end: outer_pointer_offset
+Box: ([]: int items 2)
+fn: mixed_read () int
+    return: quote\items[at]
+end: mixed_read
+fn: mixed_write () int
+    @: p int @ quote\items[at]
+    \p: 21
+    return: quote\items[at]
+end: mixed_write
+fn: outer_mixed () int
+    Box\items[1U]: 17
+    @: quote Box Box
+    size_t: at 1U
+    if: mixed_read() != 17 || mixed_write() != 21
+        return: 96
+    return: 0
+end: outer_mixed
+fn: m () int
+    int: r outer_pointer()
+    if: r != 0
+        return: r
+    r: outer_size()
+    if: r != 0
+        return: r
+    r: outer_array()
+    if: r != 0
+        return: r
+    r: outer_number()
+    if: r != 0
+        return: r
+    r: outer_array_only()
+    if: r != 0
+        return: r
+    r: outer_pointer_offset()
+    if: r != 0
+        return: r
+    r: outer_mixed()
+    if: r != 0
+        return: r
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

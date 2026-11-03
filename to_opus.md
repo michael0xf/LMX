@@ -8,6 +8,11 @@ Fable остановлен. Нового разрешения автора, ACK 
 Старая очередь «ждать окончания всей оптимизации Fable/Codex» отменена:
 ты наследуешь её остаток сейчас, затем продолжаешь §§8/8a.
 
+**Статус на 2026-11-03, Opus.** Передача принята, §§3–4 выполнены: срез 271
+опубликован. Текущий пакет и tuple — [selfbuild/README.md](selfbuild/README.md),
+[запись среза](steps/witnesses/fix271-20261103/notes.md). §§2–4 ниже — снимок на
+момент передачи; действуют §1, §5 и §6.
+
 Читать эту передачу как действующую. Исторические назначения и WIP в
 to_codex.md/to_fable.md не переопределяют её. Старая версия этого файла
 сохранена в Git и в P/pins/to_opus-before-20261103-handoff.md; не возвращай
@@ -150,7 +155,7 @@ Array binding зелёные. Не ослабляй oracle и не повтор�
 
 ## 5. Остаток после271
 
-Сначала закончить конкретные открытые потребители и C по design rev29:
+Сначала закончить конкретные открытые потребители и C по design rev30:
 raw-only consumer при известном C ABI; descriptor/DESC address witnesses;
 source-occurrence и одинаковые ссылки не смешивать с несколькими datafields.
 Известныйactual graphplace не opaquevoid*, таблица pointer codes не норма.
@@ -181,8 +186,9 @@ compiler/tests/docs после передачи. При OOM направить C
 Корневой C:/Nyasha_Planet/LMX/build вообще не читать/перечислять/трогать.
 Basename l2_driver_launch.err нигде не читать/перечислять/хешировать/копировать/
 стейджить. reference-producer117.patch сохранить непрочитанным/неизменённым.
-Чужие dirty: steps/witnesses/fix249-20261101/notes.md, to_codex.md,
-to_fable.md — не включать. to_opus.md явно передан автором для этой редакции;
+Чужие dirty: to_codex.md, to_fable.md — не включать.
+steps/witnesses/fix249-20261101/notes.md и steps/witnesses/fix250-20261101/ —
+прежний WIP Opus, сохранить отдельно от271. to_opus.md явно передан автором для этой редакции;
 его исходный dirty-текст сохранён отдельно. Без reset/clean/massadd,
 новых веток/worktree/PR. Frozen inputs и исторические receipts сохранять.
 Обычный законченный main commit/push разрешён без ACK.

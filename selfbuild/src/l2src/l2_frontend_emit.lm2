@@ -12221,11 +12221,14 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     if: c.lm_compiler_text_eq(h, "implements")
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "implements")))
     # An own Array of the body (-170; R5-3a: by its row, whatever its head word -- `[]: T x n`, `T: []: []: x`,
-    # `[]: []: T x n`): the graph build makes its descriptor in the field's slot, as natively; nothing runs.
+    # `[]: []: T x n`): the existing descriptor supplies this activation's ordinary binding.
     oi: c.lm_compiler_own_by_decl(rw_mi_cell[0], stmt)
     if: oi >= 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) != 0
         if: c.lm_compiler_rw_array_placed(oi) != 0 && c.lm_compiler_rw_elem_ty(oi) >= 0
-            return: (cast: (int) (0))
+            if: lm_compiler_rw_own(into, oi, @ port_local_node) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+                return: 1
+            \made: 1
+            return: 0
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "an array")))
     ---
     # A resolved graph place receives an empty Structure before the type-word
@@ -16685,14 +16688,11 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             return: (cast: (int) (1))
         k: 0
         while: k < own_n_cell[0]
-            if: c.lm_compiler_own_is_array(own_ty_cell[0][k]) != 0
-                k: k + 1
-                continue
-            # -189 c3b: every own field but an array is direct: its slot handle, an address, not a value.
-            if: c.lm_compiler_own_used(i, k) != 0 && c.lm_compiler_own_direct(i, k) != 0 && (c.lm_compiler_tx_clear(cq_name) != 0 || c.lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0 || c.fprintf(out_cell[0], "    @@: void %s_from 0\n", cq_name\data) < 0)
+            # Both cached cells and descriptor bindings use their selected graph slot.
+            if: (c.lm_compiler_own_bound(i, k) != 0 || (c.lm_compiler_own_is_array(own_ty_cell[0][k]) = 0 && c.lm_compiler_own_used(i, k) != 0 && c.lm_compiler_own_direct(i, k) != 0)) && (c.lm_compiler_tx_clear(cq_name) != 0 || c.lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0 || c.fprintf(out_cell[0], "    @@: void %s_from 0\n", cq_name\data) < 0)
                 c.fclose(out_cell[0])
                 return: (cast: (int) (1))
-            if: c.lm_compiler_own_used(i, k) != 0 && c.lm_compiler_own_direct(i, k) != 0
+            if: (c.lm_compiler_own_bound(i, k) != 0 || (c.lm_compiler_own_is_array(own_ty_cell[0][k]) = 0 && c.lm_compiler_own_used(i, k) != 0 && c.lm_compiler_own_direct(i, k) != 0))
                 if: c.lm_compiler_own_from_expr(k, sx) != 0 || c.fprintf(out_cell[0], "    %s_from: %s\n    if: %s_from = 0\n        c.fprintf(c.stderr, \"lmx: invariant: own field %d has no cell\\n\")\n        c.abort()\n", cq_name\data, sx\data, cq_name\data, k) < 0
                     c.fclose(out_cell[0])
                     return: (cast: (int) (1))
@@ -16710,7 +16710,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             return: (cast: (int) (1))
         k: 0
         while: k < own_n_cell[0]
-            if: c.lm_compiler_own_cached(i, k) != 0 && c.lm_compiler_emit_work_decl(k) != 0
+            if: c.lm_compiler_own_bound(i, k) != 0 && c.lm_compiler_emit_work_decl(k) != 0
                 c.fclose(out_cell[0])
                 return: (cast: (int) (1))
             k: k + 1

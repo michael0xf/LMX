@@ -4003,6 +4003,15 @@ fn: lm_compiler_emit_work_decl (int: k) int
     const: (@: cty char c.lm_compiler_own_num_ctype(own_ty_cell[0][k]))
     if: c.lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0 || c.lm_compiler_tx_own_cname(cwv_name, "l2_wv", k, "") != 0
         return: (cast: (int) (1))
+    # A descriptor is itself the graph value; it is not a machine pointer
+    # cell. Keep that actual Value in the activation's ordinary binding map.
+    if: c.lm_compiler_own_is_array(own_ty_cell[0][k]) != 0
+        if: c.fprintf(out_cell[0], "    LmxWalkValue: %s\n    int: %s_status lmx_walk_value_cell(l2_program_arena, %s_from[0], @ %s)\n    if: %s_status != c.LMX_WALK_OK\n        lmx_call_note_walk_fail(%s_status)\n        return: 0\n    ---\n", cwv_name\data, cwv_name\data, cq_name\data, cwv_name\data, cwv_name\data, cwv_name\data) < 0
+            return: 1
+        if: c.fprintf(out_cell[0], "    if: lmx_activation_bind(l2_program_arena, (cast: (@: void) \"%.*s\"), %uU, 0, c.LMX_TYPE_NONE, @ %s) != 0\n        lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n        return: 0\n    ---\n", (cast: (int) (own_name_cell[0][k]\length)), own_name_cell[0][k]\data, (cast: (unsigned) (own_name_cell[0][k]\length)), cwv_name\data) < 0
+            return: 1
+        return: 0
+    ---
     # A number's cell is never empty where it is held: an empty one is a place a partial copy does not hold
     # (READ-FIELD-CLOSURE), and its read is refused, never read as nothing (Codex -28 review point 3).
     if: cty != 0
@@ -13942,8 +13951,8 @@ fn: lm_compiler_rw_cached (int: oi) int
     # N4 (plan A10, SF20): a place of the data has one working value per name, its representative's, as natively
     # (l2_own_load maps a row to l2_split_rep), wherever its row stands.
     if: lm_compiler_rw_place_row(oi) != 0
-        return: (cast: (int) ((cast: (int) (rw_cache_on_cell[0] != 0 && c.lm_compiler_own_cached(rw_mi_cell[0], c.lm_compiler_split_rep(oi)) != 0))))
-    if: rw_cache_on_cell[0] = 0 || oi < 0 || oi >= own_n_cell[0] || c.lm_compiler_own_cached(rw_mi_cell[0], oi) = 0
+        return: (cast: (int) ((cast: (int) (rw_cache_on_cell[0] != 0 && c.lm_compiler_own_bound(rw_mi_cell[0], c.lm_compiler_split_rep(oi)) != 0))))
+    if: rw_cache_on_cell[0] = 0 || oi < 0 || oi >= own_n_cell[0] || c.lm_compiler_own_bound(rw_mi_cell[0], oi) = 0
         return: (cast: (int) (0))
     if: lm_compiler_rw_is_hosted(oi) != 0
         return: (cast: (int) (1))

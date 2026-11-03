@@ -6706,19 +6706,28 @@ fn: lm_compiler_emit_actual_path_place (const: (@: path c.L2Path); int: mi; cons
         return: 1
     while: k < path\n
         @: step c.L2PathStep path\steps + k
-        if: step\locus != 8
-            return: 1
-        size_t: selector_cap step\len * 4U + 3U
-        @: selector char c.malloc(selector_cap)
-        if: selector = 0
-            return: 1
-        if: c.lm_compiler_fmt_l1_string(selector, selector_cap, path\text + step\off, step\len) != 0
-            c.free(selector)
-            return: 1
         t: tn_cell[0]
         tn_cell[0]: t + 1
-        int: printed c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ap%d\n%sint: l2_aps%d lmx_walk_value_named_place(l2_call_arena, %s, (cast: (@: char) %s), @ l2_ap%d)\n", ind, t, ind, t, holder, selector, t)
-        c.free(selector)
+        int: printed -1
+        if: step\locus = 7
+            if: lm_compiler_emit_numeric_receive_span_full((cast: (@: c.L2ValueSpan) (@ step\index)), 2, mi, ind, value, full) != 0
+                return: 1
+            if: full\data[0] != 0 && lm_compiler_emit_full_number_use(ind, (cast: (const: @: char) full\data)) != 0
+                return: 1
+            printed: c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ap%d\n%sint: l2_aps%d lmx_walk_value_index_place(l2_call_arena, %s, %s, @ l2_ap%d)\n", ind, t, ind, t, holder, value\data, t)
+        else:
+            if: step\locus != 8
+                return: 1
+            size_t: selector_cap step\len * 4U + 3U
+            @: selector char c.malloc(selector_cap)
+            if: selector = 0
+                return: 1
+            if: c.lm_compiler_fmt_l1_string(selector, selector_cap, path\text + step\off, step\len) != 0
+                c.free(selector)
+                return: 1
+            printed: c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ap%d\n%sint: l2_aps%d lmx_walk_value_named_place(l2_call_arena, %s, (cast: (@: char) %s), @ l2_ap%d)\n", ind, t, ind, t, holder, selector, t)
+            c.free(selector)
+        ---
         if: printed < 0
             return: 1
         if: c.fprintf(out_cell[0], "%sif: l2_aps%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0
@@ -6797,7 +6806,7 @@ fn: lm_compiler_path_record_read_context_full (int: mi; const: (@: path c.L2Path
     # root producer; the nonempty cursor does not invent a field at level0.
     if: path\n = 0
         return: lm_compiler_emit_binding_value_full(path, mi, ind, dest, context, full_value)
-    if: path\steps\locus = 8
+    if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(path, mi)) != 0
         if: lm_compiler_emit_actual_path_place(path, mi, ind, at, cell) != 0
             return: 1
         return: lm_compiler_emit_place_value_full(ft, (cast: (@: char) cell\data), ind, dest, context, full_value)
@@ -9353,6 +9362,8 @@ fn: lm_compiler_emit_array_place (const: (@: stmt c.LmP0Node); int: mi; const: (
     c.L2FrontendScratchChar64: current_storage
     @: current char (cast: (@: char) current_storage\buffer)
     tn_cell[0]: tn_cell[0] + 1
+    if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft((cast: (const: @: c.L2Path) (@ place\path)), mi)) != 0
+        return: lm_compiler_emit_actual_path_store((cast: (const: @: c.L2Path) (@ place\path)), stmt, mi, ind)
     if: place\steps < 1 || lm_compiler_emit_path_cursor((cast: (const: @: c.L2Path) (@ place\path)), mi, ind, stmt, @ kind, 1, receiving, 0, target) != 0
         return: (cast: (int) (1))
     # Preserve the common executable-write barrier on the SAME selected
@@ -9417,7 +9428,7 @@ fn: lm_compiler_emit_address_context_full (int: mi; const: (@: address c.L2Addre
     if: full_value = 0 || mi < 0 || ind = 0 || c.lm_compiler_m_machine(mi) != 0
         return: lm_compiler_emit_address_context_raw(mi, address, ind, dest, context)
     const: (@: actual_path c.L2Path (cast: (const: @: c.L2Path) (@ address\path)))
-    if: address\kind = 6 && actual_path\n > 0 && actual_path\steps\locus = 8
+    if: address\kind = 6 && actual_path\n > 0 && c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(actual_path, mi)) != 0
         c.L2FrontendScratchChar64: place_storage
         c.L2Tx: place_tx
         @: selected c.L2Tx c.lm_compiler_tx_local(@ place_tx, (cast: (@: char) place_storage\buffer), 64U)
@@ -18011,7 +18022,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 c.lm_compiler_path_release(l2_ppath)
                 return: (cast: (int) (1))
             ---
-            if: l2_ppath\n > 0 && l2_ppath\steps\locus = 8
+            if: l2_ppath\n > 0 && c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(l2_ppath, mi)) != 0
                 pret: lm_compiler_emit_actual_path_store(l2_ppath, stmt, mi, ind)
                 c.lm_compiler_path_release(l2_ppath)
                 if: pret != 0

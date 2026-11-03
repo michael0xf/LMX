@@ -3042,6 +3042,20 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
                 next_index: 1
             ---
         ---
+        if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(out, cur_mi_cell[0])) != 0
+            # The written selector is retained; the reached kernel operation
+            # selects its actual cell, including an INDEX on a held free value.
+            if: step\locus != 7
+                step\locus: 8
+            step\kind: 13
+            step\row: k
+            step\cell_ft: c.lm_compiler_free_own()
+            step\elem_ty: c.lm_compiler_free_own()
+            kind: 13
+            value: 0
+            k: k + 1
+            continue
+        ---
         if: step\locus = 7
             # INDEX resolves from the value contract before THIS step. An
             # Array consumes its declared level; a machine pointer consumes
@@ -3096,16 +3110,6 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
         len: step\len
         if: len = 0U
             return: (cast: (int) (c.lm_compiler_path_fail(out, k + 1, 4)))
-        if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(out, cur_mi_cell[0])) != 0
-            step\locus: 8
-            step\kind: 13
-            step\row: k
-            step\cell_ft: c.lm_compiler_free_own()
-            step\elem_ty: c.lm_compiler_free_own()
-            kind: 13
-            k: k + 1
-            continue
-        ---
         step\host_ns: ni
         step\host_res: res
         step\host_bm: bm

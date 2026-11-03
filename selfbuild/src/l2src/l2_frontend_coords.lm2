@@ -394,7 +394,7 @@ fn: lm_compiler_own_used (int: mi; int: k) int
     return: (cast: (int) (0))
 end: lm_compiler_own_used
 
-fn: lm_compiler_own_cached (int: mi; int: k) int
+fn: lm_compiler_own_bound (int: mi; int: k) int
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
@@ -411,13 +411,22 @@ fn: lm_compiler_own_cached (int: mi; int: k) int
     # Original identity alone does not change their physical operand form.
     if: c.lm_compiler_source_definition_unit_ns(k) >= 0 || c.lm_compiler_source_definition_method(k) >= 0
         return: (cast: (int) (0))
-    if: lm_compiler_own_used(mi, k) = 0 || c.lm_compiler_own_is_array(own_ty_cell[0][k]) != 0 || c.lm_compiler_own_direct(mi, k) = 0
+    if: lm_compiler_own_used(mi, k) = 0 || (c.lm_compiler_own_is_array(own_ty_cell[0][k]) = 0 && c.lm_compiler_own_direct(mi, k) = 0)
         return: (cast: (int) (0))
     # A catch parameter is written by the delivery into its cell -- the walker's pad binding, the native handler -- so
     # in 7b-1 it keeps no working value in either mode (steps/working-state-7b.md, the open items).
     if: own_host_cell[0][k] != 0 && c.lm_compiler_frame_head(own_host_cell[0][k], "catch") != 0
         return: (cast: (int) (0))
     return: (cast: (int) (1))
+end: lm_compiler_own_bound
+
+# The activation binds graph descriptors as full Values too. Only scalar
+# and pointer cells need the native dirty-value publication cache.
+fn: lm_compiler_own_cached (int: mi; int: k) int
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    if: lm_compiler_own_bound(mi, k) = 0
+        return: 0
+    return: (cast: (int) (c.lm_compiler_own_is_array(own_ty_cell[0][k]) = 0))
 end: lm_compiler_own_cached
 
 fn: lm_compiler_source_projected_entry (@: row c.L2SourceContainer) int

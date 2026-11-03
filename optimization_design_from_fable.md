@@ -21,6 +21,12 @@
 Автор передаёт реализацию Opus по [to_opus.md](to_opus.md); Codex остаётся
 консультантом. Первоначальное назначение Fable и старые очереди ниже исторические.
 
+Редакция 30 (2026-11-03 UTC, Opus, срез 271). Написанный INDEX на удержанном
+FREE-значении сохраняется до достигнутой операции; native и walker выбирают его
+фактическое место общим `lmx_walk_value_index_place`. Array — обычная привязка
+активации. boot133a G1/G2 сверены, G2 focus 33/0, G2-наблюдение 7 пройденных тел.
+[Срез 271](steps/witnesses/fix271-20261103/notes.md).
+
 Редакция29:270 опубликован45cafc25; обычная var и именованные FREE-root places
 реализованы после сверки точного ответа15 октября. WIP267 больше не отдельная
 семантическая пауза. 271 добавляет actual INDEX и Array activation binding;
@@ -33,13 +39,13 @@
 | §4.2 throws | Общий reached-call obligation действует263/264, implicit status исправлен268. В maintained emit ещё есть body_throws_stmts/body_throws/throws_close: удаление прогноза и общий статический/динамический контракт обязательны. |
 | §4.3 M2/call | 264 удалил44 forecast functions и M2-state. check_struct_call/check_call_data теперь удерживают реальные operands/site, inert=0; оставшиеся имена функций не означают прежний сертификат тела. |
 | §4.4 native reset | Kernel253: actual cell-to-code links и prepare→write→commit; ordinary data writes сохраняют native. Общая финальная интеграция и роли ещё проверяются по consumers. |
-| §4.5 free inputs | 254 resolver;255–261 runtime consumers;262 удалил transitive name/type worklist, заголовок задаётся собственными свободными именами выбранного callee. 270 named paths;271 INDEX кандидат. Raw-only, descriptor/DESC witnesses и оставшиеся place consumers открыты. |
+| §4.5 free inputs | 254 resolver;255–261 runtime consumers;262 удалил transitive name/type worklist, заголовок задаётся собственными свободными именами выбранного callee. 270 named paths;271 INDEX. Raw-only, descriptor/DESC witnesses и оставшиеся place consumers открыты. |
 | §4.6 D-105/admission | 260 graph receive,263–266 actual call/data admission,270 named reception. Полное устранение proof-only/UNKNOWN/preflight остатка ещё не объявлено. |
 | §4.7 split/immutable forecasts | 264 снял address-escape и immutable-call forecasts; copy_calls_verify/check_immutable_calls отсутствуют. split_close теперь упаковывает declared place rows, а не предсказывает будущие тела. Общая классификация/collector остаётся. |
 | §4.8 walker | Достигнутые operations используют общий runtime; нет права предварительно обходить будущие ветви/тела. Полная замена оставшихся подготовительных семантических дублей открыта. |
 | §4.9 emission | Numeric/model/read/write/address adapters вызывают общие kernel helpers;268/269 закрыли bit/shift/~. Все другие потребители и общий collector/3pass ещё не завершены. |
 
-Очередь Opus: закончить и опубликовать271 → оставшиеся конкретные consumers
+Очередь Opus: оставшиеся конкретные consumers
 и C (включая throws forecast) → общий collector/resolver/3pass → финальный
 FULL → незакрытые §§8/8a и T01–T26. Старые номера tp/S ниже — первоначальный
 план, а не отчёт о выполнении. [Текущие строки](next_core_tasks_v3_checklist.md#status-20261103).

@@ -2385,9 +2385,6 @@ fn: lm_compiler_d105_catalog (int: req; @: source c.L2ReferenceSource; int: tmi;
     int: i 0
     int: first 0
     int: count 0
-    @: row c.L2D105CatalogRow
-    @: plan c.L2D105Plan
-    @: step c.L2D105Step
     int: target
     if: catalog = 0 || source = 0 || req = -1
         return: (cast: (int) (1))
@@ -2431,23 +2428,6 @@ fn: lm_compiler_d105_catalog (int: req; @: source c.L2ReferenceSource; int: tmi;
     ---
     if: lm_compiler_d105_catalog_close(catalog) != 0
         return: (cast: (int) (1))
-    # A retained declaration is also an ordinary graph-copy dependency.
-    # Note it in every source planning phase, not only while filling bytes.
-    row: catalog\required_first
-    while: row != 0
-        plan: row\plan
-        i: 0
-        while: i < plan\width
-            const: (@: port_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
-            step: port_steps\data + i
-            const: (@: port_requirement c.L2SchemaField (cast: (const: @: c.L2SchemaField) (@ step\requirement)))
-            target: port_requirement\pointee
-            if: port_requirement\kind = 10 && target >= 0 && lm_compiler_use_model_role(target, 2) != 0
-                return: (cast: (int) (1))
-            i: i + 1
-        ---
-        row: row\next
-    ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_catalog
 

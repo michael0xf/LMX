@@ -470,11 +470,6 @@ end: lm_compiler_ns_proc_add
 
 # Original: l2src/l2trans.lm1:3612
 fn: lm_compiler_ns_procs (const: (@: path char)) int
-    @: e_n_cell int (cast: (@: int) (@ c.l2_e_n))
-    @@: e_fields_cell c.LmP0Field (cast: (@@: c.LmP0Field) (@ c.l2_e_fields))
-    @: e_cell int (cast: (@: int) (@ c.l2_e))
-    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
-    @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
     @@@: ns_stmt_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_stmt))
     @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
@@ -482,15 +477,6 @@ fn: lm_compiler_ns_procs (const: (@: path char)) int
     @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     @@@: part_path_cell char (cast: (@@@: char) (@ c.l2_part_path))
     int: i
-    int: more 1
-    if: e_n_cell[0] > 0
-        c.lm_compiler_ns_exec_scan(e_fields_cell[0], e_cell[0])
-    i: 0
-    while: i < m_n_cell[0]
-        if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0
-            c.lm_compiler_ns_exec_scan_body((cast: (const: @: c.LmP0Structure) m_body_cell[0][i]\as\structure), i)
-        i: i + 1
-    ---
     # Any original definition uses the same body producer. An adapter without
     # one must not silently discard its executable statements.
     i: 0
@@ -499,25 +485,19 @@ fn: lm_compiler_ns_procs (const: (@: path char)) int
             return: (cast: (int) (c.lm_compiler_error(path, ns_stmt_cell[0][i], "a statement in a nested or qualified named Structure is not supported yet")))
         i: i + 1
     ---
-    # §10: a part's root's procedure is registered whatever its body holds -- its own fields are the root's
-    # fields a method of the part reads by name (l2_own_unit_seen) -- and no statement executes it: its entry
-    # has no name, and each lookup that could name an entry compares a name (l2_ns_find, l2_ns_find_payload,
-    # l2_path_root), so its l2_ns_exec stays 0.
-    while: more != 0
-        more: 0
-        i: 0
-        while: i < ns_n_cell[0]
-            if: ns_proc_cell[0][i] < 0 && c.lm_compiler_ns_original_body(i) != 0
-                if: c.lm_compiler_ns_part(i) < 0 && lm_compiler_ns_proc_add(i, path) != 0
-                    return: (cast: (int) (1))
-                if: c.lm_compiler_ns_part(i) >= 0 && lm_compiler_ns_proc_add(i, part_path_cell[0][c.lm_compiler_ns_part(i)]) != 0
-                    return: (cast: (int) (1))
-                if: c.lm_compiler_ns_exec_scan_body((cast: (const: @: c.LmP0Structure) c.lm_compiler_ns_defining_body(i)), ns_proc_cell[0][i]) != 0
-                    more: 1
-                more: 1
+    # Registration may append nested definitions. The live bound includes them.
+    i: 0
+    while: i < ns_n_cell[0]
+        if: ns_proc_cell[0][i] < 0 && c.lm_compiler_ns_original_body(i) != 0
+            int: part c.lm_compiler_ns_part(i)
+            const: (@: source_path char path)
+            if: part >= 0
+                source_path: part_path_cell[0][part]
+            if: lm_compiler_ns_proc_add(i, source_path) != 0
+                return: 1
             ---
-            i: i + 1
         ---
+        i: i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_ns_procs
@@ -561,10 +541,6 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     @: library_mode_cell int (cast: (@: int) (@ c.l2_library_mode))
     @: library_flag_cell int (cast: (@: int) (@ c.l2_library_flag))
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
-    @: ns_split_any_cell int (cast: (@: int) (@ c.l2_ns_split_any))
-    @: spr_n_cell int (cast: (@: int) (@ c.l2_spr_n))
-    @: spw_n_cell int (cast: (@: int) (@ c.l2_spw_n))
-    @: spw_failed_cell int (cast: (@: int) (@ c.l2_spw_failed))
     @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
     @: nsty_n_cell int (cast: (@: int) (@ c.l2_nsty_n))
     @: ebr_n_cell int (cast: (@: int) (@ c.l2_ebr_n))
@@ -625,10 +601,6 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     c.lm_compiler_ns_procs_free()
     c.lm_compiler_ns_def_free()
     ns_n_cell[0]: 0
-    ns_split_any_cell[0]: 0
-    spr_n_cell[0]: 0
-    spw_n_cell[0]: 0
-    spw_failed_cell[0]: 0
     nsf_n_cell[0]: 0
     nsty_n_cell[0]: 0
     ebr_n_cell[0]: 0
@@ -1380,7 +1352,6 @@ fn: lm_compiler_colon_check_assignment (const: (@: stmt c.LmP0Node); int: mi; co
     if: c.lm_compiler_own_in_eternal((cast: (int) (c.lm_compiler_resolved_own(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))))) != 0 && c.lm_compiler_split_data_row((cast: (int) (c.lm_compiler_resolved_own(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))))) = 0
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "an eternal branch field cannot be updated")))
     # N4 (plan D12): an assignment of a data place writes the data; the split call checks its qualification.
-    c.lm_compiler_split_written_add((cast: (int) (c.lm_compiler_resolved_own(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))))))
     if: c.lm_compiler_colon_bound_ty(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), @ target_ty) != 0
         if: c.lm_compiler_head_resolve(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), @ named, 0) != 5 || named < 0
             return: (cast: (int) (0))
@@ -5787,15 +5758,6 @@ fn: lm_compiler_parse_unit (const: (@: path char)) int
             i: i + 1
         if: c.lm_compiler_collect_asgn_binds(path) != 0
             return: (cast: (int) (1))
-    ---
-    # Local original definitions are now registered. Re-run the same call
-    # scan with complete source bindings before split-place preparation; the
-    # early scan cannot classify a local body that did not yet exist.
-    i: 0
-    while: i < m_n_cell[0]
-        if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0
-            c.lm_compiler_ns_exec_scan_body((cast: (const: @: c.LmP0Structure) m_body_cell[0][i]\as\structure), i)
-        i: i + 1
     ---
     # Reference fields are source declarations too. Consumers of a local
     # definition's schema must see their resolved callable/model target,
@@ -13843,7 +13805,6 @@ end: lm_compiler_rw_split_data
 # Original: l2src/l2trans.lm1:34641
 fn: lm_compiler_rw_struct_call (const: (@: source_node c.LmP0Node); @: plan c.L2StructCallPlan; int: into; int: slot; @: made int) int
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    @@: ns_exec_cell int (cast: (@@: int) (@ c.l2_ns_exec))
     int: st 0
     \made: 0
     if: c.lm_compiler_call_body_site(source_node, rw_mi_cell[0]) = 0 || lm_compiler_rw_empty_struct_call(plan, into, @ st) != 0

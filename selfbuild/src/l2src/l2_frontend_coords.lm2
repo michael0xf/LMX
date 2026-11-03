@@ -858,20 +858,18 @@ end: lm_compiler_ns_tail_rank
 # row addresses that cell like a number's). Array and graph references still
 # need the implements admission of their data place (split_staged).
 fn: lm_compiler_split_data_row (int: oi) int
-    @: ns_split_any_cell int (cast: (@: int) (@ c.l2_ns_split_any))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
     @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
     @@@: for_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_for_node))
     @@: for_parent_cell int (cast: (@@: int) (@ c.l2_for_parent))
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
-    @@: ns_split_cell int (cast: (@@: int) (@ c.l2_ns_split))
     int: fid
     int: ni
     int: typed_reference 0
-    if: ns_split_any_cell[0] = 0 || oi < 0 || oi >= own_n_cell[0]
+    if: oi < 0 || oi >= own_n_cell[0]
         return: (cast: (int) (0))
-    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) = 0 && c.lm_compiler_own_is_graph(own_ty_cell[0][oi]) = 0
+    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) = 0
         typed_reference: 1
     if: c.lm_compiler_own_num_ctype(own_ty_cell[0][oi]) = 0 && c.lm_compiler_source_definition_ns(oi) < 0 && typed_reference = 0
         return: (cast: (int) (0))
@@ -886,7 +884,8 @@ fn: lm_compiler_split_data_row (int: oi) int
         ---
     ---
     ni: c.lm_compiler_m_nsof(own_mi_cell[0][oi])
-    return: (cast: (int) ((cast: (int) (ni >= 0 && ns_split_cell[0][ni] != 0))))
+    # Required places belong to the written body, regardless of its callers.
+    return: (cast: (int) (ni >= 0 && c.lm_compiler_ns_part(ni) < 0))
 end: lm_compiler_split_data_row
 
 fn: lm_compiler_own_ctr (int: oi) const: @: char

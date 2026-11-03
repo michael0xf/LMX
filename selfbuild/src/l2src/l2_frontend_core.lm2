@@ -363,9 +363,6 @@ fn: lm_compiler_release () int
     @@: m_throws_cell int (cast: (@@: int) (@ c.l2_m_throws))
     @@: m_split_cell int (cast: (@@: int) (@ c.l2_m_split))
     @@: m_place_cell int (cast: (@@: int) (@ c.l2_m_place))
-    @@: spr_proc_cell int (cast: (@@: int) (@ c.l2_spr_proc))
-    @@: spr_layout_cell int (cast: (@@: int) (@ c.l2_spr_layout))
-    @@: spw_cell int (cast: (@@: int) (@ c.l2_spw))
     @@: pap_model_cell int (cast: (@@: int) (@ c.l2_pap_model))
     @@: mad_model_cell int (cast: (@@: int) (@ c.l2_mad_model))
     @@: mad_host_cell int (cast: (@@: int) (@ c.l2_mad_host))
@@ -382,8 +379,6 @@ fn: lm_compiler_release () int
     @: t7b_n_cell int (cast: (@: int) (@ c.l2_t7b_n))
     @: t7h_n_cell int (cast: (@: int) (@ c.l2_t7h_n))
     @: m_split_n_cell int (cast: (@: int) (@ c.l2_m_split_n))
-    @: spr_cap_cell int (cast: (@: int) (@ c.l2_spr_cap))
-    @: spw_cap_cell int (cast: (@: int) (@ c.l2_spw_cap))
     @: intern_cap_cell unsigned (cast: (@: unsigned) (@ c.l2_intern_cap))
     @@: lmx_name_cache_cell c.LmP0Text (cast: (@@: c.LmP0Text) (@ c.l2_lmx_name_cache))
     @@: void_name_cache_cell c.LmP0Text (cast: (@@: c.LmP0Text) (@ c.l2_void_name_cache))
@@ -413,10 +408,6 @@ fn: lm_compiler_release () int
     @: urm_n_cell int (cast: (@: int) (@ c.l2_urm_n))
     @: urm_cap_cell int (cast: (@: int) (@ c.l2_urm_cap))
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
-    @: ns_split_any_cell int (cast: (@: int) (@ c.l2_ns_split_any))
-    @: spr_n_cell int (cast: (@: int) (@ c.l2_spr_n))
-    @: spw_n_cell int (cast: (@: int) (@ c.l2_spw_n))
-    @: spw_failed_cell int (cast: (@: int) (@ c.l2_spw_failed))
     @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
     @: nsty_n_cell int (cast: (@: int) (@ c.l2_nsty_n))
     @: ebr_n_cell int (cast: (@: int) (@ c.l2_ebr_n))
@@ -581,12 +572,6 @@ fn: lm_compiler_release () int
         c.lm_compiler_xfree((cast: (@: void) m_split_cell[0]))
     if: m_place_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) m_place_cell[0]))
-    if: spr_proc_cell[0] != 0
-        c.lm_compiler_xfree((cast: (@: void) spr_proc_cell[0]))
-    if: spr_layout_cell[0] != 0
-        c.lm_compiler_xfree((cast: (@: void) spr_layout_cell[0]))
-    if: spw_cell[0] != 0
-        c.lm_compiler_xfree((cast: (@: void) spw_cell[0]))
     if: pap_model_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) pap_model_cell[0]))
     pap_model_cell[0]: 0
@@ -636,11 +621,6 @@ fn: lm_compiler_release () int
     m_split_cell[0]: 0
     m_place_cell[0]: 0
     m_split_n_cell[0]: 0
-    spr_proc_cell[0]: 0
-    spr_layout_cell[0]: 0
-    spr_cap_cell[0]: 0
-    spw_cell[0]: 0
-    spw_cap_cell[0]: 0
     intern_n_cell[0]: 0U
     intern_cap_cell[0]: 0U
     lm_compiler_own_free()
@@ -710,10 +690,6 @@ fn: lm_compiler_release () int
     # Source tables, method contexts and their part documents belong to one
     # translation. The next pre-table pass must see an empty source context.
     ns_n_cell[0]: 0
-    ns_split_any_cell[0]: 0
-    spr_n_cell[0]: 0
-    spw_n_cell[0]: 0
-    spw_failed_cell[0]: 0
     nsf_n_cell[0]: 0
     nsty_n_cell[0]: 0
     ebr_n_cell[0]: 0
@@ -1728,86 +1704,6 @@ fn: lm_compiler_ns_decl_first (const: (@: source_node c.LmP0Node); int: me) int
         return: (cast: (int) (1))
     return: (cast: (int) ((cast: (int) (c.lm_compiler_address_depth((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0))))
 end: lm_compiler_ns_decl_first
-
-# Original: l2src/l2trans.lm1:3552
-fn: lm_compiler_ns_exec_scan_in (const: (@: body c.LmP0Structure); @: first c.LmP0Field; int: mi) int
-    @: f c.LmP0Field
-    @: unit_resume c.LmP0Field 0
-    int: unit_body c.lm_compiler_part_source_body(body)
-    @: g c.LmP0Field
-    @: v c.LmP0Node
-    @: t c.LmP0Text
-    c.L2ValueSpan: call_operand
-    c.L2ValueSpan: data_operand
-    @: extra c.LmP0Field 0
-    int: shape
-    int: hit 0
-    f: c.lm_compiler_next_active(first)
-    while: f != 0 || unit_resume != 0
-        if: unit_body != 0
-            f: c.lm_compiler_unit_cursor_field(f, @ unit_resume)
-            if: f = 0
-                break
-        ---
-        v: f\value
-        t: 0
-        shape: c.lm_compiler_struct_call_operands(v, @ call_operand, @ data_operand, @ extra)
-        if: shape = 0 || shape = 1
-            t: c.lm_compiler_struct_call_direct_name(@ call_operand)
-        if: t != 0 && lm_compiler_ns_exec_mark(t, shape, mi, v) != 0
-            hit: 1
-        if: v != 0 && v\kind = c.LM_P0_NODE_FRAME && v\as != 0 && v\as\frame != 0 && v\as\frame\body != 0
-            g: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (v\as\frame\body\first_field)))
-            while: g != 0
-                if: g\value != 0 && g\value\kind = c.LM_P0_NODE_STRUCTURE && g\value\as != 0 && g\value\as\structure != 0 && lm_compiler_ns_exec_scan((cast: (@: c.LmP0Field) (g\value\as\structure\first_field)), mi) != 0
-                    hit: 1
-                g: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (g\next)))
-            ---
-            if: c.lm_compiler_frame_head(v, "else") != 0 && lm_compiler_ns_exec_scan((cast: (@: c.LmP0Field) (v\as\frame\body\first_field)), mi) != 0
-                hit: 1
-        ---
-        if: v != 0 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0 && lm_compiler_ns_exec_scan((cast: (@: c.LmP0Field) (v\as\structure\first_field)), mi) != 0
-            hit: 1
-        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
-    ---
-    return: (cast: (int) (hit))
-end: lm_compiler_ns_exec_scan_in
-
-# Existing first-only entry keeps its original non-unit traversal.
-fn: lm_compiler_ns_exec_scan (@: first c.LmP0Field; int: mi) int
-    return: lm_compiler_ns_exec_scan_in(0, first, mi)
-end: lm_compiler_ns_exec_scan
-
-fn: lm_compiler_ns_exec_scan_body (const: (@: body c.LmP0Structure); int: mi) int
-    if: body = 0
-        return: 0
-    return: lm_compiler_ns_exec_scan_in(body, (cast: (@: c.LmP0Field) body\first_field), mi)
-end: lm_compiler_ns_exec_scan_body
-
-# Original: l2src/l2trans.lm1:3590
-fn: lm_compiler_ns_exec_mark (const: (@: t c.LmP0Text); int: shape; int: mi; const: (@: at c.LmP0Node)) int
-    @@: ns_local_cell int (cast: (@@: int) (@ c.l2_ns_local))
-    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
-    @@: ns_split_cell int (cast: (@@: int) (@ c.l2_ns_split))
-    @: ns_split_any_cell int (cast: (@: int) (@ c.l2_ns_split_any))
-    @@: ns_exec_cell int (cast: (@@: int) (@ c.l2_ns_exec))
-    int: oi c.lm_compiler_own_at(mi, t, at)
-    int: ni c.lm_compiler_own_layout(oi)
-    # The common binding query may select a local original definition inside
-    # an inline operator. Its source host is not another callable scope.
-    if: ni < 0 || ns_local_cell[0][ni] != mi || c.lm_compiler_own_of_local_ns(mi, ni) != oi
-        ni: c.lm_compiler_ns_find(t)
-    ---
-    if: ni < 0 || ns_parent_cell[0][ni] >= 0 || c.lm_compiler_ns_original_body(ni) = 0
-        return: (cast: (int) (0))
-    if: shape = 1
-        ns_split_cell[0][ni]: 1
-        ns_split_any_cell[0]: 1
-    if: ns_exec_cell[0][ni] = 0
-        ns_exec_cell[0][ni]: 1
-        return: (cast: (int) (1))
-    return: (cast: (int) (0))
-end: lm_compiler_ns_exec_mark
 
 # Original: l2src/l2trans.lm1:3669
 fn: lm_compiler_part_root (int: k) int
@@ -7724,8 +7620,6 @@ fn: lm_compiler_ns_push (const: (@: name c.LmP0Text); int: parent; const: (@: at
     @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
     @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
     @@@: ns_at_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_at))
-    @@: ns_exec_cell int (cast: (@@: int) (@ c.l2_ns_exec))
-    @@: ns_split_cell int (cast: (@@: int) (@ c.l2_ns_split))
     @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     @@@: ns_stmt_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_stmt))
     @@: ns_local_cell int (cast: (@@: int) (@ c.l2_ns_local))
@@ -7767,14 +7661,6 @@ fn: lm_compiler_ns_push (const: (@: name c.LmP0Text); int: parent; const: (@: at
     if: ga = 0
         return: (cast: (int) (0 - 1))
     ns_at_cell[0]: ga
-    gi: (cast: (@: int) c.realloc((cast: (@: void) ns_exec_cell[0]), want * c.sizeof(c.int)))
-    if: gi = 0
-        return: (cast: (int) (0 - 1))
-    ns_exec_cell[0]: gi
-    gi: (cast: (@: int) c.realloc((cast: (@: void) ns_split_cell[0]), want * c.sizeof(c.int)))
-    if: gi = 0
-        return: (cast: (int) (0 - 1))
-    ns_split_cell[0]: gi
     gi: (cast: (@: int) c.realloc((cast: (@: void) ns_proc_cell[0]), want * c.sizeof(c.int)))
     if: gi = 0
         return: (cast: (int) (0 - 1))
@@ -7799,8 +7685,6 @@ fn: lm_compiler_ns_push (const: (@: name c.LmP0Text); int: parent; const: (@: at
     ns_def_body_cell[0]: gb
     ns_def_node_cell[0][ns_n_cell[0]]: 0
     ns_def_body_cell[0][ns_n_cell[0]]: 0
-    ns_exec_cell[0][ns_n_cell[0]]: 0
-    ns_split_cell[0][ns_n_cell[0]]: 0
     ns_proc_cell[0][ns_n_cell[0]]: 0 - 1
     ns_stmt_cell[0][ns_n_cell[0]]: 0
     ns_at_cell[0][ns_n_cell[0]]: (cast: (@: c.LmP0Node) at)
@@ -10143,26 +10027,12 @@ end: lm_compiler_split_m
 
 # Original: l2src/l2trans.lm1:19776
 fn: lm_compiler_split_close (const: (@: path char)) int
-    @: spw_failed_cell int (cast: (@: int) (@ c.l2_spw_failed))
-    @: call_body_sites_n_cell int (cast: (@: int) (@ c.l2_call_body_sites_n))
-    @@: call_body_sites_cell c.L2CallBodySite (cast: (@@: c.L2CallBodySite) (@ c.l2_call_body_sites))
-    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
-    @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
-    @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
-    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
-    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @@: m_split_cell int (cast: (@@: int) (@ c.l2_m_split))
     @@: m_place_cell int (cast: (@@: int) (@ c.l2_m_place))
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
     @: m_split_n_cell int (cast: (@: int) (@ c.l2_m_split_n))
-    @@: ns_split_cell int (cast: (@@: int) (@ c.l2_ns_split))
     int: i 0
     int: ni
-    int: k
-    int: qualified
-    @: site c.L2CallBodySite
-    if: spw_failed_cell[0] != 0
-        return: (cast: (int) (c.lm_compiler_error(path, 0, "out of memory")))
     if: m_split_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) m_split_cell[0]))
     if: m_place_cell[0] != 0
@@ -10175,7 +10045,7 @@ fn: lm_compiler_split_close (const: (@: path char)) int
     m_split_n_cell[0]: m_n_cell[0]
     while: i < m_n_cell[0]
         ni: c.lm_compiler_m_nsof(i)
-        if: ni >= 0 && ns_split_cell[0][ni] != 0
+        if: ni >= 0 && c.lm_compiler_ns_part(ni) < 0
             m_split_cell[0][i]: 1
             if: lm_compiler_split_m(i) > 0
                 m_place_cell[0][i]: 1
@@ -13260,6 +13130,23 @@ fn: lm_compiler_rw_reference_contracts (int: parent; const: (@: catalog c.L2D105
     @: frame char (cast: (@: char) frame_storage\buffer)
     if: c.lm_compiler_reference_extent_valid(catalog) = 0
         return: (cast: (int) (1))
+    # Only a retained receiving operation makes its referenced declarations
+    # uses of this method. Filling a construction seed emits the same graph
+    # references without adding dependencies to the last method visited.
+    @: row c.L2D105CatalogRow catalog\required_first
+    while: row != 0
+        @: plan c.L2D105Plan row\plan
+        int: i 0
+        while: i < plan\width
+            const: (@: steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
+            @: step c.L2D105Step (steps\data + i)
+            const: (@: required c.L2SchemaField (cast: (const: @: c.L2SchemaField) (@ step\requirement)))
+            if: required\kind = 10 && required\pointee >= 0 && c.lm_compiler_use_model_role((cast: (int) required\pointee), 2) != 0
+                return: 1
+            i: i + 1
+        ---
+        row: row\next
+    ---
     if: lm_compiler_rw_plain(parent, (cast: (int) ((cast: (int) (1U + catalog\reference_count * 3U)))), out) != 0
         return: (cast: (int) (1))
     if: rw_emit_cell[0] != 0

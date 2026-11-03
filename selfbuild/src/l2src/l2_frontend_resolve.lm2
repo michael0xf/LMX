@@ -3561,43 +3561,6 @@ fn: lm_compiler_own_addr_note (int: own) int
     return: (cast: (int) (0))
 end: lm_compiler_own_addr_note
 
-# Original: l2src/l2trans.lm1:29896
-fn: lm_compiler_split_written_add (int: oi) int
-    @: spw_n_cell int (cast: (@: int) (@ c.l2_spw_n))
-    @@: spw_cell int (cast: (@@: int) (@ c.l2_spw))
-    @: spw_cap_cell int (cast: (@: int) (@ c.l2_spw_cap))
-    @: spw_failed_cell int (cast: (@: int) (@ c.l2_spw_failed))
-    int: r
-    int: i 0
-    int: cap
-    @: grown int
-    if: c.lm_compiler_split_data_row(oi) = 0
-        return: (cast: (int) (0))
-    r: c.lm_compiler_split_rep(oi)
-    while: i < spw_n_cell[0]
-        if: spw_cell[0][i] = r
-            return: (cast: (int) (0))
-        i: i + 1
-    ---
-    if: spw_n_cell[0] >= spw_cap_cell[0]
-        if: spw_cap_cell[0] >= c.INT_MAX / 2
-            spw_failed_cell[0]: 1
-            return: (cast: (int) (1))
-        cap: spw_cap_cell[0] * 2
-        if: cap < 8
-            cap: 8
-        grown: (cast: (@: int) c.realloc((cast: (@: void) spw_cell[0]), (cast: (size_t) ((cast: (size_t) cap) * c.sizeof(c.int)))))
-        if: grown = 0
-            spw_failed_cell[0]: 1
-            return: (cast: (int) (1))
-        spw_cell[0]: grown
-        spw_cap_cell[0]: cap
-    ---
-    spw_cell[0][spw_n_cell[0]]: r
-    spw_n_cell[0]: spw_n_cell[0] + 1
-    return: (cast: (int) (0))
-end: lm_compiler_split_written_add
-
 # Original: l2src/l2trans.lm1:31348
 fn: lm_compiler_input_is_descriptor (int: mi; int: k) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
@@ -3797,7 +3760,6 @@ fn: lm_compiler_address_root (const: (@: path c.L2Path); int: mi; @: out c.L2Add
         # N4 (plan A9, D12): the cell of a data place is the data's, not the code's; its address may write it.
         if: c.lm_compiler_split_data_row(own) != 0
             out\immutable: 0
-            lm_compiler_split_written_add(own)
         out\descriptor: lm_compiler_own_is_slot(own)
         if: path\array_leaf != 0
             out\descriptor: 1

@@ -6,24 +6,25 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 178 inputs (65 source files, 34 tools and
-79 tests). Slice 264 changed 13 existing inputs and added five fixtures.
-The compiler records `call: code data` as two operands. Both executors
-hold them and use the kernel's physical field map at the reached call.
-A graph-valued write receives against the model declared on its data slot.
+The selected package contains 179 inputs (65 source files, 34 tools and
+80 tests). Slice 265 records the data places required by a named Structure
+from its declarations. A call through a held reference and a direct call
+admit the same requirements, including declarations inside an inline branch.
 
-`boot126a` built both generations in 766.90 seconds. Each generation passed
-nine smoke rows. The promoted G2 tools passed all 26 focused rows.
-[Sources, controls and generation records](../steps/witnesses/fix264-20261103/notes.md).
+The quick bootstrap took 749.81 seconds. G1 and G2 each passed nine smoke
+rows. G2 passed all 27 focused rows.
+[Sources and checks](../steps/witnesses/fix265-20261103/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `F6CCC5855DE67626D50819BA14C487D950D86A0959EF0C0C473028DB0C3046D3` |
-| Input manifest | `35E501526D2BD1B1D2B54BECD626201A3F2A040259BB35C01847691007A65E8E` |
-| Working tool | `CE43E24F740D7083C2C5D524DEAEC1A6FC8253AE2039420ADDA860A566B2EFD2` |
-| G2 frontend | `BDCC42FF6C9CA0AA895DD7D0197A623FC0F7CECDC0D7775BFFC839AB2228AE1C` |
+| Input list | `24E8E7551475522126ECE5EE7C4537298092DAEDB2AEA67EB929DE5974E3FFC8` |
+| Input manifest | `41ACDB1666CB7AD4A4FFFE5984CE801DEDE6A4C17B4CC47444BD83240E326DF7` |
+| Working tool | `FF07ECBB0C65FE965380ED54A155CF9132514A1F5A13E31F26EE80AEFFEE5177` |
+| G2 frontend | `BBCABDAC2CBB98EB9E23F725843E95AD50A1091B1639A4760F84CF206D77EAB2` |
 | Production runtime | `1DB4884783710CD4424F2FCF23A32A7A015BEB77EBD88BFB371B23BD7F4DBB1A` |
 | Observation runtime | `F4EAFB53512301BFB64BAA0CC53D1884CB87D014ECBAF8DC0BD10B94803FB756` |
+
+[Slice 264](../steps/witnesses/fix264-20261103/notes.md) contained 178 inputs and introduced admission of the actual code/data pair at Structure calls.
 
 [Slice 263](../steps/witnesses/fix263-20261103/notes.md) contained 173 inputs,
 manifest `48951CA2…`, and established the shared dispatch of unary Structure calls.

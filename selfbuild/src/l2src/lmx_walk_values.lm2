@@ -5932,6 +5932,11 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             return: c.LMX_WALK_INVALID
         if: value_p\ref != 0 && lmx_walk_kind(f, (cast: (@: void) value_p\ref)) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID
+        status: c.lmx_implements_receive_data_field((cast: (@: c.LmxArena) f\arena), wholder, index, (cast: (@: c.Lmx) value_p\ref))
+        if: status != c.LMX_WALK_OK
+            f\payload: 0
+            return: status
+        ---
         status: lmx_walk_value_materialize((cast: (@: c.LmxArena) f\arena), @ value, @ materialized)
         if: status != c.LMX_WALK_OK
             return: status
@@ -5966,6 +5971,13 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         if: work\kind != 1
             if: value_p\kind != c.LMX_WALK_VALUE_REFERENCE
                 return: c.LMX_WALK_INVALID
+            ---
+            if: work\kind = 3
+                status: c.lmx_implements_receive_data_field((cast: (@: c.LmxArena) f\arena), wholder, index, (cast: (@: c.Lmx) value_p\ref))
+                if: status != c.LMX_WALK_OK
+                    f\payload: 0
+                    return: status
+                ---
             ---
         else:
             # Slice 255 (design 4.5 B2a): the working number cell is a receiving place -- the kernel's one admission
@@ -6769,6 +6781,19 @@ fn: lmx_call_selected_structure (@: arena c.LmxArena; @: frame c.LmxWalkFrame; @
             i: i + 1U
         ---
     ---
+    c.LmxCallPlaces: place_scope
+    int: opened 0
+    if: status = c.LMX_WALK_OK && operation != 0 && c.lmx_graph_value_in(arena, operation, 1U) != 0
+        int: place_answer c.LMX_IMPLEMENTS_UNKNOWN
+        status: c.lmx_implements_call_places_open(arena, code, data, @ place_scope, @ place_answer)
+        if: status = c.LMX_WALK_OK
+            if: place_answer = c.LMX_IMPLEMENTS_YES
+                opened: 1
+            else:
+                status: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+            ---
+        ---
+    ---
     if: status = c.LMX_WALK_OK
         @@: refs void (cast: (@@: void) rows\refs)
         @: values c.LmxWalkValue (cast: (@: c.LmxWalkValue) rows\values)
@@ -6789,6 +6814,8 @@ fn: lmx_call_selected_structure (@: arena c.LmxArena; @: frame c.LmxWalkFrame; @
             ---
         ---
     ---
+    if: opened != 0
+        c.lmx_implements_call_places_close(arena, @ place_scope)
     lmx_walk_call_rows_close(rows)
     if: status = c.LMX_WALK_OK
         lmx_walk_value_clear(out)

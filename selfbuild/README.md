@@ -6,27 +6,27 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 173 inputs (65 source files, 34 tools and 74 tests).
-Slice 263 changed eight of the 170 files in slice 262 and added three fixtures.
-The unary `call: code` evaluates the operand once. At the reached call the kernel
-checks the selected body's declared throws and prepares its own inputs. An ordinary
-named Structure carries its free input names on the physical occurrence, including
-copies. Both executors use the same admission before entering the body.
+The selected package contains 178 inputs (65 source files, 34 tools and
+79 tests). Slice 264 changed 13 existing inputs and added five fixtures.
+The compiler records `call: code data` as two operands. Both executors
+hold them and use the kernel's physical field map at the reached call.
+A graph-valued write receives against the model declared on its data slot.
 
-The `boot125a` quick bootstrap took 807.96 seconds. G1 and G2 passed nine
-smoke rows each, and the resulting G2 tools passed all 21 focused rows. The
-same call site returned 3 and then 9 after selecting a body with different
-free names. The explicit two-operand call still uses M2 and layout tables.
-[Sources, tests and build records](../steps/witnesses/fix263-20261103/notes.md).
+`boot126a` built both generations in 766.90 seconds. Each generation passed
+nine smoke rows. The promoted G2 tools passed all 26 focused rows.
+[Sources, controls and generation records](../steps/witnesses/fix264-20261103/notes.md).
 
-| Selected artifact | SHA-256 |
+| Artifact | SHA-256 |
 | --- | --- |
-| Input list | `41E70A3EE8717678FA0A45C133166639ED116D2302F4AECC317EF69B96BCC7EF` |
-| Input manifest | `48951CA277B822FF35997A07D33AA72D44660044276DE5A0A9B563A4316E6EC2` |
-| Working G2 tool | `9E5798D8BD55E57A89242FDAD0624C2AF9BDF5CE27396624A79F72DCEA0766EA` |
-| G2 frontend | `567EDCE7D75B6C8A79EA245640FDA2D7CDA78E11DD5D2148E60B96CFF14AE7A2` |
-| G2 runtime | `A05DB426EECB50A079615944DCC23363B57438C9562AB194F721ED0DD26C68AC` |
-| G2 observation runtime | `2EC4A637D0B7B6BF4523C7899557C4677D8B05BFDCFC91B4901D31967A271E33` |
+| Input list | `F6CCC5855DE67626D50819BA14C487D950D86A0959EF0C0C473028DB0C3046D3` |
+| Input manifest | `35E501526D2BD1B1D2B54BECD626201A3F2A040259BB35C01847691007A65E8E` |
+| Working tool | `CE43E24F740D7083C2C5D524DEAEC1A6FC8253AE2039420ADDA860A566B2EFD2` |
+| G2 frontend | `BDCC42FF6C9CA0AA895DD7D0197A623FC0F7CECDC0D7775BFFC839AB2228AE1C` |
+| Production runtime | `1DB4884783710CD4424F2FCF23A32A7A015BEB77EBD88BFB371B23BD7F4DBB1A` |
+| Observation runtime | `F4EAFB53512301BFB64BAA0CC53D1884CB87D014ECBAF8DC0BD10B94803FB756` |
+
+[Slice 263](../steps/witnesses/fix263-20261103/notes.md) contained 173 inputs,
+manifest `48951CA2…`, and established the shared dispatch of unary Structure calls.
 
 The preceding packages were [slice 262](../steps/witnesses/fix262-20261102/notes.md)
 (170 inputs, manifest `A148F03F…`) and [slice 261](../steps/witnesses/fix261-20261102/notes.md)

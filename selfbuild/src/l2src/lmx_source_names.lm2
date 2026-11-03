@@ -82,6 +82,49 @@ fn: lmx_source_name_get_at (@: arena c.LmxArena; @: key void; size_t: port) @: c
     return: 0
 end: lmx_source_name_get_at
 
+# A separate port records the physical occurrence's compiled data interface.
+# Its two module arrays have exactly the lifetime of the compiled word.
+fn: lmx_source_places (@: arena c.LmxArena; @: key void) @: c.LmxSourceName
+    if: arena = 0 || key = 0
+        return: 0
+    @: row c.LmxSourceName lmx_source_name_local(arena, key, (cast: (size_t) -1))
+    if: row != 0
+        return: row
+    @: home c.LmxArena (cast: (@: c.LmxArena) c.lmx_range_home(arena, key))
+    if: home != 0 && home != arena
+        return: lmx_source_name_local(home, key, (cast: (size_t) -1))
+    return: 0
+end: lmx_source_places
+
+# Store the written receiver's layout on its physical slot. The current
+# value of that slot can change after construction.
+fn: lmx_source_place_model_set (@: arena c.LmxArena; @: slot void; @: layout void) int
+    if: slot = 0 || layout = 0
+        return: 1
+    @: row c.LmxSourceName lmx_source_places(arena, slot)
+    if: row != 0
+        return: (cast: (int) (row\model_layout != layout))
+    if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0, 0U, @ row) != 0 || row = 0
+        return: 1
+    row\model_layout: layout
+    lmx_source_name_publish(row, slot)
+    return: 0
+end: lmx_source_place_model_set
+
+fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: names char; @: spec size_t) int
+    if: names = 0 || spec = 0
+        return: 1
+    @: row c.LmxSourceName lmx_source_places(arena, key)
+    if: row != 0
+        return: (cast: (int) (row\place_names != names || row\place_spec != spec))
+    if: lmx_source_name_prepare_at(arena, key, (cast: (size_t) -1), 0, 0U, @ row) != 0 || row = 0
+        return: 1
+    row\place_names: names
+    row\place_spec: spec
+    lmx_source_name_publish(row, key)
+    return: 0
+end: lmx_source_places_set
+
 # A stable arena service cell. prepare leaves key zero until publication.
 fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; const: (@: text char); size_t: text_length; @@: out c.LmxSourceName) int
     return: lmx_source_name_prepare_at(arena, key, 0U, text, text_length, out)
@@ -116,6 +159,9 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
         return: 1
     row\key: 0
     row\port: port
+    row\place_names: 0
+    row\place_spec: 0
+    row\model_layout: 0
     row\pending_next: 0
     # The row's by-value VoidArray is written through its address.
     va: @ row\text

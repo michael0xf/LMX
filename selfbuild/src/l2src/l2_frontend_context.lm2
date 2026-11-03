@@ -1599,7 +1599,7 @@ fn: lm_compiler_bound_nsty (int: mi; const: (@: name c.LmP0Text)) int
     return: (cast: (int) (lm_compiler_graph_nsty(mi, name)))
 end: lm_compiler_bound_nsty
 
-fn: lm_compiler_m2_place (int: own) int
+fn: lm_compiler_structure_own_place (int: own) int
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     int: ni
     if: own < 0 || own >= own_n_cell[0]
@@ -1608,18 +1608,7 @@ fn: lm_compiler_m2_place (int: own) int
     if: ni >= 0
         return: (cast: (int) (own_n_cell[0] + ni))
     return: (cast: (int) (own))
-end: lm_compiler_m2_place
-
-fn: lm_compiler_m2_graph_place (int: place) int
-    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
-    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
-    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
-    if: place >= own_n_cell[0]
-        return: (cast: (int) ((cast: (int) (place - own_n_cell[0] < ns_n_cell[0]))))
-    if: place < 0
-        return: (cast: (int) (0))
-    return: (cast: (int) (c.lm_compiler_own_is_graph(own_ty_cell[0][place])))
-end: lm_compiler_m2_graph_place
+end: lm_compiler_structure_own_place
 
 fn: lm_compiler_split_place (int: k; int: layout) int
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))

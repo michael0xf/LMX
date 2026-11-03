@@ -4319,6 +4319,155 @@ end: lmx_implements_model_for_layout
 # every name has a slot inside the data, and out, when not 0, gets the m slots.  NO: the row marks a name SIZE_MAX --
 # the call's own runtime refusal.  UNKNOWN: no proof -- the data has no token, no row has it, or a slot of the row is
 # past the data.  m = 0 is YES for any data.  Nothing is recorded; out is the only write.
+# At admission a named place must identify exactly one physical storage
+# slot. Literal source heads are distinct from that storage. A second equal
+# root head makes an unindexed name ambiguous.
+fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.VoidArray; int: type; @: out size_t) int
+    @: fields c.VoidArray @ data\array
+    size_t: slot (cast: (size_t) -1)
+    size_t: heads 0U
+    size_t: j 0U
+    while: j < fields\size
+        @: cell void c.lmx_graph_value_in(arena, data, j)
+        if: lmx_domain_kind(arena, cell) = c.LMX_KIND_STRUCT && lmx_implements_same_name(c.lmx_source_name_get(arena, cell), wanted) != 0
+            heads: heads + 1U
+        if: lmx_implements_same_name(lmx_implements_place_name(arena, data, j), wanted) != 0
+            if: slot != (cast: (size_t) -1)
+                return: c.LMX_IMPLEMENTS_NO
+            slot: j
+        ---
+        j: j + 1U
+    ---
+    if: slot = (cast: (size_t) -1) || heads > 1U
+        return: c.LMX_IMPLEMENTS_NO
+    @: value void c.lmx_graph_value_in(arena, data, slot)
+    if: type = c.LMX_TYPE_LMX
+        if: c.lmx_graph_node_in(arena, value) = 0 && (lmx_domain_kind(arena, value) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(lmx_domain_type(arena, value)) != c.LMX_TYPE_LMX)
+            return: c.LMX_IMPLEMENTS_NO
+        ---
+    else:
+        if: lmx_domain_kind(arena, value) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(lmx_domain_type(arena, value)) != c.lmx_type_base(type)
+            return: c.LMX_IMPLEMENTS_NO
+        ---
+    ---
+    if: out != 0
+        out[0]: slot
+    return: c.LMX_IMPLEMENTS_YES
+end: lmx_implements_call_field
+
+fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: names char; @: requirements size_t; @: out size_t) int
+    if: names = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    size_t: i 0U
+    while: i < requirements[0]
+        @: spec size_t (requirements + 2U + 3U * i)
+        c.VoidArray: wanted
+        wanted\data: (cast: (@: void) (names + spec[0]))
+        wanted\size: spec[1]
+        size_t: slot 0U
+        int: answer lmx_implements_call_field(arena, data, @ wanted, (cast: (int) spec[2]), @ slot)
+        if: answer != c.LMX_IMPLEMENTS_YES
+            return: answer
+        if: out != 0
+            out[i]: slot
+        i: i + 1U
+    ---
+    return: c.LMX_IMPLEMENTS_YES
+end: lmx_implements_named_places
+
+# The caller owns this frame. Its slots belong to this one admission, including
+# recursive calls on the same code with different data. Install only after all
+# demanded places have been found. Unwinding restores the enclosing call.
+fn: lmx_implements_call_places_open (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @: scope c.LmxCallPlaces; @: out_answer int) int
+    if: arena = 0 || scope = 0 || out_answer = 0
+        return: c.LMX_WALK_INVALID
+    c.memset((cast: (@: void) scope), 0, c.sizeof(c.LmxCallPlaces))
+    out_answer[0]: c.LMX_IMPLEMENTS_NO
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0
+        return: c.LMX_WALK_OK
+    @: fields c.VoidArray @ code\array
+    @: interface_row c.LmxSourceName c.lmx_source_places(arena, (cast: (@: void) code))
+    size_t: root_count fields\size
+    size_t: required 0U
+    if: interface_row != 0
+        scope\requirements: interface_row\place_spec
+        if: scope\requirements = 0 || interface_row\place_names = 0
+            return: c.LMX_WALK_INVALID
+        required: scope\requirements[0]
+    ---
+    if: root_count > (cast: (size_t) -1) / c.sizeof(c.size_t) || required > (cast: (size_t) -1) / c.sizeof(c.size_t) - root_count
+        return: c.LMX_WALK_NOMEM
+    size_t: count root_count + required
+    if: count != 0U
+        scope\root_slots: (cast: (@: size_t) c.malloc(count * c.sizeof(c.size_t)))
+        if: scope\root_slots = 0
+            return: c.LMX_WALK_NOMEM
+        c.memset((cast: (@: void) scope\root_slots), 255, count * c.sizeof(c.size_t))
+    ---
+    int: answer c.LMX_IMPLEMENTS_YES
+    if: required != 0U
+        scope\required_slots: scope\root_slots + root_count
+        answer: lmx_implements_named_places(arena, data, (cast: (@: char) interface_row\place_names), (cast: (@: size_t) scope\requirements), (cast: (@: size_t) scope\required_slots))
+    else:
+        # Ordinary code already addresses its declared root places via
+        # code_slot. Read the name and type of the actual selected place.
+        size_t: i 0U
+        while: i < root_count && answer = c.LMX_IMPLEMENTS_YES
+            @: name c.VoidArray lmx_implements_place_name(arena, code, i)
+            if: name != 0
+                @: cell void c.lmx_graph_value_in(arena, code, i)
+                int: type lmx_domain_type(arena, cell)
+                if: c.lmx_graph_node_in(arena, cell) != 0
+                    type: c.LMX_TYPE_LMX
+                answer: lmx_implements_call_field(arena, data, name, type, (cast: (@: size_t) (scope\root_slots + i)))
+            ---
+            i: i + 1U
+        ---
+    ---
+    out_answer[0]: answer
+    if: answer != c.LMX_IMPLEMENTS_YES
+        c.free((cast: (@: void) scope\root_slots))
+        scope\root_slots: 0
+        return: c.LMX_WALK_OK
+    scope\code: code
+    scope\data: data
+    scope\root_count: root_count
+    scope\parent: arena\call_places
+    arena\call_places: scope
+    return: c.LMX_WALK_OK
+end: lmx_implements_call_places_open
+
+sub: lmx_implements_call_places_close (@: arena c.LmxArena; @: scope c.LmxCallPlaces)
+    if: arena != 0 && scope != 0 && arena\call_places = scope
+        arena\call_places: scope\parent
+        c.free((cast: (@: void) scope\root_slots))
+        scope\root_slots: 0
+    ---
+end: lmx_implements_call_places_close
+
+# Receive a reached Structure write into the selected data field. Its
+# declaration belongs to the slot and survives earlier assignments there.
+fn: lmx_implements_receive_data_field (@: arena c.LmxArena; @: data c.Lmx; size_t: slot; @: value c.Lmx) int
+    if: arena = 0 || data = 0
+        return: c.LMX_WALK_INVALID
+    @: scope c.LmxCallPlaces arena\call_places
+    if: scope = 0 || scope\data != data || value = 0
+        return: c.LMX_WALK_OK
+    @: row c.LmxSourceName c.lmx_source_places(arena, (cast: (@: void) c.lmx_graph_cell_in(arena, data, slot)))
+    if: row = 0 || row\model_layout = 0
+        return: c.LMX_WALK_OK
+    @: model c.Lmx lmx_implements_model_for_layout(arena, (cast: (@: void) row\model_layout))
+    if: model = 0
+        return: c.LMX_WALK_UNSUPPORTED
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status lmx_implements_admit_receiving_templates(arena, value, model, 0, 0U, 0, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer = c.LMX_IMPLEMENTS_NO
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+    return: c.LMX_WALK_OK
+end: lmx_implements_receive_data_field
+
 fn: lmx_implements_places (@: arena c.LmxArena; @: data c.Lmx; @: tokens char; @: slot_table size_t; @: out size_t) int
     @: part_data_array c.VoidArray 0
     size_t: m 0U
@@ -4332,6 +4481,13 @@ fn: lmx_implements_places (@: arena c.LmxArena; @: data c.Lmx; @: tokens char; @
         return: c.LMX_IMPLEMENTS_UNKNOWN
     m: slot_table[0]
     k: slot_table[1]
+    if: k = (cast: (size_t) -1)
+        @: scope c.LmxCallPlaces arena\call_places
+        if: scope != 0 && scope\data = data && scope\requirements = slot_table
+            if: out != 0 && m != 0U
+                c.memcpy((cast: (@: void) out), (cast: (@: void) scope\required_slots), m * c.sizeof(c.size_t))
+            return: c.LMX_IMPLEMENTS_YES
+        return: lmx_implements_named_places(arena, data, tokens, slot_table, out)
     if: m = 0U
         return: c.LMX_IMPLEMENTS_YES
     layout: lmx_implements_layout(arena, data)
@@ -6467,6 +6623,11 @@ fn: lmx_implements_code_slot (@: arena c.LmxArena; @: value c.Lmx; @: code c.Lmx
             out_answer[0]: answer
         return: status
     ---
+    @: scope c.LmxCallPlaces arena\call_places
+    if: scope != 0 && scope\code = code && scope\data = value && scope\requirements = 0 && middle < scope\root_count && scope\root_slots[middle] != (cast: (size_t) -1)
+        out[0]: scope\root_slots[middle]
+        out_answer[0]: c.LMX_IMPLEMENTS_YES
+        return: c.LMX_WALK_OK
     req_edge: middle
     if: edge >= source_width
         if: code != 0

@@ -1,0 +1,27 @@
+# Nest a split call, then publish the outer code's dirty data. A copied
+# executable carries its own requirements. Neither template is the data.
+B:
+    int: y
+    y: y + 3
+end: B
+Other:
+    int: pad 9
+    int: y 10
+end: Other
+A:
+    int: x
+    call: B Other
+    x: x + 2
+end: A
+D:
+    int: padding 19
+    int: x 5
+end: D
+call: A D
+Copy: merge: A
+call: Copy D
+int: answer 81
+if: D\x = 9 && D\padding = 19 && Other\y = 16 && Other\pad = 9
+    answer: 7
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+return

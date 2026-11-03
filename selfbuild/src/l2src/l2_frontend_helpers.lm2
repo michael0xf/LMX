@@ -2433,24 +2433,6 @@ fn: lm_compiler_path_kind_ft (int: kind) int
     return: (cast: (int) (0 - 1))
 end: lm_compiler_path_kind_ft
 
-fn: lm_compiler_m2_atom_run (@: first c.LmP0Field; int: n) int
-    int: i 0
-    @: f c.LmP0Field first
-    while: i < n
-        if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
-            return: (cast: (int) (0))
-        f: lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
-        i: i + 1
-    ---
-    return: (cast: (int) (1))
-end: lm_compiler_m2_atom_run
-
-fn: lm_compiler_m2_alloc (size_t: rows; size_t: cols) @: int
-    if: lm_compiler_mul_ok(rows + 1U, cols + 1U) = 0 || lm_compiler_mul_ok((rows + 1U) * (cols + 1U), c.sizeof(c.int)) = 0
-        return: (cast: (@: int) (0))
-    return: (cast: (@: int) ((cast: (@: int) c.calloc((rows + 1U) * (cols + 1U), c.sizeof(c.int)))))
-end: lm_compiler_m2_alloc
-
 fn: lm_compiler_struct_call_direct_name (@: operand c.L2ValueSpan) @: c.LmP0Text
     if: operand = 0 || operand\count != 1 || operand\node = 0 || operand\node\kind != c.LM_P0_NODE_ATOM || operand\node\as = 0
         return: (cast: (@: c.LmP0Text) (0))

@@ -2856,11 +2856,19 @@ end: lmx_copy_process
 
 # Prepare the name of an actual copied place. The private map keeps pending
 # rows unpublished until the complete graph and every spelling are ready.
-fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: pending c.LmxCopyMap; size_t: port; @: text c.VoidArray) int
+fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: pending c.LmxCopyMap; size_t: port; @: text c.VoidArray; @: layout c.LmxSourceName) int
     @: part_row_text c.VoidArray 0
     @: row c.LmxSourceName 0
     if: text = 0
         return: c.LMX_GRAPH_COPY_OK
+    if: layout != 0
+        @: known c.LmxSourceName c.lmx_source_places(dst_arena, destination)
+        if: known != 0
+            if: known\place_spec != layout\place_spec || known\place_names != layout\place_names || known\model_layout != layout\model_layout
+                return: c.LMX_GRAPH_COPY_INVALID
+            return: c.LMX_GRAPH_COPY_OK
+        ---
+    ---
     if: lmx_copy_map_keys_data(pending) = 0
         if: lmx_copy_map_init(pending) != 0
             return: c.LMX_GRAPH_COPY_NOMEM
@@ -2872,6 +2880,8 @@ fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: 
         row: row\pending_next
     ---
     if: row != 0
+        if: layout != 0 && (row\place_spec != layout\place_spec || row\place_names != layout\place_names || row\model_layout != layout\model_layout)
+            return: c.LMX_GRAPH_COPY_INVALID
         part_row_text: @ row\text
         if: part_row_text\size != text\size || (text\size != 0U && c.memcmp((part_row_text\data), (text\data), (text\size)) != 0)
             return: c.LMX_GRAPH_COPY_INVALID
@@ -2879,6 +2889,11 @@ fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: 
     if: c.lmx_source_name_prepare_at(dst_arena, destination, port, (cast: (@: char) text\data), (text\size), @ row) != 0
         return: c.LMX_GRAPH_COPY_NOMEM
     if: row != 0
+        if: layout != 0
+            row\place_names: layout\place_names
+            row\place_spec: layout\place_spec
+            row\model_layout: layout\model_layout
+        ---
         row\pending_next: head
         if: lmx_copy_map_put(pending, destination, (cast: (@: void) row)) != 0
             c.lmx_source_name_cancel(row)
@@ -2891,18 +2906,23 @@ end: lmx_copy_spelling_prepare
 # Both a graph copy and a merge projection call this for a real place.
 # Copy the complete local interface only for a Structure occurrence.
 fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: source void; @: destination void; @: pending c.LmxCopyMap) int
-    int: status lmx_copy_spelling_prepare(dst_arena, destination, pending, 0U, c.lmx_source_name_get(src_arena, source))
-    if: status != c.LMX_GRAPH_COPY_OK || c.lmx_range_classify(src_arena, source) != c.LMX_KIND_STRUCT
+    int: status lmx_copy_spelling_prepare(dst_arena, destination, pending, 0U, c.lmx_source_name_get(src_arena, source), 0)
+    if: status != c.LMX_GRAPH_COPY_OK
         return: status
-    size_t: port 1U
-    @: name c.VoidArray c.lmx_source_name_get_at(src_arena, source, port)
-    while: name != 0
-        status: lmx_copy_spelling_prepare(dst_arena, destination, pending, port, name)
-        if: status != c.LMX_GRAPH_COPY_OK
-            return: status
-        port: port + 1U
-        name: c.lmx_source_name_get_at(src_arena, source, port)
+    if: c.lmx_range_classify(src_arena, source) = c.LMX_KIND_STRUCT
+        size_t: port 1U
+        @: name c.VoidArray c.lmx_source_name_get_at(src_arena, source, port)
+        while: name != 0
+            status: lmx_copy_spelling_prepare(dst_arena, destination, pending, port, name, 0)
+            if: status != c.LMX_GRAPH_COPY_OK
+                return: status
+            port: port + 1U
+            name: c.lmx_source_name_get_at(src_arena, source, port)
+        ---
     ---
+    @: layout c.LmxSourceName c.lmx_source_places(src_arena, source)
+    if: layout != 0
+        return: lmx_copy_spelling_prepare(dst_arena, destination, pending, (cast: (size_t) -1), (cast: (@: c.VoidArray) (@ layout\text)), layout)
     return: c.LMX_GRAPH_COPY_OK
 end: lmx_copy_name_prepare
 

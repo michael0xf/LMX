@@ -1,0 +1,22 @@
+# N4 (LMX_semantics.ru.md #dynamic: the admission turns the correspondence into one physical map for reading, writing,
+# @ and publication): @x in S is the cell of x in D, not a cell of S. put adds 5 through it, so D\x becomes 15; the
+# bare x is never written, so its clean working value is not published over 15. k publishes 0 into its own slot of D,
+# and the pad of D keeps 1. Entry 7.
+fn: put (@: p int) int
+    \p: \p + 5
+return: 0
+S:
+    int: x
+    int: k put(@x)
+end: S
+D:
+    int: k 9
+    int: pad 1
+    int: x 10
+end: D
+call: S D
+int: r 81
+if: D\x = 15 && D\k = 0 && D\pad = 1
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

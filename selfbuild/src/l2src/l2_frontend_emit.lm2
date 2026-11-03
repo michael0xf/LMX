@@ -635,7 +635,6 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     mres_n_cell[0]: 0
     addr_own_n_cell[0]: 0
     call_body_sites_n_cell[0]: 0
-    c.lm_compiler_m2_reset()
     mrs_n_cell[0]: 0
     msrc_n_cell[0]: 0
     c.lm_compiler_bound_free()
@@ -1832,8 +1831,6 @@ fn: lm_compiler_wait_run (const: (@: path char)) int
             rc: lm_compiler_check_fields((cast: (@: c.LmP0Field) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), (cast: (int) lm_compiler_port249_1_L2SourceSite_count((wait_cell[0] + w))), mi, (cast: (const: @: char) (c.lm_compiler_method_src(mi, path))), (cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_source((wait_cell[0] + w))))
         if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 7
             rc: lm_compiler_check_path_write((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), mi, (cast: (const: @: char) (c.lm_compiler_method_src(mi, path))))
-        if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 9
-            rc: c.lm_compiler_check_split_call((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), mi, c.lm_compiler_method_src(mi, path))
         if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 10
             rc: lm_compiler_check_call_at((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), (cast: (@: c.LmP0Text) (c.lm_compiler_app_head((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w)))))), (cast: (int) lm_compiler_port249_1_L2SourceSite_count((wait_cell[0] + w))), (cast: (int) lm_compiler_port249_1_L2SourceSite_target((wait_cell[0] + w))), (cast: (const: @: c.LmP0Structure) (c.lm_compiler_app_actuals((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w)))))), mi, (cast: (const: @: char) (c.lm_compiler_method_src(mi, path))))
         if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 11
@@ -5236,6 +5233,12 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         q_at_cell[0]: stmt
         c.lm_compiler_here_at(stmt)
         q_path_cell[0]: path
+        int: definition_own c.lm_compiler_own_by_decl(mi, stmt)
+        # A reached graph-valued write to explicit data can raise implements.
+        # Its native entry needs the same status channel as other model writes.
+        if: definition_own >= 0 && c.lm_compiler_split_data_row(definition_own) != 0 && c.lm_compiler_source_definition_ns(definition_own) >= 0 && c.lm_compiler_admit_site(mi) != 0
+            return: 1
+        ---
         retained: c.lm_compiler_ns_constructed_row(mi, stmt)
         if: retained = -2
             return: (cast: (int) (1))
@@ -5245,7 +5248,7 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         if: c.lm_compiler_pap_on(mi) != 0 && c.lm_compiler_frame_head(stmt, "merge") != 0
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        if: c.lm_compiler_source_definition_method(c.lm_compiler_own_by_decl(mi, stmt)) >= 0
+        if: c.lm_compiler_source_definition_method(definition_own) >= 0
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         # D-93: the host's `return: model` standing as a statement of its body (after other
@@ -5853,10 +5856,6 @@ fn: lm_compiler_parse_unit (const: (@: path char)) int
     ---
     if: lm_compiler_pap_prepare(path) != 0
         return: (cast: (int) (1))
-    # v3 M2: every explicit call learns its actual body before CHECK fixes
-    # call edges, hidden inputs, throws and frame sizes.
-    if: c.lm_compiler_m2_close(path) != 0
-        return: (cast: (int) (1))
     i: 0
     while: i < m_n_cell[0]
         c.lm_compiler_vis_method(i)
@@ -5883,10 +5882,6 @@ fn: lm_compiler_parse_unit (const: (@: path char)) int
     if: lm_compiler_wait_run(path) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_split_close(path) != 0
-        return: (cast: (int) (1))
-    if: c.lm_compiler_copy_calls_verify(path) != 0
-        return: (cast: (int) (1))
-    if: c.lm_compiler_check_immutable_calls(path) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_collect_asgn_binds(path) != 0
         return: (cast: (int) (1))
@@ -6521,6 +6516,8 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         # An ordinary Structure has no args child. The coordinates of its
         # own free inputs belong to the occurrence, beside its source names.
         if: rw_emit_cell[0] != 0
+            if: c.lm_compiler_m_is_place(mi) != 0 && c.fprintf(out_cell[0], "        if: lmx_source_places_set(l2_program_arena, (cast: (@: void) l2_rw%d), l2_cpn%d, l2_cpt%d) != 0\n            return: 1\n", root, mi, mi) < 0
+                return: 1
             while: j < m_dyn_cell[0][mi]
                 @: name c.LmP0Text c.lm_compiler_dn(mi, j)
                 if: name = 0 || c.fprintf(out_cell[0], "        if: lmx_source_name_set_at(l2_program_arena, l2_rw%d, %uU, ", root, (cast: (unsigned) (j + 1))) < 0 || c.lm_compiler_emit_cstr(name) != 0 || c.fprintf(out_cell[0], ", %zuU) != 0\n            return: 1\n", name\length) < 0
@@ -8528,7 +8525,7 @@ fn: lm_compiler_rw_cell (int: source_node; int: oi) int
             return: (cast: (int) (1))
         if: rw_emit_cell[0] = 0
             return: (cast: (int) (0))
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 1U, l2_layout_tokens) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, (cast: (@: char) l2_cpt%d)) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", k, k, rw_mi_cell[0], source_node, c.lm_compiler_split_name_ix(oi)) < 0))))
+        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 1U, l2_cpn%d) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, (cast: (@: char) l2_cpt%d)) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", k, rw_mi_cell[0], k, rw_mi_cell[0], source_node, c.lm_compiler_split_name_ix(oi)) < 0))))
     # A split-called method's code is not its data (plan D10): a place inside its code is reached from NODE, and
     # holder 0 or a fixed holder inside it would name the data's slot of the same position.  No row takes this route
     # (the kind-9 check stages every other class of the code's rows); one that does is the translator's broken promise.
@@ -11531,26 +11528,11 @@ end: lm_compiler_emit_expr_keep
 # Original: l2src/l2trans.lm1:31057
 fn: lm_compiler_rw_atom_ns (const: (@: stmt c.LmP0Node); int: into; int: slot; @: made int) int
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    @: spr_n_cell int (cast: (@: int) (@ c.l2_spr_n))
-    @@: spr_proc_cell int (cast: (@@: int) (@ c.l2_spr_proc))
-    @@: spr_layout_cell int (cast: (@@: int) (@ c.l2_spr_layout))
-    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
-    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     int: own c.lm_compiler_own_by_decl(rw_mi_cell[0], stmt)
     int: ns
     int: port_local_node
     int: source_value
     int: value_slot
-    int: selector
-    int: selected
-    int: admit
-    int: r 0
-    int: count 0
-    int: at 2
-    int: place
-    int: target_model
-    int: token
-    c.L2ReferenceSource: source_ref
     @: source c.L2SourceContainer 0
     \made: 0
     if: own < 0 || c.lm_compiler_source_definition_ns(own) < 0 || c.lm_compiler_source_field_owner(own, @ source) = 0
@@ -11560,39 +11542,9 @@ fn: lm_compiler_rw_atom_ns (const: (@: stmt c.LmP0Node); int: into; int: slot; @
     # value to the admitted data place; it neither invokes nor allocates it.
     if: c.lm_compiler_m_is_split(rw_mi_cell[0]) != 0 && c.lm_compiler_split_data_row(own) != 0
         ns: c.lm_compiler_source_definition_ns(own)
-        source_ref\schema: ns
-        source_ref\path: 0
-        source_ref\origin: stmt
-        source_ref\origin_count: 0
-        source_ref\origin_method: rw_mi_cell[0]
-        source_ref\layout: -1
-        source_ref\method: -1
-        source_ref\place: -1
-        while: r < spr_n_cell[0]
-            if: spr_proc_cell[0][r] = rw_mi_cell[0] && c.lm_compiler_split_place(own, spr_layout_cell[0][r]) >= 0
-                count: count + 1
-            r: r + 1
+        if: lm_compiler_rw_write(into, own, "LMX_WALK_OP_PUT_REF", @ port_local_node, @ value_slot) != 0 || lm_compiler_rw_ns_value(port_local_node, ns, rw_mi_cell[0], @ source_value) != 0 || c.lm_compiler_rw_put(port_local_node, value_slot, source_value) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+            return: 1
         ---
-        if: lm_compiler_rw_write(into, own, "LMX_WALK_OP_PUT_REF", @ port_local_node, @ value_slot) != 0 || c.lm_compiler_rw_frame(port_local_node, "LMX_WALK_OP_LAYOUT_SWITCH", 2 + count * 2, @ selected) != 0 || c.lm_compiler_rw_frame(selected, "LMX_WALK_OP_SELF", 1, @ selector) != 0 || c.lm_compiler_rw_put(selected, 1, selector) != 0
-            return: (cast: (int) (1))
-        r: 0
-        while: r < spr_n_cell[0]
-            if: spr_proc_cell[0][r] = rw_mi_cell[0]
-                place: c.lm_compiler_split_place(own, spr_layout_cell[0][r])
-                if: place >= 0
-                    target_model: c.lm_compiler_own_nsty_get(place)
-                    token: c.lm_compiler_schema_token_slot(spr_layout_cell[0][r])
-                    if: target_model < 0 || token < 0 || lm_compiler_rw_admit_project_at(selected, target_model, @ source_ref, 1, -1, -1, -1, @ admit, 0, 1) != 0 || lm_compiler_rw_ns_value(admit, ns, rw_mi_cell[0], @ source_value) != 0 || c.lm_compiler_rw_put(admit, 3, source_value) != 0 || c.lm_compiler_rw_put(selected, at + 1, admit) != 0
-                        return: (cast: (int) (1))
-                    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, %dU, l2_layout_tokens + %d) != c.LMX_WALK_OK\n            return: 1\n", selected, at, token) < 0
-                        return: (cast: (int) (1))
-                    at: at + 2
-                ---
-            ---
-            r: r + 1
-        ---
-        if: c.lm_compiler_rw_put(port_local_node, value_slot, selected) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
-            return: (cast: (int) (1))
         \made: 1
     return: (cast: (int) (0))
 end: lm_compiler_rw_atom_ns
@@ -13833,7 +13785,7 @@ fn: lm_compiler_rw_empty_struct_call (@: plan c.L2StructCallPlan; int: into; @: 
     int: current
     if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_EXEC", 5, out) != 0
         return: (cast: (int) (1))
-    if: plan\shape = 0 && plan\target_ns < 0 && plan\oi < 0
+    if: plan\target_ns < 0 && plan\oi < 0
         @: operand c.L2ValueSpan (cast: (@: c.L2ValueSpan) (@ plan\operand))
         int: graph c.lm_compiler_own_ty_of_param(c.lm_compiler_graph_ft())
         if: lm_compiler_rw_reference_receive((cast: (@: c.LmP0Field) operand\first), (cast: (int) operand\count), graph, -1, (cast: (int) (\out)), @ current) != 0
@@ -13869,30 +13821,23 @@ fn: lm_compiler_rw_split_data (const: (@: source_node c.LmP0Node); @: plan c.L2S
     if: site = 0 || site\split = 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a split call reached the walk without its data decision")))
     if: site\data_target_ns < 0 && site\data_oi < 0
-        return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a split call site has no data place")))
-    if: plan\inert = 0 && plan\ni >= 0 && plan\ni < ns_n_cell[0]
-        pr: ns_proc_cell[0][plan\ni]
-    if: pr >= 0 && c.lm_compiler_m_is_place(pr) != 0
-        if: c.lm_compiler_rw_frame(st, "LMX_WALK_OP_CALL_DATA", 4, @ cd) != 0
-            return: (cast: (int) (1))
-        holder: cd
-    ---
-    if: site\data_target_ns >= 0
-        if: c.lm_compiler_use_unit_child(3, (cast: (int) (site\data_target_ns))) != 0 || lm_compiler_rw_ns_value(holder, (cast: (int) (site\data_target_ns)), -1, @ d) != 0
-            return: (cast: (int) (1))
+        int: graph c.lm_compiler_own_ty_of_param(c.lm_compiler_graph_ft())
+        @: operand c.L2ValueSpan (cast: (@: c.L2ValueSpan) (@ plan\data))
+        if: lm_compiler_rw_reference_receive((cast: (@: c.LmP0Field) operand\first), (cast: (int) operand\count), graph, -1, holder, @ d) != 0
+            return: 1
         ---
     else:
-        if: lm_compiler_rw_own(holder, (cast: (int) (site\data_oi)), @ d) != 0
-            return: (cast: (int) (1))
+        if: site\data_target_ns >= 0
+            if: c.lm_compiler_use_unit_child(3, site\data_target_ns) != 0 || lm_compiler_rw_ns_value(holder, site\data_target_ns, -1, @ d) != 0
+                return: 1
+            ---
+        else:
+            if: lm_compiler_rw_own(holder, site\data_oi, @ d) != 0
+                return: 1
+            ---
         ---
     ---
-    if: cd < 0
-        return: (cast: (int) (c.lm_compiler_rw_put(st, 1, d)))
-    if: c.lm_compiler_rw_put(cd, 1, d) != 0
-        return: (cast: (int) (1))
-    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, l2_layout_tokens) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 3U, (cast: (@: char) l2_cpt%d)) != c.LMX_WALK_OK\n            return: 1\n", cd, cd, pr) < 0
-        return: (cast: (int) (1))
-    return: (cast: (int) (c.lm_compiler_rw_put(st, 1, cd)))
+    return: c.lm_compiler_rw_put(st, 1, d)
 end: lm_compiler_rw_split_data
 
 # Original: l2src/l2trans.lm1:34641
@@ -13901,27 +13846,12 @@ fn: lm_compiler_rw_struct_call (const: (@: source_node c.LmP0Node); @: plan c.L2
     @@: ns_exec_cell int (cast: (@@: int) (@ c.l2_ns_exec))
     int: st 0
     \made: 0
-    if: plan\shape = 0 || plan\inert != 0
-        if: c.lm_compiler_call_body_site(source_node, rw_mi_cell[0]) = 0 || lm_compiler_rw_empty_struct_call(plan, into, @ st) != 0
-            return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "an unproved empty Structure call")))
-        if: lm_compiler_rw_split_data(source_node, plan, st) != 0
-            return: (cast: (int) (1))
-        if: plan\shape = 0 && c.lm_compiler_expr_site_note_role(source_node, 1, 6, -1, 0, @ st) != 0
-            return: 1
-        \made: 1
-        return: (cast: (int) (c.lm_compiler_rw_put(into, slot, st)))
-    ---
-    if: plan\ni >= 0 && ns_exec_cell[0][plan\ni] != 0
-        if: plan\oi < 0 && lm_compiler_rw_ns_call(source_node, (cast: (int) (plan\ni)), (cast: (int) (plan\target_ns)), into, @ st) != 0
-            return: (cast: (int) (1))
-        if: plan\oi >= 0 && lm_compiler_rw_ns_var_call(source_node, (cast: (int) (plan\ni)), (cast: (int) (plan\oi)), into, @ st) != 0
-            return: (cast: (int) (1))
-        if: lm_compiler_rw_split_data(source_node, plan, st) != 0
-            return: (cast: (int) (1))
-        \made: 1
-        return: (cast: (int) (c.lm_compiler_rw_put(into, slot, st)))
-    ---
-    return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "this call")))
+    if: c.lm_compiler_call_body_site(source_node, rw_mi_cell[0]) = 0 || lm_compiler_rw_empty_struct_call(plan, into, @ st) != 0
+        return: 1
+    if: lm_compiler_rw_split_data(source_node, plan, st) != 0 || c.lm_compiler_expr_site_note_role(source_node, 1, 6, -1, 0, @ st) != 0
+        return: 1
+    \made: 1
+    return: c.lm_compiler_rw_put(into, slot, st)
 end: lm_compiler_rw_struct_call
 
 # Original: l2src/l2trans.lm1:34667
@@ -16659,7 +16589,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         ---
         # N4 (plan D4, SF12): a code that maps its names to places of its data selects the same static row its call
         # site admitted, by the data's own layout token; anything but YES is the translator's broken promise.
-        if: c.lm_compiler_m_is_place(i) != 0 && c.fprintf(out_cell[0], "    []: size_t l2_cpl %d\n    if: lmx_implements_places(l2_program_arena, self, l2_layout_tokens, l2_cpt%d, l2_cpl) != c.LMX_IMPLEMENTS_YES\n", c.lm_compiler_split_m(i), i) < 0
+        if: c.lm_compiler_m_is_place(i) != 0 && c.fprintf(out_cell[0], "    []: size_t l2_cpl %d\n    if: lmx_implements_places(l2_program_arena, self, l2_cpn%d, l2_cpt%d, l2_cpl) != c.LMX_IMPLEMENTS_YES\n", c.lm_compiler_split_m(i), i, i) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.lm_compiler_m_is_place(i) != 0 && c.lm_compiler_emit_invariant("    ", "a split-called code reached data without its place row") != 0

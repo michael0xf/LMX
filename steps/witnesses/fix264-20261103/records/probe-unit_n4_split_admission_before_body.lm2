@@ -1,0 +1,28 @@
+# N4 (Codex OPUS-CODEX-20261015-19: the admission is the call's own, raised before the body runs): the whole body of
+# S stands under a handler of S for call, but no statement of S has started, so only the handler of run takes the
+# throw: inner stays 0 and D\x keeps 1. An admission made inside the body, or a lazy one at the first use of y,
+# reaches the handler of S. Entry 7.
+int: inner 0
+S:
+    ---
+        int: x 9
+        int: y 2
+        catch: call ()
+            node\inner: 1
+    ---
+end: S
+D:
+    int: x 1
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: call ()
+        r: 83
+        if: D\x = 1 && inner = 0
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

@@ -1,0 +1,26 @@
+# N4 (LMX_semantics.ru.md #fields: two or more root occurrences of one head make a bare name ambiguous, never the
+# first; Codex OPUS-CODEX-20261015-23 Q2: the literal heads count): D has two root heads y, y: 1 and y: 2, so the bare
+# y of S is ambiguous. The admission fails when the program runs, before S runs: the implicit call throw, taken by
+# catch: call. D\x keeps 1. Entry 7.
+S:
+    int: x 9
+    int: y 2
+end: S
+D:
+    int: x 1
+    int: y 0
+    y: 1
+    y: 2
+end: D
+fn: run () int
+    int: r 82
+    call: S D
+    catch: call ()
+        r: 83
+        if: D\x = 1
+            r: 7
+    ---
+return: r
+int: got run()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

@@ -1,0 +1,27 @@
+# N4 (LMX_semantics.ru.md #fields, #method-parts, #dynamic: a free name is a runtime input, never a data field by a
+# coincidence of names): k in S is the root k, 5, not the k of D, 77, and k: k + 1 changes only the value of this
+# activation, neither D\k nor the root k. got is declared by S, so it is the got of D and hides the root got, which
+# keeps 1. Entry 7.
+int: k 5
+int: got 1
+S:
+    int: got
+    k: k + 1
+    got: k
+end: S
+D:
+    int: k 77
+    int: got 0
+end: D
+fn: unit_k () int
+    return: node\k
+end: unit_k
+fn: unit_got () int
+    return: node\got
+end: unit_got
+call: S D
+int: r 81
+if: D\got = 6 && D\k = 77 && unit_k() = 5 && unit_got() = 1
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

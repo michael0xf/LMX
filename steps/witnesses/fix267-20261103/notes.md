@@ -2,7 +2,8 @@
 
 Current WIP, 2026-11-03 05:10Z: fe129e and two focused rows pass.
 This is not a published or whole-bootstrap slice. Maintained source is still266.
-The ordinary var execution question U3 remains pending; no semantic choice
+Historical initial status (superseded by the 2026-11-03 resolution below):
+The ordinary var execution question U3 was pending; no semantic choice
 has been made. Independent typed-native shift guard work has a measured
 native-versus-walker separating witness and is the next available step.
 
@@ -107,3 +108,19 @@ declines a machine operator. Shared lmx_walk_value_bin already performs the
 width/count/signed-left checks and the forced witness proves them.
 Unary ~ remains a separate open part of that ledger. Keep full C/shared
 collector/3passes/S8/mail goal active; this partial WIP is not its completion.
+
+## U3 resolved by author and exact history, 2026-11-03
+
+The question no longer holds this work. A previously undeclared ordinary
+`var: (...)` declares a Structure; if var already denotes an ordinary
+Structure, the form assigns a new value to the same place. It does not invoke
+the stored body or switch the current data binding merely because it is var.
+The method's var argument and call's selected data retain their own contracts.
+Method references are assigned with `@` first: `@: ptr method`; its name
+arguments are bare atoms and atoms do not invoke.
+
+See [the resolved question](../../../LMX_blog/q/ordinary_var_execution_20261103.md)
+and [verbatim source/history](../../../LMX_blog/2026-11-03.md). Prior measured
+refusals above remain historical results, not a normative oracle or an
+implementation PASS. Implement the clarified common semantics in a subsequent
+coherent source slice; do not land this old candidate over newer selfbuild.

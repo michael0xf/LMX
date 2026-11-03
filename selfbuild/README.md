@@ -6,23 +6,27 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 180 inputs (65 source files, 34 tools and
-81 tests). Slice 266 preserves absent data for an ordinary unary call with
-no var. Required data fields are admitted before dispatch; a body needing
-none can run without manufacturing an alias to its code.
+The selected package contains 181 inputs (65 source files, 34 tools and
+82 tests). Slice 268 routes typed language bitwise/shift operations through
+the same checked kernel as runtime-typed values and the walker. Implicit
+faults use the existing status channel without requiring a payload parameter.
 
-The quick bootstrap took 762.66 seconds. G1 and G2 each passed nine smoke
-rows. G2 passed all 28 focused rows.
-[Sources and checks](../steps/witnesses/fix266-20261103/notes.md).
+The quick bootstrap took 759.91 seconds. G1 and G2 each passed nine
+smoke rows. G2 passed all 29 focused rows.
+[Sources and checks](../steps/witnesses/fix268-20261103/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `50baf20d0a6ef9035805080c4f543a404d79236db4f963672e6840866ab79ed4` |
-| Input manifest | `556841e159fa7aedbc079ca9324130d341fca9393f14b2c417678673bf57d425` |
-| Working tool | `57304b57646e2f60a4ff00994c85d895363e6cafd40a4222dee0167d795c0921` |
-| G2 frontend | `04eecfad1bca6b4e382851ad0ca6f514e904a43b477eae225a9a1a3328c87281` |
+| Input list | `99f9bae8af2197dfee3801f04220dea30570b0642964f1807579a3c2edc4d4fb` |
+| Input manifest | `cf7ad03769104512f36ca96148097ae665ec54fddaa596292da38eaee4bd883d` |
+| Working tool | `31d55441805a79a36a93e6bb7ff842370b034fbc6d1f440c3a9ecc9702e46f43` |
+| G2 frontend | `ec3e0ae8a19f8f61114b425fc6374d9e46291b95891fe77029d2703dc7434e18` |
 | Production runtime | `e617e95da4019c90a4b47adcb62ddfc79d9818d0729c4bb43b7ba7164a581c96` |
 | Observation runtime | `84ef7a8471496a0225482985e773f856cf89f075b29ffcd0ff12409dc68bc774` |
+
+[Slice 266](../steps/witnesses/fix266-20261103/notes.md) preserves absent data
+for an ordinary unary call with no var and admits required data fields
+before dispatch. Pending ordinary-var WIP267 is not part of this package.
 
 [Slice 265](../steps/witnesses/fix265-20261103/notes.md) collected the declared-place interface independently of direct call sites.
 

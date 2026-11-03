@@ -11865,7 +11865,11 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
     status: lm_compiler_emit_live_int_bin_full(tok, lo, hi, mi, ind, dest, 0, full_value)
     if: status != 2
         return: (cast: (int) (status))
-    if: full_value != 0 && mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_rw_prec_machine(prec) != 0
+    # Typed language bitwise/shift expressions use the same reached operation
+    # as runtime-typed inputs. In particular, count/overflow checks happen in
+    # the shared kernel before a C shift. The existing result type supplies
+    # only the typed view; it does not implement another operation algorithm.
+    if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_rw_prec_machine(prec) != 0
         kind: c.lm_compiler_value_expr_type(tok, lo, hi, mi, @ exact)
         if: exact < 0
             exact: kind
@@ -11876,7 +11880,9 @@ fn: lm_compiler_emit_native_values_full (@: tok c.L2ValueSpan; int: lo; int: hi;
         ---
         if: exact >= 0 && exact != 8 && c.lm_compiler_prim_code_name(c.lm_compiler_formal_raw(exact)) != 0
             exact: c.lm_compiler_formal_raw(exact)
-            numeric_capture: 1
+            if: operand_full = 0 || lm_compiler_emit_dyn_values_full(tok, lo, hi, mi, ind, piece, operand_full) != 0
+                return: 1
+            return: lm_compiler_emit_dyn_receive_record((cast: (const: @: char) operand_full\data), exact, mi, ind, dest, full_value, (cast: (const: @: c.LmP0Node) op))
         ---
     ---
     k: lo

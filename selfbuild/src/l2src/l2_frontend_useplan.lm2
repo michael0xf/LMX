@@ -1570,6 +1570,7 @@ end: lm_compiler_emit_deliver
 fn: lm_compiler_emit_implicit_throw (int: mi; const: (@: name char); const: (@: ind char)) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @@: m_throws_cell int (cast: (@@: int) (@ c.l2_m_throws))
     @: deep char 0
     int: st
     int: dv
@@ -1586,7 +1587,15 @@ fn: lm_compiler_emit_implicit_throw (int: mi; const: (@: name char); const: (@: 
         return: (cast: (int) (0))
     if: lm_compiler_emit_publish(deep) != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sl2_out_throw[0]: 0\n%sreturn: %d\n", deep, deep, st) < 0
+    # The control status exists for every language body. A payload parameter
+    # exists only in the current payload ABI; an implicit throw has no payload
+    # and must not require a body forecast merely to return its named status.
+    if: m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0
+        if: c.fprintf(out_cell[0], "%sl2_out_throw[0]: 0\n", deep) < 0
+            return: (cast: (int) (1))
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "%sreturn: %d\n", deep, st) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_implicit_throw

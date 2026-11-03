@@ -4323,6 +4323,8 @@ end: lmx_implements_model_for_layout
 # slot. Literal source heads are distinct from that storage. A second equal
 # root head makes an unindexed name ambiguous.
 fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.VoidArray; int: type; @: out size_t) int
+    if: data = 0
+        return: c.LMX_IMPLEMENTS_NO
     @: fields c.VoidArray @ data\array
     size_t: slot (cast: (size_t) -1)
     size_t: heads 0U
@@ -4356,7 +4358,13 @@ fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.V
 end: lmx_implements_call_field
 
 fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: names char; @: requirements size_t; @: out size_t) int
-    if: names = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0
+    if: names = 0 || requirements = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: requirements[0] = 0U
+        return: c.LMX_IMPLEMENTS_YES
+    if: data = 0
+        return: c.LMX_IMPLEMENTS_NO
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     size_t: i 0U
     while: i < requirements[0]
@@ -4383,8 +4391,17 @@ fn: lmx_implements_call_places_open (@: arena c.LmxArena; @: code c.Lmx; @: data
         return: c.LMX_WALK_INVALID
     c.memset((cast: (@: void) scope), 0, c.sizeof(c.LmxCallPlaces))
     out_answer[0]: c.LMX_IMPLEMENTS_NO
-    if: c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || (data != 0 && c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0)
         return: c.LMX_WALK_OK
+    # Receiver-produced methods describe their data in the actual var part.
+    # The outer args/return/var/body slots are code structure, not data fields.
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, (cast: (@: void) code))
+    if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
+        code: c.lmx_call_unary_data(arena, code)
+        if: code = 0
+            return: c.LMX_WALK_INVALID
+        ---
+    ---
     @: fields c.VoidArray @ code\array
     @: interface_row c.LmxSourceName c.lmx_source_places(arena, (cast: (@: void) code))
     size_t: root_count fields\size

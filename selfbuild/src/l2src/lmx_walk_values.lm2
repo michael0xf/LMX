@@ -2807,11 +2807,11 @@ fn: lmx_walk_enter_parts_values (@: f c.LmxWalkFrame; @: context c.LmxWalkContex
     int: status
     if: f = 0
         return: c.LMX_WALK_INVALID
-    if: context = 0 || (cast: (@: c.LmxArena) context\arena) = 0 || context\scratch = 0 || code = 0 || body = 0 || source = 0 || data = 0
+    if: context = 0 || (cast: (@: c.LmxArena) context\arena) = 0 || context\scratch = 0 || code = 0 || body = 0 || source = 0
         c.memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
         return: c.LMX_WALK_INVALID
     lmx_walk_frame_open(f, context, code, source, data, args, nargs)
-    if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) code)) = 0 || c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) body)) = 0 || c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) source)) = 0 || c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) data)) = 0
+    if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) code)) = 0 || c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) body)) = 0 || c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) source)) = 0 || (data != 0 && c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) data)) = 0)
         return: c.LMX_WALK_INVALID
     status: lmx_walk_args_open_values(f, values)
     if: status != c.LMX_WALK_OK
@@ -2931,23 +2931,26 @@ fn: lmx_walk_activate (@: context c.LmxWalkContext; @: code c.Lmx; @: data c.Lmx
     return: lmx_walk_activate_values(context, code, data, args, nargs, 0, result)
 end: lmx_walk_activate
 
+# An ordinary unary call selects the unique written var place of this
+# actual occurrence. Absence stays null; the call's required-place admission
+# decides whether this body can run without data.
 fn: lmx_call_unary_data (@: arena c.LmxArena; @: code c.Lmx) @: c.Lmx
-    @: vars c.Lmx 0
-    @: pool c.LmxPool
-    if: arena = 0 || code = 0
-        return: code
-    if: c.lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
-        return: code
-    pool: c.lmx_range_cell_pool(arena, (cast: (@: void) code))
-    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
-        return: code
-    @: fields c.VoidArray @ code\array
-    if: fields\size != 4U
-        return: code
-    vars: c.lmx_graph_ref_struct_in(arena, code, 2U)
-    if: vars = 0
-        return: code
-    return: vars
+    if: arena = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0
+        return: 0
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, (cast: (@: void) code))
+    if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
+        @: fields c.VoidArray @ code\array
+        if: fields\size != 4U
+            return: 0
+        return: c.lmx_graph_ref_struct_in(arena, code, 2U)
+    ---
+    c.VoidArray: name
+    name\data: (cast: (@: void) "var")
+    name\size: 3U
+    size_t: slot 0U
+    if: c.lmx_implements_call_field(arena, code, @ name, c.LMX_TYPE_LMX, @ slot) != c.LMX_IMPLEMENTS_YES
+        return: 0
+    return: c.lmx_graph_ref_struct_in(arena, code, slot)
 end: lmx_call_unary_data
 
 fn: lmx_walk_run (@: context c.LmxWalkContext; @: operand c.Lmx; @@: args void; size_t: nargs; @: out c.LmxWalkValue) int
@@ -6344,7 +6347,7 @@ fn: lmx_walk_call_prim_dispatch (@: arena c.LmxArena; @: code c.Lmx; @: data c.L
     if: out = 0
         return: c.LMX_CALL_NOT_CALLABLE
     out[0]: 0
-    if: arena = 0 || code = 0 || data = 0
+    if: arena = 0 || code = 0
         return: c.LMX_CALL_NOT_CALLABLE
     c.memset((cast: (@: void) (@ sa)), 0, c.sizeof(c.LmxArena))
     c.memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
@@ -6729,9 +6732,9 @@ fn: lmx_call_selected_structure (@: arena c.LmxArena; @: frame c.LmxWalkFrame; @
     if: arena = 0 || out = 0
         return: c.LMX_WALK_INVALID
     lmx_walk_value_clear(out)
-    if: code = 0 || data = 0
+    if: code = 0 || (data = 0 && operation != 0 && c.lmx_graph_value_in(arena, operation, 1U) != 0)
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-    if: c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || (data != 0 && c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0)
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
     int: status lmx_call_obligation(arena, code, caller, operation)
     if: status != c.LMX_WALK_OK
@@ -6783,7 +6786,7 @@ fn: lmx_call_selected_structure (@: arena c.LmxArena; @: frame c.LmxWalkFrame; @
     ---
     c.LmxCallPlaces: place_scope
     int: opened 0
-    if: status = c.LMX_WALK_OK && operation != 0 && c.lmx_graph_value_in(arena, operation, 1U) != 0
+    if: status = c.LMX_WALK_OK
         int: place_answer c.LMX_IMPLEMENTS_UNKNOWN
         status: c.lmx_implements_call_places_open(arena, code, data, @ place_scope, @ place_answer)
         if: status = c.LMX_WALK_OK

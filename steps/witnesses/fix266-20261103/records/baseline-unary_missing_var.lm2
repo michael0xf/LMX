@@ -1,0 +1,19 @@
+# An ordinary code occurrence without var cannot use itself as implicit data.
+S:
+    int: x 2
+    x: 4
+end: S
+@: held S
+fn: try_call () int
+    int: answer 81
+    call: held
+    catch: call ()
+        answer: 7
+    ---
+    return: answer
+end: try_call
+int: answer try_call()
+if: S\x != 2
+    answer: 82
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+return

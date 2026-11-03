@@ -290,7 +290,7 @@ end: lmx_call0
 fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
     int: status
     c.LmxWalkValue: result_context
-    if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
+    if: out = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
         c.fprintf(c.l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
         c.abort()
     ---

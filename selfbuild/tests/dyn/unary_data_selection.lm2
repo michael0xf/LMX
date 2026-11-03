@@ -1,0 +1,53 @@
+# A unary ordinary Structure has no implicit alias to its source.
+# Caller working cells retain their snapshots after explicit external writes.
+int: quote 7
+int: signal 0
+NoData:
+    node\signal: 7
+end: NoData
+FreeOnly:
+    quote: 9
+    node\signal: quote
+end: FreeOnly
+S:
+    int: x 2
+    x: 4
+end: S
+@: held S
+fn: try_call () int
+    int: answer 81
+    call: held
+    catch: call ()
+        answer: 7
+    ---
+    return: answer
+end: try_call
+fn: read_signal () int
+    return: node\signal
+end: read_signal
+@: absent NoData 0
+fn: try_null () int
+    call: NoData absent
+    catch: interpreter ()
+        return: 7
+    ---
+    return: 86
+end: try_null
+int: answer try_call()
+if: try_null() != 7
+    answer: 86
+if: S\x != 2
+    answer: 82
+@: empty NoData
+call: empty
+if: read_signal() != 7 || signal != 0
+    answer: 83
+@: local FreeOnly
+call: local
+if: read_signal() != 9 || quote != 7 || signal != 0
+    answer: 84
+call: held S
+if: S\x != 4
+    answer: 85
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+return

@@ -6,23 +6,25 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 179 inputs (65 source files, 34 tools and
-80 tests). Slice 265 records the data places required by a named Structure
-from its declarations. A call through a held reference and a direct call
-admit the same requirements, including declarations inside an inline branch.
+The selected package contains 180 inputs (65 source files, 34 tools and
+81 tests). Slice 266 preserves absent data for an ordinary unary call with
+no var. Required data fields are admitted before dispatch; a body needing
+none can run without manufacturing an alias to its code.
 
-The quick bootstrap took 749.81 seconds. G1 and G2 each passed nine smoke
-rows. G2 passed all 27 focused rows.
-[Sources and checks](../steps/witnesses/fix265-20261103/notes.md).
+The quick bootstrap took 762.66 seconds. G1 and G2 each passed nine smoke
+rows. G2 passed all 28 focused rows.
+[Sources and checks](../steps/witnesses/fix266-20261103/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `24E8E7551475522126ECE5EE7C4537298092DAEDB2AEA67EB929DE5974E3FFC8` |
-| Input manifest | `41ACDB1666CB7AD4A4FFFE5984CE801DEDE6A4C17B4CC47444BD83240E326DF7` |
-| Working tool | `FF07ECBB0C65FE965380ED54A155CF9132514A1F5A13E31F26EE80AEFFEE5177` |
-| G2 frontend | `BBCABDAC2CBB98EB9E23F725843E95AD50A1091B1639A4760F84CF206D77EAB2` |
-| Production runtime | `1DB4884783710CD4424F2FCF23A32A7A015BEB77EBD88BFB371B23BD7F4DBB1A` |
-| Observation runtime | `F4EAFB53512301BFB64BAA0CC53D1884CB87D014ECBAF8DC0BD10B94803FB756` |
+| Input list | `50baf20d0a6ef9035805080c4f543a404d79236db4f963672e6840866ab79ed4` |
+| Input manifest | `556841e159fa7aedbc079ca9324130d341fca9393f14b2c417678673bf57d425` |
+| Working tool | `57304b57646e2f60a4ff00994c85d895363e6cafd40a4222dee0167d795c0921` |
+| G2 frontend | `04eecfad1bca6b4e382851ad0ca6f514e904a43b477eae225a9a1a3328c87281` |
+| Production runtime | `e617e95da4019c90a4b47adcb62ddfc79d9818d0729c4bb43b7ba7164a581c96` |
+| Observation runtime | `84ef7a8471496a0225482985e773f856cf89f075b29ffcd0ff12409dc68bc774` |
+
+[Slice 265](../steps/witnesses/fix265-20261103/notes.md) collected the declared-place interface independently of direct call sites.
 
 [Slice 264](../steps/witnesses/fix264-20261103/notes.md) contained 178 inputs and introduced admission of the actual code/data pair at Structure calls.
 

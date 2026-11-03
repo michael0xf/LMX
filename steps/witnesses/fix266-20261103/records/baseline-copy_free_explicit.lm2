@@ -1,0 +1,19 @@
+# Only the copied Inner is executed; it resolves the caller's free input.
+int: ticket 13
+Holder:
+    Inner:
+        int: seen 0
+        seen: ticket
+    end: Inner
+end: Holder
+Copy: merge: Holder
+fn: run_copy (int: ticket) int
+    call: Copy\Inner Copy\Inner
+    return: 0
+end: run_copy
+int: dropped run_copy(7)
+int: answer 81
+if: Copy\Inner\seen = 7 && Holder\Inner\seen = 0
+    answer: 7
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+return

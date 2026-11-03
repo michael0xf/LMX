@@ -329,7 +329,7 @@ fn: lm_compiler_own_slot_at (int: k; @: dest char) int
     # A slot selected as a place of explicit data is addressed by its admitted
     # place row, just like a number or pointer cell. It must not reuse the
     # source code's positional child index.
-    if: lm_compiler_split_data_row(k) != 0
+    if: own_mi_cell[0][k] = cur_mi_cell[0] && lm_compiler_split_data_row(k) != 0
         if: lm_compiler_m_is_place(cur_mi_cell[0]) = 0 || c.sprintf(dest, "self, l2_cpl[%dU]", lm_compiler_split_name_ix(k)) < 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], own_decl_cell[0][k], "internal: a place of the data has no place row")))
         return: (cast: (int) (0))
@@ -642,6 +642,7 @@ fn: lm_compiler_source_field_owner (int: own; @@: owner c.L2SourceContainer) @: 
 end: lm_compiler_source_field_owner
 
 fn: lm_compiler_graph_field (int: oi) @: c.L2GraphField
+    oi: c.lm_compiler_data_binding_source(oi)
     @@: source_containers_cell c.L2SourceContainer (cast: (@@: c.L2SourceContainer) (@ c.l2_source_containers))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@: own_places_cell c.L2GraphField (cast: (@@: c.L2GraphField) (@ c.l2_own_places))
@@ -867,8 +868,14 @@ fn: lm_compiler_split_data_row (int: oi) int
     int: fid
     int: ni
     int: typed_reference 0
+    @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     if: oi < 0 || oi >= own_n_cell[0]
         return: (cast: (int) (0))
+    if: c.lm_compiler_source_definition_ns(oi) >= 0 && c.lm_compiler_default_data_input(own_mi_cell[0][oi], c.lm_compiler_param_find(own_mi_cell[0][oi], names[0][oi])) != 0
+        return: 0
+    @@: uses int (cast: (@@: int) (@ c.l2_m_uses))
+    if: c.lm_compiler_data_binding_source(oi) != oi && uses[0][lm_compiler_own_off(own_mi_cell[0][oi], oi)] = 0
+        return: 0
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) = 0
         typed_reference: 1
     if: c.lm_compiler_own_num_ctype(own_ty_cell[0][oi]) = 0 && c.lm_compiler_source_definition_ns(oi) < 0 && typed_reference = 0

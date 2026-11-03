@@ -4343,6 +4343,10 @@ fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.V
     if: slot = (cast: (size_t) -1) || heads > 1U
         return: c.LMX_IMPLEMENTS_NO
     @: value void c.lmx_graph_value_in(arena, data, slot)
+    if: type = c.LMX_TYPE_NONE
+        if: out != 0
+            out[0]: slot
+        return: c.LMX_IMPLEMENTS_YES
     if: type = c.LMX_TYPE_LMX
         if: c.lmx_graph_node_in(arena, value) = 0 && (lmx_domain_kind(arena, value) != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(lmx_domain_type(arena, value)) != c.LMX_TYPE_LMX)
             return: c.LMX_IMPLEMENTS_NO
@@ -4422,8 +4426,12 @@ fn: lmx_implements_call_places_open (@: arena c.LmxArena; @: code c.Lmx; @: data
         c.memset((cast: (@: void) scope\root_slots), 255, count * c.sizeof(c.size_t))
     ---
     int: answer c.LMX_IMPLEMENTS_YES
-    if: required != 0U
-        scope\required_slots: scope\root_slots + root_count
+    # A present interface is authoritative even with zero demanded places.
+    # Its source statements do not become additional data requirements.
+    if: interface_row != 0
+        if: required != 0U
+            scope\required_slots: scope\root_slots + root_count
+        ---
         answer: lmx_implements_named_places(arena, data, (cast: (@: char) interface_row\place_names), (cast: (@: size_t) scope\requirements), (cast: (@: size_t) scope\required_slots))
     else:
         # Ordinary code already addresses its declared root places via

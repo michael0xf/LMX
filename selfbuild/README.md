@@ -6,33 +6,44 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 182 inputs (65 source files, 34 tools and
-83 tests). Slice 269 adds unary bitwise complement through the same kernel
-operation for native and the walker. Prefix operands are evaluated once;
-typed and runtime-typed numeric results retain the common receiving contract.
-Compact prefixed calls preserve receiver paths, and grouped dereference uses
-the common prepared operand.
+The selected package contains 184 inputs (65 source files, 34 tools and
+85 tests). Slice270 binds ordinary written data declarations to existing
+physical source cells. The reserved var input starts as selected data;
+ordinary assignment replaces that same binding, and subsequent explicit
+paths follow its current reference. A distinct data/var field and held
+bare fields stay separate. Structure assignment does not execute its body.
 
-The quick bootstrap took 805.29 seconds. G1 and G2 each passed nine
-smoke rows. G2 passed all 30 focused rows. Separate observation checked
-13 walked bodies and exact counts, including the side-effecting operand.
-[Sources and checks](../steps/witnesses/fix269-20261103/notes.md).
+Native and walker share actual named-place selection, reception and store.
+A consumed numeric receiver uses one prepared expression and the common
+runtime value receiver. There is no separate var parser or hidden graph.
+
+The whole quick bootstrap took879.95 seconds; G1 and G2 each passed9 smoke
+rows. G2 passed32 focused rows. Separate G2 observation checked9 genuinely
+walked bodies with exact counts, including3 executions of WriteNine.
+All184 published source hashes match their manifest. Compared with the
+frozen tested input,182 files are raw-equal. l2_driver.lm2 has its3505
+CRLF endings normalized to LF; l2_frontend_views.lm2 drops one extra blank
+line at EOF. All remaining bytes are exact, and the frozen inputs/receipts
+remain unchanged. The248
+generation inventories are identical:245 raw-equal files and3 PE files
+differing only in link metadata.
+[Sources and checks](../steps/witnesses/fix270-20261103/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `4ee22d619a417eea79937c34f1cc267a3fcdd6e62722ae01813bc24f9366cab4` |
-| Input manifest | `a4e6cc19f8b47342899e94f0119c6de1bcec161e6335773bd1224356cc6647f1` |
-| Working tool | `692f9d4d20dafafdde68df6c583e836060f10163589d89b539e691ae8b75a6e9` |
-| G2 frontend | `6b586e49f1954532c5b64621721964d6f3976fdc4b0b7faf77df7f6caf0473e0` |
-| Production runtime | `738e187f401a22571ac9cec0b794f716793e57ae2fb22530ce9c902fb6c8a672` |
-| Observation runtime | `df8cd15198bd47338a5ce3baff9894c6b4da360f9fb46f438082a727046711a4` |
+| Input list | `9cf7282a5e60fcfe43ade8d0980da05abb8103afde41dc5327a67314154bba8b` |
+| Input manifest | `b9af771a661c8a2ecff90dcd881c055af974d301460d3493fa5cf9d69533a916` |
+| Working tool | `2e936543ab9c36c842b03c489052b44a6bcaa3110f8018851f2ee07f7f49ba26` |
+| G2 frontend | `fa22765b71e99c1e2f5b4eb0f01588eec5859e9d30405945492a73dece09b99d` |
+| Production runtime | `5a39a205a07e4e40b185251811ac2897b1ff22660d1224f04637f25deef06ada` |
+| Observation runtime | `60ff05dd4bff4c1567775b10c4ec5348a4f614a2eb697756fca2e38cd1b99adb` |
 
 [Slice 268](../steps/witnesses/fix268-20261103/notes.md) supplied typed-native
 bitwise/shift guards and the common implicit status return.
 
 [Slice 266](../steps/witnesses/fix266-20261103/notes.md) preserves absent data
 for an ordinary unary call with no var and admits required data fields
-before dispatch. Pending ordinary-var WIP267 is not part of this package.
+before dispatch. Slice270 reconciles that earlier private candidate with the exact author rule.
 
 [Slice 265](../steps/witnesses/fix265-20261103/notes.md) collected the declared-place interface independently of direct call sites.
 

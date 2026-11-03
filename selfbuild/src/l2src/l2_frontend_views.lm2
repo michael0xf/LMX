@@ -501,6 +501,8 @@ fn: lm_compiler_source_part_field (int: mi; int: slot; int: own) @: c.L2GraphFie
 end: lm_compiler_source_part_field
 
 fn: lm_compiler_source_owns (int: own) int
+    if: lm_compiler_data_binding_source(own) != own
+        return: 1
     @@: source_containers_cell c.L2SourceContainer (cast: (@@: c.L2SourceContainer) (@ c.l2_source_containers))
     @: row c.L2SourceContainer source_containers_cell[0]
     @: field c.L2SourceField
@@ -1337,3 +1339,27 @@ fn: lm_compiler_hmemo_put (const: (@: at c.LmP0Node); @: value c.LmP0Node) int
     val_cell[0][i]: value
     return: (cast: (int) (0))
 end: lm_compiler_hmemo_put
+
+# A data binding is a compiler row for an existing physical source cell.
+# It belongs to the calling body's activation, without another graph field.
+fn: lm_compiler_data_binding_source (int: own) int
+    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
+    @: row c.L2DataBinding bindings[0]
+    while: row != 0
+        if: row\binding = own
+            return: row\source
+        row: row\allocated_next
+    ---
+    return: own
+end: lm_compiler_data_binding_source
+
+# The written child selects the interface. Its source occurrence remains
+# distinct from that interface's uses in the enclosing executable body.
+fn: lm_compiler_ns_data_source (int: ns) int
+    @@: kinds int (cast: (@@: int) (@ c.l2_nsf_kind))
+    @@: refs int (cast: (@@: int) (@ c.l2_nsf_ref))
+    int: row c.lm_compiler_ns_field_ix(ns, "var")
+    if: row < 0 || kinds[0][row] != 2
+        return: -1
+    return: refs[0][row]
+end: lm_compiler_ns_data_source

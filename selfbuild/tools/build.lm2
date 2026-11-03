@@ -308,7 +308,8 @@ end: file_count_line
 # In the program of the L1 at path (one translation for one target: the os block selected its branch, L2 section
 # 20), whether the occurrence of the method `name` binds a native word: 1 yes, 0 no, -1 the method's occurrence was
 # not found. The occurrence is the unit slot whose cell is named `name` (a method with header parts), or else the
-# slot the occurrence named `name` is stored at (a method without them, a sub).
+# slot the occurrence named `name` is stored at (a method without them, a sub). Ordinary Structures are named
+# directly on their l2_nsp descriptor. Both forms select the actual occurrence before checking its native binding.
 fn: l1_binds_native (@: path char; @: name char) int
     @: len size_t c.calloc(1U, c.sizeof(c.size_t))
     @: data char 0
@@ -358,6 +359,26 @@ fn: l1_binds_native (@: path char; @: name char) int
     ---
     if: slot != 0
         head: txt_cat3("l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, ", slot, "U)\n")
+    else:
+        # The descriptor naming statement is the identity witness. A generated
+        # body definition alone is not a native binding, especially in forced mode.
+        key: txt_cat3("]), \"", name, "\", ")
+        at: c.strstr(win, "lmx_source_name_set(l2_program_arena, (cast: (@: void) l2_nsp[")
+        while: at != 0
+            at: at + c.strlen("lmx_source_name_set(l2_program_arena, (cast: (@: void) l2_nsp[")
+            if: c.strspn(at, "0123456789") != 0U && c.strncmp(at + (cast: (size_t) c.strspn(at, "0123456789")), key, (cast: (size_t) c.strlen(key))) = 0
+                # A witness name must identify one occurrence, not choose between
+                # two equal spellings in distinct nested Structures.
+                if: head != 0
+                    c.free(data)
+                    c.free(len)
+                    return: -1
+                slot: txt_ndup(at, (cast: (size_t) c.strspn(at, "0123456789")))
+                head: txt_cat3("l2_entry_leaf: l2_nsp[", slot, "]\n")
+            at: c.strstr(at, "lmx_source_name_set(l2_program_arena, (cast: (@: void) l2_nsp[")
+        ---
+    ---
+    if: head != 0
         r: 0
         sec: c.strstr(win, head)
         while: sec != 0 && r = 0
@@ -1641,7 +1662,7 @@ fn: decl_walk (@: f c.FILE) int
         return: 1
     if: c.fputs("# node owns (lmx_walk_load_body).  OWN and OWN_OF read the row, SET and SET_OF write it and mark it dirty;\n# a slot with no row is the translator's broken promise, said as \"lmx: invariant: an own field used but\n# not loaded\" (X1).\n# The publication (lmx_walk_publish) writes the dirty rows into their slots in row order and unmarks\n# them: at CALL after its arguments, at PRIM_PUB after its operands, and when the activation ends --\n# RET after its value, a fall-off, a throw that leaves.  AT, PUT, PUT_REF, OF and PUT_OF are explicit\n# graph operations and never see the table: a write through them leaves the working value as it is.\n# Nothing is reloaded after a call, and a clean row is never written back.  Activation state lives\n# only on LmxWalkFrame and in its scratch slice; nothing precomputes or caches a field set (k.4).\n# MUL/DIV/MOD: [mul|div|mod, a, b]; typed numeric result. A zero divisor or\n# signed arithmetic overflow on a complete operation raises the ordinary\n# implicit `interpreter` throw (THROWN + LMX_WALK_NAME_INTERPRETER, no extra\n# children); malformed operands stay INVALID.\n# PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.\n# D-105 (Q39): OF [of, struct-expr, slot, req] and PUT_OF [put_of, struct-expr, slot, value, req] --\n# a non-null req is the named Structure the place is typed with: the slot is an EDGE into the\n# `implements` table's correspondence (K01): below req's width it is req's own field (an explicit\n# `[N]name` use), from width to 2*width-1 the LAST half of field slot - width (a bare `name` use,\n# the value's last occurrence of it).  lmx_implements_slot resolves the edge to the value's own\n# slot; no record = INVALID.\n# A physical reference place can additionally carry the closed pointer-cell witness supplied by its declaration:\n# AT [at, slot, unused, pointer-witness], OF [of, holder, slot, optional-req, pointer-witness], and PUT_OF\n# [put_of, holder, slot, value, optional-req, pointer-witness]. The witness is checked before the live slot's kind\n# or value is read; an absent cell is not the valid null held by a present typed cell. The same canonical ABI is\n# required for the witness and slot even when both addresses came from another admitted arena.\n# lmx_walk_slot refuses an OP-node holder (X1). receiveMessage take (-177 c1): PRIM record whose fn is lmx_walk_mail_take (nargs 0);\n# Empty inbox yields a present null reference under its declared result contract.\n# lmx_walk_admit / lmx_walk_admit_letter consume two reference-value storage inputs;\n# letter admits its payload. YES preserves the reference; NO throws IMPLEMENTS.\n# lmx_walk_merge_model is the existing explicit runtime merge callback; this\n# carrier description does not define source declaration/call classification.\n# CALL/EXEC child3 and PRIM.signature share the ordinary two-part contract:\n# child0 is the ordered input-witness Structure; child1 is an empty return part\n# for void, or contains one result witness. The contract is declared metadata,\n# never inferred from supplied operands, used ARG nodes or a callable's data child0.\n#\n#   ret     [ret, value?]                 return an optional typed value\n#   call    [call, code, data, contract, catch, actuals...]\n#             code/data identify the selected complete callable occurrence;\n#             its native word selects native adapter or ordinary walk.\n#   exec    [exec, data?, target-expression, contract, catch, actuals...]\n", f) < 0
         return: 1
-    if: c.fputs("#             evaluate the actual target (the code) once, then the explicitly\n#             passed data at slot 1 (`call: code data`; empty: the code\n#             itself), then use the same dispatch.\n#   lit     [lit, typed-cell]             snapshot a literal's typed value\n#   own     [own, holder, slot, reference-cell-witness?]  read the activation's working value;\n#             with distinct admitted code/data, the implements record of the\n#             actual pair projects the code's source slot to the data's\n#             physical slot; a PLACE holder (N4) reads the data slot of its\n#             name's ordinal through the procedure's static place table.  No\n#             position of the code is replayed into the data of\n#             `call: code data` (lmx_walk_data_holder)\n#   own_of  [own_of, holder-expression, slot, reference-cell-witness?]  read a hosted working value\n#   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback;\n#             the ENTRY source facet snapshots a callee-owned input at activation entry\n#   node    [node, size_t-count?, descriptor-expression?]  physical parent ancestry;\n#             absent count means one, zero selects the base itself. The base\n#             is the selected code unless explicitly supplied (one level up is\n#             node, the space above the method); it must be a present non-null\n#             Structure descriptor. An invalid explicit base never falls back.\n#   set_arg [set_arg, ordinal, value, type-witness]  write callee-owned input storage\n#   at      [at, holder, slot]            read physical declared storage\n#   of      [of, descriptor-expression, slot, model?]  physical path read\n#   deref   [deref, held-reference, referent-witness]  select the referent's place\n#   address [address, place-expression, pointer-witness]  address of real storage\n#   put     [put, place-expression, value]  select place, receive value, physical store\n#   put_ref [put_ref, holder, slot, descriptor]  replace a direct descriptor child\n#   set     [set, own-node, value]        working assignment, mark dirty after reception\n#   set_of  [set_of, holder-expression, slot, value, reference-cell-witness?]  hosted working assignment\n#   prim_pub [prim_pub, record, catch, operands...]  publish after operands, then callback\n#   add sub mul div mod lt eq [op, a, b]\n#   if      [if, cond, then, else?]       then/else are bodies\n#   while   [while, cond, body]\n#\n# The set of roles beyond RETURN and CALL and the operands of each are a carrier draft\n# for probing the mechanism, not an L3 ISA (dev/graph_interp/BODY_NODES.md).\n#\n# QUALIFIED IMMUTABILITY.  The full `independent: const: immutable` receiver profile is\n# itself an ordinary graph value.  LmxWalkContext carries its physical reference.  A\n# candidate is immutable exactly when its address range's array carries that same profile\n# reference; owner-local objects are protected and foreign ownership/sealing alone grant\n# nothing.  The way OUT is closed while a body is prepared: `put`, `set`, or a primitive\n# owner targeting that exact profile makes preparation INVALID.  Reading remains valid.\n#\n# This header describes the implemented carrier, not a second language grammar.\n# Source eligibility/type resolution belongs to the translator. Reached malformed\n# operands report INVALID; unknown roles report UNSUPPORTED. Empty bodies finish\n# normally. Runtime callbacks retain their distinct status/throw propagation.\n#\n\n", f) < 0
+    if: c.fputs("#             evaluate the actual target (the code) once, then the explicitly\n#             passed data at slot 1 (`call: code data`; empty: the code\n#             itself), then use the same dispatch.\n#   lit     [lit, typed-cell]             snapshot a literal's typed value\n#           [lit, magnitude, U-suffix]    preserve a contextual literal until reception\n#   own     [own, holder, slot, reference-cell-witness?]  read the activation's working value;\n#             with distinct admitted code/data, the implements record of the\n#             actual pair projects the code's source slot to the data's\n#             physical slot; a PLACE holder (N4) reads the data slot of its\n#             name's ordinal through the procedure's static place table.  No\n#             position of the code is replayed into the data of\n#             `call: code data` (lmx_walk_data_holder)\n#   own_of  [own_of, holder-expression, slot, reference-cell-witness?]  read a hosted working value\n#   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback;\n#             the ENTRY source facet snapshots a callee-owned input at activation entry\n#   node    [node, size_t-count?, descriptor-expression?]  physical parent ancestry;\n#             absent count means one, zero selects the base itself. The base\n#             is the selected code unless explicitly supplied (one level up is\n#             node, the space above the method); it must be a present non-null\n#             Structure descriptor. An invalid explicit base never falls back.\n#   set_arg [set_arg, ordinal, value, type-witness]  write callee-owned input storage\n#   at      [at, holder, slot]            read physical declared storage\n#   of      [of, descriptor-expression, slot, model?]  physical path read\n#   deref   [deref, held-reference, referent-witness]  select the referent's place\n#   address [address, place-expression, pointer-witness]  address of real storage\n#   put     [put, place-expression, value]  select place, receive value, physical store\n#   put_ref [put_ref, holder, slot, descriptor]  replace a direct descriptor child\n#   set     [set, own-node, value]        working assignment, mark dirty after reception\n#   set_of  [set_of, holder-expression, slot, value, reference-cell-witness?]  hosted working assignment\n#   prim_pub [prim_pub, record, catch, operands...]  publish after operands, then callback\n#   add sub mul div mod lt eq [op, a, b]\n#   if      [if, cond, then, else?]       then/else are bodies\n#   while   [while, cond, body]\n#\n# The set of roles beyond RETURN and CALL and the operands of each are a carrier draft\n# for probing the mechanism, not an L3 ISA (dev/graph_interp/BODY_NODES.md).\n#\n# QUALIFIED IMMUTABILITY.  The full `independent: const: immutable` receiver profile is\n# itself an ordinary graph value.  LmxWalkContext carries its physical reference.  A\n# candidate is immutable exactly when its address range's array carries that same profile\n# reference; owner-local objects are protected and foreign ownership/sealing alone grant\n# nothing.  The way OUT is closed while a body is prepared: `put`, `set`, or a primitive\n# owner targeting that exact profile makes preparation INVALID.  Reading remains valid.\n#\n# This header describes the implemented carrier, not a second language grammar.\n# Source eligibility/type resolution belongs to the translator. Reached malformed\n# operands report INVALID; unknown roles report UNSUPPORTED. Empty bodies finish\n# normally. Runtime callbacks retain their distinct status/throw propagation.\n#\n\n", f) < 0
         return: 1
     if: c.fputs("define: LMX_WALK_OK 0\n# Malformed body tree, not a callable, a field reference that selects nothing, an own\n# field that is not lexically inside M, a missing input.\ndefine: LMX_WALK_INVALID 1\n# A callable with no body node: nothing to walk.\ndefine: LMX_WALK_NO_GRAPH 2\ndefine: LMX_WALK_NOMEM 3\n# An unknown reached executable role or an unsupported reached operation.\ndefine: LMX_WALK_UNSUPPORTED 5\n# THE PRIMITIVE REPORTED A FAILURE: the nonzero ABI status of its own fn (lmx_primitive.h.lm1).\n# A status of its own ON PURPOSE, and each of the four collisions is refused deliberately: it is\n# not business zero (a primitive may return the VALUE 0 with status OK -- that is success, and\n# the value rides in `out`/`dest`, never in the status), not LMX_WALK_INVALID (the graph is well\n# formed and the record was admitted), not LMX_WALK_UNSUPPORTED (this slice DOES read the node)\n# and not LMX_WALK_NO_GRAPH.  It travels up unchanged to whoever mapped the activation; the\n# Thread reports it through the Thread ABI's own existing failure status (lmx_thread.lm1).\ndefine: LMX_WALK_PRIMITIVE 6\n# Reserved distinct dispatch refusal status; not an empty-body or missing-plan rule.\ndefine: LMX_WALK_NOT_CALLABLE 7\n# D-37: an explicit method throw or a recoverable valid-graph operation fault\n# rides as LMX_WALK_THROWN + key, where key is the program's identity of the\n# thrown NAME (below): the walker never renumbers a status between activations\n# and never resolves a spelling.  The per-callee ABI ordinal (declared names\n# 1..d in `throws:` order, implicit names d + g) exists only at the native\n# boundary: lmx_walk_key_from_ordinal / lmx_walk_ordinal_from_key translate\n# through the callee's retained THROWS node.  Malformed-graph and kernel errors\n# stay 1..7 and become X1 at note_walk_fail.\ndefine: LMX_WALK_THROWN 8\n# THE KEY OF A THROW NAME.  The implicit names have the language's fixed\n# keys, in the order of their implicit statuses (g); every declared name of a\n# translation unit gets the next key at its first appearance.  A key lives in a\n# typed size_t cell exactly where the source names the throw: in THROWS (the\n# `throws:` header), in PAD (the `catch:` name) and in THROW (the `throw:` name);\n# the address-to-name table carries the spelling of each such cell for toLmx.\ndefine: LMX_WALK_NAME_MERGE 1\ndefine: LMX_WALK_NAME_IMPLEMENTS 2\ndefine: LMX_WALK_NAME_CONVERT 3\ndefine: LMX_WALK_NAME_INTERPRETER 4\ndefine: LMX_WALK_NAME_ADOPT 5\ndefine: LMX_WALK_NAME_INDEPENDENT 6\ndefine: LMX_WALK_NAME_CALL 7\ndefine: LMX_WALK_NAME_DECLARED 8\n\n# What lmx_walk_op answers for a frame node whose code is not one of those below.\ndefine: LMX_WALK_OP_UNKNOWN -1\n# The fixed instruction vocabulary. A typed OP record carries its code inside\n# the graph; the record's physical address is not the instruction identity.\ndefine: LMX_WALK_OP_NONE 0\ndefine: LMX_WALK_OP_RET 1\ndefine: LMX_WALK_OP_CALL 2\ndefine: LMX_WALK_OP_LIT 3\ndefine: LMX_WALK_OP_OWN 4\ndefine: LMX_WALK_OP_ARG 5\ndefine: LMX_WALK_OP_AT 6\ndefine: LMX_WALK_OP_PUT 7\ndefine: LMX_WALK_OP_SET 8\ndefine: LMX_WALK_OP_ADD 9\ndefine: LMX_WALK_OP_SUB 10\ndefine: LMX_WALK_OP_LT 11\ndefine: LMX_WALK_OP_EQ 12\ndefine: LMX_WALK_OP_IF 13\ndefine: LMX_WALK_OP_WHILE 14\ndefine: LMX_WALK_OP_OF 15\n# [prim, record, arg ...] -- THE PRIMITIVE INSERT (lmx_primitive.h.lm1).  `record` is a PHYSICAL\n# reference to an LmxPrimitive, admitted because the arena classifies it as\n", f) < 0
         return: 1
@@ -2002,7 +2023,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: value_names char c.calloc(62U, sizeof(@: char))
     @@: source_names char c.calloc(13U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
-    @@: implements_names char c.calloc(62U, sizeof(@: char))
+    @@: implements_names char c.calloc(63U, sizeof(@: char))
     @@: copy_names char c.calloc(27U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(18U, sizeof(@: char))
@@ -2022,7 +2043,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(152U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(155U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2366,6 +2387,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[149]: "lmx_walk_call_held_values"
     walk_value_names[150]: "lmx_call_obligation"
     walk_value_names[151]: "lmx_call_selected_structure"
+    walk_value_names[152]: "lmx_walk_cell_place"
+    walk_value_names[153]: "lmx_walk_graph_cell_place"
+    walk_value_names[154]: "lmx_walk_value_named_place"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2520,6 +2544,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     implements_names[59]: "lmx_implements_call_places_open"
     implements_names[60]: "lmx_implements_call_places_close"
     implements_names[61]: "lmx_implements_receive_data_field"
+    implements_names[62]: "lmx_implements_call_field"
     list_names[0]: "lmx_list_len"
     list_names[1]: "lmx_list_cap"
     list_names[2]: "lmx_list_data"
@@ -2787,7 +2812,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 62, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 63, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 27, 0) != 0
         return: 1
@@ -2829,7 +2854,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 152, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 155, 1)
 end: bld_kernel_l2
 
 # L3 declaration writer; all executable algorithm bodies are ordinary L2.
@@ -3115,7 +3140,7 @@ end: decl_l2_consumer_uses
 # Compiler-owned declarations, printed as ordinary L1 text by L3.
 # No source file is copied or read by the generator at execution time.
 fn: decl_l2_application (@: f c.FILE) int
-    if: c.fputs("predef: \"l1src/p0.h.lm1\"\n\n# Translation-owned contracts. These records are not runtime graph objects.\n# A constructor has one ordinary operand contract; no Array rank/depth table.\nstruct: L2TypeContract\n    int: kind\n    int: depth\n    @: LmP0Text word\n    @: L2TypeContract operand\n    @: L2TypeContract allocated_next\nend: L2TypeContract\n\n# A receiver may derive this contract from an application. Name visibility is\n# resolved at the source position, never cached from allocated storage.\nstruct: L2Declaration\n    @: LmP0Node source\n    @: L2TypeContract contract\n    @: LmP0Text name\n    @: LmP0Field candidate\n    int: candidate_count\n    # An explicit type/value receiver nested in a repeated reference write\n    # validates its value before the original place contract does.\n    @: L2TypeContract asserted_contract\n    @: LmP0Text extent\n    # Translator-only atom view of the receiving name. Candidate-free carry\n    # reads the prior binding by name, independent of receiver spelling.\n    LmP0NodeAs: carry_as\n    LmP0Node: carry_node\n    LmP0Field: carry_field\n    @: L2Declaration allocated_next\nend: L2Declaration\n\n# A later source operation may write an already declared field. This is a\n# translator-only association: the runtime graph retains the source operation,\n# while the field still has exactly one physical cell.\nstruct: L2OwnReuse\n    @: LmP0Node source\n    int: method\n    int: own\n    @: L2OwnReuse allocated_next\nend: L2OwnReuse\n\n# A field projected from either existing named or composed compiler metadata.\n# This record has no runtime representation and contains no binding identity.\nstruct: L2SchemaField\n    @: LmP0Text name\n    @: LmP0Text type_word\n    int: kind\n    int: model\n", f) < 0
+    if: c.fputs("predef: \"l1src/p0.h.lm1\"\n\n# Translation-owned contracts. These records are not runtime graph objects.\n# A constructor has one ordinary operand contract; no Array rank/depth table.\nstruct: L2TypeContract\n    int: kind\n    int: depth\n    @: LmP0Text word\n    @: L2TypeContract operand\n    @: L2TypeContract allocated_next\nend: L2TypeContract\n\n# A receiver may derive this contract from an application. Name visibility is\n# resolved at the source position, never cached from allocated storage.\nstruct: L2Declaration\n    @: LmP0Node source\n    @: L2TypeContract contract\n    @: LmP0Text name\n    @: LmP0Field candidate\n    int: candidate_count\n    # An explicit type/value receiver nested in a repeated reference write\n    # validates its value before the original place contract does.\n    @: L2TypeContract asserted_contract\n    @: LmP0Text extent\n    # Translator-only atom view of the receiving name. Candidate-free carry\n    # reads the prior binding by name, independent of receiver spelling.\n    LmP0NodeAs: carry_as\n    LmP0Node: carry_node\n    LmP0Field: carry_field\n    @: L2Declaration allocated_next\nend: L2Declaration\n\n# A later source operation may write an already declared field. This is a\n# translator-only association: the runtime graph retains the source operation,\n# while the field still has exactly one physical cell.\nstruct: L2OwnReuse\n    @: LmP0Node source\n    int: method\n    int: own\n    @: L2OwnReuse allocated_next\nend: L2OwnReuse\n\n# One activation binding may use an existing child data declaration.\n# This translation-only relation allocates no runtime graph storage.\nstruct: L2DataBinding\n    int: binding\n    int: source\n    @: L2DataBinding allocated_next\nend: L2DataBinding\n\n# A field projected from either existing named or composed compiler metadata.\n# This record has no runtime representation and contains no binding identity.\nstruct: L2SchemaField\n    @: LmP0Text name\n    @: LmP0Text type_word\n    int: kind\n    int: model\n", f) < 0
         return: 1
     if: c.fputs("    # A reference's declared structural pointee, independent of model's\n    # machine pointer ABI and of the current/null cell value. Source-owned\n    # declaration metadata resolves this once; sealed consumers only read it.\n    int: pointee\nend: L2SchemaField\n\n# Translation-only resolved correspondence. The physical field and its two\n# contracts survive the source planning fixed point. No runtime permission\n# or guessed constructor is represented by one of these records.\nstruct: L2D105Step\n    L2SchemaField: requirement\n    L2SchemaField: actual\n    int: selector\n    int: physical\n    int: slot\n    int: status\n    int: child_pair\nend: L2D105Step\n\nstruct: L2D105StepDynamicArray\n    size_t: size\n    size_t: capacity\n    @: L2D105Step data\nend: L2D105StepDynamicArray\n\nstruct: L2D105Plan\n    int: candidate\n    int: requirement\n    int: width\n    int: physical_width\n    int: source_width\n    int: ready\n    L2D105StepDynamicArray: steps\n    @: L2D105Plan next\nend: L2D105Plan\n\n# One operation's reachable PAIRS, not another source/value graph. Rows\n# borrow the already resolved typed plans. Both backend representations\n# consume this same closure; no backend selects child models by name.\nstruct: L2D105CatalogRow\n    @: L2D105Plan plan\n    @: L2D105CatalogRow next\nend: L2D105CatalogRow\n\nstruct: L2D105Catalog\n    size_t: count\n    size_t: extent\n    int: ready\n    @: L2D105CatalogRow first\n    @: L2D105CatalogRow last\n    # Declared requirement closure also includes equal-layout references.\n    # These rows borrow identity plans, not candidate-layout evidence.\n    @: L2D105CatalogRow required_first\n    @: L2D105CatalogRow required_last\n    size_t: reference_count\nend: L2D105Catalog\n\n", f) < 0
         return: 1
@@ -3171,7 +3196,7 @@ end: decl_l2_application
 fn: decl_l2_frontend_state (@: f c.FILE) int
     if: c.fputs("predef: \"l1src/p0.h.lm1\"\npredef: \"l2src/l2_application.h.lm1\"\ninclude: \"<stdio.h>\"\n\n", f) < 0
         return: 1
-    if: c.fputs("int: l2_library_mode 0\nint: l2_want_fnptr 0\nunsigned: l2_module_hash_a 2166136261U\nunsigned: l2_module_hash_b 5381U\nunsigned: l2_sigv 0U\nunsigned: l2_intern_n 0U\nunsigned: l2_intern_cap 0U\nunsigned: l2_intern_again 0U\nunsigned: l2_intern_swap 0U\nunsigned: l2_intern_probe 0U\nint: l2_m_n 0\nint: l2_m_cap 0\nint: l2_slot_cap 0\nint: l2_own_n 0\nint: l2_own_cap 0\n@: int l2_pointer_store_types 0\nint: l2_pointer_store_count 0\n@: L2Declaration l2_declarations 0\n@: L2OwnReuse l2_own_reuses 0\n@: L2TypeContract l2_contracts 0\n@: L2HeadExpression l2_head_expressions 0\n@: L2ApplicationSite l2_application_sites 0\n@@: L2ApplicationSite l2_application_site_index 0\nsize_t: l2_application_site_capacity 0U\nsize_t: l2_application_site_count 0U\nint: l2_own_excl -1\nint: l2_hr_on 0\nint: l2_hr_hit 0\nint: l2_hr_done 0\n@: LmP0Text l2_hr_name 0\n@: LmP0Node l2_hr_stop 0\n@@: LmP0Node l2_hr_at 0\n", f) < 0
+    if: c.fputs("int: l2_library_mode 0\nint: l2_want_fnptr 0\nunsigned: l2_module_hash_a 2166136261U\nunsigned: l2_module_hash_b 5381U\nunsigned: l2_sigv 0U\nunsigned: l2_intern_n 0U\nunsigned: l2_intern_cap 0U\nunsigned: l2_intern_again 0U\nunsigned: l2_intern_swap 0U\nunsigned: l2_intern_probe 0U\nint: l2_m_n 0\nint: l2_m_cap 0\nint: l2_slot_cap 0\nint: l2_own_n 0\nint: l2_own_cap 0\n@: int l2_pointer_store_types 0\nint: l2_pointer_store_count 0\n@: L2Declaration l2_declarations 0\n@: L2OwnReuse l2_own_reuses 0\n@: L2DataBinding l2_data_bindings 0\n@: L2TypeContract l2_contracts 0\n@: L2HeadExpression l2_head_expressions 0\n@: L2ApplicationSite l2_application_sites 0\n@@: L2ApplicationSite l2_application_site_index 0\nsize_t: l2_application_site_capacity 0U\nsize_t: l2_application_site_count 0U\nint: l2_own_excl -1\nint: l2_hr_on 0\nint: l2_hr_hit 0\nint: l2_hr_done 0\n@: LmP0Text l2_hr_name 0\n@: LmP0Node l2_hr_stop 0\n@@: LmP0Node l2_hr_at 0\n", f) < 0
         return: 1
     if: c.fputs("@: int l2_hr_mi 0\n@: int l2_hr_val 0\nint: l2_hr_n 0\nint: l2_hr_cap 0\n@@: LmP0Node l2_rb_at 0\n@@: LmP0Text l2_rb_model 0\n@: int l2_rb_meth 0\n@: int l2_rb_own 0\nint: l2_rb_n 0\nint: l2_rb_cap 0\n@@: LmP0Node l2_ab_at 0\n@@: L2TypeContract l2_ab_contract 0\nint: l2_ab_n 0\nint: l2_ab_cap 0\n@@: LmP0Node l2_urm_at 0\n@: int l2_urm_val 0\nint: l2_urm_n 0\nint: l2_urm_cap 0\nint: l2_tn 0\nint: l2_pw_n 0\nint: l2_loop_depth 0\nint: l2_scope_n 0\nint: l2_scope_cap 0\n@@: LmP0Node l2_scope_at 0\nint: l2_wait_n 0\nint: l2_wait_cap 0\nint: l2_wait_on 0\n@: L2SourceSite l2_wait 0\nint: l2_indent_n 0\nint: l2_indent_cap 0\n@@: char l2_indent_at 0\n@: char l2_pub_tmp 0\n", f) < 0
         return: 1
@@ -3290,16 +3315,16 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     @@: frontend_names char c.calloc(259U, sizeof(@: char))
     @@: frontend_alloc_names char c.calloc(20U, sizeof(@: char))
     @@: frontend_value_names char c.calloc(148U, sizeof(@: char))
-    @@: frontend_view_names char c.calloc(83U, sizeof(@: char))
+    @@: frontend_view_names char c.calloc(85U, sizeof(@: char))
     @@: frontend_context_names char c.calloc(111U, sizeof(@: char))
     @@: frontend_type_names char c.calloc(51U, sizeof(@: char))
     @@: frontend_coord_names char c.calloc(112U, sizeof(@: char))
-    @@: frontend_resolve_names char c.calloc(120U, sizeof(@: char))
+    @@: frontend_resolve_names char c.calloc(121U, sizeof(@: char))
     @@: frontend_intern_names char c.calloc(19U, sizeof(@: char))
     @@: frontend_useplan_names char c.calloc(151U, sizeof(@: char))
-    @@: frontend_lower_names char c.calloc(425U, sizeof(@: char))
+    @@: frontend_lower_names char c.calloc(427U, sizeof(@: char))
     @@: frontend_core_names char c.calloc(442U, sizeof(@: char))
-    @@: frontend_emit_names char c.calloc(308U, sizeof(@: char))
+    @@: frontend_emit_names char c.calloc(309U, sizeof(@: char))
     @@: generated char c.calloc(87U, sizeof(@: char))
     int: k 0
     if: src = 0 || libc_dir = 0 || libc_abi = 0 || own_names = 0 || text_names = 0 || scan_names = 0 || copy_names = 0 || parser_names = 0 || type_names = 0 || receiving_names = 0 || consumer_names = 0 || frontend_names = 0 || frontend_alloc_names = 0 || frontend_value_names = 0 || frontend_view_names = 0 || frontend_context_names = 0 || frontend_type_names = 0 || frontend_coord_names = 0 || frontend_resolve_names = 0 || frontend_intern_names = 0 || frontend_useplan_names = 0 || frontend_lower_names = 0 || frontend_core_names = 0 || frontend_emit_names = 0 || generated = 0 || previous_fe = 0 || file_exists(previous_fe) = 0
@@ -3896,6 +3921,8 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_view_names[80]: "lm_compiler_schema_method"
     frontend_view_names[81]: "lm_compiler_mres_of_own"
     frontend_view_names[82]: "lm_compiler_mres_decl"
+    frontend_view_names[83]: "lm_compiler_data_binding_source"
+    frontend_view_names[84]: "lm_compiler_ns_data_source"
     frontend_context_names[0]: "lm_compiler_node_file"
     frontend_context_names[1]: "lm_compiler_vis_ok"
     frontend_context_names[2]: "lm_compiler_vis_from"
@@ -4290,6 +4317,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_resolve_names[117]: "lm_compiler_merge_frame_in"
     frontend_resolve_names[118]: "lm_compiler_merge_typed_decl"
     frontend_resolve_names[119]: "lm_compiler_value_body"
+    frontend_resolve_names[120]: "lm_compiler_primary_numeric_receiver"
     frontend_intern_names[0]: "lm_compiler_intern_reserve"
     frontend_intern_names[1]: "lm_compiler_intern_match"
     frontend_intern_names[2]: "lm_compiler_intern_store"
@@ -4885,6 +4913,8 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_lower_names[422]: "lm_compiler_own_load_context_full"
     frontend_lower_names[423]: "lm_compiler_emit_native_input_entry"
     frontend_lower_names[424]: "lm_compiler_indirect_managed"
+    frontend_lower_names[425]: "lm_compiler_emit_actual_path_place"
+    frontend_lower_names[426]: "lm_compiler_emit_actual_path_store"
     frontend_core_names[0]: "lm_compiler_emit_ns_num_cell"
     frontend_core_names[1]: "lm_compiler_translation_failed"
     frontend_core_names[2]: "lm_compiler_release"
@@ -5643,6 +5673,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_emit_names[305]: "lm_compiler_emit_unit"
     frontend_emit_names[306]: "lm_compiler_translate_program"
     frontend_emit_names[307]: "lm_compiler_cli_main"
+    frontend_emit_names[308]: "lm_compiler_collect_data_bindings"
     generated[0]: "src/l1src/p0.h.lm1"
     generated[1]: "src/l1src/p0_own_state.lm1"
     generated[2]: "src/l1src/own.h.lm1"
@@ -5838,7 +5869,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_views") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_views", frontend_view_names, 83, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_views", frontend_view_names, 85, 1) != 0
             return: 1
         ---
     ---
@@ -5858,7 +5889,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_resolve") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_resolve", frontend_resolve_names, 120, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_resolve", frontend_resolve_names, 121, 1) != 0
             return: 1
         ---
     ---
@@ -5873,7 +5904,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_lower") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_lower", frontend_lower_names, 425, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_lower", frontend_lower_names, 427, 1) != 0
             return: 1
         ---
     ---
@@ -5893,7 +5924,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_emit") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_emit", frontend_emit_names, 308, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_emit", frontend_emit_names, 309, 1) != 0
             return: 1
         ---
     ---

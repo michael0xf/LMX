@@ -753,6 +753,12 @@ end: lm_compiler_e_free
 
 # Original: l2src/l2trans.lm1:2334
 fn: lm_compiler_own_free () int
+    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
+    while: bindings[0] != 0
+        @: row c.L2DataBinding bindings[0]
+        bindings[0]: row\allocated_next
+        c.lm_compiler_xfree((cast: (@: void) row))
+    ---
     @: own_gen_cell int (cast: (@: int) (@ c.l2_own_gen))
     @@: own_reuses_cell c.L2OwnReuse (cast: (@@: c.L2OwnReuse) (@ c.l2_own_reuses))
     @@: rw_bseq_cell int (cast: (@@: int) (@ c.l2_rw_bseq))
@@ -1697,7 +1703,9 @@ fn: lm_compiler_ns_decl_first (const: (@: source_node c.LmP0Node); int: me) int
         return: (cast: (int) (0))
     if: c.lm_compiler_ns_field_word((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_decl_content((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), source_node, 0 - 1, me) = 4
+    # A typed value in the tail does not declare a field at a path target.
+    # Only a binding name can introduce that outer field.
+    if: c.lm_compiler_bind_spelling((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0 && c.lm_compiler_decl_content((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), source_node, 0 - 1, me) = 4
         return: (cast: (int) (1))
     declaration: c.lm_compiler_declaration(source_node)
     if: declaration != 0 && c.lm_compiler_contract_leaf((cast: (@: c.L2TypeContract) (declaration\contract)), @ depth, @ qualified) != 0 && depth > 0
@@ -4095,7 +4103,12 @@ fn: lm_compiler_collect_asgn_body (const: (@: body c.LmP0Structure); int: mi; co
         ---
         stmt: field\value
         c.lm_compiler_vis_stmt(mi, stmt)
-        retained: c.lm_compiler_ns_constructed_row(mi, stmt)
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && c.lm_compiler_default_data_name(mi, stmt\as\frame\head) != 0 && c.lm_compiler_is_asgn(stmt, mi) != 0
+            if: c.lm_compiler_dyn_add(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), c.lm_compiler_free_dt()) != 0
+                return: 1
+            ---
+        ---
+        retained: c.lm_compiler_inert_source_row(mi, stmt)
         if: retained = -2
             return: (cast: (int) (1))
         if: retained >= 0
@@ -4413,6 +4426,9 @@ fn: lm_compiler_dyn_local (const: (@: path char)) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
     @: vis_on_cell int (cast: (@: int) (@ c.l2_vis_on))
     @: uses_methods_cell int (cast: (@: int) (@ c.l2_uses_methods))
+    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
+    @@: binding_owners int (cast: (@@: int) (@ c.l2_own_mi))
+    @: binding c.L2DataBinding
     int: d0 0
     int: i 0
     int: k
@@ -4491,6 +4507,16 @@ fn: lm_compiler_dyn_local (const: (@: path char)) int
                     c.lm_compiler_xfree((cast: (@: void) seen))
                 return: (cast: (int) (c.lm_compiler_said_or(path, m_node_cell[0][i], d0, "unsupported body")))
             oi: oi + 1
+        # Explicit ordinary data bindings are available at entry. Scanning
+        # the body must not also demand a free input for the same local name.
+        # This marks binding only; no initializer is evaluated or scanned here.
+        binding: bindings[0]
+        while: binding != 0
+            oi: binding\binding
+            if: binding_owners[0][oi] = i
+                seen[oi]: 1
+            binding: binding\allocated_next
+        ---
         if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && c.lm_compiler_scan_body((cast: (const: @: c.LmP0Structure) (m_body_cell[0][i]\as\structure)), i, seen) != 0
             if: heap != 0
                 c.lm_compiler_xfree((cast: (@: void) seen))
@@ -6960,6 +6986,9 @@ end: lm_compiler_for_add
 
 # Original: l2src/l2trans.lm1:11891
 fn: lm_compiler_own_mslot (int: oi) int
+    int: source c.lm_compiler_data_binding_source(oi)
+    if: source != oi
+        return: lm_compiler_own_mslot(source)
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
     @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
@@ -8606,6 +8635,10 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
     size_t: bits 0U
     int: st 0
     int: span 0
+    int: data_index -1
+    @: data_source c.LmP0Node 0
+    @: scan c.LmP0Field
+    int: data_count 0
     if: body = 0
         return: (cast: (int) (c.lm_compiler_error(path, at, "a named Structure needs at least one field")))
     me: lm_compiler_ns_push(name, parent, at)
@@ -8622,6 +8655,24 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
     if: f = 0 || (c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next))) = 0 && c.lm_compiler_empty_struct((cast: (const: @: c.LmP0Node) (f\value))) != 0)
         ns_count_cell[0][me]: 0
         return: (cast: (int) (0))
+    # Written data declarations are visible to the whole enclosing body.
+    # Collect that child with the SAME namespace collector before classifying
+    # the body heads. Its parent field is still placed at its source position.
+    scan: f
+    while: scan != 0
+        if: c.lm_compiler_frame_head(scan\value, "var") != 0
+            data_source: scan\value
+            data_count: data_count + 1
+        scan: c.lm_compiler_next_active(scan\next)
+    ---
+    if: data_count = 1 && data_source != 0 && data_source\as != 0 && data_source\as\frame != 0 && lm_compiler_ns_nested_def(data_source, me) != 0
+        data_index: ns_n_cell[0]
+        if: lm_compiler_take_ns_body((cast: (const: @: c.LmP0Text) (data_source\as\frame\head)), me, (cast: (const: @: c.LmP0Structure) (data_source\as\frame\body)), data_source, data_source, path) != 0
+            return: 1
+        ---
+    else:
+        data_source: 0
+    ---
     while: f != 0 || unit_resume != 0
         if: unit_body != 0
             f: c.lm_compiler_unit_cursor_field(f, @ unit_resume)
@@ -8733,9 +8784,13 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
                 return: (cast: (int) (1))
             nsf_fname_cell[0][nsf_n_cell[0] - 1]: (cast: (@: c.LmP0Text) fld\as\frame\head)
             sub_ix: nsf_n_cell[0] - 1
-            ref_ix: ns_n_cell[0]
-            if: lm_compiler_take_ns_body((cast: (const: @: c.LmP0Text) ((cast: (@: c.LmP0Text) fld\as\frame\head))), me, (cast: (const: @: c.LmP0Structure) (fld\as\frame\body)), fld, fld, path) != 0
-                return: (cast: (int) (1))
+            ref_ix: data_index
+            if: fld != data_source
+                ref_ix: ns_n_cell[0]
+                if: lm_compiler_take_ns_body((cast: (const: @: c.LmP0Text) ((cast: (@: c.LmP0Text) fld\as\frame\head))), me, (cast: (const: @: c.LmP0Structure) (fld\as\frame\body)), fld, fld, path) != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
             nsf_ref_cell[0][sub_ix]: ref_ix
             count: count + 1
             f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
@@ -12870,6 +12925,16 @@ fn: lm_compiler_rw_path_records (const: (@: source_node c.LmP0Node); const: (@: 
             k: k + 1
             continue
         ---
+        if: step\locus = 8
+            path[6 + 6 * k]: k
+            path[7 + 6 * k]: 18
+            path[8 + 6 * k]: -1
+            path[9 + 6 * k]: -1
+            path[10 + 6 * k]: -1
+            path[11 + 6 * k]: step\cell_ft
+            k: k + 1
+            continue
+        ---
         kind: step\kind
         slot: step\row
         if: project != 0 && (step\locus = 1 || step\locus = 6)
@@ -12916,7 +12981,12 @@ fn: lm_compiler_rw_path_records (const: (@: source_node c.LmP0Node); const: (@: 
     # The same resolved value type as native checking. In particular a whole
     # Array field is a descriptor reference, not an untyped Structure, and a
     # deeper reference retains its complete closed pointer type.
-    path[3]: c.lm_compiler_own_ty_of_param(c.lm_compiler_path_rec_leaf_ft(resolved))
+    if: c.lm_compiler_ft_is_free(c.lm_compiler_path_rec_leaf_ft(resolved)) != 0
+        # This is a value record, not a declaration of a new typed own cell.
+        path[3]: c.lm_compiler_free_own()
+    else:
+        path[3]: c.lm_compiler_own_ty_of_param(c.lm_compiler_path_rec_leaf_ft(resolved))
+    ---
     return: (cast: (int) (0))
 end: lm_compiler_rw_path_records
 
@@ -13584,8 +13654,9 @@ fn: lm_compiler_place_tables_declare () int
     @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     int: i 0
     while: i < methods[0]
-        if: c.lm_compiler_m_is_place(i) != 0
-            size_t: bytes 0U
+        if: c.lm_compiler_m_is_split(i) != 0
+            # Keep a real buffer for the empty interface as well.
+            size_t: bytes 1U
             int: k 0
             while: k < owns[0]
                 if: owners[0][k] = i && c.lm_compiler_split_data_row(k) != 0 && c.lm_compiler_split_rep(k) = k
@@ -13615,7 +13686,7 @@ fn: lm_compiler_place_tables_emit () int
     @: type_name char (cast: (@: char) type_buffer\buffer)
     int: i 0
     while: i < methods[0]
-        if: c.lm_compiler_m_is_place(i) != 0
+        if: c.lm_compiler_m_is_split(i) != 0
             if: c.fprintf(output[0], "        l2_cpt%d[0]: %dU\n        l2_cpt%d[1]: (cast: (size_t) -1)\n", i, lm_compiler_split_m(i), i) < 0
                 return: 1
             size_t: offset 0U

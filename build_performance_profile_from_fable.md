@@ -214,3 +214,12 @@ Source182/A4E6CC19; all248 artifact paths per generation independently hashed,
 245 raw-equal and3 PE metadata-only differences. This is a whole-pipeline
 measurement, not a same-context translation-speed claim.
 [Commands, failures, fixes and current hashes](steps/witnesses/fix269-20261103/notes.md).
+
+## Slice270 / boot132c (Codex, 2026-11-03)
+
+Whole quick879.95s:11:10:05.7616252Z–11:24:45.7090672Z, both generations
+smoke9/0. G2 focus32/0; G2 observation confirms9 walked bodies and counts.
+Source184/E4D1E376; all248 artifact paths per generation independently
+hashed,245 raw-equal and3 PE metadata-only. This is a whole-pipeline
+measurement, not a controlled translation-speed comparison.
+[Commands, failures, fixes and hashes](steps/witnesses/fix270-20261103/notes.md).

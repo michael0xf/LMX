@@ -431,6 +431,13 @@ fn: lm_compiler_own_source_visible (int: row; int: mi; const: (@: at c.LmP0Node)
     @: here_source_mi_cell int (cast: (@: int) (@ c.l2_here_source_mi))
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
     const: (@: source c.LmP0Node c.lm_compiler_head_source_node(own_decl_cell[0][row]))
+    @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
+    @: binding c.L2DataBinding bindings[0]
+    while: binding != 0
+        if: binding\binding = row
+            return: 1
+        binding: binding\allocated_next
+    ---
     if: c.lm_compiler_source_definition_method(row) >= 0
         return: (cast: (int) (1))
     at: c.lm_compiler_head_source_node(at)
@@ -727,6 +734,22 @@ fn: lm_compiler_own_direct (int: mi; int: k) int
     return: (cast: (int) (ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36 || c.lm_compiler_own_is_pointer(ty) != 0))
 end: lm_compiler_own_direct
 
+# The explicit reserved data reference is an activation input. Its
+# source spelling may also label a retained Structure; that source child
+# is not another storage cell for the already bound input.
+fn: lm_compiler_default_data_name (int: mi; const: (@: name c.LmP0Text)) int
+    if: mi < 0 || c.lm_compiler_asgn_root(mi) != 0 || c.lm_compiler_m_machine(mi) != 0
+        return: 0
+    return: c.lm_compiler_text_eq(name, "var")
+end: lm_compiler_default_data_name
+
+fn: lm_compiler_default_data_input (int: mi; int: pk) int
+    @@: arity int (cast: (@@: int) (@ c.l2_m_arity))
+    if: mi < 0 || pk < arity[0][mi]
+        return: 0
+    return: lm_compiler_default_data_name(mi, c.lm_compiler_dn(mi, pk - arity[0][mi]))
+end: lm_compiler_default_data_input
+
 fn: lm_compiler_formal_row (int: mi; int: pk) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
@@ -738,11 +761,47 @@ fn: lm_compiler_formal_row (int: mi; int: pk) int
         name: c.lm_compiler_fn(mi, pk)
     else:
         name: c.lm_compiler_dn(mi, pk - m_arity_cell[0][mi])
+    if: lm_compiler_default_data_input(mi, pk) != 0
+        return: -1
     own: lm_compiler_own_visible(mi, name)
     if: own >= 0 && own_mi_cell[0][own] = mi
         return: (cast: (int) (own))
     return: (cast: (int) (-1))
 end: lm_compiler_formal_row
+
+# An existing input without an own receiving cell is assigned in place.
+# Retained source syntax does not make that reached statement inert.
+fn: lm_compiler_assignment_input (int: mi; const: (@: stmt c.LmP0Node)) int
+    int: input
+    if: c.lm_compiler_is_asgn(stmt, mi) = 0
+        return: -1
+    input: c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))
+    if: input < 0 || lm_compiler_formal_row(mi, input) >= 0
+        return: -1
+    return: input
+end: lm_compiler_assignment_input
+
+# A retained Structure value and an ordinary expression use their existing
+# source classification. Assigning the former does not evaluate its fields.
+fn: lm_compiler_input_source_definition (int: mi; const: (@: stmt c.LmP0Node)) int
+    int: own
+    const: (@: frame c.LmP0Frame)
+    if: lm_compiler_assignment_input(mi, stmt) < 0
+        return: -1
+    own: c.lm_compiler_own_by_decl(mi, stmt)
+    if: own < 0 || c.lm_compiler_source_definition_ns(own) < 0
+        return: -1
+    frame: stmt\as\frame
+    if: c.lm_compiler_atom_only_tail(frame) != 0 || c.lm_compiler_expr_only_tail(frame) != 0
+        return: -1
+    return: own
+end: lm_compiler_input_source_definition
+
+fn: lm_compiler_inert_source_row (int: mi; const: (@: stmt c.LmP0Node)) int
+    if: lm_compiler_assignment_input(mi, stmt) >= 0 && lm_compiler_input_source_definition(mi, stmt) < 0
+        return: -1
+    return: c.lm_compiler_ns_constructed_row(mi, stmt)
+end: lm_compiler_inert_source_row
 
 fn: lm_compiler_name_cell (int: mi; const: (@: t c.LmP0Text)) int
     int: pi c.lm_compiler_param_find(mi, t)
@@ -1692,25 +1751,15 @@ fn: lm_compiler_rw_find (const: (@: t c.LmP0Text)) int
 end: lm_compiler_rw_find
 
 fn: lm_compiler_rw_bound (const: (@: t c.LmP0Text)) int
-    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    int: own lm_compiler_own_visible(rw_mi_cell[0], t)
-    if: own >= 0 && own_mi_cell[0][own] = rw_mi_cell[0]
-        return: (cast: (int) (own))
-    return: (cast: (int) (-1))
+    int: input c.lm_compiler_param_find(rw_mi_cell[0], t)
+    return: lm_compiler_formal_row(rw_mi_cell[0], input)
 end: lm_compiler_rw_bound
 
 fn: lm_compiler_rw_formal_slot (const: (@: t c.LmP0Text)) int
-    @: e_cell int (cast: (@: int) (@ c.l2_e))
-    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    int: own
-    if: rw_mi_cell[0] = e_cell[0] || c.lm_compiler_param_find(rw_mi_cell[0], t) < 0
-        return: (cast: (int) (-1))
-    own: lm_compiler_own_visible(rw_mi_cell[0], t)
-    if: own >= 0 && own_mi_cell[0][own] = rw_mi_cell[0]
-        return: (cast: (int) (own))
-    return: (cast: (int) (-1))
+    int: input c.lm_compiler_param_find(rw_mi_cell[0], t)
+    return: lm_compiler_formal_row(rw_mi_cell[0], input)
 end: lm_compiler_rw_formal_slot
 
 fn: lm_compiler_rw_code_inside (int: mi) int

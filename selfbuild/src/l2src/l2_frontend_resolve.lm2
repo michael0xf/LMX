@@ -1969,11 +1969,28 @@ fn: lm_compiler_ns_site_known (const: (@: t c.LmP0Text); int: me) int
     int: x me
     int: top me
     int: j
+    @: namespace_count int (cast: (@: int) (@ c.l2_ns_n))
+    int: data
     const: (@: stop c.LmP0Node)
     @: first c.LmP0Field
     if: t = 0 || me < 0
         return: (cast: (int) (0))
     while: x >= 0
+        # A precollected written var contributes its declared root names
+        # before and after its source position. This uses its actual field
+        # rows, including reference and method declarations, not type guesses.
+        data: 0
+        while: data < namespace_count[0]
+            if: ns_parent_cell[0][data] = x && c.lm_compiler_text_eq(ns_name_cell[0][data], "var") != 0
+                j: ns_first_cell[0][data]
+                while: j < nsf_n_cell[0]
+                    if: nsf_owner_cell[0][j] = data && nsf_fname_cell[0][j] != 0 && c.lm_compiler_text_same(nsf_fname_cell[0][j], t) != 0
+                        return: 1
+                    j: j + 1
+                ---
+            ---
+            data: data + 1
+        ---
         if: ns_name_cell[0][x] != 0 && c.lm_compiler_text_same(ns_name_cell[0][x], t) != 0
             return: (cast: (int) (1))
         j: ns_first_cell[0][x]
@@ -3079,6 +3096,16 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
         len: step\len
         if: len = 0U
             return: (cast: (int) (c.lm_compiler_path_fail(out, k + 1, 4)))
+        if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(out, cur_mi_cell[0])) != 0
+            step\locus: 8
+            step\kind: 13
+            step\row: k
+            step\cell_ft: c.lm_compiler_free_own()
+            step\elem_ty: c.lm_compiler_free_own()
+            kind: 13
+            k: k + 1
+            continue
+        ---
         step\host_ns: ni
         step\host_res: res
         step\host_bm: bm
@@ -3265,7 +3292,7 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
         k: k + 1
     ---
     # The leaf: a name's kind, Structure or pointee; an index's element; and whether the value is an Array.
-    if: last\locus = 7
+    if: last\locus = 7 || last\locus = 8
         out\leaf_kind: 13
         out\leaf_ty: last\elem_ty
         out\leaf_model: last\elem_model
@@ -3727,7 +3754,9 @@ fn: lm_compiler_address_record (const: (@: path c.L2Path); int: mi; @: out c.L2A
     out\index: kind
     out\descriptor: 0
     out\model: model
-    out\type: c.lm_compiler_address_type(ft)
+    out\type: ft
+    if: c.lm_compiler_ft_is_free(ft) = 0
+        out\type: c.lm_compiler_address_type(ft)
     out\target: path\source_first
     out\target_count: path\run_count
     return: (cast: (int) (0))
@@ -4112,6 +4141,7 @@ end: lm_compiler_primary_role
 
 # Original: l2src/l2trans.lm1:38039
 fn: lm_compiler_node_role (const: (@: source_node c.LmP0Node); int: mi) int
+    int: numeric_type -1
     @: head c.LmP0Text
     @: site c.L2ApplicationSite
     int: formal
@@ -4131,6 +4161,8 @@ fn: lm_compiler_node_role (const: (@: source_node c.LmP0Node); int: mi) int
         return: (cast: (int) (5))
     if: lm_compiler_external_head(head, mi) != 0
         return: (cast: (int) (3))
+    if: c.lm_compiler_ret_type_word(head, 0, 0, @ numeric_type) = 0 && numeric_type != 8 && c.lm_compiler_prim_code_name(numeric_type) != 0
+        return: 6
     return: (cast: (int) (0))
 end: lm_compiler_node_role
 
@@ -4156,6 +4188,8 @@ fn: lm_compiler_primary_value_type (@: value c.L2ValueSpan; int: mi; @: type int
         return: (cast: (int) (2))
     if: role = 1
         return: (cast: (int) (lm_compiler_primary_cast_value(value, type, 0, @ operand)))
+    if: role = 6
+        return: lm_compiler_primary_numeric_receiver(value, type, @ operand)
     # length and both sizeof operators have C's size_t (C99 6.5.3.4p4); any other C door value is opaque, C's to type.
     if: role = 2 || role = 4 || role = 5
         \type: 2
@@ -5074,3 +5108,21 @@ fn: lm_compiler_cmap_index (@: at c.L2Declaration) int
     ---
     return: (cast: (int) (0))
 end: lm_compiler_cmap_index
+
+# A consumed numeric receiver borrows the already prepared full expression.
+# Its written contract is independent of the place consuming its result.
+fn: lm_compiler_primary_numeric_receiver (@: value c.L2ValueSpan; @: type int; @: operand c.L2ValueSpan) int
+    @: frame c.LmP0Frame 0
+    if: value = 0 || value\node = 0 || value\node\kind != c.LM_P0_NODE_FRAME || value\node\as = 0 || type = 0 || operand = 0
+        return: 1
+    frame: value\node\as\frame
+    if: frame = 0 || frame\head = 0 || frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
+        return: 1
+    if: c.lm_compiler_ret_type_word((cast: (const: @: c.LmP0Text) frame\head), 0, 0, type) != 0 || type[0] = 8 || c.lm_compiler_prim_code_name(type[0]) = 0
+        return: 1
+    if: c.lm_compiler_primary_slice(value, 0, -1, operand) != 0 || operand\count < 1
+        return: 1
+    if: operand\grammar = 3 && c.lm_compiler_value_spans_expression((cast: (@: c.L2ValueSpan) operand\values), (cast: (int) operand\value_n)) = 0
+        return: 1
+    return: 0
+end: lm_compiler_primary_numeric_receiver

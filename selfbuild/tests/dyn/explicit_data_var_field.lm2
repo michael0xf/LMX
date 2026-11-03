@@ -1,0 +1,124 @@
+# Reserved var initially refers to the selected data.
+# Ordinary assignment replaces that binding; an explicit data/var field is distinct.
+S:
+    if: var\x != 10
+        sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+        return
+    ---
+    x: x + 3
+    var:
+        int: x 2
+        int: unused 9
+    end: var
+    if: var\x != 2
+        sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+        return
+    ---
+    var\x: 6
+end: S
+D:
+    int: x 10
+    var:
+        int: x 0
+        int: unused 0
+    end: var
+end: D
+@: held S
+call: held D
+int: answer 82
+if: D\x = 13 && D\var\x = 0 && D\var\unused = 0 && S\var\x = 6 && S\var\unused = 9
+    answer: 7
+
+# One actual path has different receiving types in different admitted calls.
+WriteNine:
+    var\cell: 9
+end: WriteNine
+WriteWide:
+    var\cell: 4294967296U
+end: WriteWide
+AddressWide:
+    @: p size_t 0
+    p: @(var\cell)
+    if: \p != 4294967296U
+        sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+        return
+    \p: 12U
+end: AddressWide
+CatchConvert:
+    ---
+        var\cell: var\bad
+        catch: convert ()
+            var\caught: 1
+    ---
+end: CatchConvert
+CatchMissing:
+    ---
+        var\missing: 7
+        catch: implements ()
+            var\caught: 2
+    ---
+end: CatchMissing
+I:
+    cell: int: 1
+end: I
+U:
+    unsigned: cell 2U
+end: U
+W:
+    @: p size_t 0
+    size_t: cell 3U
+    int: caught 0
+    int: bad 7
+end: W
+call: WriteNine I
+call: WriteNine U
+call: WriteNine W
+if: I\cell != 9 || U\cell != 9U || W\cell != 9U
+    answer: 87
+call: WriteWide W
+if: W\cell != 4294967296U
+    answer: 88
+call: AddressWide W
+if: W\cell != 12U
+    answer: 89
+call: CatchConvert W
+if: W\caught != 1 || W\cell != 12U
+    answer: 90
+call: CatchMissing W
+if: W\caught != 2 || W\cell != 12U
+    answer: 91
+
+# Consumed typed receivers are values; the outer path remains an assignment.
+WriteTyped:
+    var\cell: (int: 15) + 2
+end: WriteTyped
+CatchTypedConvert:
+    ---
+        var\cell: int: 7
+        catch: convert ()
+            var\caught: 3
+    ---
+end: CatchTypedConvert
+call: WriteTyped I
+if: I\cell != 17
+    answer: 92
+I\cell: int: 19
+if: I\cell != 19
+    answer: 93
+call: CatchTypedConvert W
+if: W\caught != 3 || W\cell != 12U
+    answer: 94
+
+CatchInnerConvert:
+    ---
+        var\caught: int: var\p
+        catch: convert ()
+            var\caught: 4
+    ---
+end: CatchInnerConvert
+call: CatchInnerConvert W
+if: W\caught != 4 || W\cell != 12U
+    answer: 95
+
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+return

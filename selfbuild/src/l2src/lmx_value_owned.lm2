@@ -500,11 +500,17 @@ fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkVa
     @: record c.LmxCodeLink 0
     int: code 0
     int: slot_cell 0
+    int: local_reference 0
     c.LmxWalkValue: saved
     int: status 0
     if: lmx_value_cell_access(arena, cell, @ read, @ write) != 0
         return: 1
-    if: write = 0
+    # An activation-owned reference lives in the Value's actual void* member.
+    # This exact owner/address identity supplies its physical ABI; an arbitrary
+    # out-of-pool address still needs its own declared callback.
+    if: owner != 0 && owner\present != 0 && owner\kind = c.LMX_WALK_VALUE_REFERENCE && cell = (cast: (@: void) (@ owner\ref))
+        local_reference: 1
+    if: write = 0 && local_reference = 0
         return: 1
     # A CHILDREN/REF cell is a slot of a graph node: this write is one of the three physical rebindings of a child
     # (design 4.4), prepared before the write -- a refusal writes nothing -- and committed after it; any other cell
@@ -517,7 +523,10 @@ fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkVa
         ---
     ---
     lmx_value_context_copy(@ saved, context)
-    status: write(cell, raw)
+    if: local_reference != 0
+        status: c.lmx_arena_pointer_void_write(cell, raw)
+    else:
+        status: write(cell, raw)
     if: status = 0
         lmx_value_context_copy(stored, @ saved)
         if: stored != 0

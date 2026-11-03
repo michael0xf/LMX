@@ -8313,16 +8313,22 @@ fn: lm_compiler_emit_dyn_unary_record (int: mi; int: sign; const: (@: ind char);
     @: name char (cast: (@: char) name_storage\buffer)
     const: (@: op char 0)
     int: t
-    if: full_value = 0 || dest = 0 || operand = 0 || ind = 0 || mi < 0 || full_value\data[0] = 0 || (sign != 1 && sign != 2)
+    if: full_value = 0 || dest = 0 || operand = 0 || ind = 0 || mi < 0 || full_value\data[0] = 0 || (sign != 1 && sign != 2 && sign != 3)
         return: 1
     if: c.lm_compiler_tx_set(operand, (cast: (const: @: char) full_value\data)) != 0 || c.lm_compiler_tx_clear(dest) != 0 || c.lm_compiler_tx_clear(full_value) != 0
         return: 1
     op: "c.LMX_WALK_OP_POS"
     if: sign = 1
         op: "c.LMX_WALK_OP_NEG"
+    if: sign = 3
+        op: "c.LMX_WALK_OP_BNOT"
     t: tn_cell[0]
     tn_cell[0]: t + 1
-    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_du%d\n%sint: l2_dus%d lmx_walk_value_unary(%s, %s, @ l2_du%d)\n%sif: l2_dus%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dus%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, op, operand\data, t, ind, t, ind, t, ind, ind) < 0
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_du%d\n%sint: l2_dus%d lmx_walk_value_unary(%s, %s, @ l2_du%d)\n", ind, t, ind, t, op, operand\data, t) < 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_dus%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_dus%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dus%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, ind, ind) < 0
         return: 1
     if: c.snprintf(name, 64U, "@ l2_du%d", t) < 0
         return: 1
@@ -8731,8 +8737,13 @@ end: lm_compiler_emit_dyn_values_full
 # A prepared value span (an expression over children, or one leaf) evaluated dynamically into a record.
 fn: lm_compiler_emit_dyn_span_full (@: span c.L2ValueSpan; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    c.L2ValueSpan: operand
     if: span = 0 || dest = 0 || full_value = 0
         return: 1
+    if: span\grammar != 3 && c.lm_compiler_prefix_rest(span, @ operand) = 0
+        if: lm_compiler_emit_dyn_span_full(@ operand, mi, ind, dest, full_value) != 0
+            return: 1
+        return: lm_compiler_emit_dyn_unary_record(mi, (cast: (int) c.lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) (span\node\as\atom)))), ind, dest, full_value)
     if: span\values != 0 && (span\grammar = 3 || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (span\node)), "@") = 0) && c.lm_compiler_value_spans_expression((cast: (@: c.L2ValueSpan) (span\values)), (cast: (int) (span\value_n))) != 0
         if: span\grammar != 3 && c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node))) != 0
             # Slice 256 (design 4.5 B2b-1): the sign is the kernel's unary operation on the operand's record.
@@ -10138,7 +10149,11 @@ fn: lm_compiler_prep_context_full (const: (@: source_node c.LmP0Node); int: mi; 
         if: c.lm_compiler_prefix_frame(source_node) = 1
             t: c.lm_compiler_tx_join(dest, "(- (", (cast: (const: @: char) (s2\data)), "))", 0, 0)
         else:
-            t: c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) (s2\data)), "))", 0, 0)
+            if: c.lm_compiler_prefix_frame(source_node) = 3
+                t: c.lm_compiler_tx_join(dest, "(~ (", (cast: (const: @: char) (s2\data)), "))", 0, 0)
+            else:
+                t: c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) (s2\data)), "))", 0, 0)
+            ---
         ---
         if: t != 0
             return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], source_node, "out of memory")))
@@ -11292,7 +11307,7 @@ fn: lm_compiler_emit_unary_value_full (int: mi; int: sign; int: view_ft; const: 
     status: c.lm_compiler_tx_set(operand, operand_record)
     if: c.lm_compiler_tx_clear(full_value) != 0 || status != 0
         return: 1
-    if: mi < 0 || ind = 0 || c.lm_compiler_m_machine(mi) != 0 || (sign != 1 && sign != 2)
+    if: mi < 0 || ind = 0 || c.lm_compiler_m_machine(mi) != 0 || (sign != 1 && sign != 2 && sign != 3)
         return: 2
     if: view_ft < 0 || view_ft = 8 || c.lm_compiler_prim_code_name(c.lm_compiler_formal_raw(view_ft)) = 0
         # The C view may be opaque, but an actual operand still has to exist.
@@ -11301,9 +11316,15 @@ fn: lm_compiler_emit_unary_value_full (int: mi; int: sign; int: view_ft; const: 
     op: "c.LMX_WALK_OP_POS"
     if: sign = 1
         op: "c.LMX_WALK_OP_NEG"
+    if: sign = 3
+        op: "c.LMX_WALK_OP_BNOT"
     t: tn_cell[0]
     tn_cell[0]: t + 1
-    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_uv%d\n%sint: l2_us%d lmx_walk_value_unary(%s, %s, @ l2_uv%d)\n%sif: l2_us%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_us%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, op, operand\data, t, ind, t, ind, t, ind, ind) < 0
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_uv%d\n%sint: l2_us%d lmx_walk_value_unary(%s, %s, @ l2_uv%d)\n", ind, t, ind, t, op, operand\data, t) < 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_us%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_us%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_us%d)\n%s    return: 0\n%s---\n", ind, t, ind, t, ind, ind) < 0
         return: 1
     if: c.snprintf(name, 64U, "@ l2_uv%d", t) < 0
         return: 1
@@ -11598,6 +11619,10 @@ fn: lm_compiler_emit_native_span_full (@: span c.L2ValueSpan; int: mi; const: (@
     int: prefix_view_ft -1
     @: name c.LmP0Node 0
     c.L2ValueSpan: child
+    c.L2FrontendScratchChar64: unary_record_storage
+    @: unary_record_text char (cast: (@: char) unary_record_storage\buffer)
+    c.L2Tx: unary_record_tx
+    @: unary_record c.L2Tx c.lm_compiler_tx_local(@ unary_record_tx, unary_record_text, 64U)
     c.L2FrontendScratchChar1024: piece_own_storage
     @: piece_own char (cast: (@: char) piece_own_storage\buffer)
     c.L2Tx: piece_tx
@@ -11608,6 +11633,25 @@ fn: lm_compiler_emit_native_span_full (@: span c.L2ValueSpan; int: mi; const: (@
         context[0]: -1
     if: span = 0 || span\grammar = 0 || piece = 0
         return: (cast: (int) (1))
+    # A typed language unary operation uses the same record operation even
+    # when its consumer asks only for a C value (for example a condition).
+    # The numeric view reads the completed result; it never recomputes it.
+    sign: 0
+    if: span\grammar != 3
+        sign: c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node)))
+    if: sign = 0 && span\grammar != 3 && c.lm_compiler_prefix_rest(span, @ child) = 0
+        sign: c.lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) (span\node\as\atom)))
+    if: sign != 0 && mi >= 0 && c.lm_compiler_m_machine(mi) = 0
+        prefix_view_ft: lm_compiler_numeric_c_view_type(span, mi)
+        if: prefix_view_ft >= 0
+            if: unary_record = 0 || lm_compiler_emit_dyn_span_full(span, mi, ind, piece, unary_record) != 0
+                return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (span\node)), "internal: cannot emit the unary operand record")
+            status: lm_compiler_emit_dyn_receive_record((cast: (const: @: char) unary_record\data), prefix_view_ft, mi, ind, dest, full_value, (cast: (const: @: c.LmP0Node) (span\node)))
+            if: status != 0
+                return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (span\node)), "internal: cannot receive the unary result record")
+            return: 0
+        ---
+    ---
     if: span\values != 0 && (span\grammar = 3 || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (span\node)), "@") = 0)
         sign: 0
         if: span\grammar != 3
@@ -11617,10 +11661,16 @@ fn: lm_compiler_emit_native_span_full (@: span c.L2ValueSpan; int: mi; const: (@
         if: c.lm_compiler_value_spans_expression((cast: (@: c.L2ValueSpan) (span\values)), (cast: (int) (span\value_n))) = 0 || lm_compiler_emit_native_values_full((cast: (@: c.L2ValueSpan) (span\values)), 0, (cast: (int) (span\value_n - 1)), mi, ind, piece, context, full_value) != 0
             return: (cast: (int) (1))
         if: sign != 0
+            if: full_value != 0 && piece\data[0] = 0 && full_value\data[0] != 0
+                return: lm_compiler_emit_dyn_unary_record(mi, sign, ind, dest, full_value)
             if: sign = 1
                 status: c.lm_compiler_tx_join(dest, "(- (", (cast: (const: @: char) piece\data), "))", 0, 0)
             else:
-                status: c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) piece\data), "))", 0, 0)
+                if: sign = 3
+                    status: c.lm_compiler_tx_join(dest, "(~ (", (cast: (const: @: char) piece\data), "))", 0, 0)
+                else:
+                    status: c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) piece\data), "))", 0, 0)
+                ---
             ---
             if: status != 0
                 return: 1
@@ -11658,7 +11708,11 @@ fn: lm_compiler_emit_native_span_full (@: span c.L2ValueSpan; int: mi; const: (@
         if: sign = 1
             status: c.lm_compiler_tx_join(dest, "(- (", (cast: (const: @: char) piece\data), "))", 0, 0)
         else:
-            status: c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) piece\data), "))", 0, 0)
+            if: sign = 3
+                status: c.lm_compiler_tx_join(dest, "(~ (", (cast: (const: @: char) piece\data), "))", 0, 0)
+            else:
+                status: c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) piece\data), "))", 0, 0)
+            ---
         ---
         if: status != 0
             return: 1
@@ -11674,8 +11728,9 @@ fn: lm_compiler_emit_native_span_full (@: span c.L2ValueSpan; int: mi; const: (@
         if: own < 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], name, "no such occurrence")))
         return: (cast: (int) (lm_compiler_own_load_context_full(own, mi, ind, dest, context, full_value)))
-    if: span\operand != 0 && c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (span\node\as\atom))) != 0
-        if: c.lm_compiler_indirect_span(span, mi, @ child, @ levels, @ source_type, @ result_type) != 0
+    status: c.lm_compiler_indirect_span(span, mi, @ child, @ levels, @ source_type, @ result_type)
+    if: status != 2
+        if: status != 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (span\node)), "the dereference operand has no pointer contract")))
         return: lm_compiler_emit_indirect_span_full(@ child, levels, source_type, mi, ind, dest, context, full_value)
     if: span\count != 1
@@ -15232,6 +15287,8 @@ fn: lm_compiler_emit_unevaluated_span (@: span c.L2ValueSpan; int: mi; int: opaq
             return: (cast: (int) (1))
         if: span\grammar != 3 && c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node))) = 1
             return: (cast: (int) (c.lm_compiler_tx_join(dest, "(- (", (cast: (const: @: char) (piece\data)), "))", 0, 0)))
+        if: span\grammar != 3 && c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node))) = 3
+            return: (cast: (int) (c.lm_compiler_tx_join(dest, "(~ (", (cast: (const: @: char) (piece\data)), "))", 0, 0)))
         if: span\grammar != 3 && c.lm_compiler_prefix_frame((cast: (const: @: c.LmP0Node) (span\node))) = 2
             return: (cast: (int) (c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) (piece\data)), "))", 0, 0)))
         return: (cast: (int) (c.lm_compiler_tx_join(dest, "(", (cast: (const: @: char) (piece\data)), ")", 0, 0)))
@@ -15262,6 +15319,8 @@ fn: lm_compiler_emit_unevaluated_span (@: span c.L2ValueSpan; int: mi; int: opaq
     if: c.lm_compiler_prefix_rest(span, @ child) = 0
         if: lm_compiler_emit_unevaluated_span(@ child, mi, opaque, piece) != 0
             return: (cast: (int) (1))
+        if: c.lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) (span\node\as\atom))) = 3
+            return: (cast: (int) (c.lm_compiler_tx_join(dest, "(~ (", (cast: (const: @: char) (piece\data)), "))", 0, 0)))
         if: c.lm_compiler_prefix_sign((cast: (const: @: c.LmP0Text) (span\node\as\atom))) = 1
             return: (cast: (int) (c.lm_compiler_tx_join(dest, "(- (", (cast: (const: @: char) (piece\data)), "))", 0, 0)))
         return: (cast: (int) (c.lm_compiler_tx_join(dest, "(+ (", (cast: (const: @: char) (piece\data)), "))", 0, 0)))
@@ -15272,8 +15331,9 @@ fn: lm_compiler_emit_unevaluated_span (@: span c.L2ValueSpan; int: mi; int: opaq
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], name, "no such occurrence")))
         return: (cast: (int) (lm_compiler_emit_unevaluated_witness(span, mi, opaque, dest)))
     # A prefix dereference keeps its operand's C spelling.
-    if: span\operand != 0 && c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (span\node\as\atom))) != 0
-        if: c.lm_compiler_indirect_span(span, mi, @ child, @ levels, @ source_type, @ result_type) != 0
+    status: c.lm_compiler_indirect_span(span, mi, @ child, @ levels, @ source_type, @ result_type)
+    if: status != 2
+        if: status != 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (span\node)), "the dereference operand has no pointer contract")))
         if: lm_compiler_emit_unevaluated_span(@ child, mi, opaque, piece) != 0
             return: (cast: (int) (1))

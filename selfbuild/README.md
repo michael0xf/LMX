@@ -6,23 +6,29 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 181 inputs (65 source files, 34 tools and
-82 tests). Slice 268 routes typed language bitwise/shift operations through
-the same checked kernel as runtime-typed values and the walker. Implicit
-faults use the existing status channel without requiring a payload parameter.
+The selected package contains 182 inputs (65 source files, 34 tools and
+83 tests). Slice 269 adds unary bitwise complement through the same kernel
+operation for native and the walker. Prefix operands are evaluated once;
+typed and runtime-typed numeric results retain the common receiving contract.
+Compact prefixed calls preserve receiver paths, and grouped dereference uses
+the common prepared operand.
 
-The quick bootstrap took 759.91 seconds. G1 and G2 each passed nine
-smoke rows. G2 passed all 29 focused rows.
-[Sources and checks](../steps/witnesses/fix268-20261103/notes.md).
+The quick bootstrap took 805.29 seconds. G1 and G2 each passed nine
+smoke rows. G2 passed all 30 focused rows. Separate observation checked
+13 walked bodies and exact counts, including the side-effecting operand.
+[Sources and checks](../steps/witnesses/fix269-20261103/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `99f9bae8af2197dfee3801f04220dea30570b0642964f1807579a3c2edc4d4fb` |
-| Input manifest | `cf7ad03769104512f36ca96148097ae665ec54fddaa596292da38eaee4bd883d` |
-| Working tool | `31d55441805a79a36a93e6bb7ff842370b034fbc6d1f440c3a9ecc9702e46f43` |
-| G2 frontend | `ec3e0ae8a19f8f61114b425fc6374d9e46291b95891fe77029d2703dc7434e18` |
-| Production runtime | `e617e95da4019c90a4b47adcb62ddfc79d9818d0729c4bb43b7ba7164a581c96` |
-| Observation runtime | `84ef7a8471496a0225482985e773f856cf89f075b29ffcd0ff12409dc68bc774` |
+| Input list | `4ee22d619a417eea79937c34f1cc267a3fcdd6e62722ae01813bc24f9366cab4` |
+| Input manifest | `a4e6cc19f8b47342899e94f0119c6de1bcec161e6335773bd1224356cc6647f1` |
+| Working tool | `692f9d4d20dafafdde68df6c583e836060f10163589d89b539e691ae8b75a6e9` |
+| G2 frontend | `6b586e49f1954532c5b64621721964d6f3976fdc4b0b7faf77df7f6caf0473e0` |
+| Production runtime | `738e187f401a22571ac9cec0b794f716793e57ae2fb22530ce9c902fb6c8a672` |
+| Observation runtime | `df8cd15198bd47338a5ce3baff9894c6b4da360f9fb46f438082a727046711a4` |
+
+[Slice 268](../steps/witnesses/fix268-20261103/notes.md) supplied typed-native
+bitwise/shift guards and the common implicit status return.
 
 [Slice 266](../steps/witnesses/fix266-20261103/notes.md) preserves absent data
 for an ordinary unary call with no var and admits required data fields

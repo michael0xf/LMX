@@ -1134,6 +1134,7 @@ end: lm_compiler_colon_field_ty
 fn: lm_compiler_colon_simple_ty (const: (@: value c.LmP0Node); int: mi; @: out_ty int) int
     @@: ml_ty_cell int (cast: (@@: int) (@ c.l2_ml_ty))
     int: m
+    int: source_type
     int: formal
     int: levels
     c.LmP0Text: base
@@ -1177,7 +1178,10 @@ fn: lm_compiler_colon_simple_ty (const: (@: value c.LmP0Node); int: mi; @: out_t
     # reference or a text under the sign has no type here: the kind rule says
     # what it is (l2_prefix_kind_refused).
     if: c.lm_compiler_prefix_frame(value) != 0
-        m: c.lm_compiler_prefix_native_ty((cast: (int) (lm_compiler_value_group_type((cast: (@: c.LmP0Field) (value\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (value\as\frame\body))))), mi, 0))), value)
+        m: lm_compiler_value_group_type((cast: (@: c.LmP0Field) (value\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (value\as\frame\body))))), mi, @ source_type)
+        m: c.lm_compiler_prefix_value_type(m, source_type, value, out_ty)
+        if: m = -20 && c.lm_compiler_ft_is_free(\out_ty) != 0
+            return: (cast: (int) (0))
         if: m = 0 - 1 || m = 0 - 2
             \out_ty: -10
             return: (cast: (int) (0))
@@ -1783,8 +1787,8 @@ fn: lm_compiler_indirect_prepare (@: span c.L2ValueSpan; @: place c.L2Address) i
     place\index: -1
     place\type: -1
     place\source_type: -1
-    if: span\operand != 0 && span\node != 0 && span\node\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (span\node\as\atom))) != 0
-        while: current\operand != 0 && current\node != 0 && current\node\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (current\node\as\atom))) != 0
+    if: span\operand != 0 && span\node != 0 && ((span\node\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (span\node\as\atom))) != 0) || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (span\node)), "\\") != 0)
+        while: current\operand != 0 && current\node != 0 && ((current\node\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (current\node\as\atom))) != 0) || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (current\node)), "\\") != 0)
             place\levels: place\levels + 1
             current: current\operand
         ---
@@ -1912,7 +1916,9 @@ end: lm_compiler_indirect_resolve
 # Original: l2src/l2trans.lm1:15279
 fn: lm_compiler_indirect_span (@: span c.L2ValueSpan; int: mi; @: operand c.L2ValueSpan; @: levels int; @: source_type int; @: result_type int) int
     c.L2Address: place
-    if: lm_compiler_indirect_prepare(span, @ place) != 0 || lm_compiler_indirect_resolve(mi, @ place) != 0
+    if: lm_compiler_indirect_prepare(span, @ place) != 0
+        return: (cast: (int) (2))
+    if: lm_compiler_indirect_resolve(mi, @ place) != 0
         return: (cast: (int) (1))
     \levels: place\levels
     \source_type: place\source_type
@@ -4170,6 +4176,18 @@ fn: lm_compiler_value_span_prepare (@: first c.LmP0Field; int: count; @: span c.
     span\grammar: 2
     if: count < 1 || f = 0 || f\value = 0
         return: (cast: (int) (0))
+    # A grouped dereference owns the same prepared operand as the flat
+    # prefix. Consumers use this operand; they do not parse a path head.
+    if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (f\value)), "\\") != 0
+        children: f\value\as\frame\body
+        if: children = 0 || c.lm_compiler_count_active(children) < 1
+            return: (cast: (int) (0))
+        span\operand: (cast: (@: c.L2ValueSpan) c.lm_compiler_xmalloc((cast: (size_t) (c.sizeof(c.L2ValueSpan)))))
+        if: span\operand = 0
+            return: (cast: (int) (0))
+        if: lm_compiler_value_expression_prepare((cast: (@: c.LmP0Field) (children\first_field)), (cast: (int) (c.lm_compiler_count_active(children))), (cast: (@: c.L2ValueSpan) (span\operand))) != 0
+            return: (cast: (int) (0))
+        return: (cast: (int) (1))
     if: f\value\as != 0
         if: f\value\kind = c.LM_P0_NODE_STRUCTURE
             children: f\value\as\structure

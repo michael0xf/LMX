@@ -2896,7 +2896,7 @@ EQ: две ссылки — сравнение (как было), ссылка �
 `lmx_walk_value_receive_graph`. Свидетели: `tests/dyn/free_machine_ops.lm2` outer_ref (104..109),
 `tests/dyn/free_model_admit.lm2` outer_num (85); пробы «до» — `tp121-probe` в записи среза.
 
-### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 `b5c920aa` (классификация, native); обходчик FIXED срез259 `d8ddf134` (boot121a); типизированный native FIXED срез 268; OPEN — унарная `~`
+### BITWISE-OPERATORS-NOT-CLASSIFIED — 2026-10-15, Opus (найдено при проверке выше), ЧАСТИЧНО FIXED Verified170 `b5c920aa` (классификация, native); обходчик FIXED срез259 `d8ddf134` (boot121a); типизированный native FIXED срез 268; унарная `~` FIXED срез 269 (native/walker, boot131b)
 
 Машинный профиль L2 включает битовые операции (`docs/L2_spec_en.md`, раздел
 о машинном профиле), но общий классификатор выражений обходчика их не знает.
@@ -2953,6 +2953,19 @@ payload-параметру. Новый typed_shift_guards проверяет ш�
 счётчик, знаковое переполнение/отрицательный левый операнд, допустимые результаты
 и вложенный сдвиг. G1/G2 smoke 9/0, фактический G2 focus 29/0 (native/forced,
 оба roots). Унарная ~ остаётся открытой; весь ledger не закрыт.
+
+Срез 269 (Codex, 2026-11-03; [код и результаты](witnesses/fix269-20261103/notes.md)):
+унарная `~` реализована как BNOT64 и вызывает общий lmx_walk_value_unary
+из typed/runtime-typed native и обходчика. Продвижение числовых типов,
+ширина результата и named convert для фактической ссылки общие.
+Новая unary_complement проверяет int/unsigned/size_t/char, вложенные и
+сгруппированные префиксы, свободный вход, pointer convert и однократный
+эффект операнда. Исправлены общий разбор компактного префикса перед вызовом
+с сохранением receiver-path и подготовка сгруппированного deref.
+G1/G2 smoke по9/0, G2 focus30/0; obs02 —13 реально walked тел, once4,
+оба roots. Native fixture вызывает общий helper17 раз и не содержит
+сырой `~`. Перечисленные в этом finding битовые операции закрыты;
+это не закрытие общего collector/3pass/остального kernel gate.
 
 <a id="put-writes-direct-structure-slot"></a>
 ### PUT-WRITES-DIRECT-STRUCTURE-SLOT — 2026-10-15, Opus (причина и норма — Codex, OPUS-CODEX-20261015-03/-04), FIXED cc9b89d7

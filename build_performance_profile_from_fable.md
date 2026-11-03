@@ -205,3 +205,12 @@ passed. What the bootstrap's smoke list does not run either is the slice's own f
 81 in both modes, and gdb on the built program found the resolver right and the method reading other arrays than the record
 held (its generated wrapper projects the caller's); the walker side named a field's value storage, not its cell. Both are
 fix10; the forced program relinked against the new driver.o passed at once, the native one needed the new frontend -- boot116c.
+
+## Slice269 / boot131b (Codex, 2026-11-03)
+
+Whole quick805.29s:06:52:55.3079527Z--07:06:20.5968097Z, both generations
+smoke9/0. Actual G2 focus30/0 at07:07:43.6906557Z--07:10:33.1409856Z.
+Source182/A4E6CC19; all248 artifact paths per generation independently hashed,
+245 raw-equal and3 PE metadata-only differences. This is a whole-pipeline
+measurement, not a same-context translation-speed claim.
+[Commands, failures, fixes and current hashes](steps/witnesses/fix269-20261103/notes.md).

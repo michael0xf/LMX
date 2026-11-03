@@ -761,8 +761,12 @@ fn: lm_compiler_prefix_value_type (int: kind; int: source_type; const: (@: at c.
         \exact_type: -1
         if: result >= 0
             \exact_type: result
+        # A unary operation preserves runtime-typed transport. Its result is
+        # received by the actual target contract, not rejected as an unknown C type.
         if: result = -99 && source_type = -12
             \exact_type: -12
+        if: result = -20 && c.lm_compiler_ft_is_free(source_type) != 0
+            \exact_type: source_type
         ---
     ---
     return: (cast: (int) (result))

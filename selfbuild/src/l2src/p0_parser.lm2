@@ -2551,6 +2551,38 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                         break
                     else:
                         if: (((i < byte_count) && (text[i] = '(')) && (head_end > start))
+                            # Operators before a compact call remain fields;
+                            # the complete receiver path owns the argument list.
+                            # Index expressions are part of that path, so their
+                            # operators do not move the receiver boundary.
+                            if: quoted_head = 0
+                                size_t: head_start start
+                                size_t: scan_start start
+                                size_t: piece_end
+                                int: allow_signed_number 1
+                                while: scan_start < head_end
+                                    if: text[scan_start] = '['
+                                        if: lm_p0_find_matching_bracket(document, text, head_end, scan_start, line, column, @ piece_end) = 0
+                                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                        scan_start: piece_end + 1U
+                                        allow_signed_number: 0
+                                        continue
+                                    ---
+                                    piece_end: c.lm_p0_scan_compact_atom_piece(text, head_end, scan_start, allow_signed_number)
+                                    if: piece_end <= scan_start || piece_end >= head_end
+                                        break
+                                    if: text[scan_start] = '+' || text[scan_start] = '-' || text[scan_start] = '~' || text[scan_start] = '*' || text[scan_start] = '/' || text[scan_start] = '%' || text[scan_start] = '&' || text[scan_start] = '|' || text[scan_start] = '^' || text[scan_start] = '<' || text[scan_start] = '>' || text[scan_start] = '=' || text[scan_start] = '!'
+                                        head_start: piece_end
+                                    ---
+                                    scan_start: piece_end
+                                    allow_signed_number: 0
+                                ---
+                                if: head_start > start
+                                    if: lm_p0_append_compact_atom_pieces(document, structure, text, byte_count, line, column, offset, start, head_start) = 0
+                                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                    start: head_start
+                                ---
+                            ---
                             p0_node: lm_p0_new_node(document, c.LM_P0_NODE_FRAME)
                             if: (p0_node = 0)
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)

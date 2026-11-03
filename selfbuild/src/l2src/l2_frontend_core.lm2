@@ -3535,7 +3535,7 @@ fn: lm_compiler_convert_edge_to (int: mi; int: idx; const: (@: path char); const
     if: check_unevaluated_cell[0] != 0
         return: (cast: (int) (0))
     m_edge_cell[0][c.lm_compiler_edge_off(mi, idx)]: m_edge_cell[0][c.lm_compiler_edge_off(mi, idx)] | 1
-    return: (cast: (int) (lm_compiler_note_call(mi, idx, stmt, path)))
+    return: 0
 end: lm_compiler_convert_edge_to
 
 # Original: l2src/l2trans.lm1:6257
@@ -4606,7 +4606,7 @@ fn: lm_compiler_dyn_local (const: (@: path char)) int
             return: (cast: (int) (c.lm_compiler_said_or(path, m_node_cell[0][i], d0, "unsupported body")))
         oi: 0
         while: oi < own_n_cell[0]
-            if: m_uses_cell[0][c.lm_compiler_own_off(i, oi)] != 0 && m_pre_cell[0][c.lm_compiler_own_off(i, oi)] != 0 && c.lm_compiler_dyn_add(i, own_name_cell[0][oi], c.lm_compiler_dt_of_own(own_ty_cell[0][oi])) != 0
+            if: m_uses_cell[0][c.lm_compiler_own_off(i, oi)] != 0 && m_pre_cell[0][c.lm_compiler_own_off(i, oi)] != 0 && c.lm_compiler_dyn_add(i, own_name_cell[0][oi], c.lm_compiler_free_dt()) != 0
                 if: heap != 0
                     c.lm_compiler_xfree((cast: (@: void) seen))
                 return: (cast: (int) (c.lm_compiler_alloc_or(path, m_node_cell[0][i], "unsupported body")))
@@ -4628,302 +4628,13 @@ end: lm_compiler_dyn_local
 # Slice 255 (design 4.5 B2a): the hidden input k of method m is free -- without a schema (a model, a Structure declaration in
 # sight, an anchored coordinate space) and not a capture of a callable merge: the input its caller marks LMX_WALK_VALUE_FREE
 # (lm_compiler_emit_call_hides) and the callee resolves from the chain of activation records.  Its type is its value's.
-fn: lm_compiler_dyn_free (int: m; int: k) int
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    if: m < 0 || k < 0 || k >= m_dyn_cell[0][m]
-        return: (cast: (int) (0))
-    if: c.lm_compiler_mad_host_of(m) >= 0
-        return: (cast: (int) (0))
-    return: (cast: (int) ((cast: (int) (c.lm_compiler_input_schema(m, m_arity_cell[0][m] + k) = -1))))
-end: lm_compiler_dyn_free
 
-fn: lm_compiler_dyn_site_callee (const: (@: site c.L2SourceSite); int: cidx; int: fi; const: (@: path char); @: changed int) int
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
-    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
-    @: e_cell int (cast: (@: int) (@ c.l2_e))
-    int: m site\method
-    int: k 0
-    int: src
-    int: own
-    int: ty
-    int: sdt
-    int: before
-    int: model
-    int: need
-    int: pres
-    @: nm c.LmP0Text
-    while: k < m_dyn_cell[0][cidx]
-        if: c.lm_compiler_mad_host_of(cidx) = m && c.lm_compiler_schema_kind(c.lm_compiler_cap_arg_ns(cidx, m_arity_cell[0][cidx] + k)) != 0
-            k: k + 1
-            continue
-        # K04 S2 part two: an input the callable this site has does not need is asked of no one.
-        need: c.lm_compiler_site_needs(m, (cast: (const: @: c.LmP0Node) (site\source)), fi, 0, cidx, k, 0, 0, path)
-        if: need < 0
-            return: (cast: (int) (1))
-        if: need = 0
-            k: k + 1
-            continue
-        nm: c.lm_compiler_dn(cidx, k)
-        ty: c.lm_compiler_dt(cidx, k)
-        own: c.lm_compiler_resolved_own(m, nm)
-        src: -1
-        sdt: 0
-        # K04 S3: whether this site hands the entry present (l2_dyp_mark): the caller's own binding, or its own
-        # input when that can be present.
-        pres: 0
-        if: own >= 0 && m_uses_cell[0][c.lm_compiler_own_off(m, own)] != 0
-            pres: 1
-            if: lm_compiler_dt_of_source(own_ty_cell[0][own], path, (cast: (const: @: c.LmP0Node) (site\source)), @ sdt) != 0
-                return: (cast: (int) (1))
-            ---
-        else:
-            src: c.lm_compiler_param_find(m, nm)
-            # Visibility of a named Structure at this call site is not a
-            # caller-local value. A method that only forwards an input must
-            # inherit and forward it even when that spelling is visible here;
-            # the eventual reader applies its own lexical fallback.
-            if: src < 0 && m != e_cell[0]
-                before: m_dyn_cell[0][m]
-                if: c.lm_compiler_dyn_add(m, nm, ty) != 0
-                    return: (cast: (int) (c.lm_compiler_alloc_or(path, (cast: (const: @: c.LmP0Node) (site\source)), "unsupported body")))
-                if: m_dyn_cell[0][m] != before
-                    \changed: 1
-                src: c.lm_compiler_param_find(m, nm)
-            if: src >= 0 && src < m_arity_cell[0][m]
-                pres: 1
-                if: c.lm_compiler_input_is_descriptor(m, src) != 0
-                    sdt: c.lm_compiler_graph_dt()
-                    ---
-                else:
-                    if: lm_compiler_dt_of_source((cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(m, src)))), path, (cast: (const: @: c.LmP0Node) (site\source)), @ sdt) != 0
-                        return: (cast: (int) (1))
-                    ---
-                ---
-            if: src >= m_arity_cell[0][m] && src >= 0
-                # The name goes on from m's own input: m needs it for the reasons this site has.
-                if: c.lm_compiler_site_needs(m, (cast: (const: @: c.LmP0Node) (site\source)), fi, 0, cidx, k, 1, changed, path) < 0
-                    return: (cast: (int) (1))
-                if: c.lm_compiler_dyn_fwd(m, src - m_arity_cell[0][m]) = 0 || c.lm_compiler_dyp_has(m, nm) != 0
-                    pres: 1
-                sdt: c.lm_compiler_dt(m, src - m_arity_cell[0][m])
-                if: sdt = 0 && ty != 0
-                    if: c.lm_compiler_dt_set(m, src - m_arity_cell[0][m], ty) != 0
-                        return: (cast: (int) (1))
-                    \changed: 1
-                    sdt: ty
-                ---
-            if: src < 0 && m = e_cell[0]
-                # The root has no binding to give. l2_site_needs has already
-                # classified whether the callee declares a lexical source
-                # (need 1) or has none (need 2). The unit-only own lookup
-                # below supplies a source type when available. A hosted source
-                # additionally needs a formed selected occurrence.
-                own: 0 - 1
-                if: c.lm_compiler_dyn_reads(cidx, k) != 0 || c.lm_compiler_dyr_any(cidx, nm) = 0
-                    own: c.lm_compiler_own_lexical(cidx, nm)
-                # The root reads the lexical source of a callee that cannot take the entry absent, and hands it.
-                if: c.lm_compiler_hid_takes_absent(cidx, k) = 0
-                    pres: 1
-                if: own >= 0
-                    if: lm_compiler_dt_of_source(own_ty_cell[0][own], path, (cast: (const: @: c.LmP0Node) (site\source)), @ sdt) != 0
-                        return: (cast: (int) (1))
-                    ---
-                else:
-                    # One admission rule for an input with a type and one without (Codex, OPUS-CODEX-20261005-01):
-                    # a required input no one can give makes this call -- where the chain starts -- inadmissible,
-                    # and a type learned elsewhere decides nothing about where the failure is said.
-                    if: need = 2
-                        return: (cast: (int) (c.lm_compiler_error_name(path, (cast: (const: @: c.LmP0Node) (site\source)), "unbound dynamic input ", (cast: (const: @: char) (nm\data)), (cast: (size_t) (nm\length)), "")))
-                    ---
-        ---
-        if: pres != 0 && lm_compiler_dyp_mark(cidx, nm, changed) != 0
-            return: (cast: (int) (1))
-        # RECEPTION-EDGE-DEBTS (e) (Codex, FABLE-CODEX-20261004-12: "An opaque reference supplied as a hidden input
-        # to a typed reference use has the same receiving-edge conversion/admission as the explicit analogue,
-        # provided actual reference depth/type is correct."): a caller's `@: void` under a name its reader uses as a
-        # graph reference is admitted where the input is formed, as an opaque actual to a Structure formal is.
-        # Slice 255 (design 4.5 B2a): a free input takes bindings of any type -- its type is the value's at run time.
-        if: sdt != 0 && ty != 0 && sdt != ty && lm_compiler_dyn_free(cidx, k) = 0 && (ty != c.lm_compiler_graph_dt() || c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(sdt)) != 16)
-            return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (site\source)), "incompatible entry signature")))
-        if: sdt != 0 && ty = 0
-            if: c.lm_compiler_dt_set(cidx, k, sdt) != 0
-                return: (cast: (int) (1))
-            \changed: 1
-        # What reaches an input is recorded where the input has a schema to admit it to -- and where it is a
-        # reference with no declaration in the callee's sight, which the callee can only hand on: the
-        # declarations that reach it are then known where a reader's schema admits it, by the one the value
-        # carries (l2_hidden_emit_admit).  No admission stands at this call then.
-        if: c.lm_compiler_input_schema(cidx, m_arity_cell[0][cidx] + k) != -1 || (c.lm_compiler_dt(cidx, k) = c.lm_compiler_graph_dt() && c.lm_compiler_input_undeclared(cidx, m_arity_cell[0][cidx] + k) != 0)
-            model: lm_compiler_hidden_model_source(m, cidx, k, @ src)
-            if: src != -1
-                if: c.lm_compiler_d105_edge(c.lm_compiler_d105_key_method(m, src), src, cidx, m_arity_cell[0][cidx] + k, (cast: (const: @: c.LmP0Node) (site\source))) != 0
-                    return: (cast: (int) (1))
-                ---
-            else:
-                if: model >= 0 && c.lm_compiler_d105_source(cidx, m_arity_cell[0][cidx] + k, model, (cast: (const: @: c.LmP0Node) (site\source))) != 0
-                    return: (cast: (int) (1))
-                ---
-            ---
-            if: model = -1 && c.lm_compiler_input_schema(cidx, m_arity_cell[0][cidx] + k) != -1 && lm_compiler_admit_site(m) != 0
-                return: (cast: (int) (1))
-            # A dynamic candidate handed under the name: its refusal is m's implicit `implements`.
-            if: model != -1 && src != -1 && c.lm_compiler_input_schema(cidx, m_arity_cell[0][cidx] + k) != -1 && c.lm_compiler_d105_place_dynamic(m, src) != 0 && lm_compiler_admit_site(m) != 0
-                return: (cast: (int) (1))
-            ---
-        k: k + 1
-    return: (cast: (int) (0))
-end: lm_compiler_dyn_site_callee
 
 # Original: l2src/l2trans.lm1:8593
-fn: lm_compiler_dyn_site_held (const: (@: site c.L2SourceSite); int: model; const: (@: path char); @: changed int) int
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    @: e_cell int (cast: (@: int) (@ c.l2_e))
-    @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    int: m site\method
-    int: k 0
-    int: need
-    int: own
-    int: pi
-    int: before
-    int: ty
-    int: pres
-    int: gives
-    int: asked
-    int: cand
-    int: src
-    int: hty
-    @: nm c.LmP0Text
-    if: m < 0 || model < 0
-        return: (cast: (int) (0))
-    while: k < m_dyn_cell[0][model]
-        nm: c.lm_compiler_dn(model, k)
-        ty: c.lm_compiler_dt(model, k)
-        if: nm = 0
-            k: k + 1
-            continue
-        need: c.lm_compiler_site_needs(m, (cast: (const: @: c.LmP0Node) (site\source)), 0 - 1, 1, model, k, 0, 0, path)
-        if: need < 0
-            return: (cast: (int) (1))
-        if: need = 0
-            k: k + 1
-            continue
-        if: m = e_cell[0] && ty = 0 && need = 2
-            return: (cast: (int) (c.lm_compiler_error_name(path, (cast: (const: @: c.LmP0Node) (site\source)), "unbound dynamic input ", (cast: (const: @: char) (nm\data)), (cast: (size_t) (nm\length)), "")))
-        own: c.lm_compiler_resolved_own(m, nm)
-        pres: 0
-        gives: 0
-        # The root's every declared field of the name is its binding (l2_rw_held_bound); a method's, the one it
-        # uses.
-        if: own >= 0 && (m = e_cell[0] || m_uses_cell[0][c.lm_compiler_own_off(m, own)] != 0)
-            pres: 1
-            gives: 1
-        if: pres = 0 && m != e_cell[0]
-            pi: c.lm_compiler_param_find(m, nm)
-            if: pi >= 0 && pi < m_arity_cell[0][m]
-                pres: 1
-            # A visible Structure name alone does not supply a caller-local
-            # binding. A forward-only method inherits any needed input.
-            asked: 1
-            # The method's own input of the name hands it on: one of this type or not yet typed, and, where the model
-            # reads a number, one of another numeric type, which the held call converts (HELD-FREE-NAME-OTHER-TYPE).
-            # A new one takes no type from a model that reads a number: a value handed on keeps the type its callers'
-            # bindings give it (Codex, OPUS-HANDOFF-20261005-103112, item 5: "first-seen consumer type is not an
-            # unobservable carrier"); the model's applies only where none gives one (l2_dyk_close).  One it has as
-            # another kind stays as it is.
-            hty: ty
-            if: c.lm_compiler_rw_num_ty(c.lm_compiler_own_of_dt(ty)) != 0
-                hty: 0
-            if: asked != 0 && (pi < 0 || (pi >= m_arity_cell[0][m] && (c.lm_compiler_dt(m, pi - m_arity_cell[0][m]) = 0 || c.lm_compiler_dt(m, pi - m_arity_cell[0][m]) = ty || (hty = 0 && c.lm_compiler_rw_num_ty(c.lm_compiler_own_of_dt(c.lm_compiler_dt(m, pi - m_arity_cell[0][m]))) != 0))))
-                before: m_dyn_cell[0][m]
-                if: c.lm_compiler_dyn_add(m, nm, hty) != 0
-                    return: (cast: (int) (c.lm_compiler_alloc_or(path, (cast: (const: @: c.LmP0Node) (site\source)), "unsupported body")))
-                if: m_dyn_cell[0][m] != before
-                    \changed: 1
-                pi: c.lm_compiler_param_find(m, nm)
-                if: hty = 0 && ty != 0 && pi >= m_arity_cell[0][m] && c.lm_compiler_dt(m, pi - m_arity_cell[0][m]) = 0 && lm_compiler_dyk_note(m, nm, ty) != 0
-                    return: (cast: (int) (c.lm_compiler_alloc_or(path, (cast: (const: @: c.LmP0Node) (site\source)), "out of memory")))
-                if: c.lm_compiler_site_needs(m, (cast: (const: @: c.LmP0Node) (site\source)), 0 - 1, 1, model, k, 1, changed, path) < 0
-                    return: (cast: (int) (1))
-                if: pi >= m_arity_cell[0][m] && (c.lm_compiler_dyn_fwd(m, pi - m_arity_cell[0][m]) = 0 || c.lm_compiler_dyp_has(m, nm) != 0)
-                    pres: 1
-            ---
-            if: pi >= 0
-                gives: 1
-        ---
-        if: pres != 0 && lm_compiler_dyp_mark(model, nm, changed) != 0
-            return: (cast: (int) (1))
-        # What the calling method gives under the name -- its own field, its formal, its own input -- is a
-        # candidate for the model's use of the name: its source is recorded, as at a call of a method.  A
-        # capture of the model's host given as a Structure of the capture's own type keeps the admission it
-        # has, as itself (l2_held_cap_same).
-        if: gives != 0 && c.lm_compiler_held_cap_same(m, model, k) = 0 && c.lm_compiler_input_schema(model, m_arity_cell[0][model] + k) != -1
-            src: 0 - 1
-            cand: lm_compiler_hidden_model_source(m, model, k, @ src)
-            if: src != -1
-                if: c.lm_compiler_d105_edge(c.lm_compiler_d105_key_method(m, src), src, model, m_arity_cell[0][model] + k, (cast: (const: @: c.LmP0Node) (site\source))) != 0
-                    return: (cast: (int) (1))
-                ---
-            else:
-                if: cand >= 0 && c.lm_compiler_d105_source(model, m_arity_cell[0][model] + k, cand, (cast: (const: @: c.LmP0Node) (site\source))) != 0
-                    return: (cast: (int) (1))
-                ---
-            ---
-            if: cand = -1 && lm_compiler_admit_site(m) != 0
-                return: (cast: (int) (1))
-            if: cand != -1 && src != -1 && c.lm_compiler_d105_place_dynamic(m, src) != 0 && lm_compiler_admit_site(m) != 0
-                return: (cast: (int) (1))
-            ---
-        k: k + 1
-    ---
-    return: (cast: (int) (0))
-end: lm_compiler_dyn_site_held
 
 # Original: l2src/l2trans.lm1:8696
-fn: lm_compiler_dyn_site (const: (@: site c.L2SourceSite); const: (@: path char); @: changed int) int
-    int: fi (cast: (int) site\count) - 1
-    int: i 0
-    int: n
-    # A held call (count -1, l2_check_held_call).
-    if: fi = 0 - 2
-        return: (cast: (int) (lm_compiler_dyn_site_held(site, (cast: (int) (site\target)), path, changed)))
-    if: fi < 0
-        return: (cast: (int) (lm_compiler_dyn_site_callee(site, (cast: (int) (site\target)), 0 - 1, path, changed)))
-    n: c.lm_compiler_cfl_count((cast: (int) (site\method)), fi)
-    while: i < n
-        if: lm_compiler_dyn_site_callee(site, (cast: (int) (c.lm_compiler_cfl_at((cast: (int) (site\method)), fi, i))), fi, path, changed) != 0
-            return: (cast: (int) (1))
-        i: i + 1
-    ---
-    return: (cast: (int) (0))
-end: lm_compiler_dyn_site
 
 # Original: l2src/l2trans.lm1:8713
-fn: lm_compiler_dyn_step (const: (@: path char); @: changed int) int
-    @: wait_n_cell int (cast: (@: int) (@ c.l2_wait_n))
-    @@: wait_cell c.L2SourceSite (cast: (@@: c.L2SourceSite) (@ c.l2_wait))
-    c.L2SourceSite: saved
-    int: w 0
-    int: rc 0
-    int: restored
-    if: c.lm_compiler_source_save(@ saved) != 0
-        return: (cast: (int) (c.lm_compiler_alloc_or(path, 0, "out of memory")))
-    while: w < wait_n_cell[0] && rc = 0
-        if: lm_compiler_port249_0_L2SourceSite_kind((wait_cell[0] + w)) = 4
-            rc: c.lm_compiler_source_restore(wait_cell[0] + w)
-            if: rc = 0
-                rc: lm_compiler_dyn_site(wait_cell[0] + w, (cast: (const: @: char) (c.lm_compiler_method_src((cast: (int) lm_compiler_port249_0_L2SourceSite_method((wait_cell[0] + w))), path))), changed)
-        ---
-        w: w + 1
-    restored: c.lm_compiler_source_restore(@ saved)
-    c.lm_compiler_xfree((cast: (@: void) ((cast: (@: void) saved\scopes))))
-    if: rc != 0 || restored != 0
-        return: (cast: (int) (1))
-    return: (cast: (int) (0))
-end: lm_compiler_dyn_step
 
 # Original: l2src/l2trans.lm1:8743
 fn: lm_compiler_free_name_at (int: m; int: k; const: (@: at c.LmP0Node)) @: c.LmP0Node
@@ -4950,73 +4661,19 @@ fn: lm_compiler_free_name_at (int: m; int: k; const: (@: at c.LmP0Node)) @: c.Lm
 end: lm_compiler_free_name_at
 
 # Original: l2src/l2trans.lm1:8761
-fn: lm_compiler_dyn_typed (const: (@: path char)) int
-    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
-    int: m 0
-    int: k
-    while: m < m_n_cell[0]
-        k: 0
-        while: k < m_dyn_cell[0][m]
-            if: c.lm_compiler_dt(m, k) = 0
-                if: c.lm_compiler_dn(m, k) != 0
-                    c.fprintf((cast: (@: c.FILE) (c.l1_stderr())), "l2trans detail: unresolved dynamic=%.*s\n", (cast: (int) lm_compiler_port249_0_LmP0Text_length((cast: (const: @: c.LmP0Text) (c.lm_compiler_dn(m, k))))), lm_compiler_port249_0_LmP0Text_data((cast: (const: @: c.LmP0Text) (c.lm_compiler_dn(m, k)))))
-                return: (cast: (int) (c.lm_compiler_error((cast: (const: @: char) (c.lm_compiler_method_src(m, path))), lm_compiler_free_name_at(m, k, m_node_cell[0][m]), "unresolved name")))
-            # Slice 255 (design 4.5 B2a): a free input is runtime-typed from here on -- its dynamic type is FREE (46), read
-            # by input_ft as the own type 45; the closure's type for it is not consulted by the emission.
-            if: lm_compiler_dyn_free(m, k) != 0 && c.lm_compiler_dt(m, k) != c.lm_compiler_free_dt() && c.lm_compiler_dt_set(m, k, c.lm_compiler_free_dt()) != 0
-                return: (cast: (int) (1))
-            k: k + 1
-        m: m + 1
-    return: (cast: (int) (0))
-end: lm_compiler_dyn_typed
 
 # Original: l2src/l2trans.lm1:8775
-fn: lm_compiler_dyn_close (const: (@: path char)) int
+# Callable formal flow and the coordinate maps of modelled receivers still
+# have consumers. They do not add names to any method's input header.
+fn: lm_compiler_close_callable_models () int
     @: d105a_done_cell int (cast: (@: int) (@ c.l2_d105a_done))
     @: ide_n_cell int (cast: (@: int) (@ c.l2_ide_n))
-    int: changed 1
-    # Every check has run: what reaches each callable formal is closed before the requirements propagate.
-    if: lm_compiler_cfl_close() != 0
-        return: (cast: (int) (1))
-    # The D-105 facts of the actuals of calls through callable formals reach the methods that reach those formals.
-    if: lm_compiler_cfa_apply() != 0
-        return: (cast: (int) (1))
-    # Each successful step can only add one of the finite method/name/type
-    # facts collected from this unit. Iterate to the actual fixed point; an
-    # arbitrary pass count rejects valid long call chains.
-    # HELD-FREE-NAME-OTHER-TYPE: once the sites change nothing, an input no binding typed takes the type of the held
-    # model that asked it (l2_dyk_close), and the sites are visited again, so that the type reaches the methods that
-    # hand the name on -- and the models those ask in turn.
-    while: changed != 0
-        changed: 0
-        if: lm_compiler_dyn_step(path, @ changed) != 0
-            return: (cast: (int) (1))
-        if: changed = 0 && lm_compiler_dyk_close(@ changed) != 0
-            return: (cast: (int) (c.lm_compiler_alloc_or(path, 0, "out of memory")))
-    ---
-    # What reaches each input is closed: the coordinate space of a path through an undeclared free name is found
-    # (l2_anchor_close).  Such an input has a schema from here on, so the sites are visited once more: what a
-    # site records by the schema of the input it hands to -- the admission it stands for, the method it marks
-    # -- is recorded now.  Nothing a site recorded before is taken back.
-    if: lm_compiler_anchor_close() != 0
-        return: (cast: (int) (1))
-    changed: 1
-    while: changed != 0
-        changed: 0
-        if: lm_compiler_dyn_step(path, @ changed) != 0
-            return: (cast: (int) (1))
-    ---
-    # Every site has recorded its edges: the possible anchors of a value's positional identity are closed over them
-    # (l2_d105a_close), and the identity entries of the receptions are found from these (l2_identity_list).  The
-    # waited checks end here again, and both are found again.
+    if: lm_compiler_cfl_close() != 0 || lm_compiler_cfa_apply() != 0 || lm_compiler_anchor_close() != 0
+        return: 1
     d105a_done_cell[0]: 0
     ide_n_cell[0]: 0
-    if: c.lm_compiler_d105a_close() != 0
-        return: (cast: (int) (1))
-    return: (cast: (int) (lm_compiler_dyn_typed(path)))
-end: lm_compiler_dyn_close
+    return: c.lm_compiler_d105a_close()
+end: lm_compiler_close_callable_models
 
 # Original: l2src/l2trans.lm1:8819
 fn: lm_compiler_wait_name (int: mi; const: (@: t c.LmP0Text)) int
@@ -5033,8 +4690,6 @@ fn: lm_compiler_wait_name (int: mi; const: (@: t c.LmP0Text)) int
     if: c.lm_compiler_deref_name(t, @ base, @ levels) = 0
         return: (cast: (int) (lm_compiler_wait_name(mi, @ base)))
     k: c.lm_compiler_dyn_find(mi, t)
-    if: k >= 0 && c.lm_compiler_dt(mi, k) = 0
-        return: (cast: (int) (1))
     # A hidden graph input can have its transport type before its field
     # coordinate space is established. Wait for the ordinary anchor closure.
     if: k >= 0 && anc_on_cell[0] = 0 && c.lm_compiler_dt(mi, k) = c.lm_compiler_graph_dt() && c.lm_compiler_input_undeclared(mi, m_arity_cell[0][mi] + k) != 0 && c.lm_compiler_input_schema(mi, m_arity_cell[0][mi] + k) < 0
@@ -5120,9 +4775,6 @@ fn: lm_compiler_wait_add (int: kind; int: mi; @: site void; int: n; int: to; con
 end: lm_compiler_wait_add
 
 # Original: l2src/l2trans.lm1:8912
-fn: lm_compiler_note_call (int: mi; int: callee; const: (@: source_node c.LmP0Node); const: (@: path char)) int
-    return: (cast: (int) (lm_compiler_wait_add(4, mi, (cast: (@: void) source_node), 0, callee, source_node, path)))
-end: lm_compiler_note_call
 
 # Original: l2src/l2trans.lm1:8964
 fn: lm_compiler_wait_kinds (@: field c.LmP0Field; int: n; int: mi; const: (@: path char)) int
@@ -11725,7 +11377,7 @@ fn: lm_compiler_check_struct_call (const: (@: source_node c.LmP0Node); @: plan c
         ns_exec_cell[0][plan\ni]: 1
         # §12: executing S calls its procedure -- an edge as any call's.
         m_edge_cell[0][c.lm_compiler_edge_off(mi, (cast: (int) (ns_proc_cell[0][plan\ni])))]: m_edge_cell[0][c.lm_compiler_edge_off(mi, (cast: (int) (ns_proc_cell[0][plan\ni])))] | 1
-        return: (cast: (int) (lm_compiler_note_call(mi, (cast: (int) (ns_proc_cell[0][plan\ni])), source_node, path)))
+        return: 0
     return: (cast: (int) (c.lm_compiler_error(path, source_node, "executing a named Structure is not supported yet")))
 end: lm_compiler_check_struct_call
 
@@ -12120,11 +11772,6 @@ fn: lm_compiler_split_close (const: (@: path char)) int
     ---
     return: (cast: (int) (0))
 end: lm_compiler_split_close
-
-# Original: l2src/l2trans.lm1:20736
-fn: lm_compiler_hidden_forward (int: mi; int: pi; int: callee; int: k; int: callee_self; const: (@: ind char); @: dest c.L2Tx; const: (@: at c.LmP0Node)) int
-    return: (cast: (int) (c.lm_compiler_hidden_forward_context(mi, pi, callee, k, callee_self, ind, dest, at, 0)))
-end: lm_compiler_hidden_forward
 
 # Original: l2src/l2trans.lm1:20757
 fn: lm_compiler_emit_formal_contexts (int: mi) int
@@ -12544,37 +12191,6 @@ fn: lm_compiler_cfr_reserve () int
     return: (cast: (int) (0))
 end: lm_compiler_cfr_reserve
 
-# Original: l2src/l2trans.lm1:21559
-fn: lm_compiler_dyp_reserve () int
-    @: dyp_n_cell int (cast: (@: int) (@ c.l2_dyp_n))
-    @: dyp_cap_cell int (cast: (@: int) (@ c.l2_dyp_cap))
-    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
-    @@: dyp_m_cell int (cast: (@@: int) (@ c.l2_dyp_m))
-    @@@: dyp_nm_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_dyp_nm))
-    int: cap
-    size_t: isz
-    size_t: psz
-    @: p void
-    if: dyp_n_cell[0] < dyp_cap_cell[0]
-        return: (cast: (int) (0))
-    cap: c.lm_compiler_cap_next(dyp_cap_cell[0], dyp_n_cell[0] + 1)
-    if: cap < 0
-        alloc_err_cell[0]: 2
-        return: (cast: (int) (1))
-    isz: c.sizeof(c.int)
-    psz: sizeof(@: char)
-    p: c.lm_compiler_vec_grow((cast: (@: void) dyp_m_cell[0]), dyp_n_cell[0], cap, isz)
-    if: p = 0
-        return: (cast: (int) (1))
-    dyp_m_cell[0]: (cast: (@: int) p)
-    p: c.lm_compiler_vec_grow((cast: (@: void) dyp_nm_cell[0]), dyp_n_cell[0], cap, psz)
-    if: p = 0
-        return: (cast: (int) (1))
-    dyp_nm_cell[0]: (cast: (@@: c.LmP0Text) p)
-    dyp_cap_cell[0]: cap
-    return: (cast: (int) (0))
-end: lm_compiler_dyp_reserve
-
 # Original: l2src/l2trans.lm1:21583
 fn: lm_compiler_flow_free () int
     @@: t7_kind_cell int (cast: (@@: int) (@ c.l2_t7_kind))
@@ -12600,15 +12216,6 @@ fn: lm_compiler_flow_free () int
     @: t7_cap_cell int (cast: (@: int) (@ c.l2_t7_cap))
     @: t7b_cap_cell int (cast: (@: int) (@ c.l2_t7b_cap))
     @: t7h_cap_cell int (cast: (@: int) (@ c.l2_t7h_cap))
-    @@: dyp_m_cell int (cast: (@@: int) (@ c.l2_dyp_m))
-    @@@: dyp_nm_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_dyp_nm))
-    @: dyp_n_cell int (cast: (@: int) (@ c.l2_dyp_n))
-    @: dyp_cap_cell int (cast: (@: int) (@ c.l2_dyp_cap))
-    @@: dyk_m_cell int (cast: (@@: int) (@ c.l2_dyk_m))
-    @@@: dyk_nm_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_dyk_nm))
-    @@: dyk_ty_cell int (cast: (@@: int) (@ c.l2_dyk_ty))
-    @: dyk_n_cell int (cast: (@: int) (@ c.l2_dyk_n))
-    @: dyk_cap_cell int (cast: (@: int) (@ c.l2_dyk_cap))
     @@: d105_mi_cell int (cast: (@@: int) (@ c.l2_d105_mi))
     @@: d105_k_cell int (cast: (@@: int) (@ c.l2_d105_k))
     @: d105_n_cell int (cast: (@: int) (@ c.l2_d105_n))
@@ -12684,25 +12291,11 @@ fn: lm_compiler_flow_free () int
     @@: cfr_t_cell int (cast: (@@: int) (@ c.l2_cfr_t))
     @@: cfr_m_cell int (cast: (@@: int) (@ c.l2_cfr_m))
     @@: cfr_origin_cell int (cast: (@@: int) (@ c.l2_cfr_origin))
-    @@: dyr_m_cell int (cast: (@@: int) (@ c.l2_dyr_m))
-    @@: dyr_at_cell int (cast: (@@: int) (@ c.l2_dyr_at))
-    @@: dyr_c_cell int (cast: (@@: int) (@ c.l2_dyr_c))
-    @@: dyr_hard_cell int (cast: (@@: int) (@ c.l2_dyr_hard))
-    @@: dyc_t_cell int (cast: (@@: int) (@ c.l2_dyc_t))
-    @@: dyc_a_cell int (cast: (@@: int) (@ c.l2_dyc_a))
-    @@: dys_t_cell int (cast: (@@: int) (@ c.l2_dys_t))
-    @@: dys_a_cell int (cast: (@@: int) (@ c.l2_dys_a))
     @@@: cfl_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_cfl_node))
-    @@@: dyr_nm_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_dyr_nm))
     @: cfl_n_cell int (cast: (@: int) (@ c.l2_cfl_n))
     @: cfl_cap_cell int (cast: (@: int) (@ c.l2_cfl_cap))
     @: cfr_n_cell int (cast: (@: int) (@ c.l2_cfr_n))
     @: cfr_cap_cell int (cast: (@: int) (@ c.l2_cfr_cap))
-    @: dyr_n_cell int (cast: (@: int) (@ c.l2_dyr_n))
-    @: dyr_cap_cell int (cast: (@: int) (@ c.l2_dyr_cap))
-    @: dyc_n_cell int (cast: (@: int) (@ c.l2_dyc_n))
-    @: dyc_cap_cell int (cast: (@: int) (@ c.l2_dyc_cap))
-    @: dys_cap_cell int (cast: (@: int) (@ c.l2_dys_cap))
     c.lm_compiler_xfree((cast: (@: void) t7_kind_cell[0]))
     t7_kind_cell[0]: 0
     c.lm_compiler_xfree((cast: (@: void) t7_host_cell[0]))
@@ -12743,20 +12336,6 @@ fn: lm_compiler_flow_free () int
     t7_cap_cell[0]: 0
     t7b_cap_cell[0]: 0
     t7h_cap_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyp_m_cell[0]))
-    dyp_m_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyp_nm_cell[0]))
-    dyp_nm_cell[0]: 0
-    dyp_n_cell[0]: 0
-    dyp_cap_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyk_m_cell[0]))
-    dyk_m_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyk_nm_cell[0]))
-    dyk_nm_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyk_ty_cell[0]))
-    dyk_ty_cell[0]: 0
-    dyk_n_cell[0]: 0
-    dyk_cap_cell[0]: 0
     c.lm_compiler_xfree((cast: (@: void) d105_mi_cell[0]))
     d105_mi_cell[0]: 0
     c.lm_compiler_xfree((cast: (@: void) d105_k_cell[0]))
@@ -12884,35 +12463,12 @@ fn: lm_compiler_flow_free () int
     cfr_m_cell[0]: 0
     c.lm_compiler_xfree((cast: (@: void) cfr_origin_cell[0]))
     cfr_origin_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyr_m_cell[0]))
-    dyr_m_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyr_at_cell[0]))
-    dyr_at_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyr_c_cell[0]))
-    dyr_c_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyr_hard_cell[0]))
-    dyr_hard_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyc_t_cell[0]))
-    dyc_t_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyc_a_cell[0]))
-    dyc_a_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dys_t_cell[0]))
-    dys_t_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dys_a_cell[0]))
-    dys_a_cell[0]: 0
     c.lm_compiler_xfree((cast: (@: void) cfl_node_cell[0]))
     cfl_node_cell[0]: 0
-    c.lm_compiler_xfree((cast: (@: void) dyr_nm_cell[0]))
-    dyr_nm_cell[0]: 0
     cfl_n_cell[0]: 0
     cfl_cap_cell[0]: 0
     cfr_n_cell[0]: 0
     cfr_cap_cell[0]: 0
-    dyr_n_cell[0]: 0
-    dyr_cap_cell[0]: 0
-    dyc_n_cell[0]: 0
-    dyc_cap_cell[0]: 0
-    dys_cap_cell[0]: 0
     return: (cast: (int) (0))
 end: lm_compiler_flow_free
 
@@ -13355,90 +12911,9 @@ fn: lm_compiler_anchor_close () int
     return: (cast: (int) (0))
 end: lm_compiler_anchor_close
 
-# Original: l2src/l2trans.lm1:22237
-fn: lm_compiler_dyp_mark (int: m; const: (@: nm c.LmP0Text); @: changed int) int
-    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
-    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
-    @@: dyp_m_cell int (cast: (@@: int) (@ c.l2_dyp_m))
-    @: dyp_n_cell int (cast: (@: int) (@ c.l2_dyp_n))
-    @@@: dyp_nm_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_dyp_nm))
-    if: m < 0 || m >= m_n_cell[0] || nm = 0 || c.lm_compiler_dyp_has(m, nm) != 0
-        return: (cast: (int) (0))
-    if: lm_compiler_dyp_reserve() != 0
-        return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")))
-    dyp_m_cell[0][dyp_n_cell[0]]: m
-    dyp_nm_cell[0][dyp_n_cell[0]]: (cast: (@: c.LmP0Text) nm)
-    dyp_n_cell[0]: dyp_n_cell[0] + 1
-    if: changed != 0
-        \changed: 1
-    return: (cast: (int) (0))
-end: lm_compiler_dyp_mark
-
 # Original: l2src/l2trans.lm1:22251
-fn: lm_compiler_dyk_note (int: m; const: (@: nm c.LmP0Text); int: ty) int
-    @: dyk_n_cell int (cast: (@: int) (@ c.l2_dyk_n))
-    @@: dyk_m_cell int (cast: (@@: int) (@ c.l2_dyk_m))
-    @@@: dyk_nm_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_dyk_nm))
-    @: dyk_cap_cell int (cast: (@: int) (@ c.l2_dyk_cap))
-    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
-    @@: dyk_ty_cell int (cast: (@@: int) (@ c.l2_dyk_ty))
-    int: cap
-    int: r 0
-    size_t: isz
-    size_t: psz
-    @: p void
-    while: r < dyk_n_cell[0]
-        if: dyk_m_cell[0][r] = m && c.lm_compiler_text_same(dyk_nm_cell[0][r], nm) != 0
-            return: (cast: (int) (0))
-        r: r + 1
-    ---
-    if: dyk_n_cell[0] >= dyk_cap_cell[0]
-        cap: c.lm_compiler_cap_next(dyk_cap_cell[0], dyk_n_cell[0] + 1)
-        if: cap < 0
-            alloc_err_cell[0]: 2
-            return: (cast: (int) (1))
-        isz: c.sizeof(c.int)
-        psz: sizeof(@: char)
-        p: c.lm_compiler_vec_grow((cast: (@: void) dyk_m_cell[0]), dyk_n_cell[0], cap, isz)
-        if: p = 0
-            return: (cast: (int) (1))
-        dyk_m_cell[0]: (cast: (@: int) p)
-        p: c.lm_compiler_vec_grow((cast: (@: void) dyk_nm_cell[0]), dyk_n_cell[0], cap, psz)
-        if: p = 0
-            return: (cast: (int) (1))
-        dyk_nm_cell[0]: (cast: (@@: c.LmP0Text) p)
-        p: c.lm_compiler_vec_grow((cast: (@: void) dyk_ty_cell[0]), dyk_n_cell[0], cap, isz)
-        if: p = 0
-            return: (cast: (int) (1))
-        dyk_ty_cell[0]: (cast: (@: int) p)
-        dyk_cap_cell[0]: cap
-    ---
-    dyk_m_cell[0][dyk_n_cell[0]]: m
-    dyk_nm_cell[0][dyk_n_cell[0]]: (cast: (@: c.LmP0Text) nm)
-    dyk_ty_cell[0][dyk_n_cell[0]]: ty
-    dyk_n_cell[0]: dyk_n_cell[0] + 1
-    return: (cast: (int) (0))
-end: lm_compiler_dyk_note
 
 # Original: l2src/l2trans.lm1:22292
-fn: lm_compiler_dyk_close (@: changed int) int
-    @: dyk_n_cell int (cast: (@: int) (@ c.l2_dyk_n))
-    @@: dyk_m_cell int (cast: (@@: int) (@ c.l2_dyk_m))
-    @@@: dyk_nm_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_dyk_nm))
-    @@: dyk_ty_cell int (cast: (@@: int) (@ c.l2_dyk_ty))
-    int: r 0
-    int: k
-    while: r < dyk_n_cell[0]
-        k: c.lm_compiler_dyn_find(dyk_m_cell[0][r], dyk_nm_cell[0][r])
-        if: k >= 0 && c.lm_compiler_dt(dyk_m_cell[0][r], k) = 0
-            if: c.lm_compiler_dt_set(dyk_m_cell[0][r], k, dyk_ty_cell[0][r]) != 0
-                return: (cast: (int) (1))
-            \changed: 1
-        ---
-        r: r + 1
-    ---
-    return: (cast: (int) (0))
-end: lm_compiler_dyk_close
 
 # Original: l2src/l2trans.lm1:22374
 fn: lm_compiler_tramp_ref (int: mi; int: k; @: dest c.L2Tx) int
@@ -13450,7 +12925,7 @@ fn: lm_compiler_tramp_ref (int: mi; int: k; @: dest c.L2Tx) int
     int: own
     c.L2FrontendScratchChar64: name_storage
     @: name char (cast: (@: char) name_storage\buffer)
-    if: k >= m_arity_cell[0][mi] && c.lm_compiler_dyn_fwd(mi, k - m_arity_cell[0][mi]) = 0 && c.lm_compiler_hid_source(mi, k - m_arity_cell[0][mi], 0, @ mode, @ depth, @ slot, @ kind, @ own) = 0
+    if: k >= m_arity_cell[0][mi] && c.lm_compiler_hid_source(mi, k - m_arity_cell[0][mi], 0, @ mode, @ depth, @ slot, @ kind, @ own) = 0
         if: c.snprintf(name, 64U, "l2_href%d", k) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (c.lm_compiler_tx_set(dest, name)))
@@ -13474,7 +12949,7 @@ fn: lm_compiler_emit_tramp_lex (int: i; int: k) int
     int: own
     c.L2FrontendScratchChar96: pty_storage
     @: pty char (cast: (@: char) pty_storage\buffer)
-    if: c.lm_compiler_dyn_fwd(i, k - m_arity_cell[0][i]) != 0 || c.lm_compiler_hid_source(i, k - m_arity_cell[0][i], 1, @ mode, @ depth, @ slot, @ kind, @ own) != 0
+    if: c.lm_compiler_hid_source(i, k - m_arity_cell[0][i], 1, @ mode, @ depth, @ slot, @ kind, @ own) != 0
         return: (cast: (int) (0))
     if: slot < 0 || depth < 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][i], "internal: a hidden input's lexical cell has no place")))
@@ -13678,16 +13153,6 @@ fn: lm_compiler_emit_formal (int: ft; int: mi; int: idx; int: arg) int
     @: ref c.L2Tx c.lm_compiler_tx_local(@ ref_tx, ref_own, 64U)
     if: arg = 1 && (ref = 0 || lm_compiler_tramp_ref(mi, idx, ref) != 0)
         return: (cast: (int) (1))
-    # K04 S2: a forward-only input is its entry of refs in the typed body, under a name of its own so that no
-    # read of the value can be written against it. An input the method resolves
-    # itself comes through the ordinary unmarshaler using l2_href<idx>.
-    if: idx >= m_arity_cell[0][mi] && c.lm_compiler_dyn_fwd(mi, idx - m_arity_cell[0][mi]) != 0
-        if: arg = 0 && (c.lm_compiler_tx_input_cname(ref, "l2_pr", mi, idx, "") != 0 || c.fprintf(out_cell[0], "; @: void %s", ref\data) < 0)
-            return: (cast: (int) (1))
-        if: arg = 1 && c.fprintf(out_cell[0], ", l2_received_refs[%d]", idx) < 0
-            return: (cast: (int) (1))
-        return: (cast: (int) (0))
-    ---
     if: ft = 0
         sig: "; int: %s"
         read: ", lmx_int_value_known(%s)"
@@ -14460,10 +13925,10 @@ fn: lm_compiler_rw_signature_charptr (int: parent; int: slot) int
 end: lm_compiler_rw_signature_charptr
 
 # Original: l2src/l2trans.lm1:23718
-fn: lm_compiler_rw_contract_parts (int: parent; int: n; int: nr; @: out int; @: inputs int; @: returns int) int
+fn: lm_compiler_rw_contract_parts (int: parent; int: n; int: nr; int: parts; @: out int; @: inputs int; @: returns int) int
     if: n < 0 || nr < 0 || nr > 1
         return: (cast: (int) (1))
-    return: (cast: (int) ((cast: (int) (lm_compiler_rw_plain(parent, 2, out) != 0 || lm_compiler_rw_plain((cast: (int) (\out)), n, inputs) != 0 || lm_compiler_rw_put((cast: (int) (\out)), 0, (cast: (int) (\inputs))) != 0 || lm_compiler_rw_plain((cast: (int) (\out)), nr, returns) != 0 || lm_compiler_rw_put((cast: (int) (\out)), 1, (cast: (int) (\returns))) != 0))))
+    return: (cast: (int) ((cast: (int) (lm_compiler_rw_plain(parent, parts, out) != 0 || lm_compiler_rw_plain((cast: (int) (\out)), n, inputs) != 0 || lm_compiler_rw_put((cast: (int) (\out)), 0, (cast: (int) (\inputs))) != 0 || lm_compiler_rw_plain((cast: (int) (\out)), nr, returns) != 0 || lm_compiler_rw_put((cast: (int) (\out)), 1, (cast: (int) (\returns))) != 0))))
 end: lm_compiler_rw_contract_parts
 
 # Original: l2src/l2trans.lm1:23805
@@ -15485,7 +14950,6 @@ fn: lm_compiler_rw_call_class_receiving (const: (@: source_node c.LmP0Node); int
     int: source_input
     int: source_method
     int: candidate
-    int: need
     int: count 0
     int: at
     int: records
@@ -15518,10 +14982,7 @@ fn: lm_compiler_rw_call_class_receiving (const: (@: source_node c.LmP0Node); int
             k: 0
             while: k < m_dyn_cell[0][head]
                 req: c.lm_compiler_input_schema(head, m_arity_cell[0][head] + k)
-                need: c.lm_compiler_site_needs(rw_mi_cell[0], source_node, formal, 0, head, k, 0, 0, src_cell[0])
-                if: need < 0
-                    return: (cast: (int) (1))
-                if: req != -1 && need != 0
+                if: req != -1
                     if: pass = 0
                         if: count = c.INT_MAX
                             return: (cast: (int) (1))
@@ -15741,7 +15202,7 @@ fn: lm_compiler_emit_library_helper_names () int
     int: k 0
     if: library_mode_cell[0] = 0
         return: (cast: (int) (0))
-    if: lm_compiler_emit_hashed_name("l2_send_fail", "send_fail", 0 - 1) != 0 || lm_compiler_emit_hashed_name("l2_mad_inputs", "mad_inputs", 0 - 1) != 0 || lm_compiler_emit_hashed_name("l2_mad_call", "mad_call", 0 - 1) != 0 || lm_compiler_emit_hashed_name("l2_mad_call_prim", "mad_call_prim", 0 - 1) != 0
+    if: lm_compiler_emit_hashed_name("l2_send_fail", "send_fail", 0 - 1) != 0 || lm_compiler_emit_hashed_name("l2_mad_call", "mad_call", 0 - 1) != 0 || lm_compiler_emit_hashed_name("l2_mad_call_prim", "mad_call_prim", 0 - 1) != 0 || lm_compiler_emit_hashed_name("l2_mad_receiver", "mad_receiver", 0 - 1) != 0
         return: (cast: (int) (1))
     while: k < msend_n_cell[0]
         if: lm_compiler_emit_hashed_name("l2_msend", "msend", k) != 0
@@ -16797,35 +16258,6 @@ fn: lm_compiler_mad_slot_ty (int: mi; const: (@: name c.LmP0Text)) int
     return: (cast: (int) (0 - 1))
 end: lm_compiler_mad_slot_ty
 
-# Original: l2src/l2trans.lm1:32910
-fn: lm_compiler_check_held_convert (const: (@: source_node c.LmP0Node); int: oi; int: mi; const: (@: path char)) int
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    c.L2FrontendScratchChar1024: bv_own_storage
-    @: bv_own char (cast: (@: char) bv_own_storage\buffer)
-    c.L2Tx: bv_tx
-    @: bv c.L2Tx c.lm_compiler_tx_local(@ bv_tx, bv_own, 1024U)
-    int: model
-    int: k 0
-    int: bty
-    int: oty
-    model: c.lm_compiler_mad_held_model(oi)
-    if: model < 0
-        return: (cast: (int) (0))
-    while: k < m_dyn_cell[0][model]
-        bty: 0 - 1
-        c.lm_compiler_tx_clear(bv)
-        if: c.lm_compiler_held_binding(mi, model, k, bv, @ bty) = 0 && c.lm_compiler_held_never(mi, model, k) = 0 && c.lm_compiler_held_cap_same(mi, model, k) = 0
-            oty: c.lm_compiler_own_of_dt(c.lm_compiler_dt(model, k))
-            if: bty != oty && (c.lm_compiler_rw_num_ty(bty) = 0 || c.lm_compiler_rw_num_ty(oty) = 0)
-                return: (cast: (int) (c.lm_compiler_error(path, source_node, "a caller's binding of a held callable's free name is of another type")))
-            if: bty != oty && lm_compiler_check_value_convert_core(source_node, (cast: (int) (c.lm_compiler_ft_of_own(bty))), (cast: (int) (c.lm_compiler_ft_of_own(oty))), mi, path) != 0
-                return: (cast: (int) (1))
-        ---
-        k: k + 1
-    ---
-    return: (cast: (int) (0))
-end: lm_compiler_check_held_convert
-
 # Original: l2src/l2trans.lm1:32980
 fn: lm_compiler_hres_reset () int
     @@@: hres_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_hres_node))
@@ -16869,16 +16301,57 @@ fn: lm_compiler_held_result_operands (int: mi; @: field c.LmP0Field; int: n; con
     return: (cast: (int) (rc))
 end: lm_compiler_held_result_operands
 
+# Lower the program-supplied conversion rows to ordinary callable coordinates.
+# Only the selected row is read at execution, from the current lexical scope.
+fn: lm_compiler_emit_held_converters () int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    int: src
+    int: dst
+    int: receiver 0
+    @: from_word char
+    @: to_word char
+    c.L2FrontendScratchChar64: source_type
+    c.L2FrontendScratchChar64: result_type
+    c.L2FrontendScratchChar1024: storage
+    c.L2Tx: path_tx
+    @: path c.L2Tx c.lm_compiler_tx_local(@ path_tx, (cast: (@: char) storage\buffer), 1024U)
+    if: c.fputs("fn: l2_mad_receiver (@: Lmx scope; int: src; int: dst) @: Lmx\n    if: scope = 0\n        return: 0\n", out_cell[0]) < 0
+        return: 1
+    while: receiver < m_n_cell[0]
+        if: m_arity_cell[0][receiver] = 1
+            src: c.lm_compiler_own_ty_of_param(c.lm_compiler_formal_raw(c.lm_compiler_ft(receiver, 0)))
+            dst: c.lm_compiler_ret_cell_ty(receiver)
+            if: src != dst && c.lm_compiler_rw_num_ty(src) != 0 && c.lm_compiler_rw_num_ty(dst) != 0
+                from_word: c.lm_compiler_own_ty_word(src)
+                to_word: c.lm_compiler_own_ty_word(dst)
+                if: c.lm_compiler_convert_hit(from_word, to_word) = 0 || c.lm_compiler_convert_method() != receiver
+                    receiver: receiver + 1
+                    continue
+                ---
+                if: c.lm_compiler_emit_input_value_type(c.lm_compiler_ft_of_own(src), 0, (cast: (@: char) source_type\buffer)) != 0 || c.lm_compiler_emit_input_value_type(c.lm_compiler_ft_of_own(dst), 0, (cast: (@: char) result_type\buffer)) != 0 || c.lm_compiler_occ_expr(receiver, "scope", path) != 0
+                    return: 1
+                if: c.fprintf(out_cell[0], "    if: src = %s && dst = %s\n        return: %s\n", (cast: (@: char) source_type\buffer), (cast: (@: char) result_type\buffer), path\data) < 0
+                    return: 1
+                ---
+            ---
+        ---
+        receiver: receiver + 1
+    ---
+    return: (cast: (int) (c.fputs("    return: 0\nend: l2_mad_receiver\n\n", out_cell[0]) < 0))
+end: lm_compiler_emit_held_converters
+
 # Original: l2src/l2trans.lm1:33088
 fn: lm_compiler_emit_mad_call () int
     @: mad_need_call_cell int (cast: (@: int) (@ c.l2_mad_need_call))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     if: mad_need_call_cell[0] = 0
         return: (cast: (int) (0))
-    if: c.lm_compiler_emit_mad_inputs() != 0
-        return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    []: LmxWalkValue l2_values %d\n    @: LmxWalkValue l2_forward 0\n    size_t: l2_n 0U\n    int: l2_status 0\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(lmx_call_arena, l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    if: lmx_input_values != 0\n        int: l2_copy_status lmx_walk_values_project(lmx_input_values, refs, nargs, 1U, l2_values, l2_all, l2_n)\n        if: l2_copy_status != c.LMX_WALK_OK\n            lmx_call_note_walk_fail(l2_copy_status)\n        l2_forward: l2_values\n    ---\n    l2_status: lmx_call_prim_values(lmx_call_arena, l2_code, lmx_call_unary_data(lmx_call_arena, l2_code), l2_all, l2_n, dest, out, l2_forward, lmx_result_context)\n    if: l2_status != 0\n        return: l2_status\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", (cast: (int) (c.lm_compiler_mad_max_inputs())), (cast: (int) (c.lm_compiler_mad_max_inputs())), c.lm_compiler_mad_max_inputs()) < 0
-        return: (cast: (int) (1))
+    if: lm_compiler_emit_held_converters() != 0
+        return: 1
+    if: c.fputs("fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n        return: 0\n    @: Lmx l2_code (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    @: LmxWalkValue l2_args 0\n    if: lmx_input_values != 0\n        l2_args: lmx_input_values + 1U\n    return: lmx_walk_call_held_values(lmx_call_arena, l2_code, refs + 1U, l2_args, nargs - 1U, dest, out, lmx_result_context, (cast: (@: Lmx) owner), lmx_call_code, l2_mad_receiver)\nend: l2_mad_call\n\n", out_cell[0]) < 0
+        return: 1
     # Item 6 of the interpreter-throw closure, the walked route (steps/interpreter-throw-20261010.md): under the walk
     # the adapter is the PRIM of the held call, and the walker reads a PRIM's status in the primitive protocol
     # (lmx_primitive.h.lm1).  This variant translates the model's per-callee ordinal -- what lmx_call_prim hands
@@ -16886,7 +16359,7 @@ fn: lm_compiler_emit_mad_call () int
     # (lmx_walk_key_from_ordinal, the one boundary where ordinal and key meet) and says LMX_PRIMITIVE_THROWN + key;
     # the thrown record is already in out.  An ordinal the model neither declares nor the language names is a broken
     # promise: FAIL, which the walker reads as PRIMITIVE, a malformed protocol -- never an ordinary throw.
-    if: c.fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", out_cell[0]) < 0
+    if: c.fputs("fn: l2_mad_call_prim (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n    size_t: l2_key 0U\n    int: l2_status l2_mad_call(0, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n    if: l2_status = 0\n        return: 0\n    if: lmx_walk_key_from_ordinal(lmx_call_arena, (cast: (@: Lmx) lmx_pointer_value_known(refs[0])), (cast: (size_t) l2_status), @ l2_key) != c.LMX_WALK_OK\n        return: c.LMX_PRIMITIVE_FAIL\n    return: c.LMX_PRIMITIVE_THROWN + (cast: (int) l2_key)\nend: l2_mad_call_prim\n\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_mad_call
@@ -17022,27 +16495,6 @@ fn: lm_compiler_rw_mad_at (int: parent; int: slot; @: out int) int
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_rw_mad_at
-
-# Original: l2src/l2trans.lm1:33535
-fn: lm_compiler_rw_held_bound (int: model; int: k) int
-    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    @: e_cell int (cast: (@: int) (@ c.l2_e))
-    @@: own_uchild_cell int (cast: (@@: int) (@ c.l2_own_uchild))
-    @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
-    @: nm c.LmP0Text
-    int: oi
-    nm: c.lm_compiler_dn(model, k)
-    if: nm = 0
-        return: (cast: (int) (0))
-    if: rw_mi_cell[0] != e_cell[0] && c.lm_compiler_param_find(rw_mi_cell[0], nm) >= 0
-        return: (cast: (int) (1))
-    oi: c.lm_compiler_own_visible(rw_mi_cell[0], nm)
-    if: oi < 0 || own_uchild_cell[0][oi] < 0
-        return: (cast: (int) (0))
-    if: rw_mi_cell[0] != e_cell[0] && m_uses_cell[0][c.lm_compiler_own_off(rw_mi_cell[0], oi)] = 0
-        return: (cast: (int) (0))
-    return: (cast: (int) (1))
-end: lm_compiler_rw_held_bound
 
 # Original: l2src/l2trans.lm1:33558
 fn: lm_compiler_t7_bound_slot (const: (@: name c.LmP0Text)) int

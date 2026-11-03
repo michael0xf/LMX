@@ -2074,6 +2074,8 @@ fn: lm_compiler_input_schema (int: mi; int: k) int
     model: c.lm_compiler_cap_arg_ns(mi, k)
     if: c.lm_compiler_schema_kind(model) != 0
         return: (cast: (int) (model))
+    if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, k)) != 0
+        return: 0 - 1
     own: c.lm_compiler_own_lexical(mi, c.lm_compiler_input_name(mi, k))
     if: own >= 0
         return: (cast: (int) (lm_compiler_own_schema(own)))

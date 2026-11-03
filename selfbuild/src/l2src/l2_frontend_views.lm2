@@ -1222,22 +1222,6 @@ fn: lm_compiler_anchor_own_layout (int: own) int
     return: (cast: (int) (0 - 1))
 end: lm_compiler_anchor_own_layout
 
-fn: lm_compiler_reader_origin_state (int: m; int: fi; int: formed; int: x) int
-    int: host lm_compiler_mad_host_of(x)
-    int: origin
-    if: formed != 0 || host = m
-        return: (cast: (int) (0))
-    if: fi >= 0
-        origin: lm_compiler_cfr_origin_of(m, fi, x)
-        if: (origin & 1) = 0 && (origin & 4) != 0
-            return: (cast: (int) (0))
-        return: (cast: (int) (1))
-    ---
-    if: host >= 0 && lm_compiler_mad_host_of(m) = host
-        return: (cast: (int) (2))
-    return: (cast: (int) (1))
-end: lm_compiler_reader_origin_state
-
 fn: lm_compiler_method_sig_compatible (int: cand; int: req) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: m_ret_cell int (cast: (@@: int) (@ c.l2_m_ret))
@@ -1396,20 +1380,6 @@ fn: lm_compiler_mad_node_arity (int: mi) int
         arity: m_arity_cell[0][mad_model_cell[0][mi]]
     return: (cast: (int) (arity))
 end: lm_compiler_mad_node_arity
-
-fn: lm_compiler_mad_max_inputs () int
-    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
-    @@: mad_model_cell int (cast: (@@: int) (@ c.l2_mad_model))
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    int: i 0
-    int: w 1
-    while: i < m_n_cell[0]
-        if: lm_compiler_mad_on(i) != 0 && mad_model_cell[0][i] >= 0 && lm_compiler_mad_node_arity(i) + m_dyn_cell[0][mad_model_cell[0][i]] > w
-            w: lm_compiler_mad_node_arity(i) + m_dyn_cell[0][mad_model_cell[0][i]]
-        i: i + 1
-    ---
-    return: (cast: (int) (w))
-end: lm_compiler_mad_max_inputs
 
 fn: lm_compiler_mad_held_model (int: oi) int
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))

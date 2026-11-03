@@ -1795,7 +1795,9 @@ fn: lmx_callable_entry (@: arena c.LmxArena; @: part c.Lmx; size_t: index; @@: s
     if: entry = 0 || lmx_domain_kind(arena, (cast: (@: void) entry)) != c.LMX_KIND_STRUCT
         return: 1
     @: pair c.VoidArray @ entry\array
-    if: pair\size != 2U && pair\size != 4U
+    # Written formals have four fields. A hidden capture can retain its
+    # receiving operation after the ordinary SOURCE and physical witness.
+    if: pair\size != 2U && pair\size != 3U && pair\size != 4U
         return: 1
     @: declared void c.lmx_graph_value_in(arena, entry, 0U)
     @: physical void c.lmx_graph_value_in(arena, entry, 1U)

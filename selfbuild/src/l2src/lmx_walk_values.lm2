@@ -2755,6 +2755,21 @@ sub: lmx_walk_entry_resolve (@: f c.LmxWalkFrame)
     return
 end: lmx_walk_entry_resolve
 
+# Called after the reached activation has selected its lexical defaults.
+# A pending free row at this point has neither a dynamic nor a lexical source.
+fn: lmx_walk_admit_free_inputs (@: values c.LmxWalkValue; size_t: width) int
+    size_t: i 0U
+    if: values = 0 && width != 0U
+        return: c.LMX_WALK_INVALID
+    while: i < width
+        @: input c.LmxWalkValue (values + i)
+        if: (input\kind = c.LMX_WALK_VALUE_FREE || input\kind = c.LMX_WALK_VALUE_MISSING) && input\present = 0
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+        i: i + 1U
+    ---
+    return: c.LMX_WALK_OK
+end: lmx_walk_admit_free_inputs
+
 fn: lmx_walk_enter_parts_values (@: f c.LmxWalkFrame; @: context c.LmxWalkContext; @: code c.Lmx; @: body c.Lmx; @: source c.Lmx; @: data c.Lmx; @@: args void; size_t: nargs; @: values c.LmxWalkValue) int
     int: status
     if: f = 0
@@ -2777,6 +2792,9 @@ fn: lmx_walk_enter_parts_values (@: f c.LmxWalkFrame; @: context c.LmxWalkContex
     if: status != c.LMX_WALK_OK
         return: status
     # Then each formal receives its value, before the entry load and the body (lmx_walk_receive).
+    status: lmx_walk_admit_free_inputs((cast: (@: c.LmxWalkValue) f\argown), (cast: (size_t) f\nargs))
+    if: status != c.LMX_WALK_OK
+        return: status
     return: lmx_walk_receive(f, body)
 end: lmx_walk_enter_parts_values
 
@@ -4319,7 +4337,7 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
             entry: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), contract, at))
             if: entry != 0
                 entry_fields: @ entry\array
-                if: entry_fields\size = 2U
+                if: entry_fields\size = 2U || entry_fields\size = 3U
                     received\kind: c.LMX_WALK_VALUE_FREE
                 ---
             ---
@@ -6311,10 +6329,9 @@ end: lmx_walk_program_qualify
 # spelling in the arena's name table (lmx_source_name_get on the input or field cell) against the spelling asked for.
 
 # The spelling of input `k` of the callable `code` (a fn-role Structure with an args header), 0 when there is none.
-fn: lmx_activation_input_name (@: arena c.LmxArena; @: code c.Lmx; size_t: k) @: c.VoidArray
+fn: lmx_activation_input_cell (@: arena c.LmxArena; @: code c.Lmx; size_t: k) @@: void
     @: pool c.LmxPool 0
     @: header c.Lmx 0
-    @: cell void 0
     if: arena = 0 || code = 0 || c.lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
         return: 0
     pool: (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) code)))
@@ -6335,16 +6352,18 @@ fn: lmx_activation_input_name (@: arena c.LmxArena; @: code c.Lmx; size_t: k) @:
             return: 0
         ---
     ---
-    header: c.lmx_graph_ref_struct_in(arena, code, 0U)
-    if: header = 0
+    header: c.lmx_graph_ref_struct_in(arena, code, c.lmx_implements_exec_index(arena, code, 0U))
+    size_t: width 0U
+    if: header = 0 || c.lmx_callable_source_count(arena, header, @ width) != 0 || k >= width
         return: 0
-    @: header_fields c.VoidArray @ header\array
-    if: k >= header_fields\size
-        return: 0
-    cell: (cast: (@: void) c.lmx_arena_ref_cell(header, k))
+    return: c.lmx_graph_ref_cell_in(arena, header, c.lmx_implements_exec_index(arena, header, k))
+end: lmx_activation_input_cell
+
+fn: lmx_activation_input_name (@: arena c.LmxArena; @: code c.Lmx; size_t: k) @: c.VoidArray
+    @@: cell void lmx_activation_input_cell(arena, code, k)
     if: cell = 0
         return: 0
-    return: (cast: (@: c.VoidArray) c.lmx_source_name_get(arena, cell))
+    return: (cast: (@: c.VoidArray) c.lmx_source_name_get(arena, (cast: (@: void) cell)))
 end: lmx_activation_input_name
 
 fn: lmx_activation_name_is (@: name c.VoidArray; @: text void; size_t: len) int
@@ -6358,40 +6377,14 @@ end: lmx_activation_name_is
 # reads the default of such an entry) and a hidden input an entry of two (the witness alone; lm_compiler_rw_header_parts,
 # lm_compiler_rw_signature_witness).  1 a formal, 0 a free input or no entry.
 fn: lmx_activation_input_formal (@: arena c.LmxArena; @: code c.Lmx; size_t: k) int
-    @: pool c.LmxPool 0
-    @: header c.Lmx 0
-    @: entry c.Lmx 0
-    if: arena = 0 || code = 0 || c.lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+    @@: cell void lmx_activation_input_cell(arena, code, k)
+    if: cell = 0
         return: 0
-    pool: (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) code)))
-    if: pool = 0
-        return: 0
-    @: fields c.VoidArray @ code\array
-    # A `fn` is a FN-role Structure of four parts (header, result, vars, body: lm_compiler_fn_parts_on gives the role to `fn`
-    # heads); a `sub` is an ordinary (PLAIN) Structure of three (header, vars, body), activated by the walker as its own body
-    # (lmx_walk_activate_values).  The args header is part 0 of both.  Slice 258: keyed by the FN role since slice 254, a
-    # sub's free input was never resolved from the chain -- it read its lexical source whatever the caller bound (the
-    # fixture's `bump` wrote the unit field's copy, then dereferenced a number: INVALID).
-    if: pool\role = c.LMX_POOL_ROLE_FN
-        if: fields\size != 4U
-            return: 0
-        ---
-    else:
-        if: fields\size != 3U
-            return: 0
-        ---
-    ---
-    header: c.lmx_graph_ref_struct_in(arena, code, 0U)
-    if: header = 0
-        return: 0
-    @: header_fields c.VoidArray @ header\array
-    if: k >= header_fields\size
-        return: 0
-    entry: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, header, k))
+    @: entry c.Lmx c.lmx_graph_node_in(arena, cell[0])
     if: entry = 0
         return: 0
-    @: entry_fields c.VoidArray @ entry\array
-    return: (cast: (int) (entry_fields\size = 4U))
+    @: fields c.VoidArray @ entry\array
+    return: (cast: (int) (fields\size = 4U))
 end: lmx_activation_input_formal
 
 # The present inputs of one record by name: its written formals (want_formal 1) or the free inputs it inherited (0).
@@ -6506,6 +6499,249 @@ fn: lmx_walk_value_free_mark (@: value c.LmxWalkValue) void
     return
 end: lmx_walk_value_free_mark
 
+# The reached held adapter has already selected its callable. Decode its
+# actual header coordinate before consuming a numeric capture candidate.
+# target remains zero for a completed receive or a nonnumeric capture.
+fn: lmx_walk_held_capture (@: arena c.LmxArena; @: code c.Lmx; size_t: k; @: item c.LmxWalkValue; @: target int) int
+    @: source void 0
+    @: witness void 0
+    if: arena = 0 || code = 0 || item = 0 || target = 0
+        return: c.LMX_WALK_INVALID
+    target[0]: 0
+    @: header c.Lmx c.lmx_graph_ref_struct_in(arena, code, c.lmx_implements_exec_index(arena, code, 0U))
+    if: header = 0 || c.lmx_callable_source_entry(arena, header, k, @ source, @ witness) != 0
+        return: c.LMX_WALK_INVALID
+    size_t: slot c.lmx_implements_exec_index(arena, header, k)
+    @: entry c.Lmx c.lmx_graph_ref_struct_in(arena, header, slot)
+    if: entry = 0
+        return: c.LMX_WALK_INVALID
+    @: fields c.VoidArray @ entry\array
+    if: fields\size != 2U && fields\size != 3U
+        return: c.LMX_WALK_OK
+    int: ty lmx_walk_numeric_type(arena, witness)
+    if: ty = 0 && fields\size = 2U
+        return: c.LMX_WALK_OK
+    if: item\present = 0 && item\kind = c.LMX_WALK_VALUE_FREE
+        @: cell void (cast: (@: void) c.lmx_graph_ref_cell_in(arena, header, slot))
+        @: name c.VoidArray (cast: (@: c.VoidArray) c.lmx_source_name_get(arena, cell))
+        if: name = 0 || name\data = 0
+            return: c.LMX_WALK_INVALID
+        @: spelling void name\data
+        size_t: len name\size
+        if: lmx_activation_resolve(arena, (cast: (@: c.LmxActivation) arena\activation), spelling, len, item) = 0
+            item\kind: c.LMX_WALK_VALUE_MISSING
+        ---
+    ---
+    if: item\present = 0
+        return: c.LMX_WALK_OK
+    if: fields\size = 3U
+        @: admission c.Lmx c.lmx_graph_ref_struct_in(arena, entry, 2U)
+        @: model c.Lmx 0
+        if: admission = 0
+            return: c.LMX_WALK_INVALID
+        @: record c.Lmx c.lmx_graph_ref_struct_in(arena, admission, 1U)
+        @: operand void c.lmx_graph_value_in(arena, admission, 4U)
+        int: received lmx_walk_value_receive_graph(arena, item, item)
+        if: received != c.LMX_WALK_OK
+            return: received
+        received: lmx_walk_receiving_model(arena, code, lmx_call_unary_data(arena, code), operand, @ model)
+        if: received != c.LMX_WALK_OK
+            return: received
+        received: lmx_walk_value_admit(arena, item, model, record)
+        if: received != c.LMX_WALK_OK
+            return: received
+        # The admitted graph reference now occupies the selected capture's
+        # physical pointer cell. Its model and correspondence travel with it.
+        item\type: lmx_walk_witness_type(arena, witness)
+        return: c.LMX_WALK_OK
+    ---
+    if: item\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    int: status lmx_walk_value_receive(item, ty, item)
+    if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        target[0]: c.lmx_type_base(ty)
+        return: c.LMX_WALK_OK
+    return: status
+end: lmx_walk_held_capture
+
+# The complete input vector is sized by the reached callable's own header.
+# The single-row case uses storage provided by this stack frame.
+fn: lmx_walk_call_rows (@: arena c.LmxArena; @: code c.Lmx; @@: source_refs void; @: supplied c.LmxWalkValue; size_t: written; @: rows c.LmxCallInputRows) int
+    @: source void 0
+    @: witness void 0
+    size_t: width 0U
+    size_t: i 0U
+    int: status c.LMX_WALK_OK
+    c.memset((cast: (@: void) rows), 0, c.sizeof(c.LmxCallInputRows))
+    @: args c.Lmx c.lmx_graph_ref_struct_in(arena, code, c.lmx_implements_exec_index(arena, code, 0U))
+    if: args = 0 || c.lmx_callable_source_count(arena, args, @ width) != 0
+        return: c.LMX_WALK_INVALID
+    if: written > width
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+    if: written != 0U && source_refs = 0
+        return: c.LMX_WALK_INVALID
+    @: values c.LmxWalkValue @ rows\first_value
+    @@: refs void (cast: (@@: void) (@ rows\first_ref))
+    if: width > 1U
+        if: width > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue) || width > (cast: (size_t) -1) / sizeof(@: void)
+            return: c.LMX_WALK_NOMEM
+        values: (cast: (@: c.LmxWalkValue) c.calloc(width, c.sizeof(c.LmxWalkValue)))
+        refs: (cast: (@@: void) c.calloc(width, sizeof(@: void)))
+        if: values = 0 || refs = 0
+            c.free((cast: (@: void) refs))
+            c.free((cast: (@: void) values))
+            return: c.LMX_WALK_NOMEM
+        ---
+    ---
+    rows\count: width
+    rows\values: values
+    rows\refs: refs
+    if: supplied != 0
+        status: lmx_walk_values_project(supplied, source_refs, written, 0U, values, refs, width)
+    ---
+    while: status = c.LMX_WALK_OK && i < width
+        @: item c.LmxWalkValue (values + i)
+        if: lmx_activation_input_formal(arena, code, i) = 0
+            if: i < written
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+            lmx_walk_value_free_mark(item)
+        else:
+            if: i < written && supplied = 0 && source_refs[i] != 0
+                if: c.lmx_callable_source_entry(arena, args, i, @ source, @ witness) != 0
+                    return: c.LMX_WALK_INVALID
+                status: lmx_walk_value_load(arena, source_refs[i], lmx_walk_witness_type(arena, witness), item)
+                refs[i]: lmx_walk_value_storage(item)
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: status
+end: lmx_walk_call_rows
+
+sub: lmx_walk_call_rows_close (@: rows c.LmxCallInputRows)
+    if: rows\count > 1U
+        c.free((cast: (@: void) rows\refs))
+        c.free((cast: (@: void) rows\values))
+    ---
+    return
+end: lmx_walk_call_rows_close
+
+# Invoke the receiver selected by the program's ordinary conversion row.
+# The source and result both travel as full Values. A failed conversion
+# does not write the argument cell. Only the slow path needs extra rows.
+fn: lmx_walk_convert_capture (@: arena c.LmxArena; @: receiver c.Lmx; @: item c.LmxWalkValue; int: target) int
+    int: refusal c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    @: source void 0
+    @: witness void 0
+    @: returned void 0
+    c.LmxWalkValue: got
+    size_t: width 0U
+    if: arena = 0 || item = 0 || item\present = 0
+        return: c.LMX_WALK_INVALID
+    if: receiver = 0 || c.lmx_call_ready(arena, receiver) != c.LMX_CALL_OK
+        return: refusal
+    @: args c.Lmx c.lmx_graph_ref_struct_in(arena, receiver, c.lmx_implements_exec_index(arena, receiver, 0U))
+    @: returns c.Lmx c.lmx_graph_ref_struct_in(arena, receiver, c.lmx_implements_exec_index(arena, receiver, 1U))
+    if: args = 0 || returns = 0 || c.lmx_callable_source_count(arena, args, @ width) != 0 || width = 0U
+        return: refusal
+    if: c.lmx_callable_source_entry(arena, args, 0U, @ source, @ witness) != 0 || c.lmx_type_base(lmx_walk_numeric_type(arena, witness)) != c.lmx_type_base(item\type)
+        return: refusal
+    if: lmx_activation_input_formal(arena, receiver, 0U) = 0 || c.lmx_callable_source_entry(arena, returns, 0U, @ source, @ witness) != 0 || c.lmx_type_base(lmx_walk_numeric_type(arena, witness)) != target
+        return: refusal
+    size_t: k 1U
+    while: k < width
+        if: lmx_activation_input_formal(arena, receiver, k) != 0
+            return: refusal
+        k: k + 1U
+    ---
+    @: ref void lmx_walk_value_storage(item)
+    c.LmxCallInputRows: input_rows
+    @: rows c.LmxCallInputRows @ input_rows
+    int: status lmx_walk_call_rows(arena, receiver, @ ref, item, 1U, rows)
+    if: status = c.LMX_WALK_OK
+        lmx_walk_value_clear(@ got)
+        if: c.lmx_call_prim_values(arena, receiver, c.lmx_call_unary_data(arena, receiver), (cast: (@@: void) rows\refs), (cast: (size_t) rows\count), 0, @ returned, (cast: (@: c.LmxWalkValue) rows\values), @ got) != 0
+            status: refusal
+        else:
+            if: c.lmx_msg_poll_escape() != 0
+                status: c.LMX_WALK_STOPPED
+            else:
+                @: result c.LmxWalkValue @ got
+                if: result\present = 0 || result\kind != c.LMX_WALK_VALUE_NUMBER
+                    status: refusal
+                else:
+                    status: lmx_walk_value_receive(result, target, item)
+                ---
+            ---
+        ---
+    ---
+    lmx_walk_call_rows_close(rows)
+    return: status
+end: lmx_walk_convert_capture
+
+# A walked held-call primitive uses the same lexical coordinate as its
+# native caller. The adapter signature stores only the number of links.
+fn: lmx_walk_capture_scope (@: arena c.LmxArena; @: operation c.Lmx) @: c.Lmx
+    if: arena = 0 || operation = 0
+        return: 0
+    @: record c.LmxPrimitive (cast: (@: c.LmxPrimitive) c.lmx_graph_value_in(arena, operation, 1U))
+    @: act c.LmxActivation (cast: (@: c.LmxActivation) arena\activation)
+    if: record = 0 || act = 0 || act\code != operation || act\parent = 0
+        return: 0
+    @: parent c.LmxActivation act\parent
+    @: scope c.Lmx parent\code
+    size_t: depth 0U
+    if: lmx_walk_load_numeric(arena, c.lmx_graph_value_in(arena, (cast: (@: c.Lmx) record\signature), 2U), @ depth) != c.LMX_WALK_OK
+        return: 0
+    while: scope != 0 && depth != 0U
+        scope: scope\parent
+        depth: depth - 1U
+    return: scope
+end: lmx_walk_capture_scope
+
+# A held call supplies its written actuals. The selected executable's
+# header supplies its own free names, witnesses, and receiving operations.
+fn: lmx_walk_call_held_values (@: arena c.LmxArena; @: code c.Lmx; @@: source_refs void; @: supplied c.LmxWalkValue; size_t: written; @: dest void; @@: out void; @: result c.LmxWalkValue; @: scope c.Lmx; @: operation c.Lmx; c.LmxWalkConvertLookup: lookup) int
+    c.LmxCallInputRows: input_rows
+    @: rows c.LmxCallInputRows @ input_rows
+    size_t: i written
+    int: said 0
+    int: status lmx_walk_call_rows(arena, code, source_refs, supplied, written, rows)
+    out[0]: 0
+    @: values c.LmxWalkValue (cast: (@: c.LmxWalkValue) rows\values)
+    @@: refs void (cast: (@@: void) rows\refs)
+    while: status = c.LMX_WALK_OK && i < rows\count
+        @: item c.LmxWalkValue (values + i)
+        int: target 0
+        status: lmx_walk_held_capture(arena, code, i, item, @ target)
+        if: status = c.LMX_WALK_OK && target != 0
+            if: scope = 0 && operation != 0
+                scope: lmx_walk_capture_scope(arena, operation)
+            ---
+            int: src c.lmx_type_base(item\type)
+            @: receiver c.Lmx 0
+            if: lookup != 0
+                receiver: lookup(scope, src, target)
+            status: lmx_walk_convert_capture(arena, receiver, item, target)
+        ---
+        refs[i]: lmx_walk_value_storage(item)
+        i: i + 1U
+    ---
+    if: status = c.LMX_WALK_OK
+        size_t: width rows\count
+        said: c.lmx_call_prim_values(arena, code, lmx_call_unary_data(arena, code), refs, width, dest, out, values, result)
+    ---
+    lmx_walk_call_rows_close(rows)
+    if: status = c.LMX_WALK_STOPPED || c.lmx_msg_poll_escape() != 0
+        out[0]: 0
+        return: 0
+    if: status != c.LMX_WALK_OK
+        return: c.lmx_call_note_walk_fail(lmx_walk_boundary_status(arena, code, status))
+    if: said = 0
+        out[0]: dest
+    return: said
+end: lmx_walk_call_held_values
+
 # Input `k` of the current activation, marked free by its caller (LMX_WALK_VALUE_FREE), resolved from the caller's
 # record upward and written into the activation's input records (value and storage); an unresolved one becomes an
 # ordinary absent input, which the callee reads by its lexical source as before.  1 resolved, 0 absent.
@@ -6544,7 +6780,7 @@ fn: lmx_activation_resolve_input (@: arena c.LmxArena; size_t: k; @@: refs void;
     len: name\size
     parent: record\parent
     if: lmx_activation_resolve(arena, parent, text, len, item) = 0
-        lmx_walk_value_clear(item)
+        lmx_walk_value_free_mark(item)
         return: 0
     @@: out_refs void (cast: (@@: void) record\refs)
     if: out_refs != 0

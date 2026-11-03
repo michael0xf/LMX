@@ -1,0 +1,51 @@
+Point:
+    int: y 2
+end: Point
+Other:
+    int: y 9
+end: Other
+Thin:
+    int: pad 4
+end: Thin
+fn: make_point (Point: selected) fn: () int
+    fn: read_point () int
+        return: selected\y
+    return: read_point
+end: make_point
+@: held make_point(Point)
+fn: relay_point () int
+    return: held()
+end: relay_point
+fn: with_point (Point: selected) int
+    return: relay_point()
+end: with_point
+fn: with_number (int: selected) int
+    return: relay_point()
+end: with_number
+fn: with_thin (Thin: selected) int
+    return: relay_point()
+end: with_thin
+fn: check_point () int
+    if: relay_point() != 2
+        return: 81
+    if: with_point(Other) != 9
+        return: 82
+    int: got 0
+    ---
+        got: with_number(4)
+        catch: convert ()
+            got: 83
+    ---
+    if: got != 83
+        return: 84
+    ---
+        got: with_thin(Thin)
+        catch: implements ()
+            got: 85
+    ---
+    if: got != 85
+        return: 86
+    return: 7
+end: check_point
+sendMessage: exit(exit_code: check_point(); stdout: ""; stderr: "")
+return

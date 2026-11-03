@@ -1,0 +1,89 @@
+# Only leaf reads ticket. relay can run without that input and the caller
+# of relay may supply it. leaf requires a binding when its entry is reached.
+Point:
+    int: y 0
+end: Point
+@: choice Point 0
+fn: read_choice () int
+    return: choice
+end: read_choice
+fn: shadow () int
+    int: choice 27
+    return: read_choice()
+end: shadow
+fn: leaf () int
+    return: ticket
+end: leaf
+fn: relay (int: enter) int
+    if: enter != 0
+        return: leaf()
+    return: 37
+end: relay
+fn: bound () int
+    int: ticket 65
+    return: relay(1)
+end: bound
+fn: m () int
+    if: bound() != 65
+        return: 81
+    if: relay(0) != 37
+        return: 82
+    int: got 0
+    ---
+        got: relay(1)
+        catch: implements ()
+            got: 93
+    ---
+    if: got != 93
+        return: 83
+    if: shadow() != 27
+        return: 84
+    ---
+        got: read_choice()
+        catch: convert ()
+            got: 94
+    ---
+    if: got != 94
+        return: 85
+    return: 7
+end: m
+# The selected held occurrence may require a different number of own free inputs.
+fn: make_one (int: seed) fn: () int
+    fn: one () int
+        return: first_key
+    return: one
+end: make_one
+fn: make_two (int: seed) fn: () int
+    fn: two () int
+        return: more_key + second_key
+    return: two
+end: make_two
+@: choose make_one(0)
+fn: invoke () int
+    return: choose()
+end: invoke
+fn: before () int
+    int: first_key 3
+    return: invoke()
+end: before
+fn: after () int
+    @: choose make_two(0)
+    int: more_key 4
+    int: second_key 5
+    return: invoke()
+end: after
+fn: check_selected () int
+    if: before() != 3
+        return: 81
+    if: after() != 9
+        return: 82
+    return: 7
+end: check_selected
+fn: run_entries () int
+    int: got m()
+    if: got != 7
+        return: got
+    return: check_selected()
+end: run_entries
+sendMessage: exit(exit_code: run_entries(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,77 @@
+# A held numeric capture takes its absent default or the caller's value
+# through this program's ordinary conversion receiver.
+size_t: increment 2U
+fn: lm_stg_convert_int_size_t (int: candidate) size_t
+    throws: range
+    if: candidate < 0
+        throw: range
+    return: (cast: (size_t) candidate) + increment
+end: lm_stg_convert_int_size_t
+fn: make_wide (size_t: n) fn: () size_t
+    fn: read_wide () size_t
+        return: n + 1U
+    return: read_wide
+end: make_wide
+@: held make_wide(1000U)
+fn: relay () size_t
+    return: held()
+end: relay
+fn: relay_bound () size_t
+    if: n = 41
+        return: 0U
+    return: held()
+end: relay_bound
+fn: outer (int: n) size_t
+    size_t: increment 5U
+    return: relay_bound()
+end: outer
+fn: check_held () int
+    if: relay() != 1001U
+        return: 81
+    if: outer(40) != 46U
+        return: 82
+    size_t: got 0U
+    ---
+        got: outer(-1)
+        catch: convert ()
+            got: 17U
+    ---
+    if: got != 17U
+        return: 83
+    return: 7
+end: check_held
+
+# A returned method can read a name absent from the factory's fields and
+# formals. The binding belongs to the caller of the selected occurrence.
+fn: make_reader (int: seed) fn: () int
+    fn: leaf () int
+        return: ticket
+    return: leaf
+end: make_reader
+@: reader make_reader(5)
+fn: relay_reader () int
+    return: reader()
+end: relay_reader
+fn: bound () int
+    int: ticket 65
+    return: relay_reader()
+end: bound
+fn: check_reader () int
+    if: bound() != 65
+        return: 81
+    int: got 0
+    ---
+        got: relay_reader()
+        catch: implements ()
+            got: 7
+    ---
+    return: got
+end: check_reader
+fn: run_checks () int
+    int: got check_held()
+    if: got != 7
+        return: got
+    return: check_reader()
+end: run_checks
+sendMessage: exit(exit_code: run_checks(); stdout: ""; stderr: "")
+return

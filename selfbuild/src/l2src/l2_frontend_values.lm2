@@ -2399,14 +2399,6 @@ fn: lm_compiler_mad_hdr_arity (int: mi) int
     return: (cast: (int) (c.lm_compiler_count_active(f\value\as\structure)))
 end: lm_compiler_mad_hdr_arity
 
-fn: lm_compiler_emit_mad_inputs () int
-    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    # Keep the adapter's existing call shape, not another emitted L1 algorithm.
-    if: c.fputs("# Legacy compiler adapter; the selected SOURCE input projection is supported L2.\nfn: l2_mad_inputs (@: LmxArena arena; @: Lmx code; @@: void args; size_t: n; @@: void sup; size_t: ns; @@: void all; size_t: cap; @: size_t count) int\n    return: lmx_callable_input_refs(arena, code, args, n, sup, ns, all, cap, count)\nend: l2_mad_inputs\n\n", out_cell[0]) < 0
-        return: (cast: (int) (1))
-    return: (cast: (int) (0))
-end: lm_compiler_emit_mad_inputs
-
 fn: lm_compiler_num_read_text (int: ty; const: (@: p char); @: dest c.L2Tx) int
     const: (@: f char "lmx_int_value_known(")
     const: (@: e char ")")

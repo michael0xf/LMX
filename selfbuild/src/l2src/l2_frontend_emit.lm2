@@ -576,10 +576,6 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     @: cf_n_cell int (cast: (@: int) (@ c.l2_cf_n))
     @: cfl_n_cell int (cast: (@: int) (@ c.l2_cfl_n))
     @: cfr_n_cell int (cast: (@: int) (@ c.l2_cfr_n))
-    @: dyr_n_cell int (cast: (@: int) (@ c.l2_dyr_n))
-    @: dyc_n_cell int (cast: (@: int) (@ c.l2_dyc_n))
-    @: dyp_n_cell int (cast: (@: int) (@ c.l2_dyp_n))
-    @: dyk_n_cell int (cast: (@: int) (@ c.l2_dyk_n))
     @: anc_n_cell int (cast: (@: int) (@ c.l2_anc_n))
     @: anc_on_cell int (cast: (@: int) (@ c.l2_anc_on))
     @: lp_n_cell int (cast: (@: int) (@ c.l2_lp_n))
@@ -646,10 +642,6 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     cf_n_cell[0]: 0
     cfl_n_cell[0]: 0
     cfr_n_cell[0]: 0
-    dyr_n_cell[0]: 0
-    dyc_n_cell[0]: 0
-    dyp_n_cell[0]: 0
-    dyk_n_cell[0]: 0
     anc_n_cell[0]: 0
     anc_on_cell[0]: 0
     lp_n_cell[0]: 0
@@ -1842,8 +1834,6 @@ fn: lm_compiler_wait_run (const: (@: path char)) int
             rc: lm_compiler_check_fields((cast: (@: c.LmP0Field) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), (cast: (int) lm_compiler_port249_1_L2SourceSite_count((wait_cell[0] + w))), mi, (cast: (const: @: char) (c.lm_compiler_method_src(mi, path))), (cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_source((wait_cell[0] + w))))
         if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 7
             rc: lm_compiler_check_path_write((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), mi, (cast: (const: @: char) (c.lm_compiler_method_src(mi, path))))
-        if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 8
-            rc: c.lm_compiler_check_held_convert((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), (cast: (int) lm_compiler_port249_1_L2SourceSite_count((wait_cell[0] + w))), mi, c.lm_compiler_method_src(mi, path))
         if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 9
             rc: c.lm_compiler_check_split_call((cast: (@: c.LmP0Node) lm_compiler_port249_1_L2SourceSite_site((wait_cell[0] + w))), mi, c.lm_compiler_method_src(mi, path))
         if: rc = 0 && lm_compiler_port249_1_L2SourceSite_kind((wait_cell[0] + w)) = 10
@@ -1858,7 +1848,7 @@ fn: lm_compiler_wait_run (const: (@: path char)) int
         return: (cast: (int) (1))
     if: lm_compiler_throws_close() != 0
         return: (cast: (int) (1))
-    return: (cast: (int) (c.lm_compiler_dyn_close(path)))
+    return: (cast: (int) (c.lm_compiler_close_callable_models()))
 end: lm_compiler_wait_run
 
 # Original: l2src/l2trans.lm1:8975
@@ -4560,13 +4550,6 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
     if: check_unevaluated_cell[0] = 0 && c.lm_compiler_check_throws_handled(mi, idx, path, source_node) != 0
         return: (cast: (int) (1))
-    # A call through callable formal fi is noted as such (its count is fi + 1): in the fixed point of
-    # dynamic inputs the methods that reach the formal stand in the place of its declaring method
-    # (l2_dyn_site).
-    if: check_unevaluated_cell[0] = 0 && fi < 0 && c.lm_compiler_note_call(mi, idx, source_node, path) != 0
-        return: (cast: (int) (1))
-    if: check_unevaluated_cell[0] = 0 && fi >= 0 && c.lm_compiler_wait_add(4, mi, (cast: (@: void) source_node), fi + 1, idx, source_node, path) != 0
-        return: (cast: (int) (1))
     actual_i: 0
     while: actual_i < nact
         actual: arguments\actuals + actual_i
@@ -5889,14 +5872,14 @@ fn: lm_compiler_parse_unit (const: (@: path char)) int
             return: (cast: (int) (1))
         # A3 / item 738: the node method i's return builds admits the model's Structure captures (l2_mad_cap_emit); a
         # dynamic candidate among them makes i a site that can refuse an admission, as every such site (l2_admit_site).
-        if: lm_compiler_mad_captures_dynamic(i) != 0 && c.lm_compiler_admit_site(i) != 0
+        if: (lm_compiler_mad_captures_dynamic(i) != 0 || (m_dyn_cell[0][i] > 0 && c.lm_compiler_m_machine(i) = 0)) && c.lm_compiler_admit_site(i) != 0
             return: (cast: (int) (1))
         i: i + 1
     cur_mi_cell[0]: 0 - 1
     vis_on_cell[0]: 0
     if: lm_compiler_throws_close() != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_dyn_close(path) != 0
+    if: c.lm_compiler_close_callable_models() != 0
         return: (cast: (int) (1))
     # steps/free-names.md M2/M3: the checks that waited for the dynamic inputs' types run now.
     if: lm_compiler_wait_run(path) != 0
@@ -6405,7 +6388,7 @@ end: lm_compiler_rw_signature_input
 fn: lm_compiler_rw_contract (int: parent; int: n; int: rty; int: descriptor; @: out int; @: inputs int) int
     int: returns
     int: nr (cast: (int) (rty >= 0 || descriptor != 0))
-    if: c.lm_compiler_rw_contract_parts(parent, n, nr, out, inputs, @ returns) != 0
+    if: c.lm_compiler_rw_contract_parts(parent, n, nr, 2, out, inputs, @ returns) != 0
         return: (cast: (int) (1))
     if: nr != 0
         return: (cast: (int) (lm_compiler_rw_signature_witness(returns, 0, rty, descriptor)))
@@ -6528,6 +6511,8 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
     int: slot
     int: ty
     int: descriptor
+    int: capture_model
+    int: capture_admit
     int: projected (cast: (int) (t7_walk_cell[0] != 0))
     c.L2FrontendScratchChar128: place_storage
     @: place char (cast: (@: char) place_storage\buffer)
@@ -6581,14 +6566,23 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         ty: c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, j))
         if: ty < 0
             return: (cast: (int) (1))
-        # Slice 255 (design 4.5 B2a): a free input has no static witness.
-        if: c.lm_compiler_own_is_free(ty) != 0
-            if: lm_compiler_rw_signature_free(inputs, slot) != 0
-                return: (cast: (int) (1))
+        capture_model: c.lm_compiler_cap_arg_ns(mi, m_arity_cell[0][mi] + j)
+        if: c.lm_compiler_schema_kind(capture_model) != 0
+            if: c.lm_compiler_rw_plain(inputs, 3, @ entry) != 0 || c.lm_compiler_rw_put(inputs, slot, entry) != 0 || lm_compiler_rw_witness(entry, 1, ty, 0) != 0
+                return: 1
+            if: lm_compiler_rw_admit_source(entry, capture_model, -1, -1, -1, mi, m_arity_cell[0][mi] + j, @ capture_admit, m_node_cell[0][mi]) != 0 || c.lm_compiler_rw_put(entry, 2, capture_admit) != 0
+                return: 1
             ---
         else:
-            if: lm_compiler_rw_signature_witness(inputs, slot, ty, 0) != 0
-                return: (cast: (int) (1))
+            if: c.lm_compiler_own_is_free(ty) != 0
+                if: lm_compiler_rw_signature_free(inputs, slot) != 0
+                    return: 1
+                ---
+            else:
+                if: lm_compiler_rw_signature_witness(inputs, slot, ty, 0) != 0
+                    return: 1
+                ---
+            ---
         ---
         if: rw_emit_cell[0] != 0
             if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_source_name(place, c.lm_compiler_dn(mi, j), "        ", "return: 1", 0) != 0
@@ -6626,7 +6620,7 @@ fn: lm_compiler_rw_call_contract (int: parent; int: mi; int: hidden; @: out int)
     int: nr (cast: (int) (rty >= 0 || descriptor != 0))
     if: hidden >= 0
         n: n + m_dyn_cell[0][hidden]
-    if: c.lm_compiler_rw_contract_parts(parent, n, nr, out, @ inputs, @ returns) != 0
+    if: c.lm_compiler_rw_contract_parts(parent, n, nr, 2, out, @ inputs, @ returns) != 0
         return: (cast: (int) (1))
     if: nr != 0 && lm_compiler_rw_signature_witness(returns, 0, rty, descriptor) != 0
         return: (cast: (int) (1))
@@ -9295,17 +9289,9 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     ---
     d: 0
     while: d < dynn
-        # K04 S2 part two: an input the callable this site has does not need is handed absent -- no operand.
-        sneed: c.lm_compiler_site_needs(rw_mi_cell[0], source_node, formal_call, 0, hid, d, 0, 0, src_cell[0])
-        if: sneed < 0
-            return: (cast: (int) (1))
-        if: sneed = 0
-            d: d + 1
-            continue
-        ---
         # Slice 254 (design 4.5 B1): a free input without a schema or capture has no operand here -- handed absent, the
         # walker's binder marks it free and the callee resolves it once at its entry from the chain of activation records.
-        if: c.lm_compiler_input_schema(hid, m_arity_cell[0][hid] + d) = -1 && c.lm_compiler_free_admit(hid, d) = 0 && c.lm_compiler_mad_host_of(hid) < 0
+        if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(hid, m_arity_cell[0][hid] + d)) != 0
             d: d + 1
             continue
         holder: \out
@@ -9465,16 +9451,6 @@ fn: lm_compiler_rw_dyn_arg_choice (const: (@: source_node c.LmP0Node); int: idx;
         if: oi >= 0
             kind[0]: 3
             chosen[0]: oi
-            return: 0
-        ---
-        if: pi >= m_arity_cell[0][rw_mi_cell[0]] && c.lm_compiler_dyn_fwd(rw_mi_cell[0], pi - m_arity_cell[0][rw_mi_cell[0]]) != 0
-            if: c.lm_compiler_hid_takes_absent(idx, k) != 0 || c.lm_compiler_own_lexical(idx, nm) < 0
-                kind[0]: 1
-                chosen[0]: pi
-                return: 0
-            ---
-            kind[0]: 4
-            chosen[0]: pi
             return: 0
         ---
         kind[0]: 5
@@ -13136,103 +13112,8 @@ fn: lm_compiler_check_held_arguments (const: (@: source_node c.LmP0Node); int: o
         m_throws_cell[0][mi]: 1
     if: c.lm_compiler_mad_held_model(oi) >= 0 && c.lm_compiler_check_throws_handled(mi, c.lm_compiler_mad_held_model(oi), path, source_node) != 0
         return: (cast: (int) (1))
-    # K04 S3: a held call is a site of the fixed point of dynamic inputs (count -1, l2_dyn_site_held): what its
-    # model needs is asked along the chain of callers, as for a call of a method.
-    if: c.lm_compiler_mad_held_model(oi) >= 0 && c.lm_compiler_wait_add(4, mi, (cast: (@: void) source_node), (cast: (int) (0 - 1)), c.lm_compiler_mad_held_model(oi), source_node, path) != 0
-        return: (cast: (int) (1))
-    # HELD-FREE-NAME-OTHER-TYPE: whether a binding the call hands is converted is known once the inputs are typed.
-    if: c.lm_compiler_mad_held_model(oi) >= 0 && c.lm_compiler_wait_add(8, mi, (cast: (@: void) source_node), oi, c.lm_compiler_mad_held_model(oi), source_node, path) != 0
-        return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_check_held_arguments
-
-# Original: l2src/l2trans.lm1:33159
-fn: lm_compiler_rw_held_convert (const: (@: source_node c.LmP0Node); int: bty; int: oty; int: pi; int: oi; int: parent; @: out int) int
-    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
-    @: rw_conv_cell int (cast: (@: int) (@ c.l2_rw_conv))
-    @: rw_conv_guarded_cell int (cast: (@: int) (@ c.l2_rw_conv_guarded))
-    c.L2ValueSpan: selected
-    int: cidx
-    int: src
-    int: port_call
-    if: c.lm_compiler_rw_num_ty(bty) = 0 || c.lm_compiler_rw_num_ty(oty) = 0
-        return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a caller's binding of a held callable's free name is of another type")))
-    if: c.lm_compiler_convert_hit((cast: (const: @: char) (c.lm_compiler_own_ty_word(bty))), c.lm_compiler_own_ty_word(oty)) = 0
-        return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a conversion site was not checked")))
-    cidx: c.lm_compiler_convert_method()
-    if: cidx < 0
-        return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a conversion site was not checked")))
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_GUARD", 3, out) != 0
-        return: (cast: (int) (1))
-    if: oi >= 0 && lm_compiler_rw_own((cast: (int) (\out)), oi, @ src) != 0
-        return: (cast: (int) (1))
-    if: oi < 0 && lm_compiler_rw_arg((cast: (int) (\out)), pi, @ src) != 0
-        return: (cast: (int) (1))
-    if: c.lm_compiler_rw_put((cast: (int) (\out)), 1, src) != 0
-        return: (cast: (int) (1))
-    # The GUARD already selects the real runtime binding. This positional
-    # metadata has no source expression to parse or evaluate again.
-    c.lm_compiler_value_span_ref(@ selected, 0, 0)
-    selected\node: (cast: (@: c.LmP0Node) source_node)
-    rw_conv_cell[0]: 1
-    rw_conv_guarded_cell[0]: 1
-    if: lm_compiler_rw_call_values(source_node, 0, cidx, -1, 0, (cast: (int) (\out)), @ port_call, @ selected, 1) != 0
-        rw_conv_cell[0]: 0
-        rw_conv_guarded_cell[0]: 0
-        return: (cast: (int) (1))
-    ---
-    return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 2, port_call)))
-end: lm_compiler_rw_held_convert
-
-# Original: l2src/l2trans.lm1:33195
-fn: lm_compiler_rw_held_binding (const: (@: source_node c.LmP0Node); int: model; int: k; int: parent; @: out int) int
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    @: e_cell int (cast: (@: int) (@ c.l2_e))
-    @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
-    @@: own_uchild_cell int (cast: (@@: int) (@ c.l2_own_uchild))
-    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
-    @: nm c.LmP0Text
-    int: oi
-    int: pi
-    int: ns
-    int: oty
-    int: same
-    nm: c.lm_compiler_dn(model, k)
-    ns: c.lm_compiler_cap_arg_ns(model, m_arity_cell[0][model] + k)
-    oty: c.lm_compiler_own_of_dt(c.lm_compiler_dt(model, k))
-    if: nm = 0
-        return: (cast: (int) (1))
-    pi: 0 - 1
-    if: rw_mi_cell[0] != e_cell[0]
-        pi: c.lm_compiler_param_find(rw_mi_cell[0], nm)
-    # A capture given as a Structure of the capture's own type is the Structure itself.  Anything else must
-    # travel as the model's input does: a value of another transport is not converted here, a limit said where
-    # it stands.
-    same: c.lm_compiler_held_cap_same(rw_mi_cell[0], model, k)
-    if: pi >= 0
-        if: same = 0 && c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(rw_mi_cell[0], pi)) != oty
-            return: (cast: (int) (lm_compiler_rw_held_convert(source_node, (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(rw_mi_cell[0], pi)))), oty, pi, (cast: (int) (c.lm_compiler_rw_bound(nm))), parent, out)))
-        oi: c.lm_compiler_rw_bound(nm)
-        if: oi >= 0
-            return: (cast: (int) (lm_compiler_rw_own(parent, oi, out)))
-        return: (cast: (int) (lm_compiler_rw_arg(parent, pi, out)))
-    ---
-    oi: c.lm_compiler_own_visible(rw_mi_cell[0], nm)
-    if: oi < 0 || (rw_mi_cell[0] != e_cell[0] && m_uses_cell[0][c.lm_compiler_own_off(rw_mi_cell[0], oi)] = 0) || own_uchild_cell[0][oi] < 0
-        return: (cast: (int) (1))
-    if: same != 0
-        return: (cast: (int) (lm_compiler_rw_mad_host_struct(parent, rw_mi_cell[0], nm, out)))
-    if: own_ty_cell[0][oi] != oty
-        return: (cast: (int) (lm_compiler_rw_held_convert(source_node, own_ty_cell[0][oi], oty, -1, oi, parent, out)))
-    # A reference of another declaration than the one the model's lexical source names is another value: it is
-    # admitted to the model's use by the ordinary admission, where the model's input has a schema to admit to
-    # (l2_rw_mad_call).  A held callable under the name has none: its admission is not built, a limit of this
-    # implementation and no rule, said where it stands.
-    if: c.lm_compiler_rw_num_ty(oty) = 0 && c.lm_compiler_own_visible(model, nm) != oi && c.lm_compiler_input_schema(model, m_arity_cell[0][model] + k) = -1
-        return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a caller's own reference under a held callable's free name is not admitted to its use yet")))
-    return: (cast: (int) (lm_compiler_rw_own(parent, oi, out)))
-end: lm_compiler_rw_held_binding
 
 # Original: l2src/l2trans.lm1:33395
 fn: lm_compiler_rw_mad_store (const: (@: stmt c.LmP0Node); int: into; @: out int) int
@@ -13275,28 +13156,22 @@ end: lm_compiler_rw_mad_call
 # Original: l2src/l2trans.lm1:33426
 fn: lm_compiler_rw_mad_call_arguments (const: (@: source_node c.LmP0Node); int: oi; int: parent; @: out int; @: arguments c.L2ApplicationActuals) int
     @: mad_need_call_cell int (cast: (@: int) (@ c.l2_mad_need_call))
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     @: e_cell int (cast: (@: int) (@ c.l2_e))
     @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @: actual c.L2ApplicationActual
     @: value c.L2ValueSpan
     int: n
     int: j 0
     int: arg
     int: at
-    int: model
-    int: nh 0
-    int: k
-    int: holder
     int: contract
     int: inputs
     int: rty
     int: site
-    int: hb
+    int: lexical_depth
     if: source_node = 0 || source_node\as = 0
         return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "this call's inputs")))
     # The primitive contract carries the actual formal and result widths. The
@@ -13308,11 +13183,8 @@ fn: lm_compiler_rw_mad_call_arguments (const: (@: source_node c.LmP0Node); int: 
     if: arguments\count != n
         return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "this call's inputs")))
     mad_need_call_cell[0]: 1
-    model: c.lm_compiler_mad_held_model(oi)
-    if: model >= 0
-        nh: m_dyn_cell[0][model]
     # §7b: a held callable is LMX code -- PRIM_PUB publishes after its operands, before the call.
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + n + nh, out) != 0
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + n, out) != 0
         return: (cast: (int) (1))
     # Item 6 of the interpreter-throw closure, the walked route: the record binds the walked variant of the adapter,
     # which says the model's throw in the primitive protocol (THROWN + the key of the name) for the walker to land on
@@ -13344,45 +13216,21 @@ fn: lm_compiler_rw_mad_call_arguments (const: (@: source_node c.LmP0Node); int: 
             return: (cast: (int) (1))
         j: j + 1
     ---
-    # Reading 1: per hidden input of the model, this caller's own binding of its name (item 738: a Structure admitted as
-    # the capture's type, unless the caller's formal is admitted by name already), or nothing -- an empty operand.
-    k: 0
-    while: k < nh
-        hb: c.lm_compiler_rw_held_bound(model, k)
-        # K04 S3: the caller only hands the name on, as another type, and it can never arrive: nothing to give.
-        if: hb != 0 && c.lm_compiler_held_never(rw_mi_cell[0], model, k) != 0
-            hb: 0
-        if: hb = 0 && c.lm_compiler_held_unbound(source_node, rw_mi_cell[0], model, k) != 0
-            return: (cast: (int) (1))
-        if: hb != 0
-            holder: \out
-            if: lm_compiler_rw_hidden_admit((cast: (int) (\out)), rw_mi_cell[0], model, k, @ holder, source_node) != 0
-                return: (cast: (int) (1))
-            if: lm_compiler_rw_held_binding(source_node, model, k, holder, @ arg) != 0
-                return: (cast: (int) (1))
-            if: holder != \out
-                if: c.lm_compiler_rw_put(holder, 3, arg) != 0
-                    return: (cast: (int) (1))
-                arg: holder
-            ---
-            if: c.lm_compiler_rw_put((cast: (int) (\out)), 4 + n + k, arg) != 0
-                return: (cast: (int) (1))
+    int: returns
+    if: c.lm_compiler_rw_contract_parts((cast: (int) (\out)), 1 + n, 1, 3, @ contract, @ inputs, @ returns) != 0 || lm_compiler_rw_signature_witness(returns, 0, rty, 0) != 0 || lm_compiler_rw_signature_witness(inputs, 0, 0, 1) != 0
+        return: 1
+    # An unavailable lexical context has no reachable conversion receiver.
+    if: rw_emit_cell[0] != 0
+        lexical_depth: c.lm_compiler_lex_depth(rw_mi_cell[0], e_cell[0])
+        if: lexical_depth >= 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", contract, lexical_depth) < 0
+            return: 1
         ---
-        k: k + 1
     ---
-    if: lm_compiler_rw_contract((cast: (int) (\out)), 1 + n + nh, rty, 0, @ contract, @ inputs) != 0 || lm_compiler_rw_signature_witness(inputs, 0, 0, 1) != 0
-        return: (cast: (int) (1))
     j: 0
     while: j < n
         if: lm_compiler_rw_signature_witness(inputs, 1 + j, (cast: (int) (c.lm_compiler_mad_held_arg_ty(oi, j))), 0) != 0
             return: (cast: (int) (1))
         j: j + 1
-    ---
-    k: 0
-    while: k < nh
-        if: lm_compiler_rw_signature_input(inputs, 1 + n + k, model, m_arity_cell[0][model] + k) != 0
-            return: (cast: (int) (1))
-        k: k + 1
     ---
     if: c.lm_compiler_rw_primitive_contract((cast: (int) (\out)), contract) != 0
         return: (cast: (int) (1))
@@ -14082,7 +13930,7 @@ fn: lm_compiler_rw_ns_hidden (const: (@: source_node c.LmP0Node); int: ni; int: 
         # declaration.
         # Slice 254 (design 4.5 B1): a free input without a schema or capture has no operand here (as at a walked call,
         # lm_compiler_rw_call_arguments): the callee resolves it at its entry from the chain of activation records.
-        if: c.lm_compiler_input_schema(pr, m_arity_cell[0][pr] + d) = -1 && c.lm_compiler_free_admit(pr, d) = 0 && c.lm_compiler_mad_host_of(pr) < 0
+        if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(pr, m_arity_cell[0][pr] + d)) != 0
             d: d + 1
             continue
         holder: frame

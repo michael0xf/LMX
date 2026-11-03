@@ -791,12 +791,6 @@ fn: lm_compiler_dyn_add (int: mi; const: (@: t c.LmP0Text); int: ty) int
         return: (cast: (int) (0))
     k: c.lm_compiler_dyn_find(mi, t)
     if: k >= 0
-        # Slice 255 (design 4.5 B2a): a second type for the name is no refusal -- a free input is typed by its value at run
-        # time and the closure's type is not read for it; the first recorded type stays for the closure's bookkeeping.
-        if: ty != 0 && c.lm_compiler_dt(mi, k) != 0 && c.lm_compiler_dt(mi, k) != ty
-            return: (cast: (int) (0))
-        if: ty != 0 && c.lm_compiler_dt_set(mi, k, ty) != 0
-            return: (cast: (int) (1))
         return: (cast: (int) (0))
     if: m_dyn_cell[0][mi] >= c.INT_MAX
         alloc_err_cell[0]: 2
@@ -1795,6 +1789,10 @@ fn: lm_compiler_input_model (int: mi; int: k) int
     model: lm_compiler_cap_arg_ns(mi, k)
     if: model >= 0
         return: (cast: (int) (model))
+    # A lexical source is a default value. Its model does not constrain a
+    # different binding supplied by the reached caller.
+    if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, k)) != 0
+        return: 0 - 1
     own: lm_compiler_own_lexical(mi, (cast: (const: @: c.LmP0Text) (c.lm_compiler_input_name(mi, k))))
     if: own >= 0
         return: (cast: (int) (c.lm_compiler_own_nsty_get(own)))
@@ -2104,25 +2102,6 @@ fn: lm_compiler_cap_named (int: mi; const: (@: name c.LmP0Text)) int
     ---
     return: (cast: (int) (0))
 end: lm_compiler_cap_named
-
-fn: lm_compiler_held_cap_same (int: mi; int: model; int: k) int
-    @: e_cell int (cast: (@: int) (@ c.l2_e))
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    int: ns
-    int: oi
-    @: nm c.LmP0Text
-    if: mi < 0 || model < 0 || k < 0 || k >= m_dyn_cell[0][model]
-        return: (cast: (int) (0))
-    ns: lm_compiler_cap_arg_ns(model, m_arity_cell[0][model] + k)
-    nm: c.lm_compiler_dn(model, k)
-    if: ns < 0 || nm = 0
-        return: (cast: (int) (0))
-    if: mi != e_cell[0] && c.lm_compiler_param_find(mi, nm) >= 0
-        return: (cast: (int) ((cast: (int) (lm_compiler_bound_nsty(mi, nm) = ns))))
-    oi: lm_compiler_own_visible(mi, nm)
-    return: (cast: (int) ((cast: (int) (oi >= 0 && c.lm_compiler_own_nsty_get(oi) = ns))))
-end: lm_compiler_held_cap_same
 
 fn: lm_compiler_pap_method_of (const: (@: source_node c.LmP0Node)) int
     @: e_cell int (cast: (@: int) (@ c.l2_e))

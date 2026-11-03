@@ -1,0 +1,181 @@
+# Slice 273: a free value at a pointer parameter of a C function whose contract is known.  The contract decides what is judged: a
+# number's or a Structure's address must fit the leaf by the actual pointee, a graph Array is no raw C array (L2 section 19), a C type
+# the kernel has no type for is known by the pointer code the value carries.  Only a `void` leaf is opaque.  A present null, a void
+# pointer the program cast and an explicit machine cast pass.  Every consumer here returns its INVALID (1) on a null first argument
+# without touching the pointer, so a wrong pointer that reached it would be seen as that sentinel and not as `convert`.
+# Bodies with a C door stay native under --walk-methods.  Entry 7; 81.. name the failing check.
+predef: "l1src/libc_abi.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+Box:
+    int: y 1
+end: Box
+int: quote 11
+fn: door_int () int
+    return: c.lmx_walk_value_number(0, 0, quote)
+end: door_int
+fn: door_size () int
+    return: c.lmx_walk_value_number(0, quote, 0)
+end: door_size
+fn: door_text () int
+    return: c.lmx_walk_value_field_place(0, 0, quote, 0, 0, 0)
+end: door_text
+fn: door_record () int
+    return: c.lmx_walk_value_number(quote, 0, 0)
+end: door_record
+fn: door_void () int
+    if: c.lmx_range_slot_holder(0, quote, 0) != 0
+        return: 90
+    return: 1
+end: door_void
+fn: door_cast () int
+    return: c.lmx_walk_value_number(0, 0, (cast: (@: int) quote))
+end: door_cast
+fn: refused_int () int
+    int: got 0
+    ---
+        got: door_int()
+        catch: convert ()
+            got: 77
+    ---
+    return: got
+end: refused_int
+fn: refused_size () int
+    int: got 0
+    ---
+        got: door_size()
+        catch: convert ()
+            got: 77
+    ---
+    return: got
+end: refused_size
+fn: refused_text () int
+    int: got 0
+    ---
+        got: door_text()
+        catch: convert ()
+            got: 77
+    ---
+    return: got
+end: refused_text
+fn: refused_record () int
+    int: got 0
+    ---
+        got: door_record()
+        catch: convert ()
+            got: 77
+    ---
+    return: got
+end: refused_record
+fn: refused_void () int
+    int: got 0
+    ---
+        got: door_void()
+        catch: convert ()
+            got: 77
+    ---
+    return: got
+end: refused_void
+fn: outer_int () int
+    int: cell 5
+    @: quote int @ cell
+    if: door_int() != 1 || door_void() != 1 || door_cast() != 1
+        return: 81
+    if: refused_size() != 77 || refused_text() != 77 || refused_record() != 77
+        return: 82
+    return: 0
+end: outer_int
+fn: outer_size () int
+    size_t: cell 5U
+    @: quote size_t @ cell
+    if: door_size() != 1 || door_void() != 1 || door_cast() != 1
+        return: 83
+    if: refused_int() != 77 || refused_text() != 77
+        return: 84
+    return: 0
+end: outer_size
+fn: outer_text () int
+    char: cell 65
+    @: quote char @ cell
+    if: door_text() != 1 || door_void() != 1
+        return: 85
+    if: refused_int() != 77 || refused_size() != 77
+        return: 86
+    return: 0
+end: outer_text
+fn: outer_null () int
+    @: quote int 0
+    if: door_int() != 1 || door_size() != 1 || door_text() != 1 || door_record() != 1
+        return: 87
+    return: 0
+end: outer_null
+fn: outer_number () int
+    int: quote 5
+    if: refused_int() != 77 || refused_void() != 77
+        return: 88
+    return: 0
+end: outer_number
+fn: outer_graph () int
+    @: quote Box Box
+    if: door_void() != 1 || door_cast() != 1
+        return: 89
+    if: refused_int() != 77 || refused_record() != 77
+        return: 90
+    return: 0
+end: outer_graph
+fn: outer_array () int
+    []: int quote 3
+    if: door_void() != 1 || door_cast() != 1
+        return: 91
+    if: refused_int() != 77 || refused_size() != 77
+        return: 92
+    return: 0
+end: outer_array
+fn: outer_void () int
+    int: cell 5
+    @: quote void (cast: (@: void) (@ cell))
+    if: door_int() != 1 || door_size() != 1 || door_text() != 1 || door_void() != 1
+        return: 93
+    return: 0
+end: outer_void
+fn: outer_record () int
+    c.LmxWalkValue: record
+    c.memset(@ record, 0, c.sizeof(c.LmxWalkValue))
+    @: quote c.LmxWalkValue @ record
+    if: door_record() != 1 || door_void() != 1
+        return: 94
+    if: refused_int() != 77
+        return: 95
+    return: 0
+end: outer_record
+fn: m () int
+    int: status outer_int()
+    if: status != 0
+        return: status
+    status: outer_size()
+    if: status != 0
+        return: status
+    status: outer_text()
+    if: status != 0
+        return: status
+    status: outer_null()
+    if: status != 0
+        return: status
+    status: outer_number()
+    if: status != 0
+        return: status
+    status: outer_graph()
+    if: status != 0
+        return: status
+    status: outer_array()
+    if: status != 0
+        return: status
+    status: outer_void()
+    if: status != 0
+        return: status
+    status: outer_record()
+    if: status != 0
+        return: status
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

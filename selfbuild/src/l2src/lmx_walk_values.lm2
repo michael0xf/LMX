@@ -1913,6 +1913,37 @@ fn: lmx_walk_value_receive_pointer (@: arena c.LmxArena; @: value c.LmxWalkValue
     return: c.LMX_WALK_OK
 end: lmx_walk_value_receive_pointer
 
+# Slice 273: the receive of a runtime-typed value by a pointer parameter of a C function whose contract the translator read.  The
+# contract decides what is judged.  A `void` leaf is opaque: any reference.  A leaf the kernel has a type for is judged by the actual
+# pointees, as above.  A C type the kernel has no type for is known only by the pointer code the reference carries: `code`, NONE
+# otherwise.  Whatever the leaf, a present null is received, and a void pointer is received as it is: the program cast it, and C
+# converts it.  A number or a foreign value is the implicit `convert`, and so is a pointer whose pointee the kernel cannot type here.
+fn: lmx_walk_value_receive_c_pointer (@: arena c.LmxArena; @: value c.LmxWalkValue; int: ty; int: depth; int: leaf; int: code; @: out c.LmxWalkValue) int
+    int: status
+    if: arena = 0 || value = 0 || out = 0 || value\present = 0 || depth < 1
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_NUMBER || value\kind = c.LMX_WALK_VALUE_FOREIGN
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: value\kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
+    if: value\ref != 0 && c.lmx_type_base(value\type) != c.LMX_TYPE_POINTER_BASE + 16
+        if: code != c.LMX_TYPE_NONE
+            if: c.lmx_type_base(value\type) != c.lmx_type_base(code)
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            ---
+        else:
+            status: lmx_walk_value_receive_pointer(arena, value, ty, depth, leaf, out)
+            if: status = c.LMX_WALK_UNSUPPORTED
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+            return: status
+        ---
+    ---
+    if: out != value
+        c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    out\type: ty
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_receive_c_pointer
+
 # Descriptor places are not numeric/pointer cells. Preserve the common cell store.
 fn: lmx_walk_value_store (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value c.LmxWalkValue) int
     c.LmxPointerCellWrite: write c.lmx_pointer_store_known

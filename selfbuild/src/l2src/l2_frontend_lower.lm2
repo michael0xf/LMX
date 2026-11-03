@@ -8463,15 +8463,75 @@ fn: lm_compiler_emit_dyn_unary_record (int: mi; int: sign; const: (@: ind char);
     return: c.lm_compiler_tx_set(full_value, name)
 end: lm_compiler_emit_dyn_unary_record
 
+# The kernel's type of a pointer leaf by its word: 1 with leaf the constant's name (NONE for `void`, no leaf check), 0 for a C type
+# the kernel has no type for.
+fn: lm_compiler_dyn_leaf_of_word (const: (@: word c.LmP0Text); @: leaf char) int
+    if: c.lm_compiler_text_eq(word, "Lmx")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_LMX") >= 0))
+    if: c.lm_compiler_text_eq(word, "LmxArray")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_DESC") >= 0))
+    if: c.lm_compiler_text_eq(word, "int")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_INT") >= 0))
+    if: c.lm_compiler_text_eq(word, "char")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_CHAR") >= 0))
+    if: c.lm_compiler_text_eq(word, "size_t")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_SIZE_T") >= 0))
+    if: c.lm_compiler_text_eq(word, "unsigned")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_UNSIGNED") >= 0))
+    if: c.lm_compiler_text_eq(word, "ulong")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_ULONG") >= 0))
+    if: c.lm_compiler_text_eq(word, "void")
+        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_NONE") >= 0))
+    return: 0
+end: lm_compiler_dyn_leaf_of_word
+
+# Slice 273: the receive of a record by a pointer parameter of a C function, the kernel's one operation.  A C type the kernel has no
+# type for is known by the pointer code a reference carries, and one C type has a code per spelling: `T`, `c.T`, their const forms.
+# Every code the translation has for this word and depth is asked in turn.  A leaf the kernel types has code NONE and one question.
+fn: lm_compiler_emit_c_pointer_receive (const: (@: record char); const: (@: type char); int: depth; const: (@: leaf char); const: (@: code char); const: (@: word c.LmP0Text); int: t; int: mi; const: (@: ind char)) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: foreign_n_cell int (cast: (@: int) (@ c.l2_foreign_n))
+    @@: foreign_depth_cell int (cast: (@@: int) (@ c.l2_foreign_depth))
+    @@@: foreign_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_foreign_name))
+    c.L2FrontendScratchChar96: other_storage
+    @: other char (cast: (@: char) other_storage\buffer)
+    int: i 0
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive_c_pointer(l2_program_arena, %s, %s, %d, c.%s, %s, @ l2_rv%d)\n", ind, t, ind, t, record, type, depth, leaf, code, t) < 0
+        return: 1
+    if: word != 0
+        while: i < foreign_n_cell[0]
+            if: foreign_depth_cell[0][i] = depth && c.lm_compiler_text_same(foreign_name_cell[0][i], word) != 0
+                if: c.lm_compiler_emit_input_value_type(100 + i, 0, other) != 0
+                    return: 1
+                if: c.strcmp(other, code) != 0
+                    if: c.fprintf(out_cell[0], "%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n%s    l2_rs%d: lmx_walk_value_receive_c_pointer(l2_program_arena, %s, %s, %d, c.%s, %s, @ l2_rv%d)\n%s---\n", ind, t, ind, t, record, type, depth, leaf, other, t, ind) < 0
+                        return: 1
+                    ---
+                ---
+            ---
+            i: i + 1
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t) < 0
+        return: 1
+    return: c.lm_compiler_emit_implicit_throw(mi, "convert", ind)
+end: lm_compiler_emit_c_pointer_receive
+
 # Slice 256 (design 4.5 B2b-1): the reception of an already evaluated record by a place of the target type -- the one
 # admission (lmx_walk_value_receive) over a record the caller holds (a C-door actual already read); dest is the typed C view
 # of the received record, full_value (when asked) names it.  As lm_compiler_emit_dyn_receive_full, without the evaluation.
-# Slice 272: c_door -- the place is a pointer parameter of a C function whose declaration a predef document gives.  As for a typed C
-# operand, the C type of the pointee is the C call's: any reference is received with the place's depth, a number is the `convert`.
+# Slice 272: c_door -- the place is a parameter of a C function whose contract the translator read.  Slice 273: a pointer parameter's
+# contract decides what is judged (lmx_walk_value_receive_c_pointer); only a `void` leaf is opaque.
 fn: lm_compiler_emit_dyn_receive_place (const: (@: record char); int: target; int: c_door; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx; const: (@: at c.LmP0Node)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    c.LmP0Text: c_word
+    @: foreign_word c.LmP0Text 0
+    int: c_pointer 0
+    int: c_qualified 0
+    c.L2FrontendScratchChar96: code_storage
+    @: code char (cast: (@: char) code_storage\buffer)
     c.L2FrontendScratchChar96: type_storage
     @: type char (cast: (@: char) type_storage\buffer)
     c.L2FrontendScratchChar1024: pointer_storage
@@ -8509,10 +8569,19 @@ fn: lm_compiler_emit_dyn_receive_place (const: (@: record char); int: target; in
         # descriptor) receives by the actual pointees: the kernel's one receive_pointer with the translator's depth and leaf.
         shaped: lm_compiler_dyn_pointer_shape(raw, @ depth, leaf)
         if: c_door != 0 && c.lm_compiler_pointer_depth(raw) > 0
-            depth: c.lm_compiler_pointer_depth(raw)
-            if: c.sprintf(leaf, "LMX_TYPE_NONE") < 0
-                return: 1
-            shaped: 1
+            c_pointer: 1
+            if: c.lm_compiler_type_parts(raw, @ c_word, @ depth, @ c_qualified) != 0
+                return: c.lm_compiler_error(src_cell[0], at, "a runtime-typed value received by a place without a value type (B2a)")
+            if: lm_compiler_dyn_leaf_of_word(@ c_word, leaf) != 0
+                if: c.sprintf(code, "c.LMX_TYPE_NONE") < 0
+                    return: 1
+                ---
+            else:
+                foreign_word: @ c_word
+                if: c.sprintf(leaf, "LMX_TYPE_NONE") < 0 || c.sprintf(code, "%s", type) < 0
+                    return: 1
+                ---
+            ---
         ---
     ---
     t: tn_cell[0]
@@ -8524,13 +8593,19 @@ fn: lm_compiler_emit_dyn_receive_place (const: (@: record char); int: target; in
                 return: 1
         ---
     else:
-        if: shaped != 0
-            if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive_pointer(l2_program_arena, %s, %s, %d, c.%s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record, type, depth, leaf, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        if: c_pointer != 0
+            if: lm_compiler_emit_c_pointer_receive(record, (cast: (const: @: char) type), depth, (cast: (const: @: char) leaf), (cast: (const: @: char) code), (cast: (const: @: c.LmP0Text) foreign_word), t, mi, ind) != 0
                 return: 1
             ---
         else:
-            if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive(%s, %s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record, type, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
-                return: 1
+            if: shaped != 0
+                if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive_pointer(l2_program_arena, %s, %s, %d, c.%s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record, type, depth, leaf, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+                    return: 1
+                ---
+            else:
+                if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_rv%d\n%sint: l2_rs%d lmx_walk_value_receive(%s, %s, @ l2_rv%d)\n%sif: l2_rs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, record, type, t, ind, t) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+                    return: 1
+                ---
             ---
         ---
     ---
@@ -8978,23 +9053,7 @@ fn: lm_compiler_dyn_pointer_shape (int: raw; @: out_depth int; @: leaf char) int
     if: c.lm_compiler_colon_is_graph_ty(raw) != 0
         return: 0
     \out_depth: foreign_depth_cell[0][fi]
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "Lmx")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_LMX") >= 0))
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "LmxArray")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_DESC") >= 0))
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "int")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_INT") >= 0))
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "char")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_CHAR") >= 0))
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "size_t")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_SIZE_T") >= 0))
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "unsigned")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_UNSIGNED") >= 0))
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "ulong")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_ULONG") >= 0))
-    if: c.lm_compiler_text_eq(foreign_name_cell[0][fi], "void")
-        return: (cast: (int) (c.sprintf(leaf, "LMX_TYPE_NONE") >= 0))
-    return: 0
+    return: lm_compiler_dyn_leaf_of_word((cast: (const: @: c.LmP0Text) foreign_name_cell[0][fi]), leaf)
 end: lm_compiler_dyn_pointer_shape
 
 # Slice 255 (design 4.5 B2a): the reception of a runtime-typed value by a place of the target type -- the one runtime

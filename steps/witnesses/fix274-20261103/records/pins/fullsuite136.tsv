@@ -1,0 +1,118 @@
+# The fixtures of the L2 runner's suite (tools/l2/lmxtool.lm2; rows read by tools/l2/suite.lm2, strictly):
+#   lmxtool 0 entry 0 -- suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT OBSERVED
+# Rows: runs SOURCE ENTRY MODES [PARTS] | refuses SOURCE NEEDLE MODES | twins SOURCE ENTRY MODES TWIN NAMES |
+# links OWNER ENTRY MODES LIBS (LIBS: comma-separated PATH=NAME, each a library built `--library --construct NAME`,
+# in f with --walk-methods too); paths relative to this list; ENTRY the program's LMX result (a decimal C int);
+# MODES n, f, nf or fn; a runs row may add the roots it runs after the letters: 0 (root0 only), 1 (root1 only), 01 (both, the default). Every check is a PASS or FAIL line with its class; a malformed row FAILs; any FAIL makes the
+# run exit 1.
+# os branches with full method bodies (OPUS-CODEX-20261022-OSBRANCH), the branch selected for the target before
+# translation (L2 section 20; the author, LMX_blog/2026-10-23.md): the selected branch's values, nothing compared
+# (os/os_walk_values.lm2 is built and run by the gate's os walk witness and bootstrap full's, not by a row)
+runs	os/os_bodies.lm2	7	nf
+runs	os/os_throws.lm2	7	nf
+runs	os/unit_os_prologue.lm2	7	nf
+runs	os/os_select_only.lm2	7	nf
+runs	os/os_unselected_invalid.lm2	7	nf
+runs	os/os_signatures_differ.lm2	7	nf
+runs	os/os_requirements.lm2	7	nf
+runs	os/os_callable_result.lm2	7	nf
+# ordinary admission at the selected branch's real receiving place, positive and negative
+runs	os/os_implements.lm2	7	nf
+refuses	os/os_implements_refused.lm2	os_implements_refused.lm2:21:30: implements is false in function argument	nf
+# the selected branch's own refusals, and the os block's structure
+refuses	os/os_unknown_name_refused.lm2	os_unknown_name_refused.lm2:6:21: unknown method	nf
+refuses	os/os_duplicate_refused.lm2	os_duplicate_refused.lm2:8:9: duplicate definition	nf
+refuses	os/os_item_refused.lm2	os_item_refused.lm2:4:9: an os branch holds methods and include, define or predef directives	n
+refuses	os/os_branch_head_refused.lm2	os_branch_head_refused.lm2:7:5: an os branch is win or default	n
+refuses	os/os_branch_twice_refused.lm2	os_branch_twice_refused.lm2:7:5: an os block has each branch once	n
+refuses	os/os_second_block_refused.lm2	os_second_block_refused.lm2:12:1: a second os block is not supported yet (the program reads one os block)	n
+# the C door: a tagged C type named through a define (Q-C); a call with one actual received by a reference
+runs	cdoor/define_struct_tm.lm2	7	nf
+runs	cdoor/c_call_one_actual.lm2	7	nf
+runs	cdoor/c_call_one_actual_root.lm2	7	nf0
+# the selected branch's methods are the unit's own (CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z): each os
+# program against its unit twin -- the same exits, each method bound natively and walked under --walk-methods alike
+twins	os_twins/named_call_below_os.lm2	7	nf	os_twins/named_call_below_unit.lm2	os_bump,count
+twins	os_twins/root_colon_above_os.lm2	7	nf	os_twins/root_colon_above_unit.lm2	os_bump,count
+twins	os_twins/root_vertical_above_os.lm2	7	nf	os_twins/root_vertical_above_unit.lm2	os_bump,count
+twins	os_twins/forward_header_os.lm2	7	nf	os_twins/forward_header_unit.lm2	os_twice,early
+twins	os_twins/method_above_os.lm2	7	nf	os_twins/method_above_unit.lm2	os_twice,early
+twins	os_twins/callable_value_os.lm2	7	nf	os_twins/callable_value_unit.lm2	os_note,placed,seen
+twins	os_twins/root_path_read_os.lm2	7	nf	os_twins/root_path_read_unit.lm2	os_mix
+twins	os_twins/sub_call_os.lm2	7	nf	os_twins/sub_call_unit.lm2	os_tick,count
+twins	os_twins/recursion_os.lm2	7	nf	os_twins/recursion_unit.lm2	os_fact
+twins	os_twins/hidden_input_os.lm2	7	nf	os_twins/hidden_input_unit.lm2	os_get
+twins	os_twins/calls_unit_below_os.lm2	7	nf	os_twins/calls_unit_below_unit.lm2	os_run,helper,count
+# bitwise operations of the machine profile (L2 section 21)
+runs	bits/bit_values.lm2	7	nf
+refuses	bits/bit_reference_refused.lm2	bit_reference_refused.lm2:3:5: a reference where a number is asked	nf
+refuses	bits/bit_mixed_refused.lm2	bit_mixed_refused.lm2:5:9: mixed numeric types (a conversion)	nf
+# the L2 SHA-256 module
+runs	sha/sha256_vectors.lm2	7	n	../tools/sha256.lm2
+# ENTRY is the program's LMX result, a C int over its whole range (R170-2, refinement 1)
+runs	suite/entry_negative.lm2	-12	nf
+runs	suite/entry_large.lm2	1011	nf
+# S8.1: library instances -- two of library A and one of B, constructed in the owner's arena, called interleaved
+links	lib/lib_owner.lm2	7	nf	lib/lib_a.lm2=lib_a_new,lib/lib_b.lm2=lib_b_new,lib/lib_c.lm2=lib_c_new,lib/lib_m.lm2=lib_m_new
+# Slice 254 (design 4.5 B1): free names resolve through the chain of activation records, the nearest current binding
+# first; a data field the activation does not use is no binding.
+runs	dyn/free_name_chain.lm2	7	nf
+runs	dyn/free_entry_binding.lm2	7	nf
+# Slice 255 (design 4.5 B2a): a free name is runtime-typed -- one callee reached from bindings of different types; a write
+# through the name, a return, a typed local, a typed formal and a condition receive the value by the kernel's one admission;
+# a mismatch is the implicit `convert` throw, caught by the caller.
+runs	dyn/free_value_types.lm2	7	nf
+# Slice 256 (design 4.5 B2b-1): the consumers of a runtime-typed value -- the prefix sign, the connectives with their
+# short circuit, a C-door actual received into the prototype's parameter type, a machine index, a cast, a reference result.
+runs	dyn/free_value_consumers.lm2	7	nf
+# Slice 257 (design 4.5 B2b, P1-RET): a walked method's declared result receives every present runtime-typed value by the
+# one admission -- a number where a pointer is declared and a pointer where an int is declared are the implicit `convert`,
+# caught by the callee's own pad or by the caller; the typed null literal and the compatible bindings pass.
+runs	dyn/free_result_convert.lm2	7	nf
+# Slice 258 (design 4.5 B2b-2a): the deref, the write through and the address of a free name are runtime-typed by the
+# kernel's pointer-code algebra -- pointer bindings of two pointee types, a write through the free pointer, the address of a
+# pointer binding (a pointer to pointer) and of a number binding, a native body among walked ones.
+runs	dyn/free_pointer_paths.lm2	7	nf
+# Slice 259 (design 4.5 B2b-2b): the bitwise and shift operators over a free operand run through the kernel's one binary
+# operation in both executors (the walker's codes BAND/BOR/BXOR/SHL/SHR; the walked body evaluates the same frames): the
+# C99 promotions, a shift count of its own type, the implicit interpreter throw for a count outside [0, width) or an
+# overflowing signed left shift, the implicit convert for two types, a sub's bare write, the typed walked path.
+runs	dyn/free_machine_ops.lm2	7	nf
+# Slice 260 (design 4.5 B2b-2c): a free value received by a place with a receiving model -- a modelled own (declaration) and
+# a modelled formal -- is received as the graph reference and admitted against the model at run time in both executors: a
+# graph with the fields (Shape as Point), a graph without them (the implicit implements), a number (the implicit convert), a
+# free pointer to a graph reference dereferenced into a modelled own (the deref level of the pointer coverage).
+runs	dyn/free_model_admit.lm2	7	nf
+# Slice 261 (design 4.5 B2b-2d; P1-PTR-COVERAGE, the address level): the address of a free name bound to a graph reference
+# (the kernel's own pointer code: the pointee is read from the cell, never from the code) received by typed pointer places at
+# depth two and three by the actual pointees in both executors; the admission of the deref'd graph at the modelled own stays;
+# a number's address at a graph pointer place and a graph reference's address at a depth-three place are the implicit convert.
+runs	dyn/free_graph_address.lm2	7	nf
+runs	dyn/free_held_receive.lm2	7	nf
+runs	dyn/free_held_model.lm2	7	nf
+# Slice 263: actual numeric reception and the selected Structure call.
+runs	dyn/free_number_places.lm2	7	nf
+runs	dyn/struct_call_selected.lm2	7	nf
+runs	dyn/struct_call_throws.lm2	7	nf
+# Selected code and explicit data: current field map, reached graph admission, copied calls.
+runs	dyn/split_formal_data.lm2	7	nf
+runs	dyn/split_selected_code.lm2	7	nf
+runs	dyn/split_copy_bound_data.lm2	7	nf
+runs	dyn/unit_n4_inline_named_incompatible.lm2	7	nf
+runs	dyn/unit_n4_inline_named_rebind.lm2	7	nf
+runs	dyn/held_structure_places.lm2	7	nf
+runs	dyn/unary_data_selection.lm2	7	nf
+# Typed native bitwise/shift uses the shared pre-operation checks.
+runs	dyn/typed_shift_guards.lm2	7	nf
+# Shared unary bitwise complement and named kind refusal.
+runs	dyn/unary_complement.lm2	7	nf
+
+# Actual source-cell identity and declared bindings through explicit data.
+runs	dyn/data_source_cells.lm2	7	nf
+runs	dyn/explicit_data_var_field.lm2	7	nf
+runs	dyn/free_index_places.lm2	7	nf
+runs	dyn/free_c_abi.lm2	7	nf
+runs	dyn/free_field_places.lm2	7	nf
+runs	dyn/free_slot_rebind.lm2	7	nf
+runs	dyn/free_c_pointer.lm2	7	nf
+runs	dyn/code_write_words.lm2	7	nf

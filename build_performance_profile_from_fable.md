@@ -250,3 +250,13 @@ smoke 9/0. G2 focus 37/0, 251.64 s: 16:19:22.7347109Z–16:23:34.3741423Z.
 Source 189/985904FD; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix273-20261103/notes.md).
+
+## Slice274 / boot136a (Opus, 2026-11-03)
+
+Whole quick 1008.67 s: 17:47:03.2298107Z–18:03:51.9011088Z, both generations
+smoke 9/0. G2 focus 38/0, 256.83 s: 18:04:43.0334151Z–18:08:59.8595940Z.
+Source 190/C1DC96BB; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A write of code now walks up twice (admission, then the drop) and a
+word above it costs one scan of its code. A whole-pipeline measurement, not a
+controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix274-20261103/notes.md).

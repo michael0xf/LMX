@@ -1,0 +1,40 @@
+import sys
+S = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp136/src/l2src/lmx_arena_refs.lm2'
+which = sys.argv[1]
+with open(S, 'rb') as f:
+    d = f.read().decode('utf-8')
+if which == 'stale':
+    # The write of code does not drop the words.
+    a = '''    if: code != 0
+        lmx_code_reset_from(arena, holder)
+    ---
+    return: status
+end: lmx_code_rebind_commit
+'''
+    b = '''    return: status
+end: lmx_code_rebind_commit
+'''
+elif which == 'noadmit':
+    # Nothing is refused: the word goes, the walker meets the machine operation later.
+    a = '''    if: word = 0
+        return: 0
+    gen: lmx_code_next_gen(arena)
+    if: start\\native != 0 && lmx_code_machine_in'''
+    b = '''    if: word >= 0
+        return: 0
+    gen: lmx_code_next_gen(arena)
+    if: start\\native != 0 && lmx_code_machine_in'''
+elif which == 'climb':
+    # Every link is climbed, the reference operands too.
+    a = '''fn: lmx_code_holds (@: arena c.LmxArena; @: holder c.Lmx; size_t: slot; @: item c.Lmx) int
+'''
+    b = a + '''    if: arena != 0
+        return: 1
+'''
+else:
+    raise SystemExit('which')
+assert d.count(a) == 1
+d = d.replace(a, b)
+with open(S, 'wb') as f:
+    f.write(d.encode('utf-8'))
+print('mutated', which)

@@ -21,6 +21,10 @@
 Автор передаёт реализацию Opus по [to_opus.md](to_opus.md); Codex остаётся
 консультантом. Первоначальное назначение Fable и старые очереди ниже исторические.
 
+Редакция 33 (2026-11-03 UTC, Opus, срез 274). §4.4 уточнён по измеренному L1: именованный узел и callable в слоте — данные,
+подъём сброса только через содержащий код, отказ `interpreter` до публикации, снятие слов в `commit`. Раздел «Реализация (срез 274)».
+boot136a G1/G2 сверены, G2 focus 38/0. [Срез 274](steps/witnesses/fix274-20261103/notes.md).
+
 Редакция 32 (2026-11-03 UTC, Opus, срез 273). Указательный параметр C принимает FREE-значение по контракту
 (`lmx_walk_value_receive_c_pointer`), опаковым остаётся только лист `void`. Находка Codex P1-C-POINTEE закрыта.
 boot135a G1/G2 сверены, G2 focus 37/0. [Срез 273](steps/witnesses/fix273-20261103/notes.md).
@@ -49,7 +53,7 @@ FREE-значении сохраняется до достигнутой опе�
 | §4.1 повторный сбор/predef | Индексы250–252 выполнены; единого collector и ровно трёх проходов ещё нет. |
 | §4.2 throws | Общий reached-call obligation действует263/264, implicit status исправлен268. В maintained emit ещё есть body_throws_stmts/body_throws/throws_close: удаление прогноза и общий статический/динамический контракт обязательны. |
 | §4.3 M2/call | 264 удалил44 forecast functions и M2-state. check_struct_call/check_call_data теперь удерживают реальные operands/site, inert=0; оставшиеся имена функций не означают прежний сертификат тела. |
-| §4.4 native reset | Kernel253: actual cell-to-code links и prepare→write→commit; ordinary data writes сохраняют native. Общая финальная интеграция и роли ещё проверяются по consumers. |
+| §4.4 native reset | Kernel253: actual cell-to-code links и prepare→write→commit; ordinary data writes сохраняют native. 274: именованный узел в слоте — данные, подъём только через содержащий код, запись над L2 — `interpreter` до публикации. Общая финальная интеграция ещё проверяется по consumers. |
 | §4.5 free inputs | 254 resolver;255–261 runtime consumers;262 удалил transitive name/type worklist, заголовок задаётся собственными свободными именами выбранного callee. 270 named paths;271 INDEX;272 known C ABI, named field store, length, descriptor/DESC witnesses. Source-occurrence и оставшиеся place consumers открыты. |
 | §4.6 D-105/admission | 260 graph receive,263–266 actual call/data admission,270 named reception. Полное устранение proof-only/UNKNOWN/preflight остатка ещё не объявлено. |
 | §4.7 split/immutable forecasts | 264 снял address-escape и immutable-call forecasts; copy_calls_verify/check_immutable_calls отсутствуют. split_close теперь упаковывает declared place rows, а не предсказывает будущие тела. Общая классификация/collector остаётся. |
@@ -1000,6 +1004,15 @@ emit.lm2:16244. Остаются: `throws_declared`, заголовок THROWS �
   модулей не строит графов, программы печатает только новый эмиттер.
 - Остаётся на срез C: сырые записи ячеек значений эмиттером (`l2_entry_slot[0]: lmx_int_new_profiled(…)`) —
   по критерию это данные, записи не создают; проверка «все записи эмиттера через функции ядра» переведёт их.
+
+**Реализация (срез 274, U5) — уточняет текст выше.** Текст §4.4 считал, что именованные поля данных ключуются только ячейкой; фактически
+именованная Structure и Array ключуются и собственным адресом, поэтому правило (2) называло кодом публикацию `T:` и запись поля, а связь
+`Box → корень` и операнд `AT(root, k)` поднимали сброс до всех тел, читающих корень. Измерено на L1: слово не содержит именованных узлов и callable,
+читает их слот при исполнении и вызывает через `lmx_call_prim_values`. Поэтому: (2) — только операция; (4) — только узел без собственного имени и
+не при уходе именованного; подъём по связи — через `lmx_code_holds` (операция, часть callable, безымянный узел этого держателя); перед записью кода
+`lmx_code_words_admit` смотрит фактический код под снимаемыми словами с новым значением в слоте и при `SOURCE_MACHINE` отказывает неявным `interpreter`;
+слова снимаются в `commit`, а не в `prepare`. Слот со Structure в обоих исполнителях держит сам узел, живое чтение места кода понимает low cell публикации.
+[Запись, свидетели, мутанты и границы](steps/witnesses/fix274-20261103/notes.md).
 
 ### 4.5 Динамические входы без замыкания
 Удаляются `dyn_close`, `cfl_close`, `cfa_apply`, `dyk_close`, `anchor_close`, `dyn_step`,

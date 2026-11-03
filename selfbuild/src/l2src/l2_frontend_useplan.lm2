@@ -891,15 +891,15 @@ fn: lm_compiler_emit_live_code_place (@: place c.L2GraphPlace; const: (@: ind ch
     if: c.fprintf(out_cell[0], "%s@: Lmx l2_cp%d 0\n", ind, here) < 0
         return: (cast: (int) (1))
     if: parent_tmp < 0
-        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_arena_ref_struct(l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU))\n", ind, here, place\child) < 0
+        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_walk_code_part_in(l2_call_arena, l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU))\n", ind, here, place\child) < 0
             return: (cast: (int) (1))
         ---
     else:
-        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_arena_ref_struct(l2_cp%d, %zuU)\n", ind, here, parent_tmp, place\child) < 0
+        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_walk_code_part_in(l2_call_arena, l2_cp%d, %zuU)\n", ind, here, parent_tmp, place\child) < 0
             return: (cast: (int) (1))
         ---
     ---
-    if: c.fprintf(out_cell[0], "%sif: l2_cp%d = 0 || lmx_domain_kind(l2_call_arena, (cast: (@: void) l2_cp%d)) != c.LMX_KIND_STRUCT\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, here, here, ind) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_cp%d = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, here, ind) < 0
         return: (cast: (int) (1))
     \out: here
     return: (cast: (int) (0))

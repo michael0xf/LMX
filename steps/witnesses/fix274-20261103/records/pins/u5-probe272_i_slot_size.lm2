@@ -1,0 +1,26 @@
+# the address of an Array field rebound by a free write, its length read back through the free address
+Fresh:
+    []: int items 7
+end: Fresh
+Box:
+    []: int items 3
+end: Box
+int: quote 11
+int: slot 0
+sub: put_items ()
+    quote\items: Fresh\items
+end: put_items
+fn: via () size_t
+    return: length(\slot)
+end: via
+fn: through () int
+    @: slot void (cast: (@: void) (@ (quote\items)))
+    return: (cast: (int) via())
+end: through
+fn: m () int
+    @: quote Box Box
+    put_items()
+    return: through()
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

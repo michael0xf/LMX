@@ -1,0 +1,23 @@
+# Probe, slice 274: a split call publishes a named Structure into its data's slot; an unrelated L2 body must keep its word.  Entry 7.
+int: k 7
+fn: through () int
+    return: (cast: (int) k)
+end: through
+S1:
+    T:
+        int: v 1
+    end: T
+end: S1
+D:
+    T:
+        int: v 0
+    end: T
+end: D
+int: code 7
+call: S1 D
+if: D\T\v != 1
+    code: 81
+if: code = 7 && through() != 7
+    code: 82
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

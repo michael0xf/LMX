@@ -1,8 +1,8 @@
 # Slice 272: a slot holding a Structure or an Array directly, written by name from a runtime-typed holder.  It is rebound as PUT_REF
 # rebinds it, after the ordinary admission: a Structure to the model the slot declares (`implements` when it does not fit, the slot
 # keeping its value), an Array by an Array of the same element type, anything else `convert`.  Typed readers see the written value.
-# A rebinding of a named Structure's slot is a write of code: the runtime drops the native words above it, so the bodies after the
-# first write run walked in the native build too, and none of them holds a machine operation.  Entry 7; 81.. name the failing check.
+# Slice 274: a named Structure or Array in a slot is that slot's value, so its rebinding is data: every native word stays, including
+# the words of bodies with a machine operation (`machined`, which reads the root like the others).  Entry 7; 81.. name the failing check.
 Other:
     int: y 7
 end: Other
@@ -52,6 +52,9 @@ end: read_items
 fn: size_items () size_t
     return: length(quote\items)
 end: size_items
+fn: machined () int
+    return: (cast: (int) (Fresh\items[1U]))
+end: machined
 fn: outer_kid () int
     @: quote Box Box
     int: caught 0
@@ -74,7 +77,7 @@ fn: outer_items () int
         return: 83
     Fresh\items[1U]: 7
     put_items()
-    if: Box\items[1U] != 7 || read_items() != 7 || size_items() != 3U
+    if: Box\items[1U] != 7 || read_items() != 7 || size_items() != 3U || machined() != 7
         return: 84
     ---
         put_items_struct()

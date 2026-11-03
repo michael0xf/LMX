@@ -1,0 +1,30 @@
+set pagination off
+set confirm off
+break lmx_source_name_set
+commands
+silent
+printf "name key=%llx text=%s\n", (long long)$rdx, (char*)$r8
+continue
+end
+break lmx_code_rebind_prepare
+commands
+silent
+if (long long)$r8 != (long long)$r9
+printf "rebind cell=%llx old=%llx new=%llx\n", (long long)$rdx, (long long)$r8, (long long)$r9
+end
+continue
+end
+break lmx_range_links_of
+commands
+silent
+printf "links_of node=%llx parent=%llx native=%llx\n", (long long)$rdx, *(long long*)$rdx, *(long long*)($rdx+8)
+continue
+end
+break lmx_walk_call_prim_dispatch
+commands
+silent
+printf "WALK dispatch code=%llx native=%llx\n", (long long)$rdx, *(long long*)($rdx+8)
+continue
+end
+run
+quit

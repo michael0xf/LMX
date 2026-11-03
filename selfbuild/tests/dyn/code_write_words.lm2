@@ -1,0 +1,179 @@
+# Slice 274 (U5 of the N4-U plan): what a write changes among the native words.  A data write keeps every word; a write of code drops
+# the words of the code that holds the place and of nothing that only refers to it; a word over a body with a machine operation cannot be
+# dropped, so such a write is the implicit `interpreter` before it changes anything; a call goes through the callee's word, so a caller
+# keeps its own.  `machined` is the body a false invalidation kills: it reads the root as every body does, and the walker cannot run it.
+# Entry 7; 81.. name the failing check.
+int: k 7
+fn: machined () int
+    return: (cast: (int) k)
+end: machined
+sub: machined_sub ()
+    k: (cast: (int) k)
+end: machined_sub
+fn: target () int
+    return: 1
+end: target
+fn: refused_target () int
+    return: 1
+end: refused_target
+fn: caller () int
+    int: got target()
+    return: (cast: (int) got)
+end: caller
+# Holds `target` as an unchanged operand of a statement: a body with a machine operation that only refers to the code written.
+fn: binder () int
+    @: bound target target
+    return: (cast: (int) 5)
+end: binder
+fn: replacement () int
+    return: 1 + 1
+end: replacement
+fn: leaving () int
+    return: (cast: (int) 3)
+end: leaving
+fn: machine_body () int
+    return: (cast: (int) 4)
+end: machine_body
+S1:
+    T:
+        int: v 1
+    end: T
+end: S1
+D:
+    T:
+        int: v 0
+    end: T
+end: D
+int: quote 11
+int: src 12
+Other:
+    T:
+        int: v 2
+    end: T
+end: Other
+sub: put_body ()
+    quote\body: src\body
+end: put_body
+sub: put_args ()
+    quote\args: src\args
+end: put_args
+sub: put_part ()
+    quote\T: src\T
+end: put_part
+sub: plain_sub ()
+    k: k
+end: plain_sub
+fn: machines_run () int
+    machined_sub()
+    return: machined()
+end: machines_run
+# A split call publishes a named Structure into its data's slot: data.
+fn: data_call () int
+    call: S1 D
+    if: D\T\v != 1 || machines_run() != 7
+        return: 81
+    return: 0
+end: data_call
+# The part of a Structure rebound by name is its slot's value: the word of the Structure stays and reads the new part.
+fn: part_rebound () int
+    @: quote S1 S1
+    @: src Other Other
+    put_part()
+    if: S1\T\v != 2
+        return: 88
+    call: S1 D
+    if: D\T\v != 2 || machines_run() != 7
+        return: 89
+    return: 0
+end: part_rebound
+# The whole body of a callable replaced: its word goes, so the stale native cannot answer; the caller keeps its word and dispatches.
+fn: swap_body () int
+    @: quote target target
+    @: src replacement replacement
+    if: target() != 1 || caller() != 1
+        return: 82
+    put_body()
+    if: target() != 2
+        return: 83
+    if: caller() != 2 || binder() != 5 || machines_run() != 7
+        return: 84
+    return: 0
+end: swap_body
+# Machine code arriving: refused by name, the slot and the word as they were.
+fn: refuse_arriving () int
+    @: quote refused_target refused_target
+    @: src machine_body machine_body
+    int: caught 0
+    ---
+        put_body()
+        catch: interpreter ()
+            caught: 1
+    ---
+    if: caught != 1 || refused_target() != 1 || machine_body() != 4
+        return: 85
+    return: 0
+end: refuse_arriving
+# The formals of a `fn` and of a `sub` with a machine operation: a part of their code, refused the same way.
+fn: refuse_args_fn () int
+    @: quote machined machined
+    @: src replacement replacement
+    int: caught 0
+    ---
+        put_args()
+        catch: interpreter ()
+            caught: 1
+    ---
+    if: caught != 1 || machines_run() != 7
+        return: 90
+    return: 0
+end: refuse_args_fn
+fn: refuse_args_sub () int
+    @: quote machined_sub machined_sub
+    @: src plain_sub plain_sub
+    int: caught 0
+    ---
+        put_args()
+        catch: interpreter ()
+            caught: 1
+    ---
+    if: caught != 1 || machines_run() != 7
+        return: 91
+    return: 0
+end: refuse_args_sub
+# A body that had the machine operation replaced whole: nothing left for the word to answer for.
+fn: machine_leaving () int
+    @: quote leaving leaving
+    @: src replacement replacement
+    if: leaving() != 3
+        return: 86
+    put_body()
+    if: leaving() != 2
+        return: 87
+    return: 0
+end: machine_leaving
+fn: m () int
+    int: status data_call()
+    if: status != 0
+        return: status
+    status: part_rebound()
+    if: status != 0
+        return: status
+    status: swap_body()
+    if: status != 0
+        return: status
+    status: refuse_arriving()
+    if: status != 0
+        return: status
+    status: refuse_args_fn()
+    if: status != 0
+        return: status
+    status: refuse_args_sub()
+    if: status != 0
+        return: status
+    status: machine_leaving()
+    if: status != 0
+        return: status
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

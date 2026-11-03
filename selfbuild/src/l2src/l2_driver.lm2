@@ -701,6 +701,15 @@ sub: code_links_check ()
     @@: cellb void 0
     @@: cellc void 0
     size_t: slot_out 0U
+    @: top c.Lmx 0
+    @: referred c.Lmx 0
+    @: built c.Lmx 0
+    @: statement c.Lmx 0
+    @: named c.Lmx 0
+    @: renamed c.Lmx 0
+    @: owner c.Lmx 0
+    @: machine c.Lmx 0
+    @: other_owner c.Lmx 0
     c.LmxEntry: word (cast: (c.LmxEntry) c.stop_first)
     c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     a: @ arena
@@ -769,6 +778,49 @@ sub: code_links_check ()
     h2\native: word
     c.lmx_code_changed_cell(a, cell2)
     check((cast: (int) (h1\native = 0 && h2\native = 0)), "code links: a reset through a cycle of code edges ends and reaches both")
+    # Slice 274.  Replacing an operand changes the operation; a change inside what an unchanged operand refers to does not,
+    # while a node built for the operation is its code.
+    top: (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    referred: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 2U))
+    built: (cast: (@: c.Lmx) c.lmx_walk_plain(a, top, 2U))
+    named: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 1U))
+    renamed: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 1U))
+    owner: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 2U))
+    machine: (cast: (@: c.Lmx) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SOURCE_MACHINE, 2U))
+    if: top = 0 || referred = 0 || built = 0 || named = 0 || renamed = 0 || owner = 0 || machine = 0 || c.lmx_source_name_set(a, (cast: (@: void) named), "T", 1U) != 0 || c.lmx_source_name_set(a, (cast: (@: void) renamed), "T", 1U) != 0
+        check(0, "code links: the nodes of the operand checks allocate")
+        c.lmx_arena_release(a)
+        return
+    top\native: word
+    check((cast: (int) (c.lmx_arena_ref_store(a, top, 1U, (cast: (@: void) referred)) = 0 && top\native = 0)), "code links: replacing an operand is a write of code")
+    top\native: word
+    referred\native: word
+    statement: (cast: (@: c.Lmx) c.lmx_walk_frame(a, referred, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, referred, 0U, (cast: (@: void) statement)) = 0 && referred\native = 0 && top\native != 0)), "code links: a write of code inside a referred node drops its word, not the word of the operation that refers to it")
+    check((cast: (int) (c.lmx_arena_ref_store(a, top, 2U, (cast: (@: void) built)) = 0)), "code links: a node built for an operation installs")
+    top\native: word
+    statement: (cast: (@: c.Lmx) c.lmx_walk_frame(a, built, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, built, 0U, (cast: (@: void) statement)) = 0 && top\native = 0)), "code links: a write of code inside a node built for an operation drops the operation's word")
+    # One operation standing in two places of code is in both.
+    other_owner: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 1U))
+    statement: (cast: (@: c.Lmx) c.lmx_walk_frame(a, root, c.LMX_WALK_OP_SET, 3U))
+    check((cast: (int) (other_owner != 0 && statement != 0 && c.lmx_arena_ref_store(a, other_owner, 0U, (cast: (@: void) statement)) = 0 && c.lmx_arena_ref_store(a, referred, 0U, (cast: (@: void) statement)) = 0)), "code links: one operation installs in two holders")
+    other_owner\native: word
+    referred\native: word
+    check((cast: (int) (c.lmx_arena_ref_store(a, statement, 1U, cell2) = 0 && other_owner\native = 0 && referred\native = 0)), "code links: a write of code inside a shared operation drops the words of both holders")
+    # A named node in a slot is that slot's value: the code reads it when it runs.
+    referred\native: word
+    check((cast: (int) (c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) named)) = 0 && referred\native != 0)), "code links: installing a named Structure keeps the word")
+    check((cast: (int) (c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) renamed)) = 0 && referred\native != 0)), "code links: a named Structure replacing a named Structure keeps the word")
+    statement: (cast: (@: c.Lmx) c.lmx_walk_frame(a, referred, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) statement)) = 0 && referred\native = 0)), "code links: an operation arriving over a named Structure is a write of code")
+    # A word over a machine operation cannot be dropped: the write is refused before it changes anything, by name.
+    check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@: void) machine)) = 0)), "code links: a machine operation installs under a node without a word")
+    owner\native: word
+    statement: (cast: (@: c.Lmx) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SET, 2U))
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, owner, 1U, (cast: (@: void) statement)) = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER)), "code links: a write of code over a machine operation refuses by name")
+    check((cast: (int) (owner\native != 0 && c.lmx_arena_ref_value(owner, 1U) = 0 && c.lmx_range_links_of(a, (cast: (@: void) statement)) = 0)), "code links: the refused write left the word, the slot and the links")
+    check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@: void) statement)) = 0 && owner\native = 0 && c.lmx_arena_ref_value(owner, 0U) = (cast: (@: void) statement))), "code links: a write taking the machine operation out is admitted and drops the word")
     # Two Arrays whose backings share one REF interval: the pool's chunk step is the first request's count (eight), so
     # the second Array fills a new chunk's first two cells and the third, made after a mark, the next two; each
     # descriptor is its own one-cell chunk.  The third's descriptor leaves with the revert while the second lives.

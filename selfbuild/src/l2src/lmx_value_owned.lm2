@@ -518,8 +518,14 @@ fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkVa
     if: pool != 0 && (pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF)
         slot_cell: 1
         old: c.lmx_arena_pointer_void_read(cell)
-        if: c.lmx_code_rebind_prepare(arena, cell, old, raw, @ record, @ code) != 0
-            return: 1
+        status: c.lmx_code_rebind_prepare(arena, cell, old, raw, @ record, @ code)
+        if: status != 0
+            return: status
+        ---
+    else:
+        status: c.lmx_code_cell_admit(arena, cell)
+        if: status != 0
+            return: status
         ---
     ---
     lmx_value_context_copy(@ saved, context)
@@ -538,7 +544,7 @@ fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkVa
             lmx_value_context_copy(owner, @ saved)
         ---
         if: slot_cell != 0
-            status: (cast: (int) c.lmx_code_rebind_commit(arena, cell, old, raw, record))
+            status: (cast: (int) c.lmx_code_rebind_commit(arena, cell, old, raw, record, code))
         else:
             c.lmx_code_changed_cell(arena, cell)
         ---

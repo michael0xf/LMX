@@ -124,6 +124,7 @@ The `data` scanner sees only direct root heads: a root-level `if:` is itself one
 | Name | Where it exists | Meaning |
 | --- | --- | --- |
 | `node` | reserved L3 word and first method ABI parameter | space above the method; fixed for the whole activation, including nested bodies |
+| `var` | reserved name of an explicit reference to the call's data | defaults to selected `data`; permits ordinary declaration and assignment ([rule](#ordinary-var)) |
 | `parent` | ordinary field of every working-graph `Lmx` Structure | immediately enclosing Structure; differs for a method, `if`, loop and other nested bodies |
 | `self` | hidden ABI context only | the active Structure of this call; not a language word |
 
@@ -323,7 +324,7 @@ A structural tail such as `A: (x: int: 1)` supplies the value for a new place `A
 <a id="ordinary-var"></a>
 ### An ordinary `var:` form
 
-The distinction between declaration, assignment, and invocation applies to `var: (...)` as it does to any other name:
+`var` is the reserved name of an explicit reference to the current call's data: its default value is the selected `data`. Ordinary declaration and assignment to this name are permitted. A Structure is not itself a call. The ordinary distinction between declaration, assignment, and invocation applies to `var: (...)`:
 
 | What `var` denotes | Action |
 | --- | --- |
@@ -331,9 +332,11 @@ The distinction between declaration, assignment, and invocation applies to `var:
 | An already declared ordinary Structure | Assign the new structural value to the existing place `var` after ordinary admission. No second same-named field is created. |
 | A declared method or a method reference | Apply the callable to the explicitly written arguments under its contract. |
 
-For example, in `var: (int: x 2); var: (int: x 5)`, the first form declares a Structure and the second assigns it a new value with `x = 5`. Both source forms may remain in the graph as occurrences; they are not two data fields named `var`. Declaring or assigning a structural value does not by itself execute the stored body of either the old or the new Structure. Execution of that Structure requires an explicit `call`. In executable `code`, writing follows the common place and selected-`data` rules, with no separate algorithm for the name `var`.
+When `var` already holds the data reference, assignment changes the value of that same binding in the ordinary way. A subsequent explicit path `var\i` uses the new reference. This is how the author's October 15 example works: in `call: code code`, initial `var` refers to `code`; the reached `var: (i: int: 5)` assigns the written structural value to that binding, and the next `var\i` accesses its `i`. Place maps and `dirty` publication must account for ordinary reference replacement; no separate execution of the value or hidden data graph is introduced. The explicit path `var\var` separately addresses an actual field of the selected Structure. [Primary example and reconciliation](../LMX_blog/2026-11-03.md#ordinary-var-assignment-20261015).
 
-Distinguish this ordinary form from the `var` argument of a `fn`/`fm`/`sub`/`catch` definition and from data selection by `call`. A method's `var` part is created and executed under the method's contract. `call: code data` receives its data explicitly; `call: code` selects `code\var` under its own contract. Reaching an ordinary `var: (...)` form neither invokes its contents nor changes the current `data` binding merely because the name is spelled `var`. Bare `var` only denotes the resulting value and does not invoke it, including when it is a method reference.
+If `var` is not yet declared in the current scope, in `var: (int: x 2); var: (int: x 5)` the first form declares a Structure and the second assigns it a new value with `x = 5`. If the binding already exists, including the default reference to call data, the first form is also an assignment. Both source forms may remain in the graph as occurrences; they are not two data fields named `var`. Declaring or assigning a structural value does not by itself execute the stored body of either the old or the new Structure. Execution of that Structure requires an explicit `call`. In executable `code`, writing follows the common place and selected-`data` rules, with no separate algorithm for the name `var`.
+
+Distinguish this ordinary form from the `var` argument of a `fn`/`fm`/`sub`/`catch` definition and from data selection by `call`. A method's `var` part is created and executed under the method's contract. `call: code data` receives its data explicitly; `call: code` selects `code\var` under its own contract. An ordinary `var: (...)` form assigns its structural value under the same rules as any other assignment; this does not invoke the Structure's contents. Bare `var` only denotes the resulting value and does not invoke it, including when it is a method reference.
 
 If put is already defined as callable, the following definition of Batch retains the structural body `(put: 7)` without executing it:
 

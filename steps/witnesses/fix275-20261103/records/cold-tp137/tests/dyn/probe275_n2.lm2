@@ -1,0 +1,27 @@
+# Probe 275 n2: a typed null in a root's slot, by the root's statement; following it is the implicit interpreter.  Entry 7.
+First:
+    int: x 3
+end: First
+Second:
+    int: w 9
+    int: x 5
+end: Second
+fn: follow () int
+    ---
+        return: First\x
+        catch: interpreter ()
+            return: 93
+    ---
+end: follow
+int: code 7
+First: @: First: 0
+if: follow() != 93
+    code: 81
+if: code = 7
+    First: Second
+    if: follow() != 5
+        code: 82
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -613,27 +613,82 @@ fn: lmx_walk_graph_value_ref (@: arena c.LmxArena; @: child void) @: void
     return: (cast: (@: void) value\ref)
 end: lmx_walk_graph_value_ref
 
-# A live place of code read by a native word: the Structure that slot `index` of `holder` holds now, directly or through
-# the low cell a rebinding of a named part leaves there (PUT_REF, a publication, a field written by name).  A rebinding keeps the
-# word (slice 274), so the word reads what stands there; 0 when no Structure does.
-fn: lmx_walk_code_part_in (@: arena c.LmxArena; @: holder c.Lmx; size_t: index) @: c.Lmx
+# The Structure that slot `index` of `holder` holds now, for a reader that takes it as a value: the node itself, or the one
+# the slot's low cell holds (lmx_walk_slot_bind, a publication).  A native word reads a live place of code the same way, since a
+# rebinding keeps the word (slice 274).  0 when a low cell holds nothing or holds no graph node; anything but a cell in this arena is
+# the node of the slot's own contract, as a direct read gave it (a branch of another arena classifies as nothing here).
+fn: lmx_walk_slot_struct (@: arena c.LmxArena; @: holder c.Lmx; size_t: index) @: c.Lmx
     c.LmxWalkValue: value
     @: value_p c.LmxWalkValue @ value
     @: child void c.lmx_arena_ref_value(holder, index)
-    int: kind 0
     if: child = 0
         return: 0
-    kind: (cast: (int) c.lmx_domain_kind(arena, child))
-    if: kind = c.LMX_KIND_STRUCT
+    if: c.lmx_domain_kind(arena, child) != c.LMX_KIND_PRIMITIVE
         return: (cast: (@: c.Lmx) child)
-    if: kind != c.LMX_KIND_PRIMITIVE
-        return: 0
     if: lmx_walk_value_cell(arena, child, value_p) != c.LMX_WALK_OK || value_p\present = 0 || value_p\kind != c.LMX_WALK_VALUE_REFERENCE || value_p\ref = 0
         return: 0
-    if: c.lmx_domain_kind(arena, value_p\ref) != c.LMX_KIND_STRUCT
+    if: c.lmx_domain_kind(arena, value_p\ref) = c.LMX_KIND_PRIMITIVE
         return: 0
     return: (cast: (@: c.Lmx) value_p\ref)
-end: lmx_walk_code_part_in
+end: lmx_walk_slot_struct
+
+# The Structure that describes slot `index` for a reader that needs its declared layout, the requirement of a typed
+# reference: the node standing there has that layout (lmx_walk_slot_bind); a low cell's context names the model.
+fn: lmx_walk_slot_model (@: arena c.LmxArena; @: holder c.Lmx; size_t: index) @: c.Lmx
+    @: child void c.lmx_arena_ref_value(holder, index)
+    if: child != 0 && c.lmx_domain_kind(arena, child) = c.LMX_KIND_PRIMITIVE
+        @: context c.LmxWalkValue c.lmx_pointer_cell_context(arena, child)
+        if: context != 0 && context\present != 0 && context\model != 0
+            return: (cast: (@: c.Lmx) context\model)
+        ---
+    ---
+    return: lmx_walk_slot_struct(arena, holder, index)
+end: lmx_walk_slot_model
+
+# The physical slot of a field of a Structure read from a named slot (the book :194, L2 86: an admitted pair's map serves every
+# read, write and address; equal ordinals are not assumed).  `index` is the field's place in the slot's declared layout.  A
+# value holding no model stands at that layout; one holding a model answers through the map admitted for the pair: edge
+# `index` for an explicit ordinal, the second half for a bare name (lmx_implements_slot).  A field the value does not carry at
+# this use is the implicit `implements`.
+fn: lmx_walk_value_slot (@: arena c.LmxArena; @: holder c.LmxWalkValue; size_t: index; int: last; @: out size_t) int
+    @: model c.Lmx 0
+    @: fields c.VoidArray 0
+    size_t: edge index
+    size_t: resolved 0U
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status 0
+    if: arena = 0 || holder = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    out[0]: index
+    model: (cast: (@: c.Lmx) holder\model)
+    if: model = 0 || holder\ref = 0 || holder\ref = (cast: (@: void) model)
+        return: c.LMX_WALK_OK
+    if: last != 0
+        fields: @ model\array
+        edge: index + fields\size
+    ---
+    status: c.lmx_implements_slot(arena, (cast: (@: c.Lmx) holder\ref), model, edge, @ resolved, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    # A field rebound after its holder was admitted stands below that holder with a pair nothing has admitted yet.  The pair is
+    # admitted once, where it is first reached, and every later access reads its map.
+    if: answer = c.LMX_IMPLEMENTS_UNKNOWN
+        status: c.lmx_implements_admit_receiving_templates(arena, (cast: (@: c.Lmx) holder\ref), model, 0, 0U, 0, @ answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: answer = c.LMX_IMPLEMENTS_NO
+            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+        status: c.lmx_implements_slot(arena, (cast: (@: c.Lmx) holder\ref), model, edge, @ resolved, @ answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+    ---
+    if: answer = c.LMX_IMPLEMENTS_UNKNOWN
+        return: c.LMX_WALK_UNSUPPORTED
+    if: answer = c.LMX_IMPLEMENTS_NO
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+    out[0]: resolved
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_slot
 
 # Persist a completed value as one ordinary arena-owned cell. Absence has no
 # cell; a present null reference still has its typed cell and saved context.
@@ -687,6 +742,119 @@ fn: lmx_walk_value_materialize (@: arena c.LmxArena; @: value c.LmxWalkValue; @@
     outcell[0]: cell
     return: c.LMX_WALK_OK
 end: lmx_walk_value_materialize
+
+# Slice 275 (P1-PLACE-MAP).  A slot may declare a model (lmx_source_place_model_set); an admitted Structure stands there by the
+# layout it has.  One of the model's layout, or any at a slot that declares none, stands as the node itself and is read at its
+# declared places.  One of another layout stands through a low cell whose context names the model, and a path reads it through the
+# pair's map (lmx_walk_value_slot).  A slot already holding a cell keeps it: a reference field is declared so, and its
+# pair has a map all the same.  The caller has admitted the value; the holder's write guard is the caller's as well.
+fn: lmx_walk_slot_bind (@: arena c.LmxArena; @: holder c.Lmx; size_t: index; @: value c.LmxWalkValue; @: model c.Lmx) int
+    c.LmxWalkValue: context
+    @: materialized void 0
+    @: held_layout void 0
+    @@: slot void (cast: (@@: void) c.lmx_graph_ref_cell_in(arena, holder, index))
+    int: status 0
+    if: slot = 0 || value\ref = 0
+        return: c.LMX_WALK_INVALID
+    if: lmx_walk_is_pointer_cell(arena, slot[0]) = 0
+        if: model != 0 && value\ref != (cast: (@: void) model)
+            held_layout: c.lmx_implements_layout(arena, (cast: (@: c.Lmx) value\ref))
+        ---
+        if: model = 0 || value\ref = (cast: (@: void) model) || (held_layout != 0 && held_layout = c.lmx_implements_layout(arena, model))
+            status: c.lmx_code_write_admit(arena, holder, index, value\ref)
+            if: status != c.LMX_WALK_OK
+                return: status
+            status: c.lmx_graph_ref_store_in(arena, holder, index, value\ref)
+            if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+                return: status
+            if: status != 0
+                return: c.LMX_WALK_INVALID
+            return: c.LMX_WALK_OK
+        ---
+    ---
+    c.memcpy((cast: (@: void) (@ context)), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    context\type: c.LMX_TYPE_LMX
+    if: model != 0
+        context\model: model
+        context\references: 0
+    ---
+    if: lmx_walk_is_pointer_cell(arena, slot[0]) != 0
+        status: c.lmx_pointer_store_context_in(arena, slot[0], value\ref, @ context)
+    else:
+        status: lmx_walk_value_materialize(arena, @ context, @ materialized)
+        if: status != c.LMX_WALK_OK
+            return: status
+        status: c.lmx_graph_ref_store_in(arena, holder, index, materialized)
+    ---
+    if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        return: status
+    if: status != 0
+        return: c.LMX_WALK_INVALID
+    return: c.LMX_WALK_OK
+end: lmx_walk_slot_bind
+
+# The one rebinding of a slot by a complete value.  A Structure is admitted to the slot's declared model before anything
+# changes and stands by lmx_walk_slot_bind.  Any other value -- a present null, an Array, a number -- persists as its ordinary cell.
+fn: lmx_walk_slot_rebind (@: arena c.LmxArena; @: holder c.Lmx; size_t: index; @: value c.LmxWalkValue) int
+    c.LmxWalkValue: context
+    @: model c.Lmx 0
+    @: materialized void 0
+    @: cell void 0
+    int: status 0
+    if: arena = 0 || holder = 0 || value = 0 || value\present = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE && value\ref != 0 && c.lmx_domain_kind(arena, value\ref) = c.LMX_KIND_STRUCT
+        cell: c.lmx_graph_cell_in(arena, holder, index)
+        status: c.lmx_implements_receive_cell(arena, cell, value\ref)
+        if: status != c.LMX_WALK_OK
+            return: status
+        status: c.lmx_implements_cell_model(arena, cell, @ model)
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_slot_bind(arena, holder, index, value, model)
+    ---
+    c.memcpy((cast: (@: void) (@ context)), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    # A present null keeps the slot's declaration: what follows it is the implicit throw, and a model read there still has its model.
+    if: value\kind = c.LMX_WALK_VALUE_REFERENCE && value\ref = 0
+        status: c.lmx_implements_cell_model(arena, c.lmx_graph_cell_in(arena, holder, index), @ model)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: model != 0
+            context\model: model
+            context\references: 0
+        ---
+    ---
+    status: lmx_walk_value_materialize(arena, @ context, @ materialized)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status: c.lmx_graph_ref_store_in(arena, holder, index, materialized)
+    if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        return: status
+    if: status != 0
+        return: c.LMX_WALK_INVALID
+    return: c.LMX_WALK_OK
+end: lmx_walk_slot_rebind
+
+# The native statement's form of the same rebinding: its operand is a raw reference and the context it was read with.  A raw
+# null or a non-Structure takes the slot as it is, as the statement always stored it.
+fn: lmx_walk_slot_store_ref (@: arena c.LmxArena; @: holder c.Lmx; size_t: index; @: ref void; @: context c.LmxWalkValue) int
+    c.LmxWalkValue: value
+    int: status 0
+    if: arena = 0 || holder = 0
+        return: c.LMX_WALK_INVALID
+    if: ref != 0 && c.lmx_domain_kind(arena, ref) = c.LMX_KIND_STRUCT
+        status: lmx_walk_value_ref_context(@ value, c.LMX_TYPE_LMX, ref, context)
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_slot_rebind(arena, holder, index, @ value)
+    ---
+    status: c.lmx_arena_ref_store(arena, holder, index, ref)
+    if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        return: status
+    if: status != 0
+        return: c.LMX_WALK_INVALID
+    return: c.LMX_WALK_OK
+end: lmx_walk_slot_store_ref
 
 fn: lmx_walk_native_numeric_lit (@: arena c.LmxArena; @: code c.Lmx; int: expected_type; @: out c.LmxWalkValue) int
     @: cell void 0
@@ -2028,13 +2196,14 @@ end: lmx_walk_value_store_with_writer
 # passes the value to the existing field after the ordinary admission.  A reference is admitted to the declared model of the
 # field's slot, as typed code does at its statement.  A field holding a Structure or an Array receives a value of the same kind
 # and, for an Array, of the same element type; what it holds is the slot's own descriptor or the low cell of a publication.
-# Slice 274: a descriptor place is rebound to the node itself, as the native statement stores it and native code reads it (PUT_REF
-# alike), and a write of code is admitted against the words above it before anything changes.
+# Slice 274: a write of code is admitted against the words above it before anything changes.  Slice 275: a Structure stands in the
+# slot by its layout, as at every rebinding (lmx_walk_slot_bind).
 fn: lmx_walk_value_field_store (@: arena c.LmxArena; @: root c.Lmx; size_t: index; @: place c.LmxWalkPlace; @: value c.LmxWalkValue) int
     c.LmxWalkValue: current
     @: current_p c.LmxWalkValue @ current
     @: raw void 0
     @: held void 0
+    @: model c.Lmx 0
     int: base
     int: kind
     int: status
@@ -2060,6 +2229,13 @@ fn: lmx_walk_value_field_store (@: arena c.LmxArena; @: root c.Lmx; size_t: inde
         ---
         if: base = c.LMX_TYPE_LMX && kind != c.LMX_KIND_STRUCT && (place\descriptor = 0 || place\address != 0 || kind != c.LMX_KIND_ARRAY)
             return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+        # Slice 275: an admitted Structure stands in a slot by its layout (lmx_walk_slot_bind).
+        if: kind = c.LMX_KIND_STRUCT && c.lmx_graph_ref_cell_in(arena, root, index) != 0
+            status: c.lmx_implements_cell_model(arena, c.lmx_graph_cell_in(arena, root, index), @ model)
+            if: status != c.LMX_WALK_OK
+                return: status
+            return: lmx_walk_slot_bind(arena, root, index, value, model)
+        ---
     ---
     if: place\descriptor = 0
         return: lmx_walk_value_store(arena, place, value)
@@ -2068,12 +2244,18 @@ fn: lmx_walk_value_field_store (@: arena c.LmxArena; @: root c.Lmx; size_t: inde
             return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
         ---
     else:
-        status: c.lmx_code_write_admit(arena, root, index, value\ref)
-        if: status != c.LMX_WALK_OK
-            return: status
-        ---
         raw: value\ref
     ---
+    # A present null has its own cell (lmx_walk_value_storage): native reads the same slot a walked read does.
+    if: raw = 0
+        status: lmx_walk_value_ref(current_p, (cast: (int) place\type), 0)
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_slot_rebind(arena, root, index, current_p)
+    ---
+    status: c.lmx_code_write_admit(arena, root, index, raw)
+    if: status != c.LMX_WALK_OK
+        return: status
     status: c.lmx_graph_ref_store_in(arena, root, index, raw)
     if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
         return: status
@@ -2942,7 +3124,6 @@ end: lmx_walk_snapshot_args
 fn: lmx_walk_publish (@: f c.LmxWalkFrame) int
     @: e c.LmxWalkWork 0
     @: ready c.LmxWalkValue 0
-    @: materialized void 0
     size_t: number 0U
     int: ty 0
     int: status 0
@@ -2966,16 +3147,11 @@ fn: lmx_walk_publish (@: f c.LmxWalkFrame) int
                 ---
             ---
             if: e\kind = 3
-                # Graph slots hold a materialized complete value. SET has
+                # A graph slot takes the complete value by the one rebinding. SET has
                 # already supplied the same present working record as OWN.
-                status: lmx_walk_value_materialize((cast: (@: c.LmxArena) f\arena), ready, @ materialized)
+                status: c.lmx_walk_slot_rebind((cast: (@: c.LmxArena) f\arena), e\holder, e\index, ready)
                 if: status != c.LMX_WALK_OK
                     return: status
-                status: c.lmx_graph_ref_store_in((cast: (@: c.LmxArena) f\arena), e\holder, e\index, materialized)
-                if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-                    return: status
-                if: status != 0
-                    return: c.LMX_WALK_INVALID
                 ---
             ---
             e\dirty: 0
@@ -3389,6 +3565,14 @@ fn: lmx_walk_model_project (@: f c.LmxWalkFrame; @: operand void; int: closed; @
             return: c.LMX_WALK_INVALID
         ---
     ---
+    # A model read from a named place is what the place declares, whichever value stands there (lmx_walk_slot_model natively).
+    if: mvp\model != 0
+        status: lmx_walk_node(f, operand)
+        if: status = c.LMX_WALK_OP_AT || status = c.LMX_WALK_OP_OF || status = c.LMX_WALK_OP_OF_EDGE
+            \out: (cast: (@: c.Lmx) mvp\model)
+            return: c.LMX_WALK_OK
+        ---
+    ---
     \out: (cast: (@: c.Lmx) mvp\ref)
     return: c.LMX_WALK_OK
 end: lmx_walk_model_project
@@ -3704,7 +3888,7 @@ fn: lmx_walk_shape_min (int: op) size_t
     return: 1U
 end: lmx_walk_shape_min
 
-fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: closed; @@: trail void; @: out c.LmxWalkPlace) int
+fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: closed; @@: trail void; @: out c.LmxWalkPlace; @@: out_model c.Lmx) int
     c.LmxWalkValue: holder
     @: holder_p c.LmxWalkValue @ holder
     @: code c.Lmx (cast: (@: c.Lmx) operand)
@@ -3732,6 +3916,8 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
     if: f = 0 || operand = 0 || out = 0
         return: c.LMX_WALK_INVALID
     c.memset((cast: (@: void) out), 0, c.sizeof(c.LmxWalkPlace))
+    if: out_model != 0
+        out_model[0]: 0
     op: lmx_walk_node(f, operand)
     # Closed analysis shares the physical projection below. It cannot load
     # activation/default/working state or evaluate a holder to discover it.
@@ -3892,6 +4078,22 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
                 return: c.LMX_WALK_INVALID
             ---
             index: resolved
+        else:
+            # Slice 275: no model in the code means the slot's declared layout.  A holder just read from a named slot, standing there
+            # by another layout, answers through the pair's map (lmx_walk_value_slot, as a native path step does).  An own's working
+            # value is no such place: its code is laid out over its own declaration.
+            if: (op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_PUT_OF || op = c.LMX_WALK_OP_SET_OF) && holder_p\model != 0
+                kind: lmx_walk_node(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U))
+                if: kind = c.LMX_WALK_OP_OF || kind = c.LMX_WALK_OP_OF_EDGE || kind = c.LMX_WALK_OP_AT
+                    # The field below a mapped holder is declared by the model's own field.
+                    if: out_model != 0
+                        out_model[0]: lmx_walk_slot_model((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) holder_p\model), index)
+                    status: lmx_walk_value_slot((cast: (@: c.LmxArena) f\arena), holder_p, index, 1, @ resolved)
+                    if: status != c.LMX_WALK_OK
+                        return: status
+                    index: resolved
+                ---
+            ---
         ---
         # The resolved projection selects one physical place. Array primitive
         # elements are already value cells; CHILDREN/REF backing stores an
@@ -3970,7 +4172,7 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
 end: lmx_walk_place_mode
 
 fn: lmx_walk_place (@: f c.LmxWalkFrame; @: operand void; int: write; @: out c.LmxWalkPlace) int
-    return: lmx_walk_place_mode(f, operand, write, 0, 0, out)
+    return: lmx_walk_place_mode(f, operand, write, 0, 0, out, 0)
 end: lmx_walk_place
 
 # NODE and OF/OF_EDGE use this same projection during ordinary execution
@@ -3984,6 +4186,7 @@ fn: lmx_walk_projection_step (@: f c.LmxWalkFrame; @: operand void; int: closed;
     c.LmxWalkValue: value
     @: vp c.LmxWalkValue @ value
     c.LmxWalkPlace: place
+    @: place_model c.Lmx 0
     size_t: steps 1U
     int: op 0
     int: status 0
@@ -4012,10 +4215,13 @@ fn: lmx_walk_projection_step (@: f c.LmxWalkFrame; @: operand void; int: closed;
         # SELF names selected data, not NODE(0)'s selected code.
         return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, (cast: (@: void) f\node))
     if: op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_OF_EDGE || op = c.LMX_WALK_OP_AT
-        status: lmx_walk_place_mode(f, operand, 0, closed, trail, @ place)
+        status: lmx_walk_place_mode(f, operand, 0, closed, trail, @ place, @ place_model)
         if: status != c.LMX_WALK_OK
             return: status
-        return: lmx_walk_place_load((cast: (@: c.LmxArena) f\arena), @ place, out)
+        status: lmx_walk_place_load((cast: (@: c.LmxArena) f\arena), @ place, out)
+        if: status = c.LMX_WALK_OK && place_model != 0
+            out\model: place_model
+        return: status
     # The historical one-cell NODE means one parent; typed SIZE_T gives
     # an exact count, including zero. A third operand selects its base.
     if: fields\size != 1U && fields\size != 2U && fields\size != 3U
@@ -6065,7 +6271,6 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
     @: wholder c.Lmx 0
     @@: slot void 0
     @: root void 0
-    @: materialized void 0
     int: slot_type 0
     @: want void 0
     @: leaf void 0
@@ -6300,26 +6505,12 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             return: c.LMX_WALK_INVALID
         if: value_p\ref != 0 && lmx_walk_kind(f, (cast: (@: void) value_p\ref)) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID
-        status: c.lmx_implements_receive_data_field((cast: (@: c.LmxArena) f\arena), wholder, index, (cast: (@: c.Lmx) value_p\ref))
+        # Slice 275: the one rebinding of a slot, as the native statement's: admitted to its declared model, then standing by its layout.
+        status: lmx_walk_slot_rebind((cast: (@: c.LmxArena) f\arena), wholder, index, @ value)
         if: status != c.LMX_WALK_OK
             f\payload: 0
             return: status
         ---
-        # Slice 274: a slot holding a Structure takes the Structure itself, as the native statement stores it and native code
-        # reads it; a low cell stays one, and so does a present null.
-        if: value_p\ref != 0 && lmx_walk_is_pointer_cell((cast: (@: c.LmxArena) f\arena), slot[0]) = 0
-            materialized: value_p\ref
-        else:
-            status: lmx_walk_value_materialize((cast: (@: c.LmxArena) f\arena), @ value, @ materialized)
-            if: status != c.LMX_WALK_OK
-                return: status
-            ---
-        ---
-        status: c.lmx_graph_ref_store_in((cast: (@: c.LmxArena) f\arena), wholder, index, materialized)
-        if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
-            return: status
-        if: status != 0
-            return: c.LMX_WALK_INVALID
         c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_SET || op = c.LMX_WALK_OP_SET_OF
@@ -6350,8 +6541,9 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             if: value_p\kind != c.LMX_WALK_VALUE_REFERENCE
                 return: c.LMX_WALK_INVALID
             ---
+            # The admission belongs to this statement, not to the publication that later rebinds the slot.
             if: work\kind = 3
-                status: c.lmx_implements_receive_data_field((cast: (@: c.LmxArena) f\arena), wholder, index, (cast: (@: c.Lmx) value_p\ref))
+                status: c.lmx_implements_receive_cell((cast: (@: c.LmxArena) f\arena), c.lmx_graph_cell_in((cast: (@: c.LmxArena) f\arena), wholder, index), value_p\ref)
                 if: status != c.LMX_WALK_OK
                     f\payload: 0
                     return: status

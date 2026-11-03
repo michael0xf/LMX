@@ -1,0 +1,19 @@
+# Probe 275: a root statement rebinds a named Structure to another layout; root and method read it.  Entry 7.
+First:
+    int: x 3
+end: First
+Second:
+    int: w 9
+    int: x 5
+end: Second
+fn: read () int
+    return: First\x
+end: read
+int: code 7
+First: Second
+if: First\x != 5
+    code: 81
+if: code = 7 && read() != 5
+    code: 82
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

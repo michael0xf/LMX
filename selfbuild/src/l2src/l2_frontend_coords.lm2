@@ -938,7 +938,7 @@ fn: lm_compiler_own_ctr (int: oi) const: @: char
     # procedure's occurrence.
     k: c.lm_compiler_m_file(own_mi_cell[0][oi])
     if: k >= 0 && part_ns_cell[0][k] >= 0 && own_mi_cell[0][oi] = ns_proc_cell[0][part_ns_cell[0][k]] && ns_parent_cell[0][part_ns_cell[0][k]] < 0 && ns_eternal_cell[0][part_ns_cell[0][k]] < 0
-        if: c.sprintf(ctr_buf_data, "lmx_arena_ref_struct(%s, %uU)", unit_ref_cell[0], (cast: (unsigned) (lm_compiler_ns_unit_slot(part_ns_cell[0][k])))) < 0
+        if: c.sprintf(ctr_buf_data, "lmx_walk_slot_struct(l2_program_arena, %s, %uU)", unit_ref_cell[0], (cast: (unsigned) (lm_compiler_ns_unit_slot(part_ns_cell[0][k])))) < 0
             return: (cast: (const: @: char) (unit_ref_cell[0]))
         return: (cast: (const: @: char) (ctr_buf_data))
     if: c.sprintf(ctr_buf_data, "lmx_arena_ref_struct(%s, %uU)", unit_ref_cell[0], (cast: (unsigned) lm_compiler_occ_slot(own_mi_cell[0][oi]))) < 0

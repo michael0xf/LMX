@@ -4470,20 +4470,35 @@ sub: lmx_implements_call_places_close (@: arena c.LmxArena; @: scope c.LmxCallPl
     ---
 end: lmx_implements_call_places_close
 
-# Receive a reached reference write into a physical field slot. Its
-# declaration belongs to the slot and survives earlier assignments there:
-# a reference to anything but a Structure does not fit it, the implicit `convert`.
-fn: lmx_implements_receive_cell (@: arena c.LmxArena; @: cell void; @: value void) int
-    if: arena = 0
+# The model a physical slot declares, whichever value stands there now (lmx_source_place_model_set): 0 for a slot that
+# declares none.  A declared layout with no model in this arena has no proof to give.
+fn: lmx_implements_cell_model (@: arena c.LmxArena; @: cell void; @@: out c.Lmx) int
+    if: arena = 0 || out = 0
         return: c.LMX_WALK_INVALID
-    if: cell = 0 || value = 0
+    out[0]: 0
+    if: cell = 0
         return: c.LMX_WALK_OK
     @: row c.LmxSourceName c.lmx_source_places(arena, cell)
     if: row = 0 || row\model_layout = 0
         return: c.LMX_WALK_OK
-    @: model c.Lmx lmx_implements_model_for_layout(arena, (cast: (@: void) row\model_layout))
-    if: model = 0
+    out[0]: lmx_implements_model_for_layout(arena, (cast: (@: void) row\model_layout))
+    if: out[0] = 0
         return: c.LMX_WALK_UNSUPPORTED
+    return: c.LMX_WALK_OK
+end: lmx_implements_cell_model
+
+# Receive a reached reference write into a physical field slot. Its
+# declaration belongs to the slot and survives earlier assignments there:
+# a reference to anything but a Structure does not fit it, the implicit `convert`.
+fn: lmx_implements_receive_cell (@: arena c.LmxArena; @: cell void; @: value void) int
+    @: model c.Lmx 0
+    if: arena = 0
+        return: c.LMX_WALK_INVALID
+    if: cell = 0 || value = 0
+        return: c.LMX_WALK_OK
+    int: known lmx_implements_cell_model(arena, cell, @ model)
+    if: known != c.LMX_WALK_OK || model = 0
+        return: known
     if: c.lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     int: answer c.LMX_IMPLEMENTS_UNKNOWN

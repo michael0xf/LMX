@@ -1,0 +1,78 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp137/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # The value standing by another layout is read at the declared position: no map on the step.
+    'nomap': ('lmx_walk_values.lm2', '''    model: (cast: (@: c.Lmx) holder\\model)
+    if: model = 0 || holder\\ref = 0 || holder\\ref = (cast: (@: void) model)
+        return: c.LMX_WALK_OK
+    if: last != 0
+''', '''    model: (cast: (@: c.Lmx) holder\\model)
+    if: model != 0 || model = 0 || holder\\ref = 0 || holder\\ref = (cast: (@: void) model)
+        return: c.LMX_WALK_OK
+    if: last != 0
+'''),
+    # Any Structure stands as the node itself: no low cell, so no model reaches the reader.
+    'direct': ('lmx_walk_values.lm2', '''        if: model = 0 || value\\ref = (cast: (@: void) model) || (held_layout != 0 && held_layout = c.lmx_implements_layout(arena, model))
+            status: c.lmx_code_write_admit''', '''        if: model != 0 || model = 0 || value\\ref = (cast: (@: void) model) || (held_layout != 0 && held_layout = c.lmx_implements_layout(arena, model))
+            status: c.lmx_code_write_admit'''),
+    # The rebinding does not admit the value to the slot's model.
+    'noadmit': ('lmx_walk_values.lm2', '''        status: c.lmx_implements_receive_cell(arena, cell, value\\ref)
+        if: status != c.LMX_WALK_OK
+            return: status
+        status: c.lmx_implements_cell_model(arena, cell, @ model)
+''', '''        status: c.lmx_implements_cell_model(arena, cell, @ model)
+'''),
+    # A pair first reached below a mapped holder is not admitted.
+    'noreach': ('lmx_walk_values.lm2', '''    if: answer = c.LMX_IMPLEMENTS_UNKNOWN
+        status: c.lmx_implements_admit_receiving_templates(arena, (cast: (@: c.Lmx) holder\\ref), model, 0, 0U, 0, @ answer)
+''', '''    if: answer = c.LMX_IMPLEMENTS_UNKNOWN && last > 9
+        status: c.lmx_implements_admit_receiving_templates(arena, (cast: (@: c.Lmx) holder\\ref), model, 0, 0U, 0, @ answer)
+'''),
+    # The walker's field below a mapped holder keeps the slot's own context.
+    'nowalkinherit': ('lmx_walk_values.lm2', '''        if: status = c.LMX_WALK_OK && place_model != 0
+            out\\model: place_model
+''', '''        if: status = c.LMX_WALK_OK && place_model != 0 && closed > 9
+            out\\model: place_model
+'''),
+    # The walker reads a holder at the declared position.
+    'nowalkmap': ('lmx_walk_values.lm2', '''            if: (op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_PUT_OF || op = c.LMX_WALK_OP_SET_OF) && holder_p\\model != 0
+''', '''            if: (op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_PUT_OF || op = c.LMX_WALK_OP_SET_OF) && holder_p\\model != 0 && closed > 9
+'''),
+    # A native path's field below a mapped holder keeps the slot's own context.
+    'noinherit': ('l2_frontend_lower.lm2', '''                if: place_holder >= 0 && c.fprintf(out_cell[0], "%sif: l2_cv%d.model != 0''', '''                if: place_holder >= 9999 && c.fprintf(out_cell[0], "%sif: l2_cv%d.model != 0'''),
+    # A named root's slot declares nothing.
+    'norow': ('l2_frontend_core.lm2', '''                    if: c.lm_compiler_layout_token(ni, token) != 0 || c.fprintf(out_cell[0], "        if: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) %s), %s) != 0\\n            return: 1\\n", value, token) < 0
+''', '''                    if: c.lm_compiler_layout_token(ni, token) != 0
+'''),
+    # A named root's slot has no place name.
+    'noname': ('l2_frontend_core.lm2', '''                    if: c.sprintf(value, "lmx_arena_ref_cell(l2_entry_unit, %uU)", (cast: (unsigned) c.lm_compiler_ns_unit_slot(ni))) < 0 || c.lm_compiler_emit_source_name(value, ns_name_cell[0][ni], "        ", "return: 1", 0) != 0
+''', '''                    if: c.sprintf(value, "lmx_arena_ref_cell(l2_entry_unit, %uU)", (cast: (unsigned) c.lm_compiler_ns_unit_slot(ni))) < 0
+'''),
+    # A model read through a low cell takes the value standing there.
+    'modelvalue': ('lmx_walk_values.lm2', '''        if: context != 0 && context\\present != 0 && context\\model != 0
+            return: (cast: (@: c.Lmx) context\\model)
+''', '''        if: context != 0 && context\\present != 0 && context\\model != 0 && index > 99999U
+            return: (cast: (@: c.Lmx) context\\model)
+'''),
+    # The walker's model operand takes the value standing in the place.
+    'walkmodel': ('lmx_walk_values.lm2', '''    if: mvp\\model != 0
+        status: lmx_walk_node(f, operand)
+''', '''    if: mvp\\model != 0 && closed > 9
+        status: lmx_walk_node(f, operand)
+'''),
+    # A present null written by name empties the slot.
+    'nullslot': ('lmx_walk_values.lm2', '''    if: raw = 0
+        status: lmx_walk_value_ref(current_p, (cast: (int) place\\type), 0)
+''', '''    if: raw = 0 && index > 99999U
+        status: lmx_walk_value_ref(current_p, (cast: (int) place\\type), 0)
+'''),
+}
+name, a, b = TABLE[which]
+with open(R + name, 'rb') as f:
+    d = f.read().decode('utf-8')
+assert d.count(a) == 1, (which, d.count(a))
+d = d.replace(a, b)
+with open(R + name, 'wb') as f:
+    f.write(d.encode('utf-8'))
+print('mutated', which, name)

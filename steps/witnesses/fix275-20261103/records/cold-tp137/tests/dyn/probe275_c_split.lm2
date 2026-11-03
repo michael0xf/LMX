@@ -1,0 +1,18 @@
+# Probe 275: a split call writes a Structure of another layout into its data's slot.  Entry 7.
+S1:
+    T:
+        int: extra 7
+        int: v 1
+    end: T
+end: S1
+D:
+    T:
+        int: v 0
+    end: T
+end: D
+int: code 7
+call: S1 D
+if: D\T\v != 1
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

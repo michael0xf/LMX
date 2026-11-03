@@ -1,0 +1,29 @@
+# Probe 275 h7: a split call at the root into a rebound Structure: its place is found in the referent, and a Structure of a third layout lands there.
+First:
+    T:
+        int: v 3
+    end: T
+end: First
+Second:
+    int: w 9
+    T:
+        int: v 5
+    end: T
+end: Second
+S1:
+    T:
+        int: extra 7
+        int: v 1
+    end: T
+end: S1
+int: code 7
+First: Second
+call: S1 First
+if: First\T\v != 1
+    code: 81
+if: code = 7 && Second\T\v != 1
+    code: 82
+if: code = 7 && Second\w != 9
+    code: 83
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

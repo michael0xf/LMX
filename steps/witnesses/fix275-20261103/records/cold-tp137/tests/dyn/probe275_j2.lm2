@@ -1,0 +1,32 @@
+# Probe 275 j2: a merge copy of a holder whose slot holds another layout reads the copied value through the map.  Entry 7.
+Other:
+    int: z 9
+    int: y 7
+end: Other
+Box:
+    kid:
+        int: y 3
+    end: kid
+end: Box
+int: quote 11
+sub: put_kid ()
+    quote\kid: Other
+end: put_kid
+fn: prepare () int
+    @: quote Box Box
+    put_kid()
+    return: 0
+end: prepare
+int: code prepare()
+Copy: merge: Box
+if: Copy\kid\y != 7
+    code: 81
+Copy\kid\y: 5
+if: code = 0 && Copy\kid\y != 5
+    code: 82
+if: code = 0 && Box\kid\y != 7
+    code: 83
+if: code = 0
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

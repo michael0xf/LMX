@@ -1,0 +1,61 @@
+# Probe 275 s4.
+Far:
+    int: z 9
+    b:
+        int: q 1
+        int: y 7
+        int: u 4
+    end: b
+end: Far
+Near:
+    a:
+        b:
+            int: u 2
+            int: y 3
+        end: b
+    end: a
+end: Near
+Other:
+    int: z 9
+    int: y 7
+end: Other
+Box:
+    kid:
+        int: k 1
+        int: y 3
+    end: kid
+end: Box
+Third:
+    int: y 5
+    int: k 6
+end: Third
+int: quote 11
+sub: put_far ()
+    quote\a: Far
+end: put_far
+sub: put_third ()
+    quote\kid: Third
+end: put_third
+First:
+    int: a 1
+    int: x 3
+end: First
+Second:
+    int: w 9
+    int: x 5
+    int: a 2
+end: Second
+fn: root_address () int
+    @: p int @ (First\x)
+    \p: 8
+    return: Second\x
+end: root_address
+int: code 7
+First: Second
+fn: m () int
+    if: root_address() != 8 || Second\w != 9 || Second\a != 2
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -6539,10 +6539,16 @@ fn: lm_compiler_source_layouts_emit (int: kind; int: index) int
     @@: source_containers_cell c.L2SourceContainer (cast: (@@: c.L2SourceContainer) (@ c.l2_source_containers))
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
     @@: ns_local_cell int (cast: (@@: int) (@ c.l2_ns_local))
+    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
+    @@@: ns_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_ns_name))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: row c.L2SourceContainer source_containers_cell[0]
     int: ni
     c.L2FrontendScratchChar64: value_storage
     @: value char (cast: (@: char) value_storage\buffer)
+    c.L2FrontendScratchChar128: token_storage
+    @: token char (cast: (@: char) token_storage\buffer)
     while: row != 0
         if: row\view_kind = kind && (index < 0 || row\view_index = index) && row\inert = 0 && row\root != 0
             ni: c.lm_compiler_m_nsof((cast: (int) (row\source_mi)))
@@ -6560,6 +6566,16 @@ fn: lm_compiler_source_layouts_emit (int: kind; int: index) int
             if: ns_local_cell[0][ni] < 0 && c.lm_compiler_ns_in_body(ni) = 0
                 if: c.sprintf(value, "l2_nsp[%d]", ni) < 0 || lm_compiler_emit_constructed_layout(ni, value, value, "        ") != 0
                     return: (cast: (int) (1))
+                ---
+                # Slice 275: a named root's slot is a place like a nested field's (lm_compiler_emit_ns_names): it has the name data of
+                # `call: code node` looks it up by, and it declares the layout that a value standing there later is admitted to and
+                # read through (lmx_walk_slot_bind).
+                if: ns_parent_cell[0][ni] < 0 && ns_eternal_cell[0][ni] < 0
+                    if: c.sprintf(value, "lmx_arena_ref_cell(l2_entry_unit, %uU)", (cast: (unsigned) c.lm_compiler_ns_unit_slot(ni))) < 0 || c.lm_compiler_emit_source_name(value, ns_name_cell[0][ni], "        ", "return: 1", 0) != 0
+                        return: 1
+                    if: c.lm_compiler_layout_token(ni, token) != 0 || c.fprintf(out_cell[0], "        if: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) %s), %s) != 0\n            return: 1\n", value, token) < 0
+                        return: 1
+                    ---
                 ---
             ---
             ni: ni + 1
@@ -7997,7 +8013,7 @@ fn: lm_compiler_emit_ns_ref (int: ref; const: (@: parent char); int: slot; const
         return: (cast: (int) (1))
     if: live = 0 && c.fprintf(out_cell[0], "%sl2_href%d[0U]: l2_nsp[%d]\n", ind, id, ref) < 0
         return: (cast: (int) (1))
-    if: live != 0 && c.fprintf(out_cell[0], "%sl2_href%d[0U]: lmx_arena_ref_struct(l2_program_unit, %uU)\n", ind, id, (cast: (unsigned) at)) < 0
+    if: live != 0 && c.fprintf(out_cell[0], "%sl2_href%d[0U]: lmx_walk_slot_struct(l2_program_arena, l2_program_unit, %uU)\n", ind, id, (cast: (unsigned) at)) < 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sl2_hbody%d: 0\n%sl2_hstat%d: lmx_merge_owned(l2_href%d, 1U, l2_hbody%d, l2_program_arena, l2_program_arena, 0, 0U, @ l2_hres%d)\n%sif: l2_hstat%d != 0 || l2_hres%d = 0\n", ind, id, ind, id, id, id, id, ind, id, id) < 0
         return: (cast: (int) (1))

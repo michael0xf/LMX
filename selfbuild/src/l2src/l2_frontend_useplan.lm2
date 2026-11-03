@@ -722,7 +722,7 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
                 # Preserve protection before allocating its physical cell.
                 if: lm_compiler_emit_own_write_guard(work_mi_cell[0], k, deep) != 0 || c.lm_compiler_own_slot_at(k, graph_slot) != 0
                     return: 1
-                if: c.fprintf(out_cell[0], "%s@: void l2_published_cell 0\n%sint: l2_publish_status lmx_walk_value_materialize(l2_program_arena, @ %s, @ l2_published_cell)\n%sif: l2_publish_status != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_publish_status)\n%s    return: 0\n%s---\n%sif: lmx_arena_ref_store(l2_program_arena, %s, l2_published_cell) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", deep, deep, cwv_name\data, deep, deep, deep, deep, deep, graph_slot, deep, k, deep, deep) < 0
+                if: c.fprintf(out_cell[0], "%sint: l2_publish_status lmx_walk_slot_rebind(l2_program_arena, %s, @ %s)\n%sif: l2_publish_status >= c.LMX_WALK_THROWN\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n%sif: l2_publish_status != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_publish_status)\n%s    return: 0\n%s---\n", deep, graph_slot, cwv_name\data, deep, deep, k, deep, deep, deep, deep, deep, deep) < 0
                     return: 1
                 ---
             else:
@@ -742,7 +742,10 @@ end: lm_compiler_emit_publish
 fn: lm_compiler_own_cell_store_context (int: mi; int: k0; const: (@: ind char); const: (@: val char); const: (@: context char)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     int: k c.lm_compiler_split_rep(k0)
+    int: t
+    @: inner char 0
     const: (@: helper char 0)
     c.L2FrontendScratchChar256: at_storage
     @: at char (cast: (@: char) at_storage\buffer)
@@ -758,7 +761,18 @@ fn: lm_compiler_own_cell_store_context (int: mi; int: k0; const: (@: ind char); 
     if: c.lm_compiler_own_is_slot(k) != 0
         if: c.lm_compiler_own_slot_at(k, at) != 0
             return: (cast: (int) (1))
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sif: lmx_arena_ref_store(l2_program_arena, %s, (cast: (@: void) (%s))) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: own field %d store failed\\n\")\n%s    c.abort()\n%s---\n", ind, at, val, ind, k, ind, ind) < 0))))
+        # Slice 275: the one rebinding of a slot (lmx_walk_slot_rebind): its refusal is the statement's implicit throw, before anything changes.
+        if: lm_compiler_bump_ind(ind, @ inner) != 0
+            return: 1
+        t: tn_cell[0]
+        tn_cell[0]: t + 1
+        if: c.fprintf(out_cell[0], "%sint: l2_srb%d lmx_walk_slot_store_ref(l2_program_arena, %s, (cast: (@: void) (%s)), %s)\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t, at, val, context, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
+            return: 1
+        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "convert", inner) != 0
+            return: 1
+        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER\n", ind, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "interpreter", inner) != 0
+            return: 1
+        return: (cast: (int) (c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_srb%d)\n%s    return: 0\n%s---\n", ind, ind, t, ind, t, ind, ind) < 0))
     ---
     helper: c.lm_compiler_own_store_helper(own_ty_cell[0][k])
     if: helper = 0
@@ -891,11 +905,11 @@ fn: lm_compiler_emit_live_code_place (@: place c.L2GraphPlace; const: (@: ind ch
     if: c.fprintf(out_cell[0], "%s@: Lmx l2_cp%d 0\n", ind, here) < 0
         return: (cast: (int) (1))
     if: parent_tmp < 0
-        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_walk_code_part_in(l2_call_arena, l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU))\n", ind, here, place\child) < 0
+        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_walk_slot_struct(l2_call_arena, l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU))\n", ind, here, place\child) < 0
             return: (cast: (int) (1))
         ---
     else:
-        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_walk_code_part_in(l2_call_arena, l2_cp%d, %zuU)\n", ind, here, parent_tmp, place\child) < 0
+        if: c.fprintf(out_cell[0], "%sl2_cp%d: lmx_walk_slot_struct(l2_call_arena, l2_cp%d, %zuU)\n", ind, here, parent_tmp, place\child) < 0
             return: (cast: (int) (1))
         ---
     ---
@@ -937,7 +951,7 @@ fn: lm_compiler_emit_graph_field_value (int: own; const: (@: ind char); @: dest 
     ---
     if: c.lm_compiler_emit_graph_holder((cast: (@: c.L2GraphPlace) (field\holder)), nm, ind) != 0
         return: (cast: (int) (1))
-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%s%s: lmx_arena_ref_struct(%s, %zuU)\n", ind, nm, nm, field\child) < 0))))
+    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%s%s: lmx_walk_slot_model(l2_program_arena, %s, %zuU)\n", ind, nm, nm, field\child) < 0))))
 end: lm_compiler_emit_graph_field_value
 
 # Original: l2src/l2trans.lm1:17134
@@ -1386,7 +1400,7 @@ fn: lm_compiler_model_child (int: ni; @: dest c.L2Tx) int
     @: child c.L2Tx c.lm_compiler_tx_local(@ text, local, 128U)
     if: slot < 0 || dest = 0 || child = 0 || c.snprintf(suffix, 32U, ", %uU)", (cast: (unsigned) slot)) < 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_tx_join(child, "lmx_arena_ref_struct(", (cast: (const: @: char) (dest\data)), suffix, 0, 0) != 0
+    if: c.lm_compiler_tx_join(child, "lmx_walk_slot_model(l2_program_arena, ", (cast: (const: @: char) (dest\data)), suffix, 0, 0) != 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_tx_set(dest, (cast: (const: @: char) (child\data)))))
 end: lm_compiler_model_child
@@ -1413,9 +1427,43 @@ fn: lm_compiler_type_inst (int: ni; @: dest c.L2Tx) int
     if: ns_eternal_cell[0][ni] >= 0 && c.snprintf(nm, 32U, ", %uU)", (cast: (unsigned) (c.lm_compiler_ebr_unit_slot(ns_eternal_cell[0][ni])))) < 0
         return: (cast: (int) (1))
     if: recv_unit_cell[0] != 0
-        return: (cast: (int) (c.lm_compiler_tx_join(dest, "lmx_arena_ref_struct(", recv_unit_cell[0], nm, 0, 0)))
-    return: (cast: (int) (c.lm_compiler_tx_join(dest, "lmx_arena_ref_struct(", unit_ref_cell[0], nm, 0, 0)))
+        return: (cast: (int) (c.lm_compiler_tx_join(dest, "lmx_walk_slot_model(l2_program_arena, ", recv_unit_cell[0], nm, 0, 0)))
+    return: (cast: (int) (c.lm_compiler_tx_join(dest, "lmx_walk_slot_model(l2_program_arena, ", unit_ref_cell[0], nm, 0, 0)))
 end: lm_compiler_type_inst
+
+# Slice 275: a declared Structure taken as a value (`ptr: Model`): what its slot holds now, a low cell included (its reader decodes
+# the record), where lm_compiler_type_inst gives the requirement the slot declares.
+fn: lm_compiler_type_value (int: ni; @: dest c.L2Tx) int
+    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
+    const: (@@: recv_unit_cell char (cast: (const: @@: char) (@ c.l2_recv_unit)))
+    const: (@@: unit_ref_cell char (cast: (const: @@: char) (@ c.l2_unit_ref)))
+    const: (@: unit char unit_ref_cell[0])
+    c.L2FrontendScratchChar32: nm_storage
+    @: nm char (cast: (@: char) nm_storage\buffer)
+    c.L2FrontendScratchChar128: local_storage
+    c.L2Tx: text
+    @: parent c.L2Tx c.lm_compiler_tx_local(@ text, (cast: (@: char) local_storage\buffer), 128U)
+    int: slot 0
+    if: lm_compiler_type_inst(ni, dest) != 0
+        return: 1
+    if: ns_parent_cell[0][ni] >= 0
+        slot: c.lm_compiler_ns_field_in_parent(ni)
+        if: slot < 0 || lm_compiler_type_inst(ns_parent_cell[0][ni], parent) != 0
+            return: 1
+        unit: (cast: (const: @: char) (parent\data))
+    else:
+        if: ns_eternal_cell[0][ni] >= 0
+            return: 0
+        slot: c.lm_compiler_ns_unit_slot(ni)
+        if: recv_unit_cell[0] != 0
+            unit: recv_unit_cell[0]
+        ---
+    ---
+    if: c.snprintf(nm, 32U, ", %uU)", (cast: (unsigned) slot)) < 0
+        return: 1
+    return: c.lm_compiler_tx_join(dest, "lmx_arena_ref_value(", unit, nm, 0, 0)
+end: lm_compiler_type_value
 
 # Original: l2src/l2trans.lm1:18222
 fn: lm_compiler_model_root_own (int: ni) int
@@ -1476,7 +1524,11 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
         if: ni < 0 || ni >= ns_n_cell[0]
             return: 1
         if: ns_local_cell[0][ni] < 0
-            status: lm_compiler_type_inst(ni, dest)
+            if: full_value != 0
+                status: lm_compiler_type_value(ni, dest)
+            else:
+                status: lm_compiler_type_inst(ni, dest)
+            ---
         else:
             if: recv_unit_cell[0] != 0
                 oi: lm_compiler_model_root_own(ni)

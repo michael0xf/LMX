@@ -1,0 +1,49 @@
+# Probe 275 f5: where a deep rebinding is refused, at the write (91) or at the read (92).
+Inner2:
+    int: q 1
+    int: y 7
+end: Inner2
+Other:
+    int: z 9
+    b:
+        int: q 1
+        int: y 7
+    end: b
+end: Other
+Box:
+    a:
+        b:
+            int: y 3
+        end: b
+    end: a
+end: Box
+int: quote 11
+sub: put_a ()
+    quote\a: Other
+end: put_a
+fn: wr () int
+    ---
+        put_a()
+        return: 7
+        catch: implements ()
+            return: 91
+    ---
+end: wr
+fn: rd () int
+    ---
+        if: Box\a\b\y != 7
+            return: 83
+        return: 7
+        catch: implements ()
+            return: 92
+    ---
+end: rd
+fn: m () int
+    @: quote Box Box
+    int: w wr()
+    if: w != 7
+        return: w
+    return: rd()
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

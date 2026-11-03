@@ -1,0 +1,39 @@
+# Probe 275 n1: a present null written by name into a nested slot; following it is the implicit interpreter.  Entry 7.
+Other:
+    int: z 9
+    int: y 7
+end: Other
+Box:
+    kid:
+        int: y 3
+    end: kid
+end: Box
+int: quote 11
+sub: put_null ()
+    quote\kid: 0
+end: put_null
+sub: put_kid ()
+    quote\kid: Other
+end: put_kid
+fn: follow () int
+    ---
+        return: Box\kid\y
+        catch: interpreter ()
+            return: 93
+    ---
+end: follow
+fn: m () int
+    @: quote Box Box
+    put_null()
+    if: follow() != 93
+        return: 81
+    put_kid()
+    if: follow() != 7
+        return: 82
+    put_null()
+    if: follow() != 93
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

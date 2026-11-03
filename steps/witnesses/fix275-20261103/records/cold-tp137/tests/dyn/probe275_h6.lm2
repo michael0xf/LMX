@@ -1,0 +1,13 @@
+# Probe 275 h6: the same split call at the root.
+First:
+    int: x 3
+end: First
+S1:
+    x: 6
+end: S1
+int: code 7
+call: S1 First
+if: First\x != 6
+    code: 81
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

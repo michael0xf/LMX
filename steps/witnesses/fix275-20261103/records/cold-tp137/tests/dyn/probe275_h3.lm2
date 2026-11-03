@@ -1,0 +1,32 @@
+# Probe 275 h3.
+First:
+    int: x 3
+end: First
+Second:
+    int: w 9
+    int: x 5
+end: Second
+S1:
+    x: 6
+end: S1
+fn: take (@: p First) int
+    return: p\x
+end: take
+fn: m () int
+    ---
+        if: First\x != 5
+            return: 83
+        return: 7
+        catch: implements ()
+            return: 91
+        catch: convert ()
+            return: 92
+        catch: interpreter ()
+            return: 93
+    ---
+end: m
+int: code 7
+First: Second
+code: m()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

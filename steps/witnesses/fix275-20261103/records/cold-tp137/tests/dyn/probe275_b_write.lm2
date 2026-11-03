@@ -1,0 +1,28 @@
+# Probe 275: a typed write and address through a slot rebound to another layout.  Entry 7.
+Other:
+    int: z 9
+    int: y 7
+end: Other
+Box:
+    kid:
+        int: y 3
+    end: kid
+end: Box
+int: quote 11
+sub: put_kid ()
+    quote\kid: Other
+end: put_kid
+fn: m () int
+    @: quote Box Box
+    put_kid()
+    Box\kid\y: 5
+    if: Other\y != 5 || Other\z != 9
+        return: 81
+    @: p int @ (Box\kid\y)
+    \p: 6
+    if: Other\y != 6 || Other\z != 9
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

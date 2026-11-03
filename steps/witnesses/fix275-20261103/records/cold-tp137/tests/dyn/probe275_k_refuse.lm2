@@ -1,0 +1,43 @@
+# Probe 275 k: a Structure lacking the declared field, written into a slot with a model.  The refusal is the statement's `implements`, in the
+# order of the statements, at the root and in a split call's own assignment; nothing is written.  Entry 7.
+First:
+    int: x 3
+end: First
+Bad:
+    int: nothing 1
+end: Bad
+S1:
+    T:
+        int: v 1
+    end: T
+    T: Bad
+end: S1
+D:
+    T:
+        int: v 0
+    end: T
+end: D
+fn: split () int
+    ---
+        call: S1 D
+        return: 81
+        catch: implements ()
+            if: D\T\v != 1 && D\T\v != 0
+                return: 82
+            return: 7
+    ---
+end: split
+int: code 7
+int: caught 0
+---
+    First: Bad
+    code: 83
+    catch: implements ()
+        caught: 1
+---
+if: code = 7 && (caught != 1 || First\x != 3)
+    code: 84
+if: code = 7
+    code: split()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -11153,3 +11153,20 @@ replay3630 не потерял выходов и не дал новых диаг
 схемы остаются открытыми. Старые runtime-отказы RR2 не считаются новыми
 регрессиями: native L1/C одного из них совпали с full04 raw-в-raw.
 [Причина и замороженные свидетельства](var-first-slot-20261019.md).
+
+### IMPLEMENTS-REFERENCE-FIELD-NESTED-MODEL — 2026-11-03, Opus (срез 275), OPEN
+
+Кандидат с полем-ссылкой против вложенной модели получает `implements` при записи: модель `a` с вложенной `b`, кандидат с `b: Inner2` или
+`@: b Inner2 Inner2`, у `Inner2` есть требуемое поле. `lmx_implements_graph_holding` считает типизированную указательную ячейку не держателем Structure;
+`lmx_implements_low_reference_type` признаёт только LMX и DESC. Книга разрешает сужающий поиск на любую нужную глубину, поэтому это дефект допуска.
+[Свидетели и receipt](witnesses/fix275-20261103/notes.md).
+
+### SPLIT-FREE-PLACE-TYPE — 2026-11-03, Opus (срез 275), OPEN
+
+`S1: x: 6`, затем `call: S1 First` с `int: x` в данных: неявный `call`. Место свободной own в таблице `l2_cpt` имеет тип LMX, а `lmx_implements_call_field` требует у данных ссылку.
+На кортеже 274 так же. [Свидетель](witnesses/fix275-20261103/records/cold-tp137/tests/dyn/probe275_h6.lm2).
+
+### ROOT-TYPED-NULL-ASSIGNMENT — 2026-11-03, Opus (срез 275), OPEN
+
+`First: @: First: 0` у уже объявленной именованной Structure: `assignment value has unknown type` при трансляции. Книга задаёт эту форму для ссылочного значения места.
+[Свидетель](witnesses/fix275-20261103/records/cold-tp137/tests/dyn/probe275_n2.lm2).

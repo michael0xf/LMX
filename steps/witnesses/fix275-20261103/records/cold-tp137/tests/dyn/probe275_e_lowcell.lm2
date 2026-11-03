@@ -1,0 +1,27 @@
+# Probe 275: a split call with the root as data publishes into a root slot; direct readers follow.  Entry 7.
+S1:
+    T:
+        int: v 2
+    end: T
+end: S1
+T:
+    int: v 1
+end: T
+fn: read () int
+    return: T\v
+end: read
+fn: via_node () int
+    return: node\T\v
+end: via_node
+fn: m () int
+    call: S1 node
+    if: T\v != 2
+        return: 81
+    if: read() != 2
+        return: 82
+    if: via_node() != 2
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,25 @@
+# Probe 275 s2: an Array of Structure references, an element rebound to another layout, read through its map.  Entry 7.
+Model:
+    int: a 1
+    int: y 3
+end: Model
+Other:
+    int: z 9
+    int: a 2
+    int: q 8
+    int: y 7
+end: Other
+Holder:
+    []: @(Model) items 2
+end: Holder
+fn: m () int
+    Holder\items[0U]: Other
+    if: Holder\items[0U]\y != 7
+        return: 81
+    Holder\items[0U]\y: 6
+    if: Other\y != 6
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

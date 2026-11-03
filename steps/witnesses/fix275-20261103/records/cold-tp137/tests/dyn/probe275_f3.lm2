@@ -1,0 +1,34 @@
+# Probe 275 f3: an Array field behind a rebound slot, of the same length and another position.
+Other:
+    int: z 9
+    []: int items 3
+end: Other
+Box:
+    a:
+        []: int items 3
+    end: a
+end: Box
+int: quote 11
+sub: put_a ()
+    quote\a: Other
+end: put_a
+fn: m () int
+    @: quote Box Box
+    ---
+        put_a()
+        if: length(Box\a\items) != 3U
+            return: 81
+        Box\a\items[1U]: 4
+        if: Other\items[1U] != 4
+            return: 82
+        return: 7
+        catch: implements ()
+            return: 91
+        catch: convert ()
+            return: 92
+        catch: interpreter ()
+            return: 93
+    ---
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

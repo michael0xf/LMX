@@ -260,3 +260,14 @@ metadata-only. A write of code now walks up twice (admission, then the drop) and
 word above it costs one scan of its code. A whole-pipeline measurement, not a
 controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix274-20261103/notes.md).
+
+## Slice275 / boot137b (Opus, 2026-11-03)
+
+Whole quick 1094.96 s: 20:52:09.0295527Z–21:10:23.9890957Z, both generations
+smoke 9/0. G2 focus 39/0, 304.29 s: 21:11:03.5190411Z–21:16:07.8052453Z.
+Source 191/FBC3FA4E; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A typed path now reads a named root as a value (one range lookup) and
+checks a field of the loaded record per inline step; a rebinding looks up its slot's
+model row. boot137a took 1019 s on nearly the same bytes, so the 76 s spread is not
+attributable to the change: a whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix275-20261103/notes.md).

@@ -1,0 +1,29 @@
+# Probe 275 r1: which read of a rebound root differs when the declared field is not the first one.  Entry 7.
+First:
+    int: a 1
+    int: x 3
+end: First
+Second:
+    int: w 9
+    int: x 5
+    int: a 2
+end: Second
+fn: take (@: p First) int
+    return: p\x
+end: take
+fn: m () int
+    if: First\x != 5
+        return: 81
+    int: t take(First)
+    if: t != 5
+        return: 100 + t
+    @: q First First
+    if: q\x != 5
+        return: 83
+    return: 7
+end: m
+int: code 7
+First: Second
+code: m()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

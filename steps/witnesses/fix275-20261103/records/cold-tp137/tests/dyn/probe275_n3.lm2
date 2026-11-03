@@ -1,0 +1,37 @@
+# Probe 275 n3: a second rebinding of a slot already standing by another layout: the cell is reused, the map is the new pair's.  Entry 7.
+Other:
+    int: z 9
+    int: y 7
+end: Other
+Third:
+    int: p 1
+    int: q 2
+    int: y 9
+end: Third
+Box:
+    kid:
+        int: y 3
+    end: kid
+end: Box
+int: quote 11
+sub: put_kid ()
+    quote\kid: Other
+end: put_kid
+sub: put_third ()
+    quote\kid: Third
+end: put_third
+fn: m () int
+    @: quote Box Box
+    put_kid()
+    if: Box\kid\y != 7
+        return: 81
+    put_third()
+    if: Box\kid\y != 9
+        return: 82
+    Box\kid\y: 4
+    if: Third\y != 4 || Other\y != 7 || Third\p != 1
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

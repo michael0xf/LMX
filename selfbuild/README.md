@@ -6,30 +6,31 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 170 inputs (65 source files, 34 tools and 71 tests).
-`inputs.list` names them and `inputs.sha256` binds each file's bytes.
+The selected package contains 173 inputs (65 source files, 34 tools and 74 tests).
+Slice 263 changed eight of the 170 files in slice 262 and added three fixtures.
+The unary `call: code` evaluates the operand once. At the reached call the kernel
+checks the selected body's declared throws and prepares its own inputs. An ordinary
+named Structure carries its free input names on the physical occurrence, including
+copies. Both executors use the same admission before entering the body.
 
-Slice 262 changes how calls supply free names. Each method collects its own free
-reads. A forwarder receives a hidden input only when it also uses that name.
-For a held call, the selected occurrence's header determines how many input cells
-to prepare. Both executors use the program's numeric converter or the model's
-receiving operation when a typed capture requires admission.
-[Implementation, fixtures and build records](../steps/witnesses/fix262-20261102/notes.md).
-
-The `boot124a` quick bootstrap took 798.37 seconds. G1 and G2 each passed
-all nine smoke rows. The G2 tuple passed all 18 focused rows. The previous
-package was [slice 261](../steps/witnesses/fix261-20261102/notes.md), with 167
-inputs and manifest `CB155E7E…`. Slice 262 changed 11 of those files and added
-three fixtures for reached entry, held numeric conversion and held model admission.
+The `boot125a` quick bootstrap took 807.96 seconds. G1 and G2 passed nine
+smoke rows each, and the resulting G2 tools passed all 21 focused rows. The
+same call site returned 3 and then 9 after selecting a body with different
+free names. The explicit two-operand call still uses M2 and layout tables.
+[Sources, tests and build records](../steps/witnesses/fix263-20261103/notes.md).
 
 | Selected artifact | SHA-256 |
 | --- | --- |
-| Input list | `3AB4B3C59402A3E237DC296960290B64746A8D3B09BF8D309F71BE3847AE6997` |
-| Input manifest | `A148F03F4FBC39FC7D5964A41569053855070D29BFF826E3E60E43D69B80004C` |
-| Working G2 tool | `62DF51CF4749013AF111D1916C24419493AD0582AA5C20B3FF18DD7B003D2D3F` |
-| G2 frontend | `1D77DC7F42B8DD17A327FC62F3C07A85AF79E94345F460032FDDEFA9A2AD70B3` |
-| G2 runtime | `701FD14C5B6687F0735166B90706D91BC0925DD1742CAF9F38AF3F86F6BB1FDE` |
-| G2 observation runtime | `ABC17D42240472AFC6D28294580C8755F268054688B28803DFD9276CF7478044` |
+| Input list | `41E70A3EE8717678FA0A45C133166639ED116D2302F4AECC317EF69B96BCC7EF` |
+| Input manifest | `48951CA277B822FF35997A07D33AA72D44660044276DE5A0A9B563A4316E6EC2` |
+| Working G2 tool | `9E5798D8BD55E57A89242FDAD0624C2AF9BDF5CE27396624A79F72DCEA0766EA` |
+| G2 frontend | `567EDCE7D75B6C8A79EA245640FDA2D7CDA78E11DD5D2148E60B96CFF14AE7A2` |
+| G2 runtime | `A05DB426EECB50A079615944DCC23363B57438C9562AB194F721ED0DD26C68AC` |
+| G2 observation runtime | `2EC4A637D0B7B6BF4523C7899557C4677D8B05BFDCFC91B4901D31967A271E33` |
+
+The preceding packages were [slice 262](../steps/witnesses/fix262-20261102/notes.md)
+(170 inputs, manifest `A148F03F…`) and [slice 261](../steps/witnesses/fix261-20261102/notes.md)
+(167 inputs, manifest `CB155E7E…`).
 
 The previous packages: boot122a is slice260 (manifest `8F34D77F…`; 6 files
 over boot121a and one new fixture); boot121a is slice259 (manifest `BBCCB259…`; 6 files

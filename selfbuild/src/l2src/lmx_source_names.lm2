@@ -18,7 +18,7 @@ include: "<string.h>"
 
 # Attach can join several pools of the same service type. Lookup/retirement
 # visits their ordinary inventory; there is no owner-global shadow registry.
-fn: lmx_source_name_local (@: arena c.LmxArena; @: key void) @: c.LmxSourceName
+fn: lmx_source_name_local (@: arena c.LmxArena; @: key void; size_t: port) @: c.LmxSourceName
     @: pool c.LmxPool 0
     @: chunk c.LmxChunk 0
     @: rows c.LmxSourceName 0
@@ -38,7 +38,7 @@ fn: lmx_source_name_local (@: arena c.LmxArena; @: key void) @: c.LmxSourceName
                     i: 0U
                     while: i < n
                         row: rows + i
-                        if: row\key = key
+                        if: row\key = key && row\port = port
                             return: row
                         i: i + 1U
                     ---
@@ -55,29 +55,39 @@ end: lmx_source_name_local
 # inventories, including a foreign home. Sealing a key alone does not
 # make its owner's still-mutable metadata inventory concurrent-readable.
 fn: lmx_source_name_get (@: arena c.LmxArena; @: key void) @: c.VoidArray
+    return: lmx_source_name_get_at(arena, key, 0U)
+end: lmx_source_name_get
+
+# Port zero names the physical occurrence. Positive ports name the
+# ordinary Structure's own free inputs in declaration order.
+fn: lmx_source_name_get_at (@: arena c.LmxArena; @: key void; size_t: port) @: c.VoidArray
     @: row c.LmxSourceName 0
     @: home c.LmxArena 0
     @: spelling c.VoidArray 0
     if: arena = 0 || key = 0
         return: 0
-    row: lmx_source_name_local(arena, key)
+    row: lmx_source_name_local(arena, key, port)
     if: row != 0
         # The row's by-value VoidArray is reached through its address, held typed.
         spelling: @ row\text
         return: spelling
     home: (cast: (@: LmxArena) c.lmx_range_home(arena, key))
     if: home != 0 && home != arena
-        row: lmx_source_name_local(home, key)
+        row: lmx_source_name_local(home, key, port)
         if: row != 0
             spelling: @ row\text
             return: spelling
         ---
     ---
     return: 0
-end: lmx_source_name_get
+end: lmx_source_name_get_at
 
 # A stable arena service cell. prepare leaves key zero until publication.
 fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; const: (@: text char); size_t: text_length; @@: out c.LmxSourceName) int
+    return: lmx_source_name_prepare_at(arena, key, 0U, text, text_length, out)
+end: lmx_source_name_prepare
+
+fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; const: (@: text char); size_t: text_length; @@: out c.LmxSourceName) int
     @: known c.VoidArray 0
     @: row c.LmxSourceName 0
     @: va c.VoidArray 0
@@ -87,7 +97,7 @@ fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; const: (@: text c
     out[0]: 0
     if: arena = 0 || key = 0 || (text_length != 0U && text = 0)
         return: 1
-    known: lmx_source_name_get(arena, key)
+    known: lmx_source_name_get_at(arena, key, port)
     if: known != 0
         # One actual occurrence has one spelling. Aliases use distinct source
         # places; they do not silently overwrite the referent's name.
@@ -105,6 +115,8 @@ fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; const: (@: text c
     if: row = 0
         return: 1
     row\key: 0
+    row\port: port
+    row\pending_next: 0
     # The row's by-value VoidArray is written through its address.
     va: @ row\text
     va\size: 0U
@@ -123,10 +135,11 @@ fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; const: (@: text c
     va\data: (cast: (@: void) data)
     out[0]: row
     return: 0
-end: lmx_source_name_prepare
+end: lmx_source_name_prepare_at
 
 sub: lmx_source_name_publish (@: row c.LmxSourceName; @: key void)
     if: row != 0
+        row\pending_next: 0
         row\key: key
     ---
 end: lmx_source_name_publish
@@ -135,6 +148,7 @@ sub: lmx_source_name_cancel (@: row c.LmxSourceName)
     @: va c.VoidArray 0
     if: row != 0
         row\key: 0
+        row\pending_next: 0
         va: @ row\text
         va\size: 0U
         va\data: 0
@@ -142,12 +156,16 @@ sub: lmx_source_name_cancel (@: row c.LmxSourceName)
 end: lmx_source_name_cancel
 
 fn: lmx_source_name_set (@: arena c.LmxArena; @: key void; const: (@: text char); size_t: text_length) int
+    return: lmx_source_name_set_at(arena, key, 0U, text, text_length)
+end: lmx_source_name_set
+
+fn: lmx_source_name_set_at (@: arena c.LmxArena; @: key void; size_t: port; const: (@: text char); size_t: text_length) int
     @: row c.LmxSourceName 0
-    if: lmx_source_name_prepare(arena, key, text, text_length, @ row) != 0
+    if: lmx_source_name_prepare_at(arena, key, port, text, text_length, @ row) != 0
         return: 1
     lmx_source_name_publish(row, key)
     return: 0
-end: lmx_source_name_set
+end: lmx_source_name_set_at
 
 # Retire before an address can be reused. The range has not been freed yet. The addresses are compared as integers
 # held by size_t, as the arena's module does (a system header's typedef names no L2 local).

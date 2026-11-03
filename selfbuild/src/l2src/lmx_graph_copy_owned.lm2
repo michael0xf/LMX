@@ -2856,9 +2856,8 @@ end: lmx_copy_process
 
 # Prepare the name of an actual copied place. The private map keeps pending
 # rows unpublished until the complete graph and every spelling are ready.
-fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: source void; @: destination void; @: pending c.LmxCopyMap) int
+fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: pending c.LmxCopyMap; size_t: port; @: text c.VoidArray) int
     @: part_row_text c.VoidArray 0
-    @: text c.VoidArray c.lmx_source_name_get(src_arena, source)
     @: row c.LmxSourceName 0
     if: text = 0
         return: c.LMX_GRAPH_COPY_OK
@@ -2867,21 +2866,42 @@ fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: 
             return: c.LMX_GRAPH_COPY_NOMEM
         ---
     ---
-    row: (cast: (@: c.LmxSourceName) lmx_copy_map_get(pending, destination))
+    @: head c.LmxSourceName (cast: (@: c.LmxSourceName) lmx_copy_map_get(pending, destination))
+    row: head
+    while: row != 0 && row\port != port
+        row: row\pending_next
+    ---
     if: row != 0
-        if: row != 0
-            part_row_text: (cast: (@: c.VoidArray) (@ row\text))
-        ---
+        part_row_text: @ row\text
         if: part_row_text\size != text\size || (text\size != 0U && c.memcmp((part_row_text\data), (text\data), (text\size)) != 0)
             return: c.LMX_GRAPH_COPY_INVALID
         return: c.LMX_GRAPH_COPY_OK
-    if: c.lmx_source_name_prepare(dst_arena, destination, (cast: (@: char) text\data), (text\size), @ row) != 0
+    if: c.lmx_source_name_prepare_at(dst_arena, destination, port, (cast: (@: char) text\data), (text\size), @ row) != 0
         return: c.LMX_GRAPH_COPY_NOMEM
     if: row != 0
+        row\pending_next: head
         if: lmx_copy_map_put(pending, destination, (cast: (@: void) row)) != 0
             c.lmx_source_name_cancel(row)
             return: c.LMX_GRAPH_COPY_NOMEM
         ---
+    ---
+    return: c.LMX_GRAPH_COPY_OK
+end: lmx_copy_spelling_prepare
+
+# Both a graph copy and a merge projection call this for a real place.
+# Copy the complete local interface only for a Structure occurrence.
+fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: source void; @: destination void; @: pending c.LmxCopyMap) int
+    int: status lmx_copy_spelling_prepare(dst_arena, destination, pending, 0U, c.lmx_source_name_get(src_arena, source))
+    if: status != c.LMX_GRAPH_COPY_OK || c.lmx_range_classify(src_arena, source) != c.LMX_KIND_STRUCT
+        return: status
+    size_t: port 1U
+    @: name c.VoidArray c.lmx_source_name_get_at(src_arena, source, port)
+    while: name != 0
+        status: lmx_copy_spelling_prepare(dst_arena, destination, pending, port, name)
+        if: status != c.LMX_GRAPH_COPY_OK
+            return: status
+        port: port + 1U
+        name: c.lmx_source_name_get_at(src_arena, source, port)
     ---
     return: c.LMX_GRAPH_COPY_OK
 end: lmx_copy_name_prepare
@@ -2928,10 +2948,14 @@ sub: lmx_copy_names_finish (@: pending c.LmxCopyMap; int: publish)
     while: i < lmx_copy_map_keys_cap(pending)
         if: keys[i] != 0
             row: (cast: (@: c.LmxSourceName) vals[i])
-            if: publish != 0
-                c.lmx_source_name_publish(row, keys[i])
-            else:
-                c.lmx_source_name_cancel(row)
+            while: row != 0
+                @: next c.LmxSourceName row\pending_next
+                if: publish != 0
+                    c.lmx_source_name_publish(row, keys[i])
+                else:
+                    c.lmx_source_name_cancel(row)
+                ---
+                row: next
             ---
         ---
         i: i + 1U

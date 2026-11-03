@@ -1,0 +1,51 @@
+# The selected fn's declared Bad is an entry obligation, even on a path
+# which would not actually throw. The refused body must leave entered at 0.
+int: entered 0
+int: raising 0
+fn: bad () int
+    throws: Bad
+    node\entered: node\entered + 1
+    if: node\raising != 0
+        throw: Bad(5)
+    return: 7
+end: bad
+@: target bad
+fn: get_entered () int
+    return: node\entered
+end: get_entered
+int: refused 0
+---
+    call: target
+    catch: implements ()
+        refused: 1
+---
+int: after_refusal get_entered()
+---
+    call: target
+    catch: Bad ()
+        refused: 2
+---
+int: after_success get_entered()
+raising: 1
+int: payload 0
+---
+    call: target
+    catch: Bad (int: value)
+        payload: value
+---
+fn: needs_input (int: amount) int
+    node\entered: 90
+    return: amount
+end: needs_input
+@: missing needs_input
+int: missing_refused 0
+---
+    call: missing
+    catch: implements ()
+        missing_refused: 1
+---
+int: answer 81
+if: refused = 1 && after_refusal = 0 && after_success = 1 && payload = 5 && get_entered() = 2 && missing_refused = 1
+    answer: 7
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+return

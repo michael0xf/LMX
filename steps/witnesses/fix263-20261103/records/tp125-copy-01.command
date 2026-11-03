@@ -1,0 +1,30 @@
+try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
+# Slice 263 written numeric receivers with fe125d and rt125i.
+$p='C:\Nyasha_Planet\LMX\build2\codex_fix250generationchain01'
+$P2='C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01'
+$R='C:/Nyasha_Planet/LMX'
+$Q="$p\cold-boot124a\quick124a"
+$tool="$p\cold-tp125\tool125b\lmxtool-tool.exe"
+$term="$p\pins\tp125-copy-01.terminal.txt"
+$run="$p\tp125-copy-01-run-01"
+$out="$P2/tp125-call-probe-01/copy-01"
+$live=Get-CimInstance Win32_Process -Filter "Name = 'l2trans.exe' OR Name = 'l1trans.exe' OR Name = 'cc1.exe' OR Name = 'lmxtool-tool.exe' OR Name = 'lmxtool.exe'"
+if ($live) { $live | Select-Object ProcessId,Name | Out-String | Write-Output; throw 'pipeline already live' }
+if (Test-Path -LiteralPath $run) { throw 'CWDexists' }
+if (Test-Path -LiteralPath "$p\tp125-call-probe-01\copy-01") { throw 'outputexists' }
+if (Test-Path -LiteralPath $term) { throw 'terminalexists' }
+if (-not (Select-String -LiteralPath "$p\pins\boot124a-detached.terminal.txt" -Pattern '^done ' -Quiet)) { throw 'boot124a not done' }
+if (-not (Select-String -LiteralPath "$p\pins\boot124a-quick.terminal.txt" -Pattern 'BootstrapExit 0' -Quiet)) { throw 'boot124a did not pass' }
+function ShaTp([string]$f) { (Get-FileHash -Algorithm SHA256 -LiteralPath $f).Hash.ToLowerInvariant() }
+foreach ($f in @($tool, "$p\cold-tp125\fe125d\l2trans.exe", "$p\cold-tp125\rt125i\driver.o", "$p\cold-tp125\rt125i\driver-observe.o", "$p\tp125-call-probe-01\focus-copy.tsv")) { if (-not (Test-Path -LiteralPath $f)) { throw ('missing: ' + $f) } }
+New-Item -ItemType Directory -Path $run | Out-Null
+Set-Location -LiteralPath $run
+Remove-Item Env:CPATH,Env:C_INCLUDE_PATH,Env:CPLUS_INCLUDE_PATH,Env:LIBRARY_PATH,Env:OBJC_INCLUDE_PATH -ErrorAction SilentlyContinue
+Add-Content -LiteralPath $term -Value ('StartUTC ' + [DateTime]::UtcNow.ToString('o') + ' tool ' + (ShaTp $tool) + ' fe ' + (ShaTp "$p\cold-tp125\fe125d\l2trans.exe") + ' prod ' + (ShaTp "$p\cold-tp125\rt125i\driver.o") + ' obs ' + (ShaTp "$p\cold-tp125\rt125i\driver-observe.o") + ' list ' + (ShaTp "$p\tp125-call-probe-01\focus-copy.tsv") + ' fixture ' + (ShaTp "$p\tp125-call-probe-01\copy_call_inputs.lm2")) -Encoding utf8
+& 'C:\Git\usr\bin\timeout.exe' '7200' $tool 0 entry 0 -- suite "$P2/tp125-call-probe-01/focus-copy.tsv" $R "$P2/cold-tp125" "$P2/cold-candidate48/full48/g2/frontend" "$P2/cold-tp125/fe125d/l2trans.exe" "$P2/cold-tp125/rt125i/driver.o" $out "$P2/cold-tp125/rt125i/driver-observe.o" *> "$p\pins\tp125-copy-01.log"
+$e=$LASTEXITCODE
+Add-Content -LiteralPath $term -Value ('EndUTC ' + [DateTime]::UtcNow.ToString('o') + ' SuiteExit ' + $e) -Encoding utf8
+if (Test-Path -LiteralPath "$p\tp125-call-probe-01\copy-01\failures.tsv") { Get-Content -LiteralPath "$p\tp125-call-probe-01\copy-01\failures.tsv" | ForEach-Object { Add-Content -LiteralPath $term -Value ('  failure: ' + $_) -Encoding utf8 } }
+Get-Content -LiteralPath "$p\pins\tp125-copy-01.log" | Select-String -Pattern '^(PASS|FAIL|SUITE)' | ForEach-Object { Add-Content -LiteralPath $term -Value ('  ' + $_.Line) -Encoding utf8 }
+Write-Output ('RECEIVE263 exit=' + $e)
+exit $e

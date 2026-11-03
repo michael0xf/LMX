@@ -7334,6 +7334,8 @@ fn: lm_compiler_src_ns_call (@: plan c.L2StructCallPlan) int
     @@: ns_exec_cell int (cast: (@@: int) (@ c.l2_ns_exec))
     if: plan = 0
         return: (cast: (int) (0 - 1))
+    if: plan\shape = 0
+        return: 1
     if: plan\ni >= 0 && ns_exec_cell[0][plan\ni] != 0
         return: (cast: (int) (1))
     if: plan\inert != 0
@@ -11334,6 +11336,31 @@ fn: lm_compiler_check_struct_call (const: (@: source_node c.LmP0Node); @: plan c
     int: inert 0
     int: target_ns -1
     int: oi -1
+    # Only a split call still needs the old code/data projection decision.
+    # A unary call records the place of a simple code operand, or retains
+    # its full written expression when the operand is an input or a path.
+    if: plan\shape = 0
+        target_ns: plan\target_ns
+        oi: plan\oi
+        if: target_ns < 0 && oi < 0 && t != 0
+            target: lm_compiler_m2_root_own(mi, t)
+            if: target >= own_n_cell[0] && target < own_n_cell[0] + ns_n_cell[0]
+                target_ns: target - own_n_cell[0]
+            else:
+                if: target >= 0 && target < own_n_cell[0]
+                    oi: target
+                ---
+            ---
+        ---
+        if: lm_compiler_call_body_note(source_node, mi, -1, target_ns, oi, 0) != 0
+            return: c.lm_compiler_alloc_or(path, source_node, "could not retain the selected call place")
+        plan\ni: -1
+        plan\target_ns: target_ns
+        plan\oi: oi
+        plan\inert: 0
+        if: t != 0
+            lm_compiler_copy_call_note(c.lm_compiler_resolved_own(mi, t), source_node, mi)
+        return: lm_compiler_admit_site(mi)
     if: t = 0
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "a dynamic Structure call operand is not supported yet")))
     # Slice 4 (§11): a Structure formal's value may be admitted by names with its fields permuted (D-105) -- Model's

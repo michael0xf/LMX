@@ -7662,6 +7662,13 @@ fn: lm_compiler_emit_native_input_entry (int: mi; const: (@: ind char)) int
     fi: m_arity_cell[0][mi]
     while: fi < m_arity_cell[0][mi] + m_dyn_cell[0][mi]
         ft: c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))
+        # A nullary call to a plain Structure carries no positional hidden
+        # values. The selected native entry owns the rows it resolves.
+        if: c.lm_compiler_m_nsof(mi) >= 0
+            if: c.fprintf(out_cell[0], "%sif: l2_input_values != 0 && l2_input_values[%d].kind = 0 && l2_input_values[%d].present = 0\n%s    lmx_walk_value_free_mark(l2_input_values + %d)\n%s---\n", ind, fi, fi, ind, fi, ind) < 0
+                return: 1
+            ---
+        ---
         # Slice 254 (design 4.5 B1): an input the caller left free is resolved first, once, from the chain of activation
         # records; resolved, it is a present input below; not, it is absent and its lexical source (the default) reads.
         if: c.fprintf(out_cell[0], "%sif: l2_input_values != 0 && l2_input_values[%d].kind = c.LMX_WALK_VALUE_FREE\n%s    lmx_activation_resolve_input(l2_call_arena, %dU, l2_input_refs, l2_input_values, %dU)\n%s---\n", ind, fi, ind, fi, m_arity_cell[0][mi] + m_dyn_cell[0][mi], ind) < 0
@@ -13302,10 +13309,11 @@ fn: lm_compiler_emit_msend (const: (@: stmt c.LmP0Node); int: mi; const: (@: ind
     while: g != 0
         v: g\value
         if: msend_kind_cell[0][msend_off_cell[0][k] + j] = 1
-            if: lm_compiler_eval_fields((cast: (@: c.LmP0Field) (c.lm_compiler_next_active((cast: (@: c.LmP0Field) (v\as\frame\body\first_field))))), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (v\as\frame\body))))), mi, ind, tok) != 0
-                return: (cast: (int) (1))
-            # A copy into a named local first: l2_eval_fields's own token can be a bare literal
-            # (e.g. "7"), and `@` needs an addressable variable, never a literal.
+            @: fields c.LmP0Field c.lm_compiler_next_active((cast: (@: c.LmP0Field) (v\as\frame\body\first_field)))
+            int: count c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (v\as\frame\body)))
+            if: lm_compiler_emit_received_span(fields, count, 0, -1, v, mi, ind, tok) != 0
+                return: 1
+            # The letter holds a reference to the received int's storage.
             if: c.fprintf(out_cell[0], "%sint: l2_msf%d_%d %s\n%sl2_msr%d[%d]: @ l2_msf%d_%d\n", ind, k, j, tok\data, ind, k, j, k, j) < 0
                 return: (cast: (int) (1))
             ---
@@ -16829,7 +16837,9 @@ fn: lm_compiler_emit_ns_exec_at (int: ni; int: mi; const: (@: source_node c.LmP0
     @: dname char (cast: (@: char) dname_storage\buffer)
     nso_n_cell[0]: nso_n_cell[0] + 1
     pr: ns_proc_cell[0][ni]
-    nh: m_dyn_cell[0][pr]
+    nh: 0
+    if: site != 0 && site\split != 0
+        nh: m_dyn_cell[0][pr]
     # N4 (plan D4): the data of `call: code data` is selected once, beside the code, before the hidden inputs and the
     # publication; a one-operand call passes the code as its data.
     c.sprintf(dname, "l2_nsn%d", k)
@@ -16922,6 +16932,73 @@ fn: lm_compiler_emit_ns_exec_at (int: ni; int: mi; const: (@: source_node c.LmP0
 end: lm_compiler_emit_ns_exec_at
 
 # Original: l2src/l2trans.lm1:48212
+# Emit the native landing labels for the same visible pads that the
+# selected call's common obligation checks in its current code graph.
+fn: lm_compiler_emit_selected_pads (int: mi; int: k; const: (@: ind char); const: (@: payload char)) int
+    @: levels int (cast: (@: int) (@ c.l2_scope_n))
+    @@@: stack c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_scope_at))
+    @@@: bodies c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: deep char 0
+    if: c.lm_compiler_bump_ind(ind, @ deep) != 0
+        return: 1
+    int: level levels[0] - 1
+    while: level >= -1
+        @: body c.LmP0Structure 0
+        if: level >= 0
+            body: c.lm_compiler_scope_block(stack[0][level])
+        else:
+            if: bodies[0][mi] != 0 && bodies[0][mi]\as != 0
+                body: bodies[0][mi]\as\structure
+            ---
+        ---
+        @: field c.LmP0Field 0
+        if: body != 0
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
+        while: field != 0
+            if: c.lm_compiler_frame_head(field\value, "catch") != 0
+                @: name c.LmP0Text c.lm_compiler_catch_name(field\value)
+                if: name != 0 && c.lm_compiler_catch_find(mi, name, 0, 0, 0) = field\value
+                    int: key c.lm_compiler_throw_key(name)
+                    if: key < 0 || c.fprintf(output[0], "%sif: l2_skey%d = %dU\n", ind, k, key) < 0 || c.lm_compiler_emit_deliver(mi, name, 0, payload, deep) < 0
+                        return: 1
+                    ---
+                ---
+            ---
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+        ---
+        level: level - 1
+    ---
+    return: 0
+end: lm_compiler_emit_selected_pads
+
+fn: lm_compiler_emit_current_structure (int: mi; const: (@: source_node c.LmP0Node); const: (@: ind char); int: k) int
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    int: index mi
+    int: kind 0
+    int: result c.lm_compiler_method_body_result(mi)
+    if: result >= 0
+        kind: 2
+        index: result
+    ---
+    @: site c.L2GraphPlace 0
+    int: at
+    if: c.lm_compiler_expr_site_place(kind, index, mi, source_node, 1, 6, @ site) != 0 || c.lm_compiler_emit_live_code_place(site, ind, @ at) != 0
+        return: 1
+    @: deep char 0
+    c.L2FrontendScratchChar64: payload_storage
+    @: payload char (cast: (@: char) payload_storage\buffer)
+    if: c.lm_compiler_bump_ind(ind, @ deep) != 0 || c.snprintf(payload, 64U, "l2_sout%d", k) < 0
+        return: 1
+    if: c.fprintf(output[0], "%sLmxWalkValue: l2_svalue%d\n%sint: l2_sstatus%d lmx_call_selected_structure(l2_call_arena, 0, l2_call_code, l2_cp%d, l2_ens%d, lmx_call_unary_data(l2_call_arena, l2_ens%d), @ l2_svalue%d)\n%sif: l2_sstatus%d >= c.LMX_WALK_THROWN\n", ind, k, ind, k, at, k, k, k, ind, k) < 0
+        return: 1
+    if: c.fprintf(output[0], "%ssize_t: l2_skey%d (cast: (size_t) (l2_sstatus%d - c.LMX_WALK_THROWN))\n%s@: Lmx %s (cast: (@: Lmx) l2_svalue%d.ref)\n", deep, k, k, deep, payload, k) < 0 || lm_compiler_emit_selected_pads(mi, k, deep, payload) != 0
+        return: 1
+    if: c.fprintf(output[0], "%ssize_t: l2_so%d 0U\n%sif: lmx_walk_ordinal_from_key(l2_call_arena, l2_call_code, l2_skey%d, @ l2_so%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s---\n%sl2_out_throw[0]: %s\n%sreturn: (cast: (int) l2_so%d)\n%s---\n%sif: l2_sstatus%d != c.LMX_WALK_OK && l2_sstatus%d != c.LMX_WALK_STOPPED\n%s    lmx_call_note_walk_fail(l2_sstatus%d)\n%s---\n", deep, k, deep, k, k, deep, deep, deep, payload, deep, k, ind, ind, k, k, ind, k, ind) < 0
+        return: 1
+    return: lm_compiler_emit_poll(mi, ind)
+end: lm_compiler_emit_current_structure
+
 fn: lm_compiler_emit_empty_struct_at (int: mi; const: (@: source_node c.LmP0Node); const: (@: ind char); const: (@: at char)) int
     @: nso_n_cell int (cast: (@: int) (@ c.l2_nso_n))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
@@ -16949,6 +17026,8 @@ fn: lm_compiler_emit_empty_struct_at (int: mi; const: (@: source_node c.LmP0Node
         return: (cast: (int) (1))
     if: c.lm_compiler_emit_publish(ind) != 0
         return: (cast: (int) (1))
+    if: site != 0 && site\split = 0
+        return: lm_compiler_emit_current_structure(mi, source_node, ind, k)
     if: c.fprintf(out_cell[0], "%sif: lmx_call_ready(l2_program_arena, l2_ens%d) != c.LMX_CALL_OK || l2_ens%d\\array.size != 0U || l2_ens%d\\native != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: an executed empty Structure changed body\\n\")\n%s    c.abort()\n%s@: void l2_eno%d 0\n%sif: lmx_call_prim(l2_program_arena, l2_ens%d, %s, 0, 0U, 0, @ l2_eno%d) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: executing an empty Structure reported a status\\n\")\n%s    c.abort()\n", ind, k, k, k, ind, ind, ind, k, ind, k, dname, k, ind, ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (lm_compiler_emit_poll(mi, ind)))
@@ -16971,6 +17050,11 @@ fn: lm_compiler_emit_empty_struct_call (const: (@: source_node c.LmP0Node); @: p
     int: oi plan\oi
     c.L2FrontendScratchChar32: unit_slot_storage
     @: unit_slot char (cast: (@: char) unit_slot_storage\buffer)
+    if: plan\shape = 0 && oi < 0 && plan\target_ns < 0
+        @: operand c.L2ValueSpan (cast: (@: c.L2ValueSpan) (@ plan\operand))
+        if: at_text = 0 || lm_compiler_emit_received_span((cast: (@: c.LmP0Field) operand\first), (cast: (int) operand\count), c.lm_compiler_graph_ft(), -1, source_node, mi, ind, at_text) != 0
+            return: 1
+        return: lm_compiler_emit_empty_struct_at(mi, source_node, ind, (cast: (const: @: char) at_text\data))
     if: oi < 0
         if: plan\target_ns < 0 || c.snprintf(unit_slot, 32U, ", %uU)", (cast: (unsigned) (c.lm_compiler_ns_unit_slot((cast: (int) (plan\target_ns)))))) < 0 || c.lm_compiler_tx_join(at_text, "lmx_arena_ref_struct(", unit_ref_cell[0], unit_slot, 0, 0) != 0
             return: (cast: (int) (1))
@@ -16993,7 +17077,7 @@ end: lm_compiler_emit_empty_struct_call
 # Original: l2src/l2trans.lm1:48267
 fn: lm_compiler_emit_struct_call (const: (@: source_node c.LmP0Node); @: plan c.L2StructCallPlan; int: mi; const: (@: ind char)) int
     @@: ns_exec_cell int (cast: (@@: int) (@ c.l2_ns_exec))
-    if: plan\inert != 0
+    if: plan\shape = 0 || plan\inert != 0
         if: lm_compiler_call_body_site(source_node, mi) = 0
             return: (cast: (int) (1))
         return: (cast: (int) (lm_compiler_emit_empty_struct_call(source_node, plan, mi, ind)))

@@ -1,0 +1,42 @@
+# A written int destination receives the actual free value on each route.
+int: quote 11
+fn: copy_value () int
+    int: answer 0
+    answer: quote
+    return: answer
+end: copy_value
+fn: post_value () int
+    sendMessage: exit(exit_code: quote; stdout: ""; stderr: "")
+    return: 81
+end: post_value
+fn: mismatch () int
+    int: cell 4
+    @: quote int @ cell
+    int: got 0
+    ---
+        got: copy_value()
+        catch: convert ()
+            got: 1
+    ---
+    if: got != 1
+        return: 82
+    ---
+        got: post_value()
+        catch: convert ()
+            got: 2
+    ---
+    if: got != 2
+        return: 83
+    return: 7
+end: mismatch
+fn: good () int
+    int: quote 7
+    if: copy_value() != 7
+        return: 84
+    return: post_value()
+end: good
+int: result mismatch()
+if: result = 7
+    result: good()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

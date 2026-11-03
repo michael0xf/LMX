@@ -1297,12 +1297,10 @@ fn: lm_compiler_check_receiving_value_at (const: (@: stmt c.LmP0Node); @: first 
                 return: (cast: (int) (1))
         ---
     ---
-    # Slice 258 (design 4.5 B2b-2a; the rule of slice 257 for the return): a runtime-typed value -- a free name's value, its
-    # deref or its address -- where a pointer is declared is admitted at run time by the one receive (lmx_walk_value_receive
-    # with the place's pointer code, lm_compiler_emit_dyn_receive_full); no static comparison.  A place with a receiving model
-    # keeps its admission path (slice 259).
-    if: receiving_model < 0 && c.lm_compiler_pointer_depth(target_ty) > 0 && c.lm_compiler_ft_is_free(value_ty) != 0
-        return: (cast: (int) (0))
+    # The written receiving place supplies the machine type. A free source
+    # is admitted by its actual value when the assignment is reached.
+    if: receiving_model < 0 && c.lm_compiler_ft_is_free(value_ty) != 0 && (c.lm_compiler_pointer_depth(target_ty) > 0 || (target_ty != 8 && c.lm_compiler_prim_code_name(target_ty) != 0))
+        return: 0
     # Slice 260 (design 4.5 B2b-2c): a runtime-typed value at a place WITH a receiving model is admitted at run time -- received as
     # the graph reference by the one receive (lmx_walk_value_receive with LMX: a number is the implicit `convert`), then admitted
     # against the model where the typed program admits (lmx_implements_admit_receiving: a graph without the model's fields is the
@@ -6500,6 +6498,7 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
     @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
     @: rw_machine_cell int (cast: (@: int) (@ c.l2_rw_machine))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @: args c.L2SourceContainer
     @: returns c.L2SourceContainer
     int: inputs
@@ -6516,8 +6515,20 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
     int: projected (cast: (int) (t7_walk_cell[0] != 0))
     c.L2FrontendScratchChar128: place_storage
     @: place char (cast: (@: char) place_storage\buffer)
-    if: mi = e_cell[0] || c.lm_compiler_m_nsof(mi) >= 0
-        return: (cast: (int) (0))
+    if: mi = e_cell[0]
+        return: 0
+    if: c.lm_compiler_m_nsof(mi) >= 0
+        # An ordinary Structure has no args child. The coordinates of its
+        # own free inputs belong to the occurrence, beside its source names.
+        if: rw_emit_cell[0] != 0
+            while: j < m_dyn_cell[0][mi]
+                @: name c.LmP0Text c.lm_compiler_dn(mi, j)
+                if: name = 0 || c.fprintf(out_cell[0], "        if: lmx_source_name_set_at(l2_program_arena, l2_rw%d, %uU, ", root, (cast: (unsigned) (j + 1))) < 0 || c.lm_compiler_emit_cstr(name) != 0 || c.fprintf(out_cell[0], ", %zuU) != 0\n            return: 1\n", name\length) < 0
+                    return: 1
+                j: j + 1
+            ---
+        ---
+        return: 0
     if: projected != 0
         n: t7_argc_cell[0][t7_walk_cell[0] - 1]
         nr: 1
@@ -13822,6 +13833,12 @@ fn: lm_compiler_rw_empty_struct_call (@: plan c.L2StructCallPlan; int: into; @: 
     int: current
     if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_EXEC", 5, out) != 0
         return: (cast: (int) (1))
+    if: plan\shape = 0 && plan\target_ns < 0 && plan\oi < 0
+        @: operand c.L2ValueSpan (cast: (@: c.L2ValueSpan) (@ plan\operand))
+        int: graph c.lm_compiler_own_ty_of_param(c.lm_compiler_graph_ft())
+        if: lm_compiler_rw_reference_receive((cast: (@: c.LmP0Field) operand\first), (cast: (int) operand\count), graph, -1, (cast: (int) (\out)), @ current) != 0
+            return: 1
+        return: c.lm_compiler_rw_put((cast: (int) (\out)), 2, current)
     if: plan\oi >= 0
         if: lm_compiler_rw_own((cast: (int) (\out)), (cast: (int) (plan\oi)), @ current) != 0
             return: (cast: (int) (1))
@@ -13884,11 +13901,13 @@ fn: lm_compiler_rw_struct_call (const: (@: source_node c.LmP0Node); @: plan c.L2
     @@: ns_exec_cell int (cast: (@@: int) (@ c.l2_ns_exec))
     int: st 0
     \made: 0
-    if: plan\inert != 0
+    if: plan\shape = 0 || plan\inert != 0
         if: c.lm_compiler_call_body_site(source_node, rw_mi_cell[0]) = 0 || lm_compiler_rw_empty_struct_call(plan, into, @ st) != 0
             return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "an unproved empty Structure call")))
         if: lm_compiler_rw_split_data(source_node, plan, st) != 0
             return: (cast: (int) (1))
+        if: plan\shape = 0 && c.lm_compiler_expr_site_note_role(source_node, 1, 6, -1, 0, @ st) != 0
+            return: 1
         \made: 1
         return: (cast: (int) (c.lm_compiler_rw_put(into, slot, st)))
     ---

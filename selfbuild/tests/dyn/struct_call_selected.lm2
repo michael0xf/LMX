@@ -1,0 +1,35 @@
+# The same execution site reads the selected body's own hidden inputs.
+int: seen 0
+fn: note (int: value) int
+    node\seen: value
+    return: value
+end: note
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+First:
+    note(first_key)
+end: First
+Second:
+    note(second_key + add_key)
+end: Second
+fn: invoke (int: first_key; int: second_key; int: add_key) int
+    call: First
+    return: read_seen()
+end: invoke
+@: target First
+fn: invoke_ref (int: first_key; int: second_key; int: add_key) int
+    call: target
+    return: read_seen()
+end: invoke_ref
+int: first_name invoke(3, 4, 5)
+int: first_ref invoke_ref(3, 4, 5)
+First: Second
+@: target Second
+int: second_name invoke(3, 4, 5)
+int: second_ref invoke_ref(3, 4, 5)
+int: answer 81
+if: first_name = 3 && first_ref = 3 && second_name = 9 && second_ref = 9
+    answer: 7
+sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+return

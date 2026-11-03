@@ -17,7 +17,33 @@
 [Codex](optimization_proposal_from_codex.md) — история измерений; их гипотезы об индексах
 подтверждены выборками attempt03, их «один участок за раз» заменён этим дизайном.
 
-Статус: дизайн и порядок реализации; реализация идёт по решениям Codex (срезы 250–253, ниже §6.1).
+Статус на 2026-11-03: исходный дизайн и фактическая карта ниже.
+Автор передаёт реализацию Opus по [to_opus.md](to_opus.md); Codex остаётся
+консультантом. Первоначальное назначение Fable и старые очереди ниже исторические.
+
+Редакция29:270 опубликован45cafc25; обычная var и именованные FREE-root places
+реализованы после сверки точного ответа15 октября. WIP267 больше не отдельная
+семантическая пауза. 271 добавляет actual INDEX и Array activation binding;
+компонентный фокус пройден; boot133a завершён12:27:02Z, BootstrapExit0.
+Детальная сверка G1/G2, G2 focus и landing271 ещё переданы Opus.
+
+| Раздел дизайна | Фактическая замена / состояние |
+| --- | --- |
+| §4.1 повторный сбор/predef | Индексы250–252 выполнены; единого collector и ровно трёх проходов ещё нет. |
+| §4.2 throws | Общий reached-call obligation действует263/264, implicit status исправлен268. В maintained emit ещё есть body_throws_stmts/body_throws/throws_close: удаление прогноза и общий статический/динамический контракт обязательны. |
+| §4.3 M2/call | 264 удалил44 forecast functions и M2-state. check_struct_call/check_call_data теперь удерживают реальные operands/site, inert=0; оставшиеся имена функций не означают прежний сертификат тела. |
+| §4.4 native reset | Kernel253: actual cell-to-code links и prepare→write→commit; ordinary data writes сохраняют native. Общая финальная интеграция и роли ещё проверяются по consumers. |
+| §4.5 free inputs | 254 resolver;255–261 runtime consumers;262 удалил transitive name/type worklist, заголовок задаётся собственными свободными именами выбранного callee. 270 named paths;271 INDEX кандидат. Raw-only, descriptor/DESC witnesses и оставшиеся place consumers открыты. |
+| §4.6 D-105/admission | 260 graph receive,263–266 actual call/data admission,270 named reception. Полное устранение proof-only/UNKNOWN/preflight остатка ещё не объявлено. |
+| §4.7 split/immutable forecasts | 264 снял address-escape и immutable-call forecasts; copy_calls_verify/check_immutable_calls отсутствуют. split_close теперь упаковывает declared place rows, а не предсказывает будущие тела. Общая классификация/collector остаётся. |
+| §4.8 walker | Достигнутые operations используют общий runtime; нет права предварительно обходить будущие ветви/тела. Полная замена оставшихся подготовительных семантических дублей открыта. |
+| §4.9 emission | Numeric/model/read/write/address adapters вызывают общие kernel helpers;268/269 закрыли bit/shift/~. Все другие потребители и общий collector/3pass ещё не завершены. |
+
+Очередь Opus: закончить и опубликовать271 → оставшиеся конкретные consumers
+и C (включая throws forecast) → общий collector/resolver/3pass → финальный
+FULL → незакрытые §§8/8a и T01–T26. Старые номера tp/S ниже — первоначальный
+план, а не отчёт о выполнении. [Текущие строки](next_core_tasks_v3_checklist.md#status-20261103).
+
 Редакция 28 (2026-11-03 UTC, Codex, срезы 268–269). Битовые операции,
 сдвиги и унарная `~` используют общий kernel как в типизированном native,
 так и в обходчике. 269 прошёл boot131b G1/G2 и G2 focus30/0;
@@ -1342,7 +1368,7 @@ S2 и далее по необходимости); FULL — только фин�
 | S4 tp113 | Ядро: `lmx_code_changed` в общем пути записи (критерий «записан код», связи ячейка → места кода и `lmx_graph_slot_rebind`, §4.4); `lmx_walk_entry_node` без preflight (§4.8); удаление M2/сертификатов/pap(M2); `call:` всегда исполняет | `unit_empty_pointer_rebound_call` 7 в n и f; фикстуры: запись в тело метода → `native = 0` → walker по актуальному телу; запись в обычную исполняемую Structure (`call: A`) — то же; запись данных в `var`/поле модели — `native` сохранён; малформированная операция в невыбранной ветви не отвергает активацию; smoke225 | меняются объяснимо |
 | S5 tp114 | Удаление D-105/статического допуска/`check_*` совместимости; runtime-допуск в месте приёма; `wait_*` | `os/os_implements.lm2` 7; `os_implements_refused` → runtime implements-ошибка (строка списка обновлена); `lib/lib_owner` links; `owner-values73`/`held-forward78` TSV Opus; `sha256_vectors` n; `pointer-copy101.tsv` (producer рабочих мест не трогается, прогон как контроль) | меняются объяснимо |
 | S6 tp115 | Emission без семантики (§4.9); `split_close` и `check_immutable_calls` удалены (§4.7) | те же модули и smoke225; фикстура записи в immutable при исполнении — runtime-отказ записи в n и f; L1 равны S5 кроме удалённых отказов | равны S5 |
-| S7 tp116 | Цепочка активаций; удаление dyn-замыканий; правка книги + регенерация docs | twins `hidden_input_*`, `native_closure_values.lm2`, `callable_value_*`, `calls_unit_below_*` в n и f; корпусные unit-фикстуры динамических имён из списков Opus; `python tools/build_semantics.py` + `python tools/check_docs.py` + `git diff --check` | меняются объяснимо |
+| S7 tp116 | Цепочка активаций; удаление dyn-замыканий; правка книги + регенерация docs | twins `hidden_input_*`, `native_closure_values.lm2`, `callable_value_*`, `calls_unit_below_*` в n и f; корпусные unit-фикстуры динамических имён из списков Opus; языковые `docs render semantics` + `docs check` + `git diff --check` | меняются объяснимо |
 | S8 tp117+ | Общий код над графом (§2): загрузчик `lm_compiler_load_unit` строит граф **как написано** (голова в таблице имён + аргументная Structure; ролей не ставит) и на каждом создаваемом узле вызывает чистый `lmx_collect_node` — одно посещение дерева даёт граф и таблицы обхода 1 (вместо собственных own/ml-таблиц и повторных сборов); обход 2 — общее `lmx_walk_named_role` (смысл головы: таблица ресиверов, затем имя по лексической цепочке; удаляет `is_asgn`/`call_head_*`/выбор роли `rw_frame`), `lmx_walk_select_call`/`lmx_call_obligation` (вызовы), места (`lmx_walk_*_place`), приём только runtime; метки роли — результат разрешения, печатаемый в конструкторы; обход 3 печатает из графа | те же модули; фикстуры на каждую замену правила (вызов/присваивание/объявление/место) в n и f; счётчик `L2_PASS_COUNTS` по обоим представлениям; whole quick | меняются объяснимо |
 | S9 | Whole quick новым producer; затем FULL; `to_opus_after_optimization.md` | `bootstrap quick`, затем `bootstrap full` | — |
 
@@ -1367,7 +1393,7 @@ tp114 = memo владельца без повторной проверки де�
 `native`, срок жизни; arena в `lmx_arena_ref_store`) — ядерная половина строки S4; **B** = общий runtime
 transport/resolver цепочки активаций для обоих исполнителей (§4.5; native frame — адаптер адресов текущей
 активации к тому же resolver) и правка книги RU/EN через `provenance/semantics-book.md` →
-`tools/build_semantics.py` — строка S7 до S5/S6; **C** = снятие M2/body certificates/`check_struct_call`/
+языковой `docs render semantics` — строка S7 до S5/S6; **C** = снятие M2/body certificates/`check_struct_call`/
 `check_call_data` proof-only частей/empty-call elision/preflight (остаток S4 и S5) с separating witness:
 замена тела телом с ДРУГИМ свободным именем/порядком входов и проверка совпадения native/forced-walk.
 Зависимость, подтверждённая Codex в source-tp114: lower 16684–16737 печатает входы/admission статического

@@ -110,8 +110,10 @@ Without a Consumer, full structural suitability is checked. A successful
 address correspondence remains valid after values change; branch
 assignment admits the replacement candidate **before storage**. Do not
 invalidate correspondence or automatically rerun every check after each
-mutation. Known static-call compatibility is established at translation;
-an unknown candidate is checked at the required dynamic admission stage.
+mutation. Translation checks only what correct C emission and explicit throws/catch
+obligations require. Actual values are admitted by the common runtime mechanism
+when the call or assignment is reached; no body or future-branch preflight
+substitutes for that admission.
 See [correspondence stability](LMX_semantics.en.md#correspondence-stability)
 and the [argument stage](LMX_semantics.en.md#argument-compatibility-stage).
 

@@ -1,8 +1,48 @@
 # Чеклист реализации LMX
 
-Обновлено 2026-10-29 (уточнение сводки 237 ниже и его поправки при передаче дел Codex; остальное — 2026-10-26). Ближайшая цель — **работающий проект и настоящая самосборка L3 + L2**, не максимальное число проверок. Это параллельная сводка к [плану v3](next_core_tasks_v3.md), а не новый план или предварительный gate. Поддерживает текущий writer/build: Codex — с передачи 2026-10-29 ([to_codex.md](to_codex.md), верхний раздел); 2026-10-27 … 2026-10-29 — fable_pc ([to_fable.md](to_fable.md)); 2026-10-24 … 2026-10-27 — Codex; до того — Opus.
+Обновлено 2026-11-03 при передаче Opus. Единственный writer/build после
+явного сообщения Codex — Opus; Codex консультирует и управляет ресурсами,
+goal Codex остаётся paused. [Точная передача](to_opus.md).
+Ближайшая цель — завершить оставшиеся зависимости и самосборку по плану,
+не расширять систему проверок. Таблицы ниже датированной сводки сохраняют
+исторические результаты; их старые ограничения не заменяют текущие строки.
 
 Уточнение автора от 2026-10-24: объявления арены и пулов генерировать на L3 как строки L1, без нового механизма в L2 ([дословный источник](LMX_blog/2026-10-24.md)). Прежний вопрос Codex о машинной C-раскладке снят. Генерация ещё не реализована этим изменением документов; отметки готовности не повышаются. Следующий результат — самосборка, не расширение системы или тестовой кампании. Срез185 (Verified185 `3a5c6919`, E20) её реализует: `lmx.h.lm1` целиком, `lmx_arena_blocks.h.lm1` и `lmx_arena.h.lm1` пишет код L3 сборки (`decls_write_all`), и короткий bootstrap прошёл с ними.
+
+<a id="status-20261103"></a>
+## Текущие строки по опубликованному270 и отдельному WIP271
+
+Опубликовано45cafc25: maintained184, manifestB9AF771A, boot132c G1/G2 smoke9/0,
+G2 focus32/0. [Результат270](steps/witnesses/fix270-20261103/notes.md).
+Кандидат271 не посажен:185 inputs/66B15DB1, фокус1/0 и OSWALK0;
+whole boot133a завершился BootstrapExit0 в12:27:02.0057253Z (1119.42s).
+Детальная G1/G2 сверка и G2 focus переданы Opus и пока не объявляются PASS.
+[WIP271](steps/witnesses/fix271-20261103/notes.md), [порядок передачи](to_opus.md).
+
+| Пункт | Подтверждённый объём | Открытый остаток |
+| --- | --- | --- |
+| M1 / N1 / K03 — атомы и потребление | Атом не вызывает; актуальные receiver/actual value пути и локальность скрытых аргументов входят в262–270. | Единый collector/resolver для всех потребителей и устранение повторной семантики emission. |
+| M2 / N4 / K04 — выбранный callable и code/data | 262 выбирает собственные входы достигнутого callee;263–266 используют actual Structure-call, текущие code/data и допуск до dispatch;264 снял44 M2 forecast functions. | Остаток C, uniform native/явные throws и все разрешённые динамические consumers не закрыты одним фокусом. |
+| M3 / N3 — объявления и var | Точная норма15 октября восстановлена;270 реализовал обычную замену локальной var, отдельность data/var и held-полей. WIP267 включён после коррекции нормы; U3 не ожидает автора. | Общая классификация всех declaring/receiving форм и source-occurrence пути. |
+| M4 — генерируемый L1 | maintained selfbuild270 состоит из L3/L2; L1/C — generated intermediates. Публикация source240 и FULL241 заменили старую непубликованную candidate45 линию. | Окончательная модель общих проходов должна пройти тем же backend и финальным FULL. |
+| N2 / K10 — исходный граф и исполнение | Сохраняется выбранное тело; мутация сбрасывает native общим runtime-путём;263/264 проверили актуальный dispatch. | Полная замена дублирующих collector/head/opcode маршрутов общей реализацией. |
+| N5 / K02 — copy/merge | 263/264 проверили реальные копии, distinct graph и actual selected code/data. | Все разрешённые происхождения/ownership/ABI случаи; прогноз alias/body не является условием нормы. |
+| N6 — интеграция | Цельные проверенные пакеты до270, обе генерации и32 focused rows. | Остаток C, общий collector/3pass, затем FULL; отдельный PASS не закрывает N1–N5. |
+| N4-U / K01 / K05 / K06 — места и адреса | 258 local @free;261 graph/depth scope;270 common named-place read/receive/write. | 271 actual INDEX/read/write/@ и Array activation binding пока кандидат. Descriptor/DESC witnesses, raw-only C consumer и source-occurrence coverage остаются явными границами. |
+| K07 — Array | Физический Array/backing на maintained L2. WIP271 фиксирует actual Array binding и mixed named/INDEX; компонентный результат есть. | Не объявлять весь Array/address/copy/parent контракт по этому кандидату. |
+| K08 — C ABI и арифметика | 268 typed-native shift guard и269 unary complement используют тот же kernel, что walker. P1-NUMERIC-KIND закрыт260. | Raw-only consumers с известным ABI должны запрашивать полный actual value; predef — один источник, не обязательное языковое ограничение. |
+| K09 — пределы | Существующие chain65 и dynamic metadata сохраняются; произвольная глубина — норма. | Остаток инвентаря/потребителей, без превращения размеров таблиц в языковой предел. |
+| K11 — запись/публикация | Kernel253 prepare→write→commit;270 local var и held snapshots; явный путь пишет физическое место. | Все exits/re-entry/maps/native-role consumers в общем завершённом маршруте. |
+| K12 / K12-TEST | 260 actual model receiving;263–266 reached-call admission;270 named receiving. Явный test отделён от обязательного допуска. | Общий used-interface/UNKNOWN и удаление оставшихся proof-only/preflight путей; будущие тела не анализировать автоматически. |
+| S8.1 — экземпляры библиотек | Опубликованные constructor/provider и ownership witnesses сохраняются. | Интеграция с окончательным common call/native; не повторять старые зелёные запуски без причины. |
+| S8.2 — List/DynamicArray | Поддерживаемый lmx_list_owned.lm2 и его языковая сборка существуют. | Общая конечная библиотечная/почтовая интеграция; не смешивать растущий List с фиксированным Array. |
+| S8.3 — runtime source closure | Runtime/driver находятся в maintained L2, объявления пишет L3;232 перенёс оставшиеся32 driver bodies. | Семантические долги ядра остаются; исторический handwritten-driver остаток снят. |
+| S8.4 — parser/frontend/backend source closure | Полные frontend/backend/parser/libc входят в published selfbuild и реальные G1/G2, включая270. | Три прохода и общий collector — ещё работа; перенос языка исходников сам по себе их не доказывает. |
+| S8.5 — языковые build/test/docs | 240 перенёс текущие docs render/check; языковой tool строит whole поколения, suite, manifests и records. | Конечная проверка нужной closure и нового mail; legacy Python не fallback. |
+| S8.6 — две самосборки | FULL241 и последующие whole quick, в270248/248 actual artifacts,245raw-equal/3PE metadata,306consumed равны. | Финальный FULL после нового кода и нормативная готовность всего §8. |
+| §8a — post/send/receive | Существующая инфраструктура не удаляется и не считается новым API. | Общий call/implements/mail маршрут и T01–T26 остаются обязательными. |
+
+## Исторические отметки
 
 ## Как читать отметки
 

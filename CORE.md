@@ -242,9 +242,14 @@ See [L2 §13](docs/L2_spec_en.md#copy-merge).
 
 ## 8. Translation and verification surfaces
 
-The active development tree is `dev/l2src_sandbox/`. The L2 translator
-forms the common expression/receiver model, resolves it, checks admission,
-then emits generated L1. Parser normalization does not itself prove
+The maintained source package is `selfbuild/` with the relative
+`src/l2src/`, `tools/` and `tests/` layout recorded in
+[selfbuild/README.md](selfbuild/README.md). Candidates remain in the named
+private stages listed by the current handoff. Translation checks correct C
+emission and explicit throws/catch obligations; actual value admission is
+performed when the call or assignment is reached. The shared collector and
+three-pass integration remain implementation work, not a completed guarantee.
+Parser normalization does not itself prove
 head resolution. Expected rejection, link, reached execution, and
 self-build generation are distinct evidence classes.
 
@@ -253,7 +258,8 @@ accepted code/data work, complete kernel gate, L3+L2 self-build, and
 then unified mail. Tests must record
 actual source bytes and reached result, not only zero exit. The goal is
 two genuine self-replacements from supported L3/L2 sources with L1 only
-generated between them and C99. Current L1 self-build does not suffice.
+generated between them and C99. The published package has real whole G1/G2 quick generations; the final
+normative acceptance still requires the open plan items and final FULL.
 
 ## 9. Known incomplete boundaries (at this snapshot)
 
@@ -299,7 +305,7 @@ computed `dirty` values go directly to their selected physical `data` slots
 through that map if necessary: no expression evaluation, repeated admission,
 or copy of the full Structure. The normal split gives the compiler and walker
 an execution-source role for `code` and a writable-state role for `data`:
-the used executable part is stable only when write paths and aliases prove it.
+those roles do not establish code stability by predicting writes or aliases.
 This is not an `immutable` qualification of the whole `code` Structure.
 `call: code code` deliberately removes that separation to exercise general
 code mutation and `native` invalidation, including eventual on-the-fly
@@ -312,9 +318,8 @@ publication within `var` or through a code/data alias. Do not add a special
 execution path or hidden copy for this form. Entry into `call(code, code)`
 alone does not invalidate anything. A working `dirty` value has not changed
 the graph until publication; a direct graph write reaches that boundary
-immediately. With the place and value admitted, check all native dependencies
-the physical write would affect, including enclosing code; commit the slot
-and clear incompatible entries as one observable operation before another or
+immediately. With the place and value admitted, follow the actual cell-to-code links, including enclosing code; commit the slot
+and clear the affected code entries as one observable operation before another or
 recursive dispatch. A failed write
 or a compatible data-value update preserves the entry. L2 code needs a
 matching native replacement or refusal before publishing an incompatible
@@ -339,14 +344,14 @@ before a one-off implementation. No second data graph is introduced.
 
 ## 10. Source map
 
-| Concern | Live entry points |
+| Concern | Maintained entry points |
 | --- | --- |
-| Graph, pools, arena | [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1), [`lmx_pool.h.lm1`](dev/l2src_sandbox/lmx_pool.h.lm1), [`lmx_arena.h.lm1`](dev/l2src_sandbox/lmx_arena.h.lm1) |
-| Call and walker | [`lmx_call.h.lm1`](dev/l2src_sandbox/lmx_call.h.lm1), [`lmx_walk.h.lm1`](dev/l2src_sandbox/lmx_walk.h.lm1) |
-| Message, Thread, turn, root | [`lmx_message.h.lm1`](dev/l2src_sandbox/lmx_message.h.lm1), [`lmx_thread.h.lm1`](dev/l2src_sandbox/lmx_thread.h.lm1), [`lmx_turn.lm1`](dev/l2src_sandbox/lmx_turn.lm1), [`lmx_root.h.lm1`](dev/l2src_sandbox/lmx_root.h.lm1) |
-| Mail, children, collection | [`lmx_post.h.lm1`](dev/l2src_sandbox/lmx_post.h.lm1), [`lmx_child.h.lm1`](dev/l2src_sandbox/lmx_child.h.lm1), [`lmx_gc.h.lm1`](dev/l2src_sandbox/lmx_gc.h.lm1) |
-| Copy, merge, admission | [`lmx_graph_copy_owned.h.lm1`](dev/l2src_sandbox/lmx_graph_copy_owned.h.lm1), [`lmx_merge_owned.h.lm1`](dev/l2src_sandbox/lmx_merge_owned.h.lm1), [`lmx_implements.h.lm1`](dev/l2src_sandbox/lmx_implements.h.lm1) |
-| Translator and gates | [`l2trans.lm1`](dev/l2src_sandbox/l2trans.lm1), [`build_l2src.ps1`](tools/build_l2src.ps1), [`l2_harness.ps1`](tools/l2_harness.ps1), [`run_l3_selftest.py`](tools/run_l3_selftest.py) |
+| Graph, pools, arena | [lmx_pool.lm2](selfbuild/src/l2src/lmx_pool.lm2), [lmx_range.lm2](selfbuild/src/l2src/lmx_range.lm2), [build.lm2](selfbuild/tools/build.lm2) |
+| Call and walker | [lmx_call.lm2](selfbuild/src/l2src/lmx_call.lm2), [lmx_walk_values.lm2](selfbuild/src/l2src/lmx_walk_values.lm2) |
+| Thread, turn, root | [lmx_thread.lm2](selfbuild/src/l2src/lmx_thread.lm2), [lmx_turn.lm2](selfbuild/src/l2src/lmx_turn.lm2), [lmx_root.lm2](selfbuild/src/l2src/lmx_root.lm2) |
+| Copy, merge, admission | [lmx_graph_copy_owned.lm2](selfbuild/src/l2src/lmx_graph_copy_owned.lm2), [lmx_merge_owned.lm2](selfbuild/src/l2src/lmx_merge_owned.lm2), [lmx_implements.lm2](selfbuild/src/l2src/lmx_implements.lm2) |
+| Frontend and backend | [l2_frontend_core.lm2](selfbuild/src/l2src/l2_frontend_core.lm2), [l2_frontend_emit.lm2](selfbuild/src/l2src/l2_frontend_emit.lm2), [build.lm2](selfbuild/tools/build.lm2) |
+| Build, docs, receipts | [build.lm2](selfbuild/tools/build.lm2), [docs_check.lm2](selfbuild/tools/docs_check.lm2), [README.md](selfbuild/README.md) |
 
 This map locates a mechanism; it grants no write ownership. Check
 `OWNED_BY`/`LOCKED` markers and the active writer before editing code.

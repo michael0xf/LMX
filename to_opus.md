@@ -1,223 +1,195 @@
-# Передача кодинга LMX — Codex → Opus
+# Передача кодинга Opus — 2026-11-03
 
-Обновлено 2026-10-30, America/Sao_Paulo; снимок процессов — 2026-10-31 00:38 UTC.
-Автор прямо поручил: «передай ему кодинг, все вопросы- тебе».
-**Opus принимает единственный writer/build. Codex прекращает самостоятельный кодинг
-и сборки, отвечает на вопросы и консультирует.** Fable остаётся остановлен.
-Это действующая передача; прежняя инструкция Opus от 2026-10-22 сохранена в Git.
+Автор поручил после актуализации документов передать тебе кодинг.
+После отдельного сообщения Codex о передаче ты — **единственный writer/build**
+и владелец единственного compiler/test/docs pipeline. Codex освобождает слот,
+остаётся консультантом и управляющим ресурсов; его goal намеренно paused.
+Fable остановлен. Нового разрешения автора, ACK или design/review gate не нужно.
+Старая очередь «ждать окончания всей оптимизации Fable/Codex» отменена:
+ты наследуешь её остаток сейчас, затем продолжаешь §§8/8a.
 
-Goal Codex фактически `paused`, прежний часовой монитор тоже `PAUSED` на проверке
-после поручения. Не возобновляй Codex goal. Это не пауза работы Opus и не условие
-ожидания: продолжай следующий безопасный шаг без разрешения или ревью Codex.
-Часовой монитор перенастраивается на Opus; его состояние отражает приложение.
+Читать эту передачу как действующую. Исторические назначения и WIP в
+to_codex.md/to_fable.md не переопределяют её. Старая версия этого файла
+сохранена в Git и в P/pins/to_opus-before-20261103-handoff.md; не возвращай
+непроверенный checkpoint80b/81 или full100 как текущую исходную базу.
 
-## Что сделать сначала
+## 1. Первый шаг и связь
 
-1. Прочитай `AGENTS.md`, `READ.ME`, начало `steps/current.md`,
-   `L2_L3_CODING_INSTRUCTION.md`, §§0/3/8/8a `next_core_tasks_v3.md` и чек-лист.
-   Последнее состояние кода и точные записи:
-   [активный checkpoint](build2/codex_fix250generationchain01/pins/codex-active-checkpoint-20261029.md).
-   Старые назначения ниже новых разделов — история.
-2. Проверь `main`, рабочий каталог и чужой WIP, исключая запрещённые пути.
-   Снимок HEAD: `d5a9e5f0f2592bb3ab7e09fcc40f661db39a3ee6`; до этой передачи
-   tracked tree был чист. Поддерживаемый опубликованный пакет — `selfbuild/`;
-   новые изменения пока в ignored `build2`, не в стандартном dev и не в main.
-3. Прими под наблюдение **уже запущенную 80b**. Не запускай вторую сборку,
-   не убивай и не перезапускай живой перевод ради передачи. Проверь актуальные
-   PID/creation time и terminal: приведённые ниже PID — снимок, не вечный адрес.
-4. После настоящего terminal продолжай очередь ниже. Если возникла ошибка,
-   сохрани её точные входы и результат, исправляй причину; не проси разрешения
-   продолжать обычную работу и не жди идеального общего gate.
+Прочитай AGENTS.md, READ.ME, L2_L3_CODING_INSTRUCTION.md, эту передачу,
+текущую сводку steps/current.md, план v3 и чек-лист #status-20261103.
+Свежие CWD/HEAD/dirty и named receipt важнее старого номера процесса.
+Не возобновляй goal Codex и не создавай новую сессию.
 
-## Цель и неизменные нормы
+Вопросы проекта, нормы, ресурсов и вопросы, которые иначе задал бы автору,
+направляй Codex полным текстом через существующий lmx_uds. Codex сначала
+сверяет историю и документацию; только действительное неразрешённое
+противоречие выносит автору. Обычный следующий шаг, commit/push или уточнение
+ABI не являются поводом ждать разрешения.
 
-Рабочая цель целиком остаётся OPEN: чистое ядро и uniform native → работающая
-source-closed L3+L2 самосборка с двумя проверенными поколениями G1/G2 и обоими
-самозамещениями → общий mail API по §8a и T01–T26. Коммитить и пушить проверенные
-завершённые срезы в main уже разрешено. Один успешный перевод или линковка не
-доказывает значения и не закрывает всю цель.
+Канал проверен полным roundtrip CODEX-LMX-ROUNDTRIP-20261103T120944Z-01.
+Последняя live Opus: b79b4933-abc1-4eae-98f7-6361633964ee / native[a8230d].
+Это снимок, не вечный адрес: каждое сообщение — fresh ListAgents и фактический
+SendMessage TO opus; offline[c60b83] не адресат. lmx_uds:
+ff11f4c5-75c5-499f-a9c2-7d5b4fc7efea / [f4bea3].
+codex_inbound.py доставляет TO CODEX, не тебе. Транспортный ACK не proof read.
 
-- Первая часть допуска проверяет **только используемые интерфейсы реальных
-  Consumer-вызовов**, с сужающим поиском на нужную глубину. Дополнительный анализ
-  программист выбирает явно в `test`. UNKNOWN сам по себе не NO. Отказ — при
-  гарантированно невыполнимом требовании; не добавляй защитные запреты или анализ
-  будущего тела/поведения результата «на всякий случай».
-- Используй общий call/implements/receiving и установленные физические карты.
-  Имена сопоставляются при допуске; доступы после него используют адреса/места.
-  Никаких library-only signature comparators, whitelist экспортов, hidden root,
-  mutable module singleton, companion graph или подмены owner.message.graph.
-- Native callee из walked root не доказывает обход его тела. У обычных проверяемых
-  тел смотри настоящий walked маршрут. C-дверь требует native; arena явно в ABI,
-  локальный alias арены сам по себе не singleton.
-- Defaults — из текущего экземпляра. Скрытый вход, который активация действительно
-  потребляет, захватывается при входе в неё, до операторов тела и входной загрузки
-  own-полей (семантика RU §9, :464-466); лишь передаваемое дальше имя не читается.
-  Без eager чтения неиспользуемых входов, повторной инициализации или initialized-флагов
-  (уточнение Codex CODEX-OPUS-81ANS-20261031T023640Z).
-  Полный Value, отсутствие результата, present-null и сырой C ABI различаются.
-  FOREIGN — только точный by-value C transport; указатели остаются обычными REF.
-- Голое рабочее значение и явная физическая запись различаются: запись через
-  `node\field` не обновляет ранее загруженный bare snapshot (норма470).
-- Грамматику ради путей/вывода не менять; допустимые пробелы вокруг `\` сохранять.
-  L3 печатает L1 обычными строками. Оба транслятора, kernel, generators и обычные
-  build/test helpers поддерживаются на L3+L2; generated L1/C и внешний compiler
-  остаются промежуточными артефактами/инструментами.
+## 2. Опубликованная база и документы
 
-## Текущая сборка: 80b
+База кода: main45cafc25519123f6b1343d40779342c8efeea686 (пакет270).
+Документальный commit этой передачи следует поверх неё и не меняет selfbuild.
+Maintained root — selfbuild,184 inputs; input manifest:
+b9af771a661c8a2ecff90dcd881c055af974d301460d3493fa5cf9d69533a916.
+Frozen tested270: E4D1E376;182 inputs raw-equal, два различия только LF/EOF
+(l2_driver и l2_frontend_views); подробности в fix270/notes, старые bytes целы.
 
-Далее `R = C:/Nyasha_Planet/LMX`, `P = R/build2/codex_fix250generationchain01`.
+P = C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01.
+Q132 = P/cold-boot132c/quick132c. Это проверенная coherent быстрая линия:
 
-**Фактически жива на 00:38:05 UTC:** host `lmxtool-tool.exe` PID20780,
-Lower `l2trans.exe` PID12932, оба созданы около 00:25:34 UTC. CPU Lower749.39s,
-working set291700736bytes; диагностика L2 пустая, terminal ещё отсутствовал.
-Handle Codex `75784` Opus обычно недоступен: наблюдай те же реальные процессы,
-файлы и их creation time, не стартуй замену из-за отсутствия чужого handle.
+| Артефакт | Относительный путь от Q132 | SHA-256 |
+| --- | --- | --- |
+| tool | lmxtool.exe | 2e936543ab9c36c842b03c489052b44a6bcaa3110f8018851f2ee07f7f49ba26 |
+| frontend G2 | g2/frontend/l2trans.exe | fa22765b71e99c1e2f5b4eb0f01588eec5859e9d30405945492a73dece09b99d |
+| runtime | g2/runtime/driver.o | 5a39a205a07e4e40b185251811ac2897b1ff22660d1224f04637f25deef06ada |
+| observe | g2/runtime/driver-observe.o | 60ff05dd4bff4c1567775b10c4ec5348a4f614a2eb697756fca2e38cd1b99adb |
 
-- Stage: `P/cold-candidate80b`; output: `P/cold-candidate80b/fe80b`.
-- Обычная запись: `.../fe80b/record.txt`; L2 log: `.../fe80b/l2_frontend_lower.L2.log`.
-- Внешний log: `P/pins/candidate80b-frontend-parts.log`.
-- Start/terminal: `P/pins/candidate80b-frontend-parts-start.txt` и
-  `candidate80b-frontend-parts-terminal.txt`. Отсутствие terminal не отказ.
-- Команда, producer и manifests:
-  [точный запуск80b](build2/codex_fix250generationchain01/pins/candidate80b-frontend-parts-invocation.md).
-- Source159: `1D29A6789042CC6560F5426F9484317A86D8DAC4899796B5FD00470928FA1332`;
-  reuse284: `4C732C147014C4F61D5A0057777D79C9949A9AFDDBAA97038BF740F1BF210636`;
-  invariant135: `D70AACF7FF42959B3EAC2D6A9016830C771C4B2F0441E975FCBCB8168E19E297`.
-  Все проверены существующим L3 tool с0ошибок до запуска; inputs заморожены.
-- Tool: `P/cold-generator62/tool62-parts/lmxtool-tool.exe`, SHA
-  `351D933F122654090DC3D7F41A6F47F020990AA0515171617F9C7E82C1166FCC`.
-- Explicit producer49c: `P/cold-candidate49c/fe49c/l2trans.exe`, SHA
-  `F646DD0754B1761E0405A1D9D7024631276CD5DFE6B3197026059C89F8EBEFCC`;
-  его соседний backend `B68E4DD248A2513299D764D8B83BDE87505308F4C1D21928A4D2020F9DEE46FE`.
-  Это явный bootstrap input, не fallback поддерживаемого рукописного L1.
+boot132c завершён:879.95s,G1/G2 smoke9/0,G2 focus32/0,OSWALK9 тел.
+Не считать его живой сборкой. Карта артефактов и receipts:
+selfbuild/README.md, steps/witnesses/fix270-20261103/notes.md.
 
-80b переводит **только Lower и Core**, затем выполняет обычный backend/libc/root/C/link
-хвост. Успешные Values/Useplan72 и Emitter77 переиспользованы по точным manifests.
-Исходники80: Core478F6F2E…, Lower065CDA7E…; изменения — общий transport скрытых
-аргументов и grouping уже вычисленного адреса в двух сгенерированных вызовах.
-Никаких результатов 80b до terminal не принято.
+По твоему запросу OPUS-CODEX-DOCS-HANDOFF-20261103T1208Z обновлены:
+- provenance/semantics-book.md и generated RU/EN: actual runtime admission,
+  запрет future-body immutable/write прогнозов, actual native reset.
+- парные L1/L2 и implementation-notes, CORE.md, словарь и инструкции.
+- plan/checklist/design: актуальные262–270, отдельно WIP271 и остаток.
+- действующие команды docs render/check на языковом tool вместо Python.
 
-## Почему следующий шаг —81
+Генерация и docs-check завершены exit0 в12:28:05Z;35пар глав/27пар
+разделов грамматики/14implements/615imports, LF15944. Полные receipts —
+[документальная сверка](steps/witnesses/docs-opus-20261103/notes.md).
 
-FE77 был собран с exit0, frontend9D52AFF6…; это не доказало его самотрансляцию.
-Первый80 под producer77 завершился **exit1 в00:22:44UTC**: Lower1315:11,
-`assignment value has unknown type`, `atom=path`, строка `kind: path\leaf_kind`.
-Эта строка не менялась; Core не достигнут. Failed `cold-candidate80/fe80`
-и session75540 — история, не живой pipeline. Не стирай эти записи.
+Решения по пунктам2.1–2.3 твоего аудита следуют первичному ответу автора
+LMX_blog/2026-11-01.md, нового вопроса нет. Написанные throws/catch и
+корректный C проверяются в трансляции; actual values — при достигнутом
+приёме. Защита immutable действует на реальной записи/публикации;
+квалификация проверяет уже построенные значения, не будущие тела.
+Копия сохраняет текущие подготовленные карты/представления/ABI; это не
+сертификат будущего тела или alias forecast. Реальная запись кода→native0,
+обычная запись данных его сохраняет.
 
-Причина установлена по коду: новая числовая receiving-ветка потеряла уже
-подготовленную категорию opaque C-member до переключения machine ABI.
-Минимальная поправка — в
-`P/variants/frontend81/src/l2src/l2_frontend_lower.lm2`, SHA
-`36D27AAAADB071039FDF7FCD559A1BF24213AAB6B988E58D287F1D3A9FE8808C`.
-Она добавляет два locals и существующий CHECK predicate на **заимствованном**
-prepared path; категории kind−99/sourceFT−12 уже существовали. Никакого нового
-resolver, повторного разбора, исключения по имени поля или расширения грамматики.
-Inverse diff точно восстанавливает base80Lower065C. Поправка **ещё не собрана**.
+Обычная var уже уточнена и реализована270. Exact Oct15 message и точная
+цитата — LMX_blog/2026-11-03.md, source anchor ordinary-var.
+Атом никогда не является вызовом; @ может идти первым. var можно обычно
+объявлять и присваивать, как зарезервированное имя с явно описанными
+особенностями. Присваивание Structure не исполняет её. @free адресует
+собственную локальную input cell; внешнее место — явное @(node\x).
+U3 не pending и повторять вопрос автору нельзя.
 
-[Обоснование81 и точная очередь](build2/codex_fix250generationchain01/pins/frontend81-c-member-receiving-review.md):
+## 3. Передаваемый WIP271 / tp133
 
-1. Дождись actual80b Lower/Core и всего component tail; прочитай итог.
-2. Подготовь source81: те же159source80 плюс минимальный Lower36D. Через
-   существующий `build-frontend-part` переведи **только Lower81** explicit49c.
-   Добавь actual Core80b outputs в новые точные reuse/invariant manifests;
-   сохрани Emitter77/Values72/Useplan72. Core и Emitter повторно не переводить.
-   Producer80b всё ещё содержит прежнюю ошибку и для этого перевода не годится.
-3. Новым actual81 проверь маленький existing machine-module CLI witness:
-   `P/variants/frontend81/unit_machine_c_member_receiving.lm2`,
-   SHA `EF5C1D50F1178EE09AFDA79CE9A7D26335FAFB12B28B15F70AF38E071B7AA143`.
-   Это лишь проверка прежнего translation failure, не доказательство значений.
-4. Затем existing suite: `P/pins/owner-values73-callable-hidden55.tsv` и
-   `P/pins/held-forward78.tsv` на actual81 + runtime71. **Support stage71**, а не
-   frontend-only80b/81: нужны его реально сгенерированные runtime public headers.
-   Production runtime71 `2F4A95B0D9E04A456883DC1E2AC4376B382ED0E074B815C2BC4001B1A43F39FD`;
-   observed `F3CE1D168888BFE3C14CC038EEEC9343DEA5B8E913BC526FFAB026123EE7BEB2`.
-   Пути: `P/cold-candidate71/rt71/driver.o` и `driver-observe.o`.
-   Не создавать новые runner/matrix и не повторять неизменный FULL48.
+В maintained selfbuild ещё не посажен. Кандидат variants/tp133, рабочий
+cold-tp133, frozen cold-boot133a.185 inputs, source manifest:
+66b15db1b3ba4543c11cf99cd49f27c10677302e45b97f0b756fa38f0c43b5c8.
+Frozen inputs не менять; все следующие проверки должны указывать их.
 
-Нижние старые строки checkpoint/80b invocation «73 сразу после80b» устарели:
-последний обязательный порядок —80b → Lower81 → реальные проверки81.
+Девять изменений перечислены P/pins/tp133-changed.list:
+frontend_resolve/lower/coords/core/emit, lmx_walk_values, tools/build,
+tests/full-suite.tsv и новая tests/dyn/free_index_places.lm2.
+inputs.list отдельно увеличен до185. Source/fixture/ABI pins сохранены.
 
-## Отдельный незавершённый draft79
+Реализация: native и walker используют общий lmx_walk_value_index_place
+для actual Array/pointer read/write/@, с receiving/границами/контекстом
+и общим store. FREE сохраняется до достигнутой операции, без статического
+lexical-only запрета. own_bound отделён от scalar dirty-cache: настоящий
+caller Array входит в activation binding полным Value существующего
+descriptor; walker использует прежний OWN/work row. Нового графа,
+broad field scan, автообновления held bare cell и driver/oracle patch нет.
 
-`P/variants/working-value79` — **семь незамороженных, нескомпилированных файлов**;
-они не входят в80b или минимальный81. Это следующий связанный kernel-срез:
-полный working Value, producer forwarding, Graph publication/read decode,
-обычный bare return без значения и receiving без подмены отсутствия на ноль.
-
-| Путь относительно draft79 | SHA256 |
+| Проверка | Действительный результат |
 | --- | --- |
-| `src/l2src/l2_frontend_core.lm2` | `1C4B35A895007E2DCB0AAFB4B8579A7F1A7625D2639CEC89710D7F25B4FAEEB9` |
-| `src/l2src/l2_frontend_lower.lm2` | `85218BA2F8A484880B88A1E265950B453DC8B9F58B89299EA31874F52FA492A8` |
-| `src/l2src/l2_frontend_useplan.lm2` | `56936B8625A84D36F82655ADB6876613C179BDC17523B2D79E03020F15562C42` |
-| `src/l2src/l2_frontend_emit.lm2` | `9676575C1B8CA07DCA6311E3EEF19EE6E5FF243E749133A076FE4BE825B5B4A8` |
-| `src/l2src/lmx_walk_values.lm2` | `69BAAFB08DAD6B911B2A41B6F0126293BDAE0C78C1CD59A2804E3C59A18D48CF` |
-| `src/l2src/lmx_value_owned.lm2` | `CB4CD7D179804B6102DFCC4F2FCA08F3C6DA198D0AF518FD1B17CE5780B7D69B` |
-| `tools/build.lm2` | `67839B11EA62DC2A3ADED14CD6AAE6C0A87E98C39C1F770D7F5F319E2F0A6539` |
+| rt133a | runtime exit0; driver b27649dc650501c116e4e1162739f3c6c8cbbec70e7e3390d95d0512dc9dbcd0, observe9dd49f04fb886b14fa8b76b39ffa5f1affdd5a42e94a89a6d3c9ada4edb3c8a8; после неё runtime не менялся |
+| tool133b | exit0; 9fc96760288f19a6189de5dfaec39497e6096e3fbb0dad7f6ec22ddcbcf73d50 |
+| fe133b | exit0; b609a8fdac53f7e477e2eff0acaccbdd3cde4f99fc85270311e0053f5c509eea |
+| tp133-suite-04 | 12:06:55.3026805→12:07:21.9664991Z;1row/0failures, n/f root0/root1=7 |
+| tp133t-obs-index01 | OSWALK0; forced m1/read_int12/write_nine3/address_int3/relay_nine1/mixed_read1/mixed_write1 в обоих roots; native0walks этих тел |
+| Final fixture | 21f7582aa07c6dd75df9dc723ff4507957002eeb35ab8808e64b6b692a9c19be |
+| boot133a | 12:08:22.5906238Z→12:27:02.0057253Z; BootstrapExit0,1119.42s; детальная сверка G1/G2 и G2 focus ещё НЕ выполнены |
 
-Нужны согласованные новый исполнившийся L3 writer, generated Work schema и runtime
-до consumers. Новые counts: Lower441, Useplan150, ValueOwned61, walkValues138.
-RT71 не выдавать за совместимый runtime79. Точные изменения/ревью/границы — верх
-checkpoint и README draft79. Статическое ревью не заменяет сборку и значения.
+Первоначальные suite01/02 красные сохранены; suite03/04 после исправления
+Array binding зелёные. Не ослабляй oracle и не повторяй их ради смены writer.
 
-Два уже подготовленных маленьких свидетеля в том же existing suite, оба UNRUN:
+## 4. Точный порядок завершения271
 
-- `P/pins/no-candidate79.tsv` → draft79 `unit_no_candidate_selected_pointer.lm2`,
-  SHA `6567E54F7672B68BFB531C96CA00906B58B7191B08010CC2D964A6403B8F8848`;
-  реальные11/13 и сохранение выбранных pointer places.
-- `P/pins/computed-absence79.tsv` → draft79 `unit_computed_absence_receiving.lm2`,
-  SHA `91369247B2E204520CF464F1F4B0EAEBA09F5759094335B779C8F7E36624904E`;
-  own17/41/calls2, physical Host.field23/41/calls4.
+1. Terminal boot133a уже завершён BootstrapExit0 в12:27:02.0057253Z. Проверить
+   его actual pins/boot133a-quick.log и именованный g2-build.log из этого запуска. Если иной следующий pipeline ещё
+   работает, принять под наблюдение тот же pipeline; не запускать дубль.
+   Сверять PID+creation/CPU/команду, не старый PID. При ошибке сохранить
+   фактическую фазу/диагностику; не выдавать Start за успешный End.
+2. При BootstrapExit0 прочитать реальные producer records G1/G2, все inner
+   exits и inventories. Сверить оба185 source inputs, consumed manifests,
+   actual248 артефактов каждого поколения. Ожидаемое сравнение245raw+3PE
+   не подставлять вместо измерения; маска только настоящих PE timestamp/checksum.
+3. Запустить уже подготовленный P/pins/tp133a-suite-g2.command:
+   powershell -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp133a-suite-g2.command')))"
+   Аргументы внутри явные: новый Q133 G2 tuple и pins/focus133-final.tsv
+   (прежние32 + новаястрока =33). Stale комментарий slice270/tp132 и label
+   SUITE132CG2 — косметическая история шаблона; actual paths/hashes — tp133.
+   Скрипт ещё не исполнялся на момент составления передачи.
+4. Не повторять component focus. Достаточный G2 observed witness для нового
+   пути использовать через существующий os-walk рецепт, без новой кампании.
+5. После coherent G2/focus посадить exact185 исходников языковым stage-copy/
+   manifest/verify по pattern land270, обновить selfbuild/README, current,
+   design/checklist и fix271 records/evidence. Старые frozen manifests не
+   переписывать. Если Git нормализует bytes — отдельно показать точную дельту.
+6. docs-check языковым текущим tool, git diff --check, точный allowlist,
+   commit/push main. Нового разрешения Codex не нужно.
 
-Только observer leaf с printf — C-дверь. Для заявленного forced результата
-проверь настоящий walk обычных тел. Состояния retained/copy callable, весь
-kernel и почту эти два случая не закрывают. Ранние immutable/target guards
-сохранены; readonly+absent этим срезом не объявлен проверенным.
+Готовы только prepare/quick/G2-suite; land271 и финальная документация271
+ещё НЕ готовы и НЕ выполнены. Не считать эту передачу кодовой публикацией271.
+Оболочки находятся в P/pins; поддерживаемая логика build/test остаётся L3/L2.
+Свежий CWD каждого запуска и абсолютные receipts обязательны.
 
-## Что принято раньше и что остаётся
+## 5. Остаток после271
 
-FULL48 действительно прошёл G0→tested/promoted G1→tested/promoted G2:
-оба37/0, OSWALK0/selftest0, оба самозамещения и сравнения. Это **старые bytes**,
-не приёмка79/80/81. [Срез241](steps/witnesses/fix241-20261029/notes.md).
-Owner60/FE65/RT71 подтвердил реальные A1/A2/B1 значения41,41,42,42,43,42 и
-отдельные mutable places, но новый owner73/runtime-built callable mismatch
-и hidden55 на исправленном frontend ещё не прошли. Held78 тоже UNRUN.
+Сначала закончить конкретные открытые потребители и C по design rev29:
+raw-only consumer при известном C ABI; descriptor/DESC address witnesses;
+source-occurrence и одинаковые ссылки не смешивать с несколькими datafields.
+Известныйactual graphplace не opaquevoid*, таблица pointer codes не норма.
+Далее убрать остающийся вывод throws (body_throws/throws_close ещё существуют),
+остатки proof-only/preflight и дубли semantics в emission; сохранить явные
+throws/catch и reached selected-call obligation, UNKNOWN не равен NO.
+M2 forecast functions уже удалены264; не восстанавливать/не переделывать
+этот срез по старому тексту плана. split_close сейчас пакует declared rows,
+не доказывает будущие тела.
 
-Не принимать один exit/линковку/отчёт за независимость экземпляров, общий допуск
-runtime Structure, callable signature и реальный body walk. Используй actual
-команды/логи с source/compiler/runtime/program байтами и чёткие границы.
-После принятого нового kernel — обычная whole chain и требуемые два поколения;
-после §8 — mail §8a/T01–T26 через общий механизм. Вся цель ещё не достигнута.
+После зависимостей — один настоящий общий collector/resolver compiler+walker
+и ровно три compiler-прохода. Interpreter не обязан предварительно обходить
+программу: проверяет достигнутую операцию. Общие kernel APIs не должны скрывать
+два отдельных алгоритма. Затем coherent whole quick по необходимости,
+FULL только финал. Завершить оставшиеся §8 и §8a (post/send/receive через
+общий call/implements/mail, T01–T26). Один numeric/Point witness или готовый
+документ не завершает общий план. Проверенный scope P1-RET/P1-NUMERIC-KIND/
+local@free/A/B1 не открывать заново без новой дельты.
 
-## Работа, ресурсы и вопросы
+## 6. Ресурсы и защищённые пути
 
-Все вопросы по проекту, ресурсу или смыслу требования направляй **Codex**, не
-автору, через существующий `lmx_uds` по [инструкции](to_lmx_uds.md).
-Установи свежий адрес, новый уникальный ID, передай полный вопрос и точные
-источники. Проверяй последний фактический хоп к Codex; socket ACK не ответ.
-Вопрос не отменяет независимую работу. Только Codex выносит автору действительно
-необходимый нормативный выбор. Старую организационную матрицу почтальона не
-принимать за новое назначение writer.
+Один writer/build/pipeline. Codex больше не кодит параллельно и не запускает
+compiler/tests/docs после передачи. При OOM направить Codex точную ошибку,
+операцию, PID/creation и named receipt. Не повторять вслепую; не обходить
+реальные limits. Освобождать можно лишь точно опознанные ненужные процессы
+проекта, не полезный compiler и не чужие/неизвестные приложения.
 
-Сохраняй один compiler/test/docs pipeline. Тишина или timeout наблюдения не
-terminal. Ресурсные вопросы решай по реальным процессам/памяти; не спрашивай
-у автора разрешения на обычный следующий шаг. Не обходи реальные ограничения.
-Проверенные bytes переиспользуй, не меняя frozen inputs и не скрывая FAIL.
-Стандартные code/docs checks выполняй существующими L3/L2 tools после текущей
-цепочки. В этой передаче source checks/builds не перезапускались; docs-правка
-проверяется отдельно и не является новым GREEN ядра.
+Корневой C:/Nyasha_Planet/LMX/build вообще не читать/перечислять/трогать.
+Basename l2_driver_launch.err нигде не читать/перечислять/хешировать/копировать/
+стейджить. reference-producer117.patch сохранить непрочитанным/неизменённым.
+Чужие dirty: steps/witnesses/fix249-20261101/notes.md, to_codex.md,
+to_fable.md — не включать. to_opus.md явно передан автором для этой редакции;
+его исходный dirty-текст сохранён отдельно. Без reset/clean/massadd,
+новых веток/worktree/PR. Frozen inputs и исторические receipts сохранять.
+Обычный законченный main commit/push разрешён без ACK.
 
-Постоянные запреты:
-
-- Корневой `C:/Nyasha_Planet/LMX/build` вообще не читать/перечислять/трогать.
-- Basename `l2_driver_launch.err` нигде не читать/перечислять/хешировать/
-  копировать/стейджить; каждый language CLI — из нового отдельного private CWD.
-- `steps/witnesses/used-scope-20261020/reference-producer117.patch` сохранить
-  непрочитанным и неизменённым; чужой WIP не захватывать.
-- Не reset/clean, не массовый git add, не новые ветки/worktree/PR.
-- Не сканировать весь проект/build2/transcripts. Читать точные manifests,
-  названные записи и зависимые места. Не создавать новый shell/Python/C/L1
-  runner/cache/scheduler или тестовую систему.
-
-После прочтения сообщи Codex о принятии, сохрани живую80b и продолжай по этой
-очереди. ACK Codex не является разрешительным gate для обычного продолжения.
+Часовой lmx-goal обновлён: ACTIVE, тот же чат и интервал в один час,
+контроль твоего продолжения по плану вместо get_goal:
+полезный долгий compiler и обычное ожидание не являются остановкой.
+Codex разбирает фактический блокер, отвечает по чату/документам и помогает
+с ресурсами; явную паузу автора уважает. Монитор сохраняется до настоящего
+завершения §§8/8a либо отмены и затем удаляется.

@@ -89,7 +89,7 @@ A child is built in its own arena. Publication adds its reference to `Thread.chi
 <a id="copy-merge"></a>
 ## 14. Copy and merge
 
-`lmx_graph_copy_owned` and `lmx_merge_owned` implement a complete traversal using one source→copy map: repeated references reach one copy, and internal references and `parent` are rebased. Typed executable-operation records are copied with the body. The `native` word transfers only if the body remains selected and its address/type contract is proved. L1 does not re-decide whether a source Frame is a declaration, assignment, or call. See [L2 §13](L2_spec_en.md#copy-merge).
+`lmx_graph_copy_owned` and `lmx_merge_owned` implement a complete traversal using one source→copy map: repeated references reach one copy, and internal references and `parent` are rebased. Typed executable-operation records are copied with the body. The `native` word transfers when the selected body and the current contract of prepared places, value representations and the admission address map are preserved. This is not a forecast of future writes or aliases: an actual code write clears `native` under the shared L2 rule. L1 does not re-decide whether a source Frame is a declaration, assignment, or call. See [L2 §13](L2_spec_en.md#copy-merge).
 
 <a id="implements"></a>
 ## 15. implements

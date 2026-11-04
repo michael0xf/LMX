@@ -1677,6 +1677,45 @@ fn: lmx_walk_args_open (@: f c.LmxWalkFrame) int
     return: lmx_walk_args_open_values(f, 0)
 end: lmx_walk_args_open
 
+# Slice 258 (design 4.5 B2b-2a): the algebra of the pointer codes the translator spells -- LMX_TYPE_POINTER_BASE + the
+# formal's code (lm_compiler_ptr_cell_type; the codes of lm_compiler_core_pointer_type: 11 int*, 12 char*, 3 const char*,
+# 9 size_t*, 25 unsigned*, 38 ulong*, 16 void*; 19 int**, 17 char**, 20 size_t**, 24 unsigned**, 39 ulong**, 18 void**) --
+# read at run time where the translator had no type: a free pointer's deref and a free place's address.  The pointee of a
+# text (CHAR_PTR) is a char.  An opaque pointee (void*, a foreign C type, a graph reference) and a place without a pointer
+# code have no value type here: LMX_TYPE_NONE, the caller's runtime refusal -- never an invented type.
+fn: lmx_type_pointee (int: code) int
+    int: ft 0
+    code: c.lmx_type_base(code)
+    if: code = c.LMX_TYPE_CHAR_PTR
+        return: c.LMX_TYPE_CHAR
+    if: code < c.LMX_TYPE_POINTER_BASE
+        return: c.LMX_TYPE_NONE
+    ft: code - c.LMX_TYPE_POINTER_BASE
+    if: ft = 11
+        return: c.LMX_TYPE_INT
+    if: ft = 12 || ft = 3
+        return: c.LMX_TYPE_CHAR
+    if: ft = 9
+        return: c.LMX_TYPE_SIZE_T
+    if: ft = 25
+        return: c.LMX_TYPE_UNSIGNED
+    if: ft = 38
+        return: c.LMX_TYPE_ULONG
+    if: ft = 19
+        return: c.LMX_TYPE_POINTER_BASE + 11
+    if: ft = 17
+        return: c.LMX_TYPE_POINTER_BASE + 12
+    if: ft = 20
+        return: c.LMX_TYPE_POINTER_BASE + 9
+    if: ft = 24
+        return: c.LMX_TYPE_POINTER_BASE + 25
+    if: ft = 39
+        return: c.LMX_TYPE_POINTER_BASE + 38
+    if: ft = 18
+        return: c.LMX_TYPE_POINTER_BASE + 16
+    return: c.LMX_TYPE_NONE
+end: lmx_type_pointee
+
 # The same activation-owned cells serve walked arguments and native body inputs.
 # This prepares a working place; an ordinary absent read must stay absent before
 # asking for a place, as it does in the ARG consumer below.
@@ -1698,11 +1737,12 @@ fn: lmx_walk_values_arg_place (@: arena c.LmxArena; @: owned c.LmxWalkValue; @@:
         ---
         ty: item\type
     ---
-    # A reference to a Structure is one value under the LMX code and under a typed reference's pointer code (lmx_walk_value_receive_graph): a host's typed place, read by a nested method, holds it so.
+    # A reference to a Structure is one value under the LMX code and under a typed reference's pointer code (lmx_walk_value_receive_graph): a host's typed place, read by a
+    # nested method, holds it so.  Only such a witness takes it: an opaque pointee, and the kernel's actual pointee a Structure.  The record keeps its own type and qualifier.
     if: item\present != 0 && item\type != ty
-        if: item\kind != c.LMX_WALK_VALUE_REFERENCE || c.lmx_type_base(item\type) != c.LMX_TYPE_LMX || c.lmx_type_base(ty) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+        if: item\kind != c.LMX_WALK_VALUE_REFERENCE || c.lmx_type_base(item\type) != c.LMX_TYPE_LMX || c.lmx_type_base(ty) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || lmx_type_pointee(ty) != c.LMX_TYPE_NONE || (item\ref != 0 && c.lmx_domain_kind(arena, item\ref) != c.LMX_KIND_STRUCT)
             return: c.LMX_WALK_INVALID
-        item\type: ty
+        ---
     ---
     if: item\present = 0
         if: inputs[k] != 0
@@ -1892,45 +1932,6 @@ fn: lmx_walk_value_deref_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; i
     out\context: c.lmx_value_address_context(arena, holder\ref, holder)
     return: c.LMX_WALK_OK
 end: lmx_walk_value_deref_place
-
-# Slice 258 (design 4.5 B2b-2a): the algebra of the pointer codes the translator spells -- LMX_TYPE_POINTER_BASE + the
-# formal's code (lm_compiler_ptr_cell_type; the codes of lm_compiler_core_pointer_type: 11 int*, 12 char*, 3 const char*,
-# 9 size_t*, 25 unsigned*, 38 ulong*, 16 void*; 19 int**, 17 char**, 20 size_t**, 24 unsigned**, 39 ulong**, 18 void**) --
-# read at run time where the translator had no type: a free pointer's deref and a free place's address.  The pointee of a
-# text (CHAR_PTR) is a char.  An opaque pointee (void*, a foreign C type, a graph reference) and a place without a pointer
-# code have no value type here: LMX_TYPE_NONE, the caller's runtime refusal -- never an invented type.
-fn: lmx_type_pointee (int: code) int
-    int: ft 0
-    code: c.lmx_type_base(code)
-    if: code = c.LMX_TYPE_CHAR_PTR
-        return: c.LMX_TYPE_CHAR
-    if: code < c.LMX_TYPE_POINTER_BASE
-        return: c.LMX_TYPE_NONE
-    ft: code - c.LMX_TYPE_POINTER_BASE
-    if: ft = 11
-        return: c.LMX_TYPE_INT
-    if: ft = 12 || ft = 3
-        return: c.LMX_TYPE_CHAR
-    if: ft = 9
-        return: c.LMX_TYPE_SIZE_T
-    if: ft = 25
-        return: c.LMX_TYPE_UNSIGNED
-    if: ft = 38
-        return: c.LMX_TYPE_ULONG
-    if: ft = 19
-        return: c.LMX_TYPE_POINTER_BASE + 11
-    if: ft = 17
-        return: c.LMX_TYPE_POINTER_BASE + 12
-    if: ft = 20
-        return: c.LMX_TYPE_POINTER_BASE + 9
-    if: ft = 24
-        return: c.LMX_TYPE_POINTER_BASE + 25
-    if: ft = 39
-        return: c.LMX_TYPE_POINTER_BASE + 38
-    if: ft = 18
-        return: c.LMX_TYPE_POINTER_BASE + 16
-    return: c.LMX_TYPE_NONE
-end: lmx_type_pointee
 
 fn: lmx_type_pointer_to (int: ty) int
     int: ft 0

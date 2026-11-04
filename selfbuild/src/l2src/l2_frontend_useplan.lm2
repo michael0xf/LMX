@@ -1789,7 +1789,8 @@ fn: lm_compiler_tx_cname (@: t c.L2Tx; const: (@: prefix char); int: a; int: b; 
         return: (cast: (int) (1))
     if: c.lm_compiler_tx_cat(t, prefix) != 0 || c.lm_compiler_tx_cat(t, num) != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_ident_word(name) != 0 && (c.lm_compiler_tx_cat(t, "_") != 0 || c.lm_compiler_tx_catn(t, (cast: (const: @: char) (name\data)), (cast: (size_t) (name\length))) != 0)
+    # A definition's name (lm_compiler_written_form_split) is no C name: the number before it already makes this one unique.
+    if: c.lm_compiler_ident_word(name) != 0 && c.memchr((cast: (const: @: void) name\data), 32, name\length) = 0 && (c.lm_compiler_tx_cat(t, "_") != 0 || c.lm_compiler_tx_catn(t, (cast: (const: @: char) (name\data)), (cast: (size_t) (name\length))) != 0)
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_tx_cat(t, tail)))
 end: lm_compiler_tx_cname

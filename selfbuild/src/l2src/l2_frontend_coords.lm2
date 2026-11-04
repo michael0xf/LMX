@@ -880,7 +880,7 @@ fn: lm_compiler_split_data_row (int: oi) int
     @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     if: oi < 0 || oi >= own_n_cell[0]
         return: (cast: (int) (0))
-    if: c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) names[0][oi])) != 0
+    if: c.lm_compiler_own_written(oi) != 0
         return: 0
     if: c.lm_compiler_source_definition_ns(oi) >= 0 && c.lm_compiler_default_data_input(own_mi_cell[0][oi], c.lm_compiler_param_find(own_mi_cell[0][oi], names[0][oi])) != 0
         return: 0
@@ -1307,10 +1307,19 @@ fn: lm_compiler_field_pointee (int: ns; int: own; const: (@: pd char); size_t: o
     return: (cast: (int) (lm_compiler_ns_ref_pointee(ns, pd, off, len)))
 end: lm_compiler_field_pointee
 
+# The name a slot of a merge result answers to: a written form's definition is the occurrence of its head there too.
+fn: lm_compiler_mrs_row_text (int: k) @: c.LmP0Text
+    @@: mrs_row_cell int (cast: (@@: int) (@ c.l2_mrs_row))
+    @@@: mrs_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_mrs_name))
+    @@@: nsf_source_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_nsf_source))
+    if: mrs_row_cell[0][k] < 0
+        return: (cast: (@: c.LmP0Text) mrs_name_cell[0][k])
+    return: c.lm_compiler_source_text_of((cast: (const: @: c.LmP0Node) nsf_source_cell[0][mrs_row_cell[0][k]]), (cast: (const: @: c.LmP0Text) mrs_name_cell[0][k]))
+end: lm_compiler_mrs_row_text
+
 fn: lm_compiler_mrs_slot_named (int: res; const: (@: pd char); size_t: off; size_t: len; @: out_kind int; @: out_ent int) int
     @: mrs_n_cell int (cast: (@: int) (@ c.l2_mrs_n))
     @@: mrs_res_cell int (cast: (@@: int) (@ c.l2_mrs_res))
-    @@@: mrs_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_mrs_name))
     @@: mrs_kind_cell int (cast: (@@: int) (@ c.l2_mrs_kind))
     @@: mrs_ent_cell int (cast: (@@: int) (@ c.l2_mrs_ent))
     int: k 0
@@ -1323,7 +1332,7 @@ fn: lm_compiler_mrs_slot_named (int: res; const: (@: pd char); size_t: off; size
     if: c.lm_compiler_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
         return: (cast: (int) (0 - 1))
     while: k < mrs_n_cell[0]
-        if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(mrs_name_cell[0][k], pd, noff, nlen) != 0
+        if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(lm_compiler_mrs_row_text(k), pd, noff, nlen) != 0
             if: occurrence < 0
                 hit: slotix
                 \out_kind: mrs_kind_cell[0][k]
@@ -1369,7 +1378,6 @@ end: lm_compiler_mrs_ref_pointee
 fn: lm_compiler_mrs_slot_nth (int: res; const: (@: name c.LmP0Text); int: occ; @: out_kind int; @: out_ent int) int
     @: mrs_n_cell int (cast: (@: int) (@ c.l2_mrs_n))
     @@: mrs_res_cell int (cast: (@@: int) (@ c.l2_mrs_res))
-    @@@: mrs_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_mrs_name))
     @@: mrs_kind_cell int (cast: (@@: int) (@ c.l2_mrs_kind))
     @@: mrs_ent_cell int (cast: (@@: int) (@ c.l2_mrs_ent))
     int: k 0
@@ -1378,11 +1386,11 @@ fn: lm_compiler_mrs_slot_nth (int: res; const: (@: name c.LmP0Text); int: occ; @
     if: name = 0 || out_kind = 0 || out_ent = 0 || occ < 0
         return: (cast: (int) (0 - 1))
     while: k < mrs_n_cell[0]
-        if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(mrs_name_cell[0][k], name\data, 0U, name\length) != 0 && seen = occ
+        if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(lm_compiler_mrs_row_text(k), name\data, 0U, name\length) != 0 && seen = occ
             \out_kind: mrs_kind_cell[0][k]
             \out_ent: mrs_ent_cell[0][k]
             return: (cast: (int) (slotix))
-        if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(mrs_name_cell[0][k], name\data, 0U, name\length) != 0
+        if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(lm_compiler_mrs_row_text(k), name\data, 0U, name\length) != 0
             seen: seen + 1
         if: mrs_res_cell[0][k] = res
             slotix: slotix + 1

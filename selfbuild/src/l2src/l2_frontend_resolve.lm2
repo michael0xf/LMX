@@ -933,7 +933,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     # tail name. An already known tail is a value for the existing head, not a
     # second declaration of the tail.
     if: kind = 0 && n = 1 && c.lm_compiler_ref_tail_atom(frame) != 0 && lm_compiler_head_resolve(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (frame\head)), 0, 0) = 5
-        if: lm_compiler_head_absent(c.lm_compiler_ref_tail_atom(frame), source_node) != 0 && lm_compiler_declaration_known_tail(source_node, frame) = 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) (c.lm_compiler_ref_tail_atom(frame)))) = 0
+        if: lm_compiler_head_absent(c.lm_compiler_ref_tail_atom(frame), source_node) != 0 && lm_compiler_declaration_known_tail(source_node, frame) = 0 && c.lm_compiler_written_put_node(source_node) = 0
             named_reference: 1
         else:
             return: (cast: (@: c.L2Declaration) (0))
@@ -3003,6 +3003,11 @@ fn: lm_compiler_root_head_text (int: mi; const: (@: value c.LmP0Node)) @: c.LmP0
     int: row
     if: value = 0 || value\as = 0
         return: (cast: (@: c.LmP0Text) (0))
+    # One written form is one head, at its definition; the assignment that follows is no occurrence (lm_compiler_written_form_split).
+    if: c.lm_compiler_written_definition_node(value) != 0
+        return: c.lm_compiler_source_text_of(value, (cast: (const: @: c.LmP0Text) (0)))
+    if: c.lm_compiler_written_put_node(value) != 0
+        return: (cast: (@: c.LmP0Text) (0))
     own: c.lm_compiler_own_by_decl(mi, value)
     if: own >= 0 && own_name_cell[0][own] != 0
         return: (cast: (@: c.LmP0Text) (own_name_cell[0][own]))
@@ -3123,6 +3128,14 @@ fn: lm_compiler_ns_head_select (int: ni; const: (@: pd char); size_t: off; size_
             \slot: -1
         ---
         return: 0
+    # A written form's definition has its own row: this occurrence reads as the Structure written there, by its schema.
+    if: c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) head)) != 0
+        row: c.lm_compiler_ns_named_row(ni, (cast: (const: @: char) head\as\frame\head\data), 0U, head\as\frame\head\length, kind, ent)
+        if: row >= 0
+            \slot: row
+            return: 0
+        ---
+    ---
     row: c.lm_compiler_ns_named_row(ni, pd, noff, nlen, kind, ent)
     if: row >= 0 && c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) (nsf_source_cell[0][row]))) = c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) head))
         \slot: row
@@ -3183,6 +3196,12 @@ fn: lm_compiler_node_head_select (int: mi; const: (@: pd char); size_t: off; siz
         return: 0
     if: occurrence < 0 && \slot >= 0
         return: 0
+    # A written form's definition has its own row: this occurrence reads as the Structure written there, by its schema.
+    if: occurrence >= 0 && c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) head)) != 0
+        if: lm_compiler_node_seg_resolve(mi, (cast: (const: @: char) head\as\frame\head\data), 0U, head\as\frame\head\length, 0, slot, kind, ent, field_own, node_ns, host, scope) = 0 && \slot >= 0
+            return: 0
+        ---
+    ---
     if: occurrence >= 0
         if: lm_compiler_node_seg_resolve(mi, pd, noff, nlen, 0, slot, kind, ent, field_own, node_ns, host, scope) != 0
             \slot: -1

@@ -1,0 +1,43 @@
+# Both written forms stay source occurrences of t, with their fields; one data place; the writes reach the later execution.
+S:
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+D:
+    t: (int: x 0)
+end: D
+E:
+    t: (int: x 0)
+end: E
+Other:
+    int: x 8
+end: Other
+int: code 7
+if: S\[0]t\x != 2
+    code: 81
+---
+if: code = 7 && S\[1]t\x != 5
+    code: 82
+---
+S\[1]t\x: 6
+if: code = 7 && S\[1]t\x != 6
+    code: 83
+---
+call: S D
+if: code = 7 && D\t\x != 6
+    code: 84
+---
+D\t\x: 7
+if: code = 7 && S\[1]t\x != 7
+    code: 85
+---
+S\[1]t: Other
+call: S E
+if: code = 7 && E\t\x != 8
+    code: 86
+---
+if: code = 7 && S\[0]t\x != 2
+    code: 87
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

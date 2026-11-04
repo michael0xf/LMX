@@ -1,0 +1,29 @@
+P=/c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01
+SP=/c/Users/mtkra/AppData/Local/Temp/claude/6d92abb4660ab27f/b79b4933-abc1-4eae-98f7-6361633964ee/scratchpad
+PWSH="/c/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe"
+cd $P
+run() { "$PWSH" -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/$1.command')))" < /dev/null 2>&1 | tail -n 1 | cut -c1-200; }
+OUT=$P/pins/mut279.txt
+TOOL=cold-boot140c/quick140c/lmxtool.exe
+BASERT=cold-tp140/rt141a
+n=$1; shift
+for m in "$@"; do
+  n=$((n+1))
+  if test -e cold-tp140/fem141-$m; then echo "label taken $m" >> $OUT; continue; fi
+  if ! python $SP/mut279.py $m >> $OUT 2>&1; then echo "mutation did not apply: $m" >> $OUT; continue; fi
+  TP_TOOL=$TOOL TP_LABEL=fem141-$m TP_TRY=f$m run tp141-fe >> $OUT
+  TP_TOOL=$TOOL TP_FE=cold-tp140/fem141-$m/l2trans.exe TP_RT=$BASERT TP_TRY=f$m TP_LIST=probe279-f.tsv run tp141-probe >> $OUT
+  grep -a -E '^ *SUITE' pins/tp141-probe-f$m.terminal.txt | cut -c1-80 >> $OUT
+  for row in written_form source_occurrences structure_slot_write; do
+    for k in native forced; do
+      printf '%s %s %s: ' $m $row $k >> $OUT
+      { grep -a -h 'l2trans error' tp141-probe/f$m/$row-$k/p.L2.log 2>/dev/null | head -n 1 | sed 's|.*/tests/||' | cut -c1-110; for r in 0 1; do grep -a -h -E 'exit [0-9]+, expected|walk error|invariant|R0 was stopped' tp141-probe/f$m/$row-$k/run-root$r.log 2>/dev/null | head -n 1 | cut -c1-60; done; } | tr '\n' ';' >> $OUT
+      echo >> $OUT
+    done
+  done
+  # the stage comes back to the candidate through its own recipe; failure stops the loop so no mutation carries over
+  r=$(TP_TOOL=$TOOL TP_TRY=m$n run tp141-prepare)
+  echo "$m restore: $r" >> $OUT
+  case "$r" in PREPARED*) ;; *) echo "restore failed, stopped" >> $OUT; exit 1;; esac
+done
+echo done

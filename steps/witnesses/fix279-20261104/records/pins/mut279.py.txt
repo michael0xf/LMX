@@ -1,0 +1,60 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # The definition is no occurrence of its head.
+    'headtext': ('l2_frontend_resolve.lm2', r'''    if: c.lm_compiler_written_definition_node(value) != 0
+        return: c.lm_compiler_source_text_of(value, (cast: (const: @: c.LmP0Text) (0)))
+''', r'''    if: c.lm_compiler_written_definition_node(value) != 0 && mi < -9
+        return: c.lm_compiler_source_text_of(value, (cast: (const: @: c.LmP0Text) (0)))
+'''),
+    # The assignment after the definition is an occurrence of its own.
+    'puthead': ('l2_frontend_resolve.lm2', r'''    if: c.lm_compiler_written_put_node(value) != 0
+        return: (cast: (@: c.LmP0Text) (0))
+''', r'''    if: c.lm_compiler_written_put_node(value) != 0 && mi < -9
+        return: (cast: (@: c.LmP0Text) (0))
+'''),
+    # The definition's slot names a place by its internal name.
+    'placename': ('l2_frontend_core.lm2', r'''(c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) nsf_source_cell[0][fx])) = 0 && c.lm_compiler_emit_source_name(key, nsf_fname_cell[0][fx], ind, fail, fail2) != 0)
+''', r'''(c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) nsf_source_cell[0][fx])) >= 0 && c.lm_compiler_emit_source_name(key, nsf_fname_cell[0][fx], ind, fail, fail2) != 0)
+'''),
+    # A named Structure's occurrence reads as a statement's slot, with no schema.
+    'headselect': ('l2_frontend_resolve.lm2', r'''    if: c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) head)) != 0
+        row: c.lm_compiler_ns_named_row(ni, (cast: (const: @: char) head\as\frame\head\data), 0U, head\as\frame\head\length, kind, ent)
+''', r'''    if: c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) head)) != 0 && ni < -9
+        row: c.lm_compiler_ns_named_row(ni, (cast: (const: @: char) head\as\frame\head\data), 0U, head\as\frame\head\length, kind, ent)
+'''),
+    # The same through node.
+    'nodeselect': ('l2_frontend_resolve.lm2', r'''    if: occurrence >= 0 && c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) head)) != 0
+''', r'''    if: occurrence >= 0 && c.lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) head)) != 0 && mi < -9
+'''),
+    # A definition asks a place of the data.
+    'dataask': ('l2_frontend_coords.lm2', r'''    if: c.lm_compiler_own_written(oi) != 0
+        return: 0
+''', r'''    if: c.lm_compiler_own_written(oi) != 0 && oi < -9
+        return: 0
+'''),
+    # A merge result counts only the rows named as the head.
+    'mrstext': ('l2_frontend_coords.lm2', r'''    if: mrs_row_cell[0][k] < 0
+        return: (cast: (@: c.LmP0Text) mrs_name_cell[0][k])
+''', r'''    if: mrs_row_cell[0][k] < 99999
+        return: (cast: (@: c.LmP0Text) mrs_name_cell[0][k])
+'''),
+    # The prefix comes back as the role: a program's name of that form is a definition (the old rule of slice 278, spelled here on the row).
+    'prefix': ('l2_frontend_types.lm2', r'''    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    return: lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) own_decl_cell[0][oi]))
+''', r'''    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    if: own_name_cell[0][oi] != 0 && own_name_cell[0][oi]\data != 0 && own_name_cell[0][oi]\length > 11U && c.strncmp(own_name_cell[0][oi]\data, "l2_written_", 11U) = 0
+        return: 1
+    return: lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) own_decl_cell[0][oi]))
+'''),
+}
+name, old, new = TABLE[which]
+with open(R + name, 'rb') as f:
+    t = f.read().decode('utf-8')
+assert t.count(old) == 1, (which, t.count(old))
+t = t.replace(old, new)
+with open(R + name, 'wb') as f:
+    f.write(t.encode('utf-8'))
+print('mutated', which, name)

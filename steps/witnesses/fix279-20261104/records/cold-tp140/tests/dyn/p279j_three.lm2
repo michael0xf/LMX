@@ -1,0 +1,25 @@
+# Three forms: three occurrences, the last reached stands in the data.
+S:
+    t: (int: x 1)
+    t: (int: x 2)
+    t: (int: x 3)
+end: S
+D:
+    t: (int: x 0)
+end: D
+int: code 7
+if: S\[0]t\x != 1
+    code: 81
+---
+if: code = 7 && S\[1]t\x != 2
+    code: 82
+---
+if: code = 7 && S\[2]t\x != 3
+    code: 83
+---
+call: S D
+if: code = 7 && D\t\x != 3
+    code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

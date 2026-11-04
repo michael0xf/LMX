@@ -677,6 +677,17 @@ fn: lm_compiler_ident_word (const: (@: t c.LmP0Text)) int
     i: 1U
     while: i < t\length
         ch: (cast: (unsigned) t\data[i])
+        # A word, a space, digits: the name lm_compiler_written_form_split gives a definition.  No atom of a source has this form, so no program can name it.
+        if: ch = 32U && i + 1U < t\length
+            i: i + 1U
+            while: i < t\length
+                ch: (cast: (unsigned) t\data[i])
+                if: ch < 48U || ch > 57U
+                    return: (cast: (int) (0))
+                i: i + 1U
+            ---
+            return: (cast: (int) (1))
+        ---
         if: ch != 95U && (ch < 65U || ch > 90U) && (ch < 97U || ch > 122U) && (ch < 48U || ch > 57U)
             return: (cast: (int) (0))
         i: i + 1U

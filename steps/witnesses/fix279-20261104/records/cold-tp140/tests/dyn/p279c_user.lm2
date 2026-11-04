@@ -1,0 +1,45 @@
+# A name of the form the split once used is an ordinary name: a place of the data, a head, a field.
+U:
+    l2_written_7: (int: x 3)
+end: U
+UD:
+    l2_written_7: (int: x 0)
+end: UD
+Bare:
+    int: z 0
+end: Bare
+Twice:
+    t: (int: x 2)
+    l2_written_1: (int: x 4)
+    t: (int: x 5)
+end: Twice
+fn: in_fn () int
+    l2_written_1: (int: x 3)
+    l2_written_1: (int: x 4)
+    return: l2_written_1\x
+end: in_fn
+int: code 7
+call: U UD
+if: UD\l2_written_7\x != 3
+    code: 81
+---
+int: caught 0
+---
+    call: U Bare
+    catch: call ()
+        caught: 1
+---
+if: code = 7 && caught != 1
+    code: 82
+---
+if: code = 7 && in_fn() != 4
+    code: 83
+---
+if: code = 7 && Twice\l2_written_1\x != 4
+    code: 84
+---
+if: code = 7 && Twice\[1]t\x != 5
+    code: 85
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

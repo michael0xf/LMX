@@ -1,0 +1,65 @@
+# The same occurrences through a free path and through a model of two heads.
+S:
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+Two:
+    t: (int: x 0)
+    t: (int: x 0)
+end: Two
+int: h 0
+fn: free_first () int
+    return: h\[0]t\x
+end: free_first
+fn: free_second () int
+    return: h\[1]t\x
+end: free_second
+fn: free_third () int
+    return: h\[2]t\x
+end: free_third
+fn: free_bare () int
+    return: h\t\x
+end: free_bare
+fn: model_second (@: m Two) int
+    return: m\[1]t\x
+end: model_second
+fn: model_write (@: m Two) int
+    m\[1]t\x: 9
+    return: m\[1]t\x
+end: model_write
+fn: run () int
+    @: h S S
+    if: free_first() != 2
+        return: 81
+    if: free_second() != 5
+        return: 82
+    int: caught 0
+    ---
+        int: a free_third()
+        catch: implements ()
+            caught: 1
+    ---
+    if: caught != 1
+        return: 83
+    caught: 0
+    ---
+        int: b free_bare()
+        catch: implements ()
+            caught: 1
+    ---
+    if: caught != 1
+        return: 84
+    return: 7
+end: run
+int: code run()
+if: code = 7 && model_second(S) != 5
+    code: 85
+---
+if: code = 7 && model_write(S) != 9
+    code: 86
+---
+if: code = 7 && S\[1]t\x != 9
+    code: 87
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

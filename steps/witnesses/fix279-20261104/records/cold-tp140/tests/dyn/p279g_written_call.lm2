@@ -1,0 +1,23 @@
+# A short call over a named Structure with one var head and two written forms in the code stays as it was.
+Code:
+    var:
+        int: n 0
+    end: var
+    t: (int: x 2)
+    t: (int: x 5)
+    n: t\x
+end: Code
+Data:
+    int: n 0
+    t: (int: x 0)
+end: Data
+int: code 7
+call: Code Data
+if: Data\n != 5
+    code: 81
+---
+if: code = 7 && Data\t\x != 5
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

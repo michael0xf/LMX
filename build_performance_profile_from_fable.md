@@ -299,3 +299,12 @@ Source 203/79F7879B; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. A local written Structure is now a typed reference place, so a read of `T\y` goes through the admitted map instead of a direct slot. A whole-pipeline
 measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix278-20261104/notes.md).
+
+## Slice279 / boot141a (Opus, 2026-11-04)
+
+Whole quick 846.95 s: 15:59:23.9478940Z–16:13:30.8965757Z, both generations
+smoke 9/0. G2 focus 53/0, 562.38 s: 16:14:30.0635449Z–16:23:52.4408663Z.
+Source 203/F1CDB823; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. The role of a written form moved from a spelling to frame flags and a C name lost the definition's text, with no new pass. A whole-pipeline
+measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix279-20261104/notes.md).

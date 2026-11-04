@@ -2257,13 +2257,13 @@ fn: lm_compiler_source_shell_emit (@: row c.L2SourceContainer; const: (@: root c
         # The owning edge names the declaration; the fn occurrence itself
         # retains its receiver head. Both names belong to existing addresses.
         if: c.lm_compiler_fn_parts_on(mi) != 0
-            if: c.sprintf(spelling, "lmx_arena_ref_cell(l2_sc%zu, %uU)", owner\id, (cast: (unsigned) field\slot)) < 0 || c.lm_compiler_emit_source_name(spelling, (cast: (const: @: c.LmP0Text) (own_name_cell[0][field\own])), "        ", "return: 1", 0) != 0
+            if: c.sprintf(spelling, "lmx_arena_ref_cell(l2_sc%zu, %uU)", owner\id, (cast: (unsigned) field\slot)) < 0 || (c.lm_compiler_own_written((cast: (int) (field\own))) = 0 && c.lm_compiler_emit_source_name(spelling, (cast: (const: @: c.LmP0Text) (own_name_cell[0][field\own])), "        ", "return: 1", 0) != 0)
                 return: (cast: (int) (1))
             if: c.sprintf(spelling, "l2_sc%zu", row\id) < 0 || c.lm_compiler_emit_source_name(spelling, (cast: (const: @: c.LmP0Text) (m_node_cell[0][mi]\as\frame\head)), "        ", "return: 1", 0) != 0
                 return: (cast: (int) (1))
             ---
         else:
-            if: c.sprintf(spelling, "l2_sc%zu", row\id) < 0 || c.lm_compiler_emit_source_name(spelling, (cast: (const: @: c.LmP0Text) (own_name_cell[0][field\own])), "        ", "return: 1", 0) != 0
+            if: c.sprintf(spelling, "l2_sc%zu", row\id) < 0 || c.lm_compiler_emit_source_name(spelling, c.lm_compiler_own_source_text((cast: (int) (field\own))), "        ", "return: 1", 0) != 0
                 return: (cast: (int) (1))
         ---
         if: ni >= 0 && c.fprintf(out_cell[0], "        l2_nsp[%d]: l2_sc%zu\n", ni, row\id) < 0
@@ -2366,7 +2366,7 @@ fn: lm_compiler_source_cells_emit (int: kind; int: index; const: (@: root char))
                 if: c.lm_compiler_own_computed((cast: (int) (field\own))) != 0
                     if: c.sprintf(holder, "l2_rw%d", field\storage_temp) < 0 || c.fprintf(out_cell[0], "        @: Lmx l2_rw%d lmx_walk_plain_profiled(l2_program_arena, l2_sc%zu, 2U, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_sc%zu)))\n        if: l2_rw%d = 0\n            return: 1\n        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, 1U)\n        if: l2_entry_slot = 0\n            return: 1\n", field\storage_temp, row\id, row\id, field\storage_temp, field\storage_temp) < 0 || lm_compiler_emit_cell_new((cast: (int) (field\own)), holder, 1U, holder, "        ", "l2_entry_slot", "return: 1", 0) != 0
                         return: (cast: (int) (1))
-                    if: c.lm_compiler_own_is_slot((cast: (int) (field\own))) != 0 && c.lm_compiler_emit_source_name("l2_entry_slot", (cast: (const: @: c.LmP0Text) (own_name_cell[0][field\own])), "        ", "return: 1", 0) != 0
+                    if: c.lm_compiler_own_is_slot((cast: (int) (field\own))) != 0 && c.lm_compiler_own_written((cast: (int) (field\own))) = 0 && c.lm_compiler_emit_source_name("l2_entry_slot", (cast: (const: @: c.LmP0Text) (own_name_cell[0][field\own])), "        ", "return: 1", 0) != 0
                         return: (cast: (int) (1))
                     field: field\next
                     continue
@@ -3576,9 +3576,9 @@ fn: lm_compiler_emit_one_nest (int: nest; const: (@: parent char); int: slot; co
         return: (cast: (int) (1))
     if: live != 0 && c.lm_compiler_emit_invariant(ind, "a method's named Structure did not allocate") != 0
         return: (cast: (int) (1))
-    if: live = 0 && c.lm_compiler_emit_source_name(mine, ns_name_cell[0][nest], ind, "return: 1", 0) != 0
+    if: live = 0 && c.lm_compiler_emit_source_name(mine, c.lm_compiler_ns_source_text(nest), ind, "return: 1", 0) != 0
         return: (cast: (int) (1))
-    if: live != 0 && c.lm_compiler_emit_source_name(mine, ns_name_cell[0][nest], ind, "c.abort()", "return: 0") != 0
+    if: live != 0 && c.lm_compiler_emit_source_name(mine, c.lm_compiler_ns_source_text(nest), ind, "c.abort()", "return: 0") != 0
         return: (cast: (int) (1))
     if: sn > 0 && c.fprintf(out_cell[0], "%sif: lmx_arena_refs_open_profiled(l2_program_arena, %s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s))) != 0\n", ind, mine, sn, mine) < 0
         return: (cast: (int) (1))
@@ -3719,7 +3719,7 @@ fn: lm_compiler_emit_method_fields_at (int: oi; const: (@: holder char); size_t:
     ---
     if: c.fprintf(out_cell[0], "        l2_entry_leaf: %s\n        if: l2_entry_leaf = 0\n            return: 1\n        l2_fkid: lmx_struct_new_profiled(l2_entry_leaf, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_leaf)))\n        if: l2_fkid = 0\n            return: 1\n", holder) < 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_emit_source_name("l2_fkid", own_name_cell[0][oi], "        ", "return: 1", 0) != 0
+    if: c.lm_compiler_emit_source_name("l2_fkid", c.lm_compiler_own_source_text(oi), "        ", "return: 1", 0) != 0
         return: (cast: (int) (1))
     if: n > 0 && c.fprintf(out_cell[0], "        if: lmx_arena_refs_open_profiled(l2_program_arena, l2_fkid, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_fkid))) != 0\n            return: 1\n", n) < 0
         return: (cast: (int) (1))
@@ -3803,7 +3803,7 @@ fn: lm_compiler_emit_method_fields_at (int: oi; const: (@: holder char); size_t:
     if: c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, %s, %zuU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", holder, child) < 0
         return: (cast: (int) (1))
     # The owning slot names the field, as a model's does (l2_emit_ns_names); the Structure keeps its own name.
-    if: c.snprintf(owning, 320U, "lmx_arena_ref_cell(%s, %zuU)", holder, child) >= 320 || c.lm_compiler_emit_source_name(owning, own_name_cell[0][oi], "        ", "return: 1", 0) != 0
+    if: c.snprintf(owning, 320U, "lmx_arena_ref_cell(%s, %zuU)", holder, child) >= 320 || (c.lm_compiler_own_written(oi) = 0 && c.lm_compiler_emit_source_name(owning, own_name_cell[0][oi], "        ", "return: 1", 0) != 0)
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_method_fields_at
@@ -8885,11 +8885,10 @@ end: lm_compiler_rw_write
 # Original: l2src/l2trans.lm1:28081
 fn: lm_compiler_rw_physical_own (int: parent; int: oi; @: out int) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
-    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     int: width 3
     # A written definition of a split-called code stays in that code, never in its data: it reads as the step of a source definition does (lm_compiler_rw_atom_ns).
-    if: c.lm_compiler_m_is_split(rw_mi_cell[0]) != 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) own_name_cell[0][oi])) != 0
+    if: c.lm_compiler_m_is_split(rw_mi_cell[0]) != 0 && c.lm_compiler_own_written(oi) != 0
         return: (cast: (int) (lm_compiler_rw_ns_value(parent, (cast: (int) (c.lm_compiler_source_definition_ns(oi))), rw_mi_cell[0], out)))
     if: c.lm_compiler_rw_is_hosted(oi) != 0
         return: (cast: (int) (lm_compiler_rw_host_read(parent, oi, out)))
@@ -17213,7 +17212,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         if: c.lm_compiler_ns_width(k) > 0 && c.fprintf(out_cell[0], "        if: lmx_arena_refs_open_profiled(l2_program_arena, l2_nsp[%d], %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_nsp[%d]))) != 0\n            return: 1\n", k, (cast: (unsigned) c.lm_compiler_ns_width(k)), k) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
-        if: c.snprintf(sx_name, 48U, "l2_nsp[%d]", k) < 0 || c.lm_compiler_emit_source_name(sx_name, ns_name_cell[0][k], "        ", "return: 1", 0) != 0
+        if: c.snprintf(sx_name, 48U, "l2_nsp[%d]", k) < 0 || c.lm_compiler_emit_source_name(sx_name, c.lm_compiler_ns_source_text(k), "        ", "return: 1", 0) != 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         # Every owned typed range reachable inside a qualified branch is

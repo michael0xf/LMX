@@ -1,0 +1,35 @@
+# A Structure of two written forms as a requirement: a candidate with one head answers for what is used of it.
+Two:
+    t: (int: x 0)
+    t: (int: x 0)
+end: Two
+One:
+    t: (int: x 4)
+end: One
+fn: first (@: m Two) int
+    return: m\[0]t\x
+end: first
+fn: second (@: m Two) int
+    int: caught 0
+    ---
+        return: m\[1]t\x
+        catch: implements ()
+            caught: 1
+    ---
+    return: 9
+end: second
+int: code 7
+if: first(One) != 4
+    code: 81
+---
+int: outer 0
+---
+    int: a second(One)
+    catch: implements ()
+        outer: 1
+---
+if: code = 7 && outer != 1
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

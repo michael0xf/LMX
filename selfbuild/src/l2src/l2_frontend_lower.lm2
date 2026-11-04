@@ -658,7 +658,7 @@ fn: lm_compiler_reference_implicit_model (const: (@: declaration c.L2Declaration
         return: (cast: (int) (-1))
     model: lm_compiler_declaration_model((cast: (const: @: c.LmP0Node) (declaration\source)), 0)
     # The model of a written place is the definition its line assigns (lm_compiler_contract_type_model): it has no written name of its own.
-    if: model < 0 || model >= ns_n_cell[0] || ns_name_cell[0][model] = 0 || (c.lm_compiler_text_same(word, ns_name_cell[0][model]) = 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) ns_name_cell[0][model])) = 0)
+    if: model < 0 || model >= ns_n_cell[0] || ns_name_cell[0][model] = 0 || (c.lm_compiler_text_same(word, ns_name_cell[0][model]) = 0 && c.lm_compiler_ns_written(model) = 0)
         return: (cast: (int) (-1))
     return: (cast: (int) (model))
 end: lm_compiler_reference_implicit_model
@@ -2108,13 +2108,12 @@ fn: lm_compiler_own_load (int: k0; @: dest c.L2Tx) int
     @: nm char (cast: (@: char) nm_storage\buffer)
     c.L2FrontendScratchChar128: call_place_storage
     @: call_place char (cast: (@: char) call_place_storage\buffer)
-    @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     @: field c.L2GraphField
     # A definition that is a place of the data is read there, as a number is (below): its position is the code's.
     if: c.lm_compiler_source_definition_ns(k) >= 0 && (c.lm_compiler_m_is_split(cur_mi_cell[0]) = 0 || c.lm_compiler_split_data_row(k) = 0)
         field: c.lm_compiler_graph_field(k)
         # A written definition of a split-called code stays in that code, never in its data.
-        if: field != 0 && field\holder = 0 && c.lm_compiler_m_is_split(cur_mi_cell[0]) != 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) names[0][k])) != 0
+        if: field != 0 && field\holder = 0 && c.lm_compiler_m_is_split(cur_mi_cell[0]) != 0 && c.lm_compiler_own_written(k) != 0
             if: c.lm_compiler_tx_clear(dest) != 0 || c.snprintf(call_place, 128U, "lmx_walk_slot_struct(l2_call_arena, l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU))", field\child) < 0
                 return: (cast: (int) (1))
             return: (cast: (int) (c.lm_compiler_tx_cat(dest, call_place)))

@@ -1,0 +1,21 @@
+# At the root: the place holds what was reached; both occurrences stay in the unit.
+rr: (int: x 2)
+rr: (int: x 5)
+fn: via_node0 () int
+    return: node\[0]rr\x
+end: via_node0
+fn: via_node1 () int
+    return: node\[1]rr\x
+end: via_node1
+int: code 7
+if: rr\x != 5
+    code: 81
+---
+if: code = 7 && via_node1() != 5
+    code: 82
+---
+if: code = 7 && via_node0() != 5
+    code: 83
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -622,27 +622,58 @@ fn: lm_compiler_predef_result_ty (const: (@: name c.LmP0Text); @: out_ty int) in
     return: (cast: (int) (0))
 end: lm_compiler_predef_result_ty
 
-# The name lm_compiler_written_form_split gives a written Structure: no program wrote it, so it asks nothing of the data.
-fn: lm_compiler_written_definition_name (const: (@: name c.LmP0Text)) int
-    return: (cast: (int) (name != 0 && name\data != 0 && name\length > 11U && c.strncmp(name\data, "l2_written_", 11U) = 0))
-end: lm_compiler_written_definition_name
+# What lm_compiler_written_form_split makes of one written form says so on the nodes themselves, in flag bits above the parser's: a role is the node's,
+# never a spelling's.
+fn: lm_compiler_written_definition_node (const: (@: at c.LmP0Node)) int
+    return: (cast: (int) (at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0 && (at\as\frame\flags & 1024U) != 0U))
+end: lm_compiler_written_definition_node
 
-# The own row of the definition a place's own line assigns (`T: l2_written_N`), or -1.
+fn: lm_compiler_written_put_node (const: (@: at c.LmP0Node)) int
+    return: (cast: (int) (at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0 && (at\as\frame\flags & 2048U) != 0U))
+end: lm_compiler_written_put_node
+
+# The text a node's Structure bears: the head the program wrote, which the split keeps beside the name its definition goes by, or the node's own.
+fn: lm_compiler_source_text_of (const: (@: at c.LmP0Node); const: (@: text c.LmP0Text)) @: c.LmP0Text
+    if: lm_compiler_written_definition_node(at) != 0
+        return: (cast: (@: c.LmP0Text) (at\as\frame\head + 1))
+    return: (cast: (@: c.LmP0Text) text)
+end: lm_compiler_source_text_of
+
+# The same two questions of a row whose declaration is that node.
+fn: lm_compiler_own_written (int: oi) int
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    return: lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) own_decl_cell[0][oi]))
+end: lm_compiler_own_written
+
+fn: lm_compiler_ns_written (int: ni) int
+    @@@: ns_def_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_def_node))
+    return: lm_compiler_written_definition_node((cast: (const: @: c.LmP0Node) ns_def_node_cell[0][ni]))
+end: lm_compiler_ns_written
+
+fn: lm_compiler_own_source_text (int: oi) @: c.LmP0Text
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    return: lm_compiler_source_text_of((cast: (const: @: c.LmP0Node) own_decl_cell[0][oi]), (cast: (const: @: c.LmP0Text) own_name_cell[0][oi]))
+end: lm_compiler_own_source_text
+
+fn: lm_compiler_ns_source_text (int: ni) @: c.LmP0Text
+    @@@: ns_def_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_def_node))
+    @@@: ns_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_ns_name))
+    return: lm_compiler_source_text_of((cast: (const: @: c.LmP0Node) ns_def_node_cell[0][ni]), (cast: (const: @: c.LmP0Text) ns_name_cell[0][ni]))
+end: lm_compiler_ns_source_text
+
+# The own row of the definition a place's own line assigns (lm_compiler_written_form_split), or -1.
 fn: lm_compiler_written_place_definition (int: own) int
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
     @: decl c.LmP0Node
-    @: written c.LmP0Text
     if: own < 0 || own >= own_n_cell[0]
         return: -1
     decl: own_decl_cell[0][own]
-    if: decl = 0 || decl\kind != c.LM_P0_NODE_FRAME || decl\as = 0 || decl\as\frame = 0
+    if: lm_compiler_written_put_node((cast: (const: @: c.LmP0Node) decl)) = 0
         return: -1
-    written: lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (decl\as\frame)))
-    if: lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) written)) = 0
-        return: -1
-    return: c.lm_compiler_own_find(own_mi_cell[0][own], (cast: (const: @: c.LmP0Text) written))
+    return: c.lm_compiler_own_find(own_mi_cell[0][own], (cast: (const: @: c.LmP0Text) lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (decl\as\frame)))))
 end: lm_compiler_written_place_definition
 
 # The place `T` of a written Structure (lm_compiler_written_form_split) is assigned by reference, so it is no type word of a statement: `T: Swapped` assigns it.

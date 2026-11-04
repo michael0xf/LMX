@@ -296,6 +296,96 @@ fn: local_named () int
     return: L\[0]t\x
 end: local_named
 
+# 114-122: both forms stay source occurrences of t (CODEX-OPUS-278-REVIEW-SOURCE-OCCURRENCE-20261104T133624Z-01): each with its fields, at its own index, through a static path, a free
+# path, a model and a copy; a write through an occurrence is seen by the next reach of its line; there is one data place.
+Occ:
+    t: (int: x 2)
+    t: (int: x 5)
+end: Occ
+OccData:
+    t: (int: x 0)
+end: OccData
+OccAgain:
+    t: (int: x 0)
+end: OccAgain
+OccOther:
+    int: x 8
+end: OccOther
+OccModel:
+    t: (int: x 0)
+    t: (int: x 0)
+end: OccModel
+OccRead:
+    t: (int: x 2)
+    t: (int: x 5)
+end: OccRead
+OccCopy: merge: OccRead
+int: occ_free_holder 0
+fn: occ_free_second () int
+    return: occ_free_holder\[1]t\x
+end: occ_free_second
+OccNothing:
+end: OccNothing
+fn: occ_free_third () int
+    @: third OccNothing occ_free_holder\[2]t
+    if: third = 0
+        return: 0
+    return: 1
+end: occ_free_third
+fn: occ_free_bare () int
+    return: occ_free_holder\t\x
+end: occ_free_bare
+fn: occ_model_write (@: m OccModel) int
+    m\[1]t\x: 9
+    return: m\[1]t\x
+end: occ_model_write
+fn: occ_free () int
+    @: occ_free_holder OccRead OccRead
+    if: occ_free_second() != 5
+        return: 117
+    int: refused 0
+    ---
+        int: third occ_free_third()
+        catch: implements ()
+            refused: 1
+    ---
+    if: refused != 1
+        return: 118
+    refused: 0
+    ---
+        int: bare occ_free_bare()
+        catch: implements ()
+            refused: 1
+    ---
+    if: refused != 1
+        return: 119
+    return: 7
+end: occ_free
+
+# 123-126: a name of the form the split once used is an ordinary name: a place the data must have, a field of its Structure, a local.
+Spelled:
+    l2_written_7: (int: x 3)
+end: Spelled
+SpelledData:
+    l2_written_7: (int: x 0)
+end: SpelledData
+SpelledNone:
+    int: z 0
+end: SpelledNone
+SpelledBeside:
+    t: (int: x 2)
+    l2_written_1: (int: x 4)
+    t: (int: x 5)
+end: SpelledBeside
+fn: rooted_index () int
+    return: node\[1]rooted\x
+end: rooted_index
+fn: spelled_local () int
+    l2_written_1: (int: x 3)
+    l2_written_1: (int: x 4)
+    return: l2_written_1\x
+end: spelled_local
+
 int: code 7
 int: first re_enter()
 int: second re_enter()
@@ -411,6 +501,62 @@ if: code = 7
     if: HandData\t\x != 5
         code: 107
     ---
+---
+if: code = 7 && (Occ\[0]t\x != 2 || Occ\[1]t\x != 5)
+    code: 114
+---
+if: code = 7
+    Occ\[1]t\x: 6
+    call: Occ OccData
+    if: OccData\t\x != 6 || Occ\[0]t\x != 2
+        code: 115
+    ---
+    OccData\t\x: 7
+    if: Occ\[1]t\x != 7
+        code: 116
+    ---
+---
+if: code = 7
+    code: occ_free()
+---
+if: code = 7 && (occ_model_write(OccRead) != 9 || OccRead\[1]t\x != 9)
+    code: 120
+---
+if: code = 7 && (OccCopy\[0]t\x != 2 || OccCopy\[1]t\x != 5)
+    code: 121
+---
+if: code = 7
+    Occ\[1]t: OccOther
+    call: Occ OccAgain
+    if: OccAgain\t\x != 8 || Occ\[0]t\x != 2
+        code: 122
+    ---
+---
+if: code = 7
+    call: Spelled SpelledData
+    if: SpelledData\l2_written_7\x != 3
+        code: 123
+    ---
+---
+if: code = 7
+    int: spelled_refused 0
+    ---
+        call: Spelled SpelledNone
+        catch: call ()
+            spelled_refused: 1
+    ---
+    if: spelled_refused != 1
+        code: 124
+    ---
+---
+if: code = 7 && (SpelledBeside\l2_written_1\x != 4 || SpelledBeside\[1]t\x != 5)
+    code: 125
+---
+if: code = 7 && spelled_local() != 4
+    code: 126
+---
+if: code = 7 && rooted_index() != 5
+    code: 127
 ---
 sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
 return

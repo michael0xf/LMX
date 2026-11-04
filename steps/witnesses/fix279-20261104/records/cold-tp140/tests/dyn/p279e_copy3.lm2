@@ -1,0 +1,33 @@
+# A retained copy keeps its origin's heads and their fields.
+S:
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+M: merge: S
+int: h 0
+fn: read_free () int
+    return: h\[1]t\x
+end: read_free
+fn: run_free () int
+    @: h S M
+    return: read_free()
+end: run_free
+int: code 7
+if: M\[0]t\x != 2
+    code: 81
+---
+if: code = 7 && M\[1]t\x != 5
+    code: 82
+---
+if: code = 7 && run_free() != 5
+    code: 83
+---
+M\[1]t\x: 6
+if: code = 7 && S\[1]t\x != 5
+    code: 84
+---
+if: code = 7 && M\[1]t\x != 6
+    code: 85
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

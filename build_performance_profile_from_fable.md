@@ -271,3 +271,13 @@ checks a field of the loaded record per inline step; a rebinding looks up its sl
 model row. boot137a took 1019 s on nearly the same bytes, so the 76 s spread is not
 attributable to the change: a whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix275-20261103/notes.md).
+
+## Slice276 / boot138b (Opus, 2026-11-04)
+
+Whole quick 997.39 s: 02:11:44.4899726Z–02:28:21.8842378Z, both generations
+smoke 9/0. G2 focus 48/0, 402.79 s: 02:28:44.3975320Z–02:35:27.1867485Z.
+Source 198/C34D7122; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A map step now calls one function; a missing number walks the arena's records once per reached edge. Each root
+head adds a row to the name table. The first boot of this slice took about the same on nearly the same bytes:
+a whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix276-20261104/notes.md).

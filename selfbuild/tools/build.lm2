@@ -1205,7 +1205,7 @@ fn: decl_implements (@: f c.FILE) int
         return: 1
     if: c.fputs("    # may try another route) from a present but refused/ambiguous admission.\n    # Both ordinal and last-occurrence edges are composed; the resulting map\n    # is owned by the arena record, never by the caller's temporary frame.\n    # full_receiver < 0 composes retained numbers only; 0 prepares current\n    # correspondence without a Consumer; > 0 checks this receiving Consumer.\n    fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied; @: int out_answer) int\n    # Read-only coordinate preparation, with separate status/out_answer.\n    # refresh=1 is admission; refresh=0 composes numbers only. No proof is\n    # retained. Caller releases/transfers computed map and out_unknown mask.\n", f) < 0
         return: 1
-    if: c.fputs("    fn: lmx_implements_compose_view (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; @: size_t pair_unknown; int: refresh; @: LmxImplEntry out; @: int applied; @@: size_t out_unknown; @: int out_answer) int\n    # The value's slot for EDGE j through its record (K01): j < width is req's field j through\n    # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).\n    # LMX_WALK status plus out_answer; out is written only on YES. A copied\n    # description may rebase an existing map of its own source layout;\n    # an unadmitted value never falls back to a guessed slot j.\n    fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out; @: int out_answer) int\n    fn: lmx_implements_resolve_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @@: LmxImplEntry out; @: int out_answer) int\n    # One record appended as given into room the caller took (lmx_arena_impl_room): a copy's carried correspondence\n", f) < 0
+    if: c.fputs("    fn: lmx_implements_compose_view (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; @: size_t pair_unknown; int: refresh; @: LmxImplEntry out; @: int applied; @@: size_t out_unknown; @: int out_answer) int\n    # The value's slot for EDGE j through its record (K01): j < width is req's field j through\n    # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).\n    # LMX_WALK status plus out_answer; out is written only on YES. A copied\n    # description may rebase an existing map of its own source layout;\n    # an unadmitted value never falls back to a guessed slot j.\n    fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out; @: int out_answer) int\n    fn: lmx_implements_reach (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: edge; @: size_t out; @: int out_answer) int\n    fn: lmx_implements_resolve_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @@: LmxImplEntry out; @: int out_answer) int\n    # One record appended as given into room the caller took (lmx_arena_impl_room): a copy's carried correspondence\n", f) < 0
         return: 1
     if: c.fputs("    # (lmx_copy_carry_records), proved by the record it carries.  0, or 1 when there is no room.  The caller restores\n    # the table's length where it reverts the copy.\n    fn: lmx_implements_append (@: LmxArena arena; @: LmxImplEntry v) int\n    # 1 when value is a partial copy (its record with itself carries holes): a place it holds no object at is absent.\n    fn: lmx_implements_holes (@: LmxArena arena; @: Lmx value) int\n    # A view's slot SIZE_MAX is \"not carried\": unavailable numeric correspondence, or a capture's omitted copy of the\n    # fields its model reads (item 738), or a value admitted by name to a formal whose method never reads\n    # that field. An actual unresolved numeric access reports unavailable;\n    # it is not permission to use a positional fallback. Admission checks the\n", f) < 0
         return: 1
@@ -2023,7 +2023,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: value_names char c.calloc(62U, sizeof(@: char))
     @@: source_names char c.calloc(13U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
-    @@: implements_names char c.calloc(65U, sizeof(@: char))
+    @@: implements_names char c.calloc(67U, sizeof(@: char))
     @@: copy_names char c.calloc(27U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(18U, sizeof(@: char))
@@ -2559,6 +2559,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     implements_names[62]: "lmx_implements_call_field"
     implements_names[63]: "lmx_implements_receive_cell"
     implements_names[64]: "lmx_implements_cell_model"
+    implements_names[65]: "lmx_implements_head_slot"
+    implements_names[66]: "lmx_implements_reach"
     list_names[0]: "lmx_list_len"
     list_names[1]: "lmx_list_cap"
     list_names[2]: "lmx_list_data"
@@ -2828,7 +2830,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 65, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 67, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 27, 0) != 0
         return: 1
@@ -3335,7 +3337,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     @@: frontend_context_names char c.calloc(111U, sizeof(@: char))
     @@: frontend_type_names char c.calloc(51U, sizeof(@: char))
     @@: frontend_coord_names char c.calloc(113U, sizeof(@: char))
-    @@: frontend_resolve_names char c.calloc(121U, sizeof(@: char))
+    @@: frontend_resolve_names char c.calloc(123U, sizeof(@: char))
     @@: frontend_intern_names char c.calloc(19U, sizeof(@: char))
     @@: frontend_useplan_names char c.calloc(151U, sizeof(@: char))
     @@: frontend_lower_names char c.calloc(427U, sizeof(@: char))
@@ -4335,6 +4337,8 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_resolve_names[118]: "lm_compiler_merge_typed_decl"
     frontend_resolve_names[119]: "lm_compiler_value_body"
     frontend_resolve_names[120]: "lm_compiler_primary_numeric_receiver"
+    frontend_resolve_names[121]: "lm_compiler_root_head_text"
+    frontend_resolve_names[122]: "lm_compiler_schema_two_heads"
     frontend_intern_names[0]: "lm_compiler_intern_reserve"
     frontend_intern_names[1]: "lm_compiler_intern_match"
     frontend_intern_names[2]: "lm_compiler_intern_store"
@@ -5906,7 +5910,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_resolve") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_resolve", frontend_resolve_names, 121, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_resolve", frontend_resolve_names, 123, 1) != 0
             return: 1
         ---
     ---

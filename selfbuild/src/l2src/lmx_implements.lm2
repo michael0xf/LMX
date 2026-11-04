@@ -601,6 +601,26 @@ fn: lmx_implements_same_name (@: a c.VoidArray; @: b c.VoidArray) int
     return: (cast: (int) (a\size = b\size && c.memcmp(a\data, b\data, a\size) = 0))
 end: lmx_implements_same_name
 
+# THE REGISTRY OF SOURCE OCCURRENCES (N4-U U1; the book, "Карта data"; author 2026-10-15: "головы считаем тупо на корневом уровне").
+# Every root head of a Structure's source has one row at this port, keyed by the owning cell of the slot the head stands at: the
+# place it declares, or the statement it executes.  A root `if:` is one head named `if`; a head inside an initializer belongs to that
+# initializer and has no row here.  This is not the map of addressable fields: a repeated head creates no second field, it takes
+# its name out of bare use, and `s\[N]field` selects the head.  0 for a slot with no head (an operation's own second child).
+fn: lmx_implements_head_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) @: c.VoidArray
+    @: name c.VoidArray c.lmx_source_name_get_at(arena, (cast: (@: void) c.lmx_arena_ref_cell(s, i)), (cast: (size_t) -2))
+    if: name = 0 || name\size = 0U || name\data = 0
+        return: 0
+    return: name
+end: lmx_implements_head_name
+
+# The name field i of s answers to in a correspondence: its place's, or the head that stands there.
+fn: lmx_implements_view_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) @: c.VoidArray
+    @: name c.VoidArray lmx_implements_place_name(arena, s, i)
+    if: name != 0
+        return: name
+    return: lmx_implements_head_name(arena, s, i)
+end: lmx_implements_view_name
+
 # Name correspondence for used-interface admission (L3 section 7). When nothing
 # else relates value to req -- no template, stored proof, pending row or identity: a candidate whose layout the
 # translation of req never saw, such as an instance a library's construction built -- each field of req is found in
@@ -655,18 +675,27 @@ fn: lmx_implements_named_view (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx
     ---
     i: 0U
     while: i < count
-        have[i]: lmx_implements_place_name(arena, value, i)
+        have[i]: lmx_implements_view_name(arena, value, i)
         i: i + 1U
     ---
     while: j < width
-        want[j]: lmx_implements_place_name(arena, req, j)
+        want[j]: lmx_implements_view_name(arena, req, j)
+        j: j + 1U
+    ---
+    j: 0U
+    while: j < width
         map[j]: (cast: (size_t) -1)
         map[width + j]: (cast: (size_t) -1)
         ordinal: 0U
+        size_t: req_heads 0U
         k: 0U
-        while: k < j
+        while: k < width
             if: lmx_implements_same_name(want[k], want[j]) != 0
-                ordinal: ordinal + 1U
+                if: k < j
+                    ordinal: ordinal + 1U
+                ---
+                req_heads: req_heads + 1U
+            ---
             k: k + 1U
         ---
         seen: 0U
@@ -679,6 +708,17 @@ fn: lmx_implements_named_view (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx
                 seen: seen + 1U
             ---
             i: i + 1U
+        ---
+        # Two or more heads in the value: a bare name selects none of them, neither the first nor the last; only an index does (the
+        # book, "Карта data").  Two or more in req: no bare use of it exists, every reached use is an index, so both halves are the head's.
+        if: want[j] != 0
+            if: req_heads > 1U
+                map[width + j]: map[j]
+            else:
+                if: seen > 1U
+                    map[width + j]: (cast: (size_t) -1)
+                ---
+            ---
         ---
         j: j + 1U
     ---
@@ -4319,20 +4359,23 @@ end: lmx_implements_model_for_layout
 # every name has a slot inside the data, and out, when not 0, gets the m slots.  NO: the row marks a name SIZE_MAX --
 # the call's own runtime refusal.  UNKNOWN: no proof -- the data has no token, no row has it, or a slot of the row is
 # past the data.  m = 0 is YES for any data.  Nothing is recorded; out is the only write.
-# At admission a named place must identify exactly one physical storage
-# slot. Literal source heads are distinct from that storage. A second equal
-# root head makes an unindexed name ambiguous.
+# At admission a named place must identify exactly one physical storage slot.  The registry of source occurrences answers for
+# the heads (lmx_implements_head_name): a second equal root head makes an unindexed name ambiguous, whichever receiver wrote it.
+# A single head with no place of its own is that head's slot: `var\if` addresses the statement standing there.
 fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.VoidArray; int: type; @: out size_t) int
     if: data = 0
         return: c.LMX_IMPLEMENTS_NO
     @: fields c.VoidArray @ data\array
     size_t: slot (cast: (size_t) -1)
+    size_t: head_slot (cast: (size_t) -1)
     size_t: heads 0U
     size_t: j 0U
     while: j < fields\size
-        @: cell void c.lmx_graph_value_in(arena, data, j)
-        if: lmx_domain_kind(arena, cell) = c.LMX_KIND_STRUCT && lmx_implements_same_name(c.lmx_source_name_get(arena, cell), wanted) != 0
+        if: lmx_implements_same_name(lmx_implements_head_name(arena, data, j), wanted) != 0
+            if: heads = 0U
+                head_slot: j
             heads: heads + 1U
+        ---
         if: lmx_implements_same_name(lmx_implements_place_name(arena, data, j), wanted) != 0
             if: slot != (cast: (size_t) -1)
                 return: c.LMX_IMPLEMENTS_NO
@@ -4340,7 +4383,11 @@ fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.V
         ---
         j: j + 1U
     ---
-    if: slot = (cast: (size_t) -1) || heads > 1U
+    if: heads > 1U
+        return: c.LMX_IMPLEMENTS_NO
+    if: slot = (cast: (size_t) -1)
+        slot: head_slot
+    if: slot = (cast: (size_t) -1)
         return: c.LMX_IMPLEMENTS_NO
     @: value void c.lmx_graph_value_in(arena, data, slot)
     if: type = c.LMX_TYPE_NONE
@@ -4360,6 +4407,33 @@ fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.V
         out[0]: slot
     return: c.LMX_IMPLEMENTS_YES
 end: lmx_implements_call_field
+
+# `s\[N]field` over an actual Structure: the slot of its source occurrence N of that head (zero-based).  A Structure with no registry
+# rows for the name has at most its one place, occurrence 0.  YES or NO; no first or last is chosen for a bare name here.
+fn: lmx_implements_head_slot (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.VoidArray; size_t: occurrence; @: out size_t) int
+    if: data = 0 || wanted = 0 || out = 0
+        return: c.LMX_IMPLEMENTS_NO
+    @: fields c.VoidArray @ data\array
+    size_t: seen 0U
+    size_t: place (cast: (size_t) -1)
+    size_t: j 0U
+    while: j < fields\size
+        if: lmx_implements_same_name(lmx_implements_head_name(arena, data, j), wanted) != 0
+            if: seen = occurrence
+                out[0]: j
+                return: c.LMX_IMPLEMENTS_YES
+            seen: seen + 1U
+        ---
+        if: place = (cast: (size_t) -1) && lmx_implements_same_name(lmx_implements_place_name(arena, data, j), wanted) != 0
+            place: j
+        ---
+        j: j + 1U
+    ---
+    if: seen = 0U && occurrence = 0U && place != (cast: (size_t) -1)
+        out[0]: place
+        return: c.LMX_IMPLEMENTS_YES
+    return: c.LMX_IMPLEMENTS_NO
+end: lmx_implements_head_slot
 
 fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: names char; @: requirements size_t; @: out size_t) int
     if: names = 0 || requirements = 0
@@ -6803,6 +6877,128 @@ fn: lmx_implements_slot (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; size
     out_answer[0]: c.LMX_IMPLEMENTS_YES
     return: c.LMX_WALK_OK
 end: lmx_implements_slot
+
+# Book, "При последовательных композициях соответствия составляются": req -> I from the record of (I, req) and I -> value from the
+# record of (value, I) give (value, req) with no names and no new proof, each half through the same half at both steps.  YES when
+# such a chain exists and its composition is now recorded; UNKNOWN when none does.
+fn: lmx_implements_chain (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; @: out_answer int) int
+    size_t: i 0U
+    out_answer[0]: c.LMX_IMPLEMENTS_UNKNOWN
+    while: i < arena\impl_len
+        @: first c.LmxImplEntry arena\impl + i
+        if: first\value = value && first\req != 0 && first\req != req && first\req != value
+            @: middle c.Lmx (cast: (@: c.Lmx) first\req)
+            @: pair_found c.LmxImplEntry lmx_implements_find(arena, middle, req)
+            @: layout void lmx_implements_layout(arena, middle)
+            if: pair_found != 0 && layout != 0
+                c.LmxImplEntry: pair
+                int: applied 0
+                c.memcpy((cast: (@: void) (@ pair)), (cast: (@: void) pair_found), c.sizeof(c.LmxImplEntry))
+                @: fields c.VoidArray @ req\array
+                @: pair_view c.LmxImplEntry @ pair
+                if: pair_view\frame = 0 && pair_view\map = 0
+                    pair_view\n: fields\size
+                ---
+                int: status lmx_implements_compose_receiving(arena, value, layout, req, pair_view, -1, 0, @ applied, out_answer)
+                if: status != c.LMX_WALK_OK
+                    return: status
+                if: out_answer[0] = c.LMX_IMPLEMENTS_YES && lmx_implements_find(arena, value, req) != 0
+                    return: c.LMX_WALK_OK
+                out_answer[0]: c.LMX_IMPLEMENTS_UNKNOWN
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: c.LMX_WALK_OK
+end: lmx_implements_chain
+
+# One edge of a pair whose record has no number for it: only this edge is asked, by the name of req's field, as the record's own
+# correspondence reads it.  Nothing about any other field or any future body.  The ordinal half is that head's same-numbered
+# occurrence in value; the bare half is value's one head of the name, and a name value lacks or holds at two or more heads is the
+# negative answer.  A field with no name stays unknown.  An owned map keeps the number: the next access reads it.
+fn: lmx_implements_edge_named (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; size_t: edge; @: out size_t; @: out_answer int) int
+    @: fields c.VoidArray @ req\array
+    @: have c.VoidArray @ value\array
+    size_t: width fields\size
+    size_t: j edge
+    int: last 0
+    out_answer[0]: c.LMX_IMPLEMENTS_NO
+    if: j >= width
+        j: j - width
+        last: 1
+    ---
+    if: j >= width
+        return: c.LMX_WALK_OK
+    @: want c.VoidArray lmx_implements_view_name(arena, req, j)
+    if: want = 0
+        out_answer[0]: c.LMX_IMPLEMENTS_UNKNOWN
+        return: c.LMX_WALK_OK
+    size_t: ordinal 0U
+    size_t: req_heads 0U
+    size_t: k 0U
+    while: k < width
+        if: lmx_implements_same_name(lmx_implements_view_name(arena, req, k), want) != 0
+            if: k < j
+                ordinal: ordinal + 1U
+            ---
+            req_heads: req_heads + 1U
+        ---
+        k: k + 1U
+    ---
+    # req with two or more heads of the name has no bare use: the half is the head's, as in lmx_implements_named_view.
+    int: bare (cast: (int) (last != 0 && req_heads < 2U))
+    size_t: seen 0U
+    size_t: selected (cast: (size_t) -1)
+    k: 0U
+    while: k < have\size
+        if: lmx_implements_same_name(lmx_implements_view_name(arena, value, k), want) != 0
+            if: bare != 0 || seen = ordinal
+                selected: k
+            seen: seen + 1U
+        ---
+        k: k + 1U
+    ---
+    if: selected = (cast: (size_t) -1) || (bare != 0 && seen > 1U)
+        return: c.LMX_WALK_OK
+    @: e c.LmxImplEntry lmx_implements_find(arena, value, req)
+    if: e != 0 && e\frame = 0 && e\map != 0 && e\owned_map != 0 && j < e\n
+        @: numbers size_t e\map
+        if: last != 0
+            numbers[e\n + j]: selected
+        else:
+            numbers[j]: selected
+        ---
+    ---
+    out[0]: selected
+    out_answer[0]: c.LMX_IMPLEMENTS_YES
+    return: c.LMX_WALK_OK
+end: lmx_implements_edge_named
+
+# A reached edge of (value, req): the number the map holds, or else one of two different situations (CODEX-OPUS-275-MAPS-20261103T214114Z-01).
+# No record of the pair: the chain of the records already made, and only where no chain exists the admission of the current
+# receiving, once; later reads find its map.  A record with no number for this edge: lmx_implements_edge_named asks this edge alone.
+# NO stays the negative answer; UNKNOWN that remains is no proof either way.
+fn: lmx_implements_reach (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; size_t: edge; @: out size_t; @: out_answer int) int
+    int: status lmx_implements_slot(arena, value, req, edge, out, out_answer)
+    if: status != c.LMX_WALK_OK || out_answer[0] != c.LMX_IMPLEMENTS_UNKNOWN
+        return: status
+    if: value = 0 || req = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) value)) = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) req)) = 0
+        return: c.LMX_WALK_OK
+    if: lmx_implements_find(arena, value, req) = 0
+        status: lmx_implements_chain(arena, value, req, out_answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: out_answer[0] != c.LMX_IMPLEMENTS_YES
+            status: lmx_implements_admit_receiving_templates(arena, value, req, 0, 0U, 0, out_answer)
+            if: status != c.LMX_WALK_OK || out_answer[0] = c.LMX_IMPLEMENTS_NO
+                return: status
+        ---
+        status: lmx_implements_slot(arena, value, req, edge, out, out_answer)
+        if: status != c.LMX_WALK_OK || out_answer[0] != c.LMX_IMPLEMENTS_UNKNOWN
+            return: status
+    ---
+    return: lmx_implements_edge_named(arena, value, req, edge, out, out_answer)
+end: lmx_implements_reach
 
 # After merge, a source's already proved code-to-source edges can be carried
 # to the result through the ordinary admitted (result, copied_source)

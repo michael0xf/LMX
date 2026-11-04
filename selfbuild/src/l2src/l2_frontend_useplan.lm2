@@ -1026,7 +1026,7 @@ fn: lm_compiler_descriptor_implements (int: cand; int: req; int: cons; @: out_re
             buf[nsf_fname_cell[0][k]\length]: 0
             fname: buf
             if: c.lm_compiler_ns_has_field(req, fname) != 0
-                if: c.lm_compiler_schema_named_meta(cand, nsf_fname_cell[0][k], -1, 0) < 0
+                if: c.lm_compiler_schema_named_meta(cand, nsf_fname_cell[0][k], -1, 0) < 0 || c.lm_compiler_schema_two_heads(cand, nsf_fname_cell[0][k]) != 0
                     \out_result: 0
                     return: (cast: (int) (0))
                 ---
@@ -1604,7 +1604,11 @@ fn: lm_compiler_emit_deliver (int: mi; const: (@: tname c.LmP0Text); const: (@: 
     if: c.lm_compiler_catch_find(mi, tname, cname, @ blk, @ idx) = 0
         return: (cast: (int) (0))
     p: lm_compiler_pad_of(blk)
-    if: p < 0 || idx < 1
+    # A handler's section ends with its block (the book, "Выходы"): the return trailer stands after the pad has closed, and what it raises
+    # leaves the method.
+    if: p < 0
+        return: (cast: (int) (0))
+    if: idx < 1
         c.lm_compiler_error(src_cell[0], 0, "internal: a catch without its pad")
         return: (cast: (int) (-1))
     if: c.fprintf(out_cell[0], "%sl2_pl%d: %s\n%sl2_at%d: %d\n", ind, p, payload, ind, p, idx) < 0
@@ -2109,6 +2113,10 @@ fn: lm_compiler_d105_resolve_field (int: cand; const: (@: needed c.L2SchemaField
     if: needed\name = 0
         return: (cast: (int) (0))
     step\physical: c.lm_compiler_schema_named(cand, (cast: (const: @: c.LmP0Text) (needed\name)), occurrence, actual)
+    # A bare use against two or more root heads of the candidate selects none (N4-U U2).
+    if: occurrence < 0 && step\physical >= 0 && c.lm_compiler_schema_two_heads(cand, (cast: (const: @: c.LmP0Text) (needed\name))) != 0
+        step\physical: -1
+    ---
     if: step\physical < 0 || actual\kind != needed\kind
         return: (cast: (int) (0))
     if: (needed\kind = 2 || needed\kind = 3) && actual\model != needed\model
@@ -3614,6 +3622,8 @@ fn: lm_compiler_d105_receiving_flow (int: cand; int: mi; int: key) int
                 occurrence: 0 - 1
             if: c.lm_compiler_schema_named_meta(cand, (cast: (const: @: c.LmP0Text) ((needed\name))), occurrence, @ actual) < 0
                 return: (cast: (int) (0))
+            if: occurrence < 0 && c.lm_compiler_schema_two_heads(cand, (cast: (const: @: c.LmP0Text) ((needed\name)))) != 0
+                return: (cast: (int) (0))
             if: actual\kind >= 0 && needed\kind >= 0
                 # Nested values, stored Structure references and callable
                 # values share the materialized Structure domain. Different
@@ -4848,11 +4858,12 @@ fn: lm_compiler_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: 
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: an admitted reference has no receiving model")))
     if: last != 0
         edge: slot + lm_compiler_d105_width(req)
-    if: c.fprintf(out_cell[0], "%ssize_t: %s (cast: (size_t) -1)\n%sint: l2_dslot_answer%d c.LMX_IMPLEMENTS_UNKNOWN\n%sint: l2_dslot_status%d lmx_implements_slot(l2_program_arena, l2_pst, %s, %uU, @ %s, @ l2_dslot_answer%d)\n", ind, dest, ind, temp, ind, temp, rinst\data, (cast: (unsigned) edge), dest, temp) < 0
+    # One reached edge: the map's number, or the chain, the admission of this receiving, or that edge alone (lmx_implements_reach).
+    if: c.fprintf(out_cell[0], "%ssize_t: %s (cast: (size_t) -1)\n%sint: l2_dslot_answer%d c.LMX_IMPLEMENTS_UNKNOWN\n%sint: l2_dslot_status%d lmx_implements_reach(l2_program_arena, l2_pst, %s, %uU, @ %s, @ l2_dslot_answer%d)\n", ind, dest, ind, temp, ind, temp, rinst\data, (cast: (unsigned) edge), dest, temp) < 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sif: l2_dslot_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dslot_status%d)\n%s---\n%sif: l2_dslot_answer%d = c.LMX_IMPLEMENTS_UNKNOWN\n%s    lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)\n%s---\n", ind, temp, ind, temp, ind, ind, temp, ind, ind) < 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sif: l2_dslot_answer%d = c.LMX_IMPLEMENTS_NO\n%s    c.fprintf(c.stderr, \"lmx: invariant: a field of an admitted reference is not carried by its value (no record, or a hole)\\n\")\n%s    c.abort()\n", ind, temp, ind, ind) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_dslot_answer%d = c.LMX_IMPLEMENTS_NO\n", ind, temp) < 0 || lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0 || c.fprintf(out_cell[0], "%s---\n", ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_d105_emit_slot

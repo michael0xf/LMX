@@ -4444,6 +4444,8 @@ fn: lm_compiler_check_primary (const: (@: source_node c.LmP0Node); int: mi; cons
         c.lm_compiler_path_release(presolved)
         if: pstatus != 0 && presolved\fail_why = 1
             return: (cast: (int) (c.lm_compiler_error(path, source_node, "unknown field path root")))
+        if: pstatus != 0 && presolved\fail_why = 8
+            return: c.lm_compiler_path_seg_refusal_at(path, source_node, 8)
         if: pstatus != 0
             return: (cast: (int) (c.lm_compiler_error(path, source_node, "unknown field path segment")))
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "a call path must end at a callable field")))
@@ -4830,7 +4832,8 @@ fn: lm_compiler_check_value_span (@: span c.L2ValueSpan; int: mi; const: (@: pat
             if: selected\fi >= 0 && c.lm_compiler_free_path_refused(mi, (cast: (int) (selected\fi)), path, where) != 0
                 return: (cast: (int) (1))
             return: (cast: (int) (c.lm_compiler_path_seg_refusal_at(path, (cast: (const: @: c.LmP0Node) (c.lm_compiler_path_fail_node(selected, (cast: (@: c.LmP0Field) (span\first))))), (cast: (int) (selected\fail_why)))))
-        if: selected\n > 0 && c.lm_compiler_path_rec_leaf_ft(selected) < 0 && c.lm_compiler_path_callee_rec(selected) < 0
+        # A selected source occurrence with no place of its own reads what stands in its slot, a Structure (lm_compiler_ns_head_select).
+        if: selected\n > 0 && c.lm_compiler_path_rec_leaf_ft(selected) < 0 && c.lm_compiler_path_callee_rec(selected) < 0 && lm_compiler_port249_1_L2PathStep_locus((cast: (const: @: c.L2PathStep) (selected\steps + (selected\n - 1)))) != 9
             return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (c.lm_compiler_path_leaf_node(selected, (cast: (@: c.LmP0Field) (span\first))))), "a field path must end at a primitive field")))
         return: (cast: (int) (lm_compiler_check_resolved_indices(at, mi, path, selected)))
     ---
@@ -5003,6 +5006,10 @@ fn: lm_compiler_check_path_write (const: (@: stmt c.LmP0Node); int: mi; const: (
     ---
     # The root resolves and a name after it does not: refused here, as the operand route refuses it; a raw C root
     # keeps its member route.
+    if: hstatus != 0 && hresolved\fail_why = 8
+        c.lm_compiler_path_release(hresolved)
+        return: c.lm_compiler_path_seg_refusal_at(path, stmt, 8)
+    ---
     if: hstatus != 0 && hresolved\fail_why != 1
         if: c.lm_compiler_path_root_raw_c(hresolved, mi) = 0
             c.lm_compiler_path_release(hresolved)
@@ -12464,7 +12471,25 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
 end: lm_compiler_rw_stmt_content
 
 # Original: l2src/l2trans.lm1:31898
+# N4-U U1: the registry row of one root head, at the owning cell of the first physical slot of its source field: the place the head
+# declares, or its statement.  The lowered second child of a declaration is that same occurrence and gets no row.
+fn: lm_compiler_emit_root_head (int: into; int: slot; const: (@: value c.LmP0Node)) int
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar32: holder_storage
+    @: holder char (cast: (@: char) holder_storage\buffer)
+    @: text c.LmP0Text c.lm_compiler_root_head_text(rw_mi_cell[0], value)
+    # A written path is no head of this level: `node\x: 1` writes elsewhere.
+    if: text = 0 || text\data = 0 || text\length = 0U || c.lm_compiler_seg_count((cast: (const: @: char) (text\data)), (cast: (size_t) (text\length))) > 1
+        return: 0
+    c.lm_compiler_rw_name(into, holder)
+    if: c.fprintf(out_cell[0], "        if: lmx_source_name_set_at(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(%s, %uU)), (cast: (size_t) -2), ", holder, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_cstr(text) != 0 || c.fprintf(out_cell[0], ", %zuU) != 0\n            return: 1\n", text\length) < 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_root_head
+
 fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Field; int: into; int: base; @: source c.L2SourceContainer; @: made int) int
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     @: t7_walk_cell int (cast: (@: int) (@ c.l2_t7_walk))
     @: rw_nest_cell int (cast: (@: int) (@ c.l2_rw_nest))
     @@: m_src_end_cell int (cast: (@@: int) (@ c.l2_m_src_end))
@@ -12499,6 +12524,18 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
         slot: base + \made
         if: placed != 0
             slot: c.lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (field\value)))
+        # A source root: every head has a physical slot and a registry row (N4-U U1).  The layout pass notes the slot: a path that selects
+        # a head with no place of its own reads it (locus 9).
+        if: source != 0 && slot >= 0
+            if: construct_phase_cell[0] = 0 && c.lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (field\value))) < 0 && c.lm_compiler_root_head_text(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value))) != 0
+                if: c.lm_compiler_ps_add((cast: (const: @: c.LmP0Node) (field\value)), slot) != 0
+                    return: 1
+                ---
+            ---
+            if: rw_emit_cell[0] != 0 && lm_compiler_emit_root_head(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
+                return: 1
+            ---
+        ---
         own: c.lm_compiler_own_by_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value)))
         return_point: 0
         if: c.lm_compiler_mad_on(rw_mi_cell[0]) != 0 && m_body_cell[0][rw_mi_cell[0]] != 0 && m_body_cell[0][rw_mi_cell[0]]\as != 0

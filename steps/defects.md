@@ -11161,7 +11161,9 @@ replay3630 не потерял выходов и не дал новых диаг
 `lmx_implements_low_reference_type` признаёт только LMX и DESC. Книга разрешает сужающий поиск на любую нужную глубину, поэтому это дефект допуска.
 [Свидетели и receipt](witnesses/fix275-20261103/notes.md).
 
-### SPLIT-FREE-PLACE-TYPE — 2026-11-03, Opus (срез 275), OPEN
+### SPLIT-FREE-PLACE-TYPE — 2026-11-03, Opus (срез 275), CLOSED срезом 276: не дефект
+
+Книга: при отсутствии видимого места `x: j` «определяет именованную Structure, а не присваивает примитиву». `S1: x: 6` с `int: x` в данных отказывает `call` по норме. Исходная запись ниже оставлена как есть.
 
 `S1: x: 6`, затем `call: S1 First` с `int: x` в данных: неявный `call`. Место свободной own в таблице `l2_cpt` имеет тип LMX, а `lmx_implements_call_field` требует у данных ссылку.
 На кортеже 274 так же. [Свидетель](witnesses/fix275-20261103/records/cold-tp137/tests/dyn/probe275_h6.lm2).
@@ -11170,3 +11172,7 @@ replay3630 не потерял выходов и не дал новых диаг
 
 `First: @: First: 0` у уже объявленной именованной Structure: `assignment value has unknown type` при трансляции. Книга задаёт эту форму для ссылочного значения места.
 [Свидетель](witnesses/fix275-20261103/records/cold-tp137/tests/dyn/probe275_n2.lm2).
+
+### TRAILER-CALL-THROW — 2026-11-04, Opus (срез 276), OPEN
+
+`return: g()` в trailer на уровне открытия, `g` объявляет `throws: Bad`, а `catch: Bad ()` есть только в теле. `lm_compiler_check_throws_handled` принимает вызов, потому что `lm_compiler_catch_find` находит обработчик тела, а вывод отказывает: `internal: a callee's declared throw is not handled by its caller`. Trailer стоит после закрытия pad, участок обработчика кончается с блоком, поэтому по книге это необработанный throw на вызове. До среза 276 тот же случай давал `internal: a catch without its pad`. Неявные отказы в trailer срез 276 уже выводит из метода. [Свидетель](witnesses/fix276-20261104/records/cold-tp138/tests/dyn/p276m_trailer_throw.lm2).

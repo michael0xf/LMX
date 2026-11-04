@@ -1,0 +1,129 @@
+# Slice 276 (CODEX-OPUS-275-MAPS-20261103T214114Z-01; the book, "При последовательных композициях соответствия составляются").  A pair
+# first reached below a mapped holder is composed from the records of that value and of that requirement through a middle Model, with
+# no new proof: Thin has no `extra`, Near's nested model has, and only `y` is reached.  Where no such chain exists, the same reach is an
+# ordinary admission of the current value, whose negative answer is the operation's implicit `implements`.  The holder's admission saw
+# Fat in the slot, and Thin stood there only later.  Entry 7; 81.. name the failing check.
+I:
+    int: y 0
+    int: extra 0
+end: I
+Fat:
+    int: y 7
+    int: extra 8
+end: Fat
+Thin:
+    int: w 1
+    int: y 9
+end: Thin
+Far:
+    b:
+        int: y 7
+    end: b
+end: Far
+Near:
+    b:
+        int: y 3
+        int: extra 1
+    end: b
+end: Near
+Far2:
+    b:
+        int: y 7
+    end: b
+end: Far2
+Near2:
+    b:
+        int: y 3
+        int: extra 1
+    end: b
+end: Near2
+fn: read_i (@: p I) int
+    return: p\y
+end: read_i
+fn: set_far_fat () int
+    quote_far\b: Fat
+    return: 0
+end: set_far_fat
+fn: set_far_thin () int
+    quote_far\b: Thin
+    return: 0
+end: set_far_thin
+fn: set_near_i () int
+    quote_near\b: I
+    return: 0
+end: set_near_i
+fn: records () int
+    @: quote_far Far Far
+    @: quote_near Near Near
+    if: read_i(Thin) != 9
+        return: 81
+    int: a set_near_i()
+    int: c set_far_fat()
+    return: 0
+end: records
+fn: thin_in_far () int
+    @: quote_far Far Far
+    int: c set_far_thin()
+    return: 0
+end: thin_in_far
+fn: composed () int
+    int: r 0
+    ---
+        if: Near\b\y != 9
+            r: 82
+        ---
+        catch: implements ()
+            r: 83
+    ---
+    return: r
+end: composed
+fn: set_far2_fat () int
+    quote_far2\b: Fat
+    return: 0
+end: set_far2_fat
+fn: set_far2_thin () int
+    quote_far2\b: Thin
+    return: 0
+end: set_far2_thin
+fn: fat_in_far2 () int
+    @: quote_far2 Far2 Far2
+    return: set_far2_fat()
+end: fat_in_far2
+fn: thin_in_far2 () int
+    @: quote_far2 Far2 Far2
+    return: set_far2_thin()
+end: thin_in_far2
+fn: not_composed () int
+    int: caught 0
+    ---
+        int: k Near2\b\y
+        catch: implements ()
+            caught: 1
+    ---
+    if: caught != 1
+        return: 84
+    return: 0
+end: not_composed
+int: code records()
+if: code = 0
+    code: fat_in_far2()
+---
+Near: Far
+Near2: Far2
+if: code = 0
+    code: thin_in_far()
+---
+if: code = 0
+    code: thin_in_far2()
+---
+if: code = 0
+    code: composed()
+---
+if: code = 0
+    code: not_composed()
+---
+if: code = 0
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

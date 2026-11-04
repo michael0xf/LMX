@@ -1476,6 +1476,14 @@ fn: lm_compiler_path_step_slot (const: (@: step c.L2PathStep)) int
         return: (cast: (int) (lm_compiler_graph_field_child((cast: (int) (step\own)))))
     if: step\locus = 4
         return: (cast: (int) (0))
+    # A root head with no place of its own: the slot of its statement in the holder (lm_compiler_ns_head_select).  The layout pass may
+    # reach the path before it reaches the statement: nothing is emitted there, and every later pass finds the noted slot.
+    if: step\locus = 9
+        int: noted lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (step\node_scope)))
+        @: phase_cell int (cast: (@: int) (@ c.l2_construct_phase))
+        if: noted < 0 && phase_cell[0] = 0
+            return: 0
+        return: noted
     if: step\locus = 6
         if: step\own < 0 && step\ns < 0 && step\formal >= 0
             return: (cast: (int) (lm_compiler_madc_formal_slot((cast: (int) (step\node_host)), (cast: (int) (step\formal)))))

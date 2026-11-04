@@ -1,0 +1,103 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp138/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # KERNEL
+    # A `call` data with two heads of a used name answers by its first place.
+    'callheads': ('lmx_implements.lm2', '''    if: heads > 1U
+        return: c.LMX_IMPLEMENTS_NO
+    if: slot = (cast: (size_t) -1)
+        slot: head_slot
+''', '''    if: heads > 99999U
+        return: c.LMX_IMPLEMENTS_NO
+    if: slot = (cast: (size_t) -1)
+        slot: head_slot
+'''),
+    # A copy loses the registry: it answers one bare name.
+    'copyrows': ('lmx_graph_copy_owned.lm2', '''    status: lmx_copy_spelling_prepare(dst_arena, destination, pending, (cast: (size_t) -2), c.lmx_source_name_get_at(src_arena, source, (cast: (size_t) -2)), 0)
+''', '''    status: lmx_copy_spelling_prepare(dst_arena, destination, pending, (cast: (size_t) -2), 0, 0)
+'''),
+    # The run-time name correspondence gives a bare name the last head.
+    'halfrule': ('lmx_implements.lm2', '''                if: seen > 1U
+                    map[width + j]: (cast: (size_t) -1)
+''', '''                if: seen > 99999U
+                    map[width + j]: (cast: (size_t) -1)
+'''),
+    # A record's unfilled edge stays unanswered.
+    'edge': ('lmx_implements.lm2', '''    return: lmx_implements_edge_named(arena, value, req, edge, out, out_answer)
+end: lmx_implements_reach
+''', '''    return: c.LMX_WALK_OK
+end: lmx_implements_reach
+'''),
+    # A pair with no record is not admitted at the reached edge.
+    'reachadmit': ('lmx_implements.lm2', '''        if: out_answer[0] != c.LMX_IMPLEMENTS_YES
+            status: lmx_implements_admit_receiving_templates(arena, value, req, 0, 0U, 0, out_answer)
+''', '''        if: out_answer[0] != c.LMX_IMPLEMENTS_YES && edge > 99999U
+            status: lmx_implements_admit_receiving_templates(arena, value, req, 0, 0U, 0, out_answer)
+'''),
+    # No composition of the records already made.
+    'chain': ('lmx_implements.lm2', '''        status: lmx_implements_chain(arena, value, req, out_answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+''', '''        out_answer[0]: c.LMX_IMPLEMENTS_UNKNOWN
+'''),
+    # The walker reads no index in a free field place.
+    'walkindex': ('lmx_walk_values.lm2', '''    if: name[0] = 91
+        size_t: occurrence 0U
+''', '''    if: name[0] = 9100
+        size_t: occurrence 0U
+'''),
+    # FRONTEND
+    # No registry rows.
+    'rows': ('l2_frontend_emit.lm2', '''            if: rw_emit_cell[0] != 0 && lm_compiler_emit_root_head(into, slot, (cast: (const: @: c.LmP0Node) (field\\value))) != 0
+''', '''            if: rw_emit_cell[0] > 99 && lm_compiler_emit_root_head(into, slot, (cast: (const: @: c.LmP0Node) (field\\value))) != 0
+'''),
+    # A static path over a named Structure selects no head.
+    'nshead': ('l2_frontend_resolve.lm2', '''            if: lm_compiler_ns_head_select(ni, pd, off, len, @ slot, @ kind, @ ent, @ locus, @ node_scope) != 0
+''', '''            if: ni < -5 && lm_compiler_ns_head_select(ni, pd, off, len, @ slot, @ kind, @ ent, @ locus, @ node_scope) != 0
+'''),
+    # A `node` path selects no head.
+    'nodehead': ('l2_frontend_resolve.lm2', '''            if: lm_compiler_node_head_select(cur_mi_cell[0], pd, off, len, @ slot, @ kind, @ ent, @ field_own, @ node_ns, @ node_host, @ node_scope, @ locus) != 0
+''', '''            if: cur_mi_cell[0] < -5 && lm_compiler_node_head_select(cur_mi_cell[0], pd, off, len, @ slot, @ kind, @ ent, @ field_own, @ node_ns, @ node_host, @ node_scope, @ locus) != 0
+'''),
+    # A word of the language counts by what lm_compiler_declaration makes of it.
+    'word': ('l2_frontend_resolve.lm2', '''    if: c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) head)) != 0 && c.lm_compiler_prim_type_word''', '''    if: head = 0 && c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) head)) != 0 && c.lm_compiler_prim_type_word'''),
+    # A static correspondence has a place for a bare use of two heads.
+    'twoheads': ('l2_frontend_resolve.lm2', '''    int: ni c.lm_compiler_schema_token_slot(schema)
+    if: name = 0 || name\\data = 0 || ni < 0 || ni >= ns_n_cell[0]
+        return: 0
+''', '''    int: ni c.lm_compiler_schema_token_slot(schema)
+    if: name != 0 || name = 0 || name\\data = 0 || ni < 0 || ni >= ns_n_cell[0]
+        return: 0
+'''),
+    # A retained copy's row answers by its own schema, not its origin's.
+    'origin': ('l2_frontend_resolve.lm2', '''    int: ni c.lm_compiler_schema_token_slot(schema)
+    if: name = 0 || name\\data = 0 || ni < 0 || ni >= ns_n_cell[0]
+        return: 0
+''', '''    int: ni schema
+    if: name = 0 || name\\data = 0 || ni < 0 || ni >= ns_n_cell[0]
+        return: 0
+'''),
+    # A record with no place of its own names the head by its first word.
+    'contractown': ('l2_frontend_resolve.lm2', '''    if: declaration != 0 && declaration\\name != 0 && c.lm_compiler_contract_own((cast: (@: c.L2TypeContract) (declaration\\contract))) != 0
+''', '''    if: declaration != 0 && declaration\\name != 0
+'''),
+    # A language word heads itself, a repeated `@:` included.
+    'atword': ('l2_frontend_resolve.lm2', '''    declaration: lm_compiler_declaration(value)
+    if: declaration != 0 && declaration\\name != 0 && c.lm_compiler_contract_own''', '''    if: c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) head)) != 0 && c.lm_compiler_prim_type_word((cast: (const: @: c.LmP0Text) head)) = 0
+        return: (cast: (@: c.LmP0Text) head)
+    declaration: lm_compiler_declaration(value)
+    if: declaration != 0 && declaration\\name != 0 && c.lm_compiler_contract_own'''),
+    # A bare name over a merge copy takes the copy's row.
+    'mresbare': ('l2_frontend_resolve.lm2', '''            if: slot >= 0 && lm_compiler_mres_bare_ambiguous(res, pd, off, len) != 0
+''', '''            if: slot < -5 && lm_compiler_mres_bare_ambiguous(res, pd, off, len) != 0
+'''),
+}
+name, a, b = TABLE[which]
+with open(R + name, 'rb') as f:
+    d = f.read().decode('utf-8')
+assert d.count(a) == 1, (which, d.count(a))
+d = d.replace(a, b)
+with open(R + name, 'wb') as f:
+    f.write(d.encode('utf-8'))
+print('mutated', which, name)

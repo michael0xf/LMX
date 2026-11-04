@@ -1,0 +1,84 @@
+I:
+    int: y 0
+    int: extra 0
+end: I
+Fat:
+    int: y 7
+    int: extra 8
+end: Fat
+Thin:
+    int: w 1
+    int: y 9
+end: Thin
+Far:
+    b:
+        int: y 7
+    end: b
+end: Far
+Near:
+    b:
+        int: y 3
+        int: extra 1
+    end: b
+end: Near
+fn: read_i (@: p I) int
+    return: p\y
+end: read_i
+fn: set_far_fat () int
+    quote_far\b: Fat
+    return: 0
+end: set_far_fat
+fn: set_far_thin () int
+    quote_far\b: Thin
+    return: 0
+end: set_far_thin
+fn: set_near_i () int
+    quote_near\b: I
+    return: 0
+end: set_near_i
+fn: stage1 () int
+    @: quote_far Far Far
+    @: quote_near Near Near
+    int: r 0
+    ---
+        if: read_i(Thin) != 9
+            r: 81
+        ---
+        catch: implements ()
+            r: 91
+    ---
+    if: r != 0
+        return: r
+    int: a set_near_i()
+    int: c set_far_fat()
+    return: 0
+end: stage1
+fn: stage2 () int
+    @: quote_far Far Far
+    int: c set_far_thin()
+    return: 0
+end: stage2
+fn: chained () int
+    int: r 0
+    ---
+        if: Near\b\y != 9
+            r: 82
+        ---
+        catch: implements ()
+            r: 93
+    ---
+    if: r = 0
+        r: 7
+    ---
+    return: r
+end: chained
+int: code stage1()
+if: code != 0
+    sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+    return
+---
+Near: Far
+code: stage2()
+code: chained()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

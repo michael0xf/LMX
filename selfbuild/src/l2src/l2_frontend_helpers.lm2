@@ -2522,7 +2522,8 @@ fn: lm_compiler_named_selector_in_text (const: (@: t c.LmP0Text)) int
     if: t = 0 || t\data = 0 || lm_compiler_quoted(t) != 0
         return: (cast: (int) (0))
     while: i + 3U < t\length
-        if: t\data[i] = 91
+        # After a path separator `[N]name` selects a source occurrence (N4-U U2); only a name glued to a value's index is refused.
+        if: t\data[i] = 91 && (i = 0U || t\data[i - 1U] != 92)
             j: i + 1U
             while: j < t\length && t\data[j] >= 48 && t\data[j] <= 57
                 j: j + 1U

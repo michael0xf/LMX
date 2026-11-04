@@ -2976,6 +2976,219 @@ fn: lm_compiler_path_step_contract (const: (@: step c.L2PathStep)) @: c.L2TypeCo
     return: (cast: (@: c.L2TypeContract) (0))
 end: lm_compiler_path_step_contract
 
+# The name a root statement gives its Structure's map of heads (N4-U U1; the author: "головы считаем тупо на корневом уровне, всё,
+# "if" считается головой"): the place it declares or assigns, whatever receiver wrote it (`int: y 3` and `y: 3` are heads of y), else
+# its written head.  A bare atom has no head; a head inside the statement's body belongs to that body.  lm_compiler_emit_root_head
+# writes this into the kernel's registry (lmx_implements_head_name) and the static paths below count the same reading.
+fn: lm_compiler_root_head_text (int: mi; const: (@: value c.LmP0Node)) @: c.LmP0Text
+    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    @@@: nsf_fname_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_nsf_fname))
+    @: declaration c.L2Declaration
+    @: head c.LmP0Text
+    int: own
+    int: row
+    if: value = 0 || value\as = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    own: c.lm_compiler_own_by_decl(mi, value)
+    if: own >= 0 && own_name_cell[0][own] != 0
+        return: (cast: (@: c.LmP0Text) (own_name_cell[0][own]))
+    row: c.lm_compiler_ns_constructed_row(mi, value)
+    if: row >= 0 && nsf_fname_cell[0][row] != 0
+        return: (cast: (@: c.LmP0Text) (nsf_fname_cell[0][row]))
+    if: value\kind != c.LM_P0_NODE_FRAME || value\as\frame = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    head: value\as\frame\head
+    # What the written words make of it decides: a repeated `@: y v` is a head of y; `if: x > 0` has a record with no place of its own, and
+    # heads itself.
+    declaration: lm_compiler_declaration(value)
+    if: declaration != 0 && declaration\name != 0 && c.lm_compiler_contract_own((cast: (@: c.L2TypeContract) (declaration\contract))) != 0
+        return: (cast: (@: c.LmP0Text) (declaration\name))
+    return: (cast: (@: c.LmP0Text) head)
+end: lm_compiler_root_head_text
+
+# The heads named by (noff, nlen) at the root of a source body, in source order, a selected os branch included as at its emission.
+# Answers their count and, in out_node when not 0, the source node of occurrence `wanted`.
+fn: lm_compiler_root_heads (int: mi; const: (@: body c.LmP0Structure); const: (@: pd char); size_t: noff; size_t: nlen; int: wanted; @@: out_node c.LmP0Node) int
+    @: field c.LmP0Field
+    @: unit_resume c.LmP0Field 0
+    int: unit_body c.lm_compiler_part_source_body(body)
+    int: count 0
+    @: text c.LmP0Text
+    # The heads are read where they stand, whichever method's path asks: a role depends on the lexical place (lm_compiler_declaration).
+    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
+    @: here_source_mi_cell int (cast: (@: int) (@ c.l2_here_source_mi))
+    @: here_cell size_t (cast: (@: size_t) (@ c.l2_here))
+    @@: here_node_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_here_node))
+    @: here_on_cell int (cast: (@: int) (@ c.l2_here_on))
+    int: saved_mi here_mi_cell[0]
+    int: saved_source_mi here_source_mi_cell[0]
+    size_t: saved_here here_cell[0]
+    @: saved_node c.LmP0Node here_node_cell[0]
+    int: saved_on here_on_cell[0]
+    if: body = 0
+        return: 0
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
+    while: field != 0 || unit_resume != 0
+        if: unit_body != 0
+            field: c.lm_compiler_unit_cursor_field(field, @ unit_resume)
+            if: field = 0
+                break
+        ---
+        c.lm_compiler_here_at_method(mi, (cast: (const: @: c.LmP0Node) (field\value)))
+        text: lm_compiler_root_head_text(mi, (cast: (const: @: c.LmP0Node) (field\value)))
+        if: text != 0 && text\data != 0 && text\length = nlen && c.memcmp((cast: (const: @: void) (text\data)), pd + noff, nlen) = 0
+            if: count = wanted && out_node != 0
+                \out_node: (cast: (@: c.LmP0Node) (field\value))
+            count: count + 1
+        ---
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+    ---
+    here_mi_cell[0]: saved_mi
+    here_source_mi_cell[0]: saved_source_mi
+    here_cell[0]: saved_here
+    here_node_cell[0]: saved_node
+    here_on_cell[0]: saved_on
+    return: count
+end: lm_compiler_root_heads
+
+# Whether a candidate's schema answers a bare name at two or more root heads: then it selects none, and a static correspondence has no
+# place for a bare use of it (lmx_implements_named_view is the run-time half of the same reading).  A retained copy keeps its origin's
+# heads (lmx_copy_name_prepare), and the catalog's row of such a copy answers for its origin's layout: the same constructor-origin
+# projection as every layout token.
+fn: lm_compiler_schema_two_heads (int: schema; const: (@: name c.LmP0Text)) int
+    @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
+    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
+    @: body c.LmP0Structure 0
+    int: ni c.lm_compiler_schema_token_slot(schema)
+    if: name = 0 || name\data = 0 || ni < 0 || ni >= ns_n_cell[0]
+        return: 0
+    body: c.lm_compiler_ns_source_body(ni)
+    if: body = 0
+        return: 0
+    return: (cast: (int) (lm_compiler_root_heads(ns_proc_cell[0][ni], (cast: (const: @: c.LmP0Structure) body), (cast: (const: @: char) name\data), 0U, name\length, -1, 0) > 1))
+end: lm_compiler_schema_two_heads
+
+# A bare name over a merge result: a retained copy keeps its origin's heads, so the name selects none at two or more.
+fn: lm_compiler_mres_bare_ambiguous (int: res; const: (@: pd char); size_t: off; size_t: len) int
+    c.LmP0Text: name
+    int: occurrence -1
+    size_t: noff off
+    size_t: nlen len
+    if: c.lm_compiler_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0 || occurrence >= 0
+        return: 0
+    name\data: pd + noff
+    name\length: nlen
+    return: lm_compiler_schema_two_heads(c.lm_compiler_schema_merge(res), (cast: (const: @: c.LmP0Text) (@ name)))
+end: lm_compiler_mres_bare_ambiguous
+
+# A name over a named Structure (N4-U U1/U2; the book, "Карта data").  A bare name answers at one root head and is ambiguous at two
+# or more: 1, the path's refusal.  `[N]name` selects source occurrence N: the row whose declaration is that head is the Structure's one
+# place of the name, as the bare path reads it; any other head is the slot of its statement, read and written as a Structure with no
+# schema (locus 9, its source node in out_head).  A bare name whose one head declares nothing is that statement's slot too.
+fn: lm_compiler_ns_head_select (int: ni; const: (@: pd char); size_t: off; size_t: len; @: slot int; @: kind int; @: ent int; @: locus int; @@: out_head c.LmP0Node) int
+    @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
+    @@@: nsf_source_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_nsf_source))
+    @: body c.LmP0Structure c.lm_compiler_ns_source_body(ni)
+    @: head c.LmP0Node 0
+    int: occurrence -1
+    int: selected
+    int: heads
+    int: row
+    size_t: noff off
+    size_t: nlen len
+    if: body = 0 || c.lm_compiler_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
+        return: 0
+    selected: occurrence
+    if: selected < 0
+        selected: 0
+    heads: lm_compiler_root_heads(ns_proc_cell[0][ni], (cast: (const: @: c.LmP0Structure) body), pd, noff, nlen, selected, @ head)
+    if: occurrence < 0 && heads > 1
+        return: 1
+    if: selected >= heads || head = 0
+        if: occurrence > 0
+            \slot: -1
+        ---
+        return: 0
+    row: c.lm_compiler_ns_named_row(ni, pd, noff, nlen, kind, ent)
+    if: row >= 0 && c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) (nsf_source_cell[0][row]))) = c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) head))
+        \slot: row
+        return: 0
+    if: row >= 0 && occurrence < 0
+        \slot: row
+        return: 0
+    \slot: 0
+    \kind: 2
+    \ent: -1
+    \locus: 9
+    \out_head: head
+    return: 0
+end: lm_compiler_ns_head_select
+
+# The same selection for `node\name`: `node` is an ordinary Structure (the book; CODEX-OPUS-OCC-VALUE-20261103T220837Z-01), its root heads
+# count as any other's.  A bare lexical name is a binding and never comes here.  The caller has resolved the written segment; an
+# occurrence is compared with what the bare name resolves to, the one place, and any other head is its statement's slot.
+fn: lm_compiler_node_head_select (int: mi; const: (@: pd char); size_t: off; size_t: len; @: slot int; @: kind int; @: ent int; @: field_own int; @: node_ns int; @: host int; @@: scope c.LmP0Node; @: locus int) int
+    @: e_cell int (cast: (@: int) (@ c.l2_e))
+    const: (@@: cur_unit_cell c.LmP0Structure (cast: (const: @@: c.LmP0Structure) (@ c.l2_cur_unit)))
+    @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @@@: ns_at_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_at))
+    const: (@: body c.LmP0Structure 0)
+    @: head c.LmP0Node 0
+    int: occurrence -1
+    int: selected
+    int: heads
+    size_t: noff off
+    size_t: nlen len
+    if: \host < 0 || c.lm_compiler_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
+        return: 0
+    if: \scope != 0
+        body: c.lm_compiler_scope_block((cast: (const: @: c.LmP0Node) (\scope)))
+    else:
+        if: \host = e_cell[0]
+            body: cur_unit_cell[0]
+        else:
+            body: c.lm_compiler_ns_original_body(c.lm_compiler_m_nsof(\host))
+            if: body = 0 && m_body_cell[0][\host] != 0 && m_body_cell[0][\host]\as != 0
+                body: m_body_cell[0][\host]\as\structure
+            ---
+        ---
+    ---
+    if: body = 0
+        return: 0
+    selected: occurrence
+    if: selected < 0
+        selected: 0
+    heads: lm_compiler_root_heads(\host, body, pd, noff, nlen, selected, @ head)
+    if: occurrence < 0 && heads > 1
+        return: 1
+    if: selected >= heads || head = 0
+        if: occurrence > 0
+            \slot: -1
+        ---
+        return: 0
+    if: occurrence < 0 && \slot >= 0
+        return: 0
+    if: occurrence >= 0
+        if: lm_compiler_node_seg_resolve(mi, pd, noff, nlen, 0, slot, kind, ent, field_own, node_ns, host, scope) != 0
+            \slot: -1
+        ---
+        if: \slot >= 0 && \field_own >= 0 && c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) (own_decl_cell[0][\field_own]))) = c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) head))
+            return: 0
+        if: \slot >= 0 && \node_ns >= 0 && c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) (ns_at_cell[0][\node_ns]))) = c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) head))
+            return: 0
+        ---
+    ---
+    \slot: 0
+    \kind: 2
+    \ent: -1
+    \field_own: -1
+    \node_ns: -1
+    \locus: 9
+    \scope: head
+    return: 0
+end: lm_compiler_node_head_select
+
 # Original: l2src/l2trans.lm1:25069
 fn: lm_compiler_path_walk_steps (@: out c.L2Path; int: ni; int: res; int: root_kind; int: bh; int: bm; int: view_model; int: original; int: protected; @: value c.L2TypeContract) int
     return: (cast: (int) (lm_compiler_path_walk_steps_from(out, 0, ni, res, root_kind, bh, bm, view_model, original, protected, value)))
@@ -3127,6 +3340,9 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
         if: res >= 0
             slot: c.lm_compiler_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
             locus: 2
+            if: slot >= 0 && lm_compiler_mres_bare_ambiguous(res, pd, off, len) != 0
+                return: (cast: (int) (c.lm_compiler_path_fail(out, k + 1, 8)))
+            ---
         ---
         # node (FABLE-SONNET-NODE-ROOT-20260923-121): the first name of a node-rooted path is a field of the lexical
         # space above the method (l2_node_seg_resolve: an own declaration, a source-declared Structure, the host's
@@ -3135,6 +3351,9 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
             if: lm_compiler_node_seg_resolve(cur_mi_cell[0], pd, off, len, 0, @ slot, @ kind, @ ent, @ field_own, @ node_ns, @ node_host, @ node_scope) != 0
                 slot: 0 - 1
             locus: 6
+            if: lm_compiler_node_head_select(cur_mi_cell[0], pd, off, len, @ slot, @ kind, @ ent, @ field_own, @ node_ns, @ node_host, @ node_scope, @ locus) != 0
+                return: (cast: (int) (c.lm_compiler_path_fail(out, k + 1, 8)))
+            ---
         ---
         if: bh >= 0
             slot: lm_compiler_for_own_seg(bh, pd, off, len, @ kind, @ ent)
@@ -3179,12 +3398,18 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
         if: nsroute != 0 && ni >= 0
             slot: c.lm_compiler_ns_named_row(ni, pd, off, len, @ kind, @ ent)
             locus: 1
+            if: lm_compiler_ns_head_select(ni, pd, off, len, @ slot, @ kind, @ ent, @ locus, @ node_scope) != 0
+                return: (cast: (int) (c.lm_compiler_path_fail(out, k + 1, 8)))
+            ---
         ---
         if: slot < 0
             return: (cast: (int) (c.lm_compiler_path_fail(out, k + 1, 2)))
         step\locus: locus
         step\kind: kind
         step\row: slot
+        if: locus = 9
+            step\node_scope: node_scope
+        ---
         step\own: field_own
         step\ent: ent
         if: locus = 6

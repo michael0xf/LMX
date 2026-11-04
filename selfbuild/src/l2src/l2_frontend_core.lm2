@@ -10150,7 +10150,7 @@ fn: lm_compiler_reject_named_selector_node (const: (@: source_node c.LmP0Node); 
         return: (cast: (int) (0))
     if: source_node\kind = c.LM_P0_NODE_ATOM
         if: c.lm_compiler_named_selector_in_text((cast: (const: @: c.LmP0Text) (source_node\as\atom))) != 0
-            return: (cast: (int) (c.lm_compiler_error(path, source_node, "named field occurrence selectors are removed")))
+            return: (cast: (int) (c.lm_compiler_error(path, source_node, "a name glued to a value's index: an occurrence is selected by a path, s\\[N]name")))
         return: (cast: (int) (0))
     if: source_node\kind = c.LM_P0_NODE_STRUCTURE
         return: (cast: (int) (lm_compiler_reject_named_selector_body((cast: (const: @: c.LmP0Structure) (source_node\as\structure)), path)))
@@ -10159,7 +10159,7 @@ fn: lm_compiler_reject_named_selector_node (const: (@: source_node c.LmP0Node); 
         if: frame = 0
             return: (cast: (int) (0))
         if: c.lm_compiler_named_selector_in_text((cast: (const: @: c.LmP0Text) (frame\head))) != 0
-            return: (cast: (int) (c.lm_compiler_error(path, source_node, "named field occurrence selectors are removed")))
+            return: (cast: (int) (c.lm_compiler_error(path, source_node, "a name glued to a value's index: an occurrence is selected by a path, s\\[N]name")))
         if: lm_compiler_reject_named_selector_body((cast: (const: @: c.LmP0Structure) (frame\body)), path) != 0
             return: (cast: (int) (1))
         if: frame\trailer != 0 && (frame\body = 0 || frame\trailer != frame\body\trailer)
@@ -10174,6 +10174,7 @@ fn: lm_compiler_reject_selector_body_mode (const: (@: body c.LmP0Structure); con
     @: field c.LmP0Field
     @: close c.LmP0Field
     @: after c.LmP0Field
+    @: previous c.LmP0Field 0
     c.L2ValueSpan: part
     int: group
     const: (@: branch c.LmP0Node)
@@ -10185,11 +10186,15 @@ fn: lm_compiler_reject_selector_body_mode (const: (@: body c.LmP0Structure); con
             group: c.lm_compiler_field_index_group(field, (cast: (int) (c.INT_MAX)), @ part, @ after)
             if: group != 0
                 close: c.lm_compiler_skip_span((cast: (@: c.LmP0Field) ((part\first))), (cast: (int) ((part\count))))
+                # N4-U U2: after a path separator `[N]name` selects a source occurrence; a name glued to a value's own index names nothing.
                 if: after != 0 && after\value != 0 && after\value\as != 0 && after\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_ident_word((cast: (const: @: c.LmP0Text) (after\value\as\atom))) != 0 && c.lm_compiler_glued_after(close, after) != 0
-                    return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (after\value)), "named field occurrence selectors are removed")))
+                    if: previous = 0 || previous\value = 0 || previous\value\kind != c.LM_P0_NODE_ATOM || previous\value\as = 0 || c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (previous\value\as\atom))) = 0
+                        return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (after\value)), "a name glued to a value's index: an occurrence is selected by a path, s\\[N]name")))
+                    ---
                 ---
             ---
         ---
+        previous: field
         if: unit_level != 0 && c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) field\value), "os") != 0
             branch: c.lm_compiler_os_selected_branch((cast: (const: @: c.LmP0Node) field\value))
             if: branch != 0 && lm_compiler_reject_selector_body_mode((cast: (const: @: c.LmP0Structure) branch\as\frame\body), path, 0) != 0
@@ -12962,7 +12967,7 @@ fn: lm_compiler_rw_path_records (const: (@: source_node c.LmP0Node); const: (@: 
         ---
         kind: step\kind
         slot: step\row
-        if: project != 0 && (step\locus = 1 || step\locus = 6)
+        if: project != 0 && (step\locus = 1 || step\locus = 6 || step\locus = 9)
             slot: c.lm_compiler_path_step_slot(step)
         if: slot < 0
             if: say != 0

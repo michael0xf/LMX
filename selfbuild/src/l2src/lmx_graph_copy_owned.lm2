@@ -2909,6 +2909,10 @@ fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: 
     int: status lmx_copy_spelling_prepare(dst_arena, destination, pending, 0U, c.lmx_source_name_get(src_arena, source), 0)
     if: status != c.LMX_GRAPH_COPY_OK
         return: status
+    # The registry of source occurrences (lmx_implements_head_name) stays with the copied slot: the copy answers one bare name as the source does.
+    status: lmx_copy_spelling_prepare(dst_arena, destination, pending, (cast: (size_t) -2), c.lmx_source_name_get_at(src_arena, source, (cast: (size_t) -2)), 0)
+    if: status != c.LMX_GRAPH_COPY_OK
+        return: status
     if: c.lmx_range_classify(src_arena, source) = c.LMX_KIND_STRUCT
         size_t: port 1U
         @: name c.VoidArray c.lmx_source_name_get_at(src_arena, source, port)

@@ -1,0 +1,17 @@
+D:
+    int: y 3
+    int: y 7
+end: D
+fn: bare_copy () int
+    copied: merge: D
+    return: copied\[0]y
+end: bare_copy
+int: code 0
+if: bare_copy() != 3
+    code: 81
+---
+if: code = 0
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

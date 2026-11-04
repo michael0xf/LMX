@@ -1,0 +1,23 @@
+D:
+    int: y 3
+    int: y 7
+end: D
+Copied: merge: D
+fn: read_first () int
+    return: Copied\[0]y
+end: read_first
+fn: read_second_ok () int
+    @: held D Copied\[1]y
+    if: held = 0
+        return: 0
+    return: 1
+end: read_second_ok
+int: code 0
+if: read_first() != 3
+    code: 81
+---
+if: code = 0
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

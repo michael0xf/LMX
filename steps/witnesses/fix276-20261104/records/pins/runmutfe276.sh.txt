@@ -1,0 +1,17 @@
+P=/c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01
+SP=/c/Users/mtkra/AppData/Local/Temp/claude/6d92abb4660ab27f/b79b4933-abc1-4eae-98f7-6361633964ee/scratchpad
+PWSH="/c/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe"
+cd $P
+run() { "$PWSH" -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/$1.command')))" < /dev/null 2>&1 | tail -n 1 | cut -c1-200; }
+OUT=$P/pins/mut276fe.txt
+TOOL=cold-tp138/tool138d/lmxtool-tool.exe
+for m in "$@"; do
+  python $SP/mut276.py $m >> $OUT
+  TP_TOOL=$TOOL TP_LABEL=fem-$m TP_TRY=f$m run tp138-fe >> $OUT
+  TP_TOOL=$TOOL TP_FE=cold-tp138/fem-$m/l2trans.exe TP_RT=cold-tp138/rt138e TP_TRY=f$m TP_LIST=probe276-q.tsv run tp138-probe >> $OUT
+  grep -a '^SUITE' pins/tp138-probe-f$m.log | cut -c1-80 >> $OUT
+  grep -a '^FAIL' pins/tp138-probe-f$m.log | cut -c1-110 | head -n 14 >> $OUT
+  for row in source_occurrences map_chain; do for k in native forced; do for r in 0 1; do printf '%s %s %s root%s: ' $m $row $k $r >> $OUT; { head -n 1 tp138-probe/f$m/$row-$k/p.L2.log 2>/dev/null | grep -v eternal | cut -c60-170; grep -a -E 'exit [0-9]+, expected|walk error|invariant|R0 was stopped' tp138-probe/f$m/$row-$k/run-root$r.log 2>/dev/null | head -n 1 | cut -c1-100; } >> $OUT; echo >> $OUT; done; done; done
+  TP_TRY=q$m run tp138-prepare >> $OUT
+done
+echo finished >> $OUT

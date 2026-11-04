@@ -1,0 +1,53 @@
+I:
+    int: y 0
+    int: extra 0
+end: I
+Far:
+    b:
+        int: y 7
+    end: b
+end: Far
+Near:
+    b:
+        int: y 3
+        int: extra 1
+    end: b
+end: Near
+fn: direct () int
+    int: r 0
+    ---
+        @: quote Near Far
+        if: quote\b\y != 7
+            r: 82
+        ---
+        catch: implements ()
+            r: 93
+    ---
+    if: r = 0
+        r: 7
+    ---
+    return: r
+end: direct
+fn: formal_read (@: h Near) int
+    return: h\b\y
+end: formal_read
+fn: through_formal () int
+    int: r 0
+    ---
+        if: formal_read(Far) != 7
+            r: 84
+        ---
+        catch: implements ()
+            r: 94
+    ---
+    if: r = 0
+        r: 7
+    ---
+    return: r
+end: through_formal
+int: code through_formal()
+if: code = 7
+    code: direct()
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

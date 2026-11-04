@@ -667,21 +667,11 @@ fn: lmx_walk_value_slot (@: arena c.LmxArena; @: holder c.LmxWalkValue; size_t: 
         fields: @ model\array
         edge: index + fields\size
     ---
-    status: c.lmx_implements_slot(arena, (cast: (@: c.Lmx) holder\ref), model, edge, @ resolved, @ answer)
+    # A field rebound after its holder was admitted stands below that holder, possibly with a pair no reception related yet: the
+    # reached edge is answered by the map, the chain, or one admission of this receiving (lmx_implements_reach).
+    status: c.lmx_implements_reach(arena, (cast: (@: c.Lmx) holder\ref), model, edge, @ resolved, @ answer)
     if: status != c.LMX_WALK_OK
         return: status
-    # A field rebound after its holder was admitted stands below that holder with a pair nothing has admitted yet.  The pair is
-    # admitted once, where it is first reached, and every later access reads its map.
-    if: answer = c.LMX_IMPLEMENTS_UNKNOWN
-        status: c.lmx_implements_admit_receiving_templates(arena, (cast: (@: c.Lmx) holder\ref), model, 0, 0U, 0, @ answer)
-        if: status != c.LMX_WALK_OK
-            return: status
-        if: answer = c.LMX_IMPLEMENTS_NO
-            return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
-        status: c.lmx_implements_slot(arena, (cast: (@: c.Lmx) holder\ref), model, edge, @ resolved, @ answer)
-        if: status != c.LMX_WALK_OK
-            return: status
-    ---
     if: answer = c.LMX_IMPLEMENTS_UNKNOWN
         return: c.LMX_WALK_UNSUPPORTED
     if: answer = c.LMX_IMPLEMENTS_NO
@@ -1786,7 +1776,23 @@ fn: lmx_walk_value_field_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; @
     wanted\data: (cast: (@: void) name)
     wanted\size: c.strlen(name)
     size_t: index 0U
-    int: answer c.lmx_implements_call_field(arena, root, @ wanted, c.LMX_TYPE_NONE, @ index)
+    int: answer c.LMX_IMPLEMENTS_NO
+    # `[N]name` selects source occurrence N of the head; a bare name answers only when it has one head.
+    if: name[0] = 91
+        size_t: occurrence 0U
+        size_t: at 1U
+        while: name[at] >= 48 && name[at] <= 57
+            occurrence: occurrence * 10U + (cast: (size_t) (name[at] - 48))
+            at: at + 1U
+        ---
+        if: at > 1U && name[at] = 93
+            wanted\data: (cast: (@: void) (name + at + 1U))
+            wanted\size: c.strlen(name + at + 1U)
+            answer: c.lmx_implements_head_slot(arena, root, @ wanted, occurrence, @ index)
+        ---
+    else:
+        answer: c.lmx_implements_call_field(arena, root, @ wanted, c.LMX_TYPE_NONE, @ index)
+    ---
     if: answer != c.LMX_IMPLEMENTS_YES
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
     @: physical void c.lmx_graph_cell_in(arena, root, index)
@@ -4069,13 +4075,13 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
             status: lmx_walk_model_project(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, (cast: (size_t) kind)), closed, trail, @ view_model)
             if: status != c.LMX_WALK_OK
                 return: status
-            status: c.lmx_implements_slot((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) root), view_model, index, @ resolved, @ answer)
+            status: c.lmx_implements_reach((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) root), view_model, index, @ resolved, @ answer)
             if: status != c.LMX_WALK_OK
                 return: status
             if: answer = c.LMX_IMPLEMENTS_UNKNOWN
                 return: c.LMX_WALK_UNSUPPORTED
             if: answer = c.LMX_IMPLEMENTS_NO
-                return: c.LMX_WALK_INVALID
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
             ---
             index: resolved
         else:

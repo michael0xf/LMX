@@ -5512,7 +5512,8 @@ fn: lm_compiler_emit_propagate (int: mi; int: callee; int: t; const: (@: ind cha
             return: (cast: (int) (1))
         k: k + 1
     while: c.lm_compiler_implicit_name(g) != 0
-        if: c.lm_compiler_catch_find(mi, 0, c.lm_compiler_implicit_name(g), 0, 0) != 0
+        @: handler_block c.LmP0Structure 0
+        if: c.lm_compiler_catch_find(mi, 0, c.lm_compiler_implicit_name(g), @ handler_block, 0) != 0 && c.lm_compiler_pad_of((cast: (const: @: c.LmP0Structure) handler_block)) >= 0
             if: c.fprintf(out_cell[0], "%sif: l2_ts%d = %d\n", d2, t, c.lm_compiler_throws_declared(callee) + g) < 0
                 return: (cast: (int) (1))
             if: c.lm_compiler_emit_deliver(mi, 0, c.lm_compiler_implicit_name(g), pl, d3) < 0
@@ -6051,8 +6052,9 @@ fn: lm_compiler_emit_selected_graph_place (const: (@: arena char); const: (@: se
 end: lm_compiler_emit_selected_graph_place
 
 # Slice 275 (P1-PLACE-MAP; the book :194): the physical slot of a field in a holder the path just read from a named slot.  `slot` holds
-# the field's declared place; the record `l2_cv<context>` holds the holder as its slot gave it.  No search of names and no
-# new proof: lmx_walk_value_slot reads the map admitted for the pair.
+# the field's declared place; the record `l2_cv<context>` holds the holder as its slot gave it.  lmx_walk_value_slot reads the map of the
+# pair; a pair with no record composes the chain or admits this receiving once, and an edge with no number asks that edge alone
+# (lmx_implements_reach): every later access reads the number.
 fn: lm_compiler_emit_place_slot (int: mi; int: context; int: last; const: (@: ind char); @: slot char) int
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
@@ -6629,6 +6631,8 @@ fn: lm_compiler_path_seg_refusal_at (const: (@: path char); const: (@: at c.LmP0
         return: (cast: (int) (c.lm_compiler_error(path, at, "an index needs an Array value")))
     if: why = 6
         return: (cast: (int) (c.lm_compiler_error(path, at, "the Array element has no supported value contract")))
+    if: why = 8
+        return: (cast: (int) (c.lm_compiler_error(path, at, "this name has two or more root heads: an index selects one (s\\[N]name)")))
     return: (cast: (int) (c.lm_compiler_error(path, at, "unknown field path segment")))
 end: lm_compiler_path_seg_refusal_at
 
@@ -17525,7 +17529,7 @@ fn: lm_compiler_emit_selected_pads (int: mi; int: k; const: (@: ind char); const
         while: field != 0
             if: c.lm_compiler_frame_head(field\value, "catch") != 0
                 @: name c.LmP0Text c.lm_compiler_catch_name(field\value)
-                if: name != 0 && c.lm_compiler_catch_find(mi, name, 0, 0, 0) = field\value
+                if: name != 0 && c.lm_compiler_catch_find(mi, name, 0, 0, 0) = field\value && c.lm_compiler_pad_of((cast: (const: @: c.LmP0Structure) body)) >= 0
                     int: key c.lm_compiler_throw_key(name)
                     if: key < 0 || c.fprintf(output[0], "%sif: l2_skey%d = %dU\n", ind, k, key) < 0 || c.lm_compiler_emit_deliver(mi, name, 0, payload, deep) < 0
                         return: 1

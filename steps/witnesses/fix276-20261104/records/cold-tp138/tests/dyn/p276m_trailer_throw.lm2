@@ -1,0 +1,14 @@
+fn: g () int
+    throws: Bad
+    throw: Bad(5)
+    return: 1
+end: g
+fn: h () int
+    int: r 1
+    catch: Bad ()
+        r: 30
+    ---
+return: g()
+int: code h()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

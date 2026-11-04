@@ -1698,8 +1698,12 @@ fn: lmx_walk_values_arg_place (@: arena c.LmxArena; @: owned c.LmxWalkValue; @@:
         ---
         ty: item\type
     ---
+    # A reference to a Structure is one value under the LMX code and under a typed reference's pointer code (lmx_walk_value_receive_graph): a host's typed place, read by a nested method, holds it so.
     if: item\present != 0 && item\type != ty
-        return: c.LMX_WALK_INVALID
+        if: item\kind != c.LMX_WALK_VALUE_REFERENCE || c.lmx_type_base(item\type) != c.LMX_TYPE_LMX || c.lmx_type_base(ty) < c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+            return: c.LMX_WALK_INVALID
+        item\type: ty
+    ---
     if: item\present = 0
         if: inputs[k] != 0
             status: lmx_walk_value_load(arena, inputs[k], ty, item)

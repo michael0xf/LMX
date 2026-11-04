@@ -1,0 +1,12 @@
+# A local Structure read by a nested method.
+fn: m () int
+    T:
+        int: y 3
+    end: T
+    fn: inner () int
+        return: T\y
+    end: inner
+    return: inner()
+end: m
+sendMessage: exit(exit_code: m() + 4; stdout: ""; stderr: "")
+return

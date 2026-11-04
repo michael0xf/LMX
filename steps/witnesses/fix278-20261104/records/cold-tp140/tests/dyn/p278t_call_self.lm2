@@ -1,0 +1,52 @@
+# `call: T T` over a local Structure: which part of T makes the implicit call?
+fn: plain () int
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    ---
+        T\y: 5
+        call: T T
+        return: T\y
+        catch: call ()
+            return: 91
+        catch: implements ()
+            return: 92
+    ---
+end: plain
+fn: nested () int
+    T:
+        int: y 3
+        K:
+            int: z 8
+        end: K
+    end: T
+    ---
+        T\y: 5
+        call: T T
+        return: T\y
+        catch: call ()
+            return: 93
+        catch: implements ()
+            return: 94
+    ---
+end: nested
+fn: method () int
+    T:
+        int: y 3
+        fn: twice () int
+            return: y * 2
+        end: twice
+    end: T
+    ---
+        T\y: 5
+        call: T T
+        return: T\y
+        catch: call ()
+            return: 95
+        catch: implements ()
+            return: 96
+    ---
+end: method
+sendMessage: exit(exit_code: plain() * 10000 + nested() * 100 + method(); stdout: ""; stderr: "")
+return

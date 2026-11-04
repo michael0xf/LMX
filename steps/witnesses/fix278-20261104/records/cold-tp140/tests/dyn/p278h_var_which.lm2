@@ -1,0 +1,29 @@
+# The author's example of 15 October: before `var:` is reached var is code itself, which has no i; reaching it assigns the written Structure to the binding.
+int: seen 0
+code:
+    ---
+        node\seen: var\i
+        catch: implements ()
+            node\seen: 1
+    ---
+    var:
+        int: i 5
+    end: var
+    node\seen: node\seen * 10 + var\i
+end: code
+fn: run () int
+    ---
+        call: code code
+        return: 100 + node\seen
+        catch: call ()
+            return: 82
+        catch: implements ()
+            return: 83
+        catch: interpreter ()
+            return: 84
+        catch: convert ()
+            return: 85
+    ---
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -779,6 +779,18 @@ fn: lm_compiler_previous_reference_contract (const: (@: source_node c.LmP0Node);
 end: lm_compiler_previous_reference_contract
 
 # Original: l2src/l2trans.lm1:6936
+# An already known tail is a value for the existing head, not a second declaration of the tail: `t: A` with both written in this body.  A named body is read for its
+# fields before its procedure has rows, so a tail found only now overrides what that reading kept.
+fn: lm_compiler_declaration_known_tail (const: (@: source_node c.LmP0Node); @: frame c.LmP0Frame) int
+    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    int: own
+    if: here_mi_cell[0] < 0 || c.lm_compiler_ref_tail_atom(frame) = 0
+        return: 0
+    own: c.lm_compiler_resolved_own(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (c.lm_compiler_ref_tail_atom(frame))))
+    return: (cast: (int) (own >= 0 && own_decl_cell[0][own] != source_node && lm_compiler_head_resolve(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (frame\head)), 0, 0) = 5))
+end: lm_compiler_declaration_known_tail
+
 fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declaration
     @@: declarations_cell c.L2Declaration (cast: (@@: c.L2Declaration) (@ c.l2_declarations))
     @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
@@ -902,7 +914,11 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     # into l2_declarations and emptied when that list is (lm_compiler_application_free leaves its head 0).
     result: lm_compiler_dmap_get(source_node)
     if: result != 0
+        if: depth = 0 && n = 1 && result\candidate_count = 0 && lm_compiler_declaration_known_tail(source_node, frame) != 0
+            return: (cast: (@: c.L2Declaration) (0))
+        ---
         return: (cast: (@: c.L2Declaration) (result))
+    ---
     if: depth != 0
         kind: 2
     if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "[]") != 0
@@ -917,7 +933,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     # tail name. An already known tail is a value for the existing head, not a
     # second declaration of the tail.
     if: kind = 0 && n = 1 && c.lm_compiler_ref_tail_atom(frame) != 0 && lm_compiler_head_resolve(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (frame\head)), 0, 0) = 5
-        if: lm_compiler_head_absent(c.lm_compiler_ref_tail_atom(frame), source_node) != 0
+        if: lm_compiler_head_absent(c.lm_compiler_ref_tail_atom(frame), source_node) != 0 && lm_compiler_declaration_known_tail(source_node, frame) = 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) (c.lm_compiler_ref_tail_atom(frame)))) = 0
             named_reference: 1
         else:
             return: (cast: (@: c.L2Declaration) (0))

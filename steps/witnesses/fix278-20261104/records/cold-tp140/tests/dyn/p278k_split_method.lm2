@@ -1,0 +1,29 @@
+# A short fn called over explicit data: its written T stays in its code, and reaching the line assigns a reference to it to D's place.
+D:
+    T:
+        int: y 9
+    end: T
+end: D
+fn: m () int
+    T:
+        int: y 3
+    end: T
+    return: T\y
+end: m
+int: rc 7
+if: D\T\y != 9
+    rc: 81
+---
+if: rc = 7
+    call: m D
+    if: D\T\y != 3
+        rc: 82
+    ---
+    D\T\y: 8
+    call: m D
+    if: rc = 7 && D\T\y != 8
+        rc: 83
+    ---
+---
+sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
+return

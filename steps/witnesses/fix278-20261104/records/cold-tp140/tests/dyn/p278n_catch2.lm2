@@ -1,0 +1,20 @@
+fn: in_catch () int
+    throws: Bad
+    ---
+        throw: Bad(5)
+        catch: Bad (int: v)
+            t: (int: x 6)
+            return: t\x
+    ---
+    return: 0
+end: in_catch
+int: code 7
+---
+    if: code = 7 && in_catch() != 6
+        code: 82
+    ---
+    catch: Bad (int: v)
+        code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

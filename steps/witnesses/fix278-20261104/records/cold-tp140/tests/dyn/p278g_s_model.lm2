@@ -1,0 +1,29 @@
+# A repeated form makes no field of the model: Thin answers for S without any trace of it.
+S:
+    int: y 1
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+Thin:
+    int: y 7
+    t: (int: x 9)
+end: Thin
+fn: read (@: h S) int
+    return: h\y
+end: read
+fn: read_full (@: h S) int
+    return: h\[0]t\x
+end: read_full
+int: code 7
+if: read(Thin) != 7
+    code: 81
+---
+if: code = 7 && read_full(Thin) != 9
+    code: 82
+---
+Other: Thin
+if: code = 7 && Other\y != 7
+    code: 83
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

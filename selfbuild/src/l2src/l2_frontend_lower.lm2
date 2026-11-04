@@ -657,7 +657,8 @@ fn: lm_compiler_reference_implicit_model (const: (@: declaration c.L2Declaration
     if: word = 0
         return: (cast: (int) (-1))
     model: lm_compiler_declaration_model((cast: (const: @: c.LmP0Node) (declaration\source)), 0)
-    if: model < 0 || model >= ns_n_cell[0] || ns_name_cell[0][model] = 0 || c.lm_compiler_text_same(word, ns_name_cell[0][model]) = 0
+    # The model of a written place is the definition its line assigns (lm_compiler_contract_type_model): it has no written name of its own.
+    if: model < 0 || model >= ns_n_cell[0] || ns_name_cell[0][model] = 0 || (c.lm_compiler_text_same(word, ns_name_cell[0][model]) = 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) ns_name_cell[0][model])) = 0)
         return: (cast: (int) (-1))
     return: (cast: (int) (model))
 end: lm_compiler_reference_implicit_model
@@ -1994,6 +1995,10 @@ fn: lm_compiler_local_absent_def (const: (@: stmt c.LmP0Node); int: mi) int
     if: c.lm_compiler_mad_host_of(mi) >= 0 && (c.lm_compiler_formal_find(c.lm_compiler_mad_host_of(mi), h) >= 0 || c.lm_compiler_mad_host_own(c.lm_compiler_mad_host_of(mi), h) >= 0)
         return: (cast: (int) (0))
     oi: c.lm_compiler_own_find(mi, h)
+    # One place for one name: a neighbouring inline body of this activation has declared it (the book: no shadowing at an inline).
+    if: oi < 0
+        oi: c.lm_compiler_own_local_at(mi, h, stmt)
+    ---
     if: oi >= 0 && own_decl_cell[0][oi] != stmt
         return: (cast: (int) (0))
     # A head the method read as a free name before this statement is its input, established by that read
@@ -2101,9 +2106,19 @@ fn: lm_compiler_own_load (int: k0; @: dest c.L2Tx) int
     int: k c.lm_compiler_split_rep(k0)
     c.L2FrontendScratchChar32: nm_storage
     @: nm char (cast: (@: char) nm_storage\buffer)
+    c.L2FrontendScratchChar128: call_place_storage
+    @: call_place char (cast: (@: char) call_place_storage\buffer)
+    @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     @: field c.L2GraphField
-    if: c.lm_compiler_source_definition_ns(k) >= 0
+    # A definition that is a place of the data is read there, as a number is (below): its position is the code's.
+    if: c.lm_compiler_source_definition_ns(k) >= 0 && (c.lm_compiler_m_is_split(cur_mi_cell[0]) = 0 || c.lm_compiler_split_data_row(k) = 0)
         field: c.lm_compiler_graph_field(k)
+        # A written definition of a split-called code stays in that code, never in its data.
+        if: field != 0 && field\holder = 0 && c.lm_compiler_m_is_split(cur_mi_cell[0]) != 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) names[0][k])) != 0
+            if: c.lm_compiler_tx_clear(dest) != 0 || c.snprintf(call_place, 128U, "lmx_walk_slot_struct(l2_call_arena, l2_call_code, lmx_call_index(l2_call_arena, l2_call_code, l2_call_code, %zuU))", field\child) < 0
+                return: (cast: (int) (1))
+            return: (cast: (int) (c.lm_compiler_tx_cat(dest, call_place)))
+        ---
         if: field = 0 || c.lm_compiler_tx_clear(dest) != 0 || c.lm_compiler_tx_cat(dest, "lmx_walk_slot_struct(l2_program_arena, ") != 0
             return: (cast: (int) (1))
         # A holder in this activation has already been selected from the code
@@ -6123,9 +6138,6 @@ fn: lm_compiler_emit_path_cursor_slot (const: (@: path c.L2Path); int: mi; const
     @: child_model_name char (cast: (@: char) child_model_name_storage\buffer)
     c.L2FrontendScratchChar96: graph_status_storage
     @: graph_status char (cast: (@: char) graph_status_storage\buffer)
-    c.L2FrontendScratchChar64: rebound_storage
-    c.L2Tx: rebound_tx
-    @: rebound_name c.L2Tx c.lm_compiler_tx_local(@ rebound_tx, (cast: (@: char) rebound_storage\buffer), 64U)
     c.L2FrontendScratchChar128: graph_value_storage
     c.L2Tx: graph_value_tx
     @: graph_value c.L2Tx c.lm_compiler_tx_local(@ graph_value_tx, (cast: (@: char) graph_value_storage\buffer), 128U)
@@ -6183,12 +6195,6 @@ fn: lm_compiler_emit_path_cursor_slot (const: (@: path c.L2Path); int: mi; const
         return: (cast: (int) (1))
     if: oi >= 0 && path\steps\locus != 7 && (c.lm_compiler_own_path_uses_work(oi) = 0 || c.lm_compiler_own_cached(work_mi_cell[0], oi) = 0) && lm_compiler_emit_path_load(mi, oi, ind, l2_proot) != 0
         return: (cast: (int) (1))
-    # `T: Other` written in this activation and not yet published: the working value is T now.
-    if: oi >= 0 && path\steps\locus != 7 && c.lm_compiler_own_path_uses_work(oi) = 0 && c.lm_compiler_own_cached(work_mi_cell[0], oi) != 0 && c.lm_compiler_own_is_slot(oi) != 0
-        if: c.lm_compiler_tx_clear(rebound_name) != 0 || lm_compiler_tx_own_cname(rebound_name, "l2_q", oi, "") != 0 || c.fprintf(out_cell[0], "%sif: %s_dirty != 0\n%s    %s: %s\n%s---\n", ind, rebound_name\data, ind, l2_proot\data, rebound_name\data, ind) < 0
-            return: (cast: (int) (1))
-        ---
-    ---
     if: oi >= 0 && c.fprintf(out_cell[0], "%sl2_pst: %s\n", ind, l2_proot\data) < 0
         return: (cast: (int) (1))
     # N2: an own reference (`@: Model box`) or a letter binding (`receiveMessage: m Model`, 0 on an empty inbox) holding

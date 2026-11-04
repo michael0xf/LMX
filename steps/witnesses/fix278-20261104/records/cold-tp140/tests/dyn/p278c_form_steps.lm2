@@ -1,0 +1,55 @@
+# The uses of a local Structure, step by step: a raise names the step that made it.
+Thin:
+    int: y 4
+end: Thin
+fn: count (@: h Thin) int
+    return: 1
+end: count
+fn: m () int
+    int: step 0
+    ---
+        T:
+            int: a 1
+            int: y 3
+            K:
+                int: z 8
+            end: K
+            fn: twice () int
+                return: y * 2
+            end: twice
+        end: T
+        step: 1
+        if: T\K\z != 8
+            return: 81
+        step: 2
+        if: T\twice() != 6
+            return: 82
+        step: 3
+        T\y: 5
+        step: 4
+        step: 5
+        if: T\y != 5
+            return: 83
+        step: 6
+        @: p T Thin
+        step: 7
+        if: p\y != 4
+            return: 84
+        step: 8
+        int: k count(T)
+        step: 9
+        if: k != 1
+            return: 85
+        return: 7
+        catch: implements ()
+            return: 100 + step
+        catch: call ()
+            return: 110 + step
+        catch: convert ()
+            return: 120 + step
+        catch: interpreter ()
+            return: 130 + step
+    ---
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

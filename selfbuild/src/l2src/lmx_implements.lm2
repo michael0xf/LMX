@@ -3345,7 +3345,7 @@ fn: lmx_implements_walk_project_resolve (@: arena c.LmxArena; @: varA c.Lmx; @: 
                 continue
             ---
             if: kindC = c.LMX_KIND_PRIMITIVE && typeC >= c.LMX_TYPE_POINTER_BASE && typeC < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-                if: lmx_domain_type(arena, a) != typeC || lmx_domain_type(arena, b) != typeC
+                if: c.lmx_type_base(lmx_domain_type(arena, a)) != c.lmx_type_base(typeC) || c.lmx_type_base(lmx_domain_type(arena, b)) != c.lmx_type_base(typeC)
                     answer: c.LMX_IMPLEMENTS_NO
                     break
                 ---
@@ -3497,7 +3497,9 @@ fn: lmx_implements_walk_project_resolve (@: arena c.LmxArena; @: varA c.Lmx; @: 
                     current: child
                 ---
             else:
-                if: lmx_domain_type(arena, a) != typeC || lmx_domain_type(arena, b) != typeC
+                # A field of an immutable value is the same field (the book: "Передача, возврат и сохранение неизменяемого значения сохраняют его идентичность"; the
+                # qualifier is the sign of the physical type, and a reached write is refused where it is written).
+                if: c.lmx_type_base(lmx_domain_type(arena, a)) != c.lmx_type_base(typeC) || c.lmx_type_base(lmx_domain_type(arena, b)) != c.lmx_type_base(typeC)
                     answer: c.LMX_IMPLEMENTS_NO
                     break
                 ---
@@ -4479,6 +4481,21 @@ fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: names ch
     return: c.LMX_IMPLEMENTS_YES
 end: lmx_implements_named_places
 
+fn: lmx_implements_repeated_var (@: arena c.LmxArena; @: code c.Lmx) int
+    @: fields c.VoidArray @ code\array
+    c.VoidArray: name
+    size_t: heads 0U
+    size_t: j 0U
+    name\data: (cast: (@: void) "var")
+    name\size: 3U
+    while: j < fields\size
+        if: lmx_implements_same_name(lmx_implements_head_name(arena, code, j), @ name) != 0
+            heads: heads + 1U
+        j: j + 1U
+    ---
+    return: (cast: (int) (heads > 1U))
+end: lmx_implements_repeated_var
+
 # The caller owns this frame. Its slots belong to this one admission, including
 # recursive calls on the same code with different data. Install only after all
 # demanded places have been found. Unwinding restores the enclosing call.
@@ -4488,6 +4505,9 @@ fn: lmx_implements_call_places_open (@: arena c.LmxArena; @: code c.Lmx; @: data
     c.memset((cast: (@: void) scope), 0, c.sizeof(c.LmxCallPlaces))
     out_answer[0]: c.LMX_IMPLEMENTS_NO
     if: c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0 || (data != 0 && c.lmx_graph_node_in(arena, (cast: (@: void) data)) = 0)
+        return: c.LMX_WALK_OK
+    # A short call reads the code's var by its name, and at two or more root heads only an index selects one (the plan, U3): no data here is no first head taken.
+    if: data = 0 && lmx_implements_repeated_var(arena, code) != 0
         return: c.LMX_WALK_OK
     # Receiver-produced methods describe their data in the actual var part.
     # The outer args/return/var/body slots are code structure, not data fields.

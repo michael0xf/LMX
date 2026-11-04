@@ -1591,11 +1591,6 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
                     oi: lm_compiler_model_root_own(ni)
                     if: oi < 0
                         return: 1
-                    if: c.lm_compiler_own_is_slot(oi) != 0
-                        if: c.lm_compiler_own_slot_at(oi, record) != 0
-                            return: 1
-                        return: c.lm_compiler_tx_join(dest, "lmx_walk_slot_model(l2_program_arena, ", record, ")", 0, 0)
-                    ---
                     if: mi = work_mi_cell[0] && c.lm_compiler_own_cached(mi, oi) != 0
                         if: full_value != 0
                             return: (cast: (int) c.lm_compiler_own_load_context_full(oi, work_mi_cell[0], ind, dest, context, full_value))

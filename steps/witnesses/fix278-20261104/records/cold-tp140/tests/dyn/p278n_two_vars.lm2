@@ -1,0 +1,20 @@
+# Two written forms of `var` in a body called over itself: var is a binding of the activation, each line rebinds it: 1, then 5.
+int: seen 0
+with2:
+    var: (int: i 1)
+    node\seen: var\i
+    var: (int: i 5)
+    node\seen: node\seen * 10 + var\i
+end: with2
+fn: run () int
+    ---
+        call: with2 with2
+        return: 100 + node\seen
+        catch: call ()
+            return: 82
+        catch: implements ()
+            return: 83
+    ---
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

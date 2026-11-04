@@ -4079,6 +4079,105 @@ fn: lm_compiler_own_work_store (int: k0; const: (@: ind char); const: (@: val ch
 end: lm_compiler_own_work_store
 
 # Original: l2src/l2trans.lm1:7719
+fn: lm_compiler_written_tail (const: (@: frame c.LmP0Frame); int: mi) int
+    @: field c.LmP0Field
+    @: inner c.LmP0Node
+    if: frame = 0 || frame\body = 0
+        return: 0
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (frame\body\first_field)))
+    if: field = 0 || field\value = 0
+        return: 0
+    inner: field\value
+    if: inner\kind = c.LM_P0_NODE_STRUCTURE && inner\as != 0 && inner\as\structure != 0 && c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next))) = 0
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (inner\as\structure\first_field)))
+        if: field = 0 || field\value = 0
+            return: 0
+        inner: field\value
+    ---
+    if: inner\kind != c.LM_P0_NODE_FRAME
+        return: 0
+    # A Frame that calls is the tail's value, a machine local's C function pointer too: `st: entry(a)`.
+    return: (cast: (int) (c.lm_compiler_own_decl_ty((cast: (const: @: c.LmP0Node) inner)) != 0 || (c.lm_compiler_is_asgn((cast: (const: @: c.LmP0Node) inner), mi) != 0 && c.lm_compiler_frame_is_call((cast: (const: @: c.LmP0Frame) (inner\as\frame)), mi) = 0) || c.lm_compiler_source_is_callable_definition((cast: (const: @: c.LmP0Node) inner)) != 0))
+end: lm_compiler_written_tail
+
+# A written Structure at a head this level has already declared: `t: (int: x 2); t: (int: x 5)` (the book, "повторной структурной формы").
+fn: lm_compiler_repeated_form (const: (@: stmt c.LmP0Node); int: mi) int
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    int: own
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || c.lm_compiler_is_asgn(stmt, mi) = 0
+        return: 0
+    if: c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 || lm_compiler_written_tail((cast: (const: @: c.LmP0Frame) (stmt\as\frame)), mi) = 0
+        return: 0
+    if: c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) >= 0
+        return: 1
+    own: c.lm_compiler_own_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))
+    if: own < 0
+        own: c.lm_compiler_own_local_at(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), stmt)
+    ---
+    return: (cast: (int) (own >= 0 && own_decl_cell[0][own] != stmt))
+end: lm_compiler_repeated_form
+
+# One source form is two acts (the book, "Исходная запись строит полный граф Structure", #method-parts; CODEX-OPUS-278-REPEAT-IDENTITY-20261104T075944Z-01).  The written Structure
+# stays where it is written, a definition of the body that nothing else names, and reaching the line assigns a reference to it to the place of its head after the
+# admission: `t: (int: x 5)` is `l2_written_N: (int: x 5)` and `t: l2_written_N`.  No copy and no second graph: the next reach assigns the same Structure as it stands, and a
+# rebinding of `t` changes the place, not the body.
+fn: lm_compiler_written_form_split (const: (@: body c.LmP0Structure); @: field c.LmP0Field; const: (@: stmt_path char)) int
+    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
+    @: holder c.LmP0Structure (cast: (@: c.LmP0Structure) body)
+    @: stmt c.LmP0Node field\value
+    @: frame c.LmP0Frame stmt\as\frame
+    @: name c.LmP0Text (cast: (@: c.LmP0Text) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Text)))
+    @: spelling char (cast: (@: char) c.lm_compiler_bound_alloc(32U, c.sizeof(c.char)))
+    @: def_frame c.LmP0Frame (cast: (@: c.LmP0Frame) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Frame)))
+    @: def_as c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0NodeAs)))
+    @: def_node c.LmP0Node (cast: (@: c.LmP0Node) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Node)))
+    @: atom_as c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0NodeAs)))
+    @: atom c.LmP0Node (cast: (@: c.LmP0Node) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Node)))
+    @: tail_field c.LmP0Field (cast: (@: c.LmP0Field) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Field)))
+    @: tail c.LmP0Structure (cast: (@: c.LmP0Structure) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Structure)))
+    @: next_field c.LmP0Field (cast: (@: c.LmP0Field) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Field)))
+    @: put_frame c.LmP0Frame (cast: (@: c.LmP0Frame) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Frame)))
+    @: put_as c.LmP0NodeAs (cast: (@: c.LmP0NodeAs) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0NodeAs)))
+    @: put_node c.LmP0Node (cast: (@: c.LmP0Node) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Node)))
+    if: name = 0 || spelling = 0 || def_frame = 0 || def_as = 0 || def_node = 0 || atom_as = 0 || atom = 0 || tail_field = 0 || tail = 0 || next_field = 0 || put_frame = 0 || put_as = 0 || put_node = 0
+        return: (cast: (int) (c.lm_compiler_alloc_or(stmt_path, stmt, "out of memory")))
+    if: c.sprintf(spelling, "l2_written_%d", ns_n_cell[0]) < 0
+        return: (cast: (int) (c.lm_compiler_alloc_or(stmt_path, stmt, "out of memory")))
+    name\data: spelling
+    name\length: c.strlen(spelling)
+    c.memcpy((cast: (@: void) def_frame), (cast: (@: void) frame), c.sizeof(c.LmP0Frame))
+    def_frame\head: name
+    def_frame\trailer: 0
+    def_as\frame: def_frame
+    c.memcpy((cast: (@: void) def_node), (cast: (@: void) stmt), c.sizeof(c.LmP0Node))
+    def_node\as: def_as
+    atom_as\atom: name
+    atom\kind: c.LM_P0_NODE_ATOM
+    atom\as: atom_as
+    atom\span: stmt\span
+    tail_field\value: atom
+    tail\first_field: tail_field
+    tail\last_field: tail_field
+    tail\field_count: 1U
+    # Both acts are new nodes: what was read of the written statement before this pass is about neither.
+    c.memcpy((cast: (@: void) put_frame), (cast: (@: void) frame), c.sizeof(c.LmP0Frame))
+    put_frame\body: tail
+    put_frame\trailer: 0
+    put_frame\flags: c.LM_P0_FRAME_COLON
+    put_as\frame: put_frame
+    c.memcpy((cast: (@: void) put_node), (cast: (@: void) stmt), c.sizeof(c.LmP0Node))
+    put_node\as: put_as
+    c.memcpy((cast: (@: void) next_field), (cast: (@: void) field), c.sizeof(c.LmP0Field))
+    next_field\value: put_node
+    field\value: def_node
+    field\next: next_field
+    if: holder\last_field = field
+        holder\last_field: next_field
+    ---
+    holder\field_count: holder\field_count + 1U
+    return: 0
+end: lm_compiler_written_form_split
+
 fn: lm_compiler_collect_asgn_body (const: (@: body c.LmP0Structure); int: mi; const: (@: path char)) int
     @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
@@ -4100,6 +4199,8 @@ fn: lm_compiler_collect_asgn_body (const: (@: body c.LmP0Structure); int: mi; co
     int: letni
     int: retained
     int: rbm
+    int: written
+    @: e_cell int (cast: (@: int) (@ c.l2_e))
     if: body = 0 || mi < 0
         return: (cast: (int) (0))
     unit_body: c.lm_compiler_part_source_body(body)
@@ -4187,7 +4288,15 @@ fn: lm_compiler_collect_asgn_body (const: (@: body c.LmP0Structure); int: mi; co
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        if: c.lm_compiler_local_ns_shape(stmt, mi) != 0
+        written: 0
+        if: c.lm_compiler_m_nsof(mi) < 0 && c.lm_compiler_own_by_decl(mi, stmt) < 0 && (mi != e_cell[0] || c.lm_compiler_scope_host() != 0) && (lm_compiler_repeated_form(stmt, mi) != 0 || (c.lm_compiler_assignment_input(mi, stmt) < 0 && (c.lm_compiler_local_ns_shape(stmt, mi) != 0 || c.lm_compiler_empty_struct_decl_shape(stmt, mi) != 0)))
+            if: lm_compiler_written_form_split(body, field, path) != 0
+                return: 1
+            ---
+            stmt: field\value
+            written: 1
+        ---
+        if: written != 0 || c.lm_compiler_local_ns_shape(stmt, mi) != 0
             if: lm_compiler_local_ns_entry(stmt, mi, path) < 0
                 return: (cast: (int) (1))
             cj: c.lm_compiler_own_add(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), c.lm_compiler_graph_own(), path, stmt)
@@ -8631,6 +8740,24 @@ fn: lm_compiler_ns_primitive_field (const: (@: source c.LmP0Node); int: owner; c
 end: lm_compiler_ns_primitive_field
 
 # Original: l2src/l2trans.lm1:14946
+# The head names a field declared above in this Structure and the tail is a written Structure.
+fn: lm_compiler_ns_written_repeat (const: (@: fld c.LmP0Node); int: me) int
+    @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
+    @@: ns_first_cell int (cast: (@@: int) (@ c.l2_ns_first))
+    @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
+    @@@: nsf_fname_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_nsf_fname))
+    @: ns_take_mi_cell int (cast: (@: int) (@ c.l2_ns_take_mi))
+    int: j ns_first_cell[0][me]
+    if: lm_compiler_written_tail((cast: (const: @: c.LmP0Frame) (fld\as\frame)), ns_take_mi_cell[0]) = 0
+        return: 0
+    while: j < nsf_n_cell[0]
+        if: nsf_owner_cell[0][j] = me && nsf_fname_cell[0][j] != 0 && c.lm_compiler_text_same(nsf_fname_cell[0][j], (cast: (const: @: c.LmP0Text) (fld\as\frame\head))) != 0
+            return: 1
+        j: j + 1
+    ---
+    return: 0
+end: lm_compiler_ns_written_repeat
+
 fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (@: body c.LmP0Structure); const: (@: defining c.LmP0Node); const: (@: at c.LmP0Node); const: (@: path char)) int
     @@@: ns_def_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_def_node))
     @@@: ns_def_body_cell c.LmP0Structure (cast: (@@@: c.LmP0Structure) (@ c.l2_ns_def_body))
@@ -8741,6 +8868,14 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
         # declaration, and its contract says what it lacks, at the word.
         if: fld != 0 && c.lm_compiler_ns_field_word(c.lm_compiler_app_head(fld)) != 0 && c.lm_compiler_count_active(c.lm_compiler_app_actuals(fld)) = 0
             return: (cast: (int) (c.lm_compiler_ns_field_needs(path, fld, c.lm_compiler_app_head(fld))))
+        # A written form at a head declared above (lm_compiler_written_form_split): the Structure is a child of this body, the line a statement of its procedure.
+        if: fld != 0 && fld\kind = c.LM_P0_NODE_FRAME && fld\as != 0 && fld\as\frame != 0 && lm_compiler_ns_body_stmt(fld, me) != 0 && lm_compiler_ns_written_repeat(fld, me) != 0
+            if: lm_compiler_written_form_split(body, f, path) != 0
+                return: 1
+            ---
+            fld: f\value
+            g: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (fld\as\frame\body\first_field)))
+        ---
         if: lm_compiler_ns_body_stmt(fld, me) != 0 || (fld != 0 && fld\kind != c.LM_P0_NODE_FRAME)
             if: ns_stmt_cell[0][me] = 0
                 ns_stmt_cell[0][me]: fld
@@ -12356,7 +12491,7 @@ fn: lm_compiler_rw_declared_source (int: entry; int: mi; int: input) int
         leaf: leaf\operand
     ---
     if: leaf != 0 && leaf\word != 0
-        model: c.lm_compiler_type_model((cast: (const: @: c.LmP0Text) (leaf\word)))
+        model: c.lm_compiler_contract_type_model((cast: (const: @: c.LmP0Text) (leaf\word)))
         if: model < 0 && callable < 0
             callable: c.lm_compiler_site_method(mi, (cast: (const: @: c.LmP0Text) (leaf\word)))
         ---

@@ -747,6 +747,14 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
         q_at_cell[0]: item
         q_path_cell[0]: path
         role: c.lm_compiler_unit_role(item)
+        # A written Structure at a root head already declared (lm_compiler_written_form_split): the definition is a named root like any other, and the line is the statement.
+        if: role = 0 && item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (item\as\frame\head))) != 0 && c.lm_compiler_is_asgn(item, -1) != 0 && c.lm_compiler_head_absent((cast: (const: @: c.LmP0Text) (item\as\frame\head)), item) = 0 && c.lm_compiler_written_tail((cast: (const: @: c.LmP0Frame) (item\as\frame)), -1) != 0
+            if: c.lm_compiler_written_form_split((cast: (const: @: c.LmP0Structure) unit), field, path) != 0
+                return: 1
+            ---
+            item: field\value
+            role: c.lm_compiler_unit_role(item)
+        ---
         if: role = 5 && item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (item\as\frame))) != 0
             return: (cast: (int) (c.lm_compiler_error(path, c.lm_compiler_ref_tail_node(item), "an unknown head needs a Structure body")))
         if: role = 1 && lm_compiler_collect_method(item, path, -1) != 0
@@ -7089,7 +7097,7 @@ fn: lm_compiler_rw_prepared_value (@: span c.L2ValueSpan; int: parent; @: out in
             return: (cast: (int) (lm_compiler_rw_binding_value(selected, parent, out)))
         ft: c.lm_compiler_path_root_binding_ft(selected, rw_mi_cell[0])
         if: ft >= 0
-            if: selected\oi >= 0 && c.lm_compiler_colon_is_graph_ty(ft) != 0 && c.lm_compiler_own_path_uses_work((cast: (int) (selected\oi))) = 0
+            if: selected\oi >= 0 && c.lm_compiler_colon_is_graph_ty(ft) != 0 && c.lm_compiler_own_path_uses_work((cast: (int) (selected\oi))) = 0 && c.lm_compiler_rw_place_row((cast: (int) (selected\oi))) = 0
                 return: (cast: (int) (lm_compiler_rw_physical_own(parent, (cast: (int) (selected\oi)), out)))
             return: (cast: (int) (lm_compiler_rw_binding_value(selected, parent, out)))
         return: (cast: (int) (lm_compiler_rw_path_value_rec((cast: (const: @: c.LmP0Node) (span\node)), selected, parent, out)))
@@ -8877,7 +8885,12 @@ end: lm_compiler_rw_write
 # Original: l2src/l2trans.lm1:28081
 fn: lm_compiler_rw_physical_own (int: parent; int: oi; @: out int) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     int: width 3
+    # A written definition of a split-called code stays in that code, never in its data: it reads as the step of a source definition does (lm_compiler_rw_atom_ns).
+    if: c.lm_compiler_m_is_split(rw_mi_cell[0]) != 0 && c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) own_name_cell[0][oi])) != 0
+        return: (cast: (int) (lm_compiler_rw_ns_value(parent, (cast: (int) (c.lm_compiler_source_definition_ns(oi))), rw_mi_cell[0], out)))
     if: c.lm_compiler_rw_is_hosted(oi) != 0
         return: (cast: (int) (lm_compiler_rw_host_read(parent, oi, out)))
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_slot(oi) = 0
@@ -11971,6 +11984,14 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         ---
         if: ns_eternal_cell[0][named] >= 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], stmt, "an eternal branch field cannot be updated")))
+        # A head that names a place of the data is written there, not in the code (native: lm_compiler_own_store_context_full over the place row).
+        oi: c.lm_compiler_own_find(rw_mi_cell[0], h)
+        if: c.lm_compiler_rw_place_row(oi) != 0
+            if: lm_compiler_rw_write(into, oi, "LMX_WALK_OP_PUT_REF", @ port_local_node, @ k) != 0 || lm_compiler_rw_reference_receive_at(written_first, written_n, (cast: (int) (c.lm_compiler_graph_own())), -1, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, k, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+                return: (cast: (int) (1))
+            \made: 1
+            return: (cast: (int) (0))
+        ---
         if: rw_mi_cell[0] != e_cell[0] || ns_parent_cell[0][named] >= 0 || ns_local_cell[0][named] >= 0
             if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PUT", 3, @ port_local_node) != 0 || lm_compiler_rw_ns_value(port_local_node, named, rw_mi_cell[0], @ t) != 0 || c.lm_compiler_rw_put(port_local_node, 1, t) != 0
                 return: (cast: (int) (1))
@@ -12566,27 +12587,6 @@ fn: lm_compiler_emit_root_head (int: into; int: slot; const: (@: value c.LmP0Nod
     return: 0
 end: lm_compiler_emit_root_head
 
-# A local Structure's slot declares its layout, as a named root's and a nested field's do (lm_compiler_source_layouts_emit, lm_compiler_emit_ns_names): a value standing
-# there later is admitted to it and read through it (lmx_walk_slot_bind), and what stands there now is no model.
-fn: lm_compiler_emit_local_place_model (int: into; int: slot; const: (@: value c.LmP0Node)) int
-    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    @@: ns_local_cell int (cast: (@@: int) (@ c.l2_ns_local))
-    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
-    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    c.L2FrontendScratchChar32: holder_storage
-    @: holder char (cast: (@: char) holder_storage\buffer)
-    c.L2FrontendScratchChar128: token_storage
-    @: token char (cast: (@: char) token_storage\buffer)
-    int: own c.lm_compiler_own_by_decl(rw_mi_cell[0], value)
-    int: ni c.lm_compiler_source_definition_ns(own)
-    if: ni < 0 || ns_local_cell[0][ni] < 0 || ns_parent_cell[0][ni] >= 0 || c.lm_compiler_own_is_slot(own) = 0
-        return: 0
-    c.lm_compiler_rw_name(into, holder)
-    if: c.lm_compiler_layout_token(ni, token) != 0 || c.fprintf(out_cell[0], "        if: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(%s, %uU)), %s) != 0\n            return: 1\n", holder, (cast: (unsigned) slot), token) < 0
-        return: 1
-    return: 0
-end: lm_compiler_emit_local_place_model
-
 fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Field; int: into; int: base; @: source c.L2SourceContainer; @: made int) int
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     @: t7_walk_cell int (cast: (@: int) (@ c.l2_t7_walk))
@@ -12634,8 +12634,6 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
             if: rw_emit_cell[0] != 0 && lm_compiler_emit_root_head(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
                 return: 1
             ---
-            if: rw_emit_cell[0] != 0 && lm_compiler_emit_local_place_model(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
-                return: 1
             ---
         ---
         own: c.lm_compiler_own_by_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value)))

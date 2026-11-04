@@ -1,0 +1,20 @@
+# The second form of a named Structure written by hand: a definition and a line that assigns it.
+S:
+    t: (int: x 2)
+    A: (int: x 5)
+    t: A
+end: S
+D:
+    t: (int: x 1)
+    A: (int: x 7)
+end: D
+int: code 7
+if: D\t\x != 1
+    code: 81
+---
+call: S D
+if: code = 7 && D\t\x != 5
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

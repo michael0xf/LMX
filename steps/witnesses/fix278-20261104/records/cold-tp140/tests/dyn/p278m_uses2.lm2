@@ -1,0 +1,72 @@
+# More uses of a local written Structure, step by step: a raise names the step that made it.
+Thin:
+    int: y 4
+end: Thin
+Data:
+    int: a 0
+    int: y 0
+end: Data
+fn: give () @: Thin
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    return: T
+end: give
+fn: m () int
+    int: step 0
+    ---
+        T:
+            int: a 1
+            int: y 3
+        end: T
+        step: 1
+        R: merge: T
+        if: R\y != 3
+            return: 81
+        step: 2
+        R\y: 9
+        if: T\y != 3
+            return: 82
+        step: 3
+        @: q Thin T
+        if: q\y != 3
+            return: 83
+        step: 4
+        q\y: 6
+        if: T\y != 6
+            return: 84
+        step: 5
+        @: g Thin give()
+        if: g\y != 3
+            return: 85
+        step: 6
+        call: T Data
+        if: Data\y != 3
+            return: 86
+        step: 7
+        U:
+            V:
+                int: w 11
+            end: V
+            int: y 2
+        end: U
+        if: U\V\w != 11
+            return: 87
+        step: 8
+        U\V\w: 12
+        if: U\V\w != 12
+            return: 88
+        return: 7
+        catch: implements ()
+            return: 100 + step
+        catch: call ()
+            return: 110 + step
+        catch: convert ()
+            return: 120 + step
+        catch: interpreter ()
+            return: 130 + step
+    ---
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

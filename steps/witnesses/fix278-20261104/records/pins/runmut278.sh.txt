@@ -1,0 +1,36 @@
+P=/c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01
+SP=/c/Users/mtkra/AppData/Local/Temp/claude/6d92abb4660ab27f/b79b4933-abc1-4eae-98f7-6361633964ee/scratchpad
+PWSH="/c/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe"
+cd $P
+run() { "$PWSH" -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/$1.command')))" < /dev/null 2>&1 | tail -n 1 | cut -c1-200; }
+OUT=$P/pins/mut278.txt
+TOOL=cold-boot139a/quick139a/lmxtool.exe
+BASEFE=cold-tp140/fe140o/l2trans.exe
+BASERT=cold-tp140/rt140c
+report() {
+  # $1 mutant, $2 try
+  grep -a -E '^ *SUITE' pins/tp140-probe-$2.terminal.txt | cut -c1-80 >> $OUT
+  for row in written_form immutable_formal structure_slot_write structure_path_write place_map source_occurrences map_chain; do
+    for k in native forced; do
+      printf '%s %s %s: ' $1 $row $k >> $OUT
+      { head -n 1 tp140-probe/$2/$row-$k/p.L2.log 2>/dev/null | sed 's|.*/tests/||' | cut -c1-110; for r in 0 1; do grep -a -h -E 'exit [0-9]+, expected|walk error|invariant|R0 was stopped' tp140-probe/$2/$row-$k/run-root$r.log 2>/dev/null | head -n 1 | cut -c1-70; done; } | tr '\n' ' ' >> $OUT
+      echo >> $OUT
+    done
+  done
+}
+kind=$1; shift
+for m in "$@"; do
+  if test -e cold-tp140/fem-$m || test -e cold-tp140/rtm-$m; then echo "label taken $m" >> $OUT; continue; fi
+  if ! python $SP/mut278.py $m >> $OUT 2>&1; then echo "mutation did not apply: $m" >> $OUT; continue; fi
+  if test "$kind" = fe; then
+    TP_TOOL=$TOOL TP_LABEL=fem-$m TP_TRY=f$m run tp140-fe >> $OUT
+    TP_TOOL=$TOOL TP_FE=cold-tp140/fem-$m/l2trans.exe TP_RT=$BASERT TP_TRY=f$m TP_LIST=probe278-f.tsv run tp140-probe >> $OUT
+    report $m f$m
+  else
+    TP_TOOL=$TOOL TP_LABEL=rtm-$m TP_TRY=m$m run tp140-rt >> $OUT
+    TP_TOOL=$TOOL TP_FE=$BASEFE TP_RT=cold-tp140/rtm-$m TP_TRY=m$m TP_LIST=probe278-f.tsv run tp140-probe >> $OUT
+    report $m m$m
+  fi
+  TP_TOOL=$TOOL TP_TRY=q$m run tp140-prepare >> $OUT
+done
+echo finished $kind >> $OUT

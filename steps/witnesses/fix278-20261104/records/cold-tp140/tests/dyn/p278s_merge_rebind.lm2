@@ -1,0 +1,19 @@
+# A merge result is an own Structure of the method: rebinding it, the path reads the working value before the publication.
+Holder:
+    int: y 3
+end: Holder
+Other:
+    int: a 5
+    int: y 7
+end: Other
+fn: m () int
+    R: merge: Holder
+    if: R\y != 3
+        return: 81
+    R: Other
+    if: R\y != 7
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

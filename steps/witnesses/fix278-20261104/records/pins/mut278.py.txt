@@ -1,0 +1,65 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # FRONTEND: is this code of 277 still reached now that a local written Structure is split?
+    # A local Structure's slot declares no layout.
+    'localmodel': ('l2_frontend_emit.lm2', r'''            if: rw_emit_cell[0] != 0 && lm_compiler_emit_local_place_model(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
+''', r'''            if: rw_emit_cell[0] != 0 && slot < -9 && lm_compiler_emit_local_place_model(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
+'''),
+    # A local Structure's model is whatever stands in its slot now.
+    'modelslot': ('l2_frontend_useplan.lm2', r'''                    if: c.lm_compiler_own_is_slot(oi) != 0
+                        if: c.lm_compiler_own_slot_at(oi, record) != 0
+''', r'''                    if: c.lm_compiler_own_is_slot(oi) != 0 && mi < -9
+                        if: c.lm_compiler_own_slot_at(oi, record) != 0
+'''),
+    # A rebound own slot not yet published is read from its old place.
+    'dirtyread': ('l2_frontend_lower.lm2', r'''c.lm_compiler_own_path_uses_work(oi) = 0 && c.lm_compiler_own_cached(work_mi_cell[0], oi) != 0 && c.lm_compiler_own_is_slot(oi) != 0
+''', r'''c.lm_compiler_own_path_uses_work(oi) = 0 && c.lm_compiler_own_cached(work_mi_cell[0], oi) != 0 && c.lm_compiler_own_is_slot(oi) != 0 && mi < -9
+'''),
+    # FRONTEND: the first form of a local Structure stays one place with its definition.
+    'firstform': ('l2_frontend_core.lm2', r'''(lm_compiler_repeated_form(stmt, mi) != 0 || (c.lm_compiler_assignment_input(mi, stmt) < 0 && (c.lm_compiler_local_ns_shape(stmt, mi) != 0 || c.lm_compiler_empty_struct_decl_shape(stmt, mi) != 0)))
+''', r'''(lm_compiler_repeated_form(stmt, mi) != 0)
+'''),
+    # A form at a formal is not repeated.
+    'formalform': ('l2_frontend_core.lm2', r'''    if: c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) >= 0
+        return: 1
+    own: c.lm_compiler_own_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))
+''', r'''    own: c.lm_compiler_own_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))
+'''),
+    # A typed null is a written form.
+    'nulltail': ('l2_frontend_core.lm2', r'''    if: inner\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_typed_null_value((cast: (const: @: c.LmP0Node) inner)) != 0
+        return: 0
+''', r'''    if: inner\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_typed_null_value((cast: (const: @: c.LmP0Node) inner)) != 0 && mi < -9
+        return: 0
+'''),
+    # KERNEL: the sign of the physical type is a difference of the field's type.
+    'baseptr': ('lmx_implements.lm2', r'''            if: kindC = c.LMX_KIND_PRIMITIVE && typeC >= c.LMX_TYPE_POINTER_BASE && typeC < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                if: c.lmx_type_base(lmx_domain_type(arena, a)) != c.lmx_type_base(typeC) || c.lmx_type_base(lmx_domain_type(arena, b)) != c.lmx_type_base(typeC)
+''', r'''            if: kindC = c.LMX_KIND_PRIMITIVE && typeC >= c.LMX_TYPE_POINTER_BASE && typeC < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                if: lmx_domain_type(arena, a) != typeC || lmx_domain_type(arena, b) != typeC
+'''),
+    'baseelse': ('lmx_implements.lm2', r'''                # qualifier is the sign of the physical type, and a reached write is refused where it is written).
+                if: c.lmx_type_base(lmx_domain_type(arena, a)) != c.lmx_type_base(typeC) || c.lmx_type_base(lmx_domain_type(arena, b)) != c.lmx_type_base(typeC)
+''', r'''                # qualifier is the sign of the physical type, and a reached write is refused where it is written).
+                if: lmx_domain_type(arena, a) != typeC || lmx_domain_type(arena, b) != typeC
+'''),
+    'basearray': ('lmx_implements.lm2', r'''        if: kind != c.LMX_KIND_ARRAY || c.lmx_type_base(lmx_domain_type(arena, cell)) != c.lmx_type_base(wanted_type)
+''', r'''        if: kind != c.LMX_KIND_ARRAY || lmx_domain_type(arena, cell) != wanted_type
+'''),
+}
+if which == 'list':
+    print(' '.join(TABLE))
+    sys.exit(0)
+name, old, new = TABLE[which]
+if old is None:
+    print('no text for', which)
+    sys.exit(1)
+path = R + name
+text = open(path, 'rb').read().decode('utf-8')
+count = text.count(old)
+if count != 1:
+    print('mutation', which, 'matches', count, 'times')
+    sys.exit(1)
+open(path, 'wb').write(text.replace(old, new).encode('utf-8'))
+print('mutated', which)

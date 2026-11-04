@@ -880,6 +880,8 @@ fn: lm_compiler_split_data_row (int: oi) int
     @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     if: oi < 0 || oi >= own_n_cell[0]
         return: (cast: (int) (0))
+    if: c.lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) names[0][oi])) != 0
+        return: 0
     if: c.lm_compiler_source_definition_ns(oi) >= 0 && c.lm_compiler_default_data_input(own_mi_cell[0][oi], c.lm_compiler_param_find(own_mi_cell[0][oi], names[0][oi])) != 0
         return: 0
     @@: uses int (cast: (@@: int) (@ c.l2_m_uses))

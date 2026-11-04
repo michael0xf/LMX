@@ -1,0 +1,19 @@
+# The short `call: code` over two root heads `var:` does not silently take the first (the plan, U3): the implicit call.
+int: seen 0
+with2:
+    var: (int: i 1)
+    var: (int: i 5)
+    node\seen: var\i
+end: with2
+fn: run () int
+    ---
+        call: with2
+        return: 100 + node\seen
+        catch: call ()
+            return: 7
+        catch: implements ()
+            return: 83
+    ---
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

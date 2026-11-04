@@ -1,0 +1,17 @@
+# A written form assigned to a formal: the activation's value after the admission (the book: an assignment to an argument does not write back).
+Holder:
+    int: x 2
+end: Holder
+fn: f (@: t Holder) int
+    t: (int: x 5)
+    return: t\x
+end: f
+int: code 7
+if: f(Holder) != 5
+    code: 81
+---
+if: code = 7 && Holder\x != 2
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

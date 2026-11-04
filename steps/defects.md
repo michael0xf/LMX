@@ -11189,10 +11189,52 @@ replay3630 не потерял выходов и не дал новых диаг
 
 `Alt\k: V`, где у `V` нет поля `q` модели, а `q` никто не читает: `implements` на записи. Слотовый приём (`lmx_implements_receive_cell`) идёт с нулевым покрытием и проверяет всю модель. Codex, `CODEX-OPUS-276-REVIEW-CONSUMER-20261104T024655Z-01`: «internal uses=0/неизвестное coverage НЕ доказывает, что программа предъявила весь интерфейс». Шаг карты по этому правилу уже исправлен, запись в слот нет. В `tests/dyn/structure_slot_write.lm2` у `V` поэтому есть `q`: это обход завышения, а не норма. [Запись](witnesses/fix277-20261104/notes.md).
 
-### IMMUTABLE-ACTUAL-TO-FORMAL — 2026-11-04, Opus (срез 277), OPEN
+### IMMUTABLE-ACTUAL-TO-FORMAL — 2026-11-04, Opus (срез 277), CLOSED срезом 278
+
+Допуск сравнивает тип поля по `lmx_type_base`: знак квалификатора — не отличие поля. Число, вложенная Structure и идентичность через возврат в native и forced, типизированная ссылка у формала в native. Достигнутая запись отказывает до изменения объекта. [Запись и свидетели](witnesses/fix278-20261104/notes.md). Исходная запись ниже.
 
 `b: immutable: merge(Holder)`, затем `read(b)` с формальным `@: h Holder`: native падает `lmx: invariant: the record of a proved admission was not kept`, обходчик даёт неявный `implements`. На кортеже 276 так же, вложенное поле ни при чём. Отказ рождается в `lmx_implements_walk_project_resolve` через `lmx_implements_admit_operation_call`; дальше не разбирал. Книга: «Передача, возврат и сохранение неизменяемого значения сохраняют его идентичность», защита срабатывает на достигнутой записи, а не на приёме. [Запись](witnesses/fix277-20261104/notes.md).
 
 ### BARE-PATH-REQUIREMENT-READ — 2026-11-04, Opus (срез 277), OPEN
 
 `@: seen Outer\Model` читается как `@: seen Outer \Model`: требование `Outer`, значение — prefix deref свободного `Model`, поэтому `seen\v` даёт `unknown field path segment`. То же начало у `@: Box\f two`: `unknown type`. Автор 2026-10-27 разрешил пробелы вокруг `\` как стиль, границей служит запятая, поэтому по этому правилу это один путь. Свидетель голого чтения в срезе 277 поэтому идёт через аргумент: `count(Outer\Runs)`. [Запись](witnesses/fix277-20261104/notes.md).
+
+### INLINE-ONE-PLACE — 2026-11-04, Opus (срез 278), OPEN
+
+Объявленное число в соседних inline-телах: `if: k = 0 → int: x 3`, `if: k = 1 → int: x 7`, чтение после обоих. 77 на кортежах 277 и 278, ожидается 37. Автор, 15 октября: правило включает `fn`, без затенения у inline. Комментарий в `lm_compiler_own_add` разрешает вложенному телу затенять, это и надо пересмотреть. Записанные формы срез 278 уже свёл к одному месту. [Запись](witnesses/fix278-20261104/notes.md).
+
+### VAR-PATH-OF-SHORT-FN — 2026-11-04, Opus (срез 278), OPEN
+
+`m\var\a` у короткого `fn`: `unknown field path segment`. Own-поля физически лежат в body, часть `var` пуста, книга говорит об own-поле в `var`. [Запись](witnesses/fix278-20261104/notes.md).
+
+### FN-OWN-PLACE-AT-CALL-DATA — 2026-11-04, Opus (срез 278), OPEN
+
+`call: m D` при коротком `fn m` не пишет `T` в `D`: own-строка `fn` не бывает строкой данных (`lm_compiler_split_data_row` требует именованную Structure). Код 82 на кортежах 277 и 278. Автор, LMX_blog/2026-10-15.md: T из S перезаписывает T в D, правило включает `fn`. [Запись](witnesses/fix278-20261104/notes.md).
+
+### CALL-SELF-WITH-METHOD-FIELD — 2026-11-04, Opus (срез 278), OPEN
+
+`call: T T`, где в локальной `T` есть `fn`: неявный `call`. Числовые поля и вложенная Structure проходят. Причину не разбирал. [Запись](witnesses/fix278-20261104/notes.md).
+
+### IMMUTABLE-ARRAY-FIELD — 2026-11-04, Opus (срез 278), OPEN
+
+`immutable: merge(Holder)` с полем-Array: `walk error` INVALID в native, PRIMITIVE в forced, на кортежах 277 и 278 и без формала. Книга: неизменяемость применима к Array с дескриптором и элементами. [Запись](witnesses/fix278-20261104/notes.md).
+
+### IMMUTABLE-REFERENCE-CELL-WALKED — 2026-11-04, Opus (срез 278), OPEN
+
+Чтение поля-типизированной ссылки из immutable-значения в обходчике: `walk error: INVALID`, с формалом и без него, native проходит. Вероятно, `lmx_value_cell_access` не находит accessor такого пула, не проверял. Поэтому `immutable_formal_cell` идёт только native. [Запись](witnesses/fix278-20261104/notes.md).
+
+### LOCAL-CATCH-OF-DECLARED-THROW — 2026-11-04, Opus (срез 278), OPEN
+
+`throw: Bad(5)` и `catch: Bad` в том же блоке метода с `throws: Bad`: native уходит к вызывающему, обходчик ловит на месте. На кортежах 277 и 278. [Запись](witnesses/fix278-20261104/notes.md).
+
+### MERGE-RESULT-REBIND-WALKED — 2026-11-04, Opus (срез 278), OPEN
+
+`R: merge: Holder; R: Other`: отказ трансляции `root operation not walkable yet: a reference assignment` на кортежах 277 и 278. [Запись](witnesses/fix278-20261104/notes.md).
+
+### LOCAL-PLACE-TYPED-NULL — 2026-11-04, Opus (срез 278), OPEN
+
+`T: @: T: 0` у локальной Structure: отказ трансляции `assignment value has unknown type`, на кортеже 277 транслировался и падал `walk error` при исполнении. `lm_compiler_consumed_type_value` читает `T` как тип только у слова-модели. У корня `First: @: First: 0` работает. [Запись](witnesses/fix278-20261104/notes.md).
+
+### OS-WALK-WITNESS-SPEC-16 — 2026-11-04, Opus (срез 278), OPEN
+
+`os_walk_witness` молча обрезает спек до 16 имён (`selfbuild/tools/build.lm2:447`, `nn < 16`): остальные тела не наблюдаются и не считаются, вывод об этом не говорит. Проверка `the L1 binds the native word` не находит вложенный метод, хотя его обход верен. Это ограничения инструмента наблюдения, не языка. Из-за первого `written_form` наблюдался двумя прогонами, из-за второго вложенные `inner` и `inner_reference` остались вне спека, их receipt `form2g2` сохранён. [Запись](witnesses/fix278-20261104/notes.md).

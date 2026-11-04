@@ -1,0 +1,13 @@
+# A typed reference of the host read by a nested method.
+Thin:
+    int: y 4
+end: Thin
+fn: m () int
+    @: q Thin Thin
+    fn: inner () int
+        return: q\y
+    end: inner
+    return: inner() + 3
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

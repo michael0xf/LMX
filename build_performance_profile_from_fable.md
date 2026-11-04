@@ -290,3 +290,12 @@ Source 200/A82F39AC; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. A map step with no record now receives one edge and restores the numbers the record had: `width * 2` words copied per
 missing edge, once per use. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix277-20261104/notes.md).
+
+## Slice278 / boot140c (Opus, 2026-11-04)
+
+Whole quick 772.93 s: 12:45:09.3781539Z–12:58:02.3097660Z, both generations
+smoke 9/0. G2 focus 53/0, 476.23 s: 12:58:35.3796328Z–13:06:31.6085806Z.
+Source 203/79F7879B; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A local written Structure is now a typed reference place, so a read of `T\y` goes through the admitted map instead of a direct slot. A whole-pipeline
+measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix278-20261104/notes.md).

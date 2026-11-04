@@ -1,0 +1,25 @@
+# What an index reads of a named Structure's second written form: the occurrence stands, an operator, a Structure without the form's fields.
+S:
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+Empty:
+end: Empty
+int: rc 7
+---
+    if: S\[0]t\x != 2
+        rc: 81
+    ---
+    @: held Empty S\[1]t
+    if: held = 0
+        rc: 82
+    ---
+    catch: implements ()
+        rc: 83
+    catch: convert ()
+        rc: 84
+    catch: call ()
+        rc: 85
+---
+sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
+return

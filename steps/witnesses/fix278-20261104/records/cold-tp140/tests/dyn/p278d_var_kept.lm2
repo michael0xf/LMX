@@ -1,0 +1,26 @@
+# The published place outlives the activation (the book, "Поле var вызываемого вхождения хранит опубликованное значение"): the lines are not reached the second time, so T reads what the first call published.
+Swapped:
+    int: y 7
+    int: a 5
+end: Swapped
+fn: m (int: k) int
+    if: k = 0
+        T:
+            int: a 1
+            int: y 3
+        end: T
+        T: Swapped
+    ---
+    return: T\y
+end: m
+fn: count () int
+    int: a
+    a: a + 1
+    return: a
+end: count
+int: first m(0)
+int: second m(1)
+int: one count()
+int: two count()
+sendMessage: exit(exit_code: first * 1000 + second * 100 + one * 10 + two; stdout: ""; stderr: "")
+return

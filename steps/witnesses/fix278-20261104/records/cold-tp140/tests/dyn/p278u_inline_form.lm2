@@ -1,0 +1,23 @@
+# One place for one name across neighbouring inline bodies: a written form in the second body rebinds the place of the first.
+Swapped:
+    int: y 7
+    int: a 5
+end: Swapped
+fn: m (int: k) int
+    if: k = 0
+        T: (int: y 3)
+    ---
+    if: k = 1
+        T: (int: y 8)
+    ---
+    if: k = 2
+        T: Swapped
+    ---
+    return: T\y
+end: m
+int: first m(0)
+int: second m(1)
+int: third m(2)
+int: fourth m(3)
+sendMessage: exit(exit_code: first * 1000 + second * 100 + third * 10 + fourth; stdout: ""; stderr: "")
+return

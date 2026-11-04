@@ -622,6 +622,44 @@ fn: lm_compiler_predef_result_ty (const: (@: name c.LmP0Text); @: out_ty int) in
     return: (cast: (int) (0))
 end: lm_compiler_predef_result_ty
 
+# The name lm_compiler_written_form_split gives a written Structure: no program wrote it, so it asks nothing of the data.
+fn: lm_compiler_written_definition_name (const: (@: name c.LmP0Text)) int
+    return: (cast: (int) (name != 0 && name\data != 0 && name\length > 11U && c.strncmp(name\data, "l2_written_", 11U) = 0))
+end: lm_compiler_written_definition_name
+
+# The own row of the definition a place's own line assigns (`T: l2_written_N`), or -1.
+fn: lm_compiler_written_place_definition (int: own) int
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @: decl c.LmP0Node
+    @: written c.LmP0Text
+    if: own < 0 || own >= own_n_cell[0]
+        return: -1
+    decl: own_decl_cell[0][own]
+    if: decl = 0 || decl\kind != c.LM_P0_NODE_FRAME || decl\as = 0 || decl\as\frame = 0
+        return: -1
+    written: lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (decl\as\frame)))
+    if: lm_compiler_written_definition_name((cast: (const: @: c.LmP0Text) written)) = 0
+        return: -1
+    return: c.lm_compiler_own_find(own_mi_cell[0][own], (cast: (const: @: c.LmP0Text) written))
+end: lm_compiler_written_place_definition
+
+# The place `T` of a written Structure (lm_compiler_written_form_split) is assigned by reference, so it is no type word of a statement: `T: Swapped` assigns it.
+# A contract's word reads what the place's declaration wrote.
+fn: lm_compiler_contract_type_model (const: (@: word c.LmP0Text)) int
+    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
+    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
+    int: model lm_compiler_type_model(word)
+    int: own
+    if: model >= 0 || here_mi_cell[0] < 0
+        return: model
+    own: c.lm_compiler_resolved_own(here_mi_cell[0], word)
+    if: own < 0 || own_mi_cell[0][own] != here_mi_cell[0]
+        return: -1
+    return: lm_compiler_own_layout(lm_compiler_written_place_definition(own))
+end: lm_compiler_contract_type_model
+
 fn: lm_compiler_resolve_type_atom (const: (@: atom c.LmP0Text); int: depth; int: is_const; @: out_ty int) int
     @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
     int: leaf
@@ -643,7 +681,7 @@ fn: lm_compiler_resolve_type_atom (const: (@: atom c.LmP0Text); int: depth; int:
         return: (cast: (int) (2))
     # A reference `@: T` to a named Structure is one level, `@: Lmx` (D-76): its value is the Structure
     # itself, the pointee its pointer cell holds -- the same value `@mo` gives and `T: mo`'s slot holds.
-    if: lm_compiler_type_model(atom) >= 0
+    if: lm_compiler_contract_type_model(atom) >= 0
         \out_ty: c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
@@ -1182,7 +1220,7 @@ fn: lm_compiler_contract_model_word (@: contract c.L2TypeContract; const: (@: wo
     int: answer
     if: entered < 0
         return: (cast: (int) (-1))
-    answer: lm_compiler_type_model(word)
+    answer: lm_compiler_contract_type_model(word)
     if: entered > 0 && c.lm_compiler_contract_source_end(@ saved, horizon_on, horizon_at) != 0
         return: (cast: (int) (-1))
     return: (cast: (int) (answer))

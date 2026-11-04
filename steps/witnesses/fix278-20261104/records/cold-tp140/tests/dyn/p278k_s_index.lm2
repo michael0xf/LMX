@@ -1,0 +1,21 @@
+# What an index reads of a named Structure's second written form: the occurrence, in the form the graph holds it.
+S:
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+int: rc 7
+---
+    if: S\[0]t\x != 2
+        rc: 81
+    ---
+    int: second S\[1]t\x
+    rc: 100 + second
+    catch: implements ()
+        rc: 83
+    catch: convert ()
+        rc: 84
+    catch: call ()
+        rc: 85
+---
+sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
+return

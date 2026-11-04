@@ -1,0 +1,19 @@
+# A typed null of a local Structure's place: following it is the implicit interpreter.
+Other:
+    int: y 7
+end: Other
+fn: m () int
+    T:
+        int: y 3
+    end: T
+    T: @: T: 0
+    ---
+        int: seen T\y
+        return: 81
+        catch: interpreter ()
+            T: Other
+            return: T\y
+    ---
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

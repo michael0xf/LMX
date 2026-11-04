@@ -1,0 +1,36 @@
+# The uses of a local Structure, written in the normal form by hand.
+Thin:
+    int: y 4
+end: Thin
+fn: count (@: h Thin) int
+    return: 1
+end: count
+fn: m () int
+    T:
+        int: a 1
+        int: y 3
+        K:
+            int: z 8
+        end: K
+        fn: twice () int
+            return: y * 2
+        end: twice
+    end: T
+    if: T\K\z != 8
+        return: 81
+    if: T\twice() != 6
+        return: 82
+    T\y: 5
+    call: T
+    if: T\y != 5
+        return: 83
+    @: p T Thin
+    if: p\y != 4
+        return: 84
+    int: k count(T)
+    if: k != 1
+        return: 85
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

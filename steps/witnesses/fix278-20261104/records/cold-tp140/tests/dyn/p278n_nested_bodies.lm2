@@ -1,0 +1,45 @@
+# A written form in a loop, in a handler, and an empty form: every reach assigns.
+fn: looped () int
+    int: i 0
+    int: sum 0
+    while: i < 3
+        t: (int: x 2)
+        sum: sum + t\x
+        t\x: t\x + 1
+        i: i + 1
+    ---
+    return: sum
+end: looped
+fn: in_catch (int: d) int
+    ---
+        int: z 1 / d
+        return: z
+        catch: interpreter ()
+            t: (int: x 6)
+            return: t\x
+    ---
+end: in_catch
+Has:
+    int: x 1
+end: Has
+fn: read_x (@: h Has) int
+    return: h\x
+end: read_x
+fn: empty () int
+    t: ()
+    t: (int: x 5)
+    return: read_x(t)
+end: empty
+int: code 7
+int: l looped()
+if: l != 9
+    code: 100 + l
+---
+if: code = 7 && in_catch(0) != 6
+    code: 82
+---
+if: code = 7 && empty() != 5
+    code: 83
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

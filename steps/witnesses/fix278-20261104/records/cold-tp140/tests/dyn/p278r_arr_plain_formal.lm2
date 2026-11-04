@@ -1,0 +1,17 @@
+Holder:
+    []: int items 3
+end: Holder
+fn: read (@: h Holder) int
+    size_t: n length(h\items)
+    if: n != 3U
+        return: 81
+    if: h\items[1] != 0
+        return: 82
+    return: 7
+end: read
+fn: m () int
+    b: merge(Holder)
+    return: read(b)
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

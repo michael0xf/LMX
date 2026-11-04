@@ -1,0 +1,18 @@
+# A repeated form in a named Structure's body: reached by `call: S D`, it assigns D's place; S itself keeps both written forms.
+S:
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+D:
+    t: (int: x 1)
+end: D
+int: code 7
+if: D\t\x != 1
+    code: 81
+---
+call: S D
+if: code = 7 && D\t\x != 5
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

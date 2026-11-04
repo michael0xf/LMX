@@ -1,0 +1,100 @@
+# Which written forms take a Structure field with no known role.
+HasQ:
+    int: q 3
+end: HasQ
+BelowA:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: BelowA
+fn: a_merge () int
+    a_copy: merge: BelowA\k
+    return: a_copy\a
+end: a_merge
+fn: a_read () int
+    return: BelowA\k\q
+end: a_read
+BelowB:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: BelowB
+fn: b_compare () int
+    if: BelowB\k != 0
+        return: 1
+    ---
+    return: 0
+end: b_compare
+fn: b_read () int
+    return: BelowB\k\q
+end: b_read
+BelowC:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: BelowC
+fn: c_place () int
+    @: c_ref void BelowC\k
+    return: 1
+end: c_place
+fn: c_read () int
+    return: BelowC\k\q
+end: c_read
+BelowD:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: BelowD
+fn: d_ref () int
+    @: d_held BelowD BelowD
+    if: d_held\k != 0
+        return: 1
+    ---
+    return: 0
+end: d_ref
+fn: d_read () int
+    return: BelowD\k\q
+end: d_read
+int: code 7
+if: a_merge() != 2
+    code: 11
+---
+if: code = 7
+    BelowA\k: HasQ
+    if: a_read() != 3
+        code: 12
+    ---
+---
+if: code = 7 && b_compare() != 1
+    code: 13
+---
+if: code = 7
+    BelowB\k: HasQ
+    if: b_read() != 3
+        code: 14
+    ---
+---
+if: code = 7 && c_place() != 1
+    code: 15
+---
+if: code = 7
+    BelowC\k: HasQ
+    if: c_read() != 3
+        code: 16
+    ---
+---
+if: code = 7 && d_ref() != 1
+    code: 17
+---
+if: code = 7
+    BelowD\k: HasQ
+    if: d_read() != 3
+        code: 18
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

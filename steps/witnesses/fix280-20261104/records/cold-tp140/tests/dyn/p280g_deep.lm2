@@ -1,0 +1,56 @@
+# Slice 280 probe: reads below a field, at the walked root.  Entry 7.
+DeepRead:
+    k:
+        m:
+            int: q 1
+        end: m
+    end: k
+end: DeepRead
+DeepNoQ:
+    k:
+        m:
+            int: a 1
+        end: m
+    end: k
+end: DeepNoQ
+InnerNoQ:
+    m:
+        int: a 1
+    end: m
+end: InnerNoQ
+InnerHasQ:
+    m:
+        int: q 5
+        int: a 1
+    end: m
+end: InnerHasQ
+fn: deep_read () int
+    return: DeepRead\k\m\q
+end: deep_read
+int: code 7
+int: deep_refused 0
+---
+    DeepRead: DeepNoQ
+    catch: implements ()
+        deep_refused: 1
+---
+if: deep_refused != 1 || deep_read() != 1
+    code: 91
+---
+if: code = 7
+    int: inner_refused 0
+    ---
+        DeepRead\k: InnerNoQ
+        catch: implements ()
+            inner_refused: 1
+    ---
+    if: inner_refused != 1 || deep_read() != 1
+        code: 92
+    ---
+    DeepRead\k: InnerHasQ
+    if: code = 7 && deep_read() != 5
+        code: 93
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

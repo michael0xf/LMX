@@ -1,0 +1,39 @@
+# Slice 280 probe: a declared result and a handed-back formal over a narrower value.  Entry 7.
+HasQ:
+    int: q 3
+end: HasQ
+FullRead:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: FullRead
+fn: hand_back () @: FullRead
+    return: FullRead
+end: hand_back
+fn: full_refused () int
+    FullRead\k: HasQ
+    ---
+        @: back FullRead hand_back()
+        return: 99
+        catch: implements ()
+            return: 7
+    ---
+end: full_refused
+fn: take_full (@: p FullRead) @: FullRead
+    return: p
+end: take_full
+fn: full_formal_refused () int
+    ---
+        @: back FullRead take_full(FullRead)
+        return: 98
+        catch: implements ()
+            return: 7
+    ---
+end: full_formal_refused
+int: code full_refused()
+if: code = 7
+    code: full_formal_refused()
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,36 @@
+set pagination off
+set confirm off
+set print frame-arguments none
+python
+import gdb
+class Root(gdb.Breakpoint):
+    def stop(self):
+        self.enabled = False
+        me = int(gdb.parse_and_eval('(long long)$rdx'))
+        code = int(gdb.parse_and_eval('(long long)lmx_arena_ref_struct(%d, 56)' % me))
+        tr = int(gdb.parse_and_eval('(long long)&l2_m22_tr'))
+        inf = gdb.selected_inferior()
+        off = -1
+        for o in range(0, 512, 8):
+            v = int.from_bytes(bytes(inf.read_memory(code + o, 8)), 'little')
+            if v == tr:
+                off = o
+                break
+        print('self', hex(me), 'code', hex(code), 'tr', hex(tr), 'native offset', off)
+        if off >= 0:
+            W('*(long long*)%d' % (code + off), gdb.BP_WATCHPOINT, gdb.WP_WRITE)
+        return False
+class W(gdb.Breakpoint):
+    def stop(self):
+        print('WATCH native written')
+        gdb.execute('bt 12')
+        return False
+Root('l2_m84')
+class Obs(gdb.Breakpoint):
+    def stop(self):
+        print('walked body')
+        gdb.execute('kill')
+        return True
+Obs('lmx_walk_observe_body')
+end
+run

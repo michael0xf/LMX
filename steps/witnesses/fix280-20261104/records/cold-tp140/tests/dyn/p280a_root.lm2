@@ -1,0 +1,35 @@
+# Slice 280 probe: the root's own place in every launch mode.  Entry 7.
+UsedRoot:
+    int: u 1
+    int: w 2
+end: UsedRoot
+OnlyU:
+    int: u 5
+end: OnlyU
+NoU:
+    int: w 6
+end: NoU
+fn: read_used_u () int
+    return: UsedRoot\u
+end: read_used_u
+int: code 7
+UsedRoot: OnlyU
+if: read_used_u() != 5
+    code: 95
+---
+if: code = 7
+    int: root_refused 0
+    ---
+        UsedRoot: NoU
+        catch: implements ()
+            root_refused: 1
+    ---
+    if: root_refused != 1
+        code: 96
+    ---
+    if: read_used_u() != 5
+        code: 97
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

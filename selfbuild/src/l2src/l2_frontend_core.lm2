@@ -1559,9 +1559,9 @@ fn: lm_compiler_emit_ret_tr (int: mi; const: (@: ind char); const: (@: body c.Lm
     # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).  A dynamic
     # candidate -- a value of opaque type (RECEPTION-EDGE-DEBTS (f)), a formal, an own reference, a call's result --
     # is refused there as this method's implicit `implements` (DUPLICATE-STOP).
-    if: c.lm_compiler_input_model(mi, -1) >= 0 && (c.lm_compiler_return_opaque((cast: (@: c.LmP0Field) (body\first_field)), n, mi) != 0 || c.lm_compiler_d105_dynamic(@ source) != 0) && c.lm_compiler_emit_model_admit_computed(mi, c.lm_compiler_input_model(mi, -1), @ source, tok_cell[0], ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context", result_context) != 0
+    if: c.lm_compiler_input_model(mi, -1) >= 0 && (c.lm_compiler_return_opaque((cast: (@: c.LmP0Field) (body\first_field)), n, mi) != 0 || c.lm_compiler_d105_refusable(mi, @ source) != 0) && c.lm_compiler_emit_model_admit_computed(mi, c.lm_compiler_input_model(mi, -1), @ source, tok_cell[0], ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context", result_context) != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_input_model(mi, -1) >= 0 && c.lm_compiler_return_opaque((cast: (@: c.LmP0Field) (body\first_field)), n, mi) = 0 && c.lm_compiler_d105_dynamic(@ source) = 0 && c.lm_compiler_emit_model_admit_computed(mi, c.lm_compiler_input_model(mi, -1), @ source, tok_cell[0], ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context", result_context) != 0
+    if: c.lm_compiler_input_model(mi, -1) >= 0 && c.lm_compiler_return_opaque((cast: (@: c.LmP0Field) (body\first_field)), n, mi) = 0 && c.lm_compiler_d105_refusable(mi, @ source) = 0 && c.lm_compiler_emit_model_admit_computed(mi, c.lm_compiler_input_model(mi, -1), @ source, tok_cell[0], ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context", result_context) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_input_model(mi, -1) < 0 && c.lm_compiler_tramp_class(mi) = 5 && c.lm_compiler_emit_result_context(result_context, ind) != 0
         return: (cast: (int) (1))
@@ -6692,6 +6692,8 @@ fn: lm_compiler_source_layouts_emit (int: kind; int: index) int
                         return: 1
                     if: c.lm_compiler_layout_token(ni, token) != 0 || c.fprintf(out_cell[0], "        if: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) %s), %s) != 0\n            return: 1\n", value, token) < 0
                         return: 1
+                    if: lm_compiler_emit_place_uses("l2_pr", ni, ni, -1, (cast: (const: @: char) value), "        ", "return: 1", 0) != 0
+                        return: 1
                     ---
                 ---
             ---
@@ -9548,6 +9550,22 @@ fn: lm_compiler_use_invoked (const: (@: source_node c.LmP0Node); int: mi; int: s
     return: (cast: (int) (0))
 end: lm_compiler_use_invoked
 
+# A statement that writes a Structure through its head takes a value at that place: the path is used, and nothing of what stood there is read (fact use_roles bit 0, the reference
+# itself, as a comparison's: no Consumer below the field).  CHECK evidence, as use_invoked's.
+fn: lm_compiler_use_written (const: (@: stmt c.LmP0Node); int: mi) int
+    int: status 0
+    @: expression c.L2HeadExpression c.lm_compiler_head_expression(stmt, @ status)
+    if: expression = 0 || status = 2 || expression\path_status != 0
+        return: 0
+    @: first c.LmP0Field c.lm_compiler_next_active((cast: (@: c.LmP0Field) (expression\body\first_field)))
+    if: first = 0
+        return: 0
+    @: fact c.L2PathFact c.lm_compiler_use_fact_at(first, (lm_compiler_port249_0_L2HeadExpression_prepared_run_count(expression)), mi)
+    if: fact != 0
+        fact\use_roles: fact\use_roles | 1
+    return: 0
+end: lm_compiler_use_written
+
 # Original: l2src/l2trans.lm1:16245
 fn: lm_compiler_path_resolve_in (int: model; const: (@: pd char); size_t: pn; @: out c.L2Path) int
     if: out = 0
@@ -10034,11 +10052,11 @@ fn: lm_compiler_admit_return (int: mi; @: first c.LmP0Field; int: n; const: (@: 
                 return: (cast: (int) (1))
             # DUPLICATE-STOP: the result of a call is a place that holds what its callee returned -- no proof of
             # its origin here; its admission when the program runs is this method's implicit `implements`.
-            if: source\method >= 0 && c.lm_compiler_d105_dynamic(@ source) != 0
-                return: (cast: (int) (lm_compiler_admit_site(mi)))
             if: source\method >= 0
-                return: (cast: (int) (0))
-            return: (cast: (int) (c.lm_compiler_admit_implements(cand, req, req, 0, path, at, "return value")))
+                return: (cast: (int) (lm_compiler_admit_site(mi)))
+            if: c.lm_compiler_admit_implements(cand, req, req, 0, path, at, "return value") != 0
+                return: 1
+            return: (cast: (int) (lm_compiler_admit_site(mi)))
         ---
     ---
     ast: lm_compiler_actual_ns(mi, first, n, path, at, @ cand)
@@ -10065,12 +10083,12 @@ fn: lm_compiler_admit_return (int: mi; @: first c.LmP0Field; int: n; const: (@: 
         return: (cast: (int) (1))
     # DUPLICATE-STOP (Codex, FABLE-CODEX-20261004-12: "If current origin is not proved, use the common dynamic
     # admission rather than a defensive abort or assumed YES"): a formal or an own reference holds what was given to
-    # it; its admission to the result when the program runs is this method's implicit `implements`.
-    if: source\method >= 0 && c.lm_compiler_d105_dynamic(@ source) != 0
-        return: (cast: (int) (lm_compiler_admit_site(mi)))
+    # it, and so does a slot (lm_compiler_d105_refusable); its admission to the result when the program runs is this method's implicit `implements`.
     if: source\method >= 0
-        return: (cast: (int) (0))
-    return: (cast: (int) (c.lm_compiler_admit_implements(cand, req, req, 0, path, at, "return value")))
+        return: (cast: (int) (lm_compiler_admit_site(mi)))
+    if: c.lm_compiler_admit_implements(cand, req, req, 0, path, at, "return value") != 0
+        return: 1
+    return: (cast: (int) (lm_compiler_admit_site(mi)))
 end: lm_compiler_admit_return
 
 # Original: l2src/l2trans.lm1:18093
@@ -13819,6 +13837,327 @@ fn: lm_compiler_mexec_emit_maps () int
     return: (cast: (int) (0))
 end: lm_compiler_mexec_emit_maps
 
+# THE REQUIREMENT OF A PLACE (SLOT-RECEPTION-USED-FIELDS; the book, #three-argument-implements, #correspondence-stability).  What the known Consumers of a named Structure's place use
+# of the value standing there is read from the use plan of the root it stands under (lm_compiler_use_scope_get under the root's key: one collector, no second analysis), and it goes with
+# the place's slot as the cells LmxImplUses reads (lmx_source_place_uses_set).  Nothing known asks nothing: a read of a field the value lacks is its own Consumer at its edge.
+
+# Whether a named Structure is a root's own slot (the name and model of lm_compiler_source_layouts_emit).
+fn: lm_compiler_ns_root_place (int: ni) int
+    @@: ns_local_cell int (cast: (@@: int) (@ c.l2_ns_local))
+    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
+    return: (cast: (int) (ns_local_cell[0][ni] < 0 && c.lm_compiler_ns_in_body(ni) = 0 && ns_parent_cell[0][ni] < 0 && ns_eternal_cell[0][ni] < 0))
+end: lm_compiler_ns_root_place
+
+# Whether row fx of a named Structure is a place that declares a model (lm_compiler_emit_ns_names).
+fn: lm_compiler_nsf_model_place (int: fx) int
+    @@: nsf_kind_cell int (cast: (@@: int) (@ c.l2_nsf_kind))
+    return: (cast: (int) (nsf_kind_cell[0][fx] = 2 || nsf_kind_cell[0][fx] = 3 || (nsf_kind_cell[0][fx] = 10 && c.lm_compiler_nsf_pointee(fx) >= 0)))
+end: lm_compiler_nsf_model_place
+
+# The plan of the root a named Structure stands under; 0 when nothing is known of it.
+fn: lm_compiler_place_scope (int: ni) @: c.L2UseScope
+    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @: e_cell int (cast: (@: int) (@ c.l2_e))
+    while: ns_parent_cell[0][ni] >= 0
+        ni: ns_parent_cell[0][ni]
+    ---
+    if: lm_compiler_ns_root_place(ni) = 0
+        return: (cast: (@: c.L2UseScope) (0))
+    int: key c.lm_compiler_d105_ns_key(ni)
+    if: key = -1
+        return: (cast: (@: c.L2UseScope) (0))
+    @: found c.L2UseScope c.lm_compiler_use_scope_get(e_cell[0], key, ni)
+    if: found = 0 || found\state != 2 || found\count = 0
+        return: (cast: (@: c.L2UseScope) (0))
+    return: (cast: (@: c.L2UseScope) (found))
+end: lm_compiler_place_scope
+
+# `set` becomes the levels below the edges of `set` that select field `row`.  1: none does.
+fn: lm_compiler_place_row_set (const: (@: scope c.L2UseScope); int: row; @: set int; @: next int) int
+    @@: ruse_e_level_cell int (cast: (@@: int) (@ c.l2_ruse_e_level))
+    @@@: ruse_e_edge_cell c.L2UsePlanEdge (cast: (@@@: c.L2UsePlanEdge) (@ c.l2_ruse_e_edge))
+    @@: ruse_e_below_cell int (cast: (@@: int) (@ c.l2_ruse_e_below))
+    int: i scope\first
+    int: scan_limit scope\first + scope\count
+    int: lv 0
+    int: found 0
+    while: lv < scope\levels
+        next[lv]: 0
+        lv: lv + 1
+    ---
+    while: i < scan_limit
+        if: set[ruse_e_level_cell[0][i]] != 0 && ruse_e_below_cell[0][i] > 0
+            @: edge c.L2UsePlanEdge ruse_e_edge_cell[0][i]
+            @: step c.L2PathStep @ edge\step
+            if: step\locus = 1 && step\row = row
+                next[ruse_e_below_cell[0][i]]: 1
+                found: 1
+            ---
+        ---
+        i: i + 1
+    ---
+    lv: 0
+    while: lv < scope\levels
+        set[lv]: next[lv]
+        lv: lv + 1
+    ---
+    return: (cast: (int) (found = 0))
+end: lm_compiler_place_row_set
+
+# `set` becomes the levels that state the value of a named Structure's own place.  1: none does.
+fn: lm_compiler_place_ns_set (int: ni; const: (@: scope c.L2UseScope); @: set int; @: next int) int
+    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
+    @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
+    @@: nsf_kind_cell int (cast: (@@: int) (@ c.l2_nsf_kind))
+    @@: nsf_ref_cell int (cast: (@@: int) (@ c.l2_nsf_ref))
+    int: parent ns_parent_cell[0][ni]
+    int: row 0
+    if: parent < 0
+        while: row < scope\levels
+            set[row]: 0
+            row: row + 1
+        ---
+        set[0]: 1
+        return: 0
+    ---
+    while: row < nsf_n_cell[0]
+        if: nsf_owner_cell[0][row] = parent && (nsf_kind_cell[0][row] = 2 || nsf_kind_cell[0][row] = 3) && nsf_ref_cell[0][row] = ni
+            if: lm_compiler_place_ns_set(parent, scope, set, next) != 0
+                return: 1
+            return: lm_compiler_place_row_set(scope, row, set, next)
+        ---
+        row: row + 1
+    ---
+    return: 1
+end: lm_compiler_place_ns_set
+
+# The requirement of the place (ni, row), row < 0 for the named Structure's own slot, as the numbers of its table: `work` holds five tables of scope\levels ints, `set` (the levels of the
+# place's value: their union is the table's first level, at cell 1), `next`, `reach` (the levels below it, each once), `at` (the cell each of those starts at) and `pairs` (a level's
+# number of edges).  0: `work` is the caller's to free.  1: no requirement.  2: out of memory.
+fn: lm_compiler_place_uses_open (int: ni; int: row; @@: out_scope c.L2UseScope; @@: out_work int; @: out_total int) int
+    @@: ruse_e_level_cell int (cast: (@@: int) (@ c.l2_ruse_e_level))
+    @@: ruse_e_below_cell int (cast: (@@: int) (@ c.l2_ruse_e_below))
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    @: scope c.L2UseScope lm_compiler_place_scope(ni)
+    \out_scope: scope
+    \out_work: 0
+    \out_total: 0
+    if: alloc_err_cell[0] != 0
+        return: 2
+    if: scope = 0
+        return: 1
+    int: levels scope\levels
+    if: levels < 1 || levels > c.INT_MAX / 5 || c.lm_compiler_mul_ok((cast: (size_t) (5 * levels)), (cast: (size_t) (c.sizeof(c.int)))) = 0
+        alloc_err_cell[0]: 2
+        return: 2
+    @: work int (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) (5 * levels)) * c.sizeof(c.int)))
+    if: work = 0
+        return: 2
+    @: set int work
+    @: next int work + levels
+    @: reach int work + 2 * levels
+    @: at int work + 3 * levels
+    @: pairs int work + 4 * levels
+    int: answer lm_compiler_place_ns_set(ni, (cast: (const: @: c.L2UseScope) scope), set, next)
+    if: answer = 0 && row >= 0
+        answer: lm_compiler_place_row_set((cast: (const: @: c.L2UseScope) scope), row, set, next)
+    ---
+    int: lv 0
+    int: i scope\first
+    int: scan_limit scope\first + scope\count
+    int: joined 0
+    while: lv < levels
+        reach[lv]: 0
+        at[lv]: 0
+        pairs[lv]: 0
+        lv: lv + 1
+    ---
+    while: i < scan_limit
+        pairs[ruse_e_level_cell[0][i]]: pairs[ruse_e_level_cell[0][i]] + 1
+        if: set[ruse_e_level_cell[0][i]] != 0
+            joined: joined + 1
+        ---
+        i: i + 1
+    ---
+    if: answer != 0 || joined = 0
+        c.lm_compiler_xfree((cast: (@: void) work))
+        return: 1
+    ---
+    # A level with no edge says the field is read and nothing of it: the field is consumed, the cell 0, and the level has no cells.
+    int: changed 1
+    while: changed != 0
+        changed: 0
+        i: scope\first
+        while: i < scan_limit
+            int: from ruse_e_level_cell[0][i]
+            int: below ruse_e_below_cell[0][i]
+            if: (set[from] != 0 || reach[from] != 0) && below > 0 && pairs[below] > 0 && reach[below] = 0
+                reach[below]: 1
+                changed: 1
+            ---
+            i: i + 1
+        ---
+    ---
+    int: total 2 + 2 * joined
+    lv: 0
+    while: lv < levels
+        if: reach[lv] != 0
+            at[lv]: total
+            total: total + 1 + 2 * pairs[lv]
+        ---
+        lv: lv + 1
+    ---
+    \out_work: work
+    \out_total: total
+    return: 0
+end: lm_compiler_place_uses_open
+
+fn: lm_compiler_place_uses_pair (const: (@: prefix char); int: id; int: i; int: k; @: at int; @: pairs int) int
+    @@@: ruse_e_edge_cell c.L2UsePlanEdge (cast: (@@@: c.L2UsePlanEdge) (@ c.l2_ruse_e_edge))
+    @@: ruse_e_below_cell int (cast: (@@: int) (@ c.l2_ruse_e_below))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    int: named 0
+    int: below ruse_e_below_cell[0][i]
+    if: c.lm_compiler_use_edge_cell(ruse_e_edge_cell[0][i], @ named) != 0
+        return: 1
+    if: below > 0
+        if: pairs[below] > 0
+            below: at[below]
+        else:
+            below: 0
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "        %s%d[%d]: %dU\n        %s%d[%d]: (cast: (size_t) %d)\n", prefix, id, k, named, prefix, id, k + 1, below) < 0
+        return: 1
+    return: 0
+end: lm_compiler_place_uses_pair
+
+fn: lm_compiler_place_uses_fill (const: (@: prefix char); int: id; int: ni; int: row) int
+    @@: ruse_e_level_cell int (cast: (@@: int) (@ c.l2_ruse_e_level))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: scope c.L2UseScope 0
+    @: work int 0
+    int: total 0
+    int: opened lm_compiler_place_uses_open(ni, row, @ scope, @ work, @ total)
+    if: opened != 0
+        return: (cast: (int) (opened = 2))
+    int: levels scope\levels
+    @: set int work
+    @: reach int work + 2 * levels
+    @: at int work + 3 * levels
+    @: pairs int work + 4 * levels
+    int: scan_limit scope\first + scope\count
+    int: i scope\first
+    int: k 2
+    int: bad (cast: (int) (c.fprintf(out_cell[0], "        %s%d[0]: %dU\n", prefix, id, total) < 0))
+    while: i < scan_limit
+        if: set[ruse_e_level_cell[0][i]] != 0
+            if: lm_compiler_place_uses_pair(prefix, id, i, k, at, pairs) != 0
+                bad: 1
+            ---
+            k: k + 2
+        ---
+        i: i + 1
+    ---
+    if: c.fprintf(out_cell[0], "        %s%d[1]: %dU\n", prefix, id, (k - 2) / 2) < 0
+        bad: 1
+    ---
+    int: lv 0
+    while: lv < levels
+        if: reach[lv] != 0
+            k: at[lv] + 1
+            if: c.fprintf(out_cell[0], "        %s%d[%d]: %dU\n", prefix, id, at[lv], pairs[lv]) < 0
+                bad: 1
+            ---
+            i: scope\first
+            while: i < scan_limit
+                if: ruse_e_level_cell[0][i] = lv
+                    if: lm_compiler_place_uses_pair(prefix, id, i, k, at, pairs) != 0
+                        bad: 1
+                    ---
+                    k: k + 2
+                ---
+                i: i + 1
+            ---
+        ---
+        lv: lv + 1
+    ---
+    c.lm_compiler_xfree((cast: (@: void) work))
+    return: bad
+end: lm_compiler_place_uses_fill
+
+fn: lm_compiler_place_uses_declare_one (const: (@: prefix char); int: id; int: ni; int: row) int
+    @: library_mode int (cast: (@: int) (@ c.l2_library_mode))
+    @: hash_a unsigned (cast: (@: unsigned) (@ c.l2_module_hash_a))
+    @: hash_b unsigned (cast: (@: unsigned) (@ c.l2_module_hash_b))
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: scope c.L2UseScope 0
+    @: work int 0
+    int: total 0
+    int: opened lm_compiler_place_uses_open(ni, row, @ scope, @ work, @ total)
+    if: opened != 0
+        return: (cast: (int) (opened = 2))
+    c.lm_compiler_xfree((cast: (@: void) work))
+    if: library_mode[0] != 0 && c.fprintf(output[0], "define: %s%d l2_u%08X%08X_%s%d\n", prefix, id, hash_a[0], hash_b[0], prefix, id) < 0
+        return: 1
+    return: (cast: (int) (c.fprintf(output[0], "[]: size_t %s%d %d\n", prefix, id, total) < 0))
+end: lm_compiler_place_uses_declare_one
+
+fn: lm_compiler_place_uses_declare () int
+    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
+    @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
+    @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
+    int: i 0
+    while: i < ns_n_cell[0]
+        if: lm_compiler_ns_root_place(i) != 0 && lm_compiler_place_uses_declare_one("l2_pr", i, i, -1) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < nsf_n_cell[0]
+        if: lm_compiler_nsf_model_place(i) != 0 && lm_compiler_place_uses_declare_one("l2_pu", i, nsf_owner_cell[0][i], i) != 0
+            return: 1
+        i: i + 1
+    ---
+    return: 0
+end: lm_compiler_place_uses_declare
+
+fn: lm_compiler_place_uses_emit () int
+    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
+    @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
+    @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
+    int: i 0
+    while: i < ns_n_cell[0]
+        if: lm_compiler_ns_root_place(i) != 0 && lm_compiler_place_uses_fill("l2_pr", i, i, -1) != 0
+            return: 1
+        i: i + 1
+    ---
+    i: 0
+    while: i < nsf_n_cell[0]
+        if: lm_compiler_nsf_model_place(i) != 0 && lm_compiler_place_uses_fill("l2_pu", i, nsf_owner_cell[0][i], i) != 0
+            return: 1
+        i: i + 1
+    ---
+    return: 0
+end: lm_compiler_place_uses_emit
+
+# The statement of a place's requirement at its slot, when the place has one.
+fn: lm_compiler_emit_place_uses (const: (@: prefix char); int: id; int: ni; int: row; const: (@: key char); const: (@: ind char); const: (@: fail char); const: (@: fail2 char)) int
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: scope c.L2UseScope 0
+    @: work int 0
+    int: total 0
+    int: opened lm_compiler_place_uses_open(ni, row, @ scope, @ work, @ total)
+    if: opened != 0
+        return: (cast: (int) (opened = 2))
+    c.lm_compiler_xfree((cast: (@: void) work))
+    if: c.fprintf(output[0], "%sif: lmx_source_place_uses_set(l2_program_arena, (cast: (@: void) %s), %s%d) != 0\n", ind, key, prefix, id) < 0
+        return: 1
+    return: c.lm_compiler_emit_source_failure(ind, fail, fail2)
+end: lm_compiler_emit_place_uses
+
 # Original: l2src/l2trans.lm1:26703
 fn: lm_compiler_place_tables_declare () int
     @: methods int (cast: (@: int) (@ c.l2_m_n))
@@ -14369,6 +14708,9 @@ fn: lm_compiler_emit_ns_names (int: ni; const: (@: holder char); const: (@: ind 
                 if: token < 0 || c.fprintf(output[0], "%sif: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) %s), (cast: (@: void) (l2_layout_tokens + %d))) != 0\n", ind, key, token) < 0 || c.lm_compiler_emit_source_failure(ind, fail, fail2) != 0
                     return: 1
                 ---
+                if: lm_compiler_emit_place_uses("l2_pu", fx, ni, fx, (cast: (const: @: char) key), ind, fail, fail2) != 0
+                    return: 1
+                ---
             ---
             # Slice 272: a reference field's declared Structure belongs to its slot as well: a write by name from a runtime-typed
             # holder is admitted to it (lmx_walk_value_field_store).
@@ -14376,6 +14718,9 @@ fn: lm_compiler_emit_ns_names (int: ni; const: (@: holder char); const: (@: ind 
                 int: pointee_token c.lm_compiler_schema_token_slot(c.lm_compiler_nsf_pointee(fx))
                 if: pointee_token >= 0
                     if: c.fprintf(output[0], "%sif: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) %s), (cast: (@: void) (l2_layout_tokens + %d))) != 0\n", ind, key, pointee_token) < 0 || c.lm_compiler_emit_source_failure(ind, fail, fail2) != 0
+                        return: 1
+                    ---
+                    if: lm_compiler_emit_place_uses("l2_pu", fx, ni, fx, (cast: (const: @: char) key), ind, fail, fail2) != 0
                         return: 1
                     ---
                 ---

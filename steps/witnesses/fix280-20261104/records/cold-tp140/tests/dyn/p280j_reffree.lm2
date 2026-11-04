@@ -1,0 +1,82 @@
+# A write by name from a free holder into a declared reference field, then the typed read of the same place.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+Holder:
+    @: p RefBox RefBox
+end: Holder
+All:
+    int: q 5
+    int: a 6
+end: All
+OnlyQ:
+    int: q 7
+end: OnlyQ
+NoQ:
+    int: a 8
+end: NoQ
+int: free_holder 0
+fn: free_put_all () int
+    free_holder\p: All
+    return: 0
+end: free_put_all
+fn: free_put_only () int
+    free_holder\p: OnlyQ
+    return: 0
+end: free_put_only
+fn: free_put_noq () int
+    free_holder\p: NoQ
+    return: 0
+end: free_put_noq
+fn: read_p () int
+    return: Holder\p\q
+end: read_p
+fn: run_all () int
+    @: free_holder Holder Holder
+    ---
+        int: r free_put_all()
+        return: read_p()
+        catch: implements ()
+            return: 40
+    ---
+end: run_all
+fn: run_only () int
+    @: free_holder Holder Holder
+    ---
+        int: r free_put_only()
+        return: read_p()
+        catch: implements ()
+            return: 40
+    ---
+end: run_only
+fn: run_noq () int
+    @: free_holder Holder Holder
+    ---
+        int: r free_put_noq()
+        return: read_p()
+        catch: implements ()
+            return: 40
+    ---
+end: run_noq
+int: code 7
+int: a run_all()
+if: a != 5
+    code: 100 + a
+---
+int: b 0
+if: code = 7
+    b: run_only()
+    if: b != 7
+        code: 150 + b
+    ---
+---
+int: c 0
+if: code = 7
+    c: run_noq()
+    if: c != 40
+        code: 200 + c
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

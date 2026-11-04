@@ -4744,7 +4744,8 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
                 return: (cast: (int) (1))
             if: c.lm_compiler_reference_source_value(value, mi, @ source) != 0
                 return: (cast: (int) (1))
-            if: c.lm_compiler_d105_dynamic(@ source) != 0 && c.lm_compiler_admit_site(mi) != 0
+            # One read from a slot can be refused too (lm_compiler_d105_refusable).
+            if: (c.lm_compiler_d105_dynamic(@ source) != 0 || c.lm_compiler_m_machine(mi) = 0) && c.lm_compiler_admit_site(mi) != 0
                 return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
             ---
             # The way such a candidate comes to the formal from a place of this method is an anchor edge
@@ -5043,6 +5044,9 @@ fn: lm_compiler_check_path_write (const: (@: stmt c.LmP0Node); int: mi; const: (
             c.lm_compiler_path_release(hresolved)
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unknown field path segment")))
         ---
+    ---
+    if: kind = 2 || kind = 3 || kind = 10 || kind = 11
+        c.lm_compiler_use_written(stmt, mi)
     ---
     if: kind = 10 || kind = 11
         hstatus: lm_compiler_check_receiving_value_at(stmt, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, leaf_mi, model, h, mi, path, hresolved)
@@ -7630,7 +7634,8 @@ fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0F
                 return: (cast: (int) (1))
             ---
         else:
-            if: lm_compiler_rw_reference_receive_at(value, n, (cast: (int) (c.lm_compiler_graph_own())), model, -1, (cast: (int) (\out)), -1, @ v, 0) != 0
+            # The store is the slot's: it admits the value by what the place's known Consumers use (lmx_implements_receive_cell), as the native store does.
+            if: lm_compiler_rw_reference_receive_at(value, n, (cast: (int) (c.lm_compiler_graph_own())), -1, -1, (cast: (int) (\out)), -1, @ v, 0) != 0
                 return: (cast: (int) (1))
             ---
         ---
@@ -11994,7 +11999,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: rw_mi_cell[0] != e_cell[0] || ns_parent_cell[0][named] >= 0 || ns_local_cell[0][named] >= 0
             if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PUT", 3, @ port_local_node) != 0 || lm_compiler_rw_ns_value(port_local_node, named, rw_mi_cell[0], @ t) != 0 || c.lm_compiler_rw_put(port_local_node, 1, t) != 0
                 return: (cast: (int) (1))
-            if: lm_compiler_rw_reference_receive_at(written_first, written_n, (cast: (int) (c.lm_compiler_graph_own())), named, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 2, t) != 0
+            if: lm_compiler_rw_reference_receive_at(written_first, written_n, (cast: (int) (c.lm_compiler_graph_own())), -1, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 2, t) != 0
                 return: (cast: (int) (1))
             \made: 1
             return: (cast: (int) (c.lm_compiler_rw_put(into, slot, port_local_node)))
@@ -12003,7 +12008,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
             return: (cast: (int) (1))
         if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", port_local_node, port_local_node, c.lm_compiler_ns_unit_slot(named)) < 0
             return: (cast: (int) (1))
-        if: lm_compiler_rw_reference_receive_at(written_first, written_n, (cast: (int) (c.lm_compiler_graph_own())), named, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 3, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+        if: lm_compiler_rw_reference_receive_at(written_first, written_n, (cast: (int) (c.lm_compiler_graph_own())), -1, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 3, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         return: (cast: (int) (0))
@@ -15415,7 +15420,8 @@ fn: lm_compiler_mad_captures_dynamic (int: host) int
             if: req != -1
                 source_input: -1
                 cand: c.lm_compiler_hidden_model_source_named(host, model, mcap_name_cell[0][k], @ source_input)
-                if: c.lm_compiler_source_admits_dynamic(host, cand, source_input) != 0
+                # A candidate with a layout is read from a slot, and it can be refused as well (lm_compiler_d105_refusable).
+                if: c.lm_compiler_source_admits_dynamic(host, cand, source_input) != 0 || c.lm_compiler_m_machine(host) = 0
                     return: (cast: (int) (1))
                 ---
             ---
@@ -16648,7 +16654,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: c.lm_compiler_d105_declare_maps() != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
-    if: c.lm_compiler_place_tables_declare() != 0
+    if: c.lm_compiler_place_tables_declare() != 0 || c.lm_compiler_place_uses_declare() != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: library_mode_cell[0] = 0 && c.fputs("\nfn: l2_program_graph () @: Lmx\nreturn: l2_program_unit\n", out_cell[0]) < 0
@@ -17309,7 +17315,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: c.lm_compiler_d105_emit_tables() != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
-    if: c.lm_compiler_place_tables_emit() != 0
+    if: c.lm_compiler_place_tables_emit() != 0 || c.lm_compiler_place_uses_emit() != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: c.lm_compiler_mexec_emit_maps() != 0

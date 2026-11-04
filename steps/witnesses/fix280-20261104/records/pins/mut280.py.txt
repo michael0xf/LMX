@@ -1,0 +1,95 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # An unknown use ends the collection of what is known.
+    'stopfull': ('l2_frontend_useplan.lm2', r'''    while: fact != 0 && (level\full = 0 || known != 0)
+''', r'''    while: fact != 0 && level\full = 0
+'''),
+    # An unknown use below a field asks the whole field.
+    'belowfull': ('l2_frontend_useplan.lm2', r'''        if: edge\below\full != 0 && known = 0
+            below: -1
+''', r'''        if: edge\below\full != 0
+            below: -1
+'''),
+    # A path from the named root itself is no read of its place.
+    'noroot': ('l2_frontend_useplan.lm2', r'''        if: key = -1 && port_resolved\root_kind = 0 && port_resolved\fi < 0 && port_resolved\ni = root_ns && port_resolved\res < 0
+''', r'''        if: key = -99 && port_resolved\root_kind = 0 && port_resolved\fi < 0 && port_resolved\ni = root_ns && port_resolved\res < 0
+'''),
+    # One Consumer's level stands for the field: no union.
+    'rowone': ('l2_frontend_core.lm2', r'''            if: step\locus = 1 && step\row = row
+                next[ruse_e_below_cell[0][i]]: 1
+                found: 1
+            ---
+''', r'''            if: step\locus = 1 && step\row = row && found = 0
+                next[ruse_e_below_cell[0][i]]: 1
+                found: 1
+            ---
+'''),
+    # A write reads what stood there.
+    'written': ('l2_frontend_emit.lm2', r'''    if: kind = 2 || kind = 3 || kind = 10 || kind = 11
+        c.lm_compiler_use_written(stmt, mi)
+    ---
+''', r'''    if: kind = -99
+        c.lm_compiler_use_written(stmt, mi)
+    ---
+'''),
+    # Nothing read below a field still enters it.
+    'emptybelow': ('l2_frontend_useplan.lm2', r'''        if: below > 0 && edge\below\edges = 0 && edge\below\links = 0
+            below: 0
+''', r'''        if: below > 99999999 && edge\below\edges = 0 && edge\below\links = 0
+            below: 0
+'''),
+    # A static candidate's refusal is no outcome again.
+    'refusable': ('l2_frontend_useplan.lm2', r'''    return: (cast: (int) (lm_compiler_d105_dynamic(source) != 0 || lm_compiler_on_status_channel(mi) != 0))
+''', r'''    return: (cast: (int) (lm_compiler_d105_dynamic(source) != 0))
+'''),
+    # A root's slot states no requirement.
+    'rootsite': ('l2_frontend_core.lm2', r'''                    if: lm_compiler_emit_place_uses("l2_pr", ni, ni, -1, (cast: (const: @: char) value), "        ", "return: 1", 0) != 0
+''', r'''                    if: ni < -9 && lm_compiler_emit_place_uses("l2_pr", ni, ni, -1, (cast: (const: @: char) value), "        ", "return: 1", 0) != 0
+'''),
+    # A nested field's slot states no requirement.
+    'rowsite': ('l2_frontend_core.lm2', r'''                if: lm_compiler_emit_place_uses("l2_pu", fx, ni, fx, (cast: (const: @: char) key), ind, fail, fail2) != 0
+                    return: 1
+                ---
+            ---
+            # Slice 272: a reference field's declared Structure belongs to its slot as well''', r'''                if: fx < -9 && lm_compiler_emit_place_uses("l2_pu", fx, ni, fx, (cast: (const: @: char) key), ind, fail, fail2) != 0
+                    return: 1
+                ---
+            ---
+            # Slice 272: a reference field's declared Structure belongs to its slot as well'''),
+    # A walked write admits the whole model first.
+    'rwwhole': ('l2_frontend_emit.lm2', r'''            if: lm_compiler_rw_reference_receive_at(value, n, (cast: (int) (c.lm_compiler_graph_own())), -1, -1, (cast: (int) (\out)), -1, @ v, 0) != 0
+''', r'''            if: lm_compiler_rw_reference_receive_at(value, n, (cast: (int) (c.lm_compiler_graph_own())), model, -1, (cast: (int) (\out)), -1, @ v, 0) != 0
+'''),
+    # A level below the place's value says nothing.
+    'nodeep': ('l2_frontend_core.lm2', r'''    if: below > 0
+        if: pairs[below] > 0
+            below: at[below]
+        else:
+            below: 0
+        ---
+    ---
+''', r'''    if: below > 0
+        below: 0
+    ---
+'''),
+    # The walked null goes to the value store again (kernel).
+    'kernelnull': ('lmx_walk_values.lm2', r'''lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF_EDGE) && value_p\kind = c.LMX_WALK_VALUE_REFERENCE && c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX))
+''', r'''lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF_EDGE) && value_p\kind = c.LMX_WALK_VALUE_REFERENCE && value_p\ref != 0 && c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX))
+'''),
+    # The reception reads no requirement (kernel).
+    'kerneluses': ('lmx_implements.lm2', r'''    if: row = 0 || row\place_uses = 0
+        return: c.LMX_WALK_OK
+''', r'''    if: row != 0 || row = 0
+        return: c.LMX_WALK_OK
+'''),
+}
+name, old, new = TABLE[which]
+with open(R + name, 'rb') as f:
+    t = f.read().decode('utf-8')
+assert t.count(old) == 1, (which, t.count(old))
+t = t.replace(old, new)
+with open(R + name, 'wb') as f:
+    f.write(t.encode('utf-8'))
+print('mutated', which, name)

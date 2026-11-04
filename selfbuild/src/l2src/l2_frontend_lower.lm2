@@ -7224,7 +7224,7 @@ fn: lm_compiler_emit_normal_return_full (int: mi; @: first c.LmP0Field; int: n; 
     if: req >= 0
         if: c.lm_compiler_reference_source(first, n, mi, @ source) != 0
             return: 1
-        if: lm_compiler_return_opaque(first, n, mi) != 0 || c.lm_compiler_d105_dynamic(@ source) != 0
+        if: lm_compiler_return_opaque(first, n, mi) != 0 || c.lm_compiler_d105_refusable(mi, @ source) != 0
             at_mi: mi
         ---
     ---
@@ -11506,7 +11506,7 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
         # the call (l2_d105_emit_admit). An occurrence already registered its pair map above.
         # A dynamic candidate's refusal is this method's implicit `implements`: the input is formed here.
         dyn_mi: 0 - 1
-        if: c.lm_compiler_d105_dynamic(@ source) != 0
+        if: c.lm_compiler_d105_refusable(mi, @ source) != 0
             dyn_mi: mi
         if: occ_mi < 0 && c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
@@ -13531,7 +13531,7 @@ fn: lm_compiler_source_emit_admit_record (int: mi; int: idx; int: req; const: (@
         source_method: c.lm_compiler_d105_key_method(mi, source_input)
     # The input is formed in mi: a dynamic candidate's refusal is mi's implicit `implements` -- the one answer the check
     # pass read when it marked mi as a site that can refuse an admission (l2_source_admits_dynamic).
-    if: lm_compiler_source_admits_dynamic(mi, cand, source_input) != 0
+    if: lm_compiler_source_admits_dynamic(mi, cand, source_input) != 0 || c.lm_compiler_on_status_channel(mi) != 0
         at_mi: mi
     if: tk >= 0
         tmi: idx
@@ -19085,9 +19085,9 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             return: (cast: (int) (1))
         # A value of opaque type is refused there as this method's implicit `implements` (RECEPTION-EDGE-DEBTS (f)),
         # as at a trailer's return (l2_emit_ret_tr).
-        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_input_model(mi, -1) >= 0 && (lm_compiler_return_opaque((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi) != 0 || c.lm_compiler_d105_dynamic(@ return_source) != 0) && lm_compiler_emit_model_admit_computed(mi, (cast: (int) (c.lm_compiler_input_model(mi, -1))), @ return_source, tok_cell[0], ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context", return_context) != 0
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_input_model(mi, -1) >= 0 && (lm_compiler_return_opaque((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi) != 0 || c.lm_compiler_d105_refusable(mi, @ return_source) != 0) && lm_compiler_emit_model_admit_computed(mi, (cast: (int) (c.lm_compiler_input_model(mi, -1))), @ return_source, tok_cell[0], ind, 1, 0, -1, mi, mi, -1, 0, "l2_result_context", return_context) != 0
             return: (cast: (int) (1))
-        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_input_model(mi, -1) >= 0 && lm_compiler_return_opaque((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi) = 0 && c.lm_compiler_d105_dynamic(@ return_source) = 0 && lm_compiler_emit_model_admit_computed(mi, (cast: (int) (c.lm_compiler_input_model(mi, -1))), @ return_source, tok_cell[0], ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context", return_context) != 0
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_input_model(mi, -1) >= 0 && lm_compiler_return_opaque((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi) = 0 && c.lm_compiler_d105_refusable(mi, @ return_source) = 0 && lm_compiler_emit_model_admit_computed(mi, (cast: (int) (c.lm_compiler_input_model(mi, -1))), @ return_source, tok_cell[0], ind, 1, 0, -1, -1, -1, -1, 0, "l2_result_context", return_context) != 0
             return: (cast: (int) (1))
         if: c.lm_compiler_frame_head(stmt, "return") && m_ret_cell[0][mi] != 8 && c.lm_compiler_input_model(mi, -1) < 0 && c.lm_compiler_tramp_class(mi) = 5 && c.lm_compiler_emit_result_context(return_context, ind) != 0
             return: (cast: (int) (1))

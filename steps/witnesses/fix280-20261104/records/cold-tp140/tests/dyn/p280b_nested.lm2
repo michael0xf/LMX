@@ -1,0 +1,68 @@
+# Slice 280 probe: a nested place and its Consumers, free holder and formal.  Entry 7.
+AltRead:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: AltRead
+HasQ:
+    int: q 3
+end: HasQ
+NoQ:
+    int: a 4
+end: NoQ
+fn: read_alt_q () int
+    return: AltRead\k\q
+end: read_alt_q
+int: alt_holder 0
+fn: free_put_noq () int
+    alt_holder\k: NoQ
+    return: 0
+end: free_put_noq
+fn: free_refused () int
+    @: alt_holder AltRead AltRead
+    ---
+        int: r free_put_noq()
+        return: 99
+        catch: implements ()
+            return: AltRead\k\q
+    ---
+end: free_refused
+fn: formal_put (@: p AltRead) int
+    p\k: NoQ
+    return: p\k\q
+end: formal_put
+fn: formal_refused () int
+    ---
+        return: formal_put(AltRead)
+        catch: implements ()
+            return: AltRead\k\q
+    ---
+end: formal_refused
+int: code 7
+int: alt_refused 0
+---
+    AltRead\k: NoQ
+    catch: implements ()
+        alt_refused: 1
+---
+if: alt_refused != 1
+    code: 90
+---
+if: code = 7 && read_alt_q() != 1
+    code: 91
+---
+if: code = 7
+    AltRead\k: HasQ
+    if: read_alt_q() != 3
+        code: 92
+    ---
+---
+if: code = 7 && free_refused() != 3
+    code: 93
+---
+if: code = 7 && formal_refused() != 3
+    code: 94
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

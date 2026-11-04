@@ -64,6 +64,32 @@ fn: lm_compiler_d105_field_key (int: row) int
     return: (cast: (int) (c.INT_MIN + row))
 end: lm_compiler_d105_field_key
 
+# A named root Structure's place as a key of a use plan (SLOT-RECEPTION-USED-FIELDS): the range right above the field keys, which neither lm_compiler_d105_key_own nor
+# lm_compiler_d105_key_field takes.  Its plan collects what is known: lm_compiler_use_scope_get.
+fn: lm_compiler_d105_ns_key (int: ni) int
+    @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
+    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    if: ni < 0 || ni >= ns_n_cell[0] || nsf_n_cell[0] > c.INT_MAX - 2 - own_n_cell[0] - ns_n_cell[0]
+        alloc_err_cell[0]: 2
+        return: (cast: (int) (-1))
+    return: (cast: (int) (c.INT_MIN + nsf_n_cell[0] + ni))
+end: lm_compiler_d105_ns_key
+
+fn: lm_compiler_d105_key_ns (int: key) int
+    @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
+    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    int: ni
+    if: key >= -1 - own_n_cell[0]
+        return: (cast: (int) (-1))
+    ni: key - c.INT_MIN - nsf_n_cell[0]
+    if: ni < 0 || ni >= ns_n_cell[0]
+        return: (cast: (int) (-1))
+    return: (cast: (int) (ni))
+end: lm_compiler_d105_key_ns
+
 # Original: l2src/l2trans.lm1:8538
 fn: lm_compiler_reference_source (@: first c.LmP0Field; int: n; int: mi; @: out c.L2ReferenceSource) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
@@ -3104,6 +3130,13 @@ fn: lm_compiler_use_plan_begin (const: (@: fact c.L2PathFact); @: level c.L2UseP
     ---
     if: key != -1 && method = level\method && key = level\key
         return: (cast: (int) (0))
+    # A named root's place: a path from the root itself, in any live method.  No step of a path is a port of it.
+    int: root_ns lm_compiler_d105_key_ns((cast: (int) (level\key)))
+    if: root_ns >= 0
+        if: key = -1 && port_resolved\root_kind = 0 && port_resolved\fi < 0 && port_resolved\ni = root_ns && port_resolved\res < 0
+            return: (cast: (int) (0))
+        return: (cast: (int) (-1))
+    ---
     if: fact\source_use != 1
         return: (cast: (int) (-1))
     status: lm_compiler_source_use_resolve(fact, @ source)
@@ -3150,8 +3183,22 @@ fn: lm_compiler_use_plan_role (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
     return: (cast: (int) (0))
 end: lm_compiler_use_plan_role
 
+# A plan of what is known keeps one edge for one field of a level: what the requirement of a place says is the union of the reads, and the place's table stays the size of the
+# distinct paths.  A Consumer's plan keeps an edge for each path, as its child scopes differ.
+fn: lm_compiler_use_plan_known_edge (@: level c.L2UsePlanLevel; const: (@: step c.L2PathStep); int: schema) @: c.L2UsePlanEdge
+    @: edge c.L2UsePlanEdge level\edges
+    int: slot c.lm_compiler_path_step_slot(step)
+    while: edge != 0
+        const: (@: held c.L2PathStep (cast: (const: @: c.L2PathStep) (@ edge\step)))
+        if: edge\schema = schema && c.lm_compiler_path_step_slot(held) = slot && (cast: (int) (held\segocc < 0)) = (cast: (int) (step\segocc < 0))
+            return: (cast: (@: c.L2UsePlanEdge) (edge))
+        edge: edge\next
+    ---
+    return: (cast: (@: c.L2UsePlanEdge) (c.lm_compiler_use_plan_edge(level, step, schema)))
+end: lm_compiler_use_plan_known_edge
+
 # Original: l2src/l2trans.lm1:36884
-fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2PathFact); int: begin) int
+fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2PathFact); int: begin; int: known) int
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     c.L2Path: path
     @: step c.L2PathStep
@@ -3182,7 +3229,11 @@ fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
             schema: step\host_ns
         if: step\host_res >= 0
             schema: c.lm_compiler_schema_merge((cast: (int) (step\host_res)))
-        edge: c.lm_compiler_use_plan_edge(current, step, schema)
+        if: known != 0
+            edge: lm_compiler_use_plan_known_edge(current, (cast: (const: @: c.L2PathStep) step), schema)
+        else:
+            edge: c.lm_compiler_use_plan_edge(current, step, schema)
+        ---
         if: edge = 0
             c.lm_compiler_path_release(@ path)
             return: (cast: (int) (1))
@@ -3207,7 +3258,10 @@ fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
         if: next_schema = -1
             edge\whole: 1
             break
-        below: lm_compiler_use_plan_level(-1, -1, next_schema)
+        below: edge\below
+        if: known = 0 || below = 0
+            below: lm_compiler_use_plan_level(-1, -1, next_schema)
+        ---
         if: below = 0
             c.lm_compiler_path_release(@ path)
             return: (cast: (int) (1))
@@ -3224,7 +3278,7 @@ fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
 end: lm_compiler_use_plan_path
 
 # Original: l2src/l2trans.lm1:36956
-fn: lm_compiler_use_plan_build (@: level c.L2UsePlanLevel; @: live int) int
+fn: lm_compiler_use_plan_build (@: level c.L2UsePlanLevel; @: live int; int: known) int
     @@: path_facts_cell c.L2PathFact (cast: (@@: c.L2PathFact) (@ c.l2_path_facts))
     @: uses_methods_cell int (cast: (@: int) (@ c.l2_uses_methods))
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
@@ -3243,17 +3297,17 @@ fn: lm_compiler_use_plan_build (@: level c.L2UsePlanLevel; @: live int) int
         level\full: 1
         return: (cast: (int) (0))
     lm_compiler_use_plan_live((cast: (int) (level\method)), live)
-    while: fact != 0 && level\full = 0
+    while: fact != 0 && (level\full = 0 || known != 0)
         begin: lm_compiler_use_plan_begin(fact, level, live)
         if: begin = -2
             if: alloc_err_cell[0] != 0
                 return: (cast: (int) (1))
             level\full: 1
-        if: begin >= 0 && lm_compiler_use_plan_path(level, fact, begin) != 0
+        if: begin >= 0 && lm_compiler_use_plan_path(level, fact, begin, known) != 0
             return: (cast: (int) (1))
         fact: fact\next
     ---
-    while: i < d105e_n_cell[0] && level\full = 0
+    while: i < d105e_n_cell[0] && (level\full = 0 || known != 0)
         if: d105e_fmi_cell[0][i] = level\method && d105e_fk_cell[0][i] = level\key && d105e_tmi_cell[0][i] >= 0
             target: lm_compiler_use_plan_level(d105e_tmi_cell[0][i], d105e_tk_cell[0][i], (cast: (int) (level\schema)))
             if: target = 0 || c.lm_compiler_use_plan_link(level, target) != 0
@@ -3317,8 +3371,24 @@ fn: lm_compiler_use_plan_seen (@: root c.L2UsePlanLevel) int
     return: (cast: (int) (0))
 end: lm_compiler_use_plan_seen
 
+# The cell that names an edge: the field's physical slot in its level's model, past that model's width the same field by its last occurrence.  1: the step has no such slot.
+fn: lm_compiler_use_edge_cell (@: edge c.L2UsePlanEdge; @: value int) int
+    int: slot c.lm_compiler_path_step_slot((cast: (const: @: c.L2PathStep) (@ edge\step)))
+    int: width c.lm_compiler_schema_width((cast: (int) (edge\schema)))
+    if: slot < 0 || slot >= width
+        return: (cast: (int) (1))
+    const: (@: port_edge_step c.L2PathStep (cast: (const: @: c.L2PathStep) (@ edge\step)))
+    if: port_edge_step\segocc < 0
+        if: slot > c.INT_MAX - width
+            return: (cast: (int) (1))
+        slot: slot + width
+    ---
+    \value: slot
+    return: (cast: (int) (0))
+end: lm_compiler_use_edge_cell
+
 # Original: l2src/l2trans.lm1:37039
-fn: lm_compiler_ruse_append (int: level; @: edge c.L2UsePlanEdge) int
+fn: lm_compiler_ruse_append (int: level; @: edge c.L2UsePlanEdge; int: known) int
     @: ruse_e_n_cell int (cast: (@: int) (@ c.l2_ruse_e_n))
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     @: ruse_e_cap_cell int (cast: (@: int) (@ c.l2_ruse_e_cap))
@@ -3328,6 +3398,10 @@ fn: lm_compiler_ruse_append (int: level; @: edge c.L2UsePlanEdge) int
     int: want
     @: p void
     int: below 0
+    int: named 0
+    # An edge with no physical slot says nothing that is known.
+    if: known != 0 && lm_compiler_use_edge_cell(edge, @ named) != 0
+        return: (cast: (int) (0))
     if: ruse_e_n_cell[0] = c.INT_MAX
         alloc_err_cell[0]: 2
         return: (cast: (int) (1))
@@ -3343,11 +3417,16 @@ fn: lm_compiler_ruse_append (int: level; @: edge c.L2UsePlanEdge) int
     ---
     if: edge\below != 0
         below: edge\below\id
-        if: edge\below\full != 0
+        # A plan of what is known reads an unknown as nothing known: never as the whole interface.
+        if: edge\below\full != 0 && known = 0
             below: -1
         ---
+        # Nothing is read below the field (it is compared, or it takes a write): the field itself is consumed, and a null standing there refuses nothing.
+        if: below > 0 && edge\below\edges = 0 && edge\below\links = 0
+            below: 0
+        ---
     ---
-    if: edge\whole != 0
+    if: edge\whole != 0 && known = 0
         below: -1
     if: edge\called != 0
         below: -2
@@ -3378,6 +3457,9 @@ fn: lm_compiler_use_scope_get (int: mi; int: key; int: schema) @: c.L2UseScope
     @: live int
     int: output_level 0
     int: status 0
+    # A named root's place is no Consumer's port.  Its plan states what the known Consumers use (the book, #three-argument-implements): an unknown use beside them proves nothing and
+    # takes nothing from them.  A Consumer's plan answers for the whole port, and an unknown there leaves no plan.
+    int: known (cast: (int) (lm_compiler_d105_key_ns(key) >= 0))
     const: (@: previous_tag char room_tag_cell[0])
     if: uses_ready_cell[0] = 0 || mi < 0 || mi >= m_n_cell[0] || schema = -1
         return: (cast: (@: c.L2UseScope) (0))
@@ -3405,12 +3487,12 @@ fn: lm_compiler_use_scope_get (int: mi; int: key; int: schema) @: c.L2UseScope
         status: 1
     level: root
     while: level != 0 && status = 0
-        status: lm_compiler_use_plan_build(level, live)
+        status: lm_compiler_use_plan_build(level, live, known)
         level: level\next
     ---
     c.lm_compiler_xfree((cast: (@: void) live))
     lm_compiler_use_plan_full()
-    if: status = 0 && root\full = 0
+    if: status = 0 && (root\full = 0 || known != 0)
         ruse_cur_first_cell[0]: ruse_e_n_cell[0]
         ruse_cur_levels_cell[0]: use_plan_n_cell[0] + 1
         level: root
@@ -3420,7 +3502,7 @@ fn: lm_compiler_use_scope_get (int: mi; int: key; int: schema) @: c.L2UseScope
             while: source != 0 && status = 0
                 edge: source\edges
                 while: source\seen != 0 && edge != 0 && status = 0
-                    status: lm_compiler_ruse_append(output_level, edge)
+                    status: lm_compiler_ruse_append(output_level, edge, known)
                     edge: edge\next
                 ---
                 source: source\next
@@ -3566,8 +3648,6 @@ fn: lm_compiler_use_scope_cell (const: (@: scope c.L2UseScope); int: k; @: whole
     int: lv 0
     int: at 1
     int: ix
-    int: slot
-    int: width
     \whole: 0
     \value: 0
     if: k = 0
@@ -3583,18 +3663,7 @@ fn: lm_compiler_use_scope_cell (const: (@: scope c.L2UseScope); int: k; @: whole
             if: ruse_e_level_cell[0][i] = lv
                 edge: ruse_e_edge_cell[0][i]
                 if: k = at + 1 + 2 * ix
-                    slot: c.lm_compiler_path_step_slot((cast: (const: @: c.L2PathStep) (@ edge\step)))
-                    width: c.lm_compiler_schema_width((cast: (int) (edge\schema)))
-                    if: slot < 0 || slot >= width
-                        return: (cast: (int) (1))
-                    const: (@: port_edge_step c.L2PathStep (cast: (const: @: c.L2PathStep) (@ edge\step)))
-                    if: port_edge_step\segocc < 0
-                        if: slot > c.INT_MAX - width
-                            return: (cast: (int) (1))
-                        slot: slot + width
-                    ---
-                    \value: slot
-                    return: (cast: (int) (0))
+                    return: (cast: (int) (lm_compiler_use_edge_cell(edge, value)))
                 ---
                 if: k = at + 2 + 2 * ix
                     if: ruse_e_below_cell[0][i] < 0
@@ -4177,6 +4246,19 @@ fn: lm_compiler_d105_dynamic (@: source c.L2ReferenceSource) int
         return: (cast: (int) (1))
     return: (cast: (int) (lm_compiler_d105_place_dynamic((cast: (int) (source\method)), (cast: (int) (source\place)))))
 end: lm_compiler_d105_dynamic
+
+# Whether a method can answer a refused admission with its implicit `implements`: it is on the status channel, and it is no machine function, which returns its value directly.
+fn: lm_compiler_on_status_channel (int: mi) int
+    @@: m_throws_cell int (cast: (@@: int) (@ c.l2_m_throws))
+    return: (cast: (int) (mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && m_throws_cell[0] != 0 && m_throws_cell[0][mi] != 0))
+end: lm_compiler_on_status_channel
+
+# Whether the admission of this candidate in this method can be refused.  A candidate with no layout the translation knows can; so can one with a layout, read from a slot: what stands
+# there was admitted by what that place's known Consumers use (SLOT-RECEPTION-USED-FIELDS), and this receiver is another Consumer with its own admission (the book,
+# #correspondence-stability: «Другой Consumer или новые требования проходят собственный допуск»).
+fn: lm_compiler_d105_refusable (int: mi; @: source c.L2ReferenceSource) int
+    return: (cast: (int) (lm_compiler_d105_dynamic(source) != 0 || lm_compiler_on_status_channel(mi) != 0))
+end: lm_compiler_d105_refusable
 
 # Original: l2src/l2trans.lm1:37851
 fn: lm_compiler_d105_place_sources (int: mi; int: k) int
@@ -4876,9 +4958,8 @@ fn: lm_compiler_emit_model_admit_record_core (int: mi; int: req; @: source c.L2R
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: the admission of a dynamic candidate was not checked")))
         return: (cast: (int) (lm_compiler_emit_implicit_throw(at_mi, "implements", ind)))
     ---
-    # DUPLICATE-STOP: here the candidate is static and its admission proved by the translation -- a refusal is no
-    # outcome.  What can still fail is the record the reads by name need: a broken invariant, or the arena's table
-    # of records that cannot grow.  That is said as such.
+    # DUPLICATE-STOP: a method off the status channel has no refusal to answer with (lm_compiler_d105_refusable): a machine function, which takes no admitted Structure.  What can still
+    # fail here is the record the reads by name need: a broken invariant, or the arena's table of records that cannot grow.  That is said as such.
     if: c.fprintf(out_cell[0], "%s    c.fprintf(c.stderr, \"lmx: invariant: the record of a proved admission was not kept\\n\")\n%s    c.abort()\n", ind, ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))

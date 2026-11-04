@@ -11185,7 +11185,9 @@ replay3630 не потерял выходов и не дал новых диаг
 
 `return: g()` в trailer на уровне открытия, `g` объявляет `throws: Bad`, а `catch: Bad ()` есть только в теле. `lm_compiler_check_throws_handled` принимает вызов, потому что `lm_compiler_catch_find` находит обработчик тела, а вывод отказывает: `internal: a callee's declared throw is not handled by its caller`. Trailer стоит после закрытия pad, участок обработчика кончается с блоком, поэтому по книге это необработанный throw на вызове. До среза 276 тот же случай давал `internal: a catch without its pad`. Неявные отказы в trailer срез 276 уже выводит из метода. [Свидетель](witnesses/fix276-20261104/records/cold-tp138/tests/dyn/p276m_trailer_throw.lm2).
 
-### SLOT-RECEPTION-USED-FIELDS — 2026-11-04, Opus (срез 277), OPEN
+### SLOT-RECEPTION-USED-FIELDS — 2026-11-04, Opus (срез 277), CLOSED срезом 280
+
+Слот принимает значение по известным Consumer места (требование места строит транслятор, читает `lmx_implements_receive_cell`), `V` в `tests/dyn/structure_slot_write.lm2` больше не несёт лишнего `q`. Типизированная запись в объявленное ссылочное поле — отдельная строка REFERENCE-FIELD-STATIC-WRITE. [Запись](witnesses/fix280-20261104/notes.md). Исходная запись ниже.
 
 `Alt\k: V`, где у `V` нет поля `q` модели, а `q` никто не читает: `implements` на записи. Слотовый приём (`lmx_implements_receive_cell`) идёт с нулевым покрытием и проверяет всю модель. Codex, `CODEX-OPUS-276-REVIEW-CONSUMER-20261104T024655Z-01`: «internal uses=0/неизвестное coverage НЕ доказывает, что программа предъявила весь интерфейс». Шаг карты по этому правилу уже исправлен, запись в слот нет. В `tests/dyn/structure_slot_write.lm2` у `V` поэтому есть `q`: это обход завышения, а не норма. [Запись](witnesses/fix277-20261104/notes.md).
 
@@ -11254,3 +11256,27 @@ replay3630 не потерял выходов и не дал новых диаг
 ### KNOWN-CALL-OCCURRENCE-STATIC-REFUSAL — 2026-11-04, Opus (срез 279), OPEN
 
 `second(One)`, где формал читает `m\[1]t\x`, а у статического кандидата `One` одна голова: отказ трансляции `implements is false in function argument`. Книга относит совместимость фактических аргументов к runtime-допуску при достигнутом вызове. Это общий статический маршрут известного кандидата, не только вхождений. Разобрать при снятии proof-only/preflight. [Запись](witnesses/fix279-20261104/notes.md).
+
+### SLOT-VALUE-STATIC-CANDIDATE-ABORT — 2026-11-04, Opus (срез 280), CLOSED срезом 280
+
+Значение, прочитанное из слота и отданное как статический кандидат (`@: back FullRead hand_back()`, `return: p` над значением уже модели): на кортеже 279 такая программа не транслировалась, `internal: the admission of a dynamic candidate was not checked`, на первых сборках среза падала `lmx: invariant: the record of a proved admission was not kept`. В слоте стоит значение, допущенное по известным Consumer места, а новый приёмник — другой Consumer, поэтому это обычный неявный `implements`: `lm_compiler_d105_refusable`, `lm_compiler_admit_return`. Отказ теперь именованный, сама полнота проверки в этом приёмнике — строка RECEIVING-UNKNOWN-COVERAGE-WHOLE. [Запись](witnesses/fix280-20261104/notes.md).
+
+### NULL-PATH-WRITE-WALKED — 2026-11-04, Opus (срез 280), CLOSED срезом 280
+
+`NullBox\k: 0` в обходимом коде: `walk error: INVALID` на кортеже 279, в native запись проходит. Ветка PUT ядра не пускала null в store слота. Теперь null идёт в `lmx_walk_value_field_store` и ставит свою присутствующую ячейку, как native. [Запись](witnesses/fix280-20261104/notes.md).
+
+### REFERENCE-FIELD-STATIC-WRITE — 2026-11-04, Opus (срез 280), OPEN
+
+`Holder\p: OnlyQ`, где `@: p RefBox RefBox`, у `OnlyQ` нет поля `a`, и `a` никто не читает: `implements` на записи, в native и forced, на кортежах 279 и 280. Запись через типизированную локальную так же. Запись через свободный путь уже идёт по чтениям места: `OnlyQ` принят, типизированное чтение после него видит значение, `NoQ` отказывает. Статический маршрут идёт через `lmx_walk_value_admit` с моделью поля, поэтому проверка целая; модель там же нужна для извлечения payload письма. Следующий малый срез: провести такую запись через store слота, письмо сохранить. [Проба](witnesses/fix280-20261104/records/cold-tp140/tests/dyn/p280i_refstatic.lm2), [свободный путь](witnesses/fix280-20261104/records/cold-tp140/tests/dyn/p280j_reffree.lm2).
+
+### RECEIVING-UNKNOWN-COVERAGE-WHOLE — 2026-11-04, Opus (срез 280), OPEN
+
+Приёмник с неизвестным использованием, типизированная локальная и результат всё ещё спрашивают весь интерфейс: `formal_unknown(@: p FullRead)` с `merge: p` отказывает на статическом актуале без `a`, а `@: back FullRead hand_back()` отказывает, хотя `back` никто не читает. Codex 276: «internal uses=0/неизвестное coverage НЕ доказывает, что программа предъявила весь интерфейс». Коды 103, 104 и 110 в `tests/dyn/structure_slot_write.lm2` закрепляют именно именованность отказа, а не его необходимость: при снятии правила их условия меняются. [Запись](witnesses/fix280-20261104/notes.md).
+
+### MERGE-PUBLICATION-DROPS-READER-WORD — 2026-11-04, Opus (срез 280), OPEN
+
+Метод, читающий результат `merge` по пути (`Copy\k\q`), в native-программе обходится: публикация результата идёт `lmx_walk_slot_rebind` в слот под узлом этого `merge`, `lmx_code_rebind_commit` считает её записью кода, и сброс доходит до читателя. Значение верное, теряется только слово; читатель исходника `Src\k\q` слово сохраняет. На кортежах 279 и 280 одинаково: [проба](witnesses/fix280-20261104/records/cold-tp140/tests/dyn/p280k_copyread.lm2), [279](witnesses/fix280-20261104/records/pins/tp142a-obs-copy279.terminal.txt), [280](witnesses/fix280-20261104/records/pins/tp142a-obs-copyg2.terminal.txt), [стек](witnesses/fix280-20261104/records/pins/gdb280g.txt). Какое правило `lmx_code_write` сработало, не разбирал.
+
+### COPY-PLACE-KNOWN-CONSUMERS — 2026-11-04, Opus (срез 280), OPEN
+
+У места копии `merge` требования нет: `AltCopy\k: NoQ` принимается, чтение `AltCopy\k\q` отказывает на своём ребре (коды 101, 102). Отказ не ложный, но поздний: известный Consumer копии при записи не учитывается. Копия не наследует требование оригинала намеренно, у неё свои Consumer; связать их с местом копии — дело общего collector. [Запись](witnesses/fix280-20261104/notes.md).

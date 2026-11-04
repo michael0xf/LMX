@@ -4602,6 +4602,9 @@ end: lmx_implements_cell_model
 # Receive a reached reference write into a physical field slot. Its
 # declaration belongs to the slot and survives earlier assignments there:
 # a reference to anything but a Structure does not fit it, the implicit `convert`.
+# The Structure is admitted by what the known Consumers of this place use of it (the book, #three-argument-implements; the author 2026-10-26: "мы проверяем не полное соответствие, а
+# используемые поля"; CODEX-OPUS-276-REVIEW-CONSUMER-20261104T024655Z-01): a field nothing uses is not looked at, and a place of which nothing is known asks nothing, since unknown is
+# no NO.  A read of a field the value lacks is its own Consumer and refuses at its edge (lmx_implements_reach).
 fn: lmx_implements_receive_cell (@: arena c.LmxArena; @: cell void; @: value void) int
     @: model c.Lmx 0
     if: arena = 0
@@ -4613,8 +4616,14 @@ fn: lmx_implements_receive_cell (@: arena c.LmxArena; @: cell void; @: value voi
         return: known
     if: c.lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    @: row c.LmxSourceName c.lmx_source_places(arena, cell)
+    if: row = 0 || row\place_uses = 0
+        return: c.LMX_WALK_OK
+    c.LmxImplUses: scope
+    c.memset((cast: (@: void) (@ scope)), 0, c.sizeof(c.LmxImplUses))
+    scope\map: row\place_uses
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
-    int: status lmx_implements_admit_receiving_templates(arena, (cast: (@: c.Lmx) value), model, 0, 0U, 0, @ answer)
+    int: status lmx_implements_admit_receiving_templates(arena, (cast: (@: c.Lmx) value), model, 0, 0U, @ scope, @ answer)
     if: status != c.LMX_WALK_OK
         return: status
     if: answer = c.LMX_IMPLEMENTS_NO

@@ -1,0 +1,22 @@
+# A reader of a merge copy by a path, in a native program: is its word kept when the root publishes the copy?  Entry 7.
+Src:
+    k:
+        int: q 1
+    end: k
+end: Src
+Copy: merge: Src
+fn: copy_read () int
+    return: Copy\k\q
+end: copy_read
+fn: src_read () int
+    return: Src\k\q
+end: src_read
+int: code 7
+if: copy_read() != 1
+    code: 11
+---
+if: code = 7 && src_read() != 1
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

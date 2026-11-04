@@ -1,0 +1,28 @@
+# Slice 280 probe: a merge copy's place.  Entry 7.
+AltRead:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: AltRead
+NoQ:
+    int: a 4
+end: NoQ
+AltCopy: merge: AltRead
+fn: copy_read_q () int
+    ---
+        return: AltCopy\k\q
+        catch: implements ()
+            return: 77
+    ---
+end: copy_read_q
+int: code 7
+AltCopy\k: NoQ
+if: AltCopy\k\a != 4
+    code: 90
+---
+if: code = 7 && copy_read_q() != 77
+    code: 91
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

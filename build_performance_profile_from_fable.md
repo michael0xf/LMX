@@ -308,3 +308,11 @@ Source 203/F1CDB823; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. The role of a written form moved from a spelling to frame flags and a C name lost the definition's text, with no new pass. A whole-pipeline
 measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix279-20261104/notes.md).
+
+## Slice280 / boot142a (Opus, 2026-11-04)
+
+Whole quick 1144.86 s: 20:13:46.5847167Z→20:32:51.4473608Z, both generations
+smoke 9/0. G2 focus 53/0, 762.53 s: 20:33:48.8514820Z→20:46:31.3809652Z.
+Source 203/1E5584C9; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A place's requirement is one more use plan per reached named root with a static table per place; no new pass. The rise over boot141a's 847 s is the machine, not this code: the same 4 rows alternating on both G2 took 318.5, 322.0, 321.0 s on slice279's and 320.4, 319.4, 319.9 s on this one, and the frontend builds by one translator rose between fe142c and fe142d on unchanged steps and in gcc itself. The whole run is a pipeline measurement, the 4 rows a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix280-20261104/notes.md).

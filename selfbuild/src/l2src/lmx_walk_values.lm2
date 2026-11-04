@@ -6486,9 +6486,9 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         if: value_p\present = 0
             c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
             return: c.LMX_WALK_OK
-        # A Structure written into a slot of an evaluated holder (PUT over OF) takes the slot's own store: its admission, its rebinding.  A fixed
-        # direct slot stays PUT_REF: PUT over AT is refused by the value store (steps/put-ref-186.md).
-        if: wholder != 0 && (by_name != 0 || (op = c.LMX_WALK_OP_PUT && (lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF || lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF_EDGE) && value_p\kind = c.LMX_WALK_VALUE_REFERENCE && value_p\ref != 0 && c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX))
+        # A Structure written into a slot of an evaluated holder (PUT over OF) takes the slot's own store: its admission, its rebinding, and a typed null its one present cell, as the
+        # native store's (NULL-PATH-WRITE-WALKED).  A fixed direct slot stays PUT_REF: PUT over AT is refused by the value store (steps/put-ref-186.md).
+        if: wholder != 0 && (by_name != 0 || (op = c.LMX_WALK_OP_PUT && (lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF || lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF_EDGE) && value_p\kind = c.LMX_WALK_VALUE_REFERENCE && c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX))
             status: lmx_walk_value_field_store((cast: (@: c.LmxArena) f\arena), wholder, field_index, @ place, @ value)
         else:
             status: lmx_walk_value_store((cast: (@: c.LmxArena) f\arena), @ place, @ value)

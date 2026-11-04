@@ -1,0 +1,27 @@
+# Slice 280 probe: a write through a formal over a null field.  Entry 7.
+HasQ:
+    int: q 3
+end: HasQ
+NullBox:
+    k:
+        int: q 1
+    end: k
+end: NullBox
+fn: clear_it () int
+    NullBox\k: 0
+    return: 0
+end: clear_it
+fn: put_on_null (@: p NullBox) int
+    p\k: HasQ
+    return: 3
+end: put_on_null
+fn: null_read () int
+    return: NullBox\k\q
+end: null_read
+int: code 7
+int: cleared clear_it()
+if: put_on_null(NullBox) != 3 || null_read() != 3
+    code: 90
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

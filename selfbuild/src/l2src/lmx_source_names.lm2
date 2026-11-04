@@ -111,6 +111,18 @@ fn: lmx_source_place_model_set (@: arena c.LmxArena; @: slot void; @: layout voi
     return: 0
 end: lmx_source_place_model_set
 
+# What the known Consumers of this place use of the value standing there (the translator's static cells, LmxImplUses): the requirement of the place.  No row of it says nothing is
+# known of them, which is no requirement.  It is of this physical place: a copy's place has its own Consumers, so a copy does not carry it.
+fn: lmx_source_place_uses_set (@: arena c.LmxArena; @: slot void; @: cells size_t) int
+    if: slot = 0 || cells = 0
+        return: 1
+    @: row c.LmxSourceName lmx_source_places(arena, slot)
+    if: row = 0
+        return: 1
+    row\place_uses: cells
+    return: 0
+end: lmx_source_place_uses_set
+
 fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: names char; @: spec size_t) int
     if: names = 0 || spec = 0
         return: 1
@@ -162,6 +174,7 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
     row\place_names: 0
     row\place_spec: 0
     row\model_layout: 0
+    row\place_uses: 0
     row\pending_next: 0
     # The row's by-value VoidArray is written through its address.
     va: @ row\text

@@ -1981,6 +1981,10 @@ fn: lm_compiler_value_null_literal (@: value c.L2ValueSpan) int
         return: (cast: (int) (0))
     if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
         return: (cast: (int) (lm_compiler_value_null_literal((cast: (@: c.L2ValueSpan) value\values))))
+    # `@: Model: 0` (the book): the same present null.
+    if: value\count = 1 && value\node\kind = c.LM_P0_NODE_FRAME
+        return: c.lm_compiler_typed_null_value((cast: (const: @: c.LmP0Node) value\node))
+    ---
     if: value\count != 1 || value\node\kind != c.LM_P0_NODE_ATOM || value\node\as = 0
         return: (cast: (int) (0))
     return: (cast: (int) ((cast: (int) (lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) value\node\as\atom), @ negative, @ magnitude, @ unsigned_literal) != 0 && magnitude = 0U))))

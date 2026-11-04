@@ -1,0 +1,19 @@
+fn: one () int
+    return: 1
+end: one
+fn: two () int
+    return: 2
+end: two
+Box:
+    @: f one
+end: Box
+fn: run () int
+    @: Box\f two
+    return: Box\f()
+end: run
+int: code 7
+if: run() != 2
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

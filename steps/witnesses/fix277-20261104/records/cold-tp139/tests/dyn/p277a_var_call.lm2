@@ -1,0 +1,19 @@
+int: seen 0
+code:
+    ---
+        int: first var\i
+        catch: implements ()
+            node\seen: 1
+    ---
+    var:
+        int: i 5
+    end: var
+    node\seen: node\seen * 10 + var\i
+end: code
+call: code code
+int: rc 7
+if: seen != 15
+    rc: 81
+---
+sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
+return

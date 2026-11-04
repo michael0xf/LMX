@@ -1,0 +1,19 @@
+# A local rebinding published by a call between the write and the read: the read stays through the map of the declared model.
+Swapped:
+    int: y 7
+    int: a 5
+end: Swapped
+fn: other () int
+    return: 0
+end: other
+fn: local_publish () int
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    T: Swapped
+    int: i other()
+    return: T\y
+end: local_publish
+sendMessage: exit(exit_code: local_publish(); stdout: ""; stderr: "")
+return

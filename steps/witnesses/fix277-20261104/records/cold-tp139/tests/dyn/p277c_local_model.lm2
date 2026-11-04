@@ -1,0 +1,19 @@
+# A local Structure's slot declares its model: after `T: Swapped` the edge of T\y is still T's, not whatever stands in the slot now.  Swapped has y first and a second.
+Swapped:
+    int: y 7
+    int: a 5
+end: Swapped
+fn: local_model () int
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    T: Swapped
+    return: T\y
+end: local_model
+int: code 7
+if: local_model() != 7
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

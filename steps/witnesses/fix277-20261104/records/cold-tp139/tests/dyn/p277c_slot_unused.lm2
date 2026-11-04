@@ -1,0 +1,33 @@
+# V has no q; nothing reads q (the book: unused fields are not compared; SLOT-RECEPTION-USED-FIELDS).
+Outer:
+    k:
+        int: a 1
+        int: b 2
+    end: k
+end: Outer
+Alt:
+    int: w 9
+    k:
+        int: q 1
+        int: a 5
+        int: b 6
+    end: k
+end: Alt
+V:
+    int: z 3
+    int: a 7
+    int: b 8
+end: V
+fn: read_k (@: p Outer) int
+    return: p\k\a
+end: read_k
+int: code 7
+if: read_k(Alt) != 5
+    code: 89
+---
+Alt\k: V
+if: code = 7 && read_k(Alt) != 7
+    code: 90
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

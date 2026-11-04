@@ -1,0 +1,22 @@
+Holder:
+    Inner:
+        int: y 3
+    end: Inner
+end: Holder
+fn: read (@: h Holder) int
+    return: h\Inner\y
+end: read
+fn: m () int
+    b: immutable: merge(Holder)
+    ---
+        return: read(b) + 4
+        catch: implements ()
+            return: 81
+        catch: interpreter ()
+            return: 82
+        catch: convert ()
+            return: 83
+    ---
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

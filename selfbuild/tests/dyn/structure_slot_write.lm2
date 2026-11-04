@@ -1,0 +1,183 @@
+# Slice 277 (DIRECT-SLOT-WRITE-EVALUATED-HOLDER, ROOT-TYPED-NULL-ASSIGNMENT, IMPLEMENTS-REFERENCE-FIELD-NESTED-MODEL; the book, #correspondence-stability, #three-argument-implements).
+# A named Structure reached through an evaluated holder takes its value by the slot's own store, in a method's body and in a split call's; a refusal is the statement's implicit
+# `implements` and keeps the old value.  A typed null is a present reference value of the place.  A typed reference holding a Structure stands for it under a model's nested
+# field, at the write and on the way of a read.  A local Structure's slot declares its model as a named root's does: T's fields stay T's after `T: Swapped`, before and after
+# the publication.  Entry 7; 81.. name the failing check.
+Other:
+    int: z 9
+    int: y 7
+end: Other
+Swapped:
+    int: y 7
+    int: a 5
+end: Swapped
+Bad:
+    int: nothing 1
+end: Bad
+S1:
+    T:
+        int: v 1
+    end: T
+    T: Bad
+end: S1
+D:
+    T:
+        int: v 0
+    end: T
+end: D
+First:
+    int: x 3
+end: First
+Second:
+    int: w 9
+    int: x 5
+end: Second
+Inner2:
+    int: q 1
+    int: y 7
+end: Inner2
+Bound:
+    int: z 9
+    b: Inner2
+end: Bound
+Declared:
+    int: z 9
+    @: b Inner2 Inner2
+end: Declared
+BoxB:
+    a:
+        b:
+            int: y 3
+        end: b
+    end: a
+end: BoxB
+BoxD:
+    a:
+        b:
+            int: y 3
+        end: b
+    end: a
+end: BoxD
+Outer:
+    k:
+        int: a 1
+        int: b 2
+    end: k
+end: Outer
+Alt:
+    int: w 9
+    k:
+        int: q 1
+        int: a 5
+        int: b 6
+    end: k
+end: Alt
+V:
+    int: q 2
+    int: z 3
+    int: a 7
+    int: b 8
+end: V
+fn: local_rebound () int
+    T:
+        int: y 3
+    end: T
+    T: Other
+    if: T\y != 7
+        return: 81
+    T\y: 5
+    if: Other\y != 5 || Other\z != 9
+        return: 82
+    return: 7
+end: local_rebound
+fn: other () int
+    return: 0
+end: other
+fn: local_order () int
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    T: Swapped
+    if: T\y != 7
+        return: 93
+    int: i other()
+    if: T\y != 7
+        return: 94
+    return: 7
+end: local_order
+fn: split_refused () int
+    ---
+        call: S1 D
+        return: 83
+        catch: implements ()
+            if: D\T\v != 1 && D\T\v != 0
+                return: 84
+            return: 7
+    ---
+end: split_refused
+fn: follow () int
+    ---
+        return: First\x
+        catch: interpreter ()
+            return: 93
+    ---
+end: follow
+fn: read_k (@: p Outer) int
+    return: p\k\a
+end: read_k
+sub: put_bound ()
+    BoxB\a: Bound
+end: put_bound
+sub: put_declared ()
+    BoxD\a: Declared
+end: put_declared
+fn: reference_fields () int
+    ---
+        put_bound()
+        if: BoxB\a\b\y != 7
+            return: 86
+        put_declared()
+        if: BoxD\a\b\y != 7
+            return: 87
+        return: 7
+        catch: implements ()
+            return: 88
+    ---
+end: reference_fields
+int: code local_rebound()
+if: code = 7
+    code: local_order()
+---
+if: code = 7
+    code: split_refused()
+---
+int: caught 0
+---
+    First: Bad
+    catch: implements ()
+        caught: 1
+---
+if: code = 7 && (caught != 1 || First\x != 3)
+    code: 85
+---
+if: code = 7 && read_k(Alt) != 5
+    code: 89
+---
+Alt\k: V
+if: code = 7 && read_k(Alt) != 7
+    code: 90
+---
+First: @: First: 0
+if: code = 7 && follow() != 93
+    code: 91
+---
+First: Second
+if: code = 7 && follow() != 5
+    code: 92
+---
+if: code = 7
+    code: reference_fields()
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

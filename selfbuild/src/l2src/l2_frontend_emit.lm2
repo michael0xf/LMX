@@ -1250,6 +1250,8 @@ fn: lm_compiler_check_receiving_value_at (const: (@: stmt c.LmP0Node); @: first 
         return: (cast: (int) (lm_compiler_check_receiving_value_at(stmt, (cast: (@: c.LmP0Field) (only\value\as\structure\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (only\value\as\structure))))), target_ty, receiving_model, receiving_name, mi, path, receiving_path)))
     if: n < 1
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "assignment value has unknown type")))
+    if: n = 1 && only != 0 && c.lm_compiler_pointer_depth(target_ty) > 0 && c.lm_compiler_typed_null_value((cast: (const: @: c.LmP0Node) (only\value))) != 0
+        return: 0
     # A received letter is admitted through its payload. `@raw` is the
     # address spelling of that same received source here, not the type of the
     # payload; its physical slot depth cannot decide the graph admission.
@@ -4935,6 +4937,24 @@ fn: lm_compiler_check_indexed_write (const: (@: stmt c.LmP0Node); int: mi; const
     return: (cast: (int) (status))
 end: lm_compiler_check_indexed_write
 
+# `Outer\Model()` and `Outer\Model: ()`: a Structure place of a path given one empty Structure (the book, the common rule of an unconsumed result).
+fn: lm_compiler_empty_path_structure (const: (@: stmt c.LmP0Node); int: mi) int
+    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
+    int: saved cur_mi_cell[0]
+    int: k 0
+    int: kind
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\head\data = 0
+        return: 0
+    if: stmt\as\frame\body != 0 && c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) > 0
+        return: 0
+    if: c.lm_compiler_is_path_head((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), mi) = 0
+        return: 0
+    cur_mi_cell[0]: mi
+    kind: c.lm_compiler_path_kind((cast: (const: @: char) (stmt\as\frame\head\data)), (cast: (size_t) (stmt\as\frame\head\length)), @ k)
+    cur_mi_cell[0]: saved
+    return: (cast: (int) (kind = 2 || kind = 3))
+end: lm_compiler_empty_path_structure
+
 # Original: l2src/l2trans.lm1:17970
 fn: lm_compiler_check_path_write (const: (@: stmt c.LmP0Node); int: mi; const: (@: path char)) int
     @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
@@ -5018,6 +5038,10 @@ fn: lm_compiler_check_path_write (const: (@: stmt c.LmP0Node); int: mi; const: (
     ---
     if: kind = 10 || kind = 11
         hstatus: lm_compiler_check_receiving_value_at(stmt, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, leaf_mi, model, h, mi, path, hresolved)
+        c.lm_compiler_path_release(hresolved)
+        return: (cast: (int) (hstatus))
+    if: kind = 2 || kind = 3
+        hstatus: lm_compiler_check_receiving_value_at(stmt, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, (cast: (int) c.lm_compiler_graph_ft()), model, h, mi, path, hresolved)
         c.lm_compiler_path_release(hresolved)
         return: (cast: (int) (hstatus))
     c.lm_compiler_path_release(hresolved)
@@ -5713,6 +5737,10 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "assignment target must be a declared typed mutable value")))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_is_char_decl(stmt) = 0 && lm_compiler_colon_check_assignment(stmt, mi, path) != 0
             return: (cast: (int) (1))
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_is_asgn(stmt, mi) != 0 && c.lm_compiler_typed_null_tail(stmt) != 0
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+            continue
+        ---
         # A nonprimitive formal -- `(@: T v)` or `(T: v)`, ONE reference transport in a signature (the book, "A signature
         # is not executed"; K03) -- is a reference binding in the body, rebound after the admission of its value to T, as
         # a typed reference local is (the ml branch above): the emission's l2_emit_admit before the formal's store; the
@@ -5727,6 +5755,13 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
             ---
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_is_char_decl(stmt) = 0 && lm_compiler_check_path_write(stmt, mi, path) != 0
             return: (cast: (int) (1))
+        # The empty value has nothing to type; its admission is the place's, its refusal the method's implicit throw.
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_is_char_decl(stmt) = 0 && lm_compiler_empty_path_structure(stmt, mi) != 0
+            if: c.lm_compiler_admit_site(mi) != 0
+                return: (cast: (int) (1))
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+            continue
+        ---
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_find_method((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && raw != 0 && c.lm_compiler_is_known((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_is_path_head((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), mi) = 0 && c.lm_compiler_cap_path_head(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0))
             if: stmt\as\frame\head != 0 && stmt\as\frame\head\data != 0 && c.lm_compiler_seg_count((cast: (const: @: char) (stmt\as\frame\head\data)), (cast: (size_t) (stmt\as\frame\head\length))) > 1
                 return: (cast: (int) (c.lm_compiler_error(path, stmt, "unknown field path root")))
@@ -7575,9 +7610,23 @@ fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0F
         # A physical own-row coordinate does not replace its value category.
         if: kind = 16 && c.lm_compiler_own_is_slot(path[6 + 6 * (path[2] - 1)]) != 0 && c.lm_compiler_own_schema(path[6 + 6 * (path[2] - 1)]) != -1
             kind: 2
-        if: kind = 2 || kind = 3
-            return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a Structure assigned through a path")))
-        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a field path")))
+        if: kind != 2 && kind != 3 && leaf_kind != 2 && leaf_kind != 3
+            return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a field path")))
+        # A Structure written through a path: PUT over the leaf's place, the slot's own store (the native lm_compiler_emit_structure_path_store).
+        if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PUT", 3, out) != 0
+            return: (cast: (int) (1))
+        if: lm_compiler_rw_path_value_full(path, resolved, 0, path[2], (cast: (int) (\out)), @ h) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 1, h) != 0
+            return: (cast: (int) (1))
+        if: n < 1
+            if: c.lm_compiler_rw_plain((cast: (int) (\out)), 0, @ v) != 0
+                return: (cast: (int) (1))
+            ---
+        else:
+            if: lm_compiler_rw_reference_receive_at(value, n, (cast: (int) (c.lm_compiler_graph_own())), model, -1, (cast: (int) (\out)), -1, @ v, 0) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 2, v)))
     ---
     if: n < 1
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this assignment")))
@@ -8246,6 +8295,18 @@ fn: lm_compiler_rw_merge (const: (@: stmt c.LmP0Node); int: res; int: into; @: o
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), value_slot, prim)))
 end: lm_compiler_rw_merge
+
+# Whether a statement declares a field of its own: its declaration names a row born at this statement.  A known head with a known tail has none, whatever
+# collection read it as before the head's field was registered.
+fn: lm_compiler_stmt_declares_place (const: (@: stmt c.LmP0Node); int: mi) int
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @: declaration c.L2Declaration c.lm_compiler_declaration(stmt)
+    int: own
+    if: declaration = 0 || declaration\name = 0
+        return: 0
+    own: c.lm_compiler_own_find_decl(mi, (cast: (const: @: c.LmP0Text) declaration\name), stmt)
+    return: (cast: (int) (own >= 0 && own_decl_cell[0][own] = stmt))
+end: lm_compiler_stmt_declares_place
 
 # Original: l2src/l2trans.lm1:27445
 fn: lm_compiler_rw_merge_prim (const: (@: stmt c.LmP0Node); int: res; int: parent; @: out int) int
@@ -11897,19 +11958,32 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     # in its existing graph slot. Its defining source Frame remains inert.
     # That slot is a direct Structure slot, written by PUT_REF [put_ref, holder, slot, value]; PUT writes cells only
     # (steps/put-ref-186.md §2). The root's top-level named Structure is the unit's own field: the holder and slot are
-    # the AT l2_rw_ns_value reads it by. In a method the head is the activation's hidden input, refused before the
-    # backends split (l2_colon_check_assignment); a nested or a local named Structure is reached through an evaluated
-    # holder, which has no direct-slot write yet: OPEN (steps/defects.md, DIRECT-SLOT-WRITE-EVALUATED-HOLDER).
-    if: c.lm_compiler_head_resolve(rw_mi_cell[0], h, @ named, 0) = 5 && named >= 0 && ns_def_node_cell[0][named] != stmt && c.lm_compiler_declaration(stmt) = 0 && c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) > 0
+    # the AT l2_rw_ns_value reads it by. Any other is reached through an evaluated holder: PUT over the OF its value is
+    # read by, whose store is the slot's (lmx_walk_value_field_store), as a path's write is.
+    if: c.lm_compiler_head_resolve(rw_mi_cell[0], h, @ named, 0) = 5 && named >= 0 && ns_def_node_cell[0][named] != stmt && lm_compiler_stmt_declares_place(stmt, rw_mi_cell[0]) = 0 && c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) > 0
+        @: written_first c.LmP0Field (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field))
+        int: written_n c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
+        # `First: @: First: 0`: the head is the place and the consumed receiver gives its value.
+        @: written_declaration c.L2Declaration c.lm_compiler_declaration(stmt)
+        if: written_declaration != 0 && written_declaration\name != 0 && c.lm_compiler_text_same((cast: (const: @: c.LmP0Text) written_declaration\name), h) != 0
+            written_first: (cast: (@: c.LmP0Field) written_declaration\candidate)
+            written_n: written_declaration\candidate_count
+        ---
         if: ns_eternal_cell[0][named] >= 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], stmt, "an eternal branch field cannot be updated")))
         if: rw_mi_cell[0] != e_cell[0] || ns_parent_cell[0][named] >= 0 || ns_local_cell[0][named] >= 0
-            return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a named Structure written through an evaluated holder")))
+            if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PUT", 3, @ port_local_node) != 0 || lm_compiler_rw_ns_value(port_local_node, named, rw_mi_cell[0], @ t) != 0 || c.lm_compiler_rw_put(port_local_node, 1, t) != 0
+                return: (cast: (int) (1))
+            if: lm_compiler_rw_reference_receive_at(written_first, written_n, (cast: (int) (c.lm_compiler_graph_own())), named, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 2, t) != 0
+                return: (cast: (int) (1))
+            \made: 1
+            return: (cast: (int) (c.lm_compiler_rw_put(into, slot, port_local_node)))
+        ---
         if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PUT_REF", 4, @ port_local_node) != 0
             return: (cast: (int) (1))
         if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", port_local_node, port_local_node, c.lm_compiler_ns_unit_slot(named)) < 0
             return: (cast: (int) (1))
-        if: lm_compiler_rw_reference_receive_at((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))))), (cast: (int) (c.lm_compiler_graph_own())), named, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 3, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+        if: lm_compiler_rw_reference_receive_at(written_first, written_n, (cast: (int) (c.lm_compiler_graph_own())), named, -1, port_local_node, -1, @ t, 0) != 0 || c.lm_compiler_rw_put(port_local_node, 3, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         return: (cast: (int) (0))
@@ -12381,9 +12455,13 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         return: (cast: (int) (0))
     # A write through a path `a\b...: v` (-178).
     if: c.lm_compiler_rw_has_slash(h) != 0
-        if: stmt\as\frame\body = 0
-            return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this assignment")))
-        if: lm_compiler_rw_path_write(stmt, h, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))))), into, @ port_local_node) != 0
+        @: written_first c.LmP0Field 0
+        int: written_n 0
+        if: stmt\as\frame\body != 0
+            written_first: (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field))
+            written_n: (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))))
+        ---
+        if: lm_compiler_rw_path_write(stmt, h, written_first, written_n, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
@@ -12488,6 +12566,27 @@ fn: lm_compiler_emit_root_head (int: into; int: slot; const: (@: value c.LmP0Nod
     return: 0
 end: lm_compiler_emit_root_head
 
+# A local Structure's slot declares its layout, as a named root's and a nested field's do (lm_compiler_source_layouts_emit, lm_compiler_emit_ns_names): a value standing
+# there later is admitted to it and read through it (lmx_walk_slot_bind), and what stands there now is no model.
+fn: lm_compiler_emit_local_place_model (int: into; int: slot; const: (@: value c.LmP0Node)) int
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
+    @@: ns_local_cell int (cast: (@@: int) (@ c.l2_ns_local))
+    @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar32: holder_storage
+    @: holder char (cast: (@: char) holder_storage\buffer)
+    c.L2FrontendScratchChar128: token_storage
+    @: token char (cast: (@: char) token_storage\buffer)
+    int: own c.lm_compiler_own_by_decl(rw_mi_cell[0], value)
+    int: ni c.lm_compiler_source_definition_ns(own)
+    if: ni < 0 || ns_local_cell[0][ni] < 0 || ns_parent_cell[0][ni] >= 0 || c.lm_compiler_own_is_slot(own) = 0
+        return: 0
+    c.lm_compiler_rw_name(into, holder)
+    if: c.lm_compiler_layout_token(ni, token) != 0 || c.fprintf(out_cell[0], "        if: lmx_source_place_model_set(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(%s, %uU)), %s) != 0\n            return: 1\n", holder, (cast: (unsigned) slot), token) < 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_local_place_model
+
 fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Field; int: into; int: base; @: source c.L2SourceContainer; @: made int) int
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     @: t7_walk_cell int (cast: (@: int) (@ c.l2_t7_walk))
@@ -12533,6 +12632,9 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
                 ---
             ---
             if: rw_emit_cell[0] != 0 && lm_compiler_emit_root_head(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
+                return: 1
+            ---
+            if: rw_emit_cell[0] != 0 && lm_compiler_emit_local_place_model(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
                 return: 1
             ---
         ---

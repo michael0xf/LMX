@@ -7300,11 +7300,12 @@ fn: lm_compiler_src_path_write (const: (@: stmt c.LmP0Node); const: (@: h c.LmP0
     @: resolved c.L2Path @ resolved_value
     if: h = 0 || c.lm_compiler_rw_has_slash(h) = 0
         return: (cast: (int) (0))
-    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: (cast: (int) (0))
-    n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
-    if: n < 1
-        return: (cast: (int) (0))
+    n: 0
+    if: stmt\as\frame\body != 0
+        n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
+    ---
     path: c.lm_compiler_rw_path_room(h, path_own, 42)
     if: path = 0
         return: (cast: (int) (0))
@@ -7319,9 +7320,12 @@ fn: lm_compiler_src_path_write (const: (@: stmt c.LmP0Node); const: (@: h c.LmP0
     status: lm_compiler_rw_path_records(stmt, resolved, 0, 0, (cast: (int) (c.lm_compiler_rw_seg_cap(h))), path)
     leaf_kind: resolved\leaf_kind
     c.lm_compiler_path_release(resolved)
-    if: status != 0
+    if: status != 0 || path[0] = 4
         return: (cast: (int) (0))
-    if: path[3] < 0 || path[0] = 4
+    # A Structure place takes its value by the holder's slot, an empty tail included.
+    if: leaf_kind = 2 || leaf_kind = 3
+        return: (cast: (int) (1))
+    if: path[3] < 0 || n < 1
         return: (cast: (int) (0))
     if: c.lm_compiler_own_is_pointer(path[3]) != 0 && leaf_kind != 10 && leaf_kind != 11
         return: (cast: (int) (0))

@@ -738,6 +738,60 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
     return: (cast: (int) (0))
 end: lm_compiler_emit_publish
 
+# `@: Model: 0` as a value (the book, "ptr: @: Model: 0"): the reference value of the receiving place, a present null: nothing to admit, its machine type the place's.
+fn: lm_compiler_typed_null_value (const: (@: value c.LmP0Node)) int
+    @: contract c.L2TypeContract 0
+    @: candidate c.LmP0Field 0
+    int: count 0
+    if: value = 0 || value\kind != c.LM_P0_NODE_FRAME
+        return: 0
+    if: c.lm_compiler_consumed_type_value(value, @ contract, @ candidate, @ count) = 0 || contract = 0 || contract\kind != 2 || candidate = 0
+        return: 0
+    return: (cast: (int) (c.lm_compiler_reference_null_literal(candidate, count) != 0))
+end: lm_compiler_typed_null_value
+
+fn: lm_compiler_typed_null_tail (const: (@: stmt c.LmP0Node)) int
+    @: only c.LmP0Field
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) != 1
+        return: 0
+    only: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
+    if: only = 0
+        return: 0
+    return: lm_compiler_typed_null_value((cast: (const: @: c.LmP0Node) (only\value)))
+end: lm_compiler_typed_null_tail
+
+# What a rebinding of a slot answered, `l2_srb<t>`: a refusal is the statement's implicit throw.
+fn: lm_compiler_emit_slot_status (int: mi; const: (@: ind char); int: t) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: inner char 0
+    if: lm_compiler_bump_ind(ind, @ inner) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "convert", inner) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER\n", ind, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "interpreter", inner) != 0
+        return: 1
+    return: (cast: (int) (c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_srb%d)\n%s    return: 0\n%s---\n", ind, ind, t, ind, t, ind, ind) < 0))
+end: lm_compiler_emit_slot_status
+
+# A Structure written into an own slot held as a working value: the publication comes later, when a refusal could no longer be this statement's and the old value is
+# gone from the activation.  So the admission lmx_walk_slot_rebind makes stands at the statement (the book, #correspondence-stability).
+fn: lm_compiler_emit_slot_receive (int: mi; int: k; const: (@: ind char); const: (@: val char)) int
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar256: at_storage
+    @: at char (cast: (@: char) at_storage\buffer)
+    int: t
+    if: c.lm_compiler_own_slot_at(k, at) != 0
+        return: 1
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%sint: l2_srb%d c.LMX_WALK_OK\n%sif: (%s) != 0 && lmx_domain_kind(l2_program_arena, (cast: (@: void) (%s))) = c.LMX_KIND_STRUCT\n%s    l2_srb%d: lmx_implements_receive_cell(l2_program_arena, (cast: (@: void) lmx_graph_cell_in(l2_program_arena, %s)), (cast: (@: void) (%s)))\n%s---\n", ind, t, ind, val, val, ind, t, at, val, ind) < 0
+        return: 1
+    return: lm_compiler_emit_slot_status(mi, ind, t)
+end: lm_compiler_emit_slot_receive
+
 # Original: l2src/l2trans.lm1:10267
 fn: lm_compiler_own_cell_store_context (int: mi; int: k0; const: (@: ind char); const: (@: val char); const: (@: context char)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
@@ -745,7 +799,6 @@ fn: lm_compiler_own_cell_store_context (int: mi; int: k0; const: (@: ind char); 
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     int: k c.lm_compiler_split_rep(k0)
     int: t
-    @: inner char 0
     const: (@: helper char 0)
     c.L2FrontendScratchChar256: at_storage
     @: at char (cast: (@: char) at_storage\buffer)
@@ -762,17 +815,11 @@ fn: lm_compiler_own_cell_store_context (int: mi; int: k0; const: (@: ind char); 
         if: c.lm_compiler_own_slot_at(k, at) != 0
             return: (cast: (int) (1))
         # Slice 275: the one rebinding of a slot (lmx_walk_slot_rebind): its refusal is the statement's implicit throw, before anything changes.
-        if: lm_compiler_bump_ind(ind, @ inner) != 0
-            return: 1
         t: tn_cell[0]
         tn_cell[0]: t + 1
-        if: c.fprintf(out_cell[0], "%sint: l2_srb%d lmx_walk_slot_store_ref(l2_program_arena, %s, (cast: (@: void) (%s)), %s)\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, t, at, val, context, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "implements", inner) != 0
+        if: c.fprintf(out_cell[0], "%sint: l2_srb%d lmx_walk_slot_store_ref(l2_program_arena, %s, (cast: (@: void) (%s)), %s)\n", ind, t, at, val, context) < 0
             return: 1
-        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "convert", inner) != 0
-            return: 1
-        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER\n", ind, ind, t) < 0 || lm_compiler_emit_implicit_throw(mi, "interpreter", inner) != 0
-            return: 1
-        return: (cast: (int) (c.fprintf(out_cell[0], "%s---\n%sif: l2_srb%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_srb%d)\n%s    return: 0\n%s---\n", ind, ind, t, ind, t, ind, ind) < 0))
+        return: lm_compiler_emit_slot_status(mi, ind, t)
     ---
     helper: c.lm_compiler_own_store_helper(own_ty_cell[0][k])
     if: helper = 0
@@ -1491,7 +1538,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
     @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    c.L2FrontendScratchChar64: record_storage
+    c.L2FrontendScratchChar256: record_storage
     @: record char (cast: (@: char) record_storage\buffer)
     c.L2FrontendScratchChar32: name_storage
     @: name char (cast: (@: char) name_storage\buffer)
@@ -1544,6 +1591,11 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
                     oi: lm_compiler_model_root_own(ni)
                     if: oi < 0
                         return: 1
+                    if: c.lm_compiler_own_is_slot(oi) != 0
+                        if: c.lm_compiler_own_slot_at(oi, record) != 0
+                            return: 1
+                        return: c.lm_compiler_tx_join(dest, "lmx_walk_slot_model(l2_program_arena, ", record, ")", 0, 0)
+                    ---
                     if: mi = work_mi_cell[0] && c.lm_compiler_own_cached(mi, oi) != 0
                         if: full_value != 0
                             return: (cast: (int) c.lm_compiler_own_load_context_full(oi, work_mi_cell[0], ind, dest, context, full_value))
@@ -4858,7 +4910,7 @@ fn: lm_compiler_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: 
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: an admitted reference has no receiving model")))
     if: last != 0
         edge: slot + lm_compiler_d105_width(req)
-    # One reached edge: the map's number, or the chain, the admission of this receiving, or that edge alone (lmx_implements_reach).
+    # One reached edge: the map's number, or the chain, or the reception of that edge alone (lmx_implements_reach).
     if: c.fprintf(out_cell[0], "%ssize_t: %s (cast: (size_t) -1)\n%sint: l2_dslot_answer%d c.LMX_IMPLEMENTS_UNKNOWN\n%sint: l2_dslot_status%d lmx_implements_reach(l2_program_arena, l2_pst, %s, %uU, @ %s, @ l2_dslot_answer%d)\n", ind, dest, ind, temp, ind, temp, rinst\data, (cast: (unsigned) edge), dest, temp) < 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sif: l2_dslot_status%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_dslot_status%d)\n%s---\n%sif: l2_dslot_answer%d = c.LMX_IMPLEMENTS_UNKNOWN\n%s    lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)\n%s---\n", ind, temp, ind, temp, ind, ind, temp, ind, ind) < 0

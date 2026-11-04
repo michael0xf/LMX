@@ -1386,6 +1386,24 @@ fn: lmx_implements_low_reference_type (@: arena c.LmxArena; @: cell void) int
     return: c.LMX_TYPE_NONE
 end: lmx_implements_low_reference_type
 
+# The same for a candidate's field under a Structure requirement: a typed reference holding a Structure stands for it, and the narrowing search goes
+# on through it to any depth (the book, #three-argument-implements; IMPLEMENTS-REFERENCE-FIELD-NESTED-MODEL).  Holding a null or a pointer to anything else
+# proves nothing of the kind.
+fn: lmx_implements_low_candidate (@: arena c.LmxArena; @: cell void) int
+    int: low lmx_implements_low_reference_type(arena, cell)
+    int: base
+    @: value void
+    if: low != c.LMX_TYPE_NONE || cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE
+        return: low
+    base: c.lmx_type_base(lmx_domain_type(arena, cell))
+    if: base < c.LMX_TYPE_POINTER_BASE || base >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || c.lmx_pointer_pool_in(arena, cell) = 0
+        return: low
+    value: c.lmx_pointer_value_in(arena, cell)
+    if: value = 0 || lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
+        return: low
+    return: lmx_domain_type(arena, cell)
+end: lmx_implements_low_candidate
+
 # A declared Model comes from saved context or the ordinary declaration sheet,
 # never from the mutable/default pointer payload. Snapshot metadata through
 # the existing context operation, without invoking a pointer read callback.
@@ -2744,7 +2762,7 @@ end: lmx_implements_call_takes
 # A low DESC tag alone does not establish an Array's element contract.
 fn: lmx_implements_graph_holding (@: arena c.LmxArena; @: cell void; int: wanted_kind; int: wanted_type; int: low_required) int
     int: kind lmx_domain_kind(arena, cell)
-    int: low lmx_implements_low_reference_type(arena, cell)
+    int: low lmx_implements_low_candidate(arena, cell)
     if: kind = c.LMX_KIND_NONE
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: low != c.LMX_TYPE_NONE
@@ -3121,8 +3139,8 @@ fn: lmx_implements_walk_project_resolve (@: arena c.LmxArena; @: varA c.Lmx; @: 
             # graph edge or CALL reads a low box; holding does not load it.
             rawA: a
             rawB: b
-            lowA: lmx_implements_low_reference_type(arena, a)
-            lowB: lmx_implements_low_reference_type(arena, b)
+            lowA: lmx_implements_low_candidate(arena, a)
+            lowB: lmx_implements_low_candidate(arena, b)
             lowC: lmx_implements_low_reference_type(arena, c)
             logical_graph: (cast: (int) (kindC = c.LMX_KIND_STRUCT || kindC = c.LMX_KIND_ARRAY || lowC != c.LMX_TYPE_NONE))
             loadedA: 0
@@ -6912,72 +6930,77 @@ fn: lmx_implements_chain (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; @: 
     return: c.LMX_WALK_OK
 end: lmx_implements_chain
 
-# One edge of a pair whose record has no number for it: only this edge is asked, by the name of req's field, as the record's own
-# correspondence reads it.  Nothing about any other field or any future body.  The ordinal half is that head's same-numbered
-# occurrence in value; the bare half is value's one head of the name, and a name value lacks or holds at two or more heads is the
-# negative answer.  A field with no name stays unknown.  An owned map keeps the number: the next access reads it.
-fn: lmx_implements_edge_named (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; size_t: edge; @: out size_t; @: out_answer int) int
+# A reached edge of (value, req) with no number.  The operation being run is the Consumer and this edge is what it uses (CODEX-OPUS-276-REVIEW-
+# CONSUMER-20261104T024655Z-01; the author 2026-10-26): the ordinary reception by that coverage, one pair with nothing below it, whose NO is the
+# ordinary implicit `implements`.  A later edge is a later use: the record keeps the numbers it had and this one, so that edge comes back here and
+# gets its own contract checked, and no number stands for a field nothing has looked at.
+fn: lmx_implements_admit_edge (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; size_t: edge; @: out size_t; @: out_answer int) int
     @: fields c.VoidArray @ req\array
-    @: have c.VoidArray @ value\array
     size_t: width fields\size
-    size_t: j edge
-    int: last 0
+    size_t: i 0U
+    int: status
     out_answer[0]: c.LMX_IMPLEMENTS_NO
-    if: j >= width
-        j: j - width
-        last: 1
-    ---
-    if: j >= width
+    if: width > ((cast: (size_t) -1) / 2U) / c.sizeof(c.size_t)
+        return: c.LMX_WALK_NOMEM
+    if: edge >= width * 2U
         return: c.LMX_WALK_OK
-    @: want c.VoidArray lmx_implements_view_name(arena, req, j)
-    if: want = 0
-        out_answer[0]: c.LMX_IMPLEMENTS_UNKNOWN
-        return: c.LMX_WALK_OK
-    size_t: ordinal 0U
-    size_t: req_heads 0U
-    size_t: k 0U
-    while: k < width
-        if: lmx_implements_same_name(lmx_implements_view_name(arena, req, k), want) != 0
-            if: k < j
-                ordinal: ordinal + 1U
+    @: kept size_t (cast: (@: size_t) c.malloc(width * 2U * c.sizeof(c.size_t)))
+    @: cells size_t (cast: (@: size_t) c.malloc(4U * c.sizeof(c.size_t)))
+    if: kept = 0 || cells = 0
+        c.free((cast: (@: void) kept))
+        c.free((cast: (@: void) cells))
+        return: c.LMX_WALK_NOMEM
+    @: before c.LmxImplEntry lmx_implements_find(arena, value, req)
+    while: i < width * 2U
+        kept[i]: (cast: (size_t) -1)
+        if: before != 0
+            size_t: index i
+            int: last 0
+            if: i >= width
+                index: i - width
+                last: 1
             ---
-            req_heads: req_heads + 1U
+            if: lmx_implements_coordinate(arena, before, index, last, @ kept[i]) != 0
+                kept[i]: (cast: (size_t) -1)
+            ---
         ---
-        k: k + 1U
+        i: i + 1U
     ---
-    # req with two or more heads of the name has no bare use: the half is the head's, as in lmx_implements_named_view.
-    int: bare (cast: (int) (last != 0 && req_heads < 2U))
-    size_t: seen 0U
-    size_t: selected (cast: (size_t) -1)
-    k: 0U
-    while: k < have\size
-        if: lmx_implements_same_name(lmx_implements_view_name(arena, value, k), want) != 0
-            if: bare != 0 || seen = ordinal
-                selected: k
-            seen: seen + 1U
+    cells[0]: 4U
+    cells[1]: 1U
+    cells[2]: edge
+    cells[3]: 0U
+    c.LmxImplUses: scope
+    c.memset((cast: (@: void) (@ scope)), 0, c.sizeof(c.LmxImplUses))
+    scope\map: cells
+    status: lmx_implements_admit_receiving_templates(arena, value, req, 0, 0U, @ scope, out_answer)
+    c.free((cast: (@: void) cells))
+    if: status != c.LMX_WALK_OK || out_answer[0] = c.LMX_IMPLEMENTS_NO
+        c.free((cast: (@: void) kept))
+        return: status
+    @: after c.LmxImplEntry lmx_implements_find(arena, value, req)
+    if: after != 0 && after\frame = 0 && after\map != 0 && after\owned_map != 0 && after\n = width
+        @: numbers size_t after\map
+        kept[edge]: numbers[edge]
+        c.memcpy((cast: (@: void) numbers), (cast: (@: void) kept), width * 2U * c.sizeof(c.size_t))
+    ---
+    c.free((cast: (@: void) kept))
+    status: lmx_implements_slot(arena, value, req, edge, out, out_answer)
+    # A named half the reception left without a number: value holds the name at two or more heads and a bare name selects none of them.
+    if: status = c.LMX_WALK_OK && out_answer[0] = c.LMX_IMPLEMENTS_UNKNOWN
+        i: edge
+        if: i >= width
+            i: i - width
         ---
-        k: k + 1U
-    ---
-    if: selected = (cast: (size_t) -1) || (bare != 0 && seen > 1U)
-        return: c.LMX_WALK_OK
-    @: e c.LmxImplEntry lmx_implements_find(arena, value, req)
-    if: e != 0 && e\frame = 0 && e\map != 0 && e\owned_map != 0 && j < e\n
-        @: numbers size_t e\map
-        if: last != 0
-            numbers[e\n + j]: selected
-        else:
-            numbers[j]: selected
+        if: lmx_implements_view_name(arena, req, i) != 0
+            out_answer[0]: c.LMX_IMPLEMENTS_NO
         ---
     ---
-    out[0]: selected
-    out_answer[0]: c.LMX_IMPLEMENTS_YES
-    return: c.LMX_WALK_OK
-end: lmx_implements_edge_named
+    return: status
+end: lmx_implements_admit_edge
 
-# A reached edge of (value, req): the number the map holds, or else one of two different situations (CODEX-OPUS-275-MAPS-20261103T214114Z-01).
-# No record of the pair: the chain of the records already made, and only where no chain exists the admission of the current
-# receiving, once; later reads find its map.  A record with no number for this edge: lmx_implements_edge_named asks this edge alone.
-# NO stays the negative answer; UNKNOWN that remains is no proof either way.
+# A reached edge of (value, req): the number the map holds, or else (CODEX-OPUS-275-MAPS-20261103T214114Z-01).  No record of the pair: the composition of the records
+# already made comes first.  Whatever number is still missing: this edge is admitted alone.  NO stays the negative answer; UNKNOWN that remains is no proof either way.
 fn: lmx_implements_reach (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; size_t: edge; @: out size_t; @: out_answer int) int
     int: status lmx_implements_slot(arena, value, req, edge, out, out_answer)
     if: status != c.LMX_WALK_OK || out_answer[0] != c.LMX_IMPLEMENTS_UNKNOWN
@@ -6988,16 +7011,14 @@ fn: lmx_implements_reach (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; siz
         status: lmx_implements_chain(arena, value, req, out_answer)
         if: status != c.LMX_WALK_OK
             return: status
-        if: out_answer[0] != c.LMX_IMPLEMENTS_YES
-            status: lmx_implements_admit_receiving_templates(arena, value, req, 0, 0U, 0, out_answer)
-            if: status != c.LMX_WALK_OK || out_answer[0] = c.LMX_IMPLEMENTS_NO
+        if: out_answer[0] = c.LMX_IMPLEMENTS_YES
+            status: lmx_implements_slot(arena, value, req, edge, out, out_answer)
+            if: status != c.LMX_WALK_OK || out_answer[0] != c.LMX_IMPLEMENTS_UNKNOWN
                 return: status
+            ---
         ---
-        status: lmx_implements_slot(arena, value, req, edge, out, out_answer)
-        if: status != c.LMX_WALK_OK || out_answer[0] != c.LMX_IMPLEMENTS_UNKNOWN
-            return: status
     ---
-    return: lmx_implements_edge_named(arena, value, req, edge, out, out_answer)
+    return: lmx_implements_admit_edge(arena, value, req, edge, out, out_answer)
 end: lmx_implements_reach
 
 # After merge, a source's already proved code-to-source edges can be carried

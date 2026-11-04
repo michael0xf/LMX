@@ -5684,8 +5684,12 @@ fn: lm_compiler_head_is_call (const: (@: t c.LmP0Text); const: (@: body c.LmP0St
         return: (cast: (int) (0))
     if: c.lm_compiler_seg_count((cast: (const: @: char) (t\data)), (cast: (size_t) (t\length))) < 2
         return: (cast: (int) (0))
-    if: c.lm_compiler_path_kind((cast: (const: @: char) (t\data)), (cast: (size_t) (t\length)), @ k) = 4
+    int: kind c.lm_compiler_path_kind((cast: (const: @: char) (t\data)), (cast: (size_t) (t\length)), @ k)
+    if: kind = 4
         return: (cast: (int) (1))
+    # `Outer\Model()` gives the field an empty Structure (the book, the same rule of an unconsumed result).
+    if: kind = 2 || kind = 3
+        return: (cast: (int) (0))
     if: body = 0 || c.lm_compiler_count_active(body) = 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
@@ -6053,8 +6057,8 @@ end: lm_compiler_emit_selected_graph_place
 
 # Slice 275 (P1-PLACE-MAP; the book :194): the physical slot of a field in a holder the path just read from a named slot.  `slot` holds
 # the field's declared place; the record `l2_cv<context>` holds the holder as its slot gave it.  lmx_walk_value_slot reads the map of the
-# pair; a pair with no record composes the chain or admits this receiving once, and an edge with no number asks that edge alone
-# (lmx_implements_reach): every later access reads the number.
+# pair; a pair with no record composes the chain, and an edge with no number is received alone (lmx_implements_reach): every later access
+# reads the number.
 fn: lm_compiler_emit_place_slot (int: mi; int: context; int: last; const: (@: ind char); @: slot char) int
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
@@ -6073,7 +6077,8 @@ fn: lm_compiler_emit_place_slot (int: mi; int: context; int: last; const: (@: in
 end: lm_compiler_emit_place_slot
 
 # Original: l2src/l2trans.lm1:20853
-fn: lm_compiler_emit_path_cursor (const: (@: path c.L2Path); int: mi; const: (@: ind char); const: (@: at c.LmP0Node); @: out_kind int; int: arr_ok; @: receiving c.L2Tx; @: machine c.L2Tx; @: physical c.L2Tx) int
+# leaf_slot, when not 0, is set to the expression of the leaf's physical slot in l2_pst, the holder the cursor stops at.
+fn: lm_compiler_emit_path_cursor_slot (const: (@: path c.L2Path); int: mi; const: (@: ind char); const: (@: at c.LmP0Node); @: out_kind int; int: arr_ok; @: receiving c.L2Tx; @: machine c.L2Tx; @: physical c.L2Tx; @: leaf_slot c.L2Tx) int
     @: path_leaf_ft_cell int (cast: (@: int) (@ c.l2_path_leaf_ft))
     @: tn_cell int (cast: (@: int) (@ c.l2_tn))
     @: work_mi_cell int (cast: (@: int) (@ c.l2_work_mi))
@@ -6118,6 +6123,9 @@ fn: lm_compiler_emit_path_cursor (const: (@: path c.L2Path); int: mi; const: (@:
     @: child_model_name char (cast: (@: char) child_model_name_storage\buffer)
     c.L2FrontendScratchChar96: graph_status_storage
     @: graph_status char (cast: (@: char) graph_status_storage\buffer)
+    c.L2FrontendScratchChar64: rebound_storage
+    c.L2Tx: rebound_tx
+    @: rebound_name c.L2Tx c.lm_compiler_tx_local(@ rebound_tx, (cast: (@: char) rebound_storage\buffer), 64U)
     c.L2FrontendScratchChar128: graph_value_storage
     c.L2Tx: graph_value_tx
     @: graph_value c.L2Tx c.lm_compiler_tx_local(@ graph_value_tx, (cast: (@: char) graph_value_storage\buffer), 128U)
@@ -6175,6 +6183,12 @@ fn: lm_compiler_emit_path_cursor (const: (@: path c.L2Path); int: mi; const: (@:
         return: (cast: (int) (1))
     if: oi >= 0 && path\steps\locus != 7 && (c.lm_compiler_own_path_uses_work(oi) = 0 || c.lm_compiler_own_cached(work_mi_cell[0], oi) = 0) && lm_compiler_emit_path_load(mi, oi, ind, l2_proot) != 0
         return: (cast: (int) (1))
+    # `T: Other` written in this activation and not yet published: the working value is T now.
+    if: oi >= 0 && path\steps\locus != 7 && c.lm_compiler_own_path_uses_work(oi) = 0 && c.lm_compiler_own_cached(work_mi_cell[0], oi) != 0 && c.lm_compiler_own_is_slot(oi) != 0
+        if: c.lm_compiler_tx_clear(rebound_name) != 0 || lm_compiler_tx_own_cname(rebound_name, "l2_q", oi, "") != 0 || c.fprintf(out_cell[0], "%sif: %s_dirty != 0\n%s    %s: %s\n%s---\n", ind, rebound_name\data, ind, l2_proot\data, rebound_name\data, ind) < 0
+            return: (cast: (int) (1))
+        ---
+    ---
     if: oi >= 0 && c.fprintf(out_cell[0], "%sl2_pst: %s\n", ind, l2_proot\data) < 0
         return: (cast: (int) (1))
     # N2: an own reference (`@: Model box`) or a letter binding (`receiveMessage: m Model`, 0 on an empty inbox) holding
@@ -6214,8 +6228,16 @@ fn: lm_compiler_emit_path_cursor (const: (@: path c.L2Path); int: mi; const: (@:
     # Structure's unit child below is the construction's promise: X1.
     if: oi < 0 && fi >= 0 && lm_compiler_emit_null_use(mi, ind) != 0
         return: (cast: (int) (1))
-    if: current = 0 && oi < 0 && fi < 0 && (root_kind = 0 || root_kind = 3) && ni >= 0 && c.lm_compiler_emit_path_bail(mi, ind) != 0
-        return: (cast: (int) (1))
+    # A named root read from its slot may hold a present null (`First: @: First: 0`): following it is the implicit throw.
+    if: current = 0 && oi < 0 && fi < 0 && root_kind = 0 && ni >= 0 && ns_eternal_cell[0][ni] < 0
+        if: lm_compiler_emit_null_use(mi, ind) != 0
+            return: (cast: (int) (1))
+        ---
+    else:
+        if: current = 0 && oi < 0 && fi < 0 && (root_kind = 0 || root_kind = 3) && ni >= 0 && c.lm_compiler_emit_path_bail(mi, ind) != 0
+            return: (cast: (int) (1))
+        ---
+    ---
     # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): node's value is the
     # method's own `node`, its lexical parent -- the unit, or for a method of a
     # program part its part's root (§10) -- needing no
@@ -6442,6 +6464,8 @@ fn: lm_compiler_emit_path_cursor (const: (@: path c.L2Path); int: mi; const: (@:
             if: i + 1 = segs && physical != 0
                 if: c.lm_compiler_tx_set(physical, child_model_name) != 0
                     return: 1
+                if: leaf_slot != 0 && c.lm_compiler_tx_set(leaf_slot, sl) != 0
+                    return: 1
                 ---
             else:
                 # Only a continued hop follows the loaded reference. Holding
@@ -6507,6 +6531,10 @@ fn: lm_compiler_emit_path_cursor (const: (@: path c.L2Path); int: mi; const: (@:
         i: i + 1
     ---
     return: (cast: (int) (0))
+end: lm_compiler_emit_path_cursor_slot
+
+fn: lm_compiler_emit_path_cursor (const: (@: path c.L2Path); int: mi; const: (@: ind char); const: (@: at c.LmP0Node); @: out_kind int; int: arr_ok; @: receiving c.L2Tx; @: machine c.L2Tx; @: physical c.L2Tx) int
+    return: lm_compiler_emit_path_cursor_slot(path, mi, ind, at, out_kind, arr_ok, receiving, machine, physical, 0)
 end: lm_compiler_emit_path_cursor
 
 # Original: l2src/l2trans.lm1:21214
@@ -6833,6 +6861,57 @@ fn: lm_compiler_emit_actual_path_store (const: (@: path c.L2Path); const: (@: st
         return: 1
     return: lm_compiler_emit_received_place_store_field(mi, "l2_call_arena", (cast: (@: char) place\data), field, ind, (cast: (@: char) record\data), 0, 0)
 end: lm_compiler_emit_actual_path_store
+
+# A Structure written through a path (the book, "Композиция места и значения"; the author 2026-11-03): the slot of the holder the path reaches, by the store a
+# field of a free value has (lmx_walk_value_field_store): the admission to the slot's model, its one rebinding, the native words of an actual code write.  The
+# holder and the slot are kept across the value's evaluation.  An empty tail is one empty Structure (the book, `Outer\Model()`).
+fn: lm_compiler_emit_structure_path_store (const: (@: path c.L2Path); const: (@: stmt c.LmP0Node); int: mi; const: (@: ind char)) int
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar64: place_storage
+    c.L2Tx: place_tx
+    @: place c.L2Tx c.lm_compiler_tx_local(@ place_tx, (cast: (@: char) place_storage\buffer), 64U)
+    c.L2FrontendScratchChar96: slot_storage
+    c.L2Tx: slot_tx
+    @: slot c.L2Tx c.lm_compiler_tx_local(@ slot_tx, (cast: (@: char) slot_storage\buffer), 96U)
+    c.L2FrontendScratchChar64: record_storage
+    c.L2Tx: record_tx
+    @: record c.L2Tx c.lm_compiler_tx_local(@ record_tx, (cast: (@: char) record_storage\buffer), 64U)
+    c.L2FrontendScratchChar128: target_storage
+    @: target char (cast: (@: char) target_storage\buffer)
+    @: body c.LmP0Structure stmt\as\frame\body
+    int: kind 0
+    int: count 0
+    int: t
+    int: status
+    if: lm_compiler_emit_path_cursor_slot(path, mi, ind, stmt, @ kind, 0, 0, 0, place, slot) != 0 || place\data[0] = 0 || slot\data[0] = 0
+        return: 1
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%s@: Lmx l2_aph%d l2_pst\n%ssize_t: l2_api%d %s\n", ind, t, ind, t, slot\data) < 0
+        return: 1
+    if: c.snprintf(target, 128U, "(%s.storage)", place\data) < 0 || c.lm_compiler_emit_write_guard(mi, ind, target) != 0
+        return: 1
+    if: body != 0
+        count: c.lm_compiler_count_active(body)
+    if: count = 0
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_aev%d\n%slmx_walk_value_ref(@ l2_aev%d, c.LMX_TYPE_LMX, (cast: (@: void) lmx_struct_new_owned(l2_aph%d, l2_program_arena)))\n", ind, t, ind, t, t) < 0
+            return: 1
+        if: c.snprintf((cast: (@: char) record\data), 64U, "@ l2_aev%d", t) < 0
+            return: 1
+        ---
+    else:
+        int: n 0
+        @: values c.L2ValueSpan c.lm_compiler_value_fields((cast: (@: c.LmP0Field) body\first_field), count, @ n)
+        if: values = 0 || n < 1
+            return: 1
+        status: lm_compiler_emit_dyn_operand_full(values, 0, n - 1, mi, ind, record)
+        c.lm_compiler_value_spans_release(values, n)
+        if: status != 0 || record\data[0] = 0
+            return: 1
+    ---
+    return: lm_compiler_emit_received_place_store_field(mi, "l2_program_arena", (cast: (@: char) place\data), t, ind, (cast: (@: char) record\data), 0, 0)
+end: lm_compiler_emit_structure_path_store
 
 fn: lm_compiler_path_record_read_context_full (int: mi; const: (@: path c.L2Path); const: (@: ind char); const: (@: at c.LmP0Node); @: dest c.L2Tx; @: context int; @: full_value c.L2Tx) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
@@ -18370,6 +18449,14 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
                 need_cut: 1
                 continue
+            if: l2_ppath\n > 0 && (l2_ppath\leaf_kind = 2 || l2_ppath\leaf_kind = 3)
+                pret: lm_compiler_emit_structure_path_store(l2_ppath, stmt, mi, ind)
+                c.lm_compiler_path_release(l2_ppath)
+                if: pret != 0
+                    return: 1
+                field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+                need_cut: 1
+                continue
             if: lm_compiler_emit_path_resolved(l2_ppath, mi, ind, stmt, @ l2_pkind, 0, l2_pmodel_instance) != 0
                 c.lm_compiler_path_release(l2_ppath)
                 return: (cast: (int) (1))
@@ -19059,6 +19146,13 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
+        # `First: @: First: 0` (the book): a present null of the place, nothing to evaluate.
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && oi >= 0 && c.lm_compiler_own_is_slot(oi) != 0 && c.lm_compiler_typed_null_tail(stmt) != 0
+            if: lm_compiler_emit_reference_null_full((cast: (int) c.lm_compiler_graph_ft()), mi, ind, tok_cell[0], @ store_context, store_full) != 0 || lm_compiler_own_store_context_full(mi, oi, ind, (cast: (const: @: char) (tok_cell[0]\data)), store_context, store_full) != 0
+                return: (cast: (int) (1))
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+            continue
+        ---
         cst: 0
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && oi >= 0
             cst: lm_compiler_convert_on_store_full(mi, oi, stmt, fr, ind, store_full)
@@ -19096,6 +19190,11 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 if: lm_compiler_emit_admit(mi, (cast: (int) (c.lm_compiler_graph_nsty(mi, (cast: (const: @: c.LmP0Text) (fr\head))))), (cast: (const: @: char) (tok_cell[0]\data)), ind) != 0
                     return: 1
                 ---
+            ---
+        ---
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && oi >= 0 && c.lm_compiler_own_is_slot(oi) != 0 && c.lm_compiler_own_cached(mi, oi) != 0
+            if: c.lm_compiler_emit_slot_receive(mi, oi, ind, (cast: (const: @: char) (tok_cell[0]\data))) != 0
+                return: 1
             ---
         ---
         # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 (a): was a byte-identical

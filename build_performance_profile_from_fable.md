@@ -281,3 +281,12 @@ metadata-only. A map step now calls one function; a missing number walks the are
 head adds a row to the name table. The first boot of this slice took about the same on nearly the same bytes:
 a whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix276-20261104/notes.md).
+
+## Slice277 / boot139a (Opus, 2026-11-04)
+
+Whole quick 768.44 s: 07:20:27.0341670Z–07:33:15.4709688Z, both generations
+smoke 9/0. G2 focus 50/0, 399.56 s: 07:33:45.4038375Z–07:40:24.9685028Z.
+Source 200/A82F39AC; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A map step with no record now receives one edge and restores the numbers the record had: `width * 2` words copied per
+missing edge, once per use. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix277-20261104/notes.md).

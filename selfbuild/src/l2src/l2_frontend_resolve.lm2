@@ -2079,8 +2079,6 @@ end: lm_compiler_head_is_callable_formal
 
 # Original: l2src/l2trans.lm1:23527
 fn: lm_compiler_head_method (int: mi; const: (@: t c.LmP0Text)) int
-    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
-    @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     int: k 0
     int: r
     int: kind
@@ -2094,11 +2092,11 @@ fn: lm_compiler_head_method (int: mi; const: (@: t c.LmP0Text)) int
         return: (cast: (int) (0 - 1))
     if: c.lm_compiler_seg_count((cast: (const: @: char) (t\data)), (cast: (size_t) (t\length))) < 2
         return: (cast: (int) (0 - 1))
+    # A path to a method calls it.  A path to a Structure names a place and takes its tail as a value (the book, "Композиция места и значения"; the author
+    # 2026-11-03): running a Structure is `call`, whatever its head is spelled like.
     kind: lm_compiler_path_contract((cast: (const: @: char) (t\data)), (cast: (size_t) (t\length)), @ k, @ model)
     if: kind = 4
         return: (cast: (int) (k))
-    if: (kind = 2 || kind = 3) && model >= 0 && model < ns_n_cell[0]
-        return: (cast: (int) (ns_proc_cell[0][model]))
     return: (cast: (int) (0 - 1))
 end: lm_compiler_head_method
 

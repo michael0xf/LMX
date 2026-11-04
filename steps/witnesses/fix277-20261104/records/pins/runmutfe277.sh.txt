@@ -1,0 +1,18 @@
+P=/c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01
+SP=/c/Users/mtkra/AppData/Local/Temp/claude/6d92abb4660ab27f/b79b4933-abc1-4eae-98f7-6361633964ee/scratchpad
+PWSH="/c/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe"
+cd $P
+run() { "$PWSH" -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/$1.command')))" < /dev/null 2>&1 | tail -n 1 | cut -c1-200; }
+OUT=$P/pins/mut277fe.txt
+TOOL=cold-boot138b/quick138b/lmxtool.exe
+RT=cold-tp139/rt139j
+for m in "$@"; do
+  if test -e cold-tp139/fem-$m; then echo "label taken $m" >> $OUT; continue; fi
+  if ! python $SP/mut277.py $m >> $OUT 2>&1; then echo "mutation did not apply: $m" >> $OUT; continue; fi
+  TP_TOOL=$TOOL TP_LABEL=fem-$m TP_TRY=f$m run tp139-fe >> $OUT
+  TP_TOOL=$TOOL TP_FE=cold-tp139/fem-$m/l2trans.exe TP_RT=$RT TP_TRY=f$m TP_LIST=probe277-e.tsv run tp139-probe >> $OUT
+  grep -a '^SUITE' pins/tp139-probe-f$m.log | cut -c1-80 >> $OUT
+  for row in structure_slot_write structure_path_write map_chain place_map source_occurrences; do for k in native forced; do for r in 0 1; do printf '%s %s %s root%s: ' $m $row $k $r >> $OUT; { head -n 1 tp139-probe/f$m/$row-$k/p.L2.log 2>/dev/null | grep -v eternal | sed 's|.*/tests/||' | cut -c1-130; grep -a -E 'exit [0-9]+, expected|walk error|invariant|R0 was stopped' tp139-probe/f$m/$row-$k/run-root$r.log 2>/dev/null | head -n 1 | cut -c1-100; } >> $OUT; echo >> $OUT; done; done; done
+  TP_TOOL=$TOOL TP_TRY=q$m run tp139-prepare >> $OUT
+done
+echo finished >> $OUT

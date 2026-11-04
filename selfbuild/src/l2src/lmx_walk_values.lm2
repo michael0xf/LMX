@@ -668,7 +668,7 @@ fn: lmx_walk_value_slot (@: arena c.LmxArena; @: holder c.LmxWalkValue; size_t: 
         edge: index + fields\size
     ---
     # A field rebound after its holder was admitted stands below that holder, possibly with a pair no reception related yet: the
-    # reached edge is answered by the map, the chain, or one admission of this receiving (lmx_implements_reach).
+    # reached edge is answered by the map, the chain, or the reception of that edge alone (lmx_implements_reach).
     status: c.lmx_implements_reach(arena, (cast: (@: c.Lmx) holder\ref), model, edge, @ resolved, @ answer)
     if: status != c.LMX_WALK_OK
         return: status
@@ -812,6 +812,7 @@ fn: lmx_walk_slot_rebind (@: arena c.LmxArena; @: holder c.Lmx; size_t: index; @
         if: model != 0
             context\model: model
             context\references: 0
+            context\type: c.LMX_TYPE_LMX
         ---
     ---
     status: lmx_walk_value_materialize(arena, @ context, @ materialized)
@@ -1823,10 +1824,14 @@ fn: lmx_walk_graph_cell_place (@: arena c.LmxArena; @@: slot void; int: desc_ok;
     if: status != c.LMX_WALK_OK || out\descriptor != 0
         return: status
     int: base c.lmx_type_base(out\type)
-    if: c.lmx_domain_kind(arena, slot[0]) != c.LMX_KIND_PRIMITIVE || (base != c.LMX_TYPE_LMX && (desc_ok = 0 || base != c.LMX_TYPE_DESC))
+    if: c.lmx_domain_kind(arena, slot[0]) != c.LMX_KIND_PRIMITIVE || c.lmx_pointer_pool_in(arena, slot[0]) = 0
         return: c.LMX_WALK_INVALID
-    if: c.lmx_pointer_pool_in(arena, slot[0]) = 0
-        return: c.LMX_WALK_INVALID
+    # A typed reference holding a Structure stands for it under a model's nested field (the book, the narrowing search to any depth).
+    if: base != c.LMX_TYPE_LMX && (desc_ok = 0 || base != c.LMX_TYPE_DESC)
+        if: base < c.LMX_TYPE_POINTER_BASE || base >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE || c.lmx_domain_kind(arena, c.lmx_pointer_value_in(arena, slot[0])) != c.LMX_KIND_STRUCT
+            return: c.LMX_WALK_INVALID
+        ---
+    ---
     out\context: c.lmx_pointer_cell_context(arena, slot[0])
     return: c.LMX_WALK_OK
 end: lmx_walk_graph_cell_place
@@ -3894,7 +3899,7 @@ fn: lmx_walk_shape_min (int: op) size_t
     return: 1U
 end: lmx_walk_shape_min
 
-fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: closed; @@: trail void; @: out c.LmxWalkPlace; @@: out_model c.Lmx) int
+fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: closed; @@: trail void; @: out c.LmxWalkPlace; @@: out_model c.Lmx; @@: out_holder c.Lmx; @: out_index size_t) int
     c.LmxWalkValue: holder
     @: holder_p c.LmxWalkValue @ holder
     @: code c.Lmx (cast: (@: c.Lmx) operand)
@@ -4107,6 +4112,10 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
         physical: c.lmx_graph_cell_in((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) root), index)
         if: physical = 0
             return: c.LMX_WALK_INVALID
+        if: out_holder != 0
+            out_holder[0]: (cast: (@: c.Lmx) root)
+            out_index[0]: index
+        ---
         if: c.lmx_domain_kind((cast: (@: c.LmxArena) f\arena), physical) = c.LMX_KIND_PRIMITIVE
             out\storage: physical
         else:
@@ -4178,7 +4187,7 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
 end: lmx_walk_place_mode
 
 fn: lmx_walk_place (@: f c.LmxWalkFrame; @: operand void; int: write; @: out c.LmxWalkPlace) int
-    return: lmx_walk_place_mode(f, operand, write, 0, 0, out, 0)
+    return: lmx_walk_place_mode(f, operand, write, 0, 0, out, 0, 0, 0)
 end: lmx_walk_place
 
 # NODE and OF/OF_EDGE use this same projection during ordinary execution
@@ -4221,7 +4230,7 @@ fn: lmx_walk_projection_step (@: f c.LmxWalkFrame; @: operand void; int: closed;
         # SELF names selected data, not NODE(0)'s selected code.
         return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, (cast: (@: void) f\node))
     if: op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_OF_EDGE || op = c.LMX_WALK_OP_AT
-        status: lmx_walk_place_mode(f, operand, 0, closed, trail, @ place, @ place_model)
+        status: lmx_walk_place_mode(f, operand, 0, closed, trail, @ place, @ place_model, 0, 0)
         if: status != c.LMX_WALK_OK
             return: status
         status: lmx_walk_place_load((cast: (@: c.LmxArena) f\arena), @ place, out)
@@ -6446,10 +6455,11 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             write_target: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U)
         ---
         # Slice 272: a name selector keeps the selected field's coordinates for the store of the written value.
-        if: lmx_walk_field_selector(f, write_target) != 0
+        int: by_name lmx_walk_field_selector(f, write_target)
+        if: by_name != 0
             status: lmx_walk_field_target(f, (cast: (@: c.Lmx) write_target), @ place, @ wholder, @ field_index)
         else:
-            status: lmx_walk_place(f, write_target, 1, @ place)
+            status: lmx_walk_place_mode(f, write_target, 1, 0, 0, @ place, 0, @ wholder, @ field_index)
         ---
         if: status != c.LMX_WALK_OK
             return: status
@@ -6471,7 +6481,9 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         if: value_p\present = 0
             c.memcpy((cast: (@: void) out), (cast: (@: void) (@ value)), c.sizeof(c.LmxWalkValue))
             return: c.LMX_WALK_OK
-        if: wholder != 0
+        # A Structure written into a slot of an evaluated holder (PUT over OF) takes the slot's own store: its admission, its rebinding.  A fixed
+        # direct slot stays PUT_REF: PUT over AT is refused by the value store (steps/put-ref-186.md).
+        if: wholder != 0 && (by_name != 0 || (op = c.LMX_WALK_OP_PUT && (lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF || lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF_EDGE) && value_p\kind = c.LMX_WALK_VALUE_REFERENCE && value_p\ref != 0 && c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX))
             status: lmx_walk_value_field_store((cast: (@: c.LmxArena) f\arena), wholder, field_index, @ place, @ value)
         else:
             status: lmx_walk_value_store((cast: (@: c.LmxArena) f\arena), @ place, @ value)

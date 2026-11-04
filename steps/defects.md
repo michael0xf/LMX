@@ -2995,7 +2995,9 @@ gate `opus_putfix_20261015_02`: kernel 305/0, L3 зелёный, L2 постро
 уровня, 2 строки — метод.
 
 <a id="direct-slot-write-evaluated-holder"></a>
-### DIRECT-SLOT-WRITE-EVALUATED-HOLDER — 2026-10-15, Opus (Codex, OPUS-CODEX-20261015-04), OPEN
+### DIRECT-SLOT-WRITE-EVALUATED-HOLDER — 2026-10-15, Opus (Codex, OPUS-CODEX-20261015-04), CLOSED срезом 277
+
+`PUT` над `OF`/`OF_EDGE` со значением-ссылкой и местом LMX идёт в общую перепривязку слота, цель вычисляется один раз, отказ — неявный `implements` оператора. `PUT` над `AT` остаётся отказом. [Запись и свидетели](witnesses/fix277-20261104/notes.md). Исходная запись ниже оставлена как есть.
 
 Это временная граница безопасности, а не исправление. Слот вложенной
 именованной Structure достигается цепочкой `OF`, слот локальной — проекцией
@@ -3061,7 +3063,9 @@ no activation value is not supported yet` (`l2_colon_hidden_write`). Грани�
 долг M3 в [тикете миграции](tickets/unique-name-reference-migration-20261014.md#m3-stale-k03-oracles).
 
 <a id="path-head-write-read-as-call"></a>
-### PATH-HEAD-WRITE-READ-AS-CALL — 2026-10-15, Opus (разбор Codex, OPUS-CODEX-20261015-02), OPEN
+### PATH-HEAD-WRITE-READ-AS-CALL — 2026-10-15, Opus (разбор Codex, OPUS-CODEX-20261015-02), CLOSED срезом 277
+
+Голова-путь к полю-Structure — запись по пути после обычного допуска, в том числе `node\A: B` из этой записи и вхождение `D\[1]y: Second`. Путь к методу остаётся вызовом. [Запись и свидетели](witnesses/fix277-20261104/notes.md). Исходная запись ниже оставлена как есть.
 
 Свидетель: `unit_path_head_write_field.lm2`. В методе `swap` стоит
 `node\A: B`, где `A` и `B` — unit-уровневые именованные Structure.
@@ -11154,7 +11158,9 @@ replay3630 не потерял выходов и не дал новых диаг
 регрессиями: native L1/C одного из них совпали с full04 raw-в-raw.
 [Причина и замороженные свидетельства](var-first-slot-20261019.md).
 
-### IMPLEMENTS-REFERENCE-FIELD-NESTED-MODEL — 2026-11-03, Opus (срез 275), OPEN
+### IMPLEMENTS-REFERENCE-FIELD-NESTED-MODEL — 2026-11-03, Opus (срез 275), CLOSED срезом 277
+
+Типизированная ссылка на Structure считается держателем: `lmx_implements_low_candidate`. [Запись и свидетели](witnesses/fix277-20261104/notes.md). Исходная запись ниже оставлена как есть.
 
 Кандидат с полем-ссылкой против вложенной модели получает `implements` при записи: модель `a` с вложенной `b`, кандидат с `b: Inner2` или
 `@: b Inner2 Inner2`, у `Inner2` есть требуемое поле. `lmx_implements_graph_holding` считает типизированную указательную ячейку не держателем Structure;
@@ -11168,7 +11174,9 @@ replay3630 не потерял выходов и не дал новых диаг
 `S1: x: 6`, затем `call: S1 First` с `int: x` в данных: неявный `call`. Место свободной own в таблице `l2_cpt` имеет тип LMX, а `lmx_implements_call_field` требует у данных ссылку.
 На кортеже 274 так же. [Свидетель](witnesses/fix275-20261103/records/cold-tp137/tests/dyn/probe275_h6.lm2).
 
-### ROOT-TYPED-NULL-ASSIGNMENT — 2026-11-03, Opus (срез 275), OPEN
+### ROOT-TYPED-NULL-ASSIGNMENT — 2026-11-03, Opus (срез 275), CLOSED срезом 277
+
+`First: @: First: 0` — присутствующий null места, следование за ним — неявный `interpreter`. [Запись и свидетели](witnesses/fix277-20261104/notes.md). Исходная запись ниже оставлена как есть.
 
 `First: @: First: 0` у уже объявленной именованной Structure: `assignment value has unknown type` при трансляции. Книга задаёт эту форму для ссылочного значения места.
 [Свидетель](witnesses/fix275-20261103/records/cold-tp137/tests/dyn/probe275_n2.lm2).
@@ -11176,3 +11184,15 @@ replay3630 не потерял выходов и не дал новых диаг
 ### TRAILER-CALL-THROW — 2026-11-04, Opus (срез 276), OPEN
 
 `return: g()` в trailer на уровне открытия, `g` объявляет `throws: Bad`, а `catch: Bad ()` есть только в теле. `lm_compiler_check_throws_handled` принимает вызов, потому что `lm_compiler_catch_find` находит обработчик тела, а вывод отказывает: `internal: a callee's declared throw is not handled by its caller`. Trailer стоит после закрытия pad, участок обработчика кончается с блоком, поэтому по книге это необработанный throw на вызове. До среза 276 тот же случай давал `internal: a catch without its pad`. Неявные отказы в trailer срез 276 уже выводит из метода. [Свидетель](witnesses/fix276-20261104/records/cold-tp138/tests/dyn/p276m_trailer_throw.lm2).
+
+### SLOT-RECEPTION-USED-FIELDS — 2026-11-04, Opus (срез 277), OPEN
+
+`Alt\k: V`, где у `V` нет поля `q` модели, а `q` никто не читает: `implements` на записи. Слотовый приём (`lmx_implements_receive_cell`) идёт с нулевым покрытием и проверяет всю модель. Codex, `CODEX-OPUS-276-REVIEW-CONSUMER-20261104T024655Z-01`: «internal uses=0/неизвестное coverage НЕ доказывает, что программа предъявила весь интерфейс». Шаг карты по этому правилу уже исправлен, запись в слот нет. В `tests/dyn/structure_slot_write.lm2` у `V` поэтому есть `q`: это обход завышения, а не норма. [Запись](witnesses/fix277-20261104/notes.md).
+
+### IMMUTABLE-ACTUAL-TO-FORMAL — 2026-11-04, Opus (срез 277), OPEN
+
+`b: immutable: merge(Holder)`, затем `read(b)` с формальным `@: h Holder`: native падает `lmx: invariant: the record of a proved admission was not kept`, обходчик даёт неявный `implements`. На кортеже 276 так же, вложенное поле ни при чём. Отказ рождается в `lmx_implements_walk_project_resolve` через `lmx_implements_admit_operation_call`; дальше не разбирал. Книга: «Передача, возврат и сохранение неизменяемого значения сохраняют его идентичность», защита срабатывает на достигнутой записи, а не на приёме. [Запись](witnesses/fix277-20261104/notes.md).
+
+### BARE-PATH-REQUIREMENT-READ — 2026-11-04, Opus (срез 277), OPEN
+
+`@: seen Outer\Model` читается как `@: seen Outer \Model`: требование `Outer`, значение — prefix deref свободного `Model`, поэтому `seen\v` даёт `unknown field path segment`. То же начало у `@: Box\f two`: `unknown type`. Автор 2026-10-27 разрешил пробелы вокруг `\` как стиль, границей служит запятая, поэтому по этому правилу это один путь. Свидетель голого чтения в срезе 277 поэтому идёт через аргумент: `count(Outer\Runs)`. [Запись](witnesses/fix277-20261104/notes.md).

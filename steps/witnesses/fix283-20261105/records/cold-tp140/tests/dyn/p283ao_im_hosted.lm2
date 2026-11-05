@@ -1,0 +1,26 @@
+# Slice 283 probe: an own Structure's slot rebound to an immutable value; its field written by a typed path.  Entry 7.
+Model:
+    int: q 5
+end: Model
+fn: write_hosted (@: h Model) int
+    Inner:
+        int: q 2
+    end: Inner
+    @: Inner h
+    ---
+        Inner\q: 9
+        return: Inner\q * 10
+        catch: interpreter ()
+            return: Inner\q
+    ---
+end: write_hosted
+fn: m () int
+    b: immutable: merge(Model)
+    return: write_hosted(b)
+end: m
+int: code 7
+if: m() != 5
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

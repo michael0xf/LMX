@@ -1,0 +1,34 @@
+# Slice 283 probe: an ordinary Structure with an explicit var part standing in a callable's place and called.  Entry 7.
+Formed:
+    int: q 1
+    var: (int: w 2)
+end: Formed
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hw 0
+fn: write_free () int
+    @: Places\f Hw
+    ---
+        int: r Places\f()
+        return: 21
+        catch: call ()
+            return: 1
+    ---
+end: write_free
+fn: run () int
+    @: Hw Formed Formed
+    return: write_free()
+end: run
+int: code 7
+int: got run()
+if: got = 21
+    code: 21
+---
+if: got != 21 && got != 1
+    code: 22
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

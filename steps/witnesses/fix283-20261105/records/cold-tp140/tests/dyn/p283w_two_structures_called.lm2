@@ -1,0 +1,30 @@
+# Slice 283 probe: an ordinary Structure whose first two fields are Structures, standing in a callable's place and called.  Entry 7.
+Other:
+    A: (int: q 1)
+    B: (int: r 2)
+end: Other
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hw 0
+fn: write_free () int
+    @: Places\f Hw
+    ---
+        int: r Places\f()
+        return: 21
+        catch: call ()
+            return: 1
+    ---
+end: write_free
+fn: run () int
+    @: Hw Other Other
+    return: write_free()
+end: run
+int: code 7
+if: run() != 1
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

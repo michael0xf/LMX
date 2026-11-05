@@ -1,0 +1,40 @@
+# Slice 283 probe: code over immutable data takes a catch parameter of a name no data has.  Entry 7.
+fn: raises () int
+    throws: Bad
+    throw: Bad(5)
+    return: 0
+end: raises
+Data:
+    int: x 10
+end: Data
+Takes:
+    ---
+        call: raises
+        catch: Bad (int: value)
+    ---
+end: Takes
+@: held Takes
+int: which 0
+fn: m () int
+    b: immutable: merge(Data)
+    ---
+        call: held b
+        node\which: 90
+        catch: interpreter ()
+            node\which: 2
+        catch: implements ()
+            node\which: 3
+        catch: call ()
+            node\which: 4
+        catch: convert ()
+            node\which: 5
+    ---
+    return: node\which
+end: m
+int: code 7
+int: r m()
+if: r != 2
+    code: 10 + r
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1818,25 +1818,42 @@ fn: lmx_walk_value_field_place (@: arena c.LmxArena; @: holder c.LmxWalkValue; @
     if: root = 0
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     c.VoidArray: wanted
-    wanted\data: (cast: (@: void) name)
-    wanted\size: c.strlen(name)
     size_t: index 0U
     int: answer c.LMX_IMPLEMENTS_NO
-    # `[N]name` selects source occurrence N of the head; a bare name answers only when it has one head.
-    if: name[0] = 91
-        size_t: occurrence 0U
+    # `[N]name` selects source occurrence N of the head; a bare name answers only when it has one head.  `[]` before either no source can write: the first name a typed path reads after a
+    # callable field (lm_compiler_path_walk_steps_from), whose declaration says it is a field of that callable; an own field stands in the parts of a fn or in any other callable itself.
+    # A runtime-typed path over a fn asks its parts the same way, as the typed path reads them.
+    @: written char name
+    int: own (cast: (int) (c.lmx_code_callable(arena, root) != 0))
+    int: selected 0
+    size_t: occurrence 0U
+    if: written[0] = 91 && written[1] = 93
+        own: 1
+        written: written + 2
+    ---
+    if: written[0] = 91
         size_t: at 1U
-        while: name[at] >= 48 && name[at] <= 57
-            occurrence: occurrence * 10U + (cast: (size_t) (name[at] - 48))
+        while: written[at] >= 48 && written[at] <= 57
+            occurrence: occurrence * 10U + (cast: (size_t) (written[at] - 48))
             at: at + 1U
         ---
-        if: at > 1U && name[at] = 93
-            wanted\data: (cast: (@: void) (name + at + 1U))
-            wanted\size: c.strlen(name + at + 1U)
-            answer: c.lmx_implements_head_slot(arena, root, @ wanted, occurrence, @ index)
+        if: at > 1U && written[at] = 93
+            selected: 1
+            written: written + at + 1U
+        ---
+    ---
+    wanted\data: (cast: (@: void) written)
+    wanted\size: c.strlen(written)
+    if: selected != 0
+        answer: c.lmx_implements_head_slot(arena, root, @ wanted, occurrence, @ index)
+        if: answer != c.LMX_IMPLEMENTS_YES && own != 0
+            answer: c.lmx_implements_own_head_slot(arena, root, @ wanted, occurrence, @ root, @ index)
         ---
     else:
         answer: c.lmx_implements_call_field(arena, root, @ wanted, c.LMX_TYPE_NONE, @ index)
+        if: answer != c.LMX_IMPLEMENTS_YES && own != 0
+            answer: c.lmx_implements_own_field(arena, root, @ wanted, @ root, @ index)
+        ---
     ---
     if: answer != c.LMX_IMPLEMENTS_YES
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
@@ -2167,7 +2184,7 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
     if: value\present = 0 || place\address = 0 || place\descriptor != 0
         return: c.LMX_WALK_INVALID
     if: c.lmx_range_write_exact_blocked(arena, place\address, 0, 0, 0U) != 0
-        return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
     int: base_type c.lmx_type_base(place\type)
     if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
         # Slice 272: another kind of value is the implicit `convert` before the write (the book :777); the contextual literal 0
@@ -2723,7 +2740,7 @@ fn: lmx_walk_slot_place (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; int:
         return: c.LMX_WALK_INVALID
     ---
     if: write != 0 && c.lmx_walk_immutable(f, holder) != 0
-        return: c.LMX_WALK_INVALID
+        return: lmx_walk_fault(f)
     ---
     if: index >= holder_fields\size
         return: c.LMX_WALK_INVALID
@@ -4024,7 +4041,7 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
             return: status
         status: lmx_walk_value_index_place((cast: (@: c.LmxArena) f\arena), @ holder, index, out)
         if: status = c.LMX_WALK_OK && write != 0 && c.lmx_walk_immutable(f, holder_p\ref) != 0
-            return: c.LMX_WALK_INVALID
+            return: lmx_walk_fault(f)
         if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
             return: lmx_walk_fault(f)
         return: status
@@ -4054,8 +4071,10 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
                 return: c.LMX_WALK_INVALID
             return: lmx_walk_fault(f)
         root: holder_p\ref
-        if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), root) = 0 || (write != 0 && c.lmx_walk_immutable(f, root) != 0)
+        if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), root) = 0
             return: c.LMX_WALK_INVALID
+        if: write != 0 && c.lmx_walk_immutable(f, root) != 0
+            return: lmx_walk_fault(f)
         cell: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)
         if: c.lmx_type_base(lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), cell)) != c.LMX_TYPE_SIZE_T || c.lmx_range_stride((cast: (@: c.LmxArena) f\arena), cell) != c.sizeof(c.size_t)
             return: c.LMX_WALK_INVALID
@@ -5937,6 +5956,12 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
             f\payload: out\ref
         return: status
     ---
+    # The call of a signature finds what a free holder wrote in a callable's place, and that may be no callable (CALLABLE-PLACE-FREE-NONCALLABLE): the selected call's admission, as the `call` receiver's above and as native has it.
+    if: raw_data = 0 && c.lmx_implements_unary_admission((cast: (@: c.LmxArena) f\arena), callee) = c.LMX_IMPLEMENTS_NO
+        f\payload: 0
+        f\landing: 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+    ---
     if: contract = 0
         if: selected_signature = 0
             return: c.LMX_WALK_INVALID
@@ -6282,7 +6307,7 @@ fn: lmx_walk_field_target (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkP
         return: status
     status: lmx_walk_value_field_place(arena, holder_p, c.lmx_charptr_value_known(c.lmx_graph_value_in(arena, code, 2U)), out, out_root, out_index)
     if: status = c.LMX_WALK_OK && c.lmx_walk_immutable(f, holder_p\ref) != 0
-        return: c.LMX_WALK_INVALID
+        return: lmx_walk_fault(f)
     return: status
 end: lmx_walk_field_target
 
@@ -6482,7 +6507,7 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             ---
         else:
             if: lmx_walk_immutable(f, (cast: (@: void) place_p\address)) != 0
-                return: c.LMX_WALK_INVALID
+                return: lmx_walk_fault(f)
             ---
         ---
         index: 3U

@@ -3271,6 +3271,7 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
     int: contract_from -1
     int: value_ft -1
     int: indirect 0
+    int: named_tail -1
     c.LmP0Text: address_word
     int: address_depth
     int: address_qualified
@@ -3302,7 +3303,7 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
                 next_index: 1
             ---
         ---
-        if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(out, cur_mi_cell[0])) != 0
+        if: c.lm_compiler_ft_is_free(out\root_ft) != 0
             # The written selector is retained; the reached kernel operation
             # selects its actual cell, including an INDEX on a held free value.
             if: step\locus != 7
@@ -3553,6 +3554,9 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
             if: kind = 4
                 bm: ent
                 ni: 0 - 1
+                if: named_tail < 0
+                    named_tail: k + 1
+                ---
             ---
             if: kind = 12
                 bm: ent
@@ -3566,6 +3570,37 @@ fn: lm_compiler_path_walk_steps_from (@: out c.L2Path; int: begin; int: ni; int:
         ---
         i: i + 1
         k: k + 1
+    ---
+    # A callable field's place holds any callable of its signature, and a signature says nothing of the fields inside it, so a field below it is read by name over the callable standing there
+    # (TYPED-PATH-THROUGH-REBOUND-CALLABLE; the book, #method-parts): the same selector and the same reached operation as a free root's.  A name the declared callable does not have was refused above.
+    # A callable at the end of the path stays typed: its call needs the signature.  A machine method has no reached operation.
+    if: named_tail >= 0 && kind != 4 && (cur_mi_cell[0] < 0 || c.lm_compiler_m_machine(cur_mi_cell[0]) = 0)
+        k: named_tail
+        while: k < out\n
+            step: out\steps + k
+            if: step\locus != 7
+                step\locus: 8
+            step\kind: 13
+            step\row: k
+            step\nsrow: -1
+            step\own: -1
+            step\ns: -1
+            step\formal: -1
+            step\node_host: -1
+            step\ent: -1
+            step\pointee: -1
+            step\view_model: -1
+            step\model_context: -1
+            step\model_step: -1
+            step\model_input: -1
+            step\address_ft: -1
+            step\elem_model: -1
+            step\cell_ft: c.lm_compiler_free_own()
+            step\elem_ty: c.lm_compiler_free_own()
+            k: k + 1
+        ---
+        kind: 13
+        value: 0
     ---
     # The leaf: a name's kind, Structure or pointee; an index's element; and whether the value is an Array.
     if: last\locus = 7 || last\locus = 8

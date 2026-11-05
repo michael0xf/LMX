@@ -1,0 +1,23 @@
+# Slice 283 probe: a write through a pointer into an immutable value.  Entry 7.
+Holder:
+    int: n 1
+end: Holder
+fn: write_deref (@: h Holder) int
+    @: p int @ h\n
+    ---
+        \p: 9
+        return: h\n * 10
+        catch: interpreter ()
+            return: h\n
+    ---
+end: write_deref
+fn: m () int
+    b: immutable: merge(Holder)
+    return: write_deref(b)
+end: m
+int: code 7
+if: m() != 1
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

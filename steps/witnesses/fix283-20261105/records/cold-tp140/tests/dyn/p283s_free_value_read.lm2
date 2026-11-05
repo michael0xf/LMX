@@ -1,0 +1,19 @@
+# Slice 283 probe: a bare free name bound to a Structure, read as a value in a walked method, with no callable place near it.  Entry 7.
+Other:
+    int: q 3
+end: Other
+int: Hv 0
+fn: read_free () int
+    @: local Other Hv
+    return: local\q
+end: read_free
+fn: run () int
+    @: Hv Other Other
+    return: read_free()
+end: run
+int: code 7
+if: run() != 3
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

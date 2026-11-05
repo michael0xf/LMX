@@ -1,0 +1,45 @@
+# Slice 283 probe: code over immutable data rebinds a slot its var declares, the data holding that slot at its top.  Entry 7.
+Other:
+    int: q 5
+end: Other
+Data:
+    Inner:
+        int: q 3
+    end: Inner
+    var:
+        int: z 0
+    end: var
+end: Data
+Code:
+    Inner: Other
+    var:
+        Inner:
+            int: q 4
+        end: Inner
+    end: var
+end: Code
+@: held Code
+int: which 0
+fn: m () int
+    b: immutable: merge(Data)
+    ---
+        call: held b
+        node\which: 90
+        catch: interpreter ()
+            node\which: 2
+        catch: implements ()
+            node\which: 3
+        catch: call ()
+            node\which: 4
+        catch: convert ()
+            node\which: 5
+    ---
+    return: node\which
+end: m
+int: code 7
+int: r m()
+if: r != 2
+    code: 10 + r
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

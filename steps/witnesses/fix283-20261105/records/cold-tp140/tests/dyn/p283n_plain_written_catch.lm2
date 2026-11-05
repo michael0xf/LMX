@@ -1,0 +1,24 @@
+# Slice 283 probe: the same write with no `@`.  Entry 7.
+Box:
+    k:
+        int: q 1
+    end: k
+end: Box
+fn: write () int
+    ---
+        @: Box\k (int: q 8)
+        return: Box\k\q
+        catch: implements ()
+            return: 31
+        catch: interpreter ()
+            return: 32
+        catch: convert ()
+            return: 33
+    ---
+end: write
+int: code write()
+if: code = 8
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

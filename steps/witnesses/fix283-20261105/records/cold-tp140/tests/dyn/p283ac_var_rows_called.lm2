@@ -1,0 +1,44 @@
+# Slice 283 probe: an ordinary Structure whose var part has the place its code reads, called through a callable's place.  Entry 7.
+int: seen 0
+Named:
+    var: (int: i 5)
+    node\seen: i
+end: Named
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hw 0
+fn: write_free () int
+    @: Places\f Hw
+    ---
+        Places\f()
+        if: read_seen() = 5
+            return: 1
+        ---
+        return: 26
+        catch: call ()
+            return: 22
+        catch: interpreter ()
+            return: 23
+        catch: implements ()
+            return: 24
+        catch: convert ()
+            return: 25
+    ---
+end: write_free
+fn: run () int
+    @: Hw Named Named
+    return: write_free()
+end: run
+int: code 7
+int: got run()
+if: got != 1
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

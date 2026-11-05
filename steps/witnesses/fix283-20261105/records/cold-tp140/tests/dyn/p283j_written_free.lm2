@@ -1,0 +1,24 @@
+# Slice 283 probe: a written Structure through a free root.  Entry 7.
+Box:
+    k:
+        int: a 1
+    end: k
+end: Box
+int: Hb 0
+fn: write () int
+    Hb\k: (int: a 30)
+    return: Hb\k\a
+end: write
+fn: through () int
+    @: Hb Box Box
+    return: write()
+end: through
+int: code 7
+if: through() != 30
+    code: 11
+---
+if: code = 7 && Box\k\a != 30
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

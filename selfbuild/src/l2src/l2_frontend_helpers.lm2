@@ -2130,6 +2130,9 @@ end: lm_compiler_path_root_text
 fn: lm_compiler_path_root_binding_ft (const: (@: path c.L2Path); int: mi) int
     if: path = 0 || path\root_ft = -2
         return: (cast: (int) (-1))
+    # What a callable field holds is read by name: that path reaches a runtime-typed place, as any name of a free root does.
+    if: c.lm_compiler_path_named_tail(path) > 0
+        return: lm_compiler_free_own()
     return: (cast: (int) (path\root_ft))
 end: lm_compiler_path_root_binding_ft
 

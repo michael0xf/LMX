@@ -1,0 +1,320 @@
+# Slice 283: a callable field's place holds any callable of its signature, and a signature says nothing of the fields inside it: a path below it reads, writes and addresses by name over the
+# callable standing there (TYPED-PATH-THROUGH-REBOUND-CALLABLE; the book, #method-parts).  Entry 7.  The field stands at another place in the rebound callable, so a read by the declared position gives its neighbour.
+Callables:
+    fn: f () int
+        int: x 3
+        x: x + 1
+        return: x
+    end: f
+    fn: with_var () int (int: v 5)
+        return: v
+    end: with_var
+    sub: s ()
+        int: w 4
+        w: w + 1
+    end: s
+    fn: gone () int
+        int: x 1
+        return: x
+    end: gone
+    fn: kinds () int
+        int: k 5
+        return: k
+    end: kinds
+end: Callables
+fn: replaced () int
+    int: y 9
+    int: x 7
+    return: x
+end: replaced
+fn: var_later () int (int: y 9; int: v 6)
+    return: v
+end: var_later
+fn: in_body () int
+    int: pad 8
+    int: v 2
+    return: v
+end: in_body
+sub: other_sub ()
+    int: pad 8
+    int: w 9
+    w: w + 1
+end: other_sub
+fn: no_x () int
+    int: y 9
+    return: y
+end: no_x
+fn: k_structure () int
+    k: (int: z 1)
+    return: 1
+end: k_structure
+fn: absent () int
+    @: Callables\gone no_x
+    ---
+        int: r Callables\gone\x
+        return: 11
+        catch: implements ()
+            return: Callables\gone()
+    ---
+end: absent
+fn: other_kind () int
+    @: Callables\kinds k_structure
+    ---
+        int: r Callables\kinds\k
+        return: 11
+        catch: convert ()
+            return: 1
+    ---
+end: other_kind
+fn: by_formal (@: h Callables) int
+    return: h\f\x
+end: by_formal
+fn: by_local () int
+    @: l Callables Callables
+    return: l\f\x
+end: by_local
+int: Hc 0
+fn: read_free () int
+    return: Hc\f\x
+end: read_free
+fn: by_free () int
+    @: Hc Callables Callables
+    return: read_free()
+end: by_free
+Other:
+    int: q 3
+end: Other
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hv 0
+fn: write_free () int
+    @: Places\f Hv
+    ---
+        int: r Places\f()
+        return: 11
+        catch: call ()
+            return: 1
+    ---
+end: write_free
+fn: non_callable () int
+    @: Hv Other Other
+    return: write_free()
+end: non_callable
+Other2:
+    int: q 3
+    int: r 4
+end: Other2
+Places2:
+    fn: f () int
+        return: 1
+    end: f
+end: Places2
+fn: write_free2 () int
+    @: Places2\f Hv
+    ---
+        int: r Places2\f()
+        return: 11
+        catch: call ()
+            return: 1
+    ---
+end: write_free2
+fn: non_callable2 () int
+    @: Hv Other2 Other2
+    return: write_free2()
+end: non_callable2
+Other3:
+    A: (int: q 1)
+    B: (int: r 2)
+end: Other3
+Places3:
+    fn: f () int
+        return: 1
+    end: f
+end: Places3
+fn: write_free3 () int
+    @: Places3\f Hv
+    ---
+        int: r Places3\f()
+        return: 11
+        catch: call ()
+            return: 1
+    ---
+end: write_free3
+fn: non_callable3 () int
+    @: Hv Other3 Other3
+    return: write_free3()
+end: non_callable3
+Occurs:
+    fn: f () int
+        int: x 3
+        x: x + 1
+        return: x
+    end: f
+end: Occurs
+fn: occurs_other () int
+    int: y 9
+    int: x 7
+    x: x + 1
+    return: x
+end: occurs_other
+Subs:
+    int: seen 0
+    sub: t ()
+        node\seen: 5
+    end: t
+end: Subs
+int: sub_seen 0
+sub: other_t ()
+    node\sub_seen: 6
+end: other_t
+fn: read_sub_seen () int
+    return: node\sub_seen
+end: read_sub_seen
+int: var_seen 0
+OverVar:
+    var: (int: i 5)
+    node\var_seen: i
+end: OverVar
+NoData:
+    node\var_seen: 8
+end: NoData
+fn: read_var_seen () int
+    return: node\var_seen
+end: read_var_seen
+Places4:
+    fn: f () int
+        return: 1
+    end: f
+end: Places4
+fn: write_free4 () int
+    @: Places4\f Hv
+    Places4\f()
+    return: read_var_seen()
+end: write_free4
+fn: over_var () int
+    @: Hv OverVar OverVar
+    return: write_free4()
+end: over_var
+fn: no_data () int
+    @: Hv NoData NoData
+    return: write_free4()
+end: no_data
+int: Ho 0
+fn: free_first () int
+    return: Ho\f\[0]x
+end: free_first
+fn: free_second () int
+    ---
+        int: r Ho\f\[1]x
+        return: 11
+        catch: convert ()
+            return: 1
+    ---
+end: free_second
+fn: free_occurrence () int
+    @: Ho Occurs Occurs
+    if: free_first() != 7
+        return: 11
+    ---
+    return: free_second()
+end: free_occurrence
+int: code 7
+if: Callables\f\x != 3
+    code: 11
+---
+@: Callables\f replaced
+if: code = 7 && Callables\f() != 7
+    code: 12
+---
+if: code = 7 && Callables\f\x != 7
+    code: 13
+---
+if: code = 7 && by_formal(Callables) != 7
+    code: 14
+---
+if: code = 7 && by_local() != 7
+    code: 15
+---
+if: code = 7 && by_free() != 7
+    code: 16
+---
+if: code = 7
+    int: sum Callables\f\x + 1
+    if: sum != 8
+        code: 17
+    ---
+---
+Callables\f\x: 30
+if: code = 7 && (Callables\f\x != 30 || replaced\x != 30)
+    code: 18
+---
+if: code = 7 && Callables\with_var\v != 5
+    code: 19
+---
+@: Callables\with_var var_later
+if: code = 7 && Callables\with_var\v != 6
+    code: 20
+---
+if: code = 7 && Callables\with_var\[0]v != 6
+    code: 37
+---
+@: Callables\with_var in_body
+if: code = 7 && Callables\with_var\v != 2
+    code: 21
+---
+if: code = 7 && Callables\s\w != 4
+    code: 22
+---
+@: Callables\s other_sub
+if: code = 7 && Callables\s\w != 9
+    code: 23
+---
+Callables\s\w: 31
+if: code = 7 && other_sub\w != 31
+    code: 24
+---
+if: code = 7 && absent() != 9
+    code: 25
+---
+if: code = 7 && other_kind() != 1
+    code: 26
+---
+if: code = 7 && non_callable() != 1
+    code: 27
+---
+if: code = 7 && non_callable2() != 1
+    code: 28
+---
+if: code = 7 && non_callable3() != 1
+    code: 29
+---
+if: code = 7 && Occurs\f\[0]x != 3
+    code: 30
+---
+@: Occurs\f occurs_other
+if: code = 7 && Occurs\f\[0]x != 7
+    code: 31
+---
+if: code = 7 && free_occurrence() != 1
+    code: 32
+---
+Subs\t()
+if: code = 7 && Subs\seen != 5
+    code: 33
+---
+@: Subs\t other_t
+Subs\t()
+if: code = 7 && read_sub_seen() != 6
+    code: 34
+---
+if: code = 7 && over_var() != 5
+    code: 35
+---
+if: code = 7 && no_data() != 8
+    code: 36
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,28 @@
+# Slice 283 probe: a sub with no own field called through a path, the declared one and a rebound one.  Entry 7.
+Callables:
+    int: seen 0
+    sub: empty ()
+        node\seen: 5
+    end: empty
+end: Callables
+int: other_seen 0
+sub: other_empty ()
+    node\other_seen: 6
+end: other_empty
+fn: read_other () int
+    return: node\other_seen
+end: read_other
+int: code 7
+Callables\empty()
+if: Callables\seen != 5
+    code: 11
+---
+@: Callables\empty other_empty
+if: code = 7
+    Callables\empty()
+    if: read_other() != 6
+        code: 12
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

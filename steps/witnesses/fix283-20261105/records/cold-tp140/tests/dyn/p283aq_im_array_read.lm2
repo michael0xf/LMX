@@ -1,0 +1,15 @@
+# Slice 283 probe: an Array of an immutable value, only read.  Entry 7.
+Holder:
+    []: int items 3
+end: Holder
+fn: m () int
+    Holder\items[1U]: 4
+    b: immutable: merge(Holder)
+    return: b\items[1U]
+end: m
+int: code 7
+if: m() != 4
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -869,8 +869,29 @@ fn: lm_compiler_emit_write_guard (int: mi; const: (@: ind char); const: (@: plac
     return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sif: lmx_range_write_exact_blocked(l2_program_arena, (cast: (@: void) (%s)), 0, l2_program_qualified_roots, %dU) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, place, ebr_n_cell[0], ind) < 0))))
 end: lm_compiler_emit_write_guard
 
+# A reached write into an immutable place: the implicit `interpreter` before anything changes (the book :401, :409, :578; IMMUTABLE-REACHED-WRITE-NAMED): a handler takes it and the object stays.
+# Publication keeps the guard above: it runs when the statement is over, and the implicit throw itself publishes.
+fn: lm_compiler_emit_path_write_guard (int: mi; const: (@: ind char); const: (@: place char)) int
+    @: ebr_n_cell int (cast: (@: int) (@ c.l2_ebr_n))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    if: c.lm_compiler_m_machine(mi) != 0
+        return: 0
+    if: ebr_n_cell[0] = 0
+        if: c.fprintf(out_cell[0], "%sif: lmx_range_write_exact_blocked(l2_program_arena, (cast: (@: void) (%s)), 0, 0, 0U) != 0\n", ind, place) < 0
+            return: 1
+        ---
+    else:
+        if: c.fprintf(out_cell[0], "%sif: lmx_range_write_exact_blocked(l2_program_arena, (cast: (@: void) (%s)), 0, l2_program_qualified_roots, %dU) != 0\n", ind, place, ebr_n_cell[0]) < 0
+            return: 1
+        ---
+    ---
+    if: lm_compiler_emit_implicit_throw(mi, "interpreter", ind) != 0 || c.fprintf(out_cell[0], "%s---\n", ind) < 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_path_write_guard
+
 # Original: l2src/l2trans.lm1:10324
-fn: lm_compiler_emit_own_write_guard (int: mi; int: own0; const: (@: ind char)) int
+fn: lm_compiler_emit_own_guard_as (int: mi; int: own0; const: (@: ind char); int: named) int
     int: own c.lm_compiler_split_rep(own0)
     c.L2FrontendScratchChar256: slot_storage
     @: slot char (cast: (@: char) slot_storage\buffer)
@@ -888,8 +909,20 @@ fn: lm_compiler_emit_own_write_guard (int: mi; int: own0; const: (@: ind char)) 
         if: lm_compiler_emit_own_from(mi, own, ind) != 0 || c.lm_compiler_tx_clear(place) != 0 || lm_compiler_tx_own_cname(place, "l2_q", own, "_from[0]") != 0
             return: (cast: (int) (1))
     ---
+    if: named != 0
+        return: lm_compiler_emit_path_write_guard(mi, ind, (cast: (const: @: char) (place\data)))
     return: (cast: (int) (lm_compiler_emit_write_guard(mi, ind, (cast: (const: @: char) (place\data)))))
+end: lm_compiler_emit_own_guard_as
+
+# The guard that stays fatal: publication, and the stores no program was found to reach over an immutable place (slice 283).
+fn: lm_compiler_emit_own_write_guard (int: mi; int: own0; const: (@: ind char)) int
+    return: lm_compiler_emit_own_guard_as(mi, own0, ind, 0)
 end: lm_compiler_emit_own_write_guard
+
+# The guard of a store a body reaches.
+fn: lm_compiler_emit_own_store_guard (int: mi; int: own0; const: (@: ind char)) int
+    return: lm_compiler_emit_own_guard_as(mi, own0, ind, 1)
+end: lm_compiler_emit_own_store_guard
 
 # Original: l2src/l2trans.lm1:10342
 fn: lm_compiler_emit_own_from (int: mi; int: oi0; const: (@: ind char)) int

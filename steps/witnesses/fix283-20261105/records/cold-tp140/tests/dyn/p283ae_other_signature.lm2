@@ -1,0 +1,36 @@
+# Slice 283 probe: a fn of another signature written by a free holder and called with the declared one.  Entry 7.
+fn: g (int: a) int
+    return: a
+end: g
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hw 0
+fn: write_free () int
+    @: Places\f Hw
+    ---
+        int: r Places\f()
+        return: r
+        catch: call ()
+            return: 22
+        catch: interpreter ()
+            return: 23
+        catch: implements ()
+            return: 24
+        catch: convert ()
+            return: 25
+    ---
+end: write_free
+fn: run () int
+    @: Hw g g
+    return: write_free()
+end: run
+int: code 7
+int: got run()
+if: got != 1
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

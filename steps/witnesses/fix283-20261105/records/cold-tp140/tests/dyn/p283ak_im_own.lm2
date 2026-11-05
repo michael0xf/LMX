@@ -1,0 +1,29 @@
+# Slice 283 probe: code over immutable data writes the place by its bare name.  Entry 7.
+Data:
+    int: x 10
+    var:
+        int: x 0
+    end: var
+end: Data
+Code:
+    x: x + 3
+    var:
+        int: x 2
+    end: var
+end: Code
+@: held Code
+fn: m () int
+    b: immutable: merge(Data)
+    ---
+        call: held b
+        return: 90
+        catch: interpreter ()
+            return: b\x
+    ---
+end: m
+int: code 7
+if: m() != 10
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

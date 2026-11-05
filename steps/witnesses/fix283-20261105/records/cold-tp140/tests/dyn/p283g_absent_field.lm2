@@ -1,0 +1,52 @@
+# Slice 283 probe: the callable standing there has no field of that name, or one of another kind.  Entry 7.
+Callables:
+    fn: f () int
+        int: x 3
+        return: x
+    end: f
+    fn: g () int
+        int: k 5
+        return: k
+    end: g
+end: Callables
+fn: no_x () int
+    int: y 9
+    return: y
+end: no_x
+fn: k_struct () int
+    k: (int: z 1)
+    return: 1
+end: k_struct
+fn: absent () int
+    @: Callables\f no_x
+    ---
+        int: r Callables\f\x
+        return: 11
+        catch: implements ()
+            return: 7
+    ---
+end: absent
+fn: other_type () int
+    @: Callables\g k_struct
+    ---
+        int: r Callables\g\k
+        return: 100 + r
+        catch: convert ()
+            return: 7
+    ---
+end: other_type
+int: code 7
+int: got 0
+got: absent()
+if: got != 7
+    code: got
+---
+got: other_type()
+if: code = 7 && got != 7
+    code: got
+---
+if: code = 7 && Callables\f() != 9
+    code: 23
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

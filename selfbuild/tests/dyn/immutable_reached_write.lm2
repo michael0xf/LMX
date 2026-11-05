@@ -1,0 +1,277 @@
+# Slice 283: a reached write into an immutable value is the implicit `interpreter`: a handler takes it and the object stays (the book :401, :409, :578; IMMUTABLE-REACHED-WRITE-NAMED).  Entry 7.
+# The value reaches the write as a formal or a free holder, so the translation does not know.  The same writes over a value that is not immutable go through, so the guard does not refuse everything.
+Other:
+    int: q 5
+end: Other
+Holder:
+    int: n 1
+    Inner:
+        int: q 2
+    end: Inner
+end: Holder
+int: Hf 0
+fn: write_number (@: h Holder) int
+    ---
+        h\n: 9
+        return: h\n * 10
+        catch: interpreter ()
+            return: h\n
+    ---
+end: write_number
+fn: write_nested (@: h Holder) int
+    ---
+        h\Inner\q: 9
+        return: h\Inner\q * 10
+        catch: interpreter ()
+            return: h\Inner\q
+    ---
+end: write_nested
+fn: write_slot (@: h Holder) int
+    ---
+        h\Inner: Other
+        return: h\Inner\q * 10
+        catch: interpreter ()
+            return: h\Inner\q
+    ---
+end: write_slot
+fn: write_free_number () int
+    ---
+        Hf\n: 8
+        return: Hf\n * 10
+        catch: interpreter ()
+            return: Hf\n
+    ---
+end: write_free_number
+fn: through_number (@: h Holder) int
+    @: Hf Holder h
+    return: write_free_number()
+end: through_number
+fn: write_free_slot () int
+    ---
+        Hf\Inner: Other
+        return: Hf\Inner\q * 10
+        catch: interpreter ()
+            return: Hf\Inner\q
+    ---
+end: write_free_slot
+fn: through_slot (@: h Holder) int
+    @: Hf Holder h
+    return: write_free_slot()
+end: through_slot
+fn: leaves (@: h Holder) int
+    h\n: 9
+    return: h\n * 10
+end: leaves
+fn: takes (@: h Holder) int
+    ---
+        return: leaves(h)
+        catch: interpreter ()
+            return: h\n
+    ---
+end: takes
+fn: write_deref (@: h Holder) int
+    @: p int @ h\n
+    ---
+        \p: 9
+        return: h\n * 10
+        catch: interpreter ()
+            return: h\n
+    ---
+end: write_deref
+fn: write_index (@: h Holder) int
+    @: p int @ h\n
+    ---
+        p[0U]: 9
+        return: h\n * 10
+        catch: interpreter ()
+            return: h\n
+    ---
+end: write_index
+int: Hi 0
+size_t: Hat 0U
+fn: write_free_deref () int
+    ---
+        \Hi: 9
+        return: \Hi * 10
+        catch: interpreter ()
+            return: \Hi
+    ---
+end: write_free_deref
+fn: through_deref (@: h Holder) int
+    @: Hi int @ h\n
+    return: write_free_deref()
+end: through_deref
+fn: write_free_index () int
+    ---
+        Hi[Hat]: 9
+        return: Hi[Hat] * 10
+        catch: interpreter ()
+            return: Hi[Hat]
+    ---
+end: write_free_index
+fn: through_index (@: h Holder) int
+    @: Hi int @ h\n
+    size_t: Hat 0U
+    return: write_free_index()
+end: through_index
+Data:
+    int: x 10
+    var:
+        int: x 0
+    end: var
+end: Data
+Bare:
+    x: x + 3
+    var:
+        int: x 2
+    end: var
+end: Bare
+OnlyWrites:
+    x: 3
+    var:
+        int: x 2
+    end: var
+end: OnlyWrites
+WritesC:
+    x: c.lmx_type_base(7)
+    var:
+        int: x 2
+    end: var
+end: WritesC
+SlotData:
+    Inner:
+        int: q 3
+    end: Inner
+    var:
+        int: z 0
+    end: var
+end: SlotData
+WritesSlot:
+    Inner: Other
+    var:
+        Inner:
+            int: q 4
+        end: Inner
+    end: var
+end: WritesSlot
+@: held Bare
+@: held_write OnlyWrites
+@: held_c WritesC
+@: held_slot WritesSlot
+Model:
+    int: q 5
+end: Model
+fn: write_hosted (@: h Model) int
+    Part:
+        int: q 2
+    end: Part
+    @: Part h
+    ---
+        Part\q: 9
+        return: Part\q * 10
+        catch: interpreter ()
+            return: Part\q
+    ---
+end: write_hosted
+fn: write_own (@: d Data) int
+    ---
+        call: held d
+        return: d\x
+        catch: interpreter ()
+            return: d\x
+    ---
+end: write_own
+fn: write_own_c (@: d Data) int
+    ---
+        call: held_c d
+        return: d\x
+        catch: interpreter ()
+            return: d\x
+    ---
+end: write_own_c
+fn: write_own_only (@: d Data) int
+    ---
+        call: held_write d
+        return: d\x
+        catch: interpreter ()
+            return: d\x
+    ---
+end: write_own_only
+fn: write_own_slot (@: d SlotData) int
+    ---
+        call: held_slot d
+        return: d\Inner\q * 10
+        catch: interpreter ()
+            return: d\Inner\q
+    ---
+end: write_own_slot
+fn: immutable_value () int
+    b: immutable: merge(Holder)
+    if: write_number(b) != 1
+        return: 21
+    if: write_nested(b) != 2
+        return: 22
+    if: write_slot(b) != 2
+        return: 23
+    if: through_number(b) != 1
+        return: 24
+    if: through_slot(b) != 2
+        return: 25
+    if: takes(b) != 1
+        return: 26
+    if: write_deref(b) != 1
+        return: 27
+    if: write_index(b) != 1
+        return: 28
+    if: through_deref(b) != 1
+        return: 29
+    if: through_index(b) != 1
+        return: 30
+    d: immutable: merge(Data)
+    if: write_own(d) != 10
+        return: 34
+    if: write_own_only(d) != 10
+        return: 35
+    if: write_own_c(d) != 10
+        return: 43
+    m: immutable: merge(Model)
+    if: write_hosted(m) != 5
+        return: 45
+    s: immutable: merge(SlotData)
+    if: write_own_slot(s) != 3
+        return: 46
+    return: 7
+end: immutable_value
+fn: plain_value () int
+    if: write_nested(Holder) != 90
+        return: 31
+    if: write_number(Holder) != 90
+        return: 32
+    if: through_number(Holder) != 80
+        return: 33
+    if: write_deref(Holder) != 90
+        return: 36
+    if: write_index(Holder) != 90
+        return: 37
+    if: through_deref(Holder) != 90
+        return: 38
+    if: through_index(Holder) != 90
+        return: 39
+    if: write_own(Data) != 13
+        return: 40
+    if: write_own_only(Data) != 3
+        return: 41
+    if: write_own_c(Data) != 7
+        return: 44
+    if: write_hosted(Model) != 90
+        return: 42
+    if: write_own_slot(SlotData) != 50
+        return: 47
+    return: 7
+end: plain_value
+int: code immutable_value()
+if: code = 7
+    code: plain_value()
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -11247,7 +11247,9 @@ replay3630 не потерял выходов и не дал новых диаг
 
 Срез 278 заменял исходное вхождение служебной головой `l2_written_N` и оператором: `S\[1]t\x` при написанном `t: (int: x 5)` отказывал при трансляции, появлялась наблюдаемая голова, роль узнавалась по префиксу имени. Теперь определение и есть вхождение `t` на своей позиции, присваивание после него не вхождение, имени места у определения нет, роль на узлах (биты флагов кадра), внутреннее имя нельзя написать в исходнике. `l2_written_N` — обычное имя программы. [Запись](witnesses/fix279-20261104/notes.md).
 
-### IMMUTABLE-REACHED-WRITE-NAMED — 2026-11-04, Codex (ревью 278), OPEN
+### IMMUTABLE-REACHED-WRITE-NAMED — 2026-11-04, Codex (ревью 278), CLOSED срезом 283 с оговоркой
+
+Достигнутая запись — неявный `interpreter` в native и forced: поле через путь, формал и свободного держателя, указатель и индекс, собственная ячейка по голому имени. Публикация фатальна по замыслу: она идёт после оператора, а ячейку делает грязной только оператор, прошедший охрану. Открыты ссылочное поле (IMMUTABLE-REFERENCE-CELL-WALKED) и Array (IMMUTABLE-ARRAY-FIELD). Сайты обходчика и собственной ячейки, до которых программа не дошла, сохранили опубликованный ответ. [Запись](witnesses/fix283-20261105/notes.md). Исходная запись ниже.
 
 Достигнутая запись в immutable-значение: `walk error: INVALID` в native и forced на обоих roots, объект не меняется. Книга :401, :409, :578: ошибка достигнутой операции над корректным графом — обычный неявный отказ `interpreter`, принимается `catch: interpreter ()` и оставляет объект неизменным. INVALID не окончательный ответ. Guard и driver не ослаблять. Нужен малый свидетель catch/запись/чтение. [Receipt 278](witnesses/fix278-20261104/records/pins/tp140-probe-ac01.terminal.txt).
 
@@ -11285,18 +11287,42 @@ replay3630 не потерял выходов и не дал новых диаг
 
 У места копии `merge` требования нет: `AltCopy\k: NoQ` принимается, чтение `AltCopy\k\q` отказывает на своём ребре (коды 101, 102). Отказ не ложный, но поздний: известный Consumer копии при записи не учитывается. Копия не наследует требование оригинала намеренно, у неё свои Consumer; связать их с местом копии — дело общего collector. [Запись](witnesses/fix280-20261104/notes.md).
 
-### WRITTEN-FORM-THROUGH-PATH-HEAD — 2026-11-04, Opus (срез 281), OPEN
+### WRITTEN-FORM-THROUGH-PATH-HEAD — 2026-11-04, Opus (срез 281), CLOSED срезом 283
+
+Те же два акта, что у простой головы: `lm_compiler_written_path_form`, `lm_compiler_written_form_split`; `@: Box\k (int: a 8)` разворачивается в `lm_compiler_place_write_lower`. [Запись](witnesses/fix283-20261105/notes.md). Исходная запись ниже.
 
 `Box\k: (int: a 8)` не транслируется: `int has no value`, и у поля-Structure, и у ссылочного поля, на кортежах 280 и 281. Простая голова `t: (int: x 5)` работает как два акта (срез 278). Написанная форма через голову-путь в плане N4-U отдельно не названа; нужно решить вместе с остатком U3. [Проба](witnesses/fix281-20261104/records/cold-tp140/tests/dyn/p281c_written.lm2).
 
-### TYPED-PATH-THROUGH-REBOUND-CALLABLE — 2026-11-05, Opus (срез 282), OPEN
+### TYPED-PATH-THROUGH-REBOUND-CALLABLE — 2026-11-05, Opus (срез 282), CLOSED срезом 283
+
+Хвост пути ниже callable-поля читается по имени над стоящим значением, части спрашивают `lmx_implements_own_field` и `lmx_implements_own_head_slot`; свободный `Hc\f\x` находит поле так же. Callable на конце пути и machine-метод типизированы. [Запись](witnesses/fix283-20261105/notes.md). Исходная запись ниже.
 
 После `@: Callables\f replaced`, где у `replaced` поля стоят иначе, `Callables\f()` даёт новый результат, а типизированный `Callables\f\x` читает прежнюю позицию в теле и получает чужое значение, без отказа. У callable нет строки модели, поэтому `lmx_walk_value_slot` остаётся позиционным. Через свободного держателя `Hc\f\x` отказывает `implements` и до перепривязки: чтение по имени поля тела метода не находит. Записан ещё в RESULT среза 275 как S10. [Запись](witnesses/fix282-20261105/notes.md).
 
-### CALLABLE-PLACE-FREE-NONCALLABLE — 2026-11-05, Opus (срез 282), OPEN
+### CALLABLE-PLACE-FREE-NONCALLABLE — 2026-11-05, Opus (срез 282), CLOSED срезом 283
+
+При вызове значение проходит допуск выбранного вызова (`lmx_implements_unary_admission`, книга :439): недостающее место — неявный `call`, а не `invariant` и `INVALID`. Ответа «это callable» в рантайме нет и не понадобилось. [Запись](witnesses/fix283-20261105/notes.md). Исходная запись ниже.
 
 Статически известное не-callable в callable-поле отказывает при трансляции, а свободное значение, держащее обычную Structure, записывается, и вызов падает: `invariant: a split-called code reached data without its place row` в native, `walk error: INVALID` в forced. В рантайме нет готового ответа «это callable»: роль FN только у `fn`. Известный предел должен отказывать, а не падать. [Запись](witnesses/fix282-20261105/notes.md).
 
 ### CALL-SELF-ASSIGNED-PLACE — 2026-11-05, Opus (срез 282), OPEN
 
+Вопрос к норме снят (Codex, [ревью 282](witnesses/fix283-20261105/records/pins/codex-282-review.txt), п.1; книга :441: при двух и более корневых головах голое имя не выбирает первое), исключения `code = data` нет, обычная `var` не переоткрывается. [p282r](witnesses/fix282-20261105/records/cold-tp140/tests/dyn/p282r_two_heads_self.lm2) и [p282q](witnesses/fix282-20261105/records/cold-tp140/tests/dyn/p282q_var_self.lm2) остаются свидетелями отказа `call`. Открыт общий положительный индексный маршрут. Исходная запись ниже.
+
 `int: got 0; got: 5` в `Code` под `call: Code Code` отказывает `call`, с отдельными данными проходит. Согласуется с решением о двух головах, но книга :337 говорит о двух вхождениях, что это не два поля данных. Вопрос к норме, код не менялся. [Запись](witnesses/fix282-20261105/notes.md).
+
+### SUB-OWN-FIELD-CALL — 2026-11-05, Opus (срез 283), OPEN
+
+`sub` с собственным полем при любом вызове, в том числе прямом: native `walk error: UNSUPPORTED` (`self` = 0 в `lmx_call_index`), forced `walk error: INVALID`, на кортежах 282 и 283. Поля такого `sub` читаются и пишутся через место callable, `sub` без поля вызывается, и перепривязанный тоже. [Проба](witnesses/fix283-20261105/records/cold-tp140/tests/dyn/p283ah_sub_own_direct.lm2), [запись](witnesses/fix283-20261105/notes.md).
+
+### CALLABLE-PLACE-FREE-SIGNATURE — 2026-11-05, Opus (срез 283), OPEN
+
+`fn` другой сигнатуры, записанный в место callable свободным держателем: native `invariant: a trampoline was called outside its method's signature`, forced `walk error: UNSUPPORTED`, на кортежах 282 и 283. Статически такая запись отказывает при трансляции. Вызов с аргументами обычной Structure в этом месте даёт `INVALID` в обходчике. Известный предел должен отказывать, а не падать. [Проба](witnesses/fix283-20261105/records/cold-tp140/tests/dyn/p283ae_other_signature.lm2), [запись](witnesses/fix283-20261105/notes.md).
+
+### IMMUTABLE-ARRAY-FIELD — 2026-11-05, Opus (срез 283), OPEN
+
+Array в immutable-значении: `b: immutable: merge(Holder)` с `[]: int items 3` и чтение `b\items[1U]` дают `walk error: INVALID` в native и `PRIMITIVE` в forced, на кортежах 282 и 283, то есть до записи дело не доходит. [Проба](witnesses/fix283-20261105/records/cold-tp140/tests/dyn/p283aq_im_array_read.lm2), [запись в элемент](witnesses/fix283-20261105/records/cold-tp140/tests/dyn/p283aj_im_elem.lm2).
+
+### VALUE-PATH-BY-FIELD-PRESENCE — 2026-11-05, Opus (срез 283), OPEN
+
+`@: x Box\absent` и `@: p T \q` различаются тем, есть ли поле (`lm_compiler_value_path_run`, срез 282): значение без поля тихо становится требованием и разыменованием, а `@: p Model \q` при поле `q` в `Model` меняет смысл. Запятая и пробелы P0 дают одни и те же поля (BARE-DEREF-ACTUAL-MERGED). Поручение Codex: [ревью 282](witnesses/fix283-20261105/records/pins/codex-282-review.txt), п.2, сверить формы с полем и без, с запятой и пробелами и выяснить, где потеряна граница. Следующий срез.

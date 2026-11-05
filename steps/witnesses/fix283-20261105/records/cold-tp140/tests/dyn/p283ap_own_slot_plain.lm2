@@ -1,0 +1,36 @@
+# Slice 283 probe: the same code over the data that is not immutable: does the admission refuse the place by itself?  Entry 7.
+Other:
+    int: q 5
+end: Other
+Data:
+    Inner:
+        int: q 2
+    end: Inner
+end: Data
+Code:
+    @: Inner Other
+end: Code
+@: held Code
+int: which 0
+fn: m () int
+    ---
+        call: held Data
+        node\which: Data\Inner\q
+        catch: interpreter ()
+            node\which: 30
+        catch: implements ()
+            node\which: 40
+        catch: call ()
+            node\which: 50
+        catch: convert ()
+            node\which: 60
+    ---
+    return: node\which
+end: m
+int: code 7
+int: r m()
+if: r != 5
+    code: 10 + r
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

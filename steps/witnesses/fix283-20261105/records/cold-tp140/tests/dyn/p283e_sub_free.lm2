@@ -1,0 +1,62 @@
+# Slice 283 probe: a sub's field through a free holder by its bare name; two heads of one name in a method body; a nested method called through a callable field.  Entry 7.
+Callables:
+    sub: s ()
+        int: w 4
+        w: w + 1
+    end: s
+    fn: f () int
+        int: x 3
+        x: x + 1
+        return: x
+    end: f
+    fn: outer () int
+        fn: inner () int
+            return: 6
+        end: inner
+        return: inner()
+    end: outer
+end: Callables
+int: Hc 0
+fn: read_sub_w () int
+    return: Hc\s\w
+end: read_sub_w
+fn: read_two_heads () int
+    return: Hc\f\body\x
+end: read_two_heads
+fn: through_sub () int
+    @: Hc Callables Callables
+    ---
+        return: read_sub_w()
+        catch: implements ()
+            return: 41
+    ---
+end: through_sub
+fn: through_two () int
+    @: Hc Callables Callables
+    ---
+        return: read_two_heads()
+        catch: implements ()
+            return: 42
+    ---
+end: through_two
+int: code 7
+int: got 0
+got: through_sub()
+if: got != 4
+    code: got
+---
+got: through_two()
+if: code = 7 && got != 42
+    code: 50 + got
+---
+if: code = 7 && Callables\outer() != 6
+    code: 13
+---
+if: code = 7 && Callables\outer\inner() != 6
+    code: 14
+---
+if: code = 7 && Callables\s\w != 4
+    code: 15
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

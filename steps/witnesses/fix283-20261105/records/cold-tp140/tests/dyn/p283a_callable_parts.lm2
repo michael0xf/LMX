@@ -1,0 +1,35 @@
+# Slice 283 probe: what a callable's parts name at run time: a free holder reads `var` and `body` by name, then a field below them.  Entry 7.
+Callables:
+    fn: f () int
+        int: x 3
+        return: x
+    end: f
+end: Callables
+int: Hc 0
+fn: read_var_size () int
+    @: part Hc\f\var
+    return: 1
+end: read_var_size
+fn: read_body_x () int
+    return: Hc\f\body\x
+end: read_body_x
+fn: through_var () int
+    @: Hc Callables Callables
+    return: read_var_size()
+end: through_var
+fn: through_body () int
+    @: Hc Callables Callables
+    return: read_body_x()
+end: through_body
+int: code 7
+if: through_var() != 1
+    code: 11
+---
+if: code = 7 && through_body() != 3
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+catch: implements ()
+    sendMessage: exit(exit_code: 41; stdout: ""; stderr: "")
+end: implements
+return

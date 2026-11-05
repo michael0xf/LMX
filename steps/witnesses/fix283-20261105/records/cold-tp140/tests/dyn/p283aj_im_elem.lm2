@@ -1,0 +1,23 @@
+# Slice 283 probe: a write into an element of an Array of an immutable value.  Entry 7.
+Holder:
+    []: int items 3
+end: Holder
+fn: write_elem (@: h Holder) int
+    ---
+        h\items[1U]: 9
+        return: h\items[1U] * 10
+        catch: interpreter ()
+            return: h\items[1U]
+    ---
+end: write_elem
+fn: m () int
+    Holder\items[1U]: 4
+    b: immutable: merge(Holder)
+    return: write_elem(b)
+end: m
+int: code 7
+if: m() != 4
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

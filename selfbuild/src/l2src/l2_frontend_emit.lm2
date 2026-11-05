@@ -754,7 +754,7 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
         q_path_cell[0]: path
         role: c.lm_compiler_unit_role(item)
         # A written Structure at a root head already declared (lm_compiler_written_form_split): the definition is a named root like any other, and the line is the statement.
-        if: role = 0 && item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (item\as\frame\head))) != 0 && c.lm_compiler_is_asgn(item, -1) != 0 && c.lm_compiler_head_absent((cast: (const: @: c.LmP0Text) (item\as\frame\head)), item) = 0 && c.lm_compiler_written_tail((cast: (const: @: c.LmP0Frame) (item\as\frame)), -1) != 0
+        if: role = 0 && item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && ((c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (item\as\frame\head))) != 0 && c.lm_compiler_is_asgn(item, -1) != 0 && c.lm_compiler_head_absent((cast: (const: @: c.LmP0Text) (item\as\frame\head)), item) = 0 && c.lm_compiler_written_tail((cast: (const: @: c.LmP0Frame) (item\as\frame)), -1) != 0) || c.lm_compiler_written_path_form(item, -1) != 0)
             if: c.lm_compiler_written_form_split((cast: (const: @: c.LmP0Structure) unit), field, path) != 0
                 return: 1
             ---
@@ -7252,14 +7252,18 @@ fn: lm_compiler_rw_path_value_full (@: path int; const: (@: prepared c.L2Path); 
     if: kind = 18
         if: prepared = 0 || level < 1 || level > prepared\n
             return: 1
-        index_step: prepared\steps + (level - 1)
-        size_t: selector_cap index_step\len * 4U + 3U
-        @: selector char c.malloc(selector_cap)
-        if: selector = 0
+        size_t: selector_len 0U
+        @: selector_text char c.lm_compiler_path_selector_text(prepared, level - 1, @ selector_len)
+        if: selector_text = 0
             return: 1
-        if: c.lm_compiler_fmt_l1_string(selector, selector_cap, prepared\text + index_step\off, index_step\len) != 0
+        size_t: selector_cap selector_len * 4U + 3U
+        @: selector char c.malloc(selector_cap)
+        if: selector = 0 || c.lm_compiler_fmt_l1_string(selector, selector_cap, selector_text, selector_len) != 0
+            c.free(selector_text)
             c.free(selector)
             return: 1
+        ---
+        c.free(selector_text)
         if: store != 0
             frame_op: "LMX_WALK_OP_PUT_OF"
         if: c.lm_compiler_rw_frame(parent, frame_op, 3 + store, @ raw) != 0 || lm_compiler_rw_path_value_full(path, prepared, 0, level - 1, raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 1, base) != 0

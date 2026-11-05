@@ -1,0 +1,38 @@
+# Slice 283 probe: code over immutable data binds a catch parameter over the place's name: a working cell written with no value record?  Entry 7.
+Data:
+    int: x 10
+    var:
+        int: x 0
+    end: var
+end: Data
+WritesCatch:
+    throws: boom
+    ---
+        throw: boom(5)
+        catch: boom (int: x)
+            x: x + 1
+    ---
+    var:
+        int: x 2
+    end: var
+end: WritesCatch
+@: held_catch WritesCatch
+fn: write_catch (@: d Data) int
+    ---
+        call: held_catch d
+        return: 90
+        catch: interpreter ()
+            return: 1
+    ---
+end: write_catch
+fn: m () int
+    d: immutable: merge(Data)
+    return: write_catch(d)
+end: m
+int: code 7
+int: r m()
+if: r != 1
+    code: 10 + r
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

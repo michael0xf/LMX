@@ -1,0 +1,38 @@
+# Slice 283 probe: the `@` form with a written Structure through a path, and a written Structure refused by the place's reader.  Entry 7.
+Model:
+    int: q 1
+end: Model
+Box:
+    @: r Model Model
+    k:
+        int: q 1
+    end: k
+end: Box
+fn: reader () int
+    return: Box\r\q
+end: reader
+fn: refused () int
+    ---
+        Box\r: (int: z 5)
+        return: 11
+        catch: implements ()
+            return: Box\r\q
+    ---
+end: refused
+int: code 7
+@: Box\k (int: q 8)
+if: Box\k\q != 8
+    code: 21
+---
+int: got 0
+if: code = 7
+    got: refused()
+    if: got != 1
+        code: 22
+    ---
+---
+if: code = 7 && reader() != 1
+    code: 23
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

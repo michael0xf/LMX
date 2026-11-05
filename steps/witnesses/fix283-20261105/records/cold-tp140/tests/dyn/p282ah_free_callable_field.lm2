@@ -1,0 +1,36 @@
+# Slice 282 probe: a field of a callable read through a free holder: by name at run time, over the callable that stands there.  Entry 7.
+Callables:
+    fn: f () int
+        int: x 3
+        return: x
+    end: f
+end: Callables
+fn: replaced () int
+    int: y 9
+    int: x 7
+    return: x
+end: replaced
+int: Hc 0
+fn: read_hidden () int
+    return: Hc\f\x
+end: read_hidden
+fn: through () int
+    @: Hc Callables Callables
+    return: read_hidden()
+end: through
+int: code 7
+if: Callables\f() != 3
+    code: 11
+---
+if: code = 7 && through() != 3
+    code: 12
+---
+@: Callables\f replaced
+if: code = 7 && Callables\f() != 7
+    code: 13
+---
+if: code = 7 && through() != 7
+    code: 14
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

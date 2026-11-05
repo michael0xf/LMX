@@ -334,3 +334,12 @@ Source 208/2370E8F5; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. The frontend gained one linear syntactic pass over the bodies at the start of a translation; its cost was not measured apart. A whole-pipeline
 measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix282-20261105/notes.md).
+
+## Slice283 / boot145a (Opus, 2026-11-05)
+
+Whole quick 810.18 s: 18:33:17.0533815Z→18:46:47.2344071Z, both generations
+smoke 9/0. G2 focus 61/0, 755.20 s: 18:48:19.5596910Z→19:00:54.7629969Z.
+Source 211/44404A52; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. The walker now asks the selected call's admission on every call with no data of its own: a fn answers at once, a sub scans the names table. Its cost was not measured apart.
+A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix283-20261105/notes.md).

@@ -1,0 +1,110 @@
+# Slice 283: a written Structure through a path head is the same two acts as at a simple head (WRITTEN-FORM-THROUGH-PATH-HEAD; the book, "Композиция места и значения": `Outer\Model()` by the common rule of an
+# unconsumed result): the definition stays where it is written and the line assigns a reference to the place.  At the root, in a method, through a formal, a free root and in a named body.  Entry 7.
+Model:
+    int: a 1
+end: Model
+Read:
+    int: q 1
+end: Read
+Box:
+    k:
+        int: a 1
+    end: k
+    @: r Model Model
+    Inner:
+        kid:
+            int: a 1
+        end: kid
+    end: Inner
+    @: held Read Read
+end: Box
+fn: in_method () int
+    Box\k: (int: a 20)
+    return: Box\k\a
+end: in_method
+fn: by_formal (@: h Box) int
+    h\k: (int: a 21)
+    return: h\k\a
+end: by_formal
+Named:
+    Box\k: (int: a 22)
+end: Named
+fn: other_order () int
+    Box\k: (int: z 24; int: a 23)
+    return: Box\k\a
+end: other_order
+fn: repeated () int
+    int: i 0
+    int: sum 0
+    while: i < 2
+        Box\k: (int: a 40)
+        sum: sum + Box\k\a
+        Box\k\a: 41
+        i: i + 1
+    ---
+    return: sum
+end: repeated
+int: Hb 0
+fn: written_free () int
+    Hb\k: (int: a 30)
+    return: Hb\k\a
+end: written_free
+fn: through_free () int
+    @: Hb Box Box
+    return: written_free()
+end: through_free
+fn: reader () int
+    return: Box\held\q
+end: reader
+fn: refused () int
+    ---
+        Box\held: (int: z 5)
+        return: 11
+        catch: implements ()
+            return: Box\held\q
+    ---
+end: refused
+int: code 7
+Box\k: (int: a 8)
+if: Box\k\a != 8
+    code: 11
+---
+Box\r: (int: a 9)
+if: code = 7 && Box\r\a != 9
+    code: 12
+---
+Box\Inner\kid: (int: a 10)
+if: code = 7 && Box\Inner\kid\a != 10
+    code: 13
+---
+if: code = 7 && in_method() != 20
+    code: 14
+---
+if: code = 7 && by_formal(Box) != 21
+    code: 15
+---
+call: Named
+if: code = 7 && Box\k\a != 22
+    code: 16
+---
+if: code = 7 && other_order() != 23
+    code: 17
+---
+if: code = 7 && repeated() != 81
+    code: 18
+---
+if: code = 7 && through_free() != 30
+    code: 19
+---
+@: Box\k (int: a 50)
+if: code = 7 && Box\k\a != 50
+    code: 20
+---
+if: code = 7 && refused() != 1
+    code: 21
+---
+if: code = 7 && reader() != 1
+    code: 22
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

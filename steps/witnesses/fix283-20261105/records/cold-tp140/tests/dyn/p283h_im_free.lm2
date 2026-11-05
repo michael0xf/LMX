@@ -1,0 +1,31 @@
+# Slice 283 probe: a reached write into an immutable value is the implicit `interpreter`, the handler takes it and the object stays.  Entry 7.
+Other:
+    int: q 5
+end: Other
+Holder:
+    int: n 1
+    Inner:
+        int: q 2
+    end: Inner
+end: Holder
+int: Hf 0
+fn: write () int
+    ---
+        Hf\n: 9
+        return: 11
+        catch: interpreter ()
+            if: Hf\n = 1
+                return: 7
+            return: 12
+    ---
+end: write
+fn: through (@: h Holder) int
+    @: Hf Holder h
+    return: write()
+end: through
+fn: m () int
+    b: immutable: merge(Holder)
+    return: through(b)
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

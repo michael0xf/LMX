@@ -1,0 +1,43 @@
+# Slice 283 probe: the same code over the data that is not immutable.  Entry 7.
+Other:
+    int: q 5
+end: Other
+Data:
+    var:
+        Inner:
+            int: q 3
+        end: Inner
+    end: var
+end: Data
+Code:
+    Inner: Other
+    var:
+        Inner:
+            int: q 4
+        end: Inner
+    end: var
+end: Code
+@: held Code
+int: which 0
+fn: m () int
+    ---
+        call: held Data
+        node\which: Data\var\Inner\q
+        catch: interpreter ()
+            node\which: 30
+        catch: implements ()
+            node\which: 40
+        catch: call ()
+            node\which: 50
+        catch: convert ()
+            node\which: 60
+    ---
+    return: node\which
+end: m
+int: code 7
+int: r m()
+if: r != 5
+    code: 100 + r
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

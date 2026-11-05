@@ -1,0 +1,72 @@
+# Slice 283 probe: a written Structure through a path head: the definition stays where it is written and the line assigns a reference to the place, at the root, in a method, through a formal, in a named body.  Entry 7.
+Model:
+    int: a 1
+end: Model
+Box:
+    k:
+        int: a 1
+    end: k
+    @: r Model Model
+    Inner:
+        kid:
+            int: a 1
+        end: kid
+    end: Inner
+end: Box
+fn: in_method () int
+    Box\k: (int: a 20)
+    return: Box\k\a
+end: in_method
+fn: by_formal (@: h Box) int
+    h\k: (int: a 21)
+    return: h\k\a
+end: by_formal
+Named:
+    Box\k: (int: a 22)
+end: Named
+fn: two_fields () int
+    Box\k: (int: z 24; int: a 23)
+    return: Box\k\a
+end: two_fields
+fn: repeated () int
+    int: i 0
+    int: sum 0
+    while: i < 2
+        Box\k: (int: a 40)
+        sum: sum + Box\k\a
+        Box\k\a: 41
+        i: i + 1
+    ---
+    return: sum
+end: repeated
+int: code 7
+Box\k: (int: a 8)
+if: Box\k\a != 8
+    code: 11
+---
+Box\r: (int: a 9)
+if: code = 7 && Box\r\a != 9
+    code: 12
+---
+Box\Inner\kid: (int: a 10)
+if: code = 7 && Box\Inner\kid\a != 10
+    code: 13
+---
+if: code = 7 && in_method() != 20
+    code: 14
+---
+if: code = 7 && by_formal(Box) != 21
+    code: 15
+---
+call: Named
+if: code = 7 && Box\k\a != 22
+    code: 16
+---
+if: code = 7 && two_fields() != 23
+    code: 17
+---
+if: code = 7 && repeated() != 81
+    code: 18
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

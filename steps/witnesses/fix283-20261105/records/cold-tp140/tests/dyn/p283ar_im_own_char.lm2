@@ -1,0 +1,32 @@
+# Slice 283 probe: code over immutable data writes a char place by its bare name: a working cell with no value record?  Entry 7.
+Data:
+    char: x 'A'
+    var:
+        char: x 'a'
+    end: var
+end: Data
+WritesChar:
+    x: 66
+    var:
+        char: x 'c'
+    end: var
+end: WritesChar
+@: held_char WritesChar
+fn: write_char (@: d Data) int
+    ---
+        call: held_char d
+        return: 90
+        catch: interpreter ()
+            return: 1
+    ---
+end: write_char
+fn: m () int
+    d: immutable: merge(Data)
+    return: write_char(d)
+end: m
+int: code 7
+if: m() != 1
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

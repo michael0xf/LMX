@@ -1,0 +1,29 @@
+# Slice 283 probe: a write into an immutable value raised in a callee with no handler, taken by its caller; a method with the path write and nothing else on the channel.  Entry 7.
+Other:
+    int: q 5
+end: Other
+Holder:
+    int: n 1
+    Inner:
+        int: q 2
+    end: Inner
+end: Holder
+fn: write (@: h Holder) int
+    h\n: 9
+    return: 11
+end: write
+fn: caller (@: h Holder) int
+    ---
+        return: write(h)
+        catch: interpreter ()
+            if: h\n = 1
+                return: 7
+            return: 12
+    ---
+end: caller
+fn: m () int
+    b: immutable: merge(Holder)
+    return: caller(b)
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

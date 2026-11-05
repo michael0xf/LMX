@@ -1,0 +1,54 @@
+# Slice 283 probe: a free holder reads a field below the named parts `var` and `body` of a callable.  Entry 7.
+Callables:
+    fn: f () int (int: x 3)
+        int: z 5
+        return: x + z
+    end: f
+end: Callables
+int: Hc 0
+fn: read_var_x () int
+    return: Hc\f\var\x
+end: read_var_x
+fn: read_body_z () int
+    return: Hc\f\body\z
+end: read_body_z
+fn: through_var () int
+    @: Hc Callables Callables
+    ---
+        return: read_var_x()
+        catch: implements ()
+            return: 41
+    ---
+end: through_var
+fn: through_body () int
+    @: Hc Callables Callables
+    ---
+        return: read_body_z()
+        catch: implements ()
+            return: 42
+    ---
+end: through_body
+fn: typed_var () int
+    return: Callables\f\var\x
+end: typed_var
+fn: typed_z () int
+    return: Callables\f\z
+end: typed_z
+int: code 7
+int: got 0
+got: through_var()
+if: got != 3
+    code: got
+---
+got: through_body()
+if: code = 7 && got != 5
+    code: got
+---
+if: code = 7 && typed_var() != 3
+    code: 13
+---
+if: code = 7 && typed_z() != 5
+    code: 14
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

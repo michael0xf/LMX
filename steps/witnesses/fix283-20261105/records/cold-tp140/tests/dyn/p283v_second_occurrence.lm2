@@ -1,0 +1,38 @@
+# Slice 283 probe: the second source occurrence of a head below a callable reached through a free holder.  Entry 7.
+Callables:
+    fn: f () int
+        int: x 3
+        x: x + 1
+        return: x
+    end: f
+end: Callables
+int: Hc 0
+fn: read_first () int
+    return: Hc\f\[0]x
+end: read_first
+fn: read_second () int
+    ---
+        int: r Hc\f\[1]x
+        return: 21
+        catch: convert ()
+            return: 22
+        catch: interpreter ()
+            return: 23
+        catch: implements ()
+            return: 24
+    ---
+end: read_second
+fn: run () int
+    @: Hc Callables Callables
+    if: read_first() != 3
+        return: 11
+    ---
+    int: answer read_second()
+    if: answer = 21
+        return: 7
+    ---
+    return: answer
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

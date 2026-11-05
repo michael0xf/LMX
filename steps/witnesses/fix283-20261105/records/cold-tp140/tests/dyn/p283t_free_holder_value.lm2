@@ -1,0 +1,32 @@
+# Slice 283 probe: a callable place given a value read through a free holder's path, then called.  Entry 7.
+Other:
+    int: q 3
+end: Other
+Holds:
+    @: p Other Other
+end: Holds
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hw 0
+fn: write_free () int
+    @: Places\f Hw\p
+    ---
+        int: r Places\f()
+        return: 11
+        catch: call ()
+            return: 1
+    ---
+end: write_free
+fn: run () int
+    @: Hw Holds Holds
+    return: write_free()
+end: run
+int: code 7
+if: run() != 1
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

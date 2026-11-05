@@ -1,0 +1,26 @@
+# Slice 283 probe: a sub called through a callable place, the declared one and a rebound one, with the catch that names what stops it.  Entry 7.
+Callables:
+    sub: s ()
+        int: w 4
+        w: w + 1
+    end: s
+end: Callables
+sub: other_sub ()
+    int: pad 8
+    int: w 9
+    w: w + 1
+end: other_sub
+int: code 7
+---
+    Callables\s()
+    catch: interpreter ()
+        code: 21
+---
+@: Callables\s other_sub
+---
+    Callables\s()
+    catch: interpreter ()
+        code: 22
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

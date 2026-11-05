@@ -1,0 +1,25 @@
+# Slice 283 probe: an explicit var part and a typed path through it, then the rebinding.  Entry 7.
+Callables:
+    fn: f () int (int: x 3)
+        return: x
+    end: f
+end: Callables
+fn: replaced () int (int: y 9; int: x 7)
+    return: x
+end: replaced
+int: code 7
+if: Callables\f() != 3
+    code: 11
+---
+if: code = 7 && Callables\f\x != 3
+    code: 12
+---
+@: Callables\f replaced
+if: code = 7 && Callables\f() != 7
+    code: 13
+---
+if: code = 7 && Callables\f\x != 7
+    code: 14
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

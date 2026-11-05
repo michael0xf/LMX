@@ -1,0 +1,41 @@
+# Slice 283 probe: a typed path through a sub with two statements at one head, a sub rebound, writes through the path.  Entry 7.
+Callables:
+    sub: s ()
+        int: w 4
+        w: w + 1
+    end: s
+    fn: f () int
+        int: x 3
+        x: x + 1
+        return: x
+    end: f
+end: Callables
+sub: other ()
+    int: pad 8
+    int: w 9
+    w: w + 1
+end: other
+int: code 7
+if: Callables\s\w != 4
+    code: 11
+---
+if: code = 7 && Callables\f\x != 3
+    code: 13
+---
+@: Callables\s other
+if: code = 7 && Callables\s\w != 9
+    code: 14
+---
+Callables\f\x: 30
+if: code = 7 && Callables\f\x != 30
+    code: 15
+---
+Callables\s\w: 31
+if: code = 7 && Callables\s\w != 31
+    code: 16
+---
+if: code = 7 && other\w != 31
+    code: 17
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

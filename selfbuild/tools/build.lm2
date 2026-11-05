@@ -1201,7 +1201,7 @@ fn: decl_implements (@: f c.FILE) int
         return: 1
     if: c.fputs("    # admissions, never inferred from req/map. No map or Consumer proof transfers.\n    fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void\n    # Recover the declared Structure already registered as its own layout\n    # anchor. This is a lookup in the arena's proof records, not a name table\n    # or an additional graph; a replaced receiving field need not still hold\n    # its original requirement value.\n    fn: lmx_implements_model_for_layout (@: LmxArena arena; @: void layout) @: Lmx\n    # N4 `call: code data`: the data slots of one procedure's names in the selected data, from the translator's\n    # static table [m, k, then k rows (token index, m data slots)], the row chosen by the data's own layout token.\n    # YES (out, when not 0, gets the m slots), NO (the row marks a name SIZE_MAX: missing, ambiguous or unfit),\n", f) < 0
         return: 1
-    if: c.fputs("    # UNKNOWN (no proof: no token, no row, or a slot past the data).  m = 0 is YES.  No name is read and nothing is\n    # recorded.\n    fn: lmx_implements_receive_data_field (@: LmxArena arena; @: Lmx data; size_t: slot; @: Lmx value) int\n    fn: lmx_implements_receive_cell (@: LmxArena arena; @: void cell; @: void value) int\n    fn: lmx_implements_call_places_open (@: LmxArena arena; @: Lmx code; @: Lmx data; @: LmxCallPlaces scope; @: int answer) int\n    sub: lmx_implements_call_places_close (@: LmxArena arena; @: LmxCallPlaces scope)\n    fn: lmx_implements_places (@: LmxArena arena; @: Lmx data; @: char tokens; @: size_t table; @: size_t out) int\n    fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry\n    # 1 when a completed reception proved value identical, by position, with the declaration whose own\n    # layout token is `layout` (a record with neither frame nor map and no holes), else 0.  The\n    # declaration's own record certifies no other value; the value's layout stays unknown.  Read only.\n    fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) int\n    # Compose a completed value-to-source admission with a source-to-target\n    # correspondence. `applied` distinguishes absent source evidence (caller\n", f) < 0
+    if: c.fputs("    # UNKNOWN (no proof: no token, no row, or a slot past the data).  m = 0 is YES.  No name is read and nothing is\n    # recorded.\n    fn: lmx_implements_receive_data_field (@: LmxArena arena; @: Lmx data; size_t: slot; @: Lmx value) int\n    fn: lmx_implements_receive_cell (@: LmxArena arena; @: void cell; @: void value) int\n    fn: lmx_implements_call_places_open (@: LmxArena arena; @: Lmx code; @: Lmx data; @: LmxCallPlaces scope; @: int answer) int\n    sub: lmx_implements_call_places_close (@: LmxArena arena; @: LmxCallPlaces scope)\n    fn: lmx_implements_unary_admission (@: LmxArena arena; @: Lmx code) int\n    fn: lmx_implements_places (@: LmxArena arena; @: Lmx data; @: char tokens; @: size_t table; @: size_t out) int\n    fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry\n    # 1 when a completed reception proved value identical, by position, with the declaration whose own\n    # layout token is `layout` (a record with neither frame nor map and no holes), else 0.  The\n    # declaration's own record certifies no other value; the value's layout stays unknown.  Read only.\n    fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) int\n    # Compose a completed value-to-source admission with a source-to-target\n    # correspondence. `applied` distinguishes absent source evidence (caller\n", f) < 0
         return: 1
     if: c.fputs("    # may try another route) from a present but refused/ambiguous admission.\n    # Both ordinal and last-occurrence edges are composed; the resulting map\n    # is owned by the arena record, never by the caller's temporary frame.\n    # full_receiver < 0 composes retained numbers only; 0 prepares current\n    # correspondence without a Consumer; > 0 checks this receiving Consumer.\n    fn: lmx_implements_compose_receiving (@: LmxArena arena; @: Lmx value; @: void source_layout; @: Lmx req; @: LmxImplEntry pair; int: full_receiver; @: LmxImplUses uses; @: int applied; @: int out_answer) int\n    # Read-only coordinate preparation, with separate status/out_answer.\n    # refresh=1 is admission; refresh=0 composes numbers only. No proof is\n    # retained. Caller releases/transfers computed map and out_unknown mask.\n", f) < 0
         return: 1
@@ -2023,7 +2023,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: value_names char c.calloc(62U, sizeof(@: char))
     @@: source_names char c.calloc(14U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
-    @@: implements_names char c.calloc(67U, sizeof(@: char))
+    @@: implements_names char c.calloc(70U, sizeof(@: char))
     @@: copy_names char c.calloc(27U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(18U, sizeof(@: char))
@@ -2561,6 +2561,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     implements_names[64]: "lmx_implements_cell_model"
     implements_names[65]: "lmx_implements_head_slot"
     implements_names[66]: "lmx_implements_reach"
+    implements_names[67]: "lmx_implements_own_field"
+    implements_names[68]: "lmx_implements_own_head_slot"
+    implements_names[69]: "lmx_implements_unary_admission"
     list_names[0]: "lmx_list_len"
     list_names[1]: "lmx_list_cap"
     list_names[2]: "lmx_list_data"
@@ -2831,7 +2834,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 67, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 70, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 27, 0) != 0
         return: 1

@@ -1676,6 +1676,78 @@ fn: lm_compiler_path_steps_all (@: out c.L2Path) int
     return: (cast: (int) (0))
 end: lm_compiler_path_steps_all
 
+# The first step of a path read by name after steps typed by their declarations, or -1 (lm_compiler_path_walk_steps_from).  A runtime-typed root reads all of its names so and has no typed part.
+fn: lm_compiler_path_named_tail (const: (@: path c.L2Path)) int
+    int: k 0
+    int: typed 0
+    if: path = 0 || path\steps = 0
+        return: -1
+    while: k < path\n
+        @: step c.L2PathStep path\steps + k
+        if: step\locus = 8
+            if: typed = 0
+                return: -1
+            return: k
+        ---
+        if: step\locus != 7
+            typed: 1
+        k: k + 1
+    ---
+    return: -1
+end: lm_compiler_path_named_tail
+
+# The written selector of a named step, as the reached operation takes it (lmx_walk_value_field_place).  The first name after a callable field says it is one with `[]`.  The caller frees the text.
+fn: lm_compiler_path_selector_text (const: (@: path c.L2Path); int: k; @: out_size size_t) @: char
+    @: step c.L2PathStep 0
+    @: text char 0
+    size_t: mark 0U
+    if: path = 0 || k < 0 || k >= path\n || out_size = 0
+        return: 0
+    step: path\steps + k
+    if: k > 0 && lm_compiler_path_named_tail(path) = k
+        mark: 2U
+    ---
+    text: (cast: (@: char) c.malloc(step\len + mark + 1U))
+    if: text = 0
+        return: 0
+    if: mark != 0U
+        text[0]: 91
+        text[1]: 93
+    ---
+    c.memcpy((cast: (@: void) (text + mark)), (cast: (@: void) (path\text + step\off)), step\len)
+    text[step\len + mark]: 0
+    out_size[0]: step\len + mark
+    return: text
+end: lm_compiler_path_selector_text
+
+# The typed part of such a path, a view over its steps with no ownership: its last step, the callable field, is its leaf.
+fn: lm_compiler_path_typed_prefix (const: (@: path c.L2Path); int: n; @: out c.L2Path) int
+    @: step c.L2PathStep 0
+    int: k 0
+    int: indexed 0
+    if: path = 0 || out = 0 || n < 1 || n > path\n
+        return: 1
+    c.memcpy((cast: (@: void) out), (cast: (@: void) path), c.sizeof(c.L2Path))
+    while: k < n
+        step: path\steps + k
+        if: step\locus = 7
+            indexed: indexed + 1
+        k: k + 1
+    ---
+    step: path\steps + (n - 1)
+    out\n: n
+    out\names: n - indexed
+    out\indexed: indexed
+    out\owned: 0
+    out\leaf_kind: step\kind
+    out\leaf_mi: step\ent
+    out\leaf_ty: -1
+    out\leaf_model: -1
+    out\array_leaf: 0
+    out\leaf_level: 0
+    return: 0
+end: lm_compiler_path_typed_prefix
+
 fn: lm_compiler_path_rec_leaf_ft (const: (@: path c.L2Path)) int
     int: ft
     if: path = 0 || path\fail_why != 0

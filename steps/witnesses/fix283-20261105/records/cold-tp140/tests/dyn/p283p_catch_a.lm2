@@ -1,0 +1,20 @@
+# Slice 283 probe: the written path form inside a handler's block, at another field name.  Entry 7.
+Box:
+    k:
+        int: a 1
+    end: k
+end: Box
+fn: write () int
+    ---
+        Box\k: (int: a 8)
+        return: Box\k\a
+        catch: implements ()
+            return: 31
+    ---
+end: write
+int: code write()
+if: code = 8
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

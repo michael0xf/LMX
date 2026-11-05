@@ -1,0 +1,45 @@
+# Slice 283 probe: the same code over data that is not immutable: where does the catch parameter go?  Entry 7.
+fn: raises () int
+    throws: Bad
+    throw: Bad(5)
+    return: 0
+end: raises
+Data:
+    int: x 10
+    var:
+        int: x 0
+    end: var
+end: Data
+Takes:
+    ---
+        call: raises
+        catch: Bad (int: x)
+    ---
+    var:
+        int: x 2
+    end: var
+end: Takes
+@: held Takes
+int: which 0
+fn: m () int
+    ---
+        call: held Data
+        node\which: Data\x
+        catch: interpreter ()
+            node\which: 30
+        catch: implements ()
+            node\which: 40
+        catch: call ()
+            node\which: 50
+        catch: convert ()
+            node\which: 60
+    ---
+    return: node\which
+end: m
+int: code 7
+int: r m()
+if: r != 5
+    code: 100 + r
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

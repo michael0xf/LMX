@@ -3255,6 +3255,11 @@ fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
             next_schema: step\ent
         if: step\kind = 10
             next_schema: step\pointee
+            # A path that stops at the reference names its declared Structure as the leaf's model: a write or a received value is no read of all of it.
+            if: next_schema = -1 && i + 1 = path\n
+                next_schema: path\leaf_model
+            ---
+        ---
         if: next_schema = -1
             edge\whole: 1
             break

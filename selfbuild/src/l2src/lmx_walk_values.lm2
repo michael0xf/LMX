@@ -2208,6 +2208,14 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
     return: status
 end: lmx_walk_value_store_with_writer
 
+# The slot declares a model: a Structure field, or a reference field with a declared Structure (lmx_source_place_model_set).
+fn: lmx_walk_slot_declared (@: arena c.LmxArena; @: root c.Lmx; size_t: index) int
+    @: model c.Lmx 0
+    if: c.lmx_implements_cell_model(arena, c.lmx_graph_cell_in(arena, root, index), @ model) != c.LMX_WALK_OK
+        return: 0
+    return: (cast: (int) (model != 0))
+end: lmx_walk_slot_declared
+
 # Slice 272: the write of a field selected by name from a runtime-typed holder.  The book (L3, construction): a path with a tail
 # passes the value to the existing field after the ordinary admission.  A reference is admitted to the declared model of the
 # field's slot, as typed code does at its statement.  A field holding a Structure or an Array receives a value of the same kind
@@ -6488,7 +6496,7 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
             return: c.LMX_WALK_OK
         # A Structure written into a slot of an evaluated holder (PUT over OF) takes the slot's own store: its admission, its rebinding, and a typed null its one present cell, as the
         # native store's (NULL-PATH-WRITE-WALKED).  A fixed direct slot stays PUT_REF: PUT over AT is refused by the value store (steps/put-ref-186.md).
-        if: wholder != 0 && (by_name != 0 || (op = c.LMX_WALK_OP_PUT && (lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF || lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF_EDGE) && value_p\kind = c.LMX_WALK_VALUE_REFERENCE && c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX))
+        if: wholder != 0 && (by_name != 0 || (op = c.LMX_WALK_OP_PUT && (lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF || lmx_walk_node(f, write_target) = c.LMX_WALK_OP_OF_EDGE) && value_p\kind = c.LMX_WALK_VALUE_REFERENCE && (c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX || lmx_walk_slot_declared((cast: (@: c.LmxArena) f\arena), wholder, field_index) != 0)))
             status: lmx_walk_value_field_store((cast: (@: c.LmxArena) f\arena), wholder, field_index, @ place, @ value)
         else:
             status: lmx_walk_value_store((cast: (@: c.LmxArena) f\arena), @ place, @ value)

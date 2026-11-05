@@ -314,5 +314,14 @@ measurement, not a controlled comparison.
 Whole quick 1144.86 s: 20:13:46.5847167Z→20:32:51.4473608Z, both generations
 smoke 9/0. G2 focus 53/0, 762.53 s: 20:33:48.8514820Z→20:46:31.3809652Z.
 Source 203/1E5584C9; 248 artifact paths per generation, 245 raw-equal and 3 PE
-metadata-only. A place's requirement is one more use plan per reached named root with a static table per place; no new pass. The rise over boot141a's 847 s is the machine, not this code: the same 4 rows alternating on both G2 took 318.5, 322.0, 321.0 s on slice279's and 320.4, 319.4, 319.9 s on this one, and the frontend builds by one translator rose between fe142c and fe142d on unchanged steps and in gcc itself. The whole run is a pipeline measurement, the 4 rows a controlled comparison.
+metadata-only. A place's requirement is one more use plan per reached named root with a static table per place; no new pass. The same 4 rows alternating on both G2 took 318.5, 322.0, 321.0 s on slice279's and 320.4, 319.4, 319.9 s on this one, and the frontend builds by one translator rose between fe142c and fe142d on unchanged steps and in gcc itself. That shows no noticeable regression on those rows and supports the environment as an explanation of the rise over boot141a's 847 s; it does not by itself prove every component of the rise is environmental. The whole run is a pipeline measurement, the 4 rows a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix280-20261104/notes.md).
+
+## Slice281 / boot143a (Opus, 2026-11-04)
+
+Whole quick 1201.50 s: 23:08:27.8454090Z→23:28:29.3404490Z, both generations
+smoke 9/0. G2 focus 53/0, 786.62 s: 23:29:04.3064430Z→23:42:10.9247609Z.
+Source 203/9FA1F933; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A write of a declared reference field moved to the store a Structure field uses; no new pass. A whole-pipeline
+measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix281-20261104/notes.md).

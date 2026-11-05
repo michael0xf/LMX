@@ -1,0 +1,50 @@
+# A static write into a declared reference field: what it asks of the value, against the free path's.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+Holder:
+    @: p RefBox RefBox
+end: Holder
+OnlyQ:
+    int: q 5
+end: OnlyQ
+NoQ:
+    int: a 6
+end: NoQ
+fn: read_p () int
+    return: Holder\p\q
+end: read_p
+int: code 7
+int: static_only_q 0
+---
+    Holder\p: OnlyQ
+    static_only_q: 1
+    catch: implements ()
+        static_only_q: 2
+---
+int: static_no_q 0
+---
+    Holder\p: NoQ
+    static_no_q: 1
+    catch: implements ()
+        static_no_q: 2
+---
+@: free_holder Holder Holder
+int: free_only_q 0
+---
+    free_holder\p: OnlyQ
+    free_only_q: 1
+    catch: implements ()
+        free_only_q: 2
+---
+int: free_no_q 0
+---
+    free_holder\p: NoQ
+    free_no_q: 1
+    catch: implements ()
+        free_no_q: 2
+---
+code: static_only_q + 3 * static_no_q + 9 * free_only_q + 27 * free_no_q + 100 * (read_p() - 5)
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

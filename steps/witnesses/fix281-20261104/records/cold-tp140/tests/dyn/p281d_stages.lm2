@@ -1,0 +1,141 @@
+# Slice 281 probe: each stage of a declared reference field, each under its own catch.  Entry 7.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+RefHolder:
+    @: p RefBox RefBox
+end: RefHolder
+RefOnlyQ:
+    int: q 5
+end: RefOnlyQ
+RefOtherQ:
+    int: q 6
+end: RefOtherQ
+RefNoQ:
+    int: a 7
+end: RefNoQ
+fn: read_ref_q () int
+    return: RefHolder\p\q
+end: read_ref_q
+fn: ref_local_put () int
+    @: ref_local RefHolder RefHolder
+    ref_local\p: RefOtherQ
+    return: read_ref_q()
+end: ref_local_put
+fn: ref_local_refused () int
+    @: ref_local RefHolder RefHolder
+    ---
+        ref_local\p: RefNoQ
+        return: 99
+        catch: implements ()
+            return: read_ref_q()
+    ---
+end: ref_local_refused
+fn: ref_formal_refused (@: h RefHolder) int
+    ---
+        h\p: RefNoQ
+        return: 99
+        catch: implements ()
+            return: read_ref_q()
+    ---
+end: ref_formal_refused
+fn: ref_null_read () int
+    ---
+        return: RefHolder\p\q
+        catch: interpreter ()
+            return: 55
+    ---
+end: ref_null_read
+int: code 7
+---
+    RefHolder\p: RefOnlyQ
+    if: read_ref_q() != 5
+        code: 113
+    ---
+    catch: implements ()
+        code: 201
+    catch: interpreter ()
+        code: 202
+---
+if: code = 7
+    int: ref_refused 0
+    ---
+        RefHolder\p: RefNoQ
+        catch: implements ()
+            ref_refused: 1
+    ---
+    if: ref_refused != 1
+        code: 114
+    ---
+---
+if: code = 7
+    ---
+        if: read_ref_q() != 5
+            code: 214
+        ---
+        catch: implements ()
+            code: 215
+        catch: interpreter ()
+            code: 216
+    ---
+---
+if: code = 7
+    ---
+        if: ref_local_put() != 6
+            code: 115
+        ---
+        catch: implements ()
+            code: 217
+        catch: interpreter ()
+            code: 218
+    ---
+---
+if: code = 7
+    ---
+        if: ref_local_refused() != 6
+            code: 116
+        ---
+        catch: implements ()
+            code: 219
+        catch: interpreter ()
+            code: 220
+    ---
+---
+if: code = 7
+    ---
+        if: ref_formal_refused(RefHolder) != 6
+            code: 117
+        ---
+        catch: implements ()
+            code: 221
+        catch: interpreter ()
+            code: 222
+    ---
+---
+if: code = 7
+    ---
+        RefHolder\p: 0
+        catch: implements ()
+            code: 223
+        catch: interpreter ()
+            code: 224
+        catch: convert ()
+            code: 225
+    ---
+---
+if: code = 7 && ref_null_read() != 55
+    code: 118
+---
+if: code = 7
+    ---
+        RefHolder\p: RefOnlyQ
+        if: read_ref_q() != 5
+            code: 119
+        ---
+        catch: implements ()
+            code: 226
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,28 @@
+set pagination off
+set confirm off
+set print frame-arguments none
+python
+import gdb
+class F(gdb.FinishBreakpoint):
+    def __init__(self, name):
+        super().__init__(gdb.newest_frame(), internal=True)
+        self.who = name
+    def stop(self):
+        v = int(gdb.parse_and_eval('(int)$rax'))
+        if v != 0:
+            print(self.who, 'returned', v)
+            gdb.execute('bt 6')
+        return False
+    def out_of_scope(self):
+        pass
+class B(gdb.Breakpoint):
+    def stop(self):
+        try:
+            F(self.location)
+        except Exception as e:
+            print('no finish', self.location, e)
+        return False
+for n in ['lmx_implements_admit_receiving_frame', 'lmx_implements_admit_receiving_parts', 'lmx_implements_admit_receiving', 'lmx_walk_value_admit', 'lmx_implements_receive_cell', 'lmx_implements_reach', 'lmx_implements_admit_receiving_templates']:
+    B(n)
+end
+run

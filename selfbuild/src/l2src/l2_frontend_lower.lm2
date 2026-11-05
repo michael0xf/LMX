@@ -6531,6 +6531,8 @@ fn: lm_compiler_emit_path_cursor_slot (const: (@: path c.L2Path); int: mi; const
                     return: (cast: (int) (1))
                 if: c.fprintf(out_cell[0], "%sLmxWalkPlace: %s\n%s%s.address: l2_pxp[0]\n%s%s.storage: l2_pxp[0]\n%s%s.type: %s\n%s%s.descriptor: 0\n%s%s.context: lmx_pointer_cell_context(l2_program_arena, l2_pxp[0])\n", ind, child_model_name, ind, child_model_name, ind, child_model_name, ind, child_model_name, pty, ind, child_model_name, ind, child_model_name) < 0
                     return: (cast: (int) (1))
+                if: leaf_slot != 0 && c.lm_compiler_tx_set(leaf_slot, sl) != 0
+                    return: 1
                 ---
         ---
         i: i + 1
@@ -6866,6 +6868,21 @@ fn: lm_compiler_emit_actual_path_store (const: (@: path c.L2Path); const: (@: st
         return: 1
     return: lm_compiler_emit_received_place_store_field(mi, "l2_call_arena", (cast: (@: char) place\data), field, ind, (cast: (@: char) record\data), 0, 0)
 end: lm_compiler_emit_actual_path_store
+
+# A declared reference field takes a Structure by its slot's own store, as a field holding a Structure does: the admission by what the place's known Consumers read
+# (lmx_implements_receive_cell; REFERENCE-FIELD-STATIC-WRITE) and the slot's one rebinding, which keeps the field's cell.  A received letter is admitted through its payload: the
+# model is what selects the payload (lm_compiler_emit_reference_receive_span_full), so it stays on that route.  A machine function has no status channel to refuse with.
+fn: lm_compiler_path_write_by_slot (const: (@: path c.L2Path); const: (@: stmt c.LmP0Node); int: mi) int
+    int: count 0
+    if: path = 0 || path\n < 1 || path\leaf_kind != 10 || path\leaf_model < 0 || c.lm_compiler_m_machine(mi) != 0
+        return: 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: 0
+    count: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
+    if: count < 1 || c.lm_compiler_is_letter_value(mi, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), count) != 0
+        return: 0
+    return: 1
+end: lm_compiler_path_write_by_slot
 
 # A Structure written through a path (the book, "Композиция места и значения"; the author 2026-11-03): the slot of the holder the path reaches, by the store a
 # field of a free value has (lmx_walk_value_field_store): the admission to the slot's model, its one rebinding, the native words of an actual code write.  The
@@ -18454,7 +18471,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
                 need_cut: 1
                 continue
-            if: l2_ppath\n > 0 && (l2_ppath\leaf_kind = 2 || l2_ppath\leaf_kind = 3)
+            if: l2_ppath\n > 0 && (l2_ppath\leaf_kind = 2 || l2_ppath\leaf_kind = 3 || lm_compiler_path_write_by_slot(l2_ppath, stmt, mi) != 0)
                 pret: lm_compiler_emit_structure_path_store(l2_ppath, stmt, mi, ind)
                 c.lm_compiler_path_release(l2_ppath)
                 if: pret != 0

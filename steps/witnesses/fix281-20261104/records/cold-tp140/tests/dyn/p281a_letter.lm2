@@ -1,0 +1,22 @@
+# Slice 281 probe: a received letter written into a declared reference field keeps the route of its payload.  The root's own inbox is empty here.  Entry 7.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+RefHolder:
+    @: p RefBox RefBox
+end: RefHolder
+receiveMessage: m RefBox
+int: code 7
+---
+    RefHolder\p: m
+    code: 21
+    catch: interpreter ()
+        code: 22
+    catch: implements ()
+        code: 23
+    catch: convert ()
+        code: 24
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

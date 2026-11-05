@@ -1,0 +1,101 @@
+# Slice 281 probe: a typed local over a holder whose reference field holds a narrower Structure, by what the local does with the field.  Entry 7.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+RefHolder:
+    @: p RefBox RefBox
+end: RefHolder
+All:
+    int: q 4
+    int: a 5
+end: All
+OnlyQ:
+    int: q 6
+end: OnlyQ
+Other:
+    int: q 8
+end: Other
+int: free_val 0
+fn: put_free () int
+    free_val\p: OnlyQ
+    return: 0
+end: put_free
+fn: narrow () int
+    @: free_val RefHolder RefHolder
+    return: put_free()
+end: narrow
+fn: read_q () int
+    return: RefHolder\p\q
+end: read_q
+fn: v_none () int
+    @: l_none RefHolder RefHolder
+    return: read_q()
+end: v_none
+fn: v_read () int
+    @: l_read RefHolder RefHolder
+    return: l_read\p\q
+end: v_read
+fn: v_field () int
+    @: l_field RefHolder RefHolder
+    @: l_held RefBox l_field\p
+    return: l_held\q
+end: v_field
+fn: v_write_all () int
+    @: l_all RefHolder RefHolder
+    l_all\p: All
+    return: read_q()
+end: v_write_all
+fn: v_write_other () int
+    @: l_other RefHolder RefHolder
+    l_other\p: Other
+    return: read_q()
+end: v_write_other
+fn: guard (int: which) int
+    ---
+        if: which = 1
+            return: v_none()
+        ---
+        if: which = 2
+            return: v_read()
+        ---
+        if: which = 3
+            return: v_field()
+        ---
+        if: which = 4
+            return: v_write_all()
+        ---
+        return: v_write_other()
+        catch: implements ()
+            return: 100 + which
+    ---
+end: guard
+int: code 0
+int: step narrow()
+int: r guard(1)
+if: r != 6
+    code: code + 1
+---
+r: guard(2)
+if: r != 6
+    code: code + 2
+---
+r: guard(3)
+if: r != 6
+    code: code + 4
+---
+step: narrow()
+r: guard(4)
+if: r != 4
+    code: code + 8
+---
+step: narrow()
+r: guard(5)
+if: r != 8
+    code: code + 16
+---
+if: code = 0
+    code: 7
+---
+sendMessage: exit(exit_code: code + 64; stdout: ""; stderr: "")
+return

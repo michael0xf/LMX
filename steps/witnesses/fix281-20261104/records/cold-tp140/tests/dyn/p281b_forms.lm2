@@ -1,0 +1,77 @@
+# Slice 281 probe: the other forms of a value written into a declared reference field, through a static path.  Entry 7.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+RefHolder:
+    @: p RefBox RefBox
+end: RefHolder
+Nested:
+    in:
+        @: p RefBox RefBox
+    end: in
+end: Nested
+OnlyQ:
+    int: q 5
+end: OnlyQ
+fn: make () @: OnlyQ
+    return: OnlyQ
+end: make
+int: free_val 0
+fn: free_value () int
+    RefHolder\p: free_val
+    return: RefHolder\p\q
+end: free_value
+fn: run_free () int
+    @: free_val OnlyQ OnlyQ
+    return: free_value()
+end: run_free
+int: free_num 0
+fn: free_number () int
+    ---
+        RefHolder\p: free_num
+        return: 99
+        catch: convert ()
+            return: 7
+    ---
+end: free_number
+fn: run_number () int
+    int: free_num 3
+    return: free_number()
+end: run_number
+fn: read_nested () int
+    return: Nested\in\p\q
+end: read_nested
+int: code 7
+# the result of a call
+if: code = 7
+    RefHolder\p: make()
+    if: RefHolder\p\q != 5
+        code: 12
+    ---
+---
+# a typed local
+if: code = 7
+    @: local_value OnlyQ OnlyQ
+    RefHolder\p: local_value
+    if: RefHolder\p\q != 5
+        code: 13
+    ---
+---
+# a free value
+if: code = 7 && run_free() != 5
+    code: 14
+---
+# a number where a reference is asked at run time: the implicit convert
+if: code = 7 && run_number() != 7
+    code: 15
+---
+# a nested holder
+if: code = 7
+    Nested\in\p: OnlyQ
+    if: read_nested() != 5
+        code: 16
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

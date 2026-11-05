@@ -1,0 +1,40 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # A declared reference field is written by the model's route again (native and walker).
+    'byslot': ('l2_frontend_lower.lm2', r'''    if: path = 0 || path\n < 1 || path\leaf_kind != 10 || path\leaf_model < 0 || c.lm_compiler_m_machine(mi) != 0
+''', r'''    if: path != 0 || path = 0
+'''),
+    # Only native stops asking the model: the walker keeps its whole admission.
+    'rwmodel': ('l2_frontend_emit.lm2', r'''    if: c.lm_compiler_path_write_by_slot(resolved, stmt, rw_mi_cell[0]) != 0
+        model: -1
+    ---
+''', r'''    if: c.lm_compiler_path_write_by_slot(resolved, stmt, rw_mi_cell[0]) != 0 && rw_mi_cell[0] < -9
+        model: -1
+    ---
+'''),
+    # A path stopping at a reference asks all of its Structure again.
+    'leafmodel': ('l2_frontend_useplan.lm2', r'''            if: next_schema = -1 && i + 1 = path\n
+                next_schema: path\leaf_model
+            ---
+''', r'''            if: next_schema = -1 && i + 1 = path\n && i < -9
+                next_schema: path\leaf_model
+            ---
+'''),
+    # A letter loses the route of its payload.
+    'letter': ('l2_frontend_lower.lm2', r'''    if: count < 1 || c.lm_compiler_is_letter_value(mi, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), count) != 0
+''', r'''    if: count < 1
+'''),
+    # The walked PUT over a reference field stores with no admission (kernel).
+    'kerneldeclared': ('lmx_walk_values.lm2', r'''(c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX || lmx_walk_slot_declared((cast: (@: c.LmxArena) f\arena), wholder, field_index) != 0)''',
+                       r'''(c.lmx_type_base((cast: (int) place_p\type)) = c.LMX_TYPE_LMX || (field_index > 999999U && lmx_walk_slot_declared((cast: (@: c.LmxArena) f\arena), wholder, field_index) != 0))'''),
+}
+name, old, new = TABLE[which]
+with open(R + name, 'rb') as f:
+    t = f.read().decode('utf-8')
+assert t.count(old) == 1, (which, t.count(old))
+t = t.replace(old, new)
+with open(R + name, 'wb') as f:
+    f.write(t.encode('utf-8'))
+print('mutated', which, name)

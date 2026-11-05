@@ -1,0 +1,37 @@
+set pagination off
+set confirm off
+set print frame-arguments none
+python
+import gdb
+class F(gdb.FinishBreakpoint):
+    def __init__(self, k, out):
+        super().__init__(gdb.newest_frame(), internal=True)
+        self.k = k
+        self.out = out
+    def stop(self):
+        v = int.from_bytes(bytes(gdb.selected_inferior().read_memory(self.out, 8)), 'little')
+        print('use_cell', self.k, '=', v)
+        return False
+    def out_of_scope(self):
+        pass
+class B(gdb.Breakpoint):
+    def stop(self):
+        F(int(gdb.parse_and_eval('(long long)$r8')), int(gdb.parse_and_eval('(long long)$r9')))
+        return False
+B('lmx_implements_use_cell')
+class G(gdb.FinishBreakpoint):
+    def __init__(self):
+        super().__init__(gdb.newest_frame(), internal=True)
+    def stop(self):
+        print('admit returned', int(gdb.parse_and_eval('(int)$rax')))
+        return False
+    def out_of_scope(self):
+        pass
+class Obs(gdb.Breakpoint):
+    def stop(self):
+        print('ADMIT ENTER')
+        G()
+        return False
+Obs('lmx_walk_value_admit')
+end
+run

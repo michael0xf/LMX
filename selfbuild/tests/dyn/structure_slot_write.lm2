@@ -273,6 +273,61 @@ fn: copy_read_q () int
             return: 77
     ---
 end: copy_read_q
+# 113-119: a declared reference field receives as any slot does, by what the known Consumers of the place read (REFERENCE-FIELD-STATIC-WRITE): through the root, a typed local and a
+# formal.  A field nobody reads is not asked; a field something reads refuses at the write and the old value stays.  A typed null is a present value of the place.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+RefHolder:
+    @: p RefBox RefBox
+end: RefHolder
+RefOnlyQ:
+    int: q 5
+end: RefOnlyQ
+RefOtherQ:
+    int: q 6
+end: RefOtherQ
+RefNoQ:
+    int: a 7
+end: RefNoQ
+fn: read_ref_q () int
+    return: RefHolder\p\q
+end: read_ref_q
+fn: ref_local_put () int
+    @: ref_local RefHolder RefHolder
+    ref_local\p: RefOtherQ
+    return: read_ref_q()
+end: ref_local_put
+fn: ref_local_refused () int
+    @: ref_local RefHolder RefHolder
+    ---
+        ref_local\p: RefNoQ
+        return: 99
+        catch: implements ()
+            return: read_ref_q()
+    ---
+end: ref_local_refused
+fn: ref_formal_refused (@: h RefHolder) int
+    ---
+        h\p: RefNoQ
+        return: 99
+        catch: implements ()
+            return: read_ref_q()
+    ---
+end: ref_formal_refused
+fn: ref_local_held () int
+    @: ref_holder RefHolder RefHolder
+    @: ref_held RefBox ref_holder\p
+    return: ref_held\q
+end: ref_local_held
+fn: ref_null_read () int
+    ---
+        return: RefHolder\p\q
+        catch: interpreter ()
+            return: 55
+    ---
+end: ref_null_read
 fn: local_rebound () int
     T:
         int: y 3
@@ -508,6 +563,45 @@ if: code = 7
     DeepRead\k: InnerHasQ
     if: code = 7 && deep_read() != 5
         code: 112
+    ---
+---
+if: code = 7
+    RefHolder\p: RefOnlyQ
+    if: read_ref_q() != 5
+        code: 113
+    ---
+---
+if: code = 7
+    int: ref_refused 0
+    ---
+        RefHolder\p: RefNoQ
+        catch: implements ()
+            ref_refused: 1
+    ---
+    if: ref_refused != 1 || read_ref_q() != 5
+        code: 114
+    ---
+---
+if: code = 7 && ref_local_put() != 6
+    code: 115
+---
+if: code = 7 && ref_local_refused() != 6
+    code: 116
+---
+if: code = 7 && ref_formal_refused(RefHolder) != 6
+    code: 117
+---
+if: code = 7 && ref_local_held() != 6
+    code: 119
+---
+if: code = 7
+    RefHolder\p: 0
+    if: ref_null_read() != 55
+        code: 118
+    ---
+    RefHolder\p: RefOnlyQ
+    if: code = 7 && read_ref_q() != 5
+        code: 118
     ---
 ---
 sendMessage: exit(exit_code: code; stdout: ""; stderr: "")

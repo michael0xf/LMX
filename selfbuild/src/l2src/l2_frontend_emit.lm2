@@ -7605,6 +7605,7 @@ end: lm_compiler_rw_path_read
 # Original: l2src/l2trans.lm1:25822
 fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0Field; int: n; int: into; @: out int; const: (@: resolved c.L2Path)) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     c.L2FrontendScratchInt42: path_own_storage
     @: path_own int (cast: (@: int) path_own_storage\buffer)
     @: path int c.lm_compiler_rw_records_room((cast: (int) (resolved\n)), path_own, 42)
@@ -7651,6 +7652,10 @@ fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0F
         return: (cast: (int) (1))
     if: lm_compiler_rw_path_value_full(path, resolved, 0, path[2], (cast: (int) (\out)), @ h) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 1, h) != 0
         return: (cast: (int) (1))
+    # A declared reference field takes a Structure by the slot's own store, as native does.
+    if: c.lm_compiler_path_write_by_slot(resolved, stmt, rw_mi_cell[0]) != 0
+        model: -1
+    ---
     if: lm_compiler_rw_reference_receive_at(value, n, path[3], model, -1, (cast: (int) (\out)), -1, @ v, resolved) != 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 2, v)))

@@ -1,0 +1,63 @@
+# Slice 281 probe: a typed local over a value of its model whose field holds a narrower Structure.  Nothing reads the field the value lacks.  Entry 7.
+Alt:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: Alt
+HasQ:
+    int: q 3
+end: HasQ
+OtherQ:
+    int: q 4
+end: OtherQ
+fn: read_q () int
+    return: Alt\k\q
+end: read_q
+fn: local_write () int
+    @: alt_local Alt Alt
+    alt_local\k: OtherQ
+    return: read_q()
+end: local_write
+fn: local_read () int
+    @: alt_read Alt Alt
+    return: alt_read\k\q
+end: local_read
+fn: local_none () int
+    @: alt_none Alt Alt
+    return: read_q()
+end: local_none
+int: code 7
+Alt\k: HasQ
+if: read_q() != 3
+    code: 11
+---
+if: code = 7
+    ---
+        if: local_none() != 3
+            code: 12
+        ---
+        catch: implements ()
+            code: 13
+    ---
+---
+if: code = 7
+    ---
+        if: local_read() != 3
+            code: 14
+        ---
+        catch: implements ()
+            code: 15
+    ---
+---
+if: code = 7
+    ---
+        if: local_write() != 4
+            code: 16
+        ---
+        catch: implements ()
+            code: 17
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

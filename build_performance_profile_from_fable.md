@@ -325,3 +325,12 @@ Source 203/9FA1F933; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. A write of a declared reference field moved to the store a Structure field uses; no new pass. A whole-pipeline
 measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix281-20261104/notes.md).
+
+## Slice282 / boot144b (Opus, 2026-11-05)
+
+Whole quick 1178.29 s: 04:34:42.1669525Z→04:54:20.4543469Z, both generations
+smoke 9/0. G2 focus 58/0, 807.90 s: 04:54:43.0470032Z→05:08:10.9513113Z.
+Source 208/2370E8F5; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. The frontend gained one linear syntactic pass over the bodies at the start of a translation; its cost was not measured apart. A whole-pipeline
+measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix282-20261105/notes.md).

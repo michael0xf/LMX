@@ -1,0 +1,26 @@
+# Slice 282 probe, control for p282v: a named method reference given a Structure, then called.  Exit 7 refused by implements, 8 by interpreter, 9 by the write, 12 not refused.
+Other:
+    int: q 3
+end: Other
+fn: two () int
+    return: 2
+end: two
+fn: run () int
+    @: ptr two
+    ---
+        @: ptr Other
+        catch: implements ()
+            return: 9
+    ---
+    ---
+        int: r ptr()
+        return: 12
+        catch: implements ()
+            return: 7
+        catch: interpreter ()
+            return: 8
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

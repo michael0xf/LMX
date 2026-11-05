@@ -706,6 +706,9 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     cur_unit_cell[0]: unit
     if: unit\trailer != 0
         return: (cast: (int) (c.lm_compiler_error(path, 0, "unsupported trailer")))
+    # The forms that say what they are by their shape, here, past the reset of this translation's memory and before anything is read for its meaning.
+    if: c.lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) unit), path, 1) != 0
+        return: 1
     # Establish the common C/predef vocabulary from actual source units,
     # once each, before any source's method declarations are classified.
     if: lm_compiler_source_directives(unit, path, 1) != 0
@@ -714,6 +717,9 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     while: i < part_n_cell[0]
         part_root: c.lm_p0_document_root((cast: (const: @: c.LmP0Document) part_doc_cell[0][i]))
         if: part_root != 0 && part_root\kind = c.LM_P0_NODE_STRUCTURE && part_root\as != 0
+            if: c.lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) part_root\as\structure), part_path_cell[0][i], 1) != 0
+                return: 1
+            ---
             if: lm_compiler_source_directives((cast: (const: @: c.LmP0Structure) part_root\as\structure), part_path_cell[0][i], 0) != 0
                 return: 1
             ---
@@ -4987,6 +4993,9 @@ fn: lm_compiler_check_path_write (const: (@: stmt c.LmP0Node); int: mi; const: (
     int: saved_cur
     int: indexed_status lm_compiler_check_indexed_write(stmt, mi, path)
     @: only c.LmP0Field
+    @: value_first c.LmP0Field 0
+    @: asserted c.L2TypeContract 0
+    int: asserted_ty 0
     const: (@: h c.LmP0Text)
     if: indexed_status != 2
         return: (cast: (int) (indexed_status))
@@ -5048,18 +5057,44 @@ fn: lm_compiler_check_path_write (const: (@: stmt c.LmP0Node); int: mi; const: (
     if: kind = 2 || kind = 3 || kind = 10 || kind = 11
         c.lm_compiler_use_written(stmt, mi)
     ---
+    c.lm_compiler_place_write_value(stmt, @ value_first, @ n, @ asserted)
+    if: asserted != 0
+        if: c.lm_compiler_contract_formal(asserted, @ asserted_ty) != 0
+            c.lm_compiler_path_release(hresolved)
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "unknown type")))
+        ---
+        if: lm_compiler_check_receiving_value(stmt, value_first, n, asserted_ty, (cast: (int) c.lm_compiler_contract_model(asserted, 0)), 0, mi, path) != 0
+            c.lm_compiler_path_release(hresolved)
+            return: 1
+        ---
+    ---
     if: kind = 10 || kind = 11
-        hstatus: lm_compiler_check_receiving_value_at(stmt, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, leaf_mi, model, h, mi, path, hresolved)
+        hstatus: lm_compiler_check_receiving_value_at(stmt, value_first, n, leaf_mi, model, h, mi, path, hresolved)
         c.lm_compiler_path_release(hresolved)
         return: (cast: (int) (hstatus))
-    if: kind = 2 || kind = 3
-        hstatus: lm_compiler_check_receiving_value_at(stmt, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, (cast: (int) c.lm_compiler_graph_ft()), model, h, mi, path, hresolved)
+    # A callable place through a path takes what a named method reference takes (lm_compiler_check_reference_init).
+    if: kind = 4
+        int: method_candidate c.lm_compiler_method_candidate_for(mi, leaf_mi, value_first, n)
+        if: method_candidate = -2
+            c.lm_compiler_path_release(hresolved)
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "method pointer assignment has incompatible signature")))
+        ---
+        if: method_candidate < 0 && c.lm_compiler_method_source_guard_for(stmt, mi, path, leaf_mi, value_first, n) != 0
+            c.lm_compiler_path_release(hresolved)
+            return: 1
+        ---
+    ---
+    if: kind = 2 || kind = 3 || kind = 4
+        hstatus: lm_compiler_check_receiving_value_at(stmt, value_first, n, (cast: (int) c.lm_compiler_graph_ft()), model, h, mi, path, hresolved)
         c.lm_compiler_path_release(hresolved)
         return: (cast: (int) (hstatus))
     c.lm_compiler_path_release(hresolved)
     to_ft: c.lm_compiler_path_kind_ft(kind)
     if: to_ft < 0
         return: (cast: (int) (0))
+    # `@: place value` is the reference form: a number field is no reference place, as `@: n 5` over `int: n` is none.
+    if: c.lm_compiler_place_write_node(stmt) != 0
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "a number field is no reference place")))
     if: n = 1
         only: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
         if: only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && only\value\as != 0 && c.lm_compiler_check_literal_kind((cast: (const: @: c.LmP0Text) (only\value\as\atom)), c.lm_compiler_lit_kind_from_ft(to_ft), path, stmt) != 0
@@ -7614,16 +7649,24 @@ fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0F
     int: kind
     int: leaf_kind
     int: model -1
+    int: asserted_model -1
+    @: asserted c.L2TypeContract 0
     if: path = 0 || c.lm_compiler_rw_path_records(stmt, resolved, 1, 1, (cast: (int) (resolved\n)), path) != 0
         return: (cast: (int) (1))
     leaf_kind: resolved\leaf_kind
     model: resolved\leaf_model
+    if: c.lm_compiler_place_write_node(stmt) != 0
+        c.lm_compiler_place_write_value(stmt, @ value, @ n, @ asserted)
+        if: asserted != 0
+            asserted_model: c.lm_compiler_contract_model(asserted, 0)
+        ---
+    ---
     if: path[3] < 0
         kind: path[7 + 6 * (path[2] - 1)]
         # A physical own-row coordinate does not replace its value category.
         if: kind = 16 && c.lm_compiler_own_is_slot(path[6 + 6 * (path[2] - 1)]) != 0 && c.lm_compiler_own_schema(path[6 + 6 * (path[2] - 1)]) != -1
             kind: 2
-        if: kind != 2 && kind != 3 && leaf_kind != 2 && leaf_kind != 3
+        if: kind != 2 && kind != 3 && leaf_kind != 2 && leaf_kind != 3 && leaf_kind != 4
             return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a field path")))
         # A Structure written through a path: PUT over the leaf's place, the slot's own store (the native lm_compiler_emit_structure_path_store).
         if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_PUT", 3, out) != 0
@@ -7636,7 +7679,7 @@ fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0F
             ---
         else:
             # The store is the slot's: it admits the value by what the place's known Consumers use (lmx_implements_receive_cell), as the native store does.
-            if: lm_compiler_rw_reference_receive_at(value, n, (cast: (int) (c.lm_compiler_graph_own())), -1, -1, (cast: (int) (\out)), -1, @ v, 0) != 0
+            if: lm_compiler_rw_reference_receive_at(value, n, (cast: (int) (c.lm_compiler_graph_own())), -1, asserted_model, (cast: (int) (\out)), -1, @ v, 0) != 0
                 return: (cast: (int) (1))
             ---
         ---
@@ -7656,7 +7699,11 @@ fn: lm_compiler_rw_path_write_rec (const: (@: stmt c.LmP0Node); @: value c.LmP0F
     if: c.lm_compiler_path_write_by_slot(resolved, stmt, rw_mi_cell[0]) != 0
         model: -1
     ---
-    if: lm_compiler_rw_reference_receive_at(value, n, path[3], model, -1, (cast: (int) (\out)), -1, @ v, resolved) != 0
+    if: asserted_model >= 0 && c.lm_compiler_own_is_pointer(path[3]) = 0
+        path[3]: c.lm_compiler_graph_own()
+        model: -1
+    ---
+    if: lm_compiler_rw_reference_receive_at(value, n, path[3], model, asserted_model, (cast: (int) (\out)), -1, @ v, resolved) != 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_rw_put((cast: (int) (\out)), 2, v)))
 end: lm_compiler_rw_path_write_rec
@@ -12435,7 +12482,10 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     # A call statement.
-    idx: c.lm_compiler_call_head_method(rw_mi_cell[0], h, @ formal)
+    idx: -1
+    if: c.lm_compiler_place_write_node(stmt) = 0
+        idx: c.lm_compiler_call_head_method(rw_mi_cell[0], h, @ formal)
+    ---
     if: idx >= 0 && idx != e_cell[0]
         if: lm_compiler_rw_call(stmt, idx, formal, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), into, @ port_local_node) != 0
             return: (cast: (int) (1))

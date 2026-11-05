@@ -1,0 +1,24 @@
+# Slice 282 probe: a reference place with no requirement, given a Structure by a later write; its fields read by name.  Entry 7.
+Inner:
+    int: w 6
+end: Inner
+Outer:
+    Model:
+        int: v 4
+    end: Model
+    @: r Inner Inner
+end: Outer
+int: code 7
+@: seen 0
+seen: Outer\Model
+if: seen\v != 4
+    code: 11
+---
+if: code = 7
+    seen: Outer\r
+    if: seen\w != 6
+        code: 12
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,22 @@
+# Slice 282 probe: `got: var\i` with no `got` in the code: by the book :353 the head defines a Structure of the code, and the data's number does not change that.  The data's number field is no place of that Structure, so the call is refused before the body runs.  Entry 7.
+Code:
+    got: var\i
+end: Code
+Data:
+    int: i 5
+    int: got 0
+end: Data
+fn: run () int
+    ---
+        call: Code Data
+        return: 11
+        catch: call ()
+            return: 7
+    ---
+end: run
+int: code run()
+if: code = 7 && Data\got != 0
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

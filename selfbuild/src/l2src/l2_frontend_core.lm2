@@ -2416,7 +2416,7 @@ fn: lm_compiler_bind_node_content (const: (@: n c.LmP0Node); int: mi; const: (@:
         return: (cast: (int) (0))
     if: c.lm_compiler_frame_head(n, "fn") != 0 || c.lm_compiler_frame_head(n, "sub") != 0
         return: (cast: (int) (0))
-    if: n\as\frame\head != 0 && n\as\frame\body != 0
+    if: n\as\frame\head != 0 && n\as\frame\body != 0 && c.lm_compiler_place_write_node(n) = 0
         idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (n\as\frame\head)), @ fi)
         if: idx >= 0 && idx != e_cell[0] && lm_compiler_bind_call(n, idx, 0 - 1, path) != 0
             return: (cast: (int) (1))
@@ -3624,8 +3624,11 @@ end: lm_compiler_check_reference_receiving_at
 
 # Original: l2src/l2trans.lm1:6735
 fn: lm_compiler_method_pointer_source_guard (const: (@: stmt c.LmP0Node); int: mi; const: (@: path char); int: target_own; @: first c.LmP0Field; int: n) int
+    return: lm_compiler_method_source_guard_for(stmt, mi, path, (cast: (int) c.lm_compiler_own_method_requirement(target_own)), first, n)
+end: lm_compiler_method_pointer_source_guard
+
+fn: lm_compiler_method_source_guard_for (const: (@: stmt c.LmP0Node); int: mi; const: (@: path char); int: requirement; @: first c.LmP0Field; int: n) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
-    int: requirement c.lm_compiler_own_method_requirement(target_own)
     int: source_own -1
     int: source_requirement -1
     @: source_field c.LmP0Field
@@ -3653,7 +3656,7 @@ fn: lm_compiler_method_pointer_source_guard (const: (@: stmt c.LmP0Node); int: m
     if: c.lm_compiler_reference_descriptor(first, n, mi, descriptor) = 0
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "cannot assign a Structure to a method pointer")))
     return: (cast: (int) (0))
-end: lm_compiler_method_pointer_source_guard
+end: lm_compiler_method_source_guard_for
 
 # Original: l2src/l2trans.lm1:6770
 fn: lm_compiler_colon_hidden_write (const: (@: stmt c.LmP0Node); int: mi; const: (@: path char); int: target_own) int
@@ -10379,6 +10382,82 @@ end: lm_compiler_reject_selector_body_mode
 fn: lm_compiler_reject_named_selector_body (const: (@: body c.LmP0Structure); const: (@: path char)) int
     return: lm_compiler_reject_selector_body_mode(body, path, 0)
 end: lm_compiler_reject_named_selector_body
+
+# `@: place value` with a path as the place (the book :373, "`@: ptr method`"; plan U3, "Это же правило применяется к явному пути принимающего места"): the form says what it is
+# by its shape alone, so it becomes the write of that place before anything is read for its meaning, with the path as the head and the value as the body.  It cannot simply be
+# `Box\f: two`: over a callable that is a call by the book, and here no atom is called, so the role stays on the node (lm_compiler_place_write_node).  One operand is an address
+# (`@: Box\f`), and a run with more than atoms in it has no one text of a head to go by: it keeps the refusal it had.
+fn: lm_compiler_place_write_lower (@: stmt c.LmP0Node; const: (@: path char)) int
+    @: frame c.LmP0Frame stmt\as\frame
+    @: first c.LmP0Field
+    @: head c.LmP0Text
+    @: tail c.LmP0Structure
+    int: n
+    int: run
+    if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) stmt), "@") = 0 || frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
+        return: 0
+    n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (frame\body)))
+    first: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (frame\body\first_field)))
+    if: n < 2 || first = 0
+        return: 0
+    run: c.lm_compiler_rw_path_run(first, n)
+    if: run < 3 || run >= n
+        return: 0
+    head: c.lm_compiler_fields_text(first, run)
+    if: head = 0
+        return: 0
+    tail: (cast: (@: c.LmP0Structure) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Structure)))
+    if: tail = 0
+        return: (cast: (int) (c.lm_compiler_alloc_or(path, (cast: (const: @: c.LmP0Node) stmt), "out of memory")))
+    tail\first_field: c.lm_compiler_skip_span(first, run)
+    tail\last_field: frame\body\last_field
+    tail\field_count: (cast: (unsigned) (n - run))
+    frame\head: head
+    frame\body: tail
+    frame\flags: c.LM_P0_FRAME_COLON | 4096U
+    return: 0
+end: lm_compiler_place_write_lower
+
+fn: lm_compiler_place_write_walk (@: body c.LmP0Structure; const: (@: path char); int: unit_level) int
+    @: field c.LmP0Field
+    @: item c.LmP0Node
+    @: frame c.LmP0Frame
+    const: (@: branch c.LmP0Node)
+    if: body = 0
+        return: 0
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
+    while: field != 0
+        item: field\value
+        if: unit_level != 0 && c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) item), "os") != 0
+            # The branches not selected stay structure only (lm_compiler_program_read).
+            branch: c.lm_compiler_os_selected_branch((cast: (const: @: c.LmP0Node) item))
+            if: branch != 0 && lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) (branch\as\frame\body)), path, 0) != 0
+                return: 1
+            ---
+        else:
+            if: item != 0 && item\as != 0 && item\kind = c.LM_P0_NODE_STRUCTURE
+                if: lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) (item\as\structure)), path, 0) != 0
+                    return: 1
+                ---
+            ---
+            if: item != 0 && item\as != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as\frame != 0
+                frame: item\as\frame
+                if: lm_compiler_place_write_lower(item, path) != 0 || lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) (frame\body)), path, 0) != 0
+                    return: 1
+                ---
+                if: frame\trailer != 0 && (frame\body = 0 || frame\trailer != frame\body\trailer)
+                    if: lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) (frame\trailer\body)), path, 0) != 0
+                        return: 1
+                    ---
+                ---
+            ---
+        ---
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+    ---
+    if: body\trailer != 0
+        return: lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) (body\trailer\body)), path, 0)
+    return: 0
+end: lm_compiler_place_write_walk
 
 fn: lm_compiler_reject_unit_selectors (const: (@: root c.LmP0Node); const: (@: path char)) int
     if: root != 0 && root\as != 0 && root\kind = c.LM_P0_NODE_STRUCTURE

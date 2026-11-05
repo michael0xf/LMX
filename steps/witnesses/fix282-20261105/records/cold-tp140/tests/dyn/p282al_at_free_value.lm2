@@ -1,0 +1,32 @@
+# Slice 282 probe, a named limit: a callable place given a free value that holds a Structure with no callable part, then called.  Exit 7 refused by implements, 8 by interpreter, 9 by the write, 12 not refused.
+Other:
+    int: q 3
+end: Other
+Box:
+    fn: f () int
+        return: 1
+    end: f
+end: Box
+int: Hv 0
+fn: write_free () int
+    ---
+        @: Box\f Hv
+        catch: implements ()
+            return: 9
+    ---
+    ---
+        int: r Box\f()
+        return: 12
+        catch: implements ()
+            return: 7
+        catch: interpreter ()
+            return: 8
+    ---
+end: write_free
+fn: run () int
+    @: Hv Other Other
+    return: write_free()
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

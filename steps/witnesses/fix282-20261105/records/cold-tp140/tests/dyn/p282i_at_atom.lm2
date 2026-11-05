@@ -1,0 +1,33 @@
+# Slice 282 probe: what the flat two-field receiver holds when its second operand is a named Structure: the place's first value, or nothing.  Entry 7.
+Model:
+    int: v 4
+end: Model
+fn: two () int
+    return: 2
+end: two
+fn: run_null () int
+    @: x Model
+    ---
+        return: x\v
+        catch: interpreter ()
+            return: 55
+    ---
+end: run_null
+fn: run_callable () int
+    @: ptr two
+    return: ptr()
+end: run_callable
+int: code 0
+int: got run_null()
+if: got = 4
+    code: 1
+---
+if: got = 55
+    code: 2
+---
+int: called run_callable()
+if: called != 2
+    code: code + 10
+---
+sendMessage: exit(exit_code: code + 100; stdout: ""; stderr: "")
+return

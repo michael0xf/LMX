@@ -1,0 +1,22 @@
+# Slice 282 probe: `x: var\i` over data with no such field: the read refuses and a handler sees it; the write before it stands (the order of effects of plan U4 is not decided here).  Entry 7.
+Code:
+    int: got 3
+    got: var\i
+end: Code
+Data:
+    int: got 9
+end: Data
+fn: run () int
+    ---
+        call: Code Data
+        return: 11
+        catch: implements ()
+            return: 8
+    ---
+end: run
+int: code run()
+if: code = 8 && Data\got = 3
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

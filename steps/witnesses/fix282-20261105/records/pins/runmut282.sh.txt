@@ -1,0 +1,33 @@
+P=/c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01
+SP=/c/Users/mtkra/AppData/Local/Temp/claude/6d92abb4660ab27f/b79b4933-abc1-4eae-98f7-6361633964ee/scratchpad
+PWSH="/c/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe"
+cd $P
+run() { "$PWSH" -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/$1.command')))" < /dev/null 2>&1 | tail -n 1 | cut -c1-200; }
+OUT=$P/pins/mut282.txt
+TOOL=cold-boot143a/quick143a/lmxtool.exe
+RT=cold-boot143a/quick143a/g2/runtime
+n=$1; shift
+for m in "$@"; do
+  n=$((n+1))
+  if ! python -I $SP/mut282.py $m >> $OUT 2>&1; then echo "mutation did not apply: $m" >> $OUT; continue; fi
+  TP_TOOL=$TOOL TP_LABEL=fem144b-$m TP_TRY=g$m run tp144-fe >> $OUT
+  FE=cold-tp140/fem144b-$m/l2trans.exe
+  if [ -f "$FE" ]; then
+    TP_TOOL=$TOOL TP_FE=$FE TP_RT=$RT TP_TRY=g$m TP_LIST=probe282-k.tsv run tp144-probe >> $OUT
+    grep -a -E '^ *SUITE' pins/tp144-probe-g$m.terminal.txt | cut -c1-80 >> $OUT
+    grep -a -E '^FAIL' pins/tp144-probe-g$m.log | grep -v '\[exit\]' | cut -c1-110 | head -n 4 >> $OUT
+    for k in native forced; do
+      printf '%s %s: ' $m $k >> $OUT
+      { grep -a -h 'l2trans error' tp144-probe/g$m/place_write_form-$k/p.L2.log 2>/dev/null | head -n 1 | sed 's|.*/tests/||' | cut -c1-110; for r in 0 1; do grep -a -h -E 'exit [0-9]+, expected|walk error|invariant|R0 was stopped|internal' tp144-probe/g$m/place_write_form-$k/run-root$r.log 2>/dev/null | head -n 1 | cut -c1-90; done; } | tr '\n' ' ' >> $OUT
+      echo >> $OUT
+    done
+  else
+    echo "$m: no frontend" >> $OUT
+    grep -a -E 'error|Error' pins/tp144-fe-g$m.log | head -n 3 | cut -c1-160 >> $OUT
+  fi
+  # the stage comes back to the candidate through its own recipe; failure stops the loop so no mutation carries over
+  r=$(TP_TRY=m$n run tp144-prepare)
+  echo "$m restore: $r" >> $OUT
+  case "$r" in PREPARED*) ;; *) echo "restore failed, stopped" >> $OUT; exit 1;; esac
+done
+echo done

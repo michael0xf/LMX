@@ -1,0 +1,17 @@
+# Slice 282 probe: `@: place Model: value` with a path as the place: the blog's asserted form, `@: ptr Model: Other`.  Entry 7.
+Inner:
+    int: q 2
+end: Inner
+Other:
+    int: q 3
+end: Other
+Box:
+    @: p Inner Inner
+end: Box
+int: code 7
+@: Box\p Inner: Other
+if: Box\p\q != 3
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

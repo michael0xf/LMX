@@ -1,0 +1,14 @@
+# Slice 282 probe: the author's example of 15 October with the first read taken out: `var:` rebinds the reference and the later `var\i` reads the new value.  Entry 7.
+Code:
+    var:
+        int: i 5
+    end: var
+    int: got var\i
+end: Code
+int: code 7
+call: Code Code
+if: Code\got != 5
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

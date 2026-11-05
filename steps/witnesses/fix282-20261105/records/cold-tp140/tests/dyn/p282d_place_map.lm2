@@ -1,0 +1,38 @@
+# Slice 282 probe: a hidden input over a place where a Structure of another layout stands: it reads by the field's name, not by the declared position.  Entry 7.
+Holder:
+    int: a 1
+    int: b 2
+end: Holder
+Swapped:
+    int: b 20
+    int: a 10
+end: Swapped
+int: Hb 0
+fn: read_hidden_b () int
+    return: Hb\b
+end: read_hidden_b
+fn: through_local () int
+    @: Hb Holder Holder
+    return: read_hidden_b()
+end: through_local
+int: Hi 0
+fn: read_hidden_field () int
+    return: Hi
+end: read_hidden_field
+fn: through_part () int
+    int: Hi Holder\b
+    return: read_hidden_field()
+end: through_part
+int: code 7
+Holder: Swapped
+if: through_local() != 20
+    code: 11
+---
+if: code = 7 && Holder\b != 20
+    code: 12
+---
+if: code = 7 && through_part() != 20
+    code: 13
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

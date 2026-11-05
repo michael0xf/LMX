@@ -1,0 +1,339 @@
+# Slice 282 (the book :313-:315, :373; plan U3, "Это же правило применяется к явному пути принимающего места").  `@: place value` with a path as the place writes it and calls nothing:
+# a callable, a Structure and a reference field, null and `Model: value`, in the root, a method, a nested body and a named body, through a typed formal, a local and a hidden input.
+# `@: x a\b` makes x hold what the path reads, its leaf being the requirement.  `x: var\i` with a declared x takes the value at run time.  Entry 7; 11.. name the failing check.
+Inner:
+    int: q 2
+end: Inner
+Other:
+    int: q 3
+end: Other
+Holder:
+    fn: f () int
+        return: 1
+    end: f
+    k:
+        int: q 1
+    end: k
+    @: p Inner Inner
+    Deep:
+        fn: g () int
+            return: 10
+        end: g
+    end: Deep
+    fn: last () int
+        return: 40
+    end: last
+end: Holder
+fn: two () int
+    return: 2
+end: two
+fn: three () int
+    return: 3
+end: three
+fn: twenty () int
+    return: 20
+end: twenty
+fn: thirty () int
+    return: 30
+end: thirty
+fn: in_method () int
+    @: Holder\f two
+    return: Holder\f()
+end: in_method
+fn: by_formal (@: b Holder) int
+    @: b\f thirty
+    return: b\f()
+end: by_formal
+fn: by_local () int
+    @: r Holder Holder
+    @: r\f two
+    return: r\f()
+end: by_local
+fn: nested () int
+    int: i 0
+    while: i < 1
+        @: Holder\f twenty
+        i: i + 1
+    ---
+    return: Holder\f()
+end: nested
+Named:
+    @: Holder\Deep\g twenty
+end: Named
+fn: null_called () int
+    @: Holder\last 0
+    ---
+        int: r Holder\last()
+        return: 11
+        catch: interpreter ()
+            @: Holder\last two
+            return: Holder\last()
+    ---
+end: null_called
+fn: chain () int
+    @: Holder\f two
+    @: g Holder\f
+    @: Holder\f three
+    return: g() * 10 + Holder\f()
+end: chain
+NoQ:
+    int: z 1
+end: NoQ
+fn: asserted_refused () int
+    ---
+        @: Holder\p Inner: NoQ
+        return: 11
+        catch: implements ()
+            return: Holder\p\q
+    ---
+end: asserted_refused
+fn: store_refused () int
+    ---
+        @: Holder\k NoQ
+        return: 11
+        catch: implements ()
+            return: Holder\k\q
+    ---
+end: store_refused
+int: Hb 0
+fn: hidden_writes () int
+    @: Hb\h two
+    @: Hb\p Inner: Other
+    return: 1
+end: hidden_writes
+HiddenBox:
+    fn: h () int
+        return: 1
+    end: h
+    @: p Inner Inner
+end: HiddenBox
+fn: through_hidden () int
+    @: Hb HiddenBox HiddenBox
+    int: done hidden_writes()
+    return: HiddenBox\h() * 10 + HiddenBox\p\q
+end: through_hidden
+WrittenOnly:
+    fn: f () int
+        int: x 1
+        return: x
+    end: f
+end: WrittenOnly
+OtherCallable:
+    fn: f () int
+        int: y 2
+        return: y
+    end: f
+end: OtherCallable
+Source:
+    Model:
+        int: v 4
+    end: Model
+    @: r Inner Inner
+    fn: f () int
+        return: 5
+    end: f
+end: Source
+Source2:
+    Model:
+        int: v 9
+    end: Model
+end: Source2
+Second:
+    int: q 8
+end: Second
+fn: value_in_method () int
+    @: seen Source\Model
+    return: seen\v
+end: value_in_method
+fn: value_callable () int
+    @: g Source\f
+    return: g()
+end: value_callable
+fn: value_with_initial () int
+    @: held Source\r Second
+    return: held\q
+end: value_with_initial
+VarWork:
+    int: got 0
+    got: var\i
+end: VarWork
+VarData:
+    int: i 6
+    int: got 9
+end: VarData
+VarAbsent:
+    int: got 3
+    got: var\i
+end: VarAbsent
+VarAbsentData:
+    int: got 9
+end: VarAbsentData
+fn: var_absent () int
+    ---
+        call: VarAbsent VarAbsentData
+        return: 11
+        catch: implements ()
+            return: 8
+    ---
+end: var_absent
+VarNew:
+    got: var\i
+end: VarNew
+VarNewData:
+    int: i 5
+    int: got 0
+end: VarNewData
+fn: var_new () int
+    ---
+        call: VarNew VarNewData
+        return: 11
+        catch: call ()
+            return: 7
+    ---
+end: var_new
+VarRebound:
+    var:
+        int: i 5
+    end: var
+    int: got var\i
+end: VarRebound
+[]: @(Inner) refs 2
+int: code 7
+@: Holder\f two
+if: Holder\f() != 2
+    code: 11
+---
+if: code = 7
+    @: Holder\k Other
+    if: Holder\k\q != 3
+        code: 12
+    ---
+---
+if: code = 7
+    @: Holder\p Other
+    if: Holder\p\q != 3
+        code: 13
+    ---
+---
+if: code = 7
+    @: Holder\p 0
+    int: was_null 0
+    ---
+        int: r Holder\p\q
+        catch: interpreter ()
+            was_null: 1
+    ---
+    if: was_null != 1
+        code: 14
+    ---
+---
+if: code = 7
+    @: Holder\p Inner: Other
+    if: Holder\p\q != 3
+        code: 15
+    ---
+---
+if: code = 7 && in_method() != 2
+    code: 16
+---
+if: code = 7 && by_formal(Holder) != 30
+    code: 17
+---
+if: code = 7 && by_local() != 2
+    code: 18
+---
+if: code = 7 && nested() != 20
+    code: 19
+---
+if: code = 7
+    call: Named
+    if: Holder\Deep\g() != 20
+        code: 20
+    ---
+---
+if: code = 7 && null_called() != 2
+    code: 21
+---
+if: code = 7 && chain() != 23
+    code: 22
+---
+if: code = 7 && through_hidden() != 23
+    code: 23
+---
+if: code = 7
+    @: seen Source\Model
+    if: seen\v != 4
+        code: 24
+    ---
+---
+if: code = 7
+    @: held Source\r
+    if: held\q != 2
+        code: 25
+    ---
+---
+if: code = 7
+    @: again Source\Model
+    @: again Source2\Model
+    if: again\v != 9
+        code: 26
+    ---
+---
+if: code = 7 && value_in_method() != 4
+    code: 27
+---
+if: code = 7 && value_callable() != 5
+    code: 28
+---
+if: code = 7 && value_with_initial() != 8
+    code: 29
+---
+if: code = 7
+    call: VarWork VarData
+    if: VarData\got != 6
+        code: 30
+    ---
+---
+if: code = 7 && var_absent() != 8
+    code: 31
+---
+if: code = 7 && VarAbsentData\got != 3
+    code: 31
+---
+if: code = 7 && var_new() != 7
+    code: 32
+---
+if: code = 7 && VarNewData\got != 0
+    code: 32
+---
+if: code = 7
+    call: VarRebound VarRebound
+    if: VarRebound\got != 5
+        code: 33
+    ---
+---
+if: code = 7
+    @: refs[0] Inner
+    @: refs[1] Other
+    if: refs[0]\q != 2
+        code: 34
+    ---
+    if: code = 7 && refs[1]\q != 3
+        code: 34
+    ---
+---
+if: code = 7 && asserted_refused() != 3
+    code: 35
+---
+if: code = 7 && store_refused() != 3
+    code: 36
+---
+if: code = 7
+    @: WrittenOnly\f two
+    WrittenOnly: OtherCallable
+    if: WrittenOnly\f() != 2
+        code: 37
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

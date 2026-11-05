@@ -813,6 +813,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     int: consumed_value 0
     int: named_reference 0
     int: operand_count
+    int: path_run 0
     # A Frame the binding resolved as a call has that role for every reader: it
     # declares nothing, and the Frames that name its actuals are not a type, a
     # name and a candidate.  The role is asked before the cache: a classification
@@ -1014,7 +1015,14 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
                     type_field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (first\next)))
                     if: type_field = 0 || type_field\value = 0
                         return: (cast: (@: c.L2Declaration) (0))
-                    contract: c.lm_compiler_contract_type((cast: (const: @: c.LmP0Node) (type_field\value)))
+                    # `@: x a\b`: the path is one operand, and its leaf the requirement (lm_compiler_path_type_model).  Alone it is the value too, as a bare `@: x Model` is.
+                    path_run: lm_compiler_value_path_run(type_field, n - 1)
+                    if: path_run >= 3
+                        contract: c.lm_compiler_contract_new(0, 0, (cast: (const: @: c.LmP0Text) (lm_compiler_fields_text(type_field, path_run))), 0)
+                    else:
+                        path_run: 0
+                        contract: c.lm_compiler_contract_type((cast: (const: @: c.LmP0Node) (type_field\value)))
+                    ---
                     if: contract = 0 && type_field\value\kind = c.LM_P0_NODE_FRAME && n = 2
                         if: lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (type_field\value)), @ inner_contract, @ candidate, @ count) != 0 && inner_contract != 0 && inner_contract\kind = 2
                             contract: inner_contract
@@ -1064,6 +1072,12 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
         if: consumed_value = 0
             if: type_after_name != 0
                 candidate: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (type_field\next)))
+                if: path_run > 0
+                    candidate: type_field
+                    if: path_run < n - 1
+                        candidate: c.lm_compiler_skip_span(type_field, path_run)
+                    ---
+                ---
             else:
                 candidate: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (name_field\next)))
             ---
@@ -1129,7 +1143,7 @@ fn: lm_compiler_own_method_requirement (int: own) int
     requirement: c.lm_compiler_contract_leaf((cast: (@: c.L2TypeContract) (declaration\contract)), @ depth, @ qualified)
     if: requirement = 0 || depth != 1 || c.lm_compiler_type_model(requirement) >= 0
         return: (cast: (int) (-1))
-    return: (cast: (int) (c.lm_compiler_site_method(own_mi_cell[0][own], requirement)))
+    return: (cast: (int) (c.lm_compiler_requirement_method(own_mi_cell[0][own], requirement)))
 end: lm_compiler_own_method_requirement
 
 # Original: l2src/l2trans.lm1:7608
@@ -4227,6 +4241,88 @@ fn: lm_compiler_address_value_span (@: span c.L2ValueSpan; int: mi; @: out c.L2A
         return: (cast: (int) (status))
     return: (cast: (int) (2))
 end: lm_compiler_address_value_span
+
+# The one text of a run of atoms: P0 gives the same fields for `a\b` and `a \ b`, and a head is one text whichever was written.  0 for a run with more than atoms in it.
+fn: lm_compiler_fields_text (@: first c.LmP0Field; int: run) @: c.LmP0Text
+    @: walk c.LmP0Field first
+    @: text c.LmP0Text
+    @: bytes char
+    size_t: size 0U
+    size_t: at 0U
+    int: k 0
+    while: k < run
+        if: walk = 0 || walk\value = 0 || walk\value\kind != c.LM_P0_NODE_ATOM || walk\value\as = 0 || walk\value\as\atom = 0
+            return: (cast: (@: c.LmP0Text) (0))
+        size: size + walk\value\as\atom\length
+        walk: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (walk\next)))
+        k: k + 1
+    ---
+    text: (cast: (@: c.LmP0Text) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Text)))
+    bytes: (cast: (@: char) c.lm_compiler_bound_alloc(size + 1U, c.sizeof(c.char)))
+    if: text = 0 || bytes = 0
+        return: (cast: (@: c.LmP0Text) (0))
+    walk: first
+    k: 0
+    while: k < run
+        c.memcpy(bytes + at, (cast: (const: @: void) walk\value\as\atom\data), (cast: (size_t) walk\value\as\atom\length))
+        at: at + walk\value\as\atom\length
+        walk: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (walk\next)))
+        k: k + 1
+    ---
+    text\data: bytes
+    text\length: size
+    return: (cast: (@: c.LmP0Text) (text))
+end: lm_compiler_fields_text
+
+# The fields of a path standing as the second operand of `@: x a\b`, or 0.  P0 gives the same fields for `a\b` and `a \ b`, and spacing is style (the author, 2026-10-27), so the
+# resolution says which it is, as for any head: a path reaching a field is the path; `@: p int \q` and `@: p Model \q` with no field q in Model are a requirement and a dereference.
+fn: lm_compiler_value_path_run (@: first c.LmP0Field; int: n) int
+    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
+    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
+    int: run lm_compiler_rw_path_run(first, n)
+    int: saved cur_mi_cell[0]
+    int: leaf_mi -1
+    int: kind
+    @: word c.LmP0Text
+    if: run < 3
+        return: 0
+    word: lm_compiler_fields_text(first, run)
+    if: word = 0
+        return: 0
+    if: here_mi_cell[0] >= 0
+        cur_mi_cell[0]: here_mi_cell[0]
+    ---
+    kind: lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, 0)
+    cur_mi_cell[0]: saved
+    if: kind < 0
+        return: 0
+    return: run
+end: lm_compiler_value_path_run
+
+# The value a write through a path gets.  Under `@: place Model: value` (the book :315) the consumed Frame gives the candidate with an added requirement, and nothing is written into Model.
+fn: lm_compiler_place_write_value (const: (@: stmt c.LmP0Node); @@: first c.LmP0Field; @: n int; @@: asserted c.L2TypeContract) int
+    @: body c.LmP0Structure stmt\as\frame\body
+    @: only c.LmP0Field
+    @: candidate c.LmP0Field 0
+    @: contract c.L2TypeContract 0
+    int: count 0
+    \first: 0
+    \n: 0
+    \asserted: 0
+    if: body = 0
+        return: 0
+    only: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
+    \first: only
+    \n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) body))
+    if: c.lm_compiler_place_write_node(stmt) = 0 || \n != 1 || only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_FRAME
+        return: 0
+    if: lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (only\value)), @ contract, @ candidate, @ count) != 0 && contract != 0
+        \first: candidate
+        \n: count
+        \asserted: contract
+    ---
+    return: 0
+end: lm_compiler_place_write_value
 
 # Original: l2src/l2trans.lm1:37824
 fn: lm_compiler_rw_path_run (@: f c.LmP0Field; int: avail) int

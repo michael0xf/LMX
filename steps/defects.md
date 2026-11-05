@@ -11197,7 +11197,9 @@ replay3630 не потерял выходов и не дал новых диаг
 
 `b: immutable: merge(Holder)`, затем `read(b)` с формальным `@: h Holder`: native падает `lmx: invariant: the record of a proved admission was not kept`, обходчик даёт неявный `implements`. На кортеже 276 так же, вложенное поле ни при чём. Отказ рождается в `lmx_implements_walk_project_resolve` через `lmx_implements_admit_operation_call`; дальше не разбирал. Книга: «Передача, возврат и сохранение неизменяемого значения сохраняют его идентичность», защита срабатывает на достигнутой записи, а не на приёме. [Запись](witnesses/fix277-20261104/notes.md).
 
-### BARE-PATH-REQUIREMENT-READ — 2026-11-04, Opus (срез 277), OPEN
+### BARE-PATH-REQUIREMENT-READ — 2026-11-04, Opus (срез 277), CLOSED срезом 282
+
+`@: x a\b` читает путь, если он находит поле (`lm_compiler_value_path_run`), лист даёт требование, путь — значение; `@: Box\f two` понижается в запись места с ролью на узле (`lm_compiler_place_write_lower`). `@: p T \q` без поля `q` остаётся требованием и разыменованием, потому что запятая границы пока не даёт (BARE-DEREF-ACTUAL-MERGED). [Запись](witnesses/fix282-20261105/notes.md). Исходная запись ниже.
 
 `@: seen Outer\Model` читается как `@: seen Outer \Model`: требование `Outer`, значение — prefix deref свободного `Model`, поэтому `seen\v` даёт `unknown field path segment`. То же начало у `@: Box\f two`: `unknown type`. Автор 2026-10-27 разрешил пробелы вокруг `\` как стиль, границей служит запятая, поэтому по этому правилу это один путь. Свидетель голого чтения в срезе 277 поэтому идёт через аргумент: `count(Outer\Runs)`. [Запись](witnesses/fix277-20261104/notes.md).
 
@@ -11286,3 +11288,15 @@ replay3630 не потерял выходов и не дал новых диаг
 ### WRITTEN-FORM-THROUGH-PATH-HEAD — 2026-11-04, Opus (срез 281), OPEN
 
 `Box\k: (int: a 8)` не транслируется: `int has no value`, и у поля-Structure, и у ссылочного поля, на кортежах 280 и 281. Простая голова `t: (int: x 5)` работает как два акта (срез 278). Написанная форма через голову-путь в плане N4-U отдельно не названа; нужно решить вместе с остатком U3. [Проба](witnesses/fix281-20261104/records/cold-tp140/tests/dyn/p281c_written.lm2).
+
+### TYPED-PATH-THROUGH-REBOUND-CALLABLE — 2026-11-05, Opus (срез 282), OPEN
+
+После `@: Callables\f replaced`, где у `replaced` поля стоят иначе, `Callables\f()` даёт новый результат, а типизированный `Callables\f\x` читает прежнюю позицию в теле и получает чужое значение, без отказа. У callable нет строки модели, поэтому `lmx_walk_value_slot` остаётся позиционным. Через свободного держателя `Hc\f\x` отказывает `implements` и до перепривязки: чтение по имени поля тела метода не находит. Записан ещё в RESULT среза 275 как S10. [Запись](witnesses/fix282-20261105/notes.md).
+
+### CALLABLE-PLACE-FREE-NONCALLABLE — 2026-11-05, Opus (срез 282), OPEN
+
+Статически известное не-callable в callable-поле отказывает при трансляции, а свободное значение, держащее обычную Structure, записывается, и вызов падает: `invariant: a split-called code reached data without its place row` в native, `walk error: INVALID` в forced. В рантайме нет готового ответа «это callable»: роль FN только у `fn`. Известный предел должен отказывать, а не падать. [Запись](witnesses/fix282-20261105/notes.md).
+
+### CALL-SELF-ASSIGNED-PLACE — 2026-11-05, Opus (срез 282), OPEN
+
+`int: got 0; got: 5` в `Code` под `call: Code Code` отказывает `call`, с отдельными данными проходит. Согласуется с решением о двух головах, но книга :337 говорит о двух вхождениях, что это не два поля данных. Вопрос к норме, код не менялся. [Запись](witnesses/fix282-20261105/notes.md).

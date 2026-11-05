@@ -1,0 +1,73 @@
+# Slice 282 probe: `@: place value` in every statement position and through every kind of root.  Entry 7.
+Inner:
+    int: q 2
+end: Inner
+Other:
+    int: q 3
+end: Other
+Box:
+    fn: f () int
+        return: 1
+    end: f
+    k:
+        int: q 1
+    end: k
+    @: p Inner Inner
+    Deep:
+        fn: g () int
+            return: 10
+        end: g
+    end: Deep
+end: Box
+fn: two () int
+    return: 2
+end: two
+fn: twenty () int
+    return: 20
+end: twenty
+fn: thirty () int
+    return: 30
+end: thirty
+fn: in_method () int
+    @: Box\f two
+    return: Box\f()
+end: in_method
+fn: by_formal (@: b Box) int
+    @: b\f thirty
+    return: b\f()
+end: by_formal
+fn: by_local () int
+    @: r Box Box
+    @: r\f two
+    return: r\f()
+end: by_local
+fn: nested () int
+    int: i 0
+    while: i < 1
+        @: Box\f twenty
+        i: i + 1
+    ---
+    return: Box\f()
+end: nested
+Named:
+    @: Box\Deep\g twenty
+end: Named
+int: code 7
+if: in_method() != 2
+    code: 11
+---
+if: code = 7 && by_formal(Box) != 30
+    code: 12
+---
+if: code = 7 && by_local() != 2
+    code: 13
+---
+if: code = 7 && nested() != 20
+    code: 14
+---
+call: Named
+if: code = 7 && Box\Deep\g() != 20
+    code: 15
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

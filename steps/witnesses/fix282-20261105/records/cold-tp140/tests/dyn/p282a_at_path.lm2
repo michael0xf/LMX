@@ -1,0 +1,50 @@
+# Slice 282 probe: the two-field receiver with a path as its place.  `@: Box\f two` writes a reference into the place; no atom in it is called.  Entry 7.
+Inner:
+    int: q 2
+end: Inner
+Box:
+    fn: f () int
+        return: 1
+    end: f
+    k:
+        int: q 1
+    end: k
+    @: p Inner Inner
+end: Box
+Other:
+    int: q 3
+end: Other
+fn: two () int
+    return: 2
+end: two
+int: code 7
+@: Box\f two
+if: Box\f() != 2
+    code: 11
+---
+if: code = 7
+    @: Box\k Other
+    if: Box\k\q != 3
+        code: 12
+    ---
+---
+if: code = 7
+    @: Box\p Other
+    if: Box\p\q != 3
+        code: 13
+    ---
+---
+if: code = 7
+    @: Box\p 0
+    int: was_null 0
+    ---
+        int: r Box\p\q
+        catch: interpreter ()
+            was_null: 1
+    ---
+    if: was_null != 1
+        code: 14
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

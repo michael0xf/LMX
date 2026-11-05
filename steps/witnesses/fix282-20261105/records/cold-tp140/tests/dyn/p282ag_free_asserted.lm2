@@ -1,0 +1,26 @@
+# Slice 282 probe: `@: place Model: value` through a free holder.  Entry 7.
+Inner:
+    int: q 2
+end: Inner
+Other:
+    int: q 3
+end: Other
+Box:
+    @: p Inner Inner
+end: Box
+int: Hb 0
+fn: writes () int
+    @: Hb\p Inner: Other
+    return: 1
+end: writes
+fn: through () int
+    @: Hb Box Box
+    int: done writes()
+    return: Box\p\q
+end: through
+int: code 7
+if: through() != 3
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

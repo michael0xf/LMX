@@ -1,0 +1,15 @@
+# Slice 282 probe: `@: place Model: value` with an indexed place.  Entry 7.
+Inner:
+    int: q 2
+end: Inner
+Other:
+    int: q 3
+end: Other
+[]: @(Inner) refs 2
+int: code 7
+@: refs[1] Inner: Other
+if: refs[1]\q != 3
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

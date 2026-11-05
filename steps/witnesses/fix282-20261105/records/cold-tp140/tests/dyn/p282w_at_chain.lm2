@@ -1,0 +1,24 @@
+# Slice 282 probe: a rebound callable field read as a value: `@: g Box\f` holds what stands there, and a later write of the field does not move g.  Entry 7.
+Box:
+    fn: f () int
+        return: 1
+    end: f
+end: Box
+fn: two () int
+    return: 2
+end: two
+fn: three () int
+    return: 3
+end: three
+fn: run () int
+    @: Box\f two
+    @: g Box\f
+    @: Box\f three
+    return: g() * 10 + Box\f()
+end: run
+int: code 7
+if: run() != 23
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

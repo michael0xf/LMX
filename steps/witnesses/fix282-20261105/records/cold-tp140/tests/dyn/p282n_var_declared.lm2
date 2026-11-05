@@ -1,0 +1,21 @@
+# Slice 282 probe: a read through `var` under explicit data, into a declared number and a method's argument.  Entry 7.
+fn: take (int: v) int
+    return: v + 1
+end: take
+Code:
+    int: got var\i
+    int: taken take(var\i)
+end: Code
+Data:
+    int: i 5
+end: Data
+int: code 7
+call: Code Data
+if: Code\got != 5
+    code: 11
+---
+if: code = 7 && Code\taken != 6
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

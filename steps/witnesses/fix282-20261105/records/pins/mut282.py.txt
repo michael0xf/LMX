@@ -1,0 +1,135 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # The head of the form calls again where the check and the emitters ask.
+    'headcall': ('l2_frontend_lower.lm2', r'''    if: (flags & 4096U) != 0U
+        return: (cast: (int) (0))
+    req: c.lm_compiler_call_head_method(mi, t, @ fi)
+''', r'''    req: c.lm_compiler_call_head_method(mi, t, @ fi)
+'''),
+    # The scan of actuals binds the form as a call.
+    'scancall': ('l2_frontend_lower.lm2', r'''    idx: -1
+    if: c.lm_compiler_place_write_node(port_call) = 0
+        idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)), @ fi)
+    ---
+''', r'''    idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)), @ fi)
+'''),
+    # The walker's statement reading calls the form.
+    'rwcall': ('l2_frontend_emit.lm2', r'''    idx: -1
+    if: c.lm_compiler_place_write_node(stmt) = 0
+        idx: c.lm_compiler_call_head_method(rw_mi_cell[0], h, @ formal)
+    ---
+''', r'''    idx: c.lm_compiler_call_head_method(rw_mi_cell[0], h, @ formal)
+'''),
+    # A callable place loses the store of its slot in native.
+    'byslot4': ('l2_frontend_lower.lm2', r'''    if: path != 0 && path\n >= 1 && path\leaf_kind = 4
+        return: c.lm_compiler_place_write_node(stmt)
+''', r'''    if: path != 0 && path\n >= 1 && path\leaf_kind = 4
+        return: 0
+'''),
+    # The walker's classification of the store forgets the callable place.
+    'srcwrite4': ('l2_frontend_core.lm2', r'''    if: leaf_kind = 2 || leaf_kind = 3 || (leaf_kind = 4 && c.lm_compiler_place_write_node(stmt) != 0)
+''', r'''    if: leaf_kind = 2 || leaf_kind = 3
+'''),
+    # A path's requirement is the word again, with no leaf to read.
+    'pathmodel': ('l2_frontend_types.lm2', r'''    if: word != 0 && word\data != 0 && c.memchr(word\data, 92, word\length) != 0
+        return: lm_compiler_path_type_model(word)
+    ---
+    model: lm_compiler_type_model(word)
+''', r'''    model: lm_compiler_type_model(word)
+'''),
+    # A callable at the requirement's leaf is no requirement.
+    'pathmethod': ('l2_frontend_types.lm2', r'''    if: kind = 4
+        return: (cast: (int) (leaf_mi))
+    return: -1
+end: lm_compiler_requirement_method
+''', r'''    return: -1
+end: lm_compiler_requirement_method
+'''),
+    # `@: x a\b`: the path stays the requirement and is no value any more.
+    'pathvalue': ('l2_frontend_resolve.lm2', r'''                if: path_run > 0
+                    candidate: type_field
+                    if: path_run < n - 1
+                        candidate: c.lm_compiler_skip_span(type_field, path_run)
+                    ---
+                ---
+''', r'''                if: path_run > 0
+                    candidate: 0
+                    if: path_run < n - 1
+                        candidate: c.lm_compiler_skip_span(type_field, path_run)
+                    ---
+                ---
+'''),
+    # `x: var\i` goes the typed way again.
+    'freegeneral': ('l2_frontend_lower.lm2', r'''    if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(path, mi)) != 0
+        return: (cast: (int) (1))
+    kind: path\leaf_kind
+''', r'''    kind: path\leaf_kind
+'''),
+    # `@: place Model: value`: no requirement is read off the Frame.
+    'asserted': ('l2_frontend_resolve.lm2', r'''    if: lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (only\value)), @ contract, @ candidate, @ count) != 0 && contract != 0
+        \first: candidate
+        \n: count
+        \asserted: contract
+    ---
+    return: 0
+end: lm_compiler_place_write_value
+''', r'''    return: 0
+end: lm_compiler_place_write_value
+'''),
+    # A null in a callable place is called.
+    'nullcall': ('l2_frontend_lower.lm2', r'''    if: sel = 1 && (c.fprintf(out_cell[0], "%sif: l2_c%d = 0\n", ind, self_t) < 0 || lm_compiler_emit_null_use(mi, ind) != 0)
+        return: 1
+''', r''''''),
+    # The two refusals of a callable place are gone.
+    'signature': ('l2_frontend_emit.lm2', r'''        if: method_candidate = -2
+            c.lm_compiler_path_release(hresolved)
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "method pointer assignment has incompatible signature")))
+        ---
+''', r''''''),
+    'guard': ('l2_frontend_emit.lm2', r'''        if: method_candidate < 0 && c.lm_compiler_method_source_guard_for(stmt, mi, path, leaf_mi, value_first, n) != 0
+            c.lm_compiler_path_release(hresolved)
+            return: 1
+        ---
+''', r''''''),
+    # A number field is written by the reference form.
+    'number': ('l2_frontend_emit.lm2', r'''    if: c.lm_compiler_place_write_node(stmt) != 0
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "a number field is no reference place")))
+''', r''''''),
+    # The binding of a statement's call reads the form.
+    'bindcall': ('l2_frontend_core.lm2', r'''    if: n\as\frame\head != 0 && n\as\frame\body != 0 && c.lm_compiler_place_write_node(n) = 0
+''', r'''    if: n\as\frame\head != 0 && n\as\frame\body != 0
+'''),
+    # Whether a statement runs a call reads the form.
+    'frameiscall': ('l2_frontend_lower.lm2', r'''    if: frame = 0 || frame\head = 0 || (frame\flags & 4096U) != 0U
+''', r'''    if: frame = 0 || frame\head = 0
+'''),
+    # The walker's statement reading asks the held callable of the form's head.
+    'rwheld': ('l2_frontend_emit.lm2', r'''    if: idx < 0 && c.lm_compiler_place_write_node(stmt) = 0 && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
+''', r'''    if: idx < 0 && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
+'''),
+    # The scan of actuals asks the held callable of the form's head.
+    'scanheld': ('l2_frontend_lower.lm2', r'''    if: idx < 0 && c.lm_compiler_place_write_node(port_call) = 0
+        held: c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)))
+''', r'''    if: idx < 0
+        held: c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)))
+'''),
+    # The walked write refuses a callable place.
+    'rwleaf4': ('l2_frontend_emit.lm2', r'''        if: kind != 2 && kind != 3 && leaf_kind != 2 && leaf_kind != 3 && leaf_kind != 4
+''', r'''        if: kind != 2 && kind != 3 && leaf_kind != 2 && leaf_kind != 3
+'''),
+    # The write of a callable place reads what stood there.
+    'usewritten4': ('l2_frontend_emit.lm2', r'''    if: kind = 2 || kind = 3 || kind = 4 || kind = 10 || kind = 11
+        c.lm_compiler_use_written(stmt, mi)
+''', r'''    if: kind = 2 || kind = 3 || kind = 10 || kind = 11
+        c.lm_compiler_use_written(stmt, mi)
+'''),
+}
+name, old, new = TABLE[which]
+with open(R + name, 'rb') as f:
+    t = f.read().decode('utf-8')
+assert t.count(old) == 1, (which, t.count(old))
+with open(R + name, 'wb') as f:
+    f.write(t.replace(old, new).encode('utf-8'))
+print('mutated', which, name)

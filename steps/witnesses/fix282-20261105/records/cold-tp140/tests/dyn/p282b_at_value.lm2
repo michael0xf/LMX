@@ -1,0 +1,29 @@
+# Slice 282 probe: the two-field receiver with a path as its value.  `@: x a\b` makes the place x hold what the path reads.  Entry 7.
+Inner:
+    int: w 6
+end: Inner
+Outer:
+    Model:
+        int: v 4
+    end: Model
+    @: r Inner Inner
+end: Outer
+int: code 7
+@: seen Outer\Model
+if: seen\v != 4
+    code: 11
+---
+if: code = 7
+    @: held Outer\r
+    if: held\w != 6
+        code: 12
+    ---
+---
+if: code = 7
+    @: seen Outer\r
+    if: seen\w != 6
+        code: 13
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

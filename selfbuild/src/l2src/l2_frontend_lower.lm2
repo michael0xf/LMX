@@ -665,7 +665,10 @@ end: lm_compiler_reference_implicit_model
 
 # Original: l2src/l2trans.lm1:5535
 fn: lm_compiler_method_pointer_candidate (int: mi; int: oi; @: first c.LmP0Field; int: n) int
-    int: requirement c.lm_compiler_own_method_requirement(oi)
+    return: lm_compiler_method_candidate_for(mi, (cast: (int) c.lm_compiler_own_method_requirement(oi)), first, n)
+end: lm_compiler_method_pointer_candidate
+
+fn: lm_compiler_method_candidate_for (int: mi; int: requirement; @: first c.LmP0Field; int: n) int
     int: kind 0
     int: formal -1
     int: candidate
@@ -686,7 +689,7 @@ fn: lm_compiler_method_pointer_candidate (int: mi; int: oi; @: first c.LmP0Field
     if: c.lm_compiler_method_sig_compatible(candidate, requirement) = 0
         return: (cast: (int) (-2))
     return: (cast: (int) (candidate))
-end: lm_compiler_method_pointer_candidate
+end: lm_compiler_method_candidate_for
 
 # Original: l2src/l2trans.lm1:5561
 fn: lm_compiler_receiver_method_candidate (const: (@: stmt c.LmP0Node); int: mi) int
@@ -1312,6 +1315,9 @@ fn: lm_compiler_path_store_general_resolved (int: mi; const: (@: head c.LmP0Text
     if: oi < 0 || path = 0 || path\text = 0 || path\length = 0U
         return: (cast: (int) (0))
     if: c.lm_compiler_path_callee_rec(path) >= 0
+        return: (cast: (int) (1))
+    # `x: var\i`: a runtime-typed root has no typed projection to copy from, and the general store takes its complete record, as a declaration's initial value does.
+    if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(path, mi)) != 0
         return: (cast: (int) (1))
     kind: path\leaf_kind
     if: kind = 10 || kind = 11
@@ -2809,7 +2815,10 @@ fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c
     values: c.lm_compiler_primary_values((cast: (@: c.L2ValueSpan) (@ site\value)), @ value_n)
     if: value_n < 0
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], port_call, "internal: a call lost its prepared actuals")))
-    idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)), @ fi)
+    idx: -1
+    if: c.lm_compiler_place_write_node(port_call) = 0
+        idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)), @ fi)
+    ---
     if: idx = e_cell[0]
         idx: -1
     if: idx < 0
@@ -5681,6 +5690,9 @@ fn: lm_compiler_head_is_call (const: (@: t c.LmP0Text); const: (@: body c.LmP0St
     int: req
     if: t = 0
         return: (cast: (int) (0))
+    # `@: place value` writes the place, whatever stands there (lm_compiler_place_write_lower).
+    if: (flags & 4096U) != 0U
+        return: (cast: (int) (0))
     req: c.lm_compiler_call_head_method(mi, t, @ fi)
     if: req >= 0
         return: (cast: (int) (1))
@@ -6841,6 +6853,41 @@ fn: lm_compiler_emit_actual_path_place (const: (@: path c.L2Path); int: mi; cons
 end: lm_compiler_emit_actual_path_place
 
 # Preserve the target place across RHS evaluation, as with any indirect write.
+# The value of a write through a path as one complete record: its one evaluation, and under `@: place Model: value` the admission to Model before anything is written.
+fn: lm_compiler_emit_path_value_record (const: (@: stmt c.LmP0Node); int: mi; const: (@: ind char); @: record c.L2Tx) int
+    @: first c.LmP0Field 0
+    @: asserted c.L2TypeContract 0
+    @: values c.L2ValueSpan 0
+    c.L2FrontendScratchChar1024: value_storage
+    c.L2Tx: value_tx
+    @: value c.L2Tx c.lm_compiler_tx_local(@ value_tx, (cast: (@: char) value_storage\buffer), 1024U)
+    int: count 0
+    int: n 0
+    int: context -1
+    int: status
+    c.lm_compiler_place_write_value(stmt, @ first, @ count, @ asserted)
+    if: asserted != 0
+        status: lm_compiler_emit_reference_value_at_context_full(first, count, (cast: (int) c.lm_compiler_graph_ft()), -1, (cast: (int) c.lm_compiler_contract_model(asserted, 0)), mi, ind, value, -1, 0, @ context, record)
+        if: status != 0
+            return: 1
+        if: record\data[0] = 0
+            status: lm_compiler_emit_material_value_full(mi, (cast: (int) c.lm_compiler_graph_ft()), 1, ind, value, context, record)
+            if: (status != 0 && status != 2) || record\data[0] = 0
+                return: 1
+            ---
+        ---
+        return: 0
+    ---
+    values: c.lm_compiler_value_fields(first, count, @ n)
+    if: values = 0 || n < 1
+        return: 1
+    status: lm_compiler_emit_dyn_operand_full(values, 0, n - 1, mi, ind, record)
+    c.lm_compiler_value_spans_release(values, n)
+    if: status != 0 || record\data[0] = 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_path_value_record
+
 fn: lm_compiler_emit_actual_path_store (const: (@: path c.L2Path); const: (@: stmt c.LmP0Node); int: mi; const: (@: ind char)) int
     c.L2FrontendScratchChar64: place_storage
     c.L2Tx: place_tx
@@ -6850,21 +6897,13 @@ fn: lm_compiler_emit_actual_path_store (const: (@: path c.L2Path); const: (@: st
     @: record c.L2Tx c.lm_compiler_tx_local(@ record_tx, (cast: (@: char) record_storage\buffer), 64U)
     c.L2FrontendScratchChar128: target_storage
     @: target char (cast: (@: char) target_storage\buffer)
-    int: n 0
-    @: values c.L2ValueSpan 0
-    int: status
     int: field -1
     if: lm_compiler_emit_actual_path_place_field(path, mi, ind, stmt, place, @ field) != 0
         return: 1
     # The written cell: a slot holding a Structure or an Array directly is the place's storage, the held value its address.
     if: c.snprintf(target, 128U, "(%s.storage)", place\data) < 0 || c.lm_compiler_emit_write_guard(mi, ind, target) != 0
         return: 1
-    values: c.lm_compiler_value_fields((cast: (@: c.LmP0Field) stmt\as\frame\body\first_field), (cast: (int) c.lm_compiler_count_active((cast: (@: c.LmP0Structure) stmt\as\frame\body))), @ n)
-    if: values = 0 || n < 1
-        return: 1
-    status: lm_compiler_emit_dyn_operand_full(values, 0, n - 1, mi, ind, record)
-    c.lm_compiler_value_spans_release(values, n)
-    if: status != 0 || record\data[0] = 0
+    if: lm_compiler_emit_path_value_record(stmt, mi, ind, record) != 0
         return: 1
     return: lm_compiler_emit_received_place_store_field(mi, "l2_call_arena", (cast: (@: char) place\data), field, ind, (cast: (@: char) record\data), 0, 0)
 end: lm_compiler_emit_actual_path_store
@@ -6874,6 +6913,9 @@ end: lm_compiler_emit_actual_path_store
 # model is what selects the payload (lm_compiler_emit_reference_receive_span_full), so it stays on that route.  A machine function has no status channel to refuse with.
 fn: lm_compiler_path_write_by_slot (const: (@: path c.L2Path); const: (@: stmt c.LmP0Node); int: mi) int
     int: count 0
+    # A callable field has no other store: a reference to the callable goes into its slot (`@: Box\f two`, the book :373).
+    if: path != 0 && path\n >= 1 && path\leaf_kind = 4
+        return: c.lm_compiler_place_write_node(stmt)
     if: path = 0 || path\n < 1 || path\leaf_kind != 10 || path\leaf_model < 0 || c.lm_compiler_m_machine(mi) != 0
         return: 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
@@ -6905,7 +6947,6 @@ fn: lm_compiler_emit_structure_path_store (const: (@: path c.L2Path); const: (@:
     int: kind 0
     int: count 0
     int: t
-    int: status
     if: lm_compiler_emit_path_cursor_slot(path, mi, ind, stmt, @ kind, 0, 0, 0, place, slot) != 0 || place\data[0] = 0 || slot\data[0] = 0
         return: 1
     t: tn_cell[0]
@@ -6923,13 +6964,7 @@ fn: lm_compiler_emit_structure_path_store (const: (@: path c.L2Path); const: (@:
             return: 1
         ---
     else:
-        int: n 0
-        @: values c.L2ValueSpan c.lm_compiler_value_fields((cast: (@: c.LmP0Field) body\first_field), count, @ n)
-        if: values = 0 || n < 1
-            return: 1
-        status: lm_compiler_emit_dyn_operand_full(values, 0, n - 1, mi, ind, record)
-        c.lm_compiler_value_spans_release(values, n)
-        if: status != 0 || record\data[0] = 0
+        if: lm_compiler_emit_path_value_record(stmt, mi, ind, record) != 0
             return: 1
     ---
     return: lm_compiler_emit_received_place_store_field(mi, "l2_program_arena", (cast: (@: char) place\data), t, ind, (cast: (@: char) record\data), 0, 0)
@@ -11370,6 +11405,9 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
         ---
     if: sel = 1 && c.fprintf(out_cell[0], "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
         return: (cast: (int) (1))
+    # What a callable place holds is data (slice 274), and `@: Box\f 0` leaves nothing to call there: the implicit throw of a null followed.
+    if: sel = 1 && (c.fprintf(out_cell[0], "%sif: l2_c%d = 0\n", ind, self_t) < 0 || lm_compiler_emit_null_use(mi, ind) != 0)
+        return: 1
     ---
     # S2a (steps/merge-callable-r48.md §4): a merge result (l2_pap_on) has native 0, and its C function is no body of
     # it -- it is called through its leaf, as the root's walk calls it: the A3 path, its occurrence (l2_c above) the

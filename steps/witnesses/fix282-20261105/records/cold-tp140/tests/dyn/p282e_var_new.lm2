@@ -1,0 +1,14 @@
+# Slice 282 probe: a new name taking its value from a path through `var` in executed code: `y: var\i`.  Entry 7.
+Fresh:
+    var:
+        int: i 6
+    end: var
+    y: var\i
+end: Fresh
+int: code 7
+call: Fresh
+if: Fresh\y != 6
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

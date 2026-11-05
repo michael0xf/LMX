@@ -1,0 +1,21 @@
+# Slice 282 probe: `@: place Model: value` where the value lacks a field of Model: refused, the old value stands.  Entry 7.
+Inner:
+    int: q 2
+end: Inner
+NoQ:
+    int: z 1
+end: NoQ
+Box:
+    @: p Inner Inner
+end: Box
+fn: run () int
+    ---
+        @: Box\p Inner: NoQ
+        return: 11
+        catch: implements ()
+            return: Box\p\q + 5
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

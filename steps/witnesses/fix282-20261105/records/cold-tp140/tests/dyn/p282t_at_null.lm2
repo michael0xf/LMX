@@ -1,0 +1,25 @@
+# Slice 282 probe: `@: Box\f 0`: an explicit null in a callable place: nothing is called by the write, and a later call of it is the implicit throw.  Entry 7.
+Box:
+    fn: f () int
+        return: 1
+    end: f
+end: Box
+fn: two () int
+    return: 2
+end: two
+fn: run () int
+    @: Box\f 0
+    ---
+        int: r Box\f()
+        return: 11
+        catch: interpreter ()
+            @: Box\f two
+            return: Box\f()
+    ---
+end: run
+int: code 7
+if: run() != 2
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

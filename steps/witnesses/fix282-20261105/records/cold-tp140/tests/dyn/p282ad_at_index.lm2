@@ -1,0 +1,19 @@
+# Slice 282 probe: `@: place value` with an indexed place: an element of an Array of references.  Entry 7.
+Inner:
+    int: q 2
+end: Inner
+Other:
+    int: q 3
+end: Other
+[]: @(Inner) list 2
+int: code 7
+@: list[0] Inner
+@: list[1] Other
+if: list[0]\q != 2
+    code: 11
+---
+if: code = 7 && list[1]\q != 3
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

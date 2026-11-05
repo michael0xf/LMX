@@ -1,0 +1,40 @@
+# Slice 282 probe: `@: x a\b` in a method, with a callable at the leaf, and with an initial value after the path.  Entry 7.
+Inner:
+    int: w 6
+end: Inner
+Second:
+    int: w 8
+end: Second
+Outer:
+    Model:
+        int: v 4
+    end: Model
+    @: r Inner Inner
+    fn: f () int
+        return: 5
+    end: f
+end: Outer
+fn: in_method () int
+    @: seen Outer\Model
+    return: seen\v
+end: in_method
+fn: call_leaf () int
+    @: g Outer\f
+    return: g()
+end: call_leaf
+fn: with_value () int
+    @: held Outer\r Second
+    return: held\w
+end: with_value
+int: code 7
+if: in_method() != 4
+    code: 11
+---
+if: code = 7 && call_leaf() != 5
+    code: 12
+---
+if: code = 7 && with_value() != 8
+    code: 13
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

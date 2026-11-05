@@ -1,0 +1,16 @@
+# Slice 282 probe: `x: var\i` with a declared x, under the data of an explicit call: a number place takes the value the path reads at run time.  Entry 7.
+Work:
+    int: got 0
+    got: var\i
+end: Work
+Data:
+    int: i 6
+    int: got 9
+end: Data
+int: code 7
+call: Work Data
+if: Data\got != 6
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

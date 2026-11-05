@@ -1,0 +1,16 @@
+# Slice 282 probe: `x: var\i` with a declared x and a written var under `call: Code Code`.  Entry 7.
+Code:
+    int: got 0
+    var:
+        int: i 5
+    end: var
+    got: var\i
+    int: same got
+end: Code
+int: code 7
+call: Code Code
+if: Code\same != 5
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -632,6 +632,11 @@ fn: lm_compiler_written_put_node (const: (@: at c.LmP0Node)) int
     return: (cast: (int) (at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0 && (at\as\frame\flags & 2048U) != 0U))
 end: lm_compiler_written_put_node
 
+# `@: place value` with a path as the place (lm_compiler_place_write_lower): the head is the path, the body the value, and the role says that nothing of it is called.
+fn: lm_compiler_place_write_node (const: (@: at c.LmP0Node)) int
+    return: (cast: (int) (at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0 && (at\as\frame\flags & 4096U) != 0U))
+end: lm_compiler_place_write_node
+
 # The text a node's Structure bears: the head the program wrote, which the split keeps beside the name its definition goes by, or the node's own.
 fn: lm_compiler_source_text_of (const: (@: at c.LmP0Node); const: (@: text c.LmP0Text)) @: c.LmP0Text
     if: lm_compiler_written_definition_node(at) != 0
@@ -681,8 +686,12 @@ end: lm_compiler_written_place_definition
 fn: lm_compiler_contract_type_model (const: (@: word c.LmP0Text)) int
     @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
-    int: model lm_compiler_type_model(word)
+    int: model -1
     int: own
+    if: word != 0 && word\data != 0 && c.memchr(word\data, 92, word\length) != 0
+        return: lm_compiler_path_type_model(word)
+    ---
+    model: lm_compiler_type_model(word)
     if: model >= 0 || here_mi_cell[0] < 0
         return: model
     own: c.lm_compiler_resolved_own(here_mi_cell[0], word)
@@ -717,7 +726,7 @@ fn: lm_compiler_resolve_type_atom (const: (@: atom c.LmP0Text); int: depth; int:
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
-    if: c.lm_compiler_site_method(here_mi_cell[0], atom) >= 0
+    if: lm_compiler_requirement_method(here_mi_cell[0], atom) >= 0
         \out_ty: c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
@@ -1256,6 +1265,44 @@ fn: lm_compiler_contract_model_word (@: contract c.L2TypeContract; const: (@: wo
         return: (cast: (int) (-1))
     return: (cast: (int) (answer))
 end: lm_compiler_contract_model_word
+
+# The callable a requirement word names: at the site, or at the leaf of a path (`@: g Outer\f`, as `@: ptr two` is).
+fn: lm_compiler_requirement_method (int: mi; const: (@: word c.LmP0Text)) int
+    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
+    int: saved cur_mi_cell[0]
+    int: leaf_mi -1
+    int: kind
+    if: word = 0 || word\data = 0 || c.memchr(word\data, 92, word\length) = 0
+        return: c.lm_compiler_site_method(mi, word)
+    ---
+    if: mi >= 0
+        cur_mi_cell[0]: mi
+    ---
+    kind: c.lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, 0)
+    cur_mi_cell[0]: saved
+    if: kind = 4
+        return: (cast: (int) (leaf_mi))
+    return: -1
+end: lm_compiler_requirement_method
+
+# `@: x a\b`: the requirement is the Structure the path's leaf holds, the second operand being both the requirement and the value, as a bare `@: x Model` is (lm_compiler_declaration).
+# A leaf of no known Structure is no requirement here, and the declaration of a name typed by it says so as an unknown word does.
+fn: lm_compiler_path_type_model (const: (@: word c.LmP0Text)) int
+    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
+    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
+    int: saved cur_mi_cell[0]
+    int: leaf_mi -1
+    int: model -1
+    int: kind
+    if: here_mi_cell[0] >= 0
+        cur_mi_cell[0]: here_mi_cell[0]
+    ---
+    kind: c.lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, @ model)
+    cur_mi_cell[0]: saved
+    if: kind = 2 || kind = 3 || kind = 10 || kind = 11
+        return: (cast: (int) (model))
+    return: -1
+end: lm_compiler_path_type_model
 
 fn: lm_compiler_type_model (const: (@: word c.LmP0Text)) int
     @: own_excl_cell int (cast: (@: int) (@ c.l2_own_excl))

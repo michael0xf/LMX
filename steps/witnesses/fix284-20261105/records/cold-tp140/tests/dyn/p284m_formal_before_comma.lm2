@@ -1,0 +1,22 @@
+# Slice 284 probe: a formal and a method's local before a comma, `two(a, \py)`, `two(w, \py)`: the name alone is the operand.  Entry 7.
+fn: two (int: a; int: b) int
+    return: a * 10 + b
+end: two
+int: y 4
+@: py int @ y
+fn: by_value (int: a) int
+    return: two(a, \py)
+end: by_value
+fn: by_local () int
+    int: w 3
+    return: two(w, \py)
+end: by_local
+int: code 7
+if: by_value(3) != 34
+    code: 11
+---
+if: code = 7 && by_local() != 34
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

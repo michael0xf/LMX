@@ -6,7 +6,7 @@
 # at the entry.  outer binds `quote` to the unit's Shape (y, x: a Point) through its formal: take reads 2, pass reads 2;
 # outer_slim binds it to Slim (pad only): take and pass are the implicit `implements`, caught; outer_num binds a number: take
 # is the implicit `convert`, caught; outer_ptr binds `quote` to a pointer to its own graph reference (`@@: quote Point`, `quote:
-# @ inst`) and through dereferences it into a modelled own (`@: m Point \quote`): the deref typed by the owning record and
+# @ inst`) and through dereferences it into a modelled own (`@: m Point, \quote`): the deref typed by the owning record and
 # admitted by the actual pointee (the deref level of P1-PTR-COVERAGE; the address of a graph-bound free name is the next
 # slice).  Entry 7; 81.. name the failing check.
 Point:
@@ -62,7 +62,7 @@ fn: outer_slim (Thin: t) int
     return: 0
 end: outer_slim
 fn: through () int
-    @: m Point \quote
+    @: m Point, \quote
     return: m\y
 end: through
 fn: outer_ptr (Point: p) int

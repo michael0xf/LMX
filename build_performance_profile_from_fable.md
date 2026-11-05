@@ -343,3 +343,12 @@ Source 211/44404A52; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. The walker now asks the selected call's admission on every call with no data of its own: a fn answers at once, a sub scans the names table. Its cost was not measured apart.
 A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix283-20261105/notes.md).
+
+## Slice284 / boot146a (Opus, 2026-11-05)
+
+Whole quick 1096.06 s: 22:15:42.9514930Z→22:33:59.0131237Z, both generations
+smoke 9/0. G2 focus 64/0, 884.79 s: 22:35:37.7276961Z→22:50:22.5172290Z.
+Source 214/2A1D385A; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. P0 sets one node flag per separator, and `@:` with a path as its second operand no longer resolves that path to choose its form. Neither was measured apart.
+A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix284-20261105/notes.md).

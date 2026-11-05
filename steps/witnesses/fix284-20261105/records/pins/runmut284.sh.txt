@@ -1,0 +1,56 @@
+P=/c/Nyasha_Planet/LMX/build2/codex_fix250generationchain01
+SP=/c/Users/mtkra/AppData/Local/Temp/claude/6d92abb4660ab27f/b79b4933-abc1-4eae-98f7-6361633964ee/scratchpad
+PWSH="/c/Users/mtkra/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe"
+cd $P
+memok() {
+  local line
+  line=$("$PWSH" -NoProfile -Command "\$o=Get-CimInstance Win32_OperatingSystem; [string][int](\$o.FreePhysicalMemory/1024) + ' ' + [string][int](\$o.FreeVirtualMemory/1024)" < /dev/null 2>&1 | tail -n 1)
+  set -- $line
+  if [ "${1:-0}" -lt 4096 ] || [ "${2:-0}" -lt 4096 ]; then echo "memory below the margin: free physical ${1:-?} MB, free virtual ${2:-?} MB, before $STEP" >> $OUT; return 1; fi
+  return 0
+}
+run() { "$PWSH" -NoProfile -Command "& ([ScriptBlock]::Create([IO.File]::ReadAllText('C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/$1.command')))" < /dev/null 2>&1 | tail -n 1 | cut -c1-200; }
+OUT=$P/pins/mut284.txt
+SUF=${MUT_SUFFIX:-}
+LIST=$1
+RTBASE=$2
+TOOL=$3
+n=$4; shift 4
+# Slice 284: every mutant is a frontend one (P0 is a part of the frontend); the runtime is the published G2's.
+for m in "$@"; do
+  n=$((n+1))
+  STEP="mutant $m"
+  memok || exit 3
+  r=$(python -I $SP/mut284.py $m 2>&1)
+  echo "$r" >> $OUT
+  case "$r" in mutated*) ;; *) echo "mutation did not apply: $m" >> $OUT; continue;; esac
+  TP_TOOL=$TOOL TP_LABEL=fem146-$m$SUF TP_TRY=m$m$SUF run tp146-fe >> $OUT
+  FE=cold-tp140/fem146-$m$SUF/l2trans.exe
+  RT=$RTBASE
+  if [ -f "$FE" ] && [ -f "$RT/driver.o" ]; then
+    STEP="the probes of $m"
+    if ! memok; then
+      r=$(TP_TRY=m$n run tp146-prepare)
+      echo "$m restore: $r" >> $OUT
+      exit 3
+    fi
+    TP_TOOL=$TOOL TP_FE=$FE TP_RT=$RT TP_TRY=f$m$SUF TP_LIST=$LIST run tp146-probe >> $OUT
+    grep -a -E '^ *SUITE' pins/tp146-probe-f$m$SUF.log | cut -c1-80 >> $OUT
+    grep -a -E '^FAIL' pins/tp146-probe-f$m$SUF.log | grep -v '\[exit\]' | cut -c1-110 | head -n 6 >> $OUT
+    for r2 in comma_boundary comma_path_refused comma_requirement_refused; do
+      for k in native forced; do
+        printf '%s %s %s: ' $m $r2 $k >> $OUT
+        { grep -a -h 'l2trans error' tp146-probe/f$m$SUF/$r2-$k/p.L2.log 2>/dev/null | head -n 1 | sed 's|.*/tests/||' | cut -c1-110; for q in 0 1; do grep -a -h -E 'exit [0-9]+, expected|walk error|invariant|R0 was stopped|internal' tp146-probe/f$m$SUF/$r2-$k/run-root$q.log 2>/dev/null | head -n 1 | cut -c1-90; done; } | tr '\n' ' ' >> $OUT
+        echo >> $OUT
+      done
+    done
+  else
+    echo "$m: no build" >> $OUT
+    grep -a -h 'l2trans error' cold-tp140/fem146-$m$SUF/p0_parser.L2.log cold-tp140/fem146-$m$SUF/l2_frontend_resolve.L2.log 2>/dev/null | head -n 2 | cut -c1-160 >> $OUT
+  fi
+  # the stage comes back to the candidate through its own recipe; failure stops the loop so no mutation carries over
+  r=$(TP_TRY=m$n run tp146-prepare)
+  echo "$m restore: $r" >> $OUT
+  case "$r" in PREPARED*) ;; *) echo "restore failed, stopped" >> $OUT; exit 1;; esac
+done
+echo done

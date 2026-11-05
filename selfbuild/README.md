@@ -6,8 +6,12 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 211 inputs (65 source files, 34 tools and
-112 tests). Slice283 reads a path below a callable's place by name over the callable standing
+The selected package contains 214 inputs (65 source files, 34 tools and
+115 tests). Slice284 makes a separator the end of an operand: `add(x, \px)` and `two(x, -y)` are
+two actuals, and `@: p T \q` is the path in any spacing, whatever `T` holds; a requirement and a
+dereference are written `@: p T, \q`.
+
+Slice283 reads a path below a callable's place by name over the callable standing
 there, a value in that place takes the selected call's admission (a missing place is the implicit
 `call`), a reached write into an immutable value is the implicit `interpreter`, and `Box\k: (int:
 a 8)` is the two acts a simple head has.
@@ -100,20 +104,20 @@ Native and walker share actual named-place selection, reception and store.
 A consumed numeric receiver uses one prepared expression and the common
 runtime value receiver. There is no separate var parser or hidden graph.
 
-The whole quick bootstrap took 810.18 seconds; G1 and G2 each passed 9 smoke
-rows. G2 passed 61 focused rows. Separate G2 observation checked 39 genuinely
+The whole quick bootstrap took 1096.06 seconds; G1 and G2 each passed 9 smoke
+rows. G2 passed 64 focused rows. Separate G2 observation checked 5 genuinely
 walked bodies with exact counts on both roots, and native walks none of them.
-All 211 published source hashes equal the frozen tested input byte for byte. The
+All 214 published source hashes equal the frozen tested input byte for byte. The
 248 generation inventories are identical: 245 raw-equal files and 3 PE files
 differing only in link metadata.
-[Sources and checks](../steps/witnesses/fix283-20261105/notes.md).
+[Sources and checks](../steps/witnesses/fix284-20261105/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `fc99357667647ab744df802a7c4bcb0e8b1e380f456f6f9782709a4bf62342e0` |
-| Input manifest | `44404a528737263c5871277adc92c83f87f820929b0001bf976b974ecff62b76` |
-| Working tool | `6d0c44248c1e5b2de37990ea1875d29591c8f475391dc4f4dc7e011f8efbe0a2` |
-| G2 frontend | `568b28408d93a51f69182d259e6bbc0eacb00a5b22d232a8c12023f275575281` |
+| Input list | `22cbf024235a4ab53af8c7d905913c79c56d2351e03452093b75e4f21080eaf7` |
+| Input manifest | `2a1d385a7f06aaeddad60305f356698eebdf62ba48a6e095bc36c237c095ba1a` |
+| Working tool | `ba82e4988ea88b8bda09a018818467b8f691b20f8cc1b9faf9d5a5148e4b4f13` |
+| G2 frontend | `08db3ff3962531a000cf68995ecbe075a249dcd7c1ae2e5b6a73b606925e01e9` |
 | Production runtime | `194a251fd9815647a9f1e8643613f0429d78f75d5295e532710462ee9e9f68de` |
 | Observation runtime | `9a8e1e053cd0de000920953a3d3d3c83a0090a6fca66b9d0a9d6ca69788a3eab` |
 
@@ -182,20 +186,20 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot145a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-tp140/tool145g/lmxtool-tool.exe` (`F48BE9F4…`, built by `rebuild tool`
-from this package's tool sources with boot144b's G2 frontend and runtime),
-previous frontend `cold-boot144b/quick144b/g2/frontend/l2trans.exe`
-(`BA51E594…`, the G2 frontend of slice282) with its adjacent backend
-(`F1036DC8…`) and libc (`AF9FDAE3…`), and BASE
+boot146a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-tp140/tool146a/lmxtool-tool.exe` (`41E2EA46…`, built by `rebuild tool`
+from this package's tool sources with boot145a's G2 frontend and runtime),
+previous frontend `cold-boot145a/quick145a/g2/frontend/l2trans.exe`
+(`568B2840…`, the G2 frontend of slice283) with its adjacent backend
+(`3650B5C7…`) and libc (`AF9FDAE3…`), and BASE
 `cold-candidate48/full48/g2/frontend`. Its promoted working tool is
-`cold-boot145a/quick145a/lmxtool.exe` (`6D0C4424…`), the G2 tool, with
+`cold-boot146a/quick146a/lmxtool.exe` (`BA82E498…`), the G2 tool, with
 `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot145a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-05, 18:33:17–18:46:47Z, 810 s): `BOOTSTRAP quick 0 failures`. G0
+boot146a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-05, 22:15:42–22:33:59Z, 1096 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's

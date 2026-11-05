@@ -1,0 +1,10 @@
+# Slice 284: `@: p Inner \q` with no comma is the path `Inner\q` whatever Inner holds, and Inner has no field q: refused at the declaration (VALUE-PATH-BY-FIELD-PRESENCE).
+# Before, the missing field turned the same fields into a requirement and a dereference; `@: p Inner, \q` writes those (tests/dyn/comma_boundary.lm2).
+Inner:
+    int: v 3
+end: Inner
+@: r Inner Inner
+@@: q Inner @ r
+@: p Inner \q
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

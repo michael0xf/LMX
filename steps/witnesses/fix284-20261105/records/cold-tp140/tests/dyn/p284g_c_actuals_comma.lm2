@@ -1,0 +1,17 @@
+# Slice 284 probe: two dereference actuals, and a name followed by a dereference: `two(\px, \py)`, `two(y, \px)`.  Entry 7.
+int: x 3
+@: px int @ x
+int: y 4
+@: py int @ y
+fn: two (int: a; int: b) int
+    return: a * 10 + b
+end: two
+int: code 7
+if: two(\px, \py) != 34
+    code: 11
+---
+if: code = 7 && two(y, \px) != 43
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

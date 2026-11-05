@@ -1,0 +1,15 @@
+# Slice 284 probe: two actuals after a comma, the second a dereference: `add(x, \px)` (BARE-DEREF-ACTUAL-MERGED).  Entry 7.
+fn: add (int: a; int: b) int
+    return: a + b
+end: add
+int: x 3
+@: px int @ x
+int: code 7
+if: add(x, \px) != 6
+    code: 11
+---
+if: code = 7 && add(x , \ px) != 6
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

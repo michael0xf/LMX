@@ -1,0 +1,95 @@
+# Slice 284: a separator ends an operand, spacing does not (the author, 2026-10-27; BARE-DEREF-ACTUAL-MERGED, VALUE-PATH-BY-FIELD-PRESENCE).  Entry 7.
+# The same fields with no separator are one operand whatever a name in them resolves to (the semantics book, "Одна модель, одно разрешение, одно потребление"):
+# `@: p Box \Inner` is the path in every spacing, `@: p Inner, \q` the requirement and the dereference, and `add(x, \px)` two actuals.
+Box:
+    Inner:
+        int: v 4
+    end: Inner
+end: Box
+Inner:
+    int: v 3
+end: Inner
+@: r Inner Inner
+@@: q Inner @ r
+fn: add (int: a; int: b) int
+    return: a + b
+end: add
+fn: two (int: a; int: b) int
+    return: a * 10 + b
+end: two
+int: x 3
+@: px int @ x
+int: y 4
+@: py int @ y
+@: glued Box\Inner
+@: spaced Box \Inner
+@: wide Box \ Inner
+@: required Inner, \q
+fn: in_method () int
+    @: local int @ y
+    return: two(x, \local)
+end: in_method
+fn: by_formal (@: h Inner) int
+    @: p Inner, \q
+    return: p\v + h\v
+end: by_formal
+# A pointer's index on a walked root is UNSUPPORTED on 283 too (p284k), so the index forms stand in a method.
+fn: by_index () int
+    if: two(px[0U], \py) != 34
+        return: 1
+    if: two(px\[0U], \py) != 34
+        return: 2
+    return: 0
+end: by_index
+Twice:
+    int: t 5
+end: Twice
+int: code 7
+if: glued\v != 4
+    code: 11
+---
+if: code = 7 && spaced\v != 4
+    code: 12
+---
+if: code = 7 && wide\v != 4
+    code: 13
+---
+if: code = 7 && required\v != 3
+    code: 14
+---
+if: code = 7 && add(x, \px) != 6
+    code: 15
+---
+if: code = 7 && add(x , \ px) != 6
+    code: 16
+---
+if: code = 7 && two(\px, \py) != 34
+    code: 17
+---
+if: code = 7 && two(y, \px) != 43
+    code: 18
+---
+if: code = 7 && in_method() != 34
+    code: 19
+---
+if: code = 7 && by_formal(r) != 6
+    code: 20
+---
+if: code = 7 && two(x, -y) != 26
+    code: 21
+---
+if: code = 7 && two(glued\v, \px) != 43
+    code: 22
+---
+int: indexed by_index()
+if: code = 7 && indexed = 1
+    code: 23
+---
+if: code = 7 && two(Twice\[0]t, \px) != 53
+    code: 24
+---
+if: code = 7 && indexed = 2
+    code: 25
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,50 @@
+import sys
+R = 'C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140/src/l2src/'
+which = sys.argv[1]
+TABLE = {
+    # P0 leaves nothing of the separator again.
+    'p0mark': ('p0_parser.lm2', r'''                # The separator stays in the model as the mark of the field before it (BARE-DEREF-ACTUAL-MERGED): spacing is style, a separator is a boundary (the author, 2026-10-27).
+                if: ((structure\last_field != 0) && (structure\last_field\value != 0))
+                    structure\last_field\value\flags: (structure\last_field\value\flags | c.LM_P0_NODE_SEPARATOR_AFTER)
+''', r''''''),
+    # The path reader steps over a separator.
+    'pathstop': ('l2_frontend_resolve.lm2', r'''        if: lm_compiler_separated((cast: (const: @: c.LmP0Field) last)) != 0
+            break
+''', r''''''),
+    # The root alone does not end the run at a separator.
+    'pathroot': ('l2_frontend_resolve.lm2', r'''    if: lm_compiler_separated((cast: (const: @: c.LmP0Field) f)) != 0 || s = 0 || s\value = 0 || ''', r'''    if: s = 0 || s\value = 0 || '''),
+    # The expression reader continues with an operator past a separator.
+    'exprstop': ('l2_frontend_resolve.lm2', r'''        if: lm_compiler_separated((cast: (const: @: c.LmP0Field) (c.lm_compiler_skip_span(f, run - 1)))) != 0
+            break
+''', r''''''),
+    # The value splitter reads an operator after a separator.
+    'valuestop': ('l2_frontend_resolve.lm2', r'''        # After a separator an operand begins, as after an operator: a sign there is its prefix (lm_compiler_separated).
+        if: lm_compiler_separated((cast: (const: @: c.LmP0Field) (c.lm_compiler_skip_span(f, run - 1)))) != 0
+            want_value: 1
+''', r''''''),
+    # `@: p T \q` is no path operand.
+    'pathvalue': ('l2_frontend_resolve.lm2', r'''                    path_run: lm_compiler_rw_path_run(type_field, n - 1)
+''', r'''                    path_run: 0
+'''),
+    # The last field read is not moved by a name step.
+    'namelast': ('l2_frontend_resolve.lm2', r'''            used: used + 2
+            last: g
+''', r'''            used: used + 2
+'''),
+    # The last field read is not moved by an index.
+    'indexlast': ('l2_frontend_resolve.lm2', r'''            last: c.lm_compiler_skip_span((cast: (@: c.LmP0Field) ((part\first))), (cast: (int) ((part\count))))
+''', r''''''),
+    # The last field read is not moved by an occurrence selector.
+    'occlast': ('l2_frontend_resolve.lm2', r'''                    last: after
+''', r''''''),
+    # The last field read is not moved by `\ [expr]`.
+    'slashindexlast': ('l2_frontend_resolve.lm2', r'''                last: close
+''', r''''''),
+}
+name, old, new = TABLE[which]
+with open(R + name, 'rb') as f:
+    t = f.read().decode('utf-8')
+assert t.count(old) == 1, (which, t.count(old))
+with open(R + name, 'wb') as f:
+    f.write(t.replace(old, new).encode('utf-8'))
+print('mutated', which, name, 'frontend')

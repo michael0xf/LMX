@@ -1,0 +1,13 @@
+# Slice 284 probe: `@: p Inner \q`, Inner has no field q, q holds the address of a reference to an Inner: the same fields as a path.  Entry 7.
+Inner:
+    int: v 3
+end: Inner
+@: r Inner Inner
+@@: q Inner @ r
+@: p Inner \q
+int: code 7
+if: p\v != 3
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

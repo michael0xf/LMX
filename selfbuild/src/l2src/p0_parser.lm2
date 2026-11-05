@@ -2361,6 +2361,9 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                 lm_p0_tmp_18: text[i]
                 i: i + 1U
                 separator: lm_p0_tmp_18
+                # The separator stays in the model as the mark of the field before it (BARE-DEREF-ACTUAL-MERGED): spacing is style, a separator is a boundary (the author, 2026-10-27).
+                if: ((structure\last_field != 0) && (structure\last_field\value != 0))
+                    structure\last_field\value\flags: (structure\last_field\value\flags | c.LM_P0_NODE_SEPARATOR_AFTER)
                 if: (c.lm_p0_is_short_form_separator(separator) && ((flags & c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON) != 0U))
                     break
                 if: (allow_empty_fields && expect_field)

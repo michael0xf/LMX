@@ -406,7 +406,9 @@ core08/emit08 переведены seed-ом (3710/5034 с), warm40 FE-O1 соб
 предупреждений unused-*/pointer-to-int-cast; `warm-frontend40/l2trans.exe` 6FF7DB4B…); в C-заголовках `lm_compiler_use_note`
 только у kernel-порта (`l2_copy_uses.lm1.h`), у core `lm_compiler_use_note_lexical`; в frontend.c по одному определению каждого.
 
-### BARE-DEREF-ACTUAL-MERGED — 2026-10-27, fable_pc (срез 238, перевод emitter choice04 seed-транслятором), OPEN
+### BARE-DEREF-ACTUAL-MERGED — 2026-10-27, fable_pc (срез 238, перевод emitter choice04 seed-транслятором), CLOSED срезом 284
+
+Разделитель оставляет в модели P0 метку на поле перед собой (`LM_P0_NODE_SEPARATOR_AFTER`). Цикл шагов пути `lm_compiler_path_steps_operand` и разбор значения `lm_compiler_value_fields_into` за метку операнд не продолжают; пробелы не участвуют. `lm_compiler_expr_span` из направления не изменён: его читатели только классифицируют, и мутант без проверки выжил (p284n). Свидетель — `tests/dyn/comma_boundary.lm2`, коды 11–25: два актуала после запятой, после индекса, шага пути и селектора, знак после запятой, пути при пробелах; C-вызов — проба p284g. [Запись](witnesses/fix284-20261105/notes.md). Исходная запись ниже.
 
 Голый актуал `\x` после запятой приклеивается как шаг пути к предыдущему актуалу, если тот — атом, путь или индекс.
 P0 выдаёт `\` отдельным атомом-оператором (`lm_p0_append_compact_atom_pieces`), запятая-разделитель полем не
@@ -11323,6 +11325,12 @@ replay3630 не потерял выходов и не дал новых диаг
 
 Array в immutable-значении: `b: immutable: merge(Holder)` с `[]: int items 3` и чтение `b\items[1U]` дают `walk error: INVALID` в native и `PRIMITIVE` в forced, на кортежах 282 и 283, то есть до записи дело не доходит. [Проба](witnesses/fix283-20261105/records/cold-tp140/tests/dyn/p283aq_im_array_read.lm2), [запись в элемент](witnesses/fix283-20261105/records/cold-tp140/tests/dyn/p283aj_im_elem.lm2).
 
-### VALUE-PATH-BY-FIELD-PRESENCE — 2026-11-05, Opus (срез 283), OPEN
+### VALUE-PATH-BY-FIELD-PRESENCE — 2026-11-05, Opus (срез 283), CLOSED срезом 284
+
+`lm_compiler_value_path_run` удалён: второй операнд `@:` — путь, если поля образуют путь, что бы в нём ни нашлось. `@: p T \q` — путь при любых пробелах; требование и разыменование пишутся `@: p T, \q`, одиннадцать строк фикстур переписаны. Путь без поля отказывает при трансляции общим `unknown type` на объявлении. [Запись](witnesses/fix284-20261105/notes.md). Исходная запись ниже.
 
 `@: x Box\absent` и `@: p T \q` различаются тем, есть ли поле (`lm_compiler_value_path_run`, срез 282): значение без поля тихо становится требованием и разыменованием, а `@: p Model \q` при поле `q` в `Model` меняет смысл. Запятая и пробелы P0 дают одни и те же поля (BARE-DEREF-ACTUAL-MERGED). Поручение Codex: [ревью 282](witnesses/fix283-20261105/records/pins/codex-282-review.txt), п.2, сверить формы с полем и без, с запятой и пробелами и выяснить, где потеряна граница. Следующий срез.
+
+### ROOT-POINTER-INDEX-WALKED — 2026-11-05, Opus (срез 284), OPEN
+
+Индекс указателя в обходимом корне: `@: px int @ x` и `int: a px[0U]` при `walkroot 1` дают `walk error: UNSUPPORTED` в native и forced, на кортежах 283 и 284. В методе и в корне без обхода работает; путь через ссылку в обходимом корне тоже (p284l). Известный предел должен отказывать при трансляции, а не падать при исполнении. [Проба](witnesses/fix284-20261105/records/cold-tp140/tests/dyn/p284k_root_pointer_index.lm2), [запись](witnesses/fix284-20261105/notes.md).

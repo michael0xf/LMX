@@ -1,0 +1,14 @@
+# Slice 284: `@: p Box, \Inner` with the comma is the requirement Box and a dereference, though Box has the field Inner, so `p\v` names no field of Box: refused
+# (BARE-DEREF-ACTUAL-MERGED).  Before, the comma was lost and the same fields read as the path `Box\Inner`.
+Box:
+    Inner:
+        int: v 4
+    end: Inner
+end: Box
+@: p Box, \Inner
+int: code 7
+if: p\v != 4
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,15 @@
+# Slice 284 probe: a prefix sign after a comma, `two(x, -y)` and `two(x, - y)`: two actuals or the binary minus?  Entry 7.
+fn: two (int: a; int: b) int
+    return: a * 10 + b
+end: two
+int: x 3
+int: y 4
+int: code 7
+if: two(x, -y) != 26
+    code: 11
+---
+if: code = 7 && two(x, - y) != 26
+    code: 12
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

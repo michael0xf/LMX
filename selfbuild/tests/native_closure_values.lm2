@@ -83,8 +83,8 @@ fn: reparent_values (int: argc; @@: argv char) int
     @: new_numbers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ moved, copied, 0U))
     if: copied = 0 || copied = source || new_numbers = 0 || new_numbers = numbers || pointers\parent != copied || c.lmx_thread_parent(child) != owner
         failed: failed + 1
-    @: first int \slot0
-    @: second int \slot1
+    @: first int, \slot0
+    @: second int, \slot1
     if: first != (cast: (@: int) c.lmx_array_cell_in(@ moved, new_numbers, 1U)) || second != (cast: (@: int) c.lmx_array_cell_in(@ moved, new_numbers, 0U))
         failed: failed + 1
     int: adopted c.lmx_thread_adopt(child, next)
@@ -96,7 +96,7 @@ fn: reparent_values (int: argc; @@: argv char) int
     \first: argc + 56
     @: retained_pointers c.LmxArray (cast: (@: c.LmxArray) c.lmx_graph_value_in(@ moved, copied, 1U))
     @@: retained_slot int (cast: (@@: int) c.lmx_array_cell_in(@ moved, retained_pointers, 0U))
-    @: retained int \retained_slot
+    @: retained int, \retained_slot
     int: after \retained
     int: other \second
     if: before != argc + 28 || after != argc + 56 || other != argc + 10 || retained != first

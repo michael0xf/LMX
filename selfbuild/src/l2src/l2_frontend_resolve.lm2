@@ -1016,7 +1016,8 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
                     if: type_field = 0 || type_field\value = 0
                         return: (cast: (@: c.L2Declaration) (0))
                     # `@: x a\b`: the path is one operand, and its leaf the requirement (lm_compiler_path_type_model).  Alone it is the value too, as a bare `@: x Model` is.
-                    path_run: lm_compiler_value_path_run(type_field, n - 1)
+                    # `@: p T \q` is that path whatever T holds; a requirement and a dereference are written `@: p T, \q` (lm_compiler_separated).
+                    path_run: lm_compiler_rw_path_run(type_field, n - 1)
                     if: path_run >= 3
                         contract: c.lm_compiler_contract_new(0, 0, (cast: (const: @: c.LmP0Text) (lm_compiler_fields_text(type_field, path_run))), 0)
                     else:
@@ -1744,6 +1745,14 @@ fn: lm_compiler_raw_index_path (const: (@: prepared c.L2Path); int: mi; @: place
 end: lm_compiler_raw_index_path
 
 # Original: l2src/l2trans.lm1:14916
+# A separator after a field ends the operand the field is in (P0's LM_P0_NODE_SEPARATOR_AFTER; BARE-DEREF-ACTUAL-MERGED): the path run and the value reader ask it.  The same
+# fields with no separator are one operand whatever a name in them resolves to (the semantics book, "Одна модель, одно разрешение, одно потребление"), and spacing is style.
+fn: lm_compiler_separated (const: (@: field c.LmP0Field)) int
+    if: field = 0 || field\value = 0
+        return: 0
+    return: (cast: (int) ((field\value\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U))
+end: lm_compiler_separated
+
 fn: lm_compiler_expr_span (@: field c.LmP0Field) int
     @: f c.LmP0Field c.lm_compiler_next_active(field)
     @: scan c.LmP0Field f
@@ -2788,6 +2797,7 @@ fn: lm_compiler_path_steps_operand (@: first c.LmP0Field; int: count; @: out c.L
     @: after c.LmP0Field
     @: close c.LmP0Field
     @: pf c.LmP0Field
+    @: last c.LmP0Field
     c.L2ValueSpan: part
     int: used 1
     int: segs 1
@@ -2851,7 +2861,11 @@ fn: lm_compiler_path_steps_operand (@: first c.LmP0Field; int: count; @: out c.L
     n: f\value\as\atom\length
     k: 0
     s: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+    last: f
     while: used < count && s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && s\value\as\atom != 0
+        # A separator after the root or after a step ends the run: `two(x, \px)` is two operands, `x` alone the first (lm_compiler_separated).
+        if: lm_compiler_separated((cast: (const: @: c.LmP0Field) last)) != 0
+            break
         if: c.lm_compiler_is_slash((cast: (const: @: c.LmP0Text) (s\value\as\atom))) != 0
             g: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (s\next)))
             if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || g\value\as\atom = 0
@@ -2886,6 +2900,7 @@ fn: lm_compiler_path_steps_operand (@: first c.LmP0Field; int: count; @: out c.L
                     k: k + 1
                     segs: segs + 1
                     used: used + group + 2
+                    last: after
                     s: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (after\next)))
                     last_index: 0
                     continue
@@ -2903,6 +2918,7 @@ fn: lm_compiler_path_steps_operand (@: first c.LmP0Field; int: count; @: out c.L
                 k: k + 1
                 indexed: indexed + 1
                 used: used + 1 + group
+                last: close
                 s: after
                 last_index: 1
                 continue
@@ -2925,6 +2941,7 @@ fn: lm_compiler_path_steps_operand (@: first c.LmP0Field; int: count; @: out c.L
             k: k + 1
             segs: segs + 1
             used: used + 2
+            last: g
             s: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (g\next)))
             last_index: 0
             continue
@@ -2948,6 +2965,7 @@ fn: lm_compiler_path_steps_operand (@: first c.LmP0Field; int: count; @: out c.L
             k: k + 1
             indexed: indexed + 1
             used: used + group
+            last: c.lm_compiler_skip_span((cast: (@: c.LmP0Field) ((part\first))), (cast: (int) ((part\count))))
             s: after
             last_index: 1
             continue
@@ -4309,31 +4327,6 @@ fn: lm_compiler_fields_text (@: first c.LmP0Field; int: run) @: c.LmP0Text
     return: (cast: (@: c.LmP0Text) (text))
 end: lm_compiler_fields_text
 
-# The fields of a path standing as the second operand of `@: x a\b`, or 0.  P0 gives the same fields for `a\b` and `a \ b`, and spacing is style (the author, 2026-10-27), so the
-# resolution says which it is, as for any head: a path reaching a field is the path; `@: p int \q` and `@: p Model \q` with no field q in Model are a requirement and a dereference.
-fn: lm_compiler_value_path_run (@: first c.LmP0Field; int: n) int
-    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
-    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
-    int: run lm_compiler_rw_path_run(first, n)
-    int: saved cur_mi_cell[0]
-    int: leaf_mi -1
-    int: kind
-    @: word c.LmP0Text
-    if: run < 3
-        return: 0
-    word: lm_compiler_fields_text(first, run)
-    if: word = 0
-        return: 0
-    if: here_mi_cell[0] >= 0
-        cur_mi_cell[0]: here_mi_cell[0]
-    ---
-    kind: lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, 0)
-    cur_mi_cell[0]: saved
-    if: kind < 0
-        return: 0
-    return: run
-end: lm_compiler_value_path_run
-
 # The value a write through a path gets.  Under `@: place Model: value` (the book :315) the consumed Frame gives the candidate with an added requirement, and nothing is written into Model.
 fn: lm_compiler_place_write_value (const: (@: stmt c.LmP0Node); @@: first c.LmP0Field; @: n int; @@: asserted c.L2TypeContract) int
     @: body c.LmP0Structure stmt\as\frame\body
@@ -4740,6 +4733,9 @@ fn: lm_compiler_value_fields_into (@: first c.LmP0Field; int: count; @: spans c.
             return: 1
         used: used + run
         n: n + 1
+        # After a separator an operand begins, as after an operator: a sign there is its prefix (lm_compiler_separated).
+        if: lm_compiler_separated((cast: (const: @: c.LmP0Field) (c.lm_compiler_skip_span(f, run - 1)))) != 0
+            want_value: 1
         f: c.lm_compiler_skip_span(f, run)
     ---
     result_length[0]: n

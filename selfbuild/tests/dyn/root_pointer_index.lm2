@@ -1,0 +1,68 @@
+# Slice 287: a machine pointer held by an L3 place -- an own field of the root or of a method, or a formal -- is
+# indexed by the L3 INDEX in native and walked code alike: read, write, address, index 1 through a pointer into an
+# Array, the slash form, a formal and a method's own pointer (ROOT-POINTER-INDEX-WALKED). A write through a pointer
+# is observed through a pointer: a bare working value is not reloaded, and a dirty one is published at the next call
+# (the book, publication) -- so touch() publishes the initial values before the first write through px. The first
+# failure stays.
+int: x 3
+@: px int @ x
+int: a px[0U]
+[]: int cells 3
+cells[0U]: 5
+cells[1U]: 17
+cells[2U]: 7
+@: pc int @ cells[0U]
+fn: touch () int
+    return: 0
+end: touch
+fn: get (@: p int; size_t: at) int
+    return: p[at]
+end: get
+sub: put (@: p int; size_t: at; int: v)
+    p[at]: v
+end: put
+fn: own_read () int
+    int: cell 11
+    @: q int @ cell
+    return: q[0U]
+end: own_read
+fn: own_write () int
+    int: cell 11
+    @: q int @ cell
+    q[0U]: 12
+    return: \q
+end: own_write
+int: code 7
+int: t touch()
+if: a != 3
+    code: 11
+px[0U]: 4
+int: seen px[0U]
+if: code = 7 && seen != 4
+    code: 12
+@: py int @ px[0U]
+\py: 6
+if: code = 7 && px[0U] != 6
+    code: 13
+if: code = 7 && pc[1U] != 17
+    code: 14
+if: code = 7 && pc[2U] != 7
+    code: 15
+pc[1U]: 19
+if: code = 7 && cells[1U] != 19
+    code: 16
+if: code = 7 && px\[0U] != 6
+    code: 17
+if: code = 7 && get(px, 0U) != 6
+    code: 18
+if: code = 7 && get(pc, 2U) != 7
+    code: 19
+put(pc, 1U, 23)
+if: code = 7 && cells[1U] != 23
+    code: 20
+if: code = 7 && own_read() != 11
+    code: 21
+if: code = 7 && own_write() != 12
+    code: 22
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

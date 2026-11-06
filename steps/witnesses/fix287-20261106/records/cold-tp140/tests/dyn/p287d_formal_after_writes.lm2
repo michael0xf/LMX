@@ -1,0 +1,12 @@
+# Probe (slice 287): the witness's sequence up to its first native failure; the exit code is get(px, 0U), expected 6.
+int: x 3
+@: px int @ x
+int: a px[0U]
+fn: get (@: p int; size_t: at) int
+    return: p[at]
+end: get
+px[0U]: 4
+@: py int @ px[0U]
+\py: 6
+sendMessage: exit(exit_code: get(px, 0U); stdout: ""; stderr: "")
+return

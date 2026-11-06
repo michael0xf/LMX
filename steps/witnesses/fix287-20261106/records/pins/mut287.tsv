@@ -1,0 +1,7 @@
+# Slice 287 mutants. Each one is a hand Edit of the stage file cold-tp140/src/l2src/l2_frontend_emit.lm2, a whole frontend
+# build (pins/tp149-fe.command, label fe149mN), the list pins/probe287-m.tsv on it with the boot148b runtime
+# (pins/tp149-probe.command, label mN), then the stage file restored by a copy from variants/tp149 and the restore checked by
+# `lmxtool verify` of pins/source-tp149.sha256 before the next mutant.
+# id	site	text of the candidate	text of the mutant	expected
+m1	lm_compiler_rw_raw_index_value	int: status lm_compiler_rw_index_place(place, 0, 0, parent, out)	int: status 2	the read and address route is off: root1 of root_pointer_index and p284k_root_pointer_index give walk error UNSUPPORTED
+m2	the store of a raw-pointer indexed head (lm_compiler_rw_stmt_content, k = 7)	k: lm_compiler_rw_index_place(@ indexed_location, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, into, @ port_local_node)	k: 2	the store route is off: root1 of root_pointer_index gives walk error UNSUPPORTED at its first store px[0U]: 4; p284k (no store) passes

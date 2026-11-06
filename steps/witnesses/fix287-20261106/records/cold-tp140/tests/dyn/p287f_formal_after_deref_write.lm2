@@ -1,0 +1,9 @@
+# Probe (slice 287): one root write through \px, then the formal read; the exit code is get(px, 0U), expected 6.
+int: x 3
+@: px int @ x
+fn: get (@: p int; size_t: at) int
+    return: p[at]
+end: get
+\px: 6
+sendMessage: exit(exit_code: get(px, 0U); stdout: ""; stderr: "")
+return

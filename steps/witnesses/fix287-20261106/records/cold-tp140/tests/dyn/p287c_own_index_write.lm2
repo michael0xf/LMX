@@ -1,0 +1,9 @@
+# Probe (slice 287): a method's own pointer indexed for a write, read back by DEREF; the exit code is 12.
+fn: own_write () int
+    int: cell 11
+    @: q int @ cell
+    q[0U]: 12
+    return: \q
+end: own_write
+sendMessage: exit(exit_code: own_write(); stdout: ""; stderr: "")
+return

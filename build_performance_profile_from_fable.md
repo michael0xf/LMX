@@ -373,3 +373,16 @@ point. Not measured apart. The slice's first whole, boot148a (1070.21 s,
 07:06:35.8034024Z→07:24:26.0096975Z), ran before the declared-throws comparison and is superseded.
 A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix286-20261106/notes.md).
+
+## Slice287 / boot149b (Opus, 2026-11-06)
+
+Whole quick 1155.00 s: 11:53:38.0142864Z→12:12:53.0093853Z, both generations
+smoke 9/0. G2 focus 68/0, 1008.81 s: 12:14:17.1378063Z→12:31:05.9479113Z; full list
+on G2 85/0, 929.21 s: 12:31:10.7526502Z→12:46:39.9651083Z.
+Source 218/43142543; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only; the runtime objects equal slice286's G2 runtime. The walked index of a machine pointer
+held by an own field or a formal is decided once per path step from the step's resolved fields; no pass
+or table was added. Not measured apart. The slice's first whole, boot149a (1197.07 s,
+10:43:18.7534207Z→11:03:15.8224590Z), ran before the index reception check and is superseded.
+A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix287-20261106/notes.md).

@@ -3,7 +3,12 @@
 # Array, the slash form, a formal and a method's own pointer (ROOT-POINTER-INDEX-WALKED). A write through a pointer
 # is observed through a pointer: a bare working value is not reloaded, and a dirty one is published at the next call
 # (the book, publication) -- so touch() publishes the initial values before the first write through px. The first
-# failure stays.
+# failure stays. Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK): an index past the place's interval is the implicit
+# `interpreter` in native and walked code alike -- through a formal (a read in get, a write in put, an address; the raise
+# leaves the method), through an own pointer of a method, and through the root's own pointer read and written; slice
+# 287's native code ran these as C indexes. 2305843009213693951 * sizeof(int) leaves every interval and overflows nothing.
+# The native holder is the pointer's current value: `@: s char "abcdef"` is written into the C working copy, which the
+# record of the own field does not follow (30).
 int: x 3
 @: px int @ x
 int: a px[0U]
@@ -32,6 +37,19 @@ fn: own_write () int
     q[0U]: 12
     return: \q
 end: own_write
+fn: own_far () int
+    []: int slots 2
+    @: q int @ slots[0U]
+    return: q[2305843009213693951U]
+end: own_far
+fn: far_address (@: p int) int
+    @: pz int @ p[2305843009213693951U]
+    return: 0
+end: far_address
+fn: literal_char () int
+    @: s char "abcdef"
+    return: (cast: (int) s[2U])
+end: literal_char
 int: code 7
 int: t touch()
 if: a != 3
@@ -64,5 +82,57 @@ if: code = 7 && own_read() != 11
     code: 21
 if: code = 7 && own_write() != 12
     code: 22
+int: caught 0
+---
+    caught: get(pc, 2305843009213693951U)
+    catch: interpreter ()
+        caught: 90
+---
+if: code = 7 && caught != 90
+    code: 23
+caught: 0
+---
+    put(pc, 2305843009213693951U, 1)
+    catch: interpreter ()
+        caught: 90
+---
+if: code = 7 && caught != 90
+    code: 24
+caught: 0
+---
+    caught: far_address(pc)
+    catch: interpreter ()
+        caught: 90
+---
+if: code = 7 && caught != 90
+    code: 25
+caught: 0
+---
+    caught: own_far()
+    catch: interpreter ()
+        caught: 90
+---
+if: code = 7 && caught != 90
+    code: 26
+caught: 0
+---
+    caught: pc[2305843009213693951U]
+    catch: interpreter ()
+        caught: 90
+---
+if: code = 7 && caught != 90
+    code: 27
+caught: 0
+---
+    pc[2305843009213693951U]: 1
+    catch: interpreter ()
+        caught: 90
+---
+if: code = 7 && caught != 90
+    code: 28
+if: code = 7 && cells[1U] != 23
+    code: 29
+if: code = 7 && literal_char() != 99
+    code: 30
 sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
 return

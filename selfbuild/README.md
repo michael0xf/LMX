@@ -7,12 +7,19 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `tests/l2/` without an explicit source change would break its resolution.
 
 The selected package contains 218 inputs (65 source files, 34 tools and
-119 tests). Slice287 makes the index of a machine pointer held by an own field or a formal the
+119 tests). Slice288 checks the same L3 INDEX in native code: the place is selected by
+`lmx_walk_value_index_place` over the pointer's current value, the index received as `size_t`, and an
+index out of the place's interval or an overflow is the implicit `interpreter`; read, write and `@` are
+the walker's, under one predicate (`lm_compiler_index_l3_path`). `tests/sha/sha256_vectors.lm2` counts
+with `size_t: i`.
+
+Slice287 makes the index of a machine pointer held by an own field or a formal the
 L3 INDEX of slice271 in walked code too: ELEM, or ELEMPUT for a store, over the place's value,
 the index received as `size_t`. A walked root with `px[0U]` no longer fails at run time, and such
-methods are walked under `--walk-methods`. A genuine L2 operation (a C ABI member, a machine local,
-a C constant, a `void` or foreign pointee, an index that reaches `size_t` only by a conversion)
-keeps the native-only machine path.
+methods are walked under `--walk-methods`. What the route does not take (a C ABI member, a machine
+local, a C constant, a `void` or foreign pointee, an index that reaches `size_t` only by a conversion)
+keeps the native-only machine path: a limit of the implementation, not a genuine L2 operation (corrected
+by slice288).
 
 Slice286 gives a callable's place its declaration: the callable its definition put there.
 Every write there, by any path, is admitted against it before anything changes; a fn or sub of

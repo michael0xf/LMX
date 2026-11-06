@@ -3824,6 +3824,10 @@ fn: lm_compiler_emit_raw_index_store (const: (@: stmt c.LmP0Node); const: (@: pl
     @: cell_own char (cast: (@: char) cell_own_storage\buffer)
     c.L2Tx: cell_tx
     @: cell c.L2Tx c.lm_compiler_tx_local(@ cell_tx, cell_own, 1024U)
+    # Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK): a write through the L3 INDEX of a machine pointer an own field or a formal
+    # holds is the walker's ELEMPUT (lm_compiler_emit_index_l3_store).
+    if: place\descriptor = 0 && c.lm_compiler_index_l3_path((cast: (const: @: c.L2Path) (@ place\path)), mi) != 0
+        return: lm_compiler_emit_index_l3_store(stmt, place, mi, ind)
     if: place\descriptor = 0
         return: (cast: (int) (lm_compiler_emit_indirect_store(stmt, place, mi, ind)))
     # Unchecked opaque C storage has no L2 cell contract. Retain its actual
@@ -6799,6 +6803,8 @@ fn: lm_compiler_emit_actual_path_place_field (const: (@: path c.L2Path); int: mi
     @: holder char (cast: (@: char) holder_storage\buffer)
     c.L2FrontendScratchChar64: place_storage
     @: place_name char (cast: (@: char) place_storage\buffer)
+    c.L2FrontendScratchChar64: owner_storage
+    @: owner char (cast: (@: char) owner_storage\buffer)
     int: context -1
     int: k c.lm_compiler_path_named_tail(path)
     int: t -1
@@ -6812,7 +6818,28 @@ fn: lm_compiler_emit_actual_path_place_field (const: (@: path c.L2Path); int: mi
         ---
     else:
         k: 0
-        if: lm_compiler_emit_binding_value_full(path, mi, ind, value, @ context, full) != 0 || full\data[0] = 0
+        if: lm_compiler_emit_binding_value_full(path, mi, ind, value, @ context, full) != 0
+            return: 1
+        # Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK): a typed root -- the machine pointer an own field or a formal holds, the
+        # holder of the L3 INDEX (lm_compiler_index_l3_path) -- is held by its current value: the C working value, with the
+        # context its record carries, as the raw index takes its base. A native write keeps that C value current, not the
+        # record's reference (lmx_value_cell_fill copies only the context into an owner that is not the cell's companion).
+        # A free root is held by its record.
+        if: c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(path, mi)) = 0
+            if: value\data[0] = 0 || path\steps = 0
+                return: 1
+            t: tn_cell[0]
+            tn_cell[0]: t + 1
+            if: c.snprintf(owner, 64U, "0") < 0
+                return: 1
+            if: context >= 0 && c.snprintf(owner, 64U, "(@ l2_cv%d)", context) < 0
+                return: 1
+            if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_hv%d\n%slmx_walk_value_ref_context(@ l2_hv%d, c.LMX_TYPE_POINTER_BASE + %d, (cast: (@: void) (%s)), %s)\n", ind, t, ind, t, path\steps\address_ft, value\data, owner) < 0
+                return: 1
+            if: c.snprintf(owner, 64U, "@ l2_hv%d", t) < 0 || c.lm_compiler_tx_set(full, owner) != 0
+                return: 1
+            ---
+        if: full\data[0] = 0
             return: 1
         ---
     ---
@@ -7033,6 +7060,19 @@ fn: lm_compiler_path_record_read_context_full (int: mi; const: (@: path c.L2Path
         raw_status: c.lm_compiler_raw_index_path(path, mi, @ raw)
         if: raw_status != 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], at, "unsupported mixed physical path projection")))
+        # Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK; Codex, CODEX-OPUS-287-NORM-REVIEW-20261106T1318Z-01, item 1): the L3 INDEX
+        # of a machine pointer an own field or a formal holds (lm_compiler_index_l3_path, the walked route's predicate too)
+        # reads what the walker's ELEM reads: the place lmx_walk_value_index_place selects over the held value, each index
+        # received into size_t -- a null holder, a step out of the place's interval or an overflow the implicit
+        # `interpreter` (the book :1083) -- loaded by the place's actual type and projected to the element's.
+        @: raw_view c.L2Address @ raw
+        if: raw_view\descriptor = 0 && c.lm_compiler_index_l3_path((cast: (const: @: c.L2Path) (@ raw_view\path)), mi) != 0
+            leaf_step: lm_compiler_port_address_path_steps(raw_view) + (lm_compiler_port_address_path_n(raw_view) - 1)
+            raw_status: lm_compiler_emit_actual_path_place((cast: (const: @: c.L2Path) (@ raw_view\path)), mi, ind, at, cell)
+            if: raw_status = 0
+                raw_status: lm_compiler_emit_place_value_full((cast: (int) (leaf_step\elem_ty)), (cast: (@: char) cell\data), ind, dest, context, full_value)
+            c.lm_compiler_address_release(@ raw)
+            return: (cast: (int) (raw_status))
         raw_status: lm_compiler_emit_raw_index_value(@ raw, mi, ind, dest, context)
         c.lm_compiler_address_release(@ raw)
         return: (cast: (int) (raw_status))
@@ -9783,6 +9823,16 @@ fn: lm_compiler_emit_address_context_full (int: mi; const: (@: address c.L2Addre
     if: full_value = 0 || mi < 0 || ind = 0 || c.lm_compiler_m_machine(mi) != 0
         return: lm_compiler_emit_address_context_raw(mi, address, ind, dest, context)
     const: (@: actual_path c.L2Path (cast: (const: @: c.L2Path) (@ address\path)))
+    # Slice 288: the address of an L3 INDEX is the selected place's address value itself (lm_compiler_emit_address_context_raw).
+    if: address\kind = 8 && address\descriptor = 0 && c.lm_compiler_index_l3_path(actual_path, mi) != 0
+        status: lm_compiler_emit_address_context_raw(mi, address, ind, dest, @ raw_context)
+        if: status != 0 || raw_context < 0
+            return: 1
+        if: c.snprintf(record, 64U, "@ l2_cv%d", raw_context) < 0 || c.lm_compiler_tx_set(full_value, record) != 0
+            return: 1
+        if: context != 0
+            context[0]: raw_context
+        return: 0
     if: address\kind = 6 && actual_path\n > 0 && c.lm_compiler_ft_is_free(c.lm_compiler_path_root_binding_ft(actual_path, mi)) != 0
         c.L2FrontendScratchChar64: place_storage
         c.L2Tx: place_tx
@@ -9862,6 +9912,21 @@ fn: lm_compiler_emit_address_context_raw (int: mi; const: (@: address c.L2Addres
     @: symbol c.LmP0Text
     if: context != 0
         \context: -1
+    # Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK): the address of an L3 INDEX of a machine pointer an own field or a formal
+    # holds (lm_compiler_index_l3_path) is the address of the place lmx_walk_value_index_place selects, as the walker's
+    # ADDRESS over ELEM takes it (lmx_walk_place_address: the place's storage, its context the referent).
+    if: address\kind = 8 && address\descriptor = 0 && c.lm_compiler_index_l3_path((cast: (const: @: c.L2Path) (@ address\path)), mi) != 0
+        if: lm_compiler_emit_actual_path_place((cast: (const: @: c.L2Path) (@ address\path)), mi, ind, 0, physical) != 0
+            return: 1
+        temp: tn_cell[0]
+        tn_cell[0]: temp + 1
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_cv%d\n%sint: l2_as%d lmx_walk_place_address(l2_call_arena, @ %s, @ l2_cv%d)\n%sif: l2_as%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_as%d)\n%s    return: 0\n%s---\n", ind, temp, ind, temp, physical\data, temp, ind, temp, ind, temp, ind, ind) < 0
+            return: 1
+        if: c.lm_compiler_pointer_decl_text((cast: (int) (address\type)), 0, 0, type_text) != 0 || c.snprintf(name, 48U, "l2_cv%d.ref)", temp) < 0 || c.lm_compiler_tx_join(dest, "(cast: (", (cast: (const: @: char) (type_text\data)), ") ", name, 0) != 0
+            return: 1
+        if: context != 0
+            \context: temp
+        return: 0
     if: address\kind = 8
         return: (cast: (int) (lm_compiler_emit_raw_index_location(address, mi, ind, dest, context)))
     if: address\kind = 9
@@ -19571,3 +19636,78 @@ fn: lm_compiler_emit_received_place_failure (int: mi; const: (@: name char); con
         return: 1
     return: 0
 end: lm_compiler_emit_received_place_failure
+
+# Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK; Codex, CODEX-OPUS-287-NORM-REVIEW-20261106T1318Z-01, item 1): a write through the
+# L3 INDEX of a machine pointer an own field or a formal holds (lm_compiler_index_l3_path) is the walker's ELEMPUT, in its
+# order: the place lmx_walk_value_index_place selects first (a null holder, a step out of the place's interval or an overflow
+# the implicit `interpreter`), the write barrier on its storage, the value received by the element's type, then its store
+# into the selected place (lmx_walk_value_store and its throws) -- nothing is written before the complete value.
+fn: lm_compiler_emit_index_l3_store (const: (@: stmt c.LmP0Node); const: (@: place c.L2Address); int: mi; const: (@: ind char)) int
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @@: tok_cell c.L2Tx (cast: (@@: c.L2Tx) (@ c.l2_tok))
+    c.L2FrontendScratchChar64: selected_storage
+    c.L2Tx: selected_tx
+    @: selected c.L2Tx c.lm_compiler_tx_local(@ selected_tx, (cast: (@: char) selected_storage\buffer), 64U)
+    c.L2FrontendScratchChar1024: value_storage
+    c.L2Tx: value_tx
+    @: value c.L2Tx c.lm_compiler_tx_local(@ value_tx, (cast: (@: char) value_storage\buffer), 1024U)
+    c.L2FrontendScratchChar128: full_storage
+    c.L2Tx: full_tx
+    @: full c.L2Tx c.lm_compiler_tx_local(@ full_tx, (cast: (@: char) full_storage\buffer), 128U)
+    c.L2FrontendScratchChar128: target_storage
+    @: target char (cast: (@: char) target_storage\buffer)
+    c.L2FrontendScratchChar64: current_storage
+    @: current char (cast: (@: char) current_storage\buffer)
+    @: first c.LmP0Field 0
+    int: count 0
+    int: value_context -1
+    int: converted 0
+    int: pointer 0
+    int: status
+    int: t
+    if: stmt = 0 || place = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: 1
+    first: (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field))
+    count: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
+    pointer: (cast: (int) (c.lm_compiler_pointer_depth((cast: (int) (c.lm_compiler_formal_raw((cast: (int) (place\index)))))) > 0))
+    if: lm_compiler_emit_actual_path_place((cast: (const: @: c.L2Path) (@ place\path)), mi, ind, stmt, selected) != 0
+        return: 1
+    if: c.snprintf(target, 128U, "(%s.storage)", selected\data) < 0 || c.lm_compiler_emit_path_write_guard(mi, ind, target) != 0
+        return: 1
+    if: pointer != 0
+        if: lm_compiler_emit_reference_value_at_context_full(first, count, (cast: (int) (place\index)), (cast: (int) (place\model)), -1, mi, ind, value, -1, 0, @ value_context, full) != 0
+            return: 1
+        ---
+    else:
+        converted: lm_compiler_convert_value_to_full(mi, (cast: (int) (place\index)), stmt, (cast: (const: @: c.LmP0Frame) (stmt\as\frame)), ind, full)
+        if: converted = 1 || converted = 2
+            return: 1
+        if: converted != 3 && lm_compiler_emit_received_span_full(first, count, (cast: (int) (place\index)), (cast: (int) (place\model)), stmt, mi, ind, tok_cell[0], full) != 0
+            return: 1
+        ---
+    ---
+    status: lm_compiler_emit_received_place_store(mi, "l2_call_arena", (cast: (const: @: char) (selected\data)), ind, (cast: (const: @: char) (full\data)), 0, 0)
+    if: status != 2
+        return: status
+    # The legacy machine/opaque transport has no full Value: the same evaluated token, stored as lm_compiler_emit_array_place
+    # stores it.
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: pointer != 0
+        if: c.snprintf(current, 64U, "0") < 0
+            return: 1
+        if: value_context >= 0 && c.snprintf(current, 64U, "(@ l2_cv%d)", value_context) < 0
+            return: 1
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_array_giving%d\n%slmx_walk_value_ref_context(@ l2_array_giving%d, (%s.type), (cast: (@: void) (%s)), %s)\n", ind, t, ind, t, selected\data, value\data, current) < 0
+            return: 1
+        ---
+    else:
+        if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_array_giving%d\n%slmx_walk_value_num(@ l2_array_giving%d, (%s.type), (cast: (size_t) (%s)))\n", ind, t, ind, t, selected\data, tok_cell[0]\data) < 0
+            return: 1
+        ---
+    ---
+    if: c.snprintf(current, 64U, "@ l2_array_giving%d", t) < 0
+        return: 1
+    return: lm_compiler_emit_received_place_store(mi, "l2_call_arena", (cast: (const: @: char) (selected\data)), ind, current, 0, 0)
+end: lm_compiler_emit_index_l3_store

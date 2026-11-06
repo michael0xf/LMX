@@ -386,3 +386,15 @@ or table was added. Not measured apart. The slice's first whole, boot149a (1197.
 10:43:18.7534207Z→11:03:15.8224590Z), ran before the index reception check and is superseded.
 A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix287-20261106/notes.md).
+
+## Slice288 / boot150a (Opus, 2026-11-06)
+
+Whole quick 923.86 s: 15:48:40.1789044Z→16:04:04.0403247Z, both generations
+smoke 9/0. The focus list 68/0 (896.20 s: 15:18:48.0615620Z→15:33:44.2578510Z) and the full list
+85/0 (848.57 s: 15:33:48.4803583Z→15:47:57.0487114Z) ran on the candidate frontend fe150c, whose code
+equals G2's up to the PE header bytes; probes on G2 10/0 (100.69 s). Source 218/61CBDA82; 248 artifact
+paths per generation, 245 raw-equal and 3 PE metadata-only; the runtime objects equal slice287's G2
+runtime. A native L3 INDEX of an own or formal pointer is now one kernel call per access instead of a C
+index; no pass or table was added. Not measured apart. A whole-pipeline measurement, not a controlled
+comparison.
+[Commands, results and hashes](steps/witnesses/fix288-20261106/notes.md).

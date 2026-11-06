@@ -1953,7 +1953,9 @@ end: lm_compiler_check_decl_candidate
 # Original: l2src/l2trans.lm1:9112
 fn: lm_compiler_rw_raw_index_value (const: (@: place c.L2Address); int: parent; @: out int) int
     @: open c.LmP0Field
-    # Slice 287: over an own field or a formal the L3 INDEX (lm_compiler_rw_index_place); the rest is the machine path.
+    # Slice 287: over an own field or a formal the L3 INDEX (lm_compiler_rw_index_place, by slice 288's one predicate
+    # lm_compiler_index_l3_path); what that predicate does not take keeps the machine path -- a limit of this
+    # implementation (OPEN), not a category of the norm.
     int: status lm_compiler_rw_index_place(place, 0, 0, parent, out)
     if: status != 2
         return: (cast: (int) (status))
@@ -10323,8 +10325,8 @@ fn: lm_compiler_rw_address (const: (@: address c.L2Address); int: parent; @: out
     holder: \out
     if: address\kind = 8
         # A raw pointer index over an own field or a formal is the L3 INDEX (slice 287): the address of the ELEM place.
-        # Otherwise it is native L2; its SOURCE_MACHINE child retains the same selected root and original index spans in
-        # COUNT and EMIT.
+        # What lm_compiler_index_l3_path does not take keeps its SOURCE_MACHINE child, which retains the same selected
+        # root and original index spans in COUNT and EMIT -- a limit of this implementation (OPEN), not a category.
         status: lm_compiler_rw_raw_index_value(address, holder, @ value)
         if: status != 0
             return: (cast: (int) (status))
@@ -12548,7 +12550,8 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         \made: 1
         return: (cast: (int) (0))
     # A raw-pointer indexed place over an own field or a formal is the L3 INDEX of slice 287 (ELEMPUT). Any other is
-    # retained with its actual base, every index and RHS: native-only, not a fake descriptor Array operation.
+    # retained with its actual base, every index and RHS: native-only, not a fake descriptor Array operation (what
+    # lm_compiler_index_l3_path does not take: a limit of this implementation, OPEN).
     if: k = 7
         n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
         k: 1
@@ -17878,31 +17881,22 @@ end: lm_compiler_emit_snap_destroy
 # by an L3 place -- an own field or a formal of the walked code, the unit root's included -- is the L3 INDEX of slice 271,
 # the checked access the book gives L3 in native and interpreted code alike (paths; L2 §18), not an L2 operation the
 # interpreter may not run (book §24): ELEM, ELEMPUT for a store, over the place's value, every index received as size_t,
-# the actual place selected by lmx_walk_value_index_place.  A member step (the C ABI), a machine local or slot, a C
-# constant root, a pointer whose pointee has no kernel cell code (`@ void`, a foreign type) and an index that size_t takes
-# only through a conversion (lm_compiler_rw_index_receivable) stay the native-only SOURCE_MACHINE: 2 to the caller, which
-# builds it.
+# the actual place selected by lmx_walk_value_index_place.  Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK): which paths these
+# are is the one predicate lm_compiler_index_l3_path the native lowering asks too.  What it does not take -- a member step,
+# a machine local, slot or C constant root, a pointer to `void` or to a foreign type, an index of another numeric type --
+# keeps the native-only SOURCE_MACHINE (2 to the caller, which builds it): a limit of this implementation (OPEN), not a
+# category of the norm (Codex, CODEX-OPUS-287-NORM-REVIEW-20261106T1318Z-01, item 2).
 fn: lm_compiler_rw_index_place (const: (@: place c.L2Address); @: assigned c.LmP0Field; int: assigned_count; int: parent; @: out int) int
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     const: (@: path c.L2Path)
     @: step c.L2PathStep
-    int: k 0
-    int: ft
     int: raw
     int: child
     if: place = 0 || out = 0 || place\resolved = 0 || place\descriptor != 0 || assigned_count < 0
         return: 2
     path: @ place\path
-    if: path\n < 1 || path\steps = 0 || path\names != 0 || path\indexed != path\n || path\root_kind != 0 || (path\oi < 0 && path\fi < 0)
+    if: c.lm_compiler_index_l3_path(path, rw_mi_cell[0]) = 0
         return: 2
-    while: k < path\n
-        step: path\steps + k
-        ft: c.lm_compiler_formal_raw((cast: (int) (step\address_ft)))
-        if: step\locus != 7 || step\address_ft < 0 || step\elem_ty < 0 || ft < 0 || ft >= 100 || ft = 16
-            return: 2
-        if: lm_compiler_rw_index_receivable((cast: (@: c.L2ValueSpan) (@ step\index))) = 0
-            return: 2
-        k: k + 1
-    ---
     if: lm_compiler_rw_index_level(path, (cast: (int) (path\n)), (cast: (int) (assigned_count > 0)), parent, @ raw) != 0
         return: 1
     if: assigned_count > 0
@@ -17944,34 +17938,3 @@ fn: lm_compiler_rw_index_level (const: (@: path c.L2Path); int: level; int: stor
     \out: raw
     return: 0
 end: lm_compiler_rw_index_level
-
-# The index of lm_compiler_rw_index_place is taken by size_t without a conversion: a size_t value, a runtime-typed one (the
-# walker receives it, lmx_walk_index) or one numeric literal (it takes size_t). An index of another numeric type reaches
-# size_t only through the program's conversion receiver (lm_compiler_numeric_receive_prepare): written as a C index, it is
-# the machine index the native code runs, and it keeps the native-only machine path.
-fn: lm_compiler_rw_index_receivable (@: index c.L2ValueSpan) int
-    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
-    @: leaf c.L2ValueSpan index
-    @: at c.LmP0Node
-    int: exact -1
-    int: kind
-    int: neg
-    int: uns
-    int: ch
-    size_t: magnitude
-    if: index = 0 || index\grammar = 0 || index\node = 0
-        return: 0
-    kind: c.lm_compiler_value_span_type(index, rw_mi_cell[0], @ exact)
-    if: kind = -20 || c.lm_compiler_formal_raw(exact) = 2
-        return: 1
-    while: leaf\values != 0 && leaf\value_n = 1 && (leaf\grammar = 3 || leaf\node\kind = c.LM_P0_NODE_STRUCTURE)
-        leaf: leaf\values
-    ---
-    at: leaf\node
-    if: leaf\count = 1 && at != 0 && at\kind = c.LM_P0_NODE_ATOM && at\as != 0
-        if: c.lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) (at\as\atom)), @ neg, @ magnitude, @ uns) != 0 || c.lm_compiler_rw_char_lit((cast: (const: @: c.LmP0Text) (at\as\atom)), @ ch) != 0
-            return: 1
-        ---
-    ---
-    return: 0
-end: lm_compiler_rw_index_receivable

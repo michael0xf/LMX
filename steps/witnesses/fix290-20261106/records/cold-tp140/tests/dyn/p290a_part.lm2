@@ -1,0 +1,19 @@
+# Probe part (slice 290): a program part with a root -- the field `scale` -- and methods of the part that read it, write
+# their own value of it (Q52: only this activation's value changes), and write the root's field by the explicit path.
+int: scale 3
+fn: scaled (int: x) int
+    return: x * scale
+end: scaled
+fn: part_scale () int
+    return: scale
+end: part_scale
+sub: set_scale (int: v)
+    scale: v
+end: set_scale
+fn: bump_scale (int: v) int
+    scale: scale + v
+    return: scale
+end: bump_scale
+sub: put_scale (int: v)
+    node\scale: v
+end: put_scale

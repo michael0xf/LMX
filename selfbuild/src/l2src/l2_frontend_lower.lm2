@@ -8334,8 +8334,18 @@ fn: lm_compiler_emit_native_input_store (int: mi; int: fi; int: ft; const: (@: i
     ind: deep
     # The existing free input owns its actual type, as in walked SET_ARG.
     # The RHS is received by that place; it does not invent a target witness.
+    # Slice 290: the store at the entry is the selected lexical default of an absent input (lm_compiler_emit_native_input_default:
+    # no value, no cell) -- no existing place has a type: the place it makes is typed by the default's value, as the walker's ARG
+    # types an absent free input's place by its default (lmx_walk_place_mode, op ARG).  Slice 270 had given both stores the
+    # existing place's type, and a part method's free input read from its part root failed INVALID natively.
     if: c.lm_compiler_ft_is_free(ft) != 0
-        status: lm_compiler_emit_native_input_place_text(mi, fi, "c.LMX_TYPE_NONE", ind, @ place)
+        if: at_entry != 0
+            if: c.snprintf(type, 96U, "(cast: (int) l2_isv%d.type)", snapshot) < 0
+                return: 1
+            status: lm_compiler_emit_native_input_place_text(mi, fi, type, ind, @ place)
+        else:
+            status: lm_compiler_emit_native_input_place_text(mi, fi, "c.LMX_TYPE_NONE", ind, @ place)
+        ---
     else:
         status: lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
     ---

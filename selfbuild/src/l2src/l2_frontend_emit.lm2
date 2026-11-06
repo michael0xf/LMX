@@ -11767,13 +11767,33 @@ fn: lm_compiler_emit_expr_keep (int: oi) int
 end: lm_compiler_emit_expr_keep
 
 # Original: l2src/l2trans.lm1:31057
+# Slice 290: a write of a hidden input that has a lexical source holds that source at the activation's entry, as a read of the
+# input does (lm_compiler_rw_arg_fb: LMX_WALK_SOURCE_ARG_ENTRY with its fallback): the activation forms the input's value from
+# its sources -- the dynamic one, then the lexical (the book :775, :777) -- and the write changes only that value (Q52).  That
+# held ARG is the frame's fifth child: the walker's entry snapshot takes it (lmx_walk_entry_node), SET_ARG reads its first
+# four.  The native entry holds the same inputs (lm_compiler_emit_native_input_entry).  Before, an input written but never read
+# stayed absent, and the entry admission refused it (`implements`) although its lexical source exists.
 fn: lm_compiler_rw_input_write (int: into; int: input; @: out int) int
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
-    if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_SET_ARG", 4, out) != 0 || lm_compiler_rw_input_witness((cast: (int) \out), 3, rw_mi_cell[0], input) != 0
+    @: e_cell int (cast: (@: int) (@ c.l2_e))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
+    int: mode
+    int: depth
+    int: slot
+    int: kind
+    int: own
+    int: held 0
+    int: hold
+    if: rw_mi_cell[0] != e_cell[0] && input >= m_arity_cell[0][rw_mi_cell[0]] && input < m_arity_cell[0][rw_mi_cell[0]] + m_dyn_cell[0][rw_mi_cell[0]] && c.lm_compiler_rw_arg_pos(input) = input && c.lm_compiler_hid_source(rw_mi_cell[0], input - m_arity_cell[0][rw_mi_cell[0]], 1, @ mode, @ depth, @ slot, @ kind, @ own) = 0
+        held: 1
+    if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_SET_ARG", 4 + held, out) != 0 || lm_compiler_rw_input_witness((cast: (int) \out), 3, rw_mi_cell[0], input) != 0
         return: 1
     if: rw_emit_cell[0] != 0 && c.fprintf(output[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", (cast: (int) \out), input) < 0
+        return: 1
+    if: held != 0 && (lm_compiler_rw_arg_fb((cast: (int) \out), input, @ hold) != 0 || c.lm_compiler_rw_put((cast: (int) \out), 4, hold) != 0)
         return: 1
     return: 0
 end: lm_compiler_rw_input_write

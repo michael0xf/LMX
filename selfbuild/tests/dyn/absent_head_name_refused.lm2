@@ -1,0 +1,11 @@
+# Slice 290: a method writes a name that no binding and no earlier read of the method name, with a name as its tail -- a
+# local definition (lm_compiler_local_absent_def), which needs a Structure body.  On the 289 tuple the translation overflowed
+# its stack: lm_compiler_declaration asked the head's role, the head was the field this declaration declares, and that role
+# asked the same declaration again.  The translation now refuses at the tail.
+sub: put_absent (int: v)
+    absent_name: v
+end: put_absent
+int: code 7
+put_absent(1)
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

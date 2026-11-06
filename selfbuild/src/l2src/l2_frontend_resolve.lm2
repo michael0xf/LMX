@@ -933,7 +933,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     # A known ordinary Structure supplies the reference requirement to a new
     # tail name. An already known tail is a value for the existing head, not a
     # second declaration of the tail.
-    if: kind = 0 && n = 1 && c.lm_compiler_ref_tail_atom(frame) != 0 && lm_compiler_head_resolve(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (frame\head)), 0, 0) = 5
+    if: kind = 0 && n = 1 && c.lm_compiler_ref_tail_atom(frame) != 0 && lm_compiler_head_structure(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (frame\head))) != 0
         if: lm_compiler_head_absent(c.lm_compiler_ref_tail_atom(frame), source_node) != 0 && lm_compiler_declaration_known_tail(source_node, frame) = 0 && c.lm_compiler_written_put_node(source_node) = 0
             named_reference: 1
         else:
@@ -972,7 +972,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
                 int: same_reference_level 0
                 if: kind = 2 && depth = 1 && inner_contract != 0 && inner_contract\kind = 2 && inner_contract\depth = 1 && c.lm_compiler_application((cast: (const: @: c.LmP0Node) (first\value))) != 0 && c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (c.lm_compiler_application((cast: (const: @: c.LmP0Node) (first\value)))))) != 0
                     @: application_at_head c.LmP0Frame c.lm_compiler_application((cast: (const: @: c.LmP0Node) (first\value)))
-                    if: lm_compiler_head_resolve(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (application_at_head\head)), 0, 0) = 5
+                    if: lm_compiler_head_structure(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (application_at_head\head))) != 0
                         same_reference_level: 1
                     ---
                 ---
@@ -1036,7 +1036,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
                         # A named Structure value has already supplied one
                         # reference level. Any further explicit @ levels are
                         # still part of the flat receiver's contract.
-                        if: lm_compiler_head_resolve(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (c.lm_compiler_app_head((cast: (const: @: c.LmP0Node) (type_field\value))))), 0, 0) = 5
+                        if: lm_compiler_head_structure(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (c.lm_compiler_app_head((cast: (const: @: c.LmP0Node) (type_field\value)))))) != 0
                             if: depth > 1
                                 contract: c.lm_compiler_contract_new(kind, depth - 1, 0, contract)
                             ---
@@ -5545,3 +5545,21 @@ fn: lm_compiler_index_l3_path (const: (@: path c.L2Path); int: mi) int
     ---
     return: 1
 end: lm_compiler_index_l3_path
+
+# Slice 290: the head is a known ordinary Structure at mi -- lm_compiler_head_resolve answers 5 -- asked without the role of
+# a value own, which head_resolve settles by that own's declaration (lm_compiler_own_method_requirement): that role is no part
+# of this answer.  For the field the asking declaration itself declares it asked the same declaration again, without end: an
+# absent head written with a name tail (`h: v` in a method, a local definition) is registered by lm_compiler_own_add before
+# the row asks its declaration (lm_compiler_declaration_model), and the translator overflowed its stack.  An own the head
+# resolves to answers as head_resolve's own branch does -- a source definition of a method is 2, one of a Structure 5;
+# everything else is head_resolve's answer unchanged.
+fn: lm_compiler_head_structure (int: mi; const: (@: t c.LmP0Text)) int
+    int: k
+    if: mi >= 0 && t != 0 && t\data != 0 && c.lm_compiler_c_stmt_door(t) = 0 && c.lm_compiler_ident_word(t) != 0
+        k: c.lm_compiler_resolved_own(mi, t)
+        if: k >= 0
+            return: (cast: (int) (c.lm_compiler_source_definition_method(k) < 0 && c.lm_compiler_source_definition_ns(k) >= 0))
+        ---
+    ---
+    return: (cast: (int) (lm_compiler_head_resolve(mi, t, 0, 0) = 5))
+end: lm_compiler_head_structure

@@ -6,8 +6,18 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 221 inputs (65 source files, 34 tools and
-122 tests). Slice289 receives an index of another numeric type at that L3 INDEX by the ordinary numeric
+The selected package contains 224 inputs (65 source files, 34 tools and
+125 tests). Slice290 makes a field of a program part's root the lexical source of a hidden input in both
+executors: a method of the part called from outside the part takes its free name from the dynamic input
+first, then from the part root's field. Native code types the absent input's place by the selected
+default, as the walker's ARG does; the walker holds at the entry also the source of an input the body only
+writes, as native code does. A bare write changes only the activation's value; `node\x` writes the root's
+field. A head with no binding and no earlier read written with a name tail (`h: v`) is now refused at the
+tail instead of overflowing the translator's stack. The tool runs a list of its own commands: `checks LIST`
+runs every line, `steps LIST` ends at the first failure; each line's output is followed by
+`CHECK <exit> <words>`, the list by `CHECKS <lines> lines, <failed> failed`.
+
+Slice289 receives an index of another numeric type at that L3 INDEX by the ordinary numeric
 reception: the index's type does not choose the route, CHECK admits the reception as at an Array level,
 and native and walked code call the program's converter (`lm_stg_convert_int_size_t` for an `int`), whose
 refusal is the implicit `convert` before the place is selected; a program without it is refused at
@@ -204,7 +214,13 @@ TOOL 0 entry 0 -- verify REPO/selfbuild/inputs.sha256 REPO/selfbuild
 TOOL 0 entry 0 -- stage-copy REPO/selfbuild/inputs.sha256 REPO/selfbuild STAGE
 TOOL 0 entry 0 -- bootstrap quick REPO STAGE BASE PREVIOUS_FRONTEND LABEL STAGE/tests/smoke-kernel225.tsv
 TOOL 0 entry 0 -- bootstrap full REPO STAGE BASE PREVIOUS_FRONTEND OTHER_LABEL STAGE/tests/smoke-kernel225.tsv STAGE/tests/full-suite.tsv
+TOOL 0 entry 0 -- checks LIST
+TOOL 0 entry 0 -- steps LIST
 ```
+
+`checks` and `steps` (slice290) run the lines of LIST, each one command of this tool with its words
+separated by tabs, in order; `checks` runs every line, `steps` ends at the first command that answers
+other than 0. A list that names `checks` or `steps` is refused.
 
 Quick and full are separate requested modes, not an instruction to run both
 automatically. One invocation of either builds/tests G1 and then G2 using the
@@ -216,34 +232,34 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot149b selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-boot148b/quick148b/lmxtool.exe` (`17AFCADC…`, the working tool of
-slice286; this package's tool sources are unchanged), previous frontend
-`cold-boot148b/quick148b/g2/frontend/l2trans.exe` (`3480B4DE…`, the G2
-frontend of slice286) with its adjacent backend (`B1E20928…`) and libc
+boot152a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-boot151a/quick151a/lmxtool.exe` (`6032766B…`, the working tool of
+slice289; this package's tool sources add `checks` and `steps`), previous frontend
+`cold-boot151a/quick151a/g2/frontend/l2trans.exe` (`83F0BE59…`, the G2
+frontend of slice289) with its adjacent backend (`C65A043B…`) and libc
 (`AF9FDAE3…`), and BASE `cold-candidate48/full48/g2/frontend`. Its promoted
-working tool is `cold-boot149b/quick149b/lmxtool.exe` (`3FFAC1A4…`), the G2
+working tool is `cold-boot152a/quick152a/lmxtool.exe` (`4F1C9009…`), the G2
 tool, with `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot149b passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-06, 11:53:38–12:12:53Z, 1155 s): `BOOTSTRAP quick 0 failures`. G0
+boot152a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-06, 19:18:24–19:29:57Z, 693 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's
 start-up self-check of the code links on a private arena before its own main.
 Quick runs neither the full list, the OS walk witness nor the self-test, and
-does not compare the generations. The focused G2 list, the full list and two
-G2 walker observations (6 walked bodies, exact counts on both roots) ran
-separately; FULL has not run on these bytes.
-Compared from the receipts, 245 of the 248 paths hashed in both generations
-are byte-equal — every frontend, backend and kernel L1, both C translation
-units, the runtime objects, libc and the tool's L1 and C — and the three
-executables differ only in the PE link stamp (TimeDateStamp, CheckSum). That
-comparison is its own evidence, not a reproducibility gate. The draft79
-line's open items (V63, the split-pointer place, the bare return) are not
-closed by this result.
+does not compare the generations. The comparison ran after it as one list of
+the G1 tool's own commands (`checks`): the stage against its manifest, every
+producer record closed on its files and free of script hosts, G1 against G2
+(`exe-same` for the three executables, which differ only in the PE link stamp,
+`same` for libc, the runtime objects, the tool's L1 and C and the consumed
+inputs), the working tool and bundle against G2. The G2 tool's self-test and
+the union of the focus and full lists on G2 ran separately; FULL has not run
+on these bytes. That comparison is its own evidence, not a reproducibility
+gate. The draft79 line's open items (V63, the split-pointer place, the bare
+return) are not closed by this result.
 
 Publishing these bytes removes their sole residence in ignored WIP. It does
 not by itself provide a clean-clone platform G0, prove every consumed include

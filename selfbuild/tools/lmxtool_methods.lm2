@@ -1204,6 +1204,47 @@ fn: test_replay_rows (@: dir char) int
     return: f
 end: test_replay_rows
 
+# Slice 290: the list runner (checks_run) by this program's own commands: `checks` runs every line and answers 1 when one
+# failed (the line after the failure makes its file); `steps` ends at the first failure (that file is never made) and answers
+# 0 when every line answered 0; a list that runs a list is refused; a list that cannot be read is a failure.
+fn: test_check_lists (@: self char; @: dir char) int
+    @: ld char txt_path(dir, "lists")
+    @: list char 0
+    @: mark char 0
+    @: text char 0
+    int: f 0
+    int: x 0
+    if: ld = 0
+        return: tool_check(0, "lists", "no memory")
+    dir_make(ld)
+    list: txt_path(ld, "all.tsv")
+    mark: txt_path(ld, "after-all")
+    text: txt_cat3("exit-with\t0\n# a comment\n\nexit-with\t3\nsleep-touch\t0\t", mark, "\n")
+    file_write(list, text, c.strlen(text))
+    x: checks_run(self, list, 0)
+    f: f + tool_check(x = 1 && file_exists(mark) != 0, "lists: checks runs every line and answers the failure", txt_int(x))
+    list: txt_path(ld, "first.tsv")
+    mark: txt_path(ld, "after-first")
+    text: txt_cat3("exit-with\t0\nexit-with\t3\nsleep-touch\t0\t", mark, "\n")
+    file_write(list, text, c.strlen(text))
+    x: checks_run(self, list, 1)
+    f: f + tool_check(x = 1 && file_exists(mark) = 0, "lists: steps ends at the first failure", txt_int(x))
+    list: txt_path(ld, "pass.tsv")
+    mark: txt_path(ld, "after-pass")
+    text: txt_cat3("exit-with\t0\nsleep-touch\t0\t", mark, "\n")
+    file_write(list, text, c.strlen(text))
+    x: checks_run(self, list, 1)
+    f: f + tool_check(x = 0 && file_exists(mark) != 0, "lists: steps that all answer 0", txt_int(x))
+    list: txt_path(ld, "nested.tsv")
+    text: txt_cat3("checks\t", list, "\n")
+    file_write(list, text, c.strlen(text))
+    x: checks_run(self, list, 0)
+    f: f + tool_check(x = 1, "lists: a list that runs a list is refused", txt_int(x))
+    x: checks_run(self, txt_path(ld, "absent.tsv"), 0)
+    f: f + tool_check(x = 1, "lists: a list that cannot be read is a failure", txt_int(x))
+    return: f
+end: test_check_lists
+
 # The self-test in dir: the process contract with child (tools/l2/lmxchild.lm2 built, `build-child`; 0: this
 # program, which waits for its own start -- tens of seconds at -O0), hashing and the evidence commands.
 fn: selftest (@: dir char; @: child char) int
@@ -1226,6 +1267,7 @@ fn: selftest (@: dir char; @: child char) int
     f: f + test_evidence(self, dir)
     f: f + test_suite_schema(dir)
     f: f + test_replay_rows(dir)
+    f: f + test_check_lists(self, dir)
     c.printf("SELFTEST %d failures\n", f)
     c.free(self)
     return: f
@@ -1261,11 +1303,82 @@ fn: child (@@: args char; int: n) int
     return: -1
 end: child
 
+# Slice 290 (Codex, CODEX-OPUS-289-REVIEW-NEXT-20261106-01: the repeatable collection of results and the management of
+# checks stay in the language's own tool, not in a PS wrapper): every line of the list is one command of this tool, its words
+# separated by tabs (an empty line and a line starting with `#` are skipped).  It runs here as tool_main runs a command line;
+# its output goes to stdout as the command writes it, then the line `CHECK <exit> <words>`.  A `checks` or `steps` line is
+# refused (exit 2): no list runs another.  `checks` (stop 0) runs every line; `steps` (stop 1) ends at the first command that
+# answers other than 0, so no later step acts on a failed one.  The last line is `CHECKS <lines> lines, <failed> failed`; 0
+# when every command run answered 0, else 1.
+fn: checks_run (@: self char; @: list char; int: stop) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @@: fld char c.calloc(9U, sizeof(@: char))
+    @@: words char c.calloc(10U, sizeof(@: char))
+    @: data char 0
+    @: line char 0
+    int: n 0
+    int: k 0
+    int: r 0
+    int: lines 0
+    int: failed 0
+    if: len = 0 || at = 0 || fld = 0 || words = 0 || list = 0
+        return: 1
+    data: file_read(list, len)
+    if: data = 0
+        c.printf("CHECKS the list cannot be read: %s\n", list)
+        return: 1
+    line: next_line(data, len[0], at)
+    while: line != 0
+        if: line[0] != (cast: (char) 35) && line[0] != (cast: (char) 0)
+            n: tsv_split(line, fld, 9)
+            words[0]: self
+            k: 0
+            while: k < n
+                words[k + 1]: fld[k]
+                k: k + 1
+            ---
+            lines: lines + 1
+            c.fflush(c.stdout)
+            if: c.strcmp(words[1], "checks") = 0 || c.strcmp(words[1], "steps") = 0
+                r: 2
+            else:
+                r: tool_main(words, n + 1)
+            ---
+            c.fflush(c.stdout)
+            c.printf("CHECK %d", r)
+            k: 1
+            while: k <= n
+                c.printf(" %s", words[k])
+                k: k + 1
+            ---
+            c.printf("\n")
+            c.fflush(c.stdout)
+            if: r != 0
+                failed: failed + 1
+                if: stop != 0
+                    c.printf("CHECKS stopped at line %d of %s\n", lines, list)
+                    break
+                ---
+            ---
+        ---
+        line: next_line(data, len[0], at)
+    ---
+    c.printf("CHECKS %d lines, %d failed\n", lines, failed)
+    if: failed != 0
+        return: 1
+    return: 0
+end: checks_run
+
 fn: tool_main (@@: args char; int: n) int
     @: hex char c.calloc(65U, 1U)
     int: r 0
     if: hex = 0
         return: 2
+    if: n >= 3 && c.strcmp(args[1], "checks") = 0
+        return: checks_run(args[0], args[2], 0)
+    if: n >= 3 && c.strcmp(args[1], "steps") = 0
+        return: checks_run(args[0], args[2], 1)
     if: n >= 2 && c.strcmp(args[1], "docs") = 0
         return: docs_cli(args, n)
     if: n >= 4 && c.strcmp(args[1], "selftest") = 0
@@ -1386,6 +1499,6 @@ fn: tool_main (@@: args char; int: n) int
     r: child(args, n)
     if: r >= 0
         return: r
-    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE PREVIOUS-FRONTEND LABEL | build-frontend-part REPO STAGE BASE PREVIOUS-FRONTEND LABEL MODULE REUSE-MANIFEST ABI-MANIFEST | build-runtime REPO STAGE BASE FRONTEND LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | build-generation quick|full REPO STAGE BASE PREVIOUS-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | bootstrap quick|full REPO STAGE BASE PREVIOUS-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL SMOKE-LIST\n")
+    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | checks LIST | steps LIST | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE PREVIOUS-FRONTEND LABEL | build-frontend-part REPO STAGE BASE PREVIOUS-FRONTEND LABEL MODULE REUSE-MANIFEST ABI-MANIFEST | build-runtime REPO STAGE BASE FRONTEND LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | build-generation quick|full REPO STAGE BASE PREVIOUS-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | bootstrap quick|full REPO STAGE BASE PREVIOUS-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL SMOKE-LIST\n")
     return: 2
 end: tool_main

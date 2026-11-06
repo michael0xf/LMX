@@ -1,0 +1,42 @@
+# Slice 290 (U3, a part root's field as a hidden input): methods of the program part part_root_hidden_part.lm2 use the free
+# name `scale`, whose lexical source is the field of the part's root, called from outside the part.  The book :687, :773,
+# :775: a free name takes an admissible dynamic input first, then its lexical source, held at the activation's entry; a bare
+# write changes only the activation's value (Q52; :691, :775); `node\scale` writes the root's field (:789).  On the 289 tuple
+# the native read failed `walk error: INVALID` (the place of the absent input got no type) and under --walk-methods the
+# write-only set_scale threw `implements` (its source was never held).  Entry 7; 11.. name the failing check.
+fn: shadowed () int
+    int: scale 9
+    return: part_scale()
+end: shadowed
+fn: shadow_set () int
+    int: scale 9
+    set_scale(4)
+    return: scale
+end: shadow_set
+int: code 7
+if: scaled(2) != 6
+    code: 11
+if: code = 7 && part_scale() != 3
+    code: 12
+set_scale(5)
+if: code = 7 && part_scale() != 3
+    code: 13
+if: code = 7 && scaled(2) != 6
+    code: 14
+if: code = 7 && bump_scale(2) != 5
+    code: 15
+if: code = 7 && part_scale() != 3
+    code: 16
+if: code = 7 && shadowed() != 9
+    code: 17
+if: code = 7 && shadow_set() != 9
+    code: 18
+put_scale(5)
+if: code = 7 && part_scale() != 5
+    code: 19
+if: code = 7 && scaled(2) != 10
+    code: 20
+if: code = 7 && bump_scale(2) != 7
+    code: 21
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

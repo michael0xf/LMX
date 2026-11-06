@@ -1,0 +1,40 @@
+# Probe (slice 290): methods of a program part (p290a_part.lm2) whose root field `scale` they read, called from outside the
+# part -- the part root's field as the lexical source of their hidden input (lm_compiler_own_ctr).  A bare write of the name
+# changes only the activation's value (Q52, the book :691, :775); `node\scale` writes the root's field; a caller's own
+# binding of the name is the dynamic input and goes first (the book :775).  Entry 7; 11.. the first failure.
+fn: shadowed () int
+    int: scale 9
+    return: part_scale()
+end: shadowed
+fn: shadow_set () int
+    int: scale 9
+    set_scale(4)
+    return: scale
+end: shadow_set
+int: code 7
+if: scaled(2) != 6
+    code: 11
+if: code = 7 && part_scale() != 3
+    code: 12
+set_scale(5)
+if: code = 7 && part_scale() != 3
+    code: 13
+if: code = 7 && scaled(2) != 6
+    code: 14
+if: code = 7 && bump_scale(2) != 5
+    code: 15
+if: code = 7 && part_scale() != 3
+    code: 16
+if: code = 7 && shadowed() != 9
+    code: 17
+if: code = 7 && shadow_set() != 9
+    code: 18
+put_scale(5)
+if: code = 7 && part_scale() != 5
+    code: 19
+if: code = 7 && scaled(2) != 10
+    code: 20
+if: code = 7 && bump_scale(2) != 7
+    code: 21
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

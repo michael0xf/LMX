@@ -405,9 +405,23 @@ Whole quick 647.20 s: 17:47:05.5415435Z→17:57:52.7447572Z, both generations
 smoke 9/0. The focus list 68/0 (693.14 s: 17:23:10.6756949Z→17:34:43.8177012Z) and the full list
 85/0 (645.27 s: 17:35:12.8834019Z→17:45:58.1519023Z) ran on the candidate frontend fe151a, which
 `lmxtool exe-same` finds one image with G2's; probes on G2 14/0 (101.80 s). Source 221/D9F7391E; the
-acceptance is 37 lmxtool commands, 0 failed (records closed on their files, G1 and G2 equal by
-`exe-same`/`same`); the runtime objects equal slice288's G2 runtime. An `int` index of the L3 INDEX now
+acceptance is 38 lmxtool commands (corrected by slice290: written 37), 0 failed (records closed on their
+files, G1 and G2 equal by `exe-same`/`same`; the run and the count were a PS function of the recipe); the
+runtime objects equal slice288's G2 runtime. An `int` index of the L3 INDEX now
 calls the program's converter per access before the kernel's place selection; CHECK asks the same
 reception as an Array level, no pass or table was added. Not measured apart. A whole-pipeline
 measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix289-20261106/notes.md).
+
+## Slice290 / boot152a (Opus, 2026-11-06)
+
+Whole quick 692.99 s: 19:18:23.8732524Z→19:29:56.8679323Z, both generations
+smoke 9/0. One union list on G2 — the rows of focus149, the rows of fullsuite149 not in it and the two
+fixtures of slice290 — 99/0 (773.50 s: 19:31:23.1330066Z→19:44:16.6303714Z); probes on G2 6/0. Source
+224/6767573C; the acceptance is one `lmxtool checks` list run by the G1 tool: the 38 commands of slice289,
+0 failed, and a 39th candidate-tool comparison that cannot hold across stages (the tool root's unit prefix
+hashes its source path), failed; the G2 tool's self-test 0 failures. The runtime objects equal slice289's
+G2 runtime. An absent free input of a part method now gets its place by the default's type (one default
+read at the entry); a walked SET_ARG of an input with a lexical source holds that source at the entry.
+Not measured apart. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix290-20261106/notes.md).

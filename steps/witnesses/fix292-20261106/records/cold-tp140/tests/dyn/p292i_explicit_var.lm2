@@ -1,0 +1,18 @@
+# Slice 292 probe: a written var part and the body's own field together -- both are fields of var, the written one first.
+int: code 7
+fn: m () int (int: k 1)
+    int: a k + 4
+    a: a + 1
+    return: a
+end: m
+if: m() != 6
+    code: 81
+---
+if: code = 7 && m\var\k != 1
+    code: 82
+---
+if: code = 7 && m\var\a != 6
+    code: 83
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

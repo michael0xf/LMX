@@ -4684,7 +4684,9 @@ fn: lm_compiler_dyn_local (const: (@: path char)) int
             return: (cast: (int) (c.lm_compiler_said_or(path, m_node_cell[0][i], d0, "unsupported body")))
         oi: 0
         while: vars != 0 && oi < own_n_cell[0]
-            if: c.lm_compiler_method_part_contains_own(i, 2, oi) != 0 && c.lm_compiler_scan_bound(i, oi, seen) != 0
+            # Slice 292: the written var part alone (part 12) -- the own fields the body declares, which var holds too, are
+            # not bound at the entry: a read before the declaration stays a hidden input.
+            if: c.lm_compiler_method_part_contains_own(i, 12, oi) != 0 && c.lm_compiler_scan_bound(i, oi, seen) != 0
                 if: heap != 0
                     c.lm_compiler_xfree((cast: (@: void) seen))
                 return: (cast: (int) (c.lm_compiler_said_or(path, m_node_cell[0][i], d0, "unsupported body")))

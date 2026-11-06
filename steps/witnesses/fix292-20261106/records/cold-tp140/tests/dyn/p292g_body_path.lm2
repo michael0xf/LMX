@@ -1,0 +1,14 @@
+# Slice 292 probe: the body part holds the statement, not a second place of the own field -- `m\body\a` (observed, not pinned).
+int: code 7
+fn: m () int
+    int: a 5
+    return: a
+end: m
+if: m() != 5
+    code: 81
+---
+if: code = 7 && m\body\a != 5
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

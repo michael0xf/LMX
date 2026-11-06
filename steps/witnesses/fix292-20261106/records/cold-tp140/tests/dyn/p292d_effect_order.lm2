@@ -1,0 +1,28 @@
+# Slice 292 probe: the initializer of a body's own field runs when its line is reached, not at the method's entry (the layout
+# does not evaluate it): the effects come in source order, 1 then 2.  The root's bare `log` is its working copy (never
+# reloaded), so the published field is read through a method.  Entry 7.
+int: log 0
+int: code 7
+sub: note (int: v)
+    node\log: node\log * 10 + v
+end: note
+fn: read_log () int
+    return: node\log
+end: read_log
+fn: two () int
+    note(2)
+    return: 2
+end: two
+fn: m () int
+    note(1)
+    int: a two()
+    return: a
+end: m
+if: m() != 2
+    code: 81
+---
+if: code = 7 && read_log() != 12
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,17 @@
+# Slice 292 probe: laying the own field out in var does not open its name before its declaration -- a read before it is the
+# hidden input, bound by the caller first (book :687); after the declaration the name is the own field.  Entry 7.
+int: code 7
+fn: early () int
+    int: got a
+    int: a 5
+    return: got * 10 + a
+end: early
+fn: caller () int
+    int: a 4
+    return: early()
+end: caller
+if: caller() != 45
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

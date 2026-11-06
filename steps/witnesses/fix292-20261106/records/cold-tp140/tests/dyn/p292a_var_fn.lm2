@@ -1,0 +1,29 @@
+# Slice 292 probe (VAR-PATH-OF-SHORT-FN): an own field a fn's body declares is a field of its var part (book, docs :437, :451);
+# its initializer stays in the body and runs when reached.  Entry 7; 81.. name the failing check.
+int: code 7
+fn: m () int
+    int: a 5
+    a: a + 1
+    return: a
+end: m
+if: m() != 6
+    code: 81
+---
+if: code = 7 && m\var\a != 6
+    code: 82
+---
+m\var\a: 40
+if: code = 7 && m\var\a != 40
+    code: 83
+---
+if: code = 7 && m() != 6
+    code: 84
+---
+if: code = 7 && m\var\a != 6
+    code: 85
+---
+if: code = 7 && m\a != 6
+    code: 86
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

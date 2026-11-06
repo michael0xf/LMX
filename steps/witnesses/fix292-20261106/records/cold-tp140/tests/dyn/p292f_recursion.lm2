@@ -1,0 +1,15 @@
+# Slice 292 probe: one physical place in var, a working value per activation -- a recursive call does not overwrite the
+# caller's value of the own field.  Entry 7.
+int: code 7
+fn: fact (int: n) int
+    int: acc 1
+    if: n > 1
+        acc: n * fact(n - 1)
+    ---
+    return: acc
+end: fact
+if: fact(5) != 120
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

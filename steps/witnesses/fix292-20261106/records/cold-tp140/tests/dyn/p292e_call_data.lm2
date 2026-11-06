@@ -1,0 +1,16 @@
+# Slice 292 probe: an own field of the body is a place of the selected data (book :439, :441): `call: s D` reaches D's field
+# of that name, the callee's var stays.  Entry 7.
+D:
+    int: a 0
+end: D
+int: code 7
+sub: s ()
+    int: a 5
+    a: a + 1
+end: s
+call: s D
+if: D\a != 6
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

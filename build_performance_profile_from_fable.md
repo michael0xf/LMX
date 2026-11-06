@@ -436,3 +436,15 @@ the G2 frontend is one image with slice290's (`exe-same`) and the runtime object
 the G2 tool's self-test 0 failures. Only the tool changed: the list runner sizes each line's word arrays
 by its tabs. Not measured apart. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix291-20261106/notes.md).
+
+## Slice292 / boot154a (Opus, 2026-11-06)
+
+Whole quick 647.31 s: 21:59:52.0549505Z→22:10:39.3633333Z, both generations smoke 9/0. The whole
+maintained registry on the candidate frontend fe154c, `exe-same` with G2: 102/0, 880 checks (784.46 s:
+21:28:43.4379087Z→21:41:47.9024973Z). Source 225/E9D6EBAE; the acceptance is one `lmxtool checks` list of
+38 commands run by the working tool of boot153a, 0 failed; the runtime objects equal slice291's G2 runtime;
+the G2 tool's self-test 0 failures. The own fields a method's body declares are laid out in its var (one more
+pass over the body's direct fields while var is built); native code reaches a var place through
+`lmx_call_index` over the selected data. Not measured apart. A whole-pipeline measurement, not a controlled
+comparison.
+[Commands, results and hashes](steps/witnesses/fix292-20261106/notes.md).

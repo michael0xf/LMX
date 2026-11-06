@@ -1612,28 +1612,27 @@ fn: lm_compiler_body_head_word (const: (@: t c.LmP0Text)) int
     return: (cast: (int) (0))
 end: lm_compiler_body_head_word
 
+# Slice 292 (VAR-PATH-OF-SHORT-FN; the book, docs/LMX_semantics.ru.md :437, :451; Codex, the 285 norm answers, item 1): the part
+# of a method an own field is in, by the layout -- part 2 its var, which holds the written var's fields and the own fields
+# its body declares (lm_compiler_body_own_in_var), part 3 its body, which holds the other own fields of its source.  Part 12
+# asks the written var part alone (the scan binds those at the entry; an own field of the body stays a hidden input before
+# its declaration), part 13 the body's own fields var holds alone.
 fn: lm_compiler_method_part_contains_own (int: mi; int: part; int: own) int
-    @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
-    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
-    @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
-    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
-    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
-    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
-    const: (@: source_node c.LmP0Node 0)
-    @: field c.LmP0Field
-    if: mi < 0 || mi >= m_n_cell[0] || own < 0 || own >= own_n_cell[0] || own_mi_cell[0][own] != mi || own_decl_cell[0][own] = 0
-        return: (cast: (int) (0))
+    if: part = 12
+        return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 2, own)))
+    if: part = 13
+        return: (cast: (int) (lm_compiler_body_own_in_var(mi, own)))
     if: part = 2
-        source_node: c.lm_compiler_fn_var_source(m_node_cell[0][mi])
-    if: part = 3
-        source_node: m_body_cell[0][mi]
-    if: source_node = 0 || source_node\as = 0 || source_node\as\structure = 0
-        return: (cast: (int) (0))
-    field: c.lm_compiler_next_active(source_node\as\structure\first_field)
-    while: field != 0
-        if: c.lm_compiler_head_source_node(field\value) = c.lm_compiler_head_source_node(own_decl_cell[0][own])
+        if: lm_compiler_method_source_contains_own(mi, 2, own) != 0
             return: (cast: (int) (1))
-        field: c.lm_compiler_next_active(field\next)
+        ---
+        return: (cast: (int) (lm_compiler_body_own_in_var(mi, own)))
+    ---
+    if: part = 3
+        if: lm_compiler_body_own_in_var(mi, own) != 0
+            return: (cast: (int) (0))
+        ---
+        return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 3, own)))
     ---
     return: (cast: (int) (0))
 end: lm_compiler_method_part_contains_own
@@ -2594,3 +2593,55 @@ fn: lm_compiler_mix_step (int: r; int: linear) int
         return: (cast: (int) (-1))
     return: (cast: (int) (next_cell[0][r]))
 end: lm_compiler_mix_step
+
+# Slice 292: membership in a method's written source parts by the declaration's head -- part 2 the written var part
+# (lm_compiler_fn_var_source), part 3 the body; the rule lm_compiler_method_part_contains_own had for its parts 2 and 3.
+fn: lm_compiler_method_source_contains_own (int: mi; int: part; int: own) int
+    @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    const: (@: source_node c.LmP0Node 0)
+    @: field c.LmP0Field
+    if: mi < 0 || mi >= m_n_cell[0] || own < 0 || own >= own_n_cell[0] || own_mi_cell[0][own] != mi || own_decl_cell[0][own] = 0
+        return: (cast: (int) (0))
+    if: part = 2
+        source_node: c.lm_compiler_fn_var_source(m_node_cell[0][mi])
+    if: part = 3
+        source_node: m_body_cell[0][mi]
+    if: source_node = 0 || source_node\as = 0 || source_node\as\structure = 0
+        return: (cast: (int) (0))
+    field: c.lm_compiler_next_active(source_node\as\structure\first_field)
+    while: field != 0
+        if: c.lm_compiler_head_source_node(field\value) = c.lm_compiler_head_source_node(own_decl_cell[0][own])
+            return: (cast: (int) (1))
+        field: c.lm_compiler_next_active(field\next)
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_method_source_contains_own
+
+# Slice 292: an own field the body of a method with parts (a `fn`, a `sub`) declares, whose place stands in its var (the book,
+# docs :437: the own fields found in the body join the written var's as its fields, before an occurrence is laid out; :451:
+# the place is physically in var, the body's statement reaches it and makes no second cell).  Its statement and initializer
+# stay in the body and run when reached.  The answer reads the source tables alone, so the checks and the layout agree.  The
+# layout keeps the other own fields where they were (a boundary of the slice): one declared in a nested body (own_host), a
+# written definition (a method, a Structure, a written form), a receiver's output operand, a reference to a graph Structure
+# (its declaration decides its storage), those of a callable merge's factory or a part constructor (their own layouts).
+fn: lm_compiler_body_own_in_var (int: mi; int: own) int
+    @@@: own_host_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_host))
+    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    if: own < 0 || own >= own_n_cell[0] || own_mi_cell[0][own] != mi || own_host_cell[0][own] != 0
+        return: (cast: (int) (0))
+    if: c.lm_compiler_fn_parts_on(mi) = 0 || c.lm_compiler_mad_on(mi) != 0 || c.lm_compiler_pap_on(mi) != 0
+        return: (cast: (int) (0))
+    if: c.lm_compiler_source_definition_method(own) >= 0 || c.lm_compiler_source_definition_ns(own) >= 0 || c.lm_compiler_mres_of_own(own) >= 0
+        return: (cast: (int) (0))
+    # A written form (lm_compiler_own_written) holds a reference to its Structure: the next test keeps it too.
+    if: c.lm_compiler_own_is_pointer(own_ty_cell[0][own]) != 0 && c.lm_compiler_own_is_graph(own_ty_cell[0][own]) != 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 3, own)))
+end: lm_compiler_body_own_in_var

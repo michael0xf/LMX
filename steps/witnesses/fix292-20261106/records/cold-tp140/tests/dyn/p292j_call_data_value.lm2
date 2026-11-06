@@ -1,0 +1,20 @@
+# Slice 292 observation: the value `call: s D` leaves in D's field, as the exit code (100 + D\a; 120 + seen when s did not run).
+D:
+    int: a 0
+end: D
+int: seen 0
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+sub: s ()
+    int: a 5
+    a: a + 1
+    node\seen: 1
+end: s
+call: s D
+int: code 100 + D\a
+if: read_seen() != 1
+    code: 120 + read_seen()
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,13 @@
+# Slice 292 observation: a written var field under explicit data, `call: m D` -- the value D's field holds after it, as the
+# exit code (100 + D\k).
+D:
+    int: k 10
+end: D
+fn: m () int (int: k 1)
+    k: k + 5
+    return: k
+end: m
+call: m D
+int: code 100 + D\k
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

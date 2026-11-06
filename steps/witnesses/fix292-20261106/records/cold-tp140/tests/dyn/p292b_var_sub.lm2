@@ -1,0 +1,28 @@
+# Slice 292 probe: a sub's own field is a field of its var part, as a fn's is.  The root's bare `seen` is its working copy,
+# so the published field is read through a method.  Entry 7.
+int: seen 0
+int: code 7
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+sub: s ()
+    int: w 6
+    w: w + 1
+    node\seen: w
+end: s
+s()
+if: read_seen() != 7
+    code: 81
+---
+if: code = 7 && s\var\w != 7
+    code: 82
+---
+if: code = 7 && s\w != 7
+    code: 83
+---
+call: s s\var
+if: code = 7 && read_seen() != 7
+    code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

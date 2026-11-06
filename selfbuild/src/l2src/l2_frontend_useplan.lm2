@@ -438,6 +438,15 @@ fn: lm_compiler_own_from_expr (int: oi; @: dest c.L2Tx) int
     if: field = 0 || dest = 0
         return: (cast: (int) (1))
     if: field\holder != 0
+        # Slice 292: a cell of a method's var part (the written var's fields and the own fields its body declares) is a place
+        # of the selected data -- the method's var under a direct call, the explicit data under `call: m D` -- and its slot is
+        # the one the admitted pair's correspondence names (lmx_call_index), as the walker's OWN maps a holder of its source to
+        # its data (the book, docs :439: the body's uses of the fields of code\var are requirements on the selected data).
+        if: field\holder\parent = 0 && field\holder\method = cur_mi_cell[0] && c.lm_compiler_fn_parts_on(cur_mi_cell[0]) != 0 && field\holder\child = (cast: (size_t) c.lm_compiler_part_slot(cur_mi_cell[0], 2))
+            if: c.snprintf(nm, 160U, "lmx_arena_ref_cell(self, lmx_call_index(l2_call_arena, self, l2_gp%zu, %zuU))", field\holder\id, field\child) < 0
+                return: (cast: (int) (1))
+            return: (cast: (int) (c.lm_compiler_tx_set(dest, nm)))
+        ---
         if: c.snprintf(nm, 160U, "lmx_arena_ref_cell(l2_gp%zu, %zuU)", field\holder\id, field\child) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (c.lm_compiler_tx_set(dest, nm)))

@@ -12709,6 +12709,7 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
     int: placed 0
     int: own
     int: return_point
+    int: moved 0
     if: source = 0 && t7_walk_cell[0] = 0 && rw_nest_cell[0] = 0 && m_src_end_cell[0] != 0 && rw_mi_cell[0] >= 0 && rw_mi_cell[0] < m_n_cell[0] && m_src_end_cell[0][rw_mi_cell[0]] >= 0
         placed: 1
     if: lm_compiler_rw_pads_in(body, first, into) != 0
@@ -12724,6 +12725,13 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
         slot: base + \made
         if: placed != 0
             slot: c.lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (field\value)))
+        # Slice 292 (VAR-PATH-OF-SHORT-FN): an own field the method's body declares has its place in var
+        # (lm_compiler_rw_body_var_slots); its statement stays here with no slot of storage before it, and the head's name is on
+        # the place, not on the statement's slot.
+        moved: 0
+        if: source != 0 && source\part = 2
+            moved: c.lm_compiler_method_part_contains_own(rw_mi_cell[0], 13, c.lm_compiler_own_by_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value))))
+        ---
         # A source root: every head has a physical slot and a registry row (N4-U U1).  The layout pass notes the slot: a path that selects
         # a head with no place of its own reads it (locus 9).
         if: source != 0 && slot >= 0
@@ -12732,7 +12740,7 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
                     return: 1
                 ---
             ---
-            if: rw_emit_cell[0] != 0 && lm_compiler_emit_root_head(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
+            if: rw_emit_cell[0] != 0 && moved = 0 && lm_compiler_emit_root_head(into, slot, (cast: (const: @: c.LmP0Node) (field\value))) != 0
                 return: 1
             ---
             ---
@@ -12827,7 +12835,7 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
         # identity; lexical scope membership alone cannot identify its body.
         if: source != 0
             own: c.lm_compiler_own_by_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value)))
-            if: own >= 0 && c.lm_compiler_source_borrowed_constructor(source, own) < 0
+            if: own >= 0 && moved = 0 && c.lm_compiler_source_borrowed_constructor(source, own) < 0
                 if: c.lm_compiler_source_field_slot(source, own, slot) != 0
                     return: (cast: (int) (1))
                 if: c.lm_compiler_own_computed(own) = 0
@@ -12890,6 +12898,9 @@ fn: lm_compiler_rw_fn_parts (int: mi; int: root; @: made int; @: one int) int
     if: lm_compiler_rw_source_frame(var_source, root, 0, -1, @ var_temp) != 0
         return: (cast: (int) (1))
     if: var_body != 0 && lm_compiler_rw_stmts_in(var_body, (cast: (@: c.LmP0Field) (var_body\first_field)), var_temp, 0, var_source, @ var_made) != 0
+        return: (cast: (int) (1))
+    # Slice 292 (VAR-PATH-OF-SHORT-FN): the places of the own fields the body declares follow the written var's fields.
+    if: lm_compiler_rw_body_var_slots(mi, body, var_temp, var_source, @ var_made) != 0
         return: (cast: (int) (1))
     if: construct_phase_cell[0] = 0
         var_source\width: var_made
@@ -17994,3 +18005,29 @@ fn: lm_compiler_check_index_l3_receive (const: (@: resolved c.L2Path); int: mi; 
     ---
     return: (cast: (int) (0))
 end: lm_compiler_check_index_l3_receive
+
+# Slice 292 (VAR-PATH-OF-SHORT-FN; the book, docs/LMX_semantics.ru.md :437, :451; Codex, the 285 norm answers, item 1, and the
+# 291 review): the places of the own fields a method's body declares stand in its var after the written var's fields, in the
+# body's source order (lm_compiler_method_part_contains_own, part 13) -- one place each, a cell the source shell makes and
+# names.  Their statements and initializers stay in the body (lm_compiler_rw_stmts_in): nothing here runs, evaluates an
+# initializer or opens a name before its declaration.
+fn: lm_compiler_rw_body_var_slots (int: mi; @: body c.LmP0Structure; int: into; @: source c.L2SourceContainer; @: made int) int
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @: field c.LmP0Field 0
+    int: own
+    if: body = 0 || source = 0
+        return: (cast: (int) (0))
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
+    while: field != 0
+        own: c.lm_compiler_own_by_decl(mi, (cast: (const: @: c.LmP0Node) (field\value)))
+        if: own >= 0 && c.lm_compiler_method_part_contains_own(mi, 13, own) != 0
+            if: c.lm_compiler_source_field_slot(source, own, \made) != 0
+                return: (cast: (int) (1))
+            if: rw_emit_cell[0] != 0 && lm_compiler_emit_root_head(into, \made, (cast: (const: @: c.LmP0Node) (field\value))) != 0
+                return: (cast: (int) (1))
+            \made: \made + 1
+        ---
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_rw_body_var_slots

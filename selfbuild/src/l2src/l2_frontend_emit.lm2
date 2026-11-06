@@ -4957,6 +4957,11 @@ fn: lm_compiler_check_indexed_write (const: (@: stmt c.LmP0Node); int: mi; const
         return: (cast: (int) (status))
     if: status != 7
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported index")))
+    # Slice 289 (INDEX-NUMERIC-RECEPTION): the indices of a write through the L3 INDEX are received into size_t by the
+    # ordinary numeric reception before anything else of the write, as the walker's ELEMPUT selects the place first.
+    if: place\descriptor = 0 && c.lm_compiler_index_l3_path((cast: (const: @: c.L2Path) (@ place\path)), mi) != 0 && lm_compiler_check_index_l3_receive((cast: (const: @: c.L2Path) (@ place\path)), mi, path, stmt) != 0
+        c.lm_compiler_address_release(@ place)
+        return: (cast: (int) (1))
     if: place\immutable != 0
         status: c.lm_compiler_error(path, stmt, "const write")
     else:
@@ -6035,8 +6040,13 @@ fn: lm_compiler_check_resolved_indices (const: (@: at c.LmP0Node); int: mi; cons
     int: k 0
     int: seen 0
     int: prefix
+    int: l3_index 0
     if: resolved = 0 || resolved\n < 0 || resolved\n > resolved\cap || resolved\names < 0 || resolved\names > resolved\n || resolved\indexed < 0 || resolved\indexed > resolved\n - resolved\names || (resolved\n > 0 && resolved\steps = 0)
         return: (cast: (int) (c.lm_compiler_error(path, at, "internal: a prepared path has inconsistent index geometry")))
+    # Slice 289 (INDEX-NUMERIC-RECEPTION): an index of the L3 INDEX of a machine pointer an own field or a formal holds
+    # (lm_compiler_index_l3_path) is received into size_t as an Array level's is -- the ordinary numeric reception, the call
+    # of its converter, its refusal.
+    l3_index: c.lm_compiler_index_l3_path(resolved, mi)
     prefix: resolved\n
     while: k < resolved\n
         step: resolved\steps + k
@@ -6048,7 +6058,7 @@ fn: lm_compiler_check_resolved_indices (const: (@: at c.LmP0Node); int: mi; cons
             pc: lm_compiler_port249_1_L2PathStep_index_count(step)
             if: pf = 0 || pc < 1
                 return: (cast: (int) (c.lm_compiler_error(path, at, "internal: an index step of a place cannot be read")))
-            if: step\level != 0 && step\level\kind = 1
+            if: (step\level != 0 && step\level\kind = 1) || l3_index != 0
                 if: lm_compiler_check_numeric_receive_span((cast: (@: c.L2ValueSpan) (@ step\index)), 2, mi, path, at) != 0
                     return: (cast: (int) (1))
                 ---
@@ -6093,36 +6103,9 @@ end: lm_compiler_check_array_place
 
 # Original: l2src/l2trans.lm1:21091
 fn: lm_compiler_check_numeric_receive_span (@: value c.L2ValueSpan; int: target; int: mi; const: (@: path char); const: (@: at c.LmP0Node)) int
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    c.L2NumericReceive: plan
-    int: status
-    int: input
-    int: source_type
-    int: converter
     if: lm_compiler_check_value_span(value, mi, path, at) != 0
         return: (cast: (int) (1))
-    status: c.lm_compiler_numeric_receive_prepare(value, target, mi, path, @ plan)
-    if: status != 0
-        return: (cast: (int) (status))
-    if: plan\literal != 0 && c.lm_compiler_check_literal_kind((cast: (const: @: c.LmP0Text) ((plan\literal\as\atom))), c.lm_compiler_lit_kind_from_ft(target), path, (cast: (const: @: c.LmP0Node) ((plan\literal)))) != 0
-        return: (cast: (int) (1))
-    converter: plan\converter
-    source_type: plan\source_ft
-    if: converter >= 0
-        if: m_arity_cell[0][converter] != 1
-            return: (cast: (int) (c.lm_compiler_error(path, at, "a numeric conversion receiver needs one declared input")))
-        input: c.lm_compiler_ft(converter, 0)
-        if: c.lm_compiler_formal_raw(input) != c.lm_compiler_formal_raw(source_type)
-            if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(input)) = 0
-                if: c.lm_compiler_prim_code_name(input) = 0
-                    return: (cast: (int) (c.lm_compiler_error(path, at, "a numeric conversion receiver's input does not receive a number")))
-                if: lm_compiler_check_numeric_receive_span(value, input, mi, path, at) != 0
-                    return: (cast: (int) (1))
-                ---
-            ---
-        ---
-        return: (cast: (int) (c.lm_compiler_convert_edge_to(mi, converter, path, (cast: (const: @: c.LmP0Node) (value\node)))))
-    return: (cast: (int) (0))
+    return: lm_compiler_check_numeric_receive_plan(value, target, mi, path, at)
 end: lm_compiler_check_numeric_receive_span
 
 # Original: l2src/l2trans.lm1:21190
@@ -17882,10 +17865,12 @@ end: lm_compiler_emit_snap_destroy
 # the checked access the book gives L3 in native and interpreted code alike (paths; L2 §18), not an L2 operation the
 # interpreter may not run (book §24): ELEM, ELEMPUT for a store, over the place's value, every index received as size_t,
 # the actual place selected by lmx_walk_value_index_place.  Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK): which paths these
-# are is the one predicate lm_compiler_index_l3_path the native lowering asks too.  What it does not take -- a member step,
-# a machine local, slot or C constant root, a pointer to `void` or to a foreign type, an index of another numeric type --
-# keeps the native-only SOURCE_MACHINE (2 to the caller, which builds it): a limit of this implementation (OPEN), not a
-# category of the norm (Codex, CODEX-OPUS-287-NORM-REVIEW-20261106T1318Z-01, item 2).
+# are is the one predicate lm_compiler_index_l3_path the native lowering asks too.  Slice 289 (INDEX-NUMERIC-RECEPTION): an
+# index of another numeric type is received by the ordinary numeric reception, its converter called as an EXEC
+# (lm_compiler_rw_numeric_receive).  What the predicate does not take -- a member step, a machine local, slot or C constant
+# root, a pointer to `void` or to a foreign type -- keeps the native-only SOURCE_MACHINE (2 to the caller, which builds it): a
+# limit of this implementation (OPEN), not a category of the norm (Codex, CODEX-OPUS-287-NORM-REVIEW-20261106T1318Z-01,
+# item 2).
 fn: lm_compiler_rw_index_place (const: (@: place c.L2Address); @: assigned c.LmP0Field; int: assigned_count; int: parent; @: out int) int
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     const: (@: path c.L2Path)
@@ -17938,3 +17923,54 @@ fn: lm_compiler_rw_index_level (const: (@: path c.L2Path); int: level; int: stor
     \out: raw
     return: 0
 end: lm_compiler_rw_index_level
+
+# The ordinary numeric reception of value at a place of type target, its expression already checked as a value: the
+# prepared reception, a literal's kind, the converter's one declared input and the call edge of the converter
+# (lm_compiler_check_numeric_receive_span checks the expression first).
+fn: lm_compiler_check_numeric_receive_plan (@: value c.L2ValueSpan; int: target; int: mi; const: (@: path char); const: (@: at c.LmP0Node)) int
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    c.L2NumericReceive: plan
+    int: status
+    int: input
+    int: source_type
+    int: converter
+    status: c.lm_compiler_numeric_receive_prepare(value, target, mi, path, @ plan)
+    if: status != 0
+        return: (cast: (int) (status))
+    if: plan\literal != 0 && c.lm_compiler_check_literal_kind((cast: (const: @: c.LmP0Text) ((plan\literal\as\atom))), c.lm_compiler_lit_kind_from_ft(target), path, (cast: (const: @: c.LmP0Node) ((plan\literal)))) != 0
+        return: (cast: (int) (1))
+    converter: plan\converter
+    source_type: plan\source_ft
+    if: converter >= 0
+        if: m_arity_cell[0][converter] != 1
+            return: (cast: (int) (c.lm_compiler_error(path, at, "a numeric conversion receiver needs one declared input")))
+        input: c.lm_compiler_ft(converter, 0)
+        if: c.lm_compiler_formal_raw(input) != c.lm_compiler_formal_raw(source_type)
+            if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(input)) = 0
+                if: c.lm_compiler_prim_code_name(input) = 0
+                    return: (cast: (int) (c.lm_compiler_error(path, at, "a numeric conversion receiver's input does not receive a number")))
+                if: lm_compiler_check_numeric_receive_span(value, input, mi, path, at) != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
+        ---
+        return: (cast: (int) (c.lm_compiler_convert_edge_to(mi, converter, path, (cast: (const: @: c.LmP0Node) (value\node)))))
+    return: (cast: (int) (0))
+end: lm_compiler_check_numeric_receive_plan
+
+# Slice 289 (INDEX-NUMERIC-RECEPTION): the indices of a write through the L3 INDEX (lm_compiler_index_l3_path), each received
+# into size_t by the ordinary numeric reception.  lm_compiler_check_indexed_write has checked their expressions as values
+# before it selected the place, so the reception alone is asked here.
+fn: lm_compiler_check_index_l3_receive (const: (@: resolved c.L2Path); int: mi; const: (@: path char); const: (@: at c.LmP0Node)) int
+    @: step c.L2PathStep
+    int: k 0
+    if: resolved = 0 || resolved\n < 1 || resolved\steps = 0
+        return: (cast: (int) (c.lm_compiler_error(path, at, "internal: a prepared path has inconsistent index geometry")))
+    while: k < resolved\n
+        step: resolved\steps + k
+        if: step\locus = 7 && lm_compiler_check_numeric_receive_plan((cast: (@: c.L2ValueSpan) (@ step\index)), 2, mi, path, at) != 0
+            return: (cast: (int) (1))
+        k: k + 1
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_check_index_l3_receive

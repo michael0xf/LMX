@@ -1,0 +1,7 @@
+# Opus, slice 289. Hand edits of one stage file each (cold-tp140), the whole frontend built (tp151-fe), the probe lists run on it
+# (tp151-probe: probe289-a, then probe289-b with the CHECK-order refusals), the file restored from variants/tp151 and the stage
+# verified (tp151-restore) before the next mutant.
+# label	file	edit
+m1	src/l2src/l2_frontend_emit.lm2	lm_compiler_check_resolved_indices: `if: (step\level != 0 && step\level\kind = 1) || l3_index != 0` -> `if: step\level != 0 && step\level\kind = 1` (a read or an address of the L3 INDEX: no reception in CHECK)
+m2	src/l2src/l2_frontend_emit.lm2	lm_compiler_check_indexed_write: the slice 289 block removed (a write through the L3 INDEX: no reception in CHECK)
+m3	src/l2src/l2_frontend_resolve.lm2	the slice 288 file (the predicate takes only a size_t, runtime-typed or literal index; lm_compiler_index_receivable back)

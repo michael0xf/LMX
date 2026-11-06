@@ -105,7 +105,7 @@ end: sha_k
 
 # One 64-byte block p[off .. off + 63] into the state h; w is the 64-word schedule.
 fn: sha_block (@: h unsigned; @: k unsigned; @: w unsigned; @: p char; size_t: off) int
-    int: i 0
+    size_t: i 0U
     unsigned: a h[0]
     unsigned: b h[1]
     unsigned: cc h[2]
@@ -118,16 +118,16 @@ fn: sha_block (@: h unsigned; @: k unsigned; @: w unsigned; @: p char; size_t: o
     unsigned: s1 0U
     unsigned: t1 0U
     unsigned: t2 0U
-    while: i < 16
-        w[i]: sha_word(p, off + (cast: (size_t) (i * 4)))
-        i: i + 1
-    while: i < 64
-        s0: sha_rotr(w[i - 15], 7) ^ sha_rotr(w[i - 15], 18) ^ (w[i - 15] >> 3)
-        s1: sha_rotr(w[i - 2], 17) ^ sha_rotr(w[i - 2], 19) ^ (w[i - 2] >> 10)
-        w[i]: w[i - 16] + s0 + w[i - 7] + s1
-        i: i + 1
-    i: 0
-    while: i < 64
+    while: i < 16U
+        w[i]: sha_word(p, off + i * 4U)
+        i: i + 1U
+    while: i < 64U
+        s0: sha_rotr(w[i - 15U], 7) ^ sha_rotr(w[i - 15U], 18) ^ (w[i - 15U] >> 3)
+        s1: sha_rotr(w[i - 2U], 17) ^ sha_rotr(w[i - 2U], 19) ^ (w[i - 2U] >> 10)
+        w[i]: w[i - 16U] + s0 + w[i - 7U] + s1
+        i: i + 1U
+    i: 0U
+    while: i < 64U
         s1: sha_rotr(e, 6) ^ sha_rotr(e, 11) ^ sha_rotr(e, 25)
         t1: hh + s1 + ((e & f) ^ ((e ^ 0xffffffffU) & g)) + k[i] + w[i]
         s0: sha_rotr(a, 2) ^ sha_rotr(a, 13) ^ sha_rotr(a, 22)
@@ -140,7 +140,7 @@ fn: sha_block (@: h unsigned; @: k unsigned; @: w unsigned; @: p char; size_t: o
         cc: b
         b: a
         a: t1 + t2
-        i: i + 1
+        i: i + 1U
     h[0]: h[0] + a
     h[1]: h[1] + b
     h[2]: h[2] + cc
@@ -159,7 +159,8 @@ fn: sha_finish (@: h unsigned; @: k unsigned; @: w unsigned; @: rest char; size_
     @: tail char c.calloc(128U, 1U)
     @: hex char "0123456789abcdef"
     size_t: tn 64U
-    int: i 0
+    size_t: i 0U
+    size_t: at 0U
     int: q 0
     if: tail = 0
         return: 1
@@ -173,12 +174,13 @@ fn: sha_finish (@: h unsigned; @: k unsigned; @: w unsigned; @: rest char; size_
     sha_block(h, k, w, tail, 0U)
     if: tn = 128U
         sha_block(h, k, w, tail, 64U)
-    while: i < 8
+    while: i < 8U
         q: 0
         while: q < 8
-            out[i * 8 + q]: hex[(cast: (int) ((h[i] >> (28 - 4 * q)) & 15U))]
+            out[at]: hex[(cast: (size_t) ((h[i] >> (28 - 4 * q)) & 15U))]
+            at: at + 1U
             q: q + 1
-        i: i + 1
+        i: i + 1U
     out[64]: (cast: (char) 0)
     c.free(tail)
     return: 0

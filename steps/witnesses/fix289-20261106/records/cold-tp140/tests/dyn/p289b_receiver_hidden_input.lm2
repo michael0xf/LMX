@@ -1,0 +1,32 @@
+# Probe (slice 289): the receiver of the index's conversion reads a free name, the root's `floor` -- a hidden input of its
+# own -- so a method whose int index calls that receiver needs the input too. Entry 7; 11.. the first failure.
+int: floor 0
+fn: lm_stg_convert_int_size_t (int: n) size_t
+    throws: range
+    if: n < floor
+        throw: range
+    return: (cast: (size_t) n)
+end: lm_stg_convert_int_size_t
+[]: int cells 3
+cells[0U]: 5
+cells[1U]: 17
+cells[2U]: 7
+@: pc int @ cells[0U]
+fn: get (@: p int; int: at) int
+    return: p[at]
+end: get
+int: code 7
+int: one 1
+int: neg 0 - 1
+if: get(pc, one) != 17
+    code: 11
+int: caught 0
+---
+    caught: get(pc, neg)
+    catch: convert ()
+        caught: 90
+---
+if: code = 7 && caught != 90
+    code: 12
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

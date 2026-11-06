@@ -5516,46 +5516,18 @@ fn: lm_compiler_primary_numeric_receiver (@: value c.L2ValueSpan; @: type int; @
     return: 0
 end: lm_compiler_primary_numeric_receiver
 
-# Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK; Codex, CODEX-OPUS-287-NORM-REVIEW-20261106T1318Z-01 and
-# CODEX-OPUS-288-CATEGORY-ANSWER-20261106-01): an index this implementation receives into size_t without a conversion -- a size_t
-# value, a runtime-typed one (the walker receives it, lmx_walk_index; native code through the same admission) or one numeric or
-# character literal (it takes size_t).  This limits the implementation; it does not define the language level of the operation:
-# an index of another numeric type is the same L3 INDEX, received by the ordinary reception, which these emitters do not run yet
-# (OPEN; a program without the conversion's receiver gets the reception's own refusal, never an unchecked C index).
-fn: lm_compiler_index_receivable (@: index c.L2ValueSpan; int: mi) int
-    @: leaf c.L2ValueSpan index
-    @: at c.LmP0Node
-    int: exact -1
-    int: kind
-    int: neg
-    int: uns
-    int: ch
-    size_t: magnitude
-    if: index = 0 || index\grammar = 0 || index\node = 0
-        return: 0
-    kind: lm_compiler_value_span_type(index, mi, @ exact)
-    if: kind = -20 || c.lm_compiler_formal_raw(exact) = 2
-        return: 1
-    while: leaf\values != 0 && leaf\value_n = 1 && (leaf\grammar = 3 || leaf\node\kind = c.LM_P0_NODE_STRUCTURE)
-        leaf: leaf\values
-    ---
-    at: leaf\node
-    if: leaf\count = 1 && at != 0 && at\kind = c.LM_P0_NODE_ATOM && at\as != 0
-        if: c.lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) (at\as\atom)), @ neg, @ magnitude, @ uns) != 0 || c.lm_compiler_rw_char_lit((cast: (const: @: c.LmP0Text) (at\as\atom)), @ ch) != 0
-            return: 1
-        ---
-    ---
-    return: 0
-end: lm_compiler_index_receivable
-
 # Slice 288 (OWN-POINTER-INDEX-NATIVE-CHECK): the one predicate of the L3 INDEX of a machine pointer an L3 place holds, asked by
-# the native lowering, the walked lowering and the effect scans alike.  A unit's body is L3 with machine insertions (the book,
+# CHECK, the native lowering and the walked lowering alike.  A unit's body is L3 with machine insertions (the book,
 # provenance :7, :9-15; READ.ME): the INDEX of a pointer an own field or a formal holds, in a method that is not a machine
 # module's function (lm_compiler_m_machine), is the checked L3 INDEX (the book :1083) -- the place lmx_walk_value_index_place
 # selects over the held value, in native and walked code alike.  Every step is an index of a pointer whose pointee the kernel
-# types, every index received into size_t (lm_compiler_index_receivable).  What this does not take -- a member step, a machine
-# local, slot or C constant root, a pointer to `void` or to a foreign type, an index of another numeric type -- is no category of
-# the norm but a limit of this implementation, which keeps its earlier route (OPEN); a machine module's function is genuine L2.
+# types.  Slice 289 (INDEX-NUMERIC-RECEPTION; Codex, CODEX-OPUS-288-REVIEW-NEXT-20261106-01): the index's own type does not
+# choose the category.  Every index is received into size_t by the ordinary numeric reception, as an Array level's is: CHECK
+# prepares it, admits its converter and records the converter's call (lm_compiler_check_resolved_indices,
+# lm_compiler_check_indexed_write), both lowerings run it; a program without the receiver of the conversion gets that
+# reception's own refusal, never an unchecked C index.  What this does not take -- a member step, a machine local, slot or C
+# constant root, a pointer to `void` or to a foreign type -- is no category of the norm but a limit of this implementation,
+# which keeps its earlier route (OPEN); a machine module's function is genuine L2.
 fn: lm_compiler_index_l3_path (const: (@: path c.L2Path); int: mi) int
     @: step c.L2PathStep
     int: k 0
@@ -5568,8 +5540,6 @@ fn: lm_compiler_index_l3_path (const: (@: path c.L2Path); int: mi) int
         step: path\steps + k
         ft: c.lm_compiler_formal_raw((cast: (int) (step\address_ft)))
         if: step\locus != 7 || step\address_ft < 0 || step\elem_ty < 0 || ft < 0 || ft >= 100 || ft = 16
-            return: 0
-        if: lm_compiler_index_receivable((cast: (@: c.L2ValueSpan) (@ step\index)), mi) = 0
             return: 0
         k: k + 1
     ---

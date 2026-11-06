@@ -6,8 +6,16 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 218 inputs (65 source files, 34 tools and
-119 tests). Slice288 checks the same L3 INDEX in native code: the place is selected by
+The selected package contains 221 inputs (65 source files, 34 tools and
+122 tests). Slice289 receives an index of another numeric type at that L3 INDEX by the ordinary numeric
+reception: the index's type does not choose the route, CHECK admits the reception as at an Array level,
+and native and walked code call the program's converter (`lm_stg_convert_int_size_t` for an `int`), whose
+refusal is the implicit `convert` before the place is selected; a program without it is refused at
+translation. No program here defines converters: the tools' methods are a machine library (genuine L2),
+and the tool parts that L3 programs use (`tools/text.lm2` in the self-test's child, `tools/sha256.lm2` in
+`tests/sha/sha256_vectors.lm2`) index by `size_t`.
+
+Slice288 checks the same L3 INDEX in native code: the place is selected by
 `lmx_walk_value_index_place` over the pointer's current value, the index received as `size_t`, and an
 index out of the place's interval or an overflow is the implicit `interpreter`; read, write and `@` are
 the walker's, under one predicate (`lm_compiler_index_l3_path`). `tests/sha/sha256_vectors.lm2` counts

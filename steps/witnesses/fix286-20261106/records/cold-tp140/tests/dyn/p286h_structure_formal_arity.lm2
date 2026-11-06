@@ -1,0 +1,64 @@
+# Slice 286 probe: a Structure formal `p` of model Places whose body calls `p\f()`; the actual Others has an `f` of
+# one input (the book :381: a structural formal admits by implements(c, A, Consumer); Codex, 285 norm answers item 4).
+# A direct actual and one through a free holder.  Entry 7.
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+Others:
+    fn: f (int: a) int
+        return: a
+    end: f
+end: Others
+fn: callit (Places: p) int
+    return: p\f()
+end: callit
+int: Hp 0
+fn: direct () int
+    ---
+        int: r callit(Others)
+        return: r
+        catch: implements ()
+            return: 24
+        catch: call ()
+            return: 22
+        catch: convert ()
+            return: 25
+    ---
+end: direct
+fn: through_free () int
+    ---
+        int: r callit(Hp)
+        return: r
+        catch: implements ()
+            return: 24
+        catch: call ()
+            return: 22
+        catch: convert ()
+            return: 25
+    ---
+end: through_free
+fn: run_free () int
+    @: Hp Others Others
+    return: through_free()
+end: run_free
+int: code 7
+if: callit(Places) != 1
+    code: 81
+---
+int: got 0
+if: code = 7
+    got: direct()
+---
+if: code = 7 && got != 24
+    code: got
+---
+if: code = 7
+    got: run_free()
+---
+if: code = 7 && got != 24
+    code: 40 + got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

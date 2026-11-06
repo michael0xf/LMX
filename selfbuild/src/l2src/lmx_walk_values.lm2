@@ -7303,8 +7303,10 @@ fn: lmx_walk_call_rows (@: arena c.LmxArena; @: code c.Lmx; @@: source_refs void
     @: args c.Lmx c.lmx_graph_ref_struct_in(arena, code, c.lmx_implements_exec_index(arena, code, 0U))
     if: args = 0 || c.lmx_callable_source_count(arena, args, @ width) != 0
         return: c.LMX_WALK_INVALID
+    # Slice 286 (Codex, 285 norm answers item 3): more written inputs than the reached callable takes, or one where it has a
+    # free input, is a form of the call it does not have: the implicit `call` before the body (slice 263 named it `implements`).
     if: written > width
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
     if: written != 0U && source_refs = 0
         return: c.LMX_WALK_INVALID
     @: values c.LmxWalkValue @ rows\first_value
@@ -7330,7 +7332,7 @@ fn: lmx_walk_call_rows (@: arena c.LmxArena; @: code c.Lmx; @@: source_refs void
         @: item c.LmxWalkValue (values + i)
         if: lmx_activation_input_formal(arena, code, i) = 0
             if: i < written
-                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
             lmx_walk_value_free_mark(item)
         else:
             if: i < written && supplied = 0 && source_refs[i] != 0
@@ -7394,8 +7396,10 @@ fn: lmx_call_selected_structure (@: arena c.LmxArena; @: frame c.LmxWalkFrame; @
             @: item c.LmxWalkValue (rows\values + i)
             if: lmx_activation_input_formal(arena, code, i) != 0
                 status: lmx_walk_current_default(arena, args, i, item)
+                # Slice 286: a formal `call: code` forms no input for, with no default, is the arity this call lacks -- its
+                # implicit `call` (Codex, 285 norm answers item 3; slice 263 named it `implements`).
                 if: status = c.LMX_WALK_OK && item\present = 0
-                    status: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+                    status: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
                 ---
                 @: expected void 0
                 if: status = c.LMX_WALK_OK && c.lmx_callable_source_entry(arena, args, i, @ source, @ expected) != 0

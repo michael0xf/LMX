@@ -2718,38 +2718,61 @@ fn: lmx_implements_call_takes (@: arena c.LmxArena; @: value void; @: req void) 
     size_t: args_slot 0U
     size_t: return_slot 0U
     int: answer
+    int: want_sub 0
+    int: have_sub 0
     if: contract = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: lmx_callable_source_count(arena, contract, @ header_count) != 0 || header_count < 2U
         return: c.LMX_IMPLEMENTS_UNKNOWN
+    # Slice 286: a `sub` is a callable of three parts that returns no value (lmx_callable_part): its edge 1 is its var, no
+    # return header.  The call its description forms reads no result; as a candidate it gives none.
+    want_sub: (cast: (int) (lmx_callable_part(arena, contract, 0U) != (cast: (size_t) -1) && lmx_callable_part(arena, contract, 1U) = (cast: (size_t) -1)))
     args_slot: lmx_implements_exec_index(arena, contract, 0U)
-    return_slot: lmx_implements_exec_index(arena, contract, 1U)
-    if: args_slot = (cast: (size_t) -1) || return_slot = (cast: (size_t) -1)
+    if: args_slot = (cast: (size_t) -1)
         return: c.LMX_IMPLEMENTS_UNKNOWN
     want_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, args_slot))
-    want_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, return_slot))
-    if: want_args = 0 || want_return = 0
+    if: want_args = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: want_sub = 0
+        return_slot: lmx_implements_exec_index(arena, contract, 1U)
+        if: return_slot = (cast: (size_t) -1)
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        want_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, contract, return_slot))
+        if: want_return = 0
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
     if: code = 0
         return: c.LMX_IMPLEMENTS_NO
     if: lmx_callable_source_count(arena, code, @ header_count) != 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: header_count < 2U
         return: c.LMX_IMPLEMENTS_NO
+    have_sub: (cast: (int) (lmx_callable_part(arena, code, 0U) != (cast: (size_t) -1) && lmx_callable_part(arena, code, 1U) = (cast: (size_t) -1)))
+    # A call reads as many results as its description has: a sub gives none, a fn one (the static rule's equal result,
+    # lm_compiler_sig_takes).
+    if: want_sub != have_sub
+        return: c.LMX_IMPLEMENTS_NO
     args_slot: lmx_implements_exec_index(arena, code, 0U)
-    return_slot: lmx_implements_exec_index(arena, code, 1U)
-    if: args_slot = (cast: (size_t) -1) || return_slot = (cast: (size_t) -1)
+    if: args_slot = (cast: (size_t) -1)
         return: c.LMX_IMPLEMENTS_UNKNOWN
     have_args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, args_slot))
-    have_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, return_slot))
-    if: have_args = 0 || have_return = 0
+    if: have_args = 0
         return: c.LMX_IMPLEMENTS_NO
+    if: have_sub = 0
+        return_slot: lmx_implements_exec_index(arena, code, 1U)
+        if: return_slot = (cast: (size_t) -1)
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        have_return: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, code, return_slot))
+        if: have_return = 0
+            return: c.LMX_IMPLEMENTS_NO
+    ---
     if: lmx_callable_source_count(arena, have_args, @ have_count) != 0 || lmx_callable_source_count(arena, want_args, @ want_count) != 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: have_count != want_count
         return: c.LMX_IMPLEMENTS_NO
     answer: lmx_implements_call_positions(arena, have_args, want_args, 1)
-    if: lmx_callable_source_count(arena, want_return, @ want_count) != 0
+    want_count: 0U
+    if: want_return != 0 && lmx_callable_source_count(arena, want_return, @ want_count) != 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: answer != c.LMX_IMPLEMENTS_YES || want_count = 0U
         return: answer
@@ -4701,6 +4724,15 @@ fn: lmx_implements_receive_cell (@: arena c.LmxArena; @: cell void; @: value voi
         return: c.LMX_WALK_INVALID
     if: cell = 0 || value = 0
         return: c.LMX_WALK_OK
+    # Slice 286 (CALLABLE-PLACE-FREE-SIGNATURE; Codex, 285 norm answers item 3; the book :370, :373, :387): a callable field's
+    # slot keeps the callable its definition put there (lmx_source_place_callable_set).  A fn or sub written there must take
+    # the call that declaration forms, or the write is the implicit `implements` and changes nothing; any other value is the
+    # selected call's to admit (lmx_implements_unary_admission).  Native and walked stores reach this one admission.
+    @: declared_row c.LmxSourceName c.lmx_source_places(arena, cell)
+    if: declared_row = 0
+        return: c.LMX_WALK_OK
+    if: declared_row\place_callable != 0
+        return: lmx_implements_place_callable(arena, value, (cast: (@: c.Lmx) declared_row\place_callable))
     int: known lmx_implements_cell_model(arena, cell, @ model)
     if: known != c.LMX_WALK_OK || model = 0
         return: known
@@ -7329,3 +7361,41 @@ fn: lmx_callable_part (@: arena c.LmxArena; @: code c.Lmx; size_t: part) size_t
         return: 0U
     return: part - 1U
 end: lmx_callable_part
+
+# Slice 286: the value written into a callable place and the place's declaration declare the same throws in the same order --
+# the ordinal space the place's callers handle (lmx_walk_key_from_ordinal), the static rule's same throws
+# (lm_compiler_throws_same).  Ordinal k past the declared ones is an implicit key, so the first implicit key both give
+# ends the comparison.  YES, NO, or UNKNOWN when a header gives no key.
+fn: lmx_implements_same_throws (@: arena c.LmxArena; @: value c.Lmx; @: declared c.Lmx) int
+    size_t: k 1U
+    size_t: a 0U
+    size_t: b 0U
+    while: k != 0U
+        if: c.lmx_walk_key_from_ordinal(arena, value, k, @ a) != c.LMX_WALK_OK || c.lmx_walk_key_from_ordinal(arena, declared, k, @ b) != c.LMX_WALK_OK
+            return: c.LMX_IMPLEMENTS_UNKNOWN
+        if: a != b
+            return: c.LMX_IMPLEMENTS_NO
+        if: a < (cast: (size_t) c.LMX_WALK_NAME_DECLARED)
+            return: c.LMX_IMPLEMENTS_YES
+        k: k + 1U
+    ---
+    return: c.LMX_IMPLEMENTS_UNKNOWN
+end: lmx_implements_same_throws
+
+# The write of a value into a declared callable place (slice 286, CALLABLE-PLACE-FREE-SIGNATURE; Codex, 285 norm answers item 3;
+# the book :370, :373, :387): the place has the signature its definition gave it, `declared` -- the callable the definition
+# put there, which the slot keeps (lmx_source_place_callable_set).  A fn or a sub written there must take the call that description forms
+# (lmx_implements_call_takes, the directional check of Q49) and declare the same throws (lmx_implements_same_throws), or the
+# write is the implicit `implements`, before anything changes.  An unknown answer refuses nothing.  An ordinary Structure
+# stands there as before: the selected call's admission asks it at the call (slice 283).  OK or the throw.
+fn: lmx_implements_place_callable (@: arena c.LmxArena; @: value void; @: declared c.Lmx) int
+    @: pool c.LmxPool 0
+    if: arena = 0 || value = 0 || declared = 0 || c.lmx_range_classify(arena, value) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_OK
+    pool: c.lmx_range_cell_pool(arena, value)
+    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
+        return: c.LMX_WALK_OK
+    if: lmx_implements_call_takes(arena, value, (cast: (@: void) declared)) = c.LMX_IMPLEMENTS_NO || lmx_implements_same_throws(arena, (cast: (@: c.Lmx) value), declared) = c.LMX_IMPLEMENTS_NO
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS
+    return: c.LMX_WALK_OK
+end: lmx_implements_place_callable

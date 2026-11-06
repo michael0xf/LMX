@@ -1,0 +1,38 @@
+# Slice 286 probe: an ordinary Structure written by a free holder into a callable place of one input, then called
+# with an argument (283 left it `walk error: INVALID` in the walker; Codex, 285 norm answers item 3: a form the
+# selected call does not take is the implicit `call`).  Entry 7.
+Other:
+    int: q 3
+end: Other
+Places:
+    fn: f (int: x) int
+        return: x
+    end: f
+end: Places
+int: Hv 0
+fn: write_free () int
+    @: Places\f Hv
+    ---
+        int: r Places\f(5)
+        return: r
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+        catch: interpreter ()
+            return: 23
+        catch: convert ()
+            return: 25
+    ---
+end: write_free
+fn: run () int
+    @: Hv Other Other
+    return: write_free()
+end: run
+int: code 7
+int: got run()
+if: got != 22
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

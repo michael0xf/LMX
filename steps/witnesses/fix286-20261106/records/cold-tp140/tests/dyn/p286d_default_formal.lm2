@@ -1,0 +1,37 @@
+# Slice 286 probe: a formal's default (the book :381: a value written in the signature is its default), a static
+# call that omits it and a dynamic one through a free path.  Entry 7.
+Defaults:
+    fn: f (int: a 5) int
+        return: a
+    end: f
+end: Defaults
+int: Hd 0
+fn: d (int: a 5) int
+    return: a
+end: d
+fn: call_free () int
+    ---
+        int: r Hd\f()
+        return: r
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+    ---
+end: call_free
+fn: run () int
+    @: Hd Defaults Defaults
+    return: call_free()
+end: run
+int: code 7
+if: d() != 5
+    code: 81
+---
+if: code = 7 && d(3) != 3
+    code: 82
+---
+if: code = 7 && run() != 5
+    code: 83
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

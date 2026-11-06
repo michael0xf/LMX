@@ -1,0 +1,44 @@
+# Slice 286 probe: a copy of a namespace (merge) has callable places of its own; a fn of another arity written there
+# through a free holder, then the copy's place called: the call's implicit `call` before the body (Codex, 285 norm
+# answers item 3), not the native entry's invariant or UNSUPPORTED.  Entry 7.
+fn: g (int: a) int
+    return: a
+end: g
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+Q: merge(Places)
+int: Hw 0
+fn: write_copy () int
+    int: refused 0
+    ---
+        @: Q\f Hw
+        catch: implements ()
+            refused: 1
+    ---
+    if: refused != 0
+        return: 40
+    ---
+        int: r Q\f()
+        return: r
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+        catch: interpreter ()
+            return: 23
+    ---
+end: write_copy
+fn: run () int
+    @: Hw g g
+    return: write_copy()
+end: run
+int: code 7
+int: got run()
+if: got != 22
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

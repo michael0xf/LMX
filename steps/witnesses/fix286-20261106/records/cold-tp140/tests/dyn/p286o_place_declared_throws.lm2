@@ -1,0 +1,45 @@
+# Slice 286 probe: a fn that declares `throws: Bad` written by a free holder into a callable place whose declaration throws
+# nothing, then called.  The static rule refuses such a write (lm_compiler_sig_takes compares the declared throws); what
+# does the dynamic admission do, and where does the throw go?  Entry 7 when the write is refused (`implements`).
+int: raising 1
+fn: bad () int
+    throws: Bad
+    if: node\[0]raising != 0
+        throw: Bad(5)
+    return: 7
+end: bad
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hw 0
+fn: write_free () int
+    int: refused 0
+    ---
+        @: Places\f Hw
+        catch: implements ()
+            refused: 1
+    ---
+    if: refused != 0
+        return: 24
+    ---
+        int: r Places\f()
+        return: r
+        catch: call ()
+            return: 22
+        catch: interpreter ()
+            return: 23
+    ---
+end: write_free
+fn: run () int
+    @: Hw bad bad
+    return: write_free()
+end: run
+int: code 7
+int: got run()
+if: got != 24
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -175,6 +175,7 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
     row\place_spec: 0
     row\model_layout: 0
     row\place_uses: 0
+    row\place_callable: 0
     row\pending_next: 0
     # The row's by-value VoidArray is written through its address.
     va: @ row\text
@@ -241,6 +242,7 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
     size_t: key 0U
     size_t: text 0U
     size_t: place 0U
+    size_t: declared 0U
     pool: (cast: (@: LmxPool) arena\arrays)
     while: pool != 0
         if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
@@ -260,6 +262,10 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
                         # Pending rows have no key, but their text still retires.
                         if: (key >= low && key < high) || (place >= low && place < high) || (text != 0U && text < high && text + (cast: (size_t) va\size) > low)
                             lmx_source_name_cancel(row)
+                        # A declared callable that leaves takes its declaration along (lmx_source_place_callable_set).
+                        declared: (cast: (size_t) row\place_callable)
+                        if: declared >= low && declared < high
+                            row\place_callable: 0
                         i: i + 1U
                     ---
                 ---
@@ -348,3 +354,22 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
     ---
     return: status
 end: lmx_source_names_mark
+
+# Slice 286 (CALLABLE-PLACE-FREE-SIGNATURE; Codex, 285 norm answers item 3): the callable a callable field's definition put in
+# its physical slot.  The slot's declaration, as a Structure field's model is (lmx_source_place_model_set): it survives later
+# assignments there, and every later write there is admitted against it (lmx_implements_receive_cell).  The declared callable
+# is a live dependency of its slot (lmx_gc_mark_impl).
+fn: lmx_source_place_callable_set (@: arena c.LmxArena; @: slot void; @: declared void) int
+    if: slot = 0 || declared = 0
+        return: 1
+    @: row c.LmxSourceName lmx_source_places(arena, slot)
+    if: row != 0
+        if: row\place_callable = 0
+            row\place_callable: declared
+        return: (cast: (int) (row\place_callable != declared))
+    if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0, 0U, @ row) != 0 || row = 0
+        return: 1
+    row\place_callable: declared
+    lmx_source_name_publish(row, slot)
+    return: 0
+end: lmx_source_place_callable_set

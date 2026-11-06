@@ -1,0 +1,45 @@
+# Slice 286 probe: a direct dynamic call through a free path, no write into a declared place: `Hp\f()` where the
+# Structure standing in the free holder has an `f` of one input (Codex, 285 norm answers item 3: the implicit `call`
+# before the body).  Entry 7.
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+Others:
+    fn: f (int: a) int
+        return: a
+    end: f
+end: Others
+int: Hp 0
+fn: call_free () int
+    ---
+        int: r Hp\f()
+        return: r
+        catch: call ()
+            return: 22
+        catch: interpreter ()
+            return: 23
+        catch: implements ()
+            return: 24
+        catch: convert ()
+            return: 25
+    ---
+end: call_free
+fn: run () int
+    @: Hp Others Others
+    return: call_free()
+end: run
+fn: control () int
+    @: Hp Places Places
+    return: call_free()
+end: control
+int: code 7
+if: control() != 1
+    code: 81
+---
+if: code = 7 && run() != 22
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

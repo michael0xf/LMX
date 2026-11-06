@@ -1,0 +1,38 @@
+# Slice 286 probe: a fn of another arity written into a callable place through a free root (`@: Hq\f Hw`, the holder's
+# definition unknown at the write), then the place called with its declared signature: the call's own admission (Codex,
+# 285 norm answers item 3: the implicit `call` before the body, not the native entry's invariant or UNSUPPORTED).  Entry 7.
+fn: g (int: a) int
+    return: a
+end: g
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hq 0
+int: Hw 0
+fn: write_through_free () int
+    @: Hq\f Hw
+    ---
+        int: r Places\f()
+        return: r
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+        catch: interpreter ()
+            return: 23
+    ---
+end: write_through_free
+fn: run () int
+    @: Hq Places Places
+    @: Hw g g
+    return: write_through_free()
+end: run
+int: code 7
+int: got run()
+if: got != 22
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

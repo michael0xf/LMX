@@ -361,3 +361,15 @@ Source 216/FA0B57AC; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. A `sub` takes the parts builder of `fn`; no pass or table was added. Not measured apart.
 A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix285-20261106/notes.md).
+
+## Slice286 / boot148b (Opus, 2026-11-06)
+
+Whole quick 1137.97 s: 08:20:25.5851370Z→08:39:23.5598476Z, both generations
+smoke 9/0. G2 focus 67/0, 973.48 s: 08:40:04.4472460Z→08:56:17.9230150Z.
+Source 217/CDB1FB25; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A callable place's declaration is one field of the existing place row: the write admission
+reads that row once, and the collection marks the declared callables of live slots in its existing fixed
+point. Not measured apart. The slice's first whole, boot148a (1070.21 s,
+07:06:35.8034024Z→07:24:26.0096975Z), ran before the declared-throws comparison and is superseded.
+A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix286-20261106/notes.md).

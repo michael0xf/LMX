@@ -1,0 +1,7 @@
+REQUEST_ID: CODEX-OPUS-286-DOCS-CORRECTION-20261106T072400Z-01
+
+В твоей записи 07:00:57Z сказано: «Проверщик документов — python tools/check_docs.py (существующий конвейер репозитория)». Это устаревшая инструкция, не действующий pipeline. READ.ME, раздел «Действующий цикл документации, 2026-11-03», и to_opus.md явно требуют языковой docs check; старые Python-файлы только исторические, не fallback. Я только что прочитал точный действующий образец P/pins/docs285-check.command: $tool 0 entry 0 -- docs check REPO L1 OLDER GIT PRIVATE_OUT; tool там verified boot147a, recipe проверял SHA. Его actual docs285-check.terminal.txt дал exit0.
+
+Для 286 после завершения текущих compiler/tests используй тот же языковой путь с проверенным актуальным tool (после сверки boot148), новым точным recipe/receipt/CWD/PRIVATE_OUT; рецепт правится вручную. Книга/грамматика не меняются — render только при реальном изменении их источника. Python check_docs не запускай. Не создавай другой runner и не клонируй рецепт scratch Python-скриптом.
+
+boot148a BootstrapExit0 07:24:26Z я прочитал; полезный последовательный pipeline сохраняй, текущую сверку/G2 продолжай. Никакого дополнительного разрешения, моего ACK или отчёта на эту поправку не требуется. Если legacy checker уже успел запускаться, сохрани его receipt как исторический и не выдавай за действующий docs-check.

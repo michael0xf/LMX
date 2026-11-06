@@ -1,0 +1,31 @@
+# Slice 286 probe: a free holder holding a fn of one input, called with none: a direct dynamic call, no write into a
+# declared place (Codex, 285 norm answers item 3: the implicit `call` before the body).  Entry 7.
+fn: g (int: a) int
+    return: a
+end: g
+int: Hw 0
+fn: call_free () int
+    ---
+        int: r Hw()
+        return: r
+        catch: call ()
+            return: 22
+        catch: interpreter ()
+            return: 23
+        catch: implements ()
+            return: 24
+        catch: convert ()
+            return: 25
+    ---
+end: call_free
+fn: run () int
+    @: Hw g g
+    return: call_free()
+end: run
+int: code 7
+int: got run()
+if: got != 22
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

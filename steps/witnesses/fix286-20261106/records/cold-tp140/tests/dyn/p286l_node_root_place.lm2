@@ -1,0 +1,39 @@
+# Slice 286 probe: the unit's own callable place written through `node\` with a fn of another arity, then called through
+# the same path: the write's `implements` if the place declares its callable, else the call's implicit `call` (Codex, 285
+# norm answers item 3).  Entry 7.
+fn: g (int: a) int
+    return: a
+end: g
+fn: f0 () int
+    return: 1
+end: f0
+int: Hw 0
+fn: write_root () int
+    int: refused 0
+    ---
+        @: node\f0 Hw
+        catch: implements ()
+            refused: 1
+    ---
+    if: refused != 0
+        return: 24
+    ---
+        int: r node\f0()
+        return: r
+        catch: call ()
+            return: 22
+        catch: interpreter ()
+            return: 23
+    ---
+end: write_root
+fn: run () int
+    @: Hw g g
+    return: write_root()
+end: run
+int: code 7
+int: got run()
+if: got != 22 && got != 24
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

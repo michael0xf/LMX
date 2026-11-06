@@ -254,6 +254,63 @@ fn: lmx_gc_impl_live (@: arena c.LmxArena; @: value c.Lmx; unsigned: gen) int
     return: (cast: (int) (chunk != 0 && chunk\mark = gen))
 end: lmx_gc_impl_live
 
+# Slice 286 (CALLABLE-PLACE-FREE-SIGNATURE): a callable field's declaration (lmx_source_place_callable_set) is a live dependency
+# of its slot, as a recorded admission's model is of its value: once the callable first put there is replaced, later writes
+# there are still admitted against it.  A slot is live when the chunk that holds it is -- the source names' own test of a weak
+# key (lmx_source_names_mark); the row itself is kept by that pass.  changed is set when this marks something new.
+fn: lmx_gc_mark_place_callables (@: arena c.LmxArena; unsigned: gen; @: changed int) int
+    @: pool c.LmxPool 0
+    @: owner c.LmxPool 0
+    @: chunk c.LmxChunk 0
+    @: held c.LmxChunk 0
+    @: rows c.LmxSourceName 0
+    @: row c.LmxSourceName 0
+    size_t: i 0U
+    size_t: n 0U
+    int: live 0
+    pool: (cast: (@: LmxPool) arena\arrays)
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
+            chunk: (cast: (@: LmxChunk) pool\head)
+            while: chunk != 0
+                if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
+                    rows: (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                    n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
+                    i: 0U
+                    while: i < n
+                        row: rows + i
+                        if: row\key != 0 && row\place_callable != 0 && lmx_gc_impl_live(arena, (cast: (@: Lmx) row\place_callable), gen) = 0
+                            live: 0
+                            owner: (cast: (@: LmxPool) c.lmx_range_pool(arena, row\key))
+                            if: owner != 0
+                                if: c.lmx_pool_is_sealed(owner) != 0
+                                    live: 1
+                                else:
+                                    held: (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, row\key))
+                                    if: held != 0 && held\mark = gen
+                                        live: 1
+                                    ---
+                                ---
+                            ---
+                            if: live != 0
+                                if: lmx_gc_mark_value(arena, (cast: (@: void) row\place_callable), gen, 0) != c.LMX_GC_OK
+                                    return: c.LMX_GC_PARTIAL
+                                if: lmx_gc_impl_live(arena, (cast: (@: Lmx) row\place_callable), gen) != 0
+                                    changed[0]: 1
+                                ---
+                            ---
+                        ---
+                        i: i + 1U
+                    ---
+                ---
+                chunk: (cast: (@: LmxChunk) chunk\next)
+            ---
+        ---
+        pool: (cast: (@: LmxPool) pool\next)
+    ---
+    return: c.LMX_GC_OK
+end: lmx_gc_mark_place_callables
+
 fn: lmx_gc_mark_impl (@: arena c.LmxArena; unsigned: gen) int
     size_t: i 0U
     int: changed 1
@@ -275,6 +332,9 @@ fn: lmx_gc_mark_impl (@: arena c.LmxArena; unsigned: gen) int
                 ---
             ---
             i: i + 1U
+        ---
+        if: lmx_gc_mark_place_callables(arena, gen, @ changed) != c.LMX_GC_OK
+            return: c.LMX_GC_PARTIAL
         ---
     ---
     return: c.LMX_GC_OK

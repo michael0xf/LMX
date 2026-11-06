@@ -1,0 +1,50 @@
+# Slice 286 probe: a callable formal `q` described by `note` receives, through a free holder, a fn of two inputs; the
+# body calls `q(x)` with one (the book :381, :463: the formal admits by its requirement; Codex, 285 norm answers
+# items 3-4).  Entry 7.
+fn: note (int: a) int
+    return: a
+end: note
+fn: two (int: a; int: b) int
+    return: a + b
+end: two
+fn: placed (note: q; int: x) int
+    int: r 0
+    r: q(x)
+    return: r
+end: placed
+int: Hw 0
+fn: pass_free () int
+    ---
+        int: r placed(Hw 3)
+        return: r
+        catch: implements ()
+            return: 24
+        catch: call ()
+            return: 22
+        catch: convert ()
+            return: 25
+        catch: interpreter ()
+            return: 23
+    ---
+end: pass_free
+fn: run () int
+    @: Hw two two
+    return: pass_free()
+end: run
+fn: control () int
+    @: Hw note note
+    return: pass_free()
+end: control
+int: code 7
+if: control() != 3
+    code: 81
+---
+int: got 0
+if: code = 7
+    got: run()
+---
+if: code = 7 && got != 24
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

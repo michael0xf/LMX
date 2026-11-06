@@ -1,0 +1,40 @@
+# Slice 286 probe: a fn of another arity written by a free holder into a declared callable place that is called
+# (Codex, 285 norm answers item 3: the write's admission, an implicit `implements`; the refusal keeps the old value).
+# Entry 7.
+fn: g (int: a) int
+    return: a
+end: g
+Places:
+    fn: f () int
+        return: 1
+    end: f
+end: Places
+int: Hw 0
+fn: write_free () int
+    int: refused 0
+    ---
+        @: Places\f Hw
+        catch: implements ()
+            refused: 1
+        catch: call ()
+            refused: 2
+        catch: convert ()
+            refused: 3
+        catch: interpreter ()
+            refused: 4
+    ---
+    if: refused != 1
+        return: 30 + refused
+    return: Places\f()
+end: write_free
+fn: run () int
+    @: Hw g g
+    return: write_free()
+end: run
+int: code 7
+int: got run()
+if: got != 1
+    code: got
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

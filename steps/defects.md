@@ -11321,7 +11321,9 @@ replay3630 не потерял выходов и не дал новых диаг
 
 `sub` с собственным полем при любом вызове, в том числе прямом: native `walk error: UNSUPPORTED` (`self` = 0 в `lmx_call_index`), forced `walk error: INVALID`, на кортежах 282 и 283. Поля такого `sub` читаются и пишутся через место callable, `sub` без поля вызывается, и перепривязанный тоже. [Проба](witnesses/fix283-20261105/records/cold-tp140/tests/dyn/p283ah_sub_own_direct.lm2), [запись](witnesses/fix283-20261105/notes.md).
 
-### CALLABLE-PLACE-FREE-SIGNATURE — 2026-11-05, Opus (срез 283), OPEN
+### CALLABLE-PLACE-FREE-SIGNATURE — 2026-11-05, Opus (срез 283), CLOSED срезом 286
+
+Слот места callable держит вызываемое, которое туда положило определение (`lmx_source_place_callable_set`, строка места рядом с моделью слота; поля пространств имён и локальных Structure, слоты `fn` единицы, заимствованное вхождение, поле `l2_fkid`). Любая запись туда — native, обходчик, перепривязка — проходит `lmx_implements_receive_cell`: `fn` или `sub`, не принимающий вызов объявления (арность, типы позиций, результат: `sub` и `fn` друг друга не принимают) или объявивший другие `throws`, — неявный `implements` до изменения, прежнее вызываемое отвечает. Объявленное вызываемое живёт, пока жив слот (`lmx_gc_mark_place_callables`). `call: code` над `fn` без входа для записанного формала — неявный `call`, а не `implements`. Свидетель `tests/dyn/callable_place_signature.lm2`. Открытыми остались FORMAL-DEFAULT и CALLABLE-PLACE-NAMED-ACTUALS. [Запись](witnesses/fix286-20261106/notes.md). Исходная запись ниже.
 
 Ответ Codex на вопросы нормы 285, п. 3–4 ([дословно](witnesses/fix285-20261106/records/pins/codex-285-norm-answers.txt)): запись в объявленное место callable проходит обычный допуск до записи, несовместимая сигнатура — неявный `implements` общим механизмом, отказ сохраняет прежнее значение; динамическая несовместимость арности или формы вызова — неявный `call` до тела с учётом умолчаний, и у прямого динамического вызова тоже; при той же арности вид или примитивный тип — `convert`, структурный формал — `implements`; native и обходчик идут одним путём допуска. Следующий срез. Исходная запись ниже.
 
@@ -11336,6 +11338,14 @@ Array в immutable-значении: `b: immutable: merge(Holder)` с `[]: int i
 `lm_compiler_value_path_run` удалён: второй операнд `@:` — путь, если поля образуют путь, что бы в нём ни нашлось. `@: p T \q` — путь при любых пробелах; требование и разыменование пишутся `@: p T, \q`, одиннадцать строк фикстур переписаны. Путь без поля отказывает при трансляции общим `unknown type` на объявлении. [Запись](witnesses/fix284-20261105/notes.md). Исходная запись ниже.
 
 `@: x Box\absent` и `@: p T \q` различаются тем, есть ли поле (`lm_compiler_value_path_run`, срез 282): значение без поля тихо становится требованием и разыменованием, а `@: p Model \q` при поле `q` в `Model` меняет смысл. Запятая и пробелы P0 дают одни и те же поля (BARE-DEREF-ACTUAL-MERGED). Поручение Codex: [ревью 282](witnesses/fix283-20261105/records/pins/codex-282-review.txt), п.2, сверить формы с полем и без, с запятой и пробелами и выяснить, где потеряна граница. Следующий срез.
+
+### FORMAL-DEFAULT — 2026-11-06, Opus (срез 286), OPEN
+
+Записанное умолчание формала определение принимает, но его не берёт ни один вызов: `d()` у `fn: d (int: a 5)` отказывает при трансляции `d has no argument a`, `call: Hw` над таким `fn` даёт неявный `call` (на 285 — `implements`). Ответ Codex на вопросы нормы 285, п. 3, требует учитывать допустимые умолчания. [p286d](witnesses/fix286-20261106/records/cold-tp140/tests/dyn/p286d_default_formal.lm2), [p286g](witnesses/fix286-20261106/records/cold-tp140/tests/dyn/p286g_call_receiver_default.lm2), [запись](witnesses/fix286-20261106/notes.md).
+
+### CALLABLE-PLACE-NAMED-ACTUALS — 2026-11-06, Opus (срез 286), OPEN
+
+`fn: g (int: y)` проходит в место `fn: f (int: x)`: позиции и типы те же. Вызов `Places\f(x: 5)` native связывает `x` с объявленной позицией и даёт 5, обходчик отвечает `walk error: INVALID`, так же на кортеже 285. Ответ Codex на вопросы нормы 285, п. 3: применяется контракт фактически выбранного вызова, а входа `x` у него нет. [p286n](witnesses/fix286-20261106/records/cold-tp140/tests/dyn/p286n_named_actual_renamed.lm2), [запись](witnesses/fix286-20261106/notes.md).
 
 ### ROOT-POINTER-INDEX-WALKED — 2026-11-05, Opus (срез 284), OPEN
 

@@ -2018,22 +2018,25 @@ fn: lmx_callable_headers (@: arena c.LmxArena; @: selected c.Lmx; @@: out_args c
     pool: c.lmx_range_cell_pool(arena, (cast: (@: void) selected))
     if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
         return: c.LMX_WALK_OK
-    if: lmx_callable_source_count(arena, selected, @ count) != 0 || count != 4U
+    # A `fn` has four parts, its return header at edge 1; a `sub` three, and no return header: it returns no value (lmx_callable_part).
+    if: lmx_callable_source_count(arena, selected, @ count) != 0 || (count != 4U && count != 3U)
         return: c.LMX_WALK_OK
     status: lmx_implements_exec_coordinate(arena, selected, 0U, @ args_at, @ answer)
     if: status != c.LMX_WALK_OK
         return: status
     if: answer = c.LMX_IMPLEMENTS_YES
         args: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, selected, args_at))
-    status: lmx_implements_exec_coordinate(arena, selected, 1U, @ returns_at, @ answer)
-    if: status != c.LMX_WALK_OK
-        return: status
-    if: answer = c.LMX_IMPLEMENTS_YES
-        returns: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, selected, returns_at))
+    if: count = 4U
+        status: lmx_implements_exec_coordinate(arena, selected, 1U, @ returns_at, @ answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: answer = c.LMX_IMPLEMENTS_YES
+            returns: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, selected, returns_at))
+        ---
     # Independent known edges survive an unrelated unavailable header.
     out_args[0]: args
     out_returns[0]: returns
-    if: args != 0 && returns != 0
+    if: args != 0 && (returns != 0 || count = 3U)
         out_answer[0]: c.LMX_IMPLEMENTS_YES
     return: c.LMX_WALK_OK
 end: lmx_callable_headers
@@ -4430,15 +4433,15 @@ end: lmx_implements_call_field
 
 # A field of a callable by its name, over the callable standing in a place (the book, #method-parts: the parts are fields of one Structure and an own field is a place in them, `func\x`).
 # A place has one name however many statements stand at that head, so the registry of heads does not take it out of use here, as it does for an explicit `func\body\x`.  A fn holds its places in
-# the parts var and body; any other callable holds them in itself, and those of a written var part in that part.  YES, or NO: the callable standing there does not have the field.
+# the parts var and body, and so does a `sub` (slice 285: its var and body stand one slot lower, lmx_callable_part); any other
+# Structure holds them in itself, and those of a written var part in that part.  YES, or NO: the callable standing there does not have the field.
 fn: lmx_implements_own_part (@: arena c.LmxArena; @: code c.Lmx; size_t: pass) @: c.Lmx
-    @: fields c.VoidArray @ code\array
     @: pool c.LmxPool c.lmx_range_cell_pool(arena, (cast: (@: void) code))
     if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
-        if: fields\size = 4U
-            return: c.lmx_graph_ref_struct_in(arena, code, 2U + pass)
-        ---
-        return: 0
+        size_t: at lmx_callable_part(arena, code, 2U + pass)
+        if: at = (cast: (size_t) -1)
+            return: 0
+        return: c.lmx_graph_ref_struct_in(arena, code, at)
     ---
     if: pass = 0U
         return: c.lmx_graph_ref_struct_in(arena, code, 1U)
@@ -7304,3 +7307,25 @@ fn: lmx_implements_holes (@: arena c.LmxArena; @: value c.Lmx) int
         return: 1
     return: 0
 end: lmx_implements_holes
+
+# The slot of part `part` of a receiver-produced callable (the FN pool role; the book, #method-parts: args, the description of the
+# return where there is one, var and body are the parts of one Structure).  `part` is the part as the contract numbers it: 0 args,
+# 1 return, 2 var, 3 body.  A `fn` holds the four in that order; a `sub` returns no value and holds three, its var and body one
+# slot lower (slice 285, SUB-OWN-FIELD-CALL).  The producer's role and its part count say which; ordinary data of the same shape
+# has no role.  SIZE_MAX for a part the callable does not have, and for anything that is no such callable.
+fn: lmx_callable_part (@: arena c.LmxArena; @: code c.Lmx; size_t: part) size_t
+    @: pool c.LmxPool 0
+    if: arena = 0 || code = 0 || part > 3U || c.lmx_range_classify(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
+        return: (cast: (size_t) -1)
+    pool: c.lmx_range_cell_pool(arena, (cast: (@: void) code))
+    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
+        return: (cast: (size_t) -1)
+    @: fields c.VoidArray @ code\array
+    if: fields\size = 4U
+        return: part
+    if: fields\size != 3U || part = 1U
+        return: (cast: (size_t) -1)
+    if: part = 0U
+        return: 0U
+    return: part - 1U
+end: lmx_callable_part

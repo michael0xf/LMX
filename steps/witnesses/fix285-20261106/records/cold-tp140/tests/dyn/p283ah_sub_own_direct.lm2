@@ -1,0 +1,16 @@
+# Slice 283 probe: a sub with an own field called directly by its name.  Entry 7.
+int: seen 0
+sub: direct ()
+    int: w 6
+    node\seen: w
+end: direct
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+direct()
+int: code 7
+if: read_seen() != 6
+    code: 11
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

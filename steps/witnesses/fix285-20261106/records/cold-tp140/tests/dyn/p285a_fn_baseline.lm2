@@ -1,0 +1,55 @@
+# Slice 285 probe: the fn forms the sub witness repeats -- an own field published after the call and read by a path, a free input
+# bound by the caller's own field, a declared throw with an own field.  Entry 7.
+int: seen 0
+int: quote 5
+fn: fgrow () int
+    int: w 6
+    w: w + 1
+    return: w
+end: fgrow
+fn: fbump () int
+    int: step 2
+    return: quote + step
+end: fbump
+fn: fbound () int
+    int: quote 10
+    return: fbump()
+end: fbound
+fn: frisky (int: v) int
+    throws: Bad
+    int: w v
+    if: w > 3
+        throw: Bad(w)
+    ---
+    return: w
+end: frisky
+fn: fcaught (int: v) int
+    int: got 0
+    ---
+        got: frisky(v)
+        catch: Bad (int: value)
+            got: 100 + value
+    ---
+    return: got
+end: fcaught
+int: code 7
+if: fgrow() != 7
+    code: 81
+---
+if: code = 7 && fgrow\w != 7
+    code: 82
+---
+if: code = 7 && fbump() != 7
+    code: 83
+---
+if: code = 7 && fbound() != 12
+    code: 84
+---
+if: code = 7 && fcaught(2) != 2
+    code: 85
+---
+if: code = 7 && fcaught(5) != 105
+    code: 86
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

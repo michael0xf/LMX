@@ -352,3 +352,12 @@ Source 214/2A1D385A; 248 artifact paths per generation, 245 raw-equal and 3 PE
 metadata-only. P0 sets one node flag per separator, and `@:` with a path as its second operand no longer resolves that path to choose its form. Neither was measured apart.
 A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix284-20261105/notes.md).
+
+## Slice285 / boot147a (Opus, 2026-11-06)
+
+Whole quick 810.91 s: 03:57:21.2680811Z→04:10:52.1796326Z, both generations
+smoke 9/0. G2 focus 66/0, 787.27 s: 04:12:11.4579529Z→04:25:18.7230643Z.
+Source 216/FA0B57AC; 248 artifact paths per generation, 245 raw-equal and 3 PE
+metadata-only. A `sub` takes the parts builder of `fn`; no pass or table was added. Not measured apart.
+A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix285-20261106/notes.md).

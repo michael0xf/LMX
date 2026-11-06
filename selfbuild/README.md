@@ -6,8 +6,12 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 214 inputs (65 source files, 34 tools and
-115 tests). Slice284 makes a separator the end of an operand: `add(x, \px)` and `two(x, -y)` are
+The selected package contains 216 inputs (65 source files, 34 tools and
+117 tests). Slice285 makes a `sub` one Structure of the parts `args`, `var` and `body`, as a `fn` is
+with its return part: a short call's data is its var, and a sub with an own field can be called in
+every form.
+
+Slice284 makes a separator the end of an operand: `add(x, \px)` and `two(x, -y)` are
 two actuals, and `@: p T \q` is the path in any spacing, whatever `T` holds; a requirement and a
 dereference are written `@: p T, \q`.
 
@@ -104,22 +108,22 @@ Native and walker share actual named-place selection, reception and store.
 A consumed numeric receiver uses one prepared expression and the common
 runtime value receiver. There is no separate var parser or hidden graph.
 
-The whole quick bootstrap took 1096.06 seconds; G1 and G2 each passed 9 smoke
-rows. G2 passed 64 focused rows. Separate G2 observation checked 5 genuinely
+The whole quick bootstrap took 810.91 seconds; G1 and G2 each passed 9 smoke
+rows. G2 passed 66 focused rows. Separate G2 observation checked 7 genuinely
 walked bodies with exact counts on both roots, and native walks none of them.
-All 214 published source hashes equal the frozen tested input byte for byte. The
+All 216 published source hashes equal the frozen tested input byte for byte. The
 248 generation inventories are identical: 245 raw-equal files and 3 PE files
 differing only in link metadata.
-[Sources and checks](../steps/witnesses/fix284-20261105/notes.md).
+[Sources and checks](../steps/witnesses/fix285-20261106/notes.md).
 
 | Artifact | SHA-256 |
 | --- | --- |
-| Input list | `22cbf024235a4ab53af8c7d905913c79c56d2351e03452093b75e4f21080eaf7` |
-| Input manifest | `2a1d385a7f06aaeddad60305f356698eebdf62ba48a6e095bc36c237c095ba1a` |
-| Working tool | `ba82e4988ea88b8bda09a018818467b8f691b20f8cc1b9faf9d5a5148e4b4f13` |
-| G2 frontend | `08db3ff3962531a000cf68995ecbe075a249dcd7c1ae2e5b6a73b606925e01e9` |
-| Production runtime | `194a251fd9815647a9f1e8643613f0429d78f75d5295e532710462ee9e9f68de` |
-| Observation runtime | `9a8e1e053cd0de000920953a3d3d3c83a0090a6fca66b9d0a9d6ca69788a3eab` |
+| Input list | `01747bce8df9bc46b7912cddfc51b8532221217a3ff8f6bac83530c224e132cc` |
+| Input manifest | `fa0b57ac7593be73799ed93d70e34bffe48c342601c37fb3f1376be0af597068` |
+| Working tool | `71b27bef93940cd613f94ff337b3bc1f9d27033e990401e86082596c70d38426` |
+| G2 frontend | `34391f355af45d6b8378539d358b9e180e05a9bb72508fd2766becf1b7000012` |
+| Production runtime | `c7140bdb478b5b1c8b6fcb7627633d16582283064f0e8fcfdf2330e321c06591` |
+| Observation runtime | `e339eef6dd9a18ede5dd027336eddaf8d267ebf47034cdc831f35510dcf86d16` |
 
 [Slice 270](../steps/witnesses/fix270-20261103/notes.md) contained 184 inputs,
 manifest `B9AF771A…`, tested on the frozen `E4D1E376…`: 182 files raw-equal,
@@ -186,20 +190,20 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot146a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-tp140/tool146a/lmxtool-tool.exe` (`41E2EA46…`, built by `rebuild tool`
-from this package's tool sources with boot145a's G2 frontend and runtime),
-previous frontend `cold-boot145a/quick145a/g2/frontend/l2trans.exe`
-(`568B2840…`, the G2 frontend of slice283) with its adjacent backend
-(`3650B5C7…`) and libc (`AF9FDAE3…`), and BASE
+boot147a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-tp140/tool147a/lmxtool-tool.exe` (`0A8E456D…`, built by `rebuild tool`
+from this package's tool sources with boot146a's G2 frontend and runtime),
+previous frontend `cold-boot146a/quick146a/g2/frontend/l2trans.exe`
+(`08DB3FF3…`, the G2 frontend of slice284) with its adjacent backend
+(`EA0D785D…`) and libc (`AF9FDAE3…`), and BASE
 `cold-candidate48/full48/g2/frontend`. Its promoted working tool is
-`cold-boot146a/quick146a/lmxtool.exe` (`BA82E498…`), the G2 tool, with
+`cold-boot147a/quick147a/lmxtool.exe` (`71B27BEF…`), the G2 tool, with
 `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot146a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-05, 22:15:42–22:33:59Z, 1096 s): `BOOTSTRAP quick 0 failures`. G0
+boot147a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-06, 03:57:21–04:10:52Z, 811 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's

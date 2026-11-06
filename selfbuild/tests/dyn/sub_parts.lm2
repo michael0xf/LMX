@@ -1,0 +1,185 @@
+# Slice 285 (SUB-OWN-FIELD-CALL): a `sub` is one Structure of the parts args, var and body, as a `fn` is with its return between
+# them (the book, #method-parts: "args, the description of the return where there is one, var and body"), and a short call's data
+# is its var.  On the tuple of 284 a sub with an own field failed at any call: native `walk error: UNSUPPORTED` (no var, so no
+# data), forced INVALID.  The sub forms here are the fn forms of the same rules.  Entry 7; 81.. name the failing check.
+int: seen 0
+int: quote 5
+int: held 0
+int: from 0
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+sub: direct ()
+    int: w 6
+    node\seen: w
+end: direct
+sub: grow ()
+    int: w 6
+    w: w + 1
+    node\seen: w
+end: grow
+sub: note (int: v)
+    int: twice v + v
+    node\seen: twice
+end: note
+sub: bump ()
+    int: step 2
+    node\seen: quote + step
+end: bump
+fn: bound () int
+    int: quote 10
+    bump()
+    return: read_seen()
+end: bound
+sub: risky (int: v)
+    throws: Bad
+    int: w v
+    if: w > 3
+        throw: Bad(w)
+    ---
+    node\seen: w
+end: risky
+fn: caught (int: v) int
+    int: got 0
+    ---
+        risky(v)
+        catch: Bad (int: value)
+            got: value
+    ---
+    return: got
+end: caught
+# A machine operation keeps this body native under --walk-methods: the walked caller meets its throw by the ordinal the native
+# entry returns, which the kernel turns into the key by the sub's declared THROWS in its body part.
+sub: risky_machine (int: v)
+    throws: Bad
+    int: w (cast: (int) v)
+    if: w > 3
+        throw: Bad(w)
+    ---
+    node\seen: w
+end: risky_machine
+fn: caught_machine (int: v) int
+    int: got 0
+    ---
+        risky_machine(v)
+        catch: Bad (int: value)
+            got: value
+    ---
+    return: got
+end: caught_machine
+Subs:
+    int: seen 0
+    sub: s ()
+        int: w 2
+        node\seen: w
+    end: s
+end: Subs
+sub: other_s ()
+    int: pad 1
+    int: w 3
+    node\seen: w + pad
+end: other_s
+# An immutable copy of a Structure that holds a sub: its qualification meets a callable of three parts.
+Holder:
+    int: k 1
+    sub: hs ()
+        int: w 2
+        node\k: w
+    end: hs
+end: Holder
+sub: put_seen (int: v)
+    node\seen: v
+end: put_seen
+# A sub defined in a method's body: a retained callable of its own, built from its source as the method is.
+fn: outer () int
+    sub: inner ()
+        int: w 31
+        put_seen(w)
+    end: inner
+    inner()
+    return: read_seen()
+end: outer
+sub: third ()
+    node\seen: 23
+end: third
+sub: fourth ()
+    node\seen: 24
+end: fourth
+# The body part of the sub standing in `held` is replaced by name: a write of its code, so its word goes and the walker runs the new body.
+sub: put_sub_body ()
+    held\body: from\body
+end: put_sub_body
+fn: swap_sub_body () int
+    @: held third third
+    @: from fourth fourth
+    put_sub_body()
+    third()
+    return: read_seen()
+end: swap_sub_body
+int: code 7
+direct()
+if: read_seen() != 6
+    code: 81
+---
+call: grow
+if: code = 7 && read_seen() != 7
+    code: 82
+---
+if: code = 7 && grow\w != 7
+    code: 83
+---
+note(4)
+if: code = 7 && read_seen() != 8
+    code: 84
+---
+bump()
+if: code = 7 && read_seen() != 7
+    code: 85
+---
+if: code = 7 && bound() != 12
+    code: 86
+---
+if: code = 7 && caught(2) != 0
+    code: 87
+---
+if: code = 7 && read_seen() != 2
+    code: 88
+---
+if: code = 7 && caught(5) != 5
+    code: 89
+---
+Subs\s()
+if: code = 7 && Subs\seen != 2
+    code: 90
+---
+@: Subs\s other_s
+Subs\s()
+if: code = 7 && read_seen() != 4
+    code: 91
+---
+if: code = 7 && Subs\s\w != 3
+    code: 92
+---
+# The parts by their paths: an own field read through the body part, the var given as the explicit data of the call.
+if: code = 7 && direct\body\w != 6
+    code: 93
+---
+if: code = 7 && swap_sub_body() != 24
+    code: 94
+---
+call: direct direct\var
+if: code = 7 && read_seen() != 6
+    code: 95
+---
+if: code = 7 && caught_machine(6) != 6
+    code: 96
+---
+frozen: immutable: merge(Holder)
+if: code = 7 && frozen\k != 1
+    code: 97
+---
+if: code = 7 && outer() != 31
+    code: 98
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

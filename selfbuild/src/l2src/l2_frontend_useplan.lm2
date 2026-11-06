@@ -462,7 +462,8 @@ fn: lm_compiler_own_from_expr (int: oi; @: dest c.L2Tx) int
             ---
             return: (cast: (int) (c.lm_compiler_tx_set(dest, nm)))
         ---
-        if: c.snprintf(nm, 160U, "lmx_arena_ref_cell(lmx_arena_ref_struct(l2_call_code, %dU), %zuU)", part, var_field\child) < 0
+        # The part's number names it; it stands at the method's slot of it (a `sub` has no result part).
+        if: c.snprintf(nm, 160U, "lmx_arena_ref_cell(lmx_arena_ref_struct(l2_call_code, %dU), %zuU)", c.lm_compiler_part_slot(cur_mi_cell[0], part), var_field\child) < 0
             return: (cast: (int) (1))
         ---
         return: (cast: (int) (c.lm_compiler_tx_set(dest, nm)))

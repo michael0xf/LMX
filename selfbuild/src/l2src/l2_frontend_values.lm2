@@ -1300,6 +1300,9 @@ fn: lm_compiler_method_part_seg (int: mi; const: (@: pd char); size_t: off; size
         \out_part: 2
     if: len = 4U && c.memcmp(pd + off, "body", 4U) = 0
         \out_part: 3
+    # A part the method does not have is no part: a `sub` returns no value, so `s\return` is read as any other name, and refused as one.
+    if: lm_compiler_part_slot(mi, \out_part) < 0
+        \out_part: -1
     return: (cast: (int) (\out_part))
 end: lm_compiler_method_part_seg
 
@@ -2383,13 +2386,16 @@ fn: lm_compiler_emit_source_failure (const: (@: ind char); const: (@: fail char)
     return: (cast: (int) (0))
 end: lm_compiler_emit_source_failure
 
+# A method the `fn` or the `sub` receiver produced: one Structure whose parts are args, the description of the return where there
+# is one, var and body (the book, #method-parts; lm_compiler_part_slot places them).  Slice 285 (SUB-OWN-FIELD-CALL): a `sub` was
+# a flat Structure of its header and its body's fields with no var, so a short call had no data and an own field no place.
 fn: lm_compiler_fn_parts_on (int: mi) int
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
     @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
     @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
     if: mi < 0 || mi >= m_n_cell[0] || m_body_cell[0][mi] = 0 || m_node_cell[0][mi] = 0
         return: (cast: (int) (0))
-    return: (cast: (int) (c.lm_compiler_frame_head(m_node_cell[0][mi], "fn")))
+    return: (cast: (int) (c.lm_compiler_frame_head(m_node_cell[0][mi], "fn") != 0 || c.lm_compiler_frame_head(m_node_cell[0][mi], "sub") != 0))
 end: lm_compiler_fn_parts_on
 
 fn: lm_compiler_mad_is_return (const: (@: stmt c.LmP0Node); int: model) int
@@ -2968,3 +2974,20 @@ fn: lm_compiler_pfi_advance (@: fact c.L2PathFact; int: linear; @: r int) @: c.L
         return: (cast: (@: c.L2PathFact) (0))
     return: (cast: (@: c.L2PathFact) (fact_cell[0][\r]))
 end: lm_compiler_pfi_advance
+
+# The physical slot of a part of a method with parts (lm_compiler_fn_parts_on).  `part` is the part as the contract names it: 0
+# args, 1 return, 2 var, 3 body -- the number every part record of the translator keeps.  A `fn` holds the four in that order; a
+# `sub` returns no value and has no result part, so its var and body stand one slot lower (the book, #method-parts: the return
+# "there where it is").  -1 for a part the method does not have, and for a method with no parts.
+fn: lm_compiler_part_slot (int: mi; int: part) int
+    @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
+    if: part < 0 || part > 3 || lm_compiler_fn_parts_on(mi) = 0
+        return: (cast: (int) (-1))
+    if: c.lm_compiler_frame_head(m_node_cell[0][mi], "fn") != 0
+        return: (cast: (int) (part))
+    if: part = 1
+        return: (cast: (int) (-1))
+    if: part = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (part - 1))
+end: lm_compiler_part_slot

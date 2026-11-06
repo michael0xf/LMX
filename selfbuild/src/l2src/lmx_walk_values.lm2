@@ -1197,11 +1197,11 @@ fn: lmx_walk_throws_node (@: arena c.LmxArena; @: callable c.Lmx) @: c.Lmx
     @: header c.Lmx lmx_walk_throws_in(arena, callable)
     if: header != 0 || arena = 0 || callable = 0
         return: header
-    @: pool c.LmxPool c.lmx_range_cell_pool(arena, (cast: (@: void) callable))
-    if: pool = 0 || pool\role != c.LMX_POOL_ROLE_FN
+    # A callable's written THROWS belongs to its body part: a fn's slot 3, a sub's 2 (lmx_callable_part).
+    size_t: body_part c.lmx_callable_part(arena, callable, 3U)
+    if: body_part = (cast: (size_t) -1)
         return: 0
-    # A fn's written THROWS belongs to its body part.
-    return: lmx_walk_throws_in(arena, c.lmx_graph_ref_struct_in(arena, callable, c.lmx_implements_exec_index(arena, callable, 3U)))
+    return: lmx_walk_throws_in(arena, c.lmx_graph_ref_struct_in(arena, callable, c.lmx_implements_exec_index(arena, callable, body_part)))
 end: lmx_walk_throws_node
 
 fn: lmx_walk_declared_count (@: arena c.LmxArena; @: callable c.Lmx) size_t
@@ -1610,8 +1610,8 @@ fn: lmx_walk_input_width (@: f c.LmxWalkFrame; @: out size_t) int
         if: width > out[0]
             out[0]: width
         return: c.LMX_WALK_OK
-    @: fields c.VoidArray @ code\array
-    if: fields\size != 4U
+    # A fn has four parts, a sub three; the args header is part 0 of both (lmx_callable_part).
+    if: c.lmx_callable_part((cast: (@: c.LmxArena) f\arena), code, 0U) = (cast: (size_t) -1)
         return: c.LMX_WALK_INVALID
     header: c.lmx_graph_ref_struct_in((cast: (@: c.LmxArena) f\arena), code, 0U)
     if: header = 0
@@ -3488,11 +3488,13 @@ fn: lmx_walk_activate_values (@: context c.LmxWalkContext; @: code c.Lmx; @: dat
         # ordinary data may have the same four parts and even the name "fn".
         pool: c.lmx_range_cell_pool((cast: (@: c.LmxArena) context\arena), (cast: (@: void) code))
         if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
-            @: fields c.VoidArray @ code\array
-            if: fields\size != 4U
+            # A fn's var and body are its parts 2 and 3; a sub has no result part, so they are its 1 and 2 (lmx_callable_part).
+            size_t: vars_at c.lmx_callable_part((cast: (@: c.LmxArena) context\arena), code, 2U)
+            size_t: body_at c.lmx_callable_part((cast: (@: c.LmxArena) context\arena), code, 3U)
+            if: vars_at = (cast: (size_t) -1) || body_at = (cast: (size_t) -1)
                 return: c.LMX_WALK_INVALID
-            vars: c.lmx_graph_ref_struct_in((cast: (@: c.LmxArena) context\arena), code, 2U)
-            body: c.lmx_graph_ref_struct_in((cast: (@: c.LmxArena) context\arena), code, 3U)
+            vars: c.lmx_graph_ref_struct_in((cast: (@: c.LmxArena) context\arena), code, vars_at)
+            body: c.lmx_graph_ref_struct_in((cast: (@: c.LmxArena) context\arena), code, body_at)
             if: vars = 0 || body = 0
                 return: c.LMX_WALK_INVALID
             # The data arrives already resolved: every unary call site
@@ -3517,10 +3519,11 @@ fn: lmx_call_unary_data (@: arena c.LmxArena; @: code c.Lmx) @: c.Lmx
         return: 0
     @: pool c.LmxPool c.lmx_range_cell_pool(arena, (cast: (@: void) code))
     if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
-        @: fields c.VoidArray @ code\array
-        if: fields\size != 4U
+        # A fn's var is its part 2, a sub's its part 1 (lmx_callable_part).
+        size_t: vars_at c.lmx_callable_part(arena, code, 2U)
+        if: vars_at = (cast: (size_t) -1)
             return: 0
-        return: c.lmx_graph_ref_struct_in(arena, code, 2U)
+        return: c.lmx_graph_ref_struct_in(arena, code, vars_at)
     ---
     c.VoidArray: name
     name\data: (cast: (@: void) "var")
@@ -6026,16 +6029,20 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
         # of a one-edge projection. Re-read after actual operand effects.
         if: c.lmx_callable_source_count((cast: (@: c.LmxArena) f\arena), callee, @ callee_count) != 0 || callee_count < 2U
             return: c.LMX_WALK_UNSUPPORTED
-        status: c.lmx_implements_exec_slot((cast: (@: c.LmxArena) f\arena), callee, 1U, @ return_slot, @ answer)
-        if: status != c.LMX_WALK_OK
-            return: status
-        if: answer != c.LMX_IMPLEMENTS_YES
-            return: c.LMX_WALK_UNSUPPORTED
-        returns: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), callee, return_slot))
-        if: returns = 0
-            return: c.LMX_WALK_UNSUPPORTED
-        if: c.lmx_callable_source_count((cast: (@: c.LmxArena) f\arena), returns, @ return_count) != 0 || return_count > 1U
-            return: c.LMX_WALK_UNSUPPORTED
+        # A sub has no result part (lmx_callable_part): it returns no value, so the call reads none.
+        return_count: 0U
+        if: c.lmx_callable_part((cast: (@: c.LmxArena) f\arena), callee, 1U) != (cast: (size_t) -1)
+            status: c.lmx_implements_exec_slot((cast: (@: c.LmxArena) f\arena), callee, 1U, @ return_slot, @ answer)
+            if: status != c.LMX_WALK_OK
+                return: status
+            if: answer != c.LMX_IMPLEMENTS_YES
+                return: c.LMX_WALK_UNSUPPORTED
+            returns: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), callee, return_slot))
+            if: returns = 0
+                return: c.LMX_WALK_UNSUPPORTED
+            if: c.lmx_callable_source_count((cast: (@: c.LmxArena) f\arena), returns, @ return_count) != 0 || return_count > 1U
+                return: c.LMX_WALK_UNSUPPORTED
+            ---
         rtype: 0
         if: return_count != 0U
             if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), returns, 0U, @ header_source, @ rtype) != 0
@@ -7060,21 +7067,13 @@ fn: lmx_activation_input_cell (@: arena c.LmxArena; @: code c.Lmx; size_t: k) @@
     pool: (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) code)))
     if: pool = 0
         return: 0
-    @: fields c.VoidArray @ code\array
     # A `fn` is a FN-role Structure of four parts (header, result, vars, body: lm_compiler_fn_parts_on gives the role to `fn`
-    # heads); a `sub` is an ordinary (PLAIN) Structure of three (header, vars, body), activated by the walker as its own body
-    # (lmx_walk_activate_values).  The args header is part 0 of both.  Slice 258: keyed by the FN role since slice 254, a
-    # sub's free input was never resolved from the chain -- it read its lexical source whatever the caller bound (the
-    # fixture's `bump` wrote the unit field's copy, then dereferenced a number: INVALID).
-    if: pool\role = c.LMX_POOL_ROLE_FN
-        if: fields\size != 4U
-            return: 0
-        ---
-    else:
-        if: fields\size != 3U
-            return: 0
-        ---
-    ---
+    # and `sub` heads), a `sub` one of three since slice 285 (no result part, lmx_callable_part); the args header is part 0 of
+    # both.  Keyed by the FN role alone (slice 254), a sub's free input was never resolved from the chain: the fixture's
+    # `bump` wrote the unit field's copy, then dereferenced a number, INVALID.  Slice 258 then read any PLAIN Structure of
+    # three fields as a sub; a sub has its role now, and an ordinary Structure has no args header.
+    if: pool\role != c.LMX_POOL_ROLE_FN || c.lmx_callable_part(arena, code, 0U) = (cast: (size_t) -1)
+        return: 0
     header: c.lmx_graph_ref_struct_in(arena, code, c.lmx_implements_exec_index(arena, code, 0U))
     size_t: width 0U
     if: header = 0 || c.lmx_callable_source_count(arena, header, @ width) != 0 || k >= width
@@ -7384,7 +7383,8 @@ fn: lmx_call_selected_structure (@: arena c.LmxArena; @: frame c.LmxWalkFrame; @
             return: c.LMX_WALK_UNSUPPORTED
         size_t: nr 0U
         @: source void 0
-        if: c.lmx_callable_source_count(arena, returns, @ nr) != 0 || nr > 1U
+        # A sub has no return header (lmx_callable_headers): no result.
+        if: returns != 0 && (c.lmx_callable_source_count(arena, returns, @ nr) != 0 || nr > 1U)
             return: c.LMX_WALK_INVALID
         if: nr = 1U && c.lmx_callable_source_entry(arena, returns, 0U, @ source, @ witness) != 0
             return: c.LMX_WALK_INVALID

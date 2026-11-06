@@ -735,8 +735,9 @@ fn: lm_compiler_m_head (int: mi) int
         if: c.lm_compiler_ns_source_body(ni) != 0
             return: (cast: (int) (0))
         return: (cast: (int) (ns_count_cell[0][ni]))
+    # A method with parts holds only them: a `fn` four, a `sub` three (its body part is the last).
     if: c.lm_compiler_fn_parts_on(mi) != 0
-        return: (cast: (int) (4))
+        return: (cast: (int) (c.lm_compiler_part_slot(mi, 3) + 1))
     return: (cast: (int) (2))
 end: lm_compiler_m_head
 
@@ -1480,8 +1481,11 @@ fn: lm_compiler_path_step_slot (const: (@: step c.L2PathStep)) int
         return: (cast: (int) (0 - 1))
     if: step\locus = 1
         return: (cast: (int) (lm_compiler_nsf_slot((cast: (int) (step\row)))))
-    if: step\locus = 2 || step\locus = 5
+    if: step\locus = 2
         return: (cast: (int) (step\row))
+    # A part of a method keeps the part's number (lm_compiler_method_part_seg); it stands at the method's slot of that part.
+    if: step\locus = 5
+        return: (cast: (int) (c.lm_compiler_part_slot((cast: (int) (step\ent)), (cast: (int) (step\row)))))
     if: step\locus = 3
         return: (cast: (int) (lm_compiler_graph_field_child((cast: (int) (step\own)))))
     if: step\locus = 4

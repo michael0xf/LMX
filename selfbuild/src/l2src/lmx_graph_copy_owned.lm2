@@ -1009,9 +1009,10 @@ fn: lmx_qualify_fn_role (@: arena c.LmxArena; @: graph_node c.Lmx) int
     if: lmx_qualify_graph_header(arena, (cast: (@: void) graph_node)) = 0
         return: -1
     fields: (cast: (@: c.VoidArray) (@ graph_node\array))
-    if: fields\size != 4U
+    # A `fn` has four parts, a `sub` three: it returns no value (lmx_callable_part).
+    if: fields\size != 4U && fields\size != 3U
         return: -1
-    while: i < 4U
+    while: i < fields\size
         part: c.lmx_graph_ref_struct_in(arena, graph_node, i)
         if: part = 0 || lmx_qualify_graph_header(arena, (cast: (@: void) part)) = 0
             return: -1

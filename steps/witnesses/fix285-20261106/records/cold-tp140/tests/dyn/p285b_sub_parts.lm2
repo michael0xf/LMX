@@ -1,0 +1,104 @@
+# Slice 285 probe: the sub forms of p285a, and a sub with an own field called directly, by the `call` receiver, with a formal,
+# with a free input, with a declared throw, through a callable place and after its rebinding.  Entry 7.
+int: seen 0
+int: quote 5
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+sub: direct ()
+    int: w 6
+    node\seen: w
+end: direct
+sub: grow ()
+    int: w 6
+    w: w + 1
+    node\seen: w
+end: grow
+sub: note (int: v)
+    int: twice v + v
+    node\seen: twice
+end: note
+sub: bump ()
+    int: step 2
+    node\seen: quote + step
+end: bump
+fn: bound () int
+    int: quote 10
+    bump()
+    return: read_seen()
+end: bound
+sub: risky (int: v)
+    throws: Bad
+    int: w v
+    if: w > 3
+        throw: Bad(w)
+    ---
+    node\seen: w
+end: risky
+fn: caught (int: v) int
+    int: got 0
+    ---
+        risky(v)
+        catch: Bad (int: value)
+            got: value
+    ---
+    return: got
+end: caught
+Subs:
+    int: seen 0
+    sub: s ()
+        int: w 2
+        node\seen: w
+    end: s
+end: Subs
+sub: other_s ()
+    int: pad 1
+    int: w 3
+    node\seen: w + pad
+end: other_s
+int: code 7
+direct()
+if: read_seen() != 6
+    code: 81
+---
+call: grow
+if: code = 7 && read_seen() != 7
+    code: 82
+---
+if: code = 7 && grow\w != 7
+    code: 83
+---
+note(4)
+if: code = 7 && read_seen() != 8
+    code: 84
+---
+bump()
+if: code = 7 && read_seen() != 7
+    code: 85
+---
+if: code = 7 && bound() != 12
+    code: 86
+---
+if: code = 7 && caught(2) != 0
+    code: 87
+---
+if: code = 7 && read_seen() != 2
+    code: 88
+---
+if: code = 7 && caught(5) != 5
+    code: 89
+---
+Subs\s()
+if: code = 7 && Subs\seen != 2
+    code: 90
+---
+@: Subs\s other_s
+Subs\s()
+if: code = 7 && read_seen() != 4
+    code: 91
+---
+if: code = 7 && Subs\s\w != 3
+    code: 92
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

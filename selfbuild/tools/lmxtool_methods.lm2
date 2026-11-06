@@ -2,7 +2,7 @@
 # lmxtool: the maintained L2 tool of the LMX builds and checks (the author, 2026-10-22: tests and scripts in
 # L2/L3). Slice 170: the platform adapter -- one os block (L2 section 20), each method one contract with a body
 # per platform -- hashing and the adapter's self-tests. Commands: selftest, sha256 FILE, and the child
-# commands the self-tests run (echo-args, exit-with, streams, cwd, sleep-ms, sleep-touch).
+# commands the self-tests run (echo-args, echo-words, exit-with, streams, cwd, sleep-ms, sleep-touch).
 # Parts: text.lm2, winargs.lm2, sha256.lm2. Link: -lshell32 -lbcrypt on Windows.
 include: "<stdio.h>"
 include: "<stdlib.h>"
@@ -1206,15 +1206,20 @@ end: test_replay_rows
 
 # Slice 290: the list runner (checks_run) by this program's own commands: `checks` runs every line and answers 1 when one
 # failed (the line after the failure makes its file); `steps` ends at the first failure (that file is never made) and answers
-# 0 when every line answered 0; a list that runs a list is refused; a list that cannot be read is a failure.
+# 0 when every line answered 0; a list that runs a list is refused; a list that cannot be read is a failure.  Slice 291: a
+# line's every word reaches its command, past the ninth too.
 fn: test_check_lists (@: self char; @: dir char) int
     @: ld char txt_path(dir, "lists")
     @: list char 0
     @: mark char 0
     @: text char 0
+    @@: run char c.calloc(2U, sizeof(@: char))
+    @: detail int c.calloc(1U, c.sizeof(c.int))
+    @: out char txt_path(dir, "lists.out")
+    @: err char txt_path(dir, "lists.err")
     int: f 0
     int: x 0
-    if: ld = 0
+    if: ld = 0 || run = 0 || detail = 0 || out = 0 || err = 0
         return: tool_check(0, "lists", "no memory")
     dir_make(ld)
     list: txt_path(ld, "all.tsv")
@@ -1242,6 +1247,15 @@ fn: test_check_lists (@: self char; @: dir char) int
     f: f + tool_check(x = 1, "lists: a list that runs a list is refused", txt_int(x))
     x: checks_run(self, txt_path(ld, "absent.tsv"), 0)
     f: f + tool_check(x = 1, "lists: a list that cannot be read is a failure", txt_int(x))
+    # Slice 291 (Codex, CODEX-OPUS-290-REVIEW-NORM-20261106-01, item 4): a line of twelve words reaches its command whole -- this
+    # program run as a child (`checks` over the list), its command echo-words printing the words it was handed.
+    list: txt_path(ld, "long.tsv")
+    text: "echo-words\ta1\ta2\ta3\ta4\ta5\ta6\ta7\ta8\ta9\ta10\ta11\n"
+    file_write(list, text, c.strlen(text))
+    run[0]: "checks"
+    run[1]: list
+    x: run_self(self, run, 2, 0, out, err, 60000U, detail)
+    f: f + tool_check(x = 0 && detail[0] = 0 && file_has_line(out, "WORDS 12") != 0 && file_has_line(out, "WORD 11 a11") != 0 && file_has_line(out, "CHECKS 1 lines, 0 failed") != 0, "lists: every word of a line past the ninth reaches its command", out)
     return: f
 end: test_check_lists
 
@@ -1277,8 +1291,18 @@ end: selftest
 fn: child (@@: args char; int: n) int
     @: here char 0
     @: f c.FILE 0
+    int: k 1
     if: n >= 2 && c.strcmp(args[1], "echo-args") = 0
         return: os_args_print()
+    # Slice 291: the words this command was handed (args, not the process's own command line, which echo-args prints): a line
+    # of a list reaches its command in process (checks_run), so these are the line's words.
+    if: n >= 2 && c.strcmp(args[1], "echo-words") = 0
+        c.printf("WORDS %d\n", n - 1)
+        while: k < n
+            c.printf("WORD %d %s\n", k - 1, args[k])
+            k: k + 1
+        ---
+        return: 0
     if: n >= 3 && c.strcmp(args[1], "exit-with") = 0
         return: c.atoi(args[2])
     if: n >= 2 && c.strcmp(args[1], "streams") = 0
@@ -1313,16 +1337,17 @@ end: child
 fn: checks_run (@: self char; @: list char; int: stop) int
     @: len size_t c.calloc(1U, c.sizeof(c.size_t))
     @: at size_t c.calloc(1U, c.sizeof(c.size_t))
-    @@: fld char c.calloc(9U, sizeof(@: char))
-    @@: words char c.calloc(10U, sizeof(@: char))
+    @@: fld char 0
+    @@: words char 0
     @: data char 0
     @: line char 0
+    @: tab char 0
     int: n 0
     int: k 0
     int: r 0
     int: lines 0
     int: failed 0
-    if: len = 0 || at = 0 || fld = 0 || words = 0 || list = 0
+    if: len = 0 || at = 0 || list = 0
         return: 1
     data: file_read(list, len)
     if: data = 0
@@ -1331,7 +1356,21 @@ fn: checks_run (@: self char; @: list char; int: stop) int
     line: next_line(data, len[0], at)
     while: line != 0
         if: line[0] != (cast: (char) 35) && line[0] != (cast: (char) 0)
-            n: tsv_split(line, fld, 9)
+            # Slice 291 (Codex, CODEX-OPUS-290-REVIEW-NORM-20261106-01, item 4): every word of the line, however many -- the
+            # arrays are sized by the line's tabs before tsv_split cuts it, so no command runs with its tail cut off (slice 290
+            # took nine words and dropped the rest without a word).
+            n: 1
+            tab: c.strchr(line, 9)
+            while: tab != 0
+                n: n + 1
+                tab: c.strchr(tab + 1, 9)
+            ---
+            fld: c.calloc((cast: (size_t) n), sizeof(@: char))
+            words: c.calloc((cast: (size_t) n) + 1U, sizeof(@: char))
+            if: fld = 0 || words = 0
+                c.printf("CHECKS no memory for a line of %s\n", list)
+                return: 1
+            n: tsv_split(line, fld, n)
             words[0]: self
             k: 0
             while: k < n
@@ -1354,6 +1393,8 @@ fn: checks_run (@: self char; @: list char; int: stop) int
             ---
             c.printf("\n")
             c.fflush(c.stdout)
+            c.free((cast: (@: void) fld))
+            c.free((cast: (@: void) words))
             if: r != 0
                 failed: failed + 1
                 if: stop != 0

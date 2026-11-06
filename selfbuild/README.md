@@ -7,7 +7,11 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `tests/l2/` without an explicit source change would break its resolution.
 
 The selected package contains 224 inputs (65 source files, 34 tools and
-125 tests). Slice290 makes a field of a program part's root the lexical source of a hidden input in both
+125 tests). Slice291 passes every word of a list line to its command (slice290 split a line into nine
+words and dropped the rest without a refusal), and the full list `tests/full-suite.tsv` holds every
+landed fixture through slice290: 101 rows.
+
+Slice290 makes a field of a program part's root the lexical source of a hidden input in both
 executors: a method of the part called from outside the part takes its free name from the dynamic input
 first, then from the part root's field. Native code types the absent input's place by the selected
 default, as the walker's ARG does; the walker holds at the entry also the source of an input the body only
@@ -220,7 +224,8 @@ TOOL 0 entry 0 -- steps LIST
 
 `checks` and `steps` (slice290) run the lines of LIST, each one command of this tool with its words
 separated by tabs, in order; `checks` runs every line, `steps` ends at the first command that answers
-other than 0. A list that names `checks` or `steps` is refused.
+other than 0. A list that names `checks` or `steps` is refused. Every word of a line reaches its
+command, however many (slice291).
 
 Quick and full are separate requested modes, not an instruction to run both
 automatically. One invocation of either builds/tests G1 and then G2 using the
@@ -232,32 +237,32 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot152a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-boot151a/quick151a/lmxtool.exe` (`6032766B…`, the working tool of
-slice289; this package's tool sources add `checks` and `steps`), previous frontend
-`cold-boot151a/quick151a/g2/frontend/l2trans.exe` (`83F0BE59…`, the G2
-frontend of slice289) with its adjacent backend (`C65A043B…`) and libc
+boot153a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-boot152a/quick152a/lmxtool.exe` (`4F1C9009…`, the working tool of
+slice290; this package's tool sources pass every word of a list line), previous frontend
+`cold-boot152a/quick152a/g2/frontend/l2trans.exe` (`15FE8A83…`, the G2
+frontend of slice290) with its adjacent backend (`4F3F510B…`) and libc
 (`AF9FDAE3…`), and BASE `cold-candidate48/full48/g2/frontend`. Its promoted
-working tool is `cold-boot152a/quick152a/lmxtool.exe` (`4F1C9009…`), the G2
+working tool is `cold-boot153a/quick153a/lmxtool.exe` (`165666E8…`), the G2
 tool, with `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot152a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-06, 19:18:24–19:29:57Z, 693 s): `BOOTSTRAP quick 0 failures`. G0
+boot153a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-06, 20:11:39–20:22:35Z, 656 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's
 start-up self-check of the code links on a private arena before its own main.
 Quick runs neither the full list, the OS walk witness nor the self-test, and
 does not compare the generations. The comparison ran after it as one list of
-the G1 tool's own commands (`checks`): the stage against its manifest, every
+the previous working tool's own commands (`checks`): the stage against its manifest, every
 producer record closed on its files and free of script hosts, G1 against G2
 (`exe-same` for the three executables, which differ only in the PE link stamp,
 `same` for libc, the runtime objects, the tool's L1 and C and the consumed
-inputs), the working tool and bundle against G2. The G2 tool's self-test and
-the union of the focus and full lists on G2 ran separately; FULL has not run
-on these bytes. That comparison is its own evidence, not a reproducibility
+inputs), the working tool and bundle against G2, the runtime objects and the
+frontend against slice290's G2. The G2 tool's self-test and the 20 rows the
+full list gained ran separately on G2; FULL has not run on these bytes. That comparison is its own evidence, not a reproducibility
 gate. The draft79 line's open items (V63, the split-pointer place, the bare
 return) are not closed by this result.
 

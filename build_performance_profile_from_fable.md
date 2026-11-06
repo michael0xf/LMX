@@ -425,3 +425,14 @@ G2 runtime. An absent free input of a part method now gets its place by the defa
 read at the entry); a walked SET_ARG of an input with a lexical source holds that source at the entry.
 Not measured apart. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix290-20261106/notes.md).
+
+## Slice291 / boot153a (Opus, 2026-11-06)
+
+Whole quick 656.49 s: 20:11:38.9606332Z→20:22:35.4530421Z, both generations
+smoke 9/0. The 20 rows the maintained registry gained (fixtures 280–290) on G2: 20/0, 120 checks
+(171.22 s: 20:24:02.3810309Z→20:26:53.5977140Z). Source 224/59160055; the acceptance is one `lmxtool
+checks` list of 38 commands run by the working tool of boot152a, 0 failed, with no cross-stage tool line;
+the G2 frontend is one image with slice290's (`exe-same`) and the runtime objects equal its G2 runtime;
+the G2 tool's self-test 0 failures. Only the tool changed: the list runner sizes each line's word arrays
+by its tabs. Not measured apart. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix291-20261106/notes.md).

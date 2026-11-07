@@ -36,8 +36,9 @@ ASSIGN-KNOWN-OPERATOR, NAMED-BINDING-BY-HEAD ([реестр](../../defects.md)).
    видимое поле (`l2_own_visible`: поле единицы, видимое методу, — его скрытый вход, Q52), слот, локал метода (`l2_ml_find`),
    активация хоста вложенного метода (`lm_compiler_assign_host_place`: формал или поле хоста — захват T6b/A3). Не
    `l2_param_find`: он отвечает и за динамический вход, который сбор (`lm_compiler_scan_ident`) делает из любого
-   свободного имени для `x: v` (steps/free-names.md §7, «unresolved if none binds it»), — для `:=` такое имя местом не
-   является, и `zz := 5` отвергается после сбора, хотя сбор уже записал `zz` входом (трансляция на этом кончается).
+   свободного имени для `x: v` («unresolved if none binds it»; история механизма — steps/free-names.md, чей §7 отозван
+   уточнением 2026-10-03, норма — единое разрешение головы и книга), — для `:=` такое имя местом не является, и `zz := 5`
+   отвергается после сбора, хотя сбор уже записал `zz` входом (трансляция на этом кончается).
 7. Программа обходчика (`lm_compiler_rw_stmt_content`, «A call statement») не спрашивает `l2_call_head_method` для
    Frame `:=`: для привязки, держащей callable, тот отвечает держимым методом, и `target := two` уходил вызовом `one` с
    фактическим `two`; теперь запись падает в store привязки (`lm_compiler_method_pointer_candidate`), как natively.
@@ -64,6 +65,47 @@ P = `C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01`; стейдж `c
 | a06 | + проверки удержанного вызова (`lm_compiler_check_held_call`, `rw_mad_call`) не читают Frame `:=`; :338 → `:=`; проверка `:=` спрашивает объявленные формалы, видимое поле, слот, локал метода и активацию хоста вложенного метода (`lm_compiler_assign_host_place`), не `l2_param_find`; карта слотов результата (`lm_compiler_mrs_build`) берёт род и слово типа операнда «имя: тип: значение» у внутреннего Frame | tool165b, fe165e `04d2c503…` (20:37:10→20:40:56Z) | f165e: 11/12; отказ — assign_known:51:15 «more arguments than target has formals» на `target := two`; gdb на fe165e (точка `lm_compiler_error_words`, [receipt](records/pins/gdb303-fe165e-assign_known.txt)): `lm_compiler_rw_stmt_content` → `lm_compiler_rw_call_values` — диспетчер программы обходчика («A call statement») спросил `l2_call_head_method` для головы `target`, а для привязки, держащей callable, ответ — метод, который она держит сейчас |
 | a07 | + диспетчер программы обходчика не спрашивает `l2_call_head_method` для Frame `:=` — запись падает в store привязки (`lm_compiler_method_pointer_candidate`), как natively | tool165b, fe165f `ca818e96…` (l1trans `2e070f9d…`, l2_libc `af9fdae3…`; 20:52:25→20:55:50Z) | f165f: 12/12, 72 проверок, native и forced, оба корня (20:56:00→20:57:11Z) |
 
+## Ревью Codex 303 (CODEX-FABLE-303-REVIEW-20261107T222601684Z-01, [копия](records/pins/CODEX-FABLE-303-REVIEW-20261107T222601684Z-01.txt))
+
+Четыре пункта после публикации 35d9f80b; гипотезы измерены на опубликованном кандидате (fe165f) до правок, фокус
+[f165k](records/pins/f165k.tsv) ([лог](records/pins/tp151-probe-f165k.log), [терминал](records/pins/tp151-probe-f165k.terminal.txt)):
+
+1. Точное имя (backtick) перед `:=` — подтверждено: ветвь `:=` в P0 требовала `quoted_head = 0`; `` `x` := 5 `` — «parse
+   error 6 at 10:9: unexpected character in field list», `` `zz` := 5 `` — то же (4:10). Правка a12: условие ветви без
+   требования к написанию головы (скан `:=` начинается после кавычечного токена — экранирование внутри токена сохранено).
+   Quoted-only имени у транслятора нет: `lm_compiler_exact_ident` принимает в кавычках лишь ident-word, а
+   `lm_compiler_bind_admit` отказывает точному идентификатору как имени привязки («an exact identifier cannot name a
+   binding yet») и слову языка — предел до 303, не этого среза; проверены `` `x` ``, `` `x`:=7 ``, `` tst(`a` := 5) ``,
+   `` tst(`a`:=5) `` для объявленного x и неизвестный `` `zz` := 5 `` (фикстуры `assign_quoted`,
+   `assign_quoted_unknown_refused`).
+2. `zz := int: 5` как объявление — подтверждено во всех трёх местах и в операнде merge: `lm_compiler_declaration` даёт
+   форме `zz := int: 5` вложенное типизированное объявление (resolve :888), `lm_compiler_own_decl_ty` ≠ 0, и
+   `lm_compiler_collect_decls` открывала ряд own; в теле Structure `lm_compiler_ns_primitive_field` объявлял поле; в merge
+   `lm_compiler_named_typed_field_kind` делал поле из `(zz := int: 5)`; `lm_compiler_is_asgn` для такой формы — 0 (объявление),
+   так что проверка `:=` её не спрашивала. Все четыре отрицательные фикстуры транслировались (f165k). Правка a12:
+   `lm_compiler_assign_new_name` — Frame `:=`, чьё имя ещё не место (own, формал, захват хоста), не открывает ряда в
+   `collect_decls`; `ns_primitive_field` и `named_typed_field_kind` не читают Frame `:=`; проверка спрашивает Frame `:=` и в
+   форме вложенного объявления (`own_decl_ty ≠ 0`). Положительный контроль `x := int: 5`, `s := size_t: 3U`, `y := int: 9`
+   на корне (`assign_typed_known`) проходил и до правки (общий допуск повторной типизированной записи сохранён).
+3. `one := two` внутри метода — переписано как предел реализации (`colon_hidden_write`, запись скрытого входа без значения
+   активации), не правило языка и не вопрос автору: «Открыто» этой записи, реестр дефектов, заметки 4.2, current.md.
+4. Ссылки на steps/free-names.md §7 переписаны: история механизма, норма — единое разрешение головы и книга (комментарий
+   проверки в emit.lm2, заметки 4.2 RU/EN, п. 6 «Проекта»).
+
+| Кандидат | Изменено | Сборка | Итог |
+| --- | --- | --- | --- |
+| a11 | + 7 фикстур ревью (без рядов и inputs) | — (fe165f) | f165k на fe165f: `assign_typed_known` 6/6; `assign_quoted`/`assign_quoted_unknown_refused` — parse error; четыре отрицательные `zz := int: 5` транслировались |
+| a12 | + P0 без `quoted_head = 0`; `lm_compiler_assign_new_name` в collect_decls; `ns_primitive_field`, `named_typed_field_kind` не читают `:=`; проверка `:=` и для формы объявления; ряды в full-suite.tsv (130), inputs 254 | fe165g `188f2bdf…` | f165n ([лог](records/pins/tp151-probe-f165n.log)): 110 проверок прошли, в том числе `zz := int: 5` в методе и на корне отвергнуты иглой `:=`, `(zz := int: 5)` в merge — «not lowered yet», `assign_typed_known` 7; отказы: `` `x` := 5 `` и `` `zz` := 5 `` — «unsupported body» (P0 даёт Frame `:=`, но транслятор не классифицирует голову-точное имя — предел до среза, см. п. 1); `zz := int: 5` в теле Structure — «internal: a named Structure's item is neither a field nor a statement» (`lm_compiler_ns_body_stmt_here` не считала форму объявления оператором) |
+| a13 | + `ns_body_stmt_here`: Frame `:=` — оператор тела в любой форме; фикстуры точных имён заменены: `named_assign_quoted` (положительная: связыватель именует формал по payload `` `a` ``), `assign_quoted_head_limit` и контроль `quoted_colon_head_limit` (предел транслятора «unsupported body», одинаковый до и после среза); `assign_quoted`, `assign_quoted_unknown_refused` удалены; inputs 255, suite 131 рядов | fe165h `03fbf9e2…` | f165p ([лог](records/pins/tp151-probe-f165p.log)): 122 проверок прошли — `zz := int: 5` в теле Structure отвергнут иглой `:=`, оба предела точных имён говорят «unsupported body»; отказ: `named_assign_quoted` — транслировался, но R0 остановлен непойманным броском в обоих исполнителях: таблица идентификаторов единицы (`lm_compiler_unit_id`) интернировала написание с кавычками — `` lmx_ids_code("`a`", 3U) `` — и код имени не совпал с кодом формала `a` у связывателя ядра ([p.lm1](records/tp151-probe/f165p/named_assign_quoted-native/p.lm1), [run-root0](records/tp151-probe/f165p/named_assign_quoted-native/run-root0.log)) |
+| a14 | + `lm_compiler_unit_id` берёт payload точного идентификатора: `` `a` `` и `a` — один код (грамматика: одно имя) | fe165i `765a8404…` | — |
+| a15 | комментарий фикстуры `named_assign_quoted` дополнен (таблица идентификаторов); транслятор без изменений — fe165i остаётся frontend кандидата | — (fe165i) | f165q: 21/0, 126 проверок, native и forced, оба корня (22:57:02→22:58:18Z; [лог](records/pins/tp151-probe-f165q.log), [терминал](records/pins/tp151-probe-f165q.terminal.txt)); реестр r303c — байты `full-suite.tsv` после a13 ([копия](records/pins/registry303-e.tsv), `4b00e7bd…`): 130 рядов, 0 отказов, 1048 проверок, 22:58:28.01→23:13:37.22Z (909.21 с), кортеж tool165b, fe165i `765a8404…`, runtime G2 boot164a ([лог](records/pins/tp151-probe-r303c.log), [терминал](records/pins/tp151-probe-r303c.terminal.txt)) |
+
+Решение автора о whole-arguments пришло во время этого follow-up (22:37–22:42Z, три реплики — [журнал](../../../LMX_blog/2026-11-07.md);
+копии [1](records/pins/CODEX-FABLE-AUTHOR-WHOLE-ARGUMENTS-20261107T223737232Z-01.txt), [2](records/pins/CODEX-FABLE-AUTHOR-STRUCTURE-AMBIGUITY-20261107T224133372Z-01.txt),
+[3](records/pins/CODEX-FABLE-AUTHOR-NO-SPECIAL-UNFOLD-20261107T224208236Z-01.txt)): первичные документы обновлены (книга RU/EN — абзац
+whole-arguments, реестр — CALL-WHOLE-ARGUMENTS-STRUCTURE и MERGE-OPERAND-FORMS, заметки 4.2, current.md, README), реализация —
+следующий срез; см. «Границы».
+
 ## Результаты
 
 | Шаг | Результат | Receipts |
@@ -77,6 +119,24 @@ P = `C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01`; стейдж `c
 | Приёмка `checks` | рабочий tool boot164a, [список](records/pins/boot165a-check.tsv) ([рецепт](records/pins/checks303.command)): 38/0 (22:10:52.77→22:10:53.15Z) — стейдж 247/0; записи producers G1 и G2 и запись сборки G2 замкнуты, без script host; G1 и G2: `exe-same` l2trans, l1trans, tool, `same` l2_libc.o, driver.o, driver-observe.o, L1 и C tool, consumed-inputs; рабочий tool и bundle = G2; runtime реестра (G2 boot164a) = G2 runtime boot165a байт в байт; fe165f = G2 по `exe-same`, l2_libc `same` | [лог](records/pins/boot165a-check.log), [терминал](records/pins/boot165a-check.terminal.txt) |
 | Самотест G2 tool | G2 tool boot165a `720ab6ec…` (= рабочий bundle), ребёнок `tool153a-child` `40c935bc…`, рецепт [tp152-selftest](records/pins/tp152-selftest.command): `SELFTEST 0 failures` (12 строк `FAIL` — ожидаемые отказы негативных проверок схемы, как у 298–302), 22:11:11.96→22:11:23.96Z | [терминал](records/pins/tp152-selftest-g303.terminal.txt), [лог](records/pins/tp152-selftest-g303.log) |
 | Посадка | `steps` рабочего tool boot164a по [land303](records/pins/land303.tsv) ([рецепт](records/pins/steps303.command)): 9/0, `selfbuild/inputs.sha256` = source-tp165-a10 `4adc073c…` (247 входов), G2 consumed 311/0, 22:11:38.20→22:11:39.62Z | [лог](records/pins/land303.log), [терминал](records/pins/land303.terminal.txt) |
+
+Follow-up ревью (кандидат a15, те же рецепты с буквой b):
+
+| Шаг | Результат | Receipts |
+| --- | --- | --- |
+| Фокус f165q | 21 ряд ([f165o.tsv](records/pins/f165o.tsv)): 21/0, 126 проверок (22:57:02→22:58:18Z) | [терминал](records/pins/tp151-probe-f165q.terminal.txt), [лог](records/pins/tp151-probe-f165q.log) |
+| Реестр r303c | байты `full-suite.tsv` при a13–a15 ([копия](records/pins/registry303-e.tsv), `4b00e7bd…`): 130/0, 1048 проверок, 22:58:28.01→23:13:37.22Z (909.21 с); tool165b, fe165i `765a8404…`, runtime G2 boot164a | [терминал](records/pins/tp151-probe-r303c.terminal.txt), [лог](records/pins/tp151-probe-r303c.log) |
+| Стейдж bootstrap | [boot165b-prepare](records/pins/boot165b-prepare.tsv): 5/0, `cold-boot165b` 255/0, source-boot165b = source-tp165-a15 (`a82f1741…`), 23:13:49.48→23:13:51.73Z | [лог](records/pins/boot165b-prepare.log), [терминал](records/pins/boot165b-prepare.terminal.txt) |
+| Whole boot165b | 23:14:00.13→23:25:02.05Z, BootstrapExit 0, 661.92 с; `BOOTSTRAP quick 0 failures`; smoke 9/0 в обеих генерациях; G0 — tool165b, предыдущий frontend — G2 boot164a | [терминал](records/pins/boot165b-quick.terminal.txt), [лог](records/pins/boot165b-quick.log), [verify](records/pins/boot165b-quick-verify.log), [launcher](records/pins/boot165b-detached.terminal.txt) |
+| Приёмка `checks` | [boot165b-check](records/pins/boot165b-check.tsv): 38/0 (23:25:15.23→23:25:15.58Z) — стейдж 255/0, записи producers замкнуты, G1 = G2 (`exe-same`/`same`), рабочий tool и bundle = G2, runtime реестра = G2 runtime boot165b байт в байт, fe165i = G2 по `exe-same` | [лог](records/pins/boot165b-check.log), [терминал](records/pins/boot165b-check.terminal.txt) |
+| Самотест G2 tool | G2 tool boot165b `c5de7e8f…`, ребёнок `tool153a-child` `40c935bc…`: `SELFTEST 0 failures` (12 ожидаемых строк `FAIL`), 23:25:33.02→23:25:44.97Z | [терминал](records/pins/tp152-selftest-g303b.terminal.txt), [лог](records/pins/tp152-selftest-g303b.log) |
+| Посадка | [land303b](records/pins/land303b.tsv): 9/0, `selfbuild/inputs.sha256` = source-tp165-a15 `a82f1741…` (255 входов), G2 consumed 311/0, 23:25:59.43→23:26:00.87Z | [лог](records/pins/land303b.log), [терминал](records/pins/land303b.terminal.txt) |
+
+Кортеж follow-up: G2 boot165b — tool `c5de7e8fd88f50f79d075cc48e4571cb0d42271f59f99b4a2c85edb98fa2294d` (= рабочий `quick165b/lmxtool.exe`),
+l2trans `0c28700102ebb3a7…`, l1trans `cf755cbcb146b1de…`, l2_libc `af9fdae3…`, driver `f5eaed6f…`, observe `4e3fc11a…` (= G2 boot164a: ядро не
+менялось); G1: l2trans `88e50f62…`, l1trans `d015417d…`, tool `fc4c8ada…`, driver.o `f5eaed6f…`; кандидат — tool165b, fe165i
+`765a8404da0db2abf…` (= G2 l2trans по `exe-same`). Source 255 входов, manifest `a82f1741f824f240f3578a675ef97cb7fae7783779774192ce61e91f02ab0ce8`
+(source-tp165-a15 = source-boot165b).
 
 Кортеж: G2 boot165a — tool `720ab6ec4506dfcf0b17d961dcccb45ace932225d95cc91ad3b67e26c46d6b1d` (= рабочий `quick165a/lmxtool.exe`),
 l2trans `b00796ad9c1752eb7d147127dbb3b5014f2fd654900cd59c90e0da72cd1f3e75`, l1trans `558686352111ab033a6cbdea3be5711ac968d421e9ffb1845f933f6280bdbd78`,
@@ -117,7 +177,16 @@ observe `4e3fc11a68706feab90af250a594212451abaff260a76921ce7c81c13560ada6` (driv
   саму Structure непримитивному формалу) разбирает автор по вопросу Codex (CODEX-FABLE-WHOLE-ARGUMENTS-HOLD-20261107T195808558Z-01,
   [копия](records/pins/CODEX-FABLE-WHOLE-ARGUMENTS-HOLD-20261107T195808558Z-01.txt); мой вопрос —
   [FABLE-Q-WHOLE-ARGUMENTS](records/pins/fable-q-whole-arguments.txt)). Операнд `merge` «часть вызываемого» `f\args`
-  (MERGE-OPERAND-FORMS) — вместе с ним.
+  (MERGE-OPERAND-FORMS) — вместе с ним. Ответ автора получен 2026-11-07 22:37Z (CODEX-FABLE-AUTHOR-WHOLE-ARGUMENTS-20261107T223737232Z-01,
+  [копия](records/pins/CODEX-FABLE-AUTHOR-WHOLE-ARGUMENTS-20261107T223737232Z-01.txt); дословно — в [журнале](../../../LMX_blog/2026-11-07.md)):
+  удержание снято. Пересказ Codex этого ответа как «принудительного раскрытия единственной позиционной Structure» отозван
+  самим Codex по двум дальнейшим репликам автора (CODEX-FABLE-AUTHOR-STRUCTURE-AMBIGUITY-20261107T224133372Z-01,
+  CODEX-FABLE-AUTHOR-NO-SPECIAL-UNFOLD-20261107T224208236Z-01; [копии](records/pins/), дословно — в журнале): позиционная
+  передача одной Structure даёт ошибку только из-за неопределённости — когда определены два метода, один с одной
+  Structure в аргументах, другой с полным набором её полей; «все остальные случаи легко вычисляются и не надо ничего
+  специально раскрывать»; именованная подача `f(v := s)` — отдельный случай. Реализация (`f\args` как операнд `merge`,
+  `mytest(merge(mytest\args; (a: int: 5)))` = 35 через общее сопоставление, та же Structure через переменную, отказ по
+  неоднозначности, именованный контроль) — следующий срез, после сверки с действующим механизмом разрешения вызываемых.
 - Составные присваивания и `**` (COMPOUND-ASSIGN-AND-POWER, план M5) — не этим срезом.
 
 ## Документы
@@ -137,6 +206,13 @@ OPEN; строка 40 [чек-листа](../../../next_core_tasks_v3_checklist.
 копий из индекса (LF; списки [crlf303-1](records/pins/crlf303-1.list), [crlf303-2](records/pins/crlf303-2.list)) второй проход
 (`P/pins/docs303-check-b.*`, не архивирован — receipts после последнего прохода архива) — 0 отказов: 35 парных глав семантики,
 27 парных разделов грамматики, 615 импортированных файлов, ссылки, LF в индексе для всех отслеживаемых файлов.
+
+Follow-up ревью: [журнал](../../../LMX_blog/2026-11-07.md) — раздел «Вся структура аргументов: единственная позиционная Structure»
+с тремя дословными репликами автора и отозванным пересказом Codex; реестр — абзацы «Решение автора» у CALL-WHOLE-ARGUMENTS-STRUCTURE,
+статусы MERGE-OPERAND-FORMS и ASSIGN-KNOWN-OPERATOR (предел записи callable-поля единицы из метода), запись IDENTIFIER-CODES (payload
+точного идентификатора); заметки 4.2 RU/EN; current.md; README (255 входов); книга RU/EN — абзац whole-arguments (уточнения автора и
+статус примера), generated docs перерисованы и проверены ([docs303b-render](records/pins/docs303b-render.tsv), [лог](records/pins/docs303b-render.log),
+[терминал](records/pins/docs303b-render.terminal.txt)).
 
 ## Провенанс
 
@@ -184,9 +260,13 @@ tool165b (a05) — сборки кандидата. Архив — два про
 
 - Вся структура аргументов из одной Structure и операнд `merge` «часть вызываемого» `f\args` — после решения автора по
   вопросу Codex (CALL-WHOLE-ARGUMENTS-STRUCTURE, MERGE-OPERAND-FORMS).
-- Имя метода как левая часть `:=` внутри метода — существующий локализованный отказ записи callable-поля единицы
-  («writing a hidden input that has no activation value is not supported yet»), не отказ «не место»: норма для записи в
-  callable-поле единицы из метода отдельно не определена.
+- Имя метода как левая часть `:=` внутри метода (`one := two`, фикстура `assign_method_name_refused`) — зафиксированное
+  ограничение реализации, не правило языка (ревью Codex 303, п. 3): имя разрешается в callable-поле единицы, видимое методу,
+  и `lm_compiler_colon_hidden_write` отказывает записи скрытого входа без значения активации («writing a hidden input that
+  has no activation value is not supported yet») — тем же пределом, что и для `x: v`. Книга (:511, :516) допускает запись
+  любого известного места, включая ссылку на Structure метода; поэтому ASSIGN-KNOWN-OPERATOR закрыт для мест с значением
+  активации — локал, формал, поле по пути, ссылка на метод в привязке (`target := two`), поле единицы с корня, — а запись
+  callable-поля единицы из метода остаётся OPEN как предел реализации (запись скрытого входа), без вопроса автору.
 - Приоритет `:=` среди операций, значение записи как выражения, составные присваивания и `**` — план M5
   (COMPOUND-ASSIGN-AND-POWER).
 - Остаток IDENTIFIER-CODES (внутренние сравнения транслятора, транслятор L1, AXBY, тесты RESULT) — следующие срезы.

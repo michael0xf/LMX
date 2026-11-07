@@ -3346,6 +3346,9 @@ fn: lm_compiler_named_typed_field_kind (const: (@: fld c.LmP0Node)) int
     @: inner c.LmP0Field
     if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\head = 0 || fld\as\frame\body = 0
         return: (cast: (int) (0 - 1))
+    # `(zz := int: 5)` is no field written name first: the operator `:=` declares nothing (the author, 2026-11-07).
+    if: (fld\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: (cast: (int) (0 - 1))
     if: lm_compiler_ident((cast: (const: @: c.LmP0Text) (fld\as\frame\head))) = 0
         return: (cast: (int) (0 - 1))
     if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fld\as\frame\body))) != 1

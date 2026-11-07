@@ -8615,6 +8615,11 @@ fn: lm_compiler_ns_body_stmt_here (const: (@: source_node c.LmP0Node); int: me) 
     if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && source_node\as\frame\head != 0
         if: c.lm_compiler_site_method(ns_take_mi_cell[0], (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0 || c.lm_compiler_root_names_method((cast: (const: @: c.LmP0Structure) (ns_at_cell[0][me]\as\frame\body)), (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0 || c.lm_compiler_unit_names_method((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0
             return: (cast: (int) (1))
+        # The operator `:=` declares nothing (the author, 2026-11-07; the book, assign-known): a Frame `:=` is a statement
+        # of the body in every shape -- `zz := int: 5` as much as `zz := 5` -- and the check refuses the write of a place
+        # the body does not know.
+        if: (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+            return: (cast: (int) (1))
         # Only a declaration is a field -- the typed shapes l2_take_ns_body takes (l2_ns_decl_first), a nested
         # definition, a binding; an item of any other shape -- `cells[1]: …`, `x\f: …`, `g: 5` with g declared
         # above, `sendMessage: exit(…)`, a known head's application `Model: m` -- is a statement.
@@ -8783,6 +8788,10 @@ fn: lm_compiler_ns_primitive_field (const: (@: source c.LmP0Node); int: owner; c
     int: character
     size_t: bits 0U
     if: declaration = 0 || declaration\contract = 0 || declaration\name = 0
+        return: (cast: (int) (0))
+    # `zz := int: 5` in the body declares no field: the operator `:=` declares nothing (the author, 2026-11-07) -- the
+    # statement is the body procedure's, refused there as a write of no known place.
+    if: source\kind = c.LM_P0_NODE_FRAME && source\as != 0 && source\as\frame != 0 && (source\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
         return: (cast: (int) (0))
     word: c.lm_compiler_contract_leaf((cast: (@: c.L2TypeContract) (declaration\contract)), @ depth, @ qualified)
     if: word = 0 || depth != 0 || qualified != 0

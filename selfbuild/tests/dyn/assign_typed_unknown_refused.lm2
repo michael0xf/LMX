@@ -1,0 +1,13 @@
+# The := slice, Codex's review of 303, item 2: `zz := int: 5` with no place zz known declares nothing -- not the typed
+# field the form `zz: int: 5` would declare (a nested typed declaration, one row with `int: zz 5`): it is the refusal of a
+# write of no known place, in a method body.
+fn: f () int
+    zz := int: 5
+    return: 1
+end: f
+int: code 7
+if: f() != 1
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

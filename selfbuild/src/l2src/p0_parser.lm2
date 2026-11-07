@@ -2527,7 +2527,10 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                     while: ((assign_index < byte_count) && c.lm_p0_is_horizontal_space(text[assign_index]))
                         assign_index: assign_index + 1U
                     ---
-                    if: ((((head_end > start) && (quoted_head = 0)) && ((assign_index + 1U) < byte_count)) && ((text[assign_index] = ':') && (text[(assign_index + 1U)] = '=')))
+                    # The head's spelling does not choose the operator (the grammar, exact identifiers: `x` and x are one
+                    # name): a quoted head -- an exact identifier -- before `:=` is the same Frame; the scan for `:=` starts
+                    # after the quoted token, so a `:=` inside the quotes is not seen.
+                    if: (((head_end > start) && ((assign_index + 1U) < byte_count)) && ((text[assign_index] = ':') && (text[(assign_index + 1U)] = '=')))
                         size_t: assign_body_index
                         unsigned: assign_body_flags
                         int: assign_inline_body

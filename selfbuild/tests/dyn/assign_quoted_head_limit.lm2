@@ -1,0 +1,17 @@
+# The := slice, Codex's review of 303, item 1: an exact identifier as the left side of `:=` -- `x` := 5 for a declared x.
+# P0 makes the Frame `:=` for the quoted head as for the bare one (the parse error of the published 303 is gone), and
+# the translator then meets its own limit: a statement whose head is an exact identifier is classified by no route
+# (lm_compiler_ident accepts no backticks; lm_compiler_bind_admit binds no exact identifier yet) -- the located refusal
+# "unsupported body", the same as the colon form gives (quoted_colon_head_limit).  A limit of the translator, not of
+# the operator.
+fn: f () int
+    int: x 1
+    `x` := 5
+    return: x
+end: f
+int: code 7
+if: f() != 5
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

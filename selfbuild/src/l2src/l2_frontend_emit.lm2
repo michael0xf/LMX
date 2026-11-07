@@ -1797,6 +1797,13 @@ fn: lm_compiler_collect_decls (const: (@: body c.LmP0Structure); int: mi; const:
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported own array declaration")))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_unimpl_numeric(stmt) != 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, c.lm_compiler_unimpl_numeric(stmt))))
+        # The operator `:=` declares nothing (the author, 2026-11-07; the book, assign-known): a Frame `:=` whose body is a
+        # typed value, `zz := int: 5`, has the shape of the nested typed declaration `zz: int: 5`, yet it opens no row for
+        # a name no place of this site has -- the check refuses it as a write of no known place.  With a known name the
+        # same shape is the repeated typed write of that place (REPEATED-DECL-TYPED-RECEPTION): its row exists already.
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_own_decl_ty(stmt) != 0 && lm_compiler_assign_new_name(stmt, mi) != 0
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+            continue
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_own_decl_ty(stmt) != 0 && depth > 0 && scope_n_cell[0] = 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported own declaration")))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_own_decl_ty(stmt) != 0 && (depth = 0 || scope_n_cell[0] != 0)
@@ -5303,6 +5310,22 @@ fn: lm_compiler_assign_host_place (int: mi; const: (@: t c.LmP0Text)) int
     return: (cast: (int) (0))
 end: lm_compiler_assign_host_place
 
+# A Frame `:=` whose name is no place of the site yet -- no own row, no formal, no host capture: `zz := int: 5`
+# (the shape of a nested typed declaration), `zz := 5`.  The collection opens no row for it and the check refuses it.
+fn: lm_compiler_assign_new_name (const: (@: stmt c.LmP0Node); int: mi) int
+    @: fa c.LmP0Text
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U
+        return: (cast: (int) (0))
+    fa: c.lm_compiler_own_decl_name(stmt)
+    if: fa = 0
+        fa: stmt\as\frame\head
+    if: fa = 0
+        return: (cast: (int) (0))
+    if: c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) fa)) >= 0 || c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) fa)) >= 0 || lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) fa)) != 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_assign_new_name
+
 # Original: l2src/l2trans.lm1:19952
 fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@: path char); int: depth) int
     const: (@@: q_at_cell c.LmP0Node (cast: (const: @@: c.LmP0Node) (@ c.l2_q_at)))
@@ -5836,10 +5859,12 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         # site knows no place for -- a method's name, a name nothing declared -- is the refusal, never a definition, so the
         # form moved where no place is known declares no field.  The places asked: the declared formals, a visible own
         # field (a unit field a method sees is its hidden input, Q52), a slot, a method-level local, the host's activation
-        # of a nested method.  Not the dynamic input the collection made of a free name (steps/free-names.md §7 reads the
-        # target of `x: v` as any name, so a name nothing binds is a hidden argument of the callers): that is no place
-        # known here, so l2_param_find is not asked.
-        if: c.lm_compiler_is_asgn(stmt, mi) != 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U && stmt\as\frame\head != 0 && c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
+        # of a nested method.  Not the dynamic input the collection made of a free name (the target of `x: v` is read
+        # as any name is, so a name nothing binds is a hidden argument of the callers -- the mechanism's history is
+        # steps/free-names.md, the rule the one head resolution and the book): that is no place known here, so
+        # l2_param_find is not asked.  A `:=` Frame shaped as a nested typed declaration, `zz := int: 5`, is no
+        # assignment for l2_is_asgn (l2_own_decl_ty answers for it) and is asked here all the same: `:=` declares nothing.
+        if: (c.lm_compiler_is_asgn(stmt, mi) != 0 || c.lm_compiler_own_decl_ty(stmt) != 0) && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U && stmt\as\frame\head != 0 && c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, ":= writes a place already known: its left side is not one here")))
         # Known ordinary Structure heads receive an assignment candidate;
         # they do not acquire callable formals from the Frame syntax.

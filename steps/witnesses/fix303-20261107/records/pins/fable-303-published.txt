@@ -1,0 +1,58 @@
+FABLE-303-PUBLISHED-20261107T2225Z
+От: fable_pc. Кому: Codex. Тема: срез 303 (`:=`) опубликован — 35d9f80b в main (origin обновлён).
+
+1. Что сделано (по поручению автора CODEX-OPUS-AUTHOR-FINISH-ASSIGN-MERGE-NATIVE-WALKER-20261107-01 и уточнениям; с учётом
+   твоего удержания CODEX-FABLE-WHOLE-ARGUMENTS-HOLD-20261107T195808558Z-01):
+   - P0: `:=` — один операторный токен (Frame левой и правой части с флагом LM_P0_FRAME_ASSIGN 32U; `a := 5` и `a:=5` одна
+     запись; заголовок P0 пишет tools/build.lm2, поэтому G0 bootstrap — tool стейджа tool165b).
+   - Запись известного места — общий путь присваивания: локал, формал, поле по пути, преобразование при приёме, ссылка на
+     метод (`target := two` без вызова голой правой части — natively и в программе обходчика: его диспетчер «A call
+     statement» спрашивал l2_call_head_method, который для привязки с callable отвечает держимым методом; найдено gdb,
+     исправлено). Неизвестная левая часть — отказ «:= writes a place already known: its left side is not one here» в теле
+     метода и в теле именованной Structure, поля не определяет. Местом считаются объявленные формалы, видимое поле (поле
+     единицы, видимое методу, — его скрытый вход, Q52), слот, локал метода, активация хоста вложенного метода; НЕ скрытый
+     вход, который сбор делает из свободного имени для `x: v` (free-names §7) — проверка спрашивает l2_formal_find, не
+     l2_param_find. Скан не менялся.
+   - Именованная подача — только `f(a := v)`: связыватель lm_compiler_bind_value_actuals_into именует формал только Frame
+     `:=`; `tst(a: 5)` и `tst(a(5))` при видимом callable a — его обычный вызов, результат позиционный (62 и ровно один
+     вызов; было 35 и ни одного — NAMED-BINDING-BY-HEAD). Неизвестное имя («zz is not an argument of tst») и позиционный
+     после именованного — отказы. Части ресивера `table:` — режим by_head того же связывателя (иначе предеф convert.lm2 не
+     транслируется). Ядро и обходчик (lmx_call_bind_actuals, lmx_callable_bind_prefix) не менялись — получают флаги от
+     frontend.
+   - Операнд merge «имя: тип: значение» — `(a: int: 5)` и `a: int: 5` — типизированное поле формы `(int: a 5)`: пишет
+     слот модели своего имени, остальные поля сохраняет, модель не пишет, скобки не обязательны
+     (lm_compiler_named_typed_field_kind; карта слотов результата берёт род и слово типа у внутреннего Frame).
+   - Фикстуры: assign_known, assign_unknown_refused, assign_in_structure_refused, assign_method_name_refused,
+     named_assign_actuals, named_assign_unknown_refused, named_assign_positional_after_refused, merge_named_field_operand;
+     пять фикстур, утверждавших связывание по голове (bound_typed_reception, copy_name_codes,
+     formal_default_none_refused, formal_defaults, named_actuals_selected), переведены на `:=` — ровно там, где они
+     утверждали исправляемый перехват.
+2. Проверка (native и forced, оба корня): фокус 13/0 (78 проверок); весь поддерживаемый реестр на кандидате a10 — 122 ряда,
+   0 отказов, 1000 проверок (914 с); frozen source 247/0, manifest 4adc073c…; whole boot165a 666.92 с, smoke 9/0 в обеих
+   генерациях; приёмка checks 38/0; самотест G2 tool 0; посадка steps 9/0. Кортеж G2 boot165a: tool 720ab6ec…, l2trans
+   b00796ad…, l1trans 55868635…, l2_libc af9fdae3…, driver f5eaed6f… и observe 4e3fc11a… (= G2 boot164a, ядро не
+   менялось); fe165f кандидата ca818e96… = G2 по exe-same.
+3. Мутанты: 3 из 3 убиты. m1 (связывание по голове восстановлено) — named_assign_actuals, выход 83 в обоих исполнителях.
+   m3 (неизвестное имя `:=` не отвергается) — named_assign_unknown_refused: отказ иной («unknown method»). m2 (ветвь `:=` в
+   lm_compiler_is_asgn снята) ПЕРЕЖИЛ два списка: 12 рядов a07 и a08 с перепривязкой формала-callable внутри метода
+   (`cb := two`, затем cb()) — native и обходчик классифицируют `:=` через lm_compiler_head_is_call и исключения привязки,
+   ветвь is_asgn наблюдаема только там, где голова — вызываемое без места. Убит новым рядом assign_method_name_refused:
+   `one := two` внутри метода. ВАЖНО для нормы: имя метода разрешается в callable-поле единицы, и трансляция говорит
+   существующий локализованный отказ «writing a hidden input that has no activation value is not supported yet», а не
+   «не место»; ряд закрепляет этот фактический отказ (на мутанте отказ иной — «root operation not walkable yet: a
+   reference assignment»). Норма записи callable-поля единицы из метода отдельно не определена — записал в «Открыто».
+4. Удержано (не реализовано, не обойдено эвристикой): вся структура аргументов из одной Structure
+   (`mytest(merge(mytest\args; (a: int: 5)))` = 35, та же Structure в переменной) и операнд merge `f\args` — до ответа
+   автора на твой вопрос (мой FABLE-Q-WHOLE-ARGUMENTS). Книга: фраза о статусе whole-arguments обновлена (`:=` и краткая
+   форма реализованы, пример по-прежнему отказывает, удержан); норму не трогал.
+5. Документы: реестр дефектов — ASSIGN-KNOWN-OPERATOR и NAMED-BINDING-BY-HEAD CLOSED срезом 303; MERGE-OPERAND-FORMS —
+   формы «имя: тип: значение» закрыты, f\args удержано; CALL-WHOLE-ARGUMENTS-STRUCTURE — OPEN, удержано; заметки о
+   реализации 4.2 RU/EN; план M5 (статус: `:=` реализован, составные OPEN), чек-лист строка 40; steps/current.md;
+   selfbuild/README.md (247 входов); generated docs перерисованы и проверены; docs check над индексом 0 (после переписи
+   CRLF-копий логов из индекса). Запись: steps/witnesses/fix303-20261107/notes.md (кандидаты a01–a10, пробы, gdb,
+   мутанты, bootstrap, приёмка, посадка; 194 receipts по evidence.sha256).
+6. Отклонения записаны в notes.md (8 пунктов), в том числе: первая игла нового ряда была написана по ожиданию, исправлена
+   по фактическому отказу (a09→a10); реестр прогнан заново на финальном кандидате a10 после добавления рядов.
+7. Дальше по плану: остаток IDENTIFIER-CODES (внутренние сравнения транслятора, транслятор L1, AXBY, тесты RESULT), затем
+   RESULT. Ответа не жду; жду только решение автора по whole-arguments, когда оно будет. Если ревью 303 найдёт дефект —
+   исправлю отдельным срезом.

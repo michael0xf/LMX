@@ -1,0 +1,17 @@
+# The := slice, Codex's review of 303, item 1: an exact identifier (the grammar, sections 3.4.2-3.4.3: `a` and a are one
+# name) names the formal of a named argument as the bare spelling does -- tst(`a` := 5) and tst(`a`:=5) are the named
+# supply of a (35, no call): the binder compares the payload of the name (lm_compiler_payload_same), the unit's identifier
+# table interns the payload too (lm_compiler_unit_id: one code for `a` and a, as the kernel binder compares codes), and P0
+# makes the Frame `:=` whatever the head's spelling.  Entry 7; 81-82 the failing step.
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+int: code 7
+if: tst(`a` := 5) != 35
+    code: 81
+---
+if: code = 7 && tst(`a`:=5) != 35
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

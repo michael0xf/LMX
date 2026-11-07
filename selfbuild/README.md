@@ -21,8 +21,13 @@ positional result (NAMED-BINDING-BY-HEAD closed; the `table:` receiver's parts u
 Fixtures `assign_known`, `assign_unknown_refused`, `assign_in_structure_refused`, `assign_method_name_refused`,
 `named_assign_actuals`, `named_assign_unknown_refused`, `named_assign_positional_after_refused`,
 `merge_named_field_operand`; five fixtures that asserted the by-head binding moved to `:=`. The whole argument Structure
-from one Structure (`mytest(merge(mytest\args; (a: int: 5)))`) and the `merge` operand `f\args` are held until the author's
-decision (CALL-WHOLE-ARGUMENTS-STRUCTURE); the kernel is unchanged. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+from one Structure (`mytest(merge(mytest\args; (a: int: 5)))`) and the `merge` operand `f\args` are the next slice: the
+author's decision of 2026-11-07 names the one error case -- two fitting methods, one with the Structure as its arguments,
+the other with the full set of its fields -- and no special unfolding (CALL-WHOLE-ARGUMENTS-STRUCTURE); the kernel is
+unchanged. The review of 303 added: an exact identifier before `:=` is the same operator in P0 (the translator's own limit
+on exact identifiers as statement heads stays, "unsupported body", pinned with its colon control); `:=` declares nothing
+in any shape -- `zz := int: 5` is refused in a method, at the root, in a Structure and as a merge operand, while a known
+place takes the typed right side by the general admission. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

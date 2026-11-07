@@ -193,7 +193,14 @@ of the third:
   visible own field (a unit field a method sees is its hidden input,
   Q52), a slot, a method-level local and the host activation of a nested
   method; the hidden input the collection makes of a free name for
-  `x: v` (steps/free-names.md section 7) is no place for `:=`.
+  `x: v` (the rule is the one head resolution and the book;
+  steps/free-names.md is the mechanism's history, its section 7 was
+  withdrawn by the clarification of 2026-10-03) is no place for `:=`.
+  A method's name as the left side inside a method (`one := two`) meets
+  the existing implementation limit of writing a hidden input that has
+  no activation value ("writing a hidden input that has no activation
+  value is not supported yet"), the same as for `x: v`; it is not a rule
+  of the language.
 - A named argument is `f(a := v)` only: the left side selects the formal
   of the selected callable, the right side is evaluated in the ordinary
   way. `f(a: 5)` and `f(a(5))` with a callable `a` visible are its
@@ -207,16 +214,20 @@ of the third:
   is: it writes the model's slot of its name, keeps the other fields and
   does not write the model; the parentheses of the second operand are
   optional.
-- Not done, held until the author's decision (Codex's answer
-  CODEX-FABLE-WHOLE-ARGUMENTS-HOLD-20261107T195808558Z-01): the whole
-  argument Structure from one Structure --
+- Not done: the whole argument Structure from one Structure --
   `mytest(merge(mytest\args; (a: int: 5)))` = 35 and the same Structure
-  in a variable -- collides with the rule "a signature is not executed"
-  (`mytest(c)` gives the Structure itself to a non-primitive formal); the
-  `merge` operand "a part of a callable", `f\args`, is held with it. The
-  precedence of `:=` among operations and a value of the written form as
-  an expression are not defined by the rule; the compound assignments
-  are [4.3](#compound-assign-notes).
+  in a variable -- and the `merge` operand "a part of a callable",
+  `f\args`. Slice 303 held them on Codex's answer (a collision with the
+  rule "a signature is not executed"); the author's decision came on
+  2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the positional
+  passing of one Structure errs only because of an ambiguity -- two
+  methods, one with the one Structure as its arguments, the other with
+  the full set of its fields; every other case is computed by the
+  general matching, nothing is unfolded specially; `f(v := s)` is a
+  separate case. The implementation is the next slice. The precedence of
+  `:=` among operations and a value of the written form as an expression
+  are not defined by the rule; the compound assignments are
+  [4.3](#compound-assign-notes).
 
 The defects are recorded in the [registry](../steps/defects.md).
 

@@ -190,3 +190,16 @@ refuses	dyn/named_assign_positional_after_refused.lm2	named_assign_positional_af
 runs	dyn/merge_named_field_operand.lm2	7	nf
 refuses	dyn/assign_in_structure_refused.lm2	assign_in_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
 refuses	dyn/assign_method_name_refused.lm2	assign_method_name_refused.lm2:14:5: writing a hidden input that has no activation value is not supported yet	nf
+# Codex's review of 303 (CODEX-FABLE-303-REVIEW-20261107T222601684Z-01): an exact identifier before := is the same operator (item 1);
+# := declares nothing -- `zz := int: 5` with no place zz is refused in a method, at the root, in a Structure and as a merge operand,
+# while a known place takes the typed right side by the general admission (item 2).
+runs	dyn/assign_typed_known.lm2	7	nf
+runs	dyn/named_assign_quoted.lm2	7	nf
+# An exact identifier as the head of a statement is a limit of the translator (no route classifies it: "unsupported body"), the same
+# before the := slice (the colon control) and after it; P0 makes the Frame := for it as for a bare head.
+refuses	dyn/assign_quoted_head_limit.lm2	assign_quoted_head_limit.lm2:9:5: unsupported body	nf
+refuses	dyn/quoted_colon_head_limit.lm2	quoted_colon_head_limit.lm2:6:5: unsupported body	nf
+refuses	dyn/assign_typed_unknown_refused.lm2	assign_typed_unknown_refused.lm2:5:5: := writes a place already known: its left side is not one here	nf
+refuses	dyn/assign_typed_unknown_root_refused.lm2	assign_typed_unknown_root_refused.lm2:3:1: := writes a place already known: its left side is not one here	nf
+refuses	dyn/assign_typed_unknown_structure_refused.lm2	assign_typed_unknown_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
+refuses	dyn/merge_assign_operand_refused.lm2	this merge operand form is not lowered yet	nf

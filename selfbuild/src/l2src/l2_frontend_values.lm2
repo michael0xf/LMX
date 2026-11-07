@@ -3018,6 +3018,12 @@ fn: lm_compiler_unit_id (const: (@: data char); size_t: nb) int
     int: want 0
     if: data = 0 || nb = 0U
         return: (cast: (int) (0 - 1))
+    # An exact identifier and its bare spelling are one name (the grammar, exact identifiers; Codex's review of 303):
+    # the code is the payload's -- `` `a` `` written as a named argument reaches the formal a by one code.
+    if: nb >= 3U && data[0] = 96 && data[nb - 1U] = 96
+        data: data + 1U
+        nb: nb - 2U
+    ---
     if: k >= cap_cell[0]
         want: c.lm_compiler_cap_next(cap_cell[0], k + 1)
         if: want < 0

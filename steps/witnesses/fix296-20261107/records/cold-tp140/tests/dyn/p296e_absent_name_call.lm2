@@ -1,0 +1,16 @@
+# Slice 296 probe (ABSENT-HEAD-WRITE-NORM): `x: j` defines a named Structure x whose content is `j`; `call: x` executes that
+# content (a read of j, no effect), the method goes on and returns its own value.  Entry 7; a wrong value leaves as the
+# exit code.
+fn: f () int
+    int: j 3
+    x: j
+    call: x
+    return: j + 4
+end: f
+int: code 7
+int: v f()
+if: v != 7
+    code: v
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

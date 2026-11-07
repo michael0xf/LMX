@@ -1,0 +1,39 @@
+# Slice 296 (ABSENT-HEAD-WRITE-NORM; the book provenance :468-476; the author 2026-10-05 and steps/free-names.md 2026-10-03;
+# Codex, the 290 review, item 1): a head that no formal, no visible outer value and no established free input binds defines a
+# named Structure with the content written after it -- a name as that content too -- in a method, at the unit's root, inside a
+# named Structure and at a part's root (absent_head_definition_part.lm2).  `call:` executes such a Structure, so a primitive
+# there would be refused.  On the tuple of 295 every such line with a name as its tail was refused at translation (`an
+# unknown head needs a Structure body`, the fixture absent_head_name_refused of slice 290).  Entry 7; 81.. name the check.
+int: j 3
+x: j
+T:
+    int: a 1
+    fld: a
+end: T
+sub: put_absent (int: v)
+    absent_name: v
+end: put_absent
+fn: f () int
+    int: i 3
+    y: i
+    call: y
+    return: i + 4
+end: f
+int: code 7
+call: x
+if: j != 3
+    code: 81
+---
+call: T\fld
+if: code = 7 && T\a != 1
+    code: 82
+---
+put_absent(1)
+if: code = 7 && f() != 7
+    code: 83
+---
+if: code = 7 && part_k() != 5
+    code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

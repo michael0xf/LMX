@@ -1,0 +1,14 @@
+# Slice 296 probe (ABSENT-HEAD-WRITE-NORM; the author 2026-10-03/05, steps/free-names.md: `k: 1U` with no established k
+# defines a Structure with the literal body): `k: 1` then `return: k` in an int fn tells a Structure (wrong result) from a
+# primitive field (1).
+fn: f () int
+    k: 1
+    return: k
+end: f
+int: code 7
+int: v f()
+if: v != 1
+    code: v
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

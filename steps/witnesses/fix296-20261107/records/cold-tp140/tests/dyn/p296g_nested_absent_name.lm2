@@ -1,0 +1,14 @@
+# Slice 296 probe (ABSENT-HEAD-WRITE-NORM): inside a named Structure's body a head nothing binds there, with a name as its
+# tail (`fld: a`), is a nested named Structure with that written content; T's own field stays as written.  Entry 7; a
+# wrong value leaves as the exit code.
+T:
+    int: a 1
+    fld: a
+end: T
+int: code 7
+call: T\fld
+if: T\a != 1
+    code: T\a
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

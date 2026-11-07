@@ -3786,8 +3786,10 @@ fn: lm_compiler_local_ns_declare (const: (@: stmt c.LmP0Node); int: mi; const: (
     int: cj
     @: h c.LmP0Text
     h: stmt\as\frame\head
-    if: c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (stmt\as\frame))) != 0
-        return: (cast: (int) (c.lm_compiler_error(path, c.lm_compiler_ref_tail_node(stmt), "an unknown head needs a Structure body")))
+    # Slice 296 (ABSENT-HEAD-WRITE-NORM; the book provenance :468-476; the author 2026-10-05): a head no formal, no visible
+    # outer value and no established free input binds defines a named Structure with the content written after it -- a
+    # name as that content too (`x: j`), not only a body or a literal; the refusal `an unknown head needs a Structure body`
+    # was a limit of the implementation.  The recursion slice 290 found stays guarded (lm_compiler_head_structure).
     ni: lm_compiler_local_ns_entry(stmt, mi, path)
     if: ni < 0
         return: (cast: (int) (1))
@@ -8922,8 +8924,8 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
                 break
         ---
         fld: f\value
-        if: fld != 0 && fld\kind = c.LM_P0_NODE_FRAME && fld\as != 0 && fld\as\frame != 0 && c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (fld\as\frame))) != 0 && lm_compiler_ns_nested_def(fld, me) != 0
-            return: (cast: (int) (c.lm_compiler_error(path, c.lm_compiler_ref_tail_node(fld), "an unknown head needs a Structure body")))
+        # Slice 296 (ABSENT-HEAD-WRITE-NORM): a nested absent head with a name as its tail (`fld: a`) is a nested named
+        # Structure with that written content, taken below as every nested definition (Q57); the refusal was a limit.
         # steps/named-struct-exec.md, slice 1: a statement of the body (Q19.2 = 2, "тело целиком, как у
         # метода") -- an assignment to a field declared above, or a bare `return` -- is no field.
         # Construction does not run it (book :928 computes the initializers only); slice 2 runs the

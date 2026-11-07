@@ -486,3 +486,14 @@ line of the list itself, a lost tab); the G2 tool's self-test 0 failures. A decl
 of a fn or sub body is a place of its var: one more var slot per such name, no second cell in the nested list,
 one registration search by the activation's host. Not measured apart. A whole-pipeline measurement, not a
 controlled comparison. [Commands, results and hashes](steps/witnesses/fix295-20261107/notes.md).
+
+## Slice296 / boot158a (Opus, 2026-11-07)
+
+Whole quick 705.97 s: 04:52:41.7180387Z→05:04:27.6912682Z, both generations smoke 9/0; G0 is the working tool of
+boot157a (tools/build.lm2 is unchanged). The whole maintained registry on the candidate frontend fe158b and the
+G2 runtime of boot157a (the kernel is unchanged; G2's runtime of boot158a is byte-equal to it), fe158b `exe-same`
+with G2: 110/0, 927 checks (883.72 s: 04:14:37.0262170Z→04:29:20.7420662Z). Source 234/B39CA2AA; the acceptance
+is one `lmxtool checks` list of 38 commands run by the working tool of boot157a, 0 failed; the G2 tool's self-test
+0 failures. A head written with a name tail and bound by nothing now builds a named Structure through the same
+collection a literal tail took; one question of a declaration goes through an existing guard. Not measured apart.
+A whole-pipeline measurement, not a controlled comparison. [Commands, results and hashes](steps/witnesses/fix296-20261107/notes.md).

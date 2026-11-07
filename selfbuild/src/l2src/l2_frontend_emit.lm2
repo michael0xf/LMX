@@ -761,8 +761,9 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
             item: field\value
             role: c.lm_compiler_unit_role(item)
         ---
-        if: role = 5 && item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (item\as\frame))) != 0
-            return: (cast: (int) (c.lm_compiler_error(path, c.lm_compiler_ref_tail_node(item), "an unknown head needs a Structure body")))
+        # Slice 296 (ABSENT-HEAD-WRITE-NORM; the book provenance :468-476): a root head nothing binds, with a name as its tail,
+        # is a named Structure with that written content (role 5, taken below); the refusal `an unknown head needs a
+        # Structure body` was a limit of the implementation.
         if: role = 1 && lm_compiler_collect_method(item, path, -1) != 0
             return: (cast: (int) (1))
         if: role = 2 && c.lm_compiler_take_eternal(item, path) != 0
@@ -820,8 +821,8 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
             q_at_cell[0]: item
             q_path_cell[0]: part_path_cell[0][i]
             role: c.lm_compiler_unit_role(item)
-            if: role = 5 && item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (item\as\frame))) != 0
-                return: (cast: (int) (c.lm_compiler_error(part_path_cell[0][i], c.lm_compiler_ref_tail_node(item), "an unknown head needs a Structure body")))
+            # Slice 296 (ABSENT-HEAD-WRITE-NORM): a part root's head nothing binds, with a name as its tail, is a named
+            # Structure with that written content, as at the unit's root.
             if: role != 0 && role != 1 && role != 3 && role != 5 && (role != 4 || c.lm_compiler_unit_directive(item) = 0)
                 part_class_cell[0]: 0
                 return: (cast: (int) (c.lm_compiler_part_refused(part_path_cell[0][i], item, role)))

@@ -788,7 +788,10 @@ fn: lm_compiler_declaration_known_tail (const: (@: source_node c.LmP0Node); @: f
     if: here_mi_cell[0] < 0 || c.lm_compiler_ref_tail_atom(frame) = 0
         return: 0
     own: c.lm_compiler_resolved_own(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (c.lm_compiler_ref_tail_atom(frame))))
-    return: (cast: (int) (own >= 0 && own_decl_cell[0][own] != source_node && lm_compiler_head_resolve(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (frame\head)), 0, 0) = 5))
+    # Slice 296 (ABSENT-HEAD-WRITE-NORM): "the head is a known Structure" asked as lm_compiler_declaration's three questions are
+    # since slice 290 (lm_compiler_head_structure), not through the role of the value own the head may be: for a nested absent
+    # head with a name tail (`fld: a` in a named Structure, `x: k` at a part's root) that role asked this declaration again.
+    return: (cast: (int) (own >= 0 && own_decl_cell[0][own] != source_node && lm_compiler_head_structure(here_mi_cell[0], (cast: (const: @: c.LmP0Text) (frame\head))) != 0))
 end: lm_compiler_declaration_known_tail
 
 fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declaration

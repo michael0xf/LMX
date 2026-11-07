@@ -1,0 +1,15 @@
+# Slice 296 probe (ABSENT-HEAD-WRITE-NORM; the book provenance :468-476): f has no formal, no visible outer value and no
+# established free input x, so `x: j` defines a named Structure x with the written content `j`; `return: x` gives no int
+# result and is wrong by the general rule of the result's check and conversion.
+fn: f () int
+    int: j 3
+    x: j
+    return: x
+end: f
+int: code 7
+int: v f()
+if: v != 3
+    code: v
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

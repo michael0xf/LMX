@@ -1,0 +1,43 @@
+# Slice 297 probe (CALLABLE-PLACE-NAMED-RECEPTION, positional; Codex 285 items 3-4): the place's formals are int x,
+# char y; the fn written into it has char a, int b -- other primitive types at the same positions.  Exit: 124 when the
+# write is refused (implements), else the call: 57 for h(5, 7), 22/25 from the catches.  Entry 7 is never reached; the
+# value is the observation.
+fn: h (char: a; int: b) int
+    return: (cast: (int) a) * 10 + b
+end: h
+Places:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_pos () int
+    ---
+        int: got Places\f(5, 7)
+        return: got
+        catch: call ()
+            return: 22
+        catch: convert ()
+            return: 25
+    ---
+end: call_pos
+fn: run () int
+    int: w 0
+    @: Hw h h
+    w: write_place()
+    if: w != 1
+        return: 100 + w
+    ---
+    return: call_pos()
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

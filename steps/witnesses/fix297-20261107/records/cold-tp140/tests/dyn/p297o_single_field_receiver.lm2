@@ -1,0 +1,14 @@
+# Slice 297 probe (REPEATED-DECL-TYPED-RECEPTION, the single-field form; the book provenance :428, :483): `char: z` after
+# `int: z 5`, the char -> int receiver defined -- the known place is compatible and nothing is written: z stays 5 (the receiver
+# adds 100, 105 would be a write through it).  Exit: z's value.
+fn: lm_stg_convert_char_int (char: c) int
+    return: (cast: (int) c) + 100
+end: lm_stg_convert_char_int
+fn: run () int
+    int: z 5
+    char: z
+    return: z
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

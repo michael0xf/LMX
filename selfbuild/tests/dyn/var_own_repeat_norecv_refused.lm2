@@ -1,0 +1,19 @@
+# Slice 297 (REPEATED-DECL-TYPED-RECEPTION; Codex's 295 review): both branches of an `if` declare `z` -- one place `z` of
+# int in the activation.  `char: z 6` gives its char candidate to that place by the ordinary numeric reception, and the
+# program defines no char -> int receiver: the ordinary reception's refusal of a conversion without its receiver (as `z: c`
+# with a char c), not a refusal by the repeat's type (slice 295's row, lifted).
+fn: m (int: c) int
+    int: r 0
+    if: c = 1
+        int: z 5
+        r: z
+    else:
+        char: z 6
+        r: 2
+    ---
+    return: r
+end: m
+int: code 7
+int: v m(1)
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

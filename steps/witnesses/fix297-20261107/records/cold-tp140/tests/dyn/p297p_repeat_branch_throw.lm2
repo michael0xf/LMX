@@ -1,0 +1,39 @@
+# Slice 297 probe (REPEATED-DECL-TYPED-RECEPTION; Codex 295 review): repeats of the int place z with the written receiver char,
+# the receiver defined and refusing (`range`) a char above 9.  `char: z 6`: 106; under a false guard `char: z 7` executes
+# nothing: 106; `char: z 20`: the receiver refuses, its caller's implicit `convert`, nothing written: 106.  Entry 7; the first
+# wrong value leaves as 40 + its check.
+fn: lm_stg_convert_char_int (char: c) int
+    throws: range
+    if: c > 9
+        throw: range
+    return: (cast: (int) c) + 100
+end: lm_stg_convert_char_int
+fn: run (int: g) int
+    int: z 5
+    int: caught 0
+    char: z 6
+    if: z != 106
+        return: 41
+    ---
+    if: g != 0
+        char: z 7
+    ---
+    if: z != 106
+        return: 42
+    ---
+    ---
+        char: z 20
+        catch: convert ()
+            caught: 1
+    ---
+    if: caught != 1
+        return: 43
+    ---
+    if: z != 106
+        return: 44
+    ---
+    return: 7
+end: run
+int: code run(0)
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

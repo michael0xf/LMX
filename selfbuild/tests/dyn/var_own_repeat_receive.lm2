@@ -1,0 +1,54 @@
+# Slice 297 (REPEATED-DECL-TYPED-RECEPTION; the book provenance :428, :483, :198; Codex's 295 review): a repeated declaration
+# of another number type names no new contract and no second field.  `char: z 6` after `int: z 5` forms its candidate by the
+# written receiver char and gives it to the place z by the ordinary numeric reception: the program's char -> int receiver (a
+# row of l2src/convert.lm2), which adds 100 and refuses (`range`) a char above 9 -- that refusal is the caller's implicit
+# `convert`, and nothing is written.  A repeat in a branch not taken executes nothing; the single-field `char: z` checks the
+# known place and writes nothing.  In a method's activation, its inline bodies included, and at the unit's root.  On 296 each
+# repeat was refused at translation by its type alone.  Entry 7; 81.. name the failing check.
+fn: lm_stg_convert_char_int (char: c) int
+    throws: range
+    if: c > 9
+        throw: range
+    return: (cast: (int) c) + 100
+end: lm_stg_convert_char_int
+fn: m (int: g) int
+    int: z 5
+    int: caught 0
+    char: z 6
+    if: z != 106
+        return: 81
+    ---
+    if: g = 1
+        char: z 7
+    else:
+        char: z 8
+    ---
+    if: z != 107
+        return: 82
+    ---
+    ---
+        char: z 20
+        catch: convert ()
+            caught: 1
+    ---
+    if: caught != 1 || z != 107
+        return: 83
+    ---
+    char: z
+    if: z != 107
+        return: 84
+    ---
+    return: 7
+end: m
+int: code m(1)
+int: rz 5
+char: rz 6
+if: code = 7 && rz != 106
+    code: 85
+---
+char: rz
+if: code = 7 && rz != 106
+    code: 86
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

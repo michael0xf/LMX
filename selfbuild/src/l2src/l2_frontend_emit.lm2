@@ -1928,6 +1928,11 @@ fn: lm_compiler_check_decl_candidate (const: (@: stmt c.LmP0Node); int: mi; cons
     # place. A candidate-free repetition only checks its contract.
     if: own >= 0 && own_decl_cell[0][own] != stmt && declaration\candidate_count > 0 && c.lm_compiler_own_in_eternal(own) != 0 && c.lm_compiler_split_data_row(own) = 0
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "an eternal branch field cannot be updated")))
+    # Slice 297 (REPEATED-DECL-TYPED-RECEPTION; the book provenance :428, :483; Codex 295 review): a single-field repeat of
+    # another number type checks the known place's compatibility by the ordinary admission and writes nothing.
+    if: own >= 0 && declaration\candidate_count = 0 && c.lm_compiler_repeat_other_type(own, stmt) != 0
+        own_excl_cell[0]: previous
+        return: (cast: (int) (lm_compiler_check_repeat_type(stmt, own, mi, path)))
     if: declaration\candidate_count = 0
         formal: c.lm_compiler_param_find(mi, (cast: (const: @: c.LmP0Text) (declaration\name)))
         if: own >= 0 && own_decl_cell[0][own] = stmt && formal >= 0 && c.lm_compiler_own_is_pointer(own_ty_cell[0][own]) = 0
@@ -1947,6 +1952,10 @@ fn: lm_compiler_check_decl_candidate (const: (@: stmt c.LmP0Node); int: mi; cons
         rc: c.lm_compiler_check_literal_kind((cast: (const: @: c.LmP0Text) (first\value\as\atom)), c.lm_compiler_lit_kind_from_own(c.lm_compiler_own_decl_ty(stmt)), path, stmt)
     if: rc = 0
         rc: lm_compiler_check_init_convert(stmt, first, mi, path)
+    # Slice 297: a repeat of another number type -- its candidate, checked above against the written receiver, is received by
+    # the known place by the ordinary reception (lm_compiler_check_repeat_type).
+    if: rc = 0 && own >= 0 && c.lm_compiler_repeat_other_type(own, stmt) != 0
+        rc: lm_compiler_check_repeat_type(stmt, own, mi, path)
     own_excl_cell[0]: previous
     return: (cast: (int) (rc))
 end: lm_compiler_check_decl_candidate
@@ -4552,6 +4561,7 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
     int: cf_cand 0 - 1
     int: ns_at 0 - 1
     int: vty 0
+    int: named_literal 0
     if: arguments = 0
         return: (cast: (int) (c.lm_compiler_error_fatal(path, source_node, "internal: CHECK lost its bound arguments")))
     nact: arguments\count
@@ -4611,6 +4621,10 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
         value: @ actual\value
         a0: value\first
         actual_span: value\count
+        # Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; Codex 294 review): a literal written by name takes its context from the
+        # formal of its name in the callable the call selects, at run time (lm_compiler_named_literal_actual) -- not from the
+        # formal of that name here: no static reception or literal range by this signature.
+        named_literal: (cast: (int) (c.lm_compiler_named_literal_actual(actual, idx, actual_i)))
         # A callable formal admits a callable value. A bare name/path denotes the occurrence; an explicit call
         # must supply its result, never its unevaluated head (book #callables, M1).
         req_mi: c.lm_compiler_cf_get(idx, actual_i)
@@ -4733,7 +4747,7 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
                 return: (cast: (int) (1))
             if: handled = 0 && req_mi < 0 && lm_compiler_check_value_span(value, mi, path, (cast: (const: @: c.LmP0Node) (value\node))) != 0
                 return: (cast: (int) (1))
-            if: handled = 0 && req_mi < 0 && nst < 0
+            if: handled = 0 && req_mi < 0 && nst < 0 && named_literal = 0
                 if: c.lm_compiler_prim_code_name(c.lm_compiler_ft(idx, actual_i)) != 0
                     if: lm_compiler_check_numeric_receive_span(value, (cast: (int) (c.lm_compiler_ft(idx, actual_i))), mi, path, (cast: (const: @: c.LmP0Node) (value\node))) != 0
                         return: (cast: (int) (1))
@@ -4752,7 +4766,7 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
                     return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
                 ---
             ---
-            if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM
+            if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && named_literal = 0
                 if: c.lm_compiler_check_literal_kind((cast: (const: @: c.LmP0Text) (a0\value\as\atom)), c.lm_compiler_lit_kind_from_ft(c.lm_compiler_ft(idx, actual_i)), path, source_node) != 0
                     return: (cast: (int) (1))
                 ---
@@ -6924,11 +6938,18 @@ fn: lm_compiler_rw_tlit (const: (@: source_node c.LmP0Node); int: parent; int: t
             return: 1
         if: rw_emit_cell[0] = 0
             return: 0
-        if: neg != 0
+        # Slice 297: a negated literal is negated in its C99 type, as the kernel's negation is (lmx_walk_value_unary): one of
+        # no U spelling is an int, its magnitude the size_t two's complement -- `0U - n` wrapped in unsigned int and read as a
+        # positive magnitude (lmx_walk_value_lit_fits); one spelled U keeps its unsigned type's wrap.
+        if: neg != 0 && usuf = 0
+            if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, (cast: (size_t) 0U) - %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
+                return: 1
+            ---
+        if: neg != 0 && usuf != 0
             if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, 0U - %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
                 return: 1
             ---
-        else:
+        if: neg = 0
             if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, mag) < 0
                 return: 1
             ---
@@ -9490,7 +9511,11 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
                 else:
                     if: c.lm_compiler_rw_num_ty(c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, k))) != 0
                         arg: -1
-                        if: lm_compiler_rw_numeric_argument_span(value, (cast: (int) (c.lm_compiler_input_ft(idx, k))), site, @ arg) != 0
+                        # Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; Codex 294 review): a literal written by name is a
+                        # contextual LIT -- the formal of its name in the selected callable receives it, as natively.
+                        if: c.lm_compiler_named_literal_actual(actual, idx, k) != 0 && lm_compiler_rw_named_literal(actual, site, @ arg) != 0
+                            return: (cast: (int) (1))
+                        if: arg < 0 && lm_compiler_rw_numeric_argument_span(value, (cast: (int) (c.lm_compiler_input_ft(idx, k))), site, @ arg) != 0
                             return: (cast: (int) (1))
                         ---
                     else:
@@ -12502,7 +12527,13 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: own_decl_cell[0][oi] = stmt
             own_excl_cell[0]: oi
         ---
-        k: lm_compiler_rw_assign(into, oi, cond, n, @ port_local_node)
+        # Slice 297 (REPEATED-DECL-TYPED-RECEPTION): a repeat of another number type puts the candidate the place received
+        # through the converter of its written type (lm_compiler_rw_repeat_assign), as natively.
+        if: c.lm_compiler_repeat_other_type(oi, stmt) != 0
+            k: lm_compiler_rw_repeat_assign(into, oi, stmt, @ port_local_node)
+        else:
+            k: lm_compiler_rw_assign(into, oi, cond, n, @ port_local_node)
+        ---
         own_excl_cell[0]: 0 - 1
         if: k != 0
             return: (cast: (int) (1))
@@ -12726,9 +12757,13 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
         if: source != 0 && (source\part = 2 || source\part = 0)
             moved: c.lm_compiler_method_part_contains_own(rw_mi_cell[0], 13, c.lm_compiler_own_by_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value))))
         ---
+        # Slice 297 (REPEATED-DECL-TYPED-RECEPTION; the book provenance :428, :483): a repeated single-field declaration writes
+        # nothing and has no slot or row of its own -- its place is the first declaration's.
+        if: lm_compiler_repeat_single_field(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value))) != 0
+            moved: 2
         # A source root: every head has a physical slot and a registry row (N4-U U1).  The layout pass notes the slot: a path that selects
         # a head with no place of its own reads it (locus 9).
-        if: source != 0 && slot >= 0
+        if: source != 0 && slot >= 0 && moved != 2
             if: construct_phase_cell[0] = 0 && c.lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (field\value))) < 0 && c.lm_compiler_root_head_text(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value))) != 0
                 if: c.lm_compiler_ps_add((cast: (const: @: c.LmP0Node) (field\value)), slot) != 0
                     return: 1
@@ -18148,3 +18183,119 @@ fn: lm_compiler_rw_contract_formal (@: arguments c.L2ApplicationActuals; int: j)
         return: (cast: (int) (j))
     return: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
 end: lm_compiler_rw_contract_formal
+
+# Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; Codex 294 review): the walked operand of a literal a call writes by name
+# (lm_compiler_named_literal_actual): a contextual LIT of its magnitude and U spelling (lm_compiler_rw_tlit with no storage
+# type), received by the formal of its name in the selected callable (lmx_walk_selected_ready_values).
+fn: lm_compiler_rw_named_literal (@: actual c.L2ApplicationActual; int: parent; @: out int) int
+    @: value c.L2ValueSpan 0
+    @: first c.LmP0Field 0
+    @: atom c.LmP0Text 0
+    int: neg 0
+    int: usuf 0
+    int: ch 0
+    size_t: mag 0U
+    if: actual = 0
+        return: (cast: (int) (1))
+    value: @ actual\value
+    first: (cast: (@: c.LmP0Field) (value\first))
+    if: first = 0 || first\value = 0 || first\value\as = 0
+        return: (cast: (int) (1))
+    atom: first\value\as\atom
+    if: c.lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) atom), @ neg, @ mag, @ usuf) != 0
+        return: (cast: (int) (lm_compiler_rw_tlit((cast: (const: @: c.LmP0Node) (first\value)), parent, (cast: (int) (c.lm_compiler_free_own())), neg, mag, usuf, out)))
+    if: c.lm_compiler_rw_char_lit((cast: (const: @: c.LmP0Text) atom), @ ch) != 0
+        return: (cast: (int) (lm_compiler_rw_tlit((cast: (const: @: c.LmP0Node) (first\value)), parent, (cast: (int) (c.lm_compiler_free_own())), 0, (cast: (size_t) ch), 0, out)))
+    return: (cast: (int) (1))
+end: lm_compiler_rw_named_literal
+
+# Slice 297 (REPEATED-DECL-TYPED-RECEPTION; the book provenance :428, :483; Codex 295 review): 1 when stmt repeats a known
+# place's declaration with one field and no candidate.  It writes nothing: no step, no slot and no row of its own.
+fn: lm_compiler_repeat_single_field (int: mi; const: (@: stmt c.LmP0Node)) int
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @: declaration c.L2Declaration 0
+    int: own -1
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || c.lm_compiler_own_decl_ty(stmt) = 0
+        return: (cast: (int) (0))
+    declaration: c.lm_compiler_declaration(stmt)
+    if: declaration = 0 || declaration\name = 0 || declaration\candidate_count != 0
+        return: (cast: (int) (0))
+    own: c.lm_compiler_own_find_decl(mi, (cast: (const: @: c.LmP0Text) (declaration\name)), stmt)
+    if: own < 0
+        return: (cast: (int) (0))
+    return: (cast: (int) ((cast: (int) (own_decl_cell[0][own] != stmt))))
+end: lm_compiler_repeat_single_field
+
+# Slice 297: the check of a repeat of another number type at the known place own (lm_compiler_repeat_other_type).  With a
+# candidate -- formed by the written receiver, checked by lm_compiler_check_decl_candidate -- the place receives it by the
+# ordinary numeric reception: the conversion table's receiver of the written type to the place's, its one input of the
+# written type, its call edge; the program without that receiver has the ordinary reception's refusal.  Without a candidate:
+# the place's compatibility with the written type by the same admission, and nothing is written (no edge).
+fn: lm_compiler_check_repeat_type (const: (@: stmt c.LmP0Node); int: own; int: mi; const: (@: path char)) int
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    @: cv_gap_cell int (cast: (@: int) (@ c.l2_cv_gap))
+    @: declaration c.L2Declaration c.lm_compiler_declaration(stmt)
+    c.L2ValueSpan: value
+    c.L2NumericReceive: plan
+    int: written 0
+    int: place 0
+    int: converter -1
+    int: status 0
+    if: declaration = 0 || own < 0
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "internal: a repeated declaration lost its place")))
+    written: (cast: (int) (c.lm_compiler_decl_ft(stmt)))
+    place: (cast: (int) (c.lm_compiler_ft_of_own(own_ty_cell[0][own])))
+    if: written < 0
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "internal: a repeated declaration lost its type")))
+    if: declaration\candidate_count = 0
+        if: c.lm_compiler_colon_types_compatible(place, written) != 0
+            return: (cast: (int) (0))
+        if: cv_gap_cell[0] = 2
+            return: (cast: (int) (c.lm_compiler_convert_norecv(path, stmt)))
+        if: cv_gap_cell[0] = 5
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "the program has no source table `primitive.convert`")))
+        if: cv_gap_cell[0] = 3
+            return: (cast: (int) (c.lm_compiler_cv_refused(path, stmt, "internal: a conversion refused without its reason")))
+        if: cv_gap_cell[0] = 1
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "mixed numeric types (a conversion)")))
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "assignment value has incompatible type")))
+    if: c.lm_compiler_repeat_plan(stmt, own, @ value, @ plan) != 0
+        # No receiver of this conversion: the ordinary reception says why.
+        if: c.lm_compiler_check_receiving_types(stmt, written, place, 0, mi, path) != 0
+            return: (cast: (int) (1))
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "internal: a repeated declaration's reception has no plan")))
+    converter: plan\converter
+    if: m_arity_cell[0][converter] != 1
+        status: (cast: (int) (c.lm_compiler_error(path, stmt, "a numeric conversion receiver needs one declared input")))
+    if: status = 0 && c.lm_compiler_formal_raw(c.lm_compiler_ft(converter, 0)) != c.lm_compiler_formal_raw(written)
+        status: (cast: (int) (c.lm_compiler_error(path, stmt, "a numeric conversion receiver's input is not its source type")))
+    if: status = 0
+        status: (cast: (int) (c.lm_compiler_convert_edge_to(mi, converter, path, (cast: (const: @: c.LmP0Node) (value\node)))))
+    c.lm_compiler_value_span_release(@ value)
+    return: (cast: (int) (status))
+end: lm_compiler_check_repeat_type
+
+# Slice 297: the walked step of a repeat of another number type -- the PUT of the known place oi, its value the candidate the
+# place received through the converter of its written type (lm_compiler_repeat_plan; natively lm_compiler_emit_repeat_receive).
+# A place hosted apart keeps the method native.
+fn: lm_compiler_rw_repeat_assign (int: into; int: oi; const: (@: stmt c.LmP0Node); @: out int) int
+    c.L2ValueSpan: value
+    c.L2NumericReceive: plan
+    int: rhs -1
+    int: vs 0
+    int: frame 0
+    int: status 0
+    if: c.lm_compiler_rw_cached(oi) = 0 && c.lm_compiler_rw_is_hosted(oi) != 0 && c.lm_compiler_own_computed(oi) = 0
+        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "a repeated declaration of another type at a hosted place")))
+    if: c.lm_compiler_repeat_plan(stmt, oi, @ value, @ plan) != 0
+        return: (cast: (int) (1))
+    status: lm_compiler_rw_write(into, oi, "LMX_WALK_OP_PUT", out, @ vs)
+    frame: (cast: (int) (\out))
+    if: status = 0
+        status: lm_compiler_rw_numeric_receive(@ plan, frame, @ rhs)
+    if: status = 0
+        status: (cast: (int) (c.lm_compiler_rw_put(frame, vs, rhs)))
+    c.lm_compiler_value_span_release(@ value)
+    return: (cast: (int) (status))
+end: lm_compiler_rw_repeat_assign

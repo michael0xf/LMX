@@ -446,6 +446,44 @@ sub: lmx_walk_value_contextual (@: value c.LmxWalkValue)
     return
 end: lmx_walk_value_contextual
 
+# Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; the book provenance :198, :773; Codex 294 review): whether the value of a
+# contextual literal is one of the numeric type `ty` -- its magnitude, or for a negated literal of no U spelling (the two's
+# complement lmx_walk_value_unary leaves, a magnitude above SIZE_MAX / 2) the negative of its complement; a literal spelled
+# U is unsigned, its value its magnitude.  A type whose largest value is SIZE_MAX takes every magnitude.  1: it is; 0: it
+# is not, the place's reception is the implicit `convert`, never a silent reinterpretation; a type that is no number
+# answers 1 (its own reception decides).
+fn: lmx_walk_value_lit_fits (@: value c.LmxWalkValue; int: ty) int
+    size_t: magnitude 0U
+    size_t: above 0U
+    size_t: below 0U
+    int: base_type 0
+    if: value = 0
+        return: 0
+    base_type: c.lmx_type_base(ty)
+    magnitude: value\wide
+    if: base_type = c.LMX_TYPE_SIZE_T
+        return: 1
+    if: base_type = c.LMX_TYPE_INT
+        above: (cast: (size_t) c.INT_MAX)
+        below: (cast: (size_t) c.INT_MAX) + 1U
+    if: base_type = c.LMX_TYPE_CHAR
+        above: (cast: (size_t) c.CHAR_MAX)
+        below: (cast: (size_t) (0 - c.CHAR_MIN))
+    if: base_type = c.LMX_TYPE_UNSIGNED
+        above: (cast: (size_t) c.UINT_MAX)
+    if: base_type = c.LMX_TYPE_ULONG
+        above: (cast: (size_t) c.ULONG_MAX)
+    if: base_type = c.LMX_TYPE_UNSIGNED_CHAR
+        above: (cast: (size_t) c.UCHAR_MAX)
+    if: above = 0U
+        return: 1
+    if: above = c.SIZE_MAX
+        return: 1
+    if: value\natural != 0U || magnitude <= c.SIZE_MAX / 2U
+        return: (cast: (int) (magnitude <= above))
+    return: (cast: (int) ((0U - magnitude) <= below))
+end: lmx_walk_value_lit_fits
+
 # Slice 255 (design 4.5 B2a): the reception of a complete value by a place of type `ty` -- the one runtime admission of a
 # runtime-typed value at a typed receiving place (a typed local or field, a return, a formal, a C-ABI actual, a store into a
 # free input's place).  A number of the same base type, after a contextual literal has taken the place's type, or a reference
@@ -457,6 +495,10 @@ fn: lmx_walk_value_receive (@: value c.LmxWalkValue; int: ty; @: out c.LmxWalkVa
     int: status
     if: value = 0 || out = 0 || c.lmx_type_base(ty) = c.LMX_TYPE_NONE || value\present = 0
         return: c.LMX_WALK_INVALID
+    # Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; Codex 294 review): a contextual literal outside the place's type -- 300 at a
+    # char formal of the callable a call selected -- is the implicit `convert` before anything receives it.
+    if: value\kind = c.LMX_WALK_VALUE_NUMBER && c.lmx_type_base(value\type) = c.LMX_TYPE_NONE && lmx_walk_value_lit_fits(value, ty) = 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
     if: value\kind = c.LMX_WALK_VALUE_NUMBER
         status: lmx_walk_value_adopt(value, ty, taken_p)
         if: status != c.LMX_WALK_OK
@@ -512,6 +554,7 @@ end: lmx_walk_value_null_literal
 
 fn: lmx_walk_value_unary (int: op; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
     size_t: number 0U
+    unsigned: narrow 0U
     int: ty 0
     if: op != c.LMX_WALK_OP_NEG && op != c.LMX_WALK_OP_POS && op != c.LMX_WALK_OP_BNOT
         return: c.LMX_WALK_INVALID
@@ -531,6 +574,23 @@ fn: lmx_walk_value_unary (int: op; @: value c.LmxWalkValue; @: out c.LmxWalkValu
         if: c.UCHAR_MAX > c.INT_MAX
             ty: c.LMX_TYPE_UNSIGNED
     ---
+    # Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION): a contextual literal spelled U is an unsigned of its C99 type (6.4.4.1:
+    # unsigned int when it holds the magnitude, else the 64-bit one): its sign and complement are that type's, and the result
+    # keeps the U spelling.  The size_t complement without the spelling made `~0U` the value -1 -- no unsigned
+    # (lmx_walk_value_lit_fits); a literal of no U spelling stays the int it is (`~0` is -1).
+    if: ty = c.LMX_TYPE_NONE && value\natural != 0U && number <= (cast: (size_t) c.UINT_MAX)
+        narrow: (cast: (unsigned) number)
+        if: op = c.LMX_WALK_OP_NEG
+            narrow: 0U - narrow
+        if: op = c.LMX_WALK_OP_BNOT
+            narrow: c.UINT_MAX - narrow
+        return: lmx_walk_value_lit(out, (cast: (size_t) narrow), 1)
+    if: ty = c.LMX_TYPE_NONE && value\natural != 0U
+        if: op = c.LMX_WALK_OP_NEG
+            number: 0U - number
+        if: op = c.LMX_WALK_OP_BNOT
+            number: 0U - number - 1U
+        return: lmx_walk_value_lit(out, number, 1)
     if: op = c.LMX_WALK_OP_NEG
         number: 0U - number
     if: op = c.LMX_WALK_OP_BNOT

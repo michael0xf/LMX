@@ -1,0 +1,16 @@
+# Slice 297 probe (REPEATED-DECL-TYPED-RECEPTION, the ordinary reception it reuses): the assignment of a char value to the
+# int place z; the program defines no char -> int receiver.  Exit: z's value, 25 for the implicit convert; a refusal at
+# translation is the ordinary reception's own answer.
+fn: run () int
+    ---
+        int: z 5
+        char: c 6
+        z: c
+        return: z
+        catch: convert ()
+            return: 25
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

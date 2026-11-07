@@ -1,0 +1,60 @@
+# Slice 294 probe (CALLABLE-PLACE-NAMED-ACTUALS, reception): the place's formals are int x, char y; the fn written into
+# it has int y, char x (one signature by position).  A named actual binds the selected formal of its name and is
+# received by that formal's type (the book :485): 5 into char x, 7 into int y; 300 is no char -- the implicit
+# `convert`.  Entry 7; a wrong value leaves as the exit code (v; 33 when the second call gives no convert).
+fn: g (int: y; char: x) int
+    return: (cast: (int) x) * 10 + y
+end: g
+Places:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_ok () int
+    ---
+        int: got Places\f(x: 5; y: 7)
+        return: got
+        catch: call ()
+            return: 22
+        catch: convert ()
+            return: 25
+    ---
+end: call_ok
+fn: call_wide () int
+    ---
+        int: got Places\f(x: 300; y: 7)
+        return: got
+        catch: call ()
+            return: 22
+        catch: convert ()
+            return: 25
+    ---
+end: call_wide
+fn: run () int
+    int: v 0
+    @: Hw g g
+    if: write_place() != 1
+        return: 34
+    ---
+    v: call_ok()
+    if: v != 57
+        return: v
+    ---
+    v: call_wide()
+    if: v != 25
+        return: 33
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

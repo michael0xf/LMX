@@ -1,0 +1,23 @@
+# Slice 297 probe (FORMAL-DEFAULT-FORMS; the book provenance :498, :699; Codex 293 and 296 reviews: an already formed
+# Structure in the default's position is taken by the formal's general contract): a Structure formal whose written default
+# names a Structure (`T: p D`).  A call without the argument takes D; one with T takes T.  Entry 7; a wrong value leaves
+# as the exit code (v, then 100 + v).
+T:
+    int: a 1
+end: T
+D:
+    int: a 4
+end: D
+fn: f (T: p D) int
+    return: p\a
+end: f
+int: code 7
+int: v f()
+if: v != 4
+    code: v
+---
+if: code = 7 && f(T) != 1
+    code: 100 + f(T)
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

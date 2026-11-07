@@ -3,7 +3,12 @@
 # formal of its ordinal, a named one the formal of its own name, never the formal the place's declared signature puts
 # there -- and a formal no written actual binds takes the selected callable's default; a name the selected callable has
 # no formal of is the call's implicit `call`.  Callable places written with fns whose formals are named otherwise
-# (swapped, with defaults, renamed), and a callable formal given such a fn.  Entry 7, codes 81-93 (34: a refused write).
+# (swapped, with defaults, renamed), and a callable formal given such a fn.  Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION;
+# the book provenance :198, :773; Codex's 294 review): a literal written by name takes its context from the formal of its
+# name in the selected callable -- the place `Mixed\f (int: x; char: y)` holding `gm (int: y; char: x)` receives `x: 5`
+# as gm's char x and `y: 300` as its int y; 300 at a char formal, through the place or in a direct call, is the implicit
+# `convert` before the body; a negated literal is received by its value (-1 a char, -200 none).  Entry 7, codes 81-99
+# (34: a refused write).
 fn: g (int: y; int: x) int
     return: x * 10 + y
 end: g
@@ -16,6 +21,9 @@ end: gr
 fn: gn (int: y) int
     return: y
 end: gn
+fn: gm (int: y; char: x) int
+    return: (cast: (int) x) * 10 + y
+end: gm
 Two:
     fn: f (int: x; int: y) int
         return: x * 10 + y
@@ -36,6 +44,11 @@ Bare:
         return: x
     end: f
 end: Bare
+Mixed:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Mixed
 int: Hw 0
 fn: write_two () int
     ---
@@ -69,6 +82,14 @@ fn: write_bare () int
             return: 24
     ---
 end: write_bare
+fn: write_mixed () int
+    ---
+        @: Mixed\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_mixed
 fn: two_xy () int
     ---
         int: got Two\f(x: 1; y: 2)
@@ -157,6 +178,54 @@ fn: bare_x () int
             return: 22
     ---
 end: bare_x
+fn: mixed_xy () int
+    ---
+        int: got Mixed\f(x: 5; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: mixed_xy
+fn: mixed_wide_y () int
+    ---
+        int: got Mixed\f(x: 5; y: 300)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: mixed_wide_y
+fn: mixed_wide_x () int
+    ---
+        int: got Mixed\f(x: 300; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: mixed_wide_x
+fn: direct_wide_x () int
+    ---
+        int: got gm(x: 300; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: direct_wide_x
+fn: mixed_neg_x () int
+    ---
+        int: got Mixed\f(x: -1; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: mixed_neg_x
+fn: mixed_low_x () int
+    ---
+        int: got Mixed\f(x: -200; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: mixed_low_x
 fn: run_two () int
     @: Hw g g
     if: write_two() != 1
@@ -218,6 +287,31 @@ fn: run_bare () int
     ---
     return: 7
 end: run_bare
+fn: run_mixed () int
+    @: Hw gm gm
+    if: write_mixed() != 1
+        return: 34
+    ---
+    if: mixed_xy() != 57
+        return: 94
+    ---
+    if: mixed_wide_y() != 350
+        return: 95
+    ---
+    if: mixed_wide_x() != 25
+        return: 96
+    ---
+    if: direct_wide_x() != 25
+        return: 97
+    ---
+    if: mixed_neg_x() + 3 != 0
+        return: 98
+    ---
+    if: mixed_low_x() != 25
+        return: 99
+    ---
+    return: 7
+end: run_mixed
 fn: h (int: b; int: a) int
     return: a * 10 + b
 end: h
@@ -239,6 +333,9 @@ if: code = 7
 ---
 if: code = 7
     code: run_bare()
+---
+if: code = 7
+    code: run_mixed()
 ---
 if: code = 7 && apply(h) != 21
     code: 92

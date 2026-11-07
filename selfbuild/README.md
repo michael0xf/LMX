@@ -6,8 +6,18 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 234 inputs (65 source files, 34 tools and
-135 tests). Slice296 lets a head that no formal, no visible outer value and no established free input binds
+The selected package contains 235 inputs (65 source files, 34 tools and
+136 tests). Slice297 carries a literal a call writes by name contextual to the formal of its name in the callable
+the call selects, in both executors: that formal receives it, and a contextual literal outside a number place's type
+is the implicit `convert` (300 at a char formal), never a silent truncation; a negated literal is negated in its C99
+type (no U: an int; U: its unsigned type). A repeated declaration of another number type gives its candidate, formed
+by the written receiver, to the known place by the ordinary numeric reception (the conversion table's receiver, else
+the ordinary refusal of a conversion without its receiver); a single-field repeat checks the place and writes
+nothing, and no longer gets a slot. Repeats of references, Structures and arrays keep the refusal
+(REPEATED-DECL-OTHER-KINDS); a typed value bound by name to a selected formal of another type is still the implicit
+`convert` (CALLABLE-PLACE-TYPED-RECEPTION).
+
+Slice296 lets a head that no formal, no visible outer value and no established free input binds
 define a named Structure with a name as its written content too (`x: j`) -- in a method, at the unit's and a
 part's root and inside a named Structure -- as a literal or an expression already did; the refusal `an unknown
 head needs a Structure body` was a limit, and the last "is the head a Structure" question of a declaration now
@@ -271,19 +281,19 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot158a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-boot157a/quick157a/lmxtool.exe` (`A6CF11BE…`, the working tool of
-slice295; this package's tools/build.lm2 is unchanged), previous frontend
-`cold-boot157a/quick157a/g2/frontend/l2trans.exe` (`DE9354F0…`, the G2
-frontend of slice295) with its adjacent backend (`22578892…`) and libc
+boot159a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-boot158a/quick158a/lmxtool.exe` (`DC20947D…`, the working tool of
+slice296; this package's tools/build.lm2 is unchanged), previous frontend
+`cold-boot158a/quick158a/g2/frontend/l2trans.exe` (`76745BB0…`, the G2
+frontend of slice296) with its adjacent backend (`5F07BA58…`) and libc
 (`AF9FDAE3…`), and BASE `cold-candidate48/full48/g2/frontend`. Its promoted
-working tool is `cold-boot158a/quick158a/lmxtool.exe` (`DC20947D…`), the G2
+working tool is `cold-boot159a/quick159a/lmxtool.exe` (`D27471B3…`), the G2
 tool, with `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot158a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-07, 04:52:41–05:04:28Z, 706 s): `BOOTSTRAP quick 0 failures`. G0
+boot159a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-07, 07:15:05–07:27:58Z, 773 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's
@@ -294,9 +304,9 @@ the previous working tool's own commands (`checks`): the stage against its manif
 producer record closed on its files and free of script hosts, G1 against G2
 (`exe-same` for the three executables, which differ only in the PE link stamp,
 `same` for libc, the runtime objects, the tool's L1 and C and the consumed
-inputs), the working tool and bundle against G2, the runtime the candidate ran on (slice295's G2
-runtime: the kernel is unchanged) against G2's runtime objects (byte-equal), and the candidate frontend
-against G2 (`exe-same`). The whole full list ran on that candidate (110 rows, 0 failures) and the G2 tool's
+inputs), the working tool and bundle against G2, the runtime the candidate ran on (this slice's
+kernel, built by the previous working tool) against G2's runtime objects (byte-equal), and the candidate frontend
+against G2 (`exe-same`). The whole full list ran on that candidate (111 rows, 0 failures) and the G2 tool's
 self-test on G2; FULL has not run on these bytes. That comparison is its own evidence, not a reproducibility
 gate. The draft79 line's open items (V63, the split-pointer place, the bare
 return) are not closed by this result.

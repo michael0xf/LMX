@@ -1,0 +1,19 @@
+# Slice 297 probe (REPEATED-DECL-TYPED-RECEPTION; Codex 295 review): `char: z 6` after `int: z 5` with the char -> int
+# receiver the conversion table names defined by the program (convert.lm2: char int widen lm_stg_convert_char_int).  The
+# candidate char 6 is received by the place z through it: 6, and the receiver adds 1 to tell its result from a raw copy
+# (7).  Exit: z's value; 25 for the implicit convert.
+fn: lm_stg_convert_char_int (char: c) int
+    return: (cast: (int) c) + 1
+end: lm_stg_convert_char_int
+fn: run () int
+    ---
+        int: z 5
+        char: z 6
+        return: z
+        catch: convert ()
+            return: 25
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

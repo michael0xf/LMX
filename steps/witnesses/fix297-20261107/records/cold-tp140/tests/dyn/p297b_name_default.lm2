@@ -1,0 +1,17 @@
+# Slice 297 probe (FORMAL-DEFAULT-FORMS): a primitive formal whose written default names a unit field (`int: a K`).  The
+# probe tells the snapshot reading (the default is K's value when the args entry was built: 5 after `node\K: 9` too) from
+# the live one (9).  Exit: 5 or 9 (the value f() returns after the write), 7 never; a refusal at translation is the
+# builder's limit of 293.
+int: K 5
+fn: f (int: a K) int
+    return: a
+end: f
+fn: set_k () int
+    node\K: 9
+    return: 0
+end: set_k
+int: code 7
+int: z set_k()
+code: f()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

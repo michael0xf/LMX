@@ -497,3 +497,16 @@ is one `lmxtool checks` list of 38 commands run by the working tool of boot157a,
 0 failures. A head written with a name tail and bound by nothing now builds a named Structure through the same
 collection a literal tail took; one question of a declaration goes through an existing guard. Not measured apart.
 A whole-pipeline measurement, not a controlled comparison. [Commands, results and hashes](steps/witnesses/fix296-20261107/notes.md).
+
+## Slice297 / boot159a (Opus, 2026-11-07)
+
+Whole quick 772.86 s: 07:15:04.6927947Z→07:27:57.5501415Z, both generations smoke 9/0; G0 is the working tool of
+boot158a (tools/build.lm2 is unchanged). The kernel changed (lmx_walk_values): the candidate runtime rt159b was built
+by the working tool of boot158a and its G2 frontend, and G2's runtime of boot159a is byte-equal to it. The whole
+maintained registry on the candidate frontend fe159c and rt159b, fe159c `exe-same` with G2: 111/0, 933 checks
+(977.54 s: 06:31:33.1793262Z→06:47:50.7238810Z; the failed first registry on fe159b and rt159a took 979.57 s). Source
+235/F2DD70E2; the acceptance is one `lmxtool checks` list of 38 commands run by the working tool of boot158a, 0
+failed; the G2 tool's self-test 0 failures. The registry took 93.82 s more than 296's with one row more; the new
+per-receive range check of a contextual literal (`lmx_walk_value_lit_fits`) and the changed rows were not measured
+apart, so the cause is not located. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix297-20261107/notes.md).

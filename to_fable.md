@@ -54,7 +54,7 @@ IDENTIFIER-CODES и итоговый RESULT.
 
 - `HEAD` = `origin/main` = `e85a3861`. P = `C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01` (не в git).
 - WIP среза 302 — только рабочая копия и стейдж, не закоммичен. 14 изменённых путей `selfbuild/` (кандидат a07,
-  список `P/pins/tp164-changed-a07.list`, хэши `P/pins/tp164-changed-a07.sha256`): `inputs.list` (238 входов, + 
+  список `P/pins/tp164-changed-a07.list`, хэши `P/pins/tp164-changed-a07.sha256`): `inputs.list` (238 входов, +
   `src/l2src/lmx_ids.lm2`), ядро `lmx_ids.lm2` (новый, untracked), `lmx_source_names`, `lmx_call`, `lmx_walk_values`,
   `lmx_implements`, `lmx_graph_copy_owned`, драйвер `l2_driver`, frontend `l2_frontend_values`, `_emit`, `_core`,
   `_lower`, `tools/build.lm2`, фикстура `tests/dyn/free_c_pointer.lm2`. Запись — `steps/witnesses/fix302-20261107/notes.md`

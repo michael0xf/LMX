@@ -461,3 +461,16 @@ an omitted formal's default through one kernel call (`lmx_call_formal_default`),
 entry of a suffix slot without an operand. Calls that omit nothing are unchanged. Not measured apart. A
 whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix293-20261106/notes.md).
+
+## Slice294 / boot156a (Opus, 2026-11-07)
+
+Whole quick 688.70 s: 01:33:22.4366990Z→01:44:51.1415445Z, both generations smoke 9/0; G0 is tool156a, the
+tool rebuilt from this package's tools/build.lm2 (one more kernel export). The whole maintained registry on
+the candidate frontend fe156a and runtime rt156b, `exe-same` with G2 and byte-equal to G2's runtime: 107/0,
+909 checks (823.96 s: 01:19:12.5346139Z→01:32:56.4952980Z). Source 230/A9D768A6; the acceptance is one
+`lmxtool checks` list of 38 commands run by the working tool of boot155a, 0 failed; the G2 tool's self-test
+0 failures. A native call that names an actual or omits a formal makes one kernel call
+(`lmx_call_bind_actuals`: the selected callable's headers, a name match per named actual, the permutation,
+the defaults); a walked call that omits formals carries a shorter frame. Calls that write every formal by
+position are unchanged. Not measured apart. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix294-20261107/notes.md).

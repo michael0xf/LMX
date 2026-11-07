@@ -1,0 +1,250 @@
+# Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; docs/LMX_semantics.ru.md :381, :467, :485; Codex's 285 norm answers item 3,
+# its 293 review): a call binds what it writes to the formals of the callable it selected -- a positional actual the
+# formal of its ordinal, a named one the formal of its own name, never the formal the place's declared signature puts
+# there -- and a formal no written actual binds takes the selected callable's default; a name the selected callable has
+# no formal of is the call's implicit `call`.  Callable places written with fns whose formals are named otherwise
+# (swapped, with defaults, renamed), and a callable formal given such a fn.  Entry 7, codes 81-93 (34: a refused write).
+fn: g (int: y; int: x) int
+    return: x * 10 + y
+end: g
+fn: gd (int: y 6; int: x 8) int
+    return: x * 10 + y
+end: gd
+fn: gr (int: y 6) int
+    return: y
+end: gr
+fn: gn (int: y) int
+    return: y
+end: gn
+Two:
+    fn: f (int: x; int: y) int
+        return: x * 10 + y
+    end: f
+end: Two
+Dflt:
+    fn: f (int: x 1; int: y 2) int
+        return: x * 10 + y
+    end: f
+end: Dflt
+One:
+    fn: f (int: x 1) int
+        return: x
+    end: f
+end: One
+Bare:
+    fn: f (int: x) int
+        return: x
+    end: f
+end: Bare
+int: Hw 0
+fn: write_two () int
+    ---
+        @: Two\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_two
+fn: write_dflt () int
+    ---
+        @: Dflt\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_dflt
+fn: write_one () int
+    ---
+        @: One\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_one
+fn: write_bare () int
+    ---
+        @: Bare\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_bare
+fn: two_xy () int
+    ---
+        int: got Two\f(x: 1; y: 2)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: two_xy
+fn: two_yx () int
+    ---
+        int: got Two\f(y: 3; x: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: two_yx
+fn: two_pos () int
+    ---
+        int: got Two\f(5, 6)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: two_pos
+fn: dflt_y () int
+    ---
+        int: got Dflt\f(y: 3)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: dflt_y
+fn: dflt_x () int
+    ---
+        int: got Dflt\f(x: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: dflt_x
+fn: dflt_none () int
+    ---
+        int: got Dflt\f()
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: dflt_none
+fn: dflt_pos () int
+    ---
+        int: got Dflt\f(5)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: dflt_pos
+fn: one_none () int
+    ---
+        int: got One\f()
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: one_none
+fn: one_x () int
+    ---
+        int: got One\f(x: 5)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: one_x
+fn: one_pos () int
+    ---
+        int: got One\f(4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: one_pos
+fn: bare_x () int
+    ---
+        int: got Bare\f(x: 5)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: bare_x
+fn: run_two () int
+    @: Hw g g
+    if: write_two() != 1
+        return: 34
+    ---
+    if: two_xy() != 12
+        return: 81
+    ---
+    if: two_yx() != 43
+        return: 82
+    ---
+    if: two_pos() != 65
+        return: 83
+    ---
+    return: 7
+end: run_two
+fn: run_dflt () int
+    @: Hw gd gd
+    if: write_dflt() != 1
+        return: 34
+    ---
+    if: dflt_y() != 83
+        return: 84
+    ---
+    if: dflt_x() != 46
+        return: 85
+    ---
+    if: dflt_none() != 86
+        return: 86
+    ---
+    if: dflt_pos() != 85
+        return: 87
+    ---
+    return: 7
+end: run_dflt
+fn: run_one () int
+    @: Hw gr gr
+    if: write_one() != 1
+        return: 34
+    ---
+    if: one_none() != 6
+        return: 88
+    ---
+    if: one_x() != 22
+        return: 89
+    ---
+    if: one_pos() != 4
+        return: 90
+    ---
+    return: 7
+end: run_one
+fn: run_bare () int
+    @: Hw gn gn
+    if: write_bare() != 1
+        return: 34
+    ---
+    if: bare_x() != 22
+        return: 91
+    ---
+    return: 7
+end: run_bare
+fn: h (int: b; int: a) int
+    return: a * 10 + b
+end: h
+fn: h2 (int: b 3; int: a 4) int
+    return: a * 10 + b
+end: h2
+fn: apply (f(fn: (int: a; int: b) int)) int
+    return: f(a: 2; b: 1)
+end: apply
+fn: apply2 (f(fn: (int: a 5; int: b 6) int)) int
+    return: f(b: 1)
+end: apply2
+int: code run_two()
+if: code = 7
+    code: run_dflt()
+---
+if: code = 7
+    code: run_one()
+---
+if: code = 7
+    code: run_bare()
+---
+if: code = 7 && apply(h) != 21
+    code: 92
+---
+if: code = 7 && apply2(h2) != 41
+    code: 93
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

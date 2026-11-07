@@ -2216,6 +2216,78 @@ fn: lmx_callable_actual_place (@: arena c.LmxArena; @: selected_args c.Lmx; @: w
     return: lmx_callable_actual_target(arena, selected_args, written_slot, is_named, wanted, out_source, out_physical, out_answer)
 end: lmx_callable_actual_place
 
+# Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :381, :467; Codex 285 item 3, 293 review): the one correspondence of
+# a call's written actuals with the formals of the callable the call selected, in written order -- a positional actual
+# the selected formal of its ordinal, a NAMED one the selected formal of its own name (lmx_callable_actual_target), never
+# the formal a declared signature puts at that slot.  A positional actual after a NAMED one, a name the selected callable
+# has no formal of, an ordinal past its formals, two actuals of one formal: NO, the call's refusal.  The walker's EXEC
+# binder (lmx_callable_bind_written) and a generated native call (lmx_call_bind_actuals) both bind here.  source_indices
+# get each actual's SOURCE ordinal, map (when given) its physical place; out_uncertain is 1 when a place is unknown.
+fn: lmx_callable_bind_prefix (@: arena c.LmxArena; @: selected_args c.Lmx; size_t: written_count; @: actual_named int; @@: actual_names c.VoidArray; @: source_indices size_t; @: map size_t; @: out_uncertain int; @: out_answer int) int
+    size_t: i 0U
+    size_t: j
+    size_t: source_index (cast: (size_t) -1)
+    size_t: physical (cast: (size_t) -1)
+    int: named 0
+    int: named_seen 0
+    int: uncertain 0
+    int: row_answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status
+    if: out_uncertain = 0 || out_answer = 0
+        return: c.LMX_WALK_INVALID
+    out_uncertain[0]: 0
+    out_answer[0]: c.LMX_IMPLEMENTS_UNKNOWN
+    if: arena = 0 || (written_count != 0U && (actual_named = 0 || actual_names = 0 || source_indices = 0))
+        return: c.LMX_WALK_INVALID
+    while: i < written_count
+        # These are the heads formed with the once-evaluated operands.
+        # Do not reclassify a CALL child after argument effects changed it.
+        source_index: (cast: (size_t) -1)
+        physical: (cast: (size_t) -1)
+        row_answer: c.LMX_IMPLEMENTS_UNKNOWN
+        named: actual_named[i]
+        status: lmx_callable_actual_target(arena, selected_args, i, named, actual_names[i], @ source_index, @ physical, @ row_answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: row_answer = c.LMX_IMPLEMENTS_NO
+            out_answer[0]: c.LMX_IMPLEMENTS_NO
+            return: c.LMX_WALK_OK
+        if: named = 1
+            named_seen: 1
+        else:
+            if: named = 0 && named_seen != 0
+                out_answer[0]: c.LMX_IMPLEMENTS_NO
+                return: c.LMX_WALK_OK
+            ---
+        ---
+        if: row_answer != c.LMX_IMPLEMENTS_YES
+            uncertain: 1
+        source_indices[i]: source_index
+        if: physical != (cast: (size_t) -1)
+            j: 0U
+            while: j < i
+                if: source_index != (cast: (size_t) -1) && source_indices[j] = source_index
+                    out_answer[0]: c.LMX_IMPLEMENTS_NO
+                    return: c.LMX_WALK_OK
+                if: map != 0 && map[j] = physical
+                    # This is not a duplicate SOURCE formal. Interface/ABI
+                    # uncertainty remains separate from both known places.
+                    uncertain: 1
+                j: j + 1U
+            ---
+            if: map != 0
+                map[i]: physical
+            ---
+        else:
+            uncertain: 1
+        ---
+        i: i + 1U
+    ---
+    out_uncertain[0]: uncertain
+    out_answer[0]: c.LMX_IMPLEMENTS_YES
+    return: c.LMX_WALK_OK
+end: lmx_callable_bind_prefix
+
 # Compute the current invocation's borrowed physical correspondence. CALL
 # argument bindings are not cached value/Model field layouts: changing a
 # NAMED operand must not recover an old numeric formal from the arena index.
@@ -2236,8 +2308,6 @@ fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: w
     size_t: physical (cast: (size_t) -1)
     size_t: contract_count 0U
     size_t: contract_physical (cast: (size_t) -1)
-    int: named 0
-    int: named_seen 0
     int: uncertain 0
     int: row_answer c.LMX_IMPLEMENTS_UNKNOWN
     int: status
@@ -2281,46 +2351,14 @@ fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: w
     # The map records physical places. Separate temporary SOURCE coordinates
     # preserve known ABI formals even if their physical projections alias.
     # ORDINAL/LAST retain their ordinary meaning; neither half encodes SOURCE.
-    i: 0U
-    while: i < written_count
-        # These are the heads formed with the once-evaluated operands.
-        # Do not reclassify a CALL child after argument effects changed it.
-        named: actual_named[first + i]
-        status: lmx_callable_actual_target(arena, selected_args, i, named, actual_names[first + i], @ source_index, @ physical, @ row_answer)
-        if: status != c.LMX_WALK_OK
-            return: status
-        if: row_answer = c.LMX_IMPLEMENTS_NO
-            out_answer[0]: c.LMX_IMPLEMENTS_NO
-            return: c.LMX_WALK_OK
-        if: named = 1
-            named_seen: 1
-        else:
-            if: named = 0 && named_seen != 0
-                out_answer[0]: c.LMX_IMPLEMENTS_NO
-                return: c.LMX_WALK_OK
-            ---
-        ---
-        if: row_answer != c.LMX_IMPLEMENTS_YES
-            uncertain: 1
-        source_indices[first + i]: source_index
-        if: physical != (cast: (size_t) -1)
-            j: 0U
-            while: j < i
-                if: source_index != (cast: (size_t) -1) && source_indices[first + j] = source_index
-                    out_answer[0]: c.LMX_IMPLEMENTS_NO
-                    return: c.LMX_WALK_OK
-                if: map[first + j] = physical
-                    # This is not a duplicate SOURCE formal. Interface/ABI
-                    # uncertainty remains separate from both known places.
-                    uncertain: 1
-                j: j + 1U
-            ---
-            map[first + i]: physical
-        else:
-            uncertain: 1
-        ---
-        i: i + 1U
-    ---
+    # The written prefix binds through the one correspondence of both executors.
+    status: lmx_callable_bind_prefix(arena, selected_args, written_count, actual_named + first, actual_names + first, source_indices + first, map + first, @ uncertain, @ row_answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: row_answer = c.LMX_IMPLEMENTS_NO
+        out_answer[0]: c.LMX_IMPLEMENTS_NO
+        return: c.LMX_WALK_OK
+    i: written_count
     # Each suffix operand keeps the identity its producer retained: the
     # Consumer contract's own input at the same SOURCE ordinal. That input's
     # name selects the selected callable's formal through the common named

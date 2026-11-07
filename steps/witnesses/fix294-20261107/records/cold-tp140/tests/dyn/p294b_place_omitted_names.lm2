@@ -1,0 +1,80 @@
+# Slice 294 probe (CALLABLE-PLACE-NAMED-ACTUALS with FORMAL-DEFAULT; Codex 293 review): the place's fn and the fn
+# written into it both have defaults, their formals named in the other order.  A formal of the selected callable that
+# no written actual binds -- by ordinal or by its own name -- takes the selected callable's default.  Entry 7; a wrong
+# value leaves as the exit code (v, 100 + v, 150 + v, 160 + v).
+fn: g (int: y 6; int: x 8) int
+    return: x * 10 + y
+end: g
+Places:
+    fn: f (int: x 1; int: y 2) int
+        return: x * 10 + y
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_y () int
+    ---
+        int: got Places\f(y: 3)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_y
+fn: call_x () int
+    ---
+        int: got Places\f(x: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_x
+fn: call_none () int
+    ---
+        int: got Places\f()
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_none
+fn: call_pos () int
+    ---
+        int: got Places\f(5)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_pos
+fn: run () int
+    int: v 0
+    @: Hw g g
+    if: write_place() != 1
+        return: 34
+    ---
+    v: call_y()
+    if: v != 83
+        return: v
+    ---
+    v: call_x()
+    if: v != 46
+        return: 100 + v
+    ---
+    v: call_none()
+    if: v != 86
+        return: 150 + v
+    ---
+    v: call_pos()
+    if: v != 85
+        return: 160 + v
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

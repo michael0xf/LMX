@@ -1,0 +1,68 @@
+# Slice 294 probe (CALLABLE-PLACE-NAMED-ACTUALS with FORMAL-DEFAULT): the fn written into the place names its one
+# formal otherwise and has a default.  No written actual: the selected formal takes its default; a named actual of the
+# place's name: the selected callable has no such input -- the call's implicit `call`; a positional actual: the formal
+# of its ordinal.  Entry 7; a wrong value leaves as the exit code (v, 100 + v, 150 + v).
+fn: g (int: y 6) int
+    return: y
+end: g
+Places:
+    fn: f (int: x 1) int
+        return: x
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_none () int
+    ---
+        int: got Places\f()
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_none
+fn: call_x () int
+    ---
+        int: got Places\f(x: 5)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_x
+fn: call_pos () int
+    ---
+        int: got Places\f(4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_pos
+fn: run () int
+    int: v 0
+    @: Hw g g
+    if: write_place() != 1
+        return: 34
+    ---
+    v: call_none()
+    if: v != 6
+        return: v
+    ---
+    v: call_x()
+    if: v != 22
+        return: 100 + v
+    ---
+    v: call_pos()
+    if: v != 4
+        return: 150 + v
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

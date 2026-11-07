@@ -1,0 +1,68 @@
+# Slice 294 probe (CALLABLE-PLACE-NAMED-ACTUALS; Codex 285 item 3, 293 review): a fn whose formals bear the place's
+# names in the other order is written into the place by position (one signature).  A call of the place binds a named
+# actual to the selected callable's formal of its own name, a positional one to the formal of its ordinal.  Entry 7;
+# a wrong value leaves as the exit code (the first check v, the second 100 + v, the third 150 + v).
+fn: g (int: y; int: x) int
+    return: x * 10 + y
+end: g
+Places:
+    fn: f (int: x; int: y) int
+        return: x * 10 + y
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_xy () int
+    ---
+        int: got Places\f(x: 1; y: 2)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_xy
+fn: call_yx () int
+    ---
+        int: got Places\f(y: 3; x: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_yx
+fn: call_pos () int
+    ---
+        int: got Places\f(5, 6)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_pos
+fn: run () int
+    int: v 0
+    @: Hw g g
+    if: write_place() != 1
+        return: 34
+    ---
+    v: call_xy()
+    if: v != 12
+        return: v
+    ---
+    v: call_yx()
+    if: v != 43
+        return: 100 + v
+    ---
+    v: call_pos()
+    if: v != 65
+        return: 150 + v
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

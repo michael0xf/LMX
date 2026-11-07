@@ -9354,7 +9354,10 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     # name and the enclosing bodies find the pad (lmx_walk.h, THROWN).  A conversion
     # edge's call is marked CONVERSION: whatever its receiver throws is this caller's
     # implicit `convert`, as native edge 1 makes it (l2_emit_call).
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_EXEC", arg0 + n + dynn, out) != 0
+    # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS): the transport carries the written operands, then the hidden inputs; a
+    # formal the call omits has no slot.  Which formals of the selected callable they bind, and which take its defaults,
+    # the one correspondence decides when the call runs (lmx_callable_bind_prefix).
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_EXEC", arg0 + arguments\written_count + dynn, out) != 0
         return: (cast: (int) (1))
     # The existing application producer distinguishes written operands from
     # normalized/synthesized transport inputs. Only that actual prefix is
@@ -9404,8 +9407,8 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     # each value to its formal.
     while: k < n
         actual: arguments\actuals + k
-        # Slice 293 (FORMAL-DEFAULT): a formal the call omits has no operand; the suffix slot its name binds through this
-        # call's contract (lm_compiler_rw_call_contract_for) stays empty, and the selected callable's default fills it.
+        # Slice 293 (FORMAL-DEFAULT), 294: a formal the call omits has no operand and no slot; a formal of the selected
+        # callable no written operand binds takes that callable's default.
         if: actual\written = 0
             k: k + 1
             continue
@@ -9530,7 +9533,7 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
                 return: (cast: (int) (1))
             arg: holder
         ---
-        if: c.lm_compiler_rw_put((cast: (int) (\out)), arg0 + n + d, arg) != 0
+        if: c.lm_compiler_rw_put((cast: (int) (\out)), arg0 + arguments\written_count + d, arg) != 0
             return: (cast: (int) (1))
         d: d + 1
     ---
@@ -18071,34 +18074,39 @@ fn: lm_compiler_rw_formal_default (int: entry; int: mi; int: j; int: ty) int
     return: (cast: (int) (0))
 end: lm_compiler_rw_formal_default
 
-# Slice 293 (FORMAL-DEFAULT): the contract of one call's transport.  The EXEC carries the written operands first, in
-# the order they are written, then a suffix each slot of which the kernel binds by the name of the Consumer contract's
-# input at its ordinal (lmx_callable_bind_written).  When the call omits formals that suffix begins with theirs, so the
-# contract lists the written formals by their written rank, then the omitted ones in declared order, then the hidden
-# inputs.  A call that writes every formal, and every other contract, keeps the declared order.
+# Slice 293 (FORMAL-DEFAULT), 294 (CALLABLE-PLACE-NAMED-ACTUALS): the contract of one call's transport.  The EXEC
+# carries the written operands, in the order they are written, then the hidden inputs, each slot of which the kernel
+# binds by the name of the Consumer contract's input at its ordinal (lmx_callable_bind_written).  A formal the call
+# omits has no slot and no input here: the selected callable's formals no written operand binds take that callable's
+# defaults.  So the contract lists the written formals by their written rank, then the hidden inputs.  A call that
+# writes every formal in declared order, and every other contract, keeps the declared order.
 fn: lm_compiler_rw_call_contract_for (int: parent; int: mi; int: hidden; @: arguments c.L2ApplicationActuals; @: out int) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
     int: inputs
     int: returns
     int: j 0
-    int: n m_arity_cell[0][mi]
+    int: w m_arity_cell[0][mi]
+    int: n 0
     int: rty c.lm_compiler_ret_cell_ty(mi)
     int: descriptor (cast: (int) (c.lm_compiler_input_model(mi, -1) >= 0 || c.lm_compiler_sig_ret(mi) = 16))
     int: nr (cast: (int) (rty >= 0 || descriptor != 0))
+    if: arguments != 0 && arguments\written_count >= 0 && arguments\written_count < w
+        w: arguments\written_count
+    n: w
     if: hidden >= 0
         n: n + m_dyn_cell[0][hidden]
     if: c.lm_compiler_rw_contract_parts(parent, n, nr, 2, out, @ inputs, @ returns) != 0
         return: (cast: (int) (1))
     if: nr != 0 && lm_compiler_rw_signature_witness(returns, 0, rty, descriptor) != 0
         return: (cast: (int) (1))
-    while: j < m_arity_cell[0][mi]
+    while: j < w
         if: lm_compiler_rw_signature_input(inputs, j, mi, lm_compiler_rw_contract_formal(arguments, j)) != 0
             return: (cast: (int) (1))
         j: j + 1
     ---
     while: j < n
-        if: lm_compiler_rw_signature_input(inputs, j, hidden, m_arity_cell[0][hidden] + j - m_arity_cell[0][mi]) != 0
+        if: lm_compiler_rw_signature_input(inputs, j, hidden, m_arity_cell[0][hidden] + j - w) != 0
             return: (cast: (int) (1))
         j: j + 1
     ---
@@ -18106,27 +18114,13 @@ fn: lm_compiler_rw_call_contract_for (int: parent; int: mi; int: hidden; @: argu
 end: lm_compiler_rw_call_contract_for
 
 # The formal at ordinal j of this call's transport (lm_compiler_rw_call_contract_for): with no omitted formal, j
-# itself; else the written formal of rank j, then the omitted formals in declared order.
+# itself; else the written formal of rank j.
 fn: lm_compiler_rw_contract_formal (@: arguments c.L2ApplicationActuals; int: j) int
     @: actual c.L2ApplicationActual 0
-    int: k 0
-    int: seen 0
-    if: arguments = 0 || arguments\written_count >= arguments\count || j < 0 || j >= arguments\count
+    if: arguments = 0 || arguments\written_count >= arguments\count || j < 0 || j >= arguments\written_count
         return: (cast: (int) (j))
-    if: j < arguments\written_count
-        actual: c.lm_compiler_value_actual_written(arguments, j)
-        if: actual = 0
-            return: (cast: (int) (j))
-        return: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
-    ---
-    while: k < arguments\count
-        actual: (cast: (@: c.L2ApplicationActual) (arguments\actuals + k))
-        if: actual\written = 0
-            if: seen = j - arguments\written_count
-                return: (cast: (int) (k))
-            seen: seen + 1
-        ---
-        k: k + 1
-    ---
-    return: (cast: (int) (j))
+    actual: c.lm_compiler_value_actual_written(arguments, j)
+    if: actual = 0
+        return: (cast: (int) (j))
+    return: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
 end: lm_compiler_rw_contract_formal

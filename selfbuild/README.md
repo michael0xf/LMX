@@ -6,8 +6,15 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 229 inputs (65 source files, 34 tools and
-130 tests). Slice293 takes a formal's written default when a call gives no argument for it: a literal of
+The selected package contains 230 inputs (65 source files, 34 tools and
+131 tests). Slice294 binds what a call writes to the formals of the callable it selected before its
+actuals: a positional actual the formal of its ordinal, a named one the formal of its own name -- never the
+formal the place's or callable formal's declared signature puts there -- and a formal no written actual binds
+takes the selected callable's default; a name the selected callable has no formal of is the call's implicit
+`call`. One kernel binder serves the walker's frame and native calls (`lmx_callable_bind_prefix`, reached by
+`lmx_call_bind_actuals`, exported in tools/build.lm2, so a new G0); a formal the call omits has no frame slot.
+
+Slice293 takes a formal's written default when a call gives no argument for it: a literal of
 the formal's own primitive type is its current default, a cell in its args entry, and a call takes the
 default of the callable it selected -- by position or by name, through a callable place, by the `call`
 receiver or through a callable formal; a supplied argument (zero too) is taken as before and never becomes
@@ -251,19 +258,19 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot155a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-tp140/tool155a/lmxtool-tool.exe` (`082779F9…`, the tool this package's
-tools/build.lm2 rebuilt with the boot154a tuple), previous frontend
-`cold-boot154a/quick154a/g2/frontend/l2trans.exe` (`F43E1878…`, the G2
-frontend of slice292) with its adjacent backend (`759E3BB9…`) and libc
+boot156a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-tp140/tool156a/lmxtool-tool.exe` (`1B3E4651…`, the tool this package's
+tools/build.lm2 rebuilt with the boot155a tuple), previous frontend
+`cold-boot155a/quick155a/g2/frontend/l2trans.exe` (`1901BF61…`, the G2
+frontend of slice293) with its adjacent backend (`580E362E…`) and libc
 (`AF9FDAE3…`), and BASE `cold-candidate48/full48/g2/frontend`. Its promoted
-working tool is `cold-boot155a/quick155a/lmxtool.exe` (`179F0B3D…`), the G2
+working tool is `cold-boot156a/quick156a/lmxtool.exe` (`A1601D2B…`), the G2
 tool, with `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot155a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-06/07, 23:57:33–00:08:41Z, 668 s): `BOOTSTRAP quick 0 failures`. G0
+boot156a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-07, 01:33:22–01:44:51Z, 689 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's
@@ -276,7 +283,7 @@ producer record closed on its files and free of script hosts, G1 against G2
 `same` for libc, the runtime objects, the tool's L1 and C and the consumed
 inputs), the working tool and bundle against G2, the candidate runtime against
 G2's runtime objects (byte-equal), and the candidate frontend against G2 (`exe-same`). The whole
-full list ran on that candidate (106 rows, 0 failures) and the G2 tool's
+full list ran on that candidate (107 rows, 0 failures) and the G2 tool's
 self-test on G2; FULL has not run on these bytes. That comparison is its own evidence, not a reproducibility
 gate. The draft79 line's open items (V63, the split-pointer place, the bare
 return) are not closed by this result.

@@ -1,0 +1,23 @@
+# Slice 294 probe: a path call with named actuals through the unit's own fn place, nothing written into it:
+# `node\f0(x: 3; y: 4)` is f0's 34.  Entry 7; a wrong value leaves as the exit code (52 the implicit call).
+fn: f0 (int: x; int: y) int
+    return: x * 10 + y
+end: f0
+fn: call_path () int
+    ---
+        int: got node\f0(x: 3; y: 4)
+        return: got
+        catch: call ()
+            return: 52
+    ---
+end: call_path
+fn: run () int
+    int: v call_path()
+    if: v != 34
+        return: v
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

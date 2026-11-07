@@ -1,0 +1,41 @@
+# Slice 294 probe: p294g's write into the unit fn's place, then a bare positional call `f0(1, 2)`: the place holds g,
+# g(y = 1, x = 2) is 21.  Entry 7; a wrong value leaves as the exit code.
+fn: f0 (int: x; int: y) int
+    return: x * 10 + y
+end: f0
+fn: g (int: y; int: x) int
+    return: x * 10 + y
+end: g
+int: Hw 0
+fn: write_root () int
+    ---
+        @: node\f0 Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_root
+fn: call_bare () int
+    ---
+        int: got f0(1, 2)
+        return: got
+        catch: call ()
+            return: 42
+    ---
+end: call_bare
+fn: run () int
+    int: v 0
+    @: Hw g g
+    v: write_root()
+    if: v != 1
+        return: v
+    ---
+    v: call_bare()
+    if: v != 21
+        return: v
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

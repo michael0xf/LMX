@@ -11480,6 +11480,7 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
     int: context_temp -1
     int: actual_context -1
     int: fd 0
+    int: bind 0
     c.L2FrontendScratchChar96: actual_record_storage
     @: actual_record char (cast: (@: char) actual_record_storage\buffer)
     c.L2FrontendScratchChar96: actual_payload_storage
@@ -11685,22 +11686,59 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         written: written + 1
     ---
-    # Slice 293 (FORMAL-DEFAULT; the book :467, :455): a formal this call gives no argument for takes the current
-    # default of the callable the call selected (l2_c, read before the actuals ran), read after the written actuals as
-    # the walker's binder reads it -- through the one kernel reading (lmx_call_formal_default).  The selected callable
-    # may hold none (a place written with another fn): the call's implicit `call` before the body.
-    t: 0
-    while: t < nact
-        actual: (cast: (@: c.L2ApplicationActual) (arguments\actuals + t))
-        if: actual\written = 0
-            fd: tn_cell[0]
-            tn_cell[0]: tn_cell[0] + 1
-            if: c.fprintf(out_cell[0], "%sint: l2_fds%d lmx_call_formal_default(l2_call_arena, l2_c%d, %dU, @ l2_av%d[%d])\n%sif: l2_fds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL\n", ind, fd, self_t, t, self_t, t, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "call", ind) != 0
+    # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :381, :467, :485; Codex 285 item 3, 293 review): a call that
+    # names an actual or omits a formal binds what it writes to the formals of the callable it selected before the
+    # actuals ran (l2_c), as the walker's binder does -- one correspondence for both executors (lmx_call_bind_actuals):
+    # a positional actual the formal of its ordinal, a named one the formal of its own name, never the formal the
+    # declared signature puts at that slot; a formal no written actual binds takes the selected callable's default
+    # (slice 293).  Until then the values stand at the slots of the declared signature, in their written order of
+    # evaluation; the binding leaves them in the selected callable's own order, a number received at its formal's type.
+    # A selected callable without such a formal, of another arity or without the default: the call's implicit `call`
+    # before the body; a number of another kind: its implicit `convert`.  A call that writes every formal by position
+    # binds as it is written.
+    if: arguments\written_count < nact
+        bind: 1
+    written: 0
+    while: bind = 0 && written < arguments\written_count
+        actual: c.lm_compiler_value_actual_written(arguments, written)
+        if: actual != 0 && actual\wrapper != 0
+            bind: 1
+        written: written + 1
+    ---
+    if: bind != 0 && nact > 0
+        fd: tn_cell[0]
+        tn_cell[0]: tn_cell[0] + 1
+        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%s[]: size_t l2_bs%d %d\n%s[]: @(void) l2_bn%d %d\n", ind, fd, arguments\written_count, ind, fd, arguments\written_count) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        written: 0
+        while: written < arguments\written_count
+            actual: c.lm_compiler_value_actual_written(arguments, written)
+            if: actual = 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-            if: c.fprintf(out_cell[0], "%s---\n%sif: l2_fds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_fds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
+            t: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
+            if: c.fprintf(out_cell[0], "%sl2_bs%d[%d]: %dU\n%sl2_bn%d[%d]: ", ind, fd, written, t, ind, fd, written) < 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+            if: actual\wrapper != 0
+                if: c.fputs("(cast: (@: void) ", out_cell[0]) < 0 || c.lm_compiler_emit_cstr((cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head)) != 0 || c.fputs(")\n", out_cell[0]) < 0
+                    return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+                ---
+            else:
+                if: c.fputs("0\n", out_cell[0]) < 0
+                    return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+                ---
             ---
-        t: t + 1
+            written: written + 1
+        ---
+        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bn%d, l2_av%d)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, self_t) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: arguments\written_count = 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, 0U, 0, 0, l2_av%d)\n", ind, fd, self_t, nact, self_t) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: c.fprintf(out_cell[0], "%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "call", ind) != 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_bds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
     ---
     if: ncls <= 1
         if: lm_compiler_emit_call_hides(mi, hid, nhid, nact, self_t, ind, source_node, cfi, @ hides) != 0

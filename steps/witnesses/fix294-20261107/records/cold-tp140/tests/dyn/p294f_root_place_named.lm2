@@ -1,0 +1,54 @@
+# Slice 294 probe (CALLABLE-PLACE-NAMED-ACTUALS at a unit fn's place): `@: node\f0 Hw` writes into the place of the
+# unit's fn a fn whose formals bear the names in the other order; a bare call `f0(...)` and a path call `node\f0(...)`
+# both call what the place holds now, and their named actuals bind its formals by name.  Entry 7; a wrong value leaves
+# as the exit code (v, 100 + v).
+fn: f0 (int: x; int: y) int
+    return: x * 10 + y
+end: f0
+fn: g (int: y; int: x) int
+    return: x * 10 + y
+end: g
+int: Hw 0
+fn: write_root () int
+    ---
+        @: node\f0 Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_root
+fn: call_bare () int
+    ---
+        int: got f0(x: 1; y: 2)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_bare
+fn: call_path () int
+    ---
+        int: got node\f0(x: 3; y: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: call_path
+fn: run () int
+    int: v 0
+    @: Hw g g
+    if: write_root() != 1
+        return: 34
+    ---
+    v: call_bare()
+    if: v != 12
+        return: v
+    ---
+    v: call_path()
+    if: v != 34
+        return: 100 + v
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

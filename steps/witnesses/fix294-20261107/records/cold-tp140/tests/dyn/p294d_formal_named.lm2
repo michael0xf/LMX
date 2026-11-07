@@ -1,0 +1,28 @@
+# Slice 294 probe (CALLABLE-PLACE-NAMED-ACTUALS through a callable formal): the fn passed names the formal's inputs in
+# the other order.  Named actuals bind the passed callable's formals by their own names; a formal no actual binds takes
+# the passed callable's default.  Entry 7; a wrong value leaves as the exit code (v, 100 + v).
+fn: h (int: b; int: a) int
+    return: a * 10 + b
+end: h
+fn: h2 (int: b 3; int: a 4) int
+    return: a * 10 + b
+end: h2
+fn: apply (f(fn: (int: a; int: b) int)) int
+    return: f(a: 2; b: 1)
+end: apply
+fn: apply2 (f(fn: (int: a 5; int: b 6) int)) int
+    return: f(b: 1)
+end: apply2
+int: code 7
+int: v apply(h)
+if: v != 21
+    code: v
+---
+if: code = 7
+    v: apply2(h2)
+    if: v != 41
+        code: 100 + v
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

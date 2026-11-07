@@ -1,0 +1,103 @@
+# Срез 294 — именованные фактические выбранного вызова (CALLABLE-PLACE-NAMED-ACTUALS)
+
+Opus, 2026-11-07. Часть U3 [плана N4-U](../../../next_core_tasks_v3.md). Задание: ответ Codex на результат 293 ([дословно](records/pins/codex-293-review-norm-next.txt), CODEX-OPUS-293-REVIEW-NORM-NEXT-20261107-01) — «Следующий действующий шаг CALLABLE-PLACE-NAMED-ACTUALS. Учти связанный остаток 293: native выбирает умолчание выбранного callable по позиции, обходчик связывает по имени — исправление должно дать одно соответствие и для поданных, и для пропущенных формалов, сохранив written order и выбор callable до фактических». Норма — книга ([docs/LMX_semantics.ru.md](../../../docs/LMX_semantics.ru.md)): :381 (сигнатура описывает входы), :467 (умолчание остаётся в интерфейсе; без поданного аргумента — умолчание), :485 (формал получает поданный аргумент или своё умолчание; несовместимость вида — `convert`); ответ Codex на вопросы нормы 285, п. 3 ([копия](../fix285-20261106/records/pins/codex-285-norm-answers.txt)): «выбранный вызов получает свои входы сигнатуры; аргументы принимаются по их контракту … Динамическая несовместимость арности/формы вызова — неявный call до тела, с учётом допустимых умолчаний … применяется контракт фактически выбранного вызова». Норма и книга не менялись.
+
+P = build2/codex_fix250generationchain01. Копии в [records](records) сделал `lmxtool stage-copy` из P, проверив хэш каждой; оригиналы связаны с [evidence.sha256](evidence.sha256).
+
+## На опубликованном кортеже 293
+
+Пробы P на рабочем tool, G2 frontend и runtime boot155a (рецепт [tp151-probe](../fix289-20261106/records/pins/tp151-probe.command) с параметрами кортежа). Неверное значение проба отдаёт кодом выхода; его пишет per-run лог `run-root<k>.log` ряда, прочитанный по точному пути.
+
+| Проба | 293 |
+| --- | --- |
+| [p294a](records/cold-tp140/tests/dyn/p294a_place_swapped_names.lm2): `fn g (int: y; int: x)` в месте `Places\f (int: x; int: y)`; `Places\f(x: 1; y: 2)`, `(y: 3; x: 4)`, `(5, 6)` | native 21 (x и y взяты по позициям объявленной сигнатуры места), обходчик 7 ([b294a](records/pins/tp151-probe-b294a.log)) |
+| [p294b](records/cold-tp140/tests/dyn/p294b_place_omitted_names.lm2): `g (int: y 6; int: x 8)` в месте `f (int: x 1; int: y 2)`; `(y: 3)`, `(x: 4)`, `()`, `(5)` | native 36 (пропущенный по объявленной позиции 0 взял умолчание `y` выбранного), обходчик `walk error: INVALID` |
+| [p294c](records/cold-tp140/tests/dyn/p294c_place_renamed_default.lm2): `g (int: y 6)` в месте `f (int: x 1)`; `()`, `(x: 5)`, `(4)` | native 105 (= 100 + 5: `(x: 5)` дал 5 вместо неявного `call`), обходчик `INVALID` (пропущенный формал связывался по имени `x` объявленной сигнатуры, у g его нет) |
+| [p294d](records/cold-tp140/tests/dyn/p294d_formal_named.lm2): callable-формал `f(fn: (int: a; int: b) int)`, поданы `h (int: b; int: a)` и `h2 (int: b 3; int: a 4)`; `f(a: 2; b: 1)`, `f(b: 1)` | native 12, обходчик 7 |
+| [p294e](records/cold-tp140/tests/dyn/p294e_place_types_permuted.lm2): место `f (int: x; char: y)`, в нём `g (int: y; char: x)`; `(x: 5; y: 7)`, `(x: 300; y: 7)` | native 75, обходчик `INVALID` |
+| [p286n](../fix286-20261106/records/cold-tp140/tests/dyn/p286n_named_actual_renamed.lm2): `Places\f(x: 5)` над `g (int: y)` | native 5, обходчик `INVALID` (как на 286) |
+| [p294f](records/cold-tp140/tests/dyn/p294f_root_place_named.lm2), [p294g](records/cold-tp140/tests/dyn/p294g_root_place_named_throws.lm2): `@: node\f0 Hw` (g с переставленными именами), `f0(x: 1; y: 2)`, `node\f0(x: 3; y: 4)` | native 21; обходчик — R0 остановлен, и с перехватом всех четырёх неявных имён ([b294b](records/pins/tp151-probe-b294b.log)) |
+| [p294h](records/cold-tp140/tests/dyn/p294h_root_place_write_only.lm2), [p294i](records/cold-tp140/tests/dyn/p294i_root_place_positional.lm2), [p294j](records/cold-tp140/tests/dyn/p294j_root_place_bare_positional.lm2): запись без вызова, `node\f0(1, 2)`, `f0(1, 2)` | 7 во всех запусках ([b294c](records/pins/tp151-probe-b294c.log), [b294d](records/pins/tp151-probe-b294d.log)) |
+| [p294k](records/cold-tp140/tests/dyn/p294k_root_place_path_named.lm2), [p294l](records/cold-tp140/tests/dyn/p294l_root_path_named_plain.lm2): `node\f0(x: 3; y: 4)` после записи и без всякой записи | R0 остановлен в обоих исполнителях ([b294d](records/pins/tp151-probe-b294d.log), [b294e](records/pins/tp151-probe-b294e.log)) |
+
+p294k/p294l — отдельный дефект, не связанный с выбором вызываемого: путевой вызов через `node\` с именованными фактическими останавливает R0 и без записи в место (NODE-PATH-NAMED-ACTUALS, OPEN). Сгенерированный native код такого вызова отличается от позиционного (p294i) только шагом `NAMED → 2` при чтении литерала из строк обходчика, и тот же шаг работает в `Places\f(x: 1; y: 2)`; причина не найдена.
+
+## Где было
+
+- **Native.** `lm_compiler_emit_call_arguments_full` ставит значение каждого фактического в слот `l2_av[t]` формала объявленной сигнатуры (места, callable-формала, метода единицы), куда его привязал связыватель трансляции по имени этой сигнатуры, и передаёт слоты выбранному вызываемому по порядку. Пропущенный формал (293) читал умолчание выбранного по той же позиции t.
+- **Обходчик.** Написанный префикс EXEC ядро связывало с формалами выбранного вызываемого по ординалу или собственному имени (`lmx_callable_bind_written`), а суффикс — по имени входа контракта на той же позиции; в 293 суффикс начинался со слотов пропущенных формалов, и они искали формал выбранного по имени объявленной сигнатуры. Ответ NO связывателя (нет формала такого имени, ординал за формалами, два фактических одного формала) давал `walk error: INVALID`.
+
+## Механизм
+
+- **Одно соответствие написанного префикса.** `lmx_callable_bind_prefix` (lmx_implements.lm2) — цикл, вынесенный без изменений из `lmx_callable_bind_written`: в порядке записи позиционный фактический связывается с формалом выбранного вызываемого его ординала, именованный — с формалом собственного имени (`lmx_callable_actual_target`); позиционный после именованного, имя без формала, ординал за формалами, два фактических одного формала — NO. Связыватель EXEC обходчика зовёт его для префикса; суффикс EXEC — только скрытые входы.
+- **Пропущенный формал — без слота и без входа контракта.** `lm_compiler_rw_call_arguments` строит EXEC из написанных операндов и скрытых входов (`arg0 + written_count + dynn`; скрытые — с `arg0 + written_count`), `lm_compiler_rw_call_contract_for` перечисляет написанные формалы по рангу, затем скрытые входы. Какие формалы выбранного вызываемого заняты, решает соответствие префикса; остальные `lmx_walk_selected_ready_values` берёт умолчанием выбранного (`lmx_walk_current_default`/`lmx_call_formal_default`, 293), без умолчания — неявный `call`.
+- **NO — неявный `call`.** В `lmx_walk_selected_ready_values` ответ NO связывателя — `THROWN + NAME_CALL` (форма вызова, которой у выбранного нет), а не ошибка ядра.
+- **Приём написанного числа типом выбранного формала.** Там же написанное число (занятость 1) принимается `lmx_walk_value_receive` по типу свидетеля выбранного формала: именованный фактический может стоять там, где объявленная сигнатура держит формал другого типа; число другого вида — неявный `convert` (книга :485).
+- **Native.** Вызов, который именует фактический или опускает формал, после написанных фактических зовёт `lmx_call_bind_actuals(l2_call_arena, l2_c<вызов>, n, w, l2_bs, l2_bn, l2_av)` (lmx_walk_values.lm2; экспорт `walk_value_names[168]` в tools/build.lm2, поэтому новый G0): для каждого написанного фактического в порядке записи — его слот объявленной сигнатуры и собственное имя (0 у позиционного). Ядро связывает их тем же `lmx_callable_bind_prefix` с формалами выбранного (`l2_c` выбран до фактических), переставляет значения в порядок выбранного, принимает число типом его формала, формалу без фактического даёт умолчание выбранного. NO, иная арность формалов, нет умолчания — неявный `call` вызывающего; `convert` — неявный `convert`; иной статус — `lmx_call_note_walk_fail`. Вызов, пишущий все формалы позиционно, связывается как написан (связыватель не зовётся). Выбранное значение без сигнатуры fn/sub (результат merge, Structure, исполняемая как вызов) берёт фактические в порядке объявленной сигнатуры, как обходчик (`lmx_walk_actuals_values`); пропуск у него — прежнее `UNSUPPORTED`. Формалы выбранного — ведущие записи его части `args` из четырёх полей; скрытые входы стоят после них.
+- **Поштучное чтение умолчания 293 в native** (`lmx_call_formal_default` по позиции t) заменено этим связыванием.
+
+## Свидетели
+
+[tests/dyn/named_actuals_selected.lm2](../../../selfbuild/tests/dyn/named_actuals_selected.lm2), native и forced, оба корня:
+
+| Код | Что проверяет |
+| --- | --- |
+| 81–83 | место `Two\f (int: x; int: y)`, в нём `g (int: y; int: x)`: `(x: 1; y: 2)` = 12, `(y: 3; x: 4)` = 43 — формалы выбранного по собственным именам; `(5, 6)` = 65 — по ординалу |
+| 84–87 | место `Dflt\f (int: x 1; int: y 2)`, в нём `gd (int: y 6; int: x 8)`: `(y: 3)` = 83, `(x: 4)` = 46, `()` = 86, `(5)` = 85 — формал без фактического берёт умолчание выбранного, какой бы формал объявленной сигнатуры ни стоял на его позиции |
+| 88–90 | место `One\f (int: x 1)`, в нём `gr (int: y 6)`: `()` = 6; `(x: 5)` — у выбранного нет `x`: неявный `call` (22); `(4)` = 4 |
+| 91 | место `Bare\f (int: x)`, в нём `gn (int: y)`: `(x: 5)` — неявный `call` (случай p286n) |
+| 92, 93 | callable-формал `f(fn: (int: a; int: b) int)`: `apply(h)` с `h (int: b; int: a)`, `f(a: 2; b: 1)` = 21; `apply2(h2)` с `h2 (int: b 3; int: a 4)`, `f(b: 1)` = 41 |
+
+На кортеже 293 фикстура: native 81, обходчик `walk error: INVALID` ([b294f](records/pins/tp151-probe-b294f.log)). Её ряд добавлен в поддерживаемый реестр.
+
+Пробы на кандидате (tool156a, fe156a, rt156b; [probe294-f](records/pins/probe294-f.tsv), [лог](records/pins/tp151-probe-c294a.log)): p294a–p294d, p286n, фикстура, `formal_defaults` и три отказа 293 — 7 и нужные отказы во всех запусках; p294e — 25 в обоих исполнителях и корнях (неявный `convert`; было: native 75 молча, обходчик INVALID) — граница CALLABLE-PLACE-NAMED-RECEPTION ниже; p294l — R0 остановлен, как на 293 (NODE-PATH-NAMED-ACTUALS).
+
+## Мутанты
+
+Ручные правки стейдж-файлов (инструмент Edit), каждая — сборка (runtime [tp156-rt](records/pins/tp156-rt.command) новым tool или frontend [tp156-fe](records/pins/tp156-fe.command)) и ряды [mut294](records/pins/mut294.tsv) (фикстура и p294e); после каждой изменённые файлы стейджа возвращены из варианта и весь стейдж проверен `lmxtool verify` ([mut294-restore](records/pins/mut294-restore.tsv): m1, m2, m3, m4, m5 — 230/0).
+
+| Мутант | Правка | Итог |
+| --- | --- | --- |
+| m1 (rt156m1) | обходчик: NO связывателя — снова `INVALID` | убит: forced оба корня `walk error: INVALID`; native 7 (его не касается) ([лог](records/pins/tp151-probe-m294a.log)) |
+| m2 (fe156m2) | native связывает только вызов с пропуском; именованные фактические без пропуска — по слотам объявленной сигнатуры | убит: native оба корня 81; forced 7 ([лог](records/pins/tp151-probe-m294b.log)) |
+| m3 (rt156m3) | общий связыватель префикса читает каждый фактический как позиционный | убит во всех четырёх запусках: 81; p294e — 75 (позиции совпадают по типам, приёма нет) ([лог](records/pins/tp151-probe-m294c.log)) |
+| m4 (rt156m4) | обходчик не принимает написанное число типом выбранного формала | реестр его не различает (ни один ряд не переносит число между формалами разных типов); проба p294e различает: forced `walk error: INVALID` вместо `convert` ([лог](records/pins/tp151-probe-m294d.log)) |
+| m5 (fe156m5) | кадр обходчика 293: слоты пропущенных формалов и их имена объявленной сигнатуры в контракте | убит: forced оба корня 87 (`Dflt\f(5)`: пропущенный `y` по имени объявленной сигнатуры попал на формал, уже занятый позиционным, — отказ вызова); native 7 ([лог](records/pins/tp151-probe-m294e.log)) |
+
+## Приёмка
+
+| Шаг | Результат | Receipts |
+| --- | --- | --- |
+| Кандидат | a01: девять изменённых файлов (ядро lmx_implements, lmx_walk_values; emit, lower; tools/build.lm2; две фикстуры, реестр, список входов) сняты и скопированы, стейдж 230/0; fe156a 00:55:35→00:59:05Z, l2trans `85f74292…`; tool156a (`rebuild tool` рабочим tool, G2 frontend и runtime boot155a; 169 имён `walk_value_names`) 00:59:14→01:00:32Z, `1b3e4651…`, `REBUILD tool 0 failures`; rt156a отказала разбором (провенанс, п. 4), a02 5/0, rt156b 01:02:24→01:03:09Z: driver `b798ebae…`, observe `8f732395…`, в `lmx_walk_values.h.lm1` прототип `lmx_call_bind_actuals` | [a01](records/pins/tp156-prepare-a01.log), [a02](records/pins/tp156-prepare-a02.log), [fe156a](records/pins/tp156-fe-a01.terminal.txt), [tool156a](records/pins/tp156-tool-a01.terminal.txt), [rt156a](records/pins/tp156-rt-a01.terminal.txt), [rt156b](records/pins/tp156-rt-a02.terminal.txt) |
+| Реестр на кандидате | tool156a, fe156a, rt156b, весь поддерживаемый реестр ([копия](records/pins/registry294-a.tsv), байты `selfbuild/tests/full-suite.tsv`): 107 рядов, 0 отказов, 909 проверок, 01:19:12.5346139Z→01:32:56.4952980Z (823.96 с) | [terminal](records/pins/tp151-probe-r294a.terminal.txt), [лог](records/pins/tp151-probe-r294a.log) |
+| Стейдж bootstrap | `steps` рабочего tool boot155a по [boot156a-prepare](records/pins/boot156a-prepare.tsv): 5/0, source-boot156a = source-tp156-a02 | [лог](records/pins/boot156a-prepare.log) |
+| Whole boot156a | 01:33:22.4366990Z→01:44:51.1415445Z, BootstrapExit 0, 688.70 с; `BOOTSTRAP quick 0 failures`; smoke 9/0 в обеих генерациях; G0 — tool156a `1b3e4651…` (tools/build.lm2 изменён), предыдущий frontend — G2 boot155a `1901bf61…` | [terminal](records/pins/boot156a-quick.terminal.txt), [log](records/pins/boot156a-quick.log), [detached](records/pins/boot156a-detached.terminal.txt) |
+| Приёмка `checks` | рабочий tool boot155a, [список](records/pins/boot156a-check.tsv): 38/0 — стейдж 230/0; записи producers G1 и G2 и запись сборки G2 замкнуты, без script host; G1 и G2: `exe-same` l2trans, l1trans, tool, `same` l2_libc.o, driver.o, driver-observe.o, L1 и C tool, consumed-inputs; рабочий tool и bundle = G2; runtime кандидата rt156b = G2 runtime байт в байт; fe156a = G2 по `exe-same` | [лог](records/pins/boot156a-check.log) |
+| Самотест G2 tool | рабочий tool boot156a `a1601d2b…` (= G2 tool), ребёнок `tool153a-child` 291-го: `SELFTEST 0 failures` (12 строк `FAIL` — ожидаемые отказы негативных проверок схемы, как в 292 и 293) | [terminal](records/pins/tp152-selftest-g294.terminal.txt), [лог](records/pins/tp152-selftest-g294.log) |
+| Посадка | `steps` рабочего tool boot156a по [land294](records/pins/land294.tsv): 9/0, `selfbuild/inputs.sha256` = source-tp156-a02 `a9d768a6…` (230 входов) | [лог](records/pins/land294.log) |
+
+Кортеж: рабочий tool `a1601d2b6880edc936ac7cc8cb5689c39a45d25b5e6ad5898f861e1b34bee58c` (= G2 tool), G2 l2trans `3faf511b1f04369650315ecddcb2bebda361f8255abcdff511b3e64cc13d9641`, l1trans `12975e5640aad07498ee324fd6357cc2699b82c1ed1000cd50921b128d6de672`, l2_libc `af9fdae3…`, driver `b798ebae5eca4c58d76ca700955786c06f58ace919d87fb0e143f9eb30649c62`, observe `8f7323950a89e22756fa0ea6cd8b5133497b5b2cbc7dedb70ff45d687c1e9f34`; G0 tool156a `1b3e4651803e707ce4c77b3cc8b5a6967202ca1b42c3ecd9735012f775b3b5d1`. Source 230 входов, manifest `a9d768a67af18cf32ef716cdab8ebf00b5ed8a9d7cbcff83064e7e638bc6961b`.
+
+## Границы
+
+- **CALLABLE-PLACE-NAMED-RECEPTION (OPEN).** Литеральный фактический транслятор принимает типом формала объявленной сигнатуры, к которому привязал его по имени; соответствие 294 переносит уже принятое число к формалу выбранного. У формала того же имени у выбранного другой тип — неявный `convert` в обоих исполнителях (p294e: место `f (int: x; char: y)`, в нём `g (int: y; char: x)`, `(x: 5; y: 7)` — 25), где прямой `g(x: 5; y: 7)` берёт литерал своим формалом (57). Реестр случай не проверяет (m4).
+- **Не проверено рядами:** именованный фактический Structure-, модельного или callable-формала, который соответствие ставит на позицию другого формала выбранного: native допускает такой фактический к модели формала объявленной сигнатуры до связывания, приём выбранного формала у native-вызываемого не повторяется. Имя, которое у выбранного носит только скрытый вход, — неявный `call` у native; у обходчика общий поиск по имени видит и скрытые входы.
+- **NODE-PATH-NAMED-ACTUALS (OPEN, найден).** См. выше: `node\f0(x: 3; y: 4)` останавливает R0 и без записи.
+- Статическая сторона не менялась: имя, которого нет в объявленной сигнатуре места, и пропуск формала без построенного умолчания объявленной сигнатуры — прежние отказы трансляции. Допуск по арности (Q49) не менялся.
+
+## Codex 293: формы умолчания
+
+Ответ Codex на результат 293 ([копия](records/pins/codex-293-review-norm-next.txt)) применён к записи FORMAL-DEFAULT-FORMS в [реестре дефектов](../../defects.md) и к комментарию фикстуры [formal_default_form_refused](../../../selfbuild/tests/dyn/formal_default_form_refused.lm2): литеральный предел 293 — предел построителя, не норма; отказ фиксирует текущую фазу реализации; долг общего построения остаётся OPEN. Комментарий фикстуры стал на две строки длиннее, игла её ряда в реестре — `10:5` вместо `8:5`. Сообщение результата 293 — [копия](records/pins/opus-codex-293-result.txt).
+
+## Провенанс
+
+Пробы, фикстура, рецепты и списки записаны вручную инструментом Write, правки — инструментом Edit; мутанты — ручные правки стейдж-файлов с возвратом из варианта (`stage-copy`) и `lmxtool verify` всего стейджа. Подготовка кандидата и стейджа bootstrap, возвраты, приёмка, посадка и архив — `lmxtool steps`/`checks` из каталогов запуска своих; PS-рецепты — запуски одной команды инструмента с охранниками: `tp156-fe`, `tp156-tool`, `tp156-rt`, `boot156-quick`, `boot156-detached` (новые, по образцам 293), `tp151-probe` (289). Список приёмки [boot156a-check](records/pins/boot156a-check.tsv) получен из списка 293 заменой меток (`sed`), реестр [registry294-a](records/pins/registry294-a.tsv) — копия `selfbuild/tests/full-suite.tsv` (`cp`, хэши равны). Отступления:
+
+1. Два листинга, нарушающие правило точных путей: `ls selfbuild/src/l2src/ | grep -c ""` (вывод — одно число 65, имён нет) и `ls -d ../tp155-prep*` из каталога pins (шаблон, пустой вывод).
+2. Временные файлы сравнения сгенерированного L1 двух проб записаны в `/tmp`, а не в scratchpad; удалены той же командой.
+3. Значения проб прочитаны из per-run логов `tp151-probe/<try>/<row>-<mode>/run-root<k>.log` по точным путям; сгенерированный L1 проб p294a, p294i, p294k (`p.lm1`) — тоже по точным путям.
+4. Первая сборка runtime кандидата (rt156a) отказала разбором (`l2trans parse error 13 at 2280:9`, `else:` двумя уровнями ниже вложенного `if:` без хвостового `---` в `lmx_callable_bind_prefix`); исправлено, стейдж переснят ([a02](records/pins/tp156-prepare-a02.log)), runtime собран как rt156b. Каталоги rt156a и её запуска остаются в P.
+5. Чтение терминала сборки runtime m4 и проба мутанта m4 шли одной фоновой командой.
+6. Поиск рецепта ребёнка самотеста: `grep -rn "TP_CHILD=" ../pins/*.txt` — шаблон по каталогу pins (пустой вывод); ребёнок затем найден по точному пути из рецепта 290 (`tool153a-child/lmxchild-prod.exe`, `40c935bc…`, как в 293).
+
+Архив и docs check — `steps`/`checks` рабочего tool boot156a. Первый проход ([docs294-archive-1](records/pins/docs294-archive-1.tsv), [лог](records/pins/docs294-archive-1.log)): манифест 120 путей P из [records294.list](records/pins/records294.list), их байтовые копии `stage-copy` в [records](records), [evidence.sha256](evidence.sha256) проверен против P и против копий. Затем точный allowlist ([allow294-1](records/pins/allow294-1.list), 140 путей) проиндексирован `git add --pathspec-from-file`, индекс сверен со списком (`diff`, до этого индекс был пуст); 78 копий с CR (receipts PowerShell; [список](records/pins/crlf294-1.list)) удалены по точному списку и записаны git из индекса с LF (`git checkout-index --stdin`), CR пересчитан по байтам (0 из 140) — эти копии равны оригиналам с точностью до концов строк. Каталог PRIVATE_OUT языкового docs check создан до запуска (DOCS-CHECK-SILENT-PRIVATE-OUT). Docs check ([список](records/pins/docs294-check-a.tsv)): `CHECKS 1 lines, 0 failed`, «line endings LF in the index for all 19817 tracked files» ([terminal](records/pins/docs294-check-a.terminal.txt), [лог](records/pins/docs294-check-a.log)). Второй проход (`pins/docs294-archive-2.tsv`) скопировал receipts первого прохода и docs check, манифест первого прохода, allowlist и список CR; итоговый evidence-манифест проверен против P; эта записка и копии второго прохода добавлены к индексу вторым точным списком, после чего docs check повторён над итоговым индексом. Receipts второго прохода и повторного docs check остаются в P (`pins/docs294-archive-2.*`, `pins/docs294-check-b.*`).

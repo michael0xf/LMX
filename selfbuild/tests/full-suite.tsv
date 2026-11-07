@@ -142,8 +142,7 @@ refuses	dyn/comma_path_refused.lm2	comma_path_refused.lm2:8:4: unknown type	nf
 refuses	dyn/comma_requirement_refused.lm2	comma_requirement_refused.lm2:10:7: unknown field path segment	nf
 runs	dyn/immutable_reached_write.lm2	7	nf
 runs	dyn/index_numeric_receive.lm2	7	nf
-refuses	dyn/index_numeric_refused.lm2	index_numeric_refused.lm2:9:13: the program has no method `lm_stg_convert_int_size_t`, the receiver of this conversion	nf
-refuses	dyn/index_numeric_write_refused.lm2	index_numeric_write_refused.lm2:7:4: the program has no method `lm_stg_convert_int_size_t`, the receiver of this conversion	nf
+runs	dyn/index_numeric_unavailable.lm2	7	nf
 runs	dyn/part_root_hidden.lm2	7	nf	dyn/part_root_hidden_part.lm2
 runs	dyn/place_write_form.lm2	7	nf
 refuses	dyn/place_write_number_refused.lm2	place_write_number_refused.lm2:5:1: a number field is no reference place	nf
@@ -168,4 +167,6 @@ runs	dyn/named_actuals_selected.lm2	7	nf
 runs	dyn/var_own_nested.lm2	7	nf
 # Slice 297 replaced slice 295's refusal of a repeat by its type (a limit): a repeat of another number type gives its candidate to the known place by the ordinary reception (REPEATED-DECL-TYPED-RECEPTION).
 runs	dyn/var_own_repeat_receive.lm2	7	nf
-refuses	dyn/var_own_repeat_norecv_refused.lm2	var_own_repeat_norecv_refused.lm2:11:9: the program has no method `lm_stg_convert_char_int`, the receiver of this conversion	nf
+runs	dyn/var_own_repeat_unavailable.lm2	7	nf
+# Slice 299: a number of another type whose conversion names a receiver the program does not define is received by an unavailable route -- the reached reception is the implicit `convert`, a branch that does not run raises nothing (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE); the refused rows of slices 289 and 297 became index_numeric_unavailable and var_own_repeat_unavailable.
+runs	dyn/numeric_unavailable_route.lm2	7	nf

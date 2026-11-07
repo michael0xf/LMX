@@ -7,7 +7,14 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `tests/l2/` without an explicit source change would break its resolution.
 
 The selected package contains 235 inputs (65 source files, 34 tools and
-136 tests). Slice298 reads the named actuals of a path call of the unit's own fn place, `node\f0(x: 3; y: 4)`, as
+136 tests). Slice299 receives a number of another type whose conversion row names a receiver the program does not
+define by an unavailable route: in language code the translation admits it and the reached reception is the implicit
+`convert` in both executors (natively the source is packed and received by the kernel's `lmx_walk_value_receive`; the
+walker evaluates the value as its own type) -- a write, an argument, a result, a declaration, an L3 INDEX index, a path
+write and a repeat leave the place's old value, a reception in a branch that does not run raises nothing, and a method
+with such a reception is on the status channel. A machine function keeps the static refusal. The refused rows of slices
+289 and 297 became `index_numeric_unavailable` and `var_own_repeat_unavailable`; `numeric_unavailable_route` is new.
+Slice298 reads the named actuals of a path call of the unit's own fn place, `node\f0(x: 3; y: 4)`, as
 labels: the collection of hidden inputs resolves a call's head with its method current, as the binding pass does, so the
 labels no longer become hidden inputs of the caller (R0 had stopped in both executors). Slice297 carries a literal a call writes by name contextual to the formal of its name in the callable
 the call selects, in both executors: that formal receives it, and a contextual literal outside a number place's type
@@ -283,19 +290,19 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot160a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-boot159a/quick159a/lmxtool.exe` (`D27471B3…`, the working tool of
-slice297; this package's tools/build.lm2 is unchanged), previous frontend
-`cold-boot159a/quick159a/g2/frontend/l2trans.exe` (`E9E46DE2…`, the G2
-frontend of slice297) with its adjacent backend (`72E638EB…`) and libc
+boot161a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-boot160a/quick160a/lmxtool.exe` (`B5F66D42…`, the working tool of
+slice298; this package's tools/build.lm2 is unchanged), previous frontend
+`cold-boot160a/quick160a/g2/frontend/l2trans.exe` (`5ACFA385…`, the G2
+frontend of slice298) with its adjacent backend (`589D1489…`) and libc
 (`AF9FDAE3…`), and BASE `cold-candidate48/full48/g2/frontend`. Its promoted
-working tool is `cold-boot160a/quick160a/lmxtool.exe` (`B5F66D42…`), the G2
+working tool is `cold-boot161a/quick161a/lmxtool.exe` (`83E9BD37…`), the G2
 tool, with `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot160a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-07, 08:36:15–08:47:06Z, 651 s): `BOOTSTRAP quick 0 failures`. G0
+boot161a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-07, 10:07:11–10:18:34Z, 683 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's
@@ -306,7 +313,7 @@ the previous working tool's own commands (`checks`): the stage against its manif
 producer record closed on its files and free of script hosts, G1 against G2
 (`exe-same` for the three executables, which differ only in the PE link stamp,
 `same` for libc, the runtime objects, the tool's L1 and C and the consumed
-inputs), the working tool and bundle against G2, the runtime the candidate ran on (slice297's G2
+inputs), the working tool and bundle against G2, the runtime the candidate ran on (slice298's G2
 runtime: the kernel is unchanged) against G2's runtime objects (byte-equal), and the candidate frontend
 against G2 (`exe-same`). The whole full list ran on that candidate (111 rows, 0 failures) and the G2 tool's
 self-test on G2; FULL has not run on these bytes. That comparison is its own evidence, not a reproducibility

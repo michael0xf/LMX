@@ -1,0 +1,66 @@
+# Slice 299 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE): the program defines no size_t -> int receiver, and the source
+# of each reception is the expression `s + s` of the type size_t (p299h's `c + c` is an int by C99's promotions) -- a write,
+# a declaration, a result and an argument.  Each reached reception is the implicit `convert` and the place keeps its value;
+# the walker evaluates the expression as its own type, never as the place's (lm_compiler_rw_bin types an operation by the
+# type it is asked for).  Entry 7.
+fn: write_sum () int
+    int: z 5
+    size_t: s 2U
+    ---
+        z: s + s
+        return: 1
+        catch: convert ()
+            return: z
+    ---
+end: write_sum
+fn: init_sum () int
+    size_t: s 2U
+    ---
+        int: w s + s
+        return: w
+        catch: convert ()
+            return: 25
+    ---
+end: init_sum
+fn: give_sum () int
+    size_t: s 2U
+    return: s + s
+end: give_sum
+fn: result_sum () int
+    ---
+        int: got give_sum()
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: result_sum
+fn: take (int: a) int
+    return: a
+end: take
+fn: arg_sum () int
+    size_t: s 2U
+    ---
+        int: got take(s + s)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: arg_sum
+fn: run () int
+    if: write_sum() != 5
+        return: 81
+    ---
+    if: init_sum() != 25
+        return: 82
+    ---
+    if: result_sum() != 25
+        return: 83
+    ---
+    if: arg_sum() != 25
+        return: 84
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

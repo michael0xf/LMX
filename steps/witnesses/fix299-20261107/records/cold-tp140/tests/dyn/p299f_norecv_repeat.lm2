@@ -1,0 +1,43 @@
+# Slice 299 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE): the program defines no char -> int receiver.  A reached repeat
+# `char: z 6` at the int place z is the implicit `convert` and z keeps 5; a repeat in a branch that does not run (slice 297's
+# refused row) refuses nothing; a single-field repeat `char: z` checks the place and writes nothing.  Entry 7.
+fn: rep_reached () int
+    int: z 5
+    ---
+        char: z 6
+        return: 1
+        catch: convert ()
+            return: z
+    ---
+end: rep_reached
+fn: rep_skipped (int: c) int
+    int: r 0
+    if: c = 1
+        int: z 5
+        r: z
+    else:
+        char: z 6
+        r: 2
+    ---
+    return: r
+end: rep_skipped
+fn: rep_single () int
+    int: z 5
+    char: z
+    return: z
+end: rep_single
+fn: run () int
+    if: rep_reached() != 5
+        return: 81
+    ---
+    if: rep_skipped(1) != 5
+        return: 82
+    ---
+    if: rep_single() != 5
+        return: 83
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

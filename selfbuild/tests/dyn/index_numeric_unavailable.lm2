@@ -1,0 +1,62 @@
+# Slice 299 (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE; replaces slice 289's rows index_numeric_refused and
+# index_numeric_write_refused, which witnessed a limit): this program has no receiver of the conversion of an int into size_t,
+# so an int index of the L3 INDEX of a machine pointer an own field holds is an unavailable route -- the translation refuses
+# nothing, the reached index is the implicit `convert`: a read reads nothing, a write writes nothing (the cell keeps 17); an
+# index in a branch that does not run raises nothing, at the root too.  Never an unchecked C index.  Entry 7.
+fn: idx_read () int
+    []: int cells 2
+    cells[1U]: 17
+    @: pc int @ cells[0U]
+    int: at 1
+    ---
+        int: got pc[at]
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: idx_read
+fn: idx_write () int
+    []: int cells 2
+    cells[1U]: 17
+    @: pc int @ cells[0U]
+    int: at 1
+    ---
+        pc[at]: 40
+        return: 1
+        catch: convert ()
+            return: cells[1U]
+    ---
+end: idx_write
+fn: idx_skipped (int: k) int
+    []: int cells 2
+    cells[1U]: 17
+    @: pc int @ cells[0U]
+    int: at 1
+    if: k = 1
+        pc[at]: 40
+        return: pc[at]
+    ---
+    return: cells[1U] - 8
+end: idx_skipped
+fn: run () int
+    if: idx_read() != 25
+        return: 81
+    ---
+    if: idx_write() != 17
+        return: 82
+    ---
+    if: idx_skipped(0) != 9
+        return: 83
+    ---
+    return: 7
+end: run
+int: code run()
+[]: int rcells 2
+rcells[1U]: 7
+@: rpc int @ rcells[0U]
+int: rat 1
+if: code = 0
+    code: rpc[rat]
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

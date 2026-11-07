@@ -1,0 +1,45 @@
+# Slice 299 (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE; replaces slice 297's row var_own_repeat_norecv_refused, which
+# witnessed a limit): this program defines no char -> int receiver, so a repeat `char: z 6` at the int place z gives its
+# candidate by an unavailable route -- the translation refuses nothing, the reached repeat is the implicit `convert` and z
+# keeps 5; the repeat in a branch that does not run (slice 297's refused program, m(1)) raises nothing; a single-field repeat
+# `char: z` checks the place's compatibility by the same admission and writes nothing.  Entry 7.
+fn: m (int: c) int
+    int: r 0
+    if: c = 1
+        int: z 5
+        r: z
+    else:
+        char: z 6
+        r: 2
+    ---
+    return: r
+end: m
+fn: rep_reached () int
+    int: z 5
+    ---
+        char: z 6
+        return: 1
+        catch: convert ()
+            return: z
+    ---
+end: rep_reached
+fn: rep_single () int
+    int: z 5
+    char: z
+    return: z
+end: rep_single
+fn: run () int
+    if: m(1) != 5
+        return: 81
+    ---
+    if: rep_reached() != 5
+        return: 82
+    ---
+    if: rep_single() != 5
+        return: 83
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,34 @@
+# Slice 299 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE): the program defines no char -> int receiver.  A reached write
+# of a char value into the int field of a named Structure by its path is the implicit `convert` and the field keeps 5; the
+# same write in a branch that does not run refuses nothing.  Entry 7.
+Box:
+    int: n 5
+end: Box
+fn: path_reached () int
+    char: c 6
+    ---
+        Box\n: c
+        return: 1
+        catch: convert ()
+            return: Box\n
+    ---
+end: path_reached
+fn: path_skipped (int: k) int
+    char: c 6
+    if: k = 1
+        Box\n: c
+    ---
+    return: Box\n
+end: path_skipped
+fn: run () int
+    if: path_reached() != 5
+        return: 81
+    ---
+    if: path_skipped(0) != 5
+        return: 82
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,32 @@
+# Slice 299 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE): the program defines no char -> int receiver.  A reached
+# declaration `int: z c` of a char value is the implicit `convert`; the same declaration in a branch that does not run
+# refuses nothing.  Entry 7.
+fn: init_reached () int
+    char: c 6
+    ---
+        int: z c
+        return: z
+        catch: convert ()
+            return: 25
+    ---
+end: init_reached
+fn: init_skipped (int: k) int
+    char: c 6
+    if: k = 1
+        int: z c
+        return: z
+    ---
+    return: 9
+end: init_skipped
+fn: run () int
+    if: init_reached() != 25
+        return: 81
+    ---
+    if: init_skipped(0) != 9
+        return: 82
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

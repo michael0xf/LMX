@@ -523,3 +523,17 @@ actuals loses two hidden inputs. The registry took 168.48 s more than 297's on t
 methods; a docs render and a two-file copy of about a second each ran during it); not measured apart, the cause is not
 located. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix298-20261107/notes.md).
+
+## Slice299 / boot161a (Opus, 2026-11-07)
+
+Whole quick 682.88 s: 10:07:11.4604087Z→10:18:34.3405963Z, both generations smoke 9/0; G0 is the working tool of
+boot160a (tools/build.lm2 is unchanged). The whole maintained registry on the candidate frontend fe161b and the G2
+runtime of boot160a (the kernel is unchanged; G2's runtime of boot161a is byte-equal to it), fe161b `exe-same` with G2:
+111/0, 934 checks (858.64 s: 09:28:07.3384403Z→09:42:25.9810535Z). The registry logs of 297 and 298 hold 934 PASS lines
+too: the 933 reported for them missed the first line, which follows the log's UTF-8 byte order mark. Source
+235/E2DBCE33; the acceptance is one `lmxtool checks` list of 38 commands run by the working tool of boot160a, 0 failed;
+the G2 tool's self-test 0 failures. An unavailable route adds a packed record and one kernel reception only where a
+program without the receiver reaches it; the self-build has no such reception. The registry took 287.38 s less than
+298's with the same number of rows (three refused rows became three running ones); not measured apart, the cause is
+not located. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix299-20261107/notes.md).

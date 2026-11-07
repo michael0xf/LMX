@@ -1,0 +1,111 @@
+# Slice 299 (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE; Codex's reviews of 297 and 298): this program defines no char -> int
+# receiver -- the row of the conversion table names one, the program has no method of that name.  Such a reception is an
+# unavailable route: the translation refuses nothing, the reached reception is the implicit `convert` -- the place keeps its
+# old value and nothing after the reception runs, the callee's body included -- and a reception in a branch that does not
+# run raises nothing.  A write, an argument, a result, a declaration, a path write; at the root a branch that does not run.
+# Entry 7.
+Box:
+    int: n 5
+end: Box
+Seen:
+    int: n 0
+end: Seen
+fn: take (int: a) int
+    Seen\n: Seen\n + 1
+    return: a
+end: take
+fn: give () int
+    char: c 6
+    return: c
+end: give
+fn: write_reached () int
+    int: z 5
+    char: c 6
+    int: after 0
+    ---
+        z: c
+        after: 1
+        return: 1
+        catch: convert ()
+            return: z + after * 100
+    ---
+end: write_reached
+fn: arg_reached () int
+    char: c 6
+    ---
+        int: got take(c)
+        return: got
+        catch: convert ()
+            return: 25 + Seen\n * 100
+    ---
+end: arg_reached
+fn: result_reached () int
+    ---
+        int: got give()
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: result_reached
+fn: init_reached () int
+    char: c 6
+    ---
+        int: z c
+        return: z
+        catch: convert ()
+            return: 25
+    ---
+end: init_reached
+fn: path_reached () int
+    char: c 6
+    ---
+        Box\n: c
+        return: 1
+        catch: convert ()
+            return: Box\n
+    ---
+end: path_reached
+fn: skipped (int: k) int
+    int: z 5
+    char: c 6
+    if: k = 1
+        z: c
+        z: take(c)
+        int: w c
+        Box\n: c
+        return: c
+    ---
+    return: z + Box\n
+end: skipped
+fn: run () int
+    if: write_reached() != 5
+        return: 81
+    ---
+    if: arg_reached() != 25
+        return: 82
+    ---
+    if: result_reached() != 25
+        return: 83
+    ---
+    if: init_reached() != 25
+        return: 84
+    ---
+    if: path_reached() != 5
+        return: 85
+    ---
+    if: skipped(0) != 10
+        return: 86
+    ---
+    return: 7
+end: run
+int: code run()
+char: rc 6
+int: rz 5
+if: code = 0
+    rz: rc
+---
+if: code = 7 && rz != 5
+    code: 87
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

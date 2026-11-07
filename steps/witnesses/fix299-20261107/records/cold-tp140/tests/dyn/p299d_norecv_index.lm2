@@ -1,0 +1,52 @@
+# Slice 299 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE): the program defines no int -> size_t receiver.  A reached int
+# index of the L3 INDEX of a method's own machine pointer is the implicit `convert` -- a read, and a write that writes
+# nothing; the same index in a branch that does not run refuses nothing.  Entry 7.
+fn: idx_read () int
+    []: int cells 2
+    cells[1U]: 17
+    @: pc int @ cells[0U]
+    int: at 1
+    ---
+        int: got pc[at]
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: idx_read
+fn: idx_write () int
+    []: int cells 2
+    cells[1U]: 17
+    @: pc int @ cells[0U]
+    int: at 1
+    ---
+        pc[at]: 40
+        return: 1
+        catch: convert ()
+            return: cells[1U]
+    ---
+end: idx_write
+fn: idx_skipped (int: k) int
+    []: int cells 2
+    cells[1U]: 17
+    @: pc int @ cells[0U]
+    int: at 1
+    if: k = 1
+        return: pc[at]
+    ---
+    return: 9
+end: idx_skipped
+fn: run () int
+    if: idx_read() != 25
+        return: 81
+    ---
+    if: idx_write() != 17
+        return: 82
+    ---
+    if: idx_skipped(0) != 9
+        return: 83
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

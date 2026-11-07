@@ -3520,6 +3520,9 @@ fn: lm_compiler_check_value_convert_core (const: (@: value c.LmP0Node); int: fro
         return: (cast: (int) (c.lm_compiler_cv_refused(path, value, "internal: a conversion refused without its reason")))
     if: cok = 0 && cv_gap_cell[0] = 5
         return: (cast: (int) (c.lm_compiler_error(path, value, "the program has no source table `primitive.convert`")))
+    # Slice 299: an unavailable route (lm_compiler_unavailable_route) -- its reached reception is the implicit `convert`.
+    if: cok = 0 && c.lm_compiler_unavailable_route_admit(mi) != 0
+        return: (cast: (int) (0))
     if: cok = 0 && cv_gap_cell[0] = 2
         return: (cast: (int) (c.lm_compiler_convert_norecv(path, value)))
     if: cok = 0 && cv_gap_cell[0] = 1
@@ -3560,6 +3563,9 @@ fn: lm_compiler_check_receiving_types (const: (@: at c.LmP0Node); int: value_typ
         return: (cast: (int) (c.lm_compiler_cv_refused(path, at, "internal: a conversion refused without its reason")))
     if: compatible = 0 && cv_gap_cell[0] = 5
         return: (cast: (int) (c.lm_compiler_error(path, at, "the program has no source table `primitive.convert`")))
+    # Slice 299: an unavailable route (lm_compiler_unavailable_route) -- its reached reception is the implicit `convert`.
+    if: compatible = 0 && c.lm_compiler_unavailable_route_admit(mi) != 0
+        return: (cast: (int) (0))
     if: compatible = 0 && cv_gap_cell[0] = 2
         return: (cast: (int) (c.lm_compiler_convert_norecv(path, at)))
     if: compatible = 0 && cv_gap_cell[0] = 1

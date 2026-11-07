@@ -1321,6 +1321,12 @@ fn: lm_compiler_convert_value_to_full (int: mi; int: to_ft; const: (@: stmt c.Lm
     if: from_n = 0 || to_n = 0 || c.strcmp(from_n, to_n) = 0
         return: (cast: (int) (0))
     if: lm_compiler_convert_hit(from_n, to_n) = 0
+        # Slice 299: an unavailable route -- the stored value is the implicit `convert` before the store
+        # (lm_compiler_emit_unavailable_receive); the value text goes where a converter's result goes.
+        if: lm_compiler_unavailable_route(mi) != 0
+            if: lm_compiler_emit_unavailable_fields(stmt, (cast: (@: c.LmP0Field) (fr\body\first_field)), n, from_ft, to_ft, mi, ind, tok_cell[0], full_value) != 0
+                return: (cast: (int) (1))
+            return: (cast: (int) (3))
         return: (cast: (int) (2))
     idx: lm_compiler_convert_method()
     if: idx < 0
@@ -1405,6 +1411,9 @@ fn: lm_compiler_emit_value_convert_full (const: (@: source_node c.LmP0Node); @: 
     if: c.strcmp((cast: (const: @: char) (c.lm_compiler_prim_code_name(from_ft))), (cast: (const: @: char) (c.lm_compiler_prim_code_name(to_ft)))) = 0
         return: (cast: (int) (2))
     if: lm_compiler_convert_hit((cast: (const: @: char) (c.lm_compiler_prim_code_name(from_ft))), (cast: (const: @: char) (c.lm_compiler_prim_code_name(to_ft)))) = 0
+        # Slice 299: an unavailable route -- the reached reception is the implicit `convert` (lm_compiler_emit_unavailable_receive).
+        if: lm_compiler_unavailable_route(mi) != 0
+            return: (cast: (int) (lm_compiler_emit_unavailable_fields(source_node, a0, 1, from_ft, to_ft, mi, ind, dest, full_value)))
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (a0\value)), "internal: a conversion site was not checked")))
     cidx: lm_compiler_convert_method()
     if: cidx < 0
@@ -1455,6 +1464,9 @@ fn: lm_compiler_emit_value_convert_n_full (const: (@: source_node c.LmP0Node); @
     if: c.strcmp((cast: (const: @: char) (c.lm_compiler_prim_code_name(from_ft))), (cast: (const: @: char) (c.lm_compiler_prim_code_name(to_ft)))) = 0
         return: (cast: (int) (2))
     if: lm_compiler_convert_hit((cast: (const: @: char) (c.lm_compiler_prim_code_name(from_ft))), (cast: (const: @: char) (c.lm_compiler_prim_code_name(to_ft)))) = 0
+        # Slice 299: an unavailable route (lm_compiler_emit_unavailable_receive).
+        if: lm_compiler_unavailable_route(mi) != 0
+            return: (cast: (int) (lm_compiler_emit_unavailable_fields(source_node, field, n, from_ft, to_ft, mi, ind, dest, full_value)))
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a conversion site was not checked")))
     cidx: lm_compiler_convert_method()
     if: cidx < 0
@@ -9533,6 +9545,10 @@ fn: lm_compiler_numeric_receive_prepare (@: value c.L2ValueSpan; int: target; in
             return: (cast: (int) (lm_compiler_cv_refused(path, at, "internal: a conversion refused without its reason")))
         if: cv_gap_cell[0] = 5
             return: (cast: (int) (c.lm_compiler_error(path, at, "the program has no source table `primitive.convert`")))
+        # Slice 299: an unavailable route (lm_compiler_unavailable_route) -- its reached reception is the implicit `convert`.
+        if: lm_compiler_unavailable_route(mi) != 0
+            plan\converter: -2
+            return: (cast: (int) (0))
         if: cv_gap_cell[0] = 2
             return: (cast: (int) (lm_compiler_convert_norecv(path, at)))
         if: cv_gap_cell[0] = 1
@@ -9578,6 +9594,9 @@ fn: lm_compiler_emit_numeric_receive_full (@: plan c.L2NumericReceive; int: mi; 
         return: 1
     if: c.lm_compiler_ft_is_free((cast: (int) plan\source_ft)) != 0
         return: lm_compiler_emit_dyn_receive_full((cast: (@: c.L2ValueSpan) plan\value), (cast: (int) plan\target_ft), mi, ind, dest, full_value)
+    # Slice 299: an unavailable route -- the source with its effects, then the kernel's reception: the implicit `convert`.
+    if: plan\converter = -2
+        return: lm_compiler_emit_unavailable_receive((cast: (@: c.L2ValueSpan) plan\value), (cast: (int) plan\source_ft), (cast: (int) plan\target_ft), mi, ind, dest, full_value)
     # The current callable value is read BEFORE any effects of the source.
     if: plan\converter >= 0 && lm_compiler_emit_convert_capture((cast: (int) (plan\converter)), ind, @ self) != 0
         return: (cast: (int) (1))
@@ -20044,16 +20063,25 @@ end: lm_compiler_repeat_other_type
 # program has no such receiver (the check pass says which, lm_compiler_check_repeat_type).
 fn: lm_compiler_repeat_plan (const: (@: stmt c.LmP0Node); int: oi; @: value c.L2ValueSpan; @: plan c.L2NumericReceive) int
     @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    @: cv_gap_cell int (cast: (@: int) (@ c.l2_cv_gap))
     @: declaration c.L2Declaration c.lm_compiler_declaration(stmt)
     int: written lm_compiler_decl_ft(stmt)
     int: place 0
+    int: converter -1
     if: declaration = 0 || declaration\candidate = 0 || declaration\candidate_count < 1 || value = 0 || plan = 0 || written < 0 || oi < 0
         return: 1
     place: (cast: (int) (c.lm_compiler_ft_of_own(own_ty_cell[0][oi])))
     if: lm_compiler_convert_hit((cast: (const: @: char) (c.lm_compiler_prim_code_name(written))), (cast: (const: @: char) (c.lm_compiler_prim_code_name(place)))) = 0
-        return: 1
-    if: lm_compiler_convert_method() < 0
-        return: 1
+        # Slice 299: the row names a receiver the program does not define -- the plan's route is unavailable (converter -2);
+        # the callers decide by their method's code (lm_compiler_route_language).
+        if: cv_gap_cell[0] != 2
+            return: 1
+        converter: -2
+    else:
+        converter: lm_compiler_convert_method()
+        if: converter < 0
+            return: 1
+    ---
     if: c.lm_compiler_value_expression_prepare((cast: (@: c.LmP0Field) (declaration\candidate)), (cast: (int) (declaration\candidate_count)), value) != 0
         return: 1
     c.memset((cast: (@: void) plan), 0, c.sizeof(c.L2NumericReceive))
@@ -20061,7 +20089,7 @@ fn: lm_compiler_repeat_plan (const: (@: stmt c.LmP0Node); int: oi; @: value c.L2
     plan\target_ft: place
     plan\source_ft: written
     plan\kind: written
-    plan\converter: lm_compiler_convert_method()
+    plan\converter: converter
     return: 0
 end: lm_compiler_repeat_plan
 
@@ -20079,3 +20107,121 @@ fn: lm_compiler_emit_repeat_receive (const: (@: stmt c.LmP0Node); int: oi; int: 
     c.lm_compiler_value_span_release(@ value)
     return: status
 end: lm_compiler_emit_repeat_receive
+
+# Slice 299 (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE; Codex's reviews of 297 and 298; LMX_blog/2026-11-01.md; the book
+# provenance :198, :200, :241, :504, :773): code that can raise the implicit throws of the language -- every method but a
+# machine function -- receives a number of another type whose conversion row names a receiver the program does not define
+# by an unavailable route: no refusal of the translation, the reached reception is the implicit `convert`.  A machine
+# function keeps the refusal: it raises no implicit throw.
+fn: lm_compiler_route_language (int: mi) int
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    if: mi < 0 || mi >= m_n_cell[0]
+        return: 0
+    if: c.lm_compiler_m_machine(mi) != 0
+        return: 0
+    return: 1
+end: lm_compiler_route_language
+
+# Slice 299: the last lm_compiler_convert_hit found the row of the conversion but the program has no method of the receiver it
+# names (l2_cv_gap 2), and mi's code receives by an unavailable route (lm_compiler_route_language).
+fn: lm_compiler_unavailable_route (int: mi) int
+    @: cv_gap_cell int (cast: (@: int) (@ c.l2_cv_gap))
+    if: cv_gap_cell[0] != 2
+        return: 0
+    return: lm_compiler_route_language(mi)
+end: lm_compiler_unavailable_route
+
+# Slice 299: the check admitted a reception of mi by an unavailable route, in code it evaluates.  Its reached reception is
+# the implicit `convert`, which leaves mi as its status: mi is on the status channel (l2_m_throws, closed over its callers by
+# lm_compiler_throws_close after the check pass), the conservative C ABI of a body with an implicit raise
+# (lm_compiler_body_throws) -- no refusal, no handler or declaration is asked of anyone.  An unevaluated operand marks nothing.
+fn: lm_compiler_unavailable_route_mark (int: mi) int
+    @: check_unevaluated_cell int (cast: (@: int) (@ c.l2_check_unevaluated))
+    @@: m_throws_cell int (cast: (@@: int) (@ c.l2_m_throws))
+    if: lm_compiler_route_language(mi) = 0
+        return: 0
+    if: check_unevaluated_cell[0] = 0 && m_throws_cell[0] != 0
+        m_throws_cell[0][mi]: 1
+    return: 1
+end: lm_compiler_unavailable_route_mark
+
+# Slice 299: a check site's admission -- 1 when the last lm_compiler_convert_hit found an unavailable route of mi
+# (lm_compiler_unavailable_route), mi then marked (lm_compiler_unavailable_route_mark); 0 otherwise.
+fn: lm_compiler_unavailable_route_admit (int: mi) int
+    if: lm_compiler_unavailable_route(mi) = 0
+        return: 0
+    return: lm_compiler_unavailable_route_mark(mi)
+end: lm_compiler_unavailable_route_admit
+
+# Slice 299: the native reception of a value span by an unavailable route.  The source is evaluated with its effects, packed
+# as the typed number it is, and received at the place's type by the kernel's one reception (lmx_walk_value_receive), as the
+# walker's place receives it: a typed number of another type is the implicit `convert` there -- the method's handler or its
+# caller sees it -- and nothing after it, the store included, runs.  No cast, search or chain stands for the missing
+# receiver.  dest gets the place type's zero, which no path reaches.
+fn: lm_compiler_emit_unavailable_receive (@: value c.L2ValueSpan; int: source_ft; int: target_ft; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    c.L2FrontendScratchChar1024: piece_own_storage
+    @: piece_own char (cast: (@: char) piece_own_storage\buffer)
+    c.L2Tx: piece_tx
+    @: piece c.L2Tx c.lm_compiler_tx_local(@ piece_tx, piece_own, 1024U)
+    c.L2FrontendScratchChar64: record_storage
+    @: record_text char (cast: (@: char) record_storage\buffer)
+    c.L2Tx: record_tx
+    @: record c.L2Tx c.lm_compiler_tx_local(@ record_tx, record_text, 64U)
+    c.L2FrontendScratchChar96: type_storage
+    @: type char (cast: (@: char) type_storage\buffer)
+    c.L2FrontendScratchChar64: zero_storage
+    @: zero char (cast: (@: char) zero_storage\buffer)
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    const: (@: ctype char 0)
+    int: t
+    int: status
+    if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
+        return: 1
+    if: value = 0 || value\node = 0 || piece = 0 || record = 0 || dest = 0
+        return: 1
+    if: lm_compiler_route_language(mi) = 0
+        return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "internal: an unavailable conversion route outside language code")))
+    ctype: c.lm_compiler_own_num_ctype(c.lm_compiler_own_ty_of_param(c.lm_compiler_formal_raw(target_ft)))
+    if: ctype = 0 || c.lm_compiler_emit_input_value_type(c.lm_compiler_formal_raw(target_ft), 0, type) != 0
+        return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "internal: an unavailable conversion route to a place of no number type")))
+    status: lm_compiler_emit_native_span(value, mi, ind, piece, 0)
+    if: status != 0
+        return: 1
+    status: lm_compiler_emit_material_value_full(mi, source_ft, 0, ind, piece, -1, record)
+    if: status != 0
+        return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], (cast: (const: @: c.LmP0Node) (value\node)), "internal: an unavailable conversion route lost its source value")))
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_ur%d\n%sint: l2_urs%d lmx_walk_value_receive(%s, %s, @ l2_ur%d)\n%sif: l2_urs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, (cast: (const: @: char) (record\data)), type, t, ind, t) < 0
+        return: 1
+    if: c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%s---\n%sif: l2_urs%d != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, ind, t, ind, ind, ind) < 0
+        return: 1
+    if: c.snprintf(zero, 64U, "(cast: (%s) 0)", ctype) < 0 || c.lm_compiler_tx_set(dest, zero) != 0
+        return: 1
+    if: full_value != 0
+        if: c.snprintf(name, 64U, "@ l2_ur%d", t) < 0 || c.lm_compiler_tx_set(full_value, name) != 0
+            return: 1
+        ---
+    ---
+    return: 0
+end: lm_compiler_emit_unavailable_receive
+
+# Slice 299: the same reception of n written fields from first (a declaration's candidate, a returned value, a stored one).
+fn: lm_compiler_emit_unavailable_fields (const: (@: at c.LmP0Node); @: first c.LmP0Field; int: n; int: source_ft; int: target_ft; int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    c.L2ValueSpan: span
+    int: status
+    if: first = 0 || n < 1
+        return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], at, "internal: an unavailable conversion route has no value")))
+    if: c.lm_compiler_value_expression_prepare(first, n, @ span) != 0
+        return: 1
+    status: lm_compiler_emit_unavailable_receive(@ span, source_ft, target_ft, mi, ind, dest, full_value)
+    c.lm_compiler_value_span_release(@ span)
+    return: status
+end: lm_compiler_emit_unavailable_fields

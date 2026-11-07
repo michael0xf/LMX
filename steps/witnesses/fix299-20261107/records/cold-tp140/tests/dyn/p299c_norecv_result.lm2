@@ -1,0 +1,34 @@
+# Slice 299 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE): the program defines no char -> int receiver.  A reached
+# `return: c` of a char value from an int fn is the implicit `convert` its caller sees; a return in a branch that does not
+# run refuses nothing.  Entry 7.
+fn: give () int
+    char: c 6
+    return: c
+end: give
+fn: give_skipped (int: k) int
+    char: c 6
+    if: k = 1
+        return: c
+    ---
+    return: 9
+end: give_skipped
+fn: res_reached () int
+    ---
+        int: got give()
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: res_reached
+fn: run () int
+    if: res_reached() != 25
+        return: 81
+    ---
+    if: give_skipped(0) != 9
+        return: 82
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

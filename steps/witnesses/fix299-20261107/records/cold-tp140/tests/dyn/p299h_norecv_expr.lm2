@@ -1,0 +1,65 @@
+# Slice 299 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE): the program defines no char -> int receiver, and the source
+# of each reception is the expression `c + c` of the type char -- a write, a declaration, a result and an argument.  Each
+# reached reception is the implicit `convert` and the place keeps its value; the expression is evaluated as its own type,
+# never as the place's.  Entry 7.
+fn: write_expr () int
+    int: z 5
+    char: c 6
+    ---
+        z: c + c
+        return: 1
+        catch: convert ()
+            return: z
+    ---
+end: write_expr
+fn: init_expr () int
+    char: c 6
+    ---
+        int: w c + c
+        return: w
+        catch: convert ()
+            return: 25
+    ---
+end: init_expr
+fn: give_expr () int
+    char: c 6
+    return: c + c
+end: give_expr
+fn: result_expr () int
+    ---
+        int: got give_expr()
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: result_expr
+fn: take (int: a) int
+    return: a
+end: take
+fn: arg_expr () int
+    char: c 6
+    ---
+        int: got take(c + c)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: arg_expr
+fn: run () int
+    if: write_expr() != 5
+        return: 81
+    ---
+    if: init_expr() != 25
+        return: 82
+    ---
+    if: result_expr() != 25
+        return: 83
+    ---
+    if: arg_expr() != 25
+        return: 84
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

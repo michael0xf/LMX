@@ -5167,6 +5167,9 @@ fn: lm_compiler_check_path_write (const: (@: stmt c.LmP0Node); int: mi; const: (
         return: (cast: (int) (c.lm_compiler_cv_refused(path, stmt, "internal: a conversion refused without its reason")))
     if: cok = 0 && cv_gap_cell[0] = 5
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "the program has no source table `primitive.convert`")))
+    # Slice 299: an unavailable route (lm_compiler_unavailable_route) -- its reached reception is the implicit `convert`.
+    if: cok = 0 && c.lm_compiler_unavailable_route_admit(mi) != 0
+        return: (cast: (int) (0))
     if: cok = 0 && cv_gap_cell[0] = 2
         return: (cast: (int) (c.lm_compiler_convert_norecv(path, stmt)))
     if: cok = 0 && cv_gap_cell[0] = 1
@@ -10724,6 +10727,11 @@ fn: lm_compiler_rw_numeric_receive (@: plan c.L2NumericReceive; int: parent; @: 
         status: lm_compiler_rw_call_values((cast: (const: @: c.LmP0Node) (plan\value\node)), 0, (cast: (int) (plan\converter)), -1, (cast: (@: c.LmP0Field) (plan\value\first)), parent, out, (cast: (@: c.L2ValueSpan) (plan\value)), 1)
         rw_conv_cell[0]: 0
         return: (cast: (int) (status))
+    # Slice 299: an unavailable route (lm_compiler_unavailable_route) -- the value is evaluated as the typed number it is; the
+    # place's own reception, the kernel's, is the implicit `convert` (natively lm_compiler_emit_unavailable_receive).
+    if: plan\converter = -2
+        ty: c.lm_compiler_own_ty_of_param((cast: (int) (plan\source_ft)))
+        return: (cast: (int) (lm_compiler_rw_evaluate_span((cast: (@: c.L2ValueSpan) (plan\value)), ty, parent, out)))
     ty: c.lm_compiler_own_ty_of_param((cast: (int) (plan\target_ft)))
     return: (cast: (int) (lm_compiler_rw_evaluate_span((cast: (@: c.L2ValueSpan) (plan\value)), ty, parent, out)))
 end: lm_compiler_rw_numeric_receive
@@ -18001,6 +18009,11 @@ fn: lm_compiler_check_numeric_receive_plan (@: value c.L2ValueSpan; int: target;
         return: (cast: (int) (1))
     converter: plan\converter
     source_type: plan\source_ft
+    # Slice 299: an unavailable route (lm_compiler_numeric_receive_prepare's converter -2) -- no receiver, no input, no edge;
+    # the reached reception is mi's implicit `convert` (lm_compiler_unavailable_route_mark).
+    if: converter = -2
+        c.lm_compiler_unavailable_route_mark(mi)
+        return: (cast: (int) (0))
     if: converter >= 0
         if: m_arity_cell[0][converter] != 1
             return: (cast: (int) (c.lm_compiler_error(path, at, "a numeric conversion receiver needs one declared input")))
@@ -18251,6 +18264,10 @@ fn: lm_compiler_check_repeat_type (const: (@: stmt c.LmP0Node); int: own; int: m
     if: declaration\candidate_count = 0
         if: c.lm_compiler_colon_types_compatible(place, written) != 0
             return: (cast: (int) (0))
+        # Slice 299: the same admission as a reception's -- an unavailable route in language code is compatible; nothing is
+        # received, so nothing is raised.
+        if: c.lm_compiler_unavailable_route(mi) != 0
+            return: (cast: (int) (0))
         if: cv_gap_cell[0] = 2
             return: (cast: (int) (c.lm_compiler_convert_norecv(path, stmt)))
         if: cv_gap_cell[0] = 5
@@ -18266,6 +18283,12 @@ fn: lm_compiler_check_repeat_type (const: (@: stmt c.LmP0Node); int: own; int: m
             return: (cast: (int) (1))
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "internal: a repeated declaration's reception has no plan")))
     converter: plan\converter
+    # Slice 299: an unavailable route (repeat_plan's converter -2) -- the ordinary reception's admission decides: in language
+    # code the reached reception is the implicit `convert`, with no receiver, no input and no edge; a machine function refuses.
+    if: converter = -2
+        status: (cast: (int) (c.lm_compiler_check_receiving_types(stmt, written, place, 0, mi, path)))
+        c.lm_compiler_value_span_release(@ value)
+        return: (cast: (int) (status))
     if: m_arity_cell[0][converter] != 1
         status: (cast: (int) (c.lm_compiler_error(path, stmt, "a numeric conversion receiver needs one declared input")))
     if: status = 0 && c.lm_compiler_formal_raw(c.lm_compiler_ft(converter, 0)) != c.lm_compiler_formal_raw(written)

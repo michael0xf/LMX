@@ -48,7 +48,7 @@ The colon separates a head from its argument Structure. It does not by itself me
 
 The target method Structure has addressable `args`, `return`, `var`, and `body` parts. `var` follows the result of `fn`/`fm` where present and precedes the body of every `fn`/`fm`/`sub`/`catch`. These are ordinary field roles: P0 does not populate `var` from the body.
 
-Positional fields retain their order. Named inputs are ordinary nested Frames. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
+Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -547,7 +547,7 @@ end: else
 
 Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct correction of 2026-09-23.
 
-A Frame's argument list is itself a Structure. If a sole anonymous Structure field occupies the whole positional sequence, P0 replaces it with its fields exactly once, independently of the head and emptiness. Thus `f()`, `f: ()`, and `f:` with an explicitly empty vertical body closed by `---` yield the same Frame with an empty Structure-body; `f(a b)` and `f: (a b)` likewise yield one list. An anonymous Structure among other fields or a named field remains a distinct field. A separate empty Structure value requires such a nontransparent position.
+A Frame's argument list is itself a Structure. If a sole anonymous Structure field occupies the whole positional sequence, P0 replaces it with its fields exactly once, independently of the head and emptiness. This unwrapping concerns an anonymous Structure as written; receiving a computed Structure, such as the result of `merge` given as the only argument, as the whole argument Structure is defined by the [semantics](LMX_semantics.en.md#whole-arguments). Thus `f()`, `f: ()`, and `f:` with an explicitly empty vertical body closed by `---` yield the same Frame with an empty Structure-body; `f(a b)` and `f: (a b)` likewise yield one list. An anonymous Structure among other fields or a named field remains a distinct field. A separate empty Structure value requires such a nontransparent position.
 
 Parentheses are not a call marker. P0 does not label `f()` as a call or decide whether `f` exists: the same normalized Frame from `f()` and `f: ()` is passed to general head resolution. Calling, assignment, and declaration are defined by [semantics](LMX_semantics.en.md#construction), not by this spelling.
 
@@ -627,7 +627,9 @@ Operator symbols are not bare identifiers. P0 splits compact unquoted spellings 
 
 The previous minimal L2 profile lists grouping `(expr)`; prefixes `@`, `\`, `++`, `--`, `+`, `-`, `!`, `~`; postfixes `++`, `--`; infixes `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `&`, `|`, `^`; and the index suffix. Writing a prefix adjacent to its operand is style, not a mandatory P0 boundary.
 
-In this profile, `=` is comparison, not assignment syntax or a named field. Updates use the ordinary head form `i: newValue`, whose meaning is determined later. The grammar does not invent a complete operation set, conversions, evaluation errors, or effect ordering.
+In this profile, `=` is comparison, not assignment syntax or a named field. Updates use the ordinary head form `i: newValue`, whose meaning is determined later.
+
+`:=` is a separate operator token (the author's decision of 2026-11-07, [journal](../LMX_blog/2026-11-07.md)): P0 neither splits it into `:` and `=` nor makes a Frame head `a:` of `a:=5`; `a := 5` and `a:=5` are one form: a left side, the token `:=`, a right side. Its meaning, a write to a place already known and the supply of a named argument, is defined by the [semantics](LMX_semantics.en.md#assign-known); this decision defines neither the precedence nor the associativity of `:=`. The grammar does not invent a complete operation set, conversions, evaluation errors, or effect ordering.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4259–4259.
 

@@ -1,0 +1,42 @@
+# Probe 302n, the second operand alone (a baseline on the 301 tuple; CODEX-OPUS-MERGE-ARGS-ISOLATE-PROBE-20261107-01 and
+# CODEX-OPUS-AUTHOR-DOCUMENT-ASSIGN-MERGE-PARENS-20261107-01): merge(tst\args; ...) is refused at its first operand on
+# this tuple, so the author's second operand a: int: 5 is tried over an ordinary Structure Args of the same fields
+# (int: c 3; int: a 0): merge(Args; a: int: 5) -- the result's a, wanted 5, its c, wanted 3, and Args not written (a
+# still 0, c still 3).  Entry 7; 81 the result's a, 82 its c, 83 Args\a, 84 Args\c; 91..94 a refusal (merge, call,
+# implements, interpreter).  Nothing here is a norm.
+Args:
+    int: c 3
+    int: a 0
+end: Args
+fn: pack_code () int
+    pack: merge(Args; a: int: 5)
+    if: pack\a != 5
+        return: 81
+    ---
+    if: pack\c != 3
+        return: 82
+    ---
+    if: Args\a != 0
+        return: 83
+    ---
+    if: Args\c != 3
+        return: 84
+    ---
+    return: 7
+end: pack_code
+fn: run () int
+    ---
+        return: pack_code()
+        catch: merge ()
+            return: 91
+        catch: call ()
+            return: 92
+        catch: implements ()
+            return: 93
+        catch: interpreter ()
+            return: 94
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

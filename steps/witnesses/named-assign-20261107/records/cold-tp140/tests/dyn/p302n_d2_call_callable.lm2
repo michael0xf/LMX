@@ -1,0 +1,43 @@
+# Probe 302n, item d (a baseline on the 301 tuple; CODEX-OPUS-NAMED-COLLISION-SOURCE-20261107-01 and
+# CODEX-OPUS-AUTHOR-NO-COLON-NAMED-BINDING-20261107-01): a callable a (int: n) int, n + 1, counting its calls, is
+# visible where tst (int: c 3; int: a 2) (the author's test; test is a word of the language) is called as tst(a(5)) --
+# the explicit call at the first position.  An ordinary call of a gives 6 at c and a its default 2: 62, one call of a;
+# the call taken as a naming of the formal a gives 35 and no call of a.  Entry 7 for 62 with one call; otherwise v + 100
+# * calls for the value v (91..93 a refusal: call, implements, convert); 80 the direct control a(5) after it.  Nothing
+# here is a norm.
+Calls:
+    int: hits 0
+end: Calls
+fn: a (int: n) int
+    Calls\hits: Calls\hits + 1
+    return: n + 1
+end: a
+fn: tst (int: c 3; int: a 2) int
+    return: c * 10 + a
+end: tst
+fn: explicit_call () int
+    ---
+        int: got tst(a(5))
+        return: got
+        catch: call ()
+            return: 91
+        catch: implements ()
+            return: 92
+        catch: convert ()
+            return: 93
+    ---
+end: explicit_call
+fn: run () int
+    int: got explicit_call()
+    int: hits Calls\hits
+    if: a(5) != 6 || Calls\hits != hits + 1
+        return: 80
+    ---
+    if: got = 62 && hits = 1
+        return: 7
+    ---
+    return: got + 100 * hits
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

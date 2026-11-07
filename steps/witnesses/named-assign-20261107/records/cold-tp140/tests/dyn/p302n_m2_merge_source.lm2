@@ -1,0 +1,65 @@
+# Probe 302n, the merge's source (a baseline on the 301 tuple; CODEX-OPUS-MERGE-ARGS-ISOLATE-PROBE-20261107-01): after
+# merge(tst\args; a: int: 5) for tst (int: c 3; int: a) (the author's test; test is a word of the language) the result
+# reads a = 5 while tst\args itself is not written -- its a is not 5 and its c is still 3.  Entry 7; 81 the result's a
+# is not 5, 83 tst\args\a reads 5, 84 tst\args\c is not 3; 91..94 a refusal (merge, call, implements, interpreter) while
+# reading a, 95..98 while reading c.  Nothing here is a norm.
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+fn: source_a () int
+    pack: merge(tst\args; a: int: 5)
+    if: pack\a != 5
+        return: 81
+    ---
+    return: tst\args\a
+end: source_a
+fn: source_c () int
+    pack: merge(tst\args; a: int: 5)
+    return: tst\args\c
+end: source_c
+fn: read_a () int
+    ---
+        return: source_a()
+        catch: merge ()
+            return: 91
+        catch: call ()
+            return: 92
+        catch: implements ()
+            return: 93
+        catch: interpreter ()
+            return: 94
+    ---
+end: read_a
+fn: read_c () int
+    ---
+        return: source_c()
+        catch: merge ()
+            return: 95
+        catch: call ()
+            return: 96
+        catch: implements ()
+            return: 97
+        catch: interpreter ()
+            return: 98
+    ---
+end: read_c
+fn: run () int
+    int: a read_a()
+    if: a = 81 || a > 90
+        return: a
+    ---
+    if: a = 5
+        return: 83
+    ---
+    int: c read_c()
+    if: c > 90
+        return: c
+    ---
+    if: c != 3
+        return: 84
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

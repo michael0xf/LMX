@@ -1,0 +1,35 @@
+# Probe 302n, item b (a baseline on the 301 tuple; CODEX-OPUS-AUTHOR-NAMED-MERGE-ASSIGN-DISCUSS-20261107-01 and
+# CODEX-OPUS-NAMED-COLLISION-SOURCE-20261107-01): the author's call test(merge(test\args; a: int: 5)), test named tst
+# (test is a word of the language), for tst (int: c 3; int: a) -- c has a written default, so a missing c does not hide
+# the question; the merge's result taken as the whole structure of the arguments gives c 3 and a 5: 35.  Entry 7 for 35;
+# 100 + v for another value v (191..195 a refusal: merge, call, implements, convert, interpreter).  Nothing here is a
+# norm.
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+fn: inline_call () int
+    ---
+        int: got tst(merge(tst\args; a: int: 5))
+        return: got
+        catch: merge ()
+            return: 91
+        catch: call ()
+            return: 92
+        catch: implements ()
+            return: 93
+        catch: convert ()
+            return: 94
+        catch: interpreter ()
+            return: 95
+    ---
+end: inline_call
+fn: run () int
+    int: got inline_call()
+    if: got = 35
+        return: 7
+    ---
+    return: got + 100
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

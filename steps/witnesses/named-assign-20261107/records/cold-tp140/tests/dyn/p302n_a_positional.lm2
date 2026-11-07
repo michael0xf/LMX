@@ -1,0 +1,47 @@
+# Probe 302n, item a (a baseline on the 301 tuple; CODEX-OPUS-AUTHOR-NAMED-MERGE-ASSIGN-DISCUSS-20261107-01): the
+# controls of an ordinary call of tst (int: c 3; int: a) with no callable a visible -- by position tst(4, 5), wanted 45,
+# and by the present named form tst(a: 5), wanted 35 (c its written default 3).  The author's name test is a word of the
+# language (the receiver test:), which a program cannot bind; tst keeps the shape.  Entry 7.  An exit below 100 is the
+# positional call's value (91..93 its refusal: call, implements, convert); 100 + v is the named call's value v (191..193
+# its refusal).  Nothing here is a norm: the record states what the 301 tuple does.
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+fn: positional () int
+    ---
+        int: got tst(4, 5)
+        return: got
+        catch: call ()
+            return: 91
+        catch: implements ()
+            return: 92
+        catch: convert ()
+            return: 93
+    ---
+end: positional
+fn: named () int
+    ---
+        int: got tst(a: 5)
+        return: got
+        catch: call ()
+            return: 91
+        catch: implements ()
+            return: 92
+        catch: convert ()
+            return: 93
+    ---
+end: named
+fn: run () int
+    int: p positional()
+    if: p != 45
+        return: p
+    ---
+    int: q named()
+    if: q != 35
+        return: q + 100
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

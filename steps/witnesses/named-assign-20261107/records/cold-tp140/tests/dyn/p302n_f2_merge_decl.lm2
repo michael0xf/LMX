@@ -1,0 +1,41 @@
+# Probe 302n, a positive control of merge itself (a baseline on the 301 tuple;
+# CODEX-OPUS-MERGE-PARENS-BASELINE-REVIEW-20261107-01): the same override as p302n_f_merge_decl_parens without the
+# parentheses -- merge(Args; int: a 5) over Args (int: c 3; int: a 0): the result's a, wanted 5, its c, wanted 3, and
+# Args not written (a still 0, c still 3).  Entry 7; 81 the result's a, 82 its c, 83 Args\a, 84 Args\c; 91..94 a
+# refusal (merge, call, implements, interpreter).  Nothing here is a norm.
+Args:
+    int: c 3
+    int: a 0
+end: Args
+fn: pack_code () int
+    pack: merge(Args; int: a 5)
+    if: pack\a != 5
+        return: 81
+    ---
+    if: pack\c != 3
+        return: 82
+    ---
+    if: Args\a != 0
+        return: 83
+    ---
+    if: Args\c != 3
+        return: 84
+    ---
+    return: 7
+end: pack_code
+fn: run () int
+    ---
+        return: pack_code()
+        catch: merge ()
+            return: 91
+        catch: call ()
+            return: 92
+        catch: implements ()
+            return: 93
+        catch: interpreter ()
+            return: 94
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

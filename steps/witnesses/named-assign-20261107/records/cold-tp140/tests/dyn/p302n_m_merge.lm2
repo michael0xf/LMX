@@ -1,0 +1,62 @@
+# Probe 302n, the merge alone (a baseline on the 301 tuple; CODEX-OPUS-MERGE-ARGS-ISOLATE-PROBE-20261107-01): the
+# author's merge(test\args; a: int: 5), test named tst (test is a word of the language), for tst (int: c 3; int: a), with
+# no call of tst -- the result's field a, wanted 5, and its field c, wanted the formal's written default 3.  Entry 7; 81
+# a is not 5, 82 c is not 3; 91..94 a refusal of the merge's reading of a (merge, call, implements, interpreter), 95..98
+# of c.  Nothing here is a norm.
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+fn: pack_a () int
+    pack: merge(tst\args; a: int: 5)
+    return: pack\a
+end: pack_a
+fn: pack_c () int
+    pack: merge(tst\args; a: int: 5)
+    return: pack\c
+end: pack_c
+fn: read_a () int
+    ---
+        return: pack_a()
+        catch: merge ()
+            return: 91
+        catch: call ()
+            return: 92
+        catch: implements ()
+            return: 93
+        catch: interpreter ()
+            return: 94
+    ---
+end: read_a
+fn: read_c () int
+    ---
+        return: pack_c()
+        catch: merge ()
+            return: 95
+        catch: call ()
+            return: 96
+        catch: implements ()
+            return: 97
+        catch: interpreter ()
+            return: 98
+    ---
+end: read_c
+fn: run () int
+    int: a read_a()
+    if: a > 90
+        return: a
+    ---
+    if: a != 5
+        return: 81
+    ---
+    int: c read_c()
+    if: c > 90
+        return: c
+    ---
+    if: c != 3
+        return: 82
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

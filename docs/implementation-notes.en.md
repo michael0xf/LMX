@@ -140,6 +140,35 @@ native/walker selection, without a hidden test catalogue, runtime names,
 `skip_tests`, or all-tests reruns after mutation. Representation of
 failure of the **whole** test set remains undecided.
 
+<a id="assign-named-merge"></a>
+### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, unfinished implementation
+
+The rules are [writing a known place](LMX_semantics.en.md#assign-known),
+[named arguments](LMX_semantics.en.md#named-actuals) and
+[the whole argument Structure](LMX_semantics.en.md#whole-arguments)
+(the author's decision of 2026-11-07). The implementation does not
+carry them out yet. A probe on the published 301 tuple (native and the
+walker, both roots; [record](../steps/witnesses/named-assign-20261107/notes.md))
+found:
+
+- `:=` is not recognized yet.
+- `f(a: 5)` and `f(a(5))` now bind the formal `a` because the head's
+  name matches it, even with a callable `a` visible, which then is not
+  called (the value 35 and no call of `a`). This is a defect the author
+  asked to remove, not a rule.
+- The translation does not lower `merge` operands of the forms
+  `callable\args`, `a: int: 5` and `(a: int: 5)` ("this merge operand
+  form is not lowered yet"), so running on this tuple does not show
+  whether the second operand needs the parentheses.
+- A `merge` result given as the only argument, and a Structure held in
+  a variable, bind the first formal by position ("has no argument a"):
+  a single Structure is not received as the whole argument Structure.
+- The executed control of `merge` itself: `merge(Args; (int: a 5))` and
+  `merge(Args; int: a 5)` over an ordinary Structure give `a` = 5, keep
+  the other fields and do not write `Args`.
+
+The defects are recorded in the [registry](../steps/defects.md).
+
 <a id="open-design"></a>
 ## 5. Open decisions
 

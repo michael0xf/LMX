@@ -19347,6 +19347,10 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             if: pret != 0 || lm_compiler_own_store_full(mi, oi, ind, (cast: (const: @: char) (tok_cell[0]\data)), store_full) != 0
                 return: (cast: (int) (1))
         ---
+        # Slice 300 (Codex's review of 299, item 3): a single-field repeat whose route is unavailable checks the known place
+        # where it is reached (lm_compiler_emit_single_repeat_check); a compatible one emits nothing.
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_own_decl_ty(stmt) != 0 && oi >= 0 && declaration\candidate_count = 0 && own_decl_cell[0][oi] != stmt && lm_compiler_emit_single_repeat_check(stmt, oi, mi, ind) != 0
+            return: (cast: (int) (1))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt)
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && (stmt = 0 || stmt\as = 0 || stmt\as\frame = 0)
@@ -20073,8 +20077,8 @@ fn: lm_compiler_repeat_plan (const: (@: stmt c.LmP0Node); int: oi; @: value c.L2
     place: (cast: (int) (c.lm_compiler_ft_of_own(own_ty_cell[0][oi])))
     if: lm_compiler_convert_hit((cast: (const: @: char) (c.lm_compiler_prim_code_name(written))), (cast: (const: @: char) (c.lm_compiler_prim_code_name(place)))) = 0
         # Slice 299: the row names a receiver the program does not define -- the plan's route is unavailable (converter -2);
-        # the callers decide by their method's code (lm_compiler_route_language).
-        if: cv_gap_cell[0] != 2
+        # the callers decide by their method's code (lm_compiler_route_language).  Slice 300: so is a pair with no row.
+        if: cv_gap_cell[0] != 1 && cv_gap_cell[0] != 2
             return: 1
         converter: -2
     else:
@@ -20123,10 +20127,12 @@ fn: lm_compiler_route_language (int: mi) int
 end: lm_compiler_route_language
 
 # Slice 299: the last lm_compiler_convert_hit found the row of the conversion but the program has no method of the receiver it
-# names (l2_cv_gap 2), and mi's code receives by an unavailable route (lm_compiler_route_language).
+# names (l2_cv_gap 2), and mi's code receives by an unavailable route (lm_compiler_route_language).  Slice 300 (Codex's review
+# of 299, item 2a): the table has no row of the pair (l2_cv_gap 1) -- no admissible conversion either, the same route.  A
+# broken table (l2_cv_gap 3, 5) is no route: its own refusal stays.
 fn: lm_compiler_unavailable_route (int: mi) int
     @: cv_gap_cell int (cast: (@: int) (@ c.l2_cv_gap))
-    if: cv_gap_cell[0] != 2
+    if: cv_gap_cell[0] != 1 && cv_gap_cell[0] != 2
         return: 0
     return: lm_compiler_route_language(mi)
 end: lm_compiler_unavailable_route
@@ -20225,3 +20231,56 @@ fn: lm_compiler_emit_unavailable_fields (const: (@: at c.LmP0Node); @: first c.L
     c.lm_compiler_value_span_release(@ span)
     return: status
 end: lm_compiler_emit_unavailable_fields
+
+# Slice 300 (Codex's review of 299, item 3; the book provenance :428, :483, :198): 1 when stmt is a single-field repeat of
+# another number type at the known place oi and the route from its written type to the place's is unavailable in mi's code
+# (lm_compiler_unavailable_route): its compatibility check is made where it is reached, and fails there.  0 when the place is
+# compatible -- an available receiver; the check runs no converter -- or stmt is no such repeat.
+fn: lm_compiler_single_repeat_unavailable (const: (@: stmt c.LmP0Node); int: oi; int: mi) int
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @: declaration c.L2Declaration 0
+    int: written 0
+    int: place 0
+    if: stmt = 0 || oi < 0 || oi >= own_n_cell[0] || own_decl_cell[0][oi] = stmt
+        return: 0
+    declaration: c.lm_compiler_declaration(stmt)
+    if: declaration = 0 || declaration\candidate_count != 0 || lm_compiler_repeat_other_type(oi, stmt) = 0
+        return: 0
+    written: lm_compiler_decl_ft(stmt)
+    place: (cast: (int) (c.lm_compiler_ft_of_own(own_ty_cell[0][oi])))
+    if: written < 0 || c.lm_compiler_prim_code_name(written) = 0 || c.lm_compiler_prim_code_name(place) = 0
+        return: 0
+    if: lm_compiler_colon_types_compatible(place, written) != 0
+        return: 0
+    return: lm_compiler_unavailable_route(mi)
+end: lm_compiler_single_repeat_unavailable
+
+# Slice 300: the native reached check of such a repeat (lm_compiler_single_repeat_unavailable).  A number of the written type
+# -- zero: the check reads no value -- is received at the place's type by the kernel's one reception (lmx_walk_value_receive),
+# whose THROWN + CONVERT is the method's implicit `convert`; another failure is the walk's.  No converter runs and the place is
+# neither read nor written; a compatible repeat emits nothing.
+fn: lm_compiler_emit_single_repeat_check (const: (@: stmt c.LmP0Node); int: oi; int: mi; const: (@: ind char)) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    c.L2FrontendScratchChar96: source_type_storage
+    @: source_type char (cast: (@: char) source_type_storage\buffer)
+    c.L2FrontendScratchChar96: place_type_storage
+    @: place_type char (cast: (@: char) place_type_storage\buffer)
+    int: t
+    if: lm_compiler_single_repeat_unavailable(stmt, oi, mi) = 0
+        return: 0
+    if: c.lm_compiler_emit_input_value_type(lm_compiler_decl_ft(stmt), 0, source_type) != 0 || c.lm_compiler_emit_input_value_type((cast: (int) (c.lm_compiler_ft_of_own(own_ty_cell[0][oi]))), 0, place_type) != 0
+        return: 1
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_usv%d\n%sif: lmx_walk_value_num(@ l2_usv%d, %s, 0U) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n%sLmxWalkValue: l2_usr%d\n%sint: l2_uss%d lmx_walk_value_receive(@ l2_usv%d, %s, @ l2_usr%d)\n%sif: l2_uss%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, t, ind, t, source_type, ind, ind, ind, ind, t, ind, t, t, place_type, t, ind, t) < 0
+        return: 1
+    if: c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%s---\n%sif: l2_uss%d != c.LMX_WALK_OK && l2_uss%d != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n%s    lmx_call_note_walk_fail(l2_uss%d)\n%s    return: 0\n%s---\n", ind, ind, t, t, ind, t, ind, ind) < 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_single_repeat_check

@@ -1,0 +1,25 @@
+# Slice 300 probe (Codex's review of 299, item 3): with the program's char -> int receiver the single-field repeat `char: z`
+# at the int place z is compatible: the check runs no converter (the receiver counts its calls) and writes nothing -- z keeps
+# 5; the repeat with a candidate, `char: z 6`, does run it (z = 106, one call).  Entry 7.
+Count:
+    int: n 0
+end: Count
+fn: lm_stg_convert_char_int (char: c) int
+    Count\n: Count\n + 1
+    return: (cast: (int) c) + 100
+end: lm_stg_convert_char_int
+fn: single_available () int
+    int: z 5
+    char: z
+    if: z != 5 || Count\n != 0
+        return: 81
+    ---
+    char: z 6
+    if: z != 106 || Count\n != 1
+        return: 82
+    ---
+    return: 7
+end: single_available
+int: code single_available()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

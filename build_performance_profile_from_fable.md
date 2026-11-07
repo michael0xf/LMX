@@ -537,3 +537,18 @@ program without the receiver reaches it; the self-build has no such reception. T
 298's with the same number of rows (three refused rows became three running ones); not measured apart, the cause is
 not located. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix299-20261107/notes.md).
+
+## Slice300 / boot162a (Opus, 2026-11-07)
+
+Whole quick 674.29 s: 11:14:51.5062014Z→11:26:05.7945638Z, both generations smoke 9/0; G0 is the working tool of
+boot161a (tools/build.lm2 is unchanged). The whole maintained registry on the candidate frontend fe162a and the G2
+runtime of boot161a (the kernel is unchanged; G2's runtime of boot162a is byte-equal to it), fe162a `exe-same` with G2:
+112/0, 940 checks (852.68 s: 10:46:39.5912481Z→11:00:52.2746187Z; counted with the log's byte order mark). Source
+236/FF8A8238; the acceptance is one `lmxtool checks` list of 38 commands run by the working tool of boot161a, 0 failed;
+the G2 tool's self-test 0 failures. A pair the conversion table has no row of takes 299's route: a packed record and one
+kernel reception only where a program reaches it (the frontend of 299, which refuses such a pair, translated this
+source, so the self-build has none). A reached single-field repeat at a place its written type cannot be received by
+adds a zero record of the written type and one kernel reception; whether the self-build holds one was not measured.
+The registry took 5.96 s less than 299's with one more row; not measured apart, the cause is not located. A
+whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix300-20261107/notes.md).

@@ -4,9 +4,15 @@
 # row of l2src/convert.lm2), which adds 100 and refuses (`range`) a char above 9 -- that refusal is the caller's implicit
 # `convert`, and nothing is written.  A repeat in a branch not taken executes nothing; the single-field `char: z` checks the
 # known place and writes nothing.  In a method's activation, its inline bodies included, and at the unit's root.  On 296 each
-# repeat was refused at translation by its type alone.  Entry 7; 81.. name the failing check.
+# repeat was refused at translation by its type alone.  Slice 300 (Codex's review of 299, item 3): the receiver counts its
+# calls (Calls\n) -- the single-field check of a compatible place runs no converter (87, 88).  Entry 7; 81.. name the failing
+# check.
+Calls:
+    int: n 0
+end: Calls
 fn: lm_stg_convert_char_int (char: c) int
     throws: range
+    Calls\n: Calls\n + 1
     if: c > 9
         throw: range
     return: (cast: (int) c) + 100
@@ -34,9 +40,13 @@ fn: m (int: g) int
     if: caught != 1 || z != 107
         return: 83
     ---
+    int: calls Calls\n
     char: z
     if: z != 107
         return: 84
+    ---
+    if: Calls\n != calls
+        return: 87
     ---
     return: 7
 end: m
@@ -46,9 +56,13 @@ char: rz 6
 if: code = 7 && rz != 106
     code: 85
 ---
+int: rcalls Calls\n
 char: rz
 if: code = 7 && rz != 106
     code: 86
+---
+if: code = 7 && Calls\n != rcalls
+    code: 88
 ---
 sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
 return

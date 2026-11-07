@@ -1,0 +1,128 @@
+# Slice 300 (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE, gap1; Codex's review of 299, item 2a): the conversion table has no
+# row char -> size_t and no row int -> ulong, so the program has no admissible conversion of these pairs -- the same
+# unavailable route as a row whose receiver the program lacks.  The translation refuses nothing; a reached implicit reception
+# -- a write, an argument (the callee's body does not run), a result, a declaration, an L3 INDEX index, a single-field repeat
+# -- is the implicit `convert` and the place keeps its value; receptions in a branch that does not run raise nothing.  On 299
+# each was refused at translation ("mixed numeric types (a conversion)").  Entry 7.
+Seen:
+    int: n 0
+end: Seen
+fn: take (size_t: a) int
+    Seen\n: Seen\n + 1
+    return: (cast: (int) a)
+end: take
+fn: give () size_t
+    char: c 6
+    return: c
+end: give
+fn: write_reached () int
+    size_t: z 5U
+    char: c 6
+    ---
+        z: c
+        return: 1
+        catch: convert ()
+            return: (cast: (int) z)
+    ---
+end: write_reached
+fn: wide_reached () int
+    ulong: w 5U
+    int: n 6
+    ---
+        w: n
+        return: 1
+        catch: convert ()
+            return: (cast: (int) w)
+    ---
+end: wide_reached
+fn: arg_reached () int
+    char: c 6
+    ---
+        int: got take(c)
+        return: got
+        catch: convert ()
+            return: 25 + Seen\n * 100
+    ---
+end: arg_reached
+fn: result_reached () int
+    ---
+        size_t: got give()
+        return: 1
+        catch: convert ()
+            return: 25
+    ---
+end: result_reached
+fn: init_reached () int
+    char: c 6
+    ---
+        size_t: w c
+        return: 1
+        catch: convert ()
+            return: 25
+    ---
+end: init_reached
+fn: index_reached () int
+    []: int cells 2
+    cells[1U]: 17
+    @: pc int @ cells[0U]
+    char: at 1
+    ---
+        int: got pc[at]
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: index_reached
+fn: single_reached () int
+    size_t: s 5U
+    ---
+        char: s
+        return: 1
+        catch: convert ()
+            return: (cast: (int) s)
+    ---
+end: single_reached
+fn: skipped (int: k) int
+    size_t: z 5U
+    ulong: w 5U
+    int: n 6
+    char: c 6
+    if: k = 1
+        z: c
+        w: n
+        size_t: v c
+        char: z
+        return: take(c)
+    ---
+    return: (cast: (int) z) + (cast: (int) w)
+end: skipped
+fn: run () int
+    if: write_reached() != 5
+        return: 81
+    ---
+    if: wide_reached() != 5
+        return: 82
+    ---
+    if: arg_reached() != 25
+        return: 83
+    ---
+    if: result_reached() != 25
+        return: 84
+    ---
+    if: init_reached() != 25
+        return: 85
+    ---
+    if: index_reached() != 25
+        return: 86
+    ---
+    if: single_reached() != 5
+        return: 87
+    ---
+    if: skipped(0) != 10
+        return: 88
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

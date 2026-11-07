@@ -1,0 +1,44 @@
+# Slice 300 probe (Codex's review of 299, item 3): a single-field repeat `char: z` at the int place z checks the place's
+# compatibility with the written type where it is reached.  The program defines no char -> int receiver, so the reached
+# check is the implicit `convert` -- no converter runs, z keeps 5, nothing is written or reset; the same repeat in a branch
+# that does not run raises nothing.  On 299 the reached check passed unconditionally (81).  Entry 7.
+fn: single_reached () int
+    int: z 5
+    ---
+        char: z
+        return: 1
+        catch: convert ()
+            return: z
+    ---
+end: single_reached
+fn: single_skipped (int: k) int
+    int: z 5
+    if: k = 1
+        char: z
+    ---
+    return: z
+end: single_skipped
+fn: single_gap1 () int
+    size_t: s 5U
+    ---
+        char: s
+        return: 1
+        catch: convert ()
+            return: (cast: (int) s)
+    ---
+end: single_gap1
+fn: run () int
+    if: single_reached() != 5
+        return: 81
+    ---
+    if: single_skipped(0) != 5
+        return: 82
+    ---
+    if: single_gap1() != 5
+        return: 83
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

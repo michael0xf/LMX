@@ -6,8 +6,12 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 235 inputs (65 source files, 34 tools and
-136 tests). Slice299 receives a number of another type whose conversion row names a receiver the program does not
+The selected package contains 236 inputs (65 source files, 34 tools and
+137 tests). Slice300 takes a pair the conversion table has no row of by the same unavailable route, and a single-field
+repeat (`int: z 5; char: z`) checks its place where it is reached in both executors: the kernel's reception of a zero of
+the written type at the place's type -- an unavailable route is the implicit `convert`, an available receiver passes
+without being called, the place is never written; Codex's review of 299 narrowed slice299's claim (its single-field
+repeat passed unconditionally). Slice299 receives a number of another type whose conversion row names a receiver the program does not
 define by an unavailable route: in language code the translation admits it and the reached reception is the implicit
 `convert` in both executors (natively the source is packed and received by the kernel's `lmx_walk_value_receive`; the
 walker evaluates the value as its own type) -- a write, an argument, a result, a declaration, an L3 INDEX index, a path
@@ -290,19 +294,19 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot161a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-boot160a/quick160a/lmxtool.exe` (`B5F66D42…`, the working tool of
-slice298; this package's tools/build.lm2 is unchanged), previous frontend
-`cold-boot160a/quick160a/g2/frontend/l2trans.exe` (`5ACFA385…`, the G2
-frontend of slice298) with its adjacent backend (`589D1489…`) and libc
+boot162a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-boot161a/quick161a/lmxtool.exe` (`83E9BD37…`, the working tool of
+slice299; this package's tools/build.lm2 is unchanged), previous frontend
+`cold-boot161a/quick161a/g2/frontend/l2trans.exe` (`D85F0715…`, the G2
+frontend of slice299) with its adjacent backend (`64C45315…`) and libc
 (`AF9FDAE3…`), and BASE `cold-candidate48/full48/g2/frontend`. Its promoted
-working tool is `cold-boot161a/quick161a/lmxtool.exe` (`83E9BD37…`), the G2
+working tool is `cold-boot162a/quick162a/lmxtool.exe` (`C6DEABF9…`), the G2
 tool, with `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot161a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-07, 10:07:11–10:18:34Z, 683 s): `BOOTSTRAP quick 0 failures`. G0
+boot162a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-07, 11:14:52–11:26:06Z, 674 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's
@@ -313,9 +317,9 @@ the previous working tool's own commands (`checks`): the stage against its manif
 producer record closed on its files and free of script hosts, G1 against G2
 (`exe-same` for the three executables, which differ only in the PE link stamp,
 `same` for libc, the runtime objects, the tool's L1 and C and the consumed
-inputs), the working tool and bundle against G2, the runtime the candidate ran on (slice298's G2
+inputs), the working tool and bundle against G2, the runtime the candidate ran on (slice299's G2
 runtime: the kernel is unchanged) against G2's runtime objects (byte-equal), and the candidate frontend
-against G2 (`exe-same`). The whole full list ran on that candidate (111 rows, 0 failures) and the G2 tool's
+against G2 (`exe-same`). The whole full list ran on that candidate (112 rows, 0 failures) and the G2 tool's
 self-test on G2; FULL has not run on these bytes. That comparison is its own evidence, not a reproducibility
 gate. The draft79 line's open items (V63, the split-pointer place, the bare
 return) are not closed by this result.

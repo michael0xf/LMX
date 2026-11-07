@@ -1,0 +1,78 @@
+# Slice 300 probe (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE, gap1; Codex's review of 299, item 2a): the conversion table
+# has no row char -> size_t.  A reached implicit reception of a char at a size_t place -- a write, an argument, a result, a
+# declaration -- is the implicit `convert` and the place keeps its value; the same receptions in a branch that does not run
+# raise nothing.  Entry 7.
+fn: write_reached () int
+    size_t: z 5U
+    char: c 6
+    ---
+        z: c
+        return: 1
+        catch: convert ()
+            return: (cast: (int) z)
+    ---
+end: write_reached
+fn: take (size_t: a) int
+    return: (cast: (int) a)
+end: take
+fn: arg_reached () int
+    char: c 6
+    ---
+        int: got take(c)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: arg_reached
+fn: give () size_t
+    char: c 6
+    return: c
+end: give
+fn: result_reached () int
+    ---
+        size_t: got give()
+        return: 1
+        catch: convert ()
+            return: 25
+    ---
+end: result_reached
+fn: init_reached () int
+    char: c 6
+    ---
+        size_t: w c
+        return: 1
+        catch: convert ()
+            return: 25
+    ---
+end: init_reached
+fn: skipped (int: k) int
+    size_t: z 5U
+    char: c 6
+    if: k = 1
+        z: c
+        size_t: w c
+        return: take(c)
+    ---
+    return: (cast: (int) z)
+end: skipped
+fn: run () int
+    if: write_reached() != 5
+        return: 81
+    ---
+    if: arg_reached() != 25
+        return: 82
+    ---
+    if: result_reached() != 25
+        return: 83
+    ---
+    if: init_reached() != 25
+        return: 84
+    ---
+    if: skipped(0) != 5
+        return: 85
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

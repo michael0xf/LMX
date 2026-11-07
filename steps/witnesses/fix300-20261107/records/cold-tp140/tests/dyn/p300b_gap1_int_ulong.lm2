@@ -1,0 +1,32 @@
+# Slice 300 probe (gap1): the conversion table has no row int -> ulong.  A reached write of an int into a ulong place is the
+# implicit `convert` and the place keeps 5; the same write in a branch that does not run raises nothing.  Entry 7.
+fn: write_reached () int
+    ulong: z 5U
+    int: n 6
+    ---
+        z: n
+        return: 1
+        catch: convert ()
+            return: (cast: (int) z)
+    ---
+end: write_reached
+fn: skipped (int: k) int
+    ulong: z 5U
+    int: n 6
+    if: k = 1
+        z: n
+    ---
+    return: (cast: (int) z)
+end: skipped
+fn: run () int
+    if: write_reached() != 5
+        return: 81
+    ---
+    if: skipped(0) != 5
+        return: 82
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -12514,6 +12514,16 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
             return: (cast: (int) (c.lm_compiler_rw_refuse_ty(stmt, oi)))
         f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (declaration\candidate)))
         if: declaration\candidate_count = 0
+            # Slice 300 (Codex's review of 299, item 3): a single-field repeat whose route is unavailable checks the known
+            # place where it is reached (lm_compiler_rw_single_repeat_check), as natively; a compatible one makes no step.
+            if: c.lm_compiler_single_repeat_unavailable(stmt, oi, rw_mi_cell[0]) != 0
+                if: lm_compiler_rw_single_repeat_check(into, stmt, oi, @ port_local_node) != 0
+                    return: (cast: (int) (1))
+                \made: 1
+                if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+                    return: (cast: (int) (1))
+                return: (cast: (int) (0))
+            ---
             # T4b class 2: `int: n` with no initializer, n an argument (a formal or a dynamic input), carries it.
             # Class 3: the same carry into a field declared in the nested body.
             if: own_decl_cell[0][oi] = stmt && c.lm_compiler_rw_formal_slot(own_name_cell[0][oi]) = oi && c.lm_compiler_split_data_row(oi) = 0
@@ -18264,9 +18274,11 @@ fn: lm_compiler_check_repeat_type (const: (@: stmt c.LmP0Node); int: own; int: m
     if: declaration\candidate_count = 0
         if: c.lm_compiler_colon_types_compatible(place, written) != 0
             return: (cast: (int) (0))
-        # Slice 299: the same admission as a reception's -- an unavailable route in language code is compatible; nothing is
-        # received, so nothing is raised.
-        if: c.lm_compiler_unavailable_route(mi) != 0
+        # Slice 299: the same admission as a reception's.  Slice 300 (Codex's review of 299, item 3): an unavailable route in
+        # language code is no success of the check -- the check is made where the repeat is reached, natively
+        # (lm_compiler_emit_single_repeat_check) and walked (lm_compiler_rw_single_repeat_check), and fails there with the
+        # implicit `convert`; the method is on the status channel (lm_compiler_unavailable_route_admit).
+        if: c.lm_compiler_unavailable_route_admit(mi) != 0
             return: (cast: (int) (0))
         if: cv_gap_cell[0] = 2
             return: (cast: (int) (c.lm_compiler_convert_norecv(path, stmt)))
@@ -18322,3 +18334,20 @@ fn: lm_compiler_rw_repeat_assign (int: into; int: oi; const: (@: stmt c.LmP0Node
     c.lm_compiler_value_span_release(@ value)
     return: (cast: (int) (status))
 end: lm_compiler_rw_repeat_assign
+
+# Slice 300 (Codex's review of 299, item 3; the book provenance :428, :483, :198): the walked reached check of a single-field
+# repeat whose route is unavailable (lm_compiler_single_repeat_unavailable) -- [RECEIVE, a zero of the written type, the
+# place type's witness]: the kernel's one reception is its implicit `convert`, as the native check's
+# (lm_compiler_emit_single_repeat_check).  No converter runs and the place is neither read nor written.
+fn: lm_compiler_rw_single_repeat_check (int: into; const: (@: stmt c.LmP0Node); int: oi; @: out int) int
+    @@: own_ty_cell int (cast: (@@: int) (@ c.l2_own_ty))
+    int: child -1
+    int: written c.lm_compiler_decl_ft(stmt)
+    if: written < 0 || out = 0
+        return: (cast: (int) (1))
+    if: c.lm_compiler_rw_frame(into, "LMX_WALK_OP_RECEIVE", 3, out) != 0 || lm_compiler_rw_witness(out[0], 2, (cast: (int) (own_ty_cell[0][oi])), 0) != 0
+        return: (cast: (int) (1))
+    if: lm_compiler_rw_tlit(stmt, out[0], (cast: (int) (c.lm_compiler_own_ty_of_param(written))), 0, 0U, 0, @ child) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.lm_compiler_rw_put(out[0], 1, child)))
+end: lm_compiler_rw_single_repeat_check

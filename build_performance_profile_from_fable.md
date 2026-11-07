@@ -552,3 +552,17 @@ adds a zero record of the written type and one kernel reception; whether the sel
 The registry took 5.96 s less than 299's with one more row; not measured apart, the cause is not located. A
 whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix300-20261107/notes.md).
+
+## Slice301 / boot163a (Opus, 2026-11-07)
+
+Whole quick 1329.57 s: 12:54:36.5999578Z→13:16:46.1671647Z, both generations smoke 9/0; G0 is the working tool of
+boot162a (tools/build.lm2 is unchanged). The whole maintained registry on the candidate frontend fe163a and the runtime
+rt163a built from the changed kernel (G2's runtime of boot163a is byte-equal to it), fe163a `exe-same` with G2:
+113/0, 946 checks (939.62 s: 12:26:48.0417168Z→12:42:27.6653015Z; counted with the log's byte order mark). Source
+237/8737EDD3; the acceptance is one `lmxtool checks` list of 38 commands run by the working tool of boot162a, 0 failed;
+the G2 tool's self-test 0 failures. A bound call with a typed number written by name carries three route arrays from its
+call site (walked: route pairs in the NAMED row), every written actual is received by one kernel function that reads
+only the selected formal's type's route, and a receiver runs only where that type differs; whether the self-build holds
+such a call was not measured. The whole quick took 655.28 s more than boot162a's and the registry 86.94 s more with one
+more row; not measured apart, the cause is not located. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix301-20261107/notes.md).

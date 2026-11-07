@@ -9444,7 +9444,8 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
         if: actual\wrapper != 0
             # The prepared wrapper owns the written name. Keep that source
             # identity instead of substituting the old descriptor's formal.
-            if: c.lm_compiler_rw_named((cast: (int) (\out)), (cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head), k, @ site) != 0
+            # Slice 301: with the routes of its typed number (lm_compiler_rw_named_routed).
+            if: lm_compiler_rw_named_routed((cast: (int) (\out)), (cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head), k, idx, actual, @ site) != 0
                 return: (cast: (int) (1))
             ---
         ---
@@ -18351,3 +18352,48 @@ fn: lm_compiler_rw_single_repeat_check (int: into; const: (@: stmt c.LmP0Node); 
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_rw_put(out[0], 1, child)))
 end: lm_compiler_rw_single_repeat_check
+
+# Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the NAMED operand of a bound call with the routes of its
+# typed number after the payload -- for each other number type the program's direct receiver from the type the actual is
+# received into (lm_compiler_bound_route_source, lm_compiler_direct_receiver), a pair [witness of the type, the receiver's
+# occurrence] (lm_compiler_rw_method_occurrence), the walked twin of the native call's arrays (lm_compiler_emit_bound_routes).
+# Without a route: the plain NAMED (lm_compiler_rw_named).
+fn: lm_compiler_rw_named_routed (int: parent; const: (@: name c.LmP0Text); int: coordinate; int: idx; @: actual c.L2ApplicationActual; @: out int) int
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    int: src (cast: (int) (c.lm_compiler_bound_route_source(actual, idx, coordinate)))
+    int: routes 0
+    int: n 0
+    int: dst 0
+    int: receiver 0
+    int: slot 3
+    int: named 0
+    int: occurrence 0
+    dst: (cast: (int) (c.lm_compiler_route_type(n)))
+    while: src >= 0 && dst >= 0
+        if: c.lm_compiler_direct_receiver(src, dst) >= 0
+            routes: routes + 1
+        n: n + 1
+        dst: (cast: (int) (c.lm_compiler_route_type(n)))
+    ---
+    if: routes = 0
+        return: (cast: (int) (c.lm_compiler_rw_named(parent, name, coordinate, out)))
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_NAMED", 3 + 2 * routes, out) != 0 || c.lm_compiler_rw_source_name((cast: (int) (\out)), name) != 0
+        return: (cast: (int) (1))
+    named: (cast: (int) (\out))
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", named, coordinate) < 0
+        return: (cast: (int) (1))
+    n: 0
+    dst: (cast: (int) (c.lm_compiler_route_type(n)))
+    while: src >= 0 && dst >= 0
+        receiver: (cast: (int) (c.lm_compiler_direct_receiver(src, dst)))
+        if: receiver >= 0
+            if: lm_compiler_rw_witness(named, slot, dst, 0) != 0 || lm_compiler_rw_method_occurrence(receiver, named, @ occurrence) != 0 || c.lm_compiler_rw_put(named, slot + 1, occurrence) != 0
+                return: (cast: (int) (1))
+            slot: slot + 2
+        ---
+        n: n + 1
+        dst: (cast: (int) (c.lm_compiler_route_type(n)))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_rw_named_routed

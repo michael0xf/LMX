@@ -1,0 +1,57 @@
+# Slice 301 probe (CALLABLE-PLACE-TYPED-RECEPTION; Codex's review of 300, item 4): Places\f declares int x, char y; the fn g
+# written into it declares int y, char x (the same positional types).  `Places\f(x: n; y: 7)` with `int: n 5` binds n to
+# the selected char x: the program defines the int -> char receiver (convert.lm2: int char narrow lm_stg_convert_int_char),
+# which counts its calls and adds 1.  Wanted: 67 (6 * 10 + 7) and one receiver call; the implicit `convert` is 81.
+Calls:
+    int: n 0
+end: Calls
+fn: lm_stg_convert_int_char (int: n) char
+    Calls\n: Calls\n + 1
+    return: (cast: (char) (n + 1))
+end: lm_stg_convert_int_char
+fn: g (int: y; char: x) int
+    return: (cast: (int) x) * 10 + y
+end: g
+Places:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_typed () int
+    int: n 5
+    ---
+        int: got Places\f(x: n; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: call_typed
+fn: run () int
+    @: Hw g g
+    if: write_place() != 1
+        return: 80
+    ---
+    int: got call_typed()
+    if: got = 25
+        return: 81
+    ---
+    if: got != 67
+        return: 82
+    ---
+    if: Calls\n != 1
+        return: 83
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

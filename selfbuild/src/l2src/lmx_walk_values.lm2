@@ -1459,13 +1459,13 @@ fn: lmx_walk_source_find (@: f c.LmxWalkFrame; @: graph_root c.Lmx; @: target vo
     return: c.LMX_WALK_OK
 end: lmx_walk_source_find
 
-# A NAMED actual evaluates its payload; other actuals evaluate themselves.
+# A NAMED actual evaluates its payload; other actuals evaluate themselves.  Slice 301: the one form of NAMED
+# (lmx_walk_named_form) -- the routes after its payload are no actuals.
 fn: lmx_walk_prim_source_value (@: f c.LmxWalkFrame; @: actual void) @: void
     if: actual = 0 || lmx_walk_kind(f, actual) != c.LMX_KIND_STRUCT || lmx_walk_op(f, actual) != c.LMX_WALK_OP_NAMED
         return: actual
     @: actual_struct c.Lmx (cast: (@: c.Lmx) actual)
-    @: fields c.VoidArray @ actual_struct\array
-    if: fields\size != 3U
+    if: lmx_walk_named_form((cast: (@: c.LmxArena) f\arena), actual_struct, 0) = 0
         return: actual
     return: (cast: (@: void) c.lmx_graph_value_in(f\arena, actual_struct, 2U))
 end: lmx_walk_prim_source_value
@@ -4564,7 +4564,6 @@ end: lmx_walk_call_shape
 fn: lmx_walk_actual_shape (@: arena c.LmxArena; @: operand void; size_t: written_slot; size_t: written_count; size_t: coordinate_count; @: out_coordinate size_t; @@: out_payload void; @@: out_named c.Lmx) int
     size_t: at 0U
     @: named c.Lmx 0
-    @: fields c.VoidArray 0
     if: out_coordinate = 0 || out_payload = 0 || out_named = 0
         return: c.LMX_WALK_INVALID
     \out_coordinate: written_slot
@@ -4577,8 +4576,8 @@ fn: lmx_walk_actual_shape (@: arena c.LmxArena; @: operand void; size_t: written
     named: c.lmx_graph_node_in(arena, operand)
     if: named = 0
         return: c.LMX_WALK_INVALID
-    fields: @ named\array
-    if: fields\size != 3U
+    # Slice 301: the one form of NAMED (lmx_walk_named_form); its routes are resolution data, never operands.
+    if: lmx_walk_named_form(arena, named, 0) = 0
         return: c.LMX_WALK_INVALID
     if: lmx_walk_load_numeric(arena, c.lmx_graph_value_in(arena, named, 1U), @ at) != c.LMX_WALK_OK
         if: c.lmx_graph_value_in(arena, named, 1U) != 0 && coordinate_count != (cast: (size_t) -1)
@@ -5841,13 +5840,19 @@ end: lmx_call_formal_default
 # implicit `convert`), a formal no written actual binds its default (lmx_call_formal_default).  A selected callable of
 # another arity, without a formal of a written name, with two actuals for one formal, or without a default for a formal
 # no actual binds: the call's refusal, its implicit `call` before the body.
-fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; size_t: written_count; @: slots size_t; @@: names void; @: values c.LmxWalkValue) int
+# Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the written actuals are received in their written order
+# by the one reception lmx_walk_receive_selected the walker takes.  A typed number at a formal of another number type goes
+# through the route the call site resolved for that formal's type -- route k is the written actual route_written[k], the
+# number type route_types[k] and the occurrence of the program's direct receiver route_codes[k] -- else it is the implicit
+# `convert`.  Routes of another form are a malformed call (INVALID).
+fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; size_t: written_count; @: slots size_t; @@: names void; @: values c.LmxWalkValue; size_t: route_count; @: route_written size_t; @: route_types int; @@: route_codes void) int
     @: args c.Lmx 0
     @: returns c.Lmx 0
     @: source void 0
     @: expected void 0
     @: bound c.LmxWalkValue 0
     @: item c.LmxWalkValue 0
+    @: route c.Lmx 0
     @: views c.VoidArray 0
     @: view c.VoidArray 0
     @@: wanted c.VoidArray 0
@@ -5863,6 +5868,8 @@ fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; si
     int: numeric 0
     int: status c.LMX_WALK_OK
     if: arena = 0 || code = 0 || written_count > count || (count != 0U && values = 0) || (written_count != 0U && (slots = 0 || names = 0))
+        return: c.LMX_WALK_INVALID
+    if: lmx_call_routes_form(arena, written_count, route_count, route_written, route_types, route_codes) = 0
         return: c.LMX_WALK_INVALID
     status: c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
     if: status != c.LMX_WALK_OK
@@ -5931,21 +5938,25 @@ fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; si
         ---
         i: i + 1U
     ---
-    j: 0U
-    while: status = c.LMX_WALK_OK && j < count
+    i: 0U
+    while: status = c.LMX_WALK_OK && i < written_count
+        j: sources[i]
         item: bound + j
-        if: occupied[j] = 0
-            status: lmx_call_formal_default(arena, code, j, item)
+        if: c.lmx_callable_source_entry(arena, args, j, @ source, @ expected) != 0
+            status: c.LMX_WALK_UNSUPPORTED
         else:
-            if: c.lmx_callable_source_entry(arena, args, j, @ source, @ expected) != 0
-                status: c.LMX_WALK_UNSUPPORTED
-            else:
-                numeric: lmx_walk_numeric_type(arena, expected)
-                if: numeric != 0 && item\present != 0 && item\kind = c.LMX_WALK_VALUE_NUMBER
-                    status: lmx_walk_value_receive(item, numeric, item)
-                ---
+            numeric: lmx_walk_numeric_type(arena, expected)
+            if: numeric != 0 && item\present != 0 && item\kind = c.LMX_WALK_VALUE_NUMBER
+                route: lmx_call_bound_route(route_count, route_written, route_types, route_codes, i, numeric)
+                status: lmx_walk_receive_selected(arena, item, numeric, route)
             ---
         ---
+        i: i + 1U
+    ---
+    j: 0U
+    while: status = c.LMX_WALK_OK && j < count
+        if: occupied[j] = 0
+            status: lmx_call_formal_default(arena, code, j, bound + j)
         j: j + 1U
     ---
     if: status = c.LMX_WALK_OK
@@ -6035,6 +6046,40 @@ fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: calle
         refs: (cast: (@@: void) room)
         c.memset(room, 0, count * sizeof(pointer_probe))
     ---
+    # Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): each written number is received by its selected formal
+    # in the written order, by the one reception the native binder takes (lmx_walk_receive_selected), through the route
+    # its NAMED operand carries for that formal's number type (lmx_walk_named_route) -- else a typed number of another
+    # type is the implicit `convert`.  The binding is the one scatter used (lmx_callable_bound_operand).
+    size_t: k 0U
+    while: k < written_count
+        size_t: at (cast: (size_t) -1)
+        size_t: physical (cast: (size_t) -1)
+        status: c.lmx_callable_bound_operand((cast: (@: c.LmxArena) f\arena), inputs, code, binding_p, sources, width, first + k, @ at, @ physical, @ answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: answer != c.LMX_IMPLEMENTS_YES || at >= count
+            return: c.LMX_WALK_INVALID
+        received: values + at
+        if: received\present != 0 && received\kind = c.LMX_WALK_VALUE_NUMBER
+            if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), inputs, at, @ source, @ witness) != 0
+                return: c.LMX_WALK_UNSUPPORTED
+            numeric: lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), witness)
+            if: numeric != 0
+                @: receiver c.Lmx 0
+                @: operand void (cast: (@: void) c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, first + k))
+                status: lmx_walk_named_route(f, operand, numeric, @ receiver)
+                if: status = c.LMX_WALK_OK
+                    status: lmx_walk_receive_selected((cast: (@: c.LmxArena) f\arena), received, numeric, receiver)
+                if: status >= c.LMX_WALK_THROWN
+                    f\payload: 0
+                    f\landing: 0
+                ---
+                if: status != c.LMX_WALK_OK
+                    return: status
+            ---
+        ---
+        k: k + 1U
+    ---
     while: i < count
         if: occupied[i] = 0
             status: lmx_walk_current_default((cast: (@: c.LmxArena) f\arena), inputs, i, values + i)
@@ -6068,21 +6113,9 @@ fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: calle
         # NO about the interface or permission to evaluate formal SOURCE.
         if: received\present = 0
             return: c.LMX_WALK_UNSUPPORTED
-        # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :485): a written number is received by the selected formal's
-        # own type -- a NAMED actual binds the formal of its name, which may stand where the signature the call was
-        # written against has a formal of another type; a number of another kind is the implicit `convert`.
-        if: occupied[i] = 1 && received\kind = c.LMX_WALK_VALUE_NUMBER
-            numeric: lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), witness)
-            if: numeric != 0
-                status: lmx_walk_value_receive(received, numeric, received)
-                if: status >= c.LMX_WALK_THROWN
-                    f\payload: 0
-                    f\landing: 0
-                ---
-                if: status != c.LMX_WALK_OK
-                    return: status
-            ---
-        ---
+        # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :485): a written number was received by the selected formal's
+        # own type above, in the written order (slice 301) -- a NAMED actual binds the formal of its name, which may stand
+        # where the signature the call was written against has a formal of another type.
         # Entry reception is not a completed conversion proof here. In
         # particular a typed null must not lose reference depth merely
         # because there is a receiver waiting at the eventual entry.
@@ -7891,3 +7924,110 @@ fn: lmx_activation_resolve_input (@: arena c.LmxArena; size_t: k; @@: refs void;
     ---
     return: 1
 end: lmx_activation_resolve_input
+
+# ---- The reception of a number by the formal a call selected (slice 301) ---------------------------------------------
+#
+# CALLABLE-PLACE-TYPED-RECEPTION (the book provenance :198, :200, :241; Codex 301, item 2): a typed number bound to a
+# formal of another number type of the callable a call selected when it ran is received by the program's direct receiver
+# of that pair, which the call site resolved as it resolves a static reception: its routes are the resolution data of the
+# call -- natively arrays the generated call hands lmx_call_bind_actuals, walked the pairs after the payload of the NAMED
+# operand.  Only the route of the selected formal's type is read; no route: the implicit `convert`.
+
+# The one form of a NAMED operand: [NAMED, coordinate, payload] -- its written name in the row's source name -- and after
+# them the routes of a typed number, pairs [witness of a number type D, occurrence of the program's direct receiver S -> D].
+# 1: the form holds (routes, when asked, the number of pairs); 0: it does not.
+fn: lmx_walk_named_form (@: arena c.LmxArena; @: named c.Lmx; @: routes size_t) int
+    @: fields c.VoidArray 0
+    if: routes != 0
+        \routes: 0U
+    if: arena = 0 || named = 0
+        return: 0
+    fields: @ named\array
+    if: fields\size < 3U || (fields\size - 3U) % 2U != 0U
+        return: 0
+    if: routes != 0
+        \routes: (fields\size - 3U) / 2U
+    return: 1
+end: lmx_walk_named_form
+
+# The one reception of a number bound to a formal of type `target` of the callable a call selected.  A typed number of
+# another type goes through `receiver`, the program's direct receiver of that pair (lmx_walk_convert_capture: its refusal is
+# the implicit `convert` and leaves the value as it was); without one -- and for a contextual literal or a number of the
+# formal's own type -- the place's ordinary reception (lmx_walk_value_receive).
+fn: lmx_walk_receive_selected (@: arena c.LmxArena; @: item c.LmxWalkValue; int: target; @: receiver c.Lmx) int
+    int: base 0
+    if: arena = 0 || item = 0
+        return: c.LMX_WALK_INVALID
+    if: receiver != 0 && item\present != 0 && item\kind = c.LMX_WALK_VALUE_NUMBER && c.lmx_type_base(item\type) != c.LMX_TYPE_NONE && c.lmx_type_base(item\type) != c.lmx_type_base(target)
+        base: (cast: (int) c.lmx_type_base(target))
+        return: lmx_walk_convert_capture(arena, receiver, item, base)
+    return: lmx_walk_value_receive(item, target, item)
+end: lmx_walk_receive_selected
+
+# The routes a generated native call hands its binder: each names a written actual, a number type and a callable occurrence
+# of the arena.  1: they do (or there are none); 0: a malformed call.
+fn: lmx_call_routes_form (@: arena c.LmxArena; size_t: written_count; size_t: route_count; @: route_written size_t; @: route_types int; @@: route_codes void) int
+    size_t: k 0U
+    if: route_count = 0U
+        return: 1
+    if: arena = 0 || route_written = 0 || route_types = 0 || route_codes = 0
+        return: 0
+    while: k < route_count
+        if: route_written[k] >= written_count || c.lmx_type_base(route_types[k]) = c.LMX_TYPE_NONE || route_codes[k] = 0 || c.lmx_graph_node_in(arena, route_codes[k]) = 0
+            return: 0
+        k: k + 1U
+    ---
+    return: 1
+end: lmx_call_routes_form
+
+# The receiver a native call resolved for its written actual `written` at a formal of type `target`; 0: none.
+fn: lmx_call_bound_route (size_t: route_count; @: route_written size_t; @: route_types int; @@: route_codes void; size_t: written; int: target) @: c.Lmx
+    size_t: k 0U
+    while: k < route_count
+        if: route_written[k] = written && c.lmx_type_base(route_types[k]) = c.lmx_type_base(target)
+            return: (cast: (@: c.Lmx) route_codes[k])
+        k: k + 1U
+    ---
+    return: 0
+end: lmx_call_bound_route
+
+# The receiver a walked operand's call site resolved for a formal of type `target`: the occurrence of the NAMED operand's
+# route of that type, evaluated only for it.  An operand of another form or without such a route: 0.  A route whose witness
+# is no number type, or whose occurrence is no Structure, is a malformed graph (INVALID).
+fn: lmx_walk_named_route (@: f c.LmxWalkFrame; @: operand void; int: target; @@: out c.Lmx) int
+    @: named c.Lmx 0
+    c.LmxWalkValue: occurrence
+    @: occurrence_p c.LmxWalkValue @ occurrence
+    size_t: routes 0U
+    size_t: r 0U
+    int: ty 0
+    int: status
+    if: f = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    \out: 0
+    if: operand = 0 || lmx_walk_shape_op((cast: (@: c.LmxArena) f\arena), operand) != c.LMX_WALK_OP_NAMED
+        return: c.LMX_WALK_OK
+    named: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), operand)
+    if: named = 0 || lmx_walk_named_form((cast: (@: c.LmxArena) f\arena), named, @ routes) = 0
+        return: c.LMX_WALK_INVALID
+    while: r < routes
+        @: witness void (cast: (@: void) c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), named, 3U + 2U * r))
+        ty: lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), witness)
+        if: ty = 0
+            return: c.LMX_WALK_INVALID
+        if: c.lmx_type_base(ty) = c.lmx_type_base(target)
+            lmx_walk_value_clear(occurrence_p)
+            status: c.lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), named, 4U + 2U * r), occurrence_p)
+            if: status != c.LMX_WALK_OK
+                return: status
+            if: occurrence_p\present = 0 || occurrence_p\kind != c.LMX_WALK_VALUE_REFERENCE
+                return: c.LMX_WALK_INVALID
+            if: occurrence_p\ref != 0 && lmx_walk_kind(f, (cast: (@: void) occurrence_p\ref)) != c.LMX_KIND_STRUCT
+                return: c.LMX_WALK_INVALID
+            \out: (cast: (@: c.Lmx) occurrence_p\ref)
+            return: c.LMX_WALK_OK
+        ---
+        r: r + 1U
+    ---
+    return: c.LMX_WALK_OK
+end: lmx_walk_named_route

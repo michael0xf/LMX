@@ -1,0 +1,61 @@
+# Slice 301 probe (the receiver's own refusal at a bound call): the int -> char receiver raises the implicit `convert` itself
+# (a reached reception the table has no row of, char -> size_t).  Its refusal is the caller's implicit `convert` before
+# the selected callee's body: the handler of call_typed gets it and g never ran.  Exit 7; 81 the call returned; 82 the
+# callee's body ran; 83 the receiver was not called.
+Seen:
+    int: n 0
+    int: r 0
+end: Seen
+fn: lm_stg_convert_int_char (int: n) char
+    Seen\r: Seen\r + 1
+    size_t: s 5U
+    char: c 6
+    s: c
+    return: (cast: (char) n)
+end: lm_stg_convert_int_char
+fn: g (int: y; char: x) int
+    Seen\n: Seen\n + 1
+    return: (cast: (int) x) * 10 + y
+end: g
+Places:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_typed () int
+    int: n 5
+    ---
+        int: got Places\f(x: n; y: 7)
+        return: 81
+        catch: convert ()
+            return: 25
+    ---
+end: call_typed
+fn: run () int
+    @: Hw g g
+    if: write_place() != 1
+        return: 80
+    ---
+    if: call_typed() != 25
+        return: 81
+    ---
+    if: Seen\n != 0
+        return: 82
+    ---
+    if: Seen\r != 1
+        return: 83
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

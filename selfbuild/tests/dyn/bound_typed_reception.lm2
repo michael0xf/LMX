@@ -1,0 +1,123 @@
+# Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; the book provenance :198, :200, :241; Codex's review of 300, item 4, and its
+# answer on 301, item 2): Places\f declares int x, char y; the fn g written into it declares int y, char x (the same
+# positional types).  A typed int written by name at x binds the selected char x: the call site resolved the program's
+# direct receiver int -> char (convert.lm2: int char narrow lm_stg_convert_int_char), which the binder calls once, before
+# the callee's body -- 67 (6 * 10 + 7).  The receiver's own refusal is the caller's implicit `convert` before the body; a
+# pair the program has no receiver of (int -> size_t at the selected size_t x of w in Wide\f) is the implicit `convert`;
+# the call in a branch that does not run neither receives nor raises.  The order of the receptions among the effects of
+# the actuals is not pinned here (a question of the author).  Entry 7.
+Calls:
+    int: n 0
+    int: body 0
+    int: fail 0
+end: Calls
+fn: lm_stg_convert_int_char (int: n) char
+    Calls\n: Calls\n + 1
+    if: Calls\fail != 0
+        size_t: s 5U
+        char: c 6
+        s: c
+    ---
+    return: (cast: (char) (n + 1))
+end: lm_stg_convert_int_char
+fn: g (int: y; char: x) int
+    Calls\body: Calls\body + 1
+    return: (cast: (int) x) * 10 + y
+end: g
+fn: w (int: y; size_t: x) int
+    Calls\body: Calls\body + 1
+    return: y + (cast: (int) x)
+end: w
+Places:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Places
+Wide:
+    fn: f (int: x; size_t: y) int
+        return: x + (cast: (int) y)
+    end: f
+end: Wide
+int: Hw 0
+int: Ww 0
+fn: write_places () int
+    ---
+        @: Places\f Hw
+        @: Wide\f Ww
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_places
+fn: received () int
+    int: n 5
+    ---
+        int: got Places\f(x: n; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: received
+fn: refused () int
+    int: n 5
+    ---
+        int: got Places\f(x: n; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: refused
+fn: no_route () int
+    int: n 5
+    ---
+        int: got Wide\f(x: n; y: 7)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: no_route
+fn: skipped (int: k) int
+    int: n 5
+    if: k = 1
+        return: Places\f(x: n; y: 7)
+    ---
+    return: 5
+end: skipped
+fn: run () int
+    @: Hw g g
+    @: Ww w w
+    if: write_places() != 1
+        return: 80
+    ---
+    if: skipped(0) != 5
+        return: 81
+    ---
+    if: Calls\n != 0 || Calls\body != 0
+        return: 82
+    ---
+    if: received() != 67
+        return: 83
+    ---
+    if: Calls\n != 1 || Calls\body != 1
+        return: 84
+    ---
+    Calls\fail: 1
+    int: refusal refused()
+    Calls\fail: 0
+    if: refusal != 25
+        return: 85
+    ---
+    if: Calls\n != 2 || Calls\body != 1
+        return: 86
+    ---
+    if: no_route() != 25
+        return: 87
+    ---
+    if: Calls\n != 2 || Calls\body != 1
+        return: 88
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

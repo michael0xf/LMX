@@ -11542,6 +11542,8 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
     @: actual_full_text char (cast: (@: char) actual_full_storage\buffer)
     c.L2Tx: actual_full_tx
     @: actual_full c.L2Tx c.lm_compiler_tx_local(@ actual_full_tx, actual_full_text, 64U)
+    c.L2FrontendScratchChar64: route_storage
+    @: route_args char (cast: (@: char) route_storage\buffer)
     if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
         return: (cast: (int) (1))
     if: context != 0
@@ -11786,9 +11788,14 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
             ---
             written: written + 1
         ---
-        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bn%d, l2_av%d)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, self_t) < 0
+        # Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the routes of the written numbers, resolved here as
+        # a static reception in this caller resolves them (lm_compiler_emit_bound_routes); the binder reads the one of the
+        # selected formal's type.
+        if: lm_compiler_emit_bound_routes(arguments, idx, fd, ind, route_args) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        if: arguments\written_count = 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, 0U, 0, 0, l2_av%d)\n", ind, fd, self_t, nact, self_t) < 0
+        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bn%d, l2_av%d, %s)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, self_t, route_args) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: arguments\written_count = 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, 0U, 0, 0, l2_av%d, %s)\n", ind, fd, self_t, nact, self_t, route_args) < 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         if: c.fprintf(out_cell[0], "%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "call", ind) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
@@ -20284,3 +20291,134 @@ fn: lm_compiler_emit_single_repeat_check (const: (@: stmt c.LmP0Node); int: oi; 
         return: 1
     return: 0
 end: lm_compiler_emit_single_repeat_check
+
+# ---- Slice 301: the routes of a bound call's written numbers ------------------------------------------------------------
+#
+# CALLABLE-PLACE-TYPED-RECEPTION (the book provenance :198, :200, :241; Codex 301, item 2): a number written by name at a
+# call whose callable is selected when it runs binds the formal of its name, which may be of another number type than the
+# formal the call was written against.  The call site resolves -- as a static reception of the same pair in this caller
+# does -- the program's direct receiver from the type the actual was received into to every other number type; the
+# kernel's binder reads only the route of the selected formal's type (lmx_walk_receive_selected).  Natively the routes are
+# arrays handed to lmx_call_bind_actuals (lm_compiler_emit_bound_routes), walked the pairs after the payload of the NAMED
+# operand (lm_compiler_rw_named_routed).  No receiver is called to choose one, no chain is formed.
+
+# The number types a route can lead to, in a fixed order: int, char, size_t, unsigned, ulong; -1 past them.
+fn: lm_compiler_route_type (int: n) int
+    if: n = 0
+        return: 0
+    if: n = 1
+        return: 1
+    if: n = 2
+        return: 2
+    if: n = 3
+        return: 3
+    if: n = 4
+        return: 36
+    return: -1
+end: lm_compiler_route_type
+
+# The program's direct receiver of the number pair src -> dst as a static reception of the pair finds it: the conversion
+# table's row (lm_compiler_convert_hit) and the method it names (lm_compiler_convert_method), of one formal of type src and
+# the result dst.  -1 without an available route: no row, no such method, another signature, one type.  The conversion
+# state of the translation around the question is kept.
+fn: lm_compiler_direct_receiver (int: src; int: dst) int
+    @: cv_gap_cell int (cast: (@: int) (@ c.l2_cv_gap))
+    @@: cv_recv_cell char (cast: (@@: char) (@ c.l2_cv_recv))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    int: saved_gap cv_gap_cell[0]
+    @: saved_recv char cv_recv_cell[0]
+    int: receiver -1
+    if: src != dst && c.lm_compiler_rw_num_ty(src) != 0 && c.lm_compiler_rw_num_ty(dst) != 0 && lm_compiler_convert_hit(c.lm_compiler_own_ty_word(src), c.lm_compiler_own_ty_word(dst)) != 0
+        receiver: lm_compiler_convert_method()
+        if: receiver >= 0 && (m_arity_cell[0][receiver] != 1 || c.lm_compiler_own_ty_of_param(c.lm_compiler_formal_raw(c.lm_compiler_ft(receiver, 0))) != src || c.lm_compiler_ret_cell_ty(receiver) != dst)
+            receiver: -1
+        ---
+    ---
+    cv_gap_cell[0]: saved_gap
+    cv_recv_cell[0]: saved_recv
+    return: receiver
+end: lm_compiler_direct_receiver
+
+# The number type a written actual of a bound call brings to the binder -- the own type of the formal it was written
+# against, into which it was received -- when routes serve it; -1 otherwise: an actual written by position (a callable
+# place admits only its positional types, the profile of slice 286), a literal written by name (contextual, slice 297), a
+# formal of another kind.
+fn: lm_compiler_bound_route_source (@: actual c.L2ApplicationActual; int: idx; int: t) int
+    int: src
+    if: actual = 0 || actual\wrapper = 0 || idx < 0 || t < 0
+        return: -1
+    if: lm_compiler_named_literal_actual(actual, idx, t) != 0
+        return: -1
+    if: c.lm_compiler_cf_get(idx, t) >= 0 || c.lm_compiler_nsty_get(idx, t) >= 0
+        return: -1
+    src: c.lm_compiler_own_ty_of_param(c.lm_compiler_formal_raw(c.lm_compiler_ft(idx, t)))
+    if: c.lm_compiler_rw_num_ty(src) = 0
+        return: -1
+    return: src
+end: lm_compiler_bound_route_source
+
+# The routes of a native bound call (lm_compiler_emit_call_arguments_full): three arrays -- l2_brw<fd> the written rank,
+# l2_brt<fd> the number type, l2_brc<fd> the receiver's occurrence, read from the unit as the call's callee is -- and in
+# route_args the binder's trailing actuals ("0U, 0, 0, 0" without a route).
+fn: lm_compiler_emit_bound_routes (@: arguments c.L2ApplicationActuals; int: idx; int: fd; const: (@: ind char); @: route_args char) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    const: (@@: unit_ref_cell char (cast: (const: @@: char) (@ c.l2_unit_ref)))
+    @: actual c.L2ApplicationActual 0
+    c.L2FrontendScratchChar64: type_storage
+    @: type_text char (cast: (@: char) type_storage\buffer)
+    c.L2FrontendScratchChar1024: occ_storage
+    c.L2Tx: occ_tx
+    @: occ c.L2Tx c.lm_compiler_tx_local(@ occ_tx, (cast: (@: char) occ_storage\buffer), 1024U)
+    int: count 0
+    int: written 0
+    int: t 0
+    int: src 0
+    int: n 0
+    int: dst 0
+    int: receiver 0
+    int: k 0
+    if: route_args = 0 || arguments = 0
+        return: 1
+    while: written < arguments\written_count
+        actual: c.lm_compiler_value_actual_written(arguments, written)
+        if: actual = 0
+            return: 1
+        t: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
+        src: lm_compiler_bound_route_source(actual, idx, t)
+        n: 0
+        dst: lm_compiler_route_type(n)
+        while: src >= 0 && dst >= 0
+            if: lm_compiler_direct_receiver(src, dst) >= 0
+                count: count + 1
+            n: n + 1
+            dst: lm_compiler_route_type(n)
+        ---
+        written: written + 1
+    ---
+    if: count = 0
+        return: (cast: (int) ((cast: (int) (c.sprintf(route_args, "0U, 0, 0, 0") < 0))))
+    if: c.fprintf(out_cell[0], "%s[]: size_t l2_brw%d %d\n%s[]: int l2_brt%d %d\n%s[]: @(void) l2_brc%d %d\n", ind, fd, count, ind, fd, count, ind, fd, count) < 0
+        return: 1
+    written: 0
+    while: written < arguments\written_count
+        actual: c.lm_compiler_value_actual_written(arguments, written)
+        t: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
+        src: lm_compiler_bound_route_source(actual, idx, t)
+        n: 0
+        dst: lm_compiler_route_type(n)
+        while: src >= 0 && dst >= 0
+            receiver: lm_compiler_direct_receiver(src, dst)
+            if: receiver >= 0
+                if: c.lm_compiler_emit_input_value_type(c.lm_compiler_ft_of_own(dst), 0, type_text) != 0 || lm_compiler_occ_expr(receiver, unit_ref_cell[0], occ) != 0
+                    return: 1
+                if: c.fprintf(out_cell[0], "%sl2_brw%d[%d]: %dU\n%sl2_brt%d[%d]: %s\n%sl2_brc%d[%d]: (cast: (@: void) %s)\n", ind, fd, k, written, ind, fd, k, type_text, ind, fd, k, occ\data) < 0
+                    return: 1
+                k: k + 1
+            ---
+            n: n + 1
+            dst: lm_compiler_route_type(n)
+        ---
+        written: written + 1
+    ---
+    return: (cast: (int) ((cast: (int) (c.sprintf(route_args, "%dU, l2_brw%d, l2_brt%d, l2_brc%d", count, fd, fd, fd) < 0))))
+end: lm_compiler_emit_bound_routes

@@ -6,8 +6,17 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 236 inputs (65 source files, 34 tools and
-137 tests). Slice300 takes a pair the conversion table has no row of by the same unavailable route, and a single-field
+The selected package contains 237 inputs (65 source files, 34 tools and
+138 tests). Slice301 receives a typed number written by name at a formal of another number type of the callable a call
+selected when it ran by the program's direct receiver of that pair: the call site resolves the routes as a static
+reception in that caller resolves them (natively arrays handed to `lmx_call_bind_actuals`, walked pairs after the
+payload of the NAMED operand), and the one kernel reception of both binders, `lmx_walk_receive_selected`, reads only the
+route of the selected formal's type and calls the receiver before the body -- its refusal, and a pair without a route,
+is the implicit `convert`. The author decided on 2026-11-07 that a call's names and form are checked before its arguments
+and each argument is received at once (AXBY); the bound call does not do that yet (CALL-ARGUMENT-ORDER-AXBY), and it still
+finds the selected formal by the written name's string when it runs, while the author's directive represents every
+identifier by the code of its spelling in both executors (IDENTIFIER-CODES) -- the next task; slice301 is an intermediate
+result and claims no named call of the required architecture. Slice300 takes a pair the conversion table has no row of by the same unavailable route, and a single-field
 repeat (`int: z 5; char: z`) checks its place where it is reached in both executors: the kernel's reception of a zero of
 the written type at the place's type -- an unavailable route is the implicit `convert`, an available receiver passes
 without being called, the place is never written; Codex's review of 299 narrowed slice299's claim (its single-field
@@ -294,19 +303,19 @@ list and the tool then read. The source package is authoritative; older
 `dev/l2src_sandbox/`, `tools/l2/inputs/` selections and PS/Python gates are
 historical inputs/routes, not an alternative fallback for this route.
 
-boot162a selected, under the ignored `build2/codex_fix250generationchain01/`:
-G0 `cold-boot161a/quick161a/lmxtool.exe` (`83E9BD37…`, the working tool of
-slice299; this package's tools/build.lm2 is unchanged), previous frontend
-`cold-boot161a/quick161a/g2/frontend/l2trans.exe` (`D85F0715…`, the G2
-frontend of slice299) with its adjacent backend (`64C45315…`) and libc
+boot163a selected, under the ignored `build2/codex_fix250generationchain01/`:
+G0 `cold-boot162a/quick162a/lmxtool.exe` (`C6DEABF9…`, the working tool of
+slice300; this package's tools/build.lm2 is unchanged), previous frontend
+`cold-boot162a/quick162a/g2/frontend/l2trans.exe` (`089896A8…`, the G2
+frontend of slice300) with its adjacent backend (`F6E31A5E…`) and libc
 (`AF9FDAE3…`), and BASE `cold-candidate48/full48/g2/frontend`. Its promoted
-working tool is `cold-boot162a/quick162a/lmxtool.exe` (`C6DEABF9…`), the G2
+working tool is `cold-boot163a/quick163a/lmxtool.exe` (`3AC5C8BA…`), the G2
 tool, with `working-bundle.sha256` equal to the G2 bundle.
 
 ## Current acceptance boundary
 
-boot162a passed whole QUICK on these bytes from a fresh source-only stage
-(2026-11-07, 11:14:52–11:26:06Z, 674 s): `BOOTSTRAP quick 0 failures`. G0
+boot163a passed whole QUICK on these bytes from a fresh source-only stage
+(2026-11-07, 12:54:36–13:16:46Z, 1330 s): `BOOTSTRAP quick 0 failures`. G0
 built and tested G1 (frontend, runtime, the 9-row smoke list with 0 failures,
 tool) and promoted it; the actual G1 tool built and tested G2 the same way,
 and G2 was promoted. Every program of the smoke list runs the driver's
@@ -317,9 +326,9 @@ the previous working tool's own commands (`checks`): the stage against its manif
 producer record closed on its files and free of script hosts, G1 against G2
 (`exe-same` for the three executables, which differ only in the PE link stamp,
 `same` for libc, the runtime objects, the tool's L1 and C and the consumed
-inputs), the working tool and bundle against G2, the runtime the candidate ran on (slice299's G2
-runtime: the kernel is unchanged) against G2's runtime objects (byte-equal), and the candidate frontend
-against G2 (`exe-same`). The whole full list ran on that candidate (112 rows, 0 failures) and the G2 tool's
+inputs), the working tool and bundle against G2, the runtime the candidate ran on (slice301's
+runtime built from the changed kernel) against G2's runtime objects (byte-equal), and the candidate frontend
+against G2 (`exe-same`). The whole full list ran on that candidate (113 rows, 0 failures) and the G2 tool's
 self-test on G2; FULL has not run on these bytes. That comparison is its own evidence, not a reproducibility
 gate. The draft79 line's open items (V63, the split-pointer place, the bare
 return) are not closed by this result.

@@ -1,0 +1,41 @@
+# Slice 301 probe (the status of a bound call; Codex's review of 300, item 4): no int -> char receiver.  The method
+# call_typed has no handler: the selected char x receives the int n by the implicit `convert`, which must pass to the
+# handler of its caller run.  Exit 7 when run's handler takes it; 81 when the int passed; the invariant of a callable that
+# reports a status it cannot have is the driver's abort.
+fn: g (int: y; char: x) int
+    return: (cast: (int) x) * 10 + y
+end: g
+Places:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_typed () int
+    int: n 5
+    int: got Places\f(x: n; y: 7)
+    return: got
+end: call_typed
+fn: run () int
+    @: Hw g g
+    if: write_place() != 1
+        return: 80
+    ---
+    ---
+        int: got call_typed()
+        return: 81
+        catch: convert ()
+            return: 7
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

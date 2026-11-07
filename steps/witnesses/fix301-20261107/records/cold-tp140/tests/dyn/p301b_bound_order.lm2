@@ -1,0 +1,69 @@
+# Slice 301 probe (CALLABLE-PLACE-TYPED-RECEPTION, the order of effects): Places\f declares int x, int y, char u, char v; the
+# fn g written into it declares int u, int v, char x, char y.  `Places\f(x: a1(); y: a2(); u: 3; v: 4)`: the int results of
+# a1 and a2 bind the selected char x and char y, each received by the program's int -> char receiver; every effect appends
+# its digit to Trace\t -- a1 1, a2 2, the receiver 3.  Exit: 12 for the order 1233 (both actuals, then both receptions in
+# written order), 13 for 1323 (each actual, then its reception), 81 for the implicit `convert`, 84 for a wrong value, 85 for
+# another order.
+Trace:
+    int: t 0
+end: Trace
+fn: lm_stg_convert_int_char (int: n) char
+    Trace\t: Trace\t * 10 + 3
+    return: (cast: (char) n)
+end: lm_stg_convert_int_char
+fn: a1 () int
+    Trace\t: Trace\t * 10 + 1
+    return: 1
+end: a1
+fn: a2 () int
+    Trace\t: Trace\t * 10 + 2
+    return: 2
+end: a2
+fn: g (int: u; int: v; char: x; char: y) int
+    return: (cast: (int) x) * 1000 + (cast: (int) y) * 100 + u * 10 + v
+end: g
+Places:
+    fn: f (int: x; int: y; char: u; char: v) int
+        return: x * 1000 + y * 100 + (cast: (int) u) * 10 + (cast: (int) v)
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_typed () int
+    ---
+        int: got Places\f(x: a1(); y: a2(); u: 3; v: 4)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: call_typed
+fn: run () int
+    @: Hw g g
+    if: write_place() != 1
+        return: 80
+    ---
+    int: got call_typed()
+    if: got = 25
+        return: 81
+    ---
+    if: got != 1234
+        return: 84
+    ---
+    if: Trace\t = 1233
+        return: 12
+    ---
+    if: Trace\t = 1323
+        return: 13
+    ---
+    return: 85
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

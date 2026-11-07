@@ -1,0 +1,55 @@
+# Slice 301 probe (the status through a mutable callable place; Codex's review of 300, item 4): Places\f declares a body that
+# raises nothing; the fn h written into it raises the implicit `convert` by a reached reception the table has no row of
+# (char -> size_t).  call_place calls through the place positionally and has no handler: the `convert` must pass to the
+# handler of its caller run (exit 7); call_caught takes it itself (exit 7 as well).  81, 82: the call returned; the
+# invariant of a callable that reports a status it cannot have is the driver's abort.
+fn: h (int: x; char: y) int
+    size_t: s 5U
+    char: c 6
+    s: c
+    return: x + (cast: (int) y)
+end: h
+Places:
+    fn: f (int: x; char: y) int
+        return: x * 10 + (cast: (int) y)
+    end: f
+end: Places
+int: Hw 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: call_place () int
+    int: got Places\f(1, 2)
+    return: got
+end: call_place
+fn: call_caught () int
+    ---
+        int: got Places\f(1, 2)
+        return: 82
+        catch: convert ()
+            return: 7
+    ---
+end: call_caught
+fn: run () int
+    @: Hw h h
+    if: write_place() != 1
+        return: 80
+    ---
+    if: call_caught() != 7
+        return: 83
+    ---
+    ---
+        int: got call_place()
+        return: 81
+        catch: convert ()
+            return: 7
+    ---
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

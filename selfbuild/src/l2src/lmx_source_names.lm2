@@ -1,18 +1,18 @@
-# The independent spelling of graph occurrences. The walker reads the receiver head of a fn occurrence from this
-# table. A key is the actual occurrence (Frame/leaf) or an owning child-cell address, not necessarily its referent;
-# neither Lmx nor an atom receives a name field. A row is a service cell of the arena's source-name array, and its
-# spelling's bytes are cells of the arena's ordinary CHAR array.
+# The binding of graph occurrences to the codes of their spellings (IDENTIFIER-CODES: the author's decision of
+# 2026-11-07; the spellings themselves are only in the two tables of lmx_ids). The walker reads the receiver head of a
+# fn occurrence from this table by its code. A key is the actual occurrence (Frame/leaf) or an owning child-cell
+# address, not necessarily its referent; neither Lmx nor an atom receives a name field. A row is a service cell of the
+# arena's source-name array; it holds the code, never the spelling's bytes, so a copy carries the code and nothing reads
+# a spelling to bind, compare or copy an occurrence.
 #
 # A machine module (L2 section 20): each function has a direct C-compatible entry, and the kernel's code calls it with
-# its explicit arguments. Its header, lmx_source_names.h.lm1 -- the row record LmxSourceName and the prototypes of the
-# seven exports -- is written by L3 code of the recipe (decl_source_names, tools/l2/build.lm2);
-# lmx_source_name_local is the module's own. The records it reads and writes (LmxArena, LmxPool, LmxChunk, VoidArray)
-# are in the kernel's headers; the arena's acts (lmx_arena_take, lmx_arena_take_n, lmx_arena_find, lmx_range_*), the
-# pools' (lmx_pool_chunk_head, lmx_chunk_data, lmx_chunk_cells, lmx_pool_is_sealed, lmx_pool_chunk_at), the interned
-# table's (lmx_chars_init) and the C library's are the kernel's C functions, called through the C door.
+# its explicit arguments. Its header, lmx_source_names.h.lm1 -- the row record LmxSourceName and the prototypes of its
+# exports -- is written by L3 code of the recipe (decl_source_names, tools/build.lm2); lmx_source_name_local and
+# lmx_source_name_row_at are the module's own. The records it reads and writes (LmxArena, LmxPool, LmxChunk) are in the
+# kernel's headers; the arena's acts (lmx_arena_take, lmx_range_*), the pools' (lmx_chunk_data, lmx_chunk_cells,
+# lmx_pool_is_sealed, lmx_pool_chunk_at) and the C library's are the kernel's C functions, called through the C door.
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
-predef: "l2src/lmx_chars.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<string.h>"
 
@@ -51,49 +51,42 @@ fn: lmx_source_name_local (@: arena c.LmxArena; @: key void; size_t: port) @: c.
     return: 0
 end: lmx_source_name_local
 
-# Inspection/copy runs with exclusive ownership of the searched source
-# inventories, including a foreign home. Sealing a key alone does not
-# make its owner's still-mutable metadata inventory concurrent-readable.
-fn: lmx_source_name_get (@: arena c.LmxArena; @: key void) @: c.VoidArray
-    return: lmx_source_name_get_at(arena, key, 0U)
-end: lmx_source_name_get
-
-# Port zero names the physical occurrence. Positive ports name the
-# ordinary Structure's own free inputs in declaration order.
-fn: lmx_source_name_get_at (@: arena c.LmxArena; @: key void; size_t: port) @: c.VoidArray
+# The row of a key's port: this arena's, or else the one of the key's true home. Inspection/copy runs with exclusive
+# ownership of the searched source inventories, including a foreign home. Sealing a key alone does not make its owner's
+# still-mutable metadata inventory concurrent-readable.
+fn: lmx_source_name_row_at (@: arena c.LmxArena; @: key void; size_t: port) @: c.LmxSourceName
     @: row c.LmxSourceName 0
     @: home c.LmxArena 0
-    @: spelling c.VoidArray 0
     if: arena = 0 || key = 0
         return: 0
     row: lmx_source_name_local(arena, key, port)
     if: row != 0
-        # The row's by-value VoidArray is reached through its address, held typed.
-        spelling: @ row\text
-        return: spelling
+        return: row
     home: (cast: (@: LmxArena) c.lmx_range_home(arena, key))
     if: home != 0 && home != arena
-        row: lmx_source_name_local(home, key, port)
-        if: row != 0
-            spelling: @ row\text
-            return: spelling
-        ---
-    ---
+        return: lmx_source_name_local(home, key, port)
     return: 0
+end: lmx_source_name_row_at
+
+fn: lmx_source_name_get (@: arena c.LmxArena; @: key void) size_t
+    return: lmx_source_name_get_at(arena, key, 0U)
+end: lmx_source_name_get
+
+# Port zero names the physical occurrence. Positive ports name the ordinary Structure's own free inputs in declaration
+# order. The code of the port's spelling, 0 for none.
+fn: lmx_source_name_get_at (@: arena c.LmxArena; @: key void; size_t: port) size_t
+    @: row c.LmxSourceName lmx_source_name_row_at(arena, key, port)
+    if: row = 0
+        return: 0U
+    return: row\code
 end: lmx_source_name_get_at
 
 # A separate port records the physical occurrence's compiled data interface.
-# Its two module arrays have exactly the lifetime of the compiled word.
+# Its spec has exactly the lifetime of the compiled word.
 fn: lmx_source_places (@: arena c.LmxArena; @: key void) @: c.LmxSourceName
     if: arena = 0 || key = 0
         return: 0
-    @: row c.LmxSourceName lmx_source_name_local(arena, key, (cast: (size_t) -1))
-    if: row != 0
-        return: row
-    @: home c.LmxArena (cast: (@: c.LmxArena) c.lmx_range_home(arena, key))
-    if: home != 0 && home != arena
-        return: lmx_source_name_local(home, key, (cast: (size_t) -1))
-    return: 0
+    return: lmx_source_name_row_at(arena, key, (cast: (size_t) -1))
 end: lmx_source_places
 
 # Store the written receiver's layout on its physical slot. The current
@@ -104,7 +97,7 @@ fn: lmx_source_place_model_set (@: arena c.LmxArena; @: slot void; @: layout voi
     @: row c.LmxSourceName lmx_source_places(arena, slot)
     if: row != 0
         return: (cast: (int) (row\model_layout != layout))
-    if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0, 0U, @ row) != 0 || row = 0
+    if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
     row\model_layout: layout
     lmx_source_name_publish(row, slot)
@@ -123,76 +116,57 @@ fn: lmx_source_place_uses_set (@: arena c.LmxArena; @: slot void; @: cells size_
     return: 0
 end: lmx_source_place_uses_set
 
-fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: names char; @: spec size_t) int
-    if: names = 0 || spec = 0
+# The compiled data interface of an occurrence: its spec (m, SIZE_MAX, then a pair of the name's code and the required
+# type per name), the generated word's static table.
+fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: spec size_t) int
+    if: spec = 0
         return: 1
     @: row c.LmxSourceName lmx_source_places(arena, key)
     if: row != 0
-        return: (cast: (int) (row\place_names != names || row\place_spec != spec))
-    if: lmx_source_name_prepare_at(arena, key, (cast: (size_t) -1), 0, 0U, @ row) != 0 || row = 0
+        return: (cast: (int) (row\place_spec != spec))
+    if: lmx_source_name_prepare_at(arena, key, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
-    row\place_names: names
     row\place_spec: spec
     lmx_source_name_publish(row, key)
     return: 0
 end: lmx_source_places_set
 
 # A stable arena service cell. prepare leaves key zero until publication.
-fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; const: (@: text char); size_t: text_length; @@: out c.LmxSourceName) int
-    return: lmx_source_name_prepare_at(arena, key, 0U, text, text_length, out)
+fn: lmx_source_name_prepare (@: arena c.LmxArena; @: key void; size_t: code; @@: out c.LmxSourceName) int
+    return: lmx_source_name_prepare_at(arena, key, 0U, code, out)
 end: lmx_source_name_prepare
 
-fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; const: (@: text char); size_t: text_length; @@: out c.LmxSourceName) int
-    @: known c.VoidArray 0
+fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; size_t: code; @@: out c.LmxSourceName) int
+    @: known c.LmxSourceName 0
     @: row c.LmxSourceName 0
-    @: va c.VoidArray 0
-    @: data char 0
     if: out = 0
         return: 1
     out[0]: 0
-    if: arena = 0 || key = 0 || (text_length != 0U && text = 0)
+    if: arena = 0 || key = 0
         return: 1
-    known: lmx_source_name_get_at(arena, key, port)
+    known: lmx_source_name_row_at(arena, key, port)
     if: known != 0
-        # One actual occurrence has one spelling. Aliases use distinct source
+        # One actual occurrence has one spelling, so one code. Aliases use distinct source
         # places; they do not silently overwrite the referent's name.
-        if: (cast: (size_t) known\size) != text_length || (text_length != 0U && c.memcmp((cast: (@: void) known\data), (cast: (@: void) text), text_length) != 0)
-            return: 1
-        return: 0
+        return: (cast: (int) (known\code != code))
     # New rows belong to actual local source places. An imported occurrence
     # consults its existing true owner's table; a borrower cannot invent a
-    # second owner for the spelling of a foreign/raw key.
+    # second owner for the name of a foreign/raw key.
     if: (cast: (@: LmxPool) c.lmx_range_pool(arena, key)) = 0
         return: 1
     # Append one real service cell. key=0 is unpublished, not a reusable slot:
-    # several pending names (including empty ones) must have distinct places.
+    # several pending rows must have distinct places.
     row: (cast: (@: LmxSourceName) c.lmx_arena_take(arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME))
     if: row = 0
         return: 1
     row\key: 0
     row\port: port
-    row\place_names: 0
+    row\code: code
     row\place_spec: 0
     row\model_layout: 0
     row\place_uses: 0
     row\place_callable: 0
     row\pending_next: 0
-    # The row's by-value VoidArray is written through its address.
-    va: @ row\text
-    va\size: 0U
-    va\data: 0
-    if: text_length != 0U
-        # Spelling bytes share the ordinary CHAR pool. Its first interval is
-        # the immutable literal table, just as for mutable char/Array storage.
-        if: c.lmx_chars_init(arena) != 0 && (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) = 0
-            return: 1
-        data: (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, text_length))
-        if: data = 0
-            return: 1
-        c.memcpy((cast: (@: void) data), (cast: (@: void) text), text_length)
-    ---
-    va\size: text_length
-    va\data: (cast: (@: void) data)
     out[0]: row
     return: 0
 end: lmx_source_name_prepare_at
@@ -205,23 +179,20 @@ sub: lmx_source_name_publish (@: row c.LmxSourceName; @: key void)
 end: lmx_source_name_publish
 
 sub: lmx_source_name_cancel (@: row c.LmxSourceName)
-    @: va c.VoidArray 0
     if: row != 0
         row\key: 0
         row\pending_next: 0
-        va: @ row\text
-        va\size: 0U
-        va\data: 0
+        row\code: 0U
     ---
 end: lmx_source_name_cancel
 
-fn: lmx_source_name_set (@: arena c.LmxArena; @: key void; const: (@: text char); size_t: text_length) int
-    return: lmx_source_name_set_at(arena, key, 0U, text, text_length)
+fn: lmx_source_name_set (@: arena c.LmxArena; @: key void; size_t: code) int
+    return: lmx_source_name_set_at(arena, key, 0U, code)
 end: lmx_source_name_set
 
-fn: lmx_source_name_set_at (@: arena c.LmxArena; @: key void; size_t: port; const: (@: text char); size_t: text_length) int
+fn: lmx_source_name_set_at (@: arena c.LmxArena; @: key void; size_t: port; size_t: code) int
     @: row c.LmxSourceName 0
-    if: lmx_source_name_prepare_at(arena, key, port, text, text_length, @ row) != 0
+    if: lmx_source_name_prepare_at(arena, key, port, code, @ row) != 0
         return: 1
     lmx_source_name_publish(row, key)
     return: 0
@@ -234,13 +205,11 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
     @: chunk c.LmxChunk 0
     @: rows c.LmxSourceName 0
     @: row c.LmxSourceName 0
-    @: va c.VoidArray 0
     size_t: i 0U
     size_t: n 0U
     size_t: low (cast: (size_t) lo)
     size_t: high (cast: (size_t) hi)
     size_t: key 0U
-    size_t: text 0U
     size_t: place 0U
     size_t: declared 0U
     pool: (cast: (@: LmxPool) arena\arrays)
@@ -254,13 +223,10 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
                     i: 0U
                     while: i < n
                         row: rows + i
-                        va: @ row\text
                         key: (cast: (size_t) row\key)
-                        text: (cast: (size_t) va\data)
                         place: (cast: (size_t) row)
-                        # Retire both independently owned ends and the record.
-                        # Pending rows have no key, but their text still retires.
-                        if: (key >= low && key < high) || (place >= low && place < high) || (text != 0U && text < high && text + (cast: (size_t) va\size) > low)
+                        # Retire the row of a retired key, and a row whose own cell retires.
+                        if: (key >= low && key < high) || (place >= low && place < high)
                             lmx_source_name_cancel(row)
                         # A declared callable that leaves takes its declaration along (lmx_source_place_callable_set).
                         declared: (cast: (size_t) row\place_callable)
@@ -276,8 +242,9 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
     ---
 end: lmx_source_names_drop
 
-# Run only after a complete ordinary graph mark. Keys are weak: this pass
-# never marks them; it keeps spelling only for already-live occurrences.
+# Run only after a complete ordinary graph mark. Keys are weak: this pass never marks them; it cancels the rows of dead
+# occurrences and marks the service chunks of the live ones. A row holds a code, no spelling storage, so nothing else
+# is marked: the spellings live in the process's tables (lmx_ids), outside every arena.
 fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
     @: pool c.LmxPool 0
     @: owner c.LmxPool 0
@@ -285,15 +252,12 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
     @: held c.LmxChunk 0
     @: rows c.LmxSourceName 0
     @: row c.LmxSourceName 0
-    @: va c.VoidArray 0
     size_t: i 0U
     size_t: n 0U
     int: live 0
     int: pass 0
-    int: status 0
-    # Decide every weak key against the completed ordinary mark FIRST.
-    # Marking a spelling can stamp a CHAR chunk containing another weak key;
-    # that must not turn a previously dead occurrence into a live one.
+    # Decide every weak key against the completed ordinary mark FIRST, then mark the chunks of the rows kept, so a
+    # stamped row chunk never turns a previously dead occurrence into a live one.
     while: pass < 2
         pool: (cast: (@: LmxPool) arena\arrays)
         while: pool != 0
@@ -325,21 +289,6 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
                                     ---
                                 else:
                                     chunk\mark: gen
-                                    # The spelling owns one contiguous CHAR
-                                    # backing, not an arbitrary graph. Mark
-                                    # that existing chunk directly; do not
-                                    # pull execution/Thread dependencies into
-                                    # the arena's name-retirement service.
-                                    va: @ row\text
-                                    if: va\data != 0
-                                        owner: (cast: (@: LmxPool) c.lmx_range_pool(arena, va\data))
-                                        held: (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, va\data))
-                                        if: held = 0
-                                            status: 1
-                                        else:
-                                            held\mark: gen
-                                        ---
-                                    ---
                                 ---
                             ---
                             i: i + 1U
@@ -352,7 +301,7 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
         ---
         pass: pass + 1
     ---
-    return: status
+    return: 0
 end: lmx_source_names_mark
 
 # Slice 286 (CALLABLE-PLACE-FREE-SIGNATURE; Codex, 285 norm answers item 3): the callable a callable field's definition put in
@@ -367,7 +316,7 @@ fn: lmx_source_place_callable_set (@: arena c.LmxArena; @: slot void; @: declare
         if: row\place_callable = 0
             row\place_callable: declared
         return: (cast: (int) (row\place_callable != declared))
-    if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0, 0U, @ row) != 0 || row = 0
+    if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
     row\place_callable: declared
     lmx_source_name_publish(row, slot)

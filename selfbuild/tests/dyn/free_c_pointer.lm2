@@ -2,10 +2,13 @@
 # number's or a Structure's address must fit the leaf by the actual pointee, a graph Array is no raw C array (L2 section 19), a C type
 # the kernel has no type for is known by the pointer code the value carries.  Only a `void` leaf is opaque.  A present null, a void
 # pointer the program cast and an explicit machine cast pass.  Every consumer here returns its INVALID (1) on a null first argument
-# without touching the pointer, so a wrong pointer that reached it would be seen as that sentinel and not as `convert`.
+# without touching the pointer, so a wrong pointer that reached it would be seen as that sentinel and not as `convert`; the `char`
+# leaf is the spelling of lmx_ids_code, which answers 0 for an empty spelling without reading it (slice 302: the selector of
+# lmx_walk_value_field_place this door used is a code now).
 # Bodies with a C door stay native under --walk-methods.  Entry 7; 81.. name the failing check.
 predef: "l1src/libc_abi.lm1"
 predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_ids.h.lm1"
 Box:
     int: y 1
 end: Box
@@ -17,7 +20,9 @@ fn: door_size () int
     return: c.lmx_walk_value_number(0, quote, 0)
 end: door_size
 fn: door_text () int
-    return: c.lmx_walk_value_field_place(0, 0, quote, 0, 0, 0)
+    if: c.lmx_ids_code(quote, 0U) != 0U
+        return: 90
+    return: 1
 end: door_text
 fn: door_record () int
     return: c.lmx_walk_value_number(quote, 0, 0)

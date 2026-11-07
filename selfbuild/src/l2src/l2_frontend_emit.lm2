@@ -6638,11 +6638,12 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         # An ordinary Structure has no args child. The coordinates of its
         # own free inputs belong to the occurrence, beside its source names.
         if: rw_emit_cell[0] != 0
-            if: c.lm_compiler_m_is_split(mi) != 0 && c.fprintf(out_cell[0], "        if: lmx_source_places_set(l2_program_arena, (cast: (@: void) l2_rw%d), l2_cpn%d, l2_cpt%d) != 0\n            return: 1\n", root, mi, mi) < 0
+            # IDENTIFIER-CODES: the place table names its places by codes; each free input is the code of its spelling.
+            if: c.lm_compiler_m_is_split(mi) != 0 && c.fprintf(out_cell[0], "        if: lmx_source_places_set(l2_program_arena, (cast: (@: void) l2_rw%d), l2_cpt%d) != 0\n            return: 1\n", root, mi) < 0
                 return: 1
             while: j < m_dyn_cell[0][mi]
                 @: name c.LmP0Text c.lm_compiler_dn(mi, j)
-                if: name = 0 || c.fprintf(out_cell[0], "        if: lmx_source_name_set_at(l2_program_arena, l2_rw%d, %uU, ", root, (cast: (unsigned) (j + 1))) < 0 || c.lm_compiler_emit_cstr(name) != 0 || c.fprintf(out_cell[0], ", %zuU) != 0\n            return: 1\n", name\length) < 0
+                if: name = 0 || c.fprintf(out_cell[0], "        if: lmx_source_name_set_at(l2_program_arena, l2_rw%d, %uU, ", root, (cast: (unsigned) (j + 1))) < 0 || c.lm_compiler_emit_unit_id_text(name) != 0 || c.fputs(") != 0\n            return: 1\n", out_cell[0]) < 0
                     return: 1
                 j: j + 1
             ---
@@ -7267,27 +7268,14 @@ fn: lm_compiler_rw_path_value_full (@: path int; const: (@: prepared c.L2Path); 
     if: kind = 18
         if: prepared = 0 || level < 1 || level > prepared\n
             return: 1
-        size_t: selector_len 0U
-        @: selector_text char c.lm_compiler_path_selector_text(prepared, level - 1, @ selector_len)
-        if: selector_text = 0
-            return: 1
-        size_t: selector_cap selector_len * 4U + 3U
-        @: selector char c.malloc(selector_cap)
-        if: selector = 0 || c.lm_compiler_fmt_l1_string(selector, selector_cap, selector_text, selector_len) != 0
-            c.free(selector_text)
-            c.free(selector)
-            return: 1
-        ---
-        c.free(selector_text)
         if: store != 0
             frame_op: "LMX_WALK_OP_PUT_OF"
         if: c.lm_compiler_rw_frame(parent, frame_op, 3 + store, @ raw) != 0 || lm_compiler_rw_path_value_full(path, prepared, 0, level - 1, raw, @ base) != 0 || c.lm_compiler_rw_put(raw, 1, base) != 0
-            c.free(selector)
             return: 1
-        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, (cast: (@: char) %s)) != c.LMX_WALK_OK\n            return: 1\n", raw, selector) < 0
-            c.free(selector)
+        # IDENTIFIER-CODES: the selector is the code of the step's name, its selected occurrence and its prefix flag,
+        # read from the written step now (lm_compiler_path_selector_parts) -- no text the walker parses.
+        if: rw_emit_cell[0] != 0 && c.lm_compiler_emit_path_selector(prepared, level - 1, raw) != 0
             return: 1
-        c.free(selector)
         \out: raw
         return: 0
     if: kind = 17
@@ -8754,7 +8742,8 @@ fn: lm_compiler_rw_cell (int: source_node; int: oi) int
             return: (cast: (int) (1))
         if: rw_emit_cell[0] = 0
             return: (cast: (int) (0))
-        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 1U, l2_cpn%d) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, (cast: (@: char) l2_cpt%d)) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", k, rw_mi_cell[0], k, rw_mi_cell[0], source_node, c.lm_compiler_split_name_ix(oi)) < 0))))
+        # IDENTIFIER-CODES: the table names its places by codes, so the PLACE frame holds no tokens (0).
+        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 1U, 0) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 2U, (cast: (@: char) l2_cpt%d)) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", k, k, rw_mi_cell[0], source_node, c.lm_compiler_split_name_ix(oi)) < 0))))
     # A split-called method's code is not its data (plan D10): a place inside its code is reached from NODE, and
     # holder 0 or a fixed holder inside it would name the data's slot of the same position.  No row takes this route
     # (the kind-9 check stages every other class of the code's rows); one that does is the translator's broken promise.
@@ -12726,7 +12715,8 @@ fn: lm_compiler_emit_root_head (int: into; int: slot; const: (@: value c.LmP0Nod
     if: text = 0 || text\data = 0 || text\length = 0U || c.lm_compiler_seg_count((cast: (const: @: char) (text\data)), (cast: (size_t) (text\length))) > 1
         return: 0
     c.lm_compiler_rw_name(into, holder)
-    if: c.fprintf(out_cell[0], "        if: lmx_source_name_set_at(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(%s, %uU)), (cast: (size_t) -2), ", holder, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_cstr(text) != 0 || c.fprintf(out_cell[0], ", %zuU) != 0\n            return: 1\n", text\length) < 0
+    # IDENTIFIER-CODES: the head is the code of its spelling (the unit's table).
+    if: c.fprintf(out_cell[0], "        if: lmx_source_name_set_at(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(%s, %uU)), (cast: (size_t) -2), ", holder, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_unit_id_text(text) != 0 || c.fputs(") != 0\n            return: 1\n", out_cell[0]) < 0
         return: 1
     return: 0
 end: lm_compiler_emit_root_head
@@ -16485,6 +16475,9 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @@: here_node_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_here_node))
     @: nso_n_cell int (cast: (@: int) (@ c.l2_nso_n))
+    # IDENTIFIER-CODES: the unit's table of spellings starts empty with its emission (lm_compiler_unit_id).
+    @: uid_n_cell int (cast: (@: int) (@ c.l2_uid_n))
+    uid_n_cell[0]: 0
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @@: pub_tmp_cell char (cast: (@@: char) (@ c.l2_pub_tmp))
     @: ns_has_array_cell int (cast: (@: int) (@ c.l2_ns_has_array))
@@ -16772,7 +16765,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     # literal's bytes into its source leaf and clears a symbolic leaf, l2_emit_source_atom; a send copies a text
     # field).  What the SOURCE uses through `c.*` comes with its own `include:` / `predef:` (the unit's list,
     # written next).
-    if: c.fprintf(out_cell[0], "predef: \"%slmx_arena_refs.h.lm1\" \"%slmx_value_owned.h.lm1\" \"%slmx.h.lm1\" \"%slmx_message.h.lm1\" \"%slmx_root.h.lm1\" \"%slmx_call.h.lm1\" \"%slmx_clock.h.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\"", rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0]) < 0
+    if: c.fprintf(out_cell[0], "predef: \"%slmx_arena_refs.h.lm1\" \"%slmx_value_owned.h.lm1\" \"%slmx.h.lm1\" \"%slmx_message.h.lm1\" \"%slmx_root.h.lm1\" \"%slmx_call.h.lm1\" \"%slmx_clock.h.lm1\" \"%slmx_ids.h.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\"", rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: c.fputs(" \"<string.h>\"", out_cell[0]) < 0
@@ -16817,7 +16810,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: c.lm_compiler_d105_declare_maps() != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
-    if: c.lm_compiler_place_tables_declare() != 0 || c.lm_compiler_place_uses_declare() != 0
+    if: c.lm_compiler_place_tables_declare() != 0 || c.lm_compiler_place_uses_declare() != 0 || c.lm_compiler_emit_unit_ids_declare() != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: library_mode_cell[0] = 0 && c.fputs("\nfn: l2_program_graph () @: Lmx\nreturn: l2_program_unit\n", out_cell[0]) < 0
@@ -17006,7 +16999,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         ---
         # N4 (plan D4, SF12): a code that maps its names to places of its data selects the same static row its call
         # site admitted, by the data's own layout token; anything but YES is the translator's broken promise.
-        if: c.lm_compiler_m_is_place(i) != 0 && c.fprintf(out_cell[0], "    []: size_t l2_cpl %d\n    if: lmx_implements_places(l2_program_arena, self, l2_cpn%d, l2_cpt%d, l2_cpl) != c.LMX_IMPLEMENTS_YES\n", c.lm_compiler_split_m(i), i, i) < 0
+        if: c.lm_compiler_m_is_place(i) != 0 && c.fprintf(out_cell[0], "    []: size_t l2_cpl %d\n    if: lmx_implements_places(l2_program_arena, self, 0, l2_cpt%d, l2_cpl) != c.LMX_IMPLEMENTS_YES\n", c.lm_compiler_split_m(i), i) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.lm_compiler_m_is_place(i) != 0 && c.lm_compiler_emit_invariant("    ", "a split-called code reached data without its place row") != 0
@@ -17215,6 +17208,11 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: library_mode_cell[0] != 0 && c.fputs("        if: nargs != 0U || out = 0\n            c.fprintf(c.stderr, \"lmx: invariant: a library construction was called outside its signature\\n\")\n            c.abort()\n        \\out: 0\n        @: LmxArena l2_program_arena lmx_call_arena\n        @: void l2_construct_out 0\n        int: l2_construct_status 0\n", out_cell[0]) < 0
+        c.fclose(out_cell[0])
+        return: (cast: (int) (1))
+    # IDENTIFIER-CODES: the unit's input boundary -- its identifiers become codes once, before anything of the unit is
+    # built or run (l2_ids_load; a library's construction loads at its first call, a later call finds the table).
+    if: c.fputs("        if: l2_ids_load() != 0\n            return: 1\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     if: (lm_compiler_parts_have_char() != 0) && c.fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", out_cell[0]) < 0
@@ -17686,6 +17684,10 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
     ---
+    # IDENTIFIER-CODES: the load of the unit's identifiers, written after every place that named one.
+    if: c.lm_compiler_emit_unit_ids() != 0
+        c.fclose(out_cell[0])
+        return: (cast: (int) (1))
     if: lm_compiler_emit_pointer_cell_definitions() != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))

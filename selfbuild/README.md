@@ -6,8 +6,25 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 237 inputs (65 source files, 34 tools and
-138 tests). Slice301 receives a typed number written by name at a formal of another number type of the callable a call
+The selected package contains 239 inputs (66 source files, 34 tools and
+139 tests). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
+its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
+informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the
+order of the `LMX_ID_*` constants (the implicit throws 1..7 are `LMX_WALK_NAME_*`); a `LmxSourceName` row binds an
+occurrence's address to a code, not to text; an emitted unit turns its spellings into codes once at its load
+(`l2_ids_load`, the first statement of its builder, its table `l2_ids`) and from then on writes only `l2_ids[K]` -- the
+registration of occurrence names, the place tables `[m, SIZE_MAX, (code, type)...]` without token text, the activation
+bindings, the names `l2_bn` of the binder, the selectors of OF/PUT_OF and of the native field place (code, selected
+occurrence, prefix, read from the written step at translation) and the throw keys; the kernel and the walker compare codes
+(`receiving_head_is` against the constants, `receiving_reference_head` by the mark a reference head's code was given with,
+`lmx_implements_same_name`, the activation resolver), a copy carries the code without reading a spelling, the driver and
+the observed walk print through `lmx_ids_name`, the recipe's `l1_binds_native` knows a method's name in an emitted L1 by
+its code. The fixture `copy_name_codes` kills the mutant that copied an occurrence without its code (the nine earlier rows
+over copies did not: a copied data field is still found by its root-head row). The translator's internal comparisons (P0,
+scopes, resolve, signature interning, throw keys), the L1 translator, AXBY and the RESULT tests (one spelling in several
+units and arenas, shadowing, a copy into another arena without text) remain the rest of the transition; no RESULT is
+claimed. Slice301 receives a typed number written by name at a formal of another number type of the callable a call
 selected when it ran by the program's direct receiver of that pair: the call site resolves the routes as a static
 reception in that caller resolves them (natively arrays handed to `lmx_call_bind_actuals`, walked pairs after the
 payload of the NAMED operand), and the one kernel reception of both binders, `lmx_walk_receive_selected`, reads only the

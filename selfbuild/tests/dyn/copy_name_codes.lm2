@@ -1,0 +1,59 @@
+# Slice 302 (IDENTIFIER-CODES; the author's decision of 2026-11-07, LMX_blog/2026-11-07.md; Codex,
+# CODEX-OPUS-302-IDS-HOME-SCOPE-ANSWER-20261107-01): a copy of a graph carries the codes of its occurrences' names and no
+# spelling, so a copied head is recognized by its code where the copy is used.  Copy is a merge copy of Holder, a Structure
+# holding two callables; a reference of Holder's model holds the copy, so the calls below select the copied callables when
+# they run.  The formals of the copied f are found by the codes of their names: a named actual to the copied method, in
+# swapped order, binds each formal of its name (43).  The formal x of the copied g is the nearest binding of the free input
+# x of k, found by its code through the activation chain (6, not the unit's x 11): one spelling in another method has the
+# same code.  The copied data field base reads by its name (100); the original f binds the same names (43).
+# Entry 7; 81.. name the failing check.
+int: x 11
+fn: k () int
+    return: x + 1
+end: k
+Holder:
+    int: base 100
+    fn: f (int: x; int: y) int
+        return: x * 10 + y
+    end: f
+    fn: g (int: x) int
+        return: k()
+    end: g
+end: Holder
+Copy: merge: Holder
+fn: named_swapped () int
+    @: hc Holder Copy
+    ---
+        int: got hc\f(y: 3; x: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: named_swapped
+fn: free_through_copy () int
+    @: hc Holder Copy
+    return: hc\g(x: 5)
+end: free_through_copy
+fn: original_swapped () int
+    ---
+        int: got Holder\f(y: 3; x: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: original_swapped
+int: code 7
+if: named_swapped() != 43
+    code: 81
+---
+if: code = 7 && free_through_copy() != 6
+    code: 82
+---
+if: code = 7 && Copy\base != 100
+    code: 83
+---
+if: code = 7 && original_swapped() != 43
+    code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

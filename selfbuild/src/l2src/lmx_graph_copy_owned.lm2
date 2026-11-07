@@ -2855,17 +2855,18 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
     return: 0
 end: lmx_copy_process
 
-# Prepare the name of an actual copied place. The private map keeps pending
-# rows unpublished until the complete graph and every spelling are ready.
-fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: pending c.LmxCopyMap; size_t: port; @: text c.VoidArray; @: layout c.LmxSourceName) int
-    @: part_row_text c.VoidArray 0
+# Prepare the name of an actual copied place: the code its source occurrence binds (IDENTIFIER-CODES), carried as it is
+# -- no spelling is read or copied, so a copy into another arena keeps the name's identity. The private map keeps
+# pending rows unpublished until the complete graph and every name are ready. A compiled interface row (layout) is
+# carried with its code 0.
+fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: pending c.LmxCopyMap; size_t: port; size_t: code; @: layout c.LmxSourceName) int
     @: row c.LmxSourceName 0
-    if: text = 0
+    if: code = 0U && layout = 0
         return: c.LMX_GRAPH_COPY_OK
     if: layout != 0
         @: known c.LmxSourceName c.lmx_source_places(dst_arena, destination)
         if: known != 0
-            if: known\place_spec != layout\place_spec || known\place_names != layout\place_names || known\model_layout != layout\model_layout
+            if: known\place_spec != layout\place_spec || known\model_layout != layout\model_layout
                 return: c.LMX_GRAPH_COPY_INVALID
             return: c.LMX_GRAPH_COPY_OK
         ---
@@ -2881,17 +2882,15 @@ fn: lmx_copy_spelling_prepare (@: dst_arena c.LmxArena; @: destination void; @: 
         row: row\pending_next
     ---
     if: row != 0
-        if: layout != 0 && (row\place_spec != layout\place_spec || row\place_names != layout\place_names || row\model_layout != layout\model_layout)
+        if: layout != 0 && (row\place_spec != layout\place_spec || row\model_layout != layout\model_layout)
             return: c.LMX_GRAPH_COPY_INVALID
-        part_row_text: @ row\text
-        if: part_row_text\size != text\size || (text\size != 0U && c.memcmp((part_row_text\data), (text\data), (text\size)) != 0)
+        if: row\code != code
             return: c.LMX_GRAPH_COPY_INVALID
         return: c.LMX_GRAPH_COPY_OK
-    if: c.lmx_source_name_prepare_at(dst_arena, destination, port, (cast: (@: char) text\data), (text\size), @ row) != 0
+    if: c.lmx_source_name_prepare_at(dst_arena, destination, port, code, @ row) != 0
         return: c.LMX_GRAPH_COPY_NOMEM
     if: row != 0
         if: layout != 0
-            row\place_names: layout\place_names
             row\place_spec: layout\place_spec
             row\model_layout: layout\model_layout
         ---
@@ -2916,8 +2915,8 @@ fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: 
         return: status
     if: c.lmx_range_classify(src_arena, source) = c.LMX_KIND_STRUCT
         size_t: port 1U
-        @: name c.VoidArray c.lmx_source_name_get_at(src_arena, source, port)
-        while: name != 0
+        size_t: name c.lmx_source_name_get_at(src_arena, source, port)
+        while: name != 0U
             status: lmx_copy_spelling_prepare(dst_arena, destination, pending, port, name, 0)
             if: status != c.LMX_GRAPH_COPY_OK
                 return: status
@@ -2927,7 +2926,7 @@ fn: lmx_copy_name_prepare (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @: 
     ---
     @: layout c.LmxSourceName c.lmx_source_places(src_arena, source)
     if: layout != 0
-        return: lmx_copy_spelling_prepare(dst_arena, destination, pending, (cast: (size_t) -1), (cast: (@: c.VoidArray) (@ layout\text)), layout)
+        return: lmx_copy_spelling_prepare(dst_arena, destination, pending, (cast: (size_t) -1), layout\code, layout)
     return: c.LMX_GRAPH_COPY_OK
 end: lmx_copy_name_prepare
 

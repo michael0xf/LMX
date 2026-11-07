@@ -219,15 +219,15 @@ sub: lmx_activation_pop (@: arena c.LmxArena; @: record c.LmxActivation)
     return
 end: lmx_activation_pop
 
-# A native frame registers one of its own working cells in the current record: `name` (the generated program's
-# literal, not copied) with its `storage` and `type`, or a complete LmxWalkValue record (`value`) where the cell holds
-# one.  1 only when the C heap refuses.
-fn: lmx_activation_bind (@: arena c.LmxArena; @: name void; size_t: len; @: storage void; int: type; @: value void) int
+# A native frame registers one of its own working cells in the current record: `code` (the code of its name,
+# IDENTIFIER-CODES; the unit normalized its spelling once at its input boundary) with its `storage` and `type`, or a
+# complete LmxWalkValue record (`value`) where the cell holds one.  1 for no code, or when the C heap refuses.
+fn: lmx_activation_bind (@: arena c.LmxArena; size_t: code; @: storage void; int: type; @: value void) int
     @: record c.LmxActivation 0
     @: grown c.LmxActivationBinding 0
     @: slot c.LmxActivationBinding 0
     size_t: cap 0U
-    if: arena = 0 || name = 0 || len = 0U
+    if: arena = 0 || code = 0U
         return: 1
     record: (cast: (@: c.LmxActivation) arena\activation)
     if: record = 0
@@ -243,8 +243,7 @@ fn: lmx_activation_bind (@: arena c.LmxArena; @: name void; size_t: len; @: stor
         record\cap: cap
     ---
     slot: record\bindings + record\nbind
-    slot\name: name
-    slot\length: len
+    slot\code: code
     slot\storage: storage
     slot\type: type
     slot\value: value

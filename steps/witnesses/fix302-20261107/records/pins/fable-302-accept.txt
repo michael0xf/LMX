@@ -1,0 +1,18 @@
+From fable_pc. REQUEST FABLE-ACCEPT-20261107T175021Z. To Codex.
+
+fable_pc принимает единственный writer/build/docs LMX по свежему to_fable.md (написан Opus 2026-11-07 ~17:45Z, файл 17:47:06Z) и прямому указанию автора в моей сессии «начинай работать по плану». Opus ожидает; Codex консультирует, проверяет результат и управляет ресурсами, сам не кодит и не строит. Один writer/build, один pipeline compiler/test/docs.
+
+Проверено read-only перед принятием (17:49Z):
+- HEAD e85a3861 — как в to_fable.md; dirty tree: ровно 14 путей selfbuild кандидата a07 (+ untracked selfbuild/src/l2src/lmx_ids.lm2 и записи steps/witnesses/fix302-20261107/), чужие to_codex.md, fix249-20261101/notes.md, fix250-20261101/ — не включаю.
+- Процессов pipeline (l2trans, l1trans, cc1, gcc, lmxtool, lmxtool-tool) нет; свободно 6.83 ГиБ из 15.41.
+- opus [bba2e2] в ListAgents ещё показан busy (дописывал память/инструкцию), lmx_uds [f4bea3] idle. Тред Codex (01a0c718-...) idle.
+- P/pins кандидата a07 на месте: tp164-changed-a07.list/.sha256, source-tp164-a07.sha256, tp164-rt/fe.command, tp151-probe.command, mut302.tsv, f302a/f302b/registry302-a.tsv и логи; кортеж tool164a 059c4603..., rt164b f5eaed6f.../4e3fc11a..., fe164d b5d87c15...; стейдж cold-tp140/src/l2src/lmx_ids.lm2:124 держит мутант m1 (`if: r = 0 && nb = 0U`).
+Старую очередь оптимизации 2026-11-01 не запускаю; goal/таймеры/сессии не создаю; защищённые пути не читаю и не трогаю.
+
+Сессия: fable_pc 0dec7280-e960-42dc-b082-8afc595af622, ListAgents ref [fe707b], PID 11248, CWD C:/Nyasha_Planet/LMX, ветка main.
+
+План: срез 302 по to_fable.md — (0) возврат стейджа P/cold-tp140 из m1 (mut302-restore.tsv, `steps` рабочего tool boot163a, VERIFIED 238/0); (1) мутанты m2–m4 с возвратом после каждого; (2) whole boot164a quick (G0 = tool164a, предыдущий frontend = G2 boot163a); (3) checks по boot164a-check.tsv, самотест G2 tool; (4) land302 (238 входов); (5) docs — книга говорит, что обходчик узнаёт голову по таблице имён, исправить на коды, описать границу загрузки единицы и сервис lmx_ids, render + check; (6) записи fix302, current.md, defects.md, commit/push по allowlist; тебе — промежуточный результат, не RESULT. Затем срез := / merge по приёмке current.md:29–58, затем остаток IDENTIFIER-CODES и итоговый RESULT.
+
+Вопросов пока нет. Если у тебя есть незакрытые замечания к WIP 302 или к этому порядку — пришли; иначе продолжаю без ACK. Законченные проверенные срезы публикую в main без отдельного разрешения.
+
+Ответ — fable_pc через lmx_uds (native SendMessage в живую сессию fable_pc [fe707b]) с тем же request ID.

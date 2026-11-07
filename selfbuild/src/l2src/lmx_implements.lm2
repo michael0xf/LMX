@@ -8,6 +8,7 @@ predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_implements_resolve.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_ids.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -579,26 +580,22 @@ end: lmx_implements_direct_view
 # THE NAME OF A PLACE (Codex, CODEX-OPUS-20261023-S81-ADMIT): field i of s as the arena's external source-name slot_table
 # names it (lmx_source_names) -- the slot's own name, or for a primitive field the name of its typed cell, which is
 # that place itself. 0 when the place has none. The name of a referent never stands in for its place's.
-fn: lmx_implements_place_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) @: c.VoidArray
-    @: name c.VoidArray
-    @: cell void
-    name: c.lmx_source_name_get(arena, (cast: (@: void) c.lmx_arena_ref_cell(s, i)))
-    if: name != 0 && name\size != 0U && name\data != 0
+# Slice 302 (IDENTIFIER-CODES): a name is the code of its spelling.
+fn: lmx_implements_place_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) size_t
+    size_t: name c.lmx_source_name_get(arena, (cast: (@: void) c.lmx_arena_ref_cell(s, i)))
+    @: cell void 0
+    if: name != 0U
         return: name
     cell: c.lmx_graph_value_in(arena, s, i)
     if: cell = 0 || lmx_domain_kind(arena, cell) != c.LMX_KIND_PRIMITIVE
-        return: 0
-    name: c.lmx_source_name_get(arena, cell)
-    if: name = 0 || name\size = 0U || name\data = 0
-        return: 0
-    return: name
+        return: 0U
+    return: c.lmx_source_name_get(arena, cell)
 end: lmx_implements_place_name
 
-# Whether two places bear one name. Unnamed places are alike: the anonymous name, selected by its ordinal like any.
-fn: lmx_implements_same_name (@: a c.VoidArray; @: b c.VoidArray) int
-    if: a = 0 || b = 0
-        return: (cast: (int) (a = 0 && b = 0))
-    return: (cast: (int) (a\size = b\size && c.memcmp(a\data, b\data, a\size) = 0))
+# Whether two places bear one name: one code. Unnamed places are alike: the anonymous name (code 0), selected by its
+# ordinal like any.
+fn: lmx_implements_same_name (size_t: a; size_t: b) int
+    return: (cast: (int) (a = b))
 end: lmx_implements_same_name
 
 # THE REGISTRY OF SOURCE OCCURRENCES (N4-U U1; the book, "Карта data"; author 2026-10-15: "головы считаем тупо на корневом уровне").
@@ -606,17 +603,14 @@ end: lmx_implements_same_name
 # place it declares, or the statement it executes.  A root `if:` is one head named `if`; a head inside an initializer belongs to that
 # initializer and has no row here.  This is not the map of addressable fields: a repeated head creates no second field, it takes
 # its name out of bare use, and `s\[N]field` selects the head.  0 for a slot with no head (an operation's own second child).
-fn: lmx_implements_head_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) @: c.VoidArray
-    @: name c.VoidArray c.lmx_source_name_get_at(arena, (cast: (@: void) c.lmx_arena_ref_cell(s, i)), (cast: (size_t) -2))
-    if: name = 0 || name\size = 0U || name\data = 0
-        return: 0
-    return: name
+fn: lmx_implements_head_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) size_t
+    return: c.lmx_source_name_get_at(arena, (cast: (@: void) c.lmx_arena_ref_cell(s, i)), (cast: (size_t) -2))
 end: lmx_implements_head_name
 
 # The name field i of s answers to in a correspondence: its place's, or the head that stands there.
-fn: lmx_implements_view_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) @: c.VoidArray
-    @: name c.VoidArray lmx_implements_place_name(arena, s, i)
-    if: name != 0
+fn: lmx_implements_view_name (@: arena c.LmxArena; @: s c.Lmx; size_t: i) size_t
+    size_t: name lmx_implements_place_name(arena, s, i)
+    if: name != 0U
         return: name
     return: lmx_implements_head_name(arena, s, i)
 end: lmx_implements_view_name
@@ -631,8 +625,8 @@ end: lmx_implements_view_name
 fn: lmx_implements_named_view (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx; @: out c.LmxImplEntry; @: applied int; @: out_answer int) int
     @: part_req_array c.VoidArray 0
     @: part_value_array c.VoidArray 0
-    @@: have c.VoidArray 0
-    @@: want c.VoidArray 0
+    @: have size_t 0
+    @: want size_t 0
     @: map size_t 0
     size_t: width 0U
     size_t: count 0U
@@ -661,11 +655,11 @@ fn: lmx_implements_named_view (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx
     if: width = 0U
         out_answer[0]: c.LMX_IMPLEMENTS_YES
         return: c.LMX_WALK_OK
-    if: width > ((cast: (size_t) -1) / 2U) / c.sizeof(c.size_t) || width > (cast: (size_t) -1) / sizeof(@: c.VoidArray) || count > (cast: (size_t) -1) / sizeof(@: c.VoidArray)
+    if: width > ((cast: (size_t) -1) / 2U) / c.sizeof(c.size_t) || count > (cast: (size_t) -1) / c.sizeof(c.size_t)
         return: c.LMX_WALK_NOMEM
     if: count != 0U
-        have: (cast: (@@: c.VoidArray) c.calloc(count, sizeof(@: c.VoidArray)))
-    want: (cast: (@@: c.VoidArray) c.calloc(width, sizeof(@: c.VoidArray)))
+        have: (cast: (@: size_t) c.calloc(count, c.sizeof(c.size_t)))
+    want: (cast: (@: size_t) c.calloc(width, c.sizeof(c.size_t)))
     map: (cast: (@: size_t) c.malloc(2U * width * c.sizeof(c.size_t)))
     if: (count != 0U && have = 0) || want = 0 || map = 0
         c.free((cast: (@: void) have))
@@ -711,7 +705,7 @@ fn: lmx_implements_named_view (@: arena c.LmxArena; @: value c.Lmx; @: req c.Lmx
         ---
         # Two or more heads in the value: a bare name selects none of them, neither the first nor the last; only an index does (the
         # book, "Карта data").  Two or more in req: no bare use of it exists, every reached use is an index, so both halves are the head's.
-        if: want[j] != 0
+        if: want[j] != 0U
             if: req_heads > 1U
                 map[width + j]: map[j]
             else:
@@ -2083,8 +2077,8 @@ end: lmx_implements_call_positions
 # SOURCE places are unavailable evidence. A known match remains a known
 # coordinate even when other names are unavailable; out_answer is then U.
 # Two known same-named formals are a guaranteed ambiguous named invocation.
-fn: lmx_callable_named_formal (@: arena c.LmxArena; @: args c.Lmx; @: wanted c.VoidArray; @: out_source size_t; @: out_physical size_t; @: out_answer int) int
-    @: name c.VoidArray
+fn: lmx_callable_named_formal (@: arena c.LmxArena; @: args c.Lmx; size_t: wanted; @: out_source size_t; @: out_physical size_t; @: out_answer int) int
+    size_t: name 0U
     size_t: count 0U
     size_t: i 0U
     size_t: physical (cast: (size_t) -1)
@@ -2100,7 +2094,7 @@ fn: lmx_callable_named_formal (@: arena c.LmxArena; @: args c.Lmx; @: wanted c.V
     out_answer[0]: c.LMX_IMPLEMENTS_UNKNOWN
     if: arena = 0
         return: c.LMX_WALK_INVALID
-    if: wanted = 0 || wanted\size = 0U || wanted\data = 0
+    if: wanted = 0U
         return: c.LMX_WALK_OK
     if: lmx_callable_source_count(arena, args, @ count) != 0
         return: c.LMX_WALK_OK
@@ -2112,7 +2106,7 @@ fn: lmx_callable_named_formal (@: arena c.LmxArena; @: args c.Lmx; @: wanted c.V
             uncertain: 1
         else:
             name: lmx_implements_place_name(arena, args, physical)
-            if: name = 0
+            if: name = 0U
                 uncertain: 1
             else:
                 if: lmx_implements_same_name(name, wanted) != 0
@@ -2145,7 +2139,7 @@ end: lmx_callable_named_formal
 # admission only. Its numeric required coordinate remains transport metadata,
 # not a substitute name. Positional actuals select the callee's own SOURCE
 # ordinal. The two coordinate spaces are never equated by their extents.
-fn: lmx_callable_actual_target (@: arena c.LmxArena; @: selected_args c.Lmx; size_t: written_slot; int: named; @: wanted c.VoidArray; @: out_source size_t; @: out_physical size_t; @: out_answer int) int
+fn: lmx_callable_actual_target (@: arena c.LmxArena; @: selected_args c.Lmx; size_t: written_slot; int: named; size_t: wanted; @: out_source size_t; @: out_physical size_t; @: out_answer int) int
     size_t: selected_count 0U
     size_t: physical (cast: (size_t) -1)
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
@@ -2187,7 +2181,7 @@ fn: lmx_callable_actual_place (@: arena c.LmxArena; @: selected_args c.Lmx; @: w
     size_t: coordinate 0U
     @: named c.Lmx 0
     @: payload void 0
-    @: wanted c.VoidArray 0
+    size_t: wanted 0U
     int: is_named 0
     int: status
     if: out_source = 0 || out_physical = 0 || out_named = 0 || out_payload = 0 || out_answer = 0
@@ -2223,7 +2217,7 @@ end: lmx_callable_actual_place
 # has no formal of, an ordinal past its formals, two actuals of one formal: NO, the call's refusal.  The walker's EXEC
 # binder (lmx_callable_bind_written) and a generated native call (lmx_call_bind_actuals) both bind here.  source_indices
 # get each actual's SOURCE ordinal, map (when given) its physical place; out_uncertain is 1 when a place is unknown.
-fn: lmx_callable_bind_prefix (@: arena c.LmxArena; @: selected_args c.Lmx; size_t: written_count; @: actual_named int; @@: actual_names c.VoidArray; @: source_indices size_t; @: map size_t; @: out_uncertain int; @: out_answer int) int
+fn: lmx_callable_bind_prefix (@: arena c.LmxArena; @: selected_args c.Lmx; size_t: written_count; @: actual_named int; @: actual_names size_t; @: source_indices size_t; @: map size_t; @: out_uncertain int; @: out_answer int) int
     size_t: i 0U
     size_t: j
     size_t: source_index (cast: (size_t) -1)
@@ -2299,8 +2293,8 @@ end: lmx_callable_bind_prefix
 # an explicit NULL occupies a formal just as a nonnull operand does.
 # The normalized suffix after that prefix (the hidden inputs an EXEC carries)
 # binds only with the Consumer contract's inputs; without them it stays MAX.
-fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: contract_inputs c.Lmx; @: actual_named int; @@: actual_names c.VoidArray; size_t: actual_capacity; @: map size_t; size_t: map_capacity; @: source_indices size_t; size_t: source_capacity; @: out c.LmxImplEntry; @: out_answer int) int
-    @: wanted c.VoidArray 0
+fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: contract_inputs c.Lmx; @: actual_named int; @: actual_names size_t; size_t: actual_capacity; @: map size_t; size_t: map_capacity; @: source_indices size_t; size_t: source_capacity; @: out c.LmxImplEntry; @: out_answer int) int
+    size_t: wanted 0U
     size_t: width
     size_t: i 0U
     size_t: j
@@ -2367,7 +2361,7 @@ fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: w
     if: contract_inputs != 0 && written_count < transport_count && lmx_callable_source_count(arena, contract_inputs, @ contract_count) != 0
         contract_count: 0U
     while: contract_inputs != 0 && i < transport_count
-        wanted: 0
+        wanted: 0U
         source_index: (cast: (size_t) -1)
         physical: (cast: (size_t) -1)
         row_answer: c.LMX_IMPLEMENTS_UNKNOWN
@@ -2379,7 +2373,7 @@ fn: lmx_callable_bind_written (@: arena c.LmxArena; @: selected_args c.Lmx; @: w
                 wanted: lmx_implements_place_name(arena, contract_inputs, contract_physical)
             row_answer: c.LMX_IMPLEMENTS_UNKNOWN
         ---
-        if: wanted != 0
+        if: wanted != 0U
             status: lmx_callable_named_formal(arena, selected_args, wanted, @ source_index, @ physical, @ row_answer)
             if: status != c.LMX_WALK_OK
                 return: status
@@ -2466,10 +2460,9 @@ fn: lmx_callable_source_binding (@: arena c.LmxArena; @: selected c.Lmx; @: writ
     @: raw_contract void 0
     @: room void 0
     @: actual_named int 0
-    @@: actual_names c.VoidArray 0
+    @: actual_names size_t 0
     @: map size_t 0
     @: sources size_t 0
-    @: pointer_probe void 0
     size_t: first 0U
     size_t: transport_count 0U
     size_t: written_count 0U
@@ -2502,7 +2495,7 @@ fn: lmx_callable_source_binding (@: arena c.LmxArena; @: selected c.Lmx; @: writ
         return: status
     fields: @ written_call\array
     width: fields\size
-    if: width > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U || width > (cast: (size_t) -1) / c.sizeof(c.int) || width > (cast: (size_t) -1) / sizeof(pointer_probe)
+    if: width > ((cast: (size_t) -1) / c.sizeof(c.size_t)) / 2U || width > (cast: (size_t) -1) / c.sizeof(c.int)
         return: c.LMX_WALK_NOMEM
     scratch_status: c.lmx_scratch_take(resolver\scratch, width * c.sizeof(c.int), @ room)
     if: scratch_status != c.LMX_SCRATCH_OK
@@ -2512,14 +2505,14 @@ fn: lmx_callable_source_binding (@: arena c.LmxArena; @: selected c.Lmx; @: writ
     ---
     actual_named: (cast: (@: int) room)
     c.memset(room, 0, width * c.sizeof(c.int))
-    scratch_status: c.lmx_scratch_take(resolver\scratch, width * sizeof(pointer_probe), @ room)
+    scratch_status: c.lmx_scratch_take(resolver\scratch, width * c.sizeof(c.size_t), @ room)
     if: scratch_status != c.LMX_SCRATCH_OK
         if: scratch_status = c.LMX_SCRATCH_NOMEM
             return: c.LMX_WALK_NOMEM
         return: c.LMX_WALK_INVALID
     ---
-    actual_names: (cast: (@@: c.VoidArray) room)
-    c.memset(room, 0, width * sizeof(pointer_probe))
+    actual_names: (cast: (@: size_t) room)
+    c.memset(room, 0, width * c.sizeof(c.size_t))
     scratch_status: c.lmx_scratch_take(resolver\scratch, width * 2U * c.sizeof(c.size_t), @ room)
     if: scratch_status != c.LMX_SCRATCH_OK
         if: scratch_status = c.LMX_SCRATCH_NOMEM
@@ -4446,8 +4439,8 @@ end: lmx_implements_model_for_layout
 # At admission a named place must identify exactly one physical storage slot.  The registry of source occurrences answers for
 # the heads (lmx_implements_head_name): a second equal root head makes an unindexed name ambiguous, whichever receiver wrote it.
 # A single head with no place of its own is that head's slot: `var\if` addresses the statement standing there.
-fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.VoidArray; int: type; @: out size_t) int
-    if: data = 0
+fn: lmx_implements_call_field (@: arena c.LmxArena; @: data c.Lmx; size_t: wanted; int: type; @: out size_t) int
+    if: data = 0 || wanted = 0U
         return: c.LMX_IMPLEMENTS_NO
     @: fields c.VoidArray @ data\array
     size_t: slot (cast: (size_t) -1)
@@ -4509,12 +4502,12 @@ fn: lmx_implements_own_part (@: arena c.LmxArena; @: code c.Lmx; size_t: pass) @
     return: code
 end: lmx_implements_own_part
 
-fn: lmx_implements_own_field (@: arena c.LmxArena; @: code c.Lmx; @: wanted c.VoidArray; @@: out_part c.Lmx; @: out size_t) int
+fn: lmx_implements_own_field (@: arena c.LmxArena; @: code c.Lmx; size_t: wanted; @@: out_part c.Lmx; @: out size_t) int
     @: part_fields c.VoidArray 0
     @: holder c.Lmx 0
     size_t: pass 0U
     size_t: j 0U
-    if: arena = 0 || code = 0 || wanted = 0 || out_part = 0 || out = 0
+    if: arena = 0 || code = 0 || wanted = 0U || out_part = 0 || out = 0
         return: c.LMX_IMPLEMENTS_NO
     while: pass < 2U
         holder: lmx_implements_own_part(arena, code, pass)
@@ -4536,13 +4529,13 @@ fn: lmx_implements_own_field (@: arena c.LmxArena; @: code c.Lmx; @: wanted c.Vo
 end: lmx_implements_own_field
 
 # `f\[N]field` over a callable: source occurrence N of that head among its own fields, counted through its parts in source order.
-fn: lmx_implements_own_head_slot (@: arena c.LmxArena; @: code c.Lmx; @: wanted c.VoidArray; size_t: occurrence; @@: out_part c.Lmx; @: out size_t) int
+fn: lmx_implements_own_head_slot (@: arena c.LmxArena; @: code c.Lmx; size_t: wanted; size_t: occurrence; @@: out_part c.Lmx; @: out size_t) int
     @: part_fields c.VoidArray 0
     @: holder c.Lmx 0
     size_t: pass 0U
     size_t: j 0U
     size_t: seen 0U
-    if: arena = 0 || code = 0 || wanted = 0 || out_part = 0 || out = 0
+    if: arena = 0 || code = 0 || wanted = 0U || out_part = 0 || out = 0
         return: c.LMX_IMPLEMENTS_NO
     while: pass < 2U
         holder: lmx_implements_own_part(arena, code, pass)
@@ -4568,8 +4561,8 @@ end: lmx_implements_own_head_slot
 
 # `s\[N]field` over an actual Structure: the slot of its source occurrence N of that head (zero-based).  A Structure with no registry
 # rows for the name has at most its one place, occurrence 0.  YES or NO; no first or last is chosen for a bare name here.
-fn: lmx_implements_head_slot (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.VoidArray; size_t: occurrence; @: out size_t) int
-    if: data = 0 || wanted = 0 || out = 0
+fn: lmx_implements_head_slot (@: arena c.LmxArena; @: data c.Lmx; size_t: wanted; size_t: occurrence; @: out size_t) int
+    if: data = 0 || wanted = 0U || out = 0
         return: c.LMX_IMPLEMENTS_NO
     @: fields c.VoidArray @ data\array
     size_t: seen 0U
@@ -4593,8 +4586,11 @@ fn: lmx_implements_head_slot (@: arena c.LmxArena; @: data c.Lmx; @: wanted c.Vo
     return: c.LMX_IMPLEMENTS_NO
 end: lmx_implements_head_slot
 
-fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: names char; @: requirements size_t; @: out size_t) int
-    if: names = 0 || requirements = 0
+# Slice 302 (IDENTIFIER-CODES): a compiled data interface is its spec alone -- m, SIZE_MAX, then for each place the code
+# of its name and the type it requires (a pair) -- the generated word's static table, filled with the codes its unit
+# normalized at its input boundary; no names text is read.
+fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: requirements size_t; @: out size_t) int
+    if: requirements = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: requirements[0] = 0U
         return: c.LMX_IMPLEMENTS_YES
@@ -4604,12 +4600,9 @@ fn: lmx_implements_named_places (@: arena c.LmxArena; @: data c.Lmx; @: names ch
         return: c.LMX_IMPLEMENTS_UNKNOWN
     size_t: i 0U
     while: i < requirements[0]
-        @: spec size_t (requirements + 2U + 3U * i)
-        c.VoidArray: wanted
-        wanted\data: (cast: (@: void) (names + spec[0]))
-        wanted\size: spec[1]
+        @: spec size_t (requirements + 2U + 2U * i)
         size_t: slot 0U
-        int: answer lmx_implements_call_field(arena, data, @ wanted, (cast: (int) spec[2]), @ slot)
+        int: answer lmx_implements_call_field(arena, data, spec[0], (cast: (int) spec[1]), @ slot)
         if: answer != c.LMX_IMPLEMENTS_YES
             return: answer
         if: out != 0
@@ -4621,13 +4614,10 @@ end: lmx_implements_named_places
 
 fn: lmx_implements_repeated_var (@: arena c.LmxArena; @: code c.Lmx) int
     @: fields c.VoidArray @ code\array
-    c.VoidArray: name
     size_t: heads 0U
     size_t: j 0U
-    name\data: (cast: (@: void) "var")
-    name\size: 3U
     while: j < fields\size
-        if: lmx_implements_same_name(lmx_implements_head_name(arena, code, j), @ name) != 0
+        if: lmx_implements_same_name(lmx_implements_head_name(arena, code, j), (cast: (size_t) c.LMX_ID_VAR)) != 0
             heads: heads + 1U
         j: j + 1U
     ---
@@ -4642,9 +4632,9 @@ fn: lmx_implements_unary_admission (@: arena c.LmxArena; @: code c.Lmx) int
     if: c.lmx_code_callable(arena, code) != 0
         return: c.LMX_IMPLEMENTS_YES
     @: row c.LmxSourceName c.lmx_source_places(arena, (cast: (@: void) code))
-    if: row = 0 || row\place_names = 0 || row\place_spec = 0
+    if: row = 0 || row\place_spec = 0
         return: c.LMX_IMPLEMENTS_YES
-    return: lmx_implements_named_places(arena, c.lmx_call_unary_data(arena, code), (cast: (@: char) row\place_names), (cast: (@: size_t) row\place_spec), 0)
+    return: lmx_implements_named_places(arena, c.lmx_call_unary_data(arena, code), (cast: (@: size_t) row\place_spec), 0)
 end: lmx_implements_unary_admission
 
 # The caller owns this frame. Its slots belong to this one admission, including
@@ -4675,7 +4665,7 @@ fn: lmx_implements_call_places_open (@: arena c.LmxArena; @: code c.Lmx; @: data
     size_t: required 0U
     if: interface_row != 0
         scope\requirements: interface_row\place_spec
-        if: scope\requirements = 0 || interface_row\place_names = 0
+        if: scope\requirements = 0
             return: c.LMX_WALK_INVALID
         required: scope\requirements[0]
     ---
@@ -4695,14 +4685,14 @@ fn: lmx_implements_call_places_open (@: arena c.LmxArena; @: code c.Lmx; @: data
         if: required != 0U
             scope\required_slots: scope\root_slots + root_count
         ---
-        answer: lmx_implements_named_places(arena, data, (cast: (@: char) interface_row\place_names), (cast: (@: size_t) scope\requirements), (cast: (@: size_t) scope\required_slots))
+        answer: lmx_implements_named_places(arena, data, (cast: (@: size_t) scope\requirements), (cast: (@: size_t) scope\required_slots))
     else:
         # Ordinary code already addresses its declared root places via
         # code_slot. Read the name and type of the actual selected place.
         size_t: i 0U
         while: i < root_count && answer = c.LMX_IMPLEMENTS_YES
-            @: name c.VoidArray lmx_implements_place_name(arena, code, i)
-            if: name != 0
+            size_t: name lmx_implements_place_name(arena, code, i)
+            if: name != 0U
                 @: cell void c.lmx_graph_value_in(arena, code, i)
                 int: type lmx_domain_type(arena, cell)
                 if: c.lmx_graph_node_in(arena, cell) != 0
@@ -4820,7 +4810,7 @@ fn: lmx_implements_places (@: arena c.LmxArena; @: data c.Lmx; @: tokens char; @
             if: out != 0 && m != 0U
                 c.memcpy((cast: (@: void) out), (cast: (@: void) scope\required_slots), m * c.sizeof(c.size_t))
             return: c.LMX_IMPLEMENTS_YES
-        return: lmx_implements_named_places(arena, data, tokens, slot_table, out)
+        return: lmx_implements_named_places(arena, data, slot_table, out)
     if: m = 0U
         return: c.LMX_IMPLEMENTS_YES
     layout: lmx_implements_layout(arena, data)

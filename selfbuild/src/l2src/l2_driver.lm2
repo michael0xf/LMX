@@ -11,6 +11,7 @@ predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_ids.h.lm1"
 predef: "l2src/lmx_array_ref_owned.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>" "<stdint.h>"
 
@@ -250,17 +251,18 @@ fn: shape_source_role (@: item c.Lmx; @: arena c.LmxArena) int
     return: code / c.LMX_WALK_OP_COUNT
 end: shape_source_role
 
+# The dump prints a name through the informational code -> name table (IDENTIFIER-CODES).
 sub: shape_dump_source_name (@: out c.FILE; @: arena c.LmxArena; @: key void)
-    @: name c.VoidArray c.lmx_source_name_get(arena, key)
+    size_t: name c.lmx_source_name_get(arena, key)
     @: bytes char 0
+    size_t: nb 0U
     size_t: i 0U
-    if: name = 0 || name\data = 0
+    if: name = 0U || c.lmx_ids_name(name, @ bytes, @ nb) != 0 || bytes = 0
         c.fprintf(out, "-")
         return
     ---
-    bytes: (cast: (@: char) name\data)
-    c.fprintf(out, "%zu:", name\size)
-    while: i < name\size
+    c.fprintf(out, "%zu:", nb)
+    while: i < nb
         c.fprintf(out, "%02X", (cast: (unsigned) (bytes[i] & 255)))
         i: i + 1U
     ---
@@ -480,18 +482,22 @@ fn: shape_add_owner (@: arena c.LmxArena; @: holder c.Lmx; int: left; int: right
     return: found
 end: shape_add_owner
 
+# The check's word is its input: normalized once by the name -> code table, then names compare by code. A char Array is
+# a user string value, compared as such.
 fn: shape_has_spell (@: arena c.LmxArena; @: item void; const: (@: word char)) int
     size_t: i 0U
     @: cell void 0
-    @: text c.VoidArray 0
+    size_t: name 0U
+    size_t: wanted 0U
     @: chars c.LmxArray 0
     @: holder c.Lmx 0
     size_t: text_length
     if: item = 0 || word = 0
         return: 0
     text_length: c.strlen(word)
-    text: c.lmx_source_name_get(arena, item)
-    if: text != 0 && text\size = text_length && (text_length = 0U || c.memcmp((text\data), (cast: (@: void) word), text_length) = 0)
+    wanted: c.lmx_ids_code(word, text_length)
+    name: c.lmx_source_name_get(arena, item)
+    if: name != 0U && name = wanted
         return: 1
     if: c.lmx_domain_kind(arena, item) = c.LMX_KIND_ARRAY && c.lmx_domain_type(arena, item) = c.LMX_TYPE_ARRAY_OF_CHAR
         chars: (cast: (@: c.LmxArray) item)
@@ -504,8 +510,8 @@ fn: shape_has_spell (@: arena c.LmxArena; @: item void; const: (@: word char)) i
     while: i < holder_fields\size
         cell: c.lmx_arena_ref_value(holder, i)
         if: cell != 0
-            text: c.lmx_source_name_get(arena, cell)
-            if: text != 0 && text\size = text_length && (text_length = 0U || c.memcmp((text\data), (cast: (@: void) word), text_length) = 0)
+            name: c.lmx_source_name_get(arena, cell)
+            if: name != 0U && name = wanted
                 return: 1
             ---
         ---
@@ -674,6 +680,44 @@ sub: check (int: ok; const: (@: label char))
     ---
 end: check
 
+# IDENTIFIER-CODES (the author's decision of 2026-11-07, LMX_blog/2026-11-07.md): the process's identifier tables
+# (lmx_ids), before the program runs and before the program's load gives its own spellings their codes. The words of the
+# language have their fixed first codes; one spelling has one code, asked again after another; another spelling has
+# another code, numbered next; code -> name gives the spelling back; a reference head of any depth is marked when its
+# code is given; a unit's table is published once -- a second load's table is freed and the first stays -- and a table
+# holding a code 0 is not published.
+sub: ids_check ()
+    size_t: before c.lmx_ids_count()
+    size_t: a c.lmx_ids_code("ids_check_alpha", 15U)
+    size_t: b c.lmx_ids_code("ids_check_beta", 14U)
+    size_t: a2 c.lmx_ids_code("ids_check_alpha", 15U)
+    size_t: at2 c.lmx_ids_code("@@", 2U)
+    @: text char 0
+    size_t: nb 0U
+    @: unit size_t 0
+    @: other size_t 0
+    @: t1 size_t (cast: (@: size_t) c.calloc(2U, c.sizeof(c.size_t)))
+    @: t2 size_t (cast: (@: size_t) c.calloc(2U, c.sizeof(c.size_t)))
+    @: t3 size_t (cast: (@: size_t) c.calloc(1U, c.sizeof(c.size_t)))
+    check((cast: (int) (c.lmx_ids_code("merge", 5U) = (cast: (size_t) c.LMX_ID_MERGE) && c.lmx_ids_code("call", 4U) = (cast: (size_t) c.LMX_ID_CALL) && c.lmx_ids_code("var", 3U) = (cast: (size_t) c.LMX_ID_VAR) && before >= (cast: (size_t) c.LMX_ID_WORDS))), "ids: the words of the language have their fixed first codes")
+    check((cast: (int) (a != 0U && a = a2)), "ids: one spelling has one code, asked again after another")
+    check((cast: (int) (b != 0U && b != a && a = before + 1U && b = before + 2U)), "ids: another spelling has another code, numbered next")
+    check((cast: (int) (c.lmx_ids_name(a, @ text, @ nb) = 0 && nb = 15U && text != 0 && c.memcmp((cast: (@: void) text), (cast: (@: void) "ids_check_alpha"), 15U) = 0)), "ids: code -> name gives the spelling back")
+    check((cast: (int) (at2 != 0U && c.lmx_ids_reference(at2) = 1 && c.lmx_ids_reference(a) = 0)), "ids: a reference head of any depth is marked when its code is given")
+    if: t1 = 0 || t2 = 0 || t3 = 0
+        check(0, "ids: the unit tables of the check allocate")
+        return
+    ---
+    t1[0]: a
+    t1[1]: b
+    t2[0]: a
+    t2[1]: b
+    check((cast: (int) (c.lmx_ids_unit_loaded((@ unit)) = 0 && c.lmx_ids_unit_publish((@ unit), t1, 2U) = 0 && unit = t1 && c.lmx_ids_unit_loaded((@ unit)) = 1)), "ids: a unit's table is published once")
+    check((cast: (int) (c.lmx_ids_unit_publish((@ unit), t2, 2U) = 0 && unit = t1)), "ids: a second load's table is freed and the first stays")
+    check((cast: (int) (c.lmx_ids_unit_publish((@ other), t3, 1U) = 1 && other = 0)), "ids: a table holding a code 0 is not published")
+    c.free((cast: (@: void) unit))
+end: ids_check
+
 # Slice 253 (design 4.4): the kernel's code links and the native reset, on a private arena, before the program runs.
 # A frame installed in a root: installing a code child resets the holder and the holders above it by code edges; a data
 # install keeps every word, and a code child under a data holder does not reach the root above the data edge; a value
@@ -685,6 +729,8 @@ sub: code_links_check ()
     c.LmxArena: arena
     @: a c.LmxArena 0
     @: root c.Lmx 0
+    # The check's own names are its input, normalized once (IDENTIFIER-CODES).
+    size_t: id_t c.lmx_ids_code("T", 1U)
     @: holder c.Lmx 0
     @: child c.Lmx 0
     @: data c.Lmx 0
@@ -787,7 +833,7 @@ sub: code_links_check ()
     renamed: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 1U))
     owner: (cast: (@: c.Lmx) c.lmx_walk_plain(a, root, 2U))
     machine: (cast: (@: c.Lmx) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SOURCE_MACHINE, 2U))
-    if: top = 0 || referred = 0 || built = 0 || named = 0 || renamed = 0 || owner = 0 || machine = 0 || c.lmx_source_name_set(a, (cast: (@: void) named), "T", 1U) != 0 || c.lmx_source_name_set(a, (cast: (@: void) renamed), "T", 1U) != 0
+    if: top = 0 || referred = 0 || built = 0 || named = 0 || renamed = 0 || owner = 0 || machine = 0 || c.lmx_source_name_set(a, (cast: (@: void) named), id_t) != 0 || c.lmx_source_name_set(a, (cast: (@: void) renamed), id_t) != 0
         check(0, "code links: the nodes of the operand checks allocate")
         c.lmx_arena_release(a)
         return
@@ -854,6 +900,11 @@ sub: activation_check ()
     c.LmxArena: arena
     @: a c.LmxArena 0
     @: root c.Lmx 0
+    # The check's own names are its input, normalized once (IDENTIFIER-CODES).
+    size_t: id_x c.lmx_ids_code("x", 1U)
+    size_t: id_y c.lmx_ids_code("y", 1U)
+    size_t: id_z c.lmx_ids_code("z", 1U)
+    size_t: id_q c.lmx_ids_code("q", 1U)
     @: fnode c.Lmx 0
     @: header c.Lmx 0
     @: gnode c.Lmx 0
@@ -908,18 +959,18 @@ sub: activation_check ()
         c.lmx_arena_release(a)
         return
     check((cast: (int) (c.lmx_arena_ref_store(a, fnode, 0U, (cast: (@: void) header)) = 0 && c.lmx_arena_ref_store(a, gnode, 0U, (cast: (@: void) gheader)) = 0)), "activation chain: the headers stand in part 0")
-    check((cast: (int) (c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 0U)), "x", 1U) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 1U)), "y", 1U) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(gheader, 0U)), "x", 1U) = 0)), "activation chain: the header cells carry their spellings")
+    check((cast: (int) (c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 0U)), id_x) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(header, 1U)), id_y) = 0 && c.lmx_source_name_set(a, (cast: (@: void) c.lmx_arena_ref_cell(gheader, 0U)), id_x) = 0)), "activation chain: the header cells carry their spellings")
     check((cast: (int) (c.lmx_walk_value_num(v0, c.LMX_TYPE_INT, 7U) = c.LMX_WALK_OK)), "activation chain: the caller's input x is 7")
     check((cast: (int) (c.lmx_activation_push(a, @ ra, 2, fnode, 0, (cast: (@: void) vals), 2U, 0) = 0 && a\activation = (cast: (@: void) (@ ra)))), "activation chain: the caller's record is current")
     check((cast: (int) (c.lmx_activation_push(a, @ rb, 2, 0, 0, 0, 0U, 0) = 0 && rb\parent = (cast: (@: c.LmxActivation) (@ ra)))), "activation chain: a forwarder's record follows with nothing in it")
     c.lmx_walk_value_free_mark(g0)
     check((cast: (int) (c.lmx_activation_push(a, @ rc, 2, gnode, 0, (cast: (@: void) gvals), 1U, 0) = 0)), "activation chain: the callee's record is current")
     check((cast: (int) (c.lmx_activation_resolve_input(a, 0U, 0, 0, 0U, 0) = 1 && g0\present != 0 && g0\number = 7 && g0\kind = c.LMX_WALK_VALUE_NUMBER)), "activation chain: the callee's free input x resolves through the forwarder to the caller's 7")
-    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rb)), (cast: (@: void) "z"), 1U, fp) = 0 && fp\present = 0)), "activation chain: an unbound name is absent")
-    check((cast: (int) (c.lmx_activation_bind(a, (cast: (@: void) "q"), 1U, (cast: (@: void) (@ cellv)), c.LMX_TYPE_INT, 0) = 0)), "activation chain: the callee registers a working cell q")
-    check((cast: (int) (c.lmx_activation_push(a, @ rd, 2, 0, 0, 0, 0U, 0) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), (cast: (@: void) "q"), 1U, fp) = 1 && fp\present != 0 && fp\number = 5)), "activation chain: a nested activation resolves the registered cell q to 5")
+    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rb)), id_z, fp) = 0 && fp\present = 0)), "activation chain: an unbound name is absent")
+    check((cast: (int) (c.lmx_activation_bind(a, id_q, (cast: (@: void) (@ cellv)), c.LMX_TYPE_INT, 0) = 0)), "activation chain: the callee registers a working cell q")
+    check((cast: (int) (c.lmx_activation_push(a, @ rd, 2, 0, 0, 0, 0U, 0) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), id_q, fp) = 1 && fp\present != 0 && fp\number = 5)), "activation chain: a nested activation resolves the registered cell q to 5")
     cellv: 6
-    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), (cast: (@: void) "q"), 1U, fp) = 1 && fp\number = 6)), "activation chain: a working cell is read at the resolution, not at the registration")
+    check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rc)), id_q, fp) = 1 && fp\number = 6)), "activation chain: a working cell is read at the resolution, not at the registration")
     # The order within one record (book :729/:779; Codex P1-B1-1): a written formal -- an args header entry of four
     # fields -- before a working cell; a working cell before an inherited free input (an entry of two fields).
     fe4: (cast: (@: c.Lmx) c.lmx_node_new_owned(a))
@@ -929,9 +980,9 @@ sub: activation_check ()
     else:
         check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@: void) fe4)) = 0 && c.lmx_arena_ref_store(a, header, 1U, (cast: (@: void) fe2)) = 0)), "activation chain: x has a formal's header entry, y a free input's")
         check((cast: (int) (c.lmx_activation_input_formal(a, fnode, 0U) = 1 && c.lmx_activation_input_formal(a, fnode, 1U) = 0 && c.lmx_activation_input_formal(a, gnode, 0U) = 0)), "activation chain: the header tells a formal from a free input by its entry")
-        check((cast: (int) (c.lmx_activation_push(a, @ rf, 2, fnode, 0, (cast: (@: void) vals), 2U, 0) = 0 && c.lmx_activation_bind(a, (cast: (@: void) "x"), 1U, (cast: (@: void) (@ cellx)), c.LMX_TYPE_INT, 0) = 0 && c.lmx_activation_push(a, @ rg, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a record with the formal x 7 and a working cell x 9, then its callee's record")
-        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), (cast: (@: void) "x"), 1U, fp) = 1 && fp\number = 7)), "activation chain: the written formal x is the nearest binding of its record")
-        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@: void) fe2)) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), (cast: (@: void) "x"), 1U, fp) = 1 && fp\number = 9)), "activation chain: the working cell x shadows the inherited free input x of its record")
+        check((cast: (int) (c.lmx_activation_push(a, @ rf, 2, fnode, 0, (cast: (@: void) vals), 2U, 0) = 0 && c.lmx_activation_bind(a, id_x, (cast: (@: void) (@ cellx)), c.LMX_TYPE_INT, 0) = 0 && c.lmx_activation_push(a, @ rg, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a record with the formal x 7 and a working cell x 9, then its callee's record")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), id_x, fp) = 1 && fp\number = 7)), "activation chain: the written formal x is the nearest binding of its record")
+        check((cast: (int) (c.lmx_arena_ref_store(a, header, 0U, (cast: (@: void) fe2)) = 0 && c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rf)), id_x, fp) = 1 && fp\number = 9)), "activation chain: the working cell x shadows the inherited free input x of its record")
         # A walker frame's record (kind 1): the rows its entry loaded are its working cells; the other fields of its
         # data node are no binding (Codex P1-B1-2).
         c.memset((cast: (@: void) frp), 0, c.sizeof(c.LmxWalkFrame))
@@ -940,8 +991,8 @@ sub: activation_check ()
         frp\work: (cast: (@: void) rp)
         frp\nwork: 1U
         check((cast: (int) (c.lmx_walk_value_num((cast: (@: c.LmxWalkValue) (@ rp\value)), c.LMX_TYPE_INT, 4U) = c.LMX_WALK_OK && c.lmx_activation_push(a, @ rw, 1, 0, 0, 0, 0U, (cast: (@: void) frp)) = 0 && c.lmx_activation_push(a, @ rh, 2, 0, 0, 0, 0U, 0) = 0)), "activation chain: a walker frame's record with the row y 4, then its callee's record")
-        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), (cast: (@: void) "y"), 1U, fp) = 1 && fp\number = 4)), "activation chain: the walker's row y resolves for its callee")
-        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), (cast: (@: void) "x"), 1U, fp) = 1 && fp\number = 9)), "activation chain: a name the walker frame holds no row of climbs to the native caller's working cell")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), id_y, fp) = 1 && fp\number = 4)), "activation chain: the walker's row y resolves for its callee")
+        check((cast: (int) (c.lmx_activation_resolve(a, (cast: (@: c.LmxActivation) (@ rw)), id_x, fp) = 1 && fp\number = 9)), "activation chain: a name the walker frame holds no row of climbs to the native caller's working cell")
         c.lmx_activation_pop(a, @ rh)
         c.lmx_activation_pop(a, @ rw)
         c.lmx_activation_pop(a, @ rg)
@@ -1456,7 +1507,7 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
     @: value void
     @: other void
     @: holder c.Lmx
-    @: text c.VoidArray
+    size_t: name_code 0U
     @: pool c.LmxPool
     size_t: text_length
     int: selected
@@ -1622,10 +1673,10 @@ fn: shape_paths_check (@: arena c.LmxArena; @: graph c.Lmx; int: late) int
             if: at >= gargc_cell[0]
                 return: 0
             text_length: c.strlen(gargv_cell[0][at])
-            text: c.lmx_source_name_get(arena, value)
-            check((cast: (int) (text != 0)), "selected address has its own external source name")
-            if: text != 0
-                check((cast: (int) (text\size = text_length && (text_length = 0U || c.memcmp((text\data), (cast: (@: void) gargv_cell[0][at]), text_length) = 0))), "selected address has exactly its own source spelling")
+            name_code: c.lmx_source_name_get(arena, value)
+            check((cast: (int) (name_code != 0U)), "selected address has its own external source name")
+            if: name_code != 0U
+                check((cast: (int) (name_code = c.lmx_ids_code(gargv_cell[0][at], text_length))), "selected address has exactly its own source spelling")
             at: at + 1
         ---
         if: mode = 7
@@ -2874,10 +2925,10 @@ sub: shape_copy_native_call (@: source c.LmxArena; @: graph c.Lmx; size_t: slot;
     @: copied c.Lmx 0
     @: method c.Lmx 0
     @: original c.Lmx 0
-    @: source_head c.VoidArray 0
-    @: copied_head c.VoidArray 0
-    @: source_field c.VoidArray 0
-    @: copied_field c.VoidArray 0
+    size_t: source_head 0U
+    size_t: copied_head 0U
+    size_t: source_field 0U
+    size_t: copied_field 0U
     size_t: source_before 0U
     size_t: destination_before 0U
     int: result 0
@@ -2900,10 +2951,10 @@ sub: shape_copy_native_call (@: source c.LmxArena; @: graph c.Lmx; size_t: slot;
     ---
     source_head: c.lmx_source_name_get(source, (cast: (@: void) original))
     copied_head: c.lmx_source_name_get(@ destination, (cast: (@: void) method))
-    check((cast: (int) ((source_head = 0 && copied_head = 0) || (source_head != 0 && copied_head != 0 && source_head\size = copied_head\size && (source_head\size = 0U || c.memcmp(source_head\data, copied_head\data, source_head\size) = 0)))), "copied method keeps its external receiver-head name")
+    check((cast: (int) (source_head = copied_head)), "copied method keeps its external receiver-head name")
     source_field: c.lmx_source_name_get(source, (cast: (@: void) c.lmx_arena_ref_cell(graph, slot)))
     copied_field: c.lmx_source_name_get(@ destination, (cast: (@: void) c.lmx_arena_ref_cell(copied, slot)))
-    check((cast: (int) ((source_field = 0 && copied_field = 0) || (source_field != 0 && copied_field != 0 && source_field\size = copied_field\size && (source_field\size = 0U || c.memcmp(source_field\data, copied_field\data, source_field\size) = 0)))), "copied method keeps its external owning-field name")
+    check((cast: (int) (source_field = copied_field)), "copied method keeps its external owning-field name")
     source_before: shape_arena_cells(source)
     destination_before: shape_arena_cells(@ destination)
     check((cast: (int) (c.lmx_call0(@ destination, method, @ result) = 0)), "copied native method returns status separately from value")
@@ -3495,6 +3546,8 @@ fn: main (int: argc; @@: argv char) int
             return: 2
         ---
     ---
+    phase_cell[0]: "identifier codes"
+    ids_check()
     phase_cell[0]: "code links"
     code_links_check()
     phase_cell[0]: "activation chain"

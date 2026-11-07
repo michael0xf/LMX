@@ -6912,25 +6912,19 @@ fn: lm_compiler_emit_actual_path_place_field (const: (@: path c.L2Path); int: mi
         else:
             if: step\locus != 8
                 return: 1
-            size_t: selector_len 0U
-            @: selector_text char c.lm_compiler_path_selector_text(path, k, @ selector_len)
-            if: selector_text = 0
-                return: 1
-            size_t: selector_cap selector_len * 4U + 3U
-            @: selector char c.malloc(selector_cap)
-            if: selector = 0 || c.lm_compiler_fmt_l1_string(selector, selector_cap, selector_text, selector_len) != 0
-                c.free(selector_text)
-                c.free(selector)
-                return: 1
-            ---
-            c.free(selector_text)
+            # IDENTIFIER-CODES: the step's selector is the code of its name, its selected occurrence and its prefix
+            # flag, read from the written step now (lm_compiler_emit_selector_args) -- no text the kernel parses.
             if: out_field != 0 && k + 1 = path\n
                 out_field[0]: t
-                printed: c.fprintf(out_cell[0], "%s@: Lmx l2_aph%d 0\n%ssize_t: l2_api%d 0U\n%sLmxWalkPlace: l2_ap%d\n%sint: l2_aps%d lmx_walk_value_field_place(l2_call_arena, %s, (cast: (@: char) %s), @ l2_ap%d, @ l2_aph%d, @ l2_api%d)\n", ind, t, ind, t, ind, t, ind, t, holder, selector, t, t, t)
+                printed: c.fprintf(out_cell[0], "%s@: Lmx l2_aph%d 0\n%ssize_t: l2_api%d 0U\n%sLmxWalkPlace: l2_ap%d\n%sint: l2_aps%d lmx_walk_value_field_place(l2_call_arena, %s, ", ind, t, ind, t, ind, t, ind, t, holder)
+                if: printed >= 0 && (c.lm_compiler_emit_selector_args(path, k) != 0 || c.fprintf(out_cell[0], ", @ l2_ap%d, @ l2_aph%d, @ l2_api%d)\n", t, t, t) < 0)
+                    printed: -1
+                ---
             else:
-                printed: c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ap%d\n%sint: l2_aps%d lmx_walk_value_named_place(l2_call_arena, %s, (cast: (@: char) %s), @ l2_ap%d)\n", ind, t, ind, t, holder, selector, t)
+                printed: c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ap%d\n%sint: l2_aps%d lmx_walk_value_named_place(l2_call_arena, %s, ", ind, t, ind, t, holder)
+                if: printed >= 0 && (c.lm_compiler_emit_selector_args(path, k) != 0 || c.fprintf(out_cell[0], ", @ l2_ap%d)\n", t) < 0)
+                    printed: -1
             ---
-            c.free(selector)
         ---
         if: printed < 0
             return: 1
@@ -11767,7 +11761,9 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
     if: bind != 0 && nact > 0
         fd: tn_cell[0]
         tn_cell[0]: tn_cell[0] + 1
-        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%s[]: size_t l2_bs%d %d\n%s[]: @(void) l2_bn%d %d\n", ind, fd, arguments\written_count, ind, fd, arguments\written_count) < 0
+        # IDENTIFIER-CODES: the names of the written actuals are the codes of their spellings (the unit's table); 0 for
+        # a positional one.
+        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%s[]: size_t l2_bs%d %d\n%s[]: size_t l2_bn%d %d\n", ind, fd, arguments\written_count, ind, fd, arguments\written_count) < 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         written: 0
         while: written < arguments\written_count
@@ -11778,11 +11774,11 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
             if: c.fprintf(out_cell[0], "%sl2_bs%d[%d]: %dU\n%sl2_bn%d[%d]: ", ind, fd, written, t, ind, fd, written) < 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             if: actual\wrapper != 0
-                if: c.fputs("(cast: (@: void) ", out_cell[0]) < 0 || c.lm_compiler_emit_cstr((cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head)) != 0 || c.fputs(")\n", out_cell[0]) < 0
+                if: c.lm_compiler_emit_unit_id_text((cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head)) != 0 || c.fputs("\n", out_cell[0]) < 0
                     return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
                 ---
             else:
-                if: c.fputs("0\n", out_cell[0]) < 0
+                if: c.fputs("0U\n", out_cell[0]) < 0
                     return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
                 ---
             ---
@@ -17699,7 +17695,7 @@ fn: lm_compiler_emit_split_admission (int: mi; int: pr; int: k; int: can_fail; c
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @@: m_throws_cell int (cast: (@@: int) (@ c.l2_m_throws))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
-    if: c.fprintf(out_cell[0], "%sint: l2_nsa%d lmx_implements_places(l2_program_arena, l2_nsd%d, l2_cpn%d, l2_cpt%d, 0)\n%sif: l2_nsa%d = c.LMX_IMPLEMENTS_NO\n", ind, k, k, pr, pr, ind, k) < 0
+    if: c.fprintf(out_cell[0], "%sint: l2_nsa%d lmx_implements_places(l2_program_arena, l2_nsd%d, 0, l2_cpt%d, 0)\n%sif: l2_nsa%d = c.LMX_IMPLEMENTS_NO\n", ind, k, k, pr, ind, k) < 0
         return: (cast: (int) (1))
     if: can_fail != 0
         if: mi < 0 || m_throws_cell[0] = 0 || m_throws_cell[0][mi] = 0
@@ -17911,7 +17907,8 @@ fn: lm_compiler_emit_selected_pads (int: mi; int: k; const: (@: ind char); const
                 @: name c.LmP0Text c.lm_compiler_catch_name(field\value)
                 if: name != 0 && c.lm_compiler_catch_find(mi, name, 0, 0, 0) = field\value && c.lm_compiler_pad_of((cast: (const: @: c.LmP0Structure) body)) >= 0
                     int: key c.lm_compiler_throw_key(name)
-                    if: key < 0 || c.fprintf(output[0], "%sif: l2_skey%d = %dU\n", ind, k, key) < 0 || c.lm_compiler_emit_deliver(mi, name, 0, payload, deep) < 0
+                    # IDENTIFIER-CODES: the pad compares the code of the catch's name (the unit's table).
+                    if: key < 0 || c.fprintf(output[0], "%sif: l2_skey%d = ", ind, k) < 0 || c.lm_compiler_emit_unit_id_text(name) != 0 || c.fputs("\n", output[0]) < 0 || c.lm_compiler_emit_deliver(mi, name, 0, payload, deep) < 0
                         return: 1
                     ---
                 ---

@@ -2361,9 +2361,10 @@ fn: lm_compiler_emit_source_name (const: (@: key char); const: (@: text c.LmP0Te
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     if: text = 0 || text\length = 0U
         return: (cast: (int) (0))
-    if: c.fprintf(out_cell[0], "%sif: lmx_source_name_set(l2_program_arena, (cast: (@: void) %s), ", ind, key) < 0 || lm_compiler_emit_cstr(text) != 0
+    # IDENTIFIER-CODES: the occurrence's name is the code of its spelling, read from the unit's table.
+    if: c.fprintf(out_cell[0], "%sif: lmx_source_name_set(l2_program_arena, (cast: (@: void) %s), ", ind, key) < 0 || lm_compiler_emit_unit_id_text(text) != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], ", %zuU) != 0\n%s    %s\n", (text\length), ind, fail) < 0
+    if: c.fprintf(out_cell[0], ") != 0\n%s    %s\n", ind, fail) < 0
         return: (cast: (int) (1))
     if: fail2 != 0 && c.fprintf(out_cell[0], "%s    %s\n", ind, fail2) < 0
         return: (cast: (int) (1))
@@ -2374,7 +2375,9 @@ fn: lm_compiler_emit_method_part_name (int: slot; const: (@: name char)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     if: slot < 0 || name = 0
         return: (cast: (int) (1))
-    return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "        if: lmx_source_name_set(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(l2_entry_leaf, %uU)), \"%s\", %zuU) != 0\n            return: 1\n", (cast: (unsigned) slot), name, c.strlen(name)) < 0))))
+    if: c.fprintf(out_cell[0], "        if: lmx_source_name_set(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(l2_entry_leaf, %uU)), ", (cast: (unsigned) slot)) < 0 || lm_compiler_emit_unit_id(name, c.strlen(name)) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.fputs(") != 0\n            return: 1\n", out_cell[0]) < 0))
 end: lm_compiler_emit_method_part_name
 
 fn: lm_compiler_emit_source_failure (const: (@: ind char); const: (@: fail char); const: (@: fail2 char)) int
@@ -2991,3 +2994,168 @@ fn: lm_compiler_part_slot (int: mi; int: part) int
         return: (cast: (int) (0))
     return: (cast: (int) (part - 1))
 end: lm_compiler_part_slot
+
+# IDENTIFIER-CODES (the author's decision of 2026-11-07, LMX_blog/2026-11-07.md; the book, names and paths): the
+# emitted unit names an identifier only by its code. Each place of the emission that names one takes the next index K
+# of the unit's table (lm_compiler_unit_id) and writes `l2_ids[KU]`, a code of the process's tables (lmx_ids). The
+# unit's load l2_ids_load (lm_compiler_emit_unit_ids, written after every other part of the unit, called first by its
+# builder) turns each written spelling into its code once, at the unit's input boundary; no executed operation consults
+# the tables. The translator keeps the unit's spellings only to write that load and compares none of them: the same
+# spelling written at two places takes two indices of one code.
+fn: lm_compiler_unit_id (const: (@: data char); size_t: nb) int
+    @@@: text_cell char (cast: (@@@: char) (@ c.l2_uid_text))
+    @@: len_cell size_t (cast: (@@: size_t) (@ c.l2_uid_len))
+    @: n_cell int (cast: (@: int) (@ c.l2_uid_n))
+    @: cap_cell int (cast: (@: int) (@ c.l2_uid_cap))
+    @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
+    @: grown void 0
+    @: copy char 0
+    int: k n_cell[0]
+    int: want 0
+    if: data = 0 || nb = 0U
+        return: (cast: (int) (0 - 1))
+    if: k >= cap_cell[0]
+        want: c.lm_compiler_cap_next(cap_cell[0], k + 1)
+        if: want < 0
+            alloc_err_cell[0]: 2
+            return: (cast: (int) (0 - 1))
+        grown: c.lm_compiler_vec_grow((cast: (@: void) text_cell[0]), k, want, sizeof(@: char))
+        if: grown = 0
+            return: (cast: (int) (0 - 1))
+        text_cell[0]: (cast: (@@: char) grown)
+        grown: c.lm_compiler_vec_grow((cast: (@: void) len_cell[0]), k, want, c.sizeof(c.size_t))
+        if: grown = 0
+            return: (cast: (int) (0 - 1))
+        len_cell[0]: (cast: (@: size_t) grown)
+        cap_cell[0]: want
+    ---
+    copy: (cast: (@: char) c.lm_compiler_xmalloc(nb))
+    if: copy = 0
+        return: (cast: (int) (0 - 1))
+    c.memcpy((cast: (@: void) copy), (cast: (@: void) data), nb)
+    text_cell[0][k]: copy
+    len_cell[0][k]: nb
+    n_cell[0]: k + 1
+    return: k
+end: lm_compiler_unit_id
+
+# The code of a spelling as the emitted unit reads it: `l2_ids[KU]`, K the spelling's index in the unit's table. 0, or 1
+# for no spelling, without memory or when the output fails.
+fn: lm_compiler_emit_unit_id (const: (@: data char); size_t: nb) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    int: k lm_compiler_unit_id(data, nb)
+    if: k < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.fprintf(out_cell[0], "l2_ids[%dU]", k) < 0))
+end: lm_compiler_emit_unit_id
+
+fn: lm_compiler_emit_unit_id_text (const: (@: t c.LmP0Text)) int
+    if: t = 0 || t\data = 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (lm_compiler_emit_unit_id((cast: (const: @: char) (t\data)), t\length)))
+end: lm_compiler_emit_unit_id_text
+
+# The unit's table of codes and its load, declared with the unit's other module cells (a library unit's under its own
+# hashed names, as its other tables): `@: size_t l2_ids 0` and the prototype of l2_ids_load, which the builder calls
+# before the definition at the end of the unit. The unit's table of spellings starts empty with the unit's emission
+# (lm_compiler_emit_unit).
+fn: lm_compiler_emit_unit_ids_declare () int
+    @: library_mode int (cast: (@: int) (@ c.l2_library_mode))
+    @: hash_a unsigned (cast: (@: unsigned) (@ c.l2_module_hash_a))
+    @: hash_b unsigned (cast: (@: unsigned) (@ c.l2_module_hash_b))
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    if: library_mode[0] != 0 && c.fprintf(output[0], "define: l2_ids l2_u%08X%08X_ids\ndefine: l2_ids_load l2_u%08X%08X_ids_load\n", hash_a[0], hash_b[0], hash_a[0], hash_b[0]) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.fputs("@: size_t l2_ids 0\n\nprototype:\n    fn: l2_ids_load () int\nend: prototype\n\n", output[0]) < 0))
+end: lm_compiler_emit_unit_ids_declare
+
+# The load of the unit's identifiers, after every other part of the unit: l2_ids_load turns each spelling the unit
+# names into its code once (lmx_ids_code, the input boundary of the unit) and publishes the table of codes in the cell
+# l2_ids (lmx_ids_unit_publish: once per process; a load that lost the race frees its own table). 0, or 1 when a
+# spelling got no code; a published table is loaded and is not read again.
+fn: lm_compiler_emit_unit_ids () int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @@@: text_cell char (cast: (@@@: char) (@ c.l2_uid_text))
+    @@: len_cell size_t (cast: (@@: size_t) (@ c.l2_uid_len))
+    @: n_cell int (cast: (@: int) (@ c.l2_uid_n))
+    c.LmP0Text: t
+    int: k 0
+    if: c.fprintf(out_cell[0], "\nfn: l2_ids_load () int\n    @: size_t l2_ids_table 0\n    if: lmx_ids_unit_loaded((@ l2_ids)) != 0\n        return: 0\n    l2_ids_table: (cast: (@: size_t) c.calloc(%dU, c.sizeof(c.size_t)))\n    if: l2_ids_table = 0\n        return: 1\n", n_cell[0] + 1) < 0
+        return: (cast: (int) (1))
+    while: k < n_cell[0]
+        t\data: text_cell[0][k]
+        t\length: len_cell[0][k]
+        if: c.fprintf(out_cell[0], "    l2_ids_table[%dU]: lmx_ids_code(", k) < 0 || lm_compiler_emit_cstr(@ t) != 0 || c.fprintf(out_cell[0], ", %zuU)\n", len_cell[0][k]) < 0
+            return: (cast: (int) (1))
+        k: k + 1
+    ---
+    return: (cast: (int) (c.fprintf(out_cell[0], "    return: lmx_ids_unit_publish((@ l2_ids), l2_ids_table, %dU)\nend: l2_ids_load\n", n_cell[0]) < 0))
+end: lm_compiler_emit_unit_ids
+
+# The selector of a named step of a path as the reached operation takes it (IDENTIFIER-CODES; lmx_walk_value_field_place,
+# lmx_walk_store_selector): the step's name (its spelling, to be written as its code), the occurrence its written
+# `[N]` selects or SIZE_MAX for none, and whether the step is the first name after a callable field (the `[]` the
+# selector text used to carry). Read from the written step at translation; nothing parses it at run time; a `[` not
+# closed after its digits stays part of the name, as the text selector read it. 0, or 1 for a step without a name.
+fn: lm_compiler_path_selector_parts (const: (@: path c.L2Path); int: k; @@: name char; @: name_len size_t; @: selected size_t; @: prefix int) int
+    @: step c.L2PathStep 0
+    @: text char 0
+    size_t: n 0U
+    size_t: i 1U
+    size_t: v 0U
+    if: path = 0 || k < 0 || k >= path\n || name = 0 || name_len = 0 || selected = 0 || prefix = 0
+        return: (cast: (int) (1))
+    step: path\steps + k
+    prefix[0]: (cast: (int) (k > 0 && lm_compiler_path_named_tail(path) = k))
+    text: (cast: (@: char) (path\text + step\off))
+    n: step\len
+    selected[0]: (cast: (size_t) -1)
+    if: n > 0U && text[0] = 91
+        while: i < n && text[i] >= 48 && text[i] <= 57 && v <= ((cast: (size_t) -1) - 9U) / 10U
+            v: v * 10U + (cast: (size_t) (text[i] - 48))
+            i: i + 1U
+        ---
+        if: i > 1U && i < n && text[i] = 93
+            selected[0]: v
+            text: text + i + 1U
+            n: n - i - 1U
+        ---
+    ---
+    if: n = 0U
+        return: (cast: (int) (1))
+    name[0]: text
+    name_len[0]: n
+    return: (cast: (int) (0))
+end: lm_compiler_path_selector_parts
+
+# The statement that stores a named step's selector at the third cell of its OF/PUT_OF frame l2_rw<frame>: the code of
+# the name from the unit's table, the selected occurrence, the prefix flag. 0, or 1.
+fn: lm_compiler_emit_path_selector (const: (@: path c.L2Path); int: k; int: frame) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: name char 0
+    size_t: name_len 0U
+    size_t: selected 0U
+    int: prefix 0
+    if: lm_compiler_path_selector_parts(path, k, @ name, @ name_len, @ selected, @ prefix) != 0
+        return: (cast: (int) (1))
+    if: c.fprintf(out_cell[0], "        if: lmx_walk_store_selector(l2_program_arena, l2_rw%d, 2U, ", frame) < 0 || lm_compiler_emit_unit_id((cast: (const: @: char) name), name_len) != 0
+        return: (cast: (int) (1))
+    if: selected = (cast: (size_t) -1)
+        return: (cast: (int) (c.fprintf(out_cell[0], ", (cast: (size_t) -1), %d) != c.LMX_WALK_OK\n            return: 1\n", prefix) < 0))
+    return: (cast: (int) (c.fprintf(out_cell[0], ", %zuU, %d) != c.LMX_WALK_OK\n            return: 1\n", selected, prefix) < 0))
+end: lm_compiler_emit_path_selector
+
+# The three selector arguments of a native field or named place (lmx_walk_value_field_place,
+# lmx_walk_value_named_place) for step k of path: `CODE, SELECTED, PREFIX`, the code from the unit's table. 0, or 1.
+fn: lm_compiler_emit_selector_args (const: (@: path c.L2Path); int: k) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: name char 0
+    size_t: name_len 0U
+    size_t: selected 0U
+    int: prefix 0
+    if: lm_compiler_path_selector_parts(path, k, @ name, @ name_len, @ selected, @ prefix) != 0 || lm_compiler_emit_unit_id((cast: (const: @: char) name), name_len) != 0
+        return: (cast: (int) (1))
+    if: selected = (cast: (size_t) -1)
+        return: (cast: (int) (c.fprintf(out_cell[0], ", (cast: (size_t) -1), %d", prefix) < 0))
+    return: (cast: (int) (c.fprintf(out_cell[0], ", %zuU, %d", selected, prefix) < 0))
+end: lm_compiler_emit_selector_args

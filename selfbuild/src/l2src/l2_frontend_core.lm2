@@ -4037,7 +4037,8 @@ fn: lm_compiler_emit_work_decl (int: k) int
     if: c.lm_compiler_own_is_array(own_ty_cell[0][k]) != 0
         if: c.fprintf(out_cell[0], "    LmxWalkValue: %s\n    int: %s_status lmx_walk_value_cell(l2_program_arena, %s_from[0], @ %s)\n    if: %s_status != c.LMX_WALK_OK\n        lmx_call_note_walk_fail(%s_status)\n        return: 0\n    ---\n", cwv_name\data, cwv_name\data, cq_name\data, cwv_name\data, cwv_name\data, cwv_name\data) < 0
             return: 1
-        if: c.fprintf(out_cell[0], "    if: lmx_activation_bind(l2_program_arena, (cast: (@: void) \"%.*s\"), %uU, 0, c.LMX_TYPE_NONE, @ %s) != 0\n        lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n        return: 0\n    ---\n", (cast: (int) (own_name_cell[0][k]\length)), own_name_cell[0][k]\data, (cast: (unsigned) (own_name_cell[0][k]\length)), cwv_name\data) < 0
+        # IDENTIFIER-CODES: the binding's name is the code of the own field's spelling (the unit's table).
+        if: c.fputs("    if: lmx_activation_bind(l2_program_arena, ", out_cell[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(out_cell[0], ", 0, c.LMX_TYPE_NONE, @ %s) != 0\n        lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n        return: 0\n    ---\n", cwv_name\data) < 0
             return: 1
         return: 0
     ---
@@ -4093,9 +4094,9 @@ fn: lm_compiler_emit_work_decl (int: k) int
     # Slice 254 (design 4.5 B1): a used own field is a binding of this activation for the free inputs of the callees
     # entered from it (lmx_activation_resolve): its place in the graph with the place's domain type -- the same read
     # as the entry load above, and current at every call because what is marked is published before each one
-    # (lm_compiler_emit_publish, book 12).  The name is the program's literal; the record is the trampoline's
-    # (lmx_call_prim_values / lmx_call0_mode), gone with the activation.
-    if: c.fprintf(out_cell[0], "    lmx_activation_bind(l2_program_arena, (cast: (@: void) \"%.*s\"), %uU, (cast: (@: void) %s_from[0]), lmx_domain_type(l2_program_arena, %s_from[0]), 0)\n", (cast: (int) (own_name_cell[0][k]\length)), own_name_cell[0][k]\data, (cast: (unsigned) (own_name_cell[0][k]\length)), cq_name\data, cq_name\data) < 0
+    # (lm_compiler_emit_publish, book 12).  The name is the code of the field's spelling (IDENTIFIER-CODES: the unit's
+    # table l2_ids); the record is the trampoline's (lmx_call_prim_values / lmx_call0_mode), gone with the activation.
+    if: c.fputs("    lmx_activation_bind(l2_program_arena, ", out_cell[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(out_cell[0], ", (cast: (@: void) %s_from[0]), lmx_domain_type(l2_program_arena, %s_from[0]), 0)\n", cq_name\data, cq_name\data) < 0
         return: 1
     # Once a published place is declared, its addresses enter the activation's
     # publication table (lm_compiler_emit_publish_table, the same planner).
@@ -14336,27 +14337,18 @@ end: lm_compiler_emit_place_uses
 # Original: l2src/l2trans.lm1:26703
 fn: lm_compiler_place_tables_declare () int
     @: methods int (cast: (@: int) (@ c.l2_m_n))
-    @: owns int (cast: (@: int) (@ c.l2_own_n))
-    @@: owners int (cast: (@@: int) (@ c.l2_own_mi))
-    @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     @: library_mode int (cast: (@: int) (@ c.l2_library_mode))
     @: hash_a unsigned (cast: (@: unsigned) (@ c.l2_module_hash_a))
     @: hash_b unsigned (cast: (@: unsigned) (@ c.l2_module_hash_b))
     @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     int: i 0
+    # IDENTIFIER-CODES: a split procedure's place table names its places by the codes of their spellings -- [m,
+    # SIZE_MAX, (code, type) per place] -- with no buffer of their texts.
     while: i < methods[0]
         if: c.lm_compiler_m_is_split(i) != 0
-            # Keep a real buffer for the empty interface as well.
-            size_t: bytes 1U
-            int: k 0
-            while: k < owns[0]
-                if: owners[0][k] = i && c.lm_compiler_split_data_row(k) != 0 && c.lm_compiler_split_rep(k) = k
-                    bytes: bytes + names[0][k]\length
-                k: k + 1
-            ---
-            if: library_mode[0] != 0 && c.fprintf(output[0], "define: l2_cpt%d l2_u%08X%08X_cpt%d\ndefine: l2_cpn%d l2_u%08X%08X_cpn%d\n", i, hash_a[0], hash_b[0], i, i, hash_a[0], hash_b[0], i) < 0
+            if: library_mode[0] != 0 && c.fprintf(output[0], "define: l2_cpt%d l2_u%08X%08X_cpt%d\n", i, hash_a[0], hash_b[0], i) < 0
                 return: 1
-            if: c.fprintf(output[0], "[]: size_t l2_cpt%d %d\n[]: char l2_cpn%d %zu\n", i, 2 + 3 * lm_compiler_split_m(i), i, bytes) < 0
+            if: c.fprintf(output[0], "[]: size_t l2_cpt%d %d\n", i, 2 + 2 * lm_compiler_split_m(i)) < 0
                 return: 1
             ---
         ---
@@ -14380,21 +14372,18 @@ fn: lm_compiler_place_tables_emit () int
         if: c.lm_compiler_m_is_split(i) != 0
             if: c.fprintf(output[0], "        l2_cpt%d[0]: %dU\n        l2_cpt%d[1]: (cast: (size_t) -1)\n", i, lm_compiler_split_m(i), i) < 0
                 return: 1
-            size_t: offset 0U
             int: k 0
             while: k < owns[0]
                 if: owners[0][k] = i && c.lm_compiler_split_data_row(k) != 0 && c.lm_compiler_split_rep(k) = k
                     @: spelling c.LmP0Text names[0][k]
-                    int: at 2 + 3 * c.lm_compiler_split_name_ix(k)
+                    int: at 2 + 2 * c.lm_compiler_split_name_ix(k)
                     int: formal_type c.lm_compiler_ft_of_own(types[0][k])
                     int: graph (cast: (int) (c.lm_compiler_source_definition_ns(k) >= 0))
                     if: c.lm_compiler_emit_input_value_type(formal_type, graph, type_name) != 0
                         return: 1
-                    if: c.fprintf(output[0], "        l2_cpt%d[%d]: %zuU\n        l2_cpt%d[%d]: %zuU\n        l2_cpt%d[%d]: %s\n", i, at, offset, i, at + 1, spelling\length, i, at + 2, type_name) < 0
+                    # IDENTIFIER-CODES: the place's name is the code of its spelling (the unit's table, loaded first).
+                    if: c.fprintf(output[0], "        l2_cpt%d[%d]: ", i, at) < 0 || c.lm_compiler_emit_unit_id_text(spelling) != 0 || c.fprintf(output[0], "\n        l2_cpt%d[%d]: %s\n", i, at + 1, type_name) < 0
                         return: 1
-                    if: c.fprintf(output[0], "        c.memcpy(l2_cpn%d + %zuU, ", i, offset) < 0 || c.lm_compiler_emit_cstr(spelling) != 0 || c.fprintf(output[0], ", %zuU)\n", spelling\length) < 0
-                        return: 1
-                    offset: offset + spelling\length
                 ---
                 k: k + 1
             ---
@@ -14696,7 +14685,9 @@ fn: lm_compiler_rw_key_cell (int: source_node; int: slot; const: (@: name c.LmP0
     k: lm_compiler_throw_key(name)
     if: k < 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "out of memory")))
-    if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", source_node, slot, k) < 0
+    # IDENTIFIER-CODES: a throw's key is the code of its name's spelling (the unit's table): the implicit names are the
+    # first codes (1..7, LMX_WALK_NAME_*), a declared name's code is above them, the same in every unit of the process.
+    if: c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, ", source_node, slot) < 0 || c.lm_compiler_emit_unit_id_text(name) != 0 || c.fputs(") != c.LMX_WALK_OK\n            return: 1\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     if: c.sprintf(key, "lmx_arena_ref_value(l2_rw%d, %dU)", source_node, slot) < 0
         return: (cast: (int) (1))

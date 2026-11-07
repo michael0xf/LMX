@@ -100,6 +100,27 @@ object, rather than one independent copy per name. Retention follows
 the same admitted `independent: immutable` profiles as ordinary copying.
 Current verification and remaining work are in [the work log](../steps/current.md).
 
+Identifier codes (IDENTIFIER-CODES; the author's decision of 2026-11-07,
+[the book](LMX_semantics.en.md#fields)). The process service `lmx_ids` --
+the kernel's machine module `src/l2src/lmx_ids.lm2` -- holds the single
+pair of tables code → name and name → code with one counter; the words of
+the language the kernel compares against get the first codes in the order
+of the `LMX_ID_*` constants of its header (the implicit throws 1..7
+coincide with the walker's numbers). An emitted unit declares its table
+`l2_ids` and its load `l2_ids_load`: as the first statement of its builder
+it turns each written name into its code once (`lmx_ids_code`) and
+publishes the table (`lmx_ids_unit_publish`, once per process); from then
+on the unit holds only `l2_ids[K]`. A `LmxSourceName` row binds an
+occurrence's address to a code, not to text; the registration of names,
+the place tables `[m, SIZE_MAX, (code, type)...]`, the activation bindings,
+the binder of named actuals, the path selectors `(code, occurrence,
+prefix)` and the throw keys of native code and the walker work by codes; a
+copy carries the code without reading a spelling (slice 302, an
+intermediate result). The translator's internal comparisons (P0, scopes,
+resolve, signature interning, throw keys) and the L1 translator still
+compare strings -- the rest of the transition ([defect
+register](../steps/defects.md)).
+
 <a id="l3-status"></a>
 ## 4. L3 interpreter and admission
 

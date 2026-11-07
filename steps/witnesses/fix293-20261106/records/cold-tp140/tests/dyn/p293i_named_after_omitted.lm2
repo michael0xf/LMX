@@ -1,0 +1,46 @@
+# Slice 293 probe: a named actual for a later formal while an earlier formal with a default is omitted, in a method,
+# in a sub and through a Structure's method by path; a recursion that omits its own defaulted formal.  Entry 7.
+fn: w (int: x 4; int: y) int
+    return: x * 10 + y
+end: w
+int: seen 0
+sub: s (int: v 3; int: u)
+    node\seen: v * 10 + u
+    return
+end: s
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+Box:
+    fn: m (int: k 2; int: j) int
+        return: k * 10 + j
+    end: m
+end: Box
+fn: r (int: n 3) int
+    if: n = 0
+        return: 0
+    ---
+    return: n + r(n - 1)
+end: r
+fn: run_sub () int
+    s(u: 1)
+    return: read_seen()
+end: run_sub
+int: code 7
+if: w(y: 2) != 42
+    code: 81
+---
+if: code = 7 && w(y: 2; x: 1) != 12
+    code: 82
+---
+if: code = 7 && run_sub() != 31
+    code: 83
+---
+if: code = 7 && Box\m(j: 5) != 25
+    code: 84
+---
+if: code = 7 && r() != 6
+    code: 85
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,43 @@
+# Slice 293 probe: a static call that omits a formal with a written default takes the default (the book :467, :381);
+# a supplied argument is taken, zero too; one call's argument does not change the next call's default; a caller's
+# same-named value is not an argument of the call.  Entry 7.
+fn: d (int: a 5) int
+    return: a
+end: d
+fn: e (int: x; int: y 7) int
+    return: x * 10 + y
+end: e
+fn: same () int
+    int: a 9
+    return: d()
+end: same
+int: code 7
+if: d() != 5
+    code: 81
+---
+if: code = 7 && d(3) != 3
+    code: 82
+---
+if: code = 7 && d() != 5
+    code: 83
+---
+if: code = 7 && d(0) != 0
+    code: 84
+---
+if: code = 7 && d(a: 4) != 4
+    code: 85
+---
+if: code = 7 && e(1) != 17
+    code: 86
+---
+if: code = 7 && e(1, 2) != 12
+    code: 87
+---
+if: code = 7 && e(x: 2) != 27
+    code: 88
+---
+if: code = 7 && same() != 5
+    code: 89
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

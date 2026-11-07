@@ -1,0 +1,99 @@
+# Slice 293 probe: dynamic calls that form no input of a formal with a written default take the default of the call
+# actually selected (the book :467; Codex, 285 norm answers item 3): a declared callable place with its own default,
+# the place after a write of a fn with another default, after a write of a fn without one (the implicit `call`), and
+# the `call` receiver over a free holder holding a fn with a default.  Entry 7.
+Places:
+    fn: f (int: x 5) int
+        return: x
+    end: f
+end: Places
+fn: g (int: x 8) int
+    return: x
+end: g
+fn: g2 (int: x) int
+    return: x
+end: g2
+int: Hw 0
+int: seen 0
+fn: put (int: v) int
+    node\seen: v
+    return: v
+end: put
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+fn: gd (int: a 6) int
+    int: r put(a)
+    return: r
+end: gd
+fn: place_call () int
+    ---
+        int: r Places\f()
+        return: r
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+    ---
+end: place_call
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: run_place () int
+    @: Hw g g
+    if: write_place() != 1
+        return: 34
+    ---
+    return: place_call()
+end: run_place
+fn: run_place2 () int
+    @: Hw g2 g2
+    if: write_place() != 1
+        return: 34
+    ---
+    return: place_call()
+end: run_place2
+fn: call_free () int
+    ---
+        call: Hw
+        return: read_seen()
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+    ---
+end: call_free
+fn: run_call () int
+    @: Hw gd gd
+    return: call_free()
+end: run_call
+int: code 7
+int: got place_call()
+if: got != 5
+    code: got + 40
+---
+if: code = 7
+    got: run_place()
+    if: got != 8
+        code: got + 50
+    ---
+---
+if: code = 7
+    got: run_place2()
+    if: got != 22
+        code: got + 60
+    ---
+---
+if: code = 7
+    got: run_call()
+    if: got != 6
+        code: got + 70
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

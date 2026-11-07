@@ -1,0 +1,214 @@
+# Slice 293 (FORMAL-DEFAULT; docs/LMX_semantics.ru.md :467, :381, :455, :485): a formal with a written default stays in
+# the interface; a call that gives no argument for it takes the default of the callable the call selects, a call that
+# gives one takes that argument (zero too), one call's argument does not change the next call's default, a same-named
+# value of the caller is no argument; static calls by position and by name, a sub, a path, a recursion, a callable place
+# (declared default, a fn written with another default, a fn written with none: the implicit `call`), the `call`
+# receiver over a free holder, a callable formal.  Entry 7, codes 81-107.
+fn: d (int: a 5) int
+    return: a
+end: d
+fn: e (int: x; int: y 7) int
+    return: x * 10 + y
+end: e
+fn: w (int: x 4; int: y) int
+    return: x * 10 + y
+end: w
+fn: same () int
+    int: a 9
+    return: d()
+end: same
+fn: neg (int: a -1) int
+    return: a
+end: neg
+fn: ch (char: c 'x') int
+    return: (cast: (int) c)
+end: ch
+fn: sz (size_t: n 9) int
+    return: (cast: (int) n)
+end: sz
+int: seen 0
+fn: put (int: v) int
+    node\seen: v
+    return: v
+end: put
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+sub: s (int: v 3; int: u)
+    node\seen: v * 10 + u
+    return
+end: s
+fn: run_sub () int
+    s(u: 1)
+    return: read_seen()
+end: run_sub
+Box:
+    fn: m (int: k 2; int: j) int
+        return: k * 10 + j
+    end: m
+end: Box
+fn: r (int: n 3) int
+    if: n = 0
+        return: 0
+    ---
+    return: n + r(n - 1)
+end: r
+Places:
+    fn: f (int: x 5) int
+        return: x
+    end: f
+end: Places
+fn: g (int: x 8) int
+    return: x
+end: g
+fn: g2 (int: x) int
+    return: x
+end: g2
+int: Hw 0
+fn: place_call () int
+    ---
+        int: got Places\f()
+        return: got
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+    ---
+end: place_call
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: run_place () int
+    @: Hw g g
+    if: write_place() != 1
+        return: 34
+    ---
+    return: place_call()
+end: run_place
+fn: run_place2 () int
+    @: Hw g2 g2
+    if: write_place() != 1
+        return: 34
+    ---
+    return: place_call()
+end: run_place2
+fn: gd (int: a 6) int
+    int: got put(a)
+    return: got
+end: gd
+fn: call_free () int
+    ---
+        call: Hw
+        return: read_seen()
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+    ---
+end: call_free
+fn: run_call () int
+    @: Hw gd gd
+    return: call_free()
+end: run_call
+fn: run_call2 () int
+    @: Hw g2 g2
+    return: call_free()
+end: run_call2
+fn: d7 (int: a 7) int
+    return: a
+end: d7
+fn: d9 (int: a 9) int
+    return: a
+end: d9
+fn: apply (f(fn: (int: a 5) int)) int
+    return: f()
+end: apply
+int: code 7
+if: d() != 5
+    code: 81
+---
+if: code = 7 && d(3) != 3
+    code: 82
+---
+if: code = 7 && d() != 5
+    code: 83
+---
+if: code = 7 && d(0) != 0
+    code: 84
+---
+if: code = 7 && d(a: 4) != 4
+    code: 85
+---
+if: code = 7 && e(1) != 17
+    code: 86
+---
+if: code = 7 && e(1, 2) != 12
+    code: 87
+---
+if: code = 7 && e(x: 2) != 27
+    code: 88
+---
+if: code = 7 && same() != 5
+    code: 89
+---
+if: code = 7 && neg() != -1
+    code: 90
+---
+if: code = 7 && neg(2) != 2
+    code: 91
+---
+if: code = 7 && ch() != 120
+    code: 92
+---
+if: code = 7 && ch('a') != 97
+    code: 93
+---
+if: code = 7 && sz() != 9
+    code: 94
+---
+if: code = 7 && sz(3) != 3
+    code: 95
+---
+if: code = 7 && w(y: 2) != 42
+    code: 96
+---
+if: code = 7 && w(y: 2; x: 1) != 12
+    code: 97
+---
+if: code = 7 && run_sub() != 31
+    code: 98
+---
+if: code = 7 && Box\m(j: 5) != 25
+    code: 99
+---
+if: code = 7 && r() != 6
+    code: 100
+---
+if: code = 7 && place_call() != 5
+    code: 101
+---
+if: code = 7 && run_place() != 8
+    code: 102
+---
+if: code = 7 && run_place2() != 22
+    code: 103
+---
+if: code = 7 && run_call() != 6
+    code: 104
+---
+if: code = 7 && run_call2() != 22
+    code: 105
+---
+if: code = 7 && apply(d7) != 7
+    code: 106
+---
+if: code = 7 && apply(d9) != 9
+    code: 107
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,21 @@
+# Slice 293 probe: a callable formal whose written signature has a default, called without the argument: the call
+# takes the default of the callable the actual selects (the book :467; Codex, 285 norm answers item 3), not the
+# signature's.  Entry 7.
+fn: d7 (int: a 7) int
+    return: a
+end: d7
+fn: d9 (int: a 9) int
+    return: a
+end: d9
+fn: apply (f(fn: (int: a 5) int)) int
+    return: f()
+end: apply
+int: code 7
+if: apply(d7) != 7
+    code: 81
+---
+if: code = 7 && apply(d9) != 9
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -840,7 +840,7 @@ fn: lm_compiler_colon_bound_before (const: (@: body c.LmP0Structure); const: (@:
 end: lm_compiler_colon_bound_before
 
 # Original: l2src/l2trans.lm1:5933
-fn: lm_compiler_bind_value_actuals (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals) int
+fn: lm_compiler_bind_value_actuals (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals) int
     int: status
     if: out = 0
         return: (cast: (int) (1))
@@ -856,14 +856,14 @@ fn: lm_compiler_bind_value_actuals (@: values c.L2ValueSpan; int: n; int: nf; @@
         c.memset(out\actuals, 0, (cast: (size_t) nf) * c.sizeof(c.L2ApplicationActual))
     ---
     out\count: nf
-    status: lm_compiler_bind_value_actuals_into(values, n, nf, names, callee, path, at, out)
+    status: lm_compiler_bind_value_actuals_into(values, n, nf, names, mi, callee, path, at, out)
     if: status != 0
         c.lm_compiler_value_actuals_release(out)
     return: (cast: (int) (status))
 end: lm_compiler_bind_value_actuals
 
 # Original: l2src/l2trans.lm1:5956
-fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals) int
+fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals) int
     @: source c.L2ValueSpan
     @: payload c.L2ValueSpan
     @: slot c.L2ApplicationActual
@@ -876,6 +876,8 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
     int: named 0
     int: rank 0
     int: payload_n
+    int: default_kind 0
+    size_t: default_bits 0U
     while: first < n
         source: values + first
         extent: c.lm_compiler_value_argument_extent(values, n, first)
@@ -922,11 +924,21 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
         rank: rank + 1
         first: first + extent
     ---
+    # Slice 293 (FORMAL-DEFAULT; the book :467): a formal the call gives no argument for takes its written default -- a
+    # literal of its type the callee's args entry holds (lm_compiler_formal_default_kind); with none it is the ordinary
+    # refusal of the call.  A default written in another form is not built: such a call must give the argument.
     k: 0
     while: k < nf
         slot: out\actuals + k
         if: slot\written = 0
-            return: (cast: (int) (lm_compiler_error_words(path, at, "", callee, (cast: (size_t) (c.strlen(callee))), " has no argument ", (cast: (const: @: char) (names[k]\data)), (cast: (size_t) (names[k]\length)), "", 0, 0U, "")))
+            default_kind: lm_compiler_formal_default_kind(mi, k, @ default_bits)
+            if: default_kind < 0
+                return: (cast: (int) (lm_compiler_error_words(path, at, "", callee, (cast: (size_t) (c.strlen(callee))), " has no argument ", (cast: (const: @: char) (names[k]\data)), (cast: (size_t) (names[k]\length)), ": its written default is no value of its type", 0, 0U, "")))
+            if: default_kind = 2
+                return: (cast: (int) (lm_compiler_error_words(path, at, "", callee, (cast: (size_t) (c.strlen(callee))), " has no argument ", (cast: (const: @: char) (names[k]\data)), (cast: (size_t) (names[k]\length)), ": its written default is not a literal value and is not built", 0, 0U, "")))
+            if: default_kind != 1
+                return: (cast: (int) (lm_compiler_error_words(path, at, "", callee, (cast: (size_t) (c.strlen(callee))), " has no argument ", (cast: (const: @: char) (names[k]\data)), (cast: (size_t) (names[k]\length)), "", 0, 0U, "")))
+            ---
         k: k + 1
     ---
     out\written_count: rank
@@ -969,7 +981,7 @@ fn: lm_compiler_bind_signature_actuals (@: values c.L2ValueSpan; int: n; int: id
     c.memcpy(callee, head\data, head\length)
     callee[head\length]: 0
     if: idx >= 0
-        return: (cast: (int) (lm_compiler_bind_value_actuals(values, n, m_arity_cell[0][idx], (cast: (@@: c.LmP0Text) m_fn_cell[0][idx]), callee, path, at, out)))
+        return: (cast: (int) (lm_compiler_bind_value_actuals(values, n, m_arity_cell[0][idx], (cast: (@@: c.LmP0Text) m_fn_cell[0][idx]), idx, callee, path, at, out)))
     nf: lm_compiler_mad_held_formals(held)
     if: nf < 0
         return: (cast: (int) (2))
@@ -984,7 +996,8 @@ fn: lm_compiler_bind_signature_actuals (@: values c.L2ValueSpan; int: n; int: id
             k: k + 1
         ---
     ---
-    status: lm_compiler_bind_value_actuals(values, n, nf, names, callee, path, at, out)
+    # A held callable's header writes no defaults this binding reads (-1).
+    status: lm_compiler_bind_value_actuals(values, n, nf, names, -1, callee, path, at, out)
     c.lm_compiler_xfree((cast: (@: void) names))
     return: (cast: (int) (status))
 end: lm_compiler_bind_signature_actuals
@@ -11466,6 +11479,7 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
     int: dyn_mi
     int: context_temp -1
     int: actual_context -1
+    int: fd 0
     c.L2FrontendScratchChar96: actual_record_storage
     @: actual_record char (cast: (@: char) actual_record_storage\buffer)
     c.L2FrontendScratchChar96: actual_payload_storage
@@ -11571,7 +11585,7 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
         ---
     # Written order and formal coordinate are both held by the common plan.
     # No reconstruction of a formal-ordered P0 chain precedes evaluation.
-    while: written < nact
+    while: written < arguments\written_count
         actual: c.lm_compiler_value_actual_written(arguments, written)
         if: actual = 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
@@ -11670,6 +11684,23 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
         if: occ_mi < 0 && c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         written: written + 1
+    ---
+    # Slice 293 (FORMAL-DEFAULT; the book :467, :455): a formal this call gives no argument for takes the current
+    # default of the callable the call selected (l2_c, read before the actuals ran), read after the written actuals as
+    # the walker's binder reads it -- through the one kernel reading (lmx_call_formal_default).  The selected callable
+    # may hold none (a place written with another fn): the call's implicit `call` before the body.
+    t: 0
+    while: t < nact
+        actual: (cast: (@: c.L2ApplicationActual) (arguments\actuals + t))
+        if: actual\written = 0
+            fd: tn_cell[0]
+            tn_cell[0]: tn_cell[0] + 1
+            if: c.fprintf(out_cell[0], "%sint: l2_fds%d lmx_call_formal_default(l2_call_arena, l2_c%d, %dU, @ l2_av%d[%d])\n%sif: l2_fds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL\n", ind, fd, self_t, t, self_t, t, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "call", ind) != 0
+                return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+            if: c.fprintf(out_cell[0], "%s---\n%sif: l2_fds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_fds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
+                return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+            ---
+        t: t + 1
     ---
     if: ncls <= 1
         if: lm_compiler_emit_call_hides(mi, hid, nhid, nact, self_t, ind, source_node, cfi, @ hides) != 0
@@ -12699,6 +12730,10 @@ fn: lm_compiler_emit_machine_call_arguments (const: (@: source_node c.LmP0Node);
     @: port_call c.L2Tx c.lm_compiler_tx_local(@ call_tx, call_own, 1024U)
     if: arguments = 0 || arguments\count != n
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], source_node, "internal: a machine call lost its bound arguments")))
+    # Slice 293 (FORMAL-DEFAULT): a formal's default is the callee's graph state (lmx_call_formal_default); a machine
+    # function has no graph, so a call of one that omits a formal is not built (FORMAL-DEFAULT-MACHINE).
+    if: arguments\written_count != n
+        return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "a call of a machine function gives every argument: a formal's default is not read without a graph")))
     # One C local per formal, l2_t<base + formal>, taken before any actual runs.
     tn_cell[0]: tn_cell[0] + n
     while: written < n
@@ -19721,3 +19756,77 @@ fn: lm_compiler_emit_index_l3_store (const: (@: stmt c.LmP0Node); const: (@: pla
         return: 1
     return: lm_compiler_emit_received_place_store(mi, "l2_call_arena", (cast: (const: @: char) (selected\data)), ind, current, 0, 0)
 end: lm_compiler_emit_index_l3_store
+
+# Slice 293 (FORMAL-DEFAULT; the book :467, :381, :455): the value written after a formal's type and name in its
+# signature is its default.  0: formal k of method mi writes none (a callable formal's written signature is no default);
+# 1: it writes a literal of its own primitive numeric type, the default this translation builds into the formal's args
+# entry (lm_compiler_rw_formal_default), its bits in out_bits; 2: it writes another form -- a name, an expression, the
+# value of a Structure formal -- which is not built (FORMAL-DEFAULT-FORMS); -1: a literal that is no value of the
+# formal's type, refused where the signature writes it.  The signature does not execute what it writes (:381).
+fn: lm_compiler_formal_default_kind (int: mi; int: k; @: out_bits size_t) int
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    const: (@: decl c.LmP0Node 0)
+    @: declaration c.L2Declaration 0
+    @: candidate c.LmP0Field 0
+    const: (@: atom c.LmP0Text 0)
+    int: ty
+    int: status
+    int: character
+    size_t: bits 0U
+    if: out_bits != 0
+        \out_bits: 0U
+    if: mi < 0 || mi >= m_n_cell[0] || k < 0 || k >= m_arity_cell[0][mi]
+        return: (cast: (int) (0))
+    if: c.lm_compiler_cf_get(mi, k) >= 0
+        return: (cast: (int) (0))
+    decl: c.lm_compiler_formal_decl_at(mi, k)
+    if: decl = 0
+        return: (cast: (int) (0))
+    declaration: c.lm_compiler_declaration(decl)
+    if: declaration = 0 || declaration\candidate = 0 || declaration\candidate_count < 1
+        return: (cast: (int) (0))
+    if: c.lm_compiler_nsty_get(mi, k) >= 0 || declaration\candidate_count != 1
+        return: (cast: (int) (2))
+    ty: c.lm_compiler_own_ty_of_param(c.lm_compiler_ft(mi, k))
+    if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 36
+        return: (cast: (int) (2))
+    candidate: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (declaration\candidate)))
+    if: candidate = 0 || candidate\value = 0 || candidate\value\kind != c.LM_P0_NODE_ATOM || candidate\value\as = 0 || candidate\value\as\atom = 0
+        return: (cast: (int) (2))
+    atom: (cast: (const: @: c.LmP0Text) (candidate\value\as\atom))
+    if: ty = 1
+        character: c.lm_compiler_char_literal(atom)
+        if: character >= 0
+            if: out_bits != 0
+                \out_bits: (cast: (size_t) character)
+            ---
+            return: (cast: (int) (1))
+        ---
+        if: c.lm_compiler_quoted(atom) != 0 || c.lm_compiler_num(atom) != 0 || c.lm_compiler_signed_num(atom) != 0
+            return: (cast: (int) (-1))
+        return: (cast: (int) (2))
+    ---
+    if: c.lm_compiler_quoted(atom) != 0
+        return: (cast: (int) (-1))
+    if: ty = 0
+        status: c.lm_compiler_int_literal_bits(atom, @ bits)
+        if: status = 2
+            return: (cast: (int) (-1))
+        if: status != 1
+            return: (cast: (int) (2))
+        ---
+    ---
+    if: ty != 0
+        if: c.lm_compiler_signed_num(atom) != 0
+            return: (cast: (int) (-1))
+        if: c.lm_compiler_num_value(atom, @ bits) = 0
+            return: (cast: (int) (2))
+        if: ty = 3 && bits > (cast: (size_t) c.UINT_MAX)
+            return: (cast: (int) (-1))
+        ---
+    ---
+    if: out_bits != 0
+        \out_bits: bits
+    return: (cast: (int) (1))
+end: lm_compiler_formal_default_kind

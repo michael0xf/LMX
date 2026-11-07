@@ -4602,6 +4602,11 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
     actual_i: 0
     while: actual_i < nact
         actual: arguments\actuals + actual_i
+        # Slice 293 (FORMAL-DEFAULT; the book :467): a formal the call omits takes its default, a value the signature
+        # writes and its definition checks (lm_compiler_rw_formal_default); there is no actual here to check or admit.
+        if: actual\written = 0
+            actual_i: actual_i + 1
+            continue
         value: @ actual\value
         a0: value\first
         actual_span: value\count
@@ -6664,6 +6669,10 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         else:
             rw_machine_cell[0]: 1
         ---
+        # Slice 293 (FORMAL-DEFAULT; the book :467, :381, :455): the value the signature writes is the formal's current
+        # default, a value of its own type in field 2 of this entry (lmx_call_formal_default reads it there).
+        if: lm_compiler_rw_formal_default(entry, mi, j, ty) != 0
+            return: (cast: (int) (1))
         if: rw_emit_cell[0] != 0
             if: c.sprintf(place, "lmx_arena_ref_cell(l2_rw%d, %uU)", inputs, (cast: (unsigned) slot)) < 0 || c.lm_compiler_emit_source_name(place, c.lm_compiler_fn(mi, j), "        ", "return: 1", 0) != 0
                 return: (cast: (int) (1))
@@ -6722,32 +6731,7 @@ end: lm_compiler_rw_header_parts
 
 # Original: l2src/l2trans.lm1:23972
 fn: lm_compiler_rw_call_contract (int: parent; int: mi; int: hidden; @: out int) int
-    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
-    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
-    int: inputs
-    int: returns
-    int: j 0
-    int: n m_arity_cell[0][mi]
-    int: rty c.lm_compiler_ret_cell_ty(mi)
-    int: descriptor (cast: (int) (c.lm_compiler_input_model(mi, -1) >= 0 || c.lm_compiler_sig_ret(mi) = 16))
-    int: nr (cast: (int) (rty >= 0 || descriptor != 0))
-    if: hidden >= 0
-        n: n + m_dyn_cell[0][hidden]
-    if: c.lm_compiler_rw_contract_parts(parent, n, nr, 2, out, @ inputs, @ returns) != 0
-        return: (cast: (int) (1))
-    if: nr != 0 && lm_compiler_rw_signature_witness(returns, 0, rty, descriptor) != 0
-        return: (cast: (int) (1))
-    while: j < m_arity_cell[0][mi]
-        if: lm_compiler_rw_signature_input(inputs, j, mi, j) != 0
-            return: (cast: (int) (1))
-        j: j + 1
-    ---
-    while: j < n
-        if: lm_compiler_rw_signature_input(inputs, j, hidden, m_arity_cell[0][hidden] + j - m_arity_cell[0][mi]) != 0
-            return: (cast: (int) (1))
-        j: j + 1
-    ---
-    return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_rw_call_contract_for(parent, mi, hidden, 0, out)))
 end: lm_compiler_rw_call_contract
 
 # Original: l2src/l2trans.lm1:23998
@@ -9410,7 +9394,7 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     contract_hidden: idx
     if: formal_call >= 0
         contract_hidden: hid
-    if: lm_compiler_rw_call_contract((cast: (int) (\out)), idx, contract_hidden, @ contract) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 3, contract) != 0
+    if: lm_compiler_rw_call_contract_for((cast: (int) (\out)), idx, contract_hidden, arguments, @ contract) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 3, contract) != 0
         return: (cast: (int) (1))
     if: formal_call >= 0 && hid < 0 && c.lm_compiler_rw_call_class_receiving(source_node, idx, formal_call, arguments, (cast: (int) (\out))) != 0
         return: (cast: (int) (1))
@@ -9420,6 +9404,11 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     # each value to its formal.
     while: k < n
         actual: arguments\actuals + k
+        # Slice 293 (FORMAL-DEFAULT): a formal the call omits has no operand; the suffix slot its name binds through this
+        # call's contract (lm_compiler_rw_call_contract_for) stays empty, and the selected callable's default fills it.
+        if: actual\written = 0
+            k: k + 1
+            continue
         value: @ actual\value
         a: value\first
         span: value\count
@@ -18031,3 +18020,113 @@ fn: lm_compiler_rw_body_var_slots (int: mi; @: body c.LmP0Structure; int: into; 
     ---
     return: (cast: (int) (0))
 end: lm_compiler_rw_body_var_slots
+
+# Slice 293 (FORMAL-DEFAULT; the book :467, :381, :455): field 2 of a written formal's args entry holds its current
+# default, a value of the formal's own type -- the literal its signature writes (lm_compiler_formal_default_kind).  An
+# entry whose signature writes no default keeps field 2 empty: no default.  A literal that is no value of the formal's
+# type is refused here, where the signature writes it; another written form is not built (FORMAL-DEFAULT-FORMS): its
+# field stays empty, a static call that omits it is refused and a call selected at run time is its implicit `call`.
+fn: lm_compiler_rw_formal_default (int: entry; int: mi; int: j; int: ty) int
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    c.L2FrontendScratchChar32: holder_storage
+    @: holder char (cast: (@: char) holder_storage\buffer)
+    c.L2FrontendScratchChar48: lit_storage
+    @: lit char (cast: (@: char) lit_storage\buffer)
+    const: (@: store char 0)
+    size_t: bits 0U
+    int: kind 0
+    kind: (cast: (int) (c.lm_compiler_formal_default_kind(mi, j, @ bits)))
+    if: kind < 0
+        return: (cast: (int) (c.lm_compiler_error(src_cell[0], c.lm_compiler_formal_decl_at(mi, j), "a formal's written default is no value of its type")))
+    if: kind != 1 || rw_emit_cell[0] = 0
+        return: (cast: (int) (0))
+    if: ty = 0
+        store: "lmx_int_store_known"
+        c.sprintf(lit, "%d", (cast: (int) bits))
+    ---
+    if: ty = 1
+        store: "lmx_char_store_known"
+        c.sprintf(lit, "%d", (cast: (int) bits))
+    ---
+    if: ty = 2
+        store: "lmx_size_store_known"
+        c.sprintf(lit, "%zuU", bits)
+    ---
+    if: ty = 3
+        store: "lmx_unsigned_store_known"
+        c.sprintf(lit, "%uU", (cast: (unsigned) bits))
+    ---
+    if: ty = 36
+        store: "lmx_ulong_store_known"
+        c.sprintf(lit, "%zuU", bits)
+    ---
+    if: store = 0
+        return: (cast: (int) (c.lm_compiler_error(src_cell[0], c.lm_compiler_formal_decl_at(mi, j), "internal: a built formal default has no primitive cell type")))
+    if: c.sprintf(holder, "l2_rw%d", entry) < 0 || c.fprintf(out_cell[0], "        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, 2U)\n        if: l2_entry_slot = 0\n            return: 1\n", entry) < 0 || lm_compiler_emit_cell_new_ty(ty, 0U, holder, 2U, 0, "        ", "l2_entry_slot", "return: 1", 0) != 0
+        return: (cast: (int) (1))
+    if: c.fprintf(out_cell[0], "        if: %s(l2_entry_slot[0], %s) != 0\n            return: 1\n", store, lit) < 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_rw_formal_default
+
+# Slice 293 (FORMAL-DEFAULT): the contract of one call's transport.  The EXEC carries the written operands first, in
+# the order they are written, then a suffix each slot of which the kernel binds by the name of the Consumer contract's
+# input at its ordinal (lmx_callable_bind_written).  When the call omits formals that suffix begins with theirs, so the
+# contract lists the written formals by their written rank, then the omitted ones in declared order, then the hidden
+# inputs.  A call that writes every formal, and every other contract, keeps the declared order.
+fn: lm_compiler_rw_call_contract_for (int: parent; int: mi; int: hidden; @: arguments c.L2ApplicationActuals; @: out int) int
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
+    int: inputs
+    int: returns
+    int: j 0
+    int: n m_arity_cell[0][mi]
+    int: rty c.lm_compiler_ret_cell_ty(mi)
+    int: descriptor (cast: (int) (c.lm_compiler_input_model(mi, -1) >= 0 || c.lm_compiler_sig_ret(mi) = 16))
+    int: nr (cast: (int) (rty >= 0 || descriptor != 0))
+    if: hidden >= 0
+        n: n + m_dyn_cell[0][hidden]
+    if: c.lm_compiler_rw_contract_parts(parent, n, nr, 2, out, @ inputs, @ returns) != 0
+        return: (cast: (int) (1))
+    if: nr != 0 && lm_compiler_rw_signature_witness(returns, 0, rty, descriptor) != 0
+        return: (cast: (int) (1))
+    while: j < m_arity_cell[0][mi]
+        if: lm_compiler_rw_signature_input(inputs, j, mi, lm_compiler_rw_contract_formal(arguments, j)) != 0
+            return: (cast: (int) (1))
+        j: j + 1
+    ---
+    while: j < n
+        if: lm_compiler_rw_signature_input(inputs, j, hidden, m_arity_cell[0][hidden] + j - m_arity_cell[0][mi]) != 0
+            return: (cast: (int) (1))
+        j: j + 1
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_rw_call_contract_for
+
+# The formal at ordinal j of this call's transport (lm_compiler_rw_call_contract_for): with no omitted formal, j
+# itself; else the written formal of rank j, then the omitted formals in declared order.
+fn: lm_compiler_rw_contract_formal (@: arguments c.L2ApplicationActuals; int: j) int
+    @: actual c.L2ApplicationActual 0
+    int: k 0
+    int: seen 0
+    if: arguments = 0 || arguments\written_count >= arguments\count || j < 0 || j >= arguments\count
+        return: (cast: (int) (j))
+    if: j < arguments\written_count
+        actual: c.lm_compiler_value_actual_written(arguments, j)
+        if: actual = 0
+            return: (cast: (int) (j))
+        return: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
+    ---
+    while: k < arguments\count
+        actual: (cast: (@: c.L2ApplicationActual) (arguments\actuals + k))
+        if: actual\written = 0
+            if: seen = j - arguments\written_count
+                return: (cast: (int) (k))
+            seen: seen + 1
+        ---
+        k: k + 1
+    ---
+    return: (cast: (int) (j))
+end: lm_compiler_rw_contract_formal

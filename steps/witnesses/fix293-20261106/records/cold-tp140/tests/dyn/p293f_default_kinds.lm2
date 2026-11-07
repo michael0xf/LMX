@@ -1,0 +1,32 @@
+# Slice 293 probe: written defaults of other primitive kinds and spellings -- a negative int, a char, a size_t -- each
+# supplied and omitted (the book :467, :381).  Entry 7.
+fn: neg (int: a -1) int
+    return: a
+end: neg
+fn: ch (char: c 'x') int
+    return: (cast: (int) c)
+end: ch
+fn: sz (size_t: n 9) int
+    return: (cast: (int) n)
+end: sz
+int: code 7
+if: neg() != -1
+    code: 81
+---
+if: code = 7 && neg(2) != 2
+    code: 82
+---
+if: code = 7 && ch() != 120
+    code: 83
+---
+if: code = 7 && ch('a') != 97
+    code: 84
+---
+if: code = 7 && sz() != 9
+    code: 85
+---
+if: code = 7 && sz(3) != 3
+    code: 86
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

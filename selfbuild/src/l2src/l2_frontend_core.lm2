@@ -2249,7 +2249,7 @@ fn: lm_compiler_table_formals () int
 end: lm_compiler_table_formals
 
 # Original: l2src/l2trans.lm1:5045
-fn: lm_compiler_bind_actuals (@: first c.LmP0Field; int: nf; @@: names c.LmP0Text; const: (@: callee char); @@: out_at c.LmP0Field; @: out_span int; const: (@: path char); const: (@: at c.LmP0Node)) int
+fn: lm_compiler_bind_actuals (@: first c.LmP0Field; int: nf; @@: names c.LmP0Text; int: idx; const: (@: callee char); @@: out_at c.LmP0Field; @: out_span int; const: (@: path char); const: (@: at c.LmP0Node)) int
     c.L2ApplicationActuals: plan
     @: values c.L2ValueSpan 0
     @: slot c.L2ApplicationActual
@@ -2268,13 +2268,17 @@ fn: lm_compiler_bind_actuals (@: first c.LmP0Field; int: nf; @@: names c.LmP0Tex
             return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "an application has no valid argument grammar")))
         ---
     ---
-    status: c.lm_compiler_bind_value_actuals(values, n, nf, names, callee, path, at, @ plan)
+    status: c.lm_compiler_bind_value_actuals(values, n, nf, names, idx, callee, path, at, @ plan)
     k: 0
     while: status = 0 && k < nf
         slot: plan\actuals + k
-        out_at[k]: slot\written\first
-        if: slot\wrapper = 0
-            out_span[k]: lm_compiler_port249_0_L2ApplicationActual_value_count(slot)
+        # Slice 293 (FORMAL-DEFAULT): a formal the call omits has no written actual -- no field and no span.
+        if: slot\written != 0
+            out_at[k]: slot\written\first
+            if: slot\wrapper = 0
+                out_span[k]: lm_compiler_port249_0_L2ApplicationActual_value_count(slot)
+            ---
+        ---
         k: k + 1
     ---
     c.lm_compiler_value_actuals_release(@ plan)
@@ -2793,7 +2797,7 @@ fn: lm_compiler_bind_call_at (const: (@: source_node c.LmP0Node); @: head c.LmP0
                 names[k]: c.lm_compiler_mad_held_arg_name(held, k)
             k: k + 1
         ---
-        rc: lm_compiler_bind_call_in(source_node, head, path, nf, at, span, names, first, cnt)
+        rc: lm_compiler_bind_call_in(source_node, head, path, nf, idx, at, span, names, first, cnt)
     else:
         rc: c.lm_compiler_alloc_or(path, source_node, "out of memory")
     if: at != 0
@@ -2810,7 +2814,7 @@ fn: lm_compiler_bind_call_at (const: (@: source_node c.LmP0Node); @: head c.LmP0
 end: lm_compiler_bind_call_at
 
 # Original: l2src/l2trans.lm1:5559
-fn: lm_compiler_bind_call_in (const: (@: source_node c.LmP0Node); @: head c.LmP0Text; const: (@: path char); int: nf; @@: at c.LmP0Field; @: span int; @@: names c.LmP0Text; @@: first c.LmP0Field; @: cnt int) int
+fn: lm_compiler_bind_call_in (const: (@: source_node c.LmP0Node); @: head c.LmP0Text; const: (@: path char); int: nf; int: idx; @@: at c.LmP0Field; @: span int; @@: names c.LmP0Text; @@: first c.LmP0Field; @: cnt int) int
     @@@: bnd_first_cell c.LmP0Field (cast: (@@@: c.LmP0Field) (@ c.l2_bnd_first))
     @@: bnd_count_cell int (cast: (@@: int) (@ c.l2_bnd_count))
     @: body c.LmP0Structure
@@ -2846,11 +2850,12 @@ fn: lm_compiler_bind_call_in (const: (@: source_node c.LmP0Node); @: head c.LmP0
     callee[hd\length]: 0
     if: body != 0
         bfirst: body\first_field
-    if: lm_compiler_bind_actuals(bfirst, nf, names, callee, at, span, path, source_node) != 0
+    if: lm_compiler_bind_actuals(bfirst, nf, names, idx, callee, at, span, path, source_node) != 0
         return: (cast: (int) (1))
     k: 0
     while: k < nf
-        if: span[k] = 0
+        # A formal the call omits (slice 293) has no field at all: it is not a named actual.
+        if: span[k] = 0 && at[k] != 0
             named: 1
         k: k + 1
     ---
@@ -2891,7 +2896,9 @@ fn: lm_compiler_bind_call_in (const: (@: source_node c.LmP0Node); @: head c.LmP0
         if: span[k] > 0
             first[k]: at[k]
             cnt[k]: span[k]
-        else:
+        ---
+        # Slice 293 (FORMAL-DEFAULT): a formal the call omits contributes no field to the projection (first 0, count 0).
+        if: span[k] = 0 && at[k] != 0
             first[k]: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (at[k]\value\as\frame\body\first_field)))
             cnt[k]: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (at[k]\value\as\frame\body)))
             if: cnt[k] = 0
@@ -2948,11 +2955,22 @@ fn: lm_compiler_bind_call_in (const: (@: source_node c.LmP0Node); @: head c.LmP0
         f: copies
         k: 0
         while: k < nf && again = 0
+            # Slice 293 (FORMAL-DEFAULT): a formal the call omits has no field in the projection.
+            if: at[k] = 0 && cnt[k] = 0
+                k: k + 1
+                continue
             s0: c.lm_compiler_expr_span(f)
             if: s0 != cnt[k]
                 j: k
+                # The neighbour an expression joins is the next formal that has a field (an omitted one has none).
                 if: s0 > cnt[k] && k + 1 < nf
                     j: k + 1
+                    while: j < nf && at[j] = 0 && cnt[j] = 0
+                        j: j + 1
+                    ---
+                    if: j >= nf
+                        j: k
+                    ---
                 if: span[j] > 0 || cnt[j] < 1
                     return: (cast: (int) (c.lm_compiler_error(path, (cast: (const: @: c.LmP0Node) (f\value)), "internal: a bound actual is not one argument")))
                 whole: c.lm_compiler_bind_whole(first[j], cnt[j], (cast: (const: @: c.LmP0Node) (first[j]\value)))
@@ -3231,7 +3249,7 @@ fn: lm_compiler_table_call (const: (@: port_call c.LmP0Node); const: (@: path ch
         return: (cast: (int) (1))
     if: lm_compiler_tb_room() != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(path, port_call, "out of memory")))
-    if: lm_compiler_bind_actuals((cast: (@: c.LmP0Field) (port_call\as\frame\body\first_field)), 4, tb_formal_cell, "table", at, span, path, port_call) != 0
+    if: lm_compiler_bind_actuals((cast: (@: c.LmP0Field) (port_call\as\frame\body\first_field)), 4, tb_formal_cell, -1, "table", at, span, path, port_call) != 0
         return: (cast: (int) (1))
     t: tb_n_cell[0]
     tb_name_cell[0][t]: 0
@@ -13006,11 +13024,17 @@ end: lm_compiler_value_span_waits
 # Original: l2src/l2trans.lm1:24742
 fn: lm_compiler_application_actuals_waits (@: arguments c.L2ApplicationActuals; int: mi) int
     @: value c.L2ValueSpan
+    @: actual c.L2ApplicationActual
     int: k 0
     int: pending 0
     int: status
     while: k < arguments\count
-        value: lm_compiler_port249_0_L2ApplicationActual_value_address((cast: (@: c.L2ApplicationActual) ((arguments\actuals + k))))
+        actual: (cast: (@: c.L2ApplicationActual) (arguments\actuals + k))
+        # Slice 293 (FORMAL-DEFAULT): a formal the call omits has no actual that could wait.
+        if: actual\written = 0
+            k: k + 1
+            continue
+        value: lm_compiler_port249_0_L2ApplicationActual_value_address(actual)
         status: lm_compiler_value_span_waits(value, mi)
         if: status < 0
             return: (cast: (int) (-1))
@@ -13644,6 +13668,7 @@ fn: lm_compiler_rw_call_class_receiving (const: (@: source_node c.LmP0Node); int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     c.L2ReferenceSource: source
     @: value c.L2ValueSpan
+    @: actual c.L2ApplicationActual
     int: n c.lm_compiler_cfl_count(rw_mi_cell[0], formal)
     int: pass 0
     int: i
@@ -13667,8 +13692,12 @@ fn: lm_compiler_rw_call_class_receiving (const: (@: source_node c.LmP0Node); int
                 continue
             k: 0
             while: k < arguments\count
-                value: lm_compiler_port249_0_L2ApplicationActual_value_address((cast: (@: c.L2ApplicationActual) ((arguments\actuals + k))))
+                actual: (cast: (@: c.L2ApplicationActual) (arguments\actuals + k))
+                value: lm_compiler_port249_0_L2ApplicationActual_value_address(actual)
                 req: c.lm_compiler_input_model(head, k)
+                # Slice 293 (FORMAL-DEFAULT): a formal the call omits has no actual to receive.
+                if: actual\written = 0
+                    req: -1
                 if: head != idx && req != -1
                     if: pass = 0
                         if: count = c.INT_MAX

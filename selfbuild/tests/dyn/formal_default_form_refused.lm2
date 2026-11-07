@@ -1,0 +1,12 @@
+# Slice 293 (FORMAL-DEFAULT-FORMS): a formal whose written default is an expression, not a literal: the signature does not
+# execute what it writes (docs/LMX_semantics.ru.md :381), the default is not built, and a call that omits the formal is
+# refused at translation (a call that gives the argument translates, probe p293g).
+fn: d (int: a 2 + 3) int
+    return: a
+end: d
+int: code 7
+if: d() != 5
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

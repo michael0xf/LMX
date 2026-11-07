@@ -5716,6 +5716,61 @@ fn: lmx_walk_current_default (@: arena c.LmxArena; @: inputs c.Lmx; size_t: inde
     return: lmx_walk_value_cell(arena, cell, out)
 end: lmx_walk_current_default
 
+# 1 when the args entry at this SOURCE ordinal is a written formal's: four fields (SOURCE, witness, current default, own
+# receiving record -- lm_compiler_rw_header_parts); a hidden input's entry has two or three.  0 otherwise.
+fn: lmx_walk_args_formal (@: arena c.LmxArena; @: inputs c.Lmx; size_t: index) int
+    @: entry c.Lmx 0
+    @: fields c.VoidArray 0
+    size_t: physical (cast: (size_t) -1)
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    if: arena = 0 || inputs = 0
+        return: 0
+    if: c.lmx_implements_exec_slot(arena, inputs, index, @ physical, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_YES
+        return: 0
+    entry: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, inputs, physical))
+    if: entry = 0
+        return: 0
+    fields: @ entry\array
+    return: (cast: (int) (fields\size = 4U))
+end: lmx_walk_args_formal
+
+# Slice 293 (FORMAL-DEFAULT; the book :467, :455, :485): the value a formal of the selected callable `code` takes when
+# the call gives no argument for it -- the current default its args entry holds, received at the formal's witness as
+# any value of that formal is.  It is the callable's own state: one activation's argument never becomes it, and no
+# value of the caller's chain stands in for it.  No default: the call's refusal, its implicit `call` before the body.
+# The one reading for both executors and the `call` receiver; a generated native call reads it here too.
+fn: lmx_call_formal_default (@: arena c.LmxArena; @: code c.Lmx; size_t: index; @: out c.LmxWalkValue) int
+    @: args c.Lmx 0
+    @: returns c.Lmx 0
+    @: source void 0
+    @: expected void 0
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: numeric 0
+    int: status
+    if: arena = 0 || code = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    lmx_walk_value_clear(out)
+    status: c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer != c.LMX_IMPLEMENTS_YES || args = 0
+        return: c.LMX_WALK_UNSUPPORTED
+    status: lmx_walk_current_default(arena, args, index, out)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: out\present = 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+    if: c.lmx_callable_source_entry(arena, args, index, @ source, @ expected) != 0
+        return: c.LMX_WALK_INVALID
+    numeric: lmx_walk_numeric_type(arena, expected)
+    if: numeric != 0
+        status: lmx_walk_value_receive(out, numeric, out)
+        if: status != c.LMX_WALK_OK
+            return: status
+    ---
+    return: lmx_walk_argument_storage(arena, out, expected, 0, code)
+end: lmx_call_formal_default
+
 # Prepare the actual invocation's captured heads and already evaluated values
 # with the SAME binder as Source admission. Its correspondence lives only
 # under the caller's scratch mark; selected-entry reception remains single.
@@ -5794,6 +5849,17 @@ fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: calle
         if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), inputs, i, @ source, @ witness) != 0
             return: c.LMX_WALK_UNSUPPORTED
         received: values + i
+        # Slice 293 (FORMAL-DEFAULT; the book :467, :485): a formal of the selected callable this call writes no argument
+        # for -- the suffix operand its name binds, handed absent, or no operand at all -- takes its current default
+        # (lmx_call_formal_default), never a value of the caller's chain; without one it is the call's implicit `call`.
+        # A written operand occupies its formal (1) and never selects a default, even when its value is absent.
+        if: received\present = 0 && occupied[i] != 1 && lmx_walk_args_formal((cast: (@: c.LmxArena) f\arena), inputs, i) != 0
+            status: lmx_call_formal_default((cast: (@: c.LmxArena) f\arena), callee, i, received)
+            if: status != c.LMX_WALK_OK
+                return: status
+            refs[i]: lmx_walk_value_storage(received)
+            i: i + 1U
+            continue
         # A hidden input handed absent travels as an absent full Value with no
         # storage (ref 0): the selected entry resolves it from its current
         # instance (semantics §9), never a zero/null forced here.
@@ -7395,23 +7461,10 @@ fn: lmx_call_selected_structure (@: arena c.LmxArena; @: frame c.LmxWalkFrame; @
         while: status = c.LMX_WALK_OK && i < rows\count
             @: item c.LmxWalkValue (rows\values + i)
             if: lmx_activation_input_formal(arena, code, i) != 0
-                status: lmx_walk_current_default(arena, args, i, item)
                 # Slice 286: a formal `call: code` forms no input for, with no default, is the arity this call lacks -- its
-                # implicit `call` (Codex, 285 norm answers item 3; slice 263 named it `implements`).
-                if: status = c.LMX_WALK_OK && item\present = 0
-                    status: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
-                ---
-                @: expected void 0
-                if: status = c.LMX_WALK_OK && c.lmx_callable_source_entry(arena, args, i, @ source, @ expected) != 0
-                    status: c.LMX_WALK_INVALID
-                if: status = c.LMX_WALK_OK
-                    int: numeric lmx_walk_numeric_type(arena, expected)
-                    if: numeric != 0
-                        status: lmx_walk_value_receive(item, numeric, item)
-                    ---
-                ---
-                if: status = c.LMX_WALK_OK
-                    status: lmx_walk_argument_storage(arena, item, expected, 0, code)
+                # implicit `call` (Codex, 285 norm answers item 3; slice 263 named it `implements`).  Slice 293: the one
+                # reading of a formal's current default, shared with both executors' calls (lmx_call_formal_default).
+                status: lmx_call_formal_default(arena, code, i, item)
                 rows\refs[i]: lmx_walk_value_storage(item)
             ---
             i: i + 1U

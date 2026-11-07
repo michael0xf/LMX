@@ -1263,7 +1263,8 @@ fn: lm_compiler_value_actual_written (@: plan c.L2ApplicationActuals; int: rank)
         return: (cast: (@: c.L2ApplicationActual) (0))
     while: k < plan\count
         @: element c.L2ApplicationActual (cast: (@: c.L2ApplicationActual) (plan\actuals + k))
-        if: element\rank = rank
+        # Slice 293 (FORMAL-DEFAULT): a formal the call omits has no rank (its slot is zero), only a written one.
+        if: element\written != 0 && element\rank = rank
             return: (cast: (@: c.L2ApplicationActual) (plan\actuals + k))
         k: k + 1
     ---

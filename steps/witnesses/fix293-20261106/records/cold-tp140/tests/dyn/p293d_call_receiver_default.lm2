@@ -1,0 +1,50 @@
+# Slice 293 probe: the `call` receiver over a free holder holding a fn whose input has a written default takes the
+# default (the book :467; Codex, 285 norm answers item 3: "с учётом допустимых умолчаний"); the same receiver over a
+# fn without the default is the implicit `call`.  Entry 7.
+fn: g (int: a) int
+    return: a
+end: g
+int: Hw 0
+int: seen 0
+fn: put (int: v) int
+    node\seen: v
+    return: v
+end: put
+fn: read_seen () int
+    return: node\seen
+end: read_seen
+fn: gd (int: a 6) int
+    int: r put(a)
+    return: r
+end: gd
+fn: call_free () int
+    ---
+        call: Hw
+        return: read_seen()
+        catch: call ()
+            return: 22
+        catch: implements ()
+            return: 24
+    ---
+end: call_free
+fn: run_call () int
+    @: Hw gd gd
+    return: call_free()
+end: run_call
+fn: run_plain () int
+    @: Hw g g
+    return: call_free()
+end: run_plain
+int: code 7
+int: got run_plain()
+if: got != 22
+    code: got + 40
+---
+if: code = 7
+    got: run_call()
+    if: got != 6
+        code: got + 70
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

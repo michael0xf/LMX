@@ -1,0 +1,11 @@
+# Slice 293 probe: a positional skip (the grammar :287: `a,,c` / a leading separator skips a position; the consumer
+# admits it only for an argument with a default) of a formal with a written default.  Entry 7.
+fn: e (int: x 4; int: y) int
+    return: x * 10 + y
+end: e
+int: code 7
+if: e(, 2) != 42
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

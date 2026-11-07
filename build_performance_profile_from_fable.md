@@ -448,3 +448,16 @@ pass over the body's direct fields while var is built); native code reaches a va
 `lmx_call_index` over the selected data. Not measured apart. A whole-pipeline measurement, not a controlled
 comparison.
 [Commands, results and hashes](steps/witnesses/fix292-20261106/notes.md).
+
+## Slice293 / boot155a (Opus, 2026-11-07)
+
+Whole quick 667.71 s: 2026-11-06T23:57:33.4516477Z→2026-11-07T00:08:41.1613318Z, both generations smoke 9/0;
+G0 is tool155a, the tool rebuilt from this package's tools/build.lm2 (one more kernel export). The whole
+maintained registry on the candidate frontend fe155b and runtime rt155a, `exe-same` with G2 and byte-equal to
+G2's runtime: 106/0, 904 checks (807.35 s: 23:25:10.0392205Z→23:38:37.3926197Z). Source 229/3C2AB9EB; the
+acceptance is one `lmxtool checks` list of 38 commands run by the working tool of boot154a, 0 failed; the G2
+tool's self-test 0 failures. A formal's literal default is one cell in its args entry; a native call reads
+an omitted formal's default through one kernel call (`lmx_call_formal_default`), the walker checks the formal
+entry of a suffix slot without an operand. Calls that omit nothing are unchanged. Not measured apart. A
+whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix293-20261106/notes.md).

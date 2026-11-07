@@ -1,15 +1,12 @@
-predef: "mixa_manager/mixa_backend.h.lm1"
-predef: "mixa_manager/mixa_pump.h.lm1"
+predef: "mixa_manager/mixa_shell_owner.h.lm1"
 predef: "mixa_manager/mixa_file_manager.h.lm1"
+predef: "mixa_manager/mixa_backend.h.lm1"
 
-# native is the one backend table Shell uses. Not a Message.
-struct: MixaShellHost
-    const: @: MixaBackendVTable native
-    @: MixaBackend backend
-end: MixaShellHost
+# Product entry for Mixa\start lives in mixa_shell_main.lm1 (fn: main).
+# The divergent MixaShellHost sketch is retired. Canonical owner is
+# MixaShellOwner; bind/open/close go through mixa_shell_native_*;
+# the start letter is mixa_shell_start.
 
 prototype:
-    fn: mixa_shell_bind_native (@: MixaShellHost host) int
-    fn: mixa_shell_close (@: MixaShellHost host; @: MixaPump pump) int
-    fn: mixa_shell_run (@: MixaShellHost host; @: MixaCellMetrics metrics; @: MixaFm fm; const: @(char root); @@: MixaFmEntry rows; @: size_t count; @: int out_events) int
+    fn: main (int: argc; @: @(char) argv) int
 end: prototype

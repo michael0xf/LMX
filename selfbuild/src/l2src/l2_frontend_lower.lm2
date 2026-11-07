@@ -2836,6 +2836,8 @@ end: lm_compiler_scan_actuals
 fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c.L2ValueSpan; int: mi; @: seen int) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: e_cell int (cast: (@: int) (@ c.l2_e))
+    @: cur_mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
+    @: uses_node_for_root_cell int (cast: (@: int) (@ c.l2_uses_node_for_root))
     @: site c.L2ApplicationSite
     @: values c.L2ValueSpan
     @: plan c.L2ApplicationActuals
@@ -2847,11 +2849,21 @@ fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c
     int: idx
     int: held -1
     int: fi 0
+    int: previous_mi
+    int: root_flag
     if: c.lm_compiler_application_site_get(port_call, mi, value, src_cell[0], @ site) != 0
         return: (cast: (int) (1))
     values: c.lm_compiler_primary_values((cast: (@: c.L2ValueSpan) (@ site\value)), @ value_n)
     if: value_n < 0
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], port_call, "internal: a call lost its prepared actuals")))
+    # Slice 298 (NODE-PATH-NAMED-ACTUALS): the head is resolved as the binding pass resolves it, with this method current
+    # (lm_compiler_bind_calls).  The collection runs with no method current, and a path head -- `node\f0(x: 3; y: 4)` --
+    # resolves only from a method: without it the call stayed unbound here and the labels x and y were read as free
+    # names, hidden inputs of the caller that nothing gives, so its entry refused and R0 stopped in both executors.  As
+    # the path notes of this collection (lm_compiler_path_use_note), the resolution leaves the collection's state as it was.
+    previous_mi: cur_mi_cell[0]
+    root_flag: uses_node_for_root_cell[0]
+    cur_mi_cell[0]: mi
     idx: -1
     if: c.lm_compiler_place_write_node(port_call) = 0
         idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)), @ fi)
@@ -2860,6 +2872,8 @@ fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c
         idx: -1
     if: idx < 0
         held: c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)))
+    cur_mi_cell[0]: previous_mi
+    uses_node_for_root_cell[0]: root_flag
     if: lm_compiler_application_site_bind(site, idx, held, src_cell[0]) != 0
         return: (cast: (int) (1))
     if: site\bound = 0

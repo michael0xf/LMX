@@ -7,8 +7,10 @@
 # the book provenance :198, :773; Codex's 294 review): a literal written by name takes its context from the formal of its
 # name in the selected callable -- the place `Mixed\f (int: x; char: y)` holding `gm (int: y; char: x)` receives `x: 5`
 # as gm's char x and `y: 300` as its int y; 300 at a char formal, through the place or in a direct call, is the implicit
-# `convert` before the body; a negated literal is received by its value (-1 a char, -200 none).  Entry 7, codes 81-99
-# (34: a refused write).
+# `convert` before the body; a negated literal is received by its value (-1 a char, -200 none).  Slice 298
+# (NODE-PATH-NAMED-ACTUALS): a path call of the unit's own fn place, `node\f0(x: 3; y: 4)`, binds its named actuals
+# as any call does -- the labels are no reads of free names of the caller -- before and after `g` is written into the
+# place (34 by name, 43 by position).  Entry 7, codes 81-103 (34: a refused write).
 fn: g (int: y; int: x) int
     return: x * 10 + y
 end: g
@@ -312,6 +314,60 @@ fn: run_mixed () int
     ---
     return: 7
 end: run_mixed
+fn: f0 (int: x; int: y) int
+    return: x * 10 + y
+end: f0
+fn: write_node () int
+    ---
+        @: node\f0 Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_node
+fn: node_xy () int
+    ---
+        int: got node\f0(x: 3; y: 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: node_xy
+fn: node_yx () int
+    ---
+        int: got node\f0(y: 4; x: 3)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: node_yx
+fn: node_pos () int
+    ---
+        int: got node\f0(3, 4)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: node_pos
+fn: run_node () int
+    if: node_xy() != 34
+        return: 100
+    ---
+    if: node_yx() != 34
+        return: 101
+    ---
+    @: Hw g g
+    if: write_node() != 1
+        return: 34
+    ---
+    if: node_xy() != 34
+        return: 102
+    ---
+    if: node_pos() != 43
+        return: 103
+    ---
+    return: 7
+end: run_node
 fn: h (int: b; int: a) int
     return: a * 10 + b
 end: h
@@ -336,6 +392,9 @@ if: code = 7
 ---
 if: code = 7
     code: run_mixed()
+---
+if: code = 7
+    code: run_node()
 ---
 if: code = 7 && apply(h) != 21
     code: 92

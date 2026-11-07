@@ -510,3 +510,16 @@ failed; the G2 tool's self-test 0 failures. The registry took 93.82 s more than 
 per-receive range check of a contextual literal (`lmx_walk_value_lit_fits`) and the changed rows were not measured
 apart, so the cause is not located. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix297-20261107/notes.md).
+
+## Slice298 / boot160a (Opus, 2026-11-07)
+
+Whole quick 650.92 s: 08:36:15.2071276Z→08:47:06.1235754Z, both generations smoke 9/0; G0 is the working tool of
+boot159a (tools/build.lm2 is unchanged). The whole maintained registry on the candidate frontend fe160a and the G2
+runtime of boot159a (the kernel is unchanged; G2's runtime of boot160a is byte-equal to it), fe160a `exe-same` with G2:
+111/0, 933 checks (1146.02 s: 08:10:09.7245638Z→08:29:15.7439021Z). Source 235/34A70535; the acceptance is one
+`lmxtool checks` list of 38 commands run by the working tool of boot159a, 0 failed; the G2 tool's self-test 0 failures.
+The collection of hidden inputs asks each call's head once more with its method current; a path call with named
+actuals loses two hidden inputs. The registry took 168.48 s more than 297's on the same rows (one fixture with four more
+methods; a docs render and a two-file copy of about a second each ran during it); not measured apart, the cause is not
+located. A whole-pipeline measurement, not a controlled comparison.
+[Commands, results and hashes](steps/witnesses/fix298-20261107/notes.md).

@@ -162,31 +162,61 @@ native/walker selection, without a hidden test catalogue, runtime names,
 failure of the **whole** test set remains undecided.
 
 <a id="assign-named-merge"></a>
-### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, unfinished implementation
+### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, implemented by slice 303, the rest held
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
 [the whole argument Structure](LMX_semantics.en.md#whole-arguments)
-(the author's decision of 2026-11-07). The implementation does not
-carry them out yet. A probe on the published 301 tuple (native and the
-walker, both roots; [record](../steps/witnesses/named-assign-20261107/notes.md))
-found:
+(the author's decisions of 2026-11-07). A probe on the published 301
+tuple ([record](../steps/witnesses/named-assign-20261107/notes.md)) found
+the implementation did not carry them out: `:=` was not recognized,
+`f(a: 5)` and `f(a(5))` bound the formal `a` because the head's name
+matched it (35 and no call of `a`), the `merge` operands of the forms
+`callable\args`, `a: int: 5` and `(a: int: 5)` were not lowered, and a
+single Structure was not received as the whole argument Structure.
+Slice 303 ([record](../steps/witnesses/fix303-20261107/notes.md); native
+and the walker, both roots) carries out the first two rules and a part
+of the third:
 
-- `:=` is not recognized yet.
-- `f(a: 5)` and `f(a(5))` now bind the formal `a` because the head's
-  name matches it, even with a callable `a` visible, which then is not
-  called (the value 35 and no call of `a`). This is a defect the author
-  asked to remove, not a rule.
-- The translation does not lower `merge` operands of the forms
-  `callable\args`, `a: int: 5` and `(a: int: 5)` ("this merge operand
-  form is not lowered yet"), so running on this tuple does not show
-  whether the second operand needs the parentheses.
-- A `merge` result given as the only argument, and a Structure held in
-  a variable, bind the first formal by position ("has no argument a"):
-  a single Structure is not received as the whole argument Structure.
-- The executed control of `merge` itself: `merge(Args; (int: a 5))` and
-  `merge(Args; int: a 5)` over an ordinary Structure give `a` = 5, keep
-  the other fields and do not write `Args`.
+- `:=` is one operator token of P0: a Frame of its left and its right
+  side flagged `LM_P0_FRAME_ASSIGN`; `a := 5` and `a:=5` are one form,
+  `a:` does not become a Frame head.
+- Writing a known place is the general assignment path: a local, a
+  formal (the activation's value), a field through a path, the
+  conversion of the reception, a method reference (`target := two`
+  redefines the reference without calling the bare right side --
+  natively and in the walker's program, whose dispatch had read a binding
+  holding a callable as a call of the method held). An unknown left side
+  is the translation refusal ":= writes a place already known: its left
+  side is not one here", in a method body and in a named Structure's
+  body; it defines no field. The places are the declared formals, a
+  visible own field (a unit field a method sees is its hidden input,
+  Q52), a slot, a method-level local and the host activation of a nested
+  method; the hidden input the collection makes of a free name for
+  `x: v` (steps/free-names.md section 7) is no place for `:=`.
+- A named argument is `f(a := v)` only: the left side selects the formal
+  of the selected callable, the right side is evaluated in the ordinary
+  way. `f(a: 5)` and `f(a(5))` with a callable `a` visible are its
+  ordinary call with a positional result (62 and exactly one call of
+  `a`); an unknown name ("zz is not an argument of tst") and a positional
+  argument after a named one are translation refusals. The parts of the
+  `table:` receiver are bound by the heads of its grammar by the same
+  binder in its `by_head` mode.
+- A `merge` operand written name first -- `(a: int: 5)` and the bare
+  `a: int: 5` -- is the typed field the declaration form `(int: a 5)`
+  is: it writes the model's slot of its name, keeps the other fields and
+  does not write the model; the parentheses of the second operand are
+  optional.
+- Not done, held until the author's decision (Codex's answer
+  CODEX-FABLE-WHOLE-ARGUMENTS-HOLD-20261107T195808558Z-01): the whole
+  argument Structure from one Structure --
+  `mytest(merge(mytest\args; (a: int: 5)))` = 35 and the same Structure
+  in a variable -- collides with the rule "a signature is not executed"
+  (`mytest(c)` gives the Structure itself to a non-primitive formal); the
+  `merge` operand "a part of a callable", `f\args`, is held with it. The
+  precedence of `:=` among operations and a value of the written form as
+  an expression are not defined by the rule; the compound assignments
+  are [4.3](#compound-assign-notes).
 
 The defects are recorded in the [registry](../steps/defects.md).
 

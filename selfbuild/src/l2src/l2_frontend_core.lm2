@@ -2249,7 +2249,7 @@ fn: lm_compiler_table_formals () int
 end: lm_compiler_table_formals
 
 # Original: l2src/l2trans.lm1:5045
-fn: lm_compiler_bind_actuals (@: first c.LmP0Field; int: nf; @@: names c.LmP0Text; int: idx; const: (@: callee char); @@: out_at c.LmP0Field; @: out_span int; const: (@: path char); const: (@: at c.LmP0Node)) int
+fn: lm_compiler_bind_actuals (@: first c.LmP0Field; int: nf; @@: names c.LmP0Text; int: idx; const: (@: callee char); @@: out_at c.LmP0Field; @: out_span int; const: (@: path char); const: (@: at c.LmP0Node); int: by_head) int
     c.L2ApplicationActuals: plan
     @: values c.L2ValueSpan 0
     @: slot c.L2ApplicationActual
@@ -2268,7 +2268,7 @@ fn: lm_compiler_bind_actuals (@: first c.LmP0Field; int: nf; @@: names c.LmP0Tex
             return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "an application has no valid argument grammar")))
         ---
     ---
-    status: c.lm_compiler_bind_value_actuals(values, n, nf, names, idx, callee, path, at, @ plan)
+    status: c.lm_compiler_bind_value_actuals(values, n, nf, names, idx, callee, path, at, @ plan, by_head)
     k: 0
     while: status = 0 && k < nf
         slot: plan\actuals + k
@@ -2420,7 +2420,9 @@ fn: lm_compiler_bind_node_content (const: (@: n c.LmP0Node); int: mi; const: (@:
         return: (cast: (int) (0))
     if: c.lm_compiler_frame_head(n, "fn") != 0 || c.lm_compiler_frame_head(n, "sub") != 0
         return: (cast: (int) (0))
-    if: n\as\frame\head != 0 && n\as\frame\body != 0 && c.lm_compiler_place_write_node(n) = 0
+    # `place := value` (the author, 2026-11-07; the book, assign-known) calls nothing: a callable the place holds is not
+    # called by the operator, so no call is bound at its head; its right side is visited as a value below.
+    if: n\as\frame\head != 0 && n\as\frame\body != 0 && c.lm_compiler_place_write_node(n) = 0 && (n\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U
         idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (n\as\frame\head)), @ fi)
         if: idx >= 0 && idx != e_cell[0] && lm_compiler_bind_call(n, idx, 0 - 1, path) != 0
             return: (cast: (int) (1))
@@ -2850,7 +2852,7 @@ fn: lm_compiler_bind_call_in (const: (@: source_node c.LmP0Node); @: head c.LmP0
     callee[hd\length]: 0
     if: body != 0
         bfirst: body\first_field
-    if: lm_compiler_bind_actuals(bfirst, nf, names, idx, callee, at, span, path, source_node) != 0
+    if: lm_compiler_bind_actuals(bfirst, nf, names, idx, callee, at, span, path, source_node, 0) != 0
         return: (cast: (int) (1))
     k: 0
     while: k < nf
@@ -3249,7 +3251,8 @@ fn: lm_compiler_table_call (const: (@: port_call c.LmP0Node); const: (@: path ch
         return: (cast: (int) (1))
     if: lm_compiler_tb_room() != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(path, port_call, "out of memory")))
-    if: lm_compiler_bind_actuals((cast: (@: c.LmP0Field) (port_call\as\frame\body\first_field)), 4, tb_formal_cell, -1, "table", at, span, path, port_call) != 0
+    # The parts of the receiver's written form (`source`, `name:`, `columns:`, `rows:`) are its heads by its grammar: bound by head.
+    if: lm_compiler_bind_actuals((cast: (@: c.LmP0Field) (port_call\as\frame\body\first_field)), 4, tb_formal_cell, -1, "table", at, span, path, port_call, 1) != 0
         return: (cast: (int) (1))
     t: tb_n_cell[0]
     tb_name_cell[0][t]: 0
@@ -8480,6 +8483,10 @@ fn: lm_compiler_ns_bind_item (const: (@: source_node c.LmP0Node); int: me) int
     @: a c.LmP0Text
     if: source_node = 0 || me < 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0 || source_node\as\frame\head = 0 || c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) = 0
         return: (cast: (int) (0))
+    # `b := A` declares no binding (the author's correction of 2026-11-07; the book, assign-known): an := item of a named
+    # Structure's body is a statement of its procedure, refused there when no place b is known.
+    if: (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: (cast: (int) (0))
     a: c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (source_node\as\frame)))
     if: a = 0 || c.lm_compiler_ns_site_known((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), me) != 0
         return: (cast: (int) (0))
@@ -8489,6 +8496,10 @@ end: lm_compiler_ns_bind_item
 # Original: l2src/l2trans.lm1:14495
 fn: lm_compiler_ns_nested_def (const: (@: source_node c.LmP0Node); int: me) int
     if: source_node = 0 || me < 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0 || source_node\as\frame\head = 0 || c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) = 0
+        return: (cast: (int) (0))
+    # `x := 5` with x absent defines no nested Structure (the author's correction of 2026-11-07; the book, assign-known):
+    # the item is a statement of the body's procedure, refused there as a write of no known place.
+    if: (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
         return: (cast: (int) (0))
     if: c.lm_compiler_ns_site_known((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), me) != 0 || c.lm_compiler_retained_body((cast: (const: @: c.LmP0Frame) (source_node\as\frame))) = 0 || c.lm_compiler_decl_content((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), source_node, 0 - 1, me) = 3 || c.lm_compiler_decl_content((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), source_node, 0 - 1, me) = 4
         return: (cast: (int) (0))

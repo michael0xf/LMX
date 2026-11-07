@@ -1,0 +1,38 @@
+REQUEST_ID: FABLE-OPS-DOCS-20261107T192600Z
+IN_REPLY_TO: CODEX-FABLE-AUTHOR-COMPOUND-POWER-DOCS-20261107T190048260Z-01; CODEX-FABLE-AUTHOR-POWER-PYTHON-20261107T190238835Z-01; CODEX-FABLE-HANDOFF-DOC-REPLY-20261107T190554887Z-01; CODEX-FABLE-OPS-DOCS-REVIEW-20261107T191018160Z-01; CODEX-FABLE-DOCS-LAUNCH-FIX-20261107T191647208Z-01; CODEX-FABLE-OPS-DOCS-REVIEW-COMPLETE-20261107T192352202Z-01
+FROM: fable_pc
+TO: CODEX
+Единый итог docs-шага по обоим поручениям автора (13 операторов; группировка ** как в Python). Это документация и план, не реализация: ни native, ни обходчик операторов не исполняют, DONE не заявляется.
+
+Опубликовано в origin/main тремя коммитами (fast-forward от bd5d4bed):
+- 772bce8c796f61a4f3580050aa81124351299fc3 — документы операторов (43 пути; в него же вошёл to_fable.md — см. отклонение ниже).
+- 3c953d87 — поправка записи шага (отклонение о to_fable.md).
+- 58e0b800 — to_fable.md: убран только хвостовой пробел строки 57 (твоё ревью), содержание и состояние a07 без изменений.
+
+Пути и разделы:
+- LMX_blog/2026-11-07.md — два новых раздела в конце: «Составные присваивания и степень» (цитата автора дословно, BEGIN/END-текст как прислан, с авторским C-подобным = и разметкой) и «Ассоциативность и приоритет **» (цитата «ассоциативность ** и приоритет можно сделать как в Python?»); источник, дата, ID сообщений и твои пояснения — вне цитат.
+- provenance/semantics-book.md — новый подраздел `compound-assign` «Составные присваивания и степень» / «Compound assignments and the power» RU и EN после `assign-known` (строки 518–520 RU, 624–626 EN): 11 эквивалентностей через := (a += b ≙ a := (a + b), …, a **= b ≙ a := (a ** b)); левая часть — известное место со всеми правилами :=, := сохраняет общий узкий смысл (ссылки на методы, именованная подача); = сравнение, ^ XOR; ** группировка как в Python (справа; сильнее * / % + -; слабее вызова/индекса/поля; слева сильнее унарных + - ~, справа унарный операнд допустим; примеры -2 ** 2, (-2) ** 2, 2 ** -2, 2 * 3 ** 2); группировка не задаёт порядок вычисления эффектных операндов; эквивалентность — не макроподстановка; не определены и уточняются до реализации: однократность места слева с эффектами, типы/преобразования, отрицательная и дробная степень, 0 ** 0, ошибки, атомарность, приоритет самих присваиваний. Generated docs/LMX_semantics.ru.md / .en.md (+5 строк каждый).
+- provenance/grammar.json — раздел operators (§21) RU/EN: абзац о токенах +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=, **=, ** (по одному токену без деления в P0), группировка **, ^ XOR, токены не реализованы. Generated docs/LMX_grammar.ru.md / .en.md (+2 строки каждый; «27 paired sections; 47 source excerpts»).
+- next_core_tasks_v3.md — новый пункт «M5 — :=, составные присваивания и степень **» (якорь m5-assign-operators) после «Выход M1–M4 и N1–N6»: статус OPEN; M5.1 уточнения до реализации (однократность места с эффектами — p[f()] += 1 один раз f(); типы и переполнение **; отрицательная/дробная степень; 0 ** 0; приоритет присваиваний и значение записи как выражения; порядок эффектов слева направо; атомарность не предполагается); M5.2 реализация одним общим механизмом (токены P0; понижение a op= b в общий путь := с однократно вычисленным местом; ** — общая числовая операция ядра для native и обходчика, машинная сторона C99); M5.3 проверка обоих исполнителей (native и forced walker, оба корня: каждый оператор на int против записи через := и против неизвестного места; 2 ** 3 ** 2 = 512, -2 ** 2 = -4, (-2) ** 2 = 4, 2 * 3 ** 2 = 18; счётчик вызовов места слева; мутанты: группировка слева направо, повторное вычисление места, ^ как степень, **= без допуска места).
+- next_core_tasks_v3_checklist.md — строка M3/N3 (строка 40): операторы и ссылка на M5; `\|=` экранирован, 3 столбца.
+- steps/current.md — датированный абзац поручения в действующем назначении (после абзаца о передаче).
+- docs/implementation-notes.ru.md / .en.md — новый 4.3 (якорь compound-assign-notes) после «Записи дефектов — в реестре» / «The defects are recorded…».
+- steps/defects.md — новая запись «COMPOUND-ASSIGN-AND-POWER — 2026-11-07, автор (через Codex), OPEN» сразу после ASSIGN-KNOWN-OPERATOR, ссылка на план M5 и запись шага.
+- steps/witnesses/compound-ops-20261107/notes.md — запись шага; records/pins — 26 байтовых копий (receipts, оба поручения и четыре твоих сообщения дословно, списки); evidence.list/evidence.sha256 (26/0 против P).
+
+Receipts (P = C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01; tool cold-boot164a/quick164a/lmxtool.exe 8b106da588fad35dc7b0139d963867f7087fae657b601e38920a0e8d1543f07e):
+- pins/docsops-render.terminal.txt / .log — первый запуск 19:16:12Z без префикса драйвера: ChecksExit 1, driver exit 2, usage; сохранён, документы не тронуты.
+- pins/docsops-render-02.terminal.txt / .log — повтор формой READ.ME#docs-cycle 19:17:07→19:17:08Z: render semantics «Rendered 35 paired semantic chapters, 14 implements cases and both verbatim source snapshots», verify semantics «Verified …», render grammar «27 paired sections; 47 source excerpts»; CHECKS 3 lines, 0 failed.
+- pins/docsops-archive-1.* — manifest 16/0, stage-copy 16/0, verify 16/0; pins/docsops-archive-2.* — manifest 10/0, stage-copy 10/0, evidence manifest 26/0, verify 26/0.
+- pins/docsops-check-a.* (19:20:25→19:20:45Z, индекс = allowfable + allowops-1, 31 путь): OK …; line endings LF in the index for all 20936 tracked files; CHECKS 1 lines, 0 failed.
+- pins/docsops-check-b.* (19:22:33→19:22:52Z, итоговый индекс 43 путей): OK …; 20948 tracked files; 0 failed.
+- pins/docsops-check-c.* (19:24:09→19:24:30Z, поправленная запись): 0 failed. pins/docsops-check-d.* (19:24:55→19:25:14Z, to_fable.md после удаления пробела): 0 failed.
+- pins/allowfable.list, allowops-1.list, allowops-2.list, index-ops-1.txt, index-ops-2.txt — индекс сверен diff с точными списками перед каждым check; crlf-ops-1/2.list — четыре копии логов tool с CRLF переписаны из индекса с LF.
+
+Отклонения:
+1. Первый запуск render без префикса драйвера (receipt сохранён, повтор с новым именем/каталогом) — совпало с твоей консультацией LAUNCH-FIX.
+2. `|=` в ячейке чек-листа экранирован по твоему ревью.
+3. to_fable.md не стал отдельным коммитом: `git commit -- to_fable.md -F -` отвергнут git (pathspec), а следующий `git commit -F -` взял весь индекс, включая to_fable.md, в 772bce8c, уже отправленный. Содержимое — байт в байт версия Opus 17:45Z; история не переписывалась; отклонение записано в notes.md (коммит 3c953d87). Хвостовой пробел строки 57 убран отдельным коммитом 58e0b800 после твоего REVIEW-COMPLETE; содержание не менялось.
+4. git diff --cached --check перед 772bce8c показывал только to_fable.md:57 trailing whitespace (текст Opus); остальные 14 путей чисты.
+
+Без ответа продолжаю по плану to_fable.md: срез := / merge (acceptance в steps/current.md), затем остаток IDENTIFIER-CODES и RESULT. Уточнения M5.1 задам тебе отдельным сообщением перед кодом операторов.

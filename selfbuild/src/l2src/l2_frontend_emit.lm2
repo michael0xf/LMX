@@ -4424,7 +4424,8 @@ fn: lm_compiler_check_primary (const: (@: source_node c.LmP0Node); int: mi; cons
         if: c.lm_compiler_mad_host_of(mi) >= 0 && c.lm_compiler_mad_host_own(c.lm_compiler_mad_host_of(mi), (cast: (const: @: c.LmP0Text) (source_node\as\atom))) >= 0
             return: (cast: (int) (0))
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "unresolved name")))
-    if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0
+    # `place := value` (the author, 2026-11-07) is no call of the callable the place holds: the write is checked as a write.
+    if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0
         return: (cast: (int) (lm_compiler_check_held_call(source_node, (cast: (int) (c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))))), mi, path)))
     if: source_node\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_frame_head(source_node, "@")
         return: (cast: (int) (lm_compiler_check_addr(source_node, mi, path)))
@@ -5290,6 +5291,18 @@ fn: lm_compiler_check_word_stmt (const: (@: stmt c.LmP0Node); const: (@: w c.LmP
     return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported body")))
 end: lm_compiler_check_word_stmt
 
+# The operator `:=` (the author, 2026-11-07): its left side names a place the statement already knows.  A nested method
+# knows its host's activation (T6b/A3: the host's formal or own field is a capture -- a hidden input of the nested method
+# whose value the write changes in this activation); that place is known, as a unit field a method sees is (Q52).
+fn: lm_compiler_assign_host_place (int: mi; const: (@: t c.LmP0Text)) int
+    int: host c.lm_compiler_mad_host_of(mi)
+    if: host < 0 || t = 0
+        return: (cast: (int) (0))
+    if: c.lm_compiler_formal_find(host, t) >= 0 || c.lm_compiler_mad_host_own(host, t) >= 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (0))
+end: lm_compiler_assign_host_place
+
 # Original: l2src/l2trans.lm1:19952
 fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@: path char); int: depth) int
     const: (@@: q_at_cell c.LmP0Node (cast: (const: @@: c.LmP0Node) (@ c.l2_q_at)))
@@ -5819,6 +5832,15 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
+        # The operator `:=` writes a place already known (the author, 2026-11-07; the book, assign-known): a left side the
+        # site knows no place for -- a method's name, a name nothing declared -- is the refusal, never a definition, so the
+        # form moved where no place is known declares no field.  The places asked: the declared formals, a visible own
+        # field (a unit field a method sees is its hidden input, Q52), a slot, a method-level local, the host's activation
+        # of a nested method.  Not the dynamic input the collection made of a free name (steps/free-names.md §7 reads the
+        # target of `x: v` as any name, so a name nothing binds is a hidden argument of the callers): that is no place
+        # known here, so l2_param_find is not asked.
+        if: c.lm_compiler_is_asgn(stmt, mi) != 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U && stmt\as\frame\head != 0 && c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, ":= writes a place already known: its left side is not one here")))
         # Known ordinary Structure heads receive an assignment candidate;
         # they do not acquire callable formals from the Frame syntax.
         # A bare colon frame whose head is not a call is an update only when
@@ -12551,9 +12573,12 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    # A call statement.
+    # A call statement.  `place := value` (the author, 2026-11-07; the book, assign-known) calls nothing, whatever
+    # callable the place holds -- l2_call_head_method answers the method a binding holds now, which would read
+    # `target := two` as a call of that method with the actual `two`: the operator is the write of the place, read
+    # below as the binding's store (lm_compiler_method_pointer_candidate), as the native emitter reads it (l2_is_asgn).
     idx: -1
-    if: c.lm_compiler_place_write_node(stmt) = 0
+    if: c.lm_compiler_place_write_node(stmt) = 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U
         idx: c.lm_compiler_call_head_method(rw_mi_cell[0], h, @ formal)
     ---
     if: idx >= 0 && idx != e_cell[0]
@@ -12563,8 +12588,9 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    # A held callable of the site applied by a statement: its call, as in an expression.
-    if: idx < 0 && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
+    # A held callable of the site applied by a statement: its call, as in an expression -- not under `:=`, which writes
+    # the place (the author, 2026-11-07).
+    if: idx < 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
         if: lm_compiler_rw_mad_call(stmt, (cast: (int) (c.lm_compiler_call_head_held(rw_mi_cell[0], h))), into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
@@ -15864,6 +15890,9 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
     c.L2ReferenceSource: operand
     @: td c.LmP0Node
     @: tdecl c.L2Declaration
+    int: tkind
+    @: tinner c.LmP0Field
+    const: (@: ttype c.LmP0Text)
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: (cast: (int) (0))
     n: c.lm_compiler_merge_arity(mf)
@@ -15906,7 +15935,17 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
             tdecl: c.lm_compiler_declaration(td)
             if: td = 0 || tdecl = 0
                 return: (cast: (int) (c.lm_compiler_error(c.lm_compiler_method_src(mi, src_cell[0]), (cast: (const: @: c.LmP0Node) (last\value)), "this merge operand form is not lowered yet")))
-            if: c.lm_compiler_mrs_join(res, k, 0, (cast: (const: @: c.LmP0Text) (tdecl\name)), c.lm_compiler_lit_field_kind(td), 0 - 1, (cast: (const: @: c.LmP0Text) (td\as\frame\head)), -1, td) != 0
+            # MERGE-OPERAND-FORMS (the author's `(a: int: 5)` of 2026-11-07 beside `int: a 5`): the field written name
+            # first has its kind and its type word at the inner Frame (l2_named_typed_field_kind); the declaration form
+            # has them at the operand itself.
+            tkind: c.lm_compiler_lit_field_kind(td)
+            ttype: (cast: (const: @: c.LmP0Text) (td\as\frame\head))
+            if: tkind < 0
+                tkind: c.lm_compiler_named_typed_field_kind(td)
+                tinner: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (td\as\frame\body\first_field)))
+                ttype: (cast: (const: @: c.LmP0Text) (tinner\value\as\frame\head))
+            ---
+            if: c.lm_compiler_mrs_join(res, k, 0, (cast: (const: @: c.LmP0Text) (tdecl\name)), tkind, 0 - 1, ttype, -1, td) != 0
                 return: (cast: (int) (1))
             k: k + 1
             continue

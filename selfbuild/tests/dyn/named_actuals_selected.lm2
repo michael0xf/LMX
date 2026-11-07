@@ -94,7 +94,7 @@ fn: write_mixed () int
 end: write_mixed
 fn: two_xy () int
     ---
-        int: got Two\f(x: 1; y: 2)
+        int: got Two\f(x := 1; y := 2)
         return: got
         catch: call ()
             return: 22
@@ -102,7 +102,7 @@ fn: two_xy () int
 end: two_xy
 fn: two_yx () int
     ---
-        int: got Two\f(y: 3; x: 4)
+        int: got Two\f(y := 3; x := 4)
         return: got
         catch: call ()
             return: 22
@@ -118,7 +118,7 @@ fn: two_pos () int
 end: two_pos
 fn: dflt_y () int
     ---
-        int: got Dflt\f(y: 3)
+        int: got Dflt\f(y := 3)
         return: got
         catch: call ()
             return: 22
@@ -126,7 +126,7 @@ fn: dflt_y () int
 end: dflt_y
 fn: dflt_x () int
     ---
-        int: got Dflt\f(x: 4)
+        int: got Dflt\f(x := 4)
         return: got
         catch: call ()
             return: 22
@@ -158,7 +158,7 @@ fn: one_none () int
 end: one_none
 fn: one_x () int
     ---
-        int: got One\f(x: 5)
+        int: got One\f(x := 5)
         return: got
         catch: call ()
             return: 22
@@ -174,7 +174,7 @@ fn: one_pos () int
 end: one_pos
 fn: bare_x () int
     ---
-        int: got Bare\f(x: 5)
+        int: got Bare\f(x := 5)
         return: got
         catch: call ()
             return: 22
@@ -182,7 +182,7 @@ fn: bare_x () int
 end: bare_x
 fn: mixed_xy () int
     ---
-        int: got Mixed\f(x: 5; y: 7)
+        int: got Mixed\f(x := 5; y := 7)
         return: got
         catch: convert ()
             return: 25
@@ -190,7 +190,7 @@ fn: mixed_xy () int
 end: mixed_xy
 fn: mixed_wide_y () int
     ---
-        int: got Mixed\f(x: 5; y: 300)
+        int: got Mixed\f(x := 5; y := 300)
         return: got
         catch: convert ()
             return: 25
@@ -198,7 +198,7 @@ fn: mixed_wide_y () int
 end: mixed_wide_y
 fn: mixed_wide_x () int
     ---
-        int: got Mixed\f(x: 300; y: 7)
+        int: got Mixed\f(x := 300; y := 7)
         return: got
         catch: convert ()
             return: 25
@@ -206,7 +206,7 @@ fn: mixed_wide_x () int
 end: mixed_wide_x
 fn: direct_wide_x () int
     ---
-        int: got gm(x: 300; y: 7)
+        int: got gm(x := 300; y := 7)
         return: got
         catch: convert ()
             return: 25
@@ -214,7 +214,7 @@ fn: direct_wide_x () int
 end: direct_wide_x
 fn: mixed_neg_x () int
     ---
-        int: got Mixed\f(x: -1; y: 7)
+        int: got Mixed\f(x := -1; y := 7)
         return: got
         catch: convert ()
             return: 25
@@ -222,7 +222,7 @@ fn: mixed_neg_x () int
 end: mixed_neg_x
 fn: mixed_low_x () int
     ---
-        int: got Mixed\f(x: -200; y: 7)
+        int: got Mixed\f(x := -200; y := 7)
         return: got
         catch: convert ()
             return: 25
@@ -327,7 +327,7 @@ fn: write_node () int
 end: write_node
 fn: node_xy () int
     ---
-        int: got node\f0(x: 3; y: 4)
+        int: got node\f0(x := 3; y := 4)
         return: got
         catch: call ()
             return: 22
@@ -335,7 +335,7 @@ fn: node_xy () int
 end: node_xy
 fn: node_yx () int
     ---
-        int: got node\f0(y: 4; x: 3)
+        int: got node\f0(y := 4; x := 3)
         return: got
         catch: call ()
             return: 22
@@ -375,10 +375,10 @@ fn: h2 (int: b 3; int: a 4) int
     return: a * 10 + b
 end: h2
 fn: apply (f(fn: (int: a; int: b) int)) int
-    return: f(a: 2; b: 1)
+    return: f(a := 2; b := 1)
 end: apply
 fn: apply2 (f(fn: (int: a 5; int: b 6) int)) int
-    return: f(b: 1)
+    return: f(b := 1)
 end: apply2
 int: code run_two()
 if: code = 7

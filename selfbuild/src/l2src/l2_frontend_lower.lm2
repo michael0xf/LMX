@@ -776,6 +776,13 @@ fn: lm_compiler_is_asgn (const: (@: stmt c.LmP0Node); int: mi) int
     # K03 S5: a word of the language heads no assignment: the statement is the word's application (l2_head_word).
     if: c.lm_compiler_head_word(h) != 0
         return: (cast: (int) (0))
+    # The operator `:=` (the author, 2026-11-07; the book, assign-known): its left side is written whatever role the
+    # name has as a head -- a callable the place holds is not called by `:=`, the place is assigned to.  A type word,
+    # a predefined receiver and the C door name no place.
+    if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        if: c.lm_compiler_is_known(h) || c.lm_compiler_predef_receiver(h) != 0 || (h\length >= 2U && h\data[0] = 99 && h\data[1] = 46) || stmt\as\frame\body = 0
+            return: (cast: (int) (0))
+        return: (cast: (int) (1))
     # The head's role at the statement's site is the one a call head has there
     # (l2_call_head_method).  A head that calls -- a method, or what a callable
     # formal carries -- is no assignment in any spelling.  A binding of the site
@@ -854,7 +861,7 @@ fn: lm_compiler_colon_bound_before (const: (@: body c.LmP0Structure); const: (@:
 end: lm_compiler_colon_bound_before
 
 # Original: l2src/l2trans.lm1:5933
-fn: lm_compiler_bind_value_actuals (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals) int
+fn: lm_compiler_bind_value_actuals (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals; int: by_head) int
     int: status
     if: out = 0
         return: (cast: (int) (1))
@@ -870,14 +877,16 @@ fn: lm_compiler_bind_value_actuals (@: values c.L2ValueSpan; int: n; int: nf; @@
         c.memset(out\actuals, 0, (cast: (size_t) nf) * c.sizeof(c.L2ApplicationActual))
     ---
     out\count: nf
-    status: lm_compiler_bind_value_actuals_into(values, n, nf, names, mi, callee, path, at, out)
+    status: lm_compiler_bind_value_actuals_into(values, n, nf, names, mi, callee, path, at, out, by_head)
     if: status != 0
         c.lm_compiler_value_actuals_release(out)
     return: (cast: (int) (status))
 end: lm_compiler_bind_value_actuals
 
 # Original: l2src/l2trans.lm1:5956
-fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals) int
+# by_head: the parts of a receiver's written form (`table:` with `source`, `name:`, `columns:`, `rows:`) are its heads by
+# that form's grammar and bind by head (1); the actuals of a callable bind a formal by the operator `:=` alone (0).
+fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals; int: by_head) int
     @: source c.L2ValueSpan
     @: payload c.L2ValueSpan
     @: slot c.L2ApplicationActual
@@ -897,13 +906,19 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
         extent: c.lm_compiler_value_argument_extent(values, n, first)
         if: extent < 1
             return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "an actual of ", callee, (cast: (size_t) (c.strlen(callee))), " is not an argument", 0, 0U, "", 0, 0U, "")))
+        # A named actual is written `a := value` (the author, 2026-11-07; the book, named-actuals): the Frame of the
+        # operator `:=` names the formal of its head, its body is the value.  A Frame whose head merely matches a
+        # formal's name -- `a: 5`, `a(5)` -- is no named supply: it is the positional value it writes, a call of a
+        # callable `a` included (NAMED-BINDING-BY-HEAD).
         frame: 0
-        if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && source\node\as\frame\head != 0
+        if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && source\node\as\frame\head != 0 && (by_head != 0 || (source\node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U)
             frame: source\node\as\frame
         k: 0
         while: frame != 0 && k < nf && c.lm_compiler_payload_same((cast: (const: @: c.LmP0Text) (frame\head)), names[k]) = 0
             k: k + 1
         ---
+        if: frame != 0 && k >= nf
+            return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "", (cast: (const: @: char) (frame\head\data)), (cast: (size_t) (frame\head\length)), " is not an argument of ", callee, (cast: (size_t) (c.strlen(callee))), "", 0, 0U, "")))
         if: frame != 0 && k < nf
             slot: out\actuals + k
             if: slot\written != 0 && slot\wrapper = 0
@@ -922,8 +937,6 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
             slot\structured: (cast: (int) (c.lm_compiler_value_spans_expression(payload, payload_n) = 0))
             named: 1
         else:
-            if: named != 0 && frame != 0
-                return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "", (cast: (const: @: char) (frame\head\data)), (cast: (size_t) (frame\head\length)), " is not an argument of ", callee, (cast: (size_t) (c.strlen(callee))), "", 0, 0U, "")))
             if: named != 0
                 return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "a positional argument of ", callee, (cast: (size_t) (c.strlen(callee))), " after a named one", 0, 0U, "", 0, 0U, "")))
             if: pos >= nf
@@ -995,7 +1008,7 @@ fn: lm_compiler_bind_signature_actuals (@: values c.L2ValueSpan; int: n; int: id
     c.memcpy(callee, head\data, head\length)
     callee[head\length]: 0
     if: idx >= 0
-        return: (cast: (int) (lm_compiler_bind_value_actuals(values, n, m_arity_cell[0][idx], (cast: (@@: c.LmP0Text) m_fn_cell[0][idx]), idx, callee, path, at, out)))
+        return: (cast: (int) (lm_compiler_bind_value_actuals(values, n, m_arity_cell[0][idx], (cast: (@@: c.LmP0Text) m_fn_cell[0][idx]), idx, callee, path, at, out, 0)))
     nf: lm_compiler_mad_held_formals(held)
     if: nf < 0
         return: (cast: (int) (2))
@@ -1011,7 +1024,7 @@ fn: lm_compiler_bind_signature_actuals (@: values c.L2ValueSpan; int: n; int: id
         ---
     ---
     # A held callable's header writes no defaults this binding reads (-1).
-    status: lm_compiler_bind_value_actuals(values, n, nf, names, -1, callee, path, at, out)
+    status: lm_compiler_bind_value_actuals(values, n, nf, names, -1, callee, path, at, out, 0)
     c.lm_compiler_xfree((cast: (@: void) names))
     return: (cast: (int) (status))
 end: lm_compiler_bind_signature_actuals
@@ -2022,6 +2035,10 @@ fn: lm_compiler_local_absent_def (const: (@: stmt c.LmP0Node); int: mi) int
         return: (cast: (int) (0))
     if: lm_compiler_is_char_decl(stmt) != 0
         return: (cast: (int) (0))
+    # `name := value` defines nothing (the author's correction of 2026-11-07; the book, assign-known): moved where no place
+    # of its name is known it is the refusal of the check, never a new definition.
+    if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: (cast: (int) (0))
     if: fr\trailer != 0 && (fr\trailer\spelling = 0 || c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (fr\trailer\spelling)), "end") = 0)
         return: (cast: (int) (0))
     # A VALUE content (`a: merge: ...`, l2_decl_content) is the method's statement declaring a's own row, not a definition.
@@ -2884,6 +2901,11 @@ fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c
         idx: -1
     if: idx < 0
         held: c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)))
+    # `place := value` (the author, 2026-11-07) calls nothing: its left side is written, its right side read as a value.
+    if: port_call\as != 0 && port_call\as\frame != 0 && (port_call\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        idx: -1
+        held: -1
+    ---
     cur_mi_cell[0]: previous_mi
     uses_node_for_root_cell[0]: root_flag
     if: lm_compiler_application_site_bind(site, idx, held, src_cell[0]) != 0
@@ -5759,6 +5781,10 @@ fn: lm_compiler_head_is_call (const: (@: t c.LmP0Text); const: (@: body c.LmP0St
         return: (cast: (int) (0))
     # `@: place value` writes the place, whatever stands there (lm_compiler_place_write_lower).
     if: (flags & 4096U) != 0U
+        return: (cast: (int) (0))
+    # So does `place := value` (the author, 2026-11-07; the book, assign-known): the operator writes its left side, a
+    # callable the place holds is not called.
+    if: (flags & c.LM_P0_FRAME_ASSIGN) != 0U
         return: (cast: (int) (0))
     req: c.lm_compiler_call_head_method(mi, t, @ fi)
     if: req >= 0

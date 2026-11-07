@@ -1,0 +1,95 @@
+# The := slice (the author's decisions of 2026-11-07; the book, named-actuals and assign-known; NAMED-BINDING-BY-HEAD):
+# a named actual is written `a := value` and names the formal a of the callable the call selected, its value computed as
+# any value is -- `tst(a := a(5))` supplies a the result of the ordinary call of the callable a.  `a: 5` and `a(5)` are no
+# named supply: with a callable a visible they are its ordinary call, whose result is the positional actual (the probes
+# p302n_d1/d2 of the record named-assign-20261107 gave 35 and no call of a; the norm is 62 and one call).  Positional
+# actuals and the earlier call forms stay.  tst (int: c 3; int: a 2) int is c * 10 + a; a (int: n) int is n + 1 and
+# counts its calls.  Entry 7; 81-99 the failing step.
+Calls:
+    int: hits 0
+end: Calls
+fn: a (int: n) int
+    Calls\hits: Calls\hits + 1
+    return: n + 1
+end: a
+fn: tst (int: c 3; int: a 2) int
+    return: c * 10 + a
+end: tst
+fn: named_literal () int
+    int: before Calls\hits
+    int: got tst(a := 5)
+    if: got != 35 || Calls\hits != before
+        return: 81
+    return: 7
+end: named_literal
+fn: named_call () int
+    int: before Calls\hits
+    int: got tst(a := a(5))
+    if: got != 36 || Calls\hits != before + 1
+        return: 82
+    return: 7
+end: named_call
+fn: colon_calls () int
+    int: before Calls\hits
+    int: got tst(a: 5)
+    if: got != 62 || Calls\hits != before + 1
+        return: 83
+    return: 7
+end: colon_calls
+fn: paren_calls () int
+    int: before Calls\hits
+    int: got tst(a(5))
+    if: got != 62 || Calls\hits != before + 1
+        return: 84
+    return: 7
+end: paren_calls
+fn: positional () int
+    if: tst(4, 5) != 45
+        return: 85
+    if: tst() != 32
+        return: 86
+    return: 7
+end: positional
+fn: named_both () int
+    if: tst(c := 1; a := 2) != 12
+        return: 87
+    if: tst(a := 1; c := 2) != 21
+        return: 88
+    return: 7
+end: named_both
+fn: compact () int
+    int: before Calls\hits
+    int: got tst(a:=5)
+    if: got != 35 || Calls\hits != before
+        return: 89
+    return: 7
+end: compact
+fn: mixed_order () int
+    if: tst(6, a := 1) != 61
+        return: 90
+    return: 7
+end: mixed_order
+int: code named_literal()
+if: code = 7
+    code: named_call()
+---
+if: code = 7
+    code: colon_calls()
+---
+if: code = 7
+    code: paren_calls()
+---
+if: code = 7
+    code: positional()
+---
+if: code = 7
+    code: named_both()
+---
+if: code = 7
+    code: compact()
+---
+if: code = 7
+    code: mixed_order()
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

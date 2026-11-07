@@ -176,3 +176,17 @@ runs	dyn/numeric_unavailable_norow.lm2	7	nf
 runs	dyn/bound_typed_reception.lm2	7	nf
 # Slice 302: a copy of a graph carries the codes of its occurrences' names, no spelling -- a named actual to a copied callable binds the formal of its name, a free input finds the copied formal by its code (IDENTIFIER-CODES).
 runs	dyn/copy_name_codes.lm2	7	nf
+# The := slice (the author, 2026-11-07; the book, assign-known and named-actuals): the operator writes a place already known
+# (a local, a formal, a field through a path, a reference place holding a method) and supplies a named argument; an unknown
+# left side, an unknown formal and a positional actual after a named one are refused at translation; a: 5 and a(5) are no
+# named supply (the ordinary call of a visible callable a, its result positional).
+runs	dyn/assign_known.lm2	7	nf
+refuses	dyn/assign_unknown_refused.lm2	assign_unknown_refused.lm2:5:5: := writes a place already known: its left side is not one here	nf
+runs	dyn/named_assign_actuals.lm2	7	nf
+refuses	dyn/named_assign_unknown_refused.lm2	named_assign_unknown_refused.lm2:7:9: zz is not an argument of tst	nf
+refuses	dyn/named_assign_positional_after_refused.lm2	named_assign_positional_after_refused.lm2:7:17: a positional argument of tst after a named one	nf
+# The := slice (MERGE-OPERAND-FORMS): a merge operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field
+# the declaration form `(int: a 5)` is: it writes the model slot of its name.
+runs	dyn/merge_named_field_operand.lm2	7	nf
+refuses	dyn/assign_in_structure_refused.lm2	assign_in_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
+refuses	dyn/assign_method_name_refused.lm2	assign_method_name_refused.lm2:14:5: writing a hidden input that has no activation value is not supported yet	nf

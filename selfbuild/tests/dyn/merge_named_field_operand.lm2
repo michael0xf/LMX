@@ -1,0 +1,61 @@
+# The := slice (MERGE-OPERAND-FORMS; the book, composition: "an operand of the form `name: value` ..." and the author's
+# example of whole-arguments with (a: int: 5)): a merge operand that is a field written name first -- `(a: int: 5)`, a
+# Structure with the one field a of type int and value 5, and the bare `a: int: 5` -- is the typed field the
+# declaration form `(int: a 5)` is: it writes the model's slot of its name (a), the other fields stay (c), the model is
+# not written.  Over an ordinary Structure Args (int: c 3; int: a 0).  Entry 7; 81-92 the failing check.
+Args:
+    int: c 3
+    int: a 0
+end: Args
+fn: parens () int
+    pack: merge(Args; (a: int: 5))
+    if: pack\a != 5
+        return: 81
+    if: pack\c != 3
+        return: 82
+    if: Args\a != 0
+        return: 83
+    return: 7
+end: parens
+fn: bare () int
+    pack: merge(Args; a: int: 7)
+    if: pack\a != 7
+        return: 84
+    if: pack\c != 3
+        return: 85
+    if: Args\a != 0
+        return: 86
+    return: 7
+end: bare
+fn: control () int
+    pack: merge(Args; (int: a 9))
+    if: pack\a != 9
+        return: 87
+    if: pack\c != 3
+        return: 88
+    if: Args\a != 0
+        return: 89
+    return: 7
+end: control
+fn: two_fields () int
+    pack: merge(Args; (a: int: 4); (c: int: 2))
+    if: pack\a != 4
+        return: 90
+    if: pack\c != 2
+        return: 91
+    if: Args\c != 3
+        return: 92
+    return: 7
+end: two_fields
+int: code parens()
+if: code = 7
+    code: bare()
+---
+if: code = 7
+    code: control()
+---
+if: code = 7
+    code: two_fields()
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

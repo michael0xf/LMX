@@ -29,6 +29,9 @@ fn: lm_p0_scan_registry_compact_atom_piece (const: (@: text char); size_t: end_i
         best: 2U
     if: text[start] = 62 && text[start + 1U] = 62
         best: 2U
+    # The operator `:=` (the author, 2026-11-07; the grammar's operators section): one token, never `:` then `=`.
+    if: text[start] = 58 && text[start + 1U] = 61
+        best: 2U
     if: best > 0U
         return: start + best
     return: start + 1U

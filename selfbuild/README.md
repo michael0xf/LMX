@@ -6,8 +6,23 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 239 inputs (66 source files, 34 tools and
-139 tests). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+The selected package contains 247 inputs (66 source files, 34 tools and
+147 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
+P0 -- a Frame of its left and its right side flagged `LM_P0_FRAME_ASSIGN`, `a := 5` and `a:=5` one form -- that writes a
+place already known through the general assignment path (a local, a formal, a field through a path, the conversion of the
+reception, a reference place holding a method: `target := two` without a call of the bare right side, natively and in the
+walker's program) and refuses an unknown left side at translation (`:= writes a place already known: its left side is not
+one here`, in a method body and in a named Structure's body, no field defined; the places are the declared formals, a
+visible own field, a slot, a method-level local and a nested method's host activation, not the hidden input the collection
+makes of a free name for `x: v`); in a call's argument Structure `:=` supplies a named argument (`f(a := v)`: the binder
+names a formal by that Frame only), while `f(a: 5)` and `f(a(5))` are the ordinary call of a visible callable `a` with a
+positional result (NAMED-BINDING-BY-HEAD closed; the `table:` receiver's parts use the same binder in its `by_head` mode); a
+`merge` operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field the declaration form `(int: a 5)` is.
+Fixtures `assign_known`, `assign_unknown_refused`, `assign_in_structure_refused`, `assign_method_name_refused`,
+`named_assign_actuals`, `named_assign_unknown_refused`, `named_assign_positional_after_refused`,
+`merge_named_field_operand`; five fixtures that asserted the by-head binding moved to `:=`. The whole argument Structure
+from one Structure (`mytest(merge(mytest\args; (a: int: 5)))`) and the `merge` operand `f\args` are held until the author's
+decision (CALL-WHOLE-ARGUMENTS-STRUCTURE); the kernel is unchanged. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

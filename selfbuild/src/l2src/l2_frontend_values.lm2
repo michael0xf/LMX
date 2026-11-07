@@ -2614,8 +2614,12 @@ fn: lm_compiler_emit_public_sig (int: mi) int
     return: (cast: (int) (0))
 end: lm_compiler_emit_public_sig
 
+# The own type of a typed merge operand: by its head word (`int: a 5`), or, written name first (`a: int: 5`, the author's
+# `(a: int: 5)` of 2026-11-07; MERGE-OPERAND-FORMS), by the leaf word of its declaration's contract.
 fn: lm_compiler_merge_typed_own (const: (@: d c.LmP0Node)) int
     int: kind c.lm_compiler_lit_field_kind(d)
+    if: kind < 0
+        kind: c.lm_compiler_named_typed_field_kind(d)
     if: kind < 0
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (lm_compiler_own_ty_of_param(c.lm_compiler_path_kind_ft(kind))))

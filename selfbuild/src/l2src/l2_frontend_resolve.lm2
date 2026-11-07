@@ -5107,6 +5107,7 @@ end: lm_compiler_merge_frame_in
 fn: lm_compiler_merge_typed_decl (@: f c.LmP0Field; int: span) @: c.LmP0Node
     @: in c.LmP0Field
     @: d c.LmP0Node
+    @: decl c.L2Declaration
     if: f = 0 || f\value = 0 || span != 1
         return: (cast: (@: c.LmP0Node) (0))
     d: f\value
@@ -5118,9 +5119,14 @@ fn: lm_compiler_merge_typed_decl (@: f c.LmP0Field; int: span) @: c.LmP0Node
             return: (cast: (@: c.LmP0Node) (0))
         d: in\value
     ---
-    if: d\kind != c.LM_P0_NODE_FRAME || d\as = 0 || d\as\frame = 0 || d\as\frame\body = 0 || c.lm_compiler_lit_field_kind(d) < 0
+    if: d\kind != c.LM_P0_NODE_FRAME || d\as = 0 || d\as\frame = 0 || d\as\frame\body = 0
         return: (cast: (@: c.LmP0Node) (0))
-    if: lm_compiler_declaration(d) = 0
+    decl: lm_compiler_declaration(d)
+    if: decl = 0
+        return: (cast: (@: c.LmP0Node) (0))
+    # A typed field in either spelling (MERGE-OPERAND-FORMS; the author's `(a: int: 5)` of 2026-11-07 beside `int: a 5`):
+    # the declaration of a numeric field -- its name, its one contract, its value -- whichever word heads it.
+    if: c.lm_compiler_lit_field_kind(d) < 0 && c.lm_compiler_named_typed_field_kind(d) < 0
         return: (cast: (@: c.LmP0Node) (0))
     return: (cast: (@: c.LmP0Node) (d))
 end: lm_compiler_merge_typed_decl

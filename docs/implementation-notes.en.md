@@ -190,6 +190,24 @@ found:
 
 The defects are recorded in the [registry](../steps/defects.md).
 
+<a id="compound-assign-notes"></a>
+### 4.3 Compound assignments and `**`: adopted rule, unfinished implementation
+
+The rules are [compound assignments and the power](LMX_semantics.en.md#compound-assign)
+and [grammar §21](LMX_grammar.en.md#operators) (the author's directive of
+2026-11-07, with the clarification that `**` groups as in Python). The
+implementation does not carry them out yet: P0 does not single out the
+tokens `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=`
+and `**`; neither native code nor the walker lowers a compound assignment
+to a write of a known place or has a power operation. The intended route
+is the one of `:=`: one token in P0, the lowering of `a op= b` as
+`a := (a op b)` with the left place evaluated once (not a macro
+substitution), `**` as a common numeric operation of the kernel for both
+executors. To be clarified before the implementation: evaluating a place
+with effects once, the types and conversions of `**`/`**=`, a negative or
+fractional exponent, `0 ** 0`, the precedence of the assignments among
+operations ([plan M5](../next_core_tasks_v3.md#m5-assign-operators)).
+
 <a id="open-design"></a>
 ## 5. Open decisions
 

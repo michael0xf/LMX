@@ -631,6 +631,8 @@ In this profile, `=` is comparison, not assignment syntax or a named field. Upda
 
 `:=` is a separate operator token (the author's decision of 2026-11-07, [journal](../LMX_blog/2026-11-07.md)): P0 neither splits it into `:` and `=` nor makes a Frame head `a:` of `a:=5`; `a := 5` and `a:=5` are one form: a left side, the token `:=`, a right side. Its meaning, a write to a place already known and the supply of a named argument, is defined by the [semantics](LMX_semantics.en.md#assign-known); this decision defines neither the precedence nor the associativity of `:=`. The grammar does not invent a complete operation set, conversions, evaluation errors, or effect ordering.
 
+The author's directive of 2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the operator tokens of the compound assignments `+=`, `-=`, `*=`, `/=`, `%=`, `<<=`, `>>=`, `&=`, `^=`, `|=`, `**=` and the power infix `**` -- each one token P0 does not split (`a+=b` and `a += b` are one form: a left side, the token, a right side). `**` groups to the right and binds tighter than `*`, `/`, `%`, `+`, `-` but looser than a call, an index and a field access; on its left it binds tighter than the unary `+`, `-`, `~`, on its right it admits a unary operand -- as in Python (the author's clarification of 2026-11-07): `-2 ** 2` is `-(2 ** 2)`, `2 ** -2` is `2 ** (-2)`, `2 * 3 ** 2` is `2 * (3 ** 2)`; `^` stays the bitwise exclusive or. The meaning of the compound assignments is the [semantics](LMX_semantics.en.md#compound-assign); the precedence of the assignments themselves among other operations, effect ordering, types and errors are not set by the grammar; P0 does not implement the tokens yet.
+
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4259–4259.
 
 ````text

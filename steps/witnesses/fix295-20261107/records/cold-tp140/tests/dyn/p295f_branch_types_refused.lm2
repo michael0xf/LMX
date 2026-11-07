@@ -1,0 +1,17 @@
+# Slice 295 probe (the book :133, :387): both branches of an `if` declare `z`, with different types.  The activation has one
+# place `z`, so the second declaration writes a value of another type to it: refused where it is written.
+fn: m (int: c) int
+    int: r 0
+    if: c = 1
+        int: z 5
+        r: z
+    else:
+        char: z 6
+        r: 2
+    ---
+    return: r
+end: m
+int: code 7
+int: v m(1)
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,44 @@
+# Slice 295 probe (the book :439, :441): `call: m D` runs m over the data D; the declaration written inside m's `if` writes
+# D's place `b` when it runs (no local data field of the inline statement).  Data without that place (E has the root
+# declaration's place `r`, not `b`): the call's admission refuses before the body -- the implicit `call`.  Entry 7; a wrong
+# value leaves as the exit code (v, then 100 + v).
+fn: m () int
+    int: r 0
+    if: r = 0
+        int: b 3
+        r: b
+    ---
+    return: r
+end: m
+D:
+    int: r 0
+    int: b 0
+end: D
+E:
+    int: r 0
+end: E
+fn: run () int
+    call: m D
+    return: D\b
+end: run
+fn: run2 () int
+    ---
+        call: m E
+        return: 1
+        catch: call ()
+            return: 22
+    ---
+end: run2
+int: code 7
+int: v run()
+if: v != 3
+    code: v
+---
+if: code = 7
+    v: run2()
+    if: v != 22
+        code: 100 + v
+    ---
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

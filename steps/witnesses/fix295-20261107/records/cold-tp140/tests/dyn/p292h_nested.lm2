@@ -1,0 +1,18 @@
+# Slice 292 probe: an own field declared inside an inline `if` of the body (observed: the boundary of the slice).
+int: code 7
+fn: m () int
+    int: r 0
+    if: r = 0
+        int: b 3
+        r: b
+    ---
+    return: r
+end: m
+if: m() != 3
+    code: 81
+---
+if: code = 7 && m\var\b != 3
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

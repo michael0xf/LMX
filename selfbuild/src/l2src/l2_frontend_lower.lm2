@@ -501,12 +501,21 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
     @@: own_fid_cell int (cast: (@@: int) (@ c.l2_own_fid))
     @@: own_fchild_cell int (cast: (@@: int) (@ c.l2_own_fchild))
     @@: own_uchild_cell int (cast: (@@: int) (@ c.l2_own_uchild))
+    @: host c.LmP0Node c.lm_compiler_scope_host()
     int: i
     int: prior 0
     if: mi < 0 || t = 0
         if: c.lm_compiler_error(path, at, "incompatible entry signature") != 0
             return: (cast: (int) (-1))
         return: (cast: (int) (-1))
+    # Slice 295 (VAR-OWN-NESTED-AND-REFERENCE; the book, docs/LMX_semantics.ru.md :133, :387, :422, :424, :441): in a method with
+    # parts (a `fn`, a `sub`) an inline statement -- `if`, `else`, `while`, `for`, an anonymous body -- opens no binding area: the
+    # depth of a declaration chooses no other place and shadows nothing, so its row is the activation's one row of that name.
+    # A catch keeps its own host for its parameters and own fields (lm_compiler_own_same_activation; Codex 295 (c)).  The rule
+    # has no exception in the norm (Codex 295): a machine function still keeps its C block scopes (MACHINE-NO-SHADOW), the
+    # file's root and an `fm` their nested hosts (ROOT-FILE-INLINE-DATA, VAR-OWN-NESTED-AND-REFERENCE) -- open debts.
+    if: c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_fn_parts_on(mi) != 0
+        host: lm_compiler_own_activation_host()
     # RR2c-3: the hidden row of a returned merge is named by the statement's own word, `return` (l2_return_merge): no
     # program binds a word of the language, so no written name reaches the row; the admission is for written names.
     if: c.lm_compiler_frame_head(at, "return") = 0 && lm_compiler_bind_admit(t, (cast: (const: @: c.LmP0Node) (c.lm_compiler_bind_at(at, t))), path) != 0
@@ -523,11 +532,11 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
         if: own_decl_cell[0][i] = at && c.lm_compiler_own_nsty_set(i, lm_compiler_declaration_model(at, 0)) != 0
             return: (cast: (int) (-1))
         return: (cast: (int) (i))
-    # Only the immediately enclosing body participates. A nested body may
-    # shadow the name with its own first field.
+    # Only the host participates: the immediately enclosing body, or the activation in a method with parts (above).  A
+    # nested body of another host may shadow the name with its own first field.
     if: c.lm_compiler_frame_head(at, "return") = 0
         while: prior < own_n_cell[0]
-            if: own_mi_cell[0][prior] = mi && own_host_cell[0][prior] = c.lm_compiler_scope_host() && own_decl_cell[0][prior] != at && c.lm_compiler_text_same(own_name_cell[0][prior], t) != 0
+            if: own_mi_cell[0][prior] = mi && own_host_cell[0][prior] = host && own_decl_cell[0][prior] != at && c.lm_compiler_text_same(own_name_cell[0][prior], t) != 0
                 if: own_ty_cell[0][prior] != ty
                     c.lm_compiler_error(path, c.lm_compiler_bind_at(at, t), "assignment value has incompatible type")
                     return: (cast: (int) (-1))
@@ -555,7 +564,7 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
     own_ty_cell[0][own_n_cell[0]]: ty
     own_bseq_cell[0][own_n_cell[0]]: 0
     own_mi_cell[0][own_n_cell[0]]: mi
-    own_host_cell[0][own_n_cell[0]]: c.lm_compiler_scope_host()
+    own_host_cell[0][own_n_cell[0]]: host
     own_decl_cell[0][own_n_cell[0]]: (cast: (@: c.LmP0Node) at)
     own_fid_cell[0][own_n_cell[0]]: -1
     own_fchild_cell[0][own_n_cell[0]]: -1
@@ -19868,3 +19877,19 @@ fn: lm_compiler_formal_default_kind (int: mi; int: k; @: out_bits size_t) int
         \out_bits: bits
     return: (cast: (int) (1))
 end: lm_compiler_formal_default_kind
+
+# Slice 295 (VAR-OWN-NESTED-AND-REFERENCE): the host of a declaration of a method with parts -- the innermost catch on the scope
+# stack, whose reception hosts its parameters and its handler's own fields (lm_compiler_own_same_activation counts a catch as
+# another activation), else 0, the method's activation.  The inline statements between (`if`, `else`, `while`, `for`, an
+# anonymous body) are statements of that activation, not binding areas (the book :133, :424).
+fn: lm_compiler_own_activation_host () @: c.LmP0Node
+    @@@: scope_at_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_scope_at))
+    @: scope_n_cell int (cast: (@: int) (@ c.l2_scope_n))
+    int: i scope_n_cell[0] - 1
+    while: i >= 0
+        if: c.lm_compiler_frame_head(scope_at_cell[0][i], "catch") != 0
+            return: (cast: (@: c.LmP0Node) (scope_at_cell[0][i]))
+        i: i - 1
+    ---
+    return: (cast: (@: c.LmP0Node) (0))
+end: lm_compiler_own_activation_host

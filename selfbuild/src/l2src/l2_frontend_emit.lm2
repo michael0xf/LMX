@@ -12719,9 +12719,10 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
             slot: c.lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (field\value)))
         # Slice 292 (VAR-PATH-OF-SHORT-FN): an own field the method's body declares has its place in var
         # (lm_compiler_rw_body_var_slots); its statement stays here with no slot of storage before it, and the head's name is on
-        # the place, not on the statement's slot.
+        # the place, not on the statement's slot.  Slice 295: so is a declaration an inline statement of the body holds, whose
+        # list is a nested container (part 0).
         moved: 0
-        if: source != 0 && source\part = 2
+        if: source != 0 && (source\part = 2 || source\part = 0)
             moved: c.lm_compiler_method_part_contains_own(rw_mi_cell[0], 13, c.lm_compiler_own_by_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value))))
         ---
         # A source root: every head has a physical slot and a registry row (N4-U U1).  The layout pass notes the slot: a path that selects
@@ -18005,6 +18006,8 @@ end: lm_compiler_check_index_l3_receive
 # initializer or opens a name before its declaration.
 fn: lm_compiler_rw_body_var_slots (int: mi; @: body c.LmP0Structure; int: into; @: source c.L2SourceContainer; @: made int) int
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
     @: field c.LmP0Field 0
     int: own
     if: body = 0 || source = 0
@@ -18020,6 +18023,26 @@ fn: lm_compiler_rw_body_var_slots (int: mi; @: body c.LmP0Structure; int: into; 
             \made: \made + 1
         ---
         field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+    ---
+    # Slice 295 (VAR-OWN-NESTED-AND-REFERENCE; the book :441): then the places of the declarations the body's inline
+    # statements hold, one per row in the rows' order -- the order lm_compiler_collect_decls met them in.  A row whose
+    # declaration is a statement of the body's root level has its place from the walk above, in every phase alike.
+    own: 0
+    while: own < own_n_cell[0]
+        if: c.lm_compiler_method_part_contains_own(mi, 13, own) != 0
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
+            while: field != 0 && field\value != own_decl_cell[0][own]
+                field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+            ---
+            if: field = 0
+                if: c.lm_compiler_source_field_slot(source, own, \made) != 0
+                    return: (cast: (int) (1))
+                if: rw_emit_cell[0] != 0 && lm_compiler_emit_root_head(into, \made, (cast: (const: @: c.LmP0Node) (own_decl_cell[0][own]))) != 0
+                    return: (cast: (int) (1))
+                \made: \made + 1
+            ---
+        ---
+        own: own + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_rw_body_var_slots

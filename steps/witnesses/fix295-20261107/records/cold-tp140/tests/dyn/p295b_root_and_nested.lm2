@@ -1,0 +1,20 @@
+# Slice 295 probe (the book :441): the body's root declares `y`, an inline `if` declares `y` again.  The data map is built by
+# the root heads: the nested declaration writes the same prepared place, it is no second field (no shadowing).  Entry 7; a
+# wrong value leaves as the exit code (v, then 100 + v).
+fn: m () int
+    int: y 1
+    if: y = 1
+        int: y 2
+    ---
+    return: y
+end: m
+int: code 7
+int: v m()
+if: v != 2
+    code: v
+---
+if: code = 7 && m\var\y != 2
+    code: 100 + m\var\y
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

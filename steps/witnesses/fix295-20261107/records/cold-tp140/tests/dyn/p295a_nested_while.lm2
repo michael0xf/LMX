@@ -1,0 +1,23 @@
+# Slice 295 probe (VAR-OWN-NESTED-AND-REFERENCE; the book :437, :441, :451): an own field declared inside a `while` body
+# of a fn has its one place in the method's var: the statement runs each time it is reached, `m\var\b` reads the place after
+# the call.  Entry 7; a wrong value leaves as the exit code (v, then 100 + v).
+fn: m () int
+    int: i 0
+    int: s 0
+    while: i < 3
+        int: b i * 10
+        s: s + b
+        i: i + 1
+    ---
+    return: s
+end: m
+int: code 7
+int: v m()
+if: v != 30
+    code: v
+---
+if: code = 7 && m\var\b != 20
+    code: 100 + m\var\b
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -474,3 +474,15 @@ the candidate frontend fe156a and runtime rt156b, `exe-same` with G2 and byte-eq
 the defaults); a walked call that omits formals carries a shorter frame. Calls that write every formal by
 position are unchanged. Not measured apart. A whole-pipeline measurement, not a controlled comparison.
 [Commands, results and hashes](steps/witnesses/fix294-20261107/notes.md).
+
+## Slice295 / boot157a (Opus, 2026-11-07)
+
+Whole quick 745.39 s: 03:29:08.5957938Z→03:41:33.9821514Z, both generations smoke 9/0; G0 is the working tool of
+boot156a (tools/build.lm2 is unchanged). The whole maintained registry on the candidate frontend fe157a and the
+G2 runtime of boot156a (the kernel is unchanged; G2's runtime of boot157a is byte-equal to it), fe157a `exe-same`
+with G2: 109/0, 921 checks (881.58 s: 02:54:30.2358854Z→03:09:11.8147647Z). Source 232/DC724B82; the acceptance
+is one `lmxtool checks` list of 38 commands run by the working tool of boot156a, 0 failed (its first run failed one
+line of the list itself, a lost tab); the G2 tool's self-test 0 failures. A declaration in an inline statement
+of a fn or sub body is a place of its var: one more var slot per such name, no second cell in the nested list,
+one registration search by the activation's host. Not measured apart. A whole-pipeline measurement, not a
+controlled comparison. [Commands, results and hashes](steps/witnesses/fix295-20261107/notes.md).

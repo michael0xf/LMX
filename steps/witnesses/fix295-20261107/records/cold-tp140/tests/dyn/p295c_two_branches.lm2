@@ -1,0 +1,32 @@
+# Slice 295 probe (the book :441): both branches of an `if` declare `z`; the method prepares one place `z` in its var, each
+# branch writes it when it runs.  Entry 7; a wrong value leaves as the exit code (v, 100 + v, 150 + v, 200 + v).
+fn: m (int: c) int
+    int: r 0
+    if: c = 1
+        int: z 5
+        r: z
+    else:
+        int: z 6
+        r: z
+    ---
+    return: r
+end: m
+int: code 7
+int: v m(1)
+if: v != 5
+    code: v
+---
+if: code = 7 && m\var\z != 5
+    code: 100 + m\var\z
+---
+if: code = 7
+    v: m(0)
+    if: v != 6
+        code: 150 + v
+    ---
+---
+if: code = 7 && m\var\z != 6
+    code: 200 + m\var\z
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

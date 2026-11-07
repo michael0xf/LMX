@@ -1,0 +1,103 @@
+# Срез 295 — вложенные объявления в `var` активации (VAR-OWN-NESTED-AND-REFERENCE, вложенные тела)
+
+Opus, 2026-11-07. Часть U3 [плана N4-U](../../../next_core_tasks_v3.md). Задание: ответ Codex на результат 294 ([дословно](../fix294-20261107/records/pins/codex-294-review-norm-next.txt), CODEX-OPUS-294-REVIEW-NORM-NEXT-20261107-01) — «Далее закрывай связанные общие долги VAR-OWN-NESTED-AND-REFERENCE, ABSENT-HEAD-WRITE-NORM, FORMAL-DEFAULT-*, NAMED-RECEPTION и NODE-PATH». Норма — книга ([docs/LMX_semantics.ru.md](../../../docs/LMX_semantics.ru.md)): :133 (внутри одной активации callable нет затенения по глубине записи; inline `if`/`for` новой области не дают), :387 (повторное обращение к известному месту — присваивание, не второе поле; глубина вложенности записи не создаёт затенения), :422, :424 (записи во вложенных операторах пользуются подготовленным одноимённым местом выбранной data; исходная позиция по-прежнему определяет, когда имя доступно), :437 (собственные поля тела добавляются к `var` метода), :441 (написанное внутри `if`/`for` объявление при исполнении пишет подготовленное место data; метод заранее готовит места в `var`; допуск вызова проверяет и места условных ветвей); L2 :90 — то же для L2. Норма и книга не менялись.
+
+Вопрос о границах среза (машинные функции, корень файла, `catch`) задан Codex сразу ([вопрос](records/pins/opus-codex-295-question-machine.txt)); его ответ ([копия](records/pins/codex-295-scope-answer.txt), CODEX-OPUS-295-SCOPE-ANSWER-20261107-01) и исправление искажённого пересказа посредника ([копия](records/pins/codex-295-scope-correction.txt), CODEX-OPUS-295-SCOPE-CORRECTION-20261107-02) сверены с транскриптом relay: исключения из no-shadow в норме нет ни для машинных функций, ни для корня файла; в этом срезе их текущая реализация — открытые долги MACHINE-NO-SHADOW и ROOT-FILE-INLINE-DATA, `fm` (по :437 — метод с частями) — долг реализации; отдельный host параметров и собственных полей `catch` сохраняется, inline-операторы внутри обработчика новых областей не дают; новый отказ CHECK или entry не вводится.
+
+P = build2/codex_fix250generationchain01. Копии в [records](records) сделал `lmxtool stage-copy` из P, проверив хэш каждой; оригиналы связаны с [evidence.sha256](evidence.sha256).
+
+## На опубликованном кортеже 294
+
+Пробы P на рабочем tool, G2 frontend и runtime boot156a (рецепт [tp151-probe](../fix289-20261106/records/pins/tp151-probe.command) с параметрами кортежа). Неверное значение проба отдаёт кодом выхода; его пишет per-run лог `run-root<k>.log` ряда, прочитанный по точному пути, отказ трансляции — `p.L2.log` ряда.
+
+| Проба | 294 |
+| --- | --- |
+| [p292h](records/cold-tp140/tests/dyn/p292h_nested.lm2) (`int: b 3` в `if` тела `fn`, `m\var\b`), [p295a](records/cold-tp140/tests/dyn/p295a_nested_while.lm2) (в теле `while`), [p295c](records/cold-tp140/tests/dyn/p295c_two_branches.lm2) (обе ветви `if`/`else` объявляют `z`) | отказ трансляции `unknown field path segment` на `m\var\…` во всех запусках ([b295a](records/pins/tp151-probe-b295a.log)) |
+| [p295b](records/cold-tp140/tests/dyn/p295b_root_and_nested.lm2): корень тела `int: y 1`, в `if` — `int: y 2` | 101: `m()` = 2, `m\var\y` = 1 — две ячейки, чтение после `if` берёт вложенную |
+| [p295d](records/cold-tp140/tests/dyn/p295d_nested_call_data.lm2): `call: m D`, вложенное `int: b 3` | 0: `D\b` не записан ([b295b](records/pins/tp151-probe-b295b.log)); data `E` без места `b` допускалась |
+| [p295e](records/cold-tp140/tests/dyn/p295e_anonymous_sub.lm2): анонимное тело `fn`, `if` в `sub` | отказ трансляции `unknown field path segment` (`m\var\q`) ([b295c](records/pins/tp151-probe-b295c.log)) |
+| [p295f](records/cold-tp140/tests/dyn/p295f_branch_types_refused.lm2): ветви объявляют `int: z` и `char: z` | 7 во всех запусках: две ячейки разных типов молча ([b295d](records/pins/tp151-probe-b295d.log)) |
+| [p295g](records/cold-tp140/tests/dyn/p295g_catch_handler_own.lm2): `call: m E` при data без места вложенного `b`; объявление в обработчике `catch` | 0: вызов допущен, обработчик не исполнялся |
+| [p295h](records/cold-tp140/tests/dyn/p295h_loop_no_shadow.lm2): `int: k 7` в `if` внутри цикла, который ведёт `k` | 1 вместо 80 (с отдельной внутренней ячейкой было бы 60): чтения и записи после `if` смешивали две ячейки |
+
+## Где было
+
+- **Регистрация.** `lm_compiler_own_add` давал строке объявления хост ближайшего тела на стеке областей (`lm_compiler_scope_host`: тело `if`, кадр `else`, тело `while`, оператор `for`, анонимное тело, `catch`) и искал повтор имени только среди строк того же хоста: вложенное объявление было новой строкой, второй ячейкой во вложенном контейнере, и затеняло одноимённое место. Поиск видимости при этом уже знал «ту же активацию» (`lm_compiler_own_same_activation`, `lm_compiler_own_local_at`): после `if` имя находило вложенную строку, а путь `m\var\y` — корневую.
+- **Раскладка.** `var` метода (292) держала только собственные поля корневого уровня тела (`lm_compiler_body_own_in_var` требовал `own_host = 0` и прямое поле тела); вложенный контейнер давал оператору объявления слот с головой имени.
+
+## Механизм
+
+- **Хост активации.** В методе с частями (`fn`, `sub`, вне машинного модуля) `lm_compiler_own_add` берёт хост `lm_compiler_own_activation_host` (l2_frontend_lower.lm2, внутренняя, в конце модуля): ближайший `catch` на стеке областей, иначе 0 — активация метода. Повтор имени на любой глубине — повтор того же места (`lm_compiler_own_reuse_add`, как у корневого повтора 292); другой написанный тип — прежняя проверка контракта повтора, отказ `assignment value has incompatible type` на месте второго объявления. Видимость не менялась: имя открывается от исходного объявления вперёд (`lm_compiler_own_source_visible`), инициализатор исполняется при достижении строки.
+- **Место в `var`.** `lm_compiler_body_own_in_var` (l2_frontend_context.lm2) принимает и объявление, которое держит inline-оператор тела на любой глубине (`lm_compiler_inline_body_holds` / `lm_compiler_inline_structure_holds`: тела `if`, `else`, `while`, C-style `for` с его первым объявлением, анонимное тело; в обработчик `catch` и определение обход не входит). Часть `body` по-прежнему держит только головы корневого уровня (:441, :497).
+- **Раскладка `var`.** `lm_compiler_rw_body_var_slots` (l2_frontend_emit.lm2) после прямых полей тела ставит места остальных строк, которые `var` держит, в порядке строк (порядок `lm_compiler_collect_decls`), одинаково во всех фазах; вложенный контейнер (part 0) не даёт оператору такого объявления слота хранения с головой (`moved` в `lm_compiler_rw_stmts_in`). Native и обходчик дальше адресуют место маршрутом 292 (место `var` через выбранные данные).
+- Под явной data место вложенного объявления — требование к выбранной data: `call: m E` без места `b` — неявный `call` допуска до тела (p295d, p295g).
+
+## Свидетели
+
+[tests/dyn/var_own_nested.lm2](../../../selfbuild/tests/dyn/var_own_nested.lm2), native и forced, оба корня:
+
+| Код | Что проверяет |
+| --- | --- |
+| 81, 82 | `int: b 3` в `if` тела `fn`: `one()` = 3, `one\var\b` = 3 |
+| 83, 84 | тело `while`: `passes()` = 30, `passes\var\b` = 20 — место хранит последнее значение |
+| 85, 86 | корневое `int: y 1` и `int: y 2` в `if`: одно место, `again()` = 2, `again\var\y` = 2 |
+| 87, 88 | обе ветви `if`/`else` объявляют `z`: `branch(1)` = 5, `branch(0)` = 6, `branch\var\z` следует за веткой |
+| 89, 90 | анонимное тело `fn` (`anon\var\q` = 4); `if` в `sub` (`note\var\w` = 6, поле единицы через `node\`) |
+| 91 | `int: k 7` в `if` внутри цикла, который ведёт `k`: 80, `drive\var\k` = 8 |
+| 92, 93 | `call: one D` пишет `D\b`; data `E` без места `b` — неявный `call` допуска, обработчик исполняет своё объявление (9) |
+
+[tests/dyn/var_own_nested_type_refused.lm2](../../../selfbuild/tests/dyn/var_own_nested_type_refused.lm2): ветви объявляют `int: z` и `char: z` — отказ трансляции `:10:15: assignment value has incompatible type`. На кортеже 294 фикстура-отказ исполнялась (p295f, 7). Ряды обеих добавлены в поддерживаемый реестр.
+
+Пробы на кандидате (tool и runtime boot156a, fe157a; [probe295-e](records/pins/probe295-e.tsv), [лог](records/pins/tp151-probe-c295a.log)): p292h, p295a–p295d, p295g, p295h — 7 во всех запусках; p295f — отказ `:9:15: assignment value has incompatible type`; p295e — 156: ошибка самой пробы (после `s(5)` корень читал свою рабочую копию `seen`, которая по правилу публикации не перечитывается), проба исправлена на чтение через `node\`, как в фикстуре 292. Исправленная p295e, обе фикстуры, `var_own_fields` (292) и `sub_parts` (285) — 5 рядов, 0 отказов ([probe295-f](records/pins/probe295-f.tsv), [лог](records/pins/tp151-probe-c295b.log)).
+
+## Мутанты
+
+Ручные правки стейдж-файлов (инструмент Edit), каждая — сборка frontend ([tp157-fe](records/pins/tp157-fe.command)) и ряды [mut295](records/pins/mut295.tsv) (обе фикстуры); после каждой изменённые файлы стейджа возвращены из варианта и весь стейдж проверен `lmxtool verify` ([mut295-restore](records/pins/mut295-restore.tsv): m1, m2, m3, m4 — 232/0).
+
+| Мутант | Правка | Итог |
+| --- | --- | --- |
+| m1 (fe157m1) | `lm_compiler_own_add`: хост ближайшего тела вместо хоста активации | убит: фикстура — отказ трансляции `:98:25: unknown field path segment` (`one\var\b`) в обоих режимах; фикстура-отказ транслируется без отказа ([лог](records/pins/tp151-probe-m295a.log)) |
+| m2 (fe157m2) | `lm_compiler_body_own_in_var` без обхода inline-тел | убит: фикстура — тот же отказ `:98:25`; фикстура-отказ отказывает (регистрация не тронута) ([лог](records/pins/tp151-probe-m295b.log)) |
+| m3 (fe157m3) | `moved` только у тела метода (part 2), как в 292 | убит: forced оба корня 84 — оператор в теле `while` пишет вторую ячейку вложенного контейнера, `passes\var\b` не меняется; native 7 ([лог](records/pins/tp151-probe-m295c.log)) |
+| m4 (fe157m4) | `lm_compiler_rw_body_var_slots` без второго прохода | убит: трансляция фикстуры — `internal: a refusal said nothing (a step failed without a located diagnostic)` в обоих режимах ([лог](records/pins/tp151-probe-m295d.log)) |
+
+## Приёмка
+
+| Шаг | Результат | Receipts |
+| --- | --- | --- |
+| Кандидат | a01: три изменённых модуля frontend (lower, context, emit) сняты и скопированы, стейдж 230/0; fe157a (`build-frontend` рабочим tool и G2 frontend boot156a; tools/build.lm2 не менялся) 02:42:23→02:46:07Z, l2trans `476fc7e5…`; a02: те же модули, две фикстуры, ряды реестра и список входов — стейдж 232/0, модули a02 = a01 по хэшам; a03: комментарий `lm_compiler_own_add` по ответу Codex — стейдж 232/0. Runtime не собирался: ядро не менялось, кандидат шёл на G2 runtime boot156a | [a01](records/pins/tp157-prepare-a01.log), [a02](records/pins/tp157-prepare-a02.log), [a03](records/pins/tp157-prepare-a03.log), [fe157a](records/pins/tp157-fe-a01.terminal.txt) |
+| Реестр на кандидате | tool и runtime boot156a, fe157a, весь поддерживаемый реестр ([копия](records/pins/registry295-a.tsv), байты `selfbuild/tests/full-suite.tsv`): 109 рядов, 0 отказов, 921 проверка, 02:54:30.2358854Z→03:09:11.8147647Z (881.58 с) | [terminal](records/pins/tp151-probe-r295a.terminal.txt), [лог](records/pins/tp151-probe-r295a.log) |
+| Стейдж bootstrap | `steps` рабочего tool boot156a по [boot157a-prepare](records/pins/boot157a-prepare.tsv): 5/0, source-boot157a = source-tp157-a03 | [лог](records/pins/boot157a-prepare.log) |
+| Whole boot157a | 03:29:08.5957938Z→03:41:33.9821514Z, BootstrapExit 0, 745.39 с; `BOOTSTRAP quick 0 failures`; smoke 9/0 в обеих генерациях; G0 — рабочий tool boot156a `a1601d2b…` (tools/build.lm2 не менялся), предыдущий frontend — G2 boot156a `3faf511b…` | [terminal](records/pins/boot157a-quick.terminal.txt), [log](records/pins/boot157a-quick.log), [detached](records/pins/boot157a-detached.terminal.txt), [G2](records/cold-boot157a/quick157a/g2-build.log) |
+| Приёмка `checks` | рабочий tool boot156a. Первый прогон ([список](records/pins/boot157a-check.tsv)): 38 строк, 1 отказ — строка 33 самого списка (между путями `driver-observe.o` потерян табулятор при правке списка; команда получила одно слово, `CHECK 2`). Исправленный список [boot157a-check-b](records/pins/boot157a-check-b.tsv) (отличается только строкой 33): 38/0 — стейдж 232/0; записи producers G1 и G2 и запись сборки G2 замкнуты, без script host; G1 и G2: `exe-same` l2trans, l1trans, tool, `same` l2_libc.o, driver.o, driver-observe.o, L1 и C tool, consumed-inputs; рабочий tool и bundle = G2; runtime, на котором шёл кандидат (G2 boot156a), = G2 runtime boot157a байт в байт; fe157a = G2 по `exe-same` | [лог 1](records/pins/boot157a-check.log), [лог 2](records/pins/boot157a-check-b.log) |
+| Самотест G2 tool | рабочий tool boot157a `a6cf11be…` (= G2 tool), ребёнок `tool153a-child` 291-го (`40c935bc…`): `SELFTEST 0 failures` (12 строк `FAIL` — ожидаемые отказы негативных проверок схемы, как в 292–294) | [terminal](records/pins/tp152-selftest-g295.terminal.txt), [лог](records/pins/tp152-selftest-g295.log) |
+| Посадка | `steps` рабочего tool boot157a по [land295](records/pins/land295.tsv): 9/0, `selfbuild/inputs.sha256` = source-tp157-a03 `dc724b82…` (232 входа) | [терминал](records/pins/land295.terminal.txt), [лог](records/pins/land295.log) |
+
+Кортеж: рабочий tool `a6cf11bec47a0e9581231c0f1ed11b12f88f7c5e152beac743ff4fa9b319d28a` (= G2 tool), G2 l2trans `de9354f0149713041feefc691b3569b70a79983f85e28f03bc288c94739dfc1c`, l1trans `22578892516484b382831a763710feb21aff0bfc55c9f8b441f278928c4ea889`, l2_libc `af9fdae3…`, driver `b798ebae5eca4c58d76ca700955786c06f58ace919d87fb0e143f9eb30649c62`, observe `8f7323950a89e22756fa0ea6cd8b5133497b5b2cbc7dedb70ff45d687c1e9f34` (байты runtime 294); G0 — рабочий tool boot156a `a1601d2b6880edc936ac7cc8cb5689c39a45d25b5e6ad5898f861e1b34bee58c`. Source 232 входа, manifest `dc724b8222e6a731f22d572298033e289320a59ddf3d78a07dc1e4d4b6d78b72`.
+
+## Границы
+
+- **MACHINE-NO-SHADOW (OPEN).** Машинная функция сохраняет C-блочные области; норма исключения не даёт (ответ Codex 295, п. (а)). Census повторных вложенных имён в исходниках selfbuild (например, p0_parser.lm2 `diagnostic_line`, l2_copy_uses.lm2 `j`) сам конфликта не доказывает; перенос должен отличать повтор записи того же места от действительно разных C-локальных.
+- **ROOT-FILE-INLINE-DATA (OPEN).** Объявление внутри inline-оператора корня файла — по-прежнему строка вложенного хоста; контракт выбора и построения data входа файла не установлен (ответ Codex 295, п. (б)).
+- **VAR-OWN-NESTED-AND-REFERENCE, остаток (OPEN).** `fm` (по :437 — метод с частями), определения (метод, Structure, записанная форма), выходной операнд ресивера, ссылки на графовые Structure, поля методов с собственной раскладкой (callable merge, конструктор части) — на прежнем месте.
+- **`catch`.** Параметры и собственные поля обработчика — хост `catch`, как до среза; одноимённые параметры `catch` и внешнего метода не сливаются; inline-операторы внутри обработчика новых областей не дают (их строки — хост этого `catch`). Поток управления `catch` не менялся.
+- **Повтор с другим написанным типом** отказывает прежней проверкой контракта повтора объявления (`lm_compiler_own_add`, тип строки), теперь на любой глубине активации; значение повтора того же типа принимается местом обычной записью оператора. Приём значения повтора местом другого типа (`convert` и т. п.) срез не строит.
+- **C-style `for`.** Его объявление и тело подчиняются тому же правилу; поддерживаемая фикстура `for` не пишет (ни одна фикстура списка входов его не использует).
+
+## Провенанс
+
+Пробы, фикстуры, рецепты и списки записаны вручную инструментом Write, правки — инструментом Edit; мутанты — ручные правки стейдж-файлов с возвратом из варианта (`stage-copy`) и `lmxtool verify` всего стейджа. Подготовка кандидата и стейджа bootstrap, возвраты, приёмка, посадка и архив — `lmxtool steps`/`checks` из своих каталогов запуска; PS-рецепты — запуски одной команды инструмента с охранниками: `tp157-fe` (из `tp156-fe` заменой меток и хэшей), `boot157-quick` (из `boot154-quick`: G0 — рабочий tool, tools/build.lm2 не менялся), `boot157-detached` (из `boot156-detached`), `tp151-probe` (289), `tp152-selftest` (290). Список приёмки [boot157a-check](records/pins/boot157a-check.tsv) получен из списка 294 заменой меток (`sed`), реестр [registry295-a](records/pins/registry295-a.tsv) — копия `selfbuild/tests/full-suite.tsv` (`cp`, хэши равны). Отступления:
+
+1. Census повторных объявлений по исходникам selfbuild и по фикстурам — `awk` по файлам точного списка входов (`selfbuild/inputs.list`, через `xargs`), только чтение; до него поиск `grep -ln "^    for: ..." selfbuild/tests/dyn/*.lm2` шёл шаблоном по каталогу (пустой вывод), после него — по точному списку.
+2. Пробы p295d (первая версия: data `D` без места `r`, R0 остановлен в b295a), p295e (чтение рабочей копии `seen`, c295a: 156) и p295f (первая версия: `r: z` при `char: z` требовал приёмника `lm_stg_convert_char_int`, b295c) исправлены на месте под тем же именем; их receipts относятся к первым версиям, копии в [records](records) — последние.
+3. Список изменённых файлов a01 (`tp157-changed.list`, три модуля) был по ошибке перезаписан списком a02 и сразу восстановлен с прежними тремя строками; у a02 свой список `tp157-changed-a02.list` (манифест a01 `tp157-changed-a01.sha256` фиксирует его входы).
+4. Правка мутанта m3 и запуск его сборки шли в одном сообщении; терминал сборки записал хэш уже изменённого `l2_frontend_emit.lm2` (`8d0fa8c2…`, у a01 — `20e99664…`).
+5. Первый запуск проб «до» (`powershell -File tp151-probe.command`) не начался: PowerShell отказывает файлу без расширения `.ps1`; повтор — прежней формой `[scriptblock]::Create`.
+6. Поиск команды запуска prepare 294 и текста ответа Codex — `grep` по транскриптам сессий (без листинга каталогов); фоновый `grep` с длинным шаблоном по транскрипту relay остановлен (`TaskStop`), его осиротевший процесс (PID 15104, только этот) завершён.
+7. a03 отличается от a02 только комментарием `lm_compiler_own_add` (l2_frontend_lower.lm2) по ответу Codex; сгенерированный L1 комментариев исходника не несёт (строки комментария в `l2_frontend_lower.lm1` стейджа нет). Реестр и мутанты шли на fe157a из байтов a01/a02.
+8. Список приёмки получен `sed` из списка 294: шаблон `cold-tp140/rt156b/driver.o` (точка — любой символ) задел и путь `driver-observe.o`, ручная правка Edit вернула имя, но потеряла табулятор между путями; первый прогон `checks` отказал на этой строке. Исправленный список — новый файл, receipt первого прогона сохранён.
+9. Ребёнок самотеста сначала проверен по неверному пути (`tool153a-child/` в корне P, `test -f` — нет файла), затем найден по пути рецептов 292–294 (`cold-tp140/tool153a-child/lmxchild-prod.exe`, `40c935bc…`) поиском по транскрипту сессии.
+10. Ожидание конца bootstrap было поставлено двумя фоновыми циклами чтения терминала (второй — после таймаута первого вызова); оба только читали файл и завершились вместе.
+11. Первый список копий с CR (`crlf295-1.list`) получился пустым: `grep` Git Bash в текстовом режиме не видит `\r`; список удалён и записан заново `grep -U` (64 копии) до каких-либо удалений.
+
+Архив и docs check — `steps`/`checks` рабочего tool boot157a. Первый проход ([docs295-archive-1](records/pins/docs295-archive-1.tsv), [лог](records/pins/docs295-archive-1.log)): манифест 105 путей P из [records295.list](records/pins/records295.list), их байтовые копии `stage-copy` в [records](records), [evidence.sha256](evidence.sha256) проверен против P и против копий. Затем точный allowlist ([allow295-1](records/pins/allow295-1.list), 122 пути) проиндексирован `git add --pathspec-from-file`, индекс сверен со списком (`diff`, до этого индекс был пуст); 64 копии с CR (receipts PowerShell; [список](records/pins/crlf295-1.list)) удалены по точному списку и записаны git из индекса с LF (`git checkout-index --stdin`), CR пересчитан по байтам (0 из 122) — эти копии равны оригиналам с точностью до концов строк. Каталог PRIVATE_OUT языкового docs check создан до запуска (DOCS-CHECK-SILENT-PRIVATE-OUT). Docs check ([список](records/pins/docs295-check-a.tsv)): `CHECKS 1 lines, 0 failed`, «line endings LF» ([terminal](records/pins/docs295-check-a.terminal.txt), [лог](records/pins/docs295-check-a.log)). Второй проход (`pins/docs295-archive-2.tsv`) скопировал receipts первого прохода и docs check, манифест первого прохода, allowlist и список CR; итоговый evidence-манифест (114 путей) проверен против P; эта записка и копии второго прохода добавлены к индексу вторым точным списком, после чего docs check повторён над итоговым индексом. Receipts второго прохода и повторного docs check остаются в P (`pins/docs295-archive-2.*`, `pins/docs295-check-b.*`).

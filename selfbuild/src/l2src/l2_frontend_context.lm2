@@ -2643,5 +2643,77 @@ fn: lm_compiler_body_own_in_var (int: mi; int: own) int
     # A written form (lm_compiler_own_written) holds a reference to its Structure: the next test keeps it too.
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][own]) != 0 && c.lm_compiler_own_is_graph(own_ty_cell[0][own]) != 0
         return: (cast: (int) (0))
-    return: (cast: (int) (lm_compiler_method_source_contains_own(mi, 3, own)))
+    if: lm_compiler_method_source_contains_own(mi, 3, own) != 0
+        return: (cast: (int) (1))
+    # Slice 295 (VAR-OWN-NESTED-AND-REFERENCE; the book :441): a declaration an inline statement of the body holds names the
+    # activation's one place too (lm_compiler_own_add gives its row the method's host): var holds it.  The body's part keeps
+    # the heads of its root level alone (:441, :497).
+    return: (cast: (int) (lm_compiler_inline_body_holds(mi, own)))
 end: lm_compiler_body_own_in_var
+
+# Slice 295 (VAR-OWN-NESTED-AND-REFERENCE): whether the declaration of a method's own row stands in an inline statement of the
+# method's written body -- the body of an `if`, of its `else`, of a `while`, of a C-style `for` (with its first declaration),
+# an anonymous body -- at any depth, by the statements lm_compiler_collect_decls walks for that method.  A catch's handler is
+# another activation's (lm_compiler_own_same_activation) and a retained definition no statement of this body; the walk
+# enters neither.
+fn: lm_compiler_inline_body_holds (int: mi; int: own) int
+    @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    if: mi < 0 || mi >= m_n_cell[0] || own < 0 || own >= own_n_cell[0] || own_decl_cell[0][own] = 0 || m_body_cell[0][mi] = 0 || m_body_cell[0][mi]\as = 0 || m_body_cell[0][mi]\as\structure = 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (lm_compiler_inline_structure_holds((cast: (const: @: c.LmP0Structure) (m_body_cell[0][mi]\as\structure)), (cast: (const: @: c.LmP0Node) (c.lm_compiler_head_source_node(own_decl_cell[0][own]))), 0)))
+end: lm_compiler_inline_body_holds
+
+# The walk of lm_compiler_inline_body_holds over one statement list: nested != 0 when the list is an inline statement's body,
+# whose own statements are then compared with the declaration's source.
+fn: lm_compiler_inline_structure_holds (const: (@: body c.LmP0Structure); const: (@: source c.LmP0Node); int: nested) int
+    @: field c.LmP0Field
+    @: last c.LmP0Field
+    @: stmt c.LmP0Node
+    int: n
+    int: j
+    if: body = 0 || source = 0
+        return: (cast: (int) (0))
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
+    while: field != 0
+        stmt: field\value
+        if: nested != 0 && stmt != 0 && c.lm_compiler_head_source_node(stmt) = source
+            return: (cast: (int) (1))
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && c.lm_compiler_discard_run(field) <= 0
+            if: lm_compiler_inline_structure_holds((cast: (const: @: c.LmP0Structure) (stmt\as\structure)), source, 1) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        if: (c.lm_compiler_frame_head(stmt, "if") != 0 || c.lm_compiler_frame_head(stmt, "while") != 0) && stmt\as\frame\body != 0
+            n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
+            last: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
+            j: 1
+            while: j < n && last != 0
+                last: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (last\next)))
+                j: j + 1
+            ---
+            if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_STRUCTURE && last\value\as != 0 && lm_compiler_inline_structure_holds((cast: (const: @: c.LmP0Structure) (last\value\as\structure)), source, 1) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        if: c.lm_compiler_frame_head(stmt, "else") != 0 && stmt\as\frame\body != 0 && lm_compiler_inline_structure_holds((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)), source, 1) != 0
+            return: (cast: (int) (1))
+        if: c.lm_compiler_frame_head(stmt, "for") != 0 && c.lm_compiler_for_cstyle(stmt) != 0
+            last: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
+            if: last != 0 && last\value != 0 && c.lm_compiler_head_source_node((cast: (const: @: c.LmP0Node) (last\value))) = source
+                return: (cast: (int) (1))
+            j: 0
+            while: j < 4 && last != 0
+                last: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (last\next)))
+                j: j + 1
+            ---
+            if: last != 0 && last\value != 0 && last\value\kind = c.LM_P0_NODE_STRUCTURE && last\value\as != 0 && lm_compiler_inline_structure_holds((cast: (const: @: c.LmP0Structure) (last\value\as\structure)), source, 1) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_inline_structure_holds

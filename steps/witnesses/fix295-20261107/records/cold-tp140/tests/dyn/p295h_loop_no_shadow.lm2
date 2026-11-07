@@ -1,0 +1,25 @@
+# Slice 295 probe (the book :133, :387, :424): a declaration of `k` in an `if` inside the loop that `k` drives writes the
+# activation's one place `k` -- no shadowing by depth -- so the loop ends after it: s = 10 + 70 = 80 (a separate inner `k`
+# would give 10 + 20 + 30 = 60).  Entry 7; a wrong value leaves as the exit code (v, then 100 + v).
+fn: m () int
+    int: k 1
+    int: s 0
+    while: k < 4
+        if: k = 2
+            int: k 7
+        ---
+        s: s + k * 10
+        k: k + 1
+    ---
+    return: s
+end: m
+int: code 7
+int: v m()
+if: v != 80
+    code: v
+---
+if: code = 7 && m\var\k != 8
+    code: 100 + m\var\k
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

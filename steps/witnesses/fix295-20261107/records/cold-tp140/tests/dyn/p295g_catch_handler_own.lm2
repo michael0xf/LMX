@@ -1,0 +1,32 @@
+# Slice 295 probe (boundary): a declaration in a catch's handler belongs to the catch's reception, which the translator
+# counts as another activation (lm_compiler_own_same_activation): it runs and is read in the handler.  The data E has no
+# place `b` that m's nested declaration writes: the call's admission refuses before the body, the implicit `call` the
+# handler takes.  Entry 7; a wrong value leaves as the exit code.
+fn: m () int
+    int: r 0
+    if: r = 0
+        int: b 3
+        r: b
+    ---
+    return: r
+end: m
+E:
+    int: r 0
+end: E
+fn: h () int
+    int: r 0
+    ---
+        call: m E
+        catch: call ()
+            int: w 9
+            r: w
+    ---
+    return: r
+end: h
+int: code 7
+int: v h()
+if: v != 9
+    code: v
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

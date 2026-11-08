@@ -108,6 +108,12 @@ fn: dl_document (@: path char) int
             break
         if: after > first
             failed: dl_target(path, stripped + first, after - first)
+            if: failed != 0
+                c.printf("FAIL: documentation link in %s: ", path)
+                c.fwrite(stripped + first, 1U, after - first, c.stdout)
+                c.fputs("\n", c.stdout)
+            ---
+        ---
         scan: after + 1U
     ---
     c.free(original)

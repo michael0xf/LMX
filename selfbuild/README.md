@@ -1,5 +1,13 @@
 # Maintained L3/L2 source package
 
+Current owner (2026-11-08): Codex, the sole writer/build/docs; Fable and Opus are stopped. The clean-graph migration
+uses the existing language-owned build route. The current graph06/tool09/rt05 slice passes 24 interp/native/forced
+cases and 10 mutation checks, including a second traversal after a computed declaration is published. Data writes
+preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
+slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
+[Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
+are historical. The current input manifest has 280 entries.
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
@@ -107,7 +115,25 @@ at a Structure formal 10, a char field at an int formal through the program's re
 their names (`bld_kernel_l2`: lmx_implements 73, lmx_walk_values 176). Acceptance of the second pass (candidate a25): the probe p307n on the a25 tuple (tool170e `91da2e20…`, rt170f `b6a65587…`, fe170r `1ff71021…`): 7 rows, 42 PASS, 0 failures, native and forced, both roots; the whole maintained registry on a25 139 rows / 1102 checks / 0 failures; five mutants killed (the walker's and the native names-and-form check before the actual by the forced and the native run, exit 98; the lift and the field applicability in both directions by the translation of the fixtures); whole boot170b 678 s with 0 failures (74 PASS, smoke 0 failures; G0 = the stage's tool170e, the previous frontend the G2 of boot169a); checks 38/0 (rt170f the same bytes as the G2 runtime, fe170r exe-same as the G2 frontend; G2 tool `41fe7cbe…`); the G2 tool's self-test 0 failures; landing 9/0 (manifest `36930663…`, 264 inputs); docs render/verify 3/0; docs check 0 (the repeat docs307c-check after the normalization from the index of the 160 CRLF copies of receipts in the working copy on which the first run failed; the final index checked once more before the commit, receipts in P).
 Acceptance of the first pass (ce01c206, candidate a11): the maintained registry 139 rows / 1102 checks / 0 failures, six
 mutants killed, whole boot170a 677 s with 0 failures and smoke 9/0, checks 38/0, landing 264 inputs, docs check 0; Codex's
-review (CODEX-FABLE-307-REVIEW-20261108094230Z-01) did not accept its closure and asked for the second pass. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+review (CODEX-FABLE-307-REVIEW-20261108094230Z-01) did not accept its closure and asked for the second pass. Slice308 (IDENTIFIER-CODES
+in the translator; fable_pc) was STOPPED by the author's directive of 2026-11-08 (relayed by Codex; verbatim in
+LMX_blog/2026-11-08.md) before landing: nothing of it is in this package; its candidate a15 is kept as WIP in
+steps/witnesses/fix308-20261108 (the patch records/wip308-a15.patch, the receipts). The directive replaces the numeric-codes
+direction by a kernel implementation specification first (docs/kernel-implementation.ru.md, .en.md) and a rebuild after it.
+The stopped candidate moved the translator's internal comparisons to codes: `LmP0Text`
+carries the code of its spelling, the one text boundary is `lm_p0_text_code` (P0 gives a code to every atom and head but a
+number, a string and an empty text; an exact identifier in backticks gets the code of its value -- the grammar's exact
+identifiers), every text the frontend builds gets its code and a copy carries its source's code (`lm_compiler_text_clone`;
+the first candidates computed the copy's code before its bytes were written: the code 0 of NUL bytes on a fresh heap, a
+code of garbage on a reused one, found with gdb on a debug twin); `lm_compiler_text_same` compares codes and a spelling
+without a code at a comparison is an invariant of the translator (`l2trans: invariant: ...`, exit 3, no byte fallback), the
+~900 literal comparisons go through the word table `l2_words` (`LM_W_*`, 129 words filled once through `lmx_ids_code`, the
+kernel's 20 first), the implicit throws are the walker's numbers, path segments are read with their codes at the split
+(`lm_compiler_seg_text`/`seg_same`/`seg_word`), primitive codes are compared as codes (`lm_compiler_prim_same`, `prim_code`),
+the `primitive.description`/`primitive.convert` tables are read by the codes of their cells (`lm_compiler_tbx_code`), the
+signature intern stores the codes of the formal and hidden-input names (`l2_it_nc`, `l2_it_hc`), the CLI's machines and
+providers are matched by codes; `lmx_ids` is a part of the l2trans and l1trans builds (its own instance per translator
+process). The L1 translator and the RESULT tests remain the rest of the transition. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

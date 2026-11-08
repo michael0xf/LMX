@@ -116,10 +116,28 @@ the place tables `[m, SIZE_MAX, (code, type)...]`, the activation bindings,
 the binder of named actuals, the path selectors `(code, occurrence,
 prefix)` and the throw keys of native code and the walker work by codes; a
 copy carries the code without reading a spelling (slice 302, an
-intermediate result). The translator's internal comparisons (P0, scopes,
-resolve, signature interning, throw keys) and the L1 translator still
-compare strings -- the rest of the transition ([defect
-register](../steps/defects.md)).
+intermediate result). Slice 308 (the translator's internal comparisons by
+the same codes) was stopped by the author's directive of 2026-11-08 before
+landing in selfbuild -- its candidate is kept as WIP in the
+[record](../steps/witnesses/fix308-20261108/notes.md). The author's decisions
+of 2026-11-08 18:00–18:20Z ([journal](../LMX_blog/2026-11-08.md)): a distinct type
+"T without initialization" for every primitive, told apart by the region of the
+cell's address -- a pointer onto the pre-existing cell of the place; the
+pointer is replaced only at the first assignment, which writes into that same
+cell (19:02Z); every verification goes by arena addresses, addresses are
+immovable; service operators and receivers have no separate codes; the term
+"primitive" replaces "atom". The directive
+([journal](../LMX_blog/2026-11-08.md)) replaces the numeric-codes
+direction: the Lmx graph suffices to describe everything, the only
+non-Structure is the primitive (its address gives its type, name and value), the
+interpreter needs no parallel hidden structures of the program -- its
+service traversal tables are left to the implementers; a name is read from
+the address → name table; identifiers are single reused strings with stable
+addresses compared by pointer; the arena attaches typed regions without
+moving cells. The design is the [kernel implementation
+specification](kernel-implementation.en.md); the present `lmx_ids`,
+`LmxSourceName`, place tables and codes are a transitional state to be
+replaced by it ([defect register](../steps/defects.md)).
 
 <a id="l3-status"></a>
 ## 4. L3 interpreter and admission

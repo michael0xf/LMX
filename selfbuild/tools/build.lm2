@@ -1053,7 +1053,7 @@ fn: decl_lmx (@: f c.FILE) int
         return: 1
     if: c.fputs("    LMX_TYPE_ARRAY_OF_DESC 11\n    # k.4 (2026-09-25): the LmxMethod pool/array is gone with LmxMethod itself; reserved.\n    LMX_TYPE_RESERVED_12 12\n    # an Lmx header: the Structure domain itself\n    LMX_TYPE_STRUCT 13\n    # SPEC 11.2.1 / ABI 3.3: the L2 form `@: ptr char \"hello\"` stores a child pointer into a\n    # typed array of char * values, each pointing directly at a C string.  No length,\n    # no Array record.  Kind PRIMITIVE, stride sizeof(char *).\n    LMX_TYPE_CHAR_PTR 14\n    # Appended so existing numeric ABI values stay stable.  `unsigned` is a distinct\n    # primitive address domain; it is not SIZE_T even on hosts where their widths\n    # happen to match.\n    LMX_TYPE_UNSIGNED 15\n    # Appended independently of the scalar SIZE_T domain: this identifies Array\n    # descriptors whose backing cells are size_t values.\n    LMX_TYPE_ARRAY_OF_SIZE_T 16\n    # A C typedef of unsigned char remains distinct from plain char.\n    LMX_TYPE_UNSIGNED_CHAR 17\n    LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR 18\n    LMX_TYPE_ULONG 19\n    LMX_TYPE_ARRAY_OF_ULONG 20\n    # Independent source-name service storage; never a graph child/value tag.\n    # 21..34 are the existing LMX_DOMAIN_* values; do not reuse them.\n    LMX_TYPE_SOURCE_NAME 35\n", f) < 0
         return: 1
-    if: c.fputs("    # Identity-only source symbol occurrence. Spelling lives in the external\n    # name table, not in this cell; it is not a machine operation record.\n    LMX_TYPE_SOURCE_SYMBOL 36\n    # Scalar pointer variables live in pointer cells.  The concrete source pointer\n    # type is encoded as LMX_TYPE_POINTER_BASE + a closed-unit type id, so @T and @@T\n    # occupy distinct address domains.\n    LMX_TYPE_POINTER_BASE 1024\n    # The Message reference -- a pointer cell holding a Message record's address, a letter's\n    # sender -- is LMX_TYPE_POINTER_BASE + 29 (29 is l2trans's l2_msg_ref_ty()).  Named once here:\n    # the kernel, the driver, the selftests and the cells the translator emits all say\n    # LMX_TYPE_MSG_REF.  (An L1 enum value is one literal; the sum is written out.)\n    LMX_TYPE_MSG_REF 1053\n    # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): the kernel's own pointer code for the address of a cell that no\n    # pointer code of the table expresses -- a graph or Array reference cell, a pointer cell of a translator code, an\n    # unsigned char cell, an element place: LMX_TYPE_POINTER_BASE + 64, below the translator's foreign band (POINTER_BASE +\n    # 100 and up) and above its fixed codes.  The pointee is read from the addressed cell or its owning record\n    # (lmx_walk_value_deref_actual), never from this code (lmx_type_pointee gives NONE); a typed pointer place receives such\n    # an address by the actual pointees (lmx_walk_value_receive_pointer).\n    LMX_TYPE_CELL_POINTER 1088\n    # Array<@T> descriptors have their own exact address domain.  For the same\n    # closed-unit T id, backing cells use POINTER_BASE + id and the descriptor uses\n    # ARRAY_OF_POINTER_BASE + id.  Array length is dynamic; these values classify\n    # types, not storage slots or capacity.\n    LMX_TYPE_ARRAY_OF_POINTER_BASE 1048576\nend: LmxType\n\n", f) < 0
+    if: c.fputs("    # Identity-only source symbol occurrence. Spelling lives in the external\n    # name table, not in this cell; it is not a machine operation record.\n    LMX_TYPE_SOURCE_SYMBOL 36\n    # The clean graph (slice 309, docs/kernel-implementation.*.md, section 2.2): a word primitive is a cell holding the\n    # canonical address of an interned spelling; a NAME row is {address, name} of the address -> name table.\n    LMX_TYPE_WORD 37\n    LMX_TYPE_NAME 38\n    # The bytes of interned spellings (section 4): char cells of the arena that owns the string state.\n    LMX_TYPE_TEXT 39\n    # Scalar pointer variables live in pointer cells.  The concrete source pointer\n    # type is encoded as LMX_TYPE_POINTER_BASE + a closed-unit type id, so @T and @@T\n    # occupy distinct address domains.\n    LMX_TYPE_POINTER_BASE 1024\n    # The pointer primitive of a place without a value -- int without initialization (the author, 2026-11-08 19:02Z;\n    # the spec, section 3.2): a pointer cell of the pointer domain pointing at the not yet written int cell of its place.\n    LMX_TYPE_UNINIT_INT 1001024\n    # The clean graph's initialized pointer to an int cell. Physical address typing, not a language opcode.\n    LMX_TYPE_GRAPH_INT_REF 1001025\n    # The Message reference -- a pointer cell holding a Message record's address, a letter's\n    # sender -- is LMX_TYPE_POINTER_BASE + 29 (29 is l2trans's l2_msg_ref_ty()).  Named once here:\n    # the kernel, the driver, the selftests and the cells the translator emits all say\n    # LMX_TYPE_MSG_REF.  (An L1 enum value is one literal; the sum is written out.)\n    LMX_TYPE_MSG_REF 1053\n    # Slice 261 (design 4.5 B2b-2d, P1-PTR-COVERAGE): the kernel's own pointer code for the address of a cell that no\n    # pointer code of the table expresses -- a graph or Array reference cell, a pointer cell of a translator code, an\n    # unsigned char cell, an element place: LMX_TYPE_POINTER_BASE + 64, below the translator's foreign band (POINTER_BASE +\n    # 100 and up) and above its fixed codes.  The pointee is read from the addressed cell or its owning record\n    # (lmx_walk_value_deref_actual), never from this code (lmx_type_pointee gives NONE); a typed pointer place receives such\n    # an address by the actual pointees (lmx_walk_value_receive_pointer).\n    LMX_TYPE_CELL_POINTER 1088\n    # Array<@T> descriptors have their own exact address domain.  For the same\n    # closed-unit T id, backing cells use POINTER_BASE + id and the descriptor uses\n    # ARRAY_OF_POINTER_BASE + id.  Array length is dynamic; these values classify\n    # types, not storage slots or capacity.\n    LMX_TYPE_ARRAY_OF_POINTER_BASE 1048576\nend: LmxType\n\n", f) < 0
         return: 1
     if: c.fputs("enum: LmxKind\n    # not a classifiable high-level value\n    LMX_KIND_NONE 0\n    # primitive pool entry, e.g. all_chars_array\n    LMX_KIND_PRIMITIVE 1\n    # k.4 (2026-09-25): LmxMethod is gone (Lmx.native replaces it); reserved.\n    LMX_KIND_RESERVED_2 2\n    # typed graph Array pool entry (the common Lmx header)\n    LMX_KIND_ARRAY 3\n    # a Structure's void * child-pointer array: a storage location, not a value\n    LMX_KIND_CHILDREN 4\n    # pointer-valued array element; type is T\n    LMX_KIND_REF 5\n    # an ordinary Lmx header {parent, native, array}\n    LMX_KIND_STRUCT 6\n    # independent L1 dynamic container (VoidArray); not an Array.  lmx_range_classify\n    # answers LmxKind and the domain kinds (lmx_implements.h.lm1, 7..20) in ONE number space,\n    # so this value follows the last domain kind: 7 was LMX_DOMAIN_KIND_MSG_RECORD, and a\n    # Thread/Message record classified as a List.\n    LMX_KIND_LIST 21\n    # Weak address-keyed source payloads outside the graph's child arrays.\n    LMX_KIND_SOURCE_NAME 22\n    LMX_KIND_SOURCE_SYMBOL 23\n    # Physical field-address backing. Each void * cell holds the ALREADY\n", f) < 0
         return: 1
@@ -1108,7 +1108,7 @@ fn: decl_arena (@: f c.FILE) int
         return: 1
     if: c.fputs("struct: LmxArena\n    @: LmxArenaBlock blocks\n    @: LmxPool arrays\n    # Sorted address index as one DynamicArray of LmxRange (Q18). len = live entries;\n    # capacity = allocated room. Storage is malloc/realloc, not an arena typed array.\n    LmxRangeDynamicArray: index\n    # The mark generation of the last collection pass (lmx_gc).  The pass bumps it and stamps\n    # every chunk it walks, so \"is this reachable\" is one comparison per chunk and nothing has\n    # to be cleared between passes.  It is the arena's own bookkeeping, like the index: no\n    # caller reads it, and only the collection pass writes it.\n    unsigned: generation\n    # 1 = letter-scale arena (Mikhail 19.09 simplified): same index + array\n    # descriptors + address stability; no GC pass; no multi-chunk growth per array.\n    # Cleared by release / left 0 after attach empties the donor.\n    unsigned: simple\n    # Disposable classification-only union for a graph-copy source. It may\n    # inspect foreign mutable ranges but owns none of their cells; it cannot\n    # allocate, attach, or be attached to a live Message arena.\n    unsigned: source_view\n    # D-105: the `implements` table's address correspondences (LmxImplEntry) -- malloc'd like\n    # the index, `impl_len` live entries of room for `impl_cap`.  Written only by\n    # lmx_implements_register and lmx_arena_impl_prune; attach moves the donor's.\n    @: LmxImplEntry impl\n    size_t: impl_len\n    # The reset generation of the code links (slice 253, lmx_code_reset_from): the records a reset takes carry it as\n    # their visit mark, so a reset over cycles and shared subgraphs ends without allocating.  Attach keeps the larger.\n    size_t: reset_gen\n    # The innermost activation record of this arena's serial lane (LmxActivation, slice 254): pushed and popped by\n    # the executors' entries, read by the resolver of free inputs.  Zero between turns.\n    @: void activation\n    @: LmxCallPlaces call_places\n", f) < 0
         return: 1
-    if: c.fputs("    size_t: impl_cap\nend: LmxArena\n\nprototype:\n    # Zero the arena.  A by-value arena must be cleared before it is opened; opening a\n    # non-empty one is refused, exactly as a pool refuses to be opened twice.\n    fn: lmx_arena_open (@: LmxArena arena) int\n    # Letter-scale open (POLL 19.29.7.1 / Mikhail 19.09): same LmxArena, primed\n    # small index capacity; GC and multi-chunk growth are refused. Index,\n    # array descriptors and address stability are unchanged.\n    fn: lmx_arena_open_simple (@: LmxArena arena) int\n    fn: lmx_arena_open_source_view (@: LmxArena arena) int\n    # The arena's array of this kind and type, or null when it has none yet.\n    fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool\n    # The same lookup with an exact physical receiver-profile identity.  profile=0 is the\n    # ordinary unqualified array and is what lmx_arena_find selects.\n    fn: lmx_arena_find_profiled (@: LmxArena arena; int: kind; int: type; @: Lmx profile) @: LmxPool\n    # A cell (or `count` consecutive cells) of the arena's array of this kind and type:\n    # the array is found among the arena's N arrays, or MADE when the arena has none of\n    # that kind and type yet.  A mutable value is therefore an element of THAT array --\n    # never an array of its own.\n    fn: lmx_arena_take (@: LmxArena arena; size_t: stride; int: kind; int: type) @: void\n    fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void\n    fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void\n", f) < 0
+    if: c.fputs("    size_t: impl_cap\nend: LmxArena\n\n# ---- The clean graph (slice 309; docs/kernel-implementation.*.md) ----------------------------------------------\n# A row of the address -> name table of an arena (section 5.1): the address of a named primitive or Lmx and the\n# canonical address of its spelling. Rows are the heap storage of the arena's LmxGraph record: an index of arena\n# state, not a graph value.\nstruct: LmxName\n    @: void address\n    @: char name\nend: LmxName\n\n# The clean-graph record of one arena: the arena, its address -> name table and the chain of the process's records.\n# Made by lmx_graph_open, found by lmx_graph_find (lmx_graph.lm2). Declared here, after LmxArena, which lmx.h.lm1\n# does not know.\nstruct: LmxGraph\n    @: LmxArena arena\n    @: LmxName names\n    size_t: names_len\n    size_t: names_cap\n    @: LmxGraph next\nend: LmxGraph\n\n# The process's interned spellings (one canonical address per spelling, section 4), its graph records and the words of\n# the language the executors compare against by address (section 6.2). The spellings' bytes lie in the `text` region of\n# the state's own arena; texts/sizes are the index of the search by bytes.\nstruct: LmxGraphState\n    @: LmxArena spellings\n    @@: char texts\n    @: size_t sizes\n    size_t: count\n    size_t: cap\n    @: LmxGraph graphs\n    @: char w_int\n    @: char w_plus\n    @: char w_minus\n    @: char w_star\n    @: char w_slash\n    @: char w_percent\n    @: char w_at\n    @: char w_deref\n    @: char w_fn\n    @: char w_return\nend: LmxGraphState\n\nprototype:\n    # Zero the arena.  A by-value arena must be cleared before it is opened; opening a\n    # non-empty one is refused, exactly as a pool refuses to be opened twice.\n    fn: lmx_arena_open (@: LmxArena arena) int\n    # Letter-scale open (POLL 19.29.7.1 / Mikhail 19.09): same LmxArena, primed\n    # small index capacity; GC and multi-chunk growth are refused. Index,\n    # array descriptors and address stability are unchanged.\n    fn: lmx_arena_open_simple (@: LmxArena arena) int\n    fn: lmx_arena_open_source_view (@: LmxArena arena) int\n    # The arena's array of this kind and type, or null when it has none yet.\n    fn: lmx_arena_find (@: LmxArena arena; int: kind; int: type) @: LmxPool\n    # The same lookup with an exact physical receiver-profile identity.  profile=0 is the\n    # ordinary unqualified array and is what lmx_arena_find selects.\n    fn: lmx_arena_find_profiled (@: LmxArena arena; int: kind; int: type; @: Lmx profile) @: LmxPool\n    # A cell (or `count` consecutive cells) of the arena's array of this kind and type:\n    # the array is found among the arena's N arrays, or MADE when the arena has none of\n    # that kind and type yet.  A mutable value is therefore an element of THAT array --\n    # never an array of its own.\n    fn: lmx_arena_take (@: LmxArena arena; size_t: stride; int: kind; int: type) @: void\n    fn: lmx_arena_take_n (@: LmxArena arena; size_t: stride; int: kind; int: type; size_t: count) @: void\n    fn: lmx_arena_take_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile) @: void\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_arena_take_n_profiled (@: LmxArena arena; size_t: stride; int: kind; int: type; @: Lmx profile; size_t: count) @: void\n    # Same Lmx representation, but a distinct typed Structure pool for the\n    # result of a receiver. Ordinary allocation always selects role 0.\n    fn: lmx_arena_take_struct_role (@: LmxArena arena; @: Lmx profile; unsigned: role) @: Lmx\n    fn: lmx_arena_take_struct_physical_role (@: LmxArena arena; int: physical_type; @: Lmx profile; unsigned: role) @: Lmx\n    # A run of pointer-object cells in the primitive pool of this exact\n    # physical type/profile. Access callbacks belong to the pool, not to\n    # names or individual cells. A mismatched existing pool is refused.\n    fn: lmx_arena_pointer_cells_profiled (@: LmxArena arena; int: type; @: Lmx profile; size_t: stride; LmxPointerCellRead: read; LmxPointerCellWrite: write; size_t: count) @: void\n    fn: lmx_arena_pointer_void_read (@: void cell) @: void\n    fn: lmx_arena_pointer_void_write (@: void cell; @: void value) int\n    fn: lmx_arena_pointer_char_read (@: void cell) @: void\n    fn: lmx_arena_pointer_char_write (@: void cell; @: void value) int\n    # An array joins: the descriptor is linked into the arena's arrays and the block\n    # carrying the descriptor (when there is one) joins the arena's block list.  The\n    # interval is registered by lmx_arena_span, which the same caller does next.\n    fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int\n    # An array leaves the arena's list (it is no longer one of its N arrays).  Its\n    # intervals are retired by lmx_range_drop, one per chunk.\n    fn: lmx_arena_array_drop (@: LmxArena arena; @: LmxPool array) int\n    # One interval [base, base + bytes) of one array joins the arena's index.  This IS\n    # the insertion into the table, and only the arena's manager performs it.\n    fn: lmx_arena_span (@: LmxArena arena; @: LmxPool array; @: void base; size_t: bytes) int\n    # Detach one block: its interval leaves the index first, then the block leaves the\n    # list.  Ownership and typing never disagree -- and the block that CARRIES a\n    # descriptor goes with the array it describes: the array leaves the arena's list of\n    # its N arrays as that block leaves the block list, so the arena never keeps a\n", f) < 0
         return: 1
@@ -1173,6 +1173,14 @@ fn: decl_ids_state (@: f c.FILE) int
         return: 1
     return: 0
 end: decl_ids_state
+
+# The text of l2src/lmx_graph_state.lm1, the state unit of the clean graph (lmx_graph.lm2, slice 309): the one anchor of
+# the process's interned spellings and graph records. 0, or 1 when a write fails.
+fn: decl_graph_state (@: f c.FILE) int
+    if: c.fputs("predef: \"l2src/lmx_arena.h.lm1\"\n\n# The process's clean-graph state (lmx_graph.lm2), made on its first use.\n@: LmxGraphState lmx_graph_anchor 0\n", f) < 0
+        return: 1
+    return: 0
+end: decl_graph_state
 
 # The text of l2src/lmx_gc.h.lm1, the collection's: its answers and depth, and the prototypes of the physical mark and
 # sweep (src/l2src/lmx_gc_graph.lm2) and of the Thread collector (lmx_gc.lm2). 0, or 1 when a write fails.
@@ -1912,6 +1920,8 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_ids(f)
     if: kind = 58
         r: decl_ids_state(f)
+    if: kind = 59
+        r: decl_graph_state(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -1944,10 +1954,11 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
     @: walk_decl char txt_path(src, "l2src/lmx_walk_state_decl.lm1")
     @: ids_header char txt_path(src, "l2src/lmx_ids.h.lm1")
     @: ids_state char txt_path(src, "l2src/lmx_ids_state.lm1")
+    @: graph_state char txt_path(src, "l2src/lmx_graph_state.lm1")
     @: libc_dir char txt_path(stage, "src/l1src")
     @: libc_abi char txt_path(stage, "src/l1src/libc_abi.lm1")
     int: k 0
-    if: names = 0 || src = 0 || state = 0 || engine = 0 || walk_decl = 0 || ids_header = 0 || ids_state = 0 || libc_dir = 0 || libc_abi = 0
+    if: names = 0 || src = 0 || state = 0 || engine = 0 || walk_decl = 0 || ids_header = 0 || ids_state = 0 || libc_dir = 0 || libc_abi = 0 || graph_state = 0
         return: 1
     names[0]: "lmx"
     names[1]: "lmx_arena_blocks"
@@ -2045,6 +2056,12 @@ fn: decls_write_all (@: rec c.FILE; @: stage char) int
         os_file_remove(ids_state)
         return: 1
     bld_hash_note(rec, ids_state)
+    # The state unit of the clean graph (slice 309), which only lmx_graph.lm2 predefs.
+    os_file_remove(graph_state)
+    if: decl_write(graph_state, 59) != 0
+        os_file_remove(graph_state)
+        return: 1
+    bld_hash_note(rec, graph_state)
     return: 0
 end: decls_write_all
 
@@ -2109,6 +2126,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
     @@: walk_value_names char c.calloc(176U, sizeof(@: char))
+    @@: graph_names char c.calloc(30U, sizeof(@: char))
+    @@: graph_run_names char c.calloc(3U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2122,10 +2141,45 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: running_names = 0 || lane_names = 0
         return: 1
-    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0 || walk_value_names = 0
+    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0 || walk_value_names = 0 || graph_names = 0 || graph_run_names = 0
         return: 1
     if: decls_write_all(rec, stage) != 0
         return: 1
+    # The clean graph of slice 309 (docs/kernel-implementation.*.md): its constructor, tables and print (lmx_graph) and its
+    # interpreter (lmx_graph_run); both write their headers.
+    graph_names[0]: "lmx_graph_state"
+    graph_names[1]: "lmx_graph_intern"
+    graph_names[2]: "lmx_graph_find"
+    graph_names[3]: "lmx_graph_open"
+    graph_names[4]: "lmx_graph_close"
+    graph_names[5]: "lmx_graph_word"
+    graph_names[6]: "lmx_graph_word_text"
+    graph_names[7]: "lmx_graph_int"
+    graph_names[8]: "lmx_graph_uninit_int"
+    graph_names[9]: "lmx_graph_lmx"
+    graph_names[10]: "lmx_graph_count"
+    graph_names[11]: "lmx_graph_get"
+    graph_names[12]: "lmx_graph_put"
+    graph_names[13]: "lmx_graph_kind"
+    graph_names[14]: "lmx_graph_name"
+    graph_names[15]: "lmx_graph_name_of"
+    graph_names[16]: "lmx_graph_place_cell"
+    graph_names[17]: "lmx_graph_slot_name"
+    graph_names[18]: "lmx_graph_named"
+    graph_names[19]: "lmx_graph_place_ready"
+    graph_names[20]: "lmx_graph_read_int"
+    graph_names[21]: "lmx_graph_assign_int"
+    graph_names[22]: "lmx_graph_dump"
+    graph_names[23]: "lmx_graph_dump_marked"
+    graph_names[24]: "lmx_graph_intern_owned"
+    graph_names[25]: "lmx_graph_ref_int"
+    graph_names[26]: "lmx_graph_deref_int"
+    graph_names[27]: "lmx_graph_name_address"
+    graph_names[28]: "lmx_graph_write_slot"
+    graph_names[29]: "lmx_graph_publish"
+    graph_run_names[0]: "lmx_graph_eval"
+    graph_run_names[1]: "lmx_graph_run"
+    graph_run_names[2]: "lmx_graph_call"
     clock_names[0]: "lmx_clock_now"
     clock_names[1]: "lmx_clock_ticks"
     clock_names[2]: "lmx_clock_since"
@@ -2925,6 +2979,10 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 62, 1) != 0
         return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 30, 1) != 0
+        return: 1
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 3, 1) != 0
+        return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_source_names", source_names, 15, 0) != 0
@@ -2978,7 +3036,7 @@ end: bld_kernel_l2
 
 # L3 declaration writer; all executable algorithm bodies are ordinary L2.
 fn: decl_driver_carrier (@: f c.FILE) int
-    if: c.fputs("predef: \"l2src/lmx_ids.lm1\"\npredef: \"l2src/lmx_root.lm1\"\npredef: \"l2src/lmx_implements.lm1\"\npredef: \"l2src/lmx_chars_owned.lm1\"\npredef: \"l2src/lmx_array_owned.lm1\"\npredef: \"l2src/lmx_array_ref_owned.lm1\"\npredef: \"l2src/lmx_graph_copy_owned.lm1\"\npredef: \"l2src/lmx_source_names.lm1\"\npredef: \"l2src/lmx_merge_owned.lm1\"\npredef: \"l2src/lmx_walk.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# Inherited test-process observation state; not clean-kernel ambient-state closure.\nint: gargc 0\n@@: char gargv 0\nint: pargc 0\n@@: char pargv 0\nint: launches 0\nint: builds 0\nint: build_rc -1\nint: host_state -1\nint: program_passed 0\nint: walk_thrown -1\nint: r0_stopped -1\nint: checks 0\nint: failures 0\nint: graph_mutation_requested 0\nint: pointer_abi_mutation_requested 0\nint: graph_mutation_baseline_ok 0\nint: graph_mutation_setup_ok 0\nint: graph_mutation_setup_failures 0\nint: graph_mutation_shape_failures 0\nint: graph_mutation_compared 0\nint: post_paths_requested 0\nint: post_paths_seen 0\nint: profile_complete_requested 0\nint: profile_complete_seen 0\n@: LmxArena post_paths_arena 0\n@: Lmx post_paths_graph 0\nint: post_log_requested 0\nint: post_log_n 0\nconst: @: char phase \"\"\nint: merge_calls 0\nint: merge_fail_at 0\nint: merge_facts_expected 0\nint: merge_facts_seen 0\nint: l2_ref_active 0\n@: LmxArena l2_ref_peer_arena 0\n@: LmxMsg l2_ref_peer 0\n@: LmxPost l2_ref_peer_mail 0\n@: void l2_ref_parent_addr 0\nint: l2_ref_reply_to_sender 0\nint: l2_ref_reply_to_parent 0\n@: LmxArena dispatch_arena 0\n@: Lmx dispatch_selected 0\nint: dispatch_calls 0\nsize_t: dispatch_second_cells 0U\nint: dispatch_throws 0\n@: Lmx dispatch_payload 0\n@: Lmx stop_caller 0\n@: Lmx stop_later 0\n@: Lmx stop_receiver 0\n@: void stop_published 0\n@: void stop_received 0\n[]: @(Lmx) stop_extra 4\n[]: LmxPrimitiveEntry stop_saved 2\nint: stop_calls 0\nint: stop_late_calls 0\nint: stop_receiver_calls 0\nint: stop_root_returns 0\nint: stop_walk_caller 0\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\nend: prototype\n\n# import is sequential; predef would hoist bodies before the two array definitions.\nimport: \"l2src/l2_driver.lm1\"\n", f) < 0
+    if: c.fputs("predef: \"l2src/lmx_ids.lm1\"\npredef: \"l2src/lmx_graph.lm1\"\npredef: \"l2src/lmx_graph_run.lm1\"\npredef: \"l2src/lmx_root.lm1\"\npredef: \"l2src/lmx_implements.lm1\"\npredef: \"l2src/lmx_chars_owned.lm1\"\npredef: \"l2src/lmx_array_owned.lm1\"\npredef: \"l2src/lmx_array_ref_owned.lm1\"\npredef: \"l2src/lmx_graph_copy_owned.lm1\"\npredef: \"l2src/lmx_source_names.lm1\"\npredef: \"l2src/lmx_merge_owned.lm1\"\npredef: \"l2src/lmx_walk.lm1\"\npredef: \"l2src/lmx_primitive.h.lm1\"\npredef: \"l1src/libc_abi.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\" \"<string.h>\"\n\n# Inherited test-process observation state; not clean-kernel ambient-state closure.\nint: gargc 0\n@@: char gargv 0\nint: pargc 0\n@@: char pargv 0\nint: launches 0\nint: builds 0\nint: build_rc -1\nint: host_state -1\nint: program_passed 0\nint: walk_thrown -1\nint: r0_stopped -1\nint: checks 0\nint: failures 0\nint: graph_mutation_requested 0\nint: pointer_abi_mutation_requested 0\nint: graph_mutation_baseline_ok 0\nint: graph_mutation_setup_ok 0\nint: graph_mutation_setup_failures 0\nint: graph_mutation_shape_failures 0\nint: graph_mutation_compared 0\nint: post_paths_requested 0\nint: post_paths_seen 0\nint: profile_complete_requested 0\nint: profile_complete_seen 0\n@: LmxArena post_paths_arena 0\n@: Lmx post_paths_graph 0\nint: post_log_requested 0\nint: post_log_n 0\nconst: @: char phase \"\"\nint: merge_calls 0\nint: merge_fail_at 0\nint: merge_facts_expected 0\nint: merge_facts_seen 0\nint: l2_ref_active 0\n@: LmxArena l2_ref_peer_arena 0\n@: LmxMsg l2_ref_peer 0\n@: LmxPost l2_ref_peer_mail 0\n@: void l2_ref_parent_addr 0\nint: l2_ref_reply_to_sender 0\nint: l2_ref_reply_to_parent 0\n@: LmxArena dispatch_arena 0\n@: Lmx dispatch_selected 0\nint: dispatch_calls 0\nsize_t: dispatch_second_cells 0U\nint: dispatch_throws 0\n@: Lmx dispatch_payload 0\n@: Lmx stop_caller 0\n@: Lmx stop_later 0\n@: Lmx stop_receiver 0\n@: void stop_published 0\n@: void stop_received 0\n[]: @(Lmx) stop_extra 4\n[]: LmxPrimitiveEntry stop_saved 2\nint: stop_calls 0\nint: stop_late_calls 0\nint: stop_receiver_calls 0\nint: stop_root_returns 0\nint: stop_walk_caller 0\n\nprototype:\n    fn: l2_generated_main (int: argc; @@: char argv) int\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n    fn: l2_program_graph () @: Lmx\n    fn: l2_program_qualified_count () size_t\n    fn: l2_program_qualified_at (size_t: index) @: Lmx\nend: prototype\n\n# import is sequential; predef would hoist bodies before the two array definitions.\nimport: \"l2src/l2_driver.lm1\"\n", f) < 0
         return: 1
     return: 0
 end: decl_driver_carrier
@@ -3105,6 +3163,251 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label
     c.fclose(rec)
     return: 0
 end: bld_runtime
+
+# ---- The vertical slice of the kernel implementation specification (slice 309; docs/kernel-implementation.*.md, section
+# 11 item 0) ------------------------------------------------------------------------------------------------------------
+# The graph tool of the new path, built beside the old pipeline as stage/label/graph_trans-prod.exe: the P0 parser's
+# machine modules of the stage (bld_p0_l2_selected with those parts only, as the translator's own build makes them), the
+# graph tool's module (src/l2src/l2_graph_tool.lm2: the builder of the clean graph from the P0 tree, the emitter of a
+# program over that graph and the command line), the C headers regenerated (the P0 headers and the kernel's, lmx_graph
+# among them), and the program tools/graph_trans.lm2 built by fe and linked with the runtime object rt/driver.o, whose
+# kernel holds lmx_graph and lmx_graph_run. 0, or the failing step (1 arguments, 2 P0 modules, 3 the tool's module,
+# 4 headers, 5 the program).
+fn: bld_graph (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char) int
+    @@: names char c.calloc(4U, sizeof(@: char))
+    @@: tags char c.calloc(1U, sizeof(@: char))
+    @@: objs char c.calloc(1U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @@: lp char c.calloc(1U, sizeof(@: char))
+    @: out char txt_path(stage, label)
+    @: src char txt_path(stage, "src")
+    @: backend char bld_bundle_backend(fe)
+    @: rec c.FILE 0
+    int: x 0
+    if: names = 0 || tags = 0 || objs = 0 || res = 0 || lp = 0 || out = 0 || src = 0 || backend = 0
+        return: 1
+    if: file_exists(backend) = 0
+        c.printf("BACKEND companion missing for frontend %s\n", fe)
+        return: 1
+    if: file_exists(txt_path(out, "record.txt")) != 0
+        c.printf("GRAPH %s exists: a new label for every attempt\n", out)
+        return: 1
+    dir_make(out)
+    rec: os_file_open(txt_path(out, "record.txt"), "wb")
+    if: rec = 0
+        return: 1
+    if: bld_p0_l2_selected(rec, repo, stage, base, fe, out, res, "p0_own,p0_text,p0_scan,l2_machine_types,p0_parser") != 0
+        c.fclose(rec)
+        return: 2
+    names[0]: "lm_graph_main"
+    names[1]: "lm_graph_build_file"
+    names[2]: "lm_graph_emit_program"
+    names[3]: "lm_graph_run_file"
+    if: bld_machine_module(rec, fe, src, base, out, res, "l2_graph_tool", names, 4, 1) != 0
+        c.fclose(rec)
+        return: 3
+    if: bld_headers(backend, stage, txt_path(out, "headers")) != 0
+        c.fclose(rec)
+        return: 4
+    tags[0]: "prod"
+    objs[0]: txt_path(rt, "driver.o")
+    x: bld_program_k(repo, stage, base, fe, 0, "-O0", txt_path(stage, "tools/graph_trans.lm2"), 0, out, "graph_trans", tags, objs, 1, "", rec, res, lp, 3600000U)
+    if: x != 0
+        c.printf("GRAPH program step %d kind %d exit %d\n", x, res[0], res[1])
+        c.fclose(rec)
+        return: 5
+    bld_hash_note(rec, txt_path(out, "graph_trans-prod.exe"))
+    c.fclose(rec)
+    return: 0
+end: bld_graph
+
+# The lines between `GRAPH-<mark>-BEGIN` and `GRAPH-<mark>-END` of the file at log_path, CR dropped, compared with the
+# file at expected_path (CR dropped): 1 the same bytes, 0 different, missing or unreadable.
+fn: bld_graph_section_same (@: log_path char; @: expected_path char; @: mark char) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: elen size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: data char 0
+    @: expected char 0
+    @: norm char 0
+    @: enorm char 0
+    @: begin char 0
+    @: finish char 0
+    @: b char 0
+    @: e char 0
+    size_t: i 0U
+    size_t: j 0U
+    size_t: n 0U
+    int: same 0
+    if: len = 0 || elen = 0 || log_path = 0 || expected_path = 0 || mark = 0
+        return: 0
+    data: file_read(log_path, len)
+    expected: file_read(expected_path, elen)
+    if: data = 0 || expected = 0
+        return: 0
+    norm: (cast: (@: char) c.malloc(len[0] + 1U))
+    enorm: (cast: (@: char) c.malloc(elen[0] + 1U))
+    if: norm = 0 || enorm = 0
+        return: 0
+    while: i < len[0]
+        if: data[i] != 13
+            norm[j]: data[i]
+            j: j + 1U
+        i: i + 1U
+    ---
+    norm[j]: (cast: (char) 0)
+    i: 0U
+    j: 0U
+    while: i < elen[0]
+        if: expected[i] != 13
+            enorm[j]: expected[i]
+            j: j + 1U
+        i: i + 1U
+    ---
+    enorm[j]: (cast: (char) 0)
+    begin: txt_cat3("GRAPH-", mark, "-BEGIN\n")
+    finish: txt_cat3("GRAPH-", mark, "-END")
+    if: begin = 0 || finish = 0
+        return: 0
+    b: c.strstr(norm, begin)
+    if: b = 0
+        return: 0
+    b: b + c.strlen(begin)
+    e: c.strstr(b, finish)
+    if: e = 0
+        return: 0
+    n: (cast: (size_t) (e - b))
+    same: (cast: (int) (n = c.strlen(enorm) && (n = 0U || c.memcmp(b, enorm, n) = 0)))
+    c.free(norm)
+    c.free(enorm)
+    c.free(data)
+    c.free(expected)
+    return: same
+end: bld_graph_section_same
+
+# The check of one source of the new path (slice 309): the interpreter in the graph tool's process (`graph_trans run`),
+# the program emitted natively and the program emitted for the kernel's interpreter, each built from the emitted L1 by
+# l1trans and gcc, linked with rt/driver.o and run through the driver with entry 0; every route prints the graph after
+# execution between GRAPH-AFTER markers, which must equal the expected file byte for byte. One GRAPH-CHECK line per
+# route; 0 when all three agree with the expected text, else 1.
+fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: graph_exe char; @: out char; @: source char; @: expected char; int: expected_exit; @: runs char) int
+    @@: a char c.calloc(70U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: rec c.FILE 0
+    @: backend char bld_bundle_backend(fe)
+    @: libc_dir char suite_dir_of(fe)
+    @: libc char 0
+    @: gcc char "C:/Qt/Tools/mingw1310_64/bin/gcc.exe"
+    @: mode char 0
+    @: lm1 char 0
+    @: cfile char 0
+    @: obj char 0
+    @: exe char 0
+    @: log char 0
+    @: dir char 0
+    int: m 0
+    int: n 0
+    int: fails 0
+    int: ok 0
+    if: a = 0 || res = 0 || backend = 0 || libc_dir = 0 || out = 0 || source = 0 || expected = 0
+        return: 1
+    libc: txt_path(libc_dir, "l2_libc.o")
+    if: libc = 0 || file_exists(backend) = 0 || file_exists(libc) = 0 || file_exists(graph_exe) = 0
+        c.printf("GRAPH-CHECK needs the frontend bundle %s and the graph tool %s\n", fe, graph_exe)
+        return: 1
+    dir_make(out)
+    rec: os_file_open(txt_path(out, "record.txt"), "wb")
+    if: rec = 0
+        return: 1
+    # The graph tool is a driver program: the protocol `exe 0 entry 0`, the tool's own arguments after `--`.
+    a[0]: graph_exe
+    a[1]: "0"
+    a[2]: "entry"
+    a[3]: "0"
+    a[4]: "--"
+    a[5]: "run"
+    a[6]: source
+    a[7]: runs
+    if: expected_exit != 0
+        a[3]: "1"
+    log: txt_path(out, "interp.log")
+    ok: (cast: (int) (bld_step(rec, a, 8, out, log, res) = 0))
+    if: ok != 0 && expected_exit = 0
+        ok: bld_graph_section_same(log, expected, "AFTER")
+    if: ok != 0
+        c.printf("GRAPH-CHECK interp %s PASS\n", source)
+    else:
+        c.printf("GRAPH-CHECK interp %s FAIL (%s)\n", source, log)
+        fails: fails + 1
+    ---
+    while: m < 2
+        mode: "native"
+        if: m = 1
+            mode: "forced"
+        dir: txt_path(out, mode)
+        os_mkdir(dir)
+        lm1: txt_path(dir, "p.lm1")
+        cfile: txt_path(dir, "p.c")
+        obj: txt_path(dir, "p.o")
+        exe: txt_path(dir, "p-prod.exe")
+        log: txt_path(dir, "run.log")
+        a[0]: graph_exe
+        a[1]: "0"
+        a[2]: "entry"
+        a[3]: "0"
+        a[4]: "--"
+        a[5]: "emit-check"
+        a[6]: source
+        a[7]: lm1
+        a[8]: mode
+        a[9]: runs
+        ok: (cast: (int) (bld_step(rec, a, 10, dir, txt_path(dir, "emit.log"), res) = 0))
+        if: ok != 0
+            a[0]: backend
+            a[1]: lm1
+            a[2]: cfile
+            # L1 imports are rooted in the stage's generated src, as in bld_program_k. Output files stay in dir.
+            ok: (cast: (int) (bld_step(rec, a, 3, txt_path(stage, "src"), txt_path(dir, "L1.log"), res) = 0))
+        ---
+        if: ok != 0
+            a[0]: gcc
+            n: bld_cflags(a, 1, repo, stage, base, "-O0", 1, 1, 0)
+            if: n < 0
+                ok: 0
+            else:
+                a[n]: "-c"
+                a[n + 1]: cfile
+                a[n + 2]: "-o"
+                a[n + 3]: obj
+                ok: (cast: (int) (bld_step_t(rec, a, n + 4, dir, txt_path(dir, "CC.log"), res, 3600000U) = 0))
+            ---
+        ---
+        if: ok != 0
+            a[0]: gcc
+            a[1]: obj
+            a[2]: txt_path(rt, "driver.o")
+            a[3]: libc
+            a[4]: "-Wl,--strip-debug"
+            a[5]: "-o"
+            a[6]: exe
+            ok: (cast: (int) (bld_step(rec, a, 7, dir, txt_path(dir, "LD.log"), res) = 0))
+        ---
+        if: ok != 0
+            ok: (cast: (int) (bld_run(exe, expected_exit, 0, dir, log, rec) = 0))
+        if: ok != 0 && expected_exit = 0
+            ok: bld_graph_section_same(log, expected, "AFTER")
+        if: ok != 0
+            c.printf("GRAPH-CHECK %s %s PASS\n", mode, source)
+        else:
+            c.printf("GRAPH-CHECK %s %s FAIL (%s)\n", mode, source, dir)
+            fails: fails + 1
+        ---
+        m: m + 1
+    ---
+    c.fclose(rec)
+    if: fails != 0
+        return: 1
+    return: 0
+end: bld_graph_check
 
 # This tool built by the frontend fe from the stage's tools sources as stage/label/lmxtool.exe, linked with the
 # runtime object rt (the parts: text, winargs, sha256, replay, build, suite).
@@ -6401,7 +6704,7 @@ end: bld_backend
 # Existing single C storage, printed as declarations only by ordinary L3.
 # Imported sequentially at the old state position, never by the public API.
 fn: decl_l1_backend_state (@: f c.FILE) int
-    if: c.fputs("@: LmP0Text l1_imp_act 0\n@: LmP0Text l1_imp_done 0\nsize_t: l1_imp_actcap 0U\nsize_t: l1_imp_donecap 0U\nint: l1_imp_actn 0\nint: l1_imp_donen 0\nconst: @: char l1_src 0\nsize_t: l1_srcn 0\n[]: char l1_th_names 2048\n[]: int l1_th_ar 32\nint: l1_th_n 0\nint: l1_in_finally 0\n@: char l1_fn_names 0\n@: int l1_fn_th 0\n@: int l1_fn_thn 0\n@: int l1_fn_ar 0\nint: l1_fnn 0\nint: l1_fn_cap 0\n[]: char l1_ca_names 2048\n[]: int l1_ca_ids 32\n[]: int l1_ca_d 32\nint: l1_ca_n 0\nint: l1_ca_next 0\nint: l1_blk_d 0\n@: LmP0Field l1_fin_f 0\nint: l1_fin_depth 0\nint: l1_has_fin 0\nint: l1_th_ch 0\nint: l1_cur_void 0\nint: l1_throw_ok 0\n[]: int l1_cur_th 8\nint: l1_cur_thn 0\nint: l1_allow_throws 0\n[]: char l1_hdr_types 8192\nint: l1_hdr_typen 0\n[]: char l1_hdr_kinds 128\nconst: @: char l1_unit_root 0\nint: l1_unit_root_set 0\n[]: char l1_hdr_emitted 2048\nint: l1_hdr_emittedn 0\n[]: char l1_hdr_pending 2048\nint: l1_hdr_pendingn 0\nint: l1_hdr_emitting 0\n", f) < 0
+    if: c.fputs("@: LmP0Text l1_imp_act 0\n@: LmP0Text l1_imp_done 0\nsize_t: l1_imp_actcap 0U\nsize_t: l1_imp_donecap 0U\nint: l1_imp_actn 0\nint: l1_imp_donen 0\nconst: @: char l1_src 0\nsize_t: l1_srcn 0\n[]: char l1_th_names 2048\n[]: int l1_th_ar 32\nint: l1_th_n 0\nint: l1_in_finally 0\n@: char l1_fn_names 0\n@: int l1_fn_th 0\n@: int l1_fn_thn 0\n@: int l1_fn_ar 0\nint: l1_fnn 0\nint: l1_fn_cap 0\n[]: char l1_ca_names 2048\n[]: int l1_ca_ids 32\n[]: int l1_ca_d 32\nint: l1_ca_n 0\nint: l1_ca_next 0\nint: l1_blk_d 0\n@: LmP0Field l1_fin_f 0\nint: l1_fin_depth 0\nint: l1_has_fin 0\nint: l1_th_ch 0\nint: l1_cur_void 0\nint: l1_throw_ok 0\n[]: int l1_cur_th 8\nint: l1_cur_thn 0\nint: l1_allow_throws 0\n@: char l1_hdr_types 0\nsize_t: l1_hdr_typescap 0U\nint: l1_hdr_typen 0\n@: char l1_hdr_kinds 0\nsize_t: l1_hdr_kindscap 0U\nconst: @: char l1_unit_root 0\nint: l1_unit_root_set 0\n[]: char l1_hdr_emitted 2048\nint: l1_hdr_emittedn 0\n[]: char l1_hdr_pending 2048\nint: l1_hdr_pendingn 0\nint: l1_hdr_emitting 0\n", f) < 0
         return: 1
     return: 0
 end: decl_l1_backend_state

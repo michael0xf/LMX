@@ -1,0 +1,836 @@
+# The clean graph of the kernel implementation specification (docs/kernel-implementation.ru.md, EN beside it; the
+# author's decisions of 2026-11-08, LMX_blog/2026-11-08.md): the common low-level constructor of the graph that the
+# builder, the generated initialization of an emitted unit and fromLmx use alike (§1a), the primitives (§3.2), the word
+# primitives (§3.3), the address -> name table of an arena (§5.1), the interned spellings of the process (§4) and the
+# toLmx-like print of a graph (§8). Slice 309 is the vertical slice of §11 item 0: this module is the kernel side of
+# the new path, built beside the old pipeline, which it does not touch.
+#
+# Representation (the spec's §2.2 regions on today's typed pools; stage 4 of the plan replaces the pools):
+#   - an int place is an `int` cell of the arena's INT pool (lmx_int_new_profiled);
+#   - a place without a value: its `int` cell, not yet written, and a pointer primitive of the UNINIT_INT pool pointing
+#     at it (the author, 19:02Z: "int без инициализации" is a pointer onto that very cell); the first assignment writes
+#     the value into that cell and turns the slot onto the cell directly (lmx_graph_assign_int); the cell's type and
+#     address never change; later writes go into the cell;
+#   - a word primitive: a cell of the WORD pool holding the canonical address of its spelling (the author, 18:18Z:
+#     service operators and receivers have no codes -- the same string addresses);
+#   - an Lmx: the common Lmx header with `count` slots (lmx_node_new_owned / lmx_struct_new_profiled and
+#     lmx_arena_refs_open_owned); a slot holds the address of a primitive or an Lmx (§3.1);
+#   - the address -> name table of an arena: rows {address, name} kept by the arena's LmxGraph record (an index of
+#     arena state, §5.1; not a graph value); the name is the canonical address of the spelling;
+#   - the interned spellings: one process table (§4); the bytes of a spelling are a NUL-terminated run of cells of the
+#     `text` region of the state's own arena (the owner of the string state), which never move or go away; comparing
+#     identifiers is comparing these addresses (the author, 18:02Z). The index of the search by bytes (texts, sizes) is
+#     heap state of the process, not a graph value.
+# Service tables of a traversal are the executors' (lmx_graph_run.lm2) and live in their frames (§5.2); nothing here is
+# one.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry; the build writes its header,
+# lmx_graph.h.lm1, from the exports named in bld_kernel_l2 (tools/build.lm2). Its records (LmxName, LmxGraph,
+# LmxGraphState) are in lmx_arena.h.lm1 after LmxArena (decl_arena), the type codes LMX_TYPE_WORD, LMX_TYPE_NAME,
+# LMX_TYPE_TEXT and LMX_TYPE_UNINIT_INT in lmx.h.lm1 (decl_lmx), both written by L3 code of the recipe; the process
+# anchor lmx_graph_anchor is the generated state unit l2src/lmx_graph_state.lm1 (decl_graph_state), which only this
+# module predefs.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_graph_state.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdlib.h>"
+include: "<string.h>"
+include: "<stdio.h>"
+
+# ---- The process state: the interned spellings and the graph records ---------------------------------------------
+
+# The canonical copy of a spelling held by the state, or 0: the one search of bytes, at the input boundary (§4).
+fn: lmx_graph_intern_find (@: state c.LmxGraphState; const: (@: text char); size_t: nb) @: char
+    size_t: i 0U
+    while: i < state\count
+        if: state\sizes[i] = nb && (nb = 0U || c.memcmp((cast: (@: void) state\texts[i]), (cast: (@: void) text), nb) = 0)
+            return: state\texts[i]
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_graph_intern_find
+
+# Room for one more spelling in the state's tables. 0, or 1 without memory.
+fn: lmx_graph_intern_room (@: state c.LmxGraphState) int
+    size_t: cap 0U
+    @@: texts char 0
+    @: sizes size_t 0
+    if: state\count + 1U <= state\cap
+        return: 0
+    cap: 64U
+    if: state\cap != 0U
+        cap: state\cap * 2U
+    texts: (cast: (@@: char) c.realloc((cast: (@: void) state\texts), cap * sizeof(@: char)))
+    if: texts = 0
+        return: 1
+    state\texts: texts
+    sizes: (cast: (@: size_t) c.realloc((cast: (@: void) state\sizes), cap * c.sizeof(c.size_t)))
+    if: sizes = 0
+        return: 1
+    state\sizes: sizes
+    state\cap: cap
+    return: 0
+end: lmx_graph_intern_room
+
+# The canonical address of a spelling in this state: the one it holds, or a new NUL-terminated copy in the `text` region
+# of the state's arena, which never moves or goes away. 0 without memory.
+fn: lmx_graph_intern_in (@: state c.LmxGraphState; const: (@: text char); size_t: nb) @: char
+    @: found char lmx_graph_intern_find(state, text, nb)
+    @: copy char 0
+    if: found != 0
+        return: found
+    if: lmx_graph_intern_room(state) != 0
+        return: 0
+    copy: (cast: (@: char) c.lmx_arena_take_n(state\spellings, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_TEXT, nb + 1U))
+    if: copy = 0
+        return: 0
+    if: nb != 0U
+        c.memcpy((cast: (@: void) copy), (cast: (@: void) text), nb)
+    ---
+    copy[nb]: (cast: (char) 0)
+    state\texts[state\count]: copy
+    state\sizes[state\count]: nb
+    state\count: state\count + 1U
+    return: copy
+end: lmx_graph_intern_in
+
+# The process's state, made on its first use: its own arena with the `text` region of the spellings (one array of 4096-byte
+# chunks; a chunk is never moved or released before the process), the index of the spellings, the graph records and the
+# words of the language the executors compare against (their canonical addresses, interned first). 0 without memory.
+fn: lmx_graph_state () @: c.LmxGraphState
+    @@: anchor c.LmxGraphState (cast: (@@: c.LmxGraphState) (@ c.lmx_graph_anchor))
+    @: state c.LmxGraphState 0
+    if: \anchor != 0
+        return: \anchor
+    state: (cast: (@: c.LmxGraphState) c.calloc(1U, c.sizeof(c.LmxGraphState)))
+    if: state = 0
+        return: 0
+    state\spellings: (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    if: state\spellings = 0 || c.lmx_arena_open(state\spellings) != 0
+        return: 0
+    if: c.lmx_pool_make_profiled(state\spellings, 4096U, 1U, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_TEXT, 0) = 0
+        return: 0
+    state\w_int: lmx_graph_intern_in(state, "int", 3U)
+    state\w_plus: lmx_graph_intern_in(state, "+", 1U)
+    state\w_minus: lmx_graph_intern_in(state, "-", 1U)
+    state\w_star: lmx_graph_intern_in(state, "*", 1U)
+    state\w_slash: lmx_graph_intern_in(state, "/", 1U)
+    state\w_percent: lmx_graph_intern_in(state, "%", 1U)
+    state\w_at: lmx_graph_intern_in(state, "@", 1U)
+    state\w_deref: lmx_graph_intern_in(state, "\\", 1U)
+    state\w_fn: lmx_graph_intern_in(state, "fn", 2U)
+    state\w_return: lmx_graph_intern_in(state, "return", 6U)
+    if: state\w_int = 0 || state\w_plus = 0 || state\w_minus = 0 || state\w_star = 0 || state\w_slash = 0 || state\w_percent = 0 || state\w_at = 0 || state\w_deref = 0 || state\w_fn = 0 || state\w_return = 0
+        return: 0
+    \anchor: state
+    return: state
+end: lmx_graph_state
+
+# The canonical address of a spelling of nb bytes (§4): interning, the only operation that compares bytes. 0 without
+# memory.
+fn: lmx_graph_intern (const: (@: text char); size_t: nb) @: char
+    @: state c.LmxGraphState lmx_graph_state()
+    if: state = 0 || text = 0
+        return: 0
+    return: lmx_graph_intern_in(state, text, nb)
+end: lmx_graph_intern
+
+# 1 when address is a canonical spelling: a cell of the `text` region of the state's arena (§4, the address invariant);
+# 0 for any other address, a heap string or a cell of a graph's arena included.
+fn: lmx_graph_intern_owned (@: address char) int
+    @: state c.LmxGraphState lmx_graph_state()
+    if: state = 0 || address = 0
+        return: 0
+    if: c.lmx_range_classify(state\spellings, (cast: (@: void) address)) != c.LMX_KIND_PRIMITIVE
+        return: 0
+    if: c.lmx_range_type_of(state\spellings, (cast: (@: void) address)) != c.LMX_TYPE_TEXT
+        return: 0
+    return: 1
+end: lmx_graph_intern_owned
+
+# The graph record of an arena, or 0 when it has none (lmx_graph_open makes it).
+fn: lmx_graph_find (@: arena c.LmxArena) @: c.LmxGraph
+    @: state c.LmxGraphState lmx_graph_state()
+    @: g c.LmxGraph 0
+    if: state = 0 || arena = 0
+        return: 0
+    g: state\graphs
+    while: g != 0
+        if: g\arena = arena
+            return: g
+        ---
+        g: g\next
+    ---
+    return: 0
+end: lmx_graph_find
+
+# The graph record of an arena: the address -> name table of that arena. One per arena; opening an arena twice answers
+# the record it has. 0 without memory.
+fn: lmx_graph_open (@: arena c.LmxArena) @: c.LmxGraph
+    @: state c.LmxGraphState lmx_graph_state()
+    @: g c.LmxGraph lmx_graph_find(arena)
+    if: state = 0 || arena = 0
+        return: 0
+    if: g != 0
+        return: g
+    g: (cast: (@: c.LmxGraph) c.calloc(1U, c.sizeof(c.LmxGraph)))
+    if: g = 0
+        return: 0
+    g\arena: arena
+    g\next: state\graphs
+    state\graphs: g
+    return: g
+end: lmx_graph_open
+
+# The record leaves the process state and its name table is freed; the cells of the arena are the arena's.
+fn: lmx_graph_close (@: g c.LmxGraph) int
+    @: state c.LmxGraphState lmx_graph_state()
+    @: at c.LmxGraph 0
+    @: before c.LmxGraph 0
+    if: state = 0 || g = 0
+        return: 1
+    at: state\graphs
+    while: at != 0 && at != g
+        before: at
+        at: at\next
+    ---
+    if: at = 0
+        return: 1
+    if: before = 0
+        state\graphs: g\next
+    else:
+        before\next: g\next
+    ---
+    c.free((cast: (@: void) g\names))
+    c.free((cast: (@: void) g))
+    return: 0
+end: lmx_graph_close
+
+# ---- Primitives and Lmx -------------------------------------------------------------------------------------------
+
+# A word primitive: a cell of the WORD pool holding the canonical address of the spelling of nb bytes (§3.3). 0 without
+# memory.
+fn: lmx_graph_word (@: g c.LmxGraph; const: (@: text char); size_t: nb) @: void
+    @: canon char lmx_graph_intern(text, nb)
+    @: cell void 0
+    @@: wc char 0
+    if: g = 0 || canon = 0
+        return: 0
+    cell: c.lmx_arena_take(g\arena, sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_WORD)
+    if: cell = 0
+        return: 0
+    wc: (cast: (@@: char) cell)
+    \wc: canon
+    return: cell
+end: lmx_graph_word
+
+# The canonical spelling a word primitive holds, or 0 when the address is no word cell of this arena.
+fn: lmx_graph_word_text (@: g c.LmxGraph; @: cell void) @: char
+    @@: wc char 0
+    if: g = 0 || cell = 0
+        return: 0
+    if: c.lmx_range_classify(g\arena, cell) != c.LMX_KIND_PRIMITIVE || c.lmx_range_type_of(g\arena, cell) != c.LMX_TYPE_WORD
+        return: 0
+    wc: (cast: (@@: char) cell)
+    return: \wc
+end: lmx_graph_word_text
+
+# An int primitive holding value (§3.2). 0 without memory.
+fn: lmx_graph_int (@: g c.LmxGraph; int: value) @: void
+    @: cell void 0
+    if: g = 0
+        return: 0
+    cell: c.lmx_int_new_profiled(g\arena, 0)
+    if: cell = 0
+        return: 0
+    if: c.lmx_int_store_known(cell, value) != 0
+        return: 0
+    return: cell
+end: lmx_graph_int
+
+# A place without a value (§3.2, the author 18:00Z and 19:02Z): its int cell, not yet written, and the pointer
+# primitive "int without initialization" pointing at it; the pointer cell is what the slot of the place holds until the
+# first assignment. Nothing reads the int cell's bytes before that. 0 without memory.
+fn: lmx_graph_uninit_int (@: g c.LmxGraph) @: void
+    @: cell void 0
+    @: pointer void 0
+    if: g = 0
+        return: 0
+    cell: c.lmx_int_new_profiled(g\arena, 0)
+    if: cell = 0
+        return: 0
+    pointer: c.lmx_arena_pointer_cells_profiled(g\arena, c.LMX_TYPE_UNINIT_INT, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: pointer = 0
+        return: 0
+    if: c.lmx_arena_pointer_void_write(pointer, cell) != 0
+        return: 0
+    return: pointer
+end: lmx_graph_uninit_int
+
+# An initialized int-reference primitive. Its referent is the actual int cell, including a cell obtained by @ before
+# its first assignment. This operation stores an address; it never reads that cell's uninitialized bytes.
+fn: lmx_graph_ref_int (@: g c.LmxGraph; @: cell void) @: void
+    @: pointer void 0
+    if: g = 0 || lmx_graph_kind(g, cell) != 1
+        return: 0
+    pointer: c.lmx_arena_pointer_cells_profiled(g\arena, c.LMX_TYPE_GRAPH_INT_REF, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: pointer = 0 || c.lmx_arena_pointer_void_write(pointer, cell) != 0
+        return: 0
+    return: pointer
+end: lmx_graph_ref_int
+
+# An Lmx of count slots under parent (0: a root of the arena), its slots empty (§3.1). 0 without memory.
+fn: lmx_graph_lmx (@: g c.LmxGraph; @: parent c.Lmx; size_t: count) @: c.Lmx
+    @: value c.Lmx 0
+    if: g = 0
+        return: 0
+    if: parent = 0
+        value: c.lmx_node_new_owned(g\arena)
+    else:
+        value: c.lmx_struct_new_profiled(parent, g\arena, 0)
+    ---
+    if: value = 0
+        return: 0
+    if: count != 0U && c.lmx_arena_refs_open_owned(g\arena, value, count) != 0
+        return: 0
+    return: value
+end: lmx_graph_lmx
+
+# The number of slots of an Lmx.
+fn: lmx_graph_count (@: lmx c.Lmx) size_t
+    @: va c.VoidArray 0
+    if: lmx = 0
+        return: 0U
+    va: @ lmx\array
+    return: (cast: (size_t) va\size)
+end: lmx_graph_count
+
+# The content of slot index of lmx: the address of a primitive or an Lmx, or 0.
+fn: lmx_graph_get (@: lmx c.Lmx; size_t: index) @: void
+    @@: slot void (cast: (@@: void) c.lmx_arena_ref_cell(lmx, index))
+    if: slot = 0
+        return: 0
+    return: \slot
+end: lmx_graph_get
+
+# The write of slot index of lmx at construction: the constructor is the slot's only writer here (the executors' writes
+# of places go through lmx_graph_assign_int). 0, or 1 when there is no such slot.
+fn: lmx_graph_put (@: lmx c.Lmx; size_t: index; @: value void) int
+    @@: slot void (cast: (@@: void) c.lmx_arena_ref_cell(lmx, index))
+    if: slot = 0
+        return: 1
+    \slot: value
+    return: 0
+end: lmx_graph_put
+
+# What an address is in this arena: 0 nothing of the graph, 1 an int primitive, 2 a word primitive, 3 the pointer
+# primitive of a place without a value, 4 an Lmx, 5 an int reference (§2.2: the type is the region of the address).
+fn: lmx_graph_kind (@: g c.LmxGraph; @: address void) int
+    int: kind 0
+    int: type 0
+    if: g = 0 || address = 0
+        return: 0
+    kind: c.lmx_range_classify(g\arena, address)
+    type: c.lmx_range_type_of(g\arena, address)
+    if: kind = c.LMX_KIND_STRUCT
+        return: 4
+    if: kind != c.LMX_KIND_PRIMITIVE
+        return: 0
+    if: type = c.LMX_TYPE_INT
+        return: 1
+    if: type = c.LMX_TYPE_WORD
+        return: 2
+    if: type = c.LMX_TYPE_UNINIT_INT
+        return: 3
+    if: type = c.LMX_TYPE_GRAPH_INT_REF
+        return: 5
+    return: 0
+end: lmx_graph_kind
+
+# ---- The address -> name table of the arena (§5.1) ----------------------------------------------------------------
+
+# A row for address: its name is the canonical address of the spelling of nb bytes. 0, or 1 without memory.
+fn: lmx_graph_name (@: g c.LmxGraph; @: address void; const: (@: text char); size_t: nb) int
+    @: canon char lmx_graph_intern(text, nb)
+    return: lmx_graph_name_address(g, address, canon)
+end: lmx_graph_name
+
+# Register a name already read from the graph. Runtime publication does not re-intern or compare spelling bytes.
+# Renaming an existing address needs its own graph mutation contract; registration never silently renames one.
+fn: lmx_graph_name_address (@: g c.LmxGraph; @: address void; @: canon char) int
+    @: state c.LmxGraphState lmx_graph_state()
+    @: rows c.LmxName 0
+    @: row c.LmxName 0
+    size_t: cap 0U
+    size_t: i 0U
+    if: g = 0 || address = 0 || canon = 0 || state = 0
+        return: 1
+    while: i < state\count && state\texts[i] != canon
+        i: i + 1U
+    if: i = state\count
+        return: 1
+    i: 0U
+    while: i < g\names_len
+        row: g\names + i
+        if: row\address = address
+            return: (cast: (int) (row\name != canon))
+        i: i + 1U
+    ---
+    if: g\names_len + 1U > g\names_cap
+        cap: 32U
+        if: g\names_cap != 0U
+            cap: g\names_cap * 2U
+        rows: (cast: (@: c.LmxName) c.realloc((cast: (@: void) g\names), cap * c.sizeof(c.LmxName)))
+        if: rows = 0
+            return: 1
+        g\names: rows
+        g\names_cap: cap
+    ---
+    row: g\names + g\names_len
+    row\address: address
+    row\name: canon
+    g\names_len: g\names_len + 1U
+    return: 0
+end: lmx_graph_name_address
+
+# The name of an address (the canonical spelling), or 0 when the table has no row for it.
+fn: lmx_graph_name_of (@: g c.LmxGraph; @: address void) @: char
+    @: row c.LmxName 0
+    size_t: i 0U
+    if: g = 0 || address = 0
+        return: 0
+    while: i < g\names_len
+        row: g\names + i
+        if: row\address = address
+            return: row\name
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_graph_name_of
+
+# The int cell of the place at slot index of lmx: the cell itself, or the cell behind the pointer of a place without a
+# value; 0 when the slot holds neither.
+fn: lmx_graph_place_cell (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: void
+    @: value void lmx_graph_get(lmx, index)
+    int: kind lmx_graph_kind(g, value)
+    if: kind = 1
+        return: value
+    if: kind = 3
+        return: c.lmx_arena_pointer_void_read(value)
+    return: 0
+end: lmx_graph_place_cell
+
+# The name the place at slot index answers to: the name of its int cell (a place without a value is named at its
+# cell, §3.2), of its Lmx, or of the primitive itself; 0 when nothing is named.
+fn: lmx_graph_slot_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
+    @: value void lmx_graph_get(lmx, index)
+    @: cell void 0
+    if: value = 0
+        return: 0
+    if: lmx_graph_kind(g, value) = 3
+        cell: c.lmx_arena_pointer_void_read(value)
+        return: lmx_graph_name_of(g, cell)
+    return: lmx_graph_name_of(g, value)
+end: lmx_graph_slot_name
+
+# The slot of lmx whose content is named name (a canonical address: pointers are compared, §5.1), or the count of
+# slots when none is.
+fn: lmx_graph_named (@: g c.LmxGraph; @: lmx c.Lmx; @: name char) size_t
+    size_t: n lmx_graph_count(lmx)
+    size_t: i 0U
+    if: g = 0 || name = 0
+        return: n
+    while: i < n
+        if: lmx_graph_slot_name(g, lmx, i) = name
+            return: i
+        ---
+        i: i + 1U
+    ---
+    return: n
+end: lmx_graph_named
+
+# ---- Reading and writing a place (§3.2) ---------------------------------------------------------------------------
+
+# 1 when the place at slot index holds a written int cell, 0 when it is a place without a value, -1 when it is no int
+# place.
+fn: lmx_graph_place_ready (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) int
+    int: kind lmx_graph_kind(g, lmx_graph_get(lmx, index))
+    if: kind = 1
+        return: 1
+    if: kind = 3
+        return: 0
+    return: -1
+end: lmx_graph_place_ready
+
+# The value of the int place at slot index: 0 and the value in out; 1 when the place has no value yet (the general
+# admission decides what that means for the reader, §3.2); 2 when the slot holds no int place.
+fn: lmx_graph_read_int (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index; @: out int) int
+    int: ready lmx_graph_place_ready(g, lmx, index)
+    if: out = 0 || ready < 0
+        return: 2
+    if: ready = 0
+        return: 1
+    \out: c.lmx_int_value_known(lmx_graph_get(lmx, index))
+    return: 0
+end: lmx_graph_read_int
+
+# Follow an int-reference place. The reference and its target are both classified by their arena addresses.
+fn: lmx_graph_deref_int (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index; @: out int) int
+    @: pointer void lmx_graph_get(lmx, index)
+    @: cell void 0
+    @: held void 0
+    size_t: at 0U
+    if: out = 0 || lmx_graph_kind(g, pointer) != 5
+        return: 2
+    cell: c.lmx_arena_pointer_void_read(pointer)
+    if: lmx_graph_kind(g, cell) != 1
+        return: 2
+    # In this root-only slice, readiness is read from the actual places of the current graph. An address taken early
+    # does not make its still-unfilled place readable. Old, detached uninit pointers in arena storage are irrelevant.
+    # There is no initialization flag or saved table; the first assignment changes that place's slot.
+    while: at < lmx_graph_count(lmx)
+        held: lmx_graph_get(lmx, at)
+        if: lmx_graph_kind(g, held) = 3 && c.lmx_arena_pointer_void_read(held) = cell
+            return: 1
+        at: at + 1U
+    ---
+    out[0]: c.lmx_int_value_known(cell)
+    return: 0
+end: lmx_graph_deref_int
+
+# The write of value into the int place at slot index: the first assignment of a place without a value writes into its
+# very int cell and turns the slot onto that cell (the pointer primitive is left behind, unchanged); a later write goes
+# into the cell. The cell's type and address never change (the author, 18:10Z and 19:02Z). 0, or 1 when the slot holds
+# no int place.
+fn: lmx_graph_assign_int (@: g c.LmxGraph; @: scope c.Lmx; @: lmx c.Lmx; size_t: index; int: value) int
+    @: held void lmx_graph_get(lmx, index)
+    @: cell void 0
+    int: kind lmx_graph_kind(g, held)
+    @: slot void 0
+    if: kind != 1 && kind != 3
+        return: 1
+    cell: held
+    if: kind = 3
+        cell: c.lmx_arena_pointer_void_read(held)
+        slot: c.lmx_arena_ref_cell(lmx, index)
+    if: lmx_graph_kind(g, cell) != 1 || lmx_graph_invalidate(g, scope, slot, cell, cell) != 0
+        return: 1
+    if: c.lmx_int_store_known(cell, value) != 0
+        return: 1
+    if: kind = 1
+        return: 0
+    return: lmx_graph_put(lmx, index, cell)
+end: lmx_graph_assign_int
+
+# A traversal-local set/queue. It contains addresses only, starts empty and is freed by its caller.
+fn: lmx_graph_scan_add (@@@: items c.Lmx; @: count size_t; @: cap size_t; @: value c.Lmx) int
+    @@: grown c.Lmx 0
+    size_t: at 0U
+    size_t: next 0U
+    if: value = 0
+        return: 0
+    while: at < count[0]
+        if: items[0][at] = value
+            return: 0
+        at: at + 1U
+    ---
+    if: count[0] = cap[0]
+        next: 16U
+        if: cap[0] != 0U
+            if: cap[0] > ((cast: (size_t) -1) / 2U) / sizeof(@: void)
+                return: 1
+            next: cap[0] * 2U
+        ---
+        grown: (cast: (@@: c.Lmx) c.realloc((cast: (@: void) items[0]), next * sizeof(@: void)))
+        if: grown = 0
+            return: 1
+        items[0]: grown
+        cap[0]: next
+    ---
+    items[0][count[0]]: value
+    count[0]: count[0] + 1U
+    return: 0
+end: lmx_graph_scan_add
+
+# The same statement shape that the current clean interpreter consumes. Named Structures remain data here.
+fn: lmx_graph_statement (@: g c.LmxGraph; @: value void) int
+    @: inner c.Lmx 0
+    if: lmx_graph_kind(g, value) != 4 || lmx_graph_name_of(g, value) != 0
+        return: 0
+    inner: (cast: (@: c.Lmx) value)
+    return: (cast: (int) (lmx_graph_count(inner) != 0U && lmx_graph_word_text(g, lmx_graph_get(inner, 0U)) != 0))
+end: lmx_graph_statement
+
+# Does this executable Structure contain the written slot or primitive cell as code? Data places are not followed
+# through the words that read them. A shared literal cell is nevertheless the same physical code place through any alias.
+# Return 1 found, 0 absent, -1 allocation failure; every temporary address set is discarded.
+fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell void; @: replacement void) int
+    @@: queue c.Lmx 0
+    size_t: count 0U
+    size_t: cap 0U
+    size_t: at 0U
+    size_t: i 0U
+    @: value void 0
+    @: inner c.Lmx 0
+    int: result 0
+    while: i < lmx_graph_count(code) && result = 0
+        value: lmx_graph_get(code, i)
+        if: slot != 0 && c.lmx_arena_ref_cell(code, i) = slot && (lmx_graph_statement(g, value) != 0 || lmx_graph_statement(g, replacement) != 0)
+            result: 1
+        if: result = 0 && lmx_graph_statement(g, value) != 0
+            if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
+                result: -1
+            ---
+        ---
+        i: i + 1U
+    ---
+    while: at < count && result = 0
+        inner: queue[at]
+        at: at + 1U
+        i: 0U
+        while: i < lmx_graph_count(inner) && result = 0
+            value: lmx_graph_get(inner, i)
+            if: (slot != 0 && c.lmx_arena_ref_cell(inner, i) = slot) || (cell != 0 && value = cell)
+                result: 1
+            if: result = 0 && lmx_graph_kind(g, value) = 4 && lmx_graph_name_of(g, value) = 0
+                if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
+                    result: -1
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+    c.free((cast: (@: void) queue))
+    return: result
+end: lmx_graph_code_uses
+
+# Fresh scan from the supplied traversal scope and its lexical parents, including shared Lmx children. First prepare
+# every affected entry; only then clear them, before the caller publishes the write. No reverse code index is retained.
+# Message/activation/mail root-set integration follows with those consumers; this slice supplies its complete root.
+fn: lmx_graph_invalidate (@: g c.LmxGraph; @: scope c.Lmx; @: slot void; @: cell void; @: replacement void) int
+    @@: nodes c.Lmx 0
+    @@: affected c.Lmx 0
+    size_t: count 0U
+    size_t: cap 0U
+    size_t: n_affected 0U
+    size_t: affected_cap 0U
+    size_t: at 0U
+    size_t: i 0U
+    @: current c.Lmx 0
+    @: value void 0
+    int: failed 0
+    int: used 0
+    if: g = 0 || lmx_graph_kind(g, (cast: (@: void) scope)) != 4
+        return: 1
+    failed: lmx_graph_scan_add(@ nodes, @ count, @ cap, scope)
+    while: at < count && failed = 0
+        current: nodes[at]
+        at: at + 1U
+        if: current\native != 0
+            used: lmx_graph_code_uses(g, current, slot, cell, replacement)
+            if: used < 0
+                failed: 1
+            if: used > 0
+                failed: lmx_graph_scan_add(@ affected, @ n_affected, @ affected_cap, current)
+            ---
+        ---
+        if: failed = 0 && lmx_graph_kind(g, (cast: (@: void) current\parent)) = 4
+            failed: lmx_graph_scan_add(@ nodes, @ count, @ cap, (cast: (@: c.Lmx) current\parent))
+        i: 0U
+        while: i < lmx_graph_count(current) && failed = 0
+            value: lmx_graph_get(current, i)
+            if: lmx_graph_kind(g, value) = 4
+                failed: lmx_graph_scan_add(@ nodes, @ count, @ cap, (cast: (@: c.Lmx) value))
+            i: i + 1U
+        ---
+    ---
+    if: failed = 0
+        at: 0U
+        while: at < n_affected
+            current: affected[at]
+            current\native: 0
+            at: at + 1U
+        ---
+    ---
+    c.free((cast: (@: void) nodes))
+    c.free((cast: (@: void) affected))
+    return: failed
+end: lmx_graph_invalidate
+
+# Runtime replacement, separate from the constructor's raw put. The physical slot is the write target.
+fn: lmx_graph_write_slot (@: g c.LmxGraph; @: scope c.Lmx; @: holder c.Lmx; size_t: index; @: value void) int
+    @: slot void 0
+    if: lmx_graph_kind(g, (cast: (@: void) holder)) != 4
+        return: 1
+    slot: c.lmx_arena_ref_cell(holder, index)
+    if: slot = 0 || (value != 0 && lmx_graph_kind(g, value) = 0)
+        return: 1
+    if: lmx_graph_invalidate(g, scope, slot, 0, value) != 0
+        return: 1
+    return: lmx_graph_put(holder, index, value)
+end: lmx_graph_write_slot
+
+# Publish a computed declaration through the same runtime write, naming it with the canonical word in that declaration.
+fn: lmx_graph_publish (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value void) int
+    @: statement void lmx_graph_get(root, index)
+    @: name char 0
+    if: lmx_graph_statement(g, statement) = 0
+        return: 1
+    name: lmx_graph_word_text(g, lmx_graph_get((cast: (@: c.Lmx) statement), 1U))
+    if: lmx_graph_name_address(g, value, name) != 0
+        return: 1
+    return: lmx_graph_write_slot(g, root, root, index, value)
+end: lmx_graph_publish
+
+# ---- toLmx-like print (§8) ----------------------------------------------------------------------------------------
+
+sub: lmx_graph_dump_indent (@: f c.FILE; int: depth)
+    int: i 0
+    while: i < depth
+        c.fputs("    ", f)
+        i: i + 1
+    ---
+    return
+end: lmx_graph_dump_indent
+
+# One field of a written Frame or Structure in the line form: a word by its spelling, an int by its value, a place
+# without a value by its name, a nested unnamed Lmx in parentheses. 0, or 1 when a cell is none of the graph's.
+fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
+    int: kind lmx_graph_kind(g, value)
+    @: text char 0
+    @: inner c.Lmx 0
+    size_t: i 0U
+    size_t: n 0U
+    if: kind = 2
+        text: lmx_graph_word_text(g, value)
+        if: text = 0
+            return: 1
+        c.fputs(text, f)
+        return: 0
+    if: kind = 1
+        c.fprintf(f, "%d", c.lmx_int_value_known(value))
+        return: 0
+    if: kind = 3
+        text: lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
+        if: text = 0
+            return: 1
+        c.fputs(text, f)
+        return: 0
+    if: kind != 4
+        return: 1
+    text: lmx_graph_name_of(g, value)
+    if: text != 0
+        c.fputs(text, f)
+        return: 0
+    inner: (cast: (@: c.Lmx) value)
+    n: lmx_graph_count(inner)
+    c.fputs("(", f)
+    while: i < n
+        if: i != 0U
+            c.fputs(" ", f)
+        if: lmx_graph_dump_token(g, lmx_graph_get(inner, i), f) != 0
+            return: 1
+        i: i + 1U
+    ---
+    c.fputs(")", f)
+    return: 0
+end: lmx_graph_dump_token
+
+# The fields of lmx, one per line at depth: an int place as `int: name value`, a place without a value as
+# `int: name`, a word as itself, a named Lmx as its block `name:` ... `end: name`, an unnamed Lmx with a word head as
+# the Frame `head: fields`. 0, or 1 when a cell is none of the graph's.
+fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) int
+    size_t: n lmx_graph_count(lmx)
+    size_t: i 0U
+    size_t: k 0U
+    size_t: m 0U
+    @: value void 0
+    @: inner c.Lmx 0
+    @: name char 0
+    @: head char 0
+    int: kind 0
+    while: i < n
+        value: lmx_graph_get(lmx, i)
+        kind: lmx_graph_kind(g, value)
+        lmx_graph_dump_indent(f, depth)
+        if: kind = 5
+            name: lmx_graph_name_of(g, value)
+            head: lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
+            if: name = 0 || head = 0
+                return: 1
+            c.fprintf(f, "@: %s int @%s\n", name, head)
+            i: i + 1U
+            continue
+        if: kind = 1
+            name: lmx_graph_name_of(g, value)
+            if: name != 0
+                c.fprintf(f, "int: %s %d\n", name, c.lmx_int_value_known(value))
+            else:
+                c.fprintf(f, "int: %d\n", c.lmx_int_value_known(value))
+            ---
+        else:
+            if: kind = 3
+                name: lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
+                if: name = 0
+                    return: 1
+                c.fprintf(f, "int: %s\n", name)
+            else:
+                if: kind = 2
+                    c.fprintf(f, "%s\n", lmx_graph_word_text(g, value))
+                else:
+                    if: kind != 4
+                        return: 1
+                    inner: (cast: (@: c.Lmx) value)
+                    name: lmx_graph_name_of(g, value)
+                    if: name != 0
+                        c.fprintf(f, "%s:\n", name)
+                        if: lmx_graph_dump_at(g, inner, f, depth + 1) != 0
+                            return: 1
+                        lmx_graph_dump_indent(f, depth)
+                        c.fprintf(f, "end: %s\n", name)
+                    else:
+                        m: lmx_graph_count(inner)
+                        head: lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
+                        if: m = 0U || head = 0
+                            return: 1
+                        c.fprintf(f, "%s:", head)
+                        k: 1U
+                        while: k < m
+                            c.fputs(" ", f)
+                            if: lmx_graph_dump_token(g, lmx_graph_get(inner, k), f) != 0
+                                return: 1
+                            k: k + 1U
+                        ---
+                        c.fputs("\n", f)
+                    ---
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_graph_dump_at
+
+# The toLmx-like text of the fields of lmx (a root) to f. 0, or 1 when a cell is none of the graph's.
+fn: lmx_graph_dump (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE) int
+    if: g = 0 || lmx = 0 || f = 0
+        return: 1
+    return: lmx_graph_dump_at(g, lmx, f, 0)
+end: lmx_graph_dump
+
+# The same text between the lines `GRAPH-<mark>-BEGIN` and `GRAPH-<mark>-END`: what a check reads from a run's log.
+fn: lmx_graph_dump_marked (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; const: (@: mark char)) int
+    int: r 0
+    if: f = 0 || mark = 0
+        return: 1
+    c.fprintf(f, "GRAPH-%s-BEGIN\n", mark)
+    r: lmx_graph_dump(g, lmx, f)
+    c.fprintf(f, "GRAPH-%s-END\n", mark)
+    c.fflush(f)
+    return: r
+end: lmx_graph_dump_marked

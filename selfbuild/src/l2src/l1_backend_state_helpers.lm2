@@ -1334,11 +1334,13 @@ end: l1_hdr_type_reset
 
 # Original: l1src/l1trans.lm1:5495
 fn: l1_hdr_type_has (const: (@: text c.LmP0Text)) int
-    @: hdr_types_array char (cast: (@: char) (@ c.l1_hdr_types))
+    @@: hdr_types_cell char (cast: (@@: char) (@ c.l1_hdr_types))
     @: hdr_typen_cell int (cast: (@: int) (@ c.l1_hdr_typen))
+    @: hdr_types_array char 0
     c.LmL1TextScratch64: buf_scratch
     int: i 0
     size_t: off 0U
+    hdr_types_array: hdr_types_cell[0]
     if: text = 0 || text\data = 0 || text\length = 0U
         return: (cast: (int) (0))
     if: c.l1_ident_to_buf((cast: (@: char) buf_scratch\buffer), 64U, text) != 0
@@ -1353,11 +1355,15 @@ end: l1_hdr_type_has
 
 # Original: l1src/l1trans.lm1:5510
 fn: l1_hdr_kind_of_cstr (const: (@: name char)) int
-    @: hdr_types_array char (cast: (@: char) (@ c.l1_hdr_types))
+    @@: hdr_types_cell char (cast: (@@: char) (@ c.l1_hdr_types))
     @: hdr_typen_cell int (cast: (@: int) (@ c.l1_hdr_typen))
-    @: hdr_kinds_array char (cast: (@: char) (@ c.l1_hdr_kinds))
+    @@: hdr_kinds_cell char (cast: (@@: char) (@ c.l1_hdr_kinds))
+    @: hdr_types_array char 0
+    @: hdr_kinds_array char 0
     int: i 0
     size_t: off 0U
+    hdr_types_array: hdr_types_cell[0]
+    hdr_kinds_array: hdr_kinds_cell[0]
     if: name = 0
         return: (cast: (int) (0))
     while: i < hdr_typen_cell[0]
@@ -1370,14 +1376,22 @@ end: l1_hdr_kind_of_cstr
 
 # Original: l1src/l1trans.lm1:5529
 fn: l1_hdr_type_add (const: (@: text c.LmP0Text); const: (@: path char); const: (@: source_node c.LmP0Node); int: kind) int
-    @: hdr_types_array char (cast: (@: char) (@ c.l1_hdr_types))
+    @@: hdr_types_cell char (cast: (@@: char) (@ c.l1_hdr_types))
     @: hdr_typen_cell int (cast: (@: int) (@ c.l1_hdr_typen))
-    @: hdr_kinds_array char (cast: (@: char) (@ c.l1_hdr_kinds))
+    @@: hdr_kinds_cell char (cast: (@@: char) (@ c.l1_hdr_kinds))
+    @: hdr_typescap_cell size_t (cast: (@: size_t) (@ c.l1_hdr_typescap))
+    @: hdr_kindscap_cell size_t (cast: (@: size_t) (@ c.l1_hdr_kindscap))
+    @: hdr_types_array char 0
+    @: hdr_kinds_array char 0
+    @: grown char 0
     c.LmL1TextScratch64: buf_scratch
     size_t: used 0U
     size_t: n 0U
+    size_t: next 0U
     int: i 0
     int: prev 0
+    hdr_types_array: hdr_types_cell[0]
+    hdr_kinds_array: hdr_kinds_cell[0]
     if: c.l1_ident_to_buf((cast: (@: char) buf_scratch\buffer), 64U, text) != 0
         return: (cast: (int) (c.l1_error(path, source_node, "type name too long")))
     # Completing an incomplete tag alias: `type: Foo struct Foo` (kind 97) may be
@@ -1393,10 +1407,34 @@ fn: l1_hdr_type_add (const: (@: text c.LmP0Text); const: (@: path char); const: 
         used: used + c.strlen(hdr_types_array + used) + 1U
         i: i + 1
     n: c.strlen((cast: (const: @: char) buf_scratch\buffer))
-    # Header-type table: 128 names / 8192 bytes (raised from 64/4096 for FABLE-134;
-    # typed Post/Thread mail fnptrs must not be erased to fit the old cliff).
-    if: used + n + 1U >= 8192U || hdr_typen_cell[0] >= 128
-        return: (cast: (int) (c.l1_error(path, source_node, "too many header type names")))
+    # The header-type table grows with the closure of the unit (no fixed cliff: the table of 128 names / 8192 bytes,
+    # raised once for FABLE-134, refused the first program that predefs the kernel's headers and the parser's together,
+    # slice 309). Both arrays are heap storage of the translator's state cells; a unit resets the count, not the room.
+    if: used + n + 1U > hdr_typescap_cell[0]
+        next: hdr_typescap_cell[0] * 2U
+        if: next < 8192U
+            next: 8192U
+        while: next < used + n + 1U
+            next: next * 2U
+        ---
+        grown: (cast: (@: char) c.realloc((cast: (@: void) hdr_types_array), next))
+        if: grown = 0
+            return: (cast: (int) (c.l1_error(path, source_node, "out of memory for header type names")))
+        hdr_types_array: grown
+        hdr_types_cell[0]: grown
+        hdr_typescap_cell[0]: next
+    ---
+    if: (cast: (size_t) hdr_typen_cell[0]) + 1U > hdr_kindscap_cell[0]
+        next: hdr_kindscap_cell[0] * 2U
+        if: next < 128U
+            next: 128U
+        grown: (cast: (@: char) c.realloc((cast: (@: void) hdr_kinds_array), next))
+        if: grown = 0
+            return: (cast: (int) (c.l1_error(path, source_node, "out of memory for header type names")))
+        hdr_kinds_array: grown
+        hdr_kinds_cell[0]: grown
+        hdr_kindscap_cell[0]: next
+    ---
     c.memcpy(hdr_types_array + used, (cast: (const: @: void) buf_scratch\buffer), n + 1U)
     hdr_kinds_array[hdr_typen_cell[0]]: (cast: (char) kind)
     hdr_typen_cell[0]: hdr_typen_cell[0] + 1

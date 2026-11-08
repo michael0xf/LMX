@@ -1,0 +1,246 @@
+# The interpreter of the clean graph (docs/kernel-implementation.ru.md §6; slice 309, the vertical slice of §11 item 0):
+# it walks the statements of a root in field order and recognizes everything by addresses -- a word by the canonical
+# address of its spelling (the words of the language are the state's, §6.2), a place by the region of the address a slot
+# holds (§2.2), a name by the address -> name table of the arena (§5.1). Its service table is the resolution of a written
+# name in the root's slots, made afresh at every statement (§3.5, §5.2): nothing is kept between traversals, nothing is
+# stored in the graph. Expressions are the written fields themselves: operands and operator words, left to right, with
+# `* / %` binding tighter than `+ -` (§3.3); a nested Lmx is a parenthesized expression. A write of a place is the
+# kernel's one write (lmx_graph_assign_int): the first assignment of a place without a value writes into its very cell
+# and turns the slot onto it; later writes go into the cell.
+#
+# Statements of this slice: `name: expression` (a write of the int place named name) and `int: name expression` (a
+# declaration with a computed initializer: the published value replaces the statement in its slot, §3.4). A read of a
+# place without a value is LMX_GRAPH_RUN_UNINIT, reported, never a zero or a random value (§3.2).
+#
+# A machine module (L2 section 20); the build writes its header, lmx_graph_run.h.lm1, from the exports named in
+# bld_kernel_l2 (tools/build.lm2).
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdlib.h>"
+include: "<stdio.h>"
+
+# The answers of the interpreter: 0 done; 1 a place without a value was read where an int is needed; 2 a malformed
+# expression (an operator without an operand, two operands in a row, an unknown token); 3 an unknown name; 4 a write
+# refused (a slot that holds no int place); 5 a statement this slice does not execute; 6 division by zero.
+
+# The binding power of an operator word (a canonical address): 2 for `* / %`, 1 for `+ -`, 0 for no operator.
+fn: lmx_graph_op_power (@: state c.LmxGraphState; @: text char) int
+    if: text = 0
+        return: 0
+    if: text = state\w_star || text = state\w_slash || text = state\w_percent
+        return: 2
+    if: text = state\w_plus || text = state\w_minus
+        return: 1
+    return: 0
+end: lmx_graph_op_power
+
+# The expression from field at[0] up to field to of expr, with operators of power at least least: precedence climbing
+# over the written fields. An operand is an int, the name of a place of scope (read through the general reading of a
+# place: a place without a value answers 1) or a nested Lmx, evaluated as a parenthesized expression by the same climb.
+# 0 and the value in out; else the answer.
+fn: lmx_graph_eval_from (@: g c.LmxGraph; @: scope c.Lmx; @: expr c.Lmx; @: at size_t; size_t: to; int: least; @: out int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: value void 0
+    @: text char 0
+    @: inner c.Lmx 0
+    size_t: inner_at 0U
+    size_t: inner_n 0U
+    size_t: k 0U
+    int: kind 0
+    int: left 0
+    int: right 0
+    int: power 0
+    int: deref 0
+    int: r 0
+    if: state = 0 || at = 0 || out = 0 || at[0] >= to
+        return: 2
+    value: c.lmx_graph_get(expr, at[0])
+    kind: c.lmx_graph_kind(g, value)
+    if: kind = 1
+        left: c.lmx_int_value_known(value)
+    else:
+        if: kind = 3
+            return: 1
+        if: kind = 2
+            text: c.lmx_graph_word_text(g, value)
+            if: text = state\w_deref
+                deref: 1
+                at[0]: at[0] + 1U
+                if: at[0] >= to
+                    return: 2
+                text: c.lmx_graph_word_text(g, c.lmx_graph_get(expr, at[0]))
+                if: text = 0
+                    return: 2
+                ---
+            ---
+            if: lmx_graph_op_power(state, text) != 0
+                return: 2
+            k: c.lmx_graph_named(g, scope, text)
+            if: k >= c.lmx_graph_count(scope)
+                return: 3
+            if: deref != 0
+                r: c.lmx_graph_deref_int(g, scope, k, @ left)
+            else:
+                r: c.lmx_graph_read_int(g, scope, k, @ left)
+            ---
+            if: r != 0
+                return: r
+            ---
+        else:
+            if: kind != 4
+                return: 2
+            inner: (cast: (@: c.Lmx) value)
+            inner_n: c.lmx_graph_count(inner)
+            r: lmx_graph_eval_from(g, scope, inner, @ inner_at, inner_n, 1, @ left)
+            if: r != 0
+                return: r
+            if: inner_at != inner_n
+                return: 2
+            ---
+        ---
+    ---
+    at[0]: at[0] + 1U
+    while: at[0] < to
+        text: c.lmx_graph_word_text(g, c.lmx_graph_get(expr, at[0]))
+        power: lmx_graph_op_power(state, text)
+        if: power = 0
+            return: 2
+        if: power < least
+            break
+        at[0]: at[0] + 1U
+        r: lmx_graph_eval_from(g, scope, expr, at, to, power + 1, @ right)
+        if: r != 0
+            return: r
+        if: text = state\w_plus
+            left: left + right
+        if: text = state\w_minus
+            left: left - right
+        if: text = state\w_star
+            left: left * right
+        if: text = state\w_slash || text = state\w_percent
+            if: right = 0
+                return: 6
+            if: text = state\w_slash
+                left: left / right
+            else:
+                left: left % right
+            ---
+        ---
+    ---
+    out[0]: left
+    return: 0
+end: lmx_graph_eval_from
+
+# The expression written in fields from .. to of expr, evaluated in the names of scope. 0 and the value in out; else the
+# answer (2 when fields are left over).
+fn: lmx_graph_eval (@: g c.LmxGraph; @: scope c.Lmx; @: expr c.Lmx; size_t: from; size_t: to; @: out int) int
+    size_t: at from
+    int: r 0
+    if: g = 0 || scope = 0 || expr = 0 || out = 0 || from >= to
+        return: 2
+    r: lmx_graph_eval_from(g, scope, expr, @ at, to, 1, out)
+    if: r != 0
+        return: r
+    if: at != to
+        return: 2
+    return: 0
+end: lmx_graph_eval
+
+# One statement: the Lmx at slot index of root, whose field 0 is a word. `int: name expression` publishes the value in a
+# new int cell named name in that slot; `name: expression` writes the int place named name.
+fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: statement c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get(root, index))
+    @: head char 0
+    @: name char 0
+    @: cell void 0
+    size_t: n 0U
+    size_t: k 0U
+    int: value 0
+    int: r 0
+    if: state = 0 || statement = 0
+        return: 5
+    n: c.lmx_graph_count(statement)
+    head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
+    if: n < 2U || head = 0
+        return: 5
+    if: head = state\w_at
+        # The initialized reference form of this int-only slice: @: p int @i. The words stay in the source graph;
+        # resolving i belongs to this traversal, and the resulting p is an ordinary primitive pointer value.
+        if: n != 5U || c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 2U)) != state\w_int || c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 3U)) != state\w_at
+            return: 5
+        name: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U))
+        head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 4U))
+        if: name = 0 || head = 0
+            return: 5
+        k: c.lmx_graph_named(g, root, head)
+        cell: c.lmx_graph_ref_int(g, c.lmx_graph_place_cell(g, root, k))
+        if: cell = 0
+            return: 4
+        return: c.lmx_graph_publish(g, root, index, cell)
+    if: head = state\w_int
+        name: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U))
+        if: n < 3U || name = 0
+            return: 5
+        r: lmx_graph_eval(g, root, statement, 2U, n, @ value)
+        if: r != 0
+            return: r
+        cell: c.lmx_graph_int(g, value)
+        if: cell = 0
+            return: 4
+        return: c.lmx_graph_publish(g, root, index, cell)
+    k: c.lmx_graph_named(g, root, head)
+    if: k >= c.lmx_graph_count(root)
+        return: 3
+    r: lmx_graph_eval(g, root, statement, 1U, n, @ value)
+    if: r != 0
+        return: r
+    if: c.lmx_graph_assign_int(g, root, root, k, value) != 0
+        return: 4
+    return: 0
+end: lmx_graph_exec_statement
+
+# The execution of a root: its fields in order; a field holding a primitive is a value and stands; a field holding an
+# unnamed Lmx whose field 0 is a word is a statement and runs; a named Lmx (a data Structure) stands. 0, or the first
+# statement's answer.
+fn: lmx_graph_run (@: g c.LmxGraph; @: root c.Lmx) int
+    size_t: n (cast: (size_t) c.lmx_graph_count(root))
+    size_t: i 0U
+    @: value void 0
+    @: inner c.Lmx 0
+    int: r 0
+    if: g = 0 || root = 0
+        return: 5
+    while: i < n
+        value: c.lmx_graph_get(root, i)
+        if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = 0
+            inner: (cast: (@: c.Lmx) value)
+            if: c.lmx_graph_count(inner) != 0U && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U)) != 0
+                r: lmx_graph_exec_statement(g, root, i)
+                if: r != 0
+                    return: r
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_graph_run
+
+# Dispatch the current clean graph. Native uses the existing common nullary call boundary; with no entry the clean
+# interpreter gets a fresh activation frame, discarded on return. No previous traversal's bindings are retained.
+fn: lmx_graph_call (@: g c.LmxGraph; @: root c.Lmx) int
+    c.LmxActivation: activation
+    int: value 0
+    int: status 0
+    if: g = 0 || c.lmx_graph_kind(g, (cast: (@: void) root)) != 4
+        return: 5
+    if: root\native != 0
+        return: c.lmx_call0(g\arena, root, @ value)
+    if: c.lmx_activation_push(g\arena, @ activation, 2, root, 0, 0, 0U, 0) != 0
+        return: 5
+    status: lmx_graph_run(g, root)
+    c.lmx_activation_pop(g\arena, @ activation)
+    return: status
+end: lmx_graph_call

@@ -75,8 +75,10 @@ Structure) and the formals (`lm_compiler_whole_fields`: every field names a form
 has a built default): the fields are the arguments (`whole` 1), or the ordinary positional reading stands with the
 binder's refusal of a missing formal, or -- the Structure also fitting the first formal, a Structure formal, by the first
 part of implements at translation (`lm_compiler_descriptor_used`, the author's instruction of 2026-11-08), every other
-formal defaulted -- two readings apply and the call is refused as ambiguous (`lm_compiler_whole_decide`; the fixture
-`whole_ambiguous_refused`). A whole call binds in the kernel, in both executors, after the one actual's evaluation
+formal defaulted -- ce01c206 refuses the call as ambiguous (`lm_compiler_whole_decide`; the fixture `whole_ambiguous_refused`):
+Codex's review of 307 established this as my own extension of the rule, the author spoke of two really applicable methods,
+so the refusal is withdrawn by the next slice (the ordinary call stands, no new priority of readings; the two-methods case
+stays unimplemented). A whole call binds in the kernel, in both executors, after the one actual's evaluation
 (`lmx_call_bind_whole`: the form against the selected callable's args part -- every field a formal, every other formal
 holding its default, else the implicit `call` --, then each formal receives the field of its name as a written actual is
 received since slices 305-306, a number through the route of its type or the implicit `convert`, a graph by the formal's
@@ -100,7 +102,9 @@ declaration statement today ("merge expression is not lowered in this receiving 
 exports, without which a program calling `lmx_call_bind_whole` failed at its C compile. Acceptance: the whole
 maintained registry on the candidate 139 rows, 1102 checks, 0 failures (native and forced, both roots); six mutants killed;
 whole boot170a 677 s with 0 failures and smoke 9/0 (G0 = the stage's tool170b); checks 38/0 (the candidate runtime the same
-bytes as the G2 runtime, the candidate frontend exe-same as the G2 frontend); landing 264 inputs; docs check 0. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+bytes as the G2 runtime, the candidate frontend exe-same as the G2 frontend); landing 264 inputs; docs check 0. Codex's review (CODEX-FABLE-307-REVIEW-20261108094230Z-01) did not accept the
+closure: the merge written in the call itself must work (35, native and forced), the form and the names must be checked
+before the producer of the Structure runs, applicability by the full first part of implements -- the next slice. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

@@ -162,7 +162,7 @@ native/walker selection, without a hidden test catalogue, runtime names,
 failure of the **whole** test set remains undecided.
 
 <a id="assign-named-merge"></a>
-### 4.2 `:=`, named arguments, a `merge` of arguments and the whole argument Structure: adopted rule, implemented by slices 303, 304 and 307
+### 4.2 `:=`, named arguments, a `merge` of arguments and the whole argument Structure: adopted rule, implemented by slices 303 and 304, partly by 307 (the remainders of Codex's review of 307 are the next slice)
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
@@ -250,12 +250,14 @@ of the third:
   ordinary positional reading stands; when the Structure also fits the
   first formal, a Structure formal, by the first part of `implements` at
   translation, as the author instructed on 2026-11-08, with every other
-  formal defaulted, both readings apply and the call is refused as
-  ambiguous ("the Structure given to k is its argument q and its
-  arguments: an ambiguous call", the fixture `whole_ambiguous_refused`).
-  Two methods of one name cannot be written in one unit (the refusal
-  "duplicate definition"), so the author's ambiguity is realizable only as
-  two readings of one call. The binding is one kernel function of both
+  formal defaulted, ce01c206 refuses the call as ambiguous ("the Structure
+  given to k is its argument q and its arguments: an ambiguous call", the
+  fixture `whole_ambiguous_refused`); Codex's review of 307 established
+  this as my own extension of the rule, not the author's decision (the
+  author spoke of two really applicable methods; two `fn` of one name in
+  one unit are refused at definition): the refusal is withdrawn by the
+  next slice, the ordinary unambiguous call stands, no new priority of
+  readings, the two-methods case stays a remainder. The binding is one kernel function of both
   executors after the evaluation of the single actual
   (`lmx_call_bind_whole`): the form against the current `args` part of the
   selected callable -- every field a formal, every other formal holding
@@ -279,7 +281,12 @@ of the third:
   decided whole by its static shape but refused earlier by the
   translation of the actual: a merge expression is lowered only as a
   declaration statement ("merge expression is not lowered in this
-  receiving context", the fixture `whole_merge_inline_refused`). The precedence of `:=` among operations and a value of
+  receiving context", the fixture `whole_merge_inline_refused`). Remainders
+  per Codex's review of 307 (the next slice): the canonical `merge` written
+  in the call itself, 35 natively and forced; the form and the names of the
+  whole before the producer of the Structure runs; applicability by the full
+  first part of `implements` with the Consumer and the conversions, not
+  executed, instead of kind classes. The precedence of `:=` among operations and a value of
   the written form as an expression are not defined by the rule; the
   compound assignments are [4.3](#compound-assign-notes).
 

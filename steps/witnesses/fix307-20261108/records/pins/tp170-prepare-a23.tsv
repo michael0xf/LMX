@@ -1,0 +1,19 @@
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE), try a23 -- a22 without the deferral of the lifted declaration. The probe p307h5 on a22
+# (fe170o) translated whole_arguments in both executors and failed at run time (native "walk error: UNSUPPORTED", forced "walk error:
+# INVALID"); the probes wl_b, wl_c, wl_d (p307k) placed it: the form check on a plain whole call passes (wl_b), the names and the form
+# before the producer at a callable place holding other names pass in both executors (wl_d: `call`, the counter 0), the merge written in
+# the call fails (wl_c) -- and the native code of wl_c shows why: a statement's prologue reads the owns the statement uses
+# (lmx_walk_value_cell on the own's cell) before the statement's code, so a declaration deferred to the whole-call site is still unset
+# there (the hand-written hidden form, wl_a, runs 35). The hidden declaration now runs in the sequence before its statement, as a
+# written `pack: merge(...)` does: the LIFTED/DEFERRED marks, lm_compiler_lifted_defer, lm_compiler_emit_lifted,
+# lm_compiler_rw_whole_payload, the four helper functions and their exports (frontend_names 260 again), the THEN operand of the walker
+# (LMX_WALK_OP_COUNT 66 again), its branch in lmx_walk_eval_result and its word in l2_driver are removed; the WHOLE payload is the plain
+# reference again. Kept: the lift walk before the owns are collected (lm_compiler_merge_lift_walk, the hidden name l2_lift_<method>_<offset>,
+# the host's span), the names and the form before the actual in both executors (lmx_call_bind_whole_form), the hold of the overlapping
+# readings, the applicability by the Consumer-relative projection with the conversion table. Bound: the operands of a merge written in the
+# call evaluate before the call's form check (the same order as the written pack). Run by `lmxtool steps` with the working tool of boot164a.
+manifest	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a23.list	C:/Nyasha_Planet/LMX/selfbuild	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a23.sha256
+stage-copy	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a23.sha256	C:/Nyasha_Planet/LMX/selfbuild	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tp170
+stage-copy	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a23.sha256	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tp170	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140
+manifest	C:/Nyasha_Planet/LMX/selfbuild/inputs.list	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-tp170-a23.sha256
+verify	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-tp170-a23.sha256	C:/Nyasha_Planet/LMX/selfbuild

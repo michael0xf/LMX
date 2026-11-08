@@ -6007,6 +6007,18 @@ fn: lm_compiler_parse_unit (const: (@: path char)) int
             if: ns_local_cell[0][i] >= 0 && c.lm_compiler_ns_original_body(i) != 0 && lm_compiler_local_ns_proc(i, path) != 0
                 return: (cast: (int) (1))
             i: i + 1
+        # Slice 307 (the review of Codex, item 2): a `merge` written as the actual of a call is lifted into a hidden
+        # declaration before the owns are collected and the calls are bound -- the binder keeps the node of each actual and asks the own
+        # table for the name (lm_compiler_merge_lift_walk); once per registration round, over the methods known so far.
+        i: 0
+        while: i < m_n_cell[0]
+            if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0
+                if: lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (m_body_cell[0][i]\as\structure)), i, c.lm_compiler_method_src(i, path)) != 0
+                    return: (cast: (int) (1))
+                ---
+            ---
+            i: i + 1
+        ---
         if: c.lm_compiler_collect_asgn_binds(path) != 0
             return: (cast: (int) (1))
     ---
@@ -18581,7 +18593,8 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
     int: dst
     int: routes 0
     int: receiver
-    int: slot 2
+    int: slot 3
+    int: names 0
     int: whole 0
     int: occurrence 0
     int: status
@@ -18598,6 +18611,8 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
     if: status != 1
         return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, c.lm_compiler_error_fatal(src_cell[0], source_node, "internal: a whole call lost its fields"))))
     while: k < nf
+        if: kinds[k] != 0 - 2
+            names: names + 1
         src: c.lm_compiler_whole_kind_number(kinds[k])
         n: 0
         dst: (cast: (int) (c.lm_compiler_route_type(n)))
@@ -18609,9 +18624,21 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
         ---
         k: k + 1
     ---
-    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_WHOLE", 2 + 3 * routes, out) != 0
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_WHOLE", 3 + names + 3 * routes, out) != 0
         return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
     whole: (cast: (int) (\out))
+    # The static field names (the review of Codex, 307, item 3): their count at slot 2, then the codes of the formals they
+    # name; the walk checks them against the callable selected now before the payload (lmx_call_bind_whole_form).
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", whole, names) < 0
+        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+    k: 0
+    while: k < nf
+        if: kinds[k] != 0 - 2
+            if: rw_emit_cell[0] != 0 && (c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, ", whole, slot) < 0 || c.lm_compiler_emit_unit_id_text(c.lm_compiler_fn(idx, k)) != 0 || c.fputs(") != c.LMX_WALK_OK\n            return: 1\n", out_cell[0]) < 0)
+                return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+            slot: slot + 1
+        k: k + 1
+    ---
     k: 0
     while: k < nf
         src: c.lm_compiler_whole_kind_number(kinds[k])
@@ -18678,3 +18705,208 @@ fn: lm_compiler_rw_named_routed (int: parent; const: (@: name c.LmP0Text); int: 
     ---
     return: (cast: (int) (0))
 end: lm_compiler_rw_named_routed
+
+# Slice 307, the review of Codex (item 2 -- the author's canonical `mytest(merge(mytest\args; (a: int: 5)))` = 35): a
+# `merge` written as the actual of a call is lowered by the general mechanism of the merge statement.  The walk before the
+# binding of the calls (lm_compiler_merge_lift_walk) lifts that actual of `stmt` into a hidden declaration statement
+# `l2_lift_<method>_<offset>: merge(...)` placed before `stmt` in `body` --
+# the merge node itself moves there and the hidden statement takes the span of `stmt` (a declaration visible from the
+# statement that reads it: the visibility of an own is decided by offsets, lm_compiler_vis_ok); the actual becomes the
+# atom of the same name at the merge's own span, a read of the hidden row.  The hidden declaration runs in the
+# sequence before `stmt`, as a written `pack: merge(...)` before `mytest(pack)` does: the operands of the merge evaluate
+# before the call checks its names and form against the callable selected -- a bound of slice 307 named in its record
+# (a deferral to the call site is not open to the native emitter, whose statement prologue reads the owns a statement
+# uses before its code).  Lifted (lm_compiler_merge_lift_find): a merge among the actuals of the call the statement is, or of the call that
+# is the value of a declaration, an assignment or a `return`.  Not lifted: the statement's own merge content
+# (`x: merge(...)`, `return: merge(...)`: lm_compiler_merge_declaration), the operands of a merge, a merge deeper in an
+# expression or in a control statement (today's refusal stays).  *out: the inserted field, or 0 when nothing was
+# lifted.  1: an error said.
+fn: lm_compiler_merge_lift (@: body c.LmP0Structure; @: host c.LmP0Field; @: stmt c.LmP0Node; int: mi; const: (@: path char); @@: out c.LmP0Field) int
+    @: app_field c.LmP0Field 0
+    @: hidden c.LmP0Node
+    @: hidden_as c.LmP0NodeAs
+    @: frame c.LmP0Frame
+    @: hbody c.LmP0Structure
+    @: hfield c.LmP0Field
+    @: atom c.LmP0Node
+    @: atom_as c.LmP0NodeAs
+    @: name c.LmP0Text
+    @: buf char
+    @: inserted c.LmP0Field
+    @: cur c.LmP0Field
+    @: app c.LmP0Node
+    \out: 0
+    if: body = 0 || host = 0 || stmt = 0
+        return: (cast: (int) (0))
+    lm_compiler_merge_lift_find(stmt, mi, @ app_field)
+    if: app_field = 0 || app_field\value = 0
+        return: (cast: (int) (0))
+    app: app_field\value
+    hidden: (cast: (@: c.LmP0Node) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0Node)))))
+    hidden_as: (cast: (@: c.LmP0NodeAs) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0NodeAs)))))
+    frame: (cast: (@: c.LmP0Frame) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0Frame)))))
+    hbody: (cast: (@: c.LmP0Structure) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0Structure)))))
+    hfield: (cast: (@: c.LmP0Field) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0Field)))))
+    atom: (cast: (@: c.LmP0Node) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0Node)))))
+    atom_as: (cast: (@: c.LmP0NodeAs) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0NodeAs)))))
+    inserted: (cast: (@: c.LmP0Field) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0Field)))))
+    name: (cast: (@: c.LmP0Text) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.LmP0Text)))))
+    buf: (cast: (@: char) c.lm_compiler_xmalloc(32U))
+    if: hidden = 0 || hidden_as = 0 || frame = 0 || hbody = 0 || hfield = 0 || atom = 0 || atom_as = 0 || inserted = 0 || name = 0 || buf = 0
+        return: (cast: (int) (c.lm_compiler_alloc_or(path, stmt, "out of memory")))
+    if: c.sprintf(buf, "l2_lift_%d_%zu", mi, (cast: (size_t) (app\span\offset))) < 0
+        return: (cast: (int) (1))
+    name\data: buf
+    name\length: c.strlen(buf)
+    hfield\value: app
+    hfield\next: 0
+    hbody\first_field: hfield
+    hbody\last_field: hfield
+    hbody\field_count: 1U
+    frame\head: name
+    frame\flags: c.LM_P0_FRAME_COLON
+    frame\body: hbody
+    frame\trailer: 0
+    hidden_as\frame: frame
+    hidden\kind: c.LM_P0_NODE_FRAME
+    hidden\flags: 0U
+    hidden\span: stmt\span
+    hidden\as: hidden_as
+    atom_as\atom: name
+    atom\kind: c.LM_P0_NODE_ATOM
+    atom\flags: 0U
+    atom\span: app\span
+    atom\as: atom_as
+    app_field\value: atom
+    inserted\value: hidden
+    inserted\next: host
+    if: body\first_field = host
+        body\first_field: inserted
+    else:
+        cur: body\first_field
+        while: cur != 0 && cur\next != host
+            cur: cur\next
+        ---
+        if: cur = 0
+            return: (cast: (int) (c.lm_compiler_error_fatal(path, stmt, "internal: a lifted merge actual's statement is not in its body")))
+        cur\next: inserted
+    ---
+    body\field_count: body\field_count + 1U
+    \out: inserted
+    return: (cast: (int) (0))
+end: lm_compiler_merge_lift
+
+# Whether node is a call application: a frame with a body, headed by a name that is no word of the language, not `merge` (its operands stay its operands) and no
+# qualifier and that declares nothing (lm_compiler_is_asgn = 0, lm_compiler_own_decl_ty = 0); a path head too.
+fn: lm_compiler_lift_call_head (@: at c.LmP0Node; int: mi) int
+    @: head c.LmP0Text
+    if: at = 0 || at\kind != c.LM_P0_NODE_FRAME || at\as = 0 || at\as\frame = 0 || at\as\frame\body = 0
+        return: (cast: (int) (0))
+    head: at\as\frame\head
+    if: head = 0 || head\length = 0U || c.lm_compiler_head_word(head) != 0 || c.lm_compiler_qual_word(head) != 0 || c.lm_compiler_text_eq(head, "merge") != 0
+        return: (cast: (int) (0))
+    if: c.lm_compiler_is_asgn(at, mi) != 0 || c.lm_compiler_own_decl_ty(at) != 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_lift_call_head
+
+# The `merge` application among the actuals of the call `stmt` is, or of the call that is the value (the last field) of a
+# declaration, an assignment or a `return` (see lm_compiler_merge_lift): the field holding it, in *out; 0 when none.
+fn: lm_compiler_merge_lift_find (@: stmt c.LmP0Node; int: mi; @@: out c.LmP0Field) int
+    @: f c.LmP0Field
+    @: appl c.LmP0Node 0
+    @: head c.LmP0Text
+    \out: 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: (cast: (int) (0))
+    head: stmt\as\frame\head
+    if: head = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_lift_call_head(stmt, mi) != 0
+        appl: stmt
+    else:
+        if: c.lm_compiler_text_eq(head, "return") != 0 || c.lm_compiler_is_asgn(stmt, mi) != 0 || c.lm_compiler_own_decl_ty(stmt) != 0
+            f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
+            while: f != 0
+                if: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next))) = 0
+                    appl: f\value
+                f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+            ---
+            if: appl != 0 && lm_compiler_lift_call_head(appl, mi) = 0
+                appl: 0
+        ---
+    ---
+    if: appl = 0 || appl\as = 0 || appl\as\frame = 0 || appl\as\frame\body = 0
+        return: (cast: (int) (0))
+    # The actuals: the fields of the call's sole anonymous container when the parentheses keep one (the bound-place
+    # index names them, lm_compiler_call_actuals; before it is built, the container's own fields), else the body's.
+    f: c.lm_compiler_next_active(c.lm_compiler_call_actuals((cast: (const: @: c.LmP0Structure) (appl\as\frame\body))))
+    if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as != 0 && f\value\as\structure != 0 && c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next))) = 0
+        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\value\as\structure\first_field)))
+    while: f != 0 && \out = 0
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (f\value)), "merge") != 0
+            \out: f
+        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+    ---
+    return: (cast: (int) (0))
+end: lm_compiler_merge_lift_find
+
+# Slice 307, the review of Codex (item 2): the walk that lifts every `merge` written as the actual of a call in a method's
+# body (lm_compiler_merge_lift) -- run once over each method before the calls are bound (lm_compiler_parse_unit:
+# the binder keeps the node of each actual, so the rewrite must come first; the merge scan then registers the hidden
+# declarations as it registers a written `pack: merge(...)`).  Statements are the fields of `body`; the walk descends
+# into the statement blocks only: a STRUCTURE item (a block), the body of `else`, the STRUCTURE children of a control
+# frame (if, while, for, catch, ...) and a trailer's body -- not into a call's actuals, a declaration's value or a
+# `return`'s value (lm_compiler_merge_lift_find reads those), nor into a callable definition (its own body is a method).
+fn: lm_compiler_merge_lift_walk (@: body c.LmP0Structure; int: mi; const: (@: path char)) int
+    @: field c.LmP0Field
+    @: item c.LmP0Node
+    @: frame c.LmP0Frame
+    @: inner c.LmP0Field
+    @: lifted c.LmP0Field 0
+    if: body = 0
+        return: (cast: (int) (0))
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
+    while: field != 0
+        item: field\value
+        if: item != 0 && item\as != 0 && item\kind = c.LM_P0_NODE_STRUCTURE && item\as\structure != 0
+            if: lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (item\as\structure)), mi, path) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        if: item != 0 && item\as != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as\frame != 0 && c.lm_compiler_source_is_callable_definition(item) = 0
+            lifted: 0
+            if: lm_compiler_merge_lift(body, field, item, mi, path, @ lifted) != 0
+                return: (cast: (int) (1))
+            frame: item\as\frame
+            if: lm_compiler_lift_call_head(item, mi) = 0 && c.lm_compiler_frame_head(item, "merge") = 0 && c.lm_compiler_frame_head(item, "return") = 0 && c.lm_compiler_is_asgn(item, mi) = 0 && c.lm_compiler_own_decl_ty(item) = 0
+                if: c.lm_compiler_frame_head(item, "else") != 0
+                    if: lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (frame\body)), mi, path) != 0
+                        return: (cast: (int) (1))
+                    ---
+                else:
+                    if: frame\body != 0
+                        inner: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (frame\body\first_field)))
+                        while: inner != 0
+                            if: inner\value != 0 && inner\value\kind = c.LM_P0_NODE_STRUCTURE && inner\value\as != 0 && inner\value\as\structure != 0
+                                if: lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (inner\value\as\structure)), mi, path) != 0
+                                    return: (cast: (int) (1))
+                                ---
+                            ---
+                            inner: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (inner\next)))
+                        ---
+                    ---
+                ---
+                if: frame\trailer != 0 && (frame\body = 0 || frame\trailer != frame\body\trailer) && frame\trailer\body != 0
+                    if: lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (frame\trailer\body)), mi, path) != 0
+                        return: (cast: (int) (1))
+                    ---
+                ---
+            ---
+        ---
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+    ---
+    if: body\trailer != 0 && body\trailer\body != 0
+        return: (cast: (int) (lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (body\trailer\body)), mi, path)))
+    return: (cast: (int) (0))
+end: lm_compiler_merge_lift_walk

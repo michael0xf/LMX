@@ -1,0 +1,55 @@
+# Probe of slice 307 (not a fixture of the suite): the names and the form before the producer only -- Places\f holding h (pp, q) given the
+# result of mk_gargs (statically a GArgs with p, q; it counts its runs): the implicit `call` with Made\n still 0.  Entry 7; 80.. the check.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+GArgs:
+    Point: p
+    int: q 7
+end: GArgs
+Made:
+    int: n 0
+end: Made
+fn: h (Point: pp; int: q) int
+    return: pp\x * 100 + q
+end: h
+fn: mk_gargs () @: GArgs
+    Made\n: Made\n + 1
+    return: GArgs
+end: mk_gargs
+Places:
+    fn: f (Point: p; int: q) int
+        return: p\x * 100 + p\y * 10 + q
+    end: f
+end: Places
+int: Hx 0
+fn: rewrite_place () int
+    ---
+        @: Places\f Hx
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: rewrite_place
+fn: early_form () int
+    ---
+        int: got Places\f(mk_gargs())
+        return: got
+        catch: call ()
+            return: 28
+    ---
+end: early_form
+fn: run () int
+    @: Hx h h
+    if: rewrite_place() != 1
+        return: 80
+    if: early_form() != 28
+        return: 81
+    if: Made\n != 0
+        return: 82
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

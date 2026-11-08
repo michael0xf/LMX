@@ -1,6 +1,6 @@
 try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
 # fable_pc, slice 307. After a mutant: the changed files of the stage cold-tp140 come back from the variant tp170 and the
-# whole stage is verified against the a11 source manifest (pins/mut307-restore.tsv) by `lmxtool steps` with the verified boot164a tool.
+# whole stage is verified against the a25 source manifest (pins/mut307-restore.tsv) by `lmxtool steps` with the verified boot164a tool.
 # Parameter TP_TRY (the mutant label).
 $p='C:\Nyasha_Planet\LMX\build2\codex_fix250generationchain01'
 $P2='C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01'

@@ -66,45 +66,48 @@ and its address at `ptr_take (@@: pp Point; int: q)` and `Ptrs\f`, each followed
 `touch()` run once, the Slim is the implicit `implements` and the number the implicit `convert` with `touch()` not run,
 in both executors (before: a walker INVALID for a number at a modelled formal of a static call, `touch()` run before the
 entry's refusal). Slice307 (CALL-WHOLE-ARGUMENTS-STRUCTURE; the book's whole-arguments rule, the author's decisions of
-2026-11-07 and 2026-11-08; fable_pc): a call with one Structure argument does not differ from a call with the chain of its
-fields. The binder marks one actual written by position that may evaluate to a Structure -- a name, a path, a merge, a call
--- as a candidate (`L2ApplicationActuals.whole` 2) and defers the check of the omitted formals; CHECK decides on the static
-shape of the actual (`lm_compiler_whole_shape`: a named Structure or a declared merge result by the resolved leaf, a call
-by its result's model, a merge written in the call by its operands -- a typed declaration, a callable's args part, a named
-Structure) and the formals (`lm_compiler_whole_fields`: every field names a formal of its kind's class, every other formal
-has a built default): the fields are the arguments (`whole` 1), or the ordinary positional reading stands with the
-binder's refusal of a missing formal, or -- the Structure also fitting the first formal, a Structure formal, by the first
-part of implements at translation (`lm_compiler_descriptor_used`, the author's instruction of 2026-11-08), every other
-formal defaulted -- ce01c206 refuses the call as ambiguous (`lm_compiler_whole_decide`; the fixture `whole_ambiguous_refused`):
-Codex's review of 307 established this as my own extension of the rule, the author spoke of two really applicable methods,
-so the refusal is withdrawn by the next slice (the ordinary call stands, no new priority of readings; the two-methods case
-stays unimplemented). A whole call binds in the kernel, in both executors, after the one actual's evaluation
-(`lmx_call_bind_whole`: the form against the selected callable's args part -- every field a formal, every other formal
-holding its default, else the implicit `call` --, then each formal receives the field of its name as a written actual is
-received since slices 305-306, a number through the route of its type or the implicit `convert`, a graph by the formal's
-own entry reception; a formal without a field takes its default); natively the emitter evaluates the actual once as a
-graph reference and calls the binder with the routes of the fields' number types (`lm_compiler_emit_whole_call`,
-`lm_compiler_emit_whole_routes`), the walker's program carries the WHOLE operand `[whole, payload, (formal, witness,
-occurrence)*]` (`LMX_WALK_OP_WHOLE`, `lm_compiler_rw_whole_routed`) and the walk binds it in `lmx_walk_whole_values`. The kernel reads the
-fields of the value as its named cells: the native layout of a declared Structure keeps a step cell beside each place (the
-procedure's width is its kids and its steps, so `Args: int: c 4; int: a 6` holds c and a at the cells 0 and 2), which the
-first form of the binder read as a field without a formal (gdb on the probe program). The fixture `whole_arguments`: the
-author's `merge(mytest\args; (a: int: 5))` held by a place and given to `mytest (int: c 3; int: a)` is 35 as `mytest(a := 5)`
-is, a declared Structure whose fields are the formals is 46 (and is not written), a Structure with some of the formals and
-the others defaulted is 39, a Structure field at a Structure formal is 10, a char field at an int formal goes through the
-program's receiver once, the whole reaches a callable place (a callable of other names held there: the implicit `call`),
-and the ordinary reading stands for a Point at `take (Point: p)`, for `take(p := Point)` and for a Structure with extra
-fields; both executors. The merge written in the call itself, `mytest(merge(mytest\args; (a: int: 5)))`, is decided whole
-by its static shape but refused before that by the translation of the actual: a merge expression is lowered only as a
-declaration statement today ("merge expression is not lowered in this receiving context"; the fixture
-`whole_merge_inline_refused`) -- an implementation limit, not a rule of the language. The export lists of the kernel in
-`tools/build.lm2` count their names (`bld_kernel_l2`): the counts of lmx_implements and lmx_walk_values rose with the new
-exports, without which a program calling `lmx_call_bind_whole` failed at its C compile. Acceptance: the whole
-maintained registry on the candidate 139 rows, 1102 checks, 0 failures (native and forced, both roots); six mutants killed;
-whole boot170a 677 s with 0 failures and smoke 9/0 (G0 = the stage's tool170b); checks 38/0 (the candidate runtime the same
-bytes as the G2 runtime, the candidate frontend exe-same as the G2 frontend); landing 264 inputs; docs check 0. Codex's review (CODEX-FABLE-307-REVIEW-20261108094230Z-01) did not accept the
-closure: the merge written in the call itself must work (35, native and forced), the form and the names must be checked
-before the producer of the Structure runs, applicability by the full first part of implements -- the next slice. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+2026-11-07 and 2026-11-08; fable_pc; two passes, the second after Codex's review): a call with one Structure argument does
+not differ from a call with the chain of its fields. The binder marks one actual written by position that may evaluate to a
+Structure -- a name, a path, a merge, a call -- as a candidate (`L2ApplicationActuals.whole` 2) and defers the check of the
+omitted formals; CHECK decides on the static shape of the actual (`lm_compiler_whole_shape`) and the formals of the selected
+callable (`lm_compiler_whole_fields`: every field names a formal of its kind's class, every other formal has a built
+default): the fields are the arguments (`whole` 1), or the ordinary positional reading stands with the binder's refusal of a
+missing formal; the Structure also fitting the first formal, a Structure formal, by the first part of implements with every
+other formal defaulted, is not a question the rule asks: the direct fields that name the formals are the arguments by the
+basic rule (the author, 2026-11-08: no search for arguments deeper in the Structure; `whole_direct_fields`: `k (Q: q; int: z 0)`
+given `QZ (int: z 5; Q: q)` takes `q` and `z` from `QZ`, no default, 15, and `k(q := QZ)` is 50); the first pass's refusal of
+that case as ambiguous and the second pass's hold were my own additions and are withdrawn; the author's case of two really applicable methods
+stays unimplemented). A whole call binds in the kernel, in both executors: first the names and the form before the actual is
+evaluated (`lmx_call_bind_whole_form`: the codes of the static fields' names against the args part of the callable selected
+now and the defaults of the other formals, else the implicit `call` -- natively `l2_wn`/`l2_wfs` before the evaluation, the
+walker's WHOLE operand `[whole, payload, names, name*, (formal, witness, occurrence)*]`; a callable held with other formal
+names given the result of a producer with a counter is the `call` with the counter still 0, `early_form`), then the actual
+evaluated once and the form against the value (`lmx_call_bind_whole`: every named cell a formal, every other formal its
+current default), then each formal receives the field of its name as a written actual is received since slices 305-306 (a
+number through the route of its type or the implicit `convert`, a graph by the formal's own entry reception; an omitted
+formal its default). The merge written in the call itself, the author's canonical `mytest(merge(mytest\args; (a: int: 5)))`,
+is 35 in both executors: the translation lifts a `merge` written as a call's actual (the call a statement, or the value of a
+declaration, an assignment or a `return`) into a hidden declaration `l2_lift_<method>_<offset>: merge(...)` before the
+statement, in the registration round of `lm_compiler_parse_unit` before the owns are collected and the calls bound
+(`lm_compiler_merge_lift_walk`; the hidden declaration takes the host's span so that the own is visible from the call), and
+from there it is a written `pack: merge(...)`; the operands of such a merge evaluate before the call's form is checked, as a
+written `pack`'s do (a native statement's prologue reads the owns before its code, so the hidden declaration cannot be
+deferred to the call site -- a bound of the record); a merge in a merge operand, deeper in an expression, in a control
+statement or in the actual of a callable held under a bare name is not lifted (the former refusal). The applicability of the
+single-argument reading and the admission of Structure fields go by the general projection of the requirements relative to
+the Consumer (`lm_compiler_whole_applicable`: the uses of the input selected, the requirement's paths projected into the
+candidate), kind-strict at the leaves as the ordinary admission and the executors' entry reception are (the probe
+`whole_leaf_convert`: a candidate admitted by the conversion table stopped R0 at run time in both executors -- the table at
+nested leaves is a shared remainder). The kernel reads the fields of a value as its named cells (the native layout of a
+declared Structure keeps a step cell beside each place). The fixture `whole_arguments` (entry 7, both executors, both roots):
+`pack` 35, the inline merge 35, `mytest(a := 5)` 35, `Args (c 4, a 6)` 46 and not written, `Only (a 9)` 39, a Structure field
+at a Structure formal 10, a char field at an int formal through the program's receiver once 505, the callable place `Places\f`
+10 and the implicit `call` for a callable of other names, `early_form` 28 with `Made\n` 0, the ordinary reading for
+`take(Point)`, `take(p := Point)` and a Structure with extra fields. The export lists of the kernel in `tools/build.lm2` count
+their names (`bld_kernel_l2`: lmx_implements 73, lmx_walk_values 176). Acceptance of the second pass (candidate a25): the probe p307n on the a25 tuple (tool170e `91da2e20…`, rt170f `b6a65587…`, fe170r `1ff71021…`): 7 rows, 42 PASS, 0 failures, native and forced, both roots; the whole maintained registry on a25 139 rows / 1102 checks / 0 failures; five mutants killed (the walker's and the native names-and-form check before the actual by the forced and the native run, exit 98; the lift and the field applicability in both directions by the translation of the fixtures); whole boot170b 678 s with 0 failures (74 PASS, smoke 0 failures; G0 = the stage's tool170e, the previous frontend the G2 of boot169a); checks 38/0 (rt170f the same bytes as the G2 runtime, fe170r exe-same as the G2 frontend; G2 tool `41fe7cbe…`); the G2 tool's self-test 0 failures; landing 9/0 (manifest `36930663…`, 264 inputs); docs render/verify 3/0; docs check 0 (the repeat docs307c-check after the normalization from the index of the 160 CRLF copies of receipts in the working copy on which the first run failed; the final index checked once more before the commit, receipts in P).
+Acceptance of the first pass (ce01c206, candidate a11): the maintained registry 139 rows / 1102 checks / 0 failures, six
+mutants killed, whole boot170a 677 s with 0 failures and smoke 9/0, checks 38/0, landing 264 inputs, docs check 0; Codex's
+review (CODEX-FABLE-307-REVIEW-20261108094230Z-01) did not accept its closure and asked for the second pass. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

@@ -1,6 +1,6 @@
 try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
 # fable_pc, slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE). Whole bootstrap quick of the checked source of the stage cold-boot170<TP_TRY>: G0 = the
-# stage's tool170b (tools/build.lm2 is changed by 307: the export counts of the kernel lists, the record field whole, the walker op WHOLE, the exports of the whole binder and the
+# stage's tool170e (boot170a: tool170b; tools/build.lm2 is changed by 307: the export of the kernel form check lmx_call_bind_whole_form and the helpers exports of the lifted marks since a12, the export counts of the kernel lists, the record field whole, the walker op WHOLE, the exports of the whole binder and the
 # two name readers, so the published boot169a tool cannot be G0), previous frontend = G2 of boot169a. The stage is verified again by lmxtool
 # against its source manifest before the run. The guards below only refuse a changed input or a live pipeline; the bootstrap is one command
 # of the tool. Parameter TP_TRY.
@@ -11,13 +11,13 @@ $try=$env:TP_TRY
 if (-not $try) { throw 'parameter TP_TRY' }
 $stage="cold-boot170$try"
 $label="quick170$try"
-$tool="$p\cold-tp140\tool170b\lmxtool-tool.exe"
+$tool="$p\cold-tp140\tool170e\lmxtool-tool.exe"
 $term="$p\pins\boot170$try-quick.terminal.txt"
 $live=Get-CimInstance Win32_Process -Filter "Name = 'l2trans.exe' OR Name = 'l1trans.exe' OR Name = 'cc1.exe' OR Name = 'lmxtool-tool.exe' OR Name = 'lmxtool.exe'"
 if ($live) { $live | Select-Object ProcessId,Name | Out-String | Write-Output; throw 'pipeline already live' }
 if (Test-Path -LiteralPath $term) { throw 'terminalexists' }
 function ShaTp([string]$f) { (Get-FileHash -Algorithm SHA256 -LiteralPath $f).Hash.ToLowerInvariant() }
-if ((ShaTp $tool) -ne '68f2105dbb67dcf9a2b8aa50b9b675177ad085ff00c2b97b897ba565b143591d') { throw 'changed bootstrap input: G0 tool' }
+if ((ShaTp $tool) -ne '91da2e20b1a93e3e943918ffed5a9ab78882b995f49f8c4c728abe23114b5013') { throw 'changed bootstrap input: G0 tool' }
 if ((ShaTp "$p\cold-boot169a\quick169a\g2\frontend\l2trans.exe") -ne '9e20bcb598afaaa433ecb8a89c76c35eac2452b446d6b2b55f56e71832e8e62b') { throw 'changed bootstrap input: previous l2trans' }
 if ((ShaTp "$p\cold-boot169a\quick169a\g2\frontend\l1trans.exe") -ne '56a5ada6b9f3705b938169266d06c06c72dfca44cfb557b0f5b6b73ae8f36f9b') { throw 'changed bootstrap input: previous l1trans' }
 if ((ShaTp "$p\cold-boot169a\quick169a\g2\frontend\l2_libc.o") -ne 'af9fdae33655f8e6235310720787102921450f0f88f9b7bb2f365d372f553d37') { throw 'changed bootstrap input: previous l2_libc.o' }

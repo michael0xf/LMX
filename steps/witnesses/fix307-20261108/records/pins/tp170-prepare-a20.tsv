@@ -1,0 +1,16 @@
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE), try a20 -- a19 with two fixes found by the probe p307h2 on the a19 tuple (fe170l: the hold
+# row passed, whole_arguments still refused "merge expression is not lowered in this receiving context" at 104:20): (1) the lift ran in
+# the merge scan, which lm_compiler_parse_unit runs AFTER lm_compiler_bind_calls, and the binder keeps the node of each actual, so CHECK
+# still saw the merge node -- the lift is now a walk over every method body right before the calls are bound
+# (lm_compiler_merge_lift_walk: statements and their blocks, not a call's actuals, a declaration's value or a return's value), the scan
+# hook is gone, and the hidden declaration is named l2_lift_<method>_<offset> (unique without a counter); (2) the three readers of a lifted
+# actual (lm_compiler_lifted_defer, lm_compiler_emit_lifted, lm_compiler_rw_whole_payload) asked lm_compiler_own_find_decl with the
+# actual's atom, which finds an own by its declaring node only -- they ask lm_compiler_own_at (a name at a site) now. The a19 fixes: the
+# actuals read through the sole anonymous container, the needle line 20:13. Earlier fixes a13-a18 as in tp170-prepare-a19.tsv. The
+# kernel, the driver and tools/build.lm2 unchanged since a13 (tool170d and rt170e stay). Run by `lmxtool steps` with the working tool of
+# boot164a.
+manifest	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a20.list	C:/Nyasha_Planet/LMX/selfbuild	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a20.sha256
+stage-copy	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a20.sha256	C:/Nyasha_Planet/LMX/selfbuild	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tp170
+stage-copy	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/tp170-changed-a20.sha256	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/variants/tp170	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140
+manifest	C:/Nyasha_Planet/LMX/selfbuild/inputs.list	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/cold-tp140	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-tp170-a20.sha256
+verify	C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/pins/source-tp170-a20.sha256	C:/Nyasha_Planet/LMX/selfbuild

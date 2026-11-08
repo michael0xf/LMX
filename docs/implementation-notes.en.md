@@ -275,18 +275,45 @@ of the third:
   through the program's receiver (one call), the callable place
   `Places\f` (a callable of other formal names held there: the implicit
   `call`); the ordinary reading at `take(Point)`, `take(p := Point)` and
-  a Structure with extra fields (the fixture `whole_arguments`). An
-  implementation limit, not a rule of the language: the `merge` written
-  in the call itself -- `mytest(merge(mytest\args; (a: int: 5)))` -- is
-  decided whole by its static shape but refused earlier by the
-  translation of the actual: a merge expression is lowered only as a
-  declaration statement ("merge expression is not lowered in this
-  receiving context", the fixture `whole_merge_inline_refused`). Remainders
-  per Codex's review of 307 (the next slice): the canonical `merge` written
-  in the call itself, 35 natively and forced; the form and the names of the
-  whole before the producer of the Structure runs; applicability by the full
-  first part of `implements` with the Consumer and the conversions, not
-  executed, instead of kind classes. The precedence of `:=` among operations and a value of
+  a Structure with extra fields (the fixture `whole_arguments`). The
+  second pass of 307 (after Codex's review; the same record): the `merge`
+  written in the call itself -- `mytest(merge(mytest\args; (a: int: 5)))`
+  -- is lifted by the translation into a hidden declaration
+  `l2_lift_<method>_<offset>: merge(...)` before the statement
+  (`lm_compiler_merge_lift_walk`, before the owns are collected and the
+  calls bound: the actuals of a call, the value of a declaration or of a
+  `return`; the operands of a merge stay its operands) and gives 35 in
+  both executors (`by_inline`); the names and the form of the whole are
+  checked before the actual is evaluated -- the kernel
+  `lmx_call_bind_whole_form` takes the codes of the static fields' names
+  against the callable selected now (native `l2_wn`/`l2_wfs` before the
+  evaluation, the WHOLE operand carries the names): a callable held with
+  other formal names is the implicit `call` and a producer with a counter
+  does not run (`early_form`, `Made\n` = 0); the applicability of the
+  single-argument reading and the admission of the fields go by the
+  general projection of the requirements relative to the Consumer
+  (`lm_compiler_whole_applicable`: the uses of the input selected, the
+  requirement's paths projected into the candidate), kind-strict at the
+  leaves as the ordinary admission and the executors' reception are (the
+  probe `whole_leaf_convert`: a candidate admitted by the conversion table
+  stopped R0 in both executors -- the table at nested leaves stays a
+  shared remainder); the refusal of two readings is withdrawn, and so is
+  the hold (the author's answer of 2026-11-08, the journal): a Structure
+  whose direct fields name the formals is given by its fields by the
+  basic rule -- whether it would also fit the first formal as a value is
+  not a question the rule asks (the fixture `whole_direct_fields`:
+  `k (Q: q; int: z 0)` given `QZ (int: z 5; Q: q)` takes `q` and `z` from
+  `QZ`, no default, 15; the explicit supply `k(q := QZ)` is 50); a
+  Structure field without a leaf the callee reads is refused at
+  translation (the fixture `whole_field_refused`), a field of another
+  model with the leaves is admitted (`SArgs` with `Shape (x, y, w)` at `g`,
+  10). Bounds: the operands of a
+  `merge` written in the call evaluate before the call's form is checked,
+  as a written `pack`'s do (a native statement's prologue reads the owns
+  before its code -- the hidden declaration cannot be deferred to the call
+  site); a `merge` in the actual of a callable held under a bare name, or
+  deeper in an expression or in a control statement, is not lifted (the
+  former refusal). The precedence of `:=` among operations and a value of
   the written form as an expression are not defined by the rule; the
   compound assignments are [4.3](#compound-assign-notes).
 

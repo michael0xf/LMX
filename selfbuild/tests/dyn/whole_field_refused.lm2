@@ -1,0 +1,24 @@
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE; the review of Codex, item 4): a Structure field of a whole call is admitted at its
+# formal by the first part of implements -- the Consumer's uses of the formal projected into the field's model
+# (lm_compiler_whole_applicable).  g (Point: p; int: q) reads p\x and p\y; BArgs (Bad: p; int: q 7) names g's formals, but
+# Bad (int: x 1) has no y: the translation refuses the call, "implements is false in function argument".
+Point:
+    int: x 1
+    int: y 2
+end: Point
+Bad:
+    int: x 1
+end: Bad
+BArgs:
+    Bad: p
+    int: q 7
+end: BArgs
+fn: g (Point: p; int: q) int
+    return: p\x + p\y + q
+end: g
+fn: run () int
+    return: g(BArgs)
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

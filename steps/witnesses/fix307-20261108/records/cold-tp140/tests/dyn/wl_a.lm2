@@ -1,0 +1,18 @@
+# Probe of slice 307 (not a fixture of the suite): the hidden form of the lifted merge written by hand -- a declaration named as the
+# translation names a lifted one, l2_lift_9_9, right before the call that gives it whole.  Entry 7 when mytest reads it as the whole
+# of its arguments (35); 80 otherwise.
+fn: mytest (int: c 3; int: a) int
+    return: c * 10 + a
+end: mytest
+fn: by_hand () int
+    l2_lift_9_9: merge(mytest\args; (a: int: 5))
+    return: mytest(l2_lift_9_9)
+end: by_hand
+fn: run () int
+    if: by_hand() != 35
+        return: 80
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

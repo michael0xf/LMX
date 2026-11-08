@@ -1,0 +1,40 @@
+# Probe of slice 307 (the review of Codex, item 4; not a fixture of the suite): a Structure field whose leaf is a number of another
+# type at a Structure formal -- CG (CPoint: p; int: q 7) given to g (Point: p; int: q), where CPoint (char: x '1'; int: y 2) has the
+# leaf x of another number type than Point's x and the program defines the char -> int receiver.  On a23 the translation admitted the
+# field by the Consumer-relative projection with the conversion table and both executors stopped R0 at run time (an uncaught implicit
+# throw: the entry reception of the field is kind-strict; the probe p307l).  Since a24 the applicability is kind-strict at the leaves
+# too, as the ordinary admission and the kernel are, and this program is refused at translation ("implements is false in function
+# argument"); the conversion table at nested leaves is a remainder shared by the translation and the executors.  Entry 7; 80: the check.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+CPoint:
+    char: x '1'
+    int: y 2
+end: CPoint
+CG:
+    CPoint: p
+    int: q 7
+end: CG
+Calls:
+    int: n 0
+end: Calls
+fn: lm_stg_convert_char_int (char: v) int
+    Calls\n: Calls\n + 1
+    return: (cast: (int) v)
+end: lm_stg_convert_char_int
+fn: g (Point: p; int: q) int
+    return: p\x + p\y + q
+end: g
+fn: by_fields () int
+    return: g(CG)
+end: by_fields
+fn: run () int
+    if: by_fields() != 58
+        return: 80
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

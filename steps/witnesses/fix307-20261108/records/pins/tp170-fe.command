@@ -1,14 +1,14 @@
 try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}
 # fable_pc, slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE). The whole frontend of the stage cold-tp140 (the binder marking one Structure actual as a
 # whole candidate, CHECK deciding on its static shape -- lm_compiler_whole_decide --, the native and walked emission of the whole call)
-# translated by the published boot169a G2 frontend with the stage's tool (tool170a of a01, tool170b of a09; tools/build.lm2 changed by this slice). Parameters TP_LABEL
+# translated by the published boot169a G2 frontend with the stage's tool (tool170a of a01, tool170b of a09, tool170c of a12, tool170d of a13, tool170e of a23; tools/build.lm2 changed by this slice). Parameters TP_LABEL
 # (the output directory under the stage), TP_TRY.
 $p='C:\Nyasha_Planet\LMX\build2\codex_fix250generationchain01'
 $P2='C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01'
 $R='C:/Nyasha_Planet/LMX'
 $label=$env:TP_LABEL; $try=$env:TP_TRY
 if (-not $label -or -not $try) { throw 'parameters TP_LABEL TP_TRY' }
-$tool="$p\cold-tp140\tool170b\lmxtool-tool.exe"
+$tool="$p\cold-tp140\tool170e\lmxtool-tool.exe"
 $fe="$p\cold-boot169a\quick169a\g2\frontend\l2trans.exe"
 $term="$p\pins\tp170-fe-$try.terminal.txt"
 $run="$p\tp170-fe-$try-run-01"
@@ -18,7 +18,7 @@ if (Test-Path -LiteralPath $run) { throw 'CWDexists' }
 if (Test-Path -LiteralPath "$p\cold-tp140\$label") { throw 'outputexists' }
 if (Test-Path -LiteralPath $term) { throw 'terminalexists' }
 function ShaTp([string]$f) { (Get-FileHash -Algorithm SHA256 -LiteralPath $f).Hash.ToLowerInvariant() }
-if ((ShaTp $tool) -ne '68f2105dbb67dcf9a2b8aa50b9b675177ad085ff00c2b97b897ba565b143591d') { throw 'tool hash' }
+if ((ShaTp $tool) -ne '91da2e20b1a93e3e943918ffed5a9ab78882b995f49f8c4c728abe23114b5013') { throw 'tool hash' }
 if ((ShaTp $fe) -ne '9e20bcb598afaaa433ecb8a89c76c35eac2452b446d6b2b55f56e71832e8e62b') { throw 'frontend hash' }
 $os=Get-CimInstance Win32_OperatingSystem
 if ($os.FreeVirtualMemory -lt 4194304 -or $os.FreePhysicalMemory -lt 4194304) { throw ('insufficient free memory: virtual ' + $os.FreeVirtualMemory + ' KiB, physical ' + $os.FreePhysicalMemory + ' KiB') }

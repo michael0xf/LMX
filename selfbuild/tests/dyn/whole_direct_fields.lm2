@@ -1,0 +1,51 @@
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE), the author's answer and order of 2026-11-08 through Codex (LMX_blog/2026-11-08.md): a
+# call with one Structure argument whose direct fields name the formals is the call with those fields as its arguments -- the basic
+# rule, whatever else the Structure might fit, in native and in the interpreter.  k (Q: q; int: z 0) given QZ (int: z 5; Q: q) with
+# QZ\q\z built as 1: q <- QZ\q and z <- QZ\z, no default -- k records what it received (Seen: q\z 1, z 5; the default 0 would give
+# 10) and reads q\z * 10 + z = 15; nothing is searched for deeper in QZ, and that QZ would also fit the formal q as a value is not a
+# question the rule asks (the first pass refused this call as ambiguous and the second held it: both my own additions, withdrawn).
+# The explicit supply k(q := QZ) is the other spelling: q <- QZ (q\z then reads QZ\z = 5), z its default 0, 50.  Entry 7; 80.. the
+# failing check.
+Q:
+    int: z 1
+end: Q
+QZ:
+    int: z 5
+    Q: q
+end: QZ
+Seen:
+    int: qz 0
+    int: z 0
+    int: n 0
+end: Seen
+fn: k (Q: q; int: z 0) int
+    Seen\n: Seen\n + 1
+    Seen\qz: q\z
+    Seen\z: z
+    return: q\z * 10 + z
+end: k
+fn: direct () int
+    return: k(QZ)
+end: direct
+fn: named () int
+    return: k(q := QZ)
+end: named
+fn: run () int
+    QZ\q\z: 1
+    if: direct() != 15
+        return: 80
+    if: Seen\qz != 1
+        return: 81
+    if: Seen\z != 5
+        return: 82
+    if: named() != 50
+        return: 83
+    if: Seen\qz != 5 || Seen\z != 0
+        return: 84
+    if: Seen\n != 2
+        return: 85
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

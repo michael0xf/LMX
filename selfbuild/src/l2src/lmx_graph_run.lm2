@@ -20,6 +20,224 @@ predef: "l2src/lmx_call.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 include: "<stdio.h>"
+include: "<string.h>"
+
+# The working cache belongs to one active traversal. Its rows refer to real own cells; numbers and dirty marks
+# disappear on return. No cache or binding is stored in the Lmx graph.
+fn: lmx_graph_work_row (@: frame c.LmxGraphFrame; @: name char) @: c.LmxGraphWork
+    size_t: i 0U
+    @: rows c.LmxGraphWork 0
+    @: row c.LmxGraphWork 0
+    if: frame = 0 || name = 0
+        return: 0
+    rows: frame\rows
+    while: i < frame\count
+        row: rows + i
+        if: row\name = name
+            return: row
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_graph_work_row
+
+fn: lmx_graph_work_load (@: g c.LmxGraph; @: row c.LmxGraphWork) int
+    if: row = 0
+        return: 3
+    if: row\loaded = 0
+        if: c.lmx_graph_value_int(g, row\cell, @ row\number) != 0
+            return: 4
+        row\loaded: 1
+    return: 0
+end: lmx_graph_work_load
+
+# Preload only own values directly consumed by this body. Nested method bodies and path selectors are not uses.
+# This temporary queue is thrown away before body execution. It is neither an operation plan nor a saved interface.
+fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lmx) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @@: queue c.Lmx 0
+    size_t: count 0U
+    size_t: cap 0U
+    size_t: at 0U
+    size_t: i 0U
+    size_t: n 0U
+    @: current c.Lmx 0
+    @: raw void 0
+    @: word char 0
+    @: op char 0
+    @: row c.LmxGraphWork 0
+    int: status c.lmx_graph_scan_add(@ queue, @ count, @ cap, body)
+    while: at < count && status = 0
+        current: queue[at]
+        at: at + 1U
+        if: c.lmx_graph_method(g, current) != 0
+            continue
+        n: c.lmx_graph_count(current)
+        word: c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U))
+        op: c.lmx_graph_word_text(g, c.lmx_graph_get(current, 1U))
+        if: n = 2U && word = state\w_at
+            continue
+        i: 0U
+        if: n > 1U && word != 0 && op != state\w_plus && op != state\w_minus && op != state\w_star && op != state\w_slash && op != state\w_percent && op != state\w_deref
+            i: 1U
+        while: i < n && status = 0
+            if: n = 3U && op = state\w_deref && i = 2U
+                i: i + 1U
+                continue
+            raw: c.lmx_graph_get(current, i)
+            if: c.lmx_graph_kind(g, raw) = 4
+                status: c.lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) raw))
+            else:
+                row: lmx_graph_work_row(frame, c.lmx_graph_word_text(g, raw))
+                if: row != 0
+                    status: lmx_graph_work_load(g, row)
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+    c.free((cast: (@: void) queue))
+    return: status
+end: lmx_graph_work_scan
+
+fn: lmx_graph_work_flush (@: g c.LmxGraph) int
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
+    @: frame c.LmxGraphFrame 0
+    @: rows c.LmxGraphWork 0
+    @: row c.LmxGraphWork 0
+    size_t: i 0U
+    if: active = 0 || active\frame = 0 || c.lmx_graph_method(g, active\code) = 0
+        return: 0
+    frame: (cast: (@: c.LmxGraphFrame) active\frame)
+    rows: frame\rows
+    while: i < frame\count
+        row: rows + i
+        if: row\dirty != 0
+            if: c.lmx_graph_assign_int(g, frame\code, frame\data, row\slot, row\number) != 0
+                return: 4
+            row\dirty: 0
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_graph_work_flush
+
+fn: lmx_graph_work_finish (@: g c.LmxGraph; @: frame c.LmxGraphFrame; int: status) int
+    int: published lmx_graph_work_flush(g)
+    if: frame\activation != 0
+        frame\activation\frame: frame\prior
+    c.free((cast: (@: void) frame\rows))
+    frame\rows: 0
+    frame\count: 0U
+    if: published != 0
+        return: published
+    return: status
+end: lmx_graph_work_finish
+
+fn: lmx_graph_work_open (@: g c.LmxGraph; @: code c.Lmx; @: frame c.LmxGraphFrame) int
+    @: data c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get(code, 3U))
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
+    @: rows c.LmxGraphWork 0
+    @: row c.LmxGraphWork 0
+    size_t: i 0U
+    int: status 0
+    if: frame = 0 || active = 0 || active\code != code
+        return: 5
+    c.memset((cast: (@: void) frame), 0, c.sizeof(c.LmxGraphFrame))
+    # var is ordinary executable Lmx; a computed initializer runs only while it is present in its real slot.
+    status: lmx_graph_call(g, data)
+    if: status != 0
+        return: status
+    frame\code: code
+    frame\data: data
+    frame\count: c.lmx_graph_count(data)
+    frame\rows: (cast: (@: c.LmxGraphWork) c.calloc(frame\count + 1U, c.sizeof(c.LmxGraphWork)))
+    if: frame\rows = 0
+        return: 4
+    frame\activation: active
+    frame\prior: active\frame
+    active\frame: (cast: (@: void) frame)
+    rows: frame\rows
+    while: i < frame\count && status = 0
+        row: rows + i
+        row\name: c.lmx_graph_slot_name(g, data, i)
+        row\slot: i
+        row\cell: c.lmx_graph_place_cell(g, data, i)
+        if: row\name = 0 || c.lmx_graph_kind(g, row\cell) != 1
+            status: 5
+        i: i + 1U
+    ---
+    if: status = 0
+        status: lmx_graph_work_scan(g, frame, (cast: (@: c.Lmx) c.lmx_graph_get(code, 4U)))
+    if: status != 0
+        return: lmx_graph_work_finish(g, frame, status)
+    return: 0
+end: lmx_graph_work_open
+
+# A bare int name reads the current working value before caller bindings and lexical graph data. Explicit paths
+# still read published cells. Argument operands snapshot this value before the caller publishes at the call boundary.
+fn: lmx_graph_named_int (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @: out int) int
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
+    @: args c.Lmx 0
+    @: row c.LmxGraphWork 0
+    size_t: slot 0U
+    int: status 0
+    while: active != 0
+        if: c.lmx_graph_method(g, active\code) != 0
+            if: active\frame != 0
+                row: lmx_graph_work_row((cast: (@: c.LmxGraphFrame) active\frame), name)
+                if: row != 0
+                    status: lmx_graph_work_load(g, row)
+                    if: status = 0
+                        out[0]: row\number
+                    return: status
+                ---
+            ---
+            args: (cast: (@: c.Lmx) c.lmx_graph_get(active\code, 1U))
+            slot: c.lmx_graph_named(g, args, name)
+            if: slot < active\width && active\refs != 0
+                return: c.lmx_graph_value_int(g, active\refs[slot], out)
+            ---
+        ---
+        active: active\parent
+    ---
+    return: c.lmx_graph_value_int(g, lmx_graph_resolve(g, scope, name), out)
+end: lmx_graph_named_int
+
+fn: lmx_graph_operand_name (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
+    @: value void lmx_graph_resolve(g, scope, name)
+    int: kind c.lmx_graph_kind(g, value)
+    int: number 0
+    if: kind = 1 || kind = 3
+        if: lmx_graph_named_int(g, scope, name, @ number) != 0
+            return: 0
+        return: c.lmx_graph_int(g, number)
+    return: value
+end: lmx_graph_operand_name
+
+fn: lmx_graph_store_name (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: number) int
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
+    @: row c.LmxGraphWork 0
+    @: args c.Lmx 0
+    size_t: slot 0U
+    if: active = 0 || active\code != code
+        return: 5
+    if: active\frame != 0
+        row: lmx_graph_work_row((cast: (@: c.LmxGraphFrame) active\frame), name)
+        if: row != 0
+            row\number: number
+            row\loaded: 1
+            row\dirty: 1
+            return: 0
+        ---
+    ---
+    args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
+    slot: c.lmx_graph_named(g, args, name)
+    if: active\refs != 0 && slot < active\width && c.lmx_graph_kind(g, active\refs[slot]) = 1
+        return: c.lmx_int_store_known(active\refs[slot], number)
+    # Free-name working bindings and body-declared own fields follow in the same migration; never write an outer
+    # lexical source merely because its spelling was used as an assignment head.
+    return: 3
+end: lmx_graph_store_name
 
 # The answers of the interpreter: 0 done; 1 an address has no int representation where an int is needed; 2 a malformed
 # expression (an operator without an operand, two operands in a row, an unknown token); 3 an unknown name; 4 a write
@@ -30,12 +248,19 @@ include: "<stdio.h>"
 fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
     @: activation c.LmxActivation 0
     @: args c.Lmx 0
+    @: row c.LmxGraphWork 0
     @: current c.Lmx scope
     size_t: slot 0U
     if: g = 0 || name = 0
         return: 0
     activation: (cast: (@: c.LmxActivation) g\arena\activation)
     while: activation != 0
+        if: c.lmx_graph_method(g, activation\code) != 0 && activation\frame != 0
+            row: lmx_graph_work_row((cast: (@: c.LmxGraphFrame) activation\frame), name)
+            if: row != 0
+                return: row\cell
+            ---
+        ---
         if: c.lmx_graph_method(g, activation\code) != 0 && activation\refs != 0
             args: (cast: (@: c.Lmx) c.lmx_graph_get(activation\code, 1U))
             slot: c.lmx_graph_named(g, args, name)
@@ -54,8 +279,8 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
     return: 0
 end: lmx_graph_resolve
 
-# Shape/default preflight precedes evaluation of any actual. This migration currently executes int-returning fn
-# bodies with no own var fields. Other receiver/result forms are refused, not silently reinterpreted.
+# Shape/default preflight precedes evaluation of any actual. This migration executes int-returning fn bodies;
+# explicit int own fields use the shared working-cache/publication mechanism. Other receiver/result forms refuse.
 fn: lmx_graph_call_shape (@: g c.LmxGraph; @: code c.Lmx; size_t: actuals) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: args c.Lmx 0
@@ -66,8 +291,6 @@ fn: lmx_graph_call_shape (@: g c.LmxGraph; @: code c.Lmx; size_t: actuals) int
     args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
     result: (cast: (@: c.Lmx) c.lmx_graph_get(code, 2U))
     if: actuals > c.lmx_graph_count(args) || c.lmx_graph_count(result) != 1U || c.lmx_graph_word_text(g, c.lmx_graph_get(result, 0U)) != state\w_int
-        return: 5
-    if: c.lmx_graph_count((cast: (@: c.Lmx) c.lmx_graph_get(code, 3U))) != 0U
         return: 5
     while: i < c.lmx_graph_count(args)
         if: c.lmx_graph_kind(g, c.lmx_graph_get(args, i)) != 1
@@ -174,6 +397,46 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
     return: status
 end: lmx_graph_admit
 
+# Sequential statements over the current method activation. Bodies stay in the graph on every call.
+fn: lmx_graph_method_run (@: g c.LmxGraph; @: code c.Lmx; @: out int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: body c.Lmx (cast: (@: c.Lmx) c.lmx_graph_get(code, 4U))
+    @: statement c.Lmx 0
+    @: head char 0
+    @: target void 0
+    size_t: i 0U
+    size_t: n 0U
+    int: number 0
+    int: status 0
+    while: i < c.lmx_graph_count(body)
+        if: c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) != 4
+            status: lmx_graph_eval_number(g, code, c.lmx_graph_get(body, i), @ number)
+        else:
+            statement: (cast: (@: c.Lmx) c.lmx_graph_get(body, i))
+            n: c.lmx_graph_count(statement)
+            head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
+            if: head = state\w_return
+                return: lmx_graph_eval(g, code, statement, 1U, n, out)
+            if: head = state\w_int || head = state\w_at
+                return: 5
+            target: lmx_graph_resolve(g, code, head)
+            if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
+                status: lmx_graph_eval_call(g, code, statement, (cast: (@: c.Lmx) target), @ number)
+            else:
+                status: lmx_graph_eval(g, code, statement, 1U, n, @ number)
+                if: status = 0
+                    status: lmx_graph_store_name(g, code, head, number)
+                ---
+            ---
+        ---
+        if: status != 0
+            return: status
+        i: i + 1U
+    ---
+    # This slice's fn result is int; reaching the end without a return has no int result.
+    return: 5
+end: lmx_graph_method_run
+
 # Invoke with arguments that have already passed admission. Missing literal defaults are copied into this call's
 # private places. Native and interpretation share the ordinary activation ABI; the signature graph remains intact.
 fn: lmx_graph_invoke (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: out int) int
@@ -184,6 +447,7 @@ fn: lmx_graph_invoke (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: 
     @@: refs void 0
     @: returned void 0
     c.LmxActivation: activation
+    c.LmxGraphFrame: frame
     size_t: width 0U
     size_t: i 0U
     int: status lmx_graph_call_shape(g, code, count)
@@ -203,18 +467,17 @@ fn: lmx_graph_invoke (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: 
         i: i + 1U
     ---
     if: status = 0
+        status: lmx_graph_work_flush(g)
+    if: status = 0
         if: code\native != 0
             status: c.lmx_call_prim(g\arena, code, code, refs, width, (cast: (@: void) out), @ returned)
         else:
             status: c.lmx_activation_push(g\arena, @ activation, 2, code, refs, 0, width, 0)
             if: status = 0
-                body: (cast: (@: c.Lmx) c.lmx_graph_get(code, 4U))
-                status: 5
-                if: c.lmx_graph_count(body) = 1U && c.lmx_graph_kind(g, c.lmx_graph_get(body, 0U)) = 4
-                    statement: (cast: (@: c.Lmx) c.lmx_graph_get(body, 0U))
-                    if: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U)) = state\w_return
-                        status: lmx_graph_eval(g, code, statement, 1U, c.lmx_graph_count(statement), out)
-                    ---
+                status: lmx_graph_work_open(g, code, @ frame)
+                if: status = 0
+                    status: lmx_graph_method_run(g, code, out)
+                    status: lmx_graph_work_finish(g, @ frame, status)
                 ---
                 c.lmx_activation_pop(g\arena, @ activation)
             ---
@@ -261,7 +524,7 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
     if: out = 0 || kind = 0
         return: 2
     if: kind = 2
-        value: lmx_graph_resolve(g, scope, c.lmx_graph_word_text(g, raw))
+        value: lmx_graph_operand_name(g, scope, c.lmx_graph_word_text(g, raw))
         if: value = 0
             return: 3
         ---
@@ -281,7 +544,16 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
             else:
                 word: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U))
                 if: count = 2U && word = state\w_at
-                    status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 1U), @ value)
+                    value: c.lmx_graph_get(expression, 1U)
+                    if: c.lmx_graph_kind(g, value) = 2
+                        value: lmx_graph_resolve(g, scope, c.lmx_graph_word_text(g, value))
+                        status: 0
+                        if: value = 0
+                            status: 3
+                        ---
+                    else:
+                        status: lmx_graph_eval_value(g, scope, value, @ value)
+                    ---
                     if: status != 0
                         return: status
                     if: c.lmx_graph_kind(g, value) = 3
@@ -321,10 +593,7 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
     int: right 0
     int: status 0
     if: kind = 2
-        value: lmx_graph_resolve(g, scope, c.lmx_graph_word_text(g, raw))
-        if: value = 0
-            return: 3
-        return: c.lmx_graph_value_int(g, value, out)
+        return: lmx_graph_named_int(g, scope, c.lmx_graph_word_text(g, raw), out)
     if: kind != 4
         return: c.lmx_graph_value_int(g, value, out)
     expression: (cast: (@: c.Lmx) raw)

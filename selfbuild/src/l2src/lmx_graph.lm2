@@ -776,6 +776,7 @@ end: lmx_graph_dump_token
 fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: depth) int
     @: args c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 1U))
     @: result c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 2U))
+    @: vars c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 3U))
     @: name char lmx_graph_name_of(g, (cast: (@: void) method))
     @: formal void 0
     @: declaration c.Lmx 0
@@ -807,6 +808,13 @@ fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: d
     c.fputs(") ", f)
     if: lmx_graph_dump_token(g, lmx_graph_get(result, 0U), f) != 0
         return: 1
+    if: lmx_graph_count(vars) != 0U
+        c.fputs(" (\n", f)
+        if: lmx_graph_dump_at(g, vars, f, depth + 1) != 0
+            return: 1
+        lmx_graph_dump_indent(f, depth)
+        c.fputs(")", f)
+    ---
     c.fputs("\n", f)
     if: lmx_graph_dump_at(g, (cast: (@: c.Lmx) lmx_graph_get(method, 4U)), f, depth + 1) != 0
         return: 1

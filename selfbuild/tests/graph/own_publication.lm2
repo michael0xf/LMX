@@ -1,0 +1,12 @@
+# Evaluate both arguments before publishing x. Bare x and the explicit graph path differ on the first call.
+fn: pair (int: a; int: b) int
+    return: a * 10 + b
+end: pair
+fn: work () int (int: x 1; int: seen 0)
+    x: 2
+    seen: pair(x; work\var\x)
+    return: seen
+end: work
+int: first work()
+int: published work\var\x
+int: second work()

@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 292 entries.
+are historical. The current input manifest has 299 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -27,6 +27,14 @@ without an initializer remain distinct, including mandatory/default signature fi
 19 mutation checks passed. The former pre-write refusal was Codex's superseded interpretation; current checks take an
 address without reading unpromised bytes. The diagnostic dump is not a full state codec.
 [Evidence and remaining work](../steps/witnesses/stable-indirection-20261108/notes.md).
+
+The graph15/tool12/rt12 tuple executes sequential fn bodies with explicit int var. Temporary activation working
+values publish only dirty fields, after argument evaluation before calls and on return/error. Native computes
+its body using the same working-place/publication boundary; it does not call an interpreter body.
+Both a(5)/a:5 invoke a exactly once, formal int writes keep the caller's value, computed var initializers run once,
+and failed execution publishes completed own writes. 24 execution checks and19 graph-mutation checks passed.
+Body-declared fields, complete dynamic inputs, control flow and general call:code data remain open.
+[Sources, tuple, receipts and limits](../steps/witnesses/working-var-20261108/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

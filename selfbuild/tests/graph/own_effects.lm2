@@ -1,0 +1,19 @@
+# Each positional call evaluates a once, including when its name matches the formal.
+fn: a (int: x) int (int: calls 0)
+    calls: calls + 1
+    return: x + 1
+end: a
+fn: mytest (int: a) int
+    return: a + 30
+end: mytest
+fn: alter (int: x) int
+    x: x + 2
+    return: x
+end: alter
+int: first mytest(a(5))
+int: after_first a\var\calls
+int: second mytest(a: 5)
+int: after_second a\var\calls
+int: original 5
+int: altered alter(original)
+int: preserved original

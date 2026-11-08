@@ -31,6 +31,13 @@ the nesting and respects P0 separators. Both consumers read this form without pr
 operators, body, admission, primitive and root forms are not implemented yet. The specification below
 states the target, rather than claiming that the entire existing runtime conforms to it.
 
+The [graph15/tool12/rt12 continuation](../steps/witnesses/working-var-20261108/notes.md) supports explicit int var and
+sequential fn bodies: assignments, calls and return. Working values belong to each activation, while actual fields
+stay in var; dirty values are published after argument evaluation before a call and on exit, including an error.
+Native computes the body itself using the shared working-place and publication mechanism. All 24 execution checks
+and 19 graph-mutation checks passed. Body-declared own fields, complete dynamic inputs, control flow, other working
+value types and general call:code data remain open; this slice does not complete the activation model.
+
 <a id="principles"></a>
 ## 1. Principles (norm)
 

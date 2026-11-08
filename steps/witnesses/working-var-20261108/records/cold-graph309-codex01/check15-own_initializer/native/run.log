@@ -1,0 +1,33 @@
+GRAPH-BEFORE-BEGIN
+fn: tick () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: calls
+end: tick
+fn: cached () int (
+    int: seeded (tick)
+)
+    return: seeded
+end: cached
+int: first (cached)
+int: second (cached)
+int: calls ((tick \ var) \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: tick () int (
+    int: calls 1
+)
+    calls: (calls + 1)
+    return: calls
+end: tick
+fn: cached () int (
+    int: seeded 1
+)
+    return: seeded
+end: cached
+int: first 1
+int: second 1
+int: calls 1
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

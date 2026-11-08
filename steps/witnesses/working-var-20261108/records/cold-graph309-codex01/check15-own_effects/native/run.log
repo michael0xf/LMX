@@ -1,0 +1,45 @@
+GRAPH-BEFORE-BEGIN
+fn: a (int: x) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: (x + 1)
+end: a
+fn: mytest (int: a) int
+    return: (a + 30)
+end: mytest
+fn: alter (int: x) int
+    x: (x + 2)
+    return: x
+end: alter
+int: first (mytest (a 5))
+int: after_first ((a \ var) \ calls)
+int: second (mytest (a 5))
+int: after_second ((a \ var) \ calls)
+int: original 5
+int: altered (alter original)
+int: preserved original
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: a (int: x) int (
+    int: calls 2
+)
+    calls: (calls + 1)
+    return: (x + 1)
+end: a
+fn: mytest (int: a) int
+    return: (a + 30)
+end: mytest
+fn: alter (int: x) int
+    x: (x + 2)
+    return: x
+end: alter
+int: first 36
+int: after_first 1
+int: second 36
+int: after_second 2
+int: original 5
+int: altered 7
+int: preserved 5
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

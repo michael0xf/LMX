@@ -1,0 +1,71 @@
+# Slice 304 (MERGE-OPERAND-FORMS; the author's `merge(f\args; (a: int: 5))` of 2026-11-07, the book #whole-arguments): the
+# args part of a callable as a merge operand -- the Structure of its formals, each holding its current default (the value a
+# call omitting it takes), and a later operand writes a field by name.  tst (int: c 3; int: a): merge(tst\args; (a: int: 5))
+# reads a = 5 and c = 3, the bare operand form a: int: 5 the same; merge(tst\args) alone reads c = 3 and a = 0 -- a formal
+# with no default holds the zero of its type, as a typed declaration written without a value does; tst\args itself is not
+# written: tst(a := 1) is 31 after the merges.  As a later operand the part writes the model's slots of its formals' names
+# in the formals' order: merge(Args; two\args) for two (int: c 3; int: a 4) reads c = 3 and a = 4, Args is not written.
+# Both executors.  Entry 7; 81.. name the failing check.
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+fn: two (int: c 3; int: a 4) int
+    return: c * 10 + a
+end: two
+Args:
+    int: c 9
+    int: a 8
+end: Args
+fn: parens () int
+    pack: merge(tst\args; (a: int: 5))
+    if: pack\a != 5
+        return: 81
+    if: pack\c != 3
+        return: 82
+    return: 0
+end: parens
+fn: bare () int
+    pack: merge(tst\args; a: int: 5)
+    if: pack\a != 5
+        return: 83
+    if: pack\c != 3
+        return: 84
+    return: 0
+end: bare
+fn: alone () int
+    pack: merge(tst\args)
+    if: pack\c != 3
+        return: 85
+    if: pack\a != 0
+        return: 86
+    return: 0
+end: alone
+fn: later () int
+    pack: merge(Args; two\args)
+    if: pack\c != 3
+        return: 88
+    if: pack\a != 4
+        return: 89
+    if: Args\c != 9 || Args\a != 8
+        return: 90
+    return: 0
+end: later
+fn: m () int
+    int: r parens()
+    if: r != 0
+        return: r
+    r: bare()
+    if: r != 0
+        return: r
+    r: alone()
+    if: r != 0
+        return: r
+    r: later()
+    if: r != 0
+        return: r
+    if: tst(a := 1) != 31
+        return: 87
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

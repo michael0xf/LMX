@@ -17044,6 +17044,13 @@ fn: lm_compiler_merge_decl_operand (const: (@: mf c.LmP0Node); int: k; int: mi; 
         \span: n
         return: (cast: (int) (2))
     ---
+    # Slice 304 (MERGE-OPERAND-FORMS): the args part of a callable, `f\args` (lm_compiler_merge_args_callee) -- form 4: its
+    # fields are the callable's formals, its values their current defaults (lmx_callable_args_value).
+    if: c.lm_compiler_merge_args_callee(g, n, mi) >= 0
+        \first: g
+        \span: n
+        return: (cast: (int) (4))
+    ---
     return: (cast: (int) (lm_compiler_merge_value_refusal(value_ty, path, (cast: (const: @: c.LmP0Node) (f\value)))))
 end: lm_compiler_merge_decl_operand
 
@@ -17610,7 +17617,8 @@ fn: lm_compiler_mu_operand_model (@: first c.LmP0Field; int: span; int: form; in
     if: out = 0
         return: (cast: (int) (1))
     \out: -1
-    if: first = 0 || first\value = 0 || form = 3
+    # A typed operand (3) and a callable's args part (4) carry no model of their own.
+    if: first = 0 || first\value = 0 || form = 3 || form = 4
         return: (cast: (int) (0))
     if: c.lm_compiler_reference_source(first, span, mi, @ source) != 0
         return: (cast: (int) (1))
@@ -18595,6 +18603,21 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 # merge runs; unprofiled, it supplies no profile to keep.
                 if: form = 3
                     if: lm_compiler_emit_merge_typed_operand((cast: (const: @: c.LmP0Node) (c.lm_compiler_merge_typed_decl(last, 1))), k, mi, ind, l2_bind_tok) != 0
+                        own_excl_cell[0]: excluded
+                        return: (cast: (int) (1))
+                    k: k + 1
+                    continue
+                ---
+                # Slice 304 (MERGE-OPERAND-FORMS): the args part of a callable is the Structure of its formals' current
+                # defaults, built by the kernel from the callable's occurrence before the merge runs (lmx_callable_args_value;
+                # the walker's PRIM lmx_walk_args_value_map); fresh and unprofiled, as a typed operand is.
+                if: form = 4
+                    int: margs_callee c.lm_compiler_merge_args_callee(last, span, mi)
+                    const: (@@: margs_unit_cell char (cast: (const: @@: char) (@ c.l2_unit_ref)))
+                    if: margs_callee < 0 || margs_unit_cell[0] = 0 || lm_compiler_occ_expr(margs_callee, margs_unit_cell[0], l2_bind_tok) != 0 || c.fprintf(out_cell[0], "%sl2_margs: 0\n%sif: lmx_callable_args_value(l2_program_arena, (cast: (@: Lmx) %s), @ l2_margs) != c.LMX_WALK_OK\n", ind, ind, l2_bind_tok\data) < 0
+                        own_excl_cell[0]: excluded
+                        return: (cast: (int) (1))
+                    if: c.lm_compiler_emit_implicit_throw(mi, "merge", ind) != 0 || c.fprintf(out_cell[0], "%sl2_mops[%dU]: l2_margs\n", ind, k) < 0
                         own_excl_cell[0]: excluded
                         return: (cast: (int) (1))
                     k: k + 1

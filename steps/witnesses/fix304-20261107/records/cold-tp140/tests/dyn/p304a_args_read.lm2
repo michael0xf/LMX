@@ -1,0 +1,35 @@
+# Probe 304a (fable_pc; the args part of a method read by a path, before the f\args merge operand): tst\args\c wanted the
+# formal c written default 3 and tst\args\a the formal a with no default -- a measurement of the present reading, not a norm.
+# Entry 7; 81 c is not 3; 91..94 a refusal of the reading (merge, call, implements, interpreter).
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+fn: read_c () int
+    return: tst\args\c
+end: read_c
+fn: guarded () int
+    ---
+        return: read_c()
+        catch: merge ()
+            return: 91
+        catch: call ()
+            return: 92
+        catch: implements ()
+            return: 93
+        catch: interpreter ()
+            return: 94
+    ---
+end: guarded
+fn: run () int
+    int: c guarded()
+    if: c > 90
+        return: c
+    ---
+    if: c != 3
+        return: 81
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

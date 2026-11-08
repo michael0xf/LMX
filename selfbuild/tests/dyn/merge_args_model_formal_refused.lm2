@@ -1,0 +1,14 @@
+# Slice 304 (MERGE-OPERAND-FORMS): a formal of a Structure type has no field kind in a merge result yet -- the limit of the
+# implementation, said at the operand `tst\args` (lm_compiler_mrs_build), not a rule of the language.
+Point:
+    int: y 0
+end: Point
+fn: tst (Point: p; int: a) int
+    return: p\y + a
+end: tst
+fn: m () int
+    pack: merge(tst\args; (a: int: 5))
+    return: pack\a
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

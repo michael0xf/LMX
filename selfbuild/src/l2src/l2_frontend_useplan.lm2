@@ -5157,3 +5157,40 @@ fn: lm_compiler_mad_reached (int: mi; int: r) int
     ---
     return: (cast: (int) (0))
 end: lm_compiler_mad_reached
+
+# Slice 304 (MERGE-OPERAND-FORMS, the author's `merge(f\args; (a: int: 5))` of 2026-11-07; the book, #whole-arguments and
+# #composition): a merge operand that is the args part of a callable -- a path whose last step the common path resolution
+# read as the part 0 (args) of a method (lm_compiler_method_part_seg, locus 5), the same fact every other read of the
+# operand consumes (lm_compiler_reference_source); a fact not yet walked is walked as a bound path is.  The method, or -1
+# when the operand is anything else.
+fn: lm_compiler_merge_args_callee (@: first c.LmP0Field; int: span; int: mi) int
+    c.L2ReferenceSource: source
+    c.L2Path: resolved
+    @: fact c.L2PathFact 0
+    @: path c.L2Path 0
+    @: step c.L2PathStep 0
+    int: callee -1
+    int: released 0
+    # A path is a run of fields (the slash is its own atom): the whole run is the operand.
+    if: first = 0 || span < 1 || first\value = 0
+        return: (cast: (int) (-1))
+    if: lm_compiler_reference_source(first, span, mi, @ source) != 0 || source\path = 0
+        return: (cast: (int) (-1))
+    fact: source\path
+    path: (cast: (@: c.L2Path) (@ fact\resolved))
+    if: fact\stage != 1
+        if: lm_compiler_source_use_resolve(fact, @ resolved) != 0
+            c.lm_compiler_path_release(@ resolved)
+            return: (cast: (int) (-1))
+        path: @ resolved
+        released: 1
+    ---
+    if: path\fail_why = 0 && path\n >= 1 && path\steps != 0
+        step: path\steps + (path\n - 1)
+        if: step\locus = 5 && step\row = 0 && step\ent >= 0
+            callee: (cast: (int) (step\ent))
+    ---
+    if: released != 0
+        c.lm_compiler_path_release(@ resolved)
+    return: (cast: (int) (callee))
+end: lm_compiler_merge_args_callee

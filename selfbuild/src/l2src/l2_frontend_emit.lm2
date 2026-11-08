@@ -8606,6 +8606,16 @@ fn: lm_compiler_rw_merge_prim (const: (@: stmt c.LmP0Node); int: res; int: paren
             k: k + 1
             continue
         ---
+        # Slice 304 (MERGE-OPERAND-FORMS): the args part of a callable is the PRIM lmx_walk_args_value_map over the
+        # callable's occurrence -- the Structure of its formals' current defaults, built before the merge runs as every
+        # operand is (natively lmx_callable_args_value); the merge copies it.
+        if: form = 4
+            if: lm_compiler_rw_merge_args_operand(c.lm_compiler_merge_args_callee(last, span, rw_mi_cell[0]), (cast: (const: @: c.LmP0Node) (last\value)), prim, @ port_local_node) != 0 || c.lm_compiler_rw_put(prim, k + 8, port_local_node) != 0
+                own_excl_cell[0]: excluded
+                return: (cast: (int) (1))
+            k: k + 1
+            continue
+        ---
         # Every ordinary operand uses the same value producer;no named
         # operand is rebound through a second namespace/formal lookup.
         if: lm_compiler_rw_merge_operand(last, span, own_ty_cell[0][own], prim, @ port_local_node) != 0 || c.lm_compiler_rw_put(prim, k + 8, port_local_node) != 0
@@ -8736,6 +8746,28 @@ fn: lm_compiler_rw_merge_typed_operand (const: (@: d c.LmP0Node); int: parent; @
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_rw_primitive_contract((cast: (int) (\out)), contract)))
 end: lm_compiler_rw_merge_typed_operand
+
+# Slice 304 (MERGE-OPERAND-FORMS): the PRIM of a merge operand that is the args part of a callable -- lmx_walk_args_value_map
+# over one input, the callable's occurrence (lm_compiler_rw_method_occurrence): the Structure of the formals' current
+# defaults, as the native merge builds it (lmx_callable_args_value).
+fn: lm_compiler_rw_merge_args_operand (int: callee; const: (@: at c.LmP0Node); int: parent; @: out int) int
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    int: occurrence
+    int: contract
+    int: inputs
+    if: callee < 0
+        return: (cast: (int) (c.lm_compiler_rw_refuse(at, "a merge operand that lost its callable")))
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_PRIM", 4, out) != 0
+        return: (cast: (int) (1))
+    if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_rw%d))))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_args_value_map\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out)), (cast: (int) (\out))) < 0
+        return: (cast: (int) (1))
+    if: lm_compiler_rw_method_occurrence(callee, (cast: (int) (\out)), @ occurrence) != 0 || c.lm_compiler_rw_put((cast: (int) (\out)), 3, occurrence) != 0
+        return: (cast: (int) (1))
+    if: lm_compiler_rw_contract((cast: (int) (\out)), 1, 0, 1, @ contract, @ inputs) != 0 || lm_compiler_rw_signature_witness(inputs, 0, 0, 1) != 0
+        return: (cast: (int) (1))
+    return: (cast: (int) (c.lm_compiler_rw_primitive_contract((cast: (int) (\out)), contract)))
+end: lm_compiler_rw_merge_args_operand
 
 # Original: l2src/l2trans.lm1:27766
 fn: lm_compiler_rw_ret_own (int: res; int: into; @: out int) int
@@ -15918,6 +15950,9 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
     int: tkind
     @: tinner c.LmP0Field
     const: (@: ttype c.LmP0Text)
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    int: callee -1
+    int: j 0
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: (cast: (int) (0))
     n: c.lm_compiler_merge_arity(mf)
@@ -15931,11 +15966,12 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
         form: c.lm_compiler_merge_decl_operand(mf, 0, mi, c.lm_compiler_method_src(mi, src_cell[0]), @ last, @ span)
         if: form = 1
             return: (cast: (int) (1))
-        # A typed operand (form 3) is no reference: the result's source stays the merge's own.
-        if: form != 3 && c.lm_compiler_reference_source(last, span, mi, source) != 0
+        # A typed operand (form 3) is no reference, nor is a callable's args part (form 4): the result's source stays the
+        # merge's own.
+        if: form != 3 && form != 4 && c.lm_compiler_reference_source(last, span, mi, source) != 0
             return: (cast: (int) (1))
         own: 0 - 1
-        if: form != 3
+        if: form != 3 && form != 4
             own: c.lm_compiler_d105_key_own((cast: (int) (source\place)))
         if: own >= 0 && source\method = own_mi_cell[0][own]
             # The source query already selected this whole binding and its
@@ -15972,6 +16008,29 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
             ---
             if: c.lm_compiler_mrs_join(res, k, 0, (cast: (const: @: c.LmP0Text) (tdecl\name)), tkind, 0 - 1, ttype, -1, td) != 0
                 return: (cast: (int) (1))
+            k: k + 1
+            continue
+        ---
+        # Slice 304 (MERGE-OPERAND-FORMS): the args part of a callable, `f\args` -- its formals join the map as the typed
+        # fields their declarations write (`int: c 3`: the kind and the type word at the declaration), in the formals'
+        # order; the kernel builds their values (lmx_callable_args_value).  A formal of another type than a number has no
+        # field kind here yet and is said at the operand.
+        if: form = 4
+            callee: c.lm_compiler_merge_args_callee(last, span, mi)
+            if: callee < 0
+                return: (cast: (int) (c.lm_compiler_error(c.lm_compiler_method_src(mi, src_cell[0]), (cast: (const: @: c.LmP0Node) (last\value)), "internal: a merge operand lost its callable")))
+            j: 0
+            while: j < m_arity_cell[0][callee]
+                td: c.lm_compiler_formal_decl_at(callee, j)
+                tkind: 0 - 1
+                if: td != 0
+                    tkind: c.lm_compiler_lit_field_kind(td)
+                if: tkind < 0
+                    return: (cast: (int) (c.lm_compiler_error(c.lm_compiler_method_src(mi, src_cell[0]), (cast: (const: @: c.LmP0Node) (last\value)), "a formal that is not a number is not lowered as a field of the args part yet")))
+                if: c.lm_compiler_mrs_join(res, k, j, (cast: (const: @: c.LmP0Text) (c.lm_compiler_fn(callee, j))), tkind, 0 - 1, (cast: (const: @: c.LmP0Text) (td\as\frame\head)), -1, (cast: (const: @: c.LmP0Node) (last\value))) != 0
+                    return: (cast: (int) (1))
+                j: j + 1
+            ---
             k: k + 1
             continue
         ---
@@ -17034,7 +17093,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         if: c.fputs("    @: LmxArena l2_program_arena l2_call_arena\n", out_cell[0]) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
-        if: m_throws_cell[0][i] != 0 && c.fprintf(out_cell[0], "    []: @(Lmx) l2_mops %d\n    []: @(Lmx) l2_mprofiles %d\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n    @: Lmx l2_mqprofile 0\n    @: Lmx l2_mqhold 0\n    @: Lmx l2_mqcopy 0\n    LmxCopyMap: l2_mqpending\n    []: int l2_mqopaque %d\n    []: @(Lmx) l2_mqleaves %d\n", merge_max_cell[0], merge_max_cell[0] + ebr_n_cell[0], foreign_n_cell[0] + 1, lm_compiler_mqleaves_max(i)) < 0
+        if: m_throws_cell[0][i] != 0 && c.fprintf(out_cell[0], "    []: @(Lmx) l2_mops %d\n    []: @(Lmx) l2_mprofiles %d\n    int: l2_mstatus 0\n    @: Lmx l2_mresult 0\n    @: Lmx l2_mbody 0\n    @@: void l2_mxp 0\n    @: Lmx l2_margs 0\n    @: Lmx l2_mqprofile 0\n    @: Lmx l2_mqhold 0\n    @: Lmx l2_mqcopy 0\n    LmxCopyMap: l2_mqpending\n    []: int l2_mqopaque %d\n    []: @(Lmx) l2_mqleaves %d\n", merge_max_cell[0], merge_max_cell[0] + ebr_n_cell[0], foreign_n_cell[0] + 1, lm_compiler_mqleaves_max(i)) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: m_throws_cell[0][i] != 0 && merge_pmax_cell[0] > 0 && c.fprintf(out_cell[0], "    []: LmxMergePair l2_mpv %d\n    []: @(LmxMergePair) l2_mpp %d\n", merge_pmax_cell[0], merge_pmax_cell[0]) < 0

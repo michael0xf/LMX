@@ -2108,7 +2108,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(170U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(172U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2473,6 +2473,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[168]: "lmx_call_bind_actuals"
     # Slice 302 (IDENTIFIER-CODES): a walked place frame written by name stores its selector record, the code of the name.
     walk_value_names[169]: "lmx_walk_store_selector"
+    # Slice 304 (MERGE-OPERAND-FORMS): a callable's args part read as the Structure of its formals' current defaults -- the merge operand of that part in both executors (native call; the walker's primitive).
+    walk_value_names[170]: "lmx_callable_args_value"
+    walk_value_names[171]: "lmx_walk_args_value_map"
     post_names[0]: "lmx_post_init"
     post_names[1]: "lmx_post_api"
     post_names[2]: "lmx_post_admits"
@@ -2957,7 +2960,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 170, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 172, 1)
 end: bld_kernel_l2
 
 # L3 declaration writer; all executable algorithm bodies are ordinary L2.
@@ -3424,7 +3427,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     @@: frontend_coord_names char c.calloc(113U, sizeof(@: char))
     @@: frontend_resolve_names char c.calloc(124U, sizeof(@: char))
     @@: frontend_intern_names char c.calloc(19U, sizeof(@: char))
-    @@: frontend_useplan_names char c.calloc(151U, sizeof(@: char))
+    @@: frontend_useplan_names char c.calloc(152U, sizeof(@: char))
     @@: frontend_lower_names char c.calloc(427U, sizeof(@: char))
     @@: frontend_core_names char c.calloc(442U, sizeof(@: char))
     @@: frontend_emit_names char c.calloc(309U, sizeof(@: char))
@@ -4605,6 +4608,8 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_useplan_names[148]: "lm_compiler_emit_publish_helpers"
     frontend_useplan_names[149]: "lm_compiler_model_inst_full"
     frontend_useplan_names[150]: "lm_compiler_emit_publish_table"
+    # Slice 304 (MERGE-OPERAND-FORMS): the merge operand that is a callable's args part, read by the lowering of both executors.
+    frontend_useplan_names[151]: "lm_compiler_merge_args_callee"
     frontend_lower_names[0]: "lm_compiler_cv_refused"
     frontend_lower_names[1]: "lm_compiler_said_or"
     frontend_lower_names[2]: "lm_compiler_own_reserve"
@@ -6016,7 +6021,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_useplan") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_useplan", frontend_useplan_names, 151, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_useplan", frontend_useplan_names, 152, 1) != 0
             return: 1
         ---
     ---

@@ -162,7 +162,7 @@ native/walker selection, without a hidden test catalogue, runtime names,
 failure of the **whole** test set remains undecided.
 
 <a id="assign-named-merge"></a>
-### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, implemented by slice 303, the rest held
+### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, implemented by slices 303 and 304, the whole-arguments supply held
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
@@ -214,20 +214,45 @@ of the third:
   is: it writes the model's slot of its name, keeps the other fields and
   does not write the model; the parentheses of the second operand are
   optional.
+- The `merge` operand "a part of a callable", `f\args` (slice 304,
+  [record](../steps/witnesses/fix304-20261107/notes.md); native and the
+  walker, both roots): the args part of a callable is read as the
+  Structure of its formals -- one field per written formal, in the
+  formals' order, holding the formal's current default (the value the
+  formal takes when a call omits it); a formal with no default holds the
+  zero of its type, as a typed declaration without a value written as an
+  operand does. The kernel reads it -- one function of both executors
+  (`lmx_callable_args_value`; the walker's program takes it as a
+  primitive over the callable's occurrence); the operand is recognized by
+  the common path resolution (its last step is the `args` part of a
+  method), the result's fields are the typed fields of the formals'
+  declarations. `merge(tst\args; (a: int: 5))` reads `a` = 5 and `c` = 3,
+  the bare form `a: int: 5` the same, `merge(tst\args)` reads `c` = 3 and
+  `a` = 0; `tst\args` is not written. Implementation limits, not rules of
+  the language: a formal of another type than a number has no field kind
+  in the result's map -- a refusal at the operand ("a formal that is not
+  a number is not lowered as a field of the args part yet"); a path into
+  the args part (`tst\args\c`) is not resolved ("unknown field path
+  segment").
 - Not done: the whole argument Structure from one Structure --
   `mytest(merge(mytest\args; (a: int: 5)))` = 35 and the same Structure
-  in a variable -- and the `merge` operand "a part of a callable",
-  `f\args`. Slice 303 held them on Codex's answer (a collision with the
+  in a variable. Slice 303 held it on Codex's answer (a collision with the
   rule "a signature is not executed"); the author's decision came on
   2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the positional
   passing of one Structure errs only because of an ambiguity -- two
   methods, one with the one Structure as its arguments, the other with
   the full set of its fields; every other case is computed by the
   general matching, nothing is unfolded specially; `f(v := s)` is a
-  separate case. The implementation is the next slice. The precedence of
-  `:=` among operations and a value of the written form as an expression
-  are not defined by the rule; the compound assignments are
-  [4.3](#compound-assign-notes).
+  separate case. Slice 304 held the implementation on Codex's answer
+  (CODEX-FABLE-304-CHOICE-HOLD): today a call selects one callable by its
+  name before the arguments and there are no overloads of one name, and
+  Codex affirms neither the reading "two callables of one name" nor the
+  reading "two readings of one callable's requirement" and asked the
+  author how these two methods are written; the call's binder still puts
+  the `merge` result into the first position and refuses ("has no
+  argument a"). The precedence of `:=` among operations and a value of
+  the written form as an expression are not defined by the rule; the
+  compound assignments are [4.3](#compound-assign-notes).
 
 The defects are recorded in the [registry](../steps/defects.md).
 

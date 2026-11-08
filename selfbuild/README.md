@@ -6,8 +6,8 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 247 inputs (66 source files, 34 tools and
-147 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
+The selected package contains 257 inputs (66 source files, 34 tools and
+157 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
 P0 -- a Frame of its left and its right side flagged `LM_P0_FRAME_ASSIGN`, `a := 5` and `a:=5` one form -- that writes a
 place already known through the general assignment path (a local, a formal, a field through a path, the conversion of the
 reception, a reference place holding a method: `target := two` without a call of the bare right side, natively and in the
@@ -21,13 +21,25 @@ positional result (NAMED-BINDING-BY-HEAD closed; the `table:` receiver's parts u
 Fixtures `assign_known`, `assign_unknown_refused`, `assign_in_structure_refused`, `assign_method_name_refused`,
 `named_assign_actuals`, `named_assign_unknown_refused`, `named_assign_positional_after_refused`,
 `merge_named_field_operand`; five fixtures that asserted the by-head binding moved to `:=`. The whole argument Structure
-from one Structure (`mytest(merge(mytest\args; (a: int: 5)))`) and the `merge` operand `f\args` are the next slice: the
-author's decision of 2026-11-07 names the one error case -- two fitting methods, one with the Structure as its arguments,
-the other with the full set of its fields -- and no special unfolding (CALL-WHOLE-ARGUMENTS-STRUCTURE); the kernel is
-unchanged. The review of 303 added: an exact identifier before `:=` is the same operator in P0 (the translator's own limit
-on exact identifiers as statement heads stays, "unsupported body", pinned with its colon control); `:=` declares nothing
-in any shape -- `zz := int: 5` is refused in a method, at the root, in a Structure and as a merge operand, while a known
-place takes the typed right side by the general admission. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+from one Structure (`mytest(merge(mytest\args; (a: int: 5)))`) is held: the author's decision of 2026-11-07 names the one
+error case -- two fitting methods, one with the Structure as its arguments, the other with the full set of its fields --
+and no special unfolding (CALL-WHOLE-ARGUMENTS-STRUCTURE), and Codex asked the author how those two methods are written;
+303 left the kernel unchanged. The review of 303 added: an exact identifier before `:=` is the same operator in P0 (the
+translator's own limit on exact identifiers as statement heads stays, "unsupported body", pinned with its colon control);
+`:=` declares nothing in any shape -- `zz := int: 5` is refused in a method, at the root, in a Structure and as a merge
+operand, while a known place takes the typed right side by the general admission. Slice304 (the `merge` operand `f\args`,
+the author's example `merge(f\args; (a: int: 5))`; fable_pc) reads the args part of a callable as the Structure of its
+formals -- one field per formal, in the formals' order, holding the formal's current default; a formal with no default
+holds the zero of its type, as a typed declaration without a value does -- by one kernel function of both executors
+(`lmx_callable_args_value`; the walker's primitive `lmx_walk_args_value_map`, both exported from `lmx_walk_values`),
+recognized by the common path resolution (the operand's last step is the `args` part of a method,
+`lm_compiler_merge_args_callee`) and lowered as the fourth form of a `merge` operand (the result's fields are the typed
+fields of the formals' declarations; natively the kernel call before the merge, in the walker's program a PRIM over the
+callable's occurrence). `merge(tst\args; (a: int: 5))` reads `a` = 5 and `c` = 3, `merge(tst\args)` reads `c` = 3 and
+`a` = 0, `tst\args` is not written. Limits: a formal that is not a number is refused at the operand (`a formal that is not
+a number is not lowered as a field of the args part yet`); a path into the args part (`tst\args\c`) is not resolved. The
+call of the merge result as the whole argument Structure stays held (above). Fixtures `merge_args_operand`,
+`merge_args_model_formal_refused`. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

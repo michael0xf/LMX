@@ -7994,3 +7994,105 @@ fn: lmx_walk_named_route (@: f c.LmxWalkFrame; @: operand void; int: target; @@:
     ---
     return: c.LMX_WALK_OK
 end: lmx_walk_named_route
+
+# Slice 304 (MERGE-OPERAND-FORMS, the author's `merge(f\args; (a: int: 5))` of 2026-11-07; the book, #whole-arguments and
+# #composition): the args part of a callable read as a Structure value -- one field per written formal, in the formals'
+# order, holding the formal's current default (lmx_walk_current_default), the value the formal takes when a call omits it
+# (slice 293); a formal with no default holds the zero of its type, as a typed declaration written without a value does
+# (lmx_walk_field_map).  A fresh owned Structure of the arena, its fields named by the formals' name codes; the callable is
+# not written.  The one reading for both executors: a generated native merge calls it for the operand, the walker's merge
+# takes it through the primitive lmx_walk_args_value_map.  A code that is no fn or sub, or a formal that is no number:
+# UNSUPPORTED (the translator admits only number formals, lm_compiler_mrs_build).
+fn: lmx_callable_args_value (@: arena c.LmxArena; @: code c.Lmx; @@: out c.Lmx) int
+    c.LmxWalkValue: current
+    @: args c.Lmx 0
+    @: returns c.Lmx 0
+    @: built c.Lmx 0
+    @: source void 0
+    @: witness void 0
+    @: cell void 0
+    size_t: count 0U
+    size_t: total 0U
+    size_t: j 0U
+    size_t: physical (cast: (size_t) -1)
+    size_t: number 0U
+    size_t: name 0U
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: numeric 0
+    int: ty 0
+    int: status
+    if: out = 0
+        return: c.LMX_WALK_INVALID
+    out[0]: 0
+    if: arena = 0 || code = 0
+        return: c.LMX_WALK_INVALID
+    status: c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer != c.LMX_IMPLEMENTS_YES || args = 0
+        return: c.LMX_WALK_UNSUPPORTED
+    # The formals stand first in the args part, the hidden inputs after them (lm_compiler_rw_header_parts); the count of
+    # the part's sources bounds the scan -- its edge at that count is LAST, not an input (lmx_call_bind_actuals reads the
+    # formals the same way).
+    if: c.lmx_callable_source_count(arena, args, @ total) != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    while: count < total && lmx_walk_args_formal(arena, args, count) != 0
+        count: count + 1U
+    ---
+    built: c.lmx_node_new_owned(arena)
+    if: built = 0 || (count != 0U && c.lmx_arena_refs_open_owned(arena, built, count) != 0)
+        return: c.LMX_WALK_NOMEM
+    while: j < count
+        if: c.lmx_callable_source_entry(arena, args, j, @ source, @ witness) != 0
+            return: c.LMX_WALK_UNSUPPORTED
+        numeric: lmx_walk_numeric_type(arena, witness)
+        if: numeric = 0
+            return: c.LMX_WALK_UNSUPPORTED
+        cell: c.lmx_scalar_new_physical_profiled(arena, numeric, 0)
+        if: cell = 0
+            return: c.LMX_WALK_NOMEM
+        status: lmx_walk_current_default(arena, args, j, @ current)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: current\present != 0
+            status: lmx_walk_value_receive(@ current, numeric, @ current)
+            if: status != c.LMX_WALK_OK
+                return: status
+            status: lmx_walk_value_number(@ current, @ number, @ ty)
+            if: status != c.LMX_WALK_OK
+                return: status
+            status: lmx_walk_store_numeric_raw(cell, numeric, number)
+            if: status != c.LMX_WALK_OK
+                return: status
+        ---
+        if: c.lmx_graph_ref_store_in(arena, built, j, cell) != 0
+            return: c.LMX_WALK_NOMEM
+        # The field bears the formal's name: the code the args part's cell of that formal bears (lmx_implements_place_name).
+        status: c.lmx_implements_exec_slot(arena, args, j, @ physical, @ answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: answer = c.LMX_IMPLEMENTS_YES
+            name: c.lmx_source_name_get(arena, (cast: (@: void) c.lmx_graph_ref_cell_in(arena, args, physical)))
+            if: name != 0U && c.lmx_source_name_set(arena, (cast: (@: void) c.lmx_graph_ref_cell_in(arena, built, j)), name) != 0
+                return: c.LMX_WALK_NOMEM
+        ---
+        j: j + 1U
+    ---
+    out[0]: built
+    return: c.LMX_WALK_OK
+end: lmx_callable_args_value
+
+# The walker's primitive of a callable's args part as a merge operand (lm_compiler_rw_merge_args_operand): its one input is
+# the callable's occurrence; \out is the Structure lmx_callable_args_value builds.  A malformed call answers 1, the kernel's
+# refusal is the merge's throw, as lmx_walk_merge_map answers it.
+fn: lmx_walk_args_value_map (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_call_arena c.LmxArena; @: lmx_call_code c.Lmx; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
+    @: built c.Lmx 0
+    if: out != 0
+        \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 1U || refs[0] = 0
+        return: 1
+    if: lmx_callable_args_value((cast: (@: c.LmxArena) owner), (cast: (@: c.Lmx) c.lmx_pointer_value_known(refs[0])), @ built) != c.LMX_WALK_OK || built = 0
+        return: c.LMX_PRIMITIVE_THROW_MERGE
+    \out: (cast: (@: void) built)
+    return: c.LMX_PRIMITIVE_OK
+end: lmx_walk_args_value_map

@@ -162,7 +162,7 @@ native/walker selection, without a hidden test catalogue, runtime names,
 failure of the **whole** test set remains undecided.
 
 <a id="assign-named-merge"></a>
-### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, implemented by slices 303 and 304, the whole-arguments supply held
+### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, implemented by slices 303 and 304, the whole-arguments supply is the next slice (the hold lifted on 2026-11-08)
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
@@ -253,7 +253,15 @@ of the third:
   reading "two readings of one callable's requirement" and asked the
   author how these two methods are written; the call's binder still puts
   the `merge` result into the first position and refuses ("has no
-  argument a"). The precedence of `:=` among operations and a value of
+  argument a"). The author answered on 2026-11-08
+  ([journal](../LMX_blog/2026-11-08.md)): with two applicable methods the
+  call `f(s)` is ambiguous and refuses, a single applicable method is
+  resolved by the ordinary matching; a method with the formal `d: S` is
+  applicable when the first part of `implements`, at translation, admits
+  the Structure by the requirements of `S` -- the general compatibility
+  check, not a count of fields or a kind/type equality (the author's
+  clarification of 2026-11-08); the hold is lifted, the
+  implementation is the slice after CALL-ENTRY-ADMISSION-ORDER. The precedence of `:=` among operations and a value of
   the written form as an expression are not defined by the rule; the
   compound assignments are [4.3](#compound-assign-notes).
 

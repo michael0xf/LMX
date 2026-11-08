@@ -1,0 +1,83 @@
+# Probe-only variant v3 of entry_admission_order (slice 306): the static call take(quote, touch()) alone -- a Shape, a
+# number, a Slim bound to the free name.  Entry 7.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+Slim:
+    int: pad 5
+end: Slim
+Thin:
+    int: pad 0
+end: Thin
+Trace:
+    int: t 0
+end: Trace
+int: quote 11
+fn: touch () int
+    Trace\t: Trace\t * 10 + 9
+    return: 9
+end: touch
+fn: take (Point: p; int: q) int
+    return: p\y * 10 + q
+end: take
+fn: pass () int
+    return: take(quote, touch())
+end: pass
+fn: c_pass () int
+    ---
+        ---
+            return: pass()
+            catch: implements ()
+                return: 90
+        ---
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass
+fn: outer (Point: p) int
+    @: quote Point p
+    Trace\t: 0
+    if: c_pass() != 29
+        return: 81
+    if: Trace\t != 9
+        return: 82
+    return: 0
+end: outer
+fn: outer_num () int
+    int: quote 5
+    Trace\t: 0
+    if: c_pass() != 91
+        return: 105
+    if: Trace\t != 0
+        return: 106
+    return: 0
+end: outer_num
+fn: outer_slim (Thin: t) int
+    @: quote Thin t
+    Trace\t: 0
+    if: c_pass() != 90
+        return: 121
+    if: Trace\t != 0
+        return: 122
+    return: 0
+end: outer_slim
+fn: run () int
+    int: r outer(Shape)
+    if: r != 0
+        return: r
+    r: outer_num()
+    if: r != 0
+        return: r
+    r: outer_slim(Slim)
+    if: r != 0
+        return: r
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

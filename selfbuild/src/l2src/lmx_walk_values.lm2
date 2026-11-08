@@ -4736,12 +4736,123 @@ fn: lmx_walk_selected_form (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: writ
     return: c.LMX_WALK_OK
 end: lmx_walk_selected_form
 
+# Slice 306 (CALL-ENTRY-ADMISSION-ORDER; the rest of CALL-ARGUMENT-ORDER-AXBY, the book :724): the entry reception of
+# formal `index` of the callable `code` -- the SET_ARG frame of the RECEPTION source its body opens with (lmx_walk_receive
+# evaluates them at the entry; a native trampoline makes the same admission by its retained record) -- found without a
+# frame: its model operand, its receiving record and the formal's witness.  1 when the callable receives that formal by a
+# model, 0 when it has no such reception (a number, a pointer, a value of no role).
+fn: lmx_call_formal_reception (@: arena c.LmxArena; @: code c.Lmx; size_t: index; @@: out_model c.Lmx; @@: out_record c.Lmx; @@: out_witness void) int
+    @: body c.Lmx 0
+    @: pool c.LmxPool 0
+    @: fields c.VoidArray 0
+    @: child void 0
+    @: model_operand c.Lmx 0
+    @: record c.Lmx 0
+    @: witness void 0
+    size_t: body_at (cast: (size_t) -1)
+    size_t: formal_index 0U
+    size_t: i 0U
+    if: out_model = 0 || out_record = 0 || out_witness = 0
+        return: 0
+    out_model[0]: 0
+    out_record[0]: 0
+    out_witness[0]: 0
+    if: arena = 0 || code = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0
+        return: 0
+    # A fn's body is its part 3, a sub's its part 2 (lmx_callable_part); a Structure run as the call is its own body
+    # (lmx_walk_activate_values).
+    body: code
+    pool: c.lmx_range_cell_pool(arena, (cast: (@: void) code))
+    if: pool != 0 && pool\role = c.LMX_POOL_ROLE_FN
+        body_at: c.lmx_callable_part(arena, code, 3U)
+        if: body_at = (cast: (size_t) -1)
+            return: 0
+        body: c.lmx_graph_ref_struct_in(arena, code, body_at)
+        if: body = 0
+            return: 0
+        ---
+    fields: @ body\array
+    while: i < fields\size
+        child: c.lmx_graph_value_in(arena, body, i)
+        if: c.lmx_graph_node_in(arena, child) != 0 && lmx_walk_code_in(arena, c.lmx_graph_value_in(arena, (cast: (@: c.Lmx) child), 0U)) = c.LMX_WALK_SOURCE_RECEPTION * c.LMX_WALK_OP_COUNT + c.LMX_WALK_OP_SET_ARG
+            if: lmx_walk_reception_parts(arena, (cast: (@: c.Lmx) child), @ model_operand, @ record, @ witness, @ formal_index) = c.LMX_WALK_OK && formal_index = index
+                out_model[0]: model_operand
+                out_record[0]: record
+                out_witness[0]: witness
+                return: 1
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: 0
+end: lmx_call_formal_reception
+
+# Slice 306 (CALL-ENTRY-ADMISSION-ORDER): the reception of the actual `item`, evaluated, by formal `index` of the callable
+# `code` the call selected -- at the call site, right after the actual's evaluation, as the callee's entry would receive
+# it (the book :724: a refusal leaves the following actuals unevaluated and the body not started).  A value at a
+# Structure formal is received as the graph reference (a number or a foreign value is the implicit `convert`,
+# lmx_walk_value_receive_graph) and admitted against the model of the callable's own entry reception by its own record
+# (lmx_walk_receiving_header_model, lmx_walk_value_admit: a graph without the model's fields is the implicit
+# `implements`); a value that is no number at a number formal is the implicit `convert` (lmx_walk_value_receive).  A
+# number at a number formal is the reception of slice 305 (the routes), an absent or free value resolves at the entry, a
+# pointer formal receives by the RECEIVE frame its actual carries: nothing here.  `data` is the data of the call (the
+# trampoline's owner), 0 for the callable's own var part (lmx_call_unary_data).  One function of both executors: the
+# walker's static and selected calls and the native binder (lmx_call_bind_receive) call it before the next actual runs;
+# the entry's own reception then finds the value admitted.
+fn: lmx_call_receive_formal (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size_t: index; @: item c.LmxWalkValue) int
+    @: args c.Lmx 0
+    @: returns c.Lmx 0
+    @: source void 0
+    @: expected void 0
+    @: model_operand c.Lmx 0
+    @: record c.Lmx 0
+    @: witness void 0
+    @: model c.Lmx 0
+    int: ty 0
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || code = 0 || item = 0
+        return: c.LMX_WALK_INVALID
+    if: item\present = 0 || item\kind = c.LMX_WALK_VALUE_FREE || item\kind = c.LMX_WALK_VALUE_MISSING
+        return: c.LMX_WALK_OK
+    status: c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer != c.LMX_IMPLEMENTS_YES || args = 0
+        return: c.LMX_WALK_OK
+    if: c.lmx_callable_source_entry(arena, args, index, @ source, @ expected) != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    if: expected = 0
+        return: c.LMX_WALK_OK
+    ty: lmx_walk_witness_type(arena, expected)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_LMX
+        status: lmx_walk_value_receive_graph(arena, item, item)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: lmx_call_formal_reception(arena, code, index, @ model_operand, @ record, @ witness) = 0
+            return: c.LMX_WALK_OK
+        if: data = 0
+            data: lmx_call_unary_data(arena, code)
+        status: lmx_walk_receiving_header_model(arena, code, data, index, @ model)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: model = 0
+            return: c.LMX_WALK_INVALID
+        return: lmx_walk_value_admit(arena, item, model, record)
+    ---
+    if: lmx_walk_numeric_type(arena, expected) != 0 && item\kind != c.LMX_WALK_VALUE_NUMBER
+        return: lmx_walk_value_receive(item, ty, item)
+    return: c.LMX_WALK_OK
+end: lmx_call_receive_formal
+
 # Slice 305 (CALL-ARGUMENT-ORDER-AXBY): the reception of the written actual k by the selected formal the current binding
 # gives it (lmx_callable_bound_operand) -- a number through the route its NAMED operand carries for that formal's number
 # type (lmx_walk_named_route, slice 301), by the one reception the native binder takes (lmx_walk_receive_selected); the
 # frame's working values are published before a receiver of the program runs.  A refusal is the caller's implicit
-# `convert`; any other value waits for the callee's entry.
-fn: lmx_walk_receive_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; @: binding c.LmxImplEntry; @: sources size_t; size_t: source_capacity; size_t: k; @: received c.LmxWalkValue) int
+# `convert`.  Slice 306 (CALL-ENTRY-ADMISSION-ORDER): any other value -- a graph at a modelled formal, a value of another
+# kind at a number or Structure formal -- is received by the selected formal here too, as the callee's entry would receive
+# it (lmx_call_receive_formal: the implicit `implements` or `convert` before the next actual runs).
+fn: lmx_walk_receive_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: callee c.Lmx; @: data c.Lmx; @: written_call c.Lmx; size_t: first; @: binding c.LmxImplEntry; @: sources size_t; size_t: source_capacity; size_t: k; @: received c.LmxWalkValue) int
     @: arena c.LmxArena 0
     @: source void 0
     @: witness void 0
@@ -4756,7 +4867,7 @@ fn: lmx_walk_receive_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: wr
     if: f = 0 || received = 0
         return: c.LMX_WALK_INVALID
     arena: (cast: (@: c.LmxArena) f\arena)
-    if: received\present = 0 || received\kind != c.LMX_WALK_VALUE_NUMBER
+    if: received\present = 0
         return: c.LMX_WALK_OK
     status: c.lmx_callable_bound_operand(arena, selected_args, written_call, binding, sources, source_capacity, first + k, @ at, @ physical, @ answer)
     if: status != c.LMX_WALK_OK
@@ -4768,8 +4879,15 @@ fn: lmx_walk_receive_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: wr
     if: c.lmx_callable_source_entry(arena, selected_args, at, @ source, @ witness) != 0
         return: c.LMX_WALK_UNSUPPORTED
     numeric: lmx_walk_numeric_type(arena, witness)
-    if: numeric = 0
-        return: c.LMX_WALK_OK
+    # Slice 306: a value that is no number, and a number at a formal of no number type, are received by the selected
+    # formal here, as its entry would receive them (lmx_call_receive_formal).
+    if: received\kind != c.LMX_WALK_VALUE_NUMBER || numeric = 0
+        status: lmx_call_receive_formal(arena, callee, data, at, received)
+        if: status >= c.LMX_WALK_THROWN
+            f\payload: 0
+            f\landing: 0
+        ---
+        return: status
     operand: (cast: (@: void) c.lmx_graph_value_in(arena, written_call, first + k))
     status: lmx_walk_named_route(f, operand, numeric, @ receiver)
     if: status != c.LMX_WALK_OK
@@ -4792,7 +4910,7 @@ end: lmx_walk_receive_written
 # The normalized suffix after the written prefix (the hidden inputs this EXEC
 # hands on) is evaluated once after every written operand, in slot order. A
 # NULL suffix slot is an input handed absent: its Value stays absent.
-fn: lmx_walk_written_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: actual_named int; @: actual_names size_t; size_t: actual_capacity; @: selected_args c.Lmx; @: binding c.LmxImplEntry; @: sources size_t; size_t: source_capacity; @@: values_out c.LmxWalkValue) int
+fn: lmx_walk_written_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: actual_named int; @: actual_names size_t; size_t: actual_capacity; @: selected_args c.Lmx; @: callee c.Lmx; @: data c.Lmx; @: binding c.LmxImplEntry; @: sources size_t; size_t: source_capacity; @@: values_out c.LmxWalkValue) int
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
     @: arena c.LmxArena 0
@@ -4898,9 +5016,10 @@ fn: lmx_walk_written_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
         # Slice 305 (CALL-ARGUMENT-ORDER-AXBY; the author's decision of 2026-11-07, the book :724): the actual, evaluated,
         # is received at once by the formal of the selected callable the binding gives it (lmx_walk_receive_written) -- a
         # number through the route its NAMED operand carries for that formal's number type (slice 301), else the implicit
-        # `convert`; a refusal leaves the following actuals unevaluated and the body not started.
+        # `convert`; any other value by the selected callable's own entry reception (slice 306, lmx_call_receive_formal);
+        # a refusal leaves the following actuals unevaluated and the body not started.
         if: selected_args != 0
-            status: lmx_walk_receive_written(f, selected_args, code, first, binding, sources, source_capacity, i, current)
+            status: lmx_walk_receive_written(f, selected_args, callee, data, code, first, binding, sources, source_capacity, i, current)
             if: status != c.LMX_WALK_OK
                 return: status
         ---
@@ -5173,6 +5292,10 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
                 ---
             ---
         ---
+        # Slice 306 (CALL-ENTRY-ADMISSION-ORDER): no reception of a formal here -- a callable with a signature (the FN role)
+        # is called through the signature path (lmx_walk_call_in: selected_signature, lmx_walk_selected_values), where
+        # lmx_walk_receive_written receives each actual by its formal at once; this path serves PRIM records and a
+        # Structure run as the call, which have no formal receptions.
         if: status = c.LMX_WALK_OK && received\present != 0
             if: receiver != 0
                 if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), contract, at, @ header_source, @ witness) != 0
@@ -6107,7 +6230,8 @@ end: lmx_call_bind_form
 
 # The reception of the written actual `written`, right after its evaluation (slice 305), by the selected formal
 # plan[written]: a number at a formal of a number type goes through the route the call site resolved for that type, else
-# it is the implicit `convert` (lmx_walk_receive_selected); any other value waits for the callee's entry.  The value is
+# it is the implicit `convert` (lmx_walk_receive_selected); any other value is received by the selected formal as its
+# entry would receive it (slice 306, lmx_call_receive_formal: the implicit `implements` or `convert`).  The value is
 # received in place, at values[slots[written]].  A selected value with no signature of its own receives nothing here.
 fn: lmx_call_bind_receive (@: arena c.LmxArena; @: code c.Lmx; size_t: count; size_t: written_count; @: slots size_t; @: plan size_t; size_t: written; @: values c.LmxWalkValue; size_t: route_count; @: route_written size_t; @: route_types int; @@: route_codes void) int
     @: args c.Lmx 0
@@ -6137,6 +6261,11 @@ fn: lmx_call_bind_receive (@: arena c.LmxArena; @: code c.Lmx; size_t: count; si
     if: numeric != 0 && item\present != 0 && item\kind = c.LMX_WALK_VALUE_NUMBER
         route: lmx_call_bound_route(route_count, route_written, route_types, route_codes, written, numeric)
         status: lmx_walk_receive_selected(arena, item, numeric, route)
+    else:
+        # Slice 306 (CALL-ENTRY-ADMISSION-ORDER): every other value is received by the selected formal here, as its entry
+        # would receive it -- the implicit `implements` or `convert` before the next actual runs (lmx_call_receive_formal;
+        # the data is the callable's own, as the dispatch hands it: lmx_call_unary_data).
+        status: lmx_call_receive_formal(arena, code, 0, plan[written], item)
     ---
     return: status
 end: lmx_call_bind_receive
@@ -6288,7 +6417,7 @@ fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: calle
     return: c.LMX_WALK_OK
 end: lmx_walk_selected_ready_values
 
-fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; size_t: first; size_t: transport_count; int: op; @: contract_inputs c.Lmx; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
+fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; @: data c.Lmx; size_t: first; size_t: transport_count; int: op; @: contract_inputs c.Lmx; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
     @: fields c.VoidArray 0
@@ -6384,7 +6513,7 @@ fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lm
     status: lmx_walk_selected_form(f, inputs, code, first, transport_count, written_count, binding_p, sources, width)
     if: status != c.LMX_WALK_OK
         return: status
-    status: lmx_walk_written_values(f, code, first, transport_count, written_count, actual_named, actual_names, width, inputs, binding_p, sources, width, @ written)
+    status: lmx_walk_written_values(f, code, first, transport_count, written_count, actual_named, actual_names, width, inputs, callee, data, binding_p, sources, width, @ written)
     if: status != c.LMX_WALK_OK
         return: status
     status: lmx_walk_publish(f)
@@ -6514,7 +6643,7 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
     scratch: (cast: (@: c.LmxScratch) context\scratch)
     if: status = c.LMX_WALK_OK
         if: selected_signature != 0
-            status: lmx_walk_selected_values(f, code, callee, arg_at, n, op, inputs, @ refs, @ values, @ input_count)
+            status: lmx_walk_selected_values(f, code, callee, data, arg_at, n, op, inputs, @ refs, @ values, @ input_count)
             n: input_count
         else:
             status: lmx_walk_actuals_values(f, code, arg_at, n, inputs, callee, 0, @ refs, @ values)

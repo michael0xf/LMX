@@ -1,0 +1,104 @@
+# Probe-only variant v5 of entry_admission_order (slice 306): the pointer formals alone -- the address of the free name
+# bound to a Shape (29) and to a number (the implicit convert) at the static call and the callable place.  Entry 7.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+Trace:
+    int: t 0
+end: Trace
+int: quote 11
+fn: touch () int
+    Trace\t: Trace\t * 10 + 9
+    return: 9
+end: touch
+fn: ptr_take (@@: pp Point; int: q) int
+    @: p Point, \pp
+    return: p\y * 10 + q
+end: ptr_take
+fn: gp (@@: pp Point; int: q) int
+    @: p Point, \pp
+    return: p\y * 10 + q
+end: gp
+Ptrs:
+    fn: f (@@: pp Point; int: q) int
+        @: p Point, \pp
+        return: p\y * 10 + q
+    end: f
+end: Ptrs
+int: Hp 0
+fn: write_places () int
+    ---
+        @: Ptrs\f Hp
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_places
+fn: pass_ptr () int
+    return: ptr_take(@ quote, touch())
+end: pass_ptr
+fn: pass_ptr_place () int
+    return: Ptrs\f(@ quote, touch())
+end: pass_ptr_place
+fn: c_pass_ptr () int
+    ---
+        return: pass_ptr()
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_ptr
+fn: c_pass_ptr_place () int
+    ---
+        return: pass_ptr_place()
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_ptr_place
+fn: outer (Point: p) int
+    @: quote Point p
+    Trace\t: 0
+    if: c_pass_ptr() != 29
+        return: 87
+    if: Trace\t != 9
+        return: 88
+    Trace\t: 0
+    if: c_pass_ptr_place() != 29
+        return: 89
+    if: Trace\t != 9
+        return: 90
+    return: 0
+end: outer
+fn: outer_num () int
+    int: quote 5
+    Trace\t: 0
+    if: c_pass_ptr() != 91
+        return: 111
+    if: Trace\t != 0
+        return: 112
+    Trace\t: 0
+    if: c_pass_ptr_place() != 91
+        return: 113
+    if: Trace\t != 0
+        return: 114
+    return: 0
+end: outer_num
+fn: run () int
+    @: Hp gp gp
+    if: write_places() != 1
+        return: 80
+    int: r outer(Shape)
+    if: r != 0
+        return: r
+    r: outer_num()
+    if: r != 0
+        return: r
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -10,7 +10,13 @@ fable_pc, 2026-11-07/08. Остаток поручения автора о `merg
 (CALL-WHOLE-ARGUMENTS-STRUCTURE) удержана: Codex (CODEX-FABLE-304-CHOICE-HOLD-20261107T233359456Z-01,
 [копия](records/pins/CODEX-FABLE-304-CHOICE-HOLD-20261107T233359456Z-01.txt)) не утверждает ни чтения «два метода одного
 имени», ни чтения «два чтения одного требования» и задал автору один вопрос о записи этих двух методов; срез не вводит ни
-новой ветви `lmx_call_bind_actuals`, ни соответствующего понижения.
+новой ветви `lmx_call_bind_actuals`, ни соответствующего понижения. Удержание снято 2026-11-08 ответом автора о двух
+методах (CODEX-FABLE-AUTHOR-STRUCTURE-AMBIGUITY-RESOLVED-20261108044825Z-01,
+[копия](records/pins/CODEX-FABLE-AUTHOR-STRUCTURE-AMBIGUITY-RESOLVED-20261108044825Z-01.txt); выдержка дословно в
+[журнале](../../../LMX_blog/2026-11-08.md)): два подходящих метода — отказ по неоднозначности, один — обычное
+сопоставление; уточнение автора того же дня (CODEX-FABLE-AUTHOR-IMPLEMENTS-MATCH-20261108T052418Z-01,
+[копия](records/pins/CODEX-FABLE-AUTHOR-IMPLEMENTS-MATCH-20261108T052418Z-01.txt)): применимость метода с формалом `d: S`
+устанавливается при трансляции первой частью `implements`; реализация — срез после CALL-ENTRY-ADMISSION-ORDER.
 
 ## Проект
 
@@ -224,7 +230,8 @@ FORMAL-DEFAULT-FORMS, путь в args, нечисловые формалы и �
 - Вся структура аргументов из одной Structure (`mytest(merge(mytest\args; (a: int: 5)))` = 35, та же Structure в переменной)
   — удержана по CODEX-FABLE-304-CHOICE-HOLD: вопрос Codex автору о записи двух методов; связыватель вызова
   (`lm_compiler_bind_value_actuals_into`) по-прежнему кладёт результат `merge` в первую позицию и отказывает «has no
-  argument a». Ни (а) перегрузка одного имени, ни (б) два чтения одного требования не введены.
+  argument a». Ни (а) перегрузка одного имени, ни (б) два чтения одного требования не введены. Удержание снято 2026-11-08
+  (ответ автора о двух методах, копия в records/pins); реализация — срез после CALL-ENTRY-ADMISSION-ORDER.
 - Чтение поля части args путём (`tst\args\c`) не разрешается: `lm_compiler_method_part_own_seg` отвечает только за части var
   и body («unknown field path segment»). Вне среза; записано здесь.
 - Формал не числового типа как поле результата `merge` — предел п. 4 проекта.

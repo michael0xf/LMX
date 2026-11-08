@@ -1,0 +1,287 @@
+# Slice 306 (CALL-ENTRY-ADMISSION-ORDER; the rest of CALL-ARGUMENT-ORDER-AXBY -- the author's decision of 2026-11-07, the
+# book :724): every actual is received by its formal right after its own evaluation, whatever its kind -- a graph reference
+# admitted against the formal's model (a graph without the model's fields is the implicit `implements`), a number at a
+# modelled formal, a graph at a number formal and a number's address at a graph pointer formal the implicit `convert` -- so a
+# refusal leaves the following actuals unevaluated and the body not started: one rule for the static call and the call
+# through a callable place, positional and named, native and the walker.  `quote` is a free name bound in each caller's
+# frame (slice 255): outer binds a Shape (y, x: a Point), outer_slim a Slim (pad: no y), outer_num a number.  take
+# (Point: p; int: q) and the g that Places\f holds read p\y * 10 + q; num_take (int: n; int: q) and the gn that Nums\f
+# holds read n * 10 + q; ptr_take (@@: pp Point; int: q) and the gp that Ptrs\f holds read the y of the Point `\pp`
+# addresses.  Every effect appends its digit to Trace\t: touch() appends 9; a refused first actual leaves Trace\t at 0.
+# Entry 7; 80.. name the failing check.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+Slim:
+    int: pad 5
+end: Slim
+Thin:
+    int: pad 0
+end: Thin
+Trace:
+    int: t 0
+end: Trace
+int: quote 11
+fn: touch () int
+    Trace\t: Trace\t * 10 + 9
+    return: 9
+end: touch
+fn: take (Point: p; int: q) int
+    return: p\y * 10 + q
+end: take
+fn: g (Point: p; int: q) int
+    return: p\y * 10 + q
+end: g
+fn: num_take (int: n; int: q) int
+    return: n * 10 + q
+end: num_take
+fn: gn (int: n; int: q) int
+    return: n * 10 + q
+end: gn
+fn: ptr_take (@@: pp Point; int: q) int
+    @: p Point, \pp
+    return: p\y * 10 + q
+end: ptr_take
+fn: gp (@@: pp Point; int: q) int
+    @: p Point, \pp
+    return: p\y * 10 + q
+end: gp
+Places:
+    fn: f (Point: p; int: q) int
+        return: p\y * 10 + q
+    end: f
+end: Places
+Nums:
+    fn: f (int: n; int: q) int
+        return: n * 10 + q
+    end: f
+end: Nums
+Ptrs:
+    fn: f (@@: pp Point; int: q) int
+        @: p Point, \pp
+        return: p\y * 10 + q
+    end: f
+end: Ptrs
+int: Hw 0
+int: Hn 0
+int: Hp 0
+fn: write_places () int
+    ---
+        @: Places\f Hw
+        @: Nums\f Hn
+        @: Ptrs\f Hp
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_places
+fn: pass () int
+    return: take(quote, touch())
+end: pass
+fn: pass_place () int
+    return: Places\f(quote, touch())
+end: pass_place
+fn: pass_named () int
+    return: Places\f(p := quote; q := touch())
+end: pass_named
+fn: pass_num () int
+    return: num_take(quote, touch())
+end: pass_num
+fn: pass_num_place () int
+    return: Nums\f(quote, touch())
+end: pass_num_place
+fn: pass_ptr () int
+    return: ptr_take(@ quote, touch())
+end: pass_ptr
+fn: pass_ptr_place () int
+    return: Ptrs\f(@ quote, touch())
+end: pass_ptr_place
+# Each caller below answers its call's value, 90 for the implicit `implements` and 91 for the implicit `convert`.
+fn: c_pass () int
+    ---
+        ---
+            return: pass()
+            catch: implements ()
+                return: 90
+        ---
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass
+fn: c_pass_place () int
+    ---
+        ---
+            return: pass_place()
+            catch: implements ()
+                return: 90
+        ---
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_place
+fn: c_pass_named () int
+    ---
+        ---
+            return: pass_named()
+            catch: implements ()
+                return: 90
+        ---
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_named
+fn: c_pass_num () int
+    ---
+        return: pass_num()
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_num
+fn: c_pass_num_place () int
+    ---
+        return: pass_num_place()
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_num_place
+fn: c_pass_ptr () int
+    ---
+        return: pass_ptr()
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_ptr
+fn: c_pass_ptr_place () int
+    ---
+        return: pass_ptr_place()
+        catch: convert ()
+            return: 91
+    ---
+end: c_pass_ptr_place
+# The Shape: every call runs and reads 2, touch() ran once (9); a graph at the number formal is the implicit `convert` with
+# touch() not evaluated.
+fn: outer (Point: p) int
+    @: quote Point p
+    Trace\t: 0
+    if: c_pass() != 29
+        return: 81
+    if: Trace\t != 9
+        return: 82
+    Trace\t: 0
+    if: c_pass_place() != 29
+        return: 83
+    if: Trace\t != 9
+        return: 84
+    Trace\t: 0
+    if: c_pass_named() != 29
+        return: 85
+    if: Trace\t != 9
+        return: 86
+    Trace\t: 0
+    if: c_pass_ptr() != 29
+        return: 87
+    if: Trace\t != 9
+        return: 88
+    Trace\t: 0
+    if: c_pass_ptr_place() != 29
+        return: 89
+    if: Trace\t != 9
+        return: 90
+    Trace\t: 0
+    if: c_pass_num() != 91
+        return: 91
+    if: Trace\t != 0
+        return: 92
+    Trace\t: 0
+    if: c_pass_num_place() != 91
+        return: 93
+    if: Trace\t != 0
+        return: 94
+    return: 0
+end: outer
+# The number: the number formals read 5, touch() ran (9); the modelled formals and the graph pointer formal are the implicit
+# `convert` with touch() not evaluated.
+fn: outer_num () int
+    int: quote 5
+    Trace\t: 0
+    if: c_pass_num() != 59
+        return: 101
+    if: Trace\t != 9
+        return: 102
+    Trace\t: 0
+    if: c_pass_num_place() != 59
+        return: 103
+    if: Trace\t != 9
+        return: 104
+    Trace\t: 0
+    if: c_pass() != 91
+        return: 105
+    if: Trace\t != 0
+        return: 106
+    Trace\t: 0
+    if: c_pass_place() != 91
+        return: 107
+    if: Trace\t != 0
+        return: 108
+    Trace\t: 0
+    if: c_pass_named() != 91
+        return: 109
+    if: Trace\t != 0
+        return: 110
+    Trace\t: 0
+    if: c_pass_ptr() != 91
+        return: 111
+    if: Trace\t != 0
+        return: 112
+    Trace\t: 0
+    if: c_pass_ptr_place() != 91
+        return: 113
+    if: Trace\t != 0
+        return: 114
+    return: 0
+end: outer_num
+# The Slim (no y): the modelled formals are the implicit `implements` with touch() not evaluated.
+fn: outer_slim (Thin: t) int
+    @: quote Thin t
+    Trace\t: 0
+    if: c_pass() != 90
+        return: 121
+    if: Trace\t != 0
+        return: 122
+    Trace\t: 0
+    if: c_pass_place() != 90
+        return: 123
+    if: Trace\t != 0
+        return: 124
+    Trace\t: 0
+    if: c_pass_named() != 90
+        return: 125
+    if: Trace\t != 0
+        return: 126
+    return: 0
+end: outer_slim
+fn: run () int
+    @: Hw g g
+    @: Hn gn gn
+    @: Hp gp gp
+    if: write_places() != 1
+        return: 80
+    int: r outer(Shape)
+    if: r != 0
+        return: r
+    r: outer_num()
+    if: r != 0
+        return: r
+    r: outer_slim(Slim)
+    if: r != 0
+        return: r
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

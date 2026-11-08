@@ -1,0 +1,127 @@
+# Probe-only variant v4 of entry_admission_order (slice 306): the graph cases only -- a Shape and a Slim at the modelled
+# formal of the static call and of the callable place, positional and named; no number formals, no pointers.  Entry 7.
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Shape:
+    int: y 2
+    int: x 1
+end: Shape
+Slim:
+    int: pad 5
+end: Slim
+Thin:
+    int: pad 0
+end: Thin
+Trace:
+    int: t 0
+end: Trace
+int: quote 11
+fn: touch () int
+    Trace\t: Trace\t * 10 + 9
+    return: 9
+end: touch
+fn: take (Point: p; int: q) int
+    return: p\y * 10 + q
+end: take
+fn: g (Point: p; int: q) int
+    return: p\y * 10 + q
+end: g
+Places:
+    fn: f (Point: p; int: q) int
+        return: p\y * 10 + q
+    end: f
+end: Places
+int: Hw 0
+fn: write_places () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_places
+fn: pass () int
+    return: take(quote, touch())
+end: pass
+fn: pass_place () int
+    return: Places\f(quote, touch())
+end: pass_place
+fn: pass_named () int
+    return: Places\f(p := quote; q := touch())
+end: pass_named
+fn: c_pass () int
+    ---
+        return: pass()
+        catch: implements ()
+            return: 90
+    ---
+end: c_pass
+fn: c_pass_place () int
+    ---
+        return: pass_place()
+        catch: implements ()
+            return: 90
+    ---
+end: c_pass_place
+fn: c_pass_named () int
+    ---
+        return: pass_named()
+        catch: implements ()
+            return: 90
+    ---
+end: c_pass_named
+fn: outer (Point: p) int
+    @: quote Point p
+    Trace\t: 0
+    if: c_pass() != 29
+        return: 81
+    if: Trace\t != 9
+        return: 82
+    Trace\t: 0
+    if: c_pass_place() != 29
+        return: 83
+    if: Trace\t != 9
+        return: 84
+    Trace\t: 0
+    if: c_pass_named() != 29
+        return: 85
+    if: Trace\t != 9
+        return: 86
+    return: 0
+end: outer
+fn: outer_slim (Thin: t) int
+    @: quote Thin t
+    Trace\t: 0
+    if: c_pass() != 90
+        return: 121
+    if: Trace\t != 0
+        return: 122
+    Trace\t: 0
+    if: c_pass_place() != 90
+        return: 123
+    if: Trace\t != 0
+        return: 124
+    Trace\t: 0
+    if: c_pass_named() != 90
+        return: 125
+    if: Trace\t != 0
+        return: 126
+    return: 0
+end: outer_slim
+fn: run () int
+    @: Hw g g
+    if: write_places() != 1
+        return: 80
+    int: r outer(Shape)
+    if: r != 0
+        return: r
+    r: outer_slim(Slim)
+    if: r != 0
+        return: r
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

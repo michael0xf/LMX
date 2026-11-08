@@ -6,8 +6,8 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 260 inputs (66 source files, 34 tools and
-160 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
+The selected package contains 261 inputs (66 source files, 34 tools and
+161 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
 P0 -- a Frame of its left and its right side flagged `LM_P0_FRAME_ASSIGN`, `a := 5` and `a:=5` one form -- that writes a
 place already known through the general assignment path (a local, a formal, a field through a path, the conversion of the
 reception, a reference place holding a method: `target := two` without a call of the bare right side, natively and in the
@@ -48,10 +48,24 @@ actual is evaluated and receive each actual right after its evaluation: the kern
 `lmx_call_bind_actuals`), the walker's selected call restructured the same way (`lmx_walk_written_names`,
 `lmx_walk_selected_form`, `lmx_walk_receive_written`), the native emitter of a bound call in the same three phases; the
 fixture `bound_order_axby` (from the probe p301b): the effects run 1323, not 1233, a refusing receiver leaves the later
-actual unevaluated, a name the selected callable lacks and a missing input refuse before `touch()` runs. This is the
-numeric part of the author's rule: the admission of a graph actual by the formal's model, and of every other value the
-"waits for the callee's entry" branches defer, still happens at the callee's entry after all actuals, for the static and
-the bound call alike (CALL-ENTRY-ADMISSION-ORDER, the required rest; Codex's review of 305). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+actual unevaluated, a name the selected callable lacks and a missing input refuse before `touch()` runs. This was the
+numeric part of the author's rule; Slice306 (CALL-ENTRY-ADMISSION-ORDER, the rest of it; fable_pc) receives every other
+actual by its formal right after its evaluation too: the kernel's `lmx_call_receive_formal` (one function of both executors)
+receives a value at a Structure formal as the graph reference (a number or a foreign value is the implicit `convert`) and
+admits it against the selected callable's own entry reception by its own record (`lmx_call_formal_reception` finds the
+SET_ARG frame of the RECEPTION source in the callable's body; a graph without the model's fields is the implicit
+`implements`), and a value that is no number at a number formal by `lmx_walk_value_receive` (the implicit `convert`); the
+walker's call through the signature path -- every call of a fn or a sub, static and bound alike
+(`lmx_walk_receive_written`) -- and the kernel binder of a native bound call (`lmx_call_bind_receive`) call it before the
+next actual runs, and the callee's entry then finds the value admitted. The native emitter binds every call through a callable place by the kernel (the callee is what the place
+holds) and no longer emits the declared signature's model admission for a bound call, which read the declared callee's
+model off the selected occurrence (`l2_c\parent\parent` of another callable: a kernel INVALID at every bound call with a
+Structure formal, native). The fixture `entry_admission_order`: a free name bound to a Shape, a Slim (no `y`) and a number
+at `take (Point: p; int: q)`, at `Places\f` holding `g` positionally and by name, at `num_take (int: n; int: q)` and `Nums\f`,
+and its address at `ptr_take (@@: pp Point; int: q)` and `Ptrs\f`, each followed by `touch()`: the Shape reads 29 with
+`touch()` run once, the Slim is the implicit `implements` and the number the implicit `convert` with `touch()` not run,
+in both executors (before: a walker INVALID for a number at a modelled formal of a static call, `touch()` run before the
+entry's refusal). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

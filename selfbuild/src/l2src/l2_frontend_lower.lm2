@@ -11678,6 +11678,12 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
             bind: 1
         written: written + 1
     ---
+    # Slice 306 (CALL-ENTRY-ADMISSION-ORDER): a call through a callable place binds by the kernel whatever its form -- the
+    # callee is what the place holds now, so each actual is received by that callable's own formal (lmx_call_bind_receive:
+    # its own entry reception for a graph, its own number type), never by the records of the declared signature, whose
+    # model admission would be read off the selected occurrence as if it stood where the declaration does.
+    if: sel = 1 && nact > 0
+        bind: 1
     written: 0
     if: bind != 0 && nact > 0
         fd: tn_cell[0]
@@ -11821,15 +11827,21 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
         dyn_mi: 0 - 1
         if: c.lm_compiler_d105_refusable(mi, @ source) != 0
             dyn_mi: mi
-        if: occ_mi < 0 && c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
+        # Slice 306: a bound call admits a graph actual by the selected callable's own entry reception, in the kernel
+        # (lmx_call_bind_receive below), not by the declared signature's record here.
+        if: bind = 0 && occ_mi < 0 && c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         # Slice 305 (CALL-ARGUMENT-ORDER-AXBY): the actual, evaluated, is received at once by the formal of the selected
         # callable the form gave it -- a number of another kind through the route the call site resolved, else the
-        # implicit `convert` -- so a refusal leaves the following actuals unevaluated and the body not started.
+        # implicit `convert`; slice 306 (CALL-ENTRY-ADMISSION-ORDER): any other value by that formal's own entry reception,
+        # a graph without the model's fields the implicit `implements` -- so a refusal leaves the following actuals
+        # unevaluated and the body not started.
         if: bind != 0 && nact > 0
             if: c.fprintf(out_cell[0], "%sl2_bds%d: lmx_call_bind_receive(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bp%d, %dU, l2_av%d, %s)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, written, self_t, route_args) < 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             if: c.fprintf(out_cell[0], "%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
+                return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+            if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_IMPLEMENTS\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "implements", ind) != 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_bds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))

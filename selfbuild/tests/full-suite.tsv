@@ -205,3 +205,9 @@ refuses	dyn/assign_typed_unknown_structure_refused.lm2	assign_typed_unknown_stru
 refuses	dyn/merge_assign_operand_refused.lm2	this merge operand form is not lowered yet	nf
 runs	dyn/merge_args_operand.lm2	7	nf
 refuses	dyn/merge_args_model_formal_refused.lm2	merge_args_model_formal_refused.lm2:10:17: a formal that is not a number is not lowered as a field of the args part yet	nf
+# Codex's review of slice 304: a formal of the args part with no current default -- a required one, or one whose written default this
+# translation does not build -- holds no value (the kernel leaves its slot empty; no zero is invented, an explicit zero `int: z 0` is a
+# value); the operand is admitted when a later operand of the same merge writes that field, else refused at the operand: the limit of
+# this phase, not a rule of the language.
+refuses	dyn/merge_args_unfilled_refused.lm2	merge_args_unfilled_refused.lm2:9:17: a formal with no default that no later operand writes is not lowered as a field of the args part yet	nf
+refuses	dyn/merge_args_computed_default_refused.lm2	merge_args_computed_default_refused.lm2:10:17: a formal whose written default is not built and that no later operand writes is not lowered as a field of the args part yet	nf

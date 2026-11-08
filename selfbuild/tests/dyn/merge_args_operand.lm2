@@ -1,17 +1,27 @@
-# Slice 304 (MERGE-OPERAND-FORMS; the author's `merge(f\args; (a: int: 5))` of 2026-11-07, the book #whole-arguments): the
-# args part of a callable as a merge operand -- the Structure of its formals, each holding its current default (the value a
-# call omitting it takes), and a later operand writes a field by name.  tst (int: c 3; int: a): merge(tst\args; (a: int: 5))
-# reads a = 5 and c = 3, the bare operand form a: int: 5 the same; merge(tst\args) alone reads c = 3 and a = 0 -- a formal
-# with no default holds the zero of its type, as a typed declaration written without a value does; tst\args itself is not
-# written: tst(a := 1) is 31 after the merges.  As a later operand the part writes the model's slots of its formals' names
-# in the formals' order: merge(Args; two\args) for two (int: c 3; int: a 4) reads c = 3 and a = 4, Args is not written.
-# Both executors.  Entry 7; 81.. name the failing check.
+# Slice 304 (MERGE-OPERAND-FORMS; the author's `merge(f\args; (a: int: 5))` of 2026-11-07, the book #whole-arguments) and
+# Codex's review of it (the book :432, :726, :738): the args part of a callable as a merge operand -- the Structure of its
+# formals, each holding its current default (the value a call omitting it takes); a formal with no default holds no value
+# -- a required formal, not a zero -- and the operand is admitted when a later operand of the merge writes that field (the
+# unfilled forms are refused: merge_args_unfilled_refused, merge_args_computed_default_refused).  tst (int: c 3; int: a):
+# merge(tst\args; (a: int: 5)) reads a = 5 and c = 3, the bare operand form a: int: 5 the same; tst\args itself is not
+# written: tst(a := 1) is 31 after the merges.  An explicit zero is a value: zed (int: c 3; int: z 0) -- merge(zed\args)
+# reads c = 3 and z = 0, zed() is 30.  As a later operand the part writes the model's slots of its formals' names in the
+# formals' order: merge(Args; two\args) for two (int: c 3; int: a 4) reads c = 3 and a = 4, Args is not written; the
+# unfilled a of tst\args as a later operand, filled by the next: merge(Args; tst\args; (a: int: 5)) reads c = 3 and a = 5.
+# A formal whose written default is not built (comp (int: c 3; int: a 2 + 3)), filled later: merge(comp\args; (a: int: 5))
+# reads c = 3 and a = 5 -- no default evaluated.  Both executors.  Entry 7; 81.. name the failing check.
 fn: tst (int: c 3; int: a) int
     return: c * 10 + a
 end: tst
 fn: two (int: c 3; int: a 4) int
     return: c * 10 + a
 end: two
+fn: zed (int: c 3; int: z 0) int
+    return: c * 10 + z
+end: zed
+fn: comp (int: c 3; int: a 2 + 3) int
+    return: c * 10 + a
+end: comp
 Args:
     int: c 9
     int: a 8
@@ -32,14 +42,14 @@ fn: bare () int
         return: 84
     return: 0
 end: bare
-fn: alone () int
-    pack: merge(tst\args)
+fn: zero () int
+    pack: merge(zed\args)
     if: pack\c != 3
         return: 85
-    if: pack\a != 0
+    if: pack\z != 0
         return: 86
     return: 0
-end: alone
+end: zero
 fn: later () int
     pack: merge(Args; two\args)
     if: pack\c != 3
@@ -50,6 +60,24 @@ fn: later () int
         return: 90
     return: 0
 end: later
+fn: filled () int
+    pack: merge(Args; tst\args; (a: int: 5))
+    if: pack\c != 3
+        return: 91
+    if: pack\a != 5
+        return: 92
+    if: Args\c != 9 || Args\a != 8
+        return: 93
+    return: 0
+end: filled
+fn: computed () int
+    pack: merge(comp\args; (a: int: 5))
+    if: pack\c != 3
+        return: 94
+    if: pack\a != 5
+        return: 95
+    return: 0
+end: computed
 fn: m () int
     int: r parens()
     if: r != 0
@@ -57,14 +85,22 @@ fn: m () int
     r: bare()
     if: r != 0
         return: r
-    r: alone()
+    r: zero()
     if: r != 0
         return: r
     r: later()
     if: r != 0
         return: r
+    r: filled()
+    if: r != 0
+        return: r
+    r: computed()
+    if: r != 0
+        return: r
     if: tst(a := 1) != 31
         return: 87
+    if: zed() != 30
+        return: 96
     return: 7
 end: m
 sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")

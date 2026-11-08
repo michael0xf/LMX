@@ -16,8 +16,8 @@ fable_pc, 2026-11-07/08. Остаток поручения автора о `merg
 
 1. Значение части `args` вызываемого — Structure его формалов: по полю на каждый записанный формал, в порядке формалов,
    со значением текущего умолчания формала (`lmx_walk_current_default` — то, что формал получает, когда вызов его опускает,
-   срез 293); формал без умолчания держит ноль своего типа, как типизированное объявление без значения, записанное операндом
-   (`lmx_walk_field_map`). Читает ядро — одна функция обоих исполнителей `lmx_callable_args_value` (конец модуля
+   срез 293); формал без текущего умолчания значения не держит — его слот пуст (ревью Codex 304, раздел ниже; до ревью срез
+   держал ячейку нуля, как у операнда `int: a`, `lmx_walk_field_map`). Читает ядро — одна функция обоих исполнителей `lmx_callable_args_value` (конец модуля
    `lmx_walk_values`; `lmx_callable_headers` → часть args, `lmx_walk_args_formal` считает формалы — они стоят первыми, скрытые
    входы за ними; свежая owned Structure арены, ячейки типа свидетеля формала, имена полей — коды имён формалов, снятые с
    ячеек части args тем же чтением, что `lmx_implements_place_name`); вызываемое не пишется. Для программы обходчика — PRIM
@@ -42,9 +42,9 @@ fable_pc, 2026-11-07/08. Остаток поручения автора о `merg
    UNSUPPORTED на такой свидетель. Не правило языка (у формалов других типов и умолчание не строится — срез 293,
    `lm_compiler_formal_default_kind` = 2).
 5. Фикстуры: `merge_args_operand` (tst (int: c 3; int: a): `merge(tst\args; (a: int: 5))` — a = 5, c = 3; голая форма
-   `a: int: 5` — то же; `merge(tst\args)` — c = 3, a = 0; `tst(a := 1)` = 31 после слияний: источник не записан; выход 7,
-   81..87 — отказавшая проверка), `merge_args_model_formal_refused` (формал `Point: p` — отказ п. 4 в 10:17). Ряды
-   `tests/full-suite.tsv` 206–207, `inputs.list` 257 входов.
+   `a: int: 5` — то же; `merge(tst\args)` — c = 3, a = 0 (придуманный ноль, снят ревью — см. ниже); `tst(a := 1)` = 31
+   после слияний: источник не записан; выход 7, 81..87 — отказавшая проверка), `merge_args_model_formal_refused` (формал
+   `Point: p` — отказ п. 4 в 10:17). Ряды `tests/full-suite.tsv` 206–207, `inputs.list` 257 входов (до ревью).
 
 ## Устройство
 
@@ -99,6 +99,112 @@ frontend среза — `build-frontend` новым tool с G2 frontend boot165b
 | m2 (rt166m2, `lmx_walk_values.lm2:8096`: примитив `lmx_walk_args_value_map` отдаёт вхождение вызываемого вместо построенной Structure) | результат примитива в программе обходчика | убит только в forced: `merge_args_operand` и p302n_m — R0 остановлен (4 отказа из 4 forced-запусков), native проходит (его `merge` зовёт `lmx_callable_args_value` напрямую) — [лог](records/pins/tp151-probe-m304b.log), [терминал](records/pins/tp151-probe-m304b.terminal.txt), сборка [терминал](records/pins/tp166-rt-m2.terminal.txt); возврат [лог](records/pins/mut304-restore-m2.log) 257/0 |
 | m3 (fe166m3 `6c6d2c73…`, `l2_frontend_emit.lm2:16030`: каждый формал присоединяется к карте результата полем операнда 0 — `lm_compiler_mrs_join(res, k, 0, …)` вместо `j`) | индекс поля формала в парах карты результата | **пережил** фокус на фикстуре a04 (18/18 проверок прошли — [лог](records/pins/tp151-probe-m304c.log)): первый операнд `merge` копируется по позициям, индекс поля читается лишь у пары позднего операнда (`lm_compiler_mrs_join`: поиск слота по имени только при `k > 0`), а `tst\args` стоял только первым; фикстура расширена (a05): `later()` — `merge(Args; two\args)` для `two (int: c 3; int: a 4)` читает `c` = 3 и `a` = 4, `Args` не записан (88–90); повторный фокус на a05 ([лог](records/pins/tp151-probe-m304d.log), [терминал](records/pins/tp151-probe-m304d.terminal.txt)): убит — `merge_args_operand` в native и forced, оба корня, R0 остановлен (две пары карты читают одно поле операнда; выход 1, а не 89 — отказ ядра раньше чтения `pack\a`), контроль отказа и p302n_m проходят; возврат [лог](records/pins/mut304-restore-m3.log) 257/0 (до a05) |
 
+## Ревью Codex 304 (CODEX-FABLE-304-REVIEW-20261108013621Z-01, [копия](records/pins/CODEX-FABLE-304-REVIEW-20261108013621Z-01.txt))
+
+Пункты ревью: (1) обязательный формал — не числовой ноль: книга :432 (`int: x` описывает место без начального значения),
+:726 (ноль — тоже поданное значение; без аргумента и допустимого дефолта вызов отказывает), :738 (`a` обязательный);
+`lmx_callable_args_value` безусловно создавала ячейку нуля, фикстура `alone()` закрепляла придуманное значение — сохранить
+отсутствие через общее представление и слияние, поздний операнд может заполнить, явный ноль остаётся отличимым, первый
+операнд, который заполняет поздний, не отвергать; пересмотреть путь типизированного операнда, не возобновляя паузу
+REPEATED-DECL; (2) формал с записанным, но не построенным умолчанием (`lm_compiler_formal_default_kind` = 2; поле 2 записи
+пусто, `lm_compiler_rw_formal_default`) та же функция обращала в ноль — предел реализации, а не вычисление умолчания при
+чтении `f\args` (правило автора — вычисление в каждом вызове без аргумента; FORMAL-DEFAULT-FORMS остаётся OPEN); парные
+проверки missing / explicit-zero / later-filled и нелитеральное умолчание; c = 3, a = 5 сохранить; (3) защищённый basename
+больше не читать и не перечислять каталоги артефактов; запись инцидента сохранить.
+
+Проект исправления (кандидат tp167 a01):
+
+1. Ядро (`lmx_callable_args_value`): формал с текущим умолчанием — ячейка типа свидетеля с его значением; формал без
+   него — слот остаётся пустым (открыт `lmx_arena_refs_open_owned`, ничего не сохранено); имя формала несёт слот — пустой
+   тоже (`lmx_source_name_set` по адресу слота). Пара позднего операнда (`lmx_merge_apply_pair`) кладёт в слот значение.
+   Ни одна программа пустой слот не читает — это гарантирует транслятор (п. 2): native-эмиттер читает числовое поле по пути
+   с инвариантом «a field path reads an absent place» (READ-FIELD-CLOSURE: числовая ячейка никогда не пуста там, где
+   держится; пустая — место, которого частичная копия не держит), обходчик — INVALID; книга :993: нарушение инварианта
+   ядра — диагностика стадии, не отказ, который ловит `catch`. Представление «место без значения» у чисел ядро не держит
+   (у `LmxWalkValue` есть `present`, у ячейки — нет), поэтому отсутствие представлено единственным существующим способом —
+   пустым слотом, как часть args держит отсутствие умолчания пустым полем 2.
+2. Транслятор (`lm_compiler_mrs_build`, после сборки карты, включая тело как операнд n): для каждого операнда формы 4 и
+   каждого формала с родом умолчания 0 или 2 — слот формала в карте (`lm_compiler_mexec_slot(res, k, j)`) должен писать
+   операнд с номером больше k (строки соответствия `l2_msrc_*`: `op > k`, тот же слот); иначе отказ у операнда: род 0 —
+   «a formal with no default that no later operand writes is not lowered as a field of the args part yet», род 2 — «a formal
+   whose written default is not built and that no later operand writes is not lowered as a field of the args part yet».
+   Предел фазы, не правило языка: что читает программа из незаполненного обязательного формала и пишет ли незаполненный
+   поздний операнд поверх значения модели, не решено (без слова автора); первый операнд, который заполняет поздний,
+   допускается; умолчание при чтении `f\args` не вычисляется.
+3. Фикстура `merge_args_operand` переписана (выход 7, 81..96): `parens`/`bare` — c = 3, a = 5 (прежние); `zero` —
+   `merge(zed\args)` для `zed (int: c 3; int: z 0)`: c = 3, z = 0, и `zed()` = 30 (явный ноль — значение); `later` —
+   `merge(Args; two\args)`: c = 3, a = 4, `Args` не записан (прежняя); `filled` — `merge(Args; tst\args; (a: int: 5))`:
+   незаполненный `a` поздним операндом, заполненный следующим — c = 3, a = 5, `Args` не записан; `computed` —
+   `merge(comp\args; (a: int: 5))` для `comp (int: c 3; int: a 2 + 3)`: c = 3, a = 5, умолчание не вычислено;
+   `tst(a := 1)` = 31. Контроли отказа: `merge_args_unfilled_refused` (`merge(tst\args)` — 9:17, род 0),
+   `merge_args_computed_default_refused` (`merge(comp\args)` — 10:17, род 2). Ряды `tests/full-suite.tsv` 206–209,
+   `inputs.list` 259 входов.
+4. Типизированный операнд без значения (`int: w`, `lmx_walk_field_map`, PRIM [kind]) пересмотрен без изменения: по
+   комментарию ядра это ячейка неизвестного содержимого в памяти (автор, q56; нулевое заполнение — акт арены, не
+   инициализатор языка) — объявленное место, а не слот формала без значения; REPEATED-DECL на паузе автора. Сказано Codex
+   в отчёте.
+
+Кандидаты ревью (стейдж cold-tp140, вариант tp167; рецепты — копии рецептов 304 с заменой имён: tp167-prepare/rt/fe,
+mut304r-restore, boot167-prepare/quick/detached; рабочий tool рецептов — boot164a `8b106da5…`, tool стейджа — tool166a
+`3d4ff36b…` без изменений (`tools/build.lm2` ревью не трогает), предыдущий frontend — G2 boot166a `44b2fe8f…`):
+
+| Кандидат | Изменение | Сборки | Результат |
+|---|---|---|---|
+| a01 | lmx_walk_values.lm2, l2_frontend_emit.lm2, три фикстуры, full-suite.tsv (ряды 208–209), inputs.list (259) — [список](records/pins/tp167-changed-a01.list), [prepare](records/pins/tp167-prepare-a01.tsv), [лог](records/pins/tp167-prepare-a01.log) 5/0, стейдж 259/0 | rt167a: driver.o `d7e7c4bf…`, driver-observe.o `857dcb0c…` ([терминал](records/pins/tp167-rt-a01.terminal.txt), [лог](records/pins/tp167-rt-a01.log), 02:01:44→02:02:32Z); fe167a: l2trans `83d25d35…`, l1trans `292bc0e4…`, l2_libc.o `af9fdae3…` ([терминал](records/pins/tp167-fe-a01.terminal.txt), [лог](records/pins/tp167-fe-a01.log), 02:04:34→02:08:11Z) | собраны с первого раза |
+| a02 | только full-suite.tsv: комментарий ревью (4 строки) перед его рядами — [prepare](records/pins/tp167-prepare-a02.tsv), [лог](records/pins/tp167-prepare-a02.log) 5/0, стейдж 259/0, [source-tp167-a02](records/pins/source-tp167-a02.sha256) | те же rt167a, fe167a | стейдж = selfbuild |
+
+Результаты ревью:
+
+| Шаг | Результат | Receipts |
+|---|---|---|
+| Фокус p304r-a (a02) | [probe304-r1](records/pins/probe304-r1.tsv) на tool166a / fe167a / rt167a: 10 рядов, 54 PASS, 2 FAIL — оба у пробы Opus `p302n_m2_merge_source` (native и forced: отказ трансляции `14:22: unknown field path segment` — путь в часть args `tst\args\a`, предел 304, не ревью); `merge_args_operand` 7 native и forced, оба корня; `merge_args_unfilled_refused` 9:17 и `merge_args_computed_default_refused` 10:17 — отказ с иглой, L1 не оставлен, native и forced; контроль 304 и ряды умолчаний 293 проходят | [терминал](records/pins/tp151-probe-p304r-a.terminal.txt), [лог](records/pins/tp151-probe-p304r-a.log) |
+| gdb на native-программе ряда `merge_args_operand` (p304r-a) | остановы на `lmx_callable_args_value` (RCX = arena, R8 = out), после `finish` — построенная Structure: у `tst\args` (parens; и вторым операндом в filled) и `comp\args` (computed) слот 1 пуст (child 0x0) и несёт код имени `a` (31), слот 0 — ячейка со значением 3 (код `c` 32); у `zed\args` слот 1 — ячейка со значением 0 (код `z` 27): явный ноль — значение, отсутствие — пустой слот; статус 0 при каждом вызове | [receipt](records/pins/gdb304r-fe167a-merge_args_operand.txt), [скрипт](records/pins/gdb304r.gdb) |
+| Реестр на кандидате a02 | весь поддерживаемый реестр — байты `selfbuild/tests/full-suite.tsv` ([копия](records/pins/registry304-r1.tsv)): 134 ряда, 0 отказов, 1072 проверки PASS, native и forced, оба корня, кортеж tool166a `3d4ff36b…` / fe167a `83d25d35…` / rt167a `d7e7c4bf…`/`857dcb0c…`, 02:10:26→02:25:54Z | [терминал](records/pins/tp151-probe-r304r-a.terminal.txt), [лог](records/pins/tp151-probe-r304r-a.log) |
+| Стейдж bootstrap | `steps` рабочего tool boot164a по [boot167a-prepare](records/pins/boot167a-prepare.tsv) ([рецепт](records/pins/boot167-prepare.command)): 5/0, стейдж `cold-boot167a` 259/0, [source-boot167a](records/pins/source-boot167a.sha256) `185952dd…` = source-tp167-a02 | [лог](records/pins/boot167a-prepare.log), [терминал](records/pins/boot167a-prepare.terminal.txt) |
+| Whole boot167a | [boot167-quick](records/pins/boot167-quick.command) через [boot167-detached](records/pins/boot167-detached.command): G0 — рабочий tool опубликованного boot166a `ace2a5d8…` (`tools/build.lm2` ревью не меняет), предыдущий frontend — G2 boot166a `44b2fe8f…`; `BOOTSTRAP quick 0 failures`, smoke 9/0 (`SUITE 9 rows, 0 failures` в логе; `PASS bootstrap: actual G1 builds and tests whole G2`), 02:41:27→02:52:37Z (670 с); G2: tool `7e220363…`, l2trans `27a9b8a8…`, l1trans `c239dbe0…`, l2_libc.o `af9fdae3…`, runtime `d7e7c4bf…`/`857dcb0c…` | [лог](records/pins/boot167a-quick.log), [терминал](records/pins/boot167a-quick.terminal.txt), [verify](records/pins/boot167a-quick-verify.log), [detached](records/pins/boot167a-detached.terminal.txt) |
+| Приёмка `checks` | рабочий tool boot164a, [список](records/pins/boot167a-check.tsv) ([рецепт](records/pins/checks303.command)): 38/0 (02:53:06.71→02:53:07.07Z) — стейдж 259/0; записи producers обеих генераций и G2-build-record закрыты и без script hosts; G1 = G2 (exe-same frontend и tool, same runtime, l2_libc.o, lmxtool.lm1/.c, consumed inputs); рабочий tool и bundle = G2; rt167a `same` G2 runtime; fe167a `exe-same` G2 frontend, его l2_libc.o `same`; хеши G2 | [лог](records/pins/checks304r-a.log), [терминал](records/pins/checks304r-a.terminal.txt) |
+| Самотест G2 tool | G2 tool boot167a `7e220363…` (= рабочий bundle), ребёнок `tool153a-child` `40c935bc…`, рецепт [tp152-selftest](records/pins/tp152-selftest.command): `SELFTEST 0 failures` (12 строк `FAIL` — ожидаемые отказы негативных проверок схемы, как у 298–304), 02:53:24.74→02:53:36.73Z | [терминал](records/pins/tp152-selftest-s304r-a.terminal.txt), [лог](records/pins/tp152-selftest-s304r-a.log) |
+| Посадка | `steps` рабочего tool boot164a по [land304r](records/pins/land304r.tsv) ([рецепт](records/pins/steps303.command)): 9/0, `selfbuild/inputs.sha256` = source-tp167-a02 `185952dd…` (259 входов), G2 consumed = G1 consumed (311 файлов проверены в стейдже), стейдж boot167a держит байты G2, `variants/tp167/inputs.list` = selfbuild, 02:53:37.31→02:53:38.78Z | [лог](records/pins/land304r.log), [терминал](records/pins/land304r.terminal.txt) |
+
+Мутанты ревью (стейдж правится `sed` по точной строке, кандидатный frontend или runtime собирается с меткой мутанта, фокус
+[probe304-r1](records/pins/probe304-r1.tsv) на tool166a / rt167a (или fe167a для мутанта ядра), возврат —
+[mut304r-restore](records/pins/mut304r-restore.command) по [списку](records/pins/mut304r-restore.tsv): семь путей из варианта
+tp167, весь стейдж против source-tp167-a02):
+
+| Мутант | Что снято | Результат |
+|---|---|---|
+| m1 (fe167m1 `73619916…`, `l2_frontend_emit.lm2:16084`: цикл проверки операндов формы 4 не выполняется — `while: k < 0`) | вся проверка «поздний операнд пишет поле» | **убит**: обе отказные фикстуры транслируются (`the translation refuses: kind 0 exit 0`, игла не сказана, L1 оставлен) — 12 отказов, native и forced; `merge_args_operand` 7 в обоих исполнителях (все его слияния заполнены — мутант там эквивалентен); p302n_m2 — предел 304 ([лог](records/pins/tp151-probe-m304r-1.log), [терминал](records/pins/tp151-probe-m304r-1.terminal.txt)); возврат [лог](records/pins/mut304r-restore-m1.log) 7 файлов, 259/0 |
+| m2 (fe167m2 `ebd02e81…`, `l2_frontend_emit.lm2:16091`: проверяется только род умолчания 0 — `if: dkind = 0`) | формал с записанным, но не построенным умолчанием (род 2) | **убит** одним рядом `merge_args_computed_default_refused` (транслируется, игла не сказана, L1 оставлен — 6 отказов, native и forced); `merge_args_unfilled_refused` по-прежнему отказывает, `merge_args_operand` 7 ([лог](records/pins/tp151-probe-m304r-2.log), [терминал](records/pins/tp151-probe-m304r-2.terminal.txt)); возврат [лог](records/pins/mut304r-restore-m2.log) 259/0 |
+| m3 (fe167m3 `a15513b4…`, `l2_frontend_emit.lm2:16096`: строки соответствия самого операнда считаются заполнением — `msrc_op_cell[0][fq] >= k`) | «позднее» в проверке заполнения | **убит**: обе отказные фикстуры транслируются — 12 отказов, native и forced; `merge_args_operand` 7 ([лог](records/pins/tp151-probe-m304r-3.log), [терминал](records/pins/tp151-probe-m304r-3.terminal.txt)); возврат [лог](records/pins/mut304r-restore-m3.log) 259/0 |
+| m4 (rt167m4 `ce4dbd67…`/`a7d52350…`, `lmx_walk_values.lm2:8061`: перед чтением умолчания в слот каждого формала кладётся ячейка нуля — поведение среза 304 до ревью) | представление отсутствия в ядре | **пережил** фокус (54 PASS, те же 2 отказа p302n_m2; [лог](records/pins/tp151-probe-m304r-4.log), [терминал](records/pins/tp151-probe-m304r-4.terminal.txt)) — ожидаемо эквивалентен для всякой допущенной программы: транслятор отказывает каждой, которая читала бы незаполненный слот, а заполненный поздним операндом слот не отличает пустого от нуля. Свидетель представления — не фикстура, а gdb-receipt выше (слот пуст, имя на слоте); наблюдаемым оно станет у подачи всей структуры аргументов (связыватель: «нет аргумента» против нуля) — удержано. Возврат [лог](records/pins/mut304r-restore-m4.log) 259/0 |
+
+Документы ревью: [реестр дефектов](../../defects.md) — MERGE-OPERAND-FORMS (абзац «Срез 304» исправлен: слот пуст, ноль не
+придумывается; новый абзац «Ревью Codex среза 304» — механизм, отказы, фикстуры, обзор типизированного операнда),
+FORMAL-DEFAULT-FORMS (абзац ревью: предел операнда `f\args` при роде 2, умолчание не вычисляется); [заметки о
+реализации 4.2](../../../docs/implementation-notes.ru.md#assign-named-merge) RU и EN (пункт об операнде `f\args`);
+[selfbuild/README.md](../../../selfbuild/README.md) (259 входов — 66 исходников, 34 инструмента, 159 тестов; абзац
+Slice304); [steps/current.md](../../current.md) (абзац ревью перед абзацем 304; абзац 304 исправлен); книга и generated
+docs не менялись (абзац whole-arguments нуля не утверждал); журнал LMX_blog — новых реплик автора нет. Проверка
+документов `docs check` по индексу git ([список](records/pins/docs304r-check-a.tsv), рецепт checks303 с приватным
+каталогом вывода): проход a — 48 находок DOCS-EOL (копии логов pwsh в records — CRLF рабочие копии;
+[лог](records/pins/docs304r-check-a.log)); проход b после переписи 12 путей из индекса ([crlf304r-1](records/pins/crlf304r-1.list)
+— только те, что проверка перечислила) — 36 находок ([лог](records/pins/docs304r-check-b.log)); проход c после переписи
+всех `w/crlf` по `git ls-files --eol` ([crlf304r-2](records/pins/crlf304r-2.list), 36 путей) — 0 отказов («35 paired semantic
+chapters … line endings LF», [лог](records/pins/docs304r-check-c.log), [терминал](records/pins/docs304r-check-c.terminal.txt));
+проход d над окончательным индексом (после второго прохода архива) — receipt только в P (`docs304r-check-d.*`), как у 303–304.
+
+Провенанс ревью: правки исходников и документов — Edit/Write; мутанты — `sed` по точной строке стейджа с проверкой `sed -n`
+до и после; списки `tp167-*`, `probe304-r1.tsv`, `records304r*.list`, `allow304r-1.list`, `crlf304r-*.list` — `printf`/`grep`;
+рецепты — копии рецептов 304 с заменой имён и хешей (Write; строки с путями `\` не правились `sed`). Receipt gdb — чтение
+готовой native-программы ряда фокуса (скрипт в записи). Архив — `steps` ([arch304r-1](records/pins/arch304r-1.tsv): 77 путей P
+по [records304r.list](records/pins/records304r.list), копии проверены 77/0; второй проход — receipts первого прохода и docs check).
+
+Отклонения ревью: (1) проба Opus `p302n_m2_merge_source` в фокусе отказывает пределом 304 («unknown field path segment»,
+путь в часть args) — в списке фокуса оставлена как в p304b, 2 FAIL каждого прогона — не ревью; (2) первая проверка CRLF
+копий циклом `grep -q $'\r'` не нашла ни одного файла (48 были): перепись по списку проверки документов, затем по
+`git ls-files --eol`; (3) мутант m4 пережил фокус — ожидаемая эквивалентность (см. таблицу), не чинится фикстурой: свидетель —
+gdb; (4) защищённый basename не читался и каталоги артефактов не перечислялись (п. 3 ревью): все чтения — по точным именам.
+
 ## Границы
 
 - Вся структура аргументов из одной Structure (`mytest(merge(mytest\args; (a: int: 5)))` = 35, та же Structure в переменной)
@@ -108,8 +214,10 @@ frontend среза — `build-frontend` новым tool с G2 frontend boot165b
 - Чтение поля части args путём (`tst\args\c`) не разрешается: `lm_compiler_method_part_own_seg` отвечает только за части var
   и body («unknown field path segment»). Вне среза; записано здесь.
 - Формал не числового типа как поле результата `merge` — предел п. 4 проекта.
-- Формал без умолчания в результате `merge` держит ноль своего типа (как `int: a` операндом): нормой не определено;
-  измерено и закреплено фикстурой как поведение реализации, не как правило.
+- Формал без умолчания в результате `merge`: срез держал ноль его типа (как `int: a` операндом) и закрепил это фикстурой
+  — снято ревью Codex 304 (раздел «Ревью Codex 304»): слот пуст, операнд допускается лишь с поздним операндом того же
+  `merge`, пишущим поле; что читает программа из незаполненного обязательного формала и пишет ли незаполненный поздний
+  операнд поверх значения модели — не решено (предел фазы).
 
 | Самотест G2 tool | G2 tool boot166a `ace2a5d8…` (= рабочий bundle), ребёнок `tool153a-child` `40c935bc…`, рецепт [tp152-selftest](records/pins/tp152-selftest.command): `SELFTEST 0 failures` (12 строк `FAIL` — ожидаемые отказы негативных проверок схемы, как у 298–303), 01:21:21.90→01:21:33.79Z | [терминал](records/pins/tp152-selftest-s304a.terminal.txt), [лог](records/pins/tp152-selftest-s304a.log) |
 | Посадка | `steps` рабочего tool boot164a по [land304](records/pins/land304.tsv) ([рецепт](records/pins/steps303.command)): 9/0, `selfbuild/inputs.sha256` = source-tp166-a05 `b7356645…` (257 входов), G2 consumed = G1 consumed, стейдж boot166a держит байты G2, `variants/tp166/inputs.list` = selfbuild, 01:22:12.52→01:22:13.93Z | [лог](records/pins/land304.log), [терминал](records/pins/land304.terminal.txt) |
@@ -178,3 +286,6 @@ p302n_m, p302n_m2 — только в стейдже и записи, не в р
 - Вопрос Codex автору о записи «двух методов» whole-arguments; реализация CALL-WHOLE-ARGUMENTS-STRUCTURE — после ответа.
 - Чтение полей части args путём (`f\args\c`).
 - Формалы не числовых типов как поля результата `merge` над `f\args`.
+- Операнд `f\args` с формалом без текущего умолчания, который не пишет поздний операнд того же `merge` (отказ ревью 304):
+  чтение незаполненного обязательного формала программой и запись незаполненного позднего операнда поверх значения
+  модели — после слова автора или общего решения представления «места без значения».

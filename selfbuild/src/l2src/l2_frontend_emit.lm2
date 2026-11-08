@@ -15951,8 +15951,15 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
     @: tinner c.LmP0Field
     const: (@: ttype c.LmP0Text)
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: msrc_op_cell int (cast: (@@: int) (@ c.l2_msrc_op))
+    @@: msrc_slot_cell int (cast: (@@: int) (@ c.l2_msrc_slot))
     int: callee -1
     int: j 0
+    int: dkind 0
+    size_t: dbits 0U
+    int: fslot -2
+    int: filled 0
+    int: fq 0
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: (cast: (int) (0))
     n: c.lm_compiler_merge_arity(mf)
@@ -16014,7 +16021,8 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
         # Slice 304 (MERGE-OPERAND-FORMS): the args part of a callable, `f\args` -- its formals join the map as the typed
         # fields their declarations write (`int: c 3`: the kind and the type word at the declaration), in the formals'
         # order; the kernel builds their values (lmx_callable_args_value).  A formal of another type than a number has no
-        # field kind here yet and is said at the operand.
+        # field kind here yet and is said at the operand.  A formal with no current default is checked after the map is
+        # whole (below): a later operand of this merge must write its field.
         if: form = 4
             callee: c.lm_compiler_merge_args_callee(last, span, mi)
             if: callee < 0
@@ -16062,6 +16070,43 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
             return: (cast: (int) (1))
         ---
         c.lm_compiler_mrs_select_source(res, n, bni)
+    # Codex's review of slice 304 (CODEX-FABLE-304-REVIEW-20261108013621Z-01; the book :432, :726, :738): a formal of the
+    # args part with no current default -- none written (a required formal), or a written form this translation does not
+    # build (lm_compiler_formal_default_kind 2, FORMAL-DEFAULT-FORMS) -- holds no value in the kernel's Structure
+    # (lmx_callable_args_value leaves its slot empty; no zero is invented), and a number's place is never read empty
+    # (READ-FIELD-CLOSURE): the operand is admitted when a later operand of this merge -- the body counts, operand n --
+    # writes the slot of that formal (the correspondence rows, lm_compiler_msrc_push), and is refused at the operand
+    # otherwise.  The limit of this phase, not a rule of the language: what a program reads from an unfilled required
+    # formal, and whether an unfilled later operand writes or keeps the model's value, is not decided here; a first
+    # operand a later one fills is admitted.  No default is evaluated by the reading of f\args (the author: a computed
+    # default is evaluated by each call omitting the formal).
+    k: 0
+    while: k < n
+        form: c.lm_compiler_merge_decl_operand(mf, k, mi, c.lm_compiler_method_src(mi, src_cell[0]), @ last, @ span)
+        if: form = 4
+            callee: c.lm_compiler_merge_args_callee(last, span, mi)
+            j: 0
+            while: callee >= 0 && j < m_arity_cell[0][callee]
+                dkind: (cast: (int) (c.lm_compiler_formal_default_kind(callee, j, @ dbits)))
+                if: dkind = 0 || dkind = 2
+                    fslot: c.lm_compiler_mexec_slot(res, k, j)
+                    filled: 0
+                    fq: 0
+                    while: fq < msrc_n_cell[0]
+                        if: msrc_res_cell[0][fq] = res && msrc_op_cell[0][fq] > k && msrc_slot_cell[0][fq] = fslot
+                            filled: 1
+                        fq: fq + 1
+                    ---
+                    if: filled = 0 && dkind = 0
+                        return: (cast: (int) (c.lm_compiler_error(c.lm_compiler_method_src(mi, src_cell[0]), (cast: (const: @: c.LmP0Node) (last\value)), "a formal with no default that no later operand writes is not lowered as a field of the args part yet")))
+                    if: filled = 0
+                        return: (cast: (int) (c.lm_compiler_error(c.lm_compiler_method_src(mi, src_cell[0]), (cast: (const: @: c.LmP0Node) (last\value)), "a formal whose written default is not built and that no later operand writes is not lowered as a field of the args part yet")))
+                ---
+                j: j + 1
+            ---
+        ---
+        k: k + 1
+    ---
     mres_width_cell[0][res]: c.lm_compiler_mrs_width(res)
     # Kernel defect MERGE-REFERENCE-TO-OPERAND: said where the merge stands (l2_mrs_operand_reference).
     if: c.lm_compiler_mrs_operand_reference(res) >= 0

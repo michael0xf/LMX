@@ -1,0 +1,13 @@
+# Codex's review of slice 304 (the book :432, :726, :738): a formal with no default is required -- the args part holds no
+# value for it and no zero stands in.  Read as a merge operand with no later operand writing that field, the part is
+# refused at the operand: the limit of this phase (lm_compiler_mrs_build), not a rule of the language.  The filled forms
+# run in merge_args_operand.
+fn: tst (int: c 3; int: a) int
+    return: c * 10 + a
+end: tst
+fn: m () int
+    pack: merge(tst\args)
+    return: pack\c
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -219,9 +219,12 @@ of the third:
   walker, both roots): the args part of a callable is read as the
   Structure of its formals -- one field per written formal, in the
   formals' order, holding the formal's current default (the value the
-  formal takes when a call omits it); a formal with no default holds the
-  zero of its type, as a typed declaration without a value written as an
-  operand does. The kernel reads it -- one function of both executors
+  formal takes when a call omits it); a formal with no current default --
+  a required one, or one whose written default this translation does not
+  build -- holds no value: its slot stays empty, no zero is invented, and
+  the operand is admitted only when a later operand of the same `merge`
+  writes that field, else refused at the operand (Codex's review of 304;
+  an explicit zero `int: z 0` is a value). The kernel reads it -- one function of both executors
   (`lmx_callable_args_value`; the walker's program takes it as a
   primitive over the callable's occurrence); the operand is recognized by
   the common path resolution (its last step is the `args` part of a

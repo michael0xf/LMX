@@ -7998,8 +7998,12 @@ end: lmx_walk_named_route
 # Slice 304 (MERGE-OPERAND-FORMS, the author's `merge(f\args; (a: int: 5))` of 2026-11-07; the book, #whole-arguments and
 # #composition): the args part of a callable read as a Structure value -- one field per written formal, in the formals'
 # order, holding the formal's current default (lmx_walk_current_default), the value the formal takes when a call omits it
-# (slice 293); a formal with no default holds the zero of its type, as a typed declaration written without a value does
-# (lmx_walk_field_map).  A fresh owned Structure of the arena, its fields named by the formals' name codes; the callable is
+# (slice 293).  A formal with no current default -- none written (a required formal), or a written form the translation
+# does not build (FORMAL-DEFAULT-FORMS) -- leaves its slot empty: the Structure holds no value for it, as the args part
+# holds none, and no zero is invented (Codex's review of 304; the book :432 -- a place without an initial value, :726 --
+# zero is a supplied value, an absent argument is not, :738 -- a is required); a later operand of the merge fills the slot
+# (lmx_merge_apply_pair), and the translator admits the operand only when one does (lm_compiler_mrs_build), so no program
+# reads the empty slot.  A fresh owned Structure of the arena, its slots named by the formals' name codes; the callable is
 # not written.  The one reading for both executors: a generated native merge calls it for the operand, the walker's merge
 # takes it through the primitive lmx_walk_args_value_map.  A code that is no fn or sub, or a formal that is no number:
 # UNSUPPORTED (the translator admits only number formals, lm_compiler_mrs_build).
@@ -8048,13 +8052,16 @@ fn: lmx_callable_args_value (@: arena c.LmxArena; @: code c.Lmx; @@: out c.Lmx) 
         numeric: lmx_walk_numeric_type(arena, witness)
         if: numeric = 0
             return: c.LMX_WALK_UNSUPPORTED
-        cell: c.lmx_scalar_new_physical_profiled(arena, numeric, 0)
-        if: cell = 0
-            return: c.LMX_WALK_NOMEM
         status: lmx_walk_current_default(arena, args, j, @ current)
         if: status != c.LMX_WALK_OK
             return: status
+        # A current default: a cell of the witness's type holding it.  None: the slot stays empty (opened by
+        # lmx_arena_refs_open_owned, nothing stored) -- the absence travels into the merge, where a later operand's pair
+        # fills the slot; no cell of a zero stands in for the value the formal does not have.
         if: current\present != 0
+            cell: c.lmx_scalar_new_physical_profiled(arena, numeric, 0)
+            if: cell = 0
+                return: c.LMX_WALK_NOMEM
             status: lmx_walk_value_receive(@ current, numeric, @ current)
             if: status != c.LMX_WALK_OK
                 return: status
@@ -8064,10 +8071,11 @@ fn: lmx_callable_args_value (@: arena c.LmxArena; @: code c.Lmx; @@: out c.Lmx) 
             status: lmx_walk_store_numeric_raw(cell, numeric, number)
             if: status != c.LMX_WALK_OK
                 return: status
+            if: c.lmx_graph_ref_store_in(arena, built, j, cell) != 0
+                return: c.LMX_WALK_NOMEM
         ---
-        if: c.lmx_graph_ref_store_in(arena, built, j, cell) != 0
-            return: c.LMX_WALK_NOMEM
-        # The field bears the formal's name: the code the args part's cell of that formal bears (lmx_implements_place_name).
+        # The slot bears the formal's name, filled or empty: the code the args part's cell of that formal bears
+        # (lmx_implements_place_name).
         status: c.lmx_implements_exec_slot(arena, args, j, @ physical, @ answer)
         if: status != c.LMX_WALK_OK
             return: status

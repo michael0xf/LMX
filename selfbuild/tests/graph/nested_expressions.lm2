@@ -1,0 +1,40 @@
+Point:
+    Inner:
+        int: y 0
+        int: x 0
+    end: Inner
+end: Point
+Candidate:
+    Inner:
+        int: y 3
+    end: Inner
+end: Candidate
+Flat:
+    int: y 0
+end: Flat
+fn: take (Point: p; int: q) int
+    return: p\Inner\y * 10 + q
+end: take
+fn: choose (Point: p) int
+    return: take(p, (1 + 2))
+end: choose
+fn: numeric (int: x; int: y) int
+    return: x * 10 + y
+end: numeric
+fn: access (Flat: value) int
+    return: value\y
+end: access
+fn: a (int: x) int
+    return: x + 1
+end: a
+fn: mytest (int: a) int
+    return: a + 30
+end: mytest
+int: arithmetic take(Candidate, 1 + 2)
+int: negative take(Candidate, -2)
+int: boundary numeric(8 - 2; 3 * 4)
+int: unary -(2 + 3) * 4
+int: nested choose(Candidate)
+int: through_path access(Candidate\Inner)
+int: call_parentheses mytest(a(5))
+int: call_colon mytest(a: 5)

@@ -25,8 +25,10 @@ independent base; there are no open questions to the author. Marks: "norm" -- th
 Codex's graph10/tool11/rt07 implementation executes the Point/take example of §10 and used-field checks through both
 consumers; [evidence and limits](../steps/witnesses/clean-call-20261108/notes.md). This is a partial migration:
 int results, a body with one return, empty var, positional arguments and int defaults are supported.
-Expressions still retain a flat field sequence with precedence handled by the consumer; the complete normalization
-of §3.3 and the remaining body, admission, primitive and root forms are not implemented yet. The specification below
+The next [graph11/tool11/rt08](../steps/witnesses/clean-expr-20261108/notes.md) normalizes supported expressions:
+a binary operation is Lmx [left, operator word, right], a prefix operation [operator word, operand]; construction sets
+the nesting and respects P0 separators. Both consumers read this form without precedence parsing. The remaining
+operators, body, admission, primitive and root forms are not implemented yet. The specification below
 states the target, rather than claiming that the entire existing runtime conforms to it.
 
 <a id="principles"></a>

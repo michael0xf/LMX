@@ -22,6 +22,13 @@ direction and the order of §11 item 0 were allowed by the second review, the im
 independent base; there are no open questions to the author. Marks: "norm" -- the author's words or the current book;
 "decision" -- the implementer's choice within the norm, checked by Codex.
 
+Codex's graph10/tool11/rt07 implementation executes the Point/take example of §10 and used-field checks through both
+consumers; [evidence and limits](../steps/witnesses/clean-call-20261108/notes.md). This is a partial migration:
+int results, a body with one return, empty var, positional arguments and int defaults are supported.
+Expressions still retain a flat field sequence with precedence handled by the consumer; the complete normalization
+of §3.3 and the remaining body, admission, primitive and root forms are not implemented yet. The specification below
+states the target, rather than claiming that the entire existing runtime conforms to it.
+
 <a id="principles"></a>
 ## 1. Principles (norm)
 

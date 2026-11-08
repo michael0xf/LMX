@@ -204,6 +204,121 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
     return: 2
 end: lm_graph_build_node
 
+# Build the fields of a data/signature Structure through the same constructor. A body retains its written statements;
+# it is not executed, and method-local declaration normalization is a later part of this migration.
+fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; int: declarations; @@: out c.Lmx) int
+    @: result c.Lmx 0
+    @: item c.LmP0Field 0
+    @: value void 0
+    size_t: i 0U
+    int: status 0
+    if: source = 0 || out = 0
+        return: 2
+    result: c.lmx_graph_lmx(g, parent, lm_graph_count_active(source))
+    if: result = 0
+        return: 1
+    item: lm_graph_next_active(lm_graph_p0_first(source))
+    while: item != 0 && status = 0
+        if: declarations != 0
+            status: lm_graph_build_field(g, result, i, lm_graph_p0_value(item))
+        else:
+            status: lm_graph_build_node(g, result, lm_graph_p0_value(item), @ value)
+            if: status = 0
+                status: c.lmx_graph_put(result, i, value)
+            ---
+        ---
+        i: i + 1U
+        item: lm_graph_next_active(lm_graph_p0_next(item))
+    ---
+    out[0]: result
+    return: status
+end: lm_graph_build_fields
+
+# fn's visible parts are normalized once by construction. Written requirements remain words, not resolved bindings.
+fn: lm_graph_build_method (@: g c.LmxGraph; @: parent c.Lmx; @: fr c.LmP0Frame; @@: out void) int
+    @: item c.LmP0Field lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(fr)))
+    @: name c.LmP0Text 0
+    @: code c.Lmx 0
+    @: args c.Lmx 0
+    @: result c.Lmx 0
+    @: vars c.Lmx 0
+    @: body c.Lmx 0
+    @: value void 0
+    @: formal c.Lmx 0
+    @: formal_name char 0
+    size_t: i 0U
+    int: status 0
+    if: item = 0 || item\value\kind != c.LM_P0_NODE_ATOM || lm_graph_count_active(lm_graph_p0_body(fr)) != 4U
+        return: 2
+    name: lm_graph_p0_atom(lm_graph_p0_value(item))
+    code: c.lmx_graph_lmx(g, parent, 5U)
+    if: code = 0
+        return: 1
+    item: lm_graph_next_active(lm_graph_p0_next(item))
+    if: item = 0 || item\value\kind != c.LM_P0_NODE_STRUCTURE
+        return: 2
+    status: lm_graph_build_fields(g, code, lm_graph_p0_structure(lm_graph_p0_value(item)), 1, @ args)
+    if: status != 0
+        return: status
+    while: i < c.lmx_graph_count(args)
+        value: c.lmx_graph_get(args, i)
+        if: c.lmx_graph_kind(g, value) = 4
+            formal: (cast: (@: c.Lmx) value)
+            if: c.lmx_graph_count(formal) != 2U
+                return: 2
+            formal_name: c.lmx_graph_word_text(g, c.lmx_graph_get(formal, 1U))
+            if: c.lmx_graph_name_address(g, value, formal_name) != 0
+                return: 2
+            ---
+        ---
+        i: i + 1U
+    ---
+    item: lm_graph_next_active(lm_graph_p0_next(item))
+    if: item = 0
+        return: 2
+    result: c.lmx_graph_lmx(g, code, 1U)
+    vars: c.lmx_graph_lmx(g, code, 0U)
+    if: result = 0 || vars = 0
+        return: 1
+    status: lm_graph_build_node(g, result, lm_graph_p0_value(item), @ value)
+    if: status != 0 || c.lmx_graph_put(result, 0U, value) != 0
+        return: 2
+    item: lm_graph_next_active(lm_graph_p0_next(item))
+    if: item = 0 || item\value\kind != c.LM_P0_NODE_STRUCTURE
+        return: 2
+    status: lm_graph_build_fields(g, code, lm_graph_p0_structure(lm_graph_p0_value(item)), 0, @ body)
+    if: status != 0
+        return: status
+    if: c.lmx_graph_name(g, (cast: (@: void) code), lm_graph_p0_data(name), lm_graph_p0_length(name)) != 0
+        return: 1
+    if: c.lmx_graph_name(g, (cast: (@: void) args), "args", 4U) != 0 || c.lmx_graph_name(g, (cast: (@: void) result), "return", 6U) != 0 || c.lmx_graph_name(g, (cast: (@: void) vars), "var", 3U) != 0 || c.lmx_graph_name(g, (cast: (@: void) body), "body", 4U) != 0
+        return: 1
+    if: c.lmx_graph_put(code, 0U, c.lmx_graph_word(g, "fn", 2U)) != 0 || c.lmx_graph_put(code, 1U, (cast: (@: void) args)) != 0 || c.lmx_graph_put(code, 2U, (cast: (@: void) result)) != 0 || c.lmx_graph_put(code, 3U, (cast: (@: void) vars)) != 0 || c.lmx_graph_put(code, 4U, (cast: (@: void) body)) != 0
+        return: 1
+    out[0]: (cast: (@: void) code)
+    return: 0
+end: lm_graph_build_method
+
+# Input-boundary classification of a named data block. An unsupported language receiver must remain an executable
+# Frame and fail explicitly in its consumer, rather than becoming inert data merely because it has an end trailer.
+fn: lm_graph_data_head (@: head char) int
+    @: words char "fn sub fm if else while for do until return break continue switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external sendMessage receiveMessage adopt length cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
+    size_t: at 0U
+    size_t: start 0U
+    while: words[at] != 0
+        start: at
+        while: words[at] != 0 && words[at] != 32
+            at: at + 1U
+        ---
+        if: head = c.lmx_graph_intern(words + start, at - start)
+            return: 0
+        if: words[at] != 0
+            at: at + 1U
+        ---
+    ---
+    return: 1
+end: lm_graph_data_head
+
 # One written field of the root into slot of root: a declaration `int: name` is a place without a value and `int: name
 # literal` an int place, each named at its cell; everything else is the written nd itself (a statement with a word
 # head, a bare atom, a block). 0, 1 without memory, 2 for a nd of no known kind.
@@ -216,6 +331,8 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
     @: head char 0
     @: cell void 0
     @: value void 0
+    @: structure c.Lmx 0
+    @: tail c.LmP0Trailer 0
     size_t: n 0U
     int: v 0
     int: r 0
@@ -226,6 +343,21 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
         head: c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr)))
         if: head = 0
             return: 1
+        if: head = state\w_fn
+            r: lm_graph_build_method(g, root, fr, @ value)
+            if: r != 0
+                return: r
+            return: c.lmx_graph_put(root, slot, value)
+        if: fr\trailer != 0 && lm_graph_data_head(head) != 0
+            tail: (cast: (@: c.LmP0Trailer) fr\trailer)
+            if: tail\spelling != 0 && c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = c.lmx_graph_intern("end", 3U)
+                r: lm_graph_build_fields(g, root, lm_graph_p0_body(fr), 1, @ structure)
+                if: r != 0
+                    return: r
+                if: c.lmx_graph_name_address(g, (cast: (@: void) structure), head) != 0
+                    return: 1
+                return: c.lmx_graph_put(root, slot, (cast: (@: void) structure))
+            ---
         if: head = state\w_int && fr\body != 0
             n: lm_graph_count_active(lm_graph_p0_body(fr))
             f1: lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(fr)))
@@ -423,6 +555,72 @@ fn: lm_graph_op_power (@: state c.LmxGraphState; @: text char) int
     return: 0
 end: lm_graph_op_power
 
+# Emit the address of a written substructure relative to this native activation's code. These field coordinates
+# belong to emitted code only; the source graph has no saved lookup plan. Code mutation invalidates this entry.
+fn: lm_graph_emit_address (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: target c.Lmx) int
+    @: parent c.Lmx 0
+    size_t: i 0U
+    if: target = scope
+        c.fputs("lmx_call_code", f)
+        return: 0
+    if: target = 0
+        return: 3
+    parent: (cast: (@: c.Lmx) target\parent)
+    if: parent = 0
+        return: 3
+    while: i < c.lmx_graph_count(parent) && c.lmx_graph_get(parent, i) != (cast: (@: void) target)
+        i: i + 1U
+    ---
+    if: i >= c.lmx_graph_count(parent)
+        return: 3
+    c.fputs("(cast: (@: Lmx) lmx_graph_get(", f)
+    if: lm_graph_emit_address(g, f, scope, parent) != 0
+        return: 3
+    c.fprintf(f, ", %zuU))", i)
+    return: 0
+end: lm_graph_emit_address
+
+fn: lm_graph_emit_word (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; size_t: index) int
+    c.fputs("lmx_graph_word_text(l2_g, lmx_graph_get(", f)
+    if: lm_graph_emit_address(g, f, scope, expression) != 0
+        return: 3
+    c.fprintf(f, ", %zuU))", index)
+    return: 0
+end: lm_graph_emit_word
+
+# Calls compile argument evaluation and immediate admission in source order. The common invocation owns only the
+# activation and default places; it dispatches the native method body, not an interpreter wrapper.
+fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    size_t: count (cast: (size_t) (c.lmx_graph_count(expression) - 1U))
+    size_t: i 0U
+    @: actual void 0
+    @: text char 0
+    int: call_id temps[0]
+    int: value 0
+    int: status 0
+    temps[0]: temps[0] + 1
+    c.fprintf(f, "        @: Lmx l2_call%d (cast: (@: Lmx) lmx_graph_resolve(l2_g, lmx_call_code, ", call_id)
+    status: lm_graph_emit_word(g, f, scope, expression, 0U)
+    c.fprintf(f, "))\n        if: lmx_graph_call_shape(l2_g, l2_call%d, %zuU) != 0\n            return: 1\n        []: @(void) l2_args%d %zuU\n", call_id, count, call_id, count + 1U)
+    while: i < count && status = 0
+        actual: c.lmx_graph_get(expression, i + 1U)
+        text: c.lmx_graph_word_text(g, actual)
+        if: text != 0
+            c.fprintf(f, "        l2_args%d[%zuU]: lmx_graph_resolve(l2_g, lmx_call_code, ", call_id, i)
+            status: lm_graph_emit_word(g, f, scope, expression, i + 1U)
+            c.fputs(")\n", f)
+        else:
+            status: lm_graph_emit_expr(g, f, scope, expression, i + 1U, i + 2U, temps, decl_names, decl_slots, decl_n, @ value)
+            c.fprintf(f, "        l2_args%d[%zuU]: lmx_graph_int(l2_g, l2_t%d)\n", call_id, i, value)
+        ---
+        c.fprintf(f, "        if: lmx_graph_admit(l2_g, l2_call%d, %zuU, l2_args%d[%zuU], @ l2_args%d[%zuU]) != 0\n            return: 1\n", call_id, i, call_id, i, call_id, i)
+        i: i + 1U
+    ---
+    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_invoke(l2_g, l2_call%d, l2_args%d, %zuU, @ l2_t%d) != 0\n            return: 1\n", call_id, call_id, call_id, count, call_id)
+    temp[0]: call_id
+    return: status
+end: lm_graph_emit_call
+
 # The expression from field at[0] to field to of expr with operators of power at least least, as temporaries l2_t<n>:
 # the same precedence climbing as the interpreter's (lmx_graph_eval_from), emitted. An operand is a literal (its
 # temporary holds it), a name (the read of its place by the slot the emitter resolved) or a nested Lmx (its expression by
@@ -432,6 +630,7 @@ fn: lm_graph_emit_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: expr c.L
     @: value void 0
     @: text char 0
     @: inner c.Lmx 0
+    @: args c.Lmx 0
     size_t: inner_at 0U
     size_t: inner_n 0U
     size_t: k 0U
@@ -464,22 +663,50 @@ fn: lm_graph_emit_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: expr c.L
             ---
             if: lm_graph_op_power(state, text) != 0
                 return: 2
-            k: lm_graph_emit_resolve(g, root, decl_names, decl_slots, decl_n, text)
-            if: k >= c.lmx_graph_count(root)
-                return: 3
             left: temps[0]
             temps[0]: temps[0] + 1
             if: deref != 0
+                k: lm_graph_emit_resolve(g, root, decl_names, decl_slots, decl_n, text)
+                if: k >= c.lmx_graph_count(root)
+                    return: 3
                 c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_deref_int(l2_g, lmx_call_code, %zuU, @ l2_t%d) != 0\n            return: 1\n", left, k, left)
             else:
-                c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_read_int(l2_g, lmx_call_code, %zuU, @ l2_t%d) != 0\n            return: 1\n", left, k, left)
+                args: 0
+                if: c.lmx_graph_method(g, root) != 0
+                    args: (cast: (@: c.Lmx) c.lmx_graph_get(root, 1U))
+                k: c.lmx_graph_named(g, args, text)
+                if: args != 0 && k < c.lmx_graph_count(args)
+                    c.fprintf(f, "        @: void l2_v%d refs[%zuU]\n", left, k)
+                else:
+                    c.fprintf(f, "        @: void l2_v%d lmx_graph_resolve(l2_g, lmx_call_code, ", left)
+                    if: lm_graph_emit_word(g, f, root, expr, at[0]) != 0
+                        return: 3
+                    c.fputs(")\n", f)
+                ---
+                while: at[0] + 1U < to && c.lmx_graph_word_text(g, c.lmx_graph_get(expr, at[0] + 1U)) = state\w_deref
+                    at[0]: at[0] + 2U
+                    if: at[0] >= to || c.lmx_graph_word_text(g, c.lmx_graph_get(expr, at[0])) = 0
+                        return: 2
+                    c.fprintf(f, "        l2_v%d: lmx_graph_field(l2_g, l2_v%d, ", left, left)
+                    if: lm_graph_emit_word(g, f, root, expr, at[0]) != 0
+                        return: 3
+                    c.fputs(")\n", f)
+                ---
+                c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, l2_v%d, @ l2_t%d) != 0\n            return: 1\n", left, left, left)
             ---
         else:
             if: kind != 4
                 return: 2
             inner: (cast: (@: c.Lmx) value)
             inner_n: c.lmx_graph_count(inner)
-            r: lm_graph_emit_from(g, f, root, inner, @ inner_at, inner_n, 1, temps, decl_names, decl_slots, decl_n, @ left)
+            text: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
+            value: c.lmx_graph_resolve(g, root, text)
+            if: c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+                r: lm_graph_emit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ left)
+                inner_at: inner_n
+            else:
+                r: lm_graph_emit_from(g, f, root, inner, @ inner_at, inner_n, 1, temps, decl_names, decl_slots, decl_n, @ left)
+            ---
             if: r != 0
                 return: r
             if: inner_at != inner_n
@@ -596,6 +823,46 @@ fn: lm_graph_emit_statements (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: te
     return: 0
 end: lm_graph_emit_statements
 
+# Emit and install method entries in the same preorder. The counter is only a translator-local machine symbol;
+# there is no method number, descriptor or companion tree in the resulting Lmx graph.
+fn: lm_graph_emit_methods (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: current c.Lmx; @: serial int; int: install) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: body c.Lmx 0
+    @: statement c.Lmx 0
+    @: value void 0
+    size_t: i 0U
+    int: label 0
+    int: temps 0
+    int: result 0
+    int: status 0
+    if: c.lmx_graph_method(g, current) != 0
+        label: serial[0]
+        serial[0]: serial[0] + 1
+        if: install != 0
+            c.fputs("        l2_method: ", f)
+            status: lm_graph_emit_address(g, f, scope, current)
+            c.fprintf(f, "\n        l2_method\\native: (cast: (LmxEntry) lm_graph_method%d)\n", label)
+        else:
+            body: (cast: (@: c.Lmx) c.lmx_graph_get(current, 4U))
+            if: c.lmx_graph_count(body) != 1U || c.lmx_graph_kind(g, c.lmx_graph_get(body, 0U)) != 4
+                return: 5
+            statement: (cast: (@: c.Lmx) c.lmx_graph_get(body, 0U))
+            if: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U)) != state\w_return
+                return: 5
+            c.fprintf(f, "external:\n    fn: lm_graph_method%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph l2_g lmx_graph_find(lmx_call_arena)\n        @: int l2_result (cast: (@: int) dest)\n        if: l2_g = 0 || l2_result = 0\n            return: 1\n", label)
+            status: lm_graph_emit_expr(g, f, current, statement, 1U, c.lmx_graph_count(statement), @ temps, 0, 0, 0U, @ result)
+            c.fprintf(f, "        l2_result[0]: l2_t%d\n        return: 0\n    end: lm_graph_method%d\nend: external\n\n", result, label)
+        ---
+    ---
+    while: i < c.lmx_graph_count(current) && status = 0
+        value: c.lmx_graph_get(current, i)
+        if: c.lmx_graph_kind(g, value) = 4
+            status: lm_graph_emit_methods(g, f, scope, (cast: (@: c.Lmx) value), serial, install)
+        i: i + 1U
+    ---
+    return: status
+end: lm_graph_emit_methods
+
 # The L1 of the program of root at out_path (§7): the kernel headers, the program hooks the driver expects, the body of
 # the root -- native (its statements over the cells of the graph) or forced (the kernel's interpreter over the same
 # graph) -- which prints the graph before and after between GRAPH markers, the generated initialization of the clean
@@ -609,6 +876,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     int: d 0
     int: temps 0
     int: r 0
+    int: methods 0
     size_t: host_fields n
     if: check_root != 0
         host_fields: 1U
@@ -624,6 +892,13 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     c.fputs("include: \"<stdio.h>\" \"<stdlib.h>\"\n\n@: LmxArena l2_program_arena 0\n@: Lmx l2_program_unit 0\n@: Lmx l2_program_root_graph 0\n\nfn: l2_program_graph () @: Lmx\nreturn: l2_program_root_graph\n\nfn: l2_program_qualified_count () size_t\nreturn: 0U\n\nfn: l2_program_qualified_at (size_t: index) @: Lmx\nreturn: 0\n\n", f)
     # Declare each native temporary where its first value is emitted. The emitter needs no temporary file or second
     # copy of the body; its traversal-local counter only supplies distinct L1 names.
+    if: forced = 0
+        r: lm_graph_emit_methods(g, f, root, root, @ methods, 0)
+        if: r != 0
+            c.fclose(f)
+            return: r
+        ---
+    ---
     c.fputs("external:\n    fn: lm_graph_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n        @: LmxGraph l2_g 0\n        @: void l2_c 0\n        l2_g: lmx_graph_find(lmx_call_arena)\n", f)
     c.fputs("        if: l2_g = 0 || lmx_call_code = 0\n            return: 1\n", f)
     if: check_root = 0
@@ -647,7 +922,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
         c.fprintf(f, "external:\n    fn: lm_graph_check_root (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena arena; @: Lmx code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph g lmx_graph_find(arena)\n        @: Lmx unit (cast: (@: Lmx) lmx_graph_get(code, 0U))\n        int: status 0\n        int: count 0\n        if: g = 0 || unit = 0 || lmx_graph_dump_marked(g, unit, c.stdout, \"BEFORE\") != 0\n            return: 1\n        while: count < %d\n            status: lmx_graph_call(g, unit)\n            if: status != 0\n                return: status\n            count: count + 1\n        ---\n        if: lmx_graph_dump_marked(g, unit, c.stdout, \"AFTER\") != 0\n            return: 1\n        @: LmxThread thread lmx_thread_current()\n        @: LmxMsg message lmx_thread_message(thread)\n        if: message = 0\n            return: 1\n        message\\success: (cast: (LmxFlag) 1)\n        return: 0\n    end: lm_graph_check_root\nend: external\n\n", runs)
     # Ordinary emission builds the program in R0. A private emit-check host owns a separate program root, so clearing
     # the program's native entry cannot erase the adapter or change the program's lexical parent.
-    c.fputs("external:\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n        @: LmxGraph l2_g 0\n        @: void l2_c 0\n", f)
+    c.fputs("external:\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n        @: LmxGraph l2_g 0\n        @: void l2_c 0\n        @: Lmx lmx_call_code 0\n        @: Lmx l2_method 0\n", f)
     depth: lm_graph_depth(g, root)
     d: 0
     while: d < depth
@@ -663,6 +938,15 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
             c.fclose(f)
             return: 5
         i: i + 1U
+    ---
+    if: forced = 0
+        c.fputs("        lmx_call_code: l2_program_unit\n", f)
+        methods: 0
+        r: lm_graph_emit_methods(g, f, root, root, @ methods, 1)
+        if: r != 0
+            c.fclose(f)
+            return: r
+        ---
     ---
     c.fputs("        l2_program_unit\\native: (cast: (LmxEntry) lm_graph_body)\n", f)
     if: check_root != 0
@@ -937,12 +1221,73 @@ fn: lm_graph_mutation_check () int
     return: 0
 end: lm_graph_mutation_check
 
-# The tool's commands: run, emit, emit-check, p0, intern, mutation. args[0] is the program, args[1]
+# Mutate the published Point/take witness through the same write API. The sentinel proves whether native survives;
+# once code changes, invocation must execute the current body with a fresh activation and untouched formal slots.
+fn: lm_graph_method_mutation (const: (@: path char)) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: point c.Lmx 0
+    @: method c.Lmx 0
+    @: args c.Lmx 0
+    @: body c.Lmx 0
+    @: statement c.Lmx 0
+    @: formal c.Lmx 0
+    @: required void 0
+    @@: values void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    int: status 0
+    int: answer 0
+    int: fails 0
+    if: values = 0 || arena = 0 || c.lmx_arena_open(arena) != 0
+        return: 1
+    g: c.lmx_graph_open(arena)
+    if: g = 0 || lm_graph_build_file(g, path, @ root) != 0
+        return: 1
+    point: (cast: (@: c.Lmx) c.lmx_graph_get(root, 0U))
+    method: (cast: (@: c.Lmx) c.lmx_graph_get(root, 1U))
+    if: c.lmx_graph_method(g, method) = 0
+        return: 1
+    args: (cast: (@: c.Lmx) c.lmx_graph_get(method, 1U))
+    body: (cast: (@: c.Lmx) c.lmx_graph_get(method, 4U))
+    statement: (cast: (@: c.Lmx) c.lmx_graph_get(body, 0U))
+    required: c.lmx_graph_get(args, 1U)
+    method\native: (cast: (c.LmxEntry) c.lm_graph_native_probe)
+    status: c.lmx_graph_assign_int(g, root, point, 0U, 3)
+    fails: fails + lm_graph_mutation_report("method-data-write-preserves-entry", (cast: (int) (status = 0 && method\native != 0)))
+    status: c.lmx_graph_admit(g, method, 0U, (cast: (@: void) point), @ values[0])
+    status: status + c.lmx_graph_admit(g, method, 1U, c.lmx_graph_int(g, 1), @ values[1])
+    if: status = 0
+        status: c.lmx_graph_invoke(g, method, values, 2U, @ answer)
+    fails: fails + lm_graph_mutation_report("method-preserved-native-is-dispatched", (cast: (int) (status = 77)))
+    status: c.lmx_graph_assign_int(g, root, statement, 5U, 20)
+    fails: fails + lm_graph_mutation_report("method-body-literal-clears-entry", (cast: (int) (status = 0 && method\native = 0)))
+    status: c.lmx_graph_invoke(g, method, values, 2U, @ answer)
+    fails: fails + lm_graph_mutation_report("method-fresh-body-result61", (cast: (int) (status = 0 && answer = 61)))
+    method\native: (cast: (c.LmxEntry) c.lm_graph_native_probe)
+    status: c.lmx_graph_write_slot(g, root, statement, 6U, c.lmx_graph_word(g, "-", 1U))
+    fails: fails + lm_graph_mutation_report("method-body-operator-clears-entry", (cast: (int) (status = 0 && method\native = 0)))
+    status: c.lmx_graph_invoke(g, method, values, 2U, @ answer)
+    fails: fails + lm_graph_mutation_report("method-next-body-result59", (cast: (int) (status = 0 && answer = 59)))
+    method\native: (cast: (c.LmxEntry) c.lm_graph_native_probe)
+    formal: (cast: (@: c.Lmx) c.lmx_graph_get(args, 0U))
+    status: c.lmx_graph_write_slot(g, root, formal, 0U, c.lmx_graph_word(g, "Point", 5U))
+    fails: fails + lm_graph_mutation_report("method-written-requirement-clears-entry", (cast: (int) (status = 0 && method\native = 0)))
+    fails: fails + lm_graph_mutation_report("method-formal-and-activation-lifetime", (cast: (int) (required = c.lmx_graph_get(args, 1U) && c.lmx_graph_kind(g, required) = 3 && arena\activation = 0)))
+    c.free((cast: (@: void) values))
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(arena)
+    c.free((cast: (@: void) arena))
+    return: (cast: (int) (fails != 0))
+end: lm_graph_method_mutation
+
+# The tool's commands: run, emit, emit-check, p0, intern, mutation, method-mutation. args[0] is the program, args[1]
 # the command. The exit: 0 done, else the answer; 2 for a usage error.
 fn: lm_graph_main (@@: args char; int: n) int
     int: forced 0
     int: check_root 0
     int: runs 1
+    if: n >= 3 && c.strcmp(args[1], "method-mutation") = 0
+        return: lm_graph_method_mutation(args[2])
     if: n >= 2 && c.strcmp(args[1], "mutation") = 0
         return: lm_graph_mutation_check()
     if: n >= 2 && c.strcmp(args[1], "intern") = 0

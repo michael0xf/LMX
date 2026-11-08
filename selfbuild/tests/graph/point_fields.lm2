@@ -1,0 +1,21 @@
+Point:
+    int: y 0
+    int: x 0
+end: Point
+Reordered:
+    int: x 999
+    int: extra 17
+    int: y 3
+end: Reordered
+OnlyUsed:
+    int: y 4
+end: OnlyUsed
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: bump (int: v) int
+    return: v + 1
+end: bump
+int: reordered take(Reordered, 1)
+int: defaulted take(OnlyUsed)
+int: nested take(Reordered, bump(1))

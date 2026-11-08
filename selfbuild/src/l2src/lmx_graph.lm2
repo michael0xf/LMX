@@ -456,6 +456,44 @@ end: lmx_graph_named
 
 # ---- Reading and writing a place (§3.2) ---------------------------------------------------------------------------
 
+# A callable is an ordinary Lmx whose written head is fn and whose four visible parts are Lmx. The physical region
+# supplies the kinds; there is no method tag or saved callable descriptor.
+fn: lmx_graph_method (@: g c.LmxGraph; @: code c.Lmx) int
+    @: state c.LmxGraphState lmx_graph_state()
+    size_t: i 1U
+    if: state = 0 || lmx_graph_kind(g, (cast: (@: void) code)) != 4 || lmx_graph_count(code) != 5U
+        return: 0
+    if: lmx_graph_word_text(g, lmx_graph_get(code, 0U)) != state\w_fn
+        return: 0
+    while: i < 5U
+        if: lmx_graph_kind(g, lmx_graph_get(code, i)) != 4
+            return: 0
+        i: i + 1U
+    ---
+    return: 1
+end: lmx_graph_method
+
+# Shared address-typed reads for graph fields and activation arguments.
+fn: lmx_graph_value_int (@: g c.LmxGraph; @: value void; @: out int) int
+    int: kind lmx_graph_kind(g, value)
+    if: out = 0 || kind != 1
+        return: 1
+    out[0]: c.lmx_int_value_known(value)
+    return: 0
+end: lmx_graph_value_int
+
+fn: lmx_graph_field (@: g c.LmxGraph; @: value void; @: name char) @: void
+    @: inner c.Lmx 0
+    size_t: slot 0U
+    if: lmx_graph_kind(g, value) != 4 || name = 0
+        return: 0
+    inner: (cast: (@: c.Lmx) value)
+    slot: lmx_graph_named(g, inner, name)
+    if: slot >= lmx_graph_count(inner)
+        return: 0
+    return: lmx_graph_get(inner, slot)
+end: lmx_graph_field
+
 # 1 when the place at slot index holds a written int cell, 0 when it is a place without a value, -1 when it is no int
 # place.
 fn: lmx_graph_place_ready (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) int
@@ -578,6 +616,23 @@ fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell v
     @: value void 0
     @: inner c.Lmx 0
     int: result 0
+    if: lmx_graph_method(g, code) != 0
+        if: (slot != 0 && c.lmx_arena_ref_cell(code, 0U) = slot) || (cell != 0 && lmx_graph_get(code, 0U) = cell)
+            result: 1
+        # The method's executable body and requirement parts are explicit Lmx children. Own data stays data.
+        i: 1U
+        while: i < 5U && result = 0
+            if: i != 3U
+                if: slot != 0 && c.lmx_arena_ref_cell(code, i) = slot
+                    result: 1
+                if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) lmx_graph_get(code, i))) != 0
+                    result: -1
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+    i: 0U
     while: i < lmx_graph_count(code) && result = 0
         value: lmx_graph_get(code, i)
         if: slot != 0 && c.lmx_arena_ref_cell(code, i) = slot && (lmx_graph_statement(g, value) != 0 || lmx_graph_statement(g, replacement) != 0)
@@ -597,7 +652,7 @@ fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell v
             value: lmx_graph_get(inner, i)
             if: (slot != 0 && c.lmx_arena_ref_cell(inner, i) = slot) || (cell != 0 && value = cell)
                 result: 1
-            if: result = 0 && lmx_graph_kind(g, value) = 4 && lmx_graph_name_of(g, value) = 0
+            if: result = 0 && lmx_graph_kind(g, value) = 4 && (lmx_graph_method(g, code) != 0 || lmx_graph_name_of(g, value) = 0)
                 if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
                     result: -1
                 ---
@@ -741,6 +796,49 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
     return: 0
 end: lmx_graph_dump_token
 
+# Render the explicit fn parts without presenting their named containers as ordinary data declarations.
+fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: depth) int
+    @: args c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 1U))
+    @: result c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 2U))
+    @: name char lmx_graph_name_of(g, (cast: (@: void) method))
+    @: formal void 0
+    @: declaration c.Lmx 0
+    size_t: i 0U
+    int: kind 0
+    if: name = 0
+        return: 1
+    c.fprintf(f, "fn: %s (", name)
+    while: i < lmx_graph_count(args)
+        if: i != 0U
+            c.fputs("; ", f)
+        formal: lmx_graph_get(args, i)
+        kind: lmx_graph_kind(g, formal)
+        if: kind = 1 || kind = 3
+            c.fprintf(f, "int: %s", lmx_graph_slot_name(g, args, i))
+            if: kind = 1
+                c.fprintf(f, " %d", c.lmx_int_value_known(formal))
+            ---
+        else:
+            if: kind != 4
+                return: 1
+            declaration: (cast: (@: c.Lmx) formal)
+            if: lmx_graph_count(declaration) != 2U
+                return: 1
+            c.fprintf(f, "%s: %s", lmx_graph_word_text(g, lmx_graph_get(declaration, 0U)), lmx_graph_slot_name(g, args, i))
+        ---
+        i: i + 1U
+    ---
+    c.fputs(") ", f)
+    if: lmx_graph_dump_token(g, lmx_graph_get(result, 0U), f) != 0
+        return: 1
+    c.fputs("\n", f)
+    if: lmx_graph_dump_at(g, (cast: (@: c.Lmx) lmx_graph_get(method, 4U)), f, depth + 1) != 0
+        return: 1
+    lmx_graph_dump_indent(f, depth)
+    c.fprintf(f, "end: %s\n", name)
+    return: 0
+end: lmx_graph_dump_method
+
 # The fields of lmx, one per line at depth: an int place as `int: name value`, a place without a value as
 # `int: name`, a word as itself, a named Lmx as its block `name:` ... `end: name`, an unnamed Lmx with a word head as
 # the Frame `head: fields`. 0, or 1 when a cell is none of the graph's.
@@ -758,6 +856,11 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
         value: lmx_graph_get(lmx, i)
         kind: lmx_graph_kind(g, value)
         lmx_graph_dump_indent(f, depth)
+        if: kind = 4 && lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+            if: lmx_graph_dump_method(g, (cast: (@: c.Lmx) value), f, depth) != 0
+                return: 1
+            i: i + 1U
+            continue
         if: kind = 5
             name: lmx_graph_name_of(g, value)
             head: lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))

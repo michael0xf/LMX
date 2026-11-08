@@ -2126,8 +2126,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
     @@: walk_value_names char c.calloc(176U, sizeof(@: char))
-    @@: graph_names char c.calloc(30U, sizeof(@: char))
-    @@: graph_run_names char c.calloc(3U, sizeof(@: char))
+    @@: graph_names char c.calloc(34U, sizeof(@: char))
+    @@: graph_run_names char c.calloc(7U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2177,9 +2177,17 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_names[27]: "lmx_graph_name_address"
     graph_names[28]: "lmx_graph_write_slot"
     graph_names[29]: "lmx_graph_publish"
+    graph_names[30]: "lmx_graph_method"
+    graph_names[31]: "lmx_graph_value_int"
+    graph_names[32]: "lmx_graph_field"
+    graph_names[33]: "lmx_graph_scan_add"
     graph_run_names[0]: "lmx_graph_eval"
     graph_run_names[1]: "lmx_graph_run"
     graph_run_names[2]: "lmx_graph_call"
+    graph_run_names[3]: "lmx_graph_resolve"
+    graph_run_names[4]: "lmx_graph_call_shape"
+    graph_run_names[5]: "lmx_graph_admit"
+    graph_run_names[6]: "lmx_graph_invoke"
     clock_names[0]: "lmx_clock_now"
     clock_names[1]: "lmx_clock_ticks"
     clock_names[2]: "lmx_clock_since"
@@ -2979,9 +2987,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 62, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 30, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 34, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 3, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 7, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1
@@ -3289,7 +3297,7 @@ end: bld_graph_section_same
 # l1trans and gcc, linked with rt/driver.o and run through the driver with entry 0; every route prints the graph after
 # execution between GRAPH-AFTER markers, which must equal the expected file byte for byte. One GRAPH-CHECK line per
 # route; 0 when all three agree with the expected text, else 1.
-fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: graph_exe char; @: out char; @: source char; @: expected char; int: expected_exit; @: runs char) int
+fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: graph_exe char; @: out char; @: source char; @: expected char; int: expected_exit; @: runs char; @: interp_exit char) int
     @@: a char c.calloc(70U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @: rec c.FILE 0
@@ -3327,8 +3335,7 @@ fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: r
     a[5]: "run"
     a[6]: source
     a[7]: runs
-    if: expected_exit != 0
-        a[3]: "1"
+    a[3]: interp_exit
     log: txt_path(out, "interp.log")
     ok: (cast: (int) (bld_step(rec, a, 8, out, log, res) = 0))
     if: ok != 0 && expected_exit = 0

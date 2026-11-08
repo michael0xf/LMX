@@ -6,8 +6,8 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 259 inputs (66 source files, 34 tools and
-159 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
+The selected package contains 260 inputs (66 source files, 34 tools and
+160 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
 P0 -- a Frame of its left and its right side flagged `LM_P0_FRAME_ASSIGN`, `a := 5` and `a:=5` one form -- that writes a
 place already known through the general assignment path (a local, a formal, a field through a path, the conversion of the
 reception, a reference place holding a method: `target := two` without a call of the bare right side, natively and in the
@@ -36,11 +36,21 @@ writes that field, else refused at the operand -- Codex's review of 304) -- by o
 recognized by the common path resolution (the operand's last step is the `args` part of a method,
 `lm_compiler_merge_args_callee`) and lowered as the fourth form of a `merge` operand (the result's fields are the typed
 fields of the formals' declarations; natively the kernel call before the merge, in the walker's program a PRIM over the
-callable's occurrence). `merge(tst\args; (a: int: 5))` reads `a` = 5 and `c` = 3, `merge(tst\args)` reads `c` = 3 and
-`a` = 0, `tst\args` is not written. Limits: a formal that is not a number is refused at the operand (`a formal that is not
-a number is not lowered as a field of the args part yet`); a path into the args part (`tst\args\c`) is not resolved. The
-call of the merge result as the whole argument Structure stays held (above). Fixtures `merge_args_operand`,
-`merge_args_model_formal_refused`. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+callable's occurrence). `merge(tst\args; (a: int: 5))` reads `a` = 5 and `c` = 3; `merge(tst\args)` alone is refused
+since Codex's review of 304 (no later operand writes the required `a`); `tst\args` is not written. Limits: a formal that
+is not a number is refused at the operand (`a formal that is not a number is not lowered as a field of the args part
+yet`); a path into the args part (`tst\args\c`) is not resolved. The call of the merge result as the whole argument
+Structure stays held (above). Fixtures `merge_args_operand`, `merge_args_unfilled_refused`,
+`merge_args_computed_default_refused`, `merge_args_model_formal_refused`. Slice305 (CALL-ARGUMENT-ORDER-AXBY, the author's
+decision of 2026-11-07; fable_pc) makes the bound call check its names and form against the selected callable before any
+actual is evaluated and receive each actual right after its evaluation: the kernel binder in three phases
+(`lmx_call_bind_form`, `lmx_call_bind_receive`, `lmx_call_bind_finish`, exported in tools/build.lm2 in place of
+`lmx_call_bind_actuals`), the walker's selected call restructured the same way (`lmx_walk_written_names`,
+`lmx_walk_selected_form`, `lmx_walk_receive_written`), the native emitter of a bound call in the same three phases; the
+fixture `bound_order_axby` (from the probe p301b): the effects run 1323, not 1233, a refusing receiver leaves the later
+actual unevaluated, a name the selected callable lacks and a missing input refuse before `touch()` runs. The admission of
+a graph actual by the formal's model still happens at the callee's entry after all actuals (CALL-ENTRY-ADMISSION-ORDER,
+open). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the
@@ -63,9 +73,9 @@ reception in that caller resolves them (natively arrays handed to `lmx_call_bind
 payload of the NAMED operand), and the one kernel reception of both binders, `lmx_walk_receive_selected`, reads only the
 route of the selected formal's type and calls the receiver before the body -- its refusal, and a pair without a route,
 is the implicit `convert`. The author decided on 2026-11-07 that a call's names and form are checked before its arguments
-and each argument is received at once (AXBY); the bound call does not do that yet (CALL-ARGUMENT-ORDER-AXBY), and it still
-finds the selected formal by the written name's string when it runs, while the author's directive represents every
-identifier by the code of its spelling in both executors (IDENTIFIER-CODES) -- the next task; slice301 is an intermediate
+and each argument is received at once (AXBY); the bound call does that since slice305 (CALL-ARGUMENT-ORDER-AXBY closed:
+the form before the actuals, each actual received right after its evaluation), and since slice302 it finds the selected
+formal by the code of the written name (IDENTIFIER-CODES, the rest of the transition open); slice301 is an intermediate
 result and claims no named call of the required architecture. Slice300 takes a pair the conversion table has no row of by the same unavailable route, and a single-field
 repeat (`int: z 5; char: z`) checks its place where it is reached in both executors: the kernel's reception of a zero of
 the written type at the place's type -- an unavailable route is the implicit `convert`, an available receiver passes

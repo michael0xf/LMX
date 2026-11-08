@@ -1,0 +1,141 @@
+# Slice 305 (CALL-ARGUMENT-ORDER-AXBY; the author's decision of 2026-11-07, the book :724): the names and the form of a
+# call are checked against the callable it selected before any actual is evaluated -- a mismatch is the implicit `call`
+# with no effect of an actual -- then each actual is evaluated and received by its selected formal at once, a refusal
+# leaving the following actuals unevaluated and the body not started; one rule for the call through a callable place,
+# native and the walker.  Places\f (int x; int y; char u; char v) holds g (int u; int v; char x; char y):
+# Places\f(x := a1(); y := a2(); u := 3; v := 4) -- the int results of a1 and a2 are received by g's char x and char y
+# through the program's int -> char receiver, every effect appending its digit to Trace\t: 1323 (a1, its reception, a2,
+# its reception), not 1233 (both actuals, then both receptions); the result 1234.  With the receiver refusing (Fail\on):
+# the implicit `convert` after a1 and its reception, a2 not evaluated -- 13.  Two\f (int x; int y) holding gq (int p;
+# int q): Two\f(x := touch(); y := 1) -- gq has no formal x: `call` without touch().  Dflt\f (int x 1; int y 2) holding
+# g2 (int y; int x) with no defaults: Dflt\f(x := touch()) -- y has no input: `call` without touch().  Entry 7; 80..88
+# name the failing check.
+Trace:
+    int: t 0
+end: Trace
+Fail:
+    int: on 0
+end: Fail
+fn: lm_stg_convert_int_char (int: n) char
+    Trace\t: Trace\t * 10 + 3
+    if: Fail\on != 0
+        size_t: s 5U
+        char: c 6
+        s: c
+    ---
+    return: (cast: (char) n)
+end: lm_stg_convert_int_char
+fn: a1 () int
+    Trace\t: Trace\t * 10 + 1
+    return: 1
+end: a1
+fn: a2 () int
+    Trace\t: Trace\t * 10 + 2
+    return: 2
+end: a2
+fn: touch () int
+    Trace\t: Trace\t * 10 + 9
+    return: 9
+end: touch
+fn: g (int: u; int: v; char: x; char: y) int
+    return: (cast: (int) x) * 1000 + (cast: (int) y) * 100 + u * 10 + v
+end: g
+fn: gq (int: p; int: q) int
+    return: p * 10 + q
+end: gq
+fn: g2 (int: y; int: x) int
+    return: x * 10 + y
+end: g2
+Places:
+    fn: f (int: x; int: y; char: u; char: v) int
+        return: x * 1000 + y * 100 + (cast: (int) u) * 10 + (cast: (int) v)
+    end: f
+end: Places
+Two:
+    fn: f (int: x; int: y) int
+        return: x * 10 + y
+    end: f
+end: Two
+Dflt:
+    fn: f (int: x 1; int: y 2) int
+        return: x * 10 + y
+    end: f
+end: Dflt
+int: Hw 0
+int: Hq 0
+int: Hd 0
+fn: write_places () int
+    ---
+        @: Places\f Hw
+        @: Two\f Hq
+        @: Dflt\f Hd
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_places
+fn: ordered () int
+    ---
+        int: got Places\f(x := a1(); y := a2(); u := 3; v := 4)
+        return: got
+        catch: convert ()
+            return: 25
+    ---
+end: ordered
+fn: no_name () int
+    ---
+        int: got Two\f(x := touch(); y := 1)
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: no_name
+fn: no_input () int
+    ---
+        int: got Dflt\f(x := touch())
+        return: got
+        catch: call ()
+            return: 22
+    ---
+end: no_input
+fn: run () int
+    @: Hw g g
+    @: Hq gq gq
+    @: Hd g2 g2
+    if: write_places() != 1
+        return: 80
+    ---
+    if: ordered() != 1234
+        return: 81
+    ---
+    if: Trace\t != 1323
+        return: 82
+    ---
+    Trace\t: 0
+    Fail\on: 1
+    int: refusal ordered()
+    Fail\on: 0
+    if: refusal != 25
+        return: 83
+    ---
+    if: Trace\t != 13
+        return: 84
+    ---
+    Trace\t: 0
+    if: no_name() != 22
+        return: 85
+    ---
+    if: Trace\t != 0
+        return: 86
+    ---
+    if: no_input() != 22
+        return: 87
+    ---
+    if: Trace\t != 0
+        return: 88
+    ---
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

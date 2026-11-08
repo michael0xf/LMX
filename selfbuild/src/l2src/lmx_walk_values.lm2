@@ -4606,6 +4606,185 @@ fn: lmx_walk_actual_shape (@: arena c.LmxArena; @: operand void; size_t: written
     return: c.LMX_WALK_OK
 end: lmx_walk_actual_shape
 
+# Slice 305 (CALL-ARGUMENT-ORDER-AXBY; the author's decision of 2026-11-07, the book :724): the names of the call's
+# written actuals, read from its operands before any of them is evaluated -- the NAMED wrapper's name code
+# (IDENTIFIER-CODES), 0 for a positional one (lmx_walk_actual_shape).
+fn: lmx_walk_written_names (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: actual_named int; @: actual_names size_t; size_t: actual_capacity) int
+    @: arena c.LmxArena 0
+    @: fields c.VoidArray 0
+    @: named c.Lmx 0
+    @: payload void 0
+    size_t: coordinate 0U
+    size_t: i 0U
+    int: status
+    if: f = 0
+        return: c.LMX_WALK_INVALID
+    arena: (cast: (@: c.LmxArena) f\arena)
+    if: arena = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0
+        return: c.LMX_WALK_INVALID
+    fields: @ code\array
+    if: first > fields\size || transport_count > fields\size - first || written_count > transport_count
+        return: c.LMX_WALK_INVALID
+    if: written_count != 0U && (actual_named = 0 || actual_names = 0 || actual_capacity < first + written_count)
+        return: c.LMX_WALK_INVALID
+    while: i < written_count
+        named: 0
+        payload: c.lmx_graph_value_in(arena, code, first + i)
+        status: lmx_walk_actual_shape(arena, payload, i, transport_count, (cast: (size_t) -1), @ coordinate, @ payload, @ named)
+        if: status != c.LMX_WALK_OK
+            return: status
+        actual_named[first + i]: 0
+        actual_names[first + i]: 0U
+        if: named != 0
+            actual_named[first + i]: 1
+            actual_names[first + i]: c.lmx_source_name_get(arena, (cast: (@: void) named))
+        ---
+        i: i + 1U
+    ---
+    return: c.LMX_WALK_OK
+end: lmx_walk_written_names
+
+# The current args part of the callable a call selected (slice 305; before, the ready phase read it after the actuals):
+# the call binds against it before any actual runs.
+fn: lmx_walk_selected_inputs (@: f c.LmxWalkFrame; @: callee c.Lmx; @@: out c.Lmx) int
+    @: arena c.LmxArena 0
+    size_t: args_at (cast: (size_t) -1)
+    size_t: header_count 0U
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status
+    if: f = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    out[0]: 0
+    arena: (cast: (@: c.LmxArena) f\arena)
+    if: c.lmx_callable_source_count(arena, callee, @ header_count) != 0 || header_count < 2U
+        return: c.LMX_WALK_UNSUPPORTED
+    status: c.lmx_implements_exec_slot(arena, callee, 0U, @ args_at, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: c.LMX_WALK_UNSUPPORTED
+    out[0]: c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, callee, args_at))
+    if: out[0] = 0
+        return: c.LMX_WALK_UNSUPPORTED
+    return: c.LMX_WALK_OK
+end: lmx_walk_selected_inputs
+
+# Slice 305 (the book :724, :726): the presence of every input of the selected callable the call does not write, checked
+# before any actual runs -- a formal no written operand and no present suffix input of the EXEC binds (the binding's
+# correspondence, lmx_callable_bound_operand; a suffix slot the frame holds nothing in is handed absent) must hold its
+# current default (lmx_walk_current_default; read, not evaluated), else the call has no input for it: its implicit `call`
+# with no effect of an actual.
+fn: lmx_walk_selected_form (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: binding c.LmxImplEntry; @: sources size_t; size_t: source_capacity) int
+    c.LmxWalkValue: current
+    @: arena c.LmxArena 0
+    @: context c.LmxWalkContext 0
+    @: scratch c.LmxScratch 0
+    @: occupied int 0
+    @: room void 0
+    size_t: count 0U
+    size_t: i 0U
+    size_t: source_index (cast: (size_t) -1)
+    size_t: physical (cast: (size_t) -1)
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status
+    int: scratch_status
+    if: f = 0 || f\arena = 0 || f\context = 0
+        return: c.LMX_WALK_INVALID
+    arena: (cast: (@: c.LmxArena) f\arena)
+    context: (cast: (@: c.LmxWalkContext) f\context)
+    scratch: (cast: (@: c.LmxScratch) context\scratch)
+    if: scratch = 0
+        return: c.LMX_WALK_INVALID
+    if: c.lmx_callable_source_count(arena, selected_args, @ count) != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    if: count = 0U
+        return: c.LMX_WALK_OK
+    if: count > (cast: (size_t) -1) / c.sizeof(c.int)
+        return: c.LMX_WALK_NOMEM
+    scratch_status: c.lmx_scratch_take(scratch, count * c.sizeof(c.int), @ room)
+    if: scratch_status != c.LMX_SCRATCH_OK
+        if: scratch_status = c.LMX_SCRATCH_NOMEM
+            return: c.LMX_WALK_NOMEM
+        return: c.LMX_WALK_INVALID
+    occupied: (cast: (@: int) room)
+    c.memset(room, 0, count * c.sizeof(c.int))
+    while: i < transport_count
+        status: c.lmx_callable_bound_operand(arena, selected_args, written_call, binding, sources, source_capacity, first + i, @ source_index, @ physical, @ answer)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: answer = c.LMX_IMPLEMENTS_UNKNOWN
+            return: c.LMX_WALK_UNSUPPORTED
+        if: answer != c.LMX_IMPLEMENTS_YES || source_index >= count
+            return: c.LMX_WALK_INVALID
+        if: i < written_count || c.lmx_graph_value_in(arena, written_call, first + i) != 0
+            occupied[source_index]: 1
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < count
+        if: occupied[i] = 0 && lmx_walk_args_formal(arena, selected_args, i) != 0
+            status: lmx_walk_current_default(arena, selected_args, i, @ current)
+            if: status != c.LMX_WALK_OK
+                return: status
+            if: current\present = 0
+                f\payload: 0
+                f\landing: 0
+                return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+        ---
+        i: i + 1U
+    ---
+    return: c.LMX_WALK_OK
+end: lmx_walk_selected_form
+
+# Slice 305 (CALL-ARGUMENT-ORDER-AXBY): the reception of the written actual k by the selected formal the current binding
+# gives it (lmx_callable_bound_operand) -- a number through the route its NAMED operand carries for that formal's number
+# type (lmx_walk_named_route, slice 301), by the one reception the native binder takes (lmx_walk_receive_selected); the
+# frame's working values are published before a receiver of the program runs.  A refusal is the caller's implicit
+# `convert`; any other value waits for the callee's entry.
+fn: lmx_walk_receive_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: written_call c.Lmx; size_t: first; @: binding c.LmxImplEntry; @: sources size_t; size_t: source_capacity; size_t: k; @: received c.LmxWalkValue) int
+    @: arena c.LmxArena 0
+    @: source void 0
+    @: witness void 0
+    @: receiver c.Lmx 0
+    @: operand void 0
+    size_t: at (cast: (size_t) -1)
+    size_t: physical (cast: (size_t) -1)
+    size_t: count 0U
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: numeric 0
+    int: status
+    if: f = 0 || received = 0
+        return: c.LMX_WALK_INVALID
+    arena: (cast: (@: c.LmxArena) f\arena)
+    if: received\present = 0 || received\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_OK
+    status: c.lmx_callable_bound_operand(arena, selected_args, written_call, binding, sources, source_capacity, first + k, @ at, @ physical, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: c.lmx_callable_source_count(arena, selected_args, @ count) != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    if: answer != c.LMX_IMPLEMENTS_YES || at >= count
+        return: c.LMX_WALK_INVALID
+    if: c.lmx_callable_source_entry(arena, selected_args, at, @ source, @ witness) != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    numeric: lmx_walk_numeric_type(arena, witness)
+    if: numeric = 0
+        return: c.LMX_WALK_OK
+    operand: (cast: (@: void) c.lmx_graph_value_in(arena, written_call, first + k))
+    status: lmx_walk_named_route(f, operand, numeric, @ receiver)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status: lmx_walk_publish(f)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status: lmx_walk_receive_selected(arena, received, numeric, receiver)
+    if: status >= c.LMX_WALK_THROWN
+        f\payload: 0
+        f\landing: 0
+    ---
+    return: status
+end: lmx_walk_receive_written
+
 # CALL-only evaluation phase. The caller owns the surrounding scratch mark
 # and supplied physical-slot head arrays. Written operands are evaluated once
 # in their written order; required-header scatter/type/default reception is a
@@ -4613,7 +4792,7 @@ end: lmx_walk_actual_shape
 # The normalized suffix after the written prefix (the hidden inputs this EXEC
 # hands on) is evaluated once after every written operand, in slot order. A
 # NULL suffix slot is an input handed absent: its Value stays absent.
-fn: lmx_walk_written_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: actual_named int; @: actual_names size_t; size_t: actual_capacity; @@: values_out c.LmxWalkValue) int
+fn: lmx_walk_written_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: actual_named int; @: actual_names size_t; size_t: actual_capacity; @: selected_args c.Lmx; @: binding c.LmxImplEntry; @: sources size_t; size_t: source_capacity; @@: values_out c.LmxWalkValue) int
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
     @: arena c.LmxArena 0
@@ -4715,6 +4894,15 @@ fn: lmx_walk_written_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
                 # Envelope provenance does not describe the extracted payload.
                 c.lmx_value_context_copy(current, 0)
             ---
+        ---
+        # Slice 305 (CALL-ARGUMENT-ORDER-AXBY; the author's decision of 2026-11-07, the book :724): the actual, evaluated,
+        # is received at once by the formal of the selected callable the binding gives it (lmx_walk_receive_written) -- a
+        # number through the route its NAMED operand carries for that formal's number type (slice 301), else the implicit
+        # `convert`; a refusal leaves the following actuals unevaluated and the body not started.
+        if: selected_args != 0
+            status: lmx_walk_receive_written(f, selected_args, code, first, binding, sources, source_capacity, i, current)
+            if: status != c.LMX_WALK_OK
+                return: status
         ---
         i: i + 1U
     ---
@@ -5799,29 +5987,28 @@ fn: lmx_call_formal_default (@: arena c.LmxArena; @: code c.Lmx; size_t: index; 
     return: lmx_walk_argument_storage(arena, out, expected, 0, code)
 end: lmx_call_formal_default
 
-# Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :381, :467, :485; Codex 285 item 3, 293 review): a generated native
-# call that names an actual or omits a formal binds what it writes to the formals of the callable it selected before its
-# actuals ran (code), through the one correspondence the walker's binder takes (lmx_callable_bind_prefix): a positional
-# actual the formal of its ordinal, a NAMED one the formal of its own name.  values holds the call's count values at the
-# slots of the signature the call was written against; for each of its written_count written actuals, in written order,
-# slots gives its slot and names its own name (0 for a positional one).  On OK values holds the selected callable's
-# formals in that callable's own order: a bound number received at the formal's type (a number of another kind is the
-# implicit `convert`), a formal no written actual binds its default (lmx_call_formal_default).  A selected callable of
-# another arity, without a formal of a written name, with two actuals for one formal, or without a default for a formal
-# no actual binds: the call's refusal, its implicit `call` before the body.
-# Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the written actuals are received in their written order
-# by the one reception lmx_walk_receive_selected the walker takes.  A typed number at a formal of another number type goes
-# through the route the call site resolved for that formal's type -- route k is the written actual route_written[k], the
-# number type route_types[k] and the occurrence of the program's direct receiver route_codes[k] -- else it is the implicit
-# `convert`.  Routes of another form are a malformed call (INVALID).
-fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; size_t: written_count; @: slots size_t; @: names size_t; @: values c.LmxWalkValue; size_t: route_count; @: route_written size_t; @: route_types int; @@: route_codes void) int
+# Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :381, :467, :485; Codex 285 item 3, 293 review) and slice 305
+# (CALL-ARGUMENT-ORDER-AXBY; the author's decision of 2026-11-07, the book :724): a generated native call that names an
+# actual or omits a formal binds what it writes to the formals of the callable it selected before its actuals ran (code),
+# through the one correspondence the walker's binder takes (lmx_callable_bind_prefix): a positional actual the formal of
+# its ordinal, a NAMED one the formal of its own name.  Three phases, in the order the call's text runs.  The FORM, before
+# any actual is evaluated: the arity, the names and positions, a formal given twice, a name only a hidden input bears, and
+# the presence of every input the call does not write (its current default) -- a mismatch is the call's implicit `call`
+# with no effect of any actual.  Then each written actual, right after its evaluation, is RECEIVED by the formal the plan
+# gives it: a number of another kind through the route the call site resolved for that formal's type -- route k is the
+# written actual route_written[k], the number type route_types[k] and the occurrence of the program's direct receiver
+# route_codes[k] -- else the implicit `convert`; a refusal leaves the following actuals unevaluated and the body not
+# started.  Then the FINISH lays the received values in the selected callable's own order and gives a formal no actual
+# binds its default (lmx_call_formal_default).  values holds the call's count values at the slots of the signature the
+# call was written against; for each of its written_count written actuals, in written order, slots gives its slot and
+# names the code of its own name (0 for a positional one; IDENTIFIER-CODES), and plan takes the index of the selected
+# formal it binds.  A selected value that is no fn or sub (a merge result, a Structure run as the call) has no signature
+# of its own: it takes the actuals as the signature the call was written against arranges them (plan = slots) and holds
+# no default for a formal the call omits.
+fn: lmx_call_bind_form (@: arena c.LmxArena; @: code c.Lmx; size_t: count; size_t: written_count; @: slots size_t; @: names size_t; @: plan size_t) int
+    c.LmxWalkValue: current
     @: args c.Lmx 0
     @: returns c.Lmx 0
-    @: source void 0
-    @: expected void 0
-    @: bound c.LmxWalkValue 0
-    @: item c.LmxWalkValue 0
-    @: route c.Lmx 0
     @: wanted size_t 0
     @: named int 0
     @: sources size_t 0
@@ -5831,22 +6018,22 @@ fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; si
     size_t: j 0U
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
     int: uncertain 0
-    int: numeric 0
     int: status c.LMX_WALK_OK
-    if: arena = 0 || code = 0 || written_count > count || (count != 0U && values = 0) || (written_count != 0U && (slots = 0 || names = 0))
-        return: c.LMX_WALK_INVALID
-    if: lmx_call_routes_form(arena, written_count, route_count, route_written, route_types, route_codes) = 0
+    if: arena = 0 || code = 0 || written_count > count || (written_count != 0U && (slots = 0 || names = 0 || plan = 0))
         return: c.LMX_WALK_INVALID
     status: c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
     if: status != c.LMX_WALK_OK
         return: status
-    # A selected value that is no fn or sub (a merge result, a Structure run as the call) has no signature of its own:
-    # it takes the actuals as the signature the call was written against arranges them, as the walker hands them on
-    # (lmx_walk_actuals_values).  It holds no default for a formal the call omits.
     if: answer != c.LMX_IMPLEMENTS_YES || args = 0
-        if: written_count = count
-            return: c.LMX_WALK_OK
-        return: c.LMX_WALK_UNSUPPORTED
+        if: written_count != count
+            return: c.LMX_WALK_UNSUPPORTED
+        while: i < written_count
+            if: slots[i] >= count
+                return: c.LMX_WALK_INVALID
+            plan[i]: slots[i]
+            i: i + 1U
+        ---
+        return: c.LMX_WALK_OK
     if: c.lmx_callable_source_count(arena, args, @ selected_count) != 0
         return: c.LMX_WALK_UNSUPPORTED
     # The formals stand first in the args part, the hidden inputs after them (lm_compiler_rw_header_parts).  The
@@ -5859,17 +6046,14 @@ fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; si
     j: 0U
     if: count = 0U
         return: c.LMX_WALK_OK
-    if: count > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue) || count > (cast: (size_t) -1) / c.sizeof(c.size_t)
+    if: count > (cast: (size_t) -1) / c.sizeof(c.size_t)
         return: c.LMX_WALK_NOMEM
-    bound: (cast: (@: c.LmxWalkValue) c.calloc(count, c.sizeof(c.LmxWalkValue)))
     wanted: (cast: (@: size_t) c.calloc(count, c.sizeof(c.size_t)))
     named: (cast: (@: int) c.calloc(count, c.sizeof(c.int)))
     sources: (cast: (@: size_t) c.calloc(count, c.sizeof(c.size_t)))
     occupied: (cast: (@: int) c.calloc(count, c.sizeof(c.int)))
-    if: bound = 0 || wanted = 0 || named = 0 || sources = 0 || occupied = 0
+    if: wanted = 0 || named = 0 || sources = 0 || occupied = 0
         status: c.LMX_WALK_NOMEM
-    # Slice 302 (IDENTIFIER-CODES): names[i] is the code of the written name (0 for a positional actual), normalized once
-    # at the unit's input boundary; the correspondence compares codes.
     while: status = c.LMX_WALK_OK && i < written_count
         if: slots[i] >= count
             status: c.LMX_WALK_INVALID
@@ -5896,23 +6080,103 @@ fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; si
         if: status = c.LMX_WALK_OK && occupied[j] != 0
             status: c.LMX_WALK_INVALID
         if: status = c.LMX_WALK_OK
-            c.memcpy((cast: (@: void) (bound + j)), (cast: (@: void) (values + slots[i])), c.sizeof(c.LmxWalkValue))
             occupied[j]: 1
+            plan[i]: j
         ---
         i: i + 1U
     ---
-    i: 0U
+    # Slice 293 (FORMAL-DEFAULT; the book :467, :485) at the form: a formal no written actual binds must hold its current
+    # default now -- the value the finish gives it -- else the call has no input for it: its implicit `call`, before any
+    # actual runs (the book :726: no argument and no admissible default is the ordinary refusal of the call).  The default
+    # is read, not evaluated (lmx_walk_current_default).
+    j: 0U
+    while: status = c.LMX_WALK_OK && j < count
+        if: occupied[j] = 0
+            status: lmx_walk_current_default(arena, args, j, @ current)
+            if: status = c.LMX_WALK_OK && current\present = 0
+                status: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+        ---
+        j: j + 1U
+    ---
+    c.free((cast: (@: void) occupied))
+    c.free((cast: (@: void) sources))
+    c.free((cast: (@: void) named))
+    c.free((cast: (@: void) wanted))
+    return: status
+end: lmx_call_bind_form
+
+# The reception of the written actual `written`, right after its evaluation (slice 305), by the selected formal
+# plan[written]: a number at a formal of a number type goes through the route the call site resolved for that type, else
+# it is the implicit `convert` (lmx_walk_receive_selected); any other value waits for the callee's entry.  The value is
+# received in place, at values[slots[written]].  A selected value with no signature of its own receives nothing here.
+fn: lmx_call_bind_receive (@: arena c.LmxArena; @: code c.Lmx; size_t: count; size_t: written_count; @: slots size_t; @: plan size_t; size_t: written; @: values c.LmxWalkValue; size_t: route_count; @: route_written size_t; @: route_types int; @@: route_codes void) int
+    @: args c.Lmx 0
+    @: returns c.Lmx 0
+    @: source void 0
+    @: expected void 0
+    @: item c.LmxWalkValue 0
+    @: route c.Lmx 0
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: numeric 0
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || code = 0 || written_count > count || written >= written_count || slots = 0 || plan = 0 || values = 0
+        return: c.LMX_WALK_INVALID
+    if: slots[written] >= count || plan[written] >= count
+        return: c.LMX_WALK_INVALID
+    if: lmx_call_routes_form(arena, written_count, route_count, route_written, route_types, route_codes) = 0
+        return: c.LMX_WALK_INVALID
+    status: c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer != c.LMX_IMPLEMENTS_YES || args = 0
+        return: c.LMX_WALK_OK
+    if: c.lmx_callable_source_entry(arena, args, plan[written], @ source, @ expected) != 0
+        return: c.LMX_WALK_UNSUPPORTED
+    item: values + slots[written]
+    numeric: lmx_walk_numeric_type(arena, expected)
+    if: numeric != 0 && item\present != 0 && item\kind = c.LMX_WALK_VALUE_NUMBER
+        route: lmx_call_bound_route(route_count, route_written, route_types, route_codes, written, numeric)
+        status: lmx_walk_receive_selected(arena, item, numeric, route)
+    ---
+    return: status
+end: lmx_call_bind_receive
+
+# The finish of the binding (slice 305): the received values laid in the selected callable's own order -- the written
+# actual i at the formal plan[i] -- and a formal no written actual binds given its current default (lmx_call_formal_default;
+# the form checked its presence).  On OK values holds the selected callable's formals in that callable's own order.
+fn: lmx_call_bind_finish (@: arena c.LmxArena; @: code c.Lmx; size_t: count; size_t: written_count; @: slots size_t; @: plan size_t; @: values c.LmxWalkValue) int
+    @: args c.Lmx 0
+    @: returns c.Lmx 0
+    @: bound c.LmxWalkValue 0
+    @: occupied int 0
+    size_t: i 0U
+    size_t: j 0U
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || code = 0 || written_count > count || (count != 0U && values = 0) || (written_count != 0U && (slots = 0 || plan = 0))
+        return: c.LMX_WALK_INVALID
+    status: c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: answer != c.LMX_IMPLEMENTS_YES || args = 0
+        if: written_count = count
+            return: c.LMX_WALK_OK
+        return: c.LMX_WALK_UNSUPPORTED
+    if: count = 0U
+        return: c.LMX_WALK_OK
+    if: count > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue)
+        return: c.LMX_WALK_NOMEM
+    bound: (cast: (@: c.LmxWalkValue) c.calloc(count, c.sizeof(c.LmxWalkValue)))
+    occupied: (cast: (@: int) c.calloc(count, c.sizeof(c.int)))
+    if: bound = 0 || occupied = 0
+        status: c.LMX_WALK_NOMEM
     while: status = c.LMX_WALK_OK && i < written_count
-        j: sources[i]
-        item: bound + j
-        if: c.lmx_callable_source_entry(arena, args, j, @ source, @ expected) != 0
-            status: c.LMX_WALK_UNSUPPORTED
+        j: plan[i]
+        if: slots[i] >= count || j >= count || occupied[j] != 0
+            status: c.LMX_WALK_INVALID
         else:
-            numeric: lmx_walk_numeric_type(arena, expected)
-            if: numeric != 0 && item\present != 0 && item\kind = c.LMX_WALK_VALUE_NUMBER
-                route: lmx_call_bound_route(route_count, route_written, route_types, route_codes, i, numeric)
-                status: lmx_walk_receive_selected(arena, item, numeric, route)
-            ---
+            c.memcpy((cast: (@: void) (bound + j)), (cast: (@: void) (values + slots[i])), c.sizeof(c.LmxWalkValue))
+            occupied[j]: 1
         ---
         i: i + 1U
     ---
@@ -5925,25 +6189,17 @@ fn: lmx_call_bind_actuals (@: arena c.LmxArena; @: code c.Lmx; size_t: count; si
     if: status = c.LMX_WALK_OK
         c.memcpy((cast: (@: void) values), (cast: (@: void) bound), count * c.sizeof(c.LmxWalkValue))
     c.free((cast: (@: void) occupied))
-    c.free((cast: (@: void) sources))
-    c.free((cast: (@: void) named))
-    c.free((cast: (@: void) wanted))
     c.free((cast: (@: void) bound))
     return: status
-end: lmx_call_bind_actuals
+end: lmx_call_bind_finish
 
-# Prepare the actual invocation's captured heads and already evaluated values
-# with the SAME binder as Source admission. Its correspondence lives only
-# under the caller's scratch mark; selected-entry reception remains single.
-# Consume ready written Values synchronously. This worker shares the admission
-# binder and current-default path; it never evaluates, selects or publishes.
-# The caller owns all buffers and the surrounding scratch mark.
-# contract_inputs are the Consumer contract's inputs: the only identity of
-# the normalized suffix the EXEC carries after its written prefix.
-fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; size_t: first; size_t: transport_count; size_t: written_count; @: contract_inputs c.Lmx; @: actual_named int; @: actual_names size_t; size_t: width; @: map size_t; @: sources size_t; @: written c.LmxWalkValue; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
-    c.LmxImplEntry: binding
-    @: binding_p c.LmxImplEntry @ binding
-    @: inputs c.Lmx 0
+# The ready phase of a selected call (slice 305 reshaped it): the written values, already evaluated and received by their
+# selected formals (lmx_walk_written_values), are laid in the selected callable's complete SOURCE order by the binding the
+# caller established before any actual ran (lmx_walk_selected_values: lmx_callable_bind_written, lmx_walk_selected_form);
+# a formal no operand binds takes its current default, a hidden input handed absent travels on, and each value gets its
+# transport storage.  This worker never evaluates, selects or publishes.  The caller owns all buffers and the surrounding
+# scratch mark.
+fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; @: inputs c.Lmx; @: binding_p c.LmxImplEntry; size_t: first; size_t: transport_count; size_t: written_count; @: sources size_t; size_t: width; @: written c.LmxWalkValue; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
     @: room void 0
@@ -5956,41 +6212,14 @@ fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: calle
     @: witness void 0
     size_t: count 0U
     size_t: i 0U
-    int: answer c.LMX_IMPLEMENTS_UNKNOWN
-    int: numeric 0
     int: status
     int: scratch_status
-    if: f = 0 || f\context = 0 || refs_out = 0 || values_out = 0 || out_count = 0
+    if: f = 0 || f\context = 0 || refs_out = 0 || values_out = 0 || out_count = 0 || inputs = 0 || binding_p = 0
         return: c.LMX_WALK_INVALID
     context: (cast: (@: c.LmxWalkContext) f\context)
     scratch: (cast: (@: c.LmxScratch) context\scratch)
     if: scratch = 0
         return: c.LMX_WALK_INVALID
-    # Operand effects can replace a part. Bind the selected callable's
-    # current args, not a descriptor or a header cached before those effects.
-    size_t: args_at (cast: (size_t) -1)
-    size_t: header_count 0U
-    if: c.lmx_callable_source_count((cast: (@: c.LmxArena) f\arena), callee, @ header_count) != 0 || header_count < 2U
-        return: c.LMX_WALK_UNSUPPORTED
-    status: c.lmx_implements_exec_slot((cast: (@: c.LmxArena) f\arena), callee, 0U, @ args_at, @ answer)
-    if: status != c.LMX_WALK_OK
-        return: status
-    if: answer != c.LMX_IMPLEMENTS_YES
-        return: c.LMX_WALK_UNSUPPORTED
-    inputs: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), callee, args_at))
-    if: inputs = 0
-        return: c.LMX_WALK_UNSUPPORTED
-    status: c.lmx_callable_bind_written((cast: (@: c.LmxArena) f\arena), inputs, code, first, transport_count, written_count, contract_inputs, actual_named, actual_names, width, map, width * 2U, sources, width, binding_p, @ answer)
-    if: status != c.LMX_WALK_OK
-        return: status
-    # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; Codex 285 item 3): the selected callable has no formal for what the call
-    # writes -- a name it does not declare, an ordinal past its formals, two actuals of one formal.  That is a form of the
-    # call it does not have: the call's implicit `call` before the body, never a kernel error (a native call binds the
-    # same way, lmx_call_bind_actuals).
-    if: answer = c.LMX_IMPLEMENTS_NO
-        f\payload: 0
-        f\landing: 0
-        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
     # An overall U is not a semantic rejection. Scatter requests only each
     # actual operand's established forward SOURCE/physical correspondence.
     status: lmx_walk_scatter_written(f, inputs, code, first, transport_count, written_count, binding_p, sources, width, written, @ values, @ occupied, @ count)
@@ -6007,40 +6236,6 @@ fn: lmx_walk_selected_ready_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: calle
         ---
         refs: (cast: (@@: void) room)
         c.memset(room, 0, count * sizeof(pointer_probe))
-    ---
-    # Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): each written number is received by its selected formal
-    # in the written order, by the one reception the native binder takes (lmx_walk_receive_selected), through the route
-    # its NAMED operand carries for that formal's number type (lmx_walk_named_route) -- else a typed number of another
-    # type is the implicit `convert`.  The binding is the one scatter used (lmx_callable_bound_operand).
-    size_t: k 0U
-    while: k < written_count
-        size_t: at (cast: (size_t) -1)
-        size_t: physical (cast: (size_t) -1)
-        status: c.lmx_callable_bound_operand((cast: (@: c.LmxArena) f\arena), inputs, code, binding_p, sources, width, first + k, @ at, @ physical, @ answer)
-        if: status != c.LMX_WALK_OK
-            return: status
-        if: answer != c.LMX_IMPLEMENTS_YES || at >= count
-            return: c.LMX_WALK_INVALID
-        received: values + at
-        if: received\present != 0 && received\kind = c.LMX_WALK_VALUE_NUMBER
-            if: c.lmx_callable_source_entry((cast: (@: c.LmxArena) f\arena), inputs, at, @ source, @ witness) != 0
-                return: c.LMX_WALK_UNSUPPORTED
-            numeric: lmx_walk_numeric_type((cast: (@: c.LmxArena) f\arena), witness)
-            if: numeric != 0
-                @: receiver c.Lmx 0
-                @: operand void (cast: (@: void) c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, first + k))
-                status: lmx_walk_named_route(f, operand, numeric, @ receiver)
-                if: status = c.LMX_WALK_OK
-                    status: lmx_walk_receive_selected((cast: (@: c.LmxArena) f\arena), received, numeric, receiver)
-                if: status >= c.LMX_WALK_THROWN
-                    f\payload: 0
-                    f\landing: 0
-                ---
-                if: status != c.LMX_WALK_OK
-                    return: status
-            ---
-        ---
-        k: k + 1U
     ---
     while: i < count
         if: occupied[i] = 0
@@ -6104,6 +6299,9 @@ fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lm
     @: sources size_t 0
     @: written c.LmxWalkValue 0
     @: pointer_probe void 0
+    c.LmxImplEntry: binding
+    @: binding_p c.LmxImplEntry @ binding
+    @: inputs c.Lmx 0
     size_t: width 0U
     size_t: written_count 0U
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
@@ -6159,13 +6357,40 @@ fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lm
             return: c.LMX_WALK_NOMEM
         return: c.LMX_WALK_INVALID
     sources: (cast: (@: size_t) room)
-    status: lmx_walk_written_values(f, code, first, transport_count, written_count, actual_named, actual_names, width, @ written)
+    # Slice 305 (CALL-ARGUMENT-ORDER-AXBY; the author's decision of 2026-11-07, the book :724): the names of the written
+    # actuals are read from the call's operands without evaluating them; the form of the call against the selected
+    # callable's current args part -- the correspondence of names and positions, a formal given twice, the presence of
+    # every input the call does not write -- is checked before any actual runs (lmx_callable_bind_written,
+    # lmx_walk_selected_form): a mismatch is the call's implicit `call` with no effect of an actual.  Then each written
+    # actual is evaluated and received by its selected formal at once (lmx_walk_written_values); the values are laid in
+    # the selected order and the omitted formals take their defaults (lmx_walk_selected_ready_values).
+    status: lmx_walk_written_names(f, code, first, transport_count, written_count, actual_named, actual_names, width)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status: lmx_walk_selected_inputs(f, callee, @ inputs)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status: c.lmx_callable_bind_written((cast: (@: c.LmxArena) f\arena), inputs, code, first, transport_count, written_count, contract_inputs, actual_named, actual_names, width, map, width * 2U, sources, width, binding_p, @ answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; Codex 285 item 3): the selected callable has no formal for what the call
+    # writes -- a name it does not declare, an ordinal past its formals, two actuals of one formal.  That is a form of the
+    # call it does not have: the call's implicit `call` before the body, never a kernel error (a native call binds the
+    # same way, lmx_call_bind_form).
+    if: answer = c.LMX_IMPLEMENTS_NO
+        f\payload: 0
+        f\landing: 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+    status: lmx_walk_selected_form(f, inputs, code, first, transport_count, written_count, binding_p, sources, width)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status: lmx_walk_written_values(f, code, first, transport_count, written_count, actual_named, actual_names, width, inputs, binding_p, sources, width, @ written)
     if: status != c.LMX_WALK_OK
         return: status
     status: lmx_walk_publish(f)
     if: status != c.LMX_WALK_OK
         return: status
-    return: lmx_walk_selected_ready_values(f, code, callee, first, transport_count, written_count, contract_inputs, actual_named, actual_names, width, map, sources, written, refs_out, values_out, out_count)
+    return: lmx_walk_selected_ready_values(f, code, callee, inputs, binding_p, first, transport_count, written_count, sources, width, written, refs_out, values_out, out_count)
 end: lmx_walk_selected_values
 
 fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) int
@@ -7893,7 +8118,7 @@ end: lmx_activation_resolve_input
 # CALLABLE-PLACE-TYPED-RECEPTION (the book provenance :198, :200, :241; Codex 301, item 2): a typed number bound to a
 # formal of another number type of the callable a call selected when it ran is received by the program's direct receiver
 # of that pair, which the call site resolved as it resolves a static reception: its routes are the resolution data of the
-# call -- natively arrays the generated call hands lmx_call_bind_actuals, walked the pairs after the payload of the NAMED
+# call -- natively arrays the generated call hands lmx_call_bind_receive, walked the pairs after the payload of the NAMED
 # operand.  Only the route of the selected formal's type is read; no route: the implicit `convert`.
 
 # The one form of a NAMED operand: [NAMED, coordinate, payload] -- its written name in the row's source name -- and after
@@ -8036,7 +8261,7 @@ fn: lmx_callable_args_value (@: arena c.LmxArena; @: code c.Lmx; @@: out c.Lmx) 
     if: answer != c.LMX_IMPLEMENTS_YES || args = 0
         return: c.LMX_WALK_UNSUPPORTED
     # The formals stand first in the args part, the hidden inputs after them (lm_compiler_rw_header_parts); the count of
-    # the part's sources bounds the scan -- its edge at that count is LAST, not an input (lmx_call_bind_actuals reads the
+    # the part's sources bounds the scan -- its edge at that count is LAST, not an input (lmx_call_bind_form reads the
     # formals the same way).
     if: c.lmx_callable_source_count(arena, args, @ total) != 0
         return: c.LMX_WALK_UNSUPPORTED

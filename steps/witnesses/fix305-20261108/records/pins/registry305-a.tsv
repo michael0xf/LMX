@@ -1,0 +1,217 @@
+# The fixtures of the L2 runner's suite (tools/l2/lmxtool.lm2; rows read by tools/l2/suite.lm2, strictly):
+#   lmxtool 0 entry 0 -- suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT OBSERVED
+# Rows: runs SOURCE ENTRY MODES [PARTS] | refuses SOURCE NEEDLE MODES | twins SOURCE ENTRY MODES TWIN NAMES |
+# links OWNER ENTRY MODES LIBS (LIBS: comma-separated PATH=NAME, each a library built `--library --construct NAME`,
+# in f with --walk-methods too); paths relative to this list; ENTRY the program's LMX result (a decimal C int);
+# MODES n, f, nf or fn; a runs row may add the roots it runs after the letters: 0 (root0 only), 1 (root1 only), 01 (both, the default). Every check is a PASS or FAIL line with its class; a malformed row FAILs; any FAIL makes the
+# run exit 1.
+# os branches with full method bodies (OPUS-CODEX-20261022-OSBRANCH), the branch selected for the target before
+# translation (L2 section 20; the author, LMX_blog/2026-10-23.md): the selected branch's values, nothing compared
+# (os/os_walk_values.lm2 is built and run by the gate's os walk witness and bootstrap full's, not by a row)
+runs	os/os_bodies.lm2	7	nf
+runs	os/os_throws.lm2	7	nf
+runs	os/unit_os_prologue.lm2	7	nf
+runs	os/os_select_only.lm2	7	nf
+runs	os/os_unselected_invalid.lm2	7	nf
+runs	os/os_signatures_differ.lm2	7	nf
+runs	os/os_requirements.lm2	7	nf
+runs	os/os_callable_result.lm2	7	nf
+# ordinary admission at the selected branch's real receiving place, positive and negative
+runs	os/os_implements.lm2	7	nf
+refuses	os/os_implements_refused.lm2	os_implements_refused.lm2:21:30: implements is false in function argument	nf
+# the selected branch's own refusals, and the os block's structure
+refuses	os/os_unknown_name_refused.lm2	os_unknown_name_refused.lm2:6:21: unknown method	nf
+refuses	os/os_duplicate_refused.lm2	os_duplicate_refused.lm2:8:9: duplicate definition	nf
+refuses	os/os_item_refused.lm2	os_item_refused.lm2:4:9: an os branch holds methods and include, define or predef directives	n
+refuses	os/os_branch_head_refused.lm2	os_branch_head_refused.lm2:7:5: an os branch is win or default	n
+refuses	os/os_branch_twice_refused.lm2	os_branch_twice_refused.lm2:7:5: an os block has each branch once	n
+refuses	os/os_second_block_refused.lm2	os_second_block_refused.lm2:12:1: a second os block is not supported yet (the program reads one os block)	n
+# the C door: a tagged C type named through a define (Q-C); a call with one actual received by a reference
+runs	cdoor/define_struct_tm.lm2	7	nf
+runs	cdoor/c_call_one_actual.lm2	7	nf
+runs	cdoor/c_call_one_actual_root.lm2	7	nf0
+# the selected branch's methods are the unit's own (CODEX-AUTHOR-OS-COMMON-PIPELINE-20261023T013324Z): each os
+# program against its unit twin -- the same exits, each method bound natively and walked under --walk-methods alike
+twins	os_twins/named_call_below_os.lm2	7	nf	os_twins/named_call_below_unit.lm2	os_bump,count
+twins	os_twins/root_colon_above_os.lm2	7	nf	os_twins/root_colon_above_unit.lm2	os_bump,count
+twins	os_twins/root_vertical_above_os.lm2	7	nf	os_twins/root_vertical_above_unit.lm2	os_bump,count
+twins	os_twins/forward_header_os.lm2	7	nf	os_twins/forward_header_unit.lm2	os_twice,early
+twins	os_twins/method_above_os.lm2	7	nf	os_twins/method_above_unit.lm2	os_twice,early
+twins	os_twins/callable_value_os.lm2	7	nf	os_twins/callable_value_unit.lm2	os_note,placed,seen
+twins	os_twins/root_path_read_os.lm2	7	nf	os_twins/root_path_read_unit.lm2	os_mix
+twins	os_twins/sub_call_os.lm2	7	nf	os_twins/sub_call_unit.lm2	os_tick,count
+twins	os_twins/recursion_os.lm2	7	nf	os_twins/recursion_unit.lm2	os_fact
+twins	os_twins/hidden_input_os.lm2	7	nf	os_twins/hidden_input_unit.lm2	os_get
+twins	os_twins/calls_unit_below_os.lm2	7	nf	os_twins/calls_unit_below_unit.lm2	os_run,helper,count
+# bitwise operations of the machine profile (L2 section 21)
+runs	bits/bit_values.lm2	7	nf
+refuses	bits/bit_reference_refused.lm2	bit_reference_refused.lm2:3:5: a reference where a number is asked	nf
+refuses	bits/bit_mixed_refused.lm2	bit_mixed_refused.lm2:5:9: mixed numeric types (a conversion)	nf
+# the L2 SHA-256 module
+runs	sha/sha256_vectors.lm2	7	n	../tools/sha256.lm2
+# ENTRY is the program's LMX result, a C int over its whole range (R170-2, refinement 1)
+runs	suite/entry_negative.lm2	-12	nf
+runs	suite/entry_large.lm2	1011	nf
+# S8.1: library instances -- two of library A and one of B, constructed in the owner's arena, called interleaved
+links	lib/lib_owner.lm2	7	nf	lib/lib_a.lm2=lib_a_new,lib/lib_b.lm2=lib_b_new,lib/lib_c.lm2=lib_c_new,lib/lib_m.lm2=lib_m_new
+# Slice 254 (design 4.5 B1): free names resolve through the chain of activation records, the nearest current binding
+# first; a data field the activation does not use is no binding.
+runs	dyn/free_name_chain.lm2	7	nf
+runs	dyn/free_entry_binding.lm2	7	nf
+# Slice 255 (design 4.5 B2a): a free name is runtime-typed -- one callee reached from bindings of different types; a write
+# through the name, a return, a typed local, a typed formal and a condition receive the value by the kernel's one admission;
+# a mismatch is the implicit `convert` throw, caught by the caller.
+runs	dyn/free_value_types.lm2	7	nf
+# Slice 256 (design 4.5 B2b-1): the consumers of a runtime-typed value -- the prefix sign, the connectives with their
+# short circuit, a C-door actual received into the prototype's parameter type, a machine index, a cast, a reference result.
+runs	dyn/free_value_consumers.lm2	7	nf
+# Slice 257 (design 4.5 B2b, P1-RET): a walked method's declared result receives every present runtime-typed value by the
+# one admission -- a number where a pointer is declared and a pointer where an int is declared are the implicit `convert`,
+# caught by the callee's own pad or by the caller; the typed null literal and the compatible bindings pass.
+runs	dyn/free_result_convert.lm2	7	nf
+# Slice 258 (design 4.5 B2b-2a): the deref, the write through and the address of a free name are runtime-typed by the
+# kernel's pointer-code algebra -- pointer bindings of two pointee types, a write through the free pointer, the address of a
+# pointer binding (a pointer to pointer) and of a number binding, a native body among walked ones.
+runs	dyn/free_pointer_paths.lm2	7	nf
+# Slice 259 (design 4.5 B2b-2b): the bitwise and shift operators over a free operand run through the kernel's one binary
+# operation in both executors (the walker's codes BAND/BOR/BXOR/SHL/SHR; the walked body evaluates the same frames): the
+# C99 promotions, a shift count of its own type, the implicit interpreter throw for a count outside [0, width) or an
+# overflowing signed left shift, the implicit convert for two types, a sub's bare write, the typed walked path.
+runs	dyn/free_machine_ops.lm2	7	nf
+# Slice 260 (design 4.5 B2b-2c): a free value received by a place with a receiving model -- a modelled own (declaration) and
+# a modelled formal -- is received as the graph reference and admitted against the model at run time in both executors: a
+# graph with the fields (Shape as Point), a graph without them (the implicit implements), a number (the implicit convert), a
+# free pointer to a graph reference dereferenced into a modelled own (the deref level of the pointer coverage).
+runs	dyn/free_model_admit.lm2	7	nf
+# Slice 261 (design 4.5 B2b-2d; P1-PTR-COVERAGE, the address level): the address of a free name bound to a graph reference
+# (the kernel's own pointer code: the pointee is read from the cell, never from the code) received by typed pointer places at
+# depth two and three by the actual pointees in both executors; the admission of the deref'd graph at the modelled own stays;
+# a number's address at a graph pointer place and a graph reference's address at a depth-three place are the implicit convert.
+runs	dyn/free_graph_address.lm2	7	nf
+runs	dyn/free_held_receive.lm2	7	nf
+runs	dyn/free_held_model.lm2	7	nf
+# Slice 263: actual numeric reception and the selected Structure call.
+runs	dyn/free_number_places.lm2	7	nf
+runs	dyn/struct_call_selected.lm2	7	nf
+runs	dyn/struct_call_throws.lm2	7	nf
+# Selected code and explicit data: current field map, reached graph admission, copied calls.
+runs	dyn/split_formal_data.lm2	7	nf
+runs	dyn/split_selected_code.lm2	7	nf
+runs	dyn/split_copy_bound_data.lm2	7	nf
+runs	dyn/unit_n4_inline_named_incompatible.lm2	7	nf
+runs	dyn/unit_n4_inline_named_rebind.lm2	7	nf
+runs	dyn/held_structure_places.lm2	7	nf
+runs	dyn/unary_data_selection.lm2	7	nf
+# Typed native bitwise/shift uses the shared pre-operation checks.
+runs	dyn/typed_shift_guards.lm2	7	nf
+# Shared unary bitwise complement and named kind refusal.
+runs	dyn/unary_complement.lm2	7	nf
+
+# Actual source-cell identity and declared bindings through explicit data.
+runs	dyn/data_source_cells.lm2	7	nf
+runs	dyn/explicit_data_var_field.lm2	7	nf
+runs	dyn/free_index_places.lm2	7	nf
+runs	dyn/free_c_abi.lm2	7	nf
+runs	dyn/free_field_places.lm2	7	nf
+runs	dyn/free_slot_rebind.lm2	7	nf
+runs	dyn/free_c_pointer.lm2	7	nf
+runs	dyn/code_write_words.lm2	7	nf
+runs	dyn/place_map.lm2	7	nf
+runs	dyn/source_occurrences.lm2	7	nf
+runs	dyn/map_chain.lm2	7	nf
+runs	dyn/structure_path_write.lm2	7	nf
+runs	dyn/structure_slot_write.lm2	7	nf
+runs	dyn/written_form.lm2	7	nf
+runs	dyn/immutable_formal.lm2	7	nf
+runs	dyn/immutable_formal_cell.lm2	7	n
+refuses	dyn/occurrence_copy_refused.lm2	occurrence_copy_refused.lm2:7:18: this name has two or more root heads	nf
+refuses	dyn/occurrence_bare_refused.lm2	occurrence_bare_refused.lm2:6:13: this name has two or more root heads	nf
+refuses	dyn/occurrence_write_refused.lm2	occurrence_write_refused.lm2:6:1: this name has two or more root heads	nf
+refuses	dyn/occurrence_node_refused.lm2	occurrence_node_refused.lm2:5:18: this name has two or more root heads	nf
+refuses	dyn/occurrence_glued_refused.lm2	occurrence_glued_refused.lm2:3:15: a name glued to a value	nf
+# Slices 280-290: the fixtures landed since slice 279, each row as it ran green in its slice's lists (P pins focus149,
+# fullsuite149, probe289-b, suite152); the registry the FULL list needs (Codex, CODEX-OPUS-290-REVIEW-NORM-20261106-01, item 5).
+# Slice 296 migrated the row of slice 290's absent_head_name_refused (a limit, ABSENT-HEAD-WRITE-NORM): the head defines a
+# Structure with its written content (book :470-476), in a method, at the unit's and a part's root and inside a Structure.
+runs	dyn/absent_head_definition.lm2	7	nf	dyn/absent_head_definition_part.lm2
+refuses	dyn/absent_head_return_refused.lm2	absent_head_return_refused.lm2:7:13: return value has incompatible type	nf
+runs	dyn/callable_place_fields.lm2	7	nf
+runs	dyn/callable_place_signature.lm2	7	nf
+runs	dyn/comma_boundary.lm2	7	nf
+refuses	dyn/comma_path_refused.lm2	comma_path_refused.lm2:8:4: unknown type	nf
+refuses	dyn/comma_requirement_refused.lm2	comma_requirement_refused.lm2:10:7: unknown field path segment	nf
+runs	dyn/immutable_reached_write.lm2	7	nf
+runs	dyn/index_numeric_receive.lm2	7	nf
+runs	dyn/index_numeric_unavailable.lm2	7	nf
+runs	dyn/part_root_hidden.lm2	7	nf	dyn/part_root_hidden_part.lm2
+runs	dyn/place_write_form.lm2	7	nf
+refuses	dyn/place_write_number_refused.lm2	place_write_number_refused.lm2:5:1: a number field is no reference place	nf
+refuses	dyn/place_write_signature_refused.lm2	place_write_signature_refused.lm2:10:1: method pointer assignment has incompatible signature	nf
+refuses	dyn/place_write_struct_refused.lm2	place_write_struct_refused.lm2:10:1: cannot assign a non-callable reference to a method pointer	nf
+runs	dyn/root_pointer_index.lm2	7	nf
+runs	dyn/sub_parts.lm2	7	nf
+refuses	dyn/sub_return_refused.lm2	sub_return_refused.lm2:6:10: unknown field path segment	nf
+refuses	dyn/value_path_number_refused.lm2	value_path_number_refused.lm2:5:4: unknown type	nf
+runs	dyn/written_path_form.lm2	7	nf
+# Slice 292: the own fields a method's body declares are fields of its var part (VAR-PATH-OF-SHORT-FN).
+runs	dyn/var_own_fields.lm2	7	nf
+# Slice 293: a formal's written default is taken when a call gives no argument for it (FORMAL-DEFAULT).
+runs	dyn/formal_defaults.lm2	7	nf
+refuses	dyn/formal_default_none_refused.lm2	formal_default_none_refused.lm2:7:5: e has no argument x	nf
+refuses	dyn/formal_default_form_refused.lm2	formal_default_form_refused.lm2:10:5: d has no argument a: its written default is not a literal value and is not built	nf
+refuses	dyn/formal_default_type_refused.lm2	formal_default_type_refused.lm2:3:9: a formal's written default is no value of its type	nf
+# Slice 294: a call binds what it writes to the formals of the callable it selected, by ordinal or by the actual's own name (CALLABLE-PLACE-NAMED-ACTUALS).
+# Slice 297: a literal written by name takes its context from the formal of its name in the selected callable (CALLABLE-PLACE-NAMED-RECEPTION).
+runs	dyn/named_actuals_selected.lm2	7	nf
+# Slice 295: a declaration an inline statement of a method holds names the activation's one place of its name, in var (VAR-OWN-NESTED-AND-REFERENCE).
+runs	dyn/var_own_nested.lm2	7	nf
+# Slice 297 replaced slice 295's refusal of a repeat by its type (a limit): a repeat of another number type gives its candidate to the known place by the ordinary reception (REPEATED-DECL-TYPED-RECEPTION).
+runs	dyn/var_own_repeat_receive.lm2	7	nf
+runs	dyn/var_own_repeat_unavailable.lm2	7	nf
+# Slice 299: a number of another type whose conversion names a receiver the program does not define is received by an unavailable route -- the reached reception is the implicit `convert`, a branch that does not run raises nothing (NUMERIC-RECEPTION-MISSING-CONVERTER-PHASE); the refused rows of slices 289 and 297 became index_numeric_unavailable and var_own_repeat_unavailable.
+runs	dyn/numeric_unavailable_route.lm2	7	nf
+# Slice 300: a pair the conversion table has no row of is the same unavailable route, and a single-field repeat checks its place where it is reached (Codex's review of 299, items 2a and 3).
+runs	dyn/numeric_unavailable_norow.lm2	7	nf
+# Slice 301: a typed number written by name at a formal of another number type of the callable a call selected is received by the program's direct receiver of that pair the call site resolved, before the body (CALLABLE-PLACE-TYPED-RECEPTION).
+runs	dyn/bound_typed_reception.lm2	7	nf
+# Slice 305 (CALL-ARGUMENT-ORDER-AXBY; the author, 2026-11-07): the names and the form of a call are checked against the selected callable
+# before any actual is evaluated, each actual is received by its selected formal right after its evaluation, a refusal leaves the
+# following actuals unevaluated; one rule for the call through a callable place, native and the walker (p301b: 1323, not 1233).
+runs	dyn/bound_order_axby.lm2	7	nf
+# Slice 302: a copy of a graph carries the codes of its occurrences' names, no spelling -- a named actual to a copied callable binds the formal of its name, a free input finds the copied formal by its code (IDENTIFIER-CODES).
+runs	dyn/copy_name_codes.lm2	7	nf
+# The := slice (the author, 2026-11-07; the book, assign-known and named-actuals): the operator writes a place already known
+# (a local, a formal, a field through a path, a reference place holding a method) and supplies a named argument; an unknown
+# left side, an unknown formal and a positional actual after a named one are refused at translation; a: 5 and a(5) are no
+# named supply (the ordinary call of a visible callable a, its result positional).
+runs	dyn/assign_known.lm2	7	nf
+refuses	dyn/assign_unknown_refused.lm2	assign_unknown_refused.lm2:5:5: := writes a place already known: its left side is not one here	nf
+runs	dyn/named_assign_actuals.lm2	7	nf
+refuses	dyn/named_assign_unknown_refused.lm2	named_assign_unknown_refused.lm2:7:9: zz is not an argument of tst	nf
+refuses	dyn/named_assign_positional_after_refused.lm2	named_assign_positional_after_refused.lm2:7:17: a positional argument of tst after a named one	nf
+# The := slice (MERGE-OPERAND-FORMS): a merge operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field
+# the declaration form `(int: a 5)` is: it writes the model slot of its name.
+runs	dyn/merge_named_field_operand.lm2	7	nf
+refuses	dyn/assign_in_structure_refused.lm2	assign_in_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
+refuses	dyn/assign_method_name_refused.lm2	assign_method_name_refused.lm2:14:5: writing a hidden input that has no activation value is not supported yet	nf
+# Codex's review of 303 (CODEX-FABLE-303-REVIEW-20261107T222601684Z-01): an exact identifier before := is the same operator (item 1);
+# := declares nothing -- `zz := int: 5` with no place zz is refused in a method, at the root, in a Structure and as a merge operand,
+# while a known place takes the typed right side by the general admission (item 2).
+runs	dyn/assign_typed_known.lm2	7	nf
+runs	dyn/named_assign_quoted.lm2	7	nf
+# An exact identifier as the head of a statement is a limit of the translator (no route classifies it: "unsupported body"), the same
+# before the := slice (the colon control) and after it; P0 makes the Frame := for it as for a bare head.
+refuses	dyn/assign_quoted_head_limit.lm2	assign_quoted_head_limit.lm2:9:5: unsupported body	nf
+refuses	dyn/quoted_colon_head_limit.lm2	quoted_colon_head_limit.lm2:6:5: unsupported body	nf
+refuses	dyn/assign_typed_unknown_refused.lm2	assign_typed_unknown_refused.lm2:5:5: := writes a place already known: its left side is not one here	nf
+refuses	dyn/assign_typed_unknown_root_refused.lm2	assign_typed_unknown_root_refused.lm2:3:1: := writes a place already known: its left side is not one here	nf
+refuses	dyn/assign_typed_unknown_structure_refused.lm2	assign_typed_unknown_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
+refuses	dyn/merge_assign_operand_refused.lm2	this merge operand form is not lowered yet	nf
+runs	dyn/merge_args_operand.lm2	7	nf
+refuses	dyn/merge_args_model_formal_refused.lm2	merge_args_model_formal_refused.lm2:10:17: a formal that is not a number is not lowered as a field of the args part yet	nf
+# Codex's review of slice 304: a formal of the args part with no current default -- a required one, or one whose written default this
+# translation does not build -- holds no value (the kernel leaves its slot empty; no zero is invented, an explicit zero `int: z 0` is a
+# value); the operand is admitted when a later operand of the same merge writes that field, else refused at the operand: the limit of
+# this phase, not a rule of the language.
+refuses	dyn/merge_args_unfilled_refused.lm2	merge_args_unfilled_refused.lm2:9:17: a formal with no default that no later operand writes is not lowered as a field of the args part yet	nf
+refuses	dyn/merge_args_computed_default_refused.lm2	merge_args_computed_default_refused.lm2:10:17: a formal whose written default is not built and that no later operand writes is not lowered as a field of the args part yet	nf

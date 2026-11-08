@@ -11659,6 +11659,66 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
             c.lm_compiler_tx_open(acts + ak, act_slots + (cast: (size_t) ak) * 1024U, 1024U)
             ak: ak + 1
         ---
+    # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :381, :467, :485; Codex 285 item 3, 293 review) and slice 305
+    # (CALL-ARGUMENT-ORDER-AXBY; the author's decision of 2026-11-07, the book :724): a call that names an actual or omits
+    # a formal binds what it writes to the formals of the callable it selected (l2_c), as the walker's binder does -- one
+    # correspondence for both executors: a positional actual the formal of its ordinal, a named one the formal of its own
+    # name, never the formal the declared signature puts at that slot.  The form of the call -- the arity, the names and
+    # positions, a formal given twice, the presence of every input the call does not write -- is checked here, before any
+    # actual is evaluated (lmx_call_bind_form: its implicit `call` has no effect of an actual); each written actual is
+    # received by its selected formal right after its evaluation (lmx_call_bind_receive, in the loop below); the finish
+    # lays the values in the selected callable's own order and gives the omitted formals their defaults
+    # (lmx_call_bind_finish, after the loop).  A call that writes every formal by position binds as it is written.
+    if: arguments\written_count < nact
+        bind: 1
+    written: 0
+    while: bind = 0 && written < arguments\written_count
+        actual: c.lm_compiler_value_actual_written(arguments, written)
+        if: actual != 0 && actual\wrapper != 0
+            bind: 1
+        written: written + 1
+    ---
+    written: 0
+    if: bind != 0 && nact > 0
+        fd: tn_cell[0]
+        tn_cell[0]: tn_cell[0] + 1
+        # IDENTIFIER-CODES: the names of the written actuals are the codes of their spellings (the unit's table); 0 for
+        # a positional one.  l2_bp takes the plan: the selected formal of each written actual.
+        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%s[]: size_t l2_bs%d %d\n%s[]: size_t l2_bn%d %d\n%s[]: size_t l2_bp%d %d\n", ind, fd, arguments\written_count, ind, fd, arguments\written_count, ind, fd, arguments\written_count) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        while: written < arguments\written_count
+            actual: c.lm_compiler_value_actual_written(arguments, written)
+            if: actual = 0
+                return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+            t: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
+            if: c.fprintf(out_cell[0], "%sl2_bs%d[%d]: %dU\n%sl2_bn%d[%d]: ", ind, fd, written, t, ind, fd, written) < 0
+                return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+            if: actual\wrapper != 0
+                if: c.lm_compiler_emit_unit_id_text((cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head)) != 0 || c.fputs("\n", out_cell[0]) < 0
+                    return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+                ---
+            else:
+                if: c.fputs("0U\n", out_cell[0]) < 0
+                    return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+                ---
+            ---
+            written: written + 1
+        ---
+        written: 0
+        # Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the routes of the written numbers, resolved here as
+        # a static reception in this caller resolves them (lm_compiler_emit_bound_routes); the reception reads the one of
+        # the selected formal's type.
+        if: lm_compiler_emit_bound_routes(arguments, idx, fd, ind, route_args) != 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_form(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bn%d, l2_bp%d)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, fd) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: arguments\written_count = 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_form(l2_call_arena, l2_c%d, %dU, 0U, 0, 0, 0)\n", ind, fd, self_t, nact) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: c.fprintf(out_cell[0], "%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "call", ind) != 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_bds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+    ---
     # Written order and formal coordinate are both held by the common plan.
     # No reconstruction of a formal-ordered P0 chain precedes evaluation.
     while: written < arguments\written_count
@@ -11763,65 +11823,28 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
             dyn_mi: mi
         if: occ_mi < 0 && c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        written: written + 1
-    ---
-    # Slice 294 (CALLABLE-PLACE-NAMED-ACTUALS; the book :381, :467, :485; Codex 285 item 3, 293 review): a call that
-    # names an actual or omits a formal binds what it writes to the formals of the callable it selected before the
-    # actuals ran (l2_c), as the walker's binder does -- one correspondence for both executors (lmx_call_bind_actuals):
-    # a positional actual the formal of its ordinal, a named one the formal of its own name, never the formal the
-    # declared signature puts at that slot; a formal no written actual binds takes the selected callable's default
-    # (slice 293).  Until then the values stand at the slots of the declared signature, in their written order of
-    # evaluation; the binding leaves them in the selected callable's own order, a number received at its formal's type.
-    # A selected callable without such a formal, of another arity or without the default: the call's implicit `call`
-    # before the body; a number of another kind: its implicit `convert`.  A call that writes every formal by position
-    # binds as it is written.
-    if: arguments\written_count < nact
-        bind: 1
-    written: 0
-    while: bind = 0 && written < arguments\written_count
-        actual: c.lm_compiler_value_actual_written(arguments, written)
-        if: actual != 0 && actual\wrapper != 0
-            bind: 1
-        written: written + 1
-    ---
-    if: bind != 0 && nact > 0
-        fd: tn_cell[0]
-        tn_cell[0]: tn_cell[0] + 1
-        # IDENTIFIER-CODES: the names of the written actuals are the codes of their spellings (the unit's table); 0 for
-        # a positional one.
-        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%s[]: size_t l2_bs%d %d\n%s[]: size_t l2_bn%d %d\n", ind, fd, arguments\written_count, ind, fd, arguments\written_count) < 0
-            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        written: 0
-        while: written < arguments\written_count
-            actual: c.lm_compiler_value_actual_written(arguments, written)
-            if: actual = 0
+        # Slice 305 (CALL-ARGUMENT-ORDER-AXBY): the actual, evaluated, is received at once by the formal of the selected
+        # callable the form gave it -- a number of another kind through the route the call site resolved, else the
+        # implicit `convert` -- so a refusal leaves the following actuals unevaluated and the body not started.
+        if: bind != 0 && nact > 0
+            if: c.fprintf(out_cell[0], "%sl2_bds%d: lmx_call_bind_receive(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bp%d, %dU, l2_av%d, %s)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, written, self_t, route_args) < 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-            t: (cast: (int) (actual - (cast: (@: c.L2ApplicationActual) (arguments\actuals))))
-            if: c.fprintf(out_cell[0], "%sl2_bs%d[%d]: %dU\n%sl2_bn%d[%d]: ", ind, fd, written, t, ind, fd, written) < 0
+            if: c.fprintf(out_cell[0], "%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-            if: actual\wrapper != 0
-                if: c.lm_compiler_emit_unit_id_text((cast: (const: @: c.LmP0Text) actual\wrapper\as\frame\head)) != 0 || c.fputs("\n", out_cell[0]) < 0
-                    return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-                ---
-            else:
-                if: c.fputs("0U\n", out_cell[0]) < 0
-                    return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-                ---
-            ---
-            written: written + 1
+            if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_bds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
+                return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         ---
-        # Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the routes of the written numbers, resolved here as
-        # a static reception in this caller resolves them (lm_compiler_emit_bound_routes); the binder reads the one of the
-        # selected formal's type.
-        if: lm_compiler_emit_bound_routes(arguments, idx, fd, ind, route_args) != 0
+        written: written + 1
+    ---
+    # Slice 305: the finish of the binding -- the received values in the selected callable's own order and the omitted
+    # formals' defaults (lmx_call_bind_finish); the form was checked before the actuals, so a `call` here is the kernel's
+    # answer for a default that vanished meanwhile, handled as the form's.
+    if: bind != 0 && nact > 0
+        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%sl2_bds%d: lmx_call_bind_finish(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bp%d, l2_av%d)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, self_t) < 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        if: arguments\written_count > 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, %dU, l2_bs%d, l2_bn%d, l2_av%d, %s)\n", ind, fd, self_t, nact, arguments\written_count, fd, fd, self_t, route_args) < 0
-            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        if: arguments\written_count = 0 && c.fprintf(out_cell[0], "%sint: l2_bds%d lmx_call_bind_actuals(l2_call_arena, l2_c%d, %dU, 0U, 0, 0, l2_av%d, %s)\n", ind, fd, self_t, nact, self_t, route_args) < 0
+        if: arguments\written_count = 0 && c.fprintf(out_cell[0], "%sl2_bds%d: lmx_call_bind_finish(l2_call_arena, l2_c%d, %dU, 0U, 0, 0, l2_av%d)\n", ind, fd, self_t, nact, self_t) < 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         if: c.fprintf(out_cell[0], "%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "call", ind) != 0
-            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "convert", ind) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         if: c.fprintf(out_cell[0], "%s---\n%sif: l2_bds%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_bds%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
@@ -20010,7 +20033,7 @@ end: lm_compiler_own_activation_host
 # writes by name -- one decimal or character literal given to a number formal -- takes its context from the formal of its
 # name in the callable the call selects, not from the formal of that name in the signature the call was written against:
 # the two may be of other types (formals by position agree by the place's admission).  It travels as a contextual literal
-# (lmx_walk_value_lit) to that formal's reception (lmx_call_bind_actuals, lmx_walk_selected_ready_values), where a literal
+# (lmx_walk_value_lit) to that formal's reception (lmx_call_bind_receive, lmx_walk_receive_written), where a literal
 # outside the formal's type is the implicit `convert` before the body.  1 for such an actual (slot t of the signature idx).
 fn: lm_compiler_named_literal_actual (@: actual c.L2ApplicationActual; int: idx; int: t) int
     @: value c.L2ValueSpan 0
@@ -20345,7 +20368,7 @@ end: lm_compiler_emit_single_repeat_check
 # formal the call was written against.  The call site resolves -- as a static reception of the same pair in this caller
 # does -- the program's direct receiver from the type the actual was received into to every other number type; the
 # kernel's binder reads only the route of the selected formal's type (lmx_walk_receive_selected).  Natively the routes are
-# arrays handed to lmx_call_bind_actuals (lm_compiler_emit_bound_routes), walked the pairs after the payload of the NAMED
+# arrays handed to lmx_call_bind_receive (lm_compiler_emit_bound_routes), walked the pairs after the payload of the NAMED
 # operand (lm_compiler_rw_named_routed).  No receiver is called to choose one, no chain is formed.
 
 # The number types a route can lead to, in a fixed order: int, char, size_t, unsigned, ulong; -1 past them.

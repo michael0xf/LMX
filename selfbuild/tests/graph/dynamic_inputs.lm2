@@ -1,0 +1,38 @@
+int: x 5
+fn: leaf () int
+    return: x
+end: leaf
+fn: relay () int
+    return: leaf()
+end: relay
+fn: local () int
+    x: x + 2
+    return: relay()
+end: local
+fn: own () int (int: x 8)
+    x: x + 1
+    return: relay()
+end: own
+fn: formal (int: x) int
+    return: child()
+    fn: child () int
+        return: relay()
+    end: child
+    fn: unused () int
+        return: absent
+    end: unused
+end: formal
+fn: local_reference () int
+    x: 7
+    return: \(@x)
+end: local_reference
+int: base leaf()
+int: local_value local()
+int: own_value own()
+int: formal_value formal(12)
+int: local_address local_reference()
+int: unchanged x
+x: 20
+int: next_local local()
+int: outside x
+int: next_relay relay()

@@ -1,0 +1,30 @@
+GRAPH-BEFORE-BEGIN
+fn: tick () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: calls
+end: tick
+fn: missing () int (
+    int: seeded (tick)
+)
+    return: absent
+end: missing
+int: result (missing)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: tick () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: calls
+end: tick
+fn: missing () int (
+    int: seeded (tick)
+)
+    return: absent
+end: missing
+int: result (missing)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

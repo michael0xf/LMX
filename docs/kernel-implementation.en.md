@@ -35,8 +35,13 @@ The [graph15/tool12/rt12 continuation](../steps/witnesses/working-var-20261108/n
 sequential fn bodies: assignments, calls and return. Working values belong to each activation, while actual fields
 stay in var; dirty values are published after argument evaluation before a call and on exit, including an error.
 Native computes the body itself using the shared working-place and publication mechanism. All 24 execution checks
-and 19 graph-mutation checks passed. Body-declared own fields, complete dynamic inputs, control flow, other working
-value types and general call:code data remain open; this slice does not complete the activation model.
+and 19 graph-mutation checks passed.
+The next [graph18/tool13/rt15](../steps/witnesses/body-inputs-20261108/notes.md) constructs body-declared int places in var,
+visible from the first line; body initializers stay at their statements. Dynamic int inputs get activation-local
+places before var; nested methods impose no input requirements on their callers. Native method collection uses one
+traversal of the completed graph, independent of construction. All 30 execution and19 graph-mutation checks passed.
+Control flow, other working-place types, full admission and general call:code data remain open; the activation model
+is not complete.
 
 <a id="principles"></a>
 ## 1. Principles (norm)
@@ -302,6 +307,12 @@ replaces the initializer ([book](LMX_semantics.en.md#ordinary-var), §10); later
 activation is not a graph: its working values, argument places and temporaries live in the executor's C frame (§6.3).
 
 ### 3.5 Names: words in the graph, resolution by the traversal (decision, checked by Codex, review 2)
+
+The author's visibility clarification of 2026-11-08: in a body with automatic var completion, all own fields are
+visible from the first statement, whether explicit in var or added from the body. A body initializer executes
+at its written position. No field-origin marker is needed. Completion belongs to construction before the final
+var allocation; the consumer collects methods and inputs in a separate traversal of the completed graph, with
+its own temporary tables. Combine independent work within each stage, without passing its service state onward.
 
 The builder **does not bake** name resolution into the graph: every written name -- in a head, in an argument, in a path,
 in an operand of an expression, in the named supply `a := v` -- stays a word primitive with the canonical pointer to its

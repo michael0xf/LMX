@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 299 entries.
+are historical. The current input manifest has 304 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -33,8 +33,15 @@ values publish only dirty fields, after argument evaluation before calls and on 
 its body using the same working-place/publication boundary; it does not call an interpreter body.
 Both a(5)/a:5 invoke a exactly once, formal int writes keep the caller's value, computed var initializers run once,
 and failed execution publishes completed own writes. 24 execution checks and19 graph-mutation checks passed.
-Body-declared fields, complete dynamic inputs, control flow and general call:code data remain open.
 [Sources, tuple, receipts and limits](../steps/witnesses/working-var-20261108/notes.md).
+
+The current graph18/tool13/rt15 tuple adds body-declared int places to var during construction. All own fields of an
+auto-filled var are visible from the body's first line; body initializers still run at their statements. Dynamic int
+inputs snapshot the nearest activation before var executes; their writes and local references do not change the source.
+Nested methods impose no transitive input requirements. The translator collects method addresses once from the completed
+graph, reuses that temporary list for native emission/installation and discards it; no constructor inventory is retained.
+30 execution checks and19 graph-mutation checks passed. Control flow, remaining place types, full admission and general
+call:code data remain open. [Sources, receipts and limits](../steps/witnesses/body-inputs-20261108/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

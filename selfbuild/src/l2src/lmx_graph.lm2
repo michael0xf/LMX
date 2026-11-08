@@ -8,9 +8,9 @@
 # Representation (the spec's §2.2 regions on today's typed pools; stage 4 of the plan replaces the pools):
 #   - an int place is an `int` cell of the arena's INT pool (lmx_int_new_profiled);
 #   - a place without a value: its `int` cell, not yet written, and a pointer primitive of the UNINIT_INT pool pointing
-#     at it (the author, 19:02Z: "int без инициализации" is a pointer onto that very cell); the first assignment writes
-#     the value into that cell and turns the slot onto the cell directly (lmx_graph_assign_int); the cell's type and
-#     address never change; later writes go into the cell;
+#     at it (the author's same-cell clarification); every assignment writes into that cell (lmx_graph_assign_int).
+#     The slot, pointer primitive, target address and physical types remain unchanged. This representation records
+#     the declaration without an initializer, not a changing runtime initialized flag;
 #   - a word primitive: a cell of the WORD pool holding the canonical address of its spelling (the author, 18:18Z:
 #     service operators and receivers have no codes -- the same string addresses);
 #   - an Lmx: the common Lmx header with `count` slots (lmx_node_new_owned / lmx_struct_new_profiled and
@@ -253,8 +253,8 @@ fn: lmx_graph_int (@: g c.LmxGraph; int: value) @: void
 end: lmx_graph_int
 
 # A place without a value (§3.2, the author 18:00Z and 19:02Z): its int cell, not yet written, and the pointer
-# primitive "int without initialization" pointing at it; the pointer cell is what the slot of the place holds until the
-# first assignment. Nothing reads the int cell's bytes before that. 0 without memory.
+# primitive "int without initialization" pointing at it; the slot keeps that pointer cell after assignments too.
+# Construction and taking its address do not read the int cell's bytes. No initial value is promised. 0 without memory.
 fn: lmx_graph_uninit_int (@: g c.LmxGraph) @: void
     @: cell void 0
     @: pointer void 0
@@ -476,6 +476,9 @@ end: lmx_graph_method
 # Shared address-typed reads for graph fields and activation arguments.
 fn: lmx_graph_value_int (@: g c.LmxGraph; @: value void; @: out int) int
     int: kind lmx_graph_kind(g, value)
+    if: kind = 3
+        value: c.lmx_arena_pointer_void_read(value)
+        kind: lmx_graph_kind(g, value)
     if: out = 0 || kind != 1
         return: 1
     out[0]: c.lmx_int_value_known(value)
@@ -494,26 +497,18 @@ fn: lmx_graph_field (@: g c.LmxGraph; @: value void; @: name char) @: void
     return: lmx_graph_get(inner, slot)
 end: lmx_graph_field
 
-# 1 when the place at slot index holds a written int cell, 0 when it is a place without a value, -1 when it is no int
-# place.
+# Compatibility query: 1 for an address-typed int place, direct or indirect; -1 otherwise. It does not track writes.
 fn: lmx_graph_place_ready (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) int
-    int: kind lmx_graph_kind(g, lmx_graph_get(lmx, index))
-    if: kind = 1
+    if: lmx_graph_kind(g, lmx_graph_place_cell(g, lmx, index)) = 1
         return: 1
-    if: kind = 3
-        return: 0
     return: -1
 end: lmx_graph_place_ready
 
-# The value of the int place at slot index: 0 and the value in out; 1 when the place has no value yet (the general
-# admission decides what that means for the reader, §3.2); 2 when the slot holds no int place.
+# The value of an int place: direct and indirect places use the same cell operation. 2 for an invalid place.
+# A declaration without an initializer promises no value before a write; no initialized state is stored or inferred.
 fn: lmx_graph_read_int (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index; @: out int) int
-    int: ready lmx_graph_place_ready(g, lmx, index)
-    if: out = 0 || ready < 0
+    if: lmx_graph_value_int(g, lmx_graph_get(lmx, index), out) != 0
         return: 2
-    if: ready = 0
-        return: 1
-    \out: c.lmx_int_value_known(lmx_graph_get(lmx, index))
     return: 0
 end: lmx_graph_read_int
 
@@ -521,48 +516,29 @@ end: lmx_graph_read_int
 fn: lmx_graph_deref_int (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index; @: out int) int
     @: pointer void lmx_graph_get(lmx, index)
     @: cell void 0
-    @: held void 0
-    size_t: at 0U
     if: out = 0 || lmx_graph_kind(g, pointer) != 5
         return: 2
     cell: c.lmx_arena_pointer_void_read(pointer)
     if: lmx_graph_kind(g, cell) != 1
         return: 2
-    # In this root-only slice, readiness is read from the actual places of the current graph. An address taken early
-    # does not make its still-unfilled place readable. Old, detached uninit pointers in arena storage are irrelevant.
-    # There is no initialization flag or saved table; the first assignment changes that place's slot.
-    while: at < lmx_graph_count(lmx)
-        held: lmx_graph_get(lmx, at)
-        if: lmx_graph_kind(g, held) = 3 && c.lmx_arena_pointer_void_read(held) = cell
-            return: 1
-        at: at + 1U
-    ---
     out[0]: c.lmx_int_value_known(cell)
     return: 0
 end: lmx_graph_deref_int
 
-# The write of value into the int place at slot index: the first assignment of a place without a value writes into its
-# very int cell and turns the slot onto that cell (the pointer primitive is left behind, unchanged); a later write goes
-# into the cell. The cell's type and address never change (the author, 18:10Z and 19:02Z). 0, or 1 when the slot holds
-# no int place.
+# Every write uses the same int cell. Neither the slot nor its optional pointer primitive is rebound or retyped.
+# 0, or 1 when the slot holds no int place. This operation never changes the signature/default declaration shape.
 fn: lmx_graph_assign_int (@: g c.LmxGraph; @: scope c.Lmx; @: lmx c.Lmx; size_t: index; int: value) int
     @: held void lmx_graph_get(lmx, index)
     @: cell void 0
     int: kind lmx_graph_kind(g, held)
-    @: slot void 0
     if: kind != 1 && kind != 3
         return: 1
     cell: held
     if: kind = 3
         cell: c.lmx_arena_pointer_void_read(held)
-        slot: c.lmx_arena_ref_cell(lmx, index)
-    if: lmx_graph_kind(g, cell) != 1 || lmx_graph_invalidate(g, scope, slot, cell, cell) != 0
+    if: lmx_graph_kind(g, cell) != 1 || lmx_graph_invalidate(g, scope, 0, cell, cell) != 0
         return: 1
-    if: c.lmx_int_store_known(cell, value) != 0
-        return: 1
-    if: kind = 1
-        return: 0
-    return: lmx_graph_put(lmx, index, cell)
+    return: c.lmx_int_store_known(cell, value)
 end: lmx_graph_assign_int
 
 # A traversal-local set/queue. It contains addresses only, starts empty and is freed by its caller.

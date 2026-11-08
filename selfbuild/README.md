@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 289 entries.
+are historical. The current input manifest has 292 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -16,10 +16,17 @@ argument places. This still supports a single return expression, int results and
 graph-check accepts optional EXPECTED-EXIT COUNT INTERPRETER-ANSWER after EXPECTED: the final argument checks the
 interpreter's exact diagnostic status (0..6); native/forced process success remains 0 or1.
 
-The current tuple graph11/tool11/rt08 normalizes supported expressions to nested ordinary Lmx during construction.
+The graph11/tool11/rt08 tuple normalizes supported expressions to nested ordinary Lmx during construction.
 Neither execution consumer parses operator precedence. Compound arguments, nested paths and both a(5)/a:5 call forms
 pass with the same results: 36 execution cases and 18 mutation checks. General bodies/local places and the remaining
 operators, primitives and call forms are still open. [Evidence](../steps/witnesses/clean-expr-20261108/notes.md).
+
+The current graph12/tool11/rt09 tuple preserves the internal pointer and slot on every assignment. The language place
+remains `int`, including expression reads and argument admission. Direct initialized storage and indirect storage
+without an initializer remain distinct, including mandatory/default signature fields. 21 execution checks and
+19 mutation checks passed. The former pre-write refusal was Codex's superseded interpretation; current checks take an
+address without reading unpromised bytes. The diagnostic dump is not a full state codec.
+[Evidence and remaining work](../steps/witnesses/stable-indirection-20261108/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

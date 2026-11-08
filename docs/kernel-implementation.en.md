@@ -59,10 +59,11 @@ states the target, rather than claiming that the entire existing runtime conform
    cell of T with an unchanging address and type, not yet written. `int: i` is a `void *` field pointing at such an
    `uninit:int` pointer, which points at the `int` cell of the place `i`; `int: i 0` is a field pointing at an `int` cell
    holding 0 directly; one representation in code, data and signatures, with no mark, flag, bitmap or walker table. **The
-   first assignment** writes the value into **the same** cell of T and turns the field onto it directly; no other cell is
-   allocated, the cell's type and address do not change, there is no reclassification; later writes go into that cell by
-   the ordinary contract (the author, 18:10Z: "При первом присваивании!"). The earlier answer "in code it is an atom with
-   some random value" is replaced by this decision.
+   first assignment and all later assignments** write into **the same** cell of T. The slot and internal pointer retain
+   their addresses, physical types and values. The author's latest answer about `@i` supersedes Codex's explanation
+   requiring a direct slot after the first write. This is storage support, not a language reference: `i` remains `int`.
+   No initial value is promised and no changing initialized state is tracked. In a signature this representation
+   distinguishes a mandatory formal from a default.
 5. **No parallel hidden structures of the program** at the interpreter or the translator. The service traversal tables
    ("namespace" in the author's words) are the implementer's to design, but **they are kept nowhere outside a
    traversal**: every traversal starts with empty tables, uses them and destroys them on any exit; they do not lie in the
@@ -135,7 +136,7 @@ intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `ho
 | Type | Cell | Content |
 |---|---|---|
 | `int`, `char`, `unsigned char`, `size_t`, `unsigned`, `ulong` | a number of the machine type | a number primitive; `int: i 5` is an `int` cell holding 5 |
-| `uninit:int`, `uninit:char`, `uninit:unsigned char`, `uninit:size_t`, `uninit:unsigned`, `uninit:ulong` | `void *` -- a pointer to a cell of T | the pointer primitive "T without initialization" (§1 item 4): points at the pre-existing, not yet written cell of T of a place `int: i` without a value or of a mandatory formal `int: q`; the region kind of this pointer is the only carrier of the state "without initialization", the cell of T itself lies in the region of T and never changes its type |
+| `uninit:int`, `uninit:char`, `uninit:unsigned char`, `uninit:size_t`, `uninit:unsigned`, `uninit:ulong` | `void *` -- a pointer to a cell of T | the internal pointer primitive of a declaration without an initializer (§1 item 4); refers to a pre-existing cell of T and persists after writes. It does not make the language place a reference. In a signature it distinguishes a mandatory formal from a default; it does not track the first write |
 | `uninit:ref` | `void *` -- a pointer to a `ref` cell | a reference place without a promised initial address -- `@: p`, `ptr: @()` ([book :487](LMX_semantics.en.md#explicit-copy)); the author's analogy "for all primitives" extends directly to the pointer receiver, which has "the same place and value forms as `int`" (confirmed by Codex, review 2) |
 | `word` | `const char *` | a word primitive: a pointer to the interned string of a spelling -- operators (`+`, `\`, `[]`, `:=`), receiver and language words (`fn`, `if`, `return`, `node`, `int`), any written name (§3.5) |
 | `ref` | `void *` | a reference cell: a slot of an Lmx field or of an Array element, the cell of a pointer `@: p T` after the first address write; holds the address of a primitive or an Lmx, or 0 |
@@ -169,10 +170,10 @@ releasing the regions attached since the mark and restoring `used` of the earlie
 Liveness is reachability from the roots ([book §22](LMX_semantics.en.md#memory)). Marking goes by regions: each region has
 a bitmap of live cells for the current generation (a service traversal table, built by the pass and discarded); a cell is
 marked by nothing. The traversal follows the slots of `lmx` cells (the address in each `ref` cell of the backing), pointer
-cells, `parent` and the address → name table (the rows of live addresses live, the rows of dead ones are dropped). An
-`uninit:T` pointer from which the slot was turned by the first assignment onto the cell of T itself is collected **only
-if no other live references to it exist**: the first assignment itself destroys nothing; the cell of T lives while the
-slot or taken addresses refer to it. A region with no live cells is released whole; a region with live cells stays and its
+cells, `parent` and the address → name table (the rows of live addresses live, the rows of dead ones are dropped). The
+slot retains the `uninit:T` pointer after assignments; collection follows it to the cell of T. No assignment severs
+that link. Separately taken addresses also keep T alive; unreachable cells follow ordinary collection. A region with
+no live cells is released whole; a region with live cells stays and its
 free cells are reused (decision; no compaction -- addresses are immovable).
 
 <a id="lmx"></a>
@@ -204,8 +205,8 @@ exactly `count` elements ([L2 §5](L2_spec_en.md#method-array)).
 
 The address `@x` ([L2 §18](L2_spec_en.md#lowlevel-address)): for a Structure/Array -- the address of the slot holding the
 reference to the header; for a primitive -- its typed cell, which exists from construction and changes neither its
-address nor its type: before the first assignment the slot leads to it through the `uninit:T` pointer, afterwards
-directly, and an `@i` taken before the first write addresses the same `int` cell as after it (the author, 19:02Z; the
+address nor its type: the slot leads to it through the same internal `uninit:T` pointer before and after writes, and an
+`@i` taken before the first write addresses the same `int` cell as after it (the author's same-cell clarification; the
 question of the second review is closed). Taking an address reads no unwritten bytes. The contracts of `@i`, of the
 reference value `@: p i`, of a formal's address and of a hidden input are distinct and are not mixed (the book:
 [addresses](LMX_semantics.en.md#explicit-copy), [dynamic visibility](LMX_semantics.en.md#dynamic)).
@@ -227,7 +228,7 @@ contract ([L2 §10–11](L2_spec_en.md#own)).
 `int` cell in the `int` region (not yet written; every primitive place has its own cell -- two places never share one, a
 literal of code is not shared with a place) and a pointer primitive onto it in the `uninit:int` region; the slot points at
 that pointer. "Without initialization" is the distinct type of this pointer, recognizable by address only (§1 item 4);
-the same for every primitive. It is not zero, not an arbitrary value, not a mark outside the graph; the book:
+the same for every primitive. It promises neither zero nor randomness, and is not a mark outside the graph; the book:
 [:432](LMX_semantics.en.md#construction) -- no invented initial value, in a signature a mandatory formal;
 [:123](LMX_semantics.en.md#fields) -- a repeat without a value writes nothing and only checks the contract (there is no
 separate policy of repeated declarations; REPEATED-DECL-OTHER-KINDS is unchanged). `int: x 0` is a slot onto an `int` cell
@@ -235,19 +236,20 @@ separate policy of repeated declarations; REPEATED-DECL-OTHER-KINDS is unchanged
 classification of what the slot points at, without a signature wrapper, a mask or a side mark. The name `x` is a table
 row for the address of the `int` cell (it exists from construction; the `uninit:int` pointer is not named).
 
-**The first assignment** (`x: 5`, a formal receiving an argument): the received value is written into **the same** `int`
-cell, and the slot is turned from the `uninit:int` pointer onto that cell directly; the cell is not allocated anew, its
-type and address do not change, nothing is moved, the name row stays in place; the `uninit:int` pointer stays alive only
-while other references to it exist (§2.4). **All later writes** go into that cell by the ordinary contract: no new
-primitive, no rebinding of the slot; cell addresses are immovable (the author, 18:10Z). The check by both executors:
+**Assignment** (`x: 5`, an argument received into a frame place): the received value is written into **the same** `int`
+cell. The slot, internal `uninit:int` pointer, target address and physical type remain unchanged on every write;
+nothing moves and the name row stays in place. Internal indirection is implementation support, not a user operator:
+`i` remains `int` in expressions and argument admission. `@i` separately creates a language reference.
+The check by both executors:
 `int: i`; keep `@i` without reading unwritten bytes; `i: 5`; reading through the kept address gives 5; `i: 7` gives 7 at
 the same address.
 
-**Reading a place without a value** (Codex, review 2): the existing general admission and `convert` apply -- an
-`uninit:int` value is not a ready `int`, and without a provided conversion integer arithmetic does not get its bytes; this
-is **not** a general prohibition on passing or inspecting the `uninit:T` value itself in a position that receives it. A
-static refusal by the translator comes only at a provably inadmissible **reached** use, not because the initial graph
-contains `uninit:int`: `int: x`, `x: 5`, … `x + 1` works. No hidden initialization flag, no zero or random value.
+**Reading and admission.** Internal indirection is transparent: address classification determines access to the
+`int` cell, from which the value is read. The presence of `uninit:int` proves neither that a write occurred nor that
+none occurred. Codex's review-2 explanation requiring a runtime refusal on that basis is superseded by the author's
+latest clarification. Before a write no initial value is promised; checks do not read those bytes or demand zero,
+randomness or a special error. A signature describes mandatory/default arguments and remains unchanged by calls;
+actual arguments are received into separate frame places.
 
 ### 3.3 An expression (norm: the author's example `x+1`)
 
@@ -421,8 +423,8 @@ current book; the carrier changes, not the rules (`:=`, `merge`, positional `a(5
 ### 6.4 Copying, merge, attaching
 
 `merge`/a copy build a new Lmx with one source → copy address map (a service table for the duration of the operation):
-`lmx` cells and primitives (a place without a value is copied as a cell of T and an `uninit:T` pointer onto the copy -- it
-stays a place without a value; words are copied as cells with the same string pointer) are copied into the regions of
+`lmx` cells and primitives (an indirect place is copied as a cell of T and an `uninit:T` pointer onto the copy; the
+contents of T and the indirect shape are preserved; words are copied as cells with the same string pointer) are copied into the regions of
 their types in the receiving arena, slots are rewritten by the map, `parent` onto the copies, shared targets and cycles
 are kept ([L2 §13](L2_spec_en.md#copy-merge)); the rows of the name table are copied with the same name pointer for the
 copies' addresses; interned strings are shared by the process, nothing to copy. Attaching the regions of another arena of
@@ -475,7 +477,7 @@ reads and writes **the same cells**: a field's slot is known as the k-th `ref` c
 value's type by the region of the address in the slot and the declaration, values are machine operations on the cells;
 the temporary results of expressions live in the C frame and are not addressable ([L2 §18](L2_spec_en.md#lowlevel-address));
 the first assignment of a place without a value is the same kernel operation as in the interpreter (a write into the
-pre-existing cell of T, the slot turned onto it), later writes go into the cell. No names are needed at a call -- the call
+pre-existing cell of T without changing the slot or internal pointer), as are later writes. No names are needed at a call -- the call
 goes by the address of the callable Lmx and its `native`. Where native must find a field by name at run time (the data of
 `call: code data`, dynamic visibility), it calls the kernel's same `named_field` with the string pointer (a constant of the
 unit). An emitted unit consists of: the unit's string table (bytes; at load one interning call per string, the result an
@@ -485,8 +487,10 @@ common constructor (§1a), the native bodies. Native/interpreter parity is check
 <a id="codec"></a>
 ## 8. toLmx and fromLmx
 
-`toLmx` walks the current graph: for a slot it prints the cell's value by the region's type (a place on an `uninit:T`
-pointer is a declaration without a value, `int: x`), the address's name from the address → name table (if any), a word as
+`toLmx` walks the current graph: for a slot it prints the cell's value by the region's type. The presence of `uninit:T`
+alone does not permit discarding the target cell's contents after writes. The current slice's diagnostic print keeps
+the form `int: x` and is not yet a complete serialization of a modified graph. The full codec must preserve both the
+link and the contents of T. The address's name comes from the address → name table (if any), a word is printed as
 the bytes of its interned string, an Lmx recursively (an Lmx with a word head as a Frame `head: …`); the order and the
 composition are the current ones ([book](LMX_semantics.en.md#source-codec)). `fromLmx` parses the text with the common P0,
 interns the spellings (§4), builds Lmx and primitives in the regions of the receiver's arena (a place without a value -- a
@@ -503,7 +507,7 @@ travel, not addresses.
 | `lmx_walk_input_width` counts an ordinary Structure's interface by the positive ports of the name table; the emitter creates those rows (`lmx_source_name_set_at` by `m_dyn`) -- Codex's example | the interface is derived from a side table, not from the graph | a Structure's interface is its slots (`count`, named addresses); hidden inputs by §6.3 |
 | Place tables `[m, SIZE_MAX, (code, type)…]` (`lmx_source_places_set`, the `PLACE` frame, `LmxCallPlaces`) | a static description of a procedure's places beside the graph | remove: a place is a slot; a name is a word resolved by the traversal (§3.5) |
 | `LmxActivationBinding {code, storage, type, value}`, `lmx_activation_bind` | binding a name by code in an activation | remove: a formal/input is the address of a slot (§6.3), resolution is the traversal's table |
-| A place without a value is a cell holding zero or garbage; every write (`lmx_value_store`) goes into that cell | the state "not initialized" is indistinguishable or outside the graph | an `uninit:T` pointer onto the cell of T by region; the first assignment writes into the same cell and turns the slot onto it, later writes go into it (§3.2) |
+| A place without an initializer | no hidden initialized flag and no promotion of internal indirection to a language reference type | a persistent `uninit:T` pointer onto the same T; every write goes into T, without rebinding the slot; `i` remains `int` (§3.2) |
 | The walker's frames `LMX_WALK_OP_*` (66 operations), `LmxOp {code}`, `lmx_walk_frame_profiled`, numeric selectors in slots (`lmx_walk_store_size`), `OF`/`AT`/`PUT_OF` by slot numbers | a second tree of the body -- pre-translation into operations | remove (K03): a body is an Lmx of words, primitives and nested Lmx (§3.3, §6.1) |
 | The binder's `l2_bn` name arrays, `lmx_call_bind_*` by codes | argument names as codes | by the string pointers in the word primitives of the named supply |
 | `LmxPool.role/profile/sealed`, `LmxRange.links/slot_owner/holder/side_*` | side arrays of intervals and result profiles | the physical kinds are header regions (§2.2, [L2 §3](L2_spec_en.md#type-by-range)); the role of a definition is its head word |
@@ -624,8 +628,8 @@ and publication of 308 are not run; the task is closed neither by a document nor
    `LmxPool/LmxChunk/LmxRange`.
 
 **Decided by Codex's second review** (CODEX-FABLE-KERNEL-SPEC-REVIEW2-20261108T185727823Z-01): the name goes by the address
-of the primitive or Lmx itself (§5.1); reading a place without a value -- the general admission and `convert`, with no
-static refusal by the mere presence of `uninit:T` (§3.2); `@: p` without an address -- `uninit:ref`, `Point: p` without a
+of the primitive or Lmx itself (§5.1); the earlier explanation of reading `uninit:T` is superseded by the author's latest
+answer: internal addressing is transparent, `i` remains `int`, and the slot stays unchanged (§3.2). `@: p` without an address -- `uninit:ref`, `Point: p` without a
 value -- the ordinary declaration Lmx (§3.4); an Array -- an Lmx with slots and no special inline form (§3.1). The only
 question of the second review -- what an `@i` taken before the first assignment addresses -- was **closed by the author at
 19:02Z** (CODEX-FABLE-AUTHOR-UNINIT-POINTER-SAME-CELL-20261108T190254726Z-01): "T without initialization" is a pointer onto

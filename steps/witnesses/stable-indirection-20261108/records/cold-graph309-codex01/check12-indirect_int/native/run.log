@@ -1,0 +1,41 @@
+GRAPH-BEFORE-BEGIN
+fn: plusone (int: x) int
+    return: (x + 1)
+end: plusone
+fn: defaultzero (int: x 0) int
+    return: x
+end: defaultzero
+int: i
+@: p int (@ i)
+i: 5
+int: direct i
+int: through (\ p)
+int: argument (plusone i)
+int: literal (plusone 5)
+int: defaulted (defaultzero)
+i: 7
+int: later i
+int: saved (\ p)
+int: again (plusone i)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: plusone (int: x) int
+    return: (x + 1)
+end: plusone
+fn: defaultzero (int: x 0) int
+    return: x
+end: defaultzero
+int: i
+@: p int @i
+i: 5
+int: direct 5
+int: through 5
+int: argument 6
+int: literal 6
+int: defaulted 0
+i: 7
+int: later 7
+int: saved 7
+int: again 8
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

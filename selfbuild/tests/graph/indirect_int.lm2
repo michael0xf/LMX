@@ -1,0 +1,19 @@
+# Internal indirection must remain an int in expressions and argument admission.
+fn: plusone (int: x) int
+    return: x + 1
+end: plusone
+fn: defaultzero (int: x 0) int
+    return: x
+end: defaultzero
+int: i
+@: p int @i
+i: 5
+int: direct i
+int: through \p
+int: argument plusone(i)
+int: literal plusone(5)
+int: defaulted defaultzero()
+i: 7
+int: later i
+int: saved \p
+int: again plusone(i)

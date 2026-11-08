@@ -5,12 +5,12 @@
 # activation and current lexical slots (§3.5, §5.2); no binding survives the traversal. Each expression operation is an
 # ordinary Lmx of operand/operator/operand, or prefix/operand, nested by construction (§3.3). This consumer performs no
 # precedence parsing and keeps no prepared expression representation. A write of a place is the
-# kernel's one write (lmx_graph_assign_int): the first assignment of a place without a value writes into its very cell
-# and turns the slot onto it; later writes go into the cell.
+# kernel's one write (lmx_graph_assign_int): every assignment writes into the same cell, through the address-typed
+# internal indirection when present. That indirection does not make the language place a reference.
 #
 # Statements of this slice: `name: expression` (a write of the int place named name) and `int: name expression` (a
-# declaration with a computed initializer: the published value replaces the statement in its slot, §3.4). A read of a
-# place without a value is LMX_GRAPH_RUN_UNINIT, reported, never a zero or a random value (§3.2).
+# declaration with a computed initializer: the published value replaces the statement in its slot, §3.4).
+# An omitted initializer promises no initial value; the kernel does not maintain a changing initialized state.
 #
 # A machine module (L2 section 20); the build writes its header, lmx_graph_run.h.lm1, from the exports named in
 # bld_kernel_l2 (tools/build.lm2).
@@ -21,7 +21,7 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 include: "<stdio.h>"
 
-# The answers of the interpreter: 0 done; 1 a place without a value was read where an int is needed; 2 a malformed
+# The answers of the interpreter: 0 done; 1 an address has no int representation where an int is needed; 2 a malformed
 # expression (an operator without an operand, two operands in a row, an unknown token); 3 an unknown name; 4 a write
 # refused (a slot that holds no int place); 5 a statement this slice does not execute; 6 division by zero.
 
@@ -105,6 +105,8 @@ fn: lmx_graph_admit_path (@: g c.LmxGraph; @: expression void; @: name char; @: 
     kind: c.lmx_graph_kind(g, wanted[0])
     if: kind = 3
         kind: 1
+    if: c.lmx_graph_kind(g, found[0]) = 3
+        found[0]: c.lmx_arena_pointer_void_read(found[0])
     if: kind = 0 || kind != c.lmx_graph_kind(g, found[0])
         return: -1
     return: 1
@@ -150,12 +152,13 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
     @: declaration c.Lmx 0
     int: kind (cast: (int) c.lmx_graph_kind(g, formal))
     int: status 0
+    int: number 0
     if: out = 0
         return: 4
     if: kind = 1 || kind = 3
-        if: c.lmx_graph_kind(g, actual) != 1
+        if: c.lmx_graph_value_int(g, actual, @ number) != 0
             return: 4
-        out[0]: c.lmx_graph_int(g, c.lmx_int_value_known(actual))
+        out[0]: c.lmx_graph_int(g, number)
         if: out[0] = 0
             return: 4
         return: 0

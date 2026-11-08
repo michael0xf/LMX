@@ -215,11 +215,11 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                 status: c.lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) raw))
             else:
                 word: c.lmx_graph_word_text(g, raw)
-                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref
+                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref && word != state\w_eq && word != state\w_ne && word != state\w_lt && word != state\w_le && word != state\w_gt && word != state\w_ge && word != state\w_and && word != state\w_or && word != state\w_not && word != state\w_if && word != state\w_else && word != state\w_while && word != state\w_for && word != state\w_break && word != state\w_continue && word != state\w_redo
                     status: lmx_graph_work_capture(g, frame, word)
                     if: status = 0
                         row: lmx_graph_work_row(frame, word)
-                        if: row != 0 && row\slot != (cast: (size_t) -1) && (i != 0U || n = 1U || op = state\w_plus || op = state\w_minus || op = state\w_star || op = state\w_slash || op = state\w_percent || op = state\w_deref)
+                        if: row != 0 && row\slot != (cast: (size_t) -1) && (i != 0U || n = 1U || op = state\w_plus || op = state\w_minus || op = state\w_star || op = state\w_slash || op = state\w_percent || op = state\w_deref || op = state\w_eq || op = state\w_ne || op = state\w_lt || op = state\w_le || op = state\w_gt || op = state\w_ge || op = state\w_and || op = state\w_or)
                             row\loaded: row\loaded | 2
                         ---
                     ---
@@ -629,73 +629,181 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
 end: lmx_graph_admit
 
 # Sequential statements over the current method activation. Bodies stay in the graph on every call.
+# A control body is consumed in the same activation. Flow is the canonical word address, never an opcode or
+# retained plan. mode 0 uses activation places; mode 1 is construction-root execution; mode 2 is its inline body.
+fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from; size_t: to; int: mode; @: out int; @@: flow char) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: statement c.Lmx 0
+    @: nested c.Lmx 0
+    @: header c.Lmx 0
+    @: head char 0
+    @: target void 0
+    @: raw void 0
+    size_t: i from
+    size_t: n 0U
+    size_t: slot 0U
+    int: number 0
+    int: status 0
+    int: nested_mode mode
+    if: mode = 1
+        nested_mode: 2
+    while: i < to && status = 0 && flow[0] = 0
+        raw: c.lmx_graph_get(body, i)
+        if: c.lmx_graph_name_of(g, raw) != 0 || c.lmx_graph_kind(g, raw) = 3
+            i: i + 1U
+            continue
+        head: c.lmx_graph_word_text(g, raw)
+        if: head = state\w_break || head = state\w_continue || head = state\w_redo
+            flow[0]: head
+            return: 0
+        if: c.lmx_graph_kind(g, raw) != 4
+            if: mode = 0
+                status: lmx_graph_eval_number(g, code, raw, @ number)
+            i: i + 1U
+            continue
+        statement: (cast: (@: c.Lmx) raw)
+        if: c.lmx_graph_method(g, statement) != 0
+            i: i + 1U
+            continue
+        n: c.lmx_graph_count(statement)
+        head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
+        if: head = state\w_if
+            if: n != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(statement, 2U)) != 4
+                return: 2
+            status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 1U), @ number)
+            if: status != 0
+                return: status
+            if: number != 0
+                nested: (cast: (@: c.Lmx) c.lmx_graph_get(statement, 2U))
+                status: lmx_graph_block(g, code, nested, 0U, c.lmx_graph_count(nested), nested_mode, out, flow)
+            i: i + 1U
+            if: i < to && c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) = 4
+                statement: (cast: (@: c.Lmx) c.lmx_graph_get(body, i))
+                if: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U)) = state\w_else
+                    if: number = 0 && status = 0
+                        status: lmx_graph_block(g, code, statement, 1U, c.lmx_graph_count(statement), nested_mode, out, flow)
+                    i: i + 1U
+                ---
+            ---
+            continue
+        if: head = state\w_else
+            return: 2
+        if: head = state\w_while || head = state\w_for
+            if: n != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(statement, 2U)) != 4
+                return: 2
+            nested: (cast: (@: c.Lmx) c.lmx_graph_get(statement, 2U))
+            header: (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U))
+            if: head = state\w_for
+                if: c.lmx_graph_kind(g, (cast: (@: void) header)) != 4 || c.lmx_graph_count(header) != 3U
+                    return: 2
+                status: lmx_graph_block(g, code, header, 0U, 1U, nested_mode, out, flow)
+            while: status = 0 && flow[0] = 0
+                if: head = state\w_for
+                    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(header, 1U), @ number)
+                else:
+                    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 1U), @ number)
+                ---
+                if: status != 0 || number = 0
+                    break
+                while: status = 0
+                    flow[0]: 0
+                    status: lmx_graph_block(g, code, nested, 0U, c.lmx_graph_count(nested), nested_mode, out, flow)
+                    if: flow[0] != state\w_redo
+                        break
+                ---
+                if: status != 0 || flow[0] = state\w_return
+                    break
+                if: flow[0] = state\w_break
+                    flow[0]: 0
+                    break
+                if: flow[0] = state\w_continue
+                    flow[0]: 0
+                if: head = state\w_for && flow[0] = 0
+                    status: lmx_graph_block(g, code, header, 2U, 3U, nested_mode, out, flow)
+                ---
+            ---
+            i: i + 1U
+            continue
+        if: head = state\w_break || head = state\w_continue || head = state\w_redo
+            if: n != 1U
+                return: 5
+            flow[0]: head
+            return: 0
+        if: head = state\w_return
+            if: n = 1U
+                if: c.lmx_graph_method(g, code) != 0
+                    return: 5
+                ---
+            else:
+                if: c.lmx_graph_method(g, code) = 0
+                    return: 5
+                status: lmx_graph_eval(g, code, statement, 1U, n, out)
+            ---
+            flow[0]: state\w_return
+            return: status
+        if: head = 0
+            status: lmx_graph_block(g, code, statement, 0U, n, nested_mode, out, flow)
+            i: i + 1U
+            continue
+        if: mode = 1
+            status: lmx_graph_exec_statement(g, code, i)
+            i: i + 1U
+            continue
+        if: head = state\w_call
+            status: lmx_graph_eval_explicit_call(g, code, statement)
+            i: i + 1U
+            continue
+        if: head = state\w_at
+            return: 5
+        if: head = state\w_int
+            head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U))
+            if: mode = 0
+                status: lmx_graph_local_int(g, code, head)
+            else:
+                slot: c.lmx_graph_named(g, code, head)
+                if: slot = c.lmx_graph_count(code)
+                    return: 3
+            ---
+            if: status != 0 || n = 2U
+                i: i + 1U
+                continue
+            status: lmx_graph_eval(g, code, statement, 2U, n, @ number)
+        else:
+            target: lmx_graph_resolve(g, code, head)
+            if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
+                status: lmx_graph_eval_call(g, code, statement, (cast: (@: c.Lmx) target), @ number)
+                i: i + 1U
+                continue
+            status: lmx_graph_eval(g, code, statement, 1U, n, @ number)
+        ---
+        if: status = 0
+            if: mode = 0
+                status: lmx_graph_store_name(g, code, head, number)
+            else:
+                slot: c.lmx_graph_named(g, code, head)
+                if: slot = c.lmx_graph_count(code)
+                    return: 3
+                status: c.lmx_graph_assign_int(g, code, code, slot, number)
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: status
+end: lmx_graph_block
+
 fn: lmx_graph_method_run (@: g c.LmxGraph; @: code c.Lmx; @: out int) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: body c.Lmx code
-    @: statement c.Lmx 0
-    @: head char 0
-    @: target void 0
-    size_t: i 0U
-    size_t: n 0U
-    int: number 0
+    @: flow char 0
     int: status 0
     if: c.lmx_graph_method(g, code) != 0
         body: (cast: (@: c.Lmx) c.lmx_graph_get(code, 4U))
-    while: i < c.lmx_graph_count(body)
-        if: c.lmx_graph_name_of(g, c.lmx_graph_get(body, i)) != 0 || c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) = 3
-            i: i + 1U
-            continue
-        if: c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) != 4
-            status: lmx_graph_eval_number(g, code, c.lmx_graph_get(body, i), @ number)
-        else:
-            statement: (cast: (@: c.Lmx) c.lmx_graph_get(body, i))
-            if: c.lmx_graph_method(g, statement) != 0
-                i: i + 1U
-                continue
-            n: c.lmx_graph_count(statement)
-            head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
-            if: head = state\w_return
-                if: n = 1U
-                    if: c.lmx_graph_method(g, code) != 0
-                        return: 5
-                    return: 0
-                if: c.lmx_graph_method(g, code) = 0
-                    return: 5
-                return: lmx_graph_eval(g, code, statement, 1U, n, out)
-            if: head = state\w_call
-                status: lmx_graph_eval_explicit_call(g, code, statement)
-                if: status != 0
-                    return: status
-                i: i + 1U
-                continue
-            if: head = state\w_at
-                return: 5
-            if: head = state\w_int
-                head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U))
-                status: lmx_graph_local_int(g, code, head)
-                if: status = 0 && n > 2U
-                    status: lmx_graph_eval(g, code, statement, 2U, n, @ number)
-                    if: status = 0
-                        status: lmx_graph_store_name(g, code, head, number)
-                    ---
-                ---
-            else:
-                target: lmx_graph_resolve(g, code, head)
-                if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
-                    status: lmx_graph_eval_call(g, code, statement, (cast: (@: c.Lmx) target), @ number)
-                else:
-                    status: lmx_graph_eval(g, code, statement, 1U, n, @ number)
-                    if: status = 0
-                        status: lmx_graph_store_name(g, code, head, number)
-                    ---
-                ---
-            ---
-        ---
-        if: status != 0
-            return: status
-        i: i + 1U
-    ---
-    if: c.lmx_graph_method(g, code) != 0
+    status: lmx_graph_block(g, code, body, 0U, c.lmx_graph_count(body), 0, out, @ flow)
+    if: status != 0
+        return: status
+    if: flow != 0 && flow != state\w_return
+        return: 5
+    if: c.lmx_graph_method(g, code) != 0 && flow != state\w_return
         return: 5
     return: 0
 end: lmx_graph_method_run
@@ -871,10 +979,13 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
         if: status != 0
             return: status
         return: c.lmx_graph_value_int(g, value, out)
-    if: count = 3U && (word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent)
+    if: count = 3U && (word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or)
         status: lmx_graph_eval_number(g, scope, c.lmx_graph_get(expression, 0U), @ left)
         if: status != 0
             return: status
+        if: (word = state\w_and && left = 0) || (word = state\w_or && left != 0)
+            out[0]: (cast: (int) (left != 0))
+            return: 0
         status: lmx_graph_eval_number(g, scope, c.lmx_graph_get(expression, 2U), @ right)
         if: status != 0
             return: status
@@ -893,13 +1004,31 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
                 left: left % right
             ---
         ---
+        if: word = state\w_eq
+            left: (cast: (int) (left = right))
+        if: word = state\w_ne
+            left: (cast: (int) (left != right))
+        if: word = state\w_lt
+            left: (cast: (int) (left < right))
+        if: word = state\w_le
+            left: (cast: (int) (left <= right))
+        if: word = state\w_gt
+            left: (cast: (int) (left > right))
+        if: word = state\w_ge
+            left: (cast: (int) (left >= right))
+        if: word = state\w_and
+            left: (cast: (int) (left && right))
+        if: word = state\w_or
+            left: (cast: (int) (left || right))
         out[0]: left
         return: 0
     word: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U))
-    if: count = 2U && (word = state\w_plus || word = state\w_minus)
+    if: count = 2U && (word = state\w_plus || word = state\w_minus || word = state\w_not)
         status: lmx_graph_eval_number(g, scope, c.lmx_graph_get(expression, 1U), out)
         if: status = 0 && word = state\w_minus
             out[0]: 0 - out[0]
+        if: status = 0 && word = state\w_not
+            out[0]: (cast: (int) (out[0] = 0))
         return: status
     if: count = 2U && word = state\w_deref
         status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 1U), @ value)
@@ -983,26 +1112,16 @@ end: lmx_graph_exec_statement
 # unnamed Lmx whose field 0 is a word is a statement and runs; a named Lmx (a data Structure) stands. 0, or the first
 # statement's answer.
 fn: lmx_graph_run (@: g c.LmxGraph; @: root c.Lmx) int
-    size_t: n (cast: (size_t) c.lmx_graph_count(root))
-    size_t: i 0U
-    @: value void 0
-    @: inner c.Lmx 0
-    int: r 0
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: flow char 0
+    int: number 0
+    int: status 0
     if: g = 0 || root = 0
         return: 5
-    while: i < n
-        value: c.lmx_graph_get(root, i)
-        if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = 0
-            inner: (cast: (@: c.Lmx) value)
-            if: c.lmx_graph_count(inner) != 0U && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U)) != 0
-                r: lmx_graph_exec_statement(g, root, i)
-                if: r != 0
-                    return: r
-            ---
-        ---
-        i: i + 1U
-    ---
-    return: 0
+    status: lmx_graph_block(g, root, root, 0U, c.lmx_graph_count(root), 1, @ number, @ flow)
+    if: status = 0 && flow != 0 && flow != state\w_return
+        return: 5
+    return: status
 end: lmx_graph_run
 
 # Dispatch the current clean graph. Native uses the existing common nullary call boundary; with no entry the clean

@@ -45,6 +45,11 @@ The next [code/data continuation](../steps/witnesses/code-data-20261108/notes.md
 and fn to explicitly selected data. Shorthand selects var; code=data uses the same mechanism. The address map and working
 values live only in the activation, data is not extended, and native computes the body directly. Remaining types,
 control flow and full admission are still open; the activation model is not complete.
+The next [graph24/tool16/rt22](../steps/witnesses/control-flow-20261108/notes.md) supports if/else, while, for,
+nearest-loop break/continue/redo, return from inline bodies, comparisons and short-circuit &&/||. Bodies remain ordinary
+Lmx and execute in the current activation; construction adds their own int fields to the shared var. Native emits its
+own conditions and jumps. All27 execution and19 graph-mutation checks passed. Until, named transfers, cleanups and
+remaining types/forms are still open; this slice does not complete the activation model.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

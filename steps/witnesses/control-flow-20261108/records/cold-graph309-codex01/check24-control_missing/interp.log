@@ -1,0 +1,32 @@
+GRAPH-BEFORE-BEGIN
+fn: tick () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: calls
+end: tick
+Code:
+    if: ((tick) = 0) ((int absent 8))
+end: Code
+Empty:
+    int: other 7
+end: Empty
+call: Code Empty
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: tick () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: calls
+end: tick
+Code:
+    if: ((tick) = 0) ((int absent 8))
+end: Code
+Empty:
+    int: other 7
+end: Empty
+call: Code Empty
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

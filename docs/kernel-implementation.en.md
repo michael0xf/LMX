@@ -40,8 +40,11 @@ The next [graph18/tool13/rt15](../steps/witnesses/body-inputs-20261108/notes.md)
 visible from the first line; body initializers stay at their statements. Dynamic int inputs get activation-local
 places before var; nested methods impose no input requirements on their callers. Native method collection uses one
 traversal of the completed graph, independent of construction. All 30 execution and19 graph-mutation checks passed.
-Control flow, other working-place types, full admission and general call:code data remain open; the activation model
-is not complete.
+Control flow, other working-place types, full admission and general call:code data were still open at that point.
+The next [code/data continuation](../steps/witnesses/code-data-20261108/notes.md) binds int places of ordinary Structures
+and fn to explicitly selected data. Shorthand selects var; code=data uses the same mechanism. The address map and working
+values live only in the activation, data is not extended, and native computes the body directly. Remaining types,
+control flow and full admission are still open; the activation model is not complete.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

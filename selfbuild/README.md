@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 304 entries.
+are historical. The current input manifest has 308 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -41,7 +41,14 @@ inputs snapshot the nearest activation before var executes; their writes and loc
 Nested methods impose no transitive input requirements. The translator collects method addresses once from the completed
 graph, reuses that temporary list for native emission/installation and discards it; no constructor inventory is retained.
 30 execution checks and19 graph-mutation checks passed. Control flow, remaining place types, full admission and general
-call:code data remain open. [Sources, receipts and limits](../steps/witnesses/body-inputs-20261108/notes.md).
+call:code data were still open at that point. [Sources, receipts and limits](../steps/witnesses/body-inputs-20261108/notes.md).
+
+The current graph21/tool15/rt20 slice uses the shared activation map for ordinary Structures and fn with int places. Explicit data
+is matched by canonical names, never extended, and receives dirty values at publication. Shorthand selects var;
+code=data follows the same dispatch and write path. Ordinary native bodies compute their operations directly.
+36 execution checks and19 graph-mutation checks passed. This is still a partial N4 migration; remaining types,
+control flow and full admission/conversion are open.
+[Current tuple, results and limits](../steps/witnesses/code-data-20261108/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

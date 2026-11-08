@@ -1,0 +1,50 @@
+Code:
+    var:
+        int: x 1
+        int: y 2
+    end: var
+    x: x + 1
+    y: x * 2
+end: Code
+Data:
+    int: extra 99
+    int: y 30
+    int: x 10
+end: Data
+call: Code Data
+int: explicit_x Data\x
+int: explicit_y Data\y
+int: own_unchanged Code\var\x
+call: Code
+int: default_x Code\var\x
+int: default_y Code\var\y
+Self:
+    int: x 4
+    x: x + 2
+end: Self
+call: Self Self
+int: same_data Self\x
+fn: method (int: step 3) int (int: x 1)
+    x: x + step
+    return: x
+end: method
+call: method Data
+int: method_data Data\x
+int: method_own method\var\x
+fn: nested () int
+    call: Code Data
+    return: Data\x
+end: nested
+int: nested_call nested()
+int: x 40
+Free:
+    x: x + 1
+end: Free
+call: Free
+int: outer_free x
+ReadSelected:
+    int: x
+    x: var\x + 1
+end: ReadSelected
+call: ReadSelected Data
+int: selected_data Data\x

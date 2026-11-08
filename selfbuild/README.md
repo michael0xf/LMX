@@ -48,9 +48,10 @@ actual is evaluated and receive each actual right after its evaluation: the kern
 `lmx_call_bind_actuals`), the walker's selected call restructured the same way (`lmx_walk_written_names`,
 `lmx_walk_selected_form`, `lmx_walk_receive_written`), the native emitter of a bound call in the same three phases; the
 fixture `bound_order_axby` (from the probe p301b): the effects run 1323, not 1233, a refusing receiver leaves the later
-actual unevaluated, a name the selected callable lacks and a missing input refuse before `touch()` runs. The admission of
-a graph actual by the formal's model still happens at the callee's entry after all actuals (CALL-ENTRY-ADMISSION-ORDER,
-open). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+actual unevaluated, a name the selected callable lacks and a missing input refuse before `touch()` runs. This is the
+numeric part of the author's rule: the admission of a graph actual by the formal's model, and of every other value the
+"waits for the callee's entry" branches defer, still happens at the callee's entry after all actuals, for the static and
+the bound call alike (CALL-ENTRY-ADMISSION-ORDER, the required rest; Codex's review of 305). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the
@@ -73,8 +74,9 @@ reception in that caller resolves them (natively arrays handed to `lmx_call_bind
 payload of the NAMED operand), and the one kernel reception of both binders, `lmx_walk_receive_selected`, reads only the
 route of the selected formal's type and calls the receiver before the body -- its refusal, and a pair without a route,
 is the implicit `convert`. The author decided on 2026-11-07 that a call's names and form are checked before its arguments
-and each argument is received at once (AXBY); the bound call does that since slice305 (CALL-ARGUMENT-ORDER-AXBY closed:
-the form before the actuals, each actual received right after its evaluation), and since slice302 it finds the selected
+and each argument is received at once (AXBY); the bound call does that for the form and the numbers since slice305
+(CALL-ARGUMENT-ORDER-AXBY in part; the admission of every other value right after its actual is the required rest,
+CALL-ENTRY-ADMISSION-ORDER, for the static and the bound call alike), and since slice302 it finds the selected
 formal by the code of the written name (IDENTIFIER-CODES, the rest of the transition open); slice301 is an intermediate
 result and claims no named call of the required architecture. Slice300 takes a pair the conversion table has no row of by the same unavailable route, and a single-field
 repeat (`int: z 5; char: z`) checks its place where it is reached in both executors: the kernel's reception of a zero of

@@ -4618,6 +4618,28 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
     if: check_unevaluated_cell[0] = 0 && c.lm_compiler_check_throws_handled(mi, idx, path, source_node) != 0
         return: (cast: (int) (1))
+    # Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE; the book #whole-arguments): a call whose one actual may be the whole of its
+    # arguments (the binder's whole 2) is decided here on the static shape of the actual and the formals
+    # (lm_compiler_whole_decide: the fields as the arguments; or the ordinary positional reading, with the binder's check
+    # of the omitted formals; or two applicable readings, the ambiguity the author named, refused).  The whole form checks
+    # the one actual as an expression (D-108: a call in it records its edge) and binds its fields in the kernel at run time
+    # (slice 306: the selected callable's own entry reception, this method's implicit `implements`); the per-formal checks
+    # below are those of written actuals and do not apply to it.
+    if: arguments\whole != 0
+        if: c.lm_compiler_whole_decide(arguments, idx, mi, path, source_node, head) != 0
+            return: (cast: (int) (1))
+        if: arguments\whole = 1
+            actual: c.lm_compiler_value_actual_written(arguments, 0)
+            if: actual = 0
+                return: (cast: (int) (c.lm_compiler_error_fatal(path, source_node, "internal: a whole call lost its one actual")))
+            value: @ actual\value
+            if: lm_compiler_check_value_span(value, mi, path, (cast: (const: @: c.LmP0Node) (value\node))) != 0
+                return: (cast: (int) (1))
+            if: check_unevaluated_cell[0] = 0 && c.lm_compiler_structure_formal_count(idx) != 0 && c.lm_compiler_admit_site(mi) != 0
+                return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
+            return: (cast: (int) (0))
+        ---
+    ---
     actual_i: 0
     while: actual_i < nact
         actual: arguments\actuals + actual_i
@@ -9509,6 +9531,22 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
         a: value\first
         span: value\count
         site: \out
+        # Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE): the one actual is the whole of the arguments (CHECK's decision, whole
+        # 1): the WHOLE operand, its payload the Structure the actual gives -- evaluated once by the walk, its fields bound to
+        # the selected callable's formals by the kernel (lmx_walk_whole_values, lmx_call_bind_whole).  A candidate CHECK
+        # never decided (whole 2) has no lowering.
+        if: arguments\whole = 2
+            return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a whole call was not checked")))
+        if: arguments\whole = 1
+            if: lm_compiler_rw_whole_routed((cast: (int) (\out)), idx, arguments, rw_mi_cell[0], source_node, @ site) != 0
+                return: (cast: (int) (1))
+            if: lm_compiler_rw_reference_span(value, c.lm_compiler_graph_own(), site, @ arg) != 0 || c.lm_compiler_rw_put(site, 1, arg) != 0
+                return: (cast: (int) (1))
+            if: c.lm_compiler_rw_put((cast: (int) (\out)), (cast: (int) (arg0 + actual\rank)), site) != 0
+                return: (cast: (int) (1))
+            k: k + 1
+            continue
+        ---
         if: actual\wrapper != 0
             # The prepared wrapper owns the written name. Keep that source
             # identity instead of substituting the old descriptor's formal.
@@ -18522,6 +18560,79 @@ fn: lm_compiler_rw_single_repeat_check (int: into; const: (@: stmt c.LmP0Node); 
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_rw_put(out[0], 1, child)))
 end: lm_compiler_rw_single_repeat_check
+
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE): the WHOLE operand of a call whose one actual is the whole of its arguments
+# (CHECK's decision, whole 1): [whole, payload, (formal, witness, occurrence)*] -- the caller puts the payload at slot 1; a
+# route for every number field whose type has a direct receiver of the program into a number type (the selected callable's
+# formal may be of another type than the declared, as a NAMED actual's routes allow): the formal it serves, the witness of
+# the type, the receiver's occurrence (lm_compiler_rw_method_occurrence) -- the walked twin of the native call's arrays
+# (lm_compiler_emit_whole_routes).
+fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2ApplicationActuals; int: mi; const: (@: source_node c.LmP0Node); @: out int) int
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: kinds int 0
+    @: models int 0
+    int: nf
+    int: k 0
+    int: n
+    int: src
+    int: dst
+    int: routes 0
+    int: receiver
+    int: slot 2
+    int: whole 0
+    int: occurrence 0
+    int: status
+    if: arguments = 0 || idx < 0
+        return: (cast: (int) (1))
+    nf: m_arity_cell[0][idx]
+    if: nf < 1 || c.lm_compiler_mul_ok((cast: (size_t) nf), c.sizeof(c.int)) = 0
+        return: (cast: (int) (1))
+    kinds: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
+    models: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
+    if: kinds = 0 || models = 0
+        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, c.lm_compiler_alloc_or(src_cell[0], source_node, "out of memory"))))
+    status: c.lm_compiler_whole_fields(arguments, idx, mi, src_cell[0], source_node, kinds, models)
+    if: status != 1
+        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, c.lm_compiler_error_fatal(src_cell[0], source_node, "internal: a whole call lost its fields"))))
+    while: k < nf
+        src: c.lm_compiler_whole_kind_number(kinds[k])
+        n: 0
+        dst: (cast: (int) (c.lm_compiler_route_type(n)))
+        while: src >= 0 && dst >= 0
+            if: c.lm_compiler_direct_receiver(src, dst) >= 0
+                routes: routes + 1
+            n: n + 1
+            dst: (cast: (int) (c.lm_compiler_route_type(n)))
+        ---
+        k: k + 1
+    ---
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_WHOLE", 2 + 3 * routes, out) != 0
+        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+    whole: (cast: (int) (\out))
+    k: 0
+    while: k < nf
+        src: c.lm_compiler_whole_kind_number(kinds[k])
+        n: 0
+        dst: (cast: (int) (c.lm_compiler_route_type(n)))
+        while: src >= 0 && dst >= 0
+            receiver: (cast: (int) (c.lm_compiler_direct_receiver(src, dst)))
+            if: receiver >= 0
+                if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", whole, slot, k) < 0
+                    return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+                if: lm_compiler_rw_witness(whole, slot + 1, dst, 0) != 0 || lm_compiler_rw_method_occurrence(receiver, whole, @ occurrence) != 0 || c.lm_compiler_rw_put(whole, slot + 2, occurrence) != 0
+                    return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+                slot: slot + 3
+            ---
+            n: n + 1
+            dst: (cast: (int) (c.lm_compiler_route_type(n)))
+        ---
+        k: k + 1
+    ---
+    return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 0)))
+end: lm_compiler_rw_whole_routed
 
 # Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the NAMED operand of a bound call with the routes of its
 # typed number after the payload -- for each other number type the program's direct receiver from the type the actual is

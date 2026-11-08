@@ -1,0 +1,25 @@
+# Probe-only (slice 307 survey): two methods of one name in one unit -- f (Pair: p) and f (int: x; int: y) -- and the calls
+# f(3, 4) and f(pr) with pr a Pair.  What the translation does today with the second definition and which f a call reaches.
+Pair:
+    int: x 1
+    int: y 2
+end: Pair
+fn: f (Pair: p) int
+    return: p\x * 10 + p\y
+end: f
+fn: f (int: x; int: y) int
+    return: x * 100 + y
+end: f
+fn: run () int
+    int: a f(3, 4)
+    @: pr Pair Pair
+    int: b f(pr)
+    if: a = 304 && b = 12
+        return: 7
+    if: a = 304
+        return: 81
+    return: 82
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,159 @@
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE; the book #whole-arguments; the author's decisions of 2026-11-07 and 2026-11-08): a
+# call with one Structure argument does not differ from a call with the chain of its fields -- when the fields of the Structure
+# are the arguments (every field names a formal, every other formal has its default) and the Structure is not the one argument,
+# each formal receives the field of its name.  mytest (int: c 3; int: a): the author's merge(mytest\args; (a: int: 5)) held by
+# a place -- pack: merge(...); mytest(pack) -- is 35, as mytest(a := 5) is (the merge written in the call itself is not lowered
+# as a value yet: whole_merge_inline_refused); a declared Structure whose
+# fields are the formals -- Args (c 4, a 6); mytest(Args) -- is 46 and Args is not written; a Structure whose fields are some of the
+# formals while every other formal has its default -- Only (a 9) at mytest -- is 39 (c by its default 3); a Structure field at a Structure
+# formal -- GArgs (Point: p; int: q 7) at g (Point: p; int: q) -- is 1 + 2 + 7 = 10; a field of another number type goes
+# through the program's receiver -- CArgs (char: c '2', the code 50; int: a 5) at mytest: the char -> int receiver, counted
+# once, 505; the
+# whole reaches a callable place too -- Places\f (Point: p; int: q) holding g -- 10, and a callable of other names held there
+# (h (Point: pp; int: q)) has no formal for the field p: the implicit `call`.  The ordinary reading stands: take (Point: p)
+# given a Point is the single argument (x, y are no formals of take) -- 12; the named supply take(p := Point) -- 12; wrong
+# (Point: p; int: q 1) given Wrong (x 5, y 6, z 3) is the single argument (x, y, z are no formals of wrong) -- 51.  Both
+# executors.  Entry 7; 80.. name the failing check.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+Args:
+    int: c 4
+    int: a 6
+end: Args
+GArgs:
+    Point: p
+    int: q 7
+end: GArgs
+CArgs:
+    char: c '2'
+    int: a 5
+end: CArgs
+Wrong:
+    int: x 5
+    int: y 6
+    int: z 3
+end: Wrong
+Only:
+    int: a 9
+end: Only
+Calls:
+    int: n 0
+end: Calls
+fn: lm_stg_convert_char_int (char: v) int
+    Calls\n: Calls\n + 1
+    return: (cast: (int) v)
+end: lm_stg_convert_char_int
+fn: mytest (int: c 3; int: a) int
+    return: c * 10 + a
+end: mytest
+fn: g (Point: p; int: q) int
+    return: p\x + p\y + q
+end: g
+fn: h (Point: pp; int: q) int
+    return: pp\x * 100 + q
+end: h
+fn: take (Point: p) int
+    return: p\x * 10 + p\y
+end: take
+fn: wrong (Point: p; int: q 1) int
+    return: p\x * 10 + q
+end: wrong
+Places:
+    fn: f (Point: p; int: q) int
+        return: p\x * 100 + p\y * 10 + q
+    end: f
+end: Places
+int: Hw 0
+int: Hx 0
+fn: write_place () int
+    ---
+        @: Places\f Hw
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: write_place
+fn: rewrite_place () int
+    ---
+        @: Places\f Hx
+        return: 1
+        catch: implements ()
+            return: 24
+    ---
+end: rewrite_place
+fn: by_place () int
+    pack: merge(mytest\args; (a: int: 5))
+    return: mytest(pack)
+end: by_place
+fn: by_default () int
+    return: mytest(Only)
+end: by_default
+fn: by_declared () int
+    return: mytest(Args)
+end: by_declared
+fn: by_fields () int
+    return: g(GArgs)
+end: by_fields
+fn: by_convert () int
+    return: mytest(CArgs)
+end: by_convert
+fn: by_callable_place () int
+    return: Places\f(GArgs)
+end: by_callable_place
+fn: other_names () int
+    ---
+        int: got Places\f(GArgs)
+        return: got
+        catch: call ()
+            return: 27
+    ---
+end: other_names
+fn: single () int
+    return: take(Point)
+end: single
+fn: named () int
+    return: take(p := Point)
+end: named
+fn: not_whole () int
+    return: wrong(Wrong)
+end: not_whole
+fn: run () int
+    @: Hw g g
+    @: Hx h h
+    if: write_place() != 1
+        return: 80
+    if: by_place() != 35
+        return: 82
+    if: by_declared() != 46
+        return: 83
+    if: Args\c != 4 || Args\a != 6
+        return: 84
+    if: by_fields() != 10
+        return: 85
+    if: by_convert() != 505
+        return: 86
+    if: Calls\n != 1
+        return: 87
+    if: by_callable_place() != 10
+        return: 88
+    if: rewrite_place() != 1
+        return: 89
+    if: other_names() != 27
+        return: 90
+    if: single() != 12
+        return: 91
+    if: named() != 12
+        return: 92
+    if: not_whole() != 51
+        return: 93
+    if: mytest(a := 5) != 35
+        return: 94
+    if: by_default() != 39
+        return: 95
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

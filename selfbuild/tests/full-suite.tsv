@@ -182,6 +182,17 @@ runs	dyn/bound_order_axby.lm2	7	nf
 # admitted against the selected callable's own entry reception, a value of another kind at a number or Structure formal the implicit `convert`
 # -- so a refusal leaves the following actuals unevaluated; the static call and the call through a callable place, native and the walker.
 runs	dyn/entry_admission_order.lm2	7	nf
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE): a call with one Structure argument does not differ from a call with the chain of its fields -- when
+# its fields are the arguments (every field a formal, every other formal defaulted) and it is not the one argument, each formal receives the
+# field of its name: merge(mytest\args; (a: int: 5)), the same Structure in a place, a declared Structure, a Structure field at a Structure
+# formal, a field of another number type through the program's receiver, a callable place; the ordinary single argument and f(d := s) stand.
+runs	dyn/whole_arguments.lm2	7	nf
+# Slice 307: two readings of one call -- the Structure as the one argument (the first formal a Structure formal it fits by the first part of
+# implements, every other formal defaulted) and its fields as the arguments -- are the ambiguity the author named (2026-11-08): refused at translation.
+refuses	dyn/whole_ambiguous_refused.lm2	whole_ambiguous_refused.lm2:17:13: the Structure given to k is its argument q and its arguments: an ambiguous call	nf
+# Slice 307: the author's canonical form with the merge written in the call itself -- a merge expression is lowered only as a declaration statement today
+# (lm_compiler_check_word_value), an implementation limit witnessed here; the same Structure held by a place is 35 (whole_arguments).
+refuses	dyn/whole_merge_inline_refused.lm2	whole_merge_inline_refused.lm2:10:15: merge expression is not lowered in this receiving context	nf
 # Slice 302: a copy of a graph carries the codes of its occurrences' names, no spelling -- a named actual to a copied callable binds the formal of its name, a free input finds the copied formal by its code (IDENTIFIER-CODES).
 runs	dyn/copy_name_codes.lm2	7	nf
 # The := slice (the author, 2026-11-07; the book, assign-known and named-actuals): the operator writes a place already known

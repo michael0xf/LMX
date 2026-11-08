@@ -6,8 +6,8 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `../tools/sha256.lm2` extra input is relative to `tests/`; moving that list to
 `tests/l2/` without an explicit source change would break its resolution.
 
-The selected package contains 261 inputs (66 source files, 34 tools and
-161 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
+The selected package contains 264 inputs (66 source files, 34 tools and
+164 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
 P0 -- a Frame of its left and its right side flagged `LM_P0_FRAME_ASSIGN`, `a := 5` and `a:=5` one form -- that writes a
 place already known through the general assignment path (a local, a formal, a field through a path, the conversion of the
 reception, a reference place holding a method: `target := two` without a call of the bare right side, natively and in the
@@ -65,7 +65,42 @@ at `take (Point: p; int: q)`, at `Places\f` holding `g` positionally and by name
 and its address at `ptr_take (@@: pp Point; int: q)` and `Ptrs\f`, each followed by `touch()`: the Shape reads 29 with
 `touch()` run once, the Slim is the implicit `implements` and the number the implicit `convert` with `touch()` not run,
 in both executors (before: a walker INVALID for a number at a modelled formal of a static call, `touch()` run before the
-entry's refusal). Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
+entry's refusal). Slice307 (CALL-WHOLE-ARGUMENTS-STRUCTURE; the book's whole-arguments rule, the author's decisions of
+2026-11-07 and 2026-11-08; fable_pc): a call with one Structure argument does not differ from a call with the chain of its
+fields. The binder marks one actual written by position that may evaluate to a Structure -- a name, a path, a merge, a call
+-- as a candidate (`L2ApplicationActuals.whole` 2) and defers the check of the omitted formals; CHECK decides on the static
+shape of the actual (`lm_compiler_whole_shape`: a named Structure or a declared merge result by the resolved leaf, a call
+by its result's model, a merge written in the call by its operands -- a typed declaration, a callable's args part, a named
+Structure) and the formals (`lm_compiler_whole_fields`: every field names a formal of its kind's class, every other formal
+has a built default): the fields are the arguments (`whole` 1), or the ordinary positional reading stands with the
+binder's refusal of a missing formal, or -- the Structure also fitting the first formal, a Structure formal, by the first
+part of implements at translation (`lm_compiler_descriptor_used`, the author's instruction of 2026-11-08), every other
+formal defaulted -- two readings apply and the call is refused as ambiguous (`lm_compiler_whole_decide`; the fixture
+`whole_ambiguous_refused`). A whole call binds in the kernel, in both executors, after the one actual's evaluation
+(`lmx_call_bind_whole`: the form against the selected callable's args part -- every field a formal, every other formal
+holding its default, else the implicit `call` --, then each formal receives the field of its name as a written actual is
+received since slices 305-306, a number through the route of its type or the implicit `convert`, a graph by the formal's
+own entry reception; a formal without a field takes its default); natively the emitter evaluates the actual once as a
+graph reference and calls the binder with the routes of the fields' number types (`lm_compiler_emit_whole_call`,
+`lm_compiler_emit_whole_routes`), the walker's program carries the WHOLE operand `[whole, payload, (formal, witness,
+occurrence)*]` (`LMX_WALK_OP_WHOLE`, `lm_compiler_rw_whole_routed`) and the walk binds it in `lmx_walk_whole_values`. The kernel reads the
+fields of the value as its named cells: the native layout of a declared Structure keeps a step cell beside each place (the
+procedure's width is its kids and its steps, so `Args: int: c 4; int: a 6` holds c and a at the cells 0 and 2), which the
+first form of the binder read as a field without a formal (gdb on the probe program). The fixture `whole_arguments`: the
+author's `merge(mytest\args; (a: int: 5))` held by a place and given to `mytest (int: c 3; int: a)` is 35 as `mytest(a := 5)`
+is, a declared Structure whose fields are the formals is 46 (and is not written), a Structure with some of the formals and
+the others defaulted is 39, a Structure field at a Structure formal is 10, a char field at an int formal goes through the
+program's receiver once, the whole reaches a callable place (a callable of other names held there: the implicit `call`),
+and the ordinary reading stands for a Point at `take (Point: p)`, for `take(p := Point)` and for a Structure with extra
+fields; both executors. The merge written in the call itself, `mytest(merge(mytest\args; (a: int: 5)))`, is decided whole
+by its static shape but refused before that by the translation of the actual: a merge expression is lowered only as a
+declaration statement today ("merge expression is not lowered in this receiving context"; the fixture
+`whole_merge_inline_refused`) -- an implementation limit, not a rule of the language. The export lists of the kernel in
+`tools/build.lm2` count their names (`bld_kernel_l2`): the counts of lmx_implements and lmx_walk_values rose with the new
+exports, without which a program calling `lmx_call_bind_whole` failed at its C compile. Acceptance: the whole
+maintained registry on the candidate 139 rows, 1102 checks, 0 failures (native and forced, both roots); six mutants killed;
+whole boot170a 677 s with 0 failures and smoke 9/0 (G0 = the stage's tool170b); checks 38/0 (the candidate runtime the same
+bytes as the G2 runtime, the candidate frontend exe-same as the G2 frontend); landing 264 inputs; docs check 0. Slice302 (an intermediate result of IDENTIFIER-CODES, the author's directive of 2026-11-07; begun by Opus,
 finished by fable_pc) represents every identifier the kernel, the walker and an emitted unit execute with by the code of
 its spelling: the process service `lmx_ids` (a new machine module, `src/l2src/lmx_ids.lm2`) holds the one pair of
 informational tables code -> name and name -> code with one counter, the words of the language get the first codes in the

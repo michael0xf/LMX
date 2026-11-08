@@ -162,7 +162,7 @@ native/walker selection, without a hidden test catalogue, runtime names,
 failure of the **whole** test set remains undecided.
 
 <a id="assign-named-merge"></a>
-### 4.2 `:=`, named arguments and a `merge` of arguments: adopted rule, implemented by slices 303 and 304, the whole-arguments supply is the next slice (the hold lifted on 2026-11-08)
+### 4.2 `:=`, named arguments, a `merge` of arguments and the whole argument Structure: adopted rule, implemented by slices 303, 304 and 307
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
@@ -237,31 +237,49 @@ of the third:
   a number is not lowered as a field of the args part yet"); a path into
   the args part (`tst\args\c`) is not resolved ("unknown field path
   segment").
-- Not done: the whole argument Structure from one Structure --
-  `mytest(merge(mytest\args; (a: int: 5)))` = 35 and the same Structure
-  in a variable. Slice 303 held it on Codex's answer (a collision with the
-  rule "a signature is not executed"); the author's decision came on
-  2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the positional
-  passing of one Structure errs only because of an ambiguity -- two
-  methods, one with the one Structure as its arguments, the other with
-  the full set of its fields; every other case is computed by the
-  general matching, nothing is unfolded specially; `f(v := s)` is a
-  separate case. Slice 304 held the implementation on Codex's answer
-  (CODEX-FABLE-304-CHOICE-HOLD): today a call selects one callable by its
-  name before the arguments and there are no overloads of one name, and
-  Codex affirms neither the reading "two callables of one name" nor the
-  reading "two readings of one callable's requirement" and asked the
-  author how these two methods are written; the call's binder still puts
-  the `merge` result into the first position and refuses ("has no
-  argument a"). The author answered on 2026-11-08
-  ([journal](../LMX_blog/2026-11-08.md)): with two applicable methods the
-  call `f(s)` is ambiguous and refuses, a single applicable method is
-  resolved by the ordinary matching; a method with the formal `d: S` is
-  applicable when the first part of `implements`, at translation, admits
-  the Structure by the requirements of `S` -- the general compatibility
-  check, not a count of fields or a kind/type equality (the author's
-  clarification of 2026-11-08); the hold is lifted, the
-  implementation is the slice after CALL-ENTRY-ADMISSION-ORDER. The precedence of `:=` among operations and a value of
+- The whole argument Structure from one Structure (slice 307,
+  [record](../steps/witnesses/fix307-20261108/notes.md); native and the
+  walker, both roots): a call with a single Structure argument does not
+  differ from a call with the chain of its fields. The binder marks one
+  positional actual that may evaluate to a Structure (a name, a path, a
+  `merge`, a call) as a candidate and defers the check of the omitted
+  formals; the check decides on the static shape of the actual and the
+  formals of the selected callable (`lm_compiler_whole_decide`): every
+  field a formal of its name and of its kind's class, every other formal
+  with a built default -- the fields are the arguments; otherwise the
+  ordinary positional reading stands; when the Structure also fits the
+  first formal, a Structure formal, by the first part of `implements` at
+  translation, as the author instructed on 2026-11-08, with every other
+  formal defaulted, both readings apply and the call is refused as
+  ambiguous ("the Structure given to k is its argument q and its
+  arguments: an ambiguous call", the fixture `whole_ambiguous_refused`).
+  Two methods of one name cannot be written in one unit (the refusal
+  "duplicate definition"), so the author's ambiguity is realizable only as
+  two readings of one call. The binding is one kernel function of both
+  executors after the evaluation of the single actual
+  (`lmx_call_bind_whole`): the form against the current `args` part of the
+  selected callable -- every field a formal, every other formal holding
+  its current default, else the implicit `call`; then each formal, in its
+  own order, receives the field of its name as a written actual of slices
+  305-306 is received (a number through the route of its type or the
+  implicit `convert`, a graph by the formal's own entry reception, an
+  omitted formal by its default). The fields of the value are its named
+  cells: the native layout of a declared Structure keeps a step cell
+  beside each place (`Args: int: c 4; int: a 6` has four cells, `c` and
+  `a` at 0 and 2). `pack: merge(mytest\args; (a: int: 5)); mytest(pack)`
+  is 35, as `mytest(a := 5)` is; the declared `Args (c 4, a 6)` at
+  `mytest` is 46 and `Args` is not written; `Only (a 9)` is 39; a
+  Structure field at a Structure formal, a char field at an int formal
+  through the program's receiver (one call), the callable place
+  `Places\f` (a callable of other formal names held there: the implicit
+  `call`); the ordinary reading at `take(Point)`, `take(p := Point)` and
+  a Structure with extra fields (the fixture `whole_arguments`). An
+  implementation limit, not a rule of the language: the `merge` written
+  in the call itself -- `mytest(merge(mytest\args; (a: int: 5)))` -- is
+  decided whole by its static shape but refused earlier by the
+  translation of the actual: a merge expression is lowered only as a
+  declaration statement ("merge expression is not lowered in this
+  receiving context", the fixture `whole_merge_inline_refused`). The precedence of `:=` among operations and a value of
   the written form as an expression are not defined by the rule; the
   compound assignments are [4.3](#compound-assign-notes).
 

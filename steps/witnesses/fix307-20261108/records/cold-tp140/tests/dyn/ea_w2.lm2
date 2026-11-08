@@ -1,0 +1,219 @@
+# Probe ea_w2 (fable_pc, slice 307): which check of whole_arguments throws on the tuple tool170b/fe170f/rt170c, and which name.
+# Each check of the fixture in its own block with the three catches; run() returns the first anomalous code: 100 + k the implicit
+# `call`, 110 + k `implements`, 120 + k `convert`, 130 + k a wrong value (k = 1 by_place, 2 by_declared, 3 by_fields, 4 by_convert,
+# 5 by_callable_place, 6 single, 7 named, 8 not_whole, 9 by_default); 7 when every check reads its value.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+Args:
+    int: c 4
+    int: a 6
+end: Args
+GArgs:
+    Point: p
+    int: q 7
+end: GArgs
+CArgs:
+    char: c '2'
+    int: a 5
+end: CArgs
+Wrong:
+    int: x 5
+    int: y 6
+    int: z 3
+end: Wrong
+Only:
+    int: a 9
+end: Only
+Calls:
+    int: n 0
+end: Calls
+fn: lm_stg_convert_char_int (char: v) int
+    Calls\n: Calls\n + 1
+    return: (cast: (int) v)
+end: lm_stg_convert_char_int
+fn: mytest (int: c 3; int: a) int
+    return: c * 10 + a
+end: mytest
+fn: g (Point: p; int: q) int
+    return: p\x + p\y + q
+end: g
+fn: take (Point: p) int
+    return: p\x * 10 + p\y
+end: take
+fn: wrong (Point: p; int: q 1) int
+    return: p\x * 10 + q
+end: wrong
+Places:
+    fn: f (Point: p; int: q) int
+        return: p\x * 100 + p\y * 10 + q
+    end: f
+end: Places
+int: Hw 0
+fn: t1 () int
+    ---
+        pack: merge(mytest\args; (a: int: 5))
+        int: got mytest(pack)
+        if: got != 35
+            return: 131
+        return: 0
+        catch: call ()
+            return: 101
+        catch: implements ()
+            return: 111
+        catch: convert ()
+            return: 121
+    ---
+end: t1
+fn: t2 () int
+    ---
+        int: got mytest(Args)
+        if: got != 46
+            return: 132
+        return: 0
+        catch: call ()
+            return: 102
+        catch: implements ()
+            return: 112
+        catch: convert ()
+            return: 122
+    ---
+end: t2
+fn: t3 () int
+    ---
+        int: got g(GArgs)
+        if: got != 10
+            return: 133
+        return: 0
+        catch: call ()
+            return: 103
+        catch: implements ()
+            return: 113
+        catch: convert ()
+            return: 123
+    ---
+end: t3
+fn: t4 () int
+    ---
+        int: got mytest(CArgs)
+        if: got != 505
+            return: 134
+        return: 0
+        catch: call ()
+            return: 104
+        catch: implements ()
+            return: 114
+        catch: convert ()
+            return: 124
+    ---
+end: t4
+fn: t5 () int
+    ---
+        int: got Places\f(GArgs)
+        if: got != 10
+            return: 135
+        return: 0
+        catch: call ()
+            return: 105
+        catch: implements ()
+            return: 115
+        catch: convert ()
+            return: 125
+    ---
+end: t5
+fn: t6 () int
+    ---
+        int: got take(Point)
+        if: got != 12
+            return: 136
+        return: 0
+        catch: call ()
+            return: 106
+        catch: implements ()
+            return: 116
+        catch: convert ()
+            return: 126
+    ---
+end: t6
+fn: t7 () int
+    ---
+        int: got take(p := Point)
+        if: got != 12
+            return: 137
+        return: 0
+        catch: call ()
+            return: 107
+        catch: implements ()
+            return: 117
+        catch: convert ()
+            return: 127
+    ---
+end: t7
+fn: t8 () int
+    ---
+        int: got wrong(Wrong)
+        if: got != 51
+            return: 138
+        return: 0
+        catch: call ()
+            return: 108
+        catch: implements ()
+            return: 118
+        catch: convert ()
+            return: 128
+    ---
+end: t8
+fn: t9 () int
+    ---
+        int: got mytest(Only)
+        if: got != 39
+            return: 139
+        return: 0
+        catch: call ()
+            return: 109
+        catch: implements ()
+            return: 119
+        catch: convert ()
+            return: 129
+    ---
+end: t9
+fn: run () int
+    @: Hw g g
+    ---
+        @: Places\f Hw
+        catch: implements ()
+            return: 90
+    ---
+    int: r1 t1()
+    if: r1 != 0
+        return: r1
+    int: r2 t2()
+    if: r2 != 0
+        return: r2
+    int: r3 t3()
+    if: r3 != 0
+        return: r3
+    int: r4 t4()
+    if: r4 != 0
+        return: r4
+    int: r5 t5()
+    if: r5 != 0
+        return: r5
+    int: r6 t6()
+    if: r6 != 0
+        return: r6
+    int: r7 t7()
+    if: r7 != 0
+        return: r7
+    int: r8 t8()
+    if: r8 != 0
+        return: r8
+    int: r9 t9()
+    if: r9 != 0
+        return: r9
+    return: 7
+end: run
+int: code run()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

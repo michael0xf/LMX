@@ -1,0 +1,12 @@
+# Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE): the author's canonical form of the whole-arguments rule (the book #whole-arguments),
+# mytest(merge(mytest\args; (a: int: 5))) = 35, with the merge written in the call itself.  The translation decides the whole form
+# for it (the static shape of the merge by its operands: c and a, mytest's formals), but a merge expression is lowered only as a
+# declaration statement today -- as a value in a call's argument it refuses for every formal ("merge expression is not lowered in
+# this receiving context", lm_compiler_check_word_value): an implementation limit witnessed here, not a rule of the language; the
+# same Structure held by a place -- pack: merge(mytest\args; (a: int: 5)); mytest(pack) -- is 35 (whole_arguments).
+fn: mytest (int: c 3; int: a) int
+    return: c * 10 + a
+end: mytest
+int: r mytest(merge(mytest\args; (a: int: 5)))
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

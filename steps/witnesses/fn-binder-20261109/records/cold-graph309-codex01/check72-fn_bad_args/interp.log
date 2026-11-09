@@ -1,0 +1,26 @@
+GRAPH-BEFORE-BEGIN
+Box:
+    int: hits 0
+end: Box
+fn: touch () int
+    Box\hits: ((Box \ hits) + 1)
+    return: 3
+end: touch
+int: before (Box \ hits)
+fn: bad 7 int (touch)
+int: after (Box \ hits)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Box:
+    int: hits 0
+end: Box
+fn: touch () int
+    Box\hits: ((Box \ hits) + 1)
+    return: 3
+end: touch
+int: before 0
+fn: bad 7 int (touch)
+int: after (Box \ hits)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5

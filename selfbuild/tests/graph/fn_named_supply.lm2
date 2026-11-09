@@ -1,0 +1,38 @@
+# Slice 334 (Codex review of 333, item 2): the receiver fn binds its arguments by the one binder of a call against its
+# contracts -- ordinary signatures every traversal registers when it begins (fn: name, args, return, var, body; name,
+# args, return, body; name, args, return; name, parts) --: by position, by `:=`, and, for the parts of a receiver, by
+# head. `fn: name := k1; args := ...` and `fn: name: k2; args: ...` (the author's two named forms, 2026-11-09) create
+# their functions as the positional form does -- on entering the block, for their arguments are written -- with no
+# callable named name here. The value of `part := (...)` is the body written after `:=`, read as the block of a part
+# given by head is: several fields, none, a declaration, a statement. A part given by head is its Frame whatever it
+# holds (none, one field, a vertical block). sub binds its own contracts by the same binder.
+fn: name := k1; args := (int: a); return := int; body := (return: a + 1)
+fn: name: k2; args: (int: a); return: int; body: (return: a * 3)
+int: r1 k1(4)
+int: r2 k2(4)
+int: r3 k1(k2(1))
+fn: name := k3; args := (int: a; int: b); return := int; var := (int: calls 0); body := (calls: calls + 1; return: a * 10 + b)
+int: r4 k3(4; 2)
+int: r5 k3(b := 1; a := 3)
+int: c3 k3\var\calls
+fn: name := k4; args := (); return := int; var := (int: n 7); body := (return: n)
+fn: name: k5; args: (); return: int; var: (int: m 8); body: (return: m + 1)
+int: r6 k4()
+int: r7 k5()
+fn:
+    name: k6
+    args:
+        int: a
+        int: b
+    end: args
+    return: int
+    body:
+        int: d a - b
+        return: d * 2
+    end: body
+end: fn
+int: r8 k6(9; 4)
+sub: name := s1; args := (int: d 1); var := (int: total 0); body := (total: total + d)
+s1(5)
+s1()
+int: total s1\var\total

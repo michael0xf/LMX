@@ -1,0 +1,11 @@
+# Slice 334 (the author 2026-11-09: `name: "test"` with an existing callable name obeys the ordinary call of that
+# callable): with the function name declared, the Frame `name: 7` is the call name(7), applied once where the traversal
+# reaches the receiver's Frame; its value binds no part name, and the receiver is refused (the interpreter answers 5;
+# native and forced code fail there).
+fn: name (int: x) int (int: calls 0)
+    calls: calls + 1
+    return: x
+end: name
+int: r1 1
+fn: name: 7; args: (int: a); return: int; body: (return: a)
+int: r2 2

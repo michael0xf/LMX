@@ -1,0 +1,11 @@
+# Slice 334 (the author 2026-11-09: `name := "test"` names the part explicitly whatever callable name exists): with the
+# function name declared, `fn: name := k3; ...` still binds the part name by its name and creates k3; name stays the
+# callable it is (name(2) 200, one call).
+fn: name (int: x) int (int: calls 0)
+    calls: calls + 1
+    return: x * 100
+end: name
+fn: name := k3; args := (int: a); return := int; body := (return: a + 2)
+int: r1 k3(1)
+int: r2 name(2)
+int: c name\var\calls

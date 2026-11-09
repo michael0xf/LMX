@@ -1,0 +1,30 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus334
+GRAPH-BEFORE-BEGIN
+Box:
+    int: hits 0
+end: Box
+fn: touch () int
+    Box\hits: ((Box \ hits) + 1)
+    return: 3
+end: touch
+int: before (Box \ hits)
+fn: bad 7 int (touch)
+int: after (Box \ hits)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Box:
+    int: hits 0
+end: Box
+fn: touch () int
+    Box\hits: ((Box \ hits) + 1)
+    return: 3
+end: touch
+int: before 0
+fn: bad 7 int (touch)
+int: after (Box \ hits)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 5, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 5
+EXIT=1

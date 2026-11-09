@@ -313,6 +313,12 @@ end: lm_graph_build_sequence
 
 # A parser assignment flag becomes an ordinary Lmx operator and its operands. No parser flag survives.
 # The written selector is split here, once; consumers use the same nested field expression as every other path.
+# The operand is the body written after `:=`, read by the one model of a Frame (§3.3) as the body of a Frame given by
+# its head is: a single field that is a value -- a word, an unnamed int, an unnamed Lmx (an expression) -- is the
+# operand itself; any other body -- no field, several, a place, a Frame -- is the Structure of its fields as written
+# (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. A consumer that evaluates
+# the operand reads a Structure of one field as that field (lmx_graph_eval_value, lm_graph_emit_operand): a Frame
+# applying a callable or merge stays that application.
 fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0Frame; @@: out void) int
     @: text c.LmP0Text lm_graph_p0_head(frame)
     const: @: bytes char lm_graph_p0_data(text)
@@ -323,7 +329,10 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
     @: left void 0
     @: path c.Lmx 0
     @: rhs void 0
+    @: operand void 0
+    @: single void 0
     @: result c.Lmx 0
+    int: kind 0
     int: status 0
     while: i <= text_size
         if: i = text_size || bytes[i] = 92
@@ -347,10 +356,16 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
     status: lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), 0, 0, (cast: (@: c.LmP0Trailer) frame\trailer), @ rhs)
     if: status != 0
         return: status
-    if: c.lmx_graph_count((cast: (@: c.Lmx) rhs)) != 1U
-        return: 2
+    operand: rhs
+    if: c.lmx_graph_count((cast: (@: c.Lmx) rhs)) = 1U
+        single: c.lmx_graph_get((cast: (@: c.Lmx) rhs), 0U)
+        kind: c.lmx_graph_kind(g, single)
+        if: kind = 2 || kind = 5 || kind = 6 || ((kind = 1 || kind = 4) && c.lmx_graph_name_of(g, single) = 0)
+            operand: single
+        ---
+    ---
     result: c.lmx_graph_lmx(g, parent, 3U)
-    if: result = 0 || lm_graph_build_put(g, result, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || lm_graph_build_put(g, result, 1U, left) != 0 || lm_graph_build_put(g, result, 2U, c.lmx_graph_get((cast: (@: c.Lmx) rhs), 0U)) != 0
+    if: result = 0 || lm_graph_build_put(g, result, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || lm_graph_build_put(g, result, 1U, left) != 0 || lm_graph_build_put(g, result, 2U, operand) != 0
         return: 1
     out[0]: (cast: (@: void) result)
     return: 0
@@ -786,12 +801,13 @@ fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap) in
 end: lm_graph_emit_parents
 
 # The name a root application of fn or sub gives (lmx_graph_fn_apply), as far as the translation reads it: the written
-# name of the form with a Structure of the parts, or the name part of the prepared Structure the translation's namespace
+# name the binder takes (lmx_graph_fn_decl_name), or the name part of the prepared Structure the translation's namespace
 # answers by the written word (lmx_graph_fn_part); 0 when only the program knows it (a Structure an expression computes).
 fn: lm_graph_emit_fn_name (@: g c.LmxGraph; @: root c.Lmx; @: decl c.Lmx) @: char
     @: value void 0
-    if: c.lmx_graph_count(decl) = 2U
-        return: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+    @: name char c.lmx_graph_fn_decl_name(g, decl)
+    if: name != 0
+        return: name
     if: c.lmx_graph_count(decl) != 1U || c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) != 2
         return: 0
     value: c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))))
@@ -1916,7 +1932,7 @@ fn: lm_graph_collect_methods (@: g c.LmxGraph; @: root c.Lmx; @@@: methods c.Lmx
         at: at + 1U
         head: c.lmx_graph_name_of(g, (cast: (@: void) current))
         if: (head = state\w_fn || head = state\w_sub) && current\parent != 0
-            made: (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) current\parent), c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U))))
+            made: (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) current\parent), c.lmx_graph_fn_decl_name(g, current)))
             if: c.lmx_graph_method(g, made) != 0 && made\parent = current
                 status: c.lmx_graph_scan_add(methods, methods_count, @ method_capacity, made)
             ---

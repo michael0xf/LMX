@@ -1,0 +1,33 @@
+GRAPH-BEFORE-BEGIN
+fn: f1 (int: a; int: b 2) int
+    return: ((a * 10) + b)
+end: f1
+fn: f2 (int: b 7) int
+R:
+    merge: f1 f2
+end: R
+fn: g R
+int: r1 (f1 1)
+int: r2 (g 1)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f1 (int: a; int: b 2) int
+    return: ((a * 10) + b)
+end: f1
+fn: f2 (int: b 7) int
+R:
+    args:
+        int: a
+        int: b 7
+    end: args
+    return: int
+    var:
+    body:
+        return: ((a * 10) + b)
+    end: body
+end: R
+fn: g R
+int: r1 12
+int: r2 17
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

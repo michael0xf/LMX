@@ -1,0 +1,35 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus334
+GRAPH-BEFORE-BEGIN
+fn: f () int
+    return: 3
+end: f
+A: (int p (f))
+B:
+    int: q 4
+end: B
+R:
+    merge: A B
+end: R
+int: rp (R \ p)
+int: rq (R \ q)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f () int
+    return: 3
+end: f
+A: (int p (f))
+B:
+    int: q 4
+end: B
+R:
+    int: p (f)
+    int: q 4
+end: R
+int: rp (R \ p)
+int: rq (R \ q)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 3, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 3
+EXIT=1

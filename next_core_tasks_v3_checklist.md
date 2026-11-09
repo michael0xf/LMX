@@ -105,6 +105,13 @@ PASS, mutation 11/11, method-mutation 8/8. Не сделано: внутренн
 для частей; `lmx_graph_merge_level` — части функции-модели компонуются рекурсивно (`fn_new_name`: g(1; 2) 15;
 `descriptor_merge`: g(1) 17); var — с нужными предками (mutation 12/12). 73 запуска graph-check × 3 режима PASS,
 method-mutation 8/8. Не сделано: применение в теле, именованная подача и подача частей по головам (5).
+Срез 334 [graph72/tool34/rt61](steps/witnesses/fn-binder-20261109/notes.md) по ревью Codex 333 и проверке 334:
+`lmx_graph_merge_level` — без условия FN pool и без классификации кода (`merge_nested_part`, `merge_code_descriptions`);
+`lmx_graph_receivers_open` — контракты `fn`/`sub` как обычные сигнатуры; `lmx_graph_bind_formals` /
+`lmx_graph_bind_fields` — одна карта имён вызова и ресивера; `lmx_graph_receiver_admit` — приём до следующего actual
+(`fn_bad_args`); `name := …` и `name: …` (`fn_named_supply`, `fn_name_collision`, `fn_name_call`); операнд `:=` — тело
+одной моделью Frame; `fn: other prepared` дополняет var. 79 запусков graph-check × 3 режима PASS, mutation 12/12,
+method-mutation 8/8. Не сделано: вычисляемое применение в теле (5); приём вызова и ресивера — разные функции.
 
 Уточнение автора от 2026-10-24: объявления арены и пулов генерировать на L3 как строки L1, без нового механизма в L2 ([дословный источник](LMX_blog/2026-10-24.md)). Прежний вопрос Codex о машинной C-раскладке снят. Генерация ещё не реализована этим изменением документов; отметки готовности не повышаются. Следующий результат — самосборка, не расширение системы или тестовой кампании. Срез185 (Verified185 `3a5c6919`, E20) её реализует: `lmx.h.lm1` целиком, `lmx_arena_blocks.h.lm1` и `lmx_arena.h.lm1` пишет код L3 сборки (`decls_write_all`), и короткий bootstrap прошёл с ними.
 

@@ -680,13 +680,16 @@ fn: lmx_graph_method_return (@: g c.LmxGraph; @: code c.Lmx) @: void
 end: lmx_graph_method_return
 
 # The name the field index of a declaration Structure (args, var) answers to: a place by the name of its cell, a
-# declaration Frame `T: name` or `@: name T` -- an Lmx named by its receiver (§3.3) -- by its first argument.
+# declaration Frame `T: name` or `@: name T` -- an Lmx named by its receiver (§3.3) -- by its first argument, an empty
+# named Lmx -- a Structure formal of a receiver's contract, with no written model -- by its own name.
 fn: lmx_graph_formal_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
     @: value void lmx_graph_get(lmx, index)
     @: inner c.Lmx 0
     if: lmx_graph_kind(g, value) = 4
         inner: (cast: (@: c.Lmx) value)
-        if: lmx_graph_name_of(g, value) = 0 || lmx_graph_count(inner) = 0U
+        if: lmx_graph_count(inner) = 0U
+            return: lmx_graph_name_of(g, value)
+        if: lmx_graph_name_of(g, value) = 0
             return: 0
         return: lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
     return: lmx_graph_slot_name(g, lmx, index)

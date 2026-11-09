@@ -428,29 +428,52 @@ holds it; the next traversal creates its own F from the same written declaration
 installed on the declaration is also the entry of the F created. Declarations in a body are created by the same rule in
 the body's block.
 
-**The receiver applied to computed arguments (slice 333; the author 2026-11-09, [journal](../LMX_blog/2026-11-09.md)).**
-A declaration with written arguments -- a positional form of the contract whose Structure arguments are written as
-anonymous Structures (`lmx_graph_fn_written`) -- creates F on entering its block, and the name is visible in the whole
-block ([the book](LMX_semantics.en.md#declaration-visibility)). The receiver applied to arguments the traversal computes
-creates F where the traversal reaches its Frame (`lmx_graph_fn_apply`), and the name answers from there on («в любой
-момент можем подставить заготовленную структуру ресиверу fn и это будет объявлением функции в namespace»): `fn: prepared`
-has one argument, the whole prepared Structure, whose fields `name`, `args`, `return` (of `fn`), `var`, `body` give the
-receiver's arguments by their names; `fn: new_name merge(f1, f2)` is the same receiver with two arguments (receivers with
-different numbers of arguments share one name): the written name, which is not evaluated, and a Structure of the parts,
-in which a field `name` is an ordinary field, not the name. Every part is read by the one model of a Frame
-(`lmx_graph_fn_part`; as at the root, §6.1): a reference answers its target, a Frame `name: value` with one value field
-that value, another field itself -- whatever Structure is given (code, a `merge` result, a created function: it has no
-field `name`, and the name is never taken from the operands' names). The same constructor builds F (`lmx_graph_fn_make`,
-its `var` by `lmx_graph_fn_var`), its `parent` is the Frame of the application, and the free names of its body resolve
-from it (§3.5): the name `f1` in a body `merge` copied is the function `f1` of this block, `k` the root's place as it is
-at the call. The name is checked before the Structure is evaluated; the Structure is evaluated once, by the general
-meaning of the expression. Refusals: a name that already answers in this block -- 4; another count of arguments, a field
-outside the contract, no name, `args` or result requirement -- 5 (`fn: merge(f1, f2)`); such an application in a body or
-an inline block -- 5 (a repeated activation would bind the name again; an implementation limit), as are the named
-supply `name := ...` and the supply of the parts by Frames named by their heads (`fn: name: ...; args: ...`). The
-translator creates neither F nor native code for such a function: the root's code calls `lmx_graph_fn_apply`, a call of
-the function is resolved when the code runs and goes to the interpreter (graph64: `fn_prepared`, `fn_new_name`,
-`fn_without_name`, `descriptor_merge`, the four fixtures of merged callables).
+**The receiver's contract and the one binder (slices 333-334; the author 2026-11-09, [journal](../LMX_blog/2026-11-09.md);
+Codex, reviews of 333 and 334).** Every traversal begins by registering the contracts of the receivers `fn` and `sub` in
+the root's block of its namespace (`lmx_graph_receivers_open`): ordinary signatures, receivers with different numbers of
+arguments sharing one name -- `fn` [name, args, return, var, body], [name, args, return, body], [name, args, return],
+[name, parts]; `sub` [name, args, var, body], [name, args, body], [name, parts]. `name` and `return` are taken as written
+(a word, or a written form such as the type `@: c.FILE`), the other formals are Structures. A Frame `fn`/`sub` binds its
+actuals by the one binder of a call (`lmx_graph_bind_formals`, which `lmx_graph_bind_call` uses too): by position; by
+`:=` (`name := k1`); and, for the parts of a receiver's written form, by head (`name: k2; args: (...)`: a Frame whose head
+names a formal and answers no callable in scope, whatever fields it holds -- none, one, a vertical block). The value of
+`part := ...` is the body written after `:=`, read by the one model of a Frame as the block of a part given by head is:
+a single value is itself, any other body -- no field, several, a declaration, a statement -- is the Structure of its
+fields as written (`lm_graph_build_assignment`, `lmx_graph_frame_value`), so `args := (int: a)` and `args: (int: a)` give
+the same `args`; a consumer that evaluates the operand reads a Structure of one field as that field, as before. The
+first form all of whose formals the actuals bind is chosen before any actual is evaluated; else one actual is the whole
+argument structure (`fn: prepared`): a Structure whose fields give exactly the formals of a form (`lmx_graph_bind_fields`,
+the book's whole-arguments), read by their values (`lmx_graph_field_value`). What is written for a formal stands as
+written where it applies nothing (`lmx_graph_applies`: merge, or a Frame whose head answers a callable in scope, is an
+application); an application, or a name a Structure formal resolves, is evaluated once, in order, and each value is
+received by its formal before the next actual is evaluated (`lmx_graph_receiver_admit`: a formal taken as written
+receives a word or a written form, a Structure formal a Structure): `fn: bad 7 int touch()` is refused (5) before
+`touch()` runs. The receiver's action is one: `lmx_graph_receiver_make` and the constructor `lmx_graph_fn_make` (its `var`
+by `lmx_graph_fn_var`); the name must be a word (5). A declaration whose actuals bind with no evaluation
+(`lmx_graph_fn_written`) creates F on entering its block, and the name is visible in the whole block
+([the book](LMX_semantics.en.md#declaration-visibility)); the receiver applied to arguments the traversal computes -- the
+whole prepared Structure (`fn: prepared`), the written name and a Structure of the parts (`fn: new_name merge(f1, f2)`),
+any form whose part an expression gives -- creates F where the traversal reaches its Frame (`lmx_graph_fn_apply`), and the
+name answers from there on («в любой момент можем подставить заготовленную структуру ресиверу fn и это будет объявлением
+функции в namespace»). A written name is checked before any argument is evaluated. In a Structure of the parts a field
+`name` is an ordinary field, not the name; every part is read by the one model of a Frame (`lmx_graph_fn_part`; as at the
+root, §6.1), whatever Structure is given (code, a `merge` result, a created function), and the name is never taken from
+the operands' names. F's `parent` is the Frame of the application, and the free names of its body resolve from it
+(§3.5): the name `f1` in a body `merge` copied is the function `f1` of this block, `k` the root's place as it is at the
+call. With a callable named `name` in scope, `fn: name: 7; ...` applies that callable (its head answers it: the ordinary
+call, once) and its value binds no part (5); `fn: name := k3; ...` names the part explicitly whatever callable exists
+(the author 2026-11-09). A result requirement other than a word is kept as written: positionally the form itself, by
+head or by `:=` the block that holds it; the executors run results whose requirement is `int` (`lmx_graph_call_shape`).
+Refusals: a name that already answers in this block -- 4; no form, a value its formal does not receive, a field outside
+the contract, no name, `args` or result requirement -- 5 (`fn: merge(f1, f2)`); a computed application in a body or an
+inline block -- 5 (a repeated activation would bind the name again; an implementation limit). The binder's name map is
+shared by calls and receivers (`lmx_graph_bind_formals`, `lmx_graph_bind_fields`; by head only for the parts of a
+receiver); the reception is each signature's own: the typed formals of a callable through `lmx_graph_admit`, the formals
+of a receiver's contract through `lmx_graph_receiver_admit`. The translator names a written declaration by
+`lmx_graph_fn_decl_name` (the word at the first position, of `name := word` or of `name: word`) and installs native code
+on it; a computed application is the root code's call of `lmx_graph_fn_apply`, and a call of such a function goes to the
+interpreter (graph72: `fn_named_supply`, `fn_name_collision`, `fn_name_call`, `fn_bad_args`, `fn_prepared`,
+`fn_new_name`, `fn_without_name`, `descriptor_merge`, the fixtures of merge).
 
 **Formals** are slots of `args` with the same representation as any place (§3.2): `int: q` → an `uninit:int` pointer onto
 the formal's `int` cell (named `q`) -- a mandatory formal; `int: q 0` → an `int` cell = 0 -- a default, read, not
@@ -641,22 +664,31 @@ through a `fromLmx`-like interning boundary. `independent: immutable` follows th
 Operands of `merge` are ordinary expressions with their general meaning (the author, 2026-11-08,
 [journal](../LMX_blog/2026-11-08.md)): a head naming a function is applied once and its result is the operand, and a
 model field of the same name never intercepts that call (`f(3)` and `f: 3` are one graph); a Frame whose head is no
-function describes a structure. Whole functions merge by the same Structure rules: when the model is a Structure `fn` or
-`sub` created, its parts that later operands give again as Structures (`args`, `var`) are composed by the same level of
-`merge` through the same map, recursively (`lmx_graph_merge_level`), a word place (`return`) takes the later word, and the
-slot keeps the model's form (a named reference refers to the composition); for `f2` without a body the result keeps the
-copy of `f1`'s body and gets the signature of both: `fn: g merge(f1, f2)` gives `g` with the formals `a`, `b` and the body
-of `f1` (graph64, `fn_new_name`; `descriptor_merge`: the descriptor's default `b` 7). Every operand root maps to the result in the
+function describes a structure. One composition serves every operand, whatever made it (slice 334; Codex, review of
+333: no special merge of functions): a slot whose value is a Structure that later operands give again as Structures is
+composed by the same level of `merge` through the same map, recursively (`lmx_graph_merge_level`), every field read by
+its value (`lmx_graph_field_value`) -- nested parts of data (`merge_nested_part`: the part `P` gets the new field `v`),
+descriptions written as code with a field `name` (`merge_code_descriptions`: `d2` without a body), functions of the
+namespace (`merge_callable`, `fn_new_name`) --, with no classification by origin or by the statements a part holds; a
+word place (`return`) takes the later word, and the slot keeps the model's form (a named reference refers to the
+composition); for `f2` without a body the result keeps the copy of `f1`'s body and gets the signature of both:
+`fn: g merge(f1, f2)` gives `g` with the formals `a`, `b` and the body of `f1` (`fn_new_name`; `descriptor_merge`: the
+descriptor's default `b` 7). Every operand root maps to the result in the
 one map, and a field of a later operand named like a place of the result maps to that place (its value and its cell),
 so a reference to it reaches the result's place; a copied Structure's parent becomes the copy of its parent. A needed
 lexical ancestor — one a copied name resolves through — is copied as an ordinary Lmx through the same map, whole, with
 its fields, references and cycles, up to parent 0: it is not trimmed to the names met, and this is no copy of the whole
 arena but the necessary reachable closure. A result with no written name or callable needs no ancestor and has parent 0
 (no lexical parent, not an arena-root object); the source's mutable ancestor is never mixed in, and the place of
-execution never gives one. The result of one operand is the copy of its root and keeps its name by §5.1. Functions live
-only in a traversal's namespace (§3.4): a copied ancestor holds the declarations as written, not functions, and the
-function `fn: g merge(f1)` creates from the copy resolves the free names of its body from itself (`merge_recursion`: the
-name `f1` in the copied body is the root's function `f1`; one activation of `g`, three of `f1`). A new place for a
+execution never gives one. The result of one operand is the copy of its root and keeps its name by §5.1. What a traversal
+holds apart from the graph are its tables and their roots (§5.2): an F the program holds by a reference of the graph
+stays a value and is copied as one; the copy holds no binding made by another traversal, and a new traversal builds its
+tables from the graph it reaches -- no context is ruled out by the current resolver. The function `fn: g merge(f1)`
+creates from the copy is a new declaration: its `parent` is the Frame of the application, and the free names of its body
+resolve from there by the general rule of the chosen method and node (the book :110, :784; the priority of dynamic inputs
+:829-833) -- `merge_recursion`: the name `f1` in the copied body is the root's function `f1`; one activation of `g`,
+three of `f1`; the copy, its body and its references keep their copied chains (the book :1205-1207), and no explicit
+reference is redirected to a source. A new place for a
 Structure or callable that already has a name is a new named reference (a `ref` cell, §2.2)
 to the same instance ([book :441](LMX_semantics.en.md#resolved-head-consumption), `@: name Model`): the reference has
 its own address and name, the target's name does not change; a call, a path, a field write and a `merge` operand
@@ -664,7 +696,7 @@ through the reference take its target ([book :454](LMX_semantics.en.md#ordinary-
 [:1237](LMX_semantics.en.md#factory-reference-result)), and the copy of a reference points at the copy of its target
 through the same map. The name of a function created from a composition is the name argument of the receiver
 (`fn: new_name merge(f1, f2)`), not a field and not the operands' names (§3.4). The implemented subset and its open
-parts: the status above (graph64).
+parts: the status above (graph72).
 
 ### 6.5 Resetting `native` on a write (decision; the norm is [L2 §11](L2_spec_en.md#call))
 

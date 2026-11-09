@@ -1,0 +1,38 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus334
+GRAPH-BEFORE-BEGIN
+fn: (:= name k1) (:= args (int a)) (:= return int) (:= body (return (a + 1)))
+fn:
+    name: k2
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a * 3)
+    end: body
+end: fn
+int: r1 (k1 4)
+int: r2 (k2 4)
+int: r3 (k1 (k2 1))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: (:= name k1) (:= args (int a)) (:= return int) (:= body (return (a + 1)))
+fn:
+    name: k2
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a * 3)
+    end: body
+end: fn
+int: r1 (k1 4)
+int: r2 (k2 4)
+int: r3 (k1 (k2 1))
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 5, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 5
+EXIT=1

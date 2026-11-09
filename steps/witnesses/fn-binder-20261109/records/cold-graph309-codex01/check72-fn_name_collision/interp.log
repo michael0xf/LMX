@@ -1,0 +1,25 @@
+GRAPH-BEFORE-BEGIN
+fn: name (int: x) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: (x * 100)
+end: name
+fn: (:= name k3) (:= args ((int a))) (:= return int) (:= body ((return (a + 2))))
+int: r1 (k3 1)
+int: r2 (name 2)
+int: c ((name \ var) \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: name (int: x) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: (x * 100)
+end: name
+fn: (:= name k3) (:= args ((int a))) (:= return int) (:= body ((return (a + 2))))
+int: r1 3
+int: r2 200
+int: c 1
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

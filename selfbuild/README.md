@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 383 entries.
+are historical. The current input manifest has 393 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -151,6 +151,13 @@ reaches it (the author 2026-11-09): `fn: prepared` (a whole prepared Structure) 
 name and a Structure of the parts) create the function with the one constructor; `merge` of functions composes their
 parts `args` and `var`, keeping the body of `f1`. 73 graph-check runs passed.
 [Sources, receipts and limits](../steps/witnesses/fn-forms-20261109/notes.md).
+
+The current graph72/tool34/rt61 applies Codex's review of slice 333: `merge` composes the Structure parts of any
+operands by one rule whatever made them, and the receivers `fn` and `sub` are ordinary signatures of the traversal's
+clean namespace, bound by the one binder of a call (by position, by `:=`, by head; each actual received before the
+next), so the author's named forms `fn: name := k1; args := ...` and `fn: name: k2; args: ...` create their functions.
+79 graph-check runs passed.
+[Sources, receipts and limits](../steps/witnesses/fn-binder-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

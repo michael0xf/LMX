@@ -1,0 +1,44 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus334
+GRAPH-BEFORE-BEGIN
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    if: (a = 0) ((return 0))
+    return: (a + (f1 (a - 1)))
+end: f1
+fn:
+    g
+    merge: f1
+end: fn
+int: r1 (g 3)
+int: c1 ((f1 \ var) \ calls)
+int: c2 ((g \ var) \ calls)
+int: r2 (f1 2)
+int: c3 ((f1 \ var) \ calls)
+int: c4 ((g \ var) \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    if: (a = 0) ((return 0))
+    return: (a + (f1 (a - 1)))
+end: f1
+fn:
+    g
+    merge: f1
+end: fn
+int: r1 (g 3)
+int: c1 ((f1 \ var) \ calls)
+int: c2 ((g \ var) \ calls)
+int: r2 (f1 2)
+int: c3 ((f1 \ var) \ calls)
+int: c4 ((g \ var) \ calls)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 5, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 5
+EXIT=1

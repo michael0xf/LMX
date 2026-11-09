@@ -1,5 +1,5 @@
 sub: add (int: delta 2) (
-    int: sum 37
+    int: sum 0
 )
     finally: (sum (sum + 10))
     sum: (sum + delta)
@@ -18,7 +18,7 @@ call: add Other
 int: other_sum 112
 int: own_sum 37
 sub: early (int: x) (
-    int: value 15
+    int: value 0
 )
     finally: (value (value + 10))
     value: x
@@ -27,9 +27,7 @@ sub: early (int: x) (
 end: early
 early: 5
 int: early_value 15
-sub: normal () (
-    int: late
-)
+sub: normal ()
     late: 7
     int: late
     finally: (late (late + 1))
@@ -41,7 +39,7 @@ fn: wrapper () int (
 )
     capture:
     sub: capture () (
-        int: seen 4
+        int: seen 0
     )
         seen: total
         total: (total + 1)
@@ -50,7 +48,7 @@ fn: wrapper () int (
 end: wrapper
 int: nested_value 44
 sub: outer () (
-    int: trace 3
+    int: trace 0
 )
     finally: (trace (trace + 1))
     finally: (return)

@@ -1,21 +1,19 @@
 fn: ordered () int (
-    int: trace 21
+    int: trace 0
 )
     finally: (trace ((trace * 10) + 1))
     finally: (trace ((trace * 10) + 2))
     return: 9
 end: ordered
 fn: held () int (
-    int: x 6
-    int: seen 5
+    int: x 0
+    int: seen 0
 )
     finally: (seen ((held \ var) \ x)) (x (x + 1))
     x: 5
     return: x
 end: held
-fn: scoped () int (
-    int: trace
-)
+fn: scoped () int
     int: trace 0
     if: 0 ((finally (trace 99)))
     ---
@@ -24,40 +22,32 @@ fn: scoped () int (
     ---
     return: trace
 end: scoped
-fn: jumps () int (
-    int: i
-    int: trace
-)
+fn: jumps () int
     int: i 0
     int: trace 0
     while: (i < 4) ((finally (trace ((trace * 10) + i))) (i (i + 1)) (if (i = 1) ((continue))) (if (i = 2) ((redo))) (if (i = 4) ((break))))
     return: trace
 end: jumps
 fn: replacement () int (
-    int: trace 1
+    int: trace 0
 )
     finally: (trace (trace + 1))
     finally: (return 7)
     return: 3
 end: replacement
 fn: nested () int (
-    int: trace 123
+    int: trace 0
 )
     finally: (finally (trace ((trace * 10) + 3))) (trace ((trace * 10) + 2))
     trace: 1
     return: trace
 end: nested
-fn: cleanup_field () int (
-    int: late
-)
+fn: cleanup_field () int
     late: 4
     finally: (int late) (late (late + 1))
     return: late
 end: cleanup_field
-fn: cleanup_jump () int (
-    int: i
-    int: trace
-)
+fn: cleanup_jump () int
     int: i 0
     int: trace 0
     while: (i < 3) ((finally (trace ((trace * 10) + i)) (if (i < 3) ((continue)))) (i (i + 1)) (break))

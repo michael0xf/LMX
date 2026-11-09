@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 370 entries.
+are historical. The current input manifest has 368 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -132,6 +132,13 @@ The current graph52/tool29/rt40 builds the clean graph of the production machine
 (reference formals `@: name T`; the C-door declarations `include:`/`predef:` stand in the root). The machine export from
 that graph is the next step. 66 graph-check runs passed.
 [Sources, receipts and limits](../steps/witnesses/clean-production-20261109/notes.md).
+
+The current graph58/tool31/rt49 keeps a `fn`/`sub` declaration as written -- the Lmx named `fn` with the arguments
+`name`, `args`, `return`, `var`, `body`; every Frame is an Lmx named by its head -- and each traversal (the interpreter,
+the translator) creates the function's Structure in its own initially empty namespace, with its own `var` copied from
+the written one (the author 2026-11-09). A Structure made by `merge` of a callable is not a function until `fn:` receives
+it (slice 333). 67 graph-check runs passed.
+[Sources, receipts and limits](../steps/witnesses/fn-traversal-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

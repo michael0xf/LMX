@@ -1,0 +1,37 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus332
+GRAPH-BEFORE-BEGIN
+fn: mark () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: calls
+end: mark
+fn: twice () int
+    int: first (mark)
+    int: second (mark)
+    return: ((first * 10) + second)
+end: twice
+int: last 0
+int: pair 0
+last: (mark)
+pair: (twice)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: mark () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: calls
+end: mark
+fn: twice () int
+    int: first (mark)
+    int: second (mark)
+    return: ((first * 10) + second)
+end: twice
+int: last 1
+int: pair 23
+last: (mark)
+pair: (twice)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+EXIT=0

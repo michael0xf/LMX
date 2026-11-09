@@ -1,0 +1,32 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus332
+GRAPH-BEFORE-BEGIN
+sub: sink (int: value) (
+    int: calls 0
+)
+    calls: (calls + 1)
+end: sink
+fn: effect () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: 5
+end: effect
+int: wrong (sink (effect))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: sink (int: value) (
+    int: calls 0
+)
+    calls: (calls + 1)
+end: sink
+fn: effect () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: 5
+end: effect
+int: wrong (sink (effect))
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5
+EXIT=0

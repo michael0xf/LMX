@@ -243,7 +243,8 @@ source text ──► builder (parsing + construction) ──► a clean Lmx gra
 **The builder** is the only place where text becomes a graph: parsing (P0 today) and construction of cells in the regions
 of the receiving arena, interning of spellings (§4), filling of the address → name table (§5.1). Its boundary is the
 finished graph; the parse tree, its arenas and any working data of the builder are destroyed on leaving the construction
-(like traversal data, §5.2). The builder resolves no names: a written name stays in the graph as a word primitive (§3.5).
+(like traversal data, §5.2). The builder resolves no names: a written name stays in the graph as a word primitive (§3.5). It leaves the declarations
+of `fn`/`sub` as written, too: the consumer creates the Structure of a declaration in its own traversal (§3.4).
 **The consumers** -- the interpreter (§6) and the translator (§7) -- read one and the same graph and prepare nothing in it
 for each other. The translator emits native bodies and the unit's loading code. The loading code is a **generated
 initialization of the same clean graph**: the exact cells in typed regions, their links, the rows of the address → name
@@ -390,52 +391,74 @@ actual arguments are received into separate frame places.
 
 `x + 1` is an Lmx of the ordinary kind with three fields: field 0 → the word primitive `x` (the written name: a `word`
 cell with the canonical pointer to the string `x`; resolved into a place at execution through the current traversal's
-table, §3.5), field 1 → the word primitive `+` (a `word` cell with a pointer to the interned string `+`; an implementation
-decision: a physical word cell with a pointer to the canonical string, with no opcode and no occurrence entity), field 2 →
-the number primitive `1` (an `int` cell belonging to this expression). No typed operation record (`LmxOp`), no frame with
-numeric selectors and no special kind of memory for code: the interpreter recognizes the operation by comparing the
-word's pointer with the interned strings of the operators (§6.2), and the operand types by the regions of their cells
-after the names are resolved. The head and the arguments of any written Frame `head: a b c` are the same Lmx: field 0 the
-head (the word of a receiver, an operator or a name), then the arguments; a nested Structure of a body is a child Lmx with
-`parent` on the containing one.
+table, §3.5), field 1 → the word primitive `+` (a `word` cell with a pointer to the interned string `+`; an
+implementation decision: a physical word cell with a pointer to the canonical string, with no opcode and no occurrence
+entity), field 2 → the number primitive `1` (an `int` cell belonging to this expression). No typed operation record
+(`LmxOp`), no frame with numeric selectors and no special kind of memory for code: the interpreter recognizes the
+operation by comparing the word's pointer with the interned strings of the operators (§6.2), and the operand types by
+the regions of their cells after the names are resolved. A written Frame `head: a b c` is an Lmx named by its head (the
+address → name row for this Lmx's address is the string `head`) whose fields are the arguments `a`, `b`, `c` (the author
+2026-11-09: «объявление fn в дереве это именованная структура (fn ее название) с аргументами»,
+[journal](../LMX_blog/2026-11-09.md)); the role of the head -- a receiver of the language, a callable, a place or a new
+name -- is decided by the consumer's resolution during its traversal (§3.5), not by the builder. An operation written as
+a Frame (`-(2 + 3)`, `\(p)`) stays an operation, as in any expression: the operator word in field 0 and the operands,
+with no name; so do `x + 1`, a path and `:=`; an anonymous Structure gets no name. A nested Structure of a body is a
+child Lmx with `parent` on the containing one.
 
 ### 3.4 Callables, var and data (norm + decision)
 
-`fn: take (Point: p; int: q) int … end: take` is the Lmx of the written Frame, **of the ordinary kind** (§2.2), with exactly
-five fields: field 0 the word primitive `fn` (the written head; the role is read by the word's pointer, §6.2 -- not by the
-region kind), fields 1–4 the four parts ([book](LMX_semantics.en.md#method-parts)): `args` -- the Lmx of the formals,
-`return` -- the Lmx of the result requirement, `var` -- the Lmx of own fields, `body` -- the Lmx of statements. There are
-no hidden parts or roles; the name `take` is a row of the name table for this Lmx's address. `sub: … end: sub` is the word
-`sub` and three parts (`args`, `var`, `body`); `fm` likewise. A Structure **created by executing** the `fn` receiver is
-put into the `lmx:result` region ([L2 §2.1](L2_spec_en.md#interpretable-tree)) -- a classification of the result of
-execution, not of the definition and not of a Structure with similar parts.
+`fn: take (Point: p; int: q) int … end: take` is the Lmx of the written Frame, **of the ordinary kind** (§2.2), named
+`fn` (§3.3), with the receiver's five arguments: `name` -- the word primitive `take`, `args` -- the Lmx of the formals,
+`return` -- the result requirement (the word `int`), `var` -- the Lmx of own fields, `body` -- the Lmx of statements
+([book](LMX_semantics.en.md#method-parts)); the short form without `var` has four arguments, the descriptor without a
+body three. `sub: … end: sub` is the Lmx `sub` with the arguments `name`, `args`, `var` (when written) and `body`; `fm`
+is not executed by this slice and refuses explicitly. The declaration stays in the graph as written: the builder neither
+normalizes it nor completes `var`. **Each traversal** -- the interpreter's execution of the root, a translation of the
+unit -- applies the receiver `fn`/`sub` to the declaration's arguments on entering its block and creates, in its own
+namespace (§5.2), the Structure F «по тому же правилу по которому int: i 5 создаёт i» (the author 2026-11-09,
+[journal](../LMX_blog/2026-11-09.md)): an Lmx in the `lmx:result` region ([L2 §2.1](L2_spec_en.md#interpretable-tree))
+with `parent` on the declaration, named by the value of the `name` argument; its fields are the named references `args`
+and `body` onto the declaration's arguments (no copy: the arguments keep their address, `parent` and namelessness), an
+own word cell of the requirement `return`, and a new Lmx `var` (below). The `lmx:result` region classifies the result of
+executing the receiver, not the definition and not a Structure with similar parts: a copy of F through `merge` is a
+Structure, not a function; the receiver makes a function of it (`fn: g merge(f1)`, slice 333). F lives only in its
+traversal: the next traversal creates a new F from the same written declaration; the `native` entry a translation
+installed on the declaration is also the entry of the F created. Declarations in a body are created by the same rule in
+the body's block.
 
 **Formals** are slots of `args` with the same representation as any place (§3.2): `int: q` → an `uninit:int` pointer onto
 the formal's `int` cell (named `q`) -- a mandatory formal; `int: q 0` → an `int` cell = 0 -- a default, read, not
 evaluated; `int: q f()` → the Lmx of the initializer -- a computed default, evaluated at each call that omits `q` (the
 author's decision on computed defaults, [journal 2026-11-07](../LMX_blog/2026-11-07.md)); `@: p` without an address → an
 `uninit:ref` pointer onto a `ref` cell; `Point: p` without a value → the slot points at the **ordinary declaration Lmx**
-from the source graph `[Point, p]` (the requirement word and the name word), which keeps the requirement `Point` and the
-absence of a candidate -- with no separate non-Lmx entity or `uninit:lmx` mark (a representation decision, confirmed by
+from the source graph -- the Frame `Point: p`, an Lmx named by the requirement `Point` with the name word `p` as its field
+(§3.3) -- which keeps the requirement `Point` and the absence of a candidate -- with no separate non-Lmx entity or `uninit:lmx` mark (a representation decision, confirmed by
 Codex, review 2). A formal's description is not executed as a body ([book :684](LMX_semantics.en.md#method-parts)); the
 actual binding of an argument and the default are not mixed ([book, callable parts](LMX_semantics.en.md#method-parts)); the formal's value in
 a call lives in the activation frame (§6.3), and the `args` slot is not changed by a call.
 
-**`data`** is an ordinary Lmx of slots onto primitives and nested Lmx. **`var`** is the same Lmx; a field with a computed
-initializer (`int: r take(Point, 1)`) holds in its slot, until executed, the address of the Lmx of the declaration
-statement (`[int, r, [take, Point, 1]]` -- the type word, the name word, the call Lmx): a declaration not yet executed,
-with no hidden source and no early execution of effects at construction. Executing the statement is the first assignment
-of the place `r`: an `int` cell is taken from the region, the slot is rewritten to its address, the published value
-replaces the initializer ([book](LMX_semantics.en.md#ordinary-var), §10); later writes into `r` go into that cell. An
-activation is not a graph: its working values, argument places and temporaries live in the executor's C frame (§6.3).
+**`data`** is an ordinary Lmx of slots onto primitives and nested Lmx. **`var`** is the same Lmx; a field with a
+computed initializer (`int: r take(Point, 1)`) holds in its slot, until executed, the address of the Lmx of the
+declaration statement -- the Frame named `int` with the arguments: the name word `r` and the call Lmx named `take`
+(§3.3): a declaration not yet executed, with no hidden source and no early execution of effects at construction.
+Executing the statement is the first assignment of the place `r`: an `int` cell is taken from the region, the slot is
+rewritten to its address, the published value replaces the initializer ([book](LMX_semantics.en.md#ordinary-var), §10);
+later writes into `r` go into that cell. The `var` of a callable is the `var` of its F of the current traversal: the
+general copy of the written `var` through one source → copy map (places, references and Structures keep their sharing
+inside the copy) and places without a value for the body's own fields that are neither formals nor fields of the written
+`var`; the completion is the same whatever the origin of the structure (the author 2026-11-09, journal: «var дополняется
+одинаково при любом происхождении подготовленных структур»); no initializer runs then -- they run at their written
+places, and publication changes the copy, not the declaration's written `var`. An activation is not a graph: its working
+values, argument places and temporaries live in the executor's C frame (§6.3).
 
 ### 3.5 Names: words in the graph, resolution by the traversal (decision, checked by Codex, review 2)
 
-The author's visibility clarification of 2026-11-08: in a body with automatic var completion, all own fields are
-visible from the first statement, whether explicit in var or added from the body. A body initializer executes
-at its written position. No field-origin marker is needed. Completion belongs to construction before the final
-var allocation; the consumer collects methods and inputs in a separate traversal of the completed graph, with
-its own temporary tables. Combine independent work within each stage, without passing its service state onward.
+The author's visibility clarification of 2026-11-08: in a body with automatic var completion, all own fields are visible
+from the first statement, whether explicit in var or added from the body. A body initializer executes at its written
+position. No field-origin marker is needed. By the author's direction of 2026-11-09 the completion of var is the same
+whatever the origin of the structure, so one constructor of F does it when the receiver is applied in each traversal
+(§3.4), not the builder; the consumer collects methods and inputs in a separate pass of its traversal, with its own
+temporary tables. Combine independent work within each stage, without passing its service state onward.
 
 The builder **does not bake** name resolution into the graph: every written name -- in a head, in an argument, in a path,
 in an operand of an expression, in the named supply `a := v` -- stays a word primitive with the canonical pointer to its
@@ -505,9 +528,11 @@ content of the graph and the arena. The address → name table (§5.1), the inte
 process string table with its byte index (§4) are not traversal tables: they are arena and process state, defined by the
 author as the means of learning a name, a type and a string; they are not mixed with the temporary traversal tables.
 
-**What a traversal has (decision, open list):** the interpreter -- activation frames and their working values, the name
-resolution table of the current traversal (the "namespace": word → the place found for the current activation and the
-selected `code`/`data`, §3.5), working `implements` maps for the given reception; the collector -- the liveness map by
+**What a traversal has (decision, open list):** the interpreter -- activation frames and their working values, the
+traversal's namespace (rows "block, name, value": the places and named Structures of the root, the Structures the
+receivers of declarations created, §3.4, and the places published on the way; made empty on entering the traversal and
+freed on leaving it, `lmx_graph_space_*`; a name is resolved for the current activation and the selected `code`/`data` by
+it and by the frames, §3.5), working `implements` maps for the given reception; the collector -- the liveness map by
 regions for the pass; the builder -- the source → copy map of one `merge`/copy, the parse tree and the parsing arenas; the
 translator -- scopes, the signature intern, the unit's emission plan for the duration of its translation. None of them is
 read by `toLmx`, carried by copying or needed by the next traversal.
@@ -700,41 +725,50 @@ int: r take(Point, 1)
 
 **The graph after construction, before execution.** The unit's root is an `lmx:data` Lmx with three slots. Slot 0 → the
 Lmx `Point` (`lmx:data`, two slots → `int` cells 0 and 0 in the `int` region; the name table rows for those cells'
-addresses are `y`, `x`; for the Lmx's address, `Point`). Slot 1 → the Lmx `take` (`lmx:data`, five fields: the word `fn`;
-`args` -- an Lmx with two slots: `p` → the declaration Lmx `[Point, p]` (the requirement and name words; the name row `p`
-is for this Lmx's address), `q` → an `uninit:int` pointer onto the formal's unwritten `int` cell (a mandatory formal; the
-row `q` is for that cell's address); `return` -- an Lmx with a field → the word `int`; `var` -- an empty Lmx; `body` -- an
-Lmx with one statement; the row `take` is for the Lmx `take`'s address). Slot 2 → the Lmx of the declaration statement
-`[int, r, [take, Point, 1]]`: field 0 → the word `int`, field 1 → the word `r`, field 2 → the call Lmx: field 0 → the word
-`take`, field 1 → the word `Point`, field 2 → an `int` cell 1. Nothing is resolved in advance: `take` and `Point` are
-words; there is no cell `r` yet -- the initializer is not evaluated, slot 2 holds the statement (§3.4). The statement of
-`take`'s body is the Lmx `[return, E]`, where `E` = `[[[p, \, y], *, 10], +, q]`: all names and operators are words
-(`return`, `p`, `\`, `y`, `*`, `+`, `q`), `10` is an `int` cell.
+addresses are `y`, `x`; for the Lmx's address, `Point`). Slot 1 → the declaration -- the Lmx of the written Frame named
+`fn` (§3.4), with five argument fields: the word `take` (the `name` argument); `args` -- an Lmx with two slots: the
+formal's Frame `Point: p` -- an Lmx named `Point` with the word `p` as its field -- and an `uninit:int` pointer onto the
+unwritten `int` cell of the formal `q` (a mandatory formal; the row `q` is for that cell's address); `return` -- the
+word `int`; `var` -- an empty Lmx; `body` -- an Lmx with one statement. Slot 2 → the Frame of the declaration `int: r
+take(Point, 1)` -- an Lmx named `int`: field 0 → the word `r`, field 1 → the call Lmx named `take`: field 0 → the word
+`Point`, field 1 → an `int` cell 1. Nothing is resolved in advance: `take` and `Point` are words; there is no function
+`take` in the graph -- the traversal creates it; there is no cell `r` yet -- the initializer is not evaluated, slot 2
+holds the statement (§3.4). The statement of the body is an Lmx named `return` with the field `E` = `[[[p, \, y], *,
+10], +, q]`: the names and operators of the expression are words (`p`, `\`, `y`, `*`, `+`, `q`), `10` is an `int` cell.
 
-The unit's regions: `lmx:data` -- the root, `Point`, `take`, its four parts, the declaration `[Point, p]`, the `return`
-statement, the three expression Lmx of `E`, the declaration statement, the call Lmx; `int` -- `y`, `x`, the cell of `q`,
-`1`, `10`; `uninit:int` -- the pointer onto the cell of `q`; `word` -- `fn`, `Point` and `p` (the formal's declaration),
-`int` (the result requirement), `int`, `r`, `take`, `Point` (the declaration statement and the call), `return`, `p`, `\`,
-`y`, `*`, `+`, `q`; `ref` -- the slots of all Lmx; `text` -- the strings `Point y x take p q return r int fn` and the
-language words of the kernel. The name table: `Point`, `y`, `x`, `take`, `p`, `q` -- for the addresses of the Lmx and
-primitives themselves; no row `r` yet. `toLmx` prints the same program: slot 2 is an Lmx with the word head `int` →
-`int: r take(Point, 1)`; the field names `Point`, `y`, `x` come from the table.
+The unit's regions: `lmx:data` -- the root, `Point`, the declaration and its Lmx `args`, `var`, `body`, the formal's
+Frame `Point: p`, the `return` statement, the three expression Lmx of `E`, the Frame of the declaration of `r`, the call
+Lmx; `int` -- `y`, `x`, the cell of `q`, `1`, `10`; `uninit:int` -- the pointer onto the cell of `q`; `word` -- `take`
+(the name), `p` (the formal), `int` (the result requirement), `r`, `Point` (the call), `p`, `\`, `y`, `*`, `+`, `q`;
+`ref` -- the slots of all Lmx; `text` -- the strings `Point y x take p q return r int fn` and the language words of the
+kernel. The name table: `Point`, `y`, `x`, `fn` (the declaration), `Point` (the formal's Frame), `q`, `return`, `int`
+(the Frame of the declaration of `r`), `take` (the call's Frame) -- for the addresses of the Lmx and primitives
+themselves; no row `r` yet. `toLmx` prints the same program by the names of the Lmx and their fields: the declaration as
+`fn: take (Point: p; int: q) int`, slot 2 as the declaration of `r` with the call.
 
-**Execution.** The interpreter walks the root by slots; slot 2 is an Lmx with the word head `int` → a declaration with a
-computed initializer; the call Lmx: the head is the word `take`, resolved by this traversal's table into the root's slot 1
--- an Lmx with the head `fn` → a call; an activation in a C frame; the frame's argument places receive their first
-assignment: the word `Point` is resolved into the Lmx `Point`, `p` receives its address by `implements` (the used field
-`y`; the correspondence map is data of this reception, §5.2), the `int` cell of the frame's argument place `q` receives 1;
-the body: `return` is a word; `E`: `p\y` → `named_field(value of p, y)` → the `int` cell 0; `0 * 10 + 1` = 1 (temporaries
-in the frame). The result 1 is the first assignment of the place `r`: a new `int` cell from the `int` region, 1 is written
-into it, the row `r` for its address is added to the name table, the root's slot 2 is rewritten from the statement's
-address to this cell's address; the declaration statement and the call Lmx, referred to by nobody else, are collected
-(§2.4). Now `toLmx` prints `int: r 1` -- the published value replaced the initializer ([book](LMX_semantics.en.md#ordinary-var));
-a later `r: 2` writes 2 into the same cell (a data write, `native` entries are kept, §6.5). Native for `take`: the
-translator resolved the words `p`, `y`, `q` at translation; the C code reads the formal `p`'s slot of its frame, calls
-`named_field` with the constant `l2_names[Y]`, reads the `int` cell, multiplies, adds the cell of `q`, returns; the unit's
-loading code is the generated initialization of this same graph through the common constructor (§1a): region sizes,
-cells, slots and words, the rows of the name table, `native` at `take`.
+**Execution.** The traversal begins with an empty namespace (§5.2). On entering the root's block the receiver `fn` is
+applied to the arguments of the declaration in slot 1: F is created -- an Lmx in `lmx:result` with `parent` on the
+declaration, named `take` (the table row for F's address), with the reference fields `args` and `body` onto the
+declaration's parts, an own word cell `return` and a new empty `var` (the body has no own fields); the namespace gets
+the row "root, `take`, F", the places and Structures of the root (`Point`) get theirs. Then the interpreter walks the
+root by slots; slot 1 is the declaration, its F already created; slot 2 is a Frame `int` → a declaration with a computed
+initializer; the call Lmx: the name `take` is resolved by the traversal's namespace into F → a call; an activation in a
+C frame; the frame's argument places receive their first assignment: the word `Point` is resolved into the Lmx `Point`,
+`p` receives its address by `implements` (the used field `y`; the correspondence map is data of this reception, §5.2),
+the `int` cell of the frame's argument place `q` receives 1; F's body -- through the reference `body`, the declaration's
+body: `return`; `E`: `p\y` → `named_field(value of p, y)` → the `int` cell 0; `0 * 10 + 1` = 1 (temporaries in the
+frame). The result 1 is the first assignment of the place `r`: a new `int` cell from the `int` region, 1 is written into
+it, the row `r` for its address is added to the name table, the root's slot 2 is rewritten from the statement's address
+to this cell's address; the declaration statement and the call Lmx, referred to by nobody else, are collected (§2.4).
+Now `toLmx` prints `int: r 1` -- the published value replaced the initializer
+([book](LMX_semantics.en.md#ordinary-var)); a later `r: 2` writes 2 into the same cell (a data write, `native` entries
+are kept, §6.5). On leaving the traversal the namespace is freed and nobody holds F any more; the declaration in slot 1
+stays as written, and the next traversal creates its own F. Native for `take`: the translator created F in its
+translation namespace by the same application of the receiver, resolved the words `p`, `y`, `q` and emitted C code that
+reads the formal `p`'s slot of its frame, calls `named_field` with the constant `l2_names[Y]`, reads the `int` cell,
+multiplies, adds the cell of `q`, returns; the unit's loading code is the generated initialization of this same graph
+through the common constructor (§1a): region sizes, cells, slots and words, the rows of the name table, `native` at the
+declaration `take` -- the F of every traversal takes it.
 
 <a id="transition"></a>
 ## 11. The transition plan (agreed with Codex in the second review)

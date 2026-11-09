@@ -1,0 +1,85 @@
+int: root 20
+:=: root 5
+:=: root 7
+int: i
+@: p int @i
+:=: i 5
+int: first 5
+:=: i 7
+int: second 7
+Box:
+    int: value 17
+    Child:
+        int: item 11
+    end: Child
+end: Box
+:=: (Box \ value) (root + 2)
+:=: ((Box \ Child) \ item) 11
+fn: tick () int (
+    int: calls 1
+)
+    :=: calls (calls + 1)
+    return: 3
+end: tick
+fn: local (int: arg) int (
+    int: x
+)
+    :=: x 7
+    int: x
+    :=: arg (arg + 1)
+    :=: x (x + arg)
+    :=: x (x + (tick))
+    return: x
+end: local
+int: local_result 15
+int: calls 1
+sub: bump (int: delta 2) (
+    int: count 5
+)
+    :=: count (count + delta)
+end: bump
+bump:
+bump: 3
+int: procedure_count 5
+Code:
+    var:
+        int: x 1
+        int: y 2
+    end: var
+    :=: x (x + 1)
+    :=: y (x * 2)
+end: Code
+Data:
+    int: y 22
+    int: x 11
+end: Data
+call: Code Data
+int: data_x 11
+int: data_y 22
+int: model_x 1
+fn: change (Box: target) int
+    :=: (target \ value) 17
+    return: (target \ value)
+end: change
+int: changed 17
+int: nested_value 11
+fn: clean_path () int (
+    int: x 9
+)
+    :=: (var \ x) 9
+    return: ((x * 10) + (var \ x))
+end: clean_path
+int: clean_snapshot 19
+int: clean_published 9
+fn: dirty_path () int (
+    int: x 2
+)
+    :=: x 2
+    :=: (var \ x) 9
+    return: ((x * 100) + (var \ x))
+end: dirty_path
+int: dirty_snapshot 209
+int: dirty_published 2
+int: n 3
+for: ((:= n 0) (n < 3) (:= n (n + 1))) ((:= root (root + 1)))
+finally: (:= root (root + 10))

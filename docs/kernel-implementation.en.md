@@ -67,6 +67,12 @@ the word sub and args/var/body parts, with no return part. Root and nested calls
 dynamic inputs, fallthrough, bare return and finally use the same activation and publication rules.
 Using sub as a number is refused before argument effects. All42 execution checks, two result-refusal checks
 and19 graph-mutation checks passed. fm, other types, full admission, exceptions, graph-state operations and §§8/8a remain open.
+The current [graph40/tool22/rt30](../steps/witnesses/known-assignment-20261108/notes.md) preserves := as Lmx
+[the := word, destination, right operand]. No parser flag survives; a destination path is ordinary nested Lmx.
+Both consumers check a known int destination before the RHS; a bare name writes its working value, an explicit path
+writes the graph without refreshing the working snapshot. Native computes the RHS directly. A typed int literal
+is built as the same primitive. All30 execution and19 graph-mutation checks passed. Other types, reference writes,
+named := arguments and §§8/8a remain open.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

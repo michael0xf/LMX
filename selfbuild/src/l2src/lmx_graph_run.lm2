@@ -215,11 +215,11 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                 status: c.lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) raw))
             else:
                 word: c.lmx_graph_word_text(g, raw)
-                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref && word != state\w_eq && word != state\w_ne && word != state\w_lt && word != state\w_le && word != state\w_gt && word != state\w_ge && word != state\w_and && word != state\w_or && word != state\w_not && word != state\w_if && word != state\w_else && word != state\w_while && word != state\w_for && word != state\w_break && word != state\w_continue && word != state\w_redo && word != state\w_until && word != state\w_finally
+                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref && word != state\w_eq && word != state\w_ne && word != state\w_lt && word != state\w_le && word != state\w_gt && word != state\w_ge && word != state\w_and && word != state\w_or && word != state\w_not && word != state\w_if && word != state\w_else && word != state\w_while && word != state\w_for && word != state\w_break && word != state\w_continue && word != state\w_redo && word != state\w_until && word != state\w_finally && word != state\w_assign
                     status: lmx_graph_work_capture(g, frame, word)
                     if: status = 0
                         row: lmx_graph_work_row(frame, word)
-                        if: row != 0 && row\slot != (cast: (size_t) -1) && (i != 0U || n = 1U || op = state\w_plus || op = state\w_minus || op = state\w_star || op = state\w_slash || op = state\w_percent || op = state\w_deref || op = state\w_eq || op = state\w_ne || op = state\w_lt || op = state\w_le || op = state\w_gt || op = state\w_ge || op = state\w_and || op = state\w_or)
+                        if: row != 0 && row\slot != (cast: (size_t) -1) && (i != 1U || c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U)) != state\w_assign) && (i != 0U || n = 1U || op = state\w_plus || op = state\w_minus || op = state\w_star || op = state\w_slash || op = state\w_percent || op = state\w_deref || op = state\w_eq || op = state\w_ne || op = state\w_lt || op = state\w_le || op = state\w_gt || op = state\w_ge || op = state\w_and || op = state\w_or)
                             row\loaded: row\loaded | 2
                         ---
                     ---
@@ -419,6 +419,94 @@ fn: lmx_graph_local_int (@: g c.LmxGraph; @: code c.Lmx; @: name char) int
         return: (cast: (int) (c.lmx_graph_kind(g, active\refs[slot]) != 1))
     return: 3
 end: lmx_graph_local_int
+
+# Check a known int destination without reading it or evaluating the RHS. No field is introduced here.
+fn: lmx_graph_known_int (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode) int
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
+    @: row c.LmxGraphWork 0
+    @: args c.Lmx 0
+    @: value void 0
+    size_t: slot 0U
+    if: name = 0
+        return: 3
+    if: mode != 0
+        slot: c.lmx_graph_named(g, code, name)
+        if: slot >= c.lmx_graph_count(code)
+            return: 3
+        value: c.lmx_graph_place_cell(g, code, slot)
+    else:
+        if: active = 0 || active\code != code
+            return: 5
+        if: active\frame != 0
+            row: lmx_graph_work_row((cast: (@: c.LmxGraphFrame) active\frame), name)
+        if: row != 0
+            value: row\cell
+        else:
+            if: c.lmx_graph_method(g, code) != 0
+                args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
+                slot: c.lmx_graph_named(g, args, name)
+                if: active\refs != 0 && slot < active\width
+                    value: active\refs[slot]
+                ---
+            ---
+            if: value = 0
+                return: 3
+            ---
+        ---
+    ---
+    if: c.lmx_graph_kind(g, value) != 1
+        return: 4
+    return: 0
+end: lmx_graph_known_int
+
+# Explicit paths write the graph, even when they address this activation's data. They neither publish nor refresh
+# bare working values (semantics, working-state); only a later bare write marks that working place dirty.
+fn: lmx_graph_store_field (@: g c.LmxGraph; @: code c.Lmx; @: owner c.Lmx; size_t: slot; int: number) int
+    if: c.lmx_graph_kind(g, (cast: (@: void) owner)) != 4
+        return: 4
+    return: c.lmx_graph_assign_int(g, code, owner, slot, number)
+end: lmx_graph_store_field
+
+fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lmx; int: mode) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: left void c.lmx_graph_get(statement, 1U)
+    @: name char c.lmx_graph_word_text(g, left)
+    @: path c.Lmx (cast: (@: c.Lmx) left)
+    @: value void 0
+    @: owner c.Lmx code
+    size_t: slot 0U
+    int: number 0
+    int: status 0
+    if: c.lmx_graph_count(statement) != 3U
+        return: 2
+    if: name != 0
+        status: lmx_graph_known_int(g, code, name, mode)
+        slot: c.lmx_graph_named(g, code, name)
+    else:
+        if: c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
+            return: 2
+        status: lmx_graph_eval_value(g, code, c.lmx_graph_get(path, 0U), @ value)
+        if: status != 0
+            return: status
+        if: c.lmx_graph_kind(g, value) != 4
+            return: 4
+        owner: (cast: (@: c.Lmx) value)
+        slot: c.lmx_graph_named(g, owner, c.lmx_graph_word_text(g, c.lmx_graph_get(path, 2U)))
+        if: slot >= c.lmx_graph_count(owner)
+            return: 3
+        if: c.lmx_graph_place_cell(g, owner, slot) = 0
+            return: 4
+        ---
+    ---
+    if: status != 0
+        return: status
+    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 2U), @ number)
+    if: status != 0
+        return: status
+    if: name != 0 && mode = 0
+        return: lmx_graph_store_name(g, code, name, number)
+    return: lmx_graph_store_field(g, code, owner, slot, number)
+end: lmx_graph_eval_assignment
 
 fn: lmx_graph_store_name (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: number) int
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
@@ -680,6 +768,10 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             continue
         n: c.lmx_graph_count(statement)
         head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
+        if: head = state\w_assign
+            status: lmx_graph_eval_assignment(g, code, statement, mode)
+            i: i + 1U
+            continue
         if: head = state\w_finally
             # Reaching this field registers its body in this scope. Recursing over the remaining statements makes
             # multiple registrations unwind in reverse order, without a persistent plan or a second graph.

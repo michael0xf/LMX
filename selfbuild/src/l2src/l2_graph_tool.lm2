@@ -304,10 +304,57 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     return: status
 end: lm_graph_build_sequence
 
+# A parser assignment flag becomes an ordinary Lmx operator and its operands. No parser flag survives.
+# The written selector is split here, once; consumers use the same nested field expression as every other path.
+fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0Frame; @@: out void) int
+    @: text c.LmP0Text lm_graph_p0_head(frame)
+    const: @: bytes char lm_graph_p0_data(text)
+    size_t: text_size lm_graph_p0_length(text)
+    size_t: start 0U
+    size_t: i 0U
+    @: part void 0
+    @: left void 0
+    @: path c.Lmx 0
+    @: rhs void 0
+    @: result c.Lmx 0
+    int: status 0
+    while: i <= text_size
+        if: i = text_size || bytes[i] = 92
+            if: i = start
+                return: 2
+            part: c.lmx_graph_word(g, bytes + start, i - start)
+            if: part = 0
+                return: 1
+            if: left = 0
+                left: part
+            else:
+                path: c.lmx_graph_lmx(g, 0, 3U)
+                if: path = 0 || lm_graph_build_put(g, path, 0U, left) != 0 || lm_graph_build_put(g, path, 1U, c.lmx_graph_word(g, "\\", 1U)) != 0 || lm_graph_build_put(g, path, 2U, part) != 0
+                    return: 1
+                left: (cast: (@: void) path)
+            ---
+            start: i + 1U
+        ---
+        i: i + 1U
+    ---
+    status: lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), 0, (cast: (@: c.LmP0Trailer) frame\trailer), @ rhs)
+    if: status != 0
+        return: status
+    if: c.lmx_graph_count((cast: (@: c.Lmx) rhs)) != 1U
+        return: 2
+    result: c.lmx_graph_lmx(g, parent, 3U)
+    if: result = 0 || lm_graph_build_put(g, result, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || lm_graph_build_put(g, result, 1U, left) != 0 || lm_graph_build_put(g, result, 2U, c.lmx_graph_get((cast: (@: c.Lmx) rhs), 0U)) != 0
+        return: 1
+    out[0]: (cast: (@: void) result)
+    return: 0
+end: lm_graph_build_assignment
+
 fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@: out void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: text c.LmP0Text 0
     @: frame c.LmP0Frame 0
     @: source c.LmP0Structure 0
+    @: literal c.LmP0Field 0
     @: value void 0
     int: number 0
     if: g = 0 || nd = 0 || out = 0
@@ -326,7 +373,17 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         return: 0
     if: nd\kind = c.LM_P0_NODE_FRAME
         frame: lm_graph_p0_frame(nd)
+        if: (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+            return: lm_graph_build_assignment(g, parent, frame, out)
         text: lm_graph_p0_head(frame)
+        # A literal primitive value has the same physical form everywhere, including a typed RHS.
+        if: c.lmx_graph_intern(lm_graph_p0_data(text), lm_graph_p0_length(text)) = state\w_int && lm_graph_count_active(lm_graph_p0_body(frame)) = 1U
+            literal: lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(frame)))
+            if: literal != 0 && literal\value\kind = c.LM_P0_NODE_ATOM && lm_graph_int_literal(lm_graph_p0_atom(lm_graph_p0_value(literal)), @ number) != 0
+                out[0]: c.lmx_graph_int(g, number)
+                return: (cast: (int) (out[0] = 0))
+            ---
+        ---
         value: c.lmx_graph_word(g, lm_graph_p0_data(text), lm_graph_p0_length(text))
         if: value = 0
             return: 1
@@ -658,6 +715,11 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
         return: 2
     if: nd\kind = c.LM_P0_NODE_FRAME
         fr: lm_graph_p0_frame(nd)
+        if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+            r: lm_graph_build_node(g, root, nd, @ value)
+            if: r != 0
+                return: r
+            return: c.lmx_graph_put(root, slot, value)
         head: c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr)))
         if: head = 0
             return: 1
@@ -1280,6 +1342,56 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     return: 0
 end: lm_graph_emit_finally
 
+# Compile the same visible assignment Lmx. Resolve/check the destination before the RHS, then generate its numeric
+# computation directly. The helpers write normal working places or graph cells; they never interpret the RHS.
+fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: statement c.Lmx; int: mode; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: left void c.lmx_graph_get(statement, 1U)
+    @: name char c.lmx_graph_word_text(g, left)
+    @: path c.Lmx (cast: (@: c.Lmx) left)
+    int: owner 0
+    int: value 0
+    int: status 0
+    if: c.lmx_graph_count(statement) != 3U
+        return: 2
+    if: name != 0
+        c.fputs("        if: lmx_graph_known_int(l2_g, lmx_call_code, ", f)
+        status: lm_graph_emit_word(g, f, code, statement, 1U)
+        c.fprintf(f, ", %d) != 0\n            %s\n", mode, leave_failure)
+    else:
+        if: c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
+            return: 2
+        status: lm_graph_emit_operand(g, f, code, path, 0U, temps, decl_names, decl_slots, decl_n, @ owner)
+        if: status != 0
+            return: status
+        c.fprintf(f, "        if: lmx_graph_kind(l2_g, l2_v%d) != 4\n            %s\n        size_t: l2_s%d lmx_graph_named(l2_g, (cast: (@: Lmx) l2_v%d), ", owner, leave_failure, owner, owner)
+        status: lm_graph_emit_word(g, f, code, path, 2U)
+        c.fprintf(f, ")\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure)
+    ---
+    if: status != 0
+        return: status
+    status: lm_graph_emit_number(g, f, code, statement, 2U, temps, decl_names, decl_slots, decl_n, @ value)
+    if: status != 0
+        return: status
+    if: name != 0
+        if: mode = 0
+            c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
+            status: lm_graph_emit_word(g, f, code, statement, 1U)
+            c.fprintf(f, ", l2_t%d) != 0\n            %s\n", value, leave_failure)
+        else:
+            c.fputs("        if: lmx_graph_store_field(l2_g, lmx_call_code, lmx_call_code, lmx_graph_named(l2_g, lmx_call_code, ", f)
+            status: lm_graph_emit_word(g, f, code, statement, 1U)
+            c.fprintf(f, "), l2_t%d) != 0\n            %s\n", value, leave_failure)
+        ---
+    else:
+        c.fprintf(f, "        if: lmx_graph_store_field(l2_g, lmx_call_code, (cast: (@: Lmx) l2_v%d), l2_s%d, l2_t%d) != 0\n            %s\n", owner, owner, value, leave_failure)
+    ---
+    return: status
+end: lm_graph_emit_assignment
+
 fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; size_t: from; @: temps int) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
@@ -1324,6 +1436,12 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
             head: 0
             if: m != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
+            if: head = state\w_assign
+                r: lm_graph_emit_assignment(g, f, root, inner, 1, temps, decl_names, decl_slots, decl_n)
+                if: r != 0
+                    return: r
+                i: i + 1U
+                continue
             if: head = state\w_finally
                 r: lm_graph_emit_finally(g, f, root, root, i, n, inner, 1, -1, -1, -1, temps)
                 c.free((cast: (@: void) decl_names))
@@ -1464,6 +1582,10 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 continue
             n: c.lmx_graph_count(statement)
             head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
+            if: head = state\w_assign
+                status: lm_graph_emit_assignment(g, f, code, statement, mode, temps, 0, 0, 0U)
+                i: i + 1U
+                continue
             if: head = state\w_finally
                 return: lm_graph_emit_finally(g, f, code, body, i, to, statement, mode, exit_label, again_label, step_label, temps)
             if: head = state\w_if

@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 322 entries.
+are historical. The current input manifest has 328 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -75,6 +75,12 @@ the shared activation and publication rules. A sub used as a number is refused b
 42 execution checks, two result-refusal checks and19 graph-mutation checks passed.
 [Sources, receipts and limits](../steps/witnesses/sub-calls-20261108/notes.md). This does not complete fm, other
 primitive/result types, full admission, exceptions, graph-state operations or §§8/8a.
+
+The current graph40/tool22/rt30 preserves := as ordinary Lmx and writes known int places: root, own/formal,
+selected data and nested paths. Bare writes use working values; explicit paths write the graph without refreshing
+the working snapshot. Unknown destinations fail before RHS effects. All30 execution and19 graph-mutation checks passed.
+[Sources, receipts and limits](../steps/witnesses/known-assignment-20261108/notes.md). Other primitive/reference writes,
+named := arguments, full admission and §§8/8a remain open.
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

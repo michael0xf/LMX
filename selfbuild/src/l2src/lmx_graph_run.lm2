@@ -546,35 +546,51 @@ fn: lmx_graph_store_field (@: g c.LmxGraph; @: code c.Lmx; @: owner c.Lmx; size_
     return: c.lmx_graph_assign_int(g, code, owner, slot, number)
 end: lmx_graph_store_field
 
+# The field a written path `owner\field` names, for a write through it: the owner evaluated -- a Structure, or the
+# target of a reference to it (the same instance) -- and the slot of its field named by the path's last word. 0 and the
+# owner and the slot in owner_out and slot_out; 2 for no path; 3 for no field of that name; 4 for an owner that is no
+# Structure; the answer of the owner's evaluation.
+fn: lmx_graph_path_field (@: g c.LmxGraph; @: code c.Lmx; @: left void; @@: owner_out c.Lmx; @: slot_out size_t) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: path c.Lmx (cast: (@: c.Lmx) left)
+    @: value void 0
+    @: owner c.Lmx 0
+    size_t: slot 0U
+    int: status 0
+    if: state = 0 || c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
+        return: 2
+    status: lmx_graph_eval_value(g, code, c.lmx_graph_get(path, 0U), @ value)
+    if: status != 0
+        return: status
+    value: c.lmx_graph_target(g, value)
+    if: c.lmx_graph_kind(g, value) != 4
+        return: 4
+    owner: (cast: (@: c.Lmx) value)
+    slot: c.lmx_graph_named(g, owner, c.lmx_graph_word_text(g, c.lmx_graph_get(path, 2U)))
+    if: slot >= c.lmx_graph_count(owner)
+        return: 3
+    owner_out[0]: owner
+    slot_out[0]: slot
+    return: 0
+end: lmx_graph_path_field
+
 fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lmx; int: mode) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: left void c.lmx_graph_get(statement, 1U)
     @: name char c.lmx_graph_word_text(g, left)
-    @: path c.Lmx (cast: (@: c.Lmx) left)
-    @: value void 0
     @: owner c.Lmx code
     size_t: slot 0U
     int: number 0
     int: status 0
-    if: c.lmx_graph_count(statement) != 3U
+    if: state = 0 || c.lmx_graph_count(statement) != 3U
         return: 2
     if: name != 0
         status: lmx_graph_known_int(g, code, name, mode)
         slot: lmx_graph_visible_slot(g, code, name)
     else:
-        if: c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
-            return: 2
-        status: lmx_graph_eval_value(g, code, c.lmx_graph_get(path, 0U), @ value)
+        status: lmx_graph_path_field(g, code, left, @ owner, @ slot)
         if: status != 0
             return: status
-        # The owner of the written field: a Structure, or the target of a reference to it (the same instance).
-        value: c.lmx_graph_target(g, value)
-        if: c.lmx_graph_kind(g, value) != 4
-            return: 4
-        owner: (cast: (@: c.Lmx) value)
-        slot: c.lmx_graph_named(g, owner, c.lmx_graph_word_text(g, c.lmx_graph_get(path, 2U)))
-        if: slot >= c.lmx_graph_count(owner)
-            return: 3
         if: c.lmx_graph_place_cell(g, owner, slot) = 0
             return: 4
         ---
@@ -588,6 +604,31 @@ fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lm
         return: lmx_graph_store_name(g, code, name, number)
     return: lmx_graph_store_field(g, code, owner, slot, number)
 end: lmx_graph_eval_assignment
+
+# A statement written on a path head, `owner\field: value` (the builder's [path, actuals], lm_graph_build_node): the
+# head is resolved first, by the general rule of a Frame -- a callable there would be applied (not yet through a path:
+# 5) --, else the place is written with the one value, as `owner\field := value` writes it (lmx_graph_eval_assignment).
+# 0; 3 or 4 as lmx_graph_path_field, 4 for no place; 5 for a callable, none or several actuals; the answer of an
+# evaluation.
+fn: lmx_graph_eval_path_statement (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lmx) int
+    @: owner c.Lmx 0
+    size_t: slot 0U
+    int: number 0
+    int: status 0
+    status: lmx_graph_path_field(g, code, (cast: (@: void) c.lmx_graph_get(statement, 0U)), @ owner, @ slot)
+    if: status != 0
+        return: status
+    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_get(owner, slot)))) != 0
+        return: 5
+    if: c.lmx_graph_count(statement) != 2U
+        return: 5
+    if: c.lmx_graph_place_cell(g, owner, slot) = 0
+        return: 4
+    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 1U), @ number)
+    if: status != 0
+        return: status
+    return: lmx_graph_store_field(g, code, owner, slot, number)
+end: lmx_graph_eval_path_statement
 
 fn: lmx_graph_store_name (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: number) int
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
@@ -1082,11 +1123,17 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
         n: c.lmx_graph_count(statement)
         head: c.lmx_graph_name_of(g, raw)
         if: head = 0
-            # An unnamed Lmx: the assignment `a := v`, an anonymous body, or an expression whose value is not used.
+            # An unnamed Lmx: the assignment `a := v`, a statement on a path head, an anonymous body, or an expression
+            # whose value is not used.
             if: n != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
             if: head = state\w_assign
                 status: lmx_graph_eval_assignment(g, code, statement, mode)
+                i: i + 1U
+                continue
+            # A statement on a path head, `owner\field: value` (c.lmx_graph_path_head): the write of that field.
+            if: head = 0 && c.lmx_graph_path_head(g, raw) != 0
+                status: lmx_graph_eval_path_statement(g, code, statement)
                 i: i + 1U
                 continue
             if: head = 0

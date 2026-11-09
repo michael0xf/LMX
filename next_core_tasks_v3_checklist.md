@@ -119,6 +119,9 @@ method-mutation 8/8. Не сделано: вычисляемое примене�
 Срез 336 [frontend на runtime](steps/witnesses/frontend-host-20261109/notes.md) (маршрут 331, шаг 1): `bld_frontend_host`,
 `decl_l2_frontend_aggregate`/`decl_write` 60, `tools/l2trans.lm2`; fehost01 на пути P0 даёт L1 fe309a байт в байт.
 Не сделано: вход машинного пути из чистого графа; рецепты по-прежнему вызывают обычный F.
+Срез 337 [graph75/tool36/rt64](steps/witnesses/path-heads-20261109/notes.md): `lm_graph_build_selector`,
+`lmx_graph_path_head`, `lmx_graph_eval_path_statement`, `lm_graph_emit_path_statement` — запись через голову-путь в
+корне и в теле (`path_write`). 82 запуска graph-check × 3 режима PASS. Не сделано: вызываемое через путь (5).
 
 Уточнение автора от 2026-10-24: объявления арены и пулов генерировать на L3 как строки L1, без нового механизма в L2 ([дословный источник](LMX_blog/2026-10-24.md)). Прежний вопрос Codex о машинной C-раскладке снят. Генерация ещё не реализована этим изменением документов; отметки готовности не повышаются. Следующий результат — самосборка, не расширение системы или тестовой кампании. Срез185 (Verified185 `3a5c6919`, E20) её реализует: `lmx.h.lm1` целиком, `lmx_arena_blocks.h.lm1` и `lmx_arena.h.lm1` пишет код L3 сборки (`decls_write_all`), и короткий bootstrap прошёл с ними.
 

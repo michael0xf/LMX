@@ -403,7 +403,15 @@ address → name row for this Lmx's address is the string `head`) whose fields a
 name -- is decided by the consumer's resolution during its traversal (§3.5), not by the builder. An operation written as
 a Frame (`-(2 + 3)`, `\(p)`) stays an operation, as in any expression: the operator word in field 0 and the operands,
 with no name; so do `x + 1`, a path and `:=`; an anonymous Structure gets no name. A nested Structure of a body is a
-child Lmx with `parent` on the containing one.
+child Lmx with `parent` on the containing one. A Frame written on a path head, `owner\field: actuals`, is the unnamed
+Lmx [path, actuals] -- the path expression [owner, \, field] in field 0, split by the builder once, while the lexical
+boundaries are known (Codex, review of 331; an exact identifier in backquotes stays one name; slice 337); the consumers
+recognize the general form of the path in field 0 (`lmx_graph_path_head`) and resolve the head as any head: a place is
+written with the one value, as `owner\field := value` writes it (`lmx_graph_eval_path_statement`,
+`lm_graph_emit_path_statement`); a callable through a path is not applied yet (5). Before, the head stayed one word: at
+the root `Box\hits: 5` defined a new place named `Box\hits`, in a body it answered 3. An anonymous body whose first
+statement were a bare path read followed by another statement has the same form and is read as this statement (such a
+read has no effect).
 
 ### 3.4 Callables, var and data (norm + decision)
 

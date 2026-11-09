@@ -156,6 +156,15 @@ tool35 (T34 build-self на rt62) на `opus336-source30` (397 входов). `b
 `lmx_schedule` (машинный модуль), `lmx_graph_run` с заголовком, программа `graph_trans`. 81 запуск graph-check × 3
 режима PASS на tool35. Следующее — вход машинного пути из чистого графа для `lmx_schedule`.
 
+**Срез Opus 337: запись через голову-путь** ([запись](witnesses/path-heads-20261109/notes.md); Codex, ревью 331 п. 2 —
+зависимость маршрута 331: `lmx_schedule` пишет поля так). graph75/tool36/rt64 на `opus337-source33` (399 входов).
+Frame `owner\field: actuals` построитель делает безымянной Lmx [путь, actuals] (`lm_graph_build_selector` — тот же
+разбор селектора, что у `:=`); потребители узнают общую форму пути в поле 0 (`lmx_graph_path_head`) и пишут место одним
+значением (`lmx_graph_eval_path_statement`, `lm_graph_emit_path_statement`), печать — как написано. Прежде в корне
+`Box\hits: 5` определял новое место `Box\hits`, в теле — 3. `path_write`: hits 16, v 42, t 42. 82 запуска graph-check × 3
+режима PASS, mutation 12/12, method-mutation 8/8, sub_void_value 5; производственные модули — как на graph64, кроме
+печати записи пути внутри однострочного тела `if` в `lmx_schedule`. Вызываемое через путь — 5 (граница).
+
 **Правило запуска (организационно, 2026-11-09).** Драйвер каждой L2-программы — lmxtool и graph_trans включительно —
 открывает в своём CWD файл защищённого имени на запись с усечением (selfbuild/src/l2src/l2_driver.lm2:3333). В срезах
 322–325 команды tool/graph запускались с CWD = корень репозитория и переписывали корневой экземпляр; его прежнее

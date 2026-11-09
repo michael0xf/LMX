@@ -1,0 +1,49 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus337
+GRAPH-BEFORE-BEGIN
+Box:
+    int: hits 0
+    Inner:
+        int: v 1
+    end: Inner
+end: Box
+Box\hits: 5
+Box\Inner\v: ((Box \ hits) + 2)
+int: v1 ((Box \ Inner) \ v)
+sub: bump (int: d 1)
+    Box\hits: ((Box \ hits) + d)
+end: bump
+bump: 10
+bump:
+fn: twice (int: x) int
+    Box\Inner\v: (x * 2)
+    return: ((Box \ Inner) \ v)
+end: twice
+int: t (twice 21)
+int: h (Box \ hits)
+int: v2 ((Box \ Inner) \ v)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Box:
+    int: hits 16
+    Inner:
+        int: v 42
+    end: Inner
+end: Box
+Box\hits: 5
+Box\Inner\v: ((Box \ hits) + 2)
+int: v1 7
+sub: bump (int: d 1)
+    Box\hits: ((Box \ hits) + d)
+end: bump
+bump: 10
+bump:
+fn: twice (int: x) int
+    Box\Inner\v: (x * 2)
+    return: ((Box \ Inner) \ v)
+end: twice
+int: t 42
+int: h 16
+int: v2 42
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+EXIT=0

@@ -311,29 +311,23 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     return: status
 end: lm_graph_build_sequence
 
-# A parser assignment flag becomes an ordinary Lmx operator and its operands. No parser flag survives.
-# The written selector is split here, once; consumers use the same nested field expression as every other path.
-# The operand is the body written after `:=`, read by the one model of a Frame (§3.3) as the body of a Frame given by
-# its head is: a single field that is a value -- a word, an unnamed int, an unnamed Lmx (an expression) -- is the
-# operand itself; any other body -- no field, several, a place, a Frame -- is the Structure of its fields as written
-# (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. A consumer that evaluates
-# the operand reads a Structure of one field as that field (lmx_graph_eval_value, lm_graph_emit_operand): a Frame
-# applying a callable or merge stays that application.
-fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0Frame; @@: out void) int
-    @: text c.LmP0Text lm_graph_p0_head(frame)
-    const: @: bytes char lm_graph_p0_data(text)
-    size_t: text_size lm_graph_p0_length(text)
+# A written selector -- `name` or `owner\field...` -- as the graph's value: a word, or the nested path [owner, \, field]
+# (the same Lmx every path expression has, §3.3), split here, once, at its backslashes, while the lexical boundaries
+# are known; an exact identifier in backquotes stays one name. 0 and the value in out; 1 without memory; 2 for an empty
+# part.
+fn: lm_graph_build_selector (@: g c.LmxGraph; const: (@: bytes char); size_t: text_size; @@: out void) int
     size_t: start 0U
     size_t: i 0U
     @: part void 0
     @: left void 0
     @: path c.Lmx 0
-    @: rhs void 0
-    @: operand void 0
-    @: single void 0
-    @: result c.Lmx 0
-    int: kind 0
-    int: status 0
+    out[0]: 0
+    if: text_size != 0U && bytes[0] = 96
+        left: c.lmx_graph_word(g, bytes, text_size)
+        if: left = 0
+            return: 1
+        out[0]: left
+        return: 0
     while: i <= text_size
         if: i = text_size || bytes[i] = 92
             if: i = start
@@ -353,6 +347,50 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
         ---
         i: i + 1U
     ---
+    out[0]: left
+    return: 0
+end: lm_graph_build_selector
+
+# Is the head text a written path -- `owner\field...`, no exact identifier in backquotes, no empty part -- so that its
+# Frame is a statement on a path head (lm_graph_build_node)? 1 or 0.
+fn: lm_graph_path_text (const: (@: bytes char); size_t: text_size) int
+    size_t: i 0U
+    int: path 0
+    if: text_size < 3U || bytes[0] = 96 || bytes[0] = 92 || bytes[text_size - 1U] = 92
+        return: 0
+    while: i < text_size
+        if: bytes[i] = 92
+            if: bytes[i + 1U] = 92
+                return: 0
+            path: 1
+        ---
+        i: i + 1U
+    ---
+    return: path
+end: lm_graph_path_text
+
+# A parser assignment flag becomes an ordinary Lmx operator and its operands. No parser flag survives.
+# The written selector is split here, once; consumers use the same nested field expression as every other path.
+# The operand is the body written after `:=`, read by the one model of a Frame (§3.3) as the body of a Frame given by
+# its head is: a single field that is a value -- a word, an unnamed int, an unnamed Lmx (an expression) -- is the
+# operand itself; any other body -- no field, several, a place, a Frame -- is the Structure of its fields as written
+# (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. A consumer that evaluates
+# the operand reads a Structure of one field as that field (lmx_graph_eval_value, lm_graph_emit_operand): a Frame
+# applying a callable or merge stays that application.
+fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0Frame; @@: out void) int
+    @: text c.LmP0Text lm_graph_p0_head(frame)
+    const: @: bytes char lm_graph_p0_data(text)
+    size_t: text_size lm_graph_p0_length(text)
+    @: left void 0
+    @: rhs void 0
+    @: operand void 0
+    @: single void 0
+    @: result c.Lmx 0
+    int: kind 0
+    int: status 0
+    status: lm_graph_build_selector(g, bytes, text_size, @ left)
+    if: status != 0
+        return: status
     status: lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), 0, 0, (cast: (@: c.LmP0Trailer) frame\trailer), @ rhs)
     if: status != 0
         return: status
@@ -417,6 +455,7 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
     @: value void 0
     @: head char 0
     int: number 0
+    int: status 0
     if: g = 0 || nd = 0 || out = 0
         return: 2
     out[0]: 0
@@ -436,6 +475,15 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         if: (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
             return: lm_graph_build_assignment(g, parent, frame, out)
         text: lm_graph_p0_head(frame)
+        # A Frame written on a path head, `owner\field: actuals` (Codex, review of 331: the path in field 0 of an
+        # ordinary Frame, the visible Lmx of the head expression, normalized here, once): the unnamed Lmx [path,
+        # actuals]; consumers resolve the head as any head (c.lmx_graph_path_head).
+        if: lm_graph_path_text(lm_graph_p0_data(text), lm_graph_p0_length(text)) != 0
+            status: lm_graph_build_selector(g, lm_graph_p0_data(text), lm_graph_p0_length(text), @ value)
+            if: status != 0
+                return: status
+            return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), 0, value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
+        ---
         head: c.lmx_graph_intern(lm_graph_p0_data(text), lm_graph_p0_length(text))
         if: head = 0
             return: 1
@@ -1295,6 +1343,54 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     return: 0
 end: lm_graph_emit_finally
 
+# The field a written path `owner\field` names, emitted for a write through it as the interpreter finds it
+# (lmx_graph_path_field): the owner's value, its target a Structure, the slot of the field named by the path's last
+# word, a place there. The temporary of the owner in owner_out; its slot is l2_s<owner>. 0, 2 for no path, or the
+# answer of the owner's emission.
+fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: left void; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: owner_out int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: path c.Lmx (cast: (@: c.Lmx) left)
+    int: owner 0
+    int: status 0
+    if: state = 0 || c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
+        return: 2
+    status: lm_graph_emit_operand(g, f, code, path, 0U, temps, decl_names, decl_slots, decl_n, @ owner)
+    if: status != 0
+        return: status
+    # The owner of the written field: a Structure, or the target of a reference to it, as in the interpreter.
+    c.fprintf(f, "        l2_v%d: lmx_graph_target(l2_g, l2_v%d)\n        if: lmx_graph_kind(l2_g, l2_v%d) != 4\n            %s\n        size_t: l2_s%d lmx_graph_named(l2_g, (cast: (@: Lmx) l2_v%d), ", owner, owner, owner, leave_failure, owner, owner)
+    status: lm_graph_emit_word(g, f, code, path, 2U)
+    c.fprintf(f, ")\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure)
+    owner_out[0]: owner
+    return: status
+end: lm_graph_emit_field_place
+
+# A statement written on a path head, `owner\field: value` (c.lmx_graph_path_head), emitted as the interpreter runs it
+# (lmx_graph_eval_path_statement): the field's place found before the value is computed, then the value written there.
+# A callable at that field is no place and fails there, as one actual missing or several do when the code reaches them.
+fn: lm_graph_emit_path_statement (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: statement c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    int: owner 0
+    int: value 0
+    int: status 0
+    if: c.lmx_graph_count(statement) != 2U
+        c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
+        return: 0
+    status: lm_graph_emit_field_place(g, f, code, c.lmx_graph_get(statement, 0U), temps, decl_names, decl_slots, decl_n, @ owner)
+    if: status != 0
+        return: status
+    status: lm_graph_emit_number(g, f, code, statement, 1U, temps, decl_names, decl_slots, decl_n, @ value)
+    if: status != 0
+        return: status
+    c.fprintf(f, "        if: lmx_graph_store_field(l2_g, lmx_call_code, (cast: (@: Lmx) l2_v%d), l2_s%d, l2_t%d) != 0\n            %s\n", owner, owner, value, leave_failure)
+    return: 0
+end: lm_graph_emit_path_statement
+
 # Compile the same visible assignment Lmx. Resolve/check the destination before the RHS, then generate its numeric
 # computation directly. The helpers write normal working places or graph cells; they never interpret the RHS.
 fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: statement c.Lmx; int: mode; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n) int
@@ -1304,26 +1400,17 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: left void c.lmx_graph_get(statement, 1U)
     @: name char c.lmx_graph_word_text(g, left)
-    @: path c.Lmx (cast: (@: c.Lmx) left)
     int: owner 0
     int: value 0
     int: status 0
-    if: c.lmx_graph_count(statement) != 3U
+    if: state = 0 || c.lmx_graph_count(statement) != 3U
         return: 2
     if: name != 0
         c.fputs("        if: lmx_graph_known_int(l2_g, lmx_call_code, ", f)
         status: lm_graph_emit_word(g, f, code, statement, 1U)
         c.fprintf(f, ", %d) != 0\n            %s\n", mode, leave_failure)
     else:
-        if: c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
-            return: 2
-        status: lm_graph_emit_operand(g, f, code, path, 0U, temps, decl_names, decl_slots, decl_n, @ owner)
-        if: status != 0
-            return: status
-        # The owner of the written field: a Structure, or the target of a reference to it, as in the interpreter.
-        c.fprintf(f, "        l2_v%d: lmx_graph_target(l2_g, l2_v%d)\n        if: lmx_graph_kind(l2_g, l2_v%d) != 4\n            %s\n        size_t: l2_s%d lmx_graph_named(l2_g, (cast: (@: Lmx) l2_v%d), ", owner, owner, owner, leave_failure, owner, owner)
-        status: lm_graph_emit_word(g, f, code, path, 2U)
-        c.fprintf(f, ")\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure)
+        status: lm_graph_emit_field_place(g, f, code, left, temps, decl_names, decl_slots, decl_n, @ owner)
     ---
     if: status != 0
         return: status
@@ -1695,6 +1782,11 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
             if: head = state\w_assign
                 status: lm_graph_emit_assignment(g, f, code, statement, mode, temps, 0, 0, 0U)
+                i: i + 1U
+                continue
+            # A statement on a path head, `owner\field: value`: the write of that field, as the interpreter runs it.
+            if: head = 0 && c.lmx_graph_path_head(g, raw) != 0
+                status: lm_graph_emit_path_statement(g, f, code, statement, temps, 0, 0, 0U)
                 i: i + 1U
                 continue
             if: head = 0

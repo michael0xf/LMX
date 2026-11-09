@@ -1,0 +1,26 @@
+# Slice 337 (Codex, review of 331, item 2: the path in field 0 of an ordinary Frame, normalized when the graph is built):
+# a Frame written on a path head, `owner\field: value`, is the write of that field, at the root and in a body, as
+# `owner\field := value` is -- the head is resolved first, the one value is computed after it, and a value may read the
+# body's own names (d, x). Before, the head stayed one word: the root defined a new place named `Box\hits`, a body
+# answered 3.
+Box:
+    int: hits 0
+    Inner:
+        int: v 1
+    end: Inner
+end: Box
+Box\hits: 5
+Box\Inner\v: Box\hits + 2
+int: v1 Box\Inner\v
+sub: bump (int: d 1)
+    Box\hits: Box\hits + d
+end: bump
+bump(10)
+bump()
+fn: twice (int: x) int
+    Box\Inner\v: x * 2
+    return: Box\Inner\v
+end: twice
+int: t twice(21)
+int: h Box\hits
+int: v2 Box\Inner\v

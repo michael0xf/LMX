@@ -24,6 +24,7 @@ predef: "l1src/parser.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>"
 include: "<stdlib.h>"
@@ -229,9 +230,33 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
     return: 0
 end: lm_graph_build_expression
 
+# The parser's closing postcondition is lowered to an ordinary receiver Lmx. No P0 trailer or source-form flag
+# survives construction. Consumers identify until by its canonical string address.
+fn: lm_graph_until_tail (@: tail c.LmP0Trailer) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    if: tail = 0 || tail\spelling = 0
+        return: 0
+    return: (cast: (int) (c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = state\w_until))
+end: lm_graph_until_tail
+
+fn: lm_graph_build_post (@: g c.LmxGraph; @: parent c.Lmx; @: body c.Lmx; @: tail c.LmP0Trailer; @@: out void) int
+    @: cursor c.LmP0Field lm_graph_next_active(lm_graph_p0_first((cast: (@: c.LmP0Structure) tail\body)))
+    @: condition void 0
+    @: loop c.Lmx 0
+    int: boundary 0
+    int: status lm_graph_build_expression(g, @ cursor, 1, @ boundary, @ condition)
+    if: status != 0 || cursor != 0
+        return: 2
+    loop: c.lmx_graph_lmx(g, parent, 3U)
+    if: loop = 0 || lm_graph_build_put(g, loop, 0U, c.lmx_graph_word(g, "until", 5U)) != 0 || lm_graph_build_put(g, loop, 1U, condition) != 0 || lm_graph_build_put(g, loop, 2U, (cast: (@: void) body)) != 0
+        return: 1
+    out[0]: (cast: (@: void) loop)
+    return: 0
+end: lm_graph_build_post
+
 # Collect one normalized expression per argument/field. The scratch pointer array is discarded; the resulting Lmx
 # has its exact fixed size. P0 separators stop an operand, so a unary operator after a comma starts the next argument.
-fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; @: head void; @@: out void) int
+fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; @: head void; @: tail c.LmP0Trailer; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     size_t: capacity (cast: (size_t) (lm_graph_count_active(source) + 1U))
     @@: items void (cast: (@@: void) c.calloc(capacity, sizeof(@: void)))
@@ -274,12 +299,15 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     ---
     c.free((cast: (@: void) items))
     out[0]: (cast: (@: void) result)
+    if: status = 0 && lm_graph_until_tail(tail) != 0
+        status: lm_graph_build_post(g, parent, result, tail, out)
     return: status
 end: lm_graph_build_sequence
 
 fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@: out void) int
     @: text c.LmP0Text 0
     @: frame c.LmP0Frame 0
+    @: source c.LmP0Structure 0
     @: value void 0
     int: number 0
     if: g = 0 || nd = 0 || out = 0
@@ -302,15 +330,20 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         value: c.lmx_graph_word(g, lm_graph_p0_data(text), lm_graph_p0_length(text))
         if: value = 0
             return: 1
-        return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), value, out)
+        return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
     if: nd\kind = c.LM_P0_NODE_STRUCTURE
-        return: lm_graph_build_sequence(g, parent, lm_graph_p0_structure(nd), 0, out)
+        source: lm_graph_p0_structure(nd)
+        return: lm_graph_build_sequence(g, parent, source, 0, (cast: (@: c.LmP0Trailer) source\trailer), out)
     return: 2
 end: lm_graph_build_node
 
 # Build data/signature fields through the same constructor. A body retains its written statements and effects.
-fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; int: declarations; @@: out c.Lmx) int
+fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Structure; int: declarations; @: tail c.LmP0Trailer; @@: out c.Lmx) int
     @: result c.Lmx 0
+    @: outer c.Lmx 0
+    @: loop void 0
+    size_t: own_count 0U
+    size_t: j 0U
     @: item c.LmP0Field 0
     @: value void 0
     size_t: i 0U
@@ -332,6 +365,29 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         ---
         i: i + 1U
         item: lm_graph_next_active(lm_graph_p0_next(item))
+    ---
+    if: status = 0 && lm_graph_until_tail(tail) != 0
+        # A named Structure retains its ordinary named fields, including var. Its executable field is the loop;
+        # the loop body shares those data fields, so names, references and selected data keep their ordinary meaning.
+        i: 0U
+        while: i < c.lmx_graph_count(result)
+            if: c.lmx_graph_slot_name(g, result, i) != 0
+                own_count: own_count + 1U
+            i: i + 1U
+        outer: c.lmx_graph_lmx(g, parent, own_count + 1U)
+        if: outer = 0
+            return: 1
+        i: 0U
+        while: i < c.lmx_graph_count(result) && status = 0
+            if: c.lmx_graph_slot_name(g, result, i) != 0
+                status: lm_graph_build_put(g, outer, j, c.lmx_graph_get(result, i))
+                j: j + 1U
+            i: i + 1U
+        if: status = 0
+            status: lm_graph_build_post(g, outer, result, tail, @ loop)
+        if: status = 0
+            status: c.lmx_graph_put(outer, own_count, loop)
+        result: outer
     ---
     out[0]: result
     return: status
@@ -368,7 +424,7 @@ fn: lm_graph_build_inline_names (@: g c.LmxGraph; @: value void; @: args c.Lmx; 
             names[0][count[0]]: name
             count[0]: count[0] + 1U
         return: 0
-    if: head != 0 && head != state\w_if && head != state\w_else && head != state\w_while && head != state\w_for
+    if: head != 0 && head != state\w_if && head != state\w_else && head != state\w_while && head != state\w_for && head != state\w_until
         return: 0
     while: i < c.lmx_graph_count(current) && status = 0
         status: lm_graph_build_inline_names(g, c.lmx_graph_get(current, i), args, names, count, capacity)
@@ -502,7 +558,7 @@ fn: lm_graph_build_method (@: g c.LmxGraph; @: parent c.Lmx; @: fr c.LmP0Frame; 
     item: lm_graph_next_active(lm_graph_p0_next(item))
     if: item = 0 || item\value\kind != c.LM_P0_NODE_STRUCTURE
         return: 2
-    status: lm_graph_build_fields(g, code, lm_graph_p0_structure(lm_graph_p0_value(item)), 1, @ args)
+    status: lm_graph_build_fields(g, code, lm_graph_p0_structure(lm_graph_p0_value(item)), 1, 0, @ args)
     if: status != 0
         return: status
     while: i < c.lmx_graph_count(args)
@@ -600,8 +656,8 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
             return: c.lmx_graph_put(root, slot, value)
         if: fr\trailer != 0 && (lm_graph_data_head(head) != 0 || head = state\w_var)
             tail: (cast: (@: c.LmP0Trailer) fr\trailer)
-            if: tail\spelling != 0 && c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = c.lmx_graph_intern("end", 3U)
-                r: lm_graph_build_fields(g, root, lm_graph_p0_body(fr), 1, @ structure)
+            if: lm_graph_until_tail(tail) != 0 || (tail\spelling != 0 && c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = c.lmx_graph_intern("end", 3U))
+                r: lm_graph_build_fields(g, root, lm_graph_p0_body(fr), 1, tail, @ structure)
                 if: r != 0
                     return: r
                 if: c.lmx_graph_name_address(g, (cast: (@: void) structure), head) != 0
@@ -709,25 +765,6 @@ sub: lm_graph_emit_quoted (@: f c.FILE; @: text char)
     return
 end: lm_graph_emit_quoted
 
-# The deepest nesting of Lmx below lmx (0 for a flat one).
-fn: lm_graph_depth (@: g c.LmxGraph; @: lmx c.Lmx) int
-    size_t: n (cast: (size_t) c.lmx_graph_count(lmx))
-    size_t: i 0U
-    int: deepest 0
-    int: d 0
-    @: value void 0
-    while: i < n
-        value: c.lmx_graph_get(lmx, i)
-        if: c.lmx_graph_kind(g, value) = 4
-            d: 1 + lm_graph_depth(g, (cast: (@: c.Lmx) value))
-            if: d > deepest
-                deepest: d
-        ---
-        i: i + 1U
-    ---
-    return: deepest
-end: lm_graph_depth
-
 # The row of the name table for the value, if any, as a name call after its construction into the L1 local `local`.
 fn: lm_graph_emit_name_row (@: g c.LmxGraph; @: f c.FILE; @: address void; @: local char) int
     @: name char (cast: (@: char) c.lmx_graph_name_of(g, address))
@@ -739,47 +776,109 @@ fn: lm_graph_emit_name_row (@: g c.LmxGraph; @: f c.FILE; @: address void; @: lo
     return: 0
 end: lm_graph_emit_name_row
 
-# The construction of value into slot k of the holder (an L1 expression naming the holding Lmx) in l2_program_build: a
-# primitive through the local l2_c, an Lmx through the local l2_s<depth> and its fields below it (the same constructor
-# the builder used, §1a). 0, or 1 for a cell of no known kind.
-fn: lm_graph_emit_value (@: g c.LmxGraph; @: f c.FILE; @: value void; @: holder char; size_t: k; int: depth) int
+# One temporary source-address map covers the emitted graph, primitives and uninitialized referents. Each live
+# address is allocated once; subsequent edges use that generated local. The map is destroyed by this translation.
+fn: lm_graph_emit_value (@: g c.LmxGraph; @: f c.FILE; @: value void; @: holder char; size_t: k; @: map c.LmxCopyMap; @: next size_t) int
     int: kind (cast: (int) c.lmx_graph_kind(g, value))
     @: inner c.Lmx 0
     @: text char 0
-    @: local char 0
+    @: referent void 0
+    @: local char (cast: (@: char) c.malloc(96U))
+    size_t: id (cast: (size_t) c.lmx_copy_map_get(map, value))
+    size_t: target 0U
     size_t: n 0U
     size_t: j 0U
-    if: kind = 1
-        c.fprintf(f, "        l2_c: lmx_graph_int(l2_g, %d)\n        if: l2_c = 0 || lmx_graph_put(%s, %zuU, l2_c) != 0\n            return: 1\n", c.lmx_int_value_known(value), holder, k)
-        return: lm_graph_emit_name_row(g, f, value, "l2_c")
-    if: kind = 3
-        c.fprintf(f, "        l2_c: lmx_graph_uninit_int(l2_g)\n        if: l2_c = 0 || lmx_graph_put(%s, %zuU, l2_c) != 0\n            return: 1\n", holder, k)
-        return: lm_graph_emit_name_row(g, f, c.lmx_arena_pointer_void_read(value), "lmx_arena_pointer_void_read(l2_c)")
-    if: kind = 2
-        text: c.lmx_graph_word_text(g, value)
-        if: text = 0
-            return: 1
-        c.fputs("        l2_c: lmx_graph_word(l2_g, ", f)
-        lm_graph_emit_quoted(f, text)
-        c.fprintf(f, ", %zuU)\n        if: l2_c = 0 || lmx_graph_put(%s, %zuU, l2_c) != 0\n            return: 1\n", (cast: (size_t) c.strlen(text)), holder, k)
-        return: 0
-    if: kind != 4
+    int: status 0
+    if: local = 0 || value = 0
+        c.free(local)
         return: 1
-    inner: (cast: (@: c.Lmx) value)
-    n: c.lmx_graph_count(inner)
-    local: (cast: (@: char) c.malloc(32U))
-    if: local = 0
-        return: 1
-    c.snprintf(local, 32U, "l2_s%d", depth)
-    c.fprintf(f, "        %s: lmx_graph_lmx(l2_g, %s, %zuU)\n        if: %s = 0\n            return: 1\n", local, holder, n, local)
-    while: j < n
-        if: lm_graph_emit_value(g, f, c.lmx_graph_get(inner, j), local, j, depth + 1) != 0
+    if: id = 0U
+        id: next[0]
+        next[0]: id + 1U
+        if: c.lmx_copy_map_put(map, value, (cast: (@: void) id)) != 0
+            c.free(local)
             return: 1
-        j: j + 1U
+        c.fprintf(f, "        @: void l2_gv%zu 0\n", id)
+        if: kind = 1
+            c.fprintf(f, "        l2_gv%zu: lmx_graph_int(l2_g, %d)\n", id, c.lmx_int_value_known(value))
+        else:
+            if: kind = 3
+                referent: c.lmx_arena_pointer_void_read(value)
+                target: (cast: (size_t) c.lmx_copy_map_get(map, referent))
+                if: target = 0U
+                    target: next[0]
+                    next[0]: target + 1U
+                    status: c.lmx_copy_map_put(map, referent, (cast: (@: void) target))
+                    c.fprintf(f, "        @: void l2_gv%zu lmx_int_new_profiled(arena, 0)\n", target)
+                c.fprintf(f, "        l2_gv%zu: lmx_arena_pointer_cells_profiled(arena, LMX_TYPE_UNINIT_INT, 0, sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, 1U)\n        if: l2_gv%zu = 0 || l2_gv%zu = 0 || lmx_arena_pointer_void_write(l2_gv%zu, l2_gv%zu) != 0\n            return: 1\n", id, id, target, id, target)
+                c.snprintf(local, 96U, "l2_gv%zu", target)
+                if: status = 0
+                    status: lm_graph_emit_name_row(g, f, referent, local)
+                ---
+            else:
+                if: kind = 2
+                    text: c.lmx_graph_word_text(g, value)
+                    if: text = 0
+                        status: 1
+                    else:
+                        c.fprintf(f, "        l2_gv%zu: lmx_graph_word(l2_g, ", id)
+                        lm_graph_emit_quoted(f, text)
+                        c.fprintf(f, ", %zuU)\n", (cast: (size_t) c.strlen(text)))
+                    ---
+                else:
+                    if: kind = 4
+                        inner: (cast: (@: c.Lmx) value)
+                        n: c.lmx_graph_count(inner)
+                        c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_graph_lmx(l2_g, 0, %zuU))\n", id, n)
+                        c.snprintf(local, 96U, "(cast: (@: Lmx) l2_gv%zu)", id)
+                        while: j < n && status = 0
+                            status: lm_graph_emit_value(g, f, c.lmx_graph_get(inner, j), local, j, map, next)
+                            j: j + 1U
+                        ---
+                    else:
+                        status: 1
+                    ---
+                ---
+            ---
+        ---
+        c.fprintf(f, "        if: l2_gv%zu = 0\n            return: 1\n", id)
+        c.snprintf(local, 96U, "l2_gv%zu", id)
+        if: status = 0 && kind != 3
+            status: lm_graph_emit_name_row(g, f, value, local)
+        ---
     ---
-    c.fprintf(f, "        if: lmx_graph_put(%s, %zuU, (cast: (@: void) %s)) != 0\n            return: 1\n", holder, k, local)
-    return: lm_graph_emit_name_row(g, f, value, local)
+    if: status = 0
+        c.fprintf(f, "        if: lmx_graph_put(%s, %zuU, l2_gv%zu) != 0\n            return: 1\n", holder, k, id)
+    c.free(local)
+    return: status
 end: lm_graph_emit_value
+
+# All graph addresses exist before lexical parent edges are installed, including a parent reached after its child.
+fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap) int
+    @: keys c.VoidDynamicArray @ map\keys
+    @: base c.VoidArray (cast: (@: c.VoidArray) keys)
+    @@: sources void (cast: (@@: void) base\data)
+    @: current c.Lmx 0
+    size_t: i 0U
+    size_t: id 0U
+    size_t: parent 0U
+    while: i < keys\capacity
+        if: sources[i] != 0 && c.lmx_graph_kind(g, sources[i]) = 4
+            current: (cast: (@: c.Lmx) sources[i])
+            id: (cast: (size_t) c.lmx_copy_map_get(map, sources[i]))
+            parent: (cast: (size_t) c.lmx_copy_map_get(map, (cast: (@: void) current\parent)))
+            c.fprintf(f, "        l2_method: (cast: (@: Lmx) l2_gv%zu)\n", id)
+            if: current\parent = 0
+                c.fputs("        l2_method\\parent: 0\n", f)
+            else:
+                if: parent = 0U
+                    return: 1
+                c.fprintf(f, "        l2_method\\parent: (cast: (@: Lmx) l2_gv%zu)\n", parent)
+            ---
+        ---
+        i: i + 1U
+    return: 0
+end: lm_graph_emit_parents
 
 # The emitter's table of the declarations its native body has emitted so far (§3.5: the translator's own resolution,
 # a table of its traversal): a declaration with a computed initializer names its slot from its statement on.
@@ -1083,7 +1182,7 @@ fn: lm_graph_emit_statements (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: te
             head: 0
             if: m != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
-            if: head = 0 || head = state\w_if || head = state\w_else || head = state\w_while || head = state\w_for || head = state\w_return
+            if: head = 0 || head = state\w_if || head = state\w_else || head = state\w_while || head = state\w_for || head = state\w_until || head = state\w_return
                 end_at: i + 1U
                 if: head = state\w_if && end_at < n && c.lmx_graph_kind(g, c.lmx_graph_get(root, end_at)) = 4
                     next: (cast: (@: c.Lmx) c.lmx_graph_get(root, end_at))
@@ -1223,7 +1322,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 continue
             if: head = state\w_else
                 return: 2
-            if: head = state\w_while || head = state\w_for
+            if: head = state\w_while || head = state\w_for || head = state\w_until
                 if: n != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(statement, 2U)) != 4
                     return: 2
                 nested: (cast: (@: c.Lmx) c.lmx_graph_get(statement, 2U))
@@ -1237,6 +1336,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                     if: c.lmx_graph_kind(g, (cast: (@: void) header)) != 4 || c.lmx_graph_count(header) != 3U
                         return: 2
                     status: lm_graph_emit_block(g, f, code, header, 0U, 1U, mode, exit_label, again_label, step_label, temps)
+                if: head = state\w_until
+                    c.fprintf(f, "        goto: l2_label%d\n", body_label)
                 c.fprintf(f, "        l2_label%d: ()\n", test_label)
                 if: status = 0
                     if: head = state\w_for
@@ -1245,7 +1346,11 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                         status: lm_graph_emit_number(g, f, code, statement, 1U, temps, 0, 0, 0U, @ result)
                     ---
                 ---
-                c.fprintf(f, "        if: l2_t%d = 0\n            goto: l2_label%d\n        l2_label%d: ()\n", result, end_label, body_label)
+                if: head = state\w_until
+                    c.fprintf(f, "        if: l2_t%d != 0\n            goto: l2_label%d\n        l2_label%d: ()\n", result, end_label, body_label)
+                else:
+                    c.fprintf(f, "        if: l2_t%d = 0\n            goto: l2_label%d\n        l2_label%d: ()\n", result, end_label, body_label)
+                ---
                 if: status = 0
                     status: lm_graph_emit_block(g, f, code, nested, 0U, c.lmx_graph_count(nested), mode, end_label, body_label, next_label, temps)
                 c.fprintf(f, "        l2_label%d: ()\n", next_label)
@@ -1439,8 +1544,8 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     @: value void 0
     size_t: n (cast: (size_t) c.lmx_graph_count(root))
     size_t: i 0U
-    int: depth 0
-    int: d 0
+    c.LmxCopyMap: emitted
+    size_t: next 2U
     int: temps 0
     int: r 0
     @@: methods c.Lmx 0
@@ -1495,22 +1600,25 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     # Ordinary emission builds the program in R0. A private emit-check host owns a separate program root, so clearing
     # the program's native entry cannot erase the adapter or change the program's lexical parent.
     c.fputs("external:\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n        @: LmxGraph l2_g 0\n        @: void l2_c 0\n        @: Lmx lmx_call_code 0\n        @: Lmx l2_method 0\n", f)
-    depth: lm_graph_depth(g, root)
-    d: 0
-    while: d < depth
-        c.fprintf(f, "        @: Lmx l2_s%d 0\n", d)
-        d: d + 1
-    ---
     c.fputs("        l2_g: lmx_graph_open(arena)\n        if: l2_g = 0 || graph = 0\n            return: 1\n        l2_program_arena: arena\n        l2_program_root_graph: graph\n        l2_program_unit: graph\n", f)
     if: check_root != 0
         c.fprintf(f, "        l2_program_unit: lmx_graph_lmx(l2_g, 0, %zuU)\n        if: l2_program_unit = 0 || lmx_graph_put(graph, 0U, (cast: (@: void) l2_program_unit)) != 0\n            return: 1\n", n)
-    while: i < n
+    c.fputs("        @: void l2_gv1 (cast: (@: void) l2_program_unit)\n", f)
+    r: c.lmx_copy_map_init(@ emitted)
+    if: r = 0
+        r: c.lmx_copy_map_put(@ emitted, (cast: (@: void) root), (cast: (@: void) 1U))
+    while: i < n && r = 0
         value: c.lmx_graph_get(root, i)
-        if: lm_graph_emit_value(g, f, value, "l2_program_unit", i, 0) != 0
-            c.fclose(f)
-            c.free((cast: (@: void) methods))
-            return: 5
+        r: lm_graph_emit_value(g, f, value, "l2_program_unit", i, @ emitted, @ next)
         i: i + 1U
+    ---
+    if: r = 0
+        r: lm_graph_emit_parents(g, f, @ emitted)
+    c.lmx_copy_map_dispose(@ emitted)
+    if: r != 0
+        c.fclose(f)
+        c.free((cast: (@: void) methods))
+        return: 5
     ---
     if: forced = 0
         c.fputs("        lmx_call_code: l2_program_unit\n", f)

@@ -48,8 +48,14 @@ control flow and full admission are still open; the activation model is not comp
 The next [graph24/tool16/rt22](../steps/witnesses/control-flow-20261108/notes.md) supports if/else, while, for,
 nearest-loop break/continue/redo, return from inline bodies, comparisons and short-circuit &&/||. Bodies remain ordinary
 Lmx and execute in the current activation; construction adds their own int fields to the shared var. Native emits its
-own conditions and jumps. All27 execution and19 graph-mutation checks passed. Until, named transfers, cleanups and
-remaining types/forms are still open; this slice does not complete the activation model.
+own conditions and jumps. All27 execution and19 graph-mutation checks passed.
+The current [graph28/tool17/rt23](../steps/witnesses/post-loop-20261108/notes.md) builds until as ordinary Lmx
+[until, condition, body]. A named Structure retains its fields and an executable field referring to that loop;
+fields shared by the body and Structure remain the same cells. Native allocates each encountered address once;
+a temporary translation map associates it with a generated constructor local and is discarded after the traversal.
+Both consumers evaluate the postcondition after the body; continue reaches it, while redo skips it.
+All33 execution and19 graph-mutation checks passed. Named transfers, cleanups and remaining types/forms are still open;
+this slice completes neither the activation model nor a general graph-state codec.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

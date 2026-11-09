@@ -215,7 +215,7 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                 status: c.lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) raw))
             else:
                 word: c.lmx_graph_word_text(g, raw)
-                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref && word != state\w_eq && word != state\w_ne && word != state\w_lt && word != state\w_le && word != state\w_gt && word != state\w_ge && word != state\w_and && word != state\w_or && word != state\w_not && word != state\w_if && word != state\w_else && word != state\w_while && word != state\w_for && word != state\w_break && word != state\w_continue && word != state\w_redo
+                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref && word != state\w_eq && word != state\w_ne && word != state\w_lt && word != state\w_le && word != state\w_gt && word != state\w_ge && word != state\w_and && word != state\w_or && word != state\w_not && word != state\w_if && word != state\w_else && word != state\w_while && word != state\w_for && word != state\w_break && word != state\w_continue && word != state\w_redo && word != state\w_until
                     status: lmx_graph_work_capture(g, frame, word)
                     if: status = 0
                         row: lmx_graph_work_row(frame, word)
@@ -688,7 +688,7 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             continue
         if: head = state\w_else
             return: 2
-        if: head = state\w_while || head = state\w_for
+        if: head = state\w_while || head = state\w_for || head = state\w_until
             if: n != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(statement, 2U)) != 4
                 return: 2
             nested: (cast: (@: c.Lmx) c.lmx_graph_get(statement, 2U))
@@ -698,10 +698,13 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
                     return: 2
                 status: lmx_graph_block(g, code, header, 0U, 1U, nested_mode, out, flow)
             while: status = 0 && flow[0] = 0
-                if: head = state\w_for
-                    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(header, 1U), @ number)
-                else:
-                    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 1U), @ number)
+                number: 1
+                if: head != state\w_until
+                    if: head = state\w_for
+                        status: lmx_graph_eval_number(g, code, c.lmx_graph_get(header, 1U), @ number)
+                    else:
+                        status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 1U), @ number)
+                    ---
                 ---
                 if: status != 0 || number = 0
                     break
@@ -720,6 +723,12 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
                     flow[0]: 0
                 if: head = state\w_for && flow[0] = 0
                     status: lmx_graph_block(g, code, header, 2U, 3U, nested_mode, out, flow)
+                ---
+                if: status = 0 && head = state\w_until && flow[0] = 0
+                    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 1U), @ number)
+                    if: status != 0 || number != 0
+                        break
+                    ---
                 ---
             ---
             i: i + 1U

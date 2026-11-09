@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 311 entries.
+are historical. The current input manifest has 314 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -53,8 +53,14 @@ control flow and full admission/conversion are open.
 The graph24/tool16/rt22 slice implements if/else, while, for and nearest-loop break/continue/redo through the clean graph.
 Inline bodies keep the same activation; construction collects their int fields into the shared var, visible from the
 first statement. Comparisons, ! and short-circuit &&/|| work in both consumers; native emits direct conditions and jumps.
-27 execution checks and19 graph-mutation checks passed. Until, named transfers, cleanups and remaining types/admission
-are open. [Commands, source manifest, receipts and limits](../steps/witnesses/control-flow-20261108/notes.md).
+27 execution checks and19 graph-mutation checks passed.
+[Commands, source manifest, receipts and limits](../steps/witnesses/control-flow-20261108/notes.md).
+
+The current graph28/tool17/rt23 adds until in anonymous bodies and named Structures, retaining own fields and var.
+It uses ordinary Lmx [until, condition, body]; continue tests the condition, redo repeats the body without testing.
+Native graph construction preserves shared cells through a temporary source-address map discarded by the translator.
+33 execution checks and19 graph-mutation checks passed. Named transfers, cleanups, remaining types/admission and the
+general graph-state codec remain open. [Current evidence](../steps/witnesses/post-loop-20261108/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

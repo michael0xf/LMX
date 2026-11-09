@@ -1,0 +1,132 @@
+GRAPH-BEFORE-BEGIN
+fn: fail () int
+    return: (1 / 0)
+end: fail
+fn: failing_body () int (
+    int: count 0
+    int: seen 0
+)
+    finally: (seen ((failing_body \ var) \ count)) (count (count + 10))
+    count: 2
+    return: (fail)
+end: failing_body
+int: root_trace 0
+finally: (root_trace ((failing_body \ var) \ count))
+int: result (failing_body)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: fail () int
+    return: (1 / 0)
+end: fail
+fn: failing_body () int (
+    int: count 12
+    int: seen 2
+)
+    finally: (seen ((failing_body \ var) \ count)) (count (count + 10))
+    count: 2
+    return: (fail)
+end: failing_body
+int: root_trace 12
+finally: (root_trace ((failing_body \ var) \ count))
+int: result (failing_body)
+GRAPH-AFTER-END
+lmx: R0 closed without an exit Message and with success = 0: R0 was stopped (an uncaught throw or a stop request)
+lmx: R0 closed with success = 0 -- the host's arena after the close's settle; an array marked joined came in at that settle (the arena of a failed child)
+a0 joined kind 6 type 13 stride 32 cells 29
+  a0[0] struct parent - fields 1: a0[1]
+  a0[1] struct parent - fields 5: a0[2] a0[9] a10[6] a0[23] a0[27]
+  a0[2] struct parent a0[1] fields 5: a5[0] a0[3] a0[4] a0[5] a0[6]
+  a0[3] struct parent a0[2] fields 0:
+  a0[4] struct parent a0[2] fields 1: a5[1]
+  a0[5] struct parent a0[2] fields 0:
+  a0[6] struct parent a0[2] fields 1: a0[7]
+  a0[7] struct parent a0[6] fields 2: a5[2] a0[8]
+  a0[8] struct parent a0[7] fields 3: a10[0] a5[3] a10[1]
+  a0[9] struct parent a0[1] fields 5: a5[4] a0[10] a0[11] a0[12] a0[13]
+  a0[10] struct parent a0[9] fields 0:
+  a0[11] struct parent a0[9] fields 1: a5[5]
+  a0[12] struct parent a0[9] fields 2: a10[2] a10[3]
+  a0[13] struct parent a0[9] fields 3: a0[14] a0[20] a0[21]
+  a0[14] struct parent a0[13] fields 3: a5[6] a0[15] a0[18]
+  a0[15] struct parent a0[14] fields 2: a5[7] a0[16]
+  a0[16] struct parent a0[15] fields 3: a0[17] a5[11] a5[12]
+  a0[17] struct parent a0[16] fields 3: a5[8] a5[9] a5[10]
+  a0[18] struct parent a0[14] fields 2: a5[13] a0[19]
+  a0[19] struct parent a0[18] fields 3: a5[14] a5[15] a10[4]
+  a0[20] struct parent a0[13] fields 2: a5[16] a10[5]
+  a0[21] struct parent a0[13] fields 2: a5[17] a0[22]
+  a0[22] struct parent a0[21] fields 1: a5[18]
+  a0[23] struct parent a0[1] fields 2: a5[19] a0[24]
+  a0[24] struct parent a0[23] fields 2: a5[20] a0[25]
+  a0[25] struct parent a0[24] fields 3: a0[26] a5[24] a5[25]
+  a0[26] struct parent a0[25] fields 3: a5[21] a5[22] a5[23]
+  a0[27] struct parent a0[1] fields 3: a5[26] a5[27] a0[28]
+  a0[28] struct parent a0[27] fields 1: a5[28]
+a1 joined kind 4 type 7 stride 8 cells 1
+a2 joined kind 7 type 22 stride 200 cells 1
+  a2[0] message running 0 success 0 graph a0[0]
+a3 joined kind 4 type 7 stride 8 cells 5
+a4 joined kind 4 type 7 stride 8 cells 5
+a5 joined kind 1 type 37 stride 8 cells 29
+a6 joined kind 4 type 7 stride 8 cells 1
+a7 joined kind 4 type 7 stride 8 cells 1
+a8 joined kind 4 type 7 stride 8 cells 2
+a9 joined kind 4 type 7 stride 8 cells 3
+a10 joined kind 1 type 2 stride 4 cells 7
+  a10[0] int 1
+  a10[1] int 0
+  a10[2] int 12
+  a10[3] int 2
+  a10[4] int 10
+  a10[5] int 2
+  a10[6] int 12
+a11 joined kind 4 type 7 stride 8 cells 5
+a12 joined kind 4 type 7 stride 8 cells 1
+a13 joined kind 4 type 7 stride 8 cells 2
+a14 joined kind 4 type 7 stride 8 cells 3
+a15 joined kind 4 type 7 stride 8 cells 3
+a16 joined kind 4 type 7 stride 8 cells 2
+a17 joined kind 4 type 7 stride 8 cells 3
+a18 joined kind 4 type 7 stride 8 cells 3
+a19 joined kind 4 type 7 stride 8 cells 2
+a20 joined kind 4 type 7 stride 8 cells 3
+a21 joined kind 4 type 7 stride 8 cells 2
+a22 joined kind 4 type 7 stride 8 cells 2
+a23 joined kind 4 type 7 stride 8 cells 1
+a24 joined kind 4 type 7 stride 8 cells 2
+a25 joined kind 4 type 7 stride 8 cells 2
+a26 joined kind 4 type 7 stride 8 cells 3
+a27 joined kind 4 type 7 stride 8 cells 3
+a28 joined kind 4 type 7 stride 8 cells 3
+a29 joined kind 4 type 7 stride 8 cells 1
+a30 joined kind 13 type 27 stride 248 cells 1
+a31 joined kind 10 type 24 stride 40 cells 1
+a32 joined kind 11 type 25 stride 72 cells 1
+a33 joined kind 1 type 1046 stride 8 cells 2
+a34 joined kind 21 type 1048598 stride 24 cells 1
+a35 kind 12 type 26 stride 40 cells 0
+a36 kind 4 type 7 stride 8 cells 0
+a37 kind 1 type 1 stride 1 cells 114
+a38 kind 3 type 5 stride 32 cells 1
+  a38[0] array len 114 "C:\x5cNyasha_Planet\x5cLMX\x5cbuild2\x5ccodex_fix250generationchain01\x5ccold-g"
+a39 kind 4 type 7 stride 8 cells 1
+a40 kind 6 type 13 stride 32 cells 1
+  a40[0] struct parent - fields 1: a38[0]
+a41 kind 6 type 13 stride 32 cells 1
+  a41[0] struct parent - fields 0:
+a42 kind 11 type 25 stride 72 cells 1
+a43 kind 9 type 23 stride 16 cells 0
+a44 kind 9 type 23 stride 16 cells 0
+a45 kind 13 type 27 stride 248 cells 2
+a46 kind 10 type 24 stride 40 cells 2
+a4l2_eternal_driver: 81 checks, 0 roots
+7 kind 7 type 22 stride 200 cells 2
+  a47[0] message running 1 success 0 graph a52[0]
+  a47[1] message running 0 success 0 graph a52[1]
+a48 kind 1 type 1046 stride 8 cells 2
+a49 kind 21 type 1048598 stride 24 cells 2
+a50 kind 1 type 1046 stride 8 cells 2
+a51 kind 4 type 7 stride 8 cells 3
+a52 kind 6 type 13 stride 32 cells 2
+  a52[0] struct parent - fields 0:
+  a52[1] struct parent - fields 3: a2[0] a40[0] ext

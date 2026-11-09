@@ -143,7 +143,8 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_continue: lmx_graph_intern_in(state, "continue", 8U)
     state\w_redo: lmx_graph_intern_in(state, "redo", 4U)
     state\w_until: lmx_graph_intern_in(state, "until", 5U)
-    if: state\w_until = 0
+    state\w_finally: lmx_graph_intern_in(state, "finally", 7U)
+    if: state\w_until = 0 || state\w_finally = 0
         return: 0
     if: state\w_eq = 0 || state\w_ne = 0 || state\w_lt = 0 || state\w_le = 0 || state\w_gt = 0 || state\w_ge = 0 || state\w_and = 0 || state\w_or = 0 || state\w_not = 0 || state\w_if = 0 || state\w_else = 0 || state\w_while = 0 || state\w_for = 0 || state\w_break = 0 || state\w_continue = 0 || state\w_redo = 0
         return: 0
@@ -850,7 +851,8 @@ end: lmx_graph_dump_method
 
 # The fields of lmx, one per line at depth: an int place as `int: name value`, a place without a value as
 # `int: name`, a word as itself, a named Lmx as its block `name:` ... `end: name`, an unnamed Lmx with a word head as
-# the Frame `head: fields`. 0, or 1 when a cell is none of the graph's.
+# the Frame head: fields, and an anonymous sequential body between --- delimiters.
+# 0, or 1 when a cell is none of the graph's.
 fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) int
     size_t: n lmx_graph_count(lmx)
     size_t: i 0U
@@ -908,8 +910,14 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
                     else:
                         m: lmx_graph_count(inner)
                         head: lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
-                        if: m = 0U || head = 0
-                            return: 1
+                        if: head = 0
+                            c.fputs("---\n", f)
+                            if: lmx_graph_dump_at(g, inner, f, depth + 1) != 0
+                                return: 1
+                            lmx_graph_dump_indent(f, depth)
+                            c.fputs("---\n", f)
+                            i: i + 1U
+                            continue
                         c.fprintf(f, "%s:", head)
                         k: 1U
                         while: k < m

@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 314 entries.
+are historical. The current input manifest has 318 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -60,7 +60,14 @@ The current graph28/tool17/rt23 adds until in anonymous bodies and named Structu
 It uses ordinary Lmx [until, condition, body]; continue tests the condition, redo repeats the body without testing.
 Native graph construction preserves shared cells through a temporary source-address map discarded by the translator.
 33 execution checks and19 graph-mutation checks passed. Named transfers, cleanups, remaining types/admission and the
-general graph-state codec remain open. [Current evidence](../steps/witnesses/post-loop-20261108/notes.md).
+general graph-state codec were still open. [Evidence](../steps/witnesses/post-loop-20261108/notes.md).
+
+The current graph34/tool19/rt26 executes reached finally registrations in reverse order on scope exit, including
+return, nearest-loop transfers and supported errors. The return value is held before cleanup; own dirty fields are
+published before activation-exit cleanup and again afterwards. A transfer or failure inside a cleanup does not rerun
+it and does not omit outer cleanups. Native emits these paths directly; traversal state is not retained in the graph.
+42 execution checks and19 graph-mutation checks passed. Named targets, throws/catch, stop/yield, other types and
+the complete activation/codec/selfbuild migration remain open. [Current evidence](../steps/witnesses/finally-20261108/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

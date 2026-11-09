@@ -56,6 +56,12 @@ a temporary translation map associates it with a generated constructor local and
 Both consumers evaluate the postcondition after the body; continue reaches it, while redo skips it.
 All33 execution and19 graph-mutation checks passed. Named transfers, cleanups and remaining types/forms are still open;
 this slice completes neither the activation model nor a general graph-state codec.
+The current [graph34/tool19/rt26](../steps/witnesses/finally-20261108/notes.md) executes reached finally registrations
+in reverse order on scope exit: normal completion, return, nearest-loop transfers and supported errors. The return
+value is held before cleanup; dirty fields publish before activation-exit cleanups and afterwards. A transfer or
+failure inside a cleanup neither reruns it nor omits outer cleanups. Native emits these paths directly; registration
+state lives only in the current traversal/call. All42 execution and19 graph-mutation checks passed. Named targets,
+throws/catch, stop/yield, other types and the complete activation/codec/selfbuild migration remain open.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

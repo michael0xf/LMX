@@ -1,0 +1,34 @@
+GRAPH-BEFORE-BEGIN
+fn: fail () int
+    return: (1 / 0)
+end: fail
+fn: failing_body () int (
+    int: count 0
+    int: seen 0
+)
+    finally: (seen ((failing_body \ var) \ count)) (count (count + 10))
+    count: 2
+    return: (fail)
+end: failing_body
+int: root_trace 0
+finally: (root_trace ((failing_body \ var) \ count))
+int: result (failing_body)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: fail () int
+    return: (1 / 0)
+end: fail
+fn: failing_body () int (
+    int: count 12
+    int: seen 2
+)
+    finally: (seen ((failing_body \ var) \ count)) (count (count + 10))
+    count: 2
+    return: (fail)
+end: failing_body
+int: root_trace 12
+finally: (root_trace ((failing_body \ var) \ count))
+int: result (failing_body)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 6

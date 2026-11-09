@@ -1,0 +1,117 @@
+fn: ordered () int (int: trace 0)
+    finally:
+        trace: trace * 10 + 1
+    end: finally
+    finally:
+        trace: trace * 10 + 2
+    end: finally
+    return: 9
+end: ordered
+fn: held () int (int: x 0; int: seen 0)
+    finally:
+        seen: held\var\x
+        x: x + 1
+    end: finally
+    x: 5
+    return: x
+end: held
+fn: scoped () int
+    int: trace 0
+    if: 0
+        finally:
+            trace: 99
+        end: finally
+    end: if
+    ---
+        finally:
+            trace: trace * 10 + 1
+        end: finally
+        trace: 2
+    ---
+    return: trace
+end: scoped
+fn: jumps () int
+    int: i 0
+    int: trace 0
+    while: i < 4
+        finally:
+            trace: trace * 10 + i
+        end: finally
+        i: i + 1
+        if: i = 1
+            continue()
+        end: if
+        if: i = 2
+            redo()
+        end: if
+        if: i = 4
+            break()
+        end: if
+    end: while
+    return: trace
+end: jumps
+fn: replacement () int (int: trace 0)
+    finally:
+        trace: trace + 1
+    end: finally
+    finally:
+        return: 7
+    end: finally
+    return: 3
+end: replacement
+fn: nested () int (int: trace 0)
+    finally:
+        finally:
+            trace: trace * 10 + 3
+        end: finally
+        trace: trace * 10 + 2
+    end: finally
+    trace: 1
+    return: trace
+end: nested
+fn: cleanup_field () int
+    late: 4
+    finally:
+        int: late
+        late: late + 1
+    end: finally
+    return: late
+end: cleanup_field
+fn: cleanup_jump () int
+    int: i 0
+    int: trace 0
+    while: i < 3
+        finally:
+            trace: trace * 10 + i
+            if: i < 3
+                continue()
+            end: if
+        end: finally
+        i: i + 1
+        break()
+    end: while
+    return: trace
+end: cleanup_jump
+int: ordered_result ordered()
+int: ordered_trace ordered\var\trace
+int: held_result held()
+int: held_x held\var\x
+int: held_seen held\var\seen
+int: scoped_result scoped()
+int: jump_result jumps()
+int: replacement_result replacement()
+int: replacement_trace replacement\var\trace
+int: nested_result nested()
+int: nested_trace nested\var\trace
+int: cleanup_field_result cleanup_field()
+int: cleanup_field_value cleanup_field\var\late
+int: cleanup_jump_result cleanup_jump()
+int: root_trace 0
+finally:
+    root_trace: root_trace * 10 + 1
+end: finally
+int: after_registration held_result + 10
+root_trace: 2
+finally:
+    root_trace: root_trace * 10 + 3
+end: finally

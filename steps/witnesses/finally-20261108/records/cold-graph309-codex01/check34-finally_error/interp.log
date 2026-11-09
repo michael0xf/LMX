@@ -1,0 +1,24 @@
+GRAPH-BEFORE-BEGIN
+fn: bad () int (
+    int: count 0
+)
+    finally: (count (count + 10))
+    finally: (count (count + 1)) (count (1 / 0))
+    count: 2
+    return: count
+end: bad
+int: result (bad)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: bad () int (
+    int: count 13
+)
+    finally: (count (count + 10))
+    finally: (count (count + 1)) (count (1 / 0))
+    count: 2
+    return: count
+end: bad
+int: result (bad)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 6

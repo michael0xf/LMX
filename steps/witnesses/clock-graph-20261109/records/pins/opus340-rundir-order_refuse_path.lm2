@@ -1,0 +1,8 @@
+# Probe of slice 340: a field read through a path before a later call has no C type the graph path knows: refused.
+predef: "l2src/lmx_schedule.h.lm1"
+
+fn: order_one (int: a) int
+    return: a + 1
+
+fn: order_path (@: slot c.LmxSchedule) ulong
+    return: slot\limit + (cast: (ulong) order_one(2))

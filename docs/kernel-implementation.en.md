@@ -923,8 +923,23 @@ and publication of 308 are not run; the task is closed neither by a document nor
    --`, the driver words before the frontend's own words), which every recipe that runs a frontend reads
    (`bld_frontend_launch`), never the program's name. From the seed bundle fehost03 (made by the plain seed, linked with
    rt65) `bootstrap quick` built G1 and G2 with hosted frontends: their runtimes' C equals rt65's byte for byte, and G1
-   and G2 differ only by link stamps (frontend, backend, tool; their L1 and C are the same bytes). The next machine
-   modules are the next step.
+   and G2 differ only by link stamps (frontend, backend, tool; their L1 and C are the same bytes). Step 4 (slice 340,
+   [witness](../steps/witnesses/clock-graph-20261109/notes.md)): `lmx_clock` is the second module every runtime
+   translates from its graph. The graph path reads the forms it is written with: C door types `c.T` of formals and
+   results, a function's own places `T: name [value]` and `@: name T [value]` (declared at its entry as
+   `l2_q<k>_<name>`, written where they are written), `cast:`, calls of the C door and of the module's functions, an
+   expression in parentheses as its one field. The actuals of a call and the operands of an operation are evaluated once
+   each, in lexical order: a value evaluated before a later call is first kept in a local of its type (`l2_t<k>`; an
+   actual of a function of the module takes its formal's type); a value with no C type in the graph -- a call of the C
+   door, a field read through a path -- that would have to be kept is refused there, as the P0 path refuses such an
+   actual of a C call. `lmx_clock` keeps no value: the C of the runtime rt67 differs from rt66's only in four functions
+   of `lmx_clock` (their calls written directly), and its objects are the same bytes; through the C door
+   (`tests/cdoor/clock_machine.lm2`) they answer 7, and the mutant `<` -> `<=` in `lmx_deadline_passed` answers 82.
+   fehost03 reads none of these forms, so the chain starts from an intermediate generation, the bundle fehost07 (its
+   objects by fehost03, linked with rt66): `bootstrap quick` from it built G1 and G2 with 0 failures, both translating
+   `lmx_schedule` and `lmx_clock` from their graphs; their runtimes equal rt67 byte for byte, and G1 and G2 differ
+   only by link stamps (frontend, backend, tool; their L1, C and objects are the same bytes). The next machine modules
+   are the next step.
 4. **Arena regions as the only storage.** `LmxPool/LmxChunk/LmxRange` → regions with the interval index; exact region sizes
    in the emission; attach/mark/revert/GC by §2.
 5. **The full final checks:** the whole registry on both executors, bootstrap quick and full, checks, landing, docs render

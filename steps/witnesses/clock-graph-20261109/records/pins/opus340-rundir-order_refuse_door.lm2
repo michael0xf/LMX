@@ -1,0 +1,8 @@
+# Probe of slice 340: the result of a C door call kept before a later call of a C door call has no C type: refused.
+predef: "l2src/lmx_clock.h.lm1"
+
+fn: order_one (int: a) int
+    return: a + 1
+
+fn: order_door (int: x) size_t
+    return: c.lmx_deadline_wait(c.lmx_clock_word(), (cast: (size_t) order_one(x)))

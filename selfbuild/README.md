@@ -186,6 +186,13 @@ BASE HOSTED-FRONTEND LABEL` needs a hosted bundle, as every runtime translates `
 the runtime by it, and link the new frontend with that runtime. `bootstrap quick` from the seed bundle fehost03 built
 G1 and G2 one image apart from the link stamps. [Sources, receipts and limits](../steps/witnesses/hosted-chain-20261109/notes.md).
 
+Since tool40 every runtime translates `lmx_clock` from its graph as well (kernel §11 item 3, step 4): the graph path
+reads C door types, a function's own places, casts and calls of the C door and of the module's functions, keeping the
+lexical order of calls (a value evaluated before a later call is first kept in a local of its type). rt67's objects
+equal rt66's byte for byte, and the smoke row `cdoor/clock_machine.lm2` checks the functions through the C door. The
+chain starts from the intermediate bundle fehost07, since fehost03 reads none of these forms; `bootstrap quick` from
+it built G1 and G2 one image apart from the link stamps. [Sources, receipts and limits](../steps/witnesses/clock-graph-20261109/notes.md).
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's

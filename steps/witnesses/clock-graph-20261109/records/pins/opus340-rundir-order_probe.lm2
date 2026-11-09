@@ -1,0 +1,40 @@
+# Probe of slice 340: the order of calls in the graph path of a machine module. Every value read before a later call
+# of the same call or operation, when the order could show, is kept first in a local of its type; stable values stay.
+predef: "l2src/lmx_clock.h.lm1"
+predef: "l2src/lmx_schedule.h.lm1"
+include: "<stdlib.h>"
+
+fn: order_two (int: a; int: b) int
+    return: a - b
+
+fn: order_one (int: a) int
+    return: a + 1
+
+fn: order_calls (int: x) int
+    return: order_two(order_one(x), order_one(x + 1))
+
+fn: order_stable (int: x) int
+    return: order_two(x, order_one(x))
+
+fn: order_nested (int: x) int
+    return: order_two(order_two(order_one(x), order_one(x)), order_one(x))
+
+fn: order_door_result (int: x) int
+    return: order_two(c.abs(x), order_one(x))
+
+fn: order_door (int: x) int
+    return: c.lmx_deadline_passed((cast: (size_t) order_one(x)), (cast: (size_t) order_one(x)))
+
+fn: order_operation (int: x) int
+    return: order_one(x) * order_one(x + 2)
+
+fn: order_places (int: x) int
+    int: y order_two(order_one(x), order_one(x))
+    y: order_one(y) - order_one(y + 1)
+    if: order_one(y) < order_one(x) && x > 0
+        return: y
+    return: x
+
+fn: order_path (@: slot c.LmxSchedule; ulong: now) ulong
+    slot\started: (cast: (ulong) order_one(1)) + now
+    return: slot\limit

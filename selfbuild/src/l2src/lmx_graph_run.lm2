@@ -1953,6 +1953,8 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     @@: work c.Lmx 0
     @@: names char 0
     @@: first void 0
+    @: from_k size_t 0
+    @: from_j size_t 0
     @: model c.Lmx 0
     @: operand c.Lmx 0
     @: result c.Lmx 0
@@ -1989,16 +1991,24 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     ---
     names: (cast: (@@: char) c.calloc(room + 1U, sizeof(@: char)))
     first: (cast: (@@: void) c.calloc(room + 1U, sizeof(@: void)))
-    if: names = 0 || first = 0
+    from_k: (cast: (@: size_t) c.calloc(room + 1U, sizeof(size_t)))
+    from_j: (cast: (@: size_t) c.calloc(room + 1U, sizeof(size_t)))
+    if: names = 0 || first = 0 || from_k = 0 || from_j = 0
         c.free((cast: (@: void) names))
         c.free((cast: (@: void) first))
+        c.free((cast: (@: void) from_k))
+        c.free((cast: (@: void) from_j))
         return: 4
-    # The field set of R before its fixed Lmx, with the field that first provides each slot: the model's slots, then each
-    # named field of a later operand that names no slot so far, in operand order. An unnamed field of a later operand is
-    # matched by no name and is open here (5).
+    # The field set of R before its fixed Lmx, with the field that first provides each slot -- its value and its position
+    # (operand, field), local data of this merge: the model's slots, then each named field of a later operand that names no
+    # slot so far, in operand order. A later supply is told from the first fill by its position, not by its address: the
+    # same source given again later (merge(M; N; M)) is written again in operand order. An unnamed field of a later operand
+    # is matched by no name and is open here (5).
     while: i < m
         names[i]: c.lmx_graph_slot_name(g, model, i)
         first[i]: c.lmx_graph_get(model, i)
+        from_k[i]: 0U
+        from_j[i]: i
         i: i + 1U
     ---
     total: m
@@ -2018,6 +2028,8 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
                 if: i = total
                     names[total]: name
                     first[total]: c.lmx_graph_get(operand, j)
+                    from_k[total]: k
+                    from_j[total]: j
                     total: total + 1U
                 ---
             ---
@@ -2060,7 +2072,7 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
                     held: c.lmx_graph_get(operand, j)
                     slot: c.lmx_graph_named(g, result, c.lmx_graph_slot_name(g, operand, j))
                     kind: c.lmx_graph_kind(g, held)
-                    if: slot < total && first[slot] != held && (kind = 1 || kind = 3)
+                    if: slot < total && (from_k[slot] != k || from_j[slot] != j) && (kind = 1 || kind = 3)
                         kind: c.lmx_graph_kind(g, c.lmx_graph_get(result, slot))
                         if: kind = 1 || kind = 3
                             status: lmx_graph_merge_alias(g, @ map, held, c.lmx_graph_get(result, slot))
@@ -2093,7 +2105,7 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
                     while: i < total && names[i] != name
                         i: i + 1U
                     ---
-                    if: i < total && first[i] != held
+                    if: i < total && (from_k[i] != k || from_j[i] != j)
                         status: lmx_graph_merge_write(g, result, i, held)
                     ---
                     j: j + 1U
@@ -2104,6 +2116,8 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     ---
     c.free((cast: (@: void) names))
     c.free((cast: (@: void) first))
+    c.free((cast: (@: void) from_k))
+    c.free((cast: (@: void) from_j))
     at: 0U
     while: at < count && status = 0
         operand: work[at]

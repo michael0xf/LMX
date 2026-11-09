@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 355 entries.
+are historical. The current input manifest has 357 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -111,6 +111,9 @@ The current graph45/tool26/rt35 makes merged places one place of the copy map, d
 (`pack: merge(...)`, `mytest(pack)` = 35) and builds the interface descriptor `fn: name args return` with an addressable
 empty `var` and no body. 58 graph-check runs passed. Tool and graph commands run from a dedicated directory of the
 slice (`P/runs/<label>`), never from the repository root. [Sources, receipts and limits](../steps/witnesses/merge-places-20261109/notes.md).
+
+The current graph46/tool26/rt36 writes a repeated supply of a field again in operand order (`merge(M; N; M)\a` = 1).
+59 graph-check runs passed. [Sources, receipts and limits](../steps/witnesses/merge-repeat-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

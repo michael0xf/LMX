@@ -118,6 +118,10 @@ unknown name defines the place by its value (`lmx_graph_define`, both consumers)
 with its `args` and `return` parts and an addressable empty `var`, without a body; it is no callable. Copying written
 names and callables (with their lexical ancestors) and matching the `fn`/`return` parts in `merge(f1; f2)` (a question
 to the author) remain open. 58 graph-check runs × interp/native/forced passed.
+The next [graph46/tool26/rt36](../steps/witnesses/merge-repeat-20261109/notes.md), after Codex's review: a later supply
+of a field is told from the first fill of its slot by its position (operand, field) — local data of the merge
+traversal — not by its address, so the same source given again is written again in operand order:
+`merge(M; N; M)\a` = 1, `merge(N; M; N)\a` = 5, sources intact. 59 graph-check runs × interp/native/forced passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

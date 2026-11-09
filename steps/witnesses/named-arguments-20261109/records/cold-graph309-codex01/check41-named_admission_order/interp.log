@@ -1,0 +1,50 @@
+GRAPH-BEFORE-BEGIN
+Point:
+    int: y 0
+end: Point
+fn: first () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: 5
+end: first
+fn: second () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: 7
+end: second
+fn: take (Point: p; int: q) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: ((p \ y) + q)
+end: take
+int: result (take (:= p (first)) (:= q (second)))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Point:
+    int: y 0
+end: Point
+fn: first () int (
+    int: calls 1
+)
+    calls: (calls + 1)
+    return: 5
+end: first
+fn: second () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: 7
+end: second
+fn: take (Point: p; int: q) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: ((p \ y) + q)
+end: take
+int: result (take (:= p (first)) (:= q (second)))
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 4

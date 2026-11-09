@@ -73,6 +73,15 @@ Both consumers check a known int destination before the RHS; a bare name writes 
 writes the graph without refreshing the working snapshot. Native computes the RHS directly. A typed int literal
 is built as the same primitive. All30 execution and19 graph-mutation checks passed. Other types, reference writes,
 named := arguments and §§8/8a remain open.
+The next [graph41/tool23/rt31](../steps/witnesses/named-arguments-20261109/notes.md) supplies named arguments `a := v`
+in a callable's argument structure (Codex's WIP, checked and finished by Opus). One temporary call binder matches the
+written positional and named actuals with the physical formal slots of the selected callee by name addresses; an
+unknown name, a repeat, a positional after a named one and a missing required formal are form refusals before any
+argument effect. Then the right operands are evaluated in the written order, each received by its formal at once; a
+refused reception leaves the later ones unevaluated and the body does not start. The binding map lives only in the
+call; native emits it and computes the right operands itself. `a(5)` and `a: 5` stay ordinary calls with positional
+results. All 45 graph fixtures: 45 graph-check runs × interp/native/forced passed (sub_void_value separately),
+mutation 11/11, method-mutation 8/8. Computed defaults, AXBY with user conversions, q/z, merge35 and §§8/8a remain open.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

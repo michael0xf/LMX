@@ -203,6 +203,15 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                 i: i + 1U
                 continue
             raw: c.lmx_graph_get(current, i)
+            # A named actual selects the callee's formal, never a free input of this caller.
+            if: i != 0U && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
+                if: c.lmx_graph_method(g, (cast: (@: c.Lmx) lmx_graph_resolve(g, (cast: (@: c.Lmx) frame\code), c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U))))) != 0
+                    if: c.lmx_graph_count((cast: (@: c.Lmx) raw)) != 3U
+                        status: 5
+                        break
+                    raw: c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
+                ---
+            ---
             if: current = body && c.lmx_graph_method(g, (cast: (@: c.Lmx) frame\code)) = 0 && (c.lmx_graph_kind(g, raw) = 1 || c.lmx_graph_kind(g, raw) = 3)
                 word: c.lmx_graph_slot_name(g, current, i)
                 if: word != 0
@@ -624,6 +633,68 @@ fn: lmx_graph_call_shape (@: g c.LmxGraph; @: code c.Lmx; size_t: actuals) int
     return: 0
 end: lmx_graph_call_shape
 
+# Bind written arguments to the selected method before evaluating any of them. The map and the seen set belong
+# only to this call; labels are canonical name addresses and the map stores physical formal slots, not name codes.
+fn: lmx_graph_bind_call (@: g c.LmxGraph; @: code c.Lmx; @: expression c.Lmx; @: bindings size_t) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: args c.Lmx 0
+    @: argument c.Lmx 0
+    @: raw void 0
+    @: name char 0
+    @: seen int 0
+    size_t: count 0U
+    size_t: width 0U
+    size_t: i 0U
+    size_t: slot 0U
+    int: named 0
+    int: status 0
+    if: c.lmx_graph_method(g, code) = 0 || c.lmx_graph_kind(g, (cast: (@: void) expression)) != 4 || c.lmx_graph_count(expression) = 0U || bindings = 0
+        return: 5
+    args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
+    width: c.lmx_graph_count(args)
+    count: c.lmx_graph_count(expression) - 1U
+    if: count > width || lmx_graph_call_shape(g, code, width) != 0
+        return: 5
+    seen: (cast: (@: int) c.calloc(width + 1U, sizeof(int)))
+    if: seen = 0
+        return: 4
+    while: i < count && status = 0
+        raw: c.lmx_graph_get(expression, i + 1U)
+        argument: (cast: (@: c.Lmx) raw)
+        slot: i
+        if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_word_text(g, c.lmx_graph_get(argument, 0U)) = state\w_assign
+            named: 1
+            name: c.lmx_graph_word_text(g, c.lmx_graph_get(argument, 1U))
+            if: c.lmx_graph_count(argument) != 3U || name = 0
+                status: 5
+            slot: c.lmx_graph_named(g, args, name)
+        else:
+            if: named != 0
+                status: 5
+            ---
+        ---
+        if: slot >= width
+            status: 5
+        if: status = 0
+            if: seen[slot] != 0
+                status: 5
+            else:
+                seen[slot]: 1
+                bindings[i]: slot
+            ---
+        ---
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < width && status = 0
+        if: seen[i] = 0 && c.lmx_graph_kind(g, c.lmx_graph_get(args, i)) != 1
+            status: 5
+        i: i + 1U
+    ---
+    c.free((cast: (@: void) seen))
+    return: status
+end: lmx_graph_bind_call
+
 # The first structural receiving pass for the field-reading subset: compare the paths actually used from this
 # formal against the written model and the candidate, by canonical names and address types. The temporary queue
 # belongs only to this admission. It neither checks unused model fields nor depends on their positions.
@@ -948,7 +1019,7 @@ end: lmx_graph_method_run
 
 # Invoke with arguments that have already passed admission. Missing literal defaults are copied into this call's
 # private places. Native and interpretation share the ordinary activation ABI; the signature graph remains intact.
-fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: actuals void; size_t: count; @: out int) int
+fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: actuals void; size_t: count; @: bindings size_t; @: out int) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: args c.Lmx 0
     @: body c.Lmx 0
@@ -959,19 +1030,45 @@ fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: ac
     c.LmxGraphFrame: frame
     size_t: width 0U
     size_t: i 0U
-    int: status lmx_graph_call_shape(g, code, count)
-    if: status != 0 || out = 0
+    size_t: slot 0U
+    int: status 0
+    if: c.lmx_graph_method(g, code) = 0 || out = 0
         return: 5
     args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
     width: c.lmx_graph_count(args)
+    if: bindings = 0
+        status: lmx_graph_call_shape(g, code, count)
+    else:
+        status: lmx_graph_call_shape(g, code, width)
+    ---
+    if: status != 0 || count > width
+        return: 5
     refs: (cast: (@@: void) c.calloc(width + 1U, sizeof(@: void)))
     if: refs = 0
         return: 4
-    while: i < width && status = 0
-        if: i < count
-            refs[i]: actuals[i]
+    while: i < count && status = 0
+        slot: i
+        if: bindings != 0
+            slot: bindings[i]
+        if: slot >= width
+            status: 5
         else:
-            status: lmx_graph_admit(g, code, i, c.lmx_graph_get(args, i), @ refs[i])
+            if: refs[slot] != 0 || actuals = 0 || actuals[i] = 0
+                status: 5
+            else:
+                refs[slot]: actuals[i]
+            ---
+        ---
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < width && status = 0
+        if: refs[i] = 0
+            if: c.lmx_graph_kind(g, c.lmx_graph_get(args, i)) != 1
+                status: 5
+            else:
+                status: lmx_graph_admit(g, code, i, c.lmx_graph_get(args, i), @ refs[i])
+            ---
         ---
         i: i + 1U
     ---
@@ -997,29 +1094,37 @@ fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: ac
 end: lmx_graph_invoke_data
 
 fn: lmx_graph_invoke (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: out int) int
-    return: lmx_graph_invoke_data(g, code, (cast: (@: c.Lmx) c.lmx_graph_method_var(code)), actuals, count, out)
+    return: lmx_graph_invoke_data(g, code, (cast: (@: c.Lmx) c.lmx_graph_method_var(code)), actuals, count, 0, out)
 end: lmx_graph_invoke
 
+fn: lmx_graph_invoke_bound (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: bindings size_t; @: out int) int
+    return: lmx_graph_invoke_data(g, code, (cast: (@: c.Lmx) c.lmx_graph_method_var(code)), actuals, count, bindings, out)
+end: lmx_graph_invoke_bound
+
 fn: lmx_graph_eval_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: code c.Lmx; @: out int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     size_t: count (cast: (size_t) (c.lmx_graph_count(expression) - 1U))
     size_t: i 0U
-    @@: values void 0
+    @@: values void (cast: (@@: void) c.calloc(count + 1U, sizeof(@: void)))
+    @: bindings size_t (cast: (@: size_t) c.calloc(count + 1U, sizeof(size_t)))
     @: actual void 0
-    int: status lmx_graph_call_shape(g, code, count)
-    if: status != 0
-        return: status
-    values: (cast: (@@: void) c.calloc(count + 1U, sizeof(@: void)))
-    if: values = 0
-        return: 4
+    @: raw void 0
+    int: status 4
+    if: values != 0 && bindings != 0
+        status: lmx_graph_bind_call(g, code, expression, bindings)
     while: i < count && status = 0
-        status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, i + 1U), @ actual)
+        raw: c.lmx_graph_get(expression, i + 1U)
+        if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
+            raw: c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
+        status: lmx_graph_eval_value(g, scope, raw, @ actual)
         if: status = 0
-            status: lmx_graph_admit(g, code, i, actual, @ values[i])
+            status: lmx_graph_admit(g, code, bindings[i], actual, @ values[i])
         i: i + 1U
     ---
     if: status = 0
-        status: lmx_graph_invoke(g, code, values, count, out)
+        status: lmx_graph_invoke_bound(g, code, values, count, bindings, out)
     c.free((cast: (@: void) values))
+    c.free((cast: (@: void) bindings))
     return: status
 end: lmx_graph_eval_call
 
@@ -1331,7 +1436,7 @@ fn: lmx_graph_call_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; int: sho
         return: 5
     # Callable arguments retain their own contract; this explicit nullary form has no actual arguments.
     if: c.lmx_graph_method(g, code) != 0
-        return: lmx_graph_invoke_data(g, code, data, 0, 0U, @ number)
+        return: lmx_graph_invoke_data(g, code, data, 0, 0U, 0, @ number)
     status: lmx_graph_work_flush(g)
     if: status != 0
         return: status

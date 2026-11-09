@@ -1016,24 +1016,37 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     size_t: count (cast: (size_t) (c.lmx_graph_count(expression) - 1U))
     size_t: i 0U
     @: actual void 0
-    @: text char 0
+    @: holder c.Lmx expression
+    size_t: at 0U
     int: call_id temps[0]
     int: value 0
     int: status 0
     temps[0]: temps[0] + 1
     c.fprintf(f, "        @: Lmx l2_call%d (cast: (@: Lmx) lmx_graph_resolve(l2_g, lmx_call_code, ", call_id)
     status: lm_graph_emit_word(g, f, scope, expression, 0U)
-    c.fprintf(f, "))\n        if: lmx_graph_call_shape(l2_g, l2_call%d, %zuU) != 0\n            %s\n        []: @(void) l2_args%d %zuU\n", call_id, count, leave_failure, call_id, count + 1U)
+    c.fprintf(f, "))\n        []: size_t l2_binding%d %zuU\n        if: lmx_graph_bind_call(l2_g, l2_call%d, (cast: (@: Lmx) ", call_id, count + 1U, call_id)
+    if: status = 0
+        status: lm_graph_emit_address(g, f, scope, expression)
+    c.fprintf(f, "), l2_binding%d) != 0\n            %s\n        []: @(void) l2_args%d %zuU\n", call_id, leave_failure, call_id, count + 1U)
     while: i < count && status = 0
-        status: lm_graph_emit_operand(g, f, scope, expression, i + 1U, temps, decl_names, decl_slots, decl_n, @ value)
+        holder: expression
+        at: i + 1U
+        actual: c.lmx_graph_get(expression, at)
+        if: c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) actual), 0U)) = state\w_assign
+            if: c.lmx_graph_count((cast: (@: c.Lmx) actual)) != 3U
+                return: 5
+            holder: (cast: (@: c.Lmx) actual)
+            at: 2U
+        status: lm_graph_emit_operand(g, f, scope, holder, at, temps, decl_names, decl_slots, decl_n, @ value)
         c.fprintf(f, "        l2_args%d[%zuU]: l2_v%d\n", call_id, i, value)
-        c.fprintf(f, "        if: lmx_graph_admit(l2_g, l2_call%d, %zuU, l2_args%d[%zuU], @ l2_args%d[%zuU]) != 0\n            %s\n", call_id, i, call_id, i, call_id, i, leave_failure)
+        c.fprintf(f, "        if: lmx_graph_admit(l2_g, l2_call%d, l2_binding%d[%zuU], l2_args%d[%zuU], @ l2_args%d[%zuU]) != 0\n            %s\n", call_id, call_id, i, call_id, i, call_id, i, leave_failure)
         i: i + 1U
     ---
-    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_invoke(l2_g, l2_call%d, l2_args%d, %zuU, @ l2_t%d) != 0\n            %s\n", call_id, call_id, call_id, count, call_id, leave_failure)
+    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_invoke_bound(l2_g, l2_call%d, l2_args%d, %zuU, l2_binding%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, call_id, count, call_id, call_id, leave_failure)
     temp[0]: call_id
     return: status
 end: lm_graph_emit_call

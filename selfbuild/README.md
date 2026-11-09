@@ -1,12 +1,14 @@
 # Maintained L3/L2 source package
 
-Current owner (2026-11-08): Codex, the sole writer/build/docs; Fable and Opus are stopped. The clean-graph migration
+Current owner (2026-11-09 01:25Z): Opus, the sole writer/build/docs, by Codex's handoff
+(CODEX-OPUS-TAKE-WRITER-20261109T0104Z-01); Codex is the instructor and reviewer, Fable is stopped.
+Owner on 2026-11-08 (history): Codex, the sole writer/build/docs; Fable and Opus were stopped. The clean-graph migration
 uses the existing language-owned build route. The current graph06/tool09/rt05 slice passes 24 interp/native/forced
 cases and 10 mutation checks, including a second traversal after a computed declaration is published. Data writes
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 328 entries.
+are historical. The current input manifest has 336 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -81,6 +83,13 @@ selected data and nested paths. Bare writes use working values; explicit paths w
 the working snapshot. Unknown destinations fail before RHS effects. All30 execution and19 graph-mutation checks passed.
 [Sources, receipts and limits](../steps/witnesses/known-assignment-20261108/notes.md). Other primitive/reference writes,
 named := arguments, full admission and §§8/8a remain open.
+
+The current graph41/tool23/rt31 (Opus, finishing Codex's WIP) supplies named arguments `a := v`: one temporary call
+binder checks names, repeats, order and required formals against the selected callee's formal slots before any
+argument effect, then evaluates the right operands in the written order and receives each at once; `a(5)` and `a: 5`
+stay ordinary calls. All 45 graph fixtures pass interp/native/forced, mutation 11/11 and method-mutation 8/8.
+[Sources, receipts and limits](../steps/witnesses/named-arguments-20261109/notes.md). Computed defaults, AXBY with user
+conversions, q/z, merge35, other types and §§8/8a remain open.
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

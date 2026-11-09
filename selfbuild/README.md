@@ -167,17 +167,24 @@ The command `build-frontend-host REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL` (to
 runtime: the language root `tools/l2trans.lm2` linked with `RUNTIME-DIR/driver.o`, launched as `l2trans-host.exe 0
 entry 0 -- ARGS` with the frontend's own arguments after `--`. On the P0 path its output equals the seed frontend's
 byte for byte; it is the first step of the frontend reading the clean graph (kernel §11 item 3).
-[Sources, receipts and limits](../steps/witnesses/frontend-host-20261109/notes.md).
+[Sources, receipts and limits](../steps/witnesses/frontend-host-20261109/notes.md). Since tool38 it builds a whole
+bundle: `LABEL/l2trans.exe` (the linked program), `LABEL/l1trans.exe`, `LABEL/l2_libc.o` and `LABEL/launch.txt`, which
+declares the launch (`0 entry 0 --`) every recipe reads before it runs a frontend.
 
 The current graph75/tool36/rt64 builds a Frame written on a path head, `owner\field: value`, as the unnamed Lmx
 [path, value] and writes that field in both consumers, at the root and in a body. 82 graph-check runs passed.
 [Sources, receipts and limits](../steps/witnesses/path-heads-20261109/notes.md).
 
 The hosted frontend translates a machine module from its clean graph when its first word is `--graph` (tool37,
-fehost02; kernel §11 item 3, step 2), and `build-runtime REPO STAGE BASE FRONTEND LABEL HOSTED-FRONTEND` translates
-`lmx_schedule` that way: the runtime rt65 differs from rt64 only in that module's C, and the smoke row
+fehost02; kernel §11 item 3, step 2): the runtime rt65 differs from rt64 only in `lmx_schedule`'s C, and the smoke row
 `cdoor/schedule_machine.lm2` checks its values through the C door. The builder of the clean graph is its own module,
 `src/l2src/l2_graph_build.lm2`. [Sources, receipts and limits](../steps/witnesses/graph-machine-20261109/notes.md).
+
+Since tool38 the hosted frontend is the frontend of the chain (kernel §11 item 3, step 3): `build-runtime REPO STAGE
+BASE HOSTED-FRONTEND LABEL` needs a hosted bundle, as every runtime translates `lmx_schedule` from its graph, and
+`bootstrap`/`build-generation` take the previous generation's hosted frontend, translate the new frontend's objects and
+the runtime by it, and link the new frontend with that runtime. `bootstrap quick` from the seed bundle fehost03 built
+G1 and G2 one image apart from the link stamps. [Sources, receipts and limits](../steps/witnesses/hosted-chain-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
@@ -589,7 +596,10 @@ and [slice241](../steps/witnesses/fix241-20261029/notes.md).
 ## Normal source selection
 
 Choose an explicit working G0 tool and its matching previous frontend,
-backend and libc tuple; retain their provenance. Run each language CLI in a
+backend and libc tuple; retain their provenance. Since slice 339 the previous
+frontend is a frontend hosted by the runtime: its bundle directory holds
+`l2trans.exe` with its launch declared in `launch.txt`, `l1trans.exe` and
+`l2_libc.o` (`build-frontend-host` makes one). Run each language CLI in a
 fresh separate working directory, never the repository or source root.
 STAGE is a new empty output root; do not prefill generated headers or bodies.
 Using absolute substituted paths, the existing commands are:

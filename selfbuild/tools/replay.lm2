@@ -575,19 +575,23 @@ end: replay_stage_shared
 
 # One translation of a row by the frontend fe: its kind and exit in res[0], res[1].
 fn: replay_one (@: fe char; @: work char; @@: words char; int: nwords; @: lm1 char; @: log char; @: res int) int
-    @@: argv char c.calloc((cast: (size_t) (nwords + 2)), sizeof(@: char))
+    @@: argv char c.calloc((cast: (size_t) (nwords + 10)), sizeof(@: char))
     @: detail int c.calloc(1U, c.sizeof(c.int))
     int: i 0
+    int: n 0
     if: argv = 0 || detail = 0
         return: 1
-    argv[0]: fe
+    # fe is launched as its bundle declares (bld_frontend_launch: the driver words of a hosted frontend).
+    n: bld_frontend_launch(argv, 8, fe)
+    if: n < 0
+        return: 1
     while: i < nwords
-        argv[1 + i]: words[i]
+        argv[n + i]: words[i]
         i: i + 1
     ---
-    argv[1 + nwords]: lm1
+    argv[n + nwords]: lm1
     os_file_remove(lm1)
-    res[0]: os_run(fe, argv, nwords + 2, work, log, log, 600000U, detail)
+    res[0]: os_run(fe, argv, n + nwords + 1, work, log, log, 600000U, detail)
     res[1]: detail[0]
     c.free(argv)
     c.free(detail)

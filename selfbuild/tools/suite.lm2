@@ -476,7 +476,7 @@ fn: suite_links (@: repo char; @: stage char; @: base char; @: fe char; @: prod 
 end: suite_links
 
 fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: needle char; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
-    @@: a char c.calloc(8U, sizeof(@: char))
+    @@: a char c.calloc(16U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @: mode char 0
     @: log char 0
@@ -494,11 +494,12 @@ fn: suite_refuses (@: stage char; @: base char; @: fe char; @: source char; @: n
         if: (m = 0 && (cast: (@: char) (c.strchr(modes, 110))) != 0) || (m = 1 && (cast: (@: char) (c.strchr(modes, 102))) != 0)
             log: txt_cat3(out, "/", txt_cat3(name, "-", txt_cat(mode, ".log")))
             lm1: txt_cat3(out, "/", txt_cat3(name, "-", txt_cat(mode, ".lm1")))
-            a[0]: fe
-            n: 1
+            n: bld_frontend_launch(a, 8, fe)
+            if: n < 0
+                return: f + ccheck(0, txt_cat3(name, " ", txt_cat(mode, ": the frontend's launch is read")), fe, cls, 1, log, fl)
             if: m = 1
-                a[1]: "--walk-methods"
-                n: 2
+                a[n]: "--walk-methods"
+                n: n + 1
             ---
             a[n]: source
             a[n + 1]: txt_path(stage, "src/l2src/convert.lm2")
@@ -899,7 +900,7 @@ end: file_size_at
 # leaves every copy its original's bytes. The record of these steps is out/record.txt. 0 when every check passed,
 # else the failures.
 fn: gate_snapshot (@: stage char; @: base char; @: fe char; @: source char; @: out char) int
-    @@: a char c.calloc(10U, sizeof(@: char))
+    @@: a char c.calloc(18U, sizeof(@: char))
     @@: copy char c.calloc(3U, sizeof(@: char))
     @@: from char c.calloc(3U, sizeof(@: char))
     @@: label char c.calloc(3U, sizeof(@: char))
@@ -950,19 +951,21 @@ fn: gate_snapshot (@: stage char; @: base char; @: fe char; @: source char; @: o
         f: f + tool_check(ok, txt_cat(name, ": its copies are made"), dir)
         lm1: txt_path(dir, "out.lm1")
         log: txt_path(dir, "l2trans.log")
-        a[0]: fe
-        n: 1
+        n: bld_frontend_launch(a, 8, fe)
+        if: n < 0
+            c.fclose(rec)
+            return: f + tool_check(0, txt_cat(name, ": the frontend's launch is read"), fe)
         touched: -1
         if: k = 0
-            a[1]: "--snap-touch"
-            a[2]: "1"
-            n: 3
+            a[n]: "--snap-touch"
+            a[n + 1]: "1"
+            n: n + 2
             touched: 0
         ---
         if: k = 1
-            a[1]: "--snap-touch"
-            a[2]: "2"
-            n: 3
+            a[n]: "--snap-touch"
+            a[n + 1]: "2"
+            n: n + 2
             touched: 1
         ---
         a[n]: copy[0]
@@ -1312,6 +1315,8 @@ fn: generation_bundle (@: out char) int
         return: 1
     if: bld_hash_note(rec, txt_path(out, "frontend/l2trans.exe")) != 0
         bad: 1
+    if: bld_hash_note(rec, txt_path(out, "frontend/launch.txt")) != 0
+        bad: 1
     if: bld_hash_note(rec, txt_path(out, "frontend/l1trans.exe")) != 0
         bad: 1
     if: bld_hash_note(rec, txt_path(out, "frontend/l2_libc.o")) != 0
@@ -1343,7 +1348,11 @@ fn: generation_promote (@: candidate char; @: out char; @: tag char) int
 end: generation_promote
 
 # Exactly one full generation; this leaf never calls bootstrap or itself.
-# Both modes build FE/backend/libc, runtime and tool by the same component path.
+# Both modes build FE/backend/libc, runtime and tool by the same component path. The frontend is hosted by the runtime
+# (route 331, step 3; Codex CODEX-OPUS-338-STEP3-REPLY): previous_fe -- the previous generation's hosted frontend, its
+# launch declared by its bundle -- translates the new frontend's objects and the runtime's kernel modules, those of the
+# frontend's clean-graph input (lmx_schedule) from their graph; the new frontend is linked last with that runtime and
+# translates everything after it. No standalone frontend is built.
 fn: build_generation (@: mode char; @: repo char; @: stage char; @: base char; @: previous_fe char; @: label char; @: smoke char; @: full char) int
     @: out char txt_path(stage, label)
     @: fe char 0
@@ -1362,17 +1371,21 @@ fn: build_generation (@: mode char; @: repo char; @: stage char; @: base char; @
         return: tool_check(0, "generation full: the full list", "not given")
     if: dir_make(out) != 0 || file_exists(txt_path(out, "bundle.sha256")) != 0
         return: tool_check(0, "generation: a fresh label", out)
-    c.printf("GENERATION step frontend\n")
-    x: bld_frontend(repo, stage, base, previous_fe, txt_path(label, "frontend"))
-    if: tool_check(x = 0, "generation: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
+    c.printf("GENERATION step frontend objects\n")
+    x: bld_frontend_objects(repo, stage, base, previous_fe, txt_path(label, "frontend"))
+    if: tool_check(x = 0, "generation: the frontend's objects, backend and libc are built", txt_cat("failing step ", txt_int(x))) != 0
         return: 1
-    fe: txt_path(out, "frontend/l2trans.exe")
     c.printf("GENERATION step runtime\n")
-    x: bld_runtime(repo, stage, base, fe, txt_path(label, "runtime"))
+    x: bld_runtime(repo, stage, base, previous_fe, txt_path(label, "runtime"))
     if: tool_check(x = 0, "generation: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
         return: 1
     prod: txt_path(out, "runtime/driver.o")
     obs: txt_path(out, "runtime/driver-observe.o")
+    c.printf("GENERATION step frontend link\n")
+    x: bld_frontend_link(repo, stage, base, previous_fe, txt_path(out, "runtime"), txt_path(label, "frontend"))
+    if: tool_check(x = 0, "generation: the frontend hosted by the new runtime is linked", txt_cat("failing step ", txt_int(x))) != 0
+        return: 1
+    fe: txt_path(out, "frontend/l2trans.exe")
     if: whole = 0
         c.printf("GENERATION step smoke\n")
         x: fixture_suite(smoke, repo, stage, base, fe, prod, obs, txt_path(out, "smoke"))
@@ -1490,7 +1503,8 @@ end: bootstrap
 
 # A rebuild of one changed component in stage/label checked by the smoke list (the author, CODEX-AUTHOR-QUICK-
 # BUILD-20261023T111132Z: build what changed and check it by a small end-to-end run; it is no bootstrap). what:
-# frontend -- the stage's frontend built as label, the smoke list run with it and the runtime directory rt;
+# frontend -- the stage's frontend built as label by fe and hosted by the runtime directory rt (bld_frontend_host), the
+# smoke list run with it and rt;
 # runtime -- the stage's runtime built as label with fe, its kernel's L2 modules and C headers with it (bld_runtime),
 # the smoke list run with fe and it; tool -- this tool built from
 # the stage's tools sources by fe with rt's driver.o, which hashes a file as this process does (tool_works) and
@@ -1510,7 +1524,7 @@ fn: rebuild (@: what char; @: repo char; @: stage char; @: base char; @: fe char
     if: c.strcmp(what, "frontend") != 0 && c.strcmp(what, "runtime") != 0 && c.strcmp(what, "tool") != 0 && c.strcmp(what, "none") != 0
         return: tool_check(0, "rebuild: the component", txt_cat3("frontend, runtime, tool or none, not ", what, ""))
     if: c.strcmp(what, "frontend") = 0
-        x: bld_frontend(repo, stage, base, fe, label)
+        x: bld_frontend_host(repo, stage, base, fe, rt, label)
         if: tool_check(x = 0, "rebuild: the frontend is built", txt_cat("failing step ", txt_int(x))) != 0
             return: 1
         front: txt_path(out, "l2trans.exe")

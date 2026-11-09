@@ -115,6 +115,10 @@ frontend языковым корнем `tools/l2trans.lm2`, связанным �
 Маршрут 331, шаг 2 — [`lmx_schedule` из чистого графа](steps/witnesses/graph-machine-20261109/notes.md) (tool37,
 fehost02, rt65, graph76): hosted F с `--graph` пишет машинный модуль из графа; runtime rt65 собран с ним, значения
 через C-дверь — 7, мутант — 89. Цепочка поколений пока без hosted F.
+Маршрут 331, шаг 3 — [hosted F — frontend цепочки](steps/witnesses/hosted-chain-20261109/notes.md) (tool39, fehost03,
+rt66, graph77, boot339b): поколение переводит объекты и runtime предыдущим hosted F (`lmx_schedule` — из графа) и
+связывает новый hosted F со своим runtime; связка объявляет запуск в `launch.txt`. `bootstrap quick` — 0 отказов,
+G1 и G2 различаются только штампами.
 
 Текущие отметки реализации — в отдельном [чек-листе](next_core_tasks_v3_checklist.md);
 их поддерживает действующий writer/build по коду и реальным запускам. История назначения: по поручению автора от

@@ -127,6 +127,11 @@ method-mutation 8/8. Не сделано: вычисляемое примене�
 `bld_machine_module_from`/`bld_runtime_from`, `build-runtime … HOSTED-FRONTEND`; rt65 с `lmx_schedule` из графа,
 `tests/cdoor/schedule_machine.lm2` — 7, мутант — 89. Частично: цепочка поколений (bootstrap, rebuild) строит runtime без
 hosted F; граф-путь отказывает `sub`, `--header` и иным операторам/выражениям машинных модулей.
+Срез 339 [hosted F — frontend цепочки](steps/witnesses/hosted-chain-20261109/notes.md) (маршрут 331, шаг 3):
+`bld_frontend_launch` (`launch.txt` связки), `bld_frontend_objects`/`bld_frontend_link`, `build_generation`
+(объекты и runtime предыдущим hosted F, связывание нового), `lmx_schedule` из графа в каждом runtime; `bootstrap quick`
+boot339b из fehost03 — 0 отказов, G1 = G2 кроме штампов. Не сделано: следующие машинные модули из графа; `bootstrap
+full` с hosted F не запускался (ПОЗЖЕ).
 
 Уточнение автора от 2026-10-24: объявления арены и пулов генерировать на L3 как строки L1, без нового механизма в L2 ([дословный источник](LMX_blog/2026-10-24.md)). Прежний вопрос Codex о машинной C-раскладке снят. Генерация ещё не реализована этим изменением документов; отметки готовности не повышаются. Следующий результат — самосборка, не расширение системы или тестовой кампании. Срез185 (Verified185 `3a5c6919`, E20) её реализует: `lmx.h.lm1` целиком, `lmx_arena_blocks.h.lm1` и `lmx_arena.h.lm1` пишет код L3 сборки (`decls_write_all`), и короткий bootstrap прошёл с ними.
 

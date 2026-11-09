@@ -913,8 +913,18 @@ and publication of 308 are not run; the task is closed neither by a document nor
    other form is refused where it stands, with no fallback to P0. `build-runtime ... HOSTED-FRONTEND` translates
    `lmx_schedule` so: the runtime's C differs from the previous one only inside `lmx_schedule_init` and
    `lmx_schedule_tick`; init/wait/tick/state through the C door (`tests/cdoor/schedule_machine.lm2`) answer 7 natively
-   and walked, and the mutant `>=` -> `>` answers 89. The generation chain (bootstrap, rebuild) still builds its runtime
-   without a hosted F; it and the next machine modules are the next step.
+   and walked, and the mutant `>=` -> `>` answers 89. Step 3 (slice 339,
+   [witness](../steps/witnesses/hosted-chain-20261109/notes.md); Codex CODEX-OPUS-338-STEP3-REPLY: the ready F(n-1)
+   builds, rt(n) is its result): the hosted F is the frontend of the chain. A generation translates the new frontend's
+   objects and its runtime's kernel modules by the previous generation's hosted F -- `lmx_schedule` from its graph in
+   every runtime; no runtime takes it from the P0 tree -- , links the new hosted F with that runtime last (its objects
+   never with the previous runtime) and translates everything after (smoke, tool) by it; no standalone frontend is built.
+   A frontend bundle -- `l2trans.exe`, `l1trans.exe`, `l2_libc.o` -- declares its launch in `launch.txt` (`0 entry 0
+   --`, the driver words before the frontend's own words), which every recipe that runs a frontend reads
+   (`bld_frontend_launch`), never the program's name. From the seed bundle fehost03 (made by the plain seed, linked with
+   rt65) `bootstrap quick` built G1 and G2 with hosted frontends: their runtimes' C equals rt65's byte for byte, and G1
+   and G2 differ only by link stamps (frontend, backend, tool; their L1 and C are the same bytes). The next machine
+   modules are the next step.
 4. **Arena regions as the only storage.** `LmxPool/LmxChunk/LmxRange` → regions with the interval index; exact region sizes
    in the emission; attach/mark/revert/GC by §2.
 5. **The full final checks:** the whole registry on both executors, bootstrap quick and full, checks, landing, docs render

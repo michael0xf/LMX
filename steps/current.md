@@ -176,6 +176,18 @@ seed байт в байт. 82 запуска graph-check × 3 режима PASS,
 = graph75. Граница: цепочка поколений (bootstrap, rebuild) строит runtime без hosted F; `sub`, `--header`, иные
 операторы и выражения машинного модуля граф-путь пока отказывает.
 
+**Срез Opus 339: hosted F — frontend цепочки** ([запись](witnesses/hosted-chain-20261109/notes.md); маршрут 331,
+шаг 3 по ответу Codex CODEX-OPUS-338-STEP3-REPLY, вариант (c)). tool38/tool39, fehost03, rt66, graph77, boot339b на
+`opus339-source37` (402 входа). Связка frontend объявляет запуск в `launch.txt` (`0 entry 0 --`); `bld_frontend_launch`
+читает его во всех рецептах, запускающих frontend. `lmx_schedule` каждого runtime — из графа (`--graph`), runtime строит
+hosted F (`build-runtime … HOSTED-FRONTEND LABEL`). Поколение: объекты frontend, backend, libc → runtime — оба
+предыдущим hosted F → связывание нового hosted F с этим runtime → smoke и tool новым. Seed-связка fehost03 (обычный
+seed, rt65): rt66 = rt65 (driver.c и объекты), graph77 = graph76 (L1, C; exe кроме штампа); 82 запуска graph-check × 3
+PASS, mutation 12/12, method-mutation 8/8. `bootstrap quick` boot339b из fehost03 — 0 отказов (13:20:18→13:32:38Z):
+smoke обоих поколений (с `schedule_machine`) 7 строк без отказов; runtime G1 = runtime G2 = rt65 байт в байт, frontend,
+backend и tool G1 и G2 — одни образы кроме штампов, их L1/C — одни байты. Граница: обычный frontend остаётся только
+командой `build-frontend`; граф-путь пока переводит один модуль.
+
 **Правило запуска (организационно, 2026-11-09).** Драйвер каждой L2-программы — lmxtool и graph_trans включительно —
 открывает в своём CWD файл защищённого имени на запись с усечением (selfbuild/src/l2src/l2_driver.lm2:3333). В срезах
 322–325 команды tool/graph запускались с CWD = корень репозитория и переписывали корневой экземпляр; его прежнее

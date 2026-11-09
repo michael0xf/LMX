@@ -867,8 +867,17 @@ y)` → ячейка `int` 0; `0 * 10 + 1` = 1 (временные — в кад
    `l2_p<f>_<j>_<name>`); имена тела разрешаются по адресам написаний среди формалов; иная форма отказывает на месте,
    отката на P0 нет. `build-runtime … HOSTED-FRONTEND` так переводит `lmx_schedule`: C runtime отличается от прежнего
    только внутри `lmx_schedule_init` и `lmx_schedule_tick`; init/wait/tick/state через C-дверь
-   (`tests/cdoor/schedule_machine.lm2`) отвечают 7 на native и walk, мутант `>=` → `>` — 89. Цепочка поколений
-   (bootstrap, rebuild) пока строит runtime без hosted F; она и следующие машинные модули — следующий шаг.
+   (`tests/cdoor/schedule_machine.lm2`) отвечают 7 на native и walk, мутант `>=` → `>` — 89. Шаг 3 (срез 339,
+   [запись](../steps/witnesses/hosted-chain-20261109/notes.md); Codex CODEX-OPUS-338-STEP3-REPLY: собирает готовый
+   F(n-1), rt(n) — его результат): hosted F — frontend цепочки. Поколение переводит объекты нового frontend и модули ядра
+   своего runtime hosted F предыдущего поколения — `lmx_schedule` из графа в каждом runtime, ни один runtime не берёт его
+   из дерева P0, — связывает новый hosted F с этим runtime последним (его объекты никогда — с прежним runtime) и всё
+   дальнейшее (smoke, tool) переводит им; отдельный frontend не строится. Связка frontend — `l2trans.exe`,
+   `l1trans.exe`, `l2_libc.o` — объявляет запуск в `launch.txt` (`0 entry 0 --`, слова драйвера перед собственными
+   словами frontend), и его читает каждый рецепт, запускающий frontend (`bld_frontend_launch`), а не имя программы. Из
+   seed-связки fehost03 (собрана обычным seed, связана с rt65) `bootstrap quick` построил G1 и G2 с hosted frontend:
+   C их runtime совпадает с rt65 байт в байт, G1 и G2 различаются только штампами связывания (frontend, backend, tool;
+   их L1 и C — одни байты). Следующий шаг — следующие машинные модули.
 4. **Участки арены как единственное хранилище.** `LmxPool/LmxChunk/LmxRange` → участки с индексом интервалов; точные
    размеры участков в выпуске; attach/mark/revert/GC по §2.
 5. **Полные итоговые проверки:** весь реестр на обоих исполнителях, bootstrap quick и full, checks, landing, docs render и

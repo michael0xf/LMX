@@ -1,0 +1,18 @@
+# Slice 342 probe: the role of a door name at a statement's head is that of its C declaration.
+predef: "l2src/lmx_win32_api.h.lm1"
+predef: "l1src/libc_abi.lm1"
+
+# A prototype function written as a colon Frame and as a call: both are calls (role 3), with any actuals.
+fn: door_probe_close (@: h void) int
+    c.CloseHandle: h
+    c.CloseHandle(h)
+    return: 0
+
+# A name no predef declares: a function of the raw C door (role 0), called.
+fn: door_probe_raw (int: x) int
+    c.door_probe_undeclared(x, "text")
+    return: x
+
+# c.sizeof is the C operator, not a call: an actual beside a call keeps nothing for it.
+fn: door_probe_size (@: h void) size_t
+    return: c.sizeof(c.LmxWin32ThreadStart) + (cast: (size_t) c.CloseHandle(h))

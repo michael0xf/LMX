@@ -193,6 +193,13 @@ equal rt66's byte for byte, and the smoke row `cdoor/clock_machine.lm2` checks t
 chain starts from the intermediate bundle fehost07, since fehost03 reads none of these forms; `bootstrap quick` from
 it built G1 and G2 one image apart from the link stamps. [Sources, receipts and limits](../steps/witnesses/clock-graph-20261109/notes.md).
 
+Since tool42 every runtime translates `lmx_process_deadline` from its graph too (kernel §11 item 3, step 5): a C door
+name at a Frame's head takes the role of its C declaration, read through the frontend's existing import of the C door
+(a prototype's function or an undeclared name is a call, a struct or fnptr type declares a place). The smoke row
+`cdoor/deadline_machine.lm2` checks the functions through the C door. The chain starts from the intermediate bundle
+fehost09; `bootstrap quick` from it built G1 and G2 one image apart from the link stamps, their runtimes equal rt68.
+[Sources, receipts and limits](../steps/witnesses/door-roles-20261109/notes.md).
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's

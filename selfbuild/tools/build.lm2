@@ -3117,7 +3117,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     # The second module of the frontend's clean-graph input (route 331, slice 340): its door types, casts and calls.
     if: bld_machine_module_from(rec, fe, 1, src, base, out, res, "lmx_clock", clock_names, 7, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_process_deadline", deadline_names, 3, 0) != 0
+    # The third (route 331, slice 342): a door name at a statement's head takes its C declaration's role.
+    if: bld_machine_module_from(rec, fe, 1, src, base, out, res, "lmx_process_deadline", deadline_names, 3, 0) != 0
         return: 1
     # The first module of the frontend's clean-graph input (route 331, steps 2 and 3): fe -- the frontend hosted by the
     # runtime -- translates it from its clean graph in every runtime; no runtime takes it from the P0 tree.
@@ -3227,7 +3228,7 @@ end: bld_driver_l2
 # translated by l1trans, compiled strict -O2 as the production runtime driver.o and with -DLMX_OBSERVE_WALK as the
 # observed one driver-observe.o. fe is the frontend hosted by an earlier runtime (route 331, step 3: the previous
 # generation's; its bundle declares its launch): it translates the kernel's modules from the P0 tree and the modules
-# of its clean-graph input -- lmx_schedule and lmx_clock -- from their graph.
+# of its clean-graph input -- lmx_schedule, lmx_clock and lmx_process_deadline -- from their graph.
 fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label char) int
     @@: a char c.calloc(40U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))

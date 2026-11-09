@@ -16,13 +16,14 @@
 # of its module, the C door `c.X` and numbers; its formals, places and result are numbers or references.
 #
 # The forms translated are those the migrated modules are written with -- lmx_schedule (slice 338), lmx_clock (slice
-# 340): written `fn:` declarations with a result (a C scalar word: int, char, size_t, unsigned, ulong, or a C door type
-# `c.T`), formals `@: name T`, `T: name` and `int: name`; places `T: name [value]` (T a C scalar word) and `@: name T
-# [value]`; the statements `if:` (with the `else:` that follows it), `return: value`, the write of a field through a
-# path head (`owner\field: value`, §3.3, slice 337), the write of a formal or a place (`name: value`) and a call; the
-# expressions: names, numbers, the operations = != < <= > >= + - * / % && ||, paths [owner, \, field] from a reference,
-# `cast:` to a scalar or reference type, and calls of the C door (`c.f(...)`) and of the module's own functions (with
-# as many actuals as formals). The actuals of a call and the operands of an operation are evaluated once each, in
+# 340), lmx_process_deadline (slice 342): written `fn:` declarations with a result (a C scalar word: int, char, size_t,
+# unsigned, ulong, or a C door type `c.T`), formals `@: name T`, `T: name` and `int: name`; places `T: name [value]` (T a
+# C scalar word) and `@: name T [value]`; the statements `if:` (with the `else:` that follows it), `return: value`, the
+# write of a field through a path head (`owner\field: value`, §3.3, slice 337), the write of a formal or a place (`name:
+# value`) and a call -- a Frame at a statement's head named by a door name is a call or the declaration of a place by
+# that name's C declaration (the C door's declarations, below); the expressions: names, numbers, strings, the operations
+# = != < <= > >= + - * / % && ||, paths [owner, \, field] from a reference, `cast:` to a scalar or reference type, and
+# calls of the C door (`c.f(...)`) and of the module's own functions (with as many actuals as formals). The actuals of a call and the operands of an operation are evaluated once each, in
 # lexical order: a value read before a later call is kept first in a local of its type (the order of calls, below). Any
 # other form is refused where it stands (`l2trans error: SOURCE: WHERE: WHY`): there is no fallback to the P0 path for a
 # module the recipe translates from its graph. The parts given after the source (the language's units of every machine
@@ -36,6 +37,9 @@ predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/l2_graph_build.h.lm1"
+predef: "l2src/l2_frontend_types.h.lm1"
+predef: "l2src/l2_frontend_intern.h.lm1"
+predef: "l2src/l2_frontend_emit.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>"
 include: "<stdlib.h>"
@@ -121,6 +125,16 @@ fn: lm_compiler_graph_door_word (@: word char) int
         return: 1
     return: 0
 end: lm_compiler_graph_door_word
+
+# Is word a name a declaration may give a place -- it begins with a letter or `_` and is no door name -- rather than a
+# literal (a number, a string "...") or a name of the C door? 1 or 0.
+fn: lm_compiler_graph_identifier (@: word char) int
+    if: word = 0 || lm_compiler_graph_door_word(word) != 0
+        return: 0
+    if: (word[0] >= 65 && word[0] <= 90) || (word[0] >= 97 && word[0] <= 122) || word[0] = 95
+        return: 1
+    return: 0
+end: lm_compiler_graph_identifier
 
 # Is word a type a formal or a result of a machine function is written with: a C scalar word or a type of the C door
 # (`c.uint64_t`)? 1 or 0.
@@ -227,14 +241,17 @@ end: lm_compiler_graph_place_at
 
 # Is the field i of block a declaration of an own place, and of which form? 1 an int place without a value (`int:
 # name`), 2 an int place holding a literal (`int: name 5`), 3 a place `T: name [value]` (T a C scalar word, int with a
-# computed value included), 4 a reference `@: name T [value]`, 5 a place of a C door type (`c.T: name`, not translated
-# yet), 0 none. Its name in name_out[0], its type word in type_out[0] (the type T of a reference).
-fn: lm_compiler_graph_declaration (@: g c.LmxGraph; @: block c.Lmx; size_t: i; @@: name_out char; @@: type_out char) int
+# computed value included), 4 a reference `@: name T [value]`, 5 a place of a C door type `c.T: name [value]` (c.T a
+# struct or fnptr of the unit's predefs: dheads/droles, lm_compiler_graph_import; not translated yet), 6 a Frame of such
+# a type in another shape, 0 none -- a Frame of any other door name is a call. Its name in name_out[0], its type word in
+# type_out[0] (the type T of a reference).
+fn: lm_compiler_graph_declaration (@: g c.LmxGraph; @: block c.Lmx; size_t: i; @@: dheads char; @: droles int; size_t: dn; @@: name_out char; @@: type_out char) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: value void c.lmx_graph_get(block, i)
     @: decl c.Lmx 0
     @: head char 0
     int: kind c.lmx_graph_kind(g, value)
+    int: role 0
     size_t: n 0U
     name_out[0]: 0
     type_out[0]: 0
@@ -251,7 +268,21 @@ fn: lm_compiler_graph_declaration (@: g c.LmxGraph; @: block c.Lmx; size_t: i; @
     decl: (cast: (@: c.Lmx) value)
     head: c.lmx_graph_name_of(g, value)
     n: c.lmx_graph_count(decl)
-    if: head = 0 || n = 0U || c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) != 2
+    if: head = 0
+        return: 0
+    # A door name's role is its C declaration's, whatever the actuals (CODEX-OPUS-341-DOOR-HEAD-REPLY).
+    if: lm_compiler_graph_door_word(head) != 0
+        role: lm_compiler_graph_door_role(dheads, droles, dn, head)
+        if: role != 1 && role != 2
+            return: 0
+        type_out[0]: head
+        if: n >= 1U && n <= 2U && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) = 2
+            name_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+            if: lm_compiler_graph_identifier(name_out[0]) != 0
+                return: 5
+            ---
+        return: 6
+    if: n = 0U || c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) != 2
         return: 0
     if: head = state\w_at && (n = 2U || n = 3U) && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 1U)) = 2
         name_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
@@ -261,10 +292,6 @@ fn: lm_compiler_graph_declaration (@: g c.LmxGraph; @: block c.Lmx; size_t: i; @
         name_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
         type_out[0]: head
         return: 3
-    if: lm_compiler_graph_door_word(head) != 0 && n <= 2U
-        name_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
-        type_out[0]: head
-        return: 5
     return: 0
 end: lm_compiler_graph_declaration
 
@@ -292,8 +319,8 @@ end: lm_compiler_graph_count_tree
 
 # The own places of a function declared in block and the bodies of its if and else, in written order: names[count..],
 # their type words, ptr 1 for a reference. A name that is a formal or a place already is refused, so is a place of a C
-# door type. 0, or the refusal.
-fn: lm_compiler_graph_collect (@: g c.LmxGraph; @: args c.Lmx; @: block c.Lmx; @@: names char; @@: types char; @: ptr int; @: count size_t; const: (@: src char); @: fname char) int
+# door type (an implementation limit: its representation is not translated yet). 0, or the refusal.
+fn: lm_compiler_graph_collect (@: g c.LmxGraph; @: args c.Lmx; @: block c.Lmx; @@: dheads char; @: droles int; size_t: dn; @@: names char; @@: types char; @: ptr int; @: count size_t; const: (@: src char); @: fname char) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: value void 0
     @: head char 0
@@ -305,9 +332,13 @@ fn: lm_compiler_graph_collect (@: g c.LmxGraph; @: args c.Lmx; @: block c.Lmx; @
     int: status 0
     while: i < n && status = 0
         value: c.lmx_graph_get(block, i)
-        form: lm_compiler_graph_declaration(g, block, i, @ name, @ type)
+        form: lm_compiler_graph_declaration(g, block, i, dheads, droles, dn, @ name, @ type)
         if: form = 5
-            c.fprintf(c.stderr, "l2trans error: %s: fn %s: the place %s of the C door type %s: the graph path does not know yet whether it is a number\n", src, fname, name, type)
+            c.fprintf(c.stderr, "l2trans error: %s: fn %s: the place %s of the C door type %s: the graph path translates no place of a C door type yet\n", src, fname, name, type)
+            return: 1
+        ---
+        if: form = 6
+            c.fprintf(c.stderr, "l2trans error: %s: fn %s: %s is a C door type (a struct or fnptr of the unit's predefs): at a statement's head it declares a place `%s: name [value]`\n", src, fname, type, type)
             return: 1
         ---
         if: form != 0
@@ -322,15 +353,150 @@ fn: lm_compiler_graph_collect (@: g c.LmxGraph; @: args c.Lmx; @: block c.Lmx; @
         ---
         head: c.lmx_graph_name_of(g, value)
         if: c.lmx_graph_kind(g, value) = 4 && head = state\w_if && c.lmx_graph_count((cast: (@: c.Lmx) value)) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)) = 4
-            status: lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)), names, types, ptr, count, src, fname)
+            status: lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)), dheads, droles, dn, names, types, ptr, count, src, fname)
         ---
         if: status = 0 && c.lmx_graph_kind(g, value) = 4 && head = state\w_else
-            status: lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) value), names, types, ptr, count, src, fname)
+            status: lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) value), dheads, droles, dn, names, types, ptr, count, src, fname)
         ---
         i: i + 1U
     ---
     return: status
 end: lm_compiler_graph_collect
+
+# ---- The C door's declarations: the role of a door name at a statement's head ------------------------------------------
+#
+# A Frame `c.X: arguments` and a call `c.X(arguments)` are one Lmx of the graph -- the builder keeps no colon, and the
+# written forms select no different operations (the book :421/:426, kernel §1a) --: the role of the door name c.X is
+# that of its C declaration (Codex, CODEX-OPUS-341-DOOR-HEAD-REPLY-20261109T144914Z-01). The unit's own predef closure,
+# the root's `predef:` words, declares it, read by the frontend's existing import of the C door -- its predef list
+# (lm_compiler_pd_push) and predef index (lm_compiler_predef_has_function, _has_type, _has_fnptr) --: a function of a
+# prototype is called, with any actuals; a struct or fnptr type is the type of the place its Frame declares; a name no
+# predef declares is a function of the raw C door (L2 §20, the grammar §23), called. `c.sizeof` is the C operator. The
+# import ends before the module is written: the roles are kept by the addresses of the heads' spellings, and the
+# frontend's predef list and documents are released (lm_compiler_pd_free, lm_compiler_snap_free), as after its own
+# translation.
+
+# The door names written at the head of a Frame anywhere in value -- a statement, an actual, an operand --, each spelling
+# once, appended to heads[count[0]..room) (c.sizeof, the C operator, not). 0, or 1 when room is exceeded.
+fn: lm_compiler_graph_door_collect (@: g c.LmxGraph; @: value void; @@: heads char; @: count size_t; size_t: room) int
+    @: head char 0
+    size_t: j 0U
+    int: status 0
+    if: c.lmx_graph_kind(g, value) != 4
+        return: 0
+    head: c.lmx_graph_name_of(g, value)
+    if: head != 0 && lm_compiler_graph_door_word(head) != 0 && head != c.lmx_graph_intern("c.sizeof", 8U)
+        if: lm_compiler_graph_place_at(heads, count[0], head) = count[0]
+            if: count[0] >= room
+                return: 1
+            heads[count[0]]: head
+            count[0]: count[0] + 1U
+        ---
+    ---
+    while: j < c.lmx_graph_count((cast: (@: c.Lmx) value)) && status = 0
+        status: lm_compiler_graph_door_collect(g, c.lmx_graph_get((cast: (@: c.Lmx) value), j), heads, count, room)
+        j: j + 1U
+    ---
+    return: status
+end: lm_compiler_graph_door_collect
+
+# The role of the door name head among heads[0..n) with roles[]: 1 a struct, 2 a fnptr type, 3 a function of a
+# prototype, 0 a name no predef declares (a function of the raw door) or no door name.
+fn: lm_compiler_graph_door_role (@@: heads char; @: roles int; size_t: n; @: head char) int
+    size_t: i lm_compiler_graph_place_at(heads, n, head)
+    if: i < n
+        return: roles[i]
+    return: 0
+end: lm_compiler_graph_door_role
+
+# The roles of heads[0..n), read from the predef closure of the unit's root by the frontend's import of the C door, which
+# is released after it. 0, or the refusal.
+fn: lm_compiler_graph_import (@: g c.LmxGraph; @: root c.Lmx; const: (@: src char); @@: heads char; @: roles int; size_t: n) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @@: texts c.LmP0Text 0
+    @: words c.Lmx 0
+    @: value void 0
+    @: text char 0
+    @: t c.LmP0Text 0
+    size_t: room 1U
+    size_t: used 0U
+    size_t: i 0U
+    size_t: k 0U
+    int: status 0
+    if: state = 0
+        return: 1
+    # One text for each predef word of the root and one for each head: the frontend's import reads LmP0Text.
+    while: i < c.lmx_graph_count(root)
+        value: c.lmx_graph_get(root, i)
+        if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = state\w_predef
+            room: room + c.lmx_graph_count((cast: (@: c.Lmx) value))
+        i: i + 1U
+    ---
+    room: room + n
+    texts: (cast: (@@: c.LmP0Text) c.calloc(room, sizeof(@: void)))
+    if: texts = 0
+        return: lm_compiler_graph_refuse(src, "out of memory")
+    i: 0U
+    while: i < c.lmx_graph_count(root) && status = 0
+        value: c.lmx_graph_get(root, i)
+        if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = state\w_predef
+            words: (cast: (@: c.Lmx) value)
+            k: 0U
+            while: k < c.lmx_graph_count(words) && status = 0
+                text: c.lmx_graph_word_text(g, c.lmx_graph_get(words, k))
+                t: (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+                if: text = 0 || t = 0
+                    status: lm_compiler_graph_refuse(src, "a predef of a machine module names its file by a word")
+                else:
+                    texts[used]: t
+                    used: used + 1U
+                    t\data: text
+                    t\length: c.strlen(text)
+                    if: c.lm_compiler_pd_push(t, src, 0) != 0
+                        status: 1
+                    ---
+                ---
+                k: k + 1U
+            ---
+        ---
+        i: i + 1U
+    ---
+    # Each head without its `c.`: the index answers for the name the C declaration gives.
+    i: 0U
+    while: i < n && status = 0
+        t: (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+        if: t = 0
+            status: lm_compiler_graph_refuse(src, "out of memory")
+        else:
+            texts[used]: t
+            used: used + 1U
+            t\data: heads[i] + 2U
+            t\length: c.strlen(heads[i] + 2U)
+            roles[i]: 0
+            if: c.lm_compiler_predef_has_function(t) != 0
+                roles[i]: 3
+            else:
+                if: c.lm_compiler_predef_has_type(t) != 0
+                    roles[i]: 1
+                else:
+                    if: c.lm_compiler_predef_has_fnptr(t) != 0
+                        roles[i]: 2
+                    ---
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    c.lm_compiler_pd_free()
+    c.lm_compiler_snap_free()
+    k: 0U
+    while: k < used
+        c.free((cast: (@: void) texts[k]))
+        k: k + 1U
+    ---
+    c.free((cast: (@: void) texts))
+    return: status
+end: lm_compiler_graph_import
 
 # ---- The order of calls: values kept before a later call ---------------------------------------------------------------
 #
@@ -360,6 +526,9 @@ fn: lm_compiler_graph_calls (@: g c.LmxGraph; @: value void) int
     if: head = c.lmx_graph_intern("cast", 4U)
         if: c.lmx_graph_count(expression) = 2U
             return: lm_compiler_graph_calls(g, c.lmx_graph_get(expression, 1U))
+        return: 0
+    # `c.sizeof` is the C operator (L2 §20), no call: it runs nothing.
+    if: head = c.lmx_graph_intern("c.sizeof", 8U)
         return: 0
     if: head != 0
         return: 1
@@ -683,10 +852,11 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
             return: lm_compiler_graph_refuse_at(src, fname, at, "a word of the expression has no spelling")
         if: lm_compiler_graph_name(g, f, args, mi, names, n, k0, text) != 0
             return: 0
-        if: lm_compiler_graph_door_word(text) != 0 || (text[0] >= 48 && text[0] <= 57)
+        # A door name, a number with its suffix and a string literal "..." as written (the C door reads its text).
+        if: lm_compiler_graph_door_word(text) != 0 || (text[0] >= 48 && text[0] <= 57) || text[0] = 34
             c.fputs(text, f)
             return: 0
-        return: lm_compiler_graph_refuse_word(src, fname, at, text, "is no formal or place of the machine function, no door name c.X and no number: a machine function has no unit")
+        return: lm_compiler_graph_refuse_word(src, fname, at, text, "is no formal or place of the machine function, no door name c.X, no number and no string: a machine function has no unit")
     if: kind != 4
         return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates names, numbers, operations, paths, casts and calls: no other expression yet")
     expression: (cast: (@: c.Lmx) value)
@@ -773,7 +943,7 @@ end: lm_compiler_graph_expr
 # lmx_graph_path_head); a declaration of an own place -- declared at the function's entry, written here when it is
 # written with a value --; the write of a formal or a place, `name: value`; a call. at counts the statements read. 0,
 # or the refusal.
-fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args c.Lmx; int: mi; @@: names char; @@: types char; @: ptr int; size_t: n; int: k0; @@: kept c.Lmx; @: kn size_t; @: block c.Lmx; int: level; const: (@: src char); @: fname char; @: at int) int
+fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args c.Lmx; int: mi; @@: dheads char; @: droles int; size_t: dn; @@: names char; @@: types char; @: ptr int; size_t: n; int: k0; @@: kept c.Lmx; @: kn size_t; @: block c.Lmx; int: level; const: (@: src char); @: fname char; @: at int) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: raw void 0
     @: statement c.Lmx 0
@@ -793,7 +963,7 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
     while: i < count && status = 0
         raw: c.lmx_graph_get(block, i)
         at[0]: at[0] + 1
-        form: lm_compiler_graph_declaration(g, block, i, @ name, @ type)
+        form: lm_compiler_graph_declaration(g, block, i, dheads, droles, dn, @ name, @ type)
         if: form = 1
             i: i + 1U
             continue
@@ -847,7 +1017,7 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
             status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
             c.fputs("\n", f)
             if: status = 0
-                status: lm_compiler_graph_block(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U)), level + 1, src, fname, at)
+                status: lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U)), level + 1, src, fname, at)
             lm_compiler_graph_indent(f, level + 1)
             c.fputs("---\n", f)
             next: 0
@@ -857,7 +1027,7 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
                 i: i + 1U
                 lm_compiler_graph_indent(f, level)
                 c.fputs("else:\n", f)
-                status: lm_compiler_graph_block(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) next), level + 1, src, fname, at)
+                status: lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) next), level + 1, src, fname, at)
                 lm_compiler_graph_indent(f, level + 1)
                 c.fputs("---\n", f)
             ---
@@ -945,7 +1115,7 @@ end: lm_compiler_graph_door
 
 # One function of the module: its signature, its own places declared at its entry (numbered from k0), its body, its end.
 # The count of its own places in places[0], 0; or the refusal.
-fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: made c.Lmx; @: name char; int: mi; int: k0; @: places size_t; const: (@: src char)) int
+fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: made c.Lmx; @: name char; int: mi; int: k0; @@: dheads char; @: droles int; size_t: dn; @: places size_t; const: (@: src char)) int
     @: args c.Lmx c.lmx_graph_method_args(g, made)
     @: body c.Lmx c.lmx_graph_method_body(g, made)
     size_t: room 0U
@@ -969,7 +1139,7 @@ fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
     kept: (cast: (@@: c.Lmx) c.calloc(lm_compiler_graph_count_nodes(g, (cast: (@: void) body)) + 1U, sizeof(@: void)))
     if: names = 0 || types = 0 || ptr = 0 || kept = 0
         return: lm_compiler_graph_refuse(src, "out of memory")
-    status: lm_compiler_graph_collect(g, args, body, names, types, ptr, @ n, src, name)
+    status: lm_compiler_graph_collect(g, args, body, dheads, droles, dn, names, types, ptr, @ n, src, name)
     if: status != 0
         return: status
     if: lm_compiler_graph_sig(g, f, made, name, mi) != 0
@@ -989,7 +1159,7 @@ fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
         c.fputs(" 0\n", f)
         i: i + 1U
     ---
-    status: lm_compiler_graph_block(g, f, root, args, mi, names, types, ptr, n, k0, kept, @ kn, body, 1, src, name, @ at)
+    status: lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, @ kn, body, 1, src, name, @ at)
     if: status != 0
         return: status
     c.fprintf(f, "end: %s\n\n", name)
@@ -1017,6 +1187,10 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
     @: name char 0
     @: wanted char 0
     @: base char 0
+    @@: dheads char 0
+    @: droles int 0
+    size_t: dn 0U
+    size_t: droom 1U
     size_t: i 0U
     size_t: p 0U
     size_t: places 0U
@@ -1069,6 +1243,26 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
             return: 1
         k: k + 1
     ---
+    # The roles of the door names the functions write, from the unit's predef closure (the import of the C door, released
+    # before any line of the module is written).
+    x: 0
+    while: x < fcount
+        droom: droom + lm_compiler_graph_count_nodes(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])))
+        x: x + 1
+    ---
+    dheads: (cast: (@@: char) c.calloc(droom, sizeof(@: char)))
+    droles: (cast: (@: int) c.calloc(droom, c.sizeof(c.int)))
+    if: dheads = 0 || droles = 0
+        return: lm_compiler_graph_refuse(src, "out of memory")
+    x: 0
+    while: x < fcount && status = 0
+        status: lm_compiler_graph_door_collect(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])), dheads, @ dn, droom)
+        x: x + 1
+    ---
+    if: status != 0
+        return: lm_compiler_graph_refuse(src, "the door names of the module outgrow their count")
+    if: lm_compiler_graph_import(g, root, src, dheads, droles, dn) != 0
+        return: 1
     # The mark names the source by its file, as the P0 path's does, and the input it was read from.
     base: (cast: (@: char) src)
     p: 0U
@@ -1098,7 +1292,7 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
     c.fputs("end: prototype\n\n", f)
     x: 0
     while: x < fcount
-        status: lm_compiler_graph_function(g, f, root, made_list[x], name_list[x], x, k0, @ places, src)
+        status: lm_compiler_graph_function(g, f, root, made_list[x], name_list[x], x, k0, dheads, droles, dn, @ places, src)
         if: status != 0
             return: status
         k0: k0 + (cast: (int) places)
@@ -1106,6 +1300,8 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
     ---
     c.free((cast: (@: void) made_list))
     c.free((cast: (@: void) name_list))
+    c.free((cast: (@: void) dheads))
+    c.free((cast: (@: void) droles))
     return: 0
 end: lm_compiler_graph_module
 

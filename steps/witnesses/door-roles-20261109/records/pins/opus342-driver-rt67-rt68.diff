@@ -1,0 +1,47 @@
+15545,15552c15545,15547
+<     l2_q0_wait = (0U);
+<     l2_q1_max_wait = (0U);
+<     int l2_t0;
+<     l2_t0 = (l2_p0_0_d == 0) != 0;
+<     if (l2_t0 == 0) {
+<     l2_t0 = (l2_p0_1_deadline == 0U) != 0;
+<     }
+<     if (l2_t0) {
+---
+>     l2_q0_wait = 0U;
+>     l2_q1_max_wait = 0U;
+>     if ((l2_p0_0_d == 0) || (l2_p0_1_deadline == 0U)) {
+15559,15561c15554,15555
+<     size_t l2_t1 = (l2_p0_1_deadline);
+<     l2_q0_wait = (lmx_deadline_wait(l2_t1, lmx_clock_word()));
+<     l2_q1_max_wait = (((((size_t)INFINITE))) - 1U);
+---
+>     l2_q0_wait = lmx_deadline_wait(l2_p0_1_deadline, lmx_clock_word());
+>     l2_q1_max_wait = (((size_t)INFINITE)) - 1U;
+15563c15557
+<     l2_q0_wait = (l2_q1_max_wait);
+---
+>     l2_q0_wait = l2_q1_max_wait;
+15570c15564
+<     l2_p0_0_d->thread = CreateThread(0, 0, ((((LmxWin32ThreadStart)lmx_process_deadline_body))), ((((void *)l2_p0_0_d))), 0, 0);
+---
+>     l2_p0_0_d->thread = CreateThread(0, 0, (((LmxWin32ThreadStart)lmx_process_deadline_body)), (((void *)l2_p0_0_d)), 0, 0);
+15582,15587c15576
+<     int l2_t0;
+<     l2_t0 = (l2_p1_0_d == 0) != 0;
+<     if (l2_t0 == 0) {
+<     l2_t0 = (l2_p1_0_d -> armed == 0) != 0;
+<     }
+<     if (l2_t0) {
+---
+>     if ((l2_p1_0_d == 0) || (l2_p1_0_d -> armed == 0)) {
+15604c15593
+<     l2_q3_code = (0U);
+---
+>     l2_q3_code = 0U;
+15608,15609c15597,15598
+<     l2_q2_d = ((LmxProcessDeadline *)(((((LmxProcessDeadline *)l2_p2_0_arg)))));
+<     l2_q3_code = (WaitForSingleObject(l2_q2_d->event, ((((unsigned long)l2_q2_d -> wait_ms)))));
+---
+>     l2_q2_d = ((LmxProcessDeadline *)l2_p2_0_arg);
+>     l2_q3_code = WaitForSingleObject(l2_q2_d->event, (((unsigned long)l2_q2_d -> wait_ms)));

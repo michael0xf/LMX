@@ -1,0 +1,40 @@
+# The machine functions of lmx_process_deadline entered through the C door (route 331, slice 342): the runtime
+# translates src/l2src/lmx_process_deadline.lm2 from its clean graph once its frontend gives a door name at a
+# statement's head the role of its C declaration (a call of a prototype, the type of a place); the answers are the
+# module's either way. arm refuses no record and the zero deadline; disarm of an unarmed record is 0 and changes
+# nothing; arm with a deadline a minute ahead starts the watchdog (armed, both handles, a wait of at most a minute);
+# disarm signals, joins and clears; a deadline beyond the OS wait width is clamped below INFINITE. Exit 7; 80.. name
+# the failing check.
+predef: "l2src/lmx_process_deadline.h.lm1"
+predef: "l2src/lmx_clock.h.lm1"
+include: "<stdlib.h>"
+fn: run () int
+    @: d c.LmxProcessDeadline (cast: (@: c.LmxProcessDeadline) c.calloc(1U, c.sizeof(c.LmxProcessDeadline)))
+    size_t: now 0U
+    if: d = 0
+        return: 90
+    if: c.lmx_process_deadline_arm(0, 100U) != 1
+        return: 80
+    if: c.lmx_process_deadline_arm(d, 0U) != 1 || d\armed != 0
+        return: 81
+    if: c.lmx_process_deadline_disarm(d) != 0 || d\armed != 0 || d\thread != 0 || d\event != 0
+        return: 82
+    now: c.lmx_clock_word()
+    if: c.lmx_process_deadline_arm(d, now + 60000U) != 0
+        return: 83
+    if: d\armed != 1 || d\event = 0 || d\thread = 0 || d\wait_ms = 0U || d\wait_ms > 60000U
+        return: 84
+    if: c.lmx_process_deadline_disarm(d) != 0 || d\armed != 0 || d\thread != 0 || d\event != 0 || d\wait_ms != 0U
+        return: 85
+    now: c.lmx_clock_word()
+    if: c.lmx_process_deadline_arm(d, now + 4294967306U) != 0
+        return: 86
+    if: d\wait_ms != 4294967294U
+        return: 87
+    if: c.lmx_process_deadline_disarm(d) != 0 || d\armed != 0
+        return: 88
+    c.free((cast: (@: void) d))
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

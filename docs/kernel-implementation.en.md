@@ -938,8 +938,20 @@ and publication of 308 are not run; the task is closed neither by a document nor
    fehost03 reads none of these forms, so the chain starts from an intermediate generation, the bundle fehost07 (its
    objects by fehost03, linked with rt66): `bootstrap quick` from it built G1 and G2 with 0 failures, both translating
    `lmx_schedule` and `lmx_clock` from their graphs; their runtimes equal rt67 byte for byte, and G1 and G2 differ
-   only by link stamps (frontend, backend, tool; their L1, C and objects are the same bytes). The next machine modules
-   are the next step.
+   only by link stamps (frontend, backend, tool; their L1, C and objects are the same bytes). Step 5 (slice 342,
+   [witness](../steps/witnesses/door-roles-20261109/notes.md)): `lmx_process_deadline` is the third module from the
+   graph. The role of a C door name `c.X` at a Frame's head is its C declaration's (Codex,
+   CODEX-OPUS-341-DOOR-HEAD-REPLY), not a colon, parentheses or the count of actuals: the graph path asks the
+   frontend's existing import of the C door along the predef closure of the unit's root and releases the import before
+   the module is written; a function of a prototype and an undeclared name are calls, a struct or fnptr type declares
+   a place (such a place is still refused), `c.sizeof` is the C operator; a string literal is written as written.
+   Slice 341 first lifted the backend's fixed 2048 bytes for the list of a header unit's types
+   ([witness](../steps/witnesses/header-types-20261109/notes.md)). The C of the runtime rt68 differs from rt67's only in
+   the three functions of `lmx_process_deadline`; through the C door (`tests/cdoor/deadline_machine.lm2`) they answer
+   7, and the mutant of the clamp `INFINITE - 1` -> `- 2` answers 87. The chain starts from the intermediate bundle
+   fehost09: `bootstrap quick` built G1 and G2 with 0 failures, their runtimes equal rt68 byte for byte, and G1 and G2
+   differ only by link stamps. The next machine modules are the next step (`lmx_turn` already translates from its
+   graph).
 4. **Arena regions as the only storage.** `LmxPool/LmxChunk/LmxRange` → regions with the interval index; exact region sizes
    in the emission; attach/mark/revert/GC by §2.
 5. **The full final checks:** the whole registry on both executors, bootstrap quick and full, checks, landing, docs render

@@ -1496,6 +1496,13 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
             return: 4
         return: c.lmx_graph_publish(g, root, index, cell)
     k: c.lmx_graph_named(g, root, head)
+    # A written field `name: value` whose name is not known defines the place by its value (the book, composition of
+    # place and value; lmx_graph_define), e.g. a held merge result.
+    if: k >= c.lmx_graph_count(root) && n = 2U && cell = 0 && lmx_graph_language_word(state, head) = 0
+        r: lmx_graph_eval_value(g, root, c.lmx_graph_get(statement, 1U), @ cell)
+        if: r != 0
+            return: r
+        return: c.lmx_graph_define(g, root, index, cell)
     if: k >= c.lmx_graph_count(root)
         return: 3
     r: lmx_graph_eval(g, root, statement, 1U, n, @ value)
@@ -1758,13 +1765,19 @@ fn: lmx_graph_merge_literal_put (@: g c.LmxGraph; @: literal c.Lmx; @: made c.Lm
             return: 4
         cell: c.lmx_arena_pointer_void_read(place)
     else:
-        if: c.lmx_graph_value_int(g, value, @ number) != 0
-            if: form = 2
-                return: 4
-            return: 5
+        if: form = 1 && c.lmx_graph_kind(g, value) = 5
+            # `name: @x` defines a reference place: a new int reference to the same cell, not the evaluated one.
+            place: c.lmx_graph_ref_int(g, c.lmx_arena_pointer_void_read(value))
+            cell: place
+        else:
+            if: c.lmx_graph_value_int(g, value, @ number) != 0
+                if: form = 2
+                    return: 4
+                return: 5
+            ---
+            place: c.lmx_graph_int(g, number)
+            cell: place
         ---
-        place: c.lmx_graph_int(g, number)
-        cell: place
     ---
     if: place = 0 || cell = 0 || c.lmx_graph_name_address(g, cell, name) != 0 || c.lmx_graph_put(made, index, place) != 0
         return: 4
@@ -1905,19 +1918,41 @@ fn: lmx_graph_merge_write (@: g c.LmxGraph; @: result c.Lmx; size_t: slot; @: va
     return: 0
 end: lmx_graph_merge_write
 
+# A later field that names an int place of the result it does not provide is that place in the one source -> copy map
+# (the review of 325): its value answers the result's place and its cell -- the cell behind a place without a value
+# included -- the result's cell, so a reference to it reached by the copy goes to the result's place. A source already
+# mapped keeps its first copy. 0, or 4 without memory.
+fn: lmx_graph_merge_alias (@: g c.LmxGraph; @: map c.LmxCopyMap; @: field void; @: place void) int
+    @: cell void field
+    @: target void place
+    if: c.lmx_graph_kind(g, place) = 3
+        target: c.lmx_arena_pointer_void_read(place)
+    if: c.lmx_graph_kind(g, field) = 3
+        if: c.lmx_copy_map_get(map, field) = 0 && c.lmx_copy_map_put(map, field, place) != 0
+            return: 4
+        cell: c.lmx_arena_pointer_void_read(field)
+    ---
+    if: c.lmx_copy_map_get(map, cell) = 0 && c.lmx_copy_map_put(map, cell, target) != 0
+        return: 4
+    return: 0
+end: lmx_graph_merge_alias
+
 # merge of evaluated operands (the book, composition; L2 §13; kernel §6.4). The result R has the layout of the model
-# (operand 0), then the new fields in operand order; a named field of a later operand naming a slot of R so far is
-# written into that slot by the admission of an assignment, any other is appended, so the model's field numbers do not
-# move. One source -> copy map serves all operands: every operand root maps to R (the instance obtained by copying and
+# (operand 0), then the new fields in operand order; a named field of a later operand naming a slot of R is written into
+# that slot by the admission of an assignment, any other is appended, so the model's field numbers do not move. One
+# source -> copy map serves all operands: every operand root maps to R (the instance obtained by copying and
 # composition), shared targets and cycles stay shared, the copies' name rows keep the canonical names, and a copied
-# Structure's parent is the copy of its parent where that was copied. The copied graph holds no written name or callable
-# (lmx_graph_merge_check), so nothing in R resolves a name through a lexical parent: R has none (parent 0, which is no
-# arena-root object), and the place of execution gives it none. The operands stay unchanged. 0 and R in out; 4 for an
-# operand that is no Structure or a refused write; 5 for an open form.
+# Structure's parent is the copy of its parent where that was copied. The order makes merged places one place: R's int
+# places are copied first, then every later field naming one of them is that place in the map (lmx_graph_merge_alias),
+# and only then are references, Structures and new fields copied, so a reference reaches R's place in any field order.
+# The copied graph holds no written name or callable (lmx_graph_merge_check), so nothing in R resolves a name through a
+# lexical parent: R has none (parent 0, which is no arena-root object), and the place of execution gives it none. The
+# operands stay unchanged. 0 and R in out; 4 for an operand that is no Structure or a refused write; 5 for an open form.
 fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out void) int
     c.LmxCopyMap: map
     @@: work c.Lmx 0
     @@: names char 0
+    @@: first void 0
     @: model c.Lmx 0
     @: operand c.Lmx 0
     @: result c.Lmx 0
@@ -1931,11 +1966,12 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     size_t: m 0U
     size_t: room 0U
     size_t: total 0U
-    size_t: next 0U
     size_t: i 0U
     size_t: j 0U
     size_t: k 0U
     size_t: slot 0U
+    int: kind 0
+    int: mapped 0
     int: status 0
     if: g = 0 || values = 0 || out = 0 || n = 0U
         return: 5
@@ -1952,12 +1988,17 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
         k: k + 1U
     ---
     names: (cast: (@@: char) c.calloc(room + 1U, sizeof(@: char)))
-    if: names = 0
+    first: (cast: (@@: void) c.calloc(room + 1U, sizeof(@: void)))
+    if: names = 0 || first = 0
+        c.free((cast: (@: void) names))
+        c.free((cast: (@: void) first))
         return: 4
-    # The field set of R before its fixed Lmx: the model's slots, then each named field of a later operand that names no
-    # slot so far, in operand order. An unnamed field of a later operand is matched by no name and is open here (5).
+    # The field set of R before its fixed Lmx, with the field that first provides each slot: the model's slots, then each
+    # named field of a later operand that names no slot so far, in operand order. An unnamed field of a later operand is
+    # matched by no name and is open here (5).
     while: i < m
         names[i]: c.lmx_graph_slot_name(g, model, i)
+        first[i]: c.lmx_graph_get(model, i)
         i: i + 1U
     ---
     total: m
@@ -1976,6 +2017,7 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
                 ---
                 if: i = total
                     names[total]: name
+                    first[total]: c.lmx_graph_get(operand, j)
                     total: total + 1U
                 ---
             ---
@@ -1983,49 +2025,85 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
         ---
         k: k + 1U
     ---
-    c.free((cast: (@: void) names))
-    if: status != 0
-        return: status
-    if: c.lmx_copy_map_init(@ map) != 0
-        return: 4
-    result: c.lmx_graph_lmx(g, 0, total)
-    if: result = 0
+    if: status = 0 && c.lmx_copy_map_init(@ map) != 0
         status: 4
-    k: 0U
-    while: k < n && status = 0
-        if: c.lmx_copy_map_put(@ map, values[k], (cast: (@: void) result)) != 0
-            status: 4
-        k: k + 1U
-    ---
-    i: 0U
-    while: i < m && status = 0
-        status: lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(model, i), @ work, @ count, @ cap, @ copy)
-        if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
-            status: 4
-        i: i + 1U
-    ---
-    next: m
-    k: 1U
-    while: k < n && status = 0
-        operand: (cast: (@: c.Lmx) values[k])
-        j: 0U
-        while: j < c.lmx_graph_count(operand) && status = 0
-            name: c.lmx_graph_slot_name(g, operand, j)
-            held: c.lmx_graph_get(operand, j)
-            slot: c.lmx_graph_named(g, result, name)
-            if: slot < next
-                status: lmx_graph_merge_write(g, result, slot, held)
-            else:
-                status: lmx_graph_merge_copy(g, @ map, held, @ work, @ count, @ cap, @ copy)
-                if: status = 0 && c.lmx_graph_put(result, next, copy) != 0
+    else:
+        if: status = 0
+            mapped: 1
+            result: c.lmx_graph_lmx(g, 0, total)
+            if: result = 0
+                status: 4
+            k: 0U
+            while: k < n && status = 0
+                if: c.lmx_copy_map_put(@ map, values[k], (cast: (@: void) result)) != 0
                     status: 4
-                ---
-                next: next + 1U
+                k: k + 1U
             ---
-            j: j + 1U
+            # R's int places first: a slot whose first source is an int place gets its copy.
+            i: 0U
+            while: i < total && status = 0
+                kind: c.lmx_graph_kind(g, first[i])
+                if: kind = 1 || kind = 3
+                    status: lmx_graph_merge_copy(g, @ map, first[i], @ work, @ count, @ cap, @ copy)
+                    if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
+                        status: 4
+                    ---
+                ---
+                i: i + 1U
+            ---
+            # Every later field naming an int place of R it does not provide is that place in the map.
+            k: 1U
+            while: k < n && status = 0
+                operand: (cast: (@: c.Lmx) values[k])
+                j: 0U
+                while: j < c.lmx_graph_count(operand) && status = 0
+                    held: c.lmx_graph_get(operand, j)
+                    slot: c.lmx_graph_named(g, result, c.lmx_graph_slot_name(g, operand, j))
+                    kind: c.lmx_graph_kind(g, held)
+                    if: slot < total && first[slot] != held && (kind = 1 || kind = 3)
+                        kind: c.lmx_graph_kind(g, c.lmx_graph_get(result, slot))
+                        if: kind = 1 || kind = 3
+                            status: lmx_graph_merge_alias(g, @ map, held, c.lmx_graph_get(result, slot))
+                        ---
+                    ---
+                    j: j + 1U
+                ---
+                k: k + 1U
+            ---
+            # The other slots by their first source: references, Structures and new fields now reach merged places.
+            i: 0U
+            while: i < total && status = 0
+                if: c.lmx_graph_get(result, i) = 0 && first[i] != 0
+                    status: lmx_graph_merge_copy(g, @ map, first[i], @ work, @ count, @ cap, @ copy)
+                    if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
+                        status: 4
+                    ---
+                ---
+                i: i + 1U
+            ---
+            # The writes of later fields into the slots they name but do not provide, in operand order.
+            k: 1U
+            while: k < n && status = 0
+                operand: (cast: (@: c.Lmx) values[k])
+                j: 0U
+                while: j < c.lmx_graph_count(operand) && status = 0
+                    held: c.lmx_graph_get(operand, j)
+                    i: 0U
+                    name: c.lmx_graph_slot_name(g, operand, j)
+                    while: i < total && names[i] != name
+                        i: i + 1U
+                    ---
+                    if: i < total && first[i] != held
+                        status: lmx_graph_merge_write(g, result, i, held)
+                    ---
+                    j: j + 1U
+                ---
+                k: k + 1U
+            ---
         ---
-        k: k + 1U
     ---
+    c.free((cast: (@: void) names))
+    c.free((cast: (@: void) first))
     at: 0U
     while: at < count && status = 0
         operand: work[at]
@@ -2048,7 +2126,8 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
         child\parent: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand\parent)))
         at: at + 1U
     ---
-    c.lmx_copy_map_dispose(@ map)
+    if: mapped != 0
+        c.lmx_copy_map_dispose(@ map)
     c.free((cast: (@: void) work))
     if: status = 0
         out[0]: (cast: (@: void) result)

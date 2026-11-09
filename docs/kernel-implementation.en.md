@@ -108,6 +108,16 @@ result has no lexical parent. `mytest(merge(mytest\args; (a: int: 5)))` = 35 in 
 `merge` at execution time. `merge(f1; f2)` of two functions (the builder does not build a descriptor without a body), a
 held place `pack: merge(...)` and replacing a Structure slot remain open. 53 graph-check runs × interp/native/forced
 passed.
+The next [graph45/tool26/rt35](../steps/witnesses/merge-places-20261109/notes.md), after Codex's review: a field of a
+later operand that names an int place of the result is that same place in the one map (its value and its cell, the
+cell behind `uninit:int` included); the correspondences are set before references are copied, so a reference to it
+reaches the result's place in any field order (`R\a := 9` → `\R\p` = 9, sources intact; a mutant without this step gives
+5). A field `name: @x` of an anonymous Structure is a new reference place. A root statement `name: value` with an
+unknown name defines the place by its value (`lmx_graph_define`, both consumers):
+`pack: merge(mytest\args; (a: int: 5)); mytest(pack)` = 35. The interface descriptor `fn: f2 (int: b 7) int` is built
+with its `args` and `return` parts and an addressable empty `var`, without a body; it is no callable. Copying written
+names and callables (with their lexical ancestors) and matching the `fn`/`return` parts in `merge(f1; f2)` (a question
+to the author) remain open. 58 graph-check runs × interp/native/forced passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)
@@ -520,9 +530,13 @@ Operands of `merge` are ordinary expressions with their general meaning (the aut
 model field of the same name never intercepts that call (`f(3)` and `f: 3` are one graph); a Frame whose head is no
 function describes a structure. Whole functions merge by the same Structure rules (`merge(f1; f2)`; for `f2` without a
 body the result keeps the copy of `f1`'s body with the changed signature). Every operand root maps to the result in the
-one map; a copied Structure's parent becomes the copy of its parent, and a lexical ancestor is copied only where a
-copied name resolves through it — a result with no written name or callable needs none and has parent 0 (no lexical
-parent, not an arena-root object); the place of execution never gives one. The implemented subset and its open parts:
+one map, and a field of a later operand named like a place of the result maps to that place (its value and its cell),
+so a reference to it reaches the result's place; a copied Structure's parent becomes the copy of its parent. A needed
+lexical ancestor — one a copied name resolves through — is copied as an ordinary Lmx through the same map, whole, with
+its fields, references and cycles, up to parent 0: it is not trimmed to the names met, and this is no copy of the whole
+arena but the necessary reachable closure. A result with no written name or callable needs no ancestor and has parent 0
+(no lexical parent, not an arena-root object); the source's mutable ancestor is never mixed in, and the place of
+execution never gives one. The implemented subset and its open parts:
 the status above (graph44).
 
 ### 6.5 Resetting `native` on a write (decision; the norm is [L2 §11](L2_spec_en.md#call))

@@ -608,10 +608,16 @@ fn: lm_graph_build_method (@: g c.LmxGraph; @: parent c.Lmx; @: fr c.LmP0Frame; 
     @: formal_name char 0
     size_t: i 0U
     size_t: arity lm_graph_count_active(lm_graph_p0_body(fr))
+    int: descriptor 0
     int: status 0
     if: head = state\w_fn
         parts: 5U
-    if: item = 0 || item\value\kind != c.LM_P0_NODE_ATOM || (arity != parts - 1U && arity != parts)
+    # `fn: name args return` without a body is the interface descriptor (the book :691): its args and return parts and
+    # the addressable empty var the fn contract creates for an omitted var; no body is synthesized, so it is no callable.
+    if: head = state\w_fn && arity = 3U
+        descriptor: 1
+        parts: 4U
+    if: item = 0 || item\value\kind != c.LM_P0_NODE_ATOM || (descriptor = 0 && arity != parts - 1U && arity != parts)
         return: 2
     name: lm_graph_p0_atom(lm_graph_p0_value(item))
     code: c.lmx_graph_lmx(g, parent, parts)
@@ -648,6 +654,18 @@ fn: lm_graph_build_method (@: g c.LmxGraph; @: parent c.Lmx; @: fr c.LmP0Frame; 
             return: 2
         item: lm_graph_next_active(lm_graph_p0_next(item))
     ---
+    if: descriptor != 0
+        if: item != 0 || result = 0
+            return: 2
+        vars: c.lmx_graph_lmx(g, code, 0U)
+        if: vars = 0
+            return: 1
+        if: c.lmx_graph_name(g, (cast: (@: void) code), lm_graph_p0_data(name), lm_graph_p0_length(name)) != 0 || c.lmx_graph_name(g, (cast: (@: void) args), "args", 4U) != 0 || c.lmx_graph_name(g, (cast: (@: void) result), "return", 6U) != 0 || c.lmx_graph_name(g, (cast: (@: void) vars), "var", 3U) != 0
+            return: 1
+        if: c.lmx_graph_put(code, 0U, c.lmx_graph_word(g, head, c.strlen(head))) != 0 || c.lmx_graph_put(code, 1U, (cast: (@: void) args)) != 0 || c.lmx_graph_put(code, 2U, (cast: (@: void) result)) != 0 || c.lmx_graph_put(code, 3U, (cast: (@: void) vars)) != 0
+            return: 1
+        out[0]: (cast: (@: void) code)
+        return: 0
     if: arity = parts
         if: item = 0 || item\value\kind != c.LM_P0_NODE_STRUCTURE
             return: 2
@@ -1447,6 +1465,12 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 decl_names[decl_n]: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 1U))
                 decl_slots[decl_n]: i
                 decl_n: decl_n + 1U
+            else:
+                if: head != 0 && c.lmx_graph_count(inner) = 2U && c.lmx_graph_language_word(state, head) = 0 && c.lmx_graph_resolve(g, root, head) = 0 && c.lmx_graph_named(g, root, head) >= n
+                    decl_names[decl_n]: head
+                    decl_slots[decl_n]: i
+                    decl_n: decl_n + 1U
+                ---
             ---
         ---
         i: i + 1U
@@ -1526,6 +1550,17 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                     decl_n: decl_n + 1U
                 else:
                     k: lm_graph_emit_resolve(g, root, decl_names, decl_slots, decl_n, head)
+                    # `name: value` with a name not known defines the place by its value, as the interpreter does.
+                    if: k >= n && m = 2U && c.lmx_graph_resolve(g, root, head) = 0 && c.lmx_graph_language_word(state, head) = 0
+                        r: lm_graph_emit_operand(g, f, root, inner, 1U, temps, decl_names, decl_slots, decl_n, @ temp)
+                        if: r != 0
+                            return: r
+                        c.fprintf(f, "        if: lmx_graph_define(l2_g, lmx_call_code, %zuU, l2_v%d) != 0\n            %s\n", i, temp, leave_failure)
+                        decl_names[decl_n]: head
+                        decl_slots[decl_n]: i
+                        decl_n: decl_n + 1U
+                        i: i + 1U
+                        continue
                     if: k >= n
                         return: 3
                     r: lm_graph_emit_expr(g, f, root, inner, 1U, m, temps, decl_names, decl_slots, decl_n, @ temp)

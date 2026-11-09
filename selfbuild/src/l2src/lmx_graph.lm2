@@ -852,12 +852,24 @@ fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: d
         i: i + 1U
     ---
     c.fputs(")", f)
-    if: lmx_graph_has_result(g, method) != 0
+    if: lmx_graph_has_result(g, method) != 0 || lmx_graph_descriptor(g, method) != 0
         c.fputs(" ", f)
         if: lmx_graph_dump_token(g, lmx_graph_get(result, 0U), f) != 0
             return: 1
         ---
     ---
+    # An interface descriptor is its header and its var part: no body is printed or synthesized (the book :691).
+    if: lmx_graph_descriptor(g, method) != 0
+        vars: (cast: (@: c.Lmx) lmx_graph_get(method, 3U))
+        if: lmx_graph_count(vars) != 0U
+            c.fputs(" (\n", f)
+            if: lmx_graph_dump_at(g, vars, f, depth + 1) != 0
+                return: 1
+            lmx_graph_dump_indent(f, depth)
+            c.fputs(")", f)
+        ---
+        c.fputs("\n", f)
+        return: 0
     if: lmx_graph_count(vars) != 0U
         c.fputs(" (\n", f)
         if: lmx_graph_dump_at(g, vars, f, depth + 1) != 0
@@ -891,7 +903,7 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
         value: lmx_graph_get(lmx, i)
         kind: lmx_graph_kind(g, value)
         lmx_graph_dump_indent(f, depth)
-        if: kind = 4 && lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+        if: kind = 4 && (lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0 || lmx_graph_descriptor(g, (cast: (@: c.Lmx) value)) != 0)
             if: lmx_graph_dump_method(g, (cast: (@: c.Lmx) value), f, depth) != 0
                 return: 1
             i: i + 1U
@@ -993,3 +1005,52 @@ fn: lmx_graph_uninit_int_at (@: g c.LmxGraph; @: cell void) @: void
         return: 0
     return: pointer
 end: lmx_graph_uninit_int_at
+
+# ---- Interface descriptor and the definition of a place ------------------------------------------------------------
+
+# The interface descriptor `fn: name args return` without a body (the book :691): an Lmx of the head word fn, the named
+# args and return parts and the addressable empty var that the fn contract creates for an omitted var. No body is
+# synthesized, so it is no callable (lmx_graph_method). 1 or 0.
+fn: lmx_graph_descriptor (@: g c.LmxGraph; @: code c.Lmx) int
+    @: state c.LmxGraphState lmx_graph_state()
+    if: state = 0 || lmx_graph_kind(g, (cast: (@: void) code)) != 4 || lmx_graph_count(code) != 4U
+        return: 0
+    if: lmx_graph_word_text(g, lmx_graph_get(code, 0U)) != state\w_fn
+        return: 0
+    return: (cast: (int) (lmx_graph_kind(g, lmx_graph_get(code, 1U)) = 4 && lmx_graph_kind(g, lmx_graph_get(code, 2U)) = 4 && lmx_graph_kind(g, lmx_graph_get(code, 3U)) = 4))
+end: lmx_graph_descriptor
+
+# The definition of a new place by the written field `name: value` of a root whose name is not known (the book,
+# composition of place and value :430-:443: the place is defined by its first field; `name: int: 5` and `int: name 5`
+# bind alike): the value, already evaluated once, gets its own place -- a new int cell for an int, a new int reference to
+# the same cell for a reference, the fresh Structure itself (a merge result) -- named by the field's head word and
+# published in the field's slot by the runtime write. A Structure that already has a name or a callable would make the
+# place a reference to that instance, which is open here (5). 0; 1 without memory or for another statement.
+fn: lmx_graph_define (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value void) int
+    @: statement void lmx_graph_get(root, index)
+    @: name char 0
+    @: place void 0
+    int: kind lmx_graph_kind(g, value)
+    int: number 0
+    if: lmx_graph_statement(g, statement) = 0 || lmx_graph_count((cast: (@: c.Lmx) statement)) != 2U
+        return: 1
+    name: lmx_graph_word_text(g, lmx_graph_get((cast: (@: c.Lmx) statement), 0U))
+    if: name = 0
+        return: 1
+    if: kind = 1 || kind = 3
+        if: lmx_graph_value_int(g, value, @ number) != 0
+            return: 1
+        place: lmx_graph_int(g, number)
+    else:
+        if: kind = 5
+            place: lmx_graph_ref_int(g, c.lmx_arena_pointer_void_read(value))
+        else:
+            if: kind != 4 || lmx_graph_name_of(g, value) != 0 || lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+                return: 5
+            place: value
+        ---
+    ---
+    if: place = 0 || lmx_graph_name_address(g, place, name) != 0
+        return: 1
+    return: lmx_graph_write_slot(g, root, root, index, place)
+end: lmx_graph_define

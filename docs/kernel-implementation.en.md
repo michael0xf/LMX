@@ -89,6 +89,11 @@ ordinary first argument. One kernel function `lmx_graph_call_single` decides for
 the formals and the direct fields, with no tree search and no second reading: `k(s)` takes q and z from `s` (15),
 `k(q := s)` gives 50. 48 graph-check runs × interp/native/forced, mutation 11/11, method-mutation 8/8 passed. `merge` in
 the clean graph (example 35), a Structure producer with effects and the choice between two methods of one name remain.
+The next [graph43/tool24/rt33](../steps/witnesses/whole-empty-20261109/notes.md), after Codex's review, replaces the
+field/formal kind check by the common admission of the subset: a field is supplied to a formal only when that formal
+accepts it (`lmx_graph_admit`); an empty Structure is the empty field chain, the call of a nullary or default-only
+callee (`zero(zero\var)` = `zero()`, `defaults(zero\var)` = `defaults()`). The current builder does not construct an
+empty named Structure (`Empty: ()`) — a recorded limitation. 49 graph-check runs × interp/native/forced passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

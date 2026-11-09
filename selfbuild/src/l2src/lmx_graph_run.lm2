@@ -677,7 +677,13 @@ fn: lmx_graph_bind_call (@: g c.LmxGraph; @: code c.Lmx; @: expression c.Lmx; @:
     args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
     width: c.lmx_graph_count(args)
     count: c.lmx_graph_count(expression) - 1U
-    if: count > width || lmx_graph_call_shape(g, code, width) != 0
+    if: lmx_graph_call_shape(g, code, width) != 0
+        return: 5
+    # A possible whole argument structure -- an empty Structure included, which is the empty field chain of a nullary
+    # or default-only call -- is matched with the formals by lmx_graph_call_single once its value is known.
+    if: lmx_graph_single_candidate(g, expression) != 0
+        return: 0
+    if: count > width
         return: 5
     seen: (cast: (@: int) c.calloc(width + 1U, sizeof(int)))
     if: seen = 0
@@ -709,10 +715,7 @@ fn: lmx_graph_bind_call (@: g c.LmxGraph; @: code c.Lmx; @: expression c.Lmx; @:
         ---
         i: i + 1U
     ---
-    # A possible whole argument structure checks its required formals in lmx_graph_call_single.
     i: 0U
-    if: lmx_graph_single_candidate(g, expression) != 0
-        i: width
     while: i < width && status = 0
         if: seen[i] = 0 && c.lmx_graph_kind(g, c.lmx_graph_get(args, i)) != 1
             status: 5
@@ -1129,12 +1132,15 @@ fn: lmx_graph_invoke_bound (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; si
 end: lmx_graph_invoke_bound
 
 # The call of one positional actual that names a value without effects (lmx_graph_single_candidate), once that value
-# is known (the book, whole-arguments). A Structure whose every direct field names a formal of the selected callee of
-# the same kind -- an int field an int formal, a Structure field a model formal -- while every formal without a field
-# has its written default, is the whole argument structure: its fields are received by their formals, in the callee's
-# order. Otherwise the value is the ordinary first argument and every other formal needs its default. One method
-# decides by its formals and the value's direct fields alone: no tree search and no second reading. The arrays belong
-# only to this call. 0, or the refusal of the form (5) or of a reception.
+# is known (the book, whole-arguments: one Structure is its chain of fields). A Structure whose every direct field names
+# a formal of the selected callee, each formal at most once, while every formal without a field has its written
+# default, is the whole argument structure when each field is accepted by its formal: the common admission of this
+# subset (lmx_graph_admit -- an int formal reads an int, a model formal the first part of implements over the used
+# paths) decides, field by field in the callee's order. An empty Structure is the empty chain: the call of a nullary or
+# default-only callee. Otherwise the value is the ordinary first argument and every other formal needs its default. One
+# method decides by its formals and the value's direct fields: no tree search, no second reading, no conversion table
+# yet (an implementation boundary of this subset). The arrays belong only to this call. 0, or the refusal of the form
+# (5) or of a reception.
 fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: value void; @: out int) int
     @: args c.Lmx 0
     @: structure c.Lmx 0
@@ -1149,15 +1155,11 @@ fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: value void; @: out
     size_t: slot 0U
     size_t: k 0U
     int: whole 0
-    int: fkind 0
-    int: akind 0
     int: status 0
     if: c.lmx_graph_method(g, code) = 0 || out = 0
         return: 5
     args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
     width: c.lmx_graph_count(args)
-    if: width = 0U
-        return: 5
     values: (cast: (@@: void) c.calloc(width + 1U, sizeof(@: void)))
     bindings: (cast: (@: size_t) c.calloc(width + 1U, sizeof(size_t)))
     from: (cast: (@: size_t) c.calloc(width + 1U, sizeof(size_t)))
@@ -1166,7 +1168,7 @@ fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: value void; @: out
     if: status = 0 && c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) = 0
         structure: (cast: (@: c.Lmx) value)
         n: c.lmx_graph_count(structure)
-        whole: (cast: (int) (n > 0U))
+        whole: 1
         # from[slot]: 1 + the index of the field that names the formal at slot, 0 for none.
         while: i < n && whole != 0
             name: c.lmx_graph_slot_name(g, structure, i)
@@ -1174,20 +1176,10 @@ fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: value void; @: out
             if: name = 0 || slot >= width
                 whole: 0
             else:
-                field: c.lmx_graph_get(structure, i)
-                fkind: c.lmx_graph_kind(g, field)
-                akind: c.lmx_graph_kind(g, c.lmx_graph_get(args, slot))
                 if: from[slot] != 0U
                     whole: 0
-                ---
-                if: whole != 0 && (fkind = 1 || fkind = 3) && (akind = 1 || akind = 3)
-                    from[slot]: i + 1U
                 else:
-                    if: whole != 0 && fkind = 4 && akind = 4 && c.lmx_graph_method(g, (cast: (@: c.Lmx) field)) = 0
-                        from[slot]: i + 1U
-                    else:
-                        whole: 0
-                    ---
+                    from[slot]: i + 1U
                 ---
             ---
             i: i + 1U
@@ -1198,20 +1190,25 @@ fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: value void; @: out
                 whole: 0
             i: i + 1U
         ---
-    ---
-    if: status = 0 && whole != 0
+        # The reading is applicable when every field is accepted by its formal.
         i: 0U
-        while: i < width && status = 0
+        while: i < width && whole != 0
             if: from[i] != 0U
                 field: c.lmx_graph_get(structure, from[i] - 1U)
-                status: lmx_graph_admit(g, code, i, field, @ values[k])
-                bindings[k]: i
-                k: k + 1U
+                if: lmx_graph_admit(g, code, i, field, @ values[k]) != 0
+                    whole: 0
+                else:
+                    bindings[k]: i
+                    k: k + 1U
+                ---
             ---
             i: i + 1U
         ---
     ---
     if: status = 0 && whole = 0
+        k: 0U
+        if: width = 0U
+            status: 5
         i: 1U
         while: i < width && status = 0
             if: c.lmx_graph_kind(g, c.lmx_graph_get(args, i)) != 1

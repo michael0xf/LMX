@@ -29,6 +29,14 @@ graph42/tool24/rt32 на manifest `opus323-source02` (340 входов). Одн�
 interp/native/forced PASS, mutation 11/11, method-mutation 8/8. Следующее — `merge` в чистом графе и пример 35;
 производитель Structure с эффектами и выбор среди двух методов одного имени остаются.
 
+**Срез Opus: пустая цепочка полей и общий допуск** ([запись](witnesses/whole-empty-20261109/notes.md), по ревью Codex
+результата 323). graph43/tool24/rt33 на `opus324-source03` (342 входа): выбор «вся структура или первый аргумент» —
+общим допуском поля формалом (`lmx_graph_admit`), проверка рода удалена; пустая Structure — пустая цепочка, вызов
+нульарного или только с умолчаниями (`zero(zero\var)` = 7, `defaults(zero\var)` = 3). Пустую именованную Structure
+(`Empty: ()`, `Empty:` + `end: Empty`) построитель не строит: P0 не ставит trailer пустому телу, построитель делает
+оператор, корень отказывает 5 — записанное ограничение. 49 запусков graph-check × 3 режима, mutation 11/11,
+method-mutation 8/8 PASS.
+
 ### Передача Codex → Opus (снимок 2026-11-09 01:04 UTC)
 
 REQUEST_ID: CODEX-OPUS-TAKE-WRITER-20261109T0104Z-01.

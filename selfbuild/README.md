@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 340 entries.
+are historical. The current input manifest has 342 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -97,6 +97,10 @@ supplied by its fields, otherwise it is the ordinary first argument; one kernel 
 the interpreter and native. q/z from `s` gives 15, `k(q := s)` 50; 48 graph-check runs × interp/native/forced,
 mutation 11/11 and method-mutation 8/8 passed. [Sources, receipts and limits](../steps/witnesses/whole-arguments-20261109/notes.md).
 `merge` in the clean graph (example 35), effectful Structure producers and two methods of one name remain open.
+
+The current graph43/tool24/rt33 replaces the field/formal kind check by the common admission of the subset and makes an
+empty Structure the empty field chain (a nullary or default-only call); the builder does not yet construct an empty
+named Structure. 49 graph-check runs passed. [Sources, receipts and limits](../steps/witnesses/whole-empty-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

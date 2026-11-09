@@ -147,7 +147,10 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_until: lmx_graph_intern_in(state, "until", 5U)
     state\w_finally: lmx_graph_intern_in(state, "finally", 7U)
     state\w_merge: lmx_graph_intern_in(state, "merge", 5U)
-    if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0
+    # The C door's declarations of a unit (L2: include, predef): they stand in the root, read by the translation.
+    state\w_include: lmx_graph_intern_in(state, "include", 7U)
+    state\w_predef: lmx_graph_intern_in(state, "predef", 6U)
+    if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0
     if: state\w_eq = 0 || state\w_ne = 0 || state\w_lt = 0 || state\w_le = 0 || state\w_gt = 0 || state\w_ge = 0 || state\w_and = 0 || state\w_or = 0 || state\w_not = 0 || state\w_if = 0 || state\w_else = 0 || state\w_while = 0 || state\w_for = 0 || state\w_break = 0 || state\w_continue = 0 || state\w_redo = 0
         return: 0
@@ -851,9 +854,17 @@ fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: d
             if: kind != 4
                 return: 1
             declaration: (cast: (@: c.Lmx) formal)
-            if: lmx_graph_count(declaration) != 2U
-                return: 1
-            c.fprintf(f, "%s: %s", lmx_graph_word_text(g, lmx_graph_get(declaration, 0U)), lmx_graph_slot_name(g, args, i))
+            # `type: name`, or a reference formal `@: name T` (the Frame [@, name, T] of lm_graph_build_method).
+            if: lmx_graph_count(declaration) = 3U
+                c.fprintf(f, "%s: %s ", lmx_graph_word_text(g, lmx_graph_get(declaration, 0U)), lmx_graph_slot_name(g, args, i))
+                if: lmx_graph_dump_token(g, lmx_graph_get(declaration, 2U), f) != 0
+                    return: 1
+                ---
+            else:
+                if: lmx_graph_count(declaration) != 2U
+                    return: 1
+                c.fprintf(f, "%s: %s", lmx_graph_word_text(g, lmx_graph_get(declaration, 0U)), lmx_graph_slot_name(g, args, i))
+            ---
         ---
         i: i + 1U
     ---

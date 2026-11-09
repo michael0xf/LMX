@@ -146,7 +146,17 @@ interp/native/forced PASS.
 при выборе невызываемого места отказывает тогда же (как интерпретатор: ответ 2 или 5), а не обрывает трансляцию верного
 вызова. Воспроизведено на graph49 (`graph: emit answered 2`) и исправлено: `f(a; b)` с `calls`/`last`, `g: merge(f)`,
 `g(1; 2)` в корне, `g(3; 4)` в native-теле метода и `g(b := 7; a := 6)` дают у копии `calls` = 3, `last` = 67, у `f` —
-0 и 0; `x: 4`, `x(1; 2)` — ответ 2 и exit 1 в native/forced. 65 запусков graph-check × interp/native/forced PASS.
+0 и 0; `x: 4`, `x(1; 2)` — ответ 2; в native/forced R0 останавливается (success 0), `y` не вычислен. 65 запусков
+graph-check × interp/native/forced PASS.
+Следующий [graph52/tool29/rt40](../steps/witnesses/clean-production-20261109/notes.md) по ревью Codex 330 — первый
+production-вход чистого пути, машинный модуль `src/l2src/lmx_schedule.lm2` (его L1 сейчас выпускает F в build-runtime).
+Существующей командой `G run` на graph50 граница — построение (`graph: build answered 2`): ссылочный формал `@: s T`
+построитель не принимал. Теперь формал `@: name T` строится Frame `[@, name, T]`, названным полем 1 (книга :436), и
+печатается; объявления C-двери `include:`/`predef:` — слова состояния (`w_include`, `w_predef`), их операторы остаются в
+корне и стоят (корень ничего для них не исполняет; читать их будет машинный выпуск). Граф `lmx_schedule` строится
+целиком и печатается одинаково до и после исполнения корня; так же `l2_libc`, `lmx_clock`, `os_native_path`,
+`tools/text`. Машинный экспорт из чистого графа (вход F вместо P0) — следующий шаг; C-двери в интерпретаторе пока нет.
+66 запусков graph-check × interp/native/forced PASS.
 
 <a id="principles"></a>
 ## 1. Принципы (норма)

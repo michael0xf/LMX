@@ -154,8 +154,17 @@ without a named actual (`lm_graph_emit_write_form`); another form — several ac
 refuses when a place that is no callable is chosen, then (as the interpreter: answer 2 or 5), instead of stopping the
 translation of a correct call. Reproduced on graph49 (`graph: emit answered 2`) and fixed: `f(a; b)` with
 `calls`/`last`, `g: merge(f)`, `g(1; 2)` in the root, `g(3; 4)` in a native method body and `g(b := 7; a := 6)` give
-the copy `calls` = 3, `last` = 67 and `f` 0 and 0; `x: 4`, `x(1; 2)` give answer 2 and exit 1 in native/forced.
-65 graph-check runs × interp/native/forced passed.
+the copy `calls` = 3, `last` = 67 and `f` 0 and 0; `x: 4`, `x(1; 2)` give answer 2; in native/forced R0 stops
+(success 0) and `y` is not computed. 65 graph-check runs × interp/native/forced passed.
+The next [graph52/tool29/rt40](../steps/witnesses/clean-production-20261109/notes.md), after Codex's review of 330 — the
+first production input of the clean path, the machine module `src/l2src/lmx_schedule.lm2` (whose L1 F now writes in
+build-runtime). With the existing command `G run`, graph50 stopped at construction (`graph: build answered 2`): the
+builder did not take the reference formal `@: s T`. Now a formal `@: name T` is built as the Frame `[@, name, T]`,
+named by field 1 (book :436), and printed; the C-door declarations `include:`/`predef:` are state words (`w_include`,
+`w_predef`), their statements stay in the root and stand (the root runs nothing for them; the machine output will read
+them). The graph of `lmx_schedule` is built whole and prints the same before and after its root runs; so do `l2_libc`,
+`lmx_clock`, `os_native_path` and `tools/text`. The machine export from the clean graph (F's input instead of P0) is the
+next step; the interpreter has no C door yet. 66 graph-check runs × interp/native/forced passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

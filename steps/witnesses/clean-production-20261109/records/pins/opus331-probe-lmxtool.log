@@ -1,0 +1,46 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus331
+GRAPH-BEFORE-BEGIN
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+predef: "l2src/lmxtool_methods.lm1"
+MainLetter:
+    char: ([] ([] mainArgs))
+end: MainLetter
+MainLetter: m
+receiveMessage: m
+size_t: n (length (m \ mainArgs))
+size_t: i 0U
+size_t: j 0U
+size_t: len 0U
+@@: args char (c.calloc (n + 1U) (sizeof (@ char)))
+@: buf char 0
+int: rc 2
+while: ((i < n) && (args != 0)) ((len (length (m \ mainArgs) [ i ])) (buf (c.malloc (len + 1U))) (j 0U) (while ((buf != 0) && (j < len)) ((buf[j] (m \ mainArgs) [ i ] [ j ]) (j (j + 1U)))) (if (buf != 0) ((buf[len] (cast (char) 0)))) (args[i] buf) (i (i + 1U)))
+if: (args != 0) ((rc (c.tool_main args ((cast (int) n)))))
+sendMessage: (exit (exit_code rc) (stdout "") (stderr ""))
+return
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+predef: "l2src/lmxtool_methods.lm1"
+MainLetter:
+    char: ([] ([] mainArgs))
+end: MainLetter
+MainLetter: m
+receiveMessage: m
+size_t: n (length (m \ mainArgs))
+size_t: i 0U
+size_t: j 0U
+size_t: len 0U
+@@: args char (c.calloc (n + 1U) (sizeof (@ char)))
+@: buf char 0
+int: rc 2
+while: ((i < n) && (args != 0)) ((len (length (m \ mainArgs) [ i ])) (buf (c.malloc (len + 1U))) (j 0U) (while ((buf != 0) && (j < len)) ((buf[j] (m \ mainArgs) [ i ] [ j ]) (j (j + 1U)))) (if (buf != 0) ((buf[len] (cast (char) 0)))) (args[i] buf) (i (i + 1U)))
+if: (args != 0) ((rc (c.tool_main args ((cast (int) n)))))
+sendMessage: (exit (exit_code rc) (stdout "") (stderr ""))
+return
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 3, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 3
+EXIT=1

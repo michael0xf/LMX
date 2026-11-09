@@ -633,7 +633,10 @@ fn: lm_graph_build_method (@: g c.LmxGraph; @: parent c.Lmx; @: fr c.LmP0Frame; 
         value: c.lmx_graph_get(args, i)
         if: c.lmx_graph_kind(g, value) = 4
             formal: (cast: (@: c.Lmx) value)
-            if: c.lmx_graph_count(formal) != 2U
+            # A formal written `type: name` is the Frame [type, name]; a reference formal `@: name T` is the Frame
+            # [@, name, T] (the book :436: `@` has two fields, the place atom and its requirement). Both are named by
+            # field 1.
+            if: c.lmx_graph_count(formal) != 2U && (c.lmx_graph_count(formal) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(formal, 0U)) != state\w_at)
                 return: 2
             formal_name: c.lmx_graph_word_text(g, c.lmx_graph_get(formal, 1U))
             if: c.lmx_graph_name_address(g, value, formal_name) != 0
@@ -1521,6 +1524,10 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 i: end_at
                 continue
             if: head != 0
+                # The unit's C-door declarations stand; the program runs nothing for them (lmx_graph_exec_statement).
+                if: head = state\w_include || head = state\w_predef
+                    i: i + 1U
+                    continue
                 if: head = state\w_call
                     r: lm_graph_emit_explicit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n)
                     if: r != 0

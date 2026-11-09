@@ -1,0 +1,61 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus331
+GRAPH-BEFORE-BEGIN
+predef: "l2src/lmx_schedule.h.lm1"
+fn: lmx_schedule_init (@: slot c.LmxSchedule; @: arena c.LmxArena; @: owner void; ulong: limit) int
+    if: ((slot = 0) || (limit = 0U)) ((return c.LMX_SCHEDULE_INVALID))
+    slot\owner: owner
+    slot\arena: arena
+    slot\started: 0U
+    slot\limit: limit
+    slot\state: c.LMX_SCHEDULE_IDLE
+    slot\lane: 0
+    return: c.LMX_SCHEDULE_OK
+end: lmx_schedule_init
+fn: lmx_schedule_wait (@: slot c.LmxSchedule; ulong: now) int
+    if: (slot = 0) ((return c.LMX_SCHEDULE_INVALID))
+    slot\started: now
+    slot\state: c.LMX_SCHEDULE_WAITING
+    return: c.LMX_SCHEDULE_OK
+end: lmx_schedule_wait
+fn: lmx_schedule_tick (@: slot c.LmxSchedule; ulong: now) int
+    if: ((slot = 0) || ((slot \ limit) = 0U)) ((return c.LMX_SCHEDULE_INVALID))
+    if: ((slot \ state) != c.LMX_SCHEDULE_WAITING) ((return (slot \ state)))
+    if: ((now - (slot \ started)) >= (slot \ limit)) ((slot\state c.LMX_SCHEDULE_OVERDUE))
+    return: (slot \ state)
+end: lmx_schedule_tick
+fn: lmx_schedule_state (@: slot c.LmxSchedule) int
+    if: (slot = 0) ((return c.LMX_SCHEDULE_INVALID))
+    return: (slot \ state)
+end: lmx_schedule_state
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+predef: "l2src/lmx_schedule.h.lm1"
+fn: lmx_schedule_init (@: slot c.LmxSchedule; @: arena c.LmxArena; @: owner void; ulong: limit) int
+    if: ((slot = 0) || (limit = 0U)) ((return c.LMX_SCHEDULE_INVALID))
+    slot\owner: owner
+    slot\arena: arena
+    slot\started: 0U
+    slot\limit: limit
+    slot\state: c.LMX_SCHEDULE_IDLE
+    slot\lane: 0
+    return: c.LMX_SCHEDULE_OK
+end: lmx_schedule_init
+fn: lmx_schedule_wait (@: slot c.LmxSchedule; ulong: now) int
+    if: (slot = 0) ((return c.LMX_SCHEDULE_INVALID))
+    slot\started: now
+    slot\state: c.LMX_SCHEDULE_WAITING
+    return: c.LMX_SCHEDULE_OK
+end: lmx_schedule_wait
+fn: lmx_schedule_tick (@: slot c.LmxSchedule; ulong: now) int
+    if: ((slot = 0) || ((slot \ limit) = 0U)) ((return c.LMX_SCHEDULE_INVALID))
+    if: ((slot \ state) != c.LMX_SCHEDULE_WAITING) ((return (slot \ state)))
+    if: ((now - (slot \ started)) >= (slot \ limit)) ((slot\state c.LMX_SCHEDULE_OVERDUE))
+    return: (slot \ state)
+end: lmx_schedule_tick
+fn: lmx_schedule_state (@: slot c.LmxSchedule) int
+    if: (slot = 0) ((return c.LMX_SCHEDULE_INVALID))
+    return: (slot \ state)
+end: lmx_schedule_state
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+EXIT=0

@@ -1469,6 +1469,10 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
     if: head = state\w_call
         return: lmx_graph_eval_explicit_call(g, root, statement)
+    # The unit's C-door declarations (`include: "<stdio.h>"`, `predef: "l2src/x.h.lm1"`) stand: they tell a
+    # translation which C headers and generated declarations the unit's machine code uses; the root runs nothing for them.
+    if: head = state\w_include || head = state\w_predef
+        return: 0
     cell: lmx_graph_resolve(g, root, head)
     # A head naming a callable, directly or through a reference to it, applies it (the book :454, :1237).
     if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, cell))) != 0
@@ -1633,7 +1637,7 @@ fn: lmx_graph_language_word (@: state c.LmxGraphState; @: word char) int
         return: 1
     if: word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or || word = state\w_not || word = state\w_if || word = state\w_else || word = state\w_while || word = state\w_for || word = state\w_break
         return: 1
-    if: word = state\w_continue || word = state\w_redo || word = state\w_until || word = state\w_finally || word = state\w_merge
+    if: word = state\w_continue || word = state\w_redo || word = state\w_until || word = state\w_finally || word = state\w_merge || word = state\w_include || word = state\w_predef
         return: 1
     return: 0
 end: lmx_graph_language_word

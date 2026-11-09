@@ -3094,6 +3094,194 @@ fn: lmx_graph_frame_value (@: g c.LmxGraph; @: scope c.Lmx; @: frame void) @: vo
     return: frame
 end: lmx_graph_frame_value
 
+# The value of the hexadecimal digit ch, or -1 for no hexadecimal digit.
+fn: lmx_graph_hex_digit (int: ch) int
+    if: ch >= 48 && ch <= 57
+        return: ch - 48
+    if: ch >= 97 && ch <= 102
+        return: ch - 87
+    if: ch >= 65 && ch <= 70
+        return: ch - 55
+    return: -1
+end: lmx_graph_hex_digit
+
+# The value of an ordinary string literal a word primitive holds (the grammar §6, by the rules of C99): the bytes
+# between its quotes with each escape decoded -- the simple escapes, up to three octal digits, `\x` with the
+# hexadecimal digits after it, `\u` and `\U` as the UTF-8 of the character, a backslash before a line break joining the
+# lines --, as a canonical spelling (§4). 0 for a word that is no ordinary string literal (an identifier, a wide or a
+# character literal), a malformed literal, a value holding a zero byte (no canonical spelling is a C string with one),
+# or without memory.
+fn: lmx_graph_string_value (@: g c.LmxGraph; @: value void) @: char
+    @: text char c.lmx_graph_word_text(g, value)
+    @: buf char 0
+    @: canon char 0
+    size_t: n 0U
+    size_t: i 1U
+    size_t: o 0U
+    size_t: k 0U
+    size_t: width 0U
+    int: ch 0
+    int: d 0
+    int: code 0
+    int: bad 0
+    if: text = 0
+        return: 0
+    while: text[n] != (cast: (char) 0)
+        n: n + 1U
+    ---
+    if: n < 2U || text[0] != (cast: (char) 34) || text[n - 1U] != (cast: (char) 34)
+        return: 0
+    buf: (cast: (@: char) c.calloc(n + 1U, sizeof(char)))
+    if: buf = 0
+        return: 0
+    while: i < n - 1U && bad = 0
+        ch: (cast: (int) text[i])
+        i: i + 1U
+        if: ch != 92
+            # An unescaped quote or line break inside the literal is malformed.
+            if: ch = 34 || ch = 10
+                bad: 1
+            buf[o]: (cast: (char) ch)
+            o: o + 1U
+            continue
+        if: i >= n - 1U
+            bad: 1
+            continue
+        ch: (cast: (int) text[i])
+        i: i + 1U
+        code: -1
+        if: ch = 10
+            continue
+        if: ch = 13
+            if: i < n - 1U && text[i] = (cast: (char) 10)
+                i: i + 1U
+            continue
+        if: ch = 39 || ch = 34 || ch = 63 || ch = 92
+            code: ch
+        if: ch = 97
+            code: 7
+        if: ch = 98
+            code: 8
+        if: ch = 102
+            code: 12
+        if: ch = 110
+            code: 10
+        if: ch = 114
+            code: 13
+        if: ch = 116
+            code: 9
+        if: ch = 118
+            code: 11
+        # Up to three octal digits.
+        if: ch >= 48 && ch <= 55
+            code: ch - 48
+            k: 1U
+            while: k < 3U && i < n - 1U && text[i] >= (cast: (char) 48) && text[i] <= (cast: (char) 55)
+                code: code * 8 + ((cast: (int) text[i]) - 48)
+                i: i + 1U
+                k: k + 1U
+            ---
+            if: code > 255
+                bad: 1
+        ---
+        # `\x` and every hexadecimal digit after it.
+        if: ch = 120
+            code: 0
+            k: 0U
+            while: i < n - 1U && lmx_graph_hex_digit((cast: (int) text[i])) >= 0 && bad = 0
+                code: code * 16 + lmx_graph_hex_digit((cast: (int) text[i]))
+                if: code > 255
+                    bad: 1
+                i: i + 1U
+                k: k + 1U
+            ---
+            if: k = 0U
+                bad: 1
+        ---
+        # `\u` with four hexadecimal digits, `\U` with eight: the character's UTF-8.
+        if: ch = 117 || ch = 85
+            width: 4U
+            if: ch = 85
+                width: 8U
+            code: 0
+            k: 0U
+            while: k < width && bad = 0
+                d: -1
+                if: i < n - 1U
+                    d: lmx_graph_hex_digit((cast: (int) text[i]))
+                if: d < 0 || code > 69631
+                    bad: 1
+                else:
+                    code: code * 16 + d
+                    i: i + 1U
+                ---
+                k: k + 1U
+            ---
+            if: bad = 0 && (code > 1114111 || (code >= 55296 && code <= 57343))
+                bad: 1
+            if: bad = 0
+                if: code < 128
+                    buf[o]: (cast: (char) code)
+                    o: o + 1U
+                else:
+                    if: code < 2048
+                        buf[o]: (cast: (char) (192 + code / 64))
+                        buf[o + 1U]: (cast: (char) (128 + code % 64))
+                        o: o + 2U
+                    else:
+                        if: code < 65536
+                            buf[o]: (cast: (char) (224 + code / 4096))
+                            buf[o + 1U]: (cast: (char) (128 + (code / 64) % 64))
+                            buf[o + 2U]: (cast: (char) (128 + code % 64))
+                            o: o + 3U
+                        else:
+                            buf[o]: (cast: (char) (240 + code / 262144))
+                            buf[o + 1U]: (cast: (char) (128 + (code / 4096) % 64))
+                            buf[o + 2U]: (cast: (char) (128 + (code / 64) % 64))
+                            buf[o + 3U]: (cast: (char) (128 + code % 64))
+                            o: o + 4U
+                        ---
+                    ---
+                ---
+                if: code = 0
+                    bad: 1
+            ---
+            continue
+        ---
+        if: code < 0
+            bad: 1
+        if: code = 0
+            bad: 1
+        if: bad = 0
+            buf[o]: (cast: (char) code)
+            o: o + 1U
+        ---
+    ---
+    if: bad = 0
+        canon: c.lmx_graph_intern((cast: (@: char) buf), o)
+    c.free((cast: (@: void) buf))
+    return: canon
+end: lmx_graph_string_value
+
+# The name a written value gives a part name of a receiver -- the contract of a name, one for every receiver (the
+# author 2026-11-09: `fn: name := "test"; ...` creates test): an identifier word its own spelling, an ordinary string
+# literal its value (lmx_graph_string_value), the quotes being no part of it; 0 for any other value -- a word holding a
+# quote (a malformed, wide or character literal), an int, a Structure.
+fn: lmx_graph_name_value (@: g c.LmxGraph; @: value void) @: char
+    @: text char c.lmx_graph_word_text(g, value)
+    size_t: i 0U
+    if: text = 0
+        return: 0
+    if: text[0] = (cast: (char) 34)
+        return: lmx_graph_string_value(g, value)
+    while: text[i] != (cast: (char) 0)
+        if: text[i] = (cast: (char) 34) || text[i] = (cast: (char) 39)
+            return: 0
+        i: i + 1U
+    ---
+    return: text
+end: lmx_graph_name_value
+
 # The reception of a value by a formal of a receiver's contract (lmx_graph_receivers_open): a formal taken as written (a
 # word cell: name, return) takes a word or a written form (a Structure: the type form `@: c.FILE` of a result
 # requirement), a Structure formal (an empty Lmx) a Structure; an int, a place, a pointer value is received by neither.
@@ -3181,14 +3369,30 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
         i: 0U
         while: i < n && status = 0
             raw: c.lmx_graph_get(decl, i)
-            # The value written for a formal by `:=` or by head: the one model of a Frame (lmx_graph_frame_value) -- the
-            # operand of `name := ...` is the body written after `:=` (lm_graph_build_assignment), the part `name: ...`
-            # the Frame itself.
-            if: modes[i] = 1
-                raw: lmx_graph_frame_value(g, scope, c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U))
-            if: modes[i] = 2
-                raw: lmx_graph_frame_value(g, scope, raw)
             slot: bindings[i]
+            # The value written for a formal by `:=` or by head. For a formal taken as written (name, return) it is the
+            # written field itself -- the single field of the part `name: ...`, the operand of `name := ...` (a body the
+            # builder keeps as a Structure because it is no single value, lm_graph_build_assignment, read as its one
+            # field) --, so one requirement is one value whether written by position, by head or by `:=`. For a
+            # Structure formal it is the part by the one model of a Frame (lmx_graph_frame_value): the block, or the
+            # value a single field gives.
+            if: modes[i] = 1
+                raw: c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
+                if: c.lmx_graph_kind(g, c.lmx_graph_get(chosen, slot)) = 2
+                    if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 1U && lmx_graph_field_value(g, raw) = raw
+                        raw: c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)
+                    ---
+                else:
+                    raw: lmx_graph_frame_value(g, scope, raw)
+                ---
+            ---
+            if: modes[i] = 2
+                if: c.lmx_graph_kind(g, c.lmx_graph_get(chosen, slot)) = 2 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 1U
+                    raw: c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)
+                else:
+                    raw: lmx_graph_frame_value(g, scope, raw)
+                ---
+            ---
             value: 0
             if: (c.lmx_graph_kind(g, raw) = 2 && c.lmx_graph_kind(g, c.lmx_graph_get(chosen, slot)) = 2) || (c.lmx_graph_kind(g, raw) = 4 && lmx_graph_applies(g, scope, raw) = 0)
                 value: raw
@@ -3276,7 +3480,8 @@ end: lmx_graph_receiver_bind
 # The receiver's action on its bound arguments (lmx_graph_receiver_bind): the Structure F of the function by the one
 # constructor lmx_graph_fn_make (sub: without a result). The form with the formal parts takes the Structure of the parts
 # and reads its fields by their values (lmx_graph_fn_part): a field name there is an ordinary field, another field is no
-# part of the contract (5). name is a word. 0 and F in out, its name in name_out; 1 without memory; 5 for a value of
+# part of the contract (5). The name is the contract of a name (lmx_graph_name_value: an identifier, or the value of
+# a string literal). 0 and F in out, its name in name_out; 1 without memory; 5 for a value of
 # another kind or a missing part.
 fn: lmx_graph_receiver_make (@: g c.LmxGraph; @: decl c.Lmx; @: form c.Lmx; @@: values void; @@: out c.Lmx; @@: name_out char) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
@@ -3302,9 +3507,9 @@ fn: lmx_graph_receiver_make (@: g c.LmxGraph; @: decl c.Lmx; @: form c.Lmx; @@: 
     with_result: (cast: (int) (head = state\w_fn))
     width: c.lmx_graph_count(form)
     slot: c.lmx_graph_formal(g, form, w_name)
-    if: slot >= width || c.lmx_graph_kind(g, values[slot]) != 2
+    if: slot >= width
         return: 5
-    name: c.lmx_graph_word_text(g, values[slot])
+    name: lmx_graph_name_value(g, values[slot])
     slot: c.lmx_graph_formal(g, form, w_parts)
     if: slot < width
         if: c.lmx_graph_kind(g, values[slot]) != 4
@@ -3344,8 +3549,9 @@ fn: lmx_graph_receiver_make (@: g c.LmxGraph; @: decl c.Lmx; @: form c.Lmx; @@: 
 end: lmx_graph_receiver_make
 
 # The name a Frame of fn or sub gives as written, as the binder takes it (lmx_graph_bind_formals): the word at the first
-# position of several actuals, the word of `name := word`, or the word of a Frame `name: word` given by head; 0 when only
-# an evaluated Structure gives it (the whole form, `fn: prepared`).
+# position of several actuals, the word of `name := word`, or the word of a Frame `name: word` given by head, read by
+# the contract of a name (lmx_graph_name_value: `name := "test"` gives test); 0 when only an evaluated Structure gives
+# it (the whole form, `fn: prepared`).
 fn: lmx_graph_fn_decl_name (@: g c.LmxGraph; @: decl c.Lmx) @: char
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: w_name char c.lmx_graph_intern("name", 4U)
@@ -3357,14 +3563,14 @@ fn: lmx_graph_fn_decl_name (@: g c.LmxGraph; @: decl c.Lmx) @: char
         return: 0
     n: c.lmx_graph_count(decl)
     if: n > 1U && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) = 2
-        return: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+        return: lmx_graph_name_value(g, c.lmx_graph_get(decl, 0U))
     while: i < n
         raw: c.lmx_graph_get(decl, i)
         inner: (cast: (@: c.Lmx) raw)
         if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_count(inner) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U)) = state\w_assign && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 1U)) = w_name && c.lmx_graph_kind(g, c.lmx_graph_get(inner, 2U)) = 2
-            return: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 2U))
+            return: lmx_graph_name_value(g, c.lmx_graph_get(inner, 2U))
         if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = w_name && c.lmx_graph_count(inner) = 1U && c.lmx_graph_kind(g, c.lmx_graph_get(inner, 0U)) = 2
-            return: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
+            return: lmx_graph_name_value(g, c.lmx_graph_get(inner, 0U))
         i: i + 1U
     ---
     return: 0

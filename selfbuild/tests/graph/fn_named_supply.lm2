@@ -5,7 +5,9 @@
 # their functions as the positional form does -- on entering the block, for their arguments are written -- with no
 # callable named name here. The value of `part := (...)` is the body written after `:=`, read as the block of a part
 # given by head is: several fields, none, a declaration, a statement. A part given by head is its Frame whatever it
-# holds (none, one field, a vertical block). sub binds its own contracts by the same binder.
+# holds (none, one field, a vertical block). sub binds its own contracts by the same binder. Slice 335 (Codex's answer
+# to the 334 questions: the author's `name := "test"` names test): a string literal gives a name by its value, its
+# escapes decoded by the rules of C ("t\x33" names t3).
 fn: name := k1; args := (int: a); return := int; body := (return: a + 1)
 fn: name: k2; args: (int: a); return: int; body: (return: a * 3)
 int: r1 k1(4)
@@ -36,3 +38,9 @@ sub: name := s1; args := (int: d 1); var := (int: total 0); body := (total: tota
 s1(5)
 s1()
 int: total s1\var\total
+fn: name := "t1"; args := (int: a); return := int; body := (return: a + 100)
+fn: name: "t2"; args: (int: a); return: int; body: (return: a + 200)
+fn: name := "t\x33"; args := (int: a); return := int; body := (return: a + 300)
+int: r9 t1(1)
+int: r10 t2(2)
+int: r11 t3(3)

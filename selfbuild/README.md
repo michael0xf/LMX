@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 393 entries.
+are historical. The current input manifest has 396 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -158,6 +158,10 @@ clean namespace, bound by the one binder of a call (by position, by `:=`, by hea
 next), so the author's named forms `fn: name := k1; args := ...` and `fn: name: k2; args: ...` create their functions.
 79 graph-check runs passed.
 [Sources, receipts and limits](../steps/witnesses/fn-binder-20261109/notes.md).
+
+The current graph73/tool34/rt62 names a function by the value of a string literal (`name := "test"` creates `test`,
+escapes decoded by the rules of C) and gives one result requirement one value in every written form. 81 graph-check
+runs passed. [Sources, receipts and limits](../steps/witnesses/fn-names-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

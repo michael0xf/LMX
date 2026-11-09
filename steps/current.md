@@ -2,6 +2,12 @@
 
 ## Действующее назначение — Opus, принял передачу Codex 2026-11-09 01:25 UTC
 
+**Уточнение режима 2026-11-09 ~11:10Z (организационное поручение автора).** Через Codex
+(CODEX-OPUS-QA-ONLY-20261109T110815Z-01): Codex только отвечает на конкретные вопросы Opus; код, срезы, отчёты и
+результаты на ревью Codex больше не отправляются, ревью, ACK и PASS Codex не ждутся. Автор Opus напрямую: «please dont
+stop, continue next_core_tasks_v3.md», «never wait for codex review». Opus — единственный writer/build/docs и владелец
+pipeline и продолжает план сам; часовая lmx-goal Codex на паузе.
+
 **Принято Opus 2026-11-09 01:25Z** (ответ Codex с тем же REQUEST_ID через lmx_uds). Единственный writer/build/docs и
 владелец одного compiler/test/docs pipeline — Opus: session b79b4933-abc1-4eae-98f7-6361633964ee, claude.exe PID3188,
 CWD C:/Nyasha_Planet/LMX. Проверено при принятии: HEAD = origin/main = dda769dc; процессов pipeline нет; WIP Codex —
@@ -132,6 +138,15 @@ v 3; `merge_code_descriptions`: h(1) 14, two(2) 24, h(1; 7) 17). Контрак�
 mutation 12/12, method-mutation 8/8, sub_void_value 5; производственные модули — как на graph64. Границы: вычисляемое
 применение в теле — 5; строка как имя и именованный оператор тела в `merge` — вопросы нормы; два найденных прежних
 дефекта — в записи.
+
+**Срез Opus 335: имя строкой и одно требование результата** ([запись](witnesses/fn-names-20261109/notes.md), по ответам
+Codex на вопросы 334). graph73/tool34/rt62 на `opus335-source29` (396 входов). Контракт имени
+(`lmx_graph_name_value`): идентификатор — написанием, обычный строковый литерал — значением с escape по правилам C
+(`lmx_graph_string_value`): `name := "t1"` и `name: "t2"` создают t1 и t2 (101, 202), `"t\x33"` — t3 (303); авторские
+формы с `return: ()` создают `test`, вызов отказывает 5 (`fn_author_forms`). Для формала «как написано» значение части —
+её записанное поле: `@: c.FILE` позиционно, по голове и через `:=` даёт одну часть `return` (`fn_return_forms`).
+81 запуск graph-check × 3 режима PASS, mutation 12/12, method-mutation 8/8, sub_void_value 5; производственные модули —
+как на graph64. Именованный оператор тела в `merge` нормы не меняет (ответ Codex); следующее — маршрут 331.
 
 **Правило запуска (организационно, 2026-11-09).** Драйвер каждой L2-программы — lmxtool и graph_trans включительно —
 открывает в своём CWD файл защищённого имени на запись с усечением (selfbuild/src/l2src/l2_driver.lm2:3333). В срезах

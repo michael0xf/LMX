@@ -1,0 +1,133 @@
+GRAPH-BEFORE-BEGIN
+fn: (:= name k1) (:= args ((int a))) (:= return int) (:= body ((return (a + 1))))
+fn:
+    name: k2
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a * 3)
+    end: body
+end: fn
+int: r1 (k1 4)
+int: r2 (k2 4)
+int: r3 (k1 (k2 1))
+fn: (:= name k3) (:= args ((int a) (int b))) (:= return int) (:= var ((int calls 0))) (:= body ((calls (calls + 1)) (return ((a * 10) + b))))
+int: r4 (k3 4 2)
+int: r5 (k3 (:= b 1) (:= a 3))
+int: c3 ((k3 \ var) \ calls)
+fn: (:= name k4) (:= args ()) (:= return int) (:= var ((int n 7))) (:= body ((return n)))
+fn:
+    name: k5
+    args:
+    return: int
+    var:
+        int: m 8
+    end: var
+    body:
+        return: (m + 1)
+    end: body
+end: fn
+int: r6 (k4)
+int: r7 (k5)
+fn:
+    name: k6
+    args:
+        int: a
+        int: b
+    end: args
+    return: int
+    body:
+        int: d (a - b)
+        return: (d * 2)
+    end: body
+end: fn
+int: r8 (k6 9 4)
+sub: (:= name s1) (:= args ((int d 1))) (:= var ((int total 0))) (:= body ((total (total + d))))
+s1: 5
+s1:
+int: total ((s1 \ var) \ total)
+fn: (:= name "t1") (:= args ((int a))) (:= return int) (:= body ((return (a + 100))))
+fn:
+    name: "t2"
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a + 200)
+    end: body
+end: fn
+fn: (:= name "t\x33") (:= args ((int a))) (:= return int) (:= body ((return (a + 300))))
+int: r9 (t1 1)
+int: r10 (t2 2)
+int: r11 (t3 3)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: (:= name k1) (:= args ((int a))) (:= return int) (:= body ((return (a + 1))))
+fn:
+    name: k2
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a * 3)
+    end: body
+end: fn
+int: r1 5
+int: r2 12
+int: r3 4
+fn: (:= name k3) (:= args ((int a) (int b))) (:= return int) (:= var ((int calls 0))) (:= body ((calls (calls + 1)) (return ((a * 10) + b))))
+int: r4 42
+int: r5 31
+int: c3 2
+fn: (:= name k4) (:= args ()) (:= return int) (:= var ((int n 7))) (:= body ((return n)))
+fn:
+    name: k5
+    args:
+    return: int
+    var:
+        int: m 8
+    end: var
+    body:
+        return: (m + 1)
+    end: body
+end: fn
+int: r6 7
+int: r7 9
+fn:
+    name: k6
+    args:
+        int: a
+        int: b
+    end: args
+    return: int
+    body:
+        int: d (a - b)
+        return: (d * 2)
+    end: body
+end: fn
+int: r8 10
+sub: (:= name s1) (:= args ((int d 1))) (:= var ((int total 0))) (:= body ((total (total + d))))
+s1: 5
+s1:
+int: total 6
+fn: (:= name "t1") (:= args ((int a))) (:= return int) (:= body ((return (a + 100))))
+fn:
+    name: "t2"
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a + 200)
+    end: body
+end: fn
+fn: (:= name "t\x33") (:= args ((int a))) (:= return int) (:= body ((return (a + 300))))
+int: r9 101
+int: r10 202
+int: r11 303
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

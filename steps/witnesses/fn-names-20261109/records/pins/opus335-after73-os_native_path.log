@@ -1,0 +1,39 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus335
+GRAPH-BEFORE-BEGIN
+include: "<stdlib.h>"
+os:
+    win:
+        include: "<windows.h>"
+        fn: os_native (@: s char) (@ c.void)
+            int: n (c.MultiByteToWideChar c.CP_UTF8 c.MB_ERR_INVALID_CHARS s -1 0 0)
+            @: w c.WCHAR 0
+            if: (n <= 0) ((return 0))
+            w: (c.calloc ((cast (size_t) n)) (c.sizeof c.WCHAR))
+            if: (w = 0) ((return 0))
+            if: ((c.MultiByteToWideChar c.CP_UTF8 c.MB_ERR_INVALID_CHARS s -1 w n) != n) ((c.free w) (return 0))
+            return: (cast ((@ void)) w)
+        end: os_native
+    end: win
+    default: (fn os_native ((@ s char)) (@ c.void) ((return (cast ((@ void)) (txt_dup s)))))
+end: os
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+include: "<stdlib.h>"
+os:
+    win:
+        include: "<windows.h>"
+        fn: os_native (@: s char) (@ c.void)
+            int: n (c.MultiByteToWideChar c.CP_UTF8 c.MB_ERR_INVALID_CHARS s -1 0 0)
+            @: w c.WCHAR 0
+            if: (n <= 0) ((return 0))
+            w: (c.calloc ((cast (size_t) n)) (c.sizeof c.WCHAR))
+            if: (w = 0) ((return 0))
+            if: ((c.MultiByteToWideChar c.CP_UTF8 c.MB_ERR_INVALID_CHARS s -1 w n) != n) ((c.free w) (return 0))
+            return: (cast ((@ void)) w)
+        end: os_native
+    end: win
+    default: (fn os_native ((@ s char)) (@ c.void) ((return (cast ((@ void)) (txt_dup s)))))
+end: os
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+EXIT=0

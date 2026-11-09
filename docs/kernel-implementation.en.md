@@ -448,8 +448,13 @@ written where it applies nothing (`lmx_graph_applies`: merge, or a Frame whose h
 application); an application, or a name a Structure formal resolves, is evaluated once, in order, and each value is
 received by its formal before the next actual is evaluated (`lmx_graph_receiver_admit`: a formal taken as written
 receives a word or a written form, a Structure formal a Structure): `fn: bad 7 int touch()` is refused (5) before
-`touch()` runs. The receiver's action is one: `lmx_graph_receiver_make` and the constructor `lmx_graph_fn_make` (its `var`
-by `lmx_graph_fn_var`); the name must be a word (5). A declaration whose actuals bind with no evaluation
+`touch()` runs. For a formal taken as written the value of a part is its written field -- the single field of
+`return: ...`, the operand of `return := ...` -- so one requirement is one value in every form (slice 335: `@: c.FILE`
+by position, by head and by `:=` gives one part `return`, `fn_return_forms`). The receiver's action is one:
+`lmx_graph_receiver_make` and the constructor `lmx_graph_fn_make` (its `var` by `lmx_graph_fn_var`); the name is given by
+the contract of a name (`lmx_graph_name_value`): an identifier its spelling, an ordinary string literal its value, the
+escapes decoded by the rules of C (grammar §6, `lmx_graph_string_value`; the author's `name := "test"` creates `test`,
+`"t\x33"` names `t3`); any other value -- 5. A declaration whose actuals bind with no evaluation
 (`lmx_graph_fn_written`) creates F on entering its block, and the name is visible in the whole block
 ([the book](LMX_semantics.en.md#declaration-visibility)); the receiver applied to arguments the traversal computes -- the
 whole prepared Structure (`fn: prepared`), the written name and a Structure of the parts (`fn: new_name merge(f1, f2)`),
@@ -462,8 +467,9 @@ the operands' names. F's `parent` is the Frame of the application, and the free 
 (§3.5): the name `f1` in a body `merge` copied is the function `f1` of this block, `k` the root's place as it is at the
 call. With a callable named `name` in scope, `fn: name: 7; ...` applies that callable (its head answers it: the ordinary
 call, once) and its value binds no part (5); `fn: name := k3; ...` names the part explicitly whatever callable exists
-(the author 2026-11-09). A result requirement other than a word is kept as written: positionally the form itself, by
-head or by `:=` the block that holds it; the executors run results whose requirement is `int` (`lmx_graph_call_shape`).
+(the author 2026-11-09). The executors run results whose requirement is `int` (`lmx_graph_call_shape`); another
+requirement stays the function's own -- the empty Structure of the author's `return: ()` is not replaced by `int`, and a
+call of such a function is refused (5, `fn_author_forms`).
 Refusals: a name that already answers in this block -- 4; no form, a value its formal does not receive, a field outside
 the contract, no name, `args` or result requirement -- 5 (`fn: merge(f1, f2)`); a computed application in a body or an
 inline block -- 5 (a repeated activation would bind the name again; an implementation limit). The binder's name map is
@@ -472,8 +478,8 @@ receiver); the reception is each signature's own: the typed formals of a callabl
 of a receiver's contract through `lmx_graph_receiver_admit`. The translator names a written declaration by
 `lmx_graph_fn_decl_name` (the word at the first position, of `name := word` or of `name: word`) and installs native code
 on it; a computed application is the root code's call of `lmx_graph_fn_apply`, and a call of such a function goes to the
-interpreter (graph72: `fn_named_supply`, `fn_name_collision`, `fn_name_call`, `fn_bad_args`, `fn_prepared`,
-`fn_new_name`, `fn_without_name`, `descriptor_merge`, the fixtures of merge).
+interpreter (graph73: `fn_named_supply`, `fn_name_collision`, `fn_name_call`, `fn_bad_args`, `fn_return_forms`,
+`fn_author_forms`, `fn_prepared`, `fn_new_name`, `fn_without_name`, `descriptor_merge`, the fixtures of merge).
 
 **Formals** are slots of `args` with the same representation as any place (§3.2): `int: q` → an `uninit:int` pointer onto
 the formal's `int` cell (named `q`) -- a mandatory formal; `int: q 0` → an `int` cell = 0 -- a default, read, not
@@ -696,7 +702,7 @@ through the reference take its target ([book :454](LMX_semantics.en.md#ordinary-
 [:1237](LMX_semantics.en.md#factory-reference-result)), and the copy of a reference points at the copy of its target
 through the same map. The name of a function created from a composition is the name argument of the receiver
 (`fn: new_name merge(f1, f2)`), not a field and not the operands' names (§3.4). The implemented subset and its open
-parts: the status above (graph72).
+parts: the status above (graph73).
 
 ### 6.5 Resetting `native` on a write (decision; the norm is [L2 §11](L2_spec_en.md#call))
 

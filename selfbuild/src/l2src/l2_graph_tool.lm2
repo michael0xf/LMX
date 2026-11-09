@@ -785,6 +785,31 @@ fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap) in
     return: 0
 end: lm_graph_emit_parents
 
+# Is name in the emitter's declaration table: a place a definition or declaration of this code gives when it runs? 1 or 0.
+fn: lm_graph_emit_known (@@: decl_names char; size_t: decl_n; @: name char) int
+    size_t: i 0U
+    while: i < decl_n
+        if: decl_names[i] = name
+            return: 1
+        i: i + 1U
+    ---
+    return: 0
+end: lm_graph_emit_known
+
+# Is field index of root a Frame `name: h(...)` whose single field applies a name of the declaration table? Whether it is
+# a named Structure or the definition by that application is told when the program runs (lmx_graph_space_reach), when h
+# holds what its definition gave (`h: f` a callable). 1 or 0.
+fn: lm_graph_emit_deferred (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @@: decl_names char; size_t: decl_n) int
+    @: value void c.lmx_graph_get(root, index)
+    @: field void 0
+    if: c.lmx_graph_kind(g, value) != 4 || c.lmx_graph_count((cast: (@: c.Lmx) value)) != 1U
+        return: 0
+    field: c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)
+    if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_name_of(g, field) = 0
+        return: 0
+    return: lm_graph_emit_known(decl_names, decl_n, c.lmx_graph_name_of(g, field))
+end: lm_graph_emit_deferred
+
 # The emitter's table of the declarations its native body has emitted so far (§3.5: the translator's own resolution,
 # a table of its traversal): a declaration with a computed initializer names its slot from its statement on.
 fn: lm_graph_emit_resolve (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: name char) size_t
@@ -794,7 +819,11 @@ fn: lm_graph_emit_resolve (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; 
             return: decl_slots[i]
         i: i + 1U
     ---
-    return: c.lmx_graph_place_slot(g, root, name)
+    # A place of the root is written by its name only from where the translation reached it (lmx_graph_space_reach).
+    i: c.lmx_graph_place_slot(g, root, name)
+    if: i < c.lmx_graph_count(root) && c.lmx_graph_space_find(root, name) != c.lmx_graph_get(root, i)
+        return: c.lmx_graph_count(root)
+    return: i
 end: lm_graph_emit_resolve
 
 # Emit the address of a written substructure relative to this native activation's code. These field coordinates
@@ -1273,7 +1302,7 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
             status: lm_graph_emit_word(g, f, code, statement, 1U)
             c.fprintf(f, ", l2_t%d) != 0\n            %s\n", value, leave_failure)
         else:
-            c.fputs("        if: lmx_graph_store_field(l2_g, lmx_call_code, lmx_call_code, lmx_graph_place_slot(l2_g, lmx_call_code, ", f)
+            c.fputs("        if: lmx_graph_store_field(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
             status: lm_graph_emit_word(g, f, code, statement, 1U)
             c.fprintf(f, "), l2_t%d) != 0\n            %s\n", value, leave_failure)
         ---
@@ -1304,6 +1333,9 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
     int: temp 0
     int: r 0
     int: finish -1
+    int: kind 0
+    int: reached 0
+    int: skip -1
     if: state = 0 || decl_names = 0 || decl_slots = 0
         return: 5
     # Earlier computed declarations have already been published by the time this continuation is entered.
@@ -1328,7 +1360,16 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
     ---
     while: i < n
         value: c.lmx_graph_get(root, i)
-        if: c.lmx_graph_kind(g, value) != 4
+        kind: c.lmx_graph_kind(g, value)
+        # A place of the root answers its name from where the traversal reaches it (lmx_graph_space_reach): in the
+        # translation's namespace now, in the program's when it runs.
+        if: kind = 1 || kind = 3 || kind = 5 || kind = 6
+            if: c.lmx_graph_space_reach(g, root, i) < 0
+                return: 1
+            c.fprintf(f, "        if: lmx_graph_space_reach(l2_g, lmx_call_code, %zuU) < 0\n            %s\n", i, leave_failure)
+            i: i + 1U
+            continue
+        if: kind != 4
             i: i + 1U
             continue
         inner: (cast: (@: c.Lmx) value)
@@ -1351,10 +1392,31 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
             ---
             i: i + 1U
             continue
-        # A declaration of fn or sub creates its Structure when the traversal begins; a named Structure stands.
-        if: head = state\w_fn || head = state\w_sub || c.lmx_graph_space_find(root, head) = value
+        # A declaration of fn or sub created its Structure when the block was entered, in both namespaces.
+        if: head = state\w_fn || head = state\w_sub
             i: i + 1U
             continue
+        # A named Structure of the root answers its name from where the traversal reaches it (lmx_graph_space_reach),
+        # as the interpreter decides it. A name this code defines when it runs is known here by the declaration table: a
+        # Frame on it is a statement. A Frame `name: h(...)` whose field applies such a name is decided when the program
+        # runs -- h may hold a callable then (`h: f`) --: its definition is emitted behind the program's own reach.
+        skip: -1
+        if: lm_graph_emit_known(decl_names, decl_n, head) = 0
+            if: lm_graph_emit_deferred(g, root, i, decl_names, decl_n) != 0
+                skip: temps[0]
+                temps[0]: temps[0] + 1
+                c.fprintf(f, "        int: l2_t%d lmx_graph_space_reach(l2_g, lmx_call_code, %zuU)\n        if: l2_t%d < 0\n            %s\n        if: l2_t%d > 0\n            goto: l2_label%d\n", skip, i, skip, leave_failure, skip, skip)
+            else:
+                reached: c.lmx_graph_space_reach(g, root, i)
+                if: reached < 0
+                    return: 1
+                if: reached > 0
+                    c.fprintf(f, "        if: lmx_graph_space_reach(l2_g, lmx_call_code, %zuU) < 0\n            %s\n", i, leave_failure)
+                    i: i + 1U
+                    continue
+                ---
+            ---
+        ---
         if: head = state\w_fm
             return: 5
         if: head = state\w_finally
@@ -1436,6 +1498,8 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 if: r != 0
                     return: r
                 c.fprintf(f, "        if: lmx_graph_define(l2_g, lmx_call_code, %zuU, l2_v%d) != 0\n            %s\n", i, temp, leave_failure)
+                if: skip >= 0
+                    c.fprintf(f, "        l2_label%d: ()\n", skip)
                 decl_names[decl_n]: head
                 decl_slots[decl_n]: i
                 decl_n: decl_n + 1U
@@ -1532,7 +1596,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 ---
             ---
             if: name != 0 && mode = 2 && kind = 1
-                c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_place_slot(l2_g, lmx_call_code, ", f)
+                c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
                 lm_graph_emit_quoted_word(f, name)
                 c.fprintf(f, "), %d) != 0\n            %s\n", c.lmx_int_value_known(raw), leave_failure)
             ---
@@ -1698,12 +1762,12 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             if: target = 0 && head != state\w_int && c.lmx_graph_language_word(state, head) = 0
                 status: lm_graph_emit_apply_or(g, f, code, statement, temps, 0, 0, 0U, @ finish)
             if: head = state\w_int
-                c.fputs("        if: lmx_graph_place_slot(l2_g, lmx_call_code, ", f)
+                c.fputs("        if: lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
                 status: lm_graph_emit_word(g, f, code, statement, 0U)
                 c.fprintf(f, ") = lmx_graph_count(lmx_call_code)\n            %s\n", leave_failure)
                 if: n > 1U && status = 0
                     status: lm_graph_emit_expr(g, f, code, statement, 1U, n, temps, 0, 0, 0U, @ result)
-                    c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_place_slot(l2_g, lmx_call_code, ", f)
+                    c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
                     if: status = 0
                         status: lm_graph_emit_word(g, f, code, statement, 0U)
                     c.fprintf(f, "), l2_t%d) != 0\n            %s\n", result, leave_failure)
@@ -1715,7 +1779,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 else:
                     if: status = 0
                         status: lm_graph_emit_expr(g, f, code, statement, 0U, n, temps, 0, 0, 0U, @ result)
-                    c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_place_slot(l2_g, lmx_call_code, ", f)
+                    c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
                     if: status = 0
                         status: lm_graph_emit_head(g, f, code, statement)
                     c.fprintf(f, "), l2_t%d) != 0\n            %s\n", result, leave_failure)
@@ -2264,6 +2328,7 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     @: formal c.Lmx 0
     @: required void 0
     @@: values void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    size_t: reached 0U
     int: status 0
     int: answer 0
     int: fails 0
@@ -2273,9 +2338,15 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     g: c.lmx_graph_open(arena)
     if: g = 0 || lm_graph_build_file(g, path, @ root) != 0
         return: 1
-    # One traversal: the Structure the receiver fn creates for the declaration of take in its namespace.
+    # One traversal: the Structure the receiver fn creates for the declaration of take in its namespace, and the fields
+    # of the root reached in order up to the call in r (lmx_graph_space_reach) -- Point answers there, as it does when
+    # the traversal runs that call.
     if: c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 1
+    while: reached < c.lmx_graph_count(root)
+        if: c.lmx_graph_space_reach(g, root, reached) < 0
+            return: 1
+        reached: reached + 1U
     point: (cast: (@: c.Lmx) c.lmx_graph_get(root, 0U))
     method: (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_intern("take", 4U))))
     if: c.lmx_graph_method(g, method) = 0

@@ -115,13 +115,87 @@ S/docs50 над индексом среза (259 путей) — PASS. `git diff
 LMX_blog/2026-11-07.md. Повторный docs check над итоговым индексом (после второго прохода и этих notes) — S/docs51
 (лог в P).
 
+<a id="review-332"></a>
+## Проход по ревью Codex 332
+
+Ревью CODEX-OPUS-332-REVIEW-20261109T080211Z-01 ([копия](records/pins/codex-332-result-review.txt)) приняло факты
+узкого среза и потребовало пять исправлений без нового ACK. Сделано на `opus332-source14` (373 входа):
+
+1. **Слова языка — по адресу.** `lmx_graph_language_receiver` больше не сравнивает байты уже канонического слова: список
+   ресиверов интернируется один раз в состояние графа (`LmxGraphState.receivers`/`receivers_count`,
+   `lmx_graph_receivers_in` из `lmx_graph_state`), распознавание — сравнение адреса, как у остальных `w_*`.
+2. **Поле корня классифицируется, когда обход до него дошёл.** `lmx_graph_space_places` удалена: `lmx_graph_space_open`
+   создаёт только F объявлений `fn`/`sub`; новая экспортируемая `lmx_graph_space_reach(g, root, index)` вносит место
+   (виды 1/3/5/6) или именованную Structure при достижении поля; `lmx_graph_root_structure` разрешает голову в namespace
+   таким, каким он стоит у этого поля (`lmx_graph_resolve`, оба списка слов): одно поле-применение того, что сейчас
+   отвечает вызываемым, — определение. Интерпретатор зовёт reach в начале каждого поля корня; транслятор — в своём
+   namespace трансляции и выпускает тот же вызов в программу (`lmx_graph_space_reach(l2_g, lmx_call_code, i)`), для
+   отложенного случая (одно поле применяет имя объявления) — выпущенная проверка с переходом. `fn_alias_call`
+   (`h: f`, `r: h(3)`, `s: f(3)`): `@: h f`, `int: r 3`, `int: s 3` во всех трёх режимах; graph58 оставлял `r: (h 3)`
+   неисполненным блоком.
+3. **Обычное поле корня видно с объявления.** Запись по голому имени достигает только видимого места
+   (`lmx_graph_visible_slot`: слот, если namespace уже связывает имя с ним) — в известных значениях, присваивании,
+   записи блока, int-операторах и итоговой записи; `lmx_graph_named_int` отвечает 3 на имя, которое ничему не отвечает.
+   `root_visibility` (`int: seen x` до `int: x 7`) — отрицательная, ответ 3 во всех режимах; graph58 давал `seen 7`,
+   graph59 — ответ 1 (поправлено в rt51/graph60).
+4. **var функции — одной картой.** `lmx_graph_fn_var` сначала сопоставляет записанной var новую, копирует и затем ставит
+   `parent` каждой копии через ту же карту (`child\parent = map_get(operand\parent)`), сохраняя вложенность; источники не
+   меняются. `var_copy_nesting`: Code под копией Box читает `kk` Box — `seen 9` во всех режимах, записанная var после
+   вызова прежняя (`int: r 0`); graph58 — `run answered 3` (Code уплощался под var и не находил `kk`). Объявление `@:`
+   в var рабочими строками — отказ 5, как в HEAD; поэтому внутренней ссылки в var этот срез не пишет: перенаправление
+   ссылки на записанную var через карту — по коду, без свидетеля запуском.
+5. **Время жизни и §6.1.** Освобождаются служебные таблицы обхода и их корни, не F, удержанная программой обычной
+   ссылкой (kernel RU/EN §3.4 и пример §10, комментарий у блока ресиверов в `lmx_graph_run.lm2`); §6.1 — голова
+   именованного Frame — его имя, поля с 0 — аргументы, поле корня классифицируется при достижении; §5.2 — видимость полей
+   корня по ходу обхода; §6.2 — список ресиверов по адресу.
+
+Регресс по ходу: `method-mutation` на graph60 — 5/8 (`method-preserved-native-is-dispatched`,
+`method-fresh-body-result61`, `method-next-body-result59`): проверка открывала namespace и вызывала `take`, не дойдя до
+полей корня, и `Point`, видимая теперь с поля 0, не отвечала при приёме формала. На graph61 проверка доходит до полей
+корня по порядку (`lmx_graph_space_reach`), как обход перед вызовом в `r`, — 8/8.
+
+Итог на graph61/tool32/rt51: `checks opus332-graph-check61.tsv` — `CHECKS 70 lines, 0 failed`, 210 PASS
+(08:34:16→08:35:29Z); `mutation` 11/11; `method-mutation` 8/8; `sub_void_value` — `run answered 5`, `emit answered 5`,
+частичный L1 = graph58; производственные модули — как на graph58 (lmx_schedule, l2_libc, lmx_clock, docs_check,
+os_native_path, text, winargs — exit 0; primitive и lmxtool — `run answered 3`), везде GRAPH-BEFORE = GRAPH-AFTER, журналы
+graph60 и graph61 совпадают после строки CWD.
+
+Кортеж прохода (обозначения — как выше):
+
+- P/pins/opus332-source14.sha256, 373 входа: b50402c0063ab9c6972e03356aa96ef350ebf5e2c8a33ef743da03a4bf357cee.
+- T32 = S/tool32/lmxtool-tool.exe: 6661de8cab0142e988f20c282d79e4c999c8e4a6903d29b013a9f3ba8ac96372 (собран T31 на rt49
+  из source11; build.lm2 после source11 не менялся).
+- S/rt51/driver.o: e29a4c5e023f4e2616838e8660262712b1d0a3c1218cabd441d9cd6d0e3ed977 (source12; исходники runtime после
+  source12 не менялись).
+- S/rt51/driver-observe.o: 22f7a3d15364f5a79301c9e5e0b90da322d734a1a99d2cc62ea1586561723b38.
+- G61 = S/graph61/graph_trans-prod.exe: 695a71cec1eaa91b5bd1843d14dee04335acd66ae985cf60c60fa256fdbb6855 (source14).
+- Промежуточные: rt50/graph59 (source11), G60 = 13eaf0df005f474e7ed70adc3f6e39689d81594ecb7a7f3de9c71c48dbad63d7
+  (rt51, source12; checks60 — 70/0, 210 PASS; method-mutation 5/8).
+
+```text
+T31 0 entry 0 -- build-self R S B F S/rt49/driver.o tool32
+T32 0 entry 0 -- build-runtime R S B F rt51
+T32 0 entry 0 -- build-graph R S B F S/rt51 graph61
+T32 0 entry 0 -- checks P/pins/opus332-graph-check61.tsv
+G61 0 entry 0 -- mutation
+G61 0 entry 0 -- method-mutation S/tests/graph/point_take.lm2
+G61 0 entry 5 -- run S/tests/graph/sub_void_value.lm2 1
+G61 0 entry 5 -- emit-check S/tests/graph/sub_void_value.lm2 S/graph61/sub-void-refused.lm1 native 1
+G61 0 entry 0 -- run S/<production input> 1
+```
+
+OUT строк проверки — `S/check61-CASE`. Архив прохода: [список](records3.list), [SHA оригиналов](records3.sha256),
+[SHA LF-копий](records3-lf.sha256) — копии в [records/](records/) рядом с копиями первого прохода; журналы docs check и
+архивные — [список](records4.list), [SHA](records4.sha256), [SHA LF](records4-lf.sha256).
+
 ## Граница и следующее
 
 1. 333: `fn: prepared` (подача всей Structure), `fn: new_name merge(f1, f2)` (имя + Structure частей — другая форма того
    же ресивера), коллизия имени, однократное вычисление фактических до эффектов; затем фикстуры merge вызываемых
    переписываются через `fn:`.
-2. Корень отличает именованный блок от оператора порядком записи и видом единственного поля; построитель знает форму
-   блока (`end:`), граф — нет. Данные блока внутри исполняемого тела, кроме `var:`, не исполняются только как места.
+2. Поле корня классифицируется, когда обход до него дошёл: вид единственного поля и разрешение головы в namespace у
+   этого поля (kernel §6.1); новой нормы о форме блока (`end:`) не нужно (ревью Codex 332, п. 2). Данные блока внутри
+   исполняемого тела, кроме `var:`, не исполняются только как места.
 3. Форма `var: (…)` как присваивание привязке var (книга, ordinary-var) в чистом графе по-прежнему не исполняется.
 4. Открытые с 329–331: части `fn`/`return` композиции, адрес `@` ссылки на Structure, замена Structure/ссылочного слота,
    C-дверь интерпретатора, машинный экспорт из чистого графа (вход F вместо P0).

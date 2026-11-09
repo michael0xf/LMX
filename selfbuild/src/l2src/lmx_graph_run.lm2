@@ -375,11 +375,14 @@ fn: lmx_graph_work_open_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: 
     while: i < frame\count && status = 0
         row: rows + i
         row\name: c.lmx_graph_slot_name(g, model, i)
-        # A computed declaration `int: name expression` (an Lmx named int, §3.3) is the place name before its publication.
+        # A computed declaration `int: name expression` (an Lmx named int, §3.3) is the place name before its publication;
+        # a reference declaration `@: name T` in a var is not executed by this slice (5), as before.
         if: row\name = state\w_int && c.lmx_graph_kind(g, c.lmx_graph_get(model, i)) = 4
             declaration: (cast: (@: c.Lmx) c.lmx_graph_get(model, i))
             row\name: c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 0U))
         ---
+        if: row\name = state\w_at && c.lmx_graph_kind(g, c.lmx_graph_get(model, i)) = 4
+            status: 5
         slot: i
         if: data != model
             slot: lmx_graph_data_slot(g, data, (cast: (@: char) row\name))
@@ -425,6 +428,7 @@ fn: lmx_graph_named_int (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @: out i
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
     @: args c.Lmx 0
     @: row c.LmxGraphWork 0
+    @: value void 0
     size_t: slot 0U
     int: status 0
     while: active != 0
@@ -450,7 +454,11 @@ fn: lmx_graph_named_int (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @: out i
         ---
         active: active\parent
     ---
-    return: c.lmx_graph_value_int(g, lmx_graph_resolve(g, scope, name), out)
+    # A name that answers nothing here -- none, or a field not reached yet (lmx_graph_space_reach) -- is unknown (3).
+    value: lmx_graph_resolve(g, scope, name)
+    if: value = 0
+        return: 3
+    return: c.lmx_graph_value_int(g, value, out)
 end: lmx_graph_named_int
 
 fn: lmx_graph_operand_name (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
@@ -498,7 +506,7 @@ fn: lmx_graph_known_int (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode
     if: name = 0
         return: 3
     if: mode != 0
-        slot: lmx_graph_place_slot(g, code, name)
+        slot: lmx_graph_visible_slot(g, code, name)
         if: slot >= c.lmx_graph_count(code)
             # A known name that is no place of this block -- a function, a Structure -- refuses the write.
             if: lmx_graph_resolve(g, code, name) != 0
@@ -552,7 +560,7 @@ fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lm
         return: 2
     if: name != 0
         status: lmx_graph_known_int(g, code, name, mode)
-        slot: lmx_graph_place_slot(g, code, name)
+        slot: lmx_graph_visible_slot(g, code, name)
     else:
         if: c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
             return: 2
@@ -934,12 +942,24 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
     int: nested_mode mode
     int: cleanup_status 0
     int: pending_result 0
+    int: reached 0
     @: pending_flow char 0
     if: mode = 1
         nested_mode: 2
     while: i < to && status = 0 && flow[0] = 0
         raw: c.lmx_graph_get(body, i)
         kind: c.lmx_graph_kind(g, raw)
+        # A field of the root answers its name from where the traversal reaches it: a place, a named Structure
+        # (lmx_graph_space_reach); a statement or a definition runs.
+        if: mode = 1
+            reached: lmx_graph_space_reach(g, code, i)
+            if: reached < 0
+                return: 1
+            if: reached > 0
+                i: i + 1U
+                continue
+            ---
+        ---
         # A declaration of an int place is that place (§3.2). Reached in a body, it runs at its written position: a
         # literal is written into the activation's own place, a place without a value is checked; in an inline body of
         # the root it writes the root's place; at the root it is the root's own place and stands.
@@ -961,7 +981,7 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
                 continue
             ---
             if: name != 0 && mode = 2
-                slot: lmx_graph_place_slot(g, code, name)
+                slot: lmx_graph_visible_slot(g, code, name)
                 if: slot >= c.lmx_graph_count(code)
                     return: 3
                 if: kind = 1
@@ -1017,9 +1037,6 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             continue
         if: head = state\w_fm
             return: 5
-        if: mode = 1 && c.lmx_graph_space_find(code, head) = raw
-            i: i + 1U
-            continue
         if: head = state\w_finally
             # Reaching this field registers its body in this scope. Recursing over the remaining statements makes
             # multiple registrations unwind in reverse order, without a persistent plan or a second graph.
@@ -1143,7 +1160,7 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             if: mode = 0
                 status: lmx_graph_local_int(g, code, head)
             else:
-                slot: lmx_graph_place_slot(g, code, head)
+                slot: lmx_graph_visible_slot(g, code, head)
                 if: slot = c.lmx_graph_count(code)
                     return: 3
             ---
@@ -1163,7 +1180,7 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             if: mode = 0
                 status: lmx_graph_store_name(g, code, head, number)
             else:
-                slot: lmx_graph_place_slot(g, code, head)
+                slot: lmx_graph_visible_slot(g, code, head)
                 if: slot = c.lmx_graph_count(code)
                     return: 3
                 status: c.lmx_graph_assign_int(g, code, code, slot, number)
@@ -1658,7 +1675,7 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
         if: cell = 0
             return: 4
         return: c.lmx_graph_publish(g, root, index, cell)
-    k: lmx_graph_place_slot(g, root, head)
+    k: lmx_graph_visible_slot(g, root, head)
     # A written field `name: value` whose name is not known defines the place by its value (the book, composition of
     # place and value; lmx_graph_define), e.g. a held merge result.
     if: k >= c.lmx_graph_count(root) && n = 1U && cell = 0 && lmx_graph_language_word(state, head) = 0 && c.lmx_graph_language_receiver(head) = 0
@@ -2483,7 +2500,9 @@ end: lmx_graph_work_scan_literal
 # fn with its arguments. Each traversal -- the interpreter's run, a translation, a native run of an emitted program --
 # begins with an empty namespace (lmx_graph_space_push) and applies the receiver: the Structure named by the value of
 # the name argument with the parts args, return, var, body (sub: args, var, body) is created in this traversal and
-# answers its name in the declaration's block. Nothing of it is kept for the next traversal.
+# answers its name in the declaration's block. The namespace and its rows are freed at the end of the traversal, and the
+# next traversal creates its own Structure from the written declaration; a Structure the program holds by an ordinary
+# reference of the graph stays an ordinary live value (§5.2).
 
 # The slot of lmx holding the place named name -- an int place, a place without a value, a reference place (a Frame
 # named by its head is no place) --, or the count of its slots when none is.
@@ -2560,9 +2579,9 @@ fn: lmx_graph_fn_own (@: g c.LmxGraph; @: value void; @@@: names char; @: count 
 end: lmx_graph_fn_own
 
 # The var of the Structure fn/sub creates: a new Lmx under it, named var, holding the copy of the fields of the written
-# var -- through one source -> copy map, so that the places, references and Structures of the written var keep their
-# sharing in the copy (kernel §6.4) -- and then a new place without a value for every own field of the body that is no
-# formal and no field of the written var. The set of fields is known before the Lmx is made; no initializer runs here
+# var -- through one source -> copy map in which the written var is the new var, so that the places, references and
+# Structures of the written var keep their sharing, nesting and cycles in the copy (kernel §6.4) -- and then a new place
+# without a value for every own field of the body that is no formal and no field of the written var. The set of fields is known before the Lmx is made; no initializer runs here
 # (they run at their written places). 0 and the var in out; 1 without memory; 4 or 5 for a written field whose copy is
 # refused or open (lmx_graph_merge_copy).
 fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written c.Lmx; @: body c.Lmx; @@: out c.Lmx) int
@@ -2613,6 +2632,11 @@ fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written
             status: 1
         else:
             mapped: 1
+            # The written var is the new var in the map before any field is copied (as an operand root is its result in
+            # lmx_graph_merge_values): a reference to the written var, or a cycle through it, reaches the new var.
+            if: c.lmx_copy_map_put(@ map, (cast: (@: void) written), (cast: (@: void) vars)) != 0
+                status: 1
+            ---
         ---
     ---
     i: 0U
@@ -2632,8 +2656,17 @@ fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written
                 status: 1
             j: j + 1U
         ---
+        at: at + 1U
+    ---
+    # Parent edges once every copy exists, as in merge: a copied Structure keeps the nesting of its source -- its parent is
+    # the copy of its source's parent, the written var's children the new var's --; a source parent outside the copied
+    # part gives none (the new var itself is under F, whose lexical chain it has).
+    at: 0U
+    while: at < wcount && status = 0
+        operand: work[at]
+        child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand)))
         if: child != 0
-            child\parent: vars
+            child\parent: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand\parent)))
         at: at + 1U
     ---
     i: 0U
@@ -2795,27 +2828,23 @@ fn: lmx_graph_space_declarations (@: g c.LmxGraph; @: block c.Lmx) int
     return: status
 end: lmx_graph_space_declarations
 
-# Does the named Lmx at field index of the root stand for a named Structure (a data or code block) rather than a
-# statement? Its name is no word of the language, answers nothing yet and heads no earlier field of the root (the first
-# written field of a name decides: after the definition `x: 4`, `x(1; 2)` applies x), and its fields are no single
-# value. A single field that is a value -- a literal, a word, a reference, an unnamed Lmx, merge or a Frame applying a
-# callable -- makes it the definition `name: value`, which runs in order; a place, an assignment to a place, a statement
-# of the language or a nested block makes it a block. 1 or 0.
+# Does the named Lmx at field index of the root, reached now, stand for a named Structure (a data or code block) rather
+# than a statement? The one model of a Frame (grammar §2, the book :426, :443): its head is resolved now, in the
+# namespace of this traversal as it stands at this field. It is a Structure when its name is no word of the language and
+# answers nothing now, and its fields are no single value. A single field that is a value -- a literal, a word, a
+# reference, an unnamed Lmx, merge or a Frame applying what answers a callable now (`r: h(3)` after `h: f`) -- makes it
+# the definition `name: value`; a place, a Frame on a place (an assignment), a statement of the language or a Frame on a
+# name that answers nothing (a nested block) makes it a block. Nothing is decided before the traversal reaches the
+# field. 1 or 0.
 fn: lmx_graph_root_structure (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: value void c.lmx_graph_get(root, index)
     @: name char c.lmx_graph_name_of(g, value)
     @: field void 0
     @: head char 0
-    size_t: j 0U
     int: kind 0
-    if: state = 0 || name = 0 || c.lmx_graph_kind(g, value) != 4 || lmx_graph_language_word(state, name) != 0 || c.lmx_graph_language_receiver(name) != 0 || c.lmx_graph_space_find(root, name) != 0
+    if: state = 0 || name = 0 || c.lmx_graph_kind(g, value) != 4 || lmx_graph_language_word(state, name) != 0 || c.lmx_graph_language_receiver(name) != 0 || lmx_graph_resolve(g, root, name) != 0
         return: 0
-    while: j < index
-        if: c.lmx_graph_kind(g, c.lmx_graph_get(root, j)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get(root, j)) = name
-            return: 0
-        j: j + 1U
-    ---
     if: c.lmx_graph_count((cast: (@: c.Lmx) value)) != 1U
         return: 1
     field: c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)
@@ -2829,41 +2858,54 @@ fn: lmx_graph_root_structure (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     head: c.lmx_graph_name_of(g, field)
     if: head = 0 || head = state\w_merge
         return: 0
-    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_space_find(root, head)))) != 0
+    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, lmx_graph_resolve(g, root, head)))) != 0
         return: 0
     return: 1
 end: lmx_graph_root_structure
 
-# The places of the root -- int places, places without a value, reference places -- and its named Structures answer
-# their names in the root from the beginning of the traversal, each its first written field of that name; the
-# definitions and statements of the root run in order.
-fn: lmx_graph_space_places (@: g c.LmxGraph; @: root c.Lmx) int
+# The traversal reaches field index of the root (§5.2; the book :443: an ordinary field is visible forward from its
+# declaration, at the root of a file too -- a slot allocated before does not open its name to an earlier statement;
+# the visibility from the first line belongs to the completed var of a method). A place answers its name from here on --
+# the first written field of a name keeps it, a repeated declaration does not re-bind --, and so does a named Structure
+# (lmx_graph_root_structure). Both consumers call it at the field, the translator in its translation namespace and in
+# the program it emits. 1 when the field stands (a place, a named Structure, a primitive value), 0 when it is a statement
+# or a definition to run (a word as `return` included), -1 without memory.
+fn: lmx_graph_space_reach (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     @: value void 0
     @: name char 0
-    size_t: i 0U
     int: kind 0
-    int: status 0
-    while: i < c.lmx_graph_count(root) && status = 0
-        value: c.lmx_graph_get(root, i)
-        kind: c.lmx_graph_kind(g, value)
-        name: 0
-        if: kind = 1 || kind = 3 || kind = 5 || kind = 6
-            name: c.lmx_graph_slot_name(g, root, i)
-        else:
-            if: lmx_graph_root_structure(g, root, i) != 0
-                name: c.lmx_graph_name_of(g, value)
+    if: g = 0 || root = 0 || index >= c.lmx_graph_count(root)
+        return: 0
+    value: c.lmx_graph_get(root, index)
+    kind: c.lmx_graph_kind(g, value)
+    if: kind = 1 || kind = 3 || kind = 5 || kind = 6
+        name: c.lmx_graph_slot_name(g, root, index)
+        if: name != 0 && c.lmx_graph_space_find(root, name) = 0
+            if: c.lmx_graph_space_put(root, name, value) != 0
+                return: -1
             ---
         ---
-        if: name != 0 && c.lmx_graph_space_find(root, name) = 0
-            status: c.lmx_graph_space_put(root, name, value)
-        i: i + 1U
-    ---
-    return: status
-end: lmx_graph_space_places
+        return: 1
+    if: kind != 4 || lmx_graph_root_structure(g, root, index) = 0
+        return: 0
+    if: c.lmx_graph_space_put(root, c.lmx_graph_name_of(g, value), value) != 0
+        return: -1
+    return: 1
+end: lmx_graph_space_reach
 
-# Begin the namespace of a traversal of root (§5.2): when no traversal is live, a new empty table, the Structures of the
-# declarations of fn and sub created in it and the places and named Structures of the root entered; a traversal begun
-# inside a live one goes on with it. opened[0] says which (the argument of lmx_graph_space_close). 0; 1 without memory;
+# The slot of the place named name of block that answers name now (lmx_graph_space_reach entered it), or the count of
+# its slots: a write by a bare name reaches only a visible place.
+fn: lmx_graph_visible_slot (@: g c.LmxGraph; @: block c.Lmx; @: name char) size_t
+    size_t: slot lmx_graph_place_slot(g, block, name)
+    if: slot < c.lmx_graph_count(block) && c.lmx_graph_space_find(block, name) != c.lmx_graph_get(block, slot)
+        return: c.lmx_graph_count(block)
+    return: slot
+end: lmx_graph_visible_slot
+
+# Begin the namespace of a traversal of root (§5.2): when no traversal is live, a new empty table and the Structures of
+# the declarations of fn and sub created in it (they answer in their whole block); the places and named Structures of the
+# root answer from their fields on, as the traversal reaches them (lmx_graph_space_reach). A traversal begun inside a live
+# one goes on with it. opened[0] says which (the argument of lmx_graph_space_close). 0; 1 without memory;
 # 5 for a declaration form this slice does not execute.
 fn: lmx_graph_space_open (@: g c.LmxGraph; @: root c.Lmx; @: opened int) int
     int: status 0
@@ -2875,8 +2917,6 @@ fn: lmx_graph_space_open (@: g c.LmxGraph; @: root c.Lmx; @: opened int) int
         return: 1
     if: opened[0] = 1
         status: lmx_graph_space_declarations(g, root)
-        if: status = 0
-            status: lmx_graph_space_places(g, root)
         if: status != 0
             c.lmx_graph_space_pop(opened[0])
             opened[0]: 0

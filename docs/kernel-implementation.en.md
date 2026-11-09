@@ -421,8 +421,10 @@ with `parent` on the declaration, named by the value of the `name` argument; its
 and `body` onto the declaration's arguments (no copy: the arguments keep their address, `parent` and namelessness), an
 own word cell of the requirement `return`, and a new Lmx `var` (below). The `lmx:result` region classifies the result of
 executing the receiver, not the definition and not a Structure with similar parts: a copy of F through `merge` is a
-Structure, not a function; the receiver makes a function of it (`fn: g merge(f1)`, slice 333). F lives only in its
-traversal: the next traversal creates a new F from the same written declaration; the `native` entry a translation
+Structure, not a function; the receiver makes a function of it (`fn: g merge(f1)`, slice 333). Leaving a traversal
+frees its service tables and their roots (the namespace, §5.2), not F as a value: an F the program holds by an ordinary
+reference of the graph stays an ordinary live value (Codex's answer of 06:05, §5.2), and without such a reference nothing
+holds it; the next traversal creates its own F from the same written declaration; the `native` entry a translation
 installed on the declaration is also the entry of the F created. Declarations in a body are created by the same rule in
 the body's block.
 
@@ -529,10 +531,14 @@ process string table with its byte index (§4) are not traversal tables: they ar
 author as the means of learning a name, a type and a string; they are not mixed with the temporary traversal tables.
 
 **What a traversal has (decision, open list):** the interpreter -- activation frames and their working values, the
-traversal's namespace (rows "block, name, value": the places and named Structures of the root, the Structures the
-receivers of declarations created, §3.4, and the places published on the way; made empty on entering the traversal and
-freed on leaving it, `lmx_graph_space_*`; a name is resolved for the current activation and the selected `code`/`data` by
-it and by the frames, §3.5), working `implements` maps for the given reception; the collector -- the liveness map by
+traversal's namespace (rows "block, name, value": the Structures the receivers of `fn`/`sub` declarations create on
+entering their block, §3.4 -- in the whole block; the places and named Structures of the root -- from their field on, when
+the traversal has reached it (`lmx_graph_space_reach`): an ordinary field is visible forward from its declaration, at the
+root of a file too, and a cell allocated before the traversal does not open its name to an earlier statement ([the
+book](LMX_semantics.en.md#declaration-visibility); the visibility from the first line belongs to the completed `var` of a
+method); the places published on the way; made empty on entering the traversal and freed on leaving it,
+`lmx_graph_space_*`; a name is resolved for the current activation and the selected `code`/`data` by it and by the
+frames, §3.5), working `implements` maps for the given reception; the collector -- the liveness map by
 regions for the pass; the builder -- the source → copy map of one `merge`/copy, the parse tree and the parsing arenas; the
 translator -- scopes, the signature intern, the unit's emission plan for the duration of its translation. None of them is
 read by `toLmx`, carried by copying or needed by the next traversal.
@@ -549,15 +555,21 @@ of [L2 §14](L2_spec_en.md#implements) about storing the correspondence is updat
 
 ### 6.1 Traversal
 
-Executing a body is a walk over the Lmx of statements in field order. A statement is an Lmx (§3.3): the executor classifies
-the address of field 0 by region: a word primitive → the role by the word's pointer: a language word
-(`if`/`while`/`return`/…), a receiver (`fn`, `int`, `merge`, `@`, …), an operator or a name -- a name is resolved into a
-place through the current traversal's table (§3.5); a place holding an Lmx with the head `fn`/`fm`/`sub` (the role by the
-address of the head word), applied with arguments → a call ([L2 §11](L2_spec_en.md#call)); a primitive or a data place →
-a value. A bare atom does not call ([READ.ME](../READ.ME)); an ordinary Structure is executed through `call`. An expression
-`a op b` is three fields; the operands are evaluated recursively: a number primitive -- the value of the cell of its type,
-a nested Lmx -- the result of its traversal, a name -- reading the cell of the place found, by its type (an `uninit:T`
-value -- by the general admission, §3.2). No pre-translation of a body into operation frames: today's `LMX_WALK_OP_*`
+Executing a body is a walk over the Lmx of statements in field order. A statement is an Lmx (§3.3). The head of a named
+Frame `head: a b` is its name (`name_of`: the row of the address → name table), its fields from 0 are the arguments; the
+head's role is told by the address of its canonical string: a language word (`if`/`while`/`return`/…), a receiver (`fn`,
+`int`, `merge`, `@`, …) or a name, resolved in the current traversal's namespace as it stands at this field (§3.5,
+§5.2). A name answering a function (the Structure F the receiver `fn`/`sub` created, §3.4), applied with arguments → a
+call ([L2 §11](L2_spec_en.md#call)); a data place → a value. A field of the root whose name is no word of the language
+and answers nothing now is classified when the traversal reaches it (`lmx_graph_root_structure`), not ahead: a Structure
+when its fields are no single value; the definition `name: value` when its one field is a value (a literal, a word, a
+reference, an unnamed Lmx, `merge`, or an application of what answers a callable now: `r: h(3)` after `h: f` calls the
+bound `h` once and defines `r` by its result, as `r: f(3)` does). Separately represented expressions keep their general form: an operation is
+an unnamed Lmx (the operator word and the operands, an operation written as a Frame included, §3.3), a path, `:=`. A bare
+atom does not call ([READ.ME](../READ.ME)); an ordinary Structure is executed through `call`. An expression `a op b` is
+three fields; the operands are evaluated recursively: a number primitive -- the value of the cell of its type, a nested
+Lmx -- the result of its traversal, a name -- reading the cell of the place found, by its type (an `uninit:T` value -- by
+the general admission, §3.2). No pre-translation of a body into operation frames: today's `LMX_WALK_OP_*`
 frames and `LmxOp` are a second tree, removed by §9 (K03 of plan v3).
 
 ### 6.2 Roles by pointers
@@ -570,7 +582,9 @@ pointers (`lmx_word_if`, …): these constants are the addresses of the same str
 codes; service operators and receivers have neither numeric codes nor a special representation (the author, 18:18Z) --
 `for`, `=`, `**` in the graph are word primitives with the addresses of their strings, and both consumers, the translator
 and the interpreter, recognize them alike, by comparing the address. "Is this the word `if`" is a comparison of the
-field's pointer with the constant. A user's name in a word field (§3.5) is looked up in the book's order by pointer
+field's pointer with the constant; so is the list of the language's receivers (`lmx_graph_language_receiver`): the same
+canonical strings, interned once into the graph state, and a comparison of addresses, with no byte comparison of an
+already canonical word (Codex review of 332). A user's name in a word field (§3.5) is looked up in the book's order by pointer
 comparison: the local binding of the current activation, the inherited dynamic input along the chain of activations, then
 the lexical fallback by `parent` (`named_field` over the slots of a known Structure -- the selected `data`, the callable's
 formals, own fields); not found -- the implicit throw by the book.
@@ -750,8 +764,9 @@ themselves; no row `r` yet. `toLmx` prints the same program by the names of the 
 applied to the arguments of the declaration in slot 1: F is created -- an Lmx in `lmx:result` with `parent` on the
 declaration, named `take` (the table row for F's address), with the reference fields `args` and `body` onto the
 declaration's parts, an own word cell `return` and a new empty `var` (the body has no own fields); the namespace gets
-the row "root, `take`, F", the places and Structures of the root (`Point`) get theirs. Then the interpreter walks the
-root by slots; slot 1 is the declaration, its F already created; slot 2 is a Frame `int` → a declaration with a computed
+the row "root, `take`, F". Then the interpreter walks the root by slots; slot 0 is the named Structure `Point`: from
+this field on it answers its name (the row "root, `Point`, the Lmx `Point`", `lmx_graph_space_reach`, §5.2); slot 1 is
+the declaration, its F already created; slot 2 is a Frame `int` → a declaration with a computed
 initializer; the call Lmx: the name `take` is resolved by the traversal's namespace into F → a call; an activation in a
 C frame; the frame's argument places receive their first assignment: the word `Point` is resolved into the Lmx `Point`,
 `p` receives its address by `implements` (the used field `y`; the correspondence map is data of this reception, §5.2),
@@ -762,7 +777,7 @@ it, the row `r` for its address is added to the name table, the root's slot 2 is
 to this cell's address; the declaration statement and the call Lmx, referred to by nobody else, are collected (§2.4).
 Now `toLmx` prints `int: r 1` -- the published value replaced the initializer
 ([book](LMX_semantics.en.md#ordinary-var)); a later `r: 2` writes 2 into the same cell (a data write, `native` entries
-are kept, §6.5). On leaving the traversal the namespace is freed and nobody holds F any more; the declaration in slot 1
+are kept, §6.5). On leaving the traversal the namespace is freed, and nobody holds F any more, since the program kept no reference to it; the declaration in slot 1
 stays as written, and the next traversal creates its own F. Native for `take`: the translator created F in its
 translation namespace by the same application of the receiver, resolved the words `p`, `y`, `q` and emitted C code that
 reads the formal `p`'s slot of its frame, calls `named_field` with the constant `l2_names[Y]`, reads the `int` cell,

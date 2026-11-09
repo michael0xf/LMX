@@ -98,6 +98,44 @@ fn: lmx_graph_intern_in (@: state c.LmxGraphState; const: (@: text char); size_t
     return: copy
 end: lmx_graph_intern_in
 
+# The words of the language -- receivers, declaration words, the type words of the C door -- interned into
+# state\receivers once, with the state: the one list the builder's input boundary (lm_graph_data_head) and the root's
+# reading (lmx_graph_root_structure) consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
+# memory.
+fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
+    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external sendMessage receiveMessage adopt length cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
+    @@: list char 0
+    size_t: at 0U
+    size_t: start 0U
+    size_t: count 0U
+    while: words[at] != 0
+        if: words[at] != 32 && (at = 0U || words[at - 1U] = 32)
+            count: count + 1U
+        at: at + 1U
+    ---
+    list: (cast: (@@: char) c.calloc(count + 1U, sizeof(@: char)))
+    if: list = 0
+        return: 1
+    at: 0U
+    count: 0U
+    while: words[at] != 0
+        start: at
+        while: words[at] != 0 && words[at] != 32
+            at: at + 1U
+        ---
+        list[count]: lmx_graph_intern_in(state, (cast: (const: @: char) (words + start)), at - start)
+        if: list[count] = 0
+            return: 1
+        count: count + 1U
+        if: words[at] != 0
+            at: at + 1U
+        ---
+    ---
+    state\receivers: list
+    state\receivers_count: count
+    return: 0
+end: lmx_graph_receivers_in
+
 # The process's state, made on its first use: its own arena with the `text` region of the spellings (one array of 4096-byte
 # chunks; a chunk is never moved or released before the process), the index of the spellings, the graph records and the
 # words of the language the executors compare against (their canonical addresses, interned first). 0 without memory.
@@ -165,6 +203,8 @@ fn: lmx_graph_state () @: c.LmxGraphState
     if: state\w_call = 0 || state\w_var = 0
         return: 0
     if: state\w_int = 0 || state\w_plus = 0 || state\w_minus = 0 || state\w_star = 0 || state\w_slash = 0 || state\w_percent = 0 || state\w_at = 0 || state\w_deref = 0 || state\w_fn = 0 || state\w_sub = 0 || state\w_assign = 0 || state\w_return = 0
+        return: 0
+    if: lmx_graph_receivers_in(state) != 0
         return: 0
     \anchor: state
     return: state
@@ -1509,30 +1549,17 @@ end: lmx_graph_target
 
 # Is word (a canonical spelling, §4) a word of the language -- a receiver, a declaration word, a type word of the C door?
 # Its Frame is a statement of the language, never a named Structure: one the consumers do not execute (table, external,
-# receiveMessage) fails there explicitly instead of standing as inert data. The one list of the builder's input
-# boundary (lm_graph_data_head) and of the root's reading (lmx_graph_root_structure); the bytes are compared, nothing is
-# interned. 1 or 0.
+# receiveMessage) fails there explicitly instead of standing as inert data. The words were interned with the state
+# (lmx_graph_receivers_in); the canonical addresses are compared, as for every other word of the language (§6.2). 1 or 0.
 fn: lmx_graph_language_receiver (@: word char) int
-    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external sendMessage receiveMessage adopt length cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
-    size_t: at 0U
-    size_t: start 0U
-    size_t: k 0U
-    if: word = 0
+    @: state c.LmxGraphState lmx_graph_state()
+    size_t: i 0U
+    if: state = 0 || word = 0
         return: 0
-    while: words[at] != 0
-        start: at
-        while: words[at] != 0 && words[at] != 32
-            at: at + 1U
-        ---
-        k: 0U
-        while: start + k < at && word[k] = words[start + k]
-            k: k + 1U
-        ---
-        if: start + k = at && word[k] = 0
+    while: i < state\receivers_count
+        if: state\receivers[i] = word
             return: 1
-        if: words[at] != 0
-            at: at + 1U
-        ---
+        i: i + 1U
     ---
     return: 0
 end: lmx_graph_language_receiver

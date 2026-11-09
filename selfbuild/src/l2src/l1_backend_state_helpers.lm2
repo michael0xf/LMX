@@ -1285,7 +1285,7 @@ end: l1_imp_reset
 
 # Original: l1src/l1trans.lm1:5177
 fn: l1_hdr_mark_unit_emitted (const: (@: root c.LmP0Node); const: (@: path char)) int
-    @: hdr_emitted_array char (cast: (@: char) (@ c.l1_hdr_emitted))
+    @@: hdr_emitted_cell char (cast: (@@: char) (@ c.l1_hdr_emitted))
     @: hdr_emittedn_cell int (cast: (@: int) (@ c.l1_hdr_emittedn))
     @: field c.LmP0Field
     const: (@: source_node c.LmP0Node)
@@ -1310,7 +1310,7 @@ fn: l1_hdr_mark_unit_emitted (const: (@: root c.LmP0Node); const: (@: path char)
             if: name != 0
                 if: c.l1_ident_to_buf((cast: (@: char) nbuf_scratch\buffer), 64U, name) != 0
                     return: (cast: (int) (c.l1_error(path, source_node, "type name too long")))
-                if: c.l1_hdr_name_list_add(hdr_emitted_array, @ hdr_emittedn_cell[0], 2048U, (cast: (const: @: char) nbuf_scratch\buffer)) != 0
+                if: c.l1_hdr_name_list_add(hdr_emitted_cell, (cast: (@: size_t) (@ c.l1_hdr_emittedcap)), @ hdr_emittedn_cell[0], (cast: (const: @: char) nbuf_scratch\buffer)) != 0
                     return: (cast: (int) (c.l1_error(path, source_node, "too many header types")))
                 ---
             ---
@@ -1540,7 +1540,7 @@ end: l1_hdr_type_node_byval_name
 
 # Original: l1src/l1trans.lm1:6153
 fn: l1_hdr_field_node_deps_ready (const: (@: source_node c.LmP0Node)) int
-    @: hdr_emitted_array char (cast: (@: char) (@ c.l1_hdr_emitted))
+    @@: hdr_emitted_cell char (cast: (@@: char) (@ c.l1_hdr_emitted))
     @: hdr_emittedn_cell int (cast: (@: int) (@ c.l1_hdr_emittedn))
     @: field c.LmP0Field
     c.LmL1TextScratch64: dep_scratch
@@ -1560,7 +1560,7 @@ fn: l1_hdr_field_node_deps_ready (const: (@: source_node c.LmP0Node)) int
             field: field\next
         return: (cast: (int) (1))
     if: l1_hdr_field_byval_name(source_node, (cast: (@: char) dep_scratch\buffer), 64U) != 0
-        if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
+        if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
             return: (cast: (int) (0))
         ---
     ---
@@ -1569,7 +1569,7 @@ end: l1_hdr_field_node_deps_ready
 
 # Original: l1src/l1trans.lm1:6178
 fn: l1_hdr_field_first_unready (const: (@: source_node c.LmP0Node); @: dep char; size_t: cap) int
-    @: hdr_emitted_array char (cast: (@: char) (@ c.l1_hdr_emitted))
+    @@: hdr_emitted_cell char (cast: (@@: char) (@ c.l1_hdr_emitted))
     @: hdr_emittedn_cell int (cast: (@: int) (@ c.l1_hdr_emittedn))
     @: field c.LmP0Field
     if: source_node = 0 || c.l1_node_ignored(source_node) || dep = 0
@@ -1588,7 +1588,7 @@ fn: l1_hdr_field_first_unready (const: (@: source_node c.LmP0Node); @: dep char;
             field: field\next
         return: (cast: (int) (0))
     if: l1_hdr_field_byval_name(source_node, dep, cap) != 0
-        if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], dep) = 0
+        if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], dep) = 0
             return: (cast: (int) (1))
         ---
     ---
@@ -1613,7 +1613,7 @@ end: l1_hdr_struct_deps_ready
 
 # Original: l1src/l1trans.lm1:6216
 fn: l1_hdr_fnptr_deps_ready (const: (@: frame c.LmP0Frame); const: (@: path char)) int
-    @: hdr_emitted_array char (cast: (@: char) (@ c.l1_hdr_emitted))
+    @@: hdr_emitted_cell char (cast: (@@: char) (@ c.l1_hdr_emitted))
     @: hdr_emittedn_cell int (cast: (@: int) (@ c.l1_hdr_emittedn))
     @: name_node c.LmP0Node
     @: params_node c.LmP0Node
@@ -1627,7 +1627,7 @@ fn: l1_hdr_fnptr_deps_ready (const: (@: frame c.LmP0Frame); const: (@: path char
         while: field != 0
             if: c.l1_node_ignored(field\value) = 0
                 if: l1_hdr_field_byval_name((cast: (const: @: c.LmP0Node) field\value), (cast: (@: char) dep_scratch\buffer), 64U) != 0
-                    if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
+                    if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
                         return: (cast: (int) (0))
                     ---
                 ---
@@ -1636,7 +1636,7 @@ fn: l1_hdr_fnptr_deps_ready (const: (@: frame c.LmP0Frame); const: (@: path char
         ---
     ---
     if: l1_hdr_type_node_byval_name(ret_node, (cast: (@: char) dep_scratch\buffer), 64U) != 0
-        if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
+        if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
             return: (cast: (int) (0))
         ---
     ---
@@ -1659,7 +1659,7 @@ end: l1_hdr_cycle_msg
 
 # Original: l1src/l1trans.lm1:6256
 fn: l1_hdr_diagnose_cycle (const: (@: root c.LmP0Node); const: (@: path char)) int
-    @: hdr_emitted_array char (cast: (@: char) (@ c.l1_hdr_emitted))
+    @@: hdr_emitted_cell char (cast: (@@: char) (@ c.l1_hdr_emitted))
     @: hdr_emittedn_cell int (cast: (@: int) (@ c.l1_hdr_emittedn))
     @: field c.LmP0Field
     @: f2 c.LmP0Field
@@ -1682,7 +1682,7 @@ fn: l1_hdr_diagnose_cycle (const: (@: root c.LmP0Node); const: (@: path char)) i
             frame: source_node\as\frame
             name: c.l1_hdr_frame_name(frame)
             if: name != 0 && c.l1_ident_to_buf((cast: (@: char) a_scratch\buffer), 64U, name) = 0
-                if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], (cast: (const: @: char) a_scratch\buffer)) = 0
+                if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) a_scratch\buffer)) = 0
                     fields: c.l1_hdr_fields_structure(frame)
                     if: fields != 0
                         f2: fields\first_field
@@ -1701,12 +1701,12 @@ fn: l1_hdr_diagnose_cycle (const: (@: root c.LmP0Node); const: (@: path char)) i
             frame: source_node\as\frame
             if: c.l1_hdr_fnptr_parts(frame, @ name_node, @ params_node, @ ret_node) = 0
                 if: name_node\kind = c.LM_P0_NODE_ATOM && c.l1_ident_to_buf((cast: (@: char) a_scratch\buffer), 64U, name_node\as\atom) = 0
-                    if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], (cast: (const: @: char) a_scratch\buffer)) = 0
+                    if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) a_scratch\buffer)) = 0
                         if: params_node\kind = c.LM_P0_NODE_STRUCTURE
                             f2: params_node\as\structure\first_field
                             while: f2 != 0
                                 if: c.l1_node_ignored(f2\value) = 0 && l1_hdr_field_byval_name((cast: (const: @: c.LmP0Node) f2\value), (cast: (@: char) dep_scratch\buffer), 64U) != 0
-                                    if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
+                                    if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
                                         l1_hdr_cycle_msg((cast: (@: char) msg_scratch\buffer), 256U, (cast: (const: @: char) a_scratch\buffer), (cast: (const: @: char) dep_scratch\buffer))
                                         return: (cast: (int) (c.l1_error(path, source_node, (cast: (const: @: char) msg_scratch\buffer))))
                                     ---
@@ -1715,7 +1715,7 @@ fn: l1_hdr_diagnose_cycle (const: (@: root c.LmP0Node); const: (@: path char)) i
                             ---
                         ---
                         if: l1_hdr_type_node_byval_name(ret_node, (cast: (@: char) dep_scratch\buffer), 64U) != 0
-                            if: c.l1_hdr_name_list_has(hdr_emitted_array, hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
+                            if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
                                 l1_hdr_cycle_msg((cast: (@: char) msg_scratch\buffer), 256U, (cast: (const: @: char) a_scratch\buffer), (cast: (const: @: char) dep_scratch\buffer))
                                 return: (cast: (int) (c.l1_error(path, source_node, (cast: (const: @: char) msg_scratch\buffer))))
                             ---

@@ -3499,7 +3499,7 @@ end: l1_hdr_emit_predef_includes
 # Original remaining L1-to-C source: l1src/l1trans.lm1:233
 fn: l1_emit_header_unit (@: out c.FILE; const: (@: root c.LmP0Node); const: (@: in_path char); const: (@: unit_id char)) int
     @: hdr_emitting_cell int (cast: (@: int) (@ c.l1_hdr_emitting))
-    @: hdr_emitted_array char (cast: (@: char) (@ c.l1_hdr_emitted))
+    @@: hdr_emitted_cell char (cast: (@@: char) (@ c.l1_hdr_emitted))
     @: hdr_emittedn_cell int (cast: (@: int) (@ c.l1_hdr_emittedn))
     @: field c.LmP0Field
     const: (@: source_node c.LmP0Node)
@@ -3587,7 +3587,7 @@ fn: l1_emit_header_unit (@: out c.FILE; const: (@: root c.LmP0Node); const: (@: 
                 return: (cast: (int) (c.l1_error((cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node)), (cast: (const: @: char) ("enum missing name")))))
             if: c.l1_emit_hdr_enum((cast: (@: c.FILE) (out)), (cast: (const: @: c.LmP0Frame) (source_node\as\frame)), (cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node))) != 0
                 return: (cast: (int) (1))
-            if: c.l1_hdr_name_list_add((cast: (@: char) (hdr_emitted_array)), (cast: (@: int) (@ hdr_emittedn_cell[0])), (cast: (size_t) (2048U)), (cast: (const: @: char) (nbuf_scratch\buffer))) != 0
+            if: c.l1_hdr_name_list_add(hdr_emitted_cell, (cast: (@: size_t) (@ c.l1_hdr_emittedcap)), (cast: (@: int) (@ hdr_emittedn_cell[0])), (cast: (const: @: char) (nbuf_scratch\buffer))) != 0
                 return: (cast: (int) (c.l1_error((cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node)), (cast: (const: @: char) ("too many header types")))))
             ---
         ---
@@ -3603,12 +3603,12 @@ fn: l1_emit_header_unit (@: out c.FILE; const: (@: root c.LmP0Node); const: (@: 
                 name: c.l1_hdr_frame_name((cast: (const: @: c.LmP0Frame) (source_node\as\frame)))
                 if: name = 0 || c.l1_ident_to_buf((cast: (@: char) (nbuf_scratch\buffer)), (cast: (size_t) (64U)), (cast: (const: @: c.LmP0Text) (name))) != 0
                     return: (cast: (int) (c.l1_error((cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node)), (cast: (const: @: char) ("struct missing name")))))
-                if: c.l1_hdr_name_list_has((cast: (@: char) (hdr_emitted_array)), (cast: (int) (hdr_emittedn_cell[0])), (cast: (const: @: char) (nbuf_scratch\buffer))) = 0
+                if: c.l1_hdr_name_list_has((cast: (@: char) (hdr_emitted_cell[0])), (cast: (int) (hdr_emittedn_cell[0])), (cast: (const: @: char) (nbuf_scratch\buffer))) = 0
                     remaining: remaining + 1
                     if: c.l1_hdr_struct_deps_ready((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), (cast: (const: @: char) (in_path))) != 0
                         if: l1_emit_hdr_struct_def((cast: (@: c.FILE) (out)), (cast: (const: @: c.LmP0Frame) (source_node\as\frame)), (cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node))) != 0
                             return: (cast: (int) (1))
-                        if: c.l1_hdr_name_list_add((cast: (@: char) (hdr_emitted_array)), (cast: (@: int) (@ hdr_emittedn_cell[0])), (cast: (size_t) (2048U)), (cast: (const: @: char) (nbuf_scratch\buffer))) != 0
+                        if: c.l1_hdr_name_list_add(hdr_emitted_cell, (cast: (@: size_t) (@ c.l1_hdr_emittedcap)), (cast: (@: int) (@ hdr_emittedn_cell[0])), (cast: (const: @: char) (nbuf_scratch\buffer))) != 0
                             return: (cast: (int) (c.l1_error((cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node)), (cast: (const: @: char) ("too many structs")))))
                         progress: 1
                     ---
@@ -3618,12 +3618,12 @@ fn: l1_emit_header_unit (@: out c.FILE; const: (@: root c.LmP0Node); const: (@: 
                 name: c.l1_hdr_frame_name((cast: (const: @: c.LmP0Frame) (source_node\as\frame)))
                 if: name = 0 || c.l1_ident_to_buf((cast: (@: char) (nbuf_scratch\buffer)), (cast: (size_t) (64U)), (cast: (const: @: c.LmP0Text) (name))) != 0
                     return: (cast: (int) (c.l1_error((cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node)), (cast: (const: @: char) ("fnptr missing name")))))
-                if: c.l1_hdr_name_list_has((cast: (@: char) (hdr_emitted_array)), (cast: (int) (hdr_emittedn_cell[0])), (cast: (const: @: char) (nbuf_scratch\buffer))) = 0
+                if: c.l1_hdr_name_list_has((cast: (@: char) (hdr_emitted_cell[0])), (cast: (int) (hdr_emittedn_cell[0])), (cast: (const: @: char) (nbuf_scratch\buffer))) = 0
                     remaining: remaining + 1
                     if: c.l1_hdr_fnptr_deps_ready((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), (cast: (const: @: char) (in_path))) != 0
                         if: c.l1_emit_hdr_fnptr((cast: (@: c.FILE) (out)), (cast: (const: @: c.LmP0Frame) (source_node\as\frame)), (cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node))) != 0
                             return: (cast: (int) (1))
-                        if: c.l1_hdr_name_list_add((cast: (@: char) (hdr_emitted_array)), (cast: (@: int) (@ hdr_emittedn_cell[0])), (cast: (size_t) (2048U)), (cast: (const: @: char) (nbuf_scratch\buffer))) != 0
+                        if: c.l1_hdr_name_list_add(hdr_emitted_cell, (cast: (@: size_t) (@ c.l1_hdr_emittedcap)), (cast: (@: int) (@ hdr_emittedn_cell[0])), (cast: (const: @: char) (nbuf_scratch\buffer))) != 0
                             return: (cast: (int) (c.l1_error((cast: (const: @: char) (in_path)), (cast: (const: @: c.LmP0Node) (source_node)), (cast: (const: @: char) ("too many header types")))))
                         progress: 1
                     ---

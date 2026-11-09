@@ -1341,22 +1341,35 @@ fn: l1_hdr_name_list_has (@: tab char; int: n; const: (@: name char)) int
     return: (cast: (int) (0))
 end: l1_hdr_name_list_has
 
-# Original: l1src/l1trans.lm1:5571
-fn: l1_hdr_name_list_add (@: tab char; @: n int; size_t: cap; const: (@: name char)) int
+# Original: l1src/l1trans.lm1:5571. The list of names tab[0] -- n[0] of them, each ended by its NUL, in cap[0] bytes --
+# gets name unless it holds it already; its room grows to the names a unit's headers really declare (slice 341: the
+# fixed 2048 bytes held about 130 type names, too few for a header unit whose predefs reach the kernel's graph and the
+# frontend's headers together). 0, or 1 without memory.
+fn: l1_hdr_name_list_add (@@: tab char; @: cap size_t; @: n int; const: (@: name char)) int
     size_t: used 0U
     size_t: len 0U
+    size_t: room 0U
+    @: grown char 0
     int: i 0
     if: name = 0
         return: (cast: (int) (1))
-    if: l1_hdr_name_list_has(tab, n[0], name) != 0
+    if: l1_hdr_name_list_has(tab[0], n[0], name) != 0
         return: (cast: (int) (0))
     while: i < n[0]
-        used: used + c.strlen(tab + used) + 1U
+        used: used + c.strlen(tab[0] + used) + 1U
         i: i + 1
     len: c.strlen(name)
-    if: used + len + 1U >= cap
-        return: (cast: (int) (1))
-    c.memcpy(tab + used, name, len + 1U)
+    if: tab[0] = 0 || used + len + 1U > cap[0]
+        room: cap[0] * 2U
+        if: room < used + len + 1U + 2048U
+            room: used + len + 1U + 2048U
+        grown: (cast: (@: char) c.realloc((cast: (@: void) tab[0]), room))
+        if: grown = 0
+            return: (cast: (int) (1))
+        tab[0]: grown
+        cap[0]: room
+    ---
+    c.memcpy(tab[0] + used, name, len + 1U)
     n[0]: n[0] + 1
     return: (cast: (int) (0))
 end: l1_hdr_name_list_add

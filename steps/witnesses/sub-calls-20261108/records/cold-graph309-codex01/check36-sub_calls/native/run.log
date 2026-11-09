@@ -1,0 +1,125 @@
+GRAPH-BEFORE-BEGIN
+sub: add (int: delta 2) (
+    int: sum 0
+)
+    finally: (sum (sum + 10))
+    sum: (sum + delta)
+end: add
+add:
+add
+int: first ((add \ var) \ sum)
+add: 3
+int: second ((add \ var) \ sum)
+call: add
+int: third ((add \ var) \ sum)
+Other:
+    int: sum 100
+end: Other
+call: add Other
+int: other_sum (Other \ sum)
+int: own_sum ((add \ var) \ sum)
+sub: early (int: x) (
+    int: value 0
+)
+    finally: (value (value + 10))
+    value: x
+    if: (x > 0) (return)
+    value: 99
+end: early
+early: 5
+int: early_value ((early \ var) \ value)
+sub: normal () (
+    int: late
+)
+    late: 7
+    int: late
+    finally: (late (late + 1))
+end: normal
+normal:
+int: normal_value ((normal \ var) \ late)
+fn: wrapper () int (
+    int: total 4
+)
+    capture:
+    sub: capture () (
+        int: seen 0
+    )
+        seen: total
+        total: (total + 1)
+    end: capture
+    return: ((((capture \ var) \ seen) * 10) + total)
+end: wrapper
+int: nested_value (wrapper)
+sub: outer () (
+    int: trace 0
+)
+    finally: (trace (trace + 1))
+    finally: (return)
+    trace: 2
+end: outer
+outer:
+int: outer_trace ((outer \ var) \ trace)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: add (int: delta 2) (
+    int: sum 37
+)
+    finally: (sum (sum + 10))
+    sum: (sum + delta)
+end: add
+add:
+add
+int: first 12
+add: 3
+int: second 25
+call: add
+int: third 37
+Other:
+    int: sum 112
+end: Other
+call: add Other
+int: other_sum 112
+int: own_sum 37
+sub: early (int: x) (
+    int: value 15
+)
+    finally: (value (value + 10))
+    value: x
+    if: (x > 0) (return)
+    value: 99
+end: early
+early: 5
+int: early_value 15
+sub: normal () (
+    int: late
+)
+    late: 7
+    int: late
+    finally: (late (late + 1))
+end: normal
+normal:
+int: normal_value 8
+fn: wrapper () int (
+    int: total 4
+)
+    capture:
+    sub: capture () (
+        int: seen 4
+    )
+        seen: total
+        total: (total + 1)
+    end: capture
+    return: ((((capture \ var) \ seen) * 10) + total)
+end: wrapper
+int: nested_value 44
+sub: outer () (
+    int: trace 3
+)
+    finally: (trace (trace + 1))
+    finally: (return)
+    trace: 2
+end: outer
+outer:
+int: outer_trace 3
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

@@ -6,7 +6,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 318 entries.
+are historical. The current input manifest has 322 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -68,6 +68,13 @@ published before activation-exit cleanup and again afterwards. A transfer or fai
 it and does not omit outer cleanups. Native emits these paths directly; traversal state is not retained in the graph.
 42 execution checks and19 graph-mutation checks passed. Named targets, throws/catch, stop/yield, other types and
 the complete activation/codec/selfbuild migration remain open. [Current evidence](../steps/witnesses/finally-20261108/notes.md).
+
+The current graph36/tool21/rt28 adds sub through the same clean-graph callable path: args/var/body, with no return
+part. Root and nested calls, defaults, explicit code/data, dynamic inputs, fallthrough, bare return and finally use
+the shared activation and publication rules. A sub used as a number is refused before argument effects.
+42 execution checks, two result-refusal checks and19 graph-mutation checks passed.
+[Sources, receipts and limits](../steps/witnesses/sub-calls-20261108/notes.md). This does not complete fm, other
+primitive/result types, full admission, exceptions, graph-state operations or §§8/8a.
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

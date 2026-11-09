@@ -123,6 +123,7 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_at: lmx_graph_intern_in(state, "@", 1U)
     state\w_deref: lmx_graph_intern_in(state, "\\", 1U)
     state\w_fn: lmx_graph_intern_in(state, "fn", 2U)
+    state\w_sub: lmx_graph_intern_in(state, "sub", 3U)
     state\w_return: lmx_graph_intern_in(state, "return", 6U)
     state\w_call: lmx_graph_intern_in(state, "call", 4U)
     state\w_var: lmx_graph_intern_in(state, "var", 3U)
@@ -150,7 +151,7 @@ fn: lmx_graph_state () @: c.LmxGraphState
         return: 0
     if: state\w_call = 0 || state\w_var = 0
         return: 0
-    if: state\w_int = 0 || state\w_plus = 0 || state\w_minus = 0 || state\w_star = 0 || state\w_slash = 0 || state\w_percent = 0 || state\w_at = 0 || state\w_deref = 0 || state\w_fn = 0 || state\w_return = 0
+    if: state\w_int = 0 || state\w_plus = 0 || state\w_minus = 0 || state\w_star = 0 || state\w_slash = 0 || state\w_percent = 0 || state\w_at = 0 || state\w_deref = 0 || state\w_fn = 0 || state\w_sub = 0 || state\w_return = 0
         return: 0
     \anchor: state
     return: state
@@ -482,22 +483,39 @@ end: lmx_graph_named
 
 # ---- Reading and writing a place (§3.2) ---------------------------------------------------------------------------
 
-# A callable is an ordinary Lmx whose written head is fn and whose four visible parts are Lmx. The physical region
-# supplies the kinds; there is no method tag or saved callable descriptor.
+# Callable parts stay ordinary named Lmx children. fn has args/return/var/body; sub has args/var/body.
+# The written head and address-typed parts determine the role, without a saved callable descriptor.
 fn: lmx_graph_method (@: g c.LmxGraph; @: code c.Lmx) int
     @: state c.LmxGraphState lmx_graph_state()
+    @: head char 0
     size_t: i 1U
-    if: state = 0 || lmx_graph_kind(g, (cast: (@: void) code)) != 4 || lmx_graph_count(code) != 5U
+    size_t: n 0U
+    if: state = 0 || lmx_graph_kind(g, (cast: (@: void) code)) != 4
         return: 0
-    if: lmx_graph_word_text(g, lmx_graph_get(code, 0U)) != state\w_fn
+    n: lmx_graph_count(code)
+    head: lmx_graph_word_text(g, lmx_graph_get(code, 0U))
+    if: (head != state\w_fn || n != 5U) && (head != state\w_sub || n != 4U)
         return: 0
-    while: i < 5U
+    while: i < n
         if: lmx_graph_kind(g, lmx_graph_get(code, i)) != 4
             return: 0
         i: i + 1U
     ---
     return: 1
 end: lmx_graph_method
+
+fn: lmx_graph_has_result (@: g c.LmxGraph; @: code c.Lmx) int
+    @: state c.LmxGraphState lmx_graph_state()
+    return: (cast: (int) (lmx_graph_method(g, code) != 0 && lmx_graph_word_text(g, lmx_graph_get(code, 0U)) = state\w_fn))
+end: lmx_graph_has_result
+
+fn: lmx_graph_method_var (@: code c.Lmx) @: c.Lmx
+    return: (cast: (@: c.Lmx) lmx_graph_get(code, lmx_graph_count(code) - 2U))
+end: lmx_graph_method_var
+
+fn: lmx_graph_method_body (@: code c.Lmx) @: c.Lmx
+    return: (cast: (@: c.Lmx) lmx_graph_get(code, lmx_graph_count(code) - 1U))
+end: lmx_graph_method_body
 
 # Shared address-typed reads for graph fields and activation arguments.
 fn: lmx_graph_value_int (@: g c.LmxGraph; @: value void; @: out int) int
@@ -623,8 +641,8 @@ fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell v
             result: 1
         # The method's executable body and requirement parts are explicit Lmx children. Own data stays data.
         i: 1U
-        while: i < 5U && result = 0
-            if: i != 3U
+        while: i < lmx_graph_count(code) && result = 0
+            if: i != lmx_graph_count(code) - 2U
                 if: slot != 0 && c.lmx_arena_ref_cell(code, i) = slot
                     result: 1
                 if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) lmx_graph_get(code, i))) != 0
@@ -798,11 +816,11 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
     return: 0
 end: lmx_graph_dump_token
 
-# Render the explicit fn parts without presenting their named containers as ordinary data declarations.
+# Render the explicit callable parts without presenting their named containers as ordinary data declarations.
 fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: depth) int
     @: args c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 1U))
     @: result c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 2U))
-    @: vars c.Lmx (cast: (@: c.Lmx) lmx_graph_get(method, 3U))
+    @: vars c.Lmx lmx_graph_method_var(method)
     @: name char lmx_graph_name_of(g, (cast: (@: void) method))
     @: formal void 0
     @: declaration c.Lmx 0
@@ -810,7 +828,7 @@ fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: d
     int: kind 0
     if: name = 0
         return: 1
-    c.fprintf(f, "fn: %s (", name)
+    c.fprintf(f, "%s: %s (", lmx_graph_word_text(g, lmx_graph_get(method, 0U)), name)
     while: i < lmx_graph_count(args)
         if: i != 0U
             c.fputs("; ", f)
@@ -831,9 +849,13 @@ fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: d
         ---
         i: i + 1U
     ---
-    c.fputs(") ", f)
-    if: lmx_graph_dump_token(g, lmx_graph_get(result, 0U), f) != 0
-        return: 1
+    c.fputs(")", f)
+    if: lmx_graph_has_result(g, method) != 0
+        c.fputs(" ", f)
+        if: lmx_graph_dump_token(g, lmx_graph_get(result, 0U), f) != 0
+            return: 1
+        ---
+    ---
     if: lmx_graph_count(vars) != 0U
         c.fputs(" (\n", f)
         if: lmx_graph_dump_at(g, vars, f, depth + 1) != 0
@@ -842,7 +864,7 @@ fn: lmx_graph_dump_method (@: g c.LmxGraph; @: method c.Lmx; @: f c.FILE; int: d
         c.fputs(")", f)
     ---
     c.fputs("\n", f)
-    if: lmx_graph_dump_at(g, (cast: (@: c.Lmx) lmx_graph_get(method, 4U)), f, depth + 1) != 0
+    if: lmx_graph_dump_at(g, lmx_graph_method_body(method), f, depth + 1) != 0
         return: 1
     lmx_graph_dump_indent(f, depth)
     c.fprintf(f, "end: %s\n", name)

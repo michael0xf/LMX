@@ -70,7 +70,7 @@ fn: lmx_graph_work_capture (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
         return: 0
     row: lmx_graph_work_row(frame, name)
     if: row != 0
-        if: row\cell = 0 && frame\data != c.lmx_graph_get(frame\code, 3U)
+        if: row\cell = 0 && frame\data != c.lmx_graph_method_var(frame\code)
             return: 3
         return: 0
     # An ordinary code/data call admits only directly used data fields, independent of their physical order.
@@ -125,7 +125,7 @@ fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
     if: row != 0
         if: row\slot = (cast: (size_t) -1)
             return: 3
-        if: row\cell != 0 || frame\data = c.lmx_graph_get(frame\code, 3U)
+        if: row\cell != 0 || frame\data = c.lmx_graph_method_var(frame\code)
             return: 0
         return: 3
     if: slot >= c.lmx_graph_count(frame\data)
@@ -282,8 +282,8 @@ fn: lmx_graph_work_open_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: 
     if: frame = 0 || active = 0 || active\code != code
         return: 5
     if: c.lmx_graph_method(g, code) != 0
-        model: (cast: (@: c.Lmx) c.lmx_graph_get(code, 3U))
-        body: (cast: (@: c.Lmx) c.lmx_graph_get(code, 4U))
+        model: (cast: (@: c.Lmx) c.lmx_graph_method_var(code))
+        body: (cast: (@: c.Lmx) c.lmx_graph_method_body(code))
     else:
         model: (cast: (@: c.Lmx) c.lmx_graph_field(g, (cast: (@: void) code), state\w_var))
     ---
@@ -348,7 +348,7 @@ fn: lmx_graph_work_open_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: 
 end: lmx_graph_work_open_data
 
 fn: lmx_graph_work_open (@: g c.LmxGraph; @: code c.Lmx; @: frame c.LmxGraphFrame) int
-    return: lmx_graph_work_open_data(g, code, (cast: (@: c.Lmx) c.lmx_graph_get(code, 3U)), frame)
+    return: lmx_graph_work_open_data(g, code, (cast: (@: c.Lmx) c.lmx_graph_method_var(code)), frame)
 end: lmx_graph_work_open
 
 # A bare int name reads the current working value before caller bindings and lexical graph data. Explicit paths
@@ -491,12 +491,12 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
     ---
     while: c.lmx_graph_kind(g, (cast: (@: void) current)) = 4
         if: c.lmx_graph_method(g, current) != 0
-            part: (cast: (@: c.Lmx) c.lmx_graph_get(current, 4U))
+            part: (cast: (@: c.Lmx) c.lmx_graph_method_body(current))
             slot: c.lmx_graph_named(g, part, name)
             value: c.lmx_graph_get(part, slot)
             if: c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
                 return: value
-            part: (cast: (@: c.Lmx) c.lmx_graph_get(current, 3U))
+            part: (cast: (@: c.Lmx) c.lmx_graph_method_var(current))
             slot: c.lmx_graph_named(g, part, name)
             if: slot < c.lmx_graph_count(part)
                 return: c.lmx_graph_get(part, slot)
@@ -521,8 +521,13 @@ fn: lmx_graph_call_shape (@: g c.LmxGraph; @: code c.Lmx; size_t: actuals) int
         return: 5
     args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
     result: (cast: (@: c.Lmx) c.lmx_graph_get(code, 2U))
-    if: actuals > c.lmx_graph_count(args) || c.lmx_graph_count(result) != 1U || c.lmx_graph_word_text(g, c.lmx_graph_get(result, 0U)) != state\w_int
+    if: actuals > c.lmx_graph_count(args)
         return: 5
+    if: c.lmx_graph_has_result(g, code) != 0
+        if: c.lmx_graph_count(result) != 1U || c.lmx_graph_word_text(g, c.lmx_graph_get(result, 0U)) != state\w_int
+            return: 5
+        ---
+    ---
     while: i < c.lmx_graph_count(args)
         if: c.lmx_graph_kind(g, c.lmx_graph_get(args, i)) != 1
             return: 5
@@ -579,7 +584,7 @@ fn: lmx_graph_admit_paths (@: g c.LmxGraph; @: code c.Lmx; @: name char; @: mode
     int: status 0
     if: c.lmx_graph_kind(g, model) != 4 || c.lmx_graph_kind(g, candidate) != 4
         return: 4
-    status: c.lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) c.lmx_graph_get(code, 4U)))
+    status: c.lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) c.lmx_graph_method_body(code)))
     while: at < count && status = 0
         current: queue[at]
         at: at + 1U
@@ -656,6 +661,11 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             i: i + 1U
             continue
         head: c.lmx_graph_word_text(g, raw)
+        if: head = state\w_return
+            if: c.lmx_graph_has_result(g, code) != 0
+                return: 5
+            flow[0]: head
+            return: 0
         if: head = state\w_break || head = state\w_continue || head = state\w_redo
             flow[0]: head
             return: 0
@@ -767,11 +777,11 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             return: 0
         if: head = state\w_return
             if: n = 1U
-                if: c.lmx_graph_method(g, code) != 0
+                if: c.lmx_graph_has_result(g, code) != 0
                     return: 5
                 ---
             else:
-                if: c.lmx_graph_method(g, code) = 0
+                if: c.lmx_graph_has_result(g, code) = 0
                     return: 5
                 status: lmx_graph_eval(g, code, statement, 1U, n, out)
             ---
@@ -833,13 +843,13 @@ fn: lmx_graph_method_run (@: g c.LmxGraph; @: code c.Lmx; @: out int) int
     @: flow char 0
     int: status 0
     if: c.lmx_graph_method(g, code) != 0
-        body: (cast: (@: c.Lmx) c.lmx_graph_get(code, 4U))
+        body: (cast: (@: c.Lmx) c.lmx_graph_method_body(code))
     status: lmx_graph_block(g, code, body, 0U, c.lmx_graph_count(body), 0, out, @ flow)
     if: status != 0
         return: status
     if: flow != 0 && flow != state\w_return
         return: 5
-    if: c.lmx_graph_method(g, code) != 0 && flow != state\w_return
+    if: c.lmx_graph_has_result(g, code) != 0 && flow != state\w_return
         return: 5
     return: 0
 end: lmx_graph_method_run
@@ -895,7 +905,7 @@ fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: ac
 end: lmx_graph_invoke_data
 
 fn: lmx_graph_invoke (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: out int) int
-    return: lmx_graph_invoke_data(g, code, (cast: (@: c.Lmx) c.lmx_graph_get(code, 3U)), actuals, count, out)
+    return: lmx_graph_invoke_data(g, code, (cast: (@: c.Lmx) c.lmx_graph_method_var(code)), actuals, count, out)
 end: lmx_graph_invoke
 
 fn: lmx_graph_eval_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: code c.Lmx; @: out int) int
@@ -1075,6 +1085,8 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
         return: c.lmx_graph_value_int(g, c.lmx_arena_pointer_void_read(value), out)
     value: lmx_graph_resolve(g, scope, word)
     if: c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+        if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) value)) = 0
+            return: 5
         return: lmx_graph_eval_call(g, scope, expression, (cast: (@: c.Lmx) value), out)
     if: count = 1U
         return: lmx_graph_eval_number(g, scope, c.lmx_graph_get(expression, 0U), out)
@@ -1106,6 +1118,9 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
     if: head = state\w_call
         return: lmx_graph_eval_explicit_call(g, root, statement)
+    cell: lmx_graph_resolve(g, root, head)
+    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) cell)) != 0
+        return: lmx_graph_eval_call(g, root, statement, (cast: (@: c.Lmx) cell), @ value)
     if: n < 2U || head = 0
         return: 5
     if: head = state\w_at
@@ -1208,7 +1223,7 @@ fn: lmx_graph_call_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; int: sho
         return: 5
     if: shorthand != 0
         if: c.lmx_graph_method(g, code) != 0
-            data: (cast: (@: c.Lmx) c.lmx_graph_get(code, 3U))
+            data: (cast: (@: c.Lmx) c.lmx_graph_method_var(code))
         else:
             slot: c.lmx_graph_named(g, code, state\w_var)
             data: (cast: (@: c.Lmx) c.lmx_graph_get(code, slot))

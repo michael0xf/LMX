@@ -62,6 +62,11 @@ value is held before cleanup; dirty fields publish before activation-exit cleanu
 failure inside a cleanup neither reruns it nor omits outer cleanups. Native emits these paths directly; registration
 state lives only in the current traversal/call. All42 execution and19 graph-mutation checks passed. Named targets,
 throws/catch, stop/yield, other types and the complete activation/codec/selfbuild migration remain open.
+The [graph36/tool21/rt28 continuation](../steps/witnesses/sub-calls-20261108/notes.md) brings sub into the shared path:
+the word sub and args/var/body parts, with no return part. Root and nested calls, defaults, explicit code/data,
+dynamic inputs, fallthrough, bare return and finally use the same activation and publication rules.
+Using sub as a number is refused before argument effects. All42 execution checks, two result-refusal checks
+and19 graph-mutation checks passed. fm, other types, full admission, exceptions, graph-state operations and §§8/8a remain open.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

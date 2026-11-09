@@ -1,0 +1,60 @@
+sub: add (int: delta 2) (
+    int: sum 37
+)
+    finally: (sum (sum + 10))
+    sum: (sum + delta)
+end: add
+add:
+add
+int: first 12
+add: 3
+int: second 25
+call: add
+int: third 37
+Other:
+    int: sum 112
+end: Other
+call: add Other
+int: other_sum 112
+int: own_sum 37
+sub: early (int: x) (
+    int: value 15
+)
+    finally: (value (value + 10))
+    value: x
+    if: (x > 0) (return)
+    value: 99
+end: early
+early: 5
+int: early_value 15
+sub: normal () (
+    int: late
+)
+    late: 7
+    int: late
+    finally: (late (late + 1))
+end: normal
+normal:
+int: normal_value 8
+fn: wrapper () int (
+    int: total 4
+)
+    capture:
+    sub: capture () (
+        int: seen 4
+    )
+        seen: total
+        total: (total + 1)
+    end: capture
+    return: ((((capture \ var) \ seen) * 10) + total)
+end: wrapper
+int: nested_value 44
+sub: outer () (
+    int: trace 3
+)
+    finally: (trace (trace + 1))
+    finally: (return)
+    trace: 2
+end: outer
+outer:
+int: outer_trace 3

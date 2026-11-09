@@ -1,13 +1,12 @@
-# Slice 332: g is the Structure merge copies from the Structure the declaration of f created in this traversal,
-# not a function -- a function is the Structure the receiver fn creates (kernel §3.4: the result role marks it, not
-# a Structure with similar parts; the author 2026-11-09: `fn: g merge(f)`, slice 333).
-# The statement `g(1; 2)` has two operands and no operation: the interpreter answers 2.
+# Slice 333: g is the function `fn: g merge(f)` creates at the root. The statements `g(1; 2)` and `g(3; 4)` (in pair)
+# apply it with two actuals, `g(b := 7; a := 6)` binds them by name: f is never called (f_calls 0, f_last 0), g's own
+# var counts three calls and keeps the last 67.
 fn: f (int: a; int: b) int (int: calls 0; int: last 0)
     calls: calls + 1
     last: a * 10 + b
     return: last
 end: f
-g: merge(f)
+fn: g merge(f)
 g(1; 2)
 fn: pair (int: x) int
     g(3; 4)

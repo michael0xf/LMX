@@ -1,0 +1,19 @@
+# Slice 333 (the author 2026-11-09: `fn: prepared`, "в любой момент можем подставить заготовленную структуру ресиверу
+# fn и это будет объявлением функции в namespace"): prepared is an ordinary Structure in code with the field name and
+# the other arguments of fn; `fn: prepared` supplies them by their names, and the receiver creates the function triple
+# in the namespace of this traversal, where the traversal reaches it. Its var is the written var (calls) completed by the
+# own fields of the body (last), by the one constructor of every form; prepared stays as written.
+int: k 2
+prepared:
+    name: triple
+    args: (int: a)
+    return: int
+    var: (int: calls 0)
+    body: (calls: calls + 1; int: last a; return: last * 3 + k)
+end: prepared
+fn: prepared
+k: 4
+int: r1 triple(5)
+int: r2 triple(2)
+int: c1 triple\var\calls
+int: c2 triple\var\last

@@ -1,0 +1,41 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus333
+GRAPH-BEFORE-BEGIN
+int: k 2
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: ((a * 10) + k)
+end: f1
+fn:
+    g
+    merge: f1
+end: fn
+k: 5
+int: r1 (f1 1)
+int: r2 (g 1)
+int: r3 (g 2)
+int: c1 ((f1 \ var) \ calls)
+int: c2 ((g \ var) \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: k 5
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: ((a * 10) + k)
+end: f1
+fn:
+    g
+    merge: f1
+end: fn
+k: 5
+int: r1 15
+int: r2 15
+int: r3 25
+int: c1 1
+int: c2 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+EXIT=0

@@ -1,0 +1,49 @@
+GRAPH-BEFORE-BEGIN
+int: k 2
+prepared:
+    name: triple
+    args:
+        int: a
+    end: args
+    return: int
+    var:
+        int: calls 0
+    end: var
+    body:
+        calls: (calls + 1)
+        int: last a
+        return: ((last * 3) + k)
+    end: body
+end: prepared
+fn: prepared
+k: 4
+int: r1 (triple 5)
+int: r2 (triple 2)
+int: c1 ((triple \ var) \ calls)
+int: c2 ((triple \ var) \ last)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: k 4
+prepared:
+    name: triple
+    args:
+        int: a
+    end: args
+    return: int
+    var:
+        int: calls 0
+    end: var
+    body:
+        calls: (calls + 1)
+        int: last a
+        return: ((last * 3) + k)
+    end: body
+end: prepared
+fn: prepared
+k: 4
+int: r1 19
+int: r2 10
+int: c1 2
+int: c2 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

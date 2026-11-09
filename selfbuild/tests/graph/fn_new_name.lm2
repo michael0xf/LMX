@@ -1,0 +1,22 @@
+# Slice 333 (the author 2026-11-09: `fn: new_name merge(f1, f2)`): the name is given apart -- written, not evaluated --;
+# merge composes an ordinary Structure from the parts of two created functions (f2 is a descriptor without a body, so
+# the parts args and var are composed and the body is f1's), and fn creates from it the function g in the namespace of
+# this traversal. f1 and f2 have no field name: the name is the receiver's argument. g takes two arguments where f1
+# takes one; g's var is the merged var completed by the own fields of the body (seen), by the one constructor of every
+# form; f1 and f2 stay as written, and their counters stay theirs.
+int: k 2
+fn: f1 (int: a) int (int: calls 0)
+    calls: calls + 1
+    int: seen a
+    return: a * 10 + k
+end: f1
+fn: f2 (int: a; int: b) int
+fn: g merge(f1, f2)
+k: 5
+int: r1 f1(1)
+int: r2 g(1; 2)
+int: r3 g(3; 4)
+int: c1 f1\var\calls
+int: c2 g\var\calls
+int: s1 f1\var\seen
+int: s2 g\var\seen

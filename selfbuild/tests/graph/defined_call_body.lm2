@@ -1,13 +1,11 @@
-# Slice 332: g is the Structure merge copies from the Structure the declaration of f1 created in this traversal,
-# not a function -- a function is the Structure the receiver fn creates (kernel §3.4: the result role marks it, not
-# a Structure with similar parts; the author 2026-11-09: `fn: g merge(f1)`, slice 333).
-# The statement `g(a)` in twice writes an int into the Structure g, refused: the interpreter answers 4.
+# Slice 333: g is the function `fn: g merge(f1)` creates at the root; twice, declared at the root, applies it in a
+# statement and in its result: r = g(1) + 1 = 16 with k 5, f1 never called (c1 0), g twice (c2 2).
 int: k 2
 fn: f1 (int: a) int (int: calls 0)
     calls: calls + 1
     return: a * 10 + k
 end: f1
-g: merge(f1)
+fn: g merge(f1)
 fn: twice (int: a) int
     g(a)
     return: g(a) + 1

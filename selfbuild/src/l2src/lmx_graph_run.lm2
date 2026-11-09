@@ -1030,9 +1030,19 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
                 status: lmx_graph_eval_number(g, code, raw, @ number)
             i: i + 1U
             continue
-        # A declaration of fn or sub created its Structure in this traversal when its block was entered
-        # (lmx_graph_space_declarations); the var part of a Structure is its data; a named Structure of the root stands.
-        if: head = state\w_fn || head = state\w_sub || head = state\w_var
+        # A declaration of fn or sub with written arguments created its Structure in this traversal when its block was
+        # entered (lmx_graph_space_declarations); the receiver applied to arguments the traversal computes creates it
+        # here, where the root reaches it (lmx_graph_fn_apply) -- in a body or an inline block that is open (5). The var
+        # part of a Structure is its data; a named Structure of the root stands.
+        if: head = state\w_fn || head = state\w_sub
+            if: lmx_graph_fn_written(g, statement) = 0
+                if: mode != 1
+                    return: 5
+                status: lmx_graph_fn_apply(g, code, i)
+            ---
+            i: i + 1U
+            continue
+        if: head = state\w_var
             i: i + 1U
             continue
         if: head = state\w_fm
@@ -1639,9 +1649,12 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
         return: lmx_graph_eval_explicit_call(g, root, statement)
     # The unit's C-door declarations (`include: "<stdio.h>"`, `predef: "l2src/x.h.lm1"`) stand: they tell a
     # translation which C headers and generated declarations the unit's machine code uses; the root runs nothing for them.
-    # A declaration of fn or sub created its Structure when the traversal began.
-    if: head = state\w_include || head = state\w_predef || head = state\w_fn || head = state\w_sub
+    if: head = state\w_include || head = state\w_predef
         return: 0
+    # A declaration of fn or sub with written arguments created its Structure when the traversal began; the receiver
+    # applied to arguments the traversal computes creates it now (lmx_graph_fn_apply).
+    if: head = state\w_fn || head = state\w_sub
+        return: lmx_graph_fn_apply(g, root, index)
     if: head = state\w_fm
         return: 5
     cell: lmx_graph_resolve(g, root, head)
@@ -2129,11 +2142,21 @@ fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @
 end: lmx_graph_merge_copy
 
 # A named field of a later operand written into the slot of the result it names, as at an assignment: an int place takes
-# the field's int and the same cell is written (§3.2). 4 for a field without an int; 5 when the slot holds no int place
-# (replacing a Structure or a reference slot is open).
+# the field's int and the same cell is written (§3.2); a word place takes a later word. 4 for a field without an int; 5
+# when the slot holds no int or word place (replacing a Structure or a reference slot is open, except the composed parts
+# of a callable, lmx_graph_merge_level).
 fn: lmx_graph_merge_write (@: g c.LmxGraph; @: result c.Lmx; size_t: slot; @: value void) int
+    @: word void 0
+    @: name char 0
     int: kind c.lmx_graph_kind(g, c.lmx_graph_get(result, slot))
     int: number 0
+    # A word place takes the later word: a new word cell named as the place (a word cell holds its spelling, §4).
+    if: kind = 2 && c.lmx_graph_kind(g, value) = 2
+        name: c.lmx_graph_slot_name(g, result, slot)
+        word: c.lmx_graph_word_of(g, c.lmx_graph_word_text(g, value))
+        if: word = 0 || (name != 0 && c.lmx_graph_name_address(g, word, name) != 0) || c.lmx_graph_put(result, slot, word) != 0
+            return: 4
+        return: 0
     if: kind != 1 && kind != 3
         return: 5
     if: c.lmx_graph_value_int(g, value, @ number) != 0
@@ -2173,49 +2196,37 @@ end: lmx_graph_merge_alias
 # A copy with written names or callables takes their needed lexical ancestors along, whole, through the same map up to
 # parent 0, and R's parent is the copy of the model's parent; a copy without them resolves no name through a parent, so R
 # has none (parent 0, which is no arena-root object). The place of execution never gives one. The operands stay
-# unchanged. 0 and R in out; 4 for an operand that is no Structure or a refused write; 5 for an open form.
-fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out void) int
-    c.LmxCopyMap: map
-    @@: work c.Lmx 0
+# unchanged. When the model is the Structure of fn or sub, its parts that later operands give as Structures are
+# composed recursively by the same rules (lmx_graph_merge_level). 0 and R in out; 4 for an operand that is no Structure
+# or a refused write; 5 for an open form.
+fn: lmx_graph_merge_level (@: g c.LmxGraph; @: map c.LmxCopyMap; @@@: work c.Lmx; @: count size_t; @: cap size_t; @@@: nested c.Lmx; @: ncount size_t; @: ncap size_t; @@: values void; size_t: n; @@: out void) int
     @@: names char 0
     @@: first void 0
+    @@: parts void 0
     @: from_k size_t 0
     @: from_j size_t 0
+    @: composed int 0
     @: model c.Lmx 0
     @: operand c.Lmx 0
     @: result c.Lmx 0
-    @: child c.Lmx 0
     @: copy void 0
     @: held void 0
+    @: part void 0
     @: name char 0
-    size_t: count 0U
-    size_t: cap 0U
-    size_t: at 0U
     size_t: m 0U
     size_t: room 0U
     size_t: total 0U
     size_t: i 0U
     size_t: j 0U
     size_t: k 0U
+    size_t: p 0U
     size_t: slot 0U
     int: kind 0
-    int: mapped 0
-    int: chain 0
+    int: callable 0
     int: status 0
-    if: g = 0 || values = 0 || out = 0 || n = 0U
-        return: 5
     out[0]: 0
-    # An operand that is a reference to a Structure or a callable stands for its target, in both consumers (the operand
-    # array is this evaluation's).
-    while: i < n
-        values[i]: c.lmx_graph_target(g, values[i])
-        i: i + 1U
-    ---
-    i: 0U
-    status: lmx_graph_merge_check(g, values, n, @ chain)
-    if: status != 0
-        return: status
     model: (cast: (@: c.Lmx) values[0])
+    callable: c.lmx_graph_fn_result(g, values[0])
     m: c.lmx_graph_count(model)
     room: m
     k: 1U
@@ -2225,13 +2236,17 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     ---
     names: (cast: (@@: char) c.calloc(room + 1U, sizeof(@: char)))
     first: (cast: (@@: void) c.calloc(room + 1U, sizeof(@: void)))
+    parts: (cast: (@@: void) c.calloc(n + 1U, sizeof(@: void)))
     from_k: (cast: (@: size_t) c.calloc(room + 1U, sizeof(size_t)))
     from_j: (cast: (@: size_t) c.calloc(room + 1U, sizeof(size_t)))
-    if: names = 0 || first = 0 || from_k = 0 || from_j = 0
+    composed: (cast: (@: int) c.calloc(room + 1U, sizeof(int)))
+    if: names = 0 || first = 0 || parts = 0 || from_k = 0 || from_j = 0 || composed = 0
         c.free((cast: (@: void) names))
         c.free((cast: (@: void) first))
+        c.free((cast: (@: void) parts))
         c.free((cast: (@: void) from_k))
         c.free((cast: (@: void) from_j))
+        c.free((cast: (@: void) composed))
         return: 4
     # The field set of R before its fixed Lmx, with the field that first provides each slot -- its value and its position
     # (operand, field), local data of this merge: the model's slots, then each named field of a later operand that names no
@@ -2271,103 +2286,187 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
         ---
         k: k + 1U
     ---
-    if: status = 0 && c.lmx_copy_map_init(@ map) != 0
-        status: 4
-    else:
-        if: status = 0
-            mapped: 1
-            result: c.lmx_graph_lmx(g, 0, total)
-            if: result = 0
+    if: status = 0
+        result: c.lmx_graph_lmx(g, 0, total)
+        if: result = 0
+            status: 4
+    ---
+    k: 0U
+    while: k < n && status = 0
+        if: c.lmx_copy_map_put(map, values[k], (cast: (@: void) result)) != 0
+            status: 4
+        k: k + 1U
+    ---
+    # R's int places first: a slot whose first source is an int place gets its copy.
+    i: 0U
+    while: i < total && status = 0
+        kind: c.lmx_graph_kind(g, first[i])
+        if: kind = 1 || kind = 3
+            status: lmx_graph_merge_copy(g, map, first[i], work, count, cap, @ copy)
+            if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
                 status: 4
-            # One operand: R is the copy of that root, so a named root's copy keeps its name row with the same name pointer
-            # (kernel §5.1), and a copied lexical ancestor's slot of the root answers that name at R -- the body's own
-            # name finds the copy. A new place for R is then a named reference to it (lmx_graph_define). The name of a
-            # composition of several roots is the part asked of the author (fn/return), not decided here.
-            if: status = 0 && n = 1U
-                name: c.lmx_graph_name_of(g, values[0])
-                if: name != 0 && c.lmx_graph_name_address(g, (cast: (@: void) result), name) != 0
-                    status: 4
-                ---
-            ---
-            k: 0U
-            while: k < n && status = 0
-                if: c.lmx_copy_map_put(@ map, values[k], (cast: (@: void) result)) != 0
-                    status: 4
-                k: k + 1U
-            ---
-            # R's int places first: a slot whose first source is an int place gets its copy.
-            i: 0U
-            while: i < total && status = 0
-                kind: c.lmx_graph_kind(g, first[i])
-                if: kind = 1 || kind = 3
-                    status: lmx_graph_merge_copy(g, @ map, first[i], @ work, @ count, @ cap, @ copy)
-                    if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
-                        status: 4
-                    ---
-                ---
-                i: i + 1U
-            ---
-            # Every later field naming an int place of R it does not provide is that place in the map.
-            k: 1U
-            while: k < n && status = 0
-                operand: (cast: (@: c.Lmx) values[k])
-                j: 0U
-                while: j < c.lmx_graph_count(operand) && status = 0
-                    held: c.lmx_graph_get(operand, j)
-                    slot: c.lmx_graph_named(g, result, c.lmx_graph_slot_name(g, operand, j))
-                    kind: c.lmx_graph_kind(g, held)
-                    if: slot < total && (from_k[slot] != k || from_j[slot] != j) && (kind = 1 || kind = 3)
-                        kind: c.lmx_graph_kind(g, c.lmx_graph_get(result, slot))
-                        if: kind = 1 || kind = 3
-                            status: lmx_graph_merge_alias(g, @ map, held, c.lmx_graph_get(result, slot))
-                        ---
-                    ---
-                    j: j + 1U
-                ---
-                k: k + 1U
-            ---
-            # The other slots by their first source: references, Structures and new fields now reach merged places.
-            i: 0U
-            while: i < total && status = 0
-                if: c.lmx_graph_get(result, i) = 0 && first[i] != 0
-                    status: lmx_graph_merge_copy(g, @ map, first[i], @ work, @ count, @ cap, @ copy)
-                    if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
-                        status: 4
-                    ---
-                ---
-                i: i + 1U
-            ---
-            # The writes of later fields into the slots they name but do not provide, in operand order.
-            k: 1U
-            while: k < n && status = 0
-                operand: (cast: (@: c.Lmx) values[k])
-                j: 0U
-                while: j < c.lmx_graph_count(operand) && status = 0
-                    held: c.lmx_graph_get(operand, j)
-                    i: 0U
-                    name: c.lmx_graph_slot_name(g, operand, j)
-                    while: i < total && names[i] != name
-                        i: i + 1U
-                    ---
-                    if: i < total && (from_k[i] != k || from_j[i] != j)
-                        status: lmx_graph_merge_write(g, result, i, held)
-                    ---
-                    j: j + 1U
-                ---
-                k: k + 1U
             ---
         ---
+        i: i + 1U
+    ---
+    # Every later field naming an int place of R it does not provide is that place in the map.
+    k: 1U
+    while: k < n && status = 0
+        operand: (cast: (@: c.Lmx) values[k])
+        j: 0U
+        while: j < c.lmx_graph_count(operand) && status = 0
+            held: c.lmx_graph_get(operand, j)
+            slot: c.lmx_graph_named(g, result, c.lmx_graph_slot_name(g, operand, j))
+            kind: c.lmx_graph_kind(g, held)
+            if: slot < total && (from_k[slot] != k || from_j[slot] != j) && (kind = 1 || kind = 3)
+                kind: c.lmx_graph_kind(g, c.lmx_graph_get(result, slot))
+                if: kind = 1 || kind = 3
+                    status: lmx_graph_merge_alias(g, map, held, c.lmx_graph_get(result, slot))
+                ---
+            ---
+            j: j + 1U
+        ---
+        k: k + 1U
+    ---
+    # The other slots by their first source: references, Structures and new fields now reach merged places. A part of the
+    # Structure of fn or sub (lmx_graph_fn_result) that is a Structure -- directly or through a reference -- and that later
+    # operands give again as Structures is the composition of those parts by this same level, through the same map (the
+    # book, composition of the structural parts: `merge(f1; f2)` with a descriptor f2 gives the signature of both and the
+    # body of f1); the slot keeps the model's form (a named reference stays one, to the composition).
+    i: 0U
+    while: i < total && status = 0
+        if: c.lmx_graph_get(result, i) = 0 && first[i] != 0
+            p: 0U
+            if: callable != 0 && c.lmx_graph_kind(g, c.lmx_graph_target(g, first[i])) = 4
+                parts[0]: c.lmx_graph_target(g, first[i])
+                p: 1U
+                k: 1U
+                while: k < n
+                    operand: (cast: (@: c.Lmx) values[k])
+                    slot: c.lmx_graph_named(g, operand, names[i])
+                    if: slot < c.lmx_graph_count(operand) && (from_k[i] != k || from_j[i] != slot) && c.lmx_graph_kind(g, c.lmx_graph_target(g, c.lmx_graph_get(operand, slot))) = 4
+                        parts[p]: c.lmx_graph_target(g, c.lmx_graph_get(operand, slot))
+                        p: p + 1U
+                    ---
+                    k: k + 1U
+                ---
+            ---
+            if: p > 1U
+                composed[i]: 1
+                status: lmx_graph_merge_level(g, map, work, count, cap, nested, ncount, ncap, parts, p, @ part)
+                if: status = 0 && c.lmx_graph_scan_add(nested, ncount, ncap, (cast: (@: c.Lmx) parts[0])) != 0
+                    status: 4
+                if: status = 0 && c.lmx_graph_kind(g, first[i]) = 6
+                    part: c.lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) part))
+                    if: part = 0
+                        status: 4
+                    ---
+                ---
+                if: status = 0 && names[i] != 0 && c.lmx_graph_name_address(g, part, names[i]) != 0
+                    status: 4
+                if: status = 0 && c.lmx_graph_put(result, i, part) != 0
+                    status: 4
+                ---
+            else:
+                status: lmx_graph_merge_copy(g, map, first[i], work, count, cap, @ copy)
+                if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
+                    status: 4
+            ---
+        ---
+        i: i + 1U
+    ---
+    # The writes of later fields into the slots they name but do not provide, in operand order; a composed part was
+    # given by its composition.
+    k: 1U
+    while: k < n && status = 0
+        operand: (cast: (@: c.Lmx) values[k])
+        j: 0U
+        while: j < c.lmx_graph_count(operand) && status = 0
+            held: c.lmx_graph_get(operand, j)
+            i: 0U
+            name: c.lmx_graph_slot_name(g, operand, j)
+            while: i < total && names[i] != name
+                i: i + 1U
+            ---
+            if: i < total && (from_k[i] != k || from_j[i] != j) && composed[i] = 0
+                status: lmx_graph_merge_write(g, result, i, held)
+            ---
+            j: j + 1U
+        ---
+        k: k + 1U
     ---
     c.free((cast: (@: void) names))
     c.free((cast: (@: void) first))
+    c.free((cast: (@: void) parts))
     c.free((cast: (@: void) from_k))
     c.free((cast: (@: void) from_j))
-    # The lexical chain of a copy with written names or callables: the model's parent and the source parent of every
-    # copied Structure are copied too, as ordinary Lmx through the same map, whole -- their fields, references and cycles
-    # -- up to parent 0 (the book :1205-1207; kernel §6.4). Not the whole arena: the reachable closure of what is copied.
-    # The source's mutable ancestors are never borrowed, and the place of this merge gives no parent.
+    c.free((cast: (@: void) composed))
+    if: status = 0
+        out[0]: (cast: (@: void) result)
+    return: status
+end: lmx_graph_merge_level
+
+fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out void) int
+    c.LmxCopyMap: map
+    @@: work c.Lmx 0
+    @@: nested c.Lmx 0
+    @: model c.Lmx 0
+    @: operand c.Lmx 0
+    @: result c.Lmx 0
+    @: child c.Lmx 0
+    @: copy void 0
+    @: name char 0
+    size_t: count 0U
+    size_t: cap 0U
+    size_t: ncount 0U
+    size_t: ncap 0U
+    size_t: at 0U
+    size_t: i 0U
+    size_t: j 0U
+    int: mapped 0
+    int: chain 0
+    int: status 0
+    if: g = 0 || values = 0 || out = 0 || n = 0U
+        return: 5
+    out[0]: 0
+    # An operand that is a reference to a Structure or a callable stands for its target, in both consumers (the operand
+    # array is this evaluation's).
+    while: i < n
+        values[i]: c.lmx_graph_target(g, values[i])
+        i: i + 1U
+    ---
+    status: lmx_graph_merge_check(g, values, n, @ chain)
+    if: status != 0
+        return: status
+    model: (cast: (@: c.Lmx) values[0])
+    if: c.lmx_copy_map_init(@ map) != 0
+        return: 4
+    mapped: 1
+    status: lmx_graph_merge_level(g, @ map, @ work, @ count, @ cap, @ nested, @ ncount, @ ncap, values, n, @ copy)
+    result: (cast: (@: c.Lmx) copy)
+    # One operand: R is the copy of that root, so a named root's copy keeps its name row with the same name pointer
+    # (kernel §5.1), and a copied lexical ancestor's slot of the root answers that name at R -- the body's own name
+    # finds the copy. A new place for R is then a named reference to it (lmx_graph_define). A composition of several
+    # roots is named by what receives it (`fn: new_name merge(f1, f2)`), not here.
+    if: status = 0 && n = 1U
+        name: c.lmx_graph_name_of(g, values[0])
+        if: name != 0 && c.lmx_graph_name_address(g, (cast: (@: void) result), name) != 0
+            status: 4
+        ---
+    ---
+    # The lexical chain of a copy with written names or callables: the model's parent, the parent of the model of every
+    # composed part and the source parent of every copied Structure are copied too, as ordinary Lmx through the same map,
+    # whole -- their fields, references and cycles -- up to parent 0 (the book :1205-1207; kernel §6.4). Not the whole
+    # arena: the reachable closure of what is copied. The source's mutable ancestors are never borrowed, and the place of
+    # this merge gives no parent.
     if: status = 0 && chain != 0 && model\parent != 0
         status: lmx_graph_merge_copy(g, @ map, (cast: (@: void) model\parent), @ work, @ count, @ cap, @ copy)
+    i: 0U
+    while: i < ncount && status = 0
+        if: chain != 0 && nested[i]\parent != 0
+            status: lmx_graph_merge_copy(g, @ map, (cast: (@: void) nested[i]\parent), @ work, @ count, @ cap, @ copy)
+        i: i + 1U
+    ---
     at: 0U
     while: at < count && status = 0
         operand: work[at]
@@ -2385,13 +2484,20 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
         at: at + 1U
     ---
     # Parent edges once every copy exists, a parent reached after its child included. R's parent is the copy of the
-    # model's parent when the chain was needed, otherwise none.
+    # model's parent when the chain was needed, otherwise none; a composed part's is the copy of its model's parent.
     at: 0U
     while: at < count && status = 0
         operand: work[at]
         child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand)))
         child\parent: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand\parent)))
         at: at + 1U
+    ---
+    i: 0U
+    while: i < ncount && status = 0
+        child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) nested[i])))
+        if: child != 0
+            child\parent: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) nested[i]\parent)))
+        i: i + 1U
     ---
     if: status = 0 && chain != 0
         child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) model\parent)))
@@ -2402,6 +2508,7 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     if: mapped != 0
         c.lmx_copy_map_dispose(@ map)
     c.free((cast: (@: void) work))
+    c.free((cast: (@: void) nested))
     if: status = 0
         out[0]: (cast: (@: void) result)
     return: status
@@ -2580,7 +2687,8 @@ end: lmx_graph_fn_own
 
 # The var of the Structure fn/sub creates: a new Lmx under it, named var, holding the copy of the fields of the written
 # var -- through one source -> copy map in which the written var is the new var, so that the places, references and
-# Structures of the written var keep their sharing, nesting and cycles in the copy (kernel §6.4) -- and then a new place
+# Structures of the written var keep their sharing, nesting and cycles in the copy, and the needed lexical ancestors of
+# what it reaches come along as in merge (kernel §6.4) -- and then a new place
 # without a value for every own field of the body that is no formal and no field of the written var. The set of fields is known before the Lmx is made; no initializer runs here
 # (they run at their written places). 0 and the var in out; 1 without memory; 4 or 5 for a written field whose copy is
 # refused or open (lmx_graph_merge_copy).
@@ -2594,6 +2702,7 @@ fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written
     @: child c.Lmx 0
     @: operand c.Lmx 0
     @: place void 0
+    @: source void (cast: (@: void) written)
     size_t: capacity 0U
     size_t: explicit 0U
     size_t: own 0U
@@ -2605,6 +2714,7 @@ fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written
     size_t: j 0U
     int: status 0
     int: mapped 0
+    int: chain 0
     out[0]: 0
     if: written != 0
         explicit: c.lmx_graph_count(written)
@@ -2612,8 +2722,13 @@ fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written
     names: (cast: (@@: char) c.calloc(capacity, sizeof(@: char)))
     if: names = 0
         return: 1
-    if: body != 0
-        status: lmx_graph_fn_own(g, (cast: (@: void) body), @ names, @ own, @ capacity)
+    # The own fields are those the statements of the body declare, whatever Structure holds them (the body of a written
+    # declaration is anonymous; the part body of a prepared Structure is its Frame `body: (...)`).
+    while: body != 0 && i < c.lmx_graph_count(body) && status = 0
+        status: lmx_graph_fn_own(g, c.lmx_graph_get(body, i), @ names, @ own, @ capacity)
+        i: i + 1U
+    ---
+    i: 0U
     while: i < own && status = 0
         if: c.lmx_graph_formal(g, args, names[i]) >= c.lmx_graph_count(args) && (written = 0 || c.lmx_graph_formal(g, written, names[i]) >= explicit)
             names[kept]: names[i]
@@ -2624,6 +2739,14 @@ fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written
     if: status = 0
         vars: c.lmx_graph_lmx(g, owner, explicit + kept)
         if: vars = 0 || c.lmx_graph_name_address(g, (cast: (@: void) vars), state\w_var) != 0
+            status: 1
+        ---
+    ---
+    # The used graph of the written var admits the copy and tells whether it resolves names through a lexical chain
+    # (written names or callables), as for merge (lmx_graph_merge_check).
+    if: status = 0 && explicit != 0
+        status: lmx_graph_merge_check(g, @ source, 1U, @ chain)
+        if: status = 4
             status: 1
         ---
     ---
@@ -2656,11 +2779,17 @@ fn: lmx_graph_fn_var (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written
                 status: 1
             j: j + 1U
         ---
+        # A copied Structure whose source parent lies outside the written var -- a Structure the var reaches by a
+        # reference -- takes that parent along when the copy resolves names through its chain: the parent is copied
+        # through the same map, whole, up to parent 0 (kernel §6.4, as lmx_graph_merge_values); the written var's own
+        # place in such a parent is the new var.
+        if: status = 0 && chain != 0 && operand\parent != 0
+            status: lmx_graph_merge_copy(g, @ map, (cast: (@: void) operand\parent), @ work, @ wcount, @ wcap, @ copy)
         at: at + 1U
     ---
     # Parent edges once every copy exists, as in merge: a copied Structure keeps the nesting of its source -- its parent is
-    # the copy of its source's parent, the written var's children the new var's --; a source parent outside the copied
-    # part gives none (the new var itself is under F, whose lexical chain it has).
+    # the copy of its source's parent, the written var's children the new var's --; a source parent is none only when the
+    # copy needs no chain (no written name or callable). The new var itself is under F, whose lexical chain it has.
     at: 0U
     while: at < wcount && status = 0
         operand: work[at]
@@ -2749,13 +2878,55 @@ fn: lmx_graph_fn_make (@: g c.LmxGraph; @: decl c.Lmx; @: name char; @: args c.L
     return: 0
 end: lmx_graph_fn_make
 
+# Is decl (a Frame named fn or sub) a declaration with written arguments -- a positional form of the receiver's contract
+# whose Structure arguments are anonymous Structures as written: fn [name, args, return], [name, args, return, body],
+# [name, args, return, var, body]; sub [name, args, body], [name, args, var, body]? Its Structure is created when its
+# block is entered (lmx_graph_space_declarations) and answers in the whole block (the book :435). A form whose arguments
+# the traversal computes -- the whole prepared Structure, a name with a Structure of the parts -- is applied where the
+# traversal reaches it (lmx_graph_fn_apply). 1 or 0.
+fn: lmx_graph_fn_written (@: g c.LmxGraph; @: decl c.Lmx) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: head char 0
+    @: part void 0
+    size_t: n 0U
+    size_t: first 2U
+    size_t: i 1U
+    if: g = 0 || state = 0 || c.lmx_graph_kind(g, (cast: (@: void) decl)) != 4
+        return: 0
+    head: c.lmx_graph_name_of(g, (cast: (@: void) decl))
+    n: c.lmx_graph_count(decl)
+    if: head = state\w_fn
+        if: n < 3U || n > 5U
+            return: 0
+        ---
+        first: 3U
+    else:
+        if: head != state\w_sub || n < 3U || n > 4U
+            return: 0
+        ---
+    ---
+    if: c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) != 2
+        return: 0
+    # args, and var and body after the result of fn: anonymous Structures as written.
+    while: i < n
+        if: i = 1U || i >= first
+            part: c.lmx_graph_get(decl, i)
+            if: c.lmx_graph_kind(g, part) != 4 || c.lmx_graph_name_of(g, part) != 0
+                return: 0
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: 1
+end: lmx_graph_fn_written
+
 # The receiver fn or sub applied to the arguments of its declaration Frame in the positions of its contract -- fn: [name,
 # args, return] (the interface descriptor), [name, args, return, body], [name, args, return, var, body]; sub: [name,
 # args, body], [name, args, var, body] --: the Structure it creates (lmx_graph_fn_make) answers the name in the block
 # scope of this traversal, then the declarations of its body answer theirs in the body's block. The receiver's other
 # forms -- the whole argument structure, and a name with a Structure of the parts (the author 2026-11-09: receivers with
-# different numbers of arguments have one name) -- are not executed by this slice (5). 0, 1 without memory, 5 for
-# another form.
+# different numbers of arguments have one name) -- are applied where the traversal reaches them (lmx_graph_fn_apply).
+# 0, 1 without memory, 5 for another form.
 fn: lmx_graph_space_declare (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: head char c.lmx_graph_name_of(g, (cast: (@: void) decl))
@@ -2810,8 +2981,10 @@ fn: lmx_graph_space_declare (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx) int
     return: status
 end: lmx_graph_space_declare
 
-# Every declaration Frame of fn or sub among the fields of a block creates its Structure in this traversal before the
-# block runs: the names of fn and sub are visible in both directions of their block (the book :435).
+# Every declaration Frame of fn or sub with written arguments (lmx_graph_fn_written) among the fields of a block creates
+# its Structure in this traversal before the block runs: the names of fn and sub are visible in both directions of their
+# block (the book :435). The receiver applied to arguments the traversal computes creates its Structure where the
+# traversal reaches it (lmx_graph_fn_apply), and the name answers from there on.
 fn: lmx_graph_space_declarations (@: g c.LmxGraph; @: block c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: value void 0
@@ -2821,12 +2994,138 @@ fn: lmx_graph_space_declarations (@: g c.LmxGraph; @: block c.Lmx) int
     while: i < c.lmx_graph_count(block) && status = 0
         value: c.lmx_graph_get(block, i)
         head: c.lmx_graph_name_of(g, value)
-        if: c.lmx_graph_kind(g, value) = 4 && (head = state\w_fn || head = state\w_sub)
+        if: c.lmx_graph_kind(g, value) = 4 && (head = state\w_fn || head = state\w_sub) && lmx_graph_fn_written(g, (cast: (@: c.Lmx) value)) != 0
             status: lmx_graph_space_declare(g, block, (cast: (@: c.Lmx) value))
         i: i + 1U
     ---
     return: status
 end: lmx_graph_space_declarations
+
+# The value a Structure gives for the part name of a receiver -- the one model of a Frame (§3.3), as at the root
+# (lmx_graph_root_structure): the field named name; a reference answers its target; a Frame `name: value` whose single
+# field is a value -- a word, an unnamed int, a reference, an unnamed Lmx -- answers that value; any other field (a
+# place, a word place, a named Structure of fields) answers itself. Whatever made the Structure -- written code, merge, a
+# function a receiver created -- it is read as it is. 0 when it has no field named name.
+fn: lmx_graph_fn_part (@: g c.LmxGraph; @: structure c.Lmx; @: name char) @: void
+    @: value void 0
+    @: field void 0
+    size_t: slot 0U
+    int: kind 0
+    if: g = 0 || structure = 0 || name = 0
+        return: 0
+    slot: c.lmx_graph_named(g, structure, name)
+    if: slot >= c.lmx_graph_count(structure)
+        return: 0
+    value: c.lmx_graph_get(structure, slot)
+    if: c.lmx_graph_kind(g, value) = 6
+        return: c.lmx_graph_target(g, value)
+    if: c.lmx_graph_kind(g, value) != 4 || c.lmx_graph_count((cast: (@: c.Lmx) value)) != 1U
+        return: value
+    field: c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)
+    kind: c.lmx_graph_kind(g, field)
+    if: kind = 6
+        return: c.lmx_graph_target(g, field)
+    if: kind = 2 || ((kind = 1 || kind = 4) && c.lmx_graph_name_of(g, field) = 0)
+        return: field
+    return: value
+end: lmx_graph_fn_part
+
+# The receiver fn or sub applied where the traversal reaches its Frame at field index of the root, to arguments the
+# traversal computes (the author 2026-11-09: "в любой момент можем подставить заготовленную структуру ресиверу fn и это
+# будет объявлением функции в namespace"): one argument -- the whole prepared Structure, whose fields give the
+# arguments name, args, return (fn), var and body (`fn: prepared`) --, or two -- the written name, which is not
+# evaluated, and a Structure of the parts (`fn: new_name merge(f1, f2)`; a field name of that Structure is an ordinary
+# field, not the name). Each part is read by lmx_graph_fn_part, whatever made the Structure; lmx_graph_fn_make creates F
+# as for a written declaration -- one constructor, its var by lmx_graph_fn_var (the parts as given, var completed by
+# the own fields of the body) -- and from here on the name answers it in this block. The written name is checked before
+# the Structure is evaluated; the evaluation is the expression's own, once. A declaration with written arguments created
+# its F when the block was entered (0 here). 0; 1 without memory; 3 for an unknown name; 4 for a name that already
+# answers in this block; 5 for a form this slice does not execute (another count of arguments, another field, no name,
+# args or result, a body or an inline block: a repeated activation would bind the name again).
+fn: lmx_graph_fn_apply (@: g c.LmxGraph; @: scope c.Lmx; size_t: index) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: space c.LmxGraphSpace c.lmx_graph_space()
+    @: w_name char c.lmx_graph_intern("name", 4U)
+    @: decl c.Lmx 0
+    @: parts c.Lmx 0
+    @: value void 0
+    @: word void 0
+    @: name char 0
+    @: head char 0
+    @: field char 0
+    @: args c.Lmx 0
+    @: result void 0
+    @: written c.Lmx 0
+    @: body c.Lmx 0
+    @: made c.Lmx 0
+    size_t: n 0U
+    size_t: i 0U
+    int: with_result 0
+    int: status 0
+    if: g = 0 || state = 0 || scope = 0 || w_name = 0 || index >= c.lmx_graph_count(scope)
+        return: 5
+    decl: (cast: (@: c.Lmx) c.lmx_graph_get(scope, index))
+    head: c.lmx_graph_name_of(g, (cast: (@: void) decl))
+    if: c.lmx_graph_kind(g, (cast: (@: void) decl)) != 4 || (head != state\w_fn && head != state\w_sub)
+        return: 5
+    if: lmx_graph_fn_written(g, decl) != 0
+        return: 0
+    if: space = 0 || space\root != scope
+        return: 5
+    n: c.lmx_graph_count(decl)
+    if: n != 1U && n != 2U
+        return: 5
+    if: n = 2U
+        name: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+        if: name = 0
+            return: 5
+        if: c.lmx_graph_space_find(scope, name) != 0
+            return: 4
+    ---
+    status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(decl, n - 1U), @ value)
+    if: status != 0
+        return: status
+    value: c.lmx_graph_target(g, value)
+    if: c.lmx_graph_kind(g, value) != 4
+        return: 5
+    parts: (cast: (@: c.Lmx) value)
+    # Every field of the Structure gives a part of this receiver's contract (sub has no result).
+    while: i < c.lmx_graph_count(parts)
+        field: c.lmx_graph_slot_name(g, parts, i)
+        if: field != w_name && field != state\w_args && field != state\w_var && field != state\w_body && (field != state\w_return || head != state\w_fn)
+            return: 5
+        i: i + 1U
+    ---
+    if: n = 1U
+        word: lmx_graph_fn_part(g, parts, w_name)
+        if: c.lmx_graph_kind(g, word) != 2
+            return: 5
+        name: c.lmx_graph_word_text(g, word)
+        if: name = 0
+            return: 5
+        if: c.lmx_graph_space_find(scope, name) != 0
+            return: 4
+    ---
+    args: (cast: (@: c.Lmx) lmx_graph_fn_part(g, parts, (cast: (@: char) state\w_args)))
+    written: (cast: (@: c.Lmx) lmx_graph_fn_part(g, parts, (cast: (@: char) state\w_var)))
+    body: (cast: (@: c.Lmx) lmx_graph_fn_part(g, parts, (cast: (@: char) state\w_body)))
+    if: head = state\w_fn
+        with_result: 1
+        result: lmx_graph_fn_part(g, parts, (cast: (@: char) state\w_return))
+        if: result = 0
+            return: 5
+    ---
+    if: args = 0
+        return: 5
+    status: lmx_graph_fn_make(g, decl, name, args, result, written, body, with_result, @ made)
+    if: status != 0
+        return: status
+    if: c.lmx_graph_space_put(scope, name, (cast: (@: void) made)) != 0
+        return: 1
+    if: body != 0
+        status: lmx_graph_space_declarations(g, body)
+    return: status
+end: lmx_graph_fn_apply
 
 # Does the named Lmx at field index of the root, reached now, stand for a named Structure (a data or code block) rather
 # than a statement? The one model of a Frame (grammar §2, the book :426, :443): its head is resolved now, in the

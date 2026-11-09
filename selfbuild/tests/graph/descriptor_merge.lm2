@@ -1,5 +1,12 @@
+# Slice 333: the descriptor f2, without a body, merged into f1 by the general rules of Structure (the author 2026-11-08):
+# the parts of the Structure of fn are composed -- args takes f2's default of b (7) into f1's formal b, return takes f2's
+# word -- and the body stays f1's. R is that ordinary Structure, data; `fn: g R` makes the function g of it: g(1) reads
+# b from the new signature (17) where f1(1) reads f1's (12). f1 and f2 stay as written.
 fn: f1 (int: a; int: b 2) int
     return: a * 10 + b
 end: f1
 fn: f2 (int: b 7) int
 R: merge(f1; f2)
+fn: g R
+int: r1 f1(1)
+int: r2 g(1)

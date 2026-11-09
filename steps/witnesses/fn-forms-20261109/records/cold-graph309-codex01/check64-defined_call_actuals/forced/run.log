@@ -1,0 +1,51 @@
+GRAPH-BEFORE-BEGIN
+fn: f (int: a; int: b) int (
+    int: calls 0
+    int: last 0
+)
+    calls: (calls + 1)
+    last: ((a * 10) + b)
+    return: last
+end: f
+fn:
+    g
+    merge: f
+end: fn
+g: 1 2
+fn: pair (int: x) int
+    g: 3 4
+    return: (x + 1)
+end: pair
+int: r (pair 5)
+g: (:= b 7) (:= a 6)
+int: f_calls ((f \ var) \ calls)
+int: f_last ((f \ var) \ last)
+int: g_calls ((g \ var) \ calls)
+int: g_last ((g \ var) \ last)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f (int: a; int: b) int (
+    int: calls 0
+    int: last 0
+)
+    calls: (calls + 1)
+    last: ((a * 10) + b)
+    return: last
+end: f
+fn:
+    g
+    merge: f
+end: fn
+g: 1 2
+fn: pair (int: x) int
+    g: 3 4
+    return: (x + 1)
+end: pair
+int: r 6
+g: (:= b 7) (:= a 6)
+int: f_calls 0
+int: f_last 0
+int: g_calls 3
+int: g_last 67
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

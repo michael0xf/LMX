@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 373 entries.
+are historical. The current input manifest has 383 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -145,6 +145,12 @@ address; a field of the root is classified, and answers its name, from where the
 (`lmx_graph_space_reach`, in both consumers), so `r: h(3)` after `h: f` defines `r` by the call and `int: seen x`
 before `int: x 7` is refused as an unknown name; the `var` of a function is copied through one map keeping its nesting.
 70 graph-check runs passed.
+
+The current graph64/tool33/rt53 applies the receiver `fn` to computed arguments where the traversal of the root
+reaches it (the author 2026-11-09): `fn: prepared` (a whole prepared Structure) and `fn: new_name merge(f1, f2)` (a
+name and a Structure of the parts) create the function with the one constructor; `merge` of functions composes their
+parts `args` and `var`, keeping the body of `f1`. 73 graph-check runs passed.
+[Sources, receipts and limits](../steps/witnesses/fn-forms-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

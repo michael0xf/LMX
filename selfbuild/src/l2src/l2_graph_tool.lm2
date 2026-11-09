@@ -785,6 +785,24 @@ fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap) in
     return: 0
 end: lm_graph_emit_parents
 
+# The name a root application of fn or sub gives (lmx_graph_fn_apply), as far as the translation reads it: the written
+# name of the form with a Structure of the parts, or the name part of the prepared Structure the translation's namespace
+# answers by the written word (lmx_graph_fn_part); 0 when only the program knows it (a Structure an expression computes).
+fn: lm_graph_emit_fn_name (@: g c.LmxGraph; @: root c.Lmx; @: decl c.Lmx) @: char
+    @: value void 0
+    if: c.lmx_graph_count(decl) = 2U
+        return: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+    if: c.lmx_graph_count(decl) != 1U || c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) != 2
+        return: 0
+    value: c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))))
+    if: c.lmx_graph_kind(g, value) != 4
+        return: 0
+    value: c.lmx_graph_fn_part(g, (cast: (@: c.Lmx) value), c.lmx_graph_intern("name", 4U))
+    if: c.lmx_graph_kind(g, value) != 2
+        return: 0
+    return: c.lmx_graph_word_text(g, value)
+end: lm_graph_emit_fn_name
+
 # Is name in the emitter's declaration table: a place a definition or declaration of this code gives when it runs? 1 or 0.
 fn: lm_graph_emit_known (@@: decl_names char; size_t: decl_n; @: name char) int
     size_t: i 0U
@@ -1354,6 +1372,15 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                     decl_slots[decl_n]: i
                     decl_n: decl_n + 1U
                 ---
+                # A root application of fn or sub before the continuation gave its name (lmx_graph_fn_apply).
+                if: (head = state\w_fn || head = state\w_sub) && c.lmx_graph_fn_written(g, inner) = 0
+                    name: lm_graph_emit_fn_name(g, root, inner)
+                    if: name != 0
+                        decl_names[decl_n]: name
+                        decl_slots[decl_n]: i
+                        decl_n: decl_n + 1U
+                    ---
+                ---
             ---
         ---
         i: i + 1U
@@ -1392,8 +1419,22 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
             ---
             i: i + 1U
             continue
-        # A declaration of fn or sub created its Structure when the block was entered, in both namespaces.
+        # A declaration of fn or sub with written arguments created its Structure when the block was entered, in both
+        # namespaces. The receiver applied to arguments the program computes runs where the program reaches it: the code
+        # calls the kernel's application (lmx_graph_fn_apply), and the function it creates is interpreted -- the
+        # translation creates no Structure and no native code for it.
         if: head = state\w_fn || head = state\w_sub
+            if: c.lmx_graph_fn_written(g, inner) = 0
+                c.fprintf(f, "        if: lmx_graph_fn_apply(l2_g, lmx_call_code, %zuU) != 0\n            %s\n", i, leave_failure)
+                # The name it gives answers a function from here on when the program runs: a statement on it applies it,
+                # a field applying it is decided then (the declaration table, lm_graph_emit_defined).
+                name: lm_graph_emit_fn_name(g, root, inner)
+                if: name != 0
+                    decl_names[decl_n]: name
+                    decl_slots[decl_n]: i
+                    decl_n: decl_n + 1U
+                ---
+            ---
             i: i + 1U
             continue
         # A named Structure of the root answers its name from where the traversal reaches it (lmx_graph_space_reach),
@@ -1648,7 +1689,11 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 status: lm_graph_emit_number(g, f, code, body, i, temps, 0, 0, 0U, @ result)
             i: i + 1U
             continue
+        # A declaration of fn or sub with written arguments created its Structure when its block was entered; the receiver
+        # applied to computed arguments in a body or an inline block is open, as in the interpreter (5).
         if: head = state\w_fn || head = state\w_sub
+            if: c.lmx_graph_fn_written(g, statement) = 0
+                return: 5
             i: i + 1U
             continue
         if: head = state\w_fm
@@ -2233,6 +2278,60 @@ fn: lm_graph_mutation_report (const: (@: what char); int: ok) int
     return: 1
 end: lm_graph_mutation_report
 
+# The var of a created function reaches, by a reference, a Structure C whose lexical parent P lies outside the written
+# var (the review of 332R): the copy keeps that chain -- the copy of C has a copy of P for its parent, through the same
+# map (kernel §6.4), never the source's mutable P and never none --, and the sources stay as they were.
+fn: lm_graph_mutation_var_chain (@: g c.LmxGraph) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: outer c.Lmx 0
+    @: inner c.Lmx 0
+    @: written c.Lmx 0
+    @: args c.Lmx 0
+    @: body c.Lmx 0
+    @: decl c.Lmx 0
+    @: made c.Lmx 0
+    @: vars c.Lmx 0
+    @: copied c.Lmx 0
+    @: held void 0
+    @: kept void 0
+    @: link void 0
+    @: k void 0
+    @: word void 0
+    @: name char 0
+    @: field char 0
+    int: value 0
+    int: status 5
+    outer: c.lmx_graph_lmx(g, 0, 2U)
+    inner: c.lmx_graph_lmx(g, outer, 1U)
+    written: c.lmx_graph_lmx(g, 0, 1U)
+    args: c.lmx_graph_lmx(g, 0, 0U)
+    body: c.lmx_graph_lmx(g, 0, 0U)
+    decl: c.lmx_graph_lmx(g, 0, 0U)
+    k: c.lmx_graph_int(g, 7)
+    if: state = 0 || outer = 0 || inner = 0 || written = 0 || args = 0 || body = 0 || decl = 0 || k = 0
+        return: 1
+    link: c.lmx_graph_ref_lmx(g, inner)
+    if: link = 0 || c.lmx_graph_name(g, k, "k", 1U) != 0 || c.lmx_graph_name(g, (cast: (@: void) outer), "P", 1U) != 0 || c.lmx_graph_name(g, (cast: (@: void) inner), "C", 1U) != 0 || c.lmx_graph_name(g, link, "c", 1U) != 0
+        return: 1
+    if: c.lmx_graph_put(outer, 0U, k) != 0 || c.lmx_graph_put(outer, 1U, (cast: (@: void) inner)) != 0 || c.lmx_graph_put(inner, 0U, c.lmx_graph_word(g, "k", 1U)) != 0 || c.lmx_graph_put(written, 0U, link) != 0
+        return: 1
+    name: c.lmx_graph_intern("probe", 5U)
+    field: c.lmx_graph_intern("k", 1U)
+    word: c.lmx_graph_word(g, "int", 3U)
+    if: name = 0 || field = 0 || word = 0
+        return: 1
+    status: c.lmx_graph_fn_make(g, decl, name, args, word, written, body, 1, @ made)
+    if: status = 0
+        vars: c.lmx_graph_method_var(g, made)
+    if: vars != 0 && c.lmx_graph_count(vars) = 1U
+        held: c.lmx_graph_get(vars, 0U)
+        copied: (cast: (@: c.Lmx) c.lmx_graph_target(g, held))
+    ---
+    if: copied != 0 && copied\parent != 0
+        kept: c.lmx_graph_field(g, (cast: (@: void) copied\parent), field)
+    return: lm_graph_mutation_report("var-copy-keeps-the-lexical-chain-of-a-reached-structure", (cast: (int) (status = 0 && c.lmx_graph_kind(g, held) = 6 && copied != inner && copied\parent != 0 && copied\parent != outer && kept != k && c.lmx_graph_value_int(g, kept, @ value) = 0 && value = 7 && inner\parent = outer && c.lmx_graph_target(g, c.lmx_graph_get(written, 0U)) = (cast: (@: void) inner))))
+end: lm_graph_mutation_var_chain
+
 # Shared code, a data alias to its literal, and a cycle are ordinary Lmx slots. There is no retained reverse index.
 fn: lm_graph_mutation_check () int
     @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
@@ -2303,6 +2402,7 @@ fn: lm_graph_mutation_check () int
     fails: fails + lm_graph_mutation_report("operator-write-clears-both-not-unrelated-entry", (cast: (int) (status = 0 && a\native = 0 && b\native = 0 && fresh\native != 0)))
     status: c.lmx_graph_call(g, a)
     fails: fails + lm_graph_mutation_report("fresh-walk-reads-updated-operator", (cast: (int) (status = 0 && c.lmx_graph_read_int(g, a, 0U, @ value) = 0 && value = 16)))
+    fails: fails + lm_graph_mutation_var_chain(g)
     fails: fails + lm_graph_mutation_report("activation-state-discarded", (cast: (int) (arena\activation = 0)))
     c.lmx_graph_close(g)
     c.lmx_arena_release(arena)
@@ -2513,13 +2613,19 @@ end: lm_graph_emit_merge
 # table of its translation): its value, and so its kind -- an int, a Structure, a reference to a callable -- exists only
 # when the code runs. The place itself is found then by the kernel's resolution.
 fn: lm_graph_emit_defined (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: name char) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: statement c.Lmx 0
+    @: head char 0
     size_t: i 0U
-    if: name = 0 || decl_names = 0 || decl_slots = 0
+    if: state = 0 || name = 0 || decl_names = 0 || decl_slots = 0
         return: 0
     while: i < decl_n
         if: decl_names[i] = name
             statement: (cast: (@: c.Lmx) c.lmx_graph_get(root, decl_slots[i]))
+            # A function a root application of fn or sub creates when the code runs (lmx_graph_fn_apply).
+            head: c.lmx_graph_name_of(g, (cast: (@: void) statement))
+            if: head = state\w_fn || head = state\w_sub
+                return: 1
             return: (cast: (int) (c.lmx_graph_kind(g, (cast: (@: void) statement)) = 4 && c.lmx_graph_count(statement) = 1U && c.lmx_graph_name_of(g, (cast: (@: void) statement)) = name))
         i: i + 1U
     ---

@@ -1337,12 +1337,25 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
             c.fprintf(f, "@: %s int @%s\n", name, head)
             i: i + 1U
             continue
-        # A reference to a Structure or a callable: `@: name target`, the target by its own name (the book :441).
+        # A reference to a Structure or a callable: `@: name target`, the target by its own name (the book :441). A
+        # reference to an unnamed Structure (the part args or body of a merge copy) has no name to print: it prints as
+        # the block of that Structure under the reference's name, the text a prepared Structure has (`args:` ...).
         if: kind = 6
             name: lmx_graph_name_of(g, value)
             head: lmx_graph_name_of(g, lmx_graph_target(g, value))
-            if: name = 0 || head = 0
+            if: name = 0
                 return: 1
+            if: head = 0
+                if: lmx_graph_kind(g, lmx_graph_target(g, value)) != 4 || depth > 64
+                    return: 1
+                c.fprintf(f, "%s:\n", name)
+                if: lmx_graph_dump_at(g, (cast: (@: c.Lmx) lmx_graph_target(g, value)), f, depth + 1) != 0
+                    return: 1
+                lmx_graph_dump_indent(f, depth)
+                c.fprintf(f, "end: %s\n", name)
+                i: i + 1U
+                continue
+            ---
             c.fprintf(f, "@: %s %s\n", name, head)
             i: i + 1U
             continue
@@ -1360,8 +1373,14 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
                     return: 1
                 c.fprintf(f, "int: %s\n", name)
             else:
+                # A word; a named word place (the part return of a merge copy) as `name: word`.
                 if: kind = 2
-                    c.fprintf(f, "%s\n", lmx_graph_word_text(g, value))
+                    name: lmx_graph_name_of(g, value)
+                    if: name != 0
+                        c.fprintf(f, "%s: %s\n", name, lmx_graph_word_text(g, value))
+                    else:
+                        c.fprintf(f, "%s\n", lmx_graph_word_text(g, value))
+                    ---
                 else:
                     if: kind != 4
                         return: 1

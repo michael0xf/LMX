@@ -1,0 +1,43 @@
+GRAPH-BEFORE-BEGIN
+int: k 2
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: ((a * 10) + k)
+end: f1
+fn:
+    g
+    merge: f1
+end: fn
+fn: twice (int: a) int
+    g: a
+    return: ((g a) + 1)
+end: twice
+k: 5
+int: r (twice 1)
+int: c1 ((f1 \ var) \ calls)
+int: c2 ((g \ var) \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: k 5
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: ((a * 10) + k)
+end: f1
+fn:
+    g
+    merge: f1
+end: fn
+fn: twice (int: a) int
+    g: a
+    return: ((g a) + 1)
+end: twice
+k: 5
+int: r 16
+int: c1 0
+int: c2 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

@@ -1023,9 +1023,9 @@ end: lmx_graph_descriptor
 # The definition of a new place by the written field `name: value` of a root whose name is not known (the book,
 # composition of place and value :430-:443: the place is defined by its first field; `name: int: 5` and `int: name 5`
 # bind alike): the value, already evaluated once, gets its own place -- a new int cell for an int, a new int reference to
-# the same cell for a reference, the fresh Structure itself (a merge result) -- named by the field's head word and
-# published in the field's slot by the runtime write. A Structure that already has a name or a callable would make the
-# place a reference to that instance, which is open here (5). 0; 1 without memory or for another statement.
+# the same cell for a reference, the fresh Structure itself (a merge result, a copied callable included) -- named by the
+# field's head word and published in the field's slot by the runtime write. A Structure that already has a name would
+# make the place a reference to that instance, which is open here (5). 0; 1 without memory or for another statement.
 fn: lmx_graph_define (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value void) int
     @: statement void lmx_graph_get(root, index)
     @: name char 0
@@ -1045,7 +1045,7 @@ fn: lmx_graph_define (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value vo
         if: kind = 5
             place: lmx_graph_ref_int(g, c.lmx_arena_pointer_void_read(value))
         else:
-            if: kind != 4 || lmx_graph_name_of(g, value) != 0 || lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+            if: kind != 4 || lmx_graph_name_of(g, value) != 0
                 return: 5
             place: value
         ---
@@ -1054,3 +1054,18 @@ fn: lmx_graph_define (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value vo
         return: 1
     return: lmx_graph_write_slot(g, root, root, index, place)
 end: lmx_graph_define
+
+# The copy of a word primitive (kernel §6.4): a new cell of the WORD pool holding the same canonical address -- no search
+# of bytes, the spelling is already interned. 0 without memory.
+fn: lmx_graph_word_of (@: g c.LmxGraph; @: canon char) @: void
+    @: cell void 0
+    @@: wc char 0
+    if: g = 0 || canon = 0
+        return: 0
+    cell: c.lmx_arena_take(g\arena, sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_WORD)
+    if: cell = 0
+        return: 0
+    wc: (cast: (@@: char) cell)
+    \wc: canon
+    return: cell
+end: lmx_graph_word_of

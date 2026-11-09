@@ -1690,8 +1690,9 @@ end: lmx_graph_merge_literal
 
 # A bare operand of merge describing a structure: a Frame whose head word names no callable, such as `v: 9` for an
 # unknown v (the author 2026-11-08: such a Frame may simply describe a structure; expressions are structures in the tree
-# too). It is that structure, not a supply of a model slot. Its copy carries written names, which resolve through their
-# lexical chain, and that copy is open: both consumers refuse it with the form answer (5). 1 or 0.
+# too). It is that structure, not a supply of a model slot. Its fields are unnamed (the head word and the arguments), and
+# how unnamed fields compose is the open part asked of the author with the fn/return parts: both consumers refuse it with
+# the form answer (5). 1 or 0.
 fn: lmx_graph_merge_description (@: g c.LmxGraph; @: scope c.Lmx; @: raw void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: frame c.Lmx 0
@@ -1784,10 +1785,11 @@ fn: lmx_graph_merge_literal_put (@: g c.LmxGraph; @: literal c.Lmx; @: made c.Lm
     return: 0
 end: lmx_graph_merge_literal_put
 
-# The used graph of the operands admits the copy of this subset: int places, int references, data Structures and empty
-# slots. A written name (a word primitive) or a callable needs the lexical chain its names resolve through, and copying
-# that chain is open (5). 4 for an operand that is no Structure, or without memory. The visited set is this check's.
-fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n) int
+# The used graph of the operands admits the copy: int places, int references, written names (word primitives),
+# Structures -- callables included -- and empty slots; another primitive kind is open (5). A written name or a callable
+# resolves names through its lexical chain, so then chain is 1 and the copy takes the needed lexical ancestors along. 4 for
+# an operand that is no Structure, or without memory. The visited set is this check's.
+fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n; @: chain int) int
     @@: seen c.Lmx 0
     @: current c.Lmx 0
     @: value void 0
@@ -1797,17 +1799,14 @@ fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n) int
     size_t: i 0U
     int: kind 0
     int: status 0
+    chain[0]: 0
     while: i < n && status = 0
         kind: c.lmx_graph_kind(g, values[i])
         if: kind != 4
             status: 4
         else:
-            if: c.lmx_graph_method(g, (cast: (@: c.Lmx) values[i])) != 0
-                status: 5
-            else:
-                if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) values[i])) != 0
-                    status: 4
-                ---
+            if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) values[i])) != 0
+                status: 4
             ---
         ---
         i: i + 1U
@@ -1815,6 +1814,8 @@ fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n) int
     while: at < count && status = 0
         current: seen[at]
         at: at + 1U
+        if: c.lmx_graph_method(g, current) != 0
+            chain[0]: 1
         i: 0U
         while: i < c.lmx_graph_count(current) && status = 0
             value: c.lmx_graph_get(current, i)
@@ -1825,16 +1826,16 @@ fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n) int
                 ---
             else:
                 if: kind = 4
-                    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
-                        status: 5
-                    else:
-                        if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
-                            status: 4
-                        ---
+                    if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
+                        status: 4
                     ---
                 else:
-                    if: kind != 1 && value != 0
-                        status: 5
+                    if: kind = 2
+                        chain[0]: 1
+                    else:
+                        if: kind != 1 && value != 0
+                            status: 5
+                        ---
                     ---
                 ---
             ---
@@ -1884,11 +1885,18 @@ fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @
                 copy: c.lmx_graph_ref_int(g, target)
             ---
         else:
-            if: kind != 4 || c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
-                return: 5
-            copy: (cast: (@: void) c.lmx_graph_lmx(g, 0, c.lmx_graph_count((cast: (@: c.Lmx) value))))
-            if: copy != 0 && c.lmx_graph_scan_add(work, count, cap, (cast: (@: c.Lmx) value)) != 0
-                return: 4
+            if: kind = 2
+                copy: c.lmx_graph_word_of(g, c.lmx_graph_word_text(g, value))
+            else:
+                # A Structure, a callable included: a new Lmx of its count, filled from the work list. The new Lmx has no
+                # native entry; reusing one needs a proven compatible contract (L2 §13), so a copied callable is
+                # dispatched by the interpreter.
+                if: kind != 4
+                    return: 5
+                copy: (cast: (@: void) c.lmx_graph_lmx(g, 0, c.lmx_graph_count((cast: (@: c.Lmx) value))))
+                if: copy != 0 && c.lmx_graph_scan_add(work, count, cap, (cast: (@: c.Lmx) value)) != 0
+                    return: 4
+                ---
             ---
         ---
     ---
@@ -1945,9 +1953,10 @@ end: lmx_graph_merge_alias
 # Structure's parent is the copy of its parent where that was copied. The order makes merged places one place: R's int
 # places are copied first, then every later field naming one of them is that place in the map (lmx_graph_merge_alias),
 # and only then are references, Structures and new fields copied, so a reference reaches R's place in any field order.
-# The copied graph holds no written name or callable (lmx_graph_merge_check), so nothing in R resolves a name through a
-# lexical parent: R has none (parent 0, which is no arena-root object), and the place of execution gives it none. The
-# operands stay unchanged. 0 and R in out; 4 for an operand that is no Structure or a refused write; 5 for an open form.
+# A copy with written names or callables takes their needed lexical ancestors along, whole, through the same map up to
+# parent 0, and R's parent is the copy of the model's parent; a copy without them resolves no name through a parent, so R
+# has none (parent 0, which is no arena-root object). The place of execution never gives one. The operands stay
+# unchanged. 0 and R in out; 4 for an operand that is no Structure or a refused write; 5 for an open form.
 fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out void) int
     c.LmxCopyMap: map
     @@: work c.Lmx 0
@@ -1974,11 +1983,12 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     size_t: slot 0U
     int: kind 0
     int: mapped 0
+    int: chain 0
     int: status 0
     if: g = 0 || values = 0 || out = 0 || n = 0U
         return: 5
     out[0]: 0
-    status: lmx_graph_merge_check(g, values, n)
+    status: lmx_graph_merge_check(g, values, n, @ chain)
     if: status != 0
         return: status
     model: (cast: (@: c.Lmx) values[0])
@@ -2118,6 +2128,12 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     c.free((cast: (@: void) first))
     c.free((cast: (@: void) from_k))
     c.free((cast: (@: void) from_j))
+    # The lexical chain of a copy with written names or callables: the model's parent and the source parent of every
+    # copied Structure are copied too, as ordinary Lmx through the same map, whole -- their fields, references and cycles
+    # -- up to parent 0 (the book :1205-1207; kernel §6.4). Not the whole arena: the reachable closure of what is copied.
+    # The source's mutable ancestors are never borrowed, and the place of this merge gives no parent.
+    if: status = 0 && chain != 0 && model\parent != 0
+        status: lmx_graph_merge_copy(g, @ map, (cast: (@: void) model\parent), @ work, @ count, @ cap, @ copy)
     at: 0U
     while: at < count && status = 0
         operand: work[at]
@@ -2130,15 +2146,24 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
             ---
             j: j + 1U
         ---
+        if: status = 0 && chain != 0 && operand\parent != 0
+            status: lmx_graph_merge_copy(g, @ map, (cast: (@: void) operand\parent), @ work, @ count, @ cap, @ copy)
         at: at + 1U
     ---
-    # Parent edges once every copy exists, a parent reached after its child included.
+    # Parent edges once every copy exists, a parent reached after its child included. R's parent is the copy of the
+    # model's parent when the chain was needed, otherwise none.
     at: 0U
     while: at < count && status = 0
         operand: work[at]
         child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand)))
         child\parent: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand\parent)))
         at: at + 1U
+    ---
+    if: status = 0 && chain != 0
+        child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) model\parent)))
+        if: child != result
+            result\parent: child
+        ---
     ---
     if: mapped != 0
         c.lmx_copy_map_dispose(@ map)

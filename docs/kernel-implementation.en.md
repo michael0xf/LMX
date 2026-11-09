@@ -122,6 +122,17 @@ The next [graph46/tool26/rt36](../steps/witnesses/merge-repeat-20261109/notes.md
 of a field is told from the first fill of its slot by its position (operand, field) — local data of the merge
 traversal — not by its address, so the same source given again is written again in operand order:
 `merge(M; N; M)\a` = 1, `merge(N; M; N)\a` = 5, sources intact. 59 graph-check runs × interp/native/forced passed.
+The next [graph48/tool27/rt37](../steps/witnesses/merge-callable-20261109/notes.md), after Codex's review of 327:
+`merge(f1)` copies a callable — its parts as ordinary Lmx, a written word as a new WORD cell holding the same canonical
+address (`lmx_graph_word_of`) — and, when the copy holds written names or callables, takes their needed lexical
+ancestors along, whole, through the same map up to `parent` = 0; the result's `parent` is the copy of the model's
+parent. The copy is a new Lmx without `native`: the interpreter runs its call, since reusing the old implementation is
+unproven. The place `g: merge(f1)` is defined by its value; the call `g(1)` in the root's native code is resolved, bound
+and dispatched by the kernel at run time (the path `g \ field` is a read, not a call). With `int: k 2` and `k: 5` after
+the merge: `f1(1)` = 15 (the live `k`), `g(1)` = 12 and `g(2)` = 22 (the copied `k` = 2), and the own `calls` stay
+apart (`f1\var\calls` = 1, `g\var\calls` = 2). Open: the old name inside the copy — the slot `f1` of the copied root
+holds the copy itself, named by its new place `g`, so a recursive `f1(...)` in the copy's body finds no name (3); a call
+of a defined place from a method's native body. 60 graph-check runs × interp/native/forced passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)
@@ -541,7 +552,7 @@ its fields, references and cycles, up to parent 0: it is not trimmed to the name
 arena but the necessary reachable closure. A result with no written name or callable needs no ancestor and has parent 0
 (no lexical parent, not an arena-root object); the source's mutable ancestor is never mixed in, and the place of
 execution never gives one. The implemented subset and its open parts:
-the status above (graph44).
+the status above (graph48).
 
 ### 6.5 Resetting `native` on a write (decision; the norm is [L2 §11](L2_spec_en.md#call))
 

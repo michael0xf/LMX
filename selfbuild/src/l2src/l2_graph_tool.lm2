@@ -1245,6 +1245,15 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
             if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0
                 return: 5
             return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
+        # A place defined by a root statement holds its value only when the code runs (a merge result, a copied callable
+        # included): its call is resolved, bound and dispatched by the kernel then -- the callee's native entry, or the
+        # interpreter for a copy without one. No merge is computed ahead of execution. Only a call form with actuals is
+        # such a call: the path `name \ field` reads the place, and a lone `(name)` keeps its value reading below.
+        if: count >= 2U && (count != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_deref)
+            if: lm_graph_emit_defined(g, scope, decl_names, decl_slots, decl_n, word) != 0
+                return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
+            ---
+        ---
         if: count = 1U
             return: lm_graph_emit_number(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, temp)
         if: count != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_deref
@@ -2447,3 +2456,19 @@ fn: lm_graph_emit_merge (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expres
     temp[0]: value
     return: status
 end: lm_graph_emit_merge
+
+# 1 when name is a place this native body has defined by a root statement `name: value` (the emitter's declaration table,
+# a table of its translation): its value exists only when the code runs.
+fn: lm_graph_emit_defined (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: name char) int
+    @: statement c.Lmx 0
+    size_t: i 0U
+    if: name = 0 || decl_names = 0 || decl_slots = 0
+        return: 0
+    while: i < decl_n
+        if: decl_names[i] = name
+            statement: (cast: (@: c.Lmx) c.lmx_graph_get(root, decl_slots[i]))
+            return: (cast: (int) (c.lmx_graph_kind(g, (cast: (@: void) statement)) = 4 && c.lmx_graph_count(statement) = 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U)) = name))
+        i: i + 1U
+    ---
+    return: 0
+end: lm_graph_emit_defined

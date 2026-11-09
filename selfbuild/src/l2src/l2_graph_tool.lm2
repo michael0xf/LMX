@@ -1031,6 +1031,14 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
     c.fprintf(f, "))\n        []: size_t l2_binding%d %zuU\n        if: lmx_graph_bind_call(l2_g, l2_call%d, (cast: (@: Lmx) ", call_id, count + 1U, call_id)
     if: status = 0
         status: lm_graph_emit_address(g, f, scope, expression)
+    # One positional actual naming a value without effects: the same kernel call as the interpreter's decides at run
+    # time whether its Structure is the whole argument structure (lmx_graph_call_single).
+    if: status = 0 && c.lmx_graph_single_candidate(g, expression) != 0
+        c.fprintf(f, "), l2_binding%d) != 0\n            %s\n", call_id, leave_failure)
+        status: lm_graph_emit_operand(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ value)
+        c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_call_single(l2_g, l2_call%d, l2_v%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, value, call_id, leave_failure)
+        temp[0]: call_id
+        return: status
     c.fprintf(f, "), l2_binding%d) != 0\n            %s\n        []: @(void) l2_args%d %zuU\n", call_id, leave_failure, call_id, count + 1U)
     while: i < count && status = 0
         holder: expression

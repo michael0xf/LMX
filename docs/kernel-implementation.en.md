@@ -82,6 +82,13 @@ refused reception leaves the later ones unevaluated and the body does not start.
 call; native emits it and computes the right operands itself. `a(5)` and `a: 5` stay ordinary calls with positional
 results. All 45 graph fixtures: 45 graph-check runs × interp/native/forced passed (sub_void_value separately),
 mutation 11/11, method-mutation 8/8. Computed defaults, AXBY with user conversions, q/z, merge35 and §§8/8a remain open.
+The next [graph42/tool24/rt32](../steps/witnesses/whole-arguments-20261109/notes.md) gives the whole argument structure
+of one Structure: a single positional actual without effects (a name or a path) whose direct fields name formals of the
+selected callee of the same kind, every other formal having its default, is supplied by its fields; otherwise it is the
+ordinary first argument. One kernel function `lmx_graph_call_single` decides for the interpreter and native alike, by
+the formals and the direct fields, with no tree search and no second reading: `k(s)` takes q and z from `s` (15),
+`k(q := s)` gives 50. 48 graph-check runs × interp/native/forced, mutation 11/11, method-mutation 8/8 passed. `merge` in
+the clean graph (example 35), a Structure producer with effects and the choice between two methods of one name remain.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

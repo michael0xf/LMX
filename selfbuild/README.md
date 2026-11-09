@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 336 entries.
+are historical. The current input manifest has 340 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -90,6 +90,13 @@ argument effect, then evaluates the right operands in the written order and rece
 stay ordinary calls. All 45 graph fixtures pass interp/native/forced, mutation 11/11 and method-mutation 8/8.
 [Sources, receipts and limits](../steps/witnesses/named-arguments-20261109/notes.md). Computed defaults, AXBY with user
 conversions, q/z, merge35, other types and §§8/8a remain open.
+
+The current graph42/tool24/rt32 gives the whole argument structure of one Structure: a single positional actual without
+effects (a name or a path) whose direct fields name formals of the same kind, every other formal having its default, is
+supplied by its fields, otherwise it is the ordinary first argument; one kernel function `lmx_graph_call_single` serves
+the interpreter and native. q/z from `s` gives 15, `k(q := s)` 50; 48 graph-check runs × interp/native/forced,
+mutation 11/11 and method-mutation 8/8 passed. [Sources, receipts and limits](../steps/witnesses/whole-arguments-20261109/notes.md).
+`merge` in the clean graph (example 35), effectful Structure producers and two methods of one name remain open.
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

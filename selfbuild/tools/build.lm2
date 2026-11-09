@@ -2127,7 +2127,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: root_names char c.calloc(34U, sizeof(@: char))
     @@: walk_value_names char c.calloc(176U, sizeof(@: char))
     @@: graph_names char c.calloc(37U, sizeof(@: char))
-    @@: graph_run_names char c.calloc(20U, sizeof(@: char))
+    @@: graph_run_names char c.calloc(22U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2204,6 +2204,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_run_names[17]: "lmx_graph_store_field"
     graph_run_names[18]: "lmx_graph_bind_call"
     graph_run_names[19]: "lmx_graph_invoke_bound"
+    graph_run_names[20]: "lmx_graph_single_candidate"
+    graph_run_names[21]: "lmx_graph_call_single"
     clock_names[0]: "lmx_clock_now"
     clock_names[1]: "lmx_clock_ticks"
     clock_names[2]: "lmx_clock_since"
@@ -3005,7 +3007,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 37, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 20, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 22, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1

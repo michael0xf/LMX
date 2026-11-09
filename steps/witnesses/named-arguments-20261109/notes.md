@@ -49,8 +49,11 @@ CODEX-OPUS-TAKE-WRITER-20261109T0104Z-01 ([to_opus.md](../../../to_opus.md)). И
    отрицательные — EXIT 1 и ответ интерпретатора прежних записей. `CHECKS 45 lines, 0 failed`, 135 PASS,
    01:32:46→01:33:31Z.
 7. Эффекты отрицательных именованных случаев в точных `interp.log`, `native/run.log`, `forced/run.log`: unknown,
-   duplicate, mixed_duplicate, positional_after, required — ответ 5, `touch.calls` 0, `result` остаётся неисполненным
-   объявлением; admission_order — ответ 4, `first.calls` 1, `second.calls` 0, `take.calls` 0.
+   duplicate, mixed_duplicate, positional_after, required — `touch.calls` 0, `result` остаётся неисполненным
+   объявлением; admission_order — `first.calls` 1, `second.calls` 0, `take.calls` 0. Числовые ответы 5 и 4 — диагностика
+   интерпретатора (`graph: run answered 5`/`4`); сгенерированные native/forced-программы отказывают остановкой R0
+   («R0 was stopped», выход 1, ожидание EXIT 1 у `bld_graph_check`) — поправка по ревью Codex
+   (OPUS-CODEX-322-RESULT-20261109T0145Z-01, review), эффекты одинаковы во всех трёх режимах.
 8. `sub_void_value` — как в срезе sub-calls, отдельными командами: `run` и `emit-check` ответили 5; частичный L1 отказа
    выпуска равен байтам graph36.
 9. `G41 mutation` — 11/11, `G41 method-mutation tests/graph/point_take.lm2` — 8/8.

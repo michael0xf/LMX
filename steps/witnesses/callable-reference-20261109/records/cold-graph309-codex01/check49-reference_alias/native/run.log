@@ -1,0 +1,43 @@
+GRAPH-BEFORE-BEGIN
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: ((a * 10) + calls)
+end: f1
+h: f1
+int: r1 (h 2)
+h: 5
+int: r2 (f1 3)
+int: c1 ((f1 \ var) \ calls)
+int: c2 ((h \ var) \ calls)
+M:
+    int: a 1
+end: M
+P: M
+:=: (P \ a) 7
+int: m_a (M \ a)
+int: p_a (P \ a)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f1 (int: a) int (
+    int: calls 3
+)
+    calls: (calls + 1)
+    return: ((a * 10) + calls)
+end: f1
+@: h f1
+int: r1 21
+h: 5
+int: r2 33
+int: c1 3
+int: c2 3
+M:
+    int: a 7
+end: M
+@: P M
+:=: (P \ a) 7
+int: m_a 7
+int: p_a 7
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

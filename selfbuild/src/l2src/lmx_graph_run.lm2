@@ -507,6 +507,8 @@ fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lm
         status: lmx_graph_eval_value(g, code, c.lmx_graph_get(path, 0U), @ value)
         if: status != 0
             return: status
+        # The owner of the written field: a Structure, or the target of a reference to it (the same instance).
+        value: c.lmx_graph_target(g, value)
         if: c.lmx_graph_kind(g, value) != 4
             return: 4
         owner: (cast: (@: c.Lmx) value)
@@ -1021,7 +1023,7 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
                 continue
             status: lmx_graph_eval(g, code, statement, 2U, n, @ number)
         else:
-            target: lmx_graph_resolve(g, code, head)
+            target: c.lmx_graph_target(g, lmx_graph_resolve(g, code, head))
             if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
                 status: lmx_graph_eval_call(g, code, statement, (cast: (@: c.Lmx) target), @ number)
                 i: i + 1U
@@ -1154,7 +1156,9 @@ end: lmx_graph_invoke_bound
 # method decides by its formals and the value's direct fields: no tree search, no second reading, no conversion table
 # yet (an implementation boundary of this subset). The arrays belong only to this call. 0, or the refusal of the form
 # (5) or of a reception.
-fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: value void; @: out int) int
+fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: given void; @: out int) int
+    # A reference to a Structure stands for that Structure as the whole argument structure (lmx_graph_target).
+    @: value void c.lmx_graph_target(g, given)
     @: args c.Lmx 0
     @: structure c.Lmx 0
     @: field void 0
@@ -1331,7 +1335,7 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                         return: 4
                     ---
                 else:
-                    if: count = 1U && c.lmx_graph_method(g, (cast: (@: c.Lmx) lmx_graph_resolve(g, scope, word))) = 0
+                    if: count = 1U && c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, lmx_graph_resolve(g, scope, word)))) = 0
                         return: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), out)
                     status: lmx_graph_eval_number(g, scope, raw, @ number)
                     if: status != 0
@@ -1430,7 +1434,7 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
         if: c.lmx_graph_kind(g, value) != 5
             return: 2
         return: c.lmx_graph_value_int(g, c.lmx_arena_pointer_void_read(value), out)
-    value: lmx_graph_resolve(g, scope, word)
+    value: c.lmx_graph_target(g, lmx_graph_resolve(g, scope, word))
     if: c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
         if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) value)) = 0
             return: 5
@@ -1466,8 +1470,9 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     if: head = state\w_call
         return: lmx_graph_eval_explicit_call(g, root, statement)
     cell: lmx_graph_resolve(g, root, head)
-    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) cell)) != 0
-        return: lmx_graph_eval_call(g, root, statement, (cast: (@: c.Lmx) cell), @ value)
+    # A head naming a callable, directly or through a reference to it, applies it (the book :454, :1237).
+    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, cell))) != 0
+        return: lmx_graph_eval_call(g, root, statement, (cast: (@: c.Lmx) c.lmx_graph_target(g, cell)), @ value)
     if: n < 2U || head = 0
         return: 5
     if: head = state\w_at
@@ -1564,8 +1569,11 @@ fn: lmx_graph_eval_explicit_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression
     return: lmx_graph_call_data(g, (cast: (@: c.Lmx) code), (cast: (@: c.Lmx) data), (cast: (int) (count = 2U)))
 end: lmx_graph_eval_explicit_call
 
-fn: lmx_graph_call_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; int: shorthand) int
+fn: lmx_graph_call_data (@: g c.LmxGraph; @: given_code c.Lmx; @: given_data c.Lmx; int: shorthand) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    # A reference to a Structure or a callable stands for its target as the code or the data (lmx_graph_target).
+    @: code c.Lmx (cast: (@: c.Lmx) c.lmx_graph_target(g, (cast: (@: void) given_code)))
+    @: data c.Lmx (cast: (@: c.Lmx) c.lmx_graph_target(g, (cast: (@: void) given_data)))
     c.LmxActivation: activation
     c.LmxGraphFrame: frame
     @: returned void 0
@@ -1786,9 +1794,9 @@ fn: lmx_graph_merge_literal_put (@: g c.LmxGraph; @: literal c.Lmx; @: made c.Lm
 end: lmx_graph_merge_literal_put
 
 # The used graph of the operands admits the copy: int places, int references, written names (word primitives),
-# Structures -- callables included -- and empty slots; another primitive kind is open (5). A written name or a callable
-# resolves names through its lexical chain, so then chain is 1 and the copy takes the needed lexical ancestors along. 4 for
-# an operand that is no Structure, or without memory. The visited set is this check's.
+# Structures -- callables included --, references to them and empty slots; another primitive kind is open (5). A written
+# name or a callable resolves names through its lexical chain, so then chain is 1 and the copy takes the needed lexical
+# ancestors along. 4 for an operand that is no Structure, or without memory. The visited set is this check's.
 fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n; @: chain int) int
     @@: seen c.Lmx 0
     @: current c.Lmx 0
@@ -1825,8 +1833,9 @@ fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n; @: chain
                     status: 5
                 ---
             else:
-                if: kind = 4
-                    if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
+                # A reference to a Structure or a callable: its target belongs to the used graph too.
+                if: kind = 4 || kind = 6
+                    if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) c.lmx_graph_target(g, value))) != 0
                         status: 4
                     ---
                 else:
@@ -1848,7 +1857,8 @@ end: lmx_graph_merge_check
 
 # The copy of one value reached by merge through the one map (kernel §6.4): an int place keeps its form (a direct cell;
 # a place without a value as its copied cell and a new pointer of the same type), an int reference points at the copy of
-# its cell, a data Structure gets a new Lmx of its count whose slots the caller fills from the work list; the copies'
+# its cell, a reference to an Lmx at the copy of its target (the operand root's copy is R, a cycle meets its copy), a data
+# Structure gets a new Lmx of its count whose slots the caller fills from the work list; the copies'
 # name rows keep the canonical names. A value already copied answers its copy. 0 and the copy in out; 4 without memory;
 # 5 for a kind whose copy is open.
 fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @@@: work c.Lmx; @: count size_t; @: cap size_t; @@: out void) int
@@ -1872,9 +1882,9 @@ fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @
             return: 4
         copy: c.lmx_graph_int(g, number)
     else:
-        if: kind = 3 || kind = 5
+        if: kind = 3 || kind = 5 || kind = 6
             referent: c.lmx_arena_pointer_void_read(value)
-            if: c.lmx_graph_kind(g, referent) != 1
+            if: (kind = 6 && c.lmx_graph_kind(g, referent) != 4) || (kind != 6 && c.lmx_graph_kind(g, referent) != 1)
                 return: 5
             status: lmx_graph_merge_copy(g, map, referent, work, count, cap, @ target)
             if: status != 0
@@ -1882,7 +1892,11 @@ fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @
             if: kind = 3
                 copy: c.lmx_graph_uninit_int_at(g, target)
             else:
-                copy: c.lmx_graph_ref_int(g, target)
+                if: kind = 5
+                    copy: c.lmx_graph_ref_int(g, target)
+                else:
+                    copy: c.lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) target))
+                ---
             ---
         else:
             if: kind = 2
@@ -1988,6 +2002,13 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
     if: g = 0 || values = 0 || out = 0 || n = 0U
         return: 5
     out[0]: 0
+    # An operand that is a reference to a Structure or a callable stands for its target, in both consumers (the operand
+    # array is this evaluation's).
+    while: i < n
+        values[i]: c.lmx_graph_target(g, values[i])
+        i: i + 1U
+    ---
+    i: 0U
     status: lmx_graph_merge_check(g, values, n, @ chain)
     if: status != 0
         return: status
@@ -2055,6 +2076,16 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
             result: c.lmx_graph_lmx(g, 0, total)
             if: result = 0
                 status: 4
+            # One operand: R is the copy of that root, so a named root's copy keeps its name row with the same name pointer
+            # (kernel §5.1), and a copied lexical ancestor's slot of the root answers that name at R -- the body's own
+            # name finds the copy. A new place for R is then a named reference to it (lmx_graph_define). The name of a
+            # composition of several roots is the part asked of the author (fn/return), not decided here.
+            if: status = 0 && n = 1U
+                name: c.lmx_graph_name_of(g, values[0])
+                if: name != 0 && c.lmx_graph_name_address(g, (cast: (@: void) result), name) != 0
+                    status: 4
+                ---
+            ---
             k: 0U
             while: k < n && status = 0
                 if: c.lmx_copy_map_put(@ map, values[k], (cast: (@: void) result)) != 0

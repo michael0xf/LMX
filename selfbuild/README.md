@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 359 entries.
+are historical. The current input manifest has 365 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -118,6 +118,11 @@ The current graph46/tool26/rt36 writes a repeated supply of a field again in ope
 The current graph48/tool27/rt37 copies one callable with its needed lexical ancestors (`g: merge(f1)`: `g(1)` = 12 by
 the copied `k`, the live `f1(1)` = 15, separate `calls`); the copy has no `native` and runs in the interpreter.
 60 graph-check runs passed. [Sources, receipts and limits](../steps/witnesses/merge-callable-20261109/notes.md).
+
+The current graph49/tool28/rt38 keeps the root's name on a one-operand merge copy and makes a new place for a named
+Structure or callable a named reference to the same instance: the copy's recursion stays in the copy (`g(3)` = 6),
+`h: f1` renames nothing, and a native method body calls such a place through the common run-time resolve/bind/invoke.
+63 graph-check runs passed. [Sources, receipts and limits](../steps/witnesses/callable-reference-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

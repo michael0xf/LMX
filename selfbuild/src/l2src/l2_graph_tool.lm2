@@ -1044,9 +1044,10 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
     int: value 0
     int: status 0
     temps[0]: temps[0] + 1
-    c.fprintf(f, "        @: Lmx l2_call%d (cast: (@: Lmx) lmx_graph_resolve(l2_g, lmx_call_code, ", call_id)
+    # The callee as the interpreter takes it: the resolved head, or the target of a reference to a callable.
+    c.fprintf(f, "        @: Lmx l2_call%d (cast: (@: Lmx) lmx_graph_target(l2_g, lmx_graph_resolve(l2_g, lmx_call_code, ", call_id)
     status: lm_graph_emit_word(g, f, scope, expression, 0U)
-    c.fprintf(f, "))\n        []: size_t l2_binding%d %zuU\n        if: lmx_graph_bind_call(l2_g, l2_call%d, (cast: (@: Lmx) ", call_id, count + 1U, call_id)
+    c.fprintf(f, ")))\n        []: size_t l2_binding%d %zuU\n        if: lmx_graph_bind_call(l2_g, l2_call%d, (cast: (@: Lmx) ", call_id, count + 1U, call_id)
     if: status = 0
         status: lm_graph_emit_address(g, f, scope, expression)
     # One positional actual naming a value without effects: the same kernel call as the interpreter's decides at run
@@ -1125,7 +1126,7 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             c.fprintf(f, "        if: lmx_graph_kind(l2_g, l2_v%d) = 3\n            l2_v%d: lmx_arena_pointer_void_read(l2_v%d)\n        l2_v%d: lmx_graph_ref_int(l2_g, l2_v%d)\n        if: l2_v%d = 0\n            %s\n", value, value, value, value, value, value, leave_failure)
             temp[0]: value
             return: 0
-        if: count = 1U && c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_resolve(g, scope, word))) = 0
+        if: count = 1U && c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word)))) = 0
             return: lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, temp)
         status: lm_graph_emit_number(g, f, scope, holder, index, temps, decl_names, decl_slots, decl_n, @ number)
         if: status != 0
@@ -1240,17 +1241,18 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
             c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_kind(l2_g, l2_v%d) != 5\n            %s\n        if: lmx_graph_value_int(l2_g, lmx_arena_pointer_void_read(l2_v%d), @ l2_t%d) != 0\n            %s\n", left, value, leave_failure, value, left, leave_failure)
             temp[0]: left
             return: 0
-        method: c.lmx_graph_resolve(g, scope, word)
+        method: c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
             if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0
                 return: 5
             return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
-        # A place defined by a root statement holds its value only when the code runs (a merge result, a copied callable
-        # included): its call is resolved, bound and dispatched by the kernel then -- the callee's native entry, or the
-        # interpreter for a copy without one. No merge is computed ahead of execution. Only a call form with actuals is
-        # such a call: the path `name \ field` reads the place, and a lone `(name)` keeps its value reading below.
-        if: count >= 2U && (count != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_deref)
-            if: lm_graph_emit_defined(g, scope, decl_names, decl_slots, decl_n, word) != 0
+        # A head this translation cannot resolve names a place the code defines when it runs (a merge result, a reference
+        # to a callable) or no place at all, in a root or a method body alike: in a call form with actuals its call is
+        # resolved, bound and dispatched by the kernel then, as by the interpreter -- the callee's native entry, or the
+        # interpreter for a copy without one; a missing name fails there. No merge is computed ahead of execution. The
+        # path `name \ field` reads the place, and a lone `(name)` keeps its value reading below.
+        if: method = 0 && word != 0 && c.lmx_graph_language_word(state, word) = 0 && count >= 2U
+            if: count != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_deref
                 return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
             ---
         ---
@@ -1417,7 +1419,8 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
         status: lm_graph_emit_operand(g, f, code, path, 0U, temps, decl_names, decl_slots, decl_n, @ owner)
         if: status != 0
             return: status
-        c.fprintf(f, "        if: lmx_graph_kind(l2_g, l2_v%d) != 4\n            %s\n        size_t: l2_s%d lmx_graph_named(l2_g, (cast: (@: Lmx) l2_v%d), ", owner, leave_failure, owner, owner)
+        # The owner of the written field: a Structure, or the target of a reference to it, as in the interpreter.
+        c.fprintf(f, "        l2_v%d: lmx_graph_target(l2_g, l2_v%d)\n        if: lmx_graph_kind(l2_g, l2_v%d) != 4\n            %s\n        size_t: l2_s%d lmx_graph_named(l2_g, (cast: (@: Lmx) l2_v%d), ", owner, owner, owner, leave_failure, owner, owner)
         status: lm_graph_emit_word(g, f, code, path, 2U)
         c.fprintf(f, ")\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure)
     ---
@@ -1462,6 +1465,7 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
     @: name char 0
     int: temp 0
     int: r 0
+    int: finish -1
     if: state = 0 || decl_names = 0 || decl_slots = 0
         return: 5
     # Earlier computed declarations have already been published by the time this continuation is entered.
@@ -1523,7 +1527,7 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                         return: r
                     i: i + 1U
                     continue
-                if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, head))) != 0
+                if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, head)))) != 0
                     r: lm_graph_emit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ temp)
                     if: r != 0
                         return: r
@@ -1572,10 +1576,23 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                         continue
                     if: k >= n
                         return: 3
+                    # A place this code defines when it runs has its kind only then: a statement on it applies the callable
+                    # it holds or refers to, as the interpreter does (lmx_graph_exec_statement), and otherwise writes the
+                    # int place. The declaration table tells which places are such; the place is found at run time.
+                    finish: -1
+                    if: lm_graph_emit_defined(g, root, decl_names, decl_slots, decl_n, head) != 0
+                        r: lm_graph_emit_apply_or(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ finish)
+                        if: r != 0
+                            return: r
+                        ---
+                    ---
                     r: lm_graph_emit_expr(g, f, root, inner, 1U, m, temps, decl_names, decl_slots, decl_n, @ temp)
                     if: r != 0
                         return: r
                     c.fprintf(f, "        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, %zuU, l2_t%d) != 0\n            %s\n", k, temp, leave_failure)
+                    if: finish >= 0
+                        c.fprintf(f, "        l2_label%d: ()\n", finish)
+                    ---
                 ---
             ---
         ---
@@ -1611,6 +1628,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     int: next_label 0
     int: end_label 0
     int: target_label -1
+    int: finish -1
     @: nested c.Lmx 0
     @: header c.Lmx 0
     @: raw void 0
@@ -1754,24 +1772,31 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             if: head = state\w_at
                 return: 5
             if: mode != 0
-                target: c.lmx_graph_resolve(g, code, head)
+                target: c.lmx_graph_target(g, c.lmx_graph_resolve(g, code, head))
                 if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
                     status: lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, @ result)
                     i: i + 1U
                     continue
+                # A head this translation cannot resolve: the kernel decides when the code runs whether the statement
+                # applies a callable, as the interpreter does, or writes the int place (lm_graph_emit_apply_or).
+                finish: -1
+                if: target = 0 && head != state\w_int && c.lmx_graph_language_word(state, head) = 0
+                    status: lm_graph_emit_apply_or(g, f, code, statement, temps, 0, 0, 0U, @ finish)
                 name_slot: 0U
                 if: head = state\w_int
                     name_slot: 1U
                     c.fputs("        if: lmx_graph_named(l2_g, lmx_call_code, ", f)
                     status: lm_graph_emit_word(g, f, code, statement, name_slot)
                     c.fprintf(f, ") = lmx_graph_count(lmx_call_code)\n            %s\n", leave_failure)
-                if: n > name_slot + 1U
+                if: n > name_slot + 1U && status = 0
                     status: lm_graph_emit_expr(g, f, code, statement, name_slot + 1U, n, temps, 0, 0, 0U, @ result)
                     c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_named(l2_g, lmx_call_code, ", f)
                     if: status = 0
                         status: lm_graph_emit_word(g, f, code, statement, name_slot)
                     c.fprintf(f, "), l2_t%d) != 0\n            %s\n", result, leave_failure)
                 ---
+                if: finish >= 0
+                    c.fprintf(f, "        l2_label%d: ()\n", finish)
                 i: i + 1U
                 continue
             if: head = state\w_int
@@ -1787,15 +1812,24 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 ---
                 i: i + 1U
                 continue
-            target: c.lmx_graph_resolve(g, code, head)
+            target: c.lmx_graph_target(g, c.lmx_graph_resolve(g, code, head))
             if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
                 status: lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, @ result)
             else:
-                status: lm_graph_emit_expr(g, f, code, statement, 1U, n, temps, 0, 0, 0U, @ result)
+                # A head this translation cannot resolve and that is no formal of this method: the kernel decides when the
+                # code runs whether the statement applies a callable or writes the place (lm_graph_emit_apply_or).
+                finish: -1
+                if: target = 0 && c.lmx_graph_language_word(state, head) = 0 && lm_graph_emit_formal(g, code, head) = 0
+                    status: lm_graph_emit_apply_or(g, f, code, statement, temps, 0, 0, 0U, @ finish)
+                if: status = 0
+                    status: lm_graph_emit_expr(g, f, code, statement, 1U, n, temps, 0, 0, 0U, @ result)
                 c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
                 if: status = 0
                     status: lm_graph_emit_word(g, f, code, statement, 0U)
                 c.fprintf(f, ", l2_t%d) != 0\n            %s\n", result, leave_failure)
+                if: finish >= 0
+                    c.fprintf(f, "        l2_label%d: ()\n", finish)
+                ---
             ---
         ---
         i: i + 1U
@@ -2457,8 +2491,9 @@ fn: lm_graph_emit_merge (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expres
     return: status
 end: lm_graph_emit_merge
 
-# 1 when name is a place this native body has defined by a root statement `name: value` (the emitter's declaration table,
-# a table of its translation): its value exists only when the code runs.
+# 1 when name is a place this native root defines by its statement `name: value` (the emitter's declaration table, a
+# table of its translation): its value, and so its kind -- an int, a Structure, a reference to a callable -- exists only
+# when the code runs. The place itself is found then by the kernel's resolution.
 fn: lm_graph_emit_defined (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: name char) int
     @: statement c.Lmx 0
     size_t: i 0U
@@ -2472,3 +2507,32 @@ fn: lm_graph_emit_defined (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; 
     ---
     return: 0
 end: lm_graph_emit_defined
+
+# A statement whose head names a place known only when the code runs: when that place holds a callable, directly or
+# through a reference to it, the statement applies it as the interpreter does (lmx_graph_exec_statement,
+# lmx_graph_block) -- the common resolve/bind/invoke of lm_graph_emit_call -- and jumps past the other reading of the
+# statement, which the caller emits next and closes with the label in finish. 0, or the answer of the call's emission.
+fn: lm_graph_emit_apply_or (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: statement c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: finish int) int
+    int: other temps[0]
+    int: result 0
+    int: status 0
+    temps[0]: temps[0] + 2
+    finish[0]: other + 1
+    c.fputs("        if: lmx_graph_method(l2_g, (cast: (@: Lmx) lmx_graph_target(l2_g, lmx_graph_resolve(l2_g, lmx_call_code, ", f)
+    status: lm_graph_emit_word(g, f, scope, statement, 0U)
+    c.fprintf(f, ")))) = 0\n            goto: l2_label%d\n", other)
+    if: status = 0
+        status: lm_graph_emit_call(g, f, scope, statement, temps, decl_names, decl_slots, decl_n, @ result)
+    c.fprintf(f, "        goto: l2_label%d\n        l2_label%d: ()\n", other + 1, other)
+    return: status
+end: lm_graph_emit_apply_or
+
+# 1 when name is a formal of the method code: a place of its activation, an int place in this subset
+# (lmx_graph_call_shape), which a statement writes and never applies.
+fn: lm_graph_emit_formal (@: g c.LmxGraph; @: code c.Lmx; @: name char) int
+    @: args c.Lmx 0
+    if: c.lmx_graph_method(g, code) = 0 || name = 0
+        return: 0
+    args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
+    return: (cast: (int) (c.lmx_graph_named(g, args, name) < c.lmx_graph_count(args)))
+end: lm_graph_emit_formal

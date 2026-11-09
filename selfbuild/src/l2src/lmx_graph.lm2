@@ -357,7 +357,8 @@ fn: lmx_graph_put (@: lmx c.Lmx; size_t: index; @: value void) int
 end: lmx_graph_put
 
 # What an address is in this arena: 0 nothing of the graph, 1 an int primitive, 2 a word primitive, 3 the pointer
-# primitive of a place without a value, 4 an Lmx, 5 an int reference (§2.2: the type is the region of the address).
+# primitive of a place without a value, 4 an Lmx, 5 an int reference, 6 a reference to an Lmx -- a Structure or a
+# callable (§2.2: the type is the region of the address).
 fn: lmx_graph_kind (@: g c.LmxGraph; @: address void) int
     int: kind 0
     int: type 0
@@ -377,6 +378,8 @@ fn: lmx_graph_kind (@: g c.LmxGraph; @: address void) int
         return: 3
     if: type = c.LMX_TYPE_GRAPH_INT_REF
         return: 5
+    if: type = c.LMX_TYPE_GRAPH_LMX_REF
+        return: 6
     return: 0
 end: lmx_graph_kind
 
@@ -531,12 +534,15 @@ fn: lmx_graph_value_int (@: g c.LmxGraph; @: value void; @: out int) int
     return: 0
 end: lmx_graph_value_int
 
+# The field name of a Structure; a path step through a reference to a Structure reads the field of its target, the
+# same instance (the book :441). 0 when there is no such field.
 fn: lmx_graph_field (@: g c.LmxGraph; @: value void; @: name char) @: void
+    @: base void lmx_graph_target(g, value)
     @: inner c.Lmx 0
     size_t: slot 0U
-    if: lmx_graph_kind(g, value) != 4 || name = 0
+    if: lmx_graph_kind(g, base) != 4 || name = 0
         return: 0
-    inner: (cast: (@: c.Lmx) value)
+    inner: (cast: (@: c.Lmx) base)
     slot: lmx_graph_named(g, inner, name)
     if: slot >= lmx_graph_count(inner)
         return: 0
@@ -916,6 +922,15 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
             c.fprintf(f, "@: %s int @%s\n", name, head)
             i: i + 1U
             continue
+        # A reference to a Structure or a callable: `@: name target`, the target by its own name (the book :441).
+        if: kind = 6
+            name: lmx_graph_name_of(g, value)
+            head: lmx_graph_name_of(g, lmx_graph_target(g, value))
+            if: name = 0 || head = 0
+                return: 1
+            c.fprintf(f, "@: %s %s\n", name, head)
+            i: i + 1U
+            continue
         if: kind = 1
             name: lmx_graph_name_of(g, value)
             if: name != 0
@@ -1023,9 +1038,11 @@ end: lmx_graph_descriptor
 # The definition of a new place by the written field `name: value` of a root whose name is not known (the book,
 # composition of place and value :430-:443: the place is defined by its first field; `name: int: 5` and `int: name 5`
 # bind alike): the value, already evaluated once, gets its own place -- a new int cell for an int, a new int reference to
-# the same cell for a reference, the fresh Structure itself (a merge result, a copied callable included) -- named by the
-# field's head word and published in the field's slot by the runtime write. A Structure that already has a name would
-# make the place a reference to that instance, which is open here (5). 0; 1 without memory or for another statement.
+# the same cell for an int reference, the fresh unnamed Structure itself (a merge result of several operands) -- named by
+# the field's head word and published in the field's slot by the runtime write. A Structure that already has a name (a
+# known Structure or callable, a one-operand merge copy keeping its name) gets no second name: the place is a new named
+# reference to that instance (the book :441, `@: name Model`), and a reference value gives a new reference to the same
+# target. The new name renames nothing. 0; 1 without memory or for another statement; 5 for another kind.
 fn: lmx_graph_define (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value void) int
     @: statement void lmx_graph_get(root, index)
     @: name char 0
@@ -1045,9 +1062,16 @@ fn: lmx_graph_define (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value vo
         if: kind = 5
             place: lmx_graph_ref_int(g, c.lmx_arena_pointer_void_read(value))
         else:
-            if: kind != 4 || lmx_graph_name_of(g, value) != 0
-                return: 5
-            place: value
+            if: kind = 6
+                place: lmx_graph_ref_lmx(g, lmx_graph_target(g, value))
+            else:
+                if: kind != 4
+                    return: 5
+                place: value
+                if: lmx_graph_name_of(g, value) != 0
+                    place: lmx_graph_ref_lmx(g, value)
+                ---
+            ---
         ---
     ---
     if: place = 0 || lmx_graph_name_address(g, place, name) != 0
@@ -1069,3 +1093,26 @@ fn: lmx_graph_word_of (@: g c.LmxGraph; @: canon char) @: void
     \wc: canon
     return: cell
 end: lmx_graph_word_of
+
+# A reference to an Lmx -- a Structure or a callable (the book :441, :454, :1237): a pointer primitive of the
+# LMX_TYPE_GRAPH_LMX_REF pool holding the target's address. A new named place for a Structure that already has a name is
+# such a reference; the reference has its own address and name, the target keeps its own. 0 for a target that is no Lmx
+# or without memory.
+fn: lmx_graph_ref_lmx (@: g c.LmxGraph; @: target c.Lmx) @: void
+    @: pointer void 0
+    if: g = 0 || lmx_graph_kind(g, (cast: (@: void) target)) != 4
+        return: 0
+    pointer: c.lmx_arena_pointer_cells_profiled(g\arena, c.LMX_TYPE_GRAPH_LMX_REF, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: pointer = 0 || c.lmx_arena_pointer_void_write(pointer, (cast: (@: void) target)) != 0
+        return: 0
+    return: pointer
+end: lmx_graph_ref_lmx
+
+# What a value stands for where a Structure is consumed -- a call head, a path step, a merge operand, a whole argument
+# structure: the target of a reference to an Lmx; any other value is itself. The address of the reference stays the
+# value of its place (`@name` is the address of the stored reference, the book :1237).
+fn: lmx_graph_target (@: g c.LmxGraph; @: value void) @: void
+    if: lmx_graph_kind(g, value) = 6
+        return: c.lmx_arena_pointer_void_read(value)
+    return: value
+end: lmx_graph_target

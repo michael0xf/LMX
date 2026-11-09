@@ -133,6 +133,21 @@ the merge: `f1(1)` = 15 (the live `k`), `g(1)` = 12 and `g(2)` = 22 (the copied 
 apart (`f1\var\calls` = 1, `g\var\calls` = 2). Open: the old name inside the copy — the slot `f1` of the copied root
 holds the copy itself, named by its new place `g`, so a recursive `f1(...)` in the copy's body finds no name (3); a call
 of a defined place from a method's native body. 60 graph-check runs × interp/native/forced passed.
+The next [graph49/tool28/rt38](../steps/witnesses/callable-reference-20261109/notes.md), after Codex's review of 328:
+the result of a one-operand `merge` is the copy of its root and keeps its name (§5.1), so the slot `f1` of a copied
+ancestor answers `f1` at the copy and the copy's recursion stays in the copy: `g(3)` = 6 with `g\var\calls` = 4 and
+`f1\var\calls` = 0. A new place for a named Structure or callable is a new named reference to the same instance (the
+`LMX_TYPE_GRAPH_LMX_REF` region, `lmx_graph_ref_lmx`; `lmx_graph_target` takes the target): `g: merge(f1)` and `h: f1`
+give `@: g f1` and `@: h f1`, the target's name does not change (`h(2)` = 21, the statement `h(5)`, `f1(3)` = 33, one
+shared `calls` = 3), and `P\a := 7` through `P: M` changes `M\a`. A call head in an expression and in a statement, a
+path, a field write, `call:`, a `merge` operand and a whole argument structure take the reference's target in both
+consumers; the copy of a reference points at the copy of its target through the same map. Native: the call of a head
+the translation cannot resolve is the common run-time resolve/bind/invoke in a root and in a method body alike, and a
+statement on a place defined at run time is decided then (a call or a write), as by the interpreter: the body of
+`twice` with the statement `g(a)` and `return: g(a) + 1` gives 13 with `g\var\calls` = 2. The clean graph has no
+collector; the name of a composition of several roots and the `fn`/`return` parts (a question to the author), the `@`
+address of a Structure reference and replacing a Structure or reference slot (5) are open. 63 graph-check runs ×
+interp/native/forced passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)
@@ -551,8 +566,15 @@ lexical ancestor — one a copied name resolves through — is copied as an ordi
 its fields, references and cycles, up to parent 0: it is not trimmed to the names met, and this is no copy of the whole
 arena but the necessary reachable closure. A result with no written name or callable needs no ancestor and has parent 0
 (no lexical parent, not an arena-root object); the source's mutable ancestor is never mixed in, and the place of
-execution never gives one. The implemented subset and its open parts:
-the status above (graph48).
+execution never gives one. The result of one operand is the copy of its root and keeps its name by §5.1: that root's
+slot in a copied ancestor answers the same name, so the body's name finds the copy (the copy's recursion stays in the
+copy). A new place for a Structure or callable that already has a name is a new named reference (a `ref` cell, §2.2)
+to the same instance ([book :441](LMX_semantics.en.md#resolved-head-consumption), `@: name Model`): the reference has
+its own address and name, the target's name does not change; a call, a path, a field write and a `merge` operand
+through the reference take its target ([book :454](LMX_semantics.en.md#ordinary-var),
+[:1237](LMX_semantics.en.md#factory-reference-result)), and the copy of a reference points at the copy of its target
+through the same map. The name of a composition of several roots is part of the question to the author about
+`fn`/`return`. The implemented subset and its open parts: the status above (graph49).
 
 ### 6.5 Resetting `native` on a write (decision; the norm is [L2 §11](L2_spec_en.md#call))
 

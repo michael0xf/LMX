@@ -1,0 +1,560 @@
+# The machine path of the frontend over the clean Lmx graph (route 331, step 2: Codex, CODEX-OPUS-331-ROUTE-REPLY;
+# docs/kernel-implementation.ru.md, EN beside it, §1a, §7, §11 item 3; L2 section 20). The frontend reads the unit's
+# clean graph instead of the P0 tree: the source is built by the common builder (src/l2src/l2_graph_build.lm2) in an
+# arena of this translation, the traversal of its root opens the translation's own namespace (lmx_graph_space_open:
+# each written `fn:` declaration creates its Structure there, with its args, return and body parts), and the machine
+# module is written from that Structure and the statements of its body -- names resolved here, by the addresses of
+# their spellings (§3.5), in tables of this translation only, released with it (§5.2). No P0 tree is read after the
+# construction and no Lmx is turned back into one.
+#
+# The output is the frontend's own form of a machine module, as the P0 path writes it (lm_compiler_emit_machine_module):
+# the mark, the preamble of the unit's C door declarations (`include: "<stddef.h>"`, its predefs, its includes), one
+# prototype block of all its functions -- the module has no header of its own --, then each function with C parameters
+# named l2_p<function>_<formal>_<name>. A machine function has no unit and no graph (L2 section 20): its names are its
+# formals, the C door `c.X` and numbers; its formals and its result are numbers or references.
+#
+# This step translates what the first migrated module, src/l2src/lmx_schedule.lm2, is written with: written `fn:`
+# declarations with a result, formals `@: name T` and `T: name` (T a C scalar word) or `int: name`, the statements
+# `if:` (with the `else:` that follows it), `return: value` and the write of a field through a path head
+# (`owner\field: value`, §3.3, slice 337), the operations = != < <= > >= + - * / % && || on such values and paths
+# [owner, \, field]. Any other form is refused where it stands (`l2trans error: SOURCE: WHERE: WHY`): there is no
+# fallback to the P0 path for a module the recipe translates from its graph. The parts given after the source (the
+# language's units of every machine translation) are not read: no name of a machine function reaches them.
+#
+# A machine module of the frontend hosted by the runtime (tools/l2trans.lm2 dispatches to lm_compiler_graph_main when
+# its first word is --graph): built by `lmxtool build-frontend-host` (bld_frontend_host, tools/build.lm2) with its own
+# header l2src/l2_frontend_graph.h.lm1, after the builder's module; it reads the graph through the kernel of the runtime
+# the hosted frontend is linked with.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/l2_graph_build.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>"
+include: "<stdlib.h>"
+include: "<string.h>"
+
+# ---- Refusals: where and why, as the translator says them ------------------------------------------------------------
+
+# A refusal of the unit: `l2trans error: SOURCE: WHY`. 1.
+fn: lm_compiler_graph_refuse (const: (@: src char); const: (@: why char)) int
+    c.fprintf(c.stderr, "l2trans error: %s: %s\n", src, why)
+    return: 1
+end: lm_compiler_graph_refuse
+
+# A refusal at a field of the unit's root (counted from 1). 1.
+fn: lm_compiler_graph_refuse_root (const: (@: src char); size_t: field; const: (@: why char)) int
+    c.fprintf(c.stderr, "l2trans error: %s: root field %zu: %s\n", src, field + 1U, why)
+    return: 1
+end: lm_compiler_graph_refuse_root
+
+# A refusal at a statement of a machine function (statements counted from 1 in written order, nested ones included). 1.
+fn: lm_compiler_graph_refuse_at (const: (@: src char); @: fname char; int: at; const: (@: why char)) int
+    c.fprintf(c.stderr, "l2trans error: %s: fn %s, statement %d: %s\n", src, fname, at, why)
+    return: 1
+end: lm_compiler_graph_refuse_at
+
+# ---- Spellings ---------------------------------------------------------------------------------------------------------
+
+# The C spelling of a written type word: the door name `c.T` is T, any other word as written.
+sub: lm_compiler_graph_type (@: f c.FILE; @: text char)
+    if: text[0] = 99 && text[1] = 46 && text[2] != 0
+        c.fputs(text + 2, f)
+    else:
+        c.fputs(text, f)
+    ---
+    return
+end: lm_compiler_graph_type
+
+# The C name of formal j of function mi: l2_p<mi>_<j>_<name>, as the P0 path names it.
+sub: lm_compiler_graph_formal_cname (@: f c.FILE; int: mi; size_t: j; @: name char)
+    c.fprintf(f, "l2_p%d_%zu_%s", mi, j, name)
+    return
+end: lm_compiler_graph_formal_cname
+
+# Four spaces a level.
+sub: lm_compiler_graph_indent (@: f c.FILE; int: level)
+    int: k 0
+    while: k < level
+        c.fputs("    ", f)
+        k: k + 1
+    ---
+    return
+end: lm_compiler_graph_indent
+
+# Is word, a canonical spelling, a C scalar a formal or a result of a machine function may be written with (L2 section
+# 20: numbers and references)? int, char, size_t, unsigned and ulong, by the addresses of their spellings. 1 or 0.
+fn: lm_compiler_graph_scalar (@: word char) int
+    if: word = 0
+        return: 0
+    if: word = c.lmx_graph_intern("int", 3U) || word = c.lmx_graph_intern("char", 4U) || word = c.lmx_graph_intern("size_t", 6U)
+        return: 1
+    if: word = c.lmx_graph_intern("unsigned", 8U) || word = c.lmx_graph_intern("ulong", 5U)
+        return: 1
+    return: 0
+end: lm_compiler_graph_scalar
+
+# Is the value an operator word of a binary operation a machine function computes (§3.3: [left, operator, right])? The
+# comparisons, the arithmetic and the short logical operations. 1 or 0.
+fn: lm_compiler_graph_operator (@: op char) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    if: state = 0 || op = 0
+        return: 0
+    if: op = state\w_eq || op = state\w_ne || op = state\w_lt || op = state\w_le || op = state\w_gt || op = state\w_ge
+        return: 1
+    if: op = state\w_plus || op = state\w_minus || op = state\w_star || op = state\w_slash || op = state\w_percent
+        return: 1
+    if: op = state\w_and || op = state\w_or
+        return: 1
+    return: 0
+end: lm_compiler_graph_operator
+
+# ---- The signature: the Structure the traversal made from the declaration ----------------------------------------------
+
+# Formal j of args in the signature: `@: T l2_p..._name` for a reference `@: name T`, `T: l2_p..._name` for a number
+# `T: name` or a place `int: name` without a value. Its name is the one the binder takes (lmx_graph_formal_name). 0, or
+# 1 for a formal of another form (a default value, a Structure, a callable).
+fn: lm_compiler_graph_formal (@: g c.LmxGraph; @: f c.FILE; @: args c.Lmx; int: mi; size_t: j) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: value void c.lmx_graph_get(args, j)
+    @: decl c.Lmx 0
+    @: head char 0
+    @: name char c.lmx_graph_formal_name(g, args, j)
+    int: kind c.lmx_graph_kind(g, value)
+    if: state = 0 || name = 0
+        return: 1
+    if: kind = 3
+        c.fputs("int: ", f)
+        lm_compiler_graph_formal_cname(f, mi, j, name)
+        return: 0
+    if: kind != 4
+        return: 1
+    decl: (cast: (@: c.Lmx) value)
+    head: c.lmx_graph_name_of(g, value)
+    if: head = state\w_at && c.lmx_graph_count(decl) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 1U)) = 2
+        c.fputs("@: ", f)
+        lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 1U)))
+        c.fputs(" ", f)
+        lm_compiler_graph_formal_cname(f, mi, j, name)
+        return: 0
+    if: head != state\w_int && lm_compiler_graph_scalar(head) != 0 && c.lmx_graph_count(decl) = 1U
+        c.fprintf(f, "%s: ", head)
+        lm_compiler_graph_formal_cname(f, mi, j, name)
+        return: 0
+    return: 1
+end: lm_compiler_graph_formal
+
+# The signature of the machine function made (the Structure the traversal created, named name, function mi of the
+# module): `fn: name (formals) T`. 0; 1 for a formal of another form; 2 for a result that is no C scalar word.
+fn: lm_compiler_graph_sig (@: g c.LmxGraph; @: f c.FILE; @: made c.Lmx; @: name char; int: mi) int
+    @: args c.Lmx c.lmx_graph_method_args(g, made)
+    @: rtext char c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, made))
+    size_t: j 0U
+    if: args = 0
+        return: 1
+    if: rtext = 0 || lm_compiler_graph_scalar(rtext) = 0
+        return: 2
+    c.fprintf(f, "fn: %s (", name)
+    while: j < c.lmx_graph_count(args)
+        if: j > 0U
+            c.fputs("; ", f)
+        if: lm_compiler_graph_formal(g, f, args, mi, j) != 0
+            return: 1
+        j: j + 1U
+    ---
+    c.fprintf(f, ") %s", rtext)
+    return: 0
+end: lm_compiler_graph_sig
+
+# ---- The body: statements and expressions of the graph ------------------------------------------------------------------
+
+# The L1 of an expression of a machine function, read from the graph (§3.3) of function mi with formals args: a formal
+# by its C name -- resolved here, by the address of its spelling among the formals --, a door name `c.X` and a number
+# written with a suffix (a word such as `0U`) as written, an int primitive by its value, an operation [left, operator,
+# right] in parentheses unless it is the whole expression, a path [owner, \, field] as owner\field, the owner a
+# reference formal or a path. 0, or the refusal (at: the statement).
+fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: args c.Lmx; int: mi; @: value void; int: whole; const: (@: src char); @: fname char; int: at) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: text char 0
+    @: op char 0
+    @: owner void 0
+    @: expression c.Lmx 0
+    size_t: j 0U
+    int: kind c.lmx_graph_kind(g, value)
+    int: number 0
+    int: status 0
+    if: state = 0
+        return: 1
+    if: kind = 1
+        if: c.lmx_graph_value_int(g, value, @ number) != 0
+            return: lm_compiler_graph_refuse_at(src, fname, at, "an int of the expression has no value")
+        c.fprintf(f, "%d", number)
+        return: 0
+    if: kind = 2
+        text: c.lmx_graph_word_text(g, value)
+        if: text = 0
+            return: lm_compiler_graph_refuse_at(src, fname, at, "a word of the expression has no spelling")
+        j: c.lmx_graph_formal(g, args, text)
+        if: j < c.lmx_graph_count(args)
+            lm_compiler_graph_formal_cname(f, mi, j, text)
+            return: 0
+        if: (text[0] = 99 && text[1] = 46 && text[2] != 0) || (text[0] >= 48 && text[0] <= 57)
+            c.fputs(text, f)
+            return: 0
+        c.fprintf(c.stderr, "l2trans error: %s: fn %s, statement %d: %s is no formal of the machine function, no door name c.X and no number: a machine function has no unit\n", src, fname, at, text)
+        return: 1
+    if: kind != 4 || c.lmx_graph_name_of(g, value) != 0
+        return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates names, numbers, operations and paths: no other expression yet")
+    expression: (cast: (@: c.Lmx) value)
+    if: c.lmx_graph_count(expression) != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(expression, 1U)) != 2
+        return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates binary operations and paths: no other operation yet")
+    op: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
+    if: op = state\w_deref
+        owner: c.lmx_graph_get(expression, 0U)
+        if: c.lmx_graph_kind(g, c.lmx_graph_get(expression, 2U)) != 2
+            return: lm_compiler_graph_refuse_at(src, fname, at, "a path of a machine function names a field by a word")
+        if: c.lmx_graph_kind(g, owner) = 2
+            j: c.lmx_graph_formal(g, args, c.lmx_graph_word_text(g, owner))
+            if: j >= c.lmx_graph_count(args) || c.lmx_graph_kind(g, c.lmx_graph_get(args, j)) != 4 || c.lmx_graph_name_of(g, c.lmx_graph_get(args, j)) != state\w_at
+                return: lm_compiler_graph_refuse_at(src, fname, at, "a path of a machine function starts at a reference formal `@: name T`")
+            ---
+        status: lm_compiler_graph_expr(g, f, args, mi, owner, 0, src, fname, at)
+        if: status != 0
+            return: status
+        c.fputc(92, f)
+        c.fputs(c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 2U)), f)
+        return: 0
+    if: lm_compiler_graph_operator(op) = 0
+        return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates = != < <= > >= + - * / % && || and paths: no other operator yet")
+    if: whole = 0
+        c.fputs("(", f)
+    status: lm_compiler_graph_expr(g, f, args, mi, c.lmx_graph_get(expression, 0U), 0, src, fname, at)
+    if: status != 0
+        return: status
+    c.fprintf(f, " %s ", op)
+    status: lm_compiler_graph_expr(g, f, args, mi, c.lmx_graph_get(expression, 2U), 0, src, fname, at)
+    if: status != 0
+        return: status
+    if: whole = 0
+        c.fputs(")", f)
+    return: 0
+end: lm_compiler_graph_expr
+
+# The statements of block -- the body of a machine function, of an if or of an else --, each at level (four spaces a
+# level): `if: condition` with its body and the `else:` that follows it, each body closed by its tail cutter `---`;
+# `return: value`; the write of a field through a path head, `owner\field: value` (the unnamed Lmx [path, value],
+# lmx_graph_path_head). at counts the statements read. 0, or the refusal.
+fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: args c.Lmx; int: mi; @: block c.Lmx; int: level; const: (@: src char); @: fname char; @: at int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void 0
+    @: statement c.Lmx 0
+    @: head char 0
+    @: path void 0
+    @: next void 0
+    size_t: n c.lmx_graph_count(block)
+    size_t: i 0U
+    int: status 0
+    if: state = 0
+        return: 1
+    while: i < n && status = 0
+        raw: c.lmx_graph_get(block, i)
+        at[0]: at[0] + 1
+        if: c.lmx_graph_kind(g, raw) != 4
+            return: lm_compiler_graph_refuse_at(src, fname, at[0], "the graph path of a machine function translates if, else, return and the write of a field through a path: no other statement yet")
+        statement: (cast: (@: c.Lmx) raw)
+        head: c.lmx_graph_name_of(g, raw)
+        path: 0
+        if: head = 0
+            path: c.lmx_graph_path_head(g, raw)
+        if: head = state\w_return && c.lmx_graph_count(statement) = 1U
+            lm_compiler_graph_indent(f, level)
+            c.fputs("return: ", f)
+            status: lm_compiler_graph_expr(g, f, args, mi, c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
+            c.fputs("\n", f)
+        else:
+            if: head = state\w_if && c.lmx_graph_count(statement) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get(statement, 1U)) = 4
+                lm_compiler_graph_indent(f, level)
+                c.fputs("if: ", f)
+                status: lm_compiler_graph_expr(g, f, args, mi, c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
+                c.fputs("\n", f)
+                if: status = 0
+                    status: lm_compiler_graph_block(g, f, args, mi, (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U)), level + 1, src, fname, at)
+                lm_compiler_graph_indent(f, level + 1)
+                c.fputs("---\n", f)
+                next: 0
+                if: i + 1U < n
+                    next: c.lmx_graph_get(block, i + 1U)
+                if: status = 0 && next != 0 && c.lmx_graph_kind(g, next) = 4 && c.lmx_graph_name_of(g, next) = state\w_else
+                    i: i + 1U
+                    lm_compiler_graph_indent(f, level)
+                    c.fputs("else:\n", f)
+                    status: lm_compiler_graph_block(g, f, args, mi, (cast: (@: c.Lmx) next), level + 1, src, fname, at)
+                    lm_compiler_graph_indent(f, level + 1)
+                    c.fputs("---\n", f)
+                ---
+            else:
+                if: path = 0 || c.lmx_graph_count(statement) != 2U
+                    return: lm_compiler_graph_refuse_at(src, fname, at[0], "the graph path of a machine function translates if, else, return and the write of a field through a path: no other statement yet")
+                lm_compiler_graph_indent(f, level)
+                status: lm_compiler_graph_expr(g, f, args, mi, path, 1, src, fname, at[0])
+                if: status = 0
+                    c.fputs(": ", f)
+                    status: lm_compiler_graph_expr(g, f, args, mi, c.lmx_graph_get(statement, 1U), 1, src, fname, at[0])
+                    c.fputs("\n", f)
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: status
+end: lm_compiler_graph_block
+
+# ---- The module ------------------------------------------------------------------------------------------------------
+
+# The words of the root's statements named head (predef or include), each as written, after prefix, one line each
+# (each = 1) or one line of all (each = 0). 0, or 1 for a field that is no word.
+fn: lm_compiler_graph_door (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: head char; const: (@: prefix char); int: each) int
+    @: value void 0
+    @: words c.Lmx 0
+    size_t: i 0U
+    size_t: k 0U
+    int: seen 0
+    while: i < c.lmx_graph_count(root)
+        value: c.lmx_graph_get(root, i)
+        if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = head
+            words: (cast: (@: c.Lmx) value)
+            k: 0U
+            while: k < c.lmx_graph_count(words)
+                if: c.lmx_graph_kind(g, c.lmx_graph_get(words, k)) != 2
+                    return: 1
+                if: each != 0 || seen = 0
+                    c.fputs(prefix, f)
+                c.fputs(" ", f)
+                c.fputs(c.lmx_graph_word_text(g, c.lmx_graph_get(words, k)), f)
+                if: each != 0
+                    c.fputs("\n", f)
+                seen: 1
+                k: k + 1U
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: each = 0 && seen != 0
+        c.fputs("\n", f)
+    return: 0
+end: lm_compiler_graph_door
+
+# The machine module of the clean graph root, in the namespace of this translation's traversal, into f: the mark, the
+# preamble, one prototype block of all its functions, each function (L2 section 20). names[0..count) are the exports
+# --machine names; each names a function with a body at the root (compared by the addresses of the spellings). 0, or
+# the refusal.
+fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const: (@: src char); @@: names char; int: count) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    size_t: n c.lmx_graph_count(root)
+    @@: made_list c.Lmx (cast: (@@: c.Lmx) c.calloc(n + 1U, sizeof(@: void)))
+    @@: name_list char (cast: (@@: char) c.calloc(n + 1U, sizeof(@: char)))
+    @: value void 0
+    @: decl c.Lmx 0
+    @: made c.Lmx 0
+    @: head char 0
+    @: name char 0
+    @: wanted char 0
+    @: base char 0
+    size_t: i 0U
+    size_t: p 0U
+    int: fcount 0
+    int: k 0
+    int: x 0
+    int: found 0
+    int: status 0
+    int: at 0
+    if: state = 0 || made_list = 0 || name_list = 0
+        return: lm_compiler_graph_refuse(src, "out of memory")
+    # The root of a machine module holds its functions and the declarations of its C door, nothing to run.
+    while: i < n
+        value: c.lmx_graph_get(root, i)
+        head: c.lmx_graph_name_of(g, value)
+        if: c.lmx_graph_kind(g, value) != 4 || head = 0
+            return: lm_compiler_graph_refuse_root(src, i, "the root of a machine module holds its functions and its predef and include declarations: it has no entry to run a statement or a graph to hold a value")
+        if: head = state\w_fn
+            decl: (cast: (@: c.Lmx) value)
+            name: c.lmx_graph_fn_decl_name(g, decl)
+            made: 0
+            if: name != 0
+                made: (cast: (@: c.Lmx) c.lmx_graph_space_find(root, name))
+            if: name = 0 || c.lmx_graph_fn_written(g, decl) = 0 || made = 0 || c.lmx_graph_method(g, made) = 0 || made\parent != decl || c.lmx_graph_has_result(g, made) = 0
+                return: lm_compiler_graph_refuse_root(src, i, "a function of a machine module is declared with written arguments, a result and a body")
+            if: name[0] = 108 && name[1] = 50 && name[2] = 95
+                return: lm_compiler_graph_refuse_root(src, i, "a machine function's C name is not l2_, the translator's own")
+            made_list[fcount]: made
+            name_list[fcount]: name
+            fcount: fcount + 1
+        else:
+            if: head != state\w_predef && head != state\w_include
+                return: lm_compiler_graph_refuse_root(src, i, "the root of a machine module holds its functions (fn: the graph path translates no sub yet) and its predef and include declarations: it has no entry to run a statement or a graph to hold a Structure")
+            ---
+        ---
+        i: i + 1U
+    ---
+    # Every export names a function with a body at the root.
+    while: k < count
+        wanted: c.lmx_graph_intern(names[k], c.strlen(names[k]))
+        found: 0
+        x: 0
+        while: x < fcount
+            if: name_list[x] = wanted
+                found: 1
+            x: x + 1
+        ---
+        if: found = 0
+            c.fprintf(c.stderr, "l2trans error: %s: --machine %s names no function with a body at the unit's root\n", src, names[k])
+            return: 1
+        k: k + 1
+    ---
+    # The mark names the source by its file, as the P0 path's does, and the input it was read from.
+    base: (cast: (@: char) src)
+    p: 0U
+    while: src[p] != 0
+        if: src[p] = 47 || src[p] = 92
+            base: (cast: (@: char) (src + p + 1U))
+        p: p + 1U
+    ---
+    c.fprintf(f, "# Generated by l2trans from the clean graph of %s, a machine module (L2 section 20): edit that source, not this file.\n", base)
+    c.fputs("include: \"<stddef.h>\"\n", f)
+    if: lm_compiler_graph_door(g, f, root, (cast: (@: char) state\w_predef), "predef:", 1) != 0 || lm_compiler_graph_door(g, f, root, (cast: (@: char) state\w_include), "include:", 0) != 0
+        return: lm_compiler_graph_refuse(src, "a predef or include declaration of a machine module names its files by words")
+    c.fputs("\nprototype:\n", f)
+    x: 0
+    while: x < fcount
+        c.fputs("    ", f)
+        status: lm_compiler_graph_sig(g, f, made_list[x], name_list[x], x)
+        if: status = 1
+            c.fprintf(c.stderr, "l2trans error: %s: fn %s: a formal of a machine function is a number `T: name` or a reference `@: name T`\n", src, name_list[x])
+            return: 1
+        if: status != 0
+            c.fprintf(c.stderr, "l2trans error: %s: fn %s: the result of a machine function is a C scalar word (int, char, size_t, unsigned, ulong)\n", src, name_list[x])
+            return: 1
+        c.fputs("\n", f)
+        x: x + 1
+    ---
+    c.fputs("end: prototype\n\n", f)
+    x: 0
+    while: x < fcount
+        if: lm_compiler_graph_sig(g, f, made_list[x], name_list[x], x) != 0
+            return: 1
+        c.fputs("\n", f)
+        at: 0
+        status: lm_compiler_graph_block(g, f, c.lmx_graph_method_args(g, made_list[x]), x, c.lmx_graph_method_body(g, made_list[x]), 1, src, name_list[x], @ at)
+        if: status != 0
+            return: status
+        c.fprintf(f, "end: %s\n\n", name_list[x])
+        x: x + 1
+    ---
+    c.free((cast: (@: void) made_list))
+    c.free((cast: (@: void) name_list))
+    return: 0
+end: lm_compiler_graph_module
+
+# The translation of the machine module at src from its clean graph into the L1 file out: the graph built in an arena
+# of this translation (lm_graph_build_file; the parse tree destroyed with the construction), the traversal's namespace
+# opened (lmx_graph_space_open) and closed, the arena released; the L1 written to out.tmp and published at out only
+# when the whole module is written. 0, or 1 for a refusal (said on stderr).
+fn: lm_compiler_graph_translate (const: (@: src char); const: (@: out char); @@: names char; int: count) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) c.calloc(1U, c.sizeof(c.LmxArena)))
+    @: tmp char (cast: (@: char) c.malloc(c.strlen(out) + 5U))
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: f c.FILE 0
+    int: opened 0
+    int: status 0
+    if: arena = 0 || tmp = 0
+        return: lm_compiler_graph_refuse(src, "out of memory")
+    c.sprintf(tmp, "%s.tmp", out)
+    if: c.lmx_arena_open(arena) != 0
+        return: lm_compiler_graph_refuse(src, "the translation's arena does not open")
+    g: c.lmx_graph_open(arena)
+    if: g = 0
+        return: lm_compiler_graph_refuse(src, "the translation's graph does not open")
+    status: c.lm_graph_build_file(g, src, @ root)
+    if: status != 0
+        c.fprintf(c.stderr, "l2trans error: %s: the clean graph of the unit is not built (the builder answered %d)\n", src, status)
+        return: 1
+    status: c.lmx_graph_space_open(g, root, @ opened)
+    if: status != 0
+        c.fprintf(c.stderr, "l2trans error: %s: the traversal of the unit's root does not open (answer %d)\n", src, status)
+        return: 1
+    f: c.fopen(tmp, "wb")
+    if: f = 0
+        c.lmx_graph_space_close(opened)
+        c.fprintf(c.stderr, "l2trans error: cannot open %s\n", tmp)
+        return: 1
+    status: lm_compiler_graph_module(g, f, root, src, names, count)
+    if: c.fclose(f) != 0 && status = 0
+        status: lm_compiler_graph_refuse(src, "the machine module is not written")
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(arena)
+    c.free((cast: (@: void) arena))
+    if: status != 0
+        c.remove(tmp)
+        c.free((cast: (@: void) tmp))
+        return: 1
+    c.remove(out)
+    if: c.rename(tmp, out) != 0
+        c.remove(tmp)
+        c.free((cast: (@: void) tmp))
+        return: lm_compiler_graph_refuse(src, "the machine module cannot be published at its output path")
+    c.free((cast: (@: void) tmp))
+    return: 0
+end: lm_compiler_graph_translate
+
+# The command line of the frontend's clean-graph input: `--graph --library --machine NAME ... SOURCE [PART ...] OUTPUT`
+# -- the words of the frontend's machine module (lm_compiler_cli_main) after the selector --graph, which the hosted
+# frontend tools/l2trans.lm2 reads first. The recipe names the modules translated from their graph; there is no
+# fallback to the P0 path for them. 0, or 1 for a refusal.
+fn: lm_compiler_graph_main (int: argc; @@: argv char) int
+    @@: names char 0
+    int: count 0
+    int: a 2
+    int: k 0
+    int: j 0
+    if: argc < 2 || c.strcmp(argv[1], "--graph") != 0
+        c.fputs("usage: l2trans --graph --library --machine NAME ... <source.lm2> [<part.lm2> ...] <output.lm1>\n", c.stderr)
+        return: 1
+    if: argc < a + 3 || c.strcmp(argv[a], "--library") != 0
+        c.fputs("l2trans error: --graph translates a machine module: --library --machine NAME ... <source.lm2> [<part.lm2> ...] <output.lm1>\n", c.stderr)
+        return: 1
+    a: a + 1
+    names: (cast: (@@: char) c.calloc((cast: (size_t) argc), sizeof(@: char)))
+    if: names = 0
+        c.fputs("l2trans error: out of memory\n", c.stderr)
+        return: 1
+    while: argc >= a + 4 && c.strcmp(argv[a], "--machine") = 0
+        names[count]: argv[a + 1]
+        count: count + 1
+        a: a + 2
+    ---
+    if: count = 0
+        c.fputs("l2trans error: --graph translates a machine module: --machine NAME ... names its exports\n", c.stderr)
+        return: 1
+    if: argc < a + 2
+        c.fputs("usage: l2trans --graph --library --machine NAME ... <source.lm2> [<part.lm2> ...] <output.lm1>\n", c.stderr)
+        return: 1
+    if: argv[a][0] = 45 && argv[a][1] = 45
+        c.fprintf(c.stderr, "l2trans error: --graph: %s is not translated from the clean graph yet (a machine module without a header of its own)\n", argv[a])
+        return: 1
+    while: k < count
+        if: c.strncmp(names[k], "l2_", 3U) = 0
+            c.fprintf(c.stderr, "l2trans error: --machine %s: a machine function's C name is not l2_, the translator's own\n", names[k])
+            return: 1
+        j: 0
+        while: j < k
+            if: c.strcmp(names[j], names[k]) = 0
+                c.fprintf(c.stderr, "l2trans error: --machine %s is given twice\n", names[k])
+                return: 1
+            j: j + 1
+        ---
+        k: k + 1
+    ---
+    return: lm_compiler_graph_translate(argv[a], argv[argc - 1], names, count)
+end: lm_compiler_graph_main

@@ -2,7 +2,9 @@
 # frontend's own command line, lm_compiler_cli_main, with the program's argv -- argv[0] this process's own, then the
 # words after `--` of the launch, unchanged -- and exits with its answer. The frontend's algorithms stay its L2 machine
 # modules (src/l2src/l2_frontend_*.lm2 and the P0 parser), aggregated by the L3-written l2_frontend_host.lm1; the
-# runtime it is linked with (rt/driver.o) is what lets the frontend read the clean Lmx graph of a unit.
+# runtime it is linked with (rt/driver.o) is what lets the frontend read the clean Lmx graph of a unit. The first word
+# --graph selects that input (route 331, step 2): the machine module is translated from its clean graph by
+# lm_compiler_graph_main (src/l2src/l2_frontend_graph.lm2), with no fallback to the P0 tree.
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 predef: "l2src/l2_frontend_host.lm1"
 
@@ -30,7 +32,11 @@ while: i < n && args != 0
         buf[len]: (cast: (char) 0)
     args[i]: buf
     i: i + 1U
-if: args != 0
-    rc: c.lm_compiler_cli_main((cast: (int) n), args)
+if: args != 0 && n > 1U && c.strcmp(args[1], "--graph") = 0
+    rc: c.lm_compiler_graph_main((cast: (int) n), args)
+else:
+    if: args != 0
+        rc: c.lm_compiler_cli_main((cast: (int) n), args)
+    ---
 sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
 return

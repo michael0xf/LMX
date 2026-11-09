@@ -1,0 +1,67 @@
+CWD=C:/Nyasha_Planet/LMX/build2/codex_fix250generationchain01/runs/opus338
+GRAPH-BEFORE-BEGIN
+predef: "l2src/lmx_win32_api.h.lm1"
+predef: "l2src/lmx_clock.h.lm1"
+fn: lmx_clock_now () c.uint64_t
+    return: (cast (c.uint64_t) (c.GetTickCount64))
+end: lmx_clock_now
+fn: lmx_clock_ticks () ulong
+    return: (cast (ulong) (c.GetTickCount64))
+end: lmx_clock_ticks
+fn: lmx_clock_elapsed (c.uint64_t: start; c.uint64_t: now) c.uint64_t
+    if: (now < start) ((return 0U))
+    return: (now - start)
+end: lmx_clock_elapsed
+fn: lmx_clock_since (c.uint64_t: start) c.uint64_t
+    return: (lmx_clock_elapsed start ((cast (c.uint64_t) (c.GetTickCount64))))
+end: lmx_clock_since
+fn: lmx_clock_word () size_t
+    return: (cast (size_t) (c.GetTickCount64))
+end: lmx_clock_word
+fn: lmx_clock_half () size_t
+    size_t: zero 0U
+    return: ((((zero - 1U)) / 2U) + 1U)
+end: lmx_clock_half
+fn: lmx_deadline_passed (size_t: deadline; size_t: now) int
+    if: ((now - deadline) < (lmx_clock_half)) ((return 1))
+    return: 0
+end: lmx_deadline_passed
+fn: lmx_deadline_wait (size_t: deadline; size_t: now) size_t
+    if: ((lmx_deadline_passed deadline now) != 0) ((return 0U))
+    return: (deadline - now)
+end: lmx_deadline_wait
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+predef: "l2src/lmx_win32_api.h.lm1"
+predef: "l2src/lmx_clock.h.lm1"
+fn: lmx_clock_now () c.uint64_t
+    return: (cast (c.uint64_t) (c.GetTickCount64))
+end: lmx_clock_now
+fn: lmx_clock_ticks () ulong
+    return: (cast (ulong) (c.GetTickCount64))
+end: lmx_clock_ticks
+fn: lmx_clock_elapsed (c.uint64_t: start; c.uint64_t: now) c.uint64_t
+    if: (now < start) ((return 0U))
+    return: (now - start)
+end: lmx_clock_elapsed
+fn: lmx_clock_since (c.uint64_t: start) c.uint64_t
+    return: (lmx_clock_elapsed start ((cast (c.uint64_t) (c.GetTickCount64))))
+end: lmx_clock_since
+fn: lmx_clock_word () size_t
+    return: (cast (size_t) (c.GetTickCount64))
+end: lmx_clock_word
+fn: lmx_clock_half () size_t
+    size_t: zero 0U
+    return: ((((zero - 1U)) / 2U) + 1U)
+end: lmx_clock_half
+fn: lmx_deadline_passed (size_t: deadline; size_t: now) int
+    if: ((now - deadline) < (lmx_clock_half)) ((return 1))
+    return: 0
+end: lmx_deadline_passed
+fn: lmx_deadline_wait (size_t: deadline; size_t: now) size_t
+    if: ((lmx_deadline_passed deadline now) != 0) ((return 0U))
+    return: (deadline - now)
+end: lmx_deadline_wait
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+EXIT=0

@@ -1,0 +1,44 @@
+# The machine functions of lmx_schedule entered through the C door with real values (route 331, step 2, slice 338):
+# the runtime this program is linked with translates src/l2src/lmx_schedule.lm2 from its clean graph when it is built
+# with a hosted frontend (`lmxtool build-runtime REPO STAGE BASE FRONTEND LABEL HOSTED-FRONTEND`), from the P0 tree
+# otherwise; the answers are the module's either way. A record without a slot or a limit is refused; a tick of a record
+# that waits for nothing answers its state; a wait started at 100 with the limit 10 still waits at 109 and is overdue
+# at 110 (now - started >= limit), and a later tick answers that state; the subtraction is the machine's unsigned one
+# (a wait started 6 below the top of ulong still waits at 3 and is overdue at 4). Exit 7; 80.. name the failing check.
+predef: "l2src/lmx_schedule.h.lm1"
+include: "<stdlib.h>"
+include: "<limits.h>"
+fn: run () int
+    @: s c.LmxSchedule (cast: (@: c.LmxSchedule) c.calloc(1U, c.sizeof(c.LmxSchedule)))
+    ulong: top c.ULONG_MAX
+    if: s = 0
+        return: 80
+    if: c.lmx_schedule_state(0) != c.LMX_SCHEDULE_INVALID
+        return: 81
+    if: c.lmx_schedule_init(0, 0, 0, 10U) != c.LMX_SCHEDULE_INVALID
+        return: 82
+    if: c.lmx_schedule_init(s, 0, 0, 0U) != c.LMX_SCHEDULE_INVALID
+        return: 83
+    if: c.lmx_schedule_init(s, 0, 0, 10U) != c.LMX_SCHEDULE_OK || c.lmx_schedule_state(s) != c.LMX_SCHEDULE_IDLE
+        return: 84
+    if: c.lmx_schedule_tick(s, 500U) != c.LMX_SCHEDULE_IDLE
+        return: 85
+    if: c.lmx_schedule_wait(0, 1U) != c.LMX_SCHEDULE_INVALID
+        return: 86
+    if: c.lmx_schedule_wait(s, 100U) != c.LMX_SCHEDULE_OK || c.lmx_schedule_state(s) != c.LMX_SCHEDULE_WAITING
+        return: 87
+    if: c.lmx_schedule_tick(s, 109U) != c.LMX_SCHEDULE_WAITING
+        return: 88
+    if: c.lmx_schedule_tick(s, 110U) != c.LMX_SCHEDULE_OVERDUE || c.lmx_schedule_state(s) != c.LMX_SCHEDULE_OVERDUE
+        return: 89
+    if: c.lmx_schedule_tick(s, 111U) != c.LMX_SCHEDULE_OVERDUE
+        return: 90
+    if: c.lmx_schedule_wait(s, top - 5U) != c.LMX_SCHEDULE_OK || c.lmx_schedule_tick(s, 3U) != c.LMX_SCHEDULE_WAITING
+        return: 91
+    if: c.lmx_schedule_tick(s, 4U) != c.LMX_SCHEDULE_OVERDUE
+        return: 92
+    c.free(s)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

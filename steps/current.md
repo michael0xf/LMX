@@ -165,6 +165,17 @@ Frame `owner\field: actuals` построитель делает безымян�
 режима PASS, mutation 12/12, method-mutation 8/8, sub_void_value 5; производственные модули — как на graph64, кроме
 печати записи пути внутри однострочного тела `if` в `lmx_schedule`. Вызываемое через путь — 5 (граница).
 
+**Срез Opus 338: `lmx_schedule` из чистого графа** ([запись](witnesses/graph-machine-20261109/notes.md); маршрут 331,
+шаг 2). tool37, fehost02 (на rt64), rt65, graph76 на `opus338-source35` (402 входа). Первое слово `--graph` hosted F
+выбирает вход из чистого графа (`src/l2src/l2_frontend_graph.lm2`): общий построитель (теперь модуль
+`l2_graph_build.lm2`, общий с graph_trans) строит граф, обход корня создаёт Structure каждого `fn:`, машинный модуль
+пишется из них в форме F; иная форма отказывает на месте, отката на P0 нет. `build-runtime … HOSTED-FRONTEND` переводит
+так `lmx_schedule`: C runtime rt65 отличается от rt64 только внутри `lmx_schedule_init`/`_tick`; C-дверь
+`tests/cdoor/schedule_machine.lm2` (в smoke-списке) — 7 на rt65 и rt64, мутант `>=`→`>` — 89. На пути P0 fehost02 =
+seed байт в байт. 82 запуска graph-check × 3 режима PASS, mutation 12/12, method-mutation 8/8, производственные модули
+= graph75. Граница: цепочка поколений (bootstrap, rebuild) строит runtime без hosted F; `sub`, `--header`, иные
+операторы и выражения машинного модуля граф-путь пока отказывает.
+
 **Правило запуска (организационно, 2026-11-09).** Драйвер каждой L2-программы — lmxtool и graph_trans включительно —
 открывает в своём CWD файл защищённого имени на запись с усечением (selfbuild/src/l2src/l2_driver.lm2:3333). В срезах
 322–325 команды tool/graph запускались с CWD = корень репозитория и переписывали корневой экземпляр; его прежнее

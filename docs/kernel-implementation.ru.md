@@ -858,8 +858,17 @@ y)` → ячейка `int` 0; `0 * 10 + 1` = 1 (временные — в кад
    [запись](../steps/witnesses/frontend-host-20261109/notes.md)): `build-frontend-host` строит языковой корень
    `tools/l2trans.lm2` — argv программы в собственную командную строку frontend `lm_compiler_cli_main`, модули frontend
    собирает L3 (`decl_write` 60: текст собственного корня frontend без его C `main`) — и связывает с `rt/driver.o`; на
-   пути P0 он даёт L1 seed байт в байт (`lmx_schedule`, `lmx_graph_run` с заголовком, программа `graph_trans`).
-   Следующий шаг — вход машинного пути из чистого графа.
+   пути P0 он даёт L1 seed байт в байт (`lmx_schedule`, `lmx_graph_run` с заголовком, программа `graph_trans`). Шаг 2
+   (срез 338, [запись](../steps/witnesses/graph-machine-20261109/notes.md)): первое слово `--graph` командной строки
+   hosted F выбирает вход из чистого графа (`l2_frontend_graph.lm2`, `lm_compiler_graph_main`). Общий построитель —
+   теперь отдельный модуль `l2_graph_build.lm2`, общий с graph_trans, — строит граф единицы в арене трансляции, обход
+   корня открывает namespace трансляции (Structure каждого записанного `fn:` с частями args, return и body), машинный
+   модуль пишется из этих Structure в форме F (метка, преамбула объявлений C-двери, один блок prototype, имена формалов
+   `l2_p<f>_<j>_<name>`); имена тела разрешаются по адресам написаний среди формалов; иная форма отказывает на месте,
+   отката на P0 нет. `build-runtime … HOSTED-FRONTEND` так переводит `lmx_schedule`: C runtime отличается от прежнего
+   только внутри `lmx_schedule_init` и `lmx_schedule_tick`; init/wait/tick/state через C-дверь
+   (`tests/cdoor/schedule_machine.lm2`) отвечают 7 на native и walk, мутант `>=` → `>` — 89. Цепочка поколений
+   (bootstrap, rebuild) пока строит runtime без hosted F; она и следующие машинные модули — следующий шаг.
 4. **Участки арены как единственное хранилище.** `LmxPool/LmxChunk/LmxRange` → участки с индексом интервалов; точные
    размеры участков в выпуске; attach/mark/revert/GC по §2.
 5. **Полные итоговые проверки:** весь реестр на обоих исполнителях, bootstrap quick и full, checks, landing, docs render и

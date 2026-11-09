@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 399 entries.
+are historical. The current input manifest has 402 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -172,6 +172,12 @@ byte for byte; it is the first step of the frontend reading the clean graph (ker
 The current graph75/tool36/rt64 builds a Frame written on a path head, `owner\field: value`, as the unnamed Lmx
 [path, value] and writes that field in both consumers, at the root and in a body. 82 graph-check runs passed.
 [Sources, receipts and limits](../steps/witnesses/path-heads-20261109/notes.md).
+
+The hosted frontend translates a machine module from its clean graph when its first word is `--graph` (tool37,
+fehost02; kernel §11 item 3, step 2), and `build-runtime REPO STAGE BASE FRONTEND LABEL HOSTED-FRONTEND` translates
+`lmx_schedule` that way: the runtime rt65 differs from rt64 only in that module's C, and the smoke row
+`cdoor/schedule_machine.lm2` checks its values through the C door. The builder of the clean graph is its own module,
+`src/l2src/l2_graph_build.lm2`. [Sources, receipts and limits](../steps/witnesses/graph-machine-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

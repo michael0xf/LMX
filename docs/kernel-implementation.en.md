@@ -903,7 +903,18 @@ and publication of 308 are not run; the task is closed neither by a document nor
    `tools/l2trans.lm2` -- the program's argv to the frontend's own command line `lm_compiler_cli_main`, the frontend's
    modules aggregated by L3 (`decl_write` 60, the text of the frontend's own root glue without its C `main`) -- linked
    with `rt/driver.o`; on the P0 path it gives the seed's L1 byte for byte (`lmx_schedule`, `lmx_graph_run` with its
-   header, the program `graph_trans`). The clean-graph input of the machine path is the next step.
+   header, the program `graph_trans`). Step 2 (slice 338, [witness](../steps/witnesses/graph-machine-20261109/notes.md)):
+   the first word `--graph` of the hosted F's command line selects the clean-graph input (`l2_frontend_graph.lm2`,
+   `lm_compiler_graph_main`). The common builder -- now its own module `l2_graph_build.lm2`, shared with graph_trans --
+   builds the unit's graph in an arena of the translation, the traversal of the root opens the translation's namespace
+   (the Structure of every written `fn:` with its args, return and body parts), and the machine module is written from
+   those Structures in F's form (the mark, the preamble of the C door's declarations, one prototype block, formals named
+   `l2_p<f>_<j>_<name>`); the names of a body are resolved by the addresses of their spellings among the formals; any
+   other form is refused where it stands, with no fallback to P0. `build-runtime ... HOSTED-FRONTEND` translates
+   `lmx_schedule` so: the runtime's C differs from the previous one only inside `lmx_schedule_init` and
+   `lmx_schedule_tick`; init/wait/tick/state through the C door (`tests/cdoor/schedule_machine.lm2`) answer 7 natively
+   and walked, and the mutant `>=` -> `>` answers 89. The generation chain (bootstrap, rebuild) still builds its runtime
+   without a hosted F; it and the next machine modules are the next step.
 4. **Arena regions as the only storage.** `LmxPool/LmxChunk/LmxRange` → regions with the interval index; exact region sizes
    in the emission; attach/mark/revert/GC by §2.
 5. **The full final checks:** the whole registry on both executors, bootstrap quick and full, checks, landing, docs render

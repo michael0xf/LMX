@@ -1000,15 +1000,28 @@ end: bld_libc
 # L1 header may declare them too). names[0..count) are its exports; the step goes to rec, its log to out/STEM.L2.log.
 # The whole compiler modules can exceed 900 s (lower measured beyond that limit);
 # only this L2 component translation gets a finite 3600 s, not later C/link steps.
+# With graph != 0 the module is translated from its clean graph by the frontend hosted by the runtime at graph (route
+# 331: `graph 0 entry 0 -- --graph --library --machine NAME ... SOURCE PARTS OUTPUT`, run in the stage's src, whose
+# relative predef paths it reads), never by fe: a refusal there fails the step.
 # 0, or 1 when the translation fails.
-fn: bld_machine_module (@: rec c.FILE; @: fe char; @: src char; @: base char; @: out char; @: res int; @: stem char; @@: names char; int: count; int: header) int
-    @@: a char c.calloc(2U * (cast: (size_t) count) + 8U, sizeof(@: char))
+fn: bld_machine_module_from (@: rec c.FILE; @: fe char; @: graph char; @: src char; @: base char; @: out char; @: res int; @: stem char; @@: names char; int: count; int: header) int
+    @@: a char c.calloc(2U * (cast: (size_t) count) + 14U, sizeof(@: char))
     int: n 2
     int: k 0
     if: a = 0
         return: 1
     a[0]: fe
     a[1]: "--library"
+    if: graph != 0
+        a[0]: graph
+        a[1]: "0"
+        a[2]: "entry"
+        a[3]: "0"
+        a[4]: "--"
+        a[5]: "--graph"
+        a[6]: "--library"
+        n: 7
+    ---
     while: k < count
         a[n]: "--machine"
         a[n + 1]: names[k]
@@ -1033,6 +1046,11 @@ fn: bld_machine_module (@: rec c.FILE; @: fe char; @: src char; @: base char; @:
         bld_hash_note(rec, txt_path(src, txt_cat3("l2src/", stem, ".h.lm1")))
     bld_hash_note(rec, txt_path(src, txt_cat3("l2src/", stem, ".lm1")))
     return: 0
+end: bld_machine_module_from
+
+# One machine module translated by the frontend fe from the P0 tree (bld_machine_module_from without a hosted frontend).
+fn: bld_machine_module (@: rec c.FILE; @: fe char; @: src char; @: base char; @: out char; @: res int; @: stem char; @@: names char; int: count; int: header) int
+    return: bld_machine_module_from(rec, fe, 0, src, base, out, res, stem, names, count, header)
 end: bld_machine_module
 
 # The text of l2src/lmx.h.lm1, the kernel's one Lmx header: the value record and its arrays, the type and kind
@@ -2091,7 +2109,7 @@ end: decls_write_all
 # (lmx_gc_graph, last) declares its functions itself: the collection's answers and the prototypes the kernel calls are
 # in lmx_gc.h.lm1, which decls_write_all writes, beside the Thread collector's (lmx_gc.lm2). 0, or 1 when a
 # step fails.
-fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
+fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: graph char; @: out char; @: res int) int
     @@: list_names char c.calloc(9U, sizeof(@: char))
     @@: range_names char c.calloc(40U, sizeof(@: char))
     @@: pool_names char c.calloc(21U, sizeof(@: char))
@@ -3069,7 +3087,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_process_deadline", deadline_names, 3, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_schedule", schedule_names, 4, 0) != 0
+    # The first module of the frontend's clean-graph input (route 331, step 2): from its graph when the runtime is built
+    # with a hosted frontend (bld_runtime_from), by fe from the P0 tree otherwise.
+    if: bld_machine_module_from(rec, fe, graph, src, base, out, res, "lmx_schedule", schedule_names, 4, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_turn", turn_names, 3, 0) != 0
         return: 1
@@ -3173,8 +3193,10 @@ end: bld_driver_l2
 # The runtime objects of the stage built as stage/label: the kernel's L2 modules translated by the frontend fe
 # (bld_kernel_l2), the C headers regenerated from the L1 sources then (bld_headers, label/headers), and the driver
 # translated by l1trans, compiled strict -O2 as the production runtime driver.o and with -DLMX_OBSERVE_WALK as the
-# observed one driver-observe.o.
-fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label char) int
+# observed one driver-observe.o. With graph != 0, the frontend hosted by an earlier runtime (bld_frontend_host),
+# the modules of the frontend's clean-graph input -- lmx_schedule (route 331, step 2) -- are translated from their
+# graph by it, the rest by fe.
+fn: bld_runtime_from (@: repo char; @: stage char; @: base char; @: fe char; @: graph char; @: label char) int
     @@: a char c.calloc(40U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @: out char txt_path(stage, label)
@@ -3192,9 +3214,12 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label
     if: file_exists(txt_path(out, "record.txt")) != 0
         c.printf("RUNTIME %s exists: a new label for every attempt\n", out)
         return: 1
+    if: graph != 0 && file_exists(graph) = 0
+        c.printf("RUNTIME hosted frontend %s missing\n", graph)
+        return: 1
     dir_make(out)
     rec: os_file_open(txt_path(out, "record.txt"), "wb")
-    if: bld_kernel_l2(rec, repo, stage, base, fe, out, res) != 0
+    if: bld_kernel_l2(rec, repo, stage, base, fe, graph, out, res) != 0
         return: 5
     if: bld_driver_l2(rec, stage, base, fe, out, res) != 0
         return: 5
@@ -3228,17 +3253,23 @@ fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label
     bld_hash_note(rec, txt_path(out, "driver-observe.o"))
     c.fclose(rec)
     return: 0
+end: bld_runtime_from
+
+# The runtime built with every kernel module translated by fe from the P0 tree (the generation chain of bootstrap and
+# rebuild until it carries a hosted frontend).
+fn: bld_runtime (@: repo char; @: stage char; @: base char; @: fe char; @: label char) int
+    return: bld_runtime_from(repo, stage, base, fe, 0, label)
 end: bld_runtime
 
 # ---- The vertical slice of the kernel implementation specification (slice 309; docs/kernel-implementation.*.md, section
 # 11 item 0) ------------------------------------------------------------------------------------------------------------
 # The graph tool of the new path, built beside the old pipeline as stage/label/graph_trans-prod.exe: the P0 parser's
 # machine modules of the stage (bld_p0_l2_selected with those parts only, as the translator's own build makes them), the
-# graph tool's module (src/l2src/l2_graph_tool.lm2: the builder of the clean graph from the P0 tree, the emitter of a
-# program over that graph and the command line), the C headers regenerated (the P0 headers and the kernel's, lmx_graph
-# among them), and the program tools/graph_trans.lm2 built by fe and linked with the runtime object rt/driver.o, whose
-# kernel holds lmx_graph and lmx_graph_run. 0, or the failing step (1 arguments, 2 P0 modules, 3 the tool's module,
-# 4 headers, 5 the program).
+# builder of the clean graph from the P0 tree (src/l2src/l2_graph_build.lm2, shared with the hosted frontend), the graph
+# tool's module (src/l2src/l2_graph_tool.lm2: the emitter of a program over that graph and the command line), the C
+# headers regenerated (the P0 headers and the kernel's, lmx_graph among them), and the program tools/graph_trans.lm2
+# built by fe and linked with the runtime object rt/driver.o, whose kernel holds lmx_graph and lmx_graph_run. 0, or the
+# failing step (1 arguments, 2 P0 modules, 3 the builder's or the tool's module, 4 headers, 5 the program).
 fn: bld_graph (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char) int
     @@: names char c.calloc(4U, sizeof(@: char))
     @@: tags char c.calloc(1U, sizeof(@: char))
@@ -3265,11 +3296,14 @@ fn: bld_graph (@: repo char; @: stage char; @: base char; @: fe char; @: rt char
     if: bld_p0_l2_selected(rec, repo, stage, base, fe, out, res, "p0_own,p0_text,p0_scan,l2_machine_types,p0_parser") != 0
         c.fclose(rec)
         return: 2
+    names[0]: "lm_graph_build_file"
+    if: bld_machine_module(rec, fe, src, base, out, res, "l2_graph_build", names, 1, 1) != 0
+        c.fclose(rec)
+        return: 3
     names[0]: "lm_graph_main"
-    names[1]: "lm_graph_build_file"
-    names[2]: "lm_graph_emit_program"
-    names[3]: "lm_graph_run_file"
-    if: bld_machine_module(rec, fe, src, base, out, res, "l2_graph_tool", names, 4, 1) != 0
+    names[1]: "lm_graph_emit_program"
+    names[2]: "lm_graph_run_file"
+    if: bld_machine_module(rec, fe, src, base, out, res, "l2_graph_tool", names, 3, 1) != 0
         c.fclose(rec)
         return: 3
     if: bld_headers(backend, stage, txt_path(out, "headers")) != 0
@@ -3289,12 +3323,16 @@ end: bld_graph
 
 # The frontend hosted by the runtime (route 331; Codex 2026-11-09: the frontend reads the clean Lmx graph, so it is a
 # program linked with the kernel, as graph_trans is, not a second compiler): the stage's P0 and frontend machine modules
-# translated by fe (bld_p0_l2_selected, as the frontend's own build makes them), their aggregate written by L3
-# (decl_write 60: src/l2src/l2_frontend_host.lm1), the C headers regenerated, and the language root tools/l2trans.lm2
-# built by fe and linked with the runtime object rt/driver.o: stage/label/l2trans-host.exe. Its command line is
+# translated by fe (bld_p0_l2_selected, as the frontend's own build makes them), the builder of the clean graph
+# (src/l2src/l2_graph_build.lm2, shared with the graph tool) and the frontend's machine path over the clean graph
+# (src/l2src/l2_frontend_graph.lm2, route 331 step 2), each with its header, their aggregate written by L3 (decl_write
+# 60: src/l2src/l2_frontend_host.lm1), the C headers regenerated, and the language root tools/l2trans.lm2 built by fe
+# and linked with the runtime object rt/driver.o: stage/label/l2trans-host.exe. Its command line is
 # `l2trans-host.exe 0 entry 0 -- ARGS`: the words after `--` are the frontend's own arguments, unchanged, its argv[0]
-# this process's. 0, or the failing step (1 arguments, 2 modules, 3 aggregate, 4 headers, 5 the program).
+# this process's; `--graph` first selects the clean-graph input. 0, or the failing step (1 arguments, 2 modules, 3
+# aggregate, 4 headers, 5 the program).
 fn: bld_frontend_host (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char) int
+    @@: names char c.calloc(1U, sizeof(@: char))
     @@: tags char c.calloc(1U, sizeof(@: char))
     @@: objs char c.calloc(1U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
@@ -3302,9 +3340,10 @@ fn: bld_frontend_host (@: repo char; @: stage char; @: base char; @: fe char; @:
     @: out char txt_path(stage, label)
     @: backend char bld_bundle_backend(fe)
     @: glue char txt_path(stage, "src/l2src/l2_frontend_host.lm1")
+    @: src char txt_path(stage, "src")
     @: rec c.FILE 0
     int: x 0
-    if: tags = 0 || objs = 0 || res = 0 || lp = 0 || out = 0 || backend = 0 || glue = 0
+    if: names = 0 || tags = 0 || objs = 0 || res = 0 || lp = 0 || out = 0 || backend = 0 || glue = 0 || src = 0
         return: 1
     if: file_exists(backend) = 0
         c.printf("BACKEND companion missing for frontend %s\n", fe)
@@ -3317,6 +3356,14 @@ fn: bld_frontend_host (@: repo char; @: stage char; @: base char; @: fe char; @:
     if: rec = 0
         return: 1
     if: bld_p0_l2_selected(rec, repo, stage, base, fe, out, res, 0) != 0
+        c.fclose(rec)
+        return: 2
+    names[0]: "lm_graph_build_file"
+    if: bld_machine_module(rec, fe, src, base, out, res, "l2_graph_build", names, 1, 1) != 0
+        c.fclose(rec)
+        return: 2
+    names[0]: "lm_compiler_graph_main"
+    if: bld_machine_module(rec, fe, src, base, out, res, "l2_frontend_graph", names, 1, 1) != 0
         c.fclose(rec)
         return: 2
     os_file_remove(glue)
@@ -3805,11 +3852,17 @@ fn: decl_l2_frontend_root (@: f c.FILE) int
 end: decl_l2_frontend_root
 
 # The same aggregate for the frontend hosted by the runtime (route 331): the language root tools/l2trans.lm2 includes
-# it and calls lm_compiler_cli_main with the program's argv; no C main.
+# it and calls lm_compiler_cli_main -- or, after --graph, lm_compiler_graph_main -- with the program's argv; no C main.
+# The hosted frontend also holds the builder of the clean graph and the machine path over it.
 fn: decl_l2_frontend_host (@: f c.FILE) int
     if: c.fputs("# Generated by maintained L3: the frontend's modules, included by the hosted frontend tools/l2trans.lm2.\n", f) < 0
         return: 1
-    return: decl_l2_frontend_aggregate(f)
+    if: decl_l2_frontend_aggregate(f) != 0
+        return: 1
+    # The frontend's clean-graph input (route 331, step 2): the common builder and the machine path over the graph.
+    if: c.fputs("predef: \"l2src/l2_graph_build.h.lm1\"\npredef: \"l2src/l2_frontend_graph.h.lm1\"\nimport: \"l2src/l2_graph_build.lm1\"\nimport: \"l2src/l2_frontend_graph.lm1\"\n", f) < 0
+        return: 1
+    return: 0
 end: decl_l2_frontend_host
 
 fn: decl_l2_immut_query (@: f c.FILE) int

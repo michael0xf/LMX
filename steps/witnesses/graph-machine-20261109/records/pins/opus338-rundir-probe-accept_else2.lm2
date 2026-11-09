@@ -1,0 +1,12 @@
+predef: "l2src/lmx_schedule.h.lm1"
+fn: probe_pick (@: slot c.LmxSchedule; ulong: x; int: k) int
+    if: x > 3U && k != 0
+        slot\state: k * 2
+    else:
+        if: k < 0
+            return: 0 - k
+        ---
+        slot\state: k + -1
+    ---
+    return: slot\state % 7
+end: probe_pick

@@ -8,7 +8,7 @@ cases and 10 mutation checks, including a second traversal after a computed decl
 preserve native; shared code changes clear the affected entries before publication. This is a flat int/reference
 slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact commands, hashes and limits are in
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
-are historical. The current input manifest has 342 entries.
+are historical. The current input manifest has 347 entries.
 
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
@@ -101,6 +101,11 @@ mutation 11/11 and method-mutation 8/8 passed. [Sources, receipts and limits](..
 The current graph43/tool24/rt33 replaces the field/formal kind check by the common admission of the subset and makes an
 empty Structure the empty field chain (a nullary or default-only call); the builder does not yet construct an empty
 named Structure. 49 graph-check runs passed. [Sources, receipts and limits](../steps/witnesses/whole-empty-20261109/notes.md).
+
+The current graph44/tool25/rt34 gives `merge` in the clean graph: operands once, left to right, by their general
+meaning; one kernel composition `lmx_graph_merge_values` for both consumers with one source → copy map; a head naming a
+function is called once and no model field intercepts it. `mytest(merge(mytest\args; (a: int: 5)))` = 35 in all three
+modes. 53 graph-check runs passed. [Sources, receipts and limits](../steps/witnesses/clean-merge-20261109/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

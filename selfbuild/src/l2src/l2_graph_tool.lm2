@@ -1079,6 +1079,8 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
     if: kind = 4 && c.lmx_graph_name_of(g, raw) = 0
         expression: (cast: (@: c.Lmx) raw)
         count: c.lmx_graph_count(expression)
+        if: count >= 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U)) = state\w_merge
+            return: lm_graph_emit_merge(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
         if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) = state\w_deref
             status: lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
@@ -2334,3 +2336,79 @@ fn: lm_graph_main (@@: args char; int: n) int
     c.fputs("graph_trans: usage: run FILE [COUNT] | emit|emit-check FILE OUT.lm1 native|forced [COUNT] | p0 FILE | intern\n", c.stderr)
     return: 2
 end: lm_graph_main
+
+# merge(operand; ...) in native code: each operand once, in order, by its own route -- the constructed value of a written
+# anonymous Structure through the kernel's literal calls, a nested merge, any other operand address (a call included,
+# applied once) -- then the one composition of the kernel (lmx_graph_merge_values), shared with the interpreter. A bare
+# Frame describing a structure is refused at run time by the kernel's own predicate, with the interpreter's form answer.
+# The emitted code computes no merge ahead of execution: the result is built when the code runs.
+fn: lm_graph_emit_merge (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void 0
+    @: literal c.Lmx 0
+    @: element c.Lmx 0
+    size_t: n (cast: (size_t) (c.lmx_graph_count(expression) - 1U))
+    size_t: j 0U
+    size_t: i 0U
+    size_t: at 0U
+    int: ops temps[0]
+    int: made 0
+    int: value 0
+    int: status 0
+    temps[0]: temps[0] + 1
+    c.fprintf(f, "        []: @(void) l2_ops%d %zuU\n", ops, n + 1U)
+    while: j < n && status = 0
+        raw: c.lmx_graph_get(expression, j + 1U)
+        if: c.lmx_graph_merge_literal(g, scope, raw) != 0
+            literal: (cast: (@: c.Lmx) raw)
+            made: temps[0]
+            temps[0]: temps[0] + 1
+            c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_merge_literal_open(l2_g, lmx_call_code, ", made)
+            status: lm_graph_emit_address(g, f, scope, literal)
+            c.fprintf(f, ", @ l2_v%d) != 0\n            %s\n", made, leave_failure)
+            i: 0U
+            while: i < c.lmx_graph_count(literal) && status = 0
+                element: (cast: (@: c.Lmx) c.lmx_graph_get(literal, i))
+                at: 1U
+                if: c.lmx_graph_word_text(g, c.lmx_graph_get(element, 0U)) = state\w_int
+                    at: 2U
+                ---
+                value: -1
+                if: at < c.lmx_graph_count(element)
+                    status: lm_graph_emit_operand(g, f, scope, element, at, temps, decl_names, decl_slots, decl_n, @ value)
+                ---
+                if: status = 0
+                    c.fputs("        if: lmx_graph_merge_literal_put(l2_g, ", f)
+                    status: lm_graph_emit_address(g, f, scope, literal)
+                    if: value < 0
+                        c.fprintf(f, ", (cast: (@: Lmx) l2_v%d), %zuU, 0) != 0\n            %s\n", made, i, leave_failure)
+                    else:
+                        c.fprintf(f, ", (cast: (@: Lmx) l2_v%d), %zuU, l2_v%d) != 0\n            %s\n", made, i, value, leave_failure)
+                    ---
+                ---
+                i: i + 1U
+            ---
+            value: made
+        else:
+            if: c.lmx_graph_merge_description(g, scope, raw) != 0
+                value: temps[0]
+                temps[0]: temps[0] + 1
+                c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_merge_description(l2_g, lmx_call_code, (cast: (@: void) ", value)
+                status: lm_graph_emit_address(g, f, scope, (cast: (@: c.Lmx) raw))
+                c.fprintf(f, ")) != 0\n            %s\n", leave_failure)
+            else:
+                status: lm_graph_emit_operand(g, f, scope, expression, j + 1U, temps, decl_names, decl_slots, decl_n, @ value)
+            ---
+        ---
+        c.fprintf(f, "        l2_ops%d[%zuU]: l2_v%d\n", ops, j, value)
+        j: j + 1U
+    ---
+    value: temps[0]
+    temps[0]: temps[0] + 1
+    c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_merge_values(l2_g, l2_ops%d, %zuU, @ l2_v%d) != 0\n            %s\n", value, ops, n, value, leave_failure)
+    temp[0]: value
+    return: status
+end: lm_graph_emit_merge

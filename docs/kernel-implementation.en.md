@@ -94,6 +94,20 @@ field/formal kind check by the common admission of the subset: a field is suppli
 accepts it (`lmx_graph_admit`); an empty Structure is the empty field chain, the call of a nullary or default-only
 callee (`zero(zero\var)` = `zero()`, `defaults(zero\var)` = `defaults()`). The current builder does not construct an
 empty named Structure (`Empty: ()`) — a recorded limitation. 49 graph-check runs × interp/native/forced passed.
+The next [graph44/tool25/rt34](../steps/witnesses/clean-merge-20261109/notes.md) gives `merge` in the clean graph
+(§6.4). The operands are evaluated once, left to right, by their general meaning: a name, a path, a nested `merge`, a
+call; an anonymous Structure `(a: int: 5)` is built by the ordinary rules — an unknown name is defined by its field. Then
+one kernel operation `lmx_graph_merge_values`, for the interpreter and native alike, builds a new root with the model's
+layout and the new fields at the end; a same-named field of a later operand is written into the model's slot by the
+admission of an assignment (the same cell). One source → copy map serves all operands: operand roots map to the
+result, shared targets and cycles stay shared, the copies' name rows keep the canonical names; the sources are not
+changed. A head naming a function is called once and no model field intercepts the call: `f(3)` and `f: 3` are one
+graph, and an int result is no Structure — an admission refusal (4). A Frame whose head is no function describes a
+structure; its copy carries written names, and copying their lexical chain is open (5), as is copying callables, so the
+result has no lexical parent. `mytest(merge(mytest\args; (a: int: 5)))` = 35 in all three modes, the native code runs
+`merge` at execution time. `merge(f1; f2)` of two functions (the builder does not build a descriptor without a body), a
+held place `pack: merge(...)` and replacing a Structure slot remain open. 53 graph-check runs × interp/native/forced
+passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)
@@ -500,6 +514,16 @@ are kept ([L2 §13](L2_spec_en.md#copy-merge)); the rows of the name table are c
 copies' addresses; interned strings are shared by the process, nothing to copy. Attaching the regions of another arena of
 the same process touches neither cells nor names; attaching from another process (mail between processes, §8) passes
 through a `fromLmx`-like interning boundary. `independent: immutable` follows the book.
+
+Operands of `merge` are ordinary expressions with their general meaning (the author, 2026-11-08,
+[journal](../LMX_blog/2026-11-08.md)): a head naming a function is applied once and its result is the operand, and a
+model field of the same name never intercepts that call (`f(3)` and `f: 3` are one graph); a Frame whose head is no
+function describes a structure. Whole functions merge by the same Structure rules (`merge(f1; f2)`; for `f2` without a
+body the result keeps the copy of `f1`'s body with the changed signature). Every operand root maps to the result in the
+one map; a copied Structure's parent becomes the copy of its parent, and a lexical ancestor is copied only where a
+copied name resolves through it — a result with no written name or callable needs none and has parent 0 (no lexical
+parent, not an arena-root object); the place of execution never gives one. The implemented subset and its open parts:
+the status above (graph44).
 
 ### 6.5 Resetting `native` on a write (decision; the norm is [L2 §11](L2_spec_en.md#call))
 

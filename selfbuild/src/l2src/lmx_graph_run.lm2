@@ -17,6 +17,7 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 include: "<stdio.h>"
@@ -169,6 +170,7 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
     @: raw void 0
     @: word char 0
     @: op char 0
+    @: lead char 0
     @: row c.LmxGraphWork 0
     int: status c.lmx_graph_scan_add(@ queue, @ count, @ cap, body)
     while: at < count && status = 0
@@ -179,6 +181,7 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
         n: c.lmx_graph_count(current)
         word: c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U))
         op: c.lmx_graph_word_text(g, c.lmx_graph_get(current, 1U))
+        lead: word
         if: n = 2U && word = state\w_at
             raw: c.lmx_graph_get(current, 1U)
             while: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 1U
@@ -212,6 +215,13 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                     raw: c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
                 ---
             ---
+            # The written fields of an anonymous Structure operand of merge define their names; only their values are
+            # read (lmx_graph_merge_literal, lmx_graph_work_scan_literal).
+            if: i != 0U && lead = state\w_merge && lmx_graph_merge_literal(g, (cast: (@: c.Lmx) frame\code), raw) != 0
+                status: lmx_graph_work_scan_literal(g, frame, (cast: (@: c.Lmx) raw), @ queue, @ count, @ cap)
+                i: i + 1U
+                continue
+            ---
             if: current = body && c.lmx_graph_method(g, (cast: (@: c.Lmx) frame\code)) = 0 && (c.lmx_graph_kind(g, raw) = 1 || c.lmx_graph_kind(g, raw) = 3)
                 word: c.lmx_graph_slot_name(g, current, i)
                 if: word != 0
@@ -224,7 +234,7 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                 status: c.lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) raw))
             else:
                 word: c.lmx_graph_word_text(g, raw)
-                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref && word != state\w_eq && word != state\w_ne && word != state\w_lt && word != state\w_le && word != state\w_gt && word != state\w_ge && word != state\w_and && word != state\w_or && word != state\w_not && word != state\w_if && word != state\w_else && word != state\w_while && word != state\w_for && word != state\w_break && word != state\w_continue && word != state\w_redo && word != state\w_until && word != state\w_finally && word != state\w_assign
+                if: word != 0 && word != state\w_call && word != state\w_return && word != state\w_int && word != state\w_at && word != state\w_plus && word != state\w_minus && word != state\w_star && word != state\w_slash && word != state\w_percent && word != state\w_deref && word != state\w_eq && word != state\w_ne && word != state\w_lt && word != state\w_le && word != state\w_gt && word != state\w_ge && word != state\w_and && word != state\w_or && word != state\w_not && word != state\w_if && word != state\w_else && word != state\w_while && word != state\w_for && word != state\w_break && word != state\w_continue && word != state\w_redo && word != state\w_until && word != state\w_finally && word != state\w_assign && word != state\w_merge
                     status: lmx_graph_work_capture(g, frame, word)
                     if: status = 0
                         row: lmx_graph_work_row(frame, word)
@@ -633,11 +643,12 @@ fn: lmx_graph_call_shape (@: g c.LmxGraph; @: code c.Lmx; size_t: actuals) int
     return: 0
 end: lmx_graph_call_shape
 
-# A call written with one positional actual that names a value without effects -- a name or a field path -- may
-# give the whole argument structure (the book, whole-arguments): a Structure whose direct fields name the formals
-# is supplied by its fields. The binder then checks the required formals once that value is known
-# (lmx_graph_call_single), still before any argument effect. Literals, operations, addresses, calls and named
-# actuals are ordinary actuals. 1 for such a call, 0 otherwise.
+# A call written with one positional actual that names a value without effects -- a name or a field path -- or that
+# is a merge may give the whole argument structure (the book, whole-arguments): a Structure whose direct fields name the
+# formals is supplied by its fields. The binder then checks the required formals once that value is known
+# (lmx_graph_call_single), still before any argument effect; the operands of a merge written in the call are evaluated
+# before that check, as for a held result. Literals, operations, addresses, calls and named actuals are ordinary
+# actuals. 1 for such a call, 0 otherwise.
 fn: lmx_graph_single_candidate (@: g c.LmxGraph; @: expression c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: raw void 0
@@ -653,6 +664,8 @@ fn: lmx_graph_single_candidate (@: g c.LmxGraph; @: expression c.Lmx) int
         return: 0
     path: (cast: (@: c.Lmx) raw)
     if: c.lmx_graph_count(path) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) = state\w_deref
+        return: 1
+    if: c.lmx_graph_count(path) >= 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(path, 0U)) = state\w_merge
         return: 1
     return: 0
 end: lmx_graph_single_candidate
@@ -1284,6 +1297,9 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
         if: kind = 4 && c.lmx_graph_name_of(g, raw) = 0
             expression: (cast: (@: c.Lmx) raw)
             count: c.lmx_graph_count(expression)
+            # merge builds a new Structure from its operands (the book, composition; lmx_graph_eval_merge).
+            if: count >= 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U)) = state\w_merge
+                return: lmx_graph_eval_merge(g, scope, expression, out)
             word: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
             if: count = 3U && word = state\w_deref
                 status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ value)
@@ -1587,3 +1603,542 @@ fn: lmx_graph_call_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; int: sho
     ---
     return: status
 end: lmx_graph_call_data
+
+# ---- merge in the clean graph (the book, composition and whole-arguments; kernel §6.4) -----------------------------
+# The author 2026-11-08 (LMX_blog/2026-11-08.md): a head naming a function is applied once and its result is the
+# operand -- a slot of the model never intercepts the call; a Frame whose head names no function describes a structure.
+# Operands are evaluated once, left to right, by their general meaning; their composition is one kernel operation
+# (lmx_graph_merge_values) shared by the interpreter and native code.
+
+# A word of the language: the state's words, none of which names a place.
+fn: lmx_graph_language_word (@: state c.LmxGraphState; @: word char) int
+    if: state = 0 || word = 0
+        return: 0
+    if: word = state\w_int || word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_at || word = state\w_deref || word = state\w_fn || word = state\w_sub || word = state\w_assign || word = state\w_return || word = state\w_call || word = state\w_var
+        return: 1
+    if: word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or || word = state\w_not || word = state\w_if || word = state\w_else || word = state\w_while || word = state\w_for || word = state\w_break
+        return: 1
+    if: word = state\w_continue || word = state\w_redo || word = state\w_until || word = state\w_finally || word = state\w_merge
+        return: 1
+    return: 0
+end: lmx_graph_language_word
+
+# A written field of an anonymous Structure in this subset, by its form only: `name: value` (the Frame [name, value],
+# 1), `int: name value` or `int: name` (2). Its name word and value (0 for none) in the outs; 0 for any other form. The
+# role of the head is decided by the resolution of the caller.
+fn: lmx_graph_literal_field (@: g c.LmxGraph; @: raw void; @@: name char; @@: value void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: field c.Lmx 0
+    @: head char 0
+    size_t: n 0U
+    name[0]: 0
+    value[0]: 0
+    if: g = 0 || state = 0 || c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != 0
+        return: 0
+    field: (cast: (@: c.Lmx) raw)
+    n: c.lmx_graph_count(field)
+    head: c.lmx_graph_word_text(g, c.lmx_graph_get(field, 0U))
+    if: head = 0
+        return: 0
+    if: head = state\w_int
+        if: n != 2U && n != 3U
+            return: 0
+        name[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(field, 1U))
+        if: name[0] = 0 || lmx_graph_language_word(state, name[0]) != 0
+            return: 0
+        if: n = 3U
+            value[0]: c.lmx_graph_get(field, 2U)
+        return: 2
+    if: n != 2U || lmx_graph_language_word(state, head) != 0
+        return: 0
+    name[0]: head
+    value[0]: c.lmx_graph_get(field, 1U)
+    return: 1
+end: lmx_graph_literal_field
+
+# An anonymous Structure written as an operand of merge (the book, whole-arguments: the inner parentheses form a
+# Structure with the field a): an unnamed Lmx all of whose fields are written fields of this subset, the empty one
+# included. `name: value` whose head names a callable is that application, so such an Lmx is no literal. 1 or 0.
+fn: lmx_graph_merge_literal (@: g c.LmxGraph; @: scope c.Lmx; @: raw void) int
+    @: literal c.Lmx 0
+    @: name char 0
+    @: value void 0
+    size_t: i 0U
+    int: form 0
+    if: g = 0 || c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != 0
+        return: 0
+    literal: (cast: (@: c.Lmx) raw)
+    if: c.lmx_graph_method(g, literal) != 0
+        return: 0
+    while: i < c.lmx_graph_count(literal)
+        form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, i), @ name, @ value)
+        if: form = 0
+            return: 0
+        if: form = 1 && c.lmx_graph_method(g, (cast: (@: c.Lmx) lmx_graph_resolve(g, scope, name))) != 0
+            return: 0
+        i: i + 1U
+    ---
+    return: 1
+end: lmx_graph_merge_literal
+
+# A bare operand of merge describing a structure: a Frame whose head word names no callable, such as `v: 9` for an
+# unknown v (the author 2026-11-08: such a Frame may simply describe a structure; expressions are structures in the tree
+# too). It is that structure, not a supply of a model slot. Its copy carries written names, which resolve through their
+# lexical chain, and that copy is open: both consumers refuse it with the form answer (5). 1 or 0.
+fn: lmx_graph_merge_description (@: g c.LmxGraph; @: scope c.Lmx; @: raw void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: frame c.Lmx 0
+    @: head char 0
+    if: g = 0 || state = 0 || c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != 0
+        return: 0
+    frame: (cast: (@: c.Lmx) raw)
+    head: c.lmx_graph_word_text(g, c.lmx_graph_get(frame, 0U))
+    if: c.lmx_graph_count(frame) < 2U || head = 0 || lmx_graph_language_word(state, head) != 0 || lmx_graph_language_word(state, c.lmx_graph_word_text(g, c.lmx_graph_get(frame, 1U))) != 0
+        return: 0
+    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) lmx_graph_resolve(g, scope, head))) != 0
+        return: 0
+    return: 1
+end: lmx_graph_merge_description
+
+# The value of a written anonymous Structure: a new Structure with one place per written field, in order (the book,
+# composition of place and value: an unknown name is defined by its field; `int: a 5` and `a: int: 5` bind alike). A
+# name that already resolves -- an assignment or a call under the normal rules -- and a name repeated in the literal are
+# open in this subset (5). The places come from lmx_graph_merge_literal_put. 0 and the Structure in out.
+fn: lmx_graph_merge_literal_open (@: g c.LmxGraph; @: scope c.Lmx; @: literal c.Lmx; @@: out void) int
+    @: name char 0
+    @: other char 0
+    @: value void 0
+    @: made c.Lmx 0
+    size_t: n 0U
+    size_t: i 0U
+    size_t: j 0U
+    int: form 0
+    if: out = 0 || lmx_graph_merge_literal(g, scope, (cast: (@: void) literal)) = 0
+        return: 5
+    out[0]: 0
+    n: c.lmx_graph_count(literal)
+    while: i < n
+        form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, i), @ name, @ value)
+        if: lmx_graph_resolve(g, scope, name) != 0
+            return: 5
+        j: 0U
+        while: j < i
+            form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, j), @ other, @ value)
+            if: other = name
+                return: 5
+            j: j + 1U
+        ---
+        i: i + 1U
+    ---
+    made: c.lmx_graph_lmx(g, 0, n)
+    if: made = 0
+        return: 4
+    out[0]: (cast: (@: void) made)
+    return: 0
+end: lmx_graph_merge_literal_open
+
+# The place of written field index of the constructed literal: a new int place holding the value's int (a literal of the
+# code is not shared with a place, §3.2) or, for `int: name`, a place without a value; named at its cell. 0; 4 for the
+# value of `int: name value` that has no int, or without memory; 5 for `name: value` with a value of another kind (open).
+fn: lmx_graph_merge_literal_put (@: g c.LmxGraph; @: literal c.Lmx; @: made c.Lmx; size_t: index; @: value void) int
+    @: name char 0
+    @: written void 0
+    @: place void 0
+    @: cell void 0
+    int: form 0
+    int: number 0
+    if: g = 0 || literal = 0 || made = 0 || index >= c.lmx_graph_count(literal) || index >= c.lmx_graph_count(made)
+        return: 5
+    form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, index), @ name, @ written)
+    if: form = 0
+        return: 5
+    if: written = 0
+        place: c.lmx_graph_uninit_int(g)
+        if: place = 0
+            return: 4
+        cell: c.lmx_arena_pointer_void_read(place)
+    else:
+        if: c.lmx_graph_value_int(g, value, @ number) != 0
+            if: form = 2
+                return: 4
+            return: 5
+        ---
+        place: c.lmx_graph_int(g, number)
+        cell: place
+    ---
+    if: place = 0 || cell = 0 || c.lmx_graph_name_address(g, cell, name) != 0 || c.lmx_graph_put(made, index, place) != 0
+        return: 4
+    return: 0
+end: lmx_graph_merge_literal_put
+
+# The used graph of the operands admits the copy of this subset: int places, int references, data Structures and empty
+# slots. A written name (a word primitive) or a callable needs the lexical chain its names resolve through, and copying
+# that chain is open (5). 4 for an operand that is no Structure, or without memory. The visited set is this check's.
+fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n) int
+    @@: seen c.Lmx 0
+    @: current c.Lmx 0
+    @: value void 0
+    size_t: count 0U
+    size_t: cap 0U
+    size_t: at 0U
+    size_t: i 0U
+    int: kind 0
+    int: status 0
+    while: i < n && status = 0
+        kind: c.lmx_graph_kind(g, values[i])
+        if: kind != 4
+            status: 4
+        else:
+            if: c.lmx_graph_method(g, (cast: (@: c.Lmx) values[i])) != 0
+                status: 5
+            else:
+                if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) values[i])) != 0
+                    status: 4
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    while: at < count && status = 0
+        current: seen[at]
+        at: at + 1U
+        i: 0U
+        while: i < c.lmx_graph_count(current) && status = 0
+            value: c.lmx_graph_get(current, i)
+            kind: c.lmx_graph_kind(g, value)
+            if: kind = 3 || kind = 5
+                if: c.lmx_graph_kind(g, c.lmx_arena_pointer_void_read(value)) != 1
+                    status: 5
+                ---
+            else:
+                if: kind = 4
+                    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+                        status: 5
+                    else:
+                        if: c.lmx_graph_scan_add(@ seen, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
+                            status: 4
+                        ---
+                    ---
+                else:
+                    if: kind != 1 && value != 0
+                        status: 5
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+    c.free((cast: (@: void) seen))
+    return: status
+end: lmx_graph_merge_check
+
+# The copy of one value reached by merge through the one map (kernel §6.4): an int place keeps its form (a direct cell;
+# a place without a value as its copied cell and a new pointer of the same type), an int reference points at the copy of
+# its cell, a data Structure gets a new Lmx of its count whose slots the caller fills from the work list; the copies'
+# name rows keep the canonical names. A value already copied answers its copy. 0 and the copy in out; 4 without memory;
+# 5 for a kind whose copy is open.
+fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @@@: work c.Lmx; @: count size_t; @: cap size_t; @@: out void) int
+    @: copy void 0
+    @: referent void 0
+    @: target void 0
+    @: name char 0
+    int: kind 0
+    int: number 0
+    int: status 0
+    out[0]: 0
+    if: value = 0
+        return: 0
+    copy: c.lmx_copy_map_get(map, value)
+    if: copy != 0
+        out[0]: copy
+        return: 0
+    kind: c.lmx_graph_kind(g, value)
+    if: kind = 1
+        if: c.lmx_graph_value_int(g, value, @ number) != 0
+            return: 4
+        copy: c.lmx_graph_int(g, number)
+    else:
+        if: kind = 3 || kind = 5
+            referent: c.lmx_arena_pointer_void_read(value)
+            if: c.lmx_graph_kind(g, referent) != 1
+                return: 5
+            status: lmx_graph_merge_copy(g, map, referent, work, count, cap, @ target)
+            if: status != 0
+                return: status
+            if: kind = 3
+                copy: c.lmx_graph_uninit_int_at(g, target)
+            else:
+                copy: c.lmx_graph_ref_int(g, target)
+            ---
+        else:
+            if: kind != 4 || c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) != 0
+                return: 5
+            copy: (cast: (@: void) c.lmx_graph_lmx(g, 0, c.lmx_graph_count((cast: (@: c.Lmx) value))))
+            if: copy != 0 && c.lmx_graph_scan_add(work, count, cap, (cast: (@: c.Lmx) value)) != 0
+                return: 4
+            ---
+        ---
+    ---
+    if: copy = 0
+        return: 4
+    name: c.lmx_graph_name_of(g, value)
+    if: name != 0 && c.lmx_graph_name_address(g, copy, name) != 0
+        return: 4
+    if: c.lmx_copy_map_put(map, value, copy) != 0
+        return: 4
+    out[0]: copy
+    return: 0
+end: lmx_graph_merge_copy
+
+# A named field of a later operand written into the slot of the result it names, as at an assignment: an int place takes
+# the field's int and the same cell is written (§3.2). 4 for a field without an int; 5 when the slot holds no int place
+# (replacing a Structure or a reference slot is open).
+fn: lmx_graph_merge_write (@: g c.LmxGraph; @: result c.Lmx; size_t: slot; @: value void) int
+    int: kind c.lmx_graph_kind(g, c.lmx_graph_get(result, slot))
+    int: number 0
+    if: kind != 1 && kind != 3
+        return: 5
+    if: c.lmx_graph_value_int(g, value, @ number) != 0
+        return: 4
+    if: c.lmx_graph_assign_int(g, result, result, slot, number) != 0
+        return: 4
+    return: 0
+end: lmx_graph_merge_write
+
+# merge of evaluated operands (the book, composition; L2 §13; kernel §6.4). The result R has the layout of the model
+# (operand 0), then the new fields in operand order; a named field of a later operand naming a slot of R so far is
+# written into that slot by the admission of an assignment, any other is appended, so the model's field numbers do not
+# move. One source -> copy map serves all operands: every operand root maps to R (the instance obtained by copying and
+# composition), shared targets and cycles stay shared, the copies' name rows keep the canonical names, and a copied
+# Structure's parent is the copy of its parent where that was copied. The copied graph holds no written name or callable
+# (lmx_graph_merge_check), so nothing in R resolves a name through a lexical parent: R has none (parent 0, which is no
+# arena-root object), and the place of execution gives it none. The operands stay unchanged. 0 and R in out; 4 for an
+# operand that is no Structure or a refused write; 5 for an open form.
+fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out void) int
+    c.LmxCopyMap: map
+    @@: work c.Lmx 0
+    @@: names char 0
+    @: model c.Lmx 0
+    @: operand c.Lmx 0
+    @: result c.Lmx 0
+    @: child c.Lmx 0
+    @: copy void 0
+    @: held void 0
+    @: name char 0
+    size_t: count 0U
+    size_t: cap 0U
+    size_t: at 0U
+    size_t: m 0U
+    size_t: room 0U
+    size_t: total 0U
+    size_t: next 0U
+    size_t: i 0U
+    size_t: j 0U
+    size_t: k 0U
+    size_t: slot 0U
+    int: status 0
+    if: g = 0 || values = 0 || out = 0 || n = 0U
+        return: 5
+    out[0]: 0
+    status: lmx_graph_merge_check(g, values, n)
+    if: status != 0
+        return: status
+    model: (cast: (@: c.Lmx) values[0])
+    m: c.lmx_graph_count(model)
+    room: m
+    k: 1U
+    while: k < n
+        room: room + c.lmx_graph_count((cast: (@: c.Lmx) values[k]))
+        k: k + 1U
+    ---
+    names: (cast: (@@: char) c.calloc(room + 1U, sizeof(@: char)))
+    if: names = 0
+        return: 4
+    # The field set of R before its fixed Lmx: the model's slots, then each named field of a later operand that names no
+    # slot so far, in operand order. An unnamed field of a later operand is matched by no name and is open here (5).
+    while: i < m
+        names[i]: c.lmx_graph_slot_name(g, model, i)
+        i: i + 1U
+    ---
+    total: m
+    k: 1U
+    while: k < n && status = 0
+        operand: (cast: (@: c.Lmx) values[k])
+        j: 0U
+        while: j < c.lmx_graph_count(operand) && status = 0
+            name: c.lmx_graph_slot_name(g, operand, j)
+            if: name = 0
+                status: 5
+            else:
+                i: 0U
+                while: i < total && names[i] != name
+                    i: i + 1U
+                ---
+                if: i = total
+                    names[total]: name
+                    total: total + 1U
+                ---
+            ---
+            j: j + 1U
+        ---
+        k: k + 1U
+    ---
+    c.free((cast: (@: void) names))
+    if: status != 0
+        return: status
+    if: c.lmx_copy_map_init(@ map) != 0
+        return: 4
+    result: c.lmx_graph_lmx(g, 0, total)
+    if: result = 0
+        status: 4
+    k: 0U
+    while: k < n && status = 0
+        if: c.lmx_copy_map_put(@ map, values[k], (cast: (@: void) result)) != 0
+            status: 4
+        k: k + 1U
+    ---
+    i: 0U
+    while: i < m && status = 0
+        status: lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(model, i), @ work, @ count, @ cap, @ copy)
+        if: status = 0 && c.lmx_graph_put(result, i, copy) != 0
+            status: 4
+        i: i + 1U
+    ---
+    next: m
+    k: 1U
+    while: k < n && status = 0
+        operand: (cast: (@: c.Lmx) values[k])
+        j: 0U
+        while: j < c.lmx_graph_count(operand) && status = 0
+            name: c.lmx_graph_slot_name(g, operand, j)
+            held: c.lmx_graph_get(operand, j)
+            slot: c.lmx_graph_named(g, result, name)
+            if: slot < next
+                status: lmx_graph_merge_write(g, result, slot, held)
+            else:
+                status: lmx_graph_merge_copy(g, @ map, held, @ work, @ count, @ cap, @ copy)
+                if: status = 0 && c.lmx_graph_put(result, next, copy) != 0
+                    status: 4
+                ---
+                next: next + 1U
+            ---
+            j: j + 1U
+        ---
+        k: k + 1U
+    ---
+    at: 0U
+    while: at < count && status = 0
+        operand: work[at]
+        child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand)))
+        j: 0U
+        while: j < c.lmx_graph_count(operand) && status = 0
+            status: lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(operand, j), @ work, @ count, @ cap, @ copy)
+            if: status = 0 && c.lmx_graph_put(child, j, copy) != 0
+                status: 4
+            ---
+            j: j + 1U
+        ---
+        at: at + 1U
+    ---
+    # Parent edges once every copy exists, a parent reached after its child included.
+    at: 0U
+    while: at < count && status = 0
+        operand: work[at]
+        child: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand)))
+        child\parent: (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand\parent)))
+        at: at + 1U
+    ---
+    c.lmx_copy_map_dispose(@ map)
+    c.free((cast: (@: void) work))
+    if: status = 0
+        out[0]: (cast: (@: void) result)
+    return: status
+end: lmx_graph_merge_values
+
+# One operand of merge, evaluated once in its order: the constructed value of a written anonymous Structure, or any other
+# expression in its general meaning -- a name, a path, a nested merge, a call (a head naming a callable is applied once,
+# whatever slot the model has). The description of a structure by a bare Frame is open (5). 0 and the value in out.
+fn: lmx_graph_merge_operand (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out void) int
+    @: literal c.Lmx 0
+    @: made void 0
+    @: name char 0
+    @: written void 0
+    @: value void 0
+    size_t: i 0U
+    int: form 0
+    int: status 0
+    out[0]: 0
+    if: lmx_graph_merge_literal(g, scope, raw) != 0
+        literal: (cast: (@: c.Lmx) raw)
+        status: lmx_graph_merge_literal_open(g, scope, literal, @ made)
+        while: status = 0 && i < c.lmx_graph_count(literal)
+            form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, i), @ name, @ written)
+            value: 0
+            if: written != 0
+                status: lmx_graph_eval_value(g, scope, written, @ value)
+            ---
+            if: status = 0
+                status: lmx_graph_merge_literal_put(g, literal, (cast: (@: c.Lmx) made), i, value)
+            ---
+            i: i + 1U
+        ---
+        if: status = 0
+            out[0]: made
+        ---
+        return: status
+    if: lmx_graph_merge_description(g, scope, raw) != 0
+        return: 5
+    return: lmx_graph_eval_value(g, scope, raw, out)
+end: lmx_graph_merge_operand
+
+# merge(operand; ...): the operands once, left to right, then their composition. The operand array is this evaluation's.
+fn: lmx_graph_eval_merge (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @@: out void) int
+    @@: values void 0
+    size_t: n 0U
+    size_t: i 0U
+    int: status 0
+    if: g = 0 || out = 0 || c.lmx_graph_count(expression) < 2U
+        return: 5
+    n: c.lmx_graph_count(expression) - 1U
+    values: (cast: (@@: void) c.calloc(n + 1U, sizeof(@: void)))
+    if: values = 0
+        return: 4
+    while: i < n && status = 0
+        status: lmx_graph_merge_operand(g, scope, c.lmx_graph_get(expression, i + 1U), @ values[i])
+        i: i + 1U
+    ---
+    if: status = 0
+        status: lmx_graph_merge_values(g, values, n, out)
+    c.free((cast: (@: void) values))
+    return: status
+end: lmx_graph_eval_merge
+
+# For the body scan: the written fields of an anonymous Structure operand of merge define their names, never free inputs
+# of the body; a value Lmx joins the scan queue and a value word is a read input.
+fn: lmx_graph_work_scan_literal (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: literal c.Lmx; @@@: queue c.Lmx; @: count size_t; @: cap size_t) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: name char 0
+    @: written void 0
+    @: word char 0
+    @: row c.LmxGraphWork 0
+    size_t: i 0U
+    int: form 0
+    int: status 0
+    while: i < c.lmx_graph_count(literal) && status = 0
+        form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, i), @ name, @ written)
+        if: c.lmx_graph_kind(g, written) = 4
+            status: c.lmx_graph_scan_add(queue, count, cap, (cast: (@: c.Lmx) written))
+        else:
+            word: c.lmx_graph_word_text(g, written)
+            if: word != 0 && lmx_graph_language_word(state, word) = 0
+                status: lmx_graph_work_capture(g, frame, word)
+                row: lmx_graph_work_row(frame, word)
+                if: status = 0 && row != 0 && row\slot != (cast: (size_t) -1)
+                    row\loaded: row\loaded | 2
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: status
+end: lmx_graph_work_scan_literal

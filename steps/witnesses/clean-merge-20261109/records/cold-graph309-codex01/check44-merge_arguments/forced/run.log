@@ -1,0 +1,41 @@
+GRAPH-BEFORE-BEGIN
+fn: mytest (int: c 3; int: a) int
+    return: ((c * 10) + a)
+end: mytest
+AV:
+    int: a 8
+end: AV
+fn: wrap (int: x) int
+    return: (mytest (merge (mytest \ args) ((a x))))
+end: wrap
+int: r (mytest (merge (mytest \ args) ((a 5))))
+int: both (mytest (merge (mytest \ args) ((c 4) (a 6))))
+int: nested (mytest (merge (merge (mytest \ args) ((c 2))) ((a 7))))
+int: named (mytest (merge (mytest \ args) AV))
+int: model (mytest (merge AV ((c 1))))
+int: body (wrap 9)
+int: appended ((merge AV ((z 9))) \ z)
+int: kept (((merge AV ((a 2))) \ a) + (AV \ a))
+int: after (mytest (:= a 1))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: mytest (int: c 3; int: a) int
+    return: ((c * 10) + a)
+end: mytest
+AV:
+    int: a 8
+end: AV
+fn: wrap (int: x) int
+    return: (mytest (merge (mytest \ args) ((a x))))
+end: wrap
+int: r 35
+int: both 46
+int: nested 27
+int: named 38
+int: model 18
+int: body 39
+int: appended 9
+int: kept 10
+int: after 31
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

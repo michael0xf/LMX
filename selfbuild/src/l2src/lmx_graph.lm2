@@ -146,7 +146,8 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_redo: lmx_graph_intern_in(state, "redo", 4U)
     state\w_until: lmx_graph_intern_in(state, "until", 5U)
     state\w_finally: lmx_graph_intern_in(state, "finally", 7U)
-    if: state\w_until = 0 || state\w_finally = 0
+    state\w_merge: lmx_graph_intern_in(state, "merge", 5U)
+    if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0
         return: 0
     if: state\w_eq = 0 || state\w_ne = 0 || state\w_lt = 0 || state\w_le = 0 || state\w_gt = 0 || state\w_ge = 0 || state\w_and = 0 || state\w_or = 0 || state\w_not = 0 || state\w_if = 0 || state\w_else = 0 || state\w_while = 0 || state\w_for = 0 || state\w_break = 0 || state\w_continue = 0 || state\w_redo = 0
         return: 0
@@ -977,3 +978,18 @@ fn: lmx_graph_dump_marked (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; const: (@
     c.fflush(f)
     return: r
 end: lmx_graph_dump_marked
+
+# ---- Copy primitive of merge (kernel §6.4) -----------------------------------------------------------------------
+
+# The pointer primitive of a place without a value pointing at an existing int cell: the copy of such a place is its
+# copied cell and a new pointer of the same type to it (§6.4: the form is kept, not replaced by a direct cell). Taking
+# the cell's address reads none of its bytes. 0 without memory or when cell is no int primitive of this arena.
+fn: lmx_graph_uninit_int_at (@: g c.LmxGraph; @: cell void) @: void
+    @: pointer void 0
+    if: g = 0 || lmx_graph_kind(g, cell) != 1
+        return: 0
+    pointer: c.lmx_arena_pointer_cells_profiled(g\arena, c.LMX_TYPE_UNINIT_INT, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: pointer = 0 || c.lmx_arena_pointer_void_write(pointer, cell) != 0
+        return: 0
+    return: pointer
+end: lmx_graph_uninit_int_at

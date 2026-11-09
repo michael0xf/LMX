@@ -1,0 +1,22 @@
+GRAPH-BEFORE-BEGIN
+fn: f1 (int: a; int: b 2) int
+    return: ((a * 10) + b)
+end: f1
+fn: f2 (int: b 7) int
+    return: b
+end: f2
+int: r (((merge f1 f2) \ args) \ b)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f1 (int: a; int: b 2) int
+    return: ((a * 10) + b)
+end: f1
+fn: f2 (int: b 7) int
+    return: b
+end: f2
+int: r (((merge f1 f2) \ args) \ b)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 5, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 5

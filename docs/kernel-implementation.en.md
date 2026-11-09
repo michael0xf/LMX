@@ -888,7 +888,14 @@ and publication of 308 are not run; the task is closed neither by a document nor
    profiles and side arrays → regions; the persistent `implements` map → reception data; `LmxCodeLink` → §6.5.
 3. **The translator over the graph in full.** The frontend reads the unit's clean graph instead of the P0 tree; the parse
    tree and the builder's arenas are destroyed with the construction; the L1 translator compares the pointers of the same
-   strings; the stopped WIP 308 is not used.
+   strings; the stopped WIP 308 is not used. The route (Codex 2026-11-09, route 331): the existing frontend F itself
+   takes the clean graph, module by module, the machine module `lmx_schedule` first, with no second translator and no
+   Lmx → P0 adapter; F reads the graph through the kernel, so it runs as a program linked with the runtime. Step 1 (slice
+   336, [witness](../steps/witnesses/frontend-host-20261109/notes.md)): `build-frontend-host` builds the language root
+   `tools/l2trans.lm2` -- the program's argv to the frontend's own command line `lm_compiler_cli_main`, the frontend's
+   modules aggregated by L3 (`decl_write` 60, the text of the frontend's own root glue without its C `main`) -- linked
+   with `rt/driver.o`; on the P0 path it gives the seed's L1 byte for byte (`lmx_schedule`, `lmx_graph_run` with its
+   header, the program `graph_trans`). The clean-graph input of the machine path is the next step.
 4. **Arena regions as the only storage.** `LmxPool/LmxChunk/LmxRange` → regions with the interval index; exact region sizes
    in the emission; attach/mark/revert/GC by §2.
 5. **The full final checks:** the whole registry on both executors, bootstrap quick and full, checks, landing, docs render

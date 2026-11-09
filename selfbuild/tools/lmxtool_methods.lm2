@@ -1541,6 +1541,10 @@ fn: tool_main (@@: args char; int: n) int
         if: bld_graph(args[2], args[3], args[4], args[5], args[6], args[7]) != 0
             return: 1
         return: 0
+    if: n >= 8 && c.strcmp(args[1], "build-frontend-host") = 0
+        if: bld_frontend_host(args[2], args[3], args[4], args[5], args[6], args[7]) != 0
+            return: 1
+        return: 0
     if: n >= 11 && c.strcmp(args[1], "graph-check") = 0
         int: expected_exit 0
         @: runs char "1"

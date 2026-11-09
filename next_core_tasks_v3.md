@@ -108,6 +108,8 @@ Codex 332: слова языка по адресу, поле корня клас
 79 запусков graph-check PASS.
 Следующий [graph73/tool34/rt62](steps/witnesses/fn-names-20261109/notes.md): имя строкой по её значению, одно требование
 результата в любой форме записи. 81 запуск graph-check PASS.
+Маршрут 331, шаг 1 — [frontend на runtime](steps/witnesses/frontend-host-20261109/notes.md) (tool35, fehost01): тот же
+frontend языковым корнем `tools/l2trans.lm2`, связанным с rt62; на пути P0 — L1 seed байт в байт.
 
 Текущие отметки реализации — в отдельном [чек-листе](next_core_tasks_v3_checklist.md);
 их поддерживает действующий writer/build по коду и реальным запускам. История назначения: по поручению автора от

@@ -1922,6 +1922,8 @@ fn: decl_write (@: path char; int: kind) int
         r: decl_ids_state(f)
     if: kind = 59
         r: decl_graph_state(f)
+    if: kind = 60
+        r: decl_l2_frontend_host(f)
     if: c.fclose(f) != 0
         return: 1
     return: r
@@ -3284,6 +3286,58 @@ fn: bld_graph (@: repo char; @: stage char; @: base char; @: fe char; @: rt char
     return: 0
 end: bld_graph
 
+# The frontend hosted by the runtime (route 331; Codex 2026-11-09: the frontend reads the clean Lmx graph, so it is a
+# program linked with the kernel, as graph_trans is, not a second compiler): the stage's P0 and frontend machine modules
+# translated by fe (bld_p0_l2_selected, as the frontend's own build makes them), their aggregate written by L3
+# (decl_write 60: src/l2src/l2_frontend_host.lm1), the C headers regenerated, and the language root tools/l2trans.lm2
+# built by fe and linked with the runtime object rt/driver.o: stage/label/l2trans-host.exe. Its command line is
+# `l2trans-host.exe 0 entry 0 -- ARGS`: the words after `--` are the frontend's own arguments, unchanged, its argv[0]
+# this process's. 0, or the failing step (1 arguments, 2 modules, 3 aggregate, 4 headers, 5 the program).
+fn: bld_frontend_host (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char) int
+    @@: tags char c.calloc(1U, sizeof(@: char))
+    @@: objs char c.calloc(1U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @@: lp char c.calloc(1U, sizeof(@: char))
+    @: out char txt_path(stage, label)
+    @: backend char bld_bundle_backend(fe)
+    @: glue char txt_path(stage, "src/l2src/l2_frontend_host.lm1")
+    @: rec c.FILE 0
+    int: x 0
+    if: tags = 0 || objs = 0 || res = 0 || lp = 0 || out = 0 || backend = 0 || glue = 0
+        return: 1
+    if: file_exists(backend) = 0
+        c.printf("BACKEND companion missing for frontend %s\n", fe)
+        return: 1
+    if: file_exists(txt_path(out, "record.txt")) != 0
+        c.printf("FRONTEND-HOST %s exists: a new label for every attempt\n", out)
+        return: 1
+    dir_make(out)
+    rec: os_file_open(txt_path(out, "record.txt"), "wb")
+    if: rec = 0
+        return: 1
+    if: bld_p0_l2_selected(rec, repo, stage, base, fe, out, res, 0) != 0
+        c.fclose(rec)
+        return: 2
+    os_file_remove(glue)
+    if: decl_write(glue, 60) != 0
+        c.fclose(rec)
+        return: 3
+    bld_hash_note(rec, glue)
+    if: bld_headers(backend, stage, txt_path(out, "headers")) != 0
+        c.fclose(rec)
+        return: 4
+    tags[0]: "host"
+    objs[0]: txt_path(rt, "driver.o")
+    x: bld_program_k(repo, stage, base, fe, 0, "-O2 -fno-strict-aliasing", txt_path(stage, "tools/l2trans.lm2"), 0, out, "l2trans", tags, objs, 1, "", rec, res, lp, 3600000U)
+    if: x != 0
+        c.printf("FRONTEND-HOST program step %d kind %d exit %d\n", x, res[0], res[1])
+        c.fclose(rec)
+        return: 5
+    bld_hash_note(rec, txt_path(out, "l2trans-host.exe"))
+    c.fclose(rec)
+    return: 0
+end: bld_frontend_host
+
 # The lines between `GRAPH-<mark>-BEGIN` and `GRAPH-<mark>-END` of the file at log_path, CR dropped, compared with the
 # file at expected_path (CR dropped): 1 the same bytes, 0 different, missing or unreadable.
 fn: bld_graph_section_same (@: log_path char; @: expected_path char; @: mark char) int
@@ -3729,12 +3783,33 @@ fn: decl_l2_frontend_state (@: f c.FILE) int
     return: 0
 end: decl_l2_frontend_state
 
+# The aggregate of the frontend's L2 machine modules and the L1 bindings they need, as one L1 text: the root glue of
+# the frontend program (decl_l2_frontend_root, with a thin C main) and of the frontend hosted by the runtime
+# (decl_l2_frontend_host, which the language root tools/l2trans.lm2 includes). No compiler or CLI algorithm is printed.
+fn: decl_l2_frontend_aggregate (@: f c.FILE) int
+    if: c.fputs("predef: \"l1src/parser.lm1\"\npredef: \"l1src/libc_abi.lm1\"\npredef: \"l2src/l2_application.h.lm1\"\npredef: \"l2src/l2_frontend_helpers.h.lm1\"\npredef: \"l2src/l2_frontend_alloc.h.lm1\"\npredef: \"l2src/l2_frontend_values.h.lm1\"\npredef: \"l2src/l2_frontend_views.h.lm1\"\npredef: \"l2src/l2_frontend_context.h.lm1\"\npredef: \"l2src/l2_frontend_types.h.lm1\"\npredef: \"l2src/l2_frontend_coords.h.lm1\"\npredef: \"l2src/l2_frontend_resolve.h.lm1\"\npredef: \"l2src/l2_frontend_intern.h.lm1\"\npredef: \"l2src/l2_frontend_useplan.h.lm1\"\npredef: \"l2src/l2_frontend_lower.h.lm1\"\npredef: \"l2src/l2_frontend_core.h.lm1\"\npredef: \"l2src/l2_frontend_emit.h.lm1\"\npredef: \"l2src/l2_copy_uses.lm1\"\npredef: \"l2src/l2_receiving_source.lm1\"\npredef: \"l2src/l2_consumer_uses.lm1\"\ninclude: \"<stdio.h>\" \"<string.h>\" \"<limits.h>\" \"<stdlib.h>\"\npredef: \"l2src/l2_machine_types.lm1\"\n\nimport: \"l2src/l2_frontend_state.lm1\"\nimport: \"l2src/l2_frontend_alloc.lm1\"\nimport: \"l2src/l2_frontend_values.lm1\"\nimport: \"l2src/l2_frontend_views.lm1\"\nimport: \"l2src/l2_frontend_context.lm1\"\nimport: \"l2src/l2_frontend_types.lm1\"\nimport: \"l2src/l2_frontend_coords.lm1\"\nimport: \"l2src/l2_frontend_resolve.lm1\"\nimport: \"l2src/l2_frontend_intern.lm1\"\nimport: \"l2src/l2_frontend_useplan.lm1\"\nimport: \"l2src/l2_frontend_lower.lm1\"\nimport: \"l2src/l2_frontend_helpers.lm1\"\nimport: \"l2src/l2_frontend_core.lm1\"\nimport: \"l2src/l2_frontend_emit.lm1\"\n", f) < 0
+        return: 1
+    return: 0
+end: decl_l2_frontend_aggregate
+
 # A generated aggregate and a thin C main; no compiler or CLI algorithm is printed here.
 fn: decl_l2_frontend_root (@: f c.FILE) int
-    if: c.fputs("# Generated by maintained L3; compiler algorithms and CLI remain ordinary L2.\npredef: \"l1src/parser.lm1\"\npredef: \"l1src/libc_abi.lm1\"\npredef: \"l2src/l2_application.h.lm1\"\npredef: \"l2src/l2_frontend_helpers.h.lm1\"\npredef: \"l2src/l2_frontend_alloc.h.lm1\"\npredef: \"l2src/l2_frontend_values.h.lm1\"\npredef: \"l2src/l2_frontend_views.h.lm1\"\npredef: \"l2src/l2_frontend_context.h.lm1\"\npredef: \"l2src/l2_frontend_types.h.lm1\"\npredef: \"l2src/l2_frontend_coords.h.lm1\"\npredef: \"l2src/l2_frontend_resolve.h.lm1\"\npredef: \"l2src/l2_frontend_intern.h.lm1\"\npredef: \"l2src/l2_frontend_useplan.h.lm1\"\npredef: \"l2src/l2_frontend_lower.h.lm1\"\npredef: \"l2src/l2_frontend_core.h.lm1\"\npredef: \"l2src/l2_frontend_emit.h.lm1\"\npredef: \"l2src/l2_copy_uses.lm1\"\npredef: \"l2src/l2_receiving_source.lm1\"\npredef: \"l2src/l2_consumer_uses.lm1\"\ninclude: \"<stdio.h>\" \"<string.h>\" \"<limits.h>\" \"<stdlib.h>\"\npredef: \"l2src/l2_machine_types.lm1\"\n\nimport: \"l2src/l2_frontend_state.lm1\"\nimport: \"l2src/l2_frontend_alloc.lm1\"\nimport: \"l2src/l2_frontend_values.lm1\"\nimport: \"l2src/l2_frontend_views.lm1\"\nimport: \"l2src/l2_frontend_context.lm1\"\nimport: \"l2src/l2_frontend_types.lm1\"\nimport: \"l2src/l2_frontend_coords.lm1\"\nimport: \"l2src/l2_frontend_resolve.lm1\"\nimport: \"l2src/l2_frontend_intern.lm1\"\nimport: \"l2src/l2_frontend_useplan.lm1\"\nimport: \"l2src/l2_frontend_lower.lm1\"\nimport: \"l2src/l2_frontend_helpers.lm1\"\nimport: \"l2src/l2_frontend_core.lm1\"\nimport: \"l2src/l2_frontend_emit.lm1\"\n\nexternal:\n    fn: main (int: argc; @@: char argv) int\n    return: lm_compiler_cli_main(argc, argv)\nend: external\n", f) < 0
+    if: c.fputs("# Generated by maintained L3; compiler algorithms and CLI remain ordinary L2.\n", f) < 0
+        return: 1
+    if: decl_l2_frontend_aggregate(f) != 0
+        return: 1
+    if: c.fputs("\nexternal:\n    fn: main (int: argc; @@: char argv) int\n    return: lm_compiler_cli_main(argc, argv)\nend: external\n", f) < 0
         return: 1
     return: 0
 end: decl_l2_frontend_root
+
+# The same aggregate for the frontend hosted by the runtime (route 331): the language root tools/l2trans.lm2 includes
+# it and calls lm_compiler_cli_main with the program's argv; no C main.
+fn: decl_l2_frontend_host (@: f c.FILE) int
+    if: c.fputs("# Generated by maintained L3: the frontend's modules, included by the hosted frontend tools/l2trans.lm2.\n", f) < 0
+        return: 1
+    return: decl_l2_frontend_aggregate(f)
+end: decl_l2_frontend_host
 
 fn: decl_l2_immut_query (@: f c.FILE) int
     if: c.fputs("include: \"<stddef.h>\" \"<stdint.h>\"\n\n# Explicit borrowed immutable-query adapter.  Not LmP0Text and not an Lmx Structure\n# with a C layout.\n#\n# data points at caller-owned bytes that must stay unchanged and alive for the\n# lifetime of this object.  A program-lifetime C string literal satisfies that.  A\n# const char * formal does not prove it for an arbitrary buffer.\n#\n# The adapter does not own or copy the bytes.  hash is FNV-1a 64 of those bytes,\n# computed once by l2_immut_query_fill.  live==0 means invalid: compares must not\n# read data/hash.\nstruct: L2ImmutQuery\n    const: @: char data\n    size_t: length\n    uint64_t: hash\n    int: live\nend: L2ImmutQuery\n", f) < 0

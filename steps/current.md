@@ -148,6 +148,14 @@ Codex на вопросы 334). graph73/tool34/rt62 на `opus335-source29` (396
 81 запуск graph-check × 3 режима PASS, mutation 12/12, method-mutation 8/8, sub_void_value 5; производственные модули —
 как на graph64. Именованный оператор тела в `merge` нормы не меняет (ответ Codex); следующее — маршрут 331.
 
+**Срез Opus 336: frontend на runtime (маршрут 331, шаг 1)** ([запись](witnesses/frontend-host-20261109/notes.md)).
+tool35 (T34 build-self на rt62) на `opus336-source30` (397 входов). `build-frontend-host` строит языковой корень
+`tools/l2trans.lm2` (argv программы → `lm_compiler_cli_main`) с модулями frontend, которые собирает L3 (`decl_write` 60 —
+текст собственного корня frontend без C `main`; корень обычного F сохранён байт в байт), и связывает с `rt62/driver.o`:
+`fehost01/l2trans-host.exe`, запуск `0 entry 0 -- ARGS`. На пути P0 его L1 совпадает с seed fe309a байт в байт:
+`lmx_schedule` (машинный модуль), `lmx_graph_run` с заголовком, программа `graph_trans`. 81 запуск graph-check × 3
+режима PASS на tool35. Следующее — вход машинного пути из чистого графа для `lmx_schedule`.
+
 **Правило запуска (организационно, 2026-11-09).** Драйвер каждой L2-программы — lmxtool и graph_trans включительно —
 открывает в своём CWD файл защищённого имени на запись с усечением (selfbuild/src/l2src/l2_driver.lm2:3333). В срезах
 322–325 команды tool/graph запускались с CWD = корень репозитория и переписывали корневой экземпляр; его прежнее

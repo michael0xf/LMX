@@ -1,0 +1,36 @@
+# The frontend hosted by the runtime (route 331; Codex 2026-11-09): the ordinary language root of a program calls the
+# frontend's own command line, lm_compiler_cli_main, with the program's argv -- argv[0] this process's own, then the
+# words after `--` of the launch, unchanged -- and exits with its answer. The frontend's algorithms stay its L2 machine
+# modules (src/l2src/l2_frontend_*.lm2 and the P0 parser), aggregated by the L3-written l2_frontend_host.lm1; the
+# runtime it is linked with (rt/driver.o) is what lets the frontend read the clean Lmx graph of a unit.
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+predef: "l2src/l2_frontend_host.lm1"
+
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+MainLetter: m
+receiveMessage: m
+size_t: n length(m\mainArgs)
+size_t: i 0U
+size_t: j 0U
+size_t: len 0U
+@@: args char c.calloc(n + 1U, sizeof(@: char))
+@: buf char 0
+int: rc 2
+while: i < n && args != 0
+    len: length(m\mainArgs[i])
+    buf: c.malloc(len + 1U)
+    j: 0U
+    while: buf != 0 && j < len
+        buf[j]: m\mainArgs[i][j]
+        j: j + 1U
+    if: buf != 0
+        buf[len]: (cast: (char) 0)
+    args[i]: buf
+    i: i + 1U
+if: args != 0
+    rc: c.lm_compiler_cli_main((cast: (int) n), args)
+sendMessage: exit(exit_code: rc; stdout: ""; stderr: "")
+return

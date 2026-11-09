@@ -1534,7 +1534,17 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                     i: i + 1U
                     continue
                 if: m < 2U
-                    return: 5
+                    # A statement without operands on a place this code defines when it runs applies the callable it
+                    # holds then; another place refuses the form when it is chosen, as the interpreter refuses it (5).
+                    if: lm_graph_emit_defined(g, root, decl_names, decl_slots, decl_n, head) = 0
+                        return: 5
+                    finish: -1
+                    r: lm_graph_emit_apply_or(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ finish)
+                    if: r != 0
+                        return: r
+                    c.fprintf(f, "        %s\n        l2_label%d: ()\n", leave_failure, finish)
+                    i: i + 1U
+                    continue
                 if: head = state\w_at
                     if: m != 4U || c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 2U)) != state\w_int
                         return: 5
@@ -1586,10 +1596,17 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                             return: r
                         ---
                     ---
-                    r: lm_graph_emit_expr(g, f, root, inner, 1U, m, temps, decl_names, decl_slots, decl_n, @ temp)
-                    if: r != 0
-                        return: r
-                    c.fprintf(f, "        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, %zuU, l2_t%d) != 0\n            %s\n", k, temp, leave_failure)
+                    # The write reading takes one value field (lm_graph_emit_write_form). Behind the call reading another
+                    # form -- several actuals, a named actual -- is no write: it refuses when the place is chosen as no
+                    # callable, as the interpreter refuses it then, and never stops the translation of the call.
+                    if: finish >= 0 && lm_graph_emit_write_form(g, inner, 1U, m) = 0
+                        c.fprintf(f, "        %s\n", leave_failure)
+                    else:
+                        r: lm_graph_emit_expr(g, f, root, inner, 1U, m, temps, decl_names, decl_slots, decl_n, @ temp)
+                        if: r != 0
+                            return: r
+                        c.fprintf(f, "        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, %zuU, l2_t%d) != 0\n            %s\n", k, temp, leave_failure)
+                    ---
                     if: finish >= 0
                         c.fprintf(f, "        l2_label%d: ()\n", finish)
                     ---
@@ -1788,12 +1805,17 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                     c.fputs("        if: lmx_graph_named(l2_g, lmx_call_code, ", f)
                     status: lm_graph_emit_word(g, f, code, statement, name_slot)
                     c.fprintf(f, ") = lmx_graph_count(lmx_call_code)\n            %s\n", leave_failure)
-                if: n > name_slot + 1U && status = 0
-                    status: lm_graph_emit_expr(g, f, code, statement, name_slot + 1U, n, temps, 0, 0, 0U, @ result)
-                    c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_named(l2_g, lmx_call_code, ", f)
-                    if: status = 0
-                        status: lm_graph_emit_word(g, f, code, statement, name_slot)
-                    c.fprintf(f, "), l2_t%d) != 0\n            %s\n", result, leave_failure)
+                # Behind the call reading a form that is no write (lm_graph_emit_write_form) refuses when chosen.
+                if: finish >= 0 && lm_graph_emit_write_form(g, statement, 1U, n) = 0
+                    c.fprintf(f, "        %s\n", leave_failure)
+                else:
+                    if: n > name_slot + 1U && status = 0
+                        status: lm_graph_emit_expr(g, f, code, statement, name_slot + 1U, n, temps, 0, 0, 0U, @ result)
+                        c.fputs("        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, lmx_graph_named(l2_g, lmx_call_code, ", f)
+                        if: status = 0
+                            status: lm_graph_emit_word(g, f, code, statement, name_slot)
+                        c.fprintf(f, "), l2_t%d) != 0\n            %s\n", result, leave_failure)
+                    ---
                 ---
                 if: finish >= 0
                     c.fprintf(f, "        l2_label%d: ()\n", finish)
@@ -1821,12 +1843,17 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 finish: -1
                 if: target = 0 && c.lmx_graph_language_word(state, head) = 0 && lm_graph_emit_formal(g, code, head) = 0
                     status: lm_graph_emit_apply_or(g, f, code, statement, temps, 0, 0, 0U, @ finish)
-                if: status = 0
-                    status: lm_graph_emit_expr(g, f, code, statement, 1U, n, temps, 0, 0, 0U, @ result)
-                c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
-                if: status = 0
-                    status: lm_graph_emit_word(g, f, code, statement, 0U)
-                c.fprintf(f, ", l2_t%d) != 0\n            %s\n", result, leave_failure)
+                # Behind the call reading a form that is no write (lm_graph_emit_write_form) refuses when chosen.
+                if: finish >= 0 && lm_graph_emit_write_form(g, statement, 1U, n) = 0
+                    c.fprintf(f, "        %s\n", leave_failure)
+                else:
+                    if: status = 0
+                        status: lm_graph_emit_expr(g, f, code, statement, 1U, n, temps, 0, 0, 0U, @ result)
+                    c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
+                    if: status = 0
+                        status: lm_graph_emit_word(g, f, code, statement, 0U)
+                    c.fprintf(f, ", l2_t%d) != 0\n            %s\n", result, leave_failure)
+                ---
                 if: finish >= 0
                     c.fprintf(f, "        l2_label%d: ()\n", finish)
                 ---
@@ -2536,3 +2563,16 @@ fn: lm_graph_emit_formal (@: g c.LmxGraph; @: code c.Lmx; @: name char) int
     args: (cast: (@: c.Lmx) c.lmx_graph_get(code, 1U))
     return: (cast: (int) (c.lmx_graph_named(g, args, name) < c.lmx_graph_count(args)))
 end: lm_graph_emit_formal
+
+# 1 when a statement of n fields can be the write of its head's place: exactly one value field after the head, at from,
+# and no named actual `name := value` there -- several actuals and named actuals are forms of a call. 0 otherwise.
+fn: lm_graph_emit_write_form (@: g c.LmxGraph; @: statement c.Lmx; size_t: from; size_t: n) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void 0
+    if: n != from + 1U
+        return: 0
+    raw: c.lmx_graph_get(statement, from)
+    if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
+        return: 0
+    return: 1
+end: lm_graph_emit_write_form

@@ -148,6 +148,14 @@ statement on a place defined at run time is decided then (a call or a write), as
 collector; the name of a composition of several roots and the `fn`/`return` parts (a question to the author), the `@`
 address of a Structure reference and replacing a Structure or reference slot (5) are open. 63 graph-check runs ×
 interp/native/forced passed.
+The next [graph50/tool28/rt38](../steps/witnesses/runtime-statement-20261109/notes.md), after Codex's review of 329:
+behind the call reading of a statement on a place defined at run time, the write reading takes only one value field
+without a named actual (`lm_graph_emit_write_form`); another form — several actuals, named ones, none — is no write and
+refuses when a place that is no callable is chosen, then (as the interpreter: answer 2 or 5), instead of stopping the
+translation of a correct call. Reproduced on graph49 (`graph: emit answered 2`) and fixed: `f(a; b)` with
+`calls`/`last`, `g: merge(f)`, `g(1; 2)` in the root, `g(3; 4)` in a native method body and `g(b := 7; a := 6)` give
+the copy `calls` = 3, `last` = 67 and `f` 0 and 0; `x: 4`, `x(1; 2)` give answer 2 and exit 1 in native/forced.
+65 graph-check runs × interp/native/forced passed.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

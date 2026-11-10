@@ -458,6 +458,24 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
         # computed ahead of execution.
         expression: (cast: (@: c.Lmx) raw)
         word: c.lmx_graph_name_of(g, raw)
+        # The receiver getType (the book, get-type), as the interpreter reads it: the code asks the kernel for the type of
+        # the region that holds the address its one argument stands for; a written zero is the null address.
+        if: word = state\w_get_type
+            if: c.lmx_graph_count(expression) != 1U
+                return: 5
+            left: temps[0]
+            temps[0]: temps[0] + 1
+            method: c.lmx_graph_get(expression, 0U)
+            if: c.lmx_graph_kind(g, method) = 1 && c.lmx_graph_name_of(g, method) = 0 && c.lmx_int_value_known(method) = 0
+                c.fprintf(f, "        int: l2_t%d %d\n", left, c.LMX_TYPE_NONE)
+                temp[0]: left
+                return: 0
+            status: lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
+            if: status != 0
+                return: status
+            c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_address_type(l2_g, l2_v%d, @ l2_t%d) != 0\n            %s\n", left, value, left, leave_failure)
+            temp[0]: left
+            return: 0
         method: c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
             if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0

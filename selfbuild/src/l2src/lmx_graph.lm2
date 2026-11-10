@@ -103,7 +103,7 @@ end: lmx_graph_intern_in
 # reading (lmx_graph_root_structure) consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
-    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external sendMessage receiveMessage adopt length cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
+    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external sendMessage receiveMessage adopt length getType cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
     @@: list char 0
     size_t: at 0U
     size_t: start 0U
@@ -194,6 +194,10 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_body: lmx_graph_intern_in(state, "body", 4U)
     state\w_name: lmx_graph_intern_in(state, "name", 4U)
     state\w_fm: lmx_graph_intern_in(state, "fm", 2U)
+    # The receiver of the type of an address (the book, get-type; lmx_graph_address_type).
+    state\w_get_type: lmx_graph_intern_in(state, "getType", 7U)
+    if: state\w_get_type = 0
+        return: 0
     if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0
     if: state\w_args = 0 || state\w_body = 0 || state\w_name = 0 || state\w_fm = 0
@@ -1643,3 +1647,23 @@ fn: lmx_graph_language_receiver (@: word char) int
     ---
     return: 0
 end: lmx_graph_language_receiver
+
+# The type of the region of the arena that holds the address a value stands for (§2.1; the book, get-type; the
+# receiver getType of both executors): a Structure is the address of its own header; a reference -- to an int cell, to
+# an Lmx -- stands for the address it holds; any other value -- an int, a word -- is no address. 0 and the type in out,
+# LMX_TYPE_NONE for an address no region of this arena holds (a null reference); 5 for a value that is no address.
+fn: lmx_graph_address_type (@: g c.LmxGraph; @: value void; @: out int) int
+    @: address void value
+    int: kind lmx_graph_kind(g, value)
+    if: g = 0 || out = 0
+        return: 5
+    if: kind = 5 || kind = 6
+        address: c.lmx_arena_pointer_void_read(value)
+    else:
+        if: kind != 4
+            return: 5
+        ---
+    ---
+    out[0]: c.lmx_range_type_of(g\arena, address)
+    return: 0
+end: lmx_graph_address_type

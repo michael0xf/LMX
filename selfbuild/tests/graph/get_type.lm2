@@ -1,0 +1,21 @@
+# getType: the type of the region of the arena that holds the address a value stands for (the book, get-type). A
+# reference stands for the cell it holds, a Structure for its own header, a written zero for the null address.
+int: i 5
+int: u
+@: p int @i
+Box:
+    int: value 1
+end: Box
+h: Box
+int: t_cell getType(@i)
+int: t_ref getType(p)
+int: t_uninit getType(@u)
+int: t_box getType(Box)
+int: t_held getType(h)
+int: t_null getType(0)
+int: same t_cell = t_ref
+int: differs t_cell != t_box
+fn: inside (int: a) int
+    return: getType(@a)
+end: inside
+int: t_formal inside(7)

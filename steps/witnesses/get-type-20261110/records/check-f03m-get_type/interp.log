@@ -1,0 +1,43 @@
+GRAPH-BEFORE-BEGIN
+int: i 5
+int: u
+@: p int (@ i)
+Box:
+    int: value 1
+end: Box
+h: Box
+int: t_cell (getType (@ i))
+int: t_ref (getType p)
+int: t_uninit (getType (@ u))
+int: t_box (getType Box)
+int: t_held (getType h)
+int: t_null (getType 0)
+int: same (t_cell = t_ref)
+int: differs (t_cell != t_box)
+fn: inside (int: a) int
+    return: (getType (@ a))
+end: inside
+int: t_formal (inside 7)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: i 5
+int: u
+@: p int @i
+Box:
+    int: value 1
+end: Box
+@: h Box
+int: t_cell 1001025
+int: t_ref 1001025
+int: t_uninit 1001025
+int: t_box 13
+int: t_held 1001026
+int: t_null 0
+int: same 1
+int: differs 1
+fn: inside (int: a) int
+    return: (getType (@ a))
+end: inside
+int: t_formal 1001025
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

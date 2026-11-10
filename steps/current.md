@@ -25,8 +25,24 @@
 групповое присваивание пишется `(a b c) := c, a, b`, двоеточие остаётся объявляющей голове `(int: a; int: b): f()`;
 дополнения M6 реализуются в чистом графе, а не в прежнем пути понижения.
 
-**Порядок дальше.** M6: шаг 5 (`getType`) в работе, затем шаги 4, 1, 2, 3; M7; маршрут 331 — после шага 3 раздела M7;
+**Порядок дальше.** M6: шаг 5 (`getType`) сделан, затем шаги 4, 1, 2, 3; M7; маршрут 331 — после шага 3 раздела M7;
 далее по плану.
+
+**Срез 343: `getType` в чистом графе** ([запись](witnesses/get-type-20261110/notes.md), план M6 шаг 5). Операция
+ядра `lmx_graph_address_type` — одна для интерпретатора и выпускаемого `native`; слово `getType` в состоянии графа;
+фикстуры `get_type` (значения 2, 13, 0 — нынешние константы ядра) и `get_type_value` (ответ 5). 84 строки graph-check
+× interp/native/forced — 252 PASS; мутант роняет фикстуру в трёх режимах; `bootstrap quick` — 0 отказов. Прежний
+путь понижения ресивера не знает; констант двери в чистом графе нет.
+
+**Рабочее окружение сессии.** `P` — `build2/codex_fix250generationchain01`. Стадия — `P/fable-main01`, наполнена из
+`main` (manifest `P/pins/fable-source04.sha256`, 407 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
+и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f03/lmxtool.exe` (`2813b499…`), hosted
+frontend — `P/fable-main01/boot-f03/g2/frontend/l2trans.exe` (`9f3003fb…`), runtime — `P/fable-main01/rt-f03`
+(`driver.o` `66839a96…`), транслятор графа — `P/fable-main01/graph-f03`, базовый frontend —
+`P/cold-candidate48/full48/g2/frontend`. Команды инструмента запускаются из `P/runs/fable-m6-01`. Список graph-check —
+`P/pins/fable-graph-check-f03.tsv` (84 строки). Заняты метки `tool-f02`, `rt-f01`–`rt-f03`, `rt-f03m`,
+`graph-f01`–`graph-f03`, `graph-f03m`, `boot-f03`, `check-f01`, `check-f03`, `check-f03m` и `docs80`–`docs98` с
+суффиксом `-fable01`.
 
 Ниже — состояние до этой записи (история).
 

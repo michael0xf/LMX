@@ -276,8 +276,11 @@ intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `ho
 A program gets the same answer from the receiver `getType(arg)` — the code of the type of the region that holds the
 address — and reads a Structure's slots as an array of references `S[i]` (author's decisions of 2026-11-10:
 [book](LMX_semantics.en.md#get-type), [journal](../LMX_blog/2026-11-10.md)); the numeric values of the codes are not
-fixed by the norm. Today this is the kernel function `lmx_range_type_of` and the constants `LMX_TYPE_*`; the language has
-neither the receiver nor the Structure index yet ([plan](../next_core_tasks_v3.md#m6)).
+fixed by the norm. The receiver is implemented in the clean graph by one kernel operation for both consumers —
+`lmx_graph_address_type` over `lmx_range_type_of`: a Structure is the address of its own header, a reference the
+address it holds, an `int` value is no address, a written zero is the null address
+([record](../steps/witnesses/get-type-20261110/notes.md)). The language has no Structure index yet
+([plan](../next_core_tasks_v3.md#m6)).
 
 ### 2.2 Region types (decision; a finite inventory)
 

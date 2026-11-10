@@ -536,6 +536,49 @@ fn: lmx_graph_known_int (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode
     return: 0
 end: lmx_graph_known_int
 
+# The physical place of the ready field at slot of owner, where a path reads or writes it and where the admission of a
+# formal reads it (M6 4c; Codex CODEX-OPUS-347-4C-READER-REPLY-20261110T072610Z-01, ROUTE-REPLY item 1): the field
+# itself -- a Frame `y: 6` or `y: x` whose head was unknown is the Structure y with that content, never the value of its
+# one field --, except the int place the explicit int contract writes, `y: int: 6` (the builder keeps the receiver
+# applied, slice 346): its place is the int cell of the value, slot 0 of the Frame int, so a read and a write of p\y
+# use that one cell. Not the reading of a write's right-hand side (lmx_graph_field_value). The place in owner_out and
+# slot_out.
+sub: lmx_graph_ready_slot (@: g c.LmxGraph; @: owner c.Lmx; size_t: slot; @@: owner_out c.Lmx; @: slot_out size_t)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: field void 0
+    @: inner void 0
+    owner_out[0]: owner
+    slot_out[0]: slot
+    if: g = 0 || state = 0 || owner = 0 || slot >= c.lmx_graph_count(owner)
+        return
+    field: c.lmx_graph_get(owner, slot)
+    if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_name_of(g, field) = 0 || c.lmx_graph_count((cast: (@: c.Lmx) field)) != 1U
+        return
+    inner: c.lmx_graph_get((cast: (@: c.Lmx) field), 0U)
+    if: c.lmx_graph_kind(g, inner) != 4 || c.lmx_graph_name_of(g, inner) != state\w_int || c.lmx_graph_count((cast: (@: c.Lmx) inner)) != 1U
+        return
+    if: c.lmx_graph_kind(g, c.lmx_graph_get((cast: (@: c.Lmx) inner), 0U)) != 1 || c.lmx_graph_name_of(g, c.lmx_graph_get((cast: (@: c.Lmx) inner), 0U)) != 0
+        return
+    owner_out[0]: (cast: (@: c.Lmx) inner)
+    slot_out[0]: 0U
+end: lmx_graph_ready_slot
+
+# The ready field name of a Structure, read through a path or by an admission (lmx_graph_ready_slot): the field found by
+# lmx_graph_field, or the int cell of an explicitly typed `name: int: v`. 0 when there is no such field. Exported: the
+# native emitter reads a path by it.
+fn: lmx_graph_ready_field (@: g c.LmxGraph; @: value void; @: name char) @: void
+    @: base void c.lmx_graph_target(g, value)
+    @: owner c.Lmx 0
+    size_t: slot 0U
+    if: g = 0 || c.lmx_graph_kind(g, base) != 4 || name = 0
+        return: 0
+    slot: c.lmx_graph_named(g, (cast: (@: c.Lmx) base), name)
+    if: slot >= c.lmx_graph_count((cast: (@: c.Lmx) base))
+        return: 0
+    lmx_graph_ready_slot(g, (cast: (@: c.Lmx) base), slot, @ owner, @ slot)
+    return: c.lmx_graph_get(owner, slot)
+end: lmx_graph_ready_field
+
 # Explicit paths write the graph, even when they address this activation's data. They neither publish nor refresh
 # bare working values (semantics, working-state); only a later bare write marks that working place dirty.
 fn: lmx_graph_store_field (@: g c.LmxGraph; @: code c.Lmx; @: owner c.Lmx; size_t: slot; int: number) int
@@ -567,8 +610,8 @@ fn: lmx_graph_path_field (@: g c.LmxGraph; @: code c.Lmx; @: left void; @@: owne
     slot: c.lmx_graph_named(g, owner, c.lmx_graph_word_text(g, c.lmx_graph_get(path, 2U)))
     if: slot >= c.lmx_graph_count(owner)
         return: 3
-    owner_out[0]: owner
-    slot_out[0]: slot
+    # The physical place of a ready field: the int cell of `name: int: v` (lmx_graph_ready_slot).
+    lmx_graph_ready_slot(g, owner, slot, owner_out, slot_out)
     return: 0
 end: lmx_graph_path_field
 
@@ -957,7 +1000,8 @@ fn: lmx_graph_admit_path (@: g c.LmxGraph; @: expression void; @: name char; @: 
         return: status
     field: c.lmx_graph_word_text(g, c.lmx_graph_get(path, 2U))
     wanted[0]: c.lmx_graph_field(g, wanted[0], field)
-    found[0]: c.lmx_graph_field(g, found[0], field)
+    # The candidate's field by its role (lmx_graph_ready_field): `y: int: 6` an int place, `y: 6` the Structure y.
+    found[0]: lmx_graph_ready_field(g, found[0], field)
     kind: c.lmx_graph_kind(g, wanted[0])
     if: kind = 3
         kind: 1
@@ -1585,7 +1629,7 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                     status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ value)
                     if: status != 0
                         return: status
-                    value: c.lmx_graph_field(g, value, c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 2U)))
+                    value: lmx_graph_ready_field(g, value, c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 2U)))
                     if: value = 0
                         return: 3
                     ---
@@ -3892,13 +3936,13 @@ end: lmx_graph_named_actual
 # tail consumed once by the receiving place's contract. A tail of one value field -- a value, an expression, an
 # application `a(5)`, a typed value `int: 5`, a reference -- is evaluated as an actual written by position is. Any other
 # tail -- no field, several, one Frame `x: ...` -- is a present Structure (an empty tail is no absent actual and asks no
-# default): when its fields are written fields (`x: v`, `int: x v`; lmx_graph_literal_fields) it is constructed as the
-# written anonymous Structure operand of merge is (lmx_graph_literal_value): a typed field `x: int: v` an int place of
-# its value, evaluated once in written order, a field `x: v` with an unknown head the Structure x with its written
-# content (lmx_graph_literal_content; M6 4c, Codex CODEX-OPUS-346-4C-Q57-REPLY), the actual's name being the formal's,
-# not the Structure's; otherwise it is the Frame itself,
-# as lmx_graph_frame_value gives it. Either way the formal's admission takes or refuses it. Native code calls this for a
-# Structure tail (lm_graph_emit_call). 0, or the answer of the evaluation.
+# default), the written tail itself, as lmx_graph_frame_value gives it; a tail that is one written group of written
+# fields, `p: (y: int: 6)`, is that group. No Structure is constructed for the call (M6 4c; Codex
+# CODEX-OPUS-347-4C-DIRTY-CORRECTION-20261110T071825Z-01 and ROUTE-REPLY item 1): the formal gets a reference to the
+# Structure written in the code, the same object at every reach of the call, and its fields are read by their roles
+# (lmx_graph_ready_field): `y: int: 6` the int place of 6, `y: 6` with an unknown head the Structure y, a computed
+# `y: int: k + 5` no int place until its line runs. The formal's admission takes or refuses it. Native code calls
+# this for a Structure tail (lm_graph_emit_call). 0, or the answer of the evaluation.
 fn: lmx_graph_named_value (@: g c.LmxGraph; @: scope c.Lmx; @: named c.Lmx; @@: out void) int
     @: value void 0
     if: out = 0 || named = 0
@@ -3906,13 +3950,15 @@ fn: lmx_graph_named_value (@: g c.LmxGraph; @: scope c.Lmx; @: named c.Lmx; @@: 
     value: lmx_graph_frame_value(g, scope, (cast: (@: void) named))
     if: value = (cast: (@: void) named)
         if: c.lmx_graph_count(named) != 1U || lmx_graph_named_actual(g, c.lmx_graph_get(named, 0U)) != 0
-            if: lmx_graph_literal_fields(g, scope, named) != 0
-                return: lmx_graph_literal_value(g, scope, named, out)
             out[0]: value
             return: 0
         ---
         value: c.lmx_graph_get(named, 0U)
     ---
+    # A written group of written fields, `p: (y: int: 6)`, is that written Structure itself, as written.
+    if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = 0 && lmx_graph_literal_fields(g, scope, (cast: (@: c.Lmx) value)) != 0
+        out[0]: value
+        return: 0
     return: lmx_graph_eval_value(g, scope, value, out)
 end: lmx_graph_named_value
 
@@ -3974,8 +4020,9 @@ end: lmx_graph_literal_fields
 
 # The value of written fields (lmx_graph_literal_fields): a new Structure with one place per field
 # (lmx_graph_merge_literal_open), each value evaluated once in written order and put in its place
-# (lmx_graph_merge_literal_put) -- the operand of merge (lmx_graph_merge_operand) and the Structure tail of a named
-# actual (lmx_graph_named_value) alike. 0 and the Structure in out.
+# (lmx_graph_merge_literal_put) -- the operand of merge (lmx_graph_merge_operand), whose contract builds a new result
+# from the values of its operands; a named actual's tail is no such construction (lmx_graph_named_value). 0 and the
+# Structure in out.
 fn: lmx_graph_literal_value (@: g c.LmxGraph; @: scope c.Lmx; @: literal c.Lmx; @@: out void) int
     @: made void 0
     @: name char 0

@@ -1,0 +1,24 @@
+OPUS-CODEX-347-4C-INIT-Q-20261110T0725Z-01 — a correction of my 346 RESULT and two questions on M6 4c in the lowering.
+Measured with the boot347 G2 frontend and runtime (records of slice 347).
+
+Correction. My 346 RESULT said the lowering reads `pack: (y: 6)` as an int expression. That was an inference from the
+refusal of take(pack) and it is wrong: `pack: (y: 6)` then `return: pack + 1` is refused "a reference where a number is
+asked" -- pack is the written Structure; take(pack) is refused at admission ("implements is false in function
+argument"), as your Q57 rule asks (y is the Structure y with the content 6). I correct the docs in 347.
+
+Found. The lowering's written Structure declaration in a body, `pack: (y: int: k + 5)` (k 1, then `k: 100`), and
+take(pack) reading p\y: pack is the retained written Structure itself (two acts, CODEX-OPUS-278-REPEAT-IDENTITY;
+written_form.lm2), admitted and referenced -- but no code evaluates the computed initializer: y reads 0, take gives 2,
+silently (the literal `(y: int: 6)` gives 62). That contradicts bugs_for_fixing §5 ("каждый достигнутый инициализатор
+исполняется в своём прежнем месте и нужное число раз"; no invented zero). The graph refuses both forms in a fn body
+(answer 3: a body defines no place by `pack: (...)`).
+
+A. The declaration: at each reach of the line, evaluate each computed field initializer once, in written order, and
+write that field of the same written Structure (its identity kept across reaches, as written_form's referent row: a
+write through the place changes the written Structure itself), then admit and assign the reference -- is that the
+norm? And on a refused admission, are the initializers' effects kept (they ran) or must the admission come first?
+
+B. The candidate among actuals, `take(p: (y: int: k + 5))` / `take(p: y: int: k + 5)` at its actual's position (your
+order answer (b)): the same written Structure of the code with its initializers run at each reach (as the declaration),
+or a new Structure per reach, as the graph's lmx_graph_literal_value builds one per evaluation? The shared one is
+overwritten by a nested reach while an outer call still holds it (recursion through take).

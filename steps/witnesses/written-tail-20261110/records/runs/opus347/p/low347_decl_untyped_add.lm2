@@ -1,0 +1,13 @@
+# Probe 347/4c (lowering): `pack: (y: 6)` defines the Structure pack whose field is the Structure y with the content 6
+# (Codex CODEX-OPUS-346-4C-Q57-REPLY), so `pack + 1` must be refused; exit 7 here measures the misreading of the group
+# as the int expression 6.
+fn: held () int
+    pack: (y: 6)
+    return: pack + 1
+end: held
+int: code 7
+if: held() != 7
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,19 @@
+# Probe 347/4c (lowering): `pack: (y: 6)` is a Structure (pack + 1 is refused: a reference); given to the Structure
+# formal p whose model reads p\y as an int, the admission must refuse: y is the Structure y with the content 6.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: held () int
+    pack: (y: 6)
+    return: take(pack)
+end: held
+int: code 7
+if: held() != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

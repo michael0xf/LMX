@@ -1,0 +1,73 @@
+GRAPH-BEFORE-BEGIN
+Point:
+    int: y 0
+    int: unused 0
+end: Point
+fn: tst (int: c 3; int: a 2) int
+    return: ((c * 10) + a)
+end: tst
+fn: take (Point: p; int: q 2) int
+    return: (((p \ y) * 10) + q)
+end: take
+sub: put (Point: p; int: q 2) (
+    int: got 0
+)
+    got: (((p \ y) * 10) + q)
+end: put
+fn: bump (Point: p) int
+    p\y: ((p \ y) + 1)
+    return: (p \ y)
+end: bump
+fn: twice () int
+    return: bump((p (y (int 6))))
+end: twice
+int: expression tst((a (2 + 3)))
+int: typed tst((a (int 4)))
+int: field take((p (y (int 6))))
+int: pair take((p (y (int 6))) (q 4))
+int: round take((p (y (int 5)) (unused (int 1))) (q 2))
+int: k 1
+k: (int 8)
+int: rewritten ((k * 10) + 1)
+int: first twice()
+int: second twice()
+put((p (y (int 7)) (unused (int 1))) (q 3))
+int: block ((put \ var) \ got)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Point:
+    int: y 0
+    int: unused 0
+end: Point
+fn: tst (int: c 3; int: a 2) int
+    return: ((c * 10) + a)
+end: tst
+fn: take (Point: p; int: q 2) int
+    return: (((p \ y) * 10) + q)
+end: take
+sub: put (Point: p; int: q 2) (
+    int: got 0
+)
+    got: (((p \ y) * 10) + q)
+end: put
+fn: bump (Point: p) int
+    p\y: ((p \ y) + 1)
+    return: (p \ y)
+end: bump
+fn: twice () int
+    return: bump((p (y (int 8))))
+end: twice
+int: expression 35
+int: typed 34
+int: field 62
+int: pair 64
+int: round 52
+int: k 8
+k: (int 8)
+int: rewritten 81
+int: first 7
+int: second 8
+put((p (y (int 7)) (unused (int 1))) (q 3))
+int: block 73
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

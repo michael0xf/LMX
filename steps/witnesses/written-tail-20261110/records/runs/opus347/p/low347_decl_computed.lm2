@@ -1,0 +1,21 @@
+# Probe 347/4c (lowering): a written Structure declaration with a computed typed field, `pack: (y: int: k + 5)`, then
+# k written: the field is computed when the line is reached (6, so 62), not when the Structure is read; 81 otherwise.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: held () int
+    int: k 1
+    pack: (y: int: k + 5)
+    k: 100
+    return: take(pack)
+end: held
+int: code 7
+if: held() != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

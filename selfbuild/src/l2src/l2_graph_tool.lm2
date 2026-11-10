@@ -386,7 +386,8 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             status: lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
-            c.fprintf(f, "        l2_v%d: lmx_graph_field(l2_g, l2_v%d, ", value, value)
+            # The ready field by its role, as the interpreter reads it (lmx_graph_ready_field).
+            c.fprintf(f, "        l2_v%d: lmx_graph_ready_field(l2_g, l2_v%d, ", value, value)
             if: lm_graph_emit_word(g, f, scope, expression, 2U) != 0
                 return: 3
             c.fprintf(f, ")\n        if: l2_v%d = 0\n            %s\n", value, leave_failure)
@@ -695,7 +696,10 @@ fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: l
     # The owner of the written field: a Structure, or the target of a reference to it, as in the interpreter.
     c.fprintf(f, "        l2_v%d: lmx_graph_target(l2_g, l2_v%d)\n        if: lmx_graph_kind(l2_g, l2_v%d) != 4\n            %s\n        size_t: l2_s%d lmx_graph_named(l2_g, (cast: (@: Lmx) l2_v%d), ", owner, owner, owner, leave_failure, owner, owner)
     status: lm_graph_emit_word(g, f, code, path, 2U)
-    c.fprintf(f, ")\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure)
+    # The physical place of the ready field, as the interpreter finds it (lmx_graph_ready_slot): the int cell of
+    # `name: int: v`.
+    c.fprintf(f, ")\n        @: Lmx l2_o%d 0\n        lmx_graph_ready_slot(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d, @ l2_o%d, @ l2_s%d)\n        l2_v%d: (cast: (@: void) l2_o%d)\n", owner, owner, owner, owner, owner, owner, owner)
+    c.fprintf(f, "        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure)
     owner_out[0]: owner
     return: status
 end: lm_graph_emit_field_place

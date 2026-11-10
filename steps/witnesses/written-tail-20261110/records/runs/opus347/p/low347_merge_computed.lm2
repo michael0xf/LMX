@@ -1,0 +1,30 @@
+# Probe 347/4c (lowering): the value take(pack) gives for `pack: merge((y: int: k + 5))` with k 1, then k: 100 -- 62 (the
+# operand's field
+# computed when the line is reached) exits 7; 1052 (computed when read after the write of k) exits 82; 22 (the model's y)
+# exits 83; 2 (y unset, 0) exits 84; any other exits 81.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: held () int
+    int: k 1
+    pack: merge((y: int: k + 5))
+    k: 100
+    return: take(pack)
+end: held
+int: v held()
+int: code 81
+if: v = 62
+    code: 7
+if: v = 1052
+    code: 82
+if: v = 22
+    code: 83
+if: v = 2
+    code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

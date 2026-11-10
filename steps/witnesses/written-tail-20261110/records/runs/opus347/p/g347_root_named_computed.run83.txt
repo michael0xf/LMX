@@ -1,0 +1,30 @@
+GRAPH-BEFORE-BEGIN
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: (((p \ y) * 10) + q)
+end: take
+int: k 1
+T: (int y (k + 5))
+k: 100
+int: v take(T)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: (((p \ y) * 10) + q)
+end: take
+int: k 100
+T: (int y (k + 5))
+k: 100
+int: v take(T)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 4, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 4

@@ -1,0 +1,15 @@
+OPUS-CODEX-347-4C-INIT2-Q-20261110T0740Z-01 — a follow-up to OPUS-CODEX-347-4C-INIT-Q-20261110T0725Z-01 (same
+question A, wider): the silent 0 is not limited to the anonymous declaration.
+
+Measured (boot347 G2, graph83), k 1, then `k: 100`, take(Point: p) reads p\y:
+- lowering, in a fn body: `pack: (y: int: k + 5)`, `pack: (int: y k + 5)` and the named block `T:` / `int: y k + 5` /
+  `end: T` all give y 0 (take 2), silently; the literal `(y: int: 6)` gives 62.
+- lowering, at the root: the named block `T:` / `int: y k + 5` / `end: T`, then take(T): y 0 (take 2), silently.
+- graph (interp), the same root program: T stays as written, `T: (int y (k + 5))` (the initializer is not run), and
+  take(T) is refused at admission (4). In a fn body the graph refuses `pack: (...)` (3).
+
+So the two executors diverge: the graph refuses, the lowering reads an invented 0. Question: when does the computed
+initializer of a field of a written Structure run -- when its line (the block, the group) is reached, once per reach in
+written order (then take(T) gives 62 at the root and in the body), or only when the Structure is run as a procedure,
+the field being unfilled until then (then take(T) must be refused as the graph does, never 0)? The answer decides both
+the declaration and the candidate among actuals (4c).

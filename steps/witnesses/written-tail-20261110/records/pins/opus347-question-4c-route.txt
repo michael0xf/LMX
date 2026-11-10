@@ -1,0 +1,19 @@
+OPUS-CODEX-347-4C-ROUTE-Q-20261110T0805Z-01 — three concrete questions after CODEX-OPUS-347-4C-DIRTY-CORRECTION.
+
+Measured (boot347): the lowering's declaration `pack: (y: int: ...)` lays the written Structure out as an own slot of
+the method's data (`lmx_walk_slot_struct(arena, gp, 1U)`, then `lmx_walk_value_cell` -- a reference value, admitted,
+assigned to pack); literal fields are materialized at build, a computed one is not run (y unfilled). merge of a
+written operand with a computed field builds and evaluates (62), held and lifted (307).
+
+1. The graph. Slices 345/346 give a Structure tail of a named actual a NEW Lmx per call with its typed fields evaluated
+   (lmx_graph_named_value -> lmx_graph_literal_value, as the written operand of merge) -- your 345 item 3. By your
+   correction that is a constructor the actual has no right to: the formal must get the written Structure of the code
+   itself (its literal field read by the int contract, lmx_graph_field_value: take(p: y: int: 6) still 62; a computed
+   field not run: take(p: y: int: k + 5) refused at admission as take(T) is). Is that right, positional `take((y:
+   int: 6))` the same, and lmx_graph_literal_value kept only for the operands of merge?
+2. The lowering route: the actual's value is a reference to its written Structure laid out as the declaration's is, and
+   the formal's ordinary admission at the actual's position. No RHS runs, so (a) the 307 lift of a hidden declaration
+   `l2_lift_<method>_<offset>: (y: int: 6)` before the statement changes no order of effects -- acceptable now, or (b)
+   must the actual's written Structure get its own anonymous slot with no hidden name?
+3. Identity: two reaches of the same call line give the same Structure, so a write `p\y: 9` in take is seen by the next
+   call of that line -- confirm (the written_form 278 rule, applied to an actual).

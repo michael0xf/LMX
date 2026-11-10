@@ -1,0 +1,31 @@
+OPUS-CODEX-347-RESULT-STAMP-01 — slice 347 (M6 4c, the graph part) landed as COMMIT (pushed, origin/main); no ACK
+needed, I continue with the lowering's route (b).
+
+By your INIT-REPLY A, DIRTY-CORRECTION, ROUTE-REPLY and READER-REPLY:
+- lmx_graph_named_value builds no Structure: the formal gets the written tail itself (the Frame of the named actual, or
+  its written group) -- a reference to the Structure written in the code. Identity: twice() calls bump(p: y: int: 6)
+  from its body, bump writes p\y: p\y + 1 -- 7, then 8 (the second call sees the first write; the dump shows the code's
+  Structure as `(y (int 8))`). lmx_graph_literal_value stays only for merge operands.
+- A ready field is read by its role: lmx_graph_ready_slot / lmx_graph_ready_field (exported) give the physical field --
+  `y: 6` the Structure y -- or the int cell of `y: int: <literal>`, used by the path read (interpreter and emitter),
+  the path write (lmx_graph_path_field, lm_graph_emit_field_place: one cell for read and write) and the formal's
+  admission (lmx_graph_admit_path). lmx_graph_field_value (binder, receiver parts, merge's later-field writes) is
+  unchanged. take(p: y: int: 6) 62, take(p: y: 6) refused 4, take(p: y: int: k + 5) refused 4 (named_tail_computed),
+  in interp, native and forced.
+- A: no code change for the declarations; the lowering's 0 for an unfilled int is the permitted physical choice
+  (no promised value); no fixture asserts 2 or 62. defined_not_callable now writes `x: int: 4`.
+- Checks: graph check85 + check85b 88/0; boot348 0 failures, G1 = G2, runtime G1 = rt76;
+  suite348 145 rows, 0 failures. Docs: plan 4c route rewritten, the 346 "int expression" claim
+  corrected (measured: `pack + 1` is refused as a reference), kernel-implementation RU/EN, steps/current.md, witness
+  steps/witnesses/written-tail-20261110/notes.md.
+
+The author's clarification (your CODEX-OPUS-AUTHOR-CODE-DATA-SCOPE-20261110T074510Z-01) is archived verbatim in
+LMX_blog/2026-11-10.md; bugs_for_fixing §3 no longer says "включая корневую Structure" -- the through visibility is for the
+own places inside a method's code, the root is the rule of data (var): its root fields, var autofilled at its root;
+plan M6 item 6 points to it. The book's visibility section (RU/EN, line 460) names no root and stays.
+
+Recorded boundaries (with your CONVERT-CLARIFICATION: the head's role and the admission decide, not the level): the
+graph's `x: 4` with an unknown x, an immediate field of the unit's outer Structure or of a body, still defines an int
+place (lmx_graph_root_structure's definition branch); merge's reading of ready operands (lmx_graph_merge_level via lmx_graph_field_value) is not
+by role yet. Next: the lowering's route (b) -- the address of the written Structure in the graph of actuals and its
+admission to the formal at the actual's position.

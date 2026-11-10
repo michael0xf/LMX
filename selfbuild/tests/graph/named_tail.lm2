@@ -1,15 +1,19 @@
 # M6 4a (slice 345; Codex CODEX-OPUS-345-4A-REPLY-20261110T041147Z-01 item 3): the tail of a named actual `a: ...` is
 # consumed once by the contract of its formal (lmx_graph_named_value). One value field is evaluated as a positional
 # actual is: an expression (35), a typed value (34). A tail of written fields -- one Frame `y: int: 6`, the same field in
-# a parenthesized container, a vertical block of two in the layout call put(): -- is a Structure constructed as the
-# written operand of merge is
-# (lmx_graph_literal_value), which the Structure formal p admits by the paths take reads (62, 64; 73 in put\var\got).
+# a parenthesized container, a vertical block of two in the layout call put(): -- is the written Structure, which the
+# Structure formal p admits by the paths take reads (62, 64; 73 in put\var\got); slice 345 constructed it as the
+# written operand of merge (lmx_graph_literal_value), a constructor withdrawn in slice 347 (below).
 # M6 4c (slice 346; Codex CODEX-OPUS-346-4C-Q57-REPLY-20261110T060100Z-01): the fields are written typed, `y: int: 6`
 # -- an untyped `y: 6` with an unknown head defines the Structure y with the content 6, not an int field
 # (named_tail_content); slice 345 wrote them untyped and read them as int places, a reading of the helper, not the norm.
 # The graph keeps the written application of the int receiver, `int: 6` and `int(6)` alike (Codex
 # CODEX-OPUS-346-4C-BUILDER-REPLY-20261110T061250Z-01): two typed fields of one tail with closed receivers (52), and
 # `k: int: 8` on the known k writes that place where it stands (81).
+# Slice 347 (Codex CODEX-OPUS-347-4C-DIRTY-CORRECTION-20261110T071825Z-01, ROUTE-REPLY, READER-REPLY): no Structure is
+# built for the call -- the formal gets the Structure written in the code itself, the same object at every reach, its
+# `y: int: 6` read and written in one int cell (lmx_graph_ready_slot): bump(p: y: int: 6) in the body of twice gives 7,
+# then 8 at the second call (the write of the first is seen; a Structure made per call would give 7 twice).
 # A named tail an int formal cannot take is the ordinary refusal of admission (named_tail_unsuitable); `p:` with no
 # field is refused by P0 today (empty colon Frame) -- the empty forms are M6 item 1.
 Point:
@@ -25,6 +29,13 @@ end: take
 sub: put (Point: p; int: q 2) (int: got 0)
     got: p\y * 10 + q
 end: put
+fn: bump (Point: p) int
+    p\y: p\y + 1
+    return: p\y
+end: bump
+fn: twice () int
+    return: bump(p: y: int: 6)
+end: twice
 int: expression tst(a: 2 + 3)
 int: typed tst(a: int: 4)
 int: field take(p: y: int: 6)
@@ -33,6 +44,8 @@ int: round take(p: (y: int(5); unused: int(1)); q: 2)
 int: k 1
 k: int: 8
 int: rewritten k * 10 + 1
+int: first twice()
+int: second twice()
 put():
     p:
         y: int: 7

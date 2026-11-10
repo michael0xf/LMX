@@ -1,0 +1,13 @@
+# Probe 347/4c (lowering): an own place of a function without a value, `int: x`, then read: x * 10 + 2 -- 2 (x read 0)
+# exits 84; a refusal or a fault measures the contract of the unfilled place; any other value exits 81.
+fn: f () int
+    int: x
+    return: x * 10 + 2
+end: f
+int: v f()
+int: code 81
+if: v = 2
+    code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

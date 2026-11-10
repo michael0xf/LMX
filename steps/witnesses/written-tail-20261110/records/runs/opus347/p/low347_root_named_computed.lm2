@@ -1,0 +1,27 @@
+# Probe 347/4c (lowering): the named block `T:` / `int: y k + 5` / `end: T` at the root with k 1, then k: 100; take(T)
+# reads p\y -- 62 (computed when the block is reached) exits 7; 1052 exits 82; 22 exits 83; 2 (y 0) exits 84; else 81.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: k 1
+T:
+    int: y k + 5
+end: T
+k: 100
+int: v take(T)
+int: code 81
+if: v = 62
+    code: 7
+if: v = 1052
+    code: 82
+if: v = 22
+    code: 83
+if: v = 2
+    code: 84
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

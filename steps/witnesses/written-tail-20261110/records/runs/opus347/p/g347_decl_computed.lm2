@@ -1,0 +1,16 @@
+# Probe 347/4c (graph): a written Structure declaration with a computed typed field, `pack: (y: int: k + 5)`, then k
+# written; take reads p\y.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: held () int
+    int: k 1
+    pack: (y: int: k + 5)
+    k: 100
+    return: take(pack)
+end: held
+int: v held()

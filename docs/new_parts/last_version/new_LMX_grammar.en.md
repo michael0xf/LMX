@@ -1,10 +1,12 @@
 # LMX grammar
 
-1. **GROSS ERROR IN THE PREVIOUS REVISION — REQUIREMENT TO FIX P0 CODE.** The rule that P0 removes a sole anonymous Structure and substitutes its fields was wrong. P0 must preserve every explicitly written anonymous container, including an empty container, in every context. Generic flattening damages non-call Structures as well as calls. Remove any implementation that unwraps a sole anonymous Structure during parsing or syntactic normalization. Preserve the container, its children, delimiter kind, and source span. Unwrapping is permitted only by function/method invocation semantics after P0; it must not mutate the retained source tree. In particular, `f()` and `f: ()` are different syntax trees: the first has no argument fields, and the second has one empty Structure field. Only invocation semantics can obtain the same empty actual-argument sequence from them.
+1. **GROSS ERROR IN THE PREVIOUS REVISION — REQUIREMENT TO FIX P0 CODE.** The rule that P0 removes a sole non-empty anonymous Structure and substitutes its fields was wrong. P0 must preserve every explicitly written non-empty anonymous container in every context. Generic flattening damages non-call Structures as well as calls. Remove any implementation that unwraps a sole non-empty anonymous Structure during parsing or syntactic normalization. Preserve the container, its children, delimiter kind, and source span. Unwrapping a supplied non-empty Structure is permitted only by function/method invocation semantics after P0; it must not mutate the retained source tree. An empty Structure is outside this requirement: expanding it in P0 is not an error ([the author's clarification of 2026-11-09](../LMX_blog/2026-11-09.md)), and P0 indistinguishability concerns only the non-call records of an empty Structure: `A{}`, the short form `A: {}` ended by a line break and a return to the previous level, and the block record of `A` with an empty body (for example `A:` followed by `---` or `end: A`) are three forms with the same meaning, an empty Structure, and one tree (so is the short `A: ()`). This follows from the general rules of levels and of how short and block forms end, not from a parser exception: `A: {}` followed by `end: A` is a block record of `A` whose only field is an empty Structure, that is `A{{}}`. P0 marks `A()` as a call (the author's clarifications, ibid.).
 
 2. **REQUIREMENT TO REMOVE TWO-ARGUMENT RECEIVER FORMS FROM CODE.** Remove the two-argument forms of built-in data/type receivers from semantic validation, dispatch, implementation, examples, and any backward-compatible fallback. The removed forms include `int: i 5`, `@: ptr 0`, `@: ptr Model`, `@: ptr Model: Other`, and `int(v, j)`; they must not remain accepted as legacy alternatives. Put the declared or assigned place outside the receiver's operand, for example `i{ int: 5}`, `i: int: 5`, `ptr: @: 0`, and `ptr: @: Model`. Unary `int: x` and `@: ptr` remain admitted. This requirement does not ban multiple arguments of arbitrary functions, `merge`, `fn`, `print`, `if`, or message operations. P0 still parses their common structural form without receiver-name-based arity inference; the removed built-in interpretations must be rejected by their semantic consumer.
 
 **Revision 4: 2026-11-09.** All names are visible in both directions within their admitted scope. The latest applicable preceding definition or accumulated update takes precedence; when none exists, the name may be found ahead. Future writes do not execute early. This is a semantic rule after P0. Direct selection by `struct\(index)`, named-occurrence selection by `struct\(index)field`, expressions as Structures, curly descriptions and grouping, square Mix, round calls and Array indices, and both initial code-correction requirements remain in force. Implementation requirements are in the [fix list](new_bugs_for_fixing.md). This revision takes precedence over incompatible older rules.
+
+**Writing calls and declarations (the author's decisions of 2026-11-09, [journal](../LMX_blog/2026-11-09.md)).** A call is only the round form right after a name: the main `f(args)` and the nullary `f()`; inside the parentheses everything admitted inside `{}` is admitted, blocks included. `f(): args` and the block `f():` are a rarely needed additional layout of the same call. P0 marks a call form as a call. The colon Frame `f: args` is not a call even when `f` is a function. The call rule does not apply to receivers and operators: `fn:`, `int:`, and other receivers keep their forms and contracts and admit parentheses without any change of meaning (`int(5)` is the same as `int: 5`). Parentheses without an identifier are an alternative spelling of the anonymous Structure `{...}`; the symbolic head `():` allocates an Array. Declarations: `name: fn: return args <var body>`, `name: sub: args <var body>`, `Name: catch: args <var body>`; the parts of a function are `{return args var body}`. Not every level needs closing (sections 15 and 17).
 
 - [1. Scope and sources](#scope)
 - [2. Structures, fields, and Frames](#structure)
@@ -52,17 +54,17 @@ Sources: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15, revised by the author's decisi
 
 A grammar rule is universal within its domain: a name, type, nesting level, or translator convenience creates no separate syntax branch. A proposed exception or contradiction between rules requires explicit discussion and must not be hidden by special-case parsing.
 
-P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one body Structure. Field order and every explicit anonymous container are preserved, even when the container is the only field or is empty. A physical line is not an abstract-tree container. P0 never replaces an anonymous container with its children.
+P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one body Structure. Field order and every explicit non-empty anonymous container are preserved, even when the container is the only field; expanding an empty Structure is not an error ([§18](#empty-colon)). A physical line is not an abstract-tree container. P0 never replaces a non-empty anonymous container with its children.
 
 Expressions are Structures. An expression has ordered fields, which may include atoms, operator fields, Frames, and nested Structures; P0 retains the written order and explicit containers. `{a + b}` is an explicitly bounded expression Structure, not a separate non-Structure expression object. Operator roles, precedence, and evaluation are determined by the expression profile after P0. Being an expression Structure does not imply immediate execution or add a runtime wrapper or fixed operator-slot layout.
 
-A colon separates a head or an addressed place from its following body. `fn:`, `if:`, `int:`, `():`, and user heads use this common structural form. The same `:` spelling supplies a named actual argument and writes to an admitted existing place; context and the consuming semantics determine the role after parsing. There is no separate `:=` operator. Nesting alone does not execute a Structure.
+A colon separates a head or an addressed place from its following body. `fn:`, `if:`, `int:`, `():`, and user heads use this common structural form. The same `:` spelling supplies a named actual argument, applies a receiver, and writes to an admitted existing place; context and the consuming semantics determine the role after parsing. The colon form never calls a callable: a call is the round form after a name. There is no separate `:=` operator. Nesting alone does not execute a Structure.
 
 Built-in data/type receivers no longer admit their former two-argument place-and-value forms. Use an outer named description or colon Frame: `i{ int: 5}`, `i: int: 5`, `ptr: @: 0`, or `ptr: @: Model`. Unary `int: x` and `@: ptr` remain admitted. This is a receiver-semantic restriction, not a universal restriction on the number of fields or on calls such as `f(x, y)` and `merge(A, C)`; the removed branch must not remain in code as a legacy fallback.
 
-Curly braces describe or group a Structure: `{i: int: 1}`, `{i: int}`, and `{}`. They also replace the former non-call expression grouping: `{a + b}`. A name followed by a brace-delimited body is a bounded named description, as in `arr{ (): @}`; it is not indexing. Round brackets delimit actual-argument Structures, as in `(1)` and `(i: 1)`, and the common attached application form used for method calls, ordinary-Structure execution, and Array indexing. These roles are resolved after P0 without changing the written nesting.
+Curly braces describe or group a Structure: `{i: int: 1}`, `{i: int}`, and `{}`. They also replace the former non-call expression grouping: `{a + b}`. A name followed by a brace-delimited body is a bounded named description, as in `arr{ (): @}`; it is not indexing. Round brackets right after an identifier form the common attached application form used for method calls, ordinary-Structure execution, Array indexing, and a receiver application with the same meaning as its colon form, as in `f(1)`, `arr(2)`, and `int(5)`; P0 marks it as a call form. Without an identifier, `(...)` is an alternative spelling of the anonymous Structure `{...}` with the same admitted contents, as in `(1)` and `(i: 1)`. These roles are resolved after P0 without changing the written nesting.
 
-A method Structure has the ordered addressable parts `args`, `return`, `var`, and `body`. Direct selection and its representation as an Array of `@` use that order at zero-based indices 0, 1, 2, and 3: `f\(1)` selects the `return` Structure of method `f`. `var` follows the result of `fn`/`fm` where present and precedes the body of every `fn`/`fm`/`sub`/`catch`. These are ordinary field roles: P0 does not populate `var` from the body.
+A method Structure has the ordered addressable parts `return`, `args`, `var`, and `body`; `sub` and `catch` have `args`, `var`, and `body`. The declared name stands outside: `name: fn: return args <var body>`. Direct selection and its representation as an Array of `@` use that order at zero-based indices 0, 1, 2, and 3: `f\(0)` selects the `return` Structure of method `f`, and `f\(1)` selects `args`. `var` follows `args` and precedes the body of every `fn`/`sub`/`catch`. There is no separate `fm`: several named results are described by a Structure in the `return` position. These are ordinary field roles: P0 does not populate `var` from the body.
 
 An ordinary Structure has no formal argument list. It is executed by `s()` or with one Structure selected as `data`, `s(data)`. A method uses its declared formals, so `f(1)` is a method call. A Structure element is selected directly by `struct\(index)`; the index counts all immediate fields from zero. `struct\(index)field` instead selects the zero-based occurrence of the specified root-level head `field:`. Representation as an Array of `@` remains another available access route, as specified in [§22](#paths). The operator `call` is removed.
 
@@ -85,7 +87,7 @@ f\(1)
 <a id="name-visibility"></a>
 ### Semantic name visibility
 
-**All names are visible in both directions within the applicable binding scope.** This applies equally to methods, ordinary Structures, reference places, and other named places; there is no remaining restriction that an ordinary name is visible only after its declaration. At a given position, the latest applicable preceding definition or accumulated update takes precedence: look backward and use the latest. Applicability here concerns the name and binding scope, not successful value validation: the selected value undergoes ordinary admission, and incompatibility does not authorize silently falling back to an earlier value. If no such preceding source exists, the name and prepared place may be found ahead. This revision does not choose the first or last among several distinct future candidates.
+**All names are visible in both directions within the applicable binding scope.** This applies equally to methods, ordinary Structures, reference places, and other named places; there is no remaining restriction that an ordinary name is visible only after its declaration. At a given position, the latest applicable preceding definition or accumulated update takes precedence: look backward and use the latest. Applicability here concerns the name and binding scope, not successful value validation: the selected value undergoes ordinary admission, and incompatibility does not authorize silently falling back to an earlier value. If no such preceding source exists, the name and prepared place may be found ahead. There is no selection by proximity among several candidates: within a code scope a name has one prepared place, and several same-named data occurrences without an index are an ambiguity error ([the author's clarification of 2026-11-09](../LMX_blog/2026-11-09.md)).
 
 Bidirectional visibility does not move execution of a future initializer or assignment backward. The walker accumulates reached changes in sequence; a later write does not replace the value at every earlier position. Repeated assignments to one place update that place and do not create competing same-named fields. Visibility of a name or an allocated place does not itself promise an initial value: the ordinary initialization, conversion, and admission contracts apply.
 
@@ -288,7 +290,7 @@ Horizontal whitespace and commas separate fields of the current tail. A physical
 
 The composed `i: int: 5`, `i{ int: 5}`, `new_var: int()`, `ptr: @: 0`, and `ptr: @: Model` use ordinary nested Frames. The outer head names the place, and the built-in receiver contains its operand. The removed two-argument data/type receiver forms are not alternative descriptions or assignments. Unary `int: x` and `@: ptr` remain valid. P0 neither parses these forms by receiver name nor assigns semantic roles to their fields; the semantic consumer rejects the removed two-argument built-in interpretation. `arr: (): int` and `arr{ (): int}` describe an Array; in both, `(): int` is a nested symbolic-head Frame, not an empty anonymous Structure followed by a colon.
 
-An ordinary Structure is explicitly executed by `code()` or `code(data)`, where `data` is a Structure. The removed `call` operator has no current spelling as a separate receiver. A method call such as `f(1)` supplies actuals to its formals. P0 does not infer these categories from names.
+An ordinary Structure is explicitly executed by `code()` or `code(data)`, where `data` is a Structure; `code()` is the former `call(code)`. The removed `call` operator has no current spelling as a separate receiver. A method call such as `f(1)` supplies actuals to its formals, and P0 marks this round form as a call; the short form `f: 1` does not call the method. The same call may be laid out as `f(): 1` or as a block `f():` with the arguments on the next level; this rarely needed additional layout assembles its body under the same level rules as any short and vertical form. P0 does not infer these categories from names.
 
 When an indented body follows existing inline arguments, the down/up level transition preserves a new Structure-field boundary. Vertical tokens must not simply be flattened into the inline tail. Ordinary P0 neither infers argument counts from head signatures nor unwraps a sole anonymous child.
 
@@ -323,7 +325,7 @@ A comma separates fields and does not terminate an open short tail. A semicolon 
 
 A neighboring headless segment after `;` may be represented as a separate anonymous Structure. P0 does not append it to the completed tail or decide whether it repeats a declaration. The consuming profile decides that.
 
-Repeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip where the context admits empty positions; a leading separator may skip the first position. P0 preserves the skip without shifting the other arguments. A consumer admits it only for an argument with an allowed default, otherwise reporting an error. `{}` is a present empty brace-delimited Structure, and `()` is a present empty round argument Structure; neither is a positional skip. An explicit empty container is retained even when it is the only field.
+Repeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip where the context admits empty positions; a leading separator may skip the first position. P0 preserves the skip without shifting the other arguments. A consumer admits it only for an argument with an allowed default, otherwise reporting an error. `{}` and `()` are a present empty Structure, not a positional skip; `()` right after a name is the nullary call form.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2950–2950.
 
@@ -341,11 +343,11 @@ Repeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip wher
 
 ## 12. Anonymous Structures
 
-An argument list is a Structure. Every explicitly written anonymous container is itself a field of its surrounding Structure. P0 preserves that field without regard to the number of its siblings, its emptiness, the head's name, or an eventual invocation. Headless atoms and Structures, including expression Structures and empty Structures, are also valid in a body. P0 preserves order and nesting but does not decide whether a field is executed, discarded, or accepted as a value.
+An argument list is a Structure. Every explicitly written non-empty anonymous container is itself a field of its surrounding Structure. P0 preserves that field without regard to the number of its siblings, the head's name, or an eventual invocation; expanding an empty Structure is not an error, and the general level rules determine the result ([§18](#empty-colon)). Round brackets without an identifier are an alternative spelling of the same anonymous Structure as braces, with the same admitted contents. Headless atoms and Structures, including expression Structures and empty Structures, are also valid in a body. P0 preserves order and nesting but does not decide whether a field is executed, discarded, or accepted as a value.
 
-Function/method invocation semantics alone may consume a sole supplied Structure as the actual-argument Structure. That is an invocation operation over the retained tree, not a parsing rewrite. A non-call consumer never inherits generic argument unwrapping. Nested data, descriptions, arrays, grouping, and Mix keep their explicit boundaries.
+Function/method invocation semantics alone may consume a sole supplied Structure, as in `f({a b c})` or `f(x)`, as the actual-argument Structure. That is an invocation operation over the retained tree, not a parsing rewrite. A non-call consumer never inherits generic argument unwrapping. Nested data, descriptions, arrays, grouping, and Mix keep their explicit boundaries.
 
-**Current examples adapted from** `Lingvamyxa_spec.txt`, 2709–2714. These spellings are not asserted to have identical P0 trees.
+**Current examples adapted from** `Lingvamyxa_spec.txt`, 2709–2714; they are structural examples of non-call Frames. These spellings are not asserted to have identical P0 trees.
 
 ```lmx
 f: a b c
@@ -357,7 +359,7 @@ f:
     c
 ```
 
-The second form contains one round anonymous Structure with fields `a`, `b`, and `c`. The third contains one brace-delimited anonymous Structure with those fields. The first lists the three fields directly. The vertical form follows the explicit level events; no field is removed to make it match another spelling.
+The second form contains one anonymous Structure in round spelling with fields `a`, `b`, and `c`; the third contains the same anonymous Structure in brace spelling. The first lists the three fields directly. The vertical form follows the explicit level events; no field is removed to make it match another spelling.
 
 **Adapted example** — `Lingvamyxa_spec.txt`, 2729–2729.
 
@@ -366,6 +368,8 @@ f: a {1 2 3} b
 ```
 
 The brace-delimited container remains one field between `a` and `b`.
+
+In nested anonymous Structures, expressions included, round and curly brackets alternate where possible for readability: start preferably with curly brackets, use curly ones next to the parentheses of a call as well, and round ones inside curly ones, for example `{a * (b + {c - d})}` and `f({a b})` ([the author's wishes of 2026-11-09](../LMX_blog/2026-11-09.md)). This is a style recommendation, not a parsing rule: the number, boundaries, and nesting of containers do not change, and the brackets of a call `f(...)` stay round.
 
 <a id="no-inference"></a>
 
@@ -377,7 +381,7 @@ Whitespace separates fields. `print: getTypedValue values(i)` does not turn into
 
 Application with explicit actual arguments requires its own Frame: short `merge: A C`, compact `merge(A C)`, or an admitted vertical form. This rule applies to all heads without name-based exceptions. In `b: merge A C`, the body of Frame `b` contains neighboring atoms `merge`, `A`, and `C`, not a nested `merge` Frame. P0 forms the complete written structural model without knowing the head's role or consulting its availability, signature, or category. A bare identifier remains an atom and captures no neighboring fields. Head resolution and invocation consumption follow parsing; they do not authorize flattening the source tree.
 
-Expressions are Structures whose ordered fields can contain atoms, operators, Frames, and nested Structures. `print: a+b c` and `print: a + b c` produce the same structural split. Curly braces explicitly bound an expression Structure: `{a + b}`. P0 retains the fields and the bounded Structure itself; it does not replace that Structure with its fields or invent a separate expression wrapper. The expression consumer interprets the retained Structure in expression position. Round forms remain actual-argument Structures and the common application/index form; an indexed path such as `struct\(index)` is a written path form inside the same structural model.
+Expressions are Structures whose ordered fields can contain atoms, operators, Frames, and nested Structures. `print: a+b c` and `print: a + b c` produce the same structural split. Curly braces explicitly bound an expression Structure: `{a + b}`. P0 retains the fields and the bounded Structure itself; it does not replace that Structure with its fields or invent a separate expression wrapper. The expression consumer interprets the retained Structure in expression position. A round form right after a name remains the common application/index form, and a standalone round form is an anonymous Structure; an indexed path such as `struct\(index)` is a written path form inside the same structural model.
 
 An expression's structural identity does not cause it to run merely because it is nested, stored, selected, or described. An executing semantic consumer determines whether and how to evaluate it. This revision does not assign a fixed ABI layout to expression fields.
 
@@ -403,11 +407,11 @@ Sources: §§4.4, 4.5.2.1, 15, revised by the author's decisions of 2026-11-09.
 
 `{...}` bounds a Structure, including a description or an expression Structure; empty `{}` is allowed. `{a + b}` retains its expression fields and explicit outer Structure in P0. A named description `name{...}` has a head and a brace-delimited body. `arr{ (): @}` is therefore a bounded named Array declaration, not an index operation.
 
-`(...)` bounds an actual-argument Structure, including standalone `(1)`, `(i: 1)`, and `()`. Attached to a preceding target, the same round bounded form is the common compact application form: a method call, an ordinary-Structure execution, or an Array index. `f()` has no argument fields; `f: ()` has one explicit empty anonymous Structure field. P0 preserves this difference.
+A standalone `(...)`, including `(1)`, `(i: 1)`, and `()`, is an alternative spelling of the anonymous Structure `{...}` with the same admitted contents. Attached right after a preceding target, the same round bounded form is the common compact application form, which P0 marks as a call form: a method call, an ordinary-Structure execution, an Array index, or a receiver application with the meaning of its colon form (`int(5)` is `int: 5`). `f(): args` and the block `f():` are the rarely needed additional layout of the same call. `f()` has no argument fields and carries the call mark; the short `f: ()` ended by a line break and a return to the previous level is not a call but the same empty Structure as `f{}` and `f: {}` ([§18](#empty-colon)). The call mark preserves this difference.
 
 `(): value` is a symbolic-head Frame whose head is `()`. It is the current Array-construction form, as in `arr: (): int` or `arr{ (): @}`. The lexer/parser recognizes the complete symbolic head followed by `:`; it does not turn it into an empty round Structure followed by a write. The former Array head `[]:` and former square index suffix are not current Array forms; square brackets now delimit Mix.
 
-The same short forms, separators, and levels apply inside round and brace-delimited forms. A matching `)` or `}` completes that bounded form and any short form still open inside it. It does not remove an anonymous container. After a physical newline, a continuation of either form must remain deeper than the opening line: at the corresponding dotted level or a deeper indentation column. A line whose next token is the matching closer may return to the opener level. `end:` and terminal closers do not replace missing delimiters.
+The same short forms, separators, and levels apply inside round and brace-delimited forms. A matching `)` or `}` completes that bounded form and any short form still open inside it. It does not remove a non-empty anonymous container. After a physical newline, a continuation of either form must remain deeper than the opening line: at the corresponding dotted level or a deeper indentation column. A line whose next token is the matching closer may return to the opener level. `end:` and terminal closers do not replace missing delimiters.
 
 Square Mix forms follow [§19](#mix): their contents are parsed in a local level-0 context, and the opening column does not become an indentation base. Their matching closer is `]`; a bracket inside shielded content does not close the form. The opening-line indentation rule for round and brace-delimited forms does not replace this Mix rule.
 
@@ -521,11 +525,11 @@ ShortForm1: 1
     .                               # trailer
 ````
 
-**Adapted example** — `Lingvamyxa_spec.txt`, 3428–3432.
+**Adapted example** — `Lingvamyxa_spec.txt`, 3428–3432; the declarations use the form `name: fn: return args` with the arguments in an anonymous round Structure. The terminal `return` at level 0 closes several levels at once.
 
 ````text
-fn: outer {} {int}
-    fn: inner {int: a} {int}
+outer: fn: int ()
+    inner: fn: int (a: int)
         return: a + 1
     a{ int: 1}
 return: inner(a)
@@ -543,7 +547,7 @@ A fence of 3–80 dashes after the leading zone has the same role. Only horizont
 
 An anonymous Structure continues until another marker at K, an ordinary item at K − 1, an admitted named/terminal close, or EOF. Replacing a named close with a fence depends on profile admission and lack of ambiguity. Matrix rows and nested arrays use the same rules, without separate table syntax.
 
-An explicitly formed empty vertical body preserves a Frame with an empty Structure-body and its recorded closure. This does not authorize removing any explicit anonymous field. In particular, `f: ()` retains one empty round Structure field and differs from both `f()` and an explicitly closed empty vertical body. Invocation may later consume an empty supplied Structure as an empty actual list, but P0 does not perform that operation. Bare `f:` without arguments or explicit closure remains invalid. See [empty bodies](#empty-colon).
+An explicitly formed empty vertical body yields a Frame with an empty Structure-body and its recorded closure: zero fields, the same empty Structure as `f{}` and the completed short `f: {}` or `f: ()`. It is not a call, unlike `f()`, which P0 marks as a call. This does not authorize removing any explicit non-empty anonymous field. Bare `f:` without arguments or explicit closure remains invalid. See [empty bodies](#empty-colon).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3496–3504.
 
@@ -580,18 +584,20 @@ Sources: §§4.6, 7.5, 8.1–8.4, 15.
 
 `end: target` is a checked structural close. Its argument is a literal target, not an evaluated expression. The receiver supplies admitted targets: normally its head name and the canonical name from a `name` argument or name position. The name must be one admitted atom; exact spelling is compared as an atom value. With no valid name, the head is used. The close-target table may admit string/operator atoms as well as executable identifiers.
 
-`end: matrix` closes the Array-head form `(): matrix`; not `end: () matrix`. A bounded named description such as `matrix{...}` still requires its matching `}`. `end: fn` may be an alternative to `end: square` for the corresponding open function. Closure may cross several open implicit levels where position and profile admit it, but not unmatched bounded brackets. A named Frame does not require explicit `end:`: an ordinary admitted level cut also closes it. Bare `end` and `end <target>` are forbidden.
+`end: matrix` closes the Array-head form `(): matrix`; not `end: () matrix`. A bounded named description such as `matrix{...}` still requires its matching `}`. `end: fn` may be an alternative to `end: square` for the corresponding open function. Closure may cross several open implicit levels where position and profile admit it, but not unmatched bounded brackets. A named Frame does not require explicit `end:`: an ordinary admitted level cut also closes it. As in Python, levels need not be closed; the general means are needed only to close several levels, and most often a terminal `return` serves as the trailer while keeping its executable action ([the author's reminder of 2026-11-09](../LMX_blog/2026-11-09.md)). Bare `end` and `end <target>` are forbidden.
 
 `return`, `return: value`, and `until: condition` are terminal-form candidates only in admitting contexts. Terminal `return` at the opening level of a named executable Structure, including an ordinary Structure without `fn`/`sub`, appends a return to its body and closes its Frame. The same receiver at body level or deeper is an internal return, not definition closure. `until:` may close a postcondition-loop body: an anonymous body closed by `until:` is an inline postcondition loop in the enclosing activation, and a named Frame closed by `until:` is an ordinary named Structure whose executable body is that loop — declaring it does not run it; only an explicit invocation such as `outerLoop()` does. No construct requires any of these trailers: they are P0 boundaries, not a condition of declaration. A named Structure closed by an ordinary level cut is declared by the same general resolution ([L3 §9](new_LMX_semantics.en.md#construction)); reaching the end of the body of a named Structure or a `sub` completes it without a result, and no return is synthesized there. Their spelling alone does not make these words universal tail cutters.
 
 When identical targets occur at different levels, the closing line’s level participates: a parent-level close selects the parent target and cuts its open tail; an inner-level close selects the inner target. Ambiguous, invisible, or positionally invalid targets are rejected. `end:` in an ordinary body position is not executable and is rejected by close validation unless a profile explicitly defines another non-runtime meaning.
 
-**Adapted example** — `Lingvamyxa_spec.txt`, 6622–6623.
+**Adapted example** — `Lingvamyxa_spec.txt`, 6622–6623; the declaration uses the form `name: fn: return args` (2026-11-09), with the arguments written as an anonymous round Structure.
 
 ````text
-fn: square {int(x)} {int}
+square: fn: int (x: int)
 return: x * x
 ````
+
+The terminal `return` at the opening level appends a return to the body of `square` and closes its Frame under the rule above.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 6393–6398.
 
@@ -608,46 +614,43 @@ end: else
 
 ## 18. Missing arguments and an empty vertical body
 
-The correction of 2026-11-09 replaces the former generic P0 normalization rule. The former rule was a **gross error**: an anonymous container cannot be removed merely because it is the only field.
+The correction of 2026-11-09 replaces the former generic P0 normalization rule. The former rule was a **gross error**: a non-empty anonymous container cannot be removed merely because it is the only field.
 
-A Frame's body is itself a Structure. Every explicit anonymous Structure inside that body remains a separate field. P0 does not unwrap it, whether it is round, brace-delimited, empty, nonempty, the only field, or one of several fields. The same invariant holds outside invocations, including descriptions, data, expression grouping, arrays, and Mix.
+A Frame's body is itself a Structure. Every explicit non-empty anonymous Structure inside that body remains a separate field. P0 does not unwrap it, whether it is round, brace-delimited, the only field, or one of several fields. The same invariant holds outside invocations, including descriptions, data, expression grouping, arrays, and Mix. Expanding an empty Structure in P0 is not an error ([the author's clarifications of 2026-11-09](../LMX_blog/2026-11-09.md)); the general level rules determine the resulting tree.
 
 Only function/method invocation semantics may consume a sole supplied anonymous Structure as the actual-argument Structure. A computed Structure supplied as the whole argument Structure is likewise an invocation-semantic case. This consumption operates on the retained tree; it is not a destructive normalization pass and does not change the number of syntactic fields. It is not a general rule for ordinary-Structure `data` or Array indexing.
 
 | Source | P0 result | Function/method invocation consumption |
 | --- | --- | --- |
-| `f()` | Compact Frame with an empty argument body | No actual arguments |
-| `f: ()` | Colon Frame containing one empty round Structure field | The sole supplied Structure yields no actual arguments |
-| `f: {}` | Colon Frame containing one empty brace-delimited Structure field | A supplied Structure may be consumed as the whole actual list |
-| `f(a b)` | Compact Frame with fields `a` and `b` | Two actual arguments |
-| `f: (a b)` | Colon Frame containing one round Structure with fields `a` and `b` | The supplied Structure yields the actuals `a` and `b` |
-| `f: {a b}` | Colon Frame containing one brace-delimited Structure with fields `a` and `b` | A supplied Structure may be consumed as the whole actual list |
+| `f()` | Compact Frame with an empty argument body and the call mark | No actual arguments |
+| `f{}`, and the short `f: {}` and `f: ()` ended by a line break and a return to the previous level | An empty Structure `f` with zero fields; not a call | None: not a call |
+| `f:` with an empty block body, for example `---` or `end: f` on the next line | The same empty Structure; the close adds no empty child field | None: not a call |
+| `f: {}` followed by `end: f` | A block `f` whose only field is an empty Structure (`f{{}}`) | None: not a call |
+| `f(a b)` | Compact Frame with fields `a` and `b` and the call mark | Two actual arguments |
+| `f({a b})` | Compact Frame containing one anonymous Structure with fields `a` and `b`, with the call mark | The supplied Structure may yield the actuals `a` and `b` |
+| `f: (a b)`, `f: {a b}` | Colon Frame containing one anonymous Structure with fields `a` and `b` | None: not a call |
 
-Thus `f()` and `f: ()` can execute the same function/method without actual arguments, while their syntax trees remain different. P0 must not consult the eventual consumer in order to erase this difference. An anonymous Structure among other fields or a named field remains distinct during ordinary argument collection; no recursive parser flattening is permitted.
+These rows follow from the general rules of levels and of how short and block forms end, not from a name-based parser exception, a special block node, or a rule that `end` always adds a wrapper. A call is written only in the round form after a name. P0 must not consult the eventual consumer in order to erase the call mark. An anonymous Structure among other fields or a named field remains distinct during ordinary argument collection; no recursive parser flattening is permitted.
 
-The round compact form is explicit application syntax. Resolution determines whether the target is a method, an ordinary executable Structure, or an Array. A bare name remains an atom and reads its resolved value or reference without executing a Structure. Ordinary Structure execution is written `s()` or `s(data)` with Structure `data`; `call` is removed. Ordinary Structures have no formal argument lists, so their data contract must not be confused with method actual-argument expansion.
+The round compact form is explicit application syntax. Resolution determines whether the target is a method, an ordinary executable Structure, an Array, or a receiver written in round form with the meaning of its colon form. `f(): args` and the block `f():` are the rarely needed additional layout of the same call. A bare name remains an atom and reads its resolved value or reference without executing a Structure. Ordinary Structure execution is written `s()` or `s(data)` with Structure `data`; `call` is removed, and `code()` is the former `call(code)`. Ordinary Structures have no formal argument lists, so their data contract must not be confused with method actual-argument expansion.
 
 P0 rejects bare `f:` without arguments, a vertical body, or an explicit `---`. An empty inline tail followed by a nonempty vertical body is valid. An explicitly closed empty vertical body has no extra anonymous field unless one was actually written. Bare `end` remains forbidden.
 
-**Current examples: distinct P0 trees.**
+**Current examples.**
 
 ```lmx
 f()
-f: ()
-```
 
-**Explicitly closed empty vertical body.**
-
-```lmx
-receiver:
+A{}
+A: {}
+A:
 ---
+
+A: {}
+end: A
 ```
 
-**One explicit empty anonymous field, retained by P0.**
-
-```lmx
-receiver: ()
-```
+The first record is a call with an empty body. The next three are one and the same empty Structure `A`: the short form `A: {}` ends with a line break and a return to the previous level, and the block `A:` is closed by `---` with an empty body. The last is a block `A` whose only field is an empty Structure (`A{{}}`).
 
 <a id="mix"></a>
 
@@ -754,7 +757,7 @@ The optional path name uses the existing path-token and field-boundary rules. It
 | `f(1)` | Method invocation with actual argument `1` |
 | `arr(1)` | Array index `1` |
 
-For method `f`, the immediate parts are ordered `{args return var body}`. Therefore `f\(1)` selects its `return` Structure. It does not invoke `f` or select the value that executing `f` might return. Direct execution of an ordinary Structure remains `s()` or `s(data)`, with Structure `data` and no formal argument list. A numeric argument such as `s(1)` is not reinterpreted as an index and does not satisfy this Structure-data requirement.
+For method `f`, the immediate parts are ordered `{return args var body}` (return first, the author's decision of 2026-11-09). Therefore `f\(0)` selects its `return` Structure and `f\(1)` its `args` Structure. It does not invoke `f` or select the value that executing `f` might return. Direct execution of an ordinary Structure remains `s()` or `s(data)`, with Structure `data` and no formal argument list. A numeric argument such as `s(1)` is not reinterpreted as an index and does not satisfy this Structure-data requirement.
 
 **Current direct-selection examples.**
 
@@ -774,7 +777,7 @@ A Structure can also be represented by an Array of void references, declared as 
 arr{ (): @}; arr: f; arr(1)
 ```
 
-For a method `f`, its representation slots follow the same `{args return var body}` order. The final `arr(1)` returns the reference to `f`'s `return` Structure, which is also selected directly by `f\(1)`. The assignment `arr: f` supplies the Array representation of `f`; this syntactic rule does not choose an aliasing, copying, or ownership implementation.
+For a method `f`, its representation slots follow the same `{return args var body}` order. The final `arr(1)` returns the reference to `f`'s `args` Structure, which is also selected directly by `f\(1)`. The assignment `arr: f` supplies the Array representation of `f`; this syntactic rule does not choose an aliasing, copying, or ownership implementation.
 
 | Position | Method part | Direct selection | Array access after `arr: f` |
 | ---: | --- | --- | --- |
@@ -783,7 +786,7 @@ For a method `f`, its representation slots follow the same `{args return var bod
 | 2 | `var` | `f\(2)` | `arr(2)` |
 | 3 | `body` | `f\(3)` | `arr(3)` |
 
-`typeof(p)` accepts a pointer and returns the code of the type arena of its target object. Thus `typeof(arr(index))` uses the reference stored at the selected Array slot; it does not report only the carrier type `@` or use the element index as an arena code. For `arr(1)` in the retained method example, the target is the `return` description Structure, so `typeof(arr(1))` reports that Structure's type-arena code, not the type of a value returned by executing `f`. Concrete arena-code values and rules for invalid pointers are not supplied by the grammar.
+`typeof(p)` accepts a pointer and returns the code of the type arena of its target object. Thus `typeof(arr(index))` uses the reference stored at the selected Array slot; it does not report only the carrier type `@` or use the element index as an arena code. For `arr(1)` in the retained method example, the target is the `args` Structure, so `typeof(arr(1))` reports that Structure's type-arena code, not the type of a value returned by executing `f`. Concrete arena-code values and rules for invalid pointers are not supplied by the grammar.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 
@@ -836,11 +839,11 @@ Source: §15.0, revised by the author's decisions of 2026-11-09. This is the nor
 
 Events E are `LEVEL(K)`, `ATOM(value)`, `HEAD(value)`, `COLON`, `NEWLINE`, `COMMA_SEPARATOR`, `SEMICOLON_SEPARATOR`, operator tokens, opening/closing round, brace, and square Mix delimiters, a `TAIL_CUTTER` candidate, and `EOF`. A compound-assignment token containing `:` is one operator event; it does not generate a separate `COLON`. The symbolic Array head `()` followed by `:` is recognized as a head, not as an empty anonymous field.
 
-Transitions follow the preceding sections. There is no separate P0 line, bracket, brace, or expression parser: all bounded forms enter recursive contexts of the same automaton. An attached round form has one syntactic shape; P0 does not inspect the target type to choose between method invocation, ordinary-Structure execution, and Array indexing. A named brace form is a description, not an index suffix. The explicit `\(index)` path suffix retains its optional following path name; P0 neither invents that name nor selects the path interpretation using the target's type or a signature. No-name Structure paths select immediate fields; named paths select occurrences of the specified head under §22.
+Transitions follow the preceding sections. There is no separate P0 line, bracket, brace, or expression parser: all bounded forms enter recursive contexts of the same automaton. An attached round form has one syntactic shape, and P0 marks it as a call form; the layout `f(): args` and the block `f():` carry the same mark, and a colon Frame never does. P0 does not inspect the target type to choose between method invocation, ordinary-Structure execution, Array indexing, and a receiver applied in round form. A named brace form is a description, not an index suffix. The explicit `\(index)` path suffix retains its optional following path name; P0 neither invents that name nor selects the path interpretation using the target's type or a signature. No-name Structure paths select immediate fields; named paths select occurrences of the specified head under §22.
 
 In a shielded lexical mode, brackets, separators, colons, dots, and closer words are content until the mode closes. Matching-delimiter search must use those same modes; a separate character counter is insufficient. Passive mark inspection within an already delimited string payload is a separate bounded context, not removal of this shielding.
 
-EOF completes the root after all forms admitting EOF closure. Unclosed bounded forms or lexical modes remain errors. Output O retains Structures, including expression Structures, Frames, paths with their optional names, delimiter and closure kinds, atoms, Mix flags, and spans. P0 does not execute code, resolve functions, assign types, or remove explicit anonymous containers. Every close operation must preserve a sole anonymous child exactly as it preserves one among several children. Argument expansion, when admitted, is performed later by function/method invocation semantics without rewriting O.
+EOF completes the root after all forms admitting EOF closure. Unclosed bounded forms or lexical modes remain errors. Output O retains Structures, including expression Structures, Frames, paths with their optional names, delimiter and closure kinds, atoms, Mix flags, and spans. P0 does not execute code, resolve functions, assign types, or remove explicit non-empty anonymous containers; expanding an empty Structure is not an error ([§18](#empty-colon)). Every close operation must preserve a sole non-empty anonymous child exactly as it preserves one among several children. Argument expansion, when admitted, is performed later by function/method invocation semantics without rewriting O.
 
 <a id="ebnf"></a>
 
@@ -850,9 +853,9 @@ The following is the current EBNF projection of this revision. It replaces the f
 
 Read the EBNF together with the automaton in §24, lexical modes, short-tail rules, and source-level rules. `name`, `atom_or_value`, `symbolic_head`, `place_expression`, and `profile_path` denote common-stream forms described above, not arbitrary characters or signature-based parsing. A bare short form `f:` with no arguments, vertical body, or explicit closure is invalid; an explicitly closed empty body is valid. A bare identifier is an atom, not an implicit nullary call.
 
-`compact_frame` describes the common attached round form. After P0 it is consumed as a method/operator call, ordinary-Structure execution, or Array index according to the resolved target object. These are not three different grammars. `index_access_suffix` names a role of the same `round_suffix`, not a competing parse. Without a backslash this suffix does not index a Structure. Direct Structure access is written as the path `s\(index)` through `indexed_path_suffix`; `s\(index)field` preserves the field name when it is written as part of the path.
+`compact_frame` describes the common attached round form; P0 marks it as a call form. After P0 it is consumed as a method call, ordinary-Structure execution, an Array index, or a receiver application with the meaning of its colon form, according to the resolved target object. These are not different grammars. `call_layout_frame` is the rarely needed additional layout of the same call: `f(): args` or `f():` with a block on the next level. `colon_frame_body` forms no call. `index_access_suffix` names a role of the same `round_suffix`, not a competing parse. Without a backslash this suffix does not index a Structure. Direct Structure access is written as the path `s\(index)` through `indexed_path_suffix`; `s\(index)field` preserves the field name when it is written as part of the path.
 
-`named_description` is a bounded description with a head, such as `arr{ (): @}`, and is not indexing. `argument_structure` and `bounded_structure` remain distinct nested fields, even when such a field is the only field or is empty. P0 never expands them into their parent's sequence. Invocation arguments are prepared only after parsing, without rewriting the source tree. An expression is also a Structure: its fields and nested containers are retained, while operator roles, precedence, and evaluation are determined by the expression profile after P0.
+`named_description` is a bounded description with a head, such as `arr{ (): @}`, and is not indexing. `argument_structure` without an identifier is an alternative spelling of the anonymous Structure `bounded_structure` with the same contents. Non-empty `argument_structure` and `bounded_structure` remain distinct nested fields, even when such a field is the only field; P0 never expands them into their parent's sequence, and expanding an empty Structure is not an error ([§18](#empty-colon)). Invocation arguments are prepared only after parsing, without rewriting the source tree. An expression is also a Structure: its fields and nested containers are retained, while operator roles, precedence, and evaluation are determined by the expression profile after P0.
 
 ````text
     program             ::= { empty_line | physical_item }
@@ -922,8 +925,21 @@ Read the EBNF together with the automaton in §24, lexical modes, short-tail rul
     enabled_line_body   ::= line_item_sequence
 
     compact_frame       ::= postfix_target round_suffix
+                            P0 marks it as a call form; after P0 it is a call,
+                            ordinary-Structure execution, an Array index, or
+                            a receiver application with the colon-form meaning
 
     round_suffix        ::= "(" [ argument_list | vertical_argument_list ] ")"
+                            written immediately after its target; the contents
+                            admit everything admitted inside "{" "}",
+                            including blocks
+
+    call_layout_frame   ::= postfix_target "(" ")" ":" [ line_arguments ]
+                            the rarely needed additional layout of the same
+                            call postfix_target(args): the inline tail and the
+                            following vertical children at N+1 form its
+                            argument Structure under the level rules; P0 marks
+                            it as a call; it is distinct from symbolic_head ()
 
     named_description   ::= name "{" [ argument_list | vertical_argument_list ] "}"
 
@@ -959,16 +975,23 @@ Read the EBNF together with the automaton in §24, lexical modes, short-tail rul
                             { semicolon_segment_separator source_item }
                             [ semicolon_segment_separator ]
 
-    source_item         ::= colon_frame_body
+    source_item         ::= call_layout_frame
+                          | colon_frame_body
                           | structural_value
 
     colon_frame_body    ::= head ":" [ line_arguments ]
                             inline tail and following vertical children at
                             N+1 form the assembled body under the level rules;
-                            no written child container is flattened;
+                            no written non-empty child container is flattened;
                             zero fields require an admitted explicit empty
                             closure or a valid explicitly formed empty body;
-                            bare f: without such a body/closure is invalid
+                            bare f: without such a body/closure is invalid;
+                            a colon Frame is never a call, even for a callable
+                            head; a short A: {} ended by a newline and a
+                            return to the previous level equals A{}, whereas
+                            A: {} followed by end: A is a block whose only
+                            field is the empty Structure (A{{}}) under the
+                            same general level rules
 
     semicolon_segment_separator
                         ::= ";"
@@ -978,13 +1001,17 @@ Read the EBNF together with the automaton in §24, lexical modes, short-tail rul
                           | place_expression
                             includes written field/index/dereference targets;
                             arr(2): value is not restricted to an atomic name
+                          | bounded_structure
+                            a nameless Structure head, as in {a, b, c}: myFn();
+                            its places are resolved after P0, and the received
+                            Structure fills them by field names
 
     name                ::= bare_identifier | exact_identifier
 
     symbolic_head       ::= symbolic_head_token
                             includes the token () before the head separator :;
                             (): type is an array description/allocation form,
-                            not an empty argument Structure followed by a value
+                            not an empty anonymous Structure followed by a value
 
     line_arguments      ::= short_tail
 
@@ -1036,12 +1063,16 @@ Read the EBNF together with the automaton in §24, lexical modes, short-tail rul
     // line. Only a line starting with the matching RPAREN/RBRACE may
     // return to the opener level. The matching closer also completes any
     // short form still open inside that bounded context.
-    // Closing a bounded context preserves its node and all child nodes;
-    // neither a sole child nor an empty child is removed.
+    // Closing a bounded context preserves its node and all non-empty child
+    // nodes; a sole non-empty child is never removed. Expanding an empty
+    // Structure is not an error (section 18).
 
     bounded_structure   ::= "{" [ argument_list | vertical_argument_list ] "}"
 
     argument_structure  ::= "(" [ argument_list | vertical_argument_list ] ")"
+                            without a preceding identifier: an alternative
+                            spelling of the anonymous Structure bounded_structure
+                            with the same admitted contents; not a call
 
     source_fragment     ::= P0 source parsed in a local level-0 context
 
@@ -1090,7 +1121,7 @@ This is the current description of the parse result, not a second surface gramma
 
 **An expression is a Structure.** `ExpressionStructure` below denotes an ordinary Structure in the expression role, not a separate non-Structure object or an additional IR wrapper. `{a + b}` retains its explicitly bounded Structure node with ordered fields; P0 neither assigns fixed ABI slots to its operator and operands nor executes the expression.
 
-**No result rule replaces a sole child Structure with its contents.** In `f()` the Frame body has no fields; in `f: ()` it has one field, an empty argument Structure. These are different source trees. Any equality of the prepared invocation arguments is established by the subsequent semantic stage, which does not rewrite the P0 tree.
+**No result rule replaces a sole non-empty child Structure with its contents.** In the call `f(a b)` the Frame body has two fields; in `f({a b})` it has one field, an anonymous Structure. These are different source trees. Expanding an empty Structure is not an error: `f{}`, the completed short `f: {}`, and an empty block `f` yield one tree ([§18](#empty-colon)); `CompactFrame` carries the call mark. Any equality of the prepared invocation arguments is established by the subsequent semantic stage, which does not rewrite the P0 tree.
 
 ````text
     SourceFile
@@ -1160,7 +1191,10 @@ This is the current description of the parse result, not a second surface gramma
         ::= Structure({ Field })
 
     CompactFrame
-        ::= Frame(Head, BodyStructure, RPAREN_BOUNDED)
+        ::= Frame(Head, BodyStructure, RPAREN_BOUNDED, CALL_MARK)
+         |  Frame(Head, BodyStructure, FrameTrailer, CALL_MARK)
+            the second alternative is the call layout f(): args or
+            f(): with a block; the same call as f(args)
 
     NamedDescription
         ::= Frame(Head, BodyStructure, RBRACE_BOUNDED)
@@ -1189,10 +1223,13 @@ This is the current description of the parse result, not a second surface gramma
     AnonymousStructure(K)
         ::= Structure({ BlockElement(K + 1) })
 
-    // All written child containers are retained, including a sole or empty
-    // child. The argument envelope of a Frame is not an extra child field.
+    // All written non-empty child containers are retained, including a sole
+    // one; an empty one may be expanded (section 18). The argument envelope
+    // of a Frame is not an extra child field.
     // Invocation argument preparation is absent from the P0 result grammar.
     // MIX_FLAG denotes the existing Mix flag, not another wrapper node.
+    // CALL_MARK is the P0 call mark of a round form written right after
+    // its target (and of its f(): layout); a colon Frame never has it.
     // ExpressionStructure is the expression role of an ordinary Structure;
     // it does not add a second wrapper to a written bounded Structure.
     // P0 preserves its fields and containers. Operator roles, precedence

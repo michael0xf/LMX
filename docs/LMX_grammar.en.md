@@ -38,17 +38,50 @@ This grammar specifies P0 lexing and structural parsing: fields, Frames, levels,
 
 ## 2. Structures, fields, and Frames
 
-Sources: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15.
+Sources: §§0, 3.2–3.4, 4.0, 4.8–4.9, 5, 15, revised by the author's decisions of 2026-11-09.
 
 A grammar rule is universal within its domain: a name, type, nesting level, or translator convenience creates no separate syntax branch. A proposed exception or contradiction between rules requires explicit discussion and must not be hidden by special-case parsing.
 
-P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one argument Structure. Field order is preserved; an anonymous Structure is also a field. A physical line is not an abstract-tree container.
+P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spans. A Frame has a head and one body Structure. Field order and every explicit non-empty anonymous container are preserved, even when the container is the only field; expanding an empty Structure is not an error ([§18](#empty-colon)). A physical line is not an abstract-tree container. P0 never replaces a non-empty anonymous container with its children.
 
-The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `fn:`, `if:`, `int:`, `[]:`, and user heads use the same form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
+Expressions are Structures. An expression has ordered fields, which may include atoms, operator fields, Frames, and nested Structures; P0 retains the written order and explicit containers. `{a + b}` is an explicitly bounded expression Structure, not a separate non-Structure expression object. Operator roles, precedence, and evaluation are determined by the expression profile after P0. Being an expression Structure does not imply immediate execution or add a runtime wrapper or fixed operator-slot layout.
 
-The target method Structure has addressable `args`, `return`, `var`, and `body` parts. `var` follows the result of `fn`/`fm` where present and precedes the body of every `fn`/`fm`/`sub`/`catch`. These are ordinary field roles: P0 does not populate `var` from the body.
+A colon separates a head or an addressed place from its following body. `fn:`, `if:`, `int:`, `():`, and user heads use this common structural form. The same `:` spelling supplies a named actual argument, applies a receiver, and writes to an admitted existing place; context and the consuming semantics determine the role after parsing. The colon form never calls a callable: a call is the round form after a name. There is no separate `:=` operator. Nesting alone does not execute a Structure.
 
-Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
+Built-in data/type receivers no longer admit their former two-argument place-and-value forms. Use an outer named description or colon Frame: `i{ int: 5}`, `i: int: 5`, `ptr: @: 0`, or `ptr: @: Model`. Unary `int: x` and `@: ptr` remain admitted. This is a receiver-semantic restriction, not a universal restriction on the number of fields or on calls such as `f(x, y)` and `merge(A, C)`; the removed branch must not remain in code as a legacy fallback.
+
+Curly braces describe or group a Structure: `{i: int: 1}`, `{i: int}`, and `{}`. They also replace the former non-call expression grouping: `{a + b}`. A name followed by a brace-delimited body is a bounded named description, as in `arr{ (): @}`; it is not indexing. Round brackets right after an identifier form the common attached application form used for method calls, ordinary-Structure execution, Array indexing, and a receiver application with the same meaning as its colon form, as in `f(1)`, `arr(2)`, and `int(5)`; P0 marks it as a call form. Without an identifier, `(...)` is an alternative spelling of the anonymous Structure `{...}` with the same admitted contents, as in `(1)` and `(i: 1)`. These roles are resolved after P0 without changing the written nesting.
+
+A method Structure has the ordered addressable parts `return`, `args`, `var`, and `body`; `sub` and `catch` have `args`, `var`, and `body`. The declared name stands outside: `name: fn: return args <var body>`. Direct selection and its representation as an Array of `@` use that order at zero-based indices 0, 1, 2, and 3: `f\(0)` selects the `return` Structure of method `f`, and `f\(1)` selects `args`. `var` follows `args` and precedes the body of every `fn`/`sub`/`catch`. There is no separate `fm`: several named results are described by a Structure in the `return` position. These are ordinary field roles: P0 does not populate `var` from the body.
+
+An ordinary Structure has no formal argument list. It is executed by `s()` or with one Structure selected as `data`, `s(data)`. A method uses its declared formals, so `f(1)` is a method call. A Structure element is selected directly by `struct\(index)`; the index counts all immediate fields from zero. `struct\(index)field` instead selects the zero-based occurrence of the specified root-level head `field:`. Representation as an Array of `@` remains another available access route, as specified in [§22](#paths). The operator `call` is removed.
+
+Positional fields retain their order. In a function/method invocation, `f(i: 1)` supplies the named actual `i`; P0 retains its ordinary nested colon Frame, and invocation semantics gives it the named-argument role. Parameter names, table meaning, column count, validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
+
+**Current examples.**
+
+```lmx
+f(a, b, c)
+f(i: 1)
+{i: int: 1}
+{i: int}
+arr{ (): @}
+struct\(index)
+struct\(index)field
+f\(1)
+{a + b}
+```
+
+<a id="name-visibility"></a>
+### Semantic name visibility
+
+**All names are visible in both directions within the applicable binding scope.** This applies equally to methods, ordinary Structures, reference places, and other named places; there is no remaining restriction that an ordinary name is visible only after its declaration. At a given position, the latest applicable preceding definition or accumulated update takes precedence: look backward and use the latest. Applicability here concerns the name and binding scope, not successful value validation: the selected value undergoes ordinary admission, and incompatibility does not authorize silently falling back to an earlier value. If no such preceding source exists, the name and prepared place may be found ahead. There is no selection by proximity among several candidates: within a code scope a name has one prepared place, and several same-named data occurrences without an index are an ambiguity error ([the author's clarification of 2026-11-09](../LMX_blog/2026-11-09.md)).
+
+Bidirectional visibility does not move execution of a future initializer or assignment backward. The walker accumulates reached changes in sequence; a later write does not replace the value at every earlier position. Repeated assignments to one place update that place and do not create competing same-named fields. Visibility of a name or an allocated place does not itself promise an initial value: the ordinary initialization, conversion, and admission contracts apply.
+
+Preliminary automatic population of `var` provides the complete set of a method's own fields before layout and execution. It prepares places; it is neither an exceptional source of bidirectional visibility nor early execution of `body` statements. Native lowering must account for the complete field set and address correspondences while preserving the walker's name selection and observable write order; layout cannot depend only on fields already encountered during linear code emission.
+
+**P0 does not resolve visibility.** It preserves all source occurrences, their order, levels, containers, and spans; semantic selection neither removes an earlier occurrence from the tree nor changes the EBNF. The rule applies inside an already admitted scope and source: it does not extend the `parent` chain, the meaning of `node`, `independent` boundaries, dynamic-versus-lexical source precedence, or access to another owner's data. Explicit-path ambiguity in `data\field`, indexing by `\(index)` and `\(index)field`, and Mix activity rules remain unchanged. Implementation requirements are collected in the [fix list](bugs_for_fixing.md).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 

@@ -1,6 +1,11 @@
 # Unselected ordinary L2 port of check_docs.py exact opening assertions.
 # The three strings below are the original expected bytes, not a new norm.
 # Normal text reads retain BOM and normalize CR/CRLF as read_text(utf-8) does.
+# Edition 4 (2026-11-09) puts the author's code-correction requirements and
+# revision notes above the opening, so the three paragraphs are found at the
+# first paragraph boundary where they start, and RU/EN paragraph parity is
+# counted from the rendered body marker on; the head above it is the
+# author's free text whose per-language layout differs (RU front matter).
 
 fn: dc_text_file (@: path char; @@: out char; @: out_count size_t) int
     @: raw char 0
@@ -16,8 +21,8 @@ fn: dc_text_file (@: path char; @@: out char; @: out_count size_t) int
     return: failed
 end: dc_text_file
 
-fn: dc_paragraphs (@: data char; size_t: count) size_t
-    size_t: at 0U
+fn: dc_paragraphs (@: data char; size_t: count; size_t: start) size_t
+    size_t: at start
     size_t: found 0U
     size_t: result 1U
     while: at < count
@@ -30,12 +35,34 @@ fn: dc_paragraphs (@: data char; size_t: count) size_t
     return: result
 end: dc_paragraphs
 
+# Offset of the first paragraph that starts with the needle: the file start
+# or a position right after a blank-line separator; SIZE_MAX if absent.
+fn: dc_paragraph_start (@: data char; size_t: count; @: needle char) size_t
+    size_t: scan 0U
+    size_t: found 0U
+    size_t: needle_count c.strlen(needle)
+    while: scan < count
+        found: dt_find(data, count, scan, needle, needle_count)
+        if: found = (cast: (size_t) -1)
+            return: (cast: (size_t) -1)
+        if: found = 0U
+            return: found
+        if: found >= 2U && data[found - 1U] = (cast: (char) 10) && data[found - 2U] = (cast: (char) 10)
+            return: found
+        scan: found + 1U
+    ---
+    return: (cast: (size_t) -1)
+end: dc_paragraph_start
+
 fn: dc_author_opening (@: ru char; size_t: count) int
     @: expected char 0
     size_t: paragraph 0U
     size_t: first 0U
     size_t: last 0U
     size_t: expected_count 0U
+    first: dc_paragraph_start(ru, count, "**Lingvamyxa (далее LMX) — язык, в котором программа — лексический лес примитивных массивов, связанный в динамический граф.**")
+    if: first = (cast: (size_t) -1)
+        return: 1
     while: paragraph < 3U
         if: paragraph = 0U
             expected: "**Lingvamyxa (далее LMX) — язык, в котором программа — лексический лес примитивных массивов, связанный в динамический граф.** Эта организация самоподобно повторяется на уровне локальных акторов с физической адресацией в памяти и далее — на уровне дальних межмашинных сообщений с комплексной адресацией."
@@ -70,6 +97,8 @@ fn: docs_opening_check (@: repo char) int
     @: en char 0
     size_t: ru_count 0U
     size_t: en_count 0U
+    size_t: ru_body 0U
+    size_t: en_body 0U
     int: failed 0
     if: ru_path = 0 || en_path = 0
         failed: 1
@@ -79,7 +108,14 @@ fn: docs_opening_check (@: repo char) int
         failed: dc_author_opening(ru, ru_count)
     if: failed = 0
         failed: dc_text_file(en_path, @ en, @ en_count)
-    if: failed = 0 && dc_paragraphs(ru, ru_count) != dc_paragraphs(en, en_count)
+    if: failed = 0
+        ru_body: dt_find(ru, ru_count, 0U, "<!-- semantics-toc -->", 22U)
+        en_body: dt_find(en, en_count, 0U, "<!-- semantics-toc -->", 22U)
+        if: ru_body = (cast: (size_t) -1) || en_body = (cast: (size_t) -1)
+            failed: 1
+        ---
+    ---
+    if: failed = 0 && dc_paragraphs(ru, ru_count, ru_body) != dc_paragraphs(en, en_count, en_body)
         failed: 1
     c.free(ru_path)
     c.free(en_path)

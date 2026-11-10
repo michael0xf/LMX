@@ -1,37 +1,64 @@
 # LMX semantics: worked explanations
 
 <a id="p0-container-correction"></a>
-## 1. GROSS ERROR — stripping the sole anonymous container in P0
+## 1. GROSS ERROR — stripping the sole non-empty anonymous container in P0
 
-The previous rule under which P0 replaces the sole anonymous Structure
-with its fields is wrong. **P0 code must be corrected to preserve every
-explicit anonymous container, including a sole or empty one, in every
+The previous rule under which P0 replaces the sole non-empty anonymous
+Structure with its fields is wrong. **P0 code must be corrected to preserve
+every explicit non-empty anonymous container, including a sole one, in every
 context.** Stripping it in advance changes not only calls but also
 declarations, descriptions, and data structures, where no such expansion applies.
 
 ```lmx
-f()
-f: ()
-
 f(a b)
-f: (a b)
+f({a b})
 ```
 
-In the first pair, `f()` has an empty argument Structure, whereas `f: ()`
-has one nested empty Structure in its argument Structure. In the second
-pair, `f(a b)` has two fields `a`, `b`, whereas `f: (a b)` has one anonymous
+`f(a b)` has two fields `a`, `b`, whereas `f({a b})` has one anonymous
 container holding those two fields. **P0 preserves these different trees.**
 It does not know whether the head will resolve to a function, method,
 declaration, or another consumer.
 
 The sole argument Structure is expanded only by the semantics of an
 already resolved function or method call, when accepted as the entire
-actual-argument Structure. Consequently, `f()` and `f: ()` produce the
-same empty actual arguments after that stage; the nonempty pair can
-similarly produce one `a`, `b` list. This is semantic call expansion,
-not normalization of the source tree. Other contexts retain the container.
-Curly-bracket Structure descriptions follow the same rule: being the
-sole container does not authorize P0 to strip it.
+actual-argument Structure: the pair above can produce one `a`, `b` list.
+This is semantic call expansion, not normalization of the source tree.
+Other contexts retain the non-empty container. Curly-bracket Structure
+descriptions follow the same rule: being the sole container does not
+authorize P0 to strip it.
+
+An empty Structure is outside this requirement: expanding it in P0 is not
+an error ([the author's clarifications of 2026-11-09](../LMX_blog/2026-11-09.md)).
+Three forms with the same meaning, an empty Structure, yield one P0 tree:
+`A{}`, the short form `A: {}`, and the block record of `A` with an empty
+body. The block closes under the general boundary rules, for example:
+
+```lmx
+A{}
+A: {}
+A:
+---
+A:
+end: A
+```
+
+The short form `A: {}` equals `A{}` only when it ends with a line break
+and a return to the previous level. This follows from the general rules of
+levels and of how short and block forms end, not from a parser exception:
+when the close of block `A` follows `A: {}`, the record is a block, and the
+empty Structure is its only field.
+
+```lmx
+A: {}
+end: A    # A{{}}, not an empty A
+```
+
+The expansion does not erase the distinction between the call form and a
+non-call record: P0 marks `A()` as a call. A call is written `A(args)` or
+`A()`; `A(): args` and the block `A():` are a rarely needed additional
+layout of the same call ([below](#call-forms)). Curly braces are never a
+call, neither is a standalone `(...)` (the short `A: ()` is the same empty
+Structure as `A: {}`), and the colon Frame `A: args` is not a call.
 
 <a id="data-receiver-correction"></a>
 ## 2. Removal of two-argument data and type receiver forms
@@ -136,8 +163,11 @@ latest. Applicability concerns the name and binding scope, not successful
 admission: the selected value is checked under its ordinary contract,
 and incompatibility does not authorize using an earlier value. If there
 is no preceding source, the name and prepared place may be found ahead.
-This revision does not specify how to choose among several distinct
-future candidates.
+There is no selection by proximity: within a code scope a name has one
+prepared place whose value the writes change in sequence; a data field is
+found unambiguously, and several same-named occurrences without an index
+are an ambiguity error ([the author's clarification of
+2026-11-09](../LMX_blog/2026-11-09.md)).
 
 ### A reached write determines the next read
 
@@ -159,15 +189,13 @@ unconditionally selecting the final write in the entire source.
 ### A method and an ordinary Structure may be described later
 
 ```lmx
-fn: read_later {} int {}
+read_later: fn: int () {}
     return: Later\value + later()
-end: read_later
 
 Later{ value: int: 5}
 
-fn: later {} int {}
+later: fn: int () {}
     return: 2
-end: later
 
 read_later()
 ```
@@ -215,18 +243,20 @@ of the particular root-level head `field:` in a Structure used as data.
 Counting also starts at zero, but only among occurrences of the selected
 name, rather than among all elements.
 
-Method `f` has its parts ordered as `{args return var body}`:
+Function `f` has its parts ordered as `{return args var body}` (return
+first everywhere, [the author's clarification of 2026-11-09](../LMX_blog/2026-11-09.md));
+`sub` and `catch` have no result, and their parts are `{args var body}`:
 
 ```lmx
-f\(1)                # element at overall position 1: return
+f\(0)                # element at overall position 0: return
 f\(0)return          # occurrence 0 of the name return
 f\return             # the sole occurrence of the name return
 f(1)                 # method call with argument 1
 ```
 
-The first three accesses select the `return` part through different paths.
-`f\(1)return` would require a second occurrence of the name `return`,
-which this method Structure does not have; it is not another spelling of
+The first three accesses select the `return` part through different paths;
+`f\(1)` selects `args`. `f\(1)return` would require a second occurrence of
+the name `return`, which this function Structure does not have; it is not another spelling of
 `f\(1)`. Bare `struct\field` still requires a sole occurrence of that name.
 
 The numbered named path addresses source heads in a Structure used as data.
@@ -263,21 +293,21 @@ as an array of void references `@`, then accessed by indexing that array.
 Explicitly declare a reference array, then assign the Structure to it:
 
 ```lmx
-arr{ (): @}; arr: f; arr(1)
+arr{ (): @}; arr: f; arr(0)
 ```
 
 `arr{ (): @}` is a named descriptor declaring an Array `@`.
-`arr: f` assigns the representation of method `f`'s Structure to the array;
-the bare name `f` reads the method without executing it. `arr(1)` returns
-method `f`'s `return` Structure, accessible through the corresponding
-array reference.
+`arr: f` assigns the representation of function `f`'s Structure to the
+array; the bare name `f` reads the function without executing it. `arr(0)`
+returns function `f`'s `return` Structure, accessible through the
+corresponding array reference.
 
-The method-part order is `{args return var body}`, indexed from zero:
+The function-part order is `{return args var body}`, indexed from zero:
 
-| Direct path | Through Array `@` | Part of method `f` |
+| Direct path | Through Array `@` | Part of function `f` |
 | --- | --- | --- |
-| `f\(0)` | `arr(0)` | `args` |
-| `f\(1)` | `arr(1)` | `return` |
+| `f\(0)` | `arr(0)` | `return` |
+| `f\(1)` | `arr(1)` | `args` |
 | `f\(2)` | `arr(2)` | `var` |
 | `f\(3)` | `arr(3)` | `body` |
 
@@ -293,10 +323,10 @@ which the pointed object belongs. For the reference array in the previous
 section:
 
 ```lmx
-typeof(arr(1))
+typeof(arr(0))
 ```
 
-The argument is a reference to method `f`'s `return` Structure. The result
+The argument is a reference to function `f`'s `return` Structure. The result
 is that Structure's arena type code, not the pointer's own static type
 `@` or the type of the value returned by calling `f`. Determining a type
 from an arena assumes its code unambiguously identifies the type of
@@ -309,61 +339,155 @@ ordinary `int` array, its element's value must not silently be treated as
 a pointer: the `typeof` contract specifically requires a reference to the
 object being inspected.
 
+<a id="fn-declaration"></a>
+## Declaring fn
+
+The function name stands outside, and the parts of the `fn` receiver come
+in the order `return args var body`. The arguments are conveniently
+described by an anonymous round Structure; all parts may be written on one
+line (the author's example):
+
+```lmx
+f: fn: int (arg: int) {variable: int} {body: int}
+```
+
+Here `int` is `return`, `(arg: int)` is `args`, `{variable: int}` is
+`var`, and `{body: int}` is `body`. Parentheses after a space with no head
+are an anonymous Structure, not a call. Without `var` this is the short
+form; without a body it is an interface descriptor.
+
+As in Python, levels need not be closed: an ordinary level decrease ends a
+block. Only closing several levels needs the general means -- `end: name`
+or a terminal `return`, which keeps its action and most often serves as the
+trailer ([the author's reminder of 2026-11-09](../LMX_blog/2026-11-09.md)).
+
+<a id="call-forms"></a>
+## Writing a call and three ways to shorten arguments
+
+The main call form is `f(args)`, and a nullary call is `f()`. Inside the
+parentheses everything admitted inside `{}` is admitted, blocks included,
+so a large argument is written in `f(args)` as well. `f: args` is not a
+call: the colon serves naming, assignment, and receivers ([the author's
+clarifications of 2026-11-09](../LMX_blog/2026-11-09.md)). The call rule
+does not apply to receivers and operators: `fn:`, `int:`, and other
+receivers have no dilemma between a call and an assignment, and their
+forms and contracts do not change. Parentheses are admitted for receivers too and change nothing: `int(5)` and `int: 5` are the same.
+
+Explicitly written arguments can be shortened in three ways.
+
+**1. A nested method -- lexical binding.** A method inside another reads
+the names of the enclosing scope:
+
+```lmx
+area: fn: int (w: int; h: int)
+    doubled: fn: int ()
+        return: w * h * 2
+    return: doubled()
+```
+
+`area(3, 4)` gives 24; `doubled()` is called without arguments.
+
+**2. Priority dynamic binding.** A callee's free name receives the
+caller's nearest binding, ahead of lexical lookup:
+
+```lmx
+greet: sub: ()
+    print(prefix + name)
+
+welcome: sub: (name: Text)
+    prefix: Text: "Hello, "
+    greet()
+```
+
+`welcome("Ann")` prints `Hello, Ann`: `prefix` and `name` in `greet` come
+from the activation of `welcome`. Without such an input and without a
+lexical source, the call `greet()` is invalid.
+
+**3. A sole Structure as the argument list** -- just as mathematics
+substitutes a point into `f(x)`:
+
+```lmx
+sum: fn: int (x: int; y: int)
+    return: x + y
+
+p: {x: int: 3; y: int: 4}
+r: int: sum(p)       # 7, as sum(3, 4) and sum(x: 3; y: 4)
+```
+
+The fields of `p` are matched against the formals at the invocation stage;
+P0 does not expand the Structure ([semantics](new_LMX_semantics.en.md#whole-arguments)).
+
+The same call may be written through `f():` -- the short `f(): args` or a
+block:
+
+```lmx
+f():
+. 3
+end: f
+```
+
+This is an additional layout of the same call, with no separate `data`
+selection, execution, or binding; ordinary code hardly ever needs it (the
+author's example is an extremely long `print`).
+
+Nested anonymous brackets read better when they alternate: start with
+curly ones, use curly ones next to the parentheses of a call too, and round
+ones inside curly ones: `{a * (b + {c - d})}`, `f({a b})` ([the author's
+wishes of 2026-11-09](../LMX_blog/2026-11-09.md)). This is style, not a
+parsing rule: no container is added or removed for appearance.
+
 <a id="callable-description"></a>
 ## Explicit method-body composition
 
 ```lmx
-fn: add {int: x; int: y} int {}
+add: fn: int (int: x; int: y) {}
     return: x + y
-end: add
 
-fn: add5 {int: x} int {}
+add5: fn: int (int: x) {}
     merge(y: int: 5; add\body)
-end: add5
 ```
 
-`add` stores `args` with formals `x` and `y`, `return`, `var`, and `body`
+`add` stores `return`, `args` with formals `x` and `y`, `var`, and `body`
 with the `return: x + y` statement as separate parts. The `add\body` path
 selects the body itself. `merge` builds an `add5` body containing `y: int: 5`
 and that statement; `add5(1)` gives 6. The `add5` header declares only
 formal `x`: the field `y` in its new body becomes neither a formal nor a
 formal default. `merge(add; y: int: 5)` is not equivalent: the outer `add`
-method Structure has `args`, `return`, `var`, and `body` parts, but no
+method Structure has `return`, `args`, `var`, and `body` parts, but no
 immediate `y` field.
 
 An alternative `add5` puts the initializer in explicit `var` and keeps
 `add`'s body:
 
 ```lmx
-fn: add5 {int: x} int {y: int: 5}
+add5: fn: int (int: x) {y: int: 5}
     add\body
-end: add5
 ```
 
 A third, alternative definition changes `args` instead: here `y` is a
 formal with default 5, not a body or `var` field:
 
 ```lmx
-fn: add5 merge(add\args; y: int: 5) int {}
+add5: fn: int merge(add\args; y: int: 5) {}
     add\body
-end: add5
 ```
 
 These are three mutually exclusive definitions of `add5`, not three
-consecutive declarations in one scope. The full `fn` form explicitly
-supplies `var` after the result description; the short source form omits
-that argument but produces the same addressable empty `var` part.
+consecutive declarations in one scope. The function name stands outside,
+and the parts of the `fn` receiver come in the order `return args var body`.
+The full `fn` form explicitly supplies `var` after `args`; the short source
+form omits that argument but produces the same addressable empty `var` part.
 Unary `int: x` describes a typed place without an initial value and,
 in a signature, a formal without a default.
 
 The `merge` result separately undergoes [admission](new_LMX_semantics.en.md#admission);
 the body's free names follow [dynamic resolution](new_LMX_semantics.en.md#dynamic).
 
-The header `fn: add {int: x; int: y} int` **without a body** is the third
+The header `add: fn: int (int: x; int: y)` **without a body** is the third
 form: an interface descriptor that can be passed by reference but cannot
 be invoked directly as an executable `add` body. With a body after that
 header it is the short executable definition with an addressable empty
-`var`. The full form with `{}` after the result supplies `var` explicitly.
+`var`. The full form with `{}` after `args` supplies `var` explicitly.
 
 <a id="receiver-arities"></a>
 ## Places and values: separate names and type receivers

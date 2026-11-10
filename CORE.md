@@ -108,13 +108,16 @@ preparation. See [L2 §§10–11](docs/L2_spec_en.md#own) and
 ### 3.1 Body fields, occurrences, and own-state
 
 A name has one physical place in a containing Structure. Its first
-declaration establishes the place; repeating a declaration-form assigns
-rather than making another same-name data field. Assignment never appends
-a slot. An explicit `call` or callable invocation (including `fn`) starts
+declaration establishes the place; a repeated declaration writes into that
+same place rather than making another same-name data field. A repeated
+declaration is not an assignment: `Struct1: Struct2` declares `Struct1`
+with `Struct2` inside it, while `Struct1 := Struct2` assigns (the author's
+decision of 2026-11-10, [semantics](docs/LMX_semantics.en.md#colon-declares)).
+Assignment never appends a slot. An explicit `call` or callable invocation (including `fn`) starts
 its own binding scope; its own field may shadow an outer one. There is no
 shadowing within one callable. Inline `if`/`for` are operators of that
 activation, not scopes, even though represented as Structures. An ordinary
-named Structure form in executable code likewise assigns into selected
+named Structure form in executable code likewise writes into selected
 `data`, not declaring a new field in `code`; method declaration receivers
 retain their own contracts. The prepared code-to-data map inventories
 root-level source heads of `data`, not heads nested inside initializers.
@@ -137,24 +140,27 @@ specialized for function pointers. See [L2 §18](docs/L2_spec_en.md#lowlevel-add
 
 In accepted v3 rules a bare resolved atom reads a value/address, not a
 nullary call. A method or method pointer uses an explicit call form. An
-ordinary Structure executes through `call: A`; `A()` and `A: ()` use
-the empty-Structure declaration/assignment route. Do not reclassify a
+ordinary Structure executes through `call: A`; `A()` and `A:` declare an
+empty Structure, first or repeated. Do not reclassify a
 failed call as another operation.
 
-M3 first normalizes legacy flat declarations to name-first order. N1–N6
-retain the composed form with the place in the outer head (`i: int: 5`,
-`ptr: @: Model: 0`) and also admit a two-field form for selected value/type
-receivers: `int: i 5`, `@: ptr 0`, `@: ptr Model`, and
-`@: ptr Model: 0`. In that form the first field names the place without
-invoking it; the second supplies a value or requirement under the receiver's
-contract. `@: ptr Model: Other` has two fields, not a special parse of
-`Model: Other`: the nested expression is consumed without thereby writing
-to `Model`. Existing three-field `@: ptr Model 0` is tracked separately by
-M3; adding the two-field form does not by itself remove it.
-`i: int()` and `int: i` declare an int place without an initial value;
-`i: int: 5` and `int: i 5` supply 5. Likewise, `ptr: @()` and
-`@: ptr` declare a void reference without an initial address, while
-`ptr: @: 0` and `@: ptr 0` explicitly supply null. A later write into
+M3 first normalizes legacy flat declarations to name-first order. A place
+is declared only by a receiver form enumerating its arguments (the author's
+decision of 2026-11-10, [semantics](docs/LMX_semantics.en.md#receiver-args-only)):
+`int: i 5`, `@: ptr 0`, `@: ptr Model`, and `@: ptr Model: 0`. The first
+field names the place without invoking it; the second supplies a value or
+requirement under the receiver's contract. `@: ptr Model: Other` has two
+fields, not a special parse of `Model: Other`: the nested expression is
+consumed without thereby writing to `Model`. Existing three-field
+`@: ptr Model 0` is tracked separately by M3. The composed form with the
+place in the outer head (`i: int: 5`, `i: int()`, `ptr: @()`, `ptr: @: 0`,
+`ptr: @: Model: 0`), which N1–N6 retained, is withdrawn: `ms: int: time` is
+a Structure `ms` with a field `time`, not a place `ms`. The translators
+still accept the composed form until plan step
+[M9](next_core_tasks_v3.md#m9).
+`int: i` declares an int place without an initial value; `int: i 5`
+supplies 5. Likewise, `@: ptr` declares a void reference without an initial
+address, while `@: ptr 0` explicitly supplies null. A later write into
 a void reference does not retroactively make its declaration
 Model-constrained. Initializers, assignments, calls, and reference depth
 use the general receiver–arguments model, not a special parse for `@`,

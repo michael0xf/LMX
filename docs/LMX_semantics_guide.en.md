@@ -12,16 +12,16 @@ fn: add (int: x; int: y) int ()
 end: add
 
 fn: add5 (int: x) int ()
-    merge(y: int: 5; add\body)
+    merge(int: y 5; add\body)
 end: add5
 ```
 
 `add` stores `args` with formals `x` and `y`, `return`, `var`, and `body`
 with the `return: x + y` statement as separate parts. The `add\body` path
-selects the body itself. `merge` builds an `add5` body containing `y: int: 5`
+selects the body itself. `merge` builds an `add5` body containing `int: y 5`
 and that statement; `add5(1)` gives 6. The `add5` header declares only
 formal `x`: the field `y` in its new body becomes neither a formal nor a
-formal default. `merge(add; y: int: 5)` is not equivalent: the outer `add`
+formal default. `merge(add; int: y 5)` is not equivalent: the outer `add`
 method Structure has `args`, `return`, `var`, and `body` parts, but no
 immediate `y` field.
 
@@ -29,7 +29,7 @@ An alternative `add5` puts the initializer in explicit `var` and keeps
 `add`'s body:
 
 ```lmx
-fn: add5 (int: x) int (y: int: 5)
+fn: add5 (int: x) int (int: y 5)
     add\body
 end: add5
 ```
@@ -38,7 +38,7 @@ A third, alternative definition changes `args` instead: here `y` is a
 formal with default 5, not a body or `var` field:
 
 ```lmx
-fn: add5 merge(add\args; y: int: 5) int ()
+fn: add5 merge(add\args; int: y 5) int ()
     add\body
 end: add5
 ```
@@ -62,31 +62,31 @@ header it is the short executable definition with an addressable empty
 <a id="receiver-arities"></a>
 ## Place and value with `int` and `@`
 
-These are alternative spellings, not consecutive statements in one program:
+A place is declared by a receiver form enumerating its arguments. These are
+separate examples, not consecutive statements in one program:
 
 ```lmx
-x: int()       # int place without an initial value
-int: x         # the same place
-x: int: 5      # int with value 5
-int: x 5       # the same value
+int: x         # int place without an initial value
+int: x 5       # int with value 5
 
-ptr: @()       # void reference without an initial address
-@: ptr         # the same place
-ptr: @: 0      # void reference with an explicit null address
-@: ptr 0       # the same value
+@: ptr         # void reference without an initial address
+@: ptr 0       # void reference with an explicit null address
+@: ptr Model   # a reference to an existing Structure, no longer an empty void pointer
 ```
 
-For a reference to an existing Structure, `ptr: @: Model` and
-`@: ptr Model` form another pair; this is not an empty void pointer.
 A first definition allocates the place, a repeated form with a candidate
 writes after admission, and a repeated form without a candidate only checks
-the requirement.
+the requirement. The composed forms with the place in the outer head —
+`x: int()`, `x: int: 5`, `ptr: @()`, `ptr: @: 0`, `ptr: @: Model` — are
+withdrawn by the author's decision of 2026-11-10
+([semantics](LMX_semantics.en.md#receiver-args-only)): `ms: int: time`
+declares a Structure `ms` with a field `time`, not a place `ms`.
 
 <a id="callable-admission"></a>
 ## What the callable interface check proves
 
 Methods with formals `(x; y = 5)` and `(x)` both accept `f(1)`, but a
-Consumer's written call `f(1; y: 25)` accepts only the former. Admission
+Consumer's written call `f(1; y := 25)` accepts only the former. Admission
 checks required explicitly used accesses, not equality of formal lists or
 predicted body behavior. User-authored behavioral tests are a separate stage.
 

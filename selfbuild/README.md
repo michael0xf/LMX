@@ -217,7 +217,9 @@ visible own field, a slot, a method-level local and a nested method's host activ
 makes of a free name for `x: v`); in a call's argument Structure `:=` supplies a named argument (`f(a := v)`: the binder
 names a formal by that Frame only), while `f(a: 5)` and `f(a(5))` are the ordinary call of a visible callable `a` with a
 positional result (NAMED-BINDING-BY-HEAD closed; the `table:` receiver's parts use the same binder in its `by_head` mode); a
-`merge` operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field the declaration form `(int: a 5)` is.
+`merge` operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field the declaration form `(int: a 5)` is
+(the name-first spelling is withdrawn by the author's decision of 2026-11-10 -- a place is declared only by
+`receiver: arguments`; the translators accept it until plan step M9, `next_core_tasks_v3.md#m9`).
 Fixtures `assign_known`, `assign_unknown_refused`, `assign_in_structure_refused`, `assign_method_name_refused`,
 `named_assign_actuals`, `named_assign_unknown_refused`, `named_assign_positional_after_refused`,
 `merge_named_field_operand`; five fixtures that asserted the by-head binding moved to `:=`. The whole argument Structure

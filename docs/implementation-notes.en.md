@@ -182,6 +182,12 @@ failure of the **whole** test set remains undecided.
 <a id="assign-named-merge"></a>
 ### 4.2 `:=`, named arguments, a `merge` of arguments and the whole argument Structure: adopted rule, implemented by slices 303 and 304, partly by 307 (the remainders of Codex's review of 307 are the next slice)
 
+The author's decision of 2026-11-10 ([book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by
+the form `receiver: arguments`, and a field written "name: type: value" (`a: int: 5`) is withdrawn. The slices below
+are described as they ran: with the field of a `merge` operand in the former form, which the translators still
+accept; under the norm it is written `(int: a 5)`. Migrating the fixtures and changing the reading is in
+[plan M9](../next_core_tasks_v3.md#m9).
+
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
 [the whole argument Structure](LMX_semantics.en.md#whole-arguments)

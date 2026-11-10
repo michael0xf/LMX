@@ -172,6 +172,13 @@ a known place. The implementation does not follow this yet: both consumers of th
 form `name: value` and, for an unknown name, define a place by its value (`lmx_graph_define`); the descriptions of the
 slices above state what the code does, not the norm. The removal is section [M7 of the plan](../next_core_tasks_v3.md#m7).
 
+The author's decision of the same day ([journal](../LMX_blog/2026-11-10.md#receiver-args-only),
+[book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by the form `receiver: arguments`, and the
+composed form `name: receiver: value` is withdrawn. The examples of the slices above are written in the former form
+(`(a: int: 5)`), and the clean graph accepts it, defining the place `a`; under the norm the same field is written
+`(int: a 5)` — the interpreter of the clean graph already runs that spelling with the same value 35 (a probe of
+2026-11-10). Migrating the fixtures and changing the reading is section [M9 of the plan](../next_core_tasks_v3.md#m9).
+
 <a id="principles"></a>
 ## 1. Principles (norm)
 
@@ -288,7 +295,7 @@ address it holds, an `int` value is no address, a written zero is the null addre
 |---|---|---|
 | `int`, `char`, `unsigned char`, `size_t`, `unsigned`, `ulong` | a number of the machine type | a number primitive; `int: i 5` is an `int` cell holding 5 |
 | `uninit:int`, `uninit:char`, `uninit:unsigned char`, `uninit:size_t`, `uninit:unsigned`, `uninit:ulong` | `void *` -- a pointer to a cell of T | the internal pointer primitive of a declaration without an initializer (§1 item 4); refers to a pre-existing cell of T and persists after writes. It does not make the language place a reference. In a signature it distinguishes a mandatory formal from a default; it does not track the first write |
-| `uninit:ref` | `void *` -- a pointer to a `ref` cell | a reference place without a promised initial address -- `@: p`, `ptr: @()` ([book :487](LMX_semantics.en.md#explicit-copy)); the author's analogy "for all primitives" extends directly to the pointer receiver, which has "the same place and value forms as `int`" (confirmed by Codex, review 2) |
+| `uninit:ref` | `void *` -- a pointer to a `ref` cell | a reference place without a promised initial address -- `@: p` ([book :487](LMX_semantics.en.md#explicit-copy)); the author's analogy "for all primitives" extends directly to the pointer receiver, which has "the same place and value forms as `int`" (confirmed by Codex, review 2) |
 | `word` | `const char *` | a word primitive: a pointer to the interned string of a spelling -- operators (`+`, `\`, `[]`, `:=`), receiver and language words (`fn`, `if`, `return`, `node`, `int`), any written name (§3.5) |
 | `ref` | `void *` | a reference cell: a slot of an Lmx field or of an Array element, the cell of a pointer `@: p T` after the first address write; holds the address of a primitive or an Lmx, or 0 |
 | `lmx:data`, `lmx:immutable`, `lmx:result` | `Lmx` | the header of an ordinary Structure, of an immutable Structure (`independent: immutable`) and of a Structure **created by executing the `fn` receiver** ([L2 §2.1](L2_spec_en.md#interpretable-tree): the pool of `fn` results receives only a structure created by executing `fn`, not a Structure with similar parts; [§3](L2_spec_en.md#type-by-range): ordinary and immutable in different regions, not a C type per model) |

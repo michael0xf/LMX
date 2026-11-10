@@ -2519,50 +2519,21 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                                 ---
                             ---
                         ---
-                    # The operator `:=` (the author, 2026-11-07; the grammar's operators section): one token, written compact
-                    # (`a:=5`) or spaced (`a := 5`), never the colon head `a:` with a body `=5` -- the Frame of its left side
-                    # (the head) and its right side (the body), flagged LM_P0_FRAME_ASSIGN, no colon.  Its body parses as a
-                    # colon Frame's inline body does; without the colon flag it keeps no source child level.
+                    # The former operator `:=` is removed (M6 4b; the book, assign-known, RU:424; the grammar's operators): a
+                    # write is written `left: right`. Written compact (`a:=5`) or spaced (`a := 5`) after a head -- an exact
+                    # identifier too (`x` and x are one name; the scan starts after the quoted token, so a `:=` inside the
+                    # quotes is not seen) -- it is refused here, before any consumer reads the document, and never read as
+                    # the colon head `a:` with a body `=5`.
                     size_t: assign_index i
                     while: ((assign_index < byte_count) && c.lm_p0_is_horizontal_space(text[assign_index]))
                         assign_index: assign_index + 1U
                     ---
-                    # The head's spelling does not choose the operator (the grammar, exact identifiers: `x` and x are one
-                    # name): a quoted head -- an exact identifier -- before `:=` is the same Frame; the scan for `:=` starts
-                    # after the quoted token, so a `:=` inside the quotes is not seen.
                     if: (((head_end > start) && ((assign_index + 1U) < byte_count)) && ((text[assign_index] = ':') && (text[(assign_index + 1U)] = '=')))
-                        size_t: assign_body_index
-                        unsigned: assign_body_flags
-                        int: assign_inline_body
-                        p0_node: lm_p0_new_node(document, c.LM_P0_NODE_FRAME)
-                        if: (p0_node = 0)
-                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                        p0_node\as\frame\head\data: (text + start)
-                        p0_node\as\frame\head\length: (head_end - start)
-                        p0_node\as\frame\flags: c.LM_P0_FRAME_ASSIGN
-                        i: (assign_index + 2U)
-                        while: ((i < byte_count) && c.lm_p0_is_horizontal_space(text[i]))
-                            i: i + 1U
-                        ---
-                        assign_body_index: i
-                        assign_inline_body: (((((i < byte_count) && (c.lm_p0_is_line_break(text[i]) = 0)) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (text[i] != ')')) && (text[i] != '#'))
-                        if: assign_inline_body
-                            p0_node\as\frame\flags: p0_node\as\frame\flags | c.LM_P0_FRAME_INLINE_BODY
-                        ---
-                        assign_body_flags: ((c.LM_P0_FIELD_PARSE_STOP_ON_SEMICOLON | c.LM_P0_FIELD_PARSE_STOP_ON_SOURCE_LEVEL) | c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS)
-                        if: (lm_p0_field_parse_loop_push(document, parse_stack, indent_stack, indent_stack_owned, structure, text, byte_count, line, column, offset, flags, short_source_level, layout_base_level, i, current_source_level, allow_empty_fields, expect_field, headless_group_after_separator, c.LM_P0_FIELD_PARSE_LOOP_COLON_FRAME_BODY, p0_node, start, 0U) = 0)
-                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                        structure: p0_node\as\frame\body
-                        flags: assign_body_flags
-                        short_source_level: current_source_level
-                        current_source_level: (current_source_level + 1U)
-                        i: assign_body_index
-                        allow_empty_fields: 1
-                        expect_field: 1
-                        headless_group_after_separator: 0
-                        indent_stack_owned: 0
-                        restart_parse_context: 1
-                        break
+                        size_t: assign_line
+                        size_t: assign_column
+                        lm_p0_position_in_slice(text, byte_count, assign_index, line, column, @ assign_line, @ assign_column)
+                        lm_p0_set_diagnostic(document, 33, assign_line, assign_column, "the operator := is removed: a write is written left: right (the book, assign-known)")
+                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     ---
                     # The layout of a call `f(): args` and its block `f():` (the author 2026-11-09, «только f(3) или
                     # f(): 3 или f(): / . 3 / end: f»; the grammar's call mark): empty parentheses right after the head

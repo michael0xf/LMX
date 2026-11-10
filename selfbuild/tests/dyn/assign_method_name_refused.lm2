@@ -1,9 +1,8 @@
-# The := slice (the author's correction of 2026-11-07; the book, assign-known): a method's name as the left side -- `one := two`
-# in a method -- is refused at translation, located: the name resolves to the unit's callable field, which a method cannot
-# write today (the existing limit "writing a hidden input that has no activation value is not supported yet"); nothing is
-# called.  Inside a method the head `one` is a call head (l2_call_head_method), and only the `:=` branch of
-# lm_compiler_is_asgn reads the statement as the write it is, so that the check says this refusal instead of binding a call
-# of `one` with the actual `two` (mutant m2 of the slice survived the fixtures without this row).
+# M6 4b (slice 350; slice 303's row in the colon form): a method's name as the left side -- `one: two` in a method --
+# is refused at translation, located: only the call mark calls (the author 2026-11-09), so the Frame is the write of
+# the place its head names, and a method is no place a statement writes; nothing is called.  Inside a method the head
+# `one` is a call head (l2_call_head_method); lm_compiler_is_asgn takes it for a call only with the call mark (slice
+# 349), so the check says this refusal instead of binding a call of `one` with the actual `two`.
 fn: one () int
     return: 1
 end: one
@@ -11,7 +10,7 @@ fn: two () int
     return: 2
 end: two
 fn: f () int
-    one := two
+    one: two
     return: 1
 end: f
 int: code 7

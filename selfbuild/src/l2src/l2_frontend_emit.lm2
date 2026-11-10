@@ -1797,13 +1797,6 @@ fn: lm_compiler_collect_decls (const: (@: body c.LmP0Structure); int: mi; const:
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported own array declaration")))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_unimpl_numeric(stmt) != 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, c.lm_compiler_unimpl_numeric(stmt))))
-        # The operator `:=` declares nothing (the author, 2026-11-07; the book, assign-known): a Frame `:=` whose body is a
-        # typed value, `zz := int: 5`, has the shape of the nested typed declaration `zz: int: 5`, yet it opens no row for
-        # a name no place of this site has -- the check refuses it as a write of no known place.  With a known name the
-        # same shape is the repeated typed write of that place (REPEATED-DECL-TYPED-RECEPTION): its row exists already.
-        if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_own_decl_ty(stmt) != 0 && lm_compiler_assign_new_name(stmt, mi) != 0
-            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
-            continue
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_own_decl_ty(stmt) != 0 && depth > 0 && scope_n_cell[0] = 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported own declaration")))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_own_decl_ty(stmt) != 0 && (depth = 0 || scope_n_cell[0] != 0)
@@ -4431,8 +4424,8 @@ fn: lm_compiler_check_primary (const: (@: source_node c.LmP0Node); int: mi; cons
         if: c.lm_compiler_mad_host_of(mi) >= 0 && c.lm_compiler_mad_host_own(c.lm_compiler_mad_host_of(mi), (cast: (const: @: c.LmP0Text) (source_node\as\atom))) >= 0
             return: (cast: (int) (0))
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "unresolved name")))
-    # Only the call mark calls a held callable (the author 2026-11-09): `place: value` and `place := value` (M6 4b) are no
-    # call of the callable the place holds -- the write is checked as a write.
+    # Only the call mark calls a held callable (the author 2026-11-09): `place: value` (M6 4b) is no call of the callable
+    # the place holds -- the write is checked as a write.
     if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && (source_node\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0
         return: (cast: (int) (lm_compiler_check_held_call(source_node, (cast: (int) (c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))))), mi, path)))
     if: source_node\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_frame_head(source_node, "@")
@@ -5335,34 +5328,6 @@ fn: lm_compiler_check_word_stmt (const: (@: stmt c.LmP0Node); const: (@: w c.LmP
     return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported body")))
 end: lm_compiler_check_word_stmt
 
-# The operator `:=` (the author, 2026-11-07): its left side names a place the statement already knows.  A nested method
-# knows its host's activation (T6b/A3: the host's formal or own field is a capture -- a hidden input of the nested method
-# whose value the write changes in this activation); that place is known, as a unit field a method sees is (Q52).
-fn: lm_compiler_assign_host_place (int: mi; const: (@: t c.LmP0Text)) int
-    int: host c.lm_compiler_mad_host_of(mi)
-    if: host < 0 || t = 0
-        return: (cast: (int) (0))
-    if: c.lm_compiler_formal_find(host, t) >= 0 || c.lm_compiler_mad_host_own(host, t) >= 0
-        return: (cast: (int) (1))
-    return: (cast: (int) (0))
-end: lm_compiler_assign_host_place
-
-# A Frame `:=` whose name is no place of the site yet -- no own row, no formal, no host capture: `zz := int: 5`
-# (the shape of a nested typed declaration), `zz := 5`.  The collection opens no row for it and the check refuses it.
-fn: lm_compiler_assign_new_name (const: (@: stmt c.LmP0Node); int: mi) int
-    @: fa c.LmP0Text
-    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U
-        return: (cast: (int) (0))
-    fa: c.lm_compiler_own_decl_name(stmt)
-    if: fa = 0
-        fa: stmt\as\frame\head
-    if: fa = 0
-        return: (cast: (int) (0))
-    if: c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) fa)) >= 0 || c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) fa)) >= 0 || lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) fa)) != 0
-        return: (cast: (int) (0))
-    return: (cast: (int) (1))
-end: lm_compiler_assign_new_name
-
 # Original: l2src/l2trans.lm1:19952
 fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@: path char); int: depth) int
     const: (@@: q_at_cell c.LmP0Node (cast: (const: @@: c.LmP0Node) (@ c.l2_q_at)))
@@ -5451,12 +5416,12 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         # `c.X: …` without the call mark (the author 2026-11-09; CODEX-OPUS-344-M6-ANSWERS-20261110T014806Z-01) calls no C
         # function, and the C door declares no storage to write: it is the declaration of a place of the C type X the
         # unit's declarations give (`c.LmxActivation: activation`), or nothing the program can mean.
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & (c.LM_P0_FRAME_COMPACT | c.LM_P0_FRAME_ASSIGN | 4096U)) = 0U && c.lm_compiler_c_stmt_door((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0 && c.lm_compiler_predef_receiver((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & (c.LM_P0_FRAME_COMPACT | 4096U)) = 0U && c.lm_compiler_c_stmt_door((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0 && c.lm_compiler_predef_receiver((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "a C door Frame written with a colon calls nothing (the author 2026-11-09: a C function is called by c.name(args)), and the door declares no storage to write: its head is no C type the unit's declarations give")))
         # `f: …` without the call mark, f a method of the unit by its name (not a place holding a callable -- a formal, a
         # binding, a local --, which the general write takes): the write of the place f, and a method is no place a
         # statement writes (the same answers: «f: v … общий маршрут разрешения принимающего места»).
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & (c.LM_P0_FRAME_COMPACT | c.LM_P0_FRAME_ASSIGN | 4096U)) = 0U && c.lm_compiler_head_is_method_call(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0 && c.lm_compiler_call_binding_own(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & (c.LM_P0_FRAME_COMPACT | 4096U)) = 0U && c.lm_compiler_head_is_method_call(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0 && c.lm_compiler_call_binding_own(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "a Frame written with a colon calls nothing (the author 2026-11-09: a call is written f(args)): it writes the place its head names, the place of a method, which this translation writes no value into")))
         int: definition_own c.lm_compiler_own_by_decl(mi, stmt)
         # A reached graph-valued write to explicit data can raise implements.
@@ -5902,17 +5867,6 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # The operator `:=` writes a place already known (the author, 2026-11-07; the book, assign-known): a left side the
-        # site knows no place for -- a method's name, a name nothing declared -- is the refusal, never a definition, so the
-        # form moved where no place is known declares no field.  The places asked: the declared formals, a visible own
-        # field (a unit field a method sees is its hidden input, Q52), a slot, a method-level local, the host's activation
-        # of a nested method.  Not the dynamic input the collection made of a free name (the target of `x: v` is read
-        # as any name is, so a name nothing binds is a hidden argument of the callers -- the mechanism's history is
-        # steps/free-names.md, the rule the one head resolution and the book): that is no place known here, so
-        # l2_param_find is not asked.  A `:=` Frame shaped as a nested typed declaration, `zz := int: 5`, is no
-        # assignment for l2_is_asgn (l2_own_decl_ty answers for it) and is asked here all the same: `:=` declares nothing.
-        if: (c.lm_compiler_is_asgn(stmt, mi) != 0 || c.lm_compiler_own_decl_ty(stmt) != 0) && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U && stmt\as\frame\head != 0 && c.lm_compiler_formal_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && lm_compiler_assign_host_place(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 && c.lm_compiler_own_visible(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_slot_find(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
-            return: (cast: (int) (c.lm_compiler_error(path, stmt, ":= writes a place already known: its left side is not one here")))
         # Known ordinary Structure heads receive an assignment candidate;
         # they do not acquire callable formals from the Frame syntax.
         # A bare colon frame whose head is not a call is an update only when
@@ -12717,13 +12671,13 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    # A call statement.  `place := value` (the author, 2026-11-07; the book, assign-known) calls nothing, whatever
-    # callable the place holds -- l2_call_head_method answers the method a binding holds now, which would read
-    # `target := two` as a call of that method with the actual `two`: the operator is the write of the place, read
-    # below as the binding's store (lm_compiler_method_pointer_candidate), as the native emitter reads it (l2_is_asgn).
-    # Only the call mark calls (the author 2026-11-09): a colon Frame `f: args` is no call statement, whatever f names.
+    # A call statement.  Only the call mark calls (the author 2026-11-09): a colon Frame `place: value` is no call
+    # statement, whatever callable the place holds -- l2_call_head_method answers the method a binding holds now, which
+    # would read `target: two` as a call of that method with the actual `two`: the statement is the write of the place,
+    # read below as the binding's store (lm_compiler_method_pointer_candidate), as the native emitter reads it
+    # (l2_is_asgn; M6 4b).
     idx: -1
-    if: c.lm_compiler_place_write_node(stmt) = 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
+    if: c.lm_compiler_place_write_node(stmt) = 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
         idx: c.lm_compiler_call_head_method(rw_mi_cell[0], h, @ formal)
     ---
     if: idx >= 0 && idx != e_cell[0]
@@ -12733,9 +12687,9 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    # A held callable of the site applied by a statement's call mark: its call, as in an expression -- not under `:=`,
-    # which writes the place (the author, 2026-11-07), nor by a colon Frame (the author, 2026-11-09).
-    if: idx < 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
+    # A held callable of the site applied by a statement's call mark: its call, as in an expression -- not by a colon
+    # Frame, which writes the place (the author, 2026-11-09; M6 4b).
+    if: idx < 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
         if: lm_compiler_rw_mad_call(stmt, (cast: (int) (c.lm_compiler_call_head_held(rw_mi_cell[0], h))), into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1

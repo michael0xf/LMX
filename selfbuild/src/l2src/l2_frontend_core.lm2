@@ -2420,8 +2420,8 @@ fn: lm_compiler_bind_node_content (const: (@: n c.LmP0Node); int: mi; const: (@:
         return: (cast: (int) (0))
     if: c.lm_compiler_frame_head(n, "fn") != 0 || c.lm_compiler_frame_head(n, "sub") != 0
         return: (cast: (int) (0))
-    # Only the call mark calls (the author 2026-11-09): `place: value` and `place := value` (M6 4b; the book, assign-known)
-    # call nothing -- a callable the place holds is not called, so no call is bound at its head; its right side is
+    # Only the call mark calls (the author 2026-11-09): `place: value` (M6 4b; the book, assign-known) calls nothing -- a
+    # callable the place holds is not called, so no call is bound at its head; its right side is
     # visited as a value below.
     if: n\as\frame\head != 0 && n\as\frame\body != 0 && c.lm_compiler_place_write_node(n) = 0 && (n\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
         idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (n\as\frame\head)), @ fi)
@@ -8484,10 +8484,6 @@ fn: lm_compiler_ns_bind_item (const: (@: source_node c.LmP0Node); int: me) int
     @: a c.LmP0Text
     if: source_node = 0 || me < 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0 || source_node\as\frame\head = 0 || c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) = 0
         return: (cast: (int) (0))
-    # `b := A` declares no binding (the author's correction of 2026-11-07; the book, assign-known): an := item of a named
-    # Structure's body is a statement of its procedure, refused there when no place b is known.
-    if: (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-        return: (cast: (int) (0))
     a: c.lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (source_node\as\frame)))
     if: a = 0 || c.lm_compiler_ns_site_known((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), me) != 0
         return: (cast: (int) (0))
@@ -8497,10 +8493,6 @@ end: lm_compiler_ns_bind_item
 # Original: l2src/l2trans.lm1:14495
 fn: lm_compiler_ns_nested_def (const: (@: source_node c.LmP0Node); int: me) int
     if: source_node = 0 || me < 0 || source_node\kind != c.LM_P0_NODE_FRAME || source_node\as = 0 || source_node\as\frame = 0 || source_node\as\frame\head = 0 || c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) = 0
-        return: (cast: (int) (0))
-    # `x := 5` with x absent defines no nested Structure (the author's correction of 2026-11-07; the book, assign-known):
-    # the item is a statement of the body's procedure, refused there as a write of no known place.
-    if: (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
         return: (cast: (int) (0))
     if: c.lm_compiler_ns_site_known((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), me) != 0 || c.lm_compiler_retained_body((cast: (const: @: c.LmP0Frame) (source_node\as\frame))) = 0 || c.lm_compiler_decl_content((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), source_node, 0 - 1, me) = 3 || c.lm_compiler_decl_content((cast: (const: @: c.LmP0Frame) (source_node\as\frame)), source_node, 0 - 1, me) = 4
         return: (cast: (int) (0))
@@ -8615,11 +8607,6 @@ fn: lm_compiler_ns_body_stmt_here (const: (@: source_node c.LmP0Node); int: me) 
     # says of every callable that returns nothing, in any place of the body.
     if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && source_node\as\frame\head != 0
         if: c.lm_compiler_site_method(ns_take_mi_cell[0], (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0 || c.lm_compiler_root_names_method((cast: (const: @: c.LmP0Structure) (ns_at_cell[0][me]\as\frame\body)), (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0 || c.lm_compiler_unit_names_method((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0
-            return: (cast: (int) (1))
-        # The operator `:=` declares nothing (the author, 2026-11-07; the book, assign-known): a Frame `:=` is a statement
-        # of the body in every shape -- `zz := int: 5` as much as `zz := 5` -- and the check refuses the write of a place
-        # the body does not know.
-        if: (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
             return: (cast: (int) (1))
         # Only a declaration is a field -- the typed shapes l2_take_ns_body takes (l2_ns_decl_first), a nested
         # definition, a binding; an item of any other shape -- `cells[1]: …`, `x\f: …`, `g: 5` with g declared
@@ -8789,10 +8776,6 @@ fn: lm_compiler_ns_primitive_field (const: (@: source c.LmP0Node); int: owner; c
     int: character
     size_t: bits 0U
     if: declaration = 0 || declaration\contract = 0 || declaration\name = 0
-        return: (cast: (int) (0))
-    # `zz := int: 5` in the body declares no field: the operator `:=` declares nothing (the author, 2026-11-07) -- the
-    # statement is the body procedure's, refused there as a write of no known place.
-    if: source\kind = c.LM_P0_NODE_FRAME && source\as != 0 && source\as\frame != 0 && (source\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
         return: (cast: (int) (0))
     word: c.lm_compiler_contract_leaf((cast: (@: c.L2TypeContract) (declaration\contract)), @ depth, @ qualified)
     if: word = 0 || depth != 0 || qualified != 0

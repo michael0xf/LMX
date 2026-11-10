@@ -202,16 +202,20 @@ runs	dyn/whole_direct_fields.lm2	7	nf
 refuses	dyn/whole_field_refused.lm2	implements is false in function argument	nf
 # Slice 302: a copy of a graph carries the codes of its occurrences' names, no spelling -- a named actual to a copied callable binds the formal of its name, a free input finds the copied formal by its code (IDENTIFIER-CODES).
 runs	dyn/copy_name_codes.lm2	7	nf
-# The := slice (the author, 2026-11-07; the book, assign-known and named-actuals): the operator writes a place already known
-# (a local, a formal, a field through a path, a reference place holding a method) and supplies a named argument; an unknown
-# left side, an unknown formal and a positional actual after a named one are refused at translation; a: 5 and a(5) are no
-# named supply (the ordinary call of a visible callable a, its result positional).
+# The write of a known place, `left: right` (M6 4b; the book, assign-known: the former operator := is removed) -- a local, a
+# formal, a field through a path, a reference place holding a method -- and the named actual `a: value` (M6 4a; the book,
+# named-actuals): an unknown formal and a positional actual after a named one are refused at translation. P0 refuses `:=`
+# wherever it stands (slice 350): in a method, at the root, in a named Structure, after an exact identifier, among the
+# actuals of a call and in a merge operand.
 runs	dyn/assign_known.lm2	7	nf
-refuses	dyn/assign_unknown_refused.lm2	assign_unknown_refused.lm2:5:5: := writes a place already known: its left side is not one here	nf
+refuses	dyn/assign_operator_removed_refused.lm2	parse error 33 at 6:7: the operator := is removed: a write is written left: right	nf
+refuses	dyn/assign_operator_root_refused.lm2	parse error 33 at 4:3: the operator := is removed: a write is written left: right	nf
+refuses	dyn/assign_operator_structure_refused.lm2	parse error 33 at 5:8: the operator := is removed: a write is written left: right	nf
+refuses	dyn/assign_operator_quoted_refused.lm2	parse error 33 at 5:9: the operator := is removed: a write is written left: right	nf
 runs	dyn/named_assign_actuals.lm2	7	nf
 refuses	dyn/named_assign_unknown_refused.lm2	named_assign_unknown_refused.lm2:7:9: zz is not an argument of tst	nf
 refuses	dyn/named_assign_positional_after_refused.lm2	named_assign_positional_after_refused.lm2:7:15: a positional argument of tst after a named one	nf
-refuses	dyn/named_assign_refused.lm2	named_assign_refused.lm2:8:9: a named actual of tst is written a: value (M6 4a): the operator := names no argument	nf
+refuses	dyn/named_assign_refused.lm2	parse error 33 at 8:11: the operator := is removed: a write is written left: right	nf
 # M6 4c (slice 348): a written Structure among the actuals of a call is laid out where it is written and received by
 # reference -- one object at every reach (7 then 8); a tail with a computed or untyped field is a recognized boundary.
 runs	dyn/named_tail_lowered.lm2	7	nf
@@ -219,24 +223,18 @@ runs	dyn/named_tail_lowered_twice.lm2	7	nf
 runs	dyn/named_tail_lowered_group.lm2	7	nf
 refuses	dyn/named_tail_lowering_refused.lm2	named_tail_lowering_refused.lm2:13:10: the named actual p of take is a written Structure with a field that is not a typed int literal (`y: int: 6`): building such a written Structure among the actuals of a call is not implemented in this translation yet (M6 4c)	nf
 refuses	dyn/named_tail_computed_lowering_refused.lm2	named_tail_computed_lowering_refused.lm2:13:10: the named actual p of take is a written Structure with a field that is not a typed int literal (`y: int: 6`): building such a written Structure among the actuals of a call is not implemented in this translation yet (M6 4c)	nf
-# The := slice (MERGE-OPERAND-FORMS): a merge operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field
-# the declaration form `(int: a 5)` is: it writes the model slot of its name.
+# MERGE-OPERAND-FORMS: a merge operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field the declaration
+# form `(int: a 5)` is: it writes the model slot of its name. A method's name written as a place, `one: two`, is refused at
+# translation (a method is no place a statement writes; nothing is called).
 runs	dyn/merge_named_field_operand.lm2	7	nf
-refuses	dyn/assign_in_structure_refused.lm2	assign_in_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
-refuses	dyn/assign_method_name_refused.lm2	assign_method_name_refused.lm2:14:5: writing a hidden input that has no activation value is not supported yet	nf
-# Codex's review of 303 (CODEX-FABLE-303-REVIEW-20261107T222601684Z-01): an exact identifier before := is the same operator (item 1);
-# := declares nothing -- `zz := int: 5` with no place zz is refused in a method, at the root, in a Structure and as a merge operand,
-# while a known place takes the typed right side by the general admission (item 2).
+refuses	dyn/assign_method_name_refused.lm2	assign_method_name_refused.lm2:13:5: a Frame written with a colon calls nothing	nf
+# Codex's review of 303 (CODEX-FABLE-303-REVIEW-20261107T222601684Z-01, item 2): a known place takes a typed right side by the
+# general admission, `x: int: 5` (M6 4b).
 runs	dyn/assign_typed_known.lm2	7	nf
 runs	dyn/named_assign_quoted.lm2	7	nf
-# An exact identifier as the head of a statement is a limit of the translator (no route classifies it: "unsupported body"), the same
-# before the := slice (the colon control) and after it; P0 makes the Frame := for it as for a bare head.
-refuses	dyn/assign_quoted_head_limit.lm2	assign_quoted_head_limit.lm2:9:5: unsupported body	nf
+# An exact identifier as the head of a statement is a limit of the translator (no route classifies it: "unsupported body").
 refuses	dyn/quoted_colon_head_limit.lm2	quoted_colon_head_limit.lm2:6:5: unsupported body	nf
-refuses	dyn/assign_typed_unknown_refused.lm2	assign_typed_unknown_refused.lm2:5:5: := writes a place already known: its left side is not one here	nf
-refuses	dyn/assign_typed_unknown_root_refused.lm2	assign_typed_unknown_root_refused.lm2:3:1: := writes a place already known: its left side is not one here	nf
-refuses	dyn/assign_typed_unknown_structure_refused.lm2	assign_typed_unknown_structure_refused.lm2:6:5: := writes a place already known: its left side is not one here	nf
-refuses	dyn/merge_assign_operand_refused.lm2	this merge operand form is not lowered yet	nf
+refuses	dyn/merge_assign_operand_refused.lm2	parse error 33 at 9:27: the operator := is removed: a write is written left: right	nf
 runs	dyn/merge_args_operand.lm2	7	nf
 refuses	dyn/merge_args_model_formal_refused.lm2	merge_args_model_formal_refused.lm2:10:17: a formal that is not a number is not lowered as a field of the args part yet	nf
 # Codex's review of slice 304: a formal of the args part with no current default -- a required one, or one whose written default this

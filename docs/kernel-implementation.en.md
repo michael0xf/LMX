@@ -99,12 +99,14 @@ gets a reference to the Structure written in the code -- the tail or the written
 of the call, so a write `p\y: 9` is seen by the next call of that line; its fields are read by their roles
 (`lmx_graph_ready_field`, `lmx_graph_ready_slot`: `y: int: 6` the int cell of the value, one cell for the path's read and
 write; `y: 6` the Structure y; a computed `y: int: k + 5` gives no int place before its line runs, and the admission
-refuses); `lmx_graph_literal_value` stays the construction of a `merge` operand. `a := v` among the actuals of a call or the parts of a receiver is no form any more: the binder refuses it
-before any actual is evaluated, in the interpreter, in native code and in the lowering, with no fallback. `f(a:)` is
-refused by P0 today (an empty colon Frame, M6 item 1); known-assignment statements `x := v` are still parsed (M6 4b), but since
-slice 349 ([record](../steps/witnesses/known-write-colon-20261110/notes.md)) the write `x: v` reaches every place `:=`
+refuses); `lmx_graph_literal_value` stays the construction of a `merge` operand. `a := v` among the actuals of a call or the parts of a receiver is no form any more: since slice 345 the
+binder refused it before any actual was evaluated, since slice 350 P0 refuses it -- with no fallback. `f(a:)` is
+refused by P0 today (an empty colon Frame, M6 item 1); since slice 349
+([record](../steps/witnesses/known-write-colon-20261110/notes.md)) the write `x: v` reaches every place the former `:=`
 wrote, in the lowering too: a place holding a callable (a callable formal, a binding to a method) is written, not
-called -- a call needs the call mark (`lm_compiler_is_asgn`). Since
+called -- a call needs the call mark (`lm_compiler_is_asgn`); since slice 350
+([record](../steps/witnesses/assign-operator-removed-20261110/notes.md)) P0 refuses `:=` (diagnostic 33) in every
+position and no consumer has a branch of it (M6 4b). Since
 slice 348 ([record](../steps/witnesses/written-tail-lowering-20261110/notes.md)) the lowering (the C path) builds no
 Structure for the call either: a named tail of typed int literal fields (`p: y: int: 6`, the group `p: (y: int(5);
 unused: int(1))`) is laid out by the code construction at the actual's own place inside the call's node (the field y a

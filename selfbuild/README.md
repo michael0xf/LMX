@@ -207,7 +207,9 @@ layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's
 `tests/l2/` without an explicit source change would break its resolution.
 
 The selected package contains 264 inputs (66 source files, 34 tools and
-164 tests). Slice303 (the operator `:=`, the author's decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
+164 tests). (Slices 345 and 349-350, M6 4a and 4b, removed the operator `:=` again: P0 refuses it, a write is written
+`left: right` and a named actual `a: value`; the record of slice 303 follows.) Slice303 (the operator `:=`, the author's
+decisions of 2026-11-07; fable_pc) makes `:=` one operator token of
 P0 -- a Frame of its left and its right side flagged `LM_P0_FRAME_ASSIGN`, `a := 5` and `a:=5` one form -- that writes a
 place already known through the general assignment path (a local, a formal, a field through a path, the conversion of the
 reception, a reference place holding a method: `target := two` without a call of the bare right side, natively and in the

@@ -365,46 +365,6 @@ fn: lm_graph_path_text (const: (@: bytes char); size_t: text_size) int
     return: path
 end: lm_graph_path_text
 
-# A parser assignment flag becomes an ordinary Lmx operator and its operands. No parser flag survives.
-# The written selector is split here, once; consumers use the same nested field expression as every other path.
-# The operand is the body written after `:=`, read by the one model of a Frame (§3.3) as the body of a Frame given by
-# its head is: a single field that is a value -- a word, an unnamed int, an unnamed Lmx (an expression) -- is the
-# operand itself; any other body -- no field, several, a place, a Frame -- is the Structure of its fields as written
-# (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. A consumer that evaluates
-# the operand reads a Structure of one field as that field (lmx_graph_eval_value, lm_graph_emit_operand): a Frame
-# applying a callable or merge stays that application.
-fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0Frame; @@: out void) int
-    @: text c.LmP0Text lm_graph_p0_head(frame)
-    const: @: bytes char lm_graph_p0_data(text)
-    size_t: text_size lm_graph_p0_length(text)
-    @: left void 0
-    @: rhs void 0
-    @: operand void 0
-    @: single void 0
-    @: result c.Lmx 0
-    int: kind 0
-    int: status 0
-    status: lm_graph_build_selector(g, bytes, text_size, @ left)
-    if: status != 0
-        return: status
-    status: lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), 0, 0, (cast: (@: c.LmP0Trailer) frame\trailer), @ rhs)
-    if: status != 0
-        return: status
-    operand: rhs
-    if: c.lmx_graph_count((cast: (@: c.Lmx) rhs)) = 1U
-        single: c.lmx_graph_get((cast: (@: c.Lmx) rhs), 0U)
-        kind: c.lmx_graph_kind(g, single)
-        if: kind = 2 || kind = 5 || kind = 6 || ((kind = 1 || kind = 4) && c.lmx_graph_name_of(g, single) = 0)
-            operand: single
-        ---
-    ---
-    result: c.lmx_graph_lmx(g, parent, 3U)
-    if: result = 0 || lm_graph_build_put(g, result, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || lm_graph_build_put(g, result, 1U, left) != 0 || lm_graph_build_put(g, result, 2U, operand) != 0
-        return: 1
-    out[0]: (cast: (@: void) result)
-    return: 0
-end: lm_graph_build_assignment
-
 # The place of a declaration Frame `int: name` (a place without a value) or `int: name literal` (an int place holding
 # the literal), named at its cell (§3.2); 0 for any other Frame, or without memory.
 fn: lm_graph_build_int_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
@@ -484,8 +444,6 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         return: 0
     if: nd\kind = c.LM_P0_NODE_FRAME
         frame: lm_graph_p0_frame(nd)
-        if: (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-            return: lm_graph_build_assignment(g, parent, frame, out)
         text: lm_graph_p0_head(frame)
         # A Frame written on a path head, `owner\field: actuals` (Codex, review of 331: the path in field 0 of an
         # ordinary Frame, the visible Lmx of the head expression, normalized here, once): the unnamed Lmx [path,
@@ -546,7 +504,7 @@ fn: lm_graph_block_item (@: nd c.LmP0Node) int
     if: nd = 0 || nd\kind != c.LM_P0_NODE_FRAME
         return: 0
     fr: lm_graph_p0_frame(nd)
-    if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U || fr\trailer = 0
+    if: fr\trailer = 0
         return: 0
     head: c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr)))
     if: head = 0 || (lm_graph_data_head(head) = 0 && head != state\w_var)
@@ -655,11 +613,6 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
         return: 2
     if: nd\kind = c.LM_P0_NODE_FRAME
         fr: lm_graph_p0_frame(nd)
-        if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-            r: lm_graph_build_node(g, root, nd, @ value)
-            if: r != 0
-                return: r
-            return: c.lmx_graph_put(root, slot, value)
         head: c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr)))
         if: head = 0
             return: 1

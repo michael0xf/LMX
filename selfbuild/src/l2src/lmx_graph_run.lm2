@@ -289,9 +289,9 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                     status: lmx_graph_work_capture(g, frame, word)
                     if: status = 0
                         row: lmx_graph_work_row(frame, word)
-                        # Every word argument of a Frame is read; in an expression the left operand of `:=` is written,
-                        # and the first field is read when it is an operand.
-                        if: row != 0 && row\slot != (cast: (size_t) -1) && (framed != 0 || ((i != 1U || c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U)) != state\w_assign) && (i != 0U || n = 1U || op = state\w_plus || op = state\w_minus || op = state\w_star || op = state\w_slash || op = state\w_percent || op = state\w_deref || op = state\w_eq || op = state\w_ne || op = state\w_lt || op = state\w_le || op = state\w_gt || op = state\w_ge || op = state\w_and || op = state\w_or)))
+                        # Every word argument of a Frame is read; in an expression the first field is read when it is an
+                        # operand.
+                        if: row != 0 && row\slot != (cast: (size_t) -1) && (framed != 0 || ((i != 0U || n = 1U || op = state\w_plus || op = state\w_minus || op = state\w_star || op = state\w_slash || op = state\w_percent || op = state\w_deref || op = state\w_eq || op = state\w_ne || op = state\w_lt || op = state\w_le || op = state\w_gt || op = state\w_ge || op = state\w_and || op = state\w_or)))
                             row\loaded: row\loaded | 2
                         ---
                     ---
@@ -615,40 +615,9 @@ fn: lmx_graph_path_field (@: g c.LmxGraph; @: code c.Lmx; @: left void; @@: owne
     return: 0
 end: lmx_graph_path_field
 
-fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lmx; int: mode) int
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: left void c.lmx_graph_get(statement, 1U)
-    @: name char c.lmx_graph_word_text(g, left)
-    @: owner c.Lmx code
-    size_t: slot 0U
-    int: number 0
-    int: status 0
-    if: state = 0 || c.lmx_graph_count(statement) != 3U
-        return: 2
-    if: name != 0
-        status: lmx_graph_known_int(g, code, name, mode)
-        slot: lmx_graph_visible_slot(g, code, name)
-    else:
-        status: lmx_graph_path_field(g, code, left, @ owner, @ slot)
-        if: status != 0
-            return: status
-        if: c.lmx_graph_place_cell(g, owner, slot) = 0
-            return: 4
-        ---
-    ---
-    if: status != 0
-        return: status
-    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 2U), @ number)
-    if: status != 0
-        return: status
-    if: name != 0 && mode = 0
-        return: lmx_graph_store_name(g, code, name, number)
-    return: lmx_graph_store_field(g, code, owner, slot, number)
-end: lmx_graph_eval_assignment
-
 # A statement written on a path head, `owner\field: value` (the builder's [path, actuals], lm_graph_build_node): the
 # head is resolved first, by the general rule of a Frame -- a callable there would be applied (not yet through a path:
-# 5) --, else the place is written with the one value, as `owner\field := value` writes it (lmx_graph_eval_assignment).
+# 5) --, else the place is written with the one value (the write `left: right`; M6 4b: := removed).
 # 0; 3 or 4 as lmx_graph_path_field, 4 for no place; 5 for a callable, none or several actuals; the answer of an
 # evaluation.
 fn: lmx_graph_eval_path_statement (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lmx) int
@@ -848,13 +817,11 @@ end: lmx_graph_single_candidate
 # f(3) или f(): 3 или f(): / . 3 / end: f»; CODEX-OPUS-344-M6-ANSWERS item 1), so `fn: name: "test"; ...` creates the
 # function test whether or not a callable named name exists -- the earlier reading of slice 334, under which such a
 # Frame was the call of that callable, is withdrawn with the colon call; the call is written name(...) in the part.
-# `name := value` is no named actual since 4a (CODEX-OPUS-345-4A-REPLY items 1, 2): in a call and in a receiver's form it
-# refuses before any actual is evaluated, and it is no positional value either.
+# The former `name := value` is refused by P0 (M6 4b: the operator := is removed).
 # A formal is bound at most once. bindings[i] the formal of actual i, modes[i] how (0 position, 2 by name; modes may be
 # 0), seen[slot] 1 for a bound formal: arrays of the caller. 0, or 5 for actuals that bind no formal of the signature.
 fn: lmx_graph_bind_formals (@: g c.LmxGraph; @: formals c.Lmx; @: expression c.Lmx; @: bindings size_t; @: modes int; @: seen int; int: by_head; @: scope c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: argument c.Lmx 0
     @: raw void 0
     @: name char 0
     size_t: width c.lmx_graph_count(formals)
@@ -868,20 +835,15 @@ fn: lmx_graph_bind_formals (@: g c.LmxGraph; @: formals c.Lmx; @: expression c.L
         return: 5
     while: i < count && status = 0
         raw: c.lmx_graph_get(expression, i)
-        argument: (cast: (@: c.Lmx) raw)
         slot: i
         mode: 0
         name: 0
-        if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get(argument, 0U)) = state\w_assign
-            status: 5
-        else:
-            if: c.lmx_graph_kind(g, raw) = 4
-                name: c.lmx_graph_name_of(g, raw)
-                if: by_head != 0 && name != 0 && c.lmx_graph_formal(g, formals, name) < width
-                    mode: 2
-                if: by_head = 0 && lmx_graph_named_actual(g, raw) != 0
-                    mode: 2
-                ---
+        if: c.lmx_graph_kind(g, raw) = 4
+            name: c.lmx_graph_name_of(g, raw)
+            if: by_head != 0 && name != 0 && c.lmx_graph_formal(g, formals, name) < width
+                mode: 2
+            if: by_head = 0 && lmx_graph_named_actual(g, raw) != 0
+                mode: 2
             ---
         ---
         if: mode != 0
@@ -1169,18 +1131,14 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
         n: c.lmx_graph_count(statement)
         head: c.lmx_graph_name_of(g, raw)
         if: head = 0
-            # An unnamed Lmx: the application `f(args)` (the call mark), the assignment `a := v`, a statement on a path
-            # head, an anonymous body, or an expression whose value is not used.
+            # An unnamed Lmx: the application `f(args)` (the call mark), a statement on a path head, an anonymous body,
+            # or an expression whose value is not used.
             if: c.lmx_graph_applied(g, raw) != 0
                 status: lmx_graph_eval_apply(g, code, c.lmx_graph_applied(g, raw), 0, @ number)
                 i: i + 1U
                 continue
             if: n != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
-            if: head = state\w_assign
-                status: lmx_graph_eval_assignment(g, code, statement, mode)
-                i: i + 1U
-                continue
             # A statement on a path head, `owner\field: value` (c.lmx_graph_path_head): the write of that field.
             if: head = 0 && c.lmx_graph_path_head(g, raw) != 0
                 status: lmx_graph_eval_path_statement(g, code, statement)
@@ -1991,7 +1949,7 @@ end: lmx_graph_call_data
 fn: lmx_graph_language_word (@: state c.LmxGraphState; @: word char) int
     if: state = 0 || word = 0
         return: 0
-    if: word = state\w_int || word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_at || word = state\w_deref || word = state\w_fn || word = state\w_sub || word = state\w_assign || word = state\w_return || word = state\w_call || word = state\w_var
+    if: word = state\w_int || word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_at || word = state\w_deref || word = state\w_fn || word = state\w_sub || word = state\w_return || word = state\w_call || word = state\w_var
         return: 1
     if: word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or || word = state\w_not || word = state\w_if || word = state\w_else || word = state\w_while || word = state\w_for || word = state\w_break
         return: 1
@@ -3167,8 +3125,8 @@ fn: lmx_graph_applies (@: g c.LmxGraph; @: scope c.Lmx; @: value void) int
     return: 0
 end: lmx_graph_applies
 
-# The written value of a Frame `name: ...` that gives a part by its head, or of the body of `name := ...` (an unnamed
-# Lmx of its fields, lm_graph_build_assignment) -- lmx_graph_bind_formals, by head or by `:=`: the one model of a Frame,
+# The written value of a Frame `name: ...` that gives a part by its head -- lmx_graph_bind_formals, by head (`:=` is
+# removed, M6 4b): the one model of a Frame,
 # as at the root -- a single field that is a value (a word, an unnamed int, a reference, an unnamed Lmx) or an
 # application (lmx_graph_applies) is the value; any other Frame or body is a block of fields and is itself.
 fn: lmx_graph_frame_value (@: g c.LmxGraph; @: scope c.Lmx; @: frame void) @: void
@@ -3353,7 +3311,7 @@ fn: lmx_graph_string_value (@: g c.LmxGraph; @: value void) @: char
 end: lmx_graph_string_value
 
 # The name a written value gives a part name of a receiver -- the contract of a name, one for every receiver (the
-# author 2026-11-09: `fn: name := "test"; ...` creates test): an identifier word its own spelling, an ordinary string
+# author 2026-11-09: `fn: name: "test"; ...` creates test): an identifier word its own spelling, an ordinary string
 # literal its value (lmx_graph_string_value), the quotes being no part of it; 0 for any other value -- a word holding a
 # quote (a malformed, wide or character literal), an int, a Structure.
 fn: lmx_graph_name_value (@: g c.LmxGraph; @: value void) @: char
@@ -3387,12 +3345,12 @@ end: lmx_graph_receiver_admit
 
 # The arguments of the receiver fn or sub of the Frame decl in block scope through its contracts
 # (lmx_graph_receivers_open) and the one binder (lmx_graph_bind_formals): the first form its written actuals bind to --
-# by position, by `:=`, by head -- with every formal bound; else one actual is the whole argument structure (the book,
+# by position or by head -- with every formal bound; else one actual is the whole argument structure (the book,
 # whole-arguments): a Structure whose fields give exactly the formals of a form (lmx_graph_bind_fields), read by their
 # values (lmx_graph_field_value). The form is chosen before any actual is evaluated; the whole Structure, the only actual
 # then, is evaluated once. What is written for a formal stands as written where it applies nothing (lmx_graph_applies):
 # a formal taken as written (name, return) takes a written word or written form (`@: c.FILE`) as it is, a Structure
-# formal a written Structure (an anonymous Structure, a block given by head or by `:=`, a Frame applying nothing); any
+# formal a written Structure (an anonymous Structure, a block given by head, a Frame applying nothing); any
 # other actual -- an application, a name a Structure formal resolves -- is an expression evaluated once, in order --
 # when evaluate is 1; with 0 such an actual binds nothing (-1), so a declaration with written arguments is told
 # (lmx_graph_fn_written). Each value is received by its formal before the next actual is evaluated
@@ -3459,7 +3417,7 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
         while: i < n && status = 0
             raw: c.lmx_graph_get(decl, i)
             slot: bindings[i]
-            # The value written for a formal by head (`:=` gives no part since M6 4a, CODEX-OPUS-345-4A-REPLY item 2). For
+            # The value written for a formal by head (`:=` is removed, M6 4b). For
             # a formal taken as written (name, return) it is the written field itself -- the single field of the part
             # `name: ...` --, so one requirement is one value whether written by position or by head. For a Structure
             # formal it is the part by the one model of a Frame (lmx_graph_frame_value): the block, or the value a single
@@ -3498,7 +3456,7 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
     if: status = 0 && found = 0
         status: 5
         raw: c.lmx_graph_get(decl, 0U)
-        if: n = 1U && (c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != 0 || c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) != state\w_assign)
+        if: n = 1U
             status: 0
             value: raw
             if: c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != 0
@@ -3629,7 +3587,7 @@ end: lmx_graph_receiver_make
 # The name a Frame of fn or sub gives as written, as the binder takes it (lmx_graph_bind_formals): the word at the first
 # position of several actuals or the word of a Frame `name: word` given by head, read by the contract of a name
 # (lmx_graph_name_value: `name: "test"` gives test); 0 when only an evaluated Structure gives it (the whole form,
-# `fn: prepared`). `name := word` gives no name since M6 4a (the binder refuses it).
+# `fn: prepared`).
 fn: lmx_graph_fn_decl_name (@: g c.LmxGraph; @: decl c.Lmx) @: char
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: w_name char c.lmx_graph_intern("name", 4U)

@@ -776,18 +776,11 @@ fn: lm_compiler_is_asgn (const: (@: stmt c.LmP0Node); int: mi) int
     # K03 S5: a word of the language heads no assignment: the statement is the word's application (l2_head_word).
     if: c.lm_compiler_head_word(h) != 0
         return: (cast: (int) (0))
-    # The operator `:=` (the author, 2026-11-07; the book, assign-known): its left side is written whatever role the
-    # name has as a head -- a callable the place holds is not called by `:=`, the place is assigned to.  A type word,
-    # a predefined receiver and the C door name no place.
-    if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-        if: c.lm_compiler_is_known(h) || c.lm_compiler_predef_receiver(h) != 0 || (h\length >= 2U && h\data[0] = 99 && h\data[1] = 46) || stmt\as\frame\body = 0
-            return: (cast: (int) (0))
-        return: (cast: (int) (1))
     # The head's role at the statement's site is the one a call head has there
     # (l2_call_head_method).  A head that calls -- a method, or what a callable
     # formal carries -- is no assignment when the Frame carries the call mark: only `f(args)`, `f(): args` and the
     # block `f():` call (the author 2026-11-09; lm_compiler_head_is_call).  Written with the colon alone, `f: v` is the
-    # general write of the place f names whatever it holds (M6 4b; the book, assign-known: `left: right`), as `:=` was
+    # general write of the place f names whatever it holds (M6 4b; the book, assign-known: `left: right`, := removed)
     # -- a callable formal, a binding holding a method, a function-pointer local; the check refuses a method's name, no
     # place.  A binding of the site that is no callable is assigned to, though a method of the unit has its name.  A
     # caller with no site asks the unit's methods alone.
@@ -914,11 +907,8 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
         # A named actual is written `a: value` (M6 4a; the book, named-actuals; next_core_tasks_v3 M6 4a): a Frame
         # written with the colon alone whose head is a name (lm_compiler_named_actual_frame) names the formal of its
         # head, its body is the value, so `f(a: a(5))` supplies a the result of the explicit call a(5); `a(5)` alone,
-        # the call mark, is a call whose result is a positional actual. `a := value`, the named actual of 2026-11-07, is
-        # no actual of any form since 4a (Codex CODEX-OPUS-345-4A-REPLY items 1, 2): it refuses before an actual is
-        # evaluated, in a call and in a receiver's parts alike.
-        if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && (source\node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-            return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "a named actual of ", callee, (cast: (size_t) (c.strlen(callee))), " is written a: value (M6 4a): the operator := names no argument", 0, 0U, "", 0, 0U, "")))
+        # the call mark, is a call whose result is a positional actual. The former `a := value` is refused by P0 (M6 4b:
+        # the operator := is removed).
         frame: 0
         if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && source\node\as\frame\head != 0 && (by_head != 0 || lm_compiler_named_actual_frame((cast: (const: @: c.LmP0Node) (source\node))) != 0)
             frame: source\node\as\frame
@@ -2081,10 +2071,6 @@ fn: lm_compiler_local_absent_def (const: (@: stmt c.LmP0Node); int: mi) int
         return: (cast: (int) (0))
     if: lm_compiler_is_char_decl(stmt) != 0
         return: (cast: (int) (0))
-    # `name := value` defines nothing (the author's correction of 2026-11-07; the book, assign-known): moved where no place
-    # of its name is known it is the refusal of the check, never a new definition.
-    if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-        return: (cast: (int) (0))
     if: fr\trailer != 0 && (fr\trailer\spelling = 0 || c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (fr\trailer\spelling)), "end") = 0)
         return: (cast: (int) (0))
     # A VALUE content (`a: merge: ...`, l2_decl_content) is the method's statement declaring a's own row, not a definition.
@@ -2947,8 +2933,8 @@ fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c
         idx: -1
     if: idx < 0
         held: c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)))
-    # Only the call mark calls (the author 2026-11-09; lm_compiler_head_is_call): `place: value` and `place := value`
-    # (M6 4b) call nothing -- the left side is written, the right side read as a value.
+    # Only the call mark calls (the author 2026-11-09; lm_compiler_head_is_call): `place: value` (M6 4b) calls nothing --
+    # the left side is written, the right side read as a value.
     if: port_call\as != 0 && port_call\as\frame != 0 && (port_call\as\frame\flags & c.LM_P0_FRAME_COMPACT) = 0U
         idx: -1
         held: -1
@@ -5836,10 +5822,6 @@ fn: lm_compiler_head_is_call (const: (@: t c.LmP0Text); const: (@: body c.LmP0St
         return: (cast: (int) (0))
     # `@: place value` writes the place, whatever stands there (lm_compiler_place_write_lower).
     if: (flags & 4096U) != 0U
-        return: (cast: (int) (0))
-    # So does `place := value` (the author, 2026-11-07; the book, assign-known): the operator writes its left side, a
-    # callable the place holds is not called.
-    if: (flags & c.LM_P0_FRAME_ASSIGN) != 0U
         return: (cast: (int) (0))
     # Only the call mark calls (the author 2026-11-09: «_только_ f(3) или f(): 3 или f(): / . 3 / end: f / других
     # способов вызова больше нет!»): P0 gives it to the attached round form `f(args)` and to its layout `f(): args` /
@@ -21256,7 +21238,7 @@ fn: lm_compiler_emit_whole_names (@: arguments c.L2ApplicationActuals; int: idx;
 end: lm_compiler_emit_whole_names
 
 # M6 4a (the book, named-actuals; next_core_tasks_v3 M6 4a): 1 when actual, an actual of a call, is the named actual
-# `a: value` -- a Frame written with the colon alone (no call mark, no `:=`, no place write `@: p v`) whose head is a
+# `a: value` -- a Frame written with the colon alone (no call mark, no place write `@: p v`) whose head is a
 # name: an identifier that is no word of the language, so the typed value `int: 5`, the receivers (`cast:`,
 # `merge(...)`), the address `@: x` and the C door `c.f:` stay positional values; an exact identifier `` `a` `` is a
 # name whatever word it spells (lm_compiler_bind_admit reads it so). 0 otherwise.
@@ -21264,7 +21246,7 @@ fn: lm_compiler_named_actual_frame (const: (@: actual c.LmP0Node)) int
     c.LmP0Text: exact
     if: actual = 0 || actual\kind != c.LM_P0_NODE_FRAME || actual\as = 0 || actual\as\frame = 0 || actual\as\frame\head = 0
         return: (cast: (int) (0))
-    if: (actual\as\frame\flags & (c.LM_P0_FRAME_COMPACT | c.LM_P0_FRAME_ASSIGN | 4096U)) != 0U
+    if: (actual\as\frame\flags & (c.LM_P0_FRAME_COMPACT | 4096U)) != 0U
         return: (cast: (int) (0))
     if: c.lm_compiler_exact_ident((cast: (const: @: c.LmP0Text) (actual\as\frame\head)), @ exact) != 0
         return: (cast: (int) (1))

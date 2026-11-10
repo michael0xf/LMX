@@ -1,0 +1,13 @@
+# M6 4b (slice 350): P0 refuses `:=` after an exact identifier as after a bare one -- `x` := 5 (the scan for `:=`
+# starts after the quoted token); the colon form `x`: 5 meets the translator's own limit (quoted_colon_head_limit).
+fn: f () int
+    int: x 1
+    `x` := 5
+    return: x
+end: f
+int: code 7
+if: f() != 5
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

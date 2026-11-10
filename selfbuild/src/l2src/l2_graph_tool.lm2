@@ -285,7 +285,6 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     size_t: count (cast: (size_t) c.lmx_graph_count(expression))
     size_t: i 0U
     @: actual void 0
@@ -314,12 +313,6 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
         holder: expression
         at: i
         actual: c.lmx_graph_get(expression, at)
-        # `name := value` is no actual since M6 4a (Codex CODEX-OPUS-345-4A-REPLY item 1): the kernel binder refuses the
-        # call when the code runs, before any actual (lmx_graph_bind_call above), and the program leaves here so too.
-        if: c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_name_of(g, actual) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) actual), 0U)) = state\w_assign
-            c.fprintf(f, "        %s\n", leave_failure)
-            i: i + 1U
-            continue
         # The named actual `name: value` (M6 4a; the kernel binds it at run time, lmx_graph_bind_call), its tail as the
         # interpreter consumes it: one value field is the operand; a Structure tail -- no field, several, a Frame
         # `x: ...` -- is the value the kernel makes of it when the code runs (lmx_graph_named_value: the Structure of its
@@ -727,48 +720,6 @@ fn: lm_graph_emit_path_statement (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @
     return: 0
 end: lm_graph_emit_path_statement
 
-# Compile the same visible assignment Lmx. Resolve/check the destination before the RHS, then generate its numeric
-# computation directly. The helpers write normal working places or graph cells; they never interpret the RHS.
-fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: statement c.Lmx; int: mode; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n) int
-    c.LmxGraphEmitScratch: leave_storage
-    @: leave_failure char (cast: (@: char) leave_storage\failure)
-    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: left void c.lmx_graph_get(statement, 1U)
-    @: name char c.lmx_graph_word_text(g, left)
-    int: owner 0
-    int: value 0
-    int: status 0
-    if: state = 0 || c.lmx_graph_count(statement) != 3U
-        return: 2
-    if: name != 0
-        c.fputs("        if: lmx_graph_known_int(l2_g, lmx_call_code, ", f)
-        status: lm_graph_emit_word(g, f, code, statement, 1U)
-        c.fprintf(f, ", %d) != 0\n            %s\n", mode, leave_failure)
-    else:
-        status: lm_graph_emit_field_place(g, f, code, left, temps, decl_names, decl_slots, decl_n, @ owner)
-    ---
-    if: status != 0
-        return: status
-    status: lm_graph_emit_number(g, f, code, statement, 2U, temps, decl_names, decl_slots, decl_n, @ value)
-    if: status != 0
-        return: status
-    if: name != 0
-        if: mode = 0
-            c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
-            status: lm_graph_emit_word(g, f, code, statement, 1U)
-            c.fprintf(f, ", l2_t%d) != 0\n            %s\n", value, leave_failure)
-        else:
-            c.fputs("        if: lmx_graph_store_field(l2_g, lmx_call_code, lmx_call_code, lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
-            status: lm_graph_emit_word(g, f, code, statement, 1U)
-            c.fprintf(f, "), l2_t%d) != 0\n            %s\n", value, leave_failure)
-        ---
-    else:
-        c.fprintf(f, "        if: lmx_graph_store_field(l2_g, lmx_call_code, (cast: (@: Lmx) l2_v%d), l2_s%d, l2_t%d) != 0\n            %s\n", owner, owner, value, leave_failure)
-    ---
-    return: status
-end: lm_graph_emit_assignment
-
 fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; size_t: from; @: temps int) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
@@ -842,7 +793,7 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
         m: c.lmx_graph_count(inner)
         head: c.lmx_graph_name_of(g, value)
         if: head = 0
-            # An unnamed Lmx: the application `f(args)` (the call mark), the assignment `a := v` or an anonymous body.
+            # An unnamed Lmx: the application `f(args)` (the call mark) or an anonymous body.
             if: c.lmx_graph_applied(g, value) != 0
                 r: lm_graph_emit_apply(g, f, root, c.lmx_graph_applied(g, value), 0, temps, decl_names, decl_slots, decl_n, @ temp)
                 if: r != 0
@@ -851,12 +802,6 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 continue
             if: m != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
-            if: head = state\w_assign
-                r: lm_graph_emit_assignment(g, f, root, inner, 1, temps, decl_names, decl_slots, decl_n)
-                if: r != 0
-                    return: r
-                i: i + 1U
-                continue
             if: head = 0
                 r: lm_graph_emit_block(g, f, root, root, i, i + 1U, 2, -1, -1, -1, temps)
                 if: r != 0
@@ -1113,10 +1058,6 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 continue
             if: n != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
-            if: head = state\w_assign
-                status: lm_graph_emit_assignment(g, f, code, statement, mode, temps, 0, 0, 0U)
-                i: i + 1U
-                continue
             # A statement on a path head, `owner\field: value`: the write of that field, as the interpreter runs it.
             if: head = 0 && c.lmx_graph_path_head(g, raw) != 0
                 status: lm_graph_emit_path_statement(g, f, code, statement, temps, 0, 0, 0U)
@@ -2099,15 +2040,10 @@ fn: lm_graph_emit_formal (@: g c.LmxGraph; @: code c.Lmx; @: name char) int
     return: (cast: (int) (c.lmx_graph_formal(g, args, name) < c.lmx_graph_count(args)))
 end: lm_graph_emit_formal
 
-# 1 when a statement of n fields can be the write of its head's place: exactly one value field after the head, at from,
-# and no named actual `name := value` there -- several actuals and named actuals are forms of a call. 0 otherwise.
+# 1 when a statement of n fields can be the write of its head's place: exactly one value field after the head, at from
+# -- several actuals are forms of a call. 0 otherwise.
 fn: lm_graph_emit_write_form (@: g c.LmxGraph; @: statement c.Lmx; size_t: from; size_t: n) int
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: raw void 0
-    if: n != from + 1U
-        return: 0
-    raw: c.lmx_graph_get(statement, from)
-    if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
+    if: g = 0 || statement = 0 || n != from + 1U
         return: 0
     return: 1
 end: lm_graph_emit_write_form

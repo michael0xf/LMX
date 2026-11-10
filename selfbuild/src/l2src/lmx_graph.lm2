@@ -162,7 +162,6 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_deref: lmx_graph_intern_in(state, "\\", 1U)
     state\w_fn: lmx_graph_intern_in(state, "fn", 2U)
     state\w_sub: lmx_graph_intern_in(state, "sub", 3U)
-    state\w_assign: lmx_graph_intern_in(state, ":=", 2U)
     state\w_return: lmx_graph_intern_in(state, "return", 6U)
     state\w_call: lmx_graph_intern_in(state, "call", 4U)
     state\w_var: lmx_graph_intern_in(state, "var", 3U)
@@ -195,7 +194,7 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_name: lmx_graph_intern_in(state, "name", 4U)
     state\w_fm: lmx_graph_intern_in(state, "fm", 2U)
     # The application `f(args)` -- the call mark of P0 (the author 2026-11-09) -- is the unnamed Lmx [(), frame]
-    # (lm_graph_build_apply); its word is the operator's, as `:=` is.
+    # (lm_graph_build_apply); its word is the operator's.
     state\w_apply: lmx_graph_intern_in(state, "()", 2U)
     if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0
@@ -205,7 +204,7 @@ fn: lmx_graph_state () @: c.LmxGraphState
         return: 0
     if: state\w_call = 0 || state\w_var = 0
         return: 0
-    if: state\w_int = 0 || state\w_plus = 0 || state\w_minus = 0 || state\w_star = 0 || state\w_slash = 0 || state\w_percent = 0 || state\w_at = 0 || state\w_deref = 0 || state\w_fn = 0 || state\w_sub = 0 || state\w_assign = 0 || state\w_return = 0
+    if: state\w_int = 0 || state\w_plus = 0 || state\w_minus = 0 || state\w_star = 0 || state\w_slash = 0 || state\w_percent = 0 || state\w_at = 0 || state\w_deref = 0 || state\w_fn = 0 || state\w_sub = 0 || state\w_return = 0
         return: 0
     if: lmx_graph_receivers_in(state) != 0
         return: 0
@@ -1354,7 +1353,7 @@ end: lmx_graph_dump_path
 # The fields of lmx, one per line at depth: an int place as `int: name value`, a place without a value as `int: name`,
 # a reference place as `@: name ...`, a word as itself, a declaration Frame of fn or sub in its written form, another
 # Frame as `head: arguments` -- or as its block `head:` ... `end: head` (lmx_graph_dump_block) --, an unnamed Lmx whose
-# first field is a word (an operator form such as `:=`) as `word: fields`, a statement on a path head as
+# first field is a word (an operator form) as `word: fields`, a statement on a path head as
 # `owner\field: actuals` (lmx_graph_path_head), and an anonymous sequential body between --- delimiters. 0, or 1 when a
 # cell is none of the graph's.
 fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) int

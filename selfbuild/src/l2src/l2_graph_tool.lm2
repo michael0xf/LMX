@@ -314,11 +314,32 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
         holder: expression
         at: i
         actual: c.lmx_graph_get(expression, at)
+        # `name := value` is no actual since M6 4a (Codex CODEX-OPUS-345-4A-REPLY item 1): the kernel binder refuses the
+        # call when the code runs, before any actual (lmx_graph_bind_call above), and the program leaves here so too.
         if: c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_name_of(g, actual) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) actual), 0U)) = state\w_assign
-            if: c.lmx_graph_count((cast: (@: c.Lmx) actual)) != 3U
-                return: 5
-            holder: (cast: (@: c.Lmx) actual)
-            at: 2U
+            c.fprintf(f, "        %s\n", leave_failure)
+            i: i + 1U
+            continue
+        # The named actual `name: value` (M6 4a; the kernel binds it at run time, lmx_graph_bind_call), its tail as the
+        # interpreter consumes it: one value field is the operand; a Structure tail -- no field, several, a Frame
+        # `x: ...` -- is the value the kernel makes of it when the code runs (lmx_graph_named_value: the Structure of its
+        # written fields, or the Frame itself), which the formal's admission takes or refuses.
+        if: c.lmx_graph_named_actual(g, actual) != 0
+            if: c.lmx_graph_count((cast: (@: c.Lmx) actual)) = 1U && c.lmx_graph_named_actual(g, c.lmx_graph_get((cast: (@: c.Lmx) actual), 0U)) = 0
+                holder: (cast: (@: c.Lmx) actual)
+                at: 0U
+            else:
+                value: temps[0]
+                temps[0]: temps[0] + 1
+                c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_named_value(l2_g, lmx_call_code, (cast: (@: Lmx) lmx_graph_get(", value)
+                if: lm_graph_emit_address(g, f, scope, expression) != 0
+                    return: 3
+                c.fprintf(f, ", %zuU)), @ l2_v%d) != 0 || l2_v%d = 0\n            %s\n        l2_args%d[%zuU]: l2_v%d\n", at, value, value, leave_failure, call_id, i, value)
+                c.fprintf(f, "        if: lmx_graph_admit(l2_g, l2_call%d, l2_binding%d[%zuU], l2_args%d[%zuU], @ l2_args%d[%zuU]) != 0\n            %s\n", call_id, call_id, i, call_id, i, call_id, i, leave_failure)
+                i: i + 1U
+                continue
+            ---
+        ---
         status: lm_graph_emit_operand(g, f, scope, holder, at, temps, decl_names, decl_slots, decl_n, @ value)
         c.fprintf(f, "        l2_args%d[%zuU]: l2_v%d\n", call_id, i, value)
         c.fprintf(f, "        if: lmx_graph_admit(l2_g, l2_call%d, l2_binding%d[%zuU], l2_args%d[%zuU], @ l2_args%d[%zuU]) != 0\n            %s\n", call_id, call_id, i, call_id, i, call_id, i, leave_failure)

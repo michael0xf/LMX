@@ -1,7 +1,16 @@
 fn: p1 (int: a) (@ c.FILE)
     return: 0
 end: p1
-fn: (:= name p2) (:= args ((int a))) (:= return ((@ c.FILE))) (:= body ((return 0)))
+fn:
+    name: p2
+    args:
+        int: a
+    end: args
+    return: (@ c.FILE)
+    body:
+        return: 0
+    end: body
+end: fn
 fn:
     name: p3
     args:
@@ -24,14 +33,10 @@ R1:
     int: zz 1
 end: R1
 R2:
-    args:
-        int: a
-    end: args
+    @: args args
     @: return @
     var:
-    body:
-        return: 0
-    end: body
+    @: body body
     int: zz 2
 end: R2
 R3:

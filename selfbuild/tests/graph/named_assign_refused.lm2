@@ -1,0 +1,13 @@
+# M6 4a (slice 345; Codex CODEX-OPUS-345-4A-REPLY-20261110T041147Z-01 item 1): `a := value` among the actuals of a call
+# is no named actual any more and no positional value: the binder refuses the call before any actual is evaluated (5),
+# so touch() never runs; native and forced code leave there as well. The named actual is written `a: value`
+# (named_arguments).
+fn: touch () int (int: calls 0)
+    calls: calls + 1
+    return: 1
+end: touch
+fn: tst (int: c 3; int: a 2) int
+    return: c * 10 + a
+end: tst
+int: result tst(a := touch())
+int: after touch\var\calls

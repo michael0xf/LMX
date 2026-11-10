@@ -2,7 +2,7 @@
 # call with one Structure argument does not differ from a call with the chain of its fields -- when the fields of the Structure
 # are the arguments (every field names a formal, every other formal has its default) and the Structure is not the one argument,
 # each formal receives the field of its name.  mytest (int: c 3; int: a): the author's merge(mytest\args; (a: int: 5)) held by
-# a place -- pack: merge(...); mytest(pack) -- is 35, as mytest(a := 5) is, and so is the merge written in the call itself,
+# a place -- pack: merge(...); mytest(pack) -- is 35, as mytest(a: 5) is, and so is the merge written in the call itself,
 # the author's canonical form (by_inline: the translation lifts it into a hidden declaration run in the sequence before the
 # call, as the written pack); a declared Structure whose
 # fields are the formals -- Args (c 4, a 6); mytest(Args) -- is 46 and Args is not written; a Structure whose fields are some of the
@@ -12,7 +12,7 @@
 # once, 505; the
 # whole reaches a callable place too -- Places\f (Point: p; int: q) holding g -- 10, and a callable of other names held there
 # (h (Point: pp; int: q)) has no formal for the field p: the implicit `call`.  The ordinary reading stands: take (Point: p)
-# given a Point is the single argument (x, y are no formals of take) -- 12; the named supply take(p := Point) -- 12; wrong
+# given a Point is the single argument (x, y are no formals of take) -- 12; the named supply take(p: Point) -- 12; wrong
 # (Point: p; int: q 1) given Wrong (x 5, y 6, z 3) is the single argument (x, y, z are no formals of wrong) -- 51.  The names
 # and the form of a whole call come before its actual (the review of Codex, 307): Places\f holding h, given the result of
 # the producer mk_gargs (statically a GArgs; it counts its runs in Made), is the implicit `call` with Made\n still 0 --
@@ -149,7 +149,7 @@ fn: single () int
     return: take(Point)
 end: single
 fn: named () int
-    return: take(p := Point)
+    return: take(p: Point)
 end: named
 fn: not_whole () int
     return: wrong(Wrong)
@@ -183,7 +183,7 @@ fn: run () int
         return: 92
     if: not_whole() != 51
         return: 93
-    if: mytest(a := 5) != 35
+    if: mytest(a: 5) != 35
         return: 94
     if: by_default() != 39
         return: 95

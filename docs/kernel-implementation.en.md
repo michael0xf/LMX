@@ -82,6 +82,19 @@ refused reception leaves the later ones unevaluated and the body does not start.
 call; native emits it and computes the right operands itself. `a(5)` and `a: 5` stay ordinary calls with positional
 results. All 45 graph fixtures: 45 graph-check runs × interp/native/forced passed (sub_void_value separately),
 mutation 11/11, method-mutation 8/8. Computed defaults, AXBY with user conversions, q/z, merge35 and §§8/8a remain open.
+Since M6 4a ([slice 345](../steps/witnesses/named-colon-20261110/notes.md); Codex, CODEX-OPUS-345-4A-REPLY) the named
+actual is written `a: v` (the book, named-actuals): in a call's actuals a Frame whose head is a name -- no word of the
+language, so `int: 5` and `merge(...)` stay positional -- names its formal (`lmx_graph_named_actual`, in the lowering
+`lm_compiler_named_actual_frame`); its tail is consumed once by the formal's contract (`lmx_graph_named_value`): one
+value field is evaluated as a positional actual is (`tst(a: a(5))` supplies the result of the explicit call), a tail of
+written fields is a Structure constructed as the written operand of `merge` is (`lmx_graph_literal_value`:
+`take(p: y: 6)` 62, a vertical block under the layout call `put():` 73), and an int formal given a Structure refuses at
+admission. `a := v` among the actuals of a call or the parts of a receiver is no form any more: the binder refuses it
+before any actual is evaluated, in the interpreter, in native code and in the lowering, with no fallback. `f(a:)` is
+refused by P0 today (an empty colon Frame, M6 item 1); known-assignment statements `x := v` remain (M6 4b). The
+lowering (the C path) builds no written Structure value among the actuals yet: a named tail of written fields is
+refused at translation where it is recognized -- a stage of the implementation, not a rule of the language; the common
+constructor for named and positional actuals is M6 4c.
 The next [graph42/tool24/rt32](../steps/witnesses/whole-arguments-20261109/notes.md) gives the whole argument structure
 of one Structure: a single positional actual without effects (a name or a path) whose direct fields name formals of the
 selected callee of the same kind, every other formal having its default, is supplied by its fields; otherwise it is the
@@ -449,7 +462,10 @@ names a formal and answers no callable in scope, whatever fields it holds -- non
 `part := ...` is the body written after `:=`, read by the one model of a Frame as the block of a part given by head is:
 a single value is itself, any other body -- no field, several, a declaration, a statement -- is the Structure of its
 fields as written (`lm_graph_build_assignment`, `lmx_graph_frame_value`), so `args := (int: a)` and `args: (int: a)` give
-the same `args`; a consumer that evaluates the operand reads a Structure of one field as that field, as before. The
+the same `args`; a consumer that evaluates the operand reads a Structure of one field as that field, as before. Since M6
+4a (slice 345) a part is given by position or by head only: `part := ...` gives no part, the binder refuses it, and the
+receiver fixtures are written by head (`fn: name: k1; args: (int: a); ...` -- the receiver's form of the implemented
+stage; the declaration of edition 4 is `k1: fn: ...`, M6 3). The
 first form all of whose formals the actuals bind is chosen before any actual is evaluated; else one actual is the whole
 argument structure (`fn: prepared`): a Structure whose fields give exactly the formals of a form (`lmx_graph_bind_fields`,
 the book's whole-arguments), read by their values (`lmx_graph_field_value`). What is written for a formal stands as

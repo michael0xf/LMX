@@ -1,0 +1,28 @@
+GRAPH-BEFORE-BEGIN
+fn: touch () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: 1
+end: touch
+fn: tst (int: c 3; int: a 2) int
+    return: ((c * 10) + a)
+end: tst
+int: result tst((:= a touch()))
+int: after ((touch \ var) \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: touch () int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: 1
+end: touch
+fn: tst (int: c 3; int: a 2) int
+    return: ((c * 10) + a)
+end: tst
+int: result tst((:= a touch()))
+int: after ((touch \ var) \ calls)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5

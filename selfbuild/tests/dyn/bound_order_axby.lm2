@@ -3,12 +3,12 @@
 # with no effect of an actual -- then each actual is evaluated and received by its selected formal at once, a refusal
 # leaving the following actuals unevaluated and the body not started; one rule for the call through a callable place,
 # native and the walker.  Places\f (int x; int y; char u; char v) holds g (int u; int v; char x; char y):
-# Places\f(x := a1(); y := a2(); u := 3; v := 4) -- the int results of a1 and a2 are received by g's char x and char y
+# Places\f(x: a1(); y: a2(); u: 3; v: 4) -- the int results of a1 and a2 are received by g's char x and char y
 # through the program's int -> char receiver, every effect appending its digit to Trace\t: 1323 (a1, its reception, a2,
 # its reception), not 1233 (both actuals, then both receptions); the result 1234.  With the receiver refusing (Fail\on):
 # the implicit `convert` after a1 and its reception, a2 not evaluated -- 13.  Two\f (int x; int y) holding gq (int p;
-# int q): Two\f(x := touch(); y := 1) -- gq has no formal x: `call` without touch().  Dflt\f (int x 1; int y 2) holding
-# g2 (int y; int x) with no defaults: Dflt\f(x := touch()) -- y has no input: `call` without touch().  Entry 7; 80..88
+# int q): Two\f(x: touch(); y: 1) -- gq has no formal x: `call` without touch().  Dflt\f (int x 1; int y 2) holding
+# g2 (int y; int x) with no defaults: Dflt\f(x: touch()) -- y has no input: `call` without touch().  Entry 7; 80..88
 # name the failing check.
 Trace:
     int: t 0
@@ -76,7 +76,7 @@ fn: write_places () int
 end: write_places
 fn: ordered () int
     ---
-        int: got Places\f(x := a1(); y := a2(); u := 3; v := 4)
+        int: got Places\f(x: a1(); y: a2(); u: 3; v: 4)
         return: got
         catch: convert ()
             return: 25
@@ -84,7 +84,7 @@ fn: ordered () int
 end: ordered
 fn: no_name () int
     ---
-        int: got Two\f(x := touch(); y := 1)
+        int: got Two\f(x: touch(); y: 1)
         return: got
         catch: call ()
             return: 22
@@ -92,7 +92,7 @@ fn: no_name () int
 end: no_name
 fn: no_input () int
     ---
-        int: got Dflt\f(x := touch())
+        int: got Dflt\f(x: touch())
         return: got
         catch: call ()
             return: 22

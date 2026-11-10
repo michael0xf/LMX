@@ -1,4 +1,13 @@
-fn: (:= name k1) (:= args ((int a))) (:= return int) (:= body ((return (a + 1))))
+fn:
+    name: k1
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a + 1)
+    end: body
+end: fn
 fn:
     name: k2
     args:
@@ -12,11 +21,35 @@ end: fn
 int: r1 5
 int: r2 12
 int: r3 4
-fn: (:= name k3) (:= args ((int a) (int b))) (:= return int) (:= var ((int calls 0))) (:= body ((calls (calls + 1)) (return ((a * 10) + b))))
+fn:
+    name: k3
+    args:
+        int: a
+        int: b
+    end: args
+    return: int
+    var:
+        int: calls 0
+    end: var
+    body:
+        calls: (calls + 1)
+        return: ((a * 10) + b)
+    end: body
+end: fn
 int: r4 42
 int: r5 31
 int: c3 2
-fn: (:= name k4) (:= args ()) (:= return int) (:= var ((int n 7))) (:= body ((return n)))
+fn:
+    name: k4
+    args:
+    return: int
+    var:
+        int: n 7
+    end: var
+    body:
+        return: n
+    end: body
+end: fn
 fn:
     name: k5
     args:
@@ -43,11 +76,29 @@ fn:
     end: body
 end: fn
 int: r8 10
-sub: (:= name s1) (:= args ((int d 1))) (:= var ((int total 0))) (:= body ((total (total + d))))
+sub:
+    name: s1
+    args:
+        int: d 1
+    end: args
+    var:
+        int: total 0
+    end: var
+    body: (total (total + d))
+end: sub
 s1(5)
 s1()
 int: total 6
-fn: (:= name "t1") (:= args ((int a))) (:= return int) (:= body ((return (a + 100))))
+fn:
+    name: "t1"
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a + 100)
+    end: body
+end: fn
 fn:
     name: "t2"
     args:
@@ -58,7 +109,16 @@ fn:
         return: (a + 200)
     end: body
 end: fn
-fn: (:= name "t\x33") (:= args ((int a))) (:= return int) (:= body ((return (a + 300))))
+fn:
+    name: "t\x33"
+    args:
+        int: a
+    end: args
+    return: int
+    body:
+        return: (a + 300)
+    end: body
+end: fn
 int: r9 101
 int: r10 202
 int: r11 303

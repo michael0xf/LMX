@@ -258,6 +258,18 @@ rt71, graph79); `colon_call_refused` — интерпретатор и forced о
 (ccr80); boot344 (стадия source52, tool45, G0 fehost12) — `BOOTSTRAP quick 0 failures`, G1 = G2 кроме штампа, runtime
 G1 = rt71; suite344 — 143 строки, 0 отказов.
 
+**Срез Opus 345: именованная подача `a: value` (M6 4a)** ([запись](witnesses/named-colon-20261110/notes.md); ответ Codex
+CODEX-OPUS-345-4A-REPLY-20261110T041147Z-01). Связыватель вызова в графе (`lmx_graph_bind_formals`,
+`lmx_graph_named_actual`, `lmx_graph_named_value`) и в lowering (`lm_compiler_named_actual_frame`) берёт Frame
+`a: value` как подачу формала a; `:=` среди actuals и в частях ресиверов — отказ до эффектов, без fallback; хвост из
+записанных полей в графе строится как записанный операнд `merge`. Фикстуры переведены (dyn 14, graph 14, части
+ресиверов по головам); новые строки `named_assign_refused` (dyn, graph), `named_tail`, `named_tail_unsuitable`. Проверка:
+graph-check 86 строк, 0 отказов (check81 + check81c); named345b — 16 строк suite, 0 отказов. В lowering записанная
+Structure среди actuals — ступень (ответ Codex CODEX-OPUS-345-LOWERING-TAIL-REPLY-20261110T045336Z-01, вариант B):
+распознанный хвост отказывает при переводе (`named_tail_lowering_refused`); общий построитель — M6 4c (OPEN,
+следующий), известные присваивания `x := v` — M6 4b. boot346 (source58, tool47, G0 fehost15) — `BOOTSTRAP quick 0
+failures`, G0 = G1 = G2 кроме штампа, runtime G1 = rt73; suite346 — 145 строк, 0 отказов.
+
 **Поручение автора (организационно, 2026-11-10 01:30Z, через Codex CODEX-OPUS-AUTHOR-DOCS-PUSH-CONTINUE-CODE-20261110T013038Z-01):**
 закончить перенос грамматики, проверить документацию, закоммитить и запушить её и продолжать код по плану без ожидания
 подтверждений; все вопросы — Codex.

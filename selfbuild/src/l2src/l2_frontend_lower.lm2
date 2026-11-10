@@ -885,7 +885,8 @@ end: lm_compiler_bind_value_actuals
 
 # Original: l2src/l2trans.lm1:5956
 # by_head: the parts of a receiver's written form (`table:` with `source`, `name:`, `columns:`, `rows:`) are its heads by
-# that form's grammar and bind by head (1); the actuals of a callable bind a formal by the operator `:=` alone (0).
+# that form's grammar and bind by head (1); the actuals of a callable bind a formal by the named actual `a: value` (0;
+# M6 4a, lm_compiler_named_actual_frame).
 fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: nf; @@: names c.LmP0Text; int: mi; const: (@: callee char); const: (@: path char); const: (@: at c.LmP0Node); @: out c.L2ApplicationActuals; int: by_head) int
     @: source c.L2ValueSpan
     @: payload c.L2ValueSpan
@@ -904,12 +905,16 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
         extent: c.lm_compiler_value_argument_extent(values, n, first)
         if: extent < 1
             return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "an actual of ", callee, (cast: (size_t) (c.strlen(callee))), " is not an argument", 0, 0U, "", 0, 0U, "")))
-        # A named actual is written `a := value` (the author, 2026-11-07; the book, named-actuals): the Frame of the
-        # operator `:=` names the formal of its head, its body is the value.  A Frame whose head merely matches a
-        # formal's name -- `a: 5`, `a(5)` -- is no named supply: it is the positional value it writes, a call of a
-        # callable `a` included (NAMED-BINDING-BY-HEAD).
+        # A named actual is written `a: value` (M6 4a; the book, named-actuals; next_core_tasks_v3 M6 4a): a Frame
+        # written with the colon alone whose head is a name (lm_compiler_named_actual_frame) names the formal of its
+        # head, its body is the value, so `f(a: a(5))` supplies a the result of the explicit call a(5); `a(5)` alone,
+        # the call mark, is a call whose result is a positional actual. `a := value`, the named actual of 2026-11-07, is
+        # no actual of any form since 4a (Codex CODEX-OPUS-345-4A-REPLY items 1, 2): it refuses before an actual is
+        # evaluated, in a call and in a receiver's parts alike.
+        if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && (source\node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+            return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "a named actual of ", callee, (cast: (size_t) (c.strlen(callee))), " is written a: value (M6 4a): the operator := names no argument", 0, 0U, "", 0, 0U, "")))
         frame: 0
-        if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && source\node\as\frame\head != 0 && (by_head != 0 || (source\node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U)
+        if: extent = 1 && source\count = 1 && source\node != 0 && source\node\kind = c.LM_P0_NODE_FRAME && source\node\as != 0 && source\node\as\frame != 0 && source\node\as\frame\head != 0 && (by_head != 0 || lm_compiler_named_actual_frame((cast: (const: @: c.LmP0Node) (source\node))) != 0)
             frame: source\node\as\frame
         k: 0
         while: frame != 0 && k < nf && c.lm_compiler_payload_same((cast: (const: @: c.LmP0Text) (frame\head)), names[k]) = 0
@@ -931,6 +936,13 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
             payload: c.lm_compiler_primary_values(source, @ payload_n)
             if: payload_n < 0 || c.lm_compiler_value_argument_ref(payload, payload_n, (cast: (const: @: c.LmP0Node) (source\node)), (cast: (@: c.L2ValueSpan) (@ slot\value))) != 0
                 return: (cast: (int) (c.lm_compiler_error_fatal(path, (cast: (const: @: c.LmP0Node) (source\node)), "internal: a named argument lost its prepared body")))
+            # M6 4a, a stage (Codex CODEX-OPUS-345-LOWERING-TAIL-REPLY item 1): a tail of written fields -- `p: y: 6`, a
+            # vertical block of `x: v` fields, `p: (y: 6; x: 1)` -- is a written Structure value, which this translation does
+            # not build among the actuals of a call yet: a limit of the implementation, refused where the form is
+            # recognized, not a rule of the language (the graph's executors build it; the next M6 item is the common
+            # constructor of a written Structure value, named and positional alike).
+            if: by_head = 0 && lm_compiler_written_structure_span(payload, payload_n) != 0
+                return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "the named actual ", (cast: (const: @: char) (frame\head\data)), (cast: (size_t) (frame\head\length)), " of ", callee, (cast: (size_t) (c.strlen(callee))), " is a written Structure: building a written Structure value among the actuals of a call is not implemented in this translation yet (M6 4a)", 0, 0U, "")))
             slot\wrapper: source\node
             slot\structured: (cast: (int) (c.lm_compiler_value_spans_expression(payload, payload_n) = 0))
             named: 1
@@ -21220,3 +21232,60 @@ fn: lm_compiler_emit_whole_names (@: arguments c.L2ApplicationActuals; int: idx;
         return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
     return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 0)))
 end: lm_compiler_emit_whole_names
+
+# M6 4a (the book, named-actuals; next_core_tasks_v3 M6 4a): 1 when actual, an actual of a call, is the named actual
+# `a: value` -- a Frame written with the colon alone (no call mark, no `:=`, no place write `@: p v`) whose head is a
+# name: an identifier that is no word of the language, so the typed value `int: 5`, the receivers (`cast:`,
+# `merge(...)`), the address `@: x` and the C door `c.f:` stay positional values; an exact identifier `` `a` `` is a
+# name whatever word it spells (lm_compiler_bind_admit reads it so). 0 otherwise.
+fn: lm_compiler_named_actual_frame (const: (@: actual c.LmP0Node)) int
+    c.LmP0Text: exact
+    if: actual = 0 || actual\kind != c.LM_P0_NODE_FRAME || actual\as = 0 || actual\as\frame = 0 || actual\as\frame\head = 0
+        return: (cast: (int) (0))
+    if: (actual\as\frame\flags & (c.LM_P0_FRAME_COMPACT | c.LM_P0_FRAME_ASSIGN | 4096U)) != 0U
+        return: (cast: (int) (0))
+    if: c.lm_compiler_exact_ident((cast: (const: @: c.LmP0Text) (actual\as\frame\head)), @ exact) != 0
+        return: (cast: (int) (1))
+    if: c.lm_compiler_ident_word((cast: (const: @: c.LmP0Text) (actual\as\frame\head))) = 0 || c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) (actual\as\frame\head))) != 0
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_named_actual_frame
+
+# 1 when item is a written field of a Structure, `x: v` (a Frame whose head is a name, lm_compiler_named_actual_frame;
+# `x: int: 5` included), or an explicitly written Structure all of whose fields are such fields. 0 otherwise -- a value,
+# an expression, a call, a typed value `size_t: 3U`, a declaration `int: x v` (the stage recognizes the named form only).
+fn: lm_compiler_written_field (const: (@: item c.LmP0Node)) int
+    @: field c.LmP0Field
+    int: n 0
+    if: item = 0
+        return: (cast: (int) (0))
+    if: lm_compiler_named_actual_frame(item) != 0
+        return: (cast: (int) (1))
+    if: item\kind != c.LM_P0_NODE_STRUCTURE || item\as = 0 || item\as\structure = 0
+        return: (cast: (int) (0))
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\structure\first_field)))
+    while: field != 0
+        if: field\value = 0 || lm_compiler_written_field((cast: (const: @: c.LmP0Node) (field\value))) = 0
+            return: (cast: (int) (0))
+        n: n + 1
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+    ---
+    return: (cast: (int) (n > 0))
+end: lm_compiler_written_field
+
+# M6 4a, a stage (Codex CODEX-OPUS-345-LOWERING-TAIL-REPLY item 1): 1 when the n values of a named actual's tail are all
+# written fields (lm_compiler_written_field) -- the written Structure value this translation does not build among the
+# actuals of a call yet; 0 otherwise (an empty tail is refused by P0).
+fn: lm_compiler_written_structure_span (@: values c.L2ValueSpan; int: n) int
+    @: cur c.L2ValueSpan
+    int: i 0
+    if: values = 0 || n < 1
+        return: (cast: (int) (0))
+    while: i < n
+        cur: values + i
+        if: cur\node = 0 || lm_compiler_written_field((cast: (const: @: c.LmP0Node) (cur\node))) = 0
+            return: (cast: (int) (0))
+        i: i + 1
+    ---
+    return: (cast: (int) (1))
+end: lm_compiler_written_structure_span

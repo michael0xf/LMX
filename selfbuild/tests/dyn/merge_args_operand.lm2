@@ -4,7 +4,7 @@
 # -- a required formal, not a zero -- and the operand is admitted when a later operand of the merge writes that field (the
 # unfilled forms are refused: merge_args_unfilled_refused, merge_args_computed_default_refused).  tst (int: c 3; int: a):
 # merge(tst\args; (a: int: 5)) reads a = 5 and c = 3, the bare operand form a: int: 5 the same; tst\args itself is not
-# written: tst(a := 1) is 31 after the merges.  An explicit zero is a value: zed (int: c 3; int: z 0) -- merge(zed\args)
+# written: tst(a: 1) is 31 after the merges.  An explicit zero is a value: zed (int: c 3; int: z 0) -- merge(zed\args)
 # reads c = 3 and z = 0, zed() is 30.  As a later operand the part writes the model's slots of its formals' names in the
 # formals' order: merge(Args; two\args) for two (int: c 3; int: a 4) reads c = 3 and a = 4, Args is not written; the
 # unfilled a of tst\args as a later operand, filled by the next: merge(Args; tst\args; (a: int: 5)) reads c = 3 and a = 5.
@@ -97,7 +97,7 @@ fn: m () int
     r: computed()
     if: r != 0
         return: r
-    if: tst(a := 1) != 31
+    if: tst(a: 1) != 31
         return: 87
     if: zed() != 30
         return: 96

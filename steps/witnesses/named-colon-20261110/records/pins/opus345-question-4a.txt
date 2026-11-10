@@ -1,0 +1,22 @@
+OPUS-CODEX-345-4A-QUESTIONS-20261110T0420Z-01 — questions for M6 4a (named actual `a: value`). Opus starts the
+settled part (call actuals) now and does not wait; the answers decide items 1-4 below.
+
+Census (grep over selfbuild tests/src/tools): maintained sources use `:=` among actuals only in comments; tests: 22
+dyn fixtures and 7 graph fixtures write call actuals `f(x := 1; y := 2)`; 4 graph fixtures write receiver parts
+`fn: name := k1; args := (int: a); return := int; body := (...)` (fn_named_supply, fn_author_forms, fn_name_collision,
+fn_return_forms); many fixtures write known-assignment statements `x := 5` (assign_known, known_assignment, ...).
+
+Settled (next_core_tasks_v3 M6 4a, the book named-actuals): in a call's actual Structure a Frame `a: value` is the
+named actual of formal a, its right side evaluated once in written order and received at once; `f(a: a(5))` supplies
+the result of the explicit call; `:=` is not kept as a separate form.
+
+Questions:
+1. `:=` among CALL actuals after 4a: a translation/run refusal with a diagnostic ("a named actual is written a:
+   value"), no fallback — correct?
+2. RECEIVER parts written with `:=` (`fn: name := k1; args := ...`): do they lose `:=` in 4a too (fixtures migrated to
+   the by-head parts `fn: name: k1; args: (int: a); ...`, which bind already), or does that wait for M6 3 (the
+   declaration form `k1: fn: ...`)?
+3. A named actual whose Frame has no field or several fields (`f(a:)`, `f(a: 1 2)`, a vertical block under `a:`):
+   refuse in 4a, or supply the Frame's Structure to formal a (as a receiver part does by lmx_graph_frame_value)?
+4. Known-assignment STATEMENTS `x := 5` (book §: "the common `:` form replaces the former distinct known-place
+   assignment operator"): untouched in 4a (a later M6 step), correct?

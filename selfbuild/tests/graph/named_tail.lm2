@@ -1,0 +1,32 @@
+# M6 4a (slice 345; Codex CODEX-OPUS-345-4A-REPLY-20261110T041147Z-01 item 3): the tail of a named actual `a: ...` is
+# consumed once by the contract of its formal (lmx_graph_named_value). One value field is evaluated as a positional
+# actual is: an expression (35), a typed value (34). A tail of written fields -- one Frame `y: 6`, a parenthesized pair,
+# a vertical block in the layout call put(): -- is a Structure constructed as the written operand of merge is
+# (lmx_graph_literal_value), which the Structure formal p admits by the paths take reads (62, 64; 73 in put\var\got).
+# A named tail an int formal cannot take is the ordinary refusal of admission (named_tail_unsuitable); `p:` with no
+# field is refused by P0 today (empty colon Frame) -- the empty forms are M6 item 1.
+Point:
+    int: y 0
+    int: unused 0
+end: Point
+fn: tst (int: c 3; int: a 2) int
+    return: c * 10 + a
+end: tst
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+sub: put (Point: p; int: q 2) (int: got 0)
+    got: p\y * 10 + q
+end: put
+int: expression tst(a: 2 + 3)
+int: typed tst(a: int: 4)
+int: field take(p: y: 6)
+int: pair take(p: (y: 6; unused: 1); q: 4)
+put():
+    p:
+        y: 7
+        unused: 1
+    end: p
+    q: 3
+end: put
+int: block put\var\got

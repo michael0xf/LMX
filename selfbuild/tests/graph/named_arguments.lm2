@@ -5,23 +5,23 @@ end: a
 fn: tst (int: c 3; int: a 2) int
     return: c * 10 + a
 end: tst
-int: named_literal tst(a := 5)
-int: named_call tst(a := a(5))
+int: named_literal tst(a: 5)
+int: named_call tst(a: a(5))
 int: paren_call tst(a(5))
 int: colon_call tst(a(): 5)
 int: calls a\var\calls
 int: defaulted tst()
-int: reordered tst(a:=1; c:=2)
-int: mixed tst(6; a:=1)
+int: reordered tst(a:1; c:2)
+int: mixed tst(6; a:1)
 fn: inside () int
-    return: tst(a := 8)
+    return: tst(a: 8)
 end: inside
 int: no_dynamic_label inside()
 fn: tick (int: n) int (int: trace 0)
     trace := trace * 10 + n
     return: n
 end: tick
-int: written_order tst(a := tick(1); c := tick(2))
+int: written_order tst(a: tick(1); c: tick(2))
 int: trace tick\var\trace
 Point:
     int: y 0
@@ -33,11 +33,11 @@ end: Data
 fn: take (Point: p; int: q 2) int
     return: p\y * 10 + q
 end: take
-int: structural take(q := 7; p := Data)
-int: structural_default take(p := Data)
+int: structural take(q: 7; p: Data)
+int: structural_default take(p: Data)
 sub: set (int: x 1; int: y 2) (int: value 0)
     value := x * 10 + y
 end: set
-set(y := 9)
+set(y: 9)
 int: procedure set\var\value
 int: later_default tst()

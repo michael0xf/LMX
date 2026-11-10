@@ -1,0 +1,14 @@
+# M6 4c (slice 346; Codex CODEX-OPUS-346-4C-Q57-REPLY-20261110T060100Z-01; the book RU:381-388; the author's
+# unknown-head-return of 2026-10-05): in the tail `p: y: 6` the head y is unknown, so `y: 6` defines the Structure y
+# with the written content 6 -- not an int field y. take reads p\y as an int, so the candidate is refused at admission
+# when the call is reached (4); with `y: int: 6` the same call gives 62 (named_tail). Nothing of the content runs, and
+# `after` is never computed.
+Point:
+    int: y 0
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: before 1
+int: r take(p: y: 6)
+int: after before + 1

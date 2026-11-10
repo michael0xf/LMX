@@ -1,0 +1,19 @@
+# Probe 345/4c (lowering): merge of a model with one typed written field `(y: int: 6)`, then the result as the actual
+# of the Structure formal p; entry 7, 81-82 a wrong value.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: build () int
+    pack: merge(Point; (y: int: 6))
+    return: take(pack)
+end: build
+int: code 7
+if: build() != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

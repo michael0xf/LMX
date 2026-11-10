@@ -1,0 +1,19 @@
+# Probe 346/4c (lowering): a local written Structure `pack: (y: int: 6)` given to the Structure formal p, which reads
+# p\y only (62); entry 7, 81 a wrong value.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: held () int
+    pack: (y: int: 6)
+    return: take(pack)
+end: held
+int: code 7
+if: held() != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

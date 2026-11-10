@@ -1,0 +1,18 @@
+# Probe 346/4c (lowering): a named Structure whose field is written untyped `y: 6` (defined by its value), given to the
+# Structure formal p, which reads p\y only (62); entry 7, 81 a wrong value.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+Pt:
+    y: 6
+end: Pt
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: code 7
+if: take(Pt) != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

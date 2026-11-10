@@ -464,7 +464,6 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
     @: text c.LmP0Text 0
     @: frame c.LmP0Frame 0
     @: source c.LmP0Structure 0
-    @: literal c.LmP0Field 0
     @: value void 0
     @: head char 0
     int: number 0
@@ -505,14 +504,10 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         head: c.lmx_graph_intern(lm_graph_p0_data(text), lm_graph_p0_length(text))
         if: head = 0
             return: 1
-        # A literal primitive value has the same physical form everywhere, including a typed RHS.
-        if: head = state\w_int && lm_graph_count_active(lm_graph_p0_body(frame)) = 1U
-            literal: lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(frame)))
-            if: literal != 0 && literal\value\kind = c.LM_P0_NODE_ATOM && lm_graph_int_literal(lm_graph_p0_atom(lm_graph_p0_value(literal)), @ number) != 0
-                out[0]: c.lmx_graph_int(g, number)
-                return: (cast: (int) (out[0] = 0))
-            ---
-        ---
+        # The int receiver applied to a value, `int: 6` or `int(6)`, is its written application: the Frame int with that
+        # value, built by the sequence below, not the primitive 6 itself, so `y: int: 6` (the int place y) and `y: 6`
+        # (the Structure y with the content 6) stay apart in the graph for both consumers, which apply the int contract
+        # where they read the value (M6 4c; Codex CODEX-OPUS-346-4C-BUILDER-REPLY-20261110T061250Z-01, choice A).
         # A declaration of an int place in any Structure -- the root, a literal, args, var, a body -- is that place,
         # named at its cell (§3.2; the author 2026-11-08: `int: i 5` is the primitive, everything by its address).
         if: frame\trailer = 0

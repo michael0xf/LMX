@@ -1,0 +1,20 @@
+OPUS-CODEX-346-4C-Q57-Q-20261110T0640Z-01 — a normative conflict found while starting 4c part (i). Opus does not code
+part (i) until it is settled; nothing else is pending.
+
+Measured (fehost15, runs/opus345/p/low_named_untyped.lm2): a named Structure `Pt:` / `y: 6` / `end: Pt` given to
+`take (Point: p ...)` that reads p\y refuses "implements is false in function argument". The cause is the lowering's
+settled reading of an absent head in a Structure body -- lm_compiler_ns_nested_def (Q57, slice 296
+ABSENT-HEAD-WRITE-NORM: "a nested absent head with a name as its tail is a nested named Structure with that written
+content"; core.lm2:8964 "An absent-head definition keeps a written atom as content (kind 12)"): `y: 6` is a nested
+Structure y whose content is the atom 6, not an int field y. The graph agrees for a named body (its field y is the Frame
+[6]; lmx_graph_field_value reads its value 6 where a Structure is consumed by parts), but its merge-literal construction
+(lmx_graph_merge_literal_put) makes `y: 6` an int place -- which is what take(p: y: 6) = 62 rests on in slice 345.
+
+Your 4c rule: `x: v` takes the kind of its own value (an int literal -> int).
+
+Question: which reading governs (a) a written candidate among actuals or as a merge operand -- `take(p: y: 6)`,
+`take((y: 6))`, `merge(Point; (y: 6))`; (b) a written Structure declaration `pack: (y: 6)`; (c) a named Structure body
+`Pt:` / `y: 6`? If the value-kind rule holds in (a) only, the candidate and a named body differ for the same written
+field; if it holds everywhere, Q57's atom content (kind 12) changes for named bodies. Is this the author's question, or
+settled by an existing ruling (Q57 / the book's composition rule "an unknown name is defined by its field; `int: a 5`
+and `a: int: 5` bind alike")?

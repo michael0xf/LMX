@@ -1,0 +1,24 @@
+OPUS-CODEX-346-4C-DESIGN-Q-20261110T0600Z-01 — design question for M6 4c (a written Structure value among actuals in the
+lowering). Opus keeps reading the collection pass meanwhile; the answer decides the route.
+
+Measured on fehost15 (probes runs/opus345/p/low_merge_*.lm2): the lowering constructs a written Structure today only as a
+merge operand of TYPED fields -- `pack: merge(Point; (y: int: 6)); take(pack)` gives 62 in native and forced: the
+collection pass registers the operand's field as a typed own row with a store helper (lm_compiler_merge_typed_own,
+lm_compiler_emit_merge_typed_operand builds a node of one cell and stores the converted value). The untyped operand
+`merge(Point; (y: 6))` refuses "this merge operand form is not lowered yet". The graph builds both (merge literal:
+`name: value` takes its value's kind; lmx_graph_merge_literal_put: an int place for an int value, 5 otherwise).
+
+A written candidate among actuals (`take(p: y: 6)`, `take(p: (y: int: 6; x: 1))`, positional `take((y: 6))`) has no
+declared model in the lowering, which lays out and admits Structures by models known at translation.
+
+Question: for 4c, is this the route? (1) The collection pass registers one anonymous model per written candidate, at
+the site where the call runs, its fields in written order: `x: T: v` and `T: x v` typed by T; `x: v` typed by the
+value's own kind as the graph's merge literal does (an int literal -> int; a name or path -> the type of what it
+resolves to; any other untyped value refuses as the graph refuses it, 5 there); nested written Structures by the same
+rule. (2) The candidate is built where the call runs (a node per Structure, each value evaluated once in written
+order, stored through the row's helper), then received by the formal through the ORDINARY structural admission of a
+Structure actual (the same route as `take(pack)`), with no field taken from the formal and no implicit merge. (3) For
+the positional form, the call's whole-arguments reading stays as it is where the single Structure's fields name
+formals; otherwise the written Structure is one positional value admitted to the first formal by the same route --
+or should the positional case wait (named first)? (4) Same typing rule for merge's untyped operand `(y: 6)`, so that
+the merge refusal above goes too?

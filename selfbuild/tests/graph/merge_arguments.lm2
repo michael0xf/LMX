@@ -1,3 +1,11 @@
+# M6 4c (slice 346; Codex CODEX-OPUS-346-4C-Q57-REPLY-20261110T060100Z-01): the written fields of the merge operands
+# are typed, `a: int: 6` -- an untyped `a: 6` (or `a: x`) with an unknown head defines the Structure a with that written
+# content, not an int place (the book RU:381-388), so it no longer writes the int slot a; the values are those of the
+# untyped forms this fixture held before, which the helper read as int places. A semicolon terminates the current
+# short form only (the grammar §11): `(c: int: 4; a: int: 6)` would be the field c with the tail `int: 4` and the field
+# a inside it, so two typed fields of one operand are written with closed receivers, `(c: int(4); a: int(6))` (Codex
+# CODEX-OPUS-346-4C-BUILDER-REPLY-20261110T061250Z-01: `int(6)` is `int: 6`). A field of the value of a name is the
+# declaration `int: a x`: `int: x` alone declares the int place x.
 fn: mytest (int: c 3; int: a) int
     return: c * 10 + a
 end: mytest
@@ -5,14 +13,14 @@ AV:
     int: a 8
 end: AV
 fn: wrap (int: x) int
-    return: mytest(merge(mytest\args; (a: x)))
+    return: mytest(merge(mytest\args; (int: a x)))
 end: wrap
 int: r mytest(merge(mytest\args; (a: int: 5)))
-int: both mytest(merge(mytest\args; (c: 4; a: 6)))
-int: nested mytest(merge(merge(mytest\args; (c: 2)); (a: 7)))
+int: both mytest(merge(mytest\args; (c: int(4); a: int(6))))
+int: nested mytest(merge(merge(mytest\args; (c: int: 2)); (a: int: 7)))
 int: named mytest(merge(mytest\args; AV))
-int: model mytest(merge(AV; (c: 1)))
+int: model mytest(merge(AV; (c: int: 1)))
 int: body wrap(9)
-int: appended merge(AV; (z: 9))\z
-int: kept merge(AV; (a: 2))\a + AV\a
+int: appended merge(AV; (z: int: 9))\z
+int: kept merge(AV; (a: int: 2))\a + AV\a
 int: after mytest(a: 1)

@@ -1,0 +1,15 @@
+# Probe 345/4c (lowering): merge of a model with one untyped written field `(y: 6)`; entry 7, 81 a wrong value.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: build () int
+    pack: merge(Point; (y: 6))
+    return: pack\y * 10 + pack\x
+end: build
+int: code 7
+if: build() != 61
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

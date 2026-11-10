@@ -1,0 +1,171 @@
+GRAPH-BEFORE-BEGIN
+int: root 1
+:=: root 5
+:=: root ((int 7))
+int: i
+@: p int (@ i)
+:=: i 5
+int: first (\ p)
+:=: i 7
+int: second (\ p)
+Box:
+    int: value 1
+    Child:
+        int: item 2
+    end: Child
+end: Box
+:=: (Box \ value) (root + 2)
+:=: ((Box \ Child) \ item) 11
+fn: tick () int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: 3
+end: tick
+fn: local (int: arg) int
+    :=: x 7
+    int: x
+    :=: arg (arg + 1)
+    :=: x (x + arg)
+    :=: x (x + tick())
+    return: x
+end: local
+int: local_result local(4)
+int: calls ((tick \ var) \ calls)
+sub: bump (int: delta 2) (
+    int: count 0
+)
+    :=: count (count + delta)
+end: bump
+bump()
+bump(3)
+int: procedure_count ((bump \ var) \ count)
+Code:
+    var:
+        int: x 1
+        int: y 2
+    end: var
+    :=: x (x + 1)
+    :=: y (x * 2)
+end: Code
+Data:
+    int: y 30
+    int: x 10
+end: Data
+call: Code Data
+int: data_x (Data \ x)
+int: data_y (Data \ y)
+int: model_x ((Code \ var) \ x)
+fn: change (Box: target) int
+    :=: (target \ value) 17
+    return: (target \ value)
+end: change
+int: changed change(Box)
+int: nested_value ((Box \ Child) \ item)
+fn: clean_path () int (
+    int: x 1
+)
+    :=: (var \ x) 9
+    return: ((x * 10) + (var \ x))
+end: clean_path
+int: clean_snapshot clean_path()
+int: clean_published ((clean_path \ var) \ x)
+fn: dirty_path () int (
+    int: x 1
+)
+    :=: x 2
+    :=: (var \ x) 9
+    return: ((x * 100) + (var \ x))
+end: dirty_path
+int: dirty_snapshot dirty_path()
+int: dirty_published ((dirty_path \ var) \ x)
+int: n 0
+for: ((:= n 0) (n < 3) (:= n (n + 1))) ((:= root (root + 1)))
+finally: (:= root (root + 10))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: root 20
+:=: root 5
+:=: root ((int 7))
+int: i
+@: p int @i
+:=: i 5
+int: first 5
+:=: i 7
+int: second 7
+Box:
+    int: value 17
+    Child:
+        int: item 11
+    end: Child
+end: Box
+:=: (Box \ value) (root + 2)
+:=: ((Box \ Child) \ item) 11
+fn: tick () int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: 3
+end: tick
+fn: local (int: arg) int
+    :=: x 7
+    int: x
+    :=: arg (arg + 1)
+    :=: x (x + arg)
+    :=: x (x + tick())
+    return: x
+end: local
+int: local_result 15
+int: calls 1
+sub: bump (int: delta 2) (
+    int: count 0
+)
+    :=: count (count + delta)
+end: bump
+bump()
+bump(3)
+int: procedure_count 5
+Code:
+    var:
+        int: x 1
+        int: y 2
+    end: var
+    :=: x (x + 1)
+    :=: y (x * 2)
+end: Code
+Data:
+    int: y 22
+    int: x 11
+end: Data
+call: Code Data
+int: data_x 11
+int: data_y 22
+int: model_x 1
+fn: change (Box: target) int
+    :=: (target \ value) 17
+    return: (target \ value)
+end: change
+int: changed 17
+int: nested_value 11
+fn: clean_path () int (
+    int: x 1
+)
+    :=: (var \ x) 9
+    return: ((x * 10) + (var \ x))
+end: clean_path
+int: clean_snapshot 19
+int: clean_published 9
+fn: dirty_path () int (
+    int: x 1
+)
+    :=: x 2
+    :=: (var \ x) 9
+    return: ((x * 100) + (var \ x))
+end: dirty_path
+int: dirty_snapshot 209
+int: dirty_published 2
+int: n 3
+for: ((:= n 0) (n < 3) (:= n (n + 1))) ((:= root (root + 1)))
+finally: (:= root (root + 10))
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

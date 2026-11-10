@@ -1651,6 +1651,10 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
     if: c.lmx_graph_applied(g, raw) != 0
         return: lmx_graph_eval_apply(g, scope, c.lmx_graph_applied(g, raw), 1, out)
     word: c.lmx_graph_name_of(g, raw)
+    # The int receiver applied to one value, `int: 6` or `int(6)` (the builder keeps the written application; M6 4c,
+    # Codex CODEX-OPUS-346-4C-BUILDER-REPLY-20261110T061250Z-01): the int of that value.
+    if: word = state\w_int && count = 1U
+        return: lmx_graph_eval_number(g, scope, c.lmx_graph_get(expression, 0U), out)
     if: word != 0
         # A Frame written with the colon alone applies nothing (the author 2026-11-09: only f(args) calls): a callable,
         # a merge or another head gives no int here.
@@ -2067,8 +2071,12 @@ fn: lmx_graph_merge_literal_open (@: g c.LmxGraph; @: scope c.Lmx; @: literal c.
 end: lmx_graph_merge_literal_open
 
 # The place of written field index of the constructed literal: a new int place holding the value's int (a literal of the
-# code is not shared with a place, §3.2) or, for `int: name`, a place without a value; named at its cell. 0; 4 for the
-# value of `int: name value` that has no int, or without memory; 5 for `name: value` with a value of another kind (open).
+# code is not shared with a place, §3.2) or, for `int: name`, a place without a value; named at its cell. A field
+# `name: content` whose head is unknown (lmx_graph_literal_content) is the Structure it defines with its written content
+# -- the written Frame itself, as a Structure written in the code is given (M6 4c; Codex
+# CODEX-OPUS-346-4C-Q57-REPLY-20261110T060100Z-01; the book RU:381-388: `x: j` stays a Structure); value is not read
+# then. 0; 4 for the value of `int: name value` that has no int, or without memory; 5 for `name: value` with a value of
+# another kind (open).
 fn: lmx_graph_merge_literal_put (@: g c.LmxGraph; @: literal c.Lmx; @: made c.Lmx; size_t: index; @: value void) int
     @: name char 0
     @: written void 0
@@ -2081,6 +2089,11 @@ fn: lmx_graph_merge_literal_put (@: g c.LmxGraph; @: literal c.Lmx; @: made c.Lm
     form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, index), @ name, @ written)
     if: form = 0
         return: 5
+    if: lmx_graph_literal_content(g, c.lmx_graph_get(literal, index)) != 0
+        if: c.lmx_graph_put(made, index, c.lmx_graph_get(literal, index)) != 0
+            return: 4
+        return: 0
+    ---
     if: written = 0
         place: c.lmx_graph_uninit_int(g)
         if: place = 0
@@ -2288,6 +2301,7 @@ end: lmx_graph_merge_alias
 # named Structure of fields) answers itself. Whatever made the Structure -- written code, merge, a function a receiver
 # created -- its fields are read so (merge, lmx_graph_fn_part).
 fn: lmx_graph_field_value (@: g c.LmxGraph; @: value void) @: void
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: field void 0
     int: kind 0
     if: g = 0 || value = 0
@@ -2302,6 +2316,13 @@ fn: lmx_graph_field_value (@: g c.LmxGraph; @: value void) @: void
         return: c.lmx_graph_target(g, field)
     if: kind = 2 || ((kind = 1 || kind = 4) && c.lmx_graph_name_of(g, field) = 0)
         return: field
+    # `name: int: 6`: the int receiver applied to an int literal (the builder keeps the written application; M6 4c,
+    # Codex CODEX-OPUS-346-4C-BUILDER-REPLY-20261110T061250Z-01) answers that int.
+    if: kind = 4 && state != 0 && c.lmx_graph_name_of(g, field) = state\w_int && c.lmx_graph_count((cast: (@: c.Lmx) field)) = 1U
+        if: c.lmx_graph_kind(g, c.lmx_graph_get((cast: (@: c.Lmx) field), 0U)) = 1 && c.lmx_graph_name_of(g, c.lmx_graph_get((cast: (@: c.Lmx) field), 0U)) = 0
+            return: c.lmx_graph_get((cast: (@: c.Lmx) field), 0U)
+        ---
+    ---
     return: value
 end: lmx_graph_field_value
 
@@ -3753,7 +3774,9 @@ fn: lmx_graph_root_structure (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     if: kind != 4
         return: 0
     head: c.lmx_graph_name_of(g, field)
-    if: head = 0 || head = state\w_merge
+    # The int receiver applied to one value, `name: int: 6` (M6 4c: the builder keeps the written application), is a
+    # value: the definition of the int place name.
+    if: head = 0 || head = state\w_merge || (head = state\w_int && c.lmx_graph_count((cast: (@: c.Lmx) field)) = 1U)
         return: 0
     if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, lmx_graph_resolve(g, root, head)))) != 0
         return: 0
@@ -3870,8 +3893,10 @@ end: lmx_graph_named_actual
 # application `a(5)`, a typed value `int: 5`, a reference -- is evaluated as an actual written by position is. Any other
 # tail -- no field, several, one Frame `x: ...` -- is a present Structure (an empty tail is no absent actual and asks no
 # default): when its fields are written fields (`x: v`, `int: x v`; lmx_graph_literal_fields) it is constructed as the
-# written anonymous Structure operand of merge is, a new Structure whose values are evaluated once in written order
-# (lmx_graph_literal_value), the actual's name being the formal's, not the Structure's; otherwise it is the Frame itself,
+# written anonymous Structure operand of merge is (lmx_graph_literal_value): a typed field `x: int: v` an int place of
+# its value, evaluated once in written order, a field `x: v` with an unknown head the Structure x with its written
+# content (lmx_graph_literal_content; M6 4c, Codex CODEX-OPUS-346-4C-Q57-REPLY), the actual's name being the formal's,
+# not the Structure's; otherwise it is the Frame itself,
 # as lmx_graph_frame_value gives it. Either way the formal's admission takes or refuses it. Native code calls this for a
 # Structure tail (lm_graph_emit_call). 0, or the answer of the evaluation.
 fn: lmx_graph_named_value (@: g c.LmxGraph; @: scope c.Lmx; @: named c.Lmx; @@: out void) int
@@ -3964,7 +3989,9 @@ fn: lmx_graph_literal_value (@: g c.LmxGraph; @: scope c.Lmx; @: literal c.Lmx; 
     while: status = 0 && i < c.lmx_graph_count(literal)
         form: lmx_graph_literal_field(g, c.lmx_graph_get(literal, i), @ name, @ written)
         value: 0
-        if: written != 0
+        # A field `name: content` whose head is unknown defines the Structure name with that written content
+        # (lmx_graph_literal_content): nothing of it runs when it is created.
+        if: written != 0 && lmx_graph_literal_content(g, c.lmx_graph_get(literal, i)) = 0
             status: lmx_graph_eval_value(g, scope, written, @ value)
         ---
         if: status = 0
@@ -3977,3 +4004,28 @@ fn: lmx_graph_literal_value (@: g c.LmxGraph; @: scope c.Lmx; @: literal c.Lmx; 
     ---
     return: status
 end: lmx_graph_literal_value
+
+# M6 4c (Codex CODEX-OPUS-346-4C-Q57-REPLY-20261110T060100Z-01; the book RU:381-388; the author's unknown-head-return of
+# 2026-10-05): 1 when field, a written field `name: content` of a Structure (lmx_graph_literal_field form 1), defines the
+# Structure name with its written content -- its head is unknown, so the content is kept as written and nothing of it runs
+# when the Structure is created: a primitive `y: 6`, a name `a: x`, an expression, an application. The content is a value
+# to evaluate only where a receiver writes the field -- a typed place `y: int: 6`, `y: merge(...)` (a word of the language
+# heads its one value) -- or where it is a reference `p: @x`. 0 otherwise. Exported: the native emitter builds a written
+# literal by the same reading (lm_graph_emit_merge).
+fn: lmx_graph_literal_content (@: g c.LmxGraph; @: field void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: name char 0
+    @: written void 0
+    @: head char 0
+    if: g = 0 || state = 0 || field = 0 || lmx_graph_literal_field(g, field, @ name, @ written) != 1 || written = 0
+        return: 0
+    if: c.lmx_graph_kind(g, written) = 4
+        head: c.lmx_graph_name_of(g, written)
+        if: head != 0 && lmx_graph_language_word(state, head) != 0
+            return: 0
+        if: head = 0 && c.lmx_graph_count((cast: (@: c.Lmx) written)) = 2U && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) written), 0U)) = state\w_at
+            return: 0
+        ---
+    ---
+    return: 1
+end: lmx_graph_literal_content

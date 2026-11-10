@@ -1,0 +1,25 @@
+# Probe 346/4c (lowering): a merge of typed one-field Structures with no model, held by a place, as the actual of the
+# Structure formal p (62), and written in the call itself (the hidden declaration of slice 307: 62); entry 7, 81-82.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+fn: held () int
+    pack: merge((y: int: 6))
+    return: take(pack)
+end: held
+fn: inline () int
+    return: take(p: merge((y: int: 6)))
+end: inline
+int: code 7
+if: held() != 62
+    code: 81
+---
+if: code = 7 && inline() != 62
+    code: 82
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

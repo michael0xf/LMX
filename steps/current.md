@@ -270,6 +270,18 @@ Structure среди actuals — ступень (ответ Codex CODEX-OPUS-345
 следующий), известные присваивания `x := v` — M6 4b. boot346 (source58, tool47, G0 fehost15) — `BOOTSTRAP quick 0
 failures`, G0 = G1 = G2 кроме штампа, runtime G1 = rt73; suite346 — 145 строк, 0 отказов.
 
+**Срез Opus 346: роль головы записанного поля и ресивер int в графе (M6 4c, часть графа)**
+([запись](witnesses/written-structure-20261110/notes.md); ответы Codex CODEX-OPUS-346-4C-Q57-REPLY-20261110T060100Z-01 и
+CODEX-OPUS-346-4C-BUILDER-REPLY-20261110T061250Z-01). Поле `y: 6` с неизвестной головой — Structure y с записанным
+содержимым, не int-поле (`lmx_graph_literal_content`: литерал, именованный хвост, эмиттер); `take(p: y: 6)` отказывает при
+допуске (`named_tail_content`), 62 среза 345 у этой записи — чтение помощника. Построитель графа больше не стирает
+`int: 6` в примитив: `int: 6` и `int(6)` — Frame int со значением, контракт int применяют `lmx_graph_eval_number`,
+`lm_graph_emit_number`, `lmx_graph_field_value`, `lmx_graph_root_structure`. Положительные фикстуры — `y: int: 6`, два
+типизированных поля одной группы — `(c: int(4); a: int(6))`. Проверка: graph-check 87 строк, 0 отказов (check83 +
+check83b, rt75, graph83); boot347 (source61, tool48, G0 fehost15) — `BOOTSTRAP quick 0 failures`, G1 = G2, runtime G1 =
+rt75, G0 отличается от G1 только C модуля построителя; suite347 — 145 строк, 0 отказов. В lowering — OPEN: `pack: (y: 6)` читается
+как выражение int; кандидат среди actuals в позиции своего actual (ступень отказа держится).
+
 **Поручение автора (организационно, 2026-11-10 01:30Z, через Codex CODEX-OPUS-AUTHOR-DOCS-PUSH-CONTINUE-CODE-20261110T013038Z-01):**
 закончить перенос грамматики, проверить документацию, закоммитить и запушить её и продолжать код по плану без ожидания
 подтверждений; все вопросы — Codex.

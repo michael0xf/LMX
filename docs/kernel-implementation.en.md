@@ -88,8 +88,12 @@ language, so `int: 5` and `merge(...)` stay positional -- names its formal (`lmx
 `lm_compiler_named_actual_frame`); its tail is consumed once by the formal's contract (`lmx_graph_named_value`): one
 value field is evaluated as a positional actual is (`tst(a: a(5))` supplies the result of the explicit call), a tail of
 written fields is a Structure constructed as the written operand of `merge` is (`lmx_graph_literal_value`:
-`take(p: y: 6)` 62, a vertical block under the layout call `put():` 73), and an int formal given a Structure refuses at
-admission. `a := v` among the actuals of a call or the parts of a receiver is no form any more: the binder refuses it
+`take(p: y: int: 6)` 62, a vertical block under the layout call `put():` 73), and an int formal given a Structure refuses at
+admission. A field `y: 6` with an unknown head defines the Structure y with the written content 6, not an int field
+(slice 346, [record](../steps/witnesses/written-structure-20261110/notes.md); the book RU:381-388): `take(p: y: 6)`
+refuses at admission, and the 62 slice 345 gave that form was a reading of the helper, not the norm; the clean graph's
+builder keeps the written application of the int receiver, `int: 6` and `int(6)` (the Frame int with its value), to which
+both consumers apply the int contract (`lmx_graph_literal_content`, `lmx_graph_eval_number`, `lm_graph_emit_number`). `a := v` among the actuals of a call or the parts of a receiver is no form any more: the binder refuses it
 before any actual is evaluated, in the interpreter, in native code and in the lowering, with no fallback. `f(a:)` is
 refused by P0 today (an empty colon Frame, M6 item 1); known-assignment statements `x := v` remain (M6 4b). The
 lowering (the C path) builds no written Structure value among the actuals yet: a named tail of written fields is

@@ -1,0 +1,50 @@
+GRAPH-BEFORE-BEGIN
+Point:
+    int: y 0
+    int: unused 0
+end: Point
+fn: tst (int: c 3; int: a 2) int
+    return: ((c * 10) + a)
+end: tst
+fn: take (Point: p; int: q 2) int
+    return: (((p \ y) * 10) + q)
+end: take
+sub: put (Point: p; int: q 2) (
+    int: got 0
+)
+    got: (((p \ y) * 10) + q)
+end: put
+int: expression tst((a (2 + 3)))
+int: typed tst((a 4))
+int: field take((p (y 6)))
+int: pair take((p (y 6 (unused 1))) (q 4))
+put((p (y 7) (unused 1)) (q 3))
+int: block ((put \ var) \ got)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Point:
+    int: y 0
+    int: unused 0
+end: Point
+fn: tst (int: c 3; int: a 2) int
+    return: ((c * 10) + a)
+end: tst
+fn: take (Point: p; int: q 2) int
+    return: (((p \ y) * 10) + q)
+end: take
+sub: put (Point: p; int: q 2) (
+    int: got 0
+)
+    got: (((p \ y) * 10) + q)
+end: put
+int: expression 35
+int: typed 34
+int: field take((p (y 6)))
+int: pair take((p (y 6 (unused 1))) (q 4))
+put((p (y 7) (unused 1)) (q 3))
+int: block ((put \ var) \ got)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 4, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 4

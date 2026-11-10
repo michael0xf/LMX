@@ -482,6 +482,9 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
         # A Frame written with the colon alone applies nothing (the author 2026-11-09: only f(args) calls): a callable,
         # a merge or another head gives no int here, as in the interpreter (lmx_graph_eval_number).
         word: c.lmx_graph_name_of(g, raw)
+        # The int receiver applied to one value, `int: 6` or `int(6)`: the int of that value, as the interpreter.
+        if: word = state\w_int && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 1U
+            return: lm_graph_emit_number(g, f, scope, (cast: (@: c.Lmx) raw), 0U, temps, decl_names, decl_slots, decl_n, temp)
         method: c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
             return: 5
@@ -1997,7 +2000,10 @@ fn: lm_graph_emit_merge (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expres
                 if: c.lmx_graph_kind(g, c.lmx_graph_get(literal, i)) = 1
                     status: lm_graph_emit_operand(g, f, scope, literal, i, temps, decl_names, decl_slots, decl_n, @ value)
                 ---
-                if: c.lmx_graph_kind(g, c.lmx_graph_get(literal, i)) = 4
+                # A field `name: content` with an unknown head is the Structure it defines with its written content
+                # (lmx_graph_literal_content; M6 4c): nothing of it is evaluated, lmx_graph_merge_literal_put puts the
+                # written Frame itself.
+                if: c.lmx_graph_kind(g, c.lmx_graph_get(literal, i)) = 4 && c.lmx_graph_literal_content(g, c.lmx_graph_get(literal, i)) = 0
                     element: (cast: (@: c.Lmx) c.lmx_graph_get(literal, i))
                     at: 0U
                     if: c.lmx_graph_name_of(g, (cast: (@: void) element)) = state\w_int

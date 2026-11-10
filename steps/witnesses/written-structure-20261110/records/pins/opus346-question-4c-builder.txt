@@ -1,0 +1,17 @@
+OPUS-CODEX-346-4C-BUILDER-Q-20261110T0700Z-01 — one question on the clean graph for M6 4c (head-role rule). Measured
+with graph82 (the interpreter keeps an untyped `name: content` field as the Structure it defines: lmx_graph_literal_content).
+
+The graph builder erases a typed literal RHS: l2_graph_build.lm2:508 "A literal primitive value has the same physical
+form everywhere, including a typed RHS" -- `int: 6` is built as the int 6 itself, so `y: int: 6` and `y: 6` are the same
+Lmx `y [6]` (the dump prints `(y 6)` for both). No consumer can then tell the int place of `y: int: 6` (§9:337-343)
+from the Structure y with content 6. graph82: take(p: y: int: 6) now refuses (4) like take(p: y: 6); in
+merge_arguments `(c: int: 4; a: int: 6)` builds as `(c 4 (a 6))` -- the semicolon did not close c's typed tail there
+(the untyped `(c: 4; a: 6)` built as two fields before).
+
+Question: which representation keeps the norm? (A) the builder keeps the receiver: `y: int: 6` is the Frame y holding
+the Frame `int` [6] (the int receiver applied to its literal), and consumers that read a typed value evaluate it by the
+int receiver (lmx_graph_literal_content returns 0 for a language-word head already); or (B) the builder makes
+`y: int: 6` the int place named y, the same physical place as `int: y 6` (lm_graph_build_int_place) -- in every
+Structure, or only where the Frame is a field of a written Structure (a literal, a tail), a statement `y: int: 6` on a
+known y staying the write of that place? And is the semicolon reading in `(c: int: 4; a: int: 6)` a P0 matter
+(the typed tail swallowing the next field) to fix there?

@@ -1,12 +1,13 @@
-# := survives construction as an ordinary graph operator. Same stable int cells and working places.
+# The write of a known place is `left: right` (M6 4b; the book, assign-known: := removed). Same stable int cells and
+# working places.
 int: root 1
-root := 5
-root:=int: 7
+root: 5
+root: int: 7
 int: i
 @: p int @i
-i := 5
+i: 5
 int: first \p
-i:=7
+i: 7
 int: second \p
 Box:
     int: value 1
@@ -14,24 +15,24 @@ Box:
         int: item 2
     end: Child
 end: Box
-Box\value := root + 2
-Box\Child\item := 11
+Box\value: root + 2
+Box\Child\item: 11
 fn: tick () int (int: calls 0)
-    calls := calls + 1
+    calls: calls + 1
     return: 3
 end: tick
 fn: local (int: arg) int
-    x := 7
+    x: 7
     int: x
-    arg := arg + 1
-    x := x + arg
-    x := x + tick()
+    arg: arg + 1
+    x: x + arg
+    x: x + tick()
     return: x
 end: local
 int: local_result local(4)
 int: calls tick\var\calls
 sub: bump (int: delta 2) (int: count 0)
-    count := count + delta
+    count: count + delta
 end: bump
 bump()
 bump(3)
@@ -41,8 +42,8 @@ Code:
         int: x 1
         int: y 2
     end: var
-    x := x + 1
-    y := x * 2
+    x: x + 1
+    y: x * 2
 end: Code
 Data:
     int: y 30
@@ -53,27 +54,27 @@ int: data_x Data\x
 int: data_y Data\y
 int: model_x Code\var\x
 fn: change (Box: target) int
-    target\value := 17
+    target\value: 17
     return: target\value
 end: change
 int: changed change(Box)
 int: nested_value Box\Child\item
 fn: clean_path () int (int: x 1)
-    var\x := 9
+    var\x: 9
     return: x * 10 + var\x
 end: clean_path
 int: clean_snapshot clean_path()
 int: clean_published clean_path\var\x
 fn: dirty_path () int (int: x 1)
-    x := 2
-    var\x := 9
+    x: 2
+    var\x: 9
     return: x * 100 + var\x
 end: dirty_path
 int: dirty_snapshot dirty_path()
 int: dirty_published dirty_path\var\x
 int: n 0
-for: (n := 0; n < 3; n := n + 1)
-    root := root + 1
+for: (n: 0; n < 3; n: n + 1)
+    root: root + 1
 finally:
-    root := root + 10
+    root: root + 10
 ---

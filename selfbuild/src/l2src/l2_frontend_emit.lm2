@@ -4431,8 +4431,9 @@ fn: lm_compiler_check_primary (const: (@: source_node c.LmP0Node); int: mi; cons
         if: c.lm_compiler_mad_host_of(mi) >= 0 && c.lm_compiler_mad_host_own(c.lm_compiler_mad_host_of(mi), (cast: (const: @: c.LmP0Text) (source_node\as\atom))) >= 0
             return: (cast: (int) (0))
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "unresolved name")))
-    # `place := value` (the author, 2026-11-07) is no call of the callable the place holds: the write is checked as a write.
-    if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && (source_node\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0
+    # Only the call mark calls a held callable (the author 2026-11-09): `place: value` and `place := value` (M6 4b) are no
+    # call of the callable the place holds -- the write is checked as a write.
+    if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && (source_node\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0
         return: (cast: (int) (lm_compiler_check_held_call(source_node, (cast: (int) (c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))))), mi, path)))
     if: source_node\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_frame_head(source_node, "@")
         return: (cast: (int) (lm_compiler_check_addr(source_node, mi, path)))

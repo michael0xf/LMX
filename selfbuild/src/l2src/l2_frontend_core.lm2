@@ -2420,9 +2420,10 @@ fn: lm_compiler_bind_node_content (const: (@: n c.LmP0Node); int: mi; const: (@:
         return: (cast: (int) (0))
     if: c.lm_compiler_frame_head(n, "fn") != 0 || c.lm_compiler_frame_head(n, "sub") != 0
         return: (cast: (int) (0))
-    # `place := value` (the author, 2026-11-07; the book, assign-known) calls nothing: a callable the place holds is not
-    # called by the operator, so no call is bound at its head; its right side is visited as a value below.
-    if: n\as\frame\head != 0 && n\as\frame\body != 0 && c.lm_compiler_place_write_node(n) = 0 && (n\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U
+    # Only the call mark calls (the author 2026-11-09): `place: value` and `place := value` (M6 4b; the book, assign-known)
+    # call nothing -- a callable the place holds is not called, so no call is bound at its head; its right side is
+    # visited as a value below.
+    if: n\as\frame\head != 0 && n\as\frame\body != 0 && c.lm_compiler_place_write_node(n) = 0 && (n\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
         idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (n\as\frame\head)), @ fi)
         if: idx >= 0 && idx != e_cell[0] && lm_compiler_bind_call(n, idx, 0 - 1, path) != 0
             return: (cast: (int) (1))

@@ -309,6 +309,17 @@ failures`, G1 = G2, runtime G1 = rt76, G0 отличается от G1 одно�
 OPEN: вычисляемые, нетипизированные и вложенные хвосты в lowering; позиционная записанная Structure (`take((y: int: 6))` —
 прежний отказ «y is not an argument of take»); граф — `x: 4`, чтение `merge` по роли.
 
+**Срез Opus 349: `left: right` доходит до каждой записи `:=` (M6 4b, часть 1)**
+([запись](witnesses/known-write-colon-20261110/notes.md); книга assign-known RU:424; Codex CODEX-OPUS-345-4A-REPLY-20261110T041147Z-01,
+пункт 4). Граф уже писал известные места двоеточием (те же значения, иной дамп). Lowering читал вызовом запись места,
+держащего callable — callable формал `cb: two`, привязку `target: two` («more arguments than cb has formals»):
+`lm_compiler_is_asgn`, сканирование actuals, проверка held callable и сбор теперь отличают вызов меткой вызова, а не
+флагом `:=`. Положительные фикстуры `:=` переписаны `left: right` (dyn `assign_known`, `assign_typed_known`; graph
+`known_assignment`, `merge_reference`, `reference_alias`, `named_arguments`). Проверка: boot350 (source70, tool49, G0
+fehost20) — `BOOTSTRAP quick 0 failures`, G0 = G1 = G2, runtime G1 = rt76; suite350 — 149 строк, 0 отказов; graph-check
+check86 — 88 строк, 0 отказов. OPEN (срез 350):
+удаление самого `:=` — отказ P0, ветви флага, прежний оператор в построенном графе, отказные фикстуры.
+
 **Поручение автора (организационно, 2026-11-10 01:30Z, через Codex CODEX-OPUS-AUTHOR-DOCS-PUSH-CONTINUE-CODE-20261110T013038Z-01):**
 закончить перенос грамматики, проверить документацию, закоммитить и запушить её и продолжать код по плану без ожидания
 подтверждений; все вопросы — Codex.

@@ -785,19 +785,25 @@ fn: lm_compiler_is_asgn (const: (@: stmt c.LmP0Node); int: mi) int
         return: (cast: (int) (1))
     # The head's role at the statement's site is the one a call head has there
     # (l2_call_head_method).  A head that calls -- a method, or what a callable
-    # formal carries -- is no assignment in any spelling.  A binding of the site
-    # that is no callable is assigned to, though a method of the unit has its
-    # name.  A caller with no site asks the unit's methods alone.
-    if: mi >= 0 && c.lm_compiler_call_head_method(mi, h, @ fi) >= 0
+    # formal carries -- is no assignment when the Frame carries the call mark: only `f(args)`, `f(): args` and the
+    # block `f():` call (the author 2026-11-09; lm_compiler_head_is_call).  Written with the colon alone, `f: v` is the
+    # general write of the place f names whatever it holds (M6 4b; the book, assign-known: `left: right`), as `:=` was
+    # -- a callable formal, a binding holding a method, a function-pointer local; the check refuses a method's name, no
+    # place.  A binding of the site that is no callable is assigned to, though a method of the unit has its name.  A
+    # caller with no site asks the unit's methods alone.
+    int: marked 0
+    if: (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
+        marked: 1
+    if: marked != 0 && mi >= 0 && c.lm_compiler_call_head_method(mi, h, @ fi) >= 0
         return: (cast: (int) (0))
-    # So is a C function pointer the site holds (l2_head_cfn_type): a call through its value in every form.
-    if: mi >= 0 && c.lm_compiler_head_cfn_type(mi, h) >= 0
+    # So is a C function pointer the site holds (l2_head_cfn_type): a call through its value by the call mark.
+    if: marked != 0 && mi >= 0 && c.lm_compiler_head_cfn_type(mi, h) >= 0
         return: (cast: (int) (0))
     # So is a head that names a held callable of the site (l2_call_head_held);
     # the statement that stores the callable merge is that binding's own.
-    if: mi >= 0 && c.lm_compiler_mad_declaring(stmt, mi) = 0 && c.lm_compiler_call_head_held(mi, h) >= 0
+    if: marked != 0 && mi >= 0 && c.lm_compiler_mad_declaring(stmt, mi) = 0 && c.lm_compiler_call_head_held(mi, h) >= 0
         return: (cast: (int) (0))
-    if: mi < 0 && c.lm_compiler_site_method(0 - 1, h) >= 0
+    if: marked != 0 && mi < 0 && c.lm_compiler_site_method(0 - 1, h) >= 0
         return: (cast: (int) (0))
     if: c.lm_compiler_is_known(h) || c.lm_compiler_predef_receiver(h) != 0
         return: (cast: (int) (0))
@@ -2941,8 +2947,9 @@ fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c
         idx: -1
     if: idx < 0
         held: c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (port_call\as\frame\head)))
-    # `place := value` (the author, 2026-11-07) calls nothing: its left side is written, its right side read as a value.
-    if: port_call\as != 0 && port_call\as\frame != 0 && (port_call\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+    # Only the call mark calls (the author 2026-11-09; lm_compiler_head_is_call): `place: value` and `place := value`
+    # (M6 4b) call nothing -- the left side is written, the right side read as a value.
+    if: port_call\as != 0 && port_call\as\frame != 0 && (port_call\as\frame\flags & c.LM_P0_FRAME_COMPACT) = 0U
         idx: -1
         held: -1
     ---

@@ -1,0 +1,67 @@
+# Probe 349/M6 4b (b: swap keeps `cb := two`, the rest left: right): tests/dyn/assign_known.lm2 with every `left := right` written `left: right` (the book,
+# assign-known: := removed). Entry 7; 81-90 the failing step.
+Box:
+    int: k 1
+end: Box
+Seen:
+    int: v 0
+end: Seen
+fn: one () int
+    Seen\v: 1
+    return: 1
+end: one
+fn: two () int
+    Seen\v: 2
+    return: 2
+end: two
+@: target one
+fn: f (int: a) int
+    a: a + 1
+    return: a
+end: f
+fn: swap (cb(fn: () int)) int
+    cb := two
+    return: cb()
+end: swap
+fn: run () int
+    int: x 1
+    x: 5
+    if: x != 5
+        return: 81
+    x: 7
+    if: x != 7
+        return: 82
+    x: x + 2
+    if: x != 9
+        return: 83
+    if: f(3) != 4
+        return: 84
+    Box\k: 9
+    if: Box\k != 9
+        return: 85
+    size_t: s 1U
+    s: 3U
+    if: s != 3U
+        return: 86
+    x: 11
+    if: x != 11
+        return: 87
+    return: 7
+end: run
+int: code run()
+if: code = 7
+    target: two
+    call: target
+    if: Seen\v != 2
+        code: 88
+---
+if: code = 7
+    code: 7
+    if: code != 7
+        code: 89
+---
+if: code = 7 && swap(one) != 2
+    code: 90
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

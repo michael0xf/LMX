@@ -1,37 +1,20 @@
 # LMX semantics: worked explanations
 
 <a id="p0-container-correction"></a>
-## 1. GROSS ERROR — stripping the sole non-empty anonymous container in P0
+## 1. The empty Structure and the sole container in P0
 
-The previous rule under which P0 replaces the sole non-empty anonymous
-Structure with its fields is wrong. **P0 code must be corrected to preserve
-every explicit non-empty anonymous container, including a sole one, in every
-context.** Stripping it in advance changes not only calls but also
-declarations, descriptions, and data structures, where no such expansion applies.
+Removing the sole non-empty anonymous container in P0 is not an error: the
+former requirement to fix it in the P0 code is withdrawn on the author's
+direct instruction ([the author's clarification of 2026-11-10](../LMX_blog/2026-11-10.md)).
+Supplying a sole argument Structure as the entire actual-argument Structure
+is a rule of the semantics of an already resolved function or method call,
+at argument preparation, not of P0.
 
-```lmx
-f(a b)
-f({a b})
-```
-
-`f(a b)` has two fields `a`, `b`, whereas `f({a b})` has one anonymous
-container holding those two fields. **P0 preserves these different trees.**
-It does not know whether the head will resolve to a function, method,
-declaration, or another consumer.
-
-The sole argument Structure is expanded only by the semantics of an
-already resolved function or method call, when accepted as the entire
-actual-argument Structure: the pair above can produce one `a`, `b` list.
-This is semantic call expansion, not normalization of the source tree.
-Other contexts retain the non-empty container. Curly-bracket Structure
-descriptions follow the same rule: being the sole container does not
-authorize P0 to strip it.
-
-An empty Structure is outside this requirement: expanding it in P0 is not
-an error ([the author's clarifications of 2026-11-09](../LMX_blog/2026-11-09.md)).
-Three forms with the same meaning, an empty Structure, yield one P0 tree:
-`A{}`, the short form `A: {}`, and the block record of `A` with an empty
-body. The block closes under the general boundary rules, for example:
+Expanding an empty Structure in P0 is not an error either ([the author's
+clarifications of 2026-11-09](../LMX_blog/2026-11-09.md)). Three forms with
+the same meaning, an empty Structure, yield one P0 tree: `A{}`, the short
+form `A: {}`, and the block record of `A` with an empty body. The block
+closes under the general boundary rules, for example:
 
 ```lmx
 A{}

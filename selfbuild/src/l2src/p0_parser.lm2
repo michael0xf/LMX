@@ -1558,7 +1558,9 @@ fn: lm_p0_record_mix_mark (@: document c.LmP0Document; @: structure c.LmP0Struct
     if: p0_node = 0
         return: 0
 
-    p0_node\flags: p0_node\flags | c.LM_P0_NODE_MIX
+    # A brace group is an ordinary anonymous Structure, not a Mix mark (the grammar edition 2: the Mix is written `[...]`;
+    # the author 2026-11-10: all brackets parse by the same rules): its content, parsed by the same P0, is a field the
+    # consumers read. The Mix of square brackets is not implemented yet.
     lm_p0_position_in_slice(text, byte_count, start, line, column, @ span_line, @ span_column)
     p0_node\span\line: span_line
     p0_node\span\column: span_column
@@ -1596,23 +1598,19 @@ fn: lm_p0_record_mix_mark (@: document c.LmP0Document; @: structure c.LmP0Struct
                 if: lm_p0_postprocess_node(payload_document, (cast: (@: c.LmP0Node) payload_document\root)) = 0
                     lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
                 else:
+                    # The written tree is kept as parsed (the author 2026-11-10: the empty short form is admitted, «никаких
+                    # раскрытий в парсере нигде не нужно»): no zero-body check, no substitution of a child container.
                     lm_p0_close_empty_by_end_in_node((cast: (@: c.LmP0Node) payload_document\root))
-                    if: lm_p0_validate_nonempty_colon_frames_in_node(payload_document, (cast: (const: @: c.LmP0Node) payload_document\root)) = 0
-                        lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
+                    if: c.lm_own_tree_cut(payload_document\tree_arena) != 0
+                        lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while promoting MIX lazy text edges")
                     else:
-                        if: lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) payload_document\root)) = 0
-                            lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
+                        if: c.lm_own_arena_absorb(document\tree_arena, payload_document\tree_arena) != 0
+                            lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while moving MIX tree into parser arena")
                         else:
-                            if: c.lm_own_tree_cut(payload_document\tree_arena) != 0
-                                lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while promoting MIX lazy text edges")
-                            else:
-                                if: c.lm_own_arena_absorb(document\tree_arena, payload_document\tree_arena) != 0
-                                    lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while moving MIX tree into parser arena")
-                                else:
-                                    p0_node\as\structure: payload_document\root\as\structure
-                                    payload_document\root\as\structure: 0
-                                    lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\structure), payload_offset)
-                                    status: 1
+                            p0_node\as\structure: payload_document\root\as\structure
+                            payload_document\root\as\structure: 0
+                            lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\structure), payload_offset)
+                            status: 1
         ---
 
         lm_p0_document_destroy_owners(payload_document)
@@ -2583,7 +2581,7 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                         restart_parse_context: 1
                         break
                     else:
-                        if: (((i < byte_count) && (text[i] = '(')) && (head_end > start))
+                        if: (((i < byte_count) && ((text[i] = '(') || (text[i] = '{'))) && (head_end > start))
                             # Operators before a compact call remain fields;
                             # the complete receiver path owns the argument list.
                             # Index expressions are part of that path, so their
@@ -2621,9 +2619,17 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                             p0_node\as\frame\head\data: (text + start)
                             p0_node\as\frame\head\length: (head_end - start)
-                            p0_node\as\frame\flags: c.LM_P0_FRAME_COMPACT
-                            if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
-                                return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                            # Brackets attached to the head bound its body by the same rules (the author 2026-11-10: «Все
+                            # разбираются по тем же правилам что и фигурные!!! Вызов делается прилипанием круглых скобок к
+                            # внешнему идентификатору»): parentheses give the call mark, braces a described Structure.
+                            if: (text[i] = '(')
+                                p0_node\as\frame\flags: c.LM_P0_FRAME_COMPACT
+                                if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                            else:
+                                if: (lm_p0_find_matching_brace(document, text, byte_count, i, line, column, @ close_index) = 0)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                            ---
                             child_indent_stack: lm_p0_indent_stack_new_empty()
                             if: (child_indent_stack = 0)
                                 lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
@@ -4379,81 +4385,6 @@ fn: lm_p0_wrap_fields_from_line (@: document c.LmP0Document; @: structure c.LmP0
     return: 1
 end: lm_p0_wrap_fields_from_line
 
-# Original: parser.lm1:4157 lm_p0_normalize_sole_anonymous_container
-fn: lm_p0_normalize_sole_anonymous_container (@: body c.LmP0Structure) int
-    @: only c.LmP0Field
-    @: container c.LmP0Node
-    @: inner c.LmP0Structure
-    if: body = 0
-        return: 1
-    if: body\field_count != 1U
-        return: 1
-    only: body\first_field
-    if: only = 0 || only\value = 0
-        return: 1
-    container: only\value
-    if: container\kind != c.LM_P0_NODE_STRUCTURE
-        return: 1
-    # Flagged/marked Structures (MIX / INACTIVE / POSITIONAL_SKIP) are not plain anonymous containers.
-    if: (container\flags & (c.LM_P0_NODE_INACTIVE | c.LM_P0_NODE_MIX | c.LM_P0_NODE_POSITIONAL_SKIP)) != 0U
-        return: 1
-    if: container\as = 0 || container\as\structure = 0
-        return: 1
-    inner: container\as\structure
-    # Opaque / trailer-bearing Structure stays a value field (one-level sole bag).
-    if: inner\trailer != 0
-        return: 1
-    body\first_field: inner\first_field
-    body\last_field: inner\last_field
-    body\field_count: inner\field_count
-    inner\first_field: 0
-    inner\last_field: 0
-    inner\field_count: 0U
-    only\value: 0
-    only\next: 0
-    return: 1
-end: lm_p0_normalize_sole_anonymous_container
-
-# Original: parser.lm1:4191 lm_p0_normalize_sole_anonymous_in_trailer
-fn: lm_p0_normalize_sole_anonymous_in_trailer (@: trailer c.LmP0Trailer) int
-    if: trailer = 0
-        return: 1
-    if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) trailer\body)) = 0
-        return: 0
-    return: lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) trailer\body))
-end: lm_p0_normalize_sole_anonymous_in_trailer
-
-# Original: parser.lm1:4199 lm_p0_normalize_sole_anonymous_in_node
-fn: lm_p0_normalize_sole_anonymous_in_node (@: p0_node c.LmP0Node) int
-    if: p0_node = 0
-        return: 1
-    if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && p0_node\as\frame != 0
-        if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) p0_node\as\frame\body)) = 0
-            return: 0
-        if: lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) p0_node\as\frame\body)) = 0
-            return: 0
-        return: lm_p0_normalize_sole_anonymous_in_trailer((cast: (@: c.LmP0Trailer) p0_node\as\frame\trailer))
-    if: p0_node\kind = c.LM_P0_NODE_STRUCTURE && p0_node\as != 0
-        if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) p0_node\as\structure)) = 0
-            return: 0
-        return: lm_p0_normalize_sole_anonymous_in_trailer((cast: (@: c.LmP0Trailer) p0_node\as\structure\trailer))
-    return: 1
-end: lm_p0_normalize_sole_anonymous_in_node
-
-# Original: parser.lm1:4215 lm_p0_normalize_sole_anonymous_in_structure
-fn: lm_p0_normalize_sole_anonymous_in_structure (@: structure c.LmP0Structure) int
-    const: (@: field c.LmP0Field)
-    if: structure = 0
-        return: 1
-    field: structure\first_field
-    while: (field != 0)
-        if: (lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) field\value)) = 0)
-            return: 0
-        field: field\next
-    ---
-    return: 1
-end: lm_p0_normalize_sole_anonymous_in_structure
-
 # Original: parser.lm1:4227 lm_p0_colon_frame_empty
 fn: lm_p0_colon_frame_empty (const: (@: frame c.LmP0Frame)) int
     if: frame = 0
@@ -4563,58 +4494,6 @@ sub: lm_p0_close_empty_by_end_in_structure (@: structure c.LmP0Structure)
     ---
 end: lm_p0_close_empty_by_end_in_structure
 
-# Original: parser.lm1:4319 lm_p0_validate_nonempty_colon_frames_in_trailer
-fn: lm_p0_validate_nonempty_colon_frames_in_trailer (@: document c.LmP0Document; const: (@: trailer c.LmP0Trailer)) int
-    if: (trailer = 0)
-        return: 1
-    if: lm_p0_colon_trailer_empty(trailer) != 0 && ((trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, 1U, 1U, "empty colon Frame is not allowed")
-        return: 0
-    return: lm_p0_validate_nonempty_colon_frames_in_structure(document, (cast: (const: @: c.LmP0Structure) trailer\body))
-end: lm_p0_validate_nonempty_colon_frames_in_trailer
-
-# Original: parser.lm1:4328 lm_p0_validate_nonempty_colon_frames_in_node
-fn: lm_p0_validate_nonempty_colon_frames_in_node (@: document c.LmP0Document; const: (@: p0_node c.LmP0Node)) int
-    size_t: line 1U
-    size_t: column 1U
-    if: (p0_node = 0)
-        return: 1
-    if: p0_node\span != 0
-        line: p0_node\span\line
-        column: p0_node\span\column
-    ---
-    if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && lm_p0_colon_frame_empty((cast: (const: @: c.LmP0Frame) p0_node\as\frame)) != 0 && ((p0_node\as\frame\flags & c.LM_P0_FRAME_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
-        return: 0
-    if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && lm_p0_colon_trailer_empty((cast: (const: @: c.LmP0Trailer) p0_node\as\frame\trailer)) != 0 && ((p0_node\as\frame\trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
-        return: 0
-    if: p0_node\kind = c.LM_P0_NODE_STRUCTURE && p0_node\as != 0 && lm_p0_colon_trailer_empty((cast: (const: @: c.LmP0Trailer) p0_node\as\structure\trailer)) != 0 && ((p0_node\as\structure\trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
-        return: 0
-    if: (p0_node\kind = c.LM_P0_NODE_FRAME)
-        if: (lm_p0_validate_nonempty_colon_frames_in_structure(document, (cast: (const: @: c.LmP0Structure) p0_node\as\frame\body)) = 0)
-            return: 0
-        return: lm_p0_validate_nonempty_colon_frames_in_trailer(document, (cast: (const: @: c.LmP0Trailer) p0_node\as\frame\trailer))
-    if: (p0_node\kind = c.LM_P0_NODE_STRUCTURE)
-        if: (lm_p0_validate_nonempty_colon_frames_in_structure(document, (cast: (const: @: c.LmP0Structure) p0_node\as\structure)) = 0)
-            return: 0
-        return: lm_p0_validate_nonempty_colon_frames_in_trailer(document, (cast: (const: @: c.LmP0Trailer) p0_node\as\structure\trailer))
-    return: 1
-end: lm_p0_validate_nonempty_colon_frames_in_node
-
-# Original: parser.lm1:4356 lm_p0_validate_nonempty_colon_frames_in_structure
-fn: lm_p0_validate_nonempty_colon_frames_in_structure (@: document c.LmP0Document; const: (@: structure c.LmP0Structure)) int
-    const: (@: field c.LmP0Field)
-    field: structure\first_field
-    while: (field != 0)
-        if: (lm_p0_validate_nonempty_colon_frames_in_node(document, (cast: (const: @: c.LmP0Node) field\value)) = 0)
-            return: 0
-        field: field\next
-    ---
-    return: 1
-end: lm_p0_validate_nonempty_colon_frames_in_structure
-
 # Original: parser.lm1:4367 lm_p0_parse_bytes
 fn: lm_p0_parse_bytes (const: (@: source char); size_t: source_length; @@: out_document c.LmP0Document) int
     @: document c.LmP0Document
@@ -4639,10 +4518,9 @@ fn: lm_p0_parse_bytes (const: (@: source char); size_t: source_length; @@: out_d
         return: 1
     if: lm_p0_parse_stream(document)
         if: lm_p0_postprocess_node(document, (cast: (@: c.LmP0Node) document\root))
+            # The written tree is kept as parsed (the author 2026-11-10): an empty short Frame `a:` is admitted, and no
+            # child container -- a sole anonymous one or an empty one -- is replaced by its fields.
             lm_p0_close_empty_by_end_in_node((cast: (@: c.LmP0Node) document\root))
-            if: lm_p0_validate_nonempty_colon_frames_in_node(document, (cast: (const: @: c.LmP0Node) document\root))
-                lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) document\root))
-            ---
         ---
     if: (document\diagnostic\code = 0)
         if: (c.lm_own_tree_cut(document\tree_arena) != 0)
@@ -5095,3 +4973,20 @@ fn: lm_p0_end_closes_layout_call (const: (@: frame c.LmP0Frame)) int
         return: 0
     return: lm_p0_atom_names((cast: (const: @: c.LmP0Node) only\value), (cast: (const: @: c.LmP0Text) frame\head))
 end: lm_p0_end_closes_layout_call
+
+# The close of a brace group `{...}` attached to a head (the grammar edition 2: braces bound a Structure, as parentheses
+# do; the author 2026-11-10: all brackets parse by the same rules): the index of its `}` in close_index -- quotes,
+# comments and fences inside skipped (lm_p0_scan_brace_mark_unchecked). 1, or 0 with the diagnostic of an unterminated
+# group.
+fn: lm_p0_find_matching_brace (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; size_t: open_index; size_t: line; size_t: base_column; @: close_index size_t) int
+    int: closed 0
+    size_t: end_index lm_p0_scan_brace_mark_unchecked(text, byte_count, open_index, @ closed)
+    size_t: diagnostic_line 0U
+    size_t: diagnostic_column 0U
+    if: closed = 0 || end_index <= open_index
+        lm_p0_position_in_slice(text, byte_count, open_index, line, base_column, @ diagnostic_line, @ diagnostic_column)
+        lm_p0_set_diagnostic(document, 31, diagnostic_line, diagnostic_column, "unterminated brace group")
+        return: 0
+    close_index[0]: end_index - 1U
+    return: 1
+end: lm_p0_find_matching_brace

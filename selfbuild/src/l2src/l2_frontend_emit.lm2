@@ -4461,6 +4461,11 @@ fn: lm_compiler_check_primary (const: (@: source_node c.LmP0Node); int: mi; cons
         return: (cast: (int) (c.lm_compiler_check_implements(source_node, path)))
     # D-106: a callable formal of this method shadows a unit method of its name.
     idx: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (port_call\head)), @ fi)
+    # Only the call mark calls (the author 2026-11-09; lm_compiler_head_is_call): a callable's Frame written with the
+    # colon alone is no call in a value either -- a method's, a held callable's, a function-pointer local's or binding's,
+    # the C door's. It describes a field of the callable's name, which no value receives.
+    if: (port_call\flags & c.LM_P0_FRAME_COMPACT) = 0U && (idx >= 0 || c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (port_call\head))) >= 0 || c.lm_compiler_head_cfn_type(mi, (cast: (const: @: c.LmP0Text) (port_call\head))) >= 0 || c.lm_compiler_is_known((cast: (const: @: c.LmP0Text) (port_call\head))) != 0 || (c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (port_call\head))) >= 0 && ml_ty_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (port_call\head)))] = 40))
+        return: (cast: (int) (c.lm_compiler_error(path, source_node, "a Frame written with a colon calls nothing (the author 2026-11-09: a call is written f(args)); its head names a callable, and this translation takes no such Frame as a value (a named actual a: value comes with the call binder's next step)")))
     # The Frame of an ordinary named Structure is a structural value, not a
     # call. A nonempty body still needs the common structural-value constructor
     # before this check can consume declarations inside it (defects.md).
@@ -5433,6 +5438,16 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         q_at_cell[0]: stmt
         c.lm_compiler_here_at(stmt)
         q_path_cell[0]: path
+        # `c.X: …` without the call mark (the author 2026-11-09; CODEX-OPUS-344-M6-ANSWERS-20261110T014806Z-01) calls no C
+        # function, and the C door declares no storage to write: it is the declaration of a place of the C type X the
+        # unit's declarations give (`c.LmxActivation: activation`), or nothing the program can mean.
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & (c.LM_P0_FRAME_COMPACT | c.LM_P0_FRAME_ASSIGN | 4096U)) = 0U && c.lm_compiler_c_stmt_door((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0 && c.lm_compiler_predef_receiver((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "a C door Frame written with a colon calls nothing (the author 2026-11-09: a C function is called by c.name(args)), and the door declares no storage to write: its head is no C type the unit's declarations give")))
+        # `f: …` without the call mark, f a method of the unit by its name (not a place holding a callable -- a formal, a
+        # binding, a local --, which the general write takes): the write of the place f, and a method is no place a
+        # statement writes (the same answers: «f: v … общий маршрут разрешения принимающего места»).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & (c.LM_P0_FRAME_COMPACT | c.LM_P0_FRAME_ASSIGN | 4096U)) = 0U && c.lm_compiler_head_is_method_call(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0 && c.lm_compiler_call_binding_own(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) < 0
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "a Frame written with a colon calls nothing (the author 2026-11-09: a call is written f(args)): it writes the place its head names, the place of a method, which this translation writes no value into")))
         int: definition_own c.lm_compiler_own_by_decl(mi, stmt)
         # A reached graph-valued write to explicit data can raise implements.
         # Its native entry needs the same status channel as other model writes.
@@ -5684,10 +5699,10 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # A resolved fnptr local (type 40) is a call in any surface form:
-        # parenthesized, colon, or vertical. Type-headed decl+init is l2_fnptr_local; later "f: value" is a call.
-        # It is the C call through the local's value (l2_external_head), checked as its value form is: each actual.
-        if: c.lm_compiler_frame_head(stmt, "if") = 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) >= 0 && ml_ty_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))] = 40
+        # A resolved fnptr local (type 40) is called by the call mark: `f(args)` or its layout `f(): args` (the author
+        # 2026-11-09). Type-headed decl+init is l2_fnptr_local; a later `f: value` writes the local, as any write does.
+        # The call is the C call through the local's value (l2_external_head), checked as its value form is: each actual.
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) >= 0 && ml_ty_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))] = 40
             if: lm_compiler_check_primary(stmt, mi, path) != 0
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
@@ -10268,6 +10283,9 @@ fn: lm_compiler_rw_operand (const: (@: source_node c.LmP0Node); int: ty; int: pa
         # method (kind 4, its occurrence -- a shared terminal, Q22 = II), called as that method is, on the occurrence
         # the path selects (l2_rw_call).
         idx: c.lm_compiler_call_head_method(rw_mi_cell[0], t, @ formal)
+        # Only the call mark calls (the author 2026-11-09): a colon Frame of a callable is no call in a value.
+        if: (source_node\as\frame\flags & c.LM_P0_FRAME_COMPACT) = 0U && (idx >= 0 || c.lm_compiler_call_head_held(rw_mi_cell[0], t) >= 0)
+            return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a Frame written with a colon")))
         if: idx >= 0 && idx != e_cell[0]
             if: source_node\as\frame\body = 0
                 return: (cast: (int) (lm_compiler_rw_call(source_node, idx, formal, 0, parent, out)))
@@ -12684,8 +12702,9 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     # callable the place holds -- l2_call_head_method answers the method a binding holds now, which would read
     # `target := two` as a call of that method with the actual `two`: the operator is the write of the place, read
     # below as the binding's store (lm_compiler_method_pointer_candidate), as the native emitter reads it (l2_is_asgn).
+    # Only the call mark calls (the author 2026-11-09): a colon Frame `f: args` is no call statement, whatever f names.
     idx: -1
-    if: c.lm_compiler_place_write_node(stmt) = 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U
+    if: c.lm_compiler_place_write_node(stmt) = 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
         idx: c.lm_compiler_call_head_method(rw_mi_cell[0], h, @ formal)
     ---
     if: idx >= 0 && idx != e_cell[0]
@@ -12695,9 +12714,9 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    # A held callable of the site applied by a statement: its call, as in an expression -- not under `:=`, which writes
-    # the place (the author, 2026-11-07).
-    if: idx < 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
+    # A held callable of the site applied by a statement's call mark: its call, as in an expression -- not under `:=`,
+    # which writes the place (the author, 2026-11-07), nor by a colon Frame (the author, 2026-11-09).
+    if: idx < 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) = 0U && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lm_compiler_call_head_held(rw_mi_cell[0], h) >= 0
         if: lm_compiler_rw_mad_call(stmt, (cast: (int) (c.lm_compiler_call_head_held(rw_mi_cell[0], h))), into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1

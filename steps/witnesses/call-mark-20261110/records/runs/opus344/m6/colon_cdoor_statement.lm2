@@ -1,0 +1,14 @@
+# M6: `c.free: q` is not a call of the C function free (CODEX-OPUS-344-M6-ANSWERS: its call is c.free(q)); the C door
+# declares no storage, so the colon Frame writes no place either.
+include: "<stdlib.h>"
+fn: run () int
+    @: q char 0
+    q: c.malloc(4U)
+    if: q = 0
+        return: 80
+    c.free: q
+    c.free(q)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

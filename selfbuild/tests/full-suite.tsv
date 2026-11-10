@@ -26,6 +26,12 @@ refuses	os/os_item_refused.lm2	os_item_refused.lm2:4:9: an os branch holds metho
 refuses	os/os_branch_head_refused.lm2	os_branch_head_refused.lm2:7:5: an os branch is win or default	n
 refuses	os/os_branch_twice_refused.lm2	os_branch_twice_refused.lm2:7:5: an os block has each branch once	n
 refuses	os/os_second_block_refused.lm2	os_second_block_refused.lm2:12:1: a second os block is not supported yet (the program reads one os block)	n
+# M6 (slice 344; the author 2026-11-09: only f(args), f(): args and the block f(): call): each form calls once; a colon
+# Frame of a method, in a statement or a value, and of the C door calls nothing and is refused as a write or a value
+runs	calls/call_marked_forms.lm2	7	nf
+refuses	calls/colon_method_statement_refused.lm2	colon_method_statement_refused.lm2:15:5: a Frame written with a colon calls nothing (the author 2026-11-09: a call is written f(args)): it writes the place its head names, the place of a method, which this translation writes no value into	nf
+refuses	calls/colon_method_value_refused.lm2	colon_method_value_refused.lm2:8:13: a Frame written with a colon calls nothing (the author 2026-11-09: a call is written f(args)); its head names a callable, and this translation takes no such Frame as a value (a named actual a: value comes with the call binder's next step)	nf
+refuses	calls/colon_cdoor_statement_refused.lm2	colon_cdoor_statement_refused.lm2:10:5: a C door Frame written with a colon calls nothing (the author 2026-11-09: a C function is called by c.name(args)), and the door declares no storage to write: its head is no C type the unit's declarations give	nf
 # the C door: a tagged C type named through a define (Q-C); a call with one actual received by a reference
 runs	cdoor/define_struct_tm.lm2	7	nf
 runs	cdoor/c_call_one_actual.lm2	7	nf

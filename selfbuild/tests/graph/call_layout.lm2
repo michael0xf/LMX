@@ -1,0 +1,28 @@
+# M6 (slice 344; the author 2026-11-09: «_только_ f(3) или f(): 3 или f(): / . 3 / end: f»): the call mark of every form
+# is the application [(), frame] of the clean graph, applied once by the interpreter and by both emitted codes -- the
+# compact call, its layout `f(): args` as a statement, a value and an actual, and its block `f():` ... `end: f`, at the
+# root and in a body. a counts its calls: 2 at the root, 3 in values, 3 in body.
+fn: a (int: x) int (int: calls 0)
+    calls: calls + 1
+    return: x + 1
+end: a
+fn: mytest (int: v) int
+    return: v + 30
+end: mytest
+fn: body () int
+    a(): 1
+    a():
+        2
+    end: a
+    int: r a(): 3
+    return: r
+end: body
+a(): 4
+a():
+    5
+end: a
+int: compact a(6)
+int: layout a(): 7
+int: actual mytest(a(): 8)
+int: inner body()
+int: calls a\var\calls

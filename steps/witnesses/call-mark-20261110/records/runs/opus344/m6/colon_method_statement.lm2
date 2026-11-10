@@ -1,0 +1,21 @@
+# M6: `bump: q, 1` is not a call of the method bump (only f(args) calls): the general write of a place named bump, which
+# a method is not. Before M6 it called bump (the buffer's byte became 1, exit 80).
+include: "<stdlib.h>"
+fn: bump (@: p char; int: by) int
+    p[0]: (cast: (char) (p[0] + by))
+    return: 0
+end: bump
+fn: run () int
+    @: q char 0
+    q: c.malloc(4U)
+    if: q = 0
+        return: 79
+    q[0]: (cast: (char) 0)
+    bump: q, 1
+    if: q[0] != 0
+        return: 80
+    c.free(q)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

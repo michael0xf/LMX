@@ -21,16 +21,16 @@ fn: condition () int (
 end: condition
 fn: transitions () int
     int: attempt 0
-    until: (condition) ((attempt (attempt + 1)) (if (attempt = 1) ((redo))) (if (attempt = 2) ((continue))))
+    until: condition() ((attempt (attempt + 1)) (if (attempt = 1) ((redo))) (if (attempt = 2) ((continue))))
     return: attempt
 end: transitions
 fn: leave () int
     int: n 0
-    until: (condition) ((n (n + 1)) (break))
+    until: condition() ((n (n + 1)) (break))
     return: n
 end: leave
 fn: early () int
-    until: (condition) ((return 9))
+    until: condition() ((return 9))
 end: early
 fn: body_fields () int
     late: 4

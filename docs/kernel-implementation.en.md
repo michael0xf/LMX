@@ -101,8 +101,9 @@ one kernel operation `lmx_graph_merge_values`, for the interpreter and native al
 layout and the new fields at the end; a same-named field of a later operand is written into the model's slot by the
 admission of an assignment (the same cell). One source → copy map serves all operands: operand roots map to the
 result, shared targets and cycles stay shared, the copies' name rows keep the canonical names; the sources are not
-changed. A head naming a function is called once and no model field intercepts the call: `f(3)` and `f: 3` are one
-graph, and an int result is no Structure — an admission refusal (4). A Frame whose head is no function describes a
+changed. A head naming a function is called once and no model field intercepts the call; only the call mark `f(3)`
+calls (since M6, the author 2026-11-09: `f: 3` is no call but the write of a place), and an int result is no Structure
+— an admission refusal (4). A Frame whose head is no function describes a
 structure; its copy carries written names, and copying their lexical chain is open (5), as is copying callables, so the
 result has no lexical parent. `mytest(merge(mytest\args; (a: int: 5)))` = 35 in all three modes, the native code runs
 `merge` at execution time. `merge(f1; f2)` of two functions (the builder does not build a descriptor without a body), a
@@ -473,9 +474,11 @@ name answers from there on («в любой момент можем подста
 root, §6.1), whatever Structure is given (code, a `merge` result, a created function), and the name is never taken from
 the operands' names. F's `parent` is the Frame of the application, and the free names of its body resolve from it
 (§3.5): the name `f1` in a body `merge` copied is the function `f1` of this block, `k` the root's place as it is at the
-call. With a callable named `name` in scope, `fn: name: 7; ...` applies that callable (its head answers it: the ordinary
-call, once) and its value binds no part (5); `fn: name := k3; ...` names the part explicitly whatever callable exists
-(the author 2026-11-09). The executors run results whose requirement is `int` (`lmx_graph_call_shape`); another
+call. Since M6 (slice 344, the author 2026-11-09: only `f(args)` calls) the part's Frame `name: 7` calls nothing and
+binds the part `name` by its head whatever callable named `name` exists -- the value 7 is no name (5); the reading of
+slice 334 (such a Frame is the call of that callable) is withdrawn with the colon call, and a call in a part is written
+`name: name(7)`, evaluated where the traversal reaches the Frame (`fn_name_call`). `fn: name := k3; ...` names the part
+the same way (the author 2026-11-09). The executors run results whose requirement is `int` (`lmx_graph_call_shape`); another
 requirement stays the function's own -- the empty Structure of the author's `return: ()` is not replaced by `int`, and a
 call of such a function is refused (5, `fn_author_forms`).
 Refusals: a name that already answers in this block -- 4; no form, a value its formal does not receive, a field outside
@@ -677,8 +680,10 @@ through a `fromLmx`-like interning boundary. `independent: immutable` follows th
 
 Operands of `merge` are ordinary expressions with their general meaning (the author, 2026-11-08,
 [journal](../LMX_blog/2026-11-08.md)): a head naming a function is applied once and its result is the operand, and a
-model field of the same name never intercepts that call (`f(3)` and `f: 3` are one graph); a Frame whose head is no
-function describes a structure. One composition serves every operand, whatever made it (slice 334; Codex, review of
+model field of the same name never intercepts that call. Only the call mark applies: `f(3)` is built in the graph as the
+ordinary Lmx of the application operation `[(), frame]` (slice 344, the author 2026-11-09: «_только_ f(3) или f(): 3
+или f(): / . 3 / end: f»); a Frame `f: 3` calls nothing whatever its head, and a Frame whose head is no function
+describes a structure. One composition serves every operand, whatever made it (slice 334; Codex, review of
 333: no special merge of functions): a slot whose value is a Structure that later operands give again as Structures is
 composed by the same level of `merge` through the same map, recursively (`lmx_graph_merge_level`), every field read by
 its value (`lmx_graph_field_value`) -- nested parts of data (`merge_nested_part`: the part `P` gets the new field `v`),

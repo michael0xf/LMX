@@ -442,6 +442,23 @@ fn: lm_graph_build_int_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
     return: cell
 end: lm_graph_build_int_place
 
+# The call mark of P0 (the author 2026-11-09: «_только_ f(3) или f(): 3 или f(): / . 3 / end: f / других способов
+# вызова больше нет!»; the grammar's call mark) is the visible operation of the application: an unnamed Lmx [`()`,
+# frame], the word `()` and the Lmx of the Frame as written -- its head's name and its actuals, or [path, actuals] on a
+# path head. A Frame written with the colon alone is the Lmx of its head with no application around it, and no consumer
+# applies a callable it names (CODEX-OPUS-344-M6-ANSWERS-20261110T014806Z-01: the distinction lives in the graph, as
+# ordinary Lmx both consumers read). A word of the language written in the round form (`merge(f1)`, `int(5)`: the
+# author, «скобки это call, причем тут операторы») is its Frame as with the colon. No P0 flag survives construction.
+fn: lm_graph_build_apply (@: g c.LmxGraph; @: parent c.Lmx; @: frame void; @: tail c.LmP0Trailer; @@: out void) int
+    @: apply c.Lmx c.lmx_graph_lmx(g, parent, 2U)
+    if: apply = 0 || lm_graph_build_put(g, apply, 0U, c.lmx_graph_word(g, "()", 2U)) != 0 || lm_graph_build_put(g, apply, 1U, frame) != 0
+        return: 1
+    out[0]: (cast: (@: void) apply)
+    if: lm_graph_until_tail(tail) != 0
+        return: lm_graph_build_post(g, parent, apply, tail, out)
+    return: 0
+end: lm_graph_build_apply
+
 fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: text c.LmP0Text 0
@@ -478,6 +495,11 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
             status: lm_graph_build_selector(g, lm_graph_p0_data(text), lm_graph_p0_length(text), @ value)
             if: status != 0
                 return: status
+            if: (frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
+                status: lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), 0, value, 0, @ value)
+                if: status != 0
+                    return: status
+                return: lm_graph_build_apply(g, parent, value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
             return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), 0, value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
         ---
         head: c.lmx_graph_intern(lm_graph_p0_data(text), lm_graph_p0_length(text))
@@ -507,6 +529,11 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
             if: value = 0
                 return: 1
             return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), 0, value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
+        if: (frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lmx_graph_language_word(state, head) = 0
+            status: lm_graph_build_sequence(g, 0, lm_graph_p0_body(frame), head, 0, 0, @ value)
+            if: status != 0
+                return: status
+            return: lm_graph_build_apply(g, parent, value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
         return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), head, 0, (cast: (@: c.LmP0Trailer) frame\trailer), out)
     if: nd\kind = c.LM_P0_NODE_STRUCTURE
         source: lm_graph_p0_structure(nd)

@@ -1,0 +1,49 @@
+GRAPH-BEFORE-BEGIN
+fn: a (int: x) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: (x + 1)
+end: a
+fn: mytest (int: v) int
+    return: (v + 30)
+end: mytest
+fn: body () int
+    a(1)
+    a(2)
+    int: r a(3)
+    return: r
+end: body
+a(4)
+a(5)
+int: compact a(6)
+int: layout a(7)
+int: actual mytest(a(8))
+int: inner body()
+int: calls ((a \ var) \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: a (int: x) int (
+    int: calls 0
+)
+    calls: (calls + 1)
+    return: (x + 1)
+end: a
+fn: mytest (int: v) int
+    return: (v + 30)
+end: mytest
+fn: body () int
+    a(1)
+    a(2)
+    int: r a(3)
+    return: r
+end: body
+a(4)
+a(5)
+int: compact 7
+int: layout 8
+int: actual 39
+int: inner 4
+int: calls 8
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

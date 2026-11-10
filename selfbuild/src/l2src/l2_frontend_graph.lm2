@@ -20,10 +20,12 @@
 # unsigned, ulong, or a C door type `c.T`), formals `@: name T`, `T: name` and `int: name`; places `T: name [value]` (T a
 # C scalar word) and `@: name T [value]`; the statements `if:` (with the `else:` that follows it), `return: value`, the
 # write of a field through a path head (`owner\field: value`, §3.3, slice 337), the write of a formal or a place (`name:
-# value`) and a call -- a Frame at a statement's head named by a door name is a call or the declaration of a place by
-# that name's C declaration (the C door's declarations, below); the expressions: names, numbers, strings, the operations
-# = != < <= > >= + - * / % && ||, paths [owner, \, field] from a reference, `cast:` to a scalar or reference type, and
-# calls of the C door (`c.f(...)`) and of the module's own functions (with as many actuals as formals). The actuals of a call and the operands of an operation are evaluated once each, in
+# value`) and a call -- the application [(), frame] the builder makes of the call mark `f(args)` (slice 344, the author
+# 2026-11-09: only f(args) calls); a colon Frame at a statement's head named by a door name is the declaration of a
+# place by that name's C declaration (the C door's declarations, below) and calls nothing; the expressions: names,
+# numbers, strings, the operations = != < <= > >= + - * / % && ||, paths [owner, \, field] from a reference, `cast:` to
+# a scalar or reference type, and calls of the C door (`c.f(...)`) and of the module's own functions (with as many
+# actuals as formals). The actuals of a call and the operands of an operation are evaluated once each, in
 # lexical order: a value read before a later call is kept first in a local of its type (the order of calls, below). Any
 # other form is refused where it stands (`l2trans error: SOURCE: WHERE: WHY`): there is no fallback to the P0 path for a
 # module the recipe translates from its graph. The parts given after the source (the language's units of every machine
@@ -521,17 +523,20 @@ fn: lm_compiler_graph_calls (@: g c.LmxGraph; @: value void) int
     size_t: j 0U
     if: c.lmx_graph_kind(g, value) != 4
         return: 0
+    # An application [(), frame] (the call mark of P0, lm_graph_build_apply) runs a call; `c.sizeof` is the C operator (L2
+    # §20), no call: it runs nothing.
+    if: c.lmx_graph_applied(g, value) != 0
+        if: c.lmx_graph_name_of(g, (cast: (@: void) c.lmx_graph_applied(g, value))) = c.lmx_graph_intern("c.sizeof", 8U)
+            return: 0
+        return: 1
     expression: (cast: (@: c.Lmx) value)
     head: c.lmx_graph_name_of(g, value)
     if: head = c.lmx_graph_intern("cast", 4U)
         if: c.lmx_graph_count(expression) = 2U
             return: lm_compiler_graph_calls(g, c.lmx_graph_get(expression, 1U))
         return: 0
-    # `c.sizeof` is the C operator (L2 §20), no call: it runs nothing.
-    if: head = c.lmx_graph_intern("c.sizeof", 8U)
-        return: 0
-    if: head != 0
-        return: 1
+    # A Frame written with the colon alone runs no call itself (the author 2026-11-09: only f(args) calls); its fields
+    # are read below.
     while: j < c.lmx_graph_count(expression)
         if: lm_compiler_graph_calls(g, c.lmx_graph_get(expression, j)) != 0
             return: 1
@@ -629,6 +634,16 @@ fn: lm_compiler_graph_own_type (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
     if: kind != 4
         return: 1
     expression: (cast: (@: c.Lmx) value)
+    # The application [(), frame] of a function of the module has the type of its result.
+    if: c.lmx_graph_applied(g, value) != 0
+        expression: c.lmx_graph_applied(g, value)
+        head: c.lmx_graph_name_of(g, (cast: (@: void) expression))
+        if: head = 0 || lm_compiler_graph_callee(g, root, (cast: (@: void) expression)) != 2
+            return: 1
+        made: (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head))
+        lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, made)))
+        c.fputs(": ", f)
+        return: 0
     head: c.lmx_graph_name_of(g, value)
     if: head = c.lmx_graph_intern("cast", 4U)
         if: c.lmx_graph_count(expression) != 2U || c.lmx_graph_kind(g, c.lmx_graph_get(expression, 0U)) != 4
@@ -649,13 +664,9 @@ fn: lm_compiler_graph_own_type (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
         lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) kind_type), 0U)))
         c.fputs(" ", f)
         return: 0
+    # A Frame written with the colon alone is no call (the author 2026-11-09): no type the graph path knows.
     if: head != 0
-        if: lm_compiler_graph_callee(g, root, value) != 2
-            return: 1
-        made: (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head))
-        lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, made)))
-        c.fputs(": ", f)
-        return: 0
+        return: 1
     if: c.lmx_graph_count(expression) = 1U
         return: lm_compiler_graph_own_type(g, f, root, args, names, types, ptr, n, c.lmx_graph_get(expression, 0U))
     if: c.lmx_graph_count(expression) != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(expression, 1U)) != 2
@@ -720,6 +731,15 @@ fn: lm_compiler_graph_keep (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         if: count != 2U
             return: 0
         return: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 1U), level, cond, src, fname, at)
+    # A Frame written with the colon alone calls nothing (the author 2026-11-09): it keeps nothing, and the expression
+    # refuses it (lm_compiler_graph_expr). The application [(), frame] is the call of its frame.
+    if: head != 0
+        return: 0
+    if: c.lmx_graph_applied(g, value) != 0
+        value: (cast: (@: void) c.lmx_graph_applied(g, value))
+        expression: (cast: (@: c.Lmx) value)
+        head: c.lmx_graph_name_of(g, value)
+        count: c.lmx_graph_count(expression)
     if: head != 0
         callee: lm_compiler_graph_callee(g, root, value)
         if: callee != 1 && callee != 2
@@ -882,7 +902,16 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
             c.fputs(")", f)
             return: status
         ---
-        status: lm_compiler_graph_callee(g, root, value)
+        return: lm_compiler_graph_refuse_word(src, fname, at, head, "is written with a colon: a Frame written with a colon calls nothing (the author 2026-11-09: a call is written f(args)), and the graph path of a machine function translates no other Frame in an expression")
+    ---
+    # The application [(), frame] (the call mark, lm_graph_build_apply): the call of the C door or of a function of the
+    # module its frame's head names, with the frame's actuals.
+    if: c.lmx_graph_applied(g, value) != 0
+        expression: c.lmx_graph_applied(g, value)
+        head: c.lmx_graph_name_of(g, (cast: (@: void) expression))
+        if: head = 0
+            return: lm_compiler_graph_refuse_at(src, fname, at, "a call on a path head: the graph path of a machine function calls a function of the module or of the C door by its name")
+        status: lm_compiler_graph_callee(g, root, (cast: (@: void) expression))
         if: status = 3
             return: lm_compiler_graph_refuse_word(src, fname, at, head, "is called with another number of actuals than its formals")
         if: status = 0
@@ -1064,7 +1093,8 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
             c.fputs("\n", f)
             i: i + 1U
             continue
-        if: head != 0 && lm_compiler_graph_callee(g, root, raw) != 0
+        # A call: the application [(), frame] (the call mark; the author 2026-11-09: only f(args) calls).
+        if: c.lmx_graph_applied(g, raw) != 0
             status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, raw, level, 0, src, fname, at[0])
             if: status != 0
                 return: status
@@ -1073,6 +1103,10 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
             c.fputs("\n", f)
             i: i + 1U
             continue
+        # The colon Frame of a function of the module or of the C door calls nothing and writes no place: a function is
+        # no place, and the C door declares no storage (CODEX-OPUS-344-M6-ANSWERS-20261110T014806Z-01).
+        if: head != 0 && lm_compiler_graph_callee(g, root, raw) != 0
+            return: lm_compiler_graph_refuse_word(src, fname, at[0], head, "is written with a colon: a Frame written with a colon calls nothing (the author 2026-11-09: a call is written f(args)), and a function of the module or of the C door is no place it writes")
         return: lm_compiler_graph_refuse_at(src, fname, at[0], "the graph path of a machine function translates if, else, return, declarations, writes and calls: no other statement yet")
     ---
     return: status

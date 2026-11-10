@@ -4,7 +4,10 @@
 # named supply: with a callable a visible they are its ordinary call, whose result is the positional actual (the probes
 # p302n_d1/d2 of the record named-assign-20261107 gave 35 and no call of a; the norm is 62 and one call).  Positional
 # actuals and the earlier call forms stay.  tst (int: c 3; int: a 2) int is c * 10 + a; a (int: n) int is n + 1 and
-# counts its calls.  Entry 7; 81-99 the failing step.
+# counts its calls.  Entry 7; 81-99 the failing step.  Since M6 (slice 344; the author 2026-11-09: only f(args) calls) the
+# call of a among the actuals is written in its layout `a(): 5` (colon_calls); the colon Frame `tst(a: 5)` calls nothing
+# and is the named actual a by the book (named-actuals; `:=` is gone from actuals) -- the call binder's move from := to the
+# colon is the next step of M6 (CODEX-OPUS-344-NAMED-COLON-REPLY-20261110T030245Z-01), which rewrites this fixture.
 Calls:
     int: hits 0
 end: Calls
@@ -31,7 +34,7 @@ fn: named_call () int
 end: named_call
 fn: colon_calls () int
     int: before Calls\hits
-    int: got tst(a: 5)
+    int: got tst(a(): 5)
     if: got != 62 || Calls\hits != before + 1
         return: 83
     return: 7

@@ -196,7 +196,11 @@ fn: lm_graph_emit_deferred (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @@: d
     if: c.lmx_graph_kind(g, value) != 4 || c.lmx_graph_count((cast: (@: c.Lmx) value)) != 1U
         return: 0
     field: c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)
-    if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_name_of(g, field) = 0
+    # The single field applies a name only as an application [(), frame] (the call mark; the author 2026-11-09).
+    if: c.lmx_graph_applied(g, field) = 0
+        return: 0
+    field: (cast: (@: void) c.lmx_graph_applied(g, field))
+    if: c.lmx_graph_name_of(g, field) = 0
         return: 0
     return: lm_graph_emit_known(decl_names, decl_n, c.lmx_graph_name_of(g, field))
 end: lm_graph_emit_deferred
@@ -450,21 +454,16 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
         c.fprintf(f, ", @ l2_t%d) != 0\n            %s\n", left, leave_failure)
         temp[0]: left
         return: status
+    # An application [(), frame] (the call mark): the call of its frame, as the interpreter makes it (lmx_graph_eval_apply).
+    if: kind = 4 && c.lmx_graph_applied(g, raw) != 0
+        return: lm_graph_emit_apply(g, f, scope, c.lmx_graph_applied(g, raw), 1, temps, decl_names, decl_slots, decl_n, temp)
     if: kind = 4 && c.lmx_graph_name_of(g, raw) != 0
-        # A Frame: the application of the callable its head names when this translation resolves it; a head it cannot
-        # resolve names a place the code defines when it runs (a merge result, a reference to a callable) or no place:
-        # its call is then resolved, bound and dispatched by the kernel when the code runs, as by the interpreter -- the
-        # callee's native entry, or the interpreter for a Structure without one; a missing name fails there. No merge is
-        # computed ahead of execution.
-        expression: (cast: (@: c.Lmx) raw)
+        # A Frame written with the colon alone applies nothing (the author 2026-11-09: only f(args) calls): a callable,
+        # a merge or another head gives no int here, as in the interpreter (lmx_graph_eval_number).
         word: c.lmx_graph_name_of(g, raw)
         method: c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
-            if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0
-                return: 5
-            return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
-        if: method = 0 && c.lmx_graph_language_word(state, word) = 0
-            return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
+            return: 5
         return: 2
     if: kind = 4
         expression: (cast: (@: c.Lmx) raw)
@@ -815,7 +814,13 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
         m: c.lmx_graph_count(inner)
         head: c.lmx_graph_name_of(g, value)
         if: head = 0
-            # An unnamed Lmx: the assignment `a := v` or an anonymous body.
+            # An unnamed Lmx: the application `f(args)` (the call mark), the assignment `a := v` or an anonymous body.
+            if: c.lmx_graph_applied(g, value) != 0
+                r: lm_graph_emit_apply(g, f, root, c.lmx_graph_applied(g, value), 0, temps, decl_names, decl_slots, decl_n, @ temp)
+                if: r != 0
+                    return: r
+                i: i + 1U
+                continue
             if: m != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
             if: head = state\w_assign
@@ -899,24 +904,12 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 return: r
             i: i + 1U
             continue
+        # A colon Frame on a callable writes its place (the author 2026-11-09: only f(args) calls), which receives no int:
+        # the interpreter refuses it (5), as a colon statement without operands, which has no value to write.
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, head)))) != 0
-            r: lm_graph_emit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ temp)
-            if: r != 0
-                return: r
-            i: i + 1U
-            continue
+            return: 5
         if: m < 1U
-            # A statement without operands on a place this code defines when it runs applies the callable it holds
-            # then; another place refuses the form when it is chosen, as the interpreter refuses it (5).
-            if: lm_graph_emit_defined(g, root, decl_names, decl_slots, decl_n, head) = 0
-                return: 5
-            finish: -1
-            r: lm_graph_emit_apply_or(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ finish)
-            if: r != 0
-                return: r
-            c.fprintf(f, "        %s\n        l2_label%d: ()\n", leave_failure, finish)
-            i: i + 1U
-            continue
+            return: 5
         if: head = state\w_at
             if: m != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 1U)) != state\w_int
                 return: 5
@@ -960,19 +953,20 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 continue
             if: k >= n
                 return: 3
-            # A place this code defines when it runs has its kind only then: a statement on it applies the callable it
-            # holds or refers to, as the interpreter does (lmx_graph_exec_statement), and otherwise writes the int
-            # place. The declaration table tells which places are such; the place is found at run time.
+            # A place this code defines when it runs has its kind only then: a colon statement on it writes the int place
+            # (the author 2026-11-09: only f(args) calls f); a place holding a callable or a reference to one then
+            # receives no int, and the statement refuses, as the interpreter refuses it (lmx_graph_exec_statement). The
+            # declaration table tells which places are such; the place is found at run time (lm_graph_emit_refuse_held).
             finish: -1
             if: lm_graph_emit_defined(g, root, decl_names, decl_slots, decl_n, head) != 0
-                r: lm_graph_emit_apply_or(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ finish)
+                finish: 0
+                r: lm_graph_emit_refuse_held(g, f, root, inner, leave_failure)
                 if: r != 0
                     return: r
                 ---
             ---
-            # The write reading takes one value field (lm_graph_emit_write_form). Behind the call reading another form --
-            # several actuals, a named actual -- is no write: it refuses when the place is chosen as no callable, as the
-            # interpreter refuses it then, and never stops the translation of the call.
+            # The write takes one value field (lm_graph_emit_write_form). Another form on such a place -- several fields, a
+            # named actual -- is no write: it refuses when the code runs, as the interpreter refuses it then.
             if: finish >= 0 && lm_graph_emit_write_form(g, inner, 0U, m) = 0
                 c.fprintf(f, "        %s\n", leave_failure)
             else:
@@ -980,9 +974,6 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 if: r != 0
                     return: r
                 c.fprintf(f, "        if: lmx_graph_assign_int(l2_g, lmx_call_code, lmx_call_code, %zuU, l2_t%d) != 0\n            %s\n", k, temp, leave_failure)
-            ---
-            if: finish >= 0
-                c.fprintf(f, "        l2_label%d: ()\n", finish)
             ---
         ---
         i: i + 1U
@@ -1087,6 +1078,11 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
         n: c.lmx_graph_count(statement)
         head: c.lmx_graph_name_of(g, raw)
         if: head = 0
+            # The application `f(args)` (the call mark): its call, as the interpreter makes it (lmx_graph_eval_apply).
+            if: c.lmx_graph_applied(g, raw) != 0
+                status: lm_graph_emit_apply(g, f, code, c.lmx_graph_applied(g, raw), 0, temps, 0, 0, 0U, @ result)
+                i: i + 1U
+                continue
             if: n != 0U
                 head: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
             if: head = state\w_assign
@@ -1213,16 +1209,17 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             i: i + 1U
             continue
         if: mode != 0
+            # A colon Frame on a callable writes its place (the author 2026-11-09: only f(args) calls), which receives no
+            # int (the interpreter: 5). A head this translation cannot resolve has its place's kind when the code runs: a
+            # place holding a callable then refuses the write, another is written (lm_graph_emit_refuse_held).
             target: c.lmx_graph_target(g, c.lmx_graph_resolve(g, code, head))
             if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
-                status: lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, @ result)
-                i: i + 1U
-                continue
-            # A head this translation cannot resolve: the kernel decides when the code runs whether the statement
-            # applies a callable, as the interpreter does, or writes the int place (lm_graph_emit_apply_or).
+                return: 5
             finish: -1
             if: target = 0 && head != state\w_int && c.lmx_graph_language_word(state, head) = 0
-                status: lm_graph_emit_apply_or(g, f, code, statement, temps, 0, 0, 0U, @ finish)
+                finish: 0
+                status: lm_graph_emit_refuse_held(g, f, code, statement, leave_failure)
+            ---
             if: head = state\w_int
                 c.fputs("        if: lmx_graph_visible_slot(l2_g, lmx_call_code, ", f)
                 status: lm_graph_emit_word(g, f, code, statement, 0U)
@@ -1235,7 +1232,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                     c.fprintf(f, "), l2_t%d) != 0\n            %s\n", result, leave_failure)
                 ---
             else:
-                # Behind the call reading a form that is no write (lm_graph_emit_write_form) refuses when chosen.
+                # On a place known only when the code runs, a form that is no write (lm_graph_emit_write_form) refuses then.
                 if: finish >= 0 && lm_graph_emit_write_form(g, statement, 0U, n) = 0
                     c.fprintf(f, "        %s\n", leave_failure)
                 else:
@@ -1247,8 +1244,6 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                     c.fprintf(f, "), l2_t%d) != 0\n            %s\n", result, leave_failure)
                 ---
             ---
-            if: finish >= 0
-                c.fprintf(f, "        l2_label%d: ()\n", finish)
             i: i + 1U
             continue
         if: head = state\w_int
@@ -1264,29 +1259,27 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             ---
             i: i + 1U
             continue
+        # A colon Frame on a callable writes its place (the author 2026-11-09: only f(args) calls), which receives no int
+        # (the interpreter: 5). A head this translation cannot resolve and that is no formal of this method has its
+        # place's kind when the code runs: a place holding a callable then refuses the write (lm_graph_emit_refuse_held).
         target: c.lmx_graph_target(g, c.lmx_graph_resolve(g, code, head))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
-            status: lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, @ result)
+            return: 5
+        finish: -1
+        if: target = 0 && c.lmx_graph_language_word(state, head) = 0 && lm_graph_emit_formal(g, code, head) = 0
+            finish: 0
+            status: lm_graph_emit_refuse_held(g, f, code, statement, leave_failure)
+        ---
+        # On a place known only when the code runs, a form that is no write (lm_graph_emit_write_form) refuses then.
+        if: finish >= 0 && lm_graph_emit_write_form(g, statement, 0U, n) = 0
+            c.fprintf(f, "        %s\n", leave_failure)
         else:
-            # A head this translation cannot resolve and that is no formal of this method: the kernel decides when the
-            # code runs whether the statement applies a callable or writes the place (lm_graph_emit_apply_or).
-            finish: -1
-            if: target = 0 && c.lmx_graph_language_word(state, head) = 0 && lm_graph_emit_formal(g, code, head) = 0
-                status: lm_graph_emit_apply_or(g, f, code, statement, temps, 0, 0, 0U, @ finish)
-            # Behind the call reading a form that is no write (lm_graph_emit_write_form) refuses when chosen.
-            if: finish >= 0 && lm_graph_emit_write_form(g, statement, 0U, n) = 0
-                c.fprintf(f, "        %s\n", leave_failure)
-            else:
-                if: status = 0
-                    status: lm_graph_emit_expr(g, f, code, statement, 0U, n, temps, 0, 0, 0U, @ result)
-                c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
-                if: status = 0
-                    status: lm_graph_emit_head(g, f, code, statement)
-                c.fprintf(f, ", l2_t%d) != 0\n            %s\n", result, leave_failure)
-            ---
-            if: finish >= 0
-                c.fprintf(f, "        l2_label%d: ()\n", finish)
-            ---
+            if: status = 0
+                status: lm_graph_emit_expr(g, f, code, statement, 0U, n, temps, 0, 0, 0U, @ result)
+            c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
+            if: status = 0
+                status: lm_graph_emit_head(g, f, code, statement)
+            c.fprintf(f, ", l2_t%d) != 0\n            %s\n", result, leave_failure)
         ---
         i: i + 1U
     ---
@@ -2049,24 +2042,21 @@ fn: lm_graph_emit_defined (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; 
     return: 0
 end: lm_graph_emit_defined
 
-# A statement whose head names a place known only when the code runs: when that place holds a callable, directly or
-# through a reference to it, the statement applies it as the interpreter does (lmx_graph_exec_statement,
-# lmx_graph_block) -- the common resolve/bind/invoke of lm_graph_emit_call -- and jumps past the other reading of the
-# statement, which the caller emits next and closes with the label in finish. 0, or the answer of the call's emission.
-fn: lm_graph_emit_apply_or (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: statement c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: finish int) int
-    int: other temps[0]
-    int: result 0
-    int: status 0
-    temps[0]: temps[0] + 2
-    finish[0]: other + 1
+# The application of a frame whose head names a place known only when the code runs (a head this translation cannot
+# resolve, a place the code defines then): when the code runs, the place holds a callable, directly or through a
+# reference to it, and the frame calls it -- the common resolve/bind/invoke of lm_graph_emit_call --; a place holding no
+# callable refuses the application, as the interpreter refuses it (lmx_graph_eval_apply: 5). 0, or the answer of the
+# call's emission.
+fn: lm_graph_emit_apply_held (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: frame c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
     c.fputs("        if: lmx_graph_method(l2_g, (cast: (@: Lmx) lmx_graph_target(l2_g, lmx_graph_resolve(l2_g, lmx_call_code, ", f)
-    status: lm_graph_emit_head(g, f, scope, statement)
-    c.fprintf(f, ")))) = 0\n            goto: l2_label%d\n", other)
-    if: status = 0
-        status: lm_graph_emit_call(g, f, scope, statement, temps, decl_names, decl_slots, decl_n, @ result)
-    c.fprintf(f, "        goto: l2_label%d\n        l2_label%d: ()\n", other + 1, other)
-    return: status
-end: lm_graph_emit_apply_or
+    if: lm_graph_emit_head(g, f, scope, frame) != 0
+        return: 3
+    c.fprintf(f, ")))) = 0\n            %s\n", leave_failure)
+    return: lm_graph_emit_call(g, f, scope, frame, temps, decl_names, decl_slots, decl_n, temp)
+end: lm_graph_emit_apply_held
 
 # 1 when name is a formal of the method code: a place of its activation, an int place in this subset
 # (lmx_graph_call_shape), which a statement writes and never applies.
@@ -2090,3 +2080,40 @@ fn: lm_graph_emit_write_form (@: g c.LmxGraph; @: statement c.Lmx; size_t: from;
         return: 0
     return: 1
 end: lm_graph_emit_write_form
+
+# The application [(), frame] -- the call mark of P0 (lm_graph_build_apply; the author 2026-11-09: «_только_ f(3) или
+# f(): 3 или f(): / . 3 / end: f») -- as a statement (want 0) or an operand (want 1: an int result in temp, from a
+# callable with a result), as the interpreter makes it (lmx_graph_eval_apply): a head this translation resolves to a
+# callable is called; a head it cannot resolve, or a place the code defines when it runs, is called then when it holds
+# a callable and refuses otherwise (lm_graph_emit_apply_held); any other head, and a frame on a path head, is an
+# application this subset does not translate (5).
+fn: lm_graph_emit_apply (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: frame c.Lmx; int: want; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: head char c.lmx_graph_name_of(g, (cast: (@: void) frame))
+    @: method void 0
+    if: state = 0 || head = 0
+        return: 5
+    method: c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, head))
+    if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
+        if: want != 0 && c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0
+            return: 5
+        return: lm_graph_emit_call(g, f, scope, frame, temps, decl_names, decl_slots, decl_n, temp)
+    if: method = 0 && c.lmx_graph_language_word(state, head) = 0
+        return: lm_graph_emit_apply_held(g, f, scope, frame, temps, decl_names, decl_slots, decl_n, temp)
+    if: lm_graph_emit_defined(g, scope, decl_names, decl_slots, decl_n, head) != 0
+        return: lm_graph_emit_apply_held(g, f, scope, frame, temps, decl_names, decl_slots, decl_n, temp)
+    return: 5
+end: lm_graph_emit_apply
+
+# A colon statement on a place known only when the code runs (a head this translation cannot resolve, a place the code
+# defines then): it writes the place (the author 2026-11-09: only f(args) calls); a place then holding a callable,
+# directly or through a reference to it, receives no int, and the statement refuses, as the interpreter refuses it
+# (lmx_graph_exec_statement, lmx_graph_block: 5). The write itself is what the caller emits next. 0, or 3 when the head
+# has no address.
+fn: lm_graph_emit_refuse_held (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: statement c.Lmx; @: leave_failure char) int
+    c.fputs("        if: lmx_graph_method(l2_g, (cast: (@: Lmx) lmx_graph_target(l2_g, lmx_graph_resolve(l2_g, lmx_call_code, ", f)
+    if: lm_graph_emit_head(g, f, scope, statement) != 0
+        return: 3
+    c.fprintf(f, ")))) != 0\n            %s\n", leave_failure)
+    return: 0
+end: lm_graph_emit_refuse_held

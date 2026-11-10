@@ -2564,6 +2564,18 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                         restart_parse_context: 1
                         break
                     ---
+                    # The layout of a call `f(): args` and its block `f():` (the author 2026-11-09, «только f(3) или
+                    # f(): 3 или f(): / . 3 / end: f»; the grammar's call mark): empty parentheses right after the head
+                    # and a colon right after them. It is the call `f(args)` with its arguments written after the
+                    # colon: the Frame of the colon's body and layout that carries the call mark of the compact form
+                    # (LM_P0_FRAME_COMPACT). A Frame written with the colon alone has no call mark.
+                    int: layout_call 0
+                    if: ((((quoted_head = 0) && (head_end > start)) && ((i + 2U) < byte_count)) && (((text[i] = '(') && (text[(i + 1U)] = ')')) && (text[(i + 2U)] = ':')))
+                        if: (((i + 3U) >= byte_count) || (text[(i + 3U)] != '='))
+                            layout_call: 1
+                            i: i + 2U
+                        ---
+                    ---
                     if: (((i < byte_count) && (text[i] = ':')) && (head_end > start))
                         size_t: body_index
                         unsigned: body_flags
@@ -2574,6 +2586,8 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                         p0_node\as\frame\head\data: (text + start)
                         p0_node\as\frame\head\length: (head_end - start)
                         p0_node\as\frame\flags: c.LM_P0_FRAME_COLON
+                        if: layout_call != 0
+                            p0_node\as\frame\flags: c.LM_P0_FRAME_COLON | c.LM_P0_FRAME_COMPACT
                         i: i + 1U
                         while: ((i < byte_count) && c.lm_p0_is_horizontal_space(text[i]))
                             i: i + 1U
@@ -4535,10 +4549,11 @@ fn: lm_p0_end_closes_empty_colon (const: (@: frame c.LmP0Frame)) int
     if: only = 0 || only\value = 0
         return: 0
     return: lm_p0_atom_names((cast: (const: @: c.LmP0Node) only\value), (cast: (const: @: c.LmP0Text) frame\head))
+end: lm_p0_end_closes_empty_colon
 
 # The explicit `end:` closure of empty colon Frames, through the tree: such a Frame is marked closed as the delimiter
-# marks it (LM_P0_FRAME_DELIMITER_CLOSED) and keeps no trailer -- the closure is syntax, not a trailer of the value.
-end: lm_p0_end_closes_empty_colon
+# marks it (LM_P0_FRAME_DELIMITER_CLOSED) and keeps no trailer -- the closure is syntax, not a trailer of the value;
+# so is the closure of a call's layout block (lm_p0_end_closes_layout_call), which marks nothing.
 
 # Original: parser.lm1:4287 lm_p0_close_empty_by_end_in_node
 sub: lm_p0_close_empty_by_end_in_node (@: p0_node c.LmP0Node)
@@ -4548,6 +4563,9 @@ sub: lm_p0_close_empty_by_end_in_node (@: p0_node c.LmP0Node)
         if: lm_p0_end_closes_empty_colon((cast: (const: @: c.LmP0Frame) p0_node\as\frame)) != 0
             p0_node\as\frame\trailer: 0
             p0_node\as\frame\flags: p0_node\as\frame\flags | c.LM_P0_FRAME_DELIMITER_CLOSED
+        ---
+        if: lm_p0_end_closes_layout_call((cast: (const: @: c.LmP0Frame) p0_node\as\frame)) != 0
+            p0_node\as\frame\trailer: 0
         ---
         lm_p0_close_empty_by_end_in_structure((cast: (@: c.LmP0Structure) p0_node\as\frame\body))
         if: p0_node\as\frame\trailer != 0
@@ -5085,3 +5103,24 @@ fn: lm_p0_dump_alloc (const: (@: document c.LmP0Document)) @: char
     lm_p0_dump_delete(dump)
     return: data
 end: lm_p0_dump_alloc
+
+# Does frame's trailer close the block of a call's layout -- `f():` with its arguments in a vertical block, closed by
+# `end:` with one atom naming the head (the author 2026-11-09: «f(): / . 3 / end: f»)? The closure is syntax: the
+# Frame is the call f(args) with those arguments and keeps no trailer (lm_p0_close_empty_by_end_in_node).
+fn: lm_p0_end_closes_layout_call (const: (@: frame c.LmP0Frame)) int
+    const: (@: trailer c.LmP0Trailer)
+    const: (@: only c.LmP0Field)
+    if: frame = 0 || (frame\flags & c.LM_P0_FRAME_COMPACT) = 0U || (frame\flags & c.LM_P0_FRAME_COLON) = 0U
+        return: 0
+    trailer: frame\trailer
+    if: trailer = 0 || trailer\spelling = 0 || (trailer\flags & c.LM_P0_TRAILER_TAIL_CUTTER) = 0U || (trailer\flags & c.LM_P0_TRAILER_COLON) = 0U
+        return: 0
+    if: lm_p0_text_has_prefix_name((cast: (const: @: char) trailer\spelling\data), (cast: (size_t) trailer\spelling\length), "end", 1) = 0
+        return: 0
+    if: trailer\body = 0 || trailer\body\field_count != 1U
+        return: 0
+    only: trailer\body\first_field
+    if: only = 0 || only\value = 0
+        return: 0
+    return: lm_p0_atom_names((cast: (const: @: c.LmP0Node) only\value), (cast: (const: @: c.LmP0Text) frame\head))
+end: lm_p0_end_closes_layout_call

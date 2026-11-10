@@ -194,9 +194,12 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_body: lmx_graph_intern_in(state, "body", 4U)
     state\w_name: lmx_graph_intern_in(state, "name", 4U)
     state\w_fm: lmx_graph_intern_in(state, "fm", 2U)
+    # The application `f(args)` -- the call mark of P0 (the author 2026-11-09) -- is the unnamed Lmx [(), frame]
+    # (lm_graph_build_apply); its word is the operator's, as `:=` is.
+    state\w_apply: lmx_graph_intern_in(state, "()", 2U)
     if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0
-    if: state\w_args = 0 || state\w_body = 0 || state\w_name = 0 || state\w_fm = 0
+    if: state\w_args = 0 || state\w_body = 0 || state\w_name = 0 || state\w_fm = 0 || state\w_apply = 0
         return: 0
     if: state\w_eq = 0 || state\w_ne = 0 || state\w_lt = 0 || state\w_le = 0 || state\w_gt = 0 || state\w_ge = 0 || state\w_and = 0 || state\w_or = 0 || state\w_not = 0 || state\w_if = 0 || state\w_else = 0 || state\w_while = 0 || state\w_for = 0 || state\w_break = 0 || state\w_continue = 0 || state\w_redo = 0
         return: 0
@@ -1142,6 +1145,9 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
         return: 0
     if: kind != 4
         return: 1
+    # The application [(), frame] (the call mark): its frame in the call form `head(actuals)` (lmx_graph_dump_apply).
+    if: lmx_graph_applied(g, value) != 0
+        return: lmx_graph_dump_apply(g, lmx_graph_applied(g, value), f)
     text: lmx_graph_name_of(g, value)
     inner: (cast: (@: c.Lmx) value)
     n: lmx_graph_count(inner)
@@ -1452,6 +1458,13 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
                             c.fputs("\n", f)
                         ---
                     else:
+                        # The application [(), frame] (the call mark) prints as its call `head(actuals)`.
+                        if: lmx_graph_applied(g, value) != 0
+                            if: lmx_graph_dump_apply(g, lmx_graph_applied(g, value), f) != 0
+                                return: 1
+                            c.fputs("\n", f)
+                            i: i + 1U
+                            continue
                         head: 0
                         if: m != 0U
                             head: lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
@@ -1643,3 +1656,48 @@ fn: lmx_graph_language_receiver (@: word char) int
     ---
     return: 0
 end: lmx_graph_language_receiver
+
+# The Frame an application applies: the unnamed Lmx [(), frame] the builder makes of the call mark of P0
+# (lm_graph_build_apply; the author 2026-11-09: «_только_ f(3) или f(): 3 или f(): / . 3 / end: f») gives its frame,
+# the Lmx of the head and its actuals as written -- named by the head, or [path, actuals] on a path head. 0 for any other
+# value: a Frame written with the colon alone is no application, whatever its head names.
+fn: lmx_graph_applied (@: g c.LmxGraph; @: value void) @: c.Lmx
+    @: state c.LmxGraphState lmx_graph_state()
+    @: frame void 0
+    if: state = 0 || lmx_graph_kind(g, value) != 4 || lmx_graph_name_of(g, value) != 0 || lmx_graph_count((cast: (@: c.Lmx) value)) != 2U
+        return: 0
+    if: lmx_graph_word_text(g, lmx_graph_get((cast: (@: c.Lmx) value), 0U)) != state\w_apply
+        return: 0
+    frame: lmx_graph_get((cast: (@: c.Lmx) value), 1U)
+    if: lmx_graph_kind(g, frame) != 4
+        return: 0
+    return: (cast: (@: c.Lmx) frame)
+end: lmx_graph_applied
+
+# The text of the frame of an application in its call form, as it is written: `head(actuals)`, or `owner\field(actuals)`
+# on a path head, the actuals as tokens (lmx_graph_dump_token) separated by a space. 0, or 1 when a cell is none of the
+# graph's.
+fn: lmx_graph_dump_apply (@: g c.LmxGraph; @: frame c.Lmx; @: f c.FILE) int
+    @: text char lmx_graph_name_of(g, (cast: (@: void) frame))
+    size_t: n lmx_graph_count(frame)
+    size_t: k 0U
+    size_t: first 0U
+    if: text != 0
+        c.fputs(text, f)
+    else:
+        if: n = 0U || lmx_graph_dump_path(g, lmx_graph_get(frame, 0U), f) != 0
+            return: 1
+        first: 1U
+        k: 1U
+    ---
+    c.fputs("(", f)
+    while: k < n
+        if: k != first
+            c.fputs(" ", f)
+        if: lmx_graph_dump_token(g, lmx_graph_get(frame, k), f) != 0
+            return: 1
+        k: k + 1U
+    ---
+    c.fputs(")", f)
+    return: 0
+end: lmx_graph_dump_apply

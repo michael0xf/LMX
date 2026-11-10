@@ -1,0 +1,15 @@
+# M6, slice 344: `c.free: q` calls nothing (CODEX-OPUS-344-M6-ANSWERS-20261110T014806Z-01: a C function is called by
+# c.free(q)), and the C door declares no storage to write: free is no C type the unit's declarations give. Before M6 it
+# called free, and the c.free(q) after it freed the buffer twice.
+include: "<stdlib.h>"
+fn: run () int
+    @: q char 0
+    q: c.malloc(4U)
+    if: q = 0
+        return: 79
+    c.free: q
+    c.free(q)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

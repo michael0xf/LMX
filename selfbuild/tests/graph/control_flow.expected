@@ -21,9 +21,9 @@ fn: mark () int (
 end: mark
 fn: short () int
     int: result 0
-    if: (0 && (mark)) ((result 100))
-    if: (1 || (mark)) ((result (result + 1)))
-    if: (((mark) = 1) && ((mark) = 2)) ((result (result + 10)))
+    if: (0 && mark()) ((result 100))
+    if: (1 || mark()) ((result (result + 1)))
+    if: ((mark() = 1) && (mark() = 2)) ((result (result + 10)))
     return: (((((result + ((! 0))) + ((3 >= 3))) + ((4 > 3))) + ((2 <= 3))) + ((1 != 2)))
 end: short
 fn: jumps () int
@@ -62,7 +62,7 @@ int: nested_result 22
 call: Code Data
 int: data_result 30
 int: root_loop 12
-while: (root_loop < 2) ((root_loop (root_loop + 1)) (mark))
+while: (root_loop < 2) ((root_loop (root_loop + 1)) mark())
 if: (root_loop = 2) ((root_loop 12))
 else: (root_loop 99)
 int: final_calls 4

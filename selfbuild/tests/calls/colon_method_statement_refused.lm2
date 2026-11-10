@@ -1,0 +1,20 @@
+# M6, slice 344: `bump: q, 1` calls nothing (the author 2026-11-09: only f(args) calls); it is the write of the place
+# bump names, the place of a method, into which this translation writes no value (a located limit, refused at the
+# check). Before M6 it called bump (the byte became 1).
+include: "<stdlib.h>"
+fn: bump (@: p char; int: by) int
+    p[0]: (cast: (char) (p[0] + by))
+    return: 0
+end: bump
+fn: run () int
+    @: q char 0
+    q: c.malloc(4U)
+    if: q = 0
+        return: 79
+    q[0]: (cast: (char) 0)
+    bump: q, 1
+    c.free(q)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -4689,13 +4689,17 @@ fn: lm_compiler_frame_is_call (const: (@: frame c.LmP0Frame); int: mi) int
     int: local
     if: frame = 0 || frame\head = 0
         return: (cast: (int) (0))
-    if: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (frame\head)), @ fi) >= 0 || c.lm_compiler_is_known((cast: (const: @: c.LmP0Text) (frame\head))) != 0 || c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (frame\head))) >= 0
-        return: (cast: (int) (1))
-    local: c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (frame\head)))
-    if: local >= 0 && ml_ty_cell[0][local] = 40
-        return: (cast: (int) (1))
-    if: c.lm_compiler_head_cfn_type(mi, (cast: (const: @: c.LmP0Text) (frame\head))) >= 0
-        return: (cast: (int) (1))
+    # A callable -- a method, the C door, a held callable, a local method pointer, a C function pointer -- is called
+    # only by the call mark of P0 (lm_compiler_head_is_call); its colon Frame writes its place.
+    if: (frame\flags & c.LM_P0_FRAME_COMPACT) != 0U
+        if: c.lm_compiler_call_head_method(mi, (cast: (const: @: c.LmP0Text) (frame\head)), @ fi) >= 0 || c.lm_compiler_is_known((cast: (const: @: c.LmP0Text) (frame\head))) != 0 || c.lm_compiler_call_head_held(mi, (cast: (const: @: c.LmP0Text) (frame\head))) >= 0
+            return: (cast: (int) (1))
+        local: c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (frame\head)))
+        if: local >= 0 && ml_ty_cell[0][local] = 40
+            return: (cast: (int) (1))
+        if: c.lm_compiler_head_cfn_type(mi, (cast: (const: @: c.LmP0Text) (frame\head))) >= 0
+            return: (cast: (int) (1))
+    ---
     if: c.lm_compiler_raw_head((cast: (const: @: c.LmP0Text) (frame\head)), mi) = 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
@@ -5810,17 +5814,24 @@ fn: lm_compiler_head_is_call (const: (@: t c.LmP0Text); const: (@: body c.LmP0St
     # callable the place holds is not called.
     if: (flags & c.LM_P0_FRAME_ASSIGN) != 0U
         return: (cast: (int) (0))
+    # Only the call mark calls (the author 2026-11-09: «_только_ f(3) или f(): 3 или f(): / . 3 / end: f / других
+    # способов вызова больше нет!»): P0 gives it to the attached round form `f(args)` and to its layout `f(): args` /
+    # `f():` with a block (LM_P0_FRAME_COMPACT). A Frame written with the colon alone -- `f: v`, `ptr: v`,
+    # `c.name: args` -- calls no callable, whatever its head holds: it is the general write of the place its head
+    # names, admitted or refused as any write is (CODEX-OPUS-344-M6-ANSWERS-20261110T014806Z-01).
+    if: (flags & c.LM_P0_FRAME_COMPACT) = 0U
+        return: (cast: (int) (0))
     req: c.lm_compiler_call_head_method(mi, t, @ fi)
     if: req >= 0
         return: (cast: (int) (1))
-    # A held callable of the site is called in every form, as a method is.
+    # A held callable of the site is called by the call mark, as a method is.
     if: c.lm_compiler_call_head_held(mi, t) >= 0
         return: (cast: (int) (1))
-    # c.name(...) is the raw C door (spec 6.6.6): a call in every form, an empty argument list
+    # c.name(...) is the raw C door (spec 6.6.6): its call mark calls it, an empty argument list
     # included (`c.abort()`), never an update of a field of that name.
     if: c.lm_compiler_c_stmt_door(t) != 0
         return: (cast: (int) (1))
-    # So is a C function pointer the method holds (l2_head_cfn_type): its value is called, never assigned.
+    # So is a C function pointer the method holds (l2_head_cfn_type): its value is called by the call mark.
     if: c.lm_compiler_head_cfn_type(mi, t) >= 0
         return: (cast: (int) (1))
     if: t\data = 0
@@ -16814,10 +16825,11 @@ fn: lm_compiler_emit_loc_stmt (const: (@: stmt c.LmP0Node); int: mi; const: (@: 
         if: lm_compiler_emit_reference_declaration(stmt, mi, ind) != 0
             return: (cast: (int) (2))
         return: (cast: (int) (0))
-    # A call through a function-pointer local, before the assignment path: the
-    # head names what is CALLED, not what is assigned to. It is the C call through the local's value, its actuals in
-    # their written order and its callee fixed before them (l2_emit_ccall_value).
-    if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) >= 0 && ml_ty_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))] = 40
+    # A call through a function-pointer local, by its call mark (the author 2026-11-09: `f(args)`, `f(): args`), before
+    # the assignment path: the head names what is CALLED. Without the mark, `f: value` is that path's write of the
+    # local. It is the C call through the local's value, its actuals in their written order and its callee fixed before
+    # them (l2_emit_ccall_value).
+    if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && (stmt\as\frame\flags & c.LM_P0_FRAME_COMPACT) != 0U && c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) >= 0 && ml_ty_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)))] = 40
         if: lm_compiler_emit_ccall(stmt, mi, ind) != 0
             return: (cast: (int) (2))
         return: (cast: (int) (0))

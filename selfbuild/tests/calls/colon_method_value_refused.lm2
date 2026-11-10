@@ -1,0 +1,12 @@
+# M6, slice 344: in a value, `(twice: 3)` calls nothing (the author 2026-11-09: only f(args) calls): the Structure it
+# writes is no int, and this translation takes no colon Frame on a callable as a value. Before M6 it called twice (r was
+# 6).
+fn: twice (int: a) int
+    return: a * 2
+end: twice
+fn: run () int
+    int: r (twice: 3)
+    return: r
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,40 @@
+# M6 (the author 2026-11-09, «_только_ f(3) или f(): 3 или f(): / . 3 / end: f»): the compact call f(args), its layout
+# f(): args and the block f(): ... end: f each call once (bump adds to the first byte of a buffer it is given); a value
+# call by the compact form and by the layout too. Exit 7.
+include: "<stdlib.h>"
+fn: bump (@: p char; int: by) int
+    p[0]: (cast: (char) (p[0] + by))
+    return: 0
+end: bump
+fn: twice (int: a) int
+    return: a * 2
+end: twice
+fn: run () int
+    @: q char 0
+    q: c.malloc(4U)
+    if: q = 0
+        return: 79
+    q[0]: (cast: (char) 0)
+    bump(q, 1)
+    if: q[0] != 1
+        return: 80
+    bump(): q, 2
+    if: q[0] != 3
+        return: 81
+    bump():
+        q
+        4
+    end: bump
+    if: q[0] != 7
+        return: 82
+    int: r twice(3)
+    if: r != 6
+        return: 83
+    int: s twice(): 4
+    if: s != 8
+        return: 84
+    c.free(q)
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,13 @@
+# M6 (slice 344; the author 2026-11-09: only f(args) calls): the colon Frame `a: 5` at the root calls nothing -- the
+# function a is not applied --; it is the write of the place a, which holds a function, and the int 5 is not admitted
+# there. The interpreter refuses it (graph_trans run: 5); the native graph emitter refuses the translation (emit-check
+# native: 5); the forced translation runs the graph when the program runs, and the program refuses then (exit 1).
+# A colon Frame among actuals, `mytest(a: 5)`, is the named actual a by the book (named-actuals): the
+# binder's move from := to the colon is the next step of M6, OPEN in the implementation (Codex,
+# CODEX-OPUS-344-NAMED-COLON-REPLY-20261110T030245Z-01).
+fn: a (int: x) int (int: calls 0)
+    calls: calls + 1
+    return: x + 1
+end: a
+a: 5
+int: calls a\var\calls

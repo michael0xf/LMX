@@ -286,8 +286,13 @@ address — and reads a Structure's slots as an array of references `S[i]` (auth
 fixed by the norm. The receiver is implemented in the clean graph by one kernel operation for both consumers —
 `lmx_graph_address_type` over `lmx_range_type_of`: a Structure is the address of its own header, a reference the
 address it holds, an `int` value is no address, a written zero is the null address
-([record](../steps/witnesses/get-type-20261110/notes.md)). The language has no Structure index yet
-([plan](../next_core_tasks_v3.md#m6)).
+([record](../steps/witnesses/get-type-20261110/notes.md)). The index of a Structure is implemented in the clean graph
+([record](../steps/witnesses/struct-index-20261110/notes.md)): the value of `S[i]` is a pointer cell of a region of its
+own, `LMX_TYPE_GRAPH_REF`, an "untyped reference" that holds any address of the arena and is never stored in a slot of
+the graph; the read is `lmx_graph_index`, the write with admission by the kind of what the slot holds is
+`lmx_graph_index_write`, the number of slots is `lmx_graph_length`, and a place `@: p int` admits an untyped reference
+through `lmx_graph_int_ref_of` — one kernel operation each for both consumers. An index outside the fields is the
+interpreter's answer 7; native and forced stop R0.
 
 ### 2.2 Region types (decision; a finite inventory)
 

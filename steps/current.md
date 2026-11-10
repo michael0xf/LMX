@@ -64,15 +64,25 @@ RU/EN, пометки в спецификации реализации, заме
 строки (`m7_struct_in_struct.lm2`, `m7-run01.out`); `mytest(merge(mytest\args; (int: a 5)))` в интерпретаторе даёт 35
 (`m9_merge_arguments.lm2`, `m9-run01.out`).
 
-**Срез 344 (`S[i]`, план M6 шаг 4) — в рабочем дереве, не закоммичен.** Правки в `l2_graph_build.lm2`,
-`lmx_graph.lm2`, `lmx_graph_run.lm2`, `l2_graph_tool.lm2`, `tools/build.lm2`, четыре фикстуры `struct_index*`.
-Собраны `tool-f04`, `rt-f04`, `graph-f04`; положительная фикстура в интерпретаторе даёт ожидаемый дамп. Остались
-ожидание `.expected`, полный graph-check (список `P/pins/fable-graph-check-f04.tsv`, 88 строк), мутант,
-`bootstrap quick`, запись.
+**Одноаргументные формы ресиверов.** Поручение автора позже в тот же вечер — «запиши ещё … после внесениязакоммить
+пушни и продолжай по плану»; техническая часть дословно в
+[журнале](../LMX_blog/2026-11-10.md#one-argument-receivers): `int: i` вместо `i: int` объявляет без инициализации или
+сверяет тип, `int: <значение>` в выражении возвращает число либо бросает отказ. Внесено в книгу и шагом 4 в раздел
+[M9](../next_core_tasks_v3.md#m9); коммит `5be4de2e`.
 
-**Порядок дальше.** M6: шаг 5 (`getType`) сделан, шаг 4 (`S[i]`) завершается; затем M7 вместе с M9 — по поручению
-автора о переводе кода на `:=`, сначала чистый граф; M8; шаги 1, 2, 3 раздела M6; маршрут 331 — после шага 3 раздела
-M7; далее по плану.
+**Срез 344: индекс Structure `S[i]` в чистом графе** ([запись](witnesses/struct-index-20261110/notes.md), план M6
+шаг 4). Значение `S[i]` — «ссылка без типа» (участок `LMX_TYPE_GRAPH_REF`); операции ядра `lmx_graph_index`,
+`lmx_graph_index_write`, `lmx_graph_length`, `lmx_graph_int_ref_of` — по одной для интерпретатора и выпускаемого
+`native`; индекс в хвосте и в голове — одно выражение построителя; фикстуры `struct_index` и три отрицательные
+(ответы 7, 4, 4). Команда `graph-check` теперь принимает ответ интерпретатора 0..7: первый прогон отказал на строке с
+ответом 7 именно этой границей. 88 строк graph-check × interp/native/forced — 264 PASS; мутант «слот `index + 1`»
+роняет фикстуру в трёх режимах; `bootstrap quick` `boot-f04` — 0 отказов, runtime G1 = G2 = `rt-f04`. Прежний путь
+понижения индекса не знает.
+
+**Порядок дальше.** M6: шаги 5 (`getType`) и 4 (`S[i]`) сделаны; затем переименования по поручению автора
+(`getType` → `typeof`, `sendMessage` → `send`, `receiveMessage` → `receive`); M7 вместе с M9 — по поручению автора о
+переводе кода на `:=`, сначала чистый граф; M8; шаги 1, 2, 3 раздела M6; маршрут 331 — после шага 3 раздела M7;
+далее по плану.
 
 **Срез 343: `getType` в чистом графе** ([запись](witnesses/get-type-20261110/notes.md), план M6 шаг 5). Операция
 ядра `lmx_graph_address_type` — одна для интерпретатора и выпускаемого `native`; слово `getType` в состоянии графа;
@@ -81,14 +91,14 @@ M7; далее по плану.
 путь понижения ресивера не знает; констант двери в чистом графе нет.
 
 **Рабочее окружение сессии.** `P` — `build2/codex_fix250generationchain01`. Стадия — `P/fable-main01`, наполнена из
-`main` (manifest `P/pins/fable-source04.sha256`, 407 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
-и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f03/lmxtool.exe` (`2813b499…`), hosted
-frontend — `P/fable-main01/boot-f03/g2/frontend/l2trans.exe` (`9f3003fb…`), runtime — `P/fable-main01/rt-f03`
-(`driver.o` `66839a96…`), транслятор графа — `P/fable-main01/graph-f03`, базовый frontend —
+`main` (manifest `P/pins/fable-source08.sha256`, 412 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
+и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f04/lmxtool.exe` (`37a8a343…`), hosted
+frontend — `P/fable-main01/boot-f04/g2/frontend/l2trans.exe` (`be7f2325…`), runtime — `P/fable-main01/rt-f04`
+(`driver.o` `692c6b1a…`), транслятор графа — `P/fable-main01/graph-f04`, базовый frontend —
 `P/cold-candidate48/full48/g2/frontend`. Команды инструмента запускаются из `P/runs/fable-m6-01`. Список graph-check —
-`P/pins/fable-graph-check-f03.tsv` (84 строки). Заняты метки `tool-f02`, `rt-f01`–`rt-f03`, `rt-f03m`,
-`graph-f01`–`graph-f03`, `graph-f03m`, `boot-f03`, `check-f01`, `check-f03`, `check-f03m` и `docs80`–`docs106` с
-суффиксом `-fable01`.
+`P/pins/fable-graph-check-f05.tsv` (88 строк). Заняты метки `tool-f02`, `tool-f04`, `tool-f05`, `rt-f01`–`rt-f04`,
+`rt-f03m`, `rt-f04m`, `graph-f01`–`graph-f04`, `graph-f03m`, `graph-f04m`, `boot-f03`, `boot-f04`, `check-f01`,
+`check-f03`, `check-f03m`, `check-f04`, `check-f05`, `check-f05m` и `docs80`–`docs108` с суффиксом `-fable01`.
 
 Ниже — состояние до этой записи (история).
 

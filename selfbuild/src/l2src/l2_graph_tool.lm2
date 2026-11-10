@@ -357,6 +357,18 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
     if: kind = 4
         expression: (cast: (@: c.Lmx) raw)
         count: c.lmx_graph_count(expression)
+        # The index of a Structure, `base[index]` (the book, structure-index), as the interpreter reads it: the base's
+        # value and the index's number, then the kernel's read of the slot.
+        if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) = state\w_index
+            status: lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
+            if: status != 0
+                return: status
+            status: lm_graph_emit_number(g, f, scope, expression, 2U, temps, decl_names, decl_slots, decl_n, @ number)
+            if: status != 0
+                return: status
+            c.fprintf(f, "        if: lmx_graph_index(l2_g, l2_v%d, l2_t%d, @ l2_v%d) != 0\n            %s\n", value, number, value, leave_failure)
+            temp[0]: value
+            return: 0
         if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) = state\w_deref
             status: lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
@@ -476,6 +488,19 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
             c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_address_type(l2_g, l2_v%d, @ l2_t%d) != 0\n            %s\n", left, value, left, leave_failure)
             temp[0]: left
             return: 0
+        # The receiver length (the book, structure-index): the code asks the kernel for the number of the fields of the
+        # Structure its one argument stands for.
+        if: word = state\w_length
+            if: c.lmx_graph_count(expression) != 1U
+                return: 5
+            status: lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
+            if: status != 0
+                return: status
+            left: temps[0]
+            temps[0]: temps[0] + 1
+            c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_length(l2_g, l2_v%d, @ l2_t%d) != 0\n            %s\n", left, value, left, leave_failure)
+            temp[0]: left
+            return: 0
         method: c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
             if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0
@@ -534,7 +559,9 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
             return: 0
         if: count = 1U
             return: lm_graph_emit_number(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, temp)
-        if: count != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_deref
+        # A field path gives the int of its place; the index of a Structure gives an address, which has no int: the code
+        # refuses it when it runs, as the interpreter does.
+        if: count != 3U || (c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_deref && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_index)
             return: 2
         ---
     ---
@@ -729,9 +756,25 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
     @: name char c.lmx_graph_word_text(g, left)
     int: owner 0
     int: value 0
+    int: source 0
     int: status 0
     if: state = 0 || c.lmx_graph_count(statement) != 3U
         return: 2
+    # A write through the index of a Structure, `base[index] := value` (the book, structure-index), as the interpreter
+    # runs it (lmx_graph_eval_index_write): the base and the index, then the value's address, then the kernel's
+    # admission and slot write.
+    if: name = 0 && c.lmx_graph_index_form(g, left) != 0
+        status: lm_graph_emit_operand(g, f, code, (cast: (@: c.Lmx) left), 0U, temps, decl_names, decl_slots, decl_n, @ owner)
+        if: status != 0
+            return: status
+        status: lm_graph_emit_number(g, f, code, (cast: (@: c.Lmx) left), 2U, temps, decl_names, decl_slots, decl_n, @ value)
+        if: status != 0
+            return: status
+        status: lm_graph_emit_operand(g, f, code, statement, 2U, temps, decl_names, decl_slots, decl_n, @ source)
+        if: status != 0
+            return: status
+        c.fprintf(f, "        if: lmx_graph_index_write(l2_g, lmx_call_code, l2_v%d, l2_t%d, l2_v%d) != 0\n            %s\n", owner, value, source, leave_failure)
+        return: 0
     if: name != 0
         c.fputs("        if: lmx_graph_known_int(l2_g, lmx_call_code, ", f)
         status: lm_graph_emit_word(g, f, code, statement, 1U)
@@ -944,7 +987,8 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
             r: lm_graph_emit_operand(g, f, root, inner, 2U, temps, decl_names, decl_slots, decl_n, @ temp)
             if: r != 0
                 return: r
-            c.fprintf(f, "        l2_c: l2_v%d\n        if: lmx_graph_kind(l2_g, l2_c) != 5 || lmx_graph_publish(l2_g, lmx_call_code, %zuU, l2_c) != 0\n            %s\n", temp, i, leave_failure)
+            # The place takes an int reference, or the address an index of a Structure read when it is an int cell's.
+            c.fprintf(f, "        l2_c: lmx_graph_int_ref_of(l2_g, l2_v%d)\n        if: l2_c = 0 || lmx_graph_publish(l2_g, lmx_call_code, %zuU, l2_c) != 0\n            %s\n", temp, i, leave_failure)
             decl_names[decl_n]: name
             decl_slots[decl_n]: i
             decl_n: decl_n + 1U

@@ -198,6 +198,12 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_get_type: lmx_graph_intern_in(state, "getType", 7U)
     if: state\w_get_type = 0
         return: 0
+    # The index of a Structure (the book, structure-index): the operator word of the expression [base, [], index] the
+    # builder makes of an attached `base[index]`, and the receiver of the number of its fields.
+    state\w_index: lmx_graph_intern_in(state, "[]", 2U)
+    state\w_length: lmx_graph_intern_in(state, "length", 6U)
+    if: state\w_index = 0 || state\w_length = 0
+        return: 0
     if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0
     if: state\w_args = 0 || state\w_body = 0 || state\w_name = 0 || state\w_fm = 0
@@ -414,7 +420,8 @@ end: lmx_graph_put
 
 # What an address is in this arena: 0 nothing of the graph, 1 an int primitive, 2 a word primitive, 3 the pointer
 # primitive of a place without a value, 4 an Lmx, 5 an int reference, 6 a reference to an Lmx -- a Structure or a
-# callable (§2.2: the type is the region of the address).
+# callable --, 7 an untyped reference, the value the index of a Structure reads (§2.2: the type is the region of the
+# address).
 fn: lmx_graph_kind (@: g c.LmxGraph; @: address void) int
     int: kind 0
     int: type 0
@@ -436,6 +443,8 @@ fn: lmx_graph_kind (@: g c.LmxGraph; @: address void) int
         return: 5
     if: type = c.LMX_TYPE_GRAPH_LMX_REF
         return: 6
+    if: type = c.LMX_TYPE_GRAPH_REF
+        return: 7
     return: 0
 end: lmx_graph_kind
 
@@ -1623,11 +1632,22 @@ fn: lmx_graph_ref_lmx (@: g c.LmxGraph; @: target c.Lmx) @: void
 end: lmx_graph_ref_lmx
 
 # What a value stands for where a Structure is consumed -- a call head, a path step, a merge operand, a whole argument
-# structure: the target of a reference to an Lmx; any other value is itself. The address of the reference stays the
-# value of its place (`@name` is the address of the stored reference, the book :1237).
+# structure, the base of an index: the target of a reference to an Lmx; any other value is itself. The address of the
+# reference stays the value of its place (`@name` is the address of the stored reference, the book :1237). An untyped
+# reference (the index of a Structure) stands for the Lmx its slot holds, directly or through the reference place of
+# that slot.
 fn: lmx_graph_target (@: g c.LmxGraph; @: value void) @: void
-    if: lmx_graph_kind(g, value) = 6
+    @: held void 0
+    int: kind lmx_graph_kind(g, value)
+    if: kind = 6
         return: c.lmx_arena_pointer_void_read(value)
+    if: kind = 7
+        held: c.lmx_arena_pointer_void_read(value)
+        if: lmx_graph_kind(g, held) = 6
+            held: c.lmx_arena_pointer_void_read(held)
+        if: lmx_graph_kind(g, held) = 4
+            return: held
+        ---
     return: value
 end: lmx_graph_target
 
@@ -1648,22 +1668,131 @@ fn: lmx_graph_language_receiver (@: word char) int
     return: 0
 end: lmx_graph_language_receiver
 
-# The type of the region of the arena that holds the address a value stands for (§2.1; the book, get-type; the
-# receiver getType of both executors): a Structure is the address of its own header; a reference -- to an int cell, to
-# an Lmx -- stands for the address it holds; any other value -- an int, a word -- is no address. 0 and the type in out,
-# LMX_TYPE_NONE for an address no region of this arena holds (a null reference); 5 for a value that is no address.
-fn: lmx_graph_address_type (@: g c.LmxGraph; @: value void; @: out int) int
-    @: address void value
+# The address a value stands for (§2.1): a Structure is the address of its own header; a reference -- to an int cell, to
+# an Lmx, an untyped one -- stands for the address it holds; any other value -- an int, a word -- is no address. 0 and
+# the address in out; 5 for a value that is no address.
+fn: lmx_graph_address_of (@: g c.LmxGraph; @: value void; @@: out void) int
     int: kind lmx_graph_kind(g, value)
     if: g = 0 || out = 0
         return: 5
-    if: kind = 5 || kind = 6
-        address: c.lmx_arena_pointer_void_read(value)
-    else:
-        if: kind != 4
-            return: 5
-        ---
-    ---
+    if: kind = 4
+        out[0]: value
+        return: 0
+    if: kind = 5 || kind = 6 || kind = 7
+        out[0]: c.lmx_arena_pointer_void_read(value)
+        return: 0
+    return: 5
+end: lmx_graph_address_of
+
+# The type of the region of the arena that holds the address a value stands for (§2.1; the book, get-type; the
+# receiver getType of both executors; lmx_graph_address_of). 0 and the type in out, LMX_TYPE_NONE for an address no
+# region of this arena holds (a null reference); 5 for a value that is no address.
+fn: lmx_graph_address_type (@: g c.LmxGraph; @: value void; @: out int) int
+    @: address void 0
+    if: out = 0 || lmx_graph_address_of(g, value, @ address) != 0
+        return: 5
     out[0]: c.lmx_range_type_of(g\arena, address)
     return: 0
 end: lmx_graph_address_type
+
+# ---- The index of a Structure (the book, structure-index; the author 2026-11-10) -----------------------------------
+# A Structure is addressed as an array of untyped references: `S[i]` reads what slot i holds -- an immediate field in
+# the written order, from zero --, `S[i] := p` gives the slot another address, `length(S)` is the number of the slots.
+# One kernel operation each, called by the interpreter and by the code the translator emits.
+
+# An untyped reference: a pointer primitive of the LMX_TYPE_GRAPH_REF pool holding an address of the arena (or none).
+# It is the value of an evaluation, never a field of the graph: a place takes it by its own requirement
+# (lmx_graph_int_ref_of), a slot takes the address it holds (lmx_graph_index_write). 0 without memory.
+fn: lmx_graph_ref (@: g c.LmxGraph; @: address void) @: void
+    @: pointer void 0
+    if: g = 0
+        return: 0
+    pointer: c.lmx_arena_pointer_cells_profiled(g\arena, c.LMX_TYPE_GRAPH_REF, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: pointer = 0 || c.lmx_arena_pointer_void_write(pointer, address) != 0
+        return: 0
+    return: pointer
+end: lmx_graph_ref
+
+# Is left the index the builder makes of an attached `base[index]`: the unnamed expression [base, [], index]? 1 or 0.
+fn: lmx_graph_index_form (@: g c.LmxGraph; @: left void) int
+    @: state c.LmxGraphState lmx_graph_state()
+    @: expression c.Lmx (cast: (@: c.Lmx) left)
+    if: state = 0 || lmx_graph_kind(g, left) != 4 || lmx_graph_name_of(g, left) != 0 || lmx_graph_count(expression) != 3U
+        return: 0
+    return: (cast: (int) (lmx_graph_word_text(g, lmx_graph_get(expression, 1U)) = state\w_index))
+end: lmx_graph_index_form
+
+# `S[i]`: an untyped reference to what slot index of the Structure value stands for holds -- the cell of an int field,
+# the pointer of a field without a value, a nested Structure, a word, a reference place. 0 and the reference in out; 4
+# for a value that stands for no Structure, or without memory; 7 for an index outside its fields.
+fn: lmx_graph_index (@: g c.LmxGraph; @: value void; int: index; @@: out void) int
+    @: base void lmx_graph_target(g, value)
+    @: inner c.Lmx 0
+    if: out = 0 || lmx_graph_kind(g, base) != 4
+        return: 4
+    inner: (cast: (@: c.Lmx) base)
+    if: index < 0 || (cast: (size_t) index) >= lmx_graph_count(inner)
+        return: 7
+    out[0]: lmx_graph_ref(g, lmx_graph_get(inner, (cast: (size_t) index)))
+    if: out[0] = 0
+        return: 4
+    return: 0
+end: lmx_graph_index
+
+# `S[i] := p`: slot index of the Structure value stands for takes the address source stands for
+# (lmx_graph_address_of), after the admission of the field -- the slot keeps its kind: an int place (its cell, or the
+# pointer of a place without a value) takes an int place, a Structure a Structure, a word a word, a reference place a
+# reference place of its kind. The number and the addresses of the slots do not change; the field answers the name of
+# what it now holds (§5.1: a name is its address's). 0; 4 for a base that is no Structure, a source that is no address,
+# a refused admission; 7 for an index outside the fields.
+fn: lmx_graph_index_write (@: g c.LmxGraph; @: scope c.Lmx; @: value void; int: index; @: source void) int
+    @: base void lmx_graph_target(g, value)
+    @: inner c.Lmx 0
+    @: address void 0
+    int: held 0
+    int: given 0
+    if: lmx_graph_kind(g, base) != 4
+        return: 4
+    inner: (cast: (@: c.Lmx) base)
+    if: index < 0 || (cast: (size_t) index) >= lmx_graph_count(inner)
+        return: 7
+    if: lmx_graph_address_of(g, source, @ address) != 0
+        return: 4
+    held: lmx_graph_kind(g, lmx_graph_get(inner, (cast: (size_t) index)))
+    given: lmx_graph_kind(g, address)
+    if: held = 3
+        held: 1
+    if: given = 3
+        given: 1
+    if: held = 0 || held = 7 || held != given
+        return: 4
+    if: lmx_graph_write_slot(g, scope, inner, (cast: (size_t) index), address) != 0
+        return: 4
+    return: 0
+end: lmx_graph_index_write
+
+# `length(S)`: the number of the fields of the Structure value stands for. 0 and the number in out; 4 for a value that
+# stands for no Structure.
+fn: lmx_graph_length (@: g c.LmxGraph; @: value void; @: out int) int
+    @: base void lmx_graph_target(g, value)
+    if: out = 0 || lmx_graph_kind(g, base) != 4
+        return: 4
+    out[0]: (cast: (int) lmx_graph_count((cast: (@: c.Lmx) base)))
+    return: 0
+end: lmx_graph_length
+
+# The value a reference place of an int takes (`@: p int value`): an int reference as it is; an untyped reference whose
+# address is an int cell -- or the pointer of a place without a value, whose cell it stands for -- as a new int
+# reference to that cell (the admission by the region of the address, §2.2). 0 for any other value, or without memory.
+fn: lmx_graph_int_ref_of (@: g c.LmxGraph; @: value void) @: void
+    @: held void 0
+    int: kind lmx_graph_kind(g, value)
+    if: kind = 5
+        return: value
+    if: kind != 7
+        return: 0
+    held: c.lmx_arena_pointer_void_read(value)
+    if: lmx_graph_kind(g, held) = 3
+        held: c.lmx_arena_pointer_void_read(held)
+    return: lmx_graph_ref_int(g, held)
+end: lmx_graph_int_ref_of

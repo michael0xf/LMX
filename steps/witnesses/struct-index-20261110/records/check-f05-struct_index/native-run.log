@@ -1,0 +1,67 @@
+GRAPH-BEFORE-BEGIN
+int: j 40
+S:
+    int: a 1
+    int: u
+    N:
+        int: x 7
+    end: N
+end: S
+int: n (length S)
+int: t_cell (getType (S [] 0))
+int: t_uninit (getType (S [] 1))
+int: t_nested (getType (S [] 2))
+@: p int (S [] 0)
+int: v_first (\ p)
+:=: (S \ a) 5
+int: v_same (\ p)
+int: x_nested ((S [] 2) \ x)
+int: n_nested (length (S [] 2))
+int: k 1
+int: t_computed (getType (S [] (k + 1)))
+fn: kind_of (int: i) int
+    return: (getType (S [] i))
+end: kind_of
+int: t_method (kind_of 2)
+:=: (S [] 0) (@ j)
+@: q int (S [] 0)
+int: v_moved (\ q)
+int: v_kept (\ p)
+:=: (S [] 1) (S [] 0)
+int: t_filled (getType (S [] 1))
+int: n_after (length S)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: j 40
+S:
+    int: j 40
+    int: j 40
+    N:
+        int: x 7
+    end: N
+end: S
+int: n 3
+int: t_cell 2
+int: t_uninit 1001024
+int: t_nested 13
+@: p int @a
+int: v_first 1
+:=: (S \ a) 5
+int: v_same 5
+int: x_nested 7
+int: n_nested 1
+int: k 1
+int: t_computed 13
+fn: kind_of (int: i) int
+    return: (getType (S [] i))
+end: kind_of
+int: t_method 13
+:=: (S [] 0) (@ j)
+@: q int @j
+int: v_moved 40
+int: v_kept 5
+:=: (S [] 1) (S [] 0)
+int: t_filled 2
+int: n_after 3
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

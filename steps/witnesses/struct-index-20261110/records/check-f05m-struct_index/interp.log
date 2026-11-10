@@ -1,0 +1,70 @@
+GRAPH-BEFORE-BEGIN
+int: j 40
+S:
+    int: a 1
+    int: u
+    N:
+        int: x 7
+    end: N
+end: S
+int: n (length S)
+int: t_cell (getType (S [] 0))
+int: t_uninit (getType (S [] 1))
+int: t_nested (getType (S [] 2))
+@: p int (S [] 0)
+int: v_first (\ p)
+:=: (S \ a) 5
+int: v_same (\ p)
+int: x_nested ((S [] 2) \ x)
+int: n_nested (length (S [] 2))
+int: k 1
+int: t_computed (getType (S [] (k + 1)))
+fn: kind_of (int: i) int
+    return: (getType (S [] i))
+end: kind_of
+int: t_method (kind_of 2)
+:=: (S [] 0) (@ j)
+@: q int (S [] 0)
+int: v_moved (\ q)
+int: v_kept (\ p)
+:=: (S [] 1) (S [] 0)
+int: t_filled (getType (S [] 1))
+int: n_after (length S)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: j 40
+S:
+    int: a 5
+    int: u
+    N:
+        int: x 7
+    end: N
+end: S
+int: n 3
+int: t_cell 1001024
+int: t_uninit 13
+int: t_nested 0
+@: p int @u
+int: v_first 0
+:=: (S \ a) 5
+int: v_same 0
+int: x_nested ((S [] 2) \ x)
+int: n_nested (length (S [] 2))
+int: k 1
+int: t_computed (getType (S [] (k + 1)))
+fn: kind_of (int: i) int
+    return: (getType (S [] i))
+end: kind_of
+int: t_method (kind_of 2)
+:=: (S [] 0) (@ j)
+@: q int (S [] 0)
+int: v_moved (\ q)
+int: v_kept (\ p)
+:=: (S [] 1) (S [] 0)
+int: t_filled (getType (S [] 1))
+int: n_after (length S)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 3, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 3

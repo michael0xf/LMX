@@ -574,6 +574,26 @@ fn: lmx_graph_path_field (@: g c.LmxGraph; @: code c.Lmx; @: left void; @@: owne
     return: 0
 end: lmx_graph_path_field
 
+# A write through the index of a Structure, `base[index] := value` (the book, structure-index): the base and the index
+# first, then the value -- an address, not a number --, then the kernel's admission and slot write
+# (lmx_graph_index_write). 0; 4 or 7 as the kernel answers; the answer of an evaluation.
+fn: lmx_graph_eval_index_write (@: g c.LmxGraph; @: code c.Lmx; @: left c.Lmx; @: operand void) int
+    @: base void 0
+    @: value void 0
+    int: index 0
+    int: status 0
+    status: lmx_graph_eval_value(g, code, c.lmx_graph_get(left, 0U), @ base)
+    if: status != 0
+        return: status
+    status: lmx_graph_eval_number(g, code, c.lmx_graph_get(left, 2U), @ index)
+    if: status != 0
+        return: status
+    status: lmx_graph_eval_value(g, code, operand, @ value)
+    if: status != 0
+        return: status
+    return: c.lmx_graph_index_write(g, code, base, index, value)
+end: lmx_graph_eval_index_write
+
 fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lmx; int: mode) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: left void c.lmx_graph_get(statement, 1U)
@@ -584,6 +604,8 @@ fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lm
     int: status 0
     if: state = 0 || c.lmx_graph_count(statement) != 3U
         return: 2
+    if: name = 0 && c.lmx_graph_index_form(g, left) != 0
+        return: lmx_graph_eval_index_write(g, code, (cast: (@: c.Lmx) left), c.lmx_graph_get(statement, 2U))
     if: name != 0
         status: lmx_graph_known_int(g, code, name, mode)
         slot: lmx_graph_visible_slot(g, code, name)
@@ -1572,6 +1594,16 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                 expression: (cast: (@: c.Lmx) raw)
                 count: c.lmx_graph_count(expression)
                 word: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
+                # The index of a Structure, `base[index]` (the book, structure-index): the base's value and the index's
+                # number, then the kernel's read of the slot -- an untyped reference to what the slot holds.
+                if: count = 3U && word = state\w_index
+                    status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ value)
+                    if: status != 0
+                        return: status
+                    status: lmx_graph_eval_number(g, scope, c.lmx_graph_get(expression, 2U), @ number)
+                    if: status != 0
+                        return: status
+                    return: c.lmx_graph_index(g, value, number, out)
                 if: count = 3U && word = state\w_deref
                     status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ value)
                     if: status != 0
@@ -1652,6 +1684,15 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
             if: status != 0
                 return: status
             return: c.lmx_graph_address_type(g, value, out)
+        # The receiver length (the book, structure-index): the number of the fields of the Structure its one argument
+        # stands for (lmx_graph_length).
+        if: word = state\w_length
+            if: count != 1U
+                return: 5
+            status: lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ value)
+            if: status != 0
+                return: status
+            return: c.lmx_graph_length(g, value, out)
         # A Frame in an operand position: the application of the callable its head names (directly or through a
         # reference to it), once; a merge or another head gives no int here.
         value: c.lmx_graph_target(g, lmx_graph_resolve(g, scope, word))
@@ -1666,7 +1707,8 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
             return: 3
         return: 2
     word: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
-    if: count = 3U && word = state\w_deref
+    # A field path gives the int of its place; the index of a Structure gives an address, which has no int (answer 1).
+    if: count = 3U && (word = state\w_deref || word = state\w_index)
         status: lmx_graph_eval_value(g, scope, raw, @ value)
         if: status != 0
             return: status
@@ -1788,7 +1830,10 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
         r: lmx_graph_eval_value(g, root, c.lmx_graph_get(statement, 2U), @ cell)
         if: r != 0
             return: r
-        if: c.lmx_graph_kind(g, cell) != 5
+        # The place takes an int reference, or the address an index of a Structure read when it is an int cell's
+        # (lmx_graph_int_ref_of).
+        cell: c.lmx_graph_int_ref_of(g, cell)
+        if: cell = 0
             return: 4
         return: c.lmx_graph_publish(g, root, index, cell)
     if: head = state\w_int
@@ -1949,6 +1994,8 @@ fn: lmx_graph_language_word (@: state c.LmxGraphState; @: word char) int
     if: word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or || word = state\w_not || word = state\w_if || word = state\w_else || word = state\w_while || word = state\w_for || word = state\w_break
         return: 1
     if: word = state\w_continue || word = state\w_redo || word = state\w_until || word = state\w_finally || word = state\w_merge || word = state\w_include || word = state\w_predef || word = state\w_fm || word = state\w_get_type
+        return: 1
+    if: word = state\w_index || word = state\w_length
         return: 1
     return: 0
 end: lmx_graph_language_word

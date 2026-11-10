@@ -172,6 +172,9 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
     @: right void 0
     @: operator void 0
     @: expression c.Lmx 0
+    # The atoms P0 makes of the brackets of an attached index `base[index]` (grammar §22).
+    @: index_open char c.lmx_graph_intern("[", 1U)
+    @: index_close char c.lmx_graph_intern("]", 1U)
     int: power 0
     int: status 0
     if: item = 0 || out = 0
@@ -207,6 +210,35 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
             break
         token: lm_graph_p0_atom(nd)
         word: c.lmx_graph_intern(lm_graph_p0_data(token), lm_graph_p0_length(token))
+        # The index of a Structure, `base[index]` (the book, structure-index): P0 gives the atom `[`, the fields of the
+        # index and the atom `]`. It binds as a path step does (grammar §22: the chain of fields and indices binds
+        # tighter than a prefix operator); the expression is [base, [], index], its index one whole expression.
+        if: word = index_open
+            if: 8 < least
+                break
+            if: (nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+                return: 2
+            cursor[0]: lm_graph_next_active(lm_graph_p0_next(item))
+            status: lm_graph_build_expression(g, cursor, 1, boundary, @ right)
+            if: status != 0
+                return: status
+            item: cursor[0]
+            if: item = 0 || boundary[0] != 0
+                return: 2
+            nd: lm_graph_p0_value(item)
+            if: nd\kind != c.LM_P0_NODE_ATOM
+                return: 2
+            token: lm_graph_p0_atom(nd)
+            if: c.lmx_graph_intern(lm_graph_p0_data(token), lm_graph_p0_length(token)) != index_close
+                return: 2
+            boundary[0]: (cast: (int) ((nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U))
+            cursor[0]: lm_graph_next_active(lm_graph_p0_next(item))
+            expression: c.lmx_graph_lmx(g, 0, 3U)
+            operator: c.lmx_graph_word(g, "[]", 2U)
+            if: expression = 0 || operator = 0 || lm_graph_build_put(g, expression, 0U, left) != 0 || lm_graph_build_put(g, expression, 1U, operator) != 0 || lm_graph_build_put(g, expression, 2U, right) != 0
+                return: 1
+            left: (cast: (@: void) expression)
+            continue
         power: lm_graph_build_power(word)
         if: power = 0 || power < least
             break
@@ -307,6 +339,52 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     return: status
 end: lm_graph_build_sequence
 
+# Has the written selector an attached index, `base[index]` (grammar §22) -- a `[` that follows a name or another
+# index? The occurrence choice `owner\[N]field`, whose bracket follows the backslash, is none and keeps its own
+# reading. 1 or 0.
+fn: lm_graph_index_text (const: (@: bytes char); size_t: text_size) int
+    size_t: i 1U
+    int: found 0
+    while: i < text_size
+        if: bytes[i] = 91
+            if: bytes[i - 1U] = 92
+                return: 0
+            found: 1
+        ---
+        i: i + 1U
+    ---
+    return: found
+end: lm_graph_index_text
+
+# The value of a selector with an attached index (the head of `base[index] := value`): P0 parses the selector's own
+# text as it parses it in a tail -- the atoms of the base, of the brackets and of the index -- and the one expression
+# builder gives the same nested Lmx a tail gives (§3.3: one construction of an expression, whatever its position). The
+# parse tree is destroyed with the construction. 0 and the value in out; 1 without memory; 2 for a text that does not
+# parse or is no single expression.
+fn: lm_graph_build_indexed (@: g c.LmxGraph; const: (@: bytes char); size_t: text_size; @@: out void) int
+    @: doc c.LmP0Document 0
+    @: nd c.LmP0Node 0
+    @: cursor c.LmP0Field 0
+    @: value void 0
+    int: boundary 0
+    int: status 2
+    if: c.lm_p0_parse_bytes(bytes, text_size, @ doc) = 0 && doc != 0
+        nd: (cast: (@: c.LmP0Node) c.lm_p0_document_root(doc))
+        if: nd != 0 && nd\kind = c.LM_P0_NODE_STRUCTURE
+            cursor: lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_structure(nd)))
+            status: lm_graph_build_expression(g, @ cursor, 1, @ boundary, @ value)
+            if: status = 0 && cursor != 0
+                status: 2
+            ---
+        ---
+    ---
+    if: doc != 0
+        c.lm_p0_document_destroy(doc)
+    if: status = 0
+        out[0]: value
+    return: status
+end: lm_graph_build_indexed
+
 # A written selector -- `name` or `owner\field...` -- as the graph's value: a word, or the nested path [owner, \, field]
 # (the same Lmx every path expression has, §3.3), split here, once, at its backslashes, while the lexical boundaries
 # are known; an exact identifier in backquotes stays one name. 0 and the value in out; 1 without memory; 2 for an empty
@@ -324,6 +402,10 @@ fn: lm_graph_build_selector (@: g c.LmxGraph; const: (@: bytes char); size_t: te
             return: 1
         out[0]: left
         return: 0
+    # A selector with an attached index, `base[index]`, alone or within a path, is the expression its text gives in a
+    # tail (lm_graph_build_indexed).
+    if: lm_graph_index_text(bytes, text_size) != 0
+        return: lm_graph_build_indexed(g, bytes, text_size, out)
     while: i <= text_size
         if: i = text_size || bytes[i] = 92
             if: i = start

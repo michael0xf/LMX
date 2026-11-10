@@ -1,0 +1,92 @@
+# A working place's Value after a bare assignment (slice250; Codex CODEX-OPUS-250-POINTER-20261101-ANSWER01).
+# A non-machine method's pointer own gets a new non-null reference by a bare assignment -- a string literal, then a
+# pointer step -- and is then copied into another own (y: x) and passed as an ordinary argument; a number formal and
+# a pointer formal are assigned and then copied into an own. Each copy and argument must hold the value the place
+# holds now, not the one it held before the assignment. Exit 7 = all hold; 81 the literal case, 91 the step case
+# (90: no memory), 101 the number formal, 111 the pointer formal, 120 the report. Each case reports what it saw.
+include: "<stdio.h>"
+include: "<stdlib.h>"
+fn: first_char (@: s char) int
+    return: (cast: (int) s[0])
+end: first_char
+fn: literal_copy () int
+    @: x char "alpha"
+    @: y char 0
+    int: same 0
+    int: lead 0
+    int: passed 0
+    x: "omega"
+    y: x
+    if: y = x
+        same: 1
+    if: same = 1
+        lead: (cast: (int) y[0])
+    passed: first_char(x)
+    c.printf("P250 literal same=%d copied-lead=%d argument-lead=%d\n", same, lead, passed)
+    if: same = 1 && lead = 111 && passed = 111
+        return: 0
+    return: 81
+end: literal_copy
+fn: step_copy () int
+    @: buf char c.malloc(4U)
+    @: x char 0
+    @: y char 0
+    size_t: two 2U
+    int: same 0
+    int: lead 0
+    int: passed 0
+    if: buf = 0
+        return: 90
+    buf[0]: (cast: (char) 97)
+    buf[1]: (cast: (char) 98)
+    buf[2]: (cast: (char) 99)
+    buf[3]: (cast: (char) 0)
+    x: buf
+    x: x + two
+    y: x
+    if: y = x
+        same: 1
+    if: same = 1
+        lead: (cast: (int) y[0])
+    passed: first_char(x)
+    c.printf("P250 step same=%d copied-lead=%d argument-lead=%d\n", same, lead, passed)
+    c.free(buf)
+    if: same = 1 && lead = 99 && passed = 99
+        return: 0
+    return: 91
+end: step_copy
+fn: formal_number (int: n) int
+    int: copied 0
+    n: n + 5
+    copied: n
+    return: copied
+end: formal_number
+fn: formal_pointer (@: s char) int
+    @: t char 0
+    size_t: one 1U
+    s: s + one
+    t: s
+    return: (cast: (int) t[0])
+end: formal_pointer
+fn: report (int: first; int: second; int: third; int: fourth) int
+    c.printf("P250 results literal=%d step=%d formal-number=%d formal-pointer=%d\n", first, second, third, fourth)
+    return: 0
+end: report
+int: first_result literal_copy()
+int: second_result step_copy()
+int: third_result formal_number(2)
+int: fourth_result formal_pointer("xyz")
+int: reported report(first_result, second_result, third_result, fourth_result)
+int: result 7
+if: first_result != 0
+    result: first_result
+if: result = 7 && second_result != 0
+    result: second_result
+if: result = 7 && third_result != 7
+    result: 101
+if: result = 7 && fourth_result != 121
+    result: 111
+if: result = 7 && reported != 0
+    result: 120
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

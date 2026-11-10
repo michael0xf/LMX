@@ -62,7 +62,8 @@ working`: the working `Q/lmxtool.exe` is `B8B01381…` (G2's tool) and `Q/workin
 [`Q/g2/bundle.sha256`](records/boot98-g2-bundle.txt) byte for byte.
 
 G1 is FE94 again: its l2trans and l1trans have FE94's sizes, and the only differing bytes are TimeDateStamp (offsets
-136–138) and CheckSum (216–217), so the bootstrap's G1 runs the code every check of slices 247/248 ran. Its runtime
+136–138) and CheckSum (216–217), so the bootstrap's G1 frontend runs FE94's code, the frontend every check of slices
+247/248 ran with (narrowed in slice250: those checks ran on RT92's runtime; their run results stay RT92's). Its runtime
 is not RT92's (`0728B3EB…`): RT92's kernel was translated by 49c, the boot's by the line's own frontend. That runtime
 passed the smoke list in both generations, and G1's and G2's runtimes are raw-equal.
 

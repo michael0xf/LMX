@@ -1,0 +1,36 @@
+--- a/src/l2src/l2_frontend_lower.lm2
++++ b/src/l2src/l2_frontend_lower.lm2
+@@ -2304,0 +2305,5 @@
++    c.L2FrontendScratchChar96: type_storage
++    @: type char (cast: (@: char) type_storage\buffer)
++    c.L2FrontendScratchChar1024: renew_storage
++    @: renew char (cast: (@: char) renew_storage\buffer)
++    const: (@: renewal char 0)
+@@ -2337 +2342,10 @@
+-    if: lm_compiler_emit_pointer_cell_store((cast: (int) (c.lm_compiler_oc_ft(ty))), ind, (cast: (const: @: char) (cell\data)), (cast: (const: @: char) (owner\data)), val, context) != 0
++    # A reference's working Value, after a SUCCESSFUL store only, is the
++    # committed payload with the context that store selected (the cell store
++    # gives a non-companion owner only that context); a failed store leaves
++    # both as they were. The existing packer keeps a stored null a present one.
++    if: c.lm_compiler_own_is_slot(k) = 0
++        if: c.lm_compiler_emit_input_value_type(c.lm_compiler_value_ft_of_own(ty), 0, type) != 0 || c.snprintf(renew, 1024U, "lmx_walk_value_ref_context(%s, %s, (cast: (@: void) %s), %s)", owner\data, type, cq_name\data, owner\data) < 0
++            return: (cast: (int) (1))
++        renewal: renew
++    ---
++    if: lm_compiler_emit_pointer_cell_store((cast: (int) (c.lm_compiler_oc_ft(ty))), ind, (cast: (const: @: char) (cell\data)), (cast: (const: @: char) (owner\data)), val, context, renewal) != 0
+@@ -4128 +4142 @@
+-        return: (cast: (int) (lm_compiler_emit_pointer_cell_store((cast: (int) (place\index)), ind, (cast: (const: @: char) (address\data)), owner, (cast: (const: @: char) (value\data)), value_context)))
++        return: (cast: (int) (lm_compiler_emit_pointer_cell_store((cast: (int) (place\index)), ind, (cast: (const: @: char) (address\data)), owner, (cast: (const: @: char) (value\data)), value_context, 0)))
+@@ -7949 +7963 @@
+-    return: (cast: (int) (lm_compiler_emit_pointer_cell_store((cast: (int) (c.lm_compiler_input_ft(mi, fi))), ind, (cast: (const: @: char) (cell\data)), (cast: (const: @: char) (owner\data)), value, context)))
++    return: (cast: (int) (lm_compiler_emit_pointer_cell_store((cast: (int) (c.lm_compiler_input_ft(mi, fi))), ind, (cast: (const: @: char) (cell\data)), (cast: (const: @: char) (owner\data)), value, context, 0)))
+@@ -17698 +17712 @@
+-            if: (l2_pkind = 10 || l2_pkind = 11) && lm_compiler_emit_pointer_cell_store(-1, ind, physical_cell, "0", (cast: (const: @: char) (tok_cell[0]\data)), store_context) != 0
++            if: (l2_pkind = 10 || l2_pkind = 11) && lm_compiler_emit_pointer_cell_store(-1, ind, physical_cell, "0", (cast: (const: @: char) (tok_cell[0]\data)), store_context, 0) != 0
+@@ -18487 +18501 @@
+-fn: lm_compiler_emit_pointer_cell_store (int: type; const: (@: ind char); const: (@: cell char); const: (@: owner char); const: (@: value char); int: context) int
++fn: lm_compiler_emit_pointer_cell_store (int: type; const: (@: ind char); const: (@: cell char); const: (@: owner char); const: (@: value char); int: context; const: (@: success char)) int
+@@ -18500,0 +18515,3 @@
++    # success: one statement that runs only when the store succeeded.
++    if: success != 0
++        return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%sif: lmx_value_cell_store(l2_program_arena, (cast: (@: void) (%s)), %s, (cast: (@: void) (%s)), %s, %s) != 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%selse:\n%s    %s\n%s---\n", ind, cell, owner, value, current, accessor, ind, ind, ind, success, ind) < 0))))

@@ -1,0 +1,137 @@
+--- a/tools/l2/build.lm2
++++ b/tools/l2/build.lm2
+@@ -1198,0 +1199,44 @@
++fn: decl_thread (@: f c.FILE) int
++    if: c.fputs("include: \"<stddef.h>\"\npredef: \"l2src/lmx_message.h.lm1\"\npredef: \"l2src/lmx_post.h.lm1\"\npredef: \"l2src/lmx_schedule.h.lm1\"\npredef: \"l2src/lmx_arena.h.lm1\"\n# LmxCallEntry: one turn takes the handler the caller already holds (lmx_call.h.lm1).\npredef: \"l2src/lmx_call.h.lm1\"\n\ndefine: LMX_THREAD_OK 0\ndefine: LMX_THREAD_INVALID 1\ndefine: LMX_THREAD_STOPPED 2\ndefine: LMX_THREAD_OWNER_REFUSED 3\ndefine: LMX_THREAD_IDLE 0\ndefine: LMX_THREAD_TURN 1\ndefine: LMX_THREAD_DONE 2\n\n# The object's interfaces, each its own table.  An L3 Thread supports all of them\n# and hands them out SEPARATELY -- a thread API and a mail API, composed, never\n# merged into one heap of functions (Mikhail, 2026-09-17: \"сделайте нормальной\n# композицией чтобы он возвращал все свои API по отдельности а не сваливайте в\n# кучу\").  LmxThread is named before it is defined so the function-pointer types can\n# point at it; the struct: below completes the same tag.\ntype: LmxThread struct LmxThread\n\nfnptr: LmxThreadEnter (@: LmxThread t) int\nfnptr: LmxThreadLeave (@: LmxThread t) int\nfnptr: LmxThreadRunning (@: LmxThread t) int\nfnptr", f) < 0
++        return: 1
++    if: c.fputs(": LmxThreadCurrent () @: LmxThread\n# The interpreter is a replaceable L2 boundary until the L3 interpreter has a stable ABI.\n# It receives only the Thread.  In particular it cannot receive or accidentally call the native\n# entry: the ABI itself makes the two paths mutually exclusive.\nfnptr: LmxThreadMailAccept (@: LmxArena arena; @: LmxThread t; @: void target; int: lane) int\nfnptr: LmxThreadMailTake (@: LmxThread t; int: lane) @: void\nfnptr: LmxThreadMailCount (@: LmxThread t; int: lane) size_t\nfnptr: LmxThreadMailClose (@: LmxArena arena; @: LmxThread t) int\n\n\n# A child remains a live physical Thread until its serialized parent removes that exact address\n# from the List held by parent.children and then releases or attaches the child's arena.  No\n# parallel family-link record or hidden source field is needed: membership is that single List.\n# The liveness stamp and close request state live on the child Thread they describe.  They do not\n# form another collection and cannot answer membership independently of the Array.\n\nstruct: LmxThreadApi\n    LmxThreadEnter: enter\n    LmxThreadLeav", f) < 0
++        return: 1
++    if: c.fputs("e: leave\n    LmxThreadRunning: running\n    LmxThreadCurrent: current\nend: LmxThreadApi\n\n# The thread's mail API -- every L3 Thread has one, because the mailbox is what makes\n# a Message an L3 Thread.  Today each method delegates to the mailbox module\n# (lmx_post).  The interface a caller holds does not change.  It is a\n# separate table from LmxThreadApi on purpose -- two APIs, returned separately.\n#\n# The arena appears on exactly the two methods whose delegate needs it (accept takes\n# a queue node from the node pool and asks the target's domain, close hands the pool\n# back to the arena), and is left off the two that need neither.  The thread stores\n# no arena of its own: the arena is the context of the act, so the caller supplies it.\nstruct: LmxThreadMailApi\n    LmxThreadMailAccept: accept\n    LmxThreadMailTake: take\n    LmxThreadMailCount: count\n    LmxThreadMailClose: close\nend: LmxThreadMailApi\n\n# The execution state of an L3 Thread.\n#\n# Model 25, Mikhail on 2026-09-14, verbatim: \"L3 Thread -- Message, который может\n# присоединять и/или исполнять любой Message.  Каждый L3 Thread -", f) < 0
++        return: 1
++    if: c.fputs("- Message, но не\n# каждый Message -- L3 Thread (у шаблона и у письма нет turn, у запущенного\n# ребёнка есть).  Почта и задел под turn есть только у L3 Thread ...  Планировщик\n# есть только у разновидностей L3 Thread\".\n#\n# So an L3 Thread has a Message as its exact physical prefix. `LmxMsg message` is the first\n# by-value member, hence `@thread == @thread\\message`; a plain letter remains a standalone\n# LmxMsg. Mail, schedule, routing and supervision remain Thread-only fields after that\n# closed four-field prefix and are never added to LmxMsg.\n#\n# It is an object and not a mechanism: \"Полоса на экране не может не быть L3\n# Thread. Message без L3 Thread это просто письмо. Полоса же это полноценный\n# объект\" (Mikhail, 2026-09-15).\n#\n# How it is implemented is open by design: the object carries its interfaces, and an\n# implementation may run a thread of its own or be stepped by its parent -- \"lmx_thread\n# имеет API и реализации могут быть разными, в том числе бегающая и небегающая\"\n# (Mikhail, 2026-09-17).  Nothing in this header promises an OS thread.\n#\n# The two poll hooks of lmx.h are ", f) < 0
++        return: 1
++    if: c.fputs("NOT redeclared here: lmx.h declares them and says\n# the kernel owns the bodies; this unit is the kernel side of that, and a second\n# declaration would only be a second place to keep in step.\nstruct: LmxThread\n    LmxMsg: message\n    @: LmxPost mail\n    @: LmxSchedule slot\n    unsigned: turn\n    int: state\n    # The completed turn body's status, owned by this Thread, not the source graph or a shared call module.\n    # The activation value is never stored here. The launch may copy this result before teardown.\n    int: body_status\n    # Execution is a property of the Thread, never an inference from entry, METHOD, graph body,\n    # a previous result or a failure.  A request made before or during a turn is committed only\n    # by that turn's end boundary and therefore selects the following turn.\n    # This turn's reserved children (lmx_child.h.lm1): the head of the list the end-turn\n    # boundary publishes or drops (model 26, 28 -- \"при успехе публикуются ... подготовленные\n    # дети\").  It is UNTYPED, like every other reference in this kernel: what a node is follows\n    # from the arra", f) < 0
++        return: 1
++    if: c.fputs("y its address falls into (LMX_DOMAIN_RESERVATION), never from a typed field\n    # here -- and the type would otherwise be a header cycle, since the child module names this\n    # thread.  The list belongs to the turn's owner, which is this object.\n    @: void prepared\n    # The parent Message's L3 Thread -- for R0 this is the structural upper frame, not null.  It is\n    # the UP-LINK used by the postman's physical-address step (lmx_deliver): a child knows its\n    # parent and a parent knows its children through its sole children List. The cell belongs to the\n    # PARENT and is written on the PARENT's lane\n    # at publication (spec 19.29.6).\n    @: void parent\n    # THE STABLE ROUTE BACK TO THIS RECORD'S SERVICE (lmx_service): registration stores it and\n    # unregister clears it, so a record can ask which registry owns it without going near the\n    # service's entries vector.  It must NOT be a pointer INTO that vector: the vector is compacted\n    # by memmove on a removal and moved by realloc on growth, so a stored row pointer is stale\n    # after either act -- measured 2026-09-21, ", f) < 0
++        return: 1
++    if: c.fputs("single-threaded, no timing involved.  Untyped like\n    # every other reference here; zero for a record no service has registered.\n    @: void service\n    # The sole direct-child membership collection, owned by this Thread record\n    # in its arena, not inserted into the executable source graph. Untyped here\n    # so L3 thread TUs do not import VoidArray. There is no link chain or\n    # scheduler queue containing another membership set.\n    @: void children\n    # Per-child supervision state.  These cells do not establish membership; only the parent's\n    # children list does.  `alive` is stamped by the child's lane and answered by its parent.\n    # `close_deadline` is the one relaxed atomic platform word inherited by a close cascade.\n    size_t: alive\n    ulong: stopped\n    size_t: close_deadline\n    # Orphan retention is supervision state of this same child record, never a second\n    # membership list.  `orphaned` selects the R0 retention policy while the physical Thread\n    # remains an element of R0's one children list.\n    int: orphaned\n    ulong: orphan_started\n    ulong: orphan_", f) < 0
++        return: 1
++    if: c.fputs("limit\n    # Optional ordinary application-graph field that published this child Message.  It is a\n    # physical cell address, never a numeric slot: success clears it, failure leaves the graph\n    # reference as the retained result.  It is not child-membership; the children list is.\n    @@: void result\n    # THIS object's OWN scheduler (Mikhail, 19.09: \"У каждого Thread своя арена и свой\n    # планировщик!\", \"менеджер у каждого ребёнка свой\"): it traverses this Thread's one\n    # children list. Untyped, like every other reference here -- the manager module names this one, so\n    # the type in this header would be an import cycle (measured: l1trans refuses it).\n    # Opened by lmx_thread_scheduler_open, which takes the arena from its CALLER rather than\n    # inferring ownership from another mechanism record.\n    @: void manager\n    LmxThreadApi: api\n    LmxThreadMailApi: mail_api\nend: LmxThread\n\nprototype:\n    # Canonical construction of an executable Message. The embedded prefix is initialized in\n    # place; no arbitrary external Message can be attached or rebound later.\n    fn: lmx", f) < 0
++        return: 1
++    if: c.fputs("_thread_init (@: LmxArena arena; @: LmxThread t; @: Lmx graph; @: LmxPost mail; @: LmxSchedule slot) int\n    fn: lmx_thread_enter (@: LmxThread t) int\n    fn: lmx_thread_leave (@: LmxThread t) int\n    # ONE TURN, whole: the boundary, the body, the boundary.  `entry` is\n    # a handler GIVEN FROM OUTSIDE -- the host's for R0 (25 (ii): \"the entry program is R0's\n    # handler\"), which is not a graph callable and has no METHOD record of its own; zero means the\n    # native body is what its OWN GRAPH names when entry is 0: lmx_call0.  A\n    # translated Message's body is a callable occurrence, because \"all executable bodies are part\n    # of the graph\" (model 8); lmx_call0 passes the selected occurrence M's immediate M.parent as\n    # reserved `Lmx *node`. A non-null external `entry` is only the synthetic R0/host adapter and\n    # analogously receives graph.parent, which is 0: the graph hanging in a Thread is independent\n    # (parent = 0), so nothing lexical lies above it. Control bodies inside that invocation never rebind node. A\n    # graph that names no callable is a legitimate state", f) < 0
++        return: 1
++    if: c.fputs(": the turn is then pure boundary work.\n    # The body runs INSIDE the turn (lm.current is this object while it runs), its status is its own\n    # report and never a stop (model 31), and the boundary follows on the turn's own outcome\n    # (19.29.4.1).  Answers LMX_THREAD_STOPPED when the boundary refuses the turn -- a close is\n    # never resurrected -- and LMX_THREAD_INVALID when the boundary's work failed.\n    fn: lmx_thread_turn (@: LmxThread t; LmxCallEntry: entry; ulong: now) int\n    fn: lmx_thread_running (@: LmxThread t) int\n    fn: lmx_thread_current () @: LmxThread\n    fn: lmx_thread_api (@: LmxThread t) @: LmxThreadApi\n    fn: lmx_thread_mail_api (@: LmxThread t) @: LmxThreadMailApi\n    # The embedded closed Message prefix. Its address is exactly the Thread address.\n    fn: lmx_thread_message (@: LmxThread t) @: LmxMsg\n    # The parent Message's L3 Thread: the up-link the postman follows.  R0 points to its ordinary\n    # structural parent stub; only that stub and a Message not yet linked have null here.\n    fn: lmx_thread_parent (@: LmxThread t) @: LmxThread\n    # This reco", f) < 0
++        return: 1
++    if: c.fputs("rd's own service entry, or null (lmx_service writes it at registration).\n    fn: lmx_thread_service (@: LmxThread t) @: void\n    # Bind the one children List supplied by this Thread's constructor. The\n    # descriptor and its backing must belong to `arena`; a second binding is refused.\n    fn: lmx_thread_children_bind (@: LmxThread t; @: void children; @: LmxArena arena) int\n    # Construct and bind the sole children List in the record's owner arena.\n    # Source graph size/order/parent are unchanged.\n    fn: lmx_thread_children_open (@: LmxThread t; @: LmxArena arena) int\n    # Construct an explicitly requested application field holding a typed List.\n    # `field` is chosen by the graph producer; it is not a runtime ABI slot.\n    fn: lmx_thread_children_field_new (@: LmxArena arena; @: Lmx graph; size_t: field) @: void\n    fn: lmx_thread_children (@: LmxThread t) @: void\n    fn: lmx_thread_child_count (@: LmxThread parent) size_t\n    fn: lmx_thread_child_at (@: LmxThread parent; size_t: index) @: LmxThread\n    # Live direct children: append, remove, membership, and ordered iteration", f) < 0
++        return: 1
++    if: c.fputs(" over that list.\n    # The address of this Thread's handshake word -- the child-owned cell the child stamps and\n    # its parent answers (19.29.7.1). Membership comes only from Thread.children.\n    # This object's own scheduler, or null while none was opened.  Untyped: a caller casts.\n    fn: lmx_thread_manager (@: LmxThread t) @: void\n    # Open this object's own scheduler as a record of `arena` (the caller names it).  Refused\n    # when it already has one.  Initialized as the STEPPED manager: a lane is a later choice.\n    fn: lmx_thread_scheduler_open (@: LmxThread t; @: LmxArena arena) int\n    fn: lmx_thread_alive_cell (@: LmxThread t) @: size_t\n    # The driver's terminal hook publishes no ownership change.  The serialized parent removes\n    # the exact physical child reference first, then releases or attaches the child's arena.\n    fn: lmx_thread_finish (@: LmxThread t) int\n    # The Array backing is owned by the parent's arena, named explicitly by the caller.  Addition\n    # preserves insertion order; removal compacts the Array and changes no other ownership state.\n    fn: lmx_", f) < 0
++        return: 1
++    if: c.fputs("thread_child_add (@: LmxThread parent; @: LmxThread child; @: LmxArena arena) int\n    fn: lmx_thread_child_remove (@: LmxThread parent; @: LmxThread child) int\n    # Explicit Message reparenting.  Its owner preflight precedes any membership\n    # mutation; a failed append or removal leaves the original parent unchanged.\n    fn: lmx_thread_adopt (@: LmxThread child; @: LmxThread new_parent) int\n    fn: lmx_thread_child_is (@: LmxThread parent; @: LmxThread child) int\n    fn: lmx_thread_child_first (@: LmxThread parent) @: LmxThread\n    fn: lmx_thread_child_next (@: LmxThread child) @: LmxThread\n    # Parent half of 19.29.7.1: zero children's fresh stamps (answer); emergency-close stale.\n    fn: lmx_poll_answer_children (@: LmxThread t; ulong: now) int\n    # Spec 32, verbatim: \"a stopped Message has no lane, so nothing runs its children's turns from\n    # it; ITS STOP REQUESTS THEIR CLOSE; a child whose inbox is empty is closed by the maintenance\n    # without a turn, and a child on its own context runs its closing turn there\".  Model 31 names\n    # the parent as the one cross-lane wri", f) < 0
++        return: 1
++    if: c.fputs("ter of `running`, so this write is the sanctioned one.\n    #\n    # WHAT IS THE REQUEST AND WHAT IS THE CLOSE (read this before touching the act).  The request\n    # is `running = 0`, and it is NOT the close:\n    #   * a child on its own context closes ITSELF -- its lane reaches its boundary, leaves the\n    #     turn and writes the handoff mark there (lmx_thread_leave).  That is the ordinary way, and\n    #     it is the only writer of the mark that cannot be wrong;\n    #   * a child NOBODY RUNS reaches no boundary of its own, so the maintenance closes it -- and\n    #     the wait that ends there is counted from the FIRST request, held in this node's `stopped`.\n    #     When the child's own window (`slot\\limit`, the same number lmx_turn_end's stamp and\n    #     lmx_orphan_maintain age against) has passed, it is closed WITHOUT a turn: stopped AND\n    #     handoff-safe, mail or no mail -- a stopped Message does not wait for letters (Mikhail,\n    #     19.09: \"с какой радости закрытое приложение должно на последнем издыхании ловить\n    #     какие-то письма\").  This act is where that ", f) < 0
++        return: 1
++    if: c.fputs("window is evaluated, and it is called at every\n    #     settle boundary of the parent and at the parent's own closing boundary, so the cascade\n    #     gets its window level by level.\n    #\n    # WHY THE INBOX IS NOT THE TEST ANY MORE.  This act used to close a child whose inbox was EMPTY\n    # at once, reading \"no letter waiting\" as \"no turn coming, so it has ended\".  That reading is\n    # false for a child that is INSIDE its turn -- and inside its turn its box IS empty, because its\n    # body took the letter at the start of the turn.  Measured (tests\\lmx_app_reroot_forbidden_selftest.lm1,\n    # run 3): the mark went onto a child whose own boundary had not run, and the very next settle\n    # attached its arena to the parent's and released the parent -- under a turn still in flight\n    # (`b_count 7->0 a_count 9->0`).  Handoff-safe means \"I have LEFT my last turn\", and only the\n    # child's own boundary, or a window that says it is not working, can establish that.\n    fn: lmx_stop_children (@: LmxThread t; ulong: now; size_t: deadline) int\n    # The two halves of that act, each re", f) < 0
++        return: 1
++    if: c.fputs("achable on its own: the request for one child, and the\n    # close of one child whose ask has outlived its own band's window.  `lmx_settle_children` calls\n    # the CLOSE for a child it cannot reap yet (and only the close: a settle must never ask a\n    # running child to stop).  The REQUEST carries the closure's ONE deadline down into the child's\n    # node -- zero for a stop that is not a closure, so a closure beginning later still publishes.\n    fn: lmx_stop_request (@: LmxThread child; ulong: now; size_t: deadline) int\n    fn: lmx_stop_close (@: LmxThread child; ulong: now) int\n    # The closure deadline as the node holds it: one relaxed atomic load of one self-contained word\n    # The one inherited close deadline carried by this child Thread itself.\n    fn: lmx_thread_close_deadline (@: LmxThread child) size_t\n    fn: lmx_thread_close_deadline_publish (@: LmxThread child; size_t: deadline) int\n    # Whether this record's own lane has ended: the stronger boundary the close publishes from, and\n    # the one the STOPPED hook asks before it speaks for a record whose lane may still be", f) < 0
++        return: 1
++    if: c.fputs(" unwinding.\n    # A record with no lane answers YES (the stepped manager's normal state).\n    fn: lmx_thread_lane_ended (@: LmxThread t) int\n    fn: lmx_thread_mail_accept (@: LmxArena arena; @: LmxThread t; @: void target; int: lane) int\n    fn: lmx_thread_mail_take (@: LmxThread t; int: lane) @: void\n    fn: lmx_thread_mail_count (@: LmxThread t; int: lane) size_t\n    fn: lmx_thread_mail_close (@: LmxArena arena; @: LmxThread t) int\nend: prototype\n", f) < 0
++        return: 1
++    return: 0
++end: decl_thread
++
++fn: decl_thread_state (@: f c.FILE) int
++    if: c.fputs("predef: \"l2src/lmx_thread.h.lm1\"\nthread_local: @: LmxThread lmx_thread_current_slot 0\n", f) < 0
++        return: 1
++    return: 0
++end: decl_thread_state
++
+@@ -1256,0 +1301,4 @@
++    if: kind = 23
++        r: decl_thread(f)
++    if: kind = 24
++        r: decl_thread_state(f)
+@@ -1270 +1318 @@
+-# source and the twenty-two headers of the stage (stage/src/l2src) are its output: all twenty-two and their C headers
++# source and the twenty-four headers of the stage (stage/src/l2src) are its output: all twenty-four and their C headers
+@@ -1279 +1327 @@
+-# Thread's hand-written header (lmx_thread.h.lm1), which reaches post and copier; post is generated before copier,
++# Thread's generated header (lmx_thread.h.lm1), which reaches post and copier; post is generated before copier,
+@@ -1283 +1331 @@
+-    @@: names char c.calloc(23U, sizeof(@: char))
++    @@: names char c.calloc(24U, sizeof(@: char))
+@@ -1287,0 +1336 @@
++    @: state char txt_path(src, "l2src/lmx_thread_state.lm1")
+@@ -1289 +1338 @@
+-    if: names = 0 || a = 0 || src = 0
++    if: names = 0 || a = 0 || src = 0 || state = 0
+@@ -1313,0 +1363 @@
++    names[23]: "lmx_thread"
+@@ -1315 +1365,4 @@
+-    while: k < 23
++    # This is a unit-level C ABI declaration, not an executable L1 body or a header definition.
++    # Generate it anew before Thread consumers, with no old declaration left as fallback.
++    c.remove(state)
++    while: k < 24
+@@ -1325 +1378 @@
+-    while: k < 23
++    while: k < 24
+@@ -1342,0 +1396,4 @@
++    if: decl_write(state, 24) != 0
++        c.remove(state)
++        return: 1
++    bld_hash_note(rec, state)
+@@ -1402,0 +1460 @@
++    @@: thread_names char c.calloc(44U, sizeof(@: char))
+@@ -1416 +1474 @@
+-    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0
++    if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0
+@@ -1513,0 +1572,44 @@
++    thread_names[0]: "lmx_thread_init"
++    thread_names[1]: "lmx_thread_enter"
++    thread_names[2]: "lmx_thread_leave"
++    thread_names[3]: "lmx_thread_turn"
++    thread_names[4]: "lmx_thread_running"
++    thread_names[5]: "lmx_thread_current"
++    thread_names[6]: "lmx_thread_api"
++    thread_names[7]: "lmx_thread_mail_api"
++    thread_names[8]: "lmx_thread_message"
++    thread_names[9]: "lmx_thread_parent"
++    thread_names[10]: "lmx_thread_service"
++    thread_names[11]: "lmx_thread_children_bind"
++    thread_names[12]: "lmx_thread_children_open"
++    thread_names[13]: "lmx_thread_children_field_new"
++    thread_names[14]: "lmx_thread_children"
++    thread_names[15]: "lmx_thread_child_count"
++    thread_names[16]: "lmx_thread_child_at"
++    thread_names[17]: "lmx_thread_manager"
++    thread_names[18]: "lmx_thread_scheduler_open"
++    thread_names[19]: "lmx_thread_alive_cell"
++    thread_names[20]: "lmx_thread_finish"
++    thread_names[21]: "lmx_thread_child_add"
++    thread_names[22]: "lmx_thread_child_remove"
++    thread_names[23]: "lmx_thread_adopt"
++    thread_names[24]: "lmx_thread_child_is"
++    thread_names[25]: "lmx_thread_child_first"
++    thread_names[26]: "lmx_thread_child_next"
++    thread_names[27]: "lmx_poll_answer_children"
++    thread_names[28]: "lmx_stop_children"
++    thread_names[29]: "lmx_stop_request"
++    thread_names[30]: "lmx_stop_close"
++    thread_names[31]: "lmx_thread_close_deadline"
++    thread_names[32]: "lmx_thread_close_deadline_publish"
++    thread_names[33]: "lmx_thread_lane_ended"
++    thread_names[34]: "lmx_thread_mail_accept"
++    thread_names[35]: "lmx_thread_mail_take"
++    thread_names[36]: "lmx_thread_mail_count"
++    thread_names[37]: "lmx_thread_mail_close"
++    thread_names[38]: "lmx_walk_mail_take"
++    thread_names[39]: "lmx_walk_adopt"
++    thread_names[40]: "lmx_walk_independent"
++    thread_names[41]: "lmx_walk_receive_if"
++    thread_names[42]: "lmx_msg_poll_abort"
++    thread_names[43]: "lmx_msg_poll_escape"
+@@ -1906 +2008,3 @@
+-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_reparent", reparent_names, 18, 0)
++    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_reparent", reparent_names, 18, 0) != 0
++        return: 1
++    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_thread", thread_names, 44, 0)

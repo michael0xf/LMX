@@ -50,7 +50,7 @@ The target method Structure has addressable `args`, `return`, `var`, and `body` 
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
-The head of a Frame may be an unnamed Structure, and the left side of the `:=` operator an unnamed Structure of places: `(int: a; int: b): f()`, `(a b c) := c, a, b` and `(a, b, c) := myFn()` (author's decisions of 2026-11-10, [journal](../LMX_blog/2026-11-10.md)). A bounded Structure whose closing parenthesis is immediately followed by a colon becomes the head, and one followed by `:=` the left side of the write; the tail and the vertical body are parsed by the common rules of the short and vertical forms. Such a Structure holds at least one field: `():` with empty parentheses remains a separate head form ([§14](#bounded)). The meaning of the notations — a declaration of places with values by position and group positional assignment — is given by the [semantics](LMX_semantics.en.md#group-assign). P0 does not parse such a head or such a left side yet ([plan](../next_core_tasks_v3.md#m6)).
+The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := c, a, b` and `(a, b, c) := myFn()` (author's decisions of 2026-11-10, [journal](../LMX_blog/2026-11-10.md#no-structure-head)). A bounded Structure whose closing parenthesis is followed by `:=` becomes the left side of the write; the right side is parsed as that of `name := value`. Such a Structure holds at least one field. A Structure as the head of a Frame before a colon is not introduced: `():` with empty parentheses remains a separate head form ([§14](#bounded)). The meaning of the notation — group positional assignment — is given by the [semantics](LMX_semantics.en.md#group-assign). P0 does not parse such a left side yet ([plan](../next_core_tasks_v3.md#m6)).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -359,7 +359,7 @@ After a physical newline, a bounded continuation must remain deeper than the ope
 
 `target[...]` is an attached index suffix. `[]:` is a symbolic head. Standalone `[a b]` is not a portable replacement for `(a b)` without explicit profile admission. Index contents use the same P0 and may contain nested calls, brackets, strings, and operators.
 
-A non-empty `(...)` whose closing parenthesis is immediately followed by a colon is a Structure head, and one followed by `:=` is the left side of a write ([§2](#structure)); `(): value` with empty parentheses remains the separate head form `()`.
+A non-empty `(...)` whose closing parenthesis is followed by `:=` is the left side of a write ([§2](#structure)); `(): value` with empty parentheses remains the separate head form `()`.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3227–3228.
 

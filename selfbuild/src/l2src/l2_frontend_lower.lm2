@@ -847,7 +847,7 @@ fn: lm_compiler_colon_bound_before (const: (@: body c.LmP0Structure); const: (@:
                 if: c.lm_compiler_text_same(dn, name)
                     return: (cast: (int) (1))
                 ---
-            # A field declared by a letter (`receiveMessage: name`) or the empty Structure (`name()`) is bound after its
+            # A field declared by a letter (`receive: name`) or the empty Structure (`name()`) is bound after its
             # statement as well.
             if: c.lm_compiler_receive_msg_shape((cast: (const: @: c.LmP0Node) (f\value)), @ dn, 0) = 0 && c.lm_compiler_text_same(dn, name) != 0
                 return: (cast: (int) (1))
@@ -3364,12 +3364,12 @@ fn: lm_compiler_scan_body (const: (@: body c.LmP0Structure); int: mi; @: seen in
                 return: (cast: (int) (1))
             field: c.lm_compiler_skip_span(field, k)
             continue
-        # sendMessage: X, or sendMessage: Ref X (FABLE-SONNET-SEND-REF-20260925-172 commit 3) --
+        # send: X, or send: Ref X (FABLE-SONNET-SEND-REF-20260925-172 commit 3) --
         # the message is always the LAST active field; anything before it is the Ref expression,
         # scanned like any other (l2_scan_fields already skips a path run's own `\name` segments,
         # the same shape a Ref like m\sender has).  The message's name and its field names label
         # positions; only each field's value is an expression.
-        if: stmt != 0 && (c.lm_compiler_frame_head(stmt, "sendMessage") != 0 || c.lm_compiler_frame_head(stmt, "send") != 0) && stmt\as\frame\body != 0
+        if: stmt != 0 && c.lm_compiler_frame_head(stmt, "send") != 0 && stmt\as\frame\body != 0
             nxt: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
             n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
             if: n > 1 && lm_compiler_scan_fields((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n - 1, mi, seen) != 0
@@ -6325,7 +6325,7 @@ fn: lm_compiler_emit_path_cursor_slot (const: (@: path c.L2Path); int: mi; const
         return: (cast: (int) (1))
     if: oi >= 0 && c.fprintf(out_cell[0], "%sl2_pst: %s\n", ind, l2_proot\data) < 0
         return: (cast: (int) (1))
-    # N2: an own reference (`@: Model box`) or a letter binding (`receiveMessage: m Model`, 0 on an empty inbox) holding
+    # N2: an own reference (`@: Model box`) or a letter binding (`receive: m Model`, 0 on an empty inbox) holding
     # nothing, followed: the implicit throw, tested at the root (Codex, CODEX-STRUCT-NULL-20261011-151401;
     # l2_own_nullable_root, the classification the throw-channel analysis shares); a merge result's reference is the
     # merge's promise, tested below as X1.
@@ -14204,7 +14204,7 @@ fn: lm_compiler_msend_register (const: (@: stmt c.LmP0Node); const: (@: path cha
         k: k + 1
     ---
     if: c.lm_compiler_count_active(c.lm_compiler_app_actuals(stmt)) = 0
-        return: (cast: (int) (c.lm_compiler_error(path, stmt, "this sendMessage")))
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "this send")))
     ---
     f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
     total: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
@@ -14215,7 +14215,7 @@ fn: lm_compiler_msend_register (const: (@: stmt c.LmP0Node); const: (@: path cha
         has_ref: 1
     ---
     if: mf = 0
-        return: (cast: (int) (c.lm_compiler_error(path, stmt, "this sendMessage")))
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "this send")))
     x: mf\value
     if: x = 0 || x\kind != c.LM_P0_NODE_FRAME || x\as = 0 || x\as\frame = 0 || x\as\frame\body = 0 || c.lm_compiler_ident((cast: (const: @: c.LmP0Text) (x\as\frame\head))) = 0
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "a message that is not one Structure")))
@@ -14372,7 +14372,7 @@ fn: lm_compiler_emit_msend (const: (@: stmt c.LmP0Node); int: mi; const: (@: ind
     # before it is sent.
     if: c.lm_compiler_emit_publish(ind) != 0
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0, l2_call_arena, l2_call_code, 0, 0) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, (nf + has_ref), ind, ind, ind) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_msend%d(0, l2_msr%d, %dU, 0, 0, l2_call_arena, l2_call_code, 0, 0) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: send failed\\n\")\n%s    c.abort()\n%s---\n", ind, k, k, (nf + has_ref), ind, ind, ind) < 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_emit_msend
@@ -19346,14 +19346,14 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         if: n = 0
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # sendMessage: X (FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2) -- see
+        # send: X (FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2) -- see
         # l2_emit_msend's own comment; l2_check_body already validated and registered the shape.
-        if: c.lm_compiler_frame_head(stmt, "sendMessage") != 0 || c.lm_compiler_frame_head(stmt, "send") != 0
+        if: c.lm_compiler_frame_head(stmt, "send") != 0
             if: lm_compiler_emit_msend(stmt, mi, ind) != 0
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # receiveMessage: m -- take the next admitted letter of the current Thread
+        # receive: m -- take the next admitted letter of the current Thread
         # (the owner attaches its arena before exposing it) and assign m its
         # graph, or 0 when the inbox is empty: m's slot takes it (l2_own_store; -189
         # c3b-3, an own Structure field is a direct slot).  A slot that cannot be
@@ -19364,9 +19364,9 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             oi: receiver_place\index
             if: c.fprintf(out_cell[0], "%sl2_nmsg: (cast: (@: LmxMsg) lmx_thread_mail_take(lmx_thread_current(), c.LMX_POST_INBOX))\n%sl2_ngraph: 0\n%sif: l2_nmsg != 0\n%s    l2_ngraph: l2_nmsg\\graph\n", ind, ind, ind, ind) < 0
                 return: (cast: (int) (1))
-            # A field of a declared Structure type, in the one-name form `T: m` / `receiveMessage:
+            # A field of a declared Structure type, in the one-name form `T: m` / `receive:
             # m`, takes the letter's payload, admitted to its type (D-57; q25 (ii): the field holds
-            # what its declaration says).  The two-name form `receiveMessage: m T` (-172 c2) types m
+            # what its declaration says).  The two-name form `receive: m T` (-172 c2) types m
             # with the synthesized letter model, and m holds the whole letter.
             if: c.lm_compiler_own_nsty_get(oi) >= 0 && c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) = 1 && c.fprintf(out_cell[0], "%sl2_ngraph: (cast: (@: Lmx) lmx_arena_ref_value(l2_ngraph, 1U))\n", ind) < 0
                 return: (cast: (int) (1))
@@ -19601,7 +19601,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             ---
         ---
         # An untyped graph into a Structure-typed own field (S3): admitted at run time, then
-        # bound like receiveMessage and `Model: fresh`: its slot takes it (l2_own_store).
+        # bound like receive and `Model: fresh`: its slot takes it (l2_own_store).
         rbadmit: 0
         if: oi >= 0 && c.lm_compiler_own_is_slot(oi) = 0 && c.lm_compiler_own_nsty_get(oi) >= 0
             rbadmit: 1

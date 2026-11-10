@@ -88,8 +88,13 @@ typeof / sendMessage -> send / receiveMessage -> receive / закоммити п
 `l2_frontend_emit.lm2`, два — `l2_frontend_lower.lm2`), исходные тексты пока пишут прежние слова. Проверки хода A:
 `tool-f06` `434740cd…`, `rt-f05`, `graph-f05`; список `fable-graph-check-f06.tsv` — `CHECKS 88 lines, 0 failed`,
 264 PASS; `bootstrap quick` `boot-f05` — 0 отказов, 19:29:08Z–19:41:33Z, runtime G1 = G2 = `rt-f05` (`d325eb0b…`),
-frontend и инструмент G1 и G2 совпадают, кроме штампа линковки. Ход B: исходные тексты `selfbuild` и документы
-переходят на `send` и `receive`, прежние слова из транслятора снимаются; собирается frontend хода A.
+frontend и инструмент G1 и G2 совпадают, кроме штампа линковки (коммит `eba21575`). Ход B: исходные тексты
+`selfbuild` (169 файлов `.lm2`, 218 строк) и документы пишут `send` и `receive`, frontend знает только их, сообщения
+транслятора и выпускаемого кода называют новые слова; первое поколение собрал frontend хода A. Проверки хода B —
+[запись](witnesses/renames-20261110/notes.md): `bootstrap quick` `boot-f06` — 0 отказов, runtime G1 = G2 = `rt-f06`; frontend G1
+и G2 различаются тремя строками выпущенного кода — G1 несёт сообщение со старым словом от frontend хода A; graph-check
+`CHECKS 88 lines, 0 failed`; полный набор `tests/full-suite.tsv` — `SUITE 139 rows, 0 failures`, 1102 PASS. В списке
+набора у одной строки сдвинулся столбец сообщения (`os_implements_refused`, 30 → 23).
 
 **Порядок дальше.** M6: шаги 5 (`typeof`, прежде `getType`) и 4 (`S[i]`) сделаны; ход B переименований; M7 вместе с
 M9 — по поручению автора о переводе кода на `:=`, сначала чистый граф; M8; шаги 1, 2, 3 раздела M6; маршрут 331 —
@@ -102,14 +107,15 @@ M9 — по поручению автора о переводе кода на `:
 путь понижения ресивера не знает; констант двери в чистом графе нет.
 
 **Рабочее окружение сессии.** `P` — `build2/codex_fix250generationchain01`. Стадия — `P/fable-main01`, наполнена из
-`main` (manifest `P/pins/fable-source08.sha256`, 412 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
-и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f04/lmxtool.exe` (`37a8a343…`), hosted
-frontend — `P/fable-main01/boot-f04/g2/frontend/l2trans.exe` (`be7f2325…`), runtime — `P/fable-main01/rt-f04`
-(`driver.o` `692c6b1a…`), транслятор графа — `P/fable-main01/graph-f04`, базовый frontend —
+`main` (manifest `P/pins/fable-source11.sha256`, 412 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
+и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f06/lmxtool.exe` (`19990ab9…`), hosted
+frontend — `P/fable-main01/boot-f06/g2/frontend/l2trans.exe` (`df27fecf…`), runtime — `P/fable-main01/rt-f06`
+(`driver.o` `56b73642…`), транслятор графа — `P/fable-main01/graph-f06`, базовый frontend —
 `P/cold-candidate48/full48/g2/frontend`. Команды инструмента запускаются из `P/runs/fable-m6-01`. Список graph-check —
-`P/pins/fable-graph-check-f05.tsv` (88 строк). Заняты метки `tool-f02`, `tool-f04`, `tool-f05`, `rt-f01`–`rt-f04`,
-`rt-f03m`, `rt-f04m`, `graph-f01`–`graph-f04`, `graph-f03m`, `graph-f04m`, `boot-f03`, `boot-f04`, `check-f01`,
-`check-f03`, `check-f03m`, `check-f04`, `check-f05`, `check-f05m` и `docs80`–`docs108` с суффиксом `-fable01`.
+`P/pins/fable-graph-check-f07.tsv` (88 строк). Заняты метки `tool-f02`, `tool-f04`–`tool-f06`, `rt-f01`–`rt-f06`,
+`rt-f03m`, `rt-f04m`, `graph-f01`–`graph-f06`, `graph-f03m`, `graph-f04m`, `boot-f03`–`boot-f06`, `check-f01`,
+`check-f03`, `check-f03m`, `check-f04`–`check-f07`, `check-f05m`, `suite-f06` и `docs80`–`docs110` с суффиксом
+`-fable01`.
 
 Ниже — состояние до этой записи (история).
 

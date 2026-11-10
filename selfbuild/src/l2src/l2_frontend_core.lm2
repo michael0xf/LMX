@@ -3955,7 +3955,7 @@ fn: lm_compiler_letter_ns_for (const: (@: model c.LmP0Text); const: (@: at c.LmP
     if: model != 0
         mni: c.lm_compiler_ns_find(model)
         if: mni < 0
-            return: (cast: (int) (c.lm_compiler_error(path, at, "receiveMessage: unknown payload model")))
+            return: (cast: (int) (c.lm_compiler_error(path, at, "receive: unknown payload model")))
         ---
     ---
     sender: lm_compiler_sender_text()
@@ -4416,8 +4416,8 @@ fn: lm_compiler_collect_asgn_body (const: (@: body c.LmP0Structure); int: mi; co
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # receiveMessage: m declares m the same way (an own field of graph
-        # type). receiveMessage: m Model (FABLE-SONNET-SEND-REF-20260925-172
+        # receive: m declares m the same way (an own field of graph
+        # type). receive: m Model (FABLE-SONNET-SEND-REF-20260925-172
         # commit 2) additionally types it to the synthesized letter model,
         # exactly as the colon-decl branch above types its own field --
         # cmodel is reused, the two branches never both match the same
@@ -8622,7 +8622,7 @@ fn: lm_compiler_ns_body_stmt_here (const: (@: source_node c.LmP0Node); int: me) 
             return: (cast: (int) (1))
         # Only a declaration is a field -- the typed shapes l2_take_ns_body takes (l2_ns_decl_first), a nested
         # definition, a binding; an item of any other shape -- `cells[1]: …`, `x\f: …`, `g: 5` with g declared
-        # above, `sendMessage: exit(…)`, a known head's application `Model: m` -- is a statement.
+        # above, `send: exit(…)`, a known head's application `Model: m` -- is a statement.
         # Q57: a nested head that resolves to nothing, with its tail retained, is a nested named Structure -- a
         # FIELD of me (kind 2), read by l2_take_ns_body -- not a statement of the body.
         if: lm_compiler_ns_nested_def(source_node, me) != 0

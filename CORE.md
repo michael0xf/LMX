@@ -210,8 +210,8 @@ child propagates the same rule.
 
 ## 6. Mail, ownership transfer, and collection
 
-Each Thread has one `LmxPost`. `post`, `sendMessage`, and
-`receiveMessage` must converge on this transport, not create a second
+Each Thread has one `LmxPost`. `post`, `send`, and
+`receive` must converge on this transport, not create a second
 mailbox. The inbox FIFO holds an inseparable target/donor-arena pair.
 The receiver attaches the donor on take; a refused attach preserves the
 pair. Owner-local staging/outbox and the publication boundary remain

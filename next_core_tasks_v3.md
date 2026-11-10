@@ -1394,14 +1394,14 @@ Gate включает generated-source checks, [цикл документаци�
 
 <a id="8a-общая-почта-post-и-sendmessagereceivemessage"></a>
 <a id="stage8a"></a>
-## 8a. Общая почта: post и sendMessage/receiveMessage
+## 8a. Общая почта: post и send/receive
 
 Только после принятого §8. Контракт —
 [семантика](docs/LMX_semantics.en.md#thread-message-api) и
 [матрица T01–T26](docs/new_parts/threadMessageAPI.en.md);
 [миграция](docs/new_parts/threadMessageAPI_migration.en.md) хранит детали.
 
-1. **S8a.1:** `post`, `sendMessage` и `receiveMessage` используют одну
+1. **S8a.1:** `post`, `send` и `receive` используют одну
    существующую mail enqueue/take, ownership, admission и вызов; без
    второй очереди/resolver и рекурсивного send→post→send.
 2. **S8a.2:** обычные Structure/conversion подготавливают `ask`, `answer`,

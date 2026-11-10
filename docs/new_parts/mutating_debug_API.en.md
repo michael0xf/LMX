@@ -92,7 +92,7 @@ The owner or its driver services control requests without concurrent adapter wri
 <a id="post"></a>
 ## 14. Message transport
 
-Ordinary `post` carries a call through the existing mailbox; `answer` completes the corresponding wait without publishing Thread methods as an API. `sendMessage` and `receiveMessage` remain available on the same foundation. A timeout starts at sending and invokes the designated user code, but does not itself cancel recipient work, close the route, or discard a late answer.
+Ordinary `post` carries a call through the existing mailbox; `answer` completes the corresponding wait without publishing Thread methods as an API. `send` and `receive` remain available on the same foundation. A timeout starts at sending and invokes the designated user code, but does not itself cancel recipient work, close the route, or discard a late answer.
 
 <a id="failures"></a>
 ## 15. Failure and uncertain outcome

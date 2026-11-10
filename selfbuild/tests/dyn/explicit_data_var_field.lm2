@@ -2,7 +2,7 @@
 # Ordinary assignment replaces that binding; an explicit data/var field is distinct.
 S:
     if: var\x != 10
-        sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+        send: exit(exit_code: 84; stdout: ""; stderr: "")
         return
     ---
     x: x + 3
@@ -11,7 +11,7 @@ S:
         int: unused 9
     end: var
     if: var\x != 2
-        sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+        send: exit(exit_code: 85; stdout: ""; stderr: "")
         return
     ---
     var\x: 6
@@ -40,7 +40,7 @@ AddressWide:
     @: p size_t 0
     p: @(var\cell)
     if: \p != 4294967296U
-        sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+        send: exit(exit_code: 86; stdout: ""; stderr: "")
         return
     \p: 12U
 end: AddressWide
@@ -120,5 +120,5 @@ call: CatchInnerConvert W
 if: W\caught != 4 || W\cell != 12U
     answer: 95
 
-sendMessage: exit(exit_code: answer; stdout: ""; stderr: "")
+send: exit(exit_code: answer; stdout: ""; stderr: "")
 return

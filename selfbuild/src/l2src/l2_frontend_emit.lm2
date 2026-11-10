@@ -3029,9 +3029,9 @@ fn: lm_compiler_src_one (@: field c.LmP0Field; int: mi; int: commit; @: cursor i
         return: (cast: (int) (0))
     if: c.lm_compiler_text_eq(h, "else") || c.lm_compiler_text_eq(h, "until") || c.lm_compiler_text_eq(h, "fn") || c.lm_compiler_text_eq(h, "throw") || c.lm_compiler_text_eq(h, "throws")
         return: (cast: (int) (1))
-    # The root's one-name receiveMessage is the letter cell and then the take.
+    # The root's one-name receive is the letter cell and then the take.
     # A second name is an admission the walk does not place here.
-    if: c.lm_compiler_text_eq(h, "receiveMessage") || c.lm_compiler_text_eq(h, "receive")
+    if: c.lm_compiler_text_eq(h, "receive")
         if: mi != e_cell[0] || c.lm_compiler_find_method(h) >= 0
             return: (cast: (int) (1))
         if: stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) != 1
@@ -3047,7 +3047,7 @@ fn: lm_compiler_src_one (@: field c.LmP0Field; int: mi; int: commit; @: cursor i
             return: (cast: (int) (1))
         \cursor: \cursor + 1
         return: (cast: (int) (0))
-    if: c.lm_compiler_text_eq(h, "sendMessage") || c.lm_compiler_text_eq(h, "send")
+    if: c.lm_compiler_text_eq(h, "send")
         if: mi != e_cell[0]
             return: (cast: (int) (1))
         if: commit != 0 && c.lm_compiler_ps_add(stmt, (cast: (int) (\cursor))) != 0
@@ -5311,10 +5311,10 @@ fn: lm_compiler_check_word_stmt (const: (@: stmt c.LmP0Node); const: (@: w c.LmP
         if: mi != e_cell[0] && m_ret_cell[0][mi] != 8 && c.lm_compiler_m_machine(mi) != 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported body")))
         return: (cast: (int) (0))
-    if: c.lm_compiler_text_eq(w, "sendMessage") || c.lm_compiler_text_eq(w, "send")
+    if: c.lm_compiler_text_eq(w, "send")
         return: (cast: (int) (c.lm_compiler_msend_register(stmt, path, mi, @ msk, @ msni)))
-    if: (c.lm_compiler_text_eq(w, "receiveMessage") || c.lm_compiler_text_eq(w, "receive")) && c.lm_compiler_receive_msg_shape(stmt, @ rnm, 0) = 2
-        return: (cast: (int) (c.lm_compiler_error(path, stmt, "receiveMessage binds one or two names")))
+    if: c.lm_compiler_text_eq(w, "receive") && c.lm_compiler_receive_msg_shape(stmt, @ rnm, 0) = 2
+        return: (cast: (int) (c.lm_compiler_error(path, stmt, "receive binds one or two names")))
     if: c.lm_compiler_text_eq(w, "for")
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported loop")))
     return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported body")))
@@ -5743,8 +5743,8 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # sendMessage is recorded for native emission in every compiled body.
-        if: c.lm_compiler_frame_head(stmt, "sendMessage") != 0 || c.lm_compiler_frame_head(stmt, "send") != 0
+        # send is recorded for native emission in every compiled body.
+        if: c.lm_compiler_frame_head(stmt, "send") != 0
             if: c.lm_compiler_msend_register(stmt, path, mi, @ msk, @ msni) != 0
                 return: (cast: (int) (1))
             send_field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
@@ -5764,7 +5764,7 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
             ---
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # receiveMessage: m / receiveMessage: m Model (Q10; the two-name form,
+        # receive: m / receive: m Model (Q10; the two-name form,
         # FABLE-SONNET-SEND-REF-20260925-172 commit 2). A written output site
         # declares its own occurrence unless a source-visible explicit typed
         # target in this body is selected. Reexecution reuses that same site;
@@ -5779,7 +5779,7 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
         # and the only way this site's own l2_own_nsty_get check below sees
         # the type on a first declaration if that pre-pass has not run yet.
         if: c.lm_compiler_receive_msg_shape(stmt, @ cname, 0) = 2
-            return: (cast: (int) (c.lm_compiler_error(path, stmt, "receiveMessage binds one or two names")))
+            return: (cast: (int) (c.lm_compiler_error(path, stmt, "receive binds one or two names")))
         if: c.lm_compiler_receive_msg_shape(stmt, @ cname, @ cmodel) = 0
             cj: c.lm_compiler_own_output_add(mi, cname, c.lm_compiler_graph_own(), path, stmt)
             if: cj < 0
@@ -8352,21 +8352,21 @@ fn: lm_compiler_rw_take (const: (@: stmt c.LmP0Node); int: into; @: out int) int
     int: contract
     int: inputs
     if: c.lm_compiler_receive_msg_shape(stmt, @ cname, @ cmodel) != 0 || cname = 0
-        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this receiveMessage")))
+        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this receive")))
     if: c.lm_compiler_receiver_output_place(stmt, rw_mi_cell[0], @ receiver_place) != 0
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "an unresolved receiver output place")))
     oi: receiver_place\index
     if: c.lm_compiler_rw_seen(oi) = 0
-        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this receiveMessage")))
+        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this receive")))
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) = 0
-        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this receiveMessage")))
+        return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this receive")))
     # §7b: the letter goes to m's working value when it has one (SET), else to its cell (l2_rw_write).
     if: lm_compiler_rw_write(into, oi, (cast: (const: @: char) (c.lm_compiler_rw_bind_op(oi))), out, @ slotv) != 0
         return: (cast: (int) (1))
     holder: \out
     # m of a declared Structure type T takes the NEXT letter and admits it to T -- its payload, the
     # user's model describes the payload -- a refusal being the implicit throw `implements`
-    # (-178 commit 3): PUT(m, admit_letter(take, T)). The two-name form `receiveMessage: m T`
+    # (-178 commit 3): PUT(m, admit_letter(take, T)). The two-name form `receive: m T`
     # types m with the synthesized letter model: m holds the whole letter, admitted to that
     # model as it is (-172 c2), PUT(m, admit(take, letter model)).
     ni: c.lm_compiler_own_nsty_get(oi)
@@ -12562,18 +12562,18 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
             return: (cast: (int) (1))
         \made: 1
         return: (cast: (int) (0))
-    # receiveMessage takes the current Thread's next letter (l2_rw_take, -179); its name is the language's, so no
+    # receive takes the current Thread's next letter (l2_rw_take, -179); its name is the language's, so no
     # method takes it (RESERVED-NAME-BINDINGS).
     # The same source-site constructor writes through the current GraphField
     # and uses the executing Thread, regardless of the body's nesting.
-    if: c.lm_compiler_text_eq(h, "receiveMessage") || c.lm_compiler_text_eq(h, "receive")
+    if: c.lm_compiler_text_eq(h, "receive")
         if: lm_compiler_rw_take(stmt, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    if: c.lm_compiler_text_eq(h, "sendMessage") || c.lm_compiler_text_eq(h, "send")
+    if: c.lm_compiler_text_eq(h, "send")
         if: lm_compiler_rw_send(stmt, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
@@ -17155,7 +17155,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: c.lm_compiler_emit_publish_helpers(2) != 0
         c.fclose(out_cell[0])
         return: 1
-    if: c.fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# A method's own field used by a bare name has a working value l2_qN, loaded at entry from its cell in the selected occurrence `self` (slot handle l2_qN_from); a write changes l2_qN and sets l2_qN_dirty; a call, a c.* call, a copying receiver, sendMessage and every exit first publish the marked fields in field order and unmark them; a clean one is not written back and nothing is reloaded after a call (book section 12, 14; Lingvamyxa spec 21.5, 21.6). An explicit path and @x of an own field are its cell. Source-visible `node` is the fixed lexical space above the method for the whole activation; explicit node\\name reads and writes that graph. Every mutable numeric field, including char, has a distinct owned cell of its declared C type (no interned shared size_t, no int narrowing).\n# Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 value; a callable is invoked only by an explicit call Frame. Body reference declarations designate real typed pointer-value cells. Pointer results pass their stored reference; sub: is void. Native @ of a Structure or nonprimitive formal forwards its descriptor; @ of an explicit pointer binding addresses its typed pointer-value cell. Primitive formals address their local parameter cells, not graph fields. Nonprimitive signature descriptions never address the hidden machine parameter transporting the descriptor. A declaration of a formal's name without an initializer takes the argument into its cell. Executable if/else/while/for bodies are graph Structures; their own fields are cells of their exact host. &&/|| use guarded evaluation through the common expression path; skipped RHS neither prepares actuals nor reads fields or Array elements.\n\n", out_cell[0]) < 0
+    if: c.fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# A method's own field used by a bare name has a working value l2_qN, loaded at entry from its cell in the selected occurrence `self` (slot handle l2_qN_from); a write changes l2_qN and sets l2_qN_dirty; a call, a c.* call, a copying receiver, send and every exit first publish the marked fields in field order and unmark them; a clean one is not written back and nothing is reloaded after a call (book section 12, 14; Lingvamyxa spec 21.5, 21.6). An explicit path and @x of an own field are its cell. Source-visible `node` is the fixed lexical space above the method for the whole activation; explicit node\\name reads and writes that graph. Every mutable numeric field, including char, has a distinct owned cell of its declared C type (no interned shared size_t, no int narrowing).\n# Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 value; a callable is invoked only by an explicit call Frame. Body reference declarations designate real typed pointer-value cells. Pointer results pass their stored reference; sub: is void. Native @ of a Structure or nonprimitive formal forwards its descriptor; @ of an explicit pointer binding addresses its typed pointer-value cell. Primitive formals address their local parameter cells, not graph fields. Nonprimitive signature descriptions never address the hidden machine parameter transporting the descriptor. A declaration of a formal's name without an initializer takes the argument into its cell. Executable if/else/while/for bodies are graph Structures; their own fields are cells of their exact host. &&/|| use guarded evaluation through the common expression path; skipped RHS neither prepares actuals nor reads fields or Array elements.\n\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     i: 0
@@ -17319,7 +17319,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         i: i + 1
-    if: msend_n_cell[0] > 0 && c.fputs("sub: l2_send_fail ()\n    c.fprintf(c.stderr, \"lmx: invariant: sendMessage failed\\n\")\n    c.abort()\nend: l2_send_fail\n\n", out_cell[0]) < 0
+    if: msend_n_cell[0] > 0 && c.fputs("sub: l2_send_fail ()\n    c.fprintf(c.stderr, \"lmx: invariant: send failed\\n\")\n    c.abort()\nend: l2_send_fail\n\n", out_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     i: 0

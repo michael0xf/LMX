@@ -16,7 +16,7 @@ The ordinary LMX machine selects and executes the addressed call; mail carries i
 
 ## 3. Required: `answer` maintains only pending-reply state
 
-`answer` populates separate sender-owned waiting state; it neither declares a public recipient method nor replaces `receiveMessage`. Original-letter identity correlates a reply with its wait without user-supplied IDs or reply ordinals. Updates to this state belong to the sender and follow existing ownership and lifetime rules.
+`answer` populates separate sender-owned waiting state; it neither declares a public recipient method nor replaces `receive`. Original-letter identity correlates a reply with its wait without user-supplied IDs or reply ordinals. Updates to this state belong to the sender and follow existing ownership and lifetime rules.
 
 ## 4. Required: plural calls and result fan-out are transport operations
 
@@ -46,7 +46,7 @@ Rows T10–T20 below fix the reference outcomes: one or three `getPixel` calls, 
 
 ### 10.1 Work order
 
-After accepted §8 self-build, connect `post` to the common call machine and mail, then migrate `sendMessage`/`receiveMessage` to that foundation. Exercise local and transported scenarios with equivalent source data; count source executions, replies, deliveries, and wait-state changes separately. A green parser does not establish transport behavior.
+After accepted §8 self-build, connect `post` to the common call machine and mail, then migrate `send`/`receive` to that foundation. Exercise local and transported scenarios with equivalent source data; count source executions, replies, deliveries, and wait-state changes separately. A green parser does not establish transport behavior.
 
 ### 10.2 Observable acceptance tests
 
@@ -83,7 +83,7 @@ Provide observable evidence for every T01–T26, including applicable native/wal
 
 ## 11. Superseded designs: do not reintroduce them
 
-Do not revive an external Thread API dictionary, reply registration as a callable, all-matches execution, user reply IDs, a second mailbox, a second resolver, or a `sendMessage → post → sendMessage` cycle. This does not constrain future optimization of the common mail machinery.
+Do not revive an external Thread API dictionary, reply registration as a callable, all-matches execution, user reply IDs, a second mailbox, a second resolver, or a `send → post → send` cycle. This does not constrain future optimization of the common mail machinery.
 
 ## 12. Required deliverables and source priority
 

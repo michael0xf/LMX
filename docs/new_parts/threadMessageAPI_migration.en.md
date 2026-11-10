@@ -1,20 +1,22 @@
-# Migrate `sendMessage` and `receiveMessage` to common mail
+# Migrate `send` and `receive` to common mail
 
 Companion documents: [Russian version](threadMessageAPI_migration.ru.md), [`post` contract and T01–T26 matrix](threadMessageAPI.en.md), and [main L3 semantics](../LMX_semantics.en.md#thread-message-api). This is implementation work after accepted §8 self-build, not evidence that migration has already happened.
 
+Names: before the author's renaming of 2026-11-10 ([journal](../../LMX_blog/2026-11-10.md#renames)) `send` and `receive` were called `sendMessage` and `receiveMessage`. "Old" below means these same operations as compared with `post`.
+
 ## 1. Required decision
 
-Keep user-facing `sendMessage` and `receiveMessage` with their existing signatures and observable behavior. Their implementations and `post` must use common Message operations; the old names do not become deprecated merely because `post` exists.
+Keep user-facing `send` and `receive` with their existing signatures and observable behavior. Their implementations and `post` must use common Message operations; the old names do not become deprecated merely because `post` exists.
 
 ## 2. Required dependency direction
 
-All three interfaces delegate downward to the existing queue, ownership, publication, and state operations. Processing a transported call uses the ordinary LMX call machine; waits, correlation, and result routes belong to the sender. Do not create a `sendMessage → post → sendMessage` cycle, another queue, or another resolver.
+All three interfaces delegate downward to the existing queue, ownership, publication, and state operations. Processing a transported call uses the ordinary LMX call machine; waits, correlation, and result routes belong to the sender. Do not create a `send → post → send` cycle, another queue, or another resolver.
 
 Where an old operation already delegates to a suitable primitive, keep it. Extract a common part only where the current body mixes public interface with reusable work; do not replace proven code to create a new object hierarchy.
 
 ## 3. What stays, and what it delegates to
 
-`sendMessage` keeps its arguments and result/status; `receiveMessage` keeps address selection, iteration over all available mail, consumption, and terminal `0`. Do not rename the all-mail form into invented `receiveMessage(0)`. `post` keeps structured `ask`, `answer`, `timeout`, `undelivered`, `unanswered`, and `catch`. `answer` does not replace explicit receive: a letter taken by one path cannot be independently consumed by the other.
+`send` keeps its arguments and result/status; `receive` keeps address selection, iteration over all available mail, consumption, and terminal `0`. Do not rename the all-mail form into invented `receive(0)`. `post` keeps structured `ask`, `answer`, `timeout`, `undelivered`, `unanswered`, and `catch`. `answer` does not replace explicit receive: a letter taken by one path cannot be independently consumed by the other.
 
 ## 4. What the common foundation must not duplicate
 
@@ -22,7 +24,7 @@ An addressed call uses ordinary callable selection, arguments, `implements`, con
 
 ## 5. How the old operations are covered
 
-A deliberate no-result send and equivalent `post` use the same delivery with no synthetic reply/ACK. For results, one source call and three destinations give one execution, one reply, and three deliveries; three calls and three destinations give three executions, three replies, and nine deliveries. Correlation uses the original letter without user IDs, total-reply counts, or hidden method search. Explicit `receiveMessage` continues to return messages under its own contract rather than becoming an `answer` handler.
+A deliberate no-result send and equivalent `post` use the same delivery with no synthetic reply/ACK. For results, one source call and three destinations give one execution, one reply, and three deliveries; three calls and three destinations give three executions, three replies, and nine deliveries. Correlation uses the original letter without user IDs, total-reply counts, or hidden method search. Explicit `receive` continues to return messages under its own contract rather than becoming an `answer` handler.
 
 ## 6. Boundaries to preserve during refactoring
 

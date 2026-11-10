@@ -280,7 +280,7 @@ ordered by address and lives outside the graph as arena state (not a traversal t
 from an address, §1 item 2). Today's `LmxPool`/`LmxChunk`/`LmxRange` are the same idea (a pool of chunks of one stride,
 intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `holder`, `side_cells`) that §9 removes.
 
-A program gets the same answer from the receiver `getType(arg)` — the code of the type of the region that holds the
+A program gets the same answer from the receiver `typeof(arg)` — the code of the type of the region that holds the
 address — and reads a Structure's slots as an array of references `S[i]` (author's decisions of 2026-11-10:
 [book](LMX_semantics.en.md#get-type), [journal](../LMX_blog/2026-11-10.md)); the numeric values of the codes are not
 fixed by the norm. The receiver is implemented in the clean graph by one kernel operation for both consumers —

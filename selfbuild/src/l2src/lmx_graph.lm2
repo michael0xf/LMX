@@ -103,7 +103,7 @@ end: lmx_graph_intern_in
 # reading (lmx_graph_root_structure) consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
-    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external sendMessage receiveMessage adopt length getType cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
+    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external sendMessage receiveMessage adopt length typeof cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
     @@: list char 0
     size_t: at 0U
     size_t: start 0U
@@ -195,8 +195,8 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_name: lmx_graph_intern_in(state, "name", 4U)
     state\w_fm: lmx_graph_intern_in(state, "fm", 2U)
     # The receiver of the type of an address (the book, get-type; lmx_graph_address_type).
-    state\w_get_type: lmx_graph_intern_in(state, "getType", 7U)
-    if: state\w_get_type = 0
+    state\w_typeof: lmx_graph_intern_in(state, "typeof", 6U)
+    if: state\w_typeof = 0
         return: 0
     # The index of a Structure (the book, structure-index): the operator word of the expression [base, [], index] the
     # builder makes of an attached `base[index]`, and the receiver of the number of its fields.
@@ -1685,7 +1685,7 @@ fn: lmx_graph_address_of (@: g c.LmxGraph; @: value void; @@: out void) int
 end: lmx_graph_address_of
 
 # The type of the region of the arena that holds the address a value stands for (§2.1; the book, get-type; the
-# receiver getType of both executors; lmx_graph_address_of). 0 and the type in out, LMX_TYPE_NONE for an address no
+# receiver typeof of both executors; lmx_graph_address_of). 0 and the type in out, LMX_TYPE_NONE for an address no
 # region of this arena holds (a null reference); 5 for a value that is no address.
 fn: lmx_graph_address_type (@: g c.LmxGraph; @: value void; @: out int) int
     @: address void 0

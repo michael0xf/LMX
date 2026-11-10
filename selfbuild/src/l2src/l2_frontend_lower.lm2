@@ -3369,7 +3369,7 @@ fn: lm_compiler_scan_body (const: (@: body c.LmP0Structure); int: mi; @: seen in
         # scanned like any other (l2_scan_fields already skips a path run's own `\name` segments,
         # the same shape a Ref like m\sender has).  The message's name and its field names label
         # positions; only each field's value is an expression.
-        if: stmt != 0 && c.lm_compiler_frame_head(stmt, "sendMessage") != 0 && stmt\as\frame\body != 0
+        if: stmt != 0 && (c.lm_compiler_frame_head(stmt, "sendMessage") != 0 || c.lm_compiler_frame_head(stmt, "send") != 0) && stmt\as\frame\body != 0
             nxt: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
             n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
             if: n > 1 && lm_compiler_scan_fields((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n - 1, mi, seen) != 0
@@ -19348,7 +19348,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             continue
         # sendMessage: X (FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2) -- see
         # l2_emit_msend's own comment; l2_check_body already validated and registered the shape.
-        if: c.lm_compiler_frame_head(stmt, "sendMessage") != 0
+        if: c.lm_compiler_frame_head(stmt, "sendMessage") != 0 || c.lm_compiler_frame_head(stmt, "send") != 0
             if: lm_compiler_emit_msend(stmt, mi, ind) != 0
                 return: (cast: (int) (1))
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))

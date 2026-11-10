@@ -3031,7 +3031,7 @@ fn: lm_compiler_src_one (@: field c.LmP0Field; int: mi; int: commit; @: cursor i
         return: (cast: (int) (1))
     # The root's one-name receiveMessage is the letter cell and then the take.
     # A second name is an admission the walk does not place here.
-    if: c.lm_compiler_text_eq(h, "receiveMessage")
+    if: c.lm_compiler_text_eq(h, "receiveMessage") || c.lm_compiler_text_eq(h, "receive")
         if: mi != e_cell[0] || c.lm_compiler_find_method(h) >= 0
             return: (cast: (int) (1))
         if: stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) != 1
@@ -3047,7 +3047,7 @@ fn: lm_compiler_src_one (@: field c.LmP0Field; int: mi; int: commit; @: cursor i
             return: (cast: (int) (1))
         \cursor: \cursor + 1
         return: (cast: (int) (0))
-    if: c.lm_compiler_text_eq(h, "sendMessage")
+    if: c.lm_compiler_text_eq(h, "sendMessage") || c.lm_compiler_text_eq(h, "send")
         if: mi != e_cell[0]
             return: (cast: (int) (1))
         if: commit != 0 && c.lm_compiler_ps_add(stmt, (cast: (int) (\cursor))) != 0
@@ -5311,9 +5311,9 @@ fn: lm_compiler_check_word_stmt (const: (@: stmt c.LmP0Node); const: (@: w c.LmP
         if: mi != e_cell[0] && m_ret_cell[0][mi] != 8 && c.lm_compiler_m_machine(mi) != 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported body")))
         return: (cast: (int) (0))
-    if: c.lm_compiler_text_eq(w, "sendMessage")
+    if: c.lm_compiler_text_eq(w, "sendMessage") || c.lm_compiler_text_eq(w, "send")
         return: (cast: (int) (c.lm_compiler_msend_register(stmt, path, mi, @ msk, @ msni)))
-    if: c.lm_compiler_text_eq(w, "receiveMessage") && c.lm_compiler_receive_msg_shape(stmt, @ rnm, 0) = 2
+    if: (c.lm_compiler_text_eq(w, "receiveMessage") || c.lm_compiler_text_eq(w, "receive")) && c.lm_compiler_receive_msg_shape(stmt, @ rnm, 0) = 2
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "receiveMessage binds one or two names")))
     if: c.lm_compiler_text_eq(w, "for")
         return: (cast: (int) (c.lm_compiler_error(path, stmt, "unsupported loop")))
@@ -5744,7 +5744,7 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
             field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         # sendMessage is recorded for native emission in every compiled body.
-        if: c.lm_compiler_frame_head(stmt, "sendMessage") != 0
+        if: c.lm_compiler_frame_head(stmt, "sendMessage") != 0 || c.lm_compiler_frame_head(stmt, "send") != 0
             if: c.lm_compiler_msend_register(stmt, path, mi, @ msk, @ msni) != 0
                 return: (cast: (int) (1))
             send_field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
@@ -12566,14 +12566,14 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     # method takes it (RESERVED-NAME-BINDINGS).
     # The same source-site constructor writes through the current GraphField
     # and uses the executing Thread, regardless of the body's nesting.
-    if: c.lm_compiler_text_eq(h, "receiveMessage")
+    if: c.lm_compiler_text_eq(h, "receiveMessage") || c.lm_compiler_text_eq(h, "receive")
         if: lm_compiler_rw_take(stmt, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    if: c.lm_compiler_text_eq(h, "sendMessage")
+    if: c.lm_compiler_text_eq(h, "sendMessage") || c.lm_compiler_text_eq(h, "send")
         if: lm_compiler_rw_send(stmt, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1

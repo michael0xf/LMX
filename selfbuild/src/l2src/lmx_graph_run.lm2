@@ -1671,9 +1671,9 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
     count: c.lmx_graph_count(expression)
     word: c.lmx_graph_name_of(g, raw)
     if: word != 0
-        # The receiver getType (the book, get-type): the type of the region of the arena that holds the address its one
+        # The receiver typeof (the book, get-type): the type of the region of the arena that holds the address its one
         # argument stands for (lmx_graph_address_type). A written zero is the null address, which no region holds.
-        if: word = state\w_get_type
+        if: word = state\w_typeof
             if: count != 1U
                 return: 5
             value: c.lmx_graph_get(expression, 0U)
@@ -1993,7 +1993,7 @@ fn: lmx_graph_language_word (@: state c.LmxGraphState; @: word char) int
         return: 1
     if: word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or || word = state\w_not || word = state\w_if || word = state\w_else || word = state\w_while || word = state\w_for || word = state\w_break
         return: 1
-    if: word = state\w_continue || word = state\w_redo || word = state\w_until || word = state\w_finally || word = state\w_merge || word = state\w_include || word = state\w_predef || word = state\w_fm || word = state\w_get_type
+    if: word = state\w_continue || word = state\w_redo || word = state\w_until || word = state\w_finally || word = state\w_merge || word = state\w_include || word = state\w_predef || word = state\w_fm || word = state\w_typeof
         return: 1
     if: word = state\w_index || word = state\w_length
         return: 1

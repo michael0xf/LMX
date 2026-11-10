@@ -28,8 +28,8 @@ Fable:** нормы внесены в книгу, грамматику, L2 RU/EN
 ([П1](LMX_blog/q/current/colon-declares-contradictions-20261110.md)).
 
 **M6 — дополнения 2026-11-10 (индекс Structure, групповое присваивание через `:=`, результат-Structure у `fn`
-без `fm`, `getType`), Fable:** нормы внесены в документы, шаги записаны в [план](next_core_tasks_v3.md#m6).
-**Шаг 5, `getType`, сделан в чистом графе** (срез 343, [запись](steps/witnesses/get-type-20261110/notes.md);
+без `fm`, `typeof`), Fable:** нормы внесены в документы, шаги записаны в [план](next_core_tasks_v3.md#m6).
+**Шаг 5, `typeof`, сделан в чистом графе** (срез 343, [запись](steps/witnesses/get-type-20261110/notes.md);
 tool-f02/rt-f03/graph-f03 в стадии `P/fable-main01`): операция ядра `lmx_graph_address_type` для интерпретатора и
 `native`; 84 строки graph-check × interp/native/forced — 252 PASS; мутант роняет фикстуру в трёх режимах;
 `bootstrap quick` `boot-f03` — 0 отказов, runtime G1 = G2 = `rt-f03` побайтно, frontend и инструмент совпадают, кроме

@@ -10,9 +10,9 @@ S:
     end: N
 end: S
 int: n length(S)
-int: t_cell getType(S[0])
-int: t_uninit getType(S[1])
-int: t_nested getType(S[2])
+int: t_cell typeof(S[0])
+int: t_uninit typeof(S[1])
+int: t_nested typeof(S[2])
 @: p int S[0]
 int: v_first \p
 S\a := 5
@@ -20,9 +20,9 @@ int: v_same \p
 int: x_nested S[2]\x
 int: n_nested length(S[2])
 int: k 1
-int: t_computed getType(S[k + 1])
+int: t_computed typeof(S[k + 1])
 fn: kind_of (int: i) int
-    return: getType(S[i])
+    return: typeof(S[i])
 end: kind_of
 int: t_method kind_of(2)
 S[0] := @j
@@ -30,5 +30,5 @@ S[0] := @j
 int: v_moved \q
 int: v_kept \p
 S[1] := S[0]
-int: t_filled getType(S[1])
+int: t_filled typeof(S[1])
 int: n_after length(S)

@@ -267,6 +267,12 @@ ordered by address and lives outside the graph as arena state (not a traversal t
 from an address, §1 item 2). Today's `LmxPool`/`LmxChunk`/`LmxRange` are the same idea (a pool of chunks of one stride,
 intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `holder`, `side_cells`) that §9 removes.
 
+A program gets the same answer from the receiver `getType(arg)` — the code of the type of the region that holds the
+address — and reads a Structure's slots as an array of references `S[i]` (author's decisions of 2026-11-10:
+[book](LMX_semantics.en.md#get-type), [journal](../LMX_blog/2026-11-10.md)); the numeric values of the codes are not
+fixed by the norm. Today this is the kernel function `lmx_range_type_of` and the constants `LMX_TYPE_*`; the language has
+neither the receiver nor the Structure index yet ([plan](../next_core_tasks_v3.md#m6)).
+
 ### 2.2 Region types (decision; a finite inventory)
 
 | Type | Cell | Content |
@@ -284,7 +290,7 @@ intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `ho
 The header kinds are the finite inventory of the physical kinds of [L2 §3](L2_spec_en.md#type-by-range): ordinary,
 immutable, an `fn` result, an Array with its element type; the kind is read from the region in which the Lmx's own address
 lies, with one common Lmx record (§3.1); neither the header nor a cell carries a tag. **A region kind is not an opcode:**
-an `fn`/`fm`/`sub` definition, a statement, an expression and a data Structure are the same Lmx of the ordinary kind;
+an `fn`/`sub` definition, a statement, an expression and a data Structure are the same Lmx of the ordinary kind;
 their role is read from the address of the head word (§3.3, §6.1), not from the header's region. The service types
 (`name`, the interval index) are visible to the arena and the executors but are not values of the language. User models
 produce no region types: a Structure of any model is an `lmx` cell plus its slots.

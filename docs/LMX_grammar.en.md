@@ -46,9 +46,11 @@ P0 builds ordered Structures, named Frames, atoms, and Mix nodes with source spa
 
 The colon separates a head from its argument Structure. It does not by itself mean assignment, a key–value pair, or a type annotation. `fn:`, `if:`, `int:`, `[]:`, and user heads use the same form. A consuming profile determines the head's meaning and field roles after parsing. Nesting alone does not make a Structure executable.
 
-The target method Structure has addressable `args`, `return`, `var`, and `body` parts. `var` follows the result of `fn`/`fm` where present and precedes the body of every `fn`/`fm`/`sub`/`catch`. These are ordinary field roles: P0 does not populate `var` from the body.
+The target method Structure has addressable `args`, `return`, `var`, and `body` parts. `var` follows the result of `fn` where present and precedes the body of every `fn`/`sub`/`catch`. These are ordinary field roles: P0 does not populate `var` from the body.
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
+
+The head of a Frame may be an unnamed Structure: `(a b c): c, a, b` and `(a, b, c): myFn()` (author's decision of 2026-11-10, [journal](../LMX_blog/2026-11-10.md)). A bounded Structure whose closing parenthesis is immediately followed by a colon becomes the head; the tail and the vertical body are parsed by the common rules of the short and vertical forms. The head holds at least one field: `():` with empty parentheses remains a separate head form ([§14](#bounded)). The meaning of the notation — group positional assignment — is given by the [semantics](LMX_semantics.en.md#group-assign). P0 does not parse such a head yet ([plan](../next_core_tasks_v3.md#m6)).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -357,6 +359,8 @@ After a physical newline, a bounded continuation must remain deeper than the ope
 
 `target[...]` is an attached index suffix. `[]:` is a symbolic head. Standalone `[a b]` is not a portable replacement for `(a b)` without explicit profile admission. Index contents use the same P0 and may contain nested calls, brackets, strings, and operators.
 
+A non-empty `(...)` whose closing parenthesis is immediately followed by a colon is a Structure head ([§2](#structure)); `(): value` with empty parentheses remains the separate head form `()`.
+
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3227–3228.
 
 ````text
@@ -651,7 +655,7 @@ The author's directive of 2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the
 
 Heads `@:`, `@@:`, `@@@:` and further depths share one structural form. The composed `ptr: @: Model: 0` builds nested Frames by the same rules as `i: int: 5`; two-field `@: ptr Model: Other` leaves two fields in `@`'s tail, the second being a nested Frame. P0 neither reorders arguments nor gives `@` a special order. Typing, declaration, and assignment follow construction of the complete Frame.
 
-Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. Field and index chains bind tighter than prefix operators. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure used as data, it is the zero-based Nth source occurrence of a root-level `field:` head, not an Array field; bare `s\field` is allowed only with one such occurrence. This does not permit duplicate data fields. Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md).
+Prefix `@x` and `\x` differ from heads `@:` and paths `x\field`. Field and index chains bind tighter than prefix operators. `a[i][j][k]` addresses a multidimensional Array; `a[i]\[j]\[k]` follows references to separate Arrays. P0 also parses `s\[N]field`: in a Structure used as data, it is the zero-based Nth source occurrence of a root-level `field:` head, not an Array field; bare `s\field` is allowed only with one such occurrence. This does not permit duplicate data fields. Fields do not use C `.` or `->`. Address and type semantics are in [L3](LMX_semantics.en.md) and [L2](L2_spec_en.md). The index suffix on a Structure, `S[i]`, is the same attached form; it reads a Structure's slot as an `@` reference ([semantics](LMX_semantics.en.md#structure-index)).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 

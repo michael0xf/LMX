@@ -21,8 +21,11 @@ OPEN.
 - Грамматика `last_version` RU/EN (§§2, 10, 12, 14, 16–18, 22, 24–26; метка вызова P0, `call_layout_frame`,
   безымянная голова, анонимная круглая Structure). Остальные документы `last_version` перегенерированы из docs
   обратной заменой ссылок `new_` (проверена обратимость).
-- `provenance/grammar.json`: раздел 2 перенесён в редакцию 4 (с подразделом `name-visibility`); остальные разделы
-  docs/LMX_grammar ещё рендерят прежнюю редакцию — M6.7.
+- `provenance/grammar.json` (второй коммит): вся грамматика редакции 4 перенесена из исправленного `last_version` —
+  все 27 разделов RU/EN и шапка требований (новое поле `prefix`, его рендерит `docs_grammar.lm2`); дословные выдержки
+  прежней спецификации остаются в `examples` с проверкой, 10 устаревших помечены «прежняя запись» / «former spelling»,
+  подписи трёх примеров автора в §18 приведены к новой норме; адаптированные примеры — в тексте разделов. В EN §22
+  исправлена таблица позиций частей (0 — `return`, 1 — `args`).
 - `selfbuild/tools/docs_check_opening.lm2`: открытие автора ищется на границе абзаца после шапки редакции 4, паритет
   абзацев RU/EN считается от маркера `<!-- semantics-toc -->`.
 
@@ -38,6 +41,17 @@ docs render semantics (boot342, pins/docs71-render*.command): 1..3 FAIL (вст�
 docs render grammar (boot342, pins/docs71-grammar.command): 27 разделов, 47 выдержек
 docs check (tool43, pins/docs71-check*.command): 1 FAIL (ссылка на LMX_grammar#name-visibility), 2 OK — 35 глав,
     27 разделов, 44 дословные выдержки, 615 импортов, ссылки, открытие автора, LF во всех 25717 файлах индекса
+```
+
+Второй коммит (перенос грамматики):
+
+```text
+(cd P/runs/opus343) manifest|stage-copy|verify -> source45, 404 входа, отличается от source44 только
+    tools/docs_grammar.lm2 (pins/opus343-stage45.log)
+build-self ... tool44 -> exit 0, S/tool44/lmxtool-tool.exe 8347b0710d6f1273e36452ec470ddb537eb844d63697c69a653d69c1fbc27e2f
+docs render grammar (tool44, pins/docs72-grammar.command): 27 разделов, 47 выдержек
+docs check (tool44, pins/docs72-check.command): OK — 35 глав, 27 разделов, 44 дословные выдержки, 615 импортов,
+    ссылки, открытие автора, LF во всех 25718 файлах индекса
 ```
 
 `git diff --check` отмечает только хвостовые пробелы внутри дословных цитат автора в журнале; они сохранены.

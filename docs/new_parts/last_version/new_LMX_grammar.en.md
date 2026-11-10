@@ -781,8 +781,8 @@ For a method `f`, its representation slots follow the same `{return args var bod
 
 | Position | Method part | Direct selection | Array access after `arr: f` |
 | ---: | --- | --- | --- |
-| 0 | `args` | `f\(0)` | `arr(0)` |
-| 1 | `return` | `f\(1)` | `arr(1)` |
+| 0 | `return` | `f\(0)` | `arr(0)` |
+| 1 | `args` | `f\(1)` | `arr(1)` |
 | 2 | `var` | `f\(2)` | `arr(2)` |
 | 3 | `body` | `f\(3)` | `arr(3)` |
 

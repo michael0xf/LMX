@@ -77,8 +77,11 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
     size_t: origin_at 0U
     size_t: origin_after 0U
     size_t: items 0U
+    size_t: prefix_at 0U
+    size_t: prefix_after 0U
     int: examples_found 0
     int: origin_found 0
+    int: prefix_found 0
     @: default_label char "Source excerpt"
     if: out = 0 || section_count = 0 || example_count = 0 || (c.strcmp(lang, "ru") != 0 && c.strcmp(lang, "en") != 0)
         return: 1
@@ -96,6 +99,18 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
         ---
     else:
         if: dg_literal(out, "# LMX grammar") != 0
+            return: 1
+        ---
+    ---
+    # Edition 4 (2026-11-09): an optional top-level "prefix" {ru, en} holds the source's head (the author's code-correction
+    # requirements and revision notes); it is data of grammar.json, rendered as one item after the title.
+    prefix_found: dj_property(data, count, root_at, "prefix", @ prefix_at, @ prefix_after)
+    if: prefix_found < 0
+        return: 1
+    if: prefix_found != 0
+        if: data[prefix_at] != (cast: (char) 123)
+            return: 1
+        if: dg_item(out, @ items) != 0 || dg_item(out, @ items) != 0 || dg_field(out, data, count, prefix_at, lang, 0, 1) != 0
             return: 1
         ---
     ---

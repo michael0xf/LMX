@@ -1,0 +1,16 @@
+# Probe 348/4c (lowering): a structured named tail that is no written field, take(p: 6 2) -- a Structure of two unnamed
+# values at the formal p, whose model reads p\y: the admission must refuse; the probe measures which pass handles a
+# structured tail today (exit 7 would mean it ran and p\y read something).
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: code 7
+if: take(p: 6 2) != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

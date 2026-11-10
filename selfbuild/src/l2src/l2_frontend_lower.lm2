@@ -936,15 +936,19 @@ fn: lm_compiler_bind_value_actuals_into (@: values c.L2ValueSpan; int: n; int: n
             payload: c.lm_compiler_primary_values(source, @ payload_n)
             if: payload_n < 0 || c.lm_compiler_value_argument_ref(payload, payload_n, (cast: (const: @: c.LmP0Node) (source\node)), (cast: (@: c.L2ValueSpan) (@ slot\value))) != 0
                 return: (cast: (int) (c.lm_compiler_error_fatal(path, (cast: (const: @: c.LmP0Node) (source\node)), "internal: a named argument lost its prepared body")))
-            # M6 4a, a stage (Codex CODEX-OPUS-345-LOWERING-TAIL-REPLY item 1): a tail of written fields -- `p: y: 6`, a
-            # vertical block of `x: v` fields, `p: (y: 6; x: 1)` -- is a written Structure value, which this translation does
-            # not build among the actuals of a call yet: a limit of the implementation, refused where the form is
-            # recognized, not a rule of the language (the graph's executors build it; the next M6 item is the common
-            # constructor of a written Structure value, named and positional alike).
-            if: by_head = 0 && lm_compiler_written_structure_span(payload, payload_n) != 0
-                return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "the named actual ", (cast: (const: @: char) (frame\head\data)), (cast: (size_t) (frame\head\length)), " of ", callee, (cast: (size_t) (c.strlen(callee))), " is a written Structure: building a written Structure value among the actuals of a call is not implemented in this translation yet (M6 4a)", 0, 0U, "")))
+            # M6 4c (slice 348; Codex CODEX-OPUS-348-ROUTE-B-REPLY-20261110T081925Z-01, CODEX-OPUS-348-LAYOUT-REPLY-
+            # 20261110T083210Z-01): a tail of written fields -- `p: y: int: 6`, `p: (y: int(5); x: int(1))`, a vertical
+            # block of such fields -- is the written Structure itself, which the formal receives at the actual's position.
+            # The ready one, every field a typed int literal (lm_compiler_ready_written_span), is laid out where it is
+            # written (structured 2: the code construction lays its fields out as named int cells of that node, the
+            # native actual reads its live place). Another written tail -- an untyped `y: 6` (the Structure y), a computed
+            # `y: int: k + 5`, a nested group -- is a limit of this translation, refused where the form is recognized.
+            if: by_head = 0 && lm_compiler_written_structure_span(payload, payload_n) != 0 && lm_compiler_ready_written_span(payload, payload_n) = 0
+                return: (cast: (int) (lm_compiler_error_words(path, (cast: (const: @: c.LmP0Node) (source\node)), "the named actual ", (cast: (const: @: char) (frame\head\data)), (cast: (size_t) (frame\head\length)), " of ", callee, (cast: (size_t) (c.strlen(callee))), " is a written Structure with a field that is not a typed int literal (`y: int: 6`): building such a written Structure among the actuals of a call is not implemented in this translation yet (M6 4c)", 0, 0U, "")))
             slot\wrapper: source\node
             slot\structured: (cast: (int) (c.lm_compiler_value_spans_expression(payload, payload_n) = 0))
+            if: by_head = 0 && lm_compiler_ready_written_span(payload, payload_n) != 0
+                slot\structured: 2
             named: 1
         else:
             if: named != 0
@@ -2956,9 +2960,13 @@ fn: lm_compiler_scan_actuals_value (const: (@: port_call c.LmP0Node); @: value c
         if: actual = 0
             return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], port_call, "internal: an application lost its written order")))
         argument: @ actual\value
-        if: actual\structured != 0
+        # M6 4c (slice 348): the fields of a ready written Structure tail (structured 2) are typed literals -- no name of
+        # this method is read there.
+        status: 0
+        if: actual\structured = 1
             status: lm_compiler_scan_value_list((cast: (@: c.L2ValueSpan) (argument\values)), (cast: (int) (argument\value_n)), mi, seen, 0)
-        else:
+        ---
+        if: actual\structured = 0
             status: lm_compiler_scan_value_span(argument, mi, seen, 0)
         ---
         if: status != 0
@@ -11799,25 +11807,32 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
         actual_context: -1
         if: actual_full = 0 || c.lm_compiler_tx_clear(actual_full) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
+        # M6 4c (slice 348; Codex CODEX-OPUS-348-ROUTE-B-REPLY, CODEX-OPUS-348-LAYOUT-REPLY): the ready written Structure
+        # tail (structured 2) is the written Structure laid out where it is written (lm_compiler_rw_ready_tail): its value
+        # is a reference to that node, read at its live place in the current code, and the selected formal receives it
+        # below (lmx_call_bind_receive), right after the earlier actuals' receptions.
+        int: ready (cast: (int) (actual\structured = 2))
+        if: ready != 0 && lm_compiler_emit_ready_tail(actual, mi, ind, actual_full, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))) != 0
+            return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         c.lm_compiler_reference_record_source(0, mi, @ source)
-        if: c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_reference_source_value(value, mi, @ source) != 0
+        if: ready = 0 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_reference_source_value(value, mi, @ source) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         # A callable formal takes the occurrence its actual names, or one merge
         # built here in the caller's native code (T7). Not a call.
-        if: c.lm_compiler_cf_get(idx, t) >= 0 && actual_span = 1 && a0\value != 0 && c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (a0\value)), "merge") != 0
+        if: ready = 0 && c.lm_compiler_cf_get(idx, t) >= 0 && actual_span = 1 && a0\value != 0 && c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (a0\value)), "merge") != 0
             if: lm_compiler_t7_emit_actual((cast: (const: @: c.LmP0Node) (a0\value)), mi, ind, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))) != 0
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             ---
         else:
-            if: c.lm_compiler_cf_get(idx, t) >= 0
+            if: ready = 0 && c.lm_compiler_cf_get(idx, t) >= 0
                 if: lm_compiler_cf_value_emit(mi, value, ind, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))) != 0
                     return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
                 ---
             ---
         ---
-        if: c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_application_actual_empty(actual, idx, t) != 0 && lm_compiler_emit_empty_actual(idx, t, mi, ind, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))) != 0
+        if: ready = 0 && c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_application_actual_empty(actual, idx, t) != 0 && lm_compiler_emit_empty_actual(idx, t, mi, ind, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        if: c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_application_actual_empty(actual, idx, t) = 0
+        if: ready = 0 && c.lm_compiler_cf_get(idx, t) < 0 && c.lm_compiler_application_actual_empty(actual, idx, t) = 0
             er: 2
             # A no-result unit method is the occurrence a nonprimitive formal receives.
             # Its fields are admitted by the pair map; the call is not evaluated here.
@@ -11857,10 +11872,10 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
                 return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
             ---
         # A letter goes to a typed formal as its payload, admitted (D-57).
-        if: occ_mi < 0 && actual_span = 1 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_untyped_graph(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && c.lm_compiler_is_letter_name(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && lm_compiler_payload_expr(mi, a0, actual_span, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))) != 0
+        if: ready = 0 && occ_mi < 0 && actual_span = 1 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_untyped_graph(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && c.lm_compiler_is_letter_name(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && lm_compiler_payload_expr(mi, a0, actual_span, (cast: (@: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         # Payload extraction does not transfer the wrapper's reference view.
-        if: occ_mi < 0 && actual_span = 1 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_untyped_graph(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && c.lm_compiler_is_letter_name(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0
+        if: ready = 0 && occ_mi < 0 && actual_span = 1 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_untyped_graph(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && c.lm_compiler_is_letter_name(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0
             actual_context: -1
         if: c.sprintf(actual_record, "@ l2_av%d[%d]", self_t, t) < 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
@@ -11879,7 +11894,7 @@ fn: lm_compiler_emit_call_arguments_full (const: (@: source_node c.LmP0Node); in
             ---
         if: occ_mi >= 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 1, occ_mi, @ source, -1, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
-        if: occ_mi < 0 && actual_span = 1 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_untyped_graph(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 2, 0 - 1, @ source, 0 - 1, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
+        if: ready = 0 && occ_mi < 0 && actual_span = 1 && c.lm_compiler_nsty_get(idx, t) >= 0 && lm_compiler_untyped_graph(mi, (cast: (const: @: c.LmP0Node) (a0\value))) != 0 && lm_compiler_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 2, 0 - 1, @ source, 0 - 1, (cast: (const: @: char) (lm_compiler_port_tx_data((cast: (const: @: c.L2Tx) (c.lm_compiler_act_tx(acts, t)))))), ind, actual_record) != 0
             return: (cast: (int) (c.lm_compiler_prep_drop(acts, hides)))
         # D-105 native (steps/d105-native.md): the actual of a formal admitted by name is recorded before
         # the call (l2_d105_emit_admit). An occurrence already registered its pair map above.
@@ -21289,3 +21304,102 @@ fn: lm_compiler_written_structure_span (@: values c.L2ValueSpan; int: n) int
     ---
     return: (cast: (int) (1))
 end: lm_compiler_written_structure_span
+
+# M6 4c (slice 348; Codex CODEX-OPUS-348-LAYOUT-REPLY-20261110T083210Z-01): 1 when item is a ready typed field of a written
+# Structure, `name: int: v` or `name: int(v)` with v an int literal -- the proven definition of an int place whose value the
+# code construction lays out as a named int cell of the written Structure's own node (lm_compiler_rw_ready_tail); 0
+# otherwise: an untyped `y: 6` (the Structure y), a computed `y: int: k + 5` (its operator stays in the written body), a
+# nested group, another type.
+fn: lm_compiler_ready_written_field (const: (@: item c.LmP0Node)) int
+    @: field c.LmP0Field
+    @: typed c.LmP0Node
+    @: value c.LmP0Node
+    int: neg 0
+    int: suffix 0
+    size_t: magnitude 0U
+    if: lm_compiler_named_actual_frame(item) = 0 || item\as\frame\body = 0 || item\as\frame\trailer != 0
+        return: (cast: (int) (0))
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    if: field = 0 || field\value = 0 || c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next))) != 0
+        return: (cast: (int) (0))
+    typed: field\value
+    if: typed\kind != c.LM_P0_NODE_FRAME || typed\as = 0 || typed\as\frame = 0 || typed\as\frame\head = 0 || typed\as\frame\body = 0 || typed\as\frame\trailer != 0
+        return: (cast: (int) (0))
+    if: c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (typed\as\frame\head)), "int") = 0
+        return: (cast: (int) (0))
+    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (typed\as\frame\body\first_field)))
+    if: field = 0 || field\value = 0 || c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next))) != 0
+        return: (cast: (int) (0))
+    value: field\value
+    if: value\kind != c.LM_P0_NODE_ATOM || value\as = 0 || value\as\atom = 0
+        return: (cast: (int) (0))
+    if: c.lm_compiler_rw_num_lit((cast: (const: @: c.LmP0Text) (value\as\atom)), @ neg, @ magnitude, @ suffix) = 0 || suffix != 0
+        return: (cast: (int) (0))
+    if: (neg = 0 && magnitude > 2147483647U) || (neg != 0 && magnitude > 2147483648U)
+        return: (cast: (int) (0))
+    return: (cast: (int) (1))
+end: lm_compiler_ready_written_field
+
+# 1 when the n values of a named actual's tail are a ready written Structure: one written group whose fields are all ready
+# typed fields (lm_compiler_ready_written_field), or such fields themselves -- the tail `y: int: 6`, a vertical block --;
+# 0 otherwise.
+fn: lm_compiler_ready_written_span (@: values c.L2ValueSpan; int: n) int
+    @: cur c.L2ValueSpan
+    @: field c.LmP0Field
+    int: i 0
+    int: count 0
+    if: values = 0 || n < 1
+        return: (cast: (int) (0))
+    if: n = 1 && values\node != 0 && values\node\kind = c.LM_P0_NODE_STRUCTURE && values\node\as != 0 && values\node\as\structure != 0
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (values\node\as\structure\first_field)))
+        while: field != 0
+            if: field\value = 0 || lm_compiler_ready_written_field((cast: (const: @: c.LmP0Node) (field\value))) = 0
+                return: (cast: (int) (0))
+            count: count + 1
+            field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+        ---
+        return: (cast: (int) (count > 0))
+    ---
+    while: i < n
+        cur: values + i
+        if: cur\node = 0 || lm_compiler_ready_written_field((cast: (const: @: c.LmP0Node) (cur\node))) = 0
+            return: (cast: (int) (0))
+        i: i + 1
+    ---
+    return: (cast: (int) (1))
+end: lm_compiler_ready_written_span
+
+# M6 4c (slice 348; Codex CODEX-OPUS-348-ROUTE-B-REPLY-20261110T081925Z-01, CODEX-OPUS-348-LAYOUT-REPLY-20261110T083210Z-01):
+# the value of a ready written Structure tail (structured 2) in native code: a reference to the node the code construction
+# laid out where the tail is written (lm_compiler_rw_ready_tail), read at its live place in the current code from its
+# expression site (role 7, the actual's wrapper node) -- as lm_compiler_emit_current_structure reads a Structure call's
+# node. full gets the LmxWalkValue of the reference, payload its address. 0, or 1 on an error.
+fn: lm_compiler_emit_ready_tail (@: actual c.L2ApplicationActual; int: mi; const: (@: ind char); @: full c.L2Tx; @: payload c.L2Tx) int
+    @@: output c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    c.L2FrontendScratchChar64: text_storage
+    @: text char (cast: (@: char) text_storage\buffer)
+    @: site c.L2GraphPlace 0
+    int: index mi
+    int: kind 0
+    int: result c.lm_compiler_method_body_result(mi)
+    int: at 0
+    int: t 0
+    if: actual = 0 || actual\wrapper = 0 || full = 0 || payload = 0
+        return: 1
+    if: result >= 0
+        kind: 2
+        index: result
+    ---
+    if: c.lm_compiler_expr_site_place(kind, index, mi, (cast: (const: @: c.LmP0Node) (actual\wrapper)), 1, 7, @ site) != 0 || c.lm_compiler_emit_live_code_place(site, ind, @ at) != 0
+        return: 1
+    t: tn_cell[0]
+    tn_cell[0]: t + 1
+    if: c.fprintf(output[0], "%sLmxWalkValue: l2_rtv%d\n%slmx_walk_value_ref(@ l2_rtv%d, c.LMX_TYPE_LMX, (cast: (@: void) l2_cp%d))\n", ind, t, ind, t, at) < 0
+        return: 1
+    if: c.snprintf(text, 64U, "@ l2_rtv%d", t) < 0 || c.lm_compiler_tx_set(full, text) != 0
+        return: 1
+    if: c.snprintf(text, 64U, "(cast: (@: void) l2_cp%d)", at) < 0 || c.lm_compiler_tx_set(payload, text) != 0
+        return: 1
+    return: 0
+end: lm_compiler_emit_ready_tail

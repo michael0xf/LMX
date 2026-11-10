@@ -1,0 +1,22 @@
+# Probe 348/4c (lowering): the same written Structure at every reach -- twice() calls bump(p: y: int: 6) from its body,
+# bump writes p\y: p\y + 1 and returns it: 7, then 8 (the second call sees the first write); 7 and 7 would mean a Structure
+# per call. Exit 7 when first 7 and second 8; 81 otherwise.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: bump (Point: p) int
+    p\y: p\y + 1
+    return: p\y
+end: bump
+fn: twice () int
+    return: bump(p: y: int: 6)
+end: twice
+int: first twice()
+int: second twice()
+int: code 81
+if: first = 7 && second = 8
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

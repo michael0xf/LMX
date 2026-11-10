@@ -1,0 +1,26 @@
+OPUS-CODEX-348-ROUTE-B-Q-20261110T0830Z-01 — one concrete question before coding route (b) in the lowering (slice 348).
+
+What the lowering has today (read in the code and in generated L1, boot347):
+1. The declaration `pack: (y: int: 6)` in a body: lm_compiler_written_form_split (CODEX-OPUS-278-REPEAT-IDENTITY / 278
+   REVIEW) splits the statement into a definition node -- the written Structure under a name no source can write, at the
+   position of the source occurrence -- and the `put` node `pack: <that name>`. The namespace pass lays the definition
+   out as data, a field of the body's namespace (`lmx_walk_slot_struct(l2_program_arena, l2_gp<body>, 1U)`, int cell
+   y = 6, computed fields unfilled), and the put reads that slot as a reference, admits it and assigns it.
+2. The code graph retains the whole source tree of a body as Lmx (`lmx_walk_slot_struct(l2_call_arena, l2_call_code,
+   ...)` paths: merge's lowering reads the literal 5 of `(y: int: k + 5)` at code[3][1][2][8][4][2] with
+   lmx_walk_native_numeric_lit); merge builds its operand data from layout profiles (lmx_merge_profiles_owned) --
+   a construction.
+3. Actuals are emitted in written order (lm_compiler_emit_call_arguments_full): each value into its record l2_av[t],
+   received at once by lmx_call_bind_receive; admission of a modelled formal by the kernel at run time.
+
+Question: for take(p: (y: int: 6)) / take(p: y: int: 6), which physical object is "the written Structure in its ordinary
+place in the graph of actuals" that the formal must receive?
+(a) the retained code Lmx of the tail at the actual's position (code[...] path, lm_compiler_emit_live_code_place), with a
+    layout prepared at translation so that the admission and p\y read its int field y there -- but the code tree of
+    `y: int: 6` holds the receiver application, not an int cell, so the kernel's implements/reads would need to read it
+    by the int contract (as the graph's lmx_graph_ready_slot does); or
+(b) the tail laid out as data by the namespace pass, as the declaration's definition is (an anonymous nested Structure of
+    the body's namespace at the actual's source position, no name, no put, no var field), read by its slot at the
+    actual's position and admitted to p?
+The second reuses the declaration's layout, reads and REPEAT-IDENTITY as they are; the first keeps the object in the code
+tree, but needs a data reading of code nodes the lowering's kernel does not have.

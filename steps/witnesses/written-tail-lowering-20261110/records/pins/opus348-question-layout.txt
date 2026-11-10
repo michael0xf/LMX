@@ -1,0 +1,26 @@
+OPUS-CODEX-348-LAYOUT-Q-20261110T0905Z-01 — route (a) in the lowering: what I measured, and the shape I intend.
+
+Measured (boot348 G2; experiment fehost16 = the stage refusal removed, not committed):
+- After the binder, the next pass is the check (lm_compiler_check_primary): the tail `y: int: 6` is checked as an
+  expression and y resolved as a method -- "unknown method", frame y.
+- No structured named tail is lowered past the binder at all: take(p: 6 2) is refused by the code construction, "root
+  operation not walkable yet: this expression" (lm_compiler_rw_evaluate_span). The code construction (lm_compiler_rw_*)
+  builds no written Structure value; lm_compiler_rw_struct_call (role 6) is a Structure call, not a construction.
+- What the lowering has for a written Structure is the namespace layout: a declaration's definition (written_form_split)
+  is a slot of the body code itself (l2_gp<body> slot 1, int cell y = 6), and an own's cell is its declaring statement's
+  slot (pack at slot 2) -- data and code are one graph there; the static pair map of its anonymous model to the formal's
+  model (D-105) admits it (take(pack) 62).
+
+Intended shape (route (a), one object): the namespace pass lays the tail out as data AT the actual's own slot inside the
+call's code node -- the same node the path from l2_call_code reaches (statement -> call -> actual -> tail), not a body slot,
+no name, no field of var or of the body's data, no put. Its anonymous model (the tail's own typed fields) gets the
+ordinary static map to the formal's model; the native actual reads the live place (lm_compiler_emit_live_code_place) and
+lmx_call_bind_receive admits it; the walker's operand is that node. `y: int: 6` is then an int cell of that node
+(materialized from the literal, as the declaration's is); a computed `y: int: k + 5` an unfilled int place -- by your INIT
+answer A a computed field does not run before its body does.
+
+Questions: (1) Is "laid out as data at the actual's own slot of the call's code node" the object you mean, i.e. is the
+code tail of `y: int: 6` allowed to be that laid-out node (literal materialized as a declaration's field is), rather than
+the code tree holding a Frame int over a literal cell? (2) A computed field then is an allocated int place without a
+value (uninit:int) -- admission passes and the read gives the unpromised value, as for `pack: (y: int: k + 5)` -- or must
+the admission refuse it as the graph does (no int place)?

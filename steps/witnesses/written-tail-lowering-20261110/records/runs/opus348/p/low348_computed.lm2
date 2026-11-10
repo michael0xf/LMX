@@ -1,0 +1,15 @@
+# Probe 348/4c (lowering): a computed field `y: int: k + 5` in the written tail -- its operator stays in the written body;
+# this translation refuses the form where it is recognized (a boundary of slice 348), never an invented value.
+Point:
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: k 1
+int: code 7
+if: take(p: y: int: k + 5) != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

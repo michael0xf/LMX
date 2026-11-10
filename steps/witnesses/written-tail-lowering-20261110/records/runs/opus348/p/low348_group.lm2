@@ -1,0 +1,15 @@
+# Probe 348/4c (lowering): a written group of two typed fields with closed receivers, take(p: (y: int(5); unused: int(1));
+# q: 2) -- 52 exits 7.
+Point:
+    int: y 2
+    int: unused 0
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: code 7
+if: take(p: (y: int(5); unused: int(1)); q: 2) != 52
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1,0 +1,22 @@
+# M6 4c (slice 348): the written Structure is one object at every reach of its place -- twice() calls bump(p: y: int: 6)
+# from its body, bump writes p\y: p\y + 1 and returns it: 7, then 8 (the second call reads the first write); 7 and 7
+# would mean a Structure built per call. Exit 7 when the first is 7 and the second 8; 81 otherwise.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: bump (Point: p) int
+    p\y: p\y + 1
+    return: p\y
+end: bump
+fn: twice () int
+    return: bump(p: y: int: 6)
+end: twice
+int: first twice()
+int: second twice()
+int: code 81
+if: first = 7 && second = 8
+    code: 7
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -212,7 +212,13 @@ runs	dyn/named_assign_actuals.lm2	7	nf
 refuses	dyn/named_assign_unknown_refused.lm2	named_assign_unknown_refused.lm2:7:9: zz is not an argument of tst	nf
 refuses	dyn/named_assign_positional_after_refused.lm2	named_assign_positional_after_refused.lm2:7:15: a positional argument of tst after a named one	nf
 refuses	dyn/named_assign_refused.lm2	named_assign_refused.lm2:8:9: a named actual of tst is written a: value (M6 4a): the operator := names no argument	nf
-refuses	dyn/named_tail_lowering_refused.lm2	named_tail_lowering_refused.lm2:13:10: the named actual p of take is a written Structure: building a written Structure value among the actuals of a call is not implemented in this translation yet (M6 4a)	nf
+# M6 4c (slice 348): a written Structure among the actuals of a call is laid out where it is written and received by
+# reference -- one object at every reach (7 then 8); a tail with a computed or untyped field is a recognized boundary.
+runs	dyn/named_tail_lowered.lm2	7	nf
+runs	dyn/named_tail_lowered_twice.lm2	7	nf
+runs	dyn/named_tail_lowered_group.lm2	7	nf
+refuses	dyn/named_tail_lowering_refused.lm2	named_tail_lowering_refused.lm2:13:10: the named actual p of take is a written Structure with a field that is not a typed int literal (`y: int: 6`): building such a written Structure among the actuals of a call is not implemented in this translation yet (M6 4c)	nf
+refuses	dyn/named_tail_computed_lowering_refused.lm2	named_tail_computed_lowering_refused.lm2:13:10: the named actual p of take is a written Structure with a field that is not a typed int literal (`y: int: 6`): building such a written Structure among the actuals of a call is not implemented in this translation yet (M6 4c)	nf
 # The := slice (MERGE-OPERAND-FORMS): a merge operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field
 # the declaration form `(int: a 5)` is: it writes the model slot of its name.
 runs	dyn/merge_named_field_operand.lm2	7	nf

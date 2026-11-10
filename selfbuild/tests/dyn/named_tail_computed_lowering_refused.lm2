@@ -1,0 +1,17 @@
+# M6 4c, a boundary (slice 348; Codex CODEX-OPUS-348-LAYOUT-REPLY-20261110T083210Z-01 item 2): a computed field
+# `y: int: k + 5` in the written tail keeps its operator in the written body; the lowering does not lay out such a tail
+# among the actuals of a call yet and refuses it where the form is recognized -- never an empty cell or an invented value
+# (the graph's executors keep the operator: tests/graph/named_tail_computed.lm2).
+Point:
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: k 1
+int: code 7
+if: take(p: y: int: k + 5) != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

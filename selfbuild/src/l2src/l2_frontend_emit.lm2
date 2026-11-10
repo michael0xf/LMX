@@ -4653,6 +4653,15 @@ fn: lm_compiler_check_call_arguments (const: (@: source_node c.LmP0Node); @: hea
         if: actual\written = 0
             actual_i: actual_i + 1
             continue
+        # M6 4c (slice 348; Codex CODEX-OPUS-348-ROUTE-B-REPLY, CODEX-OPUS-348-LAYOUT-REPLY): a ready written Structure tail
+        # (structured 2, lm_compiler_ready_written_span) is that written Structure itself, laid out where it is written:
+        # its fields are typed literals, no expression of the caller, and the formal's own reception admits it when the
+        # call is reached (lmx_call_bind_receive), as a runtime-typed actual is (slice 260).
+        if: actual\structured = 2
+            if: check_unevaluated_cell[0] = 0 && c.lm_compiler_admit_site(mi) != 0
+                return: (cast: (int) (c.lm_compiler_error(path, source_node, "internal: admission outside a method")))
+            actual_i: actual_i + 1
+            continue
         value: @ actual\value
         a0: value\first
         actual_span: value\count
@@ -9582,6 +9591,15 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
                 return: (cast: (int) (1))
             ---
         ---
+        # M6 4c (slice 348; Codex CODEX-OPUS-348-ROUTE-B-REPLY, CODEX-OPUS-348-LAYOUT-REPLY): the ready written Structure
+        # tail (structured 2) is laid out where it is written -- the operand of its formal is a plain node of its fields,
+        # each a named int cell of its literal (lm_compiler_rw_ready_tail). The walker's operand of no operation is that
+        # Structure itself (lmx_walk_eval_result), the native actual reads its live place (lm_compiler_emit_ready_tail).
+        if: actual\structured = 2
+            if: lm_compiler_rw_ready_tail(actual, site, @ arg) != 0 || c.lm_compiler_rw_put_actual((cast: (int) (\out)), site, (cast: (int) (arg0 + actual\rank)), arg) != 0
+                return: (cast: (int) (1))
+            k: k + 1
+            continue
         if: c.lm_compiler_cf_get(idx, k) >= 0
             # The caller's resolved occurrence, not the descriptor of a
             # same-named unit method or the formal's signature anchor.
@@ -18929,3 +18947,96 @@ fn: lm_compiler_merge_lift_walk (@: body c.LmP0Structure; int: mi; const: (@: pa
         return: (cast: (int) (lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (body\trailer\body)), mi, path)))
     return: (cast: (int) (0))
 end: lm_compiler_merge_lift_walk
+
+# M6 4c (slice 348; Codex CODEX-OPUS-348-ROUTE-B-REPLY-20261110T081925Z-01, CODEX-OPUS-348-LAYOUT-REPLY-20261110T083210Z-01):
+# the ready written Structure tail of a named actual (structured 2, lm_compiler_ready_written_span) laid out where it is
+# written, under the actual's operand in the code of the call: a plain node of its fields (no operation), each field
+# `name: int: v` the proven definition of an int place, the named int cell of v (the normalization of the whole field,
+# as a declaration's written Structure lays it out). Its expression site (role 7, the wrapper node) is noted for the
+# native actual, which reads its live place (lm_compiler_emit_ready_tail); the walker's operand of no operation is that
+# Structure itself. The node is made once, with the code: every reach of the call gives the same Structure, a write
+# through the formal stays in it. 0 and the node in out; 1 on an error.
+fn: lm_compiler_rw_ready_tail (@: actual c.L2ApplicationActual; int: parent; @: out int) int
+    @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: value c.L2ValueSpan 0
+    @: first c.L2ValueSpan 0
+    @: cur c.L2ValueSpan 0
+    @: field c.LmP0Field 0
+    @: inner c.LmP0Field 0
+    @: item c.LmP0Node 0
+    @: typed c.LmP0Node 0
+    @: atom c.LmP0Node 0
+    @: literal c.LmP0Text 0
+    int: n 0
+    int: i 0
+    int: made 0
+    # The tail's fields: the fields of one written group (the value's own node a Structure), the spans of a vertical
+    # block (several values), or the one written field the value is (a one-span value is that span itself,
+    # lm_compiler_value_argument_ref).
+    int: shape 0
+    if: actual = 0 || out = 0 || actual\wrapper = 0
+        return: (cast: (int) (1))
+    value: @ actual\value
+    if: value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE && value\node\as != 0 && value\node\as\structure != 0
+        shape: 1
+        n: (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (value\node\as\structure)))))
+        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (value\node\as\structure\first_field)))
+    else:
+        first: (cast: (@: c.L2ValueSpan) (value\values))
+        if: first != 0 && value\value_n > 1
+            shape: 2
+            n: (cast: (int) (value\value_n))
+        else:
+            shape: 3
+            n: 1
+        ---
+    ---
+    if: n < 1 || c.lm_compiler_rw_plain(parent, n, @ made) != 0
+        return: (cast: (int) (1))
+    if: c.lm_compiler_expr_site_note_role((cast: (const: @: c.LmP0Node) (actual\wrapper)), 1, 7, -1, 0, @ made) != 0
+        return: (cast: (int) (1))
+    while: i < n
+        item: 0
+        if: shape = 1
+            if: field != 0
+                item: field\value
+                field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
+            ---
+        ---
+        if: shape = 2
+            cur: first + i
+            item: cur\node
+        ---
+        if: shape = 3
+            item: value\node
+        ---
+        if: item = 0 || item\kind != c.LM_P0_NODE_FRAME || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
+            return: (cast: (int) (1))
+        inner: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+        if: inner = 0 || inner\value = 0
+            return: (cast: (int) (1))
+        typed: inner\value
+        if: typed\as = 0 || typed\as\frame = 0 || typed\as\frame\body = 0
+            return: (cast: (int) (1))
+        inner: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (typed\as\frame\body\first_field)))
+        if: inner = 0 || inner\value = 0
+            return: (cast: (int) (1))
+        atom: inner\value
+        if: atom\as = 0 || atom\as\atom = 0
+            return: (cast: (int) (1))
+        literal: atom\as\atom
+        if: rw_emit_cell[0] != 0
+            if: c.fprintf(out_cell[0], "        l2_entry_slot: lmx_arena_ref_cell(l2_rw%d, %dU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_int_new_profiled(l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_entry_slot)))\n        if: l2_entry_slot[0] = 0\n            return: 1\n        if: lmx_int_store_known(l2_entry_slot[0], %.*s) != 0\n            return: 1\n", made, i, (cast: (int) (literal\length)), literal\data) < 0
+                return: (cast: (int) (1))
+            if: c.fprintf(out_cell[0], "        if: lmx_source_name_set(l2_program_arena, (cast: (@: void) lmx_arena_ref_cell(l2_rw%d, %dU)), ", made, i) < 0 || c.lm_compiler_emit_unit_id_text((cast: (const: @: c.LmP0Text) (item\as\frame\head))) != 0 || c.fputs(") != 0\n            return: 1\n", out_cell[0]) < 0
+                return: (cast: (int) (1))
+            if: c.fprintf(out_cell[0], "        if: lmx_source_name_set(l2_program_arena, (cast: (@: void) lmx_arena_ref_value(l2_rw%d, %dU)), ", made, i) < 0 || c.lm_compiler_emit_unit_id_text((cast: (const: @: c.LmP0Text) (item\as\frame\head))) != 0 || c.fputs(") != 0\n            return: 1\n", out_cell[0]) < 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        i: i + 1
+    ---
+    \out: made
+    return: (cast: (int) (0))
+end: lm_compiler_rw_ready_tail

@@ -101,10 +101,16 @@ of the call, so a write `p\y: 9` is seen by the next call of that line; its fiel
 write; `y: 6` the Structure y; a computed `y: int: k + 5` gives no int place before its line runs, and the admission
 refuses); `lmx_graph_literal_value` stays the construction of a `merge` operand. `a := v` among the actuals of a call or the parts of a receiver is no form any more: the binder refuses it
 before any actual is evaluated, in the interpreter, in native code and in the lowering, with no fallback. `f(a:)` is
-refused by P0 today (an empty colon Frame, M6 item 1); known-assignment statements `x := v` remain (M6 4b). The
-lowering (the C path) builds no written Structure value among the actuals yet: a named tail of written fields is
-refused at translation where it is recognized -- a stage of the implementation, not a rule of the language; the common
-constructor for named and positional actuals is M6 4c.
+refused by P0 today (an empty colon Frame, M6 item 1); known-assignment statements `x := v` remain (M6 4b). Since
+slice 348 ([record](../steps/witnesses/written-tail-lowering-20261110/notes.md)) the lowering (the C path) builds no
+Structure for the call either: a named tail of typed int literal fields (`p: y: int: 6`, the group `p: (y: int(5);
+unused: int(1))`) is laid out by the code construction at the actual's own place inside the call's node (the field y a
+direct named int cell 6), and the formal gets a reference to that node along the live path from the current code
+(`lm_compiler_rw_ready_tail`, `lm_compiler_emit_ready_tail`, the ordinary `lmx_call_bind_receive` at the actual's
+position) -- the same object at every reach of the call (`twice()` gives 7, then 8). A tail with a computed or untyped
+field (`y: int: k + 5`, `y: 6`) is a boundary of the implementation: refused at translation where the form is
+recognized, not a rule of the language; a positional written Structure (`take((y: int: 6))`) still gets the earlier
+refusal "y is not an argument of take" -- not the norm either (M6 4c).
 The next [graph42/tool24/rt32](../steps/witnesses/whole-arguments-20261109/notes.md) gives the whole argument structure
 of one Structure: a single positional actual without effects (a name or a path) whose direct fields name formals of the
 selected callee of the same kind, every other formal having its default, is supplied by its fields; otherwise it is the

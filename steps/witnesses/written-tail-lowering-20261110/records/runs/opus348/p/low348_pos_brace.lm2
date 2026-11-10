@@ -1,0 +1,15 @@
+# Probe 348/4c (lowering): a written Structure as a positional actual in braces, take({y: int: 6}) -- 62 exits 7; the
+# refusal names the pass that stops a written Structure value among actuals today.
+Point:
+    int: x 1
+    int: y 2
+end: Point
+fn: take (Point: p; int: q 2) int
+    return: p\y * 10 + q
+end: take
+int: code 7
+if: take({y: int: 6}) != 62
+    code: 81
+---
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

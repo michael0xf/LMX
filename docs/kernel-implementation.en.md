@@ -166,6 +166,12 @@ them). The graph of `lmx_schedule` is built whole and prints the same before and
 `lmx_clock`, `os_native_path` and `tools/text`. The machine export from the clean graph (F's input instead of P0) is the
 next step; the interpreter has no C door yet. 66 graph-check runs × interp/native/forced passed.
 
+The author's decision of 2026-11-10 ([journal](../LMX_blog/2026-11-10.md#forms-declare-or-call),
+[book](LMX_semantics.en.md#forms-declare-or-call)): structural forms only declare or call, and `:=` writes a value into
+a known place. The implementation does not follow this yet: both consumers of the clean graph write a place with the
+form `name: value` and, for an unknown name, define a place by its value (`lmx_graph_define`); the descriptions of the
+slices above state what the code does, not the norm. The removal is section [M7 of the plan](../next_core_tasks_v3.md#m7).
+
 <a id="principles"></a>
 ## 1. Principles (norm)
 

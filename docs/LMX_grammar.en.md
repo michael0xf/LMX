@@ -50,7 +50,7 @@ The target method Structure has addressable `args`, `return`, `var`, and `body` 
 
 Positional fields retain their order. A nested Frame stays an ordinary Frame and does not by itself name a formal; a named argument of a callable is written with the operator `:=` ([§21](#operators)), whose meaning the semantics defines after P0. Parameter names, table meaning, column count, named-argument validation, and execution are not inferred by P0 from visual alignment. There is no separate anonymous-function or label grammar; `outerLoop:` with a body is an ordinary Frame.
 
-The head of a Frame may be an unnamed Structure: `(a b c): c, a, b` and `(a, b, c): myFn()` (author's decision of 2026-11-10, [journal](../LMX_blog/2026-11-10.md)). A bounded Structure whose closing parenthesis is immediately followed by a colon becomes the head; the tail and the vertical body are parsed by the common rules of the short and vertical forms. The head holds at least one field: `():` with empty parentheses remains a separate head form ([§14](#bounded)). The meaning of the notation — group positional assignment — is given by the [semantics](LMX_semantics.en.md#group-assign). P0 does not parse such a head yet ([plan](../next_core_tasks_v3.md#m6)).
+The head of a Frame may be an unnamed Structure, and the left side of the `:=` operator an unnamed Structure of places: `(int: a; int: b): f()`, `(a b c) := c, a, b` and `(a, b, c) := myFn()` (author's decisions of 2026-11-10, [journal](../LMX_blog/2026-11-10.md)). A bounded Structure whose closing parenthesis is immediately followed by a colon becomes the head, and one followed by `:=` the left side of the write; the tail and the vertical body are parsed by the common rules of the short and vertical forms. Such a Structure holds at least one field: `():` with empty parentheses remains a separate head form ([§14](#bounded)). The meaning of the notations — a declaration of places with values by position and group positional assignment — is given by the [semantics](LMX_semantics.en.md#group-assign). P0 does not parse such a head or such a left side yet ([plan](../next_core_tasks_v3.md#m6)).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2148–2148.
 
@@ -359,7 +359,7 @@ After a physical newline, a bounded continuation must remain deeper than the ope
 
 `target[...]` is an attached index suffix. `[]:` is a symbolic head. Standalone `[a b]` is not a portable replacement for `(a b)` without explicit profile admission. Index contents use the same P0 and may contain nested calls, brackets, strings, and operators.
 
-A non-empty `(...)` whose closing parenthesis is immediately followed by a colon is a Structure head ([§2](#structure)); `(): value` with empty parentheses remains the separate head form `()`.
+A non-empty `(...)` whose closing parenthesis is immediately followed by a colon is a Structure head, and one followed by `:=` is the left side of a write ([§2](#structure)); `(): value` with empty parentheses remains the separate head form `()`.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3227–3228.
 
@@ -631,7 +631,7 @@ Operator symbols are not bare identifiers. P0 splits compact unquoted spellings 
 
 The previous minimal L2 profile lists grouping `(expr)`; prefixes `@`, `\`, `++`, `--`, `+`, `-`, `!`, `~`; postfixes `++`, `--`; infixes `+`, `-`, `*`, `/`, `%`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `&&`, `||`, `&`, `|`, `^`; and the index suffix. Writing a prefix adjacent to its operand is style, not a mandatory P0 boundary.
 
-In this profile, `=` is comparison, not assignment syntax or a named field. Updates use the ordinary head form `i: newValue`, whose meaning is determined later.
+In this profile, `=` is comparison, not assignment syntax or a named field. An update is written with the operator `i := newValue`; P0 still parses `i: newValue` as an ordinary head form, but in translation and interpretation it no longer serves as an assignment (author's decision of 2026-11-10, [semantics](LMX_semantics.en.md#forms-declare-or-call)).
 
 `:=` is a separate operator token (the author's decision of 2026-11-07, [journal](../LMX_blog/2026-11-07.md)): P0 neither splits it into `:` and `=` nor makes a Frame head `a:` of `a:=5`; `a := 5` and `a:=5` are one form: a left side, the token `:=`, a right side. Its meaning, a write to a place already known and the supply of a named argument, is defined by the [semantics](LMX_semantics.en.md#assign-known); this decision defines neither the precedence nor the associativity of `:=`. The grammar does not invent a complete operation set, conversions, evaluation errors, or effect ordering.
 

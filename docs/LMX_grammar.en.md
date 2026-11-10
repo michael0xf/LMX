@@ -304,7 +304,7 @@ Repeated separators `a,,c`, `a;;c`, `a,;c`, `a;,c` denote a positional skip wher
 
 ## 12. Anonymous Structures
 
-An argument list is a Structure. P0 makes its sole anonymous container transparent; an anonymous field among other fields keeps its boundary. Headless atoms, expressions, and empty Structures are also valid in a body. P0 preserves order and nesting but does not decide whether a field is executed, discarded, or accepted as a value. A semantic consumer cannot retroactively change tree boundaries.
+An argument list is a Structure. An anonymous field keeps its boundary both among other fields and when it is the only one in the list: P0 does not unwrap a sole anonymous Structure ([empty bodies](#empty-colon)). Headless atoms, expressions, and empty Structures are also valid in a body. P0 preserves order and nesting but does not decide whether a field is executed, discarded, or accepted as a value. A semantic consumer cannot retroactively change tree boundaries.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2709–2714.
 
@@ -484,7 +484,7 @@ A fence of 3–80 dashes after the leading zone has the same role. Only horizont
 
 An anonymous Structure continues until another marker at K, an ordinary item at K − 1, an admitted named/terminal close, or EOF. Replacing a named close with a fence depends on profile admission and lack of ambiguity. Matrix rows and nested arrays use the same rules, without separate table syntax.
 
-An explicitly formed empty vertical body preserves a Frame with an empty Structure-body. P0 normalizes it exactly like `f()` and `f: ()`: there is no extra anonymous empty field. Bare `f:` without arguments or explicit closure remains invalid. See [empty bodies](#empty-colon).
+An explicitly formed empty vertical body preserves a Frame with an empty Structure-body. P0 normalizes it exactly like `f()` and `f:`: there is no extra anonymous empty field; `f: ()`, by contrast, holds one field — an empty Structure. See [empty bodies](#empty-colon).
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3496–3504.
 
@@ -549,13 +549,13 @@ end: else
 
 ## 18. Missing arguments and an empty vertical body
 
-Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct correction of 2026-09-23.
+Source: §§4.0.1, 4.1 and 15 of the previous specification; the author's direct correction of 2026-09-23; the author's decision of 2026-11-10.
 
-A Frame's argument list is itself a Structure. If a sole anonymous Structure field occupies the whole positional sequence, P0 replaces it with its fields exactly once, independently of the head and emptiness. This unwrapping concerns an anonymous Structure as written; receiving a computed Structure, such as the result of `merge` given as the only argument, as the whole argument Structure is defined by the [semantics](LMX_semantics.en.md#whole-arguments). Thus `f()`, `f: ()`, and `f:` with an explicitly empty vertical body closed by `---` yield the same Frame with an empty Structure-body; `f(a b)` and `f: (a b)` likewise yield one list. An anonymous Structure among other fields or a named field remains a distinct field. A separate empty Structure value requires such a nontransparent position.
+A Frame's argument list is itself a Structure. P0 does not change the written boundaries: an anonymous Structure stays a field of the list also when it is the only one there, empty or not (author's decision of 2026-11-10, [journal](../LMX_blog/2026-11-10.md#p0-no-unwrap); the earlier rule of 2026-09-23, by which P0 replaced a sole anonymous Structure with its fields exactly once, is withdrawn). `s((a))` is a Frame with one field, the Structure `(a)`; `s(a b)` and `s: a b` yield one list of two fields, while `s((a b))` and `s: (a b)` yield one Structure field. `f()`, `f:`, and `f:` with an explicitly empty vertical body closed by `---` yield the same Frame with an empty Structure-body; `f: ()` is the same as `f(())`: one field, an empty Structure. What a sole Structure means for the head is decided by translation and interpretation under the resolved head's contract: for a callable it is still, written or computed, the whole argument Structure ([semantics](LMX_semantics.en.md#whole-arguments)). P0 still unwraps a sole Structure and rejects bare `f:`; the change is section [M8 of the plan](../next_core_tasks_v3.md#m8).
 
-Parentheses are not a call marker. P0 does not label `f()` as a call or decide whether `f` exists: the same normalized Frame from `f()` and `f: ()` is passed to general head resolution. Calling, assignment, and declaration are defined by [semantics](LMX_semantics.en.md#construction), not by this spelling.
+Parentheses are not a call marker. P0 does not label `f()` as a call or decide whether `f` exists: the same normalized Frame from `f()` and `f:` is passed to general head resolution. Calling, assignment, and declaration are defined by [semantics](LMX_semantics.en.md#construction), not by this spelling.
 
-P0 rejects bare `f:` without arguments, a vertical body, or an explicit `---`. Bare `f` is an ordinary admitted atomic expression; P0 retains it as an atom and does not create a call Frame. Under [semantics](LMX_semantics.en.md#resolved-head-consumption), a bare name reads the resolved value or reference without executing the Structure; its explicit call is written `call: f`. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
+Bare `f:` without arguments and without a vertical body is the short form without arguments: a Frame with an empty body, like `f()`. Bare `f` is an ordinary admitted atomic expression; P0 retains it as an atom and does not create a call Frame. Under [semantics](LMX_semantics.en.md#resolved-head-consumption), a bare name reads the resolved value or reference without executing the Structure; its explicit call is written `call: f`. The translator does not distinguish Frame forms by COLON/COMPACT or source spelling. An empty inline tail followed by a nonempty vertical body is valid. Bare `end` remains forbidden.
 
 **Valid: the same empty P0 Frame; parentheses do not select a call** — author / автор, 2026-09-23.
 
@@ -719,9 +719,9 @@ EOF completes the root after all forms admitting EOF closure. Unclosed bounded f
 
 Source: §15.0. The formal notation and its original annotations are retained verbatim below. This is the same immutable source excerpt in both language versions; all constraints are explained in the preceding sections. `name`, `atom_or_value`, `symbolic_head`, and level events are read with the lexical rules, not as permission for arbitrary characters. English annotations within the notation are not language tokens.
 
-This EBNF does not replace the automaton: bare `f:` without an argument and explicit closure is invalid; `newline/source-level composition` denotes the stated transitions, not arbitrary whitespace separation.
+This EBNF does not replace the automaton: bare `f:` without an argument and without a vertical body is the short form with an empty body (author's decision of 2026-11-10; the historical notation below does not contain it); `newline/source-level composition` denotes the stated transitions, not arbitrary whitespace separation.
 
-Under the general §4.0.1 rule, P0 normalizes the sole anonymous Structure occupying the whole list before consumption: `f()`, `f: ()`, and an explicitly empty vertical form yield the same Frame with an empty Structure-body. The rule also applies to a nonempty container. Read the historical notation below with this clarification.
+By the author's decision of 2026-11-10, P0 does not unwrap the sole anonymous Structure occupying the whole list, empty or not ([empty bodies](#empty-colon)): `f()`, `f:`, and an explicitly empty vertical form yield the same Frame with an empty Structure-body, while `f: ()` yields a Frame with one field, an empty Structure. Read the historical notation below with this clarification.
 
 The annotation on historical `nullary_line_body` is not a P0 check of name availability, role, or arity: a bare identifier is parsed as an atom by the common grammar. Those checks follow construction of the complete model under [the single semantic rule](LMX_semantics.en.md#resolved-head-consumption). The immutable excerpt below is retained as a source, not permission for a separate nullary-receiver parser.
 

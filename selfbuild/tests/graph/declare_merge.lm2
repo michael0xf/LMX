@@ -1,0 +1,20 @@
+# Slice 346 (the book :375, "внешний b получает результат"; colon-declares): `R: merge(A; B)` declares the Structure R,
+# and the receiver in its tail builds it. Declared again by `R: merge(B; A)`, the place R gets the new result -- first
+# reads y of the first, second reads x of the second --; declared again by `R: A B`, it holds the Structures A and B
+# themselves (two fields). There is one field R after the three forms. `S: S` declares S with the word S inside, the
+# name answering nothing before; the repeated `S: S` declares S with the former S inside -- no cycle, one field.
+A:
+    int: x 1
+end: A
+B:
+    int: y 2
+end: B
+R: merge(A; B)
+int: first R\y
+R: merge(B; A)
+int: second R\x
+R: A B
+int: n length(R)
+S: S
+S: S
+int: m length(S)

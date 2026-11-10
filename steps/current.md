@@ -96,9 +96,28 @@ frontend и инструмент G1 и G2 совпадают, кроме шта�
 `CHECKS 88 lines, 0 failed`; полный набор `tests/full-suite.tsv` — `SUITE 139 rows, 0 failures`, 1102 PASS. В списке
 набора у одной строки сдвинулся столбец сообщения (`os_implements_refused`, 30 → 23).
 
-**Порядок дальше.** M6: шаги 5 (`typeof`, прежде `getType`) и 4 (`S[i]`) сделаны; ход B переименований; M7 вместе с
-M9 — по поручению автора о переводе кода на `:=`, сначала чистый граф; M8; шаги 1, 2, 3 раздела M6; маршрут 331 —
-после шага 3 раздела M7; далее по плану.
+**Срез 346: форма с двоеточием объявляет, известное место её отказывает — чистый граф**
+([запись](witnesses/colon-declares-clean-graph-20261110/notes.md); план M7 шаги 2–4 и M9 шаг 3 для чистого графа).
+Форму корня читает голова (`lmx_graph_root_declares`); объявление — одна операция для интерпретатора и выпускаемого
+`native` (`lmx_graph_root_declare`): атом хвоста, называющий известное, — сама сущность, повторное объявление отдаёт
+месту имени новую Structure и оставляет слот формы пустым; `lmx_graph_define` снята; отказ — ответ 8 в корне, в теле
+и на пути; `@: имя значение` в корне объявляет ссылочное место; поля письменного операнда `merge` объявляют ресиверы.
+Фикстуры `tests/graph` переведены на `:=` (59 файлов, 170 строк), ожидания 30 строк отличаются только написанием
+оператора. Пример автора `Struct2: a b c` / `Struct1: q w e r t` / `Struct1: Struct2` — фикстура `declare_structure`,
+дамп `Struct2: a b c`, `Struct1: (Struct2 a b c)` в трёх режимах. Найден и исправлен дефект, вскрытый переводом: тело
+из одного присваивания `body := (total := total + d)` читалось как выражение. Проверки: 99 строк graph-check ×
+interp/native/forced — 297 PASS на кортеже `boot-f07`/`rt-f10`/`graph-f10`; мутант «отказ снят» — 6 строк из 8,
+мутант «повторное объявление добавляет поле» — 3 строки из 4 в трёх режимах; `bootstrap quick` `boot-f07` — 0
+отказов, 21:27:38Z–21:39:42Z, frontend, инструмент и runtime G1 = G2; полный набор — `SUITE 139 rows, 0 failures`, 1102 PASS. Понижение L3,
+машинный путь L2 и обходчик не менялись. Автору открыты П3–П5 в
+[q/current](../LMX_blog/q/current/colon-declares-contradictions-20261110.md): остаётся ли `Struct2` полем корня,
+`R: merge(A; B)`, подача `f(a: 5)`; что исполнитель решил сам — часть Е
+[ответов](../LMX_blog/q/fable-self-answers-20261110.md).
+
+**Порядок дальше.** M6: шаги 5 (`typeof`, прежде `getType`) и 4 (`S[i]`) сделаны; переименования сделаны; M7 и шаг 3
+M9 сделаны в чистом графе. Дальше — M7 для рабочего frontend: перепись записей присваивания (шаг 1), `:=` во всех
+положениях записи (шаг 2), команда перевода и перевод исходных текстов вместе с составной формой M9 (шаг 3), отказ
+(шаг 4); затем M8; шаги 1, 2, 3 раздела M6; маршрут 331 — после шага 3 раздела M7; далее по плану.
 
 **Срез 343: `getType` в чистом графе** ([запись](witnesses/get-type-20261110/notes.md), план M6 шаг 5). Операция
 ядра `lmx_graph_address_type` — одна для интерпретатора и выпускаемого `native`; слово `getType` в состоянии графа;
@@ -107,15 +126,17 @@ M9 — по поручению автора о переводе кода на `:
 путь понижения ресивера не знает; констант двери в чистом графе нет.
 
 **Рабочее окружение сессии.** `P` — `build2/codex_fix250generationchain01`. Стадия — `P/fable-main01`, наполнена из
-`main` (manifest `P/pins/fable-source11.sha256`, 412 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
-и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f06/lmxtool.exe` (`19990ab9…`), hosted
-frontend — `P/fable-main01/boot-f06/g2/frontend/l2trans.exe` (`df27fecf…`), runtime — `P/fable-main01/rt-f06`
-(`driver.o` `56b73642…`), транслятор графа — `P/fable-main01/graph-f06`, базовый frontend —
+`main` (manifest `P/pins/fable-source19.sha256`, 427 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
+и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f07/lmxtool.exe` (`3f9e3328…`), hosted
+frontend — `P/fable-main01/boot-f07/g2/frontend/l2trans.exe` (`61e01587…`), runtime — `P/fable-main01/rt-f11`
+(`driver.o` `0fec21ad…`, побайтно равен `rt-f10`), транслятор графа — `P/fable-main01/graph-f11`, базовый frontend —
 `P/cold-candidate48/full48/g2/frontend`. Команды инструмента запускаются из `P/runs/fable-m6-01`. Список graph-check —
-`P/pins/fable-graph-check-f07.tsv` (88 строк). Заняты метки `tool-f02`, `tool-f04`–`tool-f06`, `rt-f01`–`rt-f06`,
-`rt-f03m`, `rt-f04m`, `graph-f01`–`graph-f06`, `graph-f03m`, `graph-f04m`, `boot-f03`–`boot-f06`, `check-f01`,
-`check-f03`, `check-f03m`, `check-f04`–`check-f07`, `check-f05m`, `suite-f06` и `docs80`–`docs110` с суффиксом
-`-fable01`.
+`P/pins/fable-graph-check-f15.tsv` (99 строк). Отдельно собранный инструмент лежит в `tool-fNN/lmxtool-tool.exe`, а
+команда `build-self` принимает четвёртым аргументом путь к `l2trans.exe`, не каталог frontend. Заняты метки
+`tool-f02`, `tool-f04`–`tool-f09`, `rt-f01`–`rt-f11`, `rt-f03m`, `rt-f04m`, `rt-f09m1`, `rt-f09m2`,
+`graph-f01`–`graph-f11`, `graph-f03m`, `graph-f04m`, `graph-f09m1`, `graph-f09m2`, `boot-f03`–`boot-f07`, `check-f01`,
+`check-f03`, `check-f03m`, `check-f04`–`check-f15`, `check-f05m`, `check-f13m1`, `check-f13m2`, `suite-f06`,
+`suite-f07`, manifest `fable-source01`–`19`, `18m1`, `18m2` и `docs80`–`docs111` с суффиксом `-fable01`.
 
 Ниже — состояние до этой записи (история).
 

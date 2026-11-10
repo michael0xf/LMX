@@ -4,16 +4,16 @@ Box:
         int: v 42
     end: Inner
 end: Box
-Box\hits: 5
-Box\Inner\v: ((Box \ hits) + 2)
+:=: (Box \ hits) 5
+:=: ((Box \ Inner) \ v) ((Box \ hits) + 2)
 int: v1 7
 sub: bump (int: d 1)
-    Box\hits: ((Box \ hits) + d)
+    :=: (Box \ hits) ((Box \ hits) + d)
 end: bump
 bump: 10
 bump:
 fn: twice (int: x) int
-    Box\Inner\v: (x * 2)
+    :=: ((Box \ Inner) \ v) (x * 2)
     return: ((Box \ Inner) \ v)
 end: twice
 int: t 42

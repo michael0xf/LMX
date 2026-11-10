@@ -1,12 +1,12 @@
 fn: repeat () int
     int: i 0
     ---
-        i: i + 1
+        i := i + 1
     until: i = 3
     return: i
 end: repeat
 Repeat:
-    x: x + 1
+    x := x + 1
 until: x = 2
 Data:
     int: x 0
@@ -16,13 +16,13 @@ int: before_call Data\x
 call: Repeat Data
 int: after_call Data\x
 fn: condition () int (int: calls 0)
-    calls: calls + 1
+    calls := calls + 1
     return: calls >= 2
 end: condition
 fn: transitions () int
     int: attempt 0
     ---
-        attempt: attempt + 1
+        attempt := attempt + 1
         if: attempt = 1
             redo()
         end: if
@@ -35,7 +35,7 @@ end: transitions
 fn: leave () int
     int: n 0
     ---
-        n: n + 1
+        n := n + 1
         break()
     until: condition()
     return: n
@@ -46,7 +46,7 @@ fn: early () int
     until: condition()
 end: early
 fn: body_fields () int
-    late: 4
+    late := 4
     ---
         int: late
     until: late = 4
@@ -59,21 +59,21 @@ int: from_body body_fields()
 int: condition_calls condition\var\calls
 int: root_value 0
 ---
-    root_value: root_value + 1
+    root_value := root_value + 1
     continue()
 until: root_value = 2
 RepeatOwn:
     var:
         int: x 0
     end: var
-    x: x + 1
+    x := x + 1
 until: x = 2
 int: own_before RepeatOwn\var\x
 call: RepeatOwn
 int: own_after RepeatOwn\var\x
 Self:
     int: x 0
-    x: x + 1
+    x := x + 1
 until: x = 2
 call: Self Self
 int: same_data Self\x

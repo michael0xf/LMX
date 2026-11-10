@@ -5,14 +5,14 @@ AV:
     int: a 8
 end: AV
 fn: wrap (int: x) int
-    return: mytest(merge(mytest\args; (a: x)))
+    return: mytest(merge(mytest\args; (int: a x)))
 end: wrap
-int: r mytest(merge(mytest\args; (a: int: 5)))
-int: both mytest(merge(mytest\args; (c(4); a(6))))
-int: nested mytest(merge(merge(mytest\args; (c: 2)); (a: 7)))
+int: r mytest(merge(mytest\args; (int: a 5)))
+int: both mytest(merge(mytest\args; (int: c 4; int: a 6)))
+int: nested mytest(merge(merge(mytest\args; (int: c 2)); (int: a 7)))
 int: named mytest(merge(mytest\args; AV))
-int: model mytest(merge(AV; (c: 1)))
+int: model mytest(merge(AV; (int: c 1)))
 int: body wrap(9)
-int: appended merge(AV; (z: 9))\z
-int: kept merge(AV; (a: 2))\a + AV\a
+int: appended merge(AV; (int: z 9))\z
+int: kept merge(AV; (int: a 2))\a + AV\a
 int: after mytest(a := 1)

@@ -452,10 +452,12 @@ end: lm_graph_path_text
 # The operand is the body written after `:=`, read by the one model of a Frame (§3.3) as the body of a Frame given by
 # its head is: a single field that is a value -- a word, an unnamed int, an unnamed Lmx (an expression) -- is the
 # operand itself; any other body -- no field, several, a place, a Frame -- is the Structure of its fields as written
-# (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. A consumer that evaluates
-# the operand reads a Structure of one field as that field (lmx_graph_eval_value, lm_graph_emit_operand): a Frame
-# applying a callable or merge stays that application.
+# (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. An assignment written
+# there, `body := (total := total + d)`, is such a Frame -- a statement, no value: the operand is the body of that one
+# statement. A consumer that evaluates the operand reads a Structure of one field as that field (lmx_graph_eval_value,
+# lm_graph_emit_operand): a Frame applying a callable or merge stays that application.
 fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0Frame; @@: out void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: text c.LmP0Text lm_graph_p0_head(frame)
     const: @: bytes char lm_graph_p0_data(text)
     size_t: text_size lm_graph_p0_length(text)
@@ -473,11 +475,14 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
     if: status != 0
         return: status
     operand: rhs
-    if: c.lmx_graph_count((cast: (@: c.Lmx) rhs)) = 1U
+    if: state != 0 && c.lmx_graph_count((cast: (@: c.Lmx) rhs)) = 1U
         single: c.lmx_graph_get((cast: (@: c.Lmx) rhs), 0U)
         kind: c.lmx_graph_kind(g, single)
         if: kind = 2 || kind = 5 || kind = 6 || ((kind = 1 || kind = 4) && c.lmx_graph_name_of(g, single) = 0)
             operand: single
+        ---
+        if: kind = 4 && c.lmx_graph_name_of(g, single) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) single), 0U)) = state\w_assign
+            operand: rhs
         ---
     ---
     result: c.lmx_graph_lmx(g, parent, 3U)

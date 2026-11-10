@@ -168,9 +168,25 @@ next step; the interpreter has no C door yet. 66 graph-check runs × interp/nati
 
 The author's decision of 2026-11-10 ([journal](../LMX_blog/2026-11-10.md#forms-declare-or-call),
 [book](LMX_semantics.en.md#forms-declare-or-call)): structural forms only declare or call, and `:=` writes a value into
-a known place. The implementation does not follow this yet: both consumers of the clean graph write a place with the
-form `name: value` and, for an unknown name, define a place by its value (`lmx_graph_define`); the descriptions of the
-slices above state what the code does, not the norm. The removal is section [M7 of the plan](../next_core_tasks_v3.md#m7).
+a known place. The clean graph follows this from
+[slice 346](../steps/witnesses/colon-declares-clean-graph-20261110/notes.md): the definition of a place by its value
+(`lmx_graph_define`) and the write by the form `name: value` are removed from both consumers; the descriptions of the
+slices above state what the code did before it. A root form `Name: tail` whose head is no word of the language, no
+receiver and no callable is a declaration of a Structure (`lmx_graph_root_declares`), executed where the traversal
+reaches it (`lmx_graph_space_reach` → `lmx_graph_root_declare`): an atom of the tail that names a Structure, a callable
+or a place now is that entity itself -- its address goes into the slot with no copy --, an unknown atom stays a word;
+nested forms and kept statements stand as written. A repeated declaration gives the place of the name -- the slot of
+the root holding the former Structure -- the newly declared one, and the slot of the form itself stays empty: there is
+no second field, and the dump prints nothing for an empty slot. `Name: merge(...)` declares the Structure the receiver
+builds: the name receives the result; a copy of one operand is named already and is held by `@: name merge(...)`. A
+head that is a known place that is no Structure (an `int` place, a reference place) -- at the root, in a body and on a
+path `owner\field:` -- is refused: answer 8 of the interpreter, a stop of R0 in a program; the translator names `:=` in
+its message and emits the refusal at the statement. A declaration of a Structure inside a running body and a repeated
+declaration through a path are not executed by the slice (5). The fields of a written operand of `merge` are declared
+by receivers -- `int: name value`, `@: name int value`; a field `name: tail` there is a description of a structure (5).
+The author's example `Struct2: a b c`, `Struct1: q w e r t`, `Struct1: Struct2` gives the dump `Struct2: a b c` and
+`Struct1: (Struct2 a b c)`. 99 graph-check runs × interp/native/forced PASS. The L3 lowering, the L2 machine path and
+the walker still accept the colon assignment -- section [M7 of the plan](../next_core_tasks_v3.md#m7).
 
 The author's decision of the same day ([journal](../LMX_blog/2026-11-10.md#receiver-args-only),
 [book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by the form `receiver: arguments`, and the
@@ -651,11 +667,12 @@ Frame `head: a b` is its name (`name_of`: the row of the address → name table)
 head's role is told by the address of its canonical string: a language word (`if`/`while`/`return`/…), a receiver (`fn`,
 `int`, `merge`, `@`, …) or a name, resolved in the current traversal's namespace as it stands at this field (§3.5,
 §5.2). A name answering a function (the Structure F the receiver `fn`/`sub` created, §3.4), applied with arguments → a
-call ([L2 §11](L2_spec_en.md#call)); a data place → a value. A field of the root whose name is no word of the language
-and answers nothing now is classified when the traversal reaches it (`lmx_graph_root_structure`), not ahead: a Structure
-when its fields are no single value; the definition `name: value` when its one field is a value (a literal, a word, a
-reference, an unnamed Lmx, `merge`, or an application of what answers a callable now: `r: h(3)` after `h: f` calls the
-bound `h` once and defines `r` by its result, as `r: f(3)` does). Separately represented expressions keep their general form: an operation is
+call ([L2 §11](L2_spec_en.md#call)); a data place → a value. A field of the root whose name is no word of the language,
+no receiver and answers no callable is read when the traversal reaches it (`lmx_graph_root_declares`), not ahead, and by
+its head, not by the form of its tail: it is a declaration of a Structure -- the first when the name answers nothing
+now, a repeated one when it answers a Structure -- or, for the name of a known place that is no Structure, a refusal
+(8); no form with a colon defines or writes a value (`x: 4` with an unknown `x` is a Structure `x` with the number
+inside, `r: h(3)` a Structure `r` with the kept call). Separately represented expressions keep their general form: an operation is
 an unnamed Lmx (the operator word and the operands, an operation written as a Frame included, §3.3), a path, `:=`. A bare
 atom does not call ([READ.ME](../READ.ME)); an ordinary Structure is executed through `call`. An expression `a op b` is
 three fields; the operands are evaluated recursively: a number primitive -- the value of the cell of its type, a nested

@@ -13,14 +13,14 @@ fn: loops () int
         return: 999
     end: while
     while: i < 5
-        i: i + 1
+        i := i + 1
         if: i = 2
             continue()
         end: if
-        sum: sum + i
+        sum := sum + i
     end: while
-    for: (i: 0; i < 3; i: i + 1)
-        sum: sum + 10
+    for: (i := 0; i < 3; i := i + 1)
+        sum := sum + 10
     end: for
     return: sum
 end: loops
@@ -28,19 +28,19 @@ int: low choose(2)
 int: high choose(3)
 int: loop_result loops()
 fn: mark () int (int: calls 0)
-    calls: calls + 1
+    calls := calls + 1
     return: calls
 end: mark
 fn: short () int
     int: result 0
     if: 0 && mark()
-        result: 100
+        result := 100
     end: if
     if: 1 || mark()
-        result: result + 1
+        result := result + 1
     end: if
     if: mark() = 1 && mark() = 2
-        result: result + 10
+        result := result + 10
     end: if
     return: result + (!0) + (3 >= 3) + (4 > 3) + (2 <= 3) + (1 != 2)
 end: short
@@ -48,10 +48,10 @@ fn: jumps () int
     int: sum 0
     int: visits 0
     int: again 0
-    for: (int: i 0; i < 5; i: i + 1)
-        visits: visits + 1
+    for: (int: i 0; i < 5; i := i + 1)
+        visits := visits + 1
         if: i = 1 && again = 0
-            again: 1
+            again := 1
             redo()
         end: if
         if: i = 2
@@ -60,12 +60,12 @@ fn: jumps () int
         if: i = 3
             break()
         end: if
-        sum: sum + i + 1
+        sum := sum + i + 1
     end: for
     return: sum * 10 + visits
 end: jumps
 fn: inline_fields () int
-    late: 9
+    late := 9
     if: 0
         int: late 30
     end: if
@@ -82,25 +82,25 @@ fn: nested_loops () int
     while: i < 2
         int: j 0
         while: j < 3
-            j: j + 1
+            j := j + 1
             if: j = 2
                 break
             end: if
-            sum: sum + 1
+            sum := sum + 1
         end: while
-        i: i + 1
+        i := i + 1
     end: while
     return: sum * 10 + i
 end: nested_loops
 Code:
     while: x < 3
-        x: x + 1
+        x := x + 1
     end: while
     if: x = 3
-        y: x * 10
+        y := x * 10
     end: if
     else:
-        y: 99
+        y := 99
     end: else
 end: Code
 Data:
@@ -116,13 +116,13 @@ call: Code Data
 int: data_result Data\y
 int: root_loop 0
 while: root_loop < 2
-    root_loop: root_loop + 1
+    root_loop := root_loop + 1
     mark()
 end: while
 if: root_loop = 2
-    root_loop: 12
+    root_loop := 12
 end: if
 else:
-    root_loop: 99
+    root_loop := 99
 end: else
 int: final_calls mark\var\calls

@@ -1,8 +1,8 @@
 sub: add (int: delta 2) (int: sum 0)
     finally:
-        sum: sum + 10
+        sum := sum + 10
     end: finally
-    sum: sum + delta
+    sum := sum + delta
 end: add
 add()
 add
@@ -19,21 +19,21 @@ int: other_sum Other\sum
 int: own_sum add\var\sum
 sub: early (int: x) (int: value 0)
     finally:
-        value: value + 10
+        value := value + 10
     end: finally
-    value: x
+    value := x
     if: x > 0
         return
     end: if
-    value: 99
+    value := 99
 end: early
 early(5)
 int: early_value early\var\value
 sub: normal ()
-    late: 7
+    late := 7
     int: late
     finally:
-        late: late + 1
+        late := late + 1
     end: finally
 end: normal
 normal()
@@ -41,20 +41,20 @@ int: normal_value normal\var\late
 fn: wrapper () int (int: total 4)
     capture()
     sub: capture () (int: seen 0)
-        seen: total
-        total: total + 1
+        seen := total
+        total := total + 1
     end: capture
     return: capture\var\seen * 10 + total
 end: wrapper
 int: nested_value wrapper()
 sub: outer () (int: trace 0)
     finally:
-        trace: trace + 1
+        trace := trace + 1
     end: finally
     finally:
         return()
     end: finally
-    trace: 2
+    trace := 2
 end: outer
 outer()
 int: outer_trace outer\var\trace

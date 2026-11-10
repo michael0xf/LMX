@@ -100,7 +100,7 @@ end: lmx_graph_intern_in
 
 # The words of the language -- receivers, declaration words, the type words of the C door -- interned into
 # state\receivers once, with the state: the one list the builder's input boundary (lm_graph_data_head) and the root's
-# reading (lmx_graph_root_structure) consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
+# reading (lmx_graph_root_declares) consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
     @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external send receive adopt length typeof cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
@@ -1120,6 +1120,7 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
     @: inner c.Lmx 0
     size_t: i 0U
     size_t: n 0U
+    int: printed 0
     if: kind = 2
         text: lmx_graph_word_text(g, value)
         if: text = 0
@@ -1161,20 +1162,39 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
     c.fputs("(", f)
     if: text != 0
         c.fputs(text, f)
-        if: n != 0U
-            c.fputs(" ", f)
-        ---
-    ---
+        printed: 1
+    # An empty slot prints nothing (lmx_graph_dump_at); a separator goes before every printed field but the first.
     while: i < n
-        if: i != 0U
-            c.fputs(" ", f)
-        if: lmx_graph_dump_token(g, lmx_graph_get(inner, i), f) != 0
-            return: 1
+        if: lmx_graph_get(inner, i) != 0
+            if: printed != 0
+                c.fputs(" ", f)
+            printed: 1
+            if: lmx_graph_dump_token(g, lmx_graph_get(inner, i), f) != 0
+                return: 1
+            ---
+        ---
         i: i + 1U
     ---
     c.fputs(")", f)
     return: 0
 end: lmx_graph_dump_token
+
+# The fields of inner from index from in the line form, a space before each; an empty slot prints nothing. 0, or 1 when
+# a cell is none of the graph's.
+fn: lmx_graph_dump_fields (@: g c.LmxGraph; @: inner c.Lmx; size_t: from; @: f c.FILE) int
+    size_t: k from
+    size_t: m lmx_graph_count(inner)
+    while: k < m
+        if: lmx_graph_get(inner, k) != 0
+            c.fputs(" ", f)
+            if: lmx_graph_dump_token(g, lmx_graph_get(inner, k), f) != 0
+                return: 1
+            ---
+        ---
+        k: k + 1U
+    ---
+    return: 0
+end: lmx_graph_dump_fields
 
 # One formal of a declaration's args in its written form: `int: name`, `int: name value`, `T: name`, `@: name T`.
 fn: lmx_graph_dump_formal (@: g c.LmxGraph; @: args c.Lmx; size_t: index; @: f c.FILE) int
@@ -1367,7 +1387,6 @@ end: lmx_graph_dump_path
 fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) int
     size_t: n lmx_graph_count(lmx)
     size_t: i 0U
-    size_t: k 0U
     size_t: m 0U
     @: value void 0
     @: inner c.Lmx 0
@@ -1377,6 +1396,11 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
     int: printed 0
     while: i < n
         value: lmx_graph_get(lmx, i)
+        # An empty slot -- the form of a repeated declaration, consumed (lmx_graph_root_declare) -- is no field:
+        # nothing is printed for it.
+        if: value = 0
+            i: i + 1U
+            continue
         kind: lmx_graph_kind(g, value)
         lmx_graph_dump_indent(f, depth)
         if: kind = 4
@@ -1455,13 +1479,8 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
                             c.fprintf(f, "end: %s\n", name)
                         else:
                             c.fprintf(f, "%s:", name)
-                            k: 0U
-                            while: k < m
-                                c.fputs(" ", f)
-                                if: lmx_graph_dump_token(g, lmx_graph_get(inner, k), f) != 0
-                                    return: 1
-                                k: k + 1U
-                            ---
+                            if: lmx_graph_dump_fields(g, inner, 0U, f) != 0
+                                return: 1
                             c.fputs("\n", f)
                         ---
                     else:
@@ -1473,13 +1492,8 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
                             if: lmx_graph_dump_path(g, lmx_graph_get(inner, 0U), f) != 0
                                 return: 1
                             c.fputs(":", f)
-                            k: 1U
-                            while: k < m
-                                c.fputs(" ", f)
-                                if: lmx_graph_dump_token(g, lmx_graph_get(inner, k), f) != 0
-                                    return: 1
-                                k: k + 1U
-                            ---
+                            if: lmx_graph_dump_fields(g, inner, 1U, f) != 0
+                                return: 1
                             c.fputs("\n", f)
                             i: i + 1U
                             continue
@@ -1492,13 +1506,8 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
                             i: i + 1U
                             continue
                         c.fprintf(f, "%s:", head)
-                        k: 1U
-                        while: k < m
-                            c.fputs(" ", f)
-                            if: lmx_graph_dump_token(g, lmx_graph_get(inner, k), f) != 0
-                                return: 1
-                            k: k + 1U
-                        ---
+                        if: lmx_graph_dump_fields(g, inner, 1U, f) != 0
+                            return: 1
                         c.fputs("\n", f)
                     ---
                 ---
@@ -1543,7 +1552,7 @@ fn: lmx_graph_uninit_int_at (@: g c.LmxGraph; @: cell void) @: void
     return: pointer
 end: lmx_graph_uninit_int_at
 
-# ---- Interface descriptor and the definition of a place ------------------------------------------------------------
+# ---- Interface descriptor ------------------------------------------------------------------------------------------
 
 # The interface descriptor (the book :691): the Structure that fn creates from `fn: name args return` without a body --
 # its args and return parts and the addressable empty var the fn contract creates for an omitted var. No body is
@@ -1554,53 +1563,6 @@ fn: lmx_graph_descriptor (@: g c.LmxGraph; @: code c.Lmx) int
         return: 0
     return: (cast: (int) (lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_body)) = 0 && lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_return)) != 0))
 end: lmx_graph_descriptor
-
-# The definition of a new place by the written field `name: value` of a root whose name is not known (the book,
-# composition of place and value :430-:443: the place is defined by its first field; `name: int: 5` and `int: name 5`
-# bind alike): the value, already evaluated once, gets its own place -- a new int cell for an int, a new int reference to
-# the same cell for an int reference, the fresh unnamed Structure itself (a merge result of several operands) -- named by
-# the field's head (the name of its Frame) and published in the field's slot by the runtime write; the place answers the name
-# in the namespace of the live traversal from then on. A Structure that already has a name (a
-# known Structure or callable, a one-operand merge copy keeping its name) gets no second name: the place is a new named
-# reference to that instance (the book :441, `@: name Model`), and a reference value gives a new reference to the same
-# target. The new name renames nothing. 0; 1 without memory or for another statement; 5 for another kind.
-fn: lmx_graph_define (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value void) int
-    @: statement void lmx_graph_get(root, index)
-    @: name char 0
-    @: place void 0
-    int: kind lmx_graph_kind(g, value)
-    int: number 0
-    if: lmx_graph_statement(g, statement) = 0 || lmx_graph_count((cast: (@: c.Lmx) statement)) != 1U
-        return: 1
-    name: lmx_graph_name_of(g, statement)
-    if: name = 0
-        return: 1
-    if: kind = 1 || kind = 3
-        if: lmx_graph_value_int(g, value, @ number) != 0
-            return: 1
-        place: lmx_graph_int(g, number)
-    else:
-        if: kind = 5
-            place: lmx_graph_ref_int(g, c.lmx_arena_pointer_void_read(value))
-        else:
-            if: kind = 6
-                place: lmx_graph_ref_lmx(g, lmx_graph_target(g, value))
-            else:
-                if: kind != 4
-                    return: 5
-                place: value
-                if: lmx_graph_name_of(g, value) != 0
-                    place: lmx_graph_ref_lmx(g, value)
-                ---
-            ---
-        ---
-    ---
-    if: place = 0 || lmx_graph_name_address(g, place, name) != 0
-        return: 1
-    if: lmx_graph_write_slot(g, root, root, index, place) != 0
-        return: 1
-    return: lmx_graph_space_put(root, name, place)
-end: lmx_graph_define
 
 # The copy of a word primitive (kernel §6.4): a new cell of the WORD pool holding the same canonical address -- no search
 # of bytes, the spelling is already interned. 0 without memory.
@@ -1796,3 +1758,14 @@ fn: lmx_graph_int_ref_of (@: g c.LmxGraph; @: value void) @: void
         held: c.lmx_arena_pointer_void_read(held)
     return: lmx_graph_ref_int(g, held)
 end: lmx_graph_int_ref_of
+
+# The value a reference place of a Structure or a callable takes (`@: name value`, the book, receiver-args-only): a new
+# reference to the Lmx the value stands for (lmx_graph_target) -- a Structure or a callable itself, the target of a
+# reference to one, the Lmx a slot read by an index holds. The place has its own address and name; the target keeps its
+# own. 0 for a value that stands for no Lmx, or without memory.
+fn: lmx_graph_lmx_ref_of (@: g c.LmxGraph; @: value void) @: void
+    @: target void lmx_graph_target(g, value)
+    if: lmx_graph_kind(g, target) != 4
+        return: 0
+    return: lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) target))
+end: lmx_graph_lmx_ref_of

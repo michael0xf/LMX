@@ -2,7 +2,7 @@
 # statement and in its result: r = g(1) + 1 = 16 with k 5, f1 never called (c1 0), g twice (c2 2).
 int: k 2
 fn: f1 (int: a) int (int: calls 0)
-    calls: calls + 1
+    calls := calls + 1
     return: a * 10 + k
 end: f1
 fn: g merge(f1)
@@ -10,7 +10,7 @@ fn: twice (int: a) int
     g(a)
     return: g(a) + 1
 end: twice
-k: 5
+k := 5
 int: r twice(1)
 int: c1 f1\var\calls
 int: c2 g\var\calls

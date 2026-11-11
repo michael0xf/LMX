@@ -103,7 +103,7 @@ end: lmx_graph_intern_in
 # reading (lmx_graph_root_declares) consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
-    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table var args body data const immutable independent implements test post external send receive adopt length typeof cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
+    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent implements test post external send receive adopt length typeof cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
     @@: list char 0
     size_t: at 0U
     size_t: start 0U
@@ -165,7 +165,9 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_assign := lmx_graph_intern_in(state, ":=", 2U)
     state\w_return := lmx_graph_intern_in(state, "return", 6U)
     state\w_call := lmx_graph_intern_in(state, "call", 4U)
-    state\w_var := lmx_graph_intern_in(state, "var", 3U)
+    # The special name of the data of a launch and the part of a callable of that name (the book, data-code-roles; the
+    # author 2026-11-11: formerly `var`).
+    state\w_data := lmx_graph_intern_in(state, "data", 4U)
     state\w_eq := lmx_graph_intern_in(state, "=", 1U)
     state\w_ne := lmx_graph_intern_in(state, "!=", 2U)
     state\w_lt := lmx_graph_intern_in(state, "<", 1U)
@@ -188,10 +190,11 @@ fn: lmx_graph_state () @: c.LmxGraphState
     # The C door's declarations of a unit (L2: include, predef): they stand in the root, read by the translation.
     state\w_include := lmx_graph_intern_in(state, "include", 7U)
     state\w_predef := lmx_graph_intern_in(state, "predef", 6U)
-    # The parts of a Structure that the receivers fn and sub create (args, return, var, body) and the names of the
-    # arguments of their contract (name, ...); fm is a receiver of the language this slice does not implement.
+    # The parts of a Structure that the receivers fn and sub create (args, return, data, code; the part code was
+    # called `body` until the author's decision of 2026-11-11) and the names of the arguments of their contract (name,
+    # ...); fm is a receiver of the language this slice does not implement.
     state\w_args := lmx_graph_intern_in(state, "args", 4U)
-    state\w_body := lmx_graph_intern_in(state, "body", 4U)
+    state\w_code := lmx_graph_intern_in(state, "code", 4U)
     state\w_name := lmx_graph_intern_in(state, "name", 4U)
     state\w_fm := lmx_graph_intern_in(state, "fm", 2U)
     # The receiver of the type of an address (the book, get-type; lmx_graph_address_type).
@@ -211,11 +214,11 @@ fn: lmx_graph_state () @: c.LmxGraphState
         return: 0
     if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0
-    if: state\w_args = 0 || state\w_body = 0 || state\w_name = 0 || state\w_fm = 0
+    if: state\w_args = 0 || state\w_code = 0 || state\w_name = 0 || state\w_fm = 0
         return: 0
     if: state\w_eq = 0 || state\w_ne = 0 || state\w_lt = 0 || state\w_le = 0 || state\w_gt = 0 || state\w_ge = 0 || state\w_and = 0 || state\w_or = 0 || state\w_not = 0 || state\w_if = 0 || state\w_else = 0 || state\w_while = 0 || state\w_for = 0 || state\w_break = 0 || state\w_continue = 0 || state\w_redo = 0
         return: 0
-    if: state\w_call = 0 || state\w_var = 0
+    if: state\w_call = 0 || state\w_data = 0
         return: 0
     if: state\w_int = 0 || state\w_plus = 0 || state\w_minus = 0 || state\w_star = 0 || state\w_slash = 0 || state\w_percent = 0 || state\w_at = 0 || state\w_deref = 0 || state\w_fn = 0 || state\w_sub = 0 || state\w_assign = 0 || state\w_return = 0
         return: 0
@@ -634,8 +637,8 @@ end: lmx_graph_named
 
 # ---- The Structure a receiver fn/sub creates (§3.4; the author 2026-11-09) -----------------------------------------
 # The graph keeps the declaration as written: the Frame of the receiver fn (an Lmx named fn) with its arguments name,
-# args, return, var, body. A traversal applies the receiver and creates, in its own namespace, the Structure named by
-# the value of the name argument with the parts args, return, var, body (sub: args, var, body) -- an Lmx of the FN pool
+# args, return, data, code. A traversal applies the receiver and creates, in its own namespace, the Structure named by
+# the value of the name argument with the parts args, return, data, code (sub: args, data, code) -- an Lmx of the FN pool
 # role (§2.2 lmx:result, L2 §2.1: only a Structure created by the execution of fn, not data with similar parts).
 
 # 1 when value is a Structure created by the receiver fn or sub (its address is in the FN pool), else 0.
@@ -661,13 +664,13 @@ fn: lmx_graph_part (@: g c.LmxGraph; @: value void; @: word char) @: void
     return: lmx_graph_target(g, lmx_graph_get(inner, slot))
 end: lmx_graph_part
 
-# A callable: a Structure created by fn or sub with its args and body parts; the interface descriptor (fn without a
+# A callable: a Structure created by fn or sub with its args and code parts; the interface descriptor (fn without a
 # body) is none (the book :691).
 fn: lmx_graph_method (@: g c.LmxGraph; @: code c.Lmx) int
     @: state c.LmxGraphState lmx_graph_state()
     if: state = 0 || lmx_graph_fn_result(g, (cast: (@: void) code)) = 0
         return: 0
-    return: (cast: (int) (lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_args))) = 4 && lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_body))) = 4))
+    return: (cast: (int) (lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_args))) = 4 && lmx_graph_kind(g, lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_code))) = 4))
 end: lmx_graph_method
 
 # A callable with a result: the one created by fn, which has the part return (sub has none).
@@ -681,15 +684,15 @@ fn: lmx_graph_method_args (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
     return: (cast: (@: c.Lmx) lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_args)))
 end: lmx_graph_method_args
 
-fn: lmx_graph_method_var (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
+fn: lmx_graph_method_data (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
     @: state c.LmxGraphState lmx_graph_state()
-    return: (cast: (@: c.Lmx) lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_var)))
-end: lmx_graph_method_var
+    return: (cast: (@: c.Lmx) lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_data)))
+end: lmx_graph_method_data
 
-fn: lmx_graph_method_body (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
+fn: lmx_graph_method_code (@: g c.LmxGraph; @: code c.Lmx) @: c.Lmx
     @: state c.LmxGraphState lmx_graph_state()
-    return: (cast: (@: c.Lmx) lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_body)))
-end: lmx_graph_method_body
+    return: (cast: (@: c.Lmx) lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_code)))
+end: lmx_graph_method_code
 
 # The result requirement of a callable as written (a word such as int, or a Structure), 0 for sub.
 fn: lmx_graph_method_return (@: g c.LmxGraph; @: code c.Lmx) @: void
@@ -697,7 +700,7 @@ fn: lmx_graph_method_return (@: g c.LmxGraph; @: code c.Lmx) @: void
     return: lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_return))
 end: lmx_graph_method_return
 
-# The name the field index of a declaration Structure (args, var) answers to: a place by the name of its cell, a
+# The name the field index of a declaration Structure (args, data) answers to: a place by the name of its cell, a
 # declaration Frame `T: name` or `@: name T` -- an Lmx named by its receiver (§3.3) -- by its first argument, an empty
 # named Lmx -- a Structure formal of a receiver's contract, with no written model -- by its own name.
 fn: lmx_graph_formal_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
@@ -874,11 +877,11 @@ fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell v
     @: state c.LmxGraphState lmx_graph_state()
     int: result 0
     if: lmx_graph_method(g, code) != 0
-        # A callable's slots and its executable parts -- args, return, body, reached through their references -- are
-        # code; its own var is data.
+        # A callable's slots and its executable parts -- args, return, code, reached through their references -- are
+        # code; its own part data is data.
         i := 0U
         while: i < lmx_graph_count(code) && result = 0
-            if: lmx_graph_slot_name(g, code, i) != state\w_var
+            if: lmx_graph_slot_name(g, code, i) != state\w_data
                 if: slot != 0 && c.lmx_arena_ref_cell(code, i) = slot
                     result := 1
                 value := lmx_graph_target(g, lmx_graph_get(code, i))
@@ -1021,7 +1024,7 @@ end: lmx_graph_publish
 
 # ---- The namespace of a traversal (§5.2; the author 2026-11-09) ----------------------------------------------------
 # The rows of the live traversal: each traversal begins with an empty table (lmx_graph_space_push) and frees it at its
-# end (lmx_graph_space_pop); a traversal entered inside another (a var's initializers, an explicit call of a Structure)
+# end (lmx_graph_space_pop); a traversal entered inside another (a data's initializers, an explicit call of a Structure)
 # shares the live one. Nothing of a table is kept in the graph, beside it or for the next traversal.
 
 # The live table, or 0 outside every traversal.
@@ -1226,9 +1229,9 @@ fn: lmx_graph_dump_formal (@: g c.LmxGraph; @: args c.Lmx; size_t: index; @: f c
     return: 0
 end: lmx_graph_dump_formal
 
-# The written form of a declaration Frame of the receiver fn or sub -- `fn: name (args) return`, its var part when
+# The written form of a declaration Frame of the receiver fn or sub -- `fn: name (args) return`, its data part when
 # written, its body lines and `end: name` -- in the positions of its arguments: fn [name, args, return], [name, args,
-# return, body] or [name, args, return, var, body]; sub [name, args, body] or [name, args, var, body]. 1 when the Lmx is
+# return, code] or [name, args, return, data, code]; sub [name, args, code] or [name, args, data, code]. 1 when the Lmx is
 # such a Frame and was printed, 0 when it is not (the caller prints it as any Frame), -1 when a cell is none of the
 # graph's.
 fn: lmx_graph_dump_declaration (@: g c.LmxGraph; @: value void; @: f c.FILE; int: depth) int
@@ -1426,7 +1429,7 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
             i := i + 1U
             continue
         # A reference to a Structure or a callable: `@: name target`, the target by its own name (the book :441). A
-        # reference to an unnamed Structure (the part args or body of a merge copy) has no name to print: it prints as
+        # reference to an unnamed Structure (the part args or code of a merge copy) has no name to print: it prints as
         # the block of that Structure under the reference's name, the text a prepared Structure has (`args:` ...).
         if: kind = 6
             name := lmx_graph_name_of(g, value)
@@ -1560,13 +1563,13 @@ end: lmx_graph_uninit_int_at
 # ---- Interface descriptor ------------------------------------------------------------------------------------------
 
 # The interface descriptor (the book :691): the Structure that fn creates from `fn: name args return` without a body --
-# its args and return parts and the addressable empty var the fn contract creates for an omitted var. No body is
+# its args and return parts and the addressable empty data the fn contract creates for an omitted data. No body is
 # synthesized, so it is no callable (lmx_graph_method). 1 or 0.
 fn: lmx_graph_descriptor (@: g c.LmxGraph; @: code c.Lmx) int
     @: state c.LmxGraphState lmx_graph_state()
     if: state = 0 || lmx_graph_fn_result(g, (cast: (@: void) code)) = 0
         return: 0
-    return: (cast: (int) (lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_body)) = 0 && lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_return)) != 0))
+    return: (cast: (int) (lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_code)) = 0 && lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_return)) != 0))
 end: lmx_graph_descriptor
 
 # The copy of a word primitive (kernel §6.4): a new cell of the WORD pool holding the same canonical address -- no search

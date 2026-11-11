@@ -11,7 +11,7 @@ Data:
 end: Data
 int: result 3
 int: before_call 0
-call: Repeat Data
+call: Data Repeat
 int: after_call 2
 fn: condition () int (
     int: calls 0
@@ -45,13 +45,13 @@ int: condition_calls 2
 int: root_value 2
 until: (root_value = 2) ((:= root_value (root_value + 1)) (continue))
 RepeatOwn:
-    var:
+    data:
         int: x 2
-    end: var
-    until: (x = 2) ((var (int x 2)) (:= x (x + 1)))
+    end: data
+    until: (x = 2) ((data (int x 2)) (:= x (x + 1)))
 end: RepeatOwn
 int: own_before 0
-call: RepeatOwn (RepeatOwn \ var)
+call: (RepeatOwn \ data) RepeatOwn
 int: own_after 2
 Self:
     int: x 2

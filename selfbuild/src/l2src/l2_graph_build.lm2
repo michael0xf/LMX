@@ -453,7 +453,7 @@ end: lm_graph_path_text
 # its head is: a single field that is a value -- a word, an unnamed int, an unnamed Lmx (an expression) -- is the
 # operand itself; any other body -- no field, several, a place, a Frame -- is the Structure of its fields as written
 # (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. An assignment written
-# there, `body := (total := total + d)`, is such a Frame -- a statement, no value: the operand is the body of that one
+# there, `code := (total := total + d)`, is such a Frame -- a statement, no value: the operand is the body of that one
 # statement. A consumer that evaluates the operand reads a Structure of one field as that field (lmx_graph_eval_value,
 # lm_graph_emit_operand): a Frame applying a callable or merge stays that application.
 fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0Frame; @@: out void) int
@@ -578,7 +578,7 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
                 return: (cast: (int) (out[0] = 0))
             ---
         ---
-        # A declaration of an int place in any Structure -- the root, a literal, args, var, a body -- is that place,
+        # A declaration of an int place in any Structure -- the root, a literal, args, data, a body -- is that place,
         # named at its cell (§3.2; the author 2026-11-08: `int: i 5` is the primitive, everything by its address).
         if: frame\trailer = 0
             value := lm_graph_build_int_place(g, frame)
@@ -601,7 +601,7 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
     return: 2
 end: lm_graph_build_node
 
-# Is the written field nd a named block -- a Frame with an end trailer whose head is no word of the language, or var --
+# Is the written field nd a named block -- a Frame with an end trailer whose head is no word of the language, or data --
 # which lm_graph_build_field builds as a named Structure, rather than a statement Frame? 1 or 0.
 fn: lm_graph_block_item (@: nd c.LmP0Node) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
@@ -614,7 +614,7 @@ fn: lm_graph_block_item (@: nd c.LmP0Node) int
     if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U || fr\trailer = 0
         return: 0
     head := c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr)))
-    if: head = 0 || (lm_graph_data_head(head) = 0 && head != state\w_var)
+    if: head = 0 || (lm_graph_data_head(head) = 0 && head != state\w_data)
         return: 0
     tail := (cast: (@: c.LmP0Trailer) fr\trailer)
     if: lm_graph_until_tail(tail) != 0
@@ -622,7 +622,7 @@ fn: lm_graph_block_item (@: nd c.LmP0Node) int
     return: (cast: (int) (tail\spelling != 0 && c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = c.lmx_graph_intern("end", 3U)))
 end: lm_graph_block_item
 
-# Is field index of result, built from the written field nd, a data field of its Structure -- a named place, the var
+# Is field index of result, built from the written field nd, a data field of its Structure -- a named place, the data
 # part, a named block -- rather than a statement (a Frame named by its head, §3.3)? 1 or 0.
 fn: lm_graph_own_field (@: g c.LmxGraph; @: result c.Lmx; size_t: index; @: nd c.LmP0Node) int
     int: kind c.lmx_graph_kind(g, c.lmx_graph_get(result, index))
@@ -665,7 +665,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         item := lm_graph_next_active(lm_graph_p0_next(item))
     ---
     if: status = 0 && lm_graph_until_tail(tail) != 0
-        # A named Structure retains its ordinary data fields -- places, var, named blocks; a statement is no data field
+        # A named Structure retains its ordinary data fields -- places, data, named blocks; a statement is no data field
         # though it is named by its head. Its executable field is the loop; the loop body shares those data fields, so
         # names, references and selected data keep their ordinary meaning.
         i := 0U
@@ -728,7 +728,7 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
         head := c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr)))
         if: head = 0
             return: 1
-        if: fr\trailer != 0 && (lm_graph_data_head(head) != 0 || head = state\w_var)
+        if: fr\trailer != 0 && (lm_graph_data_head(head) != 0 || head = state\w_data)
             tail := (cast: (@: c.LmP0Trailer) fr\trailer)
             if: lm_graph_until_tail(tail) != 0 || (tail\spelling != 0 && c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = c.lmx_graph_intern("end", 3U))
                 r := lm_graph_build_fields(g, root, lm_graph_p0_body(fr), 1, tail, @ structure)

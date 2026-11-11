@@ -1,8 +1,8 @@
 Code:
-    var:
+    data:
         int: x 1
         int: y 2
-    end: var
+    end: data
     x := x + 1
     y := x * 2
 end: Code
@@ -11,13 +11,13 @@ Data:
     int: y 30
     int: x 10
 end: Data
-call: Code Data
+call: Data Code
 int: explicit_x Data\x
 int: explicit_y Data\y
-int: own_unchanged Code\var\x
-call: Code Code\var
-int: passed_x Code\var\x
-int: passed_y Code\var\y
+int: own_unchanged Code\data\x
+call: Code\data Code
+int: passed_x Code\data\x
+int: passed_y Code\data\y
 Self:
     int: x 4
     x := x + 2
@@ -28,11 +28,11 @@ fn: method (int: step 3) int (int: x 1)
     x := x + step
     return: x
 end: method
-call: method Data
+call: Data method
 int: method_data Data\x
-int: method_own method\var\x
+int: method_own method\data\x
 fn: nested () int
-    call: Code Data
+    call: Data Code
     return: Data\x
 end: nested
 int: nested_call nested()
@@ -44,7 +44,7 @@ call: Free
 int: outer_free x
 ReadSelected:
     int: x
-    x := var\x + 1
+    x := data\x + 1
 end: ReadSelected
-call: ReadSelected Data
+call: Data ReadSelected
 int: selected_data Data\x

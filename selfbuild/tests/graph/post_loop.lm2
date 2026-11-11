@@ -13,7 +13,7 @@ Data:
 end: Data
 int: result repeat()
 int: before_call Data\x
-call: Repeat Data
+call: Data Repeat
 int: after_call Data\x
 fn: condition () int (int: calls 0)
     calls := calls + 1
@@ -56,21 +56,21 @@ int: transitioned transitions()
 int: left leave()
 int: early_result early()
 int: from_body body_fields()
-int: condition_calls condition\var\calls
+int: condition_calls condition\data\calls
 int: root_value 0
 ---
     root_value := root_value + 1
     continue()
 until: root_value = 2
 RepeatOwn:
-    var:
+    data:
         int: x 0
-    end: var
+    end: data
     x := x + 1
 until: x = 2
-int: own_before RepeatOwn\var\x
-call: RepeatOwn RepeatOwn\var
-int: own_after RepeatOwn\var\x
+int: own_before RepeatOwn\data\x
+call: RepeatOwn\data RepeatOwn
+int: own_after RepeatOwn\data\x
 Self:
     int: x 0
     x := x + 1

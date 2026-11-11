@@ -29,18 +29,18 @@ fn: local (int: arg) int
     return: x
 end: local
 int: local_result local(4)
-int: calls tick\var\calls
+int: calls tick\data\calls
 sub: bump (int: delta 2) (int: count 0)
     count := count + delta
 end: bump
 bump()
 bump: 3
-int: procedure_count bump\var\count
+int: procedure_count bump\data\count
 Code:
-    var:
+    data:
         int: x 1
         int: y 2
-    end: var
+    end: data
     x := x + 1
     y := x * 2
 end: Code
@@ -48,10 +48,10 @@ Data:
     int: y 30
     int: x 10
 end: Data
-call: Code Data
+call: Data Code
 int: data_x Data\x
 int: data_y Data\y
-int: model_x Code\var\x
+int: model_x Code\data\x
 fn: change (Box: target) int
     target\value := 17
     return: target\value
@@ -59,18 +59,18 @@ end: change
 int: changed change(Box)
 int: nested_value Box\Child\item
 fn: clean_path () int (int: x 1)
-    var\x := 9
-    return: x * 10 + var\x
+    data\x := 9
+    return: x * 10 + data\x
 end: clean_path
 int: clean_snapshot clean_path()
-int: clean_published clean_path\var\x
+int: clean_published clean_path\data\x
 fn: dirty_path () int (int: x 1)
     x := 2
-    var\x := 9
-    return: x * 100 + var\x
+    data\x := 9
+    return: x * 100 + data\x
 end: dirty_path
 int: dirty_snapshot dirty_path()
-int: dirty_published dirty_path\var\x
+int: dirty_published dirty_path\data\x
 int: n 0
 for: (n := 0; n < 3; n := n + 1)
     root := root + 1

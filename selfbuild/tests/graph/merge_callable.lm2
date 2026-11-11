@@ -1,7 +1,7 @@
 # Slice 333: `fn: g merge(f1)` -- merge copies the Structure the declaration of f1 created in this traversal (an
 # ordinary Structure, not a function), and the receiver fn creates from its parts the function g in the namespace of
-# this traversal (the author 2026-11-09). g's var is the copy of f1's var at the merge (calls 0) completed by the own
-# fields of the body: the counters stay apart (c1 1, c2 2). g's body is the copy of f1's; its free name k is resolved
+# this traversal (the author 2026-11-09). g's data is the copy of f1's data at the merge (calls 0) completed by the own
+# fields of the code: the counters stay apart (c1 1, c2 2). g's code is the copy of f1's; its free name k is resolved
 # from g, created at the root -- k is 5 when g runs (r2 15, r3 25). g is interpreted: no native code exists for it.
 int: k 2
 fn: f1 (int: a) int (int: calls 0)
@@ -13,5 +13,5 @@ k := 5
 int: r1 f1(1)
 int: r2 g(1)
 int: r3 g(2)
-int: c1 f1\var\calls
-int: c2 g\var\calls
+int: c1 f1\data\calls
+int: c2 g\data\calls

@@ -222,8 +222,8 @@ fn: lm_graph_emit_address (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: targ
         return: 3
     # The body of the Structure the receiver created: the native code reaches it through that Structure's own part (the
     # Structure of the running traversal, lmx_call_code), never through a coordinate of the translation's Structure.
-    if: c.lmx_graph_method(g, scope) != 0 && target = c.lmx_graph_method_body(g, scope)
-        c.fputs("lmx_graph_method_body(l2_g, lmx_call_code)", f)
+    if: c.lmx_graph_method(g, scope) != 0 && target = c.lmx_graph_method_code(g, scope)
+        c.fputs("lmx_graph_method_code(l2_g, lmx_call_code)", f)
         return: 0
     parent := (cast: (@: c.Lmx) target\parent)
     if: parent = 0
@@ -605,22 +605,25 @@ fn: lm_graph_emit_explicit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
             return: status
         c.fprintf(f, "        if: l2_v%d = 0 || l2_v%d = 0 || l2_v%d = 0 || lmx_graph_launch(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0, (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", args, data, code, args, data, code, leave_failure)
         return: 0
+    # Two arguments are the data and the code, the data before the code (the author 2026-11-11,
+    # LMX_blog/2026-11-11.md#data-before-code); the operands are evaluated in the order they are written.
+    if: count = 2U
+        status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ data)
+        if: status = 0
+            status := lm_graph_emit_operand(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ code)
+        if: status != 0
+            return: status
+        c.fprintf(f, "        if: lmx_graph_call_data(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", data, code, leave_failure)
+        return: 0
+    # One argument is the code alone; it selects its data (lmx_graph_call_data, shorthand).
     status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ code)
-    if: status = 0 && count = 2U
-        status := lm_graph_emit_operand(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ data)
     if: status != 0
         return: status
-    c.fprintf(f, "        if: lmx_graph_call_data(l2_g, (cast: (@: Lmx) l2_v%d), ", code)
-    if: count = 2U
-        c.fprintf(f, "(cast: (@: Lmx) l2_v%d), 0", data)
-    else:
-        c.fputs("0, 1", f)
-    ---
-    c.fprintf(f, ") != 0\n            %s\n", leave_failure)
+    c.fprintf(f, "        if: lmx_graph_call_data(l2_g, 0, (cast: (@: Lmx) l2_v%d), 1) != 0\n            %s\n", code, leave_failure)
     return: 0
 end: lm_graph_emit_explicit_call
 
-# fncall in native code (the book, call-receivers): `fncall(args var return code)`, `fncall(var return code)`,
+# fncall in native code (the book, call-receivers): `fncall(args data return code)`, `fncall(data return code)`,
 # `fncall(return code)`. The arguments, the data and the code are ordinary values; the description of the result is the
 # word of the language written there, or the word a value holds when the code runs (the return part of a callable); the
 # launch is the kernel's own (lmx_graph_launch), shared with the interpreter. The result is the int temporary in temp.
@@ -1429,7 +1432,7 @@ fn: lm_graph_emit_method_body (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: t
     @: body c.Lmx code
     int: status 0
     if: c.lmx_graph_method(g, code) != 0
-        body := c.lmx_graph_method_body(g, code)
+        body := c.lmx_graph_method_code(g, code)
     status := lm_graph_emit_block(g, f, code, body, 0U, c.lmx_graph_count(body), 0, -1, -1, -1, temps)
     if: status = 0
         c.fprintf(f, "        return: %d\n", c.lmx_graph_has_result(g, code))
@@ -1488,7 +1491,7 @@ fn: lm_graph_emit_methods (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @@: met
         label := (cast: (int) i)
         if: install != 0
             # The entry goes on the declaration (the Frame of the graph): the Structure each traversal creates from it
-            # takes it (lmx_graph_fn_make); the var a traversal makes runs its initializers through the interpreter.
+            # takes it (lmx_graph_fn_make); the data a traversal makes runs its initializers through the interpreter.
             c.fputs("        l2_method: ", f)
             status := lm_graph_emit_address(g, f, scope, (cast: (@: c.Lmx) current\parent))
             c.fprintf(f, "\n        l2_method\\native: (cast: (LmxEntry) lm_graph_method%d)\n", label)
@@ -1818,8 +1821,8 @@ fn: lm_graph_mutation_report (const: (@: what char); int: ok) int
     return: 1
 end: lm_graph_mutation_report
 
-# The var of a created function reaches, by a reference, a Structure C whose lexical parent P lies outside the written
-# var (the review of 332R): the copy keeps that chain -- the copy of C has a copy of P for its parent, through the same
+# The data of a created function reaches, by a reference, a Structure C whose lexical parent P lies outside the written
+# data (the review of 332R): the copy keeps that chain -- the copy of C has a copy of P for its parent, through the same
 # map (kernel §6.4), never the source's mutable P and never none --, and the sources stay as they were.
 fn: lm_graph_mutation_var_chain (@: g c.LmxGraph) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
@@ -1862,7 +1865,7 @@ fn: lm_graph_mutation_var_chain (@: g c.LmxGraph) int
         return: 1
     status := c.lmx_graph_fn_make(g, decl, name, args, word, written, body, 1, @ made)
     if: status = 0
-        vars := c.lmx_graph_method_var(g, made)
+        vars := c.lmx_graph_method_data(g, made)
     if: vars != 0 && c.lmx_graph_count(vars) = 1U
         held := c.lmx_graph_get(vars, 0U)
         copied := (cast: (@: c.Lmx) c.lmx_graph_target(g, held))
@@ -1992,7 +1995,7 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     if: c.lmx_graph_method(g, method) = 0
         return: 1
     args := c.lmx_graph_method_args(g, method)
-    body := c.lmx_graph_method_body(g, method)
+    body := c.lmx_graph_method_code(g, method)
     statement := (cast: (@: c.Lmx) c.lmx_graph_get(body, 0U))
     expression := (cast: (@: c.Lmx) c.lmx_graph_get(statement, 0U))
     product := (cast: (@: c.Lmx) c.lmx_graph_get(expression, 0U))

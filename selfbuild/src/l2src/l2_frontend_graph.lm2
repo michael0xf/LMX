@@ -2,7 +2,7 @@
 # docs/kernel-implementation.ru.md, EN beside it, §1a, §7, §11 item 3; L2 section 20). The frontend reads the unit's
 # clean graph instead of the P0 tree: the source is built by the common builder (src/l2src/l2_graph_build.lm2) in an
 # arena of this translation, the traversal of its root opens the translation's own namespace (lmx_graph_space_open:
-# each written `fn:` declaration creates its Structure there, with its args, return and body parts), and the machine
+# each written `fn:` declaration creates its Structure there, with its args, return and code parts), and the machine
 # module is written from that Structure and the statements of its body -- names resolved here, by the addresses of
 # their spellings (§3.5), in tables of this translation only, released with it (§5.2). No P0 tree is read after the
 # construction and no Lmx is turned back into one.
@@ -11,7 +11,7 @@
 # the mark, the preamble of the unit's C door declarations (`include: "<stddef.h>"`, its predefs, its includes), one
 # prototype block of all its functions -- the module has no header of its own --, then each function with C parameters
 # named l2_p<function>_<formal>_<name> and its own places named l2_q<place>_<name> (numbered through the module),
-# declared at its entry and written where they are written: the var of a function is visible from its first line. A
+# declared at its entry and written where they are written: the data of a function is visible from its first line. A
 # machine function has no unit and no graph (L2 section 20): its names are its formals, its own places, the functions
 # of its module, the C door `c.X` and numbers; its formals, places and result are numbers or references.
 #
@@ -1145,7 +1145,7 @@ end: lm_compiler_graph_door
 # The count of its own places in places[0], 0; or the refusal.
 fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: made c.Lmx; @: name char; int: mi; int: k0; @@: dheads char; @: droles int; size_t: dn; @: places size_t; const: (@: src char)) int
     @: args c.Lmx c.lmx_graph_method_args(g, made)
-    @: body c.Lmx c.lmx_graph_method_body(g, made)
+    @: body c.Lmx c.lmx_graph_method_code(g, made)
     size_t: room 0U
     @@: names char 0
     @@: types char 0
@@ -1275,7 +1275,7 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
     # before any line of the module is written).
     x := 0
     while: x < fcount
-        droom := droom + lm_compiler_graph_count_nodes(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])))
+        droom := droom + lm_compiler_graph_count_nodes(g, (cast: (@: void) c.lmx_graph_method_code(g, made_list[x])))
         x := x + 1
     ---
     dheads := (cast: (@@: char) c.calloc(droom, sizeof(@: char)))
@@ -1284,7 +1284,7 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
         return: lm_compiler_graph_refuse(src, "out of memory")
     x := 0
     while: x < fcount && status = 0
-        status := lm_compiler_graph_door_collect(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])), dheads, @ dn, droom)
+        status := lm_compiler_graph_door_collect(g, (cast: (@: void) c.lmx_graph_method_code(g, made_list[x])), dheads, @ dn, droom)
         x := x + 1
     ---
     if: status != 0

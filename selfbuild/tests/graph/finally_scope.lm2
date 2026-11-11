@@ -9,7 +9,7 @@ fn: ordered () int (int: trace 0)
 end: ordered
 fn: held () int (int: x 0; int: seen 0)
     finally:
-        seen := held\var\x
+        seen := held\data\x
         x := x + 1
     end: finally
     x := 5
@@ -93,18 +93,18 @@ fn: cleanup_jump () int
     return: trace
 end: cleanup_jump
 int: ordered_result ordered()
-int: ordered_trace ordered\var\trace
+int: ordered_trace ordered\data\trace
 int: held_result held()
-int: held_x held\var\x
-int: held_seen held\var\seen
+int: held_x held\data\x
+int: held_seen held\data\seen
 int: scoped_result scoped()
 int: jump_result jumps()
 int: replacement_result replacement()
-int: replacement_trace replacement\var\trace
+int: replacement_trace replacement\data\trace
 int: nested_result nested()
-int: nested_trace nested\var\trace
+int: nested_trace nested\data\trace
 int: cleanup_field_result cleanup_field()
-int: cleanup_field_value cleanup_field\var\late
+int: cleanup_field_value cleanup_field\data\late
 int: cleanup_jump_result cleanup_jump()
 int: root_trace 0
 finally:

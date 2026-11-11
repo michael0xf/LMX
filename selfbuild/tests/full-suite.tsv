@@ -125,9 +125,9 @@ runs	dyn/written_form.lm2	7	nf
 runs	dyn/immutable_formal.lm2	7	nf
 runs	dyn/immutable_formal_cell.lm2	7	n
 refuses	dyn/occurrence_copy_refused.lm2	occurrence_copy_refused.lm2:7:18: this name has two or more root heads	nf
-refuses	dyn/occurrence_bare_refused.lm2	occurrence_bare_refused.lm2:6:13: this name has two or more root heads	nf
+refuses	dyn/occurrence_bare_refused.lm2	occurrence_bare_refused.lm2:8:13: this name has two or more root heads	nf
 refuses	dyn/occurrence_write_refused.lm2	occurrence_write_refused.lm2:6:1: this name has two or more root heads	nf
-refuses	dyn/occurrence_node_refused.lm2	occurrence_node_refused.lm2:5:18: this name has two or more root heads	nf
+refuses	dyn/occurrence_node_refused.lm2	occurrence_node_refused.lm2:6:18: this name has two or more root heads	nf
 refuses	dyn/occurrence_glued_refused.lm2	occurrence_glued_refused.lm2:3:15: a name glued to a value	nf
 # Slices 280-290: the fixtures landed since slice 279, each row as it ran green in its slice's lists (P pins focus149,
 # fullsuite149, probe289-b, suite152); the registry the FULL list needs (Codex, CODEX-OPUS-290-REVIEW-NORM-20261106-01, item 5).
@@ -235,3 +235,17 @@ refuses	dyn/merge_args_computed_default_refused.lm2	merge_args_computed_default_
 # its own (lm_compiler_merge_lift_methods); before it `@: p int @ x` of a method was refused "a declaration takes one value"
 # when the last method of the unit, in a program part, declared a pointer of the same name nearer to the start of its file.
 runs	dyn/declaration_site.lm2	7	nf	dyn/declaration_site_part.lm2
+# Plan M7, step 4 (the author, 2026-11-10; the book, forms-declare-or-call): a structural form declares or calls and writes no known
+# place -- a form with a colon whose head is a known place is refused where it would be lowered as a write, natively and by the
+# walker, and the message names :=: a literal, a name and the result of a call as its tail, a field through a path, at the root,
+# an element, a dereferenced cell, a statement of a named Structure's body; a head that names nothing with the name of a Structure
+# as its tail no longer binds a reference (the book, colon-declares).
+refuses	dyn/colon_known_literal_refused.lm2	colon_known_literal_refused.lm2:5:5: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_known_name_refused.lm2	colon_known_name_refused.lm2:6:5: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_known_call_refused.lm2	colon_known_call_refused.lm2:9:5: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_known_path_refused.lm2	colon_known_path_refused.lm2:7:5: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_known_root_refused.lm2	colon_known_root_refused.lm2:4:1: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_known_index_refused.lm2	colon_known_index_refused.lm2:4:1: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_known_deref_refused.lm2	colon_known_deref_refused.lm2:7:5: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_known_body_refused.lm2	colon_known_body_refused.lm2:7:5: a form with a colon declares and writes no known place: assign with :=	nf
+refuses	dyn/colon_absent_reference_refused.lm2	colon_absent_reference_refused.lm2:8:1: a form with a colon whose head names nothing declares a Structure with its tail inside, not a place	nf

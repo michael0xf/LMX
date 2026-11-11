@@ -1,0 +1,302 @@
+# The identifier codes of the process (IDENTIFIER-CODES: the author's decision of 2026-11-07, LMX_blog/2026-11-07.md;
+# Codex's answer CODEX-OPUS-302-IDS-HOME-SCOPE-ANSWER-20261107-01). Every identifier is the code of its spelling: one
+# spelling has one code anywhere in the process, a new spelling gets the next number -- a plain increment, no hash code.
+# The two tables of this module are the only places that hold spellings: code -> name (by code, the address and length
+# of its spelling, whose bytes are never moved or freed) and name -> code (the codes in the order of their spellings,
+# searched by bisection). Both are informational: the input boundary of a unit (the first construction of its graph),
+# toLmx and fromLmx, diagnostics. An executor compares the codes it already holds and does not consult the tables.
+#
+# One instance per process: its anchor is the single cell lmx_ids_anchor of the generated state unit
+# l2src/lmx_ids_state.lm1, which only this module predefs, so the runtime's amalgamation defines it once; programs and
+# tools call this module's functions. One gate (lmx_ids_gate, an atomic exchange) serializes every read and write of the
+# tables, as a write may move their arrays; it is no lock of a Message. The words of the language that the kernel
+# compares against get their codes first, in the order of the LMX_ID_* constants of lmx_ids.h.lm1, and the seeding
+# checks that order. A code also records, when it is given, whether its spelling is a reference head of any depth
+# (`@`, `@@`, ...): a lexical class fixed at the input boundary, read by code, never by reading the spelling again.
+#
+# A machine module (L2 section 20): each function has a direct C-compatible entry. Its header, lmx_ids.h.lm1 -- the
+# service record LmxIds, the LMX_ID_* constants and the prototypes of the six exports -- and its state unit are written
+# by L3 code of the recipe (decl_ids, decl_ids_state, tools/build.lm2). An emitted unit reaches the service at its load
+# (l2_ids_load: lmx_ids_code for each spelling it names, then lmx_ids_unit_publish of its table l2_ids).
+predef: "l2src/lmx_ids.h.lm1"
+predef: "l2src/lmx_ids_state.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<string.h>"
+include: "<stdlib.h>"
+
+# Take the gate of the tables. Every function that reads or writes them holds it; a code already given is compared
+# without it.
+sub: lmx_ids_enter ()
+    int: acquired 0
+    while: acquired = 0
+        if: c.__atomic_load_n((cast: (@: int) (@ c.lmx_ids_gate)), c.__ATOMIC_RELAXED) = 0
+            if: c.__atomic_exchange_n((cast: (@: int) (@ c.lmx_ids_gate)), 1, c.__ATOMIC_ACQUIRE) = 0
+                acquired := 1
+            ---
+        ---
+    ---
+end: lmx_ids_enter
+
+sub: lmx_ids_leave ()
+    c.__atomic_store_n((cast: (@: int) (@ c.lmx_ids_gate)), 0, c.__ATOMIC_RELEASE)
+end: lmx_ids_leave
+
+# The order of two spellings, by their bytes and then by their lengths: below 0, 0 or above 0. Only the name -> code
+# table compares spellings, at the input boundary.
+fn: lmx_ids_order (const: (@: a char); size_t: an; const: (@: b char); size_t: bn) int
+    size_t: n an
+    int: r 0
+    if: bn < n
+        n: bn
+    if: n != 0U
+        r := c.memcmp((cast: (@: void) a), (cast: (@: void) b), n)
+    if: r != 0
+        return: r
+    if: an < bn
+        return: -1
+    if: an > bn
+        return: 1
+    return: 0
+end: lmx_ids_order
+
+# 1 when the spelling is a reference head of any depth: one or more `@` and nothing else.
+fn: lmx_ids_all_at (const: (@: text char); size_t: nb) int
+    size_t: i 0U
+    if: text = 0 || nb = 0U
+        return: 0
+    while: i < nb
+        if: text[i] != 64
+            return: 0
+        i := i + 1U
+    ---
+    return: 1
+end: lmx_ids_all_at
+
+# Room for one more code: the arrays by code (spellings, lengths, reference marks; code 0 unused) and the order of the
+# codes. 0, or 1 without memory (the arrays already grown stay valid, the capacity is unchanged).
+fn: lmx_ids_room (@: ids c.LmxIds) int
+    size_t: cap 0U
+    @@: texts char 0
+    @: sizes size_t 0
+    @: order size_t 0
+    @: marks char 0
+    if: ids\count + 2U <= ids\cap
+        return: 0
+    cap := 64U
+    if: ids\cap != 0U
+        cap := ids\cap * 2U
+    texts := (cast: (@@: char) c.realloc((cast: (@: void) ids\text), cap * sizeof(@: char)))
+    if: texts = 0
+        return: 1
+    ids\text := texts
+    sizes := (cast: (@: size_t) c.realloc((cast: (@: void) ids\size), cap * c.sizeof(c.size_t)))
+    if: sizes = 0
+        return: 1
+    ids\size := sizes
+    order := (cast: (@: size_t) c.realloc((cast: (@: void) ids\order), cap * c.sizeof(c.size_t)))
+    if: order = 0
+        return: 1
+    ids\order := order
+    marks := (cast: (@: char) c.realloc((cast: (@: void) ids\marks), cap * c.sizeof(c.char)))
+    if: marks = 0
+        return: 1
+    ids\marks := marks
+    ids\cap := cap
+    return: 0
+end: lmx_ids_room
+
+# The code of a spelling under the gate: the one the table holds, or a new one numbered next. 0 without memory.
+fn: lmx_ids_put (@: ids c.LmxIds; const: (@: text char); size_t: nb) size_t
+    size_t: lo 0U
+    size_t: hi ids\count
+    size_t: mid 0U
+    size_t: code 0U
+    int: r 0
+    @@: texts char ids\text
+    @: sizes size_t ids\size
+    @: order size_t ids\order
+    @: marks char 0
+    @: bytes char 0
+    while: lo < hi
+        mid := lo + (hi - lo) / 2U
+        code := order[mid]
+        r := lmx_ids_order(text, nb, texts[code], sizes[code])
+        if: r = 0
+            return: code
+        if: r < 0
+            hi := mid
+        else:
+            lo := mid + 1U
+        ---
+    ---
+    if: lmx_ids_room(ids) != 0
+        return: 0U
+    bytes := (cast: (@: char) c.malloc(nb))
+    if: bytes = 0
+        return: 0U
+    c.memcpy((cast: (@: void) bytes), (cast: (@: void) text), nb)
+    code := ids\count + 1U
+    texts := ids\text
+    sizes := ids\size
+    order := ids\order
+    marks := ids\marks
+    texts[code] := bytes
+    sizes[code] := nb
+    marks[code] := (cast: (char) lmx_ids_all_at(text, nb))
+    if: lo < ids\count
+        c.memmove((cast: (@: void) (order + lo + 1U)), (cast: (@: void) (order + lo)), (ids\count - lo) * c.sizeof(c.size_t))
+    order[lo] := code
+    ids\count := code
+    return: code
+end: lmx_ids_put
+
+# One word of the language under the gate: 0 when its code is the expected constant, 1 otherwise.
+fn: lmx_ids_seed_word (@: ids c.LmxIds; const: (@: text char); size_t: nb; int: expected) int
+    return: (cast: (int) (lmx_ids_put(ids, text, nb) != (cast: (size_t) expected)))
+end: lmx_ids_seed_word
+
+# The words the kernel compares against, given their codes first, in the order of the LMX_ID_* constants: the implicit
+# throws in the order of the walker's names (LMX_WALK_NAME_MERGE .. LMX_WALK_NAME_CALL), so an implicit throw's key is
+# its name's code, then the receiving and type words of a declaration and `var`. 0, or 1 when a code differs from its
+# constant (the header and this list disagree) or without memory.
+fn: lmx_ids_seed (@: ids c.LmxIds) int
+    int: bad 0
+    bad := bad + lmx_ids_seed_word(ids, "merge", 5U, c.LMX_ID_MERGE)
+    bad := bad + lmx_ids_seed_word(ids, "implements", 10U, c.LMX_ID_IMPLEMENTS)
+    bad := bad + lmx_ids_seed_word(ids, "convert", 7U, c.LMX_ID_CONVERT)
+    bad := bad + lmx_ids_seed_word(ids, "interpreter", 11U, c.LMX_ID_INTERPRETER)
+    bad := bad + lmx_ids_seed_word(ids, "adopt", 5U, c.LMX_ID_ADOPT)
+    bad := bad + lmx_ids_seed_word(ids, "independent", 11U, c.LMX_ID_INDEPENDENT)
+    bad := bad + lmx_ids_seed_word(ids, "call", 4U, c.LMX_ID_CALL)
+    bad := bad + lmx_ids_seed_word(ids, "const", 5U, c.LMX_ID_CONST)
+    bad := bad + lmx_ids_seed_word(ids, "immutable", 9U, c.LMX_ID_IMMUTABLE)
+    bad := bad + lmx_ids_seed_word(ids, "int", 3U, c.LMX_ID_INT)
+    bad := bad + lmx_ids_seed_word(ids, "char", 4U, c.LMX_ID_CHAR)
+    bad := bad + lmx_ids_seed_word(ids, "size_t", 6U, c.LMX_ID_SIZE_T)
+    bad := bad + lmx_ids_seed_word(ids, "unsigned", 8U, c.LMX_ID_UNSIGNED)
+    bad := bad + lmx_ids_seed_word(ids, "ulong", 5U, c.LMX_ID_ULONG)
+    bad := bad + lmx_ids_seed_word(ids, "void", 4U, c.LMX_ID_VOID)
+    bad := bad + lmx_ids_seed_word(ids, "[]", 2U, c.LMX_ID_ARRAY)
+    bad := bad + lmx_ids_seed_word(ids, "fn", 2U, c.LMX_ID_FN)
+    bad := bad + lmx_ids_seed_word(ids, "fm", 2U, c.LMX_ID_FM)
+    bad := bad + lmx_ids_seed_word(ids, "sub", 3U, c.LMX_ID_SUB)
+    bad := bad + lmx_ids_seed_word(ids, "var", 3U, c.LMX_ID_VAR)
+    return: (cast: (int) (bad != 0 || ids\count != (cast: (size_t) c.LMX_ID_WORDS)))
+end: lmx_ids_seed
+
+# The process's tables under the gate, made and seeded on their first use. 0 without memory or when the seeding does not
+# match the constants.
+fn: lmx_ids_ready () @: c.LmxIds
+    @@: anchor c.LmxIds (cast: (@@: c.LmxIds) (@ c.lmx_ids_anchor))
+    @: ids c.LmxIds anchor[0]
+    if: ids != 0
+        return: ids
+    ids := (cast: (@: c.LmxIds) c.calloc(1U, c.sizeof(c.LmxIds)))
+    if: ids = 0
+        return: 0
+    if: lmx_ids_seed(ids) != 0
+        return: 0
+    anchor[0] := ids
+    return: ids
+end: lmx_ids_ready
+
+# name -> code: the code of the spelling of length bytes at text, a new one numbered next; 0 for no spelling or without
+# memory. The input boundary of a unit and fromLmx call it; an executor holds codes.
+fn: lmx_ids_code (const: (@: text char); size_t: nb) size_t
+    @: ids c.LmxIds 0
+    size_t: code 0U
+    if: text = 0 || nb = 0U
+        return: 0U
+    lmx_ids_enter()
+    ids := lmx_ids_ready()
+    if: ids != 0
+        code := lmx_ids_put(ids, text, nb)
+    lmx_ids_leave()
+    return: code
+end: lmx_ids_code
+
+# code -> name: the spelling of code in text/length (its bytes are never moved or freed); 0, or 1 for no such code.
+# toLmx, diagnostics and the observed walk print by it; no executor decides by it.
+fn: lmx_ids_name (size_t: code; @@: text char; @: nb size_t) int
+    @: ids c.LmxIds 0
+    @@: texts char 0
+    @: sizes size_t 0
+    int: status 1
+    if: text = 0 || nb = 0
+        return: 1
+    text[0] := 0
+    nb[0] := 0U
+    lmx_ids_enter()
+    ids := lmx_ids_ready()
+    if: ids != 0 && code != 0U && code <= ids\count
+        texts := ids\text
+        sizes := ids\size
+        text[0] := texts[code]
+        nb[0] := sizes[code]
+        status := 0
+    lmx_ids_leave()
+    return: status
+end: lmx_ids_name
+
+# The number of codes given so far, the words of the language included.
+fn: lmx_ids_count () size_t
+    @: ids c.LmxIds 0
+    size_t: n 0U
+    lmx_ids_enter()
+    ids := lmx_ids_ready()
+    if: ids != 0
+        n := ids\count
+    lmx_ids_leave()
+    return: n
+end: lmx_ids_count
+
+# 1 when the spelling of code was a reference head of any depth when the code was given, 0 otherwise.
+fn: lmx_ids_reference (size_t: code) int
+    @: ids c.LmxIds 0
+    @: marks char 0
+    int: r 0
+    if: code = 0U
+        return: 0
+    lmx_ids_enter()
+    ids := lmx_ids_ready()
+    if: ids != 0 && code <= ids\count
+        marks := ids\marks
+        r := (cast: (int) (marks[code] != 0))
+    lmx_ids_leave()
+    return: r
+end: lmx_ids_reference
+
+# A unit's table of codes (the cell l2_ids of an emitted unit, IDENTIFIER-CODES): 1 once a load of the unit published
+# it, 0 before. Read under the gate, as the publication writes it; the codes in the table are then read without it.
+fn: lmx_ids_unit_loaded (@@: cell size_t) int
+    int: r 0
+    if: cell = 0
+        return: 0
+    lmx_ids_enter()
+    r := (cast: (int) (cell[0] != 0))
+    lmx_ids_leave()
+    return: r
+end: lmx_ids_unit_loaded
+
+# Publish the table of count codes a unit's load made from the unit's spellings (the unit's input boundary, once per
+# process): 0, or 1 when a code is 0 -- a spelling the tables could not take without memory -- or there is no cell, and
+# the table is freed. When another load of the same unit published first, that table stays and this one is freed.
+fn: lmx_ids_unit_publish (@@: cell size_t; @: codes size_t; size_t: count) int
+    size_t: i 0U
+    if: cell = 0 || codes = 0
+        c.free((cast: (@: void) codes))
+        return: 1
+    while: i < count
+        if: codes[i] = 0U
+            c.free((cast: (@: void) codes))
+            return: 1
+        i := i + 1U
+    ---
+    lmx_ids_enter()
+    if: cell[0] = 0
+        cell[0] := codes
+        codes := 0
+    lmx_ids_leave()
+    c.free((cast: (@: void) codes))
+    return: 0
+end: lmx_ids_unit_publish

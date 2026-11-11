@@ -69,8 +69,15 @@ end: lm_compiler_error
 # offset + head-length.  Rows are appended, so one file collects every translation of a build.  A Frame whose head is
 # a word of the language or a reference receiver -- `int`, `const`, `@` -- declares by its receiver and is no row;
 # neither is the Frame `@: place value` brought to a write through its path, nor the put of a Structure such a form
-# wrote (lm_compiler_receiver_form_node): the receiver wrote it.  Without the variable nothing is done.  0, or 1 when
-# the named file cannot be written.
+# wrote (lm_compiler_receiver_form_node): the receiver wrote it.  Without the variable no row is written.
+#
+# Plan M7, step 4 -- the refusal (the author, 2026-11-10; the book, forms-declare-or-call): a structural form declares
+# or calls, it writes no known place.  Every branch that would lower such a Frame as a write asks here first, so the
+# rule stands where the write is: a Frame of the kinds 1-6 -- its head is a known place -- is refused, and the message
+# names the operator `:=`; so is a Frame of the kinds 7 and 8, which defined a place by its value where the norm
+# declares a Structure with the tail inside.  The kinds 9 and 10 are declarations and pass.  The row is written
+# before the refusal, so a census still names the form that stopped the translation.  0 when the Frame passes; 1
+# when it is refused or the named file cannot be written.
 fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; int: route) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
@@ -81,8 +88,6 @@ fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; in
     const: (@: h c.LmP0Text)
     @: f c.FILE
     int: i 0
-    if: out = 0 || out[0] = 0
-        return: (cast: (int) (0))
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\span = 0
         return: (cast: (int) (0))
     if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U || lm_compiler_receiver_form_node(stmt) != 0
@@ -105,12 +110,22 @@ fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; in
             kind := 6
         i := i + 1
     ---
-    f := c.fopen(out, "ab")
-    if: f = 0
-        c.fprintf(c.l1_stderr(), "l2trans error: L2_COLON_WRITES names a file that cannot be appended: %s\n", out)
-        return: (cast: (int) (1))
-    c.fprintf(f, "%d\t%d\t%s\t%zu\t%zu\t%zu\t%zu\t%u\t%.*s\n", route, kind, c.lm_compiler_node_file(src_cell[0], stmt), (cast: (size_t) stmt\span\line), (cast: (size_t) stmt\span\column), (cast: (size_t) stmt\span\offset), (cast: (size_t) h\length), (cast: (unsigned) stmt\as\frame\flags), (cast: (int) h\length), h\data)
-    c.fclose(f)
+    if: out != 0 && out[0] != 0
+        f := c.fopen(out, "ab")
+        if: f = 0
+            c.fprintf(c.l1_stderr(), "l2trans error: L2_COLON_WRITES names a file that cannot be appended: %s\n", out)
+            return: (cast: (int) (1))
+        c.fprintf(f, "%d\t%d\t%s\t%zu\t%zu\t%zu\t%zu\t%u\t%.*s\n", route, kind, c.lm_compiler_node_file(src_cell[0], stmt), (cast: (size_t) stmt\span\line), (cast: (size_t) stmt\span\column), (cast: (size_t) stmt\span\offset), (cast: (size_t) h\length), (cast: (unsigned) stmt\as\frame\flags), (cast: (int) h\length), h\data)
+        c.fclose(f)
+    ---
+    # A machine function, an element, a dereferenced cell and a member of C storage are never a Structure a form
+    # declares again; a name or a path of L3 may be one, and its repeated declaration is a written body (kind 10).
+    if: kind = 3 || kind = 4 || kind = 5 || (route = 1 && kind <= 6)
+        return: lm_compiler_error(src_cell[0], stmt, "a form with a colon declares and writes no known place: assign with :=")
+    if: kind <= 6
+        return: lm_compiler_error(src_cell[0], stmt, "a form with a colon declares and writes no known place: assign with := (a Structure is declared again by its written body)")
+    if: kind = 7 || kind = 8
+        return: lm_compiler_error(src_cell[0], stmt, "a form with a colon whose head names nothing declares a Structure with its tail inside, not a place: a reference is declared `@: name value`, a value by its receiver; a Structure declared with this tail inside is not lowered yet")
     return: (cast: (int) (0))
 end: lm_compiler_colon_write
 

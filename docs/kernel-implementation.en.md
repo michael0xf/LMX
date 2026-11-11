@@ -288,8 +288,40 @@ of the list `smoke-kernel225` is the former one. A repeated census names no writ
 translates it. The declarations keep the colon: written Structures and the records `Name: (fields)`
 ([P2](../LMX_blog/q/current/colon-declares-contradictions-20261110.md)), a place under a Structure in the head
 (P1), declarations through `merge` (P4), the composed form ([M9](../next_core_tasks_v3.md#m9)) and the second heads
-in three refusal fixtures, which step 4 will revisit. The L3 lowering, the machine path and the walker still accept
-a write with a colon: the refusal is [step 4 of section M7](../next_core_tasks_v3.md#m7).
+in three refusal fixtures, which step 4 will revisit. In this slice the L3 lowering, the machine path and the walker
+still accepted a write with a colon.
+
+[Slice 350](../steps/witnesses/colon-refusal-20261111/notes.md) introduced the refusal in the working frontend: a
+structural form declares or calls and writes no known place
+([book](LMX_semantics.en.md#forms-declare-or-call)). The refusal stands where the write is: every branch that
+would emit a write of a place for a structural Frame first asks the function of the census
+(`lm_compiler_colon_write`, `l2_frontend_types.lm2`), and the census showed that every write of the native L3
+lowering, of the walker and of the machine path passes through it. A form of the kinds 1-6 -- its head is a known
+place: a name, a path through fields, an element, a dereferenced cell, a member of C storage -- is refused, and the
+message names `:=`: "a form with a colon declares and writes no known place: assign with :=". The forms of the kinds
+7 and 8, which defined a place by its value (`h: Box`, `r: h(3)`), are refused with a message of their own: a form
+with an unknown head declares a Structure with its tail inside, a reference is declared `@: name value`. The kinds 9
+and 10 -- declarations -- pass. The row of the census is written before the refusal, so a census names the form that
+stopped the translation. The machine path from the clean graph (`lm_compiler_graph_block`) refuses in its two
+branches that emitted a write for the forms `name: value` and `owner\field: value`; the write there is the operator
+`:=` alone.
+
+Limits: the L3 lowering builds a repeated declaration of a Structure only from a written body; a Structure with
+another entity inside -- `Struct1: Struct2` with a known `Struct1`, `h: Box` with an unknown `h` -- it does not build
+and refuses such a form instead of assigning a reference as before. The clean graph executes such a declaration. The
+refusal does not tell a Structure place from a value place: its message is true of both.
+
+The checks of slice 350: nine refusal fixtures (`colon_known_*_refused`, `colon_absent_reference_refused`) -- a
+literal, a name and the result of a call as the tail, a path, the root, an element, a dereference, a statement of a
+named Structure's body, a reference by a value -- are refused natively and under the walker. The mutant -- the
+refusal removed -- translates all nine. The machine path is checked on the kernel module `lmx_ids` with one write
+turned back into a colon form: refused; the same module unchanged gives the L1 of the build. The machine path from
+the graph -- on `lmx_schedule` and `lmx_process_deadline` with one such write each: refused. Two fixtures that pinned
+the former rule (`occurrence_bare_refused`, `occurrence_node_refused`: a second root head written `y: 7`) write the
+second head as a repeat of the declaration; their subject and message are the former ones. `bootstrap quick` -- 0
+failures, the generations are the same: the sources of the translator, the kernel and the tool hold no write with a
+colon. The full list -- `SUITE 149 rows, 0 failures`, 1162 PASS; the L1 of all 220 programs of the list is byte for
+byte that of the previous slice; `l1trans`, the tool, the graph translator and `driver.o` are the former ones.
 
 The author's decision of the same day ([journal](../LMX_blog/2026-11-10.md#receiver-args-only),
 [book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by the form `receiver: arguments`, and the

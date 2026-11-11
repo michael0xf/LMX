@@ -1038,9 +1038,10 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
             continue
         # The operator `left := value` (the author, 2026-11-07 and 2026-11-10: a value is written into a known place by
         # `:=`; a structural form declares or calls) -- the unnamed Lmx [`:=`, left, operand] of the builder
-        # (lm_graph_build_assignment).  left is the word of a formal or of a place of the function, or the path the
-        # head of `owner\field: value` is; the write is emitted as the structural form's below, so both spellings give
-        # one L1.  An operand the builder kept as the sequence of one application is that application.
+        # (lm_graph_build_assignment).  left is the word of a formal or of a place of the function, or a path through
+        # fields; the generated L1 keeps its own form `left: value`.  This is the one write of the graph path: the
+        # structural forms that wrote before are refused below.  An operand the builder kept as the sequence of one
+        # application is that application.
         if: head = 0 && c.lmx_graph_count(statement) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U)) = state\w_assign
             left := c.lmx_graph_get(statement, 1U)
             value := c.lmx_graph_get(statement, 2U)
@@ -1084,37 +1085,13 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
             ---
             return: lm_compiler_graph_refuse_at(src, fname, at[0], "the operator := of a machine function writes a formal, a place of the function or a field through a path: its left side is none of them")
         ---
+        # Plan M7, step 4 (the author, 2026-11-10; the book, forms-declare-or-call): a structural form declares or calls
+        # and writes no known place.  The forms `owner\field: value` and `name: value`, name a formal or a place of the
+        # function, wrote here before; the write is the operator `:=` above, and these are the refusal.
         if: path != 0 && c.lmx_graph_count(statement) = 2U
-            # The head's owner is read before the value, in lexical order, as an operation's left operand is.
-            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, path, level, 0, src, fname, at[0])
-            if: status = 0 && c.lmx_graph_kind(g, path) = 4 && c.lmx_graph_count((cast: (@: c.Lmx) path)) = 3U
-                if: lm_compiler_graph_before(g, c.lmx_graph_get((cast: (@: c.Lmx) path), 0U), c.lmx_graph_get(statement, 1U)) != 0
-                    status := lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get((cast: (@: c.Lmx) path), 0U), 0, 0U, level, 0, src, fname, at[0])
-                ---
-            if: status = 0
-                status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 1U), level, 0, src, fname, at[0])
-            if: status != 0
-                return: status
-            lm_compiler_graph_indent(f, level)
-            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], path, 1, src, fname, at[0])
-            if: status = 0
-                c.fputs(": ", f)
-                status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 1U), 1, src, fname, at[0])
-                c.fputs("\n", f)
-            ---
-            i := i + 1U
-            continue
+            return: lm_compiler_graph_refuse_at(src, fname, at[0], "a form with a colon declares and writes no known place: the field through this path is assigned with :=")
         if: head != 0 && c.lmx_graph_count(statement) = 1U && (c.lmx_graph_formal(g, args, head) < c.lmx_graph_count(args) || lm_compiler_graph_place_at(names, n, head) < n)
-            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
-            if: status != 0
-                return: status
-            lm_compiler_graph_indent(f, level)
-            lm_compiler_graph_name(g, f, args, mi, names, n, k0, head)
-            c.fputs(": ", f)
-            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
-            c.fputs("\n", f)
-            i := i + 1U
-            continue
+            return: lm_compiler_graph_refuse_at(src, fname, at[0], "a form with a colon declares and writes no known place: this formal or place of the function is assigned with :=")
         if: head != 0 && lm_compiler_graph_callee(g, root, raw) != 0
             status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, raw, level, 0, src, fname, at[0])
             if: status != 0

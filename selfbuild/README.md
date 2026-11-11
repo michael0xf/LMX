@@ -227,9 +227,17 @@ the fixtures with `default:` branches translated with `L2_OS_TARGET=default` (a 
 paths; its rows are for the other target, so their verdicts are no test). A suite keeps the L1 of every program it
 builds at `OUT/<name>-native/p.lm1` and `OUT/<name>-forced/p.lm1`, so two runs are compared program by program:
 212 of 220 programs kept their L1 byte for byte, the rest are explained in the receipts. Forms that declare keep the
-colon. `tests/native_closure_values.lm2` is translated by no command of the tool and is left as it was. The
-translator still accepts a write with a colon; the refusal is step 4 of plan M7.
+colon. `tests/native_closure_values.lm2` is translated by no command of the tool and is left as it was.
 [Sources, receipts and limits](../steps/witnesses/colon-migrate-fixtures-20261111/notes.md).
+
+Since slice 350 the translator refuses a form with a colon that it would lower as a write of a known place (plan
+M7, step 4) -- in the L3 lowering, the walker, the machine path and the machine path from the clean graph; the
+message names `:=`. A source that still writes `place: value` no longer translates: `a form with a colon declares
+and writes no known place: assign with :=`. The row of `L2_COLON_WRITES` is written before the refusal, so a census
+names the one form that stopped the translation; the sources of this repository give no such row. A mutant is built
+by editing a source, a manifest with the suffix `m`, `stage-copy` and `build-frontend`; right after the build the
+source is put back and the stage is filled from the former manifest, both checked by sha256.
+[Sources, receipts and limits](../steps/witnesses/colon-refusal-20261111/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

@@ -1,0 +1,38 @@
+Args:
+    int: a 5
+    int: b 2
+end: Args
+Vars:
+    int: x 10
+    int: y 0
+end: Vars
+Body:
+    y := x + a
+    return: y * b
+end: Body
+int: response 0
+response := fncall(Args Vars int Body)
+int: after_y Vars\y
+int: args_kept Args\a
+NoArgs:
+    x := x + 1
+    return: x
+end: NoArgs
+int: second fncall(Vars int NoArgs)
+SelfFn:
+    int: n 3
+    n := n * 2
+    return: n + 1
+end: SelfFn
+int: third fncall(int SelfFn)
+Sub:
+    y := y + a + b
+end: Sub
+call(Args Vars Sub)
+int: sub_y Vars\y
+Self:
+    int: k 1
+    k := k + 4
+end: Self
+call(Self)
+int: self_k Self\k

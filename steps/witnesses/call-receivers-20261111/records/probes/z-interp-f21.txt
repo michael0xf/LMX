@@ -1,0 +1,284 @@
+=== z01.lm2
+Args:
+    int: a 5
+    int: b 2
+end: Args
+Vars:
+    int: x 10
+    int: y 0
+end: Vars
+Body:
+    y := x + a
+    return: y * b
+end: Body
+int: response 0
+response := fncall(Args Vars int Body)
+int: after_y Vars\y
+int: args_kept Args\a
+NoArgs:
+    x := x + 1
+    return: x
+end: NoArgs
+int: second fncall(Vars int NoArgs)
+SelfFn:
+    int: n 3
+    n := n * 2
+    return: n + 1
+end: SelfFn
+int: third fncall(int SelfFn)
+Sub:
+    y := y + a + b
+end: Sub
+call(Args Vars Sub)
+int: sub_y Vars\y
+Self:
+    int: k 1
+    k := k + 4
+end: Self
+call(Self)
+int: self_k Self\k
+--- run
+GRAPH-BEFORE-BEGIN
+Args:
+    int: a 5
+    int: b 2
+end: Args
+Vars:
+    int: x 10
+    int: y 0
+end: Vars
+Body:
+    :=: y (x + a)
+    return: (y * b)
+end: Body
+int: response 0
+:=: response ((fncall Args Vars int Body))
+int: after_y (Vars \ y)
+int: args_kept (Args \ a)
+NoArgs:
+    :=: x (x + 1)
+    return: x
+end: NoArgs
+int: second (fncall Vars int NoArgs)
+SelfFn:
+    int: n 3
+    :=: n (n * 2)
+    return: (n + 1)
+end: SelfFn
+int: third (fncall int SelfFn)
+Sub: (:= y ((y + a) + b))
+call: Args Vars Sub
+int: sub_y (Vars \ y)
+Self:
+    int: k 1
+    :=: k (k + 4)
+end: Self
+call: Self
+int: self_k (Self \ k)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Args:
+    int: a 5
+    int: b 2
+end: Args
+Vars:
+    int: x 11
+    int: y 22
+end: Vars
+Body:
+    :=: y (x + a)
+    return: (y * b)
+end: Body
+int: response 30
+:=: response ((fncall Args Vars int Body))
+int: after_y 15
+int: args_kept 5
+NoArgs:
+    :=: x (x + 1)
+    return: x
+end: NoArgs
+int: second 11
+SelfFn:
+    int: n 6
+    :=: n (n * 2)
+    return: (n + 1)
+end: SelfFn
+int: third 7
+Sub: (:= y ((y + a) + b))
+call: Args Vars Sub
+int: sub_y 22
+Self:
+    int: k 5
+    :=: k (k + 4)
+end: Self
+call: Self
+int: self_k 5
+GRAPH-AFTER-END
+exit=0
+=== z02.lm2
+fn: f (int: a 1) int (int: x 100)
+    x := x + a
+    return: x
+end: f
+int: plain f(4)
+int: by_parts fncall(f\args f\var f\return f\body)
+int: var_x f\var\x
+sub: bump (int: d 2) (int: total 0)
+    total := total + d
+end: bump
+bump(3)
+call(bump\args bump\var bump\body)
+int: bump_total bump\var\total
+int: whole fncall(f\var int f)
+int: bare fncall(int f)
+--- run
+GRAPH-BEFORE-BEGIN
+fn: f (int: a 1) int (
+    int: x 100
+)
+    :=: x (x + a)
+    return: x
+end: f
+int: plain (f 4)
+int: by_parts (fncall (f \ args) (f \ var) (f \ return) (f \ body))
+int: var_x ((f \ var) \ x)
+sub: bump (int: d 2) (
+    int: total 0
+)
+    :=: total (total + d)
+end: bump
+bump: 3
+call: (bump \ args) (bump \ var) (bump \ body)
+int: bump_total ((bump \ var) \ total)
+int: whole (fncall (f \ var) int f)
+int: bare (fncall int f)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f (int: a 1) int (
+    int: x 100
+)
+    :=: x (x + a)
+    return: x
+end: f
+int: plain 104
+int: by_parts 105
+int: var_x 105
+sub: bump (int: d 2) (
+    int: total 0
+)
+    :=: total (total + d)
+end: bump
+bump: 3
+call: (bump \ args) (bump \ var) (bump \ body)
+int: bump_total 5
+int: whole 106
+int: bare 107
+GRAPH-AFTER-END
+exit=0
+=== z03.lm2
+fn: five () int
+    return: 5
+end: five
+Self:
+    y := x + 1
+    int: x five()
+    int: y
+end: Self
+call: Self
+int: seen Self\y
+Code:
+    int: z
+    z := z + 1
+end: Code
+Data:
+    int: z five() + 1
+end: Data
+call: Code Data
+int: data_z Data\z
+--- run
+GRAPH-BEFORE-BEGIN
+fn: five () int
+    return: 5
+end: five
+Self:
+    :=: y (x + 1)
+    int: x (five)
+    int: y
+end: Self
+call: Self
+int: seen (Self \ y)
+Code:
+    int: z
+    :=: z (z + 1)
+end: Code
+Data: (int z ((five) + 1))
+call: Code Data
+int: data_z (Data \ z)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: five () int
+    return: 5
+end: five
+Self:
+    :=: y (x + 1)
+    int: x 5
+    int: y
+end: Self
+call: Self
+int: seen 6
+Code:
+    int: z
+    :=: z (z + 1)
+end: Code
+Data:
+    int: z 7
+end: Data
+call: Code Data
+int: data_z 7
+GRAPH-AFTER-END
+exit=0
+=== z04.lm2
+fn: five () int
+    return: 5
+end: five
+fn: m () int (int: z 0)
+    z := z + 1
+    return: z
+end: m
+Data:
+    int: z five()
+end: Data
+call: m Data
+int: seen Data\z
+--- run
+GRAPH-BEFORE-BEGIN
+fn: five () int
+    return: 5
+end: five
+fn: m () int (
+    int: z 0
+)
+    :=: z (z + 1)
+    return: z
+end: m
+Data: (int z (five))
+call: m Data
+int: seen (Data \ z)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: five () int
+    return: 5
+end: five
+fn: m () int (
+    int: z 0
+)
+    :=: z (z + 1)
+    return: z
+end: m
+Data:
+    int: z 6
+end: Data
+call: m Data
+int: seen 6
+GRAPH-AFTER-END
+exit=0

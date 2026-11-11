@@ -298,13 +298,39 @@ Structure автозаполнения нет, а Structure, которая са
 ответа прежний ([q/current](../LMX_blog/q/current/colon-declares-contradictions-20261110.md)). Остальные чтения —
 часть Н [ответов](../LMX_blog/q/fable-self-answers-20261110.md).
 
+**Срез 353: ресиверы `call` и `fncall` в чистом графе**
+([запись](witnesses/call-receivers-20261111/notes.md); план M10, шаги 1–5). Части запуска — формалы, данные, тело,
+признак результата — лежат в рабочем кадре активации (`LmxGraphFrame`), и исполняющийся код читает их из кадра, а не
+из Structure метода: обычный вызов `f(x)` и ресивер идут одним путём. Запуск по поданным частям — `lmx_graph_launch`:
+`fncall` с двумя, тремя и четырьмя аргументами (операндом и оператором) и `call` с тремя; одноаргументный `call` над
+обычной Structure исполняет её над самой собой и её `var` больше не выбирает; двухаргументный читается по-прежнему,
+`call: code data` (П6). Данные читаются целиком (`lmx_graph_data_realize`): вычисляемые объявления их корневого
+уровня исполняются перед привязкой мест, один раз. Выпускаемый `native` зовёт тот же запуск ядра. Пределы: формалы
+поданной Structure аргументов — места `int` и места-ссылки, результат — только `int`, `catch` в чистом графе нет.
+Рабочий frontend не менялся.
+
+Фикстуры `tests/graph`: новые `call_receivers`, `call_data_whole` (положительные), `call_var_not_selected`,
+`call_data_lacks`, `call_self_repeat` (ответ 3), `fncall_arity`, `call_arity`, `call_returns_value`,
+`fncall_no_result`, `fncall_result_word` (ответ 5); `code_data` и `post_loop` передают `var` явно;
+`code_data_no_var` из отказа стала положительной. По вопросу автора в ходе среза измерено дерево формы
+`Model: KnownStruct` — в записи среза.
+
+Проверки: `bootstrap quick` `boot-f22` — 0 отказов, 12:20:30Z–12:34:27Z, G1 = G2; graph-check на кортеже (список
+`f20`) — `CHECKS 109 lines, 0 failed`, 327 PASS в трёх режимах; полный набор рабочего frontend на новом runtime
+(`suite-f17`) — `SUITE 162 rows, 0 failures`, 1240 PASS, 17 минут, закончен 12:54Z. Первый список (`f18`) дал
+один отказ — `fncall_arity` в режиме `native`: эмиттер отказывал при трансляции; неверное число аргументов теперь
+выпускается отказом на месте исполнения. Мутант «запуск берёт данные из Structure кода» (`rt-f14m1`, `graph-f20m1`,
+manifest `49m1`) роняет `call_receivers` в трёх режимах; исходник и стадия возвращены и сверены с manifest 49.
+`l1trans` тот же, что в `boot-f21`; hosted frontend, инструмент и `driver.o` (`9296be5d…`) другие — в них ядро
+чистого графа и шаблон заголовка; переходный инструмент — `tool-f18`; `graph-f21` = `graph-f20`. Что исполнитель
+решил сам — часть Н [ответов](../LMX_blog/q/fable-self-answers-20261110.md), пункты Н9–Н13.
+
 **Порядок дальше.** M6: шаги 5 (`typeof`, прежде `getType`) и 4 (`S[i]`) сделаны; переименования сделаны; M7 сделан
 в чистом графе и в рабочем frontend, кроме примеров документов; шаги 1–3 M9 сделаны в чистом графе и в рабочем
-frontend, шаг 4 — в рабочем frontend. Дальше — раздел M10: перепись строк `call:` (шаг 1), один механизм запуска и
-ресиверы в интерпретаторе чистого графа (шаг 2), следствия вместе с шагом 5 раздела M9 в чистом графе (шаг 3),
-перевод исходных текстов (шаг 4), `native` чистого графа (шаг 5), рабочий frontend (шаг 6); затем шаг 4 раздела M9 в
-чистом графе (литерал вне диапазона, ресиверы кроме `int`); примеры в документах (шаг 3 M7 и шаг 2 M9); затем M8;
-шаги 1, 2, 3 раздела M6; маршрут 331; далее по плану.
+frontend, шаг 4 — в рабочем frontend; шаги 1–5 M10 — в чистом графе. Дальше — шаг 5 раздела M9 в чистом графе
+(повтор в корне, голый путь при двух головах, путь с индексом вхождения) и шаг 4 там же (литерал вне диапазона,
+ресиверы кроме `int`); шаг 6 раздела M10 и шаг 5 раздела M9 в рабочем frontend; примеры в документах (шаг 3 M7 и
+шаг 2 M9); затем M8; шаги 1, 2, 3 раздела M6; маршрут 331; далее по плану.
 
 **Срез 343: `getType` в чистом графе** ([запись](witnesses/get-type-20261110/notes.md), план M6 шаг 5). Операция
 ядра `lmx_graph_address_type` — одна для интерпретатора и выпускаемого `native`; слово `getType` в состоянии графа;
@@ -313,28 +339,33 @@ frontend, шаг 4 — в рабочем frontend. Дальше — раздел
 путь понижения ресивера не знает; констант двери в чистом графе нет.
 
 **Рабочее окружение сессии.** `P` — `build2/codex_fix250generationchain01`. Стадия — `P/fable-main01`, наполнена из
-`main` (manifest `P/pins/fable-source45.sha256`, 452 входа); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
-и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f21/lmxtool.exe` (`d9b1547c…`), hosted
-frontend — `P/fable-main01/boot-f21/g2/frontend/l2trans.exe` (`f96da118…`), runtime —
-`P/fable-main01/boot-f21/g2/runtime` (`driver.o` `0fec21ad…`, побайтно равен `rt-f13`), транслятор графа —
-`P/fable-main01/graph-f18` (тот же образ, что `graph-f12`–`graph-f17`), базовый frontend —
+`main` (manifest `P/pins/fable-source49.sha256`, 465 входов); прежняя `P/cold-graph309-codex01` хранит исходники `v2`
+и служит только своими артефактами. Рабочий инструмент — `P/fable-main01/boot-f22/lmxtool.exe` (`35736274…`), hosted
+frontend — `P/fable-main01/boot-f22/g2/frontend/l2trans.exe` (`0cc9a2e1…`), runtime —
+`P/fable-main01/boot-f22/g2/runtime` (`driver.o` `9296be5d…`, побайтно равен `rt-f14`; до среза 353 — `0fec21ad…`),
+транслятор графа — `P/fable-main01/graph-f21` (тот же образ, что `graph-f20`), базовый frontend —
 `P/cold-candidate48/full48/g2/frontend`. Команды инструмента запускаются из
-`P/runs/fable-m6-01`. Список graph-check — `P/pins/fable-graph-check-f17.tsv` (99 строк); список `f16` негоден — его
-каталоги результатов совпадают с `check-f15-*`. Отдельно собранный инструмент лежит в `tool-fNN/lmxtool-tool.exe`, а
+`P/runs/fable-m6-01`. Список graph-check — `P/pins/fable-graph-check-f20.tsv` (109 строк, около двух минут); список
+`f16` негоден — его каталоги результатов совпадают с `check-f15-*`. Правка ядра чистого графа (`lmx_graph*.lm2`)
+требует `build-runtime` (около минуты, `rt-fNN`) и затем `build-graph`; правка одного эмиттера
+(`l2_graph_tool.lm2`) — только `build-graph`. Отдельно собранный инструмент лежит в `tool-fNN/lmxtool-tool.exe`, а
 команда `build-self` принимает четвёртым аргументом путь к `l2trans.exe`, не каталог frontend. Один frontend без
 runtime собирает `build-frontend` (4 минуты, `fe-fNN/l2trans.exe`, запускается без слов `0 entry 0 --`); он не
 читает `--graph`, поэтому `build-runtime` им не пройдёт. Новая часть инструмента или изменённый список экспорта
 требуют переходного инструмента: сначала `build-self` новых текстов, затем сборка им. Заняты метки
-`tool-f02`, `tool-f04`–`tool-f17`, `fe-f01`–`fe-f17` (`fe-f14` и `fe-f15` не собрались), `fe-f07m`, `fe-f13m`,
-`fe-f18m`, `rt-f01`–`rt-f13`, `rt-f03m`, `rt-f04m`,
-`rt-f09m1`, `rt-f09m2`, `graph-f01`–`graph-f18`, `graph-f03m`, `graph-f04m`, `graph-f09m1`, `graph-f09m2`,
-`boot-f03`–`boot-f21` (`boot-f11` отказала, `boot-f14` убита перезагрузкой, `boot-f19` собрана с отказом шире нормы),
-`check-f01`, `check-f03`, `check-f03m`, `check-f04`–`check-f17`, `check-f05m`, `check-f13m1`, `check-f13m2`,
-`suite-f06`–`suite-f16` (`suite-f14` — 6 отказов), `suite-f11k`, `suite-f11d`, `suite-f12k`, `suite-f12d`,
-`suite-f13k`, `suite-m8m`, manifest `fable-source01`–`45`, `18m1`, `18m2`, `21t`, `34m1`, `40m1`, `45m1` и
-`docs80`–`docs122` с суффиксом `-fable01`; команде `docs check` нужен заранее созданный каталог `private`. Пробы — в
+`tool-f02`, `tool-f04`–`tool-f18`, `fe-f01`–`fe-f17` (`fe-f14` и `fe-f15` не собрались), `fe-f07m`, `fe-f13m`,
+`fe-f18m`, `rt-f01`–`rt-f14`, `rt-f03m`, `rt-f04m`,
+`rt-f09m1`, `rt-f09m2`, `rt-f14m1`, `graph-f01`–`graph-f21`, `graph-f03m`, `graph-f04m`, `graph-f09m1`, `graph-f09m2`,
+`graph-f20m1`,
+`boot-f03`–`boot-f22` (`boot-f11` отказала, `boot-f14` убита перезагрузкой, `boot-f19` собрана с отказом шире нормы),
+`check-f01`, `check-f03`, `check-f03m`, `check-f04`–`check-f20` (`check-f18` — один отказ), `check-f05m`,
+`check-f13m1`, `check-f13m2`, `check-f19m1`,
+`suite-f06`–`suite-f17` (`suite-f14` — 6 отказов), `suite-f11k`, `suite-f11d`, `suite-f12k`, `suite-f12d`,
+`suite-f13k`, `suite-m8m`, manifest `fable-source01`–`49`, `18m1`, `18m2`, `21t`, `34m1`, `40m1`, `45m1`, `49m1` и
+`docs80`–`docs123` с суффиксом `-fable01`; команде `docs check` нужен заранее созданный каталог `private`. Пробы — в
 `P/runs/fable-m6-probe01`, имена до `m9z`, `n01`–`n18`, `p01`–`p03`, `q01`–`q08`, `r01`–`r12`, `s01`–`s08`,
-`t01`–`t10`, `g01`–`g10`, `v01`–`v19`, `h01`–`h11`, `w01`–`w07`, `k01`–`k03`, `x01`–`x06` и `y01`–`y04` заняты. Мутант строится так:
+`t01`–`t10`, `g01`–`g10`, `v01`–`v19`, `h01`–`h14`, `w01`–`w07`, `k01`–`k03`, `x01`–`x06`, `y01`–`y04` и `z01`–`z04`
+заняты. Мутант строится так:
 правка исходника в репозитории, manifest с суффиксом `m`, `stage-copy`, `build-frontend`; сразу после сборки исходник
 возвращается, а стадия наполняется прежним manifest — оба возврата сверяются по sha256. L1 программ набора лежит в
 `P/fable-main01/suite-fNN/<имя>-native/p.lm1` и

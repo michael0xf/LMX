@@ -315,9 +315,10 @@ and the interpreter launches them through this same open mechanism, which
 can call any composition of Structures. `fn`, `sub` and `catch` differ from
 an ordinary Structure in completing their `var` when the graph is built;
 data is read as a whole, so a name used above the line of its declaration
-reads the same place. Not implemented yet
-([plan](next_core_tasks_v3.md#m10)); the order of the two arguments of the
-former `call: code data` against `call(var code)` awaits the author's
+reads the same place. The clean graph -- its interpreter and the `native` it
+emits -- executes these receivers since slice 353; the working frontend does
+not yet ([plan](next_core_tasks_v3.md#m10)). The order of the two arguments
+of the former `call: code data` against `call(var code)` awaits the author's
 answer. The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already
 computed `dirty` values go directly to their selected physical `data` slots

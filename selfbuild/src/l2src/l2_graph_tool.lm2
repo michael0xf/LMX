@@ -494,6 +494,9 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
             c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_length(l2_g, l2_v%d, @ l2_t%d) != 0\n            %s\n", left, value, left, leave_failure)
             temp[0] := left
             return: 0
+        # The receiver fncall (the book, call-receivers): the launch of the code it is given, with its result.
+        if: word = state\w_fncall
+            return: lm_graph_emit_fncall(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
         method := c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
             if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0
@@ -584,9 +587,24 @@ fn: lm_graph_emit_explicit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
     size_t: count c.lmx_graph_count(expression)
     int: code 0
     int: data 0
+    int: args 0
     int: status 0
-    if: count < 1U || count > 2U
-        return: 5
+    # No form of call: the code refuses it where it reaches it, as the interpreter does (5).
+    if: count < 1U || count > 3U
+        c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
+        return: 0
+    # Three arguments are the parts of a launch without a result -- arguments, data, code (the book, call-receivers):
+    # the code asks the kernel's one launch, as the interpreter does (lmx_graph_launch).
+    if: count = 3U
+        status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ args)
+        if: status = 0
+            status := lm_graph_emit_operand(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ data)
+        if: status = 0
+            status := lm_graph_emit_operand(g, f, scope, expression, 2U, temps, decl_names, decl_slots, decl_n, @ code)
+        if: status != 0
+            return: status
+        c.fprintf(f, "        if: l2_v%d = 0 || l2_v%d = 0 || l2_v%d = 0 || lmx_graph_launch(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0, (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", args, data, code, args, data, code, leave_failure)
+        return: 0
     status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ code)
     if: status = 0 && count = 2U
         status := lm_graph_emit_operand(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ data)
@@ -601,6 +619,75 @@ fn: lm_graph_emit_explicit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
     c.fprintf(f, ") != 0\n            %s\n", leave_failure)
     return: 0
 end: lm_graph_emit_explicit_call
+
+# fncall in native code (the book, call-receivers): `fncall(args var return code)`, `fncall(var return code)`,
+# `fncall(return code)`. The arguments, the data and the code are ordinary values; the description of the result is the
+# word of the language written there, or the word a value holds when the code runs (the return part of a callable); the
+# launch is the kernel's own (lmx_graph_launch), shared with the interpreter. The result is the int temporary in temp.
+fn: lm_graph_emit_fncall (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: word char 0
+    size_t: count c.lmx_graph_count(expression)
+    int: args -1
+    int: data -1
+    int: described -1
+    int: code 0
+    int: left 0
+    int: status 0
+    if: state = 0
+        return: 5
+    # No form of fncall: the code refuses it where it reaches it, as the interpreter does (5).
+    if: count < 2U || count > 4U
+        left := temps[0]
+        temps[0] := temps[0] + 1
+        c.fprintf(f, "        int: l2_t%d 0\n        if: 1\n            %s\n", left, leave_failure)
+        temp[0] := left
+        return: 0
+    if: count = 4U
+        status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ args)
+    if: status = 0 && count >= 3U
+        status := lm_graph_emit_operand(g, f, scope, expression, count - 3U, temps, decl_names, decl_slots, decl_n, @ data)
+    word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, count - 2U))
+    if: status = 0 && (word = 0 || c.lmx_graph_language_word(state, word) = 0)
+        word := 0
+        status := lm_graph_emit_operand(g, f, scope, expression, count - 2U, temps, decl_names, decl_slots, decl_n, @ described)
+    ---
+    if: status = 0
+        status := lm_graph_emit_operand(g, f, scope, expression, count - 1U, temps, decl_names, decl_slots, decl_n, @ code)
+    if: status != 0
+        return: status
+    left := temps[0]
+    temps[0] := temps[0] + 1
+    c.fprintf(f, "        int: l2_t%d 0\n        if: l2_v%d = 0", left, code)
+    if: args >= 0
+        c.fprintf(f, " || l2_v%d = 0", args)
+    if: data >= 0
+        c.fprintf(f, " || l2_v%d = 0", data)
+    if: word = 0
+        c.fprintf(f, " || lmx_graph_word_text(l2_g, l2_v%d) = 0", described)
+    c.fputs(" || lmx_graph_launch(l2_g, ", f)
+    if: args >= 0
+        c.fprintf(f, "(cast: (@: Lmx) l2_v%d), ", args)
+    else:
+        c.fputs("0, ", f)
+    ---
+    if: data >= 0
+        c.fprintf(f, "(cast: (@: Lmx) l2_v%d), ", data)
+    else:
+        c.fputs("0, ", f)
+    ---
+    if: word != 0
+        lm_graph_emit_quoted_word(f, word)
+    else:
+        c.fprintf(f, "lmx_graph_word_text(l2_g, l2_v%d)", described)
+    ---
+    c.fprintf(f, ", (cast: (@: Lmx) l2_v%d), @ l2_t%d) != 0\n            %s\n", code, left, leave_failure)
+    temp[0] := left
+    return: 0
+end: lm_graph_emit_fncall
 
 # One proxy records the pending transfer and reaches either the cleanup body or its final dispatch. The word is
 # the same canonical arena string used by the interpreter. A failing cleanup retains the pending error.
@@ -945,6 +1032,13 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 return: r
             i := i + 1U
             continue
+        # fncall written as a statement: the launch runs and its result is not used.
+        if: head = state\w_fncall
+            r := lm_graph_emit_fncall(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ temp)
+            if: r != 0
+                return: r
+            i := i + 1U
+            continue
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, head)))) != 0
             r := lm_graph_emit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ temp)
             if: r != 0
@@ -1234,6 +1328,11 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             return: status
         if: head = state\w_call
             status := lm_graph_emit_explicit_call(g, f, code, statement, temps, 0, 0, 0U)
+            i := i + 1U
+            continue
+        # fncall written as a statement: the launch runs and its result is not used.
+        if: head = state\w_fncall
+            status := lm_graph_emit_fncall(g, f, code, statement, temps, 0, 0, 0U, @ result)
             i := i + 1U
             continue
         if: head = state\w_at

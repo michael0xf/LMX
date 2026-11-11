@@ -1,0 +1,321 @@
+=== x01.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model: KnownStruct
+--- p0
+structure fields=2
+  frame head="KnownStruct" body=structure fields=2
+    frame head="int" body=structure fields=2
+      atom "a"
+      atom "1"
+    frame head="int" body=structure fields=2
+      atom "b"
+      atom "2"
+    Tail cutter trailer spelling="end" fields=1
+      atom "KnownStruct"
+  frame head="Model" body=structure fields=1
+    atom "KnownStruct"
+--- run
+GRAPH-BEFORE-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model: KnownStruct
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model:
+    KnownStruct:
+        int: a 1
+        int: b 2
+    end: KnownStruct
+end: Model
+GRAPH-AFTER-END
+--- exit 0
+
+=== x02.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model:
+    int: z 9
+end: Model
+Model: KnownStruct
+--- p0
+structure fields=3
+  frame head="KnownStruct" body=structure fields=2
+    frame head="int" body=structure fields=2
+      atom "a"
+      atom "1"
+    frame head="int" body=structure fields=2
+      atom "b"
+      atom "2"
+    Tail cutter trailer spelling="end" fields=1
+      atom "KnownStruct"
+  frame head="Model" body=structure fields=1
+    frame head="int" body=structure fields=2
+      atom "z"
+      atom "9"
+    Tail cutter trailer spelling="end" fields=1
+      atom "Model"
+  frame head="Model" body=structure fields=1
+    atom "KnownStruct"
+--- run
+GRAPH-BEFORE-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model:
+    int: z 9
+end: Model
+Model: KnownStruct
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model:
+    KnownStruct:
+        int: a 1
+        int: b 2
+    end: KnownStruct
+end: Model
+GRAPH-AFTER-END
+--- exit 0
+
+=== x03.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model: KnownStruct
+int: n length(Model)
+int: inner length(Model\KnownStruct)
+int: seen Model\KnownStruct\a
+Model\KnownStruct\a := 7
+int: shared KnownStruct\a
+--- p0
+structure fields=7
+  frame head="KnownStruct" body=structure fields=2
+    frame head="int" body=structure fields=2
+      atom "a"
+      atom "1"
+    frame head="int" body=structure fields=2
+      atom "b"
+      atom "2"
+    Tail cutter trailer spelling="end" fields=1
+      atom "KnownStruct"
+  frame head="Model" body=structure fields=1
+    atom "KnownStruct"
+  frame head="int" body=structure fields=2
+    atom "n"
+    frame head="length" body=structure fields=1
+      atom "Model"
+  frame head="int" body=structure fields=2
+    atom "inner"
+    frame head="length" body=structure fields=3
+      atom "Model"
+      atom "\"
+      atom "KnownStruct"
+  frame head="int" body=structure fields=6
+    atom "seen"
+    atom "Model"
+    atom "\"
+    atom "KnownStruct"
+    atom "\"
+    atom "a"
+  frame head="Model\KnownStruct\a" body=structure fields=1
+    atom "7"
+  frame head="int" body=structure fields=4
+    atom "shared"
+    atom "KnownStruct"
+    atom "\"
+    atom "a"
+--- run
+GRAPH-BEFORE-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model: KnownStruct
+int: n (length Model)
+int: inner (length (Model \ KnownStruct))
+int: seen ((Model \ KnownStruct) \ a)
+:=: ((Model \ KnownStruct) \ a) 7
+int: shared (KnownStruct \ a)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+KnownStruct:
+    int: a 7
+    int: b 2
+end: KnownStruct
+Model:
+    KnownStruct:
+        int: a 7
+        int: b 2
+    end: KnownStruct
+end: Model
+int: n 1
+int: inner 2
+int: seen 1
+:=: ((Model \ KnownStruct) \ a) 7
+int: shared 7
+GRAPH-AFTER-END
+--- exit 0
+
+=== x04.lm2
+Model: KnownStruct
+KnownStruct:
+    int: a 1
+end: KnownStruct
+--- p0
+structure fields=2
+  frame head="Model" body=structure fields=1
+    atom "KnownStruct"
+  frame head="KnownStruct" body=structure fields=1
+    frame head="int" body=structure fields=2
+      atom "a"
+      atom "1"
+    Tail cutter trailer spelling="end" fields=1
+      atom "KnownStruct"
+--- run
+GRAPH-BEFORE-BEGIN
+Model: KnownStruct
+KnownStruct:
+    int: a 1
+end: KnownStruct
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Model: KnownStruct
+KnownStruct:
+    int: a 1
+end: KnownStruct
+GRAPH-AFTER-END
+--- exit 0
+
+=== x05.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+fn: f () int
+    Model: KnownStruct
+    return: Model\KnownStruct\a
+end: f
+int: seen f()
+--- p0
+structure fields=3
+  frame head="KnownStruct" body=structure fields=2
+    frame head="int" body=structure fields=2
+      atom "a"
+      atom "1"
+    frame head="int" body=structure fields=2
+      atom "b"
+      atom "2"
+    Tail cutter trailer spelling="end" fields=1
+      atom "KnownStruct"
+  frame head="fn" body=structure fields=4
+    atom "f"
+    structure fields=0
+    atom "int"
+    structure fields=2
+      frame head="Model" body=structure fields=1
+        atom "KnownStruct"
+      frame head="return" body=structure fields=5
+        atom "Model"
+        atom "\"
+        atom "KnownStruct"
+        atom "\"
+        atom "a"
+    Tail cutter trailer spelling="end" fields=1
+      atom "f"
+  frame head="int" body=structure fields=2
+    atom "seen"
+    frame head="f" body=structure fields=0
+--- run
+GRAPH-BEFORE-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+fn: f () int
+    Model: KnownStruct
+    return: ((Model \ KnownStruct) \ a)
+end: f
+int: seen (f)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+fn: f () int
+    Model: KnownStruct
+    return: ((Model \ KnownStruct) \ a)
+end: f
+int: seen (f)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+graph: run answered 3
+--- exit 1
+
+=== x06.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model(KnownStruct)
+Other: (KnownStruct)
+--- p0
+structure fields=3
+  frame head="KnownStruct" body=structure fields=2
+    frame head="int" body=structure fields=2
+      atom "a"
+      atom "1"
+    frame head="int" body=structure fields=2
+      atom "b"
+      atom "2"
+    Tail cutter trailer spelling="end" fields=1
+      atom "KnownStruct"
+  frame head="Model" body=structure fields=1
+    atom "KnownStruct"
+  frame head="Other" body=structure fields=1
+    atom "KnownStruct"
+--- run
+GRAPH-BEFORE-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model: KnownStruct
+Other: KnownStruct
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model:
+    KnownStruct:
+        int: a 1
+        int: b 2
+    end: KnownStruct
+end: Model
+Other:
+    KnownStruct:
+        int: a 1
+        int: b 2
+    end: KnownStruct
+end: Other
+GRAPH-AFTER-END
+--- exit 0
+

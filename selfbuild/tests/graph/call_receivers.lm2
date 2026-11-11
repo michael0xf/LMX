@@ -1,0 +1,78 @@
+# The receivers call and fncall (the author 2026-11-11, LMX_blog/2026-11-11.md#call-receivers; the book,
+# call-receivers): the parts of a launch -- arguments, data, the description of the result, code -- are given
+# explicitly and may come from any Structures. An addition to the existing mechanisms: fn and sub are declared and
+# called as before, and the interpreter launches them by the same parts.
+#   response := fncall(args var return code)    fncall(var return code)    fncall(return code)
+#   call(args var code)                         call(code)
+# The formals are the fields of the arguments, independent cells of the launch; the data is written as it is.
+Args:
+    int: a 5
+    int: b 2
+end: Args
+Vars:
+    int: x 10
+    int: y 0
+end: Vars
+Body:
+    y := x + a
+    return: y * b
+end: Body
+int: response 0
+response := fncall(Args Vars int Body)
+int: after_y Vars\y
+int: args_kept Args\a
+NoArgs:
+    x := x + 1
+    return: x
+end: NoArgs
+int: second fncall(Vars int NoArgs)
+SelfFn:
+    int: n 3
+    n := n * 2
+    return: n + 1
+end: SelfFn
+int: third fncall(int SelfFn)
+int: self_n SelfFn\n
+Sub:
+    y := y + a + b
+end: Sub
+call(Args Vars Sub)
+int: sub_y Vars\y
+Self:
+    int: k 1
+    k := k + 4
+end: Self
+call(Self)
+int: self_k Self\k
+fncall(Vars int NoArgs)
+int: unused_result Vars\x
+# The parts of a callable are such parts: the ordinary call and the launch by parts run the same body over the same var.
+fn: f (int: a 1) int (int: x 100)
+    x := x + a
+    return: x
+end: f
+int: plain f(4)
+int: by_parts fncall(f\args f\var f\return f\body)
+int: var_x f\var\x
+int: whole fncall(f\var int f)
+int: bare fncall(int f)
+sub: bump (int: d 2) (int: total 0)
+    total := total + d
+end: bump
+bump(3)
+call(bump\args bump\var bump\body)
+int: bump_total bump\var\total
+# A composition: the arguments of a callable, the data of a Structure, the body of a third.
+Add:
+    y := x + a
+    return: y
+end: Add
+int: mixed fncall(f\args Vars int Add)
+int: mixed_y Vars\y
+# The receivers inside the body of a callable: the same launches, the Structures found from the body.
+fn: inside () int (int: got 0)
+    got := fncall(Args Vars int Add)
+    call(Args Vars Sub)
+    return: got + Vars\y
+end: inside
+int: in_method inside()

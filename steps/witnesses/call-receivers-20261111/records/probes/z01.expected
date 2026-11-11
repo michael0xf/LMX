@@ -1,0 +1,36 @@
+Args:
+    int: a 5
+    int: b 2
+end: Args
+Vars:
+    int: x 11
+    int: y 22
+end: Vars
+Body:
+    :=: y (x + a)
+    return: (y * b)
+end: Body
+int: response 30
+:=: response ((fncall Args Vars int Body))
+int: after_y 15
+int: args_kept 5
+NoArgs:
+    :=: x (x + 1)
+    return: x
+end: NoArgs
+int: second 11
+SelfFn:
+    int: n 6
+    :=: n (n * 2)
+    return: (n + 1)
+end: SelfFn
+int: third 7
+Sub: (:= y ((y + a) + b))
+call: Args Vars Sub
+int: sub_y 22
+Self:
+    int: k 5
+    :=: k (k + 4)
+end: Self
+call: Self
+int: self_k 5

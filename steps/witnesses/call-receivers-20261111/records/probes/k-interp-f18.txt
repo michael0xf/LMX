@@ -1,0 +1,197 @@
+=== k01.lm2
+Code:
+    var:
+        int: x 1
+    end: var
+    x := x + 1
+end: Code
+Data:
+    int: x 10
+end: Data
+call(Code Data)
+int: seen Data\x
+--- p0
+structure fields=4
+  frame head="Code" body=structure fields=2
+    frame head="var" body=structure fields=1
+      frame head="int" body=structure fields=2
+        atom "x"
+        atom "1"
+      Tail cutter trailer spelling="end" fields=1
+        atom "var"
+    frame head="x" body=structure fields=3
+      atom "x"
+      atom "+"
+      atom "1"
+    Tail cutter trailer spelling="end" fields=1
+      atom "Code"
+  frame head="Data" body=structure fields=1
+    frame head="int" body=structure fields=2
+      atom "x"
+      atom "10"
+    Tail cutter trailer spelling="end" fields=1
+      atom "Data"
+  frame head="call" body=structure fields=2
+    atom "Code"
+    atom "Data"
+  frame head="int" body=structure fields=4
+    atom "seen"
+    atom "Data"
+    atom "\"
+    atom "x"
+--- run
+GRAPH-BEFORE-BEGIN
+Code:
+    var:
+        int: x 1
+    end: var
+    :=: x (x + 1)
+end: Code
+Data:
+    int: x 10
+end: Data
+call: Code Data
+int: seen (Data \ x)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Code:
+    var:
+        int: x 1
+    end: var
+    :=: x (x + 1)
+end: Code
+Data:
+    int: x 11
+end: Data
+call: Code Data
+int: seen 11
+GRAPH-AFTER-END
+exit=0
+=== k02.lm2
+Code:
+    var:
+        int: x 1
+    end: var
+    x := x + 1
+end: Code
+Data:
+    int: x 10
+end: Data
+call(Code; Data)
+int: seen Data\x
+--- p0
+structure fields=4
+  frame head="Code" body=structure fields=2
+    frame head="var" body=structure fields=1
+      frame head="int" body=structure fields=2
+        atom "x"
+        atom "1"
+      Tail cutter trailer spelling="end" fields=1
+        atom "var"
+    frame head="x" body=structure fields=3
+      atom "x"
+      atom "+"
+      atom "1"
+    Tail cutter trailer spelling="end" fields=1
+      atom "Code"
+  frame head="Data" body=structure fields=1
+    frame head="int" body=structure fields=2
+      atom "x"
+      atom "10"
+    Tail cutter trailer spelling="end" fields=1
+      atom "Data"
+  frame head="call" body=structure fields=2
+    atom "Code"
+    atom "Data"
+  frame head="int" body=structure fields=4
+    atom "seen"
+    atom "Data"
+    atom "\"
+    atom "x"
+--- run
+GRAPH-BEFORE-BEGIN
+Code:
+    var:
+        int: x 1
+    end: var
+    :=: x (x + 1)
+end: Code
+Data:
+    int: x 10
+end: Data
+call: Code Data
+int: seen (Data \ x)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Code:
+    var:
+        int: x 1
+    end: var
+    :=: x (x + 1)
+end: Code
+Data:
+    int: x 11
+end: Data
+call: Code Data
+int: seen 11
+GRAPH-AFTER-END
+exit=0
+=== k03.lm2
+fn: f (int: a 1) int (int: x 1)
+    return: a + x
+end: f
+int: r 0
+r := f(5)
+int: parts length(f)
+--- p0
+structure fields=4
+  frame head="fn" body=structure fields=5
+    atom "f"
+    structure fields=1
+      frame head="int" body=structure fields=2
+        atom "a"
+        atom "1"
+    atom "int"
+    structure fields=1
+      frame head="int" body=structure fields=2
+        atom "x"
+        atom "1"
+    structure fields=1
+      frame head="return" body=structure fields=3
+        atom "a"
+        atom "+"
+        atom "x"
+    Tail cutter trailer spelling="end" fields=1
+      atom "f"
+  frame head="int" body=structure fields=2
+    atom "r"
+    atom "0"
+  frame head="r" body=structure fields=1
+    frame head="f" body=structure fields=1
+      atom "5"
+  frame head="int" body=structure fields=2
+    atom "parts"
+    frame head="length" body=structure fields=1
+      atom "f"
+--- run
+GRAPH-BEFORE-BEGIN
+fn: f (int: a 1) int (
+    int: x 1
+)
+    return: (a + x)
+end: f
+int: r 0
+:=: r ((f 5))
+int: parts (length f)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f (int: a 1) int (
+    int: x 1
+)
+    return: (a + x)
+end: f
+int: r 6
+:=: r ((f 5))
+int: parts 4
+GRAPH-AFTER-END
+exit=0

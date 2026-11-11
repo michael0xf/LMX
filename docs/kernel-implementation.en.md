@@ -424,16 +424,56 @@ clarification in the same witness; the divergences of the implementation found t
 working frontend silently reads the first occurrence; the clean graph does not write the place on a repetition at
 the root, selects the first occurrence by a bare path and does not build the path with the index of an occurrence.
 
-The author's decision of 2026-11-11 on launching code over data ([journal](../LMX_blog/2026-11-11.md#call-receivers);
-the book -- [the receivers `call` and `fncall`](LMX_semantics.en.md#call-receivers)) is not implemented yet; the
-steps are [section M10 of the plan](../next_core_tasks_v3.md#m10). The parts of a launch -- arguments, data, the
-description of the result, code -- are received by the receivers `fncall` and `call`, and the interpreter is to
-launch `fn`, `sub` and `catch` through the same mechanism. Now the interpreter of the clean graph launches a method
-by its Structure (`lmx_graph_invoke_data`: the parts are read from it), `call` takes one or two arguments, code
-first, and the one-argument form selects the `var` of the code (`lmx_graph_call_data`); by the decision the
-one-argument form executes the code over itself, and a name used above the line of its declaration reads the place
-of the data -- the former rule of the book rejected such a call, and the working frontend still executes that rule;
-the clean graph reads a literal value above the line of its declaration, a computed one not yet.
+[Slice 353](../steps/witnesses/call-receivers-20261111/notes.md) executed in the clean graph the author's decision
+of 2026-11-11 on launching code over data ([journal](../LMX_blog/2026-11-11.md#call-receivers); the book --
+[the receivers `call` and `fncall`](LMX_semantics.en.md#call-receivers); steps 1-5 of
+[section M10 of the plan](../next_core_tasks_v3.md#m10)). The working frontend does not read the new forms and
+reads the one-argument `call` as before; a name used above the line of its declaration it still rejects by the
+former rule of the book.
+
+A launch is given by its parts. The work frame of an activation (`LmxGraphFrame`) keeps, besides the code and the
+data, the parts of the launch: the Structure of the formals (`args`), the body (`body`), whether there is a result
+(`result`) and whether the data is the callable's own `var` (`own`). The frame is opened by
+`lmx_graph_work_open_parts`; the former `lmx_graph_work_open_data` takes the parts from the code itself -- a
+callable's `args`, `var`, `body` and the presence of `return`, an ordinary Structure as its own body with its `var`
+child as the model of its places -- and calls the same function. The running code reads the formals, the body and
+the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, `lmx_graph_launch_result`), not from
+the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call
+`f(x)` therefore goes the same way as a launch that was given its parts.
+
+The receivers. `lmx_graph_launch(g, args, data, result, code, out)` is the launch by given parts. The formals are
+the fields of the Structure of the arguments: an `int` place gives the launch an independent cell, a reference place
+is passed as it is; a place without a value and any other field is answer 5. The data is not completed and must
+have every place the code declares or uses (`lmx_graph_work_require`). The description of the result is the word
+`int`, otherwise 5: the same limit as for `fn`. With no data an ordinary Structure runs over itself and a callable
+over its own `var`; a callable given without arguments keeps its own contract and its own entry
+(`lmx_graph_invoke_data`). `call` with three arguments and `fncall` with two, three and four call this launch
+(`lmx_graph_eval_explicit_call`, `lmx_graph_eval_fncall`); the one-argument `call` over an ordinary Structure
+executes it over itself, the two-argument one is read as before -- `call: code data` (question P6). `fncall` is a
+word of the language (`w_fncall`, the list of receiver words). The emitted `native` calls the same launch of the
+kernel (`lm_graph_emit_fncall`, `lm_graph_emit_explicit_call`); a wrong number of arguments it emits as a refusal
+where the code runs.
+
+Data is read as a whole. Before the places are bound, `lmx_graph_data_realize` executes the computed declarations
+of the root level of the data (`int: name expression`, still a statement in its slot) in field order and publishes
+the result into the same slot -- once: from then on the slot holds the place. This is done for every launch except
+that of a callable over its own `var`: the entry of a method executes that content, as before. In a Structure
+over itself a computed declaration is therefore executed before the first statement and is not executed again on
+its own line. This is the executor's reading ([answers](../LMX_blog/q/fable-self-answers-20261110.md), items М8
+and Н11).
+
+The checks of slice 353: the fixtures of `tests/graph` -- `call_receivers` (the six forms, `fncall` as a statement,
+the receivers in the body of a method, the parts of a method one by one, a `sub` by its parts, a composition of the
+parts of three structures) and `call_data_whole` (the value of a field above the line of its declaration, a computed
+initial value, executed once) pass in the modes of the interpreter, `native` and `forced`; the refusals are
+`call_var_not_selected`, `call_data_lacks`, `call_self_repeat` (answer 3), `fncall_arity`, `call_arity`,
+`call_returns_value`, `fncall_no_result`, `fncall_result_word` (answer 5). `code_data` and `post_loop` pass `var`
+explicitly, with the former values; `code_data_no_var` turned from a refusal into a positive row. All 109 rows of
+graph-check pass in the three modes -- 327 PASS. A mutant -- the launch takes its data from the Structure of the
+code, not from the given part -- fails `call_receivers` in all three modes. `bootstrap quick` -- 0 failures, the
+generations are the same; `l1trans` is the former one; the hosted frontend, the tool and `driver.o` are others: they
+contain the kernel of the clean graph and the header template. The full suite of the working frontend on the new
+runtime -- `SUITE 162 rows, 0 failures`.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

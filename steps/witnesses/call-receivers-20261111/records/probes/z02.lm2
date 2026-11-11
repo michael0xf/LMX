@@ -1,0 +1,15 @@
+fn: f (int: a 1) int (int: x 100)
+    x := x + a
+    return: x
+end: f
+int: plain f(4)
+int: by_parts fncall(f\args f\var f\return f\body)
+int: var_x f\var\x
+sub: bump (int: d 2) (int: total 0)
+    total := total + d
+end: bump
+bump(3)
+call(bump\args bump\var bump\body)
+int: bump_total bump\var\total
+int: whole fncall(f\var int f)
+int: bare fncall(int f)

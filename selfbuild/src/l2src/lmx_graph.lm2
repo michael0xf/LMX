@@ -103,7 +103,7 @@ end: lmx_graph_intern_in
 # reading (lmx_graph_root_declares) consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
-    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call merge table var args body data const immutable independent implements test post external send receive adopt length typeof cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
+    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table var args body data const immutable independent implements test post external send receive adopt length typeof cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
     @@: list char 0
     size_t: at 0U
     size_t: start 0U
@@ -203,6 +203,11 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_index := lmx_graph_intern_in(state, "[]", 2U)
     state\w_length := lmx_graph_intern_in(state, "length", 6U)
     if: state\w_index = 0 || state\w_length = 0
+        return: 0
+    # The receiver of a launch that returns a result (the book, call-receivers; lmx_graph_launch); `call` is its twin
+    # without a result.
+    state\w_fncall := lmx_graph_intern_in(state, "fncall", 6U)
+    if: state\w_fncall = 0
         return: 0
     if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0

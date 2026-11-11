@@ -1,0 +1,50 @@
+=== y01.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model: KnownStruct
+send: exit(exit_code: Model\KnownStruct\a + 6; stdout: ""; stderr: "")
+return
+--- outcome
+y01 n L2 rc=1 l2trans error: y01.lm2:6:29: unknown field path segment
+y01 f L2 rc=1 l2trans error: y01.lm2:6:29: unknown field path segment
+=== y02.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model:
+    int: z 9
+end: Model
+Model: KnownStruct
+send: exit(exit_code: 7; stdout: ""; stderr: "")
+return
+--- outcome
+y02 n L2 rc=1 l2trans error: y02.lm2:8:1: a form with a colon declares and writes no known place: assign with := (a Structure is declared again by its written body)
+y02 f L2 rc=1 l2trans error: y02.lm2:8:1: a form with a colon declares and writes no known place: assign with := (a Structure is declared again by its written body)
+=== y03.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+fn: f () int
+    Model: KnownStruct
+    return: 7
+end: f
+send: exit(exit_code: f(); stdout: ""; stderr: "")
+return
+--- outcome
+y03 n L2 rc=1 l2trans error: y03.lm2:6:5: a form with a colon whose head names nothing declares a Structure with its tail inside, not a place: a reference is declared `@: name value`, a value by its receiver; a Structure declared with
+y03 f L2 rc=1 l2trans error: y03.lm2:6:5: a form with a colon whose head names nothing declares a Structure with its tail inside, not a place: a reference is declared `@: name value`, a value by its receiver; a Structure declared with
+=== y04.lm2
+KnownStruct:
+    int: a 1
+    int: b 2
+end: KnownStruct
+Model: KnownStruct
+send: exit(exit_code: 7; stdout: ""; stderr: "")
+return
+--- outcome
+y04 n L2 rc=1 l2trans error: y04.lm2:5:1: a form with a colon whose head names nothing declares a Structure with its tail inside, not a place: a reference is declared `@: name value`, a value by its receiver; a Structure declared with
+y04 f L2 rc=1 l2trans error: y04.lm2:5:1: a form with a colon whose head names nothing declares a Structure with its tail inside, not a place: a reference is declared `@: name value`, a value by its receiver; a Structure declared with

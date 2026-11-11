@@ -258,6 +258,16 @@ frontend module that another module calls before its definition in the generated
 export list in `tools/build.lm2`, and a changed list needs a transitional tool (`build-self`) before the bootstrap.
 [Sources, receipts and limits](../steps/witnesses/receiver-check-20261111/notes.md).
 
+Since slice 353 the clean graph executes the receivers `call` and `fncall` (plan M10, steps 1-5; the author
+2026-11-11): `response := fncall(args var return code)`, `fncall(var return code)`, `fncall(return code)`,
+`call(args var code)` and `call(code)` launch the parts they are given -- an addition to declarations and to the
+ordinary call, which runs through the same launch (`lmx_graph_launch`, the work frame carries `args`, `body`,
+`result`). One-argument `call` runs an ordinary Structure over itself and selects no `var` child; the
+two-argument form is still `call: code data` (question P6 to the author). Data is read as a whole: a computed
+declaration of its root level is executed before the code, once. The emitted `native` calls the same kernel
+launch. The working frontend does not read these forms yet. 109 graph-check rows pass in the three modes.
+[Sources, receipts and limits](../steps/witnesses/call-receivers-20261111/notes.md).
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's

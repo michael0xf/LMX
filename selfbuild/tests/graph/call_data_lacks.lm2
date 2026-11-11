@@ -1,0 +1,19 @@
+# The data of a launch is not completed (the book, call-receivers; only fn, sub and catch complete their var, when the
+# graph is built): Body declares y, the data given has no such place -- answer 3 -- and nothing of the body ran.
+fn: tick () int (int: calls 0)
+    calls := calls + 1
+    return: calls
+end: tick
+Args:
+    int: a 5
+end: Args
+Other:
+    int: x 10
+end: Other
+Body:
+    x := tick()
+    int: y
+    y := x + a
+    return: y
+end: Body
+int: response fncall(Args Other int Body)

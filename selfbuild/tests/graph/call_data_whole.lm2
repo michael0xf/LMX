@@ -1,0 +1,43 @@
+# Data is read as a whole before the code runs over it (the author 2026-11-11, LMX_blog/2026-11-11.md#call-receivers;
+# the book, call-receivers): a variable has no visibility "forward" or "backward" -- a name used above the line of its
+# declaration reads the same place of the data -- and a computed declaration of the root level of the data is executed
+# first, once: its slot holds the place from then on.
+fn: five () int
+    return: 5
+end: five
+Self:
+    y := x + 1
+    int: x 5
+    int: y
+end: Self
+call: Self
+int: literal_above Self\y
+Code:
+    y := x + 1
+    int: x
+    int: y
+end: Code
+Data:
+    int: x 5
+    int: y 0
+end: Data
+call: Code Data
+int: supplied_above Data\y
+Computed:
+    y := x + 1
+    int: x five()
+    int: y
+end: Computed
+call: Computed
+int: computed_above Computed\y
+Step:
+    int: z
+    z := z + 1
+end: Step
+Made:
+    int: z five() + 1
+end: Made
+call: Step Made
+int: realized Made\z
+call: Step Made
+int: realized_once Made\z

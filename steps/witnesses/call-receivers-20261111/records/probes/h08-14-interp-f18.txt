@@ -1,0 +1,231 @@
+=== h08.lm2
+Self:
+    y := x + 1
+    int: x 5
+    int: y
+end: Self
+call: Self Self
+int: seen Self\y
+--- run
+GRAPH-BEFORE-BEGIN
+Self:
+    :=: y (x + 1)
+    int: x 5
+    int: y
+end: Self
+call: Self Self
+int: seen (Self \ y)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Self:
+    :=: y (x + 1)
+    int: x 5
+    int: y
+end: Self
+call: Self Self
+int: seen 6
+GRAPH-AFTER-END
+exit=0
+=== h09.lm2
+Code:
+    y := x + 1
+    int: x
+    int: y
+end: Code
+Data:
+    int: x 5
+    int: y 0
+end: Data
+call: Code Data
+int: seen Data\y
+--- run
+GRAPH-BEFORE-BEGIN
+Code:
+    :=: y (x + 1)
+    int: x
+    int: y
+end: Code
+Data:
+    int: x 5
+    int: y 0
+end: Data
+call: Code Data
+int: seen (Data \ y)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Code:
+    :=: y (x + 1)
+    int: x
+    int: y
+end: Code
+Data:
+    int: x 5
+    int: y 6
+end: Data
+call: Code Data
+int: seen 6
+GRAPH-AFTER-END
+exit=0
+=== h10.lm2
+fn: five () int
+    return: 5
+end: five
+Self:
+    y := x + 1
+    int: x five()
+    int: y
+end: Self
+call: Self Self
+int: seen Self\y
+--- run
+GRAPH-BEFORE-BEGIN
+fn: five () int
+    return: 5
+end: five
+Self:
+    :=: y (x + 1)
+    int: x (five)
+    int: y
+end: Self
+call: Self Self
+int: seen (Self \ y)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: five () int
+    return: 5
+end: five
+Self:
+    :=: y (x + 1)
+    int: x (five)
+    int: y
+end: Self
+call: Self Self
+int: seen (Self \ y)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+graph: run answered 3
+exit=1
+=== h11.lm2
+Code:
+    int: x
+    x := 7
+end: Code
+call: Code Code
+int: seen Code\x
+--- run
+GRAPH-BEFORE-BEGIN
+Code:
+    int: x
+    :=: x 7
+end: Code
+call: Code Code
+int: seen (Code \ x)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Code:
+    int: x
+    :=: x 7
+end: Code
+call: Code Code
+int: seen 7
+GRAPH-AFTER-END
+exit=0
+=== h12.lm2
+fn: five () int
+    return: 5
+end: five
+Data:
+    int: x five()
+end: Data
+int: seen Data\x
+--- run
+GRAPH-BEFORE-BEGIN
+fn: five () int
+    return: 5
+end: five
+Data: (int x (five))
+int: seen (Data \ x)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: five () int
+    return: 5
+end: five
+Data: (int x (five))
+int: seen (Data \ x)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+graph: run answered 3
+exit=1
+=== h13.lm2
+fn: five () int
+    return: 5
+end: five
+Code:
+    int: x
+    x := x + 1
+end: Code
+Data:
+    int: x five()
+end: Data
+call: Code Data
+int: seen Data\x
+--- run
+GRAPH-BEFORE-BEGIN
+fn: five () int
+    return: 5
+end: five
+Code:
+    int: x
+    :=: x (x + 1)
+end: Code
+Data: (int x (five))
+call: Code Data
+int: seen (Data \ x)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: five () int
+    return: 5
+end: five
+Code:
+    int: x
+    :=: x (x + 1)
+end: Code
+Data: (int x (five))
+call: Code Data
+int: seen (Data \ x)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+graph: run answered 3
+exit=1
+=== h14.lm2
+fn: five () int
+    return: 5
+end: five
+fn: f () int (int: x five())
+    return: x + 1
+end: f
+int: seen f()
+--- run
+GRAPH-BEFORE-BEGIN
+fn: five () int
+    return: 5
+end: five
+fn: f () int (
+    int: x (five)
+)
+    return: (x + 1)
+end: f
+int: seen (f)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: five () int
+    return: 5
+end: five
+fn: f () int (
+    int: x (five)
+)
+    return: (x + 1)
+end: f
+int: seen 6
+GRAPH-AFTER-END
+exit=0

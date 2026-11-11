@@ -66,8 +66,9 @@ check46 —3/0, invalid — ожидаемый exit1, docs semantics —35/14/о
   не вводить анализ будущего поведения, protective gates, library comparator, hidden root; L3 печатает L1 как выходной
   текст, ради объявлений арены и пулов L2 не расширять; поддерживаемые ядро, build/test и генераторы — только L3+L2,
   прежние алгоритмы в строках не прятать, новый shell/Python runner не писать; не увлекаться тестовой кампанией вместо
-  самосборки; корневой `build` не трогать; basename `l2_driver_launch.err` нигде не читать, не хешировать, не
-  копировать; `steps/witnesses/used-scope-20261020/reference-producer117.patch` сохранить; весь проект/build2/transcripts
+  самосборки; корневой `build` не трогать; файл `l2_driver_launch.err` не защищён и не нужен (слова автора
+  2026-11-11: «Я его не защищал» — прежний запрет читать, хешировать и копировать его снят);
+  `steps/witnesses/used-scope-20261020/reference-producer117.patch` сохранить; весь проект/build2/transcripts
   не сканировать; обычные завершённые проверенные срезы коммитить и пушить в `main` самостоятельно.
 - **Решения Codex, действующие на передачу** (копии в `steps/witnesses/fix238-20261027/codex-reply-*.txt`):
   - CODEX-REPLY-BOOT43-BOUNDS-20261028T052500Z, CODEX-REPLY-TOOL32-LIVE-20261028T052915Z: границы recipe — рабочие

@@ -71,9 +71,12 @@ until: x = 2
 int: own_before RepeatOwn\data\x
 call: RepeatOwn\data RepeatOwn
 int: own_after RepeatOwn\data\x
+# The declaration line of an own place runs at every reach, each pass of the post-loop body too (the author 2026-11-11,
+# R12; plan M11 5a, B10): it writes x what stands in its slot, so the body reaches the condition in one pass. A counter
+# of several passes lives in data given separately (Repeat over Data above).
 Self:
     int: x 0
-    x := x + 1
+    x := x + 2
 until: x = 2
 call: Self Self
 int: same_data Self\x

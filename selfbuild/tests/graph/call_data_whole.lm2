@@ -1,10 +1,8 @@
 # Data is read as a whole before the code runs over it (the author 2026-11-11, LMX_blog/2026-11-11.md#call-receivers;
 # the book, call-receivers): a variable has no visibility "forward" or "backward" -- a name used above the line of its
-# declaration reads the same place of the data -- and a computed declaration of the root level of the data is executed
-# first, once: its slot holds the place from then on.
-fn: five () int
-    return: 5
-end: five
+# declaration reads the same place of the data. A literal value is data and stands in its place from the start (R12):
+# Self reads x = 5 above `int: x 5`, and Code reads the x of the Data it was given. A computed declaration is code,
+# executed at its line (computed_self_refused, computed_data_refused, computed_line_publishes).
 Self:
     y := x + 1
     int: x 5
@@ -23,21 +21,3 @@ Data:
 end: Data
 call: Data Code
 int: supplied_above Data\y
-Computed:
-    y := x + 1
-    int: x five()
-    int: y
-end: Computed
-call: Computed
-int: computed_above Computed\y
-Step:
-    int: z
-    z := z + 1
-end: Step
-Made:
-    int: z five() + 1
-end: Made
-call: Made Step
-int: realized Made\z
-call: Made Step
-int: realized_once Made\z

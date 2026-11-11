@@ -162,6 +162,101 @@ fn: lm_graph_build_power (@: word char) int
     return: 0
 end: lm_graph_build_power
 
+# Is the atom spelled bytes the single byte b (`[` 91, `]` 93), or, with b = 0, a decimal number? 1 or 0.
+fn: lm_graph_build_atom_bytes (const: (@: bytes char); size_t: size; int: b) int
+    size_t: i 0U
+    if: size = 0U
+        return: 0
+    if: b != 0
+        return: (cast: (int) (size = 1U && bytes[0] = b))
+    while: i < size
+        if: bytes[i] < 48 || bytes[i] > 57
+            return: 0
+        ---
+        i := i + 1U
+    ---
+    return: 1
+end: lm_graph_build_atom_bytes
+
+# Is field an atom spelled as lm_graph_build_atom_bytes says? 1 or 0.
+fn: lm_graph_build_atom_is (@: field c.LmP0Field; int: b) int
+    @: nd c.LmP0Node 0
+    @: token c.LmP0Text 0
+    if: field = 0
+        return: 0
+    nd := lm_graph_p0_value(field)
+    if: nd\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    token := lm_graph_p0_atom(nd)
+    return: lm_graph_build_atom_bytes(lm_graph_p0_data(token), lm_graph_p0_length(token), b)
+end: lm_graph_build_atom_is
+
+# The step of an occurrence (the book, fields: `s\[N]field` selects the record N of field at the root level of s; plan
+# M11 5a): when the atoms after the operator `\` at item are `[`, a number N, `]` and a name, written without a
+# separator, out takes the one word `[N]name` -- the word a head `s\[N]name` gives (lm_graph_build_selector), so that
+# both reach the same path step (lmx_graph_step) -- and the cursor moves past the name. Any other atoms leave out 0 and
+# the cursor where it was. 0, or 1 without memory.
+fn: lm_graph_build_occurrence (@: g c.LmxGraph; @: item c.LmP0Field; @@: cursor c.LmP0Field; @: boundary int; @@: out void) int
+    @: open c.LmP0Field 0
+    @: number c.LmP0Field 0
+    @: close c.LmP0Field 0
+    @: name c.LmP0Field 0
+    @: nd c.LmP0Node 0
+    @: digits c.LmP0Text 0
+    @: label c.LmP0Text 0
+    @: text char 0
+    size_t: nd_size 0U
+    size_t: nm_size 0U
+    out[0] := 0
+    if: item = 0
+        return: 0
+    nd := lm_graph_p0_value(item)
+    if: (nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+        return: 0
+    open := lm_graph_next_active(lm_graph_p0_next(item))
+    if: lm_graph_build_atom_is(open, 91) = 0
+        return: 0
+    nd := lm_graph_p0_value(open)
+    if: (nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+        return: 0
+    number := lm_graph_next_active(lm_graph_p0_next(open))
+    if: lm_graph_build_atom_is(number, 0) = 0
+        return: 0
+    nd := lm_graph_p0_value(number)
+    if: (nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+        return: 0
+    digits := lm_graph_p0_atom(nd)
+    close := lm_graph_next_active(lm_graph_p0_next(number))
+    if: lm_graph_build_atom_is(close, 93) = 0
+        return: 0
+    nd := lm_graph_p0_value(close)
+    if: (nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U
+        return: 0
+    name := lm_graph_next_active(lm_graph_p0_next(close))
+    if: name = 0
+        return: 0
+    nd := lm_graph_p0_value(name)
+    if: nd\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    label := lm_graph_p0_atom(nd)
+    nd_size := lm_graph_p0_length(digits)
+    nm_size := lm_graph_p0_length(label)
+    text := (cast: (@: char) c.malloc(nd_size + nm_size + 2U))
+    if: text = 0
+        return: 1
+    text[0] := 91
+    c.memcpy((cast: (@: void) (text + 1U)), (cast: (@: void) lm_graph_p0_data(digits)), nd_size)
+    text[nd_size + 1U] := 93
+    c.memcpy((cast: (@: void) (text + nd_size + 2U)), (cast: (@: void) lm_graph_p0_data(label)), nm_size)
+    out[0] := c.lmx_graph_word(g, text, nd_size + nm_size + 2U)
+    c.free((cast: (@: void) text))
+    if: out[0] = 0
+        return: 1
+    boundary[0] := (cast: (int) ((nd\flags & c.LM_P0_NODE_SEPARATOR_AFTER) != 0U))
+    cursor[0] := lm_graph_next_active(lm_graph_p0_next(name))
+    return: 0
+end: lm_graph_build_occurrence
+
 fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: least; @: boundary int; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: item c.LmP0Field cursor[0]
@@ -239,6 +334,20 @@ fn: lm_graph_build_expression (@: g c.LmxGraph; @@: cursor c.LmP0Field; int: lea
                 return: 1
             left := (cast: (@: void) expression)
             continue
+        # The step of an occurrence, `s\[N]name` (lm_graph_build_occurrence): one word after the operator `\`.
+        if: word = state\w_deref && 8 >= least
+            status := lm_graph_build_occurrence(g, item, cursor, boundary, @ right)
+            if: status != 0
+                return: status
+            if: right != 0
+                expression := c.lmx_graph_lmx(g, 0, 3U)
+                operator := c.lmx_graph_word(g, lm_graph_p0_data(token), lm_graph_p0_length(token))
+                if: expression = 0 || operator = 0 || lm_graph_build_put(g, expression, 0U, left) != 0 || lm_graph_build_put(g, expression, 1U, operator) != 0 || lm_graph_build_put(g, expression, 2U, right) != 0
+                    return: 1
+                left := (cast: (@: void) expression)
+                continue
+            ---
+        ---
         power := lm_graph_build_power(word)
         if: power = 0 || power < least
             break

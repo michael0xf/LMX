@@ -1,0 +1,14 @@
+# A computed declaration is code executed at its line (the author 2026-11-11, R12; plan M11 5a): run over itself,
+# Computed gives x its value at the line `int: x five()`, the read below that line sees 5, and the place is published
+# into the slot of the declaration at the end of the launch.
+fn: five () int
+    return: 5
+end: five
+Computed:
+    int: x five()
+    int: y
+    y := x + 1
+end: Computed
+call: Computed
+int: seen Computed\y
+int: published Computed\x

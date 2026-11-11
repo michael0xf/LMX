@@ -1008,7 +1008,8 @@ end: lmx_graph_write_slot
 
 # Publish a computed declaration through the same runtime write, naming it with the canonical word in that declaration:
 # the declaration Frame `int: name expression` (an Lmx named int, §3.3) has the name as its first argument. The new
-# place answers the name in the namespace of the live traversal from here on.
+# place stands in the slot of the declaration, where the registry of the block reads it (plan M11 5a), and answers the
+# name in the namespace of the live traversal too.
 fn: lmx_graph_publish (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value void) int
     @: statement void lmx_graph_get(root, index)
     @: name char 0
@@ -1117,18 +1118,55 @@ sub: lmx_graph_dump_indent (@: f c.FILE; int: depth)
     return
 end: lmx_graph_dump_indent
 
+# The path of a print (plan M11 5a): the chain of the Structures whose fields are being printed, innermost first, each
+# link a pair [Structure, the link before]. A write can close a cycle -- `A[0] := B`, `B[0] := A` hold each Structure
+# inside the other, one instance each --, and a Structure met again on the path is printed by its name, not entered:
+# the print ends. lmx_graph_dump_enter makes the link of value on path (0 without memory); lmx_graph_dump_on_path
+# answers whether value is on path (1 or 0).
+fn: lmx_graph_dump_enter (@@: path void; @: value void) @@: void
+    @@: link void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    if: link = 0
+        return: 0
+    link[0] := value
+    link[1] := (cast: (@: void) path)
+    return: link
+end: lmx_graph_dump_enter
+
+fn: lmx_graph_dump_on_path (@@: path void; @: value void) int
+    @@: link void path
+    while: link != 0
+        if: link[0] = value
+            return: 1
+        link := (cast: (@@: void) link[1])
+    ---
+    return: 0
+end: lmx_graph_dump_on_path
+
+# A Structure met again on the path of a print (a cycle): its name, or `...` for an unnamed one.
+sub: lmx_graph_dump_again (@: g c.LmxGraph; @: value void; @: f c.FILE)
+    @: name char lmx_graph_name_of(g, value)
+    if: name = 0
+        c.fputs("...", f)
+    else:
+        c.fputs(name, f)
+    ---
+    return
+end: lmx_graph_dump_again
+
 # One field in the line form: a word by its spelling, an int by its value; a place as `(int name value)` or
 # `(int name)` and a reference place as `(@ name target)`; an Lmx in parentheses -- a Frame (an Lmx named by its head,
-# §3.3) as `(head arguments)`, an anonymous Structure or an expression as `(fields)`. 0, or 1 when a cell is none of
-# the graph's.
-fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
+# §3.3) as `(head arguments)`, an anonymous Structure or an expression as `(fields)` -- or by its name when it is on the
+# path of the print already (lmx_graph_dump_on_path). 0, or 1 when a cell is none of the graph's or without memory.
+fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE; @@: path void) int
     int: kind lmx_graph_kind(g, value)
     @: text char 0
     @: name char 0
     @: inner c.Lmx 0
+    @@: link void 0
     size_t: i 0U
     size_t: n 0U
     int: printed 0
+    int: status 0
     if: kind = 2
         text := lmx_graph_word_text(g, value)
         if: text = 0
@@ -1164,6 +1202,12 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
         return: 0
     if: kind != 4
         return: 1
+    if: lmx_graph_dump_on_path(path, value) != 0
+        lmx_graph_dump_again(g, value, f)
+        return: 0
+    link := lmx_graph_dump_enter(path, value)
+    if: link = 0
+        return: 1
     text := lmx_graph_name_of(g, value)
     inner := (cast: (@: c.Lmx) value)
     n := lmx_graph_count(inner)
@@ -1172,30 +1216,31 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE) int
         c.fputs(text, f)
         printed := 1
     # An empty slot prints nothing (lmx_graph_dump_at); a separator goes before every printed field but the first.
-    while: i < n
+    while: i < n && status = 0
         if: lmx_graph_get(inner, i) != 0
             if: printed != 0
                 c.fputs(" ", f)
             printed := 1
-            if: lmx_graph_dump_token(g, lmx_graph_get(inner, i), f) != 0
-                return: 1
-            ---
+            status := lmx_graph_dump_token(g, lmx_graph_get(inner, i), f, link)
         ---
         i := i + 1U
     ---
+    c.free((cast: (@: void) link))
+    if: status != 0
+        return: 1
     c.fputs(")", f)
     return: 0
 end: lmx_graph_dump_token
 
-# The fields of inner from index from in the line form, a space before each; an empty slot prints nothing. 0, or 1 when
-# a cell is none of the graph's.
-fn: lmx_graph_dump_fields (@: g c.LmxGraph; @: inner c.Lmx; size_t: from; @: f c.FILE) int
+# The fields of inner from index from in the line form, a space before each; an empty slot prints nothing. path is the
+# path of the print with inner on it. 0, or 1 when a cell is none of the graph's.
+fn: lmx_graph_dump_fields (@: g c.LmxGraph; @: inner c.Lmx; size_t: from; @: f c.FILE; @@: path void) int
     size_t: k from
     size_t: m lmx_graph_count(inner)
     while: k < m
         if: lmx_graph_get(inner, k) != 0
             c.fputs(" ", f)
-            if: lmx_graph_dump_token(g, lmx_graph_get(inner, k), f) != 0
+            if: lmx_graph_dump_token(g, lmx_graph_get(inner, k), f, path) != 0
                 return: 1
             ---
         ---
@@ -1204,8 +1249,9 @@ fn: lmx_graph_dump_fields (@: g c.LmxGraph; @: inner c.Lmx; size_t: from; @: f c
     return: 0
 end: lmx_graph_dump_fields
 
-# One formal of a declaration's args in its written form: `int: name`, `int: name value`, `T: name`, `@: name T`.
-fn: lmx_graph_dump_formal (@: g c.LmxGraph; @: args c.Lmx; size_t: index; @: f c.FILE) int
+# One formal of a declaration's args in its written form: `int: name`, `int: name value`, `T: name`, `@: name T`. path
+# is the path of the print with args on it.
+fn: lmx_graph_dump_formal (@: g c.LmxGraph; @: args c.Lmx; size_t: index; @: f c.FILE; @@: path void) int
     @: state c.LmxGraphState lmx_graph_state()
     @: formal void lmx_graph_get(args, index)
     @: declaration c.Lmx 0
@@ -1217,15 +1263,15 @@ fn: lmx_graph_dump_formal (@: g c.LmxGraph; @: args c.Lmx; size_t: index; @: f c
             c.fprintf(f, " %d", c.lmx_int_value_known(formal))
         return: 0
     if: kind != 4
-        return: lmx_graph_dump_token(g, formal, f)
+        return: lmx_graph_dump_token(g, formal, f, path)
     declaration := (cast: (@: c.Lmx) formal)
     head := lmx_graph_name_of(g, formal)
     if: head = 0 || lmx_graph_count(declaration) = 0U || lmx_graph_word_text(g, lmx_graph_get(declaration, 0U)) = 0
-        return: lmx_graph_dump_token(g, formal, f)
+        return: lmx_graph_dump_token(g, formal, f, path)
     c.fprintf(f, "%s: %s", head, lmx_graph_word_text(g, lmx_graph_get(declaration, 0U)))
     if: head = state\w_at && lmx_graph_count(declaration) = 2U
         c.fputs(" ", f)
-        return: lmx_graph_dump_token(g, lmx_graph_get(declaration, 1U), f)
+        return: lmx_graph_dump_token(g, lmx_graph_get(declaration, 1U), f, path)
     return: 0
 end: lmx_graph_dump_formal
 
@@ -1233,8 +1279,8 @@ end: lmx_graph_dump_formal
 # written, its body lines and `end: name` -- in the positions of its arguments: fn [name, args, return], [name, args,
 # return, code] or [name, args, return, data, code]; sub [name, args, code] or [name, args, data, code]. 1 when the Lmx is
 # such a Frame and was printed, 0 when it is not (the caller prints it as any Frame), -1 when a cell is none of the
-# graph's.
-fn: lmx_graph_dump_declaration (@: g c.LmxGraph; @: value void; @: f c.FILE; int: depth) int
+# graph's or without memory. path is the path of the print with value on it.
+fn: lmx_graph_dump_declaration (@: g c.LmxGraph; @: value void; @: f c.FILE; int: depth; @@: path void) int
     @: state c.LmxGraphState lmx_graph_state()
     @: decl c.Lmx 0
     @: head char lmx_graph_name_of(g, value)
@@ -1243,8 +1289,10 @@ fn: lmx_graph_dump_declaration (@: g c.LmxGraph; @: value void; @: f c.FILE; int
     @: vars c.Lmx 0
     @: body c.Lmx 0
     @: result void 0
+    @@: link void 0
     size_t: n 0U
     size_t: i 0U
+    int: status 0
     if: state = 0 || lmx_graph_kind(g, value) != 4 || (head != state\w_fn && head != state\w_sub)
         return: 0
     decl := (cast: (@: c.Lmx) value)
@@ -1277,23 +1325,28 @@ fn: lmx_graph_dump_declaration (@: g c.LmxGraph; @: value void; @: f c.FILE; int
     if: (body != 0 && (lmx_graph_kind(g, (cast: (@: void) body)) != 4 || lmx_graph_name_of(g, (cast: (@: void) body)) != 0)) || (vars != 0 && (lmx_graph_kind(g, (cast: (@: void) vars)) != 4 || lmx_graph_name_of(g, (cast: (@: void) vars)) != 0))
         return: 0
     c.fprintf(f, "%s: %s (", head, name)
-    while: i < lmx_graph_count(args)
+    link := lmx_graph_dump_enter(path, (cast: (@: void) args))
+    if: link = 0
+        return: -1
+    while: i < lmx_graph_count(args) && status = 0
         if: i != 0U
             c.fputs("; ", f)
-        if: lmx_graph_dump_formal(g, args, i, f) != 0
-            return: -1
+        status := lmx_graph_dump_formal(g, args, i, f, link)
         i := i + 1U
     ---
+    c.free((cast: (@: void) link))
+    if: status != 0
+        return: -1
     c.fputs(")", f)
     if: head = state\w_fn
         c.fputs(" ", f)
-        if: lmx_graph_dump_token(g, result, f) != 0
+        if: lmx_graph_dump_token(g, result, f, path) != 0
             return: -1
         ---
     ---
     if: vars != 0 && lmx_graph_count(vars) != 0U
         c.fputs(" (\n", f)
-        if: lmx_graph_dump_at(g, vars, f, depth + 1) != 0
+        if: lmx_graph_dump_child(g, vars, f, depth + 1, path) != 0
             return: -1
         lmx_graph_dump_indent(f, depth)
         c.fputs(")", f)
@@ -1301,7 +1354,7 @@ fn: lmx_graph_dump_declaration (@: g c.LmxGraph; @: value void; @: f c.FILE; int
     c.fputs("\n", f)
     if: body = 0
         return: 1
-    if: lmx_graph_dump_at(g, body, f, depth + 1) != 0
+    if: lmx_graph_dump_child(g, body, f, depth + 1, path) != 0
         return: -1
     lmx_graph_dump_indent(f, depth)
     c.fprintf(f, "end: %s\n", name)
@@ -1318,13 +1371,16 @@ end: lmx_graph_dump_statement_word
 
 # Whether the named Frame inner prints as its block `head:` ... `end: head`: it is no statement of the language, and a
 # field of it is a place or a statement of the language, two of its fields are Frames, or its Frame field prints as a
-# block itself (a data block holding another, `Holder:` `Inner:`). 1 or 0.
-fn: lmx_graph_dump_block (@: g c.LmxGraph; @: inner c.Lmx) int
+# block itself (a data block holding another, `Holder:` `Inner:`) -- a Frame on the path of the print (path, with inner
+# on it) prints by its name, as no block. 1 or 0; -1 without memory.
+fn: lmx_graph_dump_block (@: g c.LmxGraph; @: inner c.Lmx; @@: path void) int
     size_t: m lmx_graph_count(inner)
     size_t: k 0U
     size_t: frames 0U
     @: field void 0
+    @@: link void 0
     int: kind 0
+    int: block 0
     if: lmx_graph_dump_statement_word(lmx_graph_name_of(g, (cast: (@: void) inner))) != 0
         return: 0
     while: k < m
@@ -1336,9 +1392,19 @@ fn: lmx_graph_dump_block (@: g c.LmxGraph; @: inner c.Lmx) int
             if: lmx_graph_dump_statement_word(lmx_graph_name_of(g, field)) != 0
                 return: 1
             frames := frames + 1U
-            if: frames >= 2U || lmx_graph_dump_block(g, (cast: (@: c.Lmx) field)) != 0
+            if: frames >= 2U
                 return: 1
+            if: lmx_graph_dump_on_path(path, field) = 0
+                link := lmx_graph_dump_enter(path, field)
+                if: link = 0
+                    return: -1
+                block := lmx_graph_dump_block(g, (cast: (@: c.Lmx) field), link)
+                c.free((cast: (@: void) link))
+                if: block != 0
+                    return: block
+                ---
             ---
+        ---
         k := k + 1U
     ---
     return: 0
@@ -1390,35 +1456,41 @@ end: lmx_graph_dump_path
 # a reference place as `@: name ...`, a word as itself, a declaration Frame of fn or sub in its written form, another
 # Frame as `head: arguments` -- or as its block `head:` ... `end: head` (lmx_graph_dump_block) --, an unnamed Lmx whose
 # first field is a word (an operator form such as `:=`) as `word: fields`, a statement on a path head as
-# `owner\field: actuals` (lmx_graph_path_head), and an anonymous sequential body between --- delimiters. 0, or 1 when a
-# cell is none of the graph's.
-fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) int
+# `owner\field: actuals` (lmx_graph_path_head), and an anonymous sequential body between --- delimiters
+# (lmx_graph_dump_frame); a Frame or a Structure met again on the path of the print (path, with lmx on it) by its name
+# alone. 0, or 1 when a cell is none of the graph's or without memory.
+fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth; @@: path void) int
     size_t: n lmx_graph_count(lmx)
     size_t: i 0U
-    size_t: m 0U
     @: value void 0
-    @: inner c.Lmx 0
     @: name char 0
     @: head char 0
+    @@: link void 0
     int: kind 0
-    int: printed 0
+    int: status 0
     while: i < n
         value := lmx_graph_get(lmx, i)
-        # An empty slot -- the form of a repeated declaration, consumed (lmx_graph_root_declare) -- is no field:
-        # nothing is printed for it.
+        # An empty slot is no field: nothing is printed for it.
         if: value = 0
             i := i + 1U
             continue
         kind := lmx_graph_kind(g, value)
         lmx_graph_dump_indent(f, depth)
         if: kind = 4
-            printed := lmx_graph_dump_declaration(g, value, f, depth)
-            if: printed < 0
-                return: 1
-            if: printed > 0
-                i := i + 1U
-                continue
+            if: lmx_graph_dump_on_path(path, value) != 0
+                lmx_graph_dump_again(g, value, f)
+                c.fputs("\n", f)
+            else:
+                link := lmx_graph_dump_enter(path, value)
+                if: link = 0
+                    return: 1
+                status := lmx_graph_dump_frame(g, (cast: (@: c.Lmx) value), f, depth, link)
+                c.free((cast: (@: void) link))
+                if: status != 0
+                    return: 1
             ---
+            i := i + 1U
+            continue
         ---
         if: kind = 5
             name := lmx_graph_name_of(g, value)
@@ -1437,10 +1509,10 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
             if: name = 0
                 return: 1
             if: head = 0
-                if: lmx_graph_kind(g, lmx_graph_target(g, value)) != 4 || depth > 64
+                if: lmx_graph_kind(g, lmx_graph_target(g, value)) != 4 || depth > 64 || lmx_graph_dump_on_path(path, lmx_graph_target(g, value)) != 0
                     return: 1
                 c.fprintf(f, "%s:\n", name)
-                if: lmx_graph_dump_at(g, (cast: (@: c.Lmx) lmx_graph_target(g, value)), f, depth + 1) != 0
+                if: lmx_graph_dump_child(g, (cast: (@: c.Lmx) lmx_graph_target(g, value)), f, depth + 1, path) != 0
                     return: 1
                 lmx_graph_dump_indent(f, depth)
                 c.fprintf(f, "end: %s\n", name)
@@ -1465,59 +1537,13 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
                 c.fprintf(f, "int: %s\n", name)
             else:
                 # A word; a named word place (the part return of a merge copy) as `name: word`.
-                if: kind = 2
-                    name := lmx_graph_name_of(g, value)
-                    if: name != 0
-                        c.fprintf(f, "%s: %s\n", name, lmx_graph_word_text(g, value))
-                    else:
-                        c.fprintf(f, "%s\n", lmx_graph_word_text(g, value))
-                    ---
+                if: kind != 2
+                    return: 1
+                name := lmx_graph_name_of(g, value)
+                if: name != 0
+                    c.fprintf(f, "%s: %s\n", name, lmx_graph_word_text(g, value))
                 else:
-                    if: kind != 4
-                        return: 1
-                    inner := (cast: (@: c.Lmx) value)
-                    m := lmx_graph_count(inner)
-                    name := lmx_graph_name_of(g, value)
-                    if: name != 0
-                        if: lmx_graph_dump_block(g, inner) != 0
-                            c.fprintf(f, "%s:\n", name)
-                            if: lmx_graph_dump_at(g, inner, f, depth + 1) != 0
-                                return: 1
-                            lmx_graph_dump_indent(f, depth)
-                            c.fprintf(f, "end: %s\n", name)
-                        else:
-                            c.fprintf(f, "%s:", name)
-                            if: lmx_graph_dump_fields(g, inner, 0U, f) != 0
-                                return: 1
-                            c.fputs("\n", f)
-                        ---
-                    else:
-                        head := 0
-                        if: m != 0U
-                            head := lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
-                        # A statement on a path head prints as written: `owner\field: actuals`.
-                        if: head = 0 && lmx_graph_path_head(g, value) != 0
-                            if: lmx_graph_dump_path(g, lmx_graph_get(inner, 0U), f) != 0
-                                return: 1
-                            c.fputs(":", f)
-                            if: lmx_graph_dump_fields(g, inner, 1U, f) != 0
-                                return: 1
-                            c.fputs("\n", f)
-                            i := i + 1U
-                            continue
-                        if: head = 0
-                            c.fputs("---\n", f)
-                            if: lmx_graph_dump_at(g, inner, f, depth + 1) != 0
-                                return: 1
-                            lmx_graph_dump_indent(f, depth)
-                            c.fputs("---\n", f)
-                            i := i + 1U
-                            continue
-                        c.fprintf(f, "%s:", head)
-                        if: lmx_graph_dump_fields(g, inner, 1U, f) != 0
-                            return: 1
-                        c.fputs("\n", f)
-                    ---
+                    c.fprintf(f, "%s\n", lmx_graph_word_text(g, value))
                 ---
             ---
         ---
@@ -1526,11 +1552,80 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth) i
     return: 0
 end: lmx_graph_dump_at
 
+# The fields of lmx printed at depth with lmx put on the path of the print (lmx_graph_dump_at). 0, or 1 when a cell is
+# none of the graph's or without memory.
+fn: lmx_graph_dump_child (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth; @@: path void) int
+    @@: link void lmx_graph_dump_enter(path, (cast: (@: void) lmx))
+    int: status 1
+    if: link != 0
+        status := lmx_graph_dump_at(g, lmx, f, depth, link)
+        c.free((cast: (@: void) link))
+    ---
+    return: status
+end: lmx_graph_dump_child
+
+# One Frame or Structure inner at depth, on the path of the print (path, with inner on it): a declaration of fn or sub
+# in its written form (lmx_graph_dump_declaration), a named Frame as `head: arguments` or as its block `head:` ...
+# `end: head` (lmx_graph_dump_block), a statement on a path head as `owner\field: actuals`, an anonymous body between
+# --- delimiters, an operator form as `word: fields`. 0, or 1 when a cell is none of the graph's or without memory.
+fn: lmx_graph_dump_frame (@: g c.LmxGraph; @: inner c.Lmx; @: f c.FILE; int: depth; @@: path void) int
+    @: value void (cast: (@: void) inner)
+    @: name char lmx_graph_name_of(g, value)
+    @: head char 0
+    int: printed lmx_graph_dump_declaration(g, value, f, depth, path)
+    int: block 0
+    if: printed < 0
+        return: 1
+    if: printed > 0
+        return: 0
+    if: name != 0
+        block := lmx_graph_dump_block(g, inner, path)
+        if: block < 0
+            return: 1
+        if: block != 0
+            c.fprintf(f, "%s:\n", name)
+            if: lmx_graph_dump_at(g, inner, f, depth + 1, path) != 0
+                return: 1
+            lmx_graph_dump_indent(f, depth)
+            c.fprintf(f, "end: %s\n", name)
+            return: 0
+        ---
+        c.fprintf(f, "%s:", name)
+        if: lmx_graph_dump_fields(g, inner, 0U, f, path) != 0
+            return: 1
+        c.fputs("\n", f)
+        return: 0
+    ---
+    if: lmx_graph_count(inner) != 0U
+        head := lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
+    # A statement on a path head prints as written: `owner\field: actuals`.
+    if: head = 0 && lmx_graph_path_head(g, value) != 0
+        if: lmx_graph_dump_path(g, lmx_graph_get(inner, 0U), f) != 0
+            return: 1
+        c.fputs(":", f)
+        if: lmx_graph_dump_fields(g, inner, 1U, f, path) != 0
+            return: 1
+        c.fputs("\n", f)
+        return: 0
+    if: head = 0
+        c.fputs("---\n", f)
+        if: lmx_graph_dump_at(g, inner, f, depth + 1, path) != 0
+            return: 1
+        lmx_graph_dump_indent(f, depth)
+        c.fputs("---\n", f)
+        return: 0
+    c.fprintf(f, "%s:", head)
+    if: lmx_graph_dump_fields(g, inner, 1U, f, path) != 0
+        return: 1
+    c.fputs("\n", f)
+    return: 0
+end: lmx_graph_dump_frame
+
 # The toLmx-like text of the fields of lmx (a root) to f. 0, or 1 when a cell is none of the graph's.
 fn: lmx_graph_dump (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE) int
     if: g = 0 || lmx = 0 || f = 0
         return: 1
-    return: lmx_graph_dump_at(g, lmx, f, 0)
+    return: lmx_graph_dump_child(g, lmx, f, 0, 0)
 end: lmx_graph_dump
 
 # The same text between the lines `GRAPH-<mark>-BEGIN` and `GRAPH-<mark>-END`: what a check reads from a run's log.

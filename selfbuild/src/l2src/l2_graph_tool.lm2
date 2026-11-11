@@ -203,11 +203,9 @@ fn: lm_graph_emit_resolve (@: g c.LmxGraph; @: root c.Lmx; @@: decl_names char; 
             return: decl_slots[i]
         i := i + 1U
     ---
-    # A place of the root is written by its name only from where the translation reached it (lmx_graph_space_reach).
-    i := c.lmx_graph_place_slot(g, root, name)
-    if: i < c.lmx_graph_count(root) && c.lmx_graph_space_find(root, name) != c.lmx_graph_get(root, i)
-        return: c.lmx_graph_count(root)
-    return: i
+    # A place of the root is written by its name above and below its line: the only record of the name in the root's
+    # registry, when it is a place (lmx_graph_visible_slot; plan M11 5a).
+    return: c.lmx_graph_visible_slot(g, root, name)
 end: lm_graph_emit_resolve
 
 # Emit the address of a written substructure relative to this native activation's code. These field coordinates
@@ -366,10 +364,12 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
-            c.fprintf(f, "        l2_v%d: lmx_graph_field(l2_g, l2_v%d, ", value, value)
+            # The path step, through an atom too, as the interpreter takes it (lmx_graph_step; plan M11 5a).
+            c.fputs("        if: lmx_graph_step(l2_g, l2_v", f)
+            c.fprintf(f, "%d, ", value)
             if: lm_graph_emit_word(g, f, scope, expression, 2U) != 0
                 return: 3
-            c.fprintf(f, ")\n        if: l2_v%d = 0\n            %s\n", value, leave_failure)
+            c.fprintf(f, ", @ l2_v%d) != 0\n            %s\n", value, leave_failure)
             temp[0] := value
             return: 0
         word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U))
@@ -781,9 +781,9 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
 end: lm_graph_emit_finally
 
 # The field a written path `owner\field` names, emitted for a write through it as the interpreter finds it
-# (lmx_graph_path_field): the owner's value, its target a Structure, the slot of the field named by the path's last
-# word, a place there. The temporary of the owner in owner_out; its slot is l2_s<owner>. 0, 2 for no path, or the
-# answer of the owner's emission.
+# (lmx_graph_path_field): the owner's value, then the Structure holding the place the path's last step names -- through
+# an atom too -- and its slot (lmx_graph_step_place), a place there. The temporary of that Structure in owner_out; the
+# slot is l2_s<owner>. 0, 2 for no path, or the answer of the owner's emission.
 fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: left void; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: owner_out int) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
@@ -797,10 +797,11 @@ fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: l
     status := lm_graph_emit_operand(g, f, code, path, 0U, temps, decl_names, decl_slots, decl_n, @ owner)
     if: status != 0
         return: status
-    # The owner of the written field: a Structure, or the target of a reference to it, as in the interpreter.
-    c.fprintf(f, "        l2_v%d: lmx_graph_target(l2_g, l2_v%d)\n        if: lmx_graph_kind(l2_g, l2_v%d) != 4\n            %s\n        size_t: l2_s%d lmx_graph_named(l2_g, (cast: (@: Lmx) l2_v%d), ", owner, owner, owner, leave_failure, owner, owner)
+    # The Structure holding the written place and its slot, as in the interpreter: the owner, or the target of a
+    # reference to it; through an atom, the record the atom refers to.
+    c.fprintf(f, "        size_t: l2_s%d 0U\n        if: lmx_graph_step_place(l2_g, l2_v%d, ", owner, owner)
     status := lm_graph_emit_word(g, f, code, path, 2U)
-    c.fprintf(f, ")\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure)
+    c.fprintf(f, ", @ l2_v%d, @ l2_s%d) != 0\n            %s\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) = 0\n            %s\n", owner, owner, leave_failure, owner, owner, leave_failure)
     owner_out[0] := owner
     return: status
 end: lm_graph_emit_field_place
@@ -927,8 +928,8 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
     while: i < n
         value := c.lmx_graph_get(root, i)
         kind := c.lmx_graph_kind(g, value)
-        # A place of the root answers its name from where the traversal reaches it (lmx_graph_space_reach): in the
-        # translation's namespace now, in the program's when it runs.
+        # A place of the root stands (lmx_graph_space_reach): it answers its name in the whole root, in the translation
+        # now and in the program when it runs.
         if: kind = 1 || kind = 3 || kind = 5 || kind = 6
             if: c.lmx_graph_space_reach(g, root, i) < 0
                 return: 1
@@ -1140,6 +1141,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     int: result 0
     int: status 0
     int: kind 0
+    int: number 0
     int: test_label 0
     int: body_label 0
     int: next_label 0
@@ -1152,26 +1154,26 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     while: i < to && status = 0
         raw := c.lmx_graph_get(body, i)
         kind := c.lmx_graph_kind(g, raw)
-        # A declaration of an int place in a body runs at its written position (§3.2), as in the interpreter: a literal
-        # is written into the activation's own place, a place without a value is checked; in an inline body of the root
-        # the root's place is written.
+        # A declaration of an int place in a body runs at its written position (§3.2), at every reach, as in the
+        # interpreter (plan M11 5a, B5, B10): a literal declaration writes into the activation's place what stands in its
+        # slot when the line runs -- read from the graph then, not the value the translation saw --, a place without a
+        # value is checked; in an inline body of the root the root's place is written.
         if: kind = 1 || kind = 3
             name := c.lmx_graph_slot_name(g, body, i)
-            # The Structure's own place -- a field of code itself, shared by a post-loop body -- stands.
-            if: name != 0 && mode = 0 && c.lmx_graph_place_slot(g, code, name) < c.lmx_graph_count(code)
-                if: c.lmx_graph_get(code, c.lmx_graph_place_slot(g, code, name)) = raw
-                    i := i + 1U
-                    continue
-                ---
-            ---
             if: name != 0 && mode = 0
                 c.fputs("        if: lmx_graph_local_int(l2_g, lmx_call_code, ", f)
                 lm_graph_emit_quoted_word(f, name)
                 c.fprintf(f, ") != 0\n            %s\n", leave_failure)
                 if: kind = 1
+                    number := temps[0]
+                    temps[0] := temps[0] + 1
+                    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_get(", number)
+                    if: lm_graph_emit_address(g, f, code, body) != 0
+                        return: 3
+                    c.fprintf(f, ", %zuU), @ l2_t%d) != 0\n            %s\n", i, number, leave_failure)
                     c.fputs("        if: lmx_graph_store_name(l2_g, lmx_call_code, ", f)
                     lm_graph_emit_quoted_word(f, name)
-                    c.fprintf(f, ", %d) != 0\n            %s\n", c.lmx_int_value_known(raw), leave_failure)
+                    c.fprintf(f, ", l2_t%d) != 0\n            %s\n", number, leave_failure)
                 ---
             ---
             if: name != 0 && mode = 2 && kind = 1

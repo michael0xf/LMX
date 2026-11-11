@@ -1,7 +1,10 @@
-# Slice 346 (the author 2026-11-10, LMX_blog/2026-11-10.md#colon-declares-not-assigns): `Struct1: Struct2` is a
-# declaration, not an assignment. The repeated declaration gives the place Struct1 the newly declared Structure -- its
-# q w e r t are gone, no second field Struct1 arises -- and Struct1 holds the Structure Struct2 itself, under its own
-# name, with its a, b, c. The three lines are the author's example.
+# Slice 346 (the author 2026-11-10, LMX_blog/2026-11-10.md#colon-declares-not-assigns) and plan M11 5a (the author
+# 2026-11-11): `Struct1: Struct2` is a declaration, not an assignment. Declared again, Struct1 is one more occurrence of
+# the name -- its q w e r t stay -- and the second Struct1 holds the atom Struct2, not expanded: a path through it
+# reaches the Structure Struct2 itself, with its a, b, c. The first three lines are the author's example; a bare
+# Struct1 would be ambiguous, `data\[N]Struct1` selects an occurrence.
 Struct2: a b c
 Struct1: q w e r t
 Struct1: Struct2
+int: first length(data\[0]Struct1)
+int: through length(data\[1]Struct1\Struct2)

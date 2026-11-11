@@ -1,0 +1,14 @@
+# A cycle made by index writes (plan M11 5a): after `A[0] := B` and `B[0] := A`, A holds the Structure B itself and B
+# holds A, one instance each -- the tree the parser built became a graph with a cycle. The print enters a Structure
+# once on its path and prints it by its name when it meets it again, so the dump ends; A[0] is B, with one field.
+A:
+    Inner:
+    end: Inner
+end: A
+B:
+    Inner:
+    end: Inner
+end: B
+A[0] := B
+B[0] := A
+int: seen length(A[0])

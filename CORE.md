@@ -319,7 +319,36 @@ reads the same place. The clean graph -- its interpreter and the `native` it
 emits -- executes these receivers since slice 353; the working frontend does
 not yet ([plan](next_core_tasks_v3.md#m10)). The order of the two arguments
 of the former `call: code data` against `call(var code)` awaits the author's
-answer. The `implements` field-address
+answer.
+
+The author's decision of 2026-11-11 on the roles `data` and `code`
+([the roles `data` and `code`](docs/LMX_semantics.en.md#data-code-roles))
+narrows the rules above; it changes and extends none of them. A Structure
+takes part in a launch as data or as code, and a written form is read by
+that role. In data a structural form declares a Structure, whatever its
+head -- a written call and the control receivers are Structures there,
+addressed `data\if`, `data\if\if`, with an index when several --, the
+declarations by receivers of places act, and assignments and all other code
+are not executed. In code every form is a call: a declaration by a receiver
+is a type check with an assignment, `Model: KnownStruct` is a call of
+`Model` and an error without such a method; code declares no Structure,
+while the declarations of `fn`, `sub` and `catch` stay. Only values are
+assigned -- primitives and pointers to Structures and to functions:
+`Model := KnownStruct3` is an error, a pointer variable is declared by
+`@: ptr KnownStruct`. Arguments of calls and of receivers are read by one
+general algorithm: `f(arg: v)` is a call of `arg`, only `f(arg := v)` is a
+named argument; formals are declared by receivers (`int: arg default`,
+`@: arg Template`), a structural form among the formals is forbidden. The
+special name `var` is called `data` and the part `body` is called `code`;
+the sources and the rest of the documents still write the former names
+until the plan step replaces them. `implements` is performed once, when the
+clean graph is built; the cases in which it is still needed at run time are
+collected in
+[steps/implements-runtime-cases-20261111.md](steps/implements-runtime-cases-20261111.md).
+The translators no longer have to find out where a call, a declaration of a
+Structure and an assignment stand -- the role says it --, and the branches
+that made this choice are to be removed. No translator executes these rules
+yet ([plan](next_core_tasks_v3.md#m11)). The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already
 computed `dirty` values go directly to their selected physical `data` slots
 through that map if necessary: no expression evaluation, repeated admission,

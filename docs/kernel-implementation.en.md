@@ -475,6 +475,22 @@ generations are the same; `l1trans` is the former one; the hosted frontend, the 
 contain the kernel of the clean graph and the header template. The full suite of the working frontend on the new
 runtime -- `SUITE 162 rows, 0 failures`.
 
+The author's decision of 2026-11-11 on the roles `data` and `code` ([journal](../LMX_blog/2026-11-11.md#data-code-roles);
+the book -- [the roles `data` and `code`](LMX_semantics.en.md#data-code-roles);
+[section M11 of the plan](../next_core_tasks_v3.md#m11)) is executed by no path of translation yet. For the clean
+graph it means the following. Data is read as a whole before the code, and the registry of its root forms -- the
+declarations of Structures by their heads and the declarations by receivers of places by the declared names -- is
+known before the first statement of the code; a traversal of code declares nothing but callables. The words of the
+state `var` and `body` and the names of the formals in the contracts of the receivers `fn` and `sub` are called
+`data` and `code`. The admission `implements` is performed by one pass when the graph is built; calls of the
+admission at run time stay only for the cases of the
+[document](../steps/implements-runtime-cases-20261111.md). The clean graph does otherwise now: it declares a
+Structure where the traversal of the root reaches the form (`lmx_graph_space_reach`, `lmx_graph_root_declares`,
+`lmx_graph_root_declare`), replaces the content on a repeated declaration and admits every call at run time
+(`lmx_graph_bind_call`, `lmx_graph_admit`). The decision makes the choice between a call, a declaration of a
+Structure and an assignment by the head and the tail of a form unnecessary -- the role gives it; removing these
+branches is step 6 of section M11.
+
 <a id="principles"></a>
 ## 1. Principles (norm)
 

@@ -432,7 +432,8 @@ launch `fn`, `sub` and `catch` through the same mechanism. Now the interpreter o
 by its Structure (`lmx_graph_invoke_data`: the parts are read from it), `call` takes one or two arguments, code
 first, and the one-argument form selects the `var` of the code (`lmx_graph_call_data`); by the decision the
 one-argument form executes the code over itself, and a name used above the line of its declaration reads the place
-of the data -- the former rule of the book rejected such a call, and both translators still execute that rule.
+of the data -- the former rule of the book rejected such a call, and the working frontend still executes that rule;
+the clean graph reads a literal value above the line of its declaration, a computed one not yet.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

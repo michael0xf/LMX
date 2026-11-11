@@ -28,7 +28,7 @@ fn: lmx_graph_node_in (@: arena c.LmxArena; @: value void) @: c.Lmx
     int: kind 0
     if: arena = 0 || value = 0
         return: 0
-    kind: (cast: (int) c.lmx_range_classify(arena, value))
+    kind := (cast: (int) c.lmx_range_classify(arena, value))
     if: kind != c.LMX_KIND_STRUCT && kind != c.LMX_KIND_ARRAY
         return: 0
     if: (cast: (size_t) c.lmx_range_stride(arena, value)) != c.sizeof(c.Lmx)
@@ -51,38 +51,38 @@ fn: lmx_graph_backing_cell_in (@: arena c.LmxArena; @: array c.Lmx; size_t: inde
         return: 0
     if: arena = 0 || array = 0
         return: 0
-    va: @ array\array
+    va := @ array\array
     if: va\data = 0 || index >= (cast: (size_t) va\size)
         return: 0
-    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, va\data))
-    stride: (cast: (size_t) c.lmx_range_stride(arena, va\data))
-    entry: (cast: (@: LmxRange) c.lmx_range_entry_at(arena, va\data))
+    pool := (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, va\data))
+    stride := (cast: (size_t) c.lmx_range_stride(arena, va\data))
+    entry := (cast: (@: LmxRange) c.lmx_range_entry_at(arena, va\data))
     if: pool = 0 || entry = 0 || entry\array != pool || stride = 0U || index > ((cast: (size_t) -1) / stride)
         return: 0
     if: (cast: (int) c.lmx_range_classify(arena, (cast: (@: void) array))) = c.LMX_KIND_STRUCT
-        expected_type: c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) array)), c.LMX_TYPE_REFS)
+        expected_type := c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) array)), c.LMX_TYPE_REFS)
         if: expected_type = c.LMX_TYPE_NONE || (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_FIELD_ADDRESSES) || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(expected_type) != 0 && pool\type != expected_type) || stride != sizeof(@: void)
             return: 0
         ---
     else:
-        expected_type: c.lmx_type_element(c.lmx_range_type_of(arena, (cast: (@: void) array)))
+        expected_type := c.lmx_type_element(c.lmx_range_type_of(arena, (cast: (@: void) array)))
         if: expected_type = c.LMX_TYPE_NONE || pool\type != expected_type || (pool\kind != c.LMX_KIND_REF && pool\kind != c.LMX_KIND_PRIMITIVE)
             return: 0
         ---
     ---
-    chunk: (cast: (@: LmxChunk) c.lmx_pool_chunk_at(pool, entry\lo))
+    chunk := (cast: (@: LmxChunk) c.lmx_pool_chunk_at(pool, entry\lo))
     if: chunk = 0 || (cast: (size_t) c.lmx_chunk_cells(chunk, stride)) > (cast: (size_t) c.lmx_chunk_room(chunk, stride))
         return: 0
-    offset: (cast: (size_t) va\data) - (cast: (size_t) entry\lo)
+    offset := (cast: (size_t) va\data) - (cast: (size_t) entry\lo)
     if: offset % stride != 0U
         return: 0
-    start: offset / stride
-    issued: (cast: (size_t) c.lmx_chunk_cells(chunk, stride))
+    start := offset / stride
+    issued := (cast: (size_t) c.lmx_chunk_cells(chunk, stride))
     # The descriptor's claimed span must fit within issued cells of this
     # single backing chunk before any C pointer arithmetic is performed.
     if: start > issued || (cast: (size_t) va\size) > issued - start
         return: 0
-    cell: (cast: (@: void) ((cast: (@: char) va\data) + index * stride))
+    cell := (cast: (@: void) ((cast: (@: char) va\data) + index * stride))
     if: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell)) != pool
         return: 0
     return: cell
@@ -95,17 +95,17 @@ fn: lmx_graph_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) 
     int: expected_type c.LMX_TYPE_NONE
     @@: address void 0
     @: pool c.LmxPool 0
-    cell: lmx_graph_backing_cell_in(arena, graph_node, index)
+    cell := lmx_graph_backing_cell_in(arena, graph_node, index)
     if: cell = 0
         return: 0
     if: (cast: (int) c.lmx_range_classify(arena, cell)) != c.LMX_KIND_FIELD_ADDRESSES
         return: cell
     # Exactly one physical indirection. Entries are physical addresses,
     # never ordinals or another field-address table to project again.
-    address: (cast: (@@: void) cell)
-    cell: \address
-    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
-    expected_type: c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) graph_node)), c.LMX_TYPE_REFS)
+    address := (cast: (@@: void) cell)
+    cell := \address
+    pool := (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
+    expected_type := c.lmx_type_storage_like(c.lmx_range_type_of(arena, (cast: (@: void) graph_node)), c.LMX_TYPE_REFS)
     # An ordinary receiving view can address an immutable target; retain its
     # actual full type for the ordinary write guard. An immutable owner cannot
     # acquire mutable field storage by projecting through an address table.
@@ -130,47 +130,47 @@ fn: lmx_graph_fields_bind (@: arena c.LmxArena; @: graph_node c.Lmx; @@: cells v
     int: contiguous 1
     int: owner_type c.LMX_TYPE_NONE
     int: storage_type c.LMX_TYPE_NONE
-    stride: sizeof(@: void)
+    stride := sizeof(@: void)
     if: graph_node = 0 || cells = 0
         return: 1
     if: (cast: (int) c.lmx_range_classify(arena, (cast: (@: void) graph_node))) != c.LMX_KIND_STRUCT
         return: 1
-    owner_type: c.lmx_range_type_of(arena, (cast: (@: void) graph_node))
+    owner_type := c.lmx_range_type_of(arena, (cast: (@: void) graph_node))
     if: c.lmx_type_base(owner_type) != c.LMX_TYPE_STRUCT
         return: 1
-    storage_type: c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
+    storage_type := c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
     if: storage_type = c.LMX_TYPE_NONE
         return: 1
-    va: @ graph_node\array
-    n: (cast: (size_t) va\size)
+    va := @ graph_node\array
+    n := (cast: (size_t) va\size)
     if: n = 0U || n > ((cast: (size_t) -1) / stride)
         return: 1
-    first_pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cells[0]))
-    first_range: (cast: (@: LmxRange) c.lmx_range_entry_at(arena, cells[0]))
+    first_pool := (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cells[0]))
+    first_range := (cast: (@: LmxRange) c.lmx_range_entry_at(arena, cells[0]))
     while: i < n
-        pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cells[i]))
+        pool := (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cells[i]))
         if: pool = 0 || pool\kind != c.LMX_KIND_CHILDREN || c.lmx_type_base(pool\type) != c.LMX_TYPE_REFS || (c.lmx_type_is_immutable(storage_type) != 0 && pool\type != storage_type) || (cast: (size_t) pool\stride) != stride
             return: 1
         # One direct span cannot straddle two chunks, even if separate
         # allocations happen to have adjacent numerical addresses.
         if: pool != first_pool || (cast: (@: LmxRange) c.lmx_range_entry_at(arena, cells[i])) != first_range || i > (((cast: (size_t) -1) - (cast: (size_t) cells[0])) / stride) || (cast: (size_t) cells[i]) != (cast: (size_t) cells[0]) + i * stride
-            contiguous: 0
-        i: i + 1U
+            contiguous := 0
+        i := i + 1U
     ---
     if: contiguous != 0
-        va\data: cells[0]
+        va\data := cells[0]
         return: 0
-    fields_profile: (cast: (@: Lmx) c.lmx_range_profile(arena, (cast: (@: void) graph_node)))
-    backing: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, n * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, storage_type, fields_profile))
+    fields_profile := (cast: (@: Lmx) c.lmx_range_profile(arena, (cast: (@: void) graph_node)))
+    backing := (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, n * stride, stride, c.LMX_KIND_FIELD_ADDRESSES, storage_type, fields_profile))
     if: backing = 0
         return: 1
-    addresses: (cast: (@@: void) c.lmx_chunk_data(backing\head))
-    i: 0U
+    addresses := (cast: (@@: void) c.lmx_chunk_data(backing\head))
+    i := 0U
     while: i < n
-        addresses[i]: cells[i]
-        i: i + 1U
+        addresses[i] := cells[i]
+        i := i + 1U
     ---
-    va\data: (cast: (@: void) addresses)
+    va\data := (cast: (@: void) addresses)
     return: 0
 end: lmx_graph_fields_bind
 
@@ -178,8 +178,8 @@ end: lmx_graph_fields_bind
 fn: lmx_graph_ref_cell_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index) @@: void
     @: cell void 0
     @: pool c.LmxPool 0
-    cell: lmx_graph_cell_in(arena, graph_node, index)
-    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
+    cell := lmx_graph_cell_in(arena, graph_node, index)
+    pool := (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
     if: pool = 0 || (pool\kind != c.LMX_KIND_CHILDREN && pool\kind != c.LMX_KIND_REF) || (cast: (size_t) pool\stride) != sizeof(@: void)
         return: 0
     return: (cast: (@@: void) cell)
@@ -204,16 +204,16 @@ fn: lmx_graph_ref_fill_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: ind
     @: record c.LmxCodeLink 0
     int: code 0
     int: status 0
-    slot: lmx_graph_ref_cell_in(arena, graph_node, index)
+    slot := lmx_graph_ref_cell_in(arena, graph_node, index)
     if: slot = 0
         return: 1
-    old: \slot
+    old := \slot
     # One of the three physical rebindings of a slot (design 4.4): prepared before the write (a refusal writes nothing),
     # committed after it.
-    status: lmx_code_rebind_prepare(arena, (cast: (@: void) slot), old, value, @ record, @ code)
+    status := lmx_code_rebind_prepare(arena, (cast: (@: void) slot), old, value, @ record, @ code)
     if: status != 0
         return: status
-    \slot: value
+    \slot := value
     return: lmx_code_rebind_commit(arena, (cast: (@: void) slot), old, value, record, code)
 end: lmx_graph_ref_fill_in
 
@@ -224,17 +224,17 @@ fn: lmx_graph_value_in (@: arena c.LmxArena; @: graph_node c.Lmx; size_t: index)
     @@: address void 0
     @: pool c.LmxPool 0
     int: kind 0
-    cell: lmx_graph_cell_in(arena, graph_node, index)
+    cell := lmx_graph_cell_in(arena, graph_node, index)
     if: cell = 0
         return: 0
-    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
+    pool := (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, cell))
     if: pool = 0
         return: 0
-    kind: (cast: (int) pool\kind)
+    kind := (cast: (int) pool\kind)
     if: kind = c.LMX_KIND_CHILDREN || kind = c.LMX_KIND_REF
         if: (cast: (size_t) pool\stride) != sizeof(@: void)
             return: 0
-        address: (cast: (@@: void) cell)
+        address := (cast: (@@: void) cell)
         return: \address
     if: kind = c.LMX_KIND_PRIMITIVE
         return: cell
@@ -265,33 +265,33 @@ fn: lmx_arena_refs_open_profiled (@: arena c.LmxArena; @: parent c.Lmx; size_t: 
     @: va c.VoidArray 0
     int: owner_type c.LMX_TYPE_NONE
     int: storage_type c.LMX_TYPE_NONE
-    slot: sizeof(@: void)
+    slot := sizeof(@: void)
     if: arena = 0 || parent = 0 || children = 0U
         return: 1
-    owner_type: c.lmx_range_type_of(arena, (cast: (@: void) parent))
+    owner_type := c.lmx_range_type_of(arena, (cast: (@: void) parent))
     if: c.lmx_range_classify(arena, (cast: (@: void) parent)) != c.LMX_KIND_STRUCT || c.lmx_type_base(owner_type) != c.LMX_TYPE_STRUCT
         return: 1
-    storage_type: c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
+    storage_type := c.lmx_type_storage_like(owner_type, c.LMX_TYPE_REFS)
     if: storage_type = c.LMX_TYPE_NONE
         return: 1
-    va: @ parent\array
+    va := @ parent\array
     if: va\data != 0 || (cast: (size_t) va\size) != 0U
         return: 1
     if: children > ((cast: (size_t) -1) / slot)
         return: 1
-    bytes: children * slot
+    bytes := children * slot
     # The slot array is an array of the arena like every other: the arena allocates it,
     # owns it and classifies it (KIND_CHILDREN with TYPE_REFS), so this constructor
     # prepares no storage of its own and a refusal leaves the arena untouched.
-    array: (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, storage_type, refs_profile))
+    array := (cast: (@: LmxPool) c.lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, storage_type, refs_profile))
     if: array = 0
         return: 1
     # The interval of this child array names its Structure first, so a slot cell alone recovers (holder, slot)
     # (lmx_range_slot_holder; design 4.4); a refusal leaves the Structure without a child array.
     if: c.lmx_range_holder_set(arena, (cast: (@: void) c.lmx_chunk_data(array\head)), parent) != 0
         return: 1
-    va\data: (cast: (@: void) c.lmx_chunk_data(array\head))
-    va\size: children
+    va\data := (cast: (@: void) c.lmx_chunk_data(array\head))
+    va\size := children
     return: 0
 end: lmx_arena_refs_open_profiled
 
@@ -303,7 +303,7 @@ fn: lmx_arena_ref_cell (@: parent c.Lmx; size_t: index) @@: void
     @: va c.VoidArray 0
     if: parent = 0
         return: 0
-    va: @ parent\array
+    va := @ parent\array
     if: va\data = 0
         return: 0
     if: index >= (cast: (size_t) va\size)
@@ -314,7 +314,7 @@ end: lmx_arena_ref_cell
 # Current child value, or null when unset or out of range.
 fn: lmx_arena_ref_value (@: parent c.Lmx; size_t: index) @: void
     @@: slot void 0
-    slot: lmx_arena_ref_cell(parent, index)
+    slot := lmx_arena_ref_cell(parent, index)
     if: slot = 0
         return: 0
     return: \slot
@@ -332,14 +332,14 @@ fn: lmx_arena_ref_store (@: arena c.LmxArena; @: parent c.Lmx; size_t: index; @:
     int: status 0
     if: arena = 0
         return: 1
-    slot: lmx_arena_ref_cell(parent, index)
+    slot := lmx_arena_ref_cell(parent, index)
     if: slot = 0
         return: 1
-    old: \slot
-    status: lmx_code_rebind_prepare(arena, (cast: (@: void) slot), old, value, @ record, @ code)
+    old := \slot
+    status := lmx_code_rebind_prepare(arena, (cast: (@: void) slot), old, value, @ record, @ code)
     if: status != 0
         return: status
-    \slot: value
+    \slot := value
     return: lmx_code_rebind_commit(arena, (cast: (@: void) slot), old, value, record, code)
 end: lmx_arena_ref_store
 
@@ -412,7 +412,7 @@ fn: lmx_code_callable (@: arena c.LmxArena; @: x c.Lmx) int
     @: pool c.LmxPool 0
     if: arena = 0 || x = 0
         return: 0
-    pool: (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) x)))
+    pool := (cast: (@: LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) x)))
     if: pool = 0 || pool\kind != c.LMX_KIND_STRUCT
         return: 0
     return: (cast: (int) (pool\role = c.LMX_POOL_ROLE_FN))
@@ -427,7 +427,7 @@ fn: lmx_code_part_slot (@: arena c.LmxArena; @: parent c.Lmx; @: x c.Lmx) int
         if: lmx_graph_value_in(arena, parent, k) = (cast: (@: void) x)
             return: 1
         ---
-        k: k + 1U
+        k := k + 1U
     ---
     return: 0
 end: lmx_code_part_slot
@@ -440,9 +440,9 @@ fn: lmx_code_write (@: arena c.LmxArena; @: holder c.Lmx; size_t: slot; @: old v
     # The head as it stands for this decision: installing a frame's own head (slot 0, over nothing) is construction
     # of that frame, not a change of the code it is in.
     if: slot = 0U
-        head: old
+        head := old
     else:
-        head: lmx_graph_value_in(arena, holder, 0U)
+        head := lmx_graph_value_in(arena, holder, 0U)
     ---
     if: lmx_code_head_is_op(arena, head) != 0
         return: 1
@@ -459,7 +459,7 @@ fn: lmx_code_write (@: arena c.LmxArena; @: holder c.Lmx; size_t: slot; @: old v
         return: 0
     if: c.lmx_source_name_get(arena, (cast: (@: void) holder)) != 0
         return: 1
-    parent: (cast: (@: c.Lmx) holder\parent)
+    parent := (cast: (@: c.Lmx) holder\parent)
     return: lmx_code_part_slot(arena, parent, holder)
 end: lmx_code_write
 
@@ -478,9 +478,9 @@ fn: lmx_code_holds (@: arena c.LmxArena; @: holder c.Lmx; size_t: slot; @: item 
 end: lmx_code_holds
 
 fn: lmx_code_next_gen (@: arena c.LmxArena) size_t
-    arena\reset_gen: arena\reset_gen + 1U
+    arena\reset_gen := arena\reset_gen + 1U
     if: arena\reset_gen = 0U
-        arena\reset_gen: 1U
+        arena\reset_gen := 1U
     ---
     return: arena\reset_gen
 end: lmx_code_next_gen
@@ -497,30 +497,30 @@ sub: lmx_code_reset_from (@: arena c.LmxArena; @: start c.Lmx)
     size_t: gen 0U
     if: arena = 0 || start = 0
         return
-    gen: lmx_code_next_gen(arena)
-    start\native: 0
-    link: (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) start)))
+    gen := lmx_code_next_gen(arena)
+    start\native := 0
+    link := (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) start)))
     while: link != 0
         if: link\mark != gen && lmx_code_holds(arena, (cast: (@: c.Lmx) (link\holder)), (cast: (size_t) (link\slot)), start) != 0
-            link\mark: gen
-            link\work: work
-            work: link
+            link\mark := gen
+            link\work := work
+            work := link
         ---
-        link: link\next
+        link := link\next
     ---
     while: work != 0
-        link: work
-        work: link\work
-        at: link\holder
-        at\native: 0
-        link: (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) at)))
+        link := work
+        work := link\work
+        at := link\holder
+        at\native := 0
+        link := (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) at)))
         while: link != 0
             if: link\mark != gen && lmx_code_holds(arena, (cast: (@: c.Lmx) (link\holder)), (cast: (size_t) (link\slot)), at) != 0
-                link\mark: gen
-                link\work: work
-                work: link
+                link\mark := gen
+                link\work := work
+                work := link
             ---
-            link: link\next
+            link := link\next
         ---
     ---
     return
@@ -541,46 +541,46 @@ fn: lmx_code_machine_in (@: arena c.LmxArena; @: item c.Lmx; @: holder c.Lmx; si
     int: crossing 0
     int: visit 0
     if: item = holder && slot = 0U
-        head: new
+        head := new
     else:
-        head: lmx_graph_value_in(arena, item, 0U)
+        head := lmx_graph_value_in(arena, item, 0U)
     ---
     if: lmx_code_head_is_op(arena, head) != 0
-        op: c.lmx_walk_code_in(arena, head) % c.LMX_WALK_OP_COUNT
+        op := c.lmx_walk_code_in(arena, head) % c.LMX_WALK_OP_COUNT
         if: op = c.LMX_WALK_OP_NONE || op = c.LMX_WALK_OP_UNKNOWN || op = c.LMX_WALK_OP_SOURCE_MACHINE
             return: 1
         if: op = c.LMX_WALK_OP_SOURCE_INERT || op = c.LMX_WALK_OP_THROWS
             return: 0
     ---
-    fields: @ item\array
+    fields := @ item\array
     while: k < (cast: (size_t) fields\size)
-        crossing: (cast: (int) (item = holder && k = slot))
+        crossing := (cast: (int) (item = holder && k = slot))
         if: crossing != 0
-            value: new
+            value := new
         else:
-            value: lmx_graph_value_in(arena, item, k)
+            value := lmx_graph_value_in(arena, item, k)
         ---
-        child: lmx_graph_node_in(arena, value)
+        child := lmx_graph_node_in(arena, value)
         if: child != 0 && lmx_code_holds(arena, item, k, child) != 0
-            visit: 1
+            visit := 1
             if: crossing != 0
-                visit: (cast: (int) (\new_seen = 0))
-                \new_seen: 1
+                visit := (cast: (int) (\new_seen = 0))
+                \new_seen := 1
             else:
-                link: (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) child)))
+                link := (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) child)))
                 while: link != 0 && (link\holder != item || link\slot != k)
-                    link: link\next
+                    link := link\next
                 ---
                 if: link != 0
-                    visit: (cast: (int) (link\mark != gen))
-                    link\mark: gen
+                    visit := (cast: (int) (link\mark != gen))
+                    link\mark := gen
                 ---
             ---
             if: visit != 0 && lmx_code_machine_in(arena, child, holder, slot, new, gen, new_seen) != 0
                 return: 1
             ---
         ---
-        k: k + 1U
+        k := k + 1U
     ---
     return: 0
 end: lmx_code_machine_in
@@ -598,41 +598,41 @@ fn: lmx_code_words_admit (@: arena c.LmxArena; @: start c.Lmx; @: holder c.Lmx; 
     int: new_seen 0
     if: arena = 0 || start = 0
         return: 0
-    gen: lmx_code_next_gen(arena)
+    gen := lmx_code_next_gen(arena)
     while: at != 0
         if: at\native != 0
-            word: 1
+            word := 1
         ---
-        link: (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) at)))
+        link := (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, (cast: (@: void) at)))
         while: link != 0
             if: link\mark != gen && lmx_code_holds(arena, (cast: (@: c.Lmx) (link\holder)), (cast: (size_t) (link\slot)), at) != 0
-                link\mark: gen
-                link\work: work
-                work: link
+                link\mark := gen
+                link\work := work
+                work := link
             ---
-            link: link\next
+            link := link\next
         ---
-        at: 0
+        at := 0
         if: work != 0
-            link: work
-            work: link\work
-            link\work: done
-            done: link
-            at: link\holder
+            link := work
+            work := link\work
+            link\work := done
+            done := link
+            at := link\holder
         ---
     ---
     if: word = 0
         return: 0
-    gen: lmx_code_next_gen(arena)
+    gen := lmx_code_next_gen(arena)
     if: start\native != 0 && lmx_code_machine_in(arena, start, holder, slot, new, gen, @ new_seen) != 0
         return: 1
     ---
     while: done != 0
-        at: done\holder
+        at := done\holder
         if: at\native != 0 && lmx_code_machine_in(arena, at, holder, slot, new, gen, @ new_seen) != 0
             return: 1
         ---
-        done: done\work
+        done := done\work
     ---
     return: 0
 end: lmx_code_words_admit
@@ -643,12 +643,12 @@ fn: lmx_code_cell_admit (@: arena c.LmxArena; @: cell void) int
     @: link c.LmxCodeLink 0
     if: arena = 0 || cell = 0
         return: c.LMX_WALK_OK
-    link: (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, cell))
+    link := (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, cell))
     while: link != 0
         if: lmx_code_words_admit(arena, (cast: (@: c.Lmx) (link\holder)), 0, 0U, 0) != 0
             return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
         ---
-        link: link\next
+        link := link\next
     ---
     return: c.LMX_WALK_OK
 end: lmx_code_cell_admit
@@ -662,7 +662,7 @@ fn: lmx_code_write_admit (@: arena c.LmxArena; @: root c.Lmx; size_t: index; @: 
     int: new_seen 0
     if: lmx_code_write(arena, root, index, lmx_graph_value_in(arena, root, index), new) = 0
         return: c.LMX_WALK_OK
-    item: lmx_graph_node_in(arena, new)
+    item := lmx_graph_node_in(arena, new)
     if: item != 0 && lmx_code_machine_in(arena, item, 0, 0U, 0, lmx_code_next_gen(arena), @ new_seen) != 0
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
     ---
@@ -678,11 +678,11 @@ sub: lmx_code_changed_cell (@: arena c.LmxArena; @: cell void)
     @: next c.LmxCodeLink 0
     if: arena = 0 || cell = 0
         return
-    link: (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, cell))
+    link := (cast: (@: LmxCodeLink) c.lmx_range_links_of(arena, cell))
     while: link != 0
-        next: link\next
+        next := link\next
         lmx_code_reset_from(arena, (cast: (@: c.Lmx) (link\holder)))
-        link: next
+        link := next
     ---
     return
 end: lmx_code_changed_cell
@@ -700,14 +700,14 @@ fn: lmx_code_rebind_prepare (@: arena c.LmxArena; @: cell void; @: old void; @: 
     int: is_code 0
     if: arena = 0 || cell = 0 || record = 0 || code = 0
         return: 1
-    \record: 0
-    \code: 0
+    \record := 0
+    \code := 0
     if: old = new
         return: 0
-    holder: (cast: (@: c.Lmx) c.lmx_range_slot_holder(arena, cell, @ slot))
+    holder := (cast: (@: c.Lmx) c.lmx_range_slot_holder(arena, cell, @ slot))
     if: holder = 0
         return: 0
-    is_code: lmx_code_write(arena, holder, slot, old, new)
+    is_code := lmx_code_write(arena, holder, slot, old, new)
     if: is_code != 0
         if: lmx_code_words_admit(arena, holder, holder, slot, new) != 0
             return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
@@ -718,7 +718,7 @@ fn: lmx_code_rebind_prepare (@: arena c.LmxArena; @: cell void; @: old void; @: 
             ---
         ---
     ---
-    \code: is_code
+    \code := is_code
     return: 0
 end: lmx_code_rebind_prepare
 
@@ -732,12 +732,12 @@ fn: lmx_code_rebind_commit (@: arena c.LmxArena; @: cell void; @: old void; @: n
     if: old = new
         c.lmx_range_link_abandon(record)
         return: 0
-    holder: (cast: (@: c.Lmx) c.lmx_range_slot_holder(arena, cell, @ slot))
+    holder := (cast: (@: c.Lmx) c.lmx_range_slot_holder(arena, cell, @ slot))
     if: old != 0 && holder != 0
         c.lmx_range_link_remove(arena, old, holder, slot)
     ---
     if: record != 0
-        status: (cast: (int) c.lmx_range_link_commit(arena, record))
+        status := (cast: (int) c.lmx_range_link_commit(arena, record))
     ---
     if: code != 0
         lmx_code_reset_from(arena, holder)

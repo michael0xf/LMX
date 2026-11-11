@@ -47,12 +47,12 @@ fn: lmx_chars_init (@: arena c.LmxArena) int
         return: 1
     if: (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) != 0
         return: 1
-    cells: (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
+    cells := (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
     if: cells = 0
         return: 1
     while: index < 256U
-        cells[index]: (cast: (char) index)
-        index: index + 1U
+        cells[index] := (cast: (char) index)
+        index := index + 1U
     ---
     return: 0
 end: lmx_chars_init
@@ -71,10 +71,10 @@ fn: lmx_char_cell (@: arena c.LmxArena; int: value) @: void
         return: 0
     if: value > 255
         return: 0
-    array: (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR))
+    array := (cast: (@: LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR))
     if: array = 0 || array\head = 0 || (cast: (size_t) c.lmx_chunk_room(array\head, (cast: (size_t) array\stride))) < 256U
         return: 0
-    cells: (cast: (@: char) c.lmx_chunk_data(array\head))
+    cells := (cast: (@: char) c.lmx_chunk_data(array\head))
     return: (cast: (@: void) (cells + value))
 end: lmx_char_cell
 
@@ -88,7 +88,7 @@ fn: lmx_char_value (@: cell void) int
     @: p char 0
     if: cell = 0
         return: -1
-    p: (cast: (@: char) cell)
+    p := (cast: (@: char) cell)
     # Numeric value, not the unsigned index of this cell in the intern table.
     return: (cast: (int) p[0])
 end: lmx_char_value

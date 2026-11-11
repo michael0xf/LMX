@@ -13,7 +13,7 @@ fn: fs_entries_free (@@: names char; @: kinds unsigned; size_t: count) int
     if: names != 0
         while: at < count
             c.free(names[at])
-            at: at + 1U
+            at := at + 1U
         ---
     ---
     c.free(names)
@@ -31,24 +31,24 @@ fn: fs_entry_append (@@@: names char; @@: kinds unsigned; @: count size_t; @: ca
     size_t: grown 0U
     if: names = 0 || kinds = 0 || count = 0 || capacity = 0 || name = 0
         return: -1
-    limit: limit / sizeof(@: char)
-    kind_limit: kind_limit / c.sizeof(c.unsigned)
+    limit := limit / sizeof(@: char)
+    kind_limit := kind_limit / c.sizeof(c.unsigned)
     if: kind_limit < limit
-        limit: kind_limit
+        limit := kind_limit
     if: count[0] >= limit
         return: -1
     if: count[0] = capacity[0]
-        grown: 16U
+        grown := 16U
         if: capacity[0] > 0U
-            grown: limit
+            grown := limit
             if: capacity[0] <= limit / 2U
-                grown: 2U * capacity[0]
+                grown := 2U * capacity[0]
             ---
         ---
         if: grown > limit
-            grown: limit
-        new_names: c.calloc(grown, sizeof(@: char))
-        new_kinds: c.calloc(grown, c.sizeof(c.unsigned))
+            grown := limit
+        new_names := c.calloc(grown, sizeof(@: char))
+        new_kinds := c.calloc(grown, c.sizeof(c.unsigned))
         if: new_names = 0 || new_kinds = 0
             c.free(new_names)
             c.free(new_kinds)
@@ -59,13 +59,13 @@ fn: fs_entry_append (@@@: names char; @@: kinds unsigned; @: count size_t; @: ca
         ---
         c.free(names[0])
         c.free(kinds[0])
-        names[0]: new_names
-        kinds[0]: new_kinds
-        capacity[0]: grown
+        names[0] := new_names
+        kinds[0] := new_kinds
+        capacity[0] := grown
     ---
-    names[0][count[0]]: name
-    kinds[0][count[0]]: kind
-    count[0]: count[0] + 1U
+    names[0][count[0]] := name
+    kinds[0][count[0]] := kind
+    count[0] := count[0] + 1U
     return: 0
 end: fs_entry_append
 
@@ -86,27 +86,27 @@ os:
             int: kind 0
             if: path = 0 || path[0] = (cast: (char) 0)
                 return: 0
-            wpath: os_native(path)
-            info: c.calloc(1U, c.sizeof(c.BY_HANDLE_FILE_INFORMATION))
+            wpath := os_native(path)
+            info := c.calloc(1U, c.sizeof(c.BY_HANDLE_FILE_INFORMATION))
             if: wpath = 0 || info = 0
                 c.free(wpath)
                 c.free(info)
                 return: -1
-            handle: c.CreateFileW(wpath, 0U, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE | c.FILE_SHARE_DELETE, 0, c.OPEN_EXISTING, c.FILE_FLAG_BACKUP_SEMANTICS, 0)
+            handle := c.CreateFileW(wpath, 0U, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE | c.FILE_SHARE_DELETE, 0, c.OPEN_EXISTING, c.FILE_FLAG_BACKUP_SEMANTICS, 0)
             if: handle != c.INVALID_HANDLE_VALUE
                 c.SetLastError(0U)
-                file_type: c.GetFileType(handle)
+                file_type := c.GetFileType(handle)
                 if: file_type = c.FILE_TYPE_DISK
                     if: c.GetFileInformationByHandle(handle, info) != 0
-                        attrs: (cast: (unsigned) info\dwFileAttributes)
-                        kind: 1
+                        attrs := (cast: (unsigned) info\dwFileAttributes)
+                        kind := 1
                         if: (attrs & (cast: (unsigned) c.FILE_ATTRIBUTE_DIRECTORY)) != 0U
-                            kind: 2
+                            kind := 2
                         ---
                     ---
                 else:
                     if: file_type != c.FILE_TYPE_UNKNOWN || c.GetLastError() = 0U
-                        kind: 3
+                        kind := 3
                     ---
                 ---
                 c.CloseHandle(handle)
@@ -134,58 +134,58 @@ os:
             int: result 0
             if: dir = 0 || out_names = 0 || out_kinds = 0 || out_count = 0
                 return: -1
-            out_names[0]: 0
-            out_kinds[0]: 0
-            out_count[0]: 0U
-            pattern: txt_cat(dir, "/*")
-            fd: c.calloc(1U, c.sizeof(c.WIN32_FIND_DATAW))
-            wdir: os_native(dir)
+            out_names[0] := 0
+            out_kinds[0] := 0
+            out_count[0] := 0U
+            pattern := txt_cat(dir, "/*")
+            fd := c.calloc(1U, c.sizeof(c.WIN32_FIND_DATAW))
+            wdir := os_native(dir)
             if: pattern != 0
-                wpattern: os_native(pattern)
+                wpattern := os_native(pattern)
             if: pattern = 0 || fd = 0 || wdir = 0 || wpattern = 0
-                result: -1
+                result := -1
             if: result = 0
-                handle: c.FindFirstFileW(wpattern, fd)
+                handle := c.FindFirstFileW(wpattern, fd)
                 if: handle = c.INVALID_HANDLE_VALUE
-                    error: c.GetLastError()
-                    result: 1
+                    error := c.GetLastError()
+                    result := 1
                     if: error = c.ERROR_FILE_NOT_FOUND
-                        attrs: c.GetFileAttributesW(wdir)
+                        attrs := c.GetFileAttributesW(wdir)
                         if: attrs != (cast: (unsigned) c.INVALID_FILE_ATTRIBUTES) && (attrs & (cast: (unsigned) c.FILE_ATTRIBUTE_DIRECTORY)) != 0U
-                            result: 0
+                            result := 0
                         ---
                     ---
                 ---
             ---
             while: result = 0 && handle != c.INVALID_HANDLE_VALUE
-                name: os_from_native((cast: (@: void) fd\cFileName))
+                name := os_from_native((cast: (@: void) fd\cFileName))
                 if: name = 0
-                    result: -1
+                    result := -1
                 else:
                     if: c.strcmp(name, ".") != 0 && c.strcmp(name, "..") != 0
-                        attrs: (cast: (unsigned) fd\dwFileAttributes)
-                        tag: (cast: (unsigned) fd\dwReserved0)
-                        kind: 0U
+                        attrs := (cast: (unsigned) fd\dwFileAttributes)
+                        tag := (cast: (unsigned) fd\dwReserved0)
+                        kind := 0U
                         if: (attrs & (cast: (unsigned) c.FILE_ATTRIBUTE_DIRECTORY)) != 0U
-                            kind: kind | 2U
+                            kind := kind | 2U
                         if: (attrs & (cast: (unsigned) c.FILE_ATTRIBUTE_REPARSE_POINT)) != 0U && tag = (cast: (unsigned) c.IO_REPARSE_TAG_SYMLINK)
-                            kind: kind | 4U
+                            kind := kind | 4U
                         if: fs_entry_append(@ names, @ kinds, @ count, @ capacity, name, kind) != 0
-                            result: -1
+                            result := -1
                         else:
-                            name: 0
+                            name := 0
                         ---
                     ---
                 ---
                 c.free(name)
-                name: 0
+                name := 0
                 if: result = 0
                     if: c.FindNextFileW(handle, fd) = 0
-                        error: c.GetLastError()
+                        error := c.GetLastError()
                         if: error != c.ERROR_NO_MORE_FILES
-                            result: 1
+                            result := 1
                         c.FindClose(handle)
-                        handle: c.INVALID_HANDLE_VALUE
+                        handle := c.INVALID_HANDLE_VALUE
                     ---
                 ---
             ---
@@ -198,9 +198,9 @@ os:
             if: result != 0
                 fs_entries_free(names, kinds, count)
                 return: result
-            out_names[0]: names
-            out_kinds[0]: kinds
-            out_count[0]: count
+            out_names[0] := names
+            out_kinds[0] := kinds
+            out_count[0] := count
             return: 0
         end: os_directory_entries
     default:
@@ -213,15 +213,15 @@ os:
             int: kind 0
             if: path = 0 || path[0] = (cast: (char) 0)
                 return: 0
-            status: c.calloc(1U, c.sizeof(c.LmxFsStat))
+            status := c.calloc(1U, c.sizeof(c.LmxFsStat))
             if: status = 0
                 return: -1
             if: c.stat(path, status) = 0
-                kind: 3
+                kind := 3
                 if: c.S_ISREG(status\st_mode) != 0
-                    kind: 1
+                    kind := 1
                 if: c.S_ISDIR(status\st_mode) != 0
-                    kind: 2
+                    kind := 2
                 ---
             ---
             c.free(status)
@@ -245,62 +245,62 @@ os:
             int: result 0
             if: dir = 0 || out_names = 0 || out_kinds = 0 || out_count = 0
                 return: -1
-            out_names[0]: 0
-            out_kinds[0]: 0
-            out_count[0]: 0U
-            status: c.calloc(1U, c.sizeof(c.LmxFsStat))
+            out_names[0] := 0
+            out_kinds[0] := 0
+            out_count[0] := 0U
+            status := c.calloc(1U, c.sizeof(c.LmxFsStat))
             if: status = 0
                 return: -1
-            directory: c.opendir(dir)
+            directory := c.opendir(dir)
             if: directory = 0
                 c.free(status)
                 return: 1
             while: result = 0
-                error_cell[0]: 0
-                entry: c.readdir(directory)
-                error: error_cell[0]
+                error_cell[0] := 0
+                entry := c.readdir(directory)
+                error := error_cell[0]
                 if: entry = 0
                     if: error != 0
-                        result: 1
+                        result := 1
                     break
                 ---
-                borrowed: entry\d_name
+                borrowed := entry\d_name
                 if: c.strcmp(borrowed, ".") = 0 || c.strcmp(borrowed, "..") = 0
                     continue
-                name: txt_dup(borrowed)
-                full: txt_path(dir, borrowed)
+                name := txt_dup(borrowed)
+                full := txt_path(dir, borrowed)
                 if: name = 0 || full = 0
-                    result: -1
+                    result := -1
                 else:
-                    kind: 0U
+                    kind := 0U
                     if: c.lstat(full, status) = 0
                         if: c.S_ISDIR(status\st_mode) != 0
-                            kind: kind | 2U
+                            kind := kind | 2U
                         if: c.S_ISLNK(status\st_mode) != 0
-                            kind: kind | 4U
+                            kind := kind | 4U
                         ---
                     ---
                     # A vanished/inaccessible entry still has its scanned name;
                     # unknown type only prevents treating it as a directory.
                     if: fs_entry_append(@ names, @ kinds, @ count, @ capacity, name, kind) != 0
-                        result: -1
+                        result := -1
                     else:
-                        name: 0
+                        name := 0
                     ---
                 ---
                 c.free(name)
                 c.free(full)
-                name: 0
-                full: 0
+                name := 0
+                full := 0
             ---
             c.closedir(directory)
             c.free(status)
             if: result != 0
                 fs_entries_free(names, kinds, count)
                 return: result
-            out_names[0]: names
-            out_kinds[0]: kinds
-            out_count[0]: count
+            out_names[0] := names
+            out_kinds[0] := kinds
+            out_count[0] := count
             return: 0
         end: os_directory_entries
 end: os

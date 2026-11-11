@@ -10,28 +10,28 @@ fn: lm_p0_scan_registry_compact_atom_piece (const: (@: text char); size_t: end_i
     if: start + 1U >= end_index
         return: start + 1U
     if: text[start] = 33 && text[start + 1U] = 61
-        best: 2U
+        best := 2U
     if: text[start] = 60 && text[start + 1U] = 61
-        best: 2U
+        best := 2U
     if: text[start] = 62 && text[start + 1U] = 61
-        best: 2U
+        best := 2U
     if: text[start] = 38 && text[start + 1U] = 38
-        best: 2U
+        best := 2U
     if: text[start] = 124 && text[start + 1U] = 124
-        best: 2U
+        best := 2U
     if: text[start] = 43 && text[start + 1U] = 43
-        best: 2U
+        best := 2U
     if: text[start] = 45 && text[start + 1U] = 45
-        best: 2U
+        best := 2U
     if: text[start] = 91 && text[start + 1U] = 93
-        best: 2U
+        best := 2U
     if: text[start] = 60 && text[start + 1U] = 60
-        best: 2U
+        best := 2U
     if: text[start] = 62 && text[start + 1U] = 62
-        best: 2U
+        best := 2U
     # The operator `:=` (the author, 2026-11-07; the grammar's operators section): one token, never `:` then `=`.
     if: text[start] = 58 && text[start + 1U] = 61
-        best: 2U
+        best := 2U
     if: best > 0U
         return: start + best
     return: start + 1U
@@ -56,69 +56,69 @@ fn: lm_p0_scan_number_token (const: (@: text char); size_t: end_index; size_t: s
     size_t: decimal_exponent_start 0U
     if: i < end_index && (text[i] = '+' || text[i] = '-')
         if: i + 1U < end_index && c.lm_p0_is_decimal_digit(text[i + 1U])
-            i: i + 1U
+            i := i + 1U
         else:
-            out_end[0]: start
+            out_end[0] := start
             return: 0
         ---
     if: i + 1U < end_index && text[i] = '0' && (text[i + 1U] = 'x' || text[i + 1U] = 'X')
-        i: i + 2U
+        i := i + 2U
         while: i < end_index && lm_p0_is_hex_digit(text[i])
-            saw_digit: 1
-            i: i + 1U
+            saw_digit := 1
+            i := i + 1U
         if: i < end_index && text[i] = '.'
-            i: i + 1U
+            i := i + 1U
             while: i < end_index && lm_p0_is_hex_digit(text[i])
-                saw_digit: 1
-                i: i + 1U
+                saw_digit := 1
+                i := i + 1U
             ---
         if: saw_digit && i < end_index && (text[i] = 'p' || text[i] = 'P')
-            hex_exponent_start: i
-            i: i + 1U
+            hex_exponent_start := i
+            i := i + 1U
             if: i < end_index && (text[i] = '+' || text[i] = '-')
-                i: i + 1U
+                i := i + 1U
             if: i < end_index && c.lm_p0_is_decimal_digit(text[i])
                 while: i < end_index && c.lm_p0_is_decimal_digit(text[i])
-                    i: i + 1U
+                    i := i + 1U
                 ---
             else:
-                i: hex_exponent_start
+                i := hex_exponent_start
             ---
         while: i < end_index && lm_p0_is_bare_identifier_rest(text[i])
-            i: i + 1U
+            i := i + 1U
         if: saw_digit
-            out_end[0]: i
+            out_end[0] := i
         else:
-            out_end[0]: start + 1U
+            out_end[0] := start + 1U
         ---
         return: 1
     while: i < end_index && c.lm_p0_is_decimal_digit(text[i])
-        saw_digit: 1
-        i: i + 1U
+        saw_digit := 1
+        i := i + 1U
     if: i < end_index && text[i] = '.'
-        i: i + 1U
+        i := i + 1U
         while: i < end_index && c.lm_p0_is_decimal_digit(text[i])
-            saw_digit: 1
-            i: i + 1U
+            saw_digit := 1
+            i := i + 1U
         ---
     if: saw_digit && i < end_index && (text[i] = 'e' || text[i] = 'E')
-        decimal_exponent_start: i
-        i: i + 1U
+        decimal_exponent_start := i
+        i := i + 1U
         if: i < end_index && (text[i] = '+' || text[i] = '-')
-            i: i + 1U
+            i := i + 1U
         if: i < end_index && c.lm_p0_is_decimal_digit(text[i])
             while: i < end_index && c.lm_p0_is_decimal_digit(text[i])
-                i: i + 1U
+                i := i + 1U
             ---
         else:
-            i: decimal_exponent_start
+            i := decimal_exponent_start
         ---
     while: i < end_index && lm_p0_is_bare_identifier_rest(text[i])
-        i: i + 1U
+        i := i + 1U
     if: saw_digit
-        out_end[0]: i
+        out_end[0] := i
     else:
-        out_end[0]: start
+        out_end[0] := start
     ---
     return: saw_digit
 end: lm_p0_scan_number_token
@@ -129,22 +129,22 @@ fn: lm_p0_scan_c_quoted_token (const: (@: text char); size_t: end_index; size_t:
     size_t: line_break_width 0U
     if: quote_index >= end_index || (text[quote_index] != '\'' && text[quote_index] != '"')
         return: quote_index
-    quote: text[quote_index]
-    i: quote_index + 1U
+    quote := text[quote_index]
+    i := quote_index + 1U
     while: i < end_index
         if: text[i] = '\\' && i + 1U < end_index
-            line_break_width: c.lm_p0_line_break_width_at(text, end_index, i + 1U)
+            line_break_width := c.lm_p0_line_break_width_at(text, end_index, i + 1U)
             if: line_break_width > 0U
-                i: i + 1U + line_break_width
+                i := i + 1U + line_break_width
             else:
-                i: i + 2U
+                i := i + 2U
             ---
             continue
         if: text[i] = quote
             return: i + 1U
         if: c.lm_p0_is_line_break(text[i])
             return: quote_index + 1U
-        i: i + 1U
+        i := i + 1U
     return: quote_index + 1U
 end: lm_p0_scan_c_quoted_token
 
@@ -162,7 +162,7 @@ fn: lm_p0_scan_c_prefixed_quote_token (const: (@: text char); size_t: end_index;
     size_t: quoted_end 0U
     if: lm_p0_starts_c_prefixed_quote(text, end_index, start) = 0
         return: start
-    quoted_end: lm_p0_scan_c_quoted_token(text, end_index, start + 1U)
+    quoted_end := lm_p0_scan_c_quoted_token(text, end_index, start + 1U)
     if: quoted_end > start + 2U
         return: quoted_end
     return: start + 1U
@@ -181,19 +181,19 @@ fn: lm_p0_scan_c_surface_atom (const: (@: text char); size_t: end_index; size_t:
     size_t: bracket_depth 0U
     if: lm_p0_starts_c_surface_atom(text, end_index, start) = 0
         return: start
-    i: start + 2U
+    i := start + 2U
     while: i < end_index
         if: c.lm_p0_is_line_break(text[i])
             break
         if: bracket_depth = 0U && lm_p0_is_c_surface_top_boundary(text[i])
             break
         if: text[i] = '['
-            bracket_depth: bracket_depth + 1U
+            bracket_depth := bracket_depth + 1U
         else:
             if: text[i] = ']' && bracket_depth > 0U
-                bracket_depth: bracket_depth - 1U
+                bracket_depth := bracket_depth - 1U
             ---
-        i: i + 1U
+        i := i + 1U
     return: i
 end: lm_p0_scan_c_surface_atom
 
@@ -210,13 +210,13 @@ fn: lm_p0_scan_compact_atom_piece (const: (@: text char); size_t: end_index; siz
     if: lm_p0_starts_c_surface_atom(text, end_index, start)
         return: lm_p0_scan_c_surface_atom(text, end_index, start)
     if: lm_p0_is_bare_identifier_start(text[start])
-        i: start + 1U
+        i := start + 1U
         while: i < end_index && lm_p0_is_bare_identifier_rest(text[i])
-            i: i + 1U
+            i := i + 1U
         if: i = start + 1U && text[start] = 'c' && i + 1U < end_index && text[i] = '.' && lm_p0_is_bare_identifier_start(text[i + 1U])
-            i: i + 2U
+            i := i + 2U
             while: i < end_index && lm_p0_is_bare_identifier_rest(text[i])
-                i: i + 1U
+                i := i + 1U
             ---
         return: i
     if: c.lm_p0_is_decimal_digit(text[start]) || (allow_signed_number && start + 1U < end_index && (text[start] = '+' || text[start] = '-') && c.lm_p0_is_decimal_digit(text[start + 1U]))
@@ -226,12 +226,12 @@ fn: lm_p0_scan_compact_atom_piece (const: (@: text char); size_t: end_index; siz
     if: text[start] = '\'' && c.lm_p0_starts_python_string(text, end_index, start) = 0
         return: lm_p0_scan_c_char_token(text, end_index, start)
     if: start + 1U < end_index
-        first: text[start]
-        second: text[start + 1U]
+        first := text[start]
+        second := text[start + 1U]
         if: first = '@' && second = '@'
-            at_end: start + 2U
+            at_end := start + 2U
             while: at_end < end_index && text[at_end] = '@'
-                at_end: at_end + 1U
+                at_end := at_end + 1U
             return: at_end
         ---
     return: lm_p0_scan_registry_compact_atom_piece(text, end_index, start)

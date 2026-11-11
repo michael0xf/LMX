@@ -14,35 +14,35 @@ fn: dl_fence_close (@: data char; size_t: count; size_t: begin; size_t: width; @
     unsigned: point 0U
     int: has_lf 0
     while: scan < count
-        first: dp_line_marker(data, count, scan, "```", 3U)
+        first := dp_line_marker(data, count, scan, "```", 3U)
         if: first = (cast: (size_t) -1)
             return: 0
-        run: 0U
+        run := 0U
         while: run < count - first && data[first + run] = (cast: (char) 96)
-            run: run + 1U
+            run := run + 1U
         if: run = width
-            pos: first + run
-            has_lf: 0
+            pos := first + run
+            has_lf := 0
             while: pos < count
-                point_width: dt_point(data, count, pos, @ point)
+                point_width := dt_point(data, count, pos, @ point)
                 if: point_width = 0U
                     return: -1
                 if: dt_space(point) = 0
                     break
                 if: point = 10U
-                    last_lf: pos
-                    has_lf: 1
-                pos: pos + point_width
+                    last_lf := pos
+                    has_lf := 1
+                pos := pos + point_width
             ---
             if: pos = count
-                after[0]: count
+                after[0] := count
                 return: 1
             if: has_lf != 0
-                after[0]: last_lf
+                after[0] := last_lf
                 return: 1
             ---
         ---
-        scan: first + run
+        scan := first + run
     ---
     return: 0
 end: dl_fence_close
@@ -59,23 +59,23 @@ fn: dl_next_fence (@: data char; size_t: count; size_t: begin; @: first size_t; 
     if: data = 0 || first = 0 || after = 0 || begin > count
         return: -1
     while: scan < count
-        opening: dp_line_marker(data, count, scan, "```", 3U)
+        opening := dp_line_marker(data, count, scan, "```", 3U)
         if: opening = (cast: (size_t) -1)
             return: 0
-        run: 0U
+        run := 0U
         while: run < count - opening && data[opening + run] = (cast: (char) 96)
-            run: run + 1U
-        width: run
+            run := run + 1U
+        width := run
         while: width >= 3U
-            found: dl_fence_close(data, count, opening + width, width, after)
+            found := dl_fence_close(data, count, opening + width, width, after)
             if: found < 0
                 return: -1
             if: found = 1
-                first[0]: opening
+                first[0] := opening
                 return: 1
-            width: width - 1U
+            width := width - 1U
         ---
-        scan: opening + run
+        scan := opening + run
     ---
     return: 0
 end: dl_next_fence
@@ -91,30 +91,30 @@ fn: docs_links_strip_fences (@: data char; size_t: count; @@: out char; @: out_c
     int: failed 0
     if: data = 0 || out = 0 || out_count = 0
         return: 1
-    out[0]: 0
-    out_count[0]: 0U
-    stream: os_file_temporary()
+    out[0] := 0
+    out_count[0] := 0U
+    stream := os_file_temporary()
     if: stream = 0
         return: 1
     while: scan < count && failed = 0
-        found: dl_next_fence(data, count, scan, @ first, @ after)
+        found := dl_next_fence(data, count, scan, @ first, @ after)
         if: found < 0
-            failed: 1
+            failed := 1
             break
         if: found = 0
             break
-        failed: dg_bytes(stream, data + scan, first - scan)
-        scan: after
+        failed := dg_bytes(stream, data + scan, first - scan)
+        scan := after
     ---
     if: failed = 0
-        failed: dg_bytes(stream, data + scan, count - scan)
+        failed := dg_bytes(stream, data + scan, count - scan)
     if: failed = 0
-        failed: db_stream_read(stream, out, out_count)
+        failed := db_stream_read(stream, out, out_count)
     if: c.fclose(stream) != 0
-        failed: 1
+        failed := 1
     if: failed != 0
         c.free(out[0])
-        out[0]: 0
-        out_count[0]: 0U
+        out[0] := 0
+        out_count[0] := 0U
     return: failed
 end: docs_links_strip_fences

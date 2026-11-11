@@ -210,6 +210,17 @@ the tool's part `tools/migrate.lm2`; a tool that predates the part cannot build 
 part needs one transitional `build-self` of sources that list it and do not call it yet.
 [Sources, receipts and limits](../steps/witnesses/colon-census-20261110/notes.md).
 
+Since slice 348 the machine sources -- `src/l2src` and `tools` -- write assignment with `:=` (plan M7, step 3):
+`colon-migrate` rewrote 34,113 sites in 101 files, and the generated L1 of a generation is byte for byte the L1 of
+the generation before. Three things a census needs beyond one build: `L2_OS_TARGET=win|default` in the environment
+names the target the branches of `os` blocks are selected for, so a translation on Windows lowers the `default:`
+branches and writes that target's L1 (without the variable the target is the translator's own); the kernel modules
+the runtime translates with `--graph` carry no source positions, so their rows come from the same translation
+command without the word `--graph`; the sources only a generation build translates are named by a `bootstrap` run
+with `L2_COLON_WRITES`. A census of the migrated sources names no write: the four forms `MainLetter: m` of the root
+programs are left as written. The fixtures of `tests` outside `tests/graph` still write the colon.
+[Sources, receipts and limits](../steps/witnesses/colon-migrate-machine-20261111/notes.md).
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's

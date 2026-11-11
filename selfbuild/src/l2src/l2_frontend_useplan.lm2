@@ -20,10 +20,10 @@ fn: lm_compiler_edge_off (int: a; int: b) size_t
     size_t: base
     if: a < 0 || b < 0 || m_cap_cell[0] <= 0 || a >= m_cap_cell[0] || b >= m_cap_cell[0]
         return: (cast: (size_t) ((cast: (size_t) -1)))
-    cap: (cast: (size_t) m_cap_cell[0])
+    cap := (cast: (size_t) m_cap_cell[0])
     if: c.lm_compiler_mul_ok((cast: (size_t) a), cap) = 0
         return: (cast: (size_t) ((cast: (size_t) -1)))
-    base: (cast: (size_t) a) * cap
+    base := (cast: (size_t) a) * cap
     if: base + (cast: (size_t) b) < base
         return: (cast: (size_t) ((cast: (size_t) -1)))
     return: (cast: (size_t) (base + (cast: (size_t) b)))
@@ -37,7 +37,7 @@ fn: lm_compiler_reference_descriptor (@: first c.LmP0Field; int: n; int: mi; @: 
     c.lm_compiler_reference_fields(@ first, @ n)
     if: n != 1 || first = 0 || first\value = 0 || first\value\as = 0
         return: (cast: (int) (1))
-    name: c.lm_compiler_reference_atom(first, n)
+    name := c.lm_compiler_reference_atom(first, n)
     # A bare callable denotes its occurrence, not its result or a descriptor
     # read. An explicit call Frame is typed through the call-result path.
     if: name != 0 && c.lm_compiler_call_head_method(mi, name, @ formal) >= 0
@@ -46,10 +46,10 @@ fn: lm_compiler_reference_descriptor (@: first c.LmP0Field; int: n; int: mi; @: 
         return: (cast: (int) (1))
     # l2_address_name describes the physical place, hence its type has one
     # more pointer level. Reception consumes the value stored at that place.
-    value_ty: c.lm_compiler_indirect_type((cast: (int) (out\type)))
+    value_ty := c.lm_compiler_indirect_type((cast: (int) (out\type)))
     if: c.lm_compiler_colon_is_graph_ty(value_ty) = 0
         return: (cast: (int) (1))
-    out\type: value_ty
+    out\type := value_ty
     return: (cast: (int) (0))
 end: lm_compiler_reference_descriptor
 
@@ -59,7 +59,7 @@ fn: lm_compiler_d105_field_key (int: row) int
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     if: row < 0 || row >= nsf_n_cell[0] || row > c.INT_MAX - 2 - own_n_cell[0]
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (-1))
     return: (cast: (int) (c.INT_MIN + row))
 end: lm_compiler_d105_field_key
@@ -72,7 +72,7 @@ fn: lm_compiler_d105_ns_key (int: ni) int
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     if: ni < 0 || ni >= ns_n_cell[0] || nsf_n_cell[0] > c.INT_MAX - 2 - own_n_cell[0] - ns_n_cell[0]
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (-1))
     return: (cast: (int) (c.INT_MIN + nsf_n_cell[0] + ni))
 end: lm_compiler_d105_ns_key
@@ -84,7 +84,7 @@ fn: lm_compiler_d105_key_ns (int: key) int
     int: ni
     if: key >= -1 - own_n_cell[0]
         return: (cast: (int) (-1))
-    ni: key - c.INT_MIN - nsf_n_cell[0]
+    ni := key - c.INT_MIN - nsf_n_cell[0]
     if: ni < 0 || ni >= ns_n_cell[0]
         return: (cast: (int) (-1))
     return: (cast: (int) (ni))
@@ -100,15 +100,15 @@ fn: lm_compiler_reference_source (@: first c.LmP0Field; int: n; int: mi; @: out 
     if: out = 0
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], here_node_cell[0], "internal: a source query has no result")))
     c.lm_compiler_reference_fields(@ first, @ n)
-    status: lm_compiler_reference_source_core(first, n, mi, out)
+    status := lm_compiler_reference_source_core(first, n, mi, out)
     if: status != 0 && diag_n_cell[0] = 0 && alloc_err_cell[0] = 0
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], here_node_cell[0], "internal: cannot construct a reference source")))
-    out\origin: 0
-    out\origin_count: 0
-    out\origin_method: mi
+    out\origin := 0
+    out\origin_count := 0
+    out\origin_method := mi
     if: first != 0 && n > 0
-        out\origin: first\value
-        out\origin_count: n
+        out\origin := first\value
+        out\origin_count := n
     return: (cast: (int) (status))
 end: lm_compiler_reference_source
 
@@ -129,14 +129,14 @@ fn: lm_compiler_reference_source_core (@: first c.LmP0Field; int: n; int: mi; @:
     int: source_match
     c.L2ValueSpan: operand
     @: source_use c.L2PathFact
-    out\schema: -1
-    out\path: 0
-    out\layout: -1
-    out\method: -1
-    out\place: -1
-    out\origin: 0
-    out\origin_count: 0
-    out\origin_method: -1
+    out\schema := -1
+    out\path := 0
+    out\layout := -1
+    out\method := -1
+    out\place := -1
+    out\origin := 0
+    out\origin_count := 0
+    out\origin_method := -1
     c.lm_compiler_reference_fields(@ first, @ n)
     if: n < 1 || first = 0 || first\value = 0 || first\value\as = 0
         return: (cast: (int) (0))
@@ -144,25 +144,25 @@ fn: lm_compiler_reference_source_core (@: first c.LmP0Field; int: n; int: mi; @:
     # replace them by the cast target. Check its immediate contract: an integer cast
     # or arithmetic cannot acquire provenance merely by casting back.
     if: n = 1 && c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (first\value)), "cast") != 0
-        cast_frame: first\value\as\frame
-        operand_count: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (cast_frame\body))) - 1
+        cast_frame := first\value\as\frame
+        operand_count := c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (cast_frame\body))) - 1
         if: operand_count < 1
             return: (cast: (int) (0))
-        type_field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (cast_frame\body\first_field)))
-        operand_field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (type_field\next)))
+        type_field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (cast_frame\body\first_field)))
+        operand_field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (type_field\next)))
         if: c.lm_compiler_cast_resolve((cast: (const: @: c.LmP0Node) (type_field\value)), @ cast_type, 0) != 0 || c.lm_compiler_pointer_depth(cast_type) = 0
             return: (cast: (int) (0))
         c.lm_compiler_reference_fields(@ operand_field, @ operand_count)
         if: operand_count < 1 || c.lm_compiler_operand_run(operand_field, operand_count) != operand_count
             return: (cast: (int) (0))
         if: lm_compiler_reference_descriptor(operand_field, operand_count, mi, address) = 0
-            pointer_operand: 1
+            pointer_operand := 1
         if: pointer_operand = 0 && operand_count = 1 && c.lm_compiler_colon_value_ty(operand_field, mi, @ operand_type) = 0 && c.lm_compiler_pointer_depth(operand_type) > 0
-            pointer_operand: 1
+            pointer_operand := 1
         if: pointer_operand = 0 && operand_count > 1
             c.lm_compiler_value_span_ref(@ operand, operand_field, operand_count)
-            operand_type: c.lm_compiler_value_span_type(@ operand, mi, 0)
-            pointer_operand: (cast: (int) (operand_type = -5 || c.lm_compiler_pointer_depth(operand_type) > 0))
+            operand_type := c.lm_compiler_value_span_type(@ operand, mi, 0)
+            pointer_operand := (cast: (int) (operand_type = -5 || c.lm_compiler_pointer_depth(operand_type) > 0))
         ---
         if: pointer_operand != 0
             return: (cast: (int) (lm_compiler_reference_source(operand_field, operand_count, mi, out)))
@@ -171,12 +171,12 @@ fn: lm_compiler_reference_source_core (@: first c.LmP0Field; int: n; int: mi; @:
     # The source/capture pass already adapted this exact operand and bound
     # its root. Fields and INDEX share that saved grammar and semantic fold;
     # neither a names-only adapter nor an alternative text parse belongs here.
-    source_match: c.lm_compiler_use_fact_find(first, n, mi, @ source_use)
+    source_match := c.lm_compiler_use_fact_find(first, n, mi, @ source_use)
     # Early typing may already have resolved this operand before the
     # namespace/capture source-use traversal. Consume its SAME prepared
     # record by original run identity, never another grammar adapter.
     if: source_match = 0
-        source_match: lm_compiler_query_fact_find(first, n, mi, @ source_use)
+        source_match := lm_compiler_query_fact_find(first, n, mi, @ source_use)
     # Ambiguous current inventory is unknown evidence, never a request to
     # retry binding by spelling in the caller's later source environment.
     if: source_match = 2
@@ -185,44 +185,44 @@ fn: lm_compiler_reference_source_core (@: first c.LmP0Field; int: n; int: mi; @:
         return: (cast: (int) (lm_compiler_reference_bound_path_source(source_use, out)))
     if: source_use != 0 && source_use\source_use = 2
         return: (cast: (int) (lm_compiler_reference_bound_root_source(source_use, out)))
-    resolved: lm_compiler_reference_descriptor(first, n, mi, address)
+    resolved := lm_compiler_reference_descriptor(first, n, mi, address)
     if: resolved != 0 && n = 1 && first\value\kind = c.LM_P0_NODE_ATOM
-        resolved: lm_compiler_address_name(mi, (cast: (const: @: c.LmP0Text) (first\value\as\atom)), address)
+        resolved := lm_compiler_address_name(mi, (cast: (const: @: c.LmP0Text) (first\value\as\atom)), address)
     if: resolved = 0 && address\kind = 2
-        address\model: c.lm_compiler_input_model(mi, (cast: (int) (address\index)))
+        address\model := c.lm_compiler_input_model(mi, (cast: (int) (address\index)))
     if: resolved = 0 && (address\kind = 1 || address\kind = 2)
         if: address\kind = 1
-            out\schema: c.lm_compiler_own_schema((cast: (int) (address\index)))
-            out\path: 0
+            out\schema := c.lm_compiler_own_schema((cast: (int) (address\index)))
+            out\path := 0
             # An original definition denotes its existing constructor,
             # unlike a receiving cell whose current referent is not its model.
             if: c.lm_compiler_source_definition_ns((cast: (int) (address\index))) >= 0
-                out\layout: c.lm_compiler_own_layout((cast: (int) (address\index)))
-            out\method: own_mi_cell[0][address\index]
-            out\place: c.lm_compiler_d105_own_key((cast: (int) (address\index)))
+                out\layout := c.lm_compiler_own_layout((cast: (int) (address\index)))
+            out\method := own_mi_cell[0][address\index]
+            out\place := c.lm_compiler_d105_own_key((cast: (int) (address\index)))
         else:
             return: (cast: (int) (c.lm_compiler_reference_input_source(mi, (cast: (int) (address\index)), out)))
         ---
         return: (cast: (int) (0))
     if: resolved = 0 && address\model >= 0
-        out\schema: address\model
-        out\path: 0
+        out\schema := address\model
+        out\path := 0
         if: address\kind = 5
-            out\layout: address\model
+            out\layout := address\model
         if: address\kind = 1
-            out\method: own_mi_cell[0][address\index]
-            out\place: c.lm_compiler_d105_own_key((cast: (int) (address\index)))
+            out\method := own_mi_cell[0][address\index]
+            out\place := c.lm_compiler_d105_own_key((cast: (int) (address\index)))
         if: address\kind = 2
-            out\method: mi
-            out\place: address\index
+            out\method := mi
+            out\place := address\index
         return: (cast: (int) (0))
     ---
-    callee: lm_compiler_d105_callee(mi, first, n)
+    callee := lm_compiler_d105_callee(mi, first, n)
     if: callee >= 0
-        out\schema: c.lm_compiler_input_model(callee, -1)
-        out\path: 0
-        out\method: callee
-        out\place: -1
+        out\schema := c.lm_compiler_input_model(callee, -1)
+        out\path := 0
+        out\method := callee
+        out\place := -1
     return: (cast: (int) (0))
 end: lm_compiler_reference_source_core
 
@@ -236,7 +236,7 @@ fn: lm_compiler_reference_bound_path_source (@: fact c.L2PathFact; @: out c.L2Re
     int: status
     if: fact = 0 || out = 0
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], here_node_cell[0], "internal: a source query has no fact or result")))
-    status: lm_compiler_source_use_resolve(fact, path)
+    status := lm_compiler_source_use_resolve(fact, path)
     if: status = 2 || status = 3
         c.lm_compiler_path_release(path)
         if: status = 3
@@ -250,7 +250,7 @@ fn: lm_compiler_reference_bound_path_source (@: fact c.L2PathFact; @: out c.L2Re
     if: status = 0
         lm_compiler_reference_record_source(path, (cast: (int) ((fact\method))), out)
     ---
-    out\path: fact
+    out\path := fact
     c.lm_compiler_path_release(path)
     if: alloc_err_cell[0] != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], (cast: (const: @: c.LmP0Node) (fact\source)), "cannot project the retained source route")))
@@ -269,28 +269,28 @@ fn: lm_compiler_reference_bound_root_source (@: fact c.L2PathFact; @: out c.L2Re
     int: restored
     if: fact = 0 || out = 0 || fact\source_use != 2
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], here_node_cell[0], "internal: a whole source query has no binding fact")))
-    out\schema: -1
-    out\layout: -1
-    out\method: -1
-    out\place: -1
-    out\path: 0
-    out\origin: 0
-    out\origin_count: 0
-    out\origin_method: -1
+    out\schema := -1
+    out\layout := -1
+    out\method := -1
+    out\place := -1
+    out\path := 0
+    out\origin := 0
+    out\origin_count := 0
+    out\origin_method := -1
     @: port_resolved c.L2Path (cast: (@: c.L2Path) (@ fact\resolved))
     c.lm_compiler_path_init((cast: (const: @: char) ((port_resolved\text))), (cast: (size_t) ((port_resolved\length))), root)
     if: fact\use_site = 0
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], (cast: (const: @: c.LmP0Node) (fact\source)), "internal: a whole source has no selected environment")))
     if: c.lm_compiler_source_save(@ saved) != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], (cast: (const: @: c.LmP0Node) (fact\source)), "cannot retain the current source environment")))
-    status: c.lm_compiler_source_restore((cast: (const: @: c.L2SourceSite) (fact\use_site)))
+    status := c.lm_compiler_source_restore((cast: (const: @: c.L2SourceSite) (fact\use_site)))
     if: status = 0
-        status: lm_compiler_source_use_binding(fact, root)
+        status := lm_compiler_source_use_binding(fact, root)
     else:
-        status: 3
+        status := 3
     if: status = 0
         lm_compiler_reference_record_source(root, (cast: (int) ((fact\method))), out)
-    restored: c.lm_compiler_source_restore(@ saved)
+    restored := c.lm_compiler_source_restore(@ saved)
     c.lm_compiler_xfree((cast: (@: void) ((cast: (@: void) saved\scopes))))
     if: status = 3 || restored != 0 || alloc_err_cell[0] != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], (cast: (const: @: c.LmP0Node) (fact\source)), "cannot restore a whole source environment")))
@@ -298,19 +298,19 @@ fn: lm_compiler_reference_bound_root_source (@: fact c.L2PathFact; @: out c.L2Re
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], (cast: (const: @: c.LmP0Node) (fact\source)), "internal: a whole source has invalid binding inventory")))
     # Publish only the refreshed binding coordinates in this SAME root
     # record. No field walk ran and the fact remains stage0 with no steps.
-    port_resolved\ni: root\ni
-    port_resolved\res: root\res
-    port_resolved\oi: root\oi
-    port_resolved\fi: root\fi
-    port_resolved\root_kind: root\root_kind
-    port_resolved\root: root\root
-    port_resolved\root_own: root\root_own
-    port_resolved\root_contract_own: root\root_contract_own
-    port_resolved\root_ft: root\root_ft
-    port_resolved\root_level: root\root_level
-    port_resolved\model_input: root\model_input
-    fact\stage: 0
-    out\path: fact
+    port_resolved\ni := root\ni
+    port_resolved\res := root\res
+    port_resolved\oi := root\oi
+    port_resolved\fi := root\fi
+    port_resolved\root_kind := root\root_kind
+    port_resolved\root := root\root
+    port_resolved\root_own := root\root_own
+    port_resolved\root_contract_own := root\root_contract_own
+    port_resolved\root_ft := root\root_ft
+    port_resolved\root_level := root\root_level
+    port_resolved\model_input := root\model_input
+    fact\stage := 0
+    out\path := fact
     return: (cast: (int) (0))
 end: lm_compiler_reference_bound_root_source
 
@@ -320,48 +320,48 @@ fn: lm_compiler_reference_record_source (const: (@: path c.L2Path); int: mi; @: 
     int: projected
     if: out = 0
         return: (cast: (int) (1))
-    out\schema: -1
-    out\layout: -1
-    out\method: -1
-    out\place: -1
-    out\path: 0
-    out\origin: 0
-    out\origin_count: 0
-    out\origin_method: -1
+    out\schema := -1
+    out\layout := -1
+    out\method := -1
+    out\place := -1
+    out\path := 0
+    out\origin := 0
+    out\origin_count := 0
+    out\origin_method := -1
     if: path = 0 || path\fail_why != 0 || path\n < 0
         return: (cast: (int) (1))
     if: path\n > 0
-        projected: lm_compiler_reference_path_projection(path, out)
+        projected := lm_compiler_reference_path_projection(path, out)
         # Existing directly selected Structure/payload category,only after
         # the selected reference/input coordinate had its ordinary priority.
         if: projected != 0 && (path\leaf_kind = 2 || path\leaf_kind = 3) && path\leaf_model >= 0
-            out\schema: path\leaf_model
-            out\layout: out\schema
+            out\schema := path\leaf_model
+            out\layout := out\schema
             return: (cast: (int) (0))
         return: (cast: (int) (projected))
     ---
     if: path\oi >= 0
-        out\schema: c.lm_compiler_own_schema((cast: (int) ((path\oi))))
+        out\schema := c.lm_compiler_own_schema((cast: (int) ((path\oi))))
         if: c.lm_compiler_source_definition_ns((cast: (int) ((path\oi)))) >= 0
-            out\layout: c.lm_compiler_own_layout((cast: (int) ((path\oi))))
-        out\method: own_mi_cell[0][path\oi]
-        out\place: c.lm_compiler_d105_own_key((cast: (int) ((path\oi))))
+            out\layout := c.lm_compiler_own_layout((cast: (int) ((path\oi))))
+        out\method := own_mi_cell[0][path\oi]
+        out\place := c.lm_compiler_d105_own_key((cast: (int) ((path\oi))))
         return: (cast: (int) (0))
     if: path\fi >= 0
-        out\schema: path\ni
+        out\schema := path\ni
         if: path\res >= 0
-            out\schema: c.lm_compiler_schema_merge((cast: (int) ((path\res))))
-        out\method: mi
-        out\place: path\fi
+            out\schema := c.lm_compiler_schema_merge((cast: (int) ((path\res))))
+        out\method := mi
+        out\place := path\fi
         return: (cast: (int) (0))
     # Only an original constructor denotes that physical layout. A method,
     # node or control value is not its return type or a guessed own schema.
     if: path\root_kind = 0 && path\ni >= 0 && path\res < 0
-        out\schema: path\ni
-        out\layout: path\ni
+        out\schema := path\ni
+        out\layout := path\ni
         return: (cast: (int) (0))
     if: path\res >= 0
-        out\schema: c.lm_compiler_schema_merge((cast: (int) ((path\res))))
+        out\schema := c.lm_compiler_schema_merge((cast: (int) ((path\res))))
         return: (cast: (int) (0))
     return: (cast: (int) (1))
 end: lm_compiler_reference_record_source
@@ -379,21 +379,21 @@ fn: lm_compiler_reference_path_projection (const: (@: path c.L2Path); @: out c.L
     int: row
     if: path = 0 || out = 0 || path\n < 1 || path\steps = 0 || path\fail_why != 0
         return: (cast: (int) (1))
-    out\origin: 0
-    out\origin_count: 0
-    out\origin_method: -1
-    step: path\steps + (path\n - 1)
+    out\origin := 0
+    out\origin_count := 0
+    out\origin_method := -1
+    step := path\steps + (path\n - 1)
     if: step\formal >= 0 && step\node_host >= 0
         return: (cast: (int) (c.lm_compiler_reference_input_source((cast: (int) (step\node_host)), (cast: (int) (step\formal)), out)))
-    own: step\own
+    own := step\own
     if: own >= 0
         if: own >= own_n_cell[0] || c.lm_compiler_own_nsty_get(own) < 0 || c.lm_compiler_pointer_depth(c.lm_compiler_ft_of_own(own_ty_cell[0][own])) != 1
             return: (cast: (int) (1))
-        out\schema: c.lm_compiler_own_schema(own)
-        out\path: 0
-        out\layout: 0 - 1
-        out\method: own_mi_cell[0][own]
-        out\place: c.lm_compiler_d105_own_key(own)
+        out\schema := c.lm_compiler_own_schema(own)
+        out\path := 0
+        out\layout := 0 - 1
+        out\method := own_mi_cell[0][own]
+        out\place := c.lm_compiler_d105_own_key(own)
         return: (cast: (int) (0))
     ---
     # The common resolver already retained the complete leaf contract,
@@ -402,17 +402,17 @@ fn: lm_compiler_reference_path_projection (const: (@: path c.L2Path); @: out c.L
     # from it. Array storage is not its element's giving namespace.
     if: path\array_leaf != 0 || path\leaf_model = -1 || c.lm_compiler_pointer_depth(c.lm_compiler_path_rec_leaf_ft(path)) != 1
         return: (cast: (int) (1))
-    out\schema: path\leaf_model
-    out\path: 0
-    out\layout: -1
-    out\method: -1
-    out\place: -1
+    out\schema := path\leaf_model
+    out\path := 0
+    out\layout := -1
+    out\method := -1
+    out\place := -1
     # A real declaration row additionally supplies its existing flow key.
     # Absence of that key does not erase the resolved logical leaf Model.
-    row: step\nsrow
+    row := step\nsrow
     if: row >= 0 && row < nsf_n_cell[0] && nsf_kind_cell[0][row] = 10
-        out\method: e_cell[0]
-        out\place: lm_compiler_d105_field_key(row)
+        out\method := e_cell[0]
+        out\place := lm_compiler_d105_field_key(row)
         if: out\place = -1
             return: (cast: (int) (1))
     ---
@@ -458,8 +458,8 @@ fn: lm_compiler_own_from_expr (int: oi; @: dest c.L2Tx) int
         int: part 2
         @: var_field c.L2GraphField c.lm_compiler_source_part_field(cur_mi_cell[0], 2, oi)
         if: var_field = 0
-            part: 3
-            var_field: c.lm_compiler_source_part_field(cur_mi_cell[0], 3, oi)
+            part := 3
+            var_field := c.lm_compiler_source_part_field(cur_mi_cell[0], 3, oi)
         ---
         if: var_field = 0
             # Composition may introduce an additional direct field on the
@@ -508,9 +508,9 @@ fn: lm_compiler_publish_stop (int: mi; int: first) int
         if: c.lm_compiler_own_cached(mi, k) != 0
             if: lm_compiler_publish_fast(mi, k) = 0 || count = 16
                 return: k
-            count: count + 1
+            count := count + 1
         ---
-        k: k + 1
+        k := k + 1
     ---
     return: k
 end: lm_compiler_publish_stop
@@ -538,8 +538,8 @@ fn: lm_compiler_publish_offset (int: mi; int: k) int
     int: o 0
     while: j < k
         if: lm_compiler_publish_fast(mi, j) != 0
-            o: o + lm_compiler_publish_entries(j)
-        j: j + 1
+            o := o + lm_compiler_publish_entries(j)
+        j := j + 1
     ---
     return: o
 end: lm_compiler_publish_offset
@@ -582,7 +582,7 @@ fn: lm_compiler_emit_publish_table (int: mi; int: k) int
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], own_decl_cell[0][k], "internal: a working place is declared outside its activation")))
     if: lm_compiler_publish_fast(mi, k) = 0
         return: 0
-    o: lm_compiler_publish_offset(mi, k)
+    o := lm_compiler_publish_offset(mi, k)
     if: o = 0 && c.fprintf(out_cell[0], "    []: @(void) l2_pt %d\n", lm_compiler_publish_offset(mi, own_n_cell[0])) < 0
         return: 1
     if: c.lm_compiler_tx_clear(cq_name) != 0 || lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0
@@ -618,13 +618,13 @@ fn: lm_compiler_emit_publish_helpers (int: phase) int
         return: 1
     while: mi < m_n_cell[0]
         if: c.lm_compiler_m_machine(mi) = 0
-            first: 0
+            first := 0
             while: first < own_n_cell[0]
                 if: lm_compiler_publish_fast(mi, first) = 0
-                    first: first + 1
+                    first := first + 1
                     continue
                 ---
-                stop: lm_compiler_publish_stop(mi, first)
+                stop := lm_compiler_publish_stop(mi, first)
                 if: lm_compiler_publish_signature(mi, first, stop, (cast: (int) (phase = 1))) != 0
                     return: 1
                 if: phase = 2
@@ -632,21 +632,21 @@ fn: lm_compiler_emit_publish_helpers (int: phase) int
                     # publisher runs, as the former by-value arguments were;
                     # each table element is cast back to the exact address
                     # type it was stored from (CODEX-OPUS-84PUBLISH review).
-                    k: first
-                    o: lm_compiler_publish_offset(mi, first)
+                    k := first
+                    o := lm_compiler_publish_offset(mi, first)
                     while: k < stop
                         if: lm_compiler_publish_fast(mi, k) != 0
                             if: c.fprintf(out_cell[0], "    @@: void l2_pf%d ((cast: (@@@: void) (l2_pt[%d])))[0]\n", k, o + 1) < 0
                                 return: 1
-                            o: o + lm_compiler_publish_entries(k)
+                            o := o + lm_compiler_publish_entries(k)
                         ---
-                        k: k + 1
+                        k := k + 1
                     ---
-                    k: first
-                    o: lm_compiler_publish_offset(mi, first)
+                    k := first
+                    o := lm_compiler_publish_offset(mi, first)
                     while: k < stop
                         if: lm_compiler_publish_fast(mi, k) != 0
-                            helper: c.lm_compiler_own_publish_helper(own_ty_cell[0][k])
+                            helper := c.lm_compiler_own_publish_helper(own_ty_cell[0][k])
                             if: c.lm_compiler_own_is_pointer(own_ty_cell[0][k]) != 0
                                 if: c.lm_compiler_tx_clear(type_text) != 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_oc_ft(own_ty_cell[0][k]), 1, 0, type_text) != 0
                                     return: 1
@@ -654,7 +654,7 @@ fn: lm_compiler_emit_publish_helpers (int: phase) int
                                     return: 1
                                 ---
                             else:
-                                cty: c.lm_compiler_own_num_ctype(own_ty_cell[0][k])
+                                cty := c.lm_compiler_own_num_ctype(own_ty_cell[0][k])
                                 if: cty = 0
                                     return: 1
                                 if: own_ty_cell[0][k] = 1
@@ -667,18 +667,18 @@ fn: lm_compiler_emit_publish_helpers (int: phase) int
                                     ---
                                 ---
                             ---
-                            o: o + lm_compiler_publish_entries(k)
+                            o := o + lm_compiler_publish_entries(k)
                         ---
-                        k: k + 1
+                        k := k + 1
                     ---
                     if: c.fputs("end: ", out_cell[0]) < 0 || lm_compiler_publish_name(mi, first) != 0 || c.fputs("\n", out_cell[0]) < 0
                         return: 1
                     ---
                 ---
-                first: stop
+                first := stop
             ---
         ---
-        mi: mi + 1
+        mi := mi + 1
     ---
     return: 0
 end: lm_compiler_emit_publish_helpers
@@ -724,7 +724,7 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
         return: (cast: (int) (1))
     while: k < own_n_cell[0]
         if: lm_compiler_publish_fast(work_mi_cell[0], k) != 0
-            stop: lm_compiler_publish_stop(work_mi_cell[0], k)
+            stop := lm_compiler_publish_stop(work_mi_cell[0], k)
             if: c.fputs(ind, out_cell[0]) < 0 || lm_compiler_publish_name(work_mi_cell[0], k) != 0
                 return: 1
             if: ebr_n_cell[0] = 0 && c.fputs("(l2_program_arena, 0, 0U", out_cell[0]) < 0
@@ -735,7 +735,7 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
             # holds this group's addresses; the helper reads them here.
             if: c.fputs(", l2_pt)\n", out_cell[0]) < 0
                 return: 1
-            k: stop
+            k := stop
             continue
         ---
         if: c.lm_compiler_own_cached(work_mi_cell[0], k) != 0 && (c.lm_compiler_tx_clear(cq_name) != 0 || lm_compiler_tx_own_cname(cq_name, "l2_q", k, "") != 0 || c.lm_compiler_tx_clear(cwv_name) != 0 || lm_compiler_tx_own_cname(cwv_name, "l2_wv", k, "") != 0)
@@ -769,7 +769,7 @@ fn: lm_compiler_emit_publish (const: (@: ind char)) int
             if: c.fprintf(out_cell[0], "%s%s_dirty: 0\n%s---\n", deep, cq_name\data, ind) < 0
                 return: (cast: (int) (1))
         ---
-        k: k + 1
+        k := k + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_emit_publish
@@ -790,7 +790,7 @@ fn: lm_compiler_typed_null_tail (const: (@: stmt c.LmP0Node)) int
     @: only c.LmP0Field
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) != 1
         return: 0
-    only: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
+    only := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
     if: only = 0
         return: 0
     return: lm_compiler_typed_null_value((cast: (const: @: c.LmP0Node) (only\value)))
@@ -821,8 +821,8 @@ fn: lm_compiler_emit_slot_receive (int: mi; int: k; const: (@: ind char); const:
     int: t
     if: c.lm_compiler_own_slot_at(k, at) != 0
         return: 1
-    t: tn_cell[0]
-    tn_cell[0]: t + 1
+    t := tn_cell[0]
+    tn_cell[0] := t + 1
     if: c.fprintf(out_cell[0], "%sint: l2_srb%d c.LMX_WALK_OK\n%sif: (%s) != 0 && lmx_domain_kind(l2_program_arena, (cast: (@: void) (%s))) = c.LMX_KIND_STRUCT\n%s    l2_srb%d: lmx_implements_receive_cell(l2_program_arena, (cast: (@: void) lmx_graph_cell_in(l2_program_arena, %s)), (cast: (@: void) (%s)))\n%s---\n", ind, t, ind, val, val, ind, t, at, val, ind) < 0
         return: 1
     return: lm_compiler_emit_slot_status(mi, ind, t)
@@ -851,13 +851,13 @@ fn: lm_compiler_own_cell_store_context (int: mi; int: k0; const: (@: ind char); 
         if: c.lm_compiler_own_slot_at(k, at) != 0
             return: (cast: (int) (1))
         # Slice 275: the one rebinding of a slot (lmx_walk_slot_rebind): its refusal is the statement's implicit throw, before anything changes.
-        t: tn_cell[0]
-        tn_cell[0]: t + 1
+        t := tn_cell[0]
+        tn_cell[0] := t + 1
         if: c.fprintf(out_cell[0], "%sint: l2_srb%d lmx_walk_slot_store_ref(l2_program_arena, %s, (cast: (@: void) (%s)), %s)\n", ind, t, at, val, context) < 0
             return: 1
         return: lm_compiler_emit_slot_status(mi, ind, t)
     ---
-    helper: c.lm_compiler_own_store_helper(own_ty_cell[0][k])
+    helper := c.lm_compiler_own_store_helper(own_ty_cell[0][k])
     if: helper = 0
         return: (cast: (int) (1))
     if: lm_compiler_emit_own_from(mi, k, ind) != 0
@@ -969,40 +969,40 @@ fn: lm_compiler_indent_reserve (int: need) int
     @@: nn char 0
     int: i 0
     if: need < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: need <= indent_cap_cell[0]
         return: (cast: (int) (0))
-    need_u: (cast: (size_t) need)
-    cap: (cast: (size_t) indent_cap_cell[0])
+    need_u := (cast: (size_t) need)
+    cap := (cast: (size_t) indent_cap_cell[0])
     if: cap < 1U
-        cap: 4U
+        cap := 4U
     while: cap < need_u
         if: cap > ((cast: (size_t) c.INT_MAX) / 2U)
-            cap: need_u
+            cap := need_u
         else:
-            cap: cap * 2U
+            cap := cap * 2U
         ---
     if: cap > (cast: (size_t) c.INT_MAX)
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
-    psz: sizeof(@: char)
+    psz := sizeof(@: char)
     if: c.lm_compiler_mul_ok(cap, psz) = 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
-    nb: cap * psz
-    alloc_kind_cell[0]: 8
-    nn: (cast: (@@: char) c.lm_compiler_xmalloc(nb))
+    nb := cap * psz
+    alloc_kind_cell[0] := 8
+    nn := (cast: (@@: char) c.lm_compiler_xmalloc(nb))
     if: nn = 0
         return: (cast: (int) (1))
     c.memset((cast: (@: void) nn), 0, nb)
     while: i < indent_n_cell[0]
-        nn[i]: indent_at_cell[0][i]
-        i: i + 1
+        nn[i] := indent_at_cell[0][i]
+        i := i + 1
     if: indent_at_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) indent_at_cell[0]))
-    indent_at_cell[0]: nn
-    indent_cap_cell[0]: (cast: (int) cap)
+    indent_at_cell[0] := nn
+    indent_cap_cell[0] := (cast: (int) cap)
     return: (cast: (int) (0))
 end: lm_compiler_indent_reserve
 
@@ -1016,8 +1016,8 @@ fn: lm_compiler_emit_live_code_place (@: place c.L2GraphPlace; const: (@: ind ch
         return: (cast: (int) (1))
     if: place\parent != 0 && lm_compiler_emit_live_code_place((cast: (@: c.L2GraphPlace) (place\parent)), ind, @ parent_tmp) != 0
         return: (cast: (int) (1))
-    here: tn_cell[0]
-    tn_cell[0]: tn_cell[0] + 1
+    here := tn_cell[0]
+    tn_cell[0] := tn_cell[0] + 1
     if: c.fprintf(out_cell[0], "%s@: Lmx l2_cp%d 0\n", ind, here) < 0
         return: (cast: (int) (1))
     if: parent_tmp < 0
@@ -1031,7 +1031,7 @@ fn: lm_compiler_emit_live_code_place (@: place c.L2GraphPlace; const: (@: ind ch
     ---
     if: c.fprintf(out_cell[0], "%sif: l2_cp%d = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, here, ind) < 0
         return: (cast: (int) (1))
-    \out: here
+    \out := here
     return: (cast: (int) (0))
 end: lm_compiler_emit_live_code_place
 
@@ -1051,7 +1051,7 @@ fn: lm_compiler_emit_graph_field_value (int: own; const: (@: ind char); @: dest 
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], own_decl_cell[0][own], "internal: a split-called code addresses a data place by position")))
     if: field = 0 || ind = 0 || dest = 0
         return: (cast: (int) (1))
-    tn_cell[0]: tn_cell[0] + 1
+    tn_cell[0] := tn_cell[0] + 1
     if: c.snprintf(nm, 32U, "l2_model%d", temp) < 0 || c.lm_compiler_tx_set(dest, nm) != 0
         return: (cast: (int) (1))
     # This is the declaration's source graph, not the call's mutable data.
@@ -1081,27 +1081,27 @@ fn: lm_compiler_bump_ind (const: (@: ind char); @@: dest char) int
     @: made char 0
     if: dest = 0 || ind = 0
         return: (cast: (int) (1))
-    \dest: 0
-    ln: c.strlen(ind)
+    \dest := 0
+    ln := c.strlen(ind)
     if: ln > ((cast: (size_t) -1) - 5U)
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: indent_n_cell[0] = c.INT_MAX || lm_compiler_indent_reserve(indent_n_cell[0] + 1) != 0
         return: (cast: (int) (1))
-    need: ln + 5U
-    alloc_kind_cell[0]: 8
-    made: (cast: (@: char) c.lm_compiler_xmalloc(need))
+    need := ln + 5U
+    alloc_kind_cell[0] := 8
+    made := (cast: (@: char) c.lm_compiler_xmalloc(need))
     if: made = 0
         return: (cast: (int) (1))
     c.memcpy(made, ind, ln)
-    made[ln]: 32
-    made[ln + 1U]: 32
-    made[ln + 2U]: 32
-    made[ln + 3U]: 32
-    made[ln + 4U]: 0
-    indent_at_cell[0][indent_n_cell[0]]: made
-    indent_n_cell[0]: indent_n_cell[0] + 1
-    \dest: made
+    made[ln] := 32
+    made[ln + 1U] := 32
+    made[ln + 2U] := 32
+    made[ln + 3U] := 32
+    made[ln + 4U] := 0
+    indent_at_cell[0][indent_n_cell[0]] := made
+    indent_n_cell[0] := indent_n_cell[0] + 1
+    \dest := made
     return: (cast: (int) (0))
 end: lm_compiler_bump_ind
 
@@ -1118,39 +1118,39 @@ fn: lm_compiler_descriptor_implements (int: cand; int: req; int: cons; @: out_re
     @: buf_own char (cast: (@: char) buf_own_storage\buffer)
     @: buf char 0
     if: out_result != 0
-        \out_result: 0
+        \out_result := 0
     if: cand = -1 || req < 0 || cons < 0 || out_result = 0
         return: (cast: (int) (1))
     while: k < nsf_n_cell[0]
         if: nsf_owner_cell[0][k] = req
-            req_n: req_n + 1
+            req_n := req_n + 1
         if: nsf_owner_cell[0][k] = cons
-            cons_n: cons_n + 1
-        k: k + 1
+            cons_n := cons_n + 1
+        k := k + 1
     if: req_n = 0 || cons_n = 0
-        \out_result: 1
+        \out_result := 1
         return: (cast: (int) (0))
-    k: 0
+    k := 0
     while: k < nsf_n_cell[0]
         if: nsf_owner_cell[0][k] = cons && nsf_fname_cell[0][k] != 0 && nsf_fname_cell[0][k]\data != 0 && nsf_fname_cell[0][k]\length > 0U
             # A field's name of any length is compared (l2_text_room); a name of 128 bytes or more used to be
             # passed over.
-            buf: c.lm_compiler_text_room((cast: (size_t) (nsf_fname_cell[0][k]\length + 1U)), buf_own, 128U)
+            buf := c.lm_compiler_text_room((cast: (size_t) (nsf_fname_cell[0][k]\length + 1U)), buf_own, 128U)
             if: buf = 0
                 return: (cast: (int) (1))
             c.memcpy(buf, nsf_fname_cell[0][k]\data, nsf_fname_cell[0][k]\length)
-            buf[nsf_fname_cell[0][k]\length]: 0
-            fname: buf
+            buf[nsf_fname_cell[0][k]\length] := 0
+            fname := buf
             if: c.lm_compiler_ns_has_field(req, fname) != 0
                 if: c.lm_compiler_schema_named_meta(cand, nsf_fname_cell[0][k], -1, 0) < 0 || c.lm_compiler_schema_two_heads(cand, nsf_fname_cell[0][k]) != 0
-                    \out_result: 0
+                    \out_result := 0
                     return: (cast: (int) (0))
                 ---
             ---
         ---
-        k: k + 1
+        k := k + 1
     ---
-    \out_result: 1
+    \out_result := 1
     return: (cast: (int) (0))
 end: lm_compiler_descriptor_implements
 
@@ -1160,10 +1160,10 @@ fn: lm_compiler_uses_reset () int
     @: uses_input_cell int (cast: (@: int) (@ c.l2_uses_input))
     @: uses_len_cell int (cast: (@: int) (@ c.l2_uses_len))
     @: uses_oom_cell int (cast: (@: int) (@ c.l2_uses_oom))
-    uses_method_cell[0]: -1
-    uses_input_cell[0]: -1
-    uses_len_cell[0]: 0
-    uses_oom_cell[0]: 0
+    uses_method_cell[0] := -1
+    uses_input_cell[0] := -1
+    uses_len_cell[0] := 0
+    uses_oom_cell[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_uses_reset
 
@@ -1177,7 +1177,7 @@ fn: lm_compiler_uses_fact (const: (@: fact c.L2PathFact)) int
     # the zero-step root fact or turn it into a full-model permission.
     if: fact = 0 || fact\source_use != 1 || fact\method != uses_method_cell[0]
         return: (cast: (int) (0))
-    own: c.lm_compiler_d105_key_own(uses_input_cell[0])
+    own := c.lm_compiler_d105_key_own(uses_input_cell[0])
     const: (@: port_resolved c.L2Path (cast: (const: @: c.L2Path) (@ fact\resolved)))
     if: own >= 0
         return: (cast: (int) ((cast: (int) (port_resolved\oi = own))))
@@ -1203,8 +1203,8 @@ fn: lm_compiler_uses_select (int: mi; int: input) int
         return: (cast: (int) (1))
     if: input >= 0 && c.lm_compiler_input_name(mi, input) = 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], here_node_cell[0], "internal: Consumer input no longer exists")))
-    uses_method_cell[0]: mi
-    uses_input_cell[0]: input
+    uses_method_cell[0] := mi
+    uses_input_cell[0] := input
     while: fact != 0
         # A binding that vanished is invalid inventory, never an empty use
         # set. This also checks whole-value observations for later role work.
@@ -1213,11 +1213,11 @@ fn: lm_compiler_uses_select (int: mi; int: input) int
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (fact\source)), "internal: binding source inventory is no longer current")))
         if: lm_compiler_uses_fact(fact) != 0
             if: uses_len_cell[0] = c.INT_MAX
-                alloc_err_cell[0]: 2
-                uses_oom_cell[0]: 1
+                alloc_err_cell[0] := 2
+                uses_oom_cell[0] := 1
                 return: (cast: (int) (1))
-            uses_len_cell[0]: uses_len_cell[0] + 1
-        fact: fact\next
+            uses_len_cell[0] := uses_len_cell[0] + 1
+        fact := fact\next
     ---
     return: (cast: (int) (0))
 end: lm_compiler_uses_select
@@ -1236,7 +1236,7 @@ fn: lm_compiler_source_use_binding (const: (@: fact c.L2PathFact); @: out c.L2Pa
     if: fact\source_use != 2 && (port_resolved\n < 1 || port_resolved\steps = 0)
         return: (cast: (int) (2))
     if: port_resolved\oi < 0 && port_resolved\fi >= 0 && port_resolved\root_kind = 0
-        input: c.lm_compiler_input_symbol_index((cast: (int) (fact\method)), (cast: (const: @: c.LmP0Text) (fact\input_symbol)))
+        input := c.lm_compiler_input_symbol_index((cast: (int) (fact\method)), (cast: (const: @: c.LmP0Text) (fact\input_symbol)))
         if: input < 0
             return: (cast: (int) (2))
         ---
@@ -1245,28 +1245,28 @@ fn: lm_compiler_source_use_binding (const: (@: fact c.L2PathFact); @: out c.L2Pa
         return: (cast: (int) (2))
     if: port_resolved\root_kind = 3 && (port_resolved\root < 0 || port_resolved\root >= m_n_cell[0])
         return: (cast: (int) (2))
-    out\ni: port_resolved\ni
-    out\res: port_resolved\res
-    out\oi: port_resolved\oi
-    out\fi: input
-    out\root_kind: port_resolved\root_kind
-    out\root: port_resolved\root
-    out\root_own: port_resolved\root_own
-    out\root_ft: -2
-    out\root_level: 0
-    out\root_contract_own: -1
+    out\ni := port_resolved\ni
+    out\res := port_resolved\res
+    out\oi := port_resolved\oi
+    out\fi := input
+    out\root_kind := port_resolved\root_kind
+    out\root := port_resolved\root
+    out\root_own := port_resolved\root_own
+    out\root_ft := -2
+    out\root_level := 0
+    out\root_contract_own := -1
     if: input >= 0
-        schema: c.lm_compiler_input_schema((cast: (int) (fact\method)), input)
-        out\ni: schema
-        out\res: -1
+        schema := c.lm_compiler_input_schema((cast: (int) (fact\method)), input)
+        out\ni := schema
+        out\res := -1
         if: c.lm_compiler_schema_kind(schema) = 2
-            out\ni: -1
-            out\res: c.lm_compiler_schema_index(schema)
+            out\ni := -1
+            out\res := c.lm_compiler_schema_index(schema)
         ---
     ---
     if: out\oi >= 0
-        out\res: c.lm_compiler_own_res((cast: (int) (out\oi)))
-    out\model_input: c.lm_compiler_path_root_model_input((cast: (int) ((fact\method))), input)
+        out\res := c.lm_compiler_own_res((cast: (int) (out\oi)))
+    out\model_input := c.lm_compiler_path_root_model_input((cast: (int) ((fact\method))), input)
     return: (cast: (int) (c.lm_compiler_path_root_close(out, (cast: (int) ((fact\method))))))
 end: lm_compiler_source_use_binding
 
@@ -1288,35 +1288,35 @@ fn: lm_compiler_source_use_resolve (const: (@: fact c.L2PathFact); @: out c.L2Pa
     c.lm_compiler_path_init(0, 0U, out)
     if: fact = 0 || (fact\source_use != 0 && fact\source_use != 1) || fact\use_site = 0 || fact\method < 0 || fact\method >= m_n_cell[0]
         return: (cast: (int) (2))
-    room_tag_cell[0]: "source-resolution"
-    status: c.lm_compiler_path_prepared_view((cast: (const: @: c.L2Path) (@ fact\resolved)), out)
+    room_tag_cell[0] := "source-resolution"
+    status := c.lm_compiler_path_prepared_view((cast: (const: @: c.L2Path) (@ fact\resolved)), out)
     if: status != 0
-        room_tag_cell[0]: previous_tag
+        room_tag_cell[0] := previous_tag
         return: (cast: (int) (status))
     if: c.lm_compiler_source_save(@ saved) != 0
-        room_tag_cell[0]: previous_tag
+        room_tag_cell[0] := previous_tag
         return: (cast: (int) (3))
-    status: c.lm_compiler_source_restore((cast: (const: @: c.L2SourceSite) (fact\use_site)))
+    status := c.lm_compiler_source_restore((cast: (const: @: c.L2SourceSite) (fact\use_site)))
     if: status = 0
-        status: lm_compiler_source_use_binding(fact, out)
+        status := lm_compiler_source_use_binding(fact, out)
         if: status = 0
-            status: c.lm_compiler_path_walk_bound(out)
+            status := c.lm_compiler_path_walk_bound(out)
             if: status < 0
-                status: 1
+                status := 1
             if: alloc_err_cell[0] != 0
-                status: 3
+                status := 3
             ---
         ---
     else:
-        status: 3
-    restored: c.lm_compiler_source_restore(@ saved)
+        status := 3
+    restored := c.lm_compiler_source_restore(@ saved)
     c.lm_compiler_xfree((cast: (@: void) ((cast: (@: void) saved\scopes))))
-    path_fail_seg_cell[0]: fail_seg
-    path_fail_why_cell[0]: fail_why
-    uses_node_for_root_cell[0]: root_flag
-    room_tag_cell[0]: previous_tag
+    path_fail_seg_cell[0] := fail_seg
+    path_fail_why_cell[0] := fail_why
+    uses_node_for_root_cell[0] := root_flag
+    room_tag_cell[0] := previous_tag
     if: restored != 0
-        status: 3
+        status := 3
     if: status = 2
         c.lm_compiler_path_release(out)
         c.lm_compiler_path_init(0, 0U, out)
@@ -1353,43 +1353,43 @@ fn: lm_compiler_uses_project_from (const: (@: fact c.L2PathFact); int: begin; in
     const: (@: port_resolved c.L2Path (cast: (const: @: c.L2Path) (@ fact\resolved)))
     if: begin >= port_resolved\n
         return: (cast: (int) (2))
-    room_tag_cell[0]: "consumer-project"
-    status: c.lm_compiler_path_prepared_view((cast: (const: @: c.L2Path) (@ fact\resolved)), out)
+    room_tag_cell[0] := "consumer-project"
+    status := c.lm_compiler_path_prepared_view((cast: (const: @: c.L2Path) (@ fact\resolved)), out)
     if: status != 0
-        room_tag_cell[0]: previous_tag
+        room_tag_cell[0] := previous_tag
         return: (cast: (int) (status))
     if: c.lm_compiler_source_save(@ saved) != 0
-        room_tag_cell[0]: previous_tag
+        room_tag_cell[0] := previous_tag
         return: (cast: (int) (3))
-    status: c.lm_compiler_source_restore((cast: (const: @: c.L2SourceSite) (fact\use_site)))
+    status := c.lm_compiler_source_restore((cast: (const: @: c.L2SourceSite) (fact\use_site)))
     if: status = 0
         if: kind = 1
-            ni: c.lm_compiler_schema_index(schema)
+            ni := c.lm_compiler_schema_index(schema)
         if: kind = 2
-            result: c.lm_compiler_schema_index(schema)
+            result := c.lm_compiler_schema_index(schema)
         if: kind = 3
-            method: c.lm_compiler_schema_index(schema)
-            root_kind: 3
-            out\root: method
-        out\ni: ni
-        out\res: result
-        out\root_kind: root_kind
-        status: c.lm_compiler_path_walk_steps_from(out, begin, ni, result, root_kind, -1, method, -1, 0, 0, 0)
+            method := c.lm_compiler_schema_index(schema)
+            root_kind := 3
+            out\root := method
+        out\ni := ni
+        out\res := result
+        out\root_kind := root_kind
+        status := c.lm_compiler_path_walk_steps_from(out, begin, ni, result, root_kind, -1, method, -1, 0, 0, 0)
         if: status < 0
-            status: 1
+            status := 1
         if: alloc_err_cell[0] != 0
-            status: 3
+            status := 3
         ---
     else:
-        status: 3
-    restored: c.lm_compiler_source_restore(@ saved)
+        status := 3
+    restored := c.lm_compiler_source_restore(@ saved)
     c.lm_compiler_xfree((cast: (@: void) ((cast: (@: void) saved\scopes))))
-    path_fail_seg_cell[0]: fail_seg
-    path_fail_why_cell[0]: fail_why
-    uses_node_for_root_cell[0]: root_flag
-    room_tag_cell[0]: previous_tag
+    path_fail_seg_cell[0] := fail_seg
+    path_fail_why_cell[0] := fail_why
+    uses_node_for_root_cell[0] := root_flag
+    room_tag_cell[0] := previous_tag
     if: restored != 0
-        status: 3
+        status := 3
     return: (cast: (int) (status))
 end: lm_compiler_uses_project_from
 
@@ -1409,37 +1409,37 @@ fn: lm_compiler_descriptor_used (int: cand; int: req; @: out_result int) int
     int: i
     int: compatible
     if: out_result != 0
-        \out_result: 0
+        \out_result := 0
     if: cand = -1 || req = -1 || out_result = 0 || uses_ready_cell[0] = 0 || uses_method_cell[0] < 0
         return: (cast: (int) (1))
     while: fact != 0
         if: lm_compiler_uses_fact(fact) != 0
-            status: lm_compiler_uses_project(fact, req, needed)
+            status := lm_compiler_uses_project(fact, req, needed)
             if: status > 1
                 c.lm_compiler_path_release(needed)
                 return: (cast: (int) (1))
             # A written path outside the requirement is not a field of that
             # requirement. Its own source CHECK still judges that expression.
             if: status = 0
-                status: lm_compiler_uses_project(fact, cand, actual)
+                status := lm_compiler_uses_project(fact, cand, actual)
                 if: status > 1
                     c.lm_compiler_path_release(actual)
                     c.lm_compiler_path_release(needed)
                     return: (cast: (int) (1))
-                compatible: (cast: (int) (status = 0))
-                i: 0
+                compatible := (cast: (int) (status = 0))
+                i := 0
                 while: compatible != 0 && i < needed\n
-                    nstep: needed\steps + i
-                    astep: actual\steps + i
+                    nstep := needed\steps + i
+                    astep := actual\steps + i
                     if: nstep\locus = 7
                         if: astep\locus != 7 || astep\elem_ty != nstep\elem_ty
-                            compatible: 0
+                            compatible := 0
                         ---
                     else:
                         if: astep\kind != nstep\kind
-                            compatible: 0
+                            compatible := 0
                     ---
-                    i: i + 1
+                    i := i + 1
                 ---
                 c.lm_compiler_path_release(actual)
                 if: compatible = 0
@@ -1449,9 +1449,9 @@ fn: lm_compiler_descriptor_used (int: cand; int: req; @: out_result int) int
             ---
             c.lm_compiler_path_release(needed)
         ---
-        fact: fact\next
+        fact := fact\next
     ---
-    \out_result: 1
+    \out_result := 1
     return: (cast: (int) (0))
 end: lm_compiler_descriptor_used
 
@@ -1479,7 +1479,7 @@ fn: lm_compiler_admit_implements (int: cand; int: req; int: cons; const: (@: can
     int: status
     if: cand = -1 || req < 0 || cons < 0
         return: (cast: (int) (0))
-    status: lm_compiler_descriptor_implements(cand, req, cons, @ compatible)
+    status := lm_compiler_descriptor_implements(cand, req, cons, @ compatible)
     return: (cast: (int) (lm_compiler_admit_finish(cand, req, status, compatible, cand_name, path, at, context)))
 end: lm_compiler_admit_implements
 
@@ -1489,7 +1489,7 @@ fn: lm_compiler_admit_paths (int: cand; int: req; const: (@: cand_name c.LmP0Tex
     int: status
     if: cand = -1 || req = -1
         return: (cast: (int) (0))
-    status: lm_compiler_descriptor_used(cand, req, @ compatible)
+    status := lm_compiler_descriptor_used(cand, req, @ compatible)
     return: (cast: (int) (lm_compiler_admit_finish(cand, req, status, compatible, cand_name, path, at, context)))
 end: lm_compiler_admit_paths
 
@@ -1500,7 +1500,7 @@ fn: lm_compiler_admit_consumer_ix (int: cand; int: req; int: mi; int: input; con
         return: (cast: (int) (0))
     if: lm_compiler_uses_select(mi, input) != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "internal: Consumer source inventory is not ready")))
-    status: lm_compiler_admit_paths(cand, req, 0, path, at, context)
+    status := lm_compiler_admit_paths(cand, req, 0, path, at, context)
     lm_compiler_uses_reset()
     return: (cast: (int) (status))
 end: lm_compiler_admit_consumer_ix
@@ -1564,16 +1564,16 @@ fn: lm_compiler_type_value (int: ni; @: dest c.L2Tx) int
     if: lm_compiler_type_inst(ni, dest) != 0
         return: 1
     if: ns_parent_cell[0][ni] >= 0
-        slot: c.lm_compiler_ns_field_in_parent(ni)
+        slot := c.lm_compiler_ns_field_in_parent(ni)
         if: slot < 0 || lm_compiler_type_inst(ns_parent_cell[0][ni], parent) != 0
             return: 1
-        unit: (cast: (const: @: char) (parent\data))
+        unit := (cast: (const: @: char) (parent\data))
     else:
         if: ns_eternal_cell[0][ni] >= 0
             return: 0
-        slot: c.lm_compiler_ns_unit_slot(ni)
+        slot := c.lm_compiler_ns_unit_slot(ni)
         if: recv_unit_cell[0] != 0
-            unit: recv_unit_cell[0]
+            unit := recv_unit_cell[0]
         ---
     ---
     if: c.snprintf(nm, 32U, ", %uU)", (cast: (unsigned) slot)) < 0
@@ -1615,7 +1615,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
     int: status
     int: t
     if: context != 0
-        context[0]: -1
+        context[0] := -1
     if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
         return: 1
     if: dest = 0
@@ -1623,7 +1623,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
     # K02c: a merge result's schema (tagged) is instanced by the result itself -- the Structure its own slot holds,
     # the one place its layout exists at run time; no schema Structure is manufactured.
     if: c.lm_compiler_schema_kind(ni) = 2
-        oi: mres_own_cell[0][c.lm_compiler_schema_index(ni)]
+        oi := mres_own_cell[0][c.lm_compiler_schema_index(ni)]
         if: oi < 0 || oi >= own_n_cell[0]
             return: (cast: (int) (1))
         # The method being EMITTED may hold the result as a working value not yet published to its cell (the root
@@ -1635,29 +1635,29 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
                 return: (cast: (int) (1))
             return: (cast: (int) (lm_compiler_tx_own_cname(dest, "l2_q", oi, ")")))
         ---
-        status: lm_compiler_emit_graph_field_value(oi, ind, dest)
+        status := lm_compiler_emit_graph_field_value(oi, ind, dest)
     else:
         if: ni < 0 || ni >= ns_n_cell[0]
             return: 1
         if: ns_local_cell[0][ni] < 0
             if: full_value != 0
-                status: lm_compiler_type_value(ni, dest)
+                status := lm_compiler_type_value(ni, dest)
             else:
-                status: lm_compiler_type_inst(ni, dest)
+                status := lm_compiler_type_inst(ni, dest)
             ---
         else:
             if: recv_unit_cell[0] != 0
-                oi: lm_compiler_model_root_own(ni)
+                oi := lm_compiler_model_root_own(ni)
                 if: oi < 0 || c.lm_compiler_tx_clear(dest) != 0
                     return: (cast: (int) c.lm_compiler_error(src_cell[0], ns_at_cell[0][ni], "internal: a receiving local model has no source field"))
-                status: lm_compiler_occ_field_expr_append(oi, recv_unit_cell[0], dest)
+                status := lm_compiler_occ_field_expr_append(oi, recv_unit_cell[0], dest)
             else:
                 if: ns_parent_cell[0][ni] >= 0
                     if: lm_compiler_model_inst(mi, ns_parent_cell[0][ni], ind, dest) != 0
                         return: 1
-                    status: lm_compiler_model_child(ni, dest)
+                    status := lm_compiler_model_child(ni, dest)
                 else:
-                    oi: lm_compiler_model_root_own(ni)
+                    oi := lm_compiler_model_root_own(ni)
                     if: oi < 0
                         return: 1
                     if: mi = work_mi_cell[0] && c.lm_compiler_own_cached(mi, oi) != 0
@@ -1667,7 +1667,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
                             return: 1
                         return: lm_compiler_tx_own_cname(dest, "l2_q", oi, ")")
                     ---
-                    status: lm_compiler_emit_graph_field_value(oi, ind, dest)
+                    status := lm_compiler_emit_graph_field_value(oi, ind, dest)
                 ---
             ---
         ---
@@ -1678,8 +1678,8 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
         return: 0
     # Decode the one selected source object, including an existing low box.
     # It is not uniformly a fresh target-model constructor.
-    t: tn_cell[0]
-    tn_cell[0]: t + 1
+    t := tn_cell[0]
+    tn_cell[0] := t + 1
     if: c.snprintf(name, 32U, "l2_t%d", t) < 0 || c.snprintf(record, 64U, "@ l2_cv%d", t) < 0
         return: 1
     if: c.fprintf(out_cell[0], "%s@: void l2_model_value%d (cast: (@: void) (%s))\n%sLmxWalkValue: l2_cv%d\n%sint: l2_model_status%d lmx_walk_value_cell(l2_program_arena, l2_model_value%d, @ l2_cv%d)\n", ind, t, dest\data, ind, t, ind, t, t, t) < 0
@@ -1689,7 +1689,7 @@ fn: lm_compiler_model_inst_full (int: mi; int: ni; const: (@: ind char); @: dest
     if: c.lm_compiler_tx_set(dest, name) != 0 || c.lm_compiler_tx_set(full_value, record) != 0
         return: 1
     if: context != 0
-        context[0]: t
+        context[0] := t
     return: 0
 end: lm_compiler_model_inst_full
 
@@ -1699,11 +1699,11 @@ fn: lm_compiler_pad_of (const: (@: blk c.LmP0Structure)) int
     @@@: padb_cell c.LmP0Structure (cast: (@@@: c.LmP0Structure) (@ c.l2_padb))
     @@: padi_cell int (cast: (@@: int) (@ c.l2_padi))
     int: i
-    i: pad_n_cell[0] - 1
+    i := pad_n_cell[0] - 1
     while: i >= 0
         if: padb_cell[0][i] = blk
             return: (cast: (int) (padi_cell[0][i]))
-        i: i - 1
+        i := i - 1
     return: (cast: (int) (-1))
 end: lm_compiler_pad_of
 
@@ -1719,7 +1719,7 @@ fn: lm_compiler_emit_deliver (int: mi; const: (@: tname c.LmP0Text); const: (@: 
     int: p
     if: c.lm_compiler_catch_find(mi, tname, cname, @ blk, @ idx) = 0
         return: (cast: (int) (0))
-    p: lm_compiler_pad_of(blk)
+    p := lm_compiler_pad_of(blk)
     # A handler's section ends with its block (the book, "Выходы"): the return trailer stands after the pad has closed, and what it raises
     # leaves the method.
     if: p < 0
@@ -1746,13 +1746,13 @@ fn: lm_compiler_emit_implicit_throw (int: mi; const: (@: name char); const: (@: 
     @: deep char 0
     int: st
     int: dv
-    st: c.lm_compiler_implicit_status(mi, name)
+    st := c.lm_compiler_implicit_status(mi, name)
     if: st <= 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: not an implicit throw name")))
     if: lm_compiler_bump_ind(ind, @ deep) != 0
         return: (cast: (int) (1))
     # A handler in this method takes it (S1.3: a catch of the operator's name); else it leaves.
-    dv: lm_compiler_emit_deliver(mi, 0, name, "0", deep)
+    dv := lm_compiler_emit_deliver(mi, 0, name, "0", deep)
     if: dv < 0
         return: (cast: (int) (1))
     if: dv > 0
@@ -1782,7 +1782,7 @@ fn: lm_compiler_query_fact_find (@: first c.LmP0Field; int: n; int: mi; @@: out 
     @: found c.L2PathFact 0
     if: out = 0
         return: (cast: (int) (2))
-    \out: 0
+    \out := 0
     c.lm_compiler_reference_fields(@ first, @ n)
     if: first = 0 || n < 1 || mi < 0 || mi >= m_n_cell[0]
         return: (cast: (int) (0))
@@ -1791,11 +1791,11 @@ fn: lm_compiler_query_fact_find (@: first c.LmP0Field; int: n; int: mi; @@: out 
         if: fact\source_use = 0 && fact\stage = 1 && fact\method = mi && fact\source_method = here_source_mi_cell[0] && fact\source = here_node_cell[0] && port_resolved\source_first = first && port_resolved\run_count = n && fact\use_site != 0
             if: found != 0
                 return: (cast: (int) (2))
-            found: fact
+            found := fact
         ---
-        fact: fact\next
+        fact := fact\next
     ---
-    \out: found
+    \out := found
     return: (cast: (int) ((cast: (int) (found != 0))))
 end: lm_compiler_query_fact_find
 
@@ -1813,36 +1813,36 @@ fn: lm_compiler_use_receiver (@: first c.LmP0Field; int: n; int: mi; int: target
     if: fact = 0 || target < 0 || target >= m_n_cell[0]
         return: (cast: (int) (0))
     if: key >= 0
-        input: c.lm_compiler_input_name(target, key)
+        input := c.lm_compiler_input_name(target, key)
         if: input = 0
             return: (cast: (int) (0))
     ---
     if: selector >= 0
-        selected: c.lm_compiler_input_name(mi, selector)
+        selected := c.lm_compiler_input_name(mi, selector)
         if: selected = 0
             return: (cast: (int) (0))
     ---
-    receiver: fact\receivers
+    receiver := fact\receivers
     while: receiver != 0
         if: receiver\method = target && (input != 0 || receiver\key = key) && receiver\input_symbol = input && receiver\selector_symbol = selected && receiver\site = site
             return: (cast: (int) (0))
-        receiver: receiver\next
+        receiver := receiver\next
     ---
-    room_tag_cell[0]: "source-use-role"
+    room_tag_cell[0] := "source-use-role"
     c.lm_compiler_alloc_note("receiver")
-    receiver: (cast: (@: c.L2UseReceiver) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2UseReceiver)))))
-    room_tag_cell[0]: previous_tag
+    receiver := (cast: (@: c.L2UseReceiver) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2UseReceiver)))))
+    room_tag_cell[0] := previous_tag
     if: receiver = 0
-        alloc_err_cell[0]: 1
+        alloc_err_cell[0] := 1
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], site, "out of memory")))
-    receiver\method: target
-    receiver\key: key
-    receiver\input_symbol: input
-    receiver\selector_symbol: selected
-    receiver\site: site
-    receiver\next: fact\receivers
-    fact\receivers: receiver
-    fact\use_roles: fact\use_roles | 2
+    receiver\method := target
+    receiver\key := key
+    receiver\input_symbol := input
+    receiver\selector_symbol := selected
+    receiver\site := site
+    receiver\next := fact\receivers
+    fact\receivers := receiver
+    fact\use_roles := fact\use_roles | 2
     return: (cast: (int) (0))
 end: lm_compiler_use_receiver
 
@@ -1870,7 +1870,7 @@ fn: lm_compiler_tx_own_cname (@: t c.L2Tx; const: (@: prefix char); int: k; cons
     @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     const: (@: name c.LmP0Text 0)
     if: k >= 0 && k < own_n_cell[0] && own_name_cell[0] != 0
-        name: own_name_cell[0][k]
+        name := own_name_cell[0][k]
     return: (cast: (int) (lm_compiler_tx_cname(t, prefix, k, -1, name, tail)))
 end: lm_compiler_tx_own_cname
 
@@ -1883,15 +1883,15 @@ fn: lm_compiler_address_name (int: mi; const: (@: name c.LmP0Text); @: out c.L2A
     if: name = 0 || c.lm_compiler_ident(name) = 0
         return: (cast: (int) (1))
     c.lm_compiler_path_init((cast: (const: @: char) (name\data)), (cast: (size_t) (name\length)), @ path)
-    path\run_count: 1
-    path\names_run: 1
-    cur_mi_cell[0]: mi
-    status: c.lm_compiler_path_root_resolve(@ path)
+    path\run_count := 1
+    path\names_run := 1
+    cur_mi_cell[0] := mi
+    status := c.lm_compiler_path_root_resolve(@ path)
     if: status = 0
-        status: c.lm_compiler_path_walk_selected(@ path)
-    cur_mi_cell[0]: saved
+        status := c.lm_compiler_path_walk_selected(@ path)
+    cur_mi_cell[0] := saved
     if: status = 0
-        status: c.lm_compiler_address_record(@ path, mi, out)
+        status := c.lm_compiler_address_record(@ path, mi, out)
     c.lm_compiler_path_release(@ path)
     return: (cast: (int) ((cast: (int) (status != 0))))
 end: lm_compiler_address_name
@@ -1913,7 +1913,7 @@ fn: lm_compiler_occ_expr_append (int: mi; const: (@: unit char); @: dest c.L2Tx)
     if: mi = e_cell[0]
         return: (cast: (int) (c.lm_compiler_tx_cat(dest, unit)))
     if: ni >= 0 && ns_local_cell[0][ni] >= 0
-        own: lm_compiler_model_root_own(ni)
+        own := lm_compiler_model_root_own(ni)
         if: own < 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], ns_at_cell[0][ni], "internal: a local callable has no physical source owner")))
         ---
@@ -1996,31 +1996,31 @@ fn: lm_compiler_use_unit_child_at (int: home; int: kind; int: v; int: role) int
     if: (kind != 1 && kind != 2 && kind != 3 && kind != 7) || v < 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: a use names an unknown unit child")))
     if: kind = 7
-        d: c.lm_compiler_use_ns_depth(v)
+        d := c.lm_compiler_use_ns_depth(v)
     if: kind = 1 && c.lm_compiler_method_source_own(v) >= 0
         return: (cast: (int) (lm_compiler_use_cell_note_at(home, 10, (cast: (int) (c.lm_compiler_method_source_own(v))), role)))
     if: d = 0
         return: (cast: (int) (0))
-    tags: (cast: (@: int) c.calloc((cast: (size_t) d), c.sizeof(c.int)))
-    vals: (cast: (@: int) c.calloc((cast: (size_t) d), c.sizeof(c.int)))
+    tags := (cast: (@: int) c.calloc((cast: (size_t) d), c.sizeof(c.int)))
+    vals := (cast: (@: int) c.calloc((cast: (size_t) d), c.sizeof(c.int)))
     if: tags = 0 || vals = 0
         c.free((cast: (@: void) tags))
         c.free((cast: (@: void) vals))
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "out of memory")))
     ---
     if: kind = 7
-        i: d - 1
+        i := d - 1
         while: i > 0
-            tags[i]: 7
-            vals[i]: v
-            v: ns_parent_cell[0][v]
-            i: i - 1
+            tags[i] := 7
+            vals[i] := v
+            v := ns_parent_cell[0][v]
+            i := i - 1
         ---
-        kind: 3
+        kind := 3
     ---
-    tags[0]: kind
-    vals[0]: v
-    rc: lm_compiler_use_note_at(home, 0, tags, vals, d, 0, 0U, role)
+    tags[0] := kind
+    vals[0] := v
+    rc := lm_compiler_use_note_at(home, 0, tags, vals, d, 0, 0U, role)
     c.free((cast: (@: void) tags))
     c.free((cast: (@: void) vals))
     return: (cast: (int) (rc))
@@ -2035,7 +2035,7 @@ fn: lm_compiler_use_model_at (int: home; int: req; int: role) int
     if: req < 0 || req >= ns_n_cell[0] || c.lm_compiler_use_ns_depth(req) = 0
         return: (cast: (int) (0))
     while: ns_parent_cell[0][root] >= 0
-        root: ns_parent_cell[0][root]
+        root := ns_parent_cell[0][root]
     ---
     if: ns_eternal_cell[0][root] >= 0
         return: (cast: (int) (lm_compiler_use_unit_child_at(home, 2, ns_eternal_cell[0][root], role)))
@@ -2054,8 +2054,8 @@ fn: lm_compiler_use_cell_note_at (int: home; int: form; int: oi; int: role) int
     @: ut int (cast: (@: int) ut_storage\buffer)
     c.L2FrontendScratchInt1: uv_storage
     @: uv int (cast: (@: int) uv_storage\buffer)
-    ut[0]: form
-    uv[0]: oi
+    ut[0] := form
+    uv[0] := oi
     return: (cast: (int) (lm_compiler_use_note_at(home, 0, ut, uv, 1, 0, 0U, role)))
 end: lm_compiler_use_cell_note_at
 
@@ -2077,13 +2077,13 @@ fn: lm_compiler_d105_room () int
     int: want
     if: d105_n_cell[0] < d105_cap_cell[0]
         return: (cast: (int) (0))
-    want: c.lm_compiler_cap_next(d105_cap_cell[0], d105_n_cell[0] + 1)
+    want := c.lm_compiler_cap_next(d105_cap_cell[0], d105_n_cell[0] + 1)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105_mi_cell[0], d105_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105_k_cell[0], d105_n_cell[0], want) != 0
         return: (cast: (int) (1))
-    d105_cap_cell[0]: want
+    d105_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_d105_room
 
@@ -2101,19 +2101,19 @@ fn: lm_compiler_d105s_room () int
     @: p void
     if: d105s_n_cell[0] < d105s_cap_cell[0]
         return: (cast: (int) (0))
-    want: c.lm_compiler_cap_next(d105s_cap_cell[0], d105s_n_cell[0] + 1)
+    want := c.lm_compiler_cap_next(d105s_cap_cell[0], d105s_n_cell[0] + 1)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105s_mi_cell[0], d105s_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105s_k_cell[0], d105s_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105s_ty_cell[0], d105s_n_cell[0], want) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105s_no_cell[0], d105s_n_cell[0], want) != 0
         return: (cast: (int) (1))
-    p: c.lm_compiler_vec_grow((cast: (@: void) d105s_at_cell[0]), d105s_n_cell[0], want, sizeof(@: char))
+    p := c.lm_compiler_vec_grow((cast: (@: void) d105s_at_cell[0]), d105s_n_cell[0], want, sizeof(@: char))
     if: p = 0
         return: (cast: (int) (1))
-    d105s_at_cell[0]: (cast: (@@: c.LmP0Node) p)
-    d105s_cap_cell[0]: want
+    d105s_at_cell[0] := (cast: (@@: c.LmP0Node) p)
+    d105s_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_d105s_room
 
@@ -2132,9 +2132,9 @@ fn: lm_compiler_d105e_room () int
     @: p void
     if: d105e_n_cell[0] < d105e_cap_cell[0]
         return: (cast: (int) (0))
-    want: c.lm_compiler_cap_next(d105e_cap_cell[0], d105e_n_cell[0] + 1)
+    want := c.lm_compiler_cap_next(d105e_cap_cell[0], d105e_n_cell[0] + 1)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105e_fmi_cell[0], d105e_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105e_fk_cell[0], d105e_n_cell[0], want) != 0
         return: (cast: (int) (1))
@@ -2142,11 +2142,11 @@ fn: lm_compiler_d105e_room () int
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105e_soft_cell[0], d105e_n_cell[0], want) != 0
         return: (cast: (int) (1))
-    p: c.lm_compiler_vec_grow((cast: (@: void) d105e_at_cell[0]), d105e_n_cell[0], want, sizeof(@: char))
+    p := c.lm_compiler_vec_grow((cast: (@: void) d105e_at_cell[0]), d105e_n_cell[0], want, sizeof(@: char))
     if: p = 0
         return: (cast: (int) (1))
-    d105e_at_cell[0]: (cast: (@@: c.LmP0Node) p)
-    d105e_cap_cell[0]: want
+    d105e_at_cell[0] := (cast: (@@: c.LmP0Node) p)
+    d105e_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_d105e_room
 
@@ -2160,13 +2160,13 @@ fn: lm_compiler_d105t_room () int
     int: want
     if: d105t_n_cell[0] < d105t_cap_cell[0]
         return: (cast: (int) (0))
-    want: c.lm_compiler_cap_next(d105t_cap_cell[0], d105t_n_cell[0] + 1)
+    want := c.lm_compiler_cap_next(d105t_cap_cell[0], d105t_n_cell[0] + 1)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105t_cand_cell[0], d105t_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105t_req_cell[0], d105t_n_cell[0], want) != 0
         return: (cast: (int) (1))
-    d105t_cap_cell[0]: want
+    d105t_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_d105t_room
 
@@ -2179,22 +2179,22 @@ fn: lm_compiler_d105_cells (int: req) @: int
     int: want
     @: p void
     if: need < 1
-        need: 1
+        need := 1
     if: need > c.INT_MAX / 2
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (@: int) (0))
-    need: need * 2
+    need := need * 2
     if: need <= d105_tcap_cell[0]
         return: (cast: (@: int) (d105_tbuf_cell[0]))
-    want: c.lm_compiler_cap_next(d105_tcap_cell[0], need)
+    want := c.lm_compiler_cap_next(d105_tcap_cell[0], need)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (@: int) (0))
-    p: c.lm_compiler_vec_grow((cast: (@: void) d105_tbuf_cell[0]), 0, want, (cast: (size_t) (c.sizeof(c.int))))
+    p := c.lm_compiler_vec_grow((cast: (@: void) d105_tbuf_cell[0]), 0, want, (cast: (size_t) (c.sizeof(c.int))))
     if: p = 0
         return: (cast: (@: int) (0))
-    d105_tbuf_cell[0]: (cast: (@: int) p)
-    d105_tcap_cell[0]: want
+    d105_tbuf_cell[0] := (cast: (@: int) p)
+    d105_tcap_cell[0] := want
     return: (cast: (@: int) (d105_tbuf_cell[0]))
 end: lm_compiler_d105_cells
 
@@ -2207,9 +2207,9 @@ fn: lm_compiler_d105_mark (int: mi; int: k) int
         return: (cast: (int) (0))
     if: lm_compiler_d105_room() != 0
         return: (cast: (int) (1))
-    d105_mi_cell[0][d105_n_cell[0]]: mi
-    d105_k_cell[0][d105_n_cell[0]]: k
-    d105_n_cell[0]: d105_n_cell[0] + 1
+    d105_mi_cell[0][d105_n_cell[0]] := mi
+    d105_k_cell[0][d105_n_cell[0]] := k
+    d105_n_cell[0] := d105_n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_d105_mark
 
@@ -2220,39 +2220,39 @@ fn: lm_compiler_d105_resolve_field (int: cand; const: (@: needed c.L2SchemaField
     @: target c.L2SchemaField (@ step\requirement)
     c.memset((cast: (@: void) step), 0, c.sizeof(c.L2D105Step))
     c.memcpy((cast: (@: void) target), (cast: (@: void) needed), c.sizeof(c.L2SchemaField))
-    step\selector: occurrence
-    step\physical: -1
-    step\slot: -1
-    step\child_pair: -1
+    step\selector := occurrence
+    step\physical := -1
+    step\slot := -1
+    step\child_pair := -1
     if: d105_plans_sealed_cell[0] != 0
-        step\status: 4
+        step\status := 4
         return: (cast: (int) (4))
     if: needed\name = 0
         return: (cast: (int) (0))
-    step\physical: c.lm_compiler_schema_named(cand, (cast: (const: @: c.LmP0Text) (needed\name)), occurrence, actual)
+    step\physical := c.lm_compiler_schema_named(cand, (cast: (const: @: c.LmP0Text) (needed\name)), occurrence, actual)
     # A bare use against two or more root heads of the candidate selects none (N4-U U2).
     if: occurrence < 0 && step\physical >= 0 && c.lm_compiler_schema_two_heads(cand, (cast: (const: @: c.LmP0Text) (needed\name))) != 0
-        step\physical: -1
+        step\physical := -1
     ---
     if: step\physical < 0 || actual\kind != needed\kind
         return: (cast: (int) (0))
     if: (needed\kind = 2 || needed\kind = 3) && actual\model != needed\model
-        step\status: 3
+        step\status := 3
         return: (cast: (int) (3))
     if: needed\kind = 10 && (actual\pointee != -1 || needed\pointee != -1)
         # A graph reference has one machine pointer ABI and a separate
         # structural contract. ABI equality alone proves no pointee map.
         if: actual\model != needed\model || actual\pointee = -1 || needed\pointee = -1 || actual\pointee != needed\pointee
-            step\status: 3
+            step\status := 3
             return: (cast: (int) (3))
         ---
-        step\slot: step\physical
+        step\slot := step\physical
         return: (cast: (int) (0))
     ---
     if: needed\kind = 10 && (actual\type_word = 0 || needed\type_word = 0 || c.lm_compiler_text_same((cast: (const: @: c.LmP0Text) (actual\type_word)), (cast: (const: @: c.LmP0Text) (needed\type_word))) = 0)
-        step\status: 3
+        step\status := 3
         return: (cast: (int) (3))
-    step\slot: step\physical
+    step\slot := step\physical
     return: (cast: (int) (0))
 end: lm_compiler_d105_resolve_field
 
@@ -2264,18 +2264,18 @@ fn: lm_compiler_d105_plan (int: cand; int: req; int: create) @: c.L2D105Plan
     while: plan != 0
         if: plan\candidate = cand && plan\requirement = req
             return: (cast: (@: c.L2D105Plan) (plan))
-        plan: plan\next
+        plan := plan\next
     ---
     if: create = 0 || d105_plans_sealed_cell[0] != 0
         return: (cast: (@: c.L2D105Plan) (0))
-    plan: (cast: (@: c.L2D105Plan) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2D105Plan)))))
+    plan := (cast: (@: c.L2D105Plan) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2D105Plan)))))
     if: plan = 0
         return: (cast: (@: c.L2D105Plan) (0))
     c.memset((cast: (@: void) plan), 0, c.sizeof(c.L2D105Plan))
-    plan\candidate: cand
-    plan\requirement: req
-    plan\next: d105_plans_cell[0]
-    d105_plans_cell[0]: plan
+    plan\candidate := cand
+    plan\requirement := req
+    plan\next := d105_plans_cell[0]
+    d105_plans_cell[0] := plan
     return: (cast: (@: c.L2D105Plan) (plan))
 end: lm_compiler_d105_plan
 
@@ -2295,41 +2295,41 @@ fn: lm_compiler_d105_plan_build (@: plan c.L2D105Plan) int
             return: (cast: (int) (1))
         const: (@: port_sealed_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
         return: (cast: (int) ((cast: (int) (port_sealed_steps\size != (cast: (size_t) (plan\width * 2)) || (port_sealed_steps\size != 0U && port_sealed_steps\data = 0)))))
-    width: c.lm_compiler_schema_width((cast: (int) (plan\requirement)))
-    plan\ready: 0
+    width := c.lm_compiler_schema_width((cast: (int) (plan\requirement)))
+    plan\ready := 0
     if: width < 0 || width > c.INT_MAX / 2
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     @: port_steps c.L2D105StepDynamicArray (cast: (@: c.L2D105StepDynamicArray) (@ plan\steps))
     if: (cast: (size_t) (width * 2)) > port_steps\capacity
-        steps: (cast: (@: c.L2D105Step) c.lm_compiler_bound_alloc((cast: (size_t) (width * 2)), (cast: (size_t) (c.sizeof(c.L2D105Step)))))
+        steps := (cast: (@: c.L2D105Step) c.lm_compiler_bound_alloc((cast: (size_t) (width * 2)), (cast: (size_t) (c.sizeof(c.L2D105Step)))))
         if: steps = 0
             return: (cast: (int) (1))
-        port_steps\data: steps
-        port_steps\capacity: (cast: (size_t) (width * 2))
+        port_steps\data := steps
+        port_steps\capacity := (cast: (size_t) (width * 2))
     ---
-    plan\width: width
-    plan\physical_width: lm_compiler_d105_width((cast: (int) (plan\requirement)))
-    plan\source_width: c.lm_compiler_schema_width((cast: (int) (plan\candidate)))
+    plan\width := width
+    plan\physical_width := lm_compiler_d105_width((cast: (int) (plan\requirement)))
+    plan\source_width := c.lm_compiler_schema_width((cast: (int) (plan\candidate)))
     while: j < width
         if: c.lm_compiler_schema_field((cast: (int) (plan\requirement)), j, @ needed) != 0
             return: (cast: (int) (1))
-        occurrence: 0
-        k: 0
+        occurrence := 0
+        k := 0
         while: k < j
             if: c.lm_compiler_schema_field((cast: (int) (plan\requirement)), k, @ other) != 0
                 return: (cast: (int) (1))
             if: c.lm_compiler_text_same((cast: (const: @: c.LmP0Text) ((needed\name))), (cast: (const: @: c.LmP0Text) ((other\name)))) != 0
-                occurrence: occurrence + 1
-            k: k + 1
+                occurrence := occurrence + 1
+            k := k + 1
         ---
-        steps: port_steps\data
+        steps := port_steps\data
         lm_compiler_d105_resolve_field((cast: (int) (plan\candidate)), @ needed, occurrence, steps + j)
         lm_compiler_d105_resolve_field((cast: (int) (plan\candidate)), @ needed, -1, steps + width + j)
-        j: j + 1
+        j := j + 1
     ---
-    port_steps\size: (cast: (size_t) (width * 2))
-    plan\ready: 1
+    port_steps\size := (cast: (size_t) (width * 2))
+    plan\ready := 1
     return: (cast: (int) (0))
 end: lm_compiler_d105_plan_build
 
@@ -2351,32 +2351,32 @@ fn: lm_compiler_d105_plan_prepare () int
     if: d105_plans_sealed_cell[0] != 0
         return: (cast: (int) (0))
     while: i < d105t_n_cell[0]
-        plan: lm_compiler_d105_plan(d105t_cand_cell[0][i], d105t_req_cell[0][i], 1)
+        plan := lm_compiler_d105_plan(d105t_cand_cell[0][i], d105t_req_cell[0][i], 1)
         if: plan = 0 || lm_compiler_d105_plan_build(plan) != 0
             return: (cast: (int) (1))
-        j: 0
+        j := 0
         while: j < plan\width * 2
             const: (@: port_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
-            step: port_steps\data + j
-            actual: @ step\actual
-            needed: @ step\requirement
-            source: -1
-            target: -1
+            step := port_steps\data + j
+            actual := @ step\actual
+            needed := @ step\requirement
+            source := -1
+            target := -1
             if: needed\kind = 2 || needed\kind = 3
-                source: actual\model
-                target: needed\model
+                source := actual\model
+                target := needed\model
             if: needed\kind = 10 && actual\model = needed\model
-                source: actual\pointee
-                target: needed\pointee
+                source := actual\pointee
+                target := needed\pointee
             if: step\physical >= 0 && actual\kind = needed\kind && source != -1 && target != -1 && source != target
-                child: lm_compiler_d105_pair(source, target)
+                child := lm_compiler_d105_pair(source, target)
                 if: child < 0
                     return: (cast: (int) (1))
-                step\child_pair: child
+                step\child_pair := child
             ---
-            j: j + 1
+            j := j + 1
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_plan_prepare
@@ -2388,22 +2388,22 @@ fn: lm_compiler_d105_catalog_require (@: catalog c.L2D105Catalog; int: req) int
     while: row != 0
         if: row\plan\requirement = req
             return: (cast: (int) (0))
-        row: row\next
+        row := row\next
     ---
-    plan: lm_compiler_d105_plan(req, req, 1)
+    plan := lm_compiler_d105_plan(req, req, 1)
     if: plan = 0
         return: (cast: (int) (1))
-    row: (cast: (@: c.L2D105CatalogRow) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2D105CatalogRow)))))
+    row := (cast: (@: c.L2D105CatalogRow) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2D105CatalogRow)))))
     if: row = 0
         return: (cast: (int) (1))
-    row\plan: plan
-    row\next: 0
+    row\plan := plan
+    row\next := 0
     if: catalog\required_last != 0
-        catalog\required_last\next: row
+        catalog\required_last\next := row
     else:
-        catalog\required_first: row
+        catalog\required_first := row
     ---
-    catalog\required_last: row
+    catalog\required_last := row
     return: (cast: (int) (0))
 end: lm_compiler_d105_catalog_require
 
@@ -2419,35 +2419,35 @@ fn: lm_compiler_d105_catalog_add (@: catalog c.L2D105Catalog; int: cand; int: re
         return: (cast: (int) (1))
     if: cand = req
         return: (cast: (int) (0))
-    row: catalog\first
+    row := catalog\first
     while: row != 0
-        plan: row\plan
+        plan := row\plan
         if: plan\candidate = cand && plan\requirement = req
             return: (cast: (int) (0))
-        row: row\next
+        row := row\next
     ---
     if: d105_plans_sealed_cell[0] = 0
-        pair: lm_compiler_d105_pair(cand, req)
+        pair := lm_compiler_d105_pair(cand, req)
     else:
-        pair: lm_compiler_d105_pair_find(cand, req)
+        pair := lm_compiler_d105_pair_find(cand, req)
     ---
     if: pair < 0 || catalog\count = (cast: (size_t) -1)
         return: (cast: (int) (1))
-    plan: lm_compiler_d105_plan(cand, req, 1)
+    plan := lm_compiler_d105_plan(cand, req, 1)
     if: plan = 0
         return: (cast: (int) (1))
-    row: (cast: (@: c.L2D105CatalogRow) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2D105CatalogRow)))))
+    row := (cast: (@: c.L2D105CatalogRow) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2D105CatalogRow)))))
     if: row = 0
         return: (cast: (int) (1))
-    row\plan: plan
-    row\next: 0
+    row\plan := plan
+    row\next := 0
     if: catalog\last != 0
-        catalog\last\next: row
+        catalog\last\next := row
     else:
-        catalog\first: row
+        catalog\first := row
     ---
-    catalog\last: row
-    catalog\count: catalog\count + 1U
+    catalog\last := row
+    catalog\count := catalog\count + 1U
     return: (cast: (int) (0))
 end: lm_compiler_d105_catalog_add
 
@@ -2469,65 +2469,65 @@ fn: lm_compiler_d105_catalog_close (@: catalog c.L2D105Catalog) int
         return: (cast: (int) (1))
     if: lm_compiler_d105_plan_prepare() != 0
         return: (cast: (int) (1))
-    row: catalog\first
+    row := catalog\first
     while: row != 0
-        plan: row\plan
+        plan := row\plan
         if: plan = 0 || plan\ready = 0 || plan\width < 0 || plan\width > c.INT_MAX / 2 || plan\physical_width < 0 || plan\physical_width > c.INT_MAX / 2
             return: (cast: (int) (1))
         const: (@: port_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
         if: port_steps\size != (cast: (size_t) (plan\width * 2))
             return: (cast: (int) (1))
         if: extent > (cast: (size_t) c.INT_MAX) - 3U || (cast: (size_t) plan\physical_width) > ((cast: (size_t) c.INT_MAX) - extent - 3U) / 2U
-            alloc_err_cell[0]: 2
+            alloc_err_cell[0] := 2
             return: (cast: (int) (1))
-        extent: extent + 3U + (cast: (size_t) (plan\physical_width * 2))
-        j: 0
+        extent := extent + 3U + (cast: (size_t) (plan\physical_width * 2))
+        j := 0
         while: j < plan\width * 2
-            step: port_steps\data + j
-            child: step\child_pair
+            step := port_steps\data + j
+            child := step\child_pair
             if: child >= 0
                 if: child >= d105t_n_cell[0]
                     return: (cast: (int) (1))
-                cand: d105t_cand_cell[0][child]
-                req: d105t_req_cell[0][child]
+                cand := d105t_cand_cell[0][child]
+                req := d105t_req_cell[0][child]
                 if: lm_compiler_d105_catalog_add(catalog, cand, req) != 0
                     return: (cast: (int) (1))
             ---
-            j: j + 1
+            j := j + 1
         ---
-        row: row\next
+        row := row\next
     ---
     # Required type closure is separate from possible physical candidates.
     # Identity plans retain the SAME selected declaration fields. Following
     # their owned/ref type edges needs neither another parser nor a guessed
     # current exemplar, and terminates on recursive model identities.
-    row: catalog\required_first
+    row := catalog\required_first
     while: row != 0
-        plan: row\plan
+        plan := row\plan
         if: lm_compiler_d105_plan_build(plan) != 0
             return: (cast: (int) (1))
         const: (@: port_required_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
-        j: 0
+        j := 0
         while: j < plan\width
-            step: port_required_steps\data + j
-            req: -1
+            step := port_required_steps\data + j
+            req := -1
             const: (@: port_requirement c.L2SchemaField (cast: (const: @: c.L2SchemaField) (@ step\requirement)))
             if: port_requirement\kind = 2 || port_requirement\kind = 3
-                req: port_requirement\model
+                req := port_requirement\model
             if: port_requirement\kind = 10 && port_requirement\pointee >= 0
-                req: port_requirement\pointee
+                req := port_requirement\pointee
                 if: catalog\reference_count >= ((cast: (size_t) c.INT_MAX) - 1U) / 3U
                     return: (cast: (int) (1))
-                catalog\reference_count: catalog\reference_count + 1U
+                catalog\reference_count := catalog\reference_count + 1U
             ---
             if: req != -1 && lm_compiler_d105_catalog_require(catalog, req) != 0
                 return: (cast: (int) (1))
-            j: j + 1
+            j := j + 1
         ---
-        row: row\next
+        row := row\next
     ---
-    catalog\extent: extent
-    catalog\ready: 1
+    catalog\extent := extent
+    catalog\ready := 1
     return: (cast: (int) (0))
 end: lm_compiler_d105_catalog_close
 
@@ -2538,24 +2538,24 @@ fn: lm_compiler_d105_catalog_cell (const: (@: plan c.L2D105Plan); int: index; @:
     int: logical
     if: out = 0
         return: (cast: (int) (1))
-    \out: -1
+    \out := -1
     if: plan = 0 || plan\ready = 0 || plan\width < 0 || plan\width > c.INT_MAX / 2 || plan\physical_width < plan\width || plan\physical_width > c.INT_MAX / 2 || index < 0 || index >= plan\physical_width * 2
         return: (cast: (int) (1))
     const: (@: port_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
     if: port_steps\size != (cast: (size_t) (plan\width * 2))
         return: (cast: (int) (1))
-    logical: index
+    logical := index
     if: index >= plan\physical_width
-        logical: index - plan\physical_width + plan\width
+        logical := index - plan\physical_width + plan\width
     if: (index < plan\physical_width && index >= plan\width) || (index >= plan\physical_width && index - plan\physical_width >= plan\width)
         return: (cast: (int) (0))
-    step: port_steps\data + logical
+    step := port_steps\data + logical
     if: step\status = 0
-        \out: step\slot
+        \out := step\slot
     if: step\status = 3 && step\child_pair >= 0
         if: step\child_pair >= d105t_n_cell[0]
             return: (cast: (int) (1))
-        \out: step\physical
+        \out := step\physical
     return: (cast: (int) (0))
 end: lm_compiler_d105_catalog_cell
 
@@ -2585,15 +2585,15 @@ fn: lm_compiler_d105_catalog (int: req; @: source c.L2ReferenceSource; int: tmi;
                 return: (cast: (int) (1))
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
     if: lm_compiler_identity_list(req, source, tmi, tk, full_receiver, @ first, @ count) != 0
         return: (cast: (int) (1))
-    i: 0
+    i := 0
     while: i < count
         if: lm_compiler_d105_catalog_add(catalog, ide_ty_cell[0][first + i], req) != 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     # A completed reception is runtime evidence even across an opaque door.
     # Retain possible bridges from every receiving schema already present in
@@ -2601,10 +2601,10 @@ fn: lm_compiler_d105_catalog (int: req; @: source c.L2ReferenceSource; int: tmi;
     # the common resolver may use one only after finding an actual bound
     # correspondence. Pair planning retains the same typed field projection.
     if: lm_compiler_d105_dynamic(source) != 0
-        i: 0
+        i := 0
         while: i < d105t_n_cell[0]
-            target: d105t_req_cell[0][i]
-            i: i + 1
+            target := d105t_req_cell[0][i]
+            i := i + 1
             if: c.lm_compiler_schema_kind(target) = 1 || c.lm_compiler_schema_kind(target) = 2
                 if: lm_compiler_d105_catalog_add(catalog, target, req) != 0
                     return: (cast: (int) (1))
@@ -2634,29 +2634,29 @@ fn: lm_compiler_emit_catalog_cells (const: (@: catalog c.L2D105Catalog); const: 
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_size(l2_program_arena, %s, 0U, %zuU) != c.LMX_WALK_OK\n%s    %s\n", ind, frame, catalog\count, ind, failure) < 0
         return: (cast: (int) (1))
-    row: catalog\first
+    row := catalog\first
     while: row != 0
-        plan: row\plan
+        plan := row\plan
         if: count >= catalog\count || plan = 0 || plan\ready = 0 || plan\physical_width < 0 || plan\physical_width > c.INT_MAX / 2 || at > catalog\extent || catalog\extent - at < 3U || (cast: (size_t) plan\physical_width) > (catalog\extent - at - 3U) / 2U
             return: (cast: (int) (1))
-        source_token: c.lm_compiler_schema_token_slot((cast: (int) (plan\candidate)))
-        required_token: c.lm_compiler_schema_token_slot((cast: (int) (plan\requirement)))
+        source_token := c.lm_compiler_schema_token_slot((cast: (int) (plan\candidate)))
+        required_token := c.lm_compiler_schema_token_slot((cast: (int) (plan\requirement)))
         if: source_token < 0 || required_token < 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], here_node_cell[0], "internal: a prepared catalog has no physical layout token")))
         if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_charptr(l2_program_arena, %s, %zuU, l2_layout_tokens + %d) != c.LMX_WALK_OK || lmx_walk_store_charptr(l2_program_arena, %s, %zuU, l2_layout_tokens + %d) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, %s, %zuU, %dU) != c.LMX_WALK_OK\n%s    %s\n", ind, frame, at, source_token, frame, at + 1U, required_token, frame, at + 2U, plan\physical_width, ind, failure) < 0
             return: (cast: (int) (1))
-        at: at + 3U
-        j: 0
+        at := at + 3U
+        j := 0
         while: j < plan\physical_width * 2
             if: lm_compiler_d105_catalog_cell(plan, j, @ cell) != 0
                 return: (cast: (int) (c.lm_compiler_error(src_cell[0], here_node_cell[0], "internal: a catalog cell has no prepared physical coordinate")))
             if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_size(l2_program_arena, %s, %zuU, (cast: (size_t) %d)) != c.LMX_WALK_OK\n%s    %s\n", ind, frame, at, cell, ind, failure) < 0
                 return: (cast: (int) (1))
-            at: at + 1U
-            j: j + 1
+            at := at + 1U
+            j := j + 1
         ---
-        count: count + 1U
-        row: row\next
+        count := count + 1U
+        row := row\next
     ---
     if: count != catalog\count || at != catalog\extent
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], here_node_cell[0], "internal: catalog extent/count disagree with its prepared rows")))
@@ -2681,31 +2681,31 @@ fn: lm_compiler_emit_reference_cells (const: (@: catalog c.L2D105Catalog); const
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_size(l2_program_arena, %s, 0U, %zuU) != c.LMX_WALK_OK\n%s    %s\n", ind, frame, catalog\reference_count, ind, failure) < 0
         return: (cast: (int) (1))
-    row: catalog\required_first
+    row := catalog\required_first
     while: row != 0
-        plan: row\plan
+        plan := row\plan
         if: plan = 0 || plan\ready = 0 || plan\width < 0 || plan\width > c.INT_MAX / 2
             return: (cast: (int) (1))
         const: (@: port_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
         if: port_steps\size != (cast: (size_t) (plan\width * 2)) || (port_steps\size != 0U && port_steps\data = 0)
             return: (cast: (int) (1))
-        j: 0
+        j := 0
         while: j < plan\width
-            step: port_steps\data + j
+            step := port_steps\data + j
             const: (@: port_requirement c.L2SchemaField (cast: (const: @: c.L2SchemaField) (@ step\requirement)))
-            target: port_requirement\pointee
+            target := port_requirement\pointee
             if: port_requirement\kind = 10 && target >= 0
-                token: c.lm_compiler_schema_token_slot((cast: (int) (plan\requirement)))
+                token := c.lm_compiler_schema_token_slot((cast: (int) (plan\requirement)))
                 if: count >= catalog\reference_count || token < 0 || target >= ns_n_cell[0]
                     return: (cast: (int) (c.lm_compiler_error(src_cell[0], here_node_cell[0], "internal: a prepared reference has no declared model address")))
                 if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_charptr(l2_program_arena, %s, %zuU, l2_layout_tokens + %d) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, %s, %zuU, %dU) != c.LMX_WALK_OK || lmx_arena_ref_store(l2_program_arena, %s, %zuU, (cast: (@: void) %s[%d])) != 0\n%s    %s\n", ind, frame, at, token, frame, at + 1U, j, frame, at + 2U, lm_compiler_rw_types_nsp(), target, ind, failure) < 0
                     return: (cast: (int) (1))
-                at: at + 3U
-                count: count + 1U
+                at := at + 3U
+                count := count + 1U
             ---
-            j: j + 1
+            j := j + 1
         ---
-        row: row\next
+        row := row\next
     ---
     return: (cast: (int) ((cast: (int) (count != catalog\reference_count))))
 end: lm_compiler_emit_reference_cells
@@ -2725,13 +2725,13 @@ fn: lm_compiler_emit_scope_cells (const: (@: scope c.L2UseScope); const: (@: fra
         if: lm_compiler_use_scope_cell(scope, i, @ whole, @ cell) != 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], here_node_cell[0], "internal: a coverage cell has no place")))
         if: whole = 1
-            cell: -1
+            cell := -1
         # A called field (lmx_implements.h.lm1, LmxImplUses: below SIZE_MAX - 1).
         if: whole = 2
-            cell: -2
+            cell := -2
         if: c.fprintf(out_cell[0], "%sif: lmx_walk_store_size(l2_program_arena, %s, %dU, (cast: (size_t) %d)) != c.LMX_WALK_OK\n%s    %s\n", ind, frame, i, cell, ind, failure) < 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_emit_scope_cells
@@ -2760,10 +2760,10 @@ fn: lm_compiler_d105_table (int: cand; int: req; @: t int; int: cap; @: out_n in
     int: j 0
     int: logical
     int: selected
-    \out_n: 0
+    \out_n := 0
     if: cand = -1 || req = -1 || cap < 0 || t = 0
         return: (cast: (int) (1))
-    plan: lm_compiler_d105_plan(cand, req, 1)
+    plan := lm_compiler_d105_plan(cand, req, 1)
     if: plan = 0
         return: (cast: (int) (1))
     # The flat representation borrows the same finite pair closure as the
@@ -2773,18 +2773,18 @@ fn: lm_compiler_d105_table (int: cand; int: req; @: t int; int: cap; @: out_n in
         return: (cast: (int) (1))
     if: lm_compiler_d105_plan_prepare() != 0
         return: (cast: (int) (1))
-    w: plan\physical_width
+    w := plan\physical_width
     if: w < 0 || w > cap / 2
         return: (cast: (int) (1))
     while: j < w * 2
         if: lm_compiler_d105_catalog_cell(plan, j, @ selected) != 0
             return: (cast: (int) (1))
-        logical: j
+        logical := j
         if: j >= w
-            logical: j - w + plan\width
+            logical := j - w + plan\width
         if: (j < w && j < plan\width) || (j >= w && j - w < plan\width)
             const: (@: port_steps c.L2D105StepDynamicArray (cast: (const: @: c.L2D105StepDynamicArray) (@ plan\steps)))
-            step: port_steps\data + logical
+            step := port_steps\data + logical
             if: holes = 0
                 const: (@: port_requirement c.L2SchemaField (cast: (const: @: c.L2SchemaField) (@ step\requirement)))
                 if: port_requirement\name != 0 && selected < 0
@@ -2792,10 +2792,10 @@ fn: lm_compiler_d105_table (int: cand; int: req; @: t int; int: cap; @: out_n in
             ---
             ---
         ---
-        t[j]: selected
-        j: j + 1
+        t[j] := selected
+        j := j + 1
     ---
-    \out_n: w * 2
+    \out_n := w * 2
     return: (cast: (int) (0))
 end: lm_compiler_d105_table
 
@@ -2811,16 +2811,16 @@ fn: lm_compiler_d105_reset () int
     @: d105a_done_cell int (cast: (@: int) (@ c.l2_d105a_done))
     @: ide_n_cell int (cast: (@: int) (@ c.l2_ide_n))
     @: d105x_n_cell int (cast: (@: int) (@ c.l2_d105x_n))
-    d105_plans_cell[0]: 0
-    d105_plans_sealed_cell[0]: 0
-    d105s_n_cell[0]: 0
-    d105e_n_cell[0]: 0
-    cfa_n_cell[0]: 0
-    d105t_n_cell[0]: 0
-    d105a_n_cell[0]: 0
-    d105a_done_cell[0]: 0
-    ide_n_cell[0]: 0
-    d105x_n_cell[0]: 0
+    d105_plans_cell[0] := 0
+    d105_plans_sealed_cell[0] := 0
+    d105s_n_cell[0] := 0
+    d105e_n_cell[0] := 0
+    cfa_n_cell[0] := 0
+    d105t_n_cell[0] := 0
+    d105a_n_cell[0] := 0
+    d105a_done_cell[0] := 0
+    ide_n_cell[0] := 0
+    d105x_n_cell[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_d105_reset
 
@@ -2834,7 +2834,7 @@ fn: lm_compiler_d105_has (int: mi; int: k; int: ty) int
     while: i < d105s_n_cell[0]
         if: d105s_mi_cell[0][i] = mi && d105s_k_cell[0][i] = k && d105s_ty_cell[0][i] = ty
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_has
@@ -2852,12 +2852,12 @@ fn: lm_compiler_d105_source (int: mi; int: k; int: ty; const: (@: at c.LmP0Node)
         return: (cast: (int) (0))
     if: lm_compiler_d105s_room() != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], at, "out of memory")))
-    d105s_mi_cell[0][d105s_n_cell[0]]: mi
-    d105s_k_cell[0][d105s_n_cell[0]]: k
-    d105s_ty_cell[0][d105s_n_cell[0]]: ty
-    d105s_no_cell[0][d105s_n_cell[0]]: 0
-    d105s_at_cell[0][d105s_n_cell[0]]: (cast: (@: c.LmP0Node) at)
-    d105s_n_cell[0]: d105s_n_cell[0] + 1
+    d105s_mi_cell[0][d105s_n_cell[0]] := mi
+    d105s_k_cell[0][d105s_n_cell[0]] := k
+    d105s_ty_cell[0][d105s_n_cell[0]] := ty
+    d105s_no_cell[0][d105s_n_cell[0]] := 0
+    d105s_at_cell[0][d105s_n_cell[0]] := (cast: (@: c.LmP0Node) at)
+    d105s_n_cell[0] := d105s_n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_d105_source
 
@@ -2880,17 +2880,17 @@ fn: lm_compiler_d105_edge_add (int: fmi; int: fk; int: tmi; int: tk; const: (@: 
     while: i < d105e_n_cell[0]
         if: d105e_fmi_cell[0][i] = fmi && d105e_fk_cell[0][i] = fk && d105e_tmi_cell[0][i] = tmi && d105e_tk_cell[0][i] = tk && d105e_soft_cell[0][i] = soft
             return: (cast: (int) (0))
-        i: i + 1
+        i := i + 1
     ---
     if: lm_compiler_d105e_room() != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], at, "out of memory")))
-    d105e_fmi_cell[0][d105e_n_cell[0]]: fmi
-    d105e_fk_cell[0][d105e_n_cell[0]]: fk
-    d105e_tmi_cell[0][d105e_n_cell[0]]: tmi
-    d105e_tk_cell[0][d105e_n_cell[0]]: tk
-    d105e_at_cell[0][d105e_n_cell[0]]: (cast: (@: c.LmP0Node) at)
-    d105e_soft_cell[0][d105e_n_cell[0]]: soft
-    d105e_n_cell[0]: d105e_n_cell[0] + 1
+    d105e_fmi_cell[0][d105e_n_cell[0]] := fmi
+    d105e_fk_cell[0][d105e_n_cell[0]] := fk
+    d105e_tmi_cell[0][d105e_n_cell[0]] := tmi
+    d105e_tk_cell[0][d105e_n_cell[0]] := tk
+    d105e_at_cell[0][d105e_n_cell[0]] := (cast: (@: c.LmP0Node) at)
+    d105e_soft_cell[0][d105e_n_cell[0]] := soft
+    d105e_n_cell[0] := d105e_n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_d105_edge_add
 
@@ -2903,13 +2903,13 @@ fn: lm_compiler_d105_pair (int: cand; int: req) int
     while: i < d105t_n_cell[0]
         if: d105t_cand_cell[0][i] = cand && d105t_req_cell[0][i] = req
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     ---
     if: lm_compiler_d105t_room() != 0
         return: (cast: (int) (0 - 1))
-    d105t_cand_cell[0][d105t_n_cell[0]]: cand
-    d105t_req_cell[0][d105t_n_cell[0]]: req
-    d105t_n_cell[0]: d105t_n_cell[0] + 1
+    d105t_cand_cell[0][d105t_n_cell[0]] := cand
+    d105t_req_cell[0][d105t_n_cell[0]] := req
+    d105t_n_cell[0] := d105t_n_cell[0] + 1
     return: (cast: (int) (d105t_n_cell[0] - 1))
 end: lm_compiler_d105_pair
 
@@ -2917,16 +2917,16 @@ end: lm_compiler_d105_pair
 fn: lm_compiler_hidden_model_source_named (int: mi; int: idx; const: (@: name c.LmP0Text); @: source_input int) int
     @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
     int: own c.lm_compiler_resolved_own(mi, name)
-    \source_input: -1
+    \source_input := -1
     if: own >= 0 && m_uses_cell[0][c.lm_compiler_own_off(mi, own)] != 0
-        \source_input: c.lm_compiler_d105_own_key(own)
+        \source_input := c.lm_compiler_d105_own_key(own)
         return: (cast: (int) (c.lm_compiler_own_schema(own)))
-    \source_input: c.lm_compiler_param_find(mi, name)
+    \source_input := c.lm_compiler_param_find(mi, name)
     if: \source_input >= 0
         return: (cast: (int) (c.lm_compiler_input_schema(mi, (cast: (int) (\source_input)))))
-    own: c.lm_compiler_own_lexical(idx, name)
+    own := c.lm_compiler_own_lexical(idx, name)
     if: own >= 0
-        \source_input: c.lm_compiler_d105_own_key(own)
+        \source_input := c.lm_compiler_d105_own_key(own)
         return: (cast: (int) (c.lm_compiler_own_schema(own)))
     return: (cast: (int) (-1))
 end: lm_compiler_hidden_model_source_named
@@ -2975,10 +2975,10 @@ fn: lm_compiler_d105_prepare_pair (int: cand; int: req; const: (@: at c.LmP0Node
     int: status
     if: cand = -1 || req = -1 || cand = req
         return: (cast: (int) (0))
-    pair_cells: lm_compiler_d105_cells(req)
+    pair_cells := lm_compiler_d105_cells(req)
     if: pair_cells = 0
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], at, "out of memory")))
-    status: lm_compiler_d105_table(cand, req, pair_cells, d105_tcap_cell[0], @ result_length, 1)
+    status := lm_compiler_d105_table(cand, req, pair_cells, d105_tcap_cell[0], @ result_length, 1)
     if: status = 2
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], at, "an admission to a Structure type through a Structure field of another type")))
     if: status != 0
@@ -3012,21 +3012,21 @@ fn: lm_compiler_ruse_reset () int
     c.lm_compiler_xfree((cast: (@: void) ruse_e_level_cell[0]))
     c.lm_compiler_xfree((cast: (@: void) ruse_e_edge_cell[0]))
     c.lm_compiler_xfree((cast: (@: void) ruse_e_below_cell[0]))
-    ruse_state_cell[0]: 0
-    ruse_first_cell[0]: 0
-    ruse_count_cell[0]: 0
-    ruse_levels_cell[0]: 0
-    ruse_e_level_cell[0]: 0
-    ruse_e_edge_cell[0]: 0
-    ruse_e_below_cell[0]: 0
-    ruse_cap_cell[0]: 0
-    ruse_e_n_cell[0]: 0
-    ruse_e_cap_cell[0]: 0
-    ruse_unit_cell[0]: 0
-    use_scopes_cell[0]: 0
-    use_plan_first_cell[0]: 0
-    use_plan_last_cell[0]: 0
-    use_plan_n_cell[0]: 0
+    ruse_state_cell[0] := 0
+    ruse_first_cell[0] := 0
+    ruse_count_cell[0] := 0
+    ruse_levels_cell[0] := 0
+    ruse_e_level_cell[0] := 0
+    ruse_e_edge_cell[0] := 0
+    ruse_e_below_cell[0] := 0
+    ruse_cap_cell[0] := 0
+    ruse_e_n_cell[0] := 0
+    ruse_e_cap_cell[0] := 0
+    ruse_unit_cell[0] := 0
+    use_scopes_cell[0] := 0
+    use_plan_first_cell[0] := 0
+    use_plan_last_cell[0] := 0
+    use_plan_n_cell[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_ruse_reset
 
@@ -3042,12 +3042,12 @@ fn: lm_compiler_ruse_room (int: own) int
     if: own < ruse_cap_cell[0]
         return: (cast: (int) (0))
     if: own = c.INT_MAX
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
-    want: c.lm_compiler_cap_next(ruse_cap_cell[0], own + 1)
+    want := c.lm_compiler_cap_next(ruse_cap_cell[0], own + 1)
     if: want < 0 || c.lm_compiler_ruse_grow(@ ruse_state_cell[0], ruse_cap_cell[0], want) != 0 || c.lm_compiler_ruse_grow(@ ruse_first_cell[0], ruse_cap_cell[0], want) != 0 || c.lm_compiler_ruse_grow(@ ruse_count_cell[0], ruse_cap_cell[0], want) != 0 || c.lm_compiler_ruse_grow(@ ruse_levels_cell[0], ruse_cap_cell[0], want) != 0
         return: (cast: (int) (1))
-    ruse_cap_cell[0]: want
+    ruse_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_ruse_room
 
@@ -3059,32 +3059,32 @@ fn: lm_compiler_use_plan_level (int: method; int: key; int: schema) @: c.L2UsePl
     @@: use_plan_last_cell c.L2UsePlanLevel (cast: (@@: c.L2UsePlanLevel) (@ c.l2_use_plan_last))
     @: level c.L2UsePlanLevel use_plan_first_cell[0]
     if: method >= 0
-        method: c.lm_compiler_d105_key_method(method, key)
+        method := c.lm_compiler_d105_key_method(method, key)
         while: level != 0
             if: level\method = method && level\key = key && level\schema = schema
                 return: (cast: (@: c.L2UsePlanLevel) (level))
-            level: level\next
+            level := level\next
         ---
     ---
     if: use_plan_n_cell[0] >= c.INT_MAX - 1
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (@: c.L2UsePlanLevel) (0))
     c.lm_compiler_alloc_note("level")
-    level: (cast: (@: c.L2UsePlanLevel) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2UsePlanLevel)))))
+    level := (cast: (@: c.L2UsePlanLevel) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2UsePlanLevel)))))
     if: level = 0
         return: (cast: (@: c.L2UsePlanLevel) (0))
-    level\method: method
-    level\key: key
-    level\schema: schema
-    use_plan_n_cell[0]: use_plan_n_cell[0] + 1
-    level\id: use_plan_n_cell[0]
+    level\method := method
+    level\key := key
+    level\schema := schema
+    use_plan_n_cell[0] := use_plan_n_cell[0] + 1
+    level\id := use_plan_n_cell[0]
     if: use_plan_last_cell[0] != 0
         @: port_last_level c.L2UsePlanLevel use_plan_last_cell[0]
-        port_last_level\next: level
+        port_last_level\next := level
     else:
-        use_plan_first_cell[0]: level
+        use_plan_first_cell[0] := level
     ---
-    use_plan_last_cell[0]: level
+    use_plan_last_cell[0] := level
     return: (cast: (@: c.L2UsePlanLevel) (level))
 end: lm_compiler_use_plan_level
 
@@ -3102,33 +3102,33 @@ fn: lm_compiler_use_plan_live (int: method; @: live int) int
     int: i
     int: selected_proto
     c.memset((cast: (@: void) live), 0, (cast: (size_t) m_n_cell[0]) * c.sizeof(c.int))
-    live[method]: 1
+    live[method] := 1
     while: changed != 0
-        changed: 0
-        from: 0
+        changed := 0
+        from := 0
         while: from < m_n_cell[0]
-            to: 0
+            to := 0
             while: live[from] != 0 && m_edge_cell[0] != 0 && to < m_n_cell[0]
                 if: live[to] = 0 && (m_edge_cell[0][lm_compiler_edge_off(from, to)] & 1) != 0
-                    live[to]: 1
-                    changed: 1
+                    live[to] := 1
+                    changed := 1
                 ---
-                to: to + 1
+                to := to + 1
             ---
-            from: from + 1
+            from := from + 1
         ---
-        i: 0
+        i := 0
         while: i < cfr_n_cell[0]
-            from: cfr_c_cell[0][i]
-            to: cfr_m_cell[0][i]
+            from := cfr_c_cell[0][i]
+            to := cfr_m_cell[0][i]
             if: from >= 0 && from < m_n_cell[0] && to >= 0 && to < m_n_cell[0] && live[from] != 0 && live[to] = 0 && m_edge_cell[0] != 0
-                selected_proto: c.lm_compiler_cf_get(from, cfr_t_cell[0][i])
+                selected_proto := c.lm_compiler_cf_get(from, cfr_t_cell[0][i])
                 if: selected_proto >= 0 && selected_proto < m_n_cell[0] && (m_edge_cell[0][lm_compiler_edge_off(from, selected_proto)] & 2) != 0
-                    live[to]: 1
-                    changed: 1
+                    live[to] := 1
+                    changed := 1
                 ---
             ---
-            i: i + 1
+            i := i + 1
         ---
     ---
     return: (cast: (int) (0))
@@ -3157,15 +3157,15 @@ fn: lm_compiler_use_plan_begin (const: (@: fact c.L2PathFact); @: level c.L2UseP
     int: status
     if: fact\source_use = 0 || fact\method < 0 || fact\method >= m_n_cell[0] || live[fact\method] = 0
         return: (cast: (int) (-1))
-    method: fact\method
+    method := fact\method
     const: (@: port_resolved c.L2Path (cast: (const: @: c.L2Path) (@ fact\resolved)))
     if: port_resolved\oi >= 0
-        key: port_resolved\oi
-        key: c.lm_compiler_d105_own_key(key)
-        method: c.lm_compiler_d105_key_method(method, key)
+        key := port_resolved\oi
+        key := c.lm_compiler_d105_own_key(key)
+        method := c.lm_compiler_d105_key_method(method, key)
     else:
         if: port_resolved\root_kind = 0 && fact\input_symbol != 0
-            key: c.lm_compiler_input_symbol_index(method, (cast: (const: @: c.LmP0Text) (fact\input_symbol)))
+            key := c.lm_compiler_input_symbol_index(method, (cast: (const: @: c.LmP0Text) (fact\input_symbol)))
             if: key < 0
                 return: (cast: (int) (-2))
             ---
@@ -3182,7 +3182,7 @@ fn: lm_compiler_use_plan_begin (const: (@: fact c.L2PathFact); @: level c.L2UseP
     ---
     if: fact\source_use != 1
         return: (cast: (int) (-1))
-    status: lm_compiler_source_use_resolve(fact, @ source)
+    status := lm_compiler_source_use_resolve(fact, @ source)
     if: status != 0
         c.lm_compiler_path_release(@ source)
         return: (cast: (int) (-2))
@@ -3190,7 +3190,7 @@ fn: lm_compiler_use_plan_begin (const: (@: fact c.L2PathFact); @: level c.L2UseP
         if: lm_compiler_use_plan_step_port((cast: (const: @: c.L2PathStep) ((source\steps) + i)), (cast: (int) (level\method)), (cast: (int) (level\key))) != 0
             c.lm_compiler_path_release(@ source)
             return: (cast: (int) (i + 1))
-        i: i + 1
+        i := i + 1
     ---
     c.lm_compiler_path_release(@ source)
     return: (cast: (int) (-1))
@@ -3205,23 +3205,23 @@ fn: lm_compiler_use_plan_role (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
     int: key
     int: status
     if: fact\use_roles = 0 || ((fact\use_roles & 2) != 0 && receiver = 0)
-        level\full: 1
+        level\full := 1
         return: (cast: (int) (0))
     while: receiver != 0
-        which: 0
+        which := 0
         while: 1
-            status: c.lm_compiler_use_receiver_port(fact, receiver, which, @ method, @ key)
+            status := c.lm_compiler_use_receiver_port(fact, receiver, which, @ method, @ key)
             if: status = 1
                 break
             if: status != 0
-                level\full: 1
+                level\full := 1
                 return: (cast: (int) (0))
-            target: lm_compiler_use_plan_level(method, key, (cast: (int) (level\schema)))
+            target := lm_compiler_use_plan_level(method, key, (cast: (int) (level\schema)))
             if: target = 0 || c.lm_compiler_use_plan_link(level, target) != 0
                 return: (cast: (int) (1))
-            which: which + 1
+            which := which + 1
         ---
-        receiver: receiver\next
+        receiver := receiver\next
     ---
     return: (cast: (int) (0))
 end: lm_compiler_use_plan_role
@@ -3235,7 +3235,7 @@ fn: lm_compiler_use_plan_known_edge (@: level c.L2UsePlanLevel; const: (@: step 
         const: (@: held c.L2PathStep (cast: (const: @: c.L2PathStep) (@ edge\step)))
         if: edge\schema = schema && c.lm_compiler_path_step_slot(held) = slot && (cast: (int) (held\segocc < 0)) = (cast: (int) (step\segocc < 0))
             return: (cast: (@: c.L2UsePlanEdge) (edge))
-        edge: edge\next
+        edge := edge\next
     ---
     return: (cast: (@: c.L2UsePlanEdge) (c.lm_compiler_use_plan_edge(level, step, schema)))
 end: lm_compiler_use_plan_known_edge
@@ -3255,27 +3255,27 @@ fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
     const: (@: port_resolved c.L2Path (cast: (const: @: c.L2Path) (@ fact\resolved)))
     if: begin = port_resolved\n
         return: (cast: (int) (lm_compiler_use_plan_role(level, fact)))
-    status: lm_compiler_uses_project_from(fact, begin, (cast: (int) (level\schema)), @ path)
+    status := lm_compiler_uses_project_from(fact, begin, (cast: (int) (level\schema)), @ path)
     if: status != 0
         c.lm_compiler_path_release(@ path)
         if: alloc_err_cell[0] != 0
             return: (cast: (int) (1))
-        level\full: 1
+        level\full := 1
         return: (cast: (int) (0))
     while: i < path\n
-        step: path\steps + i
+        step := path\steps + i
         if: step\locus = 7
-            current\full: 1
+            current\full := 1
             break
-        schema: current\schema
+        schema := current\schema
         if: step\host_ns >= 0
-            schema: step\host_ns
+            schema := step\host_ns
         if: step\host_res >= 0
-            schema: c.lm_compiler_schema_merge((cast: (int) (step\host_res)))
+            schema := c.lm_compiler_schema_merge((cast: (int) (step\host_res)))
         if: known != 0
-            edge: lm_compiler_use_plan_known_edge(current, (cast: (const: @: c.L2PathStep) step), schema)
+            edge := lm_compiler_use_plan_known_edge(current, (cast: (const: @: c.L2PathStep) step), schema)
         else:
-            edge: c.lm_compiler_use_plan_edge(current, step, schema)
+            edge := c.lm_compiler_use_plan_edge(current, step, schema)
         ---
         if: edge = 0
             c.lm_compiler_path_release(@ path)
@@ -3287,39 +3287,39 @@ fn: lm_compiler_use_plan_path (@: level c.L2UsePlanLevel; const: (@: fact c.L2Pa
         # A callable field the Consumer calls by a written call takes that call (fact use_roles bit 2); any other
         # use of it is consumed whole, as before.
         if: step\kind = 4 && i + 1 = path\n && (fact\use_roles & 4) != 0
-            edge\called: 1
-            edge\calls: fact\calls
+            edge\called := 1
+            edge\calls := fact\calls
             break
         if: step\kind = 5 || step\kind = 6 || step\kind = 4 || step\kind = 12
-            edge\whole: 1
+            edge\whole := 1
             break
-        next_schema: -1
+        next_schema := -1
         if: step\kind = 2 || step\kind = 3
-            next_schema: step\ent
+            next_schema := step\ent
         if: step\kind = 10
-            next_schema: step\pointee
+            next_schema := step\pointee
             # A path that stops at the reference names its declared Structure as the leaf's model: a write or a received value is no read of all of it.
             if: next_schema = -1 && i + 1 = path\n
-                next_schema: path\leaf_model
+                next_schema := path\leaf_model
             ---
         ---
         if: next_schema = -1
-            edge\whole: 1
+            edge\whole := 1
             break
-        below: edge\below
+        below := edge\below
         if: known = 0 || below = 0
-            below: lm_compiler_use_plan_level(-1, -1, next_schema)
+            below := lm_compiler_use_plan_level(-1, -1, next_schema)
         ---
         if: below = 0
             c.lm_compiler_path_release(@ path)
             return: (cast: (int) (1))
-        edge\below: below
+        edge\below := below
         if: i + 1 = path\n
-            status: lm_compiler_use_plan_role(below, fact)
+            status := lm_compiler_use_plan_role(below, fact)
             c.lm_compiler_path_release(@ path)
             return: (cast: (int) (status))
-        current: below
-        i: i + 1
+        current := below
+        i := i + 1
     ---
     c.lm_compiler_path_release(@ path)
     return: (cast: (int) (0))
@@ -3342,27 +3342,27 @@ fn: lm_compiler_use_plan_build (@: level c.L2UsePlanLevel; @: live int; int: kno
     if: level\method < 0
         return: (cast: (int) (0))
     if: level\method >= uses_methods_cell[0] || level\key = -1
-        level\full: 1
+        level\full := 1
         return: (cast: (int) (0))
     lm_compiler_use_plan_live((cast: (int) (level\method)), live)
     while: fact != 0 && (level\full = 0 || known != 0)
-        begin: lm_compiler_use_plan_begin(fact, level, live)
+        begin := lm_compiler_use_plan_begin(fact, level, live)
         if: begin = -2
             if: alloc_err_cell[0] != 0
                 return: (cast: (int) (1))
-            level\full: 1
+            level\full := 1
         if: begin >= 0 && lm_compiler_use_plan_path(level, fact, begin, known) != 0
             return: (cast: (int) (1))
-        fact: fact\next
+        fact := fact\next
     ---
     while: i < d105e_n_cell[0] && (level\full = 0 || known != 0)
         if: d105e_fmi_cell[0][i] = level\method && d105e_fk_cell[0][i] = level\key && d105e_tmi_cell[0][i] >= 0
-            target: lm_compiler_use_plan_level(d105e_tmi_cell[0][i], d105e_tk_cell[0][i], (cast: (int) (level\schema)))
+            target := lm_compiler_use_plan_level(d105e_tmi_cell[0][i], d105e_tk_cell[0][i], (cast: (int) (level\schema)))
             if: target = 0 || c.lm_compiler_use_plan_link(level, target) != 0
                 return: (cast: (int) (1))
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_use_plan_build
@@ -3374,17 +3374,17 @@ fn: lm_compiler_use_plan_full () int
     @: link c.L2UsePlanLink
     int: changed 1
     while: changed != 0
-        changed: 0
-        level: use_plan_first_cell[0]
+        changed := 0
+        level := use_plan_first_cell[0]
         while: level != 0
-            link: level\links
+            link := level\links
             while: link != 0 && level\full = 0
                 if: link\target\full != 0
-                    level\full: 1
-                    changed: 1
-                link: link\next
+                    level\full := 1
+                    changed := 1
+                link := link\next
             ---
-            level: level\next
+            level := level\next
         ---
     ---
     return: (cast: (int) (0))
@@ -3397,23 +3397,23 @@ fn: lm_compiler_use_plan_seen (@: root c.L2UsePlanLevel) int
     @: link c.L2UsePlanLink
     int: changed 1
     while: level != 0
-        level\seen: 0
-        level: level\next
+        level\seen := 0
+        level := level\next
     ---
-    root\seen: 1
+    root\seen := 1
     while: changed != 0
-        changed: 0
-        level: use_plan_first_cell[0]
+        changed := 0
+        level := use_plan_first_cell[0]
         while: level != 0
-            link: level\links
+            link := level\links
             while: level\seen != 0 && link != 0
                 if: link\target\seen = 0
-                    link\target\seen: 1
-                    changed: 1
+                    link\target\seen := 1
+                    changed := 1
                 ---
-                link: link\next
+                link := link\next
             ---
-            level: level\next
+            level := level\next
         ---
     ---
     return: (cast: (int) (0))
@@ -3429,9 +3429,9 @@ fn: lm_compiler_use_edge_cell (@: edge c.L2UsePlanEdge; @: value int) int
     if: port_edge_step\segocc < 0
         if: slot > c.INT_MAX - width
             return: (cast: (int) (1))
-        slot: slot + width
+        slot := slot + width
     ---
-    \value: slot
+    \value := slot
     return: (cast: (int) (0))
 end: lm_compiler_use_edge_cell
 
@@ -3451,37 +3451,37 @@ fn: lm_compiler_ruse_append (int: level; @: edge c.L2UsePlanEdge; int: known) in
     if: known != 0 && lm_compiler_use_edge_cell(edge, @ named) != 0
         return: (cast: (int) (0))
     if: ruse_e_n_cell[0] = c.INT_MAX
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: ruse_e_n_cell[0] >= ruse_e_cap_cell[0]
-        want: c.lm_compiler_cap_next(ruse_e_cap_cell[0], ruse_e_n_cell[0] + 1)
+        want := c.lm_compiler_cap_next(ruse_e_cap_cell[0], ruse_e_n_cell[0] + 1)
         if: want < 0 || c.lm_compiler_ruse_grow(@ ruse_e_level_cell[0], ruse_e_cap_cell[0], want) != 0 || c.lm_compiler_ruse_grow(@ ruse_e_below_cell[0], ruse_e_cap_cell[0], want) != 0
             return: (cast: (int) (1))
-        p: c.lm_compiler_vec_grow((cast: (@: void) ruse_e_edge_cell[0]), ruse_e_n_cell[0], want, sizeof(@: void))
+        p := c.lm_compiler_vec_grow((cast: (@: void) ruse_e_edge_cell[0]), ruse_e_n_cell[0], want, sizeof(@: void))
         if: p = 0
             return: (cast: (int) (1))
-        ruse_e_edge_cell[0]: (cast: (@@: c.L2UsePlanEdge) p)
-        ruse_e_cap_cell[0]: want
+        ruse_e_edge_cell[0] := (cast: (@@: c.L2UsePlanEdge) p)
+        ruse_e_cap_cell[0] := want
     ---
     if: edge\below != 0
-        below: edge\below\id
+        below := edge\below\id
         # A plan of what is known reads an unknown as nothing known: never as the whole interface.
         if: edge\below\full != 0 && known = 0
-            below: -1
+            below := -1
         ---
         # Nothing is read below the field (it is compared, or it takes a write): the field itself is consumed, and a null standing there refuses nothing.
         if: below > 0 && edge\below\edges = 0 && edge\below\links = 0
-            below: 0
+            below := 0
         ---
     ---
     if: edge\whole != 0 && known = 0
-        below: -1
+        below := -1
     if: edge\called != 0
-        below: -2
-    ruse_e_level_cell[0][ruse_e_n_cell[0]]: level
-    ruse_e_edge_cell[0][ruse_e_n_cell[0]]: edge
-    ruse_e_below_cell[0][ruse_e_n_cell[0]]: below
-    ruse_e_n_cell[0]: ruse_e_n_cell[0] + 1
+        below := -2
+    ruse_e_level_cell[0][ruse_e_n_cell[0]] := level
+    ruse_e_edge_cell[0][ruse_e_n_cell[0]] := edge
+    ruse_e_below_cell[0][ruse_e_n_cell[0]] := below
+    ruse_e_n_cell[0] := ruse_e_n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_ruse_append
 
@@ -3514,70 +3514,70 @@ fn: lm_compiler_use_scope_get (int: mi; int: key; int: schema) @: c.L2UseScope
     while: scope != 0
         if: scope\method = mi && scope\key = key && scope\schema = schema
             return: (cast: (@: c.L2UseScope) (scope))
-        scope: scope\next
+        scope := scope\next
     ---
-    scope: (cast: (@: c.L2UseScope) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2UseScope)))))
+    scope := (cast: (@: c.L2UseScope) c.lm_compiler_bound_alloc(1U, (cast: (size_t) (c.sizeof(c.L2UseScope)))))
     if: scope = 0
         return: (cast: (@: c.L2UseScope) (0))
     c.memset((cast: (@: void) scope), 0, c.sizeof(c.L2UseScope))
-    scope\method: mi
-    scope\key: key
-    scope\schema: schema
-    scope\state: 1
-    room_tag_cell[0]: "source-use-consumer"
-    use_plan_first_cell[0]: 0
-    use_plan_last_cell[0]: 0
-    use_plan_n_cell[0]: 0
-    root: lm_compiler_use_plan_level(mi, key, schema)
+    scope\method := mi
+    scope\key := key
+    scope\schema := schema
+    scope\state := 1
+    room_tag_cell[0] := "source-use-consumer"
+    use_plan_first_cell[0] := 0
+    use_plan_last_cell[0] := 0
+    use_plan_n_cell[0] := 0
+    root := lm_compiler_use_plan_level(mi, key, schema)
     c.lm_compiler_alloc_note("reachable")
-    live: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) m_n_cell[0]) * c.sizeof(c.int)))))
+    live := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) m_n_cell[0]) * c.sizeof(c.int)))))
     if: root = 0 || live = 0
-        status: 1
-    level: root
+        status := 1
+    level := root
     while: level != 0 && status = 0
-        status: lm_compiler_use_plan_build(level, live, known)
-        level: level\next
+        status := lm_compiler_use_plan_build(level, live, known)
+        level := level\next
     ---
     c.lm_compiler_xfree((cast: (@: void) live))
     lm_compiler_use_plan_full()
     if: status = 0 && (root\full = 0 || known != 0)
-        ruse_cur_first_cell[0]: ruse_e_n_cell[0]
-        ruse_cur_levels_cell[0]: use_plan_n_cell[0] + 1
-        level: root
+        ruse_cur_first_cell[0] := ruse_e_n_cell[0]
+        ruse_cur_levels_cell[0] := use_plan_n_cell[0] + 1
+        level := root
         while: level != 0 && status = 0
             lm_compiler_use_plan_seen(level)
-            source: use_plan_first_cell[0]
+            source := use_plan_first_cell[0]
             while: source != 0 && status = 0
-                edge: source\edges
+                edge := source\edges
                 while: source\seen != 0 && edge != 0 && status = 0
-                    status: lm_compiler_ruse_append(output_level, edge, known)
-                    edge: edge\next
+                    status := lm_compiler_ruse_append(output_level, edge, known)
+                    edge := edge\next
                 ---
-                source: source\next
+                source := source\next
             ---
             if: output_level = 0
-                output_level: root\id
+                output_level := root\id
             else:
-                level: level\next
+                level := level\next
                 if: level != 0
-                    output_level: level\id
+                    output_level := level\id
                 ---
             ---
         ---
         if: status = 0
-            scope\first: ruse_cur_first_cell[0]
-            scope\count: ruse_e_n_cell[0] - ruse_cur_first_cell[0]
-            scope\levels: ruse_cur_levels_cell[0]
-            scope\state: 2
+            scope\first := ruse_cur_first_cell[0]
+            scope\count := ruse_e_n_cell[0] - ruse_cur_first_cell[0]
+            scope\levels := ruse_cur_levels_cell[0]
+            scope\state := 2
         else:
-            ruse_e_n_cell[0]: ruse_cur_first_cell[0]
+            ruse_e_n_cell[0] := ruse_cur_first_cell[0]
         ---
     ---
-    room_tag_cell[0]: previous_tag
+    room_tag_cell[0] := previous_tag
     if: status != 0
         return: (cast: (@: c.L2UseScope) (0))
-    scope\next: use_scopes_cell[0]
-    use_scopes_cell[0]: scope
+    scope\next := use_scopes_cell[0]
+    use_scopes_cell[0] := scope
     return: (cast: (@: c.L2UseScope) (scope))
 end: lm_compiler_use_scope_get
 
@@ -3603,12 +3603,12 @@ fn: lm_compiler_ruse_analyse (int: own) int
     @: scope c.L2UseScope
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][own]) = 0 || c.lm_compiler_own_is_slot(own) != 0
         return: (cast: (int) (1))
-    scope: lm_compiler_use_scope_get(own_mi_cell[0][own], (cast: (int) (c.lm_compiler_d105_own_key(own))), (cast: (int) (c.lm_compiler_own_schema(own))))
+    scope := lm_compiler_use_scope_get(own_mi_cell[0][own], (cast: (int) (c.lm_compiler_d105_own_key(own))), (cast: (int) (c.lm_compiler_own_schema(own))))
     if: scope = 0 || scope\state != 2
         return: (cast: (int) (1))
-    ruse_first_cell[0][own]: scope\first
-    ruse_count_cell[0][own]: scope\count
-    ruse_levels_cell[0][own]: scope\levels
+    ruse_first_cell[0][own] := scope\first
+    ruse_count_cell[0][own] := scope\count
+    ruse_levels_cell[0][own] := scope\levels
     return: (cast: (int) (2))
 end: lm_compiler_ruse_analyse
 
@@ -3623,14 +3623,14 @@ fn: lm_compiler_ruse_root_slot (int: own; int: req; int: slot) int
     int: scan_limit ruse_first_cell[0][own] + ruse_count_cell[0][own]
     int: half 0
     while: i < scan_limit
-        edge: ruse_e_edge_cell[0][i]
+        edge := ruse_e_edge_cell[0][i]
         if: ruse_e_level_cell[0][i] = 0 && edge\schema = req && c.lm_compiler_path_step_slot((cast: (const: @: c.L2PathStep) (@ edge\step))) = slot
             const: (@: port_edge_step c.L2PathStep (cast: (const: @: c.L2PathStep) (@ edge\step)))
             if: port_edge_step\segocc >= 0
                 return: (cast: (int) (1))
-            half: 2
+            half := 2
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (half))
 end: lm_compiler_ruse_root_slot
@@ -3642,7 +3642,7 @@ fn: lm_compiler_ruse_of (int: own) int
     if: own < 0 || own >= own_n_cell[0] || lm_compiler_ruse_room(own) != 0
         return: (cast: (int) (1))
     if: ruse_state_cell[0][own] = 0
-        ruse_state_cell[0][own]: lm_compiler_ruse_analyse(own)
+        ruse_state_cell[0][own] := lm_compiler_ruse_analyse(own)
     return: (cast: (int) (ruse_state_cell[0][own]))
 end: lm_compiler_ruse_of
 
@@ -3653,9 +3653,9 @@ fn: lm_compiler_ruse_level_count (int: own; int: level) int
     @@: ruse_levels_cell int (cast: (@@: int) (@ c.l2_ruse_levels))
     c.L2UseScope: scope
     @: view c.L2UseScope @ scope
-    view\first: ruse_first_cell[0][own]
-    view\count: ruse_count_cell[0][own]
-    view\levels: ruse_levels_cell[0][own]
+    view\first := ruse_first_cell[0][own]
+    view\count := ruse_count_cell[0][own]
+    view\levels := ruse_levels_cell[0][own]
     return: (cast: (int) (c.lm_compiler_use_scope_level_count(view, level)))
 end: lm_compiler_ruse_level_count
 
@@ -3666,9 +3666,9 @@ fn: lm_compiler_ruse_level_at (int: own; int: level) int
     @@: ruse_levels_cell int (cast: (@@: int) (@ c.l2_ruse_levels))
     c.L2UseScope: scope
     @: view c.L2UseScope @ scope
-    view\first: ruse_first_cell[0][own]
-    view\count: ruse_count_cell[0][own]
-    view\levels: ruse_levels_cell[0][own]
+    view\first := ruse_first_cell[0][own]
+    view\count := ruse_count_cell[0][own]
+    view\levels := ruse_levels_cell[0][own]
     return: (cast: (int) (c.lm_compiler_use_scope_level_at(view, level)))
 end: lm_compiler_ruse_level_at
 
@@ -3679,9 +3679,9 @@ fn: lm_compiler_ruse_cells (int: own) int
     @@: ruse_levels_cell int (cast: (@@: int) (@ c.l2_ruse_levels))
     c.L2UseScope: scope
     @: view c.L2UseScope @ scope
-    view\first: ruse_first_cell[0][own]
-    view\count: ruse_count_cell[0][own]
-    view\levels: ruse_levels_cell[0][own]
+    view\first := ruse_first_cell[0][own]
+    view\count := ruse_count_cell[0][own]
+    view\levels := ruse_levels_cell[0][own]
     return: (cast: (int) (c.lm_compiler_use_scope_cells(view)))
 end: lm_compiler_ruse_cells
 
@@ -3696,39 +3696,39 @@ fn: lm_compiler_use_scope_cell (const: (@: scope c.L2UseScope); int: k; @: whole
     int: lv 0
     int: at 1
     int: ix
-    \whole: 0
-    \value: 0
+    \whole := 0
+    \value := 0
     if: k = 0
-        \value: c.lm_compiler_use_scope_cells(scope)
+        \value := c.lm_compiler_use_scope_cells(scope)
         return: (cast: (int) ((cast: (int) (\value < 0))))
     while: lv < scope\levels
         if: k = at
-            \value: c.lm_compiler_use_scope_level_count(scope, lv)
+            \value := c.lm_compiler_use_scope_level_count(scope, lv)
             return: (cast: (int) (0))
-        ix: 0
-        i: scope\first
+        ix := 0
+        i := scope\first
         while: i < scan_limit
             if: ruse_e_level_cell[0][i] = lv
-                edge: ruse_e_edge_cell[0][i]
+                edge := ruse_e_edge_cell[0][i]
                 if: k = at + 1 + 2 * ix
                     return: (cast: (int) (lm_compiler_use_edge_cell(edge, value)))
                 ---
                 if: k = at + 2 + 2 * ix
                     if: ruse_e_below_cell[0][i] < 0
-                        \whole: 1
+                        \whole := 1
                     if: ruse_e_below_cell[0][i] = -2
-                        \whole: 2
+                        \whole := 2
                     if: ruse_e_below_cell[0][i] > 0
-                        \value: c.lm_compiler_use_scope_level_at(scope, ruse_e_below_cell[0][i])
+                        \value := c.lm_compiler_use_scope_level_at(scope, ruse_e_below_cell[0][i])
                     return: (cast: (int) ((cast: (int) (\value < 0))))
-                ix: ix + 1
+                ix := ix + 1
             ---
-            i: i + 1
+            i := i + 1
         ---
         if: ix > (c.INT_MAX - at - 1) / 2
             return: (cast: (int) (1))
-        at: at + 1 + 2 * ix
-        lv: lv + 1
+        at := at + 1 + 2 * ix
+        lv := lv + 1
     ---
     return: (cast: (int) (1))
 end: lm_compiler_use_scope_cell
@@ -3740,9 +3740,9 @@ fn: lm_compiler_ruse_cell (int: own; int: k; @: whole int; @: value int) int
     @@: ruse_levels_cell int (cast: (@@: int) (@ c.l2_ruse_levels))
     c.L2UseScope: scope
     @: view c.L2UseScope @ scope
-    view\first: ruse_first_cell[0][own]
-    view\count: ruse_count_cell[0][own]
-    view\levels: ruse_levels_cell[0][own]
+    view\first := ruse_first_cell[0][own]
+    view\count := ruse_count_cell[0][own]
+    view\levels := ruse_levels_cell[0][own]
     return: (cast: (int) (lm_compiler_use_scope_cell(view, k, whole, value)))
 end: lm_compiler_ruse_cell
 
@@ -3765,26 +3765,26 @@ fn: lm_compiler_d105_receiving_flow (int: cand; int: mi; int: key) int
     # the half it names, and looks at no other field: a candidate that lacks one of them is
     # refused where the place receives it and reaches no later Consumer.  A place of unknown
     # coverage receives in full and requires every field.
-    known: (cast: (int) (lm_compiler_ruse_of(own) = 2))
-    width: c.lm_compiler_schema_width(req)
+    known := (cast: (int) (lm_compiler_ruse_of(own) = 2))
+    width := c.lm_compiler_schema_width(req)
     while: slot < width
         if: c.lm_compiler_schema_field(req, slot, @ needed) != 0
             return: (cast: (int) (1))
-        half: 1
+        half := 1
         if: known != 0
-            half: lm_compiler_ruse_root_slot(own, req, slot)
+            half := lm_compiler_ruse_root_slot(own, req, slot)
         if: needed\name != 0 && half != 0
-            occurrence: 0
-            prior: 0
+            occurrence := 0
+            prior := 0
             while: prior < slot
                 if: c.lm_compiler_schema_field(req, prior, @ previous) != 0
                     return: (cast: (int) (1))
                 if: c.lm_compiler_text_same((cast: (const: @: c.LmP0Text) ((needed\name))), (cast: (const: @: c.LmP0Text) ((previous\name)))) != 0
-                    occurrence: occurrence + 1
-                prior: prior + 1
+                    occurrence := occurrence + 1
+                prior := prior + 1
             ---
             if: half = 2
-                occurrence: 0 - 1
+                occurrence := 0 - 1
             if: c.lm_compiler_schema_named_meta(cand, (cast: (const: @: c.LmP0Text) ((needed\name))), occurrence, @ actual) < 0
                 return: (cast: (int) (0))
             if: occurrence < 0 && c.lm_compiler_schema_two_heads(cand, (cast: (const: @: c.LmP0Text) ((needed\name)))) != 0
@@ -3801,7 +3801,7 @@ fn: lm_compiler_d105_receiving_flow (int: cand; int: mi; int: key) int
                     return: (cast: (int) (0))
             ---
         ---
-        slot: slot + 1
+        slot := slot + 1
     ---
     return: (cast: (int) (1))
 end: lm_compiler_d105_receiving_flow
@@ -3827,10 +3827,10 @@ fn: lm_compiler_d105_fits (int: ty; int: req; int: mi; int: k) int
         if: lm_compiler_uses_select(mi, k) != 0 || uses_oom_cell[0] != 0
             lm_compiler_uses_reset()
             return: (cast: (int) (-1))
-        status: lm_compiler_descriptor_used(ty, req, @ compatible)
+        status := lm_compiler_descriptor_used(ty, req, @ compatible)
         lm_compiler_uses_reset()
     else:
-        status: lm_compiler_descriptor_implements(ty, req, req, @ compatible)
+        status := lm_compiler_descriptor_implements(ty, req, req, @ compatible)
     ---
     if: status != 0
         return: (cast: (int) (-1))
@@ -3861,25 +3861,25 @@ fn: lm_compiler_d105_possible (int: i; int: req) int
             # COPIED-METHOD-DECLARED-FORMAL: a soft edge brings its candidate only when the method's class is the one a
             # call through a callable formal selects -- no proof that a call is incompatible.
             if: d105e_soft_cell[0][e] != 0
-                found: 1
-                e: e + 1
+                found := 1
+                e := e + 1
                 continue
             # RECEPTION-EDGE-DEBTS (f): at a result, only the return of a value of opaque type admits its value when
             # the program runs as the method's implicit `implements`; any other return's admission is a proof.
             if: d105s_k_cell[0][i] = -1 && lm_compiler_d105_opaque_place(d105e_fmi_cell[0][e], d105e_fk_cell[0][e]) = 0 && (d105e_fk_cell[0][e] != -1 || m_ret_cell[0][d105e_fmi_cell[0][e]] != 16)
                 return: (cast: (int) (0))
-            found: 1
-            alt: 0
-            j: 0
+            found := 1
+            alt := 0
+            j := 0
             while: j < d105s_n_cell[0] && alt = 0
                 if: d105s_mi_cell[0][j] = d105e_fmi_cell[0][e] && d105s_k_cell[0][j] = d105e_fk_cell[0][e] && (d105s_ty_cell[0][j] = req || lm_compiler_d105_fits(d105s_ty_cell[0][j], req, d105s_mi_cell[0][i], d105s_k_cell[0][i]) = 1)
-                    alt: 1
-                j: j + 1
+                    alt := 1
+                j := j + 1
             ---
             if: alt = 0
                 return: (cast: (int) (0))
         ---
-        e: e + 1
+        e := e + 1
     ---
     return: (cast: (int) (found))
 end: lm_compiler_d105_possible
@@ -3897,7 +3897,7 @@ fn: lm_compiler_d105_refused (int: tmi; int: tk; int: ty) int
     while: i < d105s_n_cell[0]
         if: d105s_mi_cell[0][i] = tmi && d105s_k_cell[0][i] = tk && d105s_ty_cell[0][i] = ty && d105s_no_cell[0][i] != 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_refused
@@ -3917,23 +3917,23 @@ fn: lm_compiler_d105_capture_sources () int
     int: source
     while: host < m_n_cell[0]
         if: c.lm_compiler_mad_on(host) != 0
-            capture: 0
+            capture := 0
             while: capture < mcap_n_cell[0]
-                reader: mcap_model_cell[0][capture]
+                reader := mcap_model_cell[0][capture]
                 if: reader = mad_model_cell[0][host] || lm_compiler_mad_reached(host, reader) != 0
-                    target: c.lm_compiler_param_find(reader, mcap_name_cell[0][capture])
+                    target := c.lm_compiler_param_find(reader, mcap_name_cell[0][capture])
                     if: target >= 0 && c.lm_compiler_input_schema(reader, target) != -1
-                        source: -1
+                        source := -1
                         lm_compiler_hidden_model_source_named(host, reader, mcap_name_cell[0][capture], @ source)
                         if: source != -1 && lm_compiler_d105_edge((cast: (int) (c.lm_compiler_d105_key_method(host, source))), source, reader, target, m_node_cell[0][host]) != 0
                             return: (cast: (int) (1))
                         ---
                     ---
                 ---
-                capture: capture + 1
+                capture := capture + 1
             ---
         ---
-        host: host + 1
+        host := host + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_capture_sources
@@ -3964,37 +3964,37 @@ fn: lm_compiler_d105_seed () int
     # by original source identity; copies retain that declaration identity.
     # Fields without a procedure still have the field coordinate. No method
     # or runtime object is manufactured just to hold source alternatives.
-    field: 0
+    field := 0
     while: field < nsf_n_cell[0]
         if: nsf_kind_cell[0][field] = 10 && c.lm_compiler_nsf_pointee(field) >= 0
-            field_key: lm_compiler_d105_field_key(field)
+            field_key := lm_compiler_d105_field_key(field)
             if: field_key = -1
                 return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], nsf_source_cell[0][field], "out of memory")))
-            own: 0
+            own := 0
             while: own < own_n_cell[0]
                 if: own_decl_cell[0][own] = nsf_source_cell[0][field] && c.lm_compiler_own_nsty_get(own) >= 0
                     if: lm_compiler_d105_edge(own_mi_cell[0][own], (cast: (int) (c.lm_compiler_d105_own_key(own))), e_cell[0], field_key, nsf_source_cell[0][field]) != 0 || lm_compiler_d105_edge(e_cell[0], field_key, own_mi_cell[0][own], (cast: (int) (c.lm_compiler_d105_own_key(own))), nsf_source_cell[0][field]) != 0
                         return: (cast: (int) (1))
                     ---
-                own: own + 1
+                own := own + 1
             ---
         ---
-        field: field + 1
+        field := field + 1
     ---
-    i: 0
+    i := 0
     while: i < own_n_cell[0]
-        ty: c.lm_compiler_own_source_layout(i)
+        ty := c.lm_compiler_own_source_layout(i)
         if: ty != -1 && lm_compiler_d105_source(own_mi_cell[0][i], (cast: (int) (c.lm_compiler_d105_own_key(i))), ty, own_decl_cell[0][i]) != 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     # A single retained operand can return its existing physical descriptor.
     # Catalogue that possible source alongside the fresh declaration source;
     # only reached construction decides which origin the actual value has.
-    i: 0
+    i := 0
     while: i < mres_n_cell[0]
-        source: @ mres_source_cell[0][i]
-        own: mres_own_cell[0][i]
+        source := @ mres_source_cell[0][i]
+        own := mres_own_cell[0][i]
         if: source\method >= 0
             if: lm_compiler_d105_edge((cast: (int) (source\method)), (cast: (int) (source\place)), own_mi_cell[0][own], (cast: (int) (c.lm_compiler_d105_own_key(own))), own_decl_cell[0][own]) != 0
                 return: (cast: (int) (1))
@@ -4004,7 +4004,7 @@ fn: lm_compiler_d105_seed () int
                 return: (cast: (int) (1))
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_seed
@@ -4050,57 +4050,57 @@ fn: lm_compiler_d105_close () int
     if: lm_compiler_d105_seed() != 0
         return: (cast: (int) (1))
     while: changed != 0
-        changed: 0
-        e: 0
+        changed := 0
+        e := 0
         while: e < d105e_n_cell[0]
             if: d105e_tmi_cell[0][e] < 0
-                e: e + 1
+                e := e + 1
                 continue
-            i: 0
-            n: d105s_n_cell[0]
+            i := 0
+            n := d105s_n_cell[0]
             while: i < n
                 if: d105s_mi_cell[0][i] = d105e_fmi_cell[0][e] && d105s_k_cell[0][i] = d105e_fk_cell[0][e] && lm_compiler_d105_has(d105e_tmi_cell[0][e], d105e_tk_cell[0][e], d105s_ty_cell[0][i]) = 0
                     # Direct candidates are also catalogued at their receiving
                     # own key. A definite failed reception never publishes that
                     # candidate for a later consumer of the stored value.
                     if: lm_compiler_d105_receiving_flow(d105s_ty_cell[0][i], d105e_fmi_cell[0][e], d105e_fk_cell[0][e]) = 0
-                        i: i + 1
+                        i := i + 1
                         continue
                     # Even a refused candidate needs its instruction's exact
                     # alternative. Reserve it before cutting publication flow;
                     # this does not register a runtime successful admission.
-                    req: c.lm_compiler_input_schema(d105e_tmi_cell[0][e], d105e_tk_cell[0][e])
-                    ty: d105s_ty_cell[0][i]
+                    req := c.lm_compiler_input_schema(d105e_tmi_cell[0][e], d105e_tk_cell[0][e])
+                    ty := d105s_ty_cell[0][i]
                     if: req != -1 && ty != req && lm_compiler_d105_pair(ty, req) < 0
                         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], d105e_at_cell[0][e], "out of memory")))
                     if: lm_compiler_d105_receiving_flow(ty, d105e_tmi_cell[0][e], d105e_tk_cell[0][e]) = 0
-                        i: i + 1
+                        i := i + 1
                         continue
-                    before: d105s_n_cell[0]
+                    before := d105s_n_cell[0]
                     if: lm_compiler_d105_source(d105e_tmi_cell[0][e], d105e_tk_cell[0][e], d105s_ty_cell[0][i], d105e_at_cell[0][e]) != 0
                         return: (cast: (int) (1))
                     # A change is a source added: the fixed point cannot turn on one that was not.
                     if: d105s_n_cell[0] != before
-                        changed: 1
+                        changed := 1
                 ---
-                i: i + 1
+                i := i + 1
             ---
-            e: e + 1
+            e := e + 1
         ---
     ---
-    i: 0
+    i := 0
     while: i < d105s_n_cell[0]
         # K02c: the requirement is the place's SCHEMA -- a hidden input's may be a merge result's (tagged).
-        req: c.lm_compiler_input_schema(d105s_mi_cell[0][i], d105s_k_cell[0][i])
-        ty: d105s_ty_cell[0][i]
+        req := c.lm_compiler_input_schema(d105s_mi_cell[0][i], d105s_k_cell[0][i])
+        ty := d105s_ty_cell[0][i]
         if: req != -1 && ty != req
             if: library_mode_cell[0] != 0
                 return: (cast: (int) (c.lm_compiler_error(src_cell[0], d105s_at_cell[0][i], "an admission to a Structure type by name in a library unit (D-105: the pair tables are a program's)")))
             # RECEPTION-EDGE-DEBTS (d): a possible candidate an input's Consumer cannot admit is refused when the
             # program runs, where the input is formed, and not here: it gets no pair map and marks nothing.
             if: d105s_k_cell[0][i] >= -1 && lm_compiler_d105_fits(ty, req, d105s_mi_cell[0][i], d105s_k_cell[0][i]) = 0 && lm_compiler_d105_possible(i, req) != 0
-                d105s_no_cell[0][i]: 1
-                i: i + 1
+                d105s_no_cell[0][i] := 1
+                i := i + 1
                 continue
             ---
             # Admission is by the consumer's uses (book: a field the formal's method never reads need not
@@ -4123,10 +4123,10 @@ fn: lm_compiler_d105_close () int
             # An ordinary reference binding checks its full receiver only
             # when reached, after evaluating the candidate. Recording layout
             # alternatives must not turn that runtime refusal into a check here.
-            t: lm_compiler_d105_cells(req)
+            t := lm_compiler_d105_cells(req)
             if: t = 0
                 return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], d105s_at_cell[0][i], "out of memory")))
-            why: lm_compiler_d105_table(ty, req, t, d105_tcap_cell[0], @ tn, 1)
+            why := lm_compiler_d105_table(ty, req, t, d105_tcap_cell[0], @ tn, 1)
             if: why = 2
                 return: (cast: (int) (c.lm_compiler_error(src_cell[0], d105s_at_cell[0][i], "an admission to a Structure type through a Structure field of another type")))
             if: why != 0
@@ -4136,56 +4136,56 @@ fn: lm_compiler_d105_close () int
             if: lm_compiler_d105_pair(ty, req) < 0
                 return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], d105s_at_cell[0][i], "out of memory")))
         ---
-        i: i + 1
+        i := i + 1
     ---
     # Every modeled edge has a declared-source default map in the emitted
     # admission, even when no genuine layout source propagated along it.
     # Reserve that instruction constant before the maps are declared. This
     # does not establish layout evidence or a successful receiving admission.
-    e: 0
+    e := 0
     while: e < d105e_n_cell[0]
         if: d105e_fmi_cell[0][e] < 0
-            ty: d105e_fk_cell[0][e]
+            ty := d105e_fk_cell[0][e]
         else:
-            ty: c.lm_compiler_input_schema(d105e_fmi_cell[0][e], d105e_fk_cell[0][e])
+            ty := c.lm_compiler_input_schema(d105e_fmi_cell[0][e], d105e_fk_cell[0][e])
         ---
         if: d105e_tmi_cell[0][e] < 0
-            req: d105e_tk_cell[0][e]
-            i: 0
+            req := d105e_tk_cell[0][e]
+            i := 0
             while: d105e_fmi_cell[0][e] >= 0 && i < d105s_n_cell[0]
                 if: d105s_mi_cell[0][i] = d105e_fmi_cell[0][e] && d105s_k_cell[0][i] = d105e_fk_cell[0][e] && lm_compiler_d105_prepare_pair(d105s_ty_cell[0][i], req, d105e_at_cell[0][e]) != 0
                     return: (cast: (int) (1))
-                i: i + 1
+                i := i + 1
             ---
         else:
-            req: c.lm_compiler_input_schema(d105e_tmi_cell[0][e], d105e_tk_cell[0][e])
+            req := c.lm_compiler_input_schema(d105e_tmi_cell[0][e], d105e_tk_cell[0][e])
         ---
         if: lm_compiler_d105_prepare_pair(ty, req, d105e_at_cell[0][e]) != 0
             return: (cast: (int) (1))
-        e: e + 1
+        e := e + 1
     ---
     # The identity entries of every reception along a recorded edge (l2_identity_list) have their pair maps among
     # the program's, reserved here before the maps are declared.  An entry is no admission: the record is asked.
-    e: 0
+    e := 0
     while: e < d105e_n_cell[0]
         if: lm_compiler_ide_reserve(d105e_fmi_cell[0][e], d105e_fk_cell[0][e], d105e_tmi_cell[0][e], d105e_tk_cell[0][e]) != 0
             return: (cast: (int) (1))
-        e: e + 1
+        e := e + 1
     ---
-    e: 0
+    e := 0
     while: e < d105x_n_cell[0]
         if: lm_compiler_ide_reserve(d105x_fmi_cell[0][e], d105x_fk_cell[0][e], d105x_tmi_cell[0][e], d105x_tk_cell[0][e]) != 0
             return: (cast: (int) (1))
-        e: e + 1
+        e := e + 1
     ---
     # A merge result whose body came from a later source uses the very same
     # 2n correspondence table as any implements admission. Reserve it before
     # the module's tables are declared; no runtime spelling lookup is added.
-    i: 0
+    i := 0
     while: i < mres_n_cell[0]
         if: mres_code_k_cell[0][i] > 0 && mres_code_schema_cell[0][i] != -1 && lm_compiler_d105_pair((cast: (int) (c.lm_compiler_schema_merge(i))), mres_code_schema_cell[0][i]) < 0
             return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], own_decl_cell[0][mres_own_cell[0][i]], "out of memory")))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_close
@@ -4198,7 +4198,7 @@ fn: lm_compiler_d105_any (int: mi) int
     while: i < d105_n_cell[0]
         if: d105_mi_cell[0][i] = mi
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_any
@@ -4245,7 +4245,7 @@ fn: lm_compiler_d105_declare_maps () int
     int: r 0
     int: count ns_n_cell[0] + mres_n_cell[0]
     if: count = 0
-        count: 1
+        count := 1
     if: library_mode_cell[0] != 0 && c.fprintf(out_cell[0], "define: l2_layout_tokens l2_u%08X%08X_layout_tokens\n", module_hash_a_cell[0], module_hash_b_cell[0]) < 0
         return: (cast: (int) (1))
     if: c.fprintf(out_cell[0], "[]: char l2_layout_tokens %d\n", count) < 0
@@ -4255,7 +4255,7 @@ fn: lm_compiler_d105_declare_maps () int
             return: (cast: (int) (1))
         if: c.fprintf(out_cell[0], "[]: size_t l2_d105m%d %d\n", q, lm_compiler_d105_width(d105t_req_cell[0][q]) * 2) < 0
             return: (cast: (int) (1))
-        q: q + 1
+        q := q + 1
     ---
     while: r < mres_n_cell[0]
         if: mres_code_k_cell[0][r] > 0
@@ -4269,9 +4269,9 @@ fn: lm_compiler_d105_declare_maps () int
                 return: (cast: (int) (1))
             ---
         ---
-        r: r + 1
+        r := r + 1
     ---
-    d105t_declared_cell[0]: d105t_n_cell[0]
+    d105t_declared_cell[0] := d105t_n_cell[0]
     return: (cast: (int) (0))
 end: lm_compiler_d105_declare_maps
 
@@ -4317,8 +4317,8 @@ fn: lm_compiler_d105_place_sources (int: mi; int: k) int
     int: n 0
     while: i < d105s_n_cell[0]
         if: d105s_mi_cell[0][i] = mi && d105s_k_cell[0][i] = k
-            n: n + 1
-        i: i + 1
+            n := n + 1
+        i := i + 1
     ---
     return: (cast: (int) (n))
 end: lm_compiler_d105_place_sources
@@ -4334,13 +4334,13 @@ fn: lm_compiler_d105a_room () int
     int: want
     if: d105a_n_cell[0] < d105a_cap_cell[0]
         return: (cast: (int) (0))
-    want: c.lm_compiler_cap_next(d105a_cap_cell[0], d105a_n_cell[0] + 1)
+    want := c.lm_compiler_cap_next(d105a_cap_cell[0], d105a_n_cell[0] + 1)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105a_mi_cell[0], d105a_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105a_k_cell[0], d105a_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105a_ty_cell[0], d105a_n_cell[0], want) != 0
         return: (cast: (int) (1))
-    d105a_cap_cell[0]: want
+    d105a_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_d105a_room
 
@@ -4354,7 +4354,7 @@ fn: lm_compiler_d105a_has (int: mi; int: k; int: ty) int
     while: i < d105a_n_cell[0]
         if: d105a_mi_cell[0][i] = mi && d105a_k_cell[0][i] = k && d105a_ty_cell[0][i] = ty
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105a_has
@@ -4369,11 +4369,11 @@ fn: lm_compiler_d105a_add (int: mi; int: k; int: ty; @: changed int) int
         return: (cast: (int) (0))
     if: lm_compiler_d105a_room() != 0
         return: (cast: (int) (1))
-    d105a_mi_cell[0][d105a_n_cell[0]]: mi
-    d105a_k_cell[0][d105a_n_cell[0]]: k
-    d105a_ty_cell[0][d105a_n_cell[0]]: ty
-    d105a_n_cell[0]: d105a_n_cell[0] + 1
-    \changed: 1
+    d105a_mi_cell[0][d105a_n_cell[0]] := mi
+    d105a_k_cell[0][d105a_n_cell[0]] := k
+    d105a_ty_cell[0][d105a_n_cell[0]] := ty
+    d105a_n_cell[0] := d105a_n_cell[0] + 1
+    \changed := 1
     return: (cast: (int) (0))
 end: lm_compiler_d105a_add
 
@@ -4386,7 +4386,7 @@ fn: lm_compiler_place_declaration (int: mi; int: k) int
         return: (cast: (int) (-1))
     if: k >= m_arity_cell[0][mi] && c.lm_compiler_input_undeclared(mi, k) != 0
         return: (cast: (int) (-1))
-    s: c.lm_compiler_input_schema(mi, k)
+    s := c.lm_compiler_input_schema(mi, k)
     if: c.lm_compiler_schema_kind(s) != 1
         return: (cast: (int) (-1))
     return: (cast: (int) (s))
@@ -4404,15 +4404,15 @@ fn: lm_compiler_d105x_room () int
     int: want
     if: d105x_n_cell[0] < d105x_cap_cell[0]
         return: (cast: (int) (0))
-    want: c.lm_compiler_cap_next(d105x_cap_cell[0], d105x_n_cell[0] + 1)
+    want := c.lm_compiler_cap_next(d105x_cap_cell[0], d105x_n_cell[0] + 1)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105x_fmi_cell[0], d105x_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105x_fk_cell[0], d105x_n_cell[0], want) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ d105x_tmi_cell[0], d105x_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ d105x_tk_cell[0], d105x_n_cell[0], want) != 0
         return: (cast: (int) (1))
-    d105x_cap_cell[0]: want
+    d105x_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_d105x_room
 
@@ -4427,11 +4427,11 @@ fn: lm_compiler_d105x_add (int: fmi; int: fk; int: tmi; int: tk) int
         return: (cast: (int) (0))
     if: lm_compiler_d105x_room() != 0
         return: (cast: (int) (1))
-    d105x_fmi_cell[0][d105x_n_cell[0]]: fmi
-    d105x_fk_cell[0][d105x_n_cell[0]]: fk
-    d105x_tmi_cell[0][d105x_n_cell[0]]: tmi
-    d105x_tk_cell[0][d105x_n_cell[0]]: tk
-    d105x_n_cell[0]: d105x_n_cell[0] + 1
+    d105x_fmi_cell[0][d105x_n_cell[0]] := fmi
+    d105x_fk_cell[0][d105x_n_cell[0]] := fk
+    d105x_tmi_cell[0][d105x_n_cell[0]] := tmi
+    d105x_tk_cell[0][d105x_n_cell[0]] := tk
+    d105x_n_cell[0] := d105x_n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_d105x_add
 
@@ -4450,7 +4450,7 @@ fn: lm_compiler_d105a_along (int: fmi; int: fk; int: tmi; int: tk; @: changed in
     while: i < n
         if: d105a_mi_cell[0][i] = fmi && d105a_k_cell[0][i] = fk && lm_compiler_d105a_add(tmi, tk, d105a_ty_cell[0][i], changed) != 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105a_along
@@ -4473,23 +4473,23 @@ fn: lm_compiler_d105a_close () int
     @: d105a_done_cell int (cast: (@: int) (@ c.l2_d105a_done))
     int: changed 1
     int: e
-    d105a_n_cell[0]: 0
+    d105a_n_cell[0] := 0
     while: changed != 0
-        changed: 0
-        e: 0
+        changed := 0
+        e := 0
         while: e < d105e_n_cell[0]
             if: lm_compiler_d105a_along(d105e_fmi_cell[0][e], d105e_fk_cell[0][e], d105e_tmi_cell[0][e], d105e_tk_cell[0][e], @ changed) != 0
                 return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], d105e_at_cell[0][e], "out of memory")))
-            e: e + 1
+            e := e + 1
         ---
-        e: 0
+        e := 0
         while: e < d105x_n_cell[0]
             if: lm_compiler_d105a_along(d105x_fmi_cell[0][e], d105x_fk_cell[0][e], d105x_tmi_cell[0][e], d105x_tk_cell[0][e], @ changed) != 0
                 return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")))
-            e: e + 1
+            e := e + 1
         ---
     ---
-    d105a_done_cell[0]: 1
+    d105a_done_cell[0] := 1
     return: (cast: (int) (0))
 end: lm_compiler_d105a_close
 
@@ -4509,13 +4509,13 @@ fn: lm_compiler_d105_edge_known (int: fmi; int: fk; int: tmi; int: tk) int
     while: e < d105e_n_cell[0]
         if: d105e_fmi_cell[0][e] = fmi && d105e_fk_cell[0][e] = fk && d105e_tmi_cell[0][e] = tmi && d105e_tk_cell[0][e] = tk
             return: (cast: (int) (1))
-        e: e + 1
+        e := e + 1
     ---
-    e: 0
+    e := 0
     while: e < d105x_n_cell[0]
         if: d105x_fmi_cell[0][e] = fmi && d105x_fk_cell[0][e] = fk && d105x_tmi_cell[0][e] = tmi && d105x_tk_cell[0][e] = tk
             return: (cast: (int) (1))
-        e: e + 1
+        e := e + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_edge_known
@@ -4529,7 +4529,7 @@ fn: lm_compiler_d105_pair_find (int: cand; int: req) int
     while: i < d105t_n_cell[0]
         if: d105t_cand_cell[0][i] = cand && d105t_req_cell[0][i] = req
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_d105_pair_find
@@ -4548,15 +4548,15 @@ fn: lm_compiler_ide_room () int
     int: want
     if: ide_n_cell[0] < ide_cap_cell[0]
         return: (cast: (int) (0))
-    want: c.lm_compiler_cap_next(ide_cap_cell[0], ide_n_cell[0] + 1)
+    want := c.lm_compiler_cap_next(ide_cap_cell[0], ide_n_cell[0] + 1)
     if: want < 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ ide_fmi_cell[0], ide_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ ide_fk_cell[0], ide_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ ide_tmi_cell[0], ide_n_cell[0], want) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_d105_ints(@ ide_tk_cell[0], ide_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ ide_ty_cell[0], ide_n_cell[0], want) != 0 || c.lm_compiler_d105_ints(@ ide_cls_cell[0], ide_n_cell[0], want) != 0
         return: (cast: (int) (1))
-    ide_cap_cell[0]: want
+    ide_cap_cell[0] := want
     return: (cast: (int) (0))
 end: lm_compiler_ide_room
 
@@ -4571,13 +4571,13 @@ fn: lm_compiler_ide_push (int: fmi; int: fk; int: tmi; int: tk; int: ty; int: cl
     @@: ide_cls_cell int (cast: (@@: int) (@ c.l2_ide_cls))
     if: lm_compiler_ide_room() != 0
         return: (cast: (int) (1))
-    ide_fmi_cell[0][ide_n_cell[0]]: fmi
-    ide_fk_cell[0][ide_n_cell[0]]: fk
-    ide_tmi_cell[0][ide_n_cell[0]]: tmi
-    ide_tk_cell[0][ide_n_cell[0]]: tk
-    ide_ty_cell[0][ide_n_cell[0]]: ty
-    ide_cls_cell[0][ide_n_cell[0]]: cls
-    ide_n_cell[0]: ide_n_cell[0] + 1
+    ide_fmi_cell[0][ide_n_cell[0]] := fmi
+    ide_fk_cell[0][ide_n_cell[0]] := fk
+    ide_tmi_cell[0][ide_n_cell[0]] := tmi
+    ide_tk_cell[0][ide_n_cell[0]] := tk
+    ide_ty_cell[0][ide_n_cell[0]] := ty
+    ide_cls_cell[0][ide_n_cell[0]] := cls
+    ide_n_cell[0] := ide_n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_ide_push
 
@@ -4592,32 +4592,32 @@ fn: lm_compiler_anchor_used (int: req; int: w; @: used int; @: n int) int
     int: j
     int: edge
     int: k
-    \n: 0
+    \n := 0
     while: fact != 0
         if: lm_compiler_uses_fact(fact) != 0
-            status: lm_compiler_uses_project(fact, req, path)
+            status := lm_compiler_uses_project(fact, req, path)
             if: status > 1
                 c.lm_compiler_path_release(path)
                 return: (cast: (int) (1))
             if: status = 0 && path\n > 0
-                step: path\steps
-                j: c.lm_compiler_path_step_slot(step)
+                step := path\steps
+                j := c.lm_compiler_path_step_slot(step)
                 if: j >= 0 && j < w
-                    edge: j
+                    edge := j
                     if: step\segocc < 0
-                        edge: w + j
-                    k: 0
+                        edge := w + j
+                    k := 0
                     while: k < \n && used[k] != edge
-                        k: k + 1
+                        k := k + 1
                     if: k = \n
-                        used[\n]: edge
-                        \n: \n + 1
+                        used[\n] := edge
+                        \n := \n + 1
                     ---
                 ---
             ---
             c.lm_compiler_path_release(path)
         ---
-        fact: fact\next
+        fact := fact\next
     ---
     return: (cast: (int) (0))
 end: lm_compiler_anchor_used
@@ -4634,17 +4634,17 @@ fn: lm_compiler_anchor_offer (int: a; int: req; @: used int; int: used_n; @: row
         return: (cast: (int) (0))
     if: lm_compiler_descriptor_used(a, req, @ ok) != 0 || ok = 0
         return: (cast: (int) (0))
-    t: lm_compiler_d105_cells(req)
+    t := lm_compiler_d105_cells(req)
     if: t = 0
         return: (cast: (int) (-1))
-    status: lm_compiler_d105_table(a, req, t, d105_tcap_cell[0], @ tn, 1)
+    status := lm_compiler_d105_table(a, req, t, d105_tcap_cell[0], @ tn, 1)
     if: status != 0
         return: (cast: (int) (0))
     while: u < used_n
-        row[u]: -1
+        row[u] := -1
         if: used[u] < tn
-            row[u]: t[used[u]]
-        u: u + 1
+            row[u] := t[used[u]]
+        u := u + 1
     ---
     return: (cast: (int) (1))
 end: lm_compiler_anchor_offer
@@ -4681,90 +4681,90 @@ fn: lm_compiler_ide_compute (int: req; int: s; int: fmi; int: fk; int: tmi; int:
     @: used int 0
     @: proj int 0
     @: nm c.LmP0Text
-    \first: 0
-    \count: 0
+    \first := 0
+    \count := 0
     # Before the model's width is known -- when the walked frames are first counted -- there is nothing to compute
     # and nothing is kept: the entries are found once the width is there.
     if: w < 1
         return: (cast: (int) (0))
     if: lm_compiler_ide_push(fmi, fk, tmi, tk, -2, 0) != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")))
-    base: ide_n_cell[0]
-    \first: base
+    base := ide_n_cell[0]
+    \first := base
     if: m_node_cell[0][tmi] = 0 || m_node_cell[0][tmi]\as = 0 || m_node_cell[0][tmi]\as\frame = 0
         return: (cast: (int) (0))
-    nm: c.lm_compiler_input_name(tmi, tk)
+    nm := c.lm_compiler_input_name(tmi, tk)
     if: nm = 0
         return: (cast: (int) (0))
     while: i < d105a_n_cell[0]
         if: d105a_mi_cell[0][i] = fmi && d105a_k_cell[0][i] = fk
-            anchors: anchors + 1
-        i: i + 1
+            anchors := anchors + 1
+        i := i + 1
     ---
-    isz: c.sizeof(c.int)
+    isz := c.sizeof(c.int)
     if: c.lm_compiler_mul_ok((cast: (size_t) w) * 2U, isz) = 0 || c.lm_compiler_mul_ok(((cast: (size_t) anchors) + 1U) * (cast: (size_t) w) * 2U, isz) = 0
-        alloc_err_cell[0]: 2
+        alloc_err_cell[0] := 2
         return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")))
-    alloc_kind_cell[0]: 5
-    used: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) w) * 2U * isz))
-    proj: (cast: (@: int) c.lm_compiler_xmalloc(((cast: (size_t) anchors) + 1U) * (cast: (size_t) w) * 2U * isz))
+    alloc_kind_cell[0] := 5
+    used := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) w) * 2U * isz))
+    proj := (cast: (@: int) c.lm_compiler_xmalloc(((cast: (size_t) anchors) + 1U) * (cast: (size_t) w) * 2U * isz))
     if: used = 0 || proj = 0
-        rc: c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
+        rc := c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
     if: rc = 0
         lm_compiler_uses_reset()
         if: lm_compiler_uses_select(tmi, tk) != 0 || uses_oom_cell[0] != 0
-            rc: c.lm_compiler_alloc_or(src_cell[0], m_node_cell[0][tmi], "out of memory")
+            rc := c.lm_compiler_alloc_or(src_cell[0], m_node_cell[0][tmi], "out of memory")
         ---
     ---
     if: rc = 0
         if: lm_compiler_anchor_used(req, w, used, @ used_n) != 0
-            rc: c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
+            rc := c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
     ---
     if: rc = 0
-        ok: lm_compiler_anchor_offer(s, req, used, used_n, proj)
+        ok := lm_compiler_anchor_offer(s, req, used, used_n, proj)
         if: ok < 0
-            rc: c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
+            rc := c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
         if: ok > 0 && lm_compiler_ide_push(fmi, fk, tmi, tk, s, 0) != 0
-            rc: c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
-        lead: ide_n_cell[0]
+            rc := c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
+        lead := ide_n_cell[0]
     ---
-    i: 0
+    i := 0
     while: rc = 0 && i < d105a_n_cell[0]
-        a: d105a_ty_cell[0][i]
+        a := d105a_ty_cell[0][i]
         if: d105a_mi_cell[0][i] = fmi && d105a_k_cell[0][i] = fk && a != s && a != req
-            ok: lm_compiler_anchor_offer(a, req, used, used_n, proj + others * used_n)
+            ok := lm_compiler_anchor_offer(a, req, used, used_n, proj + others * used_n)
             if: ok < 0
-                rc: c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
+                rc := c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
             if: ok > 0
-                cls: 0
-                k: 0
+                cls := 0
+                k := 0
                 while: cls = 0 && k < others
-                    j: 1
-                    u: 0
+                    j := 1
+                    u := 0
                     while: u < used_n
                         if: proj[k * used_n + u] != proj[others * used_n + u]
-                            j: 0
-                        u: u + 1
+                            j := 0
+                        u := u + 1
                     ---
                     if: j != 0
-                        cls: ide_cls_cell[0][lead + k]
-                    k: k + 1
+                        cls := ide_cls_cell[0][lead + k]
+                    k := k + 1
                 ---
                 if: cls = 0
-                    cls: next_cls
-                    next_cls: next_cls + 1
+                    cls := next_cls
+                    next_cls := next_cls + 1
                 ---
                 if: lm_compiler_ide_push(fmi, fk, tmi, tk, a, cls) != 0
-                    rc: c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
-                others: others + 1
+                    rc := c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")
+                others := others + 1
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
     lm_compiler_uses_reset()
     c.lm_compiler_xfree((cast: (@: void) used))
     c.lm_compiler_xfree((cast: (@: void) proj))
-    \count: ide_n_cell[0] - base
+    \count := ide_n_cell[0] - base
     return: (cast: (int) (rc))
 end: lm_compiler_ide_compute
 
@@ -4781,29 +4781,29 @@ fn: lm_compiler_identity_list (int: req; @: source c.L2ReferenceSource; int: tmi
     int: r 0
     int: fmi
     int: fk
-    \first: 0
-    \count: 0
+    \first := 0
+    \count := 0
     if: full_receiver != 0 || req = -1 || source = 0 || source\method < 0 || tmi < 0 || tmi >= m_n_cell[0] || tk < 0
         return: (cast: (int) (0))
     if: lm_compiler_d105_dynamic(source) = 0
         return: (cast: (int) (0))
-    fmi: source\method
-    fk: source\place
+    fmi := source\method
+    fk := source\place
     if: lm_compiler_d105_edge_known(fmi, fk, tmi, tk) = 0 || c.lm_compiler_input_schema(tmi, tk) != req
         return: (cast: (int) (0))
     if: d105a_done_cell[0] = 0 && lm_compiler_d105a_close() != 0
         return: (cast: (int) (1))
     while: r < ide_n_cell[0]
         if: ide_ty_cell[0][r] = -2 && ide_fmi_cell[0][r] = fmi && ide_fk_cell[0][r] = fk && ide_tmi_cell[0][r] = tmi && ide_tk_cell[0][r] = tk
-            \first: r + 1
-            r: r + 1
+            \first := r + 1
+            r := r + 1
             while: r < ide_n_cell[0] && ide_ty_cell[0][r] != -2
-                \count: \count + 1
-                r: r + 1
+                \count := \count + 1
+                r := r + 1
             ---
             return: (cast: (int) (0))
         ---
-        r: r + 1
+        r := r + 1
     ---
     return: (cast: (int) (lm_compiler_ide_compute(req, (cast: (int) (source\schema)), fmi, fk, tmi, tk, first, count)))
 end: lm_compiler_identity_list
@@ -4819,22 +4819,22 @@ fn: lm_compiler_ide_reserve (int: fmi; int: fk; int: tmi; int: tk) int
     int: i
     if: fmi < 0 || tmi < 0 || tk < 0
         return: (cast: (int) (0))
-    source\schema: c.lm_compiler_input_schema(fmi, fk)
-    source\path: 0
-    source\origin: 0
-    source\origin_count: 0
-    source\origin_method: -1
-    source\layout: -1
-    source\method: fmi
-    source\place: fk
-    req: c.lm_compiler_input_schema(tmi, tk)
+    source\schema := c.lm_compiler_input_schema(fmi, fk)
+    source\path := 0
+    source\origin := 0
+    source\origin_count := 0
+    source\origin_method := -1
+    source\layout := -1
+    source\method := fmi
+    source\place := fk
+    req := c.lm_compiler_input_schema(tmi, tk)
     if: lm_compiler_identity_list(req, @ source, tmi, tk, 0, @ first, @ count) != 0
         return: (cast: (int) (1))
-    i: first
+    i := first
     while: i < first + count
         if: lm_compiler_d105_pair(ide_ty_cell[0][i], req) < 0
             return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_ide_reserve
@@ -4861,16 +4861,16 @@ end: lm_compiler_d105_emit_source_req
 # Original: l2src/l2trans.lm1:38361
 fn: lm_compiler_d105_emit_source_req_record (int: idx; int: req; int: cand; int: smi; int: sk; const: (@: value char); const: (@: ind char); int: at_mi; int: tmi; int: tk; int: owner; const: (@: source_node c.LmP0Node); const: (@: computed_record char)) int
     c.L2ReferenceSource: source
-    source\schema: cand
-    source\path: 0
-    source\origin: source_node
-    source\origin_count: 0
-    source\origin_method: owner
-    source\layout: -1
-    source\method: c.lm_compiler_d105_key_method(smi, sk)
-    source\place: sk
+    source\schema := cand
+    source\path := 0
+    source\origin := source_node
+    source\origin_count := 0
+    source\origin_method := owner
+    source\layout := -1
+    source\method := c.lm_compiler_d105_key_method(smi, sk)
+    source\place := sk
     if: smi < 0
-        source\layout: cand
+        source\layout := cand
     return: (cast: (int) (lm_compiler_emit_model_admit_record_core(idx, req, @ source, value, ind, 0, 0, -1, at_mi, tmi, tk, 0, 0, 0, 0, -1, computed_record)))
 end: lm_compiler_d105_emit_source_req_record
 
@@ -4889,10 +4889,10 @@ fn: lm_compiler_emit_receiving_seed_record (int: req; @: source c.L2ReferenceSou
     c.L2FrontendScratchChar64: references_storage
     @: references char (cast: (@: char) references_storage\buffer)
     if: live = 0
-        failure: "return: 1"
+        failure := "return: 1"
     if: lm_compiler_d105_catalog(req, source, tmi, tk, full_receiver, @ catalog) != 0 || c.sprintf(out, "l2_receiving%d", seq) < 0 || c.sprintf(templates, "l2_templates%d", seq) < 0
         return: (cast: (int) (1))
-    extent: prepared\extent
+    extent := prepared\extent
     if: c.fprintf(out_cell[0], "%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, 6U) != 0\n%s    %s\n%s@: Lmx %s lmx_struct_new_owned(%s, l2_program_arena)\n%sif: %s = 0 || lmx_arena_refs_open_owned(l2_program_arena, %s, %zuU) != 0\n%s    %s\n", ind, out, parent, ind, out, out, ind, failure, ind, templates, out, ind, templates, templates, extent, ind, failure) < 0
         return: (cast: (int) (1))
     if: lm_compiler_emit_catalog_cells(@ catalog, templates, ind, failure) != 0
@@ -4938,13 +4938,13 @@ fn: lm_compiler_emit_model_admit_record_core (int: mi; int: req; @: source c.L2R
     if: outcome = 0
         if: c.lm_compiler_admission_key(req, source, full_receiver, uses_own, tmi, tk, @ admission_query) != 0
             return: (cast: (int) (1))
-        admission_index: c.lm_compiler_method_body_result((cast: (int) (source\origin_method)))
+        admission_index := c.lm_compiler_method_body_result((cast: (int) (source\origin_method)))
         if: admission_index >= 0
-            admission_kind: 2
+            admission_kind := 2
         else:
-            admission_index: source\origin_method
+            admission_index := source\origin_method
         ---
-        admission_site: c.lm_compiler_admission_site(admission_kind, admission_index, (cast: (int) (source\origin_method)), @ admission_query)
+        admission_site := c.lm_compiler_admission_site(admission_kind, admission_index, (cast: (int) (source\origin_method)), @ admission_query)
         if: admission_site = 0 || admission_site\state != 1
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) (source\origin)), "internal: native admission has no unique retained source operation")))
     ---
@@ -4952,14 +4952,14 @@ fn: lm_compiler_emit_model_admit_record_core (int: mi; int: req; @: source c.L2R
         return: (cast: (int) (1))
     if: selected_model = 0 && lm_compiler_model_inst(mi, req, ind, rinst) != 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: admission without receiving model")))
-    d105_seq_cell[0]: d105_seq_cell[0] + 1
+    d105_seq_cell[0] := d105_seq_cell[0] + 1
     if: (context != 0 || computed_record != 0) && outcome != 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: constructed seed has no computed result context")))
     if: lm_compiler_bump_ind(ind, @ inside) != 0 || c.fprintf(out_cell[0], "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n", ind, seq) < 0
         return: (cast: (int) (1))
-    record_ind: inside
+    record_ind := inside
     if: context != 0 || computed_record != 0
-        record_ind: ind
+        record_ind := ind
     if: context = 0 && computed_record = 0 && c.fprintf(out_cell[0], "%sif: %s != 0\n", ind, value) < 0
         return: (cast: (int) (1))
     if: outcome = 0
@@ -5024,7 +5024,7 @@ fn: lm_compiler_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: 
     @: rinst c.L2Tx c.lm_compiler_tx_local(@ rinst_tx, rinst_own, 320U)
     int: edge slot
     int: temp tn_cell[0]
-    tn_cell[0]: tn_cell[0] + 1
+    tn_cell[0] := tn_cell[0] + 1
     # dest is the caller's40-byte machine-integer suffix buffer, not a
     # source-expression buffer or a language length limit.
     if: dest = 0 || c.snprintf(dest, 40U, "l2_dslot%d", temp) < 0
@@ -5034,7 +5034,7 @@ fn: lm_compiler_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: 
     if: model = 0 && lm_compiler_model_inst(mi, req, ind, rinst) != 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: an admitted reference has no receiving model")))
     if: last != 0
-        edge: slot + lm_compiler_d105_width(req)
+        edge := slot + lm_compiler_d105_width(req)
     # One reached edge: the map's number, or the chain, or the reception of that edge alone (lmx_implements_reach).
     if: c.fprintf(out_cell[0], "%ssize_t: %s (cast: (size_t) -1)\n%sint: l2_dslot_answer%d c.LMX_IMPLEMENTS_UNKNOWN\n%sint: l2_dslot_status%d lmx_implements_reach(l2_program_arena, l2_pst, %s, %uU, @ %s, @ l2_dslot_answer%d)\n", ind, dest, ind, temp, ind, temp, rinst\data, (cast: (unsigned) edge), dest, temp) < 0
         return: (cast: (int) (1))
@@ -5060,22 +5060,22 @@ fn: lm_compiler_d105_emit_tables () int
     int: cells
     @: t int 0
     while: p < d105t_n_cell[0]
-        t: lm_compiler_d105_cells(d105t_req_cell[0][p])
+        t := lm_compiler_d105_cells(d105t_req_cell[0][p])
         if: t = 0
             return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], 0, "out of memory")))
         if: lm_compiler_d105_table(d105t_cand_cell[0][p], d105t_req_cell[0][p], t, d105_tcap_cell[0], @ n, 1) != 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: a pair table of D-105 could not be built")))
-        w: lm_compiler_d105_width(d105t_req_cell[0][p])
-        cells: w * 2
-        j: 0
+        w := lm_compiler_d105_width(d105t_req_cell[0][p])
+        cells := w * 2
+        j := 0
         while: j < cells
             if: j < n && t[j] >= 0 && c.fprintf(out_cell[0], "        l2_d105m%d[%d]: %dU\n", p, j, t[j]) < 0
                 return: (cast: (int) (1))
             if: (j >= n || t[j] < 0) && c.fprintf(out_cell[0], "        l2_d105m%d[%d]: (cast: (size_t) -1)\n", p, j) < 0
                 return: (cast: (int) (1))
-            j: j + 1
+            j := j + 1
         ---
-        p: p + 1
+        p := p + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_d105_emit_tables
@@ -5103,41 +5103,41 @@ fn: lm_compiler_mad_reach (int: mi) int
     int: more 1
     if: reach_set_host_cell[0] = mi
         return: (cast: (int) (0))
-    reach_set_n_cell[0]: 0
-    reach_set_host_cell[0]: mi
-    reach_sealed_cell[0]: 1
+    reach_set_n_cell[0] := 0
+    reach_set_host_cell[0] := mi
+    reach_sealed_cell[0] := 1
     if: mi < 0 || mi >= mad_cap_cell[0] || mad_reach_set_cell[0] = 0
         return: (cast: (int) (0))
-    model: mad_model_cell[0][mi]
+    model := mad_model_cell[0][mi]
     if: model < 0
         return: (cast: (int) (0))
-    cur: model
+    cur := model
     while: more != 0
-        k: 0
+        k := 0
         while: k < reach_n_cell[0]
-            r: reach_to_cell[0][k]
+            r := reach_to_cell[0][k]
             if: reach_from_cell[0][k] = cur && r != model && c.lm_compiler_mad_host_of(r) = mi
-                known: 0
-                j: 0
+                known := 0
+                j := 0
                 while: j < reach_set_n_cell[0]
                     if: mad_reach_set_cell[0][j] = r
-                        known: 1
-                    j: j + 1
+                        known := 1
+                    j := j + 1
                 ---
                 if: known = 0 && reach_set_n_cell[0] >= mad_cap_cell[0]
                     return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][mi], "internal: a host's reference closure outgrew its table")))
                 if: known = 0
-                    mad_reach_set_cell[0][reach_set_n_cell[0]]: r
-                    reach_set_n_cell[0]: reach_set_n_cell[0] + 1
+                    mad_reach_set_cell[0][reach_set_n_cell[0]] := r
+                    reach_set_n_cell[0] := reach_set_n_cell[0] + 1
                 ---
             ---
-            k: k + 1
+            k := k + 1
         ---
         if: i >= reach_set_n_cell[0]
-            more: 0
+            more := 0
         else:
-            cur: mad_reach_set_cell[0][i]
-            i: i + 1
+            cur := mad_reach_set_cell[0][i]
+            i := i + 1
         ---
     ---
     return: (cast: (int) (0))
@@ -5153,7 +5153,7 @@ fn: lm_compiler_mad_reached (int: mi; int: r) int
     while: j < reach_set_n_cell[0]
         if: mad_reach_set_cell[0][j] = r
             return: (cast: (int) (1))
-        j: j + 1
+        j := j + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_mad_reached
@@ -5176,19 +5176,19 @@ fn: lm_compiler_merge_args_callee (@: first c.LmP0Field; int: span; int: mi) int
         return: (cast: (int) (-1))
     if: lm_compiler_reference_source(first, span, mi, @ source) != 0 || source\path = 0
         return: (cast: (int) (-1))
-    fact: source\path
-    path: (cast: (@: c.L2Path) (@ fact\resolved))
+    fact := source\path
+    path := (cast: (@: c.L2Path) (@ fact\resolved))
     if: fact\stage != 1
         if: lm_compiler_source_use_resolve(fact, @ resolved) != 0
             c.lm_compiler_path_release(@ resolved)
             return: (cast: (int) (-1))
-        path: @ resolved
-        released: 1
+        path := @ resolved
+        released := 1
     ---
     if: path\fail_why = 0 && path\n >= 1 && path\steps != 0
-        step: path\steps + (path\n - 1)
+        step := path\steps + (path\n - 1)
         if: step\locus = 5 && step\row = 0 && step\ent >= 0
-            callee: (cast: (int) (step\ent))
+            callee := (cast: (int) (step\ent))
     ---
     if: released != 0
         c.lm_compiler_path_release(@ resolved)

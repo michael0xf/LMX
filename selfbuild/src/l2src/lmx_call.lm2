@@ -98,7 +98,7 @@ sub: lmx_publish_int (@: dirty int; @: arena c.LmxArena; @: cell void; int: valu
     else:
         c.lmx_code_changed_cell(arena, cell)
     ---
-    \dirty: 0
+    \dirty := 0
     return
 end: lmx_publish_int
 
@@ -111,7 +111,7 @@ sub: lmx_publish_char (@: dirty int; @: arena c.LmxArena; @: cell void; int: val
     else:
         c.lmx_code_changed_cell(arena, cell)
     ---
-    \dirty: 0
+    \dirty := 0
     return
 end: lmx_publish_char
 
@@ -124,7 +124,7 @@ sub: lmx_publish_size (@: dirty int; @: arena c.LmxArena; @: cell void; size_t: 
     else:
         c.lmx_code_changed_cell(arena, cell)
     ---
-    \dirty: 0
+    \dirty := 0
     return
 end: lmx_publish_size
 
@@ -137,7 +137,7 @@ sub: lmx_publish_unsigned (@: dirty int; @: arena c.LmxArena; @: cell void; unsi
     else:
         c.lmx_code_changed_cell(arena, cell)
     ---
-    \dirty: 0
+    \dirty := 0
     return
 end: lmx_publish_unsigned
 
@@ -150,7 +150,7 @@ sub: lmx_publish_ulong (@: dirty int; @: arena c.LmxArena; @: cell void; ulong: 
     else:
         c.lmx_code_changed_cell(arena, cell)
     ---
-    \dirty: 0
+    \dirty := 0
     return
 end: lmx_publish_ulong
 
@@ -160,7 +160,7 @@ sub: lmx_publish_pointer (@: dirty int; @: arena c.LmxArena; @: cell void; @: ra
     lmx_publish_guard(arena, cell, guard, roots, count)
     if: c.lmx_pointer_store_context_in(arena, cell, raw, context) != 0
         lmx_publish_failed(k)
-    \dirty: 0
+    \dirty := 0
     return
 end: lmx_publish_pointer
 
@@ -193,14 +193,14 @@ fn: lmx_activation_push (@: arena c.LmxArena; @: record c.LmxActivation; int: ki
     if: arena = 0 || record = 0
         return: 1
     c.memset((cast: (@: void) record), 0, c.sizeof(c.LmxActivation))
-    record\parent: (cast: (@: c.LmxActivation) arena\activation)
-    record\kind: kind
-    record\code: code
-    record\refs: refs
-    record\values: values
-    record\width: width
-    record\frame: frame
-    arena\activation: (cast: (@: void) record)
+    record\parent := (cast: (@: c.LmxActivation) arena\activation)
+    record\kind := kind
+    record\code := code
+    record\refs := refs
+    record\values := values
+    record\width := width
+    record\frame := frame
+    arena\activation := (cast: (@: void) record)
     return: 0
 end: lmx_activation_push
 
@@ -212,10 +212,10 @@ sub: lmx_activation_pop (@: arena c.LmxArena; @: record c.LmxActivation)
     if: record\bindings != 0
         c.free((cast: (@: void) record\bindings))
     ---
-    record\bindings: 0
-    record\nbind: 0U
-    record\cap: 0U
-    arena\activation: (cast: (@: void) record\parent)
+    record\bindings := 0
+    record\nbind := 0U
+    record\cap := 0U
+    arena\activation := (cast: (@: void) record\parent)
     return
 end: lmx_activation_pop
 
@@ -229,25 +229,25 @@ fn: lmx_activation_bind (@: arena c.LmxArena; size_t: code; @: storage void; int
     size_t: cap 0U
     if: arena = 0 || code = 0U
         return: 1
-    record: (cast: (@: c.LmxActivation) arena\activation)
+    record := (cast: (@: c.LmxActivation) arena\activation)
     if: record = 0
         return: 1
     if: record\nbind = record\cap
-        cap: 8U
+        cap := 8U
         if: record\cap != 0U
-            cap: record\cap * 2U
-        grown: (cast: (@: c.LmxActivationBinding) c.realloc((cast: (@: void) record\bindings), cap * c.sizeof(c.LmxActivationBinding)))
+            cap := record\cap * 2U
+        grown := (cast: (@: c.LmxActivationBinding) c.realloc((cast: (@: void) record\bindings), cap * c.sizeof(c.LmxActivationBinding)))
         if: grown = 0
             return: 1
-        record\bindings: grown
-        record\cap: cap
+        record\bindings := grown
+        record\cap := cap
     ---
-    slot: record\bindings + record\nbind
-    slot\code: code
-    slot\storage: storage
-    slot\type: type
-    slot\value: value
-    record\nbind: record\nbind + 1U
+    slot := record\bindings + record\nbind
+    slot\code := code
+    slot\storage := storage
+    slot\type := type
+    slot\value := value
+    record\nbind := record\nbind + 1U
     return: 0
 end: lmx_activation_bind
 
@@ -257,26 +257,26 @@ fn: lmx_call0_mode (@: arena c.LmxArena; @: callable c.Lmx; @: route int; @: val
     @: out void 0
     int: st
     if: route != 0
-        \route: c.LMX_CALL_ROUTE_REFUSED
+        \route := c.LMX_CALL_ROUTE_REFUSED
     if: value = 0 || lmx_call_ready(arena, callable) != c.LMX_CALL_OK
         return: c.LMX_CALL_NOT_CALLABLE
-    \value: 0
+    \value := 0
     c.LmxEntry: addr (cast: (c.LmxEntry) callable\native)
     if: addr = 0
         if: route != 0
-            \route: c.LMX_CALL_ROUTE_WALK
+            \route := c.LMX_CALL_ROUTE_WALK
         ---
         return: c.lmx_walk_call0_dispatch(arena, callable, value)
     ---
     if: route != 0
-        \route: c.LMX_CALL_ROUTE_NATIVE
+        \route := c.LMX_CALL_ROUTE_NATIVE
     c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
     c.LmxActivation: act
     lmx_activation_push(arena, @ act, 2, callable, 0, 0, 0U, 0)
-    st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) value), @ out, arena, callable, 0, 0)
+    st := entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) value), @ out, arena, callable, 0, 0)
     lmx_activation_pop(arena, @ act)
     if: c.lmx_msg_poll_escape() != 0
-        \value: 0
+        \value := 0
         return: 0
     return: st
 end: lmx_call0_mode
@@ -293,7 +293,7 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
         c.fprintf(c.l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
         c.abort()
     ---
-    \out: 0
+    \out := 0
     c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
     c.LmxEntry: addr (cast: (c.LmxEntry) code\native)
     c.LmxActivation: act
@@ -301,14 +301,14 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
         c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
         # The native activation's record (slice 254): its inputs are the arrays the entry receives.
         lmx_activation_push(arena, @ act, 2, code, refs, (cast: (@: void) lmx_input_values), nargs, 0)
-        status: entry((cast: (@: void) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
+        status := entry((cast: (@: void) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
         lmx_activation_pop(arena, @ act)
     else:
-        status: c.lmx_walk_call_prim_dispatch(arena, code, data, refs, nargs, dest, out, lmx_input_values, @ result_context)
+        status := c.lmx_walk_call_prim_dispatch(arena, code, data, refs, nargs, dest, out, lmx_input_values, @ result_context)
     ---
     if: c.lmx_msg_poll_escape() != 0
-        \out: 0
-        status: 0
+        \out := 0
+        status := 0
         c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
     if: lmx_result_context != 0
         # Do not clear an aliased caller input before the selected entry consumes it.

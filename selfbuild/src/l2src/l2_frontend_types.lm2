@@ -24,29 +24,29 @@ fn: lm_compiler_error (const: (@: path char); const: (@: source_node c.LmP0Node)
     if: alloc_err_cell[0] != 0
         if: diag_n_cell[0] != 0
             return: (cast: (int) (1))
-        msg: "out of memory"
+        msg := "out of memory"
         if: alloc_err_cell[0] = 2
-            msg: "size overflow"
+            msg := "size overflow"
         ---
     # A method's body tried for the walk (l2_rw_quiet, -193 T4a) is refused silently: it only gets
     # no frames.  The first such refusal is kept for a note (l2_rw_methods_count).
     if: rw_quiet_cell[0] != 0 && alloc_err_cell[0] = 0 && rw_quiet_msg_cell[0] = 0
-        rw_quiet_msg_cell[0]: c.lm_compiler_msg_copy(msg)
+        rw_quiet_msg_cell[0] := c.lm_compiler_msg_copy(msg)
         if: source_node != 0 && source_node\span != 0
-            rw_quiet_line_cell[0]: source_node\span\line
-            rw_quiet_col_cell[0]: source_node\span\column
+            rw_quiet_line_cell[0] := source_node\span\line
+            rw_quiet_col_cell[0] := source_node\span\column
         ---
     ---
     if: rw_quiet_cell[0] != 0 && alloc_err_cell[0] = 0
         return: (cast: (int) (1))
     # A node read from a program part is said in that part (§10): the file of a diagnostic is the file its node
     # was read from, whichever pass says it -- one handed the source's path included (l2_node_file).
-    path: c.lm_compiler_node_file(path, source_node)
+    path := c.lm_compiler_node_file(path, source_node)
     if: source_node != 0 && source_node\span != 0
-        line: source_node\span\line
-        column: source_node\span\column
+        line := source_node\span\line
+        column := source_node\span\column
     c.fprintf(c.l1_stderr(), "l2trans error: %s:%zu:%zu: %s\n", path, line, column, msg)
-    diag_n_cell[0]: diag_n_cell[0] + 1
+    diag_n_cell[0] := diag_n_cell[0] + 1
     if: source_node != 0 && source_node\kind = c.LM_P0_NODE_ATOM && source_node\as != 0 && source_node\as\atom != 0
         c.fprintf(c.l1_stderr(), "l2trans detail: atom=%.*s\n", (cast: (int) source_node\as\atom\length), source_node\as\atom\data)
     if: source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && source_node\as\frame\head != 0
@@ -62,10 +62,13 @@ end: lm_compiler_error
 # method mi).  kind, the left side: 1 a bare name, 2 a field path, 3 an index, 4 a dereference, 5 a member path of C
 # storage, 6 a name this very Frame defines by its value, 7 a reference this Frame defines by its value (`h: Box`),
 # 8 a callable's result this Frame defines (`r: h(3)`), 9 a place the Frame declares in its tail under a Structure
-# named in its head (`Model: m`).  line, column and offset are those of the head's first byte; in the colon form the
-# colon is the byte at offset + head-length.  Rows are appended, so one file collects every translation of a build.
-# A Frame whose head is a word of the language or a reference receiver -- `int`, `const`, `@` -- declares by its
-# receiver and is no row.  Without the variable nothing is done.  0, or 1 when the named file cannot be written.
+# named in its head (`Model: m`), 10 a Structure written with its fields at the place of its head (`T:` and a body:
+# the Frame the translator marked as a written definition or a written put).  line, column and offset are those of
+# the head's first byte; in the colon form the colon is the byte at offset + head-length.  Rows are appended, so one
+# file collects every translation of a build.  A Frame whose head is a word of the language or a reference receiver
+# -- `int`, `const`, `@` -- declares by its receiver and is no row; neither is the Frame `@: place value` brought to
+# a write through its path (lm_compiler_place_write_node): the receiver wrote it.  Without the variable nothing is
+# done.  0, or 1 when the named file cannot be written.
 fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; int: route) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
@@ -80,23 +83,25 @@ fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; in
         return: (cast: (int) (0))
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\span = 0
         return: (cast: (int) (0))
-    if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+    if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U || lm_compiler_place_write_node(stmt) != 0
         return: (cast: (int) (0))
-    h: stmt\as\frame\head
+    h := stmt\as\frame\head
     if: h\data = 0 || h\length = 0U || h\data[0] = 64 || lm_compiler_head_word(h) != 0
         return: (cast: (int) (0))
+    if: lm_compiler_written_definition_node(stmt) != 0 || lm_compiler_written_put_node(stmt) != 0
+        kind := 10
     if: route = 0
-        route: 2
+        route := 2
         if: c.lm_compiler_m_machine(mi) != 0
-            route: 1
+            route := 1
         ---
     # The Frame that declared the row of its own head defines the name by its value; any other writes a known place.
     while: kind = 1 && i < own_n_cell[0]
         if: own_decl_cell[0][i] = stmt && own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], h) != 0
-            kind: 6
-        i: i + 1
+            kind := 6
+        i := i + 1
     ---
-    f: c.fopen(out, "ab")
+    f := c.fopen(out, "ab")
     if: f = 0
         c.fprintf(c.l1_stderr(), "l2trans error: L2_COLON_WRITES names a file that cannot be appended: %s\n", out)
         return: (cast: (int) (1))
@@ -113,7 +118,7 @@ fn: lm_compiler_slot_off (int: mi; int: si) size_t
         return: (cast: (size_t) ((cast: (size_t) -1)))
     if: c.lm_compiler_mul_ok((cast: (size_t) mi), (cast: (size_t) slot_cap_cell[0])) = 0
         return: (cast: (size_t) ((cast: (size_t) -1)))
-    base: (cast: (size_t) mi) * (cast: (size_t) slot_cap_cell[0])
+    base := (cast: (size_t) mi) * (cast: (size_t) slot_cap_cell[0])
     if: base + (cast: (size_t) si) < base
         return: (cast: (size_t) ((cast: (size_t) -1)))
     return: (cast: (size_t) (base + (cast: (size_t) si)))
@@ -123,7 +128,7 @@ fn: lm_compiler_ref_tail_atom (const: (@: fr c.LmP0Frame)) @: c.LmP0Text
     @: f c.LmP0Field
     if: fr = 0 || fr\body = 0 || fr\body\trailer != 0 || c.lm_compiler_count_active(fr\body) != 1
         return: (cast: (@: c.LmP0Text) (0))
-    f: c.lm_compiler_next_active(fr\body\first_field)
+    f := c.lm_compiler_next_active(fr\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || c.lm_compiler_ident(f\value\as\atom) = 0 || lm_compiler_head_word((cast: (const: @: c.LmP0Text) (f\value\as\atom))) != 0
         return: (cast: (@: c.LmP0Text) (0))
     return: (cast: (@: c.LmP0Text) (f\value\as\atom))
@@ -146,18 +151,18 @@ fn: lm_compiler_ns_constructed_row (int: mi; const: (@: source_node c.LmP0Node))
     if: c.lm_compiler_body_has_source(body, source_node) = 0
         return: (cast: (int) (-1))
     while: row < nsf_n_cell[0]
-        match: 0
+        match := 0
         if: nsf_owner_cell[0][row] = ni && nsf_source_cell[0][row] = source_node
             if: nsf_kind_cell[0][row] = 2 || nsf_kind_cell[0][row] = 4 || nsf_kind_cell[0][row] = 5 || nsf_kind_cell[0][row] = 6 || (nsf_kind_cell[0][row] = 12 && nsf_fname_cell[0][row] = 0)
-                match: 1
+                match := 1
             ---
         ---
         if: match != 0
             if: found >= 0
                 lm_compiler_error(src_cell[0], source_node, "internal: a source child has two constructor rows")
                 return: (cast: (int) (-2))
-            found: row
-        row: row + 1
+            found := row
+        row := row + 1
     ---
     return: (cast: (int) (found))
 end: lm_compiler_ns_constructed_row
@@ -170,7 +175,7 @@ fn: lm_compiler_ml_value_ty (int: i) int
     if: i < 0 || i >= ml_n_cell[0] || ml_ty_cell[0] = 0
         return: (cast: (int) (0 - 1))
     if: (ml_ty_cell[0][i] = 40 || ml_ty_cell[0][i] = 41) && ml_cty_cell[0] != 0 && ml_cty_cell[0][i] != 0
-        ty: c.lm_compiler_foreign_byvalue(ml_cty_cell[0][i])
+        ty := c.lm_compiler_foreign_byvalue(ml_cty_cell[0][i])
     if: ty >= 100
         return: (cast: (int) (ty))
     return: (cast: (int) (ml_ty_cell[0][i]))
@@ -179,9 +184,9 @@ end: lm_compiler_ml_value_ty
 fn: lm_compiler_predef_has_fnptr (const: (@: name c.LmP0Text)) int
     @: want_fnptr_cell int (cast: (@: int) (@ c.l2_want_fnptr))
     int: r
-    want_fnptr_cell[0]: 1
-    r: lm_compiler_predef_has_type(name)
-    want_fnptr_cell[0]: 0
+    want_fnptr_cell[0] := 1
+    r := lm_compiler_predef_has_type(name)
+    want_fnptr_cell[0] := 0
     if: r = 0
         return: (cast: (int) (0))
     # struct: and fnptr: share the walk, so a name that is a STRUCT is not a
@@ -217,34 +222,34 @@ fn: lm_compiler_predef_file_has_type (const: (@: name c.LmP0Text); const: (@: qu
     int: found 0
     if: name = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
         return: (cast: (int) (0))
-    n: quoted\length - 2U
-    path: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    n := quoted\length - 2U
+    path := (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
     if: path = 0
         return: (cast: (int) (0))
     c.memcpy(path, quoted\data + 1U, n)
-    path[n]: 0
-    document: lm_compiler_snap_document(path)
+    path[n] := 0
+    document := lm_compiler_snap_document(path)
     if: document != 0
-        root: c.lm_p0_document_root(document)
+        root := c.lm_p0_document_root(document)
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
-            f: c.lm_compiler_next_active(root\as\structure\first_field)
+            f := c.lm_compiler_next_active(root\as\structure\first_field)
             while: f != 0 && found = 0
-                item: f\value
+                item := f\value
                 if: (c.lm_compiler_frame_head(item, "struct") || (want_fnptr_cell[0] != 0 && c.lm_compiler_frame_head(item, "fnptr"))) && item\as\frame\body != 0
-                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && (c.lm_compiler_text_same(first\value\as\atom, name) || (name\length > 2U && name\data[0] = 99 && name\data[1] = 46 && first\value\as\atom\length = name\length - 2U && c.memcmp(first\value\as\atom\data, name\data + 2U, name\length - 2U) = 0))
-                        found: 1
+                        found := 1
                     ---
                 ---
                 # A predef header may reuse another header's ABI declaration.
                 # Follow that declared closure instead of forcing every L2 unit
                 # to repeat aggregate layouts. L1 permits several declared paths in one predef Frame.
                 if: found = 0 && c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
-                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     while: first != 0 && found = 0
                         if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                            found: lm_compiler_predef_file_has_type(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))))
-                        first: c.lm_compiler_next_active(first\next)
+                            found := lm_compiler_predef_file_has_type(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))))
+                        first := c.lm_compiler_next_active(first\next)
                     ---
                 ---
                 # Generated L1 headers use foo.lm1.h while their source header
@@ -252,24 +257,24 @@ fn: lm_compiler_predef_file_has_type (const: (@: name c.LmP0Text); const: (@: qu
                 # lookup needs no C layout parser and the downstream L1/C
                 # compiler remains the final spelling check.
                 if: found = 0 && c.lm_compiler_frame_head(item, "include") && item\as\frame\body != 0
-                    inc: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    inc := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     while: inc != 0 && found = 0
                         if: inc\value != 0 && inc\value\kind = c.LM_P0_NODE_ATOM
-                            q: inc\value\as\atom
+                            q := inc\value\as\atom
                             if: q != 0 && q\data != 0 && q\length > 8U && q\data[0] = 34 && c.memcmp(q\data + q\length - 7U, ".lm1.h\"", 7U) = 0
-                                mapped_data: (cast: (@: char) c.lm_compiler_xmalloc(q\length + 1U))
-                                mapped: (cast: (@: c.LmP0Text) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Text)))
+                                mapped_data := (cast: (@: char) c.lm_compiler_xmalloc(q\length + 1U))
+                                mapped := (cast: (@: c.LmP0Text) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Text)))
                                 if: mapped_data != 0 && mapped != 0
                                     c.memcpy(mapped_data, q\data, q\length)
                                     c.memcpy(mapped_data + (cast: (size_t) (q\length)) - 7U, ".h.lm1\"", 7U)
-                                    mapped_data[q\length]: 0
-                                    mapped\data: mapped_data
-                                    mapped\length: q\length
-                                    found: lm_compiler_predef_file_has_type(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(mapped, path))))
+                                    mapped_data[q\length] := 0
+                                    mapped\data := mapped_data
+                                    mapped\length := q\length
+                                    found := lm_compiler_predef_file_has_type(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(mapped, path))))
                                     c.lm_compiler_xfree((cast: (@: void) mapped_data))
                                     c.lm_compiler_xfree((cast: (@: void) mapped))
-                                    mapped_data: 0
-                                    mapped: 0
+                                    mapped_data := 0
+                                    mapped := 0
                                 ---
                                 if: mapped_data != 0
                                     c.lm_compiler_xfree((cast: (@: void) mapped_data))
@@ -278,10 +283,10 @@ fn: lm_compiler_predef_file_has_type (const: (@: name c.LmP0Text); const: (@: qu
                                 ---
                             ---
                         ---
-                        inc: c.lm_compiler_next_active(inc\next)
+                        inc := c.lm_compiler_next_active(inc\next)
                     ---
                 ---
-                f: c.lm_compiler_next_active(f\next)
+                f := c.lm_compiler_next_active(f\next)
             ---
         ---
     ---
@@ -306,9 +311,9 @@ fn: lm_compiler_predef_receiver (const: (@: name c.LmP0Text)) int
     @: want_fnptr_cell int (cast: (@: int) (@ c.l2_want_fnptr))
     int: saved want_fnptr_cell[0]
     int: found
-    want_fnptr_cell[0]: 1
-    found: lm_compiler_predef_has_type(name)
-    want_fnptr_cell[0]: saved
+    want_fnptr_cell[0] := 1
+    found := lm_compiler_predef_has_type(name)
+    want_fnptr_cell[0] := saved
     return: (cast: (int) (found))
 end: lm_compiler_predef_receiver
 
@@ -324,46 +329,46 @@ fn: lm_compiler_predef_file_define (const: (@: name c.LmP0Text); const: (@: quot
     @: found c.LmP0Text 0
     if: name = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
         return: (cast: (@: c.LmP0Text) (0))
-    n: quoted\length - 2U
-    path: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    n := quoted\length - 2U
+    path := (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
     if: path = 0
         return: (cast: (@: c.LmP0Text) (0))
     c.memcpy(path, quoted\data + 1U, n)
-    path[n]: 0
-    document: lm_compiler_snap_document(path)
+    path[n] := 0
+    document := lm_compiler_snap_document(path)
     # tp114: the document's rows from the predef file index (lm_compiler_pfx_*, module end) merged by position with
     # its predef items -- the same items in the same order as the scan below, which runs only when the index could
     # not be built (allocation failure).
     if: document != 0 && lm_compiler_pfx_ready(document) = 0
-        found: lm_compiler_pfx_define(name, document, path, any)
+        found := lm_compiler_pfx_define(name, document, path, any)
         c.lm_compiler_xfree((cast: (@: void) path))
         return: (cast: (@: c.LmP0Text) (found))
     ---
     if: document != 0
-        root: c.lm_p0_document_root(document)
+        root := c.lm_p0_document_root(document)
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
-            f: c.lm_compiler_next_active(root\as\structure\first_field)
+            f := c.lm_compiler_next_active(root\as\structure\first_field)
             while: f != 0 && found = 0
-                item: f\value
+                item := f\value
                 if: c.lm_compiler_frame_head(item, "define") && item\as\frame\body != 0 && (c.lm_compiler_count_active(item\as\frame\body) = 2 || (any != 0 && c.lm_compiler_count_active(item\as\frame\body) > 2))
-                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
-                    second: 0
+                    first := c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    second := 0
                     if: first != 0
-                        second: c.lm_compiler_next_active(first\next)
+                        second := c.lm_compiler_next_active(first\next)
                     ---
                     if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_text_same(first\value\as\atom, name) && second != 0 && second\value != 0 && second\value\kind = c.LM_P0_NODE_ATOM && (any != 0 || c.lm_compiler_array_count_is(second\value\as\atom) != 0)
-                        found: c.lm_compiler_cnt_keep(second\value\as\atom)
+                        found := c.lm_compiler_cnt_keep(second\value\as\atom)
                     ---
                 ---
                 if: found = 0 && c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
-                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     while: first != 0 && found = 0
                         if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                            found: lm_compiler_predef_file_define(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), any)
-                        first: c.lm_compiler_next_active(first\next)
+                            found := lm_compiler_predef_file_define(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), any)
+                        first := c.lm_compiler_next_active(first\next)
                     ---
                 ---
-                f: c.lm_compiler_next_active(f\next)
+                f := c.lm_compiler_next_active(f\next)
             ---
         ---
     ---
@@ -384,21 +389,21 @@ fn: lm_compiler_define_count (const: (@: name c.LmP0Text)) @: c.LmP0Text
         return: (cast: (@: c.LmP0Text) (0))
     while: i < def_n_cell[0]
         if: def_cell[0][i] != 0 && def_cell[0][i]\as != 0 && def_cell[0][i]\as\frame != 0 && def_cell[0][i]\as\frame\body != 0 && c.lm_compiler_count_active(def_cell[0][i]\as\frame\body) = 2
-            first: c.lm_compiler_next_active(def_cell[0][i]\as\frame\body\first_field)
-            second: 0
+            first := c.lm_compiler_next_active(def_cell[0][i]\as\frame\body\first_field)
+            second := 0
             if: first != 0
-                second: c.lm_compiler_next_active(first\next)
+                second := c.lm_compiler_next_active(first\next)
             ---
             if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_text_same(first\value\as\atom, name) && second != 0 && second\value != 0 && second\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_array_count_is(second\value\as\atom) != 0
                 return: (cast: (@: c.LmP0Text) (second\value\as\atom))
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
-    i: 0
+    i := 0
     while: i < pd_n_cell[0] && r = 0
-        r: lm_compiler_predef_file_define(name, pd_cell[0][i], 0)
-        i: i + 1
+        r := lm_compiler_predef_file_define(name, pd_cell[0][i], 0)
+        i := i + 1
     ---
     return: (cast: (@: c.LmP0Text) (r))
 end: lm_compiler_define_count
@@ -414,18 +419,18 @@ fn: lm_compiler_define_name (const: (@: name c.LmP0Text)) int
         return: (cast: (int) (0))
     while: i < def_n_cell[0]
         if: def_cell[0][i] != 0 && def_cell[0][i]\as != 0 && def_cell[0][i]\as\frame != 0 && def_cell[0][i]\as\frame\body != 0 && c.lm_compiler_count_active(def_cell[0][i]\as\frame\body) >= 2
-            first: c.lm_compiler_next_active(def_cell[0][i]\as\frame\body\first_field)
+            first := c.lm_compiler_next_active(def_cell[0][i]\as\frame\body\first_field)
             if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_text_same(first\value\as\atom, name)
                 return: (cast: (int) (1))
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
-    i: 0
+    i := 0
     while: i < pd_n_cell[0]
         if: lm_compiler_predef_file_define(name, pd_cell[0][i], 1) != 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_define_name
@@ -459,41 +464,41 @@ fn: lm_compiler_predef_file_has_function (const: (@: name c.LmP0Text); const: (@
     int: found 0
     if: name = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
         return: (cast: (int) (0))
-    n: quoted\length - 2U
-    path: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    n := quoted\length - 2U
+    path := (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
     if: path = 0
         return: (cast: (int) (0))
     c.memcpy(path, quoted\data + 1U, n)
-    path[n]: 0
-    document: lm_compiler_snap_document(path)
+    path[n] := 0
+    document := lm_compiler_snap_document(path)
     if: document != 0
-        root: c.lm_p0_document_root(document)
+        root := c.lm_p0_document_root(document)
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
-            f: c.lm_compiler_next_active(root\as\structure\first_field)
+            f := c.lm_compiler_next_active(root\as\structure\first_field)
             while: f != 0 && found = 0
-                item: f\value
+                item := f\value
                 if: c.lm_compiler_frame_head(item, "prototype") && item\as\frame\body != 0
-                    pf: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    pf := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     while: pf != 0 && found = 0
-                        decl: pf\value
+                        decl := pf\value
                         if: (c.lm_compiler_frame_head(decl, "fn") || c.lm_compiler_frame_head(decl, "sub")) && decl\as\frame\body != 0
-                            nf: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                            nf := c.lm_compiler_next_active(decl\as\frame\body\first_field)
                             if: nf != 0 && nf\value != 0 && nf\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_text_same(nf\value\as\atom, name)
-                                found: 1
+                                found := 1
                             ---
                         ---
-                        pf: c.lm_compiler_next_active(pf\next)
+                        pf := c.lm_compiler_next_active(pf\next)
                     ---
                 ---
                 if: found = 0 && c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
-                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     while: first != 0 && found = 0
                         if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                            found: lm_compiler_predef_file_has_function(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))))
-                        first: c.lm_compiler_next_active(first\next)
+                            found := lm_compiler_predef_file_has_function(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))))
+                        first := c.lm_compiler_next_active(first\next)
                     ---
                 ---
-                f: c.lm_compiler_next_active(f\next)
+                f := c.lm_compiler_next_active(f\next)
             ---
         ---
     ---
@@ -512,46 +517,46 @@ end: lm_compiler_predef_has_function
 fn: lm_compiler_ret_type_word (const: (@: word c.LmP0Text); int: depth; int: is_const; @: out_ty int) int
     if: out_ty = 0 || word = 0
         return: (cast: (int) (1))
-    \out_ty: 0
+    \out_ty := 0
     if: depth = 0 && c.lm_compiler_text_eq(word, "int")
-        \out_ty: 0
+        \out_ty := 0
         return: (cast: (int) (0))
     if: depth = 0 && c.lm_compiler_text_eq(word, "char")
-        \out_ty: 1
+        \out_ty := 1
         return: (cast: (int) (0))
     if: depth = 0 && c.lm_compiler_text_eq(word, "size_t")
-        \out_ty: 2
+        \out_ty := 2
         return: (cast: (int) (0))
     if: depth = 0 && c.lm_compiler_text_eq(word, "unsigned")
-        \out_ty: 33
+        \out_ty := 33
         return: (cast: (int) (0))
     if: depth = 0 && c.lm_compiler_text_eq(word, "ulong")
-        \out_ty: 36
+        \out_ty := 36
         return: (cast: (int) (0))
     if: depth = 0 && c.lm_compiler_text_eq(word, "void")
-        \out_ty: 8
+        \out_ty := 8
         return: (cast: (int) (0))
     if: depth = 0 && lm_compiler_ns_find(word) >= 0
-        \out_ty: c.lm_compiler_graph_ft()
+        \out_ty := c.lm_compiler_graph_ft()
         if: \out_ty != 0
             return: (cast: (int) (0))
         return: (cast: (int) (1))
     if: depth = 0
-        \out_ty: c.lm_compiler_foreign_byvalue(word)
+        \out_ty := c.lm_compiler_foreign_byvalue(word)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (1))
     if: depth = 1 && is_const = 0 && c.lm_compiler_text_eq(word, "char")
-        \out_ty: 3
+        \out_ty := 3
         return: (cast: (int) (0))
     if: depth = 1 && is_const != 0 && c.lm_compiler_text_eq(word, "char")
-        \out_ty: 35
+        \out_ty := 35
         return: (cast: (int) (0))
     if: depth = 1 && is_const = 0 && c.lm_compiler_text_eq(word, "void")
-        \out_ty: 16
+        \out_ty := 16
         return: (cast: (int) (0))
     if: depth = 2 && is_const = 0 && c.lm_compiler_text_eq(word, "char")
-        \out_ty: 32
+        \out_ty := 32
         return: (cast: (int) (0))
     if: lm_compiler_resolve_type_atom(word, depth, is_const, out_ty) != 0
         return: (cast: (int) (1))
@@ -562,7 +567,7 @@ fn: lm_compiler_ret_type_node (const: (@: rt c.LmP0Node); @: out_ty int) int
     int: ft
     if: out_ty = 0
         return: (cast: (int) (1))
-    \out_ty: 8
+    \out_ty := 8
     if: rt = 0
         return: (cast: (int) (0))
     if: lm_compiler_contract_formal((cast: (@: c.L2TypeContract) (c.lm_compiler_contract_type(rt))), @ ft) != 0
@@ -589,65 +594,65 @@ fn: lm_compiler_predef_file_result_ty (const: (@: name c.LmP0Text); const: (@: q
         return: (cast: (int) (0))
     if: name = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
         return: (cast: (int) (0))
-    n: quoted\length - 2U
-    path: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    n := quoted\length - 2U
+    path := (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
     if: path = 0
         return: (cast: (int) (0))
     c.memcpy(path, quoted\data + 1U, n)
-    path[n]: 0
-    document: lm_compiler_snap_document(path)
+    path[n] := 0
+    document := lm_compiler_snap_document(path)
     # tp114: as in lm_compiler_predef_file_define -- the index's rows of this document, merged with its predef items.
     if: document != 0 && lm_compiler_pfx_ready(document) = 0
-        found: lm_compiler_pfx_result_ty(name, document, path, out_ty)
+        found := lm_compiler_pfx_result_ty(name, document, path, out_ty)
         c.lm_compiler_xfree((cast: (@: void) path))
         return: (cast: (int) (found))
     ---
     if: document != 0
-        root: c.lm_p0_document_root(document)
+        root := c.lm_p0_document_root(document)
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
-            f: c.lm_compiler_next_active(root\as\structure\first_field)
+            f := c.lm_compiler_next_active(root\as\structure\first_field)
             while: f != 0 && found = 0
-                item: f\value
+                item := f\value
                 if: c.lm_compiler_frame_head(item, "prototype") && item\as\frame\body != 0
-                    pf: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    pf := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     while: pf != 0 && found = 0
-                        decl: pf\value
+                        decl := pf\value
                         if: (c.lm_compiler_frame_head(decl, "fn") || c.lm_compiler_frame_head(decl, "sub")) && decl\as\frame\body != 0
-                            nf: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                            nf := c.lm_compiler_next_active(decl\as\frame\body\first_field)
                             if: nf != 0 && nf\value != 0 && nf\value\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_text_same(nf\value\as\atom, name)
-                                pp: c.lm_compiler_next_active(nf\next)
-                                rtf: 0
+                                pp := c.lm_compiler_next_active(nf\next)
+                                rtf := 0
                                 if: pp != 0
-                                    rtf: c.lm_compiler_next_active(pp\next)
-                                rtnode: 0
+                                    rtf := c.lm_compiler_next_active(pp\next)
+                                rtnode := 0
                                 if: rtf != 0
-                                    rtnode: rtf\value
+                                    rtnode := rtf\value
                                 # A `sub` has no result: the void code, so the one
                                 # "no result" refusal applies.  A `fn` whose result type
                                 # cannot be read is refused by the caller (D-88), never
                                 # stood in for by the numeric-literal class.
-                                found: 1
+                                found := 1
                                 if: c.lm_compiler_frame_head(decl, "sub")
-                                    \out_ty: 8
+                                    \out_ty := 8
                                 else:
                                     if: lm_compiler_ret_type_node(rtnode, out_ty) != 0
-                                        found: 2
+                                        found := 2
                                     ---
                                 ---
                             ---
                         ---
-                        pf: c.lm_compiler_next_active(pf\next)
+                        pf := c.lm_compiler_next_active(pf\next)
                     ---
                 ---
                 if: found = 0 && c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
-                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                     while: first != 0 && found = 0
                         if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                            found: lm_compiler_predef_file_result_ty(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), out_ty)
-                        first: c.lm_compiler_next_active(first\next)
+                            found := lm_compiler_predef_file_result_ty(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), out_ty)
+                        first := c.lm_compiler_next_active(first\next)
                     ---
                 ---
-                f: c.lm_compiler_next_active(f\next)
+                f := c.lm_compiler_next_active(f\next)
             ---
         ---
     ---
@@ -663,12 +668,12 @@ fn: lm_compiler_predef_result_ty (const: (@: name c.LmP0Text); @: out_ty int) in
         return: (cast: (int) (0))
     int: st
     while: i < pd_n_cell[0]
-        st: lm_compiler_predef_file_result_ty(name, pd_cell[0][i], out_ty)
+        st := lm_compiler_predef_file_result_ty(name, pd_cell[0][i], out_ty)
         if: st = 1
-            \out_ty: c.lm_compiler_result_value_ty(\out_ty)
+            \out_ty := c.lm_compiler_result_value_ty(\out_ty)
         if: st != 0
             return: (cast: (int) (st))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_predef_result_ty
@@ -726,7 +731,7 @@ fn: lm_compiler_written_place_definition (int: own) int
     @: decl c.LmP0Node
     if: own < 0 || own >= own_n_cell[0]
         return: -1
-    decl: own_decl_cell[0][own]
+    decl := own_decl_cell[0][own]
     if: lm_compiler_written_put_node((cast: (const: @: c.LmP0Node) decl)) = 0
         return: -1
     return: c.lm_compiler_own_find(own_mi_cell[0][own], (cast: (const: @: c.LmP0Text) lm_compiler_ref_tail_atom((cast: (const: @: c.LmP0Frame) (decl\as\frame)))))
@@ -742,10 +747,10 @@ fn: lm_compiler_contract_type_model (const: (@: word c.LmP0Text)) int
     if: word != 0 && word\data != 0 && c.memchr(word\data, 92, word\length) != 0
         return: lm_compiler_path_type_model(word)
     ---
-    model: lm_compiler_type_model(word)
+    model := lm_compiler_type_model(word)
     if: model >= 0 || here_mi_cell[0] < 0
         return: model
-    own: c.lm_compiler_resolved_own(here_mi_cell[0], word)
+    own := c.lm_compiler_resolved_own(here_mi_cell[0], word)
     if: own < 0 || own_mi_cell[0][own] != here_mi_cell[0]
         return: -1
     return: lm_compiler_own_layout(lm_compiler_written_place_definition(own))
@@ -756,34 +761,34 @@ fn: lm_compiler_resolve_type_atom (const: (@: atom c.LmP0Text); int: depth; int:
     int: leaf
     if: out_ty = 0 || atom = 0
         return: (cast: (int) (2))
-    \out_ty: 0
+    \out_ty := 0
     if: depth < 1
         return: (cast: (int) (2))
     if: lm_compiler_ret_type_word(atom, 0, 0, @ leaf) = 0 && c.lm_compiler_prim_code_name(c.lm_compiler_result_value_ty(leaf)) != 0
-        \out_ty: c.lm_compiler_foreign_intern(atom, depth, is_const)
+        \out_ty := c.lm_compiler_foreign_intern(atom, depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
     # Lmx is the Structure/model projection type (CORE.md 3.1); it is not a foreign C name.
     if: c.lm_compiler_text_eq(atom, "Lmx")
-        \out_ty: c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
+        \out_ty := c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
     # A reference `@: T` to a named Structure is one level, `@: Lmx` (D-76): its value is the Structure
     # itself, the pointee its pointer cell holds -- the same value `@mo` gives and `T: mo`'s slot holds.
     if: lm_compiler_contract_type_model(atom) >= 0
-        \out_ty: c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
+        \out_ty := c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
     if: lm_compiler_requirement_method(here_mi_cell[0], atom) >= 0
-        \out_ty: c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
+        \out_ty := c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
     if: c.lm_compiler_c_stmt_door(atom) != 0
-        \out_ty: c.lm_compiler_foreign_intern(atom, depth, is_const)
+        \out_ty := c.lm_compiler_foreign_intern(atom, depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
@@ -794,7 +799,7 @@ fn: lm_compiler_fnptr_local (const: (@: stmt c.LmP0Node); @@: out_name c.LmP0Tex
     @: f c.LmP0Field
     if: out_name = 0
         return: (cast: (int) (1))
-    \out_name: 0
+    \out_name := 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: (cast: (int) (1))
     # A bare declaration, or a declaration with an initialiser. The
@@ -802,12 +807,12 @@ fn: lm_compiler_fnptr_local (const: (@: stmt c.LmP0Node); @@: out_name c.LmP0Tex
     # later "d: value" statement is the same tree as the call "d(value)".
     if: c.lm_compiler_count_active(stmt\as\frame\body) < 1
         return: (cast: (int) (1))
-    f: c.lm_compiler_next_active(stmt\as\frame\body\first_field)
+    f := c.lm_compiler_next_active(stmt\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_bind_spelling(f\value\as\atom) = 0
         return: (cast: (int) (1))
     if: lm_compiler_predef_has_fnptr((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0
         return: (cast: (int) (1))
-    \out_name: f\value\as\atom
+    \out_name := f\value\as\atom
     return: (cast: (int) (0))
 end: lm_compiler_fnptr_local
 
@@ -815,17 +820,17 @@ fn: lm_compiler_struct_local (const: (@: stmt c.LmP0Node); @@: out_name c.LmP0Te
     @: f c.LmP0Field
     if: out_name = 0
         return: (cast: (int) (1))
-    \out_name: 0
+    \out_name := 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: (cast: (int) (1))
     if: c.lm_compiler_count_active(stmt\as\frame\body) != 1
         return: (cast: (int) (1))
-    f: c.lm_compiler_next_active(stmt\as\frame\body\first_field)
+    f := c.lm_compiler_next_active(stmt\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_bind_spelling(f\value\as\atom) = 0
         return: (cast: (int) (1))
     if: lm_compiler_predef_has_type((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 || lm_compiler_predef_has_fnptr((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
         return: (cast: (int) (1))
-    \out_name: f\value\as\atom
+    \out_name := f\value\as\atom
     return: (cast: (int) (0))
 end: lm_compiler_struct_local
 
@@ -837,12 +842,12 @@ fn: lm_compiler_ptr_type_word (const: (@: word c.LmP0Text); int: depth; @: out_t
         return: (cast: (int) (0))
     # `@: T` of a named Structure is one level, `@: Lmx` (D-76; l2_resolve_type_atom).
     if: lm_compiler_type_model(word) >= 0 || c.lm_compiler_site_method(here_mi_cell[0], word) >= 0
-        \out_ty: c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, 0)
+        \out_ty := c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, 0)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
     if: c.lm_compiler_c_stmt_door(word) != 0
-        \out_ty: c.lm_compiler_foreign_intern(word, depth, 0)
+        \out_ty := c.lm_compiler_foreign_intern(word, depth, 0)
         if: \out_ty >= 100
             return: (cast: (int) (0))
         return: (cast: (int) (2))
@@ -860,14 +865,14 @@ fn: lm_compiler_declaration_initial_word (const: (@: declaration c.L2Declaration
     if: declaration = 0
         return: (cast: (@: c.LmP0Text) (0))
     if: declaration\candidate_count = 1
-        candidate: c.lm_compiler_next_active(declaration\candidate)
+        candidate := c.lm_compiler_next_active(declaration\candidate)
         if: candidate != 0 && candidate\value != 0 && candidate\value\kind = c.LM_P0_NODE_ATOM && candidate\value\as != 0
             return: (cast: (@: c.LmP0Text) (candidate\value\as\atom))
         ---
         return: (cast: (@: c.LmP0Text) (0))
     if: declaration\candidate_count != 0
         return: (cast: (@: c.LmP0Text) (0))
-    outer: c.lm_compiler_application(declaration\source)
+    outer := c.lm_compiler_application(declaration\source)
     if: outer = 0
         return: (cast: (@: c.LmP0Text) (0))
     # A known Structure's one-name declaration has the same initial referent
@@ -878,23 +883,23 @@ fn: lm_compiler_declaration_initial_word (const: (@: declaration c.L2Declaration
     if: c.lm_compiler_address_depth(outer\head) = 0
         return: (cast: (@: c.LmP0Text) (0))
     if: c.lm_compiler_count_active(outer\body) = 2
-        candidate: c.lm_compiler_next_active(outer\body\first_field)
+        candidate := c.lm_compiler_next_active(outer\body\first_field)
         if: candidate = 0
             return: (cast: (@: c.LmP0Text) (0))
-        requirement: c.lm_compiler_next_active(candidate\next)
-        word: c.lm_compiler_contract_leaf(declaration\contract, @ depth, @ qualified)
+        requirement := c.lm_compiler_next_active(candidate\next)
+        word := c.lm_compiler_contract_leaf(declaration\contract, @ depth, @ qualified)
         if: depth = 1 && word != 0 && requirement != 0 && requirement\value != 0 && requirement\value\kind = c.LM_P0_NODE_ATOM && requirement\value\as != 0 && c.lm_compiler_text_same(word, requirement\value\as\atom) != 0
             return: (cast: (@: c.LmP0Text) (word))
         return: (cast: (@: c.LmP0Text) (0))
     if: c.lm_compiler_count_active(outer\body) != 1
         return: (cast: (@: c.LmP0Text) (0))
-    candidate: c.lm_compiler_next_active(outer\body\first_field)
+    candidate := c.lm_compiler_next_active(outer\body\first_field)
     if: candidate = 0 || candidate\value = 0
         return: (cast: (@: c.LmP0Text) (0))
-    inner: c.lm_compiler_application(candidate\value)
+    inner := c.lm_compiler_application(candidate\value)
     if: inner = 0 || inner\head = 0
         return: (cast: (@: c.LmP0Text) (0))
-    word: c.lm_compiler_contract_leaf(declaration\contract, @ depth, @ qualified)
+    word := c.lm_compiler_contract_leaf(declaration\contract, @ depth, @ qualified)
     if: depth != 1 || word = 0 || c.lm_compiler_text_same(word, inner\head) = 0
         return: (cast: (@: c.LmP0Text) (0))
     return: (cast: (@: c.LmP0Text) (word))
@@ -907,8 +912,8 @@ fn: lm_compiler_reference_implicit_method (const: (@: declaration c.L2Declaratio
     int: qualified
     if: declaration = 0 || declaration\candidate_count != 0 || declaration\contract = 0
         return: (cast: (int) (-1))
-    word: lm_compiler_declaration_initial_word(declaration)
-    requirement: c.lm_compiler_contract_leaf(declaration\contract, @ depth, @ qualified)
+    word := lm_compiler_declaration_initial_word(declaration)
+    requirement := c.lm_compiler_contract_leaf(declaration\contract, @ depth, @ qualified)
     if: word = 0 || requirement = 0 || depth != 1 || c.lm_compiler_text_same(word, requirement) = 0 || lm_compiler_type_model(word) >= 0
         return: (cast: (int) (-1))
     return: (cast: (int) (c.lm_compiler_site_method(mi, word)))
@@ -922,7 +927,7 @@ fn: lm_compiler_contract_formal (@: contract c.L2TypeContract; @: out_ty int) in
     int: answer
     if: entered < 0
         return: (cast: (int) (1))
-    answer: lm_compiler_contract_formal_here(contract, out_ty)
+    answer := lm_compiler_contract_formal_here(contract, out_ty)
     if: entered > 0 && c.lm_compiler_contract_source_end(@ saved, horizon_on, horizon_at) != 0
         return: (cast: (int) (1))
     return: (cast: (int) (answer))
@@ -947,9 +952,9 @@ fn: lm_compiler_contract_formal_here (@: contract c.L2TypeContract; @: out_ty in
                 if: c.lm_compiler_type_parts(\out_ty, @ resolved_word, @ resolved_depth, @ resolved_qualified) != 0
                     return: (cast: (int) (1))
                 if: \out_ty >= 100
-                    \out_ty: c.lm_compiler_foreign_intern_parts(@ resolved_word, resolved_depth, 1, foreign_raw_c_cell[0][\out_ty - 100])
+                    \out_ty := c.lm_compiler_foreign_intern_parts(@ resolved_word, resolved_depth, 1, foreign_raw_c_cell[0][\out_ty - 100])
                 else:
-                    \out_ty: c.lm_compiler_foreign_intern(@ resolved_word, resolved_depth, 1)
+                    \out_ty := c.lm_compiler_foreign_intern(@ resolved_word, resolved_depth, 1)
                 ---
                 if: \out_ty < 100
                     return: (cast: (int) (1))
@@ -962,14 +967,14 @@ fn: lm_compiler_contract_formal_here (@: contract c.L2TypeContract; @: out_ty in
         return: (cast: (int) (lm_compiler_resolve_type_atom(word, depth, 0, out_ty)))
     ---
     if: lm_compiler_type_model(word) >= 0 || c.lm_compiler_site_method(here_mi_cell[0], word) >= 0
-        \out_ty: c.lm_compiler_graph_ft()
+        \out_ty := c.lm_compiler_graph_ft()
         if: \out_ty = 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     if: lm_compiler_ret_type_word(word, 0, qualified, out_ty) != 0
         return: (cast: (int) (1))
     if: \out_ty = 33
-        \out_ty: 34
+        \out_ty := 34
     return: (cast: (int) (0))
 end: lm_compiler_contract_formal_here
 
@@ -993,7 +998,7 @@ fn: lm_compiler_contract_own (@: contract c.L2TypeContract) int
             return: (cast: (int) (c.lm_compiler_oc_darray()))
         if: contract\operand\kind != 0
             return: (cast: (int) (0))
-        word: contract\operand\word
+        word := contract\operand\word
         if: c.lm_compiler_text_eq(word, "int") != 0
             return: (cast: (int) (4))
         if: c.lm_compiler_text_eq(word, "char") != 0
@@ -1004,7 +1009,7 @@ fn: lm_compiler_contract_own (@: contract c.L2TypeContract) int
             return: (cast: (int) (37))
         return: (cast: (int) (0))
     ---
-    word: c.lm_compiler_contract_leaf(contract, @ depth, @ qualified)
+    word := c.lm_compiler_contract_leaf(contract, @ depth, @ qualified)
     if: word = 0
         return: (cast: (int) (0))
     if: depth > 0
@@ -1032,42 +1037,42 @@ fn: lm_compiler_colon_bound_ty (int: mi; const: (@: name c.LmP0Text); @: out_ty 
     int: i
     if: name = 0 || out_ty = 0
         return: (cast: (int) (1))
-    i: c.lm_compiler_resolved_own(mi, name)
+    i := c.lm_compiler_resolved_own(mi, name)
     if: i >= 0
-        \out_ty: c.lm_compiler_value_ft_of_own(own_ty_cell[0][i])
+        \out_ty := c.lm_compiler_value_ft_of_own(own_ty_cell[0][i])
         return: (cast: (int) (0))
-    i: c.lm_compiler_formal_find(mi, name)
+    i := c.lm_compiler_formal_find(mi, name)
     if: i >= 0
-        \out_ty: c.lm_compiler_ft(mi, i)
+        \out_ty := c.lm_compiler_ft(mi, i)
         return: (cast: (int) (0))
     if: c.lm_compiler_mad_host_of(mi) >= 0
-        i: c.lm_compiler_formal_find(c.lm_compiler_mad_host_of(mi), name)
+        i := c.lm_compiler_formal_find(c.lm_compiler_mad_host_of(mi), name)
         if: i >= 0
-            \out_ty: c.lm_compiler_ft(c.lm_compiler_mad_host_of(mi), i)
+            \out_ty := c.lm_compiler_ft(c.lm_compiler_mad_host_of(mi), i)
             return: (cast: (int) (0))
         # T6b: a field the host declares at method level is its activation too.
-        i: c.lm_compiler_mad_host_own(c.lm_compiler_mad_host_of(mi), name)
+        i := c.lm_compiler_mad_host_own(c.lm_compiler_mad_host_of(mi), name)
         if: i >= 0
-            \out_ty: c.lm_compiler_value_ft_of_own(own_ty_cell[0][i])
+            \out_ty := c.lm_compiler_value_ft_of_own(own_ty_cell[0][i])
             return: (cast: (int) (0))
         ---
-    i: c.lm_compiler_dyn_find(mi, name)
+    i := c.lm_compiler_dyn_find(mi, name)
     if: i >= 0 && c.lm_compiler_dt(mi, i) != 0
-        \out_ty: c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, i)))
+        \out_ty := c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(c.lm_compiler_dt(mi, i)))
         return: (cast: (int) (0))
     if: i >= 0
         return: (cast: (int) (1))
-    i: c.lm_compiler_own_visible(mi, name)
+    i := c.lm_compiler_own_visible(mi, name)
     if: i >= 0
-        \out_ty: c.lm_compiler_value_ft_of_own(own_ty_cell[0][i])
+        \out_ty := c.lm_compiler_value_ft_of_own(own_ty_cell[0][i])
         return: (cast: (int) (0))
-    i: lm_compiler_slot_find(mi, name)
+    i := lm_compiler_slot_find(mi, name)
     if: i >= 0
-        \out_ty: st_cell[0][lm_compiler_slot_off(mi, i)]
+        \out_ty := st_cell[0][lm_compiler_slot_off(mi, i)]
         return: (cast: (int) (0))
-    i: c.lm_compiler_ml_find(name)
+    i := c.lm_compiler_ml_find(name)
     if: i >= 0
-        \out_ty: lm_compiler_ml_value_ty(i)
+        \out_ty := lm_compiler_ml_value_ty(i)
         return: (cast: (int) (0))
     ---
     return: (cast: (int) (1))
@@ -1086,12 +1091,12 @@ fn: lm_compiler_own_layout (int: own) int
     int: row
     if: own < 0 || own >= own_n_cell[0]
         return: (cast: (int) (-1))
-    model: c.lm_compiler_own_nsty_get(own)
+    model := c.lm_compiler_own_nsty_get(own)
     if: model >= 0 && c.lm_compiler_source_definition_ns(own) = model
         return: (cast: (int) (model))
     if: model >= 0 && ns_local_cell[0][model] >= 0 && c.lm_compiler_own_of_local_ns(own_mi_cell[0][own], model) = own
         return: (cast: (int) (model))
-    row: lm_compiler_ns_constructed_row(own_mi_cell[0][own], own_decl_cell[0][own])
+    row := lm_compiler_ns_constructed_row(own_mi_cell[0][own], own_decl_cell[0][own])
     if: row >= 0 && nsf_kind_cell[0][row] = 2 && nsf_ref_cell[0][row] = model && nsf_fname_cell[0][row] = own_name_cell[0][own]
         return: (cast: (int) (model))
     return: (cast: (int) (-1))
@@ -1107,34 +1112,34 @@ fn: lm_compiler_node_of_text (const: (@: s c.LmP0Structure); const: (@: t c.LmP0
         return: (cast: (@: c.LmP0Node) (0))
     # A call's actuals: the Frame that names an actual spells a formal of the
     # callee, never the free name looked for.
-    f: c.lm_compiler_call_actuals(s)
+    f := c.lm_compiler_call_actuals(s)
     while: f != 0 && r = 0
-        n: f\value
+        n := f\value
         if: n != 0 && n\as != 0 && n\kind = c.LM_P0_NODE_ATOM && c.lm_compiler_source_text(n\as\atom, t) != 0
-            r: n
+            r := n
         if: r = 0 && n != 0 && n\as != 0 && n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0
             if: c.lm_compiler_source_text(n\as\frame\head, t) != 0
-                r: n
+                r := n
             if: r = 0
-                r: lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (n\as\frame\body)), t)
+                r := lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (n\as\frame\body)), t)
             if: r = 0 && n\as\frame\trailer != 0
-                r: lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (n\as\frame\trailer\body)), t)
+                r := lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (n\as\frame\trailer\body)), t)
             # A compact head's expression belongs to this original Frame,
             # although P0 parsed its bytes into a separately owned document.
             # Every source-use query sees that same retained tree. Otherwise
             # a real read in an index looks like a forward-only hidden input.
-            expression: head_expressions_cell[0]
+            expression := head_expressions_cell[0]
             while: r = 0 && expression != 0
                 if: expression\source = n
-                    r: lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (expression\body)), t)
-                expression: expression\allocated_next
+                    r := lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (expression\body)), t)
+                expression := expression\allocated_next
             ---
             ---
         if: r = 0 && n != 0 && n\as != 0 && n\kind = c.LM_P0_NODE_STRUCTURE
-            r: lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (n\as\structure)), t)
-        f: f\next
+            r := lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (n\as\structure)), t)
+        f := f\next
     if: r = 0 && s\trailer != 0
-        r: lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (s\trailer\body)), t)
+        r := lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (s\trailer\body)), t)
     return: (cast: (@: c.LmP0Node) (r))
 end: lm_compiler_node_of_text
 
@@ -1161,9 +1166,9 @@ fn: lm_compiler_address_type (int: ty) int
     int: qualified
     int: result
     int: raw_c 0
-    ty: c.lm_compiler_formal_raw(ty)
+    ty := c.lm_compiler_formal_raw(ty)
     if: ty >= 100 && ty - 100 < foreign_n_cell[0]
-        raw_c: foreign_raw_c_cell[0][ty - 100]
+        raw_c := foreign_raw_c_cell[0][ty - 100]
     if: c.lm_compiler_type_parts(ty, word, @ depth, @ qualified) != 0
         return: (cast: (int) (0 - 1))
     if: raw_c = 0 && qualified = 0 && lm_compiler_ptr_type_word(word, depth + 1, @ result) = 0
@@ -1180,9 +1185,9 @@ fn: lm_compiler_indirect_type (int: ty) int
     int: qualified
     int: result
     int: raw_c 0
-    ty: c.lm_compiler_formal_raw(ty)
+    ty := c.lm_compiler_formal_raw(ty)
     if: ty >= 100 && ty - 100 < foreign_n_cell[0]
-        raw_c: foreign_raw_c_cell[0][ty - 100]
+        raw_c := foreign_raw_c_cell[0][ty - 100]
     if: c.lm_compiler_type_parts(ty, word, @ depth, @ qualified) != 0 || depth < 1
         return: (cast: (int) (-1))
     if: depth = 1
@@ -1191,7 +1196,7 @@ fn: lm_compiler_indirect_type (int: ty) int
         if: lm_compiler_ret_type_word(word, 0, 0, @ result) != 0 || result = 8
             return: (cast: (int) (-1))
         if: result = 33
-            result: 34
+            result := 34
         return: (cast: (int) (result))
     if: raw_c = 0 && qualified = 0 && lm_compiler_ptr_type_word(word, depth - 1, @ result) = 0
         return: (cast: (int) (result))
@@ -1207,7 +1212,7 @@ fn: lm_compiler_slot_find (int: mi; const: (@: t c.LmP0Text)) int
     while: i < m_sn_cell[0][mi]
         if: c.lm_compiler_text_same(sn_cell[0][lm_compiler_slot_off(mi, i)], t)
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     return: (cast: (int) (-1))
 end: lm_compiler_slot_find
 
@@ -1260,17 +1265,17 @@ fn: lm_compiler_ns_source_site (const: (@: t c.LmP0Text)) const: @: c.LmP0Node
     @: expression c.L2HeadExpression head_expressions_cell[0]
     int: i 0
     while: site = 0 && part_doc_cell[0] != 0 && i < part_n_cell[0]
-        root: c.lm_p0_document_root(part_doc_cell[0][i])
+        root := c.lm_p0_document_root(part_doc_cell[0][i])
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
-            site: lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (root\as\structure)), t)
-        i: i + 1
+            site := lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (root\as\structure)), t)
+        i := i + 1
     ---
     while: site = 0 && expression != 0
-        site: lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (expression\body)), t)
-        expression: expression\allocated_next
+        site := lm_compiler_node_of_text((cast: (const: @: c.LmP0Structure) (expression\body)), t)
+        expression := expression\allocated_next
     ---
     if: site = 0
-        site: here_node_cell[0]
+        site := here_node_cell[0]
     return: (cast: (const: @: c.LmP0Node) (c.lm_compiler_head_source_node(site)))
 end: lm_compiler_ns_source_site
 
@@ -1286,19 +1291,19 @@ fn: lm_compiler_ns_find (const: (@: t c.LmP0Text)) int
     while: i < ns_n_cell[0]
         if: c.lm_compiler_text_same(ns_name_cell[0][i], t) != 0
             if: site_ready = 0
-                site: lm_compiler_ns_source_site(t)
-                site_ready: 1
+                site := lm_compiler_ns_source_site(t)
+                site_ready := 1
             ---
-            rank: c.lm_compiler_ns_source_rank(i, site)
+            rank := c.lm_compiler_ns_source_rank(i, site)
             # At one eligible lexical depth, the latest source occurrence is
             # the bare-name binding; an ineligible (-1) later declaration must
             # never win merely because the selected rank is still -1.
             if: rank >= 0 && rank >= selected_rank
-                selected: i
-                selected_rank: rank
+                selected := i
+                selected_rank := rank
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (selected))
 end: lm_compiler_ns_find
@@ -1311,7 +1316,7 @@ fn: lm_compiler_contract_model_word (@: contract c.L2TypeContract; const: (@: wo
     int: answer
     if: entered < 0
         return: (cast: (int) (-1))
-    answer: lm_compiler_contract_type_model(word)
+    answer := lm_compiler_contract_type_model(word)
     if: entered > 0 && c.lm_compiler_contract_source_end(@ saved, horizon_on, horizon_at) != 0
         return: (cast: (int) (-1))
     return: (cast: (int) (answer))
@@ -1327,10 +1332,10 @@ fn: lm_compiler_requirement_method (int: mi; const: (@: word c.LmP0Text)) int
         return: c.lm_compiler_site_method(mi, word)
     ---
     if: mi >= 0
-        cur_mi_cell[0]: mi
+        cur_mi_cell[0] := mi
     ---
-    kind: c.lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, 0)
-    cur_mi_cell[0]: saved
+    kind := c.lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, 0)
+    cur_mi_cell[0] := saved
     if: kind = 4
         return: (cast: (int) (leaf_mi))
     return: -1
@@ -1346,10 +1351,10 @@ fn: lm_compiler_path_type_model (const: (@: word c.LmP0Text)) int
     int: model -1
     int: kind
     if: here_mi_cell[0] >= 0
-        cur_mi_cell[0]: here_mi_cell[0]
+        cur_mi_cell[0] := here_mi_cell[0]
     ---
-    kind: c.lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, @ model)
-    cur_mi_cell[0]: saved
+    kind := c.lm_compiler_path_contract((cast: (const: @: char) word\data), (cast: (size_t) word\length), @ leaf_mi, @ model)
+    cur_mi_cell[0] := saved
     if: kind = 2 || kind = 3 || kind = 10 || kind = 11
         return: (cast: (int) (model))
     return: -1
@@ -1365,11 +1370,11 @@ fn: lm_compiler_type_model (const: (@: word c.LmP0Text)) int
     if: here_mi_cell[0] >= 0
         # A declaration's receiving type is read before that declaration binds,
         # just like its candidate. Preserve an enclosing initializer exclusion.
-        own: c.lm_compiler_own_find_decl(here_mi_cell[0], word, here_node_cell[0])
+        own := c.lm_compiler_own_find_decl(here_mi_cell[0], word, here_node_cell[0])
         if: own >= 0
-            own_excl_cell[0]: own
-        own: c.lm_compiler_resolved_own(here_mi_cell[0], word)
-        own_excl_cell[0]: excluded
+            own_excl_cell[0] := own
+        own := c.lm_compiler_resolved_own(here_mi_cell[0], word)
+        own_excl_cell[0] := excluded
         if: own >= 0 && own_mi_cell[0][own] = here_mi_cell[0]
             return: (cast: (int) (lm_compiler_own_layout(own)))
         if: c.lm_compiler_param_find(here_mi_cell[0], word) >= 0
@@ -1386,10 +1391,10 @@ fn: lm_compiler_contract_model_depth (@: contract c.L2TypeContract; int: signatu
     @: word c.LmP0Text
     int: depth
     int: qualified
-    word: c.lm_compiler_contract_leaf(contract, @ depth, @ qualified)
+    word := c.lm_compiler_contract_leaf(contract, @ depth, @ qualified)
     if: indirect < 0 || depth < indirect
         return: (cast: (int) (-1))
-    depth: depth - indirect
+    depth := depth - indirect
     if: word = 0 || (depth != 1 && (signature = 0 || depth != 0))
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (lm_compiler_contract_model_word(contract, word)))
@@ -1399,7 +1404,7 @@ fn: lm_compiler_contract_element_ty (@: element c.L2TypeContract; @: out_ty int)
     if: element = 0 || out_ty = 0
         return: (cast: (int) (1))
     if: element\kind = 1
-        \out_ty: c.lm_compiler_array_desc_ty()
+        \out_ty := c.lm_compiler_array_desc_ty()
         return: (cast: (int) ((cast: (int) (\out_ty < 100))))
     return: (cast: (int) (lm_compiler_contract_formal(element, out_ty)))
 end: lm_compiler_contract_element_ty
@@ -1416,34 +1421,34 @@ fn: lm_compiler_cast_resolve (const: (@: source_node c.LmP0Node); @: out_ty int;
     int: ty
     if: source_node = 0 || source_node\as = 0 || out_ty = 0
         return: (cast: (int) (1))
-    contract: c.lm_compiler_contract_type(source_node)
+    contract := c.lm_compiler_contract_type(source_node)
     if: contract = 0
         # Existing multi-word raw C type syntax is checked by C, not an L2
         # primitive conversion. It has no inferred L2 value type.
         if: source_node\kind != c.LM_P0_NODE_STRUCTURE || source_node\as\structure = 0 || c.lm_compiler_count_active(source_node\as\structure) != 2
             return: (cast: (int) (1))
-        f: c.lm_compiler_next_active(source_node\as\structure\first_field)
-        g: c.lm_compiler_next_active(f\next)
+        f := c.lm_compiler_next_active(source_node\as\structure\first_field)
+        g := c.lm_compiler_next_active(f\next)
         if: f\value = 0 || g = 0 || g\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || g\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_ctype_word(f\value\as\atom) = 0 || c.lm_compiler_ctype_word(g\value\as\atom) = 0
             return: (cast: (int) (1))
-        \out_ty: -12
+        \out_ty := -12
         if: dest != 0 && (c.lm_compiler_tx_wrapn(dest, 0, f\value\as\atom\data, f\value\as\atom\length, " ") != 0 || c.lm_compiler_tx_catn(dest, g\value\as\atom\data, g\value\as\atom\length) != 0)
             return: (cast: (int) (1))
         return: (cast: (int) (0))
-    word: c.lm_compiler_contract_leaf(contract, @ depth, @ qualified)
+    word := c.lm_compiler_contract_leaf(contract, @ depth, @ qualified)
     if: word = 0
         return: (cast: (int) (1))
     if: lm_compiler_contract_formal(contract, @ ty) != 0
         # A cast is an explicit machine type position. Preserve its existing
         # foreign ABI spelling, including a type supplied by a predef header.
-        saved: (cast: (@: c.LmP0Text) word)
+        saved := (cast: (@: c.LmP0Text) word)
         if: saved = 0 || (c.lm_compiler_c_stmt_door(saved) = 0 && c.lm_compiler_ident(saved) = 0)
             return: (cast: (int) (1))
-        ty: c.lm_compiler_foreign_intern(saved, depth, qualified)
+        ty := c.lm_compiler_foreign_intern(saved, depth, qualified)
         if: ty < 100
             return: (cast: (int) (1))
         ---
-    \out_ty: ty
+    \out_ty := ty
     if: dest = 0
         return: (cast: (int) (0))
     if: c.lm_compiler_pointer_depth(ty) > 0
@@ -1474,20 +1479,20 @@ fn: lm_compiler_value_type_operand (@: value c.L2ValueSpan; @: type int; @: text
     if: value\count != 1
         return: (cast: (int) (2))
     if: value\node\kind = c.LM_P0_NODE_ATOM
-        word: value\node\as\atom
+        word := value\node\as\atom
         if: lm_compiler_prim_type_word(word) != 0
             return: (cast: (int) (lm_compiler_cast_resolve((cast: (const: @: c.LmP0Node) (value\node)), type, text)))
         if: c.lm_compiler_c_stmt_door(word) != 0
-            \type: -12
+            \type := -12
             if: text != 0
                 return: (cast: (int) (c.lm_compiler_tok_tx(text, word)))
             return: (cast: (int) (0))
         return: (cast: (int) (2))
-    values: c.lm_compiler_primary_values(value, @ n)
+    values := c.lm_compiler_primary_values(value, @ n)
     if: n < 0
         return: (cast: (int) (1))
     if: value\node\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_address_depth(value\node\as\frame\head) > 0 && n = 1
-        status: lm_compiler_value_type_operand(values, @ child_type, 0)
+        status := lm_compiler_value_type_operand(values, @ child_type, 0)
         if: status != 0
             return: (cast: (int) (status))
         return: (cast: (int) (lm_compiler_cast_resolve((cast: (const: @: c.LmP0Node) (value\node)), type, text)))
@@ -1502,7 +1507,7 @@ fn: lm_compiler_value_type_operand (@: value c.L2ValueSpan; @: type int; @: text
             @: item_node_again c.LmP0Node (cast: (@: c.LmP0Node) c.lm_compiler_span_node(values, k))
             if: c.lm_compiler_ctype_word(item_node_again\as\atom) = 0
                 return: (cast: (int) (2))
-            k: k + 1
+            k := k + 1
         ---
         return: (cast: (int) (lm_compiler_cast_resolve((cast: (const: @: c.LmP0Node) (value\node)), type, text)))
     ---
@@ -1537,23 +1542,23 @@ fn: lm_compiler_snap_bytes (const: (@: path char); @: len size_t) const: @: char
         return: (cast: (const: @: char) (0))
     while: i < snap_n_cell[0]
         if: c.strcmp(snap_path_cell[0][i], path) = 0
-            \len: snap_len_cell[0][i]
+            \len := snap_len_cell[0][i]
             return: (cast: (const: @: char) (snap_data_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     if: snap_n_cell[0] >= snap_cap_cell[0]
-        cap: snap_cap_cell[0]
+        cap := snap_cap_cell[0]
         if: cap < 1
-            cap: 8
+            cap := 8
         while: cap <= snap_n_cell[0]
             if: cap > c.INT_MAX / 2
                 return: (cast: (const: @: char) (0))
-            cap: cap * 2
+            cap := cap * 2
         ---
-        np: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof((cast: (@: char) 0))))
-        nd: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof((cast: (@: char) 0))))
-        nl: (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.size_t)))
-        nv: (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof((cast: (@: c.LmP0Document) 0))))
+        np := (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof((cast: (@: char) 0))))
+        nd := (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof((cast: (@: char) 0))))
+        nl := (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.size_t)))
+        nv := (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof((cast: (@: c.LmP0Document) 0))))
         if: np = 0 || nd = 0 || nl = 0 || nv = 0
             if: np != 0
                 c.lm_compiler_xfree((cast: (@: void) np))
@@ -1565,13 +1570,13 @@ fn: lm_compiler_snap_bytes (const: (@: path char); @: len size_t) const: @: char
                 c.lm_compiler_xfree((cast: (@: void) nv))
             return: (cast: (const: @: char) (0))
         ---
-        i: 0
+        i := 0
         while: i < snap_n_cell[0]
-            np[i]: snap_path_cell[0][i]
-            nd[i]: snap_data_cell[0][i]
-            nl[i]: snap_len_cell[0][i]
-            nv[i]: snap_doc_cell[0][i]
-            i: i + 1
+            np[i] := snap_path_cell[0][i]
+            nd[i] := snap_data_cell[0][i]
+            nl[i] := snap_len_cell[0][i]
+            nv[i] := snap_doc_cell[0][i]
+            i := i + 1
         ---
         if: snap_path_cell[0] != 0
             c.lm_compiler_xfree((cast: (@: void) snap_path_cell[0]))
@@ -1581,26 +1586,26 @@ fn: lm_compiler_snap_bytes (const: (@: path char); @: len size_t) const: @: char
             c.lm_compiler_xfree((cast: (@: void) snap_len_cell[0]))
         if: snap_doc_cell[0] != 0
             c.lm_compiler_xfree((cast: (@: void) snap_doc_cell[0]))
-        snap_path_cell[0]: np
-        snap_data_cell[0]: nd
-        snap_len_cell[0]: nl
-        snap_doc_cell[0]: nv
-        snap_cap_cell[0]: cap
+        snap_path_cell[0] := np
+        snap_data_cell[0] := nd
+        snap_len_cell[0] := nl
+        snap_doc_cell[0] := nv
+        snap_cap_cell[0] := cap
     ---
-    data: c.lm_compiler_snap_read(path, len)
+    data := c.lm_compiler_snap_read(path, len)
     if: data = 0
         return: (cast: (const: @: char) (0))
-    n: c.strlen(path)
-    name: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    n := c.strlen(path)
+    name := (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
     if: name = 0
         c.lm_compiler_xfree((cast: (@: void) data))
         return: (cast: (const: @: char) (0))
     c.memcpy(name, path, n + 1U)
-    snap_path_cell[0][snap_n_cell[0]]: name
-    snap_data_cell[0][snap_n_cell[0]]: data
-    snap_len_cell[0][snap_n_cell[0]]: \len
-    snap_doc_cell[0][snap_n_cell[0]]: 0
-    snap_n_cell[0]: snap_n_cell[0] + 1
+    snap_path_cell[0][snap_n_cell[0]] := name
+    snap_data_cell[0][snap_n_cell[0]] := data
+    snap_len_cell[0][snap_n_cell[0]] := \len
+    snap_doc_cell[0][snap_n_cell[0]] := 0
+    snap_n_cell[0] := snap_n_cell[0] + 1
     return: (cast: (const: @: char) (data))
 end: lm_compiler_snap_bytes
 
@@ -1612,11 +1617,11 @@ fn: lm_compiler_snap_document (const: (@: path char)) @: c.LmP0Document
     size_t: n 0U
     const: (@: data char)
     @: document c.LmP0Document 0
-    data: lm_compiler_snap_bytes(path, @ n)
+    data := lm_compiler_snap_bytes(path, @ n)
     if: data = 0
         return: (cast: (@: c.LmP0Document) (0))
     while: i < snap_n_cell[0] && snap_data_cell[0][i] != data
-        i: i + 1
+        i := i + 1
     if: i >= snap_n_cell[0]
         return: (cast: (@: c.LmP0Document) (0))
     if: snap_doc_cell[0][i] = 0
@@ -1625,7 +1630,7 @@ fn: lm_compiler_snap_document (const: (@: path char)) @: c.LmP0Document
                 lm_compiler_types_doc_destroy(document)
             return: (cast: (@: c.LmP0Document) (0))
         ---
-        snap_doc_cell[0][i]: document
+        snap_doc_cell[0][i] := document
     ---
     return: (cast: (@: c.LmP0Document) (snap_doc_cell[0][i]))
 end: lm_compiler_snap_document
@@ -1646,8 +1651,8 @@ fn: lm_compiler_pdx_hash (const: (@: name c.LmP0Text)) unsigned
     if: name = 0 || name\data = 0
         return: (cast: (unsigned) (0U))
     while: i < name\length
-        h: h * 16777619U + (cast: (unsigned) (cast: (uchar) name\data[i]))
-        i: i + 1U
+        h := h * 16777619U + (cast: (unsigned) (cast: (uchar) name\data[i]))
+        i := i + 1U
     ---
     return: (cast: (unsigned) (h))
 end: lm_compiler_pdx_hash
@@ -1660,17 +1665,17 @@ fn: lm_compiler_pdx_find (const: (@: name c.LmP0Text)) int
     int: steps 0
     if: name = 0 || name\data = 0 || pdx_cap_cell[0] <= 0 || pdx_key_cell[0] = 0
         return: (cast: (int) (0 - 1))
-    h: lm_compiler_pdx_hash(name)
-    i: (cast: (int) (h % (cast: (unsigned) pdx_cap_cell[0])))
+    h := lm_compiler_pdx_hash(name)
+    i := (cast: (int) (h % (cast: (unsigned) pdx_cap_cell[0])))
     while: steps < pdx_cap_cell[0]
         if: pdx_key_cell[0][i] = 0
             return: (cast: (int) (0 - 1))
         if: c.lm_compiler_text_same(pdx_key_cell[0][i], name) != 0
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
         if: i >= pdx_cap_cell[0]
-            i: 0
-        steps: steps + 1
+            i := 0
+        steps := steps + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_pdx_find
@@ -1689,36 +1694,36 @@ fn: lm_compiler_pdx_add (const: (@: name c.LmP0Text); int: kind) int
     int: at 0 - 1
     if: name = 0 || name\data = 0 || pdx_cap_cell[0] <= 0 || pdx_key_cell[0] = 0
         return: (cast: (int) (1))
-    h: lm_compiler_pdx_hash(name)
-    i: (cast: (int) (h % (cast: (unsigned) pdx_cap_cell[0])))
+    h := lm_compiler_pdx_hash(name)
+    i := (cast: (int) (h % (cast: (unsigned) pdx_cap_cell[0])))
     while: steps < pdx_cap_cell[0] && at < 0
         if: pdx_key_cell[0][i] = 0
             if: pdx_n_cell[0] * 2 >= pdx_cap_cell[0]
                 return: (cast: (int) (1))
-            pdx_key_cell[0][i]: (cast: (@: c.LmP0Text) name)
-            pdx_type_cell[0][i]: 0
-            pdx_fnptr_cell[0][i]: 0
-            pdx_fn_cell[0][i]: 0
-            pdx_n_cell[0]: pdx_n_cell[0] + 1
-            at: i
+            pdx_key_cell[0][i] := (cast: (@: c.LmP0Text) name)
+            pdx_type_cell[0][i] := 0
+            pdx_fnptr_cell[0][i] := 0
+            pdx_fn_cell[0][i] := 0
+            pdx_n_cell[0] := pdx_n_cell[0] + 1
+            at := i
         ---
         if: at < 0 && c.lm_compiler_text_same(pdx_key_cell[0][i], name) != 0
-            at: i
+            at := i
         if: at < 0
-            i: i + 1
+            i := i + 1
             if: i >= pdx_cap_cell[0]
-                i: 0
-            steps: steps + 1
+                i := 0
+            steps := steps + 1
         ---
     ---
     if: at < 0
         return: (cast: (int) (1))
     if: kind = 1
-        pdx_type_cell[0][at]: 1
+        pdx_type_cell[0][at] := 1
     if: kind = 2
-        pdx_fnptr_cell[0][at]: 1
+        pdx_fnptr_cell[0][at] := 1
     if: kind = 3
-        pdx_fn_cell[0][at]: 1
+        pdx_fn_cell[0][at] := 1
     return: (cast: (int) (0))
 end: lm_compiler_pdx_add
 
@@ -1731,7 +1736,7 @@ fn: lm_compiler_pdx_snap_index (const: (@: document c.LmP0Document)) int
     while: i < snap_n_cell[0]
         if: snap_doc_cell[0][i] = document
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_pdx_snap_index
@@ -1744,15 +1749,15 @@ fn: lm_compiler_pdx_seen (@@: seen int; @: seen_cap int; int: idx) int
     if: seen = 0 || seen_cap = 0 || idx < 0
         return: (cast: (int) (0 - 1))
     if: idx >= seen_cap[0]
-        cap: seen_cap[0]
+        cap := seen_cap[0]
         if: cap < 16
-            cap: 16
+            cap := 16
         while: cap <= idx
             if: cap > c.INT_MAX / 2
                 return: (cast: (int) (0 - 1))
-            cap: cap * 2
+            cap := cap * 2
         ---
-        grown: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+        grown := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
         if: grown = 0
             return: (cast: (int) (0 - 1))
         c.memset((cast: (@: void) grown), 0, (cast: (size_t) cap) * c.sizeof(c.int))
@@ -1760,12 +1765,12 @@ fn: lm_compiler_pdx_seen (@@: seen int; @: seen_cap int; int: idx) int
             c.memcpy((cast: (@: void) grown), (cast: (@: void) seen[0]), (cast: (size_t) seen_cap[0]) * c.sizeof(c.int))
             c.lm_compiler_xfree((cast: (@: void) seen[0]))
         ---
-        seen[0]: grown
-        seen_cap[0]: cap
+        seen[0] := grown
+        seen_cap[0] := cap
     ---
     if: seen[0][idx] != 0
         return: (cast: (int) (1))
-    seen[0][idx]: 1
+    seen[0][idx] := 1
     return: (cast: (int) (0))
 end: lm_compiler_pdx_seen
 
@@ -1792,91 +1797,91 @@ fn: lm_compiler_pdx_walk (const: (@: quoted c.LmP0Text); int: types_pass; @@: se
     int: mark
     if: count = 0 || quoted = 0 || quoted\data = 0 || quoted\length < 2U || quoted\data[0] != 34 || quoted\data[quoted\length - 1U] != 34
         return: (cast: (int) (0))
-    n: quoted\length - 2U
-    path: (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
+    n := quoted\length - 2U
+    path := (cast: (@: char) c.lm_compiler_xmalloc(n + 1U))
     if: path = 0
         return: (cast: (int) (1))
     c.memcpy(path, quoted\data + 1U, n)
-    path[n]: 0
-    document: lm_compiler_snap_document(path)
+    path[n] := 0
+    document := lm_compiler_snap_document(path)
     if: document = 0
         c.lm_compiler_xfree((cast: (@: void) path))
         return: (cast: (int) (0))
-    mark: lm_compiler_pdx_seen(seen, seen_cap, lm_compiler_pdx_snap_index(document))
+    mark := lm_compiler_pdx_seen(seen, seen_cap, lm_compiler_pdx_snap_index(document))
     if: mark != 0
         c.lm_compiler_xfree((cast: (@: void) path))
         if: mark < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     ---
-    root: c.lm_p0_document_root(document)
+    root := c.lm_p0_document_root(document)
     if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
-        f: c.lm_compiler_next_active(root\as\structure\first_field)
+        f := c.lm_compiler_next_active(root\as\structure\first_field)
         while: f != 0 && rc = 0
-            item: f\value
+            item := f\value
             if: types_pass != 0 && (c.lm_compiler_frame_head(item, "struct") || c.lm_compiler_frame_head(item, "fnptr")) && item\as\frame\body != 0
-                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                    count[0]: count[0] + 1
+                    count[0] := count[0] + 1
                     if: insert != 0 && c.lm_compiler_frame_head(item, "struct") && lm_compiler_pdx_add((cast: (const: @: c.LmP0Text) (first\value\as\atom)), 1) != 0
-                        rc: 1
+                        rc := 1
                     if: insert != 0 && c.lm_compiler_frame_head(item, "fnptr") && lm_compiler_pdx_add((cast: (const: @: c.LmP0Text) (first\value\as\atom)), 2) != 0
-                        rc: 1
+                        rc := 1
                 ---
             ---
             if: types_pass = 0 && c.lm_compiler_frame_head(item, "prototype") && item\as\frame\body != 0
-                pf: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                pf := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 while: pf != 0 && rc = 0
-                    decl: pf\value
+                    decl := pf\value
                     if: (c.lm_compiler_frame_head(decl, "fn") || c.lm_compiler_frame_head(decl, "sub")) && decl\as\frame\body != 0
-                        nf: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                        nf := c.lm_compiler_next_active(decl\as\frame\body\first_field)
                         if: nf != 0 && nf\value != 0 && nf\value\kind = c.LM_P0_NODE_ATOM
-                            count[0]: count[0] + 1
+                            count[0] := count[0] + 1
                             if: insert != 0 && lm_compiler_pdx_add((cast: (const: @: c.LmP0Text) (nf\value\as\atom)), 3) != 0
-                                rc: 1
+                                rc := 1
                         ---
                     ---
-                    pf: c.lm_compiler_next_active(pf\next)
+                    pf := c.lm_compiler_next_active(pf\next)
                 ---
             ---
             if: c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
-                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 while: first != 0 && rc = 0
                     if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                        rc: lm_compiler_pdx_walk((cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), types_pass, seen, seen_cap, insert, count)
-                    first: c.lm_compiler_next_active(first\next)
+                        rc := lm_compiler_pdx_walk((cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), types_pass, seen, seen_cap, insert, count)
+                    first := c.lm_compiler_next_active(first\next)
                 ---
             ---
             if: types_pass != 0 && c.lm_compiler_frame_head(item, "include") && item\as\frame\body != 0
-                inc: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                inc := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 while: inc != 0 && rc = 0
                     if: inc\value != 0 && inc\value\kind = c.LM_P0_NODE_ATOM
-                        q: inc\value\as\atom
+                        q := inc\value\as\atom
                         if: q != 0 && q\data != 0 && q\length > 8U && q\data[0] = 34 && c.memcmp(q\data + q\length - 7U, ".lm1.h\"", 7U) = 0
-                            mapped_data: (cast: (@: char) c.lm_compiler_xmalloc(q\length + 1U))
-                            mapped: (cast: (@: c.LmP0Text) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Text)))
+                            mapped_data := (cast: (@: char) c.lm_compiler_xmalloc(q\length + 1U))
+                            mapped := (cast: (@: c.LmP0Text) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Text)))
                             if: mapped_data != 0 && mapped != 0
                                 c.memcpy(mapped_data, q\data, q\length)
                                 c.memcpy(mapped_data + (cast: (size_t) (q\length)) - 7U, ".h.lm1\"", 7U)
-                                mapped_data[q\length]: 0
-                                mapped\data: mapped_data
-                                mapped\length: q\length
-                                rc: lm_compiler_pdx_walk((cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(mapped, path))), types_pass, seen, seen_cap, insert, count)
+                                mapped_data[q\length] := 0
+                                mapped\data := mapped_data
+                                mapped\length := q\length
+                                rc := lm_compiler_pdx_walk((cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(mapped, path))), types_pass, seen, seen_cap, insert, count)
                             else:
-                                rc: 1
+                                rc := 1
                             ---
                             if: mapped_data != 0
                                 c.lm_compiler_xfree((cast: (@: void) mapped_data))
                             if: mapped != 0
                                 c.lm_compiler_xfree((cast: (@: void) mapped))
-                            mapped_data: 0
-                            mapped: 0
+                            mapped_data := 0
+                            mapped := 0
                         ---
                     ---
-                    inc: c.lm_compiler_next_active(inc\next)
+                    inc := c.lm_compiler_next_active(inc\next)
                 ---
             ---
-            f: c.lm_compiler_next_active(f\next)
+            f := c.lm_compiler_next_active(f\next)
         ---
     ---
     c.lm_compiler_xfree((cast: (@: void) path))
@@ -1899,13 +1904,13 @@ fn: lm_compiler_pdx_release () int
         c.lm_compiler_xfree((cast: (@: void) pdx_fnptr_cell[0]))
     if: pdx_fn_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) pdx_fn_cell[0]))
-    pdx_key_cell[0]: 0
-    pdx_type_cell[0]: 0
-    pdx_fnptr_cell[0]: 0
-    pdx_fn_cell[0]: 0
-    pdx_n_cell[0]: 0
-    pdx_cap_cell[0]: 0
-    pdx_built_cell[0]: 0
+    pdx_key_cell[0] := 0
+    pdx_type_cell[0] := 0
+    pdx_fnptr_cell[0] := 0
+    pdx_fn_cell[0] := 0
+    pdx_n_cell[0] := 0
+    pdx_cap_cell[0] := 0
+    pdx_built_cell[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_pdx_release
 
@@ -1938,52 +1943,52 @@ fn: lm_compiler_pdx_ready () int
     lm_compiler_pdx_release()
     while: pass < 2 && rc = 0
         if: pass = 1
-            cap: 16
+            cap := 16
             while: cap <= count * 2 + 2
                 if: cap > c.INT_MAX / 4
-                    rc: 1
+                    rc := 1
                     break
-                cap: cap * 2
+                cap := cap * 2
             ---
             if: rc = 0
-                nb: (cast: (size_t) cap) * sizeof(@: char)
-                pdx_key_cell[0]: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
-                pdx_type_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
-                pdx_fnptr_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
-                pdx_fn_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+                nb := (cast: (size_t) cap) * sizeof(@: char)
+                pdx_key_cell[0] := (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
+                pdx_type_cell[0] := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+                pdx_fnptr_cell[0] := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+                pdx_fn_cell[0] := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
                 if: pdx_key_cell[0] = 0 || pdx_type_cell[0] = 0 || pdx_fnptr_cell[0] = 0 || pdx_fn_cell[0] = 0
-                    rc: 1
+                    rc := 1
                 else:
                     c.memset((cast: (@: void) pdx_key_cell[0]), 0, nb)
                     c.memset((cast: (@: void) pdx_type_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
                     c.memset((cast: (@: void) pdx_fnptr_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
                     c.memset((cast: (@: void) pdx_fn_cell[0]), 0, (cast: (size_t) cap) * c.sizeof(c.int))
-                    pdx_cap_cell[0]: cap
+                    pdx_cap_cell[0] := cap
                 ---
             ---
         ---
-        count: 0
-        types_pass: 0
+        count := 0
+        types_pass := 0
         while: types_pass < 2 && rc = 0
             if: seen != 0
                 c.memset((cast: (@: void) seen), 0, (cast: (size_t) seen_cap) * c.sizeof(c.int))
-            i: 0
+            i := 0
             while: i < pd_n_cell[0] && rc = 0
-                rc: lm_compiler_pdx_walk(pd_cell[0][i], types_pass, @ seen, @ seen_cap, pass, @ count)
-                i: i + 1
+                rc := lm_compiler_pdx_walk(pd_cell[0][i], types_pass, @ seen, @ seen_cap, pass, @ count)
+                i := i + 1
             ---
-            types_pass: types_pass + 1
+            types_pass := types_pass + 1
         ---
-        pass: pass + 1
+        pass := pass + 1
     ---
     if: seen != 0
         c.lm_compiler_xfree((cast: (@: void) seen))
     if: rc != 0
         lm_compiler_pdx_release()
         return: (cast: (int) (1))
-    pdx_built_cell[0]: 1
-    pdx_pd_n_cell[0]: pd_n_cell[0]
-    pdx_pd0_cell[0]: pd_cell[0]
+    pdx_built_cell[0] := 1
+    pdx_pd_n_cell[0] := pd_n_cell[0]
+    pdx_pd0_cell[0] := pd_cell[0]
     return: (cast: (int) (0))
 end: lm_compiler_pdx_ready
 
@@ -1999,7 +2004,7 @@ fn: lm_compiler_pdx_kind (const: (@: name c.LmP0Text); int: want) int
         return: (cast: (int) (0))
     if: lm_compiler_pdx_ready() != 0
         return: (cast: (int) (0))
-    i: lm_compiler_pdx_find(name)
+    i := lm_compiler_pdx_find(name)
     if: i >= 0 && want = 1 && pdx_type_cell[0][i] != 0
         return: (cast: (int) (1))
     if: i >= 0 && want = 2 && pdx_fnptr_cell[0][i] != 0
@@ -2007,9 +2012,9 @@ fn: lm_compiler_pdx_kind (const: (@: name c.LmP0Text); int: want) int
     if: i >= 0 && want = 3 && pdx_fn_cell[0][i] != 0
         return: (cast: (int) (1))
     if: want != 3 && name\length > 2U && name\data[0] = 99 && name\data[1] = 46
-        suffix\data: name\data + 2U
-        suffix\length: name\length - 2U
-        i: lm_compiler_pdx_find(@ suffix)
+        suffix\data := name\data + 2U
+        suffix\length := name\length - 2U
+        i := lm_compiler_pdx_find(@ suffix)
         if: i >= 0 && want = 1 && pdx_type_cell[0][i] != 0
             return: (cast: (int) (1))
         if: i >= 0 && want = 2 && pdx_fnptr_cell[0][i] != 0
@@ -2023,7 +2028,7 @@ end: lm_compiler_pdx_kind
 # forget everything by this generation at their next use instead of re-checking a remembered node against its tree.
 fn: lm_compiler_types_doc_destroy (@: document c.LmP0Document) int
     @: doc_gen_cell int (cast: (@: int) (@ c.l2_doc_gen))
-    doc_gen_cell[0]: doc_gen_cell[0] + 1
+    doc_gen_cell[0] := doc_gen_cell[0] + 1
     c.lm_p0_document_destroy(document)
     return: (cast: (int) (0))
 end: lm_compiler_types_doc_destroy
@@ -2040,12 +2045,12 @@ fn: lm_compiler_pfx_hash (@: document c.LmP0Document; const: (@: t c.LmP0Text)) 
     size_t: k (cast: (size_t) document)
     unsigned: h (cast: (unsigned) (k / 8U + k / 4096U))
     size_t: i 0U
-    h: h * 16777619U + 2166136261U
+    h := h * 16777619U + 2166136261U
     if: t = 0 || t\data = 0
         return: (cast: (unsigned) (h))
     while: i < t\length
-        h: h * 16777619U + (cast: (unsigned) (cast: (uchar) t\data[i]))
-        i: i + 1U
+        h := h * 16777619U + (cast: (unsigned) (cast: (uchar) t\data[i]))
+        i := i + 1U
     ---
     return: (cast: (unsigned) (h))
 end: lm_compiler_pfx_hash
@@ -2058,14 +2063,14 @@ fn: lm_compiler_pfx_insert (int: r) int
     @@@: docp_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_pfx_docp))
     @@@: name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_pfx_name))
     int: b
-    next_cell[0][r]: -1
-    b: (cast: (int) (lm_compiler_pfx_hash(docp_cell[0][r], name_cell[0][r]) % (cast: (unsigned) cap_cell[0])))
+    next_cell[0][r] := -1
+    b := (cast: (int) (lm_compiler_pfx_hash(docp_cell[0][r], name_cell[0][r]) % (cast: (unsigned) cap_cell[0])))
     if: bucket_cell[0][b] < 0
-        bucket_cell[0][b]: r
+        bucket_cell[0][b] := r
     else:
-        next_cell[0][tail_cell[0][b]]: r
+        next_cell[0][tail_cell[0][b]] := r
     ---
-    tail_cell[0][b]: r
+    tail_cell[0][b] := r
     return: (cast: (int) (0))
 end: lm_compiler_pfx_insert
 
@@ -2083,9 +2088,9 @@ fn: lm_compiler_pfx_sync () int
             c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
             c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap_cell[0]) * c.sizeof(c.int))
         ---
-        n_cell[0]: 0
-        doc_n_cell[0]: 0
-        gen_cell[0]: snap_gen_cell[0]
+        n_cell[0] := 0
+        doc_n_cell[0] := 0
+        gen_cell[0] := snap_gen_cell[0]
     ---
     return: (cast: (int) (0))
 end: lm_compiler_pfx_sync
@@ -2110,39 +2115,39 @@ fn: lm_compiler_pfx_room () int
     int: i 0
     if: bucket_cell[0] != 0 && (n_cell[0] + 1) * 2 <= cap_cell[0] && n_cell[0] + 1 <= rows_cell[0]
         return: (cast: (int) (0))
-    cap: 1024
+    cap := 1024
     while: cap < (n_cell[0] + 1) * 4
-        cap: cap * 2
+        cap := cap * 2
     if: bucket_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) bucket_cell[0]))
     if: tail_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) tail_cell[0]))
     if: next_cell[0] != 0
         c.lm_compiler_xfree((cast: (@: void) next_cell[0]))
-    bucket_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
-    tail_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
-    next_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
-    node_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
-    docp_cell[0]: (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
-    name_cell[0]: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
-    kind_cell[0]: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    bucket_cell[0] := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    tail_cell[0] := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    next_cell[0] := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
+    node_cell[0] := (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    docp_cell[0] := (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    name_cell[0] := (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    kind_cell[0] := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) cap) * c.sizeof(c.int)))
     if: bucket_cell[0] = 0 || tail_cell[0] = 0 || next_cell[0] = 0 || node_cell[0] = 0 || docp_cell[0] = 0 || name_cell[0] = 0 || kind_cell[0] = 0
-        cap_cell[0]: 0
-        rows_cell[0]: 0
-        n_cell[0]: 0
+        cap_cell[0] := 0
+        rows_cell[0] := 0
+        n_cell[0] := 0
         return: (cast: (int) (1))
     ---
     c.memset((cast: (@: void) bucket_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
     c.memset((cast: (@: void) tail_cell[0]), 255, (cast: (size_t) cap) * c.sizeof(c.int))
-    cap_cell[0]: cap
-    rows_cell[0]: cap
+    cap_cell[0] := cap
+    rows_cell[0] := cap
     while: i < n_cell[0]
-        node_cell[0][i]: node_old[i]
-        docp_cell[0][i]: docp_old[i]
-        name_cell[0][i]: name_old[i]
-        kind_cell[0][i]: kind_old[i]
+        node_cell[0][i] := node_old[i]
+        docp_cell[0][i] := docp_old[i]
+        name_cell[0][i] := name_old[i]
+        kind_cell[0][i] := kind_old[i]
         lm_compiler_pfx_insert(i)
-        i: i + 1
+        i := i + 1
     ---
     if: node_old != 0
         c.lm_compiler_xfree((cast: (@: void) node_old))
@@ -2163,12 +2168,12 @@ fn: lm_compiler_pfx_add_row (@: document c.LmP0Document; @: at c.LmP0Node; @: na
     @@: kind_cell int (cast: (@@: int) (@ c.l2_pfx_kind))
     if: lm_compiler_pfx_room() != 0
         return: (cast: (int) (1))
-    node_cell[0][n_cell[0]]: at
-    docp_cell[0][n_cell[0]]: document
-    name_cell[0][n_cell[0]]: name
-    kind_cell[0][n_cell[0]]: kind
+    node_cell[0][n_cell[0]] := at
+    docp_cell[0][n_cell[0]] := document
+    name_cell[0][n_cell[0]] := name
+    kind_cell[0][n_cell[0]] := kind
     lm_compiler_pfx_insert(n_cell[0])
-    n_cell[0]: n_cell[0] + 1
+    n_cell[0] := n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_pfx_add_row
 
@@ -2194,61 +2199,61 @@ fn: lm_compiler_pfx_ready (@: document c.LmP0Document) int
     while: i < doc_n_cell[0]
         if: doc_cell[0][i] = document
             return: (cast: (int) (0))
-        i: i + 1
+        i := i + 1
     ---
     if: doc_cell[0] = 0 || doc_n_cell[0] + 1 > doc_cap_cell[0]
-        cap: 64
+        cap := 64
         while: cap < doc_n_cell[0] + 1
-            cap: cap * 2
-        docs_old: doc_cell[0]
-        doc_cell[0]: (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+            cap := cap * 2
+        docs_old := doc_cell[0]
+        doc_cell[0] := (cast: (@@: c.LmP0Document) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
         if: doc_cell[0] = 0
-            doc_cell[0]: docs_old
+            doc_cell[0] := docs_old
             return: (cast: (int) (1))
         if: docs_old != 0
             c.memcpy((cast: (@: void) doc_cell[0]), (cast: (const: @: void) docs_old), (cast: (size_t) doc_n_cell[0]) * sizeof(@: void))
             c.lm_compiler_xfree((cast: (@: void) docs_old))
         ---
-        doc_cap_cell[0]: cap
+        doc_cap_cell[0] := cap
     ---
-    root: c.lm_p0_document_root(document)
+    root := c.lm_p0_document_root(document)
     if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
-        f: c.lm_compiler_next_active(root\as\structure\first_field)
+        f := c.lm_compiler_next_active(root\as\structure\first_field)
         while: f != 0 && failed = 0
-            item: f\value
+            item := f\value
             if: c.lm_compiler_frame_head(item, "define") && item\as\frame\body != 0
-                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                    failed: lm_compiler_pfx_add_row(document, item, (cast: (@: c.LmP0Text) (first\value\as\atom)), 1)
+                    failed := lm_compiler_pfx_add_row(document, item, (cast: (@: c.LmP0Text) (first\value\as\atom)), 1)
                 ---
             ---
             if: failed = 0 && c.lm_compiler_frame_head(item, "prototype") && item\as\frame\body != 0
-                pf: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                pf := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 while: pf != 0 && failed = 0
-                    decl: pf\value
+                    decl := pf\value
                     if: (c.lm_compiler_frame_head(decl, "fn") || c.lm_compiler_frame_head(decl, "sub")) && decl\as\frame\body != 0
-                        first: c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                        first := c.lm_compiler_next_active(decl\as\frame\body\first_field)
                         if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                            failed: lm_compiler_pfx_add_row(document, decl, (cast: (@: c.LmP0Text) (first\value\as\atom)), 2)
+                            failed := lm_compiler_pfx_add_row(document, decl, (cast: (@: c.LmP0Text) (first\value\as\atom)), 2)
                         ---
                     ---
-                    pf: c.lm_compiler_next_active(pf\next)
+                    pf := c.lm_compiler_next_active(pf\next)
                 ---
             ---
             if: failed = 0 && c.lm_compiler_frame_head(item, "predef") && item\as\frame\body != 0
-                failed: lm_compiler_pfx_add_row(document, item, 0, 3)
-            f: c.lm_compiler_next_active(f\next)
+                failed := lm_compiler_pfx_add_row(document, item, 0, 3)
+            f := c.lm_compiler_next_active(f\next)
         ---
     ---
     if: failed != 0
         # half-indexed rows must not be met by a lookup: drop everything, the scan serves this query
-        n_cell[0]: 0
-        doc_n_cell[0]: 0
+        n_cell[0] := 0
+        doc_n_cell[0] := 0
         lm_compiler_pfx_reset_chains()
         return: (cast: (int) (1))
     ---
-    doc_cell[0][doc_n_cell[0]]: document
-    doc_n_cell[0]: doc_n_cell[0] + 1
+    doc_cell[0][doc_n_cell[0]] := document
+    doc_n_cell[0] := doc_n_cell[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_pfx_ready
 
@@ -2271,7 +2276,7 @@ fn: lm_compiler_pfx_first (@: document c.LmP0Document; const: (@: name c.LmP0Tex
     int: b
     if: n_cell[0] = 0 || bucket_cell[0] = 0 || cap_cell[0] <= 0
         return: (cast: (int) (-1))
-    b: (cast: (int) (lm_compiler_pfx_hash(document, name) % (cast: (unsigned) cap_cell[0])))
+    b := (cast: (int) (lm_compiler_pfx_hash(document, name) % (cast: (unsigned) cap_cell[0])))
     return: (cast: (int) (bucket_cell[0][b]))
 end: lm_compiler_pfx_first
 
@@ -2299,30 +2304,30 @@ fn: lm_compiler_pfx_define (const: (@: name c.LmP0Text); @: document c.LmP0Docum
     while: (d >= 0 || p >= 0) && found = 0
         if: p < 0 || (d >= 0 && d < p)
             if: kind_cell[0][d] = 1 && docp_cell[0][d] = document && c.lm_compiler_text_same(name_cell[0][d], name)
-                item: node_cell[0][d]
+                item := node_cell[0][d]
                 if: c.lm_compiler_count_active(item\as\frame\body) = 2 || (any != 0 && c.lm_compiler_count_active(item\as\frame\body) > 2)
-                    first: c.lm_compiler_next_active(item\as\frame\body\first_field)
-                    second: 0
+                    first := c.lm_compiler_next_active(item\as\frame\body\first_field)
+                    second := 0
                     if: first != 0
-                        second: c.lm_compiler_next_active(first\next)
+                        second := c.lm_compiler_next_active(first\next)
                     ---
                     if: second != 0 && second\value != 0 && second\value\kind = c.LM_P0_NODE_ATOM && (any != 0 || c.lm_compiler_array_count_is(second\value\as\atom) != 0)
-                        found: c.lm_compiler_cnt_keep(second\value\as\atom)
+                        found := c.lm_compiler_cnt_keep(second\value\as\atom)
                     ---
                 ---
             ---
-            d: lm_compiler_pfx_step(d)
+            d := lm_compiler_pfx_step(d)
         else:
             if: kind_cell[0][p] = 3 && docp_cell[0][p] = document
-                item: node_cell[0][p]
-                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                item := node_cell[0][p]
+                first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 while: first != 0 && found = 0
                     if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                        found: lm_compiler_predef_file_define(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), any)
-                    first: c.lm_compiler_next_active(first\next)
+                        found := lm_compiler_predef_file_define(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), any)
+                    first := c.lm_compiler_next_active(first\next)
                 ---
             ---
-            p: lm_compiler_pfx_step(p)
+            p := lm_compiler_pfx_step(p)
         ---
     ---
     return: (cast: (@: c.LmP0Text) (found))
@@ -2348,36 +2353,36 @@ fn: lm_compiler_pfx_result_ty (const: (@: name c.LmP0Text); @: document c.LmP0Do
     while: (d >= 0 || p >= 0) && found = 0
         if: p < 0 || (d >= 0 && d < p)
             if: kind_cell[0][d] = 2 && docp_cell[0][d] = document && c.lm_compiler_text_same(name_cell[0][d], name)
-                decl: node_cell[0][d]
-                nf: c.lm_compiler_next_active(decl\as\frame\body\first_field)
-                pp: c.lm_compiler_next_active(nf\next)
-                rtf: 0
+                decl := node_cell[0][d]
+                nf := c.lm_compiler_next_active(decl\as\frame\body\first_field)
+                pp := c.lm_compiler_next_active(nf\next)
+                rtf := 0
                 if: pp != 0
-                    rtf: c.lm_compiler_next_active(pp\next)
-                rtnode: 0
+                    rtf := c.lm_compiler_next_active(pp\next)
+                rtnode := 0
                 if: rtf != 0
-                    rtnode: rtf\value
-                found: 1
+                    rtnode := rtf\value
+                found := 1
                 if: c.lm_compiler_frame_head(decl, "sub")
-                    \out_ty: 8
+                    \out_ty := 8
                 else:
                     if: lm_compiler_ret_type_node(rtnode, out_ty) != 0
-                        found: 2
+                        found := 2
                     ---
                 ---
             ---
-            d: lm_compiler_pfx_step(d)
+            d := lm_compiler_pfx_step(d)
         else:
             if: kind_cell[0][p] = 3 && docp_cell[0][p] = document
-                item: node_cell[0][p]
-                first: c.lm_compiler_next_active(item\as\frame\body\first_field)
+                item := node_cell[0][p]
+                first := c.lm_compiler_next_active(item\as\frame\body\first_field)
                 while: first != 0 && found = 0
                     if: first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM
-                        found: lm_compiler_predef_file_result_ty(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), out_ty)
-                    first: c.lm_compiler_next_active(first\next)
+                        found := lm_compiler_predef_file_result_ty(name, (cast: (const: @: c.LmP0Text) (c.lm_compiler_predef_import(first\value\as\atom, path))), out_ty)
+                    first := c.lm_compiler_next_active(first\next)
                 ---
             ---
-            p: lm_compiler_pfx_step(p)
+            p := lm_compiler_pfx_step(p)
         ---
     ---
     return: (cast: (int) (found))

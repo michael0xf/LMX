@@ -17,8 +17,8 @@ fn: lm_compiler_ns_rank (int: ni) int
     int: r 0
     while: i < ni
         if: ns_parent_cell[0][i] < 0 && ns_eternal_cell[0][i] < 0 && ns_local_cell[0][i] < 0 && c.lm_compiler_ns_merge_body(i) < 0
-            r: r + 1
-        i: i + 1
+            r := r + 1
+        i := i + 1
     ---
     return: (cast: (int) (r))
 end: lm_compiler_ns_rank
@@ -32,8 +32,8 @@ fn: lm_compiler_ns_top_count () int
     int: r 0
     while: i < ns_n_cell[0]
         if: ns_parent_cell[0][i] < 0 && ns_eternal_cell[0][i] < 0 && ns_local_cell[0][i] < 0 && c.lm_compiler_ns_merge_body(i) < 0
-            r: r + 1
-        i: i + 1
+            r := r + 1
+        i := i + 1
     ---
     return: (cast: (int) (r))
 end: lm_compiler_ns_top_count
@@ -47,20 +47,20 @@ fn: lm_compiler_ns_field_in_parent (int: ni) int
     int: par
     int: k 0
     int: slotix 0
-    par: ns_parent_cell[0][ni]
+    par := ns_parent_cell[0][ni]
     if: par < 0
         return: (cast: (int) (0 - 1))
     # Fields of one Structure are not contiguous: a nested body pushes its own
     # fields in between. Walk the whole table and count only this owner.
-    slotix: 0
+    slotix := 0
     while: k < nsf_n_cell[0]
         if: nsf_owner_cell[0][k] = par
             if: nsf_kind_cell[0][k] = 2 && nsf_ref_cell[0][k] = ni
                 return: (cast: (int) (lm_compiler_nsf_slot(k)))
             ---
-            slotix: slotix + 1
+            slotix := slotix + 1
         ---
-        k: k + 1
+        k := k + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_ns_field_in_parent
@@ -73,11 +73,11 @@ fn: lm_compiler_own_off (int: mi; int: oi) size_t
     size_t: idx
     if: mi < 0 || oi < 0 || own_cap_cell[0] <= 0 || m_cap_cell[0] <= 0 || mi >= m_cap_cell[0] || oi >= own_cap_cell[0]
         return: (cast: (size_t) ((cast: (size_t) -1)))
-    cap: (cast: (size_t) own_cap_cell[0])
+    cap := (cast: (size_t) own_cap_cell[0])
     if: c.lm_compiler_mul_ok((cast: (size_t) mi), cap) = 0
         return: (cast: (size_t) ((cast: (size_t) -1)))
-    base: (cast: (size_t) mi) * cap
-    idx: (cast: (size_t) oi)
+    base := (cast: (size_t) mi) * cap
+    idx := (cast: (size_t) oi)
     if: base + idx < base
         return: (cast: (size_t) ((cast: (size_t) -1)))
     return: (cast: (size_t) (base + idx))
@@ -93,7 +93,7 @@ fn: lm_compiler_rb_find (const: (@: stmt c.LmP0Node)) @: c.LmP0Text
     while: i < rb_n_cell[0]
         if: rb_at_cell[0][i] = stmt
             return: (cast: (@: c.LmP0Text) (rb_model_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (@: c.LmP0Text) (0))
 end: lm_compiler_rb_find
@@ -108,7 +108,7 @@ fn: lm_compiler_rb_meth_of (const: (@: stmt c.LmP0Node)) int
     while: i < rb_n_cell[0]
         if: rb_at_cell[0][i] = stmt
             return: (cast: (int) (rb_meth_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_rb_meth_of
@@ -123,7 +123,7 @@ fn: lm_compiler_ab_find (const: (@: stmt c.LmP0Node)) @: c.L2TypeContract
     while: i < ab_n_cell[0]
         if: ab_at_cell[0][i] = stmt
             return: (cast: (@: c.L2TypeContract) (ab_contract_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (@: c.L2TypeContract) (0))
 end: lm_compiler_ab_find
@@ -138,7 +138,7 @@ fn: lm_compiler_rb_own_of (const: (@: stmt c.LmP0Node)) int
     while: i < rb_n_cell[0]
         if: rb_at_cell[0][i] = stmt
             return: (cast: (int) (rb_own_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_rb_own_of
@@ -150,7 +150,7 @@ fn: lm_compiler_urm_find (const: (@: item c.LmP0Node)) int
     while: i < urm_n_cell[0]
         if: urm_at_cell[0][i] = item
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_urm_find
@@ -172,7 +172,7 @@ fn: lm_compiler_method_source_unit (int: mi) const: @: c.LmP0Structure
     const: (@: root c.LmP0Node)
     int: part c.lm_compiler_m_part(mi)
     if: part >= 0 && part < part_loaded_cell[0]
-        root: c.lm_p0_document_root((cast: (const: @: c.LmP0Document) part_doc_cell[0][part]))
+        root := c.lm_p0_document_root((cast: (const: @: c.LmP0Document) part_doc_cell[0][part]))
         if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
             return: (cast: (const: @: c.LmP0Structure) root\as\structure)
         return: 0
@@ -188,23 +188,23 @@ fn: lm_compiler_method_in_os (int: mi) int
     @: method c.LmP0Field
     if: mi < 0 || mi >= m_n_cell[0]
         return: (cast: (int) (0))
-    unit: lm_compiler_method_source_unit(mi)
+    unit := lm_compiler_method_source_unit(mi)
     if: unit = 0
         return: (cast: (int) (0))
-    field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) unit\first_field))
+    field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) unit\first_field))
     while: field != 0
         if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) field\value), "os") != 0
-            branch: c.lm_compiler_os_selected_branch((cast: (const: @: c.LmP0Node) field\value))
+            branch := c.lm_compiler_os_selected_branch((cast: (const: @: c.LmP0Node) field\value))
             if: branch != 0
-                method: c.lm_compiler_next_active((cast: (@: c.LmP0Field) branch\as\frame\body\first_field))
+                method := c.lm_compiler_next_active((cast: (@: c.LmP0Field) branch\as\frame\body\first_field))
                 while: method != 0
                     if: method\value = m_node_cell[0][mi]
                         return: (cast: (int) (1))
-                    method: c.lm_compiler_next_active(method\next)
+                    method := c.lm_compiler_next_active(method\next)
                 ---
             ---
         ---
-        field: c.lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
+        field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) field\next))
     ---
     return: (cast: (int) (0))
 end: lm_compiler_method_in_os
@@ -217,7 +217,7 @@ fn: lm_compiler_own_copy_layout (int: own) int
     @: source c.L2ReferenceSource
     if: result < 0 || mres_source_cell[0] = 0
         return: (cast: (int) (-1))
-    source: @ mres_source_cell[0][result]
+    source := @ mres_source_cell[0][result]
     if: source\layout < 0 || source\layout >= ns_n_cell[0] || ns_eternal_cell[0][source\layout] >= 0
         return: (cast: (int) (-1))
     return: (cast: (int) (source\layout))
@@ -227,9 +227,9 @@ fn: lm_compiler_own_capture_ns (int: own) int
     int: ns
     if: own < 0
         return: (cast: (int) (-1))
-    ns: c.lm_compiler_own_nsty_get(own)
+    ns := c.lm_compiler_own_nsty_get(own)
     if: ns < 0
-        ns: lm_compiler_own_copy_layout(own)
+        ns := lm_compiler_own_copy_layout(own)
     return: (cast: (int) (ns))
 end: lm_compiler_own_capture_ns
 
@@ -253,20 +253,20 @@ fn: lm_compiler_own_copy_chain (int: own) int
     int: mi
     if: own < 0 || own >= own_n_cell[0]
         return: (cast: (int) (-1))
-    mi: own_mi_cell[0][own]
+    mi := own_mi_cell[0][own]
     while: own >= 0 && own < own_n_cell[0] && hops <= mres_n_cell[0]
         if: own_mi_cell[0][own] != mi
             return: (cast: (int) (-1))
-        result: c.lm_compiler_mres_of_own(own)
+        result := c.lm_compiler_mres_of_own(own)
         if: result < 0
             return: (cast: (int) (c.lm_compiler_own_layout(own)))
-        layout: lm_compiler_own_copy_layout(own)
+        layout := lm_compiler_own_copy_layout(own)
         if: layout >= 0
             return: (cast: (int) (layout))
         if: mres_from_cell[0] = 0
             return: (cast: (int) (-1))
-        own: mres_from_cell[0][result]
-        hops: hops + 1
+        own := mres_from_cell[0][result]
+        hops := hops + 1
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_own_copy_chain
@@ -285,14 +285,14 @@ fn: lm_compiler_reference_input_source (int: mi; int: input; @: out c.L2Referenc
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
     if: mi < 0 || mi >= m_n_cell[0] || input < 0 || input >= m_arity_cell[0][mi] + m_dyn_cell[0][mi] || out = 0
         return: (cast: (int) (1))
-    out\schema: lm_compiler_input_schema(mi, input)
-    out\path: 0
-    out\layout: -1
-    out\method: mi
-    out\place: input
-    out\origin: 0
-    out\origin_count: 0
-    out\origin_method: -1
+    out\schema := lm_compiler_input_schema(mi, input)
+    out\path := 0
+    out\layout := -1
+    out\method := mi
+    out\place := input
+    out\origin := 0
+    out\origin_count := 0
+    out\origin_method := -1
     return: (cast: (int) (0))
 end: lm_compiler_reference_input_source
 
@@ -312,8 +312,8 @@ fn: lm_compiler_ns_num_fields (int: ni) int
         if: nsf_owner_cell[0][fx] = ni && nsf_kind_cell[0][fx] != 0 && nsf_kind_cell[0][fx] != 1 && nsf_kind_cell[0][fx] != 2 && nsf_kind_cell[0][fx] != 3 && nsf_kind_cell[0][fx] != 4 && nsf_kind_cell[0][fx] != 5 && nsf_kind_cell[0][fx] != 6 && nsf_kind_cell[0][fx] != 7 && nsf_kind_cell[0][fx] != 8 && nsf_kind_cell[0][fx] != 9 && nsf_kind_cell[0][fx] != 10 && nsf_kind_cell[0][fx] != 11
             return: (cast: (int) (0))
         if: nsf_owner_cell[0][fx] = ni
-            n: n + 1
-        fx: fx + 1
+            n := n + 1
+        fx := fx + 1
     ---
     if: n < 1
         return: (cast: (int) (0))
@@ -354,16 +354,16 @@ fn: lm_compiler_own_after_factory_return (int: mi; int: k) int
     int: past 0
     if: mi < 0 || k < 0 || k >= own_n_cell[0] || c.lm_compiler_mad_on(mi) = 0 || m_body_cell[0][mi] = 0 || m_body_cell[0][mi]\as = 0
         return: (cast: (int) (0))
-    body: m_body_cell[0][mi]\as\structure
+    body := m_body_cell[0][mi]\as\structure
     if: body = 0
         return: (cast: (int) (0))
-    field: c.lm_compiler_next_active(body\first_field)
+    field := c.lm_compiler_next_active(body\first_field)
     while: field != 0
         if: past != 0 && field\value = own_decl_cell[0][k]
             return: (cast: (int) (1))
         if: lm_compiler_mad_return_point(body, mi, field) != 0
-            past: 1
-        field: c.lm_compiler_next_active(field\next)
+            past := 1
+        field := c.lm_compiler_next_active(field\next)
     ---
     return: (cast: (int) (0))
 end: lm_compiler_own_after_factory_return
@@ -383,13 +383,13 @@ fn: lm_compiler_own_used (int: mi; int: k) int
         return: (cast: (int) (0))
     if: own_mi_cell[0][k] != mi || lm_compiler_split_data_row(k) = 0
         return: (cast: (int) (m_uses_cell[0][lm_compiler_own_off(mi, k)]))
-    r: lm_compiler_split_rep(k)
+    r := lm_compiler_split_rep(k)
     if: r != k
         return: (cast: (int) (0))
     while: j < own_n_cell[0]
         if: own_mi_cell[0][j] = mi && lm_compiler_split_data_row(j) != 0 && lm_compiler_split_rep(j) = r && m_uses_cell[0][lm_compiler_own_off(mi, j)] != 0
             return: (cast: (int) (1))
-        j: j + 1
+        j := j + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_own_used
@@ -434,7 +434,7 @@ fn: lm_compiler_source_projected_entry (@: row c.L2SourceContainer) int
     @@: t7_model_cell int (cast: (@@: int) (@ c.l2_t7_model))
     int: ns
     if: row\view_kind = 2 && row\root != 0
-        ns: c.lm_compiler_m_nsof(row\source_mi)
+        ns := c.lm_compiler_m_nsof(row\source_mi)
         if: ns >= 0 && c.lm_compiler_ns_merge_body(ns) = row\view_index
             return: (cast: (int) (1))
         ---
@@ -460,11 +460,11 @@ fn: lm_compiler_source_global (@: body c.LmP0Structure) int
     if: c.lm_compiler_source_root(construct_view_index_cell[0]) != 0
         return: (cast: (int) (0))
     while: i < fill_n_cell[0]
-        fid: fill_k_cell[0][i]
-        source_node: for_node_cell[0][fid]
+        fid := fill_k_cell[0][i]
+        source_node := for_node_cell[0][fid]
         if: c.lm_compiler_for_owner(fid) = construct_view_index_cell[0] && source_node != 0 && source_node\as != 0 && source_node\kind = c.LM_P0_NODE_STRUCTURE && source_node\as\structure = body
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_source_global
@@ -477,7 +477,7 @@ fn: lm_compiler_construct_find (int: index) @: c.L2ConstructionTemp
     while: temp != 0
         if: temp\view_kind = construct_view_kind_cell[0] && temp\view_index = construct_view_index_cell[0] && temp\index = index
             return: (cast: (@: c.L2ConstructionTemp) (temp))
-        temp: temp\allocated_next
+        temp := temp\allocated_next
     ---
     return: (cast: (@: c.L2ConstructionTemp) (0))
 end: lm_compiler_construct_find
@@ -488,13 +488,13 @@ fn: lm_compiler_construct_link (int: parent; int: slot; int: child) int
     @: temp c.L2ConstructionTemp
     if: construct_phase_cell[0] != 1
         return: (cast: (int) (0))
-    temp: lm_compiler_construct_find(child)
+    temp := lm_compiler_construct_find(child)
     # Borrowed references do not establish an ownership edge or change parent.
     if: temp = 0 || temp\parent != parent || temp\root != 0
         return: (cast: (int) (0))
     if: temp\slot >= 0 && temp\slot != slot
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: a source allocation has two owning attachments")))
-    temp\slot: slot
+    temp\slot := slot
     return: (cast: (int) (0))
 end: lm_compiler_construct_link
 
@@ -504,7 +504,7 @@ fn: lm_compiler_expr_site_find (int: kind; int: index; int: method; const: (@: s
     while: site != 0
         if: site\view_kind = kind && site\view_index = index && site\method = method && site\node = source_node && site\count = count && site\role = role
             return: (cast: (@: c.L2ExpressionSite) (site))
-        site: site\allocated_next
+        site := site\allocated_next
     ---
     return: (cast: (@: c.L2ExpressionSite) (0))
 end: lm_compiler_expr_site_find
@@ -514,7 +514,7 @@ fn: lm_compiler_expr_temp_below (int: inner; int: outer) int
     while: temp != 0 && temp\root = 0
         if: temp\parent = outer
             return: (cast: (int) (1))
-        temp: lm_compiler_construct_find((cast: (int) (temp\parent)))
+        temp := lm_compiler_construct_find((cast: (int) (temp\parent)))
     ---
     return: (cast: (int) (0))
 end: lm_compiler_expr_temp_below
@@ -524,7 +524,7 @@ fn: lm_compiler_admission_site (int: kind; int: index; int: method; const: (@: k
     @: site c.L2ExpressionSite expr_sites_cell[0]
     @: plan c.L2AdmissionPlan
     while: site != 0
-        plan: site\admission
+        plan := site\admission
         if: site\role = 3 && plan != 0 && site\view_kind = kind && site\view_index = index && site\method = method
             const: (@: key_source c.L2ReferenceSource (cast: (const: @: c.L2ReferenceSource) (@ key\source)))
             if: site\node = key_source\origin && site\count = key_source\origin_count
@@ -533,7 +533,7 @@ fn: lm_compiler_admission_site (int: kind; int: index; int: method; const: (@: k
                 ---
             ---
         ---
-        site: site\allocated_next
+        site := site\allocated_next
     ---
     return: (cast: (@: c.L2ExpressionSite) (0))
 end: lm_compiler_admission_site
@@ -541,14 +541,14 @@ end: lm_compiler_admission_site
 fn: lm_compiler_expr_site_place (int: kind; int: index; int: method; const: (@: source_node c.LmP0Node); int: count; int: role; @@: out c.L2GraphPlace) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: site c.L2ExpressionSite lm_compiler_expr_site_find(kind, index, method, source_node, count, role)
-    \out: 0
+    \out := 0
     if: site = 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a source expression has no noted construction site")))
     if: site\state = 3
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a source expression has two constructions in one view")))
     if: site\state != 1 || site\place = 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "internal: a source expression has no retained graph place")))
-    \out: site\place
+    \out := site\place
     return: (cast: (int) (0))
 end: lm_compiler_expr_site_place
 
@@ -564,22 +564,22 @@ fn: lm_compiler_source_definition_node_field (const: (@: source_node c.LmP0Node)
     @: row c.L2SourceContainer source_containers_cell[0]
     @: field c.L2SourceField
     @: found c.L2SourceField 0
-    \owner: 0
+    \owner := 0
     while: row != 0
         if: row\view_kind = kind && (index < 0 || row\view_index = index) && row\inert = 0
-            field: row\fields
+            field := row\fields
             while: field != 0
                 if: own_decl_cell[0][field\own] = source_node
                     if: found != 0
                         c.lm_compiler_error(src_cell[0], source_node, "internal: a source definition has two owning fields")
                         return: (cast: (@: c.L2SourceField) (0))
-                    found: field
-                    \owner: row
+                    found := field
+                    \owner := row
                 ---
-                field: field\next
+                field := field\next
             ---
         ---
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (@: c.L2SourceField) (found))
 end: lm_compiler_source_definition_node_field
@@ -599,20 +599,20 @@ fn: lm_compiler_node_graph_stop (int: mi; @@: stop c.L2GraphPlace) int
     int: kind 0
     int: index -1
     @: owner c.L2SourceContainer 0
-    \stop: 0
+    \stop := 0
     if: ni < 0 && c.lm_compiler_method_source_own(mi) < 0
         return: (cast: (int) (0))
     if: ni >= 0 && (c.lm_compiler_ns_source_body(ni) = 0 || (ns_local_cell[0][ni] < 0 && ns_parent_cell[0][ni] < 0))
         return: (cast: (int) (0))
     if: construct_phase_cell[0] > 0 && construct_view_kind_cell[0] != 0
-        kind: construct_view_kind_cell[0]
-        index: construct_view_index_cell[0]
+        kind := construct_view_kind_cell[0]
+        index := construct_view_index_cell[0]
         # The projected entry is supplied by its target, not declared inside
         # that view. Its NODE crosses the copied original lexical parent;
         # only descendants declared in the view select projected ownership.
         if: kind = 1 && index >= 0 && index < t7_n_cell[0] && mi = t7_model_cell[0][index]
-            kind: 0
-            index: -1
+            kind := 0
+            index := -1
         ---
     if: ni >= 0
         if: lm_compiler_source_definition_field(ni, kind, index, @ owner) = 0
@@ -624,7 +624,7 @@ fn: lm_compiler_node_graph_stop (int: mi; @@: stop c.L2GraphPlace) int
         ---
     if: owner = 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][mi], "internal: a lexical parent has no source owner")))
-    \stop: owner\place
+    \stop := owner\place
     return: (cast: (int) (0))
 end: lm_compiler_node_graph_stop
 
@@ -634,24 +634,24 @@ fn: lm_compiler_source_field_owner (int: own; @@: owner c.L2SourceContainer) @: 
     @: construct_view_index_cell int (cast: (@: int) (@ c.l2_construct_view_index))
     @: row c.L2SourceContainer source_containers_cell[0]
     @: field c.L2SourceField
-    \owner: 0
+    \owner := 0
     while: row != 0
         if: row\inert = 0 && row\view_kind = construct_view_kind_cell[0] && row\view_index = construct_view_index_cell[0]
-            field: row\fields
+            field := row\fields
             while: field != 0
                 if: field\own = own
-                    \owner: row
+                    \owner := row
                     return: (cast: (@: c.L2SourceField) (field))
-                field: field\next
+                field := field\next
             ---
         ---
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (@: c.L2SourceField) (0))
 end: lm_compiler_source_field_owner
 
 fn: lm_compiler_graph_field (int: oi) @: c.L2GraphField
-    oi: c.lm_compiler_data_binding_source(oi)
+    oi := c.lm_compiler_data_binding_source(oi)
     @@: source_containers_cell c.L2SourceContainer (cast: (@@: c.L2SourceContainer) (@ c.l2_source_containers))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
     @@: own_places_cell c.L2GraphField (cast: (@@: c.L2GraphField) (@ c.l2_own_places))
@@ -668,14 +668,14 @@ fn: lm_compiler_graph_field (int: oi) @: c.L2GraphField
     if: construct_phase_cell[0] > 0 && construct_view_index_cell[0] >= 0
         while: row != 0
             if: row\view_kind = construct_view_kind_cell[0] && row\view_index = construct_view_index_cell[0] && (row\place != 0 || row\root != 0)
-                field: row\fields
+                field := row\fields
                 while: field != 0
                     if: field\own = oi
                         return: (cast: (@: c.L2GraphField) (@ field\place))
-                    field: field\next
+                    field := field\next
                 ---
             ---
-            row: row\allocated_next
+            row := row\allocated_next
         ---
         if: construct_phase_cell[0] = 2 && construct_view_kind_cell[0] != 0 && own_mi_cell[0][oi] = rw_mi_cell[0] && own_fid_cell[0][oi] >= 0
             return: (cast: (@: c.L2GraphField) (0))
@@ -699,16 +699,16 @@ fn: lm_compiler_graph_body_place (int: fid) @: c.L2GraphPlace
     if: fid < 0 || fid >= for_n_cell[0] || for_place_cell[0] = 0
         return: (cast: (@: c.L2GraphPlace) (0))
     if: construct_phase_cell[0] > 0 && construct_view_kind_cell[0] != 0 && construct_view_index_cell[0] >= 0 && c.lm_compiler_for_owner(fid) = rw_mi_cell[0]
-        source_node: for_node_cell[0][fid]
-        body: 0
+        source_node := for_node_cell[0][fid]
+        body := 0
         if: source_node != 0 && source_node\as != 0 && source_node\kind = c.LM_P0_NODE_STRUCTURE
-            body: source_node\as\structure
+            body := source_node\as\structure
         if: source_node != 0 && source_node\as != 0 && source_node\kind = c.LM_P0_NODE_FRAME
-            body: source_node\as\frame\body
+            body := source_node\as\frame\body
         while: row != 0
             if: row\view_kind = construct_view_kind_cell[0] && row\view_index = construct_view_index_cell[0] && row\body = body && row\place != 0
                 return: (cast: (@: c.L2GraphPlace) (row\place))
-            row: row\allocated_next
+            row := row\allocated_next
         ---
         if: construct_phase_cell[0] = 2
             return: (cast: (@: c.L2GraphPlace) (0))
@@ -730,7 +730,7 @@ fn: lm_compiler_m_head (int: mi) int
     int: ni
     if: mi = e_cell[0]
         return: (cast: (int) (0))
-    ni: c.lm_compiler_m_nsof(mi)
+    ni := c.lm_compiler_m_nsof(mi)
     if: ni >= 0
         if: c.lm_compiler_ns_source_body(ni) != 0
             return: (cast: (int) (0))
@@ -760,10 +760,10 @@ fn: lm_compiler_occ_slot (int: mi) int
     @: unit_base_cell int (cast: (@: int) (@ c.l2_unit_base))
     int: ni
     int: slot
-    ni: c.lm_compiler_m_nsof(mi)
+    ni := c.lm_compiler_m_nsof(mi)
     if: ni >= 0 && ns_parent_cell[0][ni] < 0
         return: (cast: (int) (lm_compiler_ns_unit_slot(ni)))
-    slot: lm_compiler_source_unit_slot(m_node_cell[0][mi])
+    slot := lm_compiler_source_unit_slot(m_node_cell[0][mi])
     if: slot >= 0
         return: (cast: (int) (slot))
     return: (cast: (int) (unit_base_cell[0] + lm_compiler_occ_tail_rank(mi)))
@@ -776,11 +776,11 @@ fn: lm_compiler_source_unit_slot (const: (@: source_node c.LmP0Node)) int
     @: field c.LmP0Field
     if: source = 0 || source\body != cur_unit_cell[0] || source_node = 0
         return: (cast: (int) (-1))
-    field: c.lm_compiler_next_active(source\body\first_field)
+    field := c.lm_compiler_next_active(source\body\first_field)
     while: field != 0
         if: field\value = source_node
             return: (cast: (int) (lm_compiler_ps_lookup(source_node)))
-        field: c.lm_compiler_next_active(field\next)
+        field := c.lm_compiler_next_active(field\next)
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_source_unit_slot
@@ -794,7 +794,7 @@ fn: lm_compiler_ns_synthesized (int: ns) int
     while: k < letter_model_n_cell[0]
         if: letter_model_ns_cell[0][k] = ns
             return: (cast: (int) (1))
-        k: k + 1
+        k := k + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_ns_synthesized
@@ -813,17 +813,17 @@ fn: lm_compiler_source_unit_declaration (const: (@: source_node c.LmP0Node)) int
     while: i < m_n_cell[0]
         if: i != e_cell[0] && m_node_cell[0][i] = source_node && c.lm_compiler_m_nsof(i) < 0
             return: (cast: (int) (1))
-        i: i + 1
-    i: 0
+        i := i + 1
+    i := 0
     while: i < ns_n_cell[0]
         if: ns_at_cell[0][i] = source_node && ns_parent_cell[0][i] < 0 && ns_local_cell[0][i] < 0 && lm_compiler_ns_synthesized(i) = 0
             return: (cast: (int) (1))
-        i: i + 1
-    i: 0
+        i := i + 1
+    i := 0
     while: i < ebr_n_cell[0]
         if: ebr_at_cell[0][i] = source_node
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     return: (cast: (int) (0))
 end: lm_compiler_source_unit_declaration
 
@@ -834,8 +834,8 @@ fn: lm_compiler_occ_tail_rank (int: mi) int
     int: count 0
     while: i < mi
         if: i != e_cell[0] && c.lm_compiler_m_nsof(i) < 0 && c.lm_compiler_method_source_own(i) < 0 && lm_compiler_source_unit_slot(m_node_cell[0][i]) < 0
-            count: count + 1
-        i: i + 1
+            count := count + 1
+        i := i + 1
     return: (cast: (int) (count))
 end: lm_compiler_occ_tail_rank
 
@@ -845,8 +845,8 @@ fn: lm_compiler_ebr_tail_rank (int: branch) int
     int: count 0
     while: i < branch
         if: lm_compiler_source_unit_slot(ebr_at_cell[0][i]) < 0
-            count: count + 1
-        i: i + 1
+            count := count + 1
+        i := i + 1
     return: (cast: (int) (count))
 end: lm_compiler_ebr_tail_rank
 
@@ -859,8 +859,8 @@ fn: lm_compiler_ns_tail_rank (int: ns) int
     int: count 0
     while: i < ns
         if: ns_parent_cell[0][i] < 0 && ns_local_cell[0][i] < 0 && ns_eternal_cell[0][i] < 0 && c.lm_compiler_ns_merge_body(i) < 0 && (lm_compiler_ns_synthesized(i) != 0 || lm_compiler_source_unit_slot(ns_at_cell[0][i]) < 0)
-            count: count + 1
-        i: i + 1
+            count := count + 1
+        i := i + 1
     return: (cast: (int) (count))
 end: lm_compiler_ns_tail_rank
 
@@ -889,20 +889,20 @@ fn: lm_compiler_split_data_row (int: oi) int
     if: c.lm_compiler_data_binding_source(oi) != oi && uses[0][lm_compiler_own_off(own_mi_cell[0][oi], oi)] = 0
         return: 0
     if: c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_array(own_ty_cell[0][oi]) = 0
-        typed_reference: 1
+        typed_reference := 1
     if: c.lm_compiler_own_num_ctype(own_ty_cell[0][oi]) = 0 && c.lm_compiler_source_definition_ns(oi) < 0 && typed_reference = 0
         return: (cast: (int) (0))
     if: own_host_cell[0][oi] != 0
-        fid: c.lm_compiler_for_find(own_host_cell[0][oi])
+        fid := c.lm_compiler_for_find(own_host_cell[0][oi])
         if: fid < 0
             return: (cast: (int) (0))
         while: fid >= 0
             if: c.lm_compiler_frame_head(for_node_cell[0][fid], "catch") != 0
                 return: (cast: (int) (0))
-            fid: for_parent_cell[0][fid]
+            fid := for_parent_cell[0][fid]
         ---
     ---
-    ni: c.lm_compiler_m_nsof(own_mi_cell[0][oi])
+    ni := c.lm_compiler_m_nsof(own_mi_cell[0][oi])
     # Required places belong to the written body, regardless of its callers.
     return: (cast: (int) (ni >= 0 && c.lm_compiler_ns_part(ni) < 0))
 end: lm_compiler_split_data_row
@@ -930,7 +930,7 @@ fn: lm_compiler_own_ctr (int: oi) const: @: char
         return: (cast: (const: @: char) (ctr_buf_data))
     # A field of a program part's root, read by a method of that part (§10): the root is the method's `node`,
     # its lexical parent.
-    k: c.lm_compiler_m_part(cur_mi_cell[0])
+    k := c.lm_compiler_m_part(cur_mi_cell[0])
     if: k >= 0 && part_ns_cell[0][k] >= 0 && own_mi_cell[0][oi] = ns_proc_cell[0][part_ns_cell[0][k]]
         return: (cast: (const: @: char) ("node"))
     # E's occurrence is the unit.
@@ -939,7 +939,7 @@ fn: lm_compiler_own_ctr (int: oi) const: @: char
     # A field of a program part's root read from outside the part -- the lexical source of a hidden input of a
     # method of that part (Q52, book :1196) -- is in that root, the unit's child it is built as (§10), not in its
     # procedure's occurrence.
-    k: c.lm_compiler_m_file(own_mi_cell[0][oi])
+    k := c.lm_compiler_m_file(own_mi_cell[0][oi])
     if: k >= 0 && part_ns_cell[0][k] >= 0 && own_mi_cell[0][oi] = ns_proc_cell[0][part_ns_cell[0][k]] && ns_parent_cell[0][part_ns_cell[0][k]] < 0 && ns_eternal_cell[0][part_ns_cell[0][k]] < 0
         if: c.sprintf(ctr_buf_data, "lmx_walk_slot_struct(l2_program_arena, %s, %uU)", unit_ref_cell[0], (cast: (unsigned) (lm_compiler_ns_unit_slot(part_ns_cell[0][k])))) < 0
             return: (cast: (const: @: char) (unit_ref_cell[0]))
@@ -957,8 +957,8 @@ fn: lm_compiler_m_for_count (int: mi) int
     int: n 0
     while: k < for_n_cell[0]
         if: c.lm_compiler_for_owner(k) = mi && for_parent_cell[0][k] < 0 && (for_transferred_cell[0] = 0 || for_transferred_cell[0][k] = 0)
-            n: n + 1
-        k: k + 1
+            n := n + 1
+        k := k + 1
     ---
     return: (cast: (int) (n))
 end: lm_compiler_m_for_count
@@ -970,8 +970,8 @@ fn: lm_compiler_for_rank (int: k) int
     int: n 0
     while: i < k
         if: c.lm_compiler_for_owner(i) = c.lm_compiler_for_owner(k) && for_parent_cell[0][i] < 0 && (for_transferred_cell[0] = 0 || for_transferred_cell[0][i] = 0)
-            n: n + 1
-        i: i + 1
+            n := n + 1
+        i := i + 1
     ---
     return: (cast: (int) (n))
 end: lm_compiler_for_rank
@@ -992,7 +992,7 @@ fn: lm_compiler_ps_lookup (const: (@: source_node c.LmP0Node)) int
     while: i < ps_n_cell[0]
         if: ps_node_cell[0][i] = source_node
             return: (cast: (int) (ps_slot_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_ps_lookup
@@ -1010,24 +1010,24 @@ fn: lm_compiler_ns_find_payload (const: (@: t c.LmP0Text)) int
     const: (@: site c.LmP0Node 0)
     if: t = 0 || t\data = 0
         return: (cast: (int) (0 - 1))
-    data: t\data
-    n: t\length
+    data := t\data
+    n := t\length
     if: n >= 2U && data[0] = 96 && data[n - 1U] = 96
-        data: data + 1U
-        n: n - 2U
+        data := data + 1U
+        n := n - 2U
     while: i < ns_n_cell[0]
         if: ns_name_cell[0][i] != 0 && ns_name_cell[0][i]\data != 0 && ns_name_cell[0][i]\length = n && c.memcmp(ns_name_cell[0][i]\data, data, n) = 0
             if: site_ready = 0
-                site: c.lm_compiler_ns_source_site(t)
-                site_ready: 1
+                site := c.lm_compiler_ns_source_site(t)
+                site_ready := 1
             ---
-            rank: c.lm_compiler_ns_source_rank(i, site)
+            rank := c.lm_compiler_ns_source_rank(i, site)
             if: rank >= 0 && rank >= selected_rank
-                selected: i
-                selected_rank: rank
+                selected := i
+                selected_rank := rank
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (selected))
 end: lm_compiler_ns_find_payload
@@ -1053,10 +1053,10 @@ fn: lm_compiler_reference_model_context (int: ni; int: res; int: slot; int: own)
     if: own >= 0
         return: (cast: (int) (own_mi_cell[0][own]))
     if: res >= 0
-        row: lm_compiler_mrs_slot_row(res, slot)
+        row := lm_compiler_mrs_slot_row(res, slot)
         if: row < 0
             return: (cast: (int) (-1))
-        ni: nsf_owner_cell[0][row]
+        ni := nsf_owner_cell[0][row]
     ---
     if: ni < 0 || ni >= ns_n_cell[0]
         return: (cast: (int) (-1))
@@ -1074,8 +1074,8 @@ fn: lm_compiler_mrs_width (int: res) int
     int: w 0
     while: r < mrs_n_cell[0]
         if: mrs_res_cell[0][r] = res
-            w: w + 1
-        r: r + 1
+            w := w + 1
+        r := r + 1
     ---
     return: (cast: (int) (w))
 end: lm_compiler_mrs_width
@@ -1096,19 +1096,19 @@ fn: lm_compiler_mrs_source_has_code (int: res; int: k) int
     int: ordinal
     while: q < msrc_n_cell[0]
         if: msrc_res_cell[0][q] = res && msrc_op_cell[0][q] = k && msrc_pair_cell[0][q] = 0 && msrc_slot_cell[0][q] >= 0
-            slot: msrc_slot_cell[0][q]
-            ordinal: 0
-            r: 0
+            slot := msrc_slot_cell[0][q]
+            ordinal := 0
+            r := 0
             while: r < mrs_n_cell[0]
                 if: mrs_res_cell[0][r] = res
                     if: ordinal = slot && mrs_name_cell[0][r] = 0 && mrs_kind_cell[0][r] = -1
                         return: (cast: (int) (1))
-                    ordinal: ordinal + 1
+                    ordinal := ordinal + 1
                 ---
-                r: r + 1
+                r := r + 1
             ---
         ---
-        q: q + 1
+        q := q + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_mrs_source_has_code
@@ -1121,16 +1121,16 @@ fn: lm_compiler_mrs_schema_has_code (int: schema) int
     int: result
     @: defining c.LmP0Frame
     if: c.lm_compiler_schema_kind(schema) = 2
-        result: c.lm_compiler_schema_index(schema)
+        result := c.lm_compiler_schema_index(schema)
         return: (cast: (int) ((cast: (int) (lm_compiler_mres_exec_ns(result) >= 0))))
     if: c.lm_compiler_schema_kind(schema) != 1
         return: (cast: (int) (0))
-    ni: schema
+    ni := schema
     if: ni < 0 || ni >= ns_n_cell[0] || ns_proc_cell[0][ni] < 0
         return: (cast: (int) (0))
     if: ns_stmt_cell[0][ni] != 0
         return: (cast: (int) (1))
-    defining: c.lm_compiler_ns_defining_frame(ni)
+    defining := c.lm_compiler_ns_defining_frame(ni)
     if: defining != 0 && defining\trailer != 0 && defining\trailer\spelling != 0 && c.lm_compiler_text_eq(defining\trailer\spelling, "until") != 0
         return: (cast: (int) (1))
     return: (cast: (int) (0))
@@ -1153,15 +1153,15 @@ fn: lm_compiler_ns_named_row (int: ni; const: (@: pd char); size_t: off; size_t:
     while: k < nsf_n_cell[0]
         if: nsf_owner_cell[0][k] = ni && nsf_fname_cell[0][k] != 0 && nsf_fname_cell[0][k]\data != 0 && nsf_fname_cell[0][k]\length > 0U && nsf_fname_cell[0][k]\length = nlen && c.memcmp(nsf_fname_cell[0][k]\data, pd + noff, nlen) = 0
             if: occurrence < 0 || seen = occurrence
-                hit: k
-            seen: seen + 1
+                hit := k
+            seen := seen + 1
         ---
-        k: k + 1
+        k := k + 1
     ---
     if: hit >= 0 && out_kind != 0
-        \out_kind: nsf_kind_cell[0][hit]
+        \out_kind := nsf_kind_cell[0][hit]
     if: hit >= 0 && out_ent != 0
-        \out_ent: nsf_ref_cell[0][hit]
+        \out_ent := nsf_ref_cell[0][hit]
     return: (cast: (int) (hit))
 end: lm_compiler_ns_named_row
 
@@ -1174,8 +1174,8 @@ fn: lm_compiler_nsf_ordinal (int: row) int
         return: (cast: (int) (-1))
     while: k < row
         if: nsf_owner_cell[0][k] = nsf_owner_cell[0][row]
-            ordinal: ordinal + 1
-        k: k + 1
+            ordinal := ordinal + 1
+        k := k + 1
     return: (cast: (int) (ordinal))
 end: lm_compiler_nsf_ordinal
 
@@ -1196,35 +1196,35 @@ fn: lm_compiler_nsf_slot (int: row) int
     int: retained
     if: row < 0 || row >= nsf_n_cell[0]
         return: (cast: (int) (-1))
-    ni: nsf_owner_cell[0][row]
+    ni := nsf_owner_cell[0][row]
     if: c.lm_compiler_ns_source_body(ni) = 0 || construct_phase_cell[0] = 0
         return: (cast: (int) (lm_compiler_nsf_ordinal(row)))
-    mi: ns_proc_cell[0][ni]
-    source: c.lm_compiler_source_root(mi)
+    mi := ns_proc_cell[0][ni]
+    source := c.lm_compiler_source_root(mi)
     if: source = 0
         return: (cast: (int) (-1))
     if: nsf_fname_cell[0][row] != 0
-        field: source\fields
+        field := source\fields
         while: field != 0
             if: own_mi_cell[0][field\own] = mi && nsf_fname_cell[0][row] = own_name_cell[0][field\own]
                 if: found >= 0
                     return: (cast: (int) (-1))
-                found: field\slot
-            field: field\next
+                found := field\slot
+            field := field\next
         ---
         if: found >= 0
             return: (cast: (int) (found))
     ---
-    atom: c.lm_compiler_next_active(source\body\first_field)
+    atom := c.lm_compiler_next_active(source\body\first_field)
     while: atom != 0
-        retained: c.lm_compiler_ns_constructed_row(mi, atom\value)
+        retained := c.lm_compiler_ns_constructed_row(mi, atom\value)
         if: retained = -2
             return: (cast: (int) (-1))
         if: retained = row
             if: found >= 0
                 return: (cast: (int) (-1))
-            found: lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (atom\value)))
-        atom: c.lm_compiler_next_active(atom\next)
+            found := lm_compiler_ps_lookup((cast: (const: @: c.LmP0Node) (atom\value)))
+        atom := c.lm_compiler_next_active(atom\next)
     ---
     return: (cast: (int) (found))
 end: lm_compiler_nsf_slot
@@ -1239,16 +1239,16 @@ fn: lm_compiler_ns_row_at_slot (int: ni; int: slot) int
         return: (cast: (int) (-2))
     while: row < nsf_n_cell[0]
         if: nsf_owner_cell[0][row] = ni
-            child: lm_compiler_nsf_slot(row)
+            child := lm_compiler_nsf_slot(row)
             if: child < 0
                 return: (cast: (int) (-2))
             if: child = slot
                 if: found >= 0
                     return: (cast: (int) (-2))
-                found: row
+                found := row
             ---
         ---
-        row: row + 1
+        row := row + 1
     ---
     return: (cast: (int) (found))
 end: lm_compiler_ns_row_at_slot
@@ -1282,14 +1282,14 @@ fn: lm_compiler_nsf_pointee (int: row) int
         return: (cast: (int) ((cast: (int) nsf_val_cell[0][row]) - 1))
     if: nsf_owner_cell[0] = 0 || ns_proc_cell[0] = 0
         return: (cast: (int) (-1))
-    owner: ns_proc_cell[0][nsf_owner_cell[0][row]]
+    owner := ns_proc_cell[0][nsf_owner_cell[0][row]]
     # A source-owned field already resolved its declared model at its own
     # declaration. A later caller's visibility cannot reinterpret that name.
     if: c.lm_compiler_ns_source_body(nsf_owner_cell[0][row]) != 0
         while: own < own_n_cell[0]
             if: own_mi_cell[0][own] = owner && own_decl_cell[0][own] = nsf_source_cell[0][row]
                 return: (cast: (int) (c.lm_compiler_own_nsty_get(own)))
-            own: own + 1
+            own := own + 1
         ---
         return: (cast: (int) (-1))
     ---
@@ -1335,20 +1335,20 @@ fn: lm_compiler_mrs_slot_named (int: res; const: (@: pd char); size_t: off; size
     while: k < mrs_n_cell[0]
         if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(lm_compiler_mrs_row_text(k), pd, noff, nlen) != 0
             if: occurrence < 0
-                hit: slotix
-                \out_kind: mrs_kind_cell[0][k]
-                \out_ent: mrs_ent_cell[0][k]
+                hit := slotix
+                \out_kind := mrs_kind_cell[0][k]
+                \out_ent := mrs_ent_cell[0][k]
             else:
                 if: seen = occurrence
-                    \out_kind: mrs_kind_cell[0][k]
-                    \out_ent: mrs_ent_cell[0][k]
+                    \out_kind := mrs_kind_cell[0][k]
+                    \out_ent := mrs_ent_cell[0][k]
                     return: (cast: (int) (slotix))
-                seen: seen + 1
+                seen := seen + 1
             ---
         ---
         if: mrs_res_cell[0][k] = res
-            slotix: slotix + 1
-        k: k + 1
+            slotix := slotix + 1
+        k := k + 1
     ---
     return: (cast: (int) (hit))
 end: lm_compiler_mrs_slot_named
@@ -1365,9 +1365,9 @@ fn: lm_compiler_mrs_slot_row (int: res; int: slot) int
         if: mrs_res_cell[0][k] = res
             if: slotix = slot
                 return: (cast: (int) (mrs_row_cell[0][k]))
-            slotix: slotix + 1
+            slotix := slotix + 1
         ---
-        k: k + 1
+        k := k + 1
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_mrs_slot_row
@@ -1388,14 +1388,14 @@ fn: lm_compiler_mrs_slot_nth (int: res; const: (@: name c.LmP0Text); int: occ; @
         return: (cast: (int) (0 - 1))
     while: k < mrs_n_cell[0]
         if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(lm_compiler_mrs_row_text(k), name\data, 0U, name\length) != 0 && seen = occ
-            \out_kind: mrs_kind_cell[0][k]
-            \out_ent: mrs_ent_cell[0][k]
+            \out_kind := mrs_kind_cell[0][k]
+            \out_ent := mrs_ent_cell[0][k]
             return: (cast: (int) (slotix))
         if: mrs_res_cell[0][k] = res && c.lm_compiler_name_is_seg(lm_compiler_mrs_row_text(k), name\data, 0U, name\length) != 0
-            seen: seen + 1
+            seen := seen + 1
         if: mrs_res_cell[0][k] = res
-            slotix: slotix + 1
-        k: k + 1
+            slotix := slotix + 1
+        k := k + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_mrs_slot_nth
@@ -1457,13 +1457,13 @@ fn: lm_compiler_method_in_eternal (int: mi) int
     int: ni
     int: links
     while: mi >= 0
-        ni: c.lm_compiler_m_nsof(mi)
+        ni := c.lm_compiler_m_nsof(mi)
         # A saved method's own cells are part of the qualified graph as well.
         # Follow the same lexical occurrence chain as every other declaration;
         # a method boundary does not exempt its future writes from immutable.
         if: ni >= 0 && ns_eternal_cell[0][ni] >= 0
             return: (cast: (int) (1))
-        mi: lm_compiler_lex_parent(mi, @ links)
+        mi := lm_compiler_lex_parent(mi, @ links)
     ---
     return: (cast: (int) (0))
 end: lm_compiler_method_in_eternal
@@ -1518,13 +1518,13 @@ fn: lm_compiler_path_callee_rec (const: (@: path c.L2Path)) int
     # input is. Its receiving Structure is not a callable source. Read the
     # same callable-input contract as the root classifier, never ns_proc of
     # the Model used only to type the place.
-    step: path\steps + (path\n - 1)
+    step := path\steps + (path\n - 1)
     if: step\formal >= 0 && step\node_host >= 0
         return: (cast: (int) (lm_compiler_cf_get((cast: (int) (step\node_host)), (cast: (int) (step\formal)))))
     if: path\leaf_kind = 4
-        k: path\leaf_mi
+        k := path\leaf_mi
     if: (path\leaf_kind = 2 || path\leaf_kind = 3) && path\leaf_model >= 0 && path\leaf_model < ns_n_cell[0]
-        k: ns_proc_cell[0][path\leaf_model]
+        k := ns_proc_cell[0][path\leaf_model]
     if: k < 0 || k = e_cell[0]
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (k))
@@ -1534,7 +1534,7 @@ fn: lm_compiler_path_callable_value_rec (const: (@: path c.L2Path)) int
     const: (@: step c.L2PathStep)
     if: path = 0 || path\n < 1 || path\steps = 0 || path\fail_why != 0
         return: (cast: (int) (-1))
-    step: path\steps + (path\n - 1)
+    step := path\steps + (path\n - 1)
     if: path\leaf_kind != 4 && (step\formal < 0 || step\node_host < 0)
         return: (cast: (int) (-1))
     return: (cast: (int) (lm_compiler_path_callee_rec(path)))
@@ -1550,8 +1550,8 @@ fn: lm_compiler_split_rep (int: k) int
         return: (cast: (int) (k))
     while: j < own_n_cell[0]
         if: j != best && own_mi_cell[0][j] = own_mi_cell[0][k] && c.lm_compiler_text_same(own_name_cell[0][j], own_name_cell[0][k]) != 0 && lm_compiler_split_data_row(j) != 0 && c.lm_compiler_own_source_after(best, j) != 0
-            best: j
-        j: j + 1
+            best := j
+        j := j + 1
     ---
     return: (cast: (int) (best))
 end: lm_compiler_split_rep
@@ -1566,8 +1566,8 @@ fn: lm_compiler_split_name_ix (int: k) int
         return: (cast: (int) (0 - 1))
     while: j < own_n_cell[0]
         if: j != r && own_mi_cell[0][j] = own_mi_cell[0][r] && lm_compiler_split_data_row(j) != 0 && lm_compiler_split_rep(j) = j && c.lm_compiler_own_source_after(r, j) != 0
-            ix: ix + 1
-        j: j + 1
+            ix := ix + 1
+        j := j + 1
     ---
     return: (cast: (int) (ix))
 end: lm_compiler_split_name_ix
@@ -1590,7 +1590,7 @@ fn: lm_compiler_anc_row (int: m; const: (@: nm c.LmP0Text)) int
     while: r < anc_n_cell[0]
         if: anc_m_cell[0][r] = m && c.lm_compiler_text_same(anc_nm_cell[0][r], nm) != 0
             return: (cast: (int) (r))
-        r: r + 1
+        r := r + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_anc_row
@@ -1601,7 +1601,7 @@ fn: lm_compiler_anchor_of (int: m; const: (@: nm c.LmP0Text)) int
     int: r
     if: anc_on_cell[0] = 0
         return: (cast: (int) (0 - 1))
-    r: lm_compiler_anc_row(m, nm)
+    r := lm_compiler_anc_row(m, nm)
     if: r < 0 || anc_ns_cell[0][r] < 0
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (anc_ns_cell[0][r]))
@@ -1621,12 +1621,12 @@ fn: lm_compiler_lex_parent (int: mi; @: links int) int
     @: owner c.L2SourceContainer 0
     @: field c.L2SourceField
     @: place c.L2GraphPlace
-    \links: 1
+    \links := 1
     if: mi < 0 || mi >= m_n_cell[0] || mi = e_cell[0]
         return: (cast: (int) (-1))
-    ni: c.lm_compiler_m_nsof(mi)
+    ni := c.lm_compiler_m_nsof(mi)
     if: ni < 0 && c.lm_compiler_method_source_own(mi) >= 0
-        field: lm_compiler_source_definition_node_field(m_node_cell[0][mi], 0, -1, @ owner)
+        field := lm_compiler_source_definition_node_field(m_node_cell[0][mi], 0, -1, @ owner)
         if: field = 0 || owner = 0
             # The declared enclosing callable is already an exact lexical
             # owner. A missing source-field projection cannot erase it.
@@ -1634,26 +1634,26 @@ fn: lm_compiler_lex_parent (int: mi; @: links int) int
                 return: (cast: (int) (c.lm_compiler_mad_host_of(mi)))
             ---
             return: (cast: (int) (-2))
-        place: owner\place
+        place := owner\place
         while: place != 0
             if: \links = c.INT_MAX
                 return: (cast: (int) (-2))
-            \links: \links + 1
-            place: place\parent
+            \links := \links + 1
+            place := place\parent
         ---
         return: (cast: (int) (owner\source_mi))
     ---
     if: ni >= 0
         if: ns_local_cell[0][ni] >= 0
-            field: lm_compiler_source_definition_field(ni, 0, -1, @ owner)
+            field := lm_compiler_source_definition_field(ni, 0, -1, @ owner)
             if: field = 0 || owner = 0
                 return: (cast: (int) (-2))
-            place: owner\place
+            place := owner\place
             while: place != 0
                 if: \links = c.INT_MAX
                     return: (cast: (int) (-2))
-                \links: \links + 1
-                place: place\parent
+                \links := \links + 1
+                place := place\parent
             ---
             return: (cast: (int) (owner\source_mi))
         ---
@@ -1665,7 +1665,7 @@ fn: lm_compiler_lex_parent (int: mi; @: links int) int
     ---
     if: c.lm_compiler_mad_host_of(mi) >= 0
         return: (cast: (int) (c.lm_compiler_mad_host_of(mi)))
-    part: c.lm_compiler_m_part(mi)
+    part := c.lm_compiler_m_part(mi)
     if: part >= 0 && part_ns_cell[0][part] >= 0
         return: (cast: (int) (ns_proc_cell[0][part_ns_cell[0][part]]))
     return: (cast: (int) (e_cell[0]))
@@ -1684,11 +1684,11 @@ fn: lm_compiler_lex_depth_at (int: mi; int: ancestor; int: committed) int
         # deferred, never silently counted as one link or a global unit.
         if: committed = 0 && ((c.lm_compiler_m_nsof(mi) >= 0 && ns_local_cell[0][c.lm_compiler_m_nsof(mi)] >= 0) || c.lm_compiler_method_source_own(mi) >= 0)
             return: (cast: (int) (-2))
-        mi: lm_compiler_lex_parent(mi, @ links)
+        mi := lm_compiler_lex_parent(mi, @ links)
         if: depth > c.INT_MAX - links
             return: (cast: (int) (-2))
-        depth: depth + links
-        steps: steps + 1
+        depth := depth + links
+        steps := steps + 1
     ---
     if: mi = -1
         return: (cast: (int) (-1))
@@ -1710,7 +1710,7 @@ fn: lm_compiler_cf_get (int: omi; int: fk) int
     while: i < cf_n_cell[0]
         if: cf_omi_cell[0][i] = omi && cf_fk_cell[0][i] = fk
             return: (cast: (int) (cf_req_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_cf_get
@@ -1726,18 +1726,18 @@ fn: lm_compiler_m_machine (int: i) int
     int: root 0
     if: i < 0 || i >= m_n_cell[0] || i = e_cell[0] || lm_compiler_machine_module() = 0 || m_name_cell[0][i] = 0 || m_node_cell[0][i] = 0 || m_body_cell[0][i] = 0 || c.lm_compiler_m_nsof(i) >= 0 || c.lm_compiler_mad_host_of(i) >= 0
         return: (cast: (int) (0))
-    unit: lm_compiler_method_source_unit(i)
+    unit := lm_compiler_method_source_unit(i)
     if: unit = 0
         return: 0
     # The already selected root os branch contributes methods to the same unit.
     # Use its existing identity projection, not a new name/ABI/platform exception.
     if: lm_compiler_method_in_os(i) != 0
         return: (cast: (int) (1))
-    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) unit\first_field))
+    f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) unit\first_field))
     while: f != 0 && root = 0
         if: f\value = m_node_cell[0][i]
-            root: 1
-        f: c.lm_compiler_next_active(f\next)
+            root := 1
+        f := c.lm_compiler_next_active(f\next)
     ---
     return: (cast: (int) (root))
 end: lm_compiler_m_machine
@@ -1756,18 +1756,18 @@ fn: lm_compiler_mad_return_point (const: (@: body c.LmP0Structure); int: mi; @: 
     int: model
     if: body = 0 || field = 0 || field\value = 0 || mad_model_cell[0] = 0 || mi < 0
         return: (cast: (int) (0))
-    model: mad_model_cell[0][mi]
+    model := mad_model_cell[0][mi]
     if: model < 0
         return: (cast: (int) (0))
     if: c.lm_compiler_mad_is_return(field\value, model) != 0 || lm_compiler_t7_return_stmt(mi, (cast: (const: @: c.LmP0Node) (field\value))) != 0
         return: (cast: (int) (1))
     if: c.lm_compiler_frame_head(field\value, "fn") = 0 || field\value != m_node_cell[0][model]
         return: (cast: (int) (0))
-    f: c.lm_compiler_next_active(body\first_field)
+    f := c.lm_compiler_next_active(body\first_field)
     while: f != 0
         if: c.lm_compiler_mad_is_return(f\value, model) != 0
             return: (cast: (int) (0))
-        f: c.lm_compiler_next_active(f\next)
+        f := c.lm_compiler_next_active(f\next)
     ---
     if: c.lm_compiler_mad_trailer_return(mi, model) != 0
         return: (cast: (int) (0))
@@ -1780,7 +1780,7 @@ fn: lm_compiler_madc_formal_slot (int: mi; int: fi) int
         return: (cast: (int) (0 - 1))
     if: c.lm_compiler_fn_parts_on(mi) = 0
         return: (cast: (int) (lm_compiler_m_width(mi) + fi))
-    part: c.lm_compiler_source_part_row(mi, 2)
+    part := c.lm_compiler_source_part_row(mi, 2)
     if: part = 0
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (part\width + fi))
@@ -1795,9 +1795,9 @@ fn: lm_compiler_ns_unit_slot (int: ns) int
         return: (cast: (int) (0 - 1))
     if: ns_eternal_cell[0][ns] >= 0
         return: (cast: (int) (lm_compiler_ebr_unit_slot(ns_eternal_cell[0][ns])))
-    slot: -1
+    slot := -1
     if: lm_compiler_ns_synthesized(ns) = 0
-        slot: lm_compiler_source_unit_slot(ns_at_cell[0][ns])
+        slot := lm_compiler_source_unit_slot(ns_at_cell[0][ns])
     if: slot >= 0
         return: (cast: (int) (slot))
     return: (cast: (int) (ns_base_cell[0] + lm_compiler_ns_tail_rank(ns)))
@@ -1821,7 +1821,7 @@ fn: lm_compiler_t7_host_site (int: mi) int
     while: s < t7_n_cell[0]
         if: t7_kind_cell[0][s] = 1 && t7_host_cell[0][s] = mi
             return: (cast: (int) (s))
-        s: s + 1
+        s := s + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_t7_host_site
@@ -1832,7 +1832,7 @@ fn: lm_compiler_t7_return_stmt (int: mi; const: (@: stmt c.LmP0Node)) int
     int: site lm_compiler_t7_host_site(mi)
     if: site < 0 || stmt = 0 || c.lm_compiler_frame_head(stmt, "return") = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0 || c.lm_compiler_count_active(stmt\as\frame\body) != 1
         return: (cast: (int) (0))
-    only: c.lm_compiler_next_active(stmt\as\frame\body\first_field)
+    only := c.lm_compiler_next_active(stmt\as\frame\body\first_field)
     if: only = 0 || only\value = 0
         return: (cast: (int) (0))
     return: (cast: (int) ((cast: (int) (t7_at_cell[0][site] = only\value))))
@@ -1847,11 +1847,11 @@ fn: lm_compiler_m_width (int: mi) int
     if: source != 0
         return: (cast: (int) (source\width))
     if: m_src_end_cell[0] != 0 && mi >= 0 && mi < m_n_cell[0] && m_src_end_cell[0][mi] >= 0
-        n: m_src_end_cell[0][mi]
+        n := m_src_end_cell[0][mi]
     else:
-        n: lm_compiler_m_kids(mi)
+        n := lm_compiler_m_kids(mi)
         if: m_steps_cell[0] != 0 && mi >= 0 && mi < m_n_cell[0] && m_steps_cell[0][mi] > 0
-            n: n + m_steps_cell[0][mi]
+            n := n + m_steps_cell[0][mi]
         ---
     return: (cast: (int) (n))
 end: lm_compiler_m_width
@@ -1885,50 +1885,50 @@ fn: lm_compiler_schema_field (int: schema; int: slot; @: out c.L2SchemaField) in
     int: owner c.lm_compiler_schema_index(schema)
     if: out = 0 || slot < 0 || schema = -1
         return: (cast: (int) (1))
-    out\name: 0
-    out\type_word: 0
-    out\kind: -1
-    out\model: -1
-    out\pointee: -1
+    out\name := 0
+    out\type_word := 0
+    out\kind := -1
+    out\model := -1
+    out\pointee := -1
     if: c.lm_compiler_schema_kind(schema) = 3
-        own: lm_compiler_method_field_own(owner, slot)
+        own := lm_compiler_method_field_own(owner, slot)
         if: own < 0
             return: (cast: (int) (1))
-        out\name: own_name_cell[0][own]
-        out\type_word: 0
-        out\kind: c.lm_compiler_own_nsf_kind(own_ty_cell[0][own])
-        out\model: 0 - 1
+        out\name := own_name_cell[0][own]
+        out\type_word := 0
+        out\kind := c.lm_compiler_own_nsf_kind(own_ty_cell[0][own])
+        out\model := 0 - 1
         if: out\kind = 10
-            out\model: c.lm_compiler_ft_of_own(own_ty_cell[0][own])
-            out\pointee: c.lm_compiler_own_nsty_get(own)
+            out\model := c.lm_compiler_ft_of_own(own_ty_cell[0][own])
+            out\pointee := c.lm_compiler_own_nsty_get(own)
         return: (cast: (int) (0))
     ---
     if: c.lm_compiler_schema_kind(schema) = 2
         while: row < mrs_n_cell[0]
             if: mrs_res_cell[0][row] = owner
                 if: ordinal = slot
-                    out\name: mrs_name_cell[0][row]
-                    out\type_word: mrs_type_cell[0][row]
-                    out\kind: mrs_kind_cell[0][row]
-                    out\model: mrs_ent_cell[0][row]
+                    out\name := mrs_name_cell[0][row]
+                    out\type_word := mrs_type_cell[0][row]
+                    out\kind := mrs_kind_cell[0][row]
+                    out\model := mrs_ent_cell[0][row]
                     if: out\kind = 10
-                        out\pointee: lm_compiler_mrs_ref_pointee(owner, slot)
+                        out\pointee := lm_compiler_mrs_ref_pointee(owner, slot)
                     return: (cast: (int) (0))
-                ordinal: ordinal + 1
-            row: row + 1
+                ordinal := ordinal + 1
+            row := row + 1
         ---
         return: (cast: (int) (1))
     ---
-    row: lm_compiler_ns_row_at_slot(owner, slot)
+    row := lm_compiler_ns_row_at_slot(owner, slot)
     if: row = -2
         return: (cast: (int) (1))
     if: row >= 0
-        out\name: nsf_fname_cell[0][row]
-        out\type_word: nsf_name_cell[0][row]
-        out\kind: nsf_kind_cell[0][row]
-        out\model: nsf_ref_cell[0][row]
+        out\name := nsf_fname_cell[0][row]
+        out\type_word := nsf_name_cell[0][row]
+        out\kind := nsf_kind_cell[0][row]
+        out\model := nsf_ref_cell[0][row]
         if: out\kind = 10
-            out\pointee: lm_compiler_nsf_pointee(row)
+            out\pointee := lm_compiler_nsf_pointee(row)
         return: (cast: (int) (0))
     # Unnamed operation children retain their actual physical coordinates.
     if: slot < lm_compiler_ns_width(owner)
@@ -1961,37 +1961,37 @@ fn: lm_compiler_schema_named_select (int: schema; const: (@: name c.LmP0Text); i
     int: width lm_compiler_schema_width(schema)
     int: owner c.lm_compiler_schema_index(schema)
     if: project = 0 && c.lm_compiler_schema_kind(schema) = 1
-        width: ns_count_cell[0][owner]
+        width := ns_count_cell[0][owner]
     while: slot < width
         if: project = 0 && c.lm_compiler_schema_kind(schema) = 1
             while: row < nsf_n_cell[0] && nsf_owner_cell[0][row] != owner
-                row: row + 1
+                row := row + 1
             if: row >= nsf_n_cell[0]
                 return: (cast: (int) (-1))
-            field\name: nsf_fname_cell[0][row]
-            field\type_word: nsf_name_cell[0][row]
-            field\kind: nsf_kind_cell[0][row]
-            field\model: nsf_ref_cell[0][row]
-            field\pointee: -1
+            field\name := nsf_fname_cell[0][row]
+            field\type_word := nsf_name_cell[0][row]
+            field\kind := nsf_kind_cell[0][row]
+            field\model := nsf_ref_cell[0][row]
+            field\pointee := -1
             if: field\kind = 10
-                field\pointee: lm_compiler_nsf_pointee(row)
-            row: row + 1
+                field\pointee := lm_compiler_nsf_pointee(row)
+            row := row + 1
         else:
             if: lm_compiler_schema_field(schema, slot, field) != 0
                 return: (cast: (int) (-1))
         ---
         if: c.lm_compiler_text_same((field\name), name) != 0
             if: occurrence < 0 || occurrence = seen
-                found: slot
+                found := slot
                 if: out != 0
-                    \out: field_storage
+                    \out := field_storage
                 if: occurrence >= 0
                     if: project = 0
                         return: (cast: (int) (found))
                     return: (cast: (int) (lm_compiler_schema_placed(schema, found)))
             ---
-            seen: seen + 1
-        slot: slot + 1
+            seen := seen + 1
+        slot := slot + 1
     ---
     if: project = 0
         return: (cast: (int) (found))
@@ -2009,8 +2009,8 @@ fn: lm_compiler_method_field_count (int: mi) int
         return: (cast: (int) (0))
     while: i < own_n_cell[0]
         if: own_mi_cell[0][i] = mi && own_host_cell[0][i] = 0 && own_fid_cell[0][i] < 0
-            n: n + 1
-        i: i + 1
+            n := n + 1
+        i := i + 1
     ---
     return: (cast: (int) (n))
 end: lm_compiler_method_field_count
@@ -2028,9 +2028,9 @@ fn: lm_compiler_method_field_own (int: mi; int: ordinal) int
         if: own_mi_cell[0][i] = mi && own_host_cell[0][i] = 0 && own_fid_cell[0][i] < 0
             if: seen = ordinal
                 return: (cast: (int) (i))
-            seen: seen + 1
+            seen := seen + 1
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_method_field_own
@@ -2039,7 +2039,7 @@ fn: lm_compiler_method_field_slot (int: schema; int: ordinal) int
     int: own
     if: c.lm_compiler_schema_kind(schema) != 3 || ordinal < 0
         return: (cast: (int) (0 - 1))
-    own: lm_compiler_method_field_own(c.lm_compiler_schema_index(schema), ordinal)
+    own := lm_compiler_method_field_own(c.lm_compiler_schema_index(schema), ordinal)
     if: own < 0
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (lm_compiler_graph_field_child(own)))
@@ -2066,9 +2066,9 @@ fn: lm_compiler_own_res (int: own) int
     int: result c.lm_compiler_mres_of_own(own)
     int: hops 0
     while: result < 0 && own >= 0 && own < own_n_cell[0] && own_decl_cell[0][own] != 0 && lm_compiler_rb_own_of(own_decl_cell[0][own]) >= 0 && hops < own_n_cell[0]
-        own: lm_compiler_rb_own_of(own_decl_cell[0][own])
-        result: c.lm_compiler_mres_of_own(own)
-        hops: hops + 1
+        own := lm_compiler_rb_own_of(own_decl_cell[0][own])
+        result := c.lm_compiler_mres_of_own(own)
+        hops := hops + 1
     ---
     return: (cast: (int) (result))
 end: lm_compiler_own_res
@@ -2082,13 +2082,13 @@ fn: lm_compiler_mres_exec_ns (int: result) int
     int: hops 0
     if: result < 0 || result >= mres_n_cell[0] || mres_code_schema_cell[0] = 0
         return: (cast: (int) (-1))
-    schema: mres_code_schema_cell[0][result]
+    schema := mres_code_schema_cell[0][result]
     while: c.lm_compiler_schema_kind(schema) = 2 && hops < mres_n_cell[0]
-        result: c.lm_compiler_schema_index(schema)
+        result := c.lm_compiler_schema_index(schema)
         if: result < 0 || result >= mres_n_cell[0]
             return: (cast: (int) (-1))
-        schema: mres_code_schema_cell[0][result]
-        hops: hops + 1
+        schema := mres_code_schema_cell[0][result]
+        hops := hops + 1
     ---
     if: c.lm_compiler_schema_kind(schema) = 1 && schema < ns_n_cell[0] && ns_proc_cell[0][schema] >= 0
         return: (cast: (int) (schema))
@@ -2108,12 +2108,12 @@ fn: lm_compiler_input_schema (int: mi; int: k) int
         return: (cast: (int) (lm_compiler_own_schema(own)))
     if: mi < 0 || mi >= m_n_cell[0] || k < m_arity_cell[0][mi] || k >= m_arity_cell[0][mi] + m_dyn_cell[0][mi]
         return: (cast: (int) (c.lm_compiler_input_model(mi, k)))
-    model: c.lm_compiler_cap_arg_ns(mi, k)
+    model := c.lm_compiler_cap_arg_ns(mi, k)
     if: c.lm_compiler_schema_kind(model) != 0
         return: (cast: (int) (model))
     if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, k)) != 0
         return: 0 - 1
-    own: c.lm_compiler_own_lexical(mi, c.lm_compiler_input_name(mi, k))
+    own := c.lm_compiler_own_lexical(mi, c.lm_compiler_input_name(mi, k))
     if: own >= 0
         return: (cast: (int) (lm_compiler_own_schema(own)))
     # No declaration in sight: the coordinate space of the method's paths through the name, where one is
@@ -2129,9 +2129,9 @@ fn: lm_compiler_mrs_row_root (int: r) int
     int: e
     if: r < 0 || r >= mrs_n_cell[0] || mrs_row_cell[0][r] < 0
         return: (cast: (int) (0 - 1))
-    e: nsf_owner_cell[0][mrs_row_cell[0][r]]
+    e := nsf_owner_cell[0][mrs_row_cell[0][r]]
     while: e >= 0 && ns_parent_cell[0][e] >= 0
-        e: ns_parent_cell[0][e]
+        e := ns_parent_cell[0][e]
     ---
     return: (cast: (int) (e))
 end: lm_compiler_mrs_row_root
@@ -2145,7 +2145,7 @@ fn: lm_compiler_mrs_has_root (int: res; int: ni) int
     while: r < mrs_n_cell[0]
         if: mrs_res_cell[0][r] = res && lm_compiler_mrs_row_root(r) = ni
             return: (cast: (int) (1))
-        r: r + 1
+        r := r + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_mrs_has_root
@@ -2165,21 +2165,21 @@ fn: lm_compiler_mrs_operand_reference (int: res) int
     while: q < nsf_n_cell[0]
         if: nsf_kind_cell[0][q] = 10 && (nsf_val_cell[0][q] != 0U || nsf_seed_cell[0][q] > 0)
             if: nsf_seed_cell[0][q] > 0
-                ref: nsf_seed_cell[0][q] - 1
+                ref := nsf_seed_cell[0][q] - 1
             else:
-                ref: (cast: (int) nsf_val_cell[0][q]) - 1
+                ref := (cast: (int) nsf_val_cell[0][q]) - 1
             ---
-            e: nsf_owner_cell[0][q]
+            e := nsf_owner_cell[0][q]
             while: e >= 0 && ns_parent_cell[0][e] >= 0
-                e: ns_parent_cell[0][e]
+                e := ns_parent_cell[0][e]
             ---
             while: ref >= 0 && ns_parent_cell[0][ref] >= 0
-                ref: ns_parent_cell[0][ref]
+                ref := ns_parent_cell[0][ref]
             ---
             if: ref >= 0 && ref < ns_n_cell[0] && e != ref && ns_eternal_cell[0][ref] < 0 && lm_compiler_mrs_has_root(res, e) != 0 && lm_compiler_mrs_has_root(res, ref) != 0
                 return: (cast: (int) (q))
             ---
-        q: q + 1
+        q := q + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_mrs_operand_reference

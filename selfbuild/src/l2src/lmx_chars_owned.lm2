@@ -26,12 +26,12 @@ fn: lmx_chars_new_owned (@: arena c.LmxArena) @: char
     @: chars char 0
     if: arena = 0
         return: 0
-    chars: (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
+    chars := (cast: (@: char) c.lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 256U))
     if: chars = 0
         return: 0
     while: index < 256U
-        chars[index]: (cast: (char) index)
-        index: index + 1U
+        chars[index] := (cast: (char) index)
+        index := index + 1U
     ---
     return: chars
 end: lmx_chars_new_owned

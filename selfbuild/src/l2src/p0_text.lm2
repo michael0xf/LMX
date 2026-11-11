@@ -8,18 +8,18 @@ fn: lm_p0_text_equals (const: (@: text c.LmP0Text); const: (@: value char)) int
     size_t: value_length 0U
     if: text = 0 || value = 0
         return: 0
-    value_length: c.strlen(value)
+    value_length := c.strlen(value)
     return: (cast: (int) (text\length = value_length && c.memcmp(text\data, value, value_length) = 0))
 end: lm_p0_text_equals
 
 fn: lm_p0_identifier_payload (const: (@: atom c.LmP0Text); @: out_payload c.LmP0Text) int
     if: atom = 0 || out_payload = 0 || atom\data = 0
         return: 0
-    out_payload\data: atom\data
-    out_payload\length: atom\length
+    out_payload\data := atom\data
+    out_payload\length := atom\length
     if: atom\length >= 2U && atom\data[0] = 96 && atom\data[atom\length - 1U] = 96
-        out_payload\data: atom\data + 1U
-        out_payload\length: atom\length - 2U
+        out_payload\data := atom\data + 1U
+        out_payload\length := atom\length - 2U
     return: 1
 end: lm_p0_identifier_payload
 
@@ -63,7 +63,7 @@ fn: lm_p0_starts_python_string (const: (@: text char); size_t: byte_count; size_
     char: quote 0
     if: index + 2U >= byte_count
         return: 0
-    quote: text[index]
+    quote := text[index]
     if: quote != 34 && quote != 39
         return: 0
     return: text[index + 1U] = quote && text[index + 2U] = quote
@@ -82,10 +82,10 @@ fn: lm_p0_text_view_new_cstr (const: (@: text char)) @: c.LmP0Text
     if: result = 0
         return: 0
     if: text != 0
-        result\data: text
+        result\data := text
     if: text = 0
-        result\data: ""
-    result\length: c.strlen(result\data)
+        result\data := ""
+    result\length := c.strlen(result\data)
     return: result
 end: lm_p0_text_view_new_cstr
 

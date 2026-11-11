@@ -10,7 +10,7 @@ fn: txt_ndup (@: s char; size_t: n) @: char
         return: 0
     if: n > 0U
         c.memcpy(p, s, n)
-    p[n]: (cast: (char) 0)
+    p[n] := (cast: (char) 0)
     return: p
 end: txt_ndup
 
@@ -28,7 +28,7 @@ fn: txt_cat (@: a char; @: b char) @: char
         c.memcpy(p, a, na)
     if: nb > 0U
         c.memcpy(p + na, b, nb)
-    p[na + nb]: (cast: (char) 0)
+    p[na + nb] := (cast: (char) 0)
     return: p
 end: txt_cat
 
@@ -37,7 +37,7 @@ fn: txt_cat3 (@: a char; @: b char; @: d char) @: char
     @: p char 0
     if: ab = 0
         return: 0
-    p: txt_cat(ab, d)
+    p := txt_cat(ab, d)
     c.free(ab)
     return: p
 end: txt_cat3
@@ -88,11 +88,11 @@ fn: txt_hex (@: s char; size_t: n) @: char
     if: p = 0
         return: 0
     while: i < n
-        b: (cast: (unsigned) s[i]) & 255U
-        p[2U * i]: hex[(cast: (size_t) (b >> 4))]
-        p[2U * i + 1U]: hex[(cast: (size_t) (b & 15U))]
-        i: i + 1U
-    p[2U * n]: (cast: (char) 0)
+        b := (cast: (unsigned) s[i]) & 255U
+        p[2U * i] := hex[(cast: (size_t) (b >> 4))]
+        p[2U * i + 1U] := hex[(cast: (size_t) (b & 15U))]
+        i := i + 1U
+    p[2U * n] := (cast: (char) 0)
     return: p
 end: txt_hex
 
@@ -108,35 +108,35 @@ fn: file_read (@: path char; @: len size_t) @: char
     size_t: got 0U
     if: f = 0
         return: 0
-    buf: c.malloc(cap + 1U)
+    buf := c.malloc(cap + 1U)
     if: buf = 0
         c.fclose(f)
         return: 0
-    got: c.fread(buf, 1U, cap, f)
+    got := c.fread(buf, 1U, cap, f)
     while: got > 0U
-        n: n + got
+        n := n + got
         if: n > text_limit()
             c.printf("TEXT-TOO-LARGE %s (more than %u bytes)\n", path, (cast: (unsigned) text_limit()))
             c.free(buf)
             c.fclose(f)
             return: 0
         if: n = cap
-            grown: (cast: (@: char) c.realloc(buf, 2U * cap + 1U))
+            grown := (cast: (@: char) c.realloc(buf, 2U * cap + 1U))
             if: grown = 0
                 c.free(buf)
                 c.fclose(f)
                 return: 0
-            buf: grown
-            cap: 2U * cap
+            buf := grown
+            cap := 2U * cap
         ---
-        got: c.fread(buf + n, 1U, cap - n, f)
+        got := c.fread(buf + n, 1U, cap - n, f)
     if: c.ferror(f) != 0
         c.free(buf)
         c.fclose(f)
         return: 0
     c.fclose(f)
-    buf[n]: (cast: (char) 0)
-    len[0]: n
+    buf[n] := (cast: (char) 0)
+    len[0] := n
     return: buf
 end: file_read
 
@@ -174,12 +174,12 @@ fn: file_same (@: a char; @: b char) int
     int: r 0
     if: na = 0
         return: -1
-    da: file_read(a, na)
-    db: file_read(b, na + 1U)
+    da := file_read(a, na)
+    db := file_read(b, na + 1U)
     if: da = 0 || db = 0
-        r: -1
+        r := -1
     if: r = 0 && na[0] = na[1] && c.memcmp(da, db, na[0]) = 0
-        r: 1
+        r := 1
     c.free(da)
     c.free(db)
     c.free(na)

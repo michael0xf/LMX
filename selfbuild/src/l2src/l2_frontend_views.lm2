@@ -18,17 +18,17 @@ fn: lm_compiler_head_source_node (const: (@: source_node c.LmP0Node)) const: @: 
     # destroyed (its node addresses may be reused). An empty list answers as the loop would, without the memo.
     if: source_node = 0 || head_expressions_cell[0] = 0
         return: (cast: (const: @: c.LmP0Node) (source_node))
-    known: lm_compiler_hmemo_get(start)
+    known := lm_compiler_hmemo_get(start)
     if: known != 0
         return: (cast: (const: @: c.LmP0Node) (known))
     while: source_node != 0 && found != 0
-        found: 0
-        expression: head_expressions_cell[0]
+        found := 0
+        expression := head_expressions_cell[0]
         while: expression != 0 && found = 0
             if: c.lm_compiler_node_in(c.lm_p0_document_root(expression\document), source_node) != 0
-                source_node: expression\source
-                found: 1
-            expression: expression\allocated_next
+                source_node := expression\source
+                found := 1
+            expression := expression\allocated_next
         ---
     ---
     if: source_node != 0
@@ -41,7 +41,7 @@ fn: lm_compiler_dn (int: mi; int: k) @: c.LmP0Text
     @@: row c.LmP0Text
     if: mi < 0 || k < 0 || m_dn_cell[0][mi] = 0
         return: (cast: (@: c.LmP0Text) (0))
-    row: (cast: (@@: c.LmP0Text) m_dn_cell[0][mi])
+    row := (cast: (@@: c.LmP0Text) m_dn_cell[0][mi])
     return: (cast: (@: c.LmP0Text) (row[k]))
 end: lm_compiler_dn
 
@@ -50,7 +50,7 @@ fn: lm_compiler_dt (int: mi; int: k) int
     @: row int
     if: mi < 0 || k < 0 || m_dt_cell[0] = 0 || m_dt_cell[0][mi] = 0
         return: (cast: (int) (0))
-    row: m_dt_cell[0][mi]
+    row := m_dt_cell[0][mi]
     return: (cast: (int) (row[k]))
 end: lm_compiler_dt
 
@@ -59,8 +59,8 @@ fn: lm_compiler_dn_set (int: mi; int: k; @: v c.LmP0Text) int
     @@: row c.LmP0Text
     if: mi < 0 || k < 0 || m_dn_cell[0][mi] = 0
         return: (cast: (int) (1))
-    row: (cast: (@@: c.LmP0Text) m_dn_cell[0][mi])
-    row[k]: v
+    row := (cast: (@@: c.LmP0Text) m_dn_cell[0][mi])
+    row[k] := v
     return: (cast: (int) (0))
 end: lm_compiler_dn_set
 
@@ -69,8 +69,8 @@ fn: lm_compiler_dt_set (int: mi; int: k; int: v) int
     @: row int
     if: mi < 0 || k < 0 || m_dt_cell[0][mi] = 0
         return: (cast: (int) (1))
-    row: m_dt_cell[0][mi]
-    row[k]: v
+    row := m_dt_cell[0][mi]
+    row[k] := v
     return: (cast: (int) (0))
 end: lm_compiler_dt_set
 
@@ -81,7 +81,7 @@ fn: lm_compiler_ret_tr (const: (@: frame c.LmP0Frame)) @: c.LmP0Structure
     while: i < mad_cap_cell[0]
         if: mad_suppressed_trailer_cell[0] != 0 && mad_suppressed_trailer_cell[0][i] = frame
             return: (cast: (@: c.LmP0Structure) (0))
-        i: i + 1
+        i := i + 1
     return: (cast: (@: c.LmP0Structure) (c.lm_compiler_source_ret_tr(frame)))
 end: lm_compiler_ret_tr
 
@@ -91,7 +91,7 @@ fn: lm_compiler_source_definition_method (int: own) int
     int: mi
     if: own < 0 || own >= own_n_cell[0]
         return: (cast: (int) (-1))
-    mi: c.lm_compiler_method_by_source(own_decl_cell[0][own])
+    mi := c.lm_compiler_method_by_source(own_decl_cell[0][own])
     if: mi < 0 || lm_compiler_m_nsof(mi) >= 0
         return: (cast: (int) (-1))
     return: (cast: (int) (mi))
@@ -125,8 +125,8 @@ fn: lm_compiler_ns_def_free () int
     @@@: ns_def_body_cell c.LmP0Structure (cast: (@@@: c.LmP0Structure) (@ c.l2_ns_def_body))
     c.free((cast: (@: void) ns_def_node_cell[0]))
     c.free((cast: (@: void) ns_def_body_cell[0]))
-    ns_def_node_cell[0]: 0
-    ns_def_body_cell[0]: 0
+    ns_def_node_cell[0] := 0
+    ns_def_body_cell[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_ns_def_free
 
@@ -141,11 +141,11 @@ fn: lm_compiler_ns_loop_body (int: ni; @: nas c.LmP0NodeAs) int
     @: outer c.LmP0Structure
     if: body = 0 || defining = 0
         return: (cast: (int) (1))
-    blk_s: (cast: (@: c.LmP0Structure) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Structure)))
-    blk_as: (cast: (@: c.LmP0NodeAs) c.lm_compiler_xmalloc(c.sizeof(c.LmP0NodeAs)))
-    blk: (cast: (@: c.LmP0Node) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Node)))
-    fld: (cast: (@: c.LmP0Field) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Field)))
-    outer: (cast: (@: c.LmP0Structure) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Structure)))
+    blk_s := (cast: (@: c.LmP0Structure) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Structure)))
+    blk_as := (cast: (@: c.LmP0NodeAs) c.lm_compiler_xmalloc(c.sizeof(c.LmP0NodeAs)))
+    blk := (cast: (@: c.LmP0Node) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Node)))
+    fld := (cast: (@: c.LmP0Field) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Field)))
+    outer := (cast: (@: c.LmP0Structure) c.lm_compiler_xmalloc(c.sizeof(c.LmP0Structure)))
     if: blk_s = 0 || blk_as = 0 || blk = 0 || fld = 0 || outer = 0
         c.lm_compiler_xfree((cast: (@: void) blk_s))
         c.lm_compiler_xfree((cast: (@: void) blk_as))
@@ -158,19 +158,19 @@ fn: lm_compiler_ns_loop_body (int: ni; @: nas c.LmP0NodeAs) int
     c.memset((cast: (@: void) blk), 0, c.sizeof(c.LmP0Node))
     c.memset((cast: (@: void) fld), 0, c.sizeof(c.LmP0Field))
     c.memset((cast: (@: void) outer), 0, c.sizeof(c.LmP0Structure))
-    blk_s\first_field: body\first_field
-    blk_s\last_field: body\last_field
-    blk_s\field_count: body\field_count
-    blk_s\trailer: defining\trailer
-    blk_as\structure: blk_s
-    blk\kind: c.LM_P0_NODE_STRUCTURE
-    blk\as: blk_as
-    blk\span: ns_at_cell[0][ni]\span
-    fld\value: blk
-    outer\first_field: fld
-    outer\last_field: fld
-    outer\field_count: 1U
-    nas\structure: outer
+    blk_s\first_field := body\first_field
+    blk_s\last_field := body\last_field
+    blk_s\field_count := body\field_count
+    blk_s\trailer := defining\trailer
+    blk_as\structure := blk_s
+    blk\kind := c.LM_P0_NODE_STRUCTURE
+    blk\as := blk_as
+    blk\span := ns_at_cell[0][ni]\span
+    fld\value := blk
+    outer\first_field := fld
+    outer\last_field := fld
+    outer\field_count := 1U
+    nas\structure := outer
     return: (cast: (int) (0))
 end: lm_compiler_ns_loop_body
 
@@ -180,10 +180,10 @@ fn: lm_compiler_ns_proc_body_free (int: ni; @: source_node c.LmP0Node) int
     @: block c.LmP0Node
     if: source_node = 0
         return: (cast: (int) (0))
-    outer: source_node\as\structure
+    outer := source_node\as\structure
     if: outer != lm_compiler_ns_defining_body(ni)
-        field: outer\first_field
-        block: field\value
+        field := outer\first_field
+        block := field\value
         c.lm_compiler_xfree((cast: (@: void) block\as\structure))
         c.lm_compiler_xfree((cast: (@: void) block\as))
         c.lm_compiler_xfree((cast: (@: void) block))
@@ -205,18 +205,18 @@ fn: lm_compiler_ns_original_body (int: ni) @: c.LmP0Structure
     @: operand c.LmP0Node
     if: ni < 0 || ni >= ns_n_cell[0]
         return: (cast: (@: c.LmP0Structure) (0))
-    source_node: lm_compiler_ns_defining_node(ni)
-    body: lm_compiler_ns_defining_body(ni)
+    source_node := lm_compiler_ns_defining_node(ni)
+    body := lm_compiler_ns_defining_body(ni)
     if: source_node = 0 || body = 0
         return: (cast: (@: c.LmP0Structure) (0))
-    defining: lm_compiler_ns_defining_frame(ni)
+    defining := lm_compiler_ns_defining_frame(ni)
     if: defining != 0
         # The Structure constructor's name and body are its operands, not its
         # receiver head. Keep the captured producer identities authoritative.
         if: c.lm_compiler_text_eq(defining\head, "()") != 0 && defining\body != 0 && c.lm_compiler_count_active(defining\body) = 2
-            field: c.lm_compiler_next_active(defining\body\first_field)
+            field := c.lm_compiler_next_active(defining\body\first_field)
             @: operand_field c.LmP0Field c.lm_compiler_next_active(field\next)
-            operand: operand_field\value
+            operand := operand_field\value
             if: field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && field\value\as != 0 && field\value\as\atom = ns_name_cell[0][ni] && operand != 0 && operand\kind = c.LM_P0_NODE_STRUCTURE && operand\as != 0 && operand\as\structure = body
                 return: (cast: (@: c.LmP0Structure) (body))
         ---
@@ -237,7 +237,7 @@ fn: lm_compiler_ns_part (int: ni) int
     while: ni >= 0 && part_ns_cell[0] != 0 && k < part_n_cell[0]
         if: part_ns_cell[0][k] = ni
             return: (cast: (int) (k))
-        k: k + 1
+        k := k + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_ns_part
@@ -247,7 +247,7 @@ fn: lm_compiler_ns_top (int: ni) int
     @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
     int: t ni
     while: t >= 0 && t < ns_n_cell[0] && ns_parent_cell[0][t] >= 0
-        t: ns_parent_cell[0][t]
+        t := ns_parent_cell[0][t]
     ---
     return: (cast: (int) (t))
 end: lm_compiler_ns_top
@@ -267,11 +267,11 @@ fn: lm_compiler_own_find_decl (int: mi; const: (@: t c.LmP0Text); const: (@: at 
             if: own_mi_cell[0][i] = mi
                 return: (cast: (int) (i))
         ---
-        i: i + 1
+        i := i + 1
     while: reuse != 0
         if: reuse\source = at && reuse\method = mi && reuse\own >= 0 && reuse\own < own_n_cell[0] && c.lm_compiler_text_same(own_name_cell[0][reuse\own], t) != 0
             return: (cast: (int) (reuse\own))
-        reuse: reuse\allocated_next
+        reuse := reuse\allocated_next
     return: (cast: (int) (-1))
 end: lm_compiler_own_find_decl
 
@@ -281,7 +281,7 @@ fn: lm_compiler_own_source_after (int: row; int: previous) int
     const: (@: before c.LmP0Node 0)
     if: previous < 0
         return: (cast: (int) (1))
-    before: lm_compiler_head_source_node(own_decl_cell[0][previous])
+    before := lm_compiler_head_source_node(own_decl_cell[0][previous])
     if: source != 0 && source\span != 0 && before != 0 && before\span != 0 && source\span\offset != before\span\offset
         return: (cast: (int) (source\span\offset > before\span\offset))
     # Generated/no-span bindings retain their stable existing identity order.
@@ -298,7 +298,7 @@ fn: lm_compiler_own_any (int: mi; const: (@: t c.LmP0Text)) int
     while: i < own_n_cell[0]
         if: own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], t)
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     return: (cast: (int) (-1))
 end: lm_compiler_own_any
 
@@ -310,7 +310,7 @@ fn: lm_compiler_dyn_find (int: mi; const: (@: t c.LmP0Text)) int
     while: i < m_dyn_cell[0][mi]
         if: c.lm_compiler_text_same(lm_compiler_dn(mi, i), t)
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     return: (cast: (int) (-1))
 end: lm_compiler_dyn_find
 
@@ -318,10 +318,10 @@ fn: lm_compiler_param_find (int: mi; const: (@: t c.LmP0Text)) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     int: fi
     int: di
-    fi: c.lm_compiler_formal_find(mi, t)
+    fi := c.lm_compiler_formal_find(mi, t)
     if: fi >= 0
         return: (cast: (int) (fi))
-    di: lm_compiler_dyn_find(mi, t)
+    di := lm_compiler_dyn_find(mi, t)
     if: di >= 0
         return: (cast: (int) (m_arity_cell[0][mi] + di))
     return: (cast: (int) (-1))
@@ -342,10 +342,10 @@ fn: lm_compiler_param_ty (int: mi; const: (@: t c.LmP0Text)) int
     int: di
     if: mi < 0 || t = 0
         return: (cast: (int) (0))
-    fi: c.lm_compiler_formal_find(mi, t)
+    fi := c.lm_compiler_formal_find(mi, t)
     if: fi >= 0
         return: (cast: (int) (c.lm_compiler_ft(mi, fi)))
-    di: lm_compiler_dyn_find(mi, t)
+    di := lm_compiler_dyn_find(mi, t)
     if: di >= 0 && lm_compiler_dt(mi, di) != 0
         return: (cast: (int) (c.lm_compiler_ft_of_own(c.lm_compiler_own_of_dt(lm_compiler_dt(mi, di)))))
     return: (cast: (int) (0))
@@ -355,7 +355,7 @@ fn: lm_compiler_application_actual_empty (const: (@: actual c.L2ApplicationActua
     const: (@: value c.L2ValueSpan)
     if: actual = 0 || signature < 0 || formal < 0 || lm_compiler_nsty_get(signature, formal) < 0
         return: (cast: (int) (0))
-    value: @ actual\value
+    value := @ actual\value
     if: actual\structured != 0 && value\value_n = 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_empty_struct(value\node)))
@@ -374,7 +374,7 @@ fn: lm_compiler_d105_key_field (int: key) int
     int: row
     if: key >= -1 - own_n_cell[0]
         return: (cast: (int) (-1))
-    row: key - c.INT_MIN
+    row := key - c.INT_MIN
     if: row < 0 || row >= nsf_n_cell[0]
         return: (cast: (int) (-1))
     return: (cast: (int) (row))
@@ -396,7 +396,7 @@ fn: lm_compiler_own_self_typed (int: oi) int
     @: d c.LmP0Node
     if: oi < 0 || oi >= own_n_cell[0]
         return: (cast: (int) (0))
-    d: own_decl_cell[0][oi]
+    d := own_decl_cell[0][oi]
     if: d = 0 || d\kind != c.LM_P0_NODE_FRAME || d\as = 0 || d\as\frame = 0 || d\as\frame\head = 0 || d\as\frame\body = 0
         return: (cast: (int) (0))
     if: d\as\frame\trailer != 0 || d\as\frame\body\trailer != 0 || c.lm_compiler_count_active(d\as\frame\body) != 0
@@ -410,7 +410,7 @@ fn: lm_compiler_ns_empty (int: ni) int
     @: at c.LmP0Node
     if: ni < 0 || ni >= ns_n_cell[0]
         return: (cast: (int) (0))
-    at: ns_at_cell[0][ni]
+    at := ns_at_cell[0][ni]
     if: at = 0 || at\kind != c.LM_P0_NODE_FRAME || at\as = 0 || at\as\frame = 0
         return: (cast: (int) (0))
     if: at\as\frame\trailer != 0 && at\as\frame\trailer\spelling != 0 && c.lm_compiler_text_eq(at\as\frame\trailer\spelling, "until") != 0
@@ -434,7 +434,7 @@ fn: lm_compiler_source_materialized (int: fid) @: c.L2SourceContainer
     while: row != 0
         if: row\fid = fid && row\inert = 0
             return: (cast: (@: c.L2SourceContainer) (row))
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (@: c.L2SourceContainer) (0))
 end: lm_compiler_source_materialized
@@ -446,7 +446,7 @@ fn: lm_compiler_source_root (int: mi) @: c.L2SourceContainer
     while: row != 0
         if: row\root != 0 && row\source_mi = mi && ((res >= 0 && row\view_kind = 2 && row\view_index = res) || (res < 0 && row\view_kind = 0 && row\view_index = mi))
             return: (cast: (@: c.L2SourceContainer) (row))
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (@: c.L2SourceContainer) (0))
 end: lm_compiler_source_root
@@ -457,19 +457,19 @@ fn: lm_compiler_source_part_place (int: mi; int: slot) @: c.L2GraphPlace
     @: row c.L2SourceContainer source_containers_cell[0]
     int: part -1
     if: slot = 0
-        part: 3
+        part := 3
     if: slot = 1
-        part: 4
+        part := 4
     if: slot = 2
-        part: 1
+        part := 1
     if: slot = 3
-        part: 2
+        part := 2
     if: part < 0 || (root = 0 && part < 3)
         return: (cast: (@: c.L2GraphPlace) (0))
     while: row != 0
         if: row\source_mi = mi && row\part = part && ((root != 0 && row\view_kind = root\view_kind && row\view_index = root\view_index) || (root = 0 && row\view_kind = 0 && row\view_index = mi))
             return: (cast: (@: c.L2GraphPlace) (row\place))
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (@: c.L2GraphPlace) (0))
 end: lm_compiler_source_part_place
@@ -481,21 +481,21 @@ fn: lm_compiler_source_part_field (int: mi; int: slot; int: own) @: c.L2GraphFie
     @: field c.L2SourceField
     int: part -1
     if: slot = 2
-        part: 1
+        part := 1
     if: slot = 3
-        part: 2
+        part := 2
     if: root = 0 || part < 0 || own < 0
         return: (cast: (@: c.L2GraphField) (0))
     while: row != 0
         if: row\source_mi = mi && row\part = part && row\view_kind = root\view_kind && row\view_index = root\view_index
-            field: row\fields
+            field := row\fields
             while: field != 0
                 if: field\own = own
                     return: (cast: (@: c.L2GraphField) (@ field\place))
-                field: field\next
+                field := field\next
             ---
             return: (cast: (@: c.L2GraphField) (0))
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (@: c.L2GraphField) (0))
 end: lm_compiler_source_part_field
@@ -508,14 +508,14 @@ fn: lm_compiler_source_owns (int: own) int
     @: field c.L2SourceField
     while: row != 0
         if: (row\view_kind = 0 || row\view_kind = 2) && row\inert = 0
-            field: row\fields
+            field := row\fields
             while: field != 0
                 if: field\own = own
                     return: (cast: (int) (1))
-                field: field\next
+                field := field\next
             ---
         ---
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (int) (0))
 end: lm_compiler_source_owns
@@ -526,20 +526,20 @@ fn: lm_compiler_admission_key (int: req; @: source c.L2ReferenceSource; int: mod
     c.memset((cast: (@: void) out), 0, c.sizeof(c.L2AdmissionPlan))
     # Only an actual ADMIT_AS producer can supply this provenance later.
     # A callable-class record has the same carrier but no receiving operation.
-    out\receiving_operation_temp: -1
-    out\requirement: req
-    out\mode: mode
-    out\own: own
-    out\target_method: tmi
-    out\target_key: tk
-    out\source: \source
+    out\receiving_operation_temp := -1
+    out\requirement := req
+    out\mode := mode
+    out\own := own
+    out\target_method := tmi
+    out\target_key := tk
+    out\source := \source
     # A result/ordinary receive has no input port. The caller's exception
     # activation (at_mi) is not a synthetic receiving input or its identity.
     if: tk < 0
-        out\target_method: -1
-        out\target_key: -1
+        out\target_method := -1
+        out\target_key := -1
     if: tmi >= 0 && tk >= 0
-        out\target_symbol: lm_compiler_input_name(tmi, tk)
+        out\target_symbol := lm_compiler_input_name(tmi, tk)
         if: out\target_symbol = 0
             return: (cast: (int) (1))
     ---
@@ -553,7 +553,7 @@ fn: lm_compiler_source_definition_ns (int: own) int
     int: ni
     if: own < 0
         return: (cast: (int) (-1))
-    ni: lm_compiler_own_nsty_get(own)
+    ni := lm_compiler_own_nsty_get(own)
     if: ni < 0 || ni >= ns_n_cell[0] || lm_compiler_ns_original_body(ni) = 0
         return: (cast: (int) (-1))
     if: ns_at_cell[0][ni] != own_decl_cell[0][own]
@@ -568,7 +568,7 @@ fn: lm_compiler_ns_merge_body (int: ns) int
     while: mres_body_ns_cell[0] != 0 && r < mres_n_cell[0]
         if: mres_body_ns_cell[0][r] = ns
             return: (cast: (int) (r))
-        r: r + 1
+        r := r + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_ns_merge_body
@@ -577,7 +577,7 @@ fn: lm_compiler_ns_body_result (int: ns) int
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
     @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
     while: ns >= 0 && ns < ns_n_cell[0] && ns_parent_cell[0][ns] >= 0
-        ns: ns_parent_cell[0][ns]
+        ns := ns_parent_cell[0][ns]
     ---
     return: (cast: (int) (lm_compiler_ns_merge_body(ns)))
 end: lm_compiler_ns_body_result
@@ -595,7 +595,7 @@ fn: lm_compiler_ns_in_body (int: ns) int
     while: ns >= 0 && ns < ns_n_cell[0]
         if: lm_compiler_ns_merge_body(ns) >= 0
             return: (cast: (int) (1))
-        ns: ns_parent_cell[0][ns]
+        ns := ns_parent_cell[0][ns]
     ---
     return: (cast: (int) (0))
 end: lm_compiler_ns_in_body
@@ -607,7 +607,7 @@ fn: lm_compiler_m_nsof (int: mi) int
     while: mi >= 0 && i < ns_n_cell[0]
         if: ns_proc_cell[0][i] = mi
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_m_nsof
@@ -622,7 +622,7 @@ fn: lm_compiler_own_by_decl (int: mi; const: (@: stmt c.LmP0Node)) int
     while: oi < own_n_cell[0]
         if: own_decl_cell[0][oi] = stmt && own_mi_cell[0][oi] = mi
             return: (cast: (int) (oi))
-        oi: oi + 1
+        oi := oi + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_own_by_decl
@@ -636,7 +636,7 @@ fn: lm_compiler_nsty_get (int: mi; int: k) int
     while: i < nsty_n_cell[0]
         if: nsty_mi_cell[0][i] = mi && nsty_k_cell[0][i] = k
             return: (cast: (int) (nsty_ni_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_nsty_get
@@ -658,7 +658,7 @@ fn: lm_compiler_input_symbol_index (int: mi; const: (@: symbol c.LmP0Text)) int
     while: i < m_arity_cell[0][mi] + m_dyn_cell[0][mi]
         if: lm_compiler_input_name(mi, i) = symbol
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     return: (cast: (int) (-1))
 end: lm_compiler_input_symbol_index
 
@@ -680,7 +680,7 @@ fn: lm_compiler_host_formal_seg (int: mi; const: (@: pd char); size_t: off; size
     while: j < m_arity_cell[0][host]
         if: c.lm_compiler_fn(host, j) != 0 && c.lm_compiler_name_is_seg(c.lm_compiler_fn(host, j), pd, off, len) != 0
             return: (cast: (int) (j))
-        j: j + 1
+        j := j + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_host_formal_seg
@@ -696,27 +696,27 @@ fn: lm_compiler_use_receiver_port (const: (@: fact c.L2PathFact); const: (@: rec
     int: row
     if: method = 0 || key = 0
         return: (cast: (int) (2))
-    \method: -1
-    \key: -1
+    \method := -1
+    \key := -1
     if: fact = 0 || receiver = 0 || which < 0 || fact\source_use = 0 || fact\method < 0 || fact\method >= m_n_cell[0]
         return: (cast: (int) (2))
-    target: receiver\method
-    input: receiver\key
+    target := receiver\method
+    input := receiver\key
     if: target < 0 || target >= m_n_cell[0]
         return: (cast: (int) (2))
     if: receiver\input_symbol != 0
-        input: lm_compiler_input_symbol_index(target, (cast: (const: @: c.LmP0Text) (receiver\input_symbol)))
+        input := lm_compiler_input_symbol_index(target, (cast: (const: @: c.LmP0Text) (receiver\input_symbol)))
         if: input < 0
             return: (cast: (int) (2))
         ---
     else:
         if: input >= 0
             return: (cast: (int) (2))
-        own: lm_compiler_d105_key_own(input)
-        row: lm_compiler_d105_key_field(input)
+        own := lm_compiler_d105_key_own(input)
+        row := lm_compiler_d105_key_field(input)
         if: input != -1 && own < 0 && row < 0
             return: (cast: (int) (2))
-        target: lm_compiler_d105_key_method(target, input)
+        target := lm_compiler_d105_key_method(target, input)
         if: target < 0 || target >= m_n_cell[0]
             return: (cast: (int) (2))
         ---
@@ -730,21 +730,21 @@ fn: lm_compiler_use_receiver_port (const: (@: fact c.L2PathFact); const: (@: rec
         # have their own existing formation edges, not a positional guess.
         if: input < 0 || input >= m_arity_cell[0][target]
             return: (cast: (int) (2))
-        selector: lm_compiler_input_symbol_index((cast: (int) (fact\method)), (cast: (const: @: c.LmP0Text) (receiver\selector_symbol)))
+        selector := lm_compiler_input_symbol_index((cast: (int) (fact\method)), (cast: (const: @: c.LmP0Text) (receiver\selector_symbol)))
         if: selector < 0 || lm_compiler_cfr_has((cast: (int) (fact\method)), selector, -1) != 0
             return: (cast: (int) (2))
-        count: lm_compiler_cfl_count((cast: (int) (fact\method)), selector)
+        count := lm_compiler_cfl_count((cast: (int) (fact\method)), selector)
         if: count = 0
             return: (cast: (int) (2))
         if: which >= count
             return: (cast: (int) (1))
-        target: lm_compiler_cfl_at((cast: (int) (fact\method)), selector, which)
+        target := lm_compiler_cfl_at((cast: (int) (fact\method)), selector, which)
         if: target < 0 || target >= m_n_cell[0] || input >= m_arity_cell[0][target] || lm_compiler_input_name(target, input) = 0
             return: (cast: (int) (2))
         ---
     ---
-    \method: target
-    \key: input
+    \method := target
+    \key := input
     return: (cast: (int) (0))
 end: lm_compiler_use_receiver_port
 
@@ -764,54 +764,54 @@ fn: lm_compiler_path_facts_dump (const: (@: path char)) int
     int: bad 0
     if: path = 0 || path[0] = 0 || fact = 0
         return: (cast: (int) (0))
-    out: c.fopen(path, "ab")
+    out := c.fopen(path, "ab")
     if: out = 0
         return: (cast: (int) (1))
     if: c.fprintf(out, "path-observations 4 (not a complete Consumer)\n") < 0
-        bad: 1
+        bad := 1
     while: fact != 0
-        observed: @ fact\resolved
-        scopes: 0
+        observed := @ fact\resolved
+        scopes := 0
         if: fact\use_site != 0
-            scopes: fact\use_site\scope_count
+            scopes := fact\use_site\scope_count
         if: c.fprintf(out, "source-use=%d stage=%d scopes=%d roles=%d\n", fact\source_use, fact\stage, scopes, fact\use_roles) < 0
-            bad: 1
+            bad := 1
         if: c.fprintf(out, "fact method=%d source_method=%d source=%p root=%d:%d formal=%d own=%d schema=%d:%d input=%d fail=%d:%d n=%d names=%d indexed=%d bytes=%zu text=", fact\method, fact\source_method, (cast: (@: void) fact\source), observed\root_kind, observed\root, observed\fi, observed\oi, observed\ni, observed\res, observed\model_input, observed\fail_seg, observed\fail_why, observed\n, observed\names, observed\indexed, observed\length) < 0 || c.fwrite(observed\text, 1U, observed\length, out) != observed\length || c.fprintf(out, "\n") < 0
-            bad: 1
+            bad := 1
         if: c.fprintf(out, "binding-input=%p current-input=%d\n", (cast: (@: void) fact\input_symbol), lm_compiler_input_symbol_index((cast: (int) (fact\method)), (cast: (const: @: c.LmP0Text) (fact\input_symbol)))) < 0
-            bad: 1
-        receiver: fact\receivers
+            bad := 1
+        receiver := fact\receivers
         while: receiver != 0
             if: c.fprintf(out, "receiving method=%d key=%d current-input=%d selector=%d site=%p\n", (cast: (int) (receiver\method)), (cast: (int) (receiver\key)), lm_compiler_input_symbol_index((cast: (int) (receiver\method)), (cast: (const: @: c.LmP0Text) (receiver\input_symbol))), lm_compiler_input_symbol_index((cast: (int) (fact\method)), (cast: (const: @: c.LmP0Text) (receiver\selector_symbol))), (cast: (@: void) receiver\site)) < 0
-                bad: 1
-            port: 0
+                bad := 1
+            port := 0
             while: 1
-                port_status: lm_compiler_use_receiver_port(fact, receiver, port, @ port_method, @ port_key)
+                port_status := lm_compiler_use_receiver_port(fact, receiver, port, @ port_method, @ port_key)
                 if: port_status = 1
                     break
                 if: c.fprintf(out, "receiving-port index=%d status=%d method=%d key=%d\n", port, port_status, port_method, port_key) < 0
-                    bad: 1
+                    bad := 1
                 if: port_status != 0
                     break
                 if: port = c.INT_MAX
-                    bad: 1
+                    bad := 1
                     break
-                port: port + 1
+                port := port + 1
             ---
-            receiver: receiver\next
+            receiver := receiver\next
         ---
-        i: 0
+        i := 0
         while: i < observed\n
-            step: observed\steps + i
+            step := observed\steps + i
             const: (@: index_view c.L2ValueSpan (cast: (const: @: c.L2ValueSpan) (@ step\index)))
             if: c.fprintf(out, "step=%d locus=%d kind=%d row=%d nsrow=%d own=%d ns=%d ent=%d pointee=%d model=%d context=%d origin=%d input=%d element=%d:%d index_count=%d address_ft=%d cell_const=%d\n", i, step\locus, step\kind, step\row, step\nsrow, step\own, step\ns, step\ent, step\pointee, step\view_model, step\model_context, step\model_step, step\model_input, step\elem_ty, step\elem_model, (index_view\count), step\address_ft, step\cell_const) < 0
-                bad: 1
-            i: i + 1
+                bad := 1
+            i := i + 1
         ---
-        fact: fact\next
+        fact := fact\next
     ---
     if: c.fclose(out) != 0
-        bad: 1
+        bad := 1
     return: (cast: (int) (bad))
 end: lm_compiler_path_facts_dump
 
@@ -841,25 +841,25 @@ fn: lm_compiler_fn_defined (const: (@: fn_node c.LmP0Node)) int
     if: fn_node = 0 || fn_node\as = 0 || fn_node\as\frame = 0
         return: (cast: (int) (0))
     if: c.lm_compiler_frame_head(fn_node, "sub")
-        is_sub: 1
+        is_sub := 1
     if: c.lm_compiler_frame_head(fn_node, "fn") = 0 && is_sub = 0
         return: (cast: (int) (0))
     if: lm_compiler_ret_tr((cast: (const: @: c.LmP0Frame) (fn_node\as\frame))) != 0
         return: (cast: (int) (1))
     if: fn_node\as\frame\body = 0
         return: (cast: (int) (0))
-    field: c.lm_compiler_next_active(fn_node\as\frame\body\first_field)
+    field := c.lm_compiler_next_active(fn_node\as\frame\body\first_field)
     if: field = 0
         return: (cast: (int) (0))
-    field: c.lm_compiler_next_active(field\next)
+    field := c.lm_compiler_next_active(field\next)
     if: field = 0
         return: (cast: (int) (0))
     if: is_sub = 0
-        field: c.lm_compiler_next_active(field\next)
+        field := c.lm_compiler_next_active(field\next)
         if: field = 0
             return: (cast: (int) (0))
         ---
-    field: c.lm_compiler_next_active(field\next)
+    field := c.lm_compiler_next_active(field\next)
     if: field = 0 || field\value = 0
         return: (cast: (int) (0))
     if: field\value\kind != c.LM_P0_NODE_STRUCTURE || field\value\as = 0
@@ -875,24 +875,24 @@ fn: lm_compiler_items_defined_fn (const: (@: body c.LmP0Structure); const: (@: s
     @: nm c.LmP0Text
     if: body = 0 || name = 0
         return: (cast: (@: c.LmP0Node) (0))
-    field: c.lm_compiler_next_active(body\first_field)
+    field := c.lm_compiler_next_active(body\first_field)
     while: field != 0
-        item: field\value
+        item := field\value
         if: item != self && (c.lm_compiler_frame_head(item, "fn") != 0 || c.lm_compiler_frame_head(item, "sub") != 0)
-            nm: c.lm_compiler_os_fn_name(item)
+            nm := c.lm_compiler_os_fn_name(item)
             if: nm != 0 && c.lm_compiler_text_same(nm, name) != 0 && lm_compiler_fn_defined(item) != 0
                 return: (cast: (@: c.LmP0Node) (item))
             ---
         ---
         if: c.lm_compiler_text_eq(c.lm_compiler_app_head(item), "os") != 0
-            branch: c.lm_compiler_os_selected_branch(item)
+            branch := c.lm_compiler_os_selected_branch(item)
             if: branch != 0 && branch\as != 0 && branch\as\frame != 0
-                found: lm_compiler_items_defined_fn((cast: (const: @: c.LmP0Structure) (branch\as\frame\body)), self, name)
+                found := lm_compiler_items_defined_fn((cast: (const: @: c.LmP0Structure) (branch\as\frame\body)), self, name)
                 if: found != 0
                     return: (cast: (@: c.LmP0Node) (found))
             ---
         ---
-        field: c.lm_compiler_next_active(field\next)
+        field := c.lm_compiler_next_active(field\next)
     ---
     return: (cast: (@: c.LmP0Node) (0))
 end: lm_compiler_items_defined_fn
@@ -924,7 +924,7 @@ fn: lm_compiler_cfr_has (int: c; int: t; int: m) int
     while: i < cfr_n_cell[0]
         if: cfr_c_cell[0][i] = c && cfr_t_cell[0][i] = t && cfr_m_cell[0][i] = m
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_cfr_has
@@ -939,7 +939,7 @@ fn: lm_compiler_cfr_origin_of (int: c; int: t; int: m) int
     while: i < cfr_n_cell[0]
         if: cfr_c_cell[0][i] = c && cfr_t_cell[0][i] = t && cfr_m_cell[0][i] = m
             return: (cast: (int) (cfr_origin_cell[0][i]))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_cfr_origin_of
@@ -954,7 +954,7 @@ fn: lm_compiler_cfr_any_built (int: c; int: t) int
     while: i < cfr_n_cell[0]
         if: cfr_c_cell[0][i] = c && cfr_t_cell[0][i] = t && cfr_m_cell[0][i] >= 0 && (cfr_origin_cell[0][i] & 2) != 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0))
 end: lm_compiler_cfr_any_built
@@ -968,8 +968,8 @@ fn: lm_compiler_cfl_count (int: c; int: t) int
     int: n 0
     while: i < cfr_n_cell[0]
         if: cfr_c_cell[0][i] = c && cfr_t_cell[0][i] = t && cfr_m_cell[0][i] >= 0
-            n: n + 1
-        i: i + 1
+            n := n + 1
+        i := i + 1
     ---
     return: (cast: (int) (n))
 end: lm_compiler_cfl_count
@@ -984,9 +984,9 @@ fn: lm_compiler_cfl_at (int: c; int: t; int: k) int
         if: cfr_c_cell[0][i] = c && cfr_t_cell[0][i] = t && cfr_m_cell[0][i] >= 0
             if: k = 0
                 return: (cast: (int) (cfr_m_cell[0][i]))
-            k: k - 1
+            k := k - 1
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_cfl_at
@@ -999,11 +999,11 @@ fn: lm_compiler_anchor_own_layout (int: own) int
     @: source c.L2ReferenceSource
     if: own < 0 || own >= own_n_cell[0] || mres_source_cell[0] = 0
         return: (cast: (int) (0 - 1))
-    res: lm_compiler_mres_of_own(own)
+    res := lm_compiler_mres_of_own(own)
     if: res < 0
         return: (cast: (int) (0 - 1))
-    source: @ mres_source_cell[0][res]
-    ly: source\layout
+    source := @ mres_source_cell[0][res]
+    ly := source\layout
     if: ly != -1 && c.lm_compiler_schema_kind(ly) = 1
         return: (cast: (int) (ly))
     return: (cast: (int) (0 - 1))
@@ -1035,7 +1035,7 @@ fn: lm_compiler_sig_takes (int: cand; int: arity; int: ret; int: req) int
     while: j < arity
         if: cand < 0 || c.lm_compiler_ft(cand, j) != c.lm_compiler_ft(req, j)
             return: (cast: (int) (0))
-        j: j + 1
+        j := j + 1
     return: (cast: (int) (1))
 end: lm_compiler_sig_takes
 
@@ -1098,7 +1098,7 @@ fn: lm_compiler_rw_param_own (const: (@: decl c.LmP0Node)) int
     while: oi < own_n_cell[0]
         if: own_decl_cell[0][oi] = decl && own_mi_cell[0][oi] = rw_mi_cell[0]
             return: (cast: (int) (oi))
-        oi: oi + 1
+        oi := oi + 1
     ---
     return: (cast: (int) (0 - 1))
 end: lm_compiler_rw_param_own
@@ -1116,8 +1116,8 @@ fn: lm_compiler_method_depth (int: r) int
     int: d 0
     int: m lm_compiler_mad_host_of(r)
     while: m >= 0 && d <= m_n_cell[0]
-        d: d + 1
-        m: lm_compiler_mad_host_of(m)
+        d := d + 1
+        m := lm_compiler_mad_host_of(m)
     ---
     return: (cast: (int) (d))
 end: lm_compiler_method_depth
@@ -1152,7 +1152,7 @@ fn: lm_compiler_source_part_row (int: mi; int: part) @: c.L2SourceContainer
     while: row != 0
         if: row\source_mi = mi && row\part = part && ((root != 0 && row\view_kind = root\view_kind && row\view_index = root\view_index) || (root = 0 && row\view_kind = 0 && row\view_index = mi))
             return: (cast: (@: c.L2SourceContainer) (row))
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: (cast: (@: c.L2SourceContainer) (0))
 end: lm_compiler_source_part_row
@@ -1162,9 +1162,9 @@ fn: lm_compiler_mad_node_arity (int: mi) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: mad_model_cell int (cast: (@@: int) (@ c.l2_mad_model))
     int: arity
-    arity: c.lm_compiler_mad_hdr_arity(mi)
+    arity := c.lm_compiler_mad_hdr_arity(mi)
     if: arity < 1 && m_ret_cell[0][mi] != 16
-        arity: m_arity_cell[0][mad_model_cell[0][mi]]
+        arity := m_arity_cell[0][mad_model_cell[0][mi]]
     return: (cast: (int) (arity))
 end: lm_compiler_mad_node_arity
 
@@ -1174,7 +1174,7 @@ fn: lm_compiler_mad_held_model (int: oi) int
     int: host
     if: oi < 0 || lm_compiler_mad_store_stmt(own_decl_cell[0][oi]) = 0
         return: (cast: (int) (0 - 1))
-    host: c.lm_compiler_store_host(own_decl_cell[0][oi])
+    host := c.lm_compiler_store_host(own_decl_cell[0][oi])
     if: host < 0 || lm_compiler_mad_on(host) = 0
         return: (cast: (int) (0 - 1))
     return: (cast: (int) (mad_model_cell[0][host]))
@@ -1192,17 +1192,17 @@ fn: lm_compiler_schema_token_slot (int: schema) int
     # constructor-origin projection. Only retained physical evidence follows
     # a copy;its receiving Model/schema is never a physical substitute.
     while: c.lm_compiler_schema_kind(schema) = 2
-        result: c.lm_compiler_schema_index(schema)
+        result := c.lm_compiler_schema_index(schema)
         if: result < 0 || result >= mres_n_cell[0] || followed >= mres_n_cell[0]
             return: (cast: (int) (-1))
         if: mres_source_cell[0] = 0
             break
         @: selected_source c.L2ReferenceSource (mres_source_cell[0] + result)
-        physical: selected_source\layout
+        physical := selected_source\layout
         if: physical = -1
             break
-        schema: physical
-        followed: followed + 1
+        schema := physical
+        followed := followed + 1
     ---
     # A method occurrence has no layout-token cell. Callers fail closed.
     if: c.lm_compiler_schema_kind(schema) = 3
@@ -1216,7 +1216,7 @@ fn: lm_compiler_schema_method (int: mi) int
     int: ns
     if: mi < 0
         return: (cast: (int) (0 - 1))
-    ns: lm_compiler_m_nsof(mi)
+    ns := lm_compiler_m_nsof(mi)
     if: ns >= 0
         return: (cast: (int) (ns))
     return: (cast: (int) ((0 - 1500000000) - mi))
@@ -1231,7 +1231,7 @@ fn: lm_compiler_mres_of_own (int: own) int
     while: i < mres_n_cell[0]
         if: mres_own_cell[0][i] = own
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     ---
     return: (cast: (int) (-1))
 end: lm_compiler_mres_of_own
@@ -1257,13 +1257,13 @@ fn: lm_compiler_hmemo_get (const: (@: at c.LmP0Node)) @: c.LmP0Node
     int: i
     if: at = 0 || n_cell[0] = 0 || key_cell[0] = 0 || cap_cell[0] <= 0
         return: (cast: (@: c.LmP0Node) (0))
-    i: lm_compiler_hmemo_slot(at, cap_cell[0])
+    i := lm_compiler_hmemo_slot(at, cap_cell[0])
     while: key_cell[0][i] != 0
         if: key_cell[0][i] = at
             return: (cast: (@: c.LmP0Node) (val_cell[0][i]))
-        i: i + 1
+        i := i + 1
         if: i >= cap_cell[0]
-            i: 0
+            i := 0
     ---
     return: (cast: (@: c.LmP0Node) (0))
 end: lm_compiler_hmemo_get
@@ -1280,33 +1280,33 @@ fn: lm_compiler_hmemo_grow () int
     int: i 0
     int: j
     if: old_cap > 0
-        cap: old_cap * 2
-    key_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+        cap := old_cap * 2
+    key_cell[0] := (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
     if: key_cell[0] = 0
-        key_cell[0]: old_key
+        key_cell[0] := old_key
         return: (cast: (int) (1))
-    val_cell[0]: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
+    val_cell[0] := (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc((cast: (size_t) cap) * sizeof(@: void)))
     if: val_cell[0] = 0
         c.lm_compiler_xfree((cast: (@: void) key_cell[0]))
-        key_cell[0]: old_key
-        val_cell[0]: old_val
+        key_cell[0] := old_key
+        val_cell[0] := old_val
         return: (cast: (int) (1))
     c.memset((cast: (@: void) key_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
     c.memset((cast: (@: void) val_cell[0]), 0, (cast: (size_t) cap) * sizeof(@: void))
-    cap_cell[0]: cap
-    n_cell[0]: 0
+    cap_cell[0] := cap
+    n_cell[0] := 0
     while: i < old_cap
         if: old_key[i] != 0
-            j: lm_compiler_hmemo_slot(old_key[i], cap)
+            j := lm_compiler_hmemo_slot(old_key[i], cap)
             while: key_cell[0][j] != 0
-                j: j + 1
+                j := j + 1
                 if: j >= cap
-                    j: 0
+                    j := 0
             ---
-            key_cell[0][j]: old_key[i]
-            val_cell[0][j]: old_val[i]
-            n_cell[0]: n_cell[0] + 1
-        i: i + 1
+            key_cell[0][j] := old_key[i]
+            val_cell[0][j] := old_val[i]
+            n_cell[0] := n_cell[0] + 1
+        i := i + 1
     ---
     if: old_key != 0
         c.lm_compiler_xfree((cast: (@: void) old_key))
@@ -1327,16 +1327,16 @@ fn: lm_compiler_hmemo_put (const: (@: at c.LmP0Node); @: value c.LmP0Node) int
         if: lm_compiler_hmemo_grow() != 0
             return: (cast: (int) (1))
         ---
-    i: lm_compiler_hmemo_slot(at, cap_cell[0])
+    i := lm_compiler_hmemo_slot(at, cap_cell[0])
     while: key_cell[0][i] != 0 && key_cell[0][i] != at
-        i: i + 1
+        i := i + 1
         if: i >= cap_cell[0]
-            i: 0
+            i := 0
     ---
     if: key_cell[0][i] = 0
-        key_cell[0][i]: (cast: (@: c.LmP0Node) at)
-        n_cell[0]: n_cell[0] + 1
-    val_cell[0][i]: value
+        key_cell[0][i] := (cast: (@: c.LmP0Node) at)
+        n_cell[0] := n_cell[0] + 1
+    val_cell[0][i] := value
     return: (cast: (int) (0))
 end: lm_compiler_hmemo_put
 
@@ -1348,7 +1348,7 @@ fn: lm_compiler_data_binding_source (int: own) int
     while: row != 0
         if: row\binding = own
             return: row\source
-        row: row\allocated_next
+        row := row\allocated_next
     ---
     return: own
 end: lm_compiler_data_binding_source

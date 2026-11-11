@@ -43,7 +43,7 @@ fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: cou
     @: backing void 0
     if: arena = 0 || element_type = c.LMX_TYPE_NONE
         return: 0
-    stride: sizeof(@: void)
+    stride := sizeof(@: void)
     # k.4: ARRAY_OF_METHOD is gone with LmxMethod -- any other type is refused.
     if: base_type != c.LMX_TYPE_ARRAY_OF_LMX && base_type != c.LMX_TYPE_ARRAY_OF_DESC
         return: 0
@@ -52,24 +52,24 @@ fn: lmx_array_ref_new_physical_profiled (@: parent c.Lmx; int: type; size_t: cou
     # The descriptor is one cell of the array of Array descriptors of this type; the
     # backing is `count` consecutive pointer cells of the array of that element type.
     # Both are the arena's arrays: found if the arena has them, made here if it does not.
-    desc: (cast: (@: LmxArray) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+    desc := (cast: (@: LmxArray) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
     if: desc = 0
         return: 0
-    desc\parent: parent
-    desc\native: 0
+    desc\parent := parent
+    desc\native := 0
     # The header's by-value VoidArray is written through its address.
-    array: @ desc\array
-    array\size: count
-    array\data: 0
+    array := @ desc\array
+    array\size := count
+    array\data := 0
     if: count != 0U
-        backing: (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_REF, element_type, array_profile, count))
+        backing := (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_REF, element_type, array_profile, count))
         if: backing = 0
             return: 0
         # The cells of this backing are this Array's slots: the shared REF interval records their owner first, so a
         # slot cell alone recovers (holder, slot) (lmx_range_slot_holder; design 4.4); a refusal leaves no backing.
         if: c.lmx_range_slot_owner_set(arena, backing, count, (cast: (@: c.Lmx) desc)) != 0
             return: 0
-        array\data: backing
+        array\data := backing
     ---
     return: desc
 end: lmx_array_ref_new_physical_profiled

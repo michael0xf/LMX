@@ -12,7 +12,7 @@ fn: win_arg_plain (@: arg char) int
     while: i < n
         if: arg[i] = (cast: (char) 32) || arg[i] = (cast: (char) 9) || arg[i] = (cast: (char) 10) || arg[i] = (cast: (char) 11) || arg[i] = (cast: (char) 34)
             return: 0
-        i: i + 1U
+        i := i + 1U
     return: 1
 end: win_arg_plain
 
@@ -20,8 +20,8 @@ end: win_arg_plain
 fn: win_backslashes (@: out char; size_t: o; size_t: k) size_t
     size_t: i 0U
     while: i < k
-        out[o + i]: (cast: (char) 92)
-        i: i + 1U
+        out[o + i] := (cast: (char) 92)
+        i := i + 1U
     return: o + k
 end: win_backslashes
 
@@ -32,28 +32,28 @@ fn: win_quote_into (@: out char; size_t: o; @: arg char) size_t
     size_t: bs 0U
     if: win_arg_plain(arg) != 0
         while: i < n
-            out[o + i]: arg[i]
-            i: i + 1U
+            out[o + i] := arg[i]
+            i := i + 1U
         return: o + n
-    out[o]: (cast: (char) 34)
-    o: o + 1U
+    out[o] := (cast: (char) 34)
+    o := o + 1U
     while: i < n
-        bs: 0U
+        bs := 0U
         while: i < n && arg[i] = (cast: (char) 92)
-            bs: bs + 1U
-            i: i + 1U
+            bs := bs + 1U
+            i := i + 1U
         if: i = n
-            o: win_backslashes(out, o, 2U * bs)
+            o := win_backslashes(out, o, 2U * bs)
         if: i < n && arg[i] = (cast: (char) 34)
-            o: win_backslashes(out, o, 2U * bs + 1U)
+            o := win_backslashes(out, o, 2U * bs + 1U)
         if: i < n && arg[i] != (cast: (char) 34)
-            o: win_backslashes(out, o, bs)
+            o := win_backslashes(out, o, bs)
         if: i < n
-            out[o]: arg[i]
-            o: o + 1U
-            i: i + 1U
+            out[o] := arg[i]
+            o := o + 1U
+            i := i + 1U
     ---
-    out[o]: (cast: (char) 34)
+    out[o] := (cast: (char) 34)
     return: o + 1U
 end: win_quote_into
 
@@ -64,18 +64,18 @@ fn: win_cmdline (@@: argv char; int: argc) @: char
     int: i 0
     @: out char 0
     while: i < argc
-        need: need + 2U * (cast: (size_t) c.strlen(argv[i])) + 3U
-        i: i + 1
-    out: c.malloc(need)
+        need := need + 2U * (cast: (size_t) c.strlen(argv[i])) + 3U
+        i := i + 1
+    out := c.malloc(need)
     if: out = 0
         return: 0
-    i: 0
+    i := 0
     while: i < argc
         if: i > 0
-            out[o]: (cast: (char) 32)
-            o: o + 1U
-        o: win_quote_into(out, o, argv[i])
-        i: i + 1
-    out[o]: (cast: (char) 0)
+            out[o] := (cast: (char) 32)
+            o := o + 1U
+        o := win_quote_into(out, o, argv[i])
+        i := i + 1
+    out[o] := (cast: (char) 0)
     return: out
 end: win_cmdline

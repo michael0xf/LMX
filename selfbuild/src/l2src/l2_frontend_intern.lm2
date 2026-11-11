@@ -45,35 +45,35 @@ fn: lm_compiler_intern_reserve (unsigned: need) int
     @@: nhty int 0
     if: need <= cell_intern_cap[0]
         return: (cast: (int) (0))
-    need_u: (cast: (size_t) need)
-    cap: (cast: (size_t) cell_intern_cap[0])
+    need_u := (cast: (size_t) need)
+    cap := (cast: (size_t) cell_intern_cap[0])
     if: cap < 1U
-        cap: 4U
+        cap := 4U
     while: cap < need_u
         if: cap > ((cast: (size_t) -1) / 2U)
-            cell_alloc_err[0]: 2
+            cell_alloc_err[0] := 2
             return: (cast: (int) (1))
-        cap: cap * 2U
+        cap := cap * 2U
     if: cap > (cast: (size_t) (cast: (unsigned) -1))
-        cap: need_u
-    psz: sizeof(@: char)
+        cap := need_u
+    psz := sizeof(@: char)
     if: c.lm_compiler_mul_ok(cap, psz) = 0 || c.lm_compiler_mul_ok(cap, (cast: (size_t) (c.sizeof(c.int)))) = 0
-        cell_alloc_err[0]: 2
+        cell_alloc_err[0] := 2
         return: (cast: (int) (1))
-    nbp: cap * psz
-    nbi: cap * c.sizeof(c.int)
-    cell_alloc_kind[0]: 7
-    nar: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
-    ndyn: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
-    nret: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
-    nthrows: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
-    ntmi: (cast: (@: int) c.lm_compiler_xmalloc(nbi))
-    nn: (cast: (@@: char) c.lm_compiler_xmalloc(nbp))
-    nnl: (cast: (@@: size_t) c.lm_compiler_xmalloc(nbp))
-    nty: (cast: (@@: int) c.lm_compiler_xmalloc(nbp))
-    nhn: (cast: (@@: char) c.lm_compiler_xmalloc(nbp))
-    nhnl: (cast: (@@: size_t) c.lm_compiler_xmalloc(nbp))
-    nhty: (cast: (@@: int) c.lm_compiler_xmalloc(nbp))
+    nbp := cap * psz
+    nbi := cap * c.sizeof(c.int)
+    cell_alloc_kind[0] := 7
+    nar := (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    ndyn := (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    nret := (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    nthrows := (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    ntmi := (cast: (@: int) c.lm_compiler_xmalloc(nbi))
+    nn := (cast: (@@: char) c.lm_compiler_xmalloc(nbp))
+    nnl := (cast: (@@: size_t) c.lm_compiler_xmalloc(nbp))
+    nty := (cast: (@@: int) c.lm_compiler_xmalloc(nbp))
+    nhn := (cast: (@@: char) c.lm_compiler_xmalloc(nbp))
+    nhnl := (cast: (@@: size_t) c.lm_compiler_xmalloc(nbp))
+    nhty := (cast: (@@: int) c.lm_compiler_xmalloc(nbp))
     if: nar = 0 || ndyn = 0 || nret = 0 || nthrows = 0 || ntmi = 0 || nn = 0 || nnl = 0 || nty = 0 || nhn = 0 || nhnl = 0 || nhty = 0
         if: nar != 0
             c.lm_compiler_xfree((cast: (@: void) nar))
@@ -109,20 +109,20 @@ fn: lm_compiler_intern_reserve (unsigned: need) int
     c.memset((cast: (@: void) nhn), 0, nbp)
     c.memset((cast: (@: void) nhnl), 0, nbp)
     c.memset((cast: (@: void) nhty), 0, nbp)
-    i: 0U
+    i := 0U
     while: i < cell_intern_n[0]
-        nar[i]: cell_it_ar[0][i]
-        ndyn[i]: cell_it_dyn[0][i]
-        nret[i]: cell_it_ret[0][i]
-        nthrows[i]: cell_it_throws[0][i]
-        ntmi[i]: cell_it_tmi[0][i]
-        nn[i]: cell_it_n[0][i]
-        nnl[i]: cell_it_nl[0][i]
-        nty[i]: cell_it_ty[0][i]
-        nhn[i]: cell_it_hn[0][i]
-        nhnl[i]: cell_it_hnl[0][i]
-        nhty[i]: cell_it_hty[0][i]
-        i: i + 1U
+        nar[i] := cell_it_ar[0][i]
+        ndyn[i] := cell_it_dyn[0][i]
+        nret[i] := cell_it_ret[0][i]
+        nthrows[i] := cell_it_throws[0][i]
+        ntmi[i] := cell_it_tmi[0][i]
+        nn[i] := cell_it_n[0][i]
+        nnl[i] := cell_it_nl[0][i]
+        nty[i] := cell_it_ty[0][i]
+        nhn[i] := cell_it_hn[0][i]
+        nhnl[i] := cell_it_hnl[0][i]
+        nhty[i] := cell_it_hty[0][i]
+        i := i + 1U
     if: cell_it_ar[0] != 0
         c.lm_compiler_xfree((cast: (@: void) cell_it_ar[0]))
     if: cell_it_dyn[0] != 0
@@ -145,18 +145,18 @@ fn: lm_compiler_intern_reserve (unsigned: need) int
         c.lm_compiler_xfree((cast: (@: void) cell_it_hnl[0]))
     if: cell_it_hty[0] != 0
         c.lm_compiler_xfree((cast: (@: void) cell_it_hty[0]))
-    cell_it_ar[0]: nar
-    cell_it_dyn[0]: ndyn
-    cell_it_ret[0]: nret
-    cell_it_throws[0]: nthrows
-    cell_it_tmi[0]: ntmi
-    cell_it_n[0]: nn
-    cell_it_nl[0]: nnl
-    cell_it_ty[0]: nty
-    cell_it_hn[0]: nhn
-    cell_it_hnl[0]: nhnl
-    cell_it_hty[0]: nhty
-    cell_intern_cap[0]: (cast: (unsigned) cap)
+    cell_it_ar[0] := nar
+    cell_it_dyn[0] := ndyn
+    cell_it_ret[0] := nret
+    cell_it_throws[0] := nthrows
+    cell_it_tmi[0] := ntmi
+    cell_it_n[0] := nn
+    cell_it_nl[0] := nnl
+    cell_it_ty[0] := nty
+    cell_it_hn[0] := nhn
+    cell_it_hnl[0] := nhnl
+    cell_it_hty[0] := nhty
+    cell_intern_cap[0] := (cast: (unsigned) cap)
     return: (cast: (int) (0))
 end: lm_compiler_intern_reserve
 
@@ -176,9 +176,9 @@ fn: lm_compiler_intern_match (unsigned: s; int: ar; const: (@: n0 char); size_t:
     # The proof helper stores the ordinary int-return/no-throw contract.
     if: s >= cell_intern_n[0] || cell_it_ar[0][s] != ar || cell_it_dyn[0][s] != 0 || cell_it_ret[0][s] != 0 || cell_it_throws[0][s] != 0
         return: (cast: (int) (0))
-    ns: (cast: (@@: char) cell_it_n[0][s])
-    nl: cell_it_nl[0][s]
-    nt: cell_it_ty[0][s]
+    ns := (cast: (@@: char) cell_it_n[0][s])
+    nl := cell_it_nl[0][s]
+    nt := cell_it_ty[0][s]
     if: ar >= 1 && (ns = 0 || nl = 0 || nt = 0 || t0 != nt[0] || l0 != nl[0] || c.memcmp(n0, ns[0], l0) != 0)
         return: (cast: (int) (0))
     if: ar >= 2 && (t1 != nt[1] || l1 != nl[1] || c.memcmp(n1, ns[1], l1) != 0)
@@ -215,22 +215,22 @@ fn: lm_compiler_intern_store (int: ar; const: (@: n0 char); size_t: l0; int: t0;
     while: i < cell_intern_n[0]
         if: lm_compiler_intern_match(i, ar, n0, l0, t0, n1, l1, t1, n2, l2n, t2, n3, l3, t3)
             return: (cast: (unsigned) (i + 1U))
-        i: i + 1U
+        i := i + 1U
     if: ar < 1 || ar > 4
         return: (cast: (unsigned) (0U))
     if: cell_intern_n[0] = (cast: (unsigned) -1)
-        cell_alloc_err[0]: 2
+        cell_alloc_err[0] := 2
         return: (cast: (unsigned) (0U))
     if: lm_compiler_intern_reserve(cell_intern_n[0] + 1U) != 0
         return: (cast: (unsigned) (0U))
-    psz: sizeof(@: char)
+    psz := sizeof(@: char)
     if: c.lm_compiler_mul_ok((cast: (size_t) ar), psz) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.size_t)))) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.int)))) = 0
-        cell_alloc_err[0]: 2
+        cell_alloc_err[0] := 2
         return: (cast: (unsigned) (0U))
-    cell_alloc_kind[0]: 3
-    ns: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) ar) * psz))
-    nl: (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.size_t)))))
-    nt: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.int)))))
+    cell_alloc_kind[0] := 3
+    ns := (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) ar) * psz))
+    nl := (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.size_t)))))
+    nt := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.int)))))
     if: ns = 0 || nl = 0 || nt = 0
         if: ns != 0
             c.lm_compiler_xfree((cast: (@: void) ns))
@@ -240,34 +240,34 @@ fn: lm_compiler_intern_store (int: ar; const: (@: n0 char); size_t: l0; int: t0;
             c.lm_compiler_xfree((cast: (@: void) nt))
         return: (cast: (unsigned) (0U))
     if: ar >= 1
-        ns[0]: (cast: (@: char) n0)
-        nl[0]: l0
-        nt[0]: t0
+        ns[0] := (cast: (@: char) n0)
+        nl[0] := l0
+        nt[0] := t0
     if: ar >= 2
-        ns[1]: (cast: (@: char) n1)
-        nl[1]: l1
-        nt[1]: t1
+        ns[1] := (cast: (@: char) n1)
+        nl[1] := l1
+        nt[1] := t1
     if: ar >= 3
-        ns[2]: (cast: (@: char) n2)
-        nl[2]: l2n
-        nt[2]: t2
+        ns[2] := (cast: (@: char) n2)
+        nl[2] := l2n
+        nt[2] := t2
     if: ar >= 4
-        ns[3]: (cast: (@: char) n3)
-        nl[3]: l3
-        nt[3]: t3
-    s: cell_intern_n[0]
-    cell_it_ar[0][s]: ar
-    cell_it_dyn[0][s]: 0
-    cell_it_ret[0][s]: 0
-    cell_it_throws[0][s]: 0
-    cell_it_tmi[0][s]: 0 - 1
-    cell_it_n[0][s]: (cast: (@: char) ns)
-    cell_it_nl[0][s]: nl
-    cell_it_ty[0][s]: nt
-    cell_it_hn[0][s]: 0
-    cell_it_hnl[0][s]: 0
-    cell_it_hty[0][s]: 0
-    cell_intern_n[0]: cell_intern_n[0] + 1U
+        ns[3] := (cast: (@: char) n3)
+        nl[3] := l3
+        nt[3] := t3
+    s := cell_intern_n[0]
+    cell_it_ar[0][s] := ar
+    cell_it_dyn[0][s] := 0
+    cell_it_ret[0][s] := 0
+    cell_it_throws[0][s] := 0
+    cell_it_tmi[0][s] := 0 - 1
+    cell_it_n[0][s] := (cast: (@: char) ns)
+    cell_it_nl[0][s] := nl
+    cell_it_ty[0][s] := nt
+    cell_it_hn[0][s] := 0
+    cell_it_hnl[0][s] := 0
+    cell_it_hty[0][s] := 0
+    cell_intern_n[0] := cell_intern_n[0] + 1U
     return: (cast: (unsigned) (cell_intern_n[0]))
 end: lm_compiler_intern_store
 
@@ -308,32 +308,32 @@ fn: lm_compiler_intern_eq_mi (unsigned: s; int: mi) int
         return: (cast: (int) (0))
     if: c.lm_compiler_throws_same(cell_it_tmi[0][s], mi) = 0
         return: (cast: (int) (0))
-    ns: (cast: (@@: char) cell_it_n[0][s])
-    nl: cell_it_nl[0][s]
-    nt: cell_it_ty[0][s]
-    hs: (cast: (@@: char) cell_it_hn[0][s])
-    hl: cell_it_hnl[0][s]
-    ht: cell_it_hty[0][s]
-    k: 0
+    ns := (cast: (@@: char) cell_it_n[0][s])
+    nl := cell_it_nl[0][s]
+    nt := cell_it_ty[0][s]
+    hs := (cast: (@@: char) cell_it_hn[0][s])
+    hl := cell_it_hnl[0][s]
+    ht := cell_it_hty[0][s]
+    k := 0
     while: k < cell_m_arity[0][mi]
-        nm: c.lm_compiler_fn(mi, k)
+        nm := c.lm_compiler_fn(mi, k)
         if: nm = 0 || nm\data = 0 || ns = 0 || nl = 0 || nt = 0
             return: (cast: (int) (0))
         if: c.lm_compiler_ft(mi, k) != nt[k]
             return: (cast: (int) (0))
         if: nm\length != nl[k] || c.memcmp((cast: (const: @: void) (nm\data)), ns[k], nl[k]) != 0
             return: (cast: (int) (0))
-        k: k + 1
-    k: 0
+        k := k + 1
+    k := 0
     while: k < cell_m_dyn[0][mi]
-        nm: c.lm_compiler_dn(mi, k)
+        nm := c.lm_compiler_dn(mi, k)
         if: nm = 0 || nm\data = 0 || hs = 0 || hl = 0 || ht = 0
             return: (cast: (int) (0))
         if: c.lm_compiler_dt(mi, k) != ht[k]
             return: (cast: (int) (0))
         if: nm\length != hl[k] || c.memcmp((cast: (const: @: void) (nm\data)), hs[k], hl[k]) != 0
             return: (cast: (int) (0))
-        k: k + 1
+        k := k + 1
     return: (cast: (int) (1))
 end: lm_compiler_intern_eq_mi
 
@@ -373,30 +373,30 @@ fn: lm_compiler_intern_store_mi (int: mi) unsigned
     while: i < cell_intern_n[0]
         if: lm_compiler_intern_eq_mi(i, mi)
             return: (cast: (unsigned) (i + 1U))
-        i: i + 1U
+        i := i + 1U
     if: cell_intern_n[0] = (cast: (unsigned) -1)
-        cell_alloc_err[0]: 2
+        cell_alloc_err[0] := 2
         return: (cast: (unsigned) (0U))
     if: lm_compiler_intern_reserve(cell_intern_n[0] + 1U) != 0
         return: (cast: (unsigned) (0U))
-    ar: cell_m_arity[0][mi]
-    dyn: cell_m_dyn[0][mi]
-    psz: sizeof(@: char)
-    s: cell_intern_n[0]
-    cell_it_n[0][s]: 0
-    cell_it_nl[0][s]: 0
-    cell_it_ty[0][s]: 0
-    cell_it_hn[0][s]: 0
-    cell_it_hnl[0][s]: 0
-    cell_it_hty[0][s]: 0
+    ar := cell_m_arity[0][mi]
+    dyn := cell_m_dyn[0][mi]
+    psz := sizeof(@: char)
+    s := cell_intern_n[0]
+    cell_it_n[0][s] := 0
+    cell_it_nl[0][s] := 0
+    cell_it_ty[0][s] := 0
+    cell_it_hn[0][s] := 0
+    cell_it_hnl[0][s] := 0
+    cell_it_hty[0][s] := 0
     if: ar > 0
         if: c.lm_compiler_mul_ok((cast: (size_t) ar), psz) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.size_t)))) = 0 || c.lm_compiler_mul_ok((cast: (size_t) ar), (cast: (size_t) (c.sizeof(c.int)))) = 0
-            cell_alloc_err[0]: 2
+            cell_alloc_err[0] := 2
             return: (cast: (unsigned) (0U))
-        cell_alloc_kind[0]: 3
-        ns: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) ar) * psz))
-        nl: (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.size_t)))))
-        nt: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.int)))))
+        cell_alloc_kind[0] := 3
+        ns := (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) ar) * psz))
+        nl := (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.size_t)))))
+        nt := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) ar) * c.sizeof(c.int)))))
         if: ns = 0 || nl = 0 || nt = 0
             if: ns != 0
                 c.lm_compiler_xfree((cast: (@: void) ns))
@@ -405,22 +405,22 @@ fn: lm_compiler_intern_store_mi (int: mi) unsigned
             if: nt != 0
                 c.lm_compiler_xfree((cast: (@: void) nt))
             return: (cast: (unsigned) (0U))
-        k: 0
+        k := 0
         while: k < ar
-            nm: c.lm_compiler_fn(mi, k)
+            nm := c.lm_compiler_fn(mi, k)
             if: nm = 0 || nm\data = 0
                 c.lm_compiler_xfree((cast: (@: void) ns))
                 c.lm_compiler_xfree((cast: (@: void) nl))
                 c.lm_compiler_xfree((cast: (@: void) nt))
                 return: (cast: (unsigned) (0U))
-            ns[k]: (cast: (@: char) nm\data)
-            nl[k]: nm\length
-            nt[k]: c.lm_compiler_ft(mi, k)
-            k: k + 1
+            ns[k] := (cast: (@: char) nm\data)
+            nl[k] := nm\length
+            nt[k] := c.lm_compiler_ft(mi, k)
+            k := k + 1
         ---
     if: dyn > 0
         if: c.lm_compiler_mul_ok((cast: (size_t) dyn), psz) = 0 || c.lm_compiler_mul_ok((cast: (size_t) dyn), (cast: (size_t) (c.sizeof(c.size_t)))) = 0 || c.lm_compiler_mul_ok((cast: (size_t) dyn), (cast: (size_t) (c.sizeof(c.int)))) = 0
-            cell_alloc_err[0]: 2
+            cell_alloc_err[0] := 2
             if: ns != 0
                 c.lm_compiler_xfree((cast: (@: void) ns))
             if: nl != 0
@@ -428,10 +428,10 @@ fn: lm_compiler_intern_store_mi (int: mi) unsigned
             if: nt != 0
                 c.lm_compiler_xfree((cast: (@: void) nt))
             return: (cast: (unsigned) (0U))
-        cell_alloc_kind[0]: 3
-        hs: (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) dyn) * psz))
-        hl: (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) dyn) * c.sizeof(c.size_t)))))
-        ht: (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) dyn) * c.sizeof(c.int)))))
+        cell_alloc_kind[0] := 3
+        hs := (cast: (@@: char) c.lm_compiler_xmalloc((cast: (size_t) dyn) * psz))
+        hl := (cast: (@: size_t) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) dyn) * c.sizeof(c.size_t)))))
+        ht := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) ((cast: (size_t) dyn) * c.sizeof(c.int)))))
         if: hs = 0 || hl = 0 || ht = 0
             if: ns != 0
                 c.lm_compiler_xfree((cast: (@: void) ns))
@@ -446,9 +446,9 @@ fn: lm_compiler_intern_store_mi (int: mi) unsigned
             if: ht != 0
                 c.lm_compiler_xfree((cast: (@: void) ht))
             return: (cast: (unsigned) (0U))
-        k: 0
+        k := 0
         while: k < dyn
-            nm: c.lm_compiler_dn(mi, k)
+            nm := c.lm_compiler_dn(mi, k)
             if: nm = 0 || nm\data = 0
                 c.lm_compiler_xfree((cast: (@: void) ns))
                 c.lm_compiler_xfree((cast: (@: void) nl))
@@ -457,23 +457,23 @@ fn: lm_compiler_intern_store_mi (int: mi) unsigned
                 c.lm_compiler_xfree((cast: (@: void) hl))
                 c.lm_compiler_xfree((cast: (@: void) ht))
                 return: (cast: (unsigned) (0U))
-            hs[k]: (cast: (@: char) nm\data)
-            hl[k]: nm\length
-            ht[k]: c.lm_compiler_dt(mi, k)
-            k: k + 1
+            hs[k] := (cast: (@: char) nm\data)
+            hl[k] := nm\length
+            ht[k] := c.lm_compiler_dt(mi, k)
+            k := k + 1
         ---
-    cell_it_ar[0][s]: ar
-    cell_it_dyn[0][s]: dyn
-    cell_it_ret[0][s]: cell_m_ret[0][mi]
-    cell_it_throws[0][s]: cell_m_throws[0][mi]
-    cell_it_tmi[0][s]: mi
-    cell_it_n[0][s]: (cast: (@: char) ns)
-    cell_it_nl[0][s]: nl
-    cell_it_ty[0][s]: nt
-    cell_it_hn[0][s]: (cast: (@: char) hs)
-    cell_it_hnl[0][s]: hl
-    cell_it_hty[0][s]: ht
-    cell_intern_n[0]: cell_intern_n[0] + 1U
+    cell_it_ar[0][s] := ar
+    cell_it_dyn[0][s] := dyn
+    cell_it_ret[0][s] := cell_m_ret[0][mi]
+    cell_it_throws[0][s] := cell_m_throws[0][mi]
+    cell_it_tmi[0][s] := mi
+    cell_it_n[0][s] := (cast: (@: char) ns)
+    cell_it_nl[0][s] := nl
+    cell_it_ty[0][s] := nt
+    cell_it_hn[0][s] := (cast: (@: char) hs)
+    cell_it_hnl[0][s] := hl
+    cell_it_hty[0][s] := ht
+    cell_intern_n[0] := cell_intern_n[0] + 1U
     return: (cast: (unsigned) (cell_intern_n[0]))
 end: lm_compiler_intern_store_mi
 
@@ -493,12 +493,12 @@ fn: lm_compiler_pd_free () int
     if: cell_pd[0] != 0
         c.lm_compiler_xfree((cast: (@: void) cell_pd[0]))
     ---
-    cell_pd[0]: 0
-    cell_pd_n[0]: 0
-    cell_pd_cap[0]: 0
+    cell_pd[0] := 0
+    cell_pd_n[0] := 0
+    cell_pd_cap[0] := 0
     # The predef declaration index (l2_frontend_types, lm_compiler_pdx_ready) was built over this list: the next
     # query rebuilds it over the next unit's list.
-    cell_pdx_built[0]: 0
+    cell_pdx_built[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_pd_free
 
@@ -510,9 +510,9 @@ fn: lm_compiler_def_free () int
     if: cell_def[0] != 0
         c.lm_compiler_xfree((cast: (@: void) cell_def[0]))
     ---
-    cell_def[0]: 0
-    cell_def_n[0]: 0
-    cell_def_cap[0]: 0
+    cell_def[0] := 0
+    cell_def_n[0] := 0
+    cell_def_cap[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_def_free
 
@@ -524,9 +524,9 @@ fn: lm_compiler_inc_free () int
     if: cell_inc[0] != 0
         c.lm_compiler_xfree((cast: (@: void) cell_inc[0]))
     ---
-    cell_inc[0]: 0
-    cell_inc_n[0]: 0
-    cell_inc_cap[0]: 0
+    cell_inc[0] := 0
+    cell_inc_n[0] := 0
+    cell_inc_cap[0] := 0
     return: (cast: (int) (0))
 end: lm_compiler_inc_free
 
@@ -541,22 +541,22 @@ fn: lm_compiler_pd_push (const: (@: t c.LmP0Text); const: (@: path char); const:
     @@: nn c.LmP0Text 0
     if: t = 0
         return: (cast: (int) (c.lm_compiler_error(path, at, "unsupported argument")))
-    t: c.lm_compiler_predef_import(t, path)
+    t := c.lm_compiler_predef_import(t, path)
     if: t = 0
         return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "cannot hold the predef path")))
-    cap: cell_pd_cap[0]
+    cap := cell_pd_cap[0]
     if: cell_pd_n[0] >= cap
         if: cap < 1
-            cap: 4
+            cap := 4
         ---
         if: cap > (c.INT_MAX / 2)
             return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
-        cap: cap * 2
-        psz: sizeof(@: char)
+        cap := cap * 2
+        psz := sizeof(@: char)
         if: c.lm_compiler_mul_ok((cast: (size_t) cap), psz) = 0
             return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
-        nb: (cast: (size_t) cap) * psz
-        nn: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
+        nb := (cast: (size_t) cap) * psz
+        nn := (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
         if: nn = 0
             return: (cast: (int) (c.lm_compiler_error(path, at, "out of memory")))
         c.memset((cast: (@: void) nn), 0, nb)
@@ -566,11 +566,11 @@ fn: lm_compiler_pd_push (const: (@: t c.LmP0Text); const: (@: path char); const:
         if: cell_pd[0] != 0
             c.lm_compiler_xfree((cast: (@: void) cell_pd[0]))
         ---
-        cell_pd[0]: nn
-        cell_pd_cap[0]: cap
+        cell_pd[0] := nn
+        cell_pd_cap[0] := cap
     ---
-    cell_pd[0][cell_pd_n[0]]: (cast: (@: c.LmP0Text) t)
-    cell_pd_n[0]: cell_pd_n[0] + 1
+    cell_pd[0][cell_pd_n[0]] := (cast: (@: c.LmP0Text) t)
+    cell_pd_n[0] := cell_pd_n[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_pd_push
 
@@ -585,19 +585,19 @@ fn: lm_compiler_def_push (const: (@: item c.LmP0Node); const: (@: path char)) in
     @@: nn c.LmP0Node 0
     if: item = 0
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
-    cap: cell_def_cap[0]
+    cap := cell_def_cap[0]
     if: cell_def_n[0] >= cap
         if: cap < 1
-            cap: 4
+            cap := 4
         ---
         if: cap > (c.INT_MAX / 2)
             return: (cast: (int) (c.lm_compiler_error(path, item, "size overflow")))
-        cap: cap * 2
-        psz: sizeof(@: char)
+        cap := cap * 2
+        psz := sizeof(@: char)
         if: c.lm_compiler_mul_ok((cast: (size_t) cap), psz) = 0
             return: (cast: (int) (c.lm_compiler_error(path, item, "size overflow")))
-        nb: (cast: (size_t) cap) * psz
-        nn: (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc(nb))
+        nb := (cast: (size_t) cap) * psz
+        nn := (cast: (@@: c.LmP0Node) c.lm_compiler_xmalloc(nb))
         if: nn = 0
             return: (cast: (int) (c.lm_compiler_error(path, item, "out of memory")))
         c.memset((cast: (@: void) nn), 0, nb)
@@ -607,11 +607,11 @@ fn: lm_compiler_def_push (const: (@: item c.LmP0Node); const: (@: path char)) in
         if: cell_def[0] != 0
             c.lm_compiler_xfree((cast: (@: void) cell_def[0]))
         ---
-        cell_def[0]: nn
-        cell_def_cap[0]: cap
+        cell_def[0] := nn
+        cell_def_cap[0] := cap
     ---
-    cell_def[0][cell_def_n[0]]: (cast: (@: c.LmP0Node) item)
-    cell_def_n[0]: cell_def_n[0] + 1
+    cell_def[0][cell_def_n[0]] := (cast: (@: c.LmP0Node) item)
+    cell_def_n[0] := cell_def_n[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_def_push
 
@@ -626,19 +626,19 @@ fn: lm_compiler_inc_push (const: (@: t c.LmP0Text); const: (@: path char); const
     @@: nn c.LmP0Text 0
     if: t = 0
         return: (cast: (int) (c.lm_compiler_error(path, at, "unsupported argument")))
-    cap: cell_inc_cap[0]
+    cap := cell_inc_cap[0]
     if: cell_inc_n[0] >= cap
         if: cap < 1
-            cap: 4
+            cap := 4
         ---
         if: cap > (c.INT_MAX / 2)
             return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
-        cap: cap * 2
-        psz: sizeof(@: char)
+        cap := cap * 2
+        psz := sizeof(@: char)
         if: c.lm_compiler_mul_ok((cast: (size_t) cap), psz) = 0
             return: (cast: (int) (c.lm_compiler_error(path, at, "size overflow")))
-        nb: (cast: (size_t) cap) * psz
-        nn: (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
+        nb := (cast: (size_t) cap) * psz
+        nn := (cast: (@@: c.LmP0Text) c.lm_compiler_xmalloc(nb))
         if: nn = 0
             return: (cast: (int) (c.lm_compiler_error(path, at, "out of memory")))
         c.memset((cast: (@: void) nn), 0, nb)
@@ -648,11 +648,11 @@ fn: lm_compiler_inc_push (const: (@: t c.LmP0Text); const: (@: path char); const
         if: cell_inc[0] != 0
             c.lm_compiler_xfree((cast: (@: void) cell_inc[0]))
         ---
-        cell_inc[0]: nn
-        cell_inc_cap[0]: cap
+        cell_inc[0] := nn
+        cell_inc_cap[0] := cap
     ---
-    cell_inc[0][cell_inc_n[0]]: (cast: (@: c.LmP0Text) t)
-    cell_inc_n[0]: cell_inc_n[0] + 1
+    cell_inc[0][cell_inc_n[0]] := (cast: (@: c.LmP0Text) t)
+    cell_inc_n[0] := cell_inc_n[0] + 1
     return: (cast: (int) (0))
 end: lm_compiler_inc_push
 
@@ -663,7 +663,7 @@ fn: lm_compiler_take_predef (const: (@: item c.LmP0Node); const: (@: path char))
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
     if: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (item\as\frame\body))) != 1
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
-    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_quoted((cast: (const: @: c.LmP0Text) (f\value\as\atom))) = 0
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
     return: (cast: (int) (lm_compiler_pd_push((cast: (const: @: c.LmP0Text) (f\value\as\atom)), path, item)))
@@ -675,10 +675,10 @@ fn: lm_compiler_take_profile (const: (@: item c.LmP0Node); const: (@: path char)
     @: f c.LmP0Field
     if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (item\as\frame\body))) != 1
         return: (cast: (int) (c.lm_compiler_error(path, item, "a profile names one profile")))
-    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (f\value\as\atom)), "runtime") = 0
         return: (cast: (int) (c.lm_compiler_error(path, item, "unknown profile")))
-    cell_profile_runtime[0]: 1
+    cell_profile_runtime[0] := 1
     return: (cast: (int) (0))
 end: lm_compiler_take_profile
 
@@ -688,12 +688,12 @@ fn: lm_compiler_take_define (const: (@: item c.LmP0Node); const: (@: path char))
     int: n 0
     if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0 || item\as\frame\trailer != 0 || item\as\frame\body\trailer != 0
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
-    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
     while: f != 0
         if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
             return: (cast: (int) (c.lm_compiler_error(path, item, "define accepts flat L1 tokens")))
-        n: n + 1
-        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+        n := n + 1
+        f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
     ---
     if: n < 2
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
@@ -711,15 +711,15 @@ fn: lm_compiler_write_defines (@: out c.FILE) int
     while: i < cell_def_n[0]
         if: c.fputs("define:", out) < 0
             return: (cast: (int) (1))
-        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (cell_def[0][i]\as\frame\body\first_field)))
+        f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (cell_def[0][i]\as\frame\body\first_field)))
         while: f != 0
             if: c.fputs(" ", out) < 0 || c.lm_compiler_write_text(out, (cast: (const: @: c.LmP0Text) (f\value\as\atom))) != 0
                 return: (cast: (int) (1))
-            f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+            f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
         ---
         if: c.fputs("\n", out) < 0
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     ---
     if: cell_def_n[0] != 0 && c.fputs("\n", out) < 0
         return: (cast: (int) (1))
@@ -731,7 +731,7 @@ fn: lm_compiler_take_include (const: (@: item c.LmP0Node); const: (@: path char)
     @: f c.LmP0Field
     if: item = 0 || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
-    f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
+    f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (item\as\frame\body\first_field)))
     if: f = 0
         return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
     while: f != 0
@@ -739,7 +739,7 @@ fn: lm_compiler_take_include (const: (@: item c.LmP0Node); const: (@: path char)
             return: (cast: (int) (c.lm_compiler_error(path, item, "unsupported argument")))
         if: lm_compiler_inc_push((cast: (const: @: c.LmP0Text) (f\value\as\atom)), path, item) != 0
             return: (cast: (int) (1))
-        f: c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+        f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
     return: (cast: (int) (0))
 end: lm_compiler_take_include
 
@@ -763,27 +763,27 @@ fn: lm_compiler_intern_prove (const: (@: path char); const: (@: source_node c.Lm
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern broken")))
     if: cell_m_n[0] = 0
         return: (cast: (int) (0))
-    id: cell_m_sig[0][0]
-    cell_intern_again[0]: lm_compiler_intern_mi(0)
+    id := cell_m_sig[0][0]
+    cell_intern_again[0] := lm_compiler_intern_mi(0)
     if: cell_intern_again[0] = 0U && cell_alloc_err[0] = 2
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "size overflow")))
     if: cell_intern_again[0] = 0U && cell_alloc_err[0] != 0
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "out of memory")))
     if: id = 0U || cell_intern_again[0] != id
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern broken")))
-    cell_intern_swap[0]: 0U
-    two: 0
+    cell_intern_swap[0] := 0U
+    two := 0
     if: cell_m_arity[0][0] = 2 && cell_m_f0[0][0] != 0 && cell_m_f1[0][0] != 0
-        two: 1
+        two := 1
     if: two != 0 && c.lm_compiler_text_same(cell_m_f0[0][0], cell_m_f1[0][0]) = 0
-        cell_intern_swap[0]: lm_compiler_intern_pair((cast: (const: @: char) (cell_m_f1[0][0]\data)), (cast: (size_t) (cell_m_f1[0][0]\length)), (cast: (const: @: char) (cell_m_f0[0][0]\data)), (cast: (size_t) (cell_m_f0[0][0]\length)))
+        cell_intern_swap[0] := lm_compiler_intern_pair((cast: (const: @: char) (cell_m_f1[0][0]\data)), (cast: (size_t) (cell_m_f1[0][0]\length)), (cast: (const: @: char) (cell_m_f0[0][0]\data)), (cast: (size_t) (cell_m_f0[0][0]\length)))
     if: two != 0 && cell_intern_swap[0] = 0U && cell_alloc_err[0] = 2
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "size overflow")))
     if: two != 0 && cell_intern_swap[0] = 0U && cell_alloc_err[0] != 0
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "out of memory")))
     if: two != 0 && c.lm_compiler_text_same(cell_m_f0[0][0], cell_m_f1[0][0]) = 0 && (cell_intern_swap[0] = 0U || cell_intern_swap[0] = id)
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern failed to distinguish swapped formals")))
-    cell_intern_probe[0]: lm_compiler_intern_pair("a", 1U, "b", 1U)
+    cell_intern_probe[0] := lm_compiler_intern_pair("a", 1U, "b", 1U)
     if: cell_intern_probe[0] = 0U && cell_alloc_err[0] = 2
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "size overflow")))
     if: cell_intern_probe[0] = 0U && cell_alloc_err[0] != 0
@@ -798,6 +798,6 @@ fn: lm_compiler_intern_prove (const: (@: path char); const: (@: source_node c.Lm
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern failed memcmp of equal names")))
     if: two != 0 && lm_compiler_intern_eq_mi(cell_intern_probe[0] - 1U, 0) = 0 && cell_intern_probe[0] = id
         return: (cast: (int) (c.lm_compiler_error(path, source_node, "intern false-equal distinct contracts")))
-    cell_sigv[0]: id
+    cell_sigv[0] := id
     return: (cast: (int) (0))
 end: lm_compiler_intern_prove

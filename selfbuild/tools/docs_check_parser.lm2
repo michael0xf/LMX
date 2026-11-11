@@ -10,7 +10,7 @@ fn: pi_array (@: data char; size_t: count; size_t: object_at; @: key char; @: fi
         return: 1
     if: first[0] >= count || data[first[0]] != (cast: (char) 91)
         return: 1
-    first[0]: dj_ws(data, count, first[0] + 1U)
+    first[0] := dj_ws(data, count, first[0] + 1U)
     return: 0
 end: pi_array
 
@@ -19,10 +19,10 @@ fn: pi_path_string (@: data char; size_t: count; size_t: object_at; @: key char;
     size_t: path_count 0U
     int: failed dc_string(data, count, object_at, key, out, @ path_count)
     if: failed = 0 && c.strlen(out[0]) != path_count
-        failed: 1
+        failed := 1
     if: failed != 0
         c.free(out[0])
-        out[0]: 0
+        out[0] := 0
     return: failed
 end: pi_path_string
 
@@ -38,26 +38,26 @@ fn: pi_origins (@: data char; size_t: count; size_t: file_at; @: raw char; size_
     int: failed pi_array(data, count, file_at, "origins", @ pos)
     while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
         if: dj_span(data, count, pos, @ after) != 2
-            failed: 1
+            failed := 1
             break
-        failed: pi_path_string(data, count, pos, "root", @ root)
+        failed := pi_path_string(data, count, pos, "root", @ root)
         if: failed = 0
-            failed: pi_path_string(data, count, pos, "path", @ path)
+            failed := pi_path_string(data, count, pos, "path", @ path)
         if: failed = 0
-            full: os_path_join(root, path)
+            full := os_path_join(root, path)
             if: full = 0
-                failed: 1
+                failed := 1
             else:
-                kind: os_path_kind(full)
+                kind := os_path_kind(full)
                 if: kind < 0
-                    failed: 1
+                    failed := 1
                 if: kind = 1
-                    source: file_read(full, @ source_count)
+                    source := file_read(full, @ source_count)
                     if: source = 0
-                        failed: 1
+                        failed := 1
                     else:
                         if: source_count != raw_count || c.memcmp(source, raw, raw_count) != 0
-                            failed: 1
+                            failed := 1
                         ---
                     ---
                 ---
@@ -67,12 +67,12 @@ fn: pi_origins (@: data char; size_t: count; size_t: file_at; @: raw char; size_
         c.free(path)
         c.free(full)
         c.free(source)
-        root: 0
-        path: 0
-        full: 0
-        source: 0
+        root := 0
+        path := 0
+        full := 0
+        source := 0
         if: failed = 0
-            failed: dj_array_next(data, count, after, @ pos)
+            failed := dj_array_next(data, count, after, @ pos)
     ---
     return: failed
 end: pi_origins
@@ -89,38 +89,38 @@ fn: pi_import (@: repo char; @: data char; size_t: count; size_t: file_at) int
     size_t: after 0U
     int: failed pi_path_string(data, count, file_at, "path", @ path)
     if: failed = 0
-        full: os_path_join(repo, path)
-        digest: c.calloc(65U, 1U)
+        full := os_path_join(repo, path)
+        digest := c.calloc(65U, 1U)
         if: full = 0 || digest = 0
-            failed: 1
+            failed := 1
         ---
     ---
     if: failed = 0
-        raw: file_read(full, @ raw_count)
+        raw := file_read(full, @ raw_count)
         if: raw = 0
-            failed: 1
+            failed := 1
         ---
     if: failed = 0
         if: dj_property(data, count, file_at, "bytes", @ first, @ after) != 1
-            failed: 1
+            failed := 1
         else:
             if: dc_counter(data, count, first, after, raw_count) = 0
-                failed: 1
+                failed := 1
             ---
         ---
     ---
     if: failed = 0
-        failed: sha256_bytes(raw, raw_count, digest)
+        failed := sha256_bytes(raw, raw_count, digest)
     if: failed = 0
-        failed: dc_string(data, count, file_at, "sha256", @ expected, @ expected_count)
+        failed := dc_string(data, count, file_at, "sha256", @ expected, @ expected_count)
         if: failed = 0
             if: expected_count != 64U || c.memcmp(expected, digest, 64U) != 0
-                failed: 1
+                failed := 1
             ---
         ---
     ---
     if: failed = 0
-        failed: pi_origins(data, count, file_at, raw, raw_count)
+        failed := pi_origins(data, count, file_at, raw, raw_count)
     c.free(path)
     c.free(full)
     c.free(raw)
@@ -149,48 +149,48 @@ fn: pi_represented (@: data char; size_t: count; size_t: files_at; @: stage char
     @: path char 0
     int: same 0
     int: failed 0
-    out[0]: 0
-    out_count[0]: 0U
+    out[0] := 0
+    out_count[0] := 0U
     while: failed = 0 && file_pos < count && data[file_pos] != (cast: (char) 93)
         if: dj_span(data, count, file_pos, @ file_after) != 2 || pi_array(data, count, file_pos, "origins", @ origin_pos) != 0
-            failed: 1
+            failed := 1
             break
         while: failed = 0 && origin_pos < count && data[origin_pos] != (cast: (char) 93)
             if: dj_span(data, count, origin_pos, @ origin_after) != 2
-                failed: 1
+                failed := 1
                 break
             if: dc_string(data, count, origin_pos, "stage", @ candidate, @ candidate_count) != 0
-                failed: 1
+                failed := 1
                 break
-            same: (cast: (int) (candidate_count = stage_count && c.memcmp(candidate, stage, stage_count) = 0))
+            same := (cast: (int) (candidate_count = stage_count && c.memcmp(candidate, stage, stage_count) = 0))
             c.free(candidate)
-            candidate: 0
+            candidate := 0
             if: same != 0
                 if: dc_string(data, count, origin_pos, "path", @ path, @ path_count) != 0
-                    failed: 1
+                    failed := 1
                 else:
                     if: c.strlen(path) != path_count || fs_entry_append(@ paths, @ kinds, @ used, @ capacity, path, 0U) != 0
-                        failed: 1
+                        failed := 1
                     else:
-                        path: 0
+                        path := 0
                     ---
                 ---
                 c.free(path)
-                path: 0
+                path := 0
             ---
             if: failed = 0
-                failed: dj_array_next(data, count, origin_after, @ origin_pos)
+                failed := dj_array_next(data, count, origin_after, @ origin_pos)
         ---
         if: failed = 0
-            failed: dj_array_next(data, count, file_after, @ file_pos)
+            failed := dj_array_next(data, count, file_after, @ file_pos)
     ---
     c.free(candidate)
     c.free(path)
     if: failed != 0
         fs_entries_free(paths, kinds, used)
         return: 1
-    out[0]: paths
-    out_count[0]: used
+    out[0] := paths
+    out_count[0] := used
     c.free(kinds)
     return: 0
 end: pi_represented
@@ -200,7 +200,7 @@ fn: pi_member (@@: represented char; size_t: count; @: relative char) int
     while: at < count
         if: c.strcmp(represented[at], relative) = 0
             return: 1
-        at: at + 1U
+        at := at + 1U
     ---
     return: 0
 end: pi_member
@@ -215,12 +215,12 @@ os:
             if: name_count < 4U
                 return: 0
             while: at < 4U
-                byte: (cast: (unsigned) name[name_count - 4U + at]) & 255U
+                byte := (cast: (unsigned) name[name_count - 4U + at]) & 255U
                 if: byte >= 65U && byte <= 90U
-                    byte: byte + 32U
+                    byte := byte + 32U
                 if: byte != ((cast: (unsigned) suffix[at]) & 255U)
                     return: 0
-                at: at + 1U
+                at := at + 1U
             ---
             return: 1
         end: pi_lmx_name
@@ -244,7 +244,7 @@ fn: pi_walk (@: base char; @: relative char; @@: represented char; size_t: repre
     int: failed 0
     if: directory = 0
         return: 1
-    scanned: os_directory_entries(directory, @ names, @ kinds, @ entries)
+    scanned := os_directory_entries(directory, @ names, @ kinds, @ entries)
     c.free(directory)
     if: scanned < 0
         return: 1
@@ -252,32 +252,32 @@ fn: pi_walk (@: base char; @: relative char; @@: represented char; size_t: repre
         return: 0
     while: at < entries && failed = 0
         if: pi_lmx_name(names[at]) != 0
-            child: txt_path(relative, names[at])
+            child := txt_path(relative, names[at])
             if: child = 0
-                failed: 1
+                failed := 1
             else:
                 if: pi_member(represented, represented_count, child) != 1
-                    failed: 1
+                    failed := 1
                 ---
             ---
             c.free(child)
-            child: 0
+            child := 0
         ---
-        at: at + 1U
+        at := at + 1U
     ---
-    at: 0U
+    at := 0U
     while: at < entries && failed = 0
         if: (kinds[at] & 2U) != 0U && (kinds[at] & 4U) = 0U
-            child: txt_path(relative, names[at])
+            child := txt_path(relative, names[at])
             if: child = 0
-                failed: 1
+                failed := 1
             else:
-                failed: pi_walk(base, child, represented, represented_count)
+                failed := pi_walk(base, child, represented, represented_count)
             ---
             c.free(child)
-            child: 0
+            child := 0
         ---
-        at: at + 1U
+        at := at + 1U
     ---
     fs_entries_free(names, kinds, entries)
     return: failed
@@ -295,31 +295,31 @@ fn: pi_sources (@: data char; size_t: count; size_t: root; size_t: files_at) int
     int: failed pi_array(data, count, root, "sources", @ pos)
     while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
         if: dj_span(data, count, pos, @ after) != 2
-            failed: 1
+            failed := 1
             break
-        failed: pi_path_string(data, count, pos, "root", @ base)
+        failed := pi_path_string(data, count, pos, "root", @ base)
         if: failed = 0
-            kind: os_path_kind(base)
+            kind := os_path_kind(base)
             if: kind < 0
-                failed: 1
+                failed := 1
             if: kind = 2
-                failed: dc_string(data, count, pos, "stage", @ stage, @ stage_count)
+                failed := dc_string(data, count, pos, "stage", @ stage, @ stage_count)
                 if: failed = 0
-                    failed: pi_represented(data, count, files_at, stage, stage_count, @ represented, @ represented_count)
+                    failed := pi_represented(data, count, files_at, stage, stage_count, @ represented, @ represented_count)
                 if: failed = 0
-                    failed: pi_walk(base, "tests", represented, represented_count)
+                    failed := pi_walk(base, "tests", represented, represented_count)
                 ---
             ---
         ---
         c.free(base)
         c.free(stage)
         fs_entries_free(represented, 0, represented_count)
-        base: 0
-        stage: 0
-        represented: 0
-        represented_count: 0U
+        base := 0
+        stage := 0
+        represented := 0
+        represented_count := 0U
         if: failed = 0
-            failed: dj_array_next(data, count, after, @ pos)
+            failed := dj_array_next(data, count, after, @ pos)
     ---
     return: failed
 end: pi_sources
@@ -336,40 +336,40 @@ fn: docs_parser_inventory_check (@: repo char; @: imported size_t) int
     int: failed 0
     if: repo = 0 || imported = 0
         return: 1
-    imported[0]: 0U
-    path: txt_path(repo, "provenance/parser-tests.json")
+    imported[0] := 0U
+    path := txt_path(repo, "provenance/parser-tests.json")
     if: path != 0
-        data: file_read(path, @ count)
+        data := file_read(path, @ count)
     if: data = 0
-        failed: 1
+        failed := 1
     if: failed = 0
         if: dj_document(data, count, @ root, @ after) != 2
-            failed: 1
+            failed := 1
         else:
             if: dj_property(data, count, root, "files", @ files_at, @ files_after) != 1
-                failed: 1
+                failed := 1
             else:
                 if: data[files_at] != (cast: (char) 91)
-                    failed: 1
+                    failed := 1
                 ---
             ---
         ---
     ---
     if: failed = 0
-        pos: dj_ws(data, count, files_at + 1U)
+        pos := dj_ws(data, count, files_at + 1U)
         while: failed = 0 && pos < count && data[pos] != (cast: (char) 93)
             if: dj_span(data, count, pos, @ after) != 2
-                failed: 1
+                failed := 1
                 break
-            failed: pi_import(repo, data, count, pos)
+            failed := pi_import(repo, data, count, pos)
             if: failed = 0
-                imported[0]: imported[0] + 1U
-                failed: dj_array_next(data, count, after, @ pos)
+                imported[0] := imported[0] + 1U
+                failed := dj_array_next(data, count, after, @ pos)
             ---
         ---
     ---
     if: failed = 0
-        failed: pi_sources(data, count, root, files_at)
+        failed := pi_sources(data, count, root, files_at)
     c.free(path)
     c.free(data)
     return: failed

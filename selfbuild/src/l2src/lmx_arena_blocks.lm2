@@ -18,21 +18,21 @@ include: "<stdlib.h>"
 fn: lmx_arena_blocks_tail (@: head c.LmxArenaBlock; @@: tail c.LmxArenaBlock) int
     @: slow c.LmxArenaBlock 0
     @: fast c.LmxArenaBlock 0
-    slow: head
-    fast: head
-    \tail: 0
+    slow := head
+    fast := head
+    \tail := 0
     while: fast != 0
-        fast: fast\next
+        fast := fast\next
         if: fast = 0
             break
-        fast: fast\next
-        slow: slow\next
+        fast := fast\next
+        slow := slow\next
         if: fast = slow
             return: c.LMX_ARENA_BLOCKS_INVALID
     ---
     while: head != 0
-        \tail: head
-        head: head\next
+        \tail := head
+        head := head\next
     ---
     return: c.LMX_ARENA_BLOCKS_OK
 end: lmx_arena_blocks_tail
@@ -48,8 +48,8 @@ fn: lmx_arena_blocks_push (@@: head c.LmxArenaBlock; @: block c.LmxArenaBlock) i
         return: c.LMX_ARENA_BLOCKS_INVALID
     if: block\base = 0 && block\n != 0U
         return: c.LMX_ARENA_BLOCKS_INVALID
-    block\next: \head
-    \head: block
+    block\next := \head
+    \head := block
     return: c.LMX_ARENA_BLOCKS_OK
 end: lmx_arena_blocks_push
 
@@ -59,20 +59,20 @@ fn: lmx_arena_blocks_remove (@@: head c.LmxArenaBlock; @: block c.LmxArenaBlock)
     @: tail c.LmxArenaBlock 0
     @: entry c.LmxArenaBlock 0
     @@: slot c.LmxArenaBlock 0
-    slot: head
+    slot := head
     if: head = 0 || block = 0
         return: c.LMX_ARENA_BLOCKS_INVALID
     if: lmx_arena_blocks_tail(\head, @ tail) != c.LMX_ARENA_BLOCKS_OK
         return: c.LMX_ARENA_BLOCKS_INVALID
-    entry: \slot
+    entry := \slot
     while: entry != 0
         if: entry = block
-            \slot: entry\next
-            entry\next: 0
+            \slot := entry\next
+            entry\next := 0
             return: c.LMX_ARENA_BLOCKS_OK
         ---
-        slot: @ entry\next
-        entry: \slot
+        slot := @ entry\next
+        entry := \slot
     ---
     return: c.LMX_ARENA_BLOCKS_INVALID
 end: lmx_arena_blocks_remove
@@ -104,9 +104,9 @@ fn: lmx_arena_blocks_move_all (@@: dst c.LmxArenaBlock; @@: src c.LmxArenaBlock)
     lmx_arena_blocks_tail(\src, @ src_tail)
     if: src_tail = 0
         return: c.LMX_ARENA_BLOCKS_OK
-    src_tail\next: \dst
-    \dst: \src
-    \src: 0
+    src_tail\next := \dst
+    \dst := \src
+    \src := 0
     return: c.LMX_ARENA_BLOCKS_OK
 end: lmx_arena_blocks_move_all
 
@@ -121,10 +121,10 @@ fn: lmx_arena_blocks_dispose_all (@@: head c.LmxArenaBlock) int
         return: c.LMX_ARENA_BLOCKS_INVALID
     if: lmx_arena_blocks_tail(\head, @ tail) != c.LMX_ARENA_BLOCKS_OK
         return: c.LMX_ARENA_BLOCKS_INVALID
-    block: \head
-    \head: 0
+    block := \head
+    \head := 0
     while: block != 0
-        next: block\next
+        next := block\next
         # A function-pointer local takes its value where it is declared: a later `disposer: v` would call it.
         c.LmxArenaBlockDisposer: disposer block\dispose
         if: disposer != 0
@@ -133,7 +133,7 @@ fn: lmx_arena_blocks_dispose_all (@@: head c.LmxArenaBlock) int
             c.free(block\base)
         ---
         c.free(block)
-        block: next
+        block := next
     ---
     return: c.LMX_ARENA_BLOCKS_OK
 end: lmx_arena_blocks_dispose_all

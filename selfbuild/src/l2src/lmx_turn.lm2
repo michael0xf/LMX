@@ -7,7 +7,7 @@ predef: "l2src/lmx_clock.lm1"
 # One end-turn outcome controls both staged mail and child publication.
 fn: lmx_turn_outcome (@: t c.LmxThread) int
     @: message c.LmxMsg
-    message: c.lmx_thread_message(t)
+    message := c.lmx_thread_message(t)
     if: message = 0
         return: c.LMX_TURN_INVALID
     if: message\running = 0 && message\success = 0
@@ -34,27 +34,27 @@ fn: lmx_turn_end_status (@: t c.LmxThread; ulong: now; int: body_status) int
     @: mail c.LmxPost
     int: overdue
     @: message c.LmxMsg
-    reading: lmx_turn_cycle_reading(now)
-    message: c.lmx_thread_message(t)
+    reading := lmx_turn_cycle_reading(now)
+    message := c.lmx_thread_message(t)
     if: message = 0
         return: c.LMX_TURN_INVALID
-    mail: t\mail
+    mail := t\mail
     if: mail = 0
         return: lmx_turn_boundary_fail(t)
     ---
-    outcome: lmx_turn_outcome(t)
+    outcome := lmx_turn_outcome(t)
     if: outcome = c.LMX_TURN_SUCCESS && body_status != c.LMX_TURN_BODY_OK
-        outcome: c.LMX_TURN_FAILED
+        outcome := c.LMX_TURN_FAILED
     ---
     if: outcome = c.LMX_TURN_FAILED
         c.lmx_post_discard(mail)
         c.lmx_child_drop_prepared(t)
     else:
         c.lmx_post_publish(mail)
-        band: 0
-        slot: t\slot
+        band := 0
+        slot := t\slot
         if: slot != 0
-            band: slot\arena
+            band := slot\arena
         ---
         if: c.lmx_child_publish_prepared(t, band) != c.LMX_CHILD_OK
             return: lmx_turn_boundary_fail(t)
@@ -63,24 +63,24 @@ fn: lmx_turn_end_status (@: t c.LmxThread; ulong: now; int: body_status) int
     # A parentless record has no liveness handshake. Otherwise answer or age
     # the same low-32 cycle reading; a zero stamp is represented by one.
     if: c.lmx_thread_parent(t) != 0 && c.lmx_thread_alive_cell(t) != 0
-        mark: c.__atomic_load_n(c.lmx_thread_alive_cell(t), c.__ATOMIC_RELAXED)
+        mark := c.__atomic_load_n(c.lmx_thread_alive_cell(t), c.__ATOMIC_RELAXED)
         if: mark = 0U
-            stamp: reading
+            stamp := reading
             if: stamp = 0U
-                stamp: 1U
+                stamp := 1U
             ---
             c.__atomic_store_n(c.lmx_thread_alive_cell(t), (cast: (size_t) stamp), c.__ATOMIC_RELAXED)
         else:
-            overdue: 0
-            slot: t\slot
+            overdue := 0
+            slot := t\slot
             if: slot != 0 && slot\limit != 0U
                 if: reading - (cast: (ulong) mark) >= slot\limit
-                    overdue: 1
+                    overdue := 1
                 ---
             ---
             if: overdue != 0
-                message\running: 0
-                message\handoff_ready: 1
+                message\running := 0
+                message\handoff_ready := 1
             ---
         ---
     ---
@@ -90,10 +90,10 @@ fn: lmx_turn_end_status (@: t c.LmxThread; ulong: now; int: body_status) int
         # publishes the one deadline shared by the whole family later.
         c.lmx_stop_children(t, reading, 0U)
     ---
-    arena: 0
-    slot: t\slot
+    arena := 0
+    slot := t\slot
     if: slot != 0
-        arena: slot\arena
+        arena := slot\arena
     ---
     if: arena = 0
         return: c.LMX_TURN_OK

@@ -31,7 +31,7 @@ sub: lmx_ids_enter ()
     while: acquired = 0
         if: c.__atomic_load_n((cast: (@: int) (@ c.lmx_ids_gate)), c.__ATOMIC_RELAXED) = 0
             if: c.__atomic_exchange_n((cast: (@: int) (@ c.lmx_ids_gate)), 1, c.__ATOMIC_ACQUIRE) = 0
-                acquired: 1
+                acquired := 1
             ---
         ---
     ---
@@ -47,9 +47,9 @@ fn: lmx_ids_order (const: (@: a char); size_t: an; const: (@: b char); size_t: b
     size_t: n an
     int: r 0
     if: bn < n
-        n: bn
+        n := bn
     if: n != 0U
-        r: c.memcmp((cast: (@: void) a), (cast: (@: void) b), n)
+        r := c.memcmp((cast: (@: void) a), (cast: (@: void) b), n)
     if: r != 0
         return: r
     if: an < bn
@@ -67,7 +67,7 @@ fn: lmx_ids_all_at (const: (@: text char); size_t: nb) int
     while: i < nb
         if: text[i] != 64
             return: 0
-        i: i + 1U
+        i := i + 1U
     ---
     return: 1
 end: lmx_ids_all_at
@@ -82,26 +82,26 @@ fn: lmx_ids_room (@: ids c.LmxIds) int
     @: marks char 0
     if: ids\count + 2U <= ids\cap
         return: 0
-    cap: 64U
+    cap := 64U
     if: ids\cap != 0U
-        cap: ids\cap * 2U
-    texts: (cast: (@@: char) c.realloc((cast: (@: void) ids\text), cap * sizeof(@: char)))
+        cap := ids\cap * 2U
+    texts := (cast: (@@: char) c.realloc((cast: (@: void) ids\text), cap * sizeof(@: char)))
     if: texts = 0
         return: 1
-    ids\text: texts
-    sizes: (cast: (@: size_t) c.realloc((cast: (@: void) ids\size), cap * c.sizeof(c.size_t)))
+    ids\text := texts
+    sizes := (cast: (@: size_t) c.realloc((cast: (@: void) ids\size), cap * c.sizeof(c.size_t)))
     if: sizes = 0
         return: 1
-    ids\size: sizes
-    order: (cast: (@: size_t) c.realloc((cast: (@: void) ids\order), cap * c.sizeof(c.size_t)))
+    ids\size := sizes
+    order := (cast: (@: size_t) c.realloc((cast: (@: void) ids\order), cap * c.sizeof(c.size_t)))
     if: order = 0
         return: 1
-    ids\order: order
-    marks: (cast: (@: char) c.realloc((cast: (@: void) ids\marks), cap * c.sizeof(c.char)))
+    ids\order := order
+    marks := (cast: (@: char) c.realloc((cast: (@: void) ids\marks), cap * c.sizeof(c.char)))
     if: marks = 0
         return: 1
-    ids\marks: marks
-    ids\cap: cap
+    ids\marks := marks
+    ids\cap := cap
     return: 0
 end: lmx_ids_room
 
@@ -118,35 +118,35 @@ fn: lmx_ids_put (@: ids c.LmxIds; const: (@: text char); size_t: nb) size_t
     @: marks char 0
     @: bytes char 0
     while: lo < hi
-        mid: lo + (hi - lo) / 2U
-        code: order[mid]
-        r: lmx_ids_order(text, nb, texts[code], sizes[code])
+        mid := lo + (hi - lo) / 2U
+        code := order[mid]
+        r := lmx_ids_order(text, nb, texts[code], sizes[code])
         if: r = 0
             return: code
         if: r < 0
-            hi: mid
+            hi := mid
         else:
-            lo: mid + 1U
+            lo := mid + 1U
         ---
     ---
     if: lmx_ids_room(ids) != 0
         return: 0U
-    bytes: (cast: (@: char) c.malloc(nb))
+    bytes := (cast: (@: char) c.malloc(nb))
     if: bytes = 0
         return: 0U
     c.memcpy((cast: (@: void) bytes), (cast: (@: void) text), nb)
-    code: ids\count + 1U
-    texts: ids\text
-    sizes: ids\size
-    order: ids\order
-    marks: ids\marks
-    texts[code]: bytes
-    sizes[code]: nb
-    marks[code]: (cast: (char) lmx_ids_all_at(text, nb))
+    code := ids\count + 1U
+    texts := ids\text
+    sizes := ids\size
+    order := ids\order
+    marks := ids\marks
+    texts[code] := bytes
+    sizes[code] := nb
+    marks[code] := (cast: (char) lmx_ids_all_at(text, nb))
     if: lo < ids\count
         c.memmove((cast: (@: void) (order + lo + 1U)), (cast: (@: void) (order + lo)), (ids\count - lo) * c.sizeof(c.size_t))
-    order[lo]: code
-    ids\count: code
+    order[lo] := code
+    ids\count := code
     return: code
 end: lmx_ids_put
 
@@ -161,26 +161,26 @@ end: lmx_ids_seed_word
 # constant (the header and this list disagree) or without memory.
 fn: lmx_ids_seed (@: ids c.LmxIds) int
     int: bad 0
-    bad: bad + lmx_ids_seed_word(ids, "merge", 5U, c.LMX_ID_MERGE)
-    bad: bad + lmx_ids_seed_word(ids, "implements", 10U, c.LMX_ID_IMPLEMENTS)
-    bad: bad + lmx_ids_seed_word(ids, "convert", 7U, c.LMX_ID_CONVERT)
-    bad: bad + lmx_ids_seed_word(ids, "interpreter", 11U, c.LMX_ID_INTERPRETER)
-    bad: bad + lmx_ids_seed_word(ids, "adopt", 5U, c.LMX_ID_ADOPT)
-    bad: bad + lmx_ids_seed_word(ids, "independent", 11U, c.LMX_ID_INDEPENDENT)
-    bad: bad + lmx_ids_seed_word(ids, "call", 4U, c.LMX_ID_CALL)
-    bad: bad + lmx_ids_seed_word(ids, "const", 5U, c.LMX_ID_CONST)
-    bad: bad + lmx_ids_seed_word(ids, "immutable", 9U, c.LMX_ID_IMMUTABLE)
-    bad: bad + lmx_ids_seed_word(ids, "int", 3U, c.LMX_ID_INT)
-    bad: bad + lmx_ids_seed_word(ids, "char", 4U, c.LMX_ID_CHAR)
-    bad: bad + lmx_ids_seed_word(ids, "size_t", 6U, c.LMX_ID_SIZE_T)
-    bad: bad + lmx_ids_seed_word(ids, "unsigned", 8U, c.LMX_ID_UNSIGNED)
-    bad: bad + lmx_ids_seed_word(ids, "ulong", 5U, c.LMX_ID_ULONG)
-    bad: bad + lmx_ids_seed_word(ids, "void", 4U, c.LMX_ID_VOID)
-    bad: bad + lmx_ids_seed_word(ids, "[]", 2U, c.LMX_ID_ARRAY)
-    bad: bad + lmx_ids_seed_word(ids, "fn", 2U, c.LMX_ID_FN)
-    bad: bad + lmx_ids_seed_word(ids, "fm", 2U, c.LMX_ID_FM)
-    bad: bad + lmx_ids_seed_word(ids, "sub", 3U, c.LMX_ID_SUB)
-    bad: bad + lmx_ids_seed_word(ids, "var", 3U, c.LMX_ID_VAR)
+    bad := bad + lmx_ids_seed_word(ids, "merge", 5U, c.LMX_ID_MERGE)
+    bad := bad + lmx_ids_seed_word(ids, "implements", 10U, c.LMX_ID_IMPLEMENTS)
+    bad := bad + lmx_ids_seed_word(ids, "convert", 7U, c.LMX_ID_CONVERT)
+    bad := bad + lmx_ids_seed_word(ids, "interpreter", 11U, c.LMX_ID_INTERPRETER)
+    bad := bad + lmx_ids_seed_word(ids, "adopt", 5U, c.LMX_ID_ADOPT)
+    bad := bad + lmx_ids_seed_word(ids, "independent", 11U, c.LMX_ID_INDEPENDENT)
+    bad := bad + lmx_ids_seed_word(ids, "call", 4U, c.LMX_ID_CALL)
+    bad := bad + lmx_ids_seed_word(ids, "const", 5U, c.LMX_ID_CONST)
+    bad := bad + lmx_ids_seed_word(ids, "immutable", 9U, c.LMX_ID_IMMUTABLE)
+    bad := bad + lmx_ids_seed_word(ids, "int", 3U, c.LMX_ID_INT)
+    bad := bad + lmx_ids_seed_word(ids, "char", 4U, c.LMX_ID_CHAR)
+    bad := bad + lmx_ids_seed_word(ids, "size_t", 6U, c.LMX_ID_SIZE_T)
+    bad := bad + lmx_ids_seed_word(ids, "unsigned", 8U, c.LMX_ID_UNSIGNED)
+    bad := bad + lmx_ids_seed_word(ids, "ulong", 5U, c.LMX_ID_ULONG)
+    bad := bad + lmx_ids_seed_word(ids, "void", 4U, c.LMX_ID_VOID)
+    bad := bad + lmx_ids_seed_word(ids, "[]", 2U, c.LMX_ID_ARRAY)
+    bad := bad + lmx_ids_seed_word(ids, "fn", 2U, c.LMX_ID_FN)
+    bad := bad + lmx_ids_seed_word(ids, "fm", 2U, c.LMX_ID_FM)
+    bad := bad + lmx_ids_seed_word(ids, "sub", 3U, c.LMX_ID_SUB)
+    bad := bad + lmx_ids_seed_word(ids, "var", 3U, c.LMX_ID_VAR)
     return: (cast: (int) (bad != 0 || ids\count != (cast: (size_t) c.LMX_ID_WORDS)))
 end: lmx_ids_seed
 
@@ -191,12 +191,12 @@ fn: lmx_ids_ready () @: c.LmxIds
     @: ids c.LmxIds anchor[0]
     if: ids != 0
         return: ids
-    ids: (cast: (@: c.LmxIds) c.calloc(1U, c.sizeof(c.LmxIds)))
+    ids := (cast: (@: c.LmxIds) c.calloc(1U, c.sizeof(c.LmxIds)))
     if: ids = 0
         return: 0
     if: lmx_ids_seed(ids) != 0
         return: 0
-    anchor[0]: ids
+    anchor[0] := ids
     return: ids
 end: lmx_ids_ready
 
@@ -208,9 +208,9 @@ fn: lmx_ids_code (const: (@: text char); size_t: nb) size_t
     if: text = 0 || nb = 0U
         return: 0U
     lmx_ids_enter()
-    ids: lmx_ids_ready()
+    ids := lmx_ids_ready()
     if: ids != 0
-        code: lmx_ids_put(ids, text, nb)
+        code := lmx_ids_put(ids, text, nb)
     lmx_ids_leave()
     return: code
 end: lmx_ids_code
@@ -224,16 +224,16 @@ fn: lmx_ids_name (size_t: code; @@: text char; @: nb size_t) int
     int: status 1
     if: text = 0 || nb = 0
         return: 1
-    text[0]: 0
-    nb[0]: 0U
+    text[0] := 0
+    nb[0] := 0U
     lmx_ids_enter()
-    ids: lmx_ids_ready()
+    ids := lmx_ids_ready()
     if: ids != 0 && code != 0U && code <= ids\count
-        texts: ids\text
-        sizes: ids\size
-        text[0]: texts[code]
-        nb[0]: sizes[code]
-        status: 0
+        texts := ids\text
+        sizes := ids\size
+        text[0] := texts[code]
+        nb[0] := sizes[code]
+        status := 0
     lmx_ids_leave()
     return: status
 end: lmx_ids_name
@@ -243,9 +243,9 @@ fn: lmx_ids_count () size_t
     @: ids c.LmxIds 0
     size_t: n 0U
     lmx_ids_enter()
-    ids: lmx_ids_ready()
+    ids := lmx_ids_ready()
     if: ids != 0
-        n: ids\count
+        n := ids\count
     lmx_ids_leave()
     return: n
 end: lmx_ids_count
@@ -258,10 +258,10 @@ fn: lmx_ids_reference (size_t: code) int
     if: code = 0U
         return: 0
     lmx_ids_enter()
-    ids: lmx_ids_ready()
+    ids := lmx_ids_ready()
     if: ids != 0 && code <= ids\count
-        marks: ids\marks
-        r: (cast: (int) (marks[code] != 0))
+        marks := ids\marks
+        r := (cast: (int) (marks[code] != 0))
     lmx_ids_leave()
     return: r
 end: lmx_ids_reference
@@ -273,7 +273,7 @@ fn: lmx_ids_unit_loaded (@@: cell size_t) int
     if: cell = 0
         return: 0
     lmx_ids_enter()
-    r: (cast: (int) (cell[0] != 0))
+    r := (cast: (int) (cell[0] != 0))
     lmx_ids_leave()
     return: r
 end: lmx_ids_unit_loaded
@@ -290,12 +290,12 @@ fn: lmx_ids_unit_publish (@@: cell size_t; @: codes size_t; size_t: count) int
         if: codes[i] = 0U
             c.free((cast: (@: void) codes))
             return: 1
-        i: i + 1U
+        i := i + 1U
     ---
     lmx_ids_enter()
     if: cell[0] = 0
-        cell[0]: codes
-        codes: 0
+        cell[0] := codes
+        codes := 0
     lmx_ids_leave()
     c.free((cast: (@: void) codes))
     return: 0

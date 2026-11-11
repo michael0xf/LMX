@@ -18,12 +18,12 @@ fn: di_chapters (@: out c.FILE; @: book char; @: rows size_t; size_t: chapters) 
     if: dg_literal(out, "[") != 0
         return: 1
     while: at < chapters
-        row: rows + 12U * at
+        row := rows + 12U * at
         if: at > 0U && c.fputc(44, out) < 0
             return: 1
         if: dg_literal(out, "\n    {\n      \"id\": ") != 0 || dj_write_string(out, book + row[0], row[1]) != 0 || dg_literal(out, ",\n      \"source_sections\": ") != 0 || dj_write_string(out, book + row[6], row[7]) != 0 || dg_literal(out, "\n    }") != 0
             return: 1
-        at: at + 1U
+        at := at + 1U
     ---
     if: chapters > 0U && dg_literal(out, "\n  ") != 0
         return: 1
@@ -47,25 +47,25 @@ fn: di_examples (@: out c.FILE; @: book char; @: rows size_t; size_t: chapters) 
     if: dg_literal(out, "[") != 0
         return: 1
     while: chapter < chapters
-        row: rows + 12U * chapter
-        scan: 0U
+        row := rows + 12U * chapter
+        scan := 0U
         while: 1
-            found: db_excerpt_next(book + row[8], row[9], scan, @ first, @ after, @ source_key, @ a, @ b, @ overflow)
+            found := db_excerpt_next(book + row[8], row[9], scan, @ first, @ after, @ source_key, @ a, @ b, @ overflow)
             if: found < 0 || overflow != 0
                 return: 1
             if: found = 0
                 break
-            key: "l1"
+            key := "l1"
             if: source_key = 2
-                key: "older"
+                key := "older"
             if: written > 0U && c.fputc(44, out) < 0
                 return: 1
             if: dg_literal(out, "\n    {\n      \"chapter\": ") != 0 || dj_write_string(out, book + row[0], row[1]) != 0 || dg_literal(out, ",\n      \"source\": ") != 0 || dj_write_string(out, key, c.strlen(key)) != 0 || c.fprintf(out, ",\n      \"start\": %zu,\n      \"end\": %zu\n    }", a, b) < 0
                 return: 1
-            written: written + 1U
-            scan: after
+            written := written + 1U
+            scan := after
         ---
-        chapter: chapter + 1U
+        chapter := chapter + 1U
     ---
     if: written > 0U && dg_literal(out, "\n  ") != 0
         return: 1
@@ -82,16 +82,16 @@ fn: di_lines_string (@: out c.FILE; @: raw char; @: starts size_t; @: lengths si
         return: dj_write_string(out, "", 0U)
     if: first > after
         return: 1
-    stream: os_file_temporary()
+    stream := os_file_temporary()
     if: stream = 0
         return: 1
-    failed: db_source_lines(stream, raw, starts, lengths, first + 1U, after)
+    failed := db_source_lines(stream, raw, starts, lengths, first + 1U, after)
     if: failed = 0
-        failed: db_stream_read(stream, @ joined, @ joined_count)
+        failed := db_stream_read(stream, @ joined, @ joined_count)
     if: c.fclose(stream) != 0
-        failed: 1
+        failed := 1
     if: failed = 0
-        failed: dj_write_string(out, joined, joined_count)
+        failed := dj_write_string(out, joined, joined_count)
     c.free(joined)
     return: failed
 end: di_lines_string
@@ -104,12 +104,12 @@ fn: di_line_views (@: raw char; @: starts size_t; size_t: lines) @@: char
     size_t: limit (cast: (size_t) -1)
     if: lines >= limit / sizeof(@: char)
         return: 0
-    views: c.calloc(lines + 1U, sizeof(@: char))
+    views := c.calloc(lines + 1U, sizeof(@: char))
     if: views = 0
         return: 0
     while: at < lines
-        views[at]: raw + starts[at]
-        at: at + 1U
+        views[at] := raw + starts[at]
+        at := at + 1U
     ---
     return: views
 end: di_line_views
@@ -124,47 +124,47 @@ fn: di_differences (@: out c.FILE; @: l1 char; @: l1_starts size_t; @: l1_length
     size_t: at 0U
     size_t: written 0U
     int: failed 0
-    left: di_line_views(older, older_starts, older_lines)
-    right: di_line_views(l1, l1_starts, l1_lines)
+    left := di_line_views(older, older_starts, older_lines)
+    right := di_line_views(l1, l1_starts, l1_lines)
     if: left = 0 || right = 0
-        failed: 1
+        failed := 1
     if: failed = 0
-        failed: docs_match_opcodes(left, older_lengths, older_lines, right, l1_lengths, l1_lines, @ opcodes, @ op_count)
+        failed := docs_match_opcodes(left, older_lengths, older_lines, right, l1_lengths, l1_lines, @ opcodes, @ op_count)
     c.free(left)
     c.free(right)
     if: failed = 0
-        failed: dg_literal(out, "[")
+        failed := dg_literal(out, "[")
     while: at < op_count && failed = 0
-        row: opcodes + 5U * at
+        row := opcodes + 5U * at
         if: row[0] != 4U
-            tag: "replace"
+            tag := "replace"
             if: row[0] = 2U
-                tag: "delete"
+                tag := "delete"
             if: row[0] = 3U
-                tag: "insert"
+                tag := "insert"
             if: written > 0U && c.fputc(44, out) < 0
-                failed: 1
+                failed := 1
             if: failed = 0
                 if: dg_literal(out, "\n    {\n      \"operation\": ") != 0 || dj_write_string(out, tag, c.strlen(tag)) != 0 || c.fprintf(out, ",\n      \"older_lines\": [\n        %zu,\n        %zu\n      ],\n      \"l1_lines\": [\n        %zu,\n        %zu\n      ],\n      \"older_text\": ", row[1] + 1U, row[2], row[3] + 1U, row[4]) < 0
-                    failed: 1
+                    failed := 1
                 ---
             ---
             if: failed = 0
-                failed: di_lines_string(out, older, older_starts, older_lengths, row[1], row[2])
+                failed := di_lines_string(out, older, older_starts, older_lengths, row[1], row[2])
             if: failed = 0
-                failed: dg_literal(out, ",\n      \"l1_text\": ")
+                failed := dg_literal(out, ",\n      \"l1_text\": ")
             if: failed = 0
-                failed: di_lines_string(out, l1, l1_starts, l1_lengths, row[3], row[4])
+                failed := di_lines_string(out, l1, l1_starts, l1_lengths, row[3], row[4])
             if: failed = 0
-                failed: dg_literal(out, "\n    }")
-            written: written + 1U
+                failed := dg_literal(out, "\n    }")
+            written := written + 1U
         ---
-        at: at + 1U
+        at := at + 1U
     ---
     if: failed = 0 && written > 0U
-        failed: dg_literal(out, "\n  ")
+        failed := dg_literal(out, "\n  ")
     if: failed = 0
-        failed: dg_literal(out, "]")
+        failed := dg_literal(out, "]")
     c.free(opcodes)
     return: failed
 end: di_differences
@@ -176,39 +176,39 @@ fn: docs_semantics_inventory (@: book char; @: rows size_t; size_t: chapters; @:
     int: failed 0
     if: result = 0 || result_count = 0
         return: 1
-    result[0]: 0
-    result_count[0]: 0U
-    out: os_file_temporary()
+    result[0] := 0
+    result_count[0] := 0U
+    out := os_file_temporary()
     if: out = 0
         return: 1
-    failed: dg_literal(out, "{\n  \"l1\": ")
+    failed := dg_literal(out, "{\n  \"l1\": ")
     if: failed = 0
-        failed: di_source(out, l1_path_json, l1_path_count, l1_digest, l1_lines, "provenance/semantics-sources/l1.txt")
+        failed := di_source(out, l1_path_json, l1_path_count, l1_digest, l1_lines, "provenance/semantics-sources/l1.txt")
     if: failed = 0
-        failed: dg_literal(out, ",\n  \"older\": ")
+        failed := dg_literal(out, ",\n  \"older\": ")
     if: failed = 0
-        failed: di_source(out, older_path_json, older_path_count, older_digest, older_lines, "provenance/semantics-sources/older.txt")
+        failed := di_source(out, older_path_json, older_path_count, older_digest, older_lines, "provenance/semantics-sources/older.txt")
     if: failed = 0
-        failed: dg_literal(out, ",\n  \"chapters\": ")
+        failed := dg_literal(out, ",\n  \"chapters\": ")
     if: failed = 0
-        failed: di_chapters(out, book, rows, chapters)
+        failed := di_chapters(out, book, rows, chapters)
     if: failed = 0
-        failed: dg_literal(out, ",\n  \"source_examples\": ")
+        failed := dg_literal(out, ",\n  \"source_examples\": ")
     if: failed = 0
-        failed: di_examples(out, book, rows, chapters)
+        failed := di_examples(out, book, rows, chapters)
     if: failed = 0
-        failed: dg_literal(out, ",\n  \"older_differences\": ")
+        failed := dg_literal(out, ",\n  \"older_differences\": ")
     if: failed = 0
-        failed: di_differences(out, l1, l1_starts, l1_lengths, l1_lines, older, older_starts, older_lengths, older_lines)
+        failed := di_differences(out, l1, l1_starts, l1_lengths, l1_lines, older, older_starts, older_lengths, older_lines)
     if: failed = 0
-        failed: dg_literal(out, "\n}\n")
+        failed := dg_literal(out, "\n}\n")
     if: failed = 0
-        failed: db_stream_read(out, result, result_count)
+        failed := db_stream_read(out, result, result_count)
     if: c.fclose(out) != 0
-        failed: 1
+        failed := 1
     if: failed != 0
         c.free(result[0])
-        result[0]: 0
-        result_count[0]: 0U
+        result[0] := 0
+        result_count[0] := 0U
     return: failed
 end: docs_semantics_inventory

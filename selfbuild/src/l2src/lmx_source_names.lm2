@@ -25,28 +25,28 @@ fn: lmx_source_name_local (@: arena c.LmxArena; @: key void; size_t: port) @: c.
     @: row c.LmxSourceName 0
     size_t: i 0U
     size_t: n 0U
-    pool: (cast: (@: LmxPool) arena\arrays)
+    pool := (cast: (@: LmxPool) arena\arrays)
     while: pool != 0
         if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
-            chunk: (cast: (@: LmxChunk) pool\head)
+            chunk := (cast: (@: LmxChunk) pool\head)
             while: chunk != 0
                 # Revert may retire storage without removing the chunk record.
                 # Only its still-registered local interval belongs to this table.
                 if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
-                    rows: (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
-                    n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
-                    i: 0U
+                    rows := (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                    n := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
+                    i := 0U
                     while: i < n
-                        row: rows + i
+                        row := rows + i
                         if: row\key = key && row\port = port
                             return: row
-                        i: i + 1U
+                        i := i + 1U
                     ---
                 ---
-                chunk: (cast: (@: LmxChunk) chunk\next)
+                chunk := (cast: (@: LmxChunk) chunk\next)
             ---
         ---
-        pool: (cast: (@: LmxPool) pool\next)
+        pool := (cast: (@: LmxPool) pool\next)
     ---
     return: 0
 end: lmx_source_name_local
@@ -59,10 +59,10 @@ fn: lmx_source_name_row_at (@: arena c.LmxArena; @: key void; size_t: port) @: c
     @: home c.LmxArena 0
     if: arena = 0 || key = 0
         return: 0
-    row: lmx_source_name_local(arena, key, port)
+    row := lmx_source_name_local(arena, key, port)
     if: row != 0
         return: row
-    home: (cast: (@: LmxArena) c.lmx_range_home(arena, key))
+    home := (cast: (@: LmxArena) c.lmx_range_home(arena, key))
     if: home != 0 && home != arena
         return: lmx_source_name_local(home, key, port)
     return: 0
@@ -99,7 +99,7 @@ fn: lmx_source_place_model_set (@: arena c.LmxArena; @: slot void; @: layout voi
         return: (cast: (int) (row\model_layout != layout))
     if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
-    row\model_layout: layout
+    row\model_layout := layout
     lmx_source_name_publish(row, slot)
     return: 0
 end: lmx_source_place_model_set
@@ -112,7 +112,7 @@ fn: lmx_source_place_uses_set (@: arena c.LmxArena; @: slot void; @: cells size_
     @: row c.LmxSourceName lmx_source_places(arena, slot)
     if: row = 0
         return: 1
-    row\place_uses: cells
+    row\place_uses := cells
     return: 0
 end: lmx_source_place_uses_set
 
@@ -126,7 +126,7 @@ fn: lmx_source_places_set (@: arena c.LmxArena; @: key void; @: spec size_t) int
         return: (cast: (int) (row\place_spec != spec))
     if: lmx_source_name_prepare_at(arena, key, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
-    row\place_spec: spec
+    row\place_spec := spec
     lmx_source_name_publish(row, key)
     return: 0
 end: lmx_source_places_set
@@ -141,10 +141,10 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
     @: row c.LmxSourceName 0
     if: out = 0
         return: 1
-    out[0]: 0
+    out[0] := 0
     if: arena = 0 || key = 0
         return: 1
-    known: lmx_source_name_row_at(arena, key, port)
+    known := lmx_source_name_row_at(arena, key, port)
     if: known != 0
         # One actual occurrence has one spelling, so one code. Aliases use distinct source
         # places; they do not silently overwrite the referent's name.
@@ -156,33 +156,33 @@ fn: lmx_source_name_prepare_at (@: arena c.LmxArena; @: key void; size_t: port; 
         return: 1
     # Append one real service cell. key=0 is unpublished, not a reusable slot:
     # several pending rows must have distinct places.
-    row: (cast: (@: LmxSourceName) c.lmx_arena_take(arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME))
+    row := (cast: (@: LmxSourceName) c.lmx_arena_take(arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME))
     if: row = 0
         return: 1
-    row\key: 0
-    row\port: port
-    row\code: code
-    row\place_spec: 0
-    row\model_layout: 0
-    row\place_uses: 0
-    row\place_callable: 0
-    row\pending_next: 0
-    out[0]: row
+    row\key := 0
+    row\port := port
+    row\code := code
+    row\place_spec := 0
+    row\model_layout := 0
+    row\place_uses := 0
+    row\place_callable := 0
+    row\pending_next := 0
+    out[0] := row
     return: 0
 end: lmx_source_name_prepare_at
 
 sub: lmx_source_name_publish (@: row c.LmxSourceName; @: key void)
     if: row != 0
-        row\pending_next: 0
-        row\key: key
+        row\pending_next := 0
+        row\key := key
     ---
 end: lmx_source_name_publish
 
 sub: lmx_source_name_cancel (@: row c.LmxSourceName)
     if: row != 0
-        row\key: 0
-        row\pending_next: 0
-        row\code: 0U
+        row\key := 0
+        row\pending_next := 0
+        row\code := 0U
     ---
 end: lmx_source_name_cancel
 
@@ -212,33 +212,33 @@ sub: lmx_source_names_drop (@: arena c.LmxArena; @: lo void; @: hi void)
     size_t: key 0U
     size_t: place 0U
     size_t: declared 0U
-    pool: (cast: (@: LmxPool) arena\arrays)
+    pool := (cast: (@: LmxPool) arena\arrays)
     while: pool != 0
         if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
-            chunk: (cast: (@: LmxChunk) pool\head)
+            chunk := (cast: (@: LmxChunk) pool\head)
             while: chunk != 0
                 if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
-                    rows: (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
-                    n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
-                    i: 0U
+                    rows := (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                    n := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
+                    i := 0U
                     while: i < n
-                        row: rows + i
-                        key: (cast: (size_t) row\key)
-                        place: (cast: (size_t) row)
+                        row := rows + i
+                        key := (cast: (size_t) row\key)
+                        place := (cast: (size_t) row)
                         # Retire the row of a retired key, and a row whose own cell retires.
                         if: (key >= low && key < high) || (place >= low && place < high)
                             lmx_source_name_cancel(row)
                         # A declared callable that leaves takes its declaration along (lmx_source_place_callable_set).
-                        declared: (cast: (size_t) row\place_callable)
+                        declared := (cast: (size_t) row\place_callable)
                         if: declared >= low && declared < high
-                            row\place_callable: 0
-                        i: i + 1U
+                            row\place_callable := 0
+                        i := i + 1U
                     ---
                 ---
-                chunk: (cast: (@: LmxChunk) chunk\next)
+                chunk := (cast: (@: LmxChunk) chunk\next)
             ---
         ---
-        pool: (cast: (@: LmxPool) pool\next)
+        pool := (cast: (@: LmxPool) pool\next)
     ---
 end: lmx_source_names_drop
 
@@ -259,28 +259,28 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
     # Decide every weak key against the completed ordinary mark FIRST, then mark the chunks of the rows kept, so a
     # stamped row chunk never turns a previously dead occurrence into a live one.
     while: pass < 2
-        pool: (cast: (@: LmxPool) arena\arrays)
+        pool := (cast: (@: LmxPool) arena\arrays)
         while: pool != 0
             if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
-                chunk: (cast: (@: LmxChunk) pool\head)
+                chunk := (cast: (@: LmxChunk) pool\head)
                 while: chunk != 0
                     if: (cast: (@: LmxPool) c.lmx_range_interval_pool(arena, (cast: (@: void) c.lmx_chunk_data(chunk)))) = pool
-                        rows: (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
-                        n: (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
-                        i: 0U
+                        rows := (cast: (@: LmxSourceName) c.lmx_chunk_data(chunk))
+                        n := (cast: (size_t) c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)))
+                        i := 0U
                         while: i < n
-                            row: rows + i
+                            row := rows + i
                             if: row\key != 0
                                 if: pass = 0
-                                    live: 0
-                                    owner: (cast: (@: LmxPool) c.lmx_range_pool(arena, row\key))
+                                    live := 0
+                                    owner := (cast: (@: LmxPool) c.lmx_range_pool(arena, row\key))
                                     if: owner != 0
                                         if: c.lmx_pool_is_sealed(owner) != 0
-                                            live: 1
+                                            live := 1
                                         else:
-                                            held: (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, row\key))
+                                            held := (cast: (@: LmxChunk) c.lmx_pool_chunk_at(owner, row\key))
                                             if: held != 0 && held\mark = gen
-                                                live: 1
+                                                live := 1
                                             ---
                                         ---
                                     ---
@@ -288,18 +288,18 @@ fn: lmx_source_names_mark (@: arena c.LmxArena; unsigned: gen) int
                                         lmx_source_name_cancel(row)
                                     ---
                                 else:
-                                    chunk\mark: gen
+                                    chunk\mark := gen
                                 ---
                             ---
-                            i: i + 1U
+                            i := i + 1U
                         ---
                     ---
-                    chunk: (cast: (@: LmxChunk) chunk\next)
+                    chunk := (cast: (@: LmxChunk) chunk\next)
                 ---
             ---
-            pool: (cast: (@: LmxPool) pool\next)
+            pool := (cast: (@: LmxPool) pool\next)
         ---
-        pass: pass + 1
+        pass := pass + 1
     ---
     return: 0
 end: lmx_source_names_mark
@@ -314,11 +314,11 @@ fn: lmx_source_place_callable_set (@: arena c.LmxArena; @: slot void; @: declare
     @: row c.LmxSourceName lmx_source_places(arena, slot)
     if: row != 0
         if: row\place_callable = 0
-            row\place_callable: declared
+            row\place_callable := declared
         return: (cast: (int) (row\place_callable != declared))
     if: lmx_source_name_prepare_at(arena, slot, (cast: (size_t) -1), 0U, @ row) != 0 || row = 0
         return: 1
-    row\place_callable: declared
+    row\place_callable := declared
     lmx_source_name_publish(row, slot)
     return: 0
 end: lmx_source_place_callable_set

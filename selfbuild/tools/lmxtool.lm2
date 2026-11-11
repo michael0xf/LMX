@@ -16,17 +16,17 @@ size_t: len 0U
 @: buf char 0
 int: rc 2
 while: i < n && args != 0
-    len: length(m\mainArgs[i])
-    buf: c.malloc(len + 1U)
-    j: 0U
+    len := length(m\mainArgs[i])
+    buf := c.malloc(len + 1U)
+    j := 0U
     while: buf != 0 && j < len
-        buf[j]: m\mainArgs[i][j]
-        j: j + 1U
+        buf[j] := m\mainArgs[i][j]
+        j := j + 1U
     if: buf != 0
-        buf[len]: (cast: (char) 0)
-    args[i]: buf
-    i: i + 1U
+        buf[len] := (cast: (char) 0)
+    args[i] := buf
+    i := i + 1U
 if: args != 0
-    rc: c.tool_main(args, (cast: (int) n))
+    rc := c.tool_main(args, (cast: (int) n))
 send: exit(exit_code: rc; stdout: ""; stderr: "")
 return

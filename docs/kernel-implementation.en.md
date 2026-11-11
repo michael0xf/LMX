@@ -230,6 +230,36 @@ its own (`lm_compiler_merge_lift_methods`) and gives the caller its former readi
 generations are the same; the full list -- `SUITE 140 rows, 0 failures`, 1108 PASS; 99 graph-check runs ×
 interp/native/forced PASS.
 
+[Slice 348](../steps/witnesses/colon-migrate-machine-20261111/notes.md) closed the three gaps of the census and
+migrated the machine sources -- the translator, the kernel, the tool and the graph translator -- to `:=`. The machine
+path from the clean graph (`lm_compiler_graph_block`, `l2_frontend_graph.lm2`) emits the operator `left := value` --
+the builder's unnamed Lmx [`:=`, left side, operand] -- as the very write it emits for the form `name: value` and
+`owner\field: value`: `lmx_schedule` and `lmx_process_deadline`, migrated to `:=`, give byte for byte the former L1
+from their graph. The clean graph has no positions in the source text, so the rows of the census for these modules
+come from a translation by the same frontend without the word `--graph`. The target the branches of `os` blocks are
+selected for is named by the environment variable `L2_OS_TARGET` -- `win` or `default`; without it the target is the
+translator's own (`lm_compiler_os_target`). A translation for another target writes the L1 of that target; that is
+how the `default:` branches are lowered on Windows and name their writes. The sources only a generation build
+translates are named by a `bootstrap` run with `L2_COLON_WRITES`. The receiver form `@: place value`, brought by
+the frontend to a write through a path, gives no row any more; a Structure written with its fields at the place of
+its head is kind 10 of its own. The commands of the report tell a write with a colon and a space from a write of
+another form -- compact or a block -- and print the second (`COLON-FORM`) without touching it. The whole census of
+`src` and `tools` -- 76,776 rows, 34,117 sites in 101 files: the machine path 34,058 (a name 20,547, an index 8,986,
+a dereference 1,188, a member of C storage 3,337), the root programs of the tool in the L3 lowering -- a name 64, an
+index 19, and four forms `MainLetter: m`, which the command does not touch
+([P1](../LMX_blog/q/current/colon-declares-contradictions-20261110.md)). Every row is confirmed by the text, there is
+no write of another form; by the text no statement with a colon whose head is a name, a path or a dereference is
+left outside the census. `colon-migrate` rewrote 34,113 sites; every changed line differs from the former one by one
+colon that became `:=`. The migration changed no generated file: all 172 L1 files of a generation -- the texts and
+headers of the frontend, the kernel and the tool -- are byte for byte the files of the generation before the
+migration; the frontend, `l1trans`, the tool and the graph translator are the same images (`EXE-SAME 1`), `driver.o`
+is the same. What a build on Windows does not translate is compared apart: the L1 of the target `default` and the L1
+of the graph-route modules read without `--graph` are the same before and after the migration. A repeated census of
+the migrated sources names no write -- the four forms `MainLetter: m` are left in it. `bootstrap quick` -- 0
+failures, the generations are the same; the full list -- `SUITE 140 rows, 0 failures`, 1108 PASS. The fixtures of
+`tests` outside
+`tests/graph` write assignment with a colon, and the L3 lowering, the machine path and the walker accept it.
+
 The author's decision of the same day ([journal](../LMX_blog/2026-11-10.md#receiver-args-only),
 [book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by the form `receiver: arguments`, and the
 composed form `name: receiver: value` is withdrawn. The examples of the slices above are written in the former form

@@ -100,7 +100,7 @@ sub: lm_compiler_graph_indent (@: f c.FILE; int: level)
     int: k 0
     while: k < level
         c.fputs("    ", f)
-        k: k + 1
+        k := k + 1
     ---
     return
 end: lm_compiler_graph_indent
@@ -177,8 +177,8 @@ fn: lm_compiler_graph_formal_type (@: g c.LmxGraph; @: f c.FILE; @: args c.Lmx; 
         return: 0
     if: kind != 4
         return: 1
-    decl: (cast: (@: c.Lmx) value)
-    head: c.lmx_graph_name_of(g, value)
+    decl := (cast: (@: c.Lmx) value)
+    head := c.lmx_graph_name_of(g, value)
     if: head = state\w_at && c.lmx_graph_count(decl) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 1U)) = 2
         c.fputs("@: ", f)
         lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 1U)))
@@ -219,7 +219,7 @@ fn: lm_compiler_graph_sig (@: g c.LmxGraph; @: f c.FILE; @: made c.Lmx; @: name 
             c.fputs("; ", f)
         if: lm_compiler_graph_formal(g, f, args, mi, j) != 0
             return: 1
-        j: j + 1U
+        j := j + 1U
     ---
     c.fputs(") ", f)
     lm_compiler_graph_type(f, rtext)
@@ -234,7 +234,7 @@ fn: lm_compiler_graph_place_at (@@: names char; size_t: n; @: word char) size_t
     while: i < n
         if: names[i] = word
             return: i
-        i: i + 1U
+        i := i + 1U
     ---
     return: n
 end: lm_compiler_graph_place_at
@@ -253,31 +253,31 @@ fn: lm_compiler_graph_declaration (@: g c.LmxGraph; @: block c.Lmx; size_t: i; @
     int: kind c.lmx_graph_kind(g, value)
     int: role 0
     size_t: n 0U
-    name_out[0]: 0
-    type_out[0]: 0
+    name_out[0] := 0
+    type_out[0] := 0
     if: state = 0
         return: 0
     if: kind = 3 || (kind = 1 && c.lmx_graph_slot_name(g, block, i) != 0)
-        name_out[0]: c.lmx_graph_slot_name(g, block, i)
-        type_out[0]: (cast: (@: char) state\w_int)
+        name_out[0] := c.lmx_graph_slot_name(g, block, i)
+        type_out[0] := (cast: (@: char) state\w_int)
         if: kind = 3
             return: 1
         return: 2
     if: kind != 4
         return: 0
-    decl: (cast: (@: c.Lmx) value)
-    head: c.lmx_graph_name_of(g, value)
-    n: c.lmx_graph_count(decl)
+    decl := (cast: (@: c.Lmx) value)
+    head := c.lmx_graph_name_of(g, value)
+    n := c.lmx_graph_count(decl)
     if: head = 0
         return: 0
     # A door name's role is its C declaration's, whatever the actuals (CODEX-OPUS-341-DOOR-HEAD-REPLY).
     if: lm_compiler_graph_door_word(head) != 0
-        role: lm_compiler_graph_door_role(dheads, droles, dn, head)
+        role := lm_compiler_graph_door_role(dheads, droles, dn, head)
         if: role != 1 && role != 2
             return: 0
-        type_out[0]: head
+        type_out[0] := head
         if: n >= 1U && n <= 2U && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) = 2
-            name_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+            name_out[0] := c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
             if: lm_compiler_graph_identifier(name_out[0]) != 0
                 return: 5
             ---
@@ -285,12 +285,12 @@ fn: lm_compiler_graph_declaration (@: g c.LmxGraph; @: block c.Lmx; size_t: i; @
     if: n = 0U || c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) != 2
         return: 0
     if: head = state\w_at && (n = 2U || n = 3U) && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 1U)) = 2
-        name_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
-        type_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 1U))
+        name_out[0] := c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+        type_out[0] := c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 1U))
         return: 4
     if: lm_compiler_graph_scalar(head) != 0 && n <= 2U
-        name_out[0]: c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
-        type_out[0]: head
+        name_out[0] := c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))
+        type_out[0] := head
         return: 3
     return: 0
 end: lm_compiler_graph_declaration
@@ -304,15 +304,15 @@ fn: lm_compiler_graph_count_tree (@: g c.LmxGraph; @: block c.Lmx) size_t
     size_t: total c.lmx_graph_count(block)
     size_t: i 0U
     while: i < n
-        value: c.lmx_graph_get(block, i)
-        head: c.lmx_graph_name_of(g, value)
+        value := c.lmx_graph_get(block, i)
+        head := c.lmx_graph_name_of(g, value)
         if: c.lmx_graph_kind(g, value) = 4 && head = state\w_if && c.lmx_graph_count((cast: (@: c.Lmx) value)) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)) = 4
-            total: total + lm_compiler_graph_count_tree(g, (cast: (@: c.Lmx) c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)))
+            total := total + lm_compiler_graph_count_tree(g, (cast: (@: c.Lmx) c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)))
         ---
         if: c.lmx_graph_kind(g, value) = 4 && head = state\w_else
-            total: total + lm_compiler_graph_count_tree(g, (cast: (@: c.Lmx) value))
+            total := total + lm_compiler_graph_count_tree(g, (cast: (@: c.Lmx) value))
         ---
-        i: i + 1U
+        i := i + 1U
     ---
     return: total
 end: lm_compiler_graph_count_tree
@@ -331,8 +331,8 @@ fn: lm_compiler_graph_collect (@: g c.LmxGraph; @: args c.Lmx; @: block c.Lmx; @
     int: form 0
     int: status 0
     while: i < n && status = 0
-        value: c.lmx_graph_get(block, i)
-        form: lm_compiler_graph_declaration(g, block, i, dheads, droles, dn, @ name, @ type)
+        value := c.lmx_graph_get(block, i)
+        form := lm_compiler_graph_declaration(g, block, i, dheads, droles, dn, @ name, @ type)
         if: form = 5
             c.fprintf(c.stderr, "l2trans error: %s: fn %s: the place %s of the C door type %s: the graph path translates no place of a C door type yet\n", src, fname, name, type)
             return: 1
@@ -346,19 +346,19 @@ fn: lm_compiler_graph_collect (@: g c.LmxGraph; @: args c.Lmx; @: block c.Lmx; @
                 c.fprintf(c.stderr, "l2trans error: %s: fn %s: the name %s is declared twice\n", src, fname, name)
                 return: 1
             ---
-            names[count[0]]: name
-            types[count[0]]: type
-            ptr[count[0]]: (cast: (int) (form = 4))
-            count[0]: count[0] + 1U
+            names[count[0]] := name
+            types[count[0]] := type
+            ptr[count[0]] := (cast: (int) (form = 4))
+            count[0] := count[0] + 1U
         ---
-        head: c.lmx_graph_name_of(g, value)
+        head := c.lmx_graph_name_of(g, value)
         if: c.lmx_graph_kind(g, value) = 4 && head = state\w_if && c.lmx_graph_count((cast: (@: c.Lmx) value)) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)) = 4
-            status: lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)), dheads, droles, dn, names, types, ptr, count, src, fname)
+            status := lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) c.lmx_graph_get((cast: (@: c.Lmx) value), 1U)), dheads, droles, dn, names, types, ptr, count, src, fname)
         ---
         if: status = 0 && c.lmx_graph_kind(g, value) = 4 && head = state\w_else
-            status: lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) value), dheads, droles, dn, names, types, ptr, count, src, fname)
+            status := lm_compiler_graph_collect(g, args, (cast: (@: c.Lmx) value), dheads, droles, dn, names, types, ptr, count, src, fname)
         ---
-        i: i + 1U
+        i := i + 1U
     ---
     return: status
 end: lm_compiler_graph_collect
@@ -384,18 +384,18 @@ fn: lm_compiler_graph_door_collect (@: g c.LmxGraph; @: value void; @@: heads ch
     int: status 0
     if: c.lmx_graph_kind(g, value) != 4
         return: 0
-    head: c.lmx_graph_name_of(g, value)
+    head := c.lmx_graph_name_of(g, value)
     if: head != 0 && lm_compiler_graph_door_word(head) != 0 && head != c.lmx_graph_intern("c.sizeof", 8U)
         if: lm_compiler_graph_place_at(heads, count[0], head) = count[0]
             if: count[0] >= room
                 return: 1
-            heads[count[0]]: head
-            count[0]: count[0] + 1U
+            heads[count[0]] := head
+            count[0] := count[0] + 1U
         ---
     ---
     while: j < c.lmx_graph_count((cast: (@: c.Lmx) value)) && status = 0
-        status: lm_compiler_graph_door_collect(g, c.lmx_graph_get((cast: (@: c.Lmx) value), j), heads, count, room)
-        j: j + 1U
+        status := lm_compiler_graph_door_collect(g, c.lmx_graph_get((cast: (@: c.Lmx) value), j), heads, count, room)
+        j := j + 1U
     ---
     return: status
 end: lm_compiler_graph_door_collect
@@ -427,72 +427,72 @@ fn: lm_compiler_graph_import (@: g c.LmxGraph; @: root c.Lmx; const: (@: src cha
         return: 1
     # One text for each predef word of the root and one for each head: the frontend's import reads LmP0Text.
     while: i < c.lmx_graph_count(root)
-        value: c.lmx_graph_get(root, i)
+        value := c.lmx_graph_get(root, i)
         if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = state\w_predef
-            room: room + c.lmx_graph_count((cast: (@: c.Lmx) value))
-        i: i + 1U
+            room := room + c.lmx_graph_count((cast: (@: c.Lmx) value))
+        i := i + 1U
     ---
-    room: room + n
-    texts: (cast: (@@: c.LmP0Text) c.calloc(room, sizeof(@: void)))
+    room := room + n
+    texts := (cast: (@@: c.LmP0Text) c.calloc(room, sizeof(@: void)))
     if: texts = 0
         return: lm_compiler_graph_refuse(src, "out of memory")
-    i: 0U
+    i := 0U
     while: i < c.lmx_graph_count(root) && status = 0
-        value: c.lmx_graph_get(root, i)
+        value := c.lmx_graph_get(root, i)
         if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = state\w_predef
-            words: (cast: (@: c.Lmx) value)
-            k: 0U
+            words := (cast: (@: c.Lmx) value)
+            k := 0U
             while: k < c.lmx_graph_count(words) && status = 0
-                text: c.lmx_graph_word_text(g, c.lmx_graph_get(words, k))
-                t: (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+                text := c.lmx_graph_word_text(g, c.lmx_graph_get(words, k))
+                t := (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
                 if: text = 0 || t = 0
-                    status: lm_compiler_graph_refuse(src, "a predef of a machine module names its file by a word")
+                    status := lm_compiler_graph_refuse(src, "a predef of a machine module names its file by a word")
                 else:
-                    texts[used]: t
-                    used: used + 1U
-                    t\data: text
-                    t\length: c.strlen(text)
+                    texts[used] := t
+                    used := used + 1U
+                    t\data := text
+                    t\length := c.strlen(text)
                     if: c.lm_compiler_pd_push(t, src, 0) != 0
-                        status: 1
+                        status := 1
                     ---
                 ---
-                k: k + 1U
+                k := k + 1U
             ---
         ---
-        i: i + 1U
+        i := i + 1U
     ---
     # Each head without its `c.`: the index answers for the name the C declaration gives.
-    i: 0U
+    i := 0U
     while: i < n && status = 0
-        t: (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+        t := (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
         if: t = 0
-            status: lm_compiler_graph_refuse(src, "out of memory")
+            status := lm_compiler_graph_refuse(src, "out of memory")
         else:
-            texts[used]: t
-            used: used + 1U
-            t\data: heads[i] + 2U
-            t\length: c.strlen(heads[i] + 2U)
-            roles[i]: 0
+            texts[used] := t
+            used := used + 1U
+            t\data := heads[i] + 2U
+            t\length := c.strlen(heads[i] + 2U)
+            roles[i] := 0
             if: c.lm_compiler_predef_has_function(t) != 0
-                roles[i]: 3
+                roles[i] := 3
             else:
                 if: c.lm_compiler_predef_has_type(t) != 0
-                    roles[i]: 1
+                    roles[i] := 1
                 else:
                     if: c.lm_compiler_predef_has_fnptr(t) != 0
-                        roles[i]: 2
+                        roles[i] := 2
                     ---
                 ---
             ---
         ---
-        i: i + 1U
+        i := i + 1U
     ---
     c.lm_compiler_pd_free()
     c.lm_compiler_snap_free()
-    k: 0U
+    k := 0U
     while: k < used
         c.free((cast: (@: void) texts[k]))
-        k: k + 1U
+        k := k + 1U
     ---
     c.free((cast: (@: void) texts))
     return: status
@@ -521,8 +521,8 @@ fn: lm_compiler_graph_calls (@: g c.LmxGraph; @: value void) int
     size_t: j 0U
     if: c.lmx_graph_kind(g, value) != 4
         return: 0
-    expression: (cast: (@: c.Lmx) value)
-    head: c.lmx_graph_name_of(g, value)
+    expression := (cast: (@: c.Lmx) value)
+    head := c.lmx_graph_name_of(g, value)
     if: head = c.lmx_graph_intern("cast", 4U)
         if: c.lmx_graph_count(expression) = 2U
             return: lm_compiler_graph_calls(g, c.lmx_graph_get(expression, 1U))
@@ -535,7 +535,7 @@ fn: lm_compiler_graph_calls (@: g c.LmxGraph; @: value void) int
     while: j < c.lmx_graph_count(expression)
         if: lm_compiler_graph_calls(g, c.lmx_graph_get(expression, j)) != 0
             return: 1
-        j: j + 1U
+        j := j + 1U
     ---
     return: 0
 end: lm_compiler_graph_calls
@@ -549,8 +549,8 @@ fn: lm_compiler_graph_reads (@: g c.LmxGraph; @: value void) int
     size_t: j 0U
     if: state = 0 || c.lmx_graph_kind(g, value) != 4
         return: 0
-    expression: (cast: (@: c.Lmx) value)
-    head: c.lmx_graph_name_of(g, value)
+    expression := (cast: (@: c.Lmx) value)
+    head := c.lmx_graph_name_of(g, value)
     if: head = c.lmx_graph_intern("cast", 4U)
         if: c.lmx_graph_count(expression) = 2U
             return: lm_compiler_graph_reads(g, c.lmx_graph_get(expression, 1U))
@@ -562,7 +562,7 @@ fn: lm_compiler_graph_reads (@: g c.LmxGraph; @: value void) int
     while: j < c.lmx_graph_count(expression)
         if: lm_compiler_graph_reads(g, c.lmx_graph_get(expression, j)) != 0
             return: 1
-        j: j + 1U
+        j := j + 1U
     ---
     return: 0
 end: lm_compiler_graph_reads
@@ -586,8 +586,8 @@ fn: lm_compiler_graph_count_nodes (@: g c.LmxGraph; @: value void) size_t
     if: c.lmx_graph_kind(g, value) != 4
         return: 0U
     while: j < c.lmx_graph_count((cast: (@: c.Lmx) value))
-        total: total + lm_compiler_graph_count_nodes(g, c.lmx_graph_get((cast: (@: c.Lmx) value), j))
-        j: j + 1U
+        total := total + lm_compiler_graph_count_nodes(g, c.lmx_graph_get((cast: (@: c.Lmx) value), j))
+        j := j + 1U
     ---
     return: total
 end: lm_compiler_graph_count_nodes
@@ -610,11 +610,11 @@ fn: lm_compiler_graph_own_type (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
     if: state = 0
         return: 1
     if: kind = 2
-        text: c.lmx_graph_word_text(g, value)
-        j: c.lmx_graph_formal(g, args, text)
+        text := c.lmx_graph_word_text(g, value)
+        j := c.lmx_graph_formal(g, args, text)
         if: j < c.lmx_graph_count(args)
             return: lm_compiler_graph_formal_type(g, f, args, j)
-        j: lm_compiler_graph_place_at(names, n, text)
+        j := lm_compiler_graph_place_at(names, n, text)
         if: j >= n
             return: 1
         if: ptr[j] != 0
@@ -628,15 +628,15 @@ fn: lm_compiler_graph_own_type (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
         return: 0
     if: kind != 4
         return: 1
-    expression: (cast: (@: c.Lmx) value)
-    head: c.lmx_graph_name_of(g, value)
+    expression := (cast: (@: c.Lmx) value)
+    head := c.lmx_graph_name_of(g, value)
     if: head = c.lmx_graph_intern("cast", 4U)
         if: c.lmx_graph_count(expression) != 2U || c.lmx_graph_kind(g, c.lmx_graph_get(expression, 0U)) != 4
             return: 1
-        typed: (cast: (@: c.Lmx) c.lmx_graph_get(expression, 0U))
+        typed := (cast: (@: c.Lmx) c.lmx_graph_get(expression, 0U))
         if: c.lmx_graph_count(typed) != 1U
             return: 1
-        kind_type: c.lmx_graph_get(typed, 0U)
+        kind_type := c.lmx_graph_get(typed, 0U)
         if: c.lmx_graph_kind(g, kind_type) = 2 && lm_compiler_graph_number(c.lmx_graph_word_text(g, kind_type)) != 0
             lm_compiler_graph_type(f, c.lmx_graph_word_text(g, kind_type))
             c.fputs(": ", f)
@@ -652,7 +652,7 @@ fn: lm_compiler_graph_own_type (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
     if: head != 0
         if: lm_compiler_graph_callee(g, root, value) != 2
             return: 1
-        made: (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head))
+        made := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head))
         lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, made)))
         c.fputs(": ", f)
         return: 0
@@ -660,7 +660,7 @@ fn: lm_compiler_graph_own_type (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
         return: lm_compiler_graph_own_type(g, f, root, args, names, types, ptr, n, c.lmx_graph_get(expression, 0U))
     if: c.lmx_graph_count(expression) != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(expression, 1U)) != 2
         return: 1
-    op: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
+    op := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
     if: op = state\w_eq || op = state\w_ne || op = state\w_lt || op = state\w_le || op = state\w_gt || op = state\w_ge || op = state\w_and || op = state\w_or
         c.fputs("int: ", f)
         return: 0
@@ -679,17 +679,17 @@ fn: lm_compiler_graph_hold (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         return: lm_compiler_graph_refuse_at(src, fname, at, "a value in the right operand of && or || would be kept before the statement, before its left operand decides whether it runs: the graph path keeps no value there yet")
     lm_compiler_graph_indent(f, level)
     if: cargs != 0
-        status: lm_compiler_graph_formal_type(g, f, cargs, j)
+        status := lm_compiler_graph_formal_type(g, f, cargs, j)
     else:
-        status: lm_compiler_graph_own_type(g, f, root, args, names, types, ptr, n, value)
+        status := lm_compiler_graph_own_type(g, f, root, args, names, types, ptr, n, value)
     ---
     if: status != 0
         return: lm_compiler_graph_refuse_at(src, fname, at, "a value evaluated before a later call is kept in a local of its C type, and this one -- a call of the C door, a field read through a path, an operation led by a number -- has none the graph path knows (as the P0 path refuses such an actual of a C call)")
     c.fprintf(f, "l2_t%zu (", kn[0])
-    status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], value, 1, src, fname, at)
+    status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], value, 1, src, fname, at)
     c.fputs(")\n", f)
-    kept[kn[0]]: (cast: (@: c.Lmx) value)
-    kn[0]: kn[0] + 1U
+    kept[kn[0]] := (cast: (@: c.Lmx) value)
+    kn[0] := kn[0] + 1U
     return: status
 end: lm_compiler_graph_hold
 
@@ -713,49 +713,49 @@ fn: lm_compiler_graph_keep (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         return: 1
     if: c.lmx_graph_kind(g, value) != 4
         return: 0
-    expression: (cast: (@: c.Lmx) value)
-    head: c.lmx_graph_name_of(g, value)
-    count: c.lmx_graph_count(expression)
+    expression := (cast: (@: c.Lmx) value)
+    head := c.lmx_graph_name_of(g, value)
+    count := c.lmx_graph_count(expression)
     if: head = c.lmx_graph_intern("cast", 4U)
         if: count != 2U
             return: 0
         return: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 1U), level, cond, src, fname, at)
     if: head != 0
-        callee: lm_compiler_graph_callee(g, root, value)
+        callee := lm_compiler_graph_callee(g, root, value)
         if: callee != 1 && callee != 2
             return: 0
         if: callee = 2
-            cargs: c.lmx_graph_method_args(g, (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head)))
+            cargs := c.lmx_graph_method_args(g, (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head)))
         while: i < count
-            status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, i), level, cond, src, fname, at)
+            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, i), level, cond, src, fname, at)
             if: status != 0
                 return: status
-            before: 0
-            j: i + 1U
+            before := 0
+            j := i + 1U
             while: j < count && before = 0
-                before: lm_compiler_graph_before(g, c.lmx_graph_get(expression, i), c.lmx_graph_get(expression, j))
-                j: j + 1U
+                before := lm_compiler_graph_before(g, c.lmx_graph_get(expression, i), c.lmx_graph_get(expression, j))
+                j := j + 1U
             ---
             if: before != 0
-                status: lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, i), cargs, i, level, cond, src, fname, at)
+                status := lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, i), cargs, i, level, cond, src, fname, at)
                 if: status != 0
                     return: status
                 ---
-            i: i + 1U
+            i := i + 1U
         ---
         return: 0
     if: count = 1U
         return: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), level, cond, src, fname, at)
     if: count != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(expression, 1U)) != 2
         return: 0
-    op: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
-    status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), level, cond, src, fname, at)
+    op := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
+    status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), level, cond, src, fname, at)
     if: status != 0 || op = state\w_deref
         return: status
     if: op = state\w_and || op = state\w_or
         return: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 2U), level, 1, src, fname, at)
     if: lm_compiler_graph_before(g, c.lmx_graph_get(expression, 0U), c.lmx_graph_get(expression, 2U)) != 0
-        status: lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), 0, 0U, level, cond, src, fname, at)
+        status := lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), 0, 0U, level, cond, src, fname, at)
         if: status != 0
             return: status
         ---
@@ -770,7 +770,7 @@ fn: lm_compiler_graph_name (@: g c.LmxGraph; @: f c.FILE; @: args c.Lmx; int: mi
     if: j < c.lmx_graph_count(args)
         lm_compiler_graph_formal_cname(f, mi, j, word)
         return: 1
-    j: lm_compiler_graph_place_at(names, n, word)
+    j := lm_compiler_graph_place_at(names, n, word)
     if: j < n
         lm_compiler_graph_place_cname(f, k0 + (cast: (int) j), word)
         return: 1
@@ -787,7 +787,7 @@ fn: lm_compiler_graph_reference (@: g c.LmxGraph; @: args c.Lmx; @@: names char;
         if: c.lmx_graph_kind(g, c.lmx_graph_get(args, j)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get(args, j)) = state\w_at
             return: 1
         return: 0
-    j: lm_compiler_graph_place_at(names, n, word)
+    j := lm_compiler_graph_place_at(names, n, word)
     if: j < n && ptr[j] != 0
         return: 1
     return: 0
@@ -803,7 +803,7 @@ fn: lm_compiler_graph_callee (@: g c.LmxGraph; @: root c.Lmx; @: value void) int
         return: 0
     if: lm_compiler_graph_door_word(head) != 0
         return: 1
-    made: (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head))
+    made := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, head))
     if: made = 0 || c.lmx_graph_method(g, made) = 0
         return: 0
     if: c.lmx_graph_count(c.lmx_graph_method_args(g, made)) != c.lmx_graph_count((cast: (@: c.Lmx) value))
@@ -838,16 +838,16 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         if: kept[j] = (cast: (@: c.Lmx) value)
             c.fprintf(f, "l2_t%zu", j)
             return: 0
-        j: j + 1U
+        j := j + 1U
     ---
-    j: 0U
+    j := 0U
     if: kind = 1
         if: c.lmx_graph_value_int(g, value, @ number) != 0
             return: lm_compiler_graph_refuse_at(src, fname, at, "an int of the expression has no value")
         c.fprintf(f, "%d", number)
         return: 0
     if: kind = 2
-        text: c.lmx_graph_word_text(g, value)
+        text := c.lmx_graph_word_text(g, value)
         if: text = 0
             return: lm_compiler_graph_refuse_at(src, fname, at, "a word of the expression has no spelling")
         if: lm_compiler_graph_name(g, f, args, mi, names, n, k0, text) != 0
@@ -859,15 +859,15 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         return: lm_compiler_graph_refuse_word(src, fname, at, text, "is no formal or place of the machine function, no door name c.X, no number and no string: a machine function has no unit")
     if: kind != 4
         return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates names, numbers, operations, paths, casts and calls: no other expression yet")
-    expression: (cast: (@: c.Lmx) value)
-    head: c.lmx_graph_name_of(g, value)
+    expression := (cast: (@: c.Lmx) value)
+    head := c.lmx_graph_name_of(g, value)
     if: head != 0
         # `cast: (T) value`: the type Structure holds a word (a C scalar or door type) or a reference `@: T`.
         if: head = c.lmx_graph_intern("cast", 4U) && c.lmx_graph_count(expression) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get(expression, 0U)) = 4
-            typed: (cast: (@: c.Lmx) c.lmx_graph_get(expression, 0U))
+            typed := (cast: (@: c.Lmx) c.lmx_graph_get(expression, 0U))
             if: c.lmx_graph_name_of(g, (cast: (@: void) typed)) != 0 || c.lmx_graph_count(typed) != 1U
                 return: lm_compiler_graph_refuse_at(src, fname, at, "a cast of a machine function names one type")
-            kind_type: c.lmx_graph_get(typed, 0U)
+            kind_type := c.lmx_graph_get(typed, 0U)
             c.fputs("(cast: (", f)
             if: c.lmx_graph_kind(g, kind_type) = 2 && lm_compiler_graph_number(c.lmx_graph_word_text(g, kind_type)) != 0
                 lm_compiler_graph_type(f, c.lmx_graph_word_text(g, kind_type))
@@ -878,24 +878,24 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
                 lm_compiler_graph_type(f, c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) kind_type), 0U)))
             ---
             c.fputs(") ", f)
-            status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 1U), 0, src, fname, at)
+            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 1U), 0, src, fname, at)
             c.fputs(")", f)
             return: status
         ---
-        status: lm_compiler_graph_callee(g, root, value)
+        status := lm_compiler_graph_callee(g, root, value)
         if: status = 3
             return: lm_compiler_graph_refuse_word(src, fname, at, head, "is called with another number of actuals than its formals")
         if: status = 0
             return: lm_compiler_graph_refuse_word(src, fname, at, head, "is no function of the module and no function of the C door: the graph path of a machine function calls no other")
         c.fputs(head, f)
         c.fputs("(", f)
-        j: 0U
-        status: 0
+        j := 0U
+        status := 0
         while: j < c.lmx_graph_count(expression) && status = 0
             if: j > 0U
                 c.fputs(", ", f)
-            status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, j), 0, src, fname, at)
-            j: j + 1U
+            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, j), 0, src, fname, at)
+            j := j + 1U
         ---
         c.fputs(")", f)
         return: status
@@ -906,16 +906,16 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         return: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), whole, src, fname, at)
     if: c.lmx_graph_count(expression) != 3U || c.lmx_graph_kind(g, c.lmx_graph_get(expression, 1U)) != 2
         return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates binary operations and paths: no other operation yet")
-    op: c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
+    op := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
     if: op = state\w_deref
-        owner: c.lmx_graph_get(expression, 0U)
+        owner := c.lmx_graph_get(expression, 0U)
         if: c.lmx_graph_kind(g, c.lmx_graph_get(expression, 2U)) != 2
             return: lm_compiler_graph_refuse_at(src, fname, at, "a path of a machine function names a field by a word")
         if: c.lmx_graph_kind(g, owner) = 2
             if: lm_compiler_graph_reference(g, args, names, ptr, n, c.lmx_graph_word_text(g, owner)) = 0
                 return: lm_compiler_graph_refuse_at(src, fname, at, "a path of a machine function starts at a reference `@: name T`, a formal or a place")
             ---
-        status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, owner, 0, src, fname, at)
+        status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, owner, 0, src, fname, at)
         if: status != 0
             return: status
         c.fputc(92, f)
@@ -925,11 +925,11 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates = != < <= > >= + - * / % && || and paths: no other operator yet")
     if: whole = 0
         c.fputs("(", f)
-    status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), 0, src, fname, at)
+    status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 0U), 0, src, fname, at)
     if: status != 0
         return: status
     c.fprintf(f, " %s ", op)
-    status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 2U), 0, src, fname, at)
+    status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn, c.lmx_graph_get(expression, 2U), 0, src, fname, at)
     if: status != 0
         return: status
     if: whole = 0
@@ -950,6 +950,9 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
     @: head char 0
     @: path void 0
     @: next void 0
+    @: left void 0
+    @: value void 0
+    @: word char 0
     @: name char 0
     @: type char 0
     size_t: count c.lmx_graph_count(block)
@@ -961,117 +964,165 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
     if: state = 0
         return: 1
     while: i < count && status = 0
-        raw: c.lmx_graph_get(block, i)
-        at[0]: at[0] + 1
-        form: lm_compiler_graph_declaration(g, block, i, dheads, droles, dn, @ name, @ type)
+        raw := c.lmx_graph_get(block, i)
+        at[0] := at[0] + 1
+        form := lm_compiler_graph_declaration(g, block, i, dheads, droles, dn, @ name, @ type)
         if: form = 1
-            i: i + 1U
+            i := i + 1U
             continue
         if: form = 2
-            k: lm_compiler_graph_place_at(names, n, name)
+            k := lm_compiler_graph_place_at(names, n, name)
             if: c.lmx_graph_value_int(g, raw, @ number) != 0
                 return: lm_compiler_graph_refuse_at(src, fname, at[0], "an int place has no value")
             lm_compiler_graph_indent(f, level)
             lm_compiler_graph_place_cname(f, k0 + (cast: (int) k), name)
             c.fprintf(f, ": %d\n", number)
-            i: i + 1U
+            i := i + 1U
             continue
         if: form = 3 || form = 4
-            statement: (cast: (@: c.Lmx) raw)
-            k: lm_compiler_graph_place_at(names, n, name)
+            statement := (cast: (@: c.Lmx) raw)
+            k := lm_compiler_graph_place_at(names, n, name)
             if: (form = 3 && c.lmx_graph_count(statement) = 2U) || (form = 4 && c.lmx_graph_count(statement) = 3U)
-                status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, c.lmx_graph_count(statement) - 1U), level, 0, src, fname, at[0])
+                status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, c.lmx_graph_count(statement) - 1U), level, 0, src, fname, at[0])
                 if: status != 0
                     return: status
                 lm_compiler_graph_indent(f, level)
                 lm_compiler_graph_place_cname(f, k0 + (cast: (int) k), name)
                 c.fputs(": ", f)
-                status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, c.lmx_graph_count(statement) - 1U), 1, src, fname, at[0])
+                status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, c.lmx_graph_count(statement) - 1U), 1, src, fname, at[0])
                 c.fputs("\n", f)
             ---
-            i: i + 1U
+            i := i + 1U
             continue
         if: c.lmx_graph_kind(g, raw) != 4
             return: lm_compiler_graph_refuse_at(src, fname, at[0], "the graph path of a machine function translates if, else, return, declarations, writes and calls: no other statement yet")
-        statement: (cast: (@: c.Lmx) raw)
-        head: c.lmx_graph_name_of(g, raw)
-        path: 0
+        statement := (cast: (@: c.Lmx) raw)
+        head := c.lmx_graph_name_of(g, raw)
+        path := 0
         if: head = 0
-            path: c.lmx_graph_path_head(g, raw)
+            path := c.lmx_graph_path_head(g, raw)
         if: head = state\w_return && c.lmx_graph_count(statement) = 1U
-            status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
+            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
             if: status != 0
                 return: status
             lm_compiler_graph_indent(f, level)
             c.fputs("return: ", f)
-            status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
+            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
             c.fputs("\n", f)
-            i: i + 1U
+            i := i + 1U
             continue
         if: head = state\w_if && c.lmx_graph_count(statement) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get(statement, 1U)) = 4
-            status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
+            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
             if: status != 0
                 return: status
             lm_compiler_graph_indent(f, level)
             c.fputs("if: ", f)
-            status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
+            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
             c.fputs("\n", f)
             if: status = 0
-                status: lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U)), level + 1, src, fname, at)
+                status := lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U)), level + 1, src, fname, at)
             lm_compiler_graph_indent(f, level + 1)
             c.fputs("---\n", f)
-            next: 0
+            next := 0
             if: i + 1U < count
-                next: c.lmx_graph_get(block, i + 1U)
+                next := c.lmx_graph_get(block, i + 1U)
             if: status = 0 && next != 0 && c.lmx_graph_kind(g, next) = 4 && c.lmx_graph_name_of(g, next) = state\w_else
-                i: i + 1U
+                i := i + 1U
                 lm_compiler_graph_indent(f, level)
                 c.fputs("else:\n", f)
-                status: lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) next), level + 1, src, fname, at)
+                status := lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, kn, (cast: (@: c.Lmx) next), level + 1, src, fname, at)
                 lm_compiler_graph_indent(f, level + 1)
                 c.fputs("---\n", f)
             ---
-            i: i + 1U
+            i := i + 1U
             continue
+        # The operator `left := value` (the author, 2026-11-07 and 2026-11-10: a value is written into a known place by
+        # `:=`; a structural form declares or calls) -- the unnamed Lmx [`:=`, left, operand] of the builder
+        # (lm_graph_build_assignment).  left is the word of a formal or of a place of the function, or the path the
+        # head of `owner\field: value` is; the write is emitted as the structural form's below, so both spellings give
+        # one L1.  An operand the builder kept as the sequence of one application is that application.
+        if: head = 0 && c.lmx_graph_count(statement) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U)) = state\w_assign
+            left := c.lmx_graph_get(statement, 1U)
+            value := c.lmx_graph_get(statement, 2U)
+            if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = 0 && c.lmx_graph_count((cast: (@: c.Lmx) value)) = 1U && c.lmx_graph_kind(g, c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)) != 0
+                value := c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)
+            word := 0
+            if: c.lmx_graph_kind(g, left) = 2
+                word := c.lmx_graph_word_text(g, left)
+            if: word != 0 && (c.lmx_graph_formal(g, args, word) < c.lmx_graph_count(args) || lm_compiler_graph_place_at(names, n, word) < n)
+                status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, value, level, 0, src, fname, at[0])
+                if: status != 0
+                    return: status
+                lm_compiler_graph_indent(f, level)
+                lm_compiler_graph_name(g, f, args, mi, names, n, k0, word)
+                c.fputs(": ", f)
+                status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], value, 1, src, fname, at[0])
+                c.fputs("\n", f)
+                i := i + 1U
+                continue
+            ---
+            if: word = 0 && c.lmx_graph_kind(g, left) = 4
+                # The left side's owner is read before the value, in lexical order, as an operation's left operand is.
+                status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, left, level, 0, src, fname, at[0])
+                if: status = 0 && c.lmx_graph_count((cast: (@: c.Lmx) left)) = 3U
+                    if: lm_compiler_graph_before(g, c.lmx_graph_get((cast: (@: c.Lmx) left), 0U), value) != 0
+                        status := lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get((cast: (@: c.Lmx) left), 0U), 0, 0U, level, 0, src, fname, at[0])
+                    ---
+                if: status = 0
+                    status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, value, level, 0, src, fname, at[0])
+                if: status != 0
+                    return: status
+                lm_compiler_graph_indent(f, level)
+                status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], left, 1, src, fname, at[0])
+                if: status = 0
+                    c.fputs(": ", f)
+                    status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], value, 1, src, fname, at[0])
+                    c.fputs("\n", f)
+                ---
+                i := i + 1U
+                continue
+            ---
+            return: lm_compiler_graph_refuse_at(src, fname, at[0], "the operator := of a machine function writes a formal, a place of the function or a field through a path: its left side is none of them")
+        ---
         if: path != 0 && c.lmx_graph_count(statement) = 2U
             # The head's owner is read before the value, in lexical order, as an operation's left operand is.
-            status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, path, level, 0, src, fname, at[0])
+            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, path, level, 0, src, fname, at[0])
             if: status = 0 && c.lmx_graph_kind(g, path) = 4 && c.lmx_graph_count((cast: (@: c.Lmx) path)) = 3U
                 if: lm_compiler_graph_before(g, c.lmx_graph_get((cast: (@: c.Lmx) path), 0U), c.lmx_graph_get(statement, 1U)) != 0
-                    status: lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get((cast: (@: c.Lmx) path), 0U), 0, 0U, level, 0, src, fname, at[0])
+                    status := lm_compiler_graph_hold(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get((cast: (@: c.Lmx) path), 0U), 0, 0U, level, 0, src, fname, at[0])
                 ---
             if: status = 0
-                status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 1U), level, 0, src, fname, at[0])
+                status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 1U), level, 0, src, fname, at[0])
             if: status != 0
                 return: status
             lm_compiler_graph_indent(f, level)
-            status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], path, 1, src, fname, at[0])
+            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], path, 1, src, fname, at[0])
             if: status = 0
                 c.fputs(": ", f)
-                status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 1U), 1, src, fname, at[0])
+                status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 1U), 1, src, fname, at[0])
                 c.fputs("\n", f)
             ---
-            i: i + 1U
+            i := i + 1U
             continue
         if: head != 0 && c.lmx_graph_count(statement) = 1U && (c.lmx_graph_formal(g, args, head) < c.lmx_graph_count(args) || lm_compiler_graph_place_at(names, n, head) < n)
-            status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
+            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
             if: status != 0
                 return: status
             lm_compiler_graph_indent(f, level)
             lm_compiler_graph_name(g, f, args, mi, names, n, k0, head)
             c.fputs(": ", f)
-            status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
+            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], c.lmx_graph_get(statement, 0U), 1, src, fname, at[0])
             c.fputs("\n", f)
-            i: i + 1U
+            i := i + 1U
             continue
         if: head != 0 && lm_compiler_graph_callee(g, root, raw) != 0
-            status: lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, raw, level, 0, src, fname, at[0])
+            status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, raw, level, 0, src, fname, at[0])
             if: status != 0
                 return: status
             lm_compiler_graph_indent(f, level)
-            status: lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], raw, 1, src, fname, at[0])
+            status := lm_compiler_graph_expr(g, f, root, args, mi, names, ptr, n, k0, kept, kn[0], raw, 1, src, fname, at[0])
             c.fputs("\n", f)
-            i: i + 1U
+            i := i + 1U
             continue
         return: lm_compiler_graph_refuse_at(src, fname, at[0], "the graph path of a machine function translates if, else, return, declarations, writes and calls: no other statement yet")
     ---
@@ -1089,10 +1140,10 @@ fn: lm_compiler_graph_door (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: head
     size_t: k 0U
     int: seen 0
     while: i < c.lmx_graph_count(root)
-        value: c.lmx_graph_get(root, i)
+        value := c.lmx_graph_get(root, i)
         if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = head
-            words: (cast: (@: c.Lmx) value)
-            k: 0U
+            words := (cast: (@: c.Lmx) value)
+            k := 0U
             while: k < c.lmx_graph_count(words)
                 if: c.lmx_graph_kind(g, c.lmx_graph_get(words, k)) != 2
                     return: 1
@@ -1102,11 +1153,11 @@ fn: lm_compiler_graph_door (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: head
                 c.fputs(c.lmx_graph_word_text(g, c.lmx_graph_get(words, k)), f)
                 if: each != 0
                     c.fputs("\n", f)
-                seen: 1
-                k: k + 1U
+                seen := 1
+                k := k + 1U
             ---
         ---
-        i: i + 1U
+        i := i + 1U
     ---
     if: each = 0 && seen != 0
         c.fputs("\n", f)
@@ -1128,18 +1179,18 @@ fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
     size_t: i 0U
     int: at 0
     int: status 0
-    places[0]: 0U
+    places[0] := 0U
     if: args = 0 || body = 0
         return: lm_compiler_graph_refuse(src, "a machine function has args and a body")
-    room: lm_compiler_graph_count_tree(g, body) + 1U
-    names: (cast: (@@: char) c.calloc(room, sizeof(@: char)))
-    types: (cast: (@@: char) c.calloc(room, sizeof(@: char)))
-    ptr: (cast: (@: int) c.calloc(room, c.sizeof(c.int)))
+    room := lm_compiler_graph_count_tree(g, body) + 1U
+    names := (cast: (@@: char) c.calloc(room, sizeof(@: char)))
+    types := (cast: (@@: char) c.calloc(room, sizeof(@: char)))
+    ptr := (cast: (@: int) c.calloc(room, c.sizeof(c.int)))
     # The values the function keeps before their statements: at most one per Lmx of its body.
-    kept: (cast: (@@: c.Lmx) c.calloc(lm_compiler_graph_count_nodes(g, (cast: (@: void) body)) + 1U, sizeof(@: void)))
+    kept := (cast: (@@: c.Lmx) c.calloc(lm_compiler_graph_count_nodes(g, (cast: (@: void) body)) + 1U, sizeof(@: void)))
     if: names = 0 || types = 0 || ptr = 0 || kept = 0
         return: lm_compiler_graph_refuse(src, "out of memory")
-    status: lm_compiler_graph_collect(g, args, body, dheads, droles, dn, names, types, ptr, @ n, src, name)
+    status := lm_compiler_graph_collect(g, args, body, dheads, droles, dn, names, types, ptr, @ n, src, name)
     if: status != 0
         return: status
     if: lm_compiler_graph_sig(g, f, made, name, mi) != 0
@@ -1157,9 +1208,9 @@ fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
         ---
         lm_compiler_graph_place_cname(f, k0 + (cast: (int) i), names[i])
         c.fputs(" 0\n", f)
-        i: i + 1U
+        i := i + 1U
     ---
-    status: lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, @ kn, body, 1, src, name, @ at)
+    status := lm_compiler_graph_block(g, f, root, args, mi, dheads, droles, dn, names, types, ptr, n, k0, kept, @ kn, body, 1, src, name, @ at)
     if: status != 0
         return: status
     c.fprintf(f, "end: %s\n\n", name)
@@ -1167,7 +1218,7 @@ fn: lm_compiler_graph_function (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: 
     c.free((cast: (@: void) types))
     c.free((cast: (@: void) ptr))
     c.free((cast: (@: void) kept))
-    places[0]: n
+    places[0] := n
     return: 0
 end: lm_compiler_graph_function
 
@@ -1204,82 +1255,82 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
         return: lm_compiler_graph_refuse(src, "out of memory")
     # The root of a machine module holds its functions and the declarations of its C door, nothing to run.
     while: i < n
-        value: c.lmx_graph_get(root, i)
-        head: c.lmx_graph_name_of(g, value)
+        value := c.lmx_graph_get(root, i)
+        head := c.lmx_graph_name_of(g, value)
         if: c.lmx_graph_kind(g, value) != 4 || head = 0
             return: lm_compiler_graph_refuse_root(src, i, "the root of a machine module holds its functions and its predef and include declarations: it has no entry to run a statement or a graph to hold a value")
         if: head = state\w_fn
-            decl: (cast: (@: c.Lmx) value)
-            name: c.lmx_graph_fn_decl_name(g, decl)
-            made: 0
+            decl := (cast: (@: c.Lmx) value)
+            name := c.lmx_graph_fn_decl_name(g, decl)
+            made := 0
             if: name != 0
-                made: (cast: (@: c.Lmx) c.lmx_graph_space_find(root, name))
+                made := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, name))
             if: name = 0 || c.lmx_graph_fn_written(g, decl) = 0 || made = 0 || c.lmx_graph_method(g, made) = 0 || made\parent != decl || c.lmx_graph_has_result(g, made) = 0
                 return: lm_compiler_graph_refuse_root(src, i, "a function of a machine module is declared with written arguments, a result and a body")
             if: name[0] = 108 && name[1] = 50 && name[2] = 95
                 return: lm_compiler_graph_refuse_root(src, i, "a machine function's C name is not l2_, the translator's own")
-            made_list[fcount]: made
-            name_list[fcount]: name
-            fcount: fcount + 1
+            made_list[fcount] := made
+            name_list[fcount] := name
+            fcount := fcount + 1
         else:
             if: head != state\w_predef && head != state\w_include
                 return: lm_compiler_graph_refuse_root(src, i, "the root of a machine module holds its functions (fn: the graph path translates no sub yet) and its predef and include declarations: it has no entry to run a statement or a graph to hold a Structure")
             ---
         ---
-        i: i + 1U
+        i := i + 1U
     ---
     # Every export names a function with a body at the root.
     while: k < count
-        wanted: c.lmx_graph_intern(names[k], c.strlen(names[k]))
-        found: 0
-        x: 0
+        wanted := c.lmx_graph_intern(names[k], c.strlen(names[k]))
+        found := 0
+        x := 0
         while: x < fcount
             if: name_list[x] = wanted
-                found: 1
-            x: x + 1
+                found := 1
+            x := x + 1
         ---
         if: found = 0
             c.fprintf(c.stderr, "l2trans error: %s: --machine %s names no function with a body at the unit's root\n", src, names[k])
             return: 1
-        k: k + 1
+        k := k + 1
     ---
     # The roles of the door names the functions write, from the unit's predef closure (the import of the C door, released
     # before any line of the module is written).
-    x: 0
+    x := 0
     while: x < fcount
-        droom: droom + lm_compiler_graph_count_nodes(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])))
-        x: x + 1
+        droom := droom + lm_compiler_graph_count_nodes(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])))
+        x := x + 1
     ---
-    dheads: (cast: (@@: char) c.calloc(droom, sizeof(@: char)))
-    droles: (cast: (@: int) c.calloc(droom, c.sizeof(c.int)))
+    dheads := (cast: (@@: char) c.calloc(droom, sizeof(@: char)))
+    droles := (cast: (@: int) c.calloc(droom, c.sizeof(c.int)))
     if: dheads = 0 || droles = 0
         return: lm_compiler_graph_refuse(src, "out of memory")
-    x: 0
+    x := 0
     while: x < fcount && status = 0
-        status: lm_compiler_graph_door_collect(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])), dheads, @ dn, droom)
-        x: x + 1
+        status := lm_compiler_graph_door_collect(g, (cast: (@: void) c.lmx_graph_method_body(g, made_list[x])), dheads, @ dn, droom)
+        x := x + 1
     ---
     if: status != 0
         return: lm_compiler_graph_refuse(src, "the door names of the module outgrow their count")
     if: lm_compiler_graph_import(g, root, src, dheads, droles, dn) != 0
         return: 1
     # The mark names the source by its file, as the P0 path's does, and the input it was read from.
-    base: (cast: (@: char) src)
-    p: 0U
+    base := (cast: (@: char) src)
+    p := 0U
     while: src[p] != 0
         if: src[p] = 47 || src[p] = 92
-            base: (cast: (@: char) (src + p + 1U))
-        p: p + 1U
+            base := (cast: (@: char) (src + p + 1U))
+        p := p + 1U
     ---
     c.fprintf(f, "# Generated by l2trans from the clean graph of %s, a machine module (L2 section 20): edit that source, not this file.\n", base)
     c.fputs("include: \"<stddef.h>\"\n", f)
     if: lm_compiler_graph_door(g, f, root, (cast: (@: char) state\w_predef), "predef:", 1) != 0 || lm_compiler_graph_door(g, f, root, (cast: (@: char) state\w_include), "include:", 0) != 0
         return: lm_compiler_graph_refuse(src, "a predef or include declaration of a machine module names its files by words")
     c.fputs("\nprototype:\n", f)
-    x: 0
+    x := 0
     while: x < fcount
         c.fputs("    ", f)
-        status: lm_compiler_graph_sig(g, f, made_list[x], name_list[x], x)
+        status := lm_compiler_graph_sig(g, f, made_list[x], name_list[x], x)
         if: status = 1
             c.fprintf(c.stderr, "l2trans error: %s: fn %s: a formal of a machine function is a number `T: name` or a reference `@: name T`\n", src, name_list[x])
             return: 1
@@ -1287,16 +1338,16 @@ fn: lm_compiler_graph_module (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; const
             c.fprintf(c.stderr, "l2trans error: %s: fn %s: the result of a machine function is a C scalar word (int, char, size_t, unsigned, ulong) or a C door type\n", src, name_list[x])
             return: 1
         c.fputs("\n", f)
-        x: x + 1
+        x := x + 1
     ---
     c.fputs("end: prototype\n\n", f)
-    x: 0
+    x := 0
     while: x < fcount
-        status: lm_compiler_graph_function(g, f, root, made_list[x], name_list[x], x, k0, dheads, droles, dn, @ places, src)
+        status := lm_compiler_graph_function(g, f, root, made_list[x], name_list[x], x, k0, dheads, droles, dn, @ places, src)
         if: status != 0
             return: status
-        k0: k0 + (cast: (int) places)
-        x: x + 1
+        k0 := k0 + (cast: (int) places)
+        x := x + 1
     ---
     c.free((cast: (@: void) made_list))
     c.free((cast: (@: void) name_list))
@@ -1322,25 +1373,25 @@ fn: lm_compiler_graph_translate (const: (@: src char); const: (@: out char); @@:
     c.sprintf(tmp, "%s.tmp", out)
     if: c.lmx_arena_open(arena) != 0
         return: lm_compiler_graph_refuse(src, "the translation's arena does not open")
-    g: c.lmx_graph_open(arena)
+    g := c.lmx_graph_open(arena)
     if: g = 0
         return: lm_compiler_graph_refuse(src, "the translation's graph does not open")
-    status: c.lm_graph_build_file(g, src, @ root)
+    status := c.lm_graph_build_file(g, src, @ root)
     if: status != 0
         c.fprintf(c.stderr, "l2trans error: %s: the clean graph of the unit is not built (the builder answered %d)\n", src, status)
         return: 1
-    status: c.lmx_graph_space_open(g, root, @ opened)
+    status := c.lmx_graph_space_open(g, root, @ opened)
     if: status != 0
         c.fprintf(c.stderr, "l2trans error: %s: the traversal of the unit's root does not open (answer %d)\n", src, status)
         return: 1
-    f: c.fopen(tmp, "wb")
+    f := c.fopen(tmp, "wb")
     if: f = 0
         c.lmx_graph_space_close(opened)
         c.fprintf(c.stderr, "l2trans error: cannot open %s\n", tmp)
         return: 1
-    status: lm_compiler_graph_module(g, f, root, src, names, count)
+    status := lm_compiler_graph_module(g, f, root, src, names, count)
     if: c.fclose(f) != 0 && status = 0
-        status: lm_compiler_graph_refuse(src, "the machine module is not written")
+        status := lm_compiler_graph_refuse(src, "the machine module is not written")
     c.lmx_graph_space_close(opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(arena)
@@ -1374,15 +1425,15 @@ fn: lm_compiler_graph_main (int: argc; @@: argv char) int
     if: argc < a + 3 || c.strcmp(argv[a], "--library") != 0
         c.fputs("l2trans error: --graph translates a machine module: --library --machine NAME ... <source.lm2> [<part.lm2> ...] <output.lm1>\n", c.stderr)
         return: 1
-    a: a + 1
-    names: (cast: (@@: char) c.calloc((cast: (size_t) argc), sizeof(@: char)))
+    a := a + 1
+    names := (cast: (@@: char) c.calloc((cast: (size_t) argc), sizeof(@: char)))
     if: names = 0
         c.fputs("l2trans error: out of memory\n", c.stderr)
         return: 1
     while: argc >= a + 4 && c.strcmp(argv[a], "--machine") = 0
-        names[count]: argv[a + 1]
-        count: count + 1
-        a: a + 2
+        names[count] := argv[a + 1]
+        count := count + 1
+        a := a + 2
     ---
     if: count = 0
         c.fputs("l2trans error: --graph translates a machine module: --machine NAME ... names its exports\n", c.stderr)
@@ -1397,14 +1448,14 @@ fn: lm_compiler_graph_main (int: argc; @@: argv char) int
         if: c.strncmp(names[k], "l2_", 3U) = 0
             c.fprintf(c.stderr, "l2trans error: --machine %s: a machine function's C name is not l2_, the translator's own\n", names[k])
             return: 1
-        j: 0
+        j := 0
         while: j < k
             if: c.strcmp(names[j], names[k]) = 0
                 c.fprintf(c.stderr, "l2trans error: --machine %s is given twice\n", names[k])
                 return: 1
-            j: j + 1
+            j := j + 1
         ---
-        k: k + 1
+        k := k + 1
     ---
     return: lm_compiler_graph_translate(argv[a], argv[argc - 1], names, count)
 end: lm_compiler_graph_main

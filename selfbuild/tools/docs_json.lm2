@@ -8,7 +8,7 @@ fn: dj_ws (@: data char; size_t: count; size_t: begin) size_t
     while: pos < count
         if: data[pos] != (cast: (char) 32) && data[pos] != (cast: (char) 9) && data[pos] != (cast: (char) 10) && data[pos] != (cast: (char) 13)
             break
-        pos: pos + 1U
+        pos := pos + 1U
     ---
     return: pos
 end: dj_ws
@@ -31,38 +31,38 @@ fn: dj_utf8 (@: data char; size_t: count) int
     unsigned: point 0U
     unsigned: least 0U
     while: pos < count
-        byte: (cast: (unsigned) data[pos]) & 255U
-        pos: pos + 1U
+        byte := (cast: (unsigned) data[pos]) & 255U
+        pos := pos + 1U
         if: byte < 128U
             continue
         if: byte >= 194U && byte <= 223U
-            tail: 1U
-            point: byte & 31U
-            least: 128U
+            tail := 1U
+            point := byte & 31U
+            least := 128U
         else:
             if: byte >= 224U && byte <= 239U
-                tail: 2U
-                point: byte & 15U
-                least: 2048U
+                tail := 2U
+                point := byte & 15U
+                least := 2048U
             else:
                 if: byte < 240U || byte > 244U
                     return: 1
                 ---
-                tail: 3U
-                point: byte & 7U
-                least: 65536U
+                tail := 3U
+                point := byte & 7U
+                least := 65536U
             ---
         ---
         if: tail > count - pos
             return: 1
         while: tail > 0U
-            byte: (cast: (unsigned) data[pos]) & 255U
+            byte := (cast: (unsigned) data[pos]) & 255U
             if: byte < 128U || byte > 191U
                 return: 1
             ---
-            point: (point << 6) | (byte & 63U)
-            pos: pos + 1U
-            tail: tail - 1U
+            point := (point << 6) | (byte & 63U)
+            pos := pos + 1U
+            tail := tail - 1U
         ---
         if: point < least || point > 1114111U || (point >= 55296U && point <= 57343U)
             return: 1
@@ -86,114 +86,114 @@ fn: dj_string (@: data char; size_t: count; size_t: begin; @@: out char; @: deco
     if: out = 0 || decoded_length = 0 || after = 0 || begin >= count || count - begin = (cast: (size_t) -1) || data[begin] != (cast: (char) 34)
         return: 1
     ---
-    out[0]: 0
-    decoded_length[0]: 0U
-    decoded: c.malloc(count - begin + 1U)
+    out[0] := 0
+    decoded_length[0] := 0U
+    decoded := c.malloc(count - begin + 1U)
     if: decoded = 0
         return: 1
-    pos: pos + 1U
+    pos := pos + 1U
     while: pos < count
-        byte: (cast: (unsigned) data[pos]) & 255U
-        pos: pos + 1U
+        byte := (cast: (unsigned) data[pos]) & 255U
+        pos := pos + 1U
         if: byte = 34U
-            done: 1
+            done := 1
             break
         if: byte < 32U
-            bad: 1
+            bad := 1
             break
         if: byte != 92U
-            decoded[used]: (cast: (char) byte)
-            used: used + 1U
+            decoded[used] := (cast: (char) byte)
+            used := used + 1U
             continue
         ---
         if: pos >= count
-            bad: 1
+            bad := 1
             break
-        byte: (cast: (unsigned) data[pos]) & 255U
-        pos: pos + 1U
+        byte := (cast: (unsigned) data[pos]) & 255U
+        pos := pos + 1U
         if: byte = 34U || byte = 47U || byte = 92U
-            decoded[used]: (cast: (char) byte)
-            used: used + 1U
+            decoded[used] := (cast: (char) byte)
+            used := used + 1U
             continue
         if: byte = 98U || byte = 102U || byte = 110U || byte = 114U || byte = 116U
             if: byte = 98U
-                byte: 8U
+                byte := 8U
             if: byte = 102U
-                byte: 12U
+                byte := 12U
             if: byte = 110U
-                byte: 10U
+                byte := 10U
             if: byte = 114U
-                byte: 13U
+                byte := 13U
             if: byte = 116U
-                byte: 9U
-            decoded[used]: (cast: (char) byte)
-            used: used + 1U
+                byte := 9U
+            decoded[used] := (cast: (char) byte)
+            used := used + 1U
             continue
         ---
         if: byte != 117U || count - pos < 4U
-            bad: 1
+            bad := 1
             break
-        point: 0U
-        digits: 0U
+        point := 0U
+        digits := 0U
         while: digits < 4U
-            hex: dj_hex((cast: (unsigned) data[pos]) & 255U)
+            hex := dj_hex((cast: (unsigned) data[pos]) & 255U)
             if: hex < 0
-                bad: 1
+                bad := 1
                 break
-            point: point * 16U + (cast: (unsigned) hex)
-            pos: pos + 1U
-            digits: digits + 1U
+            point := point * 16U + (cast: (unsigned) hex)
+            pos := pos + 1U
+            digits := digits + 1U
         ---
         if: bad != 0
             break
         if: point >= 55296U && point <= 56319U
             if: count - pos < 6U || data[pos] != (cast: (char) 92) || data[pos + 1U] != (cast: (char) 117)
-                bad: 1
+                bad := 1
                 break
             ---
-            pos: pos + 2U
-            low: 0U
-            digits: 0U
+            pos := pos + 2U
+            low := 0U
+            digits := 0U
             while: digits < 4U
-                hex: dj_hex((cast: (unsigned) data[pos]) & 255U)
+                hex := dj_hex((cast: (unsigned) data[pos]) & 255U)
                 if: hex < 0
-                    bad: 1
+                    bad := 1
                     break
-                low: low * 16U + (cast: (unsigned) hex)
-                pos: pos + 1U
-                digits: digits + 1U
+                low := low * 16U + (cast: (unsigned) hex)
+                pos := pos + 1U
+                digits := digits + 1U
             ---
             if: bad != 0 || low < 56320U || low > 57343U
-                bad: 1
+                bad := 1
                 break
             ---
-            point: 65536U + (point - 55296U) * 1024U + low - 56320U
+            point := 65536U + (point - 55296U) * 1024U + low - 56320U
         else:
             if: point >= 56320U && point <= 57343U
-                bad: 1
+                bad := 1
                 break
             ---
         ---
         if: point < 128U
-            decoded[used]: (cast: (char) point)
-            used: used + 1U
+            decoded[used] := (cast: (char) point)
+            used := used + 1U
         else:
             if: point < 2048U
-                decoded[used]: (cast: (char) (192U | (point >> 6)))
-                decoded[used + 1U]: (cast: (char) (128U | (point & 63U)))
-                used: used + 2U
+                decoded[used] := (cast: (char) (192U | (point >> 6)))
+                decoded[used + 1U] := (cast: (char) (128U | (point & 63U)))
+                used := used + 2U
             else:
                 if: point < 65536U
-                    decoded[used]: (cast: (char) (224U | (point >> 12)))
-                    decoded[used + 1U]: (cast: (char) (128U | ((point >> 6) & 63U)))
-                    decoded[used + 2U]: (cast: (char) (128U | (point & 63U)))
-                    used: used + 3U
+                    decoded[used] := (cast: (char) (224U | (point >> 12)))
+                    decoded[used + 1U] := (cast: (char) (128U | ((point >> 6) & 63U)))
+                    decoded[used + 2U] := (cast: (char) (128U | (point & 63U)))
+                    used := used + 3U
                 else:
-                    decoded[used]: (cast: (char) (240U | (point >> 18)))
-                    decoded[used + 1U]: (cast: (char) (128U | ((point >> 12) & 63U)))
-                    decoded[used + 2U]: (cast: (char) (128U | ((point >> 6) & 63U)))
-                    decoded[used + 3U]: (cast: (char) (128U | (point & 63U)))
-                    used: used + 4U
+                    decoded[used] := (cast: (char) (240U | (point >> 18)))
+                    decoded[used + 1U] := (cast: (char) (128U | ((point >> 12) & 63U)))
+                    decoded[used + 2U] := (cast: (char) (128U | ((point >> 6) & 63U)))
+                    decoded[used + 3U] := (cast: (char) (128U | (point & 63U)))
+                    used := used + 4U
                 ---
             ---
         ---
@@ -202,10 +202,10 @@ fn: dj_string (@: data char; size_t: count; size_t: begin; @@: out char; @: deco
         c.free(decoded)
         return: 1
     ---
-    decoded[used]: (cast: (char) 0)
-    out[0]: decoded
-    decoded_length[0]: used
-    after[0]: pos
+    decoded[used] := (cast: (char) 0)
+    out[0] := decoded
+    decoded_length[0] := used
+    after[0] := pos
     return: 0
 end: dj_string
 
@@ -218,29 +218,29 @@ fn: dj_string_span (@: data char; size_t: count; size_t: begin; @: after size_t)
     unsigned: byte 0U
     if: after = 0 || pos >= count || data[pos] != (cast: (char) 34)
         return: 1
-    pos: pos + 1U
+    pos := pos + 1U
     while: pos < count
-        byte: (cast: (unsigned) data[pos]) & 255U
-        pos: pos + 1U
+        byte := (cast: (unsigned) data[pos]) & 255U
+        pos := pos + 1U
         if: byte = 34U
-            after[0]: pos
+            after[0] := pos
             return: 0
         if: byte < 32U
             return: 1
         if: byte = 92U
             if: pos >= count
                 return: 1
-            byte: (cast: (unsigned) data[pos]) & 255U
-            pos: pos + 1U
+            byte := (cast: (unsigned) data[pos]) & 255U
+            pos := pos + 1U
             if: byte = 117U
                 if: count - pos < 4U
                     return: 1
-                digits: 0U
+                digits := 0U
                 while: digits < 4U
                     if: dj_hex((cast: (unsigned) data[pos]) & 255U) < 0
                         return: 1
-                    pos: pos + 1U
-                    digits: digits + 1U
+                    pos := pos + 1U
+                    digits := digits + 1U
                 ---
             else:
                 if: byte != 34U && byte != 47U && byte != 92U && byte != 98U && byte != 102U && byte != 110U && byte != 114U && byte != 116U
@@ -266,15 +266,15 @@ fn: dj_span (@: data char; size_t: count; size_t: begin; @: after size_t) int
         if: dj_string_span(data, count, pos, @ pos) != 0
             return: 0
         ---
-        after[0]: pos
+        after[0] := pos
         return: 1
     ---
     if: data[pos] = (cast: (char) 123) || data[pos] = (cast: (char) 91)
-        object: (cast: (int) (data[pos] = (cast: (char) 123)))
-        kind: 3 - object
-        pos: dj_ws(data, count, pos + 1U)
+        object := (cast: (int) (data[pos] = (cast: (char) 123)))
+        kind := 3 - object
+        pos := dj_ws(data, count, pos + 1U)
         if: pos < count && ((object != 0 && data[pos] = (cast: (char) 125)) || (object = 0 && data[pos] = (cast: (char) 93)))
-            after[0]: pos + 1U
+            after[0] := pos + 1U
             return: kind
         ---
         while: pos < count
@@ -282,81 +282,81 @@ fn: dj_span (@: data char; size_t: count; size_t: begin; @: after size_t) int
                 if: dj_string_span(data, count, pos, @ pos) != 0
                     return: 0
                 ---
-                pos: dj_ws(data, count, pos)
+                pos := dj_ws(data, count, pos)
                 if: pos >= count || data[pos] != (cast: (char) 58)
                     return: 0
-                pos: pos + 1U
+                pos := pos + 1U
             ---
             if: dj_span(data, count, pos, @ pos) = 0
                 return: 0
-            pos: dj_ws(data, count, pos)
+            pos := dj_ws(data, count, pos)
             if: pos >= count
                 return: 0
             if: (object != 0 && data[pos] = (cast: (char) 125)) || (object = 0 && data[pos] = (cast: (char) 93))
-                after[0]: pos + 1U
+                after[0] := pos + 1U
                 return: kind
             ---
             if: data[pos] != (cast: (char) 44)
                 return: 0
-            pos: dj_ws(data, count, pos + 1U)
+            pos := dj_ws(data, count, pos + 1U)
         ---
         return: 0
     ---
     if: count - pos >= 4U && c.strncmp(data + pos, "true", 4U) = 0
-        after[0]: pos + 4U
+        after[0] := pos + 4U
         return: 5
     if: count - pos >= 5U && c.strncmp(data + pos, "false", 5U) = 0
-        after[0]: pos + 5U
+        after[0] := pos + 5U
         return: 6
     if: count - pos >= 4U && c.strncmp(data + pos, "null", 4U) = 0
-        after[0]: pos + 4U
+        after[0] := pos + 4U
         return: 7
     ---
     if: count - pos >= 3U && c.memcmp(data + pos, "NaN", 3U) = 0
-        after[0]: pos + 3U
+        after[0] := pos + 3U
         return: 8
     if: count - pos >= 8U && c.memcmp(data + pos, "Infinity", 8U) = 0
-        after[0]: pos + 8U
+        after[0] := pos + 8U
         return: 9
     if: count - pos >= 9U && c.memcmp(data + pos, "-Infinity", 9U) = 0
-        after[0]: pos + 9U
+        after[0] := pos + 9U
         return: 10
     ---
     if: data[pos] = (cast: (char) 45)
-        pos: pos + 1U
+        pos := pos + 1U
     if: pos >= count
         return: 0
     if: data[pos] = (cast: (char) 48)
-        pos: pos + 1U
+        pos := pos + 1U
     else:
-        mark: pos
+        mark := pos
         while: pos < count && data[pos] >= (cast: (char) 48) && data[pos] <= (cast: (char) 57)
-            pos: pos + 1U
+            pos := pos + 1U
         if: pos = mark
             return: 0
         ---
     ---
     if: pos < count && data[pos] = (cast: (char) 46)
-        pos: pos + 1U
-        mark: pos
+        pos := pos + 1U
+        mark := pos
         while: pos < count && data[pos] >= (cast: (char) 48) && data[pos] <= (cast: (char) 57)
-            pos: pos + 1U
+            pos := pos + 1U
         if: pos = mark
             return: 0
         ---
     ---
     if: pos < count && (data[pos] = (cast: (char) 69) || data[pos] = (cast: (char) 101))
-        pos: pos + 1U
+        pos := pos + 1U
         if: pos < count && (data[pos] = (cast: (char) 43) || data[pos] = (cast: (char) 45))
-            pos: pos + 1U
-        mark: pos
+            pos := pos + 1U
+        mark := pos
         while: pos < count && data[pos] >= (cast: (char) 48) && data[pos] <= (cast: (char) 57)
-            pos: pos + 1U
+            pos := pos + 1U
         if: pos = mark
             return: 0
         ---
     ---
-    after[0]: pos
+    after[0] := pos
     return: 4
 end: dj_span
 
@@ -366,9 +366,9 @@ fn: dj_document (@: data char; size_t: count; @: begin size_t; @: after size_t) 
     if: data = 0 || begin = 0 || after = 0 || dj_utf8(data, count) != 0
         return: 0
     ---
-    pos: dj_ws(data, count, 0U)
-    begin[0]: pos
-    kind: dj_span(data, count, pos, after)
+    pos := dj_ws(data, count, 0U)
+    begin[0] := pos
+    kind := dj_span(data, count, pos, after)
     if: kind = 0 || dj_ws(data, count, after[0]) != count
         return: 0
     return: kind
@@ -384,31 +384,31 @@ fn: dj_property (@: data char; size_t: count; size_t: object_at; @: key char; @:
     int: found 0
     if: key = 0 || value_at = 0 || value_after = 0 || pos >= count || data[pos] != (cast: (char) 123)
         return: -1
-    pos: dj_ws(data, count, pos + 1U)
+    pos := dj_ws(data, count, pos + 1U)
     while: pos < count && data[pos] != (cast: (char) 125)
         if: dj_string(data, count, pos, @ decoded, @ key_n, @ pos) != 0
             return: -1
         ---
-        pos: dj_ws(data, count, pos)
+        pos := dj_ws(data, count, pos)
         if: pos >= count || data[pos] != (cast: (char) 58)
             c.free(decoded)
             return: -1
         ---
-        first: dj_ws(data, count, pos + 1U)
+        first := dj_ws(data, count, pos + 1U)
         if: dj_span(data, count, first, @ last) = 0
             c.free(decoded)
             return: -1
         ---
         if: c.strlen(key) = key_n && c.memcmp(decoded, key, key_n) = 0
-            value_at[0]: first
-            value_after[0]: last
-            found: 1
+            value_at[0] := first
+            value_after[0] := last
+            found := 1
         ---
         c.free(decoded)
-        decoded: 0
-        pos: dj_ws(data, count, last)
+        decoded := 0
+        pos := dj_ws(data, count, last)
         if: pos < count && data[pos] = (cast: (char) 44)
-            pos: dj_ws(data, count, pos + 1U)
+            pos := dj_ws(data, count, pos + 1U)
         else:
             if: pos >= count || data[pos] != (cast: (char) 125)
                 return: -1
@@ -427,7 +427,7 @@ fn: dj_array_next (@: data char; size_t: count; size_t: member_after; @: followi
     if: following = 0 || pos >= count
         return: 1
     if: data[pos] = (cast: (char) 44)
-        pos: dj_ws(data, count, pos + 1U)
+        pos := dj_ws(data, count, pos + 1U)
     else:
         if: data[pos] != (cast: (char) 93)
             return: 1
@@ -435,7 +435,7 @@ fn: dj_array_next (@: data char; size_t: count; size_t: member_after; @: followi
     ---
     if: pos >= count
         return: 1
-    following[0]: pos
+    following[0] := pos
     return: 0
 end: dj_array_next
 
@@ -451,7 +451,7 @@ fn: dj_write_string (@: out c.FILE; @: data char; size_t: count) int
     if: c.fputc(34, out) < 0
         return: 1
     while: scan < count
-        byte: (cast: (unsigned) data[scan]) & 255U
+        byte := (cast: (unsigned) data[scan]) & 255U
         if: byte < 32U || byte = 34U || byte = 92U
             if: scan > plain && c.fwrite(data + plain, 1U, scan - plain, out) != scan - plain
                 return: 1
@@ -462,15 +462,15 @@ fn: dj_write_string (@: out c.FILE; @: data char; size_t: count) int
             else:
                 if: byte = 8U || byte = 9U || byte = 10U || byte = 12U || byte = 13U
                     if: byte = 8U
-                        byte: 98U
+                        byte := 98U
                     if: byte = 9U
-                        byte: 116U
+                        byte := 116U
                     if: byte = 10U
-                        byte: 110U
+                        byte := 110U
                     if: byte = 12U
-                        byte: 102U
+                        byte := 102U
                     if: byte = 13U
-                        byte: 114U
+                        byte := 114U
                     if: c.fputc(92, out) < 0 || c.fputc((cast: (int) byte), out) < 0
                         return: 1
                     ---
@@ -480,9 +480,9 @@ fn: dj_write_string (@: out c.FILE; @: data char; size_t: count) int
                     ---
                 ---
             ---
-            plain: scan + 1U
+            plain := scan + 1U
         ---
-        scan: scan + 1U
+        scan := scan + 1U
     ---
     if: count > plain && c.fwrite(data + plain, 1U, count - plain, out) != count - plain
         return: 1

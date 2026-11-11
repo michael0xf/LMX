@@ -19,26 +19,26 @@ fn: lmx_child_create_profiled (@: src_arena c.LmxArena; @: child_arena c.LmxAren
             return: 0
         ---
     ---
-    mark: c.lmx_arena_mark(child_arena)
+    mark := c.lmx_arena_mark(child_arena)
     if: retain_profile != 0
         if: c.lmx_range_import_profile(child_arena, src_arena, retain_profile) != 0
             c.lmx_arena_revert(child_arena, mark)
             return: 0
         ---
     ---
-    status: c.lmx_graph_copy_profiled_owned(source, src_arena, child_arena, retain_profile, @ graph)
+    status := c.lmx_graph_copy_profiled_owned(source, src_arena, child_arena, retain_profile, @ graph)
     if: status != c.LMX_GRAPH_COPY_OK || graph = 0
         c.lmx_arena_revert(child_arena, mark)
         return: 0
-    thread: (cast: (@: c.LmxThread) c.lmx_arena_take(child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+    thread := (cast: (@: c.LmxThread) c.lmx_arena_take(child_arena, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
     if: thread = 0
         c.lmx_arena_revert(child_arena, mark)
         return: 0
-    message: (cast: (@: c.LmxMsg) thread)
-    message\running: 1
-    message\success: 0
-    message\handoff_ready: 0
-    message\graph: graph
+    message := (cast: (@: c.LmxMsg) thread)
+    message\running := 1
+    message\success := 0
+    message\handoff_ready := 0
+    message\graph := graph
     return: message
 
 fn: lmx_child_create (@: src_arena c.LmxArena; @: child_arena c.LmxArena; @@: result void; @: source c.Lmx) @: c.LmxMsg
@@ -52,26 +52,26 @@ fn: lmx_child_reserve_profiled (@: t c.LmxThread; @: src_arena c.LmxArena; @: ch
         return: 0
     if: t\state != c.LMX_THREAD_TURN
         return: 0
-    message: lmx_child_create_profiled(src_arena, child_arena, result, source, retain_profile)
+    message := lmx_child_create_profiled(src_arena, child_arena, result, source, retain_profile)
     if: message = 0
         return: 0
-    reservation: (cast: (@: c.LmxReservation) c.lmx_arena_take(src_arena, c.sizeof(c.LmxReservation), c.LMX_DOMAIN_KIND_RESERVATION, c.LMX_DOMAIN_RESERVATION))
+    reservation := (cast: (@: c.LmxReservation) c.lmx_arena_take(src_arena, c.sizeof(c.LmxReservation), c.LMX_DOMAIN_KIND_RESERVATION, c.LMX_DOMAIN_RESERVATION))
     if: reservation = 0
         c.lmx_arena_release(child_arena)
         return: 0
-    reservation\result: result
-    reservation\message: message
-    reservation\arena: child_arena
-    reservation\thread: 0
-    reservation\next: 0
-    tail: (cast: (@: c.LmxReservation) t\prepared)
+    reservation\result := result
+    reservation\message := message
+    reservation\arena := child_arena
+    reservation\thread := 0
+    reservation\next := 0
+    tail := (cast: (@: c.LmxReservation) t\prepared)
     if: tail = 0
-        t\prepared: (cast: (@: void) reservation)
+        t\prepared := (cast: (@: void) reservation)
     else:
         while: tail\next != 0
-            tail: tail\next
+            tail := tail\next
         ---
-        tail\next: reservation
+        tail\next := reservation
     ---
     return: message
 
@@ -86,13 +86,13 @@ fn: lmx_child_thread (@: t c.LmxThread; @: child c.LmxMsg; @: child_thread c.Lmx
         return: c.LMX_CHILD_INVALID
     if: child_thread != (cast: (@: c.LmxThread) child)
         return: c.LMX_CHILD_INVALID
-    reservation: (cast: (@: c.LmxReservation) t\prepared)
+    reservation := (cast: (@: c.LmxReservation) t\prepared)
     while: reservation != 0
         if: reservation\message = child
-            arena: reservation\arena
+            arena := reservation\arena
             if: arena = 0 || c.lmx_range_classify(arena, (cast: (@: void) child_thread)) != c.LMX_DOMAIN_KIND_MSG_RECORD || c.lmx_range_type_of(arena, (cast: (@: void) child_thread)) != c.LMX_DOMAIN_THREAD || c.lmx_range_stride(arena, (cast: (@: void) child_thread)) != c.sizeof(c.LmxThread) || c.lmx_range_home(arena, (cast: (@: void) child_thread)) != arena
                 return: c.LMX_CHILD_INVALID
-            slot: child_thread\slot
+            slot := child_thread\slot
             if: slot = 0
                 return: c.LMX_CHILD_INVALID
             if: c.lmx_range_classify(arena, (cast: (@: void) slot)) != c.LMX_DOMAIN_KIND_SCHEDULE || c.lmx_range_type_of(arena, (cast: (@: void) slot)) != c.LMX_DOMAIN_SCHEDULE || c.lmx_range_stride(arena, (cast: (@: void) slot)) != c.sizeof(c.LmxSchedule) || c.lmx_range_home(arena, (cast: (@: void) slot)) != arena
@@ -104,10 +104,10 @@ fn: lmx_child_thread (@: t c.LmxThread; @: child c.LmxMsg; @: child_thread c.Lmx
                     return: c.LMX_CHILD_INVALID
                 ---
             ---
-            reservation\thread: child_thread
+            reservation\thread := child_thread
             return: c.LMX_CHILD_OK
         ---
-        reservation: reservation\next
+        reservation := reservation\next
     ---
     return: c.LMX_CHILD_INVALID
 
@@ -126,36 +126,36 @@ fn: lmx_child_publish_prepared (@: t c.LmxThread; @: arena c.LmxArena) int
     int: answer c.LMX_CHILD_OK
     if: t = 0
         return: c.LMX_CHILD_INVALID
-    reservation: (cast: (@: c.LmxReservation) t\prepared)
-    t\prepared: 0
+    reservation := (cast: (@: c.LmxReservation) t\prepared)
+    t\prepared := 0
     while: reservation != 0
-        next: reservation\next
-        child_thread: reservation\thread
-        child_arena: reservation\arena
+        next := reservation\next
+        child_thread := reservation\thread
+        child_arena := reservation\arena
         if: child_thread = 0
             c.lmx_arena_release(child_arena)
-            answer: c.LMX_CHILD_INVALID
+            answer := c.LMX_CHILD_INVALID
         ---
         if: child_thread != 0
-            child_thread\result: reservation\result
+            child_thread\result := reservation\result
             if: c.lmx_thread_child_add(t, child_thread, arena) != c.LMX_THREAD_OK
                 c.lmx_arena_release(child_arena)
-                answer: c.LMX_CHILD_INVALID
+                answer := c.LMX_CHILD_INVALID
             else:
-                service: lmx_child_service(t)
+                service := lmx_child_service(t)
                 if: service != 0 && c.lmx_service_register(service, child_thread, child_arena) != c.LMX_SERVICE_OK
                     c.lmx_thread_child_remove(t, child_thread)
                     c.lmx_arena_release(child_arena)
-                    answer: c.LMX_CHILD_INVALID
+                    answer := c.LMX_CHILD_INVALID
                 else:
                     if: reservation\result != 0
-                        result: reservation\result
-                        \result: (cast: (@: void) reservation\message)
+                        result := reservation\result
+                        \result := (cast: (@: void) reservation\message)
                     ---
                 ---
             ---
         ---
-        reservation: next
+        reservation := next
     ---
     return: answer
 
@@ -164,12 +164,12 @@ fn: lmx_child_drop_prepared (@: t c.LmxThread) int
     @: next c.LmxReservation
     if: t = 0
         return: c.LMX_CHILD_INVALID
-    reservation: (cast: (@: c.LmxReservation) t\prepared)
-    t\prepared: 0
+    reservation := (cast: (@: c.LmxReservation) t\prepared)
+    t\prepared := 0
     while: reservation != 0
-        next: reservation\next
+        next := reservation\next
         c.lmx_arena_release(reservation\arena)
-        reservation: next
+        reservation := next
     ---
     return: c.LMX_CHILD_OK
 

@@ -23,13 +23,13 @@ include: "<stdlib.h>" "<stdio.h>"
 sub: lmx_value_context_copy (@: out c.LmxWalkValue; @: source c.LmxWalkValue)
     if: out != 0
         if: source = 0
-            out\model: 0
-            out\references: 0
-            out\referent: 0
+            out\model := 0
+            out\references := 0
+            out\referent := 0
         else:
-            out\model: source\model
-            out\references: source\references
-            out\referent: source\referent
+            out\model := source\model
+            out\references := source\references
+            out\referent := source\referent
         ---
     ---
 end: lmx_value_context_copy
@@ -79,11 +79,11 @@ fn: lmx_node_new_physical_role_profiled (@: arena c.LmxArena; int: physical_type
     @: value c.Lmx (cast: (@: c.Lmx) c.lmx_arena_take_struct_physical_role(arena, physical_type, value_profile, role))
     @: va c.VoidArray 0
     if: value != 0
-        value\parent: 0
-        va: @ value\array
-        va\size: 0U
-        va\data: 0
-        value\native: 0
+        value\parent := 0
+        va := @ value\array
+        va\size := 0U
+        va\data := 0
+        value\native := 0
     ---
     return: value
 end: lmx_node_new_physical_role_profiled
@@ -104,9 +104,9 @@ fn: lmx_struct_new_physical_role_profiled (@: parent c.Lmx; @: arena c.LmxArena;
     @: value c.Lmx 0
     if: parent = 0
         return: 0
-    value: lmx_node_new_physical_role_profiled(arena, physical_type, value_profile, role)
+    value := lmx_node_new_physical_role_profiled(arena, physical_type, value_profile, role)
     if: value != 0
-        value\parent: parent
+        value\parent := parent
     ---
     return: value
 end: lmx_struct_new_physical_role_profiled
@@ -118,13 +118,13 @@ fn: lmx_field_place_new (@: arena c.LmxArena; @: owner c.Lmx; size_t: field) @: 
     @: va c.VoidArray 0
     if: cell = 0
         return: 0
-    place_profile: (cast: (@: c.Lmx) c.lmx_range_profile(arena, (cast: (@: void) cell)))
-    place: lmx_struct_new_profiled(owner, arena, place_profile)
+    place_profile := (cast: (@: c.Lmx) c.lmx_range_profile(arena, (cast: (@: void) cell)))
+    place := lmx_struct_new_profiled(owner, arena, place_profile)
     if: place = 0
         return: 0
-    va: @ place\array
-    va\size: 1U
-    va\data: (cast: (@: void) cell)
+    va := @ place\array
+    va\size := 1U
+    va\data := (cast: (@: void) cell)
     return: place
 end: lmx_field_place_new
 
@@ -141,7 +141,7 @@ fn: lmx_op_new_physical_profiled (@: arena c.LmxArena; int: code; int: physical_
         return: 0
     @: value c.LmxOp (cast: (@: c.LmxOp) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, physical_type, value_profile))
     if: value != 0
-        value\code: code
+        value\code := code
     ---
     return: value
 end: lmx_op_new_physical_profiled
@@ -164,7 +164,7 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         int: zero_int 0
         @: cell_int int (cast: (@: int) c.lmx_arena_take_profiled(arena, c.sizeof(zero_int), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_int != 0
-            \cell_int: 0
+            \cell_int := 0
         ---
         return: (cast: (@: void) cell_int)
     ---
@@ -172,9 +172,9 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         @: cell_char char 0
         if: physical_type = c.LMX_TYPE_CHAR && value_profile = 0 && c.lmx_chars_init(arena) != 0 && (cast: (@: c.LmxPool) c.lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)) = 0
             return: 0
-        cell_char: (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
+        cell_char := (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_char != 0
-            \cell_char: 0
+            \cell_char := 0
         ---
         return: (cast: (@: void) cell_char)
     ---
@@ -182,7 +182,7 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         size_t: zero_size 0U
         @: cell_size size_t (cast: (@: size_t) c.lmx_arena_take_profiled(arena, c.sizeof(zero_size), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_size != 0
-            \cell_size: 0U
+            \cell_size := 0U
         ---
         return: (cast: (@: void) cell_size)
     ---
@@ -190,7 +190,7 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         unsigned: zero_unsigned 0U
         @: cell_unsigned unsigned (cast: (@: unsigned) c.lmx_arena_take_profiled(arena, c.sizeof(zero_unsigned), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_unsigned != 0
-            \cell_unsigned: 0U
+            \cell_unsigned := 0U
         ---
         return: (cast: (@: void) cell_unsigned)
     ---
@@ -198,7 +198,7 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         ulong: zero_ulong 0U
         @: cell_ulong ulong (cast: (@: ulong) c.lmx_arena_take_profiled(arena, c.sizeof(zero_ulong), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_ulong != 0
-            \cell_ulong: 0U
+            \cell_ulong := 0U
         ---
         return: (cast: (@: void) cell_ulong)
     ---
@@ -206,7 +206,7 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         char: zero_uchar '\0'
         @: cell_uchar char (cast: (@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero_uchar), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_uchar != 0
-            \cell_uchar: '\0'
+            \cell_uchar := '\0'
         ---
         return: (cast: (@: void) cell_uchar)
     ---
@@ -214,7 +214,7 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         @: zero_charptr char 0
         @@: cell_charptr char (cast: (@@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero_charptr), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_charptr != 0
-            \cell_charptr: 0
+            \cell_charptr := 0
         ---
         return: (cast: (@: void) cell_charptr)
     ---
@@ -235,8 +235,8 @@ fn: lmx_char_store_known (@: cell void; int: value) int
     @: p char 0
     if: cell = 0
         return: 1
-    p: (cast: (@: char) cell)
-    \p: (cast: (char) value)
+    p := (cast: (@: char) cell)
+    \p := (cast: (char) value)
     return: 0
 end: lmx_char_store_known
 
@@ -284,7 +284,7 @@ fn: lmx_charptr_value_known (@: cell void) @: char
     @@: p char 0
     if: cell = 0
         return: 0
-    p: (cast: (@@: char) cell)
+    p := (cast: (@@: char) cell)
     return: \p
 end: lmx_charptr_value_known
 
@@ -292,8 +292,8 @@ fn: lmx_charptr_store_known (@: cell void; @: value char) int
     @@: p char 0
     if: cell = 0
         return: 1
-    p: (cast: (@@: char) cell)
-    \p: value
+    p := (cast: (@@: char) cell)
+    \p := value
     return: 0
 end: lmx_charptr_store_known
 
@@ -371,11 +371,11 @@ fn: lmx_pointer_cell_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkVal
     size_t: index 0U
     if: pool = 0
         return: 0
-    chunk: (cast: (@: c.LmxChunk) c.lmx_pool_chunk_at(pool, cell))
+    chunk := (cast: (@: c.LmxChunk) c.lmx_pool_chunk_at(pool, cell))
     if: chunk = 0 || chunk\value_contexts = 0
         return: 0
-    contexts: (cast: (@: c.LmxWalkValue) chunk\value_contexts)
-    index: ((cast: (size_t) cell) - (cast: (size_t) c.lmx_chunk_data(chunk))) / (cast: (size_t) pool\stride)
+    contexts := (cast: (@: c.LmxWalkValue) chunk\value_contexts)
+    index := ((cast: (size_t) cell) - (cast: (size_t) c.lmx_chunk_data(chunk))) / (cast: (size_t) pool\stride)
     return: contexts + index
 end: lmx_pointer_cell_context
 
@@ -398,21 +398,21 @@ fn: lmx_value_context_cell_in (@: arena c.LmxArena; @: context c.LmxWalkValue) @
         return: 0
     ---
     while: index < c.lmx_arena_index_len(arena)
-        entry: c.lmx_arena_index_data(arena) + index
-        pool: (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, (cast: (@: void) entry\lo)))
+        entry := c.lmx_arena_index_data(arena) + index
+        pool := (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, (cast: (@: void) entry\lo)))
         if: pool != 0
-            stride: (cast: (size_t) pool\stride)
+            stride := (cast: (size_t) pool\stride)
             # Use the same published chunk accessor as the forward lookup.
-            chunk: (cast: (@: c.LmxChunk) c.lmx_pool_chunk_at(pool, (cast: (@: void) entry\lo)))
+            chunk := (cast: (@: c.LmxChunk) c.lmx_pool_chunk_at(pool, (cast: (@: void) entry\lo)))
             if: chunk != 0 && chunk\value_contexts != 0
-                contexts: (cast: (@: c.LmxWalkValue) chunk\value_contexts)
-                first: (cast: (size_t) contexts)
+                contexts := (cast: (@: c.LmxWalkValue) chunk\value_contexts)
+                first := (cast: (size_t) contexts)
                 if: address >= first
-                    offset: address - first
+                    offset := address - first
                     if: offset % context_stride = 0U
-                        ordinal: offset / context_stride
+                        ordinal := offset / context_stride
                         if: ordinal < c.lmx_chunk_cells(chunk, stride)
-                            cell: (cast: (@: void) ((cast: (@: char) c.lmx_chunk_data(chunk)) + ordinal * stride))
+                            cell := (cast: (@: void) ((cast: (@: char) c.lmx_chunk_data(chunk)) + ordinal * stride))
                             if: lmx_pointer_cell_context(arena, cell) = context
                                 return: cell
                             ---
@@ -421,7 +421,7 @@ fn: lmx_value_context_cell_in (@: arena c.LmxArena; @: context c.LmxWalkValue) @
                 ---
             ---
         ---
-        index: index + 1U
+        index := index + 1U
     ---
     return: 0
 end: lmx_value_context_cell_in
@@ -457,22 +457,22 @@ fn: lmx_value_cell_access (@: arena c.LmxArena; @: cell void; @: read c.LmxPoint
         # may be REFS, Lmx or Array; that does not change this storage ABI.
         if: pool\stride != sizeof(@: void)
             return: 1
-        read[0]: c.lmx_arena_pointer_void_read
-        write[0]: c.lmx_arena_pointer_void_write
+        read[0] := c.lmx_arena_pointer_void_read
+        write[0] := c.lmx_arena_pointer_void_write
         return: 0
     if: pool\kind != c.LMX_KIND_PRIMITIVE
         return: 1
     # Explicit callbacks describe the actual pointer object, including an
     # imported typed CHAR_PTR pool. Do not reinterpret it through char **.
     if: c.lmx_type_reference_cell((cast: (int) pool\type)) != 0 && pool\stride != 0U && pool\pointer_read != 0 && pool\pointer_write != 0
-        read[0]: pool\pointer_read
-        write[0]: pool\pointer_write
+        read[0] := pool\pointer_read
+        write[0] := pool\pointer_write
         return: 0
     if: c.lmx_type_base(pool\type) = c.LMX_TYPE_CHAR_PTR
         if: pool\stride != sizeof(@: char)
             return: 1
-        read[0]: c.lmx_value_charptr_read
-        write[0]: c.lmx_value_charptr_write
+        read[0] := c.lmx_value_charptr_read
+        write[0] := c.lmx_value_charptr_write
         return: 0
     return: 1
 end: lmx_value_cell_access
@@ -509,42 +509,42 @@ fn: lmx_value_cell_fill (@: arena c.LmxArena; @: cell void; @: owner c.LmxWalkVa
     # This exact owner/address identity supplies its physical ABI; an arbitrary
     # out-of-pool address still needs its own declared callback.
     if: owner != 0 && owner\present != 0 && owner\kind = c.LMX_WALK_VALUE_REFERENCE && cell = (cast: (@: void) (@ owner\ref))
-        local_reference: 1
+        local_reference := 1
     if: write = 0 && local_reference = 0
         return: 1
     # A CHILDREN/REF cell is a slot of a graph node: this write is one of the three physical rebindings of a child
     # (design 4.4), prepared before the write -- a refusal writes nothing -- and committed after it; any other cell
     # takes a value, and its own places of code are asked after the write.
     if: pool != 0 && (pool\kind = c.LMX_KIND_CHILDREN || pool\kind = c.LMX_KIND_REF)
-        slot_cell: 1
-        old: c.lmx_arena_pointer_void_read(cell)
-        status: c.lmx_code_rebind_prepare(arena, cell, old, raw, @ record, @ code)
+        slot_cell := 1
+        old := c.lmx_arena_pointer_void_read(cell)
+        status := c.lmx_code_rebind_prepare(arena, cell, old, raw, @ record, @ code)
         if: status != 0
             return: status
         ---
     else:
-        status: c.lmx_code_cell_admit(arena, cell)
+        status := c.lmx_code_cell_admit(arena, cell)
         if: status != 0
             return: status
         ---
     ---
     lmx_value_context_copy(@ saved, context)
     if: local_reference != 0
-        status: c.lmx_arena_pointer_void_write(cell, raw)
+        status := c.lmx_arena_pointer_void_write(cell, raw)
     else:
-        status: write(cell, raw)
+        status := write(cell, raw)
     if: status = 0
         lmx_value_context_copy(stored, @ saved)
         if: stored != 0
-            stored\present: 1
-            stored\kind: c.LMX_WALK_VALUE_REFERENCE
-            stored\ref: raw
+            stored\present := 1
+            stored\kind := c.LMX_WALK_VALUE_REFERENCE
+            stored\ref := raw
         ---
         if: owner != stored
             lmx_value_context_copy(owner, @ saved)
         ---
         if: slot_cell != 0
-            status: (cast: (int) c.lmx_code_rebind_commit(arena, cell, old, raw, record, code))
+            status := (cast: (int) c.lmx_code_rebind_commit(arena, cell, old, raw, record, code))
         else:
             c.lmx_code_changed_cell(arena, cell)
         ---
@@ -572,7 +572,7 @@ fn: lmx_pointer_value_known (@: cell void) @: void
     @@: p void 0
     if: cell = 0
         return: 0
-    p: (cast: (@@: void) cell)
+    p := (cast: (@@: void) cell)
     return: \p
 end: lmx_pointer_value_known
 
@@ -580,8 +580,8 @@ fn: lmx_pointer_store_known (@: cell void; @: value void) int
     @@: p void 0
     if: cell = 0
         return: 1
-    p: (cast: (@@: void) cell)
-    \p: value
+    p := (cast: (@@: void) cell)
+    \p := value
     return: 0
 end: lmx_pointer_store_known
 
@@ -591,7 +591,7 @@ fn: lmx_char_value_known (@: cell void) int
     @: p char 0
     if: cell = 0
         return: -1
-    p: (cast: (@: char) cell)
+    p := (cast: (@: char) cell)
     # Numeric value follows C char promotion; byte-table indices are a storage detail.
     return: (cast: (int) \p)
 end: lmx_char_value_known
@@ -600,7 +600,7 @@ fn: lmx_ulong_value_known (@: cell void) ulong
     @: p ulong 0
     if: cell = 0
         return: 0U
-    p: (cast: (@: ulong) cell)
+    p := (cast: (@: ulong) cell)
     return: \p
 end: lmx_ulong_value_known
 
@@ -608,8 +608,8 @@ fn: lmx_ulong_store_known (@: cell void; ulong: value) int
     @: p ulong 0
     if: cell = 0
         return: 1
-    p: (cast: (@: ulong) cell)
-    \p: value
+    p := (cast: (@: ulong) cell)
+    \p := value
     return: 0
 end: lmx_ulong_store_known
 
@@ -617,7 +617,7 @@ fn: lmx_uchar_value_known (@: cell void) unsigned
     @: p char 0
     if: cell = 0
         return: 0U
-    p: (cast: (@: char) cell)
+    p := (cast: (@: char) cell)
     return: (cast: (unsigned) ((cast: (int) \p) & 255))
 end: lmx_uchar_value_known
 
@@ -625,8 +625,8 @@ fn: lmx_uchar_store_known (@: cell void; unsigned: value) int
     @: p char 0
     if: cell = 0
         return: 1
-    p: (cast: (@: char) cell)
-    \p: (cast: (char) (value & 255U))
+    p := (cast: (@: char) cell)
+    \p := (cast: (char) (value & 255U))
     return: 0
 end: lmx_uchar_store_known
 
@@ -634,7 +634,7 @@ fn: lmx_int_value_known (@: cell void) int
     @: p int 0
     if: cell = 0
         return: 0
-    p: (cast: (@: int) cell)
+    p := (cast: (@: int) cell)
     return: \p
 end: lmx_int_value_known
 
@@ -642,8 +642,8 @@ fn: lmx_int_store_known (@: cell void; int: value) int
     @: p int 0
     if: cell = 0
         return: 1
-    p: (cast: (@: int) cell)
-    \p: value
+    p := (cast: (@: int) cell)
+    \p := value
     return: 0
 end: lmx_int_store_known
 
@@ -651,7 +651,7 @@ fn: lmx_size_value_known (@: cell void) size_t
     @: p size_t 0
     if: cell = 0
         return: 0U
-    p: (cast: (@: size_t) cell)
+    p := (cast: (@: size_t) cell)
     return: \p
 end: lmx_size_value_known
 
@@ -659,8 +659,8 @@ fn: lmx_size_store_known (@: cell void; size_t: value) int
     @: p size_t 0
     if: cell = 0
         return: 1
-    p: (cast: (@: size_t) cell)
-    \p: value
+    p := (cast: (@: size_t) cell)
+    \p := value
     return: 0
 end: lmx_size_store_known
 
@@ -668,7 +668,7 @@ fn: lmx_unsigned_value_known (@: cell void) unsigned
     @: p unsigned 0
     if: cell = 0
         return: 0U
-    p: (cast: (@: unsigned) cell)
+    p := (cast: (@: unsigned) cell)
     return: \p
 end: lmx_unsigned_value_known
 
@@ -676,7 +676,7 @@ fn: lmx_unsigned_store_known (@: cell void; unsigned: value) int
     @: p unsigned 0
     if: cell = 0
         return: 1
-    p: (cast: (@: unsigned) cell)
-    \p: value
+    p := (cast: (@: unsigned) cell)
+    \p := value
     return: 0
 end: lmx_unsigned_store_known

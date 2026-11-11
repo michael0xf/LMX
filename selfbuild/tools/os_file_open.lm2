@@ -11,10 +11,10 @@ os:
             @: stream c.FILE 0
             if: path = 0 || mode = 0 || path[0] = (cast: (char) 0) || mode[0] = (cast: (char) 0)
                 return: 0
-            wpath: os_native(path)
-            wmode: os_native(mode)
+            wpath := os_native(path)
+            wmode := os_native(mode)
             if: wpath != 0 && wmode != 0
-                stream: c._wfopen(wpath, wmode)
+                stream := c._wfopen(wpath, wmode)
             c.free(wpath)
             c.free(wmode)
             return: stream
@@ -32,7 +32,7 @@ os:
             @: stream c.FILE 0
             if: path != 0 && directory != 0 && prefix != 0 && mode != 0
                 if: c.GetTempFileNameW(directory, prefix, 0U, path) != 0U
-                    stream: c._wfopen(path, mode)
+                    stream := c._wfopen(path, mode)
                     if: stream = 0
                         c.DeleteFileW(path)
                     ---
@@ -52,10 +52,10 @@ os:
             int: result -1
             if: path = 0
                 return: -1
-            wide: os_native(path)
+            wide := os_native(path)
             if: wide = 0
                 return: -1
-            result: c._wremove(wide)
+            result := c._wremove(wide)
             c.free(wide)
             return: result
         end: os_file_remove

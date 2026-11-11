@@ -58,8 +58,8 @@ fn: lmx_post_inbox_data (@: box c.LmxPost) @: c.LmxPostInboxSlot
     @: base c.LmxPostInboxSlotArray
     if: box = 0
         return: 0
-    da: @ box\inbox
-    base: (cast: (@: c.LmxPostInboxSlotArray) da)
+    da := @ box\inbox
+    base := (cast: (@: c.LmxPostInboxSlotArray) da)
     return: (cast: (@: c.LmxPostInboxSlot) base\data)
 end: lmx_post_inbox_data
 
@@ -68,7 +68,7 @@ fn: lmx_post_inbox_cap (@: box c.LmxPost) size_t
     @: da c.LmxPostInboxSlotDynamicArray
     if: box = 0
         return: 0U
-    da: @ box\inbox
+    da := @ box\inbox
     return: (cast: (size_t) da\capacity)
 end: lmx_post_inbox_cap
 
@@ -78,9 +78,9 @@ sub: lmx_post_inbox_set_data (@: box c.LmxPost; @: data c.LmxPostInboxSlot)
     @: base c.LmxPostInboxSlotArray
     if: box = 0
         return
-    da: @ box\inbox
-    base: (cast: (@: c.LmxPostInboxSlotArray) da)
-    base\data: data
+    da := @ box\inbox
+    base := (cast: (@: c.LmxPostInboxSlotArray) da)
+    base\data := data
     return
 end: lmx_post_inbox_set_data
 
@@ -90,9 +90,9 @@ sub: lmx_post_inbox_set_len (@: box c.LmxPost; size_t: len)
     @: base c.LmxPostInboxSlotArray
     if: box = 0
         return
-    da: @ box\inbox
-    base: (cast: (@: c.LmxPostInboxSlotArray) da)
-    base\len: len
+    da := @ box\inbox
+    base := (cast: (@: c.LmxPostInboxSlotArray) da)
+    base\len := len
     return
 end: lmx_post_inbox_set_len
 
@@ -101,8 +101,8 @@ sub: lmx_post_inbox_set_cap (@: box c.LmxPost; size_t: capacity)
     @: da c.LmxPostInboxSlotDynamicArray
     if: box = 0
         return
-    da: @ box\inbox
-    da\capacity: capacity
+    da := @ box\inbox
+    da\capacity := capacity
     return
 end: lmx_post_inbox_set_cap
 
@@ -113,20 +113,20 @@ fn: lmx_post_monitor_enter (@: box c.LmxPost) int
     int: acquired 0
     if: box = 0
         return: c.LMX_POST_INVALID
-    self: (cast: (size_t) c.lmx_manager_running_thread_id())
+    self := (cast: (size_t) c.lmx_manager_running_thread_id())
     if: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), c.__ATOMIC_RELAXED) = self
-        box\inbox_monitor_depth: box\inbox_monitor_depth + 1U
+        box\inbox_monitor_depth := box\inbox_monitor_depth + 1U
         return: c.LMX_POST_OK
     ---
     while: acquired = 0
         if: c.__atomic_load_n((cast: (@: int) (@ box\inbox_monitor_held)), c.__ATOMIC_RELAXED) = 0
             if: c.__atomic_exchange_n((cast: (@: int) (@ box\inbox_monitor_held)), 1, c.__ATOMIC_ACQUIRE) = 0
-                acquired: 1
+                acquired := 1
             ---
         ---
     ---
     c.__atomic_store_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), self, c.__ATOMIC_RELAXED)
-    box\inbox_monitor_depth: 1U
+    box\inbox_monitor_depth := 1U
     return: c.LMX_POST_OK
 end: lmx_post_monitor_enter
 
@@ -135,10 +135,10 @@ fn: lmx_post_monitor_leave (@: box c.LmxPost) int
     size_t: self
     if: box = 0
         return: c.LMX_POST_INVALID
-    self: (cast: (size_t) c.lmx_manager_running_thread_id())
+    self := (cast: (size_t) c.lmx_manager_running_thread_id())
     if: c.__atomic_load_n((cast: (@: size_t) (@ box\inbox_monitor_owner)), c.__ATOMIC_RELAXED) != self || box\inbox_monitor_depth = 0U
         return: c.LMX_POST_INVALID
-    box\inbox_monitor_depth: box\inbox_monitor_depth - 1U
+    box\inbox_monitor_depth := box\inbox_monitor_depth - 1U
     if: box\inbox_monitor_depth != 0U
         return: c.LMX_POST_OK
     ---
@@ -164,40 +164,40 @@ fn: lmx_post_inbox_grow (@: box c.LmxPost) int
     @: dst_slot c.LmxPostInboxSlot
     if: box = 0
         return: c.LMX_POST_INVALID
-    old_capacity: lmx_post_inbox_cap(box)
-    old_slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    old_capacity := lmx_post_inbox_cap(box)
+    old_slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
     if: box\inbox_count != 0U && (old_slots = 0 || old_capacity = 0U)
         return: c.LMX_POST_INVALID
     if: old_capacity < c.LMX_POST_INBOX_MIN_CAPACITY
-        new_capacity: c.LMX_POST_INBOX_MIN_CAPACITY
+        new_capacity := c.LMX_POST_INBOX_MIN_CAPACITY
     else:
-        step: old_capacity / 2U
+        step := old_capacity / 2U
         if: step = 0U
-            step: 1U
+            step := 1U
         ---
         if: old_capacity > (cast: (size_t) -1) - step
             return: c.LMX_POST_FULL
-        new_capacity: old_capacity + step
+        new_capacity := old_capacity + step
     ---
     if: new_capacity > ((cast: (size_t) -1) / c.sizeof(c.LmxPostInboxSlot))
         return: c.LMX_POST_FULL
-    grown: (cast: (@: c.LmxPostInboxSlot) c.calloc(new_capacity, c.sizeof(c.LmxPostInboxSlot)))
+    grown := (cast: (@: c.LmxPostInboxSlot) c.calloc(new_capacity, c.sizeof(c.LmxPostInboxSlot)))
     if: grown = 0
         return: c.LMX_POST_FULL
     while: i < box\inbox_count
-        from: ((cast: (size_t) box\inbox_head) + i) % old_capacity
-        src_slot: old_slots + from
-        dst_slot: grown + i
-        dst_slot\target: src_slot\target
-        dst_slot\source_arena: src_slot\source_arena
-        i: i + 1U
+        from := ((cast: (size_t) box\inbox_head) + i) % old_capacity
+        src_slot := old_slots + from
+        dst_slot := grown + i
+        dst_slot\target := src_slot\target
+        dst_slot\source_arena := src_slot\source_arena
+        i := i + 1U
     ---
     c.free((cast: (@: void) old_slots))
     lmx_post_inbox_set_data(box, grown)
     lmx_post_inbox_set_cap(box, new_capacity)
     lmx_post_inbox_set_len(box, (cast: (size_t) box\inbox_count))
-    box\inbox_head: 0U
-    box\inbox_tail: (cast: (ulong) box\inbox_count)
+    box\inbox_head := 0U
+    box\inbox_tail := (cast: (ulong) box\inbox_count)
     return: c.LMX_POST_OK
 end: lmx_post_inbox_grow
 
@@ -213,8 +213,8 @@ fn: lmx_post_snapshot_inbox (@: box c.LmxPost; @@: out size_t; @: count size_t) 
     @: src_slot c.LmxPostInboxSlot
     if: box = 0 || out = 0 || count = 0
         return: c.LMX_POST_INVALID
-    \out: 0
-    \count: 0U
+    \out := 0
+    \count := 0U
     if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
         return: c.LMX_POST_INVALID
     ---
@@ -222,28 +222,28 @@ fn: lmx_post_snapshot_inbox (@: box c.LmxPost; @@: out size_t; @: count size_t) 
         lmx_post_monitor_leave(box)
         return: c.LMX_POST_INVALID
     ---
-    n: (cast: (size_t) box\inbox_count)
-    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
-    copy: 0
+    n := (cast: (size_t) box\inbox_count)
+    slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    copy := 0
     if: n != 0U
         if: n > (cast: (size_t) -1) / c.sizeof(c.size_t)
             lmx_post_monitor_leave(box)
             return: c.LMX_POST_FULL
         ---
-        copy: (cast: (@: size_t) c.malloc(n * c.sizeof(c.size_t)))
+        copy := (cast: (@: size_t) c.malloc(n * c.sizeof(c.size_t)))
         if: copy = 0
             lmx_post_monitor_leave(box)
             return: c.LMX_POST_FULL
         ---
     ---
     while: i < n
-        src_slot: slots + (((cast: (size_t) box\inbox_head) + i) % lmx_post_inbox_cap(box))
-        copy[i]: (cast: (size_t) src_slot\target)
-        i: i + 1U
+        src_slot := slots + (((cast: (size_t) box\inbox_head) + i) % lmx_post_inbox_cap(box))
+        copy[i] := (cast: (size_t) src_slot\target)
+        i := i + 1U
     ---
     lmx_post_monitor_leave(box)
-    \out: copy
-    \count: n
+    \out := copy
+    \count := n
     return: c.LMX_POST_OK
 end: lmx_post_snapshot_inbox
 
@@ -252,7 +252,7 @@ fn: lmx_post_admits (@: arena c.LmxArena; @: target void) int
     int: kind
     if: target = 0
         return: c.LMX_POST_REFUSED
-    kind: c.lmx_domain_kind(arena, target)
+    kind := c.lmx_domain_kind(arena, target)
     if: kind = c.LMX_DOMAIN_KIND_MSG_RECORD
         return: c.LMX_POST_OK
     return: c.LMX_POST_REFUSED
@@ -267,11 +267,11 @@ fn: lmx_post_new_node (@: arena c.LmxArena; @: box c.LmxPost) @: c.LmxPostLink
     if: box = 0
         return: 0
     if: box\free_nodes != 0
-        link: (cast: (@: c.LmxPostLink) box\free_nodes)
-        box\free_nodes: link\next
-        link\next: 0
+        link := (cast: (@: c.LmxPostLink) box\free_nodes)
+        box\free_nodes := link\next
+        link\next := 0
         return: link
-    link: (cast: (@: c.LmxPostLink) c.lmx_pool_take(arena, @ box\nodes))
+    link := (cast: (@: c.LmxPostLink) c.lmx_pool_take(arena, @ box\nodes))
     return: link
 end: lmx_post_new_node
 
@@ -281,26 +281,26 @@ fn: lmx_post_init (@: arena c.LmxArena; @: box c.LmxPost) int
     @: api c.LmxPostApi
     if: arena = 0 || box = 0
         return: c.LMX_POST_INVALID
-    nodes: @ box\nodes
-    api: @ box\api
+    nodes := @ box\nodes
+    api := @ box\api
     # THE INBOX RING: private movable metadata, deliberately outside the graph arena.  It starts
     # at two slots and later grows under the mailbox monitor without touching the receiver's arena.
     lmx_post_inbox_set_data(box, (cast: (@: c.LmxPostInboxSlot) c.calloc(c.LMX_POST_INBOX_MIN_CAPACITY, c.sizeof(c.LmxPostInboxSlot))))
     lmx_post_inbox_set_cap(box, c.LMX_POST_INBOX_MIN_CAPACITY)
     lmx_post_inbox_set_len(box, 0U)
-    box\inbox_head: 0U
-    box\inbox_tail: 0U
-    box\inbox_count: 0U
-    box\inbox_monitor_owner: 0U
-    box\inbox_monitor_depth: 0U
-    box\inbox_monitor_held: 0
-    box\outbox: 0
-    box\outbox_tail: 0
-    box\staged: 0
-    box\staged_tail: 0
-    box\free_nodes: 0
-    box\outbox_count: 0U
-    box\staged_count: 0U
+    box\inbox_head := 0U
+    box\inbox_tail := 0U
+    box\inbox_count := 0U
+    box\inbox_monitor_owner := 0U
+    box\inbox_monitor_depth := 0U
+    box\inbox_monitor_held := 0
+    box\outbox := 0
+    box\outbox_tail := 0
+    box\staged := 0
+    box\staged_tail := 0
+    box\free_nodes := 0
+    box\outbox_count := 0U
+    box\staged_count := 0U
     if: lmx_post_inbox_data(box) = 0
         lmx_post_inbox_set_cap(box, 0U)
         return: c.LMX_POST_INVALID
@@ -311,21 +311,21 @@ fn: lmx_post_init (@: arena c.LmxArena; @: box c.LmxPost) int
     # itself, and without this the open fails on garbage and the mailbox is left
     # holding an uninitialised pool.  The arena is the caller's and is already open:
     # a by-value arena is cleared and opened by whoever made it (lmx_arena_open).
-    nodes\head: 0
-    nodes\tail: 0
-    nodes\stride: 0U
-    nodes\chunk_capacity: 0U
-    nodes\kind: 0
-    nodes\type: 0
+    nodes\head := 0
+    nodes\tail := 0
+    nodes\stride := 0U
+    nodes\chunk_capacity := 0U
+    nodes\kind := 0
+    nodes\type := 0
     if: c.lmx_pool_open(arena, nodes, c.sizeof(c.LmxPostLink), c.LMX_POST_NODE_CHUNK, c.LMX_DOMAIN_KIND_POST_LINK, c.LMX_DOMAIN_POST_LINK) != 0
         c.free(lmx_post_inbox_data(box))
         lmx_post_inbox_set_data(box, 0)
         lmx_post_inbox_set_cap(box, 0U)
         return: c.LMX_POST_INVALID
-    api\accept: (cast: (c.LmxPostAccept) c.lmx_post_accept)
-    api\take: (cast: (c.LmxPostTake) c.lmx_post_take)
-    api\count: (cast: (c.LmxPostCount) c.lmx_post_count)
-    api\close: (cast: (c.LmxPostClose) c.lmx_post_close)
+    api\accept := (cast: (c.LmxPostAccept) c.lmx_post_accept)
+    api\take := (cast: (c.LmxPostTake) c.lmx_post_take)
+    api\count := (cast: (c.LmxPostCount) c.lmx_post_count)
+    api\close := (cast: (c.LmxPostClose) c.lmx_post_close)
     return: c.LMX_POST_OK
 end: lmx_post_init
 
@@ -370,40 +370,40 @@ fn: lmx_post_accept (@: arena c.LmxArena; @: box c.LmxPost; @: target void; int:
             return: c.LMX_POST_INVALID
         ---
         if: box\inbox_count >= lmx_post_inbox_cap(box)
-            rc: lmx_post_inbox_grow(box)
+            rc := lmx_post_inbox_grow(box)
             if: rc != c.LMX_POST_OK
                 lmx_post_monitor_leave(box)
                 return: rc
             ---
         ---
-        tail_read: (cast: (ulong) box\inbox_tail)
+        tail_read := (cast: (ulong) box\inbox_tail)
         if: lmx_post_inbox_cap(box) = 0U
             lmx_post_monitor_leave(box)
             return: c.LMX_POST_INVALID
         ---
-        slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
-        item: (cast: (size_t) tail_read) % lmx_post_inbox_cap(box)
-        slot: slots + item
-        slot\target: target
-        slot\source_arena: 0U
-        box\inbox_tail: (tail_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
-        box\inbox_count: (cast: (size_t) box\inbox_count) + 1U
+        slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+        item := (cast: (size_t) tail_read) % lmx_post_inbox_cap(box)
+        slot := slots + item
+        slot\target := target
+        slot\source_arena := 0U
+        box\inbox_tail := (tail_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+        box\inbox_count := (cast: (size_t) box\inbox_count) + 1U
         lmx_post_monitor_leave(box)
         return: c.LMX_POST_OK
     ---
-    link: lmx_post_new_node(arena, box)
+    link := lmx_post_new_node(arena, box)
     if: link = 0
         return: c.LMX_POST_FULL
     ---
-    link\target: target
-    link\next: 0
+    link\target := target
+    link\next := 0
     if: box\staged_tail = 0
-        box\staged: link
+        box\staged := link
     else:
-        box\staged_tail\next: link
+        box\staged_tail\next := link
     ---
-    box\staged_tail: link
-    box\staged_count: box\staged_count + 1U
+    box\staged_tail := link
+    box\staged_count := box\staged_count + 1U
     return: c.LMX_POST_OK
 end: lmx_post_accept
 
@@ -437,24 +437,24 @@ fn: lmx_post_accept_transfer (@: arena c.LmxArena; @: box c.LmxPost; @: target v
         return: c.LMX_POST_INVALID
     ---
     if: box\inbox_count >= lmx_post_inbox_cap(box)
-        rc: lmx_post_inbox_grow(box)
+        rc := lmx_post_inbox_grow(box)
         if: rc != c.LMX_POST_OK
             lmx_post_monitor_leave(box)
             return: rc
         ---
     ---
-    tail_read: (cast: (ulong) box\inbox_tail)
-    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
-    item: (cast: (size_t) tail_read) % lmx_post_inbox_cap(box)
-    slot: slots + item
-    slot\target: target
+    tail_read := (cast: (ulong) box\inbox_tail)
+    slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    item := (cast: (size_t) tail_read) % lmx_post_inbox_cap(box)
+    slot := slots + item
+    slot\target := target
     if: source_arena != arena
-        slot\source_arena: source_arena
+        slot\source_arena := source_arena
     else:
-        slot\source_arena: 0U
+        slot\source_arena := 0U
     ---
-    box\inbox_tail: (tail_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
-    box\inbox_count: (cast: (size_t) box\inbox_count) + 1U
+    box\inbox_tail := (tail_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+    box\inbox_count := (cast: (size_t) box\inbox_count) + 1U
     lmx_post_monitor_leave(box)
     return: c.LMX_POST_OK
 end: lmx_post_accept_transfer
@@ -484,15 +484,15 @@ fn: lmx_post_take_inbox (@: arena c.LmxArena; @: box c.LmxPost) @: void
         lmx_post_monitor_leave(box)
         return: 0
     ---
-    head_read: (cast: (ulong) box\inbox_head)
+    head_read := (cast: (ulong) box\inbox_head)
     if: box\inbox_count = 0U
         lmx_post_monitor_leave(box)
         return: 0
     ---
-    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
-    item: (cast: (size_t) head_read) % lmx_post_inbox_cap(box)
-    slot: slots + item
-    source_arena: (cast: (@: c.LmxArena) slot\source_arena)
+    slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    item := (cast: (size_t) head_read) % lmx_post_inbox_cap(box)
+    slot := slots + item
+    source_arena := (cast: (@: c.LmxArena) slot\source_arena)
     if: source_arena != 0
         # Only the receiver owner supplies its arena. A raw/direct take cannot expose a foreign
         # letter, and attach refusal leaves the exact pair at the head for a later retry/close.
@@ -500,12 +500,12 @@ fn: lmx_post_take_inbox (@: arena c.LmxArena; @: box c.LmxPost) @: void
             lmx_post_monitor_leave(box)
             return: 0
         ---
-        slot\source_arena: 0U
+        slot\source_arena := 0U
     ---
-    target: (cast: (@: void) slot\target)
-    slot\target: 0U
-    box\inbox_head: (head_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
-    box\inbox_count: (cast: (size_t) box\inbox_count) - 1U
+    target := (cast: (@: void) slot\target)
+    slot\target := 0U
+    box\inbox_head := (head_read + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+    box\inbox_count := (cast: (size_t) box\inbox_count) - 1U
     lmx_post_monitor_leave(box)
     # A PLAIN LETTER IS DELIVERED HERE, and delivery is its completion: the system sets its
     # `success` to 1 at the receiver owner's take, after the attach, when the receiver owns it
@@ -513,8 +513,8 @@ fn: lmx_post_take_inbox (@: arena c.LmxArena; @: box c.LmxPost) @: void
     # passed through the mailbox keeps its flag, which only its own program sets.  A take with no
     # receiver arena is not an owner's take and cannot classify the letter, so it writes nothing.
     if: arena != 0 && target != 0 && c.lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_MSG_RECORD && c.lmx_domain_type(arena, target) = c.LMX_DOMAIN_MSG_RECORD
-        letter: (cast: (@: c.LmxMsg) target)
-        letter\success: 1
+        letter := (cast: (@: c.LmxMsg) target)
+        letter\success := 1
     ---
     return: target
 end: lmx_post_take_inbox
@@ -536,22 +536,22 @@ fn: lmx_post_take (@: box c.LmxPost; int: lane) @: void
     if: lane = c.LMX_POST_INBOX
         return: lmx_post_take_inbox(0, box)
     ---
-    link: (cast: (@: c.LmxPostLink) box\outbox)
+    link := (cast: (@: c.LmxPostLink) box\outbox)
     if: link = 0
         return: 0
     ---
     # The only lane left here is the OUTBOX, and it is OWNER-LOCAL by the model: a turn takes
     # from what an earlier successful turn published, and no other lane touches it -- which is
     # why it may stay a plain list while the inbox could not.
-    box\outbox: link\next
+    box\outbox := link\next
     if: box\outbox = 0
-        box\outbox_tail: 0
+        box\outbox_tail := 0
     ---
-    box\outbox_count: box\outbox_count - 1U
-    target: (cast: (@: void) link\target)
-    link\target: 0
-    link\next: box\free_nodes
-    box\free_nodes: link
+    box\outbox_count := box\outbox_count - 1U
+    target := (cast: (@: void) link\target)
+    link\target := 0
+    link\next := box\free_nodes
+    box\free_nodes := link
     return: target
 end: lmx_post_take
 
@@ -563,7 +563,7 @@ fn: lmx_post_count (@: box c.LmxPost; int: lane) size_t
     if: lane = c.LMX_POST_INBOX
         if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
             return: 0U
-        count: (cast: (size_t) box\inbox_count)
+        count := (cast: (size_t) box\inbox_count)
         lmx_post_monitor_leave(box)
         return: count
     if: lane = c.LMX_POST_OUTBOX
@@ -585,15 +585,15 @@ fn: lmx_post_publish (@: box c.LmxPost) int
         return: c.LMX_POST_OK
     ---
     if: box\outbox_tail = 0
-        box\outbox: box\staged
+        box\outbox := box\staged
     else:
-        box\outbox_tail\next: box\staged
+        box\outbox_tail\next := box\staged
     ---
-    box\outbox_tail: box\staged_tail
-    box\outbox_count: box\outbox_count + box\staged_count
-    box\staged: 0
-    box\staged_tail: 0
-    box\staged_count: 0U
+    box\outbox_tail := box\staged_tail
+    box\outbox_count := box\outbox_count + box\staged_count
+    box\staged := 0
+    box\staged_tail := 0
+    box\staged_count := 0U
     return: c.LMX_POST_OK
 end: lmx_post_publish
 
@@ -607,17 +607,17 @@ fn: lmx_post_discard (@: box c.LmxPost) int
     @: next c.LmxPostLink
     if: box = 0
         return: c.LMX_POST_INVALID
-    link: (cast: (@: c.LmxPostLink) box\staged)
+    link := (cast: (@: c.LmxPostLink) box\staged)
     while: link != 0
-        next: (cast: (@: c.LmxPostLink) link\next)
-        link\target: 0
-        link\next: box\free_nodes
-        box\free_nodes: link
-        link: next
+        next := (cast: (@: c.LmxPostLink) link\next)
+        link\target := 0
+        link\next := box\free_nodes
+        box\free_nodes := link
+        link := next
     ---
-    box\staged: 0
-    box\staged_tail: 0
-    box\staged_count: 0U
+    box\staged := 0
+    box\staged_tail := 0
+    box\staged_count := 0U
     return: c.LMX_POST_OK
 end: lmx_post_discard
 
@@ -638,16 +638,16 @@ fn: lmx_post_close (@: arena c.LmxArena; @: box c.LmxPost) int
     # Closing is quiescent. Discard pending imported letters one by one; after each successful
     # release advance the ring immediately, so any later malformed arena refusal leaves every
     # still-owned pair reachable for retry/diagnosis rather than losing it with the backing.
-    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
     while: box\inbox_count != 0U
-        item: (cast: (size_t) box\inbox_head) % lmx_post_inbox_cap(box)
-        slot: slots + item
-        source_arena: (cast: (@: c.LmxArena) slot\source_arena)
+        item := (cast: (size_t) box\inbox_head) % lmx_post_inbox_cap(box)
+        slot := slots + item
+        source_arena := (cast: (@: c.LmxArena) slot\source_arena)
         if: source_arena != 0
             # Release walks the block list before its disposer can reject a cycle. Preflight the
             # exact donor without mutation so malformed ownership leaves this pair and backing
             # intact for diagnosis/repair instead of hanging or partly closing the mailbox.
-            empty_blocks: 0
+            empty_blocks := 0
             if: c.lmx_arena_blocks_can_move(@ empty_blocks, @ source_arena\blocks) != c.LMX_ARENA_BLOCKS_OK
                 return: c.LMX_POST_INVALID
             ---
@@ -655,28 +655,28 @@ fn: lmx_post_close (@: arena c.LmxArena; @: box c.LmxPost) int
                 return: c.LMX_POST_INVALID
             ---
         ---
-        slot\target: 0U
-        slot\source_arena: 0U
-        box\inbox_head: (box\inbox_head + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
-        box\inbox_count: (cast: (size_t) box\inbox_count) - 1U
+        slot\target := 0U
+        slot\source_arena := 0U
+        box\inbox_head := (box\inbox_head + 1U) % (cast: (ulong) lmx_post_inbox_cap(box))
+        box\inbox_count := (cast: (size_t) box\inbox_count) - 1U
     ---
     c.lmx_pool_release(arena, @ box\nodes)
     c.free(lmx_post_inbox_data(box))
     lmx_post_inbox_set_data(box, 0)
     lmx_post_inbox_set_cap(box, 0U)
-    box\inbox_head: 0U
-    box\inbox_tail: 0U
-    box\inbox_monitor_owner: 0U
-    box\inbox_monitor_depth: 0U
-    box\inbox_monitor_held: 0
-    box\outbox: 0
-    box\outbox_tail: 0
-    box\staged: 0
-    box\staged_tail: 0
-    box\free_nodes: 0
-    box\inbox_count: 0U
-    box\outbox_count: 0U
-    box\staged_count: 0U
+    box\inbox_head := 0U
+    box\inbox_tail := 0U
+    box\inbox_monitor_owner := 0U
+    box\inbox_monitor_depth := 0U
+    box\inbox_monitor_held := 0
+    box\outbox := 0
+    box\outbox_tail := 0
+    box\staged := 0
+    box\staged_tail := 0
+    box\free_nodes := 0
+    box\inbox_count := 0U
+    box\outbox_count := 0U
+    box\staged_count := 0U
     return: c.LMX_POST_OK
 end: lmx_post_close
 
@@ -689,10 +689,10 @@ fn: lmx_post_cursor_open (@: box c.LmxPost; @: cur c.LmxPostCursor) int
     if: box = 0 || cur = 0
         return: c.LMX_POST_INVALID
     ---
-    cur\box: box
-    cur\index: 0U
-    cur\has_current: 0
-    cur\open: 1
+    cur\box := box
+    cur\index := 0U
+    cur\has_current := 0
+    cur\open := 1
     return: c.LMX_POST_OK
 end: lmx_post_cursor_open
 
@@ -707,24 +707,24 @@ fn: lmx_post_cursor_next (@: cur c.LmxPostCursor) @: void
     if: cur = 0 || cur\open = 0 || cur\box = 0
         return: 0
     ---
-    box: (cast: (@: c.LmxPost) cur\box)
+    box := (cast: (@: c.LmxPost) cur\box)
     if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
         return: 0
     ---
     if: cur\has_current != 0
-        cur\index: cur\index + 1U
+        cur\index := cur\index + 1U
     ---
     if: cur\index >= box\inbox_count || lmx_post_inbox_data(box) = 0
-        cur\has_current: 0
+        cur\has_current := 0
         lmx_post_monitor_leave(box)
         return: 0
     ---
-    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
-    cap: lmx_post_inbox_cap(box)
-    item: (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
-    slot: slots + item
-    target: (cast: (@: void) slot\target)
-    cur\has_current: 1
+    slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    cap := lmx_post_inbox_cap(box)
+    item := (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
+    slot := slots + item
+    target := (cast: (@: void) slot\target)
+    cur\has_current := 1
     lmx_post_monitor_leave(box)
     return: target
 end: lmx_post_cursor_next
@@ -747,57 +747,57 @@ fn: lmx_post_cursor_take (@: arena c.LmxArena; @: cur c.LmxPostCursor) @: void
     if: cur = 0 || cur\open = 0 || cur\box = 0 || cur\has_current = 0
         return: 0
     ---
-    box: (cast: (@: c.LmxPost) cur\box)
+    box := (cast: (@: c.LmxPost) cur\box)
     if: lmx_post_monitor_enter(box) != c.LMX_POST_OK
         return: 0
     ---
     if: cur\index >= box\inbox_count || lmx_post_inbox_data(box) = 0
-        cur\has_current: 0
+        cur\has_current := 0
         lmx_post_monitor_leave(box)
         return: 0
     ---
-    slots: (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
-    cap: lmx_post_inbox_cap(box)
-    item: (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
-    slot: slots + item
-    source_arena: (cast: (@: c.LmxArena) slot\source_arena)
+    slots := (cast: (@: c.LmxPostInboxSlot) lmx_post_inbox_data(box))
+    cap := lmx_post_inbox_cap(box)
+    item := (cast: (size_t) ((box\inbox_head + (cast: (ulong) cur\index)) % (cast: (ulong) cap)))
+    slot := slots + item
+    source_arena := (cast: (@: c.LmxArena) slot\source_arena)
     if: source_arena != 0
         if: arena = 0 || c.lmx_arena_attach(arena, source_arena) != 0
             lmx_post_monitor_leave(box)
             return: 0
         ---
-        slot\source_arena: 0U
+        slot\source_arena := 0U
     ---
-    target: (cast: (@: void) slot\target)
+    target := (cast: (@: void) slot\target)
     # Compact: shift later unread slots down by one in admission order.
-    i: cur\index
+    i := cur\index
     while: i + 1U < box\inbox_count
-        from: (cast: (size_t) ((box\inbox_head + (cast: (ulong) (i + 1U))) % (cast: (ulong) cap)))
-        to: (cast: (size_t) ((box\inbox_head + (cast: (ulong) i)) % (cast: (ulong) cap)))
-        src: slots + from
-        dst: slots + to
-        dst\target: src\target
-        dst\source_arena: src\source_arena
-        i: i + 1U
+        from := (cast: (size_t) ((box\inbox_head + (cast: (ulong) (i + 1U))) % (cast: (ulong) cap)))
+        to := (cast: (size_t) ((box\inbox_head + (cast: (ulong) i)) % (cast: (ulong) cap)))
+        src := slots + from
+        dst := slots + to
+        dst\target := src\target
+        dst\source_arena := src\source_arena
+        i := i + 1U
     ---
     # Clear the vacated tail slot.
-    to: (cast: (size_t) ((box\inbox_head + (cast: (ulong) (box\inbox_count - 1U))) % (cast: (ulong) cap)))
-    dst: slots + to
-    dst\target: 0U
-    dst\source_arena: 0U
-    box\inbox_count: (cast: (size_t) box\inbox_count) - 1U
+    to := (cast: (size_t) ((box\inbox_head + (cast: (ulong) (box\inbox_count - 1U))) % (cast: (ulong) cap)))
+    dst := slots + to
+    dst\target := 0U
+    dst\source_arena := 0U
+    box\inbox_count := (cast: (size_t) box\inbox_count) - 1U
     if: box\inbox_count = 0U
-        box\inbox_head: 0U
-        box\inbox_tail: 0U
+        box\inbox_head := 0U
+        box\inbox_tail := 0U
     else:
-        box\inbox_tail: (box\inbox_head + (cast: (ulong) box\inbox_count)) % (cast: (ulong) cap)
+        box\inbox_tail := (box\inbox_head + (cast: (ulong) box\inbox_count)) % (cast: (ulong) cap)
     ---
     # After take, the next letter (if any) now sits at the same index; next will advance.
-    cur\has_current: 0
+    cur\has_current := 0
     lmx_post_monitor_leave(box)
     if: arena != 0 && target != 0 && c.lmx_domain_kind(arena, target) = c.LMX_DOMAIN_KIND_MSG_RECORD && c.lmx_domain_type(arena, target) = c.LMX_DOMAIN_MSG_RECORD
-        letter: (cast: (@: c.LmxMsg) target)
-        letter\success: 1
+        letter := (cast: (@: c.LmxMsg) target)
+        letter\success := 1
     ---
     return: target
 end: lmx_post_cursor_take
@@ -807,9 +807,9 @@ sub: lmx_post_cursor_close (@: cur c.LmxPostCursor)
     if: cur = 0
         return
     ---
-    cur\box: 0
-    cur\index: 0U
-    cur\has_current: 0
-    cur\open: 0
+    cur\box := 0
+    cur\index := 0U
+    cur\has_current := 0
+    cur\open := 0
     return
 end: lmx_post_cursor_close

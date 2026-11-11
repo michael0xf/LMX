@@ -17,7 +17,7 @@ end: dg_literal
 fn: dg_item (@: out c.FILE; @: items size_t) int
     if: items[0] != 0U && c.fputc(10, out) < 0
         return: 1
-    items[0]: items[0] + 1U
+    items[0] := items[0] + 1U
     return: 0
 end: dg_item
 
@@ -39,12 +39,12 @@ fn: dg_field (@: out c.FILE; @: data char; size_t: count; size_t: object_at; @: 
             return: 1
         return: dg_literal(out, missing)
     ---
-    kind: dj_span(data, count, first, @ last)
+    kind := dj_span(data, count, first, @ last)
     if: kind = 1
         if: dj_string(data, count, first, @ decoded, @ decoded_n, @ last) != 0
             return: 1
         ---
-        result: dg_bytes(out, decoded, decoded_n)
+        result := dg_bytes(out, decoded, decoded_n)
         c.free(decoded)
         return: result
     ---
@@ -85,12 +85,12 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
     if: dj_document(data, count, @ root_at, @ root_after) != 2 || dj_property(data, count, root_at, "sections", @ sections_at, @ sections_after) != 1 || data[sections_at] != (cast: (char) 91)
         return: 1
     ---
-    section_count[0]: 0U
-    example_count[0]: 0U
+    section_count[0] := 0U
+    example_count[0] := 0U
     if: dg_item(out, @ items) != 0
         return: 1
     if: c.strcmp(lang, "ru") = 0
-        default_label: "Исходный фрагмент"
+        default_label := "Исходный фрагмент"
         if: dg_literal(out, "# Грамматика LMX") != 0
             return: 1
         ---
@@ -101,7 +101,7 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
     ---
     if: dg_item(out, @ items) != 0
         return: 1
-    section_at: dj_ws(data, count, sections_at + 1U)
+    section_at := dj_ws(data, count, sections_at + 1U)
     while: section_at < count && data[section_at] != (cast: (char) 93)
         if: dj_span(data, count, section_at, @ section_after) != 2 || dj_property(data, count, section_at, lang, @ language_at, @ language_after) != 1 || data[language_at] != (cast: (char) 123)
             return: 1
@@ -112,7 +112,7 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
     ---
     if: dg_item(out, @ items) != 0
         return: 1
-    section_at: dj_ws(data, count, sections_at + 1U)
+    section_at := dj_ws(data, count, sections_at + 1U)
     while: section_at < count && data[section_at] != (cast: (char) 93)
         if: dj_span(data, count, section_at, @ section_after) != 2 || dj_property(data, count, section_at, lang, @ language_at, @ language_after) != 1 || data[language_at] != (cast: (char) 123)
             return: 1
@@ -122,20 +122,20 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
             return: 1
         if: dg_item(out, @ items) != 0 || dg_field(out, data, count, language_at, "text", 0, 1) != 0 || dg_item(out, @ items) != 0
             return: 1
-        section_count[0]: section_count[0] + 1U
-        examples_found: dj_property(data, count, section_at, "examples", @ examples_at, @ examples_after)
+        section_count[0] := section_count[0] + 1U
+        examples_found := dj_property(data, count, section_at, "examples", @ examples_at, @ examples_after)
         if: examples_found < 0
             return: 1
         if: examples_found != 0
             if: data[examples_at] != (cast: (char) 91)
                 return: 1
-            example_at: dj_ws(data, count, examples_at + 1U)
+            example_at := dj_ws(data, count, examples_at + 1U)
             while: example_at < count && data[example_at] != (cast: (char) 93)
                 if: dj_span(data, count, example_at, @ example_after) != 2
                     return: 1
                 if: dg_item(out, @ items) != 0 || dg_literal(out, "**") != 0 || dg_field(out, data, count, example_at, lang, default_label, 0) != 0 || dg_literal(out, "** — ") != 0
                     return: 1
-                origin_found: dj_property(data, count, example_at, "origin", @ origin_at, @ origin_after)
+                origin_found := dj_property(data, count, example_at, "origin", @ origin_at, @ origin_after)
                 if: origin_found < 0
                     return: 1
                 if: origin_found != 0
@@ -149,7 +149,7 @@ fn: dg_render (@: data char; size_t: count; @: lang char; @: out c.FILE; @: sect
                 ---
                 if: dg_literal(out, ".") != 0 || dg_item(out, @ items) != 0 || dg_item(out, @ items) != 0 || dg_literal(out, "````text") != 0 || dg_item(out, @ items) != 0 || dg_field(out, data, count, example_at, "text", 0, 1) != 0 || dg_item(out, @ items) != 0 || dg_literal(out, "````") != 0 || dg_item(out, @ items) != 0
                     return: 1
-                example_count[0]: example_count[0] + 1U
+                example_count[0] := example_count[0] + 1U
                 if: dj_array_next(data, count, example_after, @ example_at) != 0
                     return: 1
             ---
@@ -175,20 +175,20 @@ fn: dg_publish (@: rendered c.FILE; @: path char) int
         return: 1
     ---
     path_make_parent(path)
-    out: os_file_open(path, "wb")
+    out := os_file_open(path, "wb")
     if: out != 0
-        result: 0
-        got: c.fread(buffer, 1U, 65536U, rendered)
+        result := 0
+        got := c.fread(buffer, 1U, 65536U, rendered)
         while: got != 0U && result = 0
-            result: dg_bytes(out, buffer, got)
+            result := dg_bytes(out, buffer, got)
             if: result = 0
-                got: c.fread(buffer, 1U, 65536U, rendered)
+                got := c.fread(buffer, 1U, 65536U, rendered)
             ---
         ---
         if: c.ferror(rendered) != 0
-            result: 1
+            result := 1
         if: c.fclose(out) != 0
-            result: 1
+            result := 1
         ---
     ---
     c.free(buffer)
@@ -216,26 +216,26 @@ fn: docs_grammar_build (@: repo char; @: outdir char) int
         c.free(en_path)
         return: 1
     ---
-    data: file_read(input_path, @ count)
+    data := file_read(input_path, @ count)
     if: data != 0
-        ru: os_file_temporary()
-        en: os_file_temporary()
+        ru := os_file_temporary()
+        en := os_file_temporary()
         if: ru != 0 && en != 0
             if: dg_render(data, count, "ru", ru, @ sections_ru, @ examples_ru) = 0 && dg_render(data, count, "en", en, @ sections_en, @ examples_en) = 0 && sections_ru = sections_en && examples_ru = examples_en
-                result: dg_publish(ru, ru_path)
+                result := dg_publish(ru, ru_path)
                 if: result = 0
-                    result: dg_publish(en, en_path)
+                    result := dg_publish(en, en_path)
                 ---
             ---
         ---
     ---
     if: ru != 0 && c.fclose(ru) != 0
-        result: 1
+        result := 1
     if: en != 0 && c.fclose(en) != 0
-        result: 1
+        result := 1
     if: result = 0
         if: c.printf("%u paired sections; %u source excerpts\n", (cast: (unsigned) sections_ru), (cast: (unsigned) examples_ru)) < 0
-            result: 1
+            result := 1
     ---
     c.free(data)
     c.free(input_path)

@@ -79,31 +79,31 @@ os:
             @: text char 0
             size_t: at 0U
             int: needed 0
-            out[0]: 0
+            out[0] := 0
             if: count = 0U
-                text: c.calloc(1U, 1U)
+                text := c.calloc(1U, 1U)
                 if: text = 0
                     return: -1
-                out[0]: text
+                out[0] := text
                 return: 0
             if: count > (cast: (size_t) c.INT_MAX)
                 return: -1
             while: at < count
                 if: (cast: (unsigned) wide[at]) = 0U
                     return: -1
-                at: at + 1U
+                at := at + 1U
             ---
-            needed: c.WideCharToMultiByte(c.CP_UTF8, c.WC_ERR_INVALID_CHARS, wide, (cast: (int) count), 0, 0, 0, 0)
+            needed := c.WideCharToMultiByte(c.CP_UTF8, c.WC_ERR_INVALID_CHARS, wide, (cast: (int) count), 0, 0, 0, 0)
             if: needed <= 0
                 return: -1
-            text: c.malloc((cast: (size_t) needed) + 1U)
+            text := c.malloc((cast: (size_t) needed) + 1U)
             if: text = 0
                 return: -1
             if: c.WideCharToMultiByte(c.CP_UTF8, c.WC_ERR_INVALID_CHARS, wide, (cast: (int) count), text, needed, 0, 0) != needed
                 c.free(text)
                 return: -1
-            text[(cast: (size_t) needed)]: (cast: (char) 0)
-            out[0]: text
+            text[(cast: (size_t) needed)] := (cast: (char) 0)
+            out[0] := text
             return: 0
         end: fpw_from_counted
 
@@ -114,36 +114,36 @@ os:
             unsigned: capacity 256U
             unsigned: got 0U
             int: result 0
-            out[0]: 0
-            error[0]: 0U
-            wpath: os_native(path)
+            out[0] := 0
+            error[0] := 0U
+            wpath := os_native(path)
             if: wpath = 0
                 return: -1
             # Match the original native query's access0/share0 contract.
-            handle: c.CreateFileW(wpath, 0U, 0U, 0, c.OPEN_EXISTING, c.FILE_FLAG_BACKUP_SEMANTICS, 0)
+            handle := c.CreateFileW(wpath, 0U, 0U, 0, c.OPEN_EXISTING, c.FILE_FLAG_BACKUP_SEMANTICS, 0)
             if: handle = c.INVALID_HANDLE_VALUE
-                error[0]: (cast: (unsigned) c.GetLastError())
-                result: 1
+                error[0] := (cast: (unsigned) c.GetLastError())
+                result := 1
             while: result = 0
-                buffer: c.calloc((cast: (size_t) capacity), c.sizeof(c.WCHAR))
+                buffer := c.calloc((cast: (size_t) capacity), c.sizeof(c.WCHAR))
                 if: buffer = 0
-                    result: -1
+                    result := -1
                     break
-                got: c.GetFinalPathNameByHandleW(handle, buffer, capacity, 0U)
+                got := c.GetFinalPathNameByHandleW(handle, buffer, capacity, 0U)
                 if: got = 0U
-                    error[0]: (cast: (unsigned) c.GetLastError())
-                    result: 1
+                    error[0] := (cast: (unsigned) c.GetLastError())
+                    result := 1
                     break
                 if: got < capacity
-                    result: fpw_from_counted(buffer, (cast: (size_t) got), out)
+                    result := fpw_from_counted(buffer, (cast: (size_t) got), out)
                     break
                 ---
                 c.free(buffer)
-                buffer: 0
+                buffer := 0
                 if: got = (cast: (unsigned) -1)
-                    result: -1
+                    result := -1
                     break
-                capacity: got + 1U
+                capacity := got + 1U
             ---
             if: handle != c.INVALID_HANDLE_VALUE
                 c.CloseHandle(handle)
@@ -159,22 +159,22 @@ os:
             @: leaf c.WCHAR 0
             size_t: count 0U
             int: result 0
-            out[0]: 0
-            error[0]: 0U
-            wpath: os_native(path)
-            fd: c.calloc(1U, c.sizeof(c.WIN32_FIND_DATAW))
+            out[0] := 0
+            error[0] := 0U
+            wpath := os_native(path)
+            fd := c.calloc(1U, c.sizeof(c.WIN32_FIND_DATAW))
             if: wpath = 0 || fd = 0
-                result: -1
+                result := -1
             if: result = 0
-                handle: c.FindFirstFileW(wpath, fd)
+                handle := c.FindFirstFileW(wpath, fd)
                 if: handle = c.INVALID_HANDLE_VALUE
-                    error[0]: (cast: (unsigned) c.GetLastError())
-                    result: 1
+                    error[0] := (cast: (unsigned) c.GetLastError())
+                    result := 1
                 else:
-                    leaf: (cast: (@: c.WCHAR) fd\cFileName)
+                    leaf := (cast: (@: c.WCHAR) fd\cFileName)
                     while: (cast: (unsigned) leaf[count]) != 0U
-                        count: count + 1U
-                    result: fpw_from_counted(leaf, count, out)
+                        count := count + 1U
+                    result := fpw_from_counted(leaf, count, out)
                 ---
             ---
             if: handle != c.INVALID_HANDLE_VALUE
@@ -201,49 +201,49 @@ os:
             size_t: units 0U
             unsigned: tag 0U
             int: result 0
-            out[0]: 0
-            kind[0]: 0
-            error[0]: 0U
-            wpath: os_native(path)
-            buffer: c.malloc(16384U)
-            returned: c.calloc(1U, c.sizeof(c.DWORD))
+            out[0] := 0
+            kind[0] := 0
+            error[0] := 0U
+            wpath := os_native(path)
+            buffer := c.malloc(16384U)
+            returned := c.calloc(1U, c.sizeof(c.DWORD))
             if: wpath = 0 || buffer = 0 || returned = 0
-                result: -1
+                result := -1
             if: result = 0
-                handle: c.CreateFileW(wpath, 0U, 0U, 0, c.OPEN_EXISTING, c.FILE_FLAG_OPEN_REPARSE_POINT | c.FILE_FLAG_BACKUP_SEMANTICS, 0)
+                handle := c.CreateFileW(wpath, 0U, 0U, 0, c.OPEN_EXISTING, c.FILE_FLAG_OPEN_REPARSE_POINT | c.FILE_FLAG_BACKUP_SEMANTICS, 0)
                 if: handle = c.INVALID_HANDLE_VALUE
-                    error[0]: (cast: (unsigned) c.GetLastError())
-                    result: 1
+                    error[0] := (cast: (unsigned) c.GetLastError())
+                    result := 1
                 ---
             ---
             if: result = 0
                 if: c.DeviceIoControl(handle, c.FSCTL_GET_REPARSE_POINT, 0, 0U, buffer, 16384U, returned, 0) = 0
-                    error[0]: (cast: (unsigned) c.GetLastError())
-                    result: 1
+                    error[0] := (cast: (unsigned) c.GetLastError())
+                    result := 1
                 ---
             ---
             if: result = 0
-                got: (cast: (size_t) returned[0])
+                got := (cast: (size_t) returned[0])
                 if: got < 8U || got > 16384U
-                    result: 1
-                    error[0]: (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
+                    result := 1
+                    error[0] := (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
                 else:
-                    tag: fpw_u32(buffer, 0U)
-                    payload: (cast: (size_t) fpw_u16(buffer, 4U))
+                    tag := fpw_u32(buffer, 0U)
+                    payload := (cast: (size_t) fpw_u16(buffer, 4U))
                     if: payload > got - 8U
-                        result: 1
-                        error[0]: (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
+                        result := 1
+                        error[0] := (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
                     else:
-                        bound: 8U + payload
+                        bound := 8U + payload
                         if: tag = (cast: (unsigned) c.IO_REPARSE_TAG_SYMLINK)
-                            base: 20U
-                            kind[0]: 1
+                            base := 20U
+                            kind[0] := 1
                         else:
                             if: tag = (cast: (unsigned) c.IO_REPARSE_TAG_MOUNT_POINT)
-                                base: 16U
-                                kind[0]: 2
+                                base := 16U
+                                kind[0] := 2
                             else:
-                                result: 2
+                                result := 2
                             ---
                         ---
                     ---
@@ -251,35 +251,35 @@ os:
             ---
             if: result = 0
                 if: bound < base
-                    result: 1
+                    result := 1
                 else:
-                    offset: (cast: (size_t) fpw_u16(buffer, 8U))
-                    target_bytes: (cast: (size_t) fpw_u16(buffer, 10U))
+                    offset := (cast: (size_t) fpw_u16(buffer, 8U))
+                    target_bytes := (cast: (size_t) fpw_u16(buffer, 10U))
                     if: offset % 2U != 0U || target_bytes % 2U != 0U || offset > bound - base
-                        result: 1
+                        result := 1
                     else:
                         if: target_bytes > bound - base - offset
-                            result: 1
+                            result := 1
                         ---
                     ---
                 ---
                 if: result != 0
-                    error[0]: (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
+                    error[0] := (cast: (unsigned) c.ERROR_INVALID_REPARSE_DATA)
                 ---
             ---
             if: result = 0
-                units: target_bytes / 2U
-                wide: c.calloc(units + 1U, c.sizeof(c.WCHAR))
+                units := target_bytes / 2U
+                wide := c.calloc(units + 1U, c.sizeof(c.WCHAR))
                 if: wide = 0
-                    result: -1
+                    result := -1
                 else:
                     c.memcpy(wide, buffer + base + offset, target_bytes)
                     # CPython's native readlink changes the NT prefix \??\
                     # into the Win32 extended prefix \\?\, not into an
                     # ordinary drive/UNC pathname.
                     if: units > 4U && (cast: (unsigned) wide[0U]) = 92U && (cast: (unsigned) wide[1U]) = 63U && (cast: (unsigned) wide[2U]) = 63U && (cast: (unsigned) wide[3U]) = 92U
-                        wide[1U]: (cast: (c.WCHAR) 92U)
-                    result: fpw_from_counted(wide, units, out)
+                        wide[1U] := (cast: (c.WCHAR) 92U)
+                    result := fpw_from_counted(wide, units, out)
                 ---
             ---
             if: handle != c.INVALID_HANDLE_VALUE
@@ -302,8 +302,8 @@ os:
                 return: 0
             while: copy[at] != (cast: (char) 0)
                 if: copy[at] = (cast: (char) 47)
-                    copy[at]: (cast: (char) 92)
-                at: at + 1U
+                    copy[at] := (cast: (char) 92)
+                at := at + 1U
             ---
             return: copy
         end: fpw_slashes
@@ -317,44 +317,44 @@ os:
             size_t: width 0U
             unsigned: point 0U
             unsigned: byte 0U
-            drive_after[0]: 0U
-            tail_at[0]: 0U
+            drive_after[0] := 0U
+            tail_at[0] := 0U
             if: count = 0U
                 return: 0
             if: fpw_separator((cast: (unsigned) path[0U]) & 255U) != 0
                 if: count > 1U && fpw_separator((cast: (unsigned) path[1U]) & 255U) != 0
-                    first: 2U
+                    first := 2U
                     if: count >= 8U && path[2U] = (cast: (char) 63) && fpw_separator((cast: (unsigned) path[3U]) & 255U) != 0 && fpw_separator((cast: (unsigned) path[7U]) & 255U) != 0
                         if: (((cast: (unsigned) path[4U]) & 255U) | 32U) = 117U && (((cast: (unsigned) path[5U]) & 255U) | 32U) = 110U && (((cast: (unsigned) path[6U]) & 255U) | 32U) = 99U
-                            first: 8U
+                            first := 8U
                         ---
                     ---
                     while: first < count && fpw_separator((cast: (unsigned) path[first]) & 255U) = 0
-                        first: first + 1U
+                        first := first + 1U
                     if: first = count
-                        drive_after[0]: count
-                        tail_at[0]: count
+                        drive_after[0] := count
+                        tail_at[0] := count
                         return: 0
-                    second: first + 1U
+                    second := first + 1U
                     while: second < count && fpw_separator((cast: (unsigned) path[second]) & 255U) = 0
-                        second: second + 1U
-                    drive_after[0]: second
-                    tail_at[0]: second
+                        second := second + 1U
+                    drive_after[0] := second
+                    tail_at[0] := second
                     if: second < count
-                        tail_at[0]: second + 1U
+                        tail_at[0] := second + 1U
                     return: 0
                 ---
-                tail_at[0]: 1U
+                tail_at[0] := 1U
                 return: 0
             ---
-            width: dt_point(path, count, 0U, @ point)
+            width := dt_point(path, count, 0U, @ point)
             if: width = 0U
                 return: 1
             if: point <= 65535U && width < count && path[width] = (cast: (char) 58)
-                drive_after[0]: width + 1U
-                tail_at[0]: width + 1U
+                drive_after[0] := width + 1U
+                tail_at[0] := width + 1U
                 if: width + 1U < count && fpw_separator((cast: (unsigned) path[width + 1U]) & 255U) != 0
-                    tail_at[0]: width + 2U
+                    tail_at[0] := width + 2U
                 ---
             ---
             return: 0
@@ -368,7 +368,7 @@ os:
                 return: 1
             if: count = 0U
                 return: 0
-            width: dt_point(path, count, 0U, @ point)
+            width := dt_point(path, count, 0U, @ point)
             if: width = 0U
                 return: 0
             if: width + 1U < count && path[width] = (cast: (char) 58) && fpw_separator((cast: (unsigned) path[width + 1U]) & 255U) != 0
@@ -391,60 +391,60 @@ os:
             int: same 0
             if: base = 0 || tail = 0
                 return: 0
-            bn: c.strlen(base)
-            tn: c.strlen(tail)
+            bn := c.strlen(base)
+            tn := c.strlen(tail)
             if: fpw_parts(base, @ bd, @ bt) != 0 || fpw_parts(tail, @ td, @ tt) != 0
                 return: 0
             if: tn > limit - 4U || bn > limit - tn - 4U
                 return: 0
             if: tt = td && td > 0U
-                same: uc_lower_equal(base, bd, tail, td)
+                same := uc_lower_equal(base, bd, tail, td)
                 if: same < 0
                     return: 0
                 if: same = 0
                     return: txt_dup(tail)
                 ---
             ---
-            dn: bd
+            dn := bd
             if: td > 0U
-                drive: tail
-                dn: td
+                drive := tail
+                dn := td
             ---
-            out: c.malloc(bn + tn + 4U)
+            out := c.malloc(bn + tn + 4U)
             if: out = 0
                 return: 0
             if: tt > td
                 # A rooted RHS inherits the drive only when its own is empty.
                 c.memcpy(out, drive, dn)
-                used: dn
-                out[used]: tail[td]
-                used: used + 1U
+                used := dn
+                out[used] := tail[td]
+                used := used + 1U
                 c.memcpy(out + used, tail + tt, tn - tt)
-                used: used + tn - tt
+                used := used + tn - tt
             else:
                 c.memcpy(out, drive, dn)
-                used: dn
+                used := dn
                 if: bt > bd
-                    out[used]: base[bd]
-                    used: used + 1U
+                    out[used] := base[bd]
+                    used := used + 1U
                 else:
                     # UNC drive plus relative path needs one separator.
                     if: dn > 0U && (bn > bt || tn > tt)
                         if: fpw_separator((cast: (unsigned) drive[dn - 1U]) & 255U) = 0 && drive[dn - 1U] != (cast: (char) 58)
-                            out[used]: (cast: (char) 92)
-                            used: used + 1U
+                            out[used] := (cast: (char) 92)
+                            used := used + 1U
                         ---
                     ---
                 ---
                 c.memcpy(out + used, base + bt, bn - bt)
-                used: used + bn - bt
+                used := used + bn - bt
                 if: bn > bt && fpw_separator((cast: (unsigned) base[bn - 1U]) & 255U) = 0
-                    out[used]: (cast: (char) 92)
-                    used: used + 1U
+                    out[used] := (cast: (char) 92)
+                    used := used + 1U
                 c.memcpy(out + used, tail + tt, tn - tt)
-                used: used + tn - tt
+                used := used + tn - tt
             ---
-            out[used]: (cast: (char) 0)
+            out[used] := (cast: (char) 0)
             return: out
         end: os_path_join
 
@@ -456,16 +456,16 @@ os:
             size_t: first 0U
             size_t: after count
             size_t: trim 0U
-            head[0]: 0
+            head[0] := 0
             if: fpw_parts(path, @ drive, @ first) != 0
                 return: 1
             while: after > first && fpw_separator((cast: (unsigned) path[after - 1U]) & 255U) = 0
-                after: after - 1U
-            tail_at[0]: after
-            trim: after
+                after := after - 1U
+            tail_at[0] := after
+            trim := after
             while: trim > first && fpw_separator((cast: (unsigned) path[trim - 1U]) & 255U) != 0
-                trim: trim - 1U
-            head[0]: txt_ndup(path, trim)
+                trim := trim - 1U
+            head[0] := txt_ndup(path, trim)
             if: head[0] = 0
                 return: 1
             return: 0
@@ -498,62 +498,62 @@ os:
             int: failed 0
             if: path = 0
                 return: 0
-            count: c.strlen(path)
-            failed: fpw_parts(path, @ drive, @ first)
-            pos: first
+            count := c.strlen(path)
+            failed := fpw_parts(path, @ drive, @ first)
+            pos := first
             while: failed = 0 && pos <= count
-                after: pos
+                after := pos
                 while: after < count && path[after] != (cast: (char) 92)
-                    after: after + 1U
+                    after := after + 1U
                 if: after > pos
-                    part: txt_ndup(path + pos, after - pos)
+                    part := txt_ndup(path + pos, after - pos)
                     if: part = 0
-                        failed: 1
+                        failed := 1
                         break
                     if: c.strcmp(part, ".") != 0
                         if: c.strcmp(part, "..") = 0 && n > 0U && c.strcmp(parts[n - 1U], "..") != 0
-                            n: n - 1U
+                            n := n - 1U
                             c.free(parts[n])
-                            parts[n]: 0
+                            parts[n] := 0
                         else:
                             if: c.strcmp(part, "..") != 0 || n > 0U || first = drive
-                                failed: fs_entry_append(@ parts, @ kinds, @ n, @ capacity, part, 0U)
+                                failed := fs_entry_append(@ parts, @ kinds, @ n, @ capacity, part, 0U)
                                 if: failed = 0
-                                    part: 0
+                                    part := 0
                                 ---
                             ---
                         ---
                     ---
                     c.free(part)
-                    part: 0
+                    part := 0
                 ---
                 if: after = count
                     break
-                pos: after + 1U
+                pos := after + 1U
             ---
             if: failed = 0 && count <= (cast: (size_t) -1) - 2U
-                out: c.malloc(count + 2U)
+                out := c.malloc(count + 2U)
                 if: out = 0
-                    failed: 1
+                    failed := 1
                 else:
                     c.memcpy(out, path, first)
-                    used: first
+                    used := first
                     while: at < n
                         if: at > 0U
-                            out[used]: (cast: (char) 92)
-                            used: used + 1U
-                        part_count: c.strlen(parts[at])
+                            out[used] := (cast: (char) 92)
+                            used := used + 1U
+                        part_count := c.strlen(parts[at])
                         c.memcpy(out + used, parts[at], part_count)
-                        used: used + part_count
-                        at: at + 1U
+                        used := used + part_count
+                        at := at + 1U
                     ---
                     if: used = 0U
-                        out[used]: (cast: (char) 46)
-                        used: used + 1U
-                    out[used]: (cast: (char) 0)
+                        out[used] := (cast: (char) 46)
+                        used := used + 1U
+                    out[used] := (cast: (char) 0)
                 ---
             else:
-                failed: 1
+                failed := 1
             ---
             fs_entries_free(parts, kinds, n)
             c.free(path)
@@ -572,34 +572,34 @@ os:
             @: mapped c.WCHAR 0
             int: needed 0
             int: result 0
-            out[0]: 0
-            error[0]: 0U
+            out[0] := 0
+            error[0] := 0U
             if: spelling = 0
                 return: -1
             if: spelling[0] = (cast: (char) 0)
-                out[0]: spelling
+                out[0] := spelling
                 return: 0
-            wide: os_native(spelling)
+            wide := os_native(spelling)
             if: wide = 0
-                result: -1
+                result := -1
             if: result = 0
-                needed: c.LCMapStringEx(c.LOCALE_NAME_INVARIANT, c.LCMAP_LOWERCASE, wide, -1, 0, 0, 0, 0, 0)
+                needed := c.LCMapStringEx(c.LOCALE_NAME_INVARIANT, c.LCMAP_LOWERCASE, wide, -1, 0, 0, 0, 0, 0)
                 if: needed <= 0
-                    error[0]: (cast: (unsigned) c.GetLastError())
-                    result: 1
+                    error[0] := (cast: (unsigned) c.GetLastError())
+                    result := 1
                 else:
-                    mapped: c.calloc((cast: (size_t) needed), c.sizeof(c.WCHAR))
+                    mapped := c.calloc((cast: (size_t) needed), c.sizeof(c.WCHAR))
                     if: mapped = 0
-                        result: -1
+                        result := -1
                     ---
                 ---
             ---
             if: result = 0
                 if: c.LCMapStringEx(c.LOCALE_NAME_INVARIANT, c.LCMAP_LOWERCASE, wide, -1, mapped, needed, 0, 0, 0) != needed
-                    error[0]: (cast: (unsigned) c.GetLastError())
-                    result: 1
+                    error[0] := (cast: (unsigned) c.GetLastError())
+                    result := 1
                 else:
-                    result: fpw_from_counted(mapped, (cast: (size_t) (needed - 1)), out)
+                    result := fpw_from_counted(mapped, (cast: (size_t) (needed - 1)), out)
                 ---
             ---
             c.free(spelling)
@@ -632,65 +632,65 @@ os:
             int: kind 0
             int: result 0
             int: found 0
-            out[0]: 0
-            error[0]: 0U
+            out[0] := 0
+            error[0] := 0U
             if: path = 0
                 return: -1
             while: result = 0
-                result: fpw_normcase(path, @ key, error)
+                result := fpw_normcase(path, @ key, error)
                 if: result != 0
                     break
-                at: 0U
-                found: 0
+                at := 0U
+                found := 0
                 while: at < count
                     if: c.strcmp(seen[2U * at], key) = 0
-                        found: 1
+                        found := 1
                         break
-                    at: at + 1U
+                    at := at + 1U
                 ---
                 if: found != 0
                     break
                 if: fp_seen_add(@ seen, @ count, @ capacity, key) != 0
-                    result: -1
+                    result := -1
                     break
                 c.free(key)
-                key: 0
-                result: fpw_readlink(path, @ target, @ kind, error)
+                key := 0
+                result := fpw_readlink(path, @ target, @ kind, error)
                 if: result = 2
-                    result: 0
+                    result := 0
                     break
                 if: result = 1
                     if: fpw_deep_stops(error[0]) != 0
-                        result: 0
+                        result := 0
                     break
                 if: result != 0
                     break
                 if: fpw_isabs(target) = 0
                     if: kind != 1
                         break
-                    parent: os_path_dirname(path)
+                    parent := os_path_dirname(path)
                     if: parent != 0
-                        joined: os_path_join(parent, target)
+                        joined := os_path_join(parent, target)
                     if: joined != 0
-                        next_path: fpw_norm(joined)
+                        next_path := fpw_norm(joined)
                     c.free(parent)
-                    parent: 0
+                    parent := 0
                     c.free(joined)
-                    joined: 0
+                    joined := 0
                     if: next_path = 0
-                        result: -1
+                        result := -1
                         break
                     c.free(target)
-                    target: next_path
-                    next_path: 0
+                    target := next_path
+                    next_path := 0
                 ---
                 c.free(path)
-                path: target
-                target: 0
+                path := target
+                target := 0
             ---
             if: result = 0
-                out[0]: path
-                path: 0
+                out[0] := path
+                path := 0
             c.free(path)
             c.free(key)
             c.free(target)
@@ -716,87 +716,87 @@ os:
             unsigned: leaf_error 0U
             int: result 0
             int: leaf_result 0
-            out[0]: 0
-            error[0]: 0U
+            out[0] := 0
+            error[0] := 0U
             if: path = 0 || tail = 0
-                result: -1
+                result := -1
             while: result = 0 && path[0] != (cast: (char) 0)
-                result: fpw_finalpath(path, @ target, @ query_error)
+                result := fpw_finalpath(path, @ target, @ query_error)
                 if: result = 0
                     if: tail[0] != (cast: (char) 0)
-                        out[0]: os_path_join(target, tail)
+                        out[0] := os_path_join(target, tail)
                     else:
-                        out[0]: target
-                        target: 0
+                        out[0] := target
+                        target := 0
                     ---
                     if: out[0] = 0
-                        result: -1
+                        result := -1
                     break
                 ---
                 if: result < 0
                     break
                 if: fpw_final_stops(query_error) = 0
-                    error[0]: query_error
+                    error[0] := query_error
                     break
-                result: fpw_deep(path, @ target, @ deep_error)
+                result := fpw_deep(path, @ target, @ deep_error)
                 if: result < 0
                     break
                 if: result = 0 && c.strcmp(target, path) != 0
                     if: tail[0] != (cast: (char) 0)
-                        out[0]: os_path_join(target, tail)
+                        out[0] := os_path_join(target, tail)
                     else:
-                        out[0]: target
-                        target: 0
+                        out[0] := target
+                        target := 0
                     ---
                     if: out[0] = 0
-                        result: -1
+                        result := -1
                     break
                 ---
                 # The original catches OSError from deep readlink and keeps
                 # walking upward; allocation/encoding failures are not caught.
                 c.free(target)
-                target: 0
-                result: 0
+                target := 0
+                result := 0
                 if: query_error = 1U || query_error = 5U || query_error = 32U || query_error = 50U || query_error = 87U || query_error = 1920U || query_error = 1921U
-                    leaf_result: fpw_findleaf(path, @ name, @ leaf_error)
+                    leaf_result := fpw_findleaf(path, @ name, @ leaf_error)
                     if: leaf_result < 0
-                        result: -1
+                        result := -1
                         break
                     ---
                 ---
                 if: fpw_split(path, @ head, @ tail_at) != 0
-                    result: -1
+                    result := -1
                     break
                 if: name = 0
-                    name: txt_dup(path + tail_at)
+                    name := txt_dup(path + tail_at)
                 if: name = 0
-                    result: -1
+                    result := -1
                     break
                 if: head[0] != (cast: (char) 0) && name[0] = (cast: (char) 0)
-                    out[0]: txt_cat(head, tail)
+                    out[0] := txt_cat(head, tail)
                     if: out[0] = 0
-                        result: -1
+                        result := -1
                     break
                 if: tail[0] != (cast: (char) 0)
-                    next_tail: os_path_join(name, tail)
+                    next_tail := os_path_join(name, tail)
                 else:
-                    next_tail: txt_dup(name)
+                    next_tail := txt_dup(name)
                 ---
                 if: next_tail = 0
-                    result: -1
+                    result := -1
                     break
                 c.free(path)
-                path: head
-                head: 0
+                path := head
+                head := 0
                 c.free(name)
-                name: 0
+                name := 0
                 c.free(tail)
-                tail: next_tail
-                next_tail: 0
+                tail := next_tail
+                next_tail := 0
             ---
             if: result = 0 && out[0] = 0
-                out[0]: tail
-                tail: 0
+                out[0] := tail
+                tail := 0
             c.free(path)
             c.free(tail)
             c.free(target)
@@ -823,71 +823,71 @@ os:
             int: result 0
             if: input = 0 || out = 0 || out_count = 0
                 return: 1
-            out[0]: 0
-            out_count[0]: 0U
+            out[0] := 0
+            out_count[0] := 0U
             if: input_count = (cast: (size_t) -1) || c.memchr(input, 0, input_count) != 0
                 return: 1
-            initial: txt_ndup(input, input_count)
+            initial := txt_ndup(input, input_count)
             if: initial != 0
-                path: fpw_norm(initial)
-            cwd: os_cwd()
+                path := fpw_norm(initial)
+            cwd := os_cwd()
             if: initial = 0 || path = 0 || cwd = 0
-                result: -1
+                result := -1
             if: result = 0
-                result: fpw_normcase(path, @ folded, @ query_error)
+                result := fpw_normcase(path, @ folded, @ query_error)
             if: result = 0 && c.strcmp(folded, "nul") = 0
-                target: txt_dup("\\\\.\\NUL")
+                target := txt_dup("\\\\.\\NUL")
                 if: target = 0
-                    result: -1
+                    result := -1
                 ---
             else:
                 if: result = 0
-                    count: c.strlen(path)
+                    count := c.strlen(path)
                     if: count >= 4U && c.memcmp(path, "\\\\?\\", 4U) = 0
-                        had_prefix: 1
+                        had_prefix := 1
                     if: had_prefix = 0 && fpw_isabs(path) = 0
-                        joined: os_path_join(cwd, path)
+                        joined := os_path_join(cwd, path)
                         if: joined = 0
-                            result: -1
+                            result := -1
                         else:
                             c.free(path)
-                            path: joined
-                            joined: 0
+                            path := joined
+                            joined := 0
                         ---
                     ---
                 ---
                 if: result = 0
-                    result: fpw_finalpath(path, @ target, @ initial_error)
+                    result := fpw_finalpath(path, @ target, @ initial_error)
                     if: result = 1
-                        result: fpw_nonstrict(path, @ target, @ query_error)
+                        result := fpw_nonstrict(path, @ target, @ query_error)
                     ---
                 ---
                 if: result = 0 && had_prefix = 0
-                    count: c.strlen(target)
+                    count := c.strlen(target)
                     if: count >= 4U && c.memcmp(target, "\\\\?\\", 4U) = 0
                         if: count >= 8U && c.memcmp(target, "\\\\?\\UNC\\", 8U) = 0
-                            stripped: txt_cat("\\\\", target + 8U)
+                            stripped := txt_cat("\\\\", target + 8U)
                         else:
-                            stripped: txt_dup(target + 4U)
+                            stripped := txt_dup(target + 4U)
                         ---
                         if: stripped = 0
-                            result: -1
+                            result := -1
                         else:
-                            result: fpw_finalpath(stripped, @ joined, @ query_error)
+                            result := fpw_finalpath(stripped, @ joined, @ query_error)
                             if: result = 0
                                 if: c.strcmp(joined, target) = 0
                                     c.free(target)
-                                    target: stripped
-                                    stripped: 0
+                                    target := stripped
+                                    stripped := 0
                                 ---
                             else:
                                 if: result = 1
                                     if: query_error = initial_error
                                         c.free(target)
-                                        target: stripped
-                                        stripped: 0
+                                        target := stripped
+                                        stripped := 0
                                     ---
-                                    result: 0
+                                    result := 0
                                 ---
                             ---
                         ---
@@ -895,9 +895,9 @@ os:
                 ---
             ---
             if: result = 0
-                out[0]: target
-                out_count[0]: c.strlen(target)
-                target: 0
+                out[0] := target
+                out_count[0] := c.strlen(target)
+                target := 0
             c.free(initial)
             c.free(path)
             c.free(cwd)

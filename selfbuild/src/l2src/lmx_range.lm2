@@ -86,21 +86,21 @@ fn: lmx_type_element (int: array_type) int
     int: base_type lmx_type_base(array_type)
     int: element_type c.LMX_TYPE_NONE
     if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
-        element_type: c.LMX_TYPE_CHAR
+        element_type := c.LMX_TYPE_CHAR
     if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
-        element_type: c.LMX_TYPE_UNSIGNED_CHAR
+        element_type := c.LMX_TYPE_UNSIGNED_CHAR
     if: base_type = c.LMX_TYPE_ARRAY_OF_INT
-        element_type: c.LMX_TYPE_INT
+        element_type := c.LMX_TYPE_INT
     if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
-        element_type: c.LMX_TYPE_SIZE_T
+        element_type := c.LMX_TYPE_SIZE_T
     if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
-        element_type: c.LMX_TYPE_ULONG
+        element_type := c.LMX_TYPE_ULONG
     if: base_type = c.LMX_TYPE_ARRAY_OF_LMX
-        element_type: c.LMX_TYPE_LMX
+        element_type := c.LMX_TYPE_LMX
     if: base_type = c.LMX_TYPE_ARRAY_OF_DESC
-        element_type: c.LMX_TYPE_DESC
+        element_type := c.LMX_TYPE_DESC
     if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-        element_type: c.LMX_TYPE_POINTER_BASE + (base_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+        element_type := c.LMX_TYPE_POINTER_BASE + (base_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
         if: element_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
             return: c.LMX_TYPE_NONE
         ---
@@ -132,17 +132,17 @@ fn: lmx_range_reserve (@: arena c.LmxArena; size_t: need) int
     if: arena\simple != 0U && need > 32U
         return: 1
     ---
-    capacity: c.lmx_arena_index_cap(arena)
+    capacity := c.lmx_arena_index_cap(arena)
     if: capacity = 0U
-        capacity: 16U
+        capacity := 16U
     ---
     while: capacity < need
         if: capacity > ((cast: (size_t) -1) / 2U)
             return: 1
         ---
-        capacity: capacity * 2U
+        capacity := capacity * 2U
         if: arena\simple != 0U && capacity > 32U
-            capacity: 32U
+            capacity := 32U
             if: capacity < need
                 return: 1
             ---
@@ -151,7 +151,7 @@ fn: lmx_range_reserve (@: arena c.LmxArena; size_t: need) int
     ---
     if: capacity > ((cast: (size_t) -1) / c.sizeof(c.LmxRange))
         return: 1
-    grown: (cast: (@: LmxRange) c.realloc((cast: (@: void) c.lmx_arena_index_data(arena)), capacity * c.sizeof(c.LmxRange)))
+    grown := (cast: (@: LmxRange) c.realloc((cast: (@: void) c.lmx_arena_index_data(arena)), capacity * c.sizeof(c.LmxRange)))
     if: grown = 0
         return: 1
     ---
@@ -195,21 +195,21 @@ fn: lmx_range_add_view (@: arena c.LmxArena; @: owner c.LmxArena; @: array c.Lmx
     # перебором а нормальным бинарным"), and the position for a new interval is found
     # the same way.  A registration walks the tail up one place; lmx_range_drop keeps the
     # order by shifting the tail down, so both operations preserve it.
-    high: c.lmx_arena_index_len(arena)
+    high := c.lmx_arena_index_len(arena)
     while: low < high
-        mid: low + (high - low) / 2U
-        slot: c.lmx_arena_index_data(arena) + mid
+        mid := low + (high - low) / 2U
+        slot := c.lmx_arena_index_data(arena) + mid
         if: lo < slot\lo
-            high: mid
+            high := mid
         else:
-            low: mid + 1U
+            low := mid + 1U
         ---
     ---
-    at: low
+    at := low
     # Re-importing the exact same physical range is a no-op.  Same addresses with a
     # different descriptor or owner would make physical classification ambiguous.
     if: at > 0U
-        slot: c.lmx_arena_index_data(arena) + (at - 1U)
+        slot := c.lmx_arena_index_data(arena) + (at - 1U)
         if: slot\lo = lo && slot\hi = hi
             if: slot\array = array && slot\owner = owner
                 return: 0
@@ -223,13 +223,13 @@ fn: lmx_range_add_view (@: arena c.LmxArena; @: owner c.LmxArena; @: array c.Lmx
     # registered twice.  The neighbours are exactly the two entries the bisection landed
     # between.
     if: at > 0U
-        slot: c.lmx_arena_index_data(arena) + (at - 1U)
+        slot := c.lmx_arena_index_data(arena) + (at - 1U)
         if: lo < slot\hi
             return: 1
         ---
     ---
     if: at < c.lmx_arena_index_len(arena)
-        slot: c.lmx_arena_index_data(arena) + at
+        slot := c.lmx_arena_index_data(arena) + at
         if: hi > slot\lo
             return: 1
         ---
@@ -239,41 +239,41 @@ fn: lmx_range_add_view (@: arena c.LmxArena; @: owner c.LmxArena; @: array c.Lmx
     if: c.lmx_arena_index_len(arena) = (cast: (size_t) -1) || lmx_range_reserve(arena, c.lmx_arena_index_len(arena) + 1U) != 0
         return: 1
     ---
-    index: c.lmx_arena_index_len(arena)
+    index := c.lmx_arena_index_len(arena)
     while: index > at
-        entry: c.lmx_arena_index_data(arena) + index
-        slot: c.lmx_arena_index_data(arena) + (index - 1U)
-        entry\lo: slot\lo
-        entry\hi: slot\hi
-        entry\array: slot\array
-        entry\owner: slot\owner
-        entry\chunk: slot\chunk
-        entry\chunk_gen: slot\chunk_gen
-        entry\links: slot\links
-        entry\slot_owner: slot\slot_owner
-        entry\holder: slot\holder
-        entry\side_cells: slot\side_cells
-        entry\side_stride: slot\side_stride
-        entry\kind: slot\kind
-        index: index - 1U
+        entry := c.lmx_arena_index_data(arena) + index
+        slot := c.lmx_arena_index_data(arena) + (index - 1U)
+        entry\lo := slot\lo
+        entry\hi := slot\hi
+        entry\array := slot\array
+        entry\owner := slot\owner
+        entry\chunk := slot\chunk
+        entry\chunk_gen := slot\chunk_gen
+        entry\links := slot\links
+        entry\slot_owner := slot\slot_owner
+        entry\holder := slot\holder
+        entry\side_cells := slot\side_cells
+        entry\side_stride := slot\side_stride
+        entry\kind := slot\kind
+        index := index - 1U
     ---
-    entry: c.lmx_arena_index_data(arena) + at
-    entry\lo: lo
-    entry\hi: hi
-    entry\array: array
-    entry\owner: owner
-    entry\chunk: 0
-    entry\chunk_gen: 0U
-    entry\links: 0
-    entry\slot_owner: 0
-    entry\holder: 0
-    entry\side_cells: 0U
-    entry\side_stride: 0U
-    entry\kind: 0
+    entry := c.lmx_arena_index_data(arena) + at
+    entry\lo := lo
+    entry\hi := hi
+    entry\array := array
+    entry\owner := owner
+    entry\chunk := 0
+    entry\chunk_gen := 0U
+    entry\links := 0
+    entry\slot_owner := 0
+    entry\holder := 0
+    entry\side_cells := 0U
+    entry\side_stride := 0U
+    entry\kind := 0
     # The array's stride and kind, kept here because at drop time the array record may already be freed.
     if: array != 0
-        entry\side_stride: (cast: (size_t) array\stride)
-        entry\kind: array\kind
+        entry\side_stride := (cast: (size_t) array\stride)
+        entry\kind := array\kind
     ---
     c.lmx_arena_index_set_len(arena, c.lmx_arena_index_len(arena) + 1U)
     return: 0
@@ -287,9 +287,9 @@ fn: lmx_range_drop (@: arena c.LmxArena; @: lo void; @: hi void) int
     size_t: index 0U
     if: arena = 0 || lo = 0 || hi = 0 || c.lmx_arena_index_data(arena) = 0
         return: 1
-    index: 0U
+    index := 0U
     while: index < c.lmx_arena_index_len(arena)
-        entry: c.lmx_arena_index_data(arena) + index
+        entry := c.lmx_arena_index_data(arena) + index
         if: entry\lo = lo && entry\hi = hi
             # Spelling keys/text must retire while this storage is still
             # registered and readable, before its address can be reused.
@@ -297,37 +297,37 @@ fn: lmx_range_drop (@: arena c.LmxArena; @: lo void; @: hi void) int
             # The interval's code links go the same way, while its cells are still readable (design 4.4).
             lmx_range_side_drop(arena, entry)
             while: index + 1U < c.lmx_arena_index_len(arena)
-                next: entry + 1
-                entry\lo: next\lo
-                entry\hi: next\hi
-                entry\array: next\array
-                entry\owner: next\owner
-                entry\chunk: next\chunk
-                entry\chunk_gen: next\chunk_gen
-                entry\links: next\links
-                entry\slot_owner: next\slot_owner
-                entry\holder: next\holder
-                entry\side_cells: next\side_cells
-                entry\side_stride: next\side_stride
-                entry\kind: next\kind
-                index: index + 1U
-                entry: next
+                next := entry + 1
+                entry\lo := next\lo
+                entry\hi := next\hi
+                entry\array := next\array
+                entry\owner := next\owner
+                entry\chunk := next\chunk
+                entry\chunk_gen := next\chunk_gen
+                entry\links := next\links
+                entry\slot_owner := next\slot_owner
+                entry\holder := next\holder
+                entry\side_cells := next\side_cells
+                entry\side_stride := next\side_stride
+                entry\kind := next\kind
+                index := index + 1U
+                entry := next
             ---
-            entry\lo: 0
-            entry\hi: 0
-            entry\array: 0
-            entry\owner: 0
-            entry\chunk: 0
-            entry\chunk_gen: 0U
-            entry\links: 0
-            entry\slot_owner: 0
-            entry\holder: 0
-            entry\side_cells: 0U
-            entry\side_stride: 0U
-            entry\kind: 0
+            entry\lo := 0
+            entry\hi := 0
+            entry\array := 0
+            entry\owner := 0
+            entry\chunk := 0
+            entry\chunk_gen := 0U
+            entry\links := 0
+            entry\slot_owner := 0
+            entry\holder := 0
+            entry\side_cells := 0U
+            entry\side_stride := 0U
+            entry\kind := 0
             c.lmx_arena_index_set_len(arena, c.lmx_arena_index_len(arena) - 1U)
             return: 0
-        index: index + 1U
+        index := index + 1U
     ---
     return: 1
 end: lmx_range_drop
@@ -347,17 +347,17 @@ fn: lmx_range_entry_at (@: arena c.LmxArena; @: p void) @: c.LmxRange
     size_t: mid 0U
     if: arena = 0 || p = 0 || c.lmx_arena_index_data(arena) = 0
         return: 0
-    high: c.lmx_arena_index_len(arena)
+    high := c.lmx_arena_index_len(arena)
     while: low < high
-        mid: low + (high - low) / 2U
-        entry: c.lmx_arena_index_data(arena) + mid
+        mid := low + (high - low) / 2U
+        entry := c.lmx_arena_index_data(arena) + mid
         if: p < entry\lo
-            high: mid
+            high := mid
         else:
             if: p < entry\hi
                 return: entry
             ---
-            low: mid + 1U
+            low := mid + 1U
         ---
     ---
     return: 0
@@ -370,7 +370,7 @@ end: lmx_range_entry_at
 # make the allocator adopt a foreign chunk.
 fn: lmx_range_interval_pool (@: arena c.LmxArena; @: p void) @: c.LmxPool
     @: entry c.LmxRange 0
-    entry: lmx_range_entry_at(arena, p)
+    entry := lmx_range_entry_at(arena, p)
     if: entry = 0 || entry\owner != arena
         return: 0
     return: (cast: (@: LmxPool) entry\array)
@@ -380,7 +380,7 @@ end: lmx_range_interval_pool
 # implementation is shared by implements, allocation clients and graph copy.
 fn: lmx_pointer_pool_in (@: arena c.LmxArena; @: cell void) @: c.LmxPool
     @: pool c.LmxPool 0
-    pool: lmx_range_cell_pool(arena, cell)
+    pool := lmx_range_cell_pool(arena, cell)
     if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || lmx_type_reference_cell((cast: (int) pool\type)) = 0 || pool\stride = 0U || pool\pointer_read = 0 || pool\pointer_write = 0
         return: 0
     return: pool
@@ -388,7 +388,7 @@ end: lmx_pointer_pool_in
 
 fn: lmx_pointer_value_in (@: arena c.LmxArena; @: cell void) @: void
     @: pool c.LmxPool 0
-    pool: lmx_pointer_pool_in(arena, cell)
+    pool := lmx_pointer_pool_in(arena, cell)
     if: pool = 0
         return: 0
     return: pool\pointer_read(cell)
@@ -410,24 +410,24 @@ fn: lmx_range_entry_chunk (@: arena c.LmxArena; @: entry c.LmxRange) @: c.LmxChu
     @: lo void 0
     if: entry = 0 || entry\array = 0
         return: 0
-    array: entry\array
-    chunk: (cast: (@: LmxChunk) entry\chunk)
+    array := entry\array
+    chunk := (cast: (@: LmxChunk) entry\chunk)
     if: chunk != 0 && entry\chunk_gen = array\chain_gen && (cast: (@: void) c.lmx_chunk_data(chunk)) = entry\lo
         return: chunk
     ---
-    entry\chunk: 0
-    chunk: array\head
+    entry\chunk := 0
+    chunk := array\head
     while: chunk != 0
-        lo: (cast: (@: void) c.lmx_chunk_data(chunk))
+        lo := (cast: (@: void) c.lmx_chunk_data(chunk))
         if: found = 0 && lo = entry\lo
-            found: chunk
+            found := chunk
         ---
-        other: lmx_range_entry_at(arena, lo)
+        other := lmx_range_entry_at(arena, lo)
         if: other != 0 && other\lo = lo && other\array = array
-            other\chunk: (cast: (@: void) chunk)
-            other\chunk_gen: array\chain_gen
+            other\chunk := (cast: (@: void) chunk)
+            other\chunk_gen := array\chain_gen
         ---
-        chunk: chunk\next
+        chunk := chunk\next
     ---
     return: found
 end: lmx_range_entry_chunk
@@ -440,12 +440,12 @@ sub: lmx_range_keep_chunk (@: arena c.LmxArena; @: array c.LmxPool; @: chunk c.L
     @: lo void 0
     if: arena = 0 || array = 0 || chunk = 0
         return
-    lo: (cast: (@: void) c.lmx_chunk_data(chunk))
-    entry: lmx_range_entry_at(arena, lo)
+    lo := (cast: (@: void) c.lmx_chunk_data(chunk))
+    entry := lmx_range_entry_at(arena, lo)
     if: entry = 0 || entry\lo != lo || entry\array != array
         return
-    entry\chunk: (cast: (@: void) chunk)
-    entry\chunk_gen: array\chain_gen
+    entry\chunk := (cast: (@: void) chunk)
+    entry\chunk_gen := array\chain_gen
 end: lmx_range_keep_chunk
 
 # The exact live cell whose START address is `p`, or null. A range covers the whole
@@ -459,20 +459,20 @@ fn: lmx_range_cell_pool (@: arena c.LmxArena; @: p void) @: c.LmxPool
     @: array c.LmxPool 0
     @: chunk c.LmxChunk 0
     size_t: offset 0U
-    entry: lmx_range_entry_at(arena, p)
+    entry := lmx_range_entry_at(arena, p)
     if: entry = 0 || entry\array = 0
         return: 0
-    array: entry\array
+    array := entry\array
     if: array\stride = 0U
         return: 0
     ---
-    chunk: lmx_range_entry_chunk(arena, entry)
+    chunk := lmx_range_entry_chunk(arena, entry)
     if: chunk = 0
         return: 0
     if: c.lmx_chunk_cells(chunk, array\stride) > c.lmx_chunk_room(chunk, array\stride)
         return: 0
     ---
-    offset: (cast: (size_t) p) - (cast: (size_t) entry\lo)
+    offset := (cast: (size_t) p) - (cast: (size_t) entry\lo)
     if: offset % array\stride != 0U
         return: 0
     if: offset / array\stride >= c.lmx_chunk_cells(chunk, array\stride)
@@ -488,7 +488,7 @@ fn: lmx_range_cell_chunk (@: arena c.LmxArena; @: p void) @: c.LmxChunk
     @: entry c.LmxRange 0
     if: lmx_range_cell_pool(arena, p) = 0
         return: 0
-    entry: lmx_range_entry_at(arena, p)
+    entry := lmx_range_entry_at(arena, p)
     return: lmx_range_entry_chunk(arena, entry)
 end: lmx_range_cell_chunk
 
@@ -496,7 +496,7 @@ fn: lmx_range_classify (@: arena c.LmxArena; @: p void) int
     @: array c.LmxPool 0
     if: arena = 0 || p = 0
         return: c.LMX_KIND_NONE
-    array: lmx_range_cell_pool(arena, p)
+    array := lmx_range_cell_pool(arena, p)
     if: array != 0
         return: (cast: (int) array\kind)
     ---
@@ -509,7 +509,7 @@ fn: lmx_range_type_of (@: arena c.LmxArena; @: p void) int
     @: array c.LmxPool 0
     if: arena = 0 || p = 0
         return: c.LMX_TYPE_NONE
-    array: lmx_range_cell_pool(arena, p)
+    array := lmx_range_cell_pool(arena, p)
     if: array != 0
         return: (cast: (int) array\type)
     ---
@@ -522,7 +522,7 @@ fn: lmx_range_stride (@: arena c.LmxArena; @: p void) size_t
     @: array c.LmxPool 0
     if: arena = 0 || p = 0
         return: 0U
-    array: lmx_range_cell_pool(arena, p)
+    array := lmx_range_cell_pool(arena, p)
     if: array != 0
         return: (cast: (size_t) array\stride)
     ---
@@ -538,7 +538,7 @@ fn: lmx_range_pool (@: arena c.LmxArena; @: p void) @: c.LmxPool
     @: entry c.LmxRange 0
     if: lmx_range_cell_pool(arena, p) = 0
         return: 0
-    entry: lmx_range_entry_at(arena, p)
+    entry := lmx_range_entry_at(arena, p)
     if: entry = 0 || entry\owner != arena
         return: 0
     return: (cast: (@: LmxPool) entry\array)
@@ -553,7 +553,7 @@ fn: lmx_range_home (@: arena c.LmxArena; @: p void) @: c.LmxArena
         return: 0
     if: lmx_range_cell_pool(arena, p) = 0
         return: 0
-    entry: lmx_range_entry_at(arena, p)
+    entry := lmx_range_entry_at(arena, p)
     if: entry = 0
         return: 0
     return: (cast: (@: LmxArena) entry\owner)
@@ -564,13 +564,13 @@ fn: lmx_range_has_root_profile (@: arena c.LmxArena; @: p void; @@: roots c.Lmx;
     @: p_profile c.Lmx 0
     if: arena = 0 || p = 0 || roots = 0 || count = 0U
         return: 0
-    p_profile: lmx_range_profile(arena, p)
+    p_profile := lmx_range_profile(arena, p)
     if: p_profile = 0
         return: 0
     while: i < count
         if: roots[i] != 0 && lmx_range_profile(arena, (cast: (@: void) roots[i])) = p_profile
             return: 1
-        i: i + 1U
+        i := i + 1U
     ---
     return: 0
 end: lmx_range_has_root_profile
@@ -598,71 +598,71 @@ fn: lmx_range_write_overlaps_profile (@: arena c.LmxArena; @: p void; size_t: by
     @: chunk c.LmxChunk 0
     @: array_profile c.Lmx 0
     int: selected 0
-    first: (cast: (size_t) p)
+    first := (cast: (size_t) p)
     # With no exact profile and no roots the barrier still protects the sealed profiled intervals (RR2b): a value
     # qualified at run time is in no list.
     if: arena = 0 || p = 0 || bytes = 0U
         return: 0
     if: bytes > ((cast: (size_t) -1) - first)
         return: 1
-    last: first + bytes
-    high: c.lmx_arena_index_len(arena)
+    last := first + bytes
+    high := c.lmx_arena_index_len(arena)
     while: low < high
-        mid: low + (high - low) / 2U
-        entry: c.lmx_arena_index_data(arena) + mid
+        mid := low + (high - low) / 2U
+        entry := c.lmx_arena_index_data(arena) + mid
         if: (cast: (size_t) entry\hi) <= first
-            low: mid + 1U
+            low := mid + 1U
         else:
-            high: mid
+            high := mid
         ---
     ---
     while: low < c.lmx_arena_index_len(arena)
-        entry: c.lmx_arena_index_data(arena) + low
-        lo: (cast: (size_t) entry\lo)
-        hi: (cast: (size_t) entry\hi)
+        entry := c.lmx_arena_index_data(arena) + low
+        lo := (cast: (size_t) entry\lo)
+        hi := (cast: (size_t) entry\hi)
         if: lo >= last
             break
         if: entry\array = 0 || hi < lo
             return: 1
-        array: entry\array
-        array_profile: array\profile
+        array := entry\array
+        array_profile := array\profile
         # Physical immutable type protects live bytes even before a seal or callback.
         # Legacy positive-family constructors still retain their exact/root/sealed-profile
         # guard until all construction routes have been migrated.
-        selected: (cast: (int) (lmx_type_is_immutable((cast: (int) array\type)) != 0 || (array_profile != 0 && (array_profile = exact_profile || array\sealed != 0U))))
-        i: 0U
+        selected := (cast: (int) (lmx_type_is_immutable((cast: (int) array\type)) != 0 || (array_profile != 0 && (array_profile = exact_profile || array\sealed != 0U))))
+        i := 0U
         while: selected = 0 && roots != 0 && i < root_count
             if: roots[i] != 0 && array_profile != 0 && lmx_range_profile(arena, (cast: (@: void) roots[i])) = array_profile
-                selected: 1
-            i: i + 1U
+                selected := 1
+            i := i + 1U
         ---
         if: selected != 0
             if: array\stride = 0U
                 return: 1
-            chunk: array\head
+            chunk := array\head
             while: chunk != 0 && (cast: (@: void) c.lmx_chunk_data(chunk)) != entry\lo
-                chunk: chunk\next
+                chunk := chunk\next
             ---
             if: chunk = 0
                 return: 1
-            cells: c.lmx_chunk_cells(chunk, array\stride)
+            cells := c.lmx_chunk_cells(chunk, array\stride)
             if: cells > c.lmx_chunk_room(chunk, array\stride) || cells > ((cast: (size_t) -1) / array\stride)
                 return: 1
-            used: cells * array\stride
+            used := cells * array\stride
             if: used > hi - lo
                 return: 1
             if: first < lo + used && last > lo
                 return: 1
             ---
         ---
-        low: low + 1U
+        low := low + 1U
     ---
     return: 0
 end: lmx_range_write_overlaps_profile
 
 fn: lmx_range_profile (@: arena c.LmxArena; @: p void) @: c.Lmx
     @: array c.LmxPool 0
-    array: lmx_range_cell_pool(arena, p)
+    array := lmx_range_cell_pool(arena, p)
     if: array = 0
         return: 0
     return: (cast: (@: Lmx) array\profile)
@@ -676,7 +676,7 @@ end: lmx_range_profile
 # as every unprofiled or unsealed cell does.  0 for no live cell at p.
 fn: lmx_range_sealed_profile (@: arena c.LmxArena; @: p void) @: c.Lmx
     @: array c.LmxPool 0
-    array: lmx_range_cell_pool(arena, p)
+    array := lmx_range_cell_pool(arena, p)
     if: array = 0 || array\profile = 0 || array\sealed = 0U
         return: 0
     return: (cast: (@: Lmx) array\profile)
@@ -706,35 +706,35 @@ fn: lmx_range_import_selected (@: arena c.LmxArena; @: source c.LmxArena; @: wan
     # half of a type view merely because a later interval conflicts or index allocation
     # fails.  Existing exact rows are retained and do not count toward the reservation.
     while: index < c.lmx_arena_index_len(source)
-        entry: c.lmx_arena_index_data(source) + index
-        selected: 0
+        entry := c.lmx_arena_index_data(source) + index
+        selected := 0
         if: entry\array != 0 && (entry\array\sealed != 0U || source_mode != 0)
             if: all_profiles != 0 || entry\array\profile = wanted
-                selected: 1
+                selected := 1
             ---
         ---
         if: selected != 0
-            exact: 0
-            scan: 0U
+            exact := 0
+            scan := 0U
             while: scan < c.lmx_arena_index_len(arena)
-                present: c.lmx_arena_index_data(arena) + scan
+                present := c.lmx_arena_index_data(arena) + scan
                 if: entry\lo < present\hi && entry\hi > present\lo
                     if: entry\lo = present\lo && entry\hi = present\hi && entry\array = present\array && entry\owner = present\owner
-                        exact: 1
+                        exact := 1
                     else:
                         return: 1
                     ---
                     break
                 ---
-                scan: scan + 1U
+                scan := scan + 1U
             ---
             if: exact = 0
                 if: needed = (cast: (size_t) -1)
                     return: 1
-                needed: needed + 1U
+                needed := needed + 1U
             ---
         ---
-        index: index + 1U
+        index := index + 1U
     ---
     if: needed > (cast: (size_t) -1) - c.lmx_arena_index_len(arena)
         return: 1
@@ -744,13 +744,13 @@ fn: lmx_range_import_selected (@: arena c.LmxArena; @: source c.LmxArena; @: wan
     # The source index is internally non-overlapping and the preflight validated every
     # destination overlap.  With capacity reserved, this pass cannot expose a partial
     # import on an expected error path.
-    index: 0U
+    index := 0U
     while: index < c.lmx_arena_index_len(source)
-        entry: c.lmx_arena_index_data(source) + index
-        selected: 0
+        entry := c.lmx_arena_index_data(source) + index
+        selected := 0
         if: entry\array != 0 && (entry\array\sealed != 0U || source_mode != 0)
             if: all_profiles != 0 || entry\array\profile = wanted
-                selected: 1
+                selected := 1
             ---
         ---
         if: selected != 0
@@ -758,7 +758,7 @@ fn: lmx_range_import_selected (@: arena c.LmxArena; @: source c.LmxArena; @: wan
                 return: 1
             ---
         ---
-        index: index + 1U
+        index := index + 1U
     ---
     return: 0
 end: lmx_range_import_selected
@@ -796,15 +796,15 @@ fn: lmx_range_unimport_profile (@: arena c.LmxArena; @: wanted c.Lmx) int
         return: 1
     ---
     while: i < c.lmx_arena_index_len(arena)
-        entry: c.lmx_arena_index_data(arena) + i
+        entry := c.lmx_arena_index_data(arena) + i
         if: entry\array != 0 && entry\owner != arena && entry\array\profile = wanted
-            lo: entry\lo
-            hi: entry\hi
+            lo := entry\lo
+            hi := entry\hi
             if: lmx_range_drop(arena, lo, hi) != 0
                 return: 1
             ---
         else:
-            i: i + 1U
+            i := i + 1U
         ---
     ---
     return: 0
@@ -836,7 +836,7 @@ fn: lmx_range_side_ordinal (@: entry c.LmxRange; @: cell void) size_t
         return: (cast: (size_t) -1)
     if: (cast: (size_t) cell) < (cast: (size_t) entry\lo)
         return: (cast: (size_t) -1)
-    ordinal: ((cast: (size_t) cell) - (cast: (size_t) entry\lo)) / entry\side_stride
+    ordinal := ((cast: (size_t) cell) - (cast: (size_t) entry\lo)) / entry\side_stride
     if: ordinal >= entry\side_cells
         return: (cast: (size_t) -1)
     return: ordinal
@@ -850,8 +850,8 @@ fn: lmx_range_side_open (@: entry c.LmxRange) int
         return: 1
     if: entry\side_cells != 0U
         return: 0
-    stride: entry\side_stride
-    entry\side_cells: lmx_range_side_cells(entry, stride)
+    stride := entry\side_stride
+    entry\side_cells := lmx_range_side_cells(entry, stride)
     if: entry\side_cells = 0U
         return: 1
     return: 0
@@ -861,10 +861,10 @@ fn: lmx_range_holder_set (@: arena c.LmxArena; @: base void; @: holder c.Lmx) in
     @: entry c.LmxRange 0
     if: arena = 0 || base = 0
         return: 1
-    entry: lmx_range_entry_at(arena, base)
+    entry := lmx_range_entry_at(arena, base)
     if: entry = 0 || entry\lo != base || lmx_range_side_open(entry) != 0
         return: 1
-    entry\holder: holder
+    entry\holder := holder
     return: 0
 end: lmx_range_holder_set
 
@@ -877,25 +877,25 @@ fn: lmx_range_slot_holder (@: arena c.LmxArena; @: cell void; @: slot size_t) @:
     size_t: ordinal 0U
     if: arena = 0 || cell = 0 || slot = 0
         return: 0
-    entry: lmx_range_entry_at(arena, cell)
+    entry := lmx_range_entry_at(arena, cell)
     if: entry = 0 || entry\side_cells = 0U
         return: 0
-    ordinal: lmx_range_side_ordinal(entry, cell)
+    ordinal := lmx_range_side_ordinal(entry, cell)
     if: ordinal = (cast: (size_t) -1)
         return: 0
     if: entry\holder != 0
-        \slot: ordinal
+        \slot := ordinal
         return: entry\holder
     ---
     if: entry\slot_owner = 0
         return: 0
-    owner: entry\slot_owner[ordinal]
+    owner := entry\slot_owner[ordinal]
     if: owner = 0
         return: 0
-    va: @ owner\array
+    va := @ owner\array
     if: va\data = 0 || (cast: (size_t) cell) < (cast: (size_t) va\data)
         return: 0
-    \slot: ((cast: (size_t) cell) - (cast: (size_t) va\data)) / entry\side_stride
+    \slot := ((cast: (size_t) cell) - (cast: (size_t) va\data)) / entry\side_stride
     return: owner
 end: lmx_range_slot_holder
 
@@ -909,31 +909,31 @@ fn: lmx_range_link_prepare (@: arena c.LmxArena; @: child void; @: holder c.Lmx;
     size_t: ordinal 0U
     if: arena = 0 || child = 0 || holder = 0 || out = 0
         return: 1
-    \out: 0
-    entry: lmx_range_entry_at(arena, child)
+    \out := 0
+    entry := lmx_range_entry_at(arena, child)
     if: entry = 0 || entry\owner != (cast: (@: void) arena)
         return: 0
     if: lmx_range_side_open(entry) != 0
         return: 0
-    ordinal: lmx_range_side_ordinal(entry, child)
+    ordinal := lmx_range_side_ordinal(entry, child)
     if: ordinal = (cast: (size_t) -1)
         return: 0
     if: entry\links = 0
-        entry\links: (cast: (@@: c.LmxCodeLink) c.calloc(entry\side_cells, sizeof(@: void)))
+        entry\links := (cast: (@@: c.LmxCodeLink) c.calloc(entry\side_cells, sizeof(@: void)))
         if: entry\links = 0
             return: 1
         ---
     ---
-    link: (cast: (@: c.LmxCodeLink) c.malloc(c.sizeof(c.LmxCodeLink)))
+    link := (cast: (@: c.LmxCodeLink) c.malloc(c.sizeof(c.LmxCodeLink)))
     if: link = 0
         return: 1
-    link\child: child
-    link\holder: holder
-    link\slot: slot
-    link\next: 0
-    link\mark: 0U
-    link\work: 0
-    \out: link
+    link\child := child
+    link\holder := holder
+    link\slot := slot
+    link\next := 0
+    link\mark := 0U
+    link\work := 0
+    \out := link
     return: 0
 end: lmx_range_link_prepare
 
@@ -944,17 +944,17 @@ fn: lmx_range_link_commit (@: arena c.LmxArena; @: record c.LmxCodeLink) int
     size_t: ordinal 0U
     if: record = 0
         return: 0
-    child: record\child
-    entry: lmx_range_entry_at(arena, child)
+    child := record\child
+    entry := lmx_range_entry_at(arena, child)
     if: entry = 0 || entry\links = 0
         c.free((cast: (@: void) record))
         return: 1
-    ordinal: lmx_range_side_ordinal(entry, child)
+    ordinal := lmx_range_side_ordinal(entry, child)
     if: ordinal = (cast: (size_t) -1)
         c.free((cast: (@: void) record))
         return: 1
-    record\next: entry\links[ordinal]
-    entry\links[ordinal]: record
+    record\next := entry\links[ordinal]
+    entry\links[ordinal] := record
     return: 0
 end: lmx_range_link_commit
 
@@ -974,25 +974,25 @@ fn: lmx_range_link_cut (@: arena c.LmxArena; @: child void; @: holder c.Lmx; siz
     size_t: ordinal 0U
     if: arena = 0 || child = 0 || holder = 0
         return: 1
-    entry: lmx_range_entry_at(arena, child)
+    entry := lmx_range_entry_at(arena, child)
     if: entry = 0 || entry\links = 0
         return: 0
-    ordinal: lmx_range_side_ordinal(entry, child)
+    ordinal := lmx_range_side_ordinal(entry, child)
     if: ordinal = (cast: (size_t) -1)
         return: 0
-    at: entry\links + ordinal
-    link: \at
+    at := entry\links + ordinal
+    link := \at
     while: link != 0
         if: link\holder = holder && (any_slot != 0 || link\slot = slot)
-            \at: link\next
+            \at := link\next
             c.free((cast: (@: void) link))
             if: any_slot = 0
                 return: 0
             ---
         else:
-            at: @ link\next
+            at := @ link\next
         ---
-        link: \at
+        link := \at
     ---
     return: 0
 end: lmx_range_link_cut
@@ -1007,10 +1007,10 @@ fn: lmx_range_links_of (@: arena c.LmxArena; @: child void) @: c.LmxCodeLink
     size_t: ordinal 0U
     if: arena = 0 || child = 0
         return: 0
-    entry: lmx_range_entry_at(arena, child)
+    entry := lmx_range_entry_at(arena, child)
     if: entry = 0 || entry\links = 0
         return: 0
-    ordinal: lmx_range_side_ordinal(entry, child)
+    ordinal := lmx_range_side_ordinal(entry, child)
     if: ordinal = (cast: (size_t) -1)
         return: 0
     return: entry\links[ordinal]
@@ -1025,24 +1025,24 @@ sub: lmx_range_side_free (@: entry c.LmxRange)
         return
     if: entry\links != 0
         while: i < entry\side_cells
-            link: entry\links[i]
+            link := entry\links[i]
             while: link != 0
-                next: link\next
+                next := link\next
                 c.free((cast: (@: void) link))
-                link: next
+                link := next
             ---
-            i: i + 1U
+            i := i + 1U
         ---
         c.free((cast: (@: void) entry\links))
     ---
     if: entry\slot_owner != 0
         c.free((cast: (@: void) entry\slot_owner))
     ---
-    entry\links: 0
-    entry\slot_owner: 0
-    entry\holder: 0
-    entry\side_cells: 0U
-    entry\side_stride: 0U
+    entry\links := 0
+    entry\slot_owner := 0
+    entry\holder := 0
+    entry\side_cells := 0U
+    entry\side_stride := 0U
     return
 end: lmx_range_side_free
 
@@ -1056,26 +1056,26 @@ fn: lmx_range_slot_owner_set (@: arena c.LmxArena; @: base void; size_t: count; 
     size_t: i 0U
     if: arena = 0 || base = 0 || count = 0U
         return: 1
-    entry: lmx_range_entry_at(arena, base)
+    entry := lmx_range_entry_at(arena, base)
     if: entry = 0 || lmx_range_side_open(entry) != 0
         return: 1
-    first: lmx_range_side_ordinal(entry, base)
+    first := lmx_range_side_ordinal(entry, base)
     if: first = (cast: (size_t) -1) || count > entry\side_cells - first
         return: 1
     if: entry\slot_owner = 0
-        entry\slot_owner: (cast: (@@: c.Lmx) c.calloc(entry\side_cells, sizeof(@: void)))
+        entry\slot_owner := (cast: (@@: c.Lmx) c.calloc(entry\side_cells, sizeof(@: void)))
         if: entry\slot_owner = 0
             return: 1
         ---
     ---
-    cells: (cast: (@@: void) entry\lo)
+    cells := (cast: (@@: void) entry\lo)
     while: i < count
-        old: entry\slot_owner[first + i]
+        old := entry\slot_owner[first + i]
         if: old != 0 && old != owner && cells[first + i] != 0
             lmx_range_link_cut(arena, cells[first + i], old, 0U, 1)
         ---
-        entry\slot_owner[first + i]: owner
-        i: i + 1U
+        entry\slot_owner[first + i] := owner
+        i := i + 1U
     ---
     return: 0
 end: lmx_range_slot_owner_set
@@ -1099,33 +1099,33 @@ sub: lmx_range_descriptors_retire (@: arena c.LmxArena; @: entry c.LmxRange)
     size_t: first 0U
     if: arena = 0 || entry = 0 || entry\side_stride = 0U
         return
-    stride: entry\side_stride
-    n: lmx_range_side_cells(entry, stride)
+    stride := entry\side_stride
+    n := lmx_range_side_cells(entry, stride)
     while: i < n
-        desc: (cast: (@: c.Lmx) ((cast: (@: char) entry\lo) + i * stride))
-        va: @ desc\array
-        data: va\data
-        size: va\size
+        desc := (cast: (@: c.Lmx) ((cast: (@: char) entry\lo) + i * stride))
+        va := @ desc\array
+        data := va\data
+        size := va\size
         if: data != 0 && size != 0U
-            backing: lmx_range_entry_at(arena, data)
+            backing := lmx_range_entry_at(arena, data)
             if: backing != 0 && backing != entry && backing\slot_owner != 0
-                first: lmx_range_side_ordinal(backing, data)
+                first := lmx_range_side_ordinal(backing, data)
                 if: first != (cast: (size_t) -1)
-                    cells: (cast: (@@: void) data)
-                    k: 0U
+                    cells := (cast: (@@: void) data)
+                    k := 0U
                     while: k < size && first + k < backing\side_cells
                         if: backing\slot_owner[first + k] = desc
-                            backing\slot_owner[first + k]: 0
+                            backing\slot_owner[first + k] := 0
                             if: cells[k] != 0
                                 lmx_range_link_cut(arena, cells[k], desc, 0U, 1)
                             ---
                         ---
-                        k: k + 1U
+                        k := k + 1U
                     ---
                 ---
             ---
         ---
-        i: i + 1U
+        i := i + 1U
     ---
     return
 end: lmx_range_descriptors_retire
@@ -1145,18 +1145,18 @@ sub: lmx_range_side_drop (@: arena c.LmxArena; @: entry c.LmxRange)
         lmx_range_descriptors_retire(arena, entry)
     ---
     if: entry\holder != 0 || entry\slot_owner != 0
-        n: entry\side_cells
-        cells: (cast: (@@: void) entry\lo)
+        n := entry\side_cells
+        cells := (cast: (@@: void) entry\lo)
         while: i < n
-            child: cells[i]
-            holder: entry\holder
+            child := cells[i]
+            holder := entry\holder
             if: holder = 0
-                holder: entry\slot_owner[i]
+                holder := entry\slot_owner[i]
             ---
             if: child != 0 && holder != 0
                 lmx_range_link_cut(arena, child, holder, 0U, 1)
             ---
-            i: i + 1U
+            i := i + 1U
         ---
     ---
     lmx_range_side_free(entry)
@@ -1170,9 +1170,9 @@ sub: lmx_range_side_release (@: arena c.LmxArena)
     if: arena = 0 || c.lmx_arena_index_data(arena) = 0
         return
     while: index < c.lmx_arena_index_len(arena)
-        entry: c.lmx_arena_index_data(arena) + index
+        entry := c.lmx_arena_index_data(arena) + index
         lmx_range_side_free(entry)
-        index: index + 1U
+        index := index + 1U
     ---
     return
 end: lmx_range_side_release

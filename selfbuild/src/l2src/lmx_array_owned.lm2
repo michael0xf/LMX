@@ -39,7 +39,7 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
     if: arena = 0 || element_type = c.LMX_TYPE_NONE
         return: 0
     if: base_type = c.LMX_TYPE_ARRAY_OF_CHAR
-        stride: c.sizeof(c.char)
+        stride := c.sizeof(c.char)
         # D-63: the interned char table (lmx_chars_init) and an ordinary char array's own
         # backing share the one (KIND_PRIMITIVE, TYPE_CHAR) pool of this arena, and
         # lmx_char_cell can only ever find the table in that pool's FIRST chunk.  Laying
@@ -52,16 +52,16 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
         ---
     else:
         if: base_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
-            stride: c.sizeof(c.char)
+            stride := c.sizeof(c.char)
         else:
             if: base_type = c.LMX_TYPE_ARRAY_OF_INT
-                stride: c.sizeof(c.int)
+                stride := c.sizeof(c.int)
             else:
                 if: base_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
-                    stride: c.sizeof(c.size_t)
+                    stride := c.sizeof(c.size_t)
                 else:
                     if: base_type = c.LMX_TYPE_ARRAY_OF_ULONG
-                        stride: c.sizeof(ulong_probe)
+                        stride := c.sizeof(ulong_probe)
                     ---
                     if: base_type != c.LMX_TYPE_ARRAY_OF_ULONG && base_type < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
                         return: 0
@@ -71,7 +71,7 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
                         if: pointer_stride = 0U || read = 0 || write = 0
                             return: 0
                         ---
-                        stride: pointer_stride
+                        stride := pointer_stride
                     ---
                 ---
             ---
@@ -82,24 +82,24 @@ fn: lmx_array_new_physical_profiled (int: type; size_t: count; @: arena c.LmxAre
     # The descriptor is one cell of the array of Array descriptors of this type; the
     # backing is `count` consecutive cells of the array of that element type.  Both are
     # the arena's arrays: found if the arena has them, made here if it does not.
-    desc: (cast: (@: LmxArray) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
+    desc := (cast: (@: LmxArray) c.lmx_arena_take_profiled(arena, c.sizeof(c.LmxArray), c.LMX_KIND_ARRAY, type, array_profile))
     if: desc = 0
         return: 0
-    desc\parent: parent
-    desc\native: 0
+    desc\parent := parent
+    desc\native := 0
     # The header's by-value VoidArray is written through its address.
-    va: @ desc\array
-    va\size: count
-    va\data: 0
+    va := @ desc\array
+    va\size := count
+    va\data := 0
     if: count != 0U
         if: base_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
-            backing: (cast: (@: void) c.lmx_arena_pointer_cells_profiled(arena, element_type, array_profile, stride, read, write, count))
+            backing := (cast: (@: void) c.lmx_arena_pointer_cells_profiled(arena, element_type, array_profile, stride, read, write, count))
         else:
-            backing: (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, array_profile, count))
+            backing := (cast: (@: void) c.lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, array_profile, count))
         ---
         if: backing = 0
             return: 0
-        va\data: backing
+        va\data := backing
     ---
     return: desc
 end: lmx_array_new_physical_profiled

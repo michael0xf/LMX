@@ -20,7 +20,7 @@ os:
             @: s char 0
             if: n <= 0
                 return: 0
-            s: c.malloc((cast: (size_t) n))
+            s := c.malloc((cast: (size_t) n))
             if: s = 0
                 return: 0
             if: c.WideCharToMultiByte(c.CP_UTF8, 0, w, -1, s, n, 0, 0) != n
@@ -59,57 +59,57 @@ os:
             int: empty 0
             unsigned: limit c.INFINITE
             unsigned: w 0U
-            detail[0]: 0
+            detail[0] := 0
             if: cmd != 0
-                wcmd: os_native(cmd)
+                wcmd := os_native(cmd)
             if: cwd != 0
-                wcwd: os_native(cwd)
+                wcwd := os_native(cwd)
             if: out_path != 0
-                wout: os_native(out_path)
+                wout := os_native(out_path)
             if: err_path != 0 && out_path != 0 && c.strcmp(out_path, err_path) = 0
-                shared: 1
+                shared := 1
             if: err_path != 0 && shared = 0
-                werr: os_native(err_path)
+                werr := os_native(err_path)
             if: sa = 0 || si = 0 || pi = 0 || code = 0 || acct = 0 || cmd = 0 || wexe = 0 || wnul = 0 || wcmd = 0
-                kind: 4
+                kind := 4
             if: kind < 0 && ((cwd != 0 && wcwd = 0) || (out_path != 0 && wout = 0) || (err_path != 0 && shared = 0 && werr = 0))
-                kind: 4
+                kind := 4
             if: kind < 0
-                sa\nLength: c.sizeof(c.SECURITY_ATTRIBUTES)
-                sa\bInheritHandle: c.TRUE
-                hin: c.CreateFileW(wnul, c.GENERIC_READ, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE, sa, c.OPEN_EXISTING, 0, 0)
+                sa\nLength := c.sizeof(c.SECURITY_ATTRIBUTES)
+                sa\bInheritHandle := c.TRUE
+                hin := c.CreateFileW(wnul, c.GENERIC_READ, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE, sa, c.OPEN_EXISTING, 0, 0)
                 if: out_path = 0
-                    hout: c.CreateFileW(wnul, c.GENERIC_WRITE, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE, sa, c.OPEN_EXISTING, 0, 0)
+                    hout := c.CreateFileW(wnul, c.GENERIC_WRITE, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE, sa, c.OPEN_EXISTING, 0, 0)
                 if: out_path != 0
-                    hout: c.CreateFileW(wout, c.GENERIC_WRITE, c.FILE_SHARE_READ, sa, c.CREATE_ALWAYS, c.FILE_ATTRIBUTE_NORMAL, 0)
+                    hout := c.CreateFileW(wout, c.GENERIC_WRITE, c.FILE_SHARE_READ, sa, c.CREATE_ALWAYS, c.FILE_ATTRIBUTE_NORMAL, 0)
                 if: shared != 0
-                    herr: hout
+                    herr := hout
                 if: shared = 0 && err_path = 0
-                    herr: c.CreateFileW(wnul, c.GENERIC_WRITE, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE, sa, c.OPEN_EXISTING, 0, 0)
+                    herr := c.CreateFileW(wnul, c.GENERIC_WRITE, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE, sa, c.OPEN_EXISTING, 0, 0)
                 if: shared = 0 && err_path != 0
-                    herr: c.CreateFileW(werr, c.GENERIC_WRITE, c.FILE_SHARE_READ, sa, c.CREATE_ALWAYS, c.FILE_ATTRIBUTE_NORMAL, 0)
+                    herr := c.CreateFileW(werr, c.GENERIC_WRITE, c.FILE_SHARE_READ, sa, c.CREATE_ALWAYS, c.FILE_ATTRIBUTE_NORMAL, 0)
                 if: hin = c.INVALID_HANDLE_VALUE || hout = c.INVALID_HANDLE_VALUE || herr = c.INVALID_HANDLE_VALUE
-                    detail[0]: (cast: (int) c.GetLastError())
-                    kind: 4
+                    detail[0] := (cast: (int) c.GetLastError())
+                    kind := 4
             ---
             if: kind < 0
-                job: c.CreateJobObjectW(0, 0)
+                job := c.CreateJobObjectW(0, 0)
                 if: job = 0
-                    detail[0]: (cast: (int) c.GetLastError())
-                    kind: 4
+                    detail[0] := (cast: (int) c.GetLastError())
+                    kind := 4
             ---
             if: kind < 0
-                si\cb: c.sizeof(c.STARTUPINFOW)
-                si\dwFlags: c.STARTF_USESTDHANDLES
-                si\hStdInput: hin
-                si\hStdOutput: hout
-                si\hStdError: herr
+                si\cb := c.sizeof(c.STARTUPINFOW)
+                si\dwFlags := c.STARTF_USESTDHANDLES
+                si\hStdInput := hin
+                si\hStdOutput := hout
+                si\hStdError := herr
                 if: c.CreateProcessW(wexe, wcmd, 0, 0, c.TRUE, c.CREATE_NO_WINDOW | c.CREATE_SUSPENDED, 0, wcwd, si, pi) = 0
-                    detail[0]: (cast: (int) c.GetLastError())
-                    kind: 1
+                    detail[0] := (cast: (int) c.GetLastError())
+                    kind := 1
                 ---
                 if: kind < 0
-                    started: 1
+                    started := 1
             ---
             # The child holds its own ends now; this process keeps none of them.
             if: hin != c.INVALID_HANDLE_VALUE
@@ -119,33 +119,33 @@ os:
             if: shared = 0 && herr != c.INVALID_HANDLE_VALUE
                 c.CloseHandle(herr)
             if: kind < 0 && (c.AssignProcessToJobObject(job, pi\hProcess) = 0 || c.ResumeThread(pi\hThread) = 0xffffffffU)
-                detail[0]: (cast: (int) c.GetLastError())
+                detail[0] := (cast: (int) c.GetLastError())
                 c.TerminateProcess(pi\hProcess, 1U)
                 c.WaitForSingleObject(pi\hProcess, c.INFINITE)
-                kind: 3
+                kind := 3
             if: kind < 0
                 if: timeout_ms != 0U
-                    limit: timeout_ms
-                w: c.WaitForSingleObject(pi\hProcess, limit)
+                    limit := timeout_ms
+                w := c.WaitForSingleObject(pi\hProcess, limit)
                 if: w = c.WAIT_OBJECT_0
-                    kind: 0
+                    kind := 0
                     if: c.GetExitCodeProcess(pi\hProcess, (cast: (@: void) code) ) = 0
-                        detail[0]: (cast: (int) c.GetLastError())
-                        kind: 3
+                        detail[0] := (cast: (int) c.GetLastError())
+                        kind := 3
                     ---
                     if: kind = 0
-                        detail[0]: (cast: (int) code[0])
+                        detail[0] := (cast: (int) code[0])
                 ---
                 if: w = c.WAIT_TIMEOUT
                     c.TerminateJobObject(job, 1U)
                     c.WaitForSingleObject(pi\hProcess, c.INFINITE)
-                    detail[0]: (cast: (int) timeout_ms)
-                    kind: 2
+                    detail[0] := (cast: (int) timeout_ms)
+                    kind := 2
                 if: kind < 0
-                    detail[0]: (cast: (int) c.GetLastError())
+                    detail[0] := (cast: (int) c.GetLastError())
                     c.TerminateJobObject(job, 1U)
                     c.WaitForSingleObject(pi\hProcess, c.INFINITE)
-                    kind: 3
+                    kind := 3
             ---
             # The terminal state of the whole tree (refinement 3 of OPUS-CODEX-20261023-SLICE170): what the main
             # process left in its job is stopped too, and the job is waited for until it holds no process -- the
@@ -154,13 +154,13 @@ os:
                 c.TerminateJobObject(job, 1U)
                 while: empty = 0 && drain < 2000
                     if: c.QueryInformationJobObject(job, c.JobObjectBasicAccountingInformation, (cast: (@: void) acct), (cast: (unsigned) c.sizeof(c.JOBOBJECT_BASIC_ACCOUNTING_INFORMATION)), 0) != 0 && acct\ActiveProcesses = 0U
-                        empty: 1
+                        empty := 1
                     if: empty = 0
                         c.Sleep(5U)
-                    drain: drain + 1
+                    drain := drain + 1
                 ---
                 if: empty = 0 && kind != 1 && kind != 4
-                    kind: 3
+                    kind := 3
             ---
             if: started != 0
                 c.CloseHandle(pi\hThread)
@@ -189,10 +189,10 @@ os:
             if: w = 0
                 return: -1
             if: c.CreateDirectoryW(w, 0) = 0
-                e: c.GetLastError()
-                r: (cast: (int) e)
+                e := c.GetLastError()
+                r := (cast: (int) e)
                 if: e = c.ERROR_ALREADY_EXISTS
-                    r: 0
+                    r := 0
             ---
             c.free(w)
             return: r
@@ -212,13 +212,13 @@ os:
             @: s char 0
             if: n = 0U
                 return: 0
-            w: c.calloc((cast: (size_t) n), c.sizeof(c.WCHAR))
+            w := c.calloc((cast: (size_t) n), c.sizeof(c.WCHAR))
             if: w = 0
                 return: 0
             if: c.GetCurrentDirectoryW(n, w) = 0U
                 c.free(w)
                 return: 0
-            s: os_from_native((cast: (@: void) w))
+            s := os_from_native((cast: (@: void) w))
             c.free(w)
             return: s
         end: os_cwd
@@ -229,19 +229,19 @@ os:
             @: w c.WCHAR 0
             @: s char 0
             while: cap < 65536U
-                w: c.calloc((cast: (size_t) cap), c.sizeof(c.WCHAR))
+                w := c.calloc((cast: (size_t) cap), c.sizeof(c.WCHAR))
                 if: w = 0
                     return: 0
-                n: c.GetModuleFileNameW(0, w, cap)
+                n := c.GetModuleFileNameW(0, w, cap)
                 if: n > 0U && n < cap
-                    s: os_from_native((cast: (@: void) w))
+                    s := os_from_native((cast: (@: void) w))
                     c.free(w)
                     return: s
                 ---
                 c.free(w)
                 if: n = 0U
                     return: 0
-                cap: 2U * cap
+                cap := 2U * cap
             return: 0
         end: os_self
         # The arguments this process was given after `--`, as the platform parses its command line: a line
@@ -255,32 +255,32 @@ os:
             int: at -1
             if: count = 0
                 return: 1
-            list: c.CommandLineToArgvW(c.GetCommandLineW(), count)
+            list := c.CommandLineToArgvW(c.GetCommandLineW(), count)
             if: list = 0
                 c.free(count)
                 return: 1
             while: i < count[0] && at < 0
-                s: os_from_native((cast: (@: void) list[i]))
+                s := os_from_native((cast: (@: void) list[i]))
                 if: s != 0 && c.strcmp(s, "--") = 0
-                    at: i + 1
+                    at := i + 1
                 c.free(s)
-                i: i + 1
+                i := i + 1
             ---
             if: at < 0
-                at: count[0]
+                at := count[0]
             c.printf("ARGC %d\n", count[0] - at)
-            i: at
+            i := at
             while: i < count[0]
-                s: os_from_native((cast: (@: void) list[i]))
+                s := os_from_native((cast: (@: void) list[i]))
                 if: s = 0
                     c.LocalFree(list)
                     c.free(count)
                     return: 1
-                hex: txt_hex(s, c.strlen(s))
+                hex := txt_hex(s, c.strlen(s))
                 c.printf("ARG %d %s\n", i - at, hex)
                 c.free(hex)
                 c.free(s)
-                i: i + 1
+                i := i + 1
             ---
             c.LocalFree(list)
             c.free(count)
@@ -300,36 +300,36 @@ os:
             int: r 0
             if: pattern = 0 || fd = 0
                 return: -1
-            wpat: os_native(pattern)
-            out: os_file_open(out_path, "wb")
+            wpat := os_native(pattern)
+            out := os_file_open(out_path, "wb")
             if: wpat = 0 || out = 0
-                r: -1
+                r := -1
             if: r = 0
-                h: c.FindFirstFileW(wpat, fd)
+                h := c.FindFirstFileW(wpat, fd)
                 if: h = c.INVALID_HANDLE_VALUE
-                    r: (cast: (int) c.GetLastError())
+                    r := (cast: (int) c.GetLastError())
             ---
             while: r = 0 && h != c.INVALID_HANDLE_VALUE
-                attrs: (cast: (unsigned) fd\dwFileAttributes)
+                attrs := (cast: (unsigned) fd\dwFileAttributes)
                 if: (attrs & (cast: (unsigned) c.FILE_ATTRIBUTE_DIRECTORY)) = 0U
-                    name: os_from_native((cast: (@: void) fd\cFileName))
+                    name := os_from_native((cast: (@: void) fd\cFileName))
                     if: name = 0
-                        r: -1
+                        r := -1
                     if: name != 0 && c.fprintf(out, "%s\n", name) < 0
-                        r: -1
+                        r := -1
                     c.free(name)
                 ---
                 if: c.FindNextFileW(h, fd) = 0
-                    e: c.GetLastError()
+                    e := c.GetLastError()
                     if: e != c.ERROR_NO_MORE_FILES
-                        r: (cast: (int) e)
+                        r := (cast: (int) e)
                     c.FindClose(h)
-                    h: c.INVALID_HANDLE_VALUE
+                    h := c.INVALID_HANDLE_VALUE
             ---
             if: h != c.INVALID_HANDLE_VALUE
                 c.FindClose(h)
             if: out != 0 && c.fclose(out) != 0 && r = 0
-                r: -1
+                r := -1
             c.free(pattern)
             c.free(wpat)
             c.free(fd)
@@ -343,9 +343,9 @@ os:
             if: f = 0
                 return: 1
             if: c._fseeki64(f, off, 0) = 0 && c.fputc(0, f) = 0
-                r: 0
+                r := 0
             if: c.fclose(f) != 0
-                r: 1
+                r := 1
             return: r
         end: os_file_at
         # The SHA-256 of the file at path as 64 lowercase hex digits and a NUL in out[0 .. 64] (the platform's
@@ -365,19 +365,19 @@ os:
             int: r 1
             if: f != 0 && alg != 0 && hh != 0 && digest != 0 && buf != 0 && c.BCryptOpenAlgorithmProvider(alg, c.BCRYPT_SHA256_ALGORITHM, 0, 0U) = 0
                 if: c.BCryptCreateHash(alg[0], hh, 0, 0U, 0, 0U, 0U) = 0
-                    ok: 1
+                    ok := 1
                     while: more != 0 && ok != 0
-                        got: c.fread(buf, 1U, hash_chunk(), f)
+                        got := c.fread(buf, 1U, hash_chunk(), f)
                         if: got > 0U && c.BCryptHashData(hh[0], (cast: (@: void) buf), (cast: (unsigned) got), 0U) != 0
-                            ok: 0
+                            ok := 0
                         if: got = 0U
-                            more: 0
+                            more := 0
                     ---
                     if: ok != 0 && c.ferror(f) = 0 && c.BCryptFinishHash(hh[0], (cast: (@: void) digest), 32U, 0U) = 0
-                        hex: txt_hex(digest, 32U)
+                        hex := txt_hex(digest, 32U)
                         if: hex != 0
                             c.memcpy(out, hex, 65U)
-                            r: 0
+                            r := 0
                         ---
                         c.free(hex)
                     ---
@@ -427,87 +427,87 @@ os:
             int: kind -1
             int: got 0
             unsigned: waited 0U
-            detail[0]: 0
+            detail[0] := 0
             if: list = 0 || fds = 0 || status = 0 || err = 0
-                kind: 4
+                kind := 4
             if: kind < 0 && c.pipe(fds) != 0
-                detail[0]: c.errno
-                kind: 4
+                detail[0] := c.errno
+                kind := 4
             if: kind < 0
                 while: i < argc
-                    list[i]: argv[i]
-                    i: i + 1
+                    list[i] := argv[i]
+                    i := i + 1
                 ---
                 c.fcntl(fds[1], c.F_SETFD, c.FD_CLOEXEC)
-                pid: c.fork()
+                pid := c.fork()
                 if: pid < 0
-                    detail[0]: c.errno
-                    kind: 1
+                    detail[0] := c.errno
+                    kind := 1
                 ---
                 if: pid = 0
                     c.close(fds[0])
                     c.setpgid(0, 0)
                     if: cwd != 0 && c.chdir(cwd) != 0
-                        err[0]: c.errno
+                        err[0] := c.errno
                         c.write(fds[1], err, c.sizeof(c.int))
                         c._exit(127)
-                    fd: c.open("/dev/null", c.O_RDONLY)
+                    fd := c.open("/dev/null", c.O_RDONLY)
                     if: fd >= 0
                         c.dup2(fd, 0)
                     if: out_path != 0
-                        fd: c.open(out_path, c.O_WRONLY | c.O_CREAT | c.O_TRUNC, 420)
+                        fd := c.open(out_path, c.O_WRONLY | c.O_CREAT | c.O_TRUNC, 420)
                     if: out_path = 0
-                        fd: c.open("/dev/null", c.O_WRONLY)
+                        fd := c.open("/dev/null", c.O_WRONLY)
                     if: fd >= 0
                         c.dup2(fd, 1)
                     if: err_path != 0 && out_path != 0 && c.strcmp(out_path, err_path) = 0
                         c.dup2(1, 2)
                     if: err_path != 0 && (out_path = 0 || c.strcmp(out_path, err_path) != 0)
-                        fd: c.open(err_path, c.O_WRONLY | c.O_CREAT | c.O_TRUNC, 420)
+                        fd := c.open(err_path, c.O_WRONLY | c.O_CREAT | c.O_TRUNC, 420)
                         if: fd >= 0
                             c.dup2(fd, 2)
                     ---
                     if: err_path = 0
-                        fd: c.open("/dev/null", c.O_WRONLY)
+                        fd := c.open("/dev/null", c.O_WRONLY)
                         if: fd >= 0
                             c.dup2(fd, 2)
                     ---
                     c.execv(exe, list)
-                    err[0]: c.errno
+                    err[0] := c.errno
                     c.write(fds[1], err, c.sizeof(c.int))
                     c._exit(127)
             ---
             if: fds != 0
                 c.close(fds[1])
             if: kind < 0 && pid > 0
-                got: (cast: (int) c.read(fds[0], err, c.sizeof(c.int)))
+                got := (cast: (int) c.read(fds[0], err, c.sizeof(c.int)))
                 if: got = (cast: (int) c.sizeof(c.int))
                     c.waitpid(pid, status, 0)
-                    detail[0]: err[0]
-                    kind: 1
+                    detail[0] := err[0]
+                    kind := 1
             ---
             while: kind < 0 && pid > 0
-                got: c.waitpid(pid, status, c.WNOHANG)
+                got := c.waitpid(pid, status, c.WNOHANG)
                 if: got = pid
-                    kind: 0
-                    detail[0]: 128 + (cast: (int) c.WTERMSIG(status[0]))
+                    kind := 0
+                    detail[0] := 128 + (cast: (int) c.WTERMSIG(status[0]))
                     if: c.WIFEXITED(status[0])
-                        detail[0]: c.WEXITSTATUS(status[0])
+                        detail[0] := c.WEXITSTATUS(status[0])
                 ---
                 if: got < 0
-                    detail[0]: c.errno
+                    detail[0] := c.errno
                     c.kill(0 - pid, c.SIGKILL)
-                    kind: 3
+                    kind := 3
                 ---
                 if: kind < 0 && timeout_ms != 0U && waited >= timeout_ms
                     c.kill(0 - pid, c.SIGKILL)
                     c.waitpid(pid, status, 0)
-                    detail[0]: (cast: (int) timeout_ms)
-                    kind: 2
+                    detail[0] := (cast: (int) timeout_ms)
+                    kind := 2
                 ---
                 if: kind < 0
                     c.usleep(10000U)
-                    waited: waited + 10U
+                    waited := waited + 10U
             ---
             if: fds != 0
                 c.close(fds[0])
@@ -527,7 +527,7 @@ os:
             @: ts c.LmxToolTimespec c.calloc(1U, c.sizeof(c.LmxToolTimespec))
             size_t: ms 0U
             if: ts != 0 && c.clock_gettime(c.CLOCK_MONOTONIC, ts) = 0
-                ms: (cast: (size_t) ts\tv_sec) * 1000U + (cast: (size_t) ts\tv_nsec) / 1000000U
+                ms := (cast: (size_t) ts\tv_sec) * 1000U + (cast: (size_t) ts\tv_nsec) / 1000000U
             c.free(ts)
             return: ms
         end: os_now_ms
@@ -536,10 +536,10 @@ os:
             while: left > 0U
                 if: left >= 1000U
                     c.usleep(999000U)
-                    left: left - 999U
+                    left := left - 999U
                 if: left < 1000U && left > 0U
                     c.usleep(left * 1000U)
-                    left: 0U
+                    left := 0U
             ---
             return: 0
         end: os_sleep_ms
@@ -547,13 +547,13 @@ os:
             size_t: cap 256U
             @: s char 0
             while: cap < 1048576U
-                s: c.malloc(cap)
+                s := c.malloc(cap)
                 if: s = 0
                     return: 0
                 if: c.getcwd(s, cap) != 0
                     return: s
                 c.free(s)
-                cap: 2U * cap
+                cap := 2U * cap
             return: 0
         end: os_cwd
         # This program's executable path (Linux: /proc/self/exe; other systems OPEN), or 0.
@@ -562,18 +562,18 @@ os:
             @: s char 0
             int: n 0
             while: cap < 1048576U
-                s: c.malloc(cap)
+                s := c.malloc(cap)
                 if: s = 0
                     return: 0
-                n: (cast: (int) c.readlink("/proc/self/exe", s, cap))
+                n := (cast: (int) c.readlink("/proc/self/exe", s, cap))
                 if: n > 0 && (cast: (size_t) n) < cap
-                    s[n]: (cast: (char) 0)
+                    s[n] := (cast: (char) 0)
                     return: s
                 ---
                 c.free(s)
                 if: n <= 0
                     return: 0
-                cap: 2U * cap
+                cap := 2U * cap
             return: 0
         end: os_self
         # This platform hands main its arguments unparsed: they are printed from the program's own argv (the
@@ -593,48 +593,48 @@ os:
             @: err int (cast: (@: int) (@ c.errno))
             int: r 0
             if: d = 0 || st = 0
-                r: c.errno
+                r := c.errno
                 if: r = 0
-                    r: -1
+                    r := -1
                 if: d != 0
                     c.closedir(d)
                 c.free(st)
                 return: r
             ---
-            out: os_file_open(out_path, "wb")
+            out := os_file_open(out_path, "wb")
             if: out = 0
                 c.closedir(d)
                 c.free(st)
                 return: -1
             ---
-            err[0]: 0
-            e: c.readdir(d)
+            err[0] := 0
+            e := c.readdir(d)
             if: e = 0 && err[0] != 0
-                r: err[0]
+                r := err[0]
             while: e != 0 && r = 0
                 # The C member received by a declared place: an L2 actual is not one yet (C-DOOR-MEMBER-ACTUAL-UNTYPED).
-                name: e\d_name
-                full: txt_cat3(dir, "/", name)
+                name := e\d_name
+                full := txt_cat3(dir, "/", name)
                 if: full = 0
-                    r: -1
+                    r := -1
                 if: full != 0
                     if: c.stat(full, st) != 0
-                        r: err[0]
+                        r := err[0]
                         if: r = 0
-                            r: -1
+                            r := -1
                     ---
                     if: r = 0 && c.S_ISDIR(st\st_mode) = 0 && c.fprintf(out, "%s\n", name) < 0
-                        r: -1
+                        r := -1
                 ---
                 c.free(full)
                 if: r = 0
-                    err[0]: 0
-                    e: c.readdir(d)
+                    err[0] := 0
+                    e := c.readdir(d)
                     if: e = 0 && err[0] != 0
-                        r: err[0]
+                        r := err[0]
             ---
             if: c.fclose(out) != 0
-                r: -1
+                r := -1
             c.closedir(d)
             c.free(st)
             return: r
@@ -645,9 +645,9 @@ os:
             if: f = 0
                 return: 1
             if: c.fseeko(f, off, 0) = 0 && c.fputc(0, f) = 0
-                r: 0
+                r := 0
             if: c.fclose(f) != 0
-                r: 1
+                r := 1
             return: r
         end: os_file_at
         # The L2 SHA-256 of the file at path, read hash_chunk() bytes at a time (sha256_stream): 0 written, 1 not.
@@ -656,7 +656,7 @@ os:
             int: r 1
             if: f = 0
                 return: 1
-            r: sha256_stream(f, hash_chunk(), out)
+            r := sha256_stream(f, hash_chunk(), out)
             c.fclose(f)
             return: r
         end: os_sha256_file
@@ -689,20 +689,20 @@ fn: file_has_line (@: path char; @: line char) int
     int: r 0
     if: len = 0
         return: 0
-    data: file_read(path, len)
+    data := file_read(path, len)
     if: data = 0
         c.free(len)
         return: 0
-    total: len[0]
+    total := len[0]
     while: r = 0 && i <= total
-        e: i + n
+        e := i + n
         if: e <= total && c.strncmp(data + i, line, n) = 0
             if: e = total || data[e] = (cast: (char) 10) || (data[e] = (cast: (char) 13) && e + 1U < total && data[e + 1U] = (cast: (char) 10))
-                r: 1
+                r := 1
         ---
         while: i < total && data[i] != (cast: (char) 10)
-            i: i + 1U
-        i: i + 1U
+            i := i + 1U
+        i := i + 1U
     ---
     c.free(data)
     c.free(len)
@@ -716,9 +716,9 @@ fn: file_has (@: path char; @: want char) int
     int: r 0
     if: len = 0
         return: 0
-    data: file_read(path, len)
+    data := file_read(path, len)
     if: data != 0 && (cast: (@: char) (c.strstr(data, want))) != 0
-        r: 1
+        r := 1
     c.free(data)
     c.free(len)
     return: r
@@ -731,15 +731,15 @@ fn: run_self (@: self char; @@: words char; int: nwords; @: cwd char; @: out cha
     int: kind 0
     if: argv = 0
         return: 4
-    argv[0]: self
-    argv[1]: "0"
-    argv[2]: "entry"
-    argv[3]: "0"
-    argv[4]: "--"
+    argv[0] := self
+    argv[1] := "0"
+    argv[2] := "entry"
+    argv[3] := "0"
+    argv[4] := "--"
     while: i < nwords
-        argv[5 + i]: words[i]
-        i: i + 1
-    kind: os_run(self, argv, nwords + 5, cwd, out, err, timeout_ms, detail)
+        argv[5 + i] := words[i]
+        i := i + 1
+    kind := os_run(self, argv, nwords + 5, cwd, out, err, timeout_ms, detail)
     c.free(argv)
     return: kind
 end: run_self
@@ -760,26 +760,26 @@ fn: test_args (@: self char; @: dir char) int
     int: f 0
     if: words = 0 || detail = 0 || out = 0 || err = 0
         return: tool_check(0, "args", "no memory")
-    words[0]: "echo-args"
-    words[1]: "a b"
-    words[2]: ""
-    words[3]: "x&y|z<>^%!"
-    words[4]: "q\"t"
-    words[5]: "юникод ✓"
-    words[6]: "tail\\"
-    words[7]: "mid\\\"q"
-    kind: run_self(self, words, 8, 0, out, err, 60000U, detail)
-    f: f + tool_check(kind = 0 && detail[0] = 0, "args: the child ran and exited 0", "kind or exit code")
-    f: f + tool_check(file_has_line(out, "ARGC 8"), "args: eight arguments after --", "ARGC")
+    words[0] := "echo-args"
+    words[1] := "a b"
+    words[2] := ""
+    words[3] := "x&y|z<>^%!"
+    words[4] := "q\"t"
+    words[5] := "юникод ✓"
+    words[6] := "tail\\"
+    words[7] := "mid\\\"q"
+    kind := run_self(self, words, 8, 0, out, err, 60000U, detail)
+    f := f + tool_check(kind = 0 && detail[0] = 0, "args: the child ran and exited 0", "kind or exit code")
+    f := f + tool_check(file_has_line(out, "ARGC 8"), "args: eight arguments after --", "ARGC")
     while: i < 8
-        hex: txt_hex(words[i], c.strlen(words[i]))
-        hn: c.strlen(hex)
-        line: c.malloc(hn + 32U)
+        hex := txt_hex(words[i], c.strlen(words[i]))
+        hn := c.strlen(hex)
+        line := c.malloc(hn + 32U)
         c.snprintf(line, hn + 32U, "ARG %d %s", i, hex)
-        f: f + tool_check(file_has_line(out, line), line, "the child saw another argument")
+        f := f + tool_check(file_has_line(out, line), line, "the child saw another argument")
         c.free(line)
         c.free(hex)
-        i: i + 1
+        i := i + 1
     ---
     c.free(words)
     c.free(detail)
@@ -797,14 +797,14 @@ fn: test_exits (@: self char; @: dir char) int
     int: f 0
     if: words = 0 || bare = 0 || detail = 0 || out = 0
         return: tool_check(0, "exits", "no memory")
-    words[0]: "exit-with"
-    words[1]: "3"
-    kind: run_self(self, words, 2, 0, out, 0, 60000U, detail)
-    f: f + tool_check(kind = 0 && detail[0] = 1, "exit: a program exit 3 against `entry 0` is the driver's exit 1", "kind or exit code")
-    f: f + tool_check(file_has(out, "exit 3, expected 0"), "exit: the driver names the program's exit 3", "driver text")
-    bare[0]: self
-    kind: os_run(self, bare, 1, 0, out, 0, 60000U, detail)
-    f: f + tool_check(kind = 0 && detail[0] = 2, "exit: the driver without arguments exits 2", "kind or exit code")
+    words[0] := "exit-with"
+    words[1] := "3"
+    kind := run_self(self, words, 2, 0, out, 0, 60000U, detail)
+    f := f + tool_check(kind = 0 && detail[0] = 1, "exit: a program exit 3 against `entry 0` is the driver's exit 1", "kind or exit code")
+    f := f + tool_check(file_has(out, "exit 3, expected 0"), "exit: the driver names the program's exit 3", "driver text")
+    bare[0] := self
+    kind := os_run(self, bare, 1, 0, out, 0, 60000U, detail)
+    f := f + tool_check(kind = 0 && detail[0] = 2, "exit: the driver without arguments exits 2", "kind or exit code")
     c.free(words)
     c.free(bare)
     c.free(detail)
@@ -822,13 +822,13 @@ fn: test_streams (@: self char; @: dir char) int
     int: f 0
     if: words = 0 || detail = 0 || out = 0 || err = 0 || both = 0
         return: tool_check(0, "streams", "no memory")
-    words[0]: "streams"
-    kind: run_self(self, words, 1, 0, out, err, 60000U, detail)
-    f: f + tool_check(kind = 0 && detail[0] = 0, "streams: the child exited 0", "kind or exit code")
-    f: f + tool_check(file_has_line(out, "OUT-LINE") && file_has(out, "ERR-LINE") = 0, "streams: stdout holds the stdout line only", "stdout")
-    f: f + tool_check(file_has_line(err, "ERR-LINE") && file_has(err, "OUT-LINE") = 0, "streams: stderr holds the stderr line only", "stderr")
-    kind: run_self(self, words, 1, 0, both, both, 60000U, detail)
-    f: f + tool_check(kind = 0 && file_has_line(both, "OUT-LINE") && file_has_line(both, "ERR-LINE"), "streams: one file takes both", "shared file")
+    words[0] := "streams"
+    kind := run_self(self, words, 1, 0, out, err, 60000U, detail)
+    f := f + tool_check(kind = 0 && detail[0] = 0, "streams: the child exited 0", "kind or exit code")
+    f := f + tool_check(file_has_line(out, "OUT-LINE") && file_has(out, "ERR-LINE") = 0, "streams: stdout holds the stdout line only", "stdout")
+    f := f + tool_check(file_has_line(err, "ERR-LINE") && file_has(err, "OUT-LINE") = 0, "streams: stderr holds the stderr line only", "stderr")
+    kind := run_self(self, words, 1, 0, both, both, 60000U, detail)
+    f := f + tool_check(kind = 0 && file_has_line(both, "OUT-LINE") && file_has_line(both, "ERR-LINE"), "streams: one file takes both", "shared file")
     c.free(words)
     c.free(detail)
     c.free(out)
@@ -848,14 +848,14 @@ fn: test_cwd (@: self char; @: dir char) int
     int: f 0
     if: words = 0 || detail = 0 || place = 0 || out = 0
         return: tool_check(0, "cwd", "no memory")
-    f: f + tool_check(os_mkdir(place) = 0, "cwd: a directory with a space made", "mkdir")
-    words[0]: "cwd"
-    kind: run_self(self, words, 1, place, out, 0, 60000U, detail)
-    f: f + tool_check(kind = 0 && detail[0] = 0, "cwd: the child exited 0", "kind or exit code")
-    f: f + tool_check(file_has(out, "cwd dir\r\n") || file_has(out, "cwd dir\n"), "cwd: the child ran in that directory", "child cwd")
-    here: os_cwd()
-    want: txt_cat("CWD ", here)
-    f: f + tool_check(file_has_line(out, want) = 0, "cwd: not in this process's directory", "child cwd")
+    f := f + tool_check(os_mkdir(place) = 0, "cwd: a directory with a space made", "mkdir")
+    words[0] := "cwd"
+    kind := run_self(self, words, 1, place, out, 0, 60000U, detail)
+    f := f + tool_check(kind = 0 && detail[0] = 0, "cwd: the child exited 0", "kind or exit code")
+    f := f + tool_check(file_has(out, "cwd dir\r\n") || file_has(out, "cwd dir\n"), "cwd: the child ran in that directory", "child cwd")
+    here := os_cwd()
+    want := txt_cat("CWD ", here)
+    f := f + tool_check(file_has_line(out, want) = 0, "cwd: not in this process's directory", "child cwd")
     c.free(here)
     c.free(want)
     c.free(words)
@@ -876,16 +876,16 @@ fn: test_timeout (@: self char; @: dir char) int
     if: words = 0 || detail = 0 || mark = 0
         return: tool_check(0, "timeout", "no memory")
     os_file_remove(mark)
-    words[0]: "sleep-touch"
-    words[1]: "3000"
-    words[2]: mark
-    t0: os_now_ms()
-    kind: run_self(self, words, 3, 0, 0, 0, 500U, detail)
-    t1: os_now_ms()
-    f: f + tool_check(kind = 2 && detail[0] = 500, "timeout: kind 2 at 500 ms", "kind")
-    f: f + tool_check(t1 - t0 < 2500U, "timeout: returned before the child's 3000 ms", "too late")
+    words[0] := "sleep-touch"
+    words[1] := "3000"
+    words[2] := mark
+    t0 := os_now_ms()
+    kind := run_self(self, words, 3, 0, 0, 0, 500U, detail)
+    t1 := os_now_ms()
+    f := f + tool_check(kind = 2 && detail[0] = 500, "timeout: kind 2 at 500 ms", "kind")
+    f := f + tool_check(t1 - t0 < 2500U, "timeout: returned before the child's 3000 ms", "too late")
     os_sleep_ms(4000U)
-    f: f + tool_check(file_exists(mark) = 0, "timeout: the stopped child never wrote its mark", "the child lived on")
+    f := f + tool_check(file_exists(mark) = 0, "timeout: the stopped child never wrote its mark", "the child lived on")
     c.free(words)
     c.free(detail)
     c.free(mark)
@@ -900,9 +900,9 @@ fn: test_spawn_failure (@: dir char) int
     int: f 0
     if: argv = 0 || detail = 0 || missing = 0
         return: tool_check(0, "spawn failure", "no memory")
-    argv[0]: missing
-    kind: os_run(missing, argv, 1, 0, 0, 0, 60000U, detail)
-    f: f + tool_check(kind = 1 && detail[0] != 0, "spawn failure: kind 1 with the OS error", "kind")
+    argv[0] := missing
+    kind := os_run(missing, argv, 1, 0, 0, 0, 60000U, detail)
+    f := f + tool_check(kind = 1 && detail[0] != 0, "spawn failure: kind 1 with the OS error", "kind")
     c.free(argv)
     c.free(detail)
     c.free(missing)
@@ -915,7 +915,7 @@ fn: test_hash_stream (@: path char; @: data char; size_t: n; size_t: chunk; @: g
     @: f c.FILE os_file_open(path, "rb")
     int: r 1
     if: f != 0
-        r: sha256_stream(f, chunk, got)
+        r := sha256_stream(f, chunk, got)
         c.fclose(f)
     ---
     sha256_bytes(data, n, mine)
@@ -945,70 +945,70 @@ fn: test_hash (@: dir char) int
     if: path = 0 || got = 0 || mine = 0 || data = 0 || sizes = 0 || chunks = 0
         return: tool_check(0, "hash", "no memory")
     file_write(path, data, 0U)
-    f: f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") = 0, "hash: empty file", got)
+    f := f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855") = 0, "hash: empty file", got)
     file_write(path, "abc", 3U)
-    f: f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad") = 0, "hash: abc", got)
+    f := f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad") = 0, "hash: abc", got)
     while: i < 1000
-        data[i]: (cast: (char) (i * 7 + 3))
-        i: i + 1
-    sizes[0]: 0U
-    sizes[1]: 1U
-    sizes[2]: 55U
-    sizes[3]: 56U
-    sizes[4]: 63U
-    sizes[5]: 64U
-    sizes[6]: 65U
-    sizes[7]: 1000U
-    i: 0
+        data[i] := (cast: (char) (i * 7 + 3))
+        i := i + 1
+    sizes[0] := 0U
+    sizes[1] := 1U
+    sizes[2] := 55U
+    sizes[3] := 56U
+    sizes[4] := 63U
+    sizes[5] := 64U
+    sizes[6] := 65U
+    sizes[7] := 1000U
+    i := 0
     while: i < 8
         file_write(path, data, sizes[i])
         sha256_bytes(data, sizes[i], mine)
-        f: f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, mine) = 0, txt_cat3("hash: ", txt_int((cast: (int) sizes[i])), " bytes, the platform's hash equals the L2 one"), got)
-        i: i + 1
+        f := f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, mine) = 0, txt_cat3("hash: ", txt_int((cast: (int) sizes[i])), " bytes, the platform's hash equals the L2 one"), got)
+        i := i + 1
     ---
-    chunks[0]: 1U
-    chunks[1]: 64U
-    chunks[2]: 100U
-    i: 0
+    chunks[0] := 1U
+    chunks[1] := 64U
+    chunks[2] := 100U
+    i := 0
     while: i < 8
         if: sizes[i] != 1U && sizes[i] != 55U && sizes[i] != 56U
             file_write(path, data, sizes[i])
-            j: 0
+            j := 0
             while: j < 3
-                f: f + test_hash_stream(path, data, sizes[i], chunks[j], got, mine)
-                j: j + 1
+                f := f + test_hash_stream(path, data, sizes[i], chunks[j], got, mine)
+                j := j + 1
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
-    big: os_file_open(path, "rb")
-    f: f + tool_check(big != 0 && sha256_stream(big, 0U, got) = 1, "hash: the L2 stream refuses a chunk of 0", "")
+    big := os_file_open(path, "rb")
+    f := f + tool_check(big != 0 && sha256_stream(big, 0U, got) = 1, "hash: the L2 stream refuses a chunk of 0", "")
     if: big != 0
         c.fclose(big)
     # i mod 251 over 1 MiB + 1: 251 bytes by steps, then doubled by the C library.
-    i: 0
+    i := 0
     while: i < 251
-        data[i]: (cast: (char) i)
-        i: i + 1
+        data[i] := (cast: (char) i)
+        i := i + 1
     ---
     while: at < 1048577U
-        n: at
+        n := at
         if: n > 1048577U - at
-            n: 1048577U - at
+            n := 1048577U - at
         c.memcpy(data + at, data, n)
-        at: at + n
+        at := at + n
     ---
     file_write(path, data, 1048575U)
-    f: f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "8b55c6a2d3444092a316985030e00c1e6f8608eaf912c896dee7c374d440ed11") = 0, "hash: 1 MiB - 1 bytes (one chunk less one)", got)
+    f := f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "8b55c6a2d3444092a316985030e00c1e6f8608eaf912c896dee7c374d440ed11") = 0, "hash: 1 MiB - 1 bytes (one chunk less one)", got)
     file_write(path, data, 1048576U)
-    f: f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "631b84027d6b9e52b539c4e8373622d23032dfadc64d60af87339c9037e4f769") = 0, "hash: 1 MiB bytes (one chunk)", got)
+    f := f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "631b84027d6b9e52b539c4e8373622d23032dfadc64d60af87339c9037e4f769") = 0, "hash: 1 MiB bytes (one chunk)", got)
     file_write(path, data, 1048577U)
-    f: f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "5769f52bc3eef28afa39c6fc68cadb7d0bd69812ae3a3d71452f519ec3c7aa56") = 0, "hash: 1 MiB + 1 bytes (one chunk and one byte)", got)
+    f := f + tool_check(os_sha256_file(path, got) = 0 && c.strcmp(got, "5769f52bc3eef28afa39c6fc68cadb7d0bd69812ae3a3d71452f519ec3c7aa56") = 0, "hash: 1 MiB + 1 bytes (one chunk and one byte)", got)
     # 2^32 + 1 zero bytes: the byte at offset 2^32 written after a seek; the file removed after.
-    far: far * 65536U
-    want: txt_path(dir, "hash-4g.bin")
-    i: os_file_at(want, far)
-    f: f + tool_check(i = 0 && os_sha256_file(want, got) = 0 && c.strcmp(got, "fbb82f7b353676bb562eb82157fcf0ea42c36492ca13ee56dbf82c08b6802c5c") = 0, "hash: 2^32 + 1 zero bytes (a length past 32 bits)", got)
+    far := far * 65536U
+    want := txt_path(dir, "hash-4g.bin")
+    i := os_file_at(want, far)
+    f := f + tool_check(i = 0 && os_sha256_file(want, got) = 0 && c.strcmp(got, "fbb82f7b353676bb562eb82157fcf0ea42c36492ca13ee56dbf82c08b6802c5c") = 0, "hash: 2^32 + 1 zero bytes (a length past 32 bits)", got)
     os_file_remove(want)
     c.free(path)
     c.free(got)
@@ -1036,47 +1036,47 @@ fn: test_evidence (@: self char; @: dir char) int
     if: ev = 0 || len = 0
         return: tool_check(0, "evidence", "no memory")
     os_mkdir(ev)
-    list: txt_path(ev, "list.txt")
-    man: txt_path(ev, "list.sha256")
-    rec: txt_path(ev, "record.txt")
-    copy: txt_path(ev, "copy.exe")
+    list := txt_path(ev, "list.txt")
+    man := txt_path(ev, "list.sha256")
+    rec := txt_path(ev, "record.txt")
+    copy := txt_path(ev, "copy.exe")
     file_write(txt_path(ev, "a.txt"), "alpha\n", 6U)
     file_write(txt_path(ev, "b.txt"), "beta\n", 5U)
-    text: "# two files\na.txt\n\nb.txt\n"
+    text := "# two files\na.txt\n\nb.txt\n"
     file_write(list, text, c.strlen(text))
-    f: f + tool_check(manifest_write(list, ev, man) = 0 && file_has_line(man, "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060  a.txt") != 0 && file_has_line(man, "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad  b.txt") != 0, "evidence: manifest of two files", man)
-    f: f + tool_check(manifest_verify(man, ev) = 0, "evidence: verify, all files equal", man)
+    f := f + tool_check(manifest_write(list, ev, man) = 0 && file_has_line(man, "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060  a.txt") != 0 && file_has_line(man, "f2c82decdd7181cf98945929a62598db7e6b477e11f6e0eb0ae97020eff151ad  b.txt") != 0, "evidence: manifest of two files", man)
+    f := f + tool_check(manifest_verify(man, ev) = 0, "evidence: verify, all files equal", man)
     file_write(txt_path(ev, "b.txt"), "BETA\n", 5U)
-    f: f + tool_check(manifest_verify(man, ev) = 1, "evidence: verify, a changed file", man)
+    f := f + tool_check(manifest_verify(man, ev) = 1, "evidence: verify, a changed file", man)
     os_file_remove(txt_path(ev, "a.txt"))
-    f: f + tool_check(manifest_verify(man, ev) = 2, "evidence: verify, a changed file and a missing one", man)
-    f: f + tool_check(manifest_write(list, ev, txt_path(ev, "again.sha256")) = 1, "evidence: manifest, a missing file", list)
-    text: "$ C:/t/gcc.exe -c a.c -o a.o\n  kind 0 exit 0 log a.log\n$ C:/t/gcc.exe a.o -o a.exe\n$ C:/t/l1trans.exe a.lm1 a.c\n"
+    f := f + tool_check(manifest_verify(man, ev) = 2, "evidence: verify, a changed file and a missing one", man)
+    f := f + tool_check(manifest_write(list, ev, txt_path(ev, "again.sha256")) = 1, "evidence: manifest, a missing file", list)
+    text := "$ C:/t/gcc.exe -c a.c -o a.o\n  kind 0 exit 0 log a.log\n$ C:/t/gcc.exe a.o -o a.exe\n$ C:/t/l1trans.exe a.lm1 a.c\n"
     file_write(rec, text, c.strlen(text))
-    f: f + tool_check(record_exes(rec) = 0, "evidence: deps, no script host started", rec)
-    text: "$ C:/t/gcc.exe -c a.c\n$ C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File t.ps1\n$ C:/t/run.py x\n"
+    f := f + tool_check(record_exes(rec) = 0, "evidence: deps, no script host started", rec)
+    text := "$ C:/t/gcc.exe -c a.c\n$ C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File t.ps1\n$ C:/t/run.py x\n"
     file_write(rec, text, c.strlen(text))
-    f: f + tool_check(record_exes(rec) = 2, "evidence: deps, a script host and a script", rec)
-    f: f + tool_check(dir_make(txt_path(ev, "deep/er/dir")) = 0 && file_write(txt_path(ev, "deep/er/dir/f.txt"), "x", 1U) = 0, "evidence: dir_make, a chain of new directories", ev)
-    f: f + tool_check(file_same(self, self) = 1, "evidence: same, a file and itself", self)
-    f: f + tool_check(file_same(txt_path(ev, "b.txt"), list) = 0, "evidence: same, two different files", list)
-    f: f + tool_check(exe_same(self, self) = 1, "evidence: exe-same, an image and itself", self)
-    f: f + tool_check(exe_same(list, self) = -1, "evidence: exe-same, no image", list)
-    img: file_read(self, len)
-    f: f + tool_check(img != 0 && len[0] > 64U, "evidence: the image is read", self)
+    f := f + tool_check(record_exes(rec) = 2, "evidence: deps, a script host and a script", rec)
+    f := f + tool_check(dir_make(txt_path(ev, "deep/er/dir")) = 0 && file_write(txt_path(ev, "deep/er/dir/f.txt"), "x", 1U) = 0, "evidence: dir_make, a chain of new directories", ev)
+    f := f + tool_check(file_same(self, self) = 1, "evidence: same, a file and itself", self)
+    f := f + tool_check(file_same(txt_path(ev, "b.txt"), list) = 0, "evidence: same, two different files", list)
+    f := f + tool_check(exe_same(self, self) = 1, "evidence: exe-same, an image and itself", self)
+    f := f + tool_check(exe_same(list, self) = -1, "evidence: exe-same, no image", list)
+    img := file_read(self, len)
+    f := f + tool_check(img != 0 && len[0] > 64U, "evidence: the image is read", self)
     if: img != 0 && len[0] > 64U
-        pe: (cast: (size_t) (sha_byte(img, 60U) | (sha_byte(img, 61U) << 8) | (sha_byte(img, 62U) << 16) | (sha_byte(img, 63U) << 24)))
-        img[pe + 8U]: (cast: (char) (img[pe + 8U] + 1))
-        img[pe + 88U]: (cast: (char) (img[pe + 88U] + 1))
+        pe := (cast: (size_t) (sha_byte(img, 60U) | (sha_byte(img, 61U) << 8) | (sha_byte(img, 62U) << 16) | (sha_byte(img, 63U) << 24)))
+        img[pe + 8U] := (cast: (char) (img[pe + 8U] + 1))
+        img[pe + 88U] := (cast: (char) (img[pe + 88U] + 1))
         file_write(copy, img, len[0])
-        f: f + tool_check(exe_same(self, copy) = 1 && file_same(self, copy) = 0, "evidence: exe-same, another link time and checksum", copy)
-        img[len[0] - 1U]: (cast: (char) (img[len[0] - 1U] + 1))
+        f := f + tool_check(exe_same(self, copy) = 1 && file_same(self, copy) = 0, "evidence: exe-same, another link time and checksum", copy)
+        img[len[0] - 1U] := (cast: (char) (img[len[0] - 1U] + 1))
         file_write(copy, img, len[0])
-        f: f + tool_check(exe_same(self, copy) = 0, "evidence: exe-same, another byte of the image", copy)
+        f := f + tool_check(exe_same(self, copy) = 0, "evidence: exe-same, another byte of the image", copy)
     ---
     c.free(img)
     c.free(len)
-    f: f + test_record(self, ev)
+    f := f + test_record(self, ev)
     return: f
 end: test_evidence
 
@@ -1097,26 +1097,26 @@ fn: test_record (@: self char; @: ev char) int
     file_write(b, "log\n", 4U)
     if: os_sha256_file(self, hs) != 0 || os_sha256_file(a, ha) != 0 || os_sha256_file(b, hb) != 0
         return: tool_check(0, "record", "cannot hash its files")
-    out: os_file_open(rec, "wb")
+    out := os_file_open(rec, "wb")
     if: out = 0
         return: tool_check(0, "record", rec)
     c.fprintf(out, "$ %s x\n  exe %s\n  in %s %s\n  kind 0 exit 0 log %s\n  log %s %s\n", self, hs, ha, a, b, hb, b)
     c.fclose(out)
-    f: f + tool_check(verify_record(rec) = 0, "record: the executable, an input and the log hold", rec)
+    f := f + tool_check(verify_record(rec) = 0, "record: the executable, an input and the log hold", rec)
     file_write(a, "changed\n", 8U)
-    f: f + tool_check(verify_record(rec) = 1, "record: a changed input fails", rec)
-    out: os_file_open(rec, "wb")
+    f := f + tool_check(verify_record(rec) = 1, "record: a changed input fails", rec)
+    out := os_file_open(rec, "wb")
     if: out = 0
         return: tool_check(0, "record", rec)
     c.fprintf(out, "$ %s x\n  in %s %s\n  kind 0 exit 0 log %s\n  log %s %s\n  out %s %s\n", self, ha, b, b, hb, b, hb, b)
     c.fclose(out)
-    f: f + tool_check(verify_record(rec) = 0, "record: only the last line about a path counts", rec)
-    out: os_file_open(rec, "wb")
+    f := f + tool_check(verify_record(rec) = 0, "record: only the last line about a path counts", rec)
+    out := os_file_open(rec, "wb")
     if: out = 0
         return: tool_check(0, "record", rec)
     c.fprintf(out, "$ %s x\n  exe %s\n  exe-changed %s\n  kind 4 exit 0 log %s\n", self, hs, self, b)
     c.fclose(out)
-    f: f + tool_check(verify_record(rec) = 1, "record: an image changed while it ran fails", rec)
+    f := f + tool_check(verify_record(rec) = 1, "record: an image changed while it ran fails", rec)
     return: f
 end: test_record
 
@@ -1137,39 +1137,39 @@ fn: test_suite_schema (@: dir char) int
     dir_make(sd)
     file_write(txt_path(sd, "x.lm2"), "return\n", 7U)
     file_write(txt_path(sd, "y.lm2"), "return\n", 7U)
-    list: txt_path(sd, "bad.tsv")
-    text: "# ten malformed rows\nbogus\tx.lm2\t7\tn\nruns\tx.lm2\t7\nruns\tx.lm2\t12a\tn\nruns\tx.lm2\t2147483648\tn\nruns\tx.lm2\t7\tq\nruns\tx.lm2\t7\tnn\nrefuses\tx.lm2\t\tn\ntwins\tx.lm2\t7\tnf\ty.lm2\t\ntwins\tx.lm2\t7\tnf\ty.lm2\ta,,b\nruns\tx.lm2\t7\tn\tx.lm2\textra\n"
+    list := txt_path(sd, "bad.tsv")
+    text := "# ten malformed rows\nbogus\tx.lm2\t7\tn\nruns\tx.lm2\t7\nruns\tx.lm2\t12a\tn\nruns\tx.lm2\t2147483648\tn\nruns\tx.lm2\t7\tq\nruns\tx.lm2\t7\tnn\nrefuses\tx.lm2\t\tn\ntwins\tx.lm2\t7\tnf\ty.lm2\t\ntwins\tx.lm2\t7\tnf\ty.lm2\ta,,b\nruns\tx.lm2\t7\tn\tx.lm2\textra\n"
     file_write(list, text, c.strlen(text))
-    x: fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-bad"))
-    fail: txt_path(sd, "out-bad/failures.tsv")
-    f: f + tool_check(x = 10 && control_eval_r(fail, "SCHEMA", why) = 0, "schema: ten malformed rows, ten SCHEMA failures and no other", txt_cat3(txt_int(x), " failures; ", why[0]))
-    list: txt_path(sd, "empty.tsv")
+    x := fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-bad"))
+    fail := txt_path(sd, "out-bad/failures.tsv")
+    f := f + tool_check(x = 10 && control_eval_r(fail, "SCHEMA", why) = 0, "schema: ten malformed rows, ten SCHEMA failures and no other", txt_cat3(txt_int(x), " failures; ", why[0]))
+    list := txt_path(sd, "empty.tsv")
     file_write(list, "# no row\n\n", 10U)
-    x: fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-empty"))
-    f: f + tool_check(x = 1 && control_eval_r(txt_path(sd, "out-empty/failures.tsv"), "SCHEMA|no row", why) = 0, "schema: a list without rows fails", why[0])
-    list: txt_path(sd, "missing.tsv")
-    text: "runs\tmissing.lm2\t7\tn\n"
+    x := fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-empty"))
+    f := f + tool_check(x = 1 && control_eval_r(txt_path(sd, "out-empty/failures.tsv"), "SCHEMA|no row", why) = 0, "schema: a list without rows fails", why[0])
+    list := txt_path(sd, "missing.tsv")
+    text := "runs\tmissing.lm2\t7\tn\n"
     file_write(list, text, c.strlen(text))
-    x: fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-missing"))
-    f: f + tool_check(x = 1 && control_eval_r(txt_path(sd, "out-missing/failures.tsv"), "INFRA|a missing input", why) = 0, "schema: a missing source is an INFRA failure", why[0])
-    f: f + tool_check(parse_entry("-12", e) = 0 && e[0] = -12, "schema: ENTRY -12", "")
-    f: f + tool_check(parse_entry("1011", e) = 0 && e[0] = 1011, "schema: ENTRY 1011", "")
-    f: f + tool_check(parse_entry("2147483647", e) = 0 && e[0] = 2147483647, "schema: ENTRY INT_MAX", "")
-    f: f + tool_check(parse_entry("-2147483648", e) = 0 && e[0] = 0 - 2147483647 - 1, "schema: ENTRY INT_MIN", "")
-    f: f + tool_check(parse_entry("-0", e) = 0 && e[0] = 0, "schema: ENTRY -0", "")
-    f: f + tool_check(parse_entry("2147483648", e) != 0 && parse_entry("-2147483649", e) != 0 && parse_entry("99999999999999999999", e) != 0, "schema: ENTRY out of range refused", "")
-    f: f + tool_check(parse_entry("12a", e) != 0 && parse_entry("", e) != 0 && parse_entry("-", e) != 0 && parse_entry("+5", e) != 0 && parse_entry(" 5", e) != 0, "schema: ENTRY not a number refused", "")
-    fail: txt_path(sd, "f.tsv")
-    text: "EXIT\ta check\texit 4, expected 7\t-\nWALKED\tb check\twalked 0\t-\n"
+    x := fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-missing"))
+    f := f + tool_check(x = 1 && control_eval_r(txt_path(sd, "out-missing/failures.tsv"), "INFRA|a missing input", why) = 0, "schema: a missing source is an INFRA failure", why[0])
+    f := f + tool_check(parse_entry("-12", e) = 0 && e[0] = -12, "schema: ENTRY -12", "")
+    f := f + tool_check(parse_entry("1011", e) = 0 && e[0] = 1011, "schema: ENTRY 1011", "")
+    f := f + tool_check(parse_entry("2147483647", e) = 0 && e[0] = 2147483647, "schema: ENTRY INT_MAX", "")
+    f := f + tool_check(parse_entry("-2147483648", e) = 0 && e[0] = 0 - 2147483647 - 1, "schema: ENTRY INT_MIN", "")
+    f := f + tool_check(parse_entry("-0", e) = 0 && e[0] = 0, "schema: ENTRY -0", "")
+    f := f + tool_check(parse_entry("2147483648", e) != 0 && parse_entry("-2147483649", e) != 0 && parse_entry("99999999999999999999", e) != 0, "schema: ENTRY out of range refused", "")
+    f := f + tool_check(parse_entry("12a", e) != 0 && parse_entry("", e) != 0 && parse_entry("-", e) != 0 && parse_entry("+5", e) != 0 && parse_entry(" 5", e) != 0, "schema: ENTRY not a number refused", "")
+    fail := txt_path(sd, "f.tsv")
+    text := "EXIT\ta check\texit 4, expected 7\t-\nWALKED\tb check\twalked 0\t-\n"
     file_write(fail, text, c.strlen(text))
-    f: f + tool_check(control_eval_r(fail, "EXIT,WALKED|expected 7", why) = 0, "control: its classes and its needle", why[0])
-    f: f + tool_check(control_eval_r(fail, "EXIT", why) != 0, "control: a failure of another class", why[0])
-    f: f + tool_check(control_eval_r(fail, "EXIT,WALKED,NATIVE", why) != 0, "control: a class that does not occur", why[0])
-    f: f + tool_check(control_eval_r(fail, "EXIT,WALKED|expected 8", why) != 0, "control: a needle not said", why[0])
-    f: f + tool_check(control_eval_r(fail, "NOCLASS", why) != 0, "control: an expectation of no class", why[0])
+    f := f + tool_check(control_eval_r(fail, "EXIT,WALKED|expected 7", why) = 0, "control: its classes and its needle", why[0])
+    f := f + tool_check(control_eval_r(fail, "EXIT", why) != 0, "control: a failure of another class", why[0])
+    f := f + tool_check(control_eval_r(fail, "EXIT,WALKED,NATIVE", why) != 0, "control: a class that does not occur", why[0])
+    f := f + tool_check(control_eval_r(fail, "EXIT,WALKED|expected 8", why) != 0, "control: a needle not said", why[0])
+    f := f + tool_check(control_eval_r(fail, "NOCLASS", why) != 0, "control: an expectation of no class", why[0])
     file_write(fail, "", 0U)
-    f: f + tool_check(control_eval_r(fail, "EXIT", why) != 0, "control: no failure", why[0])
-    f: f + tool_check(control_eval_r(txt_path(sd, "nothing.tsv"), "EXIT", why) != 0, "control: no failures file", why[0])
+    f := f + tool_check(control_eval_r(fail, "EXIT", why) != 0, "control: no failure", why[0])
+    f := f + tool_check(control_eval_r(txt_path(sd, "nothing.tsv"), "EXIT", why) != 0, "control: no failures file", why[0])
     return: f
 end: test_suite_schema
 
@@ -1186,21 +1186,21 @@ fn: test_replay_rows (@: dir char) int
     int: x 0
     if: rd = 0
         return: tool_check(0, "replay", "no memory")
-    sb: txt_path(rd, "sandbox")
+    sb := txt_path(rd, "sandbox")
     dir_make(txt_path(sb, "tests"))
     dir_make(txt_path(rd, "work"))
     file_write(txt_path(sb, "convert.lm2"), "return\n", 7U)
     file_write(txt_path(sb, "primitive.lm2"), "return\n", 7U)
     file_write(txt_path(sb, "convert_impl.lm2"), "return\n", 7U)
     file_write(txt_path(sb, "tests/x.lm2"), "return\n", 7U)
-    rows: txt_path(rd, "rows.tsv")
-    text: "short\tx\nnolm2\ta\t\t\t\t\t\t\nx.lm2\tx\t\t\t\t\t\t\n"
+    rows := txt_path(rd, "rows.tsv")
+    text := "short\tx\nnolm2\ta\t\t\t\t\t\t\nx.lm2\tx\t\t\t\t\t\t\n"
     file_write(rows, text, c.strlen(text))
-    x: replay(rows, sb, txt_path(rd, "work"), txt_path(rd, "no-frontend-a.exe"), txt_path(rd, "no-frontend-b.exe"), txt_path(rd, "out"), 0, 3)
-    res: txt_path(rd, "out/results.tsv")
-    f: f + tool_check(x = 3 && file_has_line(res, "TOTAL\t3 rows\t3 DIFF") != 0, "replay: three rows, three DIFFs", txt_int(x))
-    f: f + tool_check(file_has(res, "\tMALFORMED (2 fields;") != 0 && file_has(res, "\tMALFORMED (8 fields;") != 0, "replay: a short row and a row without a .lm2 name are MALFORMED", res)
-    f: f + tool_check(file_has(res, "\tINFRA\n") != 0 && file_has(res, "\tSAME\n") = 0, "replay: frontends that cannot be started are INFRA, not SAME", res)
+    x := replay(rows, sb, txt_path(rd, "work"), txt_path(rd, "no-frontend-a.exe"), txt_path(rd, "no-frontend-b.exe"), txt_path(rd, "out"), 0, 3)
+    res := txt_path(rd, "out/results.tsv")
+    f := f + tool_check(x = 3 && file_has_line(res, "TOTAL\t3 rows\t3 DIFF") != 0, "replay: three rows, three DIFFs", txt_int(x))
+    f := f + tool_check(file_has(res, "\tMALFORMED (2 fields;") != 0 && file_has(res, "\tMALFORMED (8 fields;") != 0, "replay: a short row and a row without a .lm2 name are MALFORMED", res)
+    f := f + tool_check(file_has(res, "\tINFRA\n") != 0 && file_has(res, "\tSAME\n") = 0, "replay: frontends that cannot be started are INFRA, not SAME", res)
     return: f
 end: test_replay_rows
 
@@ -1222,40 +1222,40 @@ fn: test_check_lists (@: self char; @: dir char) int
     if: ld = 0 || run = 0 || detail = 0 || out = 0 || err = 0
         return: tool_check(0, "lists", "no memory")
     dir_make(ld)
-    list: txt_path(ld, "all.tsv")
-    mark: txt_path(ld, "after-all")
-    text: txt_cat3("exit-with\t0\n# a comment\n\nexit-with\t3\nsleep-touch\t0\t", mark, "\n")
+    list := txt_path(ld, "all.tsv")
+    mark := txt_path(ld, "after-all")
+    text := txt_cat3("exit-with\t0\n# a comment\n\nexit-with\t3\nsleep-touch\t0\t", mark, "\n")
     file_write(list, text, c.strlen(text))
-    x: checks_run(self, list, 0)
-    f: f + tool_check(x = 1 && file_exists(mark) != 0, "lists: checks runs every line and answers the failure", txt_int(x))
-    list: txt_path(ld, "first.tsv")
-    mark: txt_path(ld, "after-first")
-    text: txt_cat3("exit-with\t0\nexit-with\t3\nsleep-touch\t0\t", mark, "\n")
+    x := checks_run(self, list, 0)
+    f := f + tool_check(x = 1 && file_exists(mark) != 0, "lists: checks runs every line and answers the failure", txt_int(x))
+    list := txt_path(ld, "first.tsv")
+    mark := txt_path(ld, "after-first")
+    text := txt_cat3("exit-with\t0\nexit-with\t3\nsleep-touch\t0\t", mark, "\n")
     file_write(list, text, c.strlen(text))
-    x: checks_run(self, list, 1)
-    f: f + tool_check(x = 1 && file_exists(mark) = 0, "lists: steps ends at the first failure", txt_int(x))
-    list: txt_path(ld, "pass.tsv")
-    mark: txt_path(ld, "after-pass")
-    text: txt_cat3("exit-with\t0\nsleep-touch\t0\t", mark, "\n")
+    x := checks_run(self, list, 1)
+    f := f + tool_check(x = 1 && file_exists(mark) = 0, "lists: steps ends at the first failure", txt_int(x))
+    list := txt_path(ld, "pass.tsv")
+    mark := txt_path(ld, "after-pass")
+    text := txt_cat3("exit-with\t0\nsleep-touch\t0\t", mark, "\n")
     file_write(list, text, c.strlen(text))
-    x: checks_run(self, list, 1)
-    f: f + tool_check(x = 0 && file_exists(mark) != 0, "lists: steps that all answer 0", txt_int(x))
-    list: txt_path(ld, "nested.tsv")
-    text: txt_cat3("checks\t", list, "\n")
+    x := checks_run(self, list, 1)
+    f := f + tool_check(x = 0 && file_exists(mark) != 0, "lists: steps that all answer 0", txt_int(x))
+    list := txt_path(ld, "nested.tsv")
+    text := txt_cat3("checks\t", list, "\n")
     file_write(list, text, c.strlen(text))
-    x: checks_run(self, list, 0)
-    f: f + tool_check(x = 1, "lists: a list that runs a list is refused", txt_int(x))
-    x: checks_run(self, txt_path(ld, "absent.tsv"), 0)
-    f: f + tool_check(x = 1, "lists: a list that cannot be read is a failure", txt_int(x))
+    x := checks_run(self, list, 0)
+    f := f + tool_check(x = 1, "lists: a list that runs a list is refused", txt_int(x))
+    x := checks_run(self, txt_path(ld, "absent.tsv"), 0)
+    f := f + tool_check(x = 1, "lists: a list that cannot be read is a failure", txt_int(x))
     # Slice 291 (Codex, CODEX-OPUS-290-REVIEW-NORM-20261106-01, item 4): a line of twelve words reaches its command whole -- this
     # program run as a child (`checks` over the list), its command echo-words printing the words it was handed.
-    list: txt_path(ld, "long.tsv")
-    text: "echo-words\ta1\ta2\ta3\ta4\ta5\ta6\ta7\ta8\ta9\ta10\ta11\n"
+    list := txt_path(ld, "long.tsv")
+    text := "echo-words\ta1\ta2\ta3\ta4\ta5\ta6\ta7\ta8\ta9\ta10\ta11\n"
     file_write(list, text, c.strlen(text))
-    run[0]: "checks"
-    run[1]: list
-    x: run_self(self, run, 2, 0, out, err, 60000U, detail)
-    f: f + tool_check(x = 0 && detail[0] = 0 && file_has_line(out, "WORDS 12") != 0 && file_has_line(out, "WORD 11 a11") != 0 && file_has_line(out, "CHECKS 1 lines, 0 failed") != 0, "lists: every word of a line past the ninth reaches its command", out)
+    run[0] := "checks"
+    run[1] := list
+    x := run_self(self, run, 2, 0, out, err, 60000U, detail)
+    f := f + tool_check(x = 0 && detail[0] = 0 && file_has_line(out, "WORDS 12") != 0 && file_has_line(out, "WORD 11 a11") != 0 && file_has_line(out, "CHECKS 1 lines, 0 failed") != 0, "lists: every word of a line past the ninth reaches its command", out)
     return: f
 end: test_check_lists
 
@@ -1268,20 +1268,20 @@ fn: selftest (@: dir char; @: child char) int
     if: self = 0
         return: tool_check(0, "selftest", "no executable path")
     if: run = 0
-        run: self
+        run := self
     if: dir_make(dir) != 0
         return: tool_check(0, "selftest", "cannot make the work directory")
-    f: f + test_args(run, dir)
-    f: f + test_exits(run, dir)
-    f: f + test_streams(run, dir)
-    f: f + test_cwd(run, dir)
-    f: f + test_timeout(run, dir)
-    f: f + test_spawn_failure(dir)
-    f: f + test_hash(dir)
-    f: f + test_evidence(self, dir)
-    f: f + test_suite_schema(dir)
-    f: f + test_replay_rows(dir)
-    f: f + test_check_lists(self, dir)
+    f := f + test_args(run, dir)
+    f := f + test_exits(run, dir)
+    f := f + test_streams(run, dir)
+    f := f + test_cwd(run, dir)
+    f := f + test_timeout(run, dir)
+    f := f + test_spawn_failure(dir)
+    f := f + test_hash(dir)
+    f := f + test_evidence(self, dir)
+    f := f + test_suite_schema(dir)
+    f := f + test_replay_rows(dir)
+    f := f + test_check_lists(self, dir)
     c.printf("SELFTEST %d failures\n", f)
     c.free(self)
     return: f
@@ -1300,7 +1300,7 @@ fn: child (@@: args char; int: n) int
         c.printf("WORDS %d\n", n - 1)
         while: k < n
             c.printf("WORD %d %s\n", k - 1, args[k])
-            k: k + 1
+            k := k + 1
         ---
         return: 0
     if: n >= 3 && c.strcmp(args[1], "exit-with") = 0
@@ -1310,7 +1310,7 @@ fn: child (@@: args char; int: n) int
         c.fputs("ERR-LINE\n", c.stderr)
         return: 0
     if: n >= 2 && c.strcmp(args[1], "cwd") = 0
-        here: os_cwd()
+        here := os_cwd()
         if: here = 0
             return: 1
         c.printf("CWD %s\n", here)
@@ -1320,7 +1320,7 @@ fn: child (@@: args char; int: n) int
         return: os_sleep_ms((cast: (unsigned) c.atoi(args[2])))
     if: n >= 4 && c.strcmp(args[1], "sleep-touch") = 0
         os_sleep_ms((cast: (unsigned) c.atoi(args[2])))
-        f: os_file_open(args[3], "wb")
+        f := os_file_open(args[3], "wb")
         if: f != 0
             c.fclose(f)
         return: 0
@@ -1349,61 +1349,61 @@ fn: checks_run (@: self char; @: list char; int: stop) int
     int: failed 0
     if: len = 0 || at = 0 || list = 0
         return: 1
-    data: file_read(list, len)
+    data := file_read(list, len)
     if: data = 0
         c.printf("CHECKS the list cannot be read: %s\n", list)
         return: 1
-    line: next_line(data, len[0], at)
+    line := next_line(data, len[0], at)
     while: line != 0
         if: line[0] != (cast: (char) 35) && line[0] != (cast: (char) 0)
             # Slice 291 (Codex, CODEX-OPUS-290-REVIEW-NORM-20261106-01, item 4): every word of the line, however many -- the
             # arrays are sized by the line's tabs before tsv_split cuts it, so no command runs with its tail cut off (slice 290
             # took nine words and dropped the rest without a word).
-            n: 1
-            tab: c.strchr(line, 9)
+            n := 1
+            tab := c.strchr(line, 9)
             while: tab != 0
-                n: n + 1
-                tab: c.strchr(tab + 1, 9)
+                n := n + 1
+                tab := c.strchr(tab + 1, 9)
             ---
-            fld: c.calloc((cast: (size_t) n), sizeof(@: char))
-            words: c.calloc((cast: (size_t) n) + 1U, sizeof(@: char))
+            fld := c.calloc((cast: (size_t) n), sizeof(@: char))
+            words := c.calloc((cast: (size_t) n) + 1U, sizeof(@: char))
             if: fld = 0 || words = 0
                 c.printf("CHECKS no memory for a line of %s\n", list)
                 return: 1
-            n: tsv_split(line, fld, n)
-            words[0]: self
-            k: 0
+            n := tsv_split(line, fld, n)
+            words[0] := self
+            k := 0
             while: k < n
-                words[k + 1]: fld[k]
-                k: k + 1
+                words[k + 1] := fld[k]
+                k := k + 1
             ---
-            lines: lines + 1
+            lines := lines + 1
             c.fflush(c.stdout)
             if: c.strcmp(words[1], "checks") = 0 || c.strcmp(words[1], "steps") = 0
-                r: 2
+                r := 2
             else:
-                r: tool_main(words, n + 1)
+                r := tool_main(words, n + 1)
             ---
             c.fflush(c.stdout)
             c.printf("CHECK %d", r)
-            k: 1
+            k := 1
             while: k <= n
                 c.printf(" %s", words[k])
-                k: k + 1
+                k := k + 1
             ---
             c.printf("\n")
             c.fflush(c.stdout)
             c.free((cast: (@: void) fld))
             c.free((cast: (@: void) words))
             if: r != 0
-                failed: failed + 1
+                failed := failed + 1
                 if: stop != 0
                     c.printf("CHECKS stopped at line %d of %s\n", lines, list)
                     break
                 ---
             ---
         ---
-        line: next_line(data, len[0], at)
+        line := next_line(data, len[0], at)
     ---
     c.printf("CHECKS %d lines, %d failed\n", lines, failed)
     if: failed != 0
@@ -1437,7 +1437,7 @@ fn: tool_main (@@: args char; int: n) int
         c.printf("%s  %s\n", hex, args[2])
         return: 0
     if: n >= 4 && c.strcmp(args[1], "rows") = 0
-        r: rows_extract(args[2], args[3])
+        r := rows_extract(args[2], args[3])
         c.printf("ROWS %d\n", r)
         if: r < 0
             return: 1
@@ -1465,23 +1465,23 @@ fn: tool_main (@@: args char; int: n) int
             return: 1
         return: 0
     if: n >= 14 && c.strcmp(args[1], "gate") = 0
-        r: gate(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13])
+        r := gate(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], args[11], args[12], args[13])
         if: r != 0
             return: 1
         return: 0
     if: n >= 3 && c.strcmp(args[1], "verify-record") = 0
-        r: verify_record(args[2])
+        r := verify_record(args[2])
         if: r != 0
             return: 1
         return: 0
     if: n >= 4 && c.strcmp(args[1], "same") = 0
-        r: file_same(args[2], args[3])
+        r := file_same(args[2], args[3])
         c.printf("SAME %d %s %s\n", r, args[2], args[3])
         if: r != 1
             return: 1
         return: 0
     if: n >= 4 && c.strcmp(args[1], "exe-same") = 0
-        r: exe_same(args[2], args[3])
+        r := exe_same(args[2], args[3])
         c.printf("EXE-SAME %d %s %s\n", r, args[2], args[3])
         if: r != 1
             return: 1
@@ -1506,40 +1506,40 @@ fn: tool_main (@@: args char; int: n) int
         return: 0
     if: n >= 9 && c.strcmp(args[1], "suite") = 0
         if: n >= 10
-            r: fixture_suite(args[2], args[3], args[4], args[5], args[6], args[7], args[9], args[8])
+            r := fixture_suite(args[2], args[3], args[4], args[5], args[6], args[7], args[9], args[8])
         if: n < 10
-            r: fixture_suite(args[2], args[3], args[4], args[5], args[6], args[7], 0, args[8])
+            r := fixture_suite(args[2], args[3], args[4], args[5], args[6], args[7], 0, args[8])
         if: r != 0
             return: 1
         return: 0
     if: n >= 12 && c.strcmp(args[1], "os-walk-witness") = 0
-        r: os_walk_witness(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], c.atoi(args[10]), args[11])
+        r := os_walk_witness(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], c.atoi(args[10]), args[11])
         if: r != 0
             return: 1
         return: 0
     if: n >= 10 && c.strcmp(args[1], "replay") = 0
-        r: replay(args[2], args[3], args[4], args[5], args[6], args[7], c.atoi(args[8]), c.atoi(args[9]))
+        r := replay(args[2], args[3], args[4], args[5], args[6], args[7], c.atoi(args[8]), c.atoi(args[9]))
         if: r != 0
             return: 1
         return: 0
     if: n >= 9 && c.strcmp(args[1], "build-generation") = 0
         if: n >= 10
-            r: build_generation(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
+            r := build_generation(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
         if: n < 10
-            r: build_generation(args[2], args[3], args[4], args[5], args[6], args[7], args[8], 0)
+            r := build_generation(args[2], args[3], args[4], args[5], args[6], args[7], args[8], 0)
         if: r != 0
             return: 1
         return: 0
     if: n >= 9 && c.strcmp(args[1], "bootstrap") = 0
         if: n >= 10
-            r: bootstrap(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
+            r := bootstrap(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
         if: n < 10
-            r: bootstrap(args[2], args[3], args[4], args[5], args[6], args[7], args[8], 0)
+            r := bootstrap(args[2], args[3], args[4], args[5], args[6], args[7], args[8], 0)
         if: r != 0
             return: 1
         return: 0
     if: n >= 10 && c.strcmp(args[1], "rebuild") = 0
-        r: rebuild(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
+        r := rebuild(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9])
         if: r != 0
             return: 1
         return: 0
@@ -1557,8 +1557,8 @@ fn: tool_main (@@: args char; int: n) int
         @: interp_exit char "0"
         if: n >= 12
             if: c.strcmp(args[11], "1") = 0
-                expected_exit: 1
-                interp_exit: "1"
+                expected_exit := 1
+                interp_exit := "1"
             else:
                 if: c.strcmp(args[11], "0") != 0
                     c.fputs("graph-check: expected exit must be 0 or 1\n", c.stderr)
@@ -1567,9 +1567,9 @@ fn: tool_main (@@: args char; int: n) int
             ---
         ---
         if: n >= 13
-            runs: args[12]
+            runs := args[12]
         if: n >= 14
-            interp_exit: args[13]
+            interp_exit := args[13]
             if: c.strlen(interp_exit) != 1U || interp_exit[0] < 48 || interp_exit[0] > 56 || (expected_exit = 0 && interp_exit[0] != 48)
                 c.fputs("graph-check: interpreter answer must be 0..8 and agree with success\n", c.stderr)
                 return: 2
@@ -1581,7 +1581,7 @@ fn: tool_main (@@: args char; int: n) int
         if: bld_graph_check(args[2], args[3], args[4], args[5], args[6], args[7], args[8], args[9], args[10], expected_exit, runs, interp_exit) != 0
             return: 1
         return: 0
-    r: child(args, n)
+    r := child(args, n)
     if: r >= 0
         return: r
     c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | checks LIST | steps LIST | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE PREVIOUS-FRONTEND LABEL | build-frontend-part REPO STAGE BASE PREVIOUS-FRONTEND LABEL MODULE REUSE-MANIFEST ABI-MANIFEST | build-runtime REPO STAGE BASE HOSTED-FRONTEND LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | build-generation quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | bootstrap quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE HOSTED-FRONTEND RUNTIME-DIR LABEL SMOKE-LIST | build-frontend-host REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | build-graph REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | graph-check REPO STAGE BASE FRONTEND RUNTIME-DIR GRAPH-EXE OUT SOURCE EXPECTED [EXPECTED-EXIT=0|1]\n")

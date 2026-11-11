@@ -18,31 +18,31 @@ fn: receiving_word_count (@: source_node c.LmP0Node; @: word c.LmP0Text) int
     int: count 0
     if: source_node\kind = c.LM_P0_NODE_FRAME && data\frame != 0
         @: application c.LmP0Frame (cast: (@: c.LmP0Frame) data\frame)
-        count: (cast: (int) (application\head = word))
-        body: application\body
-        trailer: application\trailer
+        count := (cast: (int) (application\head = word))
+        body := application\body
+        trailer := application\trailer
     else:
         if: source_node\kind = c.LM_P0_NODE_STRUCTURE && data\structure != 0
-            body: data\structure
-            trailer: body\trailer
+            body := data\structure
+            trailer := body\trailer
         ---
     ---
     @: field c.LmP0Field 0
     if: body != 0
-        field: c.lm_compiler_next_active(body\first_field)
+        field := c.lm_compiler_next_active(body\first_field)
     while: field != 0 && count < 2
-        count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
-        field: c.lm_compiler_next_active(field\next)
+        count := count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
+        field := c.lm_compiler_next_active(field\next)
     ---
     if: trailer != 0 && count < 2
-        count: count + (cast: (int) (trailer\spelling = word))
-        body: trailer\body
-        field: 0
+        count := count + (cast: (int) (trailer\spelling = word))
+        body := trailer\body
+        field := 0
         if: body != 0
-            field: c.lm_compiler_next_active(body\first_field)
+            field := c.lm_compiler_next_active(body\first_field)
         while: field != 0 && count < 2
-            count: count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
-            field: c.lm_compiler_next_active(field\next)
+            count := count + receiving_word_count((cast: (@: c.LmP0Node) field\value), word)
+            field := c.lm_compiler_next_active(field\next)
         ---
     ---
     return: count
@@ -51,11 +51,11 @@ end: receiving_word_count
 fn: receiving_resolved (@: word c.LmP0Text; int: model; int: callable; int: declaring; int: home; int: parent; @: out int; @: selected int) int
     int: status 1
     if: model >= 0 && callable < 0
-        status: c.lm_compiler_rw_ns_value_at(parent, model, declaring, home, 2, out)
+        status := c.lm_compiler_rw_ns_value_at(parent, model, declaring, home, 2, out)
     if: callable >= 0 && model < 0
-        status: c.lm_compiler_rw_callable_operand(parent, callable, out)
+        status := c.lm_compiler_rw_callable_operand(parent, callable, out)
     if: status = 0
-        selected[0]: out[0]
+        selected[0] := out[0]
     return: status
 end: receiving_resolved
 
@@ -65,22 +65,22 @@ fn: receiving_source_body (@: body c.LmP0Structure; @: trailer c.LmP0Trailer; @:
     int: at 0
     int: child 0
     if: body != 0
-        field: c.lm_compiler_next_active(body\first_field)
+        field := c.lm_compiler_next_active(body\first_field)
     while: field != 0
-        width: width + 1
-        field: c.lm_compiler_next_active(field\next)
+        width := width + 1
+        field := c.lm_compiler_next_active(field\next)
     ---
     if: trailer != 0
-        width: width + 1
+        width := width + 1
     if: c.lm_compiler_rw_plain(parent, width, out) != 0
         return: 1
     if: body != 0
-        field: c.lm_compiler_next_active(body\first_field)
+        field := c.lm_compiler_next_active(body\first_field)
     while: field != 0
         if: receiving_source_node((cast: (@: c.LmP0Node) field\value), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.lm_compiler_rw_put(out[0], at, child) != 0
             return: 1
-        at: at + 1
-        field: c.lm_compiler_next_active(field\next)
+        at := at + 1
+        field := c.lm_compiler_next_active(field\next)
     ---
     if: trailer != 0
         if: receiving_source_application((cast: (@: c.LmP0Text) trailer\spelling), (cast: (@: c.LmP0Structure) trailer\body), (cast: (@: c.LmP0Trailer) 0), word, model, callable, declaring, home, out[0], @ child, selected) != 0 || c.lm_compiler_rw_source_facet(child, "LMX_WALK_SOURCE_TRAILER") != 0 || c.lm_compiler_rw_put(out[0], at, child) != 0
@@ -131,9 +131,9 @@ fn: lm_compiler_receiving_source (@: source c.LmP0Node; @: contract c.L2TypeCont
     @: word c.LmP0Text 0
     if: source = 0 || out = 0 || selected = 0 || (model >= 0 && callable >= 0)
         return: 1
-    selected[0]: -1
+    selected[0] := -1
     while: leaf != 0 && leaf\kind != 0
-        leaf: leaf\operand
+        leaf := leaf\operand
     ---
     # An anonymous callable receiver already has its ordinary declaration
     # occurrence, including its own args/result declarations. Borrow it;
@@ -143,7 +143,7 @@ fn: lm_compiler_receiving_source (@: source c.LmP0Node; @: contract c.L2TypeCont
     if: model >= 0 || callable >= 0
         if: leaf = 0 || leaf\word = 0
             return: 1
-        word: leaf\word
+        word := leaf\word
         if: receiving_word_count(source, word) != 1
             return: 1
         ---

@@ -214,25 +214,25 @@ fn: dt_decimal_run (@: data char; size_t: count; size_t: begin; @: value size_t;
     if: data = 0 || value = 0 || after = 0 || overflow = 0 || begin > count
         return: -1
     while: at < count
-        width: dt_point(data, count, at, @ point)
+        width := dt_point(data, count, at, @ point)
         if: width = 0U
             return: -1
-        decimal: dt_decimal(point)
+        decimal := dt_decimal(point)
         if: decimal < 0
             break
-        digit: (cast: (size_t) decimal)
+        digit := (cast: (size_t) decimal)
         if: exceeded = 0
             if: number > (limit - digit) / 10U
-                exceeded: 1
+                exceeded := 1
             else:
-                number: number * 10U + digit
+                number := number * 10U + digit
             ---
         ---
-        at: at + width
+        at := at + width
     ---
-    value[0]: number
-    after[0]: at
-    overflow[0]: exceeded
+    value[0] := number
+    after[0] := at
+    overflow[0] := exceeded
     if: at = begin
         return: 0
     return: 1

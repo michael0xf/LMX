@@ -15,7 +15,7 @@ fn: consumer_site_same (@: a c.L2SourceSite; @: b c.L2SourceSite) int
     while: i < a\scope_count
         if: a\scopes[i] != b\scopes[i]
             return: 0
-        i: i + 1
+        i := i + 1
     ---
     return: 1
 end: consumer_site_same
@@ -26,7 +26,7 @@ end: consumer_site_same
 fn: lm_compiler_consumer_call_note (@: fact c.L2PathFact; const: (@: source_node c.LmP0Node); int: method; int: signature; int: formal; int: frozen; @: changed int) int
     if: changed = 0
         return: 1
-    changed[0]: 0
+    changed[0] := 0
     if: fact = 0 || source_node = 0
         return: 1
     c.L2SourceSite: snapshot
@@ -42,33 +42,33 @@ fn: lm_compiler_consumer_call_note (@: fact c.L2PathFact; const: (@: source_node
                 if: frozen != 0
                     c.lm_compiler_xfree((cast: (@: void) saved\scopes))
                     return: 2
-                entry\signature: signature
-                entry\formal: formal
-                changed[0]: 1
+                entry\signature := signature
+                entry\formal := formal
+                changed[0] := 1
             ---
             c.lm_compiler_xfree((cast: (@: void) saved\scopes))
             return: 0
         ---
-        entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+        entry := (cast: (@: c.L2ConsumerCallUse) entry\next)
     ---
     if: frozen != 0
         c.lm_compiler_xfree((cast: (@: void) saved\scopes))
         return: 2
-    entry: (cast: (@: c.L2ConsumerCallUse) c.lm_compiler_bound_alloc(1U, c.sizeof(c.L2ConsumerCallUse)))
+    entry := (cast: (@: c.L2ConsumerCallUse) c.lm_compiler_bound_alloc(1U, c.sizeof(c.L2ConsumerCallUse)))
     @: retained c.L2SourceSite (cast: (@: c.L2SourceSite) c.lm_compiler_bound_alloc(1U, c.sizeof(c.L2SourceSite)))
     if: entry = 0 || retained = 0
         c.lm_compiler_xfree((cast: (@: void) saved\scopes))
         return: 1
     c.memcpy((cast: (@: void) retained), (cast: (@: void) saved), c.sizeof(c.L2SourceSite))
-    entry\method: method
-    entry\source_method: saved\source_method
-    entry\source: source_node
-    entry\signature: signature
-    entry\formal: formal
-    entry\use_site: retained
-    entry\next: fact\calls
-    fact\calls: entry
-    changed[0]: 1
+    entry\method := method
+    entry\source_method := saved\source_method
+    entry\source := source_node
+    entry\signature := signature
+    entry\formal := formal
+    entry\use_site := retained
+    entry\next := fact\calls
+    fact\calls := entry
+    changed[0] := 1
     return: 0
 end: lm_compiler_consumer_call_note
 
@@ -80,10 +80,10 @@ fn: lm_compiler_consumer_calls_release (@: first c.L2ConsumerCallUse) int
         @: saved c.L2SourceSite (cast: (@: c.L2SourceSite) entry\use_site)
         if: saved != 0
             c.lm_compiler_xfree((cast: (@: void) saved\scopes))
-            saved\scopes: 0
-            saved\scope_count: 0
+            saved\scopes := 0
+            saved\scope_count := 0
         ---
-        entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+        entry := (cast: (@: c.L2ConsumerCallUse) entry\next)
     ---
     return: 0
 end: lm_compiler_consumer_calls_release
@@ -112,11 +112,11 @@ fn: lm_compiler_consumer_calls_snapshot (@: facts c.L2PathFact; @: out c.L2Tx) i
             while: i < saved\scope_count
                 if: c.snprintf(text, 192U, "cx%p\n", (cast: (@: void) saved\scopes[i])) < 0 || c.lm_compiler_tx_cat(out, text) != 0
                     return: 1
-                i: i + 1
+                i := i + 1
             ---
-            entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+            entry := (cast: (@: c.L2ConsumerCallUse) entry\next)
         ---
-        fact: (cast: (@: c.L2PathFact) fact\next)
+        fact := (cast: (@: c.L2PathFact) fact\next)
     ---
     return: 0
 end: lm_compiler_consumer_calls_snapshot
@@ -141,11 +141,11 @@ fn: lm_compiler_consumer_call_cells (@: scope c.L2UseScope; @@: edges c.L2UsePla
             while: entry != 0
                 if: count >= (c.INT_MAX - 1) / 5
                     return: -1
-                count: count + 1
-                entry: (cast: (@: c.L2ConsumerCallUse) entry\next)
+                count := count + 1
+                entry := (cast: (@: c.L2ConsumerCallUse) entry\next)
             ---
         ---
-        i: i + 1
+        i := i + 1
     ---
     return: 1 + 5 * count
 end: lm_compiler_consumer_call_cells
@@ -161,16 +161,16 @@ fn: consumer_call_site (@: sites c.L2ExpressionSite; int: kind; int: index; @: u
             if: site\view_kind = kind && site\view_index = index
                 return: site
         ---
-        site: (cast: (@: c.L2ExpressionSite) site\allocated_next)
+        site := (cast: (@: c.L2ExpressionSite) site\allocated_next)
     ---
-    site: sites
+    site := sites
     while: site != 0
         if: site\role = 4 && site\method = use\method && site\node = use\source && site\count = 1 && site\view_kind = 0
             if: found != 0
                 return: 0
-            found: site
+            found := site
         ---
-        site: (cast: (@: c.L2ExpressionSite) site\allocated_next)
+        site := (cast: (@: c.L2ExpressionSite) site\allocated_next)
     ---
     return: found
 end: consumer_call_site
@@ -192,9 +192,9 @@ fn: consumer_build_cursor (@: roots c.L2SourceContainer; int: actual_kind; int: 
             if: root\root != 0 && root\source_mi = site\method && root\view_kind = site\view_kind && root\view_index = site\view_index && root\inert = 0
                 if: selected != 0 || root\shell_state != 2
                     return: 1
-                selected: root
+                selected := root
             ---
-            root: (cast: (@: c.L2SourceContainer) root\allocated_next)
+            root := (cast: (@: c.L2SourceContainer) root\allocated_next)
         ---
     ---
     if: c.fprintf(out, "        @: Lmx %s ", cursor) < 0
@@ -206,7 +206,7 @@ fn: consumer_build_cursor (@: roots c.L2SourceContainer; int: actual_kind; int: 
     else:
         if: site\view_kind != 0
             return: 1
-        expression: (cast: (@: c.L2Tx) c.lm_compiler_tx_local(expression, (cast: (@: char) local), 256U))
+        expression := (cast: (@: c.L2Tx) c.lm_compiler_tx_local(expression, (cast: (@: char) local), 256U))
         if: expression = 0 || c.lm_compiler_occ_expr(site\method, "l2_entry_unit", expression) != 0 || c.fputs(expression\data, out) < 0
             return: 1
     ---
@@ -234,25 +234,25 @@ fn: lm_compiler_formal_receiving_emit (@: sites c.L2ExpressionSite; int: kind; i
     int: model
     while: entry_site != 0
         if: entry_site\role = 5 && entry_site\view_kind = kind && (index < 0 || entry_site\view_index = index) && entry_site\state = 1 && entry_site\place != 0
-            mi: (cast: (int) entry_site\value_type)
-            formal: (cast: (int) entry_site\count)
+            mi := (cast: (int) entry_site\value_type)
+            formal := (cast: (int) entry_site\count)
             # This validates declared method/formal bounds before either
             # input_model or reception_formal interprets special input keys.
             if: c.lm_compiler_reception_source(mi, formal, @ source) != 0
                 return: 1
             if: c.lm_compiler_reception_formal(mi, formal) != 0
-                model: c.lm_compiler_input_model(mi, formal)
+                model := c.lm_compiler_input_model(mi, formal)
                 if: c.lm_compiler_admission_key(model, @ source, 0, -1, mi, formal, @ key) != 0
                     return: 1
                 # An aggregate index=-1 is a pass filter, never a lookup key.
-                receiving_site: c.lm_compiler_admission_site((cast: (int) entry_site\view_kind), (cast: (int) entry_site\view_index), (cast: (int) entry_site\method), @ key)
+                receiving_site := c.lm_compiler_admission_site((cast: (int) entry_site\view_kind), (cast: (int) entry_site\view_index), (cast: (int) entry_site\method), @ key)
                 if: receiving_site != 0 && receiving_site\state = 1 && receiving_site\place != 0
                     if: storage = 0
-                        storage: (cast: (@: char) c.lm_compiler_bound_alloc(160U, c.sizeof(c.char)))
+                        storage := (cast: (@: char) c.lm_compiler_bound_alloc(160U, c.sizeof(c.char)))
                         if: storage = 0
                             return: 1
-                        entry_name: storage
-                        record_name: storage + 80
+                        entry_name := storage
+                        record_name := storage + 80
                     ---
                     if: c.snprintf(entry_name, 80U, "l2_formal_entry%zu", serial) < 0 || c.snprintf(record_name, 80U, "l2_formal_record%zu", serial) < 0
                         return: 1
@@ -260,11 +260,11 @@ fn: lm_compiler_formal_receiving_emit (@: sites c.L2ExpressionSite; int: kind; i
                         return: 1
                     if: c.fprintf(out, "        if: lmx_arena_ref_store(l2_program_arena, %s, 3U, (cast: (@: void) %s)) != 0\n            return: 1\n", entry_name, record_name) < 0
                         return: 1
-                    serial: serial + 1U
+                    serial := serial + 1U
                 ---
             ---
         ---
-        entry_site: (cast: (@: c.L2ExpressionSite) entry_site\allocated_next)
+        entry_site := (cast: (@: c.L2ExpressionSite) entry_site\allocated_next)
     ---
     return: 0
 end: lm_compiler_formal_receiving_emit
@@ -302,9 +302,9 @@ fn: consumer_results_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @
         if: consumer_result_operation(sink, called) != 0
             if: count >= c.INT_MAX - 1
                 return: 1
-            count: count + 1
+            count := count + 1
         ---
-        sink: (cast: (@: c.L2ExpressionSite) sink\allocated_next)
+        sink := (cast: (@: c.L2ExpressionSite) sink\allocated_next)
     ---
     if: count = 0
         return: 0
@@ -317,7 +317,7 @@ fn: consumer_results_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @
         return: 1
     if: c.fprintf(out, "        @: Lmx %s lmx_walk_plain_profiled(l2_program_arena, %s, %dU, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n        if: %s = 0 || lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) %s)) != 0 || lmx_walk_store_size(l2_program_arena, %s, 0U, %dU) != c.LMX_WALK_OK\n            return: 1\n", results_name, uses_name, count + 1, uses_name, results_name, uses_name, offset + 3, results_name, results_name, count) < 0
         return: 1
-    sink: sites
+    sink := sites
     int: at 1
     while: sink != 0
         @: operation c.L2GraphPlace consumer_result_operation(sink, called)
@@ -326,9 +326,9 @@ fn: consumer_results_emit (@: sites c.L2ExpressionSite; int: kind; int: index; @
                 return: 1
             if: c.fprintf(out, "        if: lmx_arena_ref_store(l2_program_arena, %s, %dU, (cast: (@: void) %s)) != 0\n            return: 1\n", results_name, at, operation_name) < 0
                 return: 1
-            at: at + 1
+            at := at + 1
         ---
-        sink: (cast: (@: c.L2ExpressionSite) sink\allocated_next)
+        sink := (cast: (@: c.L2ExpressionSite) sink\allocated_next)
     ---
     if: at != count + 1
         return: 1
@@ -373,13 +373,13 @@ fn: lm_compiler_consumer_calls_emit (@: sites c.L2ExpressionSite; int: kind; int
                         int: ordinal 0
                         while: j < i
                             if: levels[j] = levels[i]
-                                ordinal: ordinal + 1
-                            j: j + 1
+                                ordinal := ordinal + 1
+                            j := j + 1
                         ---
                         int: coordinate c.lm_compiler_use_scope_level_at(scope, levels[i])
                         if: coordinate < 0 || ordinal > (c.INT_MAX - coordinate - 1) / 2
                             return: 1
-                        coordinate: coordinate + 1 + 2 * ordinal
+                        coordinate := coordinate + 1 + 2 * ordinal
                         @: use c.L2ConsumerCallUse (cast: (@: c.L2ConsumerCallUse) edge\calls)
                         while: use != 0
                             if: offset >= cells || c.fprintf(out, "        if: lmx_walk_store_size(l2_program_arena, %s, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", uses_name, offset, coordinate) < 0
@@ -397,17 +397,17 @@ fn: lm_compiler_consumer_calls_emit (@: sites c.L2ExpressionSite; int: kind; int
                             ---
                             # Missing/ambiguous CALL, other result contexts
                             # and absent exit facts remain null, never proof.
-                            offset: offset + 5
-                            use: (cast: (@: c.L2ConsumerCallUse) use\next)
+                            offset := offset + 5
+                            use := (cast: (@: c.L2ConsumerCallUse) use\next)
                         ---
                     ---
-                    i: i + 1
+                    i := i + 1
                 ---
                 if: offset != cells
                     return: 1
             ---
         ---
-        site: (cast: (@: c.L2ExpressionSite) site\allocated_next)
+        site := (cast: (@: c.L2ExpressionSite) site\allocated_next)
     ---
     return: 0
 end: lm_compiler_consumer_calls_emit

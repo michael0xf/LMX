@@ -59,8 +59,8 @@ fn: lmx_chunk_cells (@: chunk c.LmxChunk; size_t: stride) size_t
     @: base c.LmxCharArray 0
     if: chunk = 0 || stride = 0U
         return: 0U
-    cells: @ chunk\cells
-    base: (cast: (@: LmxCharArray) cells)
+    cells := @ chunk\cells
+    base := (cast: (@: LmxCharArray) cells)
     return: base\len / stride
 end: lmx_chunk_cells
 
@@ -68,7 +68,7 @@ fn: lmx_chunk_room (@: chunk c.LmxChunk; size_t: stride) size_t
     @: cells c.LmxCharDynamicArray 0
     if: chunk = 0 || stride = 0U
         return: 0U
-    cells: @ chunk\cells
+    cells := @ chunk\cells
     return: cells\capacity / stride
 end: lmx_chunk_room
 
@@ -77,12 +77,12 @@ sub: lmx_chunk_set_used (@: chunk c.LmxChunk; size_t: stride; size_t: n)
     @: base c.LmxCharArray 0
     if: chunk = 0
         return
-    cells: @ chunk\cells
-    base: (cast: (@: LmxCharArray) cells)
+    cells := @ chunk\cells
+    base := (cast: (@: LmxCharArray) cells)
     if: stride = 0U
-        base\len: 0U
+        base\len := 0U
         return
-    base\len: n * stride
+    base\len := n * stride
     return
 end: lmx_chunk_set_used
 
@@ -90,11 +90,11 @@ sub: lmx_chunk_set_room (@: chunk c.LmxChunk; size_t: stride; size_t: n)
     @: cells c.LmxCharDynamicArray 0
     if: chunk = 0
         return
-    cells: @ chunk\cells
+    cells := @ chunk\cells
     if: stride = 0U
-        cells\capacity: 0U
+        cells\capacity := 0U
         return
-    cells\capacity: n * stride
+    cells\capacity := n * stride
     return
 end: lmx_chunk_set_room
 
@@ -104,8 +104,8 @@ fn: lmx_chunk_data (@: chunk c.LmxChunk) @: void
     @: base c.LmxCharArray 0
     if: chunk = 0
         return: 0
-    cells: @ chunk\cells
-    base: (cast: (@: LmxCharArray) cells)
+    cells := @ chunk\cells
+    base := (cast: (@: LmxCharArray) cells)
     return: (cast: (@: void) base\data)
 end: lmx_chunk_data
 
@@ -141,56 +141,56 @@ fn: lmx_pool_add_chunk (@: arena c.LmxArena; @: pool c.LmxPool; size_t: want) in
     # pool\chunk_capacity -- the pool's configured step stays what lmx_pool_open_profiled
     # set it to, for every chunk after this one, whatever `want` was here.  0 means
     # "no floor beyond the pool's own step."
-    capacity: (cast: (size_t) pool\chunk_capacity)
+    capacity := (cast: (size_t) pool\chunk_capacity)
     if: want > capacity
-        capacity: want
+        capacity := want
     ---
     if: capacity > ((cast: (size_t) -1) / pool\stride)
         return: 1
-    bytes: capacity * pool\stride
+    bytes := capacity * pool\stride
     if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell((cast: (int) pool\type)) != 0
         if: capacity > (((cast: (size_t) -1) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
             return: 1
-        context_bytes: capacity * c.sizeof(c.LmxWalkValue)
+        context_bytes := capacity * c.sizeof(c.LmxWalkValue)
     ---
-    block: c.calloc(capacity, pool\stride)
+    block := c.calloc(capacity, pool\stride)
     if: block = 0
         return: 1
-    chunk: (cast: (@: LmxChunk) c.calloc(1U, c.sizeof(c.LmxChunk) + context_bytes))
+    chunk := (cast: (@: LmxChunk) c.calloc(1U, c.sizeof(c.LmxChunk) + context_bytes))
     if: chunk = 0
         c.free(block)
         return: 1
-    payload_block: (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
+    payload_block := (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
     if: payload_block = 0
         c.free(chunk)
         c.free(block)
         return: 1
-    chunk_block: (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
+    chunk_block := (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
     if: chunk_block = 0
         c.free(payload_block)
         c.free(chunk)
         c.free(block)
         return: 1
-    cells: @ chunk\cells
-    base: (cast: (@: LmxCharArray) cells)
-    base\data: (cast: (@: char) block)
+    cells := @ chunk\cells
+    base := (cast: (@: LmxCharArray) cells)
+    base\data := (cast: (@: char) block)
     lmx_chunk_set_room(chunk, (cast: (size_t) pool\stride), capacity)
     lmx_chunk_set_used(chunk, (cast: (size_t) pool\stride), 0U)
     if: context_bytes != 0U
         # The value contexts follow the chunk record in the same block: one LmxChunk past chunk.
-        chunk\value_contexts: (cast: (@: LmxWalkValue) (chunk + 1))
+        chunk\value_contexts := (cast: (@: LmxWalkValue) (chunk + 1))
     ---
-    chunk\next: 0
-    payload_block\base: block
-    payload_block\n: bytes
-    payload_block\class: (cast: (unsigned) pool\type)
-    payload_block\dispose: 0
-    payload_block\next: 0
-    chunk_block\base: (cast: (@: void) chunk)
-    chunk_block\n: c.sizeof(c.LmxChunk) + context_bytes
-    chunk_block\class: (cast: (unsigned) pool\kind)
-    chunk_block\dispose: 0
-    chunk_block\next: 0
+    chunk\next := 0
+    payload_block\base := block
+    payload_block\n := bytes
+    payload_block\class := (cast: (unsigned) pool\type)
+    payload_block\dispose := 0
+    payload_block\next := 0
+    chunk_block\base := (cast: (@: void) chunk)
+    chunk_block\n := c.sizeof(c.LmxChunk) + context_bytes
+    chunk_block\class := (cast: (unsigned) pool\kind)
+    chunk_block\dispose := 0
+    chunk_block\next := 0
     # GROWTH IS THE ARENA'S ACT, like every other act on an array: both the storage of
     # the new chunk and the chunk's own record join the arena's block list BEFORE the
     # interval joins the index.  So the arena owns everything the array hands out, and a
@@ -228,12 +228,12 @@ fn: lmx_pool_add_chunk (@: arena c.LmxArena; @: pool c.LmxPool; size_t: want) in
         return: 1
     ---
     if: pool\head = 0
-        pool\head: chunk
+        pool\head := chunk
     ---
     if: pool\tail != 0
-        pool\tail\next: chunk
+        pool\tail\next := chunk
     ---
-    pool\tail: chunk
+    pool\tail := chunk
     c.lmx_range_keep_chunk(arena, pool, chunk)
     return: 0
 end: lmx_pool_add_chunk
@@ -253,18 +253,18 @@ fn: lmx_pool_open_profiled (@: arena c.LmxArena; @: pool c.LmxPool; size_t: stri
         return: 1
     if: pool\head != 0
         return: 1
-    pool\stride: stride
-    pool\chunk_capacity: chunk_capacity
-    pool\kind: kind
-    pool\type: type
-    pool\role: c.LMX_POOL_ROLE_PLAIN
-    pool\pointer_read: 0
-    pool\pointer_write: 0
-    pool\profile: pool_profile
-    pool\sealed: 0U
-    pool\head: 0
-    pool\tail: 0
-    pool\next: 0
+    pool\stride := stride
+    pool\chunk_capacity := chunk_capacity
+    pool\kind := kind
+    pool\type := type
+    pool\role := c.LMX_POOL_ROLE_PLAIN
+    pool\pointer_read := 0
+    pool\pointer_write := 0
+    pool\profile := pool_profile
+    pool\sealed := 0U
+    pool\head := 0
+    pool\tail := 0
+    pool\next := 0
     if: lmx_pool_add_chunk(arena, pool, 0U) != 0
         return: 1
     ---
@@ -294,17 +294,17 @@ fn: lmx_pool_release (@: arena c.LmxArena; @: pool c.LmxPool) int
     @: next c.LmxChunk 0
     if: pool = 0
         return: 0
-    chunk: pool\head
+    chunk := pool\head
     while: chunk != 0
-        next: chunk\next
+        next := chunk\next
         if: lmx_chunk_data(chunk) != 0 && arena != 0
             c.lmx_range_drop(arena, (cast: (@: void) lmx_chunk_data(chunk)), (cast: (@: void) ((cast: (@: char) lmx_chunk_data(chunk)) + lmx_chunk_room(chunk, (cast: (size_t) pool\stride)) * (cast: (size_t) pool\stride))))
         ---
-        chunk: next
+        chunk := next
     ---
-    pool\head: 0
-    pool\tail: 0
-    pool\chain_gen: pool\chain_gen + 1U
+    pool\head := 0
+    pool\tail := 0
+    pool\chain_gen := pool\chain_gen + 1U
     if: arena != 0
         c.lmx_arena_array_drop(arena, pool)
     ---
@@ -345,7 +345,7 @@ fn: lmx_pool_take_n (@: arena c.LmxArena; @: pool c.LmxPool; size_t: count) @: v
         return: 0
     if: pool\sealed != 0U
         return: 0
-    chunk: pool\tail
+    chunk := pool\tail
     if: chunk = 0
         # An array with NO chunk is EMPTY, not unusable -- and it is a state a collection pass
         # CREATES: the array's descriptor block is the arena's own record and reads as live on
@@ -361,10 +361,10 @@ fn: lmx_pool_take_n (@: arena c.LmxArena; @: pool c.LmxPool; size_t: count) @: v
         if: lmx_pool_add_chunk(arena, pool, 0U) != 0
             return: 0
         ---
-        chunk: pool\tail
+        chunk := pool\tail
     ---
     if: lmx_chunk_room(chunk, (cast: (size_t) pool\stride)) > lmx_chunk_cells(chunk, (cast: (size_t) pool\stride))
-        room: lmx_chunk_room(chunk, (cast: (size_t) pool\stride)) - lmx_chunk_cells(chunk, (cast: (size_t) pool\stride))
+        room := lmx_chunk_room(chunk, (cast: (size_t) pool\stride)) - lmx_chunk_cells(chunk, (cast: (size_t) pool\stride))
     ---
     # Room is room only while the arena still holds the chunk: a rollback takes a block
     # off the arena's list and the interval with it, and a chunk that went that way is no
@@ -376,7 +376,7 @@ fn: lmx_pool_take_n (@: arena c.LmxArena; @: pool c.LmxPool; size_t: count) @: v
     # question: a fresh chunk has count=0 and therefore no live cell yet, but its whole
     # storage interval is already registered and must be used rather than skipped.
     if: room > 0U && arena != 0 && c.lmx_range_interval_pool(arena, (cast: (@: void) lmx_chunk_data(chunk))) != pool
-        room: 0U
+        room := 0U
     ---
     if: room < count
         # D-67: `count` is passed straight through as the new chunk's own floor
@@ -392,9 +392,9 @@ fn: lmx_pool_take_n (@: arena c.LmxArena; @: pool c.LmxPool; size_t: count) @: v
         #     arena cannot be grown at all -- also not distinguishable from failure by the caller.
         if: lmx_pool_add_chunk(arena, pool, count) != 0
             return: 0
-        chunk: pool\tail
+        chunk := pool\tail
     ---
-    first: (cast: (@: void) ((cast: (@: char) lmx_chunk_data(chunk)) + lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)) * (cast: (size_t) pool\stride)))
+    first := (cast: (@: void) ((cast: (@: char) lmx_chunk_data(chunk)) + lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)) * (cast: (size_t) pool\stride)))
     lmx_chunk_set_used(chunk, (cast: (size_t) pool\stride), lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)) + count)
     return: first
 end: lmx_pool_take_n
@@ -437,63 +437,63 @@ fn: lmx_pool_make_profiled (@: arena c.LmxArena; size_t: bytes; size_t: stride; 
         return: 0
     if: bytes % stride != 0U
         return: 0
-    count: bytes / stride
+    count := bytes / stride
     if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell(type) != 0
         if: count > (((cast: (size_t) -1) - c.sizeof(c.LmxPool) - c.sizeof(c.LmxChunk)) / c.sizeof(c.LmxWalkValue))
             return: 0
-        context_bytes: count * c.sizeof(c.LmxWalkValue)
+        context_bytes := count * c.sizeof(c.LmxWalkValue)
     ---
-    mark: c.lmx_arena_mark(arena)
-    payload: c.calloc(count, stride)
+    mark := c.lmx_arena_mark(arena)
+    payload := c.calloc(count, stride)
     if: payload = 0
         return: 0
-    payload_block: (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
+    payload_block := (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
     if: payload_block = 0
         c.free(payload)
         return: 0
-    record: (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
+    record := (cast: (@: LmxArenaBlock) c.calloc(1U, c.sizeof(c.LmxArenaBlock)))
     if: record = 0
         c.free(payload_block)
         c.free(payload)
         return: 0
-    pool: (cast: (@: LmxPool) c.calloc(1U, c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk) + context_bytes))
+    pool := (cast: (@: LmxPool) c.calloc(1U, c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk) + context_bytes))
     if: pool = 0
         c.free(record)
         c.free(payload_block)
         c.free(payload)
         return: 0
     # The chunk record follows the pool record in the same block: one LmxPool past pool.
-    chunk: (cast: (@: LmxChunk) (pool + 1))
-    pool\head: chunk
-    pool\tail: chunk
-    pool\stride: stride
-    pool\chunk_capacity: count
-    pool\kind: kind
-    pool\type: type
-    pool\role: c.LMX_POOL_ROLE_PLAIN
-    pool\profile: pool_profile
-    pool\sealed: 0U
-    pool\next: 0
-    cells: @ chunk\cells
-    base: (cast: (@: LmxCharArray) cells)
-    base\data: (cast: (@: char) payload)
+    chunk := (cast: (@: LmxChunk) (pool + 1))
+    pool\head := chunk
+    pool\tail := chunk
+    pool\stride := stride
+    pool\chunk_capacity := count
+    pool\kind := kind
+    pool\type := type
+    pool\role := c.LMX_POOL_ROLE_PLAIN
+    pool\profile := pool_profile
+    pool\sealed := 0U
+    pool\next := 0
+    cells := @ chunk\cells
+    base := (cast: (@: LmxCharArray) cells)
+    base\data := (cast: (@: char) payload)
     lmx_chunk_set_room(chunk, stride, count)
     lmx_chunk_set_used(chunk, stride, count)
-    chunk\next: 0
+    chunk\next := 0
     if: context_bytes != 0U
         # The value contexts follow the chunk record in the same block: one LmxChunk past chunk.
-        chunk\value_contexts: (cast: (@: LmxWalkValue) (chunk + 1))
+        chunk\value_contexts := (cast: (@: LmxWalkValue) (chunk + 1))
     ---
-    payload_block\base: payload
-    payload_block\n: bytes
-    payload_block\class: (cast: (unsigned) type)
-    payload_block\dispose: 0
-    payload_block\next: 0
-    record\base: (cast: (@: void) pool)
-    record\n: c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk) + context_bytes
-    record\class: (cast: (unsigned) kind)
-    record\dispose: 0
-    record\next: 0
+    payload_block\base := payload
+    payload_block\n := bytes
+    payload_block\class := (cast: (unsigned) type)
+    payload_block\dispose := 0
+    payload_block\next := 0
+    record\base := (cast: (@: void) pool)
+    record\n := c.sizeof(c.LmxPool) + c.sizeof(c.LmxChunk) + context_bytes
+    record\class := (cast: (unsigned) kind)
+    record\dispose := 0
+    record\next := 0
     # Ownership first: the payload block joins the arena's list.
     if: c.lmx_arena_blocks_push(@ arena\blocks, payload_block) != c.LMX_ARENA_BLOCKS_OK
         c.free(pool)
@@ -541,28 +541,28 @@ fn: lmx_pool_over (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; 
         return: 1
     if: bytes % stride != 0U
         return: 1
-    count: bytes / stride
+    count := bytes / stride
     # The chain is replaced, not grown (index entries keep their chunk only while chain_gen stays, lmx_range.lm1).
-    pool\chain_gen: pool\chain_gen + 1U
-    pool\head: chunk
-    pool\tail: chunk
-    pool\stride: stride
-    pool\chunk_capacity: count
-    pool\kind: kind
-    pool\type: type
-    pool\role: c.LMX_POOL_ROLE_PLAIN
-    pool\pointer_read: 0
-    pool\pointer_write: 0
-    pool\profile: 0
-    pool\sealed: 0U
-    pool\next: 0
-    cells: @ chunk\cells
-    ba: (cast: (@: LmxCharArray) cells)
-    ba\data: (cast: (@: char) base)
+    pool\chain_gen := pool\chain_gen + 1U
+    pool\head := chunk
+    pool\tail := chunk
+    pool\stride := stride
+    pool\chunk_capacity := count
+    pool\kind := kind
+    pool\type := type
+    pool\role := c.LMX_POOL_ROLE_PLAIN
+    pool\pointer_read := 0
+    pool\pointer_write := 0
+    pool\profile := 0
+    pool\sealed := 0U
+    pool\next := 0
+    cells := @ chunk\cells
+    ba := (cast: (@: LmxCharArray) cells)
+    ba\data := (cast: (@: char) base)
     lmx_chunk_set_room(chunk, stride, count)
     lmx_chunk_set_used(chunk, stride, count)
-    chunk\value_contexts: 0
-    chunk\next: 0
+    chunk\value_contexts := 0
+    chunk\next := 0
     if: c.lmx_arena_array(arena, pool, 0) != 0
         return: 1
     ---
@@ -579,7 +579,7 @@ end: lmx_pool_over
 fn: lmx_pool_seal (@: pool c.LmxPool) int
     if: pool = 0
         return: 1
-    pool\sealed: 1U
+    pool\sealed := 1U
     return: 0
 end: lmx_pool_seal
 
@@ -595,13 +595,13 @@ end: lmx_pool_is_sealed
 fn: lmx_pool_count (@: pool c.LmxPool) size_t
     @: chunk c.LmxChunk 0
     size_t: total 0U
-    total: 0U
+    total := 0U
     if: pool = 0
         return: 0U
-    chunk: pool\head
+    chunk := pool\head
     while: chunk != 0
-        total: total + lmx_chunk_cells(chunk, (cast: (size_t) pool\stride))
-        chunk: chunk\next
+        total := total + lmx_chunk_cells(chunk, (cast: (size_t) pool\stride))
+        chunk := chunk\next
     ---
     return: total
 end: lmx_pool_count
@@ -618,15 +618,15 @@ fn: lmx_array_desc_new (@: arena c.LmxArena; @: pool c.LmxPool; size_t: len; @: 
     @: array c.VoidArray 0
     if: pool = 0 || pool\kind != c.LMX_KIND_ARRAY || pool\stride != c.sizeof(c.LmxArray)
         return: 0
-    desc: (cast: (@: LmxArray) lmx_pool_take(arena, pool))
+    desc := (cast: (@: LmxArray) lmx_pool_take(arena, pool))
     if: desc = 0
         return: 0
-    desc\parent: 0
-    desc\native: 0
+    desc\parent := 0
+    desc\native := 0
     # The header's by-value VoidArray is written through its address.
-    array: @ desc\array
-    array\size: len
-    array\data: data
+    array := @ desc\array
+    array\size := len
+    array\data := data
     return: desc
 end: lmx_array_desc_new
 
@@ -655,13 +655,13 @@ fn: lmx_pool_chunk_at (@: pool c.LmxPool; @: p void) @: c.LmxChunk
     @: base char 0
     if: pool = 0 || p = 0
         return: 0
-    chunk: pool\head
+    chunk := pool\head
     while: chunk != 0
-        base: (cast: (@: char) lmx_chunk_data(chunk))
+        base := (cast: (@: char) lmx_chunk_data(chunk))
         if: (cast: (@: char) p) >= base && (cast: (@: char) p) < base + (lmx_chunk_room(chunk, (cast: (size_t) pool\stride)) * (cast: (size_t) pool\stride))
             return: chunk
         ---
-        chunk: chunk\next
+        chunk := chunk\next
     ---
     return: 0
 end: lmx_pool_chunk_at
@@ -682,25 +682,25 @@ fn: lmx_pool_chunk_drop (@: pool c.LmxPool; @: chunk c.LmxChunk) int
     @: entry c.LmxChunk 0
     if: pool = 0 || chunk = 0
         return: 1
-    slot: @ pool\head
-    entry: \slot
+    slot := @ pool\head
+    entry := \slot
     while: entry != 0
         if: entry = chunk
-            \slot: entry\next
-            entry\next: 0
-            pool\chain_gen: pool\chain_gen + 1U
+            \slot := entry\next
+            entry\next := 0
+            pool\chain_gen := pool\chain_gen + 1U
             if: pool\tail = entry
-                pool\tail: 0
-                entry: pool\head
+                pool\tail := 0
+                entry := pool\head
                 while: entry != 0
-                    pool\tail: entry
-                    entry: entry\next
+                    pool\tail := entry
+                    entry := entry\next
                 ---
             ---
             return: 0
         ---
-        slot: @ entry\next
-        entry: \slot
+        slot := @ entry\next
+        entry := \slot
     ---
     return: 1
 end: lmx_pool_chunk_drop

@@ -81,9 +81,9 @@ fn: l1_head_is_unknown_type (const: (@: head c.LmP0Text)) int
     if: head = 0 || head\data = 0 || head\length = 0U
         return: (cast: (int) (0))
     if: c.l1_text_starts(head, "c.") && head\length > 2U
-        start: 2U
+        start := 2U
     ---
-    ch: (cast: (unsigned) head\data[start])
+    ch := (cast: (unsigned) head\data[start])
     if: ch < 65U || ch > 90U
         return: (cast: (int) (0))
     if: start = 0U && l1_is_type_name(head)
@@ -107,20 +107,20 @@ fn: l1_throw_reset () void
     @: throw_ok_cell int (cast: (@: int) (@ c.l1_throw_ok))
     @: cur_thn_cell int (cast: (@: int) (@ c.l1_cur_thn))
     @: allow_throws_cell int (cast: (@: int) (@ c.l1_allow_throws))
-    th_n_cell[0]: 0
-    in_finally_cell[0]: 0
-    fnn_cell[0]: 0
-    ca_n_cell[0]: 0
-    ca_next_cell[0]: 0
-    blk_d_cell[0]: 0
-    fin_f_cell[0]: 0
-    fin_depth_cell[0]: 0
-    has_fin_cell[0]: 0
-    th_ch_cell[0]: 0
-    cur_void_cell[0]: 0
-    throw_ok_cell[0]: 0
-    cur_thn_cell[0]: 0
-    allow_throws_cell[0]: 0
+    th_n_cell[0] := 0
+    in_finally_cell[0] := 0
+    fnn_cell[0] := 0
+    ca_n_cell[0] := 0
+    ca_next_cell[0] := 0
+    blk_d_cell[0] := 0
+    fin_f_cell[0] := 0
+    fin_depth_cell[0] := 0
+    has_fin_cell[0] := 0
+    th_ch_cell[0] := 0
+    cur_void_cell[0] := 0
+    throw_ok_cell[0] := 0
+    cur_thn_cell[0] := 0
+    allow_throws_cell[0] := 0
     return
 end: l1_throw_reset
 
@@ -136,12 +136,12 @@ fn: l1_throw_intern (const: (@: text c.LmP0Text)) int
     while: i < th_n_cell[0]
         if: c.strcmp(th_names_array + i * 64, (cast: (const: @: char) buf_scratch\buffer)) = 0
             return: (cast: (int) (i + 1))
-        i: i + 1
+        i := i + 1
     if: th_n_cell[0] >= 32
         return: (cast: (int) (0))
     c.strcpy(th_names_array + th_n_cell[0] * 64, (cast: (const: @: char) buf_scratch\buffer))
-    th_ar_array[th_n_cell[0]]: -1
-    th_n_cell[0]: th_n_cell[0] + 1
+    th_ar_array[th_n_cell[0]] := -1
+    th_n_cell[0] := th_n_cell[0] + 1
     return: (cast: (int) (th_n_cell[0]))
 end: l1_throw_intern
 
@@ -154,9 +154,9 @@ fn: l1_arity_bind (int: code; int: n; const: (@: path char); const: (@: source_n
         return: (cast: (int) (1))
     if: n < 0 || n > 8
         return: (cast: (int) (c.l1_error(path, source_node, "throw payload is limited to 8 arguments")))
-    prev: th_ar_array[code - 1]
+    prev := th_ar_array[code - 1]
     if: prev < 0
-        th_ar_array[code - 1]: n
+        th_ar_array[code - 1] := n
         return: (cast: (int) (0))
     if: prev != n
         return: (cast: (int) (c.l1_error(path, source_node, "throw payload arity mismatch")))
@@ -174,7 +174,7 @@ fn: l1_fn_find (const: (@: text c.LmP0Text)) int
     while: i < fnn_cell[0]
         if: c.strcmp(fn_names_cell[0] + i * 64, (cast: (const: @: char) buf_scratch\buffer)) = 0
             return: (cast: (int) (i))
-        i: i + 1
+        i := i + 1
     return: (cast: (int) (-1))
 end: l1_fn_find
 
@@ -192,32 +192,32 @@ fn: l1_fn_grow () int
     @: th int
     @: thn int
     @: ar int
-    intsz: c.sizeof(probe)
+    intsz := c.sizeof(probe)
     if: fn_cap_cell[0] = 0
-        cap: 8
+        cap := 8
     else:
         if: fn_cap_cell[0] > 1073741823
             return: (cast: (int) (1))
         ---
-        cap: fn_cap_cell[0] * 2
+        cap := fn_cap_cell[0] * 2
     ---
-    names: (cast: (@: char) c.realloc((cast: (@: void) fn_names_cell[0]), (cast: (size_t) cap) * 64U))
+    names := (cast: (@: char) c.realloc((cast: (@: void) fn_names_cell[0]), (cast: (size_t) cap) * 64U))
     if: names = 0
         return: (cast: (int) (1))
-    fn_names_cell[0]: names
-    th: (cast: (@: int) c.realloc((cast: (@: void) fn_th_cell[0]), (cast: (size_t) cap) * 8U * intsz))
+    fn_names_cell[0] := names
+    th := (cast: (@: int) c.realloc((cast: (@: void) fn_th_cell[0]), (cast: (size_t) cap) * 8U * intsz))
     if: th = 0
         return: (cast: (int) (1))
-    fn_th_cell[0]: th
-    thn: (cast: (@: int) c.realloc((cast: (@: void) fn_thn_cell[0]), (cast: (size_t) cap) * intsz))
+    fn_th_cell[0] := th
+    thn := (cast: (@: int) c.realloc((cast: (@: void) fn_thn_cell[0]), (cast: (size_t) cap) * intsz))
     if: thn = 0
         return: (cast: (int) (1))
-    fn_thn_cell[0]: thn
-    ar: (cast: (@: int) c.realloc((cast: (@: void) fn_ar_cell[0]), (cast: (size_t) cap) * intsz))
+    fn_thn_cell[0] := thn
+    ar := (cast: (@: int) c.realloc((cast: (@: void) fn_ar_cell[0]), (cast: (size_t) cap) * intsz))
     if: ar = 0
         return: (cast: (int) (1))
-    fn_ar_cell[0]: ar
-    fn_cap_cell[0]: cap
+    fn_ar_cell[0] := ar
+    fn_cap_cell[0] := cap
     return: (cast: (int) (0))
 end: l1_fn_grow
 
@@ -230,7 +230,7 @@ fn: l1_fn_ensure (const: (@: text c.LmP0Text)) int
     @: fn_cap_cell int (cast: (@: int) (@ c.l1_fn_cap))
     c.LmL1TextScratch64: buf_scratch
     int: i
-    i: l1_fn_find(text)
+    i := l1_fn_find(text)
     if: i >= 0
         return: (cast: (int) (i))
     if: c.l1_ident_to_buf((cast: (@: char) buf_scratch\buffer), 64U, text) != 0
@@ -241,10 +241,10 @@ fn: l1_fn_ensure (const: (@: text c.LmP0Text)) int
         ---
     ---
     c.strcpy(fn_names_cell[0] + fnn_cell[0] * 64, (cast: (const: @: char) buf_scratch\buffer))
-    fn_thn_cell[0][fnn_cell[0]]: 0
-    fn_ar_cell[0][fnn_cell[0]]: -1
-    i: fnn_cell[0]
-    fnn_cell[0]: fnn_cell[0] + 1
+    fn_thn_cell[0][fnn_cell[0]] := 0
+    fn_ar_cell[0][fnn_cell[0]] := -1
+    i := fnn_cell[0]
+    fnn_cell[0] := fnn_cell[0] + 1
     return: (cast: (int) (i))
 end: l1_fn_ensure
 
@@ -257,15 +257,15 @@ fn: l1_fn_add_throw (int: fn_i; int: code) int
     int: j 0
     if: fn_i < 0 || fn_i >= fnn_cell[0] || code = 0
         return: (cast: (int) (1))
-    n: fn_thn_cell[0][fn_i]
+    n := fn_thn_cell[0][fn_i]
     while: j < n
         if: fn_th_cell[0][fn_i * 8 + j] = code
             return: (cast: (int) (0))
-        j: j + 1
+        j := j + 1
     if: n >= 8
         return: (cast: (int) (1))
-    fn_th_cell[0][fn_i * 8 + n]: code
-    fn_thn_cell[0][fn_i]: n + 1
+    fn_th_cell[0][fn_i * 8 + n] := code
+    fn_thn_cell[0][fn_i] := n + 1
     return: (cast: (int) (0))
 end: l1_fn_add_throw
 
@@ -273,7 +273,7 @@ end: l1_fn_add_throw
 fn: l1_fn_is_throwing (const: (@: text c.LmP0Text)) int
     @@: fn_thn_cell int (cast: (@@: int) (@ c.l1_fn_thn))
     int: i
-    i: l1_fn_find(text)
+    i := l1_fn_find(text)
     if: i < 0
         return: (cast: (int) (0))
     return: (cast: (int) (fn_thn_cell[0][i] != 0))
@@ -296,82 +296,82 @@ fn: l1_fn_register_frame (const: (@: frame c.LmP0Frame); const: (@: path char); 
     int: code
     if: frame = 0 || frame\body = 0
         return: (cast: (int) (0))
-    field: frame\body\first_field
-    name_node: 0
-    params_node: 0
-    third: 0
-    fourth: 0
+    field := frame\body\first_field
+    name_node := 0
+    params_node := 0
+    third := 0
+    fourth := 0
     while: field != 0
         if: c.l1_node_ignored(field\value) = 0
             if: name_node = 0
-                name_node: field\value
+                name_node := field\value
             else:
                 if: params_node = 0
-                    params_node: field\value
+                    params_node := field\value
                 else:
                     if: third = 0
-                        third: field\value
+                        third := field\value
                     else:
                         if: fourth = 0
-                            fourth: field\value
+                            fourth := field\value
                         ---
                     ---
                 ---
             ---
         ---
-        field: field\next
+        field := field\next
     if: name_node = 0
         return: (cast: (int) (0))
-    fn_name: 0
+    fn_name := 0
     if: name_node\kind = c.LM_P0_NODE_ATOM
-        fn_name: name_node\as\atom
+        fn_name := name_node\as\atom
     else:
         if: name_node\kind = c.LM_P0_NODE_FRAME
-            fn_name: name_node\as\frame\head
+            fn_name := name_node\as\frame\head
             if: params_node = 0
-                params_node: name_node
-                third: 0
-                fourth: 0
+                params_node := name_node
+                third := 0
+                fourth := 0
             ---
         ---
     ---
     if: fn_name = 0
         return: (cast: (int) (0))
-    ar: 0
-    pf: 0
+    ar := 0
+    pf := 0
     if: params_node != 0 && params_node\kind = c.LM_P0_NODE_STRUCTURE && params_node\as\structure != 0
-        pf: params_node\as\structure\first_field
+        pf := params_node\as\structure\first_field
         while: pf != 0
             if: c.l1_node_ignored(pf\value) = 0
-                ar: ar + 1
+                ar := ar + 1
             ---
-            pf: pf\next
+            pf := pf\next
         ---
     ---
-    fn_i: l1_fn_ensure(fn_name)
+    fn_i := l1_fn_ensure(fn_name)
     if: fn_i < 0
         return: (cast: (int) (c.l1_error(path, source_node, "too many functions")))
-    fn_ar_cell[0][fn_i]: ar
-    body_node: 0
+    fn_ar_cell[0][fn_i] := ar
+    body_node := 0
     if: c.l1_text_eq(frame\head, "sub")
-        body_node: third
+        body_node := third
     else:
-        body_node: fourth
+        body_node := fourth
     ---
-    throws_field: 0
+    throws_field := 0
     if: body_node != 0 && body_node\kind = c.LM_P0_NODE_STRUCTURE && body_node\as\structure != 0
-        throws_field: body_node\as\structure\first_field
+        throws_field := body_node\as\structure\first_field
         while: throws_field != 0 && c.l1_node_ignored(throws_field\value)
-            throws_field: throws_field\next
+            throws_field := throws_field\next
         if: throws_field != 0 && throws_field\value != 0 && throws_field\value\kind = c.LM_P0_NODE_FRAME && c.l1_text_eq(throws_field\value\as\frame\head, "throws")
-            field: 0
+            field := 0
             if: throws_field\value\as\frame\body != 0
-                field: throws_field\value\as\frame\body\first_field
+                field := throws_field\value\as\frame\body\first_field
             ---
             while: field != 0
                 if: c.l1_node_ignored(field\value) = 0
                     if: field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM
-                        code: l1_throw_intern((cast: (const: @: c.LmP0Text) field\value\as\atom))
+                        code := l1_throw_intern((cast: (const: @: c.LmP0Text) field\value\as\atom))
                         if: code = 0
                             return: (cast: (int) (c.l1_error(path, field\value, "too many throw names")))
                         if: l1_fn_add_throw(fn_i, code) != 0
@@ -379,7 +379,7 @@ fn: l1_fn_register_frame (const: (@: frame c.LmP0Frame); const: (@: path char); 
                         ---
                     ---
                 ---
-                field: field\next
+                field := field\next
             ---
         ---
     ---
@@ -394,11 +394,11 @@ fn: l1_fn_register_node (const: (@: source_node c.LmP0Node); const: (@: path cha
     if: source_node\kind = c.LM_P0_NODE_STRUCTURE
         if: source_node\as\structure = 0
             return: (cast: (int) (0))
-        field: source_node\as\structure\first_field
+        field := source_node\as\structure\first_field
         while: field != 0
             if: l1_fn_register_node((cast: (const: @: c.LmP0Node) field\value), path) != 0
                 return: (cast: (int) (1))
-            field: field\next
+            field := field\next
         return: (cast: (int) (0))
     if: source_node\kind != c.LM_P0_NODE_FRAME || source_node\as\frame = 0
         return: (cast: (int) (0))
@@ -407,11 +407,11 @@ fn: l1_fn_register_node (const: (@: source_node c.LmP0Node); const: (@: path cha
     if: c.l1_text_eq(source_node\as\frame\head, "prototype") || c.l1_text_eq(source_node\as\frame\head, "external") || c.l1_text_eq(source_node\as\frame\head, "os") || c.l1_text_eq(source_node\as\frame\head, "win") || c.l1_text_eq(source_node\as\frame\head, "default") || c.l1_text_eq(source_node\as\frame\head, "ifdef") || c.l1_text_eq(source_node\as\frame\head, "L1")
         if: source_node\as\frame\body = 0
             return: (cast: (int) (0))
-        field: source_node\as\frame\body\first_field
+        field := source_node\as\frame\body\first_field
         while: field != 0
             if: l1_fn_register_node((cast: (const: @: c.LmP0Node) field\value), path) != 0
                 return: (cast: (int) (1))
-            field: field\next
+            field := field\next
         return: (cast: (int) (0))
     return: (cast: (int) (0))
 end: l1_fn_register_node
@@ -424,7 +424,7 @@ fn: l1_cur_has_throw (int: code) int
     while: i < cur_thn_cell[0]
         if: cur_th_array[i] = code
             return: (cast: (int) (1))
-        i: i + 1
+        i := i + 1
     return: (cast: (int) (0))
 end: l1_cur_has_throw
 
@@ -438,9 +438,9 @@ fn: l1_catch_find (const: (@: text c.LmP0Text); int: same_depth) int
     int: i
     if: c.l1_ident_to_buf((cast: (@: char) buf_scratch\buffer), 64U, text) != 0
         return: (cast: (int) (-1))
-    i: ca_n_cell[0]
+    i := ca_n_cell[0]
     while: i > 0
-        i: i - 1
+        i := i - 1
         if: c.strcmp(ca_names_array + i * 64, (cast: (const: @: char) buf_scratch\buffer)) = 0
             if: same_depth != 0 && ca_d_array[i] != blk_d_cell[0]
                 continue
@@ -464,9 +464,9 @@ fn: l1_catch_push (const: (@: text c.LmP0Text); int: id) int
     if: c.l1_ident_to_buf((cast: (@: char) buf_scratch\buffer), 64U, text) != 0
         return: (cast: (int) (1))
     c.strcpy(ca_names_array + ca_n_cell[0] * 64, (cast: (const: @: char) buf_scratch\buffer))
-    ca_ids_array[ca_n_cell[0]]: id
-    ca_d_array[ca_n_cell[0]]: blk_d_cell[0]
-    ca_n_cell[0]: ca_n_cell[0] + 1
+    ca_ids_array[ca_n_cell[0]] := id
+    ca_d_array[ca_n_cell[0]] := blk_d_cell[0]
+    ca_n_cell[0] := ca_n_cell[0] + 1
     return: (cast: (int) (0))
 end: l1_catch_push
 
@@ -476,7 +476,7 @@ fn: l1_catch_pop () void
     @: ca_n_cell int (cast: (@: int) (@ c.l1_ca_n))
     @: blk_d_cell int (cast: (@: int) (@ c.l1_blk_d))
     while: ca_n_cell[0] > 0 && ca_d_array[ca_n_cell[0] - 1] = blk_d_cell[0]
-        ca_n_cell[0]: ca_n_cell[0] - 1
+        ca_n_cell[0] := ca_n_cell[0] - 1
     ---
     return
 end: l1_catch_pop
@@ -488,8 +488,8 @@ fn: l1_src_release () void
     if: src_cell[0] != 0
         c.free((cast: (@: void) src_cell[0]))
     ---
-    src_cell[0]: 0
-    srcn_cell[0]: 0
+    src_cell[0] := 0
+    srcn_cell[0] := 0
 end: l1_src_release
 
 # Original: l1src/l1trans.lm1:1218
@@ -500,19 +500,19 @@ fn: l1_src_load (const: (@: path char)) int
     c.LmP0FileScratch: file_scratch
     size_t: nn
     @: buf char
-    f: c.fopen(path, "rb")
+    f := c.fopen(path, "rb")
     if: f = 0
         return: (cast: (int) (1))
     if: c.fseek(f, 0, 2) != 0
         c.fclose(f)
         return: (cast: (int) (1))
-    file_scratch\file_size: c.ftell(f)
+    file_scratch\file_size := c.ftell(f)
     if: file_scratch\file_size < 0
         c.fclose(f)
         return: (cast: (int) (1))
     c.rewind(f)
-    nn: (cast: (size_t) file_scratch\file_size)
-    buf: (cast: (@: char) c.malloc(nn + 1U))
+    nn := (cast: (size_t) file_scratch\file_size)
+    buf := (cast: (@: char) c.malloc(nn + 1U))
     if: buf = 0
         c.fclose(f)
         return: (cast: (int) (1))
@@ -521,9 +521,9 @@ fn: l1_src_load (const: (@: path char)) int
         c.fclose(f)
         return: (cast: (int) (1))
     c.fclose(f)
-    buf[nn]: 0
-    src_cell[0]: buf
-    srcn_cell[0]: nn
+    buf[nn] := 0
+    src_cell[0] := buf
+    srcn_cell[0] := nn
     return: (cast: (int) (0))
 end: l1_src_load
 
@@ -553,12 +553,12 @@ fn: l1_emit_atom_node (@: out c.FILE; const: (@: source_node c.LmP0Node); const:
     int: q
     if: source_node = 0 || source_node\kind != c.LM_P0_NODE_ATOM
         return: (cast: (int) (1))
-    text: source_node\as\atom
+    text := source_node\as\atom
     if: l1_node_is_block_string(source_node)
         if: text = 0
             return: (cast: (int) (c.l1_emit_c99_string(out, "", 0U)))
         return: (cast: (int) (c.l1_emit_c99_string(out, text\data, text\length)))
-    q: c.l1_python_triple_quote(text)
+    q := c.l1_python_triple_quote(text)
     if: q != 0
         return: (cast: (int) (c.l1_emit_triple_body(out, text\data + 3U, text\length - 6U, q)))
     return: (cast: (int) (c.l1_emit_atom_c(out, text, path, source_node)))
@@ -570,12 +570,12 @@ fn: l1_at_frame_is_type (const: (@: frame c.LmP0Frame)) int
     const: (@: n c.LmP0Node)
     if: frame = 0 || frame\body = 0
         return: (cast: (int) (0))
-    field: frame\body\first_field
+    field := frame\body\first_field
     while: field != 0 && c.l1_node_ignored(field\value)
-        field: field\next
+        field := field\next
     if: field = 0 || field\value = 0
         return: (cast: (int) (0))
-    n: field\value
+    n := field\value
     if: n\kind = c.LM_P0_NODE_ATOM
         return: (cast: (int) (l1_is_type_name((cast: (const: @: c.LmP0Text) n\as\atom))))
     if: n\kind != c.LM_P0_NODE_FRAME || n\as\frame = 0
@@ -597,9 +597,9 @@ fn: l1_emit_type_token (@: out c.FILE; const: (@: source_node c.LmP0Node); const
         if: c.l1_text_eq(source_node\as\frame\head, "const")
             if: source_node\as\frame\body = 0 || source_node\as\frame\body\first_field = 0
                 return: (cast: (int) (c.l1_error(path, source_node, "const missing type")))
-            field: source_node\as\frame\body\first_field
+            field := source_node\as\frame\body\first_field
             while: field != 0 && c.l1_node_ignored(field\value)
-                field: field\next
+                field := field\next
             if: field = 0 || field\value = 0
                 return: (cast: (int) (c.l1_error(path, source_node, "const missing type")))
             if: c.l1_pointer_pointee_is_const_frame(field\value)
@@ -609,28 +609,28 @@ fn: l1_emit_type_token (@: out c.FILE; const: (@: source_node c.LmP0Node); const
             if: c.l1_write_cstr(out, "const ") != 0
                 return: (cast: (int) (1))
             return: (cast: (int) (l1_emit_type_token(out, (cast: (const: @: c.LmP0Node) field\value), path)))
-        pointer_depth: c.l1_pointer_depth(source_node\as\frame\head)
+        pointer_depth := c.l1_pointer_depth(source_node\as\frame\head)
         if: pointer_depth != 0U
             if: source_node\as\frame\body = 0 || source_node\as\frame\body\first_field = 0
                 return: (cast: (int) (c.l1_error(path, source_node, "missing pointer type")))
-            field: source_node\as\frame\body\first_field
+            field := source_node\as\frame\body\first_field
             while: field != 0 && c.l1_node_ignored(field\value)
-                field: field\next
+                field := field\next
             if: field = 0 || field\value = 0
                 return: (cast: (int) (c.l1_error(path, source_node, "missing pointer type")))
             if: l1_emit_type_token(out, (cast: (const: @: c.LmP0Node) field\value), path) != 0
                 return: (cast: (int) (1))
-            field: field\next
+            field := field\next
             while: field != 0 && c.l1_node_ignored(field\value)
-                field: field\next
+                field := field\next
             while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l1_is_type_name((cast: (const: @: c.LmP0Text) field\value\as\atom))
                 if: c.l1_write_cstr(out, " ") != 0
                     return: (cast: (int) (1))
                 if: c.l1_write_type_spelling(out, field\value\as\atom, path, field\value) != 0
                     return: (cast: (int) (1))
-                field: field\next
+                field := field\next
                 while: field != 0 && c.l1_node_ignored(field\value)
-                    field: field\next
+                    field := field\next
                 ---
             ---
             if: c.l1_error_if_extra_fields(field, path, source_node, "pointer type has extra fields") != 0
@@ -642,24 +642,24 @@ fn: l1_emit_type_token (@: out c.FILE; const: (@: source_node c.LmP0Node); const
     if: source_node\kind = c.LM_P0_NODE_STRUCTURE
         if: source_node\as\structure\first_field = 0
             return: (cast: (int) (c.l1_error(path, source_node, "empty type")))
-        field: source_node\as\structure\first_field
+        field := source_node\as\structure\first_field
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         if: field = 0 || field\value = 0
             return: (cast: (int) (c.l1_error(path, source_node, "empty type")))
         if: l1_emit_type_token(out, (cast: (const: @: c.LmP0Node) field\value), path) != 0
             return: (cast: (int) (1))
-        field: field\next
+        field := field\next
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l1_is_type_name((cast: (const: @: c.LmP0Text) field\value\as\atom))
             if: c.l1_write_cstr(out, " ") != 0
                 return: (cast: (int) (1))
             if: c.l1_write_type_spelling(out, field\value\as\atom, path, field\value) != 0
                 return: (cast: (int) (1))
-            field: field\next
+            field := field\next
             while: field != 0 && c.l1_node_ignored(field\value)
-                field: field\next
+                field := field\next
             ---
         ---
         return: (cast: (int) (0))
@@ -677,17 +677,17 @@ fn: l1_emit_param (@: out c.FILE; const: (@: source_node c.LmP0Node); const: (@:
         return: (cast: (int) (c.l1_error(path, 0, "empty parameter")))
     if: source_node\kind != c.LM_P0_NODE_FRAME
         return: (cast: (int) (c.l1_error(path, source_node, "parameter must be a frame")))
-    head: source_node\as\frame\head
-    field: 0
+    head := source_node\as\frame\head
+    field := 0
     if: source_node\as\frame\body != 0
-        field: source_node\as\frame\body\first_field
+        field := source_node\as\frame\body\first_field
     ---
     if: c.l1_text_eq(head, "const")
         if: field = 0 || field\value = 0
             return: (cast: (int) (c.l1_error(path, source_node, "const parameter missing type")))
-        extra: field\next
+        extra := field\next
         while: extra != 0 && c.l1_node_ignored(extra\value)
-            extra: extra\next
+            extra := extra\next
         if: c.l1_write_cstr(out, "const ") != 0
             return: (cast: (int) (1))
         ---
@@ -702,18 +702,18 @@ fn: l1_emit_param (@: out c.FILE; const: (@: source_node c.LmP0Node); const: (@:
         # by the `field` advance into the type node's body.
         if: l1_emit_type_token(out, (cast: (const: @: c.LmP0Node) field\value), path) != 0
             return: (cast: (int) (1))
-        field: field\next
+        field := field\next
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         ---
         while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l1_is_type_name((cast: (const: @: c.LmP0Text) field\value\as\atom))
             if: c.l1_write_cstr(out, " ") != 0
                 return: (cast: (int) (1))
             if: c.l1_write_type_spelling(out, field\value\as\atom, path, field\value) != 0
                 return: (cast: (int) (1))
-            field: field\next
+            field := field\next
             while: field != 0 && c.l1_node_ignored(field\value)
-                field: field\next
+                field := field\next
             ---
         ---
         if: extra\value = 0 || extra\value\kind != c.LM_P0_NODE_ATOM
@@ -728,17 +728,17 @@ fn: l1_emit_param (@: out c.FILE; const: (@: source_node c.LmP0Node); const: (@:
             return: (cast: (int) (c.l1_error(path, source_node, "array parameter missing type")))
         if: l1_emit_type_token(out, (cast: (const: @: c.LmP0Node) field\value), path) != 0
             return: (cast: (int) (1))
-        field: field\next
+        field := field\next
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l1_is_type_name((cast: (const: @: c.LmP0Text) field\value\as\atom))
             if: c.l1_write_cstr(out, " ") != 0
                 return: (cast: (int) (1))
             if: c.l1_write_type_spelling(out, field\value\as\atom, path, field\value) != 0
                 return: (cast: (int) (1))
-            field: field\next
+            field := field\next
             while: field != 0 && c.l1_node_ignored(field\value)
-                field: field\next
+                field := field\next
             ---
         ---
         if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
@@ -749,22 +749,22 @@ fn: l1_emit_param (@: out c.FILE; const: (@: source_node c.LmP0Node); const: (@:
             return: (cast: (int) (1))
         return: (cast: (int) (c.l1_write_cstr(out, "[]")))
     if: c.l1_pointer_depth(head) != 0U
-        pointer_depth: c.l1_pointer_depth(head)
+        pointer_depth := c.l1_pointer_depth(head)
         if: field = 0 || field\value = 0
             return: (cast: (int) (c.l1_error(path, source_node, "pointer parameter missing type")))
         if: l1_emit_type_token(out, (cast: (const: @: c.LmP0Node) field\value), path) != 0
             return: (cast: (int) (1))
-        field: field\next
+        field := field\next
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l1_is_type_name((cast: (const: @: c.LmP0Text) field\value\as\atom))
             if: c.l1_write_cstr(out, " ") != 0
                 return: (cast: (int) (1))
             if: c.l1_write_type_spelling(out, field\value\as\atom, path, field\value) != 0
                 return: (cast: (int) (1))
-            field: field\next
+            field := field\next
             while: field != 0 && c.l1_node_ignored(field\value)
-                field: field\next
+                field := field\next
             ---
         ---
         if: c.l1_write_cstr(out, " ") != 0 || c.l1_emit_stars(out, pointer_depth) != 0
@@ -779,22 +779,22 @@ fn: l1_emit_param (@: out c.FILE; const: (@: source_node c.LmP0Node); const: (@:
     if: l1_emit_type_token(out, source_node, path) != 0
         return: (cast: (int) (1))
     while: field != 0 && c.l1_node_ignored(field\value)
-        field: field\next
+        field := field\next
     while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l1_is_type_name((cast: (const: @: c.LmP0Text) field\value\as\atom))
         if: c.l1_write_cstr(out, " ") != 0
             return: (cast: (int) (1))
         if: c.l1_write_type_spelling(out, field\value\as\atom, path, field\value) != 0
             return: (cast: (int) (1))
-        field: field\next
+        field := field\next
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         ---
     ---
     if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
         return: (cast: (int) (0))
     if: c.l1_write_cstr(out, " ") != 0
         return: (cast: (int) (1))
-    name_node: field\value
+    name_node := field\value
     return: (cast: (int) (c.l1_write_ident(out, name_node\as\atom, path, name_node)))
 end: l1_emit_param
 
@@ -804,7 +804,7 @@ fn: l1_emit_param_list (@: out c.FILE; const: (@: source_node c.LmP0Node); const
     int: first 1
     if: source_node = 0 || source_node\kind != c.LM_P0_NODE_STRUCTURE || source_node\as\structure\first_field = 0
         return: (cast: (int) (c.l1_write_cstr(out, "void")))
-    field: source_node\as\structure\first_field
+    field := source_node\as\structure\first_field
     while: field != 0
         if: c.l1_node_ignored(field\value) = 0
             if: first = 0
@@ -812,11 +812,11 @@ fn: l1_emit_param_list (@: out c.FILE; const: (@: source_node c.LmP0Node); const
                     return: (cast: (int) (1))
                 ---
             ---
-            first: 0
+            first := 0
             if: l1_emit_param(out, (cast: (const: @: c.LmP0Node) field\value), path) != 0
                 return: (cast: (int) (1))
         ---
-        field: field\next
+        field := field\next
     if: first != 0
         return: (cast: (int) (c.l1_write_cstr(out, "void")))
     return: (cast: (int) (0))
@@ -827,7 +827,7 @@ fn: l1_emit_throw_channel (@: out c.FILE) int
     @: th_ch_cell int (cast: (@: int) (@ c.l1_th_ch))
     if: th_ch_cell[0] != 0
         return: (cast: (int) (0))
-    th_ch_cell[0]: 1
+    th_ch_cell[0] := 1
     if: c.l1_write_cstr(out, "static int l1_throw_code = 0;\n") != 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.l1_write_cstr(out, "static long l1_throw_payload[8];\n")))
@@ -840,8 +840,8 @@ fn: l1_fin_pop_depth () void
     @: fin_depth_cell int (cast: (@: int) (@ c.l1_fin_depth))
     @: has_fin_cell int (cast: (@: int) (@ c.l1_has_fin))
     if: has_fin_cell[0] != 0 && fin_depth_cell[0] = blk_d_cell[0]
-        has_fin_cell[0]: 0
-        fin_f_cell[0]: 0
+        has_fin_cell[0] := 0
+        fin_f_cell[0] := 0
     ---
     return
 end: l1_fin_pop_depth
@@ -854,30 +854,30 @@ fn: l1_register_catches (@: field c.LmP0Field; const: (@: path char)) int
     int: id
     int: exist
     while: field != 0
-        source_node: field\value
+        source_node := field\value
         if: c.l1_node_ignored(source_node) = 0 && source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && c.l1_text_eq(source_node\as\frame\head, "catch")
-            name_field: 0
+            name_field := 0
             if: source_node\as\frame\body != 0
-                name_field: source_node\as\frame\body\first_field
+                name_field := source_node\as\frame\body\first_field
             ---
             while: name_field != 0 && c.l1_node_ignored(name_field\value)
-                name_field: name_field\next
+                name_field := name_field\next
             if: name_field = 0 || name_field\value = 0 || name_field\value\kind != c.LM_P0_NODE_ATOM
                 return: (cast: (int) (c.l1_error(path, source_node, "catch expects a throw name")))
             if: c.l1_ident_is_reserved(name_field\value\as\atom) != 0
                 return: (cast: (int) (c.l1_error(path, name_field\value, "reserved L1 name")))
-            exist: l1_catch_find((cast: (const: @: c.LmP0Text) name_field\value\as\atom), 1)
+            exist := l1_catch_find((cast: (const: @: c.LmP0Text) name_field\value\as\atom), 1)
             if: exist >= 0
                 return: (cast: (int) (c.l1_error(path, source_node, "duplicate catch in the same block")))
             if: l1_throw_intern((cast: (const: @: c.LmP0Text) name_field\value\as\atom)) = 0
                 return: (cast: (int) (c.l1_error(path, name_field\value, "too many throw names")))
-            ca_next_cell[0]: ca_next_cell[0] + 1
-            id: ca_next_cell[0]
+            ca_next_cell[0] := ca_next_cell[0] + 1
+            id := ca_next_cell[0]
             if: l1_catch_push((cast: (const: @: c.LmP0Text) name_field\value\as\atom), id) != 0
                 return: (cast: (int) (c.l1_error(path, source_node, "too many catch pads")))
             ---
         ---
-        field: field\next
+        field := field\next
     return: (cast: (int) (0))
 end: l1_register_catches
 
@@ -888,31 +888,31 @@ fn: l1_record_throws (@: throws_frame c.LmP0Frame; const: (@: fn_name c.LmP0Text
     @: field c.LmP0Field
     int: fn_i
     int: code
-    fn_i: l1_fn_ensure(fn_name)
+    fn_i := l1_fn_ensure(fn_name)
     if: fn_i < 0
         return: (cast: (int) (c.l1_error(path, source_node, "too many throwing functions")))
-    cur_thn_cell[0]: 0
+    cur_thn_cell[0] := 0
     if: throws_frame = 0 || throws_frame\body = 0
         return: (cast: (int) (c.l1_error(path, source_node, "throws expects names")))
-    field: throws_frame\body\first_field
+    field := throws_frame\body\first_field
     while: field != 0
         if: c.l1_node_ignored(field\value) = 0
             if: field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
                 return: (cast: (int) (c.l1_error(path, field\value, "throws lists names, not types")))
             if: c.l1_ident_is_reserved(field\value\as\atom) != 0
                 return: (cast: (int) (c.l1_error(path, field\value, "reserved L1 name")))
-            code: l1_throw_intern((cast: (const: @: c.LmP0Text) field\value\as\atom))
+            code := l1_throw_intern((cast: (const: @: c.LmP0Text) field\value\as\atom))
             if: code = 0
                 return: (cast: (int) (c.l1_error(path, field\value, "too many throw names")))
             if: l1_fn_add_throw(fn_i, code) != 0
                 return: (cast: (int) (1))
             if: cur_thn_cell[0] >= 8
                 return: (cast: (int) (c.l1_error(path, field\value, "too many throw names")))
-            cur_th_array[cur_thn_cell[0]]: code
-            cur_thn_cell[0]: cur_thn_cell[0] + 1
+            cur_th_array[cur_thn_cell[0]] := code
+            cur_thn_cell[0] := cur_thn_cell[0] + 1
             ---
         ---
-        field: field\next
+        field := field\next
     return: (cast: (int) (0))
 end: l1_record_throws
 
@@ -927,9 +927,9 @@ fn: l1_catch_find_code (int: code) int
     if: code <= 0 || code > th_n_cell[0]
         return: (cast: (int) (-1))
     c.strcpy((cast: (@: char) buf_scratch\buffer), th_names_array + (code - 1) * 64)
-    i: ca_n_cell[0]
+    i := ca_n_cell[0]
     while: i > 0
-        i: i - 1
+        i := i - 1
         if: c.strcmp(ca_names_array + i * 64, (cast: (const: @: char) buf_scratch\buffer)) = 0
             return: (cast: (int) (i))
         ---
@@ -952,12 +952,12 @@ fn: l1_frame_is_repeatable (const: (@: frame c.LmP0Frame)) int
         return: (cast: (int) (1))
     if: l1_is_type_name((cast: (const: @: c.LmP0Text) frame\head)) = 0
         return: (cast: (int) (0))
-    field: 0
+    field := 0
     if: frame\body != 0
-        field: frame\body\first_field
+        field := frame\body\first_field
     ---
     while: field != 0 && c.l1_node_ignored(field\value)
-        field: field\next
+        field := field\next
     if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
         return: (cast: (int) (0))
     return: (cast: (int) (1))
@@ -1007,11 +1007,11 @@ fn: l1_validate_external_body (const: (@: body c.LmP0Structure); const: (@: path
     int: saw 0
     if: body = 0
         return: (cast: (int) (c.l1_error(path, 0, "external without fn")))
-    field: body\first_field
+    field := body\first_field
     if: field = 0
         return: (cast: (int) (c.l1_error(path, 0, "external without fn")))
     while: field != 0
-        source_node: field\value
+        source_node := field\value
         if: c.l1_node_ignored(source_node) != 0
             if: l1_validate_implicit_node(source_node, path, 0) != 0
                 return: (cast: (int) (1))
@@ -1023,7 +1023,7 @@ fn: l1_validate_external_body (const: (@: body c.LmP0Structure); const: (@: path
                 return: (cast: (int) (c.l1_error(path, source_node, "unsupported L1 form")))
             ---
             if: source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && (c.l1_text_eq(source_node\as\frame\head, "fn") || c.l1_text_eq(source_node\as\frame\head, "sub"))
-                saw: 1
+                saw := 1
                 if: l1_validate_implicit_structure((cast: (const: @: c.LmP0Structure) source_node\as\frame\body), path, 0) != 0
                     return: (cast: (int) (1))
                 if: source_node\as\frame\trailer != 0 && source_node\as\frame\trailer\body != 0
@@ -1037,7 +1037,7 @@ fn: l1_validate_external_body (const: (@: body c.LmP0Structure); const: (@: path
                 return: (cast: (int) (c.l1_error(path, source_node, "external without fn")))
             ---
         ---
-        field: field\next
+        field := field\next
     if: saw = 0
         return: (cast: (int) (c.l1_error(path, 0, "external without fn")))
     return: (cast: (int) (0))
@@ -1053,32 +1053,32 @@ fn: l1_validate_switch (const: (@: source_node c.LmP0Node); const: (@: path char
     int: saw_default 0
     if: source_node = 0 || source_node\as\frame = 0
         return: (cast: (int) (1))
-    last: c.l1_last_active_field(source_node\as\frame\body)
+    last := c.l1_last_active_field(source_node\as\frame\body)
     if: last = 0 || last\value = 0 || last\value\kind != c.LM_P0_NODE_STRUCTURE
         return: (cast: (int) (c.l1_error(path, source_node, "switch without body")))
-    field: last\value\as\structure\first_field
+    field := last\value\as\structure\first_field
     while: field != 0
-        clause: field\value
+        clause := field\value
         if: c.l1_node_ignored(clause) = 0
             if: clause = 0 || clause\kind != c.LM_P0_NODE_FRAME
                 return: (cast: (int) (c.l1_error(path, clause, "switch body expects case/default frames")))
             if: c.l1_text_eq(clause\as\frame\head, "default")
                 if: saw_default != 0
                     return: (cast: (int) (c.l1_error(path, clause, "switch has duplicate default")))
-                saw_default: 1
+                saw_default := 1
                 if: l1_validate_implicit_structure((cast: (const: @: c.LmP0Structure) clause\as\frame\body), path, 0) != 0
                     return: (cast: (int) (1))
                 ---
             else:
                 if: c.l1_text_eq(clause\as\frame\head, "case") = 0
                     return: (cast: (int) (c.l1_error(path, clause, "switch body expects case/default frames")))
-                clast: c.l1_last_active_field(clause\as\frame\body)
+                clast := c.l1_last_active_field(clause\as\frame\body)
                 if: clast = 0
                     return: (cast: (int) (c.l1_error(path, clause, "case expects an expression")))
                 if: clast\value != 0 && clast\value\kind = c.LM_P0_NODE_STRUCTURE
-                    pre: clause\as\frame\body\first_field
+                    pre := clause\as\frame\body\first_field
                     while: pre != 0 && pre != clast && c.l1_node_ignored(pre\value)
-                        pre: pre\next
+                        pre := pre\next
                     if: pre = 0 || pre = clast
                         return: (cast: (int) (c.l1_error(path, clause, "case expects an expression")))
                     if: l1_validate_implicit_node((cast: (const: @: c.LmP0Node) clast\value), path, 0) != 0
@@ -1091,7 +1091,7 @@ fn: l1_validate_switch (const: (@: source_node c.LmP0Node); const: (@: path char
                 ---
             ---
         ---
-        field: field\next
+        field := field\next
     return: (cast: (int) (c.l1_validate_end_trailer(source_node\as\frame, path, source_node)))
 end: l1_validate_switch
 
@@ -1100,11 +1100,11 @@ fn: l1_validate_implicit_structure (const: (@: body c.LmP0Structure); const: (@:
     @: field c.LmP0Field
     if: body = 0
         return: (cast: (int) (0))
-    field: body\first_field
+    field := body\first_field
     while: field != 0
         if: l1_validate_implicit_node((cast: (const: @: c.LmP0Node) field\value), path, top) != 0
             return: (cast: (int) (1))
-        field: field\next
+        field := field\next
     if: body\trailer != 0 && body\trailer\body != 0
         if: l1_validate_implicit_structure((cast: (const: @: c.LmP0Structure) body\trailer\body), path, 0) != 0
             return: (cast: (int) (1))
@@ -1197,17 +1197,17 @@ fn: l1_imp_push (int: active; const: (@: path char)) int
     size_t: path_length c.strlen(path)
     size_t: maximum ((cast: (size_t) -1) / c.sizeof(c.LmP0Text))
     if: active != 0
-        tab: imp_act_cell[0]
-        n: imp_actn_cell[0]
-        capacity: imp_actcap_cell[0]
+        tab := imp_act_cell[0]
+        n := imp_actn_cell[0]
+        capacity := imp_actcap_cell[0]
     else:
-        tab: imp_done_cell[0]
-        n: imp_donen_cell[0]
-        capacity: imp_donecap_cell[0]
+        tab := imp_done_cell[0]
+        n := imp_donen_cell[0]
+        capacity := imp_donecap_cell[0]
     ---
     if: n < 0 || n = c.INT_MAX || path_length = (cast: (size_t) -1)
         return: (cast: (int) (1))
-    copy: (cast: (@: char) c.malloc(path_length + 1U))
+    copy := (cast: (@: char) c.malloc(path_length + 1U))
     if: copy = 0
         return: (cast: (int) (1))
     c.memcpy(copy, path, path_length + 1U)
@@ -1216,33 +1216,33 @@ fn: l1_imp_push (int: active; const: (@: path char)) int
             c.free(copy)
             return: (cast: (int) (1))
         if: capacity = 0U
-            next: 16U
+            next := 16U
         else:
             if: capacity > maximum / 2U
-                next: maximum
+                next := maximum
             else:
-                next: capacity * 2U
+                next := capacity * 2U
         ---
         if: next > maximum
-            next: maximum
-        grown: (cast: (@: c.LmP0Text) c.realloc((cast: (@: void) tab), next * c.sizeof(c.LmP0Text)))
+            next := maximum
+        grown := (cast: (@: c.LmP0Text) c.realloc((cast: (@: void) tab), next * c.sizeof(c.LmP0Text)))
         if: grown = 0
             c.free(copy)
             return: (cast: (int) (1))
-        tab: grown
-        capacity: next
+        tab := grown
+        capacity := next
     ---
-    entry: tab + n
-    entry\data: copy
-    entry\length: path_length
+    entry := tab + n
+    entry\data := copy
+    entry\length := path_length
     if: active != 0
-        imp_act_cell[0]: tab
-        imp_actn_cell[0]: n + 1
-        imp_actcap_cell[0]: capacity
+        imp_act_cell[0] := tab
+        imp_actn_cell[0] := n + 1
+        imp_actcap_cell[0] := capacity
     else:
-        imp_done_cell[0]: tab
-        imp_donen_cell[0]: n + 1
-        imp_donecap_cell[0]: capacity
+        imp_done_cell[0] := tab
+        imp_donen_cell[0] := n + 1
+        imp_donecap_cell[0] := capacity
     ---
     return: (cast: (int) (0))
 end: l1_imp_push
@@ -1253,8 +1253,8 @@ sub: l1_imp_pop ()
     @: imp_actn_cell int (cast: (@: int) (@ c.l1_imp_actn))
     @: entry c.LmP0Text
     if: imp_actn_cell[0] > 0
-        imp_actn_cell[0]: imp_actn_cell[0] - 1
-        entry: imp_act_cell[0] + imp_actn_cell[0]
+        imp_actn_cell[0] := imp_actn_cell[0] - 1
+        entry := imp_act_cell[0] + imp_actn_cell[0]
         c.free((cast: (@: void) entry\data))
     ---
 end: l1_imp_pop
@@ -1271,16 +1271,16 @@ sub: l1_imp_reset ()
     while: imp_actn_cell[0] > 0
         l1_imp_pop()
     while: imp_donen_cell[0] > 0
-        imp_donen_cell[0]: imp_donen_cell[0] - 1
-        entry: imp_done_cell[0] + imp_donen_cell[0]
+        imp_donen_cell[0] := imp_donen_cell[0] - 1
+        entry := imp_done_cell[0] + imp_donen_cell[0]
         c.free((cast: (@: void) entry\data))
     ---
     c.free(imp_act_cell[0])
     c.free(imp_done_cell[0])
-    imp_act_cell[0]: 0
-    imp_done_cell[0]: 0
-    imp_actcap_cell[0]: 0U
-    imp_donecap_cell[0]: 0U
+    imp_act_cell[0] := 0
+    imp_done_cell[0] := 0
+    imp_actcap_cell[0] := 0U
+    imp_donecap_cell[0] := 0U
 end: l1_imp_reset
 
 # Original: l1src/l1trans.lm1:5177
@@ -1293,19 +1293,19 @@ fn: l1_hdr_mark_unit_emitted (const: (@: root c.LmP0Node); const: (@: path char)
     c.LmL1TextScratch64: nbuf_scratch
     if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE
         return: (cast: (int) (0))
-    field: root\as\structure\first_field
+    field := root\as\structure\first_field
     while: field != 0
-        source_node: field\value
+        source_node := field\value
         if: c.l1_node_ignored(source_node) = 0 && source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME
-            name: 0
+            name := 0
             if: c.l1_text_eq(source_node\as\frame\head, "struct") || c.l1_text_eq(source_node\as\frame\head, "enum") || c.l1_text_eq(source_node\as\frame\head, "fnptr")
-                name: c.l1_hdr_frame_name(source_node\as\frame)
+                name := c.l1_hdr_frame_name(source_node\as\frame)
             ---
             if: c.l1_text_eq(source_node\as\frame\head, "type")
-                name: c.l1_hdr_frame_name(source_node\as\frame)
+                name := c.l1_hdr_frame_name(source_node\as\frame)
             ---
             if: c.l1_text_eq(source_node\as\frame\head, "foreign")
-                name: c.l1_hdr_frame_name(source_node\as\frame)
+                name := c.l1_hdr_frame_name(source_node\as\frame)
             ---
             if: name != 0
                 if: c.l1_ident_to_buf((cast: (@: char) nbuf_scratch\buffer), 64U, name) != 0
@@ -1315,7 +1315,7 @@ fn: l1_hdr_mark_unit_emitted (const: (@: root c.LmP0Node); const: (@: path char)
                 ---
             ---
         ---
-        field: field\next
+        field := field\next
     return: (cast: (int) (0))
 end: l1_hdr_mark_unit_emitted
 
@@ -1325,10 +1325,10 @@ fn: l1_hdr_type_reset () void
     @: hdr_emittedn_cell int (cast: (@: int) (@ c.l1_hdr_emittedn))
     @: hdr_pendingn_cell int (cast: (@: int) (@ c.l1_hdr_pendingn))
     @: hdr_emitting_cell int (cast: (@: int) (@ c.l1_hdr_emitting))
-    hdr_typen_cell[0]: 0
-    hdr_emittedn_cell[0]: 0
-    hdr_pendingn_cell[0]: 0
-    hdr_emitting_cell[0]: 0
+    hdr_typen_cell[0] := 0
+    hdr_emittedn_cell[0] := 0
+    hdr_pendingn_cell[0] := 0
+    hdr_emitting_cell[0] := 0
     return
 end: l1_hdr_type_reset
 
@@ -1340,7 +1340,7 @@ fn: l1_hdr_type_has (const: (@: text c.LmP0Text)) int
     c.LmL1TextScratch64: buf_scratch
     int: i 0
     size_t: off 0U
-    hdr_types_array: hdr_types_cell[0]
+    hdr_types_array := hdr_types_cell[0]
     if: text = 0 || text\data = 0 || text\length = 0U
         return: (cast: (int) (0))
     if: c.l1_ident_to_buf((cast: (@: char) buf_scratch\buffer), 64U, text) != 0
@@ -1348,8 +1348,8 @@ fn: l1_hdr_type_has (const: (@: text c.LmP0Text)) int
     while: i < hdr_typen_cell[0]
         if: c.strcmp(hdr_types_array + off, (cast: (const: @: char) buf_scratch\buffer)) = 0
             return: (cast: (int) (1))
-        off: off + c.strlen(hdr_types_array + off) + 1U
-        i: i + 1
+        off := off + c.strlen(hdr_types_array + off) + 1U
+        i := i + 1
     return: (cast: (int) (0))
 end: l1_hdr_type_has
 
@@ -1362,15 +1362,15 @@ fn: l1_hdr_kind_of_cstr (const: (@: name char)) int
     @: hdr_kinds_array char 0
     int: i 0
     size_t: off 0U
-    hdr_types_array: hdr_types_cell[0]
-    hdr_kinds_array: hdr_kinds_cell[0]
+    hdr_types_array := hdr_types_cell[0]
+    hdr_kinds_array := hdr_kinds_cell[0]
     if: name = 0
         return: (cast: (int) (0))
     while: i < hdr_typen_cell[0]
         if: c.strcmp(hdr_types_array + off, name) = 0
             return: (cast: (int) (hdr_kinds_array[i]))
-        off: off + c.strlen(hdr_types_array + off) + 1U
-        i: i + 1
+        off := off + c.strlen(hdr_types_array + off) + 1U
+        i := i + 1
     return: (cast: (int) (0))
 end: l1_hdr_kind_of_cstr
 
@@ -1390,54 +1390,54 @@ fn: l1_hdr_type_add (const: (@: text c.LmP0Text); const: (@: path char); const: 
     size_t: next 0U
     int: i 0
     int: prev 0
-    hdr_types_array: hdr_types_cell[0]
-    hdr_kinds_array: hdr_kinds_cell[0]
+    hdr_types_array := hdr_types_cell[0]
+    hdr_kinds_array := hdr_kinds_cell[0]
     if: c.l1_ident_to_buf((cast: (@: char) buf_scratch\buffer), 64U, text) != 0
         return: (cast: (int) (c.l1_error(path, source_node, "type name too long")))
     # Completing an incomplete tag alias: `type: Foo struct Foo` (kind 97) may be
     # followed by `struct: Foo` (kind 115) in the same header or a predef'd one —
     # the C shape is typedef-then-struct-body. Any other duplicate still fails.
     if: l1_hdr_type_has(text) != 0
-        prev: l1_hdr_kind_of_cstr((cast: (const: @: char) buf_scratch\buffer))
+        prev := l1_hdr_kind_of_cstr((cast: (const: @: char) buf_scratch\buffer))
         if: kind = 115 && prev = 97
             return: (cast: (int) (0))
         ---
         return: (cast: (int) (c.l1_error(path, source_node, "duplicate type name in header unit")))
     while: i < hdr_typen_cell[0]
-        used: used + c.strlen(hdr_types_array + used) + 1U
-        i: i + 1
-    n: c.strlen((cast: (const: @: char) buf_scratch\buffer))
+        used := used + c.strlen(hdr_types_array + used) + 1U
+        i := i + 1
+    n := c.strlen((cast: (const: @: char) buf_scratch\buffer))
     # The header-type table grows with the closure of the unit (no fixed cliff: the table of 128 names / 8192 bytes,
     # raised once for FABLE-134, refused the first program that predefs the kernel's headers and the parser's together,
     # slice 309). Both arrays are heap storage of the translator's state cells; a unit resets the count, not the room.
     if: used + n + 1U > hdr_typescap_cell[0]
-        next: hdr_typescap_cell[0] * 2U
+        next := hdr_typescap_cell[0] * 2U
         if: next < 8192U
-            next: 8192U
+            next := 8192U
         while: next < used + n + 1U
-            next: next * 2U
+            next := next * 2U
         ---
-        grown: (cast: (@: char) c.realloc((cast: (@: void) hdr_types_array), next))
+        grown := (cast: (@: char) c.realloc((cast: (@: void) hdr_types_array), next))
         if: grown = 0
             return: (cast: (int) (c.l1_error(path, source_node, "out of memory for header type names")))
-        hdr_types_array: grown
-        hdr_types_cell[0]: grown
-        hdr_typescap_cell[0]: next
+        hdr_types_array := grown
+        hdr_types_cell[0] := grown
+        hdr_typescap_cell[0] := next
     ---
     if: (cast: (size_t) hdr_typen_cell[0]) + 1U > hdr_kindscap_cell[0]
-        next: hdr_kindscap_cell[0] * 2U
+        next := hdr_kindscap_cell[0] * 2U
         if: next < 128U
-            next: 128U
-        grown: (cast: (@: char) c.realloc((cast: (@: void) hdr_kinds_array), next))
+            next := 128U
+        grown := (cast: (@: char) c.realloc((cast: (@: void) hdr_kinds_array), next))
         if: grown = 0
             return: (cast: (int) (c.l1_error(path, source_node, "out of memory for header type names")))
-        hdr_kinds_array: grown
-        hdr_kinds_cell[0]: grown
-        hdr_kindscap_cell[0]: next
+        hdr_kinds_array := grown
+        hdr_kinds_cell[0] := grown
+        hdr_kindscap_cell[0] := next
     ---
     c.memcpy(hdr_types_array + used, (cast: (const: @: void) buf_scratch\buffer), n + 1U)
-    hdr_kinds_array[hdr_typen_cell[0]]: (cast: (char) kind)
-    hdr_typen_cell[0]: hdr_typen_cell[0] + 1
+    hdr_kinds_array[hdr_typen_cell[0]] := (cast: (char) kind)
+    hdr_typen_cell[0] := hdr_typen_cell[0] + 1
     return: (cast: (int) (0))
 end: l1_hdr_type_add
 
@@ -1448,16 +1448,16 @@ fn: l1_hdr_field_byval_name (const: (@: source_node c.LmP0Node); @: buf char; si
     const: (@: head c.LmP0Text)
     if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME || buf = 0
         return: (cast: (int) (0))
-    frame: source_node\as\frame
-    head: frame\head
+    frame := source_node\as\frame
+    head := frame\head
     if: c.l1_pointer_depth(head) != 0U
         return: (cast: (int) (0))
     if: c.l1_text_eq(head, "const")
         if: frame\body = 0 || frame\body\first_field = 0
             return: (cast: (int) (0))
-        field: frame\body\first_field
+        field := frame\body\first_field
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         if: field = 0 || field\value = 0
             return: (cast: (int) (0))
         return: (cast: (int) (l1_hdr_field_byval_name((cast: (const: @: c.LmP0Node) field\value), buf, cap)))
@@ -1481,31 +1481,31 @@ fn: l1_emit_hdr_fnptr (@: out c.FILE; const: (@: frame c.LmP0Frame); const: (@: 
     const: (@: name c.LmP0Text)
     if: frame = 0 || frame\body = 0
         return: (cast: (int) (c.l1_error(path, source_node, "fnptr without body")))
-    field: frame\body\first_field
-    name_node: 0
-    params_node: 0
-    ret_node: 0
+    field := frame\body\first_field
+    name_node := 0
+    params_node := 0
+    ret_node := 0
     while: field != 0
         if: c.l1_node_ignored(field\value) = 0
             if: name_node = 0
-                name_node: field\value
+                name_node := field\value
             else:
                 if: params_node = 0
-                    params_node: field\value
+                    params_node := field\value
                 else:
                     if: ret_node = 0
-                        ret_node: field\value
+                        ret_node := field\value
                     else:
                         return: (cast: (int) (c.l1_error(path, field\value, "fnptr has extra fields")))
         ---
-        field: field\next
+        field := field\next
     if: name_node = 0 || name_node\kind != c.LM_P0_NODE_ATOM
         return: (cast: (int) (c.l1_error(path, source_node, "fnptr missing name")))
     if: params_node = 0
         return: (cast: (int) (c.l1_error(path, source_node, "fnptr missing parameter list")))
     if: ret_node = 0
         return: (cast: (int) (c.l1_error(path, source_node, "fnptr missing return type")))
-    name: name_node\as\atom
+    name := name_node\as\atom
     if: c.l1_write_cstr(out, "typedef ") != 0
         return: (cast: (int) (1))
     if: l1_emit_type_token(out, ret_node, path) != 0
@@ -1549,15 +1549,15 @@ fn: l1_hdr_field_node_deps_ready (const: (@: source_node c.LmP0Node)) int
     if: source_node\kind != c.LM_P0_NODE_FRAME
         return: (cast: (int) (1))
     if: c.l1_text_eq(source_node\as\frame\head, "immutable")
-        field: 0
+        field := 0
         if: source_node\as\frame\body != 0
-            field: source_node\as\frame\body\first_field
+            field := source_node\as\frame\body\first_field
         ---
         while: field != 0
             if: l1_hdr_field_node_deps_ready((cast: (const: @: c.LmP0Node) field\value)) = 0
                 return: (cast: (int) (0))
             ---
-            field: field\next
+            field := field\next
         return: (cast: (int) (1))
     if: l1_hdr_field_byval_name(source_node, (cast: (@: char) dep_scratch\buffer), 64U) != 0
         if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
@@ -1577,15 +1577,15 @@ fn: l1_hdr_field_first_unready (const: (@: source_node c.LmP0Node); @: dep char;
     if: source_node\kind != c.LM_P0_NODE_FRAME
         return: (cast: (int) (0))
     if: c.l1_text_eq(source_node\as\frame\head, "immutable")
-        field: 0
+        field := 0
         if: source_node\as\frame\body != 0
-            field: source_node\as\frame\body\first_field
+            field := source_node\as\frame\body\first_field
         ---
         while: field != 0
             if: l1_hdr_field_first_unready((cast: (const: @: c.LmP0Node) field\value), dep, cap) != 0
                 return: (cast: (int) (1))
             ---
-            field: field\next
+            field := field\next
         return: (cast: (int) (0))
     if: l1_hdr_field_byval_name(source_node, dep, cap) != 0
         if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], dep) = 0
@@ -1599,15 +1599,15 @@ end: l1_hdr_field_first_unready
 fn: l1_hdr_struct_deps_ready (const: (@: frame c.LmP0Frame); const: (@: path char)) int
     @: fields c.LmP0Structure
     @: field c.LmP0Field
-    fields: c.l1_hdr_fields_structure(frame)
+    fields := c.l1_hdr_fields_structure(frame)
     if: fields = 0
         return: (cast: (int) (1))
-    field: fields\first_field
+    field := fields\first_field
     while: field != 0
         if: l1_hdr_field_node_deps_ready((cast: (const: @: c.LmP0Node) field\value)) = 0
             return: (cast: (int) (0))
         ---
-        field: field\next
+        field := field\next
     return: (cast: (int) (1))
 end: l1_hdr_struct_deps_ready
 
@@ -1623,7 +1623,7 @@ fn: l1_hdr_fnptr_deps_ready (const: (@: frame c.LmP0Frame); const: (@: path char
     if: c.l1_hdr_fnptr_parts(frame, @ name_node, @ params_node, @ ret_node) != 0
         return: (cast: (int) (0))
     if: params_node\kind = c.LM_P0_NODE_STRUCTURE
-        field: params_node\as\structure\first_field
+        field := params_node\as\structure\first_field
         while: field != 0
             if: c.l1_node_ignored(field\value) = 0
                 if: l1_hdr_field_byval_name((cast: (const: @: c.LmP0Node) field\value), (cast: (@: char) dep_scratch\buffer), 64U) != 0
@@ -1632,7 +1632,7 @@ fn: l1_hdr_fnptr_deps_ready (const: (@: frame c.LmP0Frame); const: (@: path char
                     ---
                 ---
             ---
-            field: field\next
+            field := field\next
         ---
     ---
     if: l1_hdr_type_node_byval_name(ret_node, (cast: (@: char) dep_scratch\buffer), 64U) != 0
@@ -1647,8 +1647,8 @@ end: l1_hdr_fnptr_deps_ready
 fn: l1_hdr_cycle_msg (@: msg char; size_t: cap; const: (@: a char); const: (@: dep char)) void
     int: ka 0
     int: kd 0
-    ka: l1_hdr_kind_of_cstr(a)
-    kd: l1_hdr_kind_of_cstr(dep)
+    ka := l1_hdr_kind_of_cstr(a)
+    kd := l1_hdr_kind_of_cstr(dep)
     if: ka = 102 || kd = 102
         c.snprintf(msg, cap, "by-value cycle between %s %s and %s %s; make one a pointer", (cast: (@: char) c.l1_hdr_kind_label(ka)), a, (cast: (@: char) c.l1_hdr_kind_label(kd)), dep)
     else:
@@ -1675,35 +1675,35 @@ fn: l1_hdr_diagnose_cycle (const: (@: root c.LmP0Node); const: (@: path char)) i
     @: fields c.LmP0Structure
     if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE
         return: (cast: (int) (c.l1_error(path, root, "by-value cycle between structs; make one a pointer")))
-    field: root\as\structure\first_field
+    field := root\as\structure\first_field
     while: field != 0
-        source_node: field\value
+        source_node := field\value
         if: c.l1_node_ignored(source_node) = 0 && source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && c.l1_text_eq(source_node\as\frame\head, "struct")
-            frame: source_node\as\frame
-            name: c.l1_hdr_frame_name(frame)
+            frame := source_node\as\frame
+            name := c.l1_hdr_frame_name(frame)
             if: name != 0 && c.l1_ident_to_buf((cast: (@: char) a_scratch\buffer), 64U, name) = 0
                 if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) a_scratch\buffer)) = 0
-                    fields: c.l1_hdr_fields_structure(frame)
+                    fields := c.l1_hdr_fields_structure(frame)
                     if: fields != 0
-                        f2: fields\first_field
+                        f2 := fields\first_field
                         while: f2 != 0
                             if: l1_hdr_field_first_unready((cast: (const: @: c.LmP0Node) f2\value), (cast: (@: char) dep_scratch\buffer), 64U) != 0
                                 l1_hdr_cycle_msg((cast: (@: char) msg_scratch\buffer), 256U, (cast: (const: @: char) a_scratch\buffer), (cast: (const: @: char) dep_scratch\buffer))
                                 return: (cast: (int) (c.l1_error(path, source_node, (cast: (const: @: char) msg_scratch\buffer))))
                             ---
-                            f2: f2\next
+                            f2 := f2\next
                         ---
                     ---
                 ---
             ---
         ---
         if: c.l1_node_ignored(source_node) = 0 && source_node != 0 && source_node\kind = c.LM_P0_NODE_FRAME && c.l1_text_eq(source_node\as\frame\head, "fnptr")
-            frame: source_node\as\frame
+            frame := source_node\as\frame
             if: c.l1_hdr_fnptr_parts(frame, @ name_node, @ params_node, @ ret_node) = 0
                 if: name_node\kind = c.LM_P0_NODE_ATOM && c.l1_ident_to_buf((cast: (@: char) a_scratch\buffer), 64U, name_node\as\atom) = 0
                     if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) a_scratch\buffer)) = 0
                         if: params_node\kind = c.LM_P0_NODE_STRUCTURE
-                            f2: params_node\as\structure\first_field
+                            f2 := params_node\as\structure\first_field
                             while: f2 != 0
                                 if: c.l1_node_ignored(f2\value) = 0 && l1_hdr_field_byval_name((cast: (const: @: c.LmP0Node) f2\value), (cast: (@: char) dep_scratch\buffer), 64U) != 0
                                     if: c.l1_hdr_name_list_has(hdr_emitted_cell[0], hdr_emittedn_cell[0], (cast: (const: @: char) dep_scratch\buffer)) = 0
@@ -1711,7 +1711,7 @@ fn: l1_hdr_diagnose_cycle (const: (@: root c.LmP0Node); const: (@: path char)) i
                                         return: (cast: (int) (c.l1_error(path, source_node, (cast: (const: @: char) msg_scratch\buffer))))
                                     ---
                                 ---
-                                f2: f2\next
+                                f2 := f2\next
                             ---
                         ---
                         if: l1_hdr_type_node_byval_name(ret_node, (cast: (@: char) dep_scratch\buffer), 64U) != 0
@@ -1724,7 +1724,7 @@ fn: l1_hdr_diagnose_cycle (const: (@: root c.LmP0Node); const: (@: path char)) i
                 ---
             ---
         ---
-        field: field\next
+        field := field\next
     c.strcpy((cast: (@: char) msg_scratch\buffer), "by-value cycle between structs; make one a pointer")
     return: (cast: (int) (c.l1_error(path, root, (cast: (const: @: char) msg_scratch\buffer))))
 end: l1_hdr_diagnose_cycle
@@ -1740,13 +1740,13 @@ fn: l1_hdr_check_item (const: (@: source_node c.LmP0Node); const: (@: path char)
         return: (cast: (int) (0))
     if: source_node = 0 || source_node\kind != c.LM_P0_NODE_FRAME
         return: (cast: (int) (c.l1_error(path, source_node, "executable body")))
-    frame: source_node\as\frame
+    frame := source_node\as\frame
     if: c.l1_text_eq(frame\head, "union")
         return: (cast: (int) (c.l1_error(path, source_node, "union")))
     if: c.l1_head_is(frame\head, "define")
         return: (cast: (int) (0))
     if: c.l1_text_eq(frame\head, "struct") || c.l1_text_eq(frame\head, "enum") || c.l1_text_eq(frame\head, "fnptr")
-        name: c.l1_hdr_frame_name(frame)
+        name := c.l1_hdr_frame_name(frame)
         if: name = 0
             return: (cast: (int) (c.l1_error(path, source_node, "type missing name")))
         if: c.l1_text_eq(frame\head, "struct")
@@ -1757,23 +1757,23 @@ fn: l1_hdr_check_item (const: (@: source_node c.LmP0Node); const: (@: path char)
         ---
         return: (cast: (int) (l1_hdr_type_add(name, path, source_node, 102)))
     if: c.l1_text_eq(frame\head, "foreign")
-        name: c.l1_hdr_frame_name(frame)
+        name := c.l1_hdr_frame_name(frame)
         if: name = 0
             return: (cast: (int) (c.l1_error(path, source_node, "foreign type missing name")))
         return: (cast: (int) (l1_hdr_type_add(name, path, source_node, 103)))
     if: c.l1_text_eq(frame\head, "extern")
         return: (cast: (int) (0))
     if: c.l1_text_eq(frame\head, "thread_local")
-        field: 0
+        field := 0
         if: frame\body != 0
-            field: frame\body\first_field
+            field := frame\body\first_field
         ---
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         ---
         if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_FRAME
             return: (cast: (int) (c.l1_error(path, source_node, "thread_local expects declarations")))
-        ch: field\value\as\frame\head
+        ch := field\value\as\frame\head
         if: c.l1_text_eq(ch, "const") || c.l1_pointer_depth(ch) != 0U || l1_is_type_name(ch) || c.l1_text_eq(ch, "foreign") || c.l1_text_eq(ch, "[]") || c.l1_text_starts(ch, "[]")
             return: (cast: (int) (0))
         ---
@@ -1781,20 +1781,20 @@ fn: l1_hdr_check_item (const: (@: source_node c.LmP0Node); const: (@: path char)
     if: c.l1_text_eq(frame\head, "include") || c.l1_text_eq(frame\head, "prototype") || c.l1_head_is(frame\head, "ifndef-default")
         return: (cast: (int) (0))
     if: c.l1_text_eq(frame\head, "type")
-        field: 0
+        field := 0
         if: frame\body != 0
-            field: frame\body\first_field
+            field := frame\body\first_field
         ---
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
             return: (cast: (int) (c.l1_error(path, source_node, "type alias missing name")))
-        name: field\value\as\atom
+        name := field\value\as\atom
         if: c.l1_hdr_validate_end_name(frame, name, path, source_node) != 0
             return: (cast: (int) (1))
-        field: field\next
+        field := field\next
         while: field != 0 && c.l1_node_ignored(field\value)
-            field: field\next
+            field := field\next
         if: field = 0
             return: (cast: (int) (c.l1_error(path, source_node, "type alias missing type")))
         while: field != 0
@@ -1809,10 +1809,10 @@ fn: l1_hdr_check_item (const: (@: source_node c.LmP0Node); const: (@: path char)
                 # is introducing right now -- an unknown atom is exactly what
                 # `typedef struct X X;` declares.
                 if: alias_after_tag != 0
-                    alias_after_tag: 0
+                    alias_after_tag := 0
                 else:
                     if: c.l1_text_eq(field\value\as\atom, "enum") != 0 || c.l1_text_eq(field\value\as\atom, "struct") != 0 || c.l1_text_eq(field\value\as\atom, "union") != 0
-                        alias_after_tag: 1
+                        alias_after_tag := 1
                     else:
                         if: l1_is_type_name((cast: (const: @: c.LmP0Text) field\value\as\atom)) = 0
                             return: (cast: (int) (c.l1_error(path, field\value, "type alias expects type name atoms")))
@@ -1820,19 +1820,19 @@ fn: l1_hdr_check_item (const: (@: source_node c.LmP0Node); const: (@: path char)
                     ---
                 ---
             ---
-            field: field\next
+            field := field\next
         ---
         return: (cast: (int) (l1_hdr_type_add(name, path, source_node, 97)))
     if: c.l1_text_eq(frame\head, "fn") || c.l1_text_eq(frame\head, "sub")
-        field: 0
+        field := 0
         if: frame\body != 0
-            field: frame\body\first_field
+            field := frame\body\first_field
         ---
         while: field != 0
             if: c.l1_node_ignored(field\value) = 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_STRUCTURE
                 return: (cast: (int) (c.l1_error(path, source_node, "executable body")))
             ---
-            field: field\next
+            field := field\next
         return: (cast: (int) (0))
     if: c.l1_text_eq(frame\head, "if") || c.l1_text_eq(frame\head, "while") || c.l1_text_eq(frame\head, "for") || c.l1_text_eq(frame\head, "switch") || c.l1_text_eq(frame\head, "goto") || c.l1_text_eq(frame\head, "throw") || c.l1_text_eq(frame\head, "return")
         return: (cast: (int) (c.l1_error(path, source_node, "executable body")))

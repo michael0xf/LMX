@@ -50,14 +50,14 @@ fn: uc_hex6 (@: data char; size_t: first) unsigned
     unsigned: byte 0U
     size_t: at 0U
     while: at < 6U
-        byte: (cast: (unsigned) data[first + at]) & 255U
+        byte := (cast: (unsigned) data[first + at]) & 255U
         if: byte <= 57U
-            byte: byte - 48U
+            byte := byte - 48U
         else:
-            byte: byte - 55U
+            byte := byte - 55U
         ---
-        value: 16U * value + byte
-        at: at + 1U
+        value := 16U * value + byte
+        at := at + 1U
     ---
     return: value
 end: uc_hex6
@@ -67,13 +67,13 @@ fn: uc_in_ranges (unsigned: point; @: records char; size_t: count) int
     unsigned: low 0U
     unsigned: high 0U
     while: at < count
-        low: uc_hex6(records, 12U * at)
+        low := uc_hex6(records, 12U * at)
         if: point < low
             return: 0
-        high: uc_hex6(records, 12U * at + 6U)
+        high := uc_hex6(records, 12U * at + 6U)
         if: point <= high
             return: 1
-        at: at + 1U
+        at := at + 1U
     ---
     return: 0
 end: uc_in_ranges
@@ -95,17 +95,17 @@ fn: uc_simple_lower (unsigned: point) unsigned
     unsigned: high 0U
     unsigned: step 0U
     while: at < 187U
-        low: uc_hex6(records, 19U * at)
+        low := uc_hex6(records, 19U * at)
         if: point < low
             return: point
-        high: uc_hex6(records, 19U * at + 6U)
+        high := uc_hex6(records, 19U * at + 6U)
         if: point <= high
-            step: ((cast: (unsigned) records[19U * at + 12U]) & 255U) - 48U
+            step := ((cast: (unsigned) records[19U * at + 12U]) & 255U) - 48U
             if: (point - low) % step = 0U
                 return: uc_hex6(records, 19U * at + 13U) + point - low
             return: point
         ---
-        at: at + 1U
+        at := at + 1U
     ---
     return: point
 end: uc_simple_lower
@@ -120,30 +120,30 @@ fn: uc_final_sigma (@: data char; size_t: count; size_t: first; size_t: after) i
     unsigned: byte 0U
     int: preceding_cased 0
     while: pos > 0U
-        before: pos - 1U
+        before := pos - 1U
         while: before > 0U
-            byte: (cast: (unsigned) data[before]) & 255U
+            byte := (cast: (unsigned) data[before]) & 255U
             if: (byte & 192U) != 128U
                 break
-            before: before - 1U
+            before := before - 1U
         ---
-        width: dt_point(data, count, before, @ point)
+        width := dt_point(data, count, before, @ point)
         if: width = 0U || before + width != pos
             return: -1
-        pos: before
+        pos := before
         if: uc_ignorable(point) != 0
             continue
-        preceding_cased: uc_cased(point)
+        preceding_cased := uc_cased(point)
         break
     ---
     if: preceding_cased = 0
         return: 0
-    pos: after
+    pos := after
     while: pos < count
-        width: dt_point(data, count, pos, @ point)
+        width := dt_point(data, count, pos, @ point)
         if: width = 0U
             return: -1
-        pos: pos + width
+        pos := pos + width
         if: uc_ignorable(point) != 0
             continue
         if: uc_cased(point) != 0
@@ -161,29 +161,29 @@ fn: uc_lower_next (@: data char; size_t: count; @: position size_t; @: pending u
     unsigned: point 0U
     int: final_sigma 0
     if: pending[0] != 0U
-        out[0]: pending[0]
-        pending[0]: 0U
+        out[0] := pending[0]
+        pending[0] := 0U
         return: 1
     if: first >= count
         return: 0
-    width: dt_point(data, count, first, @ point)
+    width := dt_point(data, count, first, @ point)
     if: width = 0U
         return: -1
-    position[0]: first + width
+    position[0] := first + width
     if: point = 304U
-        out[0]: 105U
-        pending[0]: 775U
+        out[0] := 105U
+        pending[0] := 775U
         return: 1
     if: point = 931U
-        final_sigma: uc_final_sigma(data, count, first, first + width)
+        final_sigma := uc_final_sigma(data, count, first, first + width)
         if: final_sigma < 0
             return: -1
-        out[0]: 963U
+        out[0] := 963U
         if: final_sigma != 0
-            out[0]: 962U
+            out[0] := 962U
         return: 1
     ---
-    out[0]: uc_simple_lower(point)
+    out[0] := uc_simple_lower(point)
     return: 1
 end: uc_lower_next
 
@@ -206,37 +206,37 @@ fn: uc_lower_equal (@: left char; size_t: left_count; @: right char; size_t: rig
         return: 1
     while: at < left_count
         if: ((cast: (unsigned) left[at]) & 255U) >= 128U
-            ascii: 0
+            ascii := 0
             break
-        at: at + 1U
+        at := at + 1U
     ---
-    at: 0U
+    at := 0U
     while: at < right_count && ascii != 0
         if: ((cast: (unsigned) right[at]) & 255U) >= 128U
-            ascii: 0
+            ascii := 0
             break
-        at: at + 1U
+        at := at + 1U
     ---
     if: ascii != 0
         if: left_count != right_count
             return: 0
-        at: 0U
+        at := 0U
         while: at < left_count
-            a: (cast: (unsigned) left[at]) & 255U
-            b: (cast: (unsigned) right[at]) & 255U
+            a := (cast: (unsigned) left[at]) & 255U
+            b := (cast: (unsigned) right[at]) & 255U
             if: a >= 65U && a <= 90U
-                a: a + 32U
+                a := a + 32U
             if: b >= 65U && b <= 90U
-                b: b + 32U
+                b := b + 32U
             if: a != b
                 return: 0
-            at: at + 1U
+            at := at + 1U
         ---
         return: 1
     ---
     while: 1
-        lstatus: uc_lower_next(left, left_count, @ lp, @ lqueue, @ a)
-        rstatus: uc_lower_next(right, right_count, @ rp, @ rqueue, @ b)
+        lstatus := uc_lower_next(left, left_count, @ lp, @ lqueue, @ a)
+        rstatus := uc_lower_next(right, right_count, @ rp, @ rqueue, @ b)
         if: lstatus < 0 || rstatus < 0
             return: -1
         if: lstatus = 0 || rstatus = 0

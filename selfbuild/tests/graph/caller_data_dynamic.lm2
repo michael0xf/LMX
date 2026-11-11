@@ -1,0 +1,12 @@
+# A Structure of the caller's data binds dynamically before the lexical levels, as a number does (plan M11 5b; R20,
+# item 4): inner, written at the root, reads the Point of outer's data, not the Point of the root.
+Point: a b
+fn: inner () int
+    return: length(Point)
+end: inner
+fn: outer () int (
+    Point: a b c
+)
+    return: inner()
+end: outer
+int: seen outer()

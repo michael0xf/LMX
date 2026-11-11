@@ -1,0 +1,28 @@
+# The arguments of the receivers call and fncall are named and are given by position or by name through `:=` (the
+# author 2026-11-11, LMX_blog/2026-11-11.md#structure-call-by-name; R22, item 4; plan M11 5b): one binder for every
+# receiver, at the root and in a callable's code; the operands are evaluated in the order they are written.
+Args:
+    int: a 5
+end: Args
+Vars:
+    int: x 10
+end: Vars
+Bump:
+    x := x + 1
+end: Bump
+Read:
+    return: x
+end: Read
+Add:
+    return: x + a
+end: Add
+call(data := Vars; code := Bump)
+call(code := Bump; data := Vars)
+int: named fncall(data := Vars; return := int; code := Read)
+int: mixed fncall(Vars; code := Read; return := int)
+int: with_args fncall(args := Args; data := Vars; return := int; code := Add)
+fn: inside () int
+    call(code := Bump; data := Vars)
+    return: fncall(return := int; code := Read; data := Vars)
+end: inside
+int: in_method inside()

@@ -1,0 +1,23 @@
+# A record whose head is a reference place to an ordinary Structure launches that Structure by the same two forms (R22,
+# item 2; plan M11 5b): a record on a place head is never a declaration, so the root executes it now, as a callable's
+# code does -- `p()` runs Model over itself, `q(D)` and `q(data := D)` run Add over D.
+Model:
+    int: v 1
+    v := v + 1
+end: Model
+Add:
+    v := v + 10
+end: Add
+D:
+    int: v 0
+end: D
+@: p Model
+@: q Add
+p()
+q(D)
+fn: f () int
+    p()
+    q(data := D)
+    return: Model\v * 100 + D\v
+end: f
+int: seen f()

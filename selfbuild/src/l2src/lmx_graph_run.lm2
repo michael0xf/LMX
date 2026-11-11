@@ -49,14 +49,15 @@ fn: lmx_graph_work_row (@: frame c.LmxGraphFrame; @: name char) @: c.LmxGraphWor
 end: lmx_graph_work_row
 
 fn: lmx_graph_work_load (@: g c.LmxGraph; @: row c.LmxGraphWork) int
-    if: row = 0
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    if: row = 0 || state = 0
         return: 3
     if: row\slot = (cast: (size_t) -1)
         return: 0
     if: (row\loaded & 1) = 0
         # A computed declaration of data not executed yet (lmx_graph_data_cell): its place has no value, and the read
         # is refused, as that of a formal without an input (the author 2026-11-11, R12; plan M11 5a, B6) -- 5.
-        if: c.lmx_graph_kind(g, row\cell) = 4
+        if: c.lmx_graph_kind(g, row\cell) = 4 && c.lmx_graph_name_of(g, row\cell) = state\w_int
             return: 5
         if: c.lmx_graph_value_int(g, row\cell, @ row\number) != 0
             return: 4
@@ -109,8 +110,10 @@ end: lmx_graph_data_twice
 # Capture a directly consumed free input at entry. An int gets its own argument cell; a Structure/reference keeps
 # its language reference value. The row lives only in this activation and does not become a field of data.
 fn: lmx_graph_work_capture (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name char) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: args c.Lmx 0
     @: value void 0
+    @: head char 0
     @: rows c.LmxGraphWork 0
     @: row c.LmxGraphWork 0
     size_t: capacity 0U
@@ -120,7 +123,7 @@ fn: lmx_graph_work_capture (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
     size_t: slot 0U
     # The formals are those of this launch (frame\args): a callable's own args part, or the Structure a receiver gave.
     args := (cast: (@: c.Lmx) frame\args)
-    if: name = 0 || (args != 0 && c.lmx_graph_formal(g, args, name) < c.lmx_graph_count(args))
+    if: state = 0 || name = 0 || (args != 0 && c.lmx_graph_formal(g, args, name) < c.lmx_graph_count(args))
         return: 0
     row := lmx_graph_work_row(frame, name)
     if: row != 0
@@ -130,12 +133,17 @@ fn: lmx_graph_work_capture (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
     # A launch over data it was given admits only directly used data fields, independent of their physical order: a name
     # the data has is its place, whatever formals the launch was given -- for an ordinary Structure and for a callable
     # launched over data it was given alike (plan M11 5a, the executor's reading B4: the code uses the names of data
-    # before a free input). A callable over its own data keeps the places of that data.
-    if: frame\own = 0
-        slot := lmx_graph_data_slot(g, (cast: (@: c.Lmx) frame\data), name)
-        if: slot < c.lmx_graph_count(frame\data)
+    # before a free input). A callable over its own data keeps the places of that data. A Structure of the data -- a
+    # named Lmx that declares no place -- gets no row: the code finds it by reference in the registry of the launch's
+    # data (lmx_graph_resolve; plan M11 5b), for a callable over its own data too.
+    slot := lmx_graph_data_slot(g, (cast: (@: c.Lmx) frame\data), name)
+    if: slot < c.lmx_graph_count(frame\data)
+        value := c.lmx_graph_get(frame\data, slot)
+        head := c.lmx_graph_name_of(g, value)
+        if: c.lmx_graph_kind(g, value) = 4 && head != 0 && head != state\w_int && head != state\w_at
+            return: 0
+        if: frame\own = 0
             return: lmx_graph_work_require(g, frame, name)
-        ---
     ---
     value := lmx_graph_resolve(g, (cast: (@: c.Lmx) frame\code), name)
     if: value = 0
@@ -211,6 +219,24 @@ fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
     return: 0
 end: lmx_graph_work_require
 
+# Does a Frame of the code a frame scans launch -- the receiver call or fncall, or a record whose head is an ordinary
+# Structure, directly or through a reference place (lmx_graph_eval_launch_record)? Its operands are then operands of a
+# launch (lmx_graph_launch_operand), and its named actuals select formals of the launch. 1 or 0.
+fn: lmx_graph_scan_launch (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: lead char) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: target void 0
+    if: state = 0 || lead = 0
+        return: 0
+    if: lead = state\w_call || lead = state\w_fncall
+        return: 1
+    if: lmx_graph_language_word(state, lead) != 0
+        return: 0
+    target := c.lmx_graph_target(g, lmx_graph_resolve(g, (cast: (@: c.Lmx) frame\code), lead))
+    if: c.lmx_graph_kind(g, target) = 4 && c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) = 0
+        return: 1
+    return: 0
+end: lmx_graph_scan_launch
+
 # One body traversal captures free inputs and records needed own loads. After data, loading iterates only rows,
 # never the body again. Nested methods are not scanned, and a selector is not an input; no transitive interface.
 fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lmx) int
@@ -284,19 +310,30 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                 i := i + 1U
                 continue
             raw := c.lmx_graph_get(current, i)
-            # A named actual selects the callee's formal, never a free input of this caller.
+            # A named actual selects the callee's formal, or a formal of a launch (lmx_graph_scan_launch), never a free
+            # input of this caller.
             if: framed != 0 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
                 if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, lmx_graph_resolve(g, (cast: (@: c.Lmx) frame\code), lead)))) != 0
                     if: c.lmx_graph_count((cast: (@: c.Lmx) raw)) != 3U
                         status := 5
                         break
                     raw := c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
+                else:
+                    if: c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 3U && lmx_graph_scan_launch(g, frame, lead) != 0
+                        raw := c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
+                    ---
                 ---
             ---
             # The written fields of an anonymous Structure operand of merge define their names; only their values are
             # read (lmx_graph_merge_literal, lmx_graph_work_scan_literal).
             if: framed != 0 && lead = state\w_merge && lmx_graph_merge_literal(g, (cast: (@: c.Lmx) frame\code), raw) != 0
                 status := lmx_graph_work_scan_literal(g, frame, (cast: (@: c.Lmx) raw), @ queue, @ count, @ cap)
+                i := i + 1U
+                continue
+            ---
+            # Such an operand of a launch is data as written (lmx_graph_launch_operand; R21, item 4): this code reads
+            # nothing of it.
+            if: framed != 0 && lmx_graph_merge_literal(g, (cast: (@: c.Lmx) frame\code), raw) != 0 && lmx_graph_scan_launch(g, frame, lead) != 0
                 i := i + 1U
                 continue
             ---
@@ -388,6 +425,7 @@ end: lmx_graph_work_finish
 fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @: data c.Lmx; @: model c.Lmx; @: body c.Lmx; int: result; @: frame c.LmxGraphFrame) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: declaration c.Lmx 0
+    @: head char 0
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
     @: rows c.LmxGraphWork 0
     @: row c.LmxGraphWork 0
@@ -407,8 +445,8 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @:
     # stands in its place from the start; a computed declaration is code, executed at its line in the code, so a launch
     # finds its place without a value until then (the author 2026-11-11, R12; plan M11 5a -- lmx_graph_data_cell).
     frame\own := (cast: (int) (model != 0 && data = model && c.lmx_graph_method(g, code) != 0))
-    frame\count := c.lmx_graph_count(model)
-    frame\capacity := frame\count + 8U
+    frame\count := 0U
+    frame\capacity := c.lmx_graph_count(model) + 8U
     frame\rows := (cast: (@: c.LmxGraphWork) c.calloc(frame\capacity, c.sizeof(c.LmxGraphWork)))
     if: frame\rows = 0
         return: 4
@@ -416,8 +454,15 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @:
     frame\prior := active\frame
     active\frame := frame
     rows := frame\rows
-    while: i < frame\count && status = 0
-        row := rows + i
+    while: i < c.lmx_graph_count(model) && status = 0
+        # A Structure of the model -- a named Lmx that declares no place -- gets no row: the code finds it by reference in
+        # the registry of the launch's data (lmx_graph_resolve; plan M11 5b). The rows are the places of the data.
+        head := c.lmx_graph_name_of(g, c.lmx_graph_get(model, i))
+        if: c.lmx_graph_kind(g, c.lmx_graph_get(model, i)) = 4 && head != 0 && head != state\w_int && head != state\w_at
+            i := i + 1U
+            continue
+        row := rows + frame\count
+        frame\count := frame\count + 1U
         row\name := c.lmx_graph_slot_name(g, model, i)
         # A computed declaration `int: name expression` (an Lmx named int, §3.3) is the place name before its publication;
         # a reference declaration `@: name T` in a data is not executed by this slice (5), as before.
@@ -1034,19 +1079,37 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
                 return: activation\refs[slot]
             ---
         ---
+        # The registry of the data of this launch, after its rows and formals and before the lexical levels -- for every
+        # launch of the chain, as for a number (plan M11 5b): a Structure of that data, a record that declares no place,
+        # answers by reference -- one instance, a path writes it, a bare name is no place to write --; two or more records
+        # of the name answer nothing.
+        if: activation\frame != 0
+            active_frame := (cast: (@: c.LmxGraphFrame) activation\frame)
+            found := lmx_graph_data_find(g, (cast: (@: c.Lmx) active_frame\data), name, 1, 0U, @ at)
+            if: found > 1U
+                return: 0
+            if: found = 1U
+                value := c.lmx_graph_get((cast: (@: c.Lmx) active_frame\data), at)
+                head := c.lmx_graph_name_of(g, value)
+                if: c.lmx_graph_kind(g, value) = 4 && head != 0 && head != state\w_int && head != state\w_at
+                    return: value
+                ---
+            ---
+        ---
         activation := activation\parent
     ---
     # The special name `data` read by the root of a unit run over itself, with no frame, answers the root itself (the
     # author 2026-11-11, R6; plan M11 5a): `data\[1]Model` selects an occurrence of the root.
     if: state != 0 && name = state\w_data && space != 0 && space\root = scope
         return: (cast: (@: void) scope)
-    # The code of the live launch over data it was given is code, not data (the roles data and code, the author
-    # 2026-11-11): its own records answer no name; the launch finds a name in its data, its inputs, and the levels
-    # around its code.
+    # The code of the live launch of an ordinary Structure over data it was given is code, not data (the roles data and
+    # code, the author 2026-11-11): its own records answer no name; the launch finds a name in its data, its inputs, and
+    # the levels around its code. A callable's own fields are its parts -- args, data, code, return --, and they answer in
+    # its code (the author 2026-11-11, LMX_blog/2026-11-11.md#callable-parts-visibility; plan M11 5b).
     activation := (cast: (@: c.LmxActivation) g\arena\activation)
     if: activation != 0 && activation\frame != 0
         active_frame := (cast: (@: c.LmxGraphFrame) activation\frame)
-        if: active_frame\data != active_frame\code
+        if: active_frame\data != active_frame\code && c.lmx_graph_method(g, active_frame\code) = 0
             launched := (cast: (@: c.Lmx) active_frame\code)
         ---
     ---
@@ -1647,10 +1710,17 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
                 status := lmx_graph_eval_call(g, code, statement, (cast: (@: c.Lmx) target), @ number)
                 i := i + 1U
                 continue
+            # A head that is an ordinary Structure launches it where the record does (lmx_graph_launch_head: in code
+            # separated from its data, or through a reference place; the author 2026-11-11, R21, R22).
+            target := lmx_graph_launch_head(g, code, head)
+            if: target != 0
+                status := lmx_graph_eval_launch_record(g, code, statement, target)
+                i := i + 1U
+                continue
             # A structural form declares or calls, it never assigns (the book, forms-declare-or-call). A head that
-            # answers a place that is no Structure -- an int place, a reference place -- is declared by no such form,
-            # and its value is written by `:=`: 8. Any other head would declare a Structure inside a running body or
-            # an inline block, which this slice does not execute: 5.
+            # answers a place that is no Structure -- an int place, a reference place that points to no callable and no
+            # Structure -- is declared by no such form, and its value is written by `:=`: 8. Any other head would
+            # declare a Structure inside a running body or an inline block, which this slice does not execute: 5.
             if: raw != 0 && c.lmx_graph_kind(g, raw) != 4
                 return: 8
             return: 5
@@ -2070,6 +2140,10 @@ fn: lmx_graph_eval_number (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out 
         ---
         if: word = state\w_merge || lmx_graph_language_word(state, word) != 0
             return: 2
+        # The record that launches an ordinary Structure, directly or through a reference place: the launch gives no
+        # result (R22), so the record in an operand position answers 5, as a launch by fncall of code without one.
+        if: c.lmx_graph_kind(g, value) = 4
+            return: 5
         if: value = 0
             return: 3
         return: 2
@@ -2187,6 +2261,11 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     # A head naming a callable, directly or through a reference to it, applies it (the book :454, :1237).
     if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, cell))) != 0
         return: lmx_graph_eval_call(g, root, statement, (cast: (@: c.Lmx) c.lmx_graph_target(g, cell)), @ value)
+    # A head that is a reference place to an ordinary Structure launches it (lmx_graph_launch_head; R22: a record on a
+    # place head is never a declaration, so the root executes it now).
+    cell := lmx_graph_launch_head(g, root, head)
+    if: cell != 0
+        return: lmx_graph_eval_launch_record(g, root, statement, cell)
     if: n < 1U
         return: 5
     if: head = state\w_at
@@ -2286,41 +2365,183 @@ end: lmx_graph_call
 
 
 
+# The formals the written actuals of a launch record give (the author 2026-11-11: the arguments of every receiver are
+# named and given by position or by name, LMX_blog/2026-11-11.md#structure-call-by-name; R22): the record of the
+# receiver call or fncall, head its canonical word, or the record that launches an ordinary Structure by name, head 0
+# (lmx_graph_eval_launch_record) -- by the contract of the record (lmx_graph_receivers_open) and the one binder
+# (lmx_graph_receiver_form_of): by position or by name through `:=`, every formal of the form given. The form depends on
+# what is written alone, so a translation binds the record as the interpreter does. formals[i] the name of the formal
+# actual i gives -- args, data, return, code --: the caller's array, one per actual. 0; 4 without memory; 5 for no form.
+fn: lmx_graph_launch_formals (@: g c.LmxGraph; @: head char; @: expression c.Lmx; @@: formals char) int
+    @: space c.LmxGraphSpace c.lmx_graph_space()
+    @: key char head
+    @: list c.Lmx 0
+    @: chosen c.Lmx 0
+    @: bindings size_t 0
+    size_t: n 0U
+    size_t: i 0U
+    int: status 0
+    if: g = 0 || space = 0 || formals = 0 || c.lmx_graph_kind(g, (cast: (@: void) expression)) != 4
+        return: 5
+    if: key = 0
+        key := c.lmx_graph_intern("()", 2U)
+    list := (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) space\root), key))
+    if: c.lmx_graph_kind(g, (cast: (@: void) list)) != 4
+        return: 5
+    n := c.lmx_graph_count(expression)
+    bindings := (cast: (@: size_t) c.calloc(n + 1U, sizeof(size_t)))
+    if: bindings = 0
+        return: 4
+    chosen := lmx_graph_receiver_form_of(g, list, expression, 0, 0, bindings, 0, @ status)
+    while: status = 0 && i < n
+        formals[i] := c.lmx_graph_slot_name(g, chosen, bindings[i])
+        i := i + 1U
+    ---
+    c.free((cast: (@: void) bindings))
+    return: status
+end: lmx_graph_launch_formals
+
+# The written value of the actual i of a launch record: the operand of `name := value` (lmx_graph_launch_formals took
+# its name), or the actual as written.
+fn: lmx_graph_launch_actual (@: g c.LmxGraph; @: expression c.Lmx; size_t: i) @: void
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void c.lmx_graph_get(expression, i)
+    if: state != 0 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
+        return: c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
+    return: raw
+end: lmx_graph_launch_actual
+
+# An operand of a launch that stands for a Structure -- the arguments, the data, the code: a name, a path, a reference
+# place, or an anonymous Structure written in parentheses (R21): such a Structure is itself, as written
+# (lmx_graph_merge_literal); any other operand is evaluated (lmx_graph_eval_value). 0 and the value in out, or the answer
+# of the evaluation.
+fn: lmx_graph_launch_operand (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out void) int
+    if: out = 0
+        return: 2
+    if: lmx_graph_merge_literal(g, scope, raw) != 0
+        out[0] := raw
+        return: 0
+    return: lmx_graph_eval_value(g, scope, raw, out)
+end: lmx_graph_launch_operand
+
+# Does the live launch run code separated from its data -- a callable's code over its data part or data it was given,
+# an ordinary Structure's code over data it was given (the roles data and code, the author 2026-11-11)? A Structure
+# running over itself does not, nor a root, which runs with no work frame. 1 or 0.
+fn: lmx_graph_code_apart (@: g c.LmxGraph) int
+    @: activation c.LmxActivation 0
+    @: frame c.LmxGraphFrame 0
+    if: g = 0 || g\arena = 0
+        return: 0
+    activation := (cast: (@: c.LmxActivation) g\arena\activation)
+    if: activation = 0 || activation\frame = 0
+        return: 0
+    frame := (cast: (@: c.LmxGraphFrame) activation\frame)
+    if: frame\data != frame\code
+        return: 1
+    return: 0
+end: lmx_graph_code_apart
+
+# The ordinary Structure a record whose head is name launches in block scope (the author 2026-11-11,
+# LMX_blog/2026-11-11.md#structure-call-by-name; R21, R22). Through a reference place, wherever the record stands: a
+# record on a place head is never a declaration. By the Structure's own name, in code separated from its data
+# (lmx_graph_code_apart): the code of a callable, code over data it was given. Until plan M11 5g the root of a unit and a
+# Structure running over itself do not execute the role of code of a record whose head is an ordinary Structure: there
+# the record stays a declaration. The Structure, or 0.
+fn: lmx_graph_launch_head (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
+    @: raw void 0
+    @: target void 0
+    if: g = 0 || name = 0
+        return: 0
+    raw := lmx_graph_resolve(g, scope, name)
+    target := c.lmx_graph_target(g, raw)
+    if: raw = 0 || c.lmx_graph_kind(g, target) != 4 || c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
+        return: 0
+    if: c.lmx_graph_kind(g, raw) != 4 || lmx_graph_code_apart(g) != 0
+        return: target
+    return: 0
+end: lmx_graph_launch_head
+
+# The record that launches an ordinary Structure by name (the author 2026-11-11,
+# LMX_blog/2026-11-11.md#structure-call-by-name; R21, R22): `S()` runs S over itself, `S(D)` and `S(data := D)` over
+# the data D -- the one argument data, by position or by name, bound by the one binder (lmx_graph_launch_formals: the
+# forms [] and [data]; two positional arguments or another name are no form, 5). The data is an operand of a launch
+# (lmx_graph_launch_operand) and the launch is the one of the receiver call (lmx_graph_call_data), so data that gives no
+# Structure answers as there. 0, or the answer of the launch.
+fn: lmx_graph_eval_launch_record (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: structure void) int
+    @@: formals char 0
+    @: raw void 0
+    @: data void 0
+    size_t: count c.lmx_graph_count(expression)
+    int: status 0
+    formals := (cast: (@@: char) c.calloc(count + 1U, sizeof(@: char)))
+    if: formals = 0
+        return: 4
+    status := lmx_graph_launch_formals(g, 0, expression, formals)
+    c.free((cast: (@: void) formals))
+    if: status != 0
+        return: status
+    if: count = 0U
+        return: lmx_graph_call_data(g, 0, (cast: (@: c.Lmx) structure), 1)
+    raw := lmx_graph_launch_actual(g, expression, 0U)
+    status := lmx_graph_launch_operand(g, scope, raw, @ data)
+    if: status != 0
+        return: status
+    return: lmx_graph_call_data(g, (cast: (@: c.Lmx) data), (cast: (@: c.Lmx) structure), 0)
+end: lmx_graph_eval_launch_record
+
 # The receiver call (the book, call-receivers; the author 2026-11-11): the actual code and data are selected when the
-# call runs. Three arguments are the parts of a launch without a result -- arguments, data, code (lmx_graph_launch).
-# One argument is the code alone: an ordinary Structure runs over itself as its data, a callable over its own data. Two
-# arguments are the data and the code: the data stands before the code in every form (the author 2026-11-11,
-# LMX_blog/2026-11-11.md#data-before-code; formerly the sources wrote `call: code data`), and the operands are
-# evaluated in the order they are written.
+# call runs. Its forms (lmx_graph_receivers_open) are bound by the one binder, by position or by name through `:=`
+# (lmx_graph_launch_formals; R22): [args data code] is the launch without a result by its parts (lmx_graph_launch);
+# [code] is the code alone -- an ordinary Structure runs over itself as its data, a callable over its own data; [data
+# code] runs the code over the data: the data stands before the code (the author 2026-11-11,
+# LMX_blog/2026-11-11.md#data-before-code; formerly the sources wrote `call: code data`). The operands are evaluated in
+# the order they are written (lmx_graph_launch_operand).
 fn: lmx_graph_eval_explicit_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @@: formals char 0
+    @: head char 0
+    @: raw void 0
     @: code void 0
     @: data void 0
     @: args void 0
+    @: value void 0
     size_t: count c.lmx_graph_count(expression)
+    size_t: i 0U
+    int: parts 0
+    int: given 0
     int: status 0
-    if: count < 1U || count > 3U
+    if: state = 0
         return: 5
-    if: count = 3U
-        status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ args)
-        if: status = 0
-            status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 1U), @ data)
-        if: status = 0
-            status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 2U), @ code)
-        if: status != 0
-            return: status
+    formals := (cast: (@@: char) c.calloc(count + 1U, sizeof(@: char)))
+    if: formals = 0
+        return: 4
+    head := state\w_call
+    status := lmx_graph_launch_formals(g, head, expression, formals)
+    while: status = 0 && i < count
+        raw := lmx_graph_launch_actual(g, expression, i)
+        status := lmx_graph_launch_operand(g, scope, raw, @ value)
+        if: formals[i] = state\w_args
+            args := value
+            parts := 1
+        ---
+        if: formals[i] = state\w_data
+            data := value
+            given := 1
+        ---
+        if: formals[i] = state\w_code
+            code := value
+        i := i + 1U
+    ---
+    c.free((cast: (@: void) formals))
+    if: status != 0
+        return: status
+    if: parts != 0
         if: args = 0 || data = 0 || code = 0
             return: 5
         return: lmx_graph_launch(g, (cast: (@: c.Lmx) args), (cast: (@: c.Lmx) data), 0, (cast: (@: c.Lmx) code), 0)
-    if: count = 2U
-        status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ data)
-        if: status = 0
-            status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 1U), @ code)
-        if: status != 0
-            return: status
+    ---
+    if: given != 0
         return: lmx_graph_call_data(g, (cast: (@: c.Lmx) data), (cast: (@: c.Lmx) code), 0)
-    status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ code)
-    if: status != 0
-        return: status
     return: lmx_graph_call_data(g, 0, (cast: (@: c.Lmx) code), 1)
 end: lmx_graph_eval_explicit_call
 
@@ -2465,48 +2686,59 @@ fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx;
     return: status
 end: lmx_graph_launch
 
-# The receiver fncall (the book, call-receivers; the author 2026-11-11): the launch of code that returns a result.
-# Its last argument is the code and the one before it the description of the result; before them stand the data and,
-# first of four, the arguments -- `fncall(args data return code)`, `fncall(data return code)`, `fncall(return code)`. The
-# arguments, the data and the code are ordinary values; the description is a word of the language written as it is
-# (`int`) or a value that holds one (the return part of a callable, `f\return`). 0 and the result in out.
+# The receiver fncall (the book, call-receivers; the author 2026-11-11): the launch of code that returns a result. Its
+# forms (lmx_graph_receivers_open) are bound by the one binder, by position or by name through `:=`
+# (lmx_graph_launch_formals; R22): `fncall(args data return code)`, `fncall(data return code)`, `fncall(return code)`.
+# The arguments, the data and the code are operands of a launch (lmx_graph_launch_operand); the description is a word of
+# the language written as it is (`int`) or a value that holds one (the return part of a callable, `f\return`). The
+# operands are evaluated in the order they are written, each received before the next. 0 and the result in out.
 fn: lmx_graph_eval_fncall (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: out int) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @@: formals char 0
+    @: head char 0
     @: args void 0
     @: data void 0
     @: code void 0
     @: raw void 0
+    @: value void 0
     @: described void 0
     @: result char 0
     size_t: count c.lmx_graph_count(expression)
+    size_t: i 0U
     int: status 0
-    if: state = 0 || out = 0 || count < 2U || count > 4U
+    if: state = 0 || out = 0
         return: 5
-    if: count = 4U
-        status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ args)
-        if: status = 0 && args = 0
-            status := 5
+    formals := (cast: (@@: char) c.calloc(count + 1U, sizeof(@: char)))
+    if: formals = 0
+        return: 4
+    head := state\w_fncall
+    status := lmx_graph_launch_formals(g, head, expression, formals)
+    while: status = 0 && i < count
+        raw := lmx_graph_launch_actual(g, expression, i)
+        if: formals[i] = state\w_return
+            result := c.lmx_graph_word_text(g, raw)
+            if: result = 0 || lmx_graph_language_word(state, result) = 0
+                status := lmx_graph_eval_value(g, scope, raw, @ described)
+                result := c.lmx_graph_word_text(g, described)
+            ---
+            if: status = 0 && result = 0
+                status := 5
+            ---
+        else:
+            value := 0
+            status := lmx_graph_launch_operand(g, scope, raw, @ value)
+            if: status = 0 && value = 0 && formals[i] != state\w_code
+                status := 5
+            if: formals[i] = state\w_args
+                args := value
+            if: formals[i] = state\w_data
+                data := value
+            if: formals[i] = state\w_code
+                code := value
         ---
+        i := i + 1U
     ---
-    if: status = 0 && count >= 3U
-        status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, count - 3U), @ data)
-        if: status = 0 && data = 0
-            status := 5
-        ---
-    ---
-    if: status = 0
-        raw := c.lmx_graph_get(expression, count - 2U)
-        result := c.lmx_graph_word_text(g, raw)
-        if: result = 0 || lmx_graph_language_word(state, result) = 0
-            status := lmx_graph_eval_value(g, scope, raw, @ described)
-            result := c.lmx_graph_word_text(g, described)
-        ---
-        if: status = 0 && result = 0
-            status := 5
-        ---
-    ---
-    if: status = 0
-        status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, count - 1U), @ code)
+    c.free((cast: (@: void) formals))
     if: status != 0
         return: status
     if: code = 0
@@ -3679,22 +3911,33 @@ end: lmx_graph_receiver_form
 # its canonical name in the root's block -- fn [name, args, return, data, code], [name, args, return, code], [name, args,
 # return], [name, parts]; sub [name, args, data, code], [name, args, code], [name, parts] (receivers with different numbers
 # of arguments share one name). name and the result requirement return are taken as written (word cells: a word, or a
-# written form such as the type `@: c.FILE`), the other formals are Structures (empty Lmx). Made for every traversal,
-# released with its tables. 0, or 1 without memory.
+# written form such as the type `@: c.FILE`), the other formals are Structures (empty Lmx). The receivers of a launch
+# have contracts of the same kind, bound by the same binder (the author 2026-11-11: the arguments of every receiver are
+# named and given by position or by name, LMX_blog/2026-11-11.md#structure-call-by-name; R22): call [code], [data, code],
+# [args, data, code]; fncall [return, code], [data, return, code], [args, data, return, code], return taken as written;
+# and the record that launches an ordinary Structure by name, which is no receiver and has one argument, data: [],
+# [data] -- registered under `()`, the mark of an application, which spells no name (lmx_graph_launch_formals). Made for
+# every traversal, released with its tables. 0, or 1 without memory.
 fn: lmx_graph_receivers_open (@: g c.LmxGraph; @: root c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: w_name char c.lmx_graph_intern("name", 4U)
     @: w_parts char c.lmx_graph_intern("parts", 5U)
+    @: w_launch char c.lmx_graph_intern("()", 2U)
     @: w_fn char 0
     @: w_sub char 0
     @: w_args char 0
     @: w_return char 0
     @: w_data char 0
     @: w_code char 0
+    @: w_call char 0
+    @: w_fncall char 0
     @: fns c.Lmx 0
     @: subs c.Lmx 0
+    @: calls c.Lmx 0
+    @: fncalls c.Lmx 0
+    @: launches c.Lmx 0
     int: status 0
-    if: g = 0 || state = 0 || root = 0 || w_name = 0 || w_parts = 0
+    if: g = 0 || state = 0 || root = 0 || w_name = 0 || w_parts = 0 || w_launch = 0
         return: 1
     w_fn := state\w_fn
     w_sub := state\w_sub
@@ -3702,9 +3945,14 @@ fn: lmx_graph_receivers_open (@: g c.LmxGraph; @: root c.Lmx) int
     w_return := state\w_return
     w_data := state\w_data
     w_code := state\w_code
+    w_call := state\w_call
+    w_fncall := state\w_fncall
     fns := c.lmx_graph_lmx(g, 0, 4U)
     subs := c.lmx_graph_lmx(g, 0, 3U)
-    if: fns = 0 || subs = 0
+    calls := c.lmx_graph_lmx(g, 0, 3U)
+    fncalls := c.lmx_graph_lmx(g, 0, 3U)
+    launches := c.lmx_graph_lmx(g, 0, 2U)
+    if: fns = 0 || subs = 0 || calls = 0 || fncalls = 0 || launches = 0
         return: 1
     status := lmx_graph_receiver_form(g, fns, 0U, w_fn, 5U, w_name, w_args, w_return, w_data, w_code, 5)
     if: status = 0
@@ -3719,7 +3967,25 @@ fn: lmx_graph_receivers_open (@: g c.LmxGraph; @: root c.Lmx) int
         status := lmx_graph_receiver_form(g, subs, 1U, w_sub, 3U, w_name, w_args, w_code, 0, 0, 1)
     if: status = 0
         status := lmx_graph_receiver_form(g, subs, 2U, w_sub, 2U, w_name, w_parts, 0, 0, 0, 1)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, calls, 0U, w_call, 1U, w_code, 0, 0, 0, 0, 0)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, calls, 1U, w_call, 2U, w_data, w_code, 0, 0, 0, 0)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, calls, 2U, w_call, 3U, w_args, w_data, w_code, 0, 0, 0)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, fncalls, 0U, w_fncall, 2U, w_return, w_code, 0, 0, 0, 1)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, fncalls, 1U, w_fncall, 3U, w_data, w_return, w_code, 0, 0, 2)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, fncalls, 2U, w_fncall, 4U, w_args, w_data, w_return, w_code, 0, 4)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, launches, 0U, w_launch, 0U, 0, 0, 0, 0, 0, 0)
+    if: status = 0
+        status := lmx_graph_receiver_form(g, launches, 1U, w_launch, 1U, w_data, 0, 0, 0, 0, 0)
     if: status = 0 && (c.lmx_graph_space_put(root, w_fn, (cast: (@: void) fns)) != 0 || c.lmx_graph_space_put(root, w_sub, (cast: (@: void) subs)) != 0)
+        status := 1
+    if: status = 0 && (c.lmx_graph_space_put(root, w_call, (cast: (@: void) calls)) != 0 || c.lmx_graph_space_put(root, w_fncall, (cast: (@: void) fncalls)) != 0 || c.lmx_graph_space_put(root, w_launch, (cast: (@: void) launches)) != 0)
         status := 1
     return: status
 end: lmx_graph_receivers_open
@@ -3958,8 +4224,65 @@ fn: lmx_graph_receiver_admit (@: g c.LmxGraph; @: formal void; @: value void) in
     return: 5
 end: lmx_graph_receiver_admit
 
+# The widest form of a contract (lmx_graph_receivers_open): the most formals any of its forms has.
+fn: lmx_graph_forms_width (@: list c.Lmx) size_t
+    size_t: widest 0U
+    size_t: f 0U
+    while: f < c.lmx_graph_count(list)
+        if: c.lmx_graph_count((cast: (@: c.Lmx) c.lmx_graph_get(list, f))) > widest
+            widest := c.lmx_graph_count((cast: (@: c.Lmx) c.lmx_graph_get(list, f)))
+        f := f + 1U
+    ---
+    return: widest
+end: lmx_graph_forms_width
+
+# The form of a contract (lmx_graph_receivers_open) the written actuals of expression bind to, by the one binder
+# (lmx_graph_bind_formals): the first form of list whose formals they all give -- by position, by name through `:=`, with
+# by_head by head too (the parts of fn and sub) -- with no actual left over and no formal unbound. The form is chosen
+# before any actual is evaluated. bindings[i] the formal of actual i, modes[i] how (modes may be 0): arrays of the
+# caller, one per actual. The form, or 0 for none; status[0] 0, 4 without memory, 5 for none.
+fn: lmx_graph_receiver_form_of (@: g c.LmxGraph; @: list c.Lmx; @: expression c.Lmx; int: by_head; @: scope c.Lmx; @: bindings size_t; @: modes int; @: status int) @: c.Lmx
+    @: chosen c.Lmx 0
+    @: seen int 0
+    size_t: n c.lmx_graph_count(expression)
+    size_t: width 0U
+    size_t: f 0U
+    size_t: i 0U
+    int: found 0
+    status[0] := 5
+    seen := (cast: (@: int) c.calloc(lmx_graph_forms_width(list) + 1U, sizeof(int)))
+    if: seen = 0
+        status[0] := 4
+        return: 0
+    while: found = 0 && f < c.lmx_graph_count(list)
+        chosen := (cast: (@: c.Lmx) c.lmx_graph_get(list, f))
+        width := c.lmx_graph_count(chosen)
+        i := 0U
+        while: i < width
+            seen[i] := 0
+            i := i + 1U
+        ---
+        if: n <= width && lmx_graph_bind_formals(g, chosen, expression, bindings, modes, seen, by_head, scope) = 0
+            found := 1
+            i := 0U
+            while: i < width
+                if: seen[i] = 0
+                    found := 0
+                i := i + 1U
+            ---
+        ---
+        if: found = 0
+            f := f + 1U
+    ---
+    c.free((cast: (@: void) seen))
+    if: found = 0
+        return: 0
+    status[0] := 0
+    return: chosen
+end: lmx_graph_receiver_form_of
+
 # The arguments of the receiver fn or sub of the Frame decl in block scope through its contracts
-# (lmx_graph_receivers_open) and the one binder (lmx_graph_bind_formals): the first form its written actuals bind to --
+# (lmx_graph_receivers_open) and the one binder (lmx_graph_receiver_form_of): the first form its written actuals bind to --
 # by position, by `:=`, by head -- with every formal bound; else one actual is the whole argument structure (the book,
 # whole-arguments): a Structure whose fields give exactly the formals of a form (lmx_graph_bind_fields), read by their
 # values (lmx_graph_field_value). The form is chosen before any actual is evaluated; the whole Structure, the only actual
@@ -3981,7 +4304,6 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
     @: value void 0
     @: bindings size_t 0
     @: modes int 0
-    @: seen int 0
     @: from size_t 0
     size_t: n 0U
     size_t: width 0U
@@ -4002,30 +4324,19 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
     n := c.lmx_graph_count(decl)
     bindings := (cast: (@: size_t) c.calloc(n + 1U, sizeof(size_t)))
     modes := (cast: (@: int) c.calloc(n + 1U, sizeof(int)))
-    seen := (cast: (@: int) c.calloc(8U, sizeof(int)))
-    from := (cast: (@: size_t) c.calloc(8U, sizeof(size_t)))
-    if: bindings = 0 || modes = 0 || seen = 0 || from = 0
+    from := (cast: (@: size_t) c.calloc(lmx_graph_forms_width(list) + 1U, sizeof(size_t)))
+    if: bindings = 0 || modes = 0 || from = 0
         status := 4
-    # The form, by the written actuals alone.
-    while: status = 0 && found = 0 && f < c.lmx_graph_count(list)
-        chosen := (cast: (@: c.Lmx) c.lmx_graph_get(list, f))
-        width := c.lmx_graph_count(chosen)
-        i := 0U
-        while: i < 8U
-            seen[i] := 0
-            i := i + 1U
-        ---
-        if: n <= width && lmx_graph_bind_formals(g, chosen, decl, bindings, modes, seen, 1, scope) = 0
+    # The form, by the written actuals alone; with none, the whole-arguments reading below.
+    if: status = 0
+        chosen := lmx_graph_receiver_form_of(g, list, decl, 1, scope, bindings, modes, @ status)
+        if: chosen != 0
             found := 1
-            i := 0U
-            while: i < width
-                if: seen[i] = 0
-                    found := 0
-                i := i + 1U
-            ---
+            width := c.lmx_graph_count(chosen)
         ---
-        if: found = 0
-            f := f + 1U
+        if: status = 5
+            status := 0
+        ---
     ---
     if: status = 0 && found != 0
         i := 0U
@@ -4101,7 +4412,7 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
                         chosen := (cast: (@: c.Lmx) c.lmx_graph_get(list, f))
                         width := c.lmx_graph_count(chosen)
                         i := 0U
-                        while: i < 8U
+                        while: i <= width
                             from[i] := 0U
                             i := i + 1U
                         ---
@@ -4134,7 +4445,6 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
         form[0] := chosen
     c.free((cast: (@: void) bindings))
     c.free((cast: (@: void) modes))
-    c.free((cast: (@: void) seen))
     c.free((cast: (@: void) from))
     return: status
 end: lmx_graph_receiver_bind
@@ -4396,8 +4706,11 @@ fn: lmx_graph_root_declares (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     if: state = 0 || name = 0 || c.lmx_graph_statement(g, value) = 0 || lmx_graph_language_word(state, name) != 0 || c.lmx_graph_language_receiver(name) != 0
         return: 0
     known := lmx_graph_resolve(g, root, name)
-    # A head naming a callable, directly or through a reference to it, applies it.
+    # A head naming a callable, directly or through a reference to it, applies it; a head that is a reference place to
+    # an ordinary Structure launches it (lmx_graph_launch_head; R22: a record on a place head is never a declaration).
     if: known != 0 && known != value && c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, known))) != 0
+        return: 0
+    if: known != 0 && known != value && lmx_graph_launch_head(g, root, name) != 0
         return: 0
     # A place of the root named name, at any line: an int place, a place without a value, a reference place, a named
     # word, a declaration Frame of a receiver of a place (lmx_graph_data_find reads the same records).

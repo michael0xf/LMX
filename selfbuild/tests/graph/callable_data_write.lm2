@@ -1,0 +1,11 @@
+# A write by a path in the code of a callable writes the Structure of its data itself (plan M11 5b; R20): the next
+# call and a read from outside see what was written.
+fn: f () int (
+    Point: (int: x 1)
+)
+    Point\x := Point\x + 1
+    return: Point\x
+end: f
+int: first f()
+int: second f()
+int: outside f\data\Point\x

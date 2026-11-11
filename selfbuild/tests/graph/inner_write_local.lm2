@@ -1,0 +1,12 @@
+# An inner method sees the data of the enclosing callable, but its write to a bare name changes a local copy, not the
+# source (the author 2026-11-11, LMX_blog/2026-11-11.md#callable-parts-visibility): inner returns 9, the v of outer
+# stays 1, so outer gives 1 * 10 + 9.
+fn: outer () int (int: v 1)
+    fn: inner () int
+        v := 9
+        return: v
+    end: inner
+    int: r inner()
+    return: v * 10 + r
+end: outer
+int: seen outer()

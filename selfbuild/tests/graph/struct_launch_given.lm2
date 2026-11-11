@@ -1,0 +1,23 @@
+# Code launched over data it was given is separated from that data too (R22, item 1; plan M11 5b): a record there whose
+# head is an ordinary Structure of the data launches it -- `Step(Inner)` and `Step(data := Inner)` run Step over Inner,
+# `Twice()` runs Twice over itself.
+Code:
+    Step(Inner)
+    Step(data := Inner)
+    Twice()
+end: Code
+D:
+    Inner:
+        int: x 1
+    end: Inner
+    Step:
+        x := x + 10
+    end: Step
+    Twice:
+        int: k 0
+        k := k + 2
+    end: Twice
+end: D
+call: D Code
+int: seen D\Inner\x
+int: twice D\Twice\k

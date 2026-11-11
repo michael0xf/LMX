@@ -1,0 +1,15 @@
+# A record whose head is an ordinary Structure launches it in code separated from its data (the author 2026-11-11,
+# LMX_blog/2026-11-11.md#structure-call-by-name; R21, R22; plan M11 5b): in a callable's code `Own()` runs Own over
+# itself, `Bump(Counter)` and `Bump(data := Counter)` run Bump over the data Counter -- the one argument data, given by
+# position or by name.
+Own: (int: n 5; n := n + 1)
+Bump: (n := n + 1)
+Counter: (int: n 0)
+fn: f () int
+    Own()
+    Own()
+    Bump(Counter)
+    Bump(data := Counter)
+    return: Own\n * 10 + Counter\n
+end: f
+int: seen f()

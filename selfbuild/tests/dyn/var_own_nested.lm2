@@ -15,7 +15,7 @@ fn: one () int
     int: r 0
     if: r = 0
         int: b 3
-        r: b
+        r := b
     ---
     return: r
 end: one
@@ -24,8 +24,8 @@ fn: passes () int
     int: s 0
     while: i < 3
         int: b i * 10
-        s: s + b
-        i: i + 1
+        s := s + b
+        i := i + 1
     ---
     return: s
 end: passes
@@ -40,10 +40,10 @@ fn: branch (int: c) int
     int: r 0
     if: c = 1
         int: z 5
-        r: z
+        r := z
     else:
         int: z 6
-        r: z
+        r := z
     ---
     return: r
 end: branch
@@ -51,14 +51,14 @@ fn: anon () int
     int: r 0
     ---
         int: q 4
-        r: q
+        r := q
     ---
     return: r
 end: anon
 sub: note (int: c)
     if: c > 0
         int: w c + 1
-        node\seen: w
+        node\seen := w
     ---
 end: note
 fn: drive () int
@@ -68,8 +68,8 @@ fn: drive () int
         if: k = 2
             int: k 7
         ---
-        t: t + k * 10
-        k: k + 1
+        t := t + k * 10
+        k := k + 1
     ---
     return: t
 end: drive
@@ -84,65 +84,65 @@ fn: lacking () int
     int: r 0
     ---
         call: one E
-        r: 1
+        r := 1
         catch: call ()
             int: w 9
-            r: w
+            r := w
     ---
     return: r
 end: lacking
 # An inline `if`: the place in var, read after the call.
 if: one() != 3
-    code: 81
+    code := 81
 ---
 if: code = 7 && one\var\b != 3
-    code: 82
+    code := 82
 ---
 # A `while` body: the statement runs at each pass, the place keeps the last value.
 if: code = 7 && passes() != 30
-    code: 83
+    code := 83
 ---
 if: code = 7 && passes\var\b != 20
-    code: 84
+    code := 84
 ---
 # The root's name declared again in an `if`: one place, no shadowing.
 if: code = 7 && again() != 2
-    code: 85
+    code := 85
 ---
 if: code = 7 && again\var\y != 2
-    code: 86
+    code := 86
 ---
 # Both branches: one place, each branch writes it when it runs.
 if: code = 7 && (branch(1) != 5 || branch\var\z != 5)
-    code: 87
+    code := 87
 ---
 if: code = 7 && (branch(0) != 6 || branch\var\z != 6)
-    code: 88
+    code := 88
 ---
 # An anonymous body of a fn, an `if` of a sub (the unit field it writes is read through `node\`: the root's bare working copy
 # is not reloaded).
 if: code = 7 && (anon() != 4 || anon\var\q != 4)
-    code: 89
+    code := 89
 ---
 if: code = 7
     note(5)
     if: read_seen() != 6 || note\var\w != 6
-        code: 90
+        code := 90
     ---
 ---
 # The declaration inside the loop its name drives writes that name's place: the loop ends after it (a second, inner `k` would
 # give 60 and leave k at 4).
 if: code = 7 && (drive() != 80 || drive\var\k != 8)
-    code: 91
+    code := 91
 ---
 # Explicit data: the nested declaration writes D's place; data without the place -- the call's admission refuses before the
 # body (the implicit `call`), and the handler's own declaration runs in the handler.
 call: one D
 if: code = 7 && D\b != 3
-    code: 92
+    code := 92
 ---
 if: code = 7 && lacking() != 9
-    code: 93
+    code := 93
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

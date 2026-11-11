@@ -12,20 +12,20 @@ Calls:
     int: fail 0
 end: Calls
 fn: lm_stg_convert_int_char (int: n) char
-    Calls\n: Calls\n + 1
+    Calls\n := Calls\n + 1
     if: Calls\fail != 0
         size_t: s 5U
         char: c 6
-        s: c
+        s := c
     ---
     return: (cast: (char) (n + 1))
 end: lm_stg_convert_int_char
 fn: g (int: y; char: x) int
-    Calls\body: Calls\body + 1
+    Calls\body := Calls\body + 1
     return: (cast: (int) x) * 10 + y
 end: g
 fn: w (int: y; size_t: x) int
-    Calls\body: Calls\body + 1
+    Calls\body := Calls\body + 1
     return: y + (cast: (int) x)
 end: w
 Places:
@@ -101,9 +101,9 @@ fn: run () int
     if: Calls\n != 1 || Calls\body != 1
         return: 84
     ---
-    Calls\fail: 1
+    Calls\fail := 1
     int: refusal refused()
-    Calls\fail: 0
+    Calls\fail := 0
     if: refusal != 25
         return: 85
     ---

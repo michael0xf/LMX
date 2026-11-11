@@ -12,29 +12,29 @@ fn: lm_stg_convert_int_size_t (int: n) size_t
     return: (cast: (size_t) n)
 end: lm_stg_convert_int_size_t
 []: int cells 3
-cells[0U]: 5
-cells[1U]: 17
-cells[2U]: 7
+cells[0U] := 5
+cells[1U] := 17
+cells[2U] := 7
 []: int seen 1
-seen[0U]: 0
+seen[0U] := 0
 @: pc int @ cells[0U]
 @: ps int @ seen[0U]
 fn: touch () int
     return: 0
 end: touch
 fn: value (@: k int) int
-    k[0U]: k[0U] + 1
+    k[0U] := k[0U] + 1
     return: 40
 end: value
 fn: get (@: p int; int: at) int
     return: p[at]
 end: get
 sub: put (@: p int; int: at; int: v)
-    p[at]: v
+    p[at] := v
 end: put
 fn: own_get (int: at) int
     []: int slots 2
-    slots[1U]: 9
+    slots[1U] := 9
     @: q int @ slots[0U]
     return: q[at]
 end: own_get
@@ -50,88 +50,88 @@ int: neg 0 - 1
 int: far 2147483647
 int: guard 0
 if: pc[one] != 17
-    code: 11
-pc[two]: value(ps)
+    code := 11
+pc[two] := value(ps)
 if: code = 7 && cells[2U] != 40
-    code: 12
+    code := 12
 if: code = 7 && seen[0U] != 1
-    code: 12
+    code := 12
 if: code = 7 && get(pc, one) != 17
-    code: 13
+    code := 13
 put(pc, one, 23)
 if: code = 7 && cells[1U] != 23
-    code: 14
+    code := 14
 if: code = 7 && own_get(one) != 9
-    code: 15
+    code := 15
 if: code = 7 && address_of(pc, two) != 40
-    code: 16
+    code := 16
 int: caught 0
 ---
-    caught: pc[neg]
+    caught := pc[neg]
     catch: convert ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 17
-caught: 0
+    code := 17
+caught := 0
 ---
-    pc[neg]: value(ps)
+    pc[neg] := value(ps)
     catch: convert ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 18
+    code := 18
 if: code = 7 && seen[0U] != 1
-    code: 18
-caught: 0
+    code := 18
+caught := 0
 ---
-    caught: get(pc, neg)
+    caught := get(pc, neg)
     catch: convert ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 19
-caught: 0
+    code := 19
+caught := 0
 ---
     put(pc, neg, 1)
     catch: convert ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 20
-caught: 0
+    code := 20
+caught := 0
 ---
-    caught: address_of(pc, neg)
+    caught := address_of(pc, neg)
     catch: convert ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 21
-caught: 0
+    code := 21
+caught := 0
 ---
-    caught: pc[far]
+    caught := pc[far]
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 22
-caught: 0
+    code := 22
+caught := 0
 ---
-    pc[far]: value(ps)
+    pc[far] := value(ps)
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 23
+    code := 23
 if: code = 7 && seen[0U] != 1
-    code: 23
+    code := 23
 if: guard != 0 && pc[neg] = 5
-    code: 24
+    code := 24
 if: code = 7 && cells[0U] != 5
-    code: 25
+    code := 25
 if: code = 7 && cells[1U] != 23
-    code: 25
+    code := 25
 if: code = 7 && cells[2U] != 40
-    code: 25
+    code := 25
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

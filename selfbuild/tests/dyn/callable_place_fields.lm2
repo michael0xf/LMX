@@ -3,7 +3,7 @@
 Callables:
     fn: f () int
         int: x 3
-        x: x + 1
+        x := x + 1
         return: x
     end: f
     fn: with_var () int (int: v 5)
@@ -11,7 +11,7 @@ Callables:
     end: with_var
     sub: s ()
         int: w 4
-        w: w + 1
+        w := w + 1
     end: s
     fn: gone () int
         int: x 1
@@ -38,7 +38,7 @@ end: in_body
 sub: other_sub ()
     int: pad 8
     int: w 9
-    w: w + 1
+    w := w + 1
 end: other_sub
 fn: no_x () int
     int: y 9
@@ -150,25 +150,25 @@ end: non_callable3
 Occurs:
     fn: f () int
         int: x 3
-        x: x + 1
+        x := x + 1
         return: x
     end: f
 end: Occurs
 fn: occurs_other () int
     int: y 9
     int: x 7
-    x: x + 1
+    x := x + 1
     return: x
 end: occurs_other
 Subs:
     int: seen 0
     sub: t ()
-        node\seen: 5
+        node\seen := 5
     end: t
 end: Subs
 int: sub_seen 0
 sub: other_t ()
-    node\sub_seen: 6
+    node\sub_seen := 6
 end: other_t
 fn: read_sub_seen () int
     return: node\sub_seen
@@ -176,10 +176,10 @@ end: read_sub_seen
 int: var_seen 0
 OverVar:
     var: (int: i 5)
-    node\var_seen: i
+    node\var_seen := i
 end: OverVar
 NoData:
-    node\var_seen: 8
+    node\var_seen := 8
 end: NoData
 fn: read_var_seen () int
     return: node\var_seen
@@ -223,98 +223,98 @@ fn: free_occurrence () int
 end: free_occurrence
 int: code 7
 if: Callables\f\x != 3
-    code: 11
+    code := 11
 ---
 @: Callables\f replaced
 if: code = 7 && Callables\f() != 7
-    code: 12
+    code := 12
 ---
 if: code = 7 && Callables\f\x != 7
-    code: 13
+    code := 13
 ---
 if: code = 7 && by_formal(Callables) != 7
-    code: 14
+    code := 14
 ---
 if: code = 7 && by_local() != 7
-    code: 15
+    code := 15
 ---
 if: code = 7 && by_free() != 7
-    code: 16
+    code := 16
 ---
 if: code = 7
     int: sum Callables\f\x + 1
     if: sum != 8
-        code: 17
+        code := 17
     ---
 ---
-Callables\f\x: 30
+Callables\f\x := 30
 if: code = 7 && (Callables\f\x != 30 || replaced\x != 30)
-    code: 18
+    code := 18
 ---
 if: code = 7 && Callables\with_var\v != 5
-    code: 19
+    code := 19
 ---
 @: Callables\with_var var_later
 if: code = 7 && Callables\with_var\v != 6
-    code: 20
+    code := 20
 ---
 if: code = 7 && Callables\with_var\[0]v != 6
-    code: 37
+    code := 37
 ---
 @: Callables\with_var in_body
 if: code = 7 && Callables\with_var\v != 2
-    code: 21
+    code := 21
 ---
 if: code = 7 && Callables\s\w != 4
-    code: 22
+    code := 22
 ---
 @: Callables\s other_sub
 if: code = 7 && Callables\s\w != 9
-    code: 23
+    code := 23
 ---
-Callables\s\w: 31
+Callables\s\w := 31
 if: code = 7 && other_sub\w != 31
-    code: 24
+    code := 24
 ---
 if: code = 7 && absent() != 9
-    code: 25
+    code := 25
 ---
 if: code = 7 && other_kind() != 1
-    code: 26
+    code := 26
 ---
 if: code = 7 && non_callable() != 1
-    code: 27
+    code := 27
 ---
 if: code = 7 && non_callable2() != 1
-    code: 28
+    code := 28
 ---
 if: code = 7 && non_callable3() != 1
-    code: 29
+    code := 29
 ---
 if: code = 7 && Occurs\f\[0]x != 3
-    code: 30
+    code := 30
 ---
 @: Occurs\f occurs_other
 if: code = 7 && Occurs\f\[0]x != 7
-    code: 31
+    code := 31
 ---
 if: code = 7 && free_occurrence() != 1
-    code: 32
+    code := 32
 ---
 Subs\t()
 if: code = 7 && Subs\seen != 5
-    code: 33
+    code := 33
 ---
 @: Subs\t other_t
 Subs\t()
 if: code = 7 && read_sub_seen() != 6
-    code: 34
+    code := 34
 ---
 if: code = 7 && over_var() != 5
-    code: 35
+    code := 35
 ---
 if: code = 7 && no_data() != 8
-    code: 36
+    code := 36
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

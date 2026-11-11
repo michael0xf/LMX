@@ -26,7 +26,7 @@ fn: as_pointer_pad () @: int
     ---
         return: quote
         catch: convert ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 0
         return: @(node\other)
@@ -37,7 +37,7 @@ fn: as_int_pad () int
     ---
         return: quote
         catch: convert ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 0
         return: 99
@@ -47,19 +47,19 @@ fn: outer_number () int
     int: quote
     int: got 0
     @: q int 0
-    quote: 5
+    quote := 5
     if: as_int() != 5
         return: 81
     ---
-        q: as_pointer()
+        q := as_pointer()
         catch: convert ()
-            got: 1
+            got := 1
     ---
     if: got != 1
         return: 82
     if: q != 0
         return: 83
-    q: as_pointer_pad()
+    q := as_pointer_pad()
     if: q = 0
         return: 84
     if: \q != 2
@@ -72,27 +72,27 @@ fn: outer_pointer () int
     @: quote int 0
     int: got 0
     @: q int 0
-    quote: @ marks
-    q: as_pointer()
+    quote := @ marks
+    q := as_pointer()
     if: q = 0
         return: 87
     if: \q != 1
         return: 88
     ---
-        got: as_int()
+        got := as_int()
         catch: convert ()
-            got: 2
+            got := 2
     ---
     if: got != 2
         return: 89
     if: as_int_pad() != 99
         return: 90
-    q: as_pointer_pad()
+    q := as_pointer_pad()
     if: q = 0
         return: 91
     if: \q != 1
         return: 92
-    q: nothing()
+    q := nothing()
     if: q != 0
         return: 93
     return: 0
@@ -101,7 +101,7 @@ fn: m () int
     int: r outer_number()
     if: r != 0
         return: r
-    r: outer_pointer()
+    r := outer_pointer()
     if: r != 0
         return: r
     return: 7

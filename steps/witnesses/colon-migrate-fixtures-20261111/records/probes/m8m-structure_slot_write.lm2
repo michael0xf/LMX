@@ -1,0 +1,608 @@
+# Slice 277 (DIRECT-SLOT-WRITE-EVALUATED-HOLDER, ROOT-TYPED-NULL-ASSIGNMENT, IMPLEMENTS-REFERENCE-FIELD-NESTED-MODEL; the book, #correspondence-stability, #three-argument-implements).
+# A named Structure reached through an evaluated holder takes its value by the slot's own store, in a method's body and in a split call's; a refusal is the statement's implicit
+# `implements` and keeps the old value.  A typed null is a present reference value of the place.  A typed reference holding a Structure stands for it under a model's nested
+# field, at the write and on the way of a read.  A local Structure's slot declares its model as a named root's does: T's fields stay T's after `T: Swapped`, before and after
+# the publication.  Entry 7; 81.. name the failing check.
+Other:
+    int: z 9
+    int: y 7
+end: Other
+Swapped:
+    int: y 7
+    int: a 5
+end: Swapped
+Bad:
+    int: nothing 1
+end: Bad
+S1:
+    T:
+        int: v 1
+    end: T
+    T: Bad
+end: S1
+D:
+    T:
+        int: v 0
+    end: T
+end: D
+First:
+    int: x 3
+end: First
+Second:
+    int: w 9
+    int: x 5
+end: Second
+Inner2:
+    int: q 1
+    int: y 7
+end: Inner2
+Bound:
+    int: z 9
+    @: b Inner2
+end: Bound
+Declared:
+    int: z 9
+    @: b Inner2 Inner2
+end: Declared
+BoxB:
+    a:
+        b:
+            int: y 3
+        end: b
+    end: a
+end: BoxB
+BoxD:
+    a:
+        b:
+            int: y 3
+        end: b
+    end: a
+end: BoxD
+Outer:
+    k:
+        int: a 1
+        int: b 2
+    end: k
+end: Outer
+Alt:
+    int: w 9
+    k:
+        int: q 1
+        int: a 5
+        int: b 6
+    end: k
+end: Alt
+V:
+    int: z 3
+    int: a 7
+    int: b 8
+end: V
+# 95-103: a slot receives by what the known Consumers of the place use of the value (SLOT-RECEPTION-USED-FIELDS): the root's own slot, a nested field through a static path, a
+# free holder and a formal.  A field nothing reads is not looked at; a field something reads refuses before the write, and the old value stays.  A copy's place has its own Consumers.
+UsedRoot:
+    int: u 1
+    int: w 2
+end: UsedRoot
+OnlyU:
+    int: u 5
+end: OnlyU
+NoU:
+    int: w 6
+end: NoU
+AltRead:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: AltRead
+HasQ:
+    int: q 3
+end: HasQ
+NoQ:
+    int: a 4
+end: NoQ
+AltCopy: merge: AltRead
+fn: read_alt_q () int
+    return: AltRead\k\q
+end: read_alt_q
+fn: read_used_u () int
+    return: UsedRoot\u
+end: read_used_u
+int: alt_holder 0
+fn: free_put_noq () int
+    alt_holder\k: NoQ
+    return: 0
+end: free_put_noq
+fn: free_refused () int
+    @: alt_holder AltRead AltRead
+    ---
+        int: r free_put_noq()
+        return: 99
+        catch: implements ()
+            return: AltRead\k\q
+    ---
+end: free_refused
+fn: formal_put (@: p AltRead) int
+    p\k: NoQ
+    return: p\k\q
+end: formal_put
+fn: formal_refused () int
+    ---
+        return: formal_put(AltRead)
+        catch: implements ()
+            return: AltRead\k\q
+    ---
+end: formal_refused
+FullRead:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: FullRead
+fn: hand_back () @: FullRead
+    return: FullRead
+end: hand_back
+fn: full_refused () int
+    FullRead\k: HasQ
+    ---
+        @: back FullRead hand_back()
+        return: 99
+        catch: implements ()
+            return: 7
+    ---
+end: full_refused
+fn: take_full (@: p FullRead) @: FullRead
+    return: p
+end: take_full
+fn: full_formal_refused () int
+    ---
+        @: back FullRead take_full(FullRead)
+        return: 99
+        catch: implements ()
+            return: 7
+    ---
+end: full_formal_refused
+# 105: an unknown use standing before a known read takes nothing from it.
+EarlyRead:
+    k:
+        int: q 1
+    end: k
+end: EarlyRead
+fn: early_unknown () int
+    early_copy: merge: EarlyRead
+    return: early_copy\k\q
+end: early_unknown
+fn: early_read () int
+    return: EarlyRead\k\q
+end: early_read
+# 106: a field an unknown use takes is consumed, not asked whole: of the value at the field, nor of the field of a value at the root.
+WholeUse:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: WholeUse
+WholeOnlyQ:
+    k:
+        int: q 5
+    end: k
+end: WholeOnlyQ
+fn: whole_unknown () int
+    whole_copy: merge: WholeUse\k
+    return: whole_copy\a
+end: whole_unknown
+fn: whole_read () int
+    return: WholeUse\k\q
+end: whole_read
+# 107: two Consumers of one place state their union.
+TwoRead:
+    k:
+        int: q 1
+        int: a 2
+    end: k
+end: TwoRead
+fn: two_direct () int
+    return: TwoRead\k\q
+end: two_direct
+fn: two_formal (@: p TwoRead) int
+    return: p\k\a
+end: two_formal
+# 108: a write through a formal is no read of what stood there.
+fn: formal_put_q (@: p AltRead) int
+    p\k: HasQ
+    return: p\k\q
+end: formal_put_q
+# 109: nor does a null standing there refuse it.
+NullBox:
+    k:
+        int: q 1
+    end: k
+end: NullBox
+fn: put_on_null (@: p NullBox) int
+    p\k: HasQ
+    return: 3
+end: put_on_null
+fn: null_read () int
+    return: NullBox\k\q
+end: null_read
+# 110: a formal with an unknown use takes the whole interface, and the value of a slot can lack it: the call's named refusal.
+fn: formal_unknown (@: p FullRead) int
+    unknown_copy: merge: p
+    return: 0
+end: formal_unknown
+fn: full_unknown_refused () int
+    ---
+        return: formal_unknown(FullRead)
+        catch: implements ()
+            return: 7
+    ---
+end: full_unknown_refused
+# 111, 112: what is read below a field is asked of the value of the place above it, at any depth.
+DeepRead:
+    k:
+        m:
+            int: q 1
+        end: m
+    end: k
+end: DeepRead
+DeepNoQ:
+    k:
+        m:
+            int: a 1
+        end: m
+    end: k
+end: DeepNoQ
+InnerNoQ:
+    m:
+        int: a 1
+    end: m
+end: InnerNoQ
+InnerHasQ:
+    m:
+        int: q 5
+        int: a 1
+    end: m
+end: InnerHasQ
+fn: deep_read () int
+    return: DeepRead\k\m\q
+end: deep_read
+fn: copy_read_q () int
+    ---
+        return: AltCopy\k\q
+        catch: implements ()
+            return: 77
+    ---
+end: copy_read_q
+# 113-119: a declared reference field receives as any slot does, by what the known Consumers of the place read (REFERENCE-FIELD-STATIC-WRITE): through the root, a typed local and a
+# formal.  A field nobody reads is not asked; a field something reads refuses at the write and the old value stays.  A typed null is a present value of the place.
+RefBox:
+    int: q 1
+    int: a 2
+end: RefBox
+RefHolder:
+    @: p RefBox RefBox
+end: RefHolder
+RefOnlyQ:
+    int: q 5
+end: RefOnlyQ
+RefOtherQ:
+    int: q 6
+end: RefOtherQ
+RefNoQ:
+    int: a 7
+end: RefNoQ
+fn: read_ref_q () int
+    return: RefHolder\p\q
+end: read_ref_q
+fn: ref_local_put () int
+    @: ref_local RefHolder RefHolder
+    ref_local\p: RefOtherQ
+    return: read_ref_q()
+end: ref_local_put
+fn: ref_local_refused () int
+    @: ref_local RefHolder RefHolder
+    ---
+        ref_local\p: RefNoQ
+        return: 99
+        catch: implements ()
+            return: read_ref_q()
+    ---
+end: ref_local_refused
+fn: ref_formal_refused (@: h RefHolder) int
+    ---
+        h\p: RefNoQ
+        return: 99
+        catch: implements ()
+            return: read_ref_q()
+    ---
+end: ref_formal_refused
+fn: ref_local_held () int
+    @: ref_holder RefHolder RefHolder
+    @: ref_held RefBox ref_holder\p
+    return: ref_held\q
+end: ref_local_held
+fn: ref_null_read () int
+    ---
+        return: RefHolder\p\q
+        catch: interpreter ()
+            return: 55
+    ---
+end: ref_null_read
+fn: local_rebound () int
+    T:
+        int: y 3
+    end: T
+    T: Other
+    if: T\y != 7
+        return: 81
+    T\y: 5
+    if: Other\y != 5 || Other\z != 9
+        return: 82
+    return: 7
+end: local_rebound
+fn: other () int
+    return: 0
+end: other
+fn: local_order () int
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    T: Swapped
+    if: T\y != 7
+        return: 93
+    int: i other()
+    if: T\y != 7
+        return: 94
+    return: 7
+end: local_order
+fn: split_refused () int
+    ---
+        call: S1 D
+        return: 83
+        catch: implements ()
+            if: D\T\v != 1 && D\T\v != 0
+                return: 84
+            return: 7
+    ---
+end: split_refused
+fn: follow () int
+    ---
+        return: First\x
+        catch: interpreter ()
+            return: 93
+    ---
+end: follow
+fn: read_k (@: p Outer) int
+    return: p\k\a
+end: read_k
+sub: put_bound ()
+    BoxB\a: Bound
+end: put_bound
+sub: put_declared ()
+    BoxD\a: Declared
+end: put_declared
+fn: reference_fields () int
+    ---
+        put_bound()
+        if: BoxB\a\b\y != 7
+            return: 86
+        put_declared()
+        if: BoxD\a\b\y != 7
+            return: 87
+        return: 7
+        catch: implements ()
+            return: 88
+    ---
+end: reference_fields
+int: code local_rebound()
+if: code = 7
+    code: local_order()
+---
+if: code = 7
+    code: split_refused()
+---
+int: caught 0
+---
+    First: Bad
+    catch: implements ()
+        caught: 1
+---
+if: code = 7 && (caught != 1 || First\x != 3)
+    code: 85
+---
+if: code = 7 && read_k(Alt) != 5
+    code: 89
+---
+Alt\k: V
+if: code = 7 && read_k(Alt) != 7
+    code: 90
+---
+First: @: First: 0
+if: code = 7 && follow() != 93
+    code: 91
+---
+First: Second
+if: code = 7 && follow() != 5
+    code: 92
+---
+if: code = 7
+    code: reference_fields()
+---
+if: code = 7
+    UsedRoot: OnlyU
+    if: read_used_u() != 5
+        code: 95
+    ---
+---
+if: code = 7
+    int: root_refused 0
+    ---
+        UsedRoot: NoU
+        catch: implements ()
+            root_refused: 1
+    ---
+    if: root_refused != 1 || read_used_u() != 5
+        code: 96
+    ---
+---
+if: code = 7
+    int: alt_refused 0
+    ---
+        AltRead\k: NoQ
+        catch: implements ()
+            alt_refused: 1
+    ---
+    if: alt_refused != 1 || read_alt_q() != 1
+        code: 97
+    ---
+---
+if: code = 7
+    AltRead\k: HasQ
+    if: read_alt_q() != 3
+        code: 98
+    ---
+---
+if: code = 7 && free_refused() != 3
+    code: 99
+---
+if: code = 7 && formal_refused() != 3
+    code: 100
+---
+if: code = 7
+    AltCopy\k: NoQ
+    if: AltCopy\k\a != 4
+        code: 101
+    ---
+---
+if: code = 7 && copy_read_q() != 77
+    code: 102
+---
+if: code = 7 && full_refused() != 7
+    code: 103
+---
+if: code = 7 && full_formal_refused() != 7
+    code: 104
+---
+if: code = 7
+    if: early_unknown() != 1
+        code: 105
+    ---
+    int: early_refused 0
+    ---
+        EarlyRead\k: NoQ
+        catch: implements ()
+            early_refused: 1
+    ---
+    if: early_refused != 1 || early_read() != 1
+        code: 105
+    ---
+---
+if: code = 7
+    if: whole_unknown() != 2
+        code: 106
+    ---
+    WholeUse: WholeOnlyQ
+    if: whole_read() != 5
+        code: 106
+    ---
+    WholeUse\k: HasQ
+    if: whole_read() != 3
+        code: 106
+    ---
+---
+if: code = 7
+    int: two_caught 0
+    ---
+        TwoRead\k: NoQ
+        catch: implements ()
+            two_caught: 1
+    ---
+    ---
+        TwoRead\k: HasQ
+        catch: implements ()
+            two_caught: two_caught + 2
+    ---
+    if: two_caught != 3 || two_direct() != 1 || two_formal(TwoRead) != 2
+        code: 107
+    ---
+---
+if: code = 7 && formal_put_q(AltRead) != 3
+    code: 108
+---
+if: code = 7
+    NullBox\k: 0
+    if: put_on_null(NullBox) != 3 || null_read() != 3
+        code: 109
+    ---
+---
+if: code = 7 && full_unknown_refused() != 7
+    code: 110
+---
+if: code = 7
+    int: deep_refused 0
+    ---
+        DeepRead: DeepNoQ
+        catch: implements ()
+            deep_refused: 1
+    ---
+    if: deep_refused != 1 || deep_read() != 1
+        code: 111
+    ---
+---
+if: code = 7
+    int: inner_refused 0
+    ---
+        DeepRead\k: InnerNoQ
+        catch: implements ()
+            inner_refused: 1
+    ---
+    if: inner_refused != 1 || deep_read() != 1
+        code: 112
+    ---
+    DeepRead\k: InnerHasQ
+    if: code = 7 && deep_read() != 5
+        code: 112
+    ---
+---
+if: code = 7
+    RefHolder\p: RefOnlyQ
+    if: read_ref_q() != 5
+        code: 113
+    ---
+---
+if: code = 7
+    int: ref_refused 0
+    ---
+        RefHolder\p: RefNoQ
+        catch: implements ()
+            ref_refused: 1
+    ---
+    if: ref_refused != 1 || read_ref_q() != 5
+        code: 114
+    ---
+---
+if: code = 7 && ref_local_put() != 6
+    code: 115
+---
+if: code = 7 && ref_local_refused() != 6
+    code: 116
+---
+if: code = 7 && ref_formal_refused(RefHolder) != 6
+    code: 117
+---
+if: code = 7 && ref_local_held() != 6
+    code: 119
+---
+if: code = 7
+    RefHolder\p: 0
+    if: ref_null_read() != 55
+        code: 118
+    ---
+    RefHolder\p: RefOnlyQ
+    if: code = 7 && read_ref_q() != 5
+        code: 118
+    ---
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -7,19 +7,19 @@ include: "<string.h>"
 @: p char 0
 @: q char 0
 int: code 7
-p: c.strdup(s)
+p := c.strdup(s)
 if: p = 0
-    code: 80
+    code := 80
 if: code = 7 && c.strcmp(p, "abc") != 0
-    code: 81
-q: c.malloc(4U)
+    code := 81
+q := c.malloc(4U)
 if: q = 0
-    code: 82
+    code := 82
 if: code = 7
-    q[0]: p[2]
-    q[1]: (cast: (char) 0)
+    q[0] := p[2]
+    q[1] := (cast: (char) 0)
     if: c.strcmp(q, "c") != 0
-        code: 83
+        code := 83
 ---
 c.free(q)
 c.free(p)

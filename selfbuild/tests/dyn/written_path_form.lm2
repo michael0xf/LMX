@@ -38,9 +38,9 @@ fn: repeated () int
     int: sum 0
     while: i < 2
         Box\k: (int: a 40)
-        sum: sum + Box\k\a
-        Box\k\a: 41
-        i: i + 1
+        sum := sum + Box\k\a
+        Box\k\a := 41
+        i := i + 1
     ---
     return: sum
 end: repeated
@@ -67,44 +67,44 @@ end: refused
 int: code 7
 Box\k: (int: a 8)
 if: Box\k\a != 8
-    code: 11
+    code := 11
 ---
 Box\r: (int: a 9)
 if: code = 7 && Box\r\a != 9
-    code: 12
+    code := 12
 ---
 Box\Inner\kid: (int: a 10)
 if: code = 7 && Box\Inner\kid\a != 10
-    code: 13
+    code := 13
 ---
 if: code = 7 && in_method() != 20
-    code: 14
+    code := 14
 ---
 if: code = 7 && by_formal(Box) != 21
-    code: 15
+    code := 15
 ---
 call: Named
 if: code = 7 && Box\k\a != 22
-    code: 16
+    code := 16
 ---
 if: code = 7 && other_order() != 23
-    code: 17
+    code := 17
 ---
 if: code = 7 && repeated() != 81
-    code: 18
+    code := 18
 ---
 if: code = 7 && through_free() != 30
-    code: 19
+    code := 19
 ---
 @: Box\k (int: a 50)
 if: code = 7 && Box\k\a != 50
-    code: 20
+    code := 20
 ---
 if: code = 7 && refused() != 1
-    code: 21
+    code := 21
 ---
 if: code = 7 && reader() != 1
-    code: 22
+    code := 22
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

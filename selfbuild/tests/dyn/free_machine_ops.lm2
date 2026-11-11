@@ -45,7 +45,7 @@ fn: both_free () int
     return: quote | marks
 end: both_free
 sub: widen ()
-    quote: quote << 1
+    quote := quote << 1
 end: widen
 fn: wide_shift (int: n) size_t
     return: quote << n
@@ -70,9 +70,9 @@ fn: outer_bits () int
     if: quote != 0x1234U
         return: 86
     ---
-        got: shifted(32)
+        got := shifted(32)
         catch: interpreter ()
-            got: 90U
+            got := 90U
     ---
     if: got != 90U
         return: 87
@@ -82,46 +82,46 @@ fn: outer_ints () int
     int: quote 0
     int: got 0
     unsigned: ugot 0U
-    quote: 0 - 6
+    quote := 0 - 6
     if: low_bits() != 2
         return: 88
     if: both_free() != 0 - 5
         return: 89
-    quote: 6
+    quote := 6
     if: halved(1) != 3
         return: 90
     if: doubled(2) != 24
         return: 91
-    quote: 5
+    quote := 5
     if: one_shifted() != 32
         return: 92
     ---
-        got: halved(0 - 1)
+        got := halved(0 - 1)
         catch: interpreter ()
-            got: 93
+            got := 93
     ---
     if: got != 93
         return: 94
-    quote: 1073741824
+    quote := 1073741824
     ---
-        got: doubled(1)
+        got := doubled(1)
         catch: interpreter ()
-            got: 95
+            got := 95
     ---
     if: got != 95
         return: 96
-    quote: 0 - 6
+    quote := 0 - 6
     ---
-        got: doubled(1)
+        got := doubled(1)
         catch: interpreter ()
-            got: 97
+            got := 97
     ---
     if: got != 97
         return: 98
     ---
-        ugot: masked_by(255U)
+        ugot := masked_by(255U)
         catch: convert ()
-            ugot: 99U
+            ugot := 99U
     ---
     if: ugot != 99U
         return: 99
@@ -133,9 +133,9 @@ fn: outer_wide () int
     if: wide_shift(40) != 1099511627776U
         return: 100
     ---
-        got: wide_shift(64)
+        got := wide_shift(64)
         catch: interpreter ()
-            got: 101U
+            got := 101U
     ---
     if: got != 101U
         return: 102
@@ -157,20 +157,20 @@ fn: outer_ref () int
     int: got 0
     if: is_null() != 1
         return: 104
-    quote: @ cell
+    quote := @ cell
     if: is_null() != 0
         return: 105
     ---
-        got: low_bits()
+        got := low_bits()
         catch: convert ()
-            got: 106
+            got := 106
     ---
     if: got != 106
         return: 107
     ---
-        got: below()
+        got := below()
         catch: convert ()
-            got: 108
+            got := 108
     ---
     if: got != 108
         return: 109
@@ -180,13 +180,13 @@ fn: m () int
     int: r outer_bits()
     if: r != 0
         return: r
-    r: outer_ints()
+    r := outer_ints()
     if: r != 0
         return: r
-    r: outer_wide()
+    r := outer_wide()
     if: r != 0
         return: r
-    r: outer_ref()
+    r := outer_ref()
     if: r != 0
         return: r
     if: typed_walked(171U, 4) != 10U

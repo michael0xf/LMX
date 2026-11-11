@@ -2,7 +2,7 @@
 int: quote 11
 fn: copy_value () int
     int: answer 0
-    answer: quote
+    answer := quote
     return: answer
 end: copy_value
 fn: post_value () int
@@ -14,16 +14,16 @@ fn: mismatch () int
     @: quote int @ cell
     int: got 0
     ---
-        got: copy_value()
+        got := copy_value()
         catch: convert ()
-            got: 1
+            got := 1
     ---
     if: got != 1
         return: 82
     ---
-        got: post_value()
+        got := post_value()
         catch: convert ()
-            got: 2
+            got := 2
     ---
     if: got != 2
         return: 83
@@ -37,6 +37,6 @@ fn: good () int
 end: good
 int: result mismatch()
 if: result = 7
-    result: good()
+    result := good()
 send: exit(exit_code: result; stdout: ""; stderr: "")
 return

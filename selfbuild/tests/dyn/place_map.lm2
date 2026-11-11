@@ -75,23 +75,23 @@ T:
     int: v 11
 end: T
 Writer:
-    var\y: var\y + 1
+    var\y := var\y + 1
 end: Writer
 int: quote 11
 sub: put_kid ()
-    quote\kid: Other
+    quote\kid := Other
 end: put_kid
 sub: put_far ()
-    quote\a: Far
+    quote\a := Far
 end: put_far
 sub: put_bad ()
-    quote\kid: Bad
+    quote\kid := Bad
 end: put_bad
 sub: put_null ()
-    quote\kid: 0
+    quote\kid := 0
 end: put_null
 sub: put_third ()
-    quote\kid: Third
+    quote\kid := Third
 end: put_third
 fn: read_typed () int
     return: Box\kid\y
@@ -115,7 +115,7 @@ fn: nested () int
     ---
         put_bad()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1 || Box\kid\y != 3
         return: 81
@@ -125,17 +125,17 @@ fn: nested () int
     put_third()
     if: follow_kid() != 9
         return: 101
-    Box\kid\y: 2
+    Box\kid\y := 2
     if: Third\y != 2 || Third\p != 1 || Third\q != 2
         return: 102
     put_kid()
     if: Box\kid\y != 7 || read_typed() != 7
         return: 82
-    Box\kid\y: 5
+    Box\kid\y := 5
     if: Other\y != 5 || Other\z != 9
         return: 83
     @: p int @ (Box\kid\y)
-    \p: 6
+    \p := 6
     if: Other\y != 6 || Other\z != 9
         return: 84
     if: take_req(Box\kid) != 6
@@ -146,7 +146,7 @@ fn: nested () int
     call: Writer Box\kid
     if: Other\y != 7 || Box\kid\y != 7
         return: 105
-    Box\kid\y: 6
+    Box\kid\y := 6
     return: 0
 end: nested
 fn: through (@: p Near) int
@@ -158,12 +158,12 @@ fn: deep () int
     put_far()
     if: Near\a\b\y != 7 || Near\a\b\u != 4 || through(Near) != 7
         return: 85
-    Near\a\b\y: 8
+    Near\a\b\y := 8
     if: Far\b\y != 8 || Far\b\q != 1 || Far\b\u != 4
         return: 86
     if: length(Near\a\items) != 2U
         return: 87
-    Near\a\items[1U]: 4
+    Near\a\items[1U] := 4
     if: Far\items[1U] != 4
         return: 88
     return: 0
@@ -178,11 +178,11 @@ fn: rooted () int
     @: q First First
     if: q\x != 5
         return: 90
-    First\x: 6
+    First\x := 6
     if: Second\x != 6 || Second\w != 9 || Second\a != 2 || take(First) != 6
         return: 91
     @: p int @ (First\x)
-    \p: 8
+    \p := 8
     if: Second\x != 8 || Second\w != 9 || Second\a != 2 || q\x != 8
         return: 106
     return: 0
@@ -215,52 +215,52 @@ end: split_rebound
 int: code 7
 int: refused 0
 ---
-    First: Bad
+    First := Bad
     catch: implements ()
-        refused: 1
+        refused := 1
 ---
 if: refused != 1 || First\x != 3
-    code: 96
-First: Second
+    code := 96
+First := Second
 if: code = 7 && First\x != 5
-    code: 97
-Holder: Standing
+    code := 97
+Holder := Standing
 int: step 0
 if: code = 7
-    step: nested()
+    step := nested()
     if: step = 0
-        step: deep()
+        step := deep()
     ---
     if: step = 0
-        step: rooted()
+        step := rooted()
     ---
     if: step = 0
-        step: split()
+        step := split()
     ---
     if: step = 0
-        step: split_rebound()
+        step := split_rebound()
     ---
     if: step != 0
-        code: step
+        code := step
     ---
 ---
 # A merge copy of a holder whose slot stands by another layout reads and writes the copy through the copied pair, at two levels.
 Copy: merge: Box
 if: code = 7 && Copy\kid\y != 6
-    code: 98
+    code := 98
 if: code = 7
-    Copy\kid\y: 4
+    Copy\kid\y := 4
     if: Copy\kid\y != 4 || Box\kid\y != 6
-        code: 99
+        code := 99
     ---
 ---
 CopyNear: merge: Near
 if: code = 7 && CopyNear\a\b\y != 8
-    code: 107
+    code := 107
 if: code = 7
-    CopyNear\a\b\y: 5
+    CopyNear\a\b\y := 5
     if: CopyNear\a\b\y != 5 || CopyNear\a\b\u != 4 || Near\a\b\y != 8
-        code: 108
+        code := 108
     ---
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")

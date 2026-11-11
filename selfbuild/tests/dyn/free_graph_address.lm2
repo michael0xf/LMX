@@ -25,13 +25,13 @@ end: Thin
 int: quote 11
 fn: addr () int
     @@: pp Point 0
-    pp: @ quote
+    pp := @ quote
     @: p Point, \pp
     return: p\y
 end: addr
 fn: addr3 () int
     @@@: ppp Point 0
-    ppp: @ quote
+    ppp := @ quote
     @@: pp Point, \ppp
     @: p Point, \pp
     return: p\y
@@ -45,7 +45,7 @@ end: outer
 fn: outer_ptr (Point: p) int
     @: inst Point p
     @@: quote Point 0
-    quote: @ inst
+    quote := @ inst
     if: addr3() != 2
         return: 82
     return: 0
@@ -54,9 +54,9 @@ fn: outer_slim (Thin: t) int
     @: quote Thin t
     int: got 0
     ---
-        got: addr()
+        got := addr()
         catch: implements ()
-            got: 90
+            got := 90
     ---
     if: got != 90
         return: 83
@@ -66,9 +66,9 @@ fn: outer_num () int
     int: quote 5
     int: got 0
     ---
-        got: addr()
+        got := addr()
         catch: convert ()
-            got: 91
+            got := 91
     ---
     if: got != 91
         return: 84
@@ -78,9 +78,9 @@ fn: outer_short (Point: p) int
     @: quote Point p
     int: got 0
     ---
-        got: addr3()
+        got := addr3()
         catch: convert ()
-            got: 92
+            got := 92
     ---
     if: got != 92
         return: 85
@@ -90,16 +90,16 @@ fn: m () int
     int: r outer(Shape)
     if: r != 0
         return: r
-    r: outer_ptr(Shape)
+    r := outer_ptr(Shape)
     if: r != 0
         return: r
-    r: outer_slim(Slim)
+    r := outer_slim(Slim)
     if: r != 0
         return: r
-    r: outer_num()
+    r := outer_num()
     if: r != 0
         return: r
-    r: outer_short(Shape)
+    r := outer_short(Shape)
     if: r != 0
         return: r
     return: 7

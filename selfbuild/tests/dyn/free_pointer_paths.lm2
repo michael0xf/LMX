@@ -25,7 +25,7 @@ fn: read_size () size_t
     return: \quote
 end: read_size
 sub: bump ()
-    \quote: \quote + 1
+    \quote := \quote + 1
 end: bump
 fn: mixed () int
     int: one c.lmx_type_base(1)
@@ -37,25 +37,25 @@ fn: next_level () int
 end: next_level
 fn: depth () int
     @@: pp int 0
-    pp: @ quote
+    pp := @ quote
     @: p int, \pp
     return: \p
 end: depth
 fn: deep () int
     @: p int 0
-    p: @ quote
+    p := @ quote
     return: \p
 end: deep
 fn: local_nine () int
-    quote: 9
+    quote := 9
     @: p int 0
-    p: @ quote
+    p := @ quote
     return: \p
 end: local_nine
 fn: lexical () int
     @: p int 0
-    p: @ quote
-    \p: \p + 1
+    p := @ quote
+    \p := \p + 1
     return: \p
 end: lexical
 fn: unit_quote () @: int
@@ -65,7 +65,7 @@ fn: outer_int () int
     @: quote int 0
     int: cell 5
     size_t: got 0U
-    quote: @ cell
+    quote := @ cell
     if: read_int() != 5
         return: 81
     bump()
@@ -78,9 +78,9 @@ fn: outer_int () int
     if: mixed() != 7
         return: 84
     ---
-        got: read_size()
+        got := read_size()
         catch: convert ()
-            got: 90U
+            got := 90U
     ---
     if: got != 90U
         return: 85
@@ -90,7 +90,7 @@ fn: outer_size () int
     @: quote size_t 0
     size_t: cell 7U
     int: got 0
-    quote: @ cell
+    quote := @ cell
     if: read_size() != 7U
         return: 86
     bump()
@@ -99,9 +99,9 @@ fn: outer_size () int
     if: cell != 7U
         return: 99
     ---
-        got: read_int()
+        got := read_int()
         catch: convert ()
-            got: 91
+            got := 91
     ---
     if: got != 91
         return: 88
@@ -121,7 +121,7 @@ fn: outer_pp () int
     int: cell 9
     @: cellp int @ cell
     @@: quote int 0
-    quote: @ cellp
+    quote := @ cellp
     if: next_level() != 9
         return: 90
     return: 0
@@ -130,13 +130,13 @@ fn: m () int
     int: r outer_int()
     if: r != 0
         return: r
-    r: outer_size()
+    r := outer_size()
     if: r != 0
         return: r
-    r: outer_number()
+    r := outer_number()
     if: r != 0
         return: r
-    r: outer_pp()
+    r := outer_pp()
     if: r != 0
         return: r
     if: lexical() != 12
@@ -146,7 +146,7 @@ fn: m () int
     @: e int unit_quote()
     if: \e != 11
         return: 96
-    \e: 13
+    \e := 13
     if: node\quote != 13
         return: 97
     return: 7

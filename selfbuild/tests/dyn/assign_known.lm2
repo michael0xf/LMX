@@ -12,11 +12,11 @@ Seen:
     int: v 0
 end: Seen
 fn: one () int
-    Seen\v: 1
+    Seen\v := 1
     return: 1
 end: one
 fn: two () int
-    Seen\v: 2
+    Seen\v := 2
     return: 2
 end: two
 @: target one
@@ -48,7 +48,7 @@ fn: run () int
     s := 3U
     if: s != 3U
         return: 86
-    x: 11
+    x := 11
     if: x != 11
         return: 87
     return: 7
@@ -58,15 +58,15 @@ if: code = 7
     target := two
     call: target
     if: Seen\v != 2
-        code: 88
+        code := 88
 ---
 if: code = 7
     code := 7
     if: code != 7
-        code: 89
+        code := 89
 ---
 if: code = 7 && swap(one) != 2
-    code: 90
+    code := 90
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

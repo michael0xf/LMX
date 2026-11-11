@@ -53,7 +53,7 @@ fn: nested () int
     int: i 0
     while: i < 1
         @: Holder\f twenty
-        i: i + 1
+        i := i + 1
     ---
     return: Holder\f()
 end: nested
@@ -155,7 +155,7 @@ fn: value_with_initial () int
 end: value_with_initial
 VarWork:
     int: got 0
-    got: var\i
+    got := var\i
 end: VarWork
 VarData:
     int: i 6
@@ -163,7 +163,7 @@ VarData:
 end: VarData
 VarAbsent:
     int: got 3
-    got: var\i
+    got := var\i
 end: VarAbsent
 VarAbsentData:
     int: got 9
@@ -201,18 +201,18 @@ end: VarRebound
 int: code 7
 @: Holder\f two
 if: Holder\f() != 2
-    code: 11
+    code := 11
 ---
 if: code = 7
     @: Holder\k Other
     if: Holder\k\q != 3
-        code: 12
+        code := 12
     ---
 ---
 if: code = 7
     @: Holder\p Other
     if: Holder\p\q != 3
-        code: 13
+        code := 13
     ---
 ---
 if: code = 7
@@ -221,118 +221,118 @@ if: code = 7
     ---
         int: r Holder\p\q
         catch: interpreter ()
-            was_null: 1
+            was_null := 1
     ---
     if: was_null != 1
-        code: 14
+        code := 14
     ---
 ---
 if: code = 7
     @: Holder\p Inner: Other
     if: Holder\p\q != 3
-        code: 15
+        code := 15
     ---
 ---
 if: code = 7 && in_method() != 2
-    code: 16
+    code := 16
 ---
 if: code = 7 && by_formal(Holder) != 30
-    code: 17
+    code := 17
 ---
 if: code = 7 && by_local() != 2
-    code: 18
+    code := 18
 ---
 if: code = 7 && nested() != 20
-    code: 19
+    code := 19
 ---
 if: code = 7
     call: Named
     if: Holder\Deep\g() != 20
-        code: 20
+        code := 20
     ---
 ---
 if: code = 7 && null_called() != 2
-    code: 21
+    code := 21
 ---
 if: code = 7 && chain() != 23
-    code: 22
+    code := 22
 ---
 if: code = 7 && through_hidden() != 23
-    code: 23
+    code := 23
 ---
 if: code = 7
     @: seen Source\Model
     if: seen\v != 4
-        code: 24
+        code := 24
     ---
 ---
 if: code = 7
     @: held Source\r
     if: held\q != 2
-        code: 25
+        code := 25
     ---
 ---
 if: code = 7
     @: again Source\Model
     @: again Source2\Model
     if: again\v != 9
-        code: 26
+        code := 26
     ---
 ---
 if: code = 7 && value_in_method() != 4
-    code: 27
+    code := 27
 ---
 if: code = 7 && value_callable() != 5
-    code: 28
+    code := 28
 ---
 if: code = 7 && value_with_initial() != 8
-    code: 29
+    code := 29
 ---
 if: code = 7
     call: VarWork VarData
     if: VarData\got != 6
-        code: 30
+        code := 30
     ---
 ---
 if: code = 7 && var_absent() != 8
-    code: 31
+    code := 31
 ---
 if: code = 7 && VarAbsentData\got != 3
-    code: 31
+    code := 31
 ---
 if: code = 7 && var_new() != 7
-    code: 32
+    code := 32
 ---
 if: code = 7 && VarNewData\got != 0
-    code: 32
+    code := 32
 ---
 if: code = 7
     call: VarRebound VarRebound
     if: VarRebound\got != 5
-        code: 33
+        code := 33
     ---
 ---
 if: code = 7
     @: refs[0] Inner
     @: refs[1] Other
     if: refs[0]\q != 2
-        code: 34
+        code := 34
     ---
     if: code = 7 && refs[1]\q != 3
-        code: 34
+        code := 34
     ---
 ---
 if: code = 7 && asserted_refused() != 3
-    code: 35
+    code := 35
 ---
 if: code = 7 && store_refused() != 3
-    code: 36
+    code := 36
 ---
 if: code = 7
     @: WrittenOnly\f two
-    WrittenOnly: OtherCallable
+    WrittenOnly := OtherCallable
     if: WrittenOnly\f() != 2
-        code: 37
+        code := 37
     ---
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")

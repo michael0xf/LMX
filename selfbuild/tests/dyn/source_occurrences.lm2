@@ -8,7 +8,7 @@ D:
 end: D
 Assigned:
     int: y 3
-    y: 7
+    y := 7
 end: Assigned
 One:
     int: y 0
@@ -21,7 +21,7 @@ Writer:
 end: Writer
 Twice:
     int: y 3
-    y: 7
+    y := 7
 end: Twice
 Nest:
     T:
@@ -47,17 +47,17 @@ Branch:
 end: Branch
 M:
     int: y 0
-    y: 1
+    y := 1
 end: M
 W:
     int: z 9
     int: y 5
-    y: 6
+    y := 6
 end: W
 Copied: merge: D
 Empty: ()
 int: hits 1
-hits: 2
+hits := 2
 hits_writer:
     int: hits 5
 end: hits_writer
@@ -78,7 +78,7 @@ fn: read_replaced () int
     return: quote\[1]y\v
 end: read_replaced
 sub: replace ()
-    quote\[1]y: Other
+    quote\[1]y := Other
 end: replace
 fn: read_note () int
     if: quote\note = 0
@@ -106,13 +106,13 @@ end: take_bare
 # does not have is the negative answer of that one reached edge.
 Two:
     int: y 1
-    y: 2
+    y := 2
 end: Two
 Lone:
     int: w 9
     int: y 5
 end: Lone
-Two: Lone
+Two := Lone
 fn: read_second_of_two () int
     @: held Empty Two\[1]y
     if: held = 0
@@ -163,9 +163,9 @@ end: free_nested
 # The return trailer stands after its body's handlers: what it raises leaves the method and the caller takes it.
 fn: trailer_bare (@: p N) int
     int: r 1
-    r: r + 1
+    r := r + 1
     catch: implements ()
-        r: 30
+        r := 30
     ---
 return: p\y + r
 fn: pass_trailer () int
@@ -205,14 +205,14 @@ end: refuses_call
 fn: places () int
     if: D\[0]y != 3
         return: 81
-    D\[0]y: 9
+    D\[0]y := 9
     if: D\[0]y != 9
         return: 82
     @: p int @ (D\[0]y)
-    \p: 8
+    \p := 8
     if: D\[0]y != 8
         return: 83
-    D\[0]y: 3
+    D\[0]y := 3
     @: h D D
     if: h\[0]y != 3
         return: 84
@@ -226,23 +226,23 @@ fn: stored () int
     ---
         int: k read_stored()
         catch: convert ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 85
-    caught: 0
+    caught := 0
     ---
         int: k read_bare()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 86
-    caught: 0
+    caught := 0
     ---
         int: k read_far()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 87
@@ -262,10 +262,10 @@ fn: replaced () int
     replace()
     if: read_replaced() != 7
         return: 91
-    D\[0]y: 4
+    D\[0]y := 4
     if: read_replaced() != 7 || D\[0]y != 4
         return: 92
-    One\y: 0
+    One\y := 0
     call: D One
     if: One\y != 3
         return: 93
@@ -280,7 +280,7 @@ fn: data_role () int
         return: 95
     if: refuses_call(2) != 1
         return: 96
-    One\y: 0
+    One\y := 0
     call: Twice One
     if: One\y != 7
         return: 97
@@ -298,17 +298,17 @@ fn: heads () int
     ---
         int: k note_two()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 101
     if: branch_if() != 1
         return: 102
-    caught: 0
+    caught := 0
     ---
         int: k branch_inner()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 103
@@ -352,41 +352,41 @@ fn: through_map () int
     ---
         int: k free_two_heads()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 109
     if: Two\[0]y != 5
         return: 110
-    caught: 0
+    caught := 0
     ---
         int: m read_second_of_two()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 111
-    caught: 0
+    caught := 0
     ---
         int: t free_trailer()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 112
-    caught: 0
+    caught := 0
     ---
         int: h free_nested()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 113
-    caught: 0
+    caught := 0
     ---
         int: e free_held_bare()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 114
@@ -396,25 +396,25 @@ fn: through_map () int
 end: through_map
 int: code places()
 if: code = 0
-    code: stored()
+    code := stored()
 ---
 if: code = 0
-    code: replaced()
+    code := replaced()
 ---
 if: code = 0
-    code: data_role()
+    code := data_role()
 ---
 if: code = 0
-    code: heads()
+    code := heads()
 ---
 if: code = 0
-    code: over_node()
+    code := over_node()
 ---
 if: code = 0
-    code: through_map()
+    code := through_map()
 ---
 if: code = 0
-    code: 7
+    code := 7
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

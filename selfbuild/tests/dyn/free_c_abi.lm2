@@ -20,12 +20,12 @@ fn: beside_result () int
     return: quote + c.lmx_type_base(2)
 end: beside_result
 fn: into_number () int
-    quote: c.lmx_type_base(7)
+    quote := c.lmx_type_base(7)
     return: quote
 end: into_number
 fn: into_pointer () char
     @: text char "abc"
-    quote: c.strchr(text, 98)
+    quote := c.strchr(text, 98)
     return: \quote
 end: into_pointer
 fn: same_pointer (@: text char) int
@@ -49,8 +49,8 @@ fn: size_of () size_t
 end: size_of
 fn: index_value () int
     []: int a 3
-    a[quote]: 7
-    a[quote + 1U]: a[quote]
+    a[quote] := 7
+    a[quote + 1U] := a[quote]
     return: a[quote + 1U]
 end: index_value
 fn: plus_u () size_t
@@ -126,9 +126,9 @@ fn: outer_index_int () int
     int: quote 1
     int: got 0
     ---
-        got: index_value()
+        got := index_value()
         catch: convert ()
-            got: 90
+            got := 90
     ---
     if: got != 90
         return: 98
@@ -138,28 +138,28 @@ fn: m () int
     int: r outer_text()
     if: r != 0
         return: r
-    r: outer_write()
+    r := outer_write()
     if: r != 0
         return: r
-    r: outer_result()
+    r := outer_result()
     if: r != 0
         return: r
-    r: outer_found()
+    r := outer_found()
     if: r != 0
         return: r
-    r: outer_same()
+    r := outer_same()
     if: r != 0
         return: r
-    r: outer_cast()
+    r := outer_cast()
     if: r != 0
         return: r
-    r: outer_cast_number()
+    r := outer_cast_number()
     if: r != 0
         return: r
-    r: outer_index()
+    r := outer_index()
     if: r != 0
         return: r
-    r: outer_index_int()
+    r := outer_index_int()
     if: r != 0
         return: r
     return: 7

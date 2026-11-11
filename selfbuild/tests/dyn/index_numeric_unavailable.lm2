@@ -5,7 +5,7 @@
 # index in a branch that does not run raises nothing, at the root too.  Never an unchecked C index.  Entry 7.
 fn: idx_read () int
     []: int cells 2
-    cells[1U]: 17
+    cells[1U] := 17
     @: pc int @ cells[0U]
     int: at 1
     ---
@@ -17,11 +17,11 @@ fn: idx_read () int
 end: idx_read
 fn: idx_write () int
     []: int cells 2
-    cells[1U]: 17
+    cells[1U] := 17
     @: pc int @ cells[0U]
     int: at 1
     ---
-        pc[at]: 40
+        pc[at] := 40
         return: 1
         catch: convert ()
             return: cells[1U]
@@ -29,11 +29,11 @@ fn: idx_write () int
 end: idx_write
 fn: idx_skipped (int: k) int
     []: int cells 2
-    cells[1U]: 17
+    cells[1U] := 17
     @: pc int @ cells[0U]
     int: at 1
     if: k = 1
-        pc[at]: 40
+        pc[at] := 40
         return: pc[at]
     ---
     return: cells[1U] - 8
@@ -52,11 +52,11 @@ fn: run () int
 end: run
 int: code run()
 []: int rcells 2
-rcells[1U]: 7
+rcells[1U] := 7
 @: rpc int @ rcells[0U]
 int: rat 1
 if: code = 0
-    code: rpc[rat]
+    code := rpc[rat]
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

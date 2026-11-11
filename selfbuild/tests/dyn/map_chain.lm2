@@ -99,15 +99,15 @@ fn: read_i (@: p I) int
     return: p\y
 end: read_i
 fn: set_far_fat () int
-    quote_far\b: Fat
+    quote_far\b := Fat
     return: 0
 end: set_far_fat
 fn: set_far_thin () int
-    quote_far\b: Thin
+    quote_far\b := Thin
     return: 0
 end: set_far_thin
 fn: set_near_i () int
-    quote_near\b: I
+    quote_near\b := I
     return: 0
 end: set_near_i
 fn: records () int
@@ -128,10 +128,10 @@ fn: composed () int
     int: r 0
     ---
         if: Near\b\y != 9
-            r: 82
+            r := 82
         ---
         catch: implements ()
-            r: 83
+            r := 83
     ---
     return: r
 end: composed
@@ -139,10 +139,10 @@ fn: used_edge_alone () int
     int: r 0
     ---
         if: Near2\b\y != 9
-            r: 84
+            r := 84
         ---
         catch: implements ()
-            r: 85
+            r := 85
     ---
     return: r
 end: used_edge_alone
@@ -151,7 +151,7 @@ fn: edge_of_later_use () int
     ---
         int: k Near2\b\extra
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 86
@@ -162,7 +162,7 @@ fn: edge_lacking () int
     ---
         int: k Near3\b\y
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 87
@@ -173,7 +173,7 @@ fn: edge_of_wrong_kind () int
     ---
         int: k Near4\b\y
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 88
@@ -186,49 +186,49 @@ fn: later_edge_of_wrong_kind () int
     ---
         int: k Near5\b\extra
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 90
     return: 0
 end: later_edge_of_wrong_kind
 int: code records()
-Far2\b: Fat
-Far3\b: Fat3
-Far4\b: Fat3
-Far5\b: Fat5
-Near: Far
-Near2: Far2
-Near3: Far3
-Near4: Far4
-Near5: Far5
+Far2\b := Fat
+Far3\b := Fat3
+Far4\b := Fat3
+Far5\b := Fat5
+Near := Far
+Near2 := Far2
+Near3 := Far3
+Near4 := Far4
+Near5 := Far5
 if: code = 0
-    code: thin_in_far()
+    code := thin_in_far()
 ---
-Far2\b: Thin
-Far3\b: Lacking
-Far4\b: WrongKind
-Far5\b: LaterWrong
+Far2\b := Thin
+Far3\b := Lacking
+Far4\b := WrongKind
+Far5\b := LaterWrong
 if: code = 0
-    code: composed()
----
-if: code = 0
-    code: used_edge_alone()
+    code := composed()
 ---
 if: code = 0
-    code: edge_of_later_use()
+    code := used_edge_alone()
 ---
 if: code = 0
-    code: edge_lacking()
+    code := edge_of_later_use()
 ---
 if: code = 0
-    code: edge_of_wrong_kind()
+    code := edge_lacking()
 ---
 if: code = 0
-    code: later_edge_of_wrong_kind()
+    code := edge_of_wrong_kind()
 ---
 if: code = 0
-    code: 7
+    code := later_edge_of_wrong_kind()
+---
+if: code = 0
+    code := 7
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

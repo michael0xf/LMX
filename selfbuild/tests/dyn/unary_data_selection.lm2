@@ -3,15 +3,15 @@
 int: quote 7
 int: signal 0
 NoData:
-    node\signal: 7
+    node\signal := 7
 end: NoData
 FreeOnly:
-    quote: 9
-    node\signal: quote
+    quote := 9
+    node\signal := quote
 end: FreeOnly
 S:
     int: x 2
-    x: 4
+    x := 4
 end: S
 X:
     int: x 0
@@ -21,7 +21,7 @@ fn: try_call () int
     int: answer 81
     call: held
     catch: call ()
-        answer: 7
+        answer := 7
     ---
     return: answer
 end: try_call
@@ -38,28 +38,28 @@ fn: try_null () int
 end: try_null
 int: answer try_call()
 if: try_null() != 7
-    answer: 86
+    answer := 86
 if: S\[0]x != 2
-    answer: 82
+    answer := 82
 @: empty NoData
 call: empty
 if: read_signal() != 7 || signal != 0
-    answer: 83
+    answer := 83
 @: local FreeOnly
 call: local
 if: read_signal() != 9 || quote != 7 || signal != 0
-    answer: 84
+    answer := 84
 # Two root heads of x: as data S answers to no bare x and the selected call refuses; as code its two writes land in the one place of X.
 int: refused 0
 ---
     call: held S
     catch: call ()
-        refused: 1
+        refused := 1
 ---
 if: refused != 1 || S\[0]x != 2
-    answer: 85
+    answer := 85
 call: held X
 if: X\x != 4
-    answer: 85
+    answer := 85
 send: exit(exit_code: answer; stdout: ""; stderr: "")
 return

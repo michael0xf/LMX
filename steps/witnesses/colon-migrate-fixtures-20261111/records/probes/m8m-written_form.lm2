@@ -1,0 +1,562 @@
+# One source form is two acts (the book, "Исходная запись строит полный граф Structure", #method-parts; CODEX-OPUS-278-REPEAT-IDENTITY-20261104T075944Z-01): the written Structure
+# stays in the body, and reaching the line assigns a reference to it to the place of its head after the admission.  No copy, no merge, no second graph; a rebinding changes the place,
+# not the body; a write through the place changes the written Structure itself.  The codes name the checks.
+Swapped:
+    int: y 7
+    int: a 5
+end: Swapped
+Holder:
+    int: x 2
+end: Holder
+Thin:
+    int: y 4
+end: Thin
+
+# 81: the rebinding of the place does not touch the body: the first line assigns its Structure again on every entry, 3 and 3.
+fn: re_enter () int
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    int: seen T\y
+    T: Swapped
+    return: seen
+end: re_enter
+
+# 82: the place outlives the activation (the book, "Поле var вызываемого вхождения хранит опубликованное значение"): lines not reached the second time leave what the first call published.
+fn: published (int: k) int
+    if: k = 0
+        T:
+            int: a 1
+            int: y 3
+        end: T
+        T: Swapped
+    ---
+    return: T\y
+end: published
+
+# 83: a repeated form, and a write into its referent: the next reach assigns the same Structure as it stands, 5 then 6.
+fn: referent () int
+    t: (int: x 2)
+    t: (int: x 5)
+    int: seen t\x
+    t\x: 6
+    return: seen
+end: referent
+
+# 84: one place for one name: a rebinding not reached leaves the written value, reached it replaces it, and the next entry assigns the written value again.
+fn: reached (int: k) int
+    T:
+        int: a 1
+        int: y 3
+    end: T
+    if: k = 1
+        T: Swapped
+    ---
+    return: T\y
+end: reached
+
+# 85: the vertical spelling of a repeated form.
+fn: vertical () int
+    t:
+        int: x 2
+    end: t
+    t:
+        int: x 5
+    end: t
+    return: t\x
+end: vertical
+
+# 86, 87: a written form assigned to a formal: the activation's value after the admission; the argument's own place is not written back.
+fn: formal (@: t Holder) int
+    t: (int: x 5)
+    return: t\x
+end: formal
+
+# 88: the two written forms of `var`.
+fn: var_forms () int
+    var: (int: x 2)
+    var: (int: x 5)
+    return: var\x
+end: var_forms
+
+# 89: the same at the root: the definition is a named root, the line assigns the first head's place.
+rooted: (int: x 2)
+rooted: (int: x 5)
+
+# 90, 91: in a named Structure: `call: S D` assigns D's place, S keeps both written forms, D answers for nothing it does not use.
+S:
+    t: (int: x 2)
+    t: (int: x 5)
+end: S
+D:
+    t: (int: x 1)
+end: D
+
+# 92: `call: S S` reads the operator's head in the data: two heads, so the implicit `call`, as a bare name does (the book: an index selects one).
+Twice:
+    t: (int: x 2)
+    t: (int: x 5)
+end: Twice
+
+# 93, 94, 95: a repeated form makes no field of the model: Thin answers for it without any trace of the form.
+Formed:
+    int: y 1
+    t: (int: x 2)
+    t: (int: x 5)
+end: Formed
+Answers:
+    int: y 7
+    t: (int: x 9)
+end: Answers
+fn: read_y (@: h Formed) int
+    return: h\y
+end: read_y
+fn: read_first (@: h Formed) int
+    return: h\[0]t\x
+end: read_first
+
+# 96: the author's example of 15 October: before `var:` is reached var is the code itself, which has no i; reaching it assigns the written Structure.
+int: seen 0
+with_var:
+    ---
+        node\seen: var\i
+        catch: implements ()
+            node\seen: 1
+    ---
+    var:
+        int: i 5
+    end: var
+    node\seen: node\seen * 10 + var\i
+end: with_var
+fn: run_code () int
+    call: with_var with_var
+    return: node\seen
+end: run_code
+
+# 97-102: every use of a local written Structure goes through its place: a nested name, a method, a write, the model of a typed reference, an actual.
+fn: count (@: h Thin) int
+    return: 1
+end: count
+fn: uses () int
+    T:
+        int: a 1
+        int: y 3
+        K:
+            int: z 8
+        end: K
+        fn: twice () int
+            return: y * 2
+        end: twice
+    end: T
+    if: T\K\z != 8
+        return: 97
+    if: T\twice() != 6
+        return: 98
+    T\y: 5
+    if: T\y != 5
+        return: 99
+    @: p T Thin
+    if: p\y != 4
+        return: 100
+    int: k count(T)
+    if: k != 1
+        return: 101
+    return: 7
+end: uses
+
+# 102: every reach in a loop assigns the same Structure as it stands: 2, 3, 4.
+fn: looped () int
+    int: i 0
+    int: sum 0
+    while: i < 3
+        t: (int: x 2)
+        sum: sum + t\x
+        t\x: t\x + 1
+        i: i + 1
+    ---
+    return: sum
+end: looped
+
+# 103: a form in a handler.
+fn: in_catch (int: d) int
+    ---
+        int: z 1 / d
+        return: z
+        catch: interpreter ()
+            t: (int: x 6)
+            return: t\x
+    ---
+end: in_catch
+
+# 104: an empty form declares the place; what stands there later answers for a consumer of its own.
+Has:
+    int: x 1
+end: Has
+fn: read_x (@: h Has) int
+    return: h\x
+end: read_x
+fn: empty () int
+    t: ()
+    t: (int: x 5)
+    return: read_x(t)
+end: empty
+
+# 105: two written forms of `var` in a body called over itself: var is the activation's binding, each line rebinds it: 1, then 5.
+int: seen2 0
+with2:
+    var: (int: i 1)
+    node\seen2: var\i
+    var: (int: i 5)
+    node\seen2: node\seen2 * 10 + var\i
+end: with2
+fn: run_with2 () int
+    call: with2 with2
+    return: node\seen2
+end: run_with2
+
+# 106: the short call reads `var` by name: over two root heads it does not silently take the first (the plan, U3): the implicit call.
+Two:
+    var: (int: i 1)
+    var: (int: i 5)
+end: Two
+fn: short_two () int
+    ---
+        call: Two
+        return: 106
+        catch: call ()
+            return: 7
+    ---
+end: short_two
+
+# 107: the second form written by hand: a definition and the line that assigns it, read as a value of the head, not as `Model: m`: the definition goes to D's place, then its value to t.
+Hand:
+    t: (int: x 2)
+    A: (int: x 5)
+    t: A
+end: Hand
+HandData:
+    t: (int: x 1)
+    A: (int: x 7)
+end: HandData
+
+# 108: one place for one name across neighbouring inline bodies (the book: no shadowing at an inline): a form or a rebinding in a later body writes the place of the first, a body not reached leaves what stands.
+fn: neighbours (int: k) int
+    if: k = 0
+        T: (int: y 3)
+    ---
+    if: k = 1
+        T: (int: y 8)
+    ---
+    if: k = 2
+        T: Swapped
+    ---
+    return: T\y
+end: neighbours
+
+# 109: a nested method reads the host's place.
+fn: host_read () int
+    T:
+        int: y 3
+    end: T
+    fn: inner () int
+        return: T\y
+    end: inner
+    return: inner()
+end: host_read
+
+# 110: the same for a host's typed reference: one reference under the LMX code and under its pointer code.
+fn: host_reference () int
+    @: q Thin Thin
+    fn: inner_reference () int
+        return: q\y
+    end: inner_reference
+    return: inner_reference()
+end: host_reference
+
+# 111: a reference with the place as its requirement and no candidate: the implicit model is the written definition.
+fn: implicit () int
+    T:
+        int: y 3
+    end: T
+    @: x T
+    return: x\y
+end: implicit
+
+# 112: a repeated form in a block of the root.
+blocked: (int: x 2)
+
+# 113: a repeated form in a method's own named Structure.
+fn: local_named () int
+    L:
+        int: y 1
+        t: (int: x 2)
+        t: (int: x 5)
+    end: L
+    return: L\[0]t\x
+end: local_named
+
+# 114-122: both forms stay source occurrences of t (CODEX-OPUS-278-REVIEW-SOURCE-OCCURRENCE-20261104T133624Z-01): each with its fields, at its own index, through a static path, a free
+# path, a model and a copy; a write through an occurrence is seen by the next reach of its line; there is one data place.
+Occ:
+    t: (int: x 2)
+    t: (int: x 5)
+end: Occ
+OccData:
+    t: (int: x 0)
+end: OccData
+OccAgain:
+    t: (int: x 0)
+end: OccAgain
+OccOther:
+    int: x 8
+end: OccOther
+OccModel:
+    t: (int: x 0)
+    t: (int: x 0)
+end: OccModel
+OccRead:
+    t: (int: x 2)
+    t: (int: x 5)
+end: OccRead
+OccCopy: merge: OccRead
+int: occ_free_holder 0
+fn: occ_free_second () int
+    return: occ_free_holder\[1]t\x
+end: occ_free_second
+OccNothing:
+end: OccNothing
+fn: occ_free_third () int
+    @: third OccNothing occ_free_holder\[2]t
+    if: third = 0
+        return: 0
+    return: 1
+end: occ_free_third
+fn: occ_free_bare () int
+    return: occ_free_holder\t\x
+end: occ_free_bare
+fn: occ_model_write (@: m OccModel) int
+    m\[1]t\x: 9
+    return: m\[1]t\x
+end: occ_model_write
+fn: occ_free () int
+    @: occ_free_holder OccRead OccRead
+    if: occ_free_second() != 5
+        return: 117
+    int: refused 0
+    ---
+        int: third occ_free_third()
+        catch: implements ()
+            refused: 1
+    ---
+    if: refused != 1
+        return: 118
+    refused: 0
+    ---
+        int: bare occ_free_bare()
+        catch: implements ()
+            refused: 1
+    ---
+    if: refused != 1
+        return: 119
+    return: 7
+end: occ_free
+
+# 123-126: a name of the form the split once used is an ordinary name: a place the data must have, a field of its Structure, a local.
+Spelled:
+    l2_written_7: (int: x 3)
+end: Spelled
+SpelledData:
+    l2_written_7: (int: x 0)
+end: SpelledData
+SpelledNone:
+    int: z 0
+end: SpelledNone
+SpelledBeside:
+    t: (int: x 2)
+    l2_written_1: (int: x 4)
+    t: (int: x 5)
+end: SpelledBeside
+fn: rooted_index () int
+    return: node\[1]rooted\x
+end: rooted_index
+fn: spelled_local () int
+    l2_written_1: (int: x 3)
+    l2_written_1: (int: x 4)
+    return: l2_written_1\x
+end: spelled_local
+
+int: code 7
+int: first re_enter()
+int: second re_enter()
+if: first * 10 + second != 33
+    code: 81
+---
+first: published(0)
+second: published(1)
+if: code = 7 && first * 10 + second != 77
+    code: 82
+---
+first: referent()
+second: referent()
+if: code = 7 && first * 10 + second != 56
+    code: 83
+---
+first: reached(0)
+second: reached(1)
+int: third reached(0)
+if: code = 7 && first * 100 + second * 10 + third != 373
+    code: 84
+---
+if: code = 7 && vertical() != 5
+    code: 85
+---
+if: code = 7 && formal(Holder) != 5
+    code: 86
+---
+if: code = 7 && Holder\x != 2
+    code: 87
+---
+if: code = 7 && var_forms() != 5
+    code: 88
+---
+if: code = 7 && rooted\x != 5
+    code: 89
+---
+if: code = 7
+    call: S D
+    if: D\t\x != 5
+        code: 90
+    ---
+    if: code = 7 && S\[0]t\x != 2
+        code: 91
+    ---
+---
+---
+    if: code = 7
+        code: 92
+        call: Twice Twice
+    ---
+    catch: call ()
+        code: 7
+---
+if: code = 7 && read_y(Answers) != 7
+    code: 93
+---
+if: code = 7 && read_first(Answers) != 9
+    code: 94
+---
+@: Other Answers
+if: code = 7 && Other\y != 7
+    code: 95
+---
+if: code = 7 && run_code() != 15
+    code: 96
+---
+if: code = 7
+    code: uses()
+---
+if: code = 7 && looped() != 9
+    code: 102
+---
+if: code = 7 && in_catch(0) != 6
+    code: 103
+---
+if: code = 7 && empty() != 5
+    code: 104
+---
+if: code = 7 && run_with2() != 15
+    code: 105
+---
+if: code = 7
+    code: short_two()
+---
+first: neighbours(0)
+second: neighbours(1)
+third: neighbours(2)
+int: fourth neighbours(3)
+if: code = 7 && first * 1000 + second * 100 + third * 10 + fourth != 3877
+    code: 108
+---
+if: code = 7 && host_read() != 3
+    code: 109
+---
+if: code = 7 && host_reference() != 4
+    code: 110
+---
+if: code = 7 && implicit() != 3
+    code: 111
+---
+if: code = 7
+    blocked: (int: x 9)
+    if: blocked\x != 9
+        code: 112
+    ---
+---
+if: code = 7 && local_named() != 2
+    code: 113
+---
+if: code = 7
+    call: Hand HandData
+    if: HandData\t\x != 5
+        code: 107
+    ---
+---
+if: code = 7 && (Occ\[0]t\x != 2 || Occ\[1]t\x != 5)
+    code: 114
+---
+if: code = 7
+    Occ\[1]t\x: 6
+    call: Occ OccData
+    if: OccData\t\x != 6 || Occ\[0]t\x != 2
+        code: 115
+    ---
+    OccData\t\x: 7
+    if: Occ\[1]t\x != 7
+        code: 116
+    ---
+---
+if: code = 7
+    code: occ_free()
+---
+if: code = 7 && (occ_model_write(OccRead) != 9 || OccRead\[1]t\x != 9)
+    code: 120
+---
+if: code = 7 && (OccCopy\[0]t\x != 2 || OccCopy\[1]t\x != 5)
+    code: 121
+---
+if: code = 7
+    Occ\[1]t: OccOther
+    call: Occ OccAgain
+    if: OccAgain\t\x != 8 || Occ\[0]t\x != 2
+        code: 122
+    ---
+---
+if: code = 7
+    call: Spelled SpelledData
+    if: SpelledData\l2_written_7\x != 3
+        code: 123
+    ---
+---
+if: code = 7
+    int: spelled_refused 0
+    ---
+        call: Spelled SpelledNone
+        catch: call ()
+            spelled_refused: 1
+    ---
+    if: spelled_refused != 1
+        code: 124
+    ---
+---
+if: code = 7 && (SpelledBeside\l2_written_1\x != 4 || SpelledBeside\[1]t\x != 5)
+    code: 125
+---
+if: code = 7 && spelled_local() != 4
+    code: 126
+---
+if: code = 7 && rooted_index() != 5
+    code: 127
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

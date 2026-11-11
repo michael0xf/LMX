@@ -9,16 +9,16 @@ fn: run () int
     @: s char "abc"
     @: p char 0
     @: q char 0
-    p: c.strdup(s)
+    p := c.strdup(s)
     if: p = 0
         return: 80
     if: c.strcmp(p, "abc") != 0
         return: 81
-    q: c.malloc(4U)
+    q := c.malloc(4U)
     if: q = 0
         return: 82
-    q[0]: p[2]
-    q[1]: (cast: (char) 0)
+    q[0] := p[2]
+    q[1] := (cast: (char) 0)
     if: c.strcmp(q, "c") != 0
         return: 83
     c.free(q)

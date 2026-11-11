@@ -9,11 +9,11 @@ fn: read_size () size_t
     return: quote[at]
 end: read_size
 sub: write_nine ()
-    quote[at]: 9
+    quote[at] := 9
 end: write_nine
 fn: address_int () int
     @: p int @ quote[at]
-    \p: 12
+    \p := 12
     return: \p
 end: address_int
 fn: outer_pointer () int
@@ -39,9 +39,9 @@ fn: outer_size () int
         return: 85
     int: caught 0
     ---
-        caught: read_int()
+        caught := read_int()
         catch: convert ()
-            caught: 90
+            caught := 90
     ---
     if: caught != 90
         return: 86
@@ -49,9 +49,9 @@ fn: outer_size () int
 end: outer_size
 fn: outer_array () int
     []: int quote 3
-    quote[0U]: 3
-    quote[1U]: 4
-    quote[2U]: 7
+    quote[0U] := 3
+    quote[1U] := 4
+    quote[2U] := 7
     size_t: at 1U
     if: read_int() != 4
         return: 87
@@ -60,12 +60,12 @@ fn: outer_array () int
         return: 88
     if: address_int() != 12 || read_int() != 12
         return: 89
-    at: 3U
+    at := 3U
     int: caught 0
     ---
-        caught: read_int()
+        caught := read_int()
         catch: interpreter ()
-            caught: 90
+            caught := 90
     ---
     if: caught != 90
         return: 91
@@ -76,9 +76,9 @@ fn: outer_number () int
     size_t: at 0U
     int: caught 0
     ---
-        caught: read_int()
+        caught := read_int()
         catch: convert ()
-            caught: 90
+            caught := 90
     ---
     if: caught != 90
         return: 92
@@ -98,9 +98,9 @@ fn: outer_array_only () int
 end: outer_array_only
 fn: outer_pointer_offset () int
     []: int cells 3
-    cells[0U]: 3
-    cells[1U]: 17
-    cells[2U]: 7
+    cells[0U] := 3
+    cells[1U] := 17
+    cells[2U] := 7
     @: quote int @ cells[0U]
     size_t: at 1U
     if: read_int() != 17
@@ -115,11 +115,11 @@ fn: mixed_read () int
 end: mixed_read
 fn: mixed_write () int
     @: p int @ quote\items[at]
-    \p: 21
+    \p := 21
     return: quote\items[at]
 end: mixed_write
 fn: outer_mixed () int
-    Box\items[1U]: 17
+    Box\items[1U] := 17
     @: quote Box Box
     size_t: at 1U
     if: mixed_read() != 17 || mixed_write() != 21
@@ -130,22 +130,22 @@ fn: m () int
     int: r outer_pointer()
     if: r != 0
         return: r
-    r: outer_size()
+    r := outer_size()
     if: r != 0
         return: r
-    r: outer_array()
+    r := outer_array()
     if: r != 0
         return: r
-    r: outer_number()
+    r := outer_number()
     if: r != 0
         return: r
-    r: outer_array_only()
+    r := outer_array_only()
     if: r != 0
         return: r
-    r: outer_pointer_offset()
+    r := outer_pointer_offset()
     if: r != 0
         return: r
-    r: outer_mixed()
+    r := outer_mixed()
     if: r != 0
         return: r
     return: 7

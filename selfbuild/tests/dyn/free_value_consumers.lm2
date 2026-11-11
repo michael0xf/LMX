@@ -9,7 +9,7 @@ predef: "l2src/lmx_arena.h.lm1"
 int: quote 11
 int: marks 0
 sub: mark ()
-    marks: marks + 1
+    marks := marks + 1
 end: mark
 fn: hit () int
     mark()
@@ -48,7 +48,7 @@ fn: pick (@: p int) @: int
 end: pick
 fn: outer () int
     int: quote
-    quote: 3
+    quote := 3
     if: neg() != 0 - 3
         return: 81
     if: both() != 1
@@ -62,7 +62,7 @@ fn: outer () int
     if: cast_it() != 3U
         return: 86
     @: q int 0
-    q: pick(@ marks)
+    q := pick(@ marks)
     if: q = 0
         return: 87
     if: \q != 0
@@ -72,15 +72,15 @@ end: outer
 fn: outer2 () int
     size_t: quote
     int: got 0
-    quote: 2U
+    quote := 2U
     if: (cast: (int) at()) != 99
         return: 88
     if: both() != 1
         return: 89
     ---
-        got: door()
+        got := door()
         catch: convert ()
-            got: 91
+            got := 91
     ---
     if: got != 91
         return: 92
@@ -92,7 +92,7 @@ fn: m () int
     int: r outer()
     if: r != 0
         return: r
-    r: outer2()
+    r := outer2()
     if: r != 0
         return: r
     return: 7

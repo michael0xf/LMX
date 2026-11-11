@@ -1,7 +1,7 @@
 # Admission reads the selected body, including declarations in inline branches.
 S:
     int: x 0
-    x: 1
+    x := 1
     if: x = 2
         int: y 5
 end: S
@@ -18,15 +18,15 @@ fn: run () int
     int: r 82
     call: chosen D
     catch: call ()
-        r: 83
+        r := 83
         if: D\x = 10
-            r: 7
+            r := 7
     ---
 return: r
 int: got run()
 call: chosen Good
 if: Good\x != 1 || Good\y != 33 || Good\padding != 27
-    got: 84
+    got := 84
 Node:
     int: value 8
 end: Node
@@ -48,13 +48,13 @@ fn: incompatible_link () int
     call: held_link NumberData
     catch: call ()
         if: NumberData\marker = 31
-            result: 7
+            result := 7
     ---
     return: result
 end: incompatible_link
 call: held_link LinkData
 int: rejected incompatible_link()
 if: LinkData\marker != 13 || rejected != 7
-    got: 86
+    got := 86
 send: exit(exit_code: got; stdout: ""; stderr: "")
 return

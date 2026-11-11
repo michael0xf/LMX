@@ -11,7 +11,7 @@ Seen:
     int: n 0
 end: Seen
 fn: take (int: a) int
-    Seen\n: Seen\n + 1
+    Seen\n := Seen\n + 1
     return: a
 end: take
 fn: give () int
@@ -23,8 +23,8 @@ fn: write_reached () int
     char: c 6
     int: after 0
     ---
-        z: c
-        after: 1
+        z := c
+        after := 1
         return: 1
         catch: convert ()
             return: z + after * 100
@@ -59,7 +59,7 @@ end: init_reached
 fn: path_reached () int
     char: c 6
     ---
-        Box\n: c
+        Box\n := c
         return: 1
         catch: convert ()
             return: Box\n
@@ -69,10 +69,10 @@ fn: skipped (int: k) int
     int: z 5
     char: c 6
     if: k = 1
-        z: c
-        z: take(c)
+        z := c
+        z := take(c)
         int: w c
-        Box\n: c
+        Box\n := c
         return: c
     ---
     return: z + Box\n
@@ -102,10 +102,10 @@ int: code run()
 char: rc 6
 int: rz 5
 if: code = 0
-    rz: rc
+    rz := rc
 ---
 if: code = 7 && rz != 5
-    code: 87
+    code := 87
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

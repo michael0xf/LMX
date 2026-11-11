@@ -13,9 +13,9 @@ int: x 3
 @: px int @ x
 int: a px[0U]
 []: int cells 3
-cells[0U]: 5
-cells[1U]: 17
-cells[2U]: 7
+cells[0U] := 5
+cells[1U] := 17
+cells[2U] := 7
 @: pc int @ cells[0U]
 fn: touch () int
     return: 0
@@ -24,7 +24,7 @@ fn: get (@: p int; size_t: at) int
     return: p[at]
 end: get
 sub: put (@: p int; size_t: at; int: v)
-    p[at]: v
+    p[at] := v
 end: put
 fn: own_read () int
     int: cell 11
@@ -34,7 +34,7 @@ end: own_read
 fn: own_write () int
     int: cell 11
     @: q int @ cell
-    q[0U]: 12
+    q[0U] := 12
     return: \q
 end: own_write
 fn: own_far () int
@@ -53,86 +53,86 @@ end: literal_char
 int: code 7
 int: t touch()
 if: a != 3
-    code: 11
-px[0U]: 4
+    code := 11
+px[0U] := 4
 int: seen px[0U]
 if: code = 7 && seen != 4
-    code: 12
+    code := 12
 @: py int @ px[0U]
-\py: 6
+\py := 6
 if: code = 7 && px[0U] != 6
-    code: 13
+    code := 13
 if: code = 7 && pc[1U] != 17
-    code: 14
+    code := 14
 if: code = 7 && pc[2U] != 7
-    code: 15
-pc[1U]: 19
+    code := 15
+pc[1U] := 19
 if: code = 7 && cells[1U] != 19
-    code: 16
+    code := 16
 if: code = 7 && px\[0U] != 6
-    code: 17
+    code := 17
 if: code = 7 && get(px, 0U) != 6
-    code: 18
+    code := 18
 if: code = 7 && get(pc, 2U) != 7
-    code: 19
+    code := 19
 put(pc, 1U, 23)
 if: code = 7 && cells[1U] != 23
-    code: 20
+    code := 20
 if: code = 7 && own_read() != 11
-    code: 21
+    code := 21
 if: code = 7 && own_write() != 12
-    code: 22
+    code := 22
 int: caught 0
 ---
-    caught: get(pc, 2305843009213693951U)
+    caught := get(pc, 2305843009213693951U)
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 23
-caught: 0
+    code := 23
+caught := 0
 ---
     put(pc, 2305843009213693951U, 1)
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 24
-caught: 0
+    code := 24
+caught := 0
 ---
-    caught: far_address(pc)
+    caught := far_address(pc)
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 25
-caught: 0
+    code := 25
+caught := 0
 ---
-    caught: own_far()
+    caught := own_far()
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 26
-caught: 0
+    code := 26
+caught := 0
 ---
-    caught: pc[2305843009213693951U]
+    caught := pc[2305843009213693951U]
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 27
-caught: 0
+    code := 27
+caught := 0
 ---
-    pc[2305843009213693951U]: 1
+    pc[2305843009213693951U] := 1
     catch: interpreter ()
-        caught: 90
+        caught := 90
 ---
 if: code = 7 && caught != 90
-    code: 28
+    code := 28
 if: code = 7 && cells[1U] != 23
-    code: 29
+    code := 29
 if: code = 7 && literal_char() != 99
-    code: 30
+    code := 30
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

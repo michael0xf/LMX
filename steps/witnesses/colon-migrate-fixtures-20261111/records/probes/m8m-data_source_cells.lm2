@@ -1,0 +1,42 @@
+# Two written cells stay distinct even though their names agree.
+D:
+    int: x 10
+    var:
+        int: x 2
+    end: var
+end: D
+# The reserved reference is local; ordinary assignment changes that cell.
+S:
+    if: var != D
+        send: exit(exit_code: 84; stdout: ""; stderr: "")
+        return
+    ---
+    var := D\var
+    if: var != D\var
+        send: exit(exit_code: 85; stdout: ""; stderr: "")
+        return
+    ---
+    return
+end: S
+T:
+    if: var != D
+        send: exit(exit_code: 86; stdout: ""; stderr: "")
+        return
+    ---
+    var:
+        int: x 17
+    end: var
+    if: var != T\var
+        send: exit(exit_code: 87; stdout: ""; stderr: "")
+        return
+    ---
+    return
+end: T
+@: held S
+call: held D
+call: T D
+int: answer 83
+if: D\x = 10 && D\var\x = 2 && T\var\x = 17
+    answer: 7
+send: exit(exit_code: answer; stdout: ""; stderr: "")
+return

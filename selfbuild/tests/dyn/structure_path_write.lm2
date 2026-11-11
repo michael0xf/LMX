@@ -46,7 +46,7 @@ Outer:
     Empty:
     end: Empty
     Runs:
-        node\ran: node\ran + 1
+        node\ran := node\ran + 1
     end: Runs
 end: Outer
 Taken: (int: x 1)
@@ -54,15 +54,15 @@ Empty: ()
 A()
 B: ()
 fn: write_fn () int
-    BoxFn\kid: Other
+    BoxFn\kid := Other
     return: BoxFn\kid\y
 end: write_fn
 fn: write_formal (@: h BoxFormal) int
-    h\kid: Other
+    h\kid := Other
     return: h\kid\y
 end: write_formal
 fn: write_node () int
-    node\kid: Other
+    node\kid := Other
     return: node\kid\y
 end: write_node
 fn: read_occurrence () int
@@ -72,9 +72,9 @@ end: read_occurrence
 fn: write_refused () int
     int: caught 0
     ---
-        BoxRefused\kid: Bad
+        BoxRefused\kid := Bad
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     return: caught
 end: write_refused
@@ -83,7 +83,7 @@ fn: empty_refused () int
     ---
         Outer\Model()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     return: caught
 end: empty_refused
@@ -92,51 +92,51 @@ fn: taken_refused () int
     ---
         Taken()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     return: caught
 end: taken_refused
 fn: count (@: p Empty) int
     return: 1
 end: count
-Box\kid: Other
-D\[1]y: Second
+Box\kid := Other
+D\[1]y := Second
 Outer\Empty()
 Outer\Empty: ()
 int: code 7
 if: Box\kid\y != 7
-    code: 81
+    code := 81
 ---
 if: code = 7 && write_fn() != 7
-    code: 82
+    code := 82
 ---
 if: code = 7 && (write_formal(BoxFormal) != 7 || BoxFormal\kid\y != 7)
-    code: 83
+    code := 83
 ---
 if: code = 7 && write_node() != 7
-    code: 84
+    code := 84
 ---
 if: code = 7 && read_occurrence() != 7
-    code: 85
+    code := 85
 ---
 if: code = 7 && (write_refused() != 1 || BoxRefused\kid\y != 3)
-    code: 86
+    code := 86
 ---
 if: code = 7 && (empty_refused() != 1 || Outer\Model\v != 1)
-    code: 87
+    code := 87
 ---
 if: code = 7 && (taken_refused() != 1 || Taken\x != 1)
-    code: 88
+    code := 88
 ---
 if: code = 7 && (count(Outer\Runs) != 1 || Outer\ran != 0)
-    code: 89
+    code := 89
 ---
 call: Outer\Runs
 if: code = 7 && Outer\ran != 1
-    code: 90
+    code := 90
 ---
 if: code = 7 && (count(A) != 1 || count(B) != 1)
-    code: 91
+    code := 91
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

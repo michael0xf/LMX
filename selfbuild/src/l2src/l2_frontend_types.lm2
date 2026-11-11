@@ -62,13 +62,15 @@ end: lm_compiler_error
 # method mi).  kind, the left side: 1 a bare name, 2 a field path, 3 an index, 4 a dereference, 5 a member path of C
 # storage, 6 a name this very Frame defines by its value, 7 a reference this Frame defines by its value (`h: Box`),
 # 8 a callable's result this Frame defines (`r: h(3)`), 9 a place the Frame declares in its tail under a Structure
-# named in its head (`Model: m`), 10 a Structure written with its fields at the place of its head (`T:` and a body:
-# the Frame the translator marked as a written definition or a written put).  line, column and offset are those of
-# the head's first byte; in the colon form the colon is the byte at offset + head-length.  Rows are appended, so one
-# file collects every translation of a build.  A Frame whose head is a word of the language or a reference receiver
-# -- `int`, `const`, `@` -- declares by its receiver and is no row; neither is the Frame `@: place value` brought to
-# a write through its path (lm_compiler_place_write_node): the receiver wrote it.  Without the variable nothing is
-# done.  0, or 1 when the named file cannot be written.
+# named in its head (`Model: m`), 10 a Structure written at the place of its head: with its fields (`T:` and a body
+# -- the Frame the translator marked as a written definition or a written put) or empty (`Outer\Empty: ()`,
+# `Outer\Empty()` -- a Frame with no field in its body: the write branches lower it as an empty Structure put at the
+# place).  line, column and offset are those of the head's first byte; in the colon form the colon is the byte at
+# offset + head-length.  Rows are appended, so one file collects every translation of a build.  A Frame whose head is
+# a word of the language or a reference receiver -- `int`, `const`, `@` -- declares by its receiver and is no row;
+# neither is the Frame `@: place value` brought to a write through its path, nor the put of a Structure such a form
+# wrote (lm_compiler_receiver_form_node): the receiver wrote it.  Without the variable nothing is done.  0, or 1 when
+# the named file cannot be written.
 fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; int: route) int
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
@@ -83,12 +85,14 @@ fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; in
         return: (cast: (int) (0))
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\span = 0
         return: (cast: (int) (0))
-    if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U || lm_compiler_place_write_node(stmt) != 0
+    if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U || lm_compiler_receiver_form_node(stmt) != 0
         return: (cast: (int) (0))
     h := stmt\as\frame\head
     if: h\data = 0 || h\length = 0U || h\data[0] = 64 || lm_compiler_head_word(h) != 0
         return: (cast: (int) (0))
     if: lm_compiler_written_definition_node(stmt) != 0 || lm_compiler_written_put_node(stmt) != 0
+        kind := 10
+    if: kind <= 5 && (stmt\as\frame\body = 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) = 0)
         kind := 10
     if: route = 0
         route := 2
@@ -692,6 +696,14 @@ end: lm_compiler_written_put_node
 fn: lm_compiler_place_write_node (const: (@: at c.LmP0Node)) int
     return: (cast: (int) (at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0 && (at\as\frame\flags & 4096U) != 0U))
 end: lm_compiler_place_write_node
+
+# A Frame the receiver form `@: place value` gave: the write through the path itself (lm_compiler_place_write_lower)
+# and, when the value is a written Structure, both acts lm_compiler_written_form_split makes of it.  The place-write
+# role (4096) stays on the first only -- the put of a written Structure is lowered as any put -- so the origin has a
+# bit of its own, which no lowering reads: the census of colon writes asks it (lm_compiler_colon_write).
+fn: lm_compiler_receiver_form_node (const: (@: at c.LmP0Node)) int
+    return: (cast: (int) (at != 0 && at\kind = c.LM_P0_NODE_FRAME && at\as != 0 && at\as\frame != 0 && (at\as\frame\flags & 8192U) != 0U))
+end: lm_compiler_receiver_form_node
 
 # The text a node's Structure bears: the head the program wrote, which the split keeps beside the name its definition goes by, or the node's own.
 fn: lm_compiler_source_text_of (const: (@: at c.LmP0Node); const: (@: text c.LmP0Text)) @: c.LmP0Text

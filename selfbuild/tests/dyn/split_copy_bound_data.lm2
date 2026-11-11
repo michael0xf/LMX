@@ -2,7 +2,7 @@
 # executable carries its own requirements. Neither template is the data.
 B:
     int: y
-    y: y + 3
+    y := y + 3
 end: B
 Other:
     int: pad 9
@@ -11,7 +11,7 @@ end: Other
 A:
     int: x
     call: B inner_data
-    x: x + 2
+    x := x + 2
 end: A
 D:
     int: padding 19
@@ -30,6 +30,6 @@ end: through_copy
 int: second through_copy(Other)
 int: answer 81
 if: D\x = 9 && D\padding = 19 && Other\y = 16 && Other\pad = 9
-    answer: 7
+    answer := 7
 send: exit(exit_code: answer; stdout: ""; stderr: "")
 return

@@ -46,16 +46,16 @@ fn: outer_slim (Thin: t) int
     @: quote Thin t
     int: got 0
     ---
-        got: take()
+        got := take()
         catch: implements ()
-            got: 90
+            got := 90
     ---
     if: got != 90
         return: 83
     ---
-        got: pass()
+        got := pass()
         catch: implements ()
-            got: 91
+            got := 91
     ---
     if: got != 91
         return: 84
@@ -68,7 +68,7 @@ end: through
 fn: outer_ptr (Point: p) int
     @: inst Point p
     @@: quote Point 0
-    quote: @ inst
+    quote := @ inst
     if: through() != 2
         return: 86
     return: 0
@@ -77,9 +77,9 @@ fn: outer_num () int
     int: quote 5
     int: got 0
     ---
-        got: take()
+        got := take()
         catch: convert ()
-            got: 92
+            got := 92
     ---
     if: got != 92
         return: 85
@@ -89,13 +89,13 @@ fn: m () int
     int: r outer(Shape)
     if: r != 0
         return: r
-    r: outer_slim(Slim)
+    r := outer_slim(Slim)
     if: r != 0
         return: r
-    r: outer_num()
+    r := outer_num()
     if: r != 0
         return: r
-    r: outer_ptr(Shape)
+    r := outer_ptr(Shape)
     if: r != 0
         return: r
     return: 7

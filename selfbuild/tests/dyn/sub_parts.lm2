@@ -11,20 +11,20 @@ fn: read_seen () int
 end: read_seen
 sub: direct ()
     int: w 6
-    node\seen: w
+    node\seen := w
 end: direct
 sub: grow ()
     int: w 6
-    w: w + 1
-    node\seen: w
+    w := w + 1
+    node\seen := w
 end: grow
 sub: note (int: v)
     int: twice v + v
-    node\seen: twice
+    node\seen := twice
 end: note
 sub: bump ()
     int: step 2
-    node\seen: quote + step
+    node\seen := quote + step
 end: bump
 fn: bound () int
     int: quote 10
@@ -37,14 +37,14 @@ sub: risky (int: v)
     if: w > 3
         throw: Bad(w)
     ---
-    node\seen: w
+    node\seen := w
 end: risky
 fn: caught (int: v) int
     int: got 0
     ---
         risky(v)
         catch: Bad (int: value)
-            got: value
+            got := value
     ---
     return: got
 end: caught
@@ -56,14 +56,14 @@ sub: risky_machine (int: v)
     if: w > 3
         throw: Bad(w)
     ---
-    node\seen: w
+    node\seen := w
 end: risky_machine
 fn: caught_machine (int: v) int
     int: got 0
     ---
         risky_machine(v)
         catch: Bad (int: value)
-            got: value
+            got := value
     ---
     return: got
 end: caught_machine
@@ -71,24 +71,24 @@ Subs:
     int: seen 0
     sub: s ()
         int: w 2
-        node\seen: w
+        node\seen := w
     end: s
 end: Subs
 sub: other_s ()
     int: pad 1
     int: w 3
-    node\seen: w + pad
+    node\seen := w + pad
 end: other_s
 # An immutable copy of a Structure that holds a sub: its qualification meets a callable of three parts.
 Holder:
     int: k 1
     sub: hs ()
         int: w 2
-        node\k: w
+        node\k := w
     end: hs
 end: Holder
 sub: put_seen (int: v)
-    node\seen: v
+    node\seen := v
 end: put_seen
 # A sub defined in a method's body: a retained callable of its own, built from its source as the method is.
 fn: outer () int
@@ -100,14 +100,14 @@ fn: outer () int
     return: read_seen()
 end: outer
 sub: third ()
-    node\seen: 23
+    node\seen := 23
 end: third
 sub: fourth ()
-    node\seen: 24
+    node\seen := 24
 end: fourth
 # The body part of the sub standing in `held` is replaced by name: a write of its code, so its word goes and the walker runs the new body.
 sub: put_sub_body ()
-    held\body: from\body
+    held\body := from\body
 end: put_sub_body
 fn: swap_sub_body () int
     @: held third third
@@ -119,68 +119,68 @@ end: swap_sub_body
 int: code 7
 direct()
 if: read_seen() != 6
-    code: 81
+    code := 81
 ---
 call: grow
 if: code = 7 && read_seen() != 7
-    code: 82
+    code := 82
 ---
 if: code = 7 && grow\w != 7
-    code: 83
+    code := 83
 ---
 note(4)
 if: code = 7 && read_seen() != 8
-    code: 84
+    code := 84
 ---
 bump()
 if: code = 7 && read_seen() != 7
-    code: 85
+    code := 85
 ---
 if: code = 7 && bound() != 12
-    code: 86
+    code := 86
 ---
 if: code = 7 && caught(2) != 0
-    code: 87
+    code := 87
 ---
 if: code = 7 && read_seen() != 2
-    code: 88
+    code := 88
 ---
 if: code = 7 && caught(5) != 5
-    code: 89
+    code := 89
 ---
 Subs\s()
 if: code = 7 && Subs\seen != 2
-    code: 90
+    code := 90
 ---
 @: Subs\s other_s
 Subs\s()
 if: code = 7 && read_seen() != 4
-    code: 91
+    code := 91
 ---
 if: code = 7 && Subs\s\w != 3
-    code: 92
+    code := 92
 ---
 # The parts by their paths: an own field read through its var part -- the body declares it, var holds its place (slice 292;
 # the book, #method-parts; slice 285 read it through the body part) -- and the var given as the explicit data of the call.
 if: code = 7 && direct\var\w != 6
-    code: 93
+    code := 93
 ---
 if: code = 7 && swap_sub_body() != 24
-    code: 94
+    code := 94
 ---
 call: direct direct\var
 if: code = 7 && read_seen() != 6
-    code: 95
+    code := 95
 ---
 if: code = 7 && caught_machine(6) != 6
-    code: 96
+    code := 96
 ---
 frozen: immutable: merge(Holder)
 if: code = 7 && frozen\k != 1
-    code: 97
+    code := 97
 ---
 if: code = 7 && outer() != 31
-    code: 98
+    code := 98
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

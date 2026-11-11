@@ -257,8 +257,39 @@ is the same. What a build on Windows does not translate is compared apart: the L
 of the graph-route modules read without `--graph` are the same before and after the migration. A repeated census of
 the migrated sources names no write -- the four forms `MainLetter: m` are left in it. `bootstrap quick` -- 0
 failures, the generations are the same; the full list -- `SUITE 140 rows, 0 failures`, 1108 PASS. The fixtures of
-`tests` outside
-`tests/graph` write assignment with a colon, and the L3 lowering, the machine path and the walker accept it.
+`tests` outside `tests/graph` were not migrated by this slice.
+
+[Slice 349](../steps/witnesses/colon-migrate-fixtures-20261111/notes.md) migrated to `:=` the fixtures of
+`selfbuild/tests` outside `tests/graph` -- the texts the L3 path lowers: the native lowering and the walker. The
+census is refined. The put of a Structure that the receiver form `@: place (fields)` wrote gives no row: the origin
+of the form has a node bit of its own (`lm_compiler_receiver_form_node`), and the role of a write through a path
+stays on the first act of the written form only. A Frame with no field in its body that a write branch lowers as an
+empty Structure at a known place (`Outer\Empty: ()`, `Outer\Model()`) is kind 10, a declaration. The rows come from
+the full list, the small list of a generation build, the list `smoke-kernel225` and a translation of the fixtures
+with `default:` branches for the target `default`: 13,187 rows, 1,221 sites in 103 files -- 1,160 write sites (the
+native lowering: a name 887, a path 211, an index 45, a dereference 15, a member of C storage 2) and 61 forms that
+declare: 54 Structures written at their own place, four places under a Structure in the head, two references and
+one name defined by a value. A write of a known place here is also a write of a reference to a Structure,
+`T: Swapped`, `Box\kid: Other`: the former reading assigned, the fixtures expect an assignment, and by the norm it
+is written `T := Swapped`. `colon-migrate` rewrote 1,160 sites. Three forms that made a place themselves were
+rewritten by hand into the norm's forms -- `var := D\var`, `@: b Inner2`, `@: Other Answers`; 15 more writes stand
+behind the point of refusal in the fixtures of `refuses` rows, the translation never reaches them, and they were
+migrated by reading the text. The operator `:=` knows the reserved `var` -- the reference to the data of the current
+call -- as a known place: the collection already made it an input of the activation, only the check of the left
+side refused it (`lm_compiler_check_body`).
+
+The checks of slice 349: the full list -- `SUITE 140 rows, 0 failures`, 1108 PASS. Of the 220 programs of the list
+212 have byte for byte the former L1; two (`whole_arguments`) differ only in the name of a lifted `merge`, which
+carries an offset in the source text; six -- the fixtures of the three forms rewritten by hand -- number their
+places differently with the same results. The L1 of the 60 programs of the target `default` and of the 16 programs
+of the list `smoke-kernel225` is the former one. A repeated census names no write: it holds 58 declarations.
+`bootstrap quick` -- 0 failures, the generations are the same; `l1trans`, the tool, the graph translator and
+`driver.o` are those of slice 348. Not migrated: `tests/native_closure_values.lm2` -- no command of the tool
+translates it. The declarations keep the colon: written Structures and the records `Name: (fields)`
+([P2](../LMX_blog/q/current/colon-declares-contradictions-20261110.md)), a place under a Structure in the head
+(P1), declarations through `merge` (P4), the composed form ([M9](../next_core_tasks_v3.md#m9)) and the second heads
+in three refusal fixtures, which step 4 will revisit. The L3 lowering, the machine path and the walker still accept
+a write with a colon: the refusal is [step 4 of section M7](../next_core_tasks_v3.md#m7).
 
 The author's decision of the same day ([journal](../LMX_blog/2026-11-10.md#receiver-args-only),
 [book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by the form `receiver: arguments`, and the

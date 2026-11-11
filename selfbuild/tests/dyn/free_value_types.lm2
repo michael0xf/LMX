@@ -10,14 +10,14 @@
 # `convert` throw, the named refusal of the receiving contract, caught by the caller.  Entry 7; 81.. name the failing check.
 int: quote 11
 sub: leaf ()
-    quote: quote + quote
+    quote := quote + quote
 end: leaf
 fn: leaf_twice () int
-    quote: quote + quote
+    quote := quote + quote
     return: quote
 end: leaf_twice
 fn: leaf_twice_size () size_t
-    quote: quote + quote
+    quote := quote + quote
     return: quote
 end: leaf_twice_size
 fn: leaf_int () int
@@ -46,7 +46,7 @@ fn: mid2 () size_t
 end: mid2
 fn: outer () int
     int: quote
-    quote: 3
+    quote := 3
     leaf()
     if: quote != 3
         return: 80
@@ -54,7 +54,7 @@ fn: outer () int
 end: outer
 fn: outer2 () int
     size_t: quote
-    quote: 65U
+    quote := 65U
     leaf()
     if: quote != 65U
         return: 0
@@ -64,7 +64,7 @@ fn: outer2 () int
 end: outer2
 fn: outer3 () int
     int: quote
-    quote: 3
+    quote := 3
     if: leaf_int() != 3
         return: 83
     if: leaf_local() != 6
@@ -77,7 +77,7 @@ fn: outer3 () int
 end: outer3
 fn: outer4 () int
     size_t: quote
-    quote: 65U
+    quote := 65U
     if: leaf_size() != 65U
         return: 87
     if: leaf_cond() != 1
@@ -86,12 +86,12 @@ fn: outer4 () int
 end: outer4
 fn: outer5 () int
     size_t: quote
-    quote: 65U
+    quote := 65U
     int: got 0
     ---
-        got: leaf_int()
+        got := leaf_int()
         catch: convert ()
-            got: 89
+            got := 89
     ---
     return: got
 end: outer5
@@ -101,10 +101,10 @@ fn: m () int
         return: 81
     if: outer2() != 1
         return: 82
-    r: outer3()
+    r := outer3()
     if: r != 0
         return: r
-    r: outer4()
+    r := outer4()
     if: r != 0
         return: r
     if: outer5() != 89

@@ -8,7 +8,7 @@ fn: machined () int
     return: (cast: (int) k)
 end: machined
 sub: machined_sub ()
-    k: (cast: (int) k)
+    k := (cast: (int) k)
 end: machined_sub
 fn: target () int
     return: 1
@@ -52,16 +52,16 @@ Other:
     end: T
 end: Other
 sub: put_body ()
-    quote\body: src\body
+    quote\body := src\body
 end: put_body
 sub: put_args ()
-    quote\args: src\args
+    quote\args := src\args
 end: put_args
 sub: put_part ()
-    quote\T: src\T
+    quote\T := src\T
 end: put_part
 sub: plain_sub ()
-    k: k
+    k := k
 end: plain_sub
 fn: machines_run () int
     machined_sub()
@@ -107,7 +107,7 @@ fn: refuse_arriving () int
     ---
         put_body()
         catch: interpreter ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1 || refused_target() != 1 || machine_body() != 4
         return: 85
@@ -121,7 +121,7 @@ fn: refuse_args_fn () int
     ---
         put_args()
         catch: interpreter ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1 || machines_run() != 7
         return: 90
@@ -134,7 +134,7 @@ fn: refuse_args_sub () int
     ---
         put_args()
         catch: interpreter ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1 || machines_run() != 7
         return: 91
@@ -155,22 +155,22 @@ fn: m () int
     int: status data_call()
     if: status != 0
         return: status
-    status: part_rebound()
+    status := part_rebound()
     if: status != 0
         return: status
-    status: swap_body()
+    status := swap_body()
     if: status != 0
         return: status
-    status: refuse_arriving()
+    status := refuse_arriving()
     if: status != 0
         return: status
-    status: refuse_args_fn()
+    status := refuse_args_fn()
     if: status != 0
         return: status
-    status: refuse_args_sub()
+    status := refuse_args_sub()
     if: status != 0
         return: status
-    status: machine_leaving()
+    status := machine_leaving()
     if: status != 0
         return: status
     return: 7

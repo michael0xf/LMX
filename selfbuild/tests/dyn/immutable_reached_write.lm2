@@ -12,7 +12,7 @@ end: Holder
 int: Hf 0
 fn: write_number (@: h Holder) int
     ---
-        h\n: 9
+        h\n := 9
         return: h\n * 10
         catch: interpreter ()
             return: h\n
@@ -20,7 +20,7 @@ fn: write_number (@: h Holder) int
 end: write_number
 fn: write_nested (@: h Holder) int
     ---
-        h\Inner\q: 9
+        h\Inner\q := 9
         return: h\Inner\q * 10
         catch: interpreter ()
             return: h\Inner\q
@@ -28,7 +28,7 @@ fn: write_nested (@: h Holder) int
 end: write_nested
 fn: write_slot (@: h Holder) int
     ---
-        h\Inner: Other
+        h\Inner := Other
         return: h\Inner\q * 10
         catch: interpreter ()
             return: h\Inner\q
@@ -36,7 +36,7 @@ fn: write_slot (@: h Holder) int
 end: write_slot
 fn: write_free_number () int
     ---
-        Hf\n: 8
+        Hf\n := 8
         return: Hf\n * 10
         catch: interpreter ()
             return: Hf\n
@@ -48,7 +48,7 @@ fn: through_number (@: h Holder) int
 end: through_number
 fn: write_free_slot () int
     ---
-        Hf\Inner: Other
+        Hf\Inner := Other
         return: Hf\Inner\q * 10
         catch: interpreter ()
             return: Hf\Inner\q
@@ -59,7 +59,7 @@ fn: through_slot (@: h Holder) int
     return: write_free_slot()
 end: through_slot
 fn: leaves (@: h Holder) int
-    h\n: 9
+    h\n := 9
     return: h\n * 10
 end: leaves
 fn: takes (@: h Holder) int
@@ -72,7 +72,7 @@ end: takes
 fn: write_deref (@: h Holder) int
     @: p int @ h\n
     ---
-        \p: 9
+        \p := 9
         return: h\n * 10
         catch: interpreter ()
             return: h\n
@@ -81,7 +81,7 @@ end: write_deref
 fn: write_index (@: h Holder) int
     @: p int @ h\n
     ---
-        p[0U]: 9
+        p[0U] := 9
         return: h\n * 10
         catch: interpreter ()
             return: h\n
@@ -91,7 +91,7 @@ int: Hi 0
 size_t: Hat 0U
 fn: write_free_deref () int
     ---
-        \Hi: 9
+        \Hi := 9
         return: \Hi * 10
         catch: interpreter ()
             return: \Hi
@@ -103,7 +103,7 @@ fn: through_deref (@: h Holder) int
 end: through_deref
 fn: write_free_index () int
     ---
-        Hi[Hat]: 9
+        Hi[Hat] := 9
         return: Hi[Hat] * 10
         catch: interpreter ()
             return: Hi[Hat]
@@ -121,19 +121,19 @@ Data:
     end: var
 end: Data
 Bare:
-    x: x + 3
+    x := x + 3
     var:
         int: x 2
     end: var
 end: Bare
 OnlyWrites:
-    x: 3
+    x := 3
     var:
         int: x 2
     end: var
 end: OnlyWrites
 WritesC:
-    x: c.lmx_type_base(7)
+    x := c.lmx_type_base(7)
     var:
         int: x 2
     end: var
@@ -147,7 +147,7 @@ SlotData:
     end: var
 end: SlotData
 WritesSlot:
-    Inner: Other
+    Inner := Other
     var:
         Inner:
             int: q 4
@@ -167,7 +167,7 @@ fn: write_hosted (@: h Model) int
     end: Part
     @: Part h
     ---
-        Part\q: 9
+        Part\q := 9
         return: Part\q * 10
         catch: interpreter ()
             return: Part\q
@@ -271,7 +271,7 @@ fn: plain_value () int
 end: plain_value
 int: code immutable_value()
 if: code = 7
-    code: plain_value()
+    code := plain_value()
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

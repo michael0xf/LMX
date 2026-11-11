@@ -19,14 +19,14 @@ fn: run () int
         return: 81
     if: c.lmx_process_deadline_disarm(d) != 0 || d\armed != 0 || d\thread != 0 || d\event != 0
         return: 82
-    now: c.lmx_clock_word()
+    now := c.lmx_clock_word()
     if: c.lmx_process_deadline_arm(d, now + 60000U) != 0
         return: 83
     if: d\armed != 1 || d\event = 0 || d\thread = 0 || d\wait_ms = 0U || d\wait_ms > 60000U
         return: 84
     if: c.lmx_process_deadline_disarm(d) != 0 || d\armed != 0 || d\thread != 0 || d\event != 0 || d\wait_ms != 0U
         return: 85
-    now: c.lmx_clock_word()
+    now := c.lmx_clock_word()
     if: c.lmx_process_deadline_arm(d, now + 4294967306U) != 0
         return: 86
     if: d\wait_ms != 4294967294U

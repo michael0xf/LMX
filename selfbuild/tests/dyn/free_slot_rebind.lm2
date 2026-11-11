@@ -23,28 +23,28 @@ Box:
 end: Box
 int: quote 11
 sub: put_kid ()
-    quote\kid: Other
+    quote\kid := Other
 end: put_kid
 sub: put_kid_wrong ()
-    quote\kid: Wrong
+    quote\kid := Wrong
 end: put_kid_wrong
 fn: read_kid () int
     return: quote\kid\y
 end: read_kid
 fn: kid_address () int
     @@: pp Other 0
-    pp: @ (quote\kid)
+    pp := @ (quote\kid)
     @: p Other, \pp
     return: p\y
 end: kid_address
 sub: put_items ()
-    quote\items: Fresh\items
+    quote\items := Fresh\items
 end: put_items
 sub: put_items_struct ()
-    quote\items: Other
+    quote\items := Other
 end: put_items_struct
 sub: put_items_bytes ()
-    quote\items: Bytes\items
+    quote\items := Bytes\items
 end: put_items_bytes
 fn: read_items () int
     return: quote\items[1U]
@@ -64,7 +64,7 @@ fn: outer_kid () int
     ---
         put_kid_wrong()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1 || read_kid() != 7
         return: 82
@@ -75,21 +75,21 @@ fn: outer_items () int
     int: caught 0
     if: size_items() != 7U
         return: 83
-    Fresh\items[1U]: 7
+    Fresh\items[1U] := 7
     put_items()
     if: Box\items[1U] != 7 || read_items() != 7 || size_items() != 3U || machined() != 7
         return: 84
     ---
         put_items_struct()
         catch: convert ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1
         return: 85
     ---
         put_items_bytes()
         catch: convert ()
-            caught: 2
+            caught := 2
     ---
     if: caught != 2 || read_items() != 7
         return: 86
@@ -99,7 +99,7 @@ fn: m () int
     int: status outer_kid()
     if: status != 0
         return: status
-    status: outer_items()
+    status := outer_items()
     if: status != 0
         return: status
     return: 7

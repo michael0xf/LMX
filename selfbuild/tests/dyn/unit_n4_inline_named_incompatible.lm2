@@ -5,7 +5,7 @@ S:
     if: flag = 1
         T:
             int: v 1
-        flag: 2
+        flag := 2
 end: S
 D:
     int: flag 0
@@ -16,14 +16,14 @@ int: caught 0
 ---
     call: S D
     catch: implements ()
-        caught: 1
+        caught := 1
 ---
 int: code 7
 if: caught != 1
-    code: 91
+    code := 91
 if: code = 7 && D\flag != 1
-    code: 92
+    code := 92
 if: code = 7 && D\T\required != 11
-    code: 93
+    code := 93
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

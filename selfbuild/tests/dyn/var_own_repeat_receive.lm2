@@ -12,7 +12,7 @@ Calls:
 end: Calls
 fn: lm_stg_convert_char_int (char: c) int
     throws: range
-    Calls\n: Calls\n + 1
+    Calls\n := Calls\n + 1
     if: c > 9
         throw: range
     return: (cast: (int) c) + 100
@@ -35,7 +35,7 @@ fn: m (int: g) int
     ---
         char: z 20
         catch: convert ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1 || z != 107
         return: 83
@@ -54,15 +54,15 @@ int: code m(1)
 int: rz 5
 char: rz 6
 if: code = 7 && rz != 106
-    code: 85
+    code := 85
 ---
 int: rcalls Calls\n
 char: rz
 if: code = 7 && rz != 106
-    code: 86
+    code := 86
 ---
 if: code = 7 && Calls\n != rcalls
-    code: 88
+    code := 88
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

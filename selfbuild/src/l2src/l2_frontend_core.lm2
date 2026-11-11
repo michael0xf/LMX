@@ -4257,7 +4257,8 @@ fn: lm_compiler_written_form_split (const: (@: body c.LmP0Structure); @: field c
     c.memcpy((cast: (@: void) put_frame), (cast: (@: void) frame), c.sizeof(c.LmP0Frame))
     put_frame\body := tail
     put_frame\trailer := 0
-    put_frame\flags := c.LM_P0_FRAME_COLON | 2048U
+    # The put keeps the origin of a form the receiver `@` wrote (lm_compiler_receiver_form_node), not its place-write role.
+    put_frame\flags := c.LM_P0_FRAME_COLON | 2048U | (frame\flags & 8192U)
     put_as\frame := put_frame
     c.memcpy((cast: (@: void) put_node), (cast: (@: void) stmt), c.sizeof(c.LmP0Node))
     put_node\as := put_as
@@ -10516,7 +10517,8 @@ fn: lm_compiler_place_write_lower (@: stmt c.LmP0Node; const: (@: path char)) in
     tail\field_count := (cast: (unsigned) (n - run))
     frame\head := head
     frame\body := tail
-    frame\flags := c.LM_P0_FRAME_COLON | 4096U
+    # 4096 is the role of the write (lm_compiler_place_write_node), 8192 the origin (lm_compiler_receiver_form_node).
+    frame\flags := c.LM_P0_FRAME_COLON | 4096U | 8192U
     # A written Structure as the whole value: its parentheses are the line's body, as in `Box\k: (...)`, where the Frame's colon takes them.
     if: n - run = 1 && tail\first_field\value != 0 && tail\first_field\value\kind = c.LM_P0_NODE_STRUCTURE && tail\first_field\value\as != 0 && tail\first_field\value\as\structure != 0
         frame\body := tail\first_field\value\as\structure

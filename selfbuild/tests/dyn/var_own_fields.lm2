@@ -14,17 +14,17 @@ fn: read_seen () int
     return: node\seen
 end: read_seen
 sub: note (int: v)
-    node\log: node\log * 10 + v
+    node\log := node\log * 10 + v
 end: note
 fn: m () int
     int: a 5
-    a: a + 1
+    a := a + 1
     return: a
 end: m
 sub: s ()
     int: w 6
-    w: w + 1
-    node\seen: w
+    w := w + 1
+    node\seen := w
 end: s
 fn: early () int
     int: got a
@@ -56,13 +56,13 @@ end: ordered
 fn: fact (int: n) int
     int: acc 1
     if: n > 1
-        acc: n * fact(n - 1)
+        acc := n * fact(n - 1)
     ---
     return: acc
 end: fact
 fn: both () int (int: k 1)
     int: c k + 4
-    c: c + 1
+    c := c + 1
     return: c
 end: both
 D:
@@ -70,79 +70,79 @@ D:
 end: D
 sub: t ()
     int: a 5
-    a: a + 1
+    a := a + 1
 end: t
 E:
     int: k 10
 end: E
 fn: wv () int (int: k 1)
-    k: k + 5
+    k := k + 5
     return: k
 end: wv
 # A fn: its own field through var after the call, written there, and without the part.
 if: m() != 6
-    code: 81
+    code := 81
 ---
 if: code = 7 && m\var\a != 6
-    code: 82
+    code := 82
 ---
-m\var\a: 40
+m\var\a := 40
 if: code = 7 && m\var\a != 40
-    code: 83
+    code := 83
 ---
 # The body's initializer runs when its line is reached: the next call sets the field again.
 if: code = 7 && m() != 6
-    code: 84
+    code := 84
 ---
 if: code = 7 && m\a != 6
-    code: 85
+    code := 85
 ---
 # A sub, as a fn; its var given as the explicit data.
 s()
 if: code = 7 && read_seen() != 7
-    code: 86
+    code := 86
 ---
 if: code = 7 && s\var\w != 7
-    code: 87
+    code := 87
 ---
 call: s s\var
 if: code = 7 && read_seen() != 7
-    code: 88
+    code := 88
 ---
 # A read before the declaration is the hidden input, the caller's binding first; after it the own field.
 if: code = 7 && caller() != 45
-    code: 89
+    code := 89
 ---
 # With a written var part as well: the entry binds the written var's fields, not the body's own fields.
 if: code = 7 && caller_v() != 46
-    code: 97
+    code := 97
 ---
 # The effects in source order: the initializer runs at its line, not at the entry.
 if: code = 7 && ordered() != 2
-    code: 90
+    code := 90
 ---
 if: code = 7 && read_log() != 12
-    code: 91
+    code := 91
 ---
 # One place, a working value per activation.
 if: code = 7 && fact(5) != 120
-    code: 92
+    code := 92
 ---
 # The written var's field and the body's: both fields of var.
 if: code = 7 && both() != 6
-    code: 93
+    code := 93
 ---
 if: code = 7 && (both\var\k != 1 || both\var\c != 6)
-    code: 94
+    code := 94
 ---
 # Explicit data: the body's own field and a written var's field reach the selected data's fields of their names.
 call: t D
 if: code = 7 && D\a != 6
-    code: 95
+    code := 95
 ---
 call: wv E
 if: code = 7 && E\k != 15
-    code: 96
+    code := 96
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

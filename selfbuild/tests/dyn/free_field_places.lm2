@@ -20,23 +20,23 @@ end: Box
 int: quote 11
 int: slot 0
 sub: put_ref ()
-    quote\ref: Other
+    quote\ref := Other
 end: put_ref
 sub: put_ref_wrong ()
-    quote\ref: Wrong
+    quote\ref := Wrong
 end: put_ref_wrong
 sub: put_ref_number ()
-    quote\ref: 5
+    quote\ref := 5
 end: put_ref_number
 sub: put_ref_null ()
-    quote\ref: 0
+    quote\ref := 0
 end: put_ref_null
 fn: read_ref () int
     return: quote\ref\y
 end: read_ref
 fn: ref_address () int
     @@: pp Inner 0
-    pp: @ (quote\ref)
+    pp := @ (quote\ref)
     @: p Inner, \pp
     return: p\y
 end: ref_address
@@ -61,7 +61,7 @@ fn: through_slot () int
     return: 0
 end: through_slot
 fn: outer_address () int
-    Box\items[1U]: 7
+    Box\items[1U] := 7
     @: quote Box Box
     return: through_slot()
 end: outer_address
@@ -74,22 +74,22 @@ fn: outer_ref () int
     ---
         put_ref_wrong()
         catch: implements ()
-            caught: 1
+            caught := 1
     ---
     if: caught != 1 || Box\ref\y != 7
         return: 84
     ---
         put_ref_number()
         catch: convert ()
-            caught: 2
+            caught := 2
     ---
     if: caught != 2 || read_ref() != 7
         return: 85
     put_ref_null()
     ---
-        caught: read_ref()
+        caught := read_ref()
         catch: interpreter ()
-            caught: 3
+            caught := 3
     ---
     if: caught != 3
         return: 86
@@ -107,9 +107,9 @@ fn: outer_number () int
     int: quote 5
     size_t: caught 0U
     ---
-        caught: size_self()
+        caught := size_self()
         catch: convert ()
-            caught: 1U
+            caught := 1U
     ---
     if: caught != 1U
         return: 89
@@ -119,9 +119,9 @@ fn: outer_structure () int
     @: quote Inner Inner
     size_t: caught 0U
     ---
-        caught: size_self()
+        caught := size_self()
         catch: convert ()
-            caught: 1U
+            caught := 1U
     ---
     if: caught != 1U
         return: 90
@@ -131,16 +131,16 @@ fn: m () int
     int: status outer_address()
     if: status != 0
         return: status
-    status: outer_ref()
+    status := outer_ref()
     if: status != 0
         return: status
-    status: outer_array()
+    status := outer_array()
     if: status != 0
         return: status
-    status: outer_number()
+    status := outer_number()
     if: status != 0
         return: status
-    status: outer_structure()
+    status := outer_structure()
     if: status != 0
         return: status
     return: 7

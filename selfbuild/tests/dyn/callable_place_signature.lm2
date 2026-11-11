@@ -67,7 +67,7 @@ fn: static_path () int
     ---
         @: Places\f Hw
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 31
@@ -81,7 +81,7 @@ fn: free_root () int
     ---
         @: Hq\f Hw
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 32
@@ -95,7 +95,7 @@ fn: unit_place () int
     ---
         @: node\f0 Hw
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 33
@@ -109,7 +109,7 @@ fn: sub_into_fn () int
     ---
         @: Places\f Hs
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 34
@@ -123,7 +123,7 @@ fn: fitting () int
     ---
         @: Fit\f Hh
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 0
         return: 35
@@ -137,7 +137,7 @@ fn: fn_into_sub () int
     ---
         @: Subs\t Hu
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 36
@@ -149,7 +149,7 @@ fn: sub_into_sub () int
     ---
         @: Subs\t Hs
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 0
         return: 37
@@ -161,7 +161,7 @@ fn: throws_into_plain () int
     ---
         @: Places\f Hb
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 38
@@ -175,16 +175,16 @@ fn: throws_into_throws () int
     ---
         @: Risky\f Hb2
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 0
         return: 39
     int: got 0
     ---
         int: v Risky\f()
-        got: v
+        got := v
         catch: Bad (int: value)
-            got: 100 + value
+            got := 100 + value
     ---
     if: got != 106
         return: 59
@@ -221,34 +221,34 @@ fn: run () int
     int: r static_path()
     if: r != 0
         return: r
-    r: free_root()
+    r := free_root()
     if: r != 0
         return: r
-    r: unit_place()
+    r := unit_place()
     if: r != 0
         return: r
-    r: sub_into_fn()
+    r := sub_into_fn()
     if: r != 0
         return: r
-    r: fitting()
+    r := fitting()
     if: r != 0
         return: r
-    r: fn_into_sub()
+    r := fn_into_sub()
     if: r != 0
         return: r
-    r: sub_into_sub()
+    r := sub_into_sub()
     if: r != 0
         return: r
-    r: throws_into_plain()
+    r := throws_into_plain()
     if: r != 0
         return: r
-    r: throws_into_throws()
+    r := throws_into_throws()
     if: r != 0
         return: r
-    r: call_fitting()
+    r := call_fitting()
     if: r != 1
         return: 40 + r
-    r: call_missing()
+    r := call_missing()
     if: r != 22
         return: 60 + r
     return: 0
@@ -256,7 +256,7 @@ end: run
 int: code 7
 int: got run()
 if: got != 0
-    code: got
+    code := got
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

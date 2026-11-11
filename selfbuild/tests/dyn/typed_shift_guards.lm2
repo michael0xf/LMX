@@ -22,52 +22,52 @@ fn: run () int
     if: left(3U, 2) != 12U || right(12U, 2) != 3U
         return: 80
     ---
-        got: left(1U, 32)
+        got := left(1U, 32)
         catch: interpreter ()
-            got: 99U
+            got := 99U
     ---
     if: got != 99U
         return: 81
-    got: 0U
+    got := 0U
     ---
-        got: right(1U, 0 - 1)
+        got := right(1U, 0 - 1)
         catch: interpreter ()
-            got: 99U
+            got := 99U
     ---
     if: got != 99U
         return: 82
     ---
-        signed_got: signed_left(1073741824, 1)
+        signed_got := signed_left(1073741824, 1)
         catch: interpreter ()
-            signed_got: 99
+            signed_got := 99
     ---
     if: signed_got != 99
         return: 83
-    signed_got: 0
+    signed_got := 0
     ---
-        signed_got: signed_left(0 - 1, 1)
+        signed_got := signed_left(0 - 1, 1)
         catch: interpreter ()
-            signed_got: 99
+            signed_got := 99
     ---
     if: signed_got != 99
         return: 84
-    wide: wide_left(wide_value, 40)
+    wide := wide_left(wide_value, 40)
     if: wide != 1099511627776U
         return: 85
     ---
-        wide: wide_left(wide_value, 64)
+        wide := wide_left(wide_value, 64)
         catch: interpreter ()
-            wide: 99U
+            wide := 99U
     ---
     if: wide != 99U
         return: 86
     if: nested(3U, 2) != 13U
         return: 87
-    got: 0U
+    got := 0U
     ---
-        got: nested(1U, 32)
+        got := nested(1U, 32)
         catch: interpreter ()
-            got: 99U
+            got := 99U
     ---
     if: got != 99U
         return: 88

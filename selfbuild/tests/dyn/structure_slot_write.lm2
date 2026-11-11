@@ -18,7 +18,7 @@ S1:
     T:
         int: v 1
     end: T
-    T: Bad
+    T := Bad
 end: S1
 D:
     T:
@@ -38,7 +38,7 @@ Inner2:
 end: Inner2
 Bound:
     int: z 9
-    b: Inner2
+    @: b Inner2
 end: Bound
 Declared:
     int: z 9
@@ -110,7 +110,7 @@ fn: read_used_u () int
 end: read_used_u
 int: alt_holder 0
 fn: free_put_noq () int
-    alt_holder\k: NoQ
+    alt_holder\k := NoQ
     return: 0
 end: free_put_noq
 fn: free_refused () int
@@ -123,7 +123,7 @@ fn: free_refused () int
     ---
 end: free_refused
 fn: formal_put (@: p AltRead) int
-    p\k: NoQ
+    p\k := NoQ
     return: p\k\q
 end: formal_put
 fn: formal_refused () int
@@ -143,7 +143,7 @@ fn: hand_back () @: FullRead
     return: FullRead
 end: hand_back
 fn: full_refused () int
-    FullRead\k: HasQ
+    FullRead\k := HasQ
     ---
         @: back FullRead hand_back()
         return: 99
@@ -209,7 +209,7 @@ fn: two_formal (@: p TwoRead) int
 end: two_formal
 # 108: a write through a formal is no read of what stood there.
 fn: formal_put_q (@: p AltRead) int
-    p\k: HasQ
+    p\k := HasQ
     return: p\k\q
 end: formal_put_q
 # 109: nor does a null standing there refuse it.
@@ -219,7 +219,7 @@ NullBox:
     end: k
 end: NullBox
 fn: put_on_null (@: p NullBox) int
-    p\k: HasQ
+    p\k := HasQ
     return: 3
 end: put_on_null
 fn: null_read () int
@@ -296,13 +296,13 @@ fn: read_ref_q () int
 end: read_ref_q
 fn: ref_local_put () int
     @: ref_local RefHolder RefHolder
-    ref_local\p: RefOtherQ
+    ref_local\p := RefOtherQ
     return: read_ref_q()
 end: ref_local_put
 fn: ref_local_refused () int
     @: ref_local RefHolder RefHolder
     ---
-        ref_local\p: RefNoQ
+        ref_local\p := RefNoQ
         return: 99
         catch: implements ()
             return: read_ref_q()
@@ -310,7 +310,7 @@ fn: ref_local_refused () int
 end: ref_local_refused
 fn: ref_formal_refused (@: h RefHolder) int
     ---
-        h\p: RefNoQ
+        h\p := RefNoQ
         return: 99
         catch: implements ()
             return: read_ref_q()
@@ -332,10 +332,10 @@ fn: local_rebound () int
     T:
         int: y 3
     end: T
-    T: Other
+    T := Other
     if: T\y != 7
         return: 81
-    T\y: 5
+    T\y := 5
     if: Other\y != 5 || Other\z != 9
         return: 82
     return: 7
@@ -348,7 +348,7 @@ fn: local_order () int
         int: a 1
         int: y 3
     end: T
-    T: Swapped
+    T := Swapped
     if: T\y != 7
         return: 93
     int: i other()
@@ -377,10 +377,10 @@ fn: read_k (@: p Outer) int
     return: p\k\a
 end: read_k
 sub: put_bound ()
-    BoxB\a: Bound
+    BoxB\a := Bound
 end: put_bound
 sub: put_declared ()
-    BoxD\a: Declared
+    BoxD\a := Declared
 end: put_declared
 fn: reference_fields () int
     ---
@@ -397,211 +397,211 @@ fn: reference_fields () int
 end: reference_fields
 int: code local_rebound()
 if: code = 7
-    code: local_order()
+    code := local_order()
 ---
 if: code = 7
-    code: split_refused()
+    code := split_refused()
 ---
 int: caught 0
 ---
-    First: Bad
+    First := Bad
     catch: implements ()
-        caught: 1
+        caught := 1
 ---
 if: code = 7 && (caught != 1 || First\x != 3)
-    code: 85
+    code := 85
 ---
 if: code = 7 && read_k(Alt) != 5
-    code: 89
+    code := 89
 ---
-Alt\k: V
+Alt\k := V
 if: code = 7 && read_k(Alt) != 7
-    code: 90
+    code := 90
 ---
-First: @: First: 0
+First := @: First: 0
 if: code = 7 && follow() != 93
-    code: 91
+    code := 91
 ---
-First: Second
+First := Second
 if: code = 7 && follow() != 5
-    code: 92
+    code := 92
 ---
 if: code = 7
-    code: reference_fields()
+    code := reference_fields()
 ---
 if: code = 7
-    UsedRoot: OnlyU
+    UsedRoot := OnlyU
     if: read_used_u() != 5
-        code: 95
+        code := 95
     ---
 ---
 if: code = 7
     int: root_refused 0
     ---
-        UsedRoot: NoU
+        UsedRoot := NoU
         catch: implements ()
-            root_refused: 1
+            root_refused := 1
     ---
     if: root_refused != 1 || read_used_u() != 5
-        code: 96
+        code := 96
     ---
 ---
 if: code = 7
     int: alt_refused 0
     ---
-        AltRead\k: NoQ
+        AltRead\k := NoQ
         catch: implements ()
-            alt_refused: 1
+            alt_refused := 1
     ---
     if: alt_refused != 1 || read_alt_q() != 1
-        code: 97
+        code := 97
     ---
 ---
 if: code = 7
-    AltRead\k: HasQ
+    AltRead\k := HasQ
     if: read_alt_q() != 3
-        code: 98
+        code := 98
     ---
 ---
 if: code = 7 && free_refused() != 3
-    code: 99
+    code := 99
 ---
 if: code = 7 && formal_refused() != 3
-    code: 100
+    code := 100
 ---
 if: code = 7
-    AltCopy\k: NoQ
+    AltCopy\k := NoQ
     if: AltCopy\k\a != 4
-        code: 101
+        code := 101
     ---
 ---
 if: code = 7 && copy_read_q() != 77
-    code: 102
+    code := 102
 ---
 if: code = 7 && full_refused() != 7
-    code: 103
+    code := 103
 ---
 if: code = 7 && full_formal_refused() != 7
-    code: 104
+    code := 104
 ---
 if: code = 7
     if: early_unknown() != 1
-        code: 105
+        code := 105
     ---
     int: early_refused 0
     ---
-        EarlyRead\k: NoQ
+        EarlyRead\k := NoQ
         catch: implements ()
-            early_refused: 1
+            early_refused := 1
     ---
     if: early_refused != 1 || early_read() != 1
-        code: 105
+        code := 105
     ---
 ---
 if: code = 7
     if: whole_unknown() != 2
-        code: 106
+        code := 106
     ---
-    WholeUse: WholeOnlyQ
+    WholeUse := WholeOnlyQ
     if: whole_read() != 5
-        code: 106
+        code := 106
     ---
-    WholeUse\k: HasQ
+    WholeUse\k := HasQ
     if: whole_read() != 3
-        code: 106
+        code := 106
     ---
 ---
 if: code = 7
     int: two_caught 0
     ---
-        TwoRead\k: NoQ
+        TwoRead\k := NoQ
         catch: implements ()
-            two_caught: 1
+            two_caught := 1
     ---
     ---
-        TwoRead\k: HasQ
+        TwoRead\k := HasQ
         catch: implements ()
-            two_caught: two_caught + 2
+            two_caught := two_caught + 2
     ---
     if: two_caught != 3 || two_direct() != 1 || two_formal(TwoRead) != 2
-        code: 107
+        code := 107
     ---
 ---
 if: code = 7 && formal_put_q(AltRead) != 3
-    code: 108
+    code := 108
 ---
 if: code = 7
-    NullBox\k: 0
+    NullBox\k := 0
     if: put_on_null(NullBox) != 3 || null_read() != 3
-        code: 109
+        code := 109
     ---
 ---
 if: code = 7 && full_unknown_refused() != 7
-    code: 110
+    code := 110
 ---
 if: code = 7
     int: deep_refused 0
     ---
-        DeepRead: DeepNoQ
+        DeepRead := DeepNoQ
         catch: implements ()
-            deep_refused: 1
+            deep_refused := 1
     ---
     if: deep_refused != 1 || deep_read() != 1
-        code: 111
+        code := 111
     ---
 ---
 if: code = 7
     int: inner_refused 0
     ---
-        DeepRead\k: InnerNoQ
+        DeepRead\k := InnerNoQ
         catch: implements ()
-            inner_refused: 1
+            inner_refused := 1
     ---
     if: inner_refused != 1 || deep_read() != 1
-        code: 112
+        code := 112
     ---
-    DeepRead\k: InnerHasQ
+    DeepRead\k := InnerHasQ
     if: code = 7 && deep_read() != 5
-        code: 112
+        code := 112
     ---
 ---
 if: code = 7
-    RefHolder\p: RefOnlyQ
+    RefHolder\p := RefOnlyQ
     if: read_ref_q() != 5
-        code: 113
+        code := 113
     ---
 ---
 if: code = 7
     int: ref_refused 0
     ---
-        RefHolder\p: RefNoQ
+        RefHolder\p := RefNoQ
         catch: implements ()
-            ref_refused: 1
+            ref_refused := 1
     ---
     if: ref_refused != 1 || read_ref_q() != 5
-        code: 114
+        code := 114
     ---
 ---
 if: code = 7 && ref_local_put() != 6
-    code: 115
+    code := 115
 ---
 if: code = 7 && ref_local_refused() != 6
-    code: 116
+    code := 116
 ---
 if: code = 7 && ref_formal_refused(RefHolder) != 6
-    code: 117
+    code := 117
 ---
 if: code = 7 && ref_local_held() != 6
-    code: 119
+    code := 119
 ---
 if: code = 7
-    RefHolder\p: 0
+    RefHolder\p := 0
     if: ref_null_read() != 55
-        code: 118
+        code := 118
     ---
-    RefHolder\p: RefOnlyQ
+    RefHolder\p := RefOnlyQ
     if: code = 7 && read_ref_q() != 5
-        code: 118
+        code := 118
     ---
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")

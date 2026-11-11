@@ -218,8 +218,18 @@ branches and writes that target's L1 (without the variable the target is the tra
 the runtime translates with `--graph` carry no source positions, so their rows come from the same translation
 command without the word `--graph`; the sources only a generation build translates are named by a `bootstrap` run
 with `L2_COLON_WRITES`. A census of the migrated sources names no write: the four forms `MainLetter: m` of the root
-programs are left as written. The fixtures of `tests` outside `tests/graph` still write the colon.
+programs are left as written.
 [Sources, receipts and limits](../steps/witnesses/colon-migrate-machine-20261111/notes.md).
+
+Since slice 349 the fixtures of `tests` outside `tests/graph` write `:=` too: `colon-migrate` rewrote 1,160 sites
+in 103 files by a census of the full list, the small list of a generation build, `tests/smoke-kernel225.tsv` and
+the fixtures with `default:` branches translated with `L2_OS_TARGET=default` (a reduced suite list with absolute
+paths; its rows are for the other target, so their verdicts are no test). A suite keeps the L1 of every program it
+builds at `OUT/<name>-native/p.lm1` and `OUT/<name>-forced/p.lm1`, so two runs are compared program by program:
+212 of 220 programs kept their L1 byte for byte, the rest are explained in the receipts. Forms that declare keep the
+colon. `tests/native_closure_values.lm2` is translated by no command of the tool and is left as it was. The
+translator still accepts a write with a colon; the refusal is step 4 of plan M7.
+[Sources, receipts and limits](../steps/witnesses/colon-migrate-fixtures-20261111/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative

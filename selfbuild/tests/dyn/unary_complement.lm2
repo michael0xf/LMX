@@ -24,18 +24,18 @@ end: free_unsigned
 fn: free_local_catch () int
     int: result 0
     ---
-        result: ~quote
+        result := ~quote
         catch: convert ()
-            result: 99
+            result := 99
     ---
     return: result
 end: free_local_catch
 fn: free_group_catch () int
     int: result 0
     ---
-        result: ~(quote)
+        result := ~(quote)
         catch: convert ()
-            result: 99
+            result := 99
     ---
     return: result
 end: free_group_catch
@@ -50,9 +50,9 @@ fn: outer_ref () int
     @: quote int @target
     int: result 0
     ---
-        result: free_invert()
+        result := free_invert()
         catch: convert ()
-            result: 99
+            result := 99
     ---
     if: result != 99
         return: 92
@@ -63,7 +63,7 @@ fn: outer_ref () int
     return: 0
 end: outer_ref
 fn: once (@: count int) unsigned
-    \count: \count + 1
+    \count := \count + 1
     return: 15U
 end: once
 fn: run () int
@@ -83,16 +83,16 @@ fn: run () int
         return: 85
     if: ~(~a) != a || (~a & 0xFFU) != 0xF0U
         return: 86
-    got: ~once(@count)
+    got := ~once(@count)
     if: got != 0xFFFFFFF0U || \(@count) != 1
         return: 87
-    got: ~ once(@count)
+    got := ~ once(@count)
     if: got != 0xFFFFFFF0U || \(@count) != 2
         return: 94
-    got: 1U+once(@count)
+    got := 1U+once(@count)
     if: got != 16U || \(@count) != 3
         return: 95
-    got: +once(@count)
+    got := +once(@count)
     if: got != 15U || \(@count) != 4
         return: 96
     if: free_invert() != 0 - 12

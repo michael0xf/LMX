@@ -8,7 +8,7 @@ Seen:
     int: n 0
 end: Seen
 fn: take (size_t: a) int
-    Seen\n: Seen\n + 1
+    Seen\n := Seen\n + 1
     return: (cast: (int) a)
 end: take
 fn: give () size_t
@@ -19,7 +19,7 @@ fn: write_reached () int
     size_t: z 5U
     char: c 6
     ---
-        z: c
+        z := c
         return: 1
         catch: convert ()
             return: (cast: (int) z)
@@ -29,7 +29,7 @@ fn: wide_reached () int
     ulong: w 5U
     int: n 6
     ---
-        w: n
+        w := n
         return: 1
         catch: convert ()
             return: (cast: (int) w)
@@ -63,7 +63,7 @@ fn: init_reached () int
 end: init_reached
 fn: index_reached () int
     []: int cells 2
-    cells[1U]: 17
+    cells[1U] := 17
     @: pc int @ cells[0U]
     char: at 1
     ---
@@ -88,8 +88,8 @@ fn: skipped (int: k) int
     int: n 6
     char: c 6
     if: k = 1
-        z: c
-        w: n
+        z := c
+        w := n
         size_t: v c
         char: z
         return: take(c)

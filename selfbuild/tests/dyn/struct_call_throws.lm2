@@ -4,7 +4,7 @@ int: entered 0
 int: raising 0
 fn: bad () int
     throws: Bad
-    node\entered: node\entered + 1
+    node\entered := node\entered + 1
     if: node\[0]raising != 0
         throw: Bad(5)
     return: 7
@@ -17,24 +17,24 @@ int: refused 0
 ---
     call: target
     catch: implements ()
-        refused: 1
+        refused := 1
 ---
 int: after_refusal get_entered()
 ---
     call: target
     catch: Bad ()
-        refused: 2
+        refused := 2
 ---
 int: after_success get_entered()
-raising: 1
+raising := 1
 int: payload 0
 ---
     call: target
     catch: Bad (int: value)
-        payload: value
+        payload := value
 ---
 fn: needs_input (int: amount) int
-    node\entered: 90
+    node\entered := 90
     return: amount
 end: needs_input
 @: missing needs_input
@@ -44,10 +44,10 @@ int: missing_refused 0
 ---
     call: missing
     catch: call ()
-        missing_refused: 1
+        missing_refused := 1
 ---
 int: answer 81
 if: refused = 1 && after_refusal = 0 && after_success = 1 && payload = 5 && get_entered() = 2 && missing_refused = 1
-    answer: 7
+    answer := 7
 send: exit(exit_code: answer; stdout: ""; stderr: "")
 return

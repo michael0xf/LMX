@@ -19,7 +19,7 @@ fn: re_enter () int
         int: y 3
     end: T
     int: seen T\y
-    T: Swapped
+    T := Swapped
     return: seen
 end: re_enter
 
@@ -30,7 +30,7 @@ fn: published (int: k) int
             int: a 1
             int: y 3
         end: T
-        T: Swapped
+        T := Swapped
     ---
     return: T\y
 end: published
@@ -40,7 +40,7 @@ fn: referent () int
     t: (int: x 2)
     t: (int: x 5)
     int: seen t\x
-    t\x: 6
+    t\x := 6
     return: seen
 end: referent
 
@@ -51,7 +51,7 @@ fn: reached (int: k) int
         int: y 3
     end: T
     if: k = 1
-        T: Swapped
+        T := Swapped
     ---
     return: T\y
 end: reached
@@ -120,14 +120,14 @@ end: read_first
 int: seen 0
 with_var:
     ---
-        node\seen: var\i
+        node\seen := var\i
         catch: implements ()
-            node\seen: 1
+            node\seen := 1
     ---
     var:
         int: i 5
     end: var
-    node\seen: node\seen * 10 + var\i
+    node\seen := node\seen * 10 + var\i
 end: with_var
 fn: run_code () int
     call: with_var with_var
@@ -153,7 +153,7 @@ fn: uses () int
         return: 97
     if: T\twice() != 6
         return: 98
-    T\y: 5
+    T\y := 5
     if: T\y != 5
         return: 99
     @: p T Thin
@@ -171,9 +171,9 @@ fn: looped () int
     int: sum 0
     while: i < 3
         t: (int: x 2)
-        sum: sum + t\x
-        t\x: t\x + 1
-        i: i + 1
+        sum := sum + t\x
+        t\x := t\x + 1
+        i := i + 1
     ---
     return: sum
 end: looped
@@ -206,9 +206,9 @@ end: empty
 int: seen2 0
 with2:
     var: (int: i 1)
-    node\seen2: var\i
+    node\seen2 := var\i
     var: (int: i 5)
-    node\seen2: node\seen2 * 10 + var\i
+    node\seen2 := node\seen2 * 10 + var\i
 end: with2
 fn: run_with2 () int
     call: with2 with2
@@ -233,7 +233,7 @@ end: short_two
 Hand:
     t: (int: x 2)
     A: (int: x 5)
-    t: A
+    t := A
 end: Hand
 HandData:
     t: (int: x 1)
@@ -249,7 +249,7 @@ fn: neighbours (int: k) int
         T: (int: y 8)
     ---
     if: k = 2
-        T: Swapped
+        T := Swapped
     ---
     return: T\y
 end: neighbours
@@ -336,7 +336,7 @@ fn: occ_free_bare () int
     return: occ_free_holder\t\x
 end: occ_free_bare
 fn: occ_model_write (@: m OccModel) int
-    m\[1]t\x: 9
+    m\[1]t\x := 9
     return: m\[1]t\x
 end: occ_model_write
 fn: occ_free () int
@@ -347,15 +347,15 @@ fn: occ_free () int
     ---
         int: third occ_free_third()
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 118
-    refused: 0
+    refused := 0
     ---
         int: bare occ_free_bare()
         catch: implements ()
-            refused: 1
+            refused := 1
     ---
     if: refused != 1
         return: 119
@@ -390,152 +390,152 @@ int: code 7
 int: first re_enter()
 int: second re_enter()
 if: first * 10 + second != 33
-    code: 81
+    code := 81
 ---
-first: published(0)
-second: published(1)
+first := published(0)
+second := published(1)
 if: code = 7 && first * 10 + second != 77
-    code: 82
+    code := 82
 ---
-first: referent()
-second: referent()
+first := referent()
+second := referent()
 if: code = 7 && first * 10 + second != 56
-    code: 83
+    code := 83
 ---
-first: reached(0)
-second: reached(1)
+first := reached(0)
+second := reached(1)
 int: third reached(0)
 if: code = 7 && first * 100 + second * 10 + third != 373
-    code: 84
+    code := 84
 ---
 if: code = 7 && vertical() != 5
-    code: 85
+    code := 85
 ---
 if: code = 7 && formal(Holder) != 5
-    code: 86
+    code := 86
 ---
 if: code = 7 && Holder\x != 2
-    code: 87
+    code := 87
 ---
 if: code = 7 && var_forms() != 5
-    code: 88
+    code := 88
 ---
 if: code = 7 && rooted\x != 5
-    code: 89
+    code := 89
 ---
 if: code = 7
     call: S D
     if: D\t\x != 5
-        code: 90
+        code := 90
     ---
     if: code = 7 && S\[0]t\x != 2
-        code: 91
+        code := 91
     ---
 ---
 ---
     if: code = 7
-        code: 92
+        code := 92
         call: Twice Twice
     ---
     catch: call ()
-        code: 7
+        code := 7
 ---
 if: code = 7 && read_y(Answers) != 7
-    code: 93
+    code := 93
 ---
 if: code = 7 && read_first(Answers) != 9
-    code: 94
+    code := 94
 ---
-Other: Answers
+@: Other Answers
 if: code = 7 && Other\y != 7
-    code: 95
+    code := 95
 ---
 if: code = 7 && run_code() != 15
-    code: 96
+    code := 96
 ---
 if: code = 7
-    code: uses()
+    code := uses()
 ---
 if: code = 7 && looped() != 9
-    code: 102
+    code := 102
 ---
 if: code = 7 && in_catch(0) != 6
-    code: 103
+    code := 103
 ---
 if: code = 7 && empty() != 5
-    code: 104
+    code := 104
 ---
 if: code = 7 && run_with2() != 15
-    code: 105
+    code := 105
 ---
 if: code = 7
-    code: short_two()
+    code := short_two()
 ---
-first: neighbours(0)
-second: neighbours(1)
-third: neighbours(2)
+first := neighbours(0)
+second := neighbours(1)
+third := neighbours(2)
 int: fourth neighbours(3)
 if: code = 7 && first * 1000 + second * 100 + third * 10 + fourth != 3877
-    code: 108
+    code := 108
 ---
 if: code = 7 && host_read() != 3
-    code: 109
+    code := 109
 ---
 if: code = 7 && host_reference() != 4
-    code: 110
+    code := 110
 ---
 if: code = 7 && implicit() != 3
-    code: 111
+    code := 111
 ---
 if: code = 7
     blocked: (int: x 9)
     if: blocked\x != 9
-        code: 112
+        code := 112
     ---
 ---
 if: code = 7 && local_named() != 2
-    code: 113
+    code := 113
 ---
 if: code = 7
     call: Hand HandData
     if: HandData\t\x != 5
-        code: 107
+        code := 107
     ---
 ---
 if: code = 7 && (Occ\[0]t\x != 2 || Occ\[1]t\x != 5)
-    code: 114
+    code := 114
 ---
 if: code = 7
-    Occ\[1]t\x: 6
+    Occ\[1]t\x := 6
     call: Occ OccData
     if: OccData\t\x != 6 || Occ\[0]t\x != 2
-        code: 115
+        code := 115
     ---
-    OccData\t\x: 7
+    OccData\t\x := 7
     if: Occ\[1]t\x != 7
-        code: 116
+        code := 116
     ---
 ---
 if: code = 7
-    code: occ_free()
+    code := occ_free()
 ---
 if: code = 7 && (occ_model_write(OccRead) != 9 || OccRead\[1]t\x != 9)
-    code: 120
+    code := 120
 ---
 if: code = 7 && (OccCopy\[0]t\x != 2 || OccCopy\[1]t\x != 5)
-    code: 121
+    code := 121
 ---
 if: code = 7
-    Occ\[1]t: OccOther
+    Occ\[1]t := OccOther
     call: Occ OccAgain
     if: OccAgain\t\x != 8 || Occ\[0]t\x != 2
-        code: 122
+        code := 122
     ---
 ---
 if: code = 7
     call: Spelled SpelledData
     if: SpelledData\l2_written_7\x != 3
-        code: 123
+        code := 123
     ---
 ---
 if: code = 7
@@ -543,20 +543,20 @@ if: code = 7
     ---
         call: Spelled SpelledNone
         catch: call ()
-            spelled_refused: 1
+            spelled_refused := 1
     ---
     if: spelled_refused != 1
-        code: 124
+        code := 124
     ---
 ---
 if: code = 7 && (SpelledBeside\l2_written_1\x != 4 || SpelledBeside\[1]t\x != 5)
-    code: 125
+    code := 125
 ---
 if: code = 7 && spelled_local() != 4
-    code: 126
+    code := 126
 ---
 if: code = 7 && rooted_index() != 5
-    code: 127
+    code := 127
 ---
 send: exit(exit_code: code; stdout: ""; stderr: "")
 return

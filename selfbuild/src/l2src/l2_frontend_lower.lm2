@@ -6362,7 +6362,7 @@ fn: lm_compiler_emit_path_cursor_slot (const: (@: path c.L2Path); int: mi; const
     # Structure's unit child below is the construction's promise: X1.
     if: oi < 0 && fi >= 0 && lm_compiler_emit_null_use(mi, ind) != 0
         return: (cast: (int) (1))
-    # A named root read from its slot may hold a present null (`First: @: First: 0`): following it is the implicit throw.
+    # A named root read from its slot may hold a present null (`First := @: First: 0`): following it is the implicit throw.
     if: current = 0 && oi < 0 && fi < 0 && root_kind = 0 && ni >= 0 && ns_eternal_cell[0][ni] < 0
         if: lm_compiler_emit_null_use(mi, ind) != 0
             return: (cast: (int) (1))
@@ -19598,7 +19598,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
                 return: (cast: (int) (1))
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
-        # `First: @: First: 0` (the book): a present null of the place, nothing to evaluate.
+        # `First := @: First: 0`: a present null of the place, nothing to evaluate.
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && oi >= 0 && c.lm_compiler_own_is_slot(oi) != 0 && c.lm_compiler_typed_null_tail(stmt) != 0
             if: lm_compiler_emit_reference_null_full((cast: (int) c.lm_compiler_graph_ft()), mi, ind, tok_cell[0], @ store_context, store_full) != 0 || lm_compiler_own_store_context_full(mi, oi, ind, (cast: (const: @: char) (tok_cell[0]\data)), store_context, store_full) != 0
                 return: (cast: (int) (1))
@@ -20729,8 +20729,6 @@ fn: lm_compiler_whole_merge_shape (const: (@: mf c.LmP0Node); int: mi; const: (@
             if: td = 0 || tdecl = 0
                 return: (cast: (int) (0))
             tkind := c.lm_compiler_lit_field_kind(td)
-            if: tkind < 0
-                tkind := c.lm_compiler_named_typed_field_kind(td)
             if: tkind < 0
                 return: (cast: (int) (0))
             if: lm_compiler_whole_shape_join(names, kinds, models, count, cap, (cast: (const: @: c.LmP0Text) (tdecl\name)), tkind, -1) != 0

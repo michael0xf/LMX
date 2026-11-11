@@ -325,10 +325,58 @@ byte that of the previous slice; `l1trans`, the tool, the graph translator and `
 
 The author's decision of the same day ([journal](../LMX_blog/2026-11-10.md#receiver-args-only),
 [book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by the form `receiver: arguments`, and the
-composed form `name: receiver: value` is withdrawn. The examples of the slices above are written in the former form
-(`(a: int: 5)`), and the clean graph accepts it, defining the place `a`; under the norm the same field is written
-`(int: a 5)` — the interpreter of the clean graph already runs that spelling with the same value 35 (a probe of
-2026-11-10). Migrating the fixtures and changing the reading is section [M9 of the plan](../next_core_tasks_v3.md#m9).
+composed form `name: receiver: value` is withdrawn. The examples of slices 304 and 307 above are written in the former
+form (`(a: int: 5)`); under the norm the same field is written `(int: a 5)`, and since slice 351 the fixtures write it
+so.
+
+[Slice 351](../steps/witnesses/composed-form-20261111/notes.md) removed the composed reading from the working
+frontend (steps 1-3 of [section M9 of the plan](../next_core_tasks_v3.md#m9); in the clean graph step 3 was done by
+slice 346). Two places of `l2_frontend_resolve.lm2` read the composed form: the reader of a declaration
+(`lm_compiler_declaration`) -- the outer head as the place, the receiver of the tail as an asserted requirement --
+and the role of the content (`lm_compiler_decl_content`, role 4: "the tail is consumed by a receiver"), under which
+the Frame was no definition of a Structure. Both readings stay with the operator `:=` (`place := int: 5` writes a
+value its receiver checks) and with the receiver form brought to a write through its path (`@: Box\k Model: Other`,
+node bit 8192); a form with a colon has neither. The common rule of the head applies from there. A head that names
+nothing declares a named Structure with the tail inside: `holder: int: time` is a Structure with the field `time` at
+the root, in the body of a Structure and in the body of a method, whatever `time` names outside it; before, a name
+known outside turned the same line into a place with a value. A known place is refused with the message of slice
+350. The field of a `merge` operand written name first (`(a: int: 5)`, label `MERGE-OPERAND-FORMS`) is withdrawn
+together with the function `lm_compiler_named_typed_field_kind`: such an operand is refused as an operand form that
+is not lowered.
+
+So that `i: int: 6` with a known `i` is refused by the rule of the form and not by the words "int has no value"
+about its tail, the check of a received value (`lm_compiler_check_receiving_value_at`, `l2_frontend_emit.lm2`) reads
+a single application of a receiver of a primitive as an expression: its operand is received by the receiver's type,
+and the place receives that type -- as it already read the initial value of a reference under an asserted
+requirement. With that a write by index and through a reference takes such a value too (`a[1] := int: 6`,
+`\p := int: 6`); before, it passed in a write by name -- through the composed reading -- and by path.
+
+The limit: a Structure with a receiver call inside -- `i: int: 5`, `ptr: @: 0` under a head that names nothing --
+is not built by the L3 lowering. An item of a body that is the application of a receiver of a value or of a type
+(`int`, `char`, `size_t`, `unsigned`, `ulong`, `@`) to what is no name of a place is refused in
+`lm_compiler_take_ns_body` where the application stands: "a receiver applied to a value declares no place, and a
+Structure declared with it inside is not lowered yet…", and the message names the form that declares a place. The
+reserved `var` with its data written as fields (`var: (int: n 3)`) does not fall under this rule. The clean graph
+executes such a declaration.
+
+The checks of slice 351: nine new rows of the list -- `composed_declares_structure` and `typed_value_write` give 7
+natively and under the walker, with both executors of the root; seven refusal fixtures (`composed_value_refused`,
+`composed_value_method_refused`, `composed_field_refused`, `composed_reference_refused`, `composed_known_refused`,
+`composed_known_root_refused`, `merge_named_field_refused`) are refused with the named message at the named place.
+A mutant -- the former reading restored in both readers -- fails `composed_declares_structure` ("unknown field path
+segment" at `box\time`), makes the three forms under an unknown head a place again and translates the two on a known
+place as a write (exits 6 and 8). The full list -- `SUITE 158 rows, 0 failures`, 1216 PASS. The first run gave 6
+failures in three fixtures: the refusal of a receiver's application was wider than the norm and caught the data of
+`var` written as fields; the condition was narrowed to the receivers that declare a field, and the tuple was built
+again. Of the 220 programs of the previous slice 210 keep their L1 byte for byte; two (`whole_arguments`) differ
+only by the name of the lifted `merge`, which embeds an offset in the source; two (`explicit_data_var_field`) by one
+line of the name table: the word of the head `cell` became the word `int`; six (`free_c_abi`, `free_c_pointer`,
+`free_value_consumers`) have a table of pointer types shorter by one or two unused entries, the codes of the types
+after them shifted. The cause of the last: the question "a type word?" (`lm_compiler_prim_type_word`) interns a
+pointer type for a word of the `c.` door as a side effect; it used to be asked of the head of the one Frame in the
+tail of any form (`return: c.f(x)`), now only in the tail of the operator `:=` and of the receiver form. `bootstrap quick` -- 0
+failures, the generations are the same; `l1trans`, `driver.o` and the graph translator are the former ones, the tool
+is another (the export list of the frontend is one name shorter).
 
 <a id="principles"></a>
 ## 1. Principles (norm)

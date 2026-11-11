@@ -4148,7 +4148,7 @@ fn: lm_compiler_written_path_form (const: (@: stmt c.LmP0Node); int: mi) int
     head := (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))
     if: c.memchr(head\data, 92, head\length) = 0 || lm_compiler_written_tail((cast: (const: @: c.LmP0Frame) (stmt\as\frame)), mi) = 0
         return: 0
-    # `Box\k: Model: Other` and `@: Box\k Model: Other` compose: the Frame is consumed and gives a candidate (the book :315).  Only a written Structure or a declaration writes one.
+    # `Box\k := Model: Other` and `@: Box\k Model: Other` compose: the Frame is consumed and gives a candidate (the book, receiver-args-only).  Only a written Structure or a declaration writes one.
     tail := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))
     inner := tail\value
     if: inner\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_own_decl_ty((cast: (const: @: c.LmP0Node) inner)) = 0
@@ -4158,7 +4158,7 @@ fn: lm_compiler_written_path_form (const: (@: stmt c.LmP0Node); int: mi) int
         tail := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (inner\as\structure\first_field)))
         inner := tail\value
     ---
-    # `x\y: int: a\b` is a value under a requirement: a declaration names its field by an atom, and a path there says the first operand is no name.
+    # `x\y := int: a\b` is a value under a requirement: a declaration names its field by an atom, and a path there says the first operand is no name.
     if: inner\kind = c.LM_P0_NODE_FRAME && inner\as != 0 && inner\as\frame != 0 && inner\as\frame\body != 0
         tail := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (inner\as\frame\body\first_field)))
         if: c.lm_compiler_rw_path_run(tail, c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (inner\as\frame\body)))) >= 3
@@ -9035,6 +9035,16 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
             count := count + 1
             f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
             continue
+        # Plan M9, step 3 (the author, 2026-11-10; the book, receiver-args-only): a receiver of a value or of a type
+        # applied to what is no name of a place -- `int: 5`, `@: 0`, `@: Model: 0` -- declares no field: it is the
+        # receiver's application, an expression.  The composed form brings it here: `i: int: 5` and `ptr: @: 0` under a
+        # head that names nothing declare a Structure with that application inside, not a place.  This translation
+        # does not build a Structure with a value inside yet, so the application is refused where it stands and the
+        # message names the form that declares a place.  The receivers asked are those that declare a field of a
+        # named Structure by a value or a type -- the words of lm_compiler_lit_field_kind and `@`; the reserved `var`
+        # with its data written as fields, `var: (int: n 3)`, is none of them.
+        if: (c.lm_compiler_lit_field_kind(fld) >= 0 || c.lm_compiler_address_depth((cast: (const: @: c.LmP0Text) (fld\as\frame\head))) > 0) && c.lm_compiler_consumed_type_value(fld, 0, 0, 0) != 0 && c.lm_compiler_declaration(fld) = 0
+            return: (cast: (int) (c.lm_compiler_error(path, fld, "a receiver applied to a value declares no place, and a Structure declared with it inside is not lowered yet: a place is declared by its receiver with the name first -- `int: name value`, `@: name value`")))
         st := lm_compiler_ns_take_reference(fld, me, path)
         if: st = 2
             return: (cast: (int) (1))

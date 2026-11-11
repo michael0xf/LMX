@@ -1,0 +1,14 @@
+# Plan M9, step 3 (the author, 2026-11-10; the book, receiver-args-only): a merge operand written name first,
+# `(a: int: 5)`, is no typed field any more -- the form declares a Structure a with the receiver's application inside
+# -- and the translation refuses the operand form, located at the operand.  The typed field is written by its
+# receiver, `(int: a 5)`: merge_named_field_operand.
+Args:
+    int: c 3
+    int: a 0
+end: Args
+fn: f () int
+    pack: merge(Args; (a: int: 5))
+    return: pack\a + 2
+end: f
+send: exit(exit_code: f(); stdout: ""; stderr: "")
+return

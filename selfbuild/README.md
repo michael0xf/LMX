@@ -239,6 +239,17 @@ by editing a source, a manifest with the suffix `m`, `stage-copy` and `build-fro
 source is put back and the stage is filled from the former manifest, both checked by sha256.
 [Sources, receipts and limits](../steps/witnesses/colon-refusal-20261111/notes.md).
 
+Since slice 351 a place is declared only by `receiver: arguments` (plan M9, steps 1-3): the composed form
+`name: receiver: value` declares no place by its outer head. Under a head that names nothing it is a Structure with
+the tail inside -- `holder: int: time` has the field `holder\time` -- and with a known place it is refused as every
+form with a colon is. A Structure with a receiver call inside (`i: int: 5`, `ptr: @: 0`) is not lowered yet: the
+translation stops at the call and names the form that declares a place, `int: i 5`. A typed field of a `merge`
+operand is written by its receiver, `(int: a 5)`; the name-first `(a: int: 5)` is refused as an operand form that
+is not lowered. A program is run outside the suite as the suite runs it -- the commands are in the suite's
+`record.txt`: the frontend, `l1trans` with the stage's `src` as the working directory, `gcc -c`, the link with
+`driver.o` and `l2_libc.o`, then `p-prod.exe 0 entry <expected exit>`.
+[Sources, receipts and limits](../steps/witnesses/composed-form-20261111/notes.md).
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's

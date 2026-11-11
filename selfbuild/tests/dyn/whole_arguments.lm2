@@ -1,7 +1,8 @@
 # Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE; the book #whole-arguments; the author's decisions of 2026-11-07 and 2026-11-08): a
 # call with one Structure argument does not differ from a call with the chain of its fields -- when the fields of the Structure
 # are the arguments (every field names a formal, every other formal has its default) and the Structure is not the one argument,
-# each formal receives the field of its name.  mytest (int: c 3; int: a): the author's merge(mytest\args; (a: int: 5)) held by
+# each formal receives the field of its name.  mytest (int: c 3; int: a): the author's merge over mytest\args with the field
+# a = 5 (the operand field written by its receiver since plan M9: merge(mytest\args; (int: a 5))) held by
 # a place -- pack: merge(...); mytest(pack) -- is 35, as mytest(a := 5) is, and so is the merge written in the call itself,
 # the author's canonical form (by_inline: the translation lifts it into a hidden declaration run in the sequence before the
 # call, as the written pack); a declared Structure whose
@@ -105,14 +106,14 @@ fn: rewrite_place () int
     ---
 end: rewrite_place
 fn: by_place () int
-    pack: merge(mytest\args; (a: int: 5))
+    pack: merge(mytest\args; (int: a 5))
     return: mytest(pack)
 end: by_place
 fn: by_default () int
     return: mytest(Only)
 end: by_default
 fn: by_inline () int
-    return: mytest(merge(mytest\args; (a: int: 5)))
+    return: mytest(merge(mytest\args; (int: a 5)))
 end: by_inline
 fn: early_form () int
     ---

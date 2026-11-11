@@ -1,0 +1,11 @@
+# Plan M9, step 3 (the author, 2026-11-10; the book, receiver-args-only and forms-declare-or-call): with a known int
+# place i the composed `i: int: 6` goes by the rule of its head -- a form with a colon declares and writes no known
+# place -- and is refused; the place is written `i := 6` or `i := int: 6`.  The refusal is the form's, not its tail's:
+# the tail is the expression it is, the value 6 asserted by int.
+fn: f () int
+    int: i 5
+    i: int: 6
+    return: i
+end: f
+send: exit(exit_code: f(); stdout: ""; stderr: "")
+return

@@ -1,14 +1,16 @@
-# Slice 304 (MERGE-OPERAND-FORMS; the author's `merge(f\args; (a: int: 5))` of 2026-11-07, the book #whole-arguments) and
+# Slice 304 (MERGE-OPERAND-FORMS; the author's merge over f\args of 2026-11-07, the book #whole-arguments -- its operand
+# field is written by its receiver, `(int: a 5)`, since plan M9: the author, 2026-11-10, a place is declared only by
+# `receiver: arguments`) and
 # Codex's review of it (the book :432, :726, :738): the args part of a callable as a merge operand -- the Structure of its
 # formals, each holding its current default (the value a call omitting it takes); a formal with no default holds no value
 # -- a required formal, not a zero -- and the operand is admitted when a later operand of the merge writes that field (the
 # unfilled forms are refused: merge_args_unfilled_refused, merge_args_computed_default_refused).  tst (int: c 3; int: a):
-# merge(tst\args; (a: int: 5)) reads a = 5 and c = 3, the bare operand form a: int: 5 the same; tst\args itself is not
+# merge(tst\args; (int: a 5)) reads a = 5 and c = 3, the bare operand form int: a 5 the same; tst\args itself is not
 # written: tst(a := 1) is 31 after the merges.  An explicit zero is a value: zed (int: c 3; int: z 0) -- merge(zed\args)
 # reads c = 3 and z = 0, zed() is 30.  As a later operand the part writes the model's slots of its formals' names in the
 # formals' order: merge(Args; two\args) for two (int: c 3; int: a 4) reads c = 3 and a = 4, Args is not written; the
-# unfilled a of tst\args as a later operand, filled by the next: merge(Args; tst\args; (a: int: 5)) reads c = 3 and a = 5.
-# A formal whose written default is not built (comp (int: c 3; int: a 2 + 3)), filled later: merge(comp\args; (a: int: 5))
+# unfilled a of tst\args as a later operand, filled by the next: merge(Args; tst\args; (int: a 5)) reads c = 3 and a = 5.
+# A formal whose written default is not built (comp (int: c 3; int: a 2 + 3)), filled later: merge(comp\args; (int: a 5))
 # reads c = 3 and a = 5 -- no default evaluated.  Both executors.  Entry 7; 81.. name the failing check.
 fn: tst (int: c 3; int: a) int
     return: c * 10 + a
@@ -27,7 +29,7 @@ Args:
     int: a 8
 end: Args
 fn: parens () int
-    pack: merge(tst\args; (a: int: 5))
+    pack: merge(tst\args; (int: a 5))
     if: pack\a != 5
         return: 81
     if: pack\c != 3
@@ -35,7 +37,7 @@ fn: parens () int
     return: 0
 end: parens
 fn: bare () int
-    pack: merge(tst\args; a: int: 5)
+    pack: merge(tst\args; int: a 5)
     if: pack\a != 5
         return: 83
     if: pack\c != 3
@@ -61,7 +63,7 @@ fn: later () int
     return: 0
 end: later
 fn: filled () int
-    pack: merge(Args; tst\args; (a: int: 5))
+    pack: merge(Args; tst\args; (int: a 5))
     if: pack\c != 3
         return: 91
     if: pack\a != 5
@@ -71,7 +73,7 @@ fn: filled () int
     return: 0
 end: filled
 fn: computed () int
-    pack: merge(comp\args; (a: int: 5))
+    pack: merge(comp\args; (int: a 5))
     if: pack\c != 3
         return: 94
     if: pack\a != 5

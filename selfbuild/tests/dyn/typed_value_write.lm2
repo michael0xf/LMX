@@ -1,0 +1,32 @@
+# Plan M9 (the author, 2026-11-10; the book, receiver-args-only: a receiver of a primitive applied to a value is an
+# expression -- that value, checked by the receiver): `int: 6` is the one value of a write by name, by path, by index
+# and through a reference; the check of a received value reads it as the value it is, not as a word of the language
+# without a value.  Entry 7; 81.. name the failing check.
+[]: int cells 3
+Holder:
+    int: cell 1
+end: Holder
+fn: by_name () int
+    int: i 0
+    i := int: 6
+    return: i + 1
+end: by_name
+fn: by_reference () int
+    int: i 3
+    @: p int @ i
+    \p := int: 6
+    return: \p + 1
+end: by_reference
+int: code 7
+if: by_name() != 7
+    code := 81
+cells[1] := int: 6
+if: cells[1] != 6
+    code := 82
+if: by_reference() != 7
+    code := 83
+Holder\cell := int: 19
+if: Holder\cell != 19
+    code := 84
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

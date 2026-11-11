@@ -1,14 +1,15 @@
-# The := slice (MERGE-OPERAND-FORMS; the book, composition: "an operand of the form `name: value` ..." and the author's
-# example of whole-arguments with (a: int: 5)): a merge operand that is a field written name first -- `(a: int: 5)`, a
-# Structure with the one field a of type int and value 5, and the bare `a: int: 5` -- is the typed field the
-# declaration form `(int: a 5)` is: it writes the model's slot of its name (a), the other fields stay (c), the model is
-# not written.  Over an ordinary Structure Args (int: c 3; int: a 0).  Entry 7; 81-92 the failing check.
+# The := slice (MERGE-OPERAND-FORMS; the book, composition), rewritten by plan M9 (the author, 2026-11-10: a place is
+# declared only by `receiver: arguments`): a merge operand that is a typed field is written by its receiver -- in
+# parentheses, `(int: a 5)`, a Structure with the one field a of type int and value 5, and bare, `int: a 7`.  It writes
+# the model's slot of its name (a), the other fields stay (c), the model is not written.  The field written name first
+# is withdrawn with the composed form: merge_named_field_refused.  Over an ordinary Structure Args (int: c 3; int: a 0).
+# Entry 7; 81-92 the failing check.
 Args:
     int: c 3
     int: a 0
 end: Args
 fn: parens () int
-    pack: merge(Args; (a: int: 5))
+    pack: merge(Args; (int: a 5))
     if: pack\a != 5
         return: 81
     if: pack\c != 3
@@ -18,7 +19,7 @@ fn: parens () int
     return: 7
 end: parens
 fn: bare () int
-    pack: merge(Args; a: int: 7)
+    pack: merge(Args; int: a 7)
     if: pack\a != 7
         return: 84
     if: pack\c != 3
@@ -38,7 +39,7 @@ fn: control () int
     return: 7
 end: control
 fn: two_fields () int
-    pack: merge(Args; (a: int: 4); (c: int: 2))
+    pack: merge(Args; (int: a 4); (int: c 2))
     if: pack\a != 4
         return: 90
     if: pack\c != 2

@@ -1,0 +1,9 @@
+# Plan M9, step 3 (the author, 2026-11-10; the book, receiver-args-only): in a method's body too `cell: int: 1` with no
+# cell known declares no local of an int: it is a Structure cell of the body with the receiver's application inside,
+# which the lowering does not build yet -- refused at the application.  The place is declared `int: cell 1`.
+fn: f () int
+    cell: int: 1
+    return: 7
+end: f
+send: exit(exit_code: f(); stdout: ""; stderr: "")
+return

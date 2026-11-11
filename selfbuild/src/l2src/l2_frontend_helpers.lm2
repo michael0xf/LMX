@@ -3339,26 +3339,6 @@ fn: lm_compiler_ft_is_free (int: ft) int
     return: (cast: (int) ((cast: (int) (ft = 45))))
 end: lm_compiler_ft_is_free
 
-# A numeric field written name first -- `a: int: 5`: the head a bare identifier, the body one Frame headed by the type
-# word with the value -- is the kind of that type word (the author's `(a: int: 5)` of 2026-11-07; MERGE-OPERAND-FORMS),
-# as `int: a 5` is the kind of its head; another shape is -1.  Exported by tools/build.lm2 (frontend_names).
-fn: lm_compiler_named_typed_field_kind (const: (@: fld c.LmP0Node)) int
-    @: inner c.LmP0Field
-    if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\head = 0 || fld\as\frame\body = 0
-        return: (cast: (int) (0 - 1))
-    # `(zz := int: 5)` is no field written name first: the operator `:=` declares nothing (the author, 2026-11-07).
-    if: (fld\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-        return: (cast: (int) (0 - 1))
-    if: lm_compiler_ident((cast: (const: @: c.LmP0Text) (fld\as\frame\head))) = 0
-        return: (cast: (int) (0 - 1))
-    if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fld\as\frame\body))) != 1
-        return: (cast: (int) (0 - 1))
-    inner := lm_compiler_next_active((cast: (@: c.LmP0Field) (fld\as\frame\body\first_field)))
-    if: inner = 0 || inner\value = 0 || inner\value\kind != c.LM_P0_NODE_FRAME
-        return: (cast: (int) (0 - 1))
-    return: (cast: (int) (lm_compiler_lit_field_kind((cast: (const: @: c.LmP0Node) (inner\value)))))
-end: lm_compiler_named_typed_field_kind
-
 os:
     win:
         fn: lm_compiler_os_target_own () int

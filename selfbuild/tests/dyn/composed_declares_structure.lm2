@@ -1,0 +1,43 @@
+# Plan M9, step 3 (the author, 2026-11-10; the book, receiver-args-only): a place is declared only by `receiver:
+# arguments`, and the composed form `name: receiver: ...` under a head that names nothing declares a Structure with its
+# tail inside -- no place by its outer head.  `holder: int: time` is the Structure holder with the field time, read
+# holder\time, whatever `time` names outside it; the author's `timeout: ms: int: time 500` is timeout with ms inside
+# and the place time in it, timeout\ms\time = 500.  At the root, in a Structure's body and in a method's body; both
+# executors.  Entry 7; 81.. name the failing check.
+int: time 3
+holder: int: time
+timeout: ms: int: time 500
+Outer:
+    inner: int: time
+end: Outer
+fn: local () int
+    int: time 40
+    box: int: time
+    box\time := 2
+    if: box\time != 2
+        return: 87
+    if: time != 40
+        return: 88
+    return: 7
+end: local
+int: code 7
+holder\time := 9
+if: holder\time != 9
+    code := 81
+if: time != 3
+    code := 82
+if: timeout\ms\time != 500
+    code := 83
+timeout\ms\time := 501
+if: timeout\ms\time != 501
+    code := 84
+Outer\inner\time := 4
+if: Outer\inner\time != 4
+    code := 85
+if: time != 3
+    code := 86
+if: code = 7
+    code := local()
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

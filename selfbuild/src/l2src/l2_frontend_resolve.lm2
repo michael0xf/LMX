@@ -205,7 +205,13 @@ fn: lm_compiler_decl_content_core (const: (@: fr c.LmP0Frame); const: (@: site c
     # when old already names a value. At the OUTER occurrence an existing
     # name is consumed by this receiver, while an absent name introduces a
     # field of the outer Structure (`Model: int: v 11`).
-    if: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))) = 1 && lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (f\value)), 0, 0, 0) != 0
+    # Plan M9, step 3 (the author, 2026-11-10; the book, receiver-args-only): the consumed content -- role 4, the head
+    # a place its tail's receiver declares or writes -- is the operator's, `zz := int: 5`, and the receiver form's
+    # brought to a write through its path (lm_compiler_receiver_form_node), as the composed reading of
+    # lm_compiler_declaration is.  A form with a colon has a body like any other: `x: int: 5` and `ms: int: time`
+    # under a head that names nothing declare a Structure with that tail inside, whatever the tail's names are
+    # outside it.
+    if: ((fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U || (fr\flags & 8192U) != 0U) && c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))) = 1 && lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (f\value)), 0, 0, 0) != 0
         nested := lm_compiler_declaration((cast: (const: @: c.LmP0Node) (f\value)))
         if: nested = 0 || nested\name = 0
             return: (cast: (int) (4))
@@ -885,7 +891,13 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     # cache: collection may have built this source descriptor before its
     # earlier same-name field was registered. The nested receiver's contract
     # remains an additional value assertion, not a replacement for that place.
-    if: depth = 0 && n = 1 && first\value\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) (frame\head))) = 0 && c.lm_compiler_prim_type_word((cast: (const: @: c.LmP0Text) (frame\head))) = 0 && c.lm_compiler_bind_spelling((cast: (const: @: c.LmP0Text) (frame\head))) != 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "[]") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "const") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "immutable") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "independent") = 0
+    # Plan M9, step 3 (the author, 2026-11-10; the book, receiver-args-only): this reading is the operator's --
+    # `place := int: 5`, a known place written with a value its receiver asserts -- and the receiver form's brought to
+    # a write through its path (`@: Box\k Model: Other`, lm_compiler_receiver_form_node).  The composed form with a
+    # colon, `name: int: 5`, declares no place by its outer head any more: it goes by the general rule of its head --
+    # a head that names nothing declares a Structure with the tail inside, a known place is refused where the form
+    # would be lowered as a write (lm_compiler_colon_write).
+    if: ((frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U || (frame\flags & 8192U) != 0U) && depth = 0 && n = 1 && first\value\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) (frame\head))) = 0 && c.lm_compiler_prim_type_word((cast: (const: @: c.LmP0Text) (frame\head))) = 0 && c.lm_compiler_bind_spelling((cast: (const: @: c.LmP0Text) (frame\head))) != 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "[]") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "const") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "immutable") = 0 && c.lm_compiler_text_eq((cast: (const: @: c.LmP0Text) (frame\head)), "independent") = 0
         if: lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (first\value)), @ contract, @ candidate, @ count) != 0
             inner_contract := lm_compiler_previous_reference_contract(source_node, (cast: (const: @: c.LmP0Text) (frame\head)))
             result := lm_compiler_dmap_get(source_node)
@@ -5124,9 +5136,9 @@ fn: lm_compiler_merge_typed_decl (@: f c.LmP0Field; int: span) @: c.LmP0Node
     decl := lm_compiler_declaration(d)
     if: decl = 0
         return: (cast: (@: c.LmP0Node) (0))
-    # A typed field in either spelling (MERGE-OPERAND-FORMS; the author's `(a: int: 5)` of 2026-11-07 beside `int: a 5`):
-    # the declaration of a numeric field -- its name, its one contract, its value -- whichever word heads it.
-    if: c.lm_compiler_lit_field_kind(d) < 0 && c.lm_compiler_named_typed_field_kind(d) < 0
+    # A typed field is the declaration its receiver writes, `int: a 5`: its name, its one contract, its value.  The field
+    # written name first, `a: int: 5`, is withdrawn (plan M9; the author, 2026-11-10): it declares a Structure `a`.
+    if: c.lm_compiler_lit_field_kind(d) < 0
         return: (cast: (@: c.LmP0Node) (0))
     return: (cast: (@: c.LmP0Node) (d))
 end: lm_compiler_merge_typed_decl

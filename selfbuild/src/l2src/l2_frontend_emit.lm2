@@ -1257,6 +1257,10 @@ fn: lm_compiler_check_receiving_value_at (const: (@: stmt c.LmP0Node); @: first 
     int: composite 0
     int: receiving_own -1
     int: letter 0
+    int: typed 0
+    int: typed_n 0
+    @: typed_contract c.L2TypeContract 0
+    @: typed_first c.LmP0Field 0
     c.L2ReferenceSource: reference_source
     c.L2Address: descriptor_value
     @: descriptor c.L2Address @ descriptor_value
@@ -1279,9 +1283,23 @@ fn: lm_compiler_check_receiving_value_at (const: (@: stmt c.LmP0Node); @: first 
             value_ty := descriptor\type
         else:
             if: n = 1
+                # Plan M9 (the author, 2026-11-10; the book, receiver-args-only): a receiver of a primitive applied to a
+                # value -- `int: 6` -- is an expression: that value, asserted by the receiver.  Received as the one
+                # value of a place it is checked as a reference's initial value under an asserted contract is
+                # (lm_compiler_check_reference_init): its operand received by the receiver's type, and the place then
+                # receives that type -- not a word of the language without a value.  The form that holds it is judged
+                # by its own rule after that: a form with a colon on a known place is refused where it would be
+                # lowered as a write (lm_compiler_colon_write).
+                if: only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && c.lm_compiler_stmt_word_head((cast: (const: @: c.LmP0Node) (only\value)), mi) != 0 && c.lm_compiler_prim_type_word((cast: (const: @: c.LmP0Text) (c.lm_compiler_app_head((cast: (const: @: c.LmP0Node) (only\value)))))) != 0 && c.lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) (only\value)), @ typed_contract, @ typed_first, @ typed_n) != 0 && typed_contract != 0 && typed_n > 0
+                    if: c.lm_compiler_contract_formal(typed_contract, @ value_ty) = 0 && c.lm_compiler_prim_code_name(value_ty) != 0
+                        if: lm_compiler_check_receiving_value_at(stmt, typed_first, typed_n, value_ty, -1, 0, mi, path, 0) != 0
+                            return: (cast: (int) (1))
+                        typed := 1
+                    ---
+                ---
                 # K03 S4: a word of the language received as a value -- the bare word or its Frame -- meets the word's value
                 # contract first, said at the word (l2_check_word_value); an operator with operands goes on to be typed.
-                if: only != 0 && only\value != 0 && c.lm_compiler_stmt_word_head((cast: (const: @: c.LmP0Node) (only\value)), mi) != 0
+                if: typed = 0 && only != 0 && only\value != 0 && c.lm_compiler_stmt_word_head((cast: (const: @: c.LmP0Node) (only\value)), mi) != 0
                     wk := c.lm_compiler_check_word_value((cast: (const: @: c.LmP0Node) (only\value)), (cast: (const: @: c.LmP0Text) (c.lm_compiler_stmt_word_head((cast: (const: @: c.LmP0Node) (only\value)), mi))), mi, path)
                     if: wk != 2
                         return: (cast: (int) (wk))
@@ -1297,7 +1315,7 @@ fn: lm_compiler_check_receiving_value_at (const: (@: stmt c.LmP0Node); @: first 
                 # A number place: the bare name of a held callable is received as its result.
                 if: c.lm_compiler_held_result_receive(mi, first, n, (cast: (int) (c.lm_compiler_prim_code_name(target_ty) != 0)), path) != 0
                     return: (cast: (int) (1))
-                if: only = 0 || c.lm_compiler_colon_value_ty(only, mi, @ value_ty) != 0
+                if: typed = 0 && (only = 0 || c.lm_compiler_colon_value_ty(only, mi, @ value_ty) != 0)
                     return: (cast: (int) (c.lm_compiler_error(path, stmt, "assignment value has unknown type")))
             ---
         ---
@@ -1798,9 +1816,10 @@ fn: lm_compiler_collect_decls (const: (@: body c.LmP0Structure); int: mi; const:
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_unimpl_numeric(stmt) != 0
             return: (cast: (int) (c.lm_compiler_error(path, stmt, c.lm_compiler_unimpl_numeric(stmt))))
         # The operator `:=` declares nothing (the author, 2026-11-07; the book, assign-known): a Frame `:=` whose body is a
-        # typed value, `zz := int: 5`, has the shape of the nested typed declaration `zz: int: 5`, yet it opens no row for
-        # a name no place of this site has -- the check refuses it as a write of no known place.  With a known name the
-        # same shape is the repeated typed write of that place (REPEATED-DECL-TYPED-RECEPTION): its row exists already.
+        # typed value, `zz := int: 5`, is read by lm_compiler_declaration as a place and the value its receiver asserts
+        # (the composed reading, the operator's since plan M9), yet it opens no row for a name no place of this site has
+        # -- the check refuses it as a write of no known place.  With a known name the same shape is the repeated typed
+        # write of that place (REPEATED-DECL-TYPED-RECEPTION): its row exists already.
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_own_decl_ty(stmt) != 0 && lm_compiler_assign_new_name(stmt, mi) != 0
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
@@ -12211,7 +12230,8 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     if: c.lm_compiler_head_resolve(rw_mi_cell[0], h, @ named, 0) = 5 && named >= 0 && ns_def_node_cell[0][named] != stmt && lm_compiler_stmt_declares_place(stmt, rw_mi_cell[0]) = 0 && c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) > 0
         @: written_first c.LmP0Field (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field))
         int: written_n c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
-        # `First: @: First: 0`: the head is the place and the consumed receiver gives its value.
+        # `First := @: First: 0` (the composed reading lm_compiler_declaration keeps for the operator and for the
+        # receiver form brought to a write): the head is the place and the consumed receiver gives its value.
         @: written_declaration c.L2Declaration c.lm_compiler_declaration(stmt)
         if: written_declaration != 0 && written_declaration\name != 0 && c.lm_compiler_text_same((cast: (const: @: c.LmP0Text) written_declaration\name), h) != 0
             written_first := (cast: (@: c.LmP0Field) written_declaration\candidate)
@@ -12605,8 +12625,9 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         \made := 1
         return: (cast: (int) (0))
     # A numeric receiving place is identified by the declaration's resolved
-    # contract, not by the spelling of its outer head. Thus `i: int: 5` and
-    # `int: i 5` retain one row and one source act in both execution modes.
+    # contract, not by the spelling of its outer head. Thus `int: i 5` and the
+    # repeated typed write `i := int: 5` (the composed reading, the operator's
+    # since plan M9) retain one row and one source act in both execution modes.
     # Keep a malformed direct primitive head on this diagnostic route too.
     declaration := c.lm_compiler_declaration(stmt)
     decl_ty := c.lm_compiler_own_decl_ty(stmt)
@@ -16005,7 +16026,6 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
     @: td c.LmP0Node
     @: tdecl c.L2Declaration
     int: tkind
-    @: tinner c.LmP0Field
     const: (@: ttype c.LmP0Text)
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @@: msrc_op_cell int (cast: (@@: int) (@ c.l2_msrc_op))
@@ -16060,16 +16080,12 @@ fn: lm_compiler_mrs_build (int: res; const: (@: stmt c.LmP0Node); const: (@: mf 
             tdecl := c.lm_compiler_declaration(td)
             if: td = 0 || tdecl = 0
                 return: (cast: (int) (c.lm_compiler_error(c.lm_compiler_method_src(mi, src_cell[0]), (cast: (const: @: c.LmP0Node) (last\value)), "this merge operand form is not lowered yet")))
-            # MERGE-OPERAND-FORMS (the author's `(a: int: 5)` of 2026-11-07 beside `int: a 5`): the field written name
-            # first has its kind and its type word at the inner Frame (l2_named_typed_field_kind); the declaration form
-            # has them at the operand itself.
+            # A typed field is written by its receiver, `int: a 5`: its kind and its type word stand at the operand itself.
+            # The field written name first, `(a: int: 5)`, is withdrawn (plan M9; the author, 2026-11-10): that form
+            # declares a Structure `a` with the receiver's application inside, lm_compiler_merge_typed_decl answers 0 for
+            # it, and the operand is the refusal above.
             tkind := c.lm_compiler_lit_field_kind(td)
             ttype := (cast: (const: @: c.LmP0Text) (td\as\frame\head))
-            if: tkind < 0
-                tkind := c.lm_compiler_named_typed_field_kind(td)
-                tinner := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (td\as\frame\body\first_field)))
-                ttype := (cast: (const: @: c.LmP0Text) (tinner\value\as\frame\head))
-            ---
             if: c.lm_compiler_mrs_join(res, k, 0, (cast: (const: @: c.LmP0Text) (tdecl\name)), tkind, 0 - 1, ttype, -1, td) != 0
                 return: (cast: (int) (1))
             k := k + 1

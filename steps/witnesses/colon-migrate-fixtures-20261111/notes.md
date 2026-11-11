@@ -76,7 +76,7 @@
 ## Что осталось с двоеточием
 
 - **Объявления.** Письменные Structure на известном месте (54 места вида 10) и первые объявления `Имя: (поля)` —
-  [вопрос П2](../../../LMX_blog/q/current/colon-declares-contradictions-20261110.md); определение отсутствующей
+  [вопрос П2](../../../LMX_blog/q/colon-declares-answered-20261111.md); определение отсутствующей
   головы (`x: j`, `w: k`); объявления через `merge` (`pack: merge(...)`, `Copy: merge: Holder`,
   `b: immutable: merge(Holder)`) — вопрос П4; место под Structure в голове (`Point: p`, `Shape: p`, `Q: q`,
   `Inner: ref`, `Bad: p`) — вопрос П1; составная форма `cell: int: 1` и поле операнда `(a: int: 5)` — раздел

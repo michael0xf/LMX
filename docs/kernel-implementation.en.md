@@ -247,7 +247,7 @@ another form -- compact or a block -- and print the second (`COLON-FORM`) withou
 `src` and `tools` -- 76,776 rows, 34,117 sites in 101 files: the machine path 34,058 (a name 20,547, an index 8,986,
 a dereference 1,188, a member of C storage 3,337), the root programs of the tool in the L3 lowering -- a name 64, an
 index 19, and four forms `MainLetter: m`, which the command does not touch
-([P1](../LMX_blog/q/current/colon-declares-contradictions-20261110.md)). Every row is confirmed by the text, there is
+([P1](../LMX_blog/q/colon-declares-answered-20261111.md)). Every row is confirmed by the text, there is
 no write of another form; by the text no statement with a colon whose head is a name, a path or a dereference is
 left outside the census. `colon-migrate` rewrote 34,113 sites; every changed line differs from the former one by one
 colon that became `:=`. The migration changed no generated file: all 172 L1 files of a generation -- the texts and
@@ -286,7 +286,7 @@ of the list `smoke-kernel225` is the former one. A repeated census names no writ
 `bootstrap quick` -- 0 failures, the generations are the same; `l1trans`, the tool, the graph translator and
 `driver.o` are those of slice 348. Not migrated: `tests/native_closure_values.lm2` -- no command of the tool
 translates it. The declarations keep the colon: written Structures and the records `Name: (fields)`
-([P2](../LMX_blog/q/current/colon-declares-contradictions-20261110.md)), a place under a Structure in the head
+([P2](../LMX_blog/q/colon-declares-answered-20261111.md)), a place under a Structure in the head
 (P1), declarations through `merge` (P4), the composed form ([M9](../next_core_tasks_v3.md#m9)) and the second heads
 in three refusal fixtures, which step 4 will revisit. In this slice the L3 lowering, the machine path and the walker
 still accepted a write with a colon.

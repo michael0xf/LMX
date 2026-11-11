@@ -276,7 +276,7 @@ pointer/address parity, cross-arena copy, admission maps,
 immutable-owner checks, native/walker parity, and both self-build
 generations need end-to-end evidence. Do not infer completion here.
 
-The next-generation method layout and explicit `call: code data` are
+The next-generation method layout and explicit `call: data code` are
 **accepted implementation work**, not merely research. The target method
 Structure has addressable `args`, result description, `var`, and `body`;
 `var` is a separate argument before the body and after the result type
@@ -289,7 +289,7 @@ not an initializer already removed from it. This automatic layout
 belongs to that method's specific body and `var`, not to arbitrary call
 data. An ordinary named Structure may instead declare an explicit `var`
 child anywhere among its fields; unlike method `var`, it receives no
-automatic fields from the body. The general `call: code data` receives
+automatic fields from the body. The general `call: data code` receives
 two Structures and admits fields required by `code` against the supplied
 `data` before execution. Executable declarations under inline control flow
 use that same prepared root-head map; a nested initializer head is not a
@@ -317,9 +317,10 @@ an ordinary Structure in completing their `var` when the graph is built;
 data is read as a whole, so a name used above the line of its declaration
 reads the same place. The clean graph -- its interpreter and the `native` it
 emits -- executes these receivers since slice 353; the working frontend does
-not yet ([plan](next_core_tasks_v3.md#m10)). The order of the two arguments
-of the former `call: code data` against `call(var code)` awaits the author's
-answer.
+not yet ([plan](next_core_tasks_v3.md#m10)). The data stands before the
+code in every form (the author's answer of 2026-11-11): the two-argument
+launch is `call: data code`; the translators still read the former
+`call: code data` ([plan](next_core_tasks_v3.md#m11), steps 4 and 8).
 
 The author's decision of 2026-11-11 on the roles `data` and `code`
 ([the roles `data` and `code`](docs/LMX_semantics.en.md#data-code-roles))
@@ -348,7 +349,24 @@ collected in
 The translators no longer have to find out where a call, a declaration of a
 Structure and an assignment stand -- the role says it --, and the branches
 that made this choice are to be removed. No translator executes these rules
-yet ([plan](next_core_tasks_v3.md#m11)). The `implements` field-address
+yet ([plan](next_core_tasks_v3.md#m11)).
+
+The author's answers of 2026-11-11 to that decision
+([declaring by a colon form](docs/LMX_semantics.en.md#colon-declares),
+[visibility](docs/LMX_semantics.en.md#declaration-visibility)). A mention of
+the name of a known Structure is expanded nowhere -- neither by the parser
+nor when the clean graph is built: in `Model: knownModel` the Structure
+`Model` has the one atom `knownModel`, a pointer to the Structure
+`knownModel`, immutable by name; it begins to refer to it at interpretation
+and translation, no subtree arises under `Model`, and the `parent` of
+`knownModel` -- its place in the tree -- does not change. The slot of the
+atom may be rewritten by index (`Model[0] := …`); a mutable reference is
+declared by `Model: @: ptr knownModel`. Visibility in data runs in both
+directions, and references by name that close into a cycle are no error. A
+Structure launched over itself -- `call(code)` and the root of a unit -- has
+no rules of its own: its forms are read in both roles by the general rules,
+and an uncertainty is an error; hence declarations of Structures are written
+in data, not among executed forms. The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already
 computed `dirty` values go directly to their selected physical `data` slots
 through that map if necessary: no expression evaluation, repeated admission,

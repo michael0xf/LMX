@@ -58,7 +58,7 @@ Struct1: (Struct2 a b c)
 
 Поле `Struct1` одно, прежних `q w e r t` нет, внутри — сама `Struct2`. До среза чистый граф отвечал на этом тексте 3.
 Остаётся ли `Struct2` полем корня и как писать вложенную Structure в дампе, спрошено у автора
-([П3](../../../LMX_blog/q/current/colon-declares-contradictions-20261110.md)).
+([П3](../../../LMX_blog/q/colon-declares-answered-20261111.md)).
 
 ## Кортеж и проверки
 

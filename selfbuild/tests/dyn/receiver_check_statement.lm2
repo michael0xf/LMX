@@ -1,0 +1,51 @@
+# Plan M9, step 4 (the author, 2026-11-10; the book, receiver-args-only): a receiver of a primitive applied to a value
+# is the receiver's check of that value, and it stands as a statement too -- `int: 5`, `char: 'a'`, `size_t: 7U`,
+# `unsigned: 7U`, `ulong: 7U` in a method's body and at the root: the value is received by the receiver's type and
+# nothing is kept.  The value is evaluated once (`int: bump()` runs bump), an expression in parentheses is a value
+# (`int: (2 + 3)`), and a value of another type is the `convert` its reception throws (`int: (big)`, big a size_t).  A
+# receiver given a name declares the name: `int: seen` after `int: seen 4` checks the type and writes nothing.  Both
+# executors.  Entry 7; 81.. name the failing check.
+int: hits 0
+fn: bump () int
+    node\hits := node\hits + 1
+    return: 5
+end: bump
+fn: checks () int
+    int: 5
+    char: 'a'
+    size_t: 7U
+    unsigned: 7U
+    ulong: 7U
+    int: bump()
+    int: (2 + 3)
+    if: node\hits != 1
+        return: 81
+    return: 7
+end: checks
+fn: another_type () int
+    size_t: big 5U
+    int: r 82
+    ---
+        int: (big)
+        catch: convert ()
+            r := 7
+    ---
+    return: r
+end: another_type
+fn: named () int
+    int: seen 4
+    int: seen
+    if: seen != 4
+        return: 83
+    return: 7
+end: named
+int: 5
+int: code checks()
+if: code = 7
+    code := another_type()
+---
+if: code = 7
+    code := named()
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

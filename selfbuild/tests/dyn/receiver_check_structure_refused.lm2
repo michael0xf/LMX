@@ -1,0 +1,10 @@
+# Plan M9, steps 3 and 4: in the body of a named Structure a receiver applied to a value is no statement of a check --
+# it is a value inside the Structure, which the lowering does not build yet -- so `int: 5` there is refused where it
+# stands, as the composed `i: int: 5` is (composed_field_refused).  In a method's body and at the root the same form
+# is the receiver's check: receiver_check_statement.
+Holder:
+    int: x 1
+    int: 5
+end: Holder
+send: exit(exit_code: 7; stdout: ""; stderr: "")
+return

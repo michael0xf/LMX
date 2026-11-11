@@ -250,6 +250,14 @@ is not lowered. A program is run outside the suite as the suite runs it -- the c
 `driver.o` and `l2_libc.o`, then `p-prod.exe 0 entry <expected exit>`.
 [Sources, receipts and limits](../steps/witnesses/composed-form-20261111/notes.md).
 
+Since slice 352 a receiver of a primitive applied to a value stands as a statement of a method or of the root
+(plan M9, step 4): `int: 5`, `int: bump()` check the value and keep nothing. A literal the receiver's type cannot
+hold is a run-time `convert`, accepted by `catch: convert ()`, not an error of the translation
+(`int: 54554878477838734`); a literal no number type holds is still refused by the translation. A function of one
+frontend module that another module calls before its definition in the generated C must stand in the module's
+export list in `tools/build.lm2`, and a changed list needs a transitional tool (`build-self`) before the bootstrap.
+[Sources, receipts and limits](../steps/witnesses/receiver-check-20261111/notes.md).
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's

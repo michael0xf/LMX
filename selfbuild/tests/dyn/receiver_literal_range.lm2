@@ -1,0 +1,78 @@
+# Plan M9, step 4 (the author, 2026-11-10: a one-argument receiver given the primitive itself returns the number in
+# an expression or throws what `catch` accepts): a literal the receiver's type cannot hold is no error of the
+# translation.  In the form `receiver: literal` the literal has the type that holds it -- int, else size_t -- and the
+# receiver receives a number of another type: the `convert` of every such reception, at run time, accepted by
+# `catch: convert ()`.  In an expression, on the right of `:=`, as a statement; for int, char and unsigned.  A literal
+# that fits is the value: `int: 7` is 7.  Both executors.  Entry 7; 81.. name the failing check.
+fn: fits () int
+    int: i 0
+    i := int: 7
+    return: i
+end: fits
+fn: int_assign () int
+    int: r 81
+    int: i 0
+    ---
+        i := int: 54554878477838734
+        catch: convert ()
+            r := 7
+    ---
+    return: r
+end: int_assign
+fn: int_statement () int
+    int: r 82
+    ---
+        int: 54554878477838734
+        catch: convert ()
+            r := 7
+    ---
+    return: r
+end: int_statement
+fn: int_operand () int
+    int: r 83
+    int: i 0
+    ---
+        i := (int: 4294967296U) + 1
+        catch: convert ()
+            r := 7
+    ---
+    return: r
+end: int_operand
+fn: char_assign () int
+    int: r 84
+    char: c 'b'
+    ---
+        c := char: 300
+        catch: convert ()
+            r := 7
+    ---
+    return: r
+end: char_assign
+fn: unsigned_assign () int
+    int: r 85
+    unsigned: u 0U
+    ---
+        u := unsigned: 4294967296
+        catch: convert ()
+            r := 7
+    ---
+    return: r
+end: unsigned_assign
+int: code fits()
+if: code = 7
+    code := int_assign()
+---
+if: code = 7
+    code := int_statement()
+---
+if: code = 7
+    code := int_operand()
+---
+if: code = 7
+    code := char_assign()
+---
+if: code = 7
+    code := unsigned_assign()
+---
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

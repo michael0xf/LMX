@@ -378,6 +378,54 @@ tail of any form (`return: c.f(x)`), now only in the tail of the operator `:=` a
 failures, the generations are the same; `l1trans`, `driver.o` and the graph translator are the former ones, the tool
 is another (the export list of the frontend is one name shorter).
 
+[Slice 352](../steps/witnesses/receiver-check-20261111/notes.md) did step 4 of
+[section M9 of the plan](../next_core_tasks_v3.md#m9) in the working frontend -- the one-argument forms of the
+receivers of primitives (`int`, `char`, `size_t`, `unsigned`, `ulong`). The form with a name (`int: i`) and its
+repetition were executed before. Two lowerings by the shape of a form were added, both in `l2_frontend_core.lm2`.
+
+The check as a statement (`lm_compiler_receiver_check_lower`). A receiver of a primitive applied to a value and
+standing as a statement in the body of a method or at the root -- `int: 5`, `int: bump()`, `int: (2 + 3)` -- checks
+the value: it is evaluated once, received by the receiver's type and not kept. The statement becomes the declaration
+of a place with a name from the translator's space (`l2_check_<part>_<offset>` -- one per place of the program's
+text), which receives the value as every declared place does; the check, the lowering and the walker read it as a
+declaration. The rewriting stands in two passes over statements -- the collection of places
+(`lm_compiler_collect_asgn_body`) and the collection of the rows of declarations (`lm_compiler_collect_decls`) -- and
+does not fire twice: a rewritten statement is already a declaration.
+
+A literal outside the type (`lm_compiler_receiver_literal_lower`). In a receiving position a literal has no type of
+its own: it takes the type of the place, and a literal the place cannot hold is refused by the translation. In the
+form `receiver: literal` the place is the receiver itself and the form is the check, so such a literal is given the
+type that holds it -- `int`, else `size_t` -- by the same form: `int: 4294967296U` reads as
+`int: size_t: 4294967296U`. The outer receiver receives a number of another type, and that is the run-time `convert`
+that `catch: convert ()` accepts -- as with a value of another type from a variable. The rewriting is done by the
+walk of the forms that say what they are by their shape (`lm_compiler_place_write_walk`), before anything is read for
+its meaning; the decision "does the literal fit" is moved from `lm_compiler_check_literal_kind` into
+`lm_compiler_literal_kind_fits`, one for both.
+
+The limits: a literal that no number type of the translation holds (`int: 342348523485629384569384`) is refused by
+the translation -- it has no value to receive at run time; a declaration with a literal outside the range
+(`int: x 4294967296U`) is refused by the translation as before; in the body of a named Structure the form with a
+value is no statement but a value inside the Structure, and is refused by the limit of slice 351.
+
+The checks of slice 352: four new rows of the list -- `receiver_check_statement` and `receiver_literal_range` give 7
+natively and under the walker, with both executors of the root; `receiver_literal_unrepresentable_refused` and
+`receiver_check_structure_refused` are refused with the named message at the named place. A mutant -- both
+rewritings switched off -- translates neither `receiver_check_statement` ("unsupported body" at `int: 5`) nor
+`receiver_literal_range` ("literal not representable as int"), and refuses the third fixture with another message.
+The full list -- `SUITE 162 rows, 0 failures`, 1240 PASS; all 224 programs of the previous slice keep their L1 byte
+for byte. `bootstrap quick` -- 0 failures, the generations are the same; `l1trans`, `driver.o` and the graph
+translator are the former ones, the tool is another (the export list of the frontend is one name longer).
+
+A repeated declaration has no mechanism of its own: it is an out-of-turn type check with an assignment (the author's
+clarification of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#repeat-is-check-and-assignment); the book --
+[structural forms](LMX_semantics.en.md#forms-declare-or-call)). Both translators were measured against this
+clarification in the same witness; the divergences of the implementation found there are written down as step 5 of
+[section M9 of the plan](../next_core_tasks_v3.md#m9): with a repetition in the explicit `var` of a method the
+working frontend silently reads the first occurrence, and it stops a Structure called over itself where the
+Structure reads its field above the line of its declaration; the clean graph does not write the place on a
+repetition at the root, selects the first occurrence by a bare path and does not build the path with the index of an
+occurrence.
+
 <a id="principles"></a>
 ## 1. Principles (norm)
 

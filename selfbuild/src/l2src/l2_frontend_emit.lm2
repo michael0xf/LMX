@@ -1680,6 +1680,10 @@ fn: lm_compiler_collect_decls (const: (@: body c.LmP0Structure); int: mi; const:
         ---
         stmt := field\value
         c.lm_compiler_vis_stmt(mi, stmt)
+        # A receiver's check of a value standing as a statement is the declaration of an unnamed place (plan M9, step 4):
+        # said here too, before the rows of the declarations are made.
+        if: c.lm_compiler_receiver_check_lower((cast: (@: c.LmP0Node) (field\value)), path) != 0
+            return: (cast: (int) (1))
         retained := lm_compiler_collect_source_definition(stmt, mi, path)
         if: retained < 0
             return: (cast: (int) (1))

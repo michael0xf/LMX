@@ -23,6 +23,22 @@ fn: lm_compiler_node_file (const: (@: path char); const: (@: source_node c.LmP0N
     return: (cast: (const: @: char) (path))
 end: lm_compiler_node_file
 
+# The index of the program part a node was read from (lm_compiler_node_file names that part's path); -1 for a node of
+# the source itself.  With the offset of the node it names one place of the whole program.
+fn: lm_compiler_node_part (const: (@: source_node c.LmP0Node)) int
+    @@@: part_doc_cell c.LmP0Document (cast: (@@@: c.LmP0Document) (@ c.l2_part_doc))
+    @: part_n_cell int (cast: (@: int) (@ c.l2_part_n))
+    int: k 0
+    int: found -1
+    const: (@: owner c.LmP0Node c.lm_compiler_head_source_node(source_node))
+    while: owner != 0 && part_doc_cell[0] != 0 && k < part_n_cell[0]
+        if: part_doc_cell[0][k] != 0 && c.lm_compiler_node_in(c.lm_p0_document_root(part_doc_cell[0][k]), owner) != 0
+            found := k
+        k := k + 1
+    ---
+    return: (cast: (int) (found))
+end: lm_compiler_node_part
+
 fn: lm_compiler_vis_ok (const: (@: at c.LmP0Node)) int
     @: vis_at_cell size_t (cast: (@: size_t) (@ c.l2_vis_at))
     @: vis_on_cell int (cast: (@: int) (@ c.l2_vis_on))

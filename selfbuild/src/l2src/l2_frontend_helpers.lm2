@@ -392,6 +392,41 @@ fn: lm_compiler_literal_fits_kind (const: (@: text c.LmP0Text); int: kind) int
     return: (cast: (int) (1))
 end: lm_compiler_literal_fits_kind
 
+# The decision of lm_compiler_check_literal_kind without its message: 1 when the text of a literal is representable as
+# the kind (0 int, 1 char, 2 size_t, 3 unsigned, 4 ulong) or the question does not arise -- no kind, no text, a text
+# that is no literal of the kind's spelling --; 0 when it is not.
+fn: lm_compiler_literal_kind_fits (const: (@: text c.LmP0Text); int: kind) int
+    size_t: bits 0U
+    int: st 0
+    if: kind < 0 || text = 0
+        return: (cast: (int) (1))
+    if: kind = 0
+        st := lm_compiler_int_literal_bits(text, @ bits)
+        if: st = 2
+            return: (cast: (int) (0))
+        if: st = 1
+            return: (cast: (int) (1))
+    ---
+    if: kind = 1
+        st := lm_compiler_int_literal_bits(text, @ bits)
+        if: st = 0
+            return: (cast: (int) (1))
+        if: st = 2 || lm_compiler_char_digit_fits(text) = 0
+            return: (cast: (int) (0))
+        return: (cast: (int) (1))
+    if: kind = 0
+        if: lm_compiler_digits(text) = 0
+            return: (cast: (int) (1))
+        ---
+    ---
+    if: kind = 2 || kind = 3 || kind = 4
+        if: text\data = 0 || text\length = 0U || text\data[0] < 48 || text\data[0] > 57
+            return: (cast: (int) (1))
+        ---
+    ---
+    return: (cast: (int) ((cast: (int) (lm_compiler_literal_fits_kind(text, kind) != 0))))
+end: lm_compiler_literal_kind_fits
+
 fn: lm_compiler_block_until (const: (@: stmt c.LmP0Node)) @: c.LmP0Structure
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_STRUCTURE || stmt\as = 0 || stmt\as\structure = 0 || stmt\as\structure\trailer = 0
         return: (cast: (@: c.LmP0Structure) (0))

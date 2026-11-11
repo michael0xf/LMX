@@ -4273,6 +4273,58 @@ fn: lm_compiler_written_form_split (const: (@: body c.LmP0Structure); @: field c
     return: 0
 end: lm_compiler_written_form_split
 
+# Plan M9, step 4 (the author, 2026-11-10; the book, receiver-args-only): a receiver of a primitive applied to a
+# value and standing as a statement -- `int: 5`, `int: big`, `int: f()` -- is the receiver's check of that value:
+# the value is received by the receiver's type and nothing of it is kept.  The statement becomes the declaration of
+# a place the program does not name (`l2_check_<part>_<offset>`: one name per place of the program's text), which
+# receives the value as every declared place does.  So the check, the lowering and the walker read the form by the
+# one mechanism of a declaration, and a value of another type is the `convert` its reception throws.  A receiver
+# given a name (`int: i`) declares that name and is not this form; in the body of a named Structure the form is a
+# value inside the Structure, which lm_compiler_take_ns_body refuses.
+fn: lm_compiler_receiver_check_lower (@: stmt c.LmP0Node; const: (@: path char)) int
+    @: frame c.LmP0Frame
+    @: name c.LmP0Text
+    @: spelling char
+    @: atom c.LmP0Node
+    @: atom_as c.LmP0NodeAs
+    @: field c.LmP0Field
+    @: tail c.LmP0Structure
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\span = 0
+        return: 0
+    frame := stmt\as\frame
+    if: frame\head = 0 || frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0 || (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: 0
+    if: c.lm_compiler_lit_field_kind((cast: (const: @: c.LmP0Node) stmt)) < 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (frame\body))) < 1
+        return: 0
+    if: c.lm_compiler_consumed_type_value((cast: (const: @: c.LmP0Node) stmt), 0, 0, 0) = 0 || c.lm_compiler_declaration((cast: (const: @: c.LmP0Node) stmt)) != 0
+        return: 0
+    name := (cast: (@: c.LmP0Text) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Text)))
+    spelling := (cast: (@: char) c.lm_compiler_bound_alloc(64U, c.sizeof(c.char)))
+    atom := (cast: (@: c.LmP0Node) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Node)))
+    atom_as := (cast: (@: c.LmP0NodeAs) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0NodeAs)))
+    field := (cast: (@: c.LmP0Field) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Field)))
+    tail := (cast: (@: c.LmP0Structure) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Structure)))
+    if: name = 0 || spelling = 0 || atom = 0 || atom_as = 0 || field = 0 || tail = 0
+        return: (cast: (int) (c.lm_compiler_alloc_or(path, (cast: (const: @: c.LmP0Node) stmt), "out of memory")))
+    if: c.sprintf(spelling, "l2_check_%d_%zu", c.lm_compiler_node_part((cast: (const: @: c.LmP0Node) stmt)) + 1, (cast: (size_t) (stmt\span\offset))) < 0
+        return: 1
+    name\data := spelling
+    name\length := c.strlen(spelling)
+    atom_as\atom := name
+    atom\kind := c.LM_P0_NODE_ATOM
+    atom\flags := 0U
+    atom\span := stmt\span
+    atom\as := atom_as
+    field\value := atom
+    field\next := frame\body\first_field
+    tail\first_field := field
+    tail\last_field := frame\body\last_field
+    tail\field_count := frame\body\field_count + 1U
+    tail\trailer := 0
+    frame\body := tail
+    return: 0
+end: lm_compiler_receiver_check_lower
+
 fn: lm_compiler_collect_asgn_body (const: (@: body c.LmP0Structure); int: mi; const: (@: path char)) int
     @@: m_uses_cell int (cast: (@@: int) (@ c.l2_m_uses))
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
@@ -4308,6 +4360,9 @@ fn: lm_compiler_collect_asgn_body (const: (@: body c.LmP0Structure); int: mi; co
         ---
         stmt := field\value
         c.lm_compiler_vis_stmt(mi, stmt)
+        # A receiver's check of a value standing as a statement is the declaration of an unnamed place (plan M9, step 4).
+        if: lm_compiler_receiver_check_lower((cast: (@: c.LmP0Node) (field\value)), path) != 0
+            return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && c.lm_compiler_default_data_name(mi, stmt\as\frame\head) != 0 && c.lm_compiler_is_asgn(stmt, mi) != 0
             if: c.lm_compiler_dyn_add(mi, (cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), c.lm_compiler_free_dt()) != 0
                 return: 1
@@ -10536,6 +10591,96 @@ fn: lm_compiler_place_write_lower (@: stmt c.LmP0Node; const: (@: path char)) in
     return: 0
 end: lm_compiler_place_write_lower
 
+# Plan M9, step 4 (the author, 2026-11-10; the book, receiver-args-only): a receiver of a primitive applied to a
+# literal is that value checked by the receiver, and a value outside the type is the refusal `catch` accepts -- not
+# an error of the translation.  A literal has no type of its own where a place receives it: it takes the type of the
+# place, which is why one that does not fit is refused when it is read.  In this form the place is the receiver
+# itself and the form is the check, so a literal the receiver's type cannot hold is given, by the same form, the
+# type that holds it -- int, else size_t: `int: 4294967296U` reads as `int: size_t: 4294967296U`.  The outer
+# receiver then receives a number of another type, which is the `convert` of every such reception.  Said by the
+# shape alone -- one field, a number literal --, before anything is read for its meaning.  A declaration
+# (`int: x 4294967296U`, two fields) is not this form and keeps its refusal; so does a literal no type holds.
+fn: lm_compiler_receiver_literal_lower (@: stmt c.LmP0Node; const: (@: path char)) int
+    @: frame c.LmP0Frame stmt\as\frame
+    @: only c.LmP0Field
+    @: text c.LmP0Text
+    @: wide c.LmP0Text
+    @: spelling char
+    @: inner_frame c.LmP0Frame
+    @: inner_as c.LmP0NodeAs
+    @: inner c.LmP0Node
+    @: inner_body c.LmP0Structure
+    @: inner_field c.LmP0Field
+    size_t: bits 0U
+    int: kind -1
+    int: wide_int 0
+    if: frame = 0 || frame\head = 0 || frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
+        return: 0
+    if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) stmt), "int") != 0
+        kind := 0
+    if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) stmt), "char") != 0
+        kind := 1
+    if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) stmt), "size_t") != 0
+        kind := 2
+    if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) stmt), "unsigned") != 0
+        kind := 3
+    if: c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) stmt), "ulong") != 0
+        kind := 4
+    if: kind < 0 || c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (frame\body))) != 1
+        return: 0
+    only := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (frame\body\first_field)))
+    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0 || only\value\as\atom = 0
+        return: 0
+    text := only\value\as\atom
+    if: c.lm_compiler_num((cast: (const: @: c.LmP0Text) text)) = 0 && c.lm_compiler_signed_num((cast: (const: @: c.LmP0Text) text)) = 0
+        return: 0
+    if: c.lm_compiler_literal_kind_fits((cast: (const: @: c.LmP0Text) text), kind) != 0
+        return: 0
+    # The type that holds the literal: int when its text is an int literal that fits, else size_t for a literal
+    # without a sign that fits it.
+    if: kind != 0 && c.lm_compiler_int_literal_bits((cast: (const: @: c.LmP0Text) text), @ bits) = 1
+        wide_int := 1
+    if: wide_int = 0 && (kind = 2 || c.lm_compiler_num((cast: (const: @: c.LmP0Text) text)) = 0 || c.lm_compiler_size_t_fits_text((cast: (const: @: c.LmP0Text) text)) = 0)
+        return: 0
+    spelling := (cast: (@: char) c.lm_compiler_bound_alloc(8U, c.sizeof(c.char)))
+    wide := (cast: (@: c.LmP0Text) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Text)))
+    inner_frame := (cast: (@: c.LmP0Frame) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Frame)))
+    inner_as := (cast: (@: c.LmP0NodeAs) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0NodeAs)))
+    inner := (cast: (@: c.LmP0Node) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Node)))
+    inner_body := (cast: (@: c.LmP0Structure) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Structure)))
+    inner_field := (cast: (@: c.LmP0Field) c.lm_compiler_bound_alloc(1U, c.sizeof(c.LmP0Field)))
+    if: spelling = 0 || wide = 0 || inner_frame = 0 || inner_as = 0 || inner = 0 || inner_body = 0 || inner_field = 0
+        return: (cast: (int) (c.lm_compiler_alloc_or(path, (cast: (const: @: c.LmP0Node) stmt), "out of memory")))
+    if: wide_int != 0
+        if: c.sprintf(spelling, "int") < 0
+            return: 1
+        ---
+    else:
+        if: c.sprintf(spelling, "size_t") < 0
+            return: 1
+        ---
+    ---
+    wide\data := spelling
+    wide\length := c.strlen(spelling)
+    inner_field\value := only\value
+    inner_field\next := 0
+    inner_body\first_field := inner_field
+    inner_body\last_field := inner_field
+    inner_body\field_count := 1U
+    inner_body\trailer := 0
+    inner_frame\head := wide
+    inner_frame\flags := c.LM_P0_FRAME_COLON
+    inner_frame\body := inner_body
+    inner_frame\trailer := 0
+    inner_as\frame := inner_frame
+    inner\kind := c.LM_P0_NODE_FRAME
+    inner\flags := 0U
+    inner\span := only\value\span
+    inner\as := inner_as
+    only\value := inner
+    return: 0
+end: lm_compiler_receiver_literal_lower
+
 fn: lm_compiler_place_write_walk (@: body c.LmP0Structure; const: (@: path char); int: unit_level) int
     @: field c.LmP0Field
     @: item c.LmP0Node
@@ -10560,7 +10705,7 @@ fn: lm_compiler_place_write_walk (@: body c.LmP0Structure; const: (@: path char)
             ---
             if: item != 0 && item\as != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as\frame != 0
                 frame := item\as\frame
-                if: lm_compiler_place_write_lower(item, path) != 0 || lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) (frame\body)), path, 0) != 0
+                if: lm_compiler_place_write_lower(item, path) != 0 || lm_compiler_receiver_literal_lower(item, path) != 0 || lm_compiler_place_write_walk((cast: (@: c.LmP0Structure) (frame\body)), path, 0) != 0
                     return: 1
                 ---
                 if: frame\trailer != 0 && (frame\body = 0 || frame\trailer != frame\body\trailer)

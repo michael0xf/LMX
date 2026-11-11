@@ -1,0 +1,126 @@
+# The clean-graph interpreter on the probes g01..g10 (slice 352 measurement): graph-f17/graph_trans-prod.exe 0 entry 0 -- run gNN.lm2 1
+# For each probe: its source, then the output from GRAPH-AFTER-BEGIN on (the driver's own lines dropped).
+
+=== g01.lm2
+int: i
+i := 7
+int: i
+int: seen i
+--- output
+GRAPH-AFTER-BEGIN
+int: i
+:=: i 7
+int: i
+int: seen 7
+GRAPH-AFTER-END
+
+=== g02.lm2
+int: i 5
+char: i
+int: seen i
+--- output
+GRAPH-AFTER-BEGIN
+int: i 5
+char: i
+int: seen i
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+graph: run answered 5
+
+=== g03.lm2
+int: i 1
+i := int: 6
+int: j int: 5
+int: k (int: 5) + 2
+--- output
+GRAPH-AFTER-BEGIN
+int: i 6
+:=: i 6
+int: j 5
+int: k 7
+GRAPH-AFTER-END
+
+=== g04.lm2
+int: 5
+int: after 1
+--- output
+GRAPH-AFTER-BEGIN
+int: 5
+int: after 1
+GRAPH-AFTER-END
+
+=== g05.lm2
+int: i 1
+i := int: 54554878477838734
+int: after 1
+--- output
+GRAPH-AFTER-BEGIN
+int: i 2020583822
+:=: i 2020583822
+int: after 1
+GRAPH-AFTER-END
+
+=== g06.lm2
+int: i 1
+int: 342348523485629384569384
+int: after 1
+--- output
+GRAPH-AFTER-BEGIN
+int: i 1
+int: -30592472
+int: after 1
+GRAPH-AFTER-END
+
+=== g07.lm2
+int: i 5
+int: i 6
+int: i
+int: seen i
+--- output
+GRAPH-AFTER-BEGIN
+int: i 5
+int: i 6
+int: i
+int: seen 5
+GRAPH-AFTER-END
+
+=== g08.lm2
+int: i 5
+int: i 6
+int: seen i
+--- output
+GRAPH-AFTER-BEGIN
+int: i 5
+int: i 6
+int: seen 5
+GRAPH-AFTER-END
+
+=== g09.lm2
+int: i 5
+int: i
+int: seen i
+--- output
+GRAPH-AFTER-BEGIN
+int: i 5
+int: i
+int: seen 5
+GRAPH-AFTER-END
+
+=== g10.lm2
+fn: f () int
+    int: i 5
+    int: i 6
+    int: i
+    return: i
+end: f
+int: seen f()
+--- output
+GRAPH-AFTER-BEGIN
+fn: f () int
+    int: i 5
+    int: i 6
+    int: i
+    return: i
+end: f
+int: seen 6
+GRAPH-AFTER-END

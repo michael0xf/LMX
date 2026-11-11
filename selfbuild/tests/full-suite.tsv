@@ -265,3 +265,12 @@ refuses	dyn/composed_known_refused.lm2	composed_known_refused.lm2:7:5: a form wi
 refuses	dyn/composed_known_root_refused.lm2	composed_known_root_refused.lm2:4:1: a form with a colon declares and writes no known place: assign with :=	nf
 refuses	dyn/merge_named_field_refused.lm2	merge_named_field_refused.lm2:10:23: this merge operand form is not lowered yet	nf
 runs	dyn/typed_value_write.lm2	7	nf
+# Plan M9, step 4 (the author, 2026-11-10; the book, receiver-args-only): a receiver of a primitive applied to a value is the check of
+# that value.  As a statement of a method or of the root -- `int: 5`, `int: bump()` -- the value is received by the receiver's type and
+# nothing is kept; a literal the type cannot hold has the type that holds it and is the run-time `convert` `catch` accepts
+# (`int: 54554878477838734`), not an error of the translation.  Limits: a literal no number type holds is refused where it stands; in
+# the body of a named Structure the form is a value inside the Structure, which the lowering does not build.
+runs	dyn/receiver_check_statement.lm2	7	nf
+runs	dyn/receiver_literal_range.lm2	7	nf
+refuses	dyn/receiver_literal_unrepresentable_refused.lm2	receiver_literal_unrepresentable_refused.lm2:6:5: literal not representable as int	nf
+refuses	dyn/receiver_check_structure_refused.lm2	receiver_check_structure_refused.lm2:7:5: a receiver applied to a value declares no place, and a Structure declared with it inside is not lowered yet	nf

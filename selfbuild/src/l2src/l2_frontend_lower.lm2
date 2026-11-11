@@ -378,35 +378,8 @@ end: lm_compiler_own_reserve
 
 # Original: l2src/l2trans.lm1:3564
 fn: lm_compiler_check_literal_kind (const: (@: text c.LmP0Text); int: kind; const: (@: path char); const: (@: at c.LmP0Node)) int
-    size_t: bits 0U
-    int: st 0
-    if: kind < 0 || text = 0
-        return: (cast: (int) (0))
-    if: kind = 0
-        st := c.lm_compiler_int_literal_bits(text, @ bits)
-        if: st = 2
-            return: (cast: (int) (c.lm_compiler_error(path, at, "literal not representable as int")))
-        if: st = 1
-            return: (cast: (int) (0))
-    ---
-    if: kind = 1
-        st := c.lm_compiler_int_literal_bits(text, @ bits)
-        if: st = 0
-            return: (cast: (int) (0))
-        if: st = 2 || c.lm_compiler_char_digit_fits(text) = 0
-            return: (cast: (int) (c.lm_compiler_error(path, at, "literal not representable as char")))
-        return: (cast: (int) (0))
-    if: kind = 0
-        if: c.lm_compiler_digits(text) = 0
-            return: (cast: (int) (0))
-        ---
-    ---
-    if: kind = 2 || kind = 3 || kind = 4
-        if: text\data = 0 || text\length = 0U || text\data[0] < 48 || text\data[0] > 57
-            return: (cast: (int) (0))
-        ---
-    ---
-    if: c.lm_compiler_literal_fits_kind(text, kind) != 0
+    # The decision is lm_compiler_literal_kind_fits (asked without a message by lm_compiler_receiver_literal_lower).
+    if: c.lm_compiler_literal_kind_fits(text, kind) != 0
         return: (cast: (int) (0))
     if: kind = 0
         return: (cast: (int) (c.lm_compiler_error(path, at, "literal not representable as int")))

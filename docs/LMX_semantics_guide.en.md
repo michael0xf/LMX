@@ -12,41 +12,41 @@ fn: add (int: x; int: y) int ()
 end: add
 
 fn: add5 (int: x) int ()
-    merge(int: y 5; add\body)
+    merge(int: y 5; add\code)
 end: add5
 ```
 
-`add` stores `args` with formals `x` and `y`, `return`, `var`, and `body`
-with the `return: x + y` statement as separate parts. The `add\body` path
-selects the body itself. `merge` builds an `add5` body containing `int: y 5`
+`add` stores `args` with formals `x` and `y`, `return`, `data`, and `code`
+with the `return: x + y` statement as separate parts. The `add\code` path
+selects the `code` part itself. `merge` builds an `add5` body containing `int: y 5`
 and that statement; `add5(1)` gives 6. The `add5` header declares only
 formal `x`: the field `y` in its new body becomes neither a formal nor a
 formal default. `merge(add; int: y 5)` is not equivalent: the outer `add`
-method Structure has `args`, `return`, `var`, and `body` parts, but no
+method Structure has `args`, `return`, `data`, and `code` parts, but no
 immediate `y` field.
 
-An alternative `add5` puts the initializer in explicit `var` and keeps
+An alternative `add5` puts the initializer in explicit `data` and keeps
 `add`'s body:
 
 ```lmx
 fn: add5 (int: x) int (int: y 5)
-    add\body
+    add\code
 end: add5
 ```
 
 A third, alternative definition changes `args` instead: here `y` is a
-formal with default 5, not a body or `var` field:
+formal with default 5, not a body or `data` field:
 
 ```lmx
 fn: add5 merge(add\args; int: y 5) int ()
-    add\body
+    add\code
 end: add5
 ```
 
 These are three mutually exclusive definitions of `add5`, not three
 consecutive declarations in one scope. The full `fn` form explicitly
-supplies `var` after the result description; the short source form omits
-that argument but produces the same addressable empty `var` part.
+supplies `data` after the result description; the short source form omits
+that argument but produces the same addressable empty `data` part.
 Unary `int: x` describes a typed place without an initial value and,
 in a signature, a formal without a default.
 
@@ -57,7 +57,7 @@ The header `fn: add (int: x; int: y) int` **without a body** is the third
 form: an interface descriptor that can be passed by reference but cannot
 be invoked directly as an executable `add` body. With a body after that
 header it is the short executable definition with an addressable empty
-`var`. The full form with `()` after the result supplies `var` explicitly.
+`data`. The full form with `()` after the result supplies `data` explicitly.
 
 <a id="receiver-arities"></a>
 ## Place and value with `int` and `@`
@@ -74,9 +74,10 @@ int: x 5       # int with value 5
 @: ptr Model   # a reference to an existing Structure, no longer an empty void pointer
 ```
 
-A first definition allocates the place, a repeated form with a candidate
-writes after admission, and a repeated form without a candidate only checks
-the requirement. The composed forms with the place in the outer head —
+A first definition allocates the place; in code a repeated form with a
+candidate writes after admission, and a repeated form without a candidate
+only checks the requirement (in data a repeated form is one more occurrence
+of the name, [names and paths](LMX_semantics.en.md#fields)). The composed forms with the place in the outer head —
 `x: int()`, `x: int: 5`, `ptr: @()`, `ptr: @: 0`, `ptr: @: Model` — are
 withdrawn by the author's decision of 2026-11-10
 ([semantics](LMX_semantics.en.md#receiver-args-only)): `ms: int: time`
@@ -94,8 +95,9 @@ predicted body behavior. User-authored behavioral tests are a separate stage.
 ## A method name and a pointer to it
 
 `myFunc()` directly calls a declared method. After `@: ptr myFunc`,
-`ptr()` calls through the pointer; repeated `@: ptr otherFunc` assigns
-another compatible method to that same cell. Bare `myFunc` or `ptr` only
+`ptr()` calls through the pointer; repeated `@: ptr otherFunc` in code
+assigns another compatible method to that same cell (in data a repeated
+form is one more occurrence of the name). Bare `myFunc` or `ptr` only
 reads a value. `(\ptr)()` calls after explicit dereference; `\ptr()`
 applies `\` to the **result** of the call under ordinary precedence,
 not through a special pointer-call rule.
@@ -109,7 +111,7 @@ entry no longer describes the selected code. With the same implementation,
 the copy's graph can be passed as data only when the used layout and address
 map remain compatible; without a suitable native entry, the completed graph
 runs in the interpreter. An `implements` map aligns physical fields but
-neither selects code nor stores runtime names. The `call: code data` split
+neither selects code nor stores runtime names. The `call: data code` split
 and addressable method parts are an [approved coding target](../next_core_tasks_v3.md);
 the compatible ABI is not fully implemented yet.
 
@@ -117,8 +119,9 @@ the compatible ABI is not fully implemented yet.
 ## A returned method
 
 `@: add5 makeAdder(5)` **calls** the factory and stores the returned
-method. `add5(1)` then calls it through the stored pointer. Merely defining
-`add5: makeAdder 5` does not run the factory. If the returned method reads
+method. `add5(1)` then calls it through the stored pointer. A data form
+`add5: makeAdder 5` merely declares a Structure `add5` and does not run the factory;
+among executed forms the same form is a call of its head `add5`. If the returned method reads
 free `n`, the caller's dynamic input takes precedence over a copied lexical
 fallback.
 

@@ -82,9 +82,17 @@ fields; a numeric position alone is not its contract. Current failures
 and checks are in the [current kernel gate](../next_core_tasks_v3.md).
 
 The current kernel distinguishes selected code from supplied data; `fn`
-has four parts, `args/return/var/body`. The `call: code data` form is
+has four parts, `args/return/data/code`. The `call: data code` form is
 partly implemented: arbitrary actual code sources and admission of their
 data remain limited by M2/N4 in the [v3 plan](../next_core_tasks_v3.md).
+Before the decision of 2026-11-11 the parts were called `var/body` and
+the launch was written `call: code data`: the clean graph reads the new
+names and order since slice 354 and does not accept the former spellings
+or order, while the working frontend and its fixtures read the former
+spellings and order until step 8 of [M11](../next_core_tasks_v3.md#m11).
+The remaining rules of M11 -- reading forms by role, the pointer atom,
+visibility in data in both directions -- are executed neither by the
+clean graph (step 5) nor by the working frontend (step 8).
 Fixed slot counts are computed in advance; full admission of required
 fields must finish before execution. Do not guess an initialization change.
 
@@ -150,9 +158,15 @@ address correspondence remains valid after values change; branch
 assignment admits the replacement candidate **before storage**. Do not
 invalidate correspondence or automatically rerun every check after each
 mutation. Translation checks only what correct C emission and explicit throws/catch
-obligations require. Actual values are admitted by the common runtime mechanism
-when the call or assignment is reached; no body or future-branch preflight
-substitutes for that admission.
+obligations require. The admission `implements` is performed once -- when the
+clean graph is built -- and after the construction it is needed only where the
+candidate is selected while the program runs (the author's decision of
+2026-11-11, [book](LMX_semantics.en.md#data-code-roles)); an assignment of
+primitives is not checked for admissibility at run time. There the actual
+value is admitted by the common runtime mechanism when the call or assignment
+is reached, without a body or future-branch preflight. At present the
+admission at construction is not yet performed: the clean graph admits each
+call at run time -- step 7 of [M11](../next_core_tasks_v3.md#m11).
 See [correspondence stability](LMX_semantics.en.md#correspondence-stability)
 and the [argument stage](LMX_semantics.en.md#argument-compatibility-stage).
 
@@ -185,8 +199,10 @@ failure of the **whole** test set remains undecided.
 The author's decision of 2026-11-10 ([book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by
 the form `receiver: arguments`, and a field written "name: type: value" (`a: int: 5`) is withdrawn. The slices below
 are described as they ran: with the field of a `merge` operand in the former form, which the translators still
-accept; under the norm it is written `(int: a 5)`. Migrating the fixtures and changing the reading is in
-[plan M9](../next_core_tasks_v3.md#m9).
+accept; under the norm it is written `(int: a 5)`. The same holds for the name that holds the result of a `merge`
+(`pack: merge(...)`) and for a formal or a field written as a structural form (`Q: q`): under the norm of 2026-11-11
+([book](LMX_semantics.en.md#data-code-roles)) they are declared `@: pack merge(...)` and `@: q Q`. Migrating the
+fixtures and changing the reading is in [plan M9](../next_core_tasks_v3.md#m9) and [M11](../next_core_tasks_v3.md#m11).
 
 The rules are [writing a known place](LMX_semantics.en.md#assign-known),
 [named arguments](LMX_semantics.en.md#named-actuals) and
@@ -224,7 +240,9 @@ of the third:
   the existing implementation limit of writing a hidden input that has
   no activation value ("writing a hidden input that has no activation
   value is not supported yet"), the same as for `x: v`; it is not a rule
-  of the language.
+  of the language. Under the norm of 2026-11-11 such a form is an error by
+  the rule of the language as well: the name of a function does not stand
+  to the left of `:=` ([book](LMX_semantics.en.md#data-code-roles)).
 - A named argument is `f(a := v)` only: the left side selects the formal
   of the selected callable, the right side is evaluated in the ordinary
   way. `f(a: 5)` and `f(a(5))` with a callable `a` visible are its
@@ -240,7 +258,7 @@ of the third:
   optional.
 - The `merge` operand "a part of a callable", `f\args` (slice 304,
   [record](../steps/witnesses/fix304-20261107/notes.md); native and the
-  walker, both roots): the args part of a callable is read as the
+  walker, both roots): the `args` part of a callable is read as the
   Structure of its formals -- one field per written formal, in the
   formals' order, holding the formal's current default (the value the
   formal takes when a call omits it); a formal with no current default --
@@ -274,9 +292,10 @@ of the third:
   ordinary positional reading stands; when the Structure also fits the
   first formal, a Structure formal, by the first part of `implements` at
   translation, as the author instructed on 2026-11-08, with every other
-  formal defaulted, ce01c206 refuses the call as ambiguous ("the Structure
-  given to k is its argument q and its arguments: an ambiguous call", the
-  fixture `whole_ambiguous_refused`); Codex's review of 307 established
+  formal defaulted, both readings apply and ce01c206 refuses the call as
+  ambiguous ("the Structure given to k is its argument q and its
+  arguments: an ambiguous call", the fixture `whole_ambiguous_refused`);
+  Codex's review of 307 established
   this as my own extension of the rule, not the author's decision (the
   author spoke of two really applicable methods; two `fn` of one name in
   one unit are refused at definition): the refusal is withdrawn by the
@@ -369,20 +388,23 @@ operations ([plan M5](../next_core_tasks_v3.md#m5-assign-operators)).
 - Unloading a later module whose `independent: immutable` branches are
   retained by physical address in consumers; until decided, ownership
   is explicit and there is no hidden global store.
-- Implementation details of the approved `args`/`return`/`var`/`body`
-  layout and `call: code data`: read-before-write, hidden inputs,
+- Implementation details of the approved `args`/`return`/`data`/`code`
+  layout and `call: data code`: read-before-write, hidden inputs,
   `node`, `catch`, and native ABI compatibility. These are N1–N6 work
   items, not a reason to return the model to optional research status.
 
 <a id="grammar-extraction"></a>
 ## 6. Grammar versus implementation
 
-Grammar specifies P0 shape but does not prove translator support. The sole
-anonymous container occupying an entire argument list is transparent
-already in P0; completed `f()`, `f: ()`, and `f:` with explicit `---`
-have one empty Frame/body shape. An unfinished bare `f:` is invalid; bare
-`f` is an atom, not a call. Historical goldens are not automatically
-normative. Remaining parser/consumer gaps and exact witnesses are in
+Grammar specifies P0 shape but does not prove translator support. By the
+author's decision of 2026-11-10, P0 does not unwrap the sole anonymous
+Structure of an argument list: `f()`, `f:`, and `f:` with explicit `---`
+have one empty Frame/body shape, while `f: ()` is the same as `f(())`: one
+field, an empty Structure ([grammar](LMX_grammar.en.md#empty-colon)). At
+present P0 still unwraps a sole Structure and rejects bare `f:`
+([plan M8](../next_core_tasks_v3.md#m8)). Bare `f` is an atom, not a call.
+Historical goldens are not automatically normative. Remaining
+parser/consumer gaps and exact witnesses are in
 [parser fix](../next_parser_fix.md) and [v3 plan](../next_core_tasks_v3.md).
 Malformed Mix-mark and `{#...}` diagnostics must not be guessed from old
 source text.

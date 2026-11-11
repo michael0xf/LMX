@@ -10,6 +10,12 @@ slice, not completion of the kernel, Message/mail roots, or §§8/8a. Exact comm
 [Codex's continuation](../steps/witnesses/fix309-20261108/codex-continuation.md); the older slice descriptions below
 are historical. The current input manifest has 402 entries.
 
+The slice descriptions below keep the names and forms of their day. The norm since the author's decisions of
+2026-11-10 and 2026-11-11 is the book ([roles `data` and `code`](../docs/LMX_semantics.en.md#data-code-roles)): the
+parts of a callable are `args`, `return`, `data` and `code` (formerly `var` and `body`), the two-argument launch is
+`call: data code` (formerly `call: code data`), and several forms the slices describe are withdrawn there. Which
+translator reads what is told in the entries of slices 353 and 354 and in [plan M11](../next_core_tasks_v3.md#m11).
+
 The method slice graph10/tool11/rt07 passed 24 execution checks and 18 graph-mutation checks.
 Point/take, reordered candidate fields, used-field-only candidates, int defaults and nested calls execute in
 interpreter/native/forced modes. Methods keep explicit args/return/var/body Lmx parts; each call owns temporary
@@ -259,14 +265,31 @@ export list in `tools/build.lm2`, and a changed list needs a transitional tool (
 [Sources, receipts and limits](../steps/witnesses/receiver-check-20261111/notes.md).
 
 Since slice 353 the clean graph executes the receivers `call` and `fncall` (plan M10, steps 1-5; the author
-2026-11-11): `response := fncall(args var return code)`, `fncall(var return code)`, `fncall(return code)`,
-`call(args var code)` and `call(code)` launch the parts they are given -- an addition to declarations and to the
+2026-11-11): `response := fncall(args data return code)`, `fncall(data return code)`, `fncall(return code)`,
+`call(args data code)` and `call(code)` launch the parts they are given (the part `data` was named `var` until
+slice 354) -- an addition to declarations and to the
 ordinary call, which runs through the same launch (`lmx_graph_launch`, the work frame carries `args`, `body`,
-`result`). One-argument `call` runs an ordinary Structure over itself and selects no `var` child; the
-two-argument form is still `call: code data` (question P6 to the author). Data is read as a whole: a computed
-declaration of its root level is executed before the code, once. The emitted `native` calls the same kernel
+`result`). One-argument `call` runs an ordinary Structure over itself and selects no `data` child; the
+two-argument form was `call: code data` until the author's answer to question P6 (2026-11-11): the data stand
+before the code, `call: data code`, which the clean graph reads since slice 354. Data is read as a whole: a computed
+declaration of its root level is executed before the code, once (the executor's reading M8; the answer Р12 of the
+executor later withdrew it as a norm -- a computed initial value is executed on its own line, in the role of code, once;
+the change is step 5a of plan M11). The emitted `native` calls the same kernel
 launch. The working frontend does not read these forms yet. 109 graph-check rows pass in the three modes.
 [Sources, receipts and limits](../steps/witnesses/call-receivers-20261111/notes.md).
+
+Since slice 354 the clean graph reads the part names `data` and `code` and the order `call: data code` in the
+interpreter and in the emitted `native` (plan M11, step 4; the author 2026-11-11): the graph-state words, the formal
+names in the contracts of the receivers `fn` and `sub`, the interpreter, the builder, the emitter and the fixtures of
+`tests/graph` use them; the former `var` and `body` are refused as unknown names, and a `call` written in the former
+order is read by the new one, its first operand being the data (the negative fixtures `former_var_part`,
+`former_body_part`, `former_var_block`, `former_call_order`). The rest of the rules of 2026-11-11 it does not execute
+yet (step 5): it binds the atom of a mention when the declaration is executed, replaces the content at a repeated
+declaration, skips the declarations of a Structure in an executed root and prints what an atom points to as nested in
+the dump. The working frontend and its fixtures read the former names and order and execute none of the new rules
+(step 8). 113 graph-check rows pass in the three modes (339 `PASS`; the full suite of the working frontend: 162 rows,
+0 failures). [Plan M11](../next_core_tasks_v3.md#m11);
+[sources, receipts and limits](../steps/witnesses/data-code-names-order-20261111/notes.md).
 
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
@@ -287,7 +310,7 @@ names a formal by that Frame only), while `f(a: 5)` and `f(a(5))` are the ordina
 positional result (NAMED-BINDING-BY-HEAD closed; the `table:` receiver's parts use the same binder in its `by_head` mode); a
 `merge` operand written name first, `(a: int: 5)` and `a: int: 5`, is the typed field the declaration form `(int: a 5)` is
 (the name-first spelling is withdrawn by the author's decision of 2026-11-10 -- a place is declared only by
-`receiver: arguments`; the translators accept it until plan step M9, `next_core_tasks_v3.md#m9`).
+`receiver: arguments`; the translators accepted it until slice 351 -- plan step M9, `next_core_tasks_v3.md#m9`).
 Fixtures `assign_known`, `assign_unknown_refused`, `assign_in_structure_refused`, `assign_method_name_refused`,
 `named_assign_actuals`, `named_assign_unknown_refused`, `named_assign_positional_after_refused`,
 `merge_named_field_operand`; five fixtures that asserted the by-head binding moved to `:=`. The whole argument Structure

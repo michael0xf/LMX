@@ -20,7 +20,10 @@ CODEX-FABLE-KERNEL-SPEC-REVIEW-20261108T175116933Z-01 and CODEX-FABLE-KERNEL-SPE
 Status: **the working specification of the transition; Codex has not declared the document accepted as a whole** -- the
 direction and the order of §11 item 0 were allowed by the second review, the implementation has started from the
 independent base; there are no open questions to the author. Marks: "norm" -- the author's words or the current book;
-"decision" -- the implementer's choice within the norm, checked by Codex.
+"decision" -- the implementer's choice within the norm, checked by Codex. The record of the slices below calls the
+parts of a callable as the slice called them -- `var`, `body` -- and writes the order of the two arguments of `call` as
+`call: code data`; by the author's decision of 2026-11-11 the parts are `data` and `code` and the order is
+`call: data code`, and the clean graph reads them since slice 354 (§3.4).
 
 Codex's graph10/tool11/rt07 implementation executes the Point/take example of §10 and used-field checks through both
 consumers; [evidence and limits](../steps/witnesses/clean-call-20261108/notes.md). This is a partial migration:
@@ -186,7 +189,12 @@ declaration through a path are not executed by the slice (5). The fields of a wr
 by receivers -- `int: name value`, `@: name int value`; a field `name: tail` there is a description of a structure (5).
 The author's example `Struct2: a b c`, `Struct1: q w e r t`, `Struct1: Struct2` gives the dump `Struct2: a b c` and
 `Struct1: (Struct2 a b c)`. 99 graph-check runs × interp/native/forced PASS. The L3 lowering, the L2 machine path and
-the walker still accept the colon assignment -- section [M7 of the plan](../next_core_tasks_v3.md#m7).
+the walker still accept the colon assignment -- section [M7 of the plan](../next_core_tasks_v3.md#m7). The author's
+decisions of 2026-11-11 changed the norm of what this slice executes -- the binding of an atom of the tail at the
+declaration, the replacement of the content on a repetition, the name that receives the result of `merge`, the
+printing of the referent in the dump and the declaration of a Structure among executed forms itself; what holds by
+them and what the clean graph still does otherwise is told below, in the paragraphs on the roles `data` and `code`
+and on the author's answers.
 
 The census of such writes in the working frontend is [slice 347](../steps/witnesses/colon-census-20261110/notes.md),
 step 1 of section M7. The translator itself names every structural Frame -- with the colon, compact or a block:
@@ -270,13 +278,17 @@ with `default:` branches for the target `default`: 13,187 rows, 1,221 sites in 1
 native lowering: a name 887, a path 211, an index 45, a dereference 15, a member of C storage 2) and 61 forms that
 declare: 54 Structures written at their own place, four places under a Structure in the head, two references and
 one name defined by a value. A write of a known place here is also a write of a reference to a Structure,
-`T: Swapped`, `Box\kid: Other`: the former reading assigned, the fixtures expect an assignment, and by the norm it
-is written `T := Swapped`. `colon-migrate` rewrote 1,160 sites. Three forms that made a place themselves were
-rewritten by hand into the norm's forms -- `var := D\var`, `@: b Inner2`, `@: Other Answers`; 15 more writes stand
-behind the point of refusal in the fixtures of `refuses` rows, the translation never reaches them, and they were
-migrated by reading the text. The operator `:=` knows the reserved `var` -- the reference to the data of the current
-call -- as a known place: the collection already made it an input of the activation, only the check of the left
-side refused it (`lm_compiler_check_body`).
+`T: Swapped`, `Box\kid: Other`: the former reading assigned, the fixtures expect an assignment, and by the norm of
+2026-11-10 it was written `T := Swapped`. `colon-migrate` rewrote 1,160 sites. Three forms that made a place
+themselves were rewritten by hand into the forms of the same norm -- `var := D\var`, `@: b Inner2`,
+`@: Other Answers`; 15 more writes stand behind the point of refusal in the fixtures of `refuses` rows, the
+translation never reaches them, and they were migrated by reading the text. The operator `:=` knows the reserved
+`var` -- the reference to the data of the current call -- as a known place: the collection already made it an input
+of the activation, only the check of the left side refused it (`lm_compiler_check_body`). The author's decision of
+2026-11-11 changed the norm of these writes: the names of Structures are not assigned -- `T := Swapped` is an error,
+and pointer variables declared by `@: ptr T` are assigned --, and the special name `var` is called `data`
+([book](LMX_semantics.en.md#data-code-roles)); their migration is steps 3 and 8 of
+[section M11 of the plan](../next_core_tasks_v3.md#m11).
 
 The checks of slice 349: the full list -- `SUITE 140 rows, 0 failures`, 1108 PASS. Of the 220 programs of the list
 212 have byte for byte the former L1; two (`whole_arguments`) differ only in the name of a lifted `merge`, which
@@ -307,8 +319,8 @@ branches that emitted a write for the forms `name: value` and `owner\field: valu
 `:=` alone.
 
 Limits: the L3 lowering builds a repeated declaration of a Structure only from a written body; a Structure with
-another entity inside -- `Struct1: Struct2` with a known `Struct1`, `h: Box` with an unknown `h` -- it does not build
-and refuses such a form instead of assigning a reference as before. The clean graph executes such a declaration. The
+an atom that names another entity -- `Struct1: Struct2` with a known `Struct1`, `h: Box` with an unknown `h` -- it
+does not build and refuses such a form instead of assigning a reference as before. The clean graph executes such a declaration. The
 refusal does not tell a Structure place from a value place: its message is true of both.
 
 The checks of slice 350: nine refusal fixtures (`colon_known_*_refused`, `colon_absent_reference_refused`) -- a
@@ -416,13 +428,20 @@ The full list -- `SUITE 162 rows, 0 failures`, 1240 PASS; all 224 programs of th
 for byte. `bootstrap quick` -- 0 failures, the generations are the same; `l1trans`, `driver.o` and the graph
 translator are the former ones, the tool is another (the export list of the frontend is one name longer).
 
-A repeated declaration has no mechanism of its own: it is an out-of-turn type check with an assignment (the author's
-clarification of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#repeat-is-check-and-assignment); the book --
-[structural forms](LMX_semantics.en.md#forms-declare-or-call)). Both translators were measured against this
-clarification in the same witness; the divergences of the implementation found there are written down as step 5 of
-[section M9 of the plan](../next_core_tasks_v3.md#m9): with a repetition in the explicit `var` of a method the
-working frontend silently reads the first occurrence; the clean graph does not write the place on a repetition at
-the root, selects the first occurrence by a bare path and does not build the path with the index of an occurrence.
+A repeated declaration by a receiver in code has no mechanism of its own: it is an out-of-turn type check with an
+assignment, and no second field arises; in data a repeated declaration is one more occurrence of the name: it
+neither replaces the former one nor writes into it, and after it the name is addressed only with the index of an
+occurrence (the author's clarification of 2026-11-11,
+[journal](../LMX_blog/2026-11-11.md#repeat-is-check-and-assignment), and his decision on the roles of the same day;
+the book -- [structural forms](LMX_semantics.en.md#forms-declare-or-call),
+[names and paths](LMX_semantics.en.md#fields)). Both translators were measured against this clarification in the
+same witness; the divergences of the implementation found there were written down as step 5 of
+[section M9 of the plan](../next_core_tasks_v3.md#m9) and moved into steps 5 and 8 of
+[section M11](../next_core_tasks_v3.md#m11): with a repetition in the explicit `var` of a method the working
+frontend silently reads the first occurrence; the clean graph does not write the place on a repetition at the root,
+selects the first occurrence by a bare path and does not build the path with the index of an occurrence. The root of
+a unit is launched as a Structure over itself, and an access without an index to a variable declared twice in it is
+refused (the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6 and Р11).
 
 [Slice 353](../steps/witnesses/call-receivers-20261111/notes.md) executed in the clean graph the author's decision
 of 2026-11-11 on launching code over data ([journal](../LMX_blog/2026-11-11.md#call-receivers); the book --
@@ -432,11 +451,12 @@ reads the one-argument `call` as before; a name used above the line of its decla
 former rule of the book.
 
 A launch is given by its parts. The work frame of an activation (`LmxGraphFrame`) keeps, besides the code and the
-data, the parts of the launch: the Structure of the formals (`args`), the body (`body`), whether there is a result
-(`result`) and whether the data is the callable's own `var` (`own`). The frame is opened by
-`lmx_graph_work_open_parts`; the former `lmx_graph_work_open_data` takes the parts from the code itself -- a
-callable's `args`, `var`, `body` and the presence of `return`, an ordinary Structure as its own body with its `var`
-child as the model of its places -- and calls the same function. The running code reads the formals, the body and
+data, the parts of the launch: the Structure of the formals (`args`), the executable part (the frame member `body`; the
+part of a callable is called `code`, the frame member kept the former name), whether there is a result (`result`) and
+whether the data is the callable's own part `data` (`own`). The frame is opened by `lmx_graph_work_open_parts`; the
+former `lmx_graph_work_open_data` takes the parts from the code itself -- a callable's `args`, `data`, `code` and the
+presence of `return`, an ordinary Structure as its own executable part with its `data` child as the model of its
+places -- and calls the same function. The running code reads the formals, the body and
 the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, `lmx_graph_launch_result`), not from
 the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call
 `f(x)` therefore goes the same way as a launch that was given its parts.
@@ -446,21 +466,30 @@ the fields of the Structure of the arguments: an `int` place gives the launch an
 is passed as it is; a place without a value and any other field is answer 5. The data is not completed and must
 have every place the code declares or uses (`lmx_graph_work_require`). The description of the result is the word
 `int`, otherwise 5: the same limit as for `fn`. With no data an ordinary Structure runs over itself and a callable
-over its own `var`; a callable given without arguments keeps its own contract and its own entry
+over its own part `data`; a callable given without arguments keeps its own contract and its own entry
 (`lmx_graph_invoke_data`). `call` with three arguments and `fncall` with two, three and four call this launch
 (`lmx_graph_eval_explicit_call`, `lmx_graph_eval_fncall`); the one-argument `call` over an ordinary Structure
-executes it over itself, the two-argument one is read as before -- `call: code data` (question P6). `fncall` is a
-word of the language (`w_fncall`, the list of receiver words). The emitted `native` calls the same launch of the
-kernel (`lm_graph_emit_fncall`, `lm_graph_emit_explicit_call`); a wrong number of arguments it emits as a refusal
-where the code runs.
+executes it over itself, the two-argument one is `call: data code` -- the data before the code everywhere (the
+author's answer of 2026-11-11 to question P6, [journal](../LMX_blog/2026-11-11.md#data-before-code); the clean graph
+reads this order since slice 354, step 4 of [section M11 of the plan](../next_core_tasks_v3.md#m11)). A form written in
+the former order, `call: code data`, is read by the same rule -- the first operand is the data, the second the code --
+and is refused with answer 3 when the first holds no place that the second declares (the fixture
+`former_call_order`). The working frontend reads only the former order (step 8 of section M11). `fncall` is a word of
+the language (`w_fncall`, the list of receiver words). The emitted `native` calls the same launch of the kernel (`lm_graph_emit_fncall`,
+`lm_graph_emit_explicit_call`); a wrong number of arguments it emits as a refusal where the code runs.
 
 Data is read as a whole. Before the places are bound, `lmx_graph_data_realize` executes the computed declarations
 of the root level of the data (`int: name expression`, still a statement in its slot) in field order and publishes
 the result into the same slot -- once: from then on the slot holds the place. This is done for every launch except
-that of a callable over its own `var`: the entry of a method executes that content, as before. In a Structure
+that of a callable over its own part `data`: the entry of a method executes that content, as before. In a Structure
 over itself a computed declaration is therefore executed before the first statement and is not executed again on
-its own line. This is the executor's reading ([answers](../LMX_blog/q/fable-self-answers-20261110.md), items М8
-and Н11).
+its own line. So the executor's answers М8 and Н11 read it; the answer [Р12](../LMX_blog/q/fable-self-answers-20261110.md)
+withdrew that reading as a norm: a computed initial value is executed on its own line, in the role of code, once, while
+in the role of data nothing is executed -- a declaration in data with a computed initial value creates a place without
+a value, while a literal is a value of the data and stands in the place from the start. By the answer Р14 (item В9)
+this concerns data supplied to a launch separately and the root of a unit; the own data of a callable are still
+executed at entry -- the contract of a method. The clean graph
+executes the former reading; the change is step 5a of [section M11 of the plan](../next_core_tasks_v3.md#m11).
 
 The checks of slice 353: the fixtures of `tests/graph` -- `call_receivers` (the six forms, `fncall` as a statement,
 the receivers in the body of a method, the parts of a method one by one, a `sub` by its parts, a composition of the
@@ -475,21 +504,93 @@ generations are the same; `l1trans` is the former one; the hosted frontend, the 
 contain the kernel of the clean graph and the header template. The full suite of the working frontend on the new
 runtime -- `SUITE 162 rows, 0 failures`.
 
+[Slice 354](../steps/witnesses/data-code-names-order-20261111/notes.md) executed in the clean graph the names `data`
+and `code` and the order `data` before `code` (step 4 of [section M11 of the plan](../next_core_tasks_v3.md#m11); the
+author's decisions of 2026-11-11 -- [the roles `data` and `code`](../LMX_blog/2026-11-11.md#data-code-roles) and
+[`data` before `code`](../LMX_blog/2026-11-11.md#data-before-code)). The words of the graph state `w_var` and `w_body`
+are replaced by `w_data` and `w_code` (the header template of the state in `tools/build.lm2` and the kernel); `var` and
+`body` are removed from the list of the language words of the clean graph. The kernel operations
+`lmx_graph_method_var` and `lmx_graph_method_body` are called `lmx_graph_method_data` and `lmx_graph_method_code`; the
+contracts of the receivers `fn` and `sub` name their arguments `name, args, return, data, code` (`sub` without
+`return`), the parts of the created Structure are `args`, `return`, `data`, `code`. The former spellings have no
+special meaning: `var` and `body` are ordinary names. The two-argument `call` reads the data as the first argument and
+the code as the second: `lmx_graph_eval_explicit_call` evaluates operand 0 as the data and operand 1 as the code, in
+the order written, and `lm_graph_emit_explicit_call` emits the same; the kernel operation is
+`lmx_graph_call_data(g, given_data, given_code, shorthand)`, the one-argument form calls it with data 0 and the mark of
+the short form; the three-argument `call` and `fncall` kept their order -- the data already stood before the code in
+them. The order of the parameters of the other internal procedures of the kernel (`lmx_graph_invoke_data`,
+`lmx_graph_work_open_data`, `lmx_call_prim` -- the code, then the data) did not change: it is no form of the language
+(the executor's answer Р5), and the header template of the working frontend's traverser still describes its operation
+as before, `call: code data`.
+
+The checks of slice 354: in 60 tracked files of `tests/graph` (44 sources and 16 expectations) `var` → `data` and
+`body` → `code` (in `merge_arguments` the name `body` is a variable and stayed); 18 two-argument `call` lines in 11
+fixtures and the same lines in six expectations are rearranged; the file names `call_var_not_selected`,
+`code_data_no_var`, `var_copy_nesting` are the former ones. Four new negative fixtures: `former_var_part` (`f\var\x`,
+answer 3), `former_body_part` (`body := …` in a record of `fn`, answer 5), `former_var_block` (a block `var:`,
+answer 3), `former_call_order` (`call: Code Data`, answer 3). Graph-check -- `CHECKS 113 lines, 0 failed`, 339 `PASS`
+in the three modes; `bootstrap quick` -- 0 failures, G1 and G2 built and tested; the full suite of the working
+frontend -- `SUITE 162 rows, 0 failures`, 1240 `PASS`. The mutant "the former word `var` accepted" fails 3 rows of 3,
+the mutant "the former order of the arguments" fails 4 of 4; in both lists every row is refused in all three modes. The
+working frontend and its fixtures (`tests/dyn`, `tests/os_twins`) read the former `var`, `body` and `call: code data`
+-- step 8; the clean graph still declares a Structure when the traversal of the root reaches it, binds an atom at the
+moment the declaration is executed and replaces the content on a repetition -- step 5.
+
 The author's decision of 2026-11-11 on the roles `data` and `code` ([journal](../LMX_blog/2026-11-11.md#data-code-roles);
 the book -- [the roles `data` and `code`](LMX_semantics.en.md#data-code-roles);
-[section M11 of the plan](../next_core_tasks_v3.md#m11)) is executed by no path of translation yet. For the clean
-graph it means the following. Data is read as a whole before the code, and the registry of its root forms -- the
+[section M11 of the plan](../next_core_tasks_v3.md#m11)) is executed by the clean graph so far only in the names and
+the order (slice 354, step 4 of section M11): the parts of a callable are called `data` and `code`, the two-argument
+`call` is `call: data code`. The rest is executed by no path of translation yet, and the working frontend reads not
+even this. For the clean graph the decision means the following. Data is read as a whole before the code, and the registry of its root forms -- the
 declarations of Structures by their heads and the declarations by receivers of places by the declared names -- is
-known before the first statement of the code; a traversal of code declares nothing but callables. The words of the
+known before the first statement of the code; a traversal of code declares nothing but callables. In code every
+form is a call: a declaration by a receiver is a type check with an assignment into a place of the data, a
+structural form is a call of its head and an error when there is no such method. A repeated declaration in data is
+one more occurrence of the name: it neither replaces the former one nor writes into it, and after it the name is
+addressed only with the index of an occurrence. The left side of `:=` is a place of a primitive or a pointer
+variable: the names of Structures and functions are not assigned. The arguments of calls and receivers are read as
+code: `f(arg: v)` calls `arg`, only `:=` gives a named argument, and the formals are declared by receivers
+(`int: arg default`, `@: arg Template`). The name of a form `Name: merge(...)` does not receive the result: in code
+it is a call of `Name`, in data a declaration of a Structure with the form of the call of `merge` inside, which is
+not executed there; a pointer variable holds the result, `@: name merge(...)` (the executor's reading --
+[closed questions](../LMX_blog/q/colon-declares-answered-20261111.md), P4). The words of the
 state `var` and `body` and the names of the formals in the contracts of the receivers `fn` and `sub` are called
-`data` and `code`. The admission `implements` is performed by one pass when the graph is built; calls of the
+`data` and `code` (the clean graph reads these names since slice 354). The admission `implements` is performed by one
+pass when the graph is built; calls of the
 admission at run time stay only for the cases of the
 [document](../steps/implements-runtime-cases-20261111.md). The clean graph does otherwise now: it declares a
 Structure where the traversal of the root reaches the form (`lmx_graph_space_reach`, `lmx_graph_root_declares`,
-`lmx_graph_root_declare`), replaces the content on a repeated declaration and admits every call at run time
-(`lmx_graph_bind_call`, `lmx_graph_admit`). The decision makes the choice between a call, a declaration of a
-Structure and an assignment by the head and the tail of a form unnecessary -- the role gives it; removing these
-branches is step 6 of section M11.
+`lmx_graph_root_declare`), replaces the content on a repeated declaration, gives the name of a form
+`Name: merge(...)` the result, accepts the formal `Point: p` and the parts of a receiver given by head (§3.4), and
+admits every call at run time (`lmx_graph_bind_call`, `lmx_graph_admit`). The decision makes the choice between a
+call, a declaration of a Structure and an assignment by the head and the tail of a form unnecessary -- the role
+gives it; removing these branches is step 6 of section M11.
+
+The author's answers of the same day to questions P3, P6 and P7 completed this norm
+([a mention is not expanded](../LMX_blog/2026-11-11.md#known-name-not-expanded),
+[`data` before `code`](../LMX_blog/2026-11-11.md#data-before-code),
+[a Structure over itself has no rules of its own](../LMX_blog/2026-11-11.md#self-launch-no-own-rules); the book --
+[declaring by a colon form](LMX_semantics.en.md#colon-declares) and
+[visibility](LMX_semantics.en.md#declaration-visibility)); the questions are closed
+([closed](../LMX_blog/q/colon-declares-answered-20261111.md)). A mention of a known Structure is expanded neither by
+the parser nor by the builder: in `Struct1: Struct2` one atom stands under `Struct1` in the tree -- a pointer to
+`Struct2`, immutable by name; it begins to refer to it at interpretation and translation, a path through it
+continues into its fields, and the `parent` of `Struct2` itself -- its place in the tree -- does not change; the
+slot of the atom is rewritten by index (`Struct1[0] := …`), and a mutable reference is declared by a receiver
+(`Model: @: ptr knownModel`). The dump prints the tree -- the atom, not the referent (the executor's reading --
+[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р2). Visibility in data runs in both directions, and
+references by name that close into a cycle are no error. The data stands before the code in every form: the
+two-argument launch is `call: data code`. A Structure launched over itself -- `call(code)` and the root of a unit --
+has no rules of its own: its forms are read in both roles by the general rules, and an uncertainty is an error; a
+structural form that execution has reached is an error without a method named by its head, a data block inside an
+executed Structure is such a call too, and so declarations of Structures are written in data, and data and code
+apart (the executor's reading -- the same answers, part Р). Here too the clean graph does otherwise now: it binds an
+atom of the tail at the moment the declaration is executed -- only to what is declared above --, puts the address
+of the named Structure into the slot and prints it in the dump as a nested Structure; it opens a name of the root
+from its field on (§5.2); a form of an ordinary Structure in the executed root it neither calls nor refuses but
+declares where the traversal reaches it (§6.1), and the child block `data` of an executed Structure it skips. The rest
+of the execution is step 5 of section M11 (the names and the order of `call` are executed by step 4), in the working
+frontend step 8.
 
 <a id="principles"></a>
 ## 1. Principles (norm)
@@ -497,8 +598,9 @@ branches is step 6 of section M11.
 1. **Lmx structures suffice to describe everything**, expressions, methods and arrays included. The program, its data and
    its current state are one Lmx graph; there is no second AST, no data graph, no "prepared" result of the translator and
    no hidden copy of the source ([L2 §2.1](L2_spec_en.md#interpretable-tree)). "Everything here is simply a structure"
-   (the author, 18:18Z): code and data are the same Lmx; the role is decided by the place and the head, not by the kind of
-   memory.
+   (the author, 18:18Z): code and data are the same Lmx; the role -- data or code -- is given by the launch, not by the
+   kind of memory and not by the Structure itself (the author's decision of 2026-11-11,
+   [book](LMX_semantics.en.md#data-code-roles)).
 2. **Every verification goes by addresses in the arena; addresses do not change** (the author, 18:02Z: "все верификации
    производим по адресам в арене, и имя тоже сравниваем по адрресу его в арене. Адреса не меняются"). Every check -- of
    a type, a kind, a name, a correspondence, an admission -- rests on the address of a primitive, an Lmx or a string in
@@ -624,7 +726,8 @@ The header kinds are the finite inventory of the physical kinds of [L2 §3](L2_s
 immutable, an `fn` result, an Array with its element type; the kind is read from the region in which the Lmx's own address
 lies, with one common Lmx record (§3.1); neither the header nor a cell carries a tag. **A region kind is not an opcode:**
 an `fn`/`sub` definition, a statement, an expression and a data Structure are the same Lmx of the ordinary kind;
-their role is read from the address of the head word (§3.3, §6.1), not from the header's region. The service types
+what a form is, is read not from the header's region but from the role of the Structure in the launch and from the
+address of the head word (§3.3, §6.1). The service types
 (`name`, the interval index) are visible to the arena and the executors but are not values of the language. User models
 produce no region types: a Structure of any model is an `lmx` cell plus its slots.
 
@@ -696,7 +799,7 @@ A primitive is one arena cell outside the `lmx:*` regions: a number, a pointer "
 a reference. A primitive has no header; its type is the region's type, its name a row of the address → name table (if the
 primitive is named), its value the cell. `int: i 5` in the body of a Structure `S`: an `int` cell = 5 in the `int` region;
 a slot of `S` holds its address; a row of the name table `(the cell's address) → "i"`. Reading `S\i`: find the slot of `S`
-whose cell is named `i` (§5.1), read the cell by its type. Writing `S\i: 7` writes into the same cell by the ordinary write
+whose cell is named `i` (§5.1), read the cell by its type. Writing `S\i := 7` writes into the same cell by the ordinary write
 contract ([L2 §10–11](L2_spec_en.md#own)).
 
 **A place without a value.** `int: x` in code, in data and in a signature: at construction the place receives its own
@@ -705,18 +808,18 @@ literal of code is not shared with a place) and a pointer primitive onto it in t
 that pointer. "Without initialization" is the distinct type of this pointer, recognizable by address only (§1 item 4);
 the same for every primitive. It promises neither zero nor randomness, and is not a mark outside the graph; the book:
 [:432](LMX_semantics.en.md#construction) -- no invented initial value, in a signature a mandatory formal;
-[:123](LMX_semantics.en.md#fields) -- a repeat without a value writes nothing and only checks the contract (there is no
+[:123](LMX_semantics.en.md#fields) -- a repeat without a value in code writes nothing and only checks the contract, and in data it is one more occurrence of the name (there is no
 separate policy of repeated declarations; REPEATED-DECL-OTHER-KINDS is unchanged). `int: x 0` is a slot onto an `int` cell
 = 0 directly. The difference between a mandatory formal `int: q` and a default `int: q 0` is the general address
 classification of what the slot points at, without a signature wrapper, a mask or a side mark. The name `x` is a table
 row for the address of the `int` cell (it exists from construction; the `uninit:int` pointer is not named).
 
-**Assignment** (`x: 5`, an argument received into a frame place): the received value is written into **the same** `int`
+**Assignment** (`x := 5`, an argument received into a frame place): the received value is written into **the same** `int`
 cell. The slot, internal `uninit:int` pointer, target address and physical type remain unchanged on every write;
 nothing moves and the name row stays in place. Internal indirection is implementation support, not a user operator:
 `i` remains `int` in expressions and argument admission. `@i` separately creates a language reference.
 The check by both executors:
-`int: i`; keep `@i` without reading unwritten bytes; `i: 5`; reading through the kept address gives 5; `i: 7` gives 7 at
+`int: i`; keep `@i` without reading unwritten bytes; `i := 5`; reading through the kept address gives 5; `i := 7` gives 7 at
 the same address.
 
 **Reading and admission.** Internal indirection is transparent: address classification determines access to the
@@ -738,35 +841,47 @@ operation by comparing the word's pointer with the interned strings of the opera
 the regions of their cells after the names are resolved. A written Frame `head: a b c` is an Lmx named by its head (the
 address → name row for this Lmx's address is the string `head`) whose fields are the arguments `a`, `b`, `c` (the author
 2026-11-09: «объявление fn в дереве это именованная структура (fn ее название) с аргументами»,
-[journal](../LMX_blog/2026-11-09.md)); the role of the head -- a receiver of the language, a callable, a place or a new
-name -- is decided by the consumer's resolution during its traversal (§3.5), not by the builder. An operation written as
+[journal](../LMX_blog/2026-11-09.md)); what a form is, is decided by the consumer during its traversal, not by the
+builder: by the norm -- the role of the Structure in the launch (in data a form declares -- a place when its head is a
+receiver of a place, otherwise a Structure; in code it is a call of its head -- the author's decision of 2026-11-11,
+[book](LMX_semantics.en.md#data-code-roles)) and the general resolution of a head in code -- a receiver of the language
+or a callable (§3.5); the clean graph now decides it by the head alone -- a receiver of the language, a callable, a
+place or a new name (§6.1). An operation written as
 a Frame (`-(2 + 3)`, `\(p)`) stays an operation, as in any expression: the operator word in field 0 and the operands,
 with no name; so do `x + 1`, a path and `:=`; an anonymous Structure gets no name. A nested Structure of a body is a
 child Lmx with `parent` on the containing one. A Frame written on a path head, `owner\field: actuals`, is the unnamed
 Lmx [path, actuals] -- the path expression [owner, \, field] in field 0, split by the builder once, while the lexical
 boundaries are known (Codex, review of 331; an exact identifier in backquotes stays one name; slice 337); the consumers
-recognize the general form of the path in field 0 (`lmx_graph_path_head`) and resolve the head as any head: a place is
-written with the one value, as `owner\field := value` writes it (`lmx_graph_eval_path_statement`,
-`lm_graph_emit_path_statement`); a callable through a path is not applied yet (5). Before, the head stayed one word: at
-the root `Box\hits: 5` defined a new place named `Box\hits`, in a body it answered 3. An anonymous body whose first
-statement were a bare path read followed by another statement has the same form and is read as this statement (such a
-read has no effect).
+recognize the general form of the path in field 0 (`lmx_graph_path_head`) and read such a statement alike
+(`lmx_graph_eval_path_statement`, `lm_graph_emit_path_statement`): it does not write the field -- `owner\field := value`
+writes a value through a path; a known place that is no Structure at its head is a refusal (answer 8 of the
+interpreter; slice 346), and its other readings -- a callable through a path, a declaration of a Structure through a
+path -- are not executed yet (5). Before slice 346 such a form wrote the place with the one value, and earlier still
+the head stayed one word: at the root `Box\hits: 5` defined a new place named `Box\hits`, in a body it answered 3. An
+anonymous body whose first statement were a bare path read followed by another statement has the same form and is
+read as this statement (such a read has no effect).
 
-### 3.4 Callables, var and data (norm + decision)
+### 3.4 Callables, `data` and `code` (norm + decision)
 
 `fn: take (Point: p; int: q) int … end: take` is the Lmx of the written Frame, **of the ordinary kind** (§2.2), named
 `fn` (§3.3), with the receiver's five arguments: `name` -- the word primitive `take`, `args` -- the Lmx of the formals,
-`return` -- the result requirement (the word `int`), `var` -- the Lmx of own fields, `body` -- the Lmx of statements
-([book](LMX_semantics.en.md#method-parts)); the short form without `var` has four arguments, the descriptor without a
-body three. `sub: … end: sub` is the Lmx `sub` with the arguments `name`, `args`, `var` (when written) and `body`; `fm`
-is not executed by this slice and refuses explicitly. The declaration stays in the graph as written: the builder neither
-normalizes it nor completes `var`. **Each traversal** -- the interpreter's execution of the root, a translation of the
+`return` -- the result requirement (the word `int`), `data` -- the Lmx of own fields, `code` -- the Lmx of statements
+([book](LMX_semantics.en.md#method-parts)); the short form without `data` has four arguments, the descriptor without a
+body three. The author's decision of 2026-11-11 calls the part `data` (formerly `var`) and the part `code` (formerly
+`body`), and writes a formal with a Structure requirement `@: p Point`: a form `Point: p` in the description of the
+formals would declare a Structure and is forbidden ([book](LMX_semantics.en.md#data-code-roles)); since slice 354 the
+clean graph reads the names `data` and `code` (it does not accept the former `var`, `body`), but it still reads a formal
+with a Structure requirement in the former form `Point: p` (steps 4 and 5e of
+[section M11 of the plan](../next_core_tasks_v3.md#m11)). `sub: … end: sub` is the Lmx `sub` with the arguments
+`name`, `args`, `data` (when written) and `code`; `fm` is not executed by this slice and refuses explicitly. The
+declaration stays in the graph as written: the builder neither
+normalizes it nor completes `data`. **Each traversal** -- the interpreter's execution of the root, a translation of the
 unit -- applies the receiver `fn`/`sub` to the declaration's arguments on entering its block and creates, in its own
 namespace (§5.2), the Structure F «по тому же правилу по которому int: i 5 создаёт i» (the author 2026-11-09,
 [journal](../LMX_blog/2026-11-09.md)): an Lmx in the `lmx:result` region ([L2 §2.1](L2_spec_en.md#interpretable-tree))
 with `parent` on the declaration, named by the value of the `name` argument; its fields are the named references `args`
-and `body` onto the declaration's arguments (no copy: the arguments keep their address, `parent` and namelessness), an
-own word cell of the requirement `return`, and a new Lmx `var` (below). The `lmx:result` region classifies the result of
+and `code` onto the declaration's arguments (no copy: the arguments keep their address, `parent` and namelessness), an
+own word cell of the requirement `return`, and a new Lmx `data` (below). The `lmx:result` region classifies the result of
 executing the receiver, not the definition and not a Structure with similar parts: a copy of F through `merge` is a
 Structure, not a function; the receiver makes a function of it (`fn: g merge(f1)`, below). Leaving a traversal
 frees its service tables and their roots (the namespace, §5.2), not F as a value: an F the program holds by an ordinary
@@ -778,8 +893,8 @@ the body's block.
 **The receiver's contract and the one binder (slices 333-334; the author 2026-11-09, [journal](../LMX_blog/2026-11-09.md);
 Codex, reviews of 333 and 334).** Every traversal begins by registering the contracts of the receivers `fn` and `sub` in
 the root's block of its namespace (`lmx_graph_receivers_open`): ordinary signatures, receivers with different numbers of
-arguments sharing one name -- `fn` [name, args, return, var, body], [name, args, return, body], [name, args, return],
-[name, parts]; `sub` [name, args, var, body], [name, args, body], [name, parts]. `name` and `return` are taken as written
+arguments sharing one name -- `fn` [name, args, return, data, code], [name, args, return, code], [name, args, return],
+[name, parts]; `sub` [name, args, data, code], [name, args, code], [name, parts]. `name` and `return` are taken as written
 (a word, or a written form such as the type `@: c.FILE`), the other formals are Structures. A Frame `fn`/`sub` binds its
 actuals by the one binder of a call (`lmx_graph_bind_formals`, which `lmx_graph_bind_call` uses too): by position; by
 `:=` (`name := k1`); and, for the parts of a receiver's written form, by head (`name: k2; args: (...)`: a Frame whose head
@@ -798,7 +913,7 @@ receives a word or a written form, a Structure formal a Structure): `fn: bad 7 i
 `touch()` runs. For a formal taken as written the value of a part is its written field -- the single field of
 `return: ...`, the operand of `return := ...` -- so one requirement is one value in every form (slice 335: `@: c.FILE`
 by position, by head and by `:=` gives one part `return`, `fn_return_forms`). The receiver's action is one:
-`lmx_graph_receiver_make` and the constructor `lmx_graph_fn_make` (its `var` by `lmx_graph_fn_var`); the name is given by
+`lmx_graph_receiver_make` and the constructor `lmx_graph_fn_make` (its `data` by `lmx_graph_fn_data`); the name is given by
 the contract of a name (`lmx_graph_name_value`): an identifier its spelling, an ordinary string literal its value, the
 escapes decoded by the rules of C (grammar §6, `lmx_graph_string_value`; the author's `name := "test"` creates `test`,
 `"t\x33"` names `t3`); any other value -- 5. A declaration whose actuals bind with no evaluation
@@ -826,40 +941,52 @@ of a receiver's contract through `lmx_graph_receiver_admit`. The translator name
 `lmx_graph_fn_decl_name` (the word at the first position, of `name := word` or of `name: word`) and installs native code
 on it; a computed application is the root code's call of `lmx_graph_fn_apply`, and a call of such a function goes to the
 interpreter (graph73: `fn_named_supply`, `fn_name_collision`, `fn_name_call`, `fn_bad_args`, `fn_return_forms`,
-`fn_author_forms`, `fn_prepared`, `fn_new_name`, `fn_without_name`, `descriptor_merge`, the fixtures of merge).
+`fn_author_forms`, `fn_prepared`, `fn_new_name`, `fn_without_name`, `descriptor_merge`, the fixtures of merge). The
+author's decision of 2026-11-11 withdrew the supply of the parts by head: the arguments of a receiver are read as
+code, `name: k2` there is a call of `name`, and only `:=` gives a named part --
+`fn: name := k1; args := (int: a); return := int; code := (return: a + 1)` (a consequence of the author's answer on
+`f(arg: v)`, the executor's reading -- [closed questions](../LMX_blog/q/colon-declares-answered-20261111.md), P5);
+the clean graph still accepts the supply by head -- step 5 of section M11.
 
 **Formals** are slots of `args` with the same representation as any place (§3.2): `int: q` → an `uninit:int` pointer onto
 the formal's `int` cell (named `q`) -- a mandatory formal; `int: q 0` → an `int` cell = 0 -- a default, read, not
 evaluated; `int: q f()` → the Lmx of the initializer -- a computed default, evaluated at each call that omits `q` (the
 author's decision on computed defaults, [journal 2026-11-07](../LMX_blog/2026-11-07.md)); `@: p` without an address → an
-`uninit:ref` pointer onto a `ref` cell; `Point: p` without a value → the slot points at the **ordinary declaration Lmx**
+`uninit:ref` pointer onto a `ref` cell; `Point: p` without a value (the former form of a formal with a Structure
+requirement; by the norm `@: p Point`, above) → the slot points at the **ordinary declaration Lmx**
 from the source graph -- the Frame `Point: p`, an Lmx named by the requirement `Point` with the name word `p` as its field
 (§3.3) -- which keeps the requirement `Point` and the absence of a candidate -- with no separate non-Lmx entity or `uninit:lmx` mark (a representation decision, confirmed by
 Codex, review 2). A formal's description is not executed as a body ([book :684](LMX_semantics.en.md#method-parts)); the
 actual binding of an argument and the default are not mixed ([book, callable parts](LMX_semantics.en.md#method-parts)); the formal's value in
 a call lives in the activation frame (§6.3), and the `args` slot is not changed by a call.
 
-**`data`** is an ordinary Lmx of slots onto primitives and nested Lmx. **`var`** is the same Lmx; a field with a
+**`data`** is an ordinary Lmx of slots onto primitives and nested Lmx; the `data` part of a callable is the same Lmx: a field with a
 computed initializer (`int: r take(Point, 1)`) holds in its slot, until executed, the address of the Lmx of the
 declaration statement -- the Frame named `int` with the arguments: the name word `r` and the call Lmx named `take`
 (§3.3): a declaration not yet executed, with no hidden source and no early execution of effects at construction.
 Executing the statement is the first assignment of the place `r`: an `int` cell is taken from the region, the slot is
 rewritten to its address, the published value replaces the initializer ([book](LMX_semantics.en.md#ordinary-var), §10);
-later writes into `r` go into that cell. The `var` of a callable is the `var` of its F of the current traversal: the
-general copy of the written `var` through one source → copy map (places, references and Structures keep their sharing
+later writes into `r` go into that cell. The `data` of a callable is the `data` of its F of the current traversal: the
+general copy of the written `data` through one source → copy map (places, references and Structures keep their sharing
 and nesting inside the copy, and the needed lexical ancestors of what the copy reaches by a reference are copied through
 the same map, whole, up to parent 0, as in `merge`, §6.4) and places without a value for the own fields the body's
 statements declare that are neither formals nor fields of the written
-`var`; the completion is the same whatever the origin of the structure (the author 2026-11-09, journal: «var дополняется
+`data`; the completion is the same whatever the origin of the structure (the author 2026-11-09, journal, the part was then called `var`: «var дополняется
 одинаково при любом происхождении подготовленных структур»); no initializer runs then -- they run at their written
-places, and publication changes the copy, not the declaration's written `var`. An activation is not a graph: its working
+places, and publication changes the copy, not the declaration's written `data`. An activation is not a graph: its working
 values, argument places and temporaries live in the executor's C frame (§6.3).
 
 ### 3.5 Names: words in the graph, resolution by the traversal (decision, checked by Codex, review 2)
 
-The author's visibility clarification of 2026-11-08: in a body with automatic var completion, all own fields are visible
-from the first statement, whether explicit in var or added from the body. A body initializer executes at its written
-position. No field-origin marker is needed. By the author's direction of 2026-11-09 the completion of var is the same
+The author's visibility clarification of 2026-11-08 (the part was then called `var`): in a body with automatic `data` completion, all own fields are visible
+from the first statement, whether explicit in `data` or added from the body. A body initializer executes at its written
+position. No field-origin marker is needed. By the author's decision of 2026-11-11 the same holds for any data: a
+name declared by a form of the data is available both to the code over it and to its other forms, wherever the line
+of the declaration stands; a name being available does not mean its value is already computed
+([book](LMX_semantics.en.md#declaration-visibility)). For the data supplied to a launch the clean graph executes
+this since slice 353 (`call_data_whole`), for the root of a unit not yet: it opens a name of the root from its field on
+(§5.2; step 5 of [section M11 of the plan](../next_core_tasks_v3.md#m11)).
+By the author's direction of 2026-11-09 the completion of `data` is the same
 whatever the origin of the structure, so one constructor of F does it when the receiver is applied in each traversal
 (§3.4), not the builder; the consumer collects methods and inputs in a separate pass of its traversal, with its own
 temporary tables. Combine independent work within each stage, without passing its service state onward.
@@ -869,10 +996,15 @@ in an operand of an expression, in the named supply `a := v` -- stays a word pri
 string (§4). Resolving a name into a place is done by the consumer during its own traversal, taking into account the
 current activation, the selected `code`/`data` and the current content of the graph: the nearest local binding of the
 calling expression, the dynamic input it inherited along the chain of activations, then the lexical fallback by `parent`
-([book §12, :827–829](LMX_semantics.en.md#dynamic)); a field of the selected `data` in `call: code data` -- by its slots;
+([book §12, :827–829](LMX_semantics.en.md#dynamic)); a field of the selected `data` in `call: data code` -- by its slots;
 the bindings found are maps **of the current traversal only** (§5.2), not a result stored in the graph. Direct graph
 references in slots are only the real links of the language: the value of `@: p Model`, a field holding a Structure, an
-address written by the program -- not a hidden outcome of resolution. The working values of different recursive
+address written by the program -- not a hidden outcome of resolution. A mention of a known Structure -- in the tail of
+a declaration, in the arguments of a call -- is likewise expanded neither by the parser nor by the builder: an atom
+(in the graph, a word primitive) stands in the tree, a pointer to it, and it begins to refer to it at interpretation
+and translation (the author's answer of 2026-11-11, [book](LMX_semantics.en.md#colon-declares)); the clean graph still
+writes the address of the named Structure into the slot of such an atom when the declaration is executed (slice 346;
+step 5 of [section M11 of the plan](../next_core_tasks_v3.md#m11)). The working values of different recursive
 activations each live in their own frame and are not read from the shared formal or its default. The translator resolves
 the same words during its translation with its own tables and emits native by the addresses found (§7); a change of code
 resets such native (§6.5). Verifiability: after construction the P0 tree is absent (its arenas are released), and the next
@@ -912,12 +1044,18 @@ value -- the address of the cell of T behind the `uninit:T` pointer) is named `n
 `name_of` per slot and pointer comparison. A place's cell is named from construction, and the first assignment changes
 nothing in the table (§3.2). The table is filled at construction (the names of declarations), at `merge`/copying (the
 copy of a named address gets a row with the same name pointer), at `fromLmx`; the rows of dead addresses are removed by
-collection. Uniqueness follows the book ([names and paths](LMX_semantics.en.md#fields)): a Structure as **data** never has
-several same-named fields, and `named_field` over data is unambiguous; a Structure as **code** (source text) may repeat
-definitions of one head, told apart by the source occurrence -- `s\[N]field` with zero-based `N` selects the Nth field of
-that name in field order, and `named_field(lmx, name, N)` over code counts occurrences in field order; every repeated
-head is its own Lmx or cell with its own table row. The semantics of repeated declarations and its narrow pause
-(REPEATED-DECL-OTHER-KINDS) are not changed by this. This is the only structure of names; there is no
+collection. Uniqueness follows the book ([names and paths](LMX_semantics.en.md#fields); the author's decisions of
+2026-11-11): in a Structure as **data** every declaring form of its root level is an occurrence of the name; a sole
+occurrence is addressed by the bare name, and `named_field` over it is unambiguous, while with two or more the bare
+path is an error and an index selects the occurrence: `s\[N]field` with zero-based `N` is the Nth occurrence of that
+name in field order, and `named_field(lmx, name, N)` counts occurrences in field order. A repeated declaration in data
+neither replaces the former one nor writes into it: every occurrence is its own Lmx or cell with its own table row. In
+**code** a repeated declaration by a receiver creates no second field -- it is a type check with an assignment into the
+same place --, and a structural form there is a call of its head. This paragraph used to say otherwise: data never has
+several same-named fields, and repeated definitions of one head are allowed in code. The clean graph still selects the
+first occurrence by a bare path and builds no path with the index of an occurrence (step 5 of
+[section M11 of the plan](../next_core_tasks_v3.md#m11)). The name table does not change the semantics of repeated
+declarations or its narrow pause (REPEATED-DECL-OTHER-KINDS). This is the only structure of names; there is no
 `LmxSourceName (key, port) → code`, no "place tables", no ordinal numbers of names.
 
 ### 5.2 Service traversal tables (norm: "do them as you like", but "kept nowhere outside a traversal")
@@ -936,10 +1074,13 @@ author as the means of learning a name, a type and a string; they are not mixed 
 traversal's namespace (rows "block, name, value": the Structures the receivers of `fn`/`sub` declarations create on
 entering their block, §3.4 -- in the whole block, and those an application of the receiver to computed arguments creates
 -- from its Frame on (`lmx_graph_fn_apply`); the places and named Structures of the root -- from their field on, when
-the traversal has reached it (`lmx_graph_space_reach`): an ordinary field is visible forward from its declaration, at the
-root of a file too, and a cell allocated before the traversal does not open its name to an earlier statement ([the
-book](LMX_semantics.en.md#declaration-visibility); the visibility from the first line belongs to the completed `var` of a
-method); the places published on the way; made empty on entering the traversal and freed on leaving it,
+the traversal has reached it (`lmx_graph_space_reach`): today an ordinary field is visible forward from its declaration,
+at the root of a file too, and a cell allocated before the traversal does not open its name to an earlier statement
+(the former rule of the book; the visibility from the first line belongs to the completed `data` of a method; by the
+author's decision of 2026-11-11 visibility in data runs in both directions --
+[the book](LMX_semantics.en.md#declaration-visibility), executed by step 5 of
+[section M11 of the plan](../next_core_tasks_v3.md#m11)); the places published on the way; made empty on entering the
+traversal and freed on leaving it,
 `lmx_graph_space_*`; a name is resolved for the current activation and the selected `code`/`data` by it and by the
 frames, §3.5), working `implements` maps for the given reception; the collector -- the liveness map by
 regions for the pass; the builder -- the source → copy map of one `merge`/copy, the parse tree and the parsing arenas; the
@@ -951,7 +1092,11 @@ fields of a model and the physical fields of a candidate is data of the receptio
 reception holds its map for the duration of the operations it needs (reading, writing, taking an address, publishing
 `dirty`), and the next traversal rebuilds it from the graph; the arena has no persistent `lmx_arena_impl`. If the language
 returns a value or a Structure to the user, that graph value is not mixed with the algorithm's internal cache. The text
-of [L2 §14](L2_spec_en.md#implements) about storing the correspondence is updated to this norm.
+of [L2 §14](L2_spec_en.md#implements) about storing the correspondence is updated to this norm. The author's decision
+of 2026-11-11: `implements` is performed once -- when the clean graph is built --, and after the construction it is
+needed only where the candidate is selected while the program runs ([book](LMX_semantics.en.md#data-code-roles); the
+cases -- the [document](../steps/implements-runtime-cases-20261111.md)); the clean graph now admits every call at run
+time and keeps no correspondence between calls -- step 7 of [section M11 of the plan](../next_core_tasks_v3.md#m11).
 
 <a id="interpreter"></a>
 ## 6. The interpreter
@@ -968,7 +1113,13 @@ no receiver and answers no callable is read when the traversal reaches it (`lmx_
 its head, not by the form of its tail: it is a declaration of a Structure -- the first when the name answers nothing
 now, a repeated one when it answers a Structure -- or, for the name of a known place that is no Structure, a refusal
 (8); no form with a colon defines or writes a value (`x: 4` with an unknown `x` is a Structure `x` with the number
-inside, `r: h(3)` a Structure `r` with the kept call). Separately represented expressions keep their general form: an operation is
+inside, `r: h(3)` a Structure `r` with the kept call). This is the current reading of the clean graph, not the norm of
+2026-11-11: by that norm the root of a unit is launched as a Structure over itself and has no rules of its own -- a
+form is read in both roles, declares in data and calls its head in code, and a structural form that execution has
+reached is an error without a method named by its head, while declarations of Structures are written in data (the
+author's answer to P7, [book](LMX_semantics.en.md#data-code-roles); the executor's reading --
+[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6 and Р7; step 5 of
+[section M11 of the plan](../next_core_tasks_v3.md#m11)). Separately represented expressions keep their general form: an operation is
 an unnamed Lmx (the operator word and the operands, an operation written as a Frame included, §3.3), a path, `:=`. A bare
 atom does not call ([READ.ME](../READ.ME)); an ordinary Structure is executed through `call`. An expression `a op b` is
 three fields; the operands are evaluated recursively: a number primitive -- the value of the cell of its type, a nested
@@ -980,7 +1131,7 @@ frames and `LmxOp` are a second tree, removed by §9 (K03 of plan v3).
 
 The language words are interned by the kernel first at process start (`fn`, `fm`, `sub`, `if`, `else`, `while`, `for`,
 `until`, `return`, `break`, `continue`, `throw`, `catch`, `merge`, `implements`, `convert`, `interpreter`, `adopt`,
-`independent`, `call`, `const`, `immutable`, `var`, `node`, `int`, `char`, `size_t`, `unsigned`, `ulong`, `void`, the
+`independent`, `call`, `const`, `immutable`, `data`, `code`, `node`, `int`, `char`, `size_t`, `unsigned`, `ulong`, `void`, the
 operators `+ - * / % = != < <= > >= && || ! & | ^ ~ << >> := \ @ [] ()`) and are available to the executors as constant
 pointers (`lmx_word_if`, …): these constants are the addresses of the same strings of the `text` region, not separate
 codes; service operators and receivers have neither numeric codes nor a special representation (the author, 18:18Z) --
@@ -991,7 +1142,9 @@ canonical strings, interned once into the graph state, and a comparison of addre
 already canonical word (Codex review of 332). A user's name in a word field (§3.5) is looked up in the book's order by pointer
 comparison: the local binding of the current activation, the inherited dynamic input along the chain of activations, then
 the lexical fallback by `parent` (`named_field` over the slots of a known Structure -- the selected `data`, the callable's
-formals, own fields); not found -- the implicit throw by the book.
+formals, own fields); not found -- the implicit throw by the book. Since slice 354 the list of the language words above holds `data` and
+`code` instead of the former `var` and `body` (the author's decision of 2026-11-11,
+[book](LMX_semantics.en.md#ordinary-var); step 4 of [section M11 of the plan](../next_core_tasks_v3.md#m11)).
 
 ### 6.3 Activation
 
@@ -1062,15 +1215,16 @@ removing the inputs of changed code are atomic for the next or a recursive dispa
 publication. The implementation tells **code from data by the place of the write**, not by transitive reachability of
 the graph and not by the name or the reference through which the write is made: the write path knows the slot it writes
 into and the Lmx that slot belongs to. An **executed Lmx** is one that execution reads as code: a callable
-`fn`/`sub`/method with its parts `args`, `return`, `body`; an ordinary executed Structure without `fn` parts -- the
-Message root with statements, a Structure executed through `call: code data` or `call: code code` ([L2
+`fn`/`sub`/method with its parts `args`, `return`, `code` (formerly `body`; the callable's own fields are the part
+`data`, formerly `var`, §3.4); an ordinary executed Structure without `fn` parts -- the
+Message root with statements, a Structure executed through `call: data code` or `call: code code` ([L2
 §11](L2_spec_en.md#call)); a statement inside them; a declaration statement not yet executed (§3.4). A slot belongs to
 **code** if execution reads its content as a part of a statement of an executed Lmx -- the head, a word, a literal, an
 operand, a nested statement; then the code itself changes, and the `native` of that Lmx and of every callable whose code
 contains or refers to it are reset. A slot belongs to **data** if it is the place of a value the executed code reads: a
-declared place after its declaration ran (`int: x 5` -- the cell `x`), a field of a data Structure, of `data`, of `var`
+declared place after its declaration ran (`int: x 5` -- the cell `x`), a field of a data Structure, of the part `data`
 or of the root as a store of values -- such a write keeps `native`. The role is read from the Lmx itself and the slot's
-position in it, not from the names `args`/`return`/`body`, not from the name of the destination place and not from the
+position in it, not from the names `args`/`return`/`code`, not from the name of the destination place and not from the
 reference: a write through an alias, or through a Structure handed over as `data`, into a statement of an Lmx that
 anyone executes is a write into code, and `native` is reset; the name `data` by itself grants no exemption from
 invalidation. For a write into code, the `native` of the callables in whose parts the changed Lmx lies (the `parent`
@@ -1079,8 +1233,8 @@ reference to code held in data) are reset -- the latter are found by a **fresh t
 traversal (the Message root, the live activations, the mail) over the statements of the executed Lmx with `native` ≠ 0
 and over the Lmx references inside them, without entering data values; there is no index between traversals, only a map
 **of this traversal** is allowed (§5.2). Separate witnesses (§11 item 6): (1) changing an ordinary `x` read by the body
-(a field of the root, of `var` or a declared place) -- `native` kept, the next call reads the new value; (2) changing a
-literal or an operator in `body` -- every `native` whose code contains or refers to it is reset; (3) code shared by two
+(a field of the root, of the part `data` or a declared place) -- `native` kept, the next call reads the new value; (2)
+changing a literal or an operator in `code` -- every `native` whose code contains or refers to it is reset; (3) code shared by two
 callables (code aliases) -- both are reset; (4) a change incompatible with the former entry -- a refusal before
 publication; (5) changing a statement of an ordinary executed Structure without `fn` parts through a reference handed to
 it as `data` -- its `native` is reset, while writing a value through the same reference keeps it. The first assignment
@@ -1100,7 +1254,7 @@ the temporary results of expressions live in the C frame and are not addressable
 the first assignment of a place without a value is the same kernel operation as in the interpreter (a write into the
 pre-existing cell of T without changing the slot or internal pointer), as are later writes. No names are needed at a call -- the call
 goes by the address of the callable Lmx and its `native`. Where native must find a field by name at run time (the data of
-`call: code data`, dynamic visibility), it calls the kernel's same `named_field` with the string pointer (a constant of the
+`call: data code`, dynamic visibility), it calls the kernel's same `named_field` with the string pointer (a constant of the
 unit). An emitted unit consists of: the unit's string table (bytes; at load one interning call per string, the result an
 array of pointers `l2_names[K]`), the exact region sizes, the generated initialization of the clean graph through the
 common constructor (§1a), the native bodies. Native/interpreter parity is checked by the same regressions on both routes.
@@ -1113,7 +1267,7 @@ alone does not permit discarding the target cell's contents after writes. The cu
 the form `int: x` and is not yet a complete serialization of a modified graph. The full codec must preserve both the
 link and the contents of T. The address's name comes from the address → name table (if any), a word is printed as
 the bytes of its interned string, an Lmx recursively (an Lmx with a word head as a Frame `head: …`); a reference to a
-named target as `@: name target`, to an unnamed Structure (the parts `args`, `body` of a `merge` copy) as the block of
+named target as `@: name target`, to an unnamed Structure (the parts `args`, `code` of a `merge` copy) as the block of
 that Structure under the reference's name, a named word place as `name: word`: the text a prepared Structure has
 (slice 333); the order and the
 composition are the current ones ([book](LMX_semantics.en.md#source-codec)). `fromLmx` parses the text with the common P0,
@@ -1160,20 +1314,34 @@ end: take
 int: r take(Point, 1)
 ```
 
+The example is written as the current implementation executes it. By the roles of the author's decision of 2026-11-11
+it mixes forms of data and of code: the block `Point: … end: Point` is a form of data, the declaration of an ordinary
+Structure; `fn: take … end: take` is the declaration of a callable, which acts in both roles; `int: r take(Point, 1)`
+is a declaration by a receiver with a computed value: in data it declares the place `r`, in code it is a type check
+with an assignment. The root of a unit is launched as a Structure over itself, so by the norm the block `Point`, when
+execution reaches it, is a call of `Point` and an error without such a method: the declaration of `Point` is written
+in data (the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6 and Р7). A formal with
+a Structure requirement is written `@: p Point`, not `Point: p`, the parts `var` and `body` are called `data` and
+`code`, and the admission `implements` is performed once, when the graph is built
+([book](LMX_semantics.en.md#data-code-roles)). Of these rules the clean graph executes so far only the names of the
+parts, `data` and `code` (slice 354); the others it does not execute yet, and the description below is its current
+behaviour; the example is translated together with steps 5 and 8 of
+[section M11 of the plan](../next_core_tasks_v3.md#m11).
+
 **The graph after construction, before execution.** The unit's root is an `lmx:data` Lmx with three slots. Slot 0 → the
 Lmx `Point` (`lmx:data`, two slots → `int` cells 0 and 0 in the `int` region; the name table rows for those cells'
 addresses are `y`, `x`; for the Lmx's address, `Point`). Slot 1 → the declaration -- the Lmx of the written Frame named
 `fn` (§3.4), with five argument fields: the word `take` (the `name` argument); `args` -- an Lmx with two slots: the
 formal's Frame `Point: p` -- an Lmx named `Point` with the word `p` as its field -- and an `uninit:int` pointer onto the
 unwritten `int` cell of the formal `q` (a mandatory formal; the row `q` is for that cell's address); `return` -- the
-word `int`; `var` -- an empty Lmx; `body` -- an Lmx with one statement. Slot 2 → the Frame of the declaration `int: r
+word `int`; `data` -- an empty Lmx; `code` -- an Lmx with one statement. Slot 2 → the Frame of the declaration `int: r
 take(Point, 1)` -- an Lmx named `int`: field 0 → the word `r`, field 1 → the call Lmx named `take`: field 0 → the word
 `Point`, field 1 → an `int` cell 1. Nothing is resolved in advance: `take` and `Point` are words; there is no function
 `take` in the graph -- the traversal creates it; there is no cell `r` yet -- the initializer is not evaluated, slot 2
 holds the statement (§3.4). The statement of the body is an Lmx named `return` with the field `E` = `[[[p, \, y], *,
 10], +, q]`: the names and operators of the expression are words (`p`, `\`, `y`, `*`, `+`, `q`), `10` is an `int` cell.
 
-The unit's regions: `lmx:data` -- the root, `Point`, the declaration and its Lmx `args`, `var`, `body`, the formal's
+The unit's regions: `lmx:data` -- the root, `Point`, the declaration and its Lmx `args`, `data`, `code`, the formal's
 Frame `Point: p`, the `return` statement, the three expression Lmx of `E`, the Frame of the declaration of `r`, the call
 Lmx; `int` -- `y`, `x`, the cell of `q`, `1`, `10`; `uninit:int` -- the pointer onto the cell of `q`; `word` -- `take`
 (the name), `p` (the formal), `int` (the result requirement), `r`, `Point` (the call), `p`, `\`, `y`, `*`, `+`, `q`;
@@ -1185,21 +1353,21 @@ themselves; no row `r` yet. `toLmx` prints the same program by the names of the 
 
 **Execution.** The traversal begins with an empty namespace (§5.2). On entering the root's block the receiver `fn` is
 applied to the arguments of the declaration in slot 1: F is created -- an Lmx in `lmx:result` with `parent` on the
-declaration, named `take` (the table row for F's address), with the reference fields `args` and `body` onto the
-declaration's parts, an own word cell `return` and a new empty `var` (the body has no own fields); the namespace gets
+declaration, named `take` (the table row for F's address), with the reference fields `args` and `code` onto the
+declaration's parts, an own word cell `return` and a new empty `data` (the body has no own fields); the namespace gets
 the row "root, `take`, F". Then the interpreter walks the root by slots; slot 0 is the named Structure `Point`: from
 this field on it answers its name (the row "root, `Point`, the Lmx `Point`", `lmx_graph_space_reach`, §5.2); slot 1 is
 the declaration, its F already created; slot 2 is a Frame `int` → a declaration with a computed
 initializer; the call Lmx: the name `take` is resolved by the traversal's namespace into F → a call; an activation in a
 C frame; the frame's argument places receive their first assignment: the word `Point` is resolved into the Lmx `Point`,
 `p` receives its address by `implements` (the used field `y`; the correspondence map is data of this reception, §5.2),
-the `int` cell of the frame's argument place `q` receives 1; F's body -- through the reference `body`, the declaration's
+the `int` cell of the frame's argument place `q` receives 1; F's body -- through the reference `code`, the declaration's
 body: `return`; `E`: `p\y` → `named_field(value of p, y)` → the `int` cell 0; `0 * 10 + 1` = 1 (temporaries in the
 frame). The result 1 is the first assignment of the place `r`: a new `int` cell from the `int` region, 1 is written into
 it, the row `r` for its address is added to the name table, the root's slot 2 is rewritten from the statement's address
 to this cell's address; the declaration statement and the call Lmx, referred to by nobody else, are collected (§2.4).
 Now `toLmx` prints `int: r 1` -- the published value replaced the initializer
-([book](LMX_semantics.en.md#ordinary-var)); a later `r: 2` writes 2 into the same cell (a data write, `native` entries
+([book](LMX_semantics.en.md#ordinary-var)); a later `r := 2` writes 2 into the same cell (a data write, `native` entries
 are kept, §6.5). On leaving the traversal the namespace is freed, and nobody holds F any more, since the program kept no reference to it; the declaration in slot 1
 stays as written, and the next traversal creates its own F. Native for `take`: the translator created F in its
 translation namespace by the same application of the receiver, resolved the words `p`, `y`, `q` and emitted C code that
@@ -1221,15 +1389,15 @@ and publication of 308 are not run; the task is closed neither by a document nor
 
 0. **The vertical slice -- first** (allowed by Codex, review 2; without another ACK). A minimal builder → one clean graph →
    both consumers, in this order: (a) a graph with an already initialized `int`, arithmetic and a repeated write
-   (`int: x 5`, `x: x + 1`, `x: 7`); (b) the first assignment (`int: x`, `x: 5`, `x + 1`), including with an address taken
-   in advance (`int: i`; `@i` kept without reading unwritten bytes; `i: 5` -- reading through the address gives 5; `i: 7`
+   (`int: x 5`, `x := x + 1`, `x := 7`); (b) the first assignment (`int: x`, `x := 5`, `x + 1`), including with an address taken
+   in advance (`int: i`; `@i` kept without reading unwritten bytes; `i := 5` -- reading through the address gives 5; `i := 7`
    -- 7 at the same address; the author, 19:02Z), and separate clean traversals (a second traversal of the same graph with
    empty tables); (c) the example of §10 in full -- regions with `uninit:int`, slots, word primitives, the address → name
    table, the interpreter by §6, the translator by §7 with native for `take` and the generated initialization of the graph,
    `toLmx` before and after, native/interpreter parity, the clean-traversal criterion (item 6b). The new path is built
    beside the old one under a separate tool entry and does not touch the old emission until it covers the fixture.
 1. **Extending the graph by the registry's fixtures**, in groups by risk: expressions and `:=`, `merge` and copying, Array
-   (slots, §3.1), `var`/`data` and `call: code data`, throws and `catch`, dynamic visibility, the named supply, q/z, AXBY
+   (slots, §3.1), `data` and `call: data code`, throws and `catch`, dynamic visibility, the named supply, q/z, AXBY
    -- every moved row passes native and forced on the new path.
 2. **Removing the old carriers as coverage grows** (the map in item 7): `lmx_ids`/codes → strings; `LmxSourceName`, place
    tables, `LmxActivationBinding` → slots, words and the name table; `LMX_WALK_OP_*`/`LmxOp` → the Lmx of statements;
@@ -1306,8 +1474,9 @@ and publication of 308 are not run; the task is closed neither by a document nor
    native and interpreter each for that state; (3) `toLmx` of the changed graph, `fromLmx` into a **second arena alive at
    the same time as the first**, execution there -- R3 = E2, and the next clean traversal of the first arena yields E2
    again; between traversals no live object of traversal tables and no P0 tree exist in the process (a release check on
-   all exits, including a throw and a Thread stop); (c) `toLmx` of a unit with `data`, `var`, a place without a value, a
-   method, an expression and an Array matches the program in composition and order; (d) the separate witnesses of the
+   all exits, including a throw and a Thread stop); (c) `toLmx` of a unit with a data Structure, the `data` part of a
+   method (formerly `var`), a place without a value, a method, an expression and an Array matches the program in
+   composition and order; (d) the separate witnesses of the
    `native` reset (§6.5); (e) native/interpreter parity on the whole registry; (f) the full self-build.
 7. **The removal map of the prepared form** (what disappears at which stage): stage 2 -- `lmx_ids`, `l2_ids`, codes,
    `LmxSourceName`, place tables, `PLACE`, `LmxCallPlaces`, `LmxActivationBinding`, the `lmx_source_name_*_at` ports, the

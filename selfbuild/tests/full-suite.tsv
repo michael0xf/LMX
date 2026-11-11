@@ -231,3 +231,7 @@ refuses	dyn/merge_args_model_formal_refused.lm2	merge_args_model_formal_refused.
 # this phase, not a rule of the language.
 refuses	dyn/merge_args_unfilled_refused.lm2	merge_args_unfilled_refused.lm2:9:17: a formal with no default that no later operand writes is not lowered as a field of the args part yet	nf
 refuses	dyn/merge_args_computed_default_refused.lm2	merge_args_computed_default_refused.lm2:10:17: a formal whose written default is not built and that no later operand writes is not lowered as a field of the args part yet	nf
+# Slice 347: a declaration is read at its own site -- the merge lift of every registration round reads each method as
+# its own (lm_compiler_merge_lift_methods); before it `@: p int @ x` of a method was refused "a declaration takes one value"
+# when the last method of the unit, in a program part, declared a pointer of the same name nearer to the start of its file.
+runs	dyn/declaration_site.lm2	7	nf	dyn/declaration_site_part.lm2

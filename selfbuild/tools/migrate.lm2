@@ -1,0 +1,339 @@
+# Plan M7 (next_core_tasks_v3.md#m7), steps 1 and 3 -- a program part: methods only (the program includes
+# <stdio.h>, <stdlib.h>, <string.h>).  The translator's census (the environment's L2_COLON_WRITES,
+# lm_compiler_colon_write) has one row for every structural Frame it lowered as a write:
+#     route TAB kind TAB file TAB line TAB column TAB offset TAB head-length TAB flags TAB head
+# route: 1 a machine method, 2 the native lowering of L3, 3 the walker's lowering.  kind, the left side: 1 a bare
+# name, 2 a field path, 3 an index, 4 a dereference, 5 a member path of C storage, 6 a name the Frame itself
+# defines by its value, 7 a reference the Frame defines by its value, 8 a callable's result the Frame defines,
+# 9 a place the Frame declares in its tail under a Structure named in its head.
+#
+# `colon-report CENSUS STAGE SOURCES` counts the sites of the census -- a site is one colon of one file, whatever
+# number of translations and routes named it -- by route and kind, and checks every row against the source text:
+# the file the row names below STAGE is read below SOURCES, the bytes at the row's offset must be its head, the
+# byte after the head the colon and the byte after the colon a space.  `colon-migrate CENSUS STAGE SOURCES`
+# also rewrites the colon of every checked site whose kinds are writes of a known place (1-5) into ` :=`.  A site
+# whose Frame defines or declares (6-9) is listed and left as written.  Nothing is found by the text: a line the
+# census does not name is not touched, and a row the text does not confirm changes nothing.
+
+# The part of path below root -- `\` read as `/`, ASCII letters without case -- or 0 when path is not below it.
+fn: colon_below (@: path char; @: root char) @: char
+    size_t: i 0U
+    int: a 0
+    int: b 0
+    while: root[i] != (cast: (char) 0)
+        a := (cast: (int) path[i]) & 255
+        b := (cast: (int) root[i]) & 255
+        if: a = 92
+            a := 47
+        if: b = 92
+            b := 47
+        if: a >= 65 && a <= 90
+            a := a + 32
+        if: b >= 65 && b <= 90
+            b := b + 32
+        if: a != b
+            return: 0
+        i := i + 1U
+    ---
+    if: path[i] != (cast: (char) 47) && path[i] != (cast: (char) 92)
+        return: 0
+    return: path + i + 1U
+end: colon_below
+
+# The relative path s made plain in place: `\` written `/`, a `.` segment dropped, a `name/..` pair dropped -- so one
+# file has one spelling whatever list named it (`tests/../tools/sha256.lm2` is `tools/sha256.lm2`).
+sub: colon_plain (@: s char)
+    size_t: r 0U
+    size_t: w 0U
+    size_t: e 0U
+    size_t: i 0U
+    while: s[r] != (cast: (char) 0)
+        e := r
+        while: s[e] != (cast: (char) 0) && s[e] != (cast: (char) 47) && s[e] != (cast: (char) 92)
+            e := e + 1U
+        ---
+        if: e - r = 2U && s[r] = (cast: (char) 46) && s[r + 1U] = (cast: (char) 46) && w > 0U
+            w := w - 1U
+            while: w > 0U && s[w - 1U] != (cast: (char) 47)
+                w := w - 1U
+            ---
+        else:
+            if: e - r != 1U || s[r] != (cast: (char) 46)
+                i := r
+                while: i < e
+                    s[w] := s[i]
+                    w := w + 1U
+                    i := i + 1U
+                ---
+                if: s[e] != (cast: (char) 0)
+                    s[w] := (cast: (char) 47)
+                    w := w + 1U
+                ---
+            ---
+        ---
+        r := e
+        if: s[r] != (cast: (char) 0)
+            r := r + 1U
+    ---
+    if: w > 0U && s[w - 1U] = (cast: (char) 47)
+        w := w - 1U
+    s[w] := (cast: (char) 0)
+end: colon_plain
+
+# The word of a route (0-2) and of a kind (0-8) in the report.
+fn: colon_route_word (int: route) @: char
+    if: route = 0
+        return: "machine"
+    if: route = 1
+        return: "native"
+    return: "walker"
+end: colon_route_word
+
+fn: colon_kind_word (int: kind) @: char
+    if: kind = 0
+        return: "name"
+    if: kind = 1
+        return: "path"
+    if: kind = 2
+        return: "index"
+    if: kind = 3
+        return: "dereference"
+    if: kind = 4
+        return: "member"
+    if: kind = 5
+        return: "defines-name"
+    if: kind = 6
+        return: "defines-reference"
+    if: kind = 7
+        return: "defines-result"
+    return: "declares-under-structure"
+end: colon_kind_word
+
+# The census read, counted and checked; with apply != 0 the checked write sites rewritten.  0 when every row was
+# confirmed by the text and every changed file written, 1 when a row was not confirmed or a file not written,
+# 2 when the census cannot be read or memory is short.
+fn: colon_sites (@: census char; @: stage char; @: sources char; int: apply) int
+    @: len size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: at size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: flen size_t c.calloc(1U, c.sizeof(c.size_t))
+    @: counts size_t c.calloc(27U, c.sizeof(c.size_t))
+    @@: fld char c.calloc(9U, sizeof(@: char))
+    @: data char 0
+    @: line char 0
+    @: rel char 0
+    @: path char 0
+    @: out char 0
+    # The files the census names: the path below the roots, the source text (0 when it cannot be read), its size,
+    # and per byte of the text the pairs that named the colon there -- bit 9 * (route - 1) + (kind - 1) -- with
+    # bit 31 at a head's first byte once its row was said as unconfirmed.
+    @@: names char 0
+    @@: texts char 0
+    @@: marks unsigned 0
+    @: sizes size_t 0
+    size_t: cap 0U
+    size_t: files 0U
+    size_t: fi 0U
+    size_t: last 0U
+    size_t: rows 0U
+    size_t: malformed 0U
+    size_t: outside 0U
+    size_t: unread 0U
+    size_t: unconfirmed 0U
+    size_t: sites 0U
+    size_t: defining 0U
+    size_t: changed 0U
+    size_t: migrated 0U
+    size_t: written 0U
+    size_t: unwritten 0U
+    size_t: off 0U
+    size_t: hlen 0U
+    size_t: colon 0U
+    size_t: i 0U
+    size_t: j 0U
+    size_t: ln 1U
+    size_t: ls 0U
+    unsigned: m 0U
+    unsigned: kinds 0U
+    int: kind 0
+    int: route 0
+    int: nf 0
+    int: k 0
+    int: q 0
+    if: len = 0 || at = 0 || flen = 0 || counts = 0 || fld = 0
+        return: 2
+    data := file_read(census, len)
+    if: data = 0
+        c.printf("COLON cannot read the census %s\n", census)
+        return: 2
+    line := next_line(data, len[0], at)
+    while: line != 0
+        if: line[0] != (cast: (char) 0)
+            rows := rows + 1U
+            nf := tsv_split(line, fld, 9)
+            kind := 0
+            route := 0
+            if: nf = 9
+                route := c.atoi(fld[0])
+                kind := c.atoi(fld[1])
+            ---
+            if: nf != 9 || route < 1 || route > 3 || kind < 1 || kind > 9
+                malformed := malformed + 1U
+            else:
+                rel := colon_below(fld[2], stage)
+                if: rel = 0
+                    outside := outside + 1U
+                    c.printf("COLON-OUTSIDE %s:%s:%s %s\n", fld[2], fld[3], fld[4], fld[8])
+                else:
+                    colon_plain(rel)
+                    # The file's row: the last one asked first -- the rows of one file come together.
+                    fi := last
+                    if: files = 0U || c.strcmp(names[last], rel) != 0
+                        fi := 0U
+                        while: fi < files && c.strcmp(names[fi], rel) != 0
+                            fi := fi + 1U
+                        ---
+                    ---
+                    if: fi = files
+                        if: files = cap
+                            cap := 2U * cap + 16U
+                            names := (cast: (@@: char) c.realloc(names, cap * sizeof(@: char)))
+                            texts := (cast: (@@: char) c.realloc(texts, cap * sizeof(@: char)))
+                            marks := (cast: (@@: unsigned) c.realloc(marks, cap * sizeof(@: char)))
+                            sizes := (cast: (@: size_t) c.realloc(sizes, cap * c.sizeof(c.size_t)))
+                            if: names = 0 || texts = 0 || marks = 0 || sizes = 0
+                                return: 2
+                            ---
+                        ---
+                        names[fi] := txt_dup(rel)
+                        path := txt_path(sources, rel)
+                        texts[fi] := 0
+                        marks[fi] := 0
+                        sizes[fi] := 0U
+                        if: names[fi] = 0 || path = 0
+                            return: 2
+                        flen[0] := 0U
+                        texts[fi] := file_read(path, flen)
+                        c.free(path)
+                        if: texts[fi] != 0
+                            sizes[fi] := flen[0]
+                            marks[fi] := (cast: (@: unsigned) c.calloc(flen[0] + 1U, c.sizeof(c.unsigned)))
+                            if: marks[fi] = 0
+                                return: 2
+                            ---
+                        else:
+                            c.printf("COLON-UNREADABLE %s\n", rel)
+                        ---
+                        files := files + 1U
+                    ---
+                    last := fi
+                    if: texts[fi] = 0
+                        unread := unread + 1U
+                    else:
+                        off := (cast: (size_t) c.strtoull(fld[5], 0, 10))
+                        hlen := (cast: (size_t) c.strtoull(fld[6], 0, 10))
+                        colon := off + hlen
+                        if: colon < off || colon + 1U >= sizes[fi] || hlen != (cast: (size_t) c.strlen(fld[8])) || c.memcmp(texts[fi] + off, fld[8], hlen) != 0 || texts[fi][colon] != (cast: (char) 58) || texts[fi][colon + 1U] != (cast: (char) 32)
+                            unconfirmed := unconfirmed + 1U
+                            if: off >= sizes[fi] || (marks[fi][off] & 2147483648U) = 0U
+                                c.printf("COLON-UNCONFIRMED %s:%s:%s %s\n", rel, fld[3], fld[4], fld[8])
+                            if: off < sizes[fi]
+                                marks[fi][off] := marks[fi][off] | 2147483648U
+                            ---
+                        else:
+                            marks[fi][colon] := marks[fi][colon] | (1U << (cast: (unsigned) (9 * (route - 1) + (kind - 1))))
+                        ---
+                    ---
+                ---
+            ---
+        ---
+        line := next_line(data, len[0], at)
+    ---
+    # The sites of every file in the order of its text: counted by route and kind, the defining ones listed, the
+    # writes rewritten.
+    fi := 0U
+    while: fi < files
+        if: texts[fi] != 0
+            changed := 0U
+            ln := 1U
+            ls := 0U
+            i := 0U
+            while: i < sizes[fi]
+                m := marks[fi][i] & 134217727U
+                if: m != 0U
+                    sites := sites + 1U
+                    kinds := (m | (m >> 9) | (m >> 18)) & 511U
+                    k := 0
+                    while: k < 27
+                        if: (m & (1U << (cast: (unsigned) k))) != 0U
+                            counts[k] := counts[k] + 1U
+                        k := k + 1
+                    ---
+                    k := 5
+                    while: k < 9
+                        if: (kinds & (1U << (cast: (unsigned) k))) != 0U
+                            c.printf("COLON-DEFINES %s:%u:%u %s\n", names[fi], (cast: (unsigned) ln), (cast: (unsigned) (i - ls + 1U)), colon_kind_word(k))
+                        k := k + 1
+                    ---
+                    if: (kinds & 480U) != 0U
+                        defining := defining + 1U
+                    else:
+                        changed := changed + 1U
+                    ---
+                ---
+                if: texts[fi][i] = (cast: (char) 10)
+                    ln := ln + 1U
+                    ls := i + 1U
+                ---
+                i := i + 1U
+            ---
+            if: apply != 0 && changed > 0U
+                out := c.malloc(sizes[fi] + 2U * changed + 1U)
+                path := txt_path(sources, names[fi])
+                if: out = 0 || path = 0
+                    return: 2
+                i := 0U
+                j := 0U
+                while: i < sizes[fi]
+                    m := marks[fi][i] & 134217727U
+                    kinds := (m | (m >> 9) | (m >> 18)) & 511U
+                    if: m != 0U && (kinds & 480U) = 0U
+                        out[j] := (cast: (char) 32)
+                        out[j + 1U] := (cast: (char) 58)
+                        out[j + 2U] := (cast: (char) 61)
+                        j := j + 3U
+                    else:
+                        out[j] := texts[fi][i]
+                        j := j + 1U
+                    ---
+                    i := i + 1U
+                ---
+                if: file_write(path, out, j) != 0
+                    c.printf("COLON-UNWRITTEN %s\n", names[fi])
+                    unwritten := unwritten + 1U
+                else:
+                    migrated := migrated + changed
+                    written := written + 1U
+                ---
+                c.free(out)
+                c.free(path)
+            ---
+        ---
+        fi := fi + 1U
+    ---
+    q := 0
+    while: q < 3
+        k := 0
+        while: k < 9
+            if: counts[q * 9 + k] != 0U
+                c.printf("COLON-SITES %s %s %u\n", colon_route_word(q), colon_kind_word(k), (cast: (unsigned) counts[q * 9 + k]))
+            k := k + 1
+        ---
+        q := q + 1
+    ---
+    c.printf("COLON rows %u, files %u, sites %u, defining %u, outside %u, unreadable %u, unconfirmed %u, malformed %u\n", (cast: (unsigned) rows), (cast: (unsigned) files), (cast: (unsigned) sites), (cast: (unsigned) defining), (cast: (unsigned) outside), (cast: (unsigned) unread), (cast: (unsigned) unconfirmed), (cast: (unsigned) malformed))
+    if: apply != 0
+        c.printf("COLON-MIGRATED sites %u in %u files, %u files not written\n", (cast: (unsigned) migrated), (cast: (unsigned) written), (cast: (unsigned) unwritten))
+    if: unread != 0U || unconfirmed != 0U || malformed != 0U || unwritten != 0U
+        return: 1
+    return: 0
+end: colon_sites

@@ -54,6 +54,57 @@ fn: lm_compiler_error (const: (@: path char); const: (@: source_node c.LmP0Node)
     return: (cast: (int) (1))
 end: lm_compiler_error
 
+# Plan M7, step 1 (next_core_tasks_v3.md#m7) -- the census of structural Frames lowered as a write.  A Frame of any
+# structural form -- with the colon, compact or a block: anything but the operator `:=` -- that the translator lowers
+# as a write of a place is one row of the file the environment names in L2_COLON_WRITES:
+#     route TAB kind TAB file TAB line TAB column TAB offset TAB head-length TAB flags TAB head
+# route: 1 a machine method, 2 the native lowering of L3, 3 the walker's lowering (asked with route = 3; 0 asks the
+# method mi).  kind, the left side: 1 a bare name, 2 a field path, 3 an index, 4 a dereference, 5 a member path of C
+# storage, 6 a name this very Frame defines by its value, 7 a reference this Frame defines by its value (`h: Box`),
+# 8 a callable's result this Frame defines (`r: h(3)`), 9 a place the Frame declares in its tail under a Structure
+# named in its head (`Model: m`).  line, column and offset are those of the head's first byte; in the colon form the
+# colon is the byte at offset + head-length.  Rows are appended, so one file collects every translation of a build.
+# A Frame whose head is a word of the language or a reference receiver -- `int`, `const`, `@` -- declares by its
+# receiver and is no row.  Without the variable nothing is done.  0, or 1 when the named file cannot be written.
+fn: lm_compiler_colon_write (const: (@: stmt c.LmP0Node); int: mi; int: kind; int: route) int
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: own_n_cell int (cast: (@: int) (@ c.l2_own_n))
+    @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))
+    @@@: own_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
+    @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
+    const: (@: out char c.getenv("L2_COLON_WRITES"))
+    const: (@: h c.LmP0Text)
+    @: f c.FILE
+    int: i 0
+    if: out = 0 || out[0] = 0
+        return: (cast: (int) (0))
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\span = 0
+        return: (cast: (int) (0))
+    if: (stmt\as\frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: (cast: (int) (0))
+    h: stmt\as\frame\head
+    if: h\data = 0 || h\length = 0U || h\data[0] = 64 || lm_compiler_head_word(h) != 0
+        return: (cast: (int) (0))
+    if: route = 0
+        route: 2
+        if: c.lm_compiler_m_machine(mi) != 0
+            route: 1
+        ---
+    # The Frame that declared the row of its own head defines the name by its value; any other writes a known place.
+    while: kind = 1 && i < own_n_cell[0]
+        if: own_decl_cell[0][i] = stmt && own_mi_cell[0][i] = mi && c.lm_compiler_text_same(own_name_cell[0][i], h) != 0
+            kind: 6
+        i: i + 1
+    ---
+    f: c.fopen(out, "ab")
+    if: f = 0
+        c.fprintf(c.l1_stderr(), "l2trans error: L2_COLON_WRITES names a file that cannot be appended: %s\n", out)
+        return: (cast: (int) (1))
+    c.fprintf(f, "%d\t%d\t%s\t%zu\t%zu\t%zu\t%zu\t%u\t%.*s\n", route, kind, c.lm_compiler_node_file(src_cell[0], stmt), (cast: (size_t) stmt\span\line), (cast: (size_t) stmt\span\column), (cast: (size_t) stmt\span\offset), (cast: (size_t) h\length), (cast: (unsigned) stmt\as\frame\flags), (cast: (int) h\length), h\data)
+    c.fclose(f)
+    return: (cast: (int) (0))
+end: lm_compiler_colon_write
+
 fn: lm_compiler_slot_off (int: mi; int: si) size_t
     @: slot_cap_cell int (cast: (@: int) (@ c.l2_slot_cap))
     @: m_cap_cell int (cast: (@: int) (@ c.l2_m_cap))

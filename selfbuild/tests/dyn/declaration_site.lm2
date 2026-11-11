@@ -1,0 +1,18 @@
+# A declaration is read at its own site.  The method `first` of this source and the method `part_last` of the program part
+# declaration_site_part.lm2 -- the last method of the unit -- each declare a pointer place `p` with its type and its value.
+# The declaration of `first` stands further from the start of its file than the one of the part does from the start of
+# the part.  A translator that read the declarations of every method under the method an earlier pass had left current
+# took the place `p` of `part_last` for the place `@: p int @ x` repeats and refused the statement: "a declaration takes
+# one value".  Each method reads through its own place.  Entry 7; 11 and 12 name the failing check.
+fn: first () int
+    int: x 5
+    @: p int @ x
+    return: \p
+end: first
+int: code 7
+if: first() != 5
+    code := 11
+if: code = 7 && part_last() != 2
+    code := 12
+send: exit(exit_code: code; stdout: ""; stderr: "")
+return

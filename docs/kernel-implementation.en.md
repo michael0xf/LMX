@@ -188,6 +188,48 @@ The author's example `Struct2: a b c`, `Struct1: q w e r t`, `Struct1: Struct2` 
 `Struct1: (Struct2 a b c)`. 99 graph-check runs × interp/native/forced PASS. The L3 lowering, the L2 machine path and
 the walker still accept the colon assignment -- section [M7 of the plan](../next_core_tasks_v3.md#m7).
 
+The census of such writes in the working frontend is [slice 347](../steps/witnesses/colon-census-20261110/notes.md),
+step 1 of section M7. The translator itself names every structural Frame -- with the colon, compact or a block:
+anything but the operator `:=` -- that it lowers as a write of a place: `lm_compiler_colon_write`
+(`l2_frontend_types.lm2`) is called in the write branches of the lowering (`lm_compiler_emit_stmts_with_position`,
+`lm_compiler_emit_loc_stmt`) and of the walker's lowering (`lm_compiler_rw_stmt_content`). When the environment names
+a file in `L2_COLON_WRITES`, the function appends a row to it: the route of the translation (1 a machine method, 2 the
+L3 lowering, 3 the walker), the kind of the left side (1 a bare name, 2 a field path, 3 an index, 4 a dereference,
+5 a member path of C storage; 6–9 the forms that themselves make a place: a name by its value, a reference `h: Box`,
+a callable's result `r: h(3)`, a place under a Structure in the head `Model: m`), the file, the line, column and
+offset of the head, its length, the flags of the Frame and the text of the head. A head that is a word of the language
+or the receiver `@` gives no row: the receiver makes that declaration. Without the variable the function does nothing,
+and the L1 written does not depend on it. Two commands of the tool (`tools/migrate.lm2`) read the report:
+`colon-report CENSUS STAGE SOURCES` counts the sites -- one colon of one file, whatever number of translations and
+routes named it -- by route and kind and checks every row against the source text (the head at its offset, the colon
+and a space after it); `colon-migrate` replaces the colon of every checked site of kinds 1–5 by ` :=`, prints the
+sites of kinds 6–9 and leaves them as written, and does not touch a row the text did not confirm. The command finds
+nothing by the text. The report over a build of the frontend, the kernel, the tool, the graph translator and over
+the full list of fixtures: 53,998 rows, 193 files, 34,843 sites. The machine path -- 33,639 sites (a name 20,216, an
+index 8,925, a dereference 1,188, a member path of C storage 3,310), every one confirmed by the text. The L3 lowering
+-- 1,309 write sites (a name 937, a path 215, an index 140, a dereference 15, C storage 2) and 18 sites whose form
+itself makes the place; the walker named 1,276 write sites (a name 906, a path 215, an index 140, a dereference 15)
+and 18 such forms. The text did not confirm 76 sites (762 rows): 61 are the receiver form `@: place value`, which the
+frontend brings to a write through a path, 15 are block and compact forms of a Structure at a known place (`T:` with
+a body, `Outer\Model()`); the command does not migrate them. The report does not see three kinds of writes: the
+kernel modules translated from the clean graph (`lmx_schedule`, `lmx_clock`, `lmx_process_deadline`), the `default:`
+branches of `os` blocks (they are not lowered on Windows) and the sources only a generation build translates
+(`l2_frontend_graph.lm2`, `tools/l2trans.lm2`, `tools/lmxchild.lm2`).
+
+The same slice fixed a declaration read at a site that is not its own. The pass that, before the calls are bound,
+lifts a `merge` written as an argument of a call into a hidden declaration (`lm_compiler_merge_lift_walk`) asks every
+statement whether it declares, and the reading of a declaration asks the places of the current method and keeps its
+answer for the node (`lm_compiler_declaration`; a repeated `@` receiver takes the requirement of the earlier
+declaration of its name). From the second registration round on the current method stayed the one the collection had
+ended with -- the last method of the unit -- and `@: p int @ x` of any other method was read as a repeat of the place
+`p` of that method with two values: "a declaration takes one value". The refusal showed when the pointer of the same
+name in the last method stood nearer to the start of its file than the declaration to the start of its own, that is
+through a program part; that is how it was found -- by adding a part to the tool. The pass now reads every method as
+its own (`lm_compiler_merge_lift_methods`) and gives the caller its former reading site back; the fixture is
+`tests/dyn/declaration_site.lm2` with the part `declaration_site_part.lm2`. `bootstrap quick` -- 0 failures, the
+generations are the same; the full list -- `SUITE 140 rows, 0 failures`, 1108 PASS; 99 graph-check runs ×
+interp/native/forced PASS.
+
 The author's decision of the same day ([journal](../LMX_blog/2026-11-10.md#receiver-args-only),
 [book](LMX_semantics.en.md#receiver-args-only)): a place is declared only by the form `receiver: arguments`, and the
 composed form `name: receiver: value` is withdrawn. The examples of the slices above are written in the former form

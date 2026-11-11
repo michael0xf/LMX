@@ -1,0 +1,82 @@
+# Plan M7 (next_core_tasks_v3.md#m7), steps 1 and 3 -- a program part: methods only (the program includes
+# <stdio.h>, <stdlib.h>, <string.h>).  The translator's census (the environment's L2_COLON_WRITES,
+# lm_compiler_colon_write) has one row for every structural Frame it lowered as a write:
+#     route TAB kind TAB file TAB line TAB column TAB offset TAB head-length TAB flags TAB head
+# route: 1 a machine method, 2 the native lowering of L3, 3 the walker's lowering.  kind, the left side: 1 a bare
+# name, 2 a field path, 3 an index, 4 a dereference, 5 a member path of C storage, 6 a name the Frame itself
+# defines by its value, 7 a reference the Frame defines by its value, 8 a callable's result the Frame defines,
+# 9 a place the Frame declares in its tail under a Structure named in its head.
+#
+# `colon-report CENSUS STAGE SOURCES` counts the sites of the census -- a site is one colon of one file, whatever
+# number of translations and routes named it -- by route and kind, and checks every row against the source text:
+# the file the row names below STAGE is read below SOURCES, the bytes at the row's offset must be its head, the
+# byte after the head the colon and the byte after the colon a space.  `colon-migrate CENSUS STAGE SOURCES`
+# also rewrites the colon of every checked site whose kinds are writes of a known place (1-5) into ` :=`.  A site
+# whose Frame defines or declares (6-9) is listed and left as written.  Nothing is found by the text: a line the
+# census does not name is not touched, and a row the text does not confirm changes nothing.
+
+# The part of path below root -- `\` read as `/`, ASCII letters without case -- or 0 when path is not below it.
+fn: colon_below (@: path char; @: root char) @: char
+    size_t: i 0U
+    int: a 0
+    int: b 0
+    while: root[i] != (cast: (char) 0)
+        a := (cast: (int) path[i]) & 255
+        b := (cast: (int) root[i]) & 255
+        if: a = 92
+            a := 47
+        if: b = 92
+            b := 47
+        if: a >= 65 && a <= 90
+            a := a + 32
+        if: b >= 65 && b <= 90
+            b := b + 32
+        if: a != b
+            return: 0
+        i := i + 1U
+    ---
+    if: path[i] != (cast: (char) 47) && path[i] != (cast: (char) 92)
+        return: 0
+    return: path + i + 1U
+end: colon_below
+
+# The word of a route (0-2) and of a kind (0-8) in the report.
+fn: colon_route_word (int: route) @: char
+    if: route = 0
+        return: "machine"
+    if: route = 1
+        return: "native"
+    return: "walker"
+end: colon_route_word
+
+fn: colon_kind_word (int: kind) @: char
+    if: kind = 0
+        return: "name"
+    if: kind = 1
+        return: "path"
+    if: kind = 2
+        return: "index"
+    if: kind = 3
+        return: "dereference"
+    if: kind = 4
+        return: "member"
+    if: kind = 5
+        return: "defines-name"
+    if: kind = 6
+        return: "defines-reference"
+    if: kind = 7
+        return: "defines-result"
+    return: "declares-under-structure"
+end: colon_kind_word
+
+# The census read, counted and checked; with apply != 0 the checked write sites rewritten.  0 when every row was
+# confirmed by the text and every changed file written, 1 when a row was not confirmed or a file not written,
+# 2 when the census cannot be read or memory is short.
+fn: colon_sites (@: census char; @: stage char; @: sources char; int: apply) int
+    @: out char 0
+    return: 0
+end: colon_sites
+
+fn: colon_last () int
+    return: 0
+end: colon_last

@@ -16777,7 +16777,7 @@ fn: lm_compiler_emit_loc_stmt (const: (@: stmt c.LmP0Node); int: mi; const: (@: 
         return: (cast: (int) (1))
     if: stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0
         if: lm_compiler_ml_array_head((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) >= 0
-            if: c.fprintf(out_cell[0], "%s", ind) < 0
+            if: c.lm_compiler_colon_write(stmt, mi, 3, 0) != 0 || c.fprintf(out_cell[0], "%s", ind) < 0
                 return: (cast: (int) (2))
             if: c.lm_compiler_write_text(out_cell[0], (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
                 return: (cast: (int) (2))
@@ -16897,7 +16897,8 @@ fn: lm_compiler_emit_loc_stmt (const: (@: stmt c.LmP0Node); int: mi; const: (@: 
     fr: stmt\as\frame
     if: c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (fr\head))) < 0
         return: (cast: (int) (1))
-    if: fr\body = 0
+    # Plan M7, step 1: the head is a local of the method and both branches below store into it.
+    if: fr\body = 0 || c.lm_compiler_colon_write(stmt, mi, 1, 0) != 0
         return: (cast: (int) (2))
     if: c.lm_compiler_pointer_depth((cast: (int) (ml_ty_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (fr\head)))]))) > 0
         if: lm_compiler_emit_reference_value((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), (cast: (int) (ml_ty_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (fr\head)))])), (cast: (int) (ml_ns_cell[0][c.lm_compiler_ml_find((cast: (const: @: c.LmP0Text) (fr\head)))])), mi, ind, tok_cell[0]) != 0
@@ -18545,6 +18546,8 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         # K03 NS-ROLES-1b: a binding `b: tick` stores tick's occurrence in b's cell -- the unit's occurrence of tick, as
         # a callable formal receives it (l2_cf_actual_emit); tick runs not.
         if: c.lm_compiler_rb_meth_of(stmt) >= 0
+            if: c.lm_compiler_colon_write(stmt, mi, 7, 0) != 0
+                return: (cast: (int) (1))
             oi: lm_compiler_own_ref_decl(stmt, mi)
             if: oi < 0
                 return: (cast: (int) (c.lm_compiler_error(src_cell[0], stmt, "internal: a reference binding to a method has no cell")))
@@ -18560,6 +18563,13 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         oi: lm_compiler_own_ref_decl(stmt, mi)
         if: oi >= 0
             declaration: c.lm_compiler_declaration(stmt)
+            # Plan M7, step 1: the head is the name the Frame defines (`h: Box`, 7) or a Structure the tail's name is
+            # declared under (`Model: m`, 9); a receiver in the head is no row (lm_compiler_colon_write).
+            k: 9
+            if: declaration != 0 && declaration\name != 0 && stmt\as != 0 && stmt\as\frame != 0 && c.lm_compiler_text_same((cast: (const: @: c.LmP0Text) (declaration\name)), (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
+                k: 7
+            if: c.lm_compiler_colon_write(stmt, mi, k, 0) != 0
+                return: (cast: (int) (1))
             # No written or implicit candidate means no body write, including
             # the first declaration. The selected entry snapshot stays current.
             if: declaration != 0 && declaration\candidate_count = 0 && lm_compiler_reference_implicit_model(declaration) < 0 && c.lm_compiler_reference_implicit_method(declaration, mi) < 0
@@ -18611,6 +18621,8 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         # Structure returned by its initializer. Use the same own cell and
         # expression lowering as any other declaration, in every native body.
         if: c.lm_compiler_mad_declaring(stmt, mi) != 0
+            if: c.lm_compiler_colon_write(stmt, mi, 8, 0) != 0
+                return: (cast: (int) (1))
             oi: 0
             while: oi < own_n_cell[0] && (own_decl_cell[0][oi] != stmt || own_mi_cell[0][oi] != mi)
                 oi: oi + 1
@@ -18816,7 +18828,9 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             # Opaque C member/callee role dispatch remains later and OPEN;
             # it must not be silently reclassified as a typed data store.
             if: indexed_place\descriptor = 0
-                k: lm_compiler_emit_raw_index_store(stmt, @ indexed_place, mi, ind)
+                k: c.lm_compiler_colon_write(stmt, mi, 3, 0)
+                if: k = 0
+                    k: lm_compiler_emit_raw_index_store(stmt, @ indexed_place, mi, ind)
                 c.lm_compiler_address_release(@ indexed_place)
                 if: k != 0
                     return: (cast: (int) (1))
@@ -18826,7 +18840,9 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             c.lm_compiler_address_release(@ indexed_place)
         ---
         if: array_status = 0
-            array_status: lm_compiler_emit_array_place(stmt, mi, ind, @ array_place)
+            array_status: c.lm_compiler_colon_write(stmt, mi, 3, 0)
+            if: array_status = 0
+                array_status: lm_compiler_emit_array_place(stmt, mi, ind, @ array_place)
             c.lm_compiler_array_place_release(@ array_place)
             if: array_status != 0
                 return: (cast: (int) (1))
@@ -18844,6 +18860,8 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         # serves every method body, the entry E included.
         # ---------------------------------------------------------------
         if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && lm_compiler_is_path_head((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), mi) != 0 && lm_compiler_head_is_call((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), (cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)), (cast: (unsigned) (stmt\as\frame\flags)), mi) = 0 && lm_compiler_raw_index_head(stmt, mi) != 0
+            if: c.lm_compiler_colon_write(stmt, mi, 2, 0) != 0
+                return: (cast: (int) (1))
             # One resolution of the head path: its qualification, its emission and the leaf's reference contract below
             # are read from the same record.  The order of the refusals is the one the write had.
             l2_pstatus: lm_compiler_path_resolve_head(stmt, l2_ppath)
@@ -19018,7 +19036,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             c.lm_compiler_path_release(l2_ppath)
         ---
         if: l2_pstatus = 0
-            if: lm_compiler_emit_path_resolved(l2_ppath, mi, ind, stmt, @ l2_pkind, 0, 0) != 0
+            if: c.lm_compiler_colon_write(stmt, mi, 1, 0) != 0 || lm_compiler_emit_path_resolved(l2_ppath, mi, ind, stmt, @ l2_pkind, 0, 0) != 0
                 c.lm_compiler_path_release(l2_ppath)
                 return: (cast: (int) (1))
             ---
@@ -19314,7 +19332,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             return: (cast: (int) (1))
         if: pd = 0
             fr: stmt\as\frame
-            if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || c.lm_compiler_indirect_resolve(mi, @ indirect_place) != 0
+            if: c.lm_compiler_colon_write(stmt, mi, 4, 0) != 0 || fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || c.lm_compiler_indirect_resolve(mi, @ indirect_place) != 0
                 return: (cast: (int) (1))
             pd: lm_compiler_emit_indirect_store(stmt, @ indirect_place, mi, ind)
             c.lm_compiler_address_release(@ indirect_place)
@@ -19331,7 +19349,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             fr: stmt\as\frame
         if: ix = 0
             k: 1
-            if: fr\body != 0 && fr\trailer = 0
+            if: fr\body != 0 && fr\trailer = 0 && c.lm_compiler_colon_write(stmt, mi, 3, 0) = 0
                 k: lm_compiler_emit_raw_index_store(stmt, @ indexed_place, mi, ind)
             c.lm_compiler_address_release(@ indexed_place)
             if: k != 0
@@ -19558,6 +19576,10 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             oi: 0 - 1
             si: 0 - 1
             fi: 0 - 1
+        # Plan M7, step 1: the head is a bare name that has a place here -- an own field, a slot or a formal -- and every
+        # branch below stores into it (lm_compiler_colon_write: the census of structural Frames lowered as a write).
+        if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && (oi >= 0 || si >= 0 || fi >= 0) && c.lm_compiler_colon_write(stmt, mi, 1, 0) != 0
+            return: (cast: (int) (1))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && oi >= 0 && lm_compiler_empty_pointer_assignment(stmt, mi) = oi
             if: lm_compiler_emit_empty_graph((cast: (int) (c.lm_compiler_own_nsty_get(oi))), mi, ind, tok_cell[0]) != 0
                 return: 1
@@ -19700,7 +19722,9 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
             if: raw = 1
                 return: (cast: (int) (1))
             if: raw = 0
-                raw_member_status: lm_compiler_eval_fields((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi, ind, tok_cell[0])
+                raw_member_status: c.lm_compiler_colon_write(stmt, mi, 5, 0)
+                if: raw_member_status = 0
+                    raw_member_status: lm_compiler_eval_fields((cast: (@: c.LmP0Field) (fr\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))))), mi, ind, tok_cell[0])
                 if: raw_member_status = 0
                     raw_member_status: lm_compiler_emit_raw_steps(@ raw_member, (cast: (int) ((raw_member\n))), mi, ind, pdest, 0)
                 c.lm_compiler_path_release(@ raw_member)

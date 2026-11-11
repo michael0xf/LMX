@@ -3667,12 +3667,12 @@ fn: bld_graph_check (@: repo char; @: stage char; @: base char; @: fe char; @: r
 end: bld_graph_check
 
 # This tool built by the frontend fe from the stage's tools sources as stage/label/lmxtool.exe, linked with the
-# runtime object rt (the parts: text, winargs, sha256, replay, build, suite).
+# runtime object rt (the parts: text, winargs, sha256, replay, build, suite, the os and docs parts, migrate).
 # Its grown source gets one hour for L2 translation, not the ordinary fifteen minutes.
 fn: bld_self (@: repo char; @: stage char; @: base char; @: fe char; @: rt char; @: label char) int
     @@: tags char c.calloc(1U, sizeof(@: char))
     @@: objs char c.calloc(1U, sizeof(@: char))
-    @@: a char c.calloc(49U, sizeof(@: char))
+    @@: a char c.calloc(50U, sizeof(@: char))
     @: res int c.calloc(2U, c.sizeof(c.int))
     @@: lp char c.calloc(1U, sizeof(@: char))
     @: out char txt_path(stage, label)
@@ -3738,10 +3738,11 @@ fn: bld_self (@: repo char; @: stage char; @: base char; @: fe char; @: rt char;
     a[o + 35]: txt_path(tools, "docs_check_parser.lm2")
     a[o + 36]: txt_path(tools, "docs_check_links.lm2")
     a[o + 37]: txt_path(tools, "docs_check.lm2")
-    a[o + 38]: txt_path(src, "l2src/convert.lm2")
-    a[o + 39]: txt_path(src, "l2src/primitive.lm2")
-    a[o + 40]: methods
-    x: bld_step_t(rec, a, o + 41, src, txt_path(out, "lmxtool-methods.L2.log"), res, 3600000U)
+    a[o + 38]: txt_path(tools, "migrate.lm2")
+    a[o + 39]: txt_path(src, "l2src/convert.lm2")
+    a[o + 40]: txt_path(src, "l2src/primitive.lm2")
+    a[o + 41]: methods
+    x: bld_step_t(rec, a, o + 42, src, txt_path(out, "lmxtool-methods.L2.log"), res, 3600000U)
     if: x = 0
         bld_hash_note(rec, methods)
         bld_hash_note(rec, header)

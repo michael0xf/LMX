@@ -200,6 +200,16 @@ name at a Frame's head takes the role of its C declaration, read through the fro
 fehost09; `bootstrap quick` from it built G1 and G2 one image apart from the link stamps, their runtimes equal rt68.
 [Sources, receipts and limits](../steps/witnesses/door-roles-20261109/notes.md).
 
+Since slice 347 the frontend names every structural Frame it lowers as a write of a place (plan M7, step 1): with
+`L2_COLON_WRITES=FILE` in the environment each translation appends its rows to FILE -- the route (machine method, L3
+lowering, walker), the kind of the left side, the file, the position and the text of the head. The tool reads such a
+census: `TOOL 0 entry 0 -- colon-report CENSUS STAGE SOURCES` counts the sites by route and kind and checks each row
+against the text below SOURCES (the stage's files are read there by the same relative path);
+`colon-migrate CENSUS STAGE SOURCES` also rewrites the colon of every checked write site into ` :=`. The commands are
+the tool's part `tools/migrate.lm2`; a tool that predates the part cannot build the tool of these sources -- a new
+part needs one transitional `build-self` of sources that list it and do not call it yet.
+[Sources, receipts and limits](../steps/witnesses/colon-census-20261110/notes.md).
+
 This is the selected repository source root for the existing language-owned
 `manifest`, `stage-copy`, `rebuild`, and `bootstrap` route. Keep its relative
 layout: `src/l2src/`, `tools/`, and `tests/`. In particular, the full suite's

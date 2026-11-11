@@ -6010,15 +6010,8 @@ fn: lm_compiler_parse_unit (const: (@: path char)) int
         # Slice 307 (the review of Codex, item 2): a `merge` written as the actual of a call is lifted into a hidden
         # declaration before the owns are collected and the calls are bound -- the binder keeps the node of each actual and asks the own
         # table for the name (lm_compiler_merge_lift_walk); once per registration round, over the methods known so far.
-        i: 0
-        while: i < m_n_cell[0]
-            if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0
-                if: lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (m_body_cell[0][i]\as\structure)), i, c.lm_compiler_method_src(i, path)) != 0
-                    return: (cast: (int) (1))
-                ---
-            ---
-            i: i + 1
-        ---
+        if: lm_compiler_merge_lift_methods(path) != 0
+            return: (cast: (int) (1))
         if: c.lm_compiler_collect_asgn_binds(path) != 0
             return: (cast: (int) (1))
     ---
@@ -12250,7 +12243,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     # The receiver of a factory's result, `@: h f(a)` (l2_mad_declaring): the call, its node put into h's place.
     # Read here, before a head that begins with `@` is taken for a machine source below.
     if: c.lm_compiler_mad_declaring(stmt, rw_mi_cell[0]) != 0
-        if: lm_compiler_rw_mad_store(stmt, into, @ port_local_node) != 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 8, 3) != 0 || lm_compiler_rw_mad_store(stmt, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
@@ -12299,6 +12292,8 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     # K03 NS-ROLES-1b: a binding `b: tick` writes tick's occurrence into b's cell -- the callable actual's resolution
     # (l2_rw_callable_actual), as a callable formal receives it; tick runs not.
     if: c.lm_compiler_rb_meth_of(stmt) >= 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 7, 3) != 0
+            return: (cast: (int) (1))
         oi: c.lm_compiler_own_ref_decl(stmt, rw_mi_cell[0])
         if: oi < 0
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], stmt, "internal: a reference binding to a method has no cell")))
@@ -12314,6 +12309,11 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     oi: c.lm_compiler_own_ref_decl(stmt, rw_mi_cell[0])
     if: oi >= 0
         declaration: c.lm_compiler_declaration(stmt)
+        k: 9
+        if: declaration != 0 && declaration\name != 0 && stmt\as != 0 && stmt\as\frame != 0 && c.lm_compiler_text_same((cast: (const: @: c.LmP0Text) (declaration\name)), (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
+            k: 7
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], k, 3) != 0
+            return: (cast: (int) (1))
         # A reference declaration without a written or implicit candidate
         # checks its place without a body write, first act or repeat alike.
         if: declaration != 0 && declaration\candidate_count = 0 && c.lm_compiler_reference_implicit_model(declaration) < 0 && c.lm_compiler_reference_implicit_method(declaration, rw_mi_cell[0]) < 0
@@ -12380,7 +12380,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     if: k = 1
         return: (cast: (int) (1))
     if: k = 0
-        if: c.lm_compiler_indirect_resolve(rw_mi_cell[0], @ indirect_place) != 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 4, 3) != 0 || c.lm_compiler_indirect_resolve(rw_mi_cell[0], @ indirect_place) != 0
             return: (cast: (int) (1))
         indirect_type: indirect_place\index
         k: 0
@@ -12711,7 +12711,9 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     if: k = 2
         return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this indexed Array operand contract")))
     if: k = 0
-        k: lm_compiler_rw_array_place(stmt, @ array_place, into, @ port_local_node)
+        k: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 3, 3)
+        if: k = 0
+            k: lm_compiler_rw_array_place(stmt, @ array_place, into, @ port_local_node)
         c.lm_compiler_array_place_release(@ array_place)
         if: k != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
@@ -12723,7 +12725,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     if: k = 7
         n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
         k: 1
-        if: n > 0
+        if: n > 0 && c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 3, 3) = 0
             k: lm_compiler_rw_index_place(@ indexed_location, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, into, @ port_local_node)
             if: k = 2
                 k: lm_compiler_rw_machine_path(@ indexed_location, h, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, into, @ port_local_node)
@@ -12736,6 +12738,8 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     # A store through a member path rooted at foreign C storage.
     k: lm_compiler_rw_machine_store(stmt, into, @ port_local_node)
     if: k != 2
+        if: k = 0 && c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 5, 3) != 0
+            return: (cast: (int) (1))
         if: k != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
@@ -12748,7 +12752,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
             written_first: (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field))
             written_n: (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))))
         ---
-        if: lm_compiler_rw_path_write(stmt, h, written_first, written_n, into, @ port_local_node) != 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 2, 3) != 0 || lm_compiler_rw_path_write(stmt, h, written_first, written_n, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
@@ -12784,12 +12788,12 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
     # Structure slot retains its separately resolved callable behavior.
     oi: c.lm_compiler_rw_find(h)
     if: c.lm_compiler_rw_seen(oi) != 0 && c.lm_compiler_method_pointer_candidate(rw_mi_cell[0], oi, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))))) >= 0
-        if: lm_compiler_rw_write(into, oi, (cast: (const: @: char) (c.lm_compiler_rw_bind_op(oi))), @ port_local_node, @ k) != 0 || lm_compiler_rw_callable_actual((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))))), port_local_node, @ t) != 0 || c.lm_compiler_rw_put(port_local_node, k, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 1, 3) != 0 || lm_compiler_rw_write(into, oi, (cast: (const: @: char) (c.lm_compiler_rw_bind_op(oi))), @ port_local_node, @ k) != 0 || lm_compiler_rw_callable_actual((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))))), port_local_node, @ t) != 0 || c.lm_compiler_rw_put(port_local_node, k, t) != 0 || c.lm_compiler_rw_put(into, slot, port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         return: (cast: (int) (0))
     if: c.lm_compiler_rw_seen(oi) != 0 && (c.lm_compiler_rw_is_hosted(oi) != 0 || (own_host_cell[0][oi] = 0 && own_fid_cell[0][oi] < 0 && own_uchild_cell[0][oi] >= 0)) && c.lm_compiler_own_is_pointer(own_ty_cell[0][oi]) != 0 && c.lm_compiler_own_is_slot(oi) = 0
-        if: lm_compiler_rw_reference_store((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))))), oi, -1, into, @ port_local_node) != 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 1, 3) != 0 || lm_compiler_rw_reference_store((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))))), oi, -1, into, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
@@ -12808,7 +12812,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
         if: n < 1
             return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this assignment")))
-        if: lm_compiler_rw_assign(into, oi, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, @ port_local_node) != 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 1, 3) != 0 || lm_compiler_rw_assign(into, oi, (cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, @ port_local_node) != 0
             return: (cast: (int) (1))
         \made: 1
         if: c.lm_compiler_rw_put(into, slot, port_local_node) != 0
@@ -12822,7 +12826,7 @@ fn: lm_compiler_rw_stmt_content (@: field c.LmP0Field; @@: next c.LmP0Field; int
         n: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)))
         if: n < 1
             return: (cast: (int) (c.lm_compiler_rw_refuse(stmt, "this assignment")))
-        if: lm_compiler_rw_input_write(into, idx, @ port_local_node) != 0
+        if: c.lm_compiler_colon_write(stmt, rw_mi_cell[0], 1, 3) != 0 || lm_compiler_rw_input_write(into, idx, @ port_local_node) != 0
             return: 1
         if: lm_compiler_rw_reference_receive((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)), n, (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_param_ty(rw_mi_cell[0], h)))), (cast: (int) (c.lm_compiler_nsty_get(rw_mi_cell[0], idx))), port_local_node, @ t) != 0 || c.lm_compiler_rw_put(port_local_node, 2, t) != 0
             return: (cast: (int) (1))
@@ -18910,3 +18914,43 @@ fn: lm_compiler_merge_lift_walk (@: body c.LmP0Structure; int: mi; const: (@: pa
         return: (cast: (int) (lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (body\trailer\body)), mi, path)))
     return: (cast: (int) (0))
 end: lm_compiler_merge_lift_walk
+
+# The walk above over every method known so far, each read as its own method.  The walk asks whether a statement
+# declares (lm_compiler_is_asgn, lm_compiler_own_decl_ty), and the reading of a declaration asks the places known in the
+# current method and keeps its answer for the node (lm_compiler_declaration; a repeated `@` receiver takes the contract
+# of the earlier declaration of its name, lm_compiler_previous_reference_contract).  From the second registration
+# round on the current method was the one the collection had ended with -- the last method of the unit -- so
+# `@: p int @ x` of any other method, standing further from the start of its file than a pointer `p` of that last
+# method stands from the start of its own, was read as a repeat of that place with two values and refused: "a
+# declaration takes one value".  The site the caller had is given back: the walk reads, it does not move the
+# translation.
+fn: lm_compiler_merge_lift_methods (const: (@: path char)) int
+    @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
+    @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
+    @: here_mi_cell int (cast: (@: int) (@ c.l2_here_mi))
+    @: here_source_mi_cell int (cast: (@: int) (@ c.l2_here_source_mi))
+    @: here_cell size_t (cast: (@: size_t) (@ c.l2_here))
+    @@: here_node_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_here_node))
+    @: here_on_cell int (cast: (@: int) (@ c.l2_here_on))
+    int: saved_mi here_mi_cell[0]
+    int: saved_source_mi here_source_mi_cell[0]
+    size_t: saved_here here_cell[0]
+    @: saved_node c.LmP0Node here_node_cell[0]
+    int: saved_on here_on_cell[0]
+    int: i 0
+    while: i < m_n_cell[0]
+        if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0
+            c.lm_compiler_here_at_method(i, 0)
+            if: lm_compiler_merge_lift_walk((cast: (@: c.LmP0Structure) (m_body_cell[0][i]\as\structure)), i, c.lm_compiler_method_src(i, path)) != 0
+                return: (cast: (int) (1))
+            ---
+        ---
+        i := i + 1
+    ---
+    here_mi_cell[0] := saved_mi
+    here_source_mi_cell[0] := saved_source_mi
+    here_cell[0] := saved_here
+    here_node_cell[0] := saved_node
+    here_on_cell[0] := saved_on
+    return: (cast: (int) (0))
+end: lm_compiler_merge_lift_methods

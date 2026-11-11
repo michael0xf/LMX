@@ -298,14 +298,27 @@ do not append slots to `data`. Method
 `var` fields are preallocated from its particular body, whereas arbitrary
 selected `data` must already contain every required place. Thus
 `call: named named\var` passes the declared data through a prepared
-code-to-data address map. Only after this general
-path is implemented does unary `call: code` select the actual code's `var`
-as data. With no `var`, it does not substitute code itself or fabricate data:
-a local data-field write refuses. Activation-only writes to free inputs do
-not trigger that refusal. Explicit `call: code code` supplies code itself as
-data without looking for `var`, under the general admission, graph-write,
-and `native`-validity rules. It is a universality test for Structures, not
-the implementation of normal `call: code var`. The `implements` field-address
+code-to-data address map. Unary `call: code` executes the code over itself
+as data (the author's decision of 2026-11-11,
+[the receivers `call` and `fncall`](docs/LMX_semantics.en.md#call-receivers));
+it used to select the actual code's `var`, and `var` is now passed
+explicitly. It fabricates no data: code that needs the fields of its `var`
+does not find them in itself, and the call refuses. Explicit
+`call: code code` is the same form, under the general admission,
+graph-write, and `native`-validity rules; it is a universality test for
+Structures. The receivers `fncall(args var return code)`,
+`fncall(var return code)`, `fncall(return code)`, `call(args var code)`,
+`call(var code)` and `call(code)` receive the parts of a launch explicitly:
+an addition to the existing mechanisms, neither a declaration nor the
+ordinary call -- `fn`, `sub` and `catch` are declared and called as before,
+and the interpreter launches them through this same open mechanism, which
+can call any composition of Structures. `fn`, `sub` and `catch` differ from
+an ordinary Structure in completing their `var` when the graph is built;
+data is read as a whole, so a name used above the line of its declaration
+reads the same place. Not implemented yet
+([plan](next_core_tasks_v3.md#m10)); the order of the two arguments of the
+former `call: code data` against `call(var code)` awaits the author's
+answer. The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already
 computed `dirty` values go directly to their selected physical `data` slots
 through that map if necessary: no expression evaluation, repeated admission,

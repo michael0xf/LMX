@@ -421,10 +421,18 @@ clarification of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#repeat-is-check
 [structural forms](LMX_semantics.en.md#forms-declare-or-call)). Both translators were measured against this
 clarification in the same witness; the divergences of the implementation found there are written down as step 5 of
 [section M9 of the plan](../next_core_tasks_v3.md#m9): with a repetition in the explicit `var` of a method the
-working frontend silently reads the first occurrence, and it stops a Structure called over itself where the
-Structure reads its field above the line of its declaration; the clean graph does not write the place on a
-repetition at the root, selects the first occurrence by a bare path and does not build the path with the index of an
-occurrence.
+working frontend silently reads the first occurrence; the clean graph does not write the place on a repetition at
+the root, selects the first occurrence by a bare path and does not build the path with the index of an occurrence.
+
+The author's decision of 2026-11-11 on launching code over data ([journal](../LMX_blog/2026-11-11.md#call-receivers);
+the book -- [the receivers `call` and `fncall`](LMX_semantics.en.md#call-receivers)) is not implemented yet; the
+steps are [section M10 of the plan](../next_core_tasks_v3.md#m10). The parts of a launch -- arguments, data, the
+description of the result, code -- are received by the receivers `fncall` and `call`, and the interpreter is to
+launch `fn`, `sub` and `catch` through the same mechanism. Now the interpreter of the clean graph launches a method
+by its Structure (`lmx_graph_invoke_data`: the parts are read from it), `call` takes one or two arguments, code
+first, and the one-argument form selects the `var` of the code (`lmx_graph_call_data`); by the decision the
+one-argument form executes the code over itself, and a name used above the line of its declaration reads the place
+of the data -- the former rule of the book rejected such a call, and both translators still execute that rule.
 
 <a id="principles"></a>
 ## 1. Principles (norm)

@@ -90,9 +90,28 @@ the launch was written `call: code data`: the clean graph reads the new
 names and order since slice 354 and does not accept the former spellings
 or order, while the working frontend and its fixtures read the former
 spellings and order until step 8 of [M11](../next_core_tasks_v3.md#m11).
-The remaining rules of M11 -- reading forms by role, the pointer atom,
-visibility in data in both directions -- are executed neither by the
-clean graph (step 5) nor by the working frontend (step 8).
+Of the remaining rules of M11 the clean graph executes sub-step 5а (the
+pointer atom and visibility in data in both directions among others) since
+slice 355 and the first part of sub-step 5б since slice 356: the launch of a
+Structure by name (the author's decision of 2026-11-11,
+[journal](../LMX_blog/2026-11-11.md#structure-call-by-name)) in the code of a
+method and in code over given data -- `S()`, `S(D)`, `S(data := D)` -- and a
+form whose head is a place holding a reference to an ordinary Structure
+everywhere, the root of a unit included, as well as the named supply of the
+arguments of `call` and `fncall`. In the root of a unit and in a Structure
+over itself it does not yet execute the role of code of a form with an
+ordinary Structure as its head by name (sub-step 5г); the rest of reading
+forms by role -- sub-step 5в and the remainders of sub-steps 5б, 5д and 5е --
+is not executed yet. The working frontend executes none of these rules of M11
+(step 8).
+The P0 parser executes the rule for closing blocks ([grammar
+§15](LMX_grammar.en.md#levels)) outside brackets and inside curly brackets;
+inside round and square brackets it does not yet: a line `end: name` is read as
+a separate record, the fence `---` as two atoms, and a jump of more than one
+level without a tail cutter is accepted (defect
+`P0-BRACKET-CONTENT-SEPARATE-LOOP`, [steps/defects.md](../steps/defects.md));
+the fix is the second part of sub-step 5б of
+[M11](../next_core_tasks_v3.md#m11).
 Fixed slot counts are computed in advance; full admission of required
 fields must finish before execution. Do not guess an initialization change.
 

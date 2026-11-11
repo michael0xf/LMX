@@ -121,7 +121,10 @@ and creates no second field. In data every declaring form is an occurrence
 of its name: a repeated declaration is one more occurrence, which neither
 replaces the former one nor writes into it, and after it the name is
 addressed only with the index of an occurrence. A Structure that is its own
-data first initializes the variables of its root level. In data
+data first initializes the variables of its root level; this prepares the
+places only: a computed initial value is computed when execution reaches the
+line of its declaration, and the data part of a method executes its own
+initial values on entry. In data
 `Struct1: Struct2` declares the Structure `Struct1` with the one atom
 `Struct2`, a pointer to the Structure `Struct2`: a mention of a known
 Structure is not expanded, and only that atom stands in the tree under
@@ -130,7 +133,8 @@ Structures and functions are not assigned: `Struct1 := Struct2`, which the
 decision of 2026-11-10 called the assignment, was withdrawn by the author
 on 2026-11-11 -- pointer variables are assigned
 ([semantics](docs/LMX_semantics.en.md#colon-declares)).
-Assignment never appends a slot. An explicit `call` or callable invocation (including `fn`) starts
+Assignment never appends a slot. An explicit `call`, the launch of a Structure
+by its name (§9) or a callable invocation (including `fn`) starts
 its own binding scope; its own field may shadow an outer one. There is no
 shadowing within one callable. Inline `if`/`for` are operators of that
 activation, not scopes, even though represented as Structures. A
@@ -161,13 +165,15 @@ specialized for function pointers. See [L2 §18](docs/L2_spec_en.md#lowlevel-add
 
 In accepted v3 rules a bare resolved atom reads a value/address, not a
 nullary call. A method or method pointer uses an explicit call form. An
-ordinary Structure executes through `call: A`. In data `A()` and `A:`
-declare an empty Structure `A`, and a repeated such form is one more
-occurrence of the name; in code the same form is a call of the head `A`,
-and with `A` an ordinary Structure of the data and no method of that name
-it is refused (the author's answer of 2026-11-11,
-[journal](LMX_blog/2026-11-11.md#structure-head-call-refuses-in-code)). Do
-not reclassify a failed call as another operation.
+ordinary Structure executes through `call: A` or, in code, by the form `A()`
+(the author's decision of 2026-11-11,
+[journal](LMX_blog/2026-11-11.md#structure-call-by-name)). In data `A()` and
+`A:` declare an empty Structure `A`, and a repeated such form is one more
+occurrence of the name; nothing is called. In code the same form is a call
+of the head `A`: with `A` a callable it calls it, with `A` an ordinary
+Structure it launches it, `A()` as `call(A, A)` and `A(D)` as
+`call(D, A)` (§9); it is an error when the head names neither a callable
+nor a Structure. Do not reclassify a failed call as another operation.
 
 M3 first normalizes legacy flat declarations to name-first order. A place
 is declared only by a receiver form enumerating its arguments (the author's
@@ -332,7 +338,9 @@ not an initializer already removed from it. This automatic layout
 belongs to that method's specific body and `data`, not to arbitrary call
 data. An ordinary Structure receives no automatic fields from the body: its
 data is passed to the launch explicitly. A child block `data:` inside an
-executed Structure is in code a call of `data`, and it is refused; the data
+executed Structure is in code a form with the head `data`, a launch of the
+data of the current launch with the block in the place of the argument, and as
+a rule it is refused (see the launch by name below); the data
 and the code of such a pair are written apart -- as two Structures of data
 or as the parts `data` and `code` of a method, `call(m\data m\code)` (the
 executor's reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md),
@@ -362,6 +370,15 @@ ordinary call -- `fn`, `sub` and `catch` are declared and called as before,
 and the interpreter launches them through this same open mechanism (the clean
 graph does not execute `catch` yet: that is the present state of the
 implementation, not the norm), which can call any composition of Structures.
+In every receiver the arguments are named and are supplied by position or by
+name with the operator `:=` (the executor's reading of the author's correction
+of 2026-11-11, [journal](LMX_blog/2026-11-11.md#structure-call-by-name)):
+`call(data := D; code := C)`,
+`fncall(args := A; data := D; return := int; code := C)`, the parts of `fn`
+and `sub`. In code an ordinary Structure is also launched by a form with its
+name as the head, `A()` as `call(A, A)` and `A(D)` as `call(D, A)`: a
+launch form of its own, not a form of a receiver (see the launch by name
+below).
 `fn`, `sub` and `catch` differ from
 an ordinary Structure in completing their `data` when the graph is built;
 data is read as a whole, so a name used above the line of its declaration
@@ -393,9 +410,11 @@ it neither replaces the former one nor writes into it, and after it the name
 is addressed only with the index of an occurrence, `data\[N]name`. In code
 every form is a call: a declaration by a receiver
 is a type check with an assignment, `Model: KnownStruct` is a call of
-`Model` and an error without such a method; code declares no Structure,
-while the declarations of `fn`, `sub` and `catch` stay, and a callable
-declared in data is called directly by its name. An unnamed Structure
+`Model` and an error when `Model` names neither a callable nor a Structure;
+code declares no Structure, while the declarations of `fn`, `sub` and `catch`
+stay, a callable declared in data is called directly by its name, and an
+ordinary Structure of the data is launched by a form with its name as the
+head (see the launch by name below). An unnamed Structure
 in code is not a call: `(a b c) := myFn()` is a group assignment
 ([book](docs/LMX_semantics.en.md#data-code-roles),
 [journal](LMX_blog/2026-11-11.md#unnamed-structure-not-call)). Only values are
@@ -424,8 +443,11 @@ collected in
 The translators no longer have to find out where a call, a declaration of a
 Structure and an assignment stand -- the role says it --, and the branches
 that made this choice are to be removed. Apart from the names and the order
-of the parts, no translator executes these rules yet
-([plan](next_core_tasks_v3.md#m11), steps 5 and 8).
+of the parts, the clean graph executes sub-step 5а since slice 355 and the
+first part of sub-step 5б since slice 356 ([plan](next_core_tasks_v3.md#m11));
+the rest -- sub-step 5в and the remainders of sub-steps 5б, 5г, 5д and 5е --
+it does not execute yet, and the working frontend executes none of these
+rules until step 8.
 
 The author's answers of 2026-11-11 to that decision
 ([declaring by a colon form](docs/LMX_semantics.en.md#colon-declares),
@@ -452,17 +474,63 @@ forms are read in both roles by the general rules, no declaration "of its
 own" is skipped, and an uncertainty is an error
 ([journal](LMX_blog/2026-11-11.md#self-launch-no-own-rules)). The executor's
 reading from that ([answers](LMX_blog/q/fable-self-answers-20261110.md),
-part Р): a structural form that execution has reached is an error without a
-method named by its head -- a form by which the same data declares an
-ordinary Structure included --, so an executed Structure (the root of a
-unit, the body of a method, a Structure launched by `call`) holds no
-declarations of Structures; they are written in data -- in the `data` part
-of a method, in a Structure the launch receives as data, in a written
-Structure in a value position. A form `f()` whose head is an ordinary
-Structure of the data is refused in code and declares an empty Structure
-`f` in data (confirmed by the author,
-[journal](LMX_blog/2026-11-11.md#structure-head-call-refuses-in-code)); an
-ordinary Structure is launched by `call`.
+part Р): a declaration of a Structure among the executed forms is still, as a
+rule, an error, but for another reason (answer Р21): in code the form by which
+the same data declares an ordinary Structure launches that Structure, and its
+own tail stands in the place of the argument -- two or more fields in the tail
+are not a defined number of arguments, one field is the data of the launch and
+must give a Structure; only the degenerate forms do not refuse: an empty tail,
+a single atom that names a Structure, a single unnamed Structure in
+parentheses. So an executed Structure (the root of a unit, the body of a
+method, a Structure launched by `call` or by name) holds no declarations of
+Structures; they are written in data -- in the `data` part of a method, in a
+Structure the launch receives as data, in a written Structure in a value
+position.
+
+A Structure is launched in code by its name (the author's decision of
+2026-11-11, [journal](LMX_blog/2026-11-11.md#structure-call-by-name); the
+executor's reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md),
+answer Р21). In code a form whose head is an ordinary Structure launches it
+(before the decision of 2026-11-11 such a form was refused in code, and an
+ordinary Structure was executed only by the receiver `call`): `S()` is the
+same as `call(S, S)` (the Structure over itself), `S(D)` is the same as
+`call(D, S)` (the Structure over the given data); so are the short form
+`S: D` and the block form. It is a launch form of its own, not a form of a
+receiver: the receivers `call` and `fncall` remain the general mechanism
+([the receivers `call` and `fncall`](docs/LMX_semantics.en.md#call-receivers)),
+and the formals are supplied by `call(args data code)` -- there is no launch
+form with the argument `args`. The argument is one and is named `data`, the
+name by which executed code refers to the data of its own launch
+([the special name `data`](docs/LMX_semantics.en.md#ordinary-var)): `S(D)` and
+`S(data := D)` are one form. It must give a Structure (a name, a path, a place
+with a reference, an unnamed Structure written in parentheses), otherwise it
+is an error; so are an argument of another name and two or more positional
+arguments. The head is a place with a reference: what the reference points to
+is called -- a callable (a call through a pointer) or a Structure (launched by
+the same forms); a place of a number, an empty reference and an unknown name
+are errors, as is a head that names neither a callable nor a Structure.
+`data()` in code launches the data of the current launch over itself. In
+data nothing changes: `S()` still declares an empty Structure `S`, and `S(D)`
+a Structure `S` with an atom `D`; nothing is called (for `S()` confirmed by the
+author, [journal](LMX_blog/2026-11-11.md#structure-head-call-refuses-in-code);
+for `S(D)` the executor's reading, answer Р21, item 2). In a
+Structure launched over itself and in the root of a unit each form is read in
+both roles, so the form `S()` there is at once a declaration of one more `S`
+and a call: if `S` is declared in the same Structure, the name has two
+occurrences, without an index it does not answer, and the call is refused; if
+`S` is declared outside, the form declares its own empty `S`, and that one is
+launched, not the outer one. There is no rule of its own, and the same
+Structure is launched there by the receiver `call`; the call of a method or of
+a receiver is not affected. Since slice 356 the clean graph executes the
+launch of a Structure by name in the code of a method and in code over given
+data -- `S()`, `S(D)`, `S(data := D)` -- and a form whose head is a place
+holding a reference to an ordinary Structure everywhere, the root of a unit
+included, as well as the named supply of the arguments of `call` and `fncall`;
+in the root of a unit and in a Structure over itself it does not yet execute
+the role of code of a form with an ordinary Structure as its head by name
+(sub-step 5г of the [plan](next_core_tasks_v3.md#m11)). The working frontend
+reads the former names and order and does not execute the launch by name
+(step 8).
 
 The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already

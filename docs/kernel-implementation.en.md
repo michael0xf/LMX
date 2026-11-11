@@ -183,7 +183,7 @@ the root holding the former Structure -- the newly declared one, and the slot of
 no second field, and the dump prints nothing for an empty slot. `Name: merge(...)` declares the Structure the receiver
 builds: the name receives the result; a copy of one operand is named already and is held by `@: name merge(...)`. A
 head that is a known place that is no Structure (an `int` place, a reference place) -- at the root, in a body and on a
-path `owner\field:` -- is refused: answer 8 of the interpreter, a stop of R0 in a program; the translator names `:=` in
+path `owner\field:` -- is refused: answer 8 of the interpreter, a stop of R0 in a program (since slice 356 a reference place to an ordinary Structure at the root and in a body launches it -- below; on a path `owner\field:` and for a place that refers to neither a callable nor a Structure the refusal stays); the translator names `:=` in
 its message and emits the refusal at the statement. A declaration of a Structure inside a running body and a repeated
 declaration through a path are not executed by the slice (5). The fields of a written operand of `merge` are declared
 by receivers -- `int: name value`, `@: name int value`; a field `name: tail` there is a description of a structure (5).
@@ -192,9 +192,10 @@ The author's example `Struct2: a b c`, `Struct1: q w e r t`, `Struct1: Struct2` 
 the walker still accept the colon assignment -- section [M7 of the plan](../next_core_tasks_v3.md#m7). The author's
 decisions of 2026-11-11 changed the norm of what this slice executes -- the binding of an atom of the tail at the
 declaration, the replacement of the content on a repetition, the name that receives the result of `merge`, the
-printing of the referent in the dump and the declaration of a Structure among executed forms itself; what holds by
-them and what the clean graph still does otherwise is told below, in the paragraphs on the roles `data` and `code`
-and on the author's answers.
+printing of the referent in the dump, the declaration of a Structure among executed forms itself and a form whose head
+is an ordinary Structure, or a place holding a reference to it, in code, which now launches the Structure by name; what
+holds by them and what the clean graph still does otherwise is told below, in the paragraphs on the roles `data` and
+`code`, on the author's answers and on launching a Structure by name.
 
 The census of such writes in the working frontend is [slice 347](../steps/witnesses/colon-census-20261110/notes.md),
 step 1 of section M7. The translator itself names every structural Frame -- with the colon, compact or a block:
@@ -438,10 +439,10 @@ the book -- [structural forms](LMX_semantics.en.md#forms-declare-or-call),
 same witness; the divergences of the implementation found there were written down as step 5 of
 [section M9 of the plan](../next_core_tasks_v3.md#m9) and moved into steps 5 and 8 of
 [section M11](../next_core_tasks_v3.md#m11): with a repetition in the explicit `var` of a method the working
-frontend silently reads the first occurrence; the clean graph does not write the place on a repetition at the root,
-selects the first occurrence by a bare path and does not build the path with the index of an occurrence. The root of
-a unit is launched as a Structure over itself, and an access without an index to a variable declared twice in it is
-refused (the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6 and Р11).
+frontend silently reads the first occurrence; the clean graph did not write the place on a repetition at the root, and
+until slice 355 it selected the first occurrence by a bare path and did not build the path with the index of an
+occurrence (the last two were removed by slice 355, sub-step 5а). The root of a unit is launched as a Structure over itself, and an access without an index to a variable declared twice in it
+is refused (the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6 and Р11).
 
 [Slice 353](../steps/witnesses/call-receivers-20261111/notes.md) executed in the clean graph the author's decision
 of 2026-11-11 on launching code over data ([journal](../LMX_blog/2026-11-11.md#call-receivers); the book --
@@ -488,8 +489,9 @@ withdrew that reading as a norm: a computed initial value is executed on its own
 in the role of data nothing is executed -- a declaration in data with a computed initial value creates a place without
 a value, while a literal is a value of the data and stands in the place from the start. By the answer Р14 (item В9)
 this concerns data supplied to a launch separately and the root of a unit; the own data of a callable are still
-executed at entry -- the contract of a method. The clean graph
-executes the former reading; the change is step 5a of [section M11 of the plan](../next_core_tasks_v3.md#m11).
+executed at entry -- the contract of a method. The clean graph executed the former reading until slice 355; since slice
+355 it does not execute a computed declaration of the data supplied to a launch -- sub-step 5а of
+[section M11 of the plan](../next_core_tasks_v3.md#m11).
 
 The checks of slice 353: the fixtures of `tests/graph` -- `call_receivers` (the six forms, `fncall` as a statement,
 the receivers in the body of a method, the parts of a method one by one, a `sub` by its parts, a composition of the
@@ -533,19 +535,25 @@ in the three modes; `bootstrap quick` -- 0 failures, G1 and G2 built and tested;
 frontend -- `SUITE 162 rows, 0 failures`, 1240 `PASS`. The mutant "the former word `var` accepted" fails 3 rows of 3,
 the mutant "the former order of the arguments" fails 4 of 4; in both lists every row is refused in all three modes. The
 working frontend and its fixtures (`tests/dyn`, `tests/os_twins`) read the former `var`, `body` and `call: code data`
--- step 8; the clean graph still declares a Structure when the traversal of the root reaches it, binds an atom at the
-moment the declaration is executed and replaces the content on a repetition -- step 5.
+-- step 8; the clean graph still declares a Structure when the traversal of the root reaches it -- step 5 --, while the
+binding of an atom at the moment the declaration is executed and the replacement of the content on a repetition were
+removed by slice 355 (sub-step 5а).
 
 The author's decision of 2026-11-11 on the roles `data` and `code` ([journal](../LMX_blog/2026-11-11.md#data-code-roles);
 the book -- [the roles `data` and `code`](LMX_semantics.en.md#data-code-roles);
-[section M11 of the plan](../next_core_tasks_v3.md#m11)) is executed by the clean graph so far only in the names and
-the order (slice 354, step 4 of section M11): the parts of a callable are called `data` and `code`, the two-argument
-`call` is `call: data code`. The rest is executed by no path of translation yet, and the working frontend reads not
+[section M11 of the plan](../next_core_tasks_v3.md#m11)) is executed by the clean graph so far only in part: the
+names and the order (slice 354, step 4 of section M11) -- the parts of a callable are called `data` and `code`, the
+two-argument `call` is `call: data code`; sub-step 5а (slice 355) -- data is read as a whole, the registry of data, an
+atom-pointer with no expansion, a repeated declaration does not replace the former one, visibility in data in both
+directions; the first part of sub-step 5б (slice 356) -- the launch of a Structure by name and the named supply of the
+arguments of `call` and `fncall`. The rest is executed by no path of translation yet, and the working frontend reads not
 even this. For the clean graph the decision means the following. Data is read as a whole before the code, and the registry of its root forms -- the
 declarations of Structures by their heads and the declarations by receivers of places by the declared names -- is
 known before the first statement of the code; a traversal of code declares nothing but callables. In code every
 form is a call: a declaration by a receiver is a type check with an assignment into a place of the data, a
-structural form is a call of its head and an error when there is no such method. A repeated declaration in data is
+structural form is a call of its head: of a callable, a method call; of an ordinary Structure, its launch by name
+([journal](../LMX_blog/2026-11-11.md#structure-call-by-name)); it is an error when the head names neither a callable nor
+a Structure. A repeated declaration in data is
 one more occurrence of the name: it neither replaces the former one nor writes into it, and after it the name is
 addressed only with the index of an occurrence. The left side of `:=` is a place of a primitive or a pointer
 variable: the names of Structures and functions are not assigned. The arguments of calls and receivers are read as
@@ -560,9 +568,9 @@ pass when the graph is built; calls of the
 admission at run time stay only for the cases of the
 [document](../steps/implements-runtime-cases-20261111.md). The clean graph does otherwise now: it declares a
 Structure where the traversal of the root reaches the form (`lmx_graph_space_reach`, `lmx_graph_root_declares`,
-`lmx_graph_root_declare`), replaces the content on a repeated declaration, gives the name of a form
-`Name: merge(...)` the result, accepts the formal `Point: p` and the parts of a receiver given by head (§3.4), and
-admits every call at run time (`lmx_graph_bind_call`, `lmx_graph_admit`). The decision makes the choice between a
+`lmx_graph_root_declare`), gives the name of a form `Name: merge(...)` the result, accepts the formal `Point: p` and the
+parts of a receiver given by head (§3.4), and admits every call at run time (`lmx_graph_bind_call`, `lmx_graph_admit`).
+The decision makes the choice between a
 call, a declaration of a Structure and an assignment by the head and the tail of a form unnecessary -- the role
 gives it; removing these branches is step 6 of section M11.
 
@@ -580,17 +588,51 @@ slot of the atom is rewritten by index (`Struct1[0] := …`), and a mutable refe
 (`Model: @: ptr knownModel`). The dump prints the tree -- the atom, not the referent (the executor's reading --
 [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р2). Visibility in data runs in both directions, and
 references by name that close into a cycle are no error. The data stands before the code in every form: the
-two-argument launch is `call: data code`. A Structure launched over itself -- `call(code)` and the root of a unit --
-has no rules of its own: its forms are read in both roles by the general rules, and an uncertainty is an error; a
-structural form that execution has reached is an error without a method named by its head, a data block inside an
-executed Structure is such a call too, and so declarations of Structures are written in data, and data and code
-apart (the executor's reading -- the same answers, part Р). Here too the clean graph does otherwise now: it binds an
-atom of the tail at the moment the declaration is executed -- only to what is declared above --, puts the address
-of the named Structure into the slot and prints it in the dump as a nested Structure; it opens a name of the root
-from its field on (§5.2); a form of an ordinary Structure in the executed root it neither calls nor refuses but
-declares where the traversal reaches it (§6.1), and the child block `data` of an executed Structure it skips. The rest
-of the execution is step 5 of section M11 (the names and the order of `call` are executed by step 4), in the working
-frontend step 8.
+two-argument launch is `call: data code`. A Structure launched over itself -- `call(code)` and the root of
+a unit -- has no rules of its own: its forms are read in both roles by the general rules, and an uncertainty is an
+error; a structural form that execution has reached is an error when its head names neither a callable nor a
+Structure; a data block inside an executed Structure is the same kind of form, a call with its own tail in the place of
+the argument (the paragraphs below), and so declarations of Structures are written in data, and data and code apart (the
+executor's reading -- the same answers, part Р). Here too the clean graph does otherwise now: a form of an ordinary
+Structure in the executed root it neither launches by name (the paragraphs below) nor refuses but declares where the
+traversal reaches it (§6.1), and the child block `data` of an executed Structure it skips. The rest of the execution is
+step 5 of section M11 (the names and the order of `call` are executed by step 4, sub-step 5а by slice 355, the first
+part of sub-step 5б by slice 356; sub-step 5в and the remainders of sub-steps 5б, 5г, 5д and 5е remain), in the working frontend step 8.
+
+The author's decision of 2026-11-11 on launching a Structure by name
+([journal](../LMX_blog/2026-11-11.md#structure-call-by-name); the executor's reading --
+[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р21) changed this norm for a form whose head is an ordinary
+Structure (before the decision such a form was refused in code, and an ordinary Structure was executed only by the
+receiver `call`). In code such a form launches that Structure: `S()` is the same as `call(S, S)` (the Structure over
+itself), `S(D)` is the same as `call(D, S)` (the Structure over the given data `D`); so are the short form `S: D` and the
+block form. It is a launch form of its own, not a form of a receiver: the receivers `call` and `fncall` remain the general
+mechanism ([the receivers `call` and `fncall`](LMX_semantics.en.md#call-receivers)), the formals are supplied by the
+receiver `call`, and there is no launch form of a Structure with an argument `args`. The form has one argument and it is
+named `data` -- by the same name by which executed code names the data of its launch
+([the special name `data`](LMX_semantics.en.md#ordinary-var)); it is supplied by position or by name, `S(D)` and
+`S(data := D)` are one form, just as with the receivers, whose arguments are named and are supplied by position or by
+name (`call(data := D; code := C)`); another name of the argument and two or more positional arguments are an error; the
+argument `data` must give a Structure (a name, a path, a reference place, an unnamed Structure written in parentheses),
+anything else is an error. The head is a place with a reference: what the reference points at is called -- a callable or
+a Structure; a number place, an empty reference and an unknown name are an error. In data nothing changes: `S()` still
+declares an empty Structure `S`, and `S(D)` a Structure `S` with an atom `D`; nothing is called.
+
+In the root of a unit and in a Structure launched over itself every form is read in both roles, so `S()` there is at once
+a declaration of one more `S` and a call: if `S` is declared in the same Structure, the name has two occurrences, without
+an index it answers nothing, and the call is refused; if `S` is declared outside, the form declares its own empty `S`, and
+that one is launched, not the outer one; there is no rule of its own for this, and the receiver `call` launches the same
+Structure there. A declaration of a Structure among executed forms is still, as a rule, an error, but for another reason:
+in code such a form is a call of the declared Structure with its own tail in the place of the argument, and two or more
+fields in the tail are not a defined number of arguments (the argument is one, `data`); one field is the data of the
+launch and must give a Structure. Degenerate forms are not refused: an empty tail, a single atom that names a Structure,
+a single unnamed Structure in parentheses. Declarations of Structures are still written in data. `data()` in code is a
+launch of the data of the current launch over itself. Since slice 356 the clean graph executes the launch of a Structure
+by name in the code of a method and in code over given data -- `S()`, `S(D)`, `S(data := D)` -- and a form whose head is
+a place holding a reference to an ordinary Structure everywhere, the root of a unit included, as well as the named
+supply of the arguments of `call` and `fncall` (the first part of sub-step 5б); in the root of a unit and in a Structure
+over itself it does not yet execute the role of code of a form with an ordinary Structure as its head by name
+(sub-step 5г of [section M11 of the plan](../next_core_tasks_v3.md#m11)), and what the clean graph answers is told above
+and in §6.1. The working frontend reads the former names and order and does not execute the launch by name (step 8).
 
 <a id="principles"></a>
 ## 1. Principles (norm)
@@ -843,10 +885,15 @@ address → name row for this Lmx's address is the string `head`) whose fields a
 2026-11-09: «объявление fn в дереве это именованная структура (fn ее название) с аргументами»,
 [journal](../LMX_blog/2026-11-09.md)); what a form is, is decided by the consumer during its traversal, not by the
 builder: by the norm -- the role of the Structure in the launch (in data a form declares -- a place when its head is a
-receiver of a place, otherwise a Structure; in code it is a call of its head -- the author's decision of 2026-11-11,
-[book](LMX_semantics.en.md#data-code-roles)) and the general resolution of a head in code -- a receiver of the language
-or a callable (§3.5); the clean graph now decides it by the head alone -- a receiver of the language, a callable, a
-place or a new name (§6.1). An operation written as
+receiver of a place, otherwise a Structure; in code it is a call of its head -- of a callable or, by the author's decision
+of 2026-11-11, of an ordinary Structure, which it launches by name: [book](LMX_semantics.en.md#data-code-roles),
+[journal](../LMX_blog/2026-11-11.md#structure-call-by-name)) and the general resolution of a head in code -- a receiver
+of the language, a callable or an ordinary Structure (§3.5); the clean graph now decides it by the head alone -- a
+receiver of the language, a callable, a place or a new name (§6.1); since slice 356 it launches a Structure by name in
+the code of a method and in code over given data, and a form whose head is a place holding a reference to an ordinary
+Structure everywhere, the root of a unit included, but in the root of a unit and in a Structure over itself it does not
+yet execute the role of code of a form with an ordinary Structure as its head by name (sub-step 5г of
+[section M11 of the plan](../next_core_tasks_v3.md#m11)). An operation written as
 a Frame (`-(2 + 3)`, `\(p)`) stays an operation, as in any expression: the operator word in field 0 and the operands,
 with no name; so do `x + 1`, a path and `:=`; an anonymous Structure gets no name. A nested Structure of a body is a
 child Lmx with `parent` on the containing one. A Frame written on a path head, `owner\field: actuals`, is the unnamed
@@ -871,7 +918,7 @@ body three. The author's decision of 2026-11-11 calls the part `data` (formerly 
 `body`), and writes a formal with a Structure requirement `@: p Point`: a form `Point: p` in the description of the
 formals would declare a Structure and is forbidden ([book](LMX_semantics.en.md#data-code-roles)); since slice 354 the
 clean graph reads the names `data` and `code` (it does not accept the former `var`, `body`), but it still reads a formal
-with a Structure requirement in the former form `Point: p` (steps 4 and 5e of
+with a Structure requirement in the former form `Point: p` (steps 4 and 5е of
 [section M11 of the plan](../next_core_tasks_v3.md#m11)). `sub: … end: sub` is the Lmx `sub` with the arguments
 `name`, `args`, `data` (when written) and `code`; `fm` is not executed by this slice and refuses explicitly. The
 declaration stays in the graph as written: the builder neither
@@ -984,8 +1031,8 @@ position. No field-origin marker is needed. By the author's decision of 2026-11-
 name declared by a form of the data is available both to the code over it and to its other forms, wherever the line
 of the declaration stands; a name being available does not mean its value is already computed
 ([book](LMX_semantics.en.md#declaration-visibility)). For the data supplied to a launch the clean graph executes
-this since slice 353 (`call_data_whole`), for the root of a unit not yet: it opens a name of the root from its field on
-(§5.2; step 5 of [section M11 of the plan](../next_core_tasks_v3.md#m11)).
+this since slice 353 (`call_data_whole`), for the root of a unit since slice 355: the places and Structures of the root
+answer above and below their line (§5.2; sub-step 5а of [section M11 of the plan](../next_core_tasks_v3.md#m11)).
 By the author's direction of 2026-11-09 the completion of `data` is the same
 whatever the origin of the structure, so one constructor of F does it when the receiver is applied in each traversal
 (§3.4), not the builder; the consumer collects methods and inputs in a separate pass of its traversal, with its own
@@ -1002,9 +1049,10 @@ references in slots are only the real links of the language: the value of `@: p 
 address written by the program -- not a hidden outcome of resolution. A mention of a known Structure -- in the tail of
 a declaration, in the arguments of a call -- is likewise expanded neither by the parser nor by the builder: an atom
 (in the graph, a word primitive) stands in the tree, a pointer to it, and it begins to refer to it at interpretation
-and translation (the author's answer of 2026-11-11, [book](LMX_semantics.en.md#colon-declares)); the clean graph still
-writes the address of the named Structure into the slot of such an atom when the declaration is executed (slice 346;
-step 5 of [section M11 of the plan](../next_core_tasks_v3.md#m11)). The working values of different recursive
+and translation (the author's answer of 2026-11-11, [book](LMX_semantics.en.md#colon-declares)); the clean graph
+executes this since slice 355: when the declaration is executed it does not rewrite the slot of such an atom, and the
+name of the atom is looked up when a path is read through it (sub-step 5а of
+[section M11 of the plan](../next_core_tasks_v3.md#m11)). The working values of different recursive
 activations each live in their own frame and are not read from the shared formal or its default. The translator resolves
 the same words during its translation with its own tables and emits native by the addresses found (§7); a change of code
 resets such native (§6.5). Verifiability: after construction the P0 tree is absent (its arenas are released), and the next
@@ -1052,9 +1100,11 @@ name in field order, and `named_field(lmx, name, N)` counts occurrences in field
 neither replaces the former one nor writes into it: every occurrence is its own Lmx or cell with its own table row. In
 **code** a repeated declaration by a receiver creates no second field -- it is a type check with an assignment into the
 same place --, and a structural form there is a call of its head. This paragraph used to say otherwise: data never has
-several same-named fields, and repeated definitions of one head are allowed in code. The clean graph still selects the
-first occurrence by a bare path and builds no path with the index of an occurrence (step 5 of
-[section M11 of the plan](../next_core_tasks_v3.md#m11)). The name table does not change the semantics of repeated
+several same-named fields, and repeated definitions of one head are allowed in code. The clean graph executes the rule
+of occurrences since slice 355: a name with two or more occurrences answers nothing without an index, and a path with
+the index selects the occurrence; in a path, a form whose head is the name of a place of the same level is not yet
+counted as an occurrence (sub-steps 5а and 5д of [section M11 of the plan](../next_core_tasks_v3.md#m11)).
+The name table does not change the semantics of repeated
 declarations or its narrow pause (REPEATED-DECL-OTHER-KINDS). This is the only structure of names; there is no
 `LmxSourceName (key, port) → code`, no "place tables", no ordinal numbers of names.
 
@@ -1073,14 +1123,12 @@ author as the means of learning a name, a type and a string; they are not mixed 
 **What a traversal has (decision, open list):** the interpreter -- activation frames and their working values, the
 traversal's namespace (rows "block, name, value": the Structures the receivers of `fn`/`sub` declarations create on
 entering their block, §3.4 -- in the whole block, and those an application of the receiver to computed arguments creates
--- from its Frame on (`lmx_graph_fn_apply`); the places and named Structures of the root -- from their field on, when
-the traversal has reached it (`lmx_graph_space_reach`): today an ordinary field is visible forward from its declaration,
-at the root of a file too, and a cell allocated before the traversal does not open its name to an earlier statement
-(the former rule of the book; the visibility from the first line belongs to the completed `data` of a method; by the
-author's decision of 2026-11-11 visibility in data runs in both directions --
-[the book](LMX_semantics.en.md#declaration-visibility), executed by step 5 of
-[section M11 of the plan](../next_core_tasks_v3.md#m11)); the places published on the way; made empty on entering the
-traversal and freed on leaving it,
+-- from its Frame on (`lmx_graph_fn_apply`); the places and Structures of the root are not in the namespace: they answer
+above and below their line (the author's decision of 2026-11-11 on visibility in data in both directions --
+[the book](LMX_semantics.en.md#declaration-visibility); the clean graph executes it since slice 355, sub-step 5а of
+[section M11 of the plan](../next_core_tasks_v3.md#m11)), and the form of the root is declared, when the traversal has
+reached it, by `lmx_graph_space_reach`; the places published on the way; made empty on entering the traversal and freed
+on leaving it,
 `lmx_graph_space_*`; a name is resolved for the current activation and the selected `code`/`data` by it and by the
 frames, §3.5), working `implements` maps for the given reception; the collector -- the liveness map by
 regions for the pass; the builder -- the source → copy map of one `merge`/copy, the parse tree and the parsing arenas; the
@@ -1111,17 +1159,24 @@ head's role is told by the address of its canonical string: a language word (`if
 call ([L2 §11](L2_spec_en.md#call)); a data place → a value. A field of the root whose name is no word of the language,
 no receiver and answers no callable is read when the traversal reaches it (`lmx_graph_root_declares`), not ahead, and by
 its head, not by the form of its tail: it is a declaration of a Structure -- the first when the name answers nothing
-now, a repeated one when it answers a Structure -- or, for the name of a known place that is no Structure, a refusal
-(8); no form with a colon defines or writes a value (`x: 4` with an unknown `x` is a Structure `x` with the number
-inside, `r: h(3)` a Structure `r` with the kept call). This is the current reading of the clean graph, not the norm of
+now, a repeated one when it answers a Structure -- or, for the name of a known place that is no Structure, the launch of
+the ordinary Structure the place refers to (a form whose head is a place is never a declaration), or a refusal (8) when
+the place refers to neither a callable nor a Structure; no form with a colon defines or writes a value (`x: 4` with an
+unknown `x` is a Structure `x` with the number inside, `r: h(3)` a Structure `r` with the kept call). This is the
+current reading of the clean graph, not the norm of
 2026-11-11: by that norm the root of a unit is launched as a Structure over itself and has no rules of its own -- a
-form is read in both roles, declares in data and calls its head in code, and a structural form that execution has
-reached is an error without a method named by its head, while declarations of Structures are written in data (the
-author's answer to P7, [book](LMX_semantics.en.md#data-code-roles); the executor's reading --
-[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6 and Р7; step 5 of
-[section M11 of the plan](../next_core_tasks_v3.md#m11)). Separately represented expressions keep their general form: an operation is
-an unnamed Lmx (the operator word and the operands, an operation written as a Frame included, §3.3), a path, `:=`. A bare
-atom does not call ([READ.ME](../READ.ME)); an ordinary Structure is executed through `call`. An expression `a op b` is
+form is read in both roles, declares in data and calls its head in code (a callable by a method call, an ordinary
+Structure by a launch by name: `S()` is `call(S, S)`, `S(D)` is `call(D, S)`), and a structural form that execution has
+reached is an error when its head names neither a callable nor a Structure, while declarations of Structures are written
+in data (the author's answer to P7, [book](LMX_semantics.en.md#data-code-roles); the decision on launching by name --
+[journal](../LMX_blog/2026-11-11.md#structure-call-by-name); the executor's reading --
+[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6, Р7 and Р21; step 5 of
+[section M11 of the plan](../next_core_tasks_v3.md#m11), the launch by name in the root of a unit and in a Structure over itself is its sub-step 5г).
+Separately represented expressions keep their general form: an operation is an unnamed Lmx (the operator word and the operands, an operation
+written as a Frame included, §3.3), a path, `:=`. A bare atom does not call ([READ.ME](../READ.ME)); an ordinary
+Structure is executed by the receiver `call` or, in code, by a launch by name -- `S()`, `S(D)` (since slice 356 the
+clean graph executes a launch by name too -- in the code of a method and in code over given data; in the root of a unit
+and in a Structure over itself not yet). An expression `a op b` is
 three fields; the operands are evaluated recursively: a number primitive -- the value of the cell of its type, a nested
 Lmx -- the result of its traversal, a name -- reading the cell of the place found, by its type (an `uninit:T` value -- by
 the general admission, §3.2). No pre-translation of a body into operation frames: today's `LMX_WALK_OP_*`
@@ -1218,7 +1273,9 @@ into and the Lmx that slot belongs to. An **executed Lmx** is one that execution
 `fn`/`sub`/method with its parts `args`, `return`, `code` (formerly `body`; the callable's own fields are the part
 `data`, formerly `var`, §3.4); an ordinary executed Structure without `fn` parts -- the
 Message root with statements, a Structure executed through `call: data code` or `call: code code` ([L2
-§11](L2_spec_en.md#call)); a statement inside them; a declaration statement not yet executed (§3.4). A slot belongs to
+§11](L2_spec_en.md#call)) or, in code, by a launch by name (`S()`, `S(D)`;
+[journal](../LMX_blog/2026-11-11.md#structure-call-by-name)); a statement inside them; a declaration statement not yet
+executed (§3.4). A slot belongs to
 **code** if execution reads its content as a part of a statement of an executed Lmx -- the head, a word, a literal, an
 operand, a nested statement; then the code itself changes, and the `native` of that Lmx and of every callable whose code
 contains or refers to it are reset. A slot belongs to **data** if it is the place of a value the executed code reads: a
@@ -1319,13 +1376,16 @@ it mixes forms of data and of code: the block `Point: … end: Point` is a form 
 Structure; `fn: take … end: take` is the declaration of a callable, which acts in both roles; `int: r take(Point, 1)`
 is a declaration by a receiver with a computed value: in data it declares the place `r`, in code it is a type check
 with an assignment. The root of a unit is launched as a Structure over itself, so by the norm the block `Point`, when
-execution reaches it, is a call of `Point` and an error without such a method: the declaration of `Point` is written
-in data (the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6 and Р7). A formal with
+execution reaches it, is read in code as a call of the declared `Point` with its own tail in the place of the argument,
+and the two fields of the tail (`int: y 0` and `int: x 0`) are not a defined number of arguments, since the argument of
+the form is one, `data`: that is an error, and the declaration of `Point` is written in data (the executor's reading --
+[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6, Р7 and Р21; the decision --
+[journal](../LMX_blog/2026-11-11.md#structure-call-by-name)). A formal with
 a Structure requirement is written `@: p Point`, not `Point: p`, the parts `var` and `body` are called `data` and
 `code`, and the admission `implements` is performed once, when the graph is built
-([book](LMX_semantics.en.md#data-code-roles)). Of these rules the clean graph executes so far only the names of the
-parts, `data` and `code` (slice 354); the others it does not execute yet, and the description below is its current
-behaviour; the example is translated together with steps 5 and 8 of
+([book](LMX_semantics.en.md#data-code-roles)). Of these rules the clean graph executes the names of the parts, `data`
+and `code` (slice 354), sub-step 5а (slice 355) and the first part of sub-step 5б (slice 356); the others it does not
+execute yet, and the description below is its current behaviour; the example is translated together with steps 5 and 8 of
 [section M11 of the plan](../next_core_tasks_v3.md#m11).
 
 **The graph after construction, before execution.** The unit's root is an `lmx:data` Lmx with three slots. Slot 0 → the
@@ -1355,9 +1415,9 @@ themselves; no row `r` yet. `toLmx` prints the same program by the names of the 
 applied to the arguments of the declaration in slot 1: F is created -- an Lmx in `lmx:result` with `parent` on the
 declaration, named `take` (the table row for F's address), with the reference fields `args` and `code` onto the
 declaration's parts, an own word cell `return` and a new empty `data` (the body has no own fields); the namespace gets
-the row "root, `take`, F". Then the interpreter walks the root by slots; slot 0 is the named Structure `Point`: from
-this field on it answers its name (the row "root, `Point`, the Lmx `Point`", `lmx_graph_space_reach`, §5.2); slot 1 is
-the declaration, its F already created; slot 2 is a Frame `int` → a declaration with a computed
+the row "root, `take`, F". Then the interpreter walks the root by slots; slot 0 is the named Structure `Point`: the
+traversal reads it as a declaration (`lmx_graph_space_reach`), and it answers its name above and below its line (§5.2);
+slot 1 is the declaration, its F already created; slot 2 is a Frame `int` → a declaration with a computed
 initializer; the call Lmx: the name `take` is resolved by the traversal's namespace into F → a call; an activation in a
 C frame; the frame's argument places receive their first assignment: the word `Point` is resolved into the Lmx `Point`,
 `p` receives its address by `implements` (the used field `y`; the correspondence map is data of this reception, §5.2),

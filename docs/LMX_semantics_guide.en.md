@@ -88,7 +88,7 @@ declares a Structure `ms` with a field `time`, not a place `ms`.
 <a id="callable-admission"></a>
 ## What the callable interface check proves
 
-Methods with formals `(x; y = 5)` and `(x)` both accept `f(1)`, but a
+Methods with formals `(int: x; int: y 5)` and `(int: x)` both accept `f(1)`, but a
 Consumer's written call `f(1; y := 25)` accepts only the former. Admission
 checks required explicitly used accesses, not equality of formal lists or
 predicted body behavior. User-authored behavioral tests are a separate stage.
@@ -123,9 +123,15 @@ the compatible ABI is not fully implemented yet.
 `@: add5 makeAdder(5)` **calls** the factory and stores the returned
 method. `add5(1)` then calls it through the stored pointer. A data form
 `add5: makeAdder 5` merely declares a Structure `add5` and does not run the factory;
-among executed forms the same form is a call of its head `add5`. If the returned method reads
-free `n`, the caller's dynamic input takes precedence over a copied lexical
-fallback.
+among executed forms the same form is a call of its head `add5`: a callable (a
+method or a pointer to one) is called, while an ordinary Structure is launched
+over the data after the colon; the form has one argument, `data`, so for a
+Structure `add5` the two fields `makeAdder` and `5` are an error
+([journal](../LMX_blog/2026-11-11.md#structure-call-by-name); the executor's
+reading in [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р21,
+items 4 and 6). If the returned
+method reads free `n`, the caller's dynamic input takes precedence over a copied
+lexical fallback.
 
 <a id="dynamic-fallback"></a>
 ## Dynamic and lexical sources

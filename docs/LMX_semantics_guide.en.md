@@ -12,16 +12,18 @@ fn: add (int: x; int: y) int ()
 end: add
 
 fn: add5 (int: x) int ()
-    merge(int: y 5; add\code)
+    merge((int: y 5); add\code)
 end: add5
 ```
 
 `add` stores `args` with formals `x` and `y`, `return`, `data`, and `code`
 with the `return: x + y` statement as separate parts. The `add\code` path
 selects the `code` part itself. `merge` builds an `add5` body containing `int: y 5`
-and that statement; `add5(1)` gives 6. The `add5` header declares only
-formal `x`: the field `y` in its new body becomes neither a formal nor a
-formal default. `merge(add; int: y 5)` is not equivalent: the outer `add`
+and that statement; `add5(1)` gives 6. The operand `(int: y 5)` is written in
+parentheses: the list of arguments is read as code, and a bare `int: y 5` in it
+would be a call of the receiver, not a field of the operand. The `add5` header
+declares only formal `x`: the field `y` in its new body becomes neither a
+formal nor a formal default. `merge(add; (int: y 5))` is not equivalent: the outer `add`
 method Structure has `args`, `return`, `data`, and `code` parts, but no
 immediate `y` field.
 
@@ -38,7 +40,7 @@ A third, alternative definition changes `args` instead: here `y` is a
 formal with default 5, not a body or `data` field:
 
 ```lmx
-fn: add5 merge(add\args; int: y 5) int ()
+fn: add5 merge(add\args; (int: y 5)) int ()
     add\code
 end: add5
 ```
@@ -80,7 +82,7 @@ only checks the requirement (in data a repeated form is one more occurrence
 of the name, [names and paths](LMX_semantics.en.md#fields)). The composed forms with the place in the outer head —
 `x: int()`, `x: int: 5`, `ptr: @()`, `ptr: @: 0`, `ptr: @: Model` — are
 withdrawn by the author's decision of 2026-11-10
-([semantics](LMX_semantics.en.md#receiver-args-only)): `ms: int: time`
+([semantics](LMX_semantics.en.md#receiver-args-only)): in data `ms: int: time`
 declares a Structure `ms` with a field `time`, not a place `ms`.
 
 <a id="callable-admission"></a>

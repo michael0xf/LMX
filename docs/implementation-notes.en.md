@@ -162,9 +162,12 @@ obligations require. The admission `implements` is performed once -- when the
 clean graph is built -- and after the construction it is needed only where the
 candidate is selected while the program runs (the author's decision of
 2026-11-11, [book](LMX_semantics.en.md#data-code-roles)); an assignment of
-primitives is not checked for admissibility at run time. There the actual
-value is admitted by the common runtime mechanism when the call or assignment
-is reached, without a body or future-branch preflight. At present the
+primitives is not checked for admissibility at run time (the rule speaks of
+the admission `implements`, not of conversion: the range check on receiving a
+number of another type, `u16(256)` into `u8`, remains at run time). For a
+candidate selected while the program runs, the actual value is admitted by the
+common runtime mechanism when the call or assignment is reached, without a
+body or future-branch preflight. At present the
 admission at construction is not yet performed: the clean graph admits each
 call at run time -- step 7 of [M11](../next_core_tasks_v3.md#m11).
 See [correspondence stability](LMX_semantics.en.md#correspondence-stability)

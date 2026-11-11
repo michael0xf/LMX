@@ -182,8 +182,8 @@ requirement with a candidate. The requirement and the candidate are written
 flat, in three fields: `@: ptr Model Other`, and `@: ptr Model 0` for a
 null address. The composed form with the
 place in the outer head (`i: int: 5`, `i: int()`, `ptr: @()`, `ptr: @: 0`,
-`ptr: @: Model: 0`), which N1–N6 retained, is withdrawn: `ms: int: time` is
-a Structure `ms` with a field `time`, not a place `ms`. No translation path
+`ptr: @: Model: 0`), which N1–N6 retained, is withdrawn: `ms: int: time` in
+data is a Structure `ms` with a field `time`, not a place `ms`. No translation path
 reads the composed form as a declaration of a place any more, and the
 project's sources and fixtures do not write it
 ([plan M9](next_core_tasks_v3.md#m9)).
@@ -211,7 +211,9 @@ the clean graph is built; after that it is needed only where the candidate
 is selected while the program runs
 ([cases](steps/implements-runtime-cases-20261111.md)), and an assignment of
 primitives is not checked for admissibility at run time (the author's
-decision of 2026-11-11). The accepted address map
+decision of 2026-11-11; the rule speaks of the admission `implements`, not
+of conversion: the range check on receiving a number of another type,
+`u16(256)` into `u8`, remains at run time). The accepted address map
 must apply to reads, writes, captures, and merge. User-authored behavioral
 tests are separate; no system re-runs every possible test after each
 mutation. Failed admission must not partly write the destination. See
@@ -357,8 +359,10 @@ Structures. The receivers `fncall(args data return code)`,
 `call(data code)` and `call(code)` receive the parts of a launch explicitly:
 an addition to the existing mechanisms, neither a declaration nor the
 ordinary call -- `fn`, `sub` and `catch` are declared and called as before,
-and the interpreter launches them through this same open mechanism, which
-can call any composition of Structures. `fn`, `sub` and `catch` differ from
+and the interpreter launches them through this same open mechanism (the clean
+graph does not execute `catch` yet: that is the present state of the
+implementation, not the norm), which can call any composition of Structures.
+`fn`, `sub` and `catch` differ from
 an ordinary Structure in completing their `data` when the graph is built;
 data is read as a whole, so a name used above the line of its declaration
 reads the same place. The clean graph -- its interpreter and the `native` it
@@ -372,7 +376,11 @@ its fixtures still read the former order (step 8).
 
 The author's decision of 2026-11-11 on the roles `data` and `code`
 ([the roles `data` and `code`](docs/LMX_semantics.en.md#data-code-roles))
-narrows the rules above; it changes and extends none of them. A Structure
+narrows the rules above; it changes and extends none of them (except the
+change of the spellings `var` → `data` and `body` → `code`, of the order
+`call: data code` and of the moment of the admission `implements`;
+[journal](LMX_blog/2026-11-11.md#data-code-roles),
+[order](LMX_blog/2026-11-11.md#data-before-code)). A Structure
 takes part in a launch as data or as code -- the launch gives the role, not
 the Structure itself --, and a written form is read by
 that role. In data a structural form declares a Structure, whatever its
@@ -387,7 +395,10 @@ every form is a call: a declaration by a receiver
 is a type check with an assignment, `Model: KnownStruct` is a call of
 `Model` and an error without such a method; code declares no Structure,
 while the declarations of `fn`, `sub` and `catch` stay, and a callable
-declared in data is called directly by its name. Only values are
+declared in data is called directly by its name. An unnamed Structure
+in code is not a call: `(a b c) := myFn()` is a group assignment
+([book](docs/LMX_semantics.en.md#data-code-roles),
+[journal](LMX_blog/2026-11-11.md#unnamed-structure-not-call)). Only values are
 assigned -- primitives and pointers to Structures and to functions:
 `Model := KnownStruct3` is an error, a pointer variable is declared by
 `@: ptr KnownStruct`. Arguments of calls and of receivers are read by one

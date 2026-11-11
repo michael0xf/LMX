@@ -12,16 +12,18 @@ fn: add (int: x; int: y) int ()
 end: add
 
 fn: add5 (int: x) int ()
-    merge(int: y 5; add\code)
+    merge((int: y 5); add\code)
 end: add5
 ```
 
 У `add` отдельно хранятся `args` с формалами `x` и `y`, `return`, `data` и
 `code` с оператором `return: x + y`. Путь `add\code` выбирает именно часть `code`.
 `merge` строит для `add5` тело с `int: y 5` и этим оператором; `add5(1)` даёт 6.
+Операнд `(int: y 5)` записан в скобках: список аргументов читается как код, и
+голое `int: y 5` в нём было бы вызовом ресивера, а не полем операнда.
 Заголовок `add5` объявляет только формал `x`: поле `y` нового тела не
 становится формалом или значением формала по умолчанию. Запись
-`merge(add; int: y 5)` не равнозначна: у внешней Structure метода `add` есть
+`merge(add; (int: y 5))` не равнозначна: у внешней Structure метода `add` есть
 части `args`, `return`, `data` и `code`, но нет непосредственного поля `y`.
 
 Другой вариант `add5` помещает инициализацию в явную `data`, сохраняя тело `add`:
@@ -36,7 +38,7 @@ end: add5
 с умолчанием 5, а не поле тела или `data`:
 
 ```lmx
-fn: add5 merge(add\args; int: y 5) int ()
+fn: add5 merge(add\args; (int: y 5)) int ()
     add\code
 end: add5
 ```
@@ -78,7 +80,8 @@ int: x 5       # int со значением 5
 [имена и пути](LMX_semantics.ru.md#fields)). Составные записи с местом во внешней голове — `x: int()`,
 `x: int: 5`, `ptr: @()`, `ptr: @: 0`, `ptr: @: Model` — сняты решением
 автора 2026-11-10 ([семантика](LMX_semantics.ru.md#receiver-args-only)):
-`ms: int: time` объявляет Structure `ms` с полем `time`, а не место `ms`.
+`ms: int: time` в данных объявляет Structure `ms` с полем `time`, а не место
+`ms`.
 
 <a id="callable-admission"></a>
 ## Что проверяет интерфейс вызываемого

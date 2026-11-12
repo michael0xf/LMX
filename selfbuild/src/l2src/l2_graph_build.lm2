@@ -638,6 +638,93 @@ fn: lm_graph_build_int_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
     return: cell
 end: lm_graph_build_int_place
 
+# ---- What construction refuses (answer 2) ---------------------------------------------------------------------------
+
+# The canonical word of a written name: an exact identifier in backquotes is the name it quotes (the grammar: `x` and x
+# are one name), so the reserved word and the targets of a closing compare names, not spellings. 0 for no text.
+fn: lm_graph_p0_name_word (@: text c.LmP0Text) @: char
+    const: @: bytes char 0
+    size_t: size 0U
+    if: text = 0
+        return: 0
+    bytes := lm_graph_p0_data(text)
+    size := lm_graph_p0_length(text)
+    if: bytes = 0
+        return: 0
+    if: size >= 2U && bytes[0] = 96 && bytes[size - 1U] = 96
+        return: c.lmx_graph_intern(bytes + 1U, size - 2U)
+    return: c.lmx_graph_intern(bytes, size)
+end: lm_graph_p0_name_word
+
+# The first written field of a Frame's body when it is an atom -- the name position of a declaration -- or 0.
+fn: lm_graph_first_atom (@: fr c.LmP0Frame) @: c.LmP0Text
+    @: field c.LmP0Field 0
+    if: fr = 0 || fr\body = 0
+        return: 0
+    field := lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(fr)))
+    if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    return: lm_graph_p0_atom(lm_graph_p0_value(field))
+end: lm_graph_first_atom
+
+# Does construction admit the written Frame? The rules of closing are those the working frontend checks
+# (l2_frontend_emit.lm2: "stray trailer: the frame above is already closed", "end target does not match close target";
+# l2_frontend_helpers.lm2: lm_compiler_fn_close, lm_compiler_end_named), and the reserved word is the book's (the book,
+# node); a Frame they refuse is answered 2 before anything is built (plan M11 5b part 2; the author 2026-11-11 through
+# fable2):
+# - node is bound by no form, in a quoted spelling too: no Frame is headed by it (in data that would be a record of that
+#   name, in code an application of it), no declaration by `int` or `@` names it, no fn, sub or fm is named by it, and
+#   `node := value` is no assignment. A path through it, `node\x := value`, is a write through the space;
+# - a Frame headed by end or until is a trailer P0 did not attach to a Frame: the frame above it is already closed;
+# - the target of an `end:` trailer is one atom and a valid target of the Frame it closes (grammar §17): a named fn, sub
+#   or fm takes its name or its receiver word (`end: square`, `end: fn`), an anonymous one its receiver word, `(): name`
+#   its name, any other Frame its head (`end: Point`, `end: if`). One trailer may close several open levels: P0 gives
+#   it to the Frame it closes. An anonymous Structure is not checked, as the working frontend does not check it.
+# 1 when the Frame is admitted, 0 when construction refuses it.
+fn: lm_graph_frame_admitted (@: fr c.LmP0Frame) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: head_text c.LmP0Text 0
+    @: head char 0
+    @: spelling char 0
+    @: first c.LmP0Text 0
+    @: tail c.LmP0Trailer 0
+    @: target_field c.LmP0Field 0
+    @: target char 0
+    @: w_end char c.lmx_graph_intern("end", 3U)
+    @: w_launch char c.lmx_graph_intern("()", 2U)
+    if: fr = 0 || state = 0
+        return: 1
+    head_text := lm_graph_p0_head(fr)
+    head := lm_graph_p0_name_word(head_text)
+    if: head = state\w_node
+        return: 0
+    if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U
+        return: 1
+    spelling := c.lmx_graph_intern(lm_graph_p0_data(head_text), lm_graph_p0_length(head_text))
+    if: spelling = w_end || spelling = state\w_until
+        return: 0
+    first := lm_graph_first_atom(fr)
+    if: (fr\flags & c.LM_P0_FRAME_COLON) != 0U && first != 0 && lm_graph_p0_name_word(first) = state\w_node
+        if: head = state\w_int || head = state\w_at || head = state\w_fn || head = state\w_sub || head = state\w_fm || head = w_launch
+            return: 0
+        ---
+    ---
+    tail := (cast: (@: c.LmP0Trailer) fr\trailer)
+    if: tail = 0 || tail\spelling = 0 || c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) != w_end
+        return: 1
+    if: lm_graph_count_active((cast: (@: c.LmP0Structure) tail\body)) != 1U
+        return: 0
+    target_field := lm_graph_next_active(lm_graph_p0_first((cast: (@: c.LmP0Structure) tail\body)))
+    if: target_field = 0 || target_field\value = 0 || target_field\value\kind != c.LM_P0_NODE_ATOM
+        return: 0
+    target := lm_graph_p0_name_word(lm_graph_p0_atom(lm_graph_p0_value(target_field)))
+    if: head = state\w_fn || head = state\w_sub || head = state\w_fm
+        return: (cast: (int) (target = head || (first != 0 && target = lm_graph_p0_name_word(first))))
+    if: head = w_launch
+        return: (cast: (int) (first != 0 && target = lm_graph_p0_name_word(first)))
+    return: (cast: (int) (target = head))
+end: lm_graph_frame_admitted
+
 fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: text c.LmP0Text 0
@@ -664,6 +751,8 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         return: 0
     if: nd\kind = c.LM_P0_NODE_FRAME
         frame := lm_graph_p0_frame(nd)
+        if: lm_graph_frame_admitted(frame) = 0
+            return: 2
         if: (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
             return: lm_graph_build_assignment(g, parent, frame, out)
         text := lm_graph_p0_head(frame)
@@ -829,6 +918,8 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
         return: 2
     if: nd\kind = c.LM_P0_NODE_FRAME
         fr := lm_graph_p0_frame(nd)
+        if: lm_graph_frame_admitted(fr) = 0
+            return: 2
         if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U
             r := lm_graph_build_node(g, root, nd, @ value)
             if: r != 0

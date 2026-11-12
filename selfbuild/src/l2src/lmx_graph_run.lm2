@@ -1041,6 +1041,64 @@ end: lmx_graph_step_place
 # forms-declare-or-call: such a form declares nothing and assigns nothing; the value of a known place is written by
 # `:=`).
 
+# The space above the code the live launch runs -- the value of the reserved word node (the book, node: one for the
+# whole activation, its nested bodies included; the author's decision 2026-11-11 through fable2, plan M11 5b part 2).
+# It is lexical by the code, not by the data the launch was given: the space of an ordinary Structure is its parent
+# (`call(D; Bump)` gives the parent of Bump). The space of a callable is the block its declaration stands in, read up
+# through the bodies of the control receivers, which run in the same activation (if, else, while, for, a post loop and
+# its body, finally): a block that is a part of the declaration of another callable -- its written code or its data --
+# gives that callable's data part (an inner method changes the enclosing's data through `node\name`); any other block is
+# the space itself. The unit root has no parent, so it has no space and the name answers nothing. 0 for no space.
+fn: lmx_graph_node_passes (@: state c.LmxGraphState; @: word char) int
+    if: state = 0 || word = 0
+        return: 0
+    return: (cast: (int) (word = state\w_if || word = state\w_else || word = state\w_while || word = state\w_for || word = state\w_until || word = state\w_finally))
+end: lmx_graph_node_passes
+
+# The space itself (lmx_graph_node_space): a control receiver or its body is passed through, above, by its name or by
+# the name of the Lmx it is a field of (an `if` is [condition, body], its body unnamed).
+fn: lmx_graph_node_space (@: g c.LmxGraph) @: void
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: activation c.LmxActivation 0
+    @: code c.Lmx 0
+    @: current c.Lmx 0
+    @: owner c.Lmx 0
+    @: enclosing c.Lmx 0
+    @: head char 0
+    @: above char 0
+    if: g = 0 || state = 0
+        return: 0
+    activation := (cast: (@: c.LmxActivation) g\arena\activation)
+    if: activation = 0 || activation\code = 0
+        return: 0
+    code := activation\code
+    if: c.lmx_graph_method(g, code) = 0
+        return: (cast: (@: void) code\parent)
+    owner := (cast: (@: c.Lmx) code\parent)
+    if: owner = 0
+        return: 0
+    current := (cast: (@: c.Lmx) owner\parent)
+    while: current != 0
+        head := c.lmx_graph_name_of(g, (cast: (@: void) current))
+        owner := (cast: (@: c.Lmx) current\parent)
+        above := 0
+        if: owner != 0
+            above := c.lmx_graph_name_of(g, (cast: (@: void) owner))
+        ---
+        if: lmx_graph_node_passes(state, head) != 0 || lmx_graph_node_passes(state, above) != 0
+            current := owner
+            continue
+        if: owner != 0 && owner\parent != 0 && (above = state\w_fn || above = state\w_sub)
+            enclosing := (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) owner\parent), lmx_graph_fn_decl_name(g, owner)))
+            if: c.lmx_graph_method(g, enclosing) != 0 && enclosing\parent = owner
+                return: (cast: (@: void) c.lmx_graph_method_data(g, enclosing))
+            ---
+        ---
+        return: (cast: (@: void) current)
+    ---
+    return: 0
+end: lmx_graph_node_space
+
 # Resolve the current activation's formals, inherited inputs, then lexical graph fields. Each lookup consumes the
 # current graph and the live activation chain; no binding is saved in the graph or reused by the next traversal.
 fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
@@ -1060,6 +1118,10 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
     size_t: found 0U
     if: g = 0 || name = 0
         return: 0
+    # The reserved word node names the space above the live launch's code (lmx_graph_node_space), never a binding: it is
+    # read before the chain of activations, and no row, formal or field answers it.
+    if: state != 0 && name = state\w_node
+        return: lmx_graph_node_space(g)
     activation := (cast: (@: c.LmxActivation) g\arena\activation)
     while: activation != 0
         if: activation\frame != 0
@@ -1575,7 +1637,19 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             ---
             i := i + 1U
             continue
+        # A record headed by data launches the data of the live launch in the code of a callable (the book,
+        # #ordinary-var; the author's decision 2026-11-11 through fable2, plan M11 5b part 2, В3): `data()` runs it over
+        # itself, `data(D)` over D -- the launch of a Structure by name, whose name data resolves to the data of the live
+        # launch (lmx_graph_launch_head, lmx_graph_eval_launch_record). Elsewhere -- the root, an ordinary Structure over
+        # itself or over data it was given, where its field data is still the model of the places of the data until
+        # plan M11 5в -- the record is passed by.
         if: head = state\w_data
+            if: mode = 0 && lmx_graph_callable_code(g) != 0
+                target := lmx_graph_launch_head(g, code, head)
+                if: target = 0
+                    return: 5
+                status := lmx_graph_eval_launch_record(g, code, statement, target)
+            ---
             i := i + 1U
             continue
         if: head = state\w_fm
@@ -2441,6 +2515,18 @@ fn: lmx_graph_code_apart (@: g c.LmxGraph) int
     return: 0
 end: lmx_graph_code_apart
 
+# Does the live launch run the code of a callable -- an fn or sub, interpreted, not the data its initializers run in
+# nor an ordinary Structure? 1 or 0.
+fn: lmx_graph_callable_code (@: g c.LmxGraph) int
+    @: activation c.LmxActivation 0
+    if: g = 0
+        return: 0
+    activation := (cast: (@: c.LmxActivation) g\arena\activation)
+    if: activation = 0 || activation\code = 0 || activation\frame = 0
+        return: 0
+    return: (cast: (int) (c.lmx_graph_method(g, activation\code) != 0))
+end: lmx_graph_callable_code
+
 # The ordinary Structure a record whose head is name launches in block scope (the author 2026-11-11,
 # LMX_blog/2026-11-11.md#structure-call-by-name; R21, R22). Through a reference place, wherever the record stands: a
 # record on a place head is never a declaration. By the Structure's own name, in code separated from its data
@@ -2762,7 +2848,7 @@ fn: lmx_graph_language_word (@: state c.LmxGraphState; @: word char) int
         return: 1
     if: word = state\w_continue || word = state\w_redo || word = state\w_until || word = state\w_finally || word = state\w_merge || word = state\w_include || word = state\w_predef || word = state\w_fm || word = state\w_typeof
         return: 1
-    if: word = state\w_index || word = state\w_length || word = state\w_fncall
+    if: word = state\w_index || word = state\w_length || word = state\w_fncall || word = state\w_node
         return: 1
     return: 0
 end: lmx_graph_language_word

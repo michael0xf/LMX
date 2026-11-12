@@ -3329,7 +3329,8 @@ fn: driver_root_launch (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRootPr
         program_passed_cell[0] := 1
     ---
     # The host's stderr goes through a file of the driver's own, so the driver reads what the host
-    # reported and then hands it on to the stream main gave.
+    # reported and then hands it on to the stream main gave; read back, the file is removed and nothing of
+    # it stays in the working directory (the author 2026-11-11 through fable2, plan M11 5b part 2).
     cap := (cast: (@: void) c.fopen("l2_driver_launch.err", "w+b"))
     if: cap = 0
         cap := err
@@ -3357,6 +3358,7 @@ fn: driver_root_launch (@: root c.LmxRoot; int: argc; @@: argv char; c.LmxRootPr
             c.free((cast: (@: void) text))
         ---
         c.fclose(cap)
+        c.remove("l2_driver_launch.err")
     ---
     return: code
 end: driver_root_launch

@@ -1,0 +1,9 @@
+# In one activation the bare name and the path through node are two places (the book, ~1000; plan M11 5b part 2): the
+# bare x is the activation's value -- 10 from the root, then 11 --, `node\x := 30` writes the root's field, and the bare
+# x keeps 11, so probe gives 11 * 100 + 30; the root's x is 30 after it.
+int: x 10
+fn: probe () int
+    x := x + 1
+    node\x := 30
+    return: x * 100 + node\x
+int: r probe()

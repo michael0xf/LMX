@@ -53,17 +53,16 @@ os:
         end: ce_build_component
 end: os
 
-# No exemption is invented for a protected input. Refuse before running Git's
-# --eol (which itself reads working files), rather than omitting that input and
-# later claiming that all tracked files passed. git ls-files -z reads names
-# from the index, not the file bodies. Git paths are repository-relative.
+# No exemption is invented for a protected input -- the root build directory
+# (ce_build_component). Refuse before running Git's --eol (which itself reads
+# working files), rather than omitting that input and later claiming that all
+# tracked files passed. git ls-files -z reads names from the index, not the
+# file bodies. Git paths are repository-relative.
 fn: ce_readable_name (@: data char; size_t: count) int
     size_t: pos 0U
     size_t: base 0U
     size_t: first_component count
-    size_t: scan 0U
     unsigned: byte 0U
-    @: blocked char "l2_driver_launch.err"
     if: count = 0U || ce_path_separator((cast: (unsigned) data[0]) & 255U) != 0 || ce_path_drive(data, count) != 0
         return: 0
     while: pos < count
@@ -83,20 +82,6 @@ fn: ce_readable_name (@: data char; size_t: count) int
         return: 0
     if: ce_build_component(data, first_component) != 0
         return: 0
-    if: count - base = c.strlen(blocked)
-        scan := 0U
-        while: base + scan < count
-            byte := (cast: (unsigned) data[base + scan]) & 255U
-            if: byte >= 65U && byte <= 90U
-                byte := byte + 32U
-            if: byte != ((cast: (unsigned) blocked[scan]) & 255U)
-                break
-            scan := scan + 1U
-        ---
-        if: base + scan = count
-            return: 0
-        ---
-    ---
     return: 1
 end: ce_readable_name
 

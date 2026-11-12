@@ -1,0 +1,6 @@
+# probe (plan M11 5b part 2, item 6): a division by a zero place at run time is an implicit throw nobody catches: R0 is
+# stopped, and the host says "R0 was stopped" on its stderr.
+int: z 0
+int: q 5 / z
+send: exit(exit_code: 7; stdout: ""; stderr: "")
+return

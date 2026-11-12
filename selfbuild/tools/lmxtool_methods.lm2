@@ -1560,9 +1560,16 @@ fn: tool_main (@@: args char; int: n) int
                 expected_exit := 1
                 interp_exit := "1"
             else:
-                if: c.strcmp(args[11], "0") != 0
-                    c.fputs("graph-check: expected exit must be 0 or 1\n", c.stderr)
-                    return: 2
+                # 2 marks a refusal of the construction of the graph (plan M11 5b part 2): the builder answers the number
+                # of field 13 in every mode, before anything runs or is emitted (bld_graph_check).
+                if: c.strcmp(args[11], "2") = 0
+                    expected_exit := 2
+                    interp_exit := "2"
+                else:
+                    if: c.strcmp(args[11], "0") != 0
+                        c.fputs("graph-check: expected exit must be 0, 1 or 2\n", c.stderr)
+                        return: 2
+                    ---
                 ---
             ---
         ---
@@ -1570,7 +1577,7 @@ fn: tool_main (@@: args char; int: n) int
             runs := args[12]
         if: n >= 14
             interp_exit := args[13]
-            if: c.strlen(interp_exit) != 1U || interp_exit[0] < 48 || interp_exit[0] > 56 || (expected_exit = 0 && interp_exit[0] != 48)
+            if: c.strlen(interp_exit) != 1U || interp_exit[0] < 48 || interp_exit[0] > 56 || (expected_exit = 0 && interp_exit[0] != 48) || (expected_exit = 2 && interp_exit[0] = 48)
                 c.fputs("graph-check: interpreter answer must be 0..8 and agree with success\n", c.stderr)
                 return: 2
             ---
@@ -1584,6 +1591,6 @@ fn: tool_main (@@: args char; int: n) int
     r := child(args, n)
     if: r >= 0
         return: r
-    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | checks LIST | steps LIST | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE PREVIOUS-FRONTEND LABEL | build-frontend-part REPO STAGE BASE PREVIOUS-FRONTEND LABEL MODULE REUSE-MANIFEST ABI-MANIFEST | build-runtime REPO STAGE BASE HOSTED-FRONTEND LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | build-generation quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | bootstrap quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE HOSTED-FRONTEND RUNTIME-DIR LABEL SMOKE-LIST | build-frontend-host REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | build-graph REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | graph-check REPO STAGE BASE FRONTEND RUNTIME-DIR GRAPH-EXE OUT SOURCE EXPECTED [EXPECTED-EXIT=0|1]\n")
+    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | checks LIST | steps LIST | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE PREVIOUS-FRONTEND LABEL | build-frontend-part REPO STAGE BASE PREVIOUS-FRONTEND LABEL MODULE REUSE-MANIFEST ABI-MANIFEST | build-runtime REPO STAGE BASE HOSTED-FRONTEND LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | build-generation quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | bootstrap quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE HOSTED-FRONTEND RUNTIME-DIR LABEL SMOKE-LIST | build-frontend-host REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | build-graph REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | graph-check REPO STAGE BASE FRONTEND RUNTIME-DIR GRAPH-EXE OUT SOURCE EXPECTED [EXPECTED-EXIT=0|1|2 [RUNS [ANSWER]]]\n")
     return: 2
 end: tool_main

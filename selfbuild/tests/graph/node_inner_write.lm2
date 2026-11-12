@@ -1,0 +1,12 @@
+# The space of an inner method declared in the code of an enclosing callable is the enclosing's data part (the author's
+# decision 2026-11-11 through fable2, plan M11 5b part 2): `node\total := total + 5` in inner writes the cell of outer's
+# total, and outer does not reread its own working value (the book, ~1000). The first call returns 4 (the cell holds 9),
+# the second returns 9 (the cell holds 14, read from outside as `outer\data\total`).
+fn: outer () int (int: total 4)
+    sub: inner ()
+        node\total := total + 5
+    inner()
+    return: total
+int: first outer()
+int: second outer()
+int: cell outer\data\total

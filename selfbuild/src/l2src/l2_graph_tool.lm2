@@ -1324,6 +1324,14 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             continue
         if: head = state\w_fm
             return: 5
+        # A record headed by data launches the data of the live launch in the code of a callable -- the body of a
+        # method, mode 0 --, as the interpreter does (lm_graph_emit_data_launch); elsewhere it is passed by, as there.
+        if: head = state\w_data
+            if: mode = 0 && c.lmx_graph_method(g, code) != 0
+                status := lm_graph_emit_data_launch(g, f, code, statement, temps)
+            ---
+            i := i + 1U
+            continue
         if: head = state\w_finally
             return: lm_graph_emit_finally(g, f, code, body, i, to, statement, mode, exit_label, again_label, step_label, temps)
         if: head = state\w_if
@@ -2317,6 +2325,45 @@ fn: lm_graph_emit_apply_or (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: sta
     c.fprintf(f, "        goto: l2_label%d\n        l2_label%d: ()\n", other + 1, other + 2)
     return: status
 end: lm_graph_emit_apply_or
+
+# A record headed by data in the code of a callable, as the interpreter runs it (lmx_graph_block; the book,
+# #ordinary-var; plan M11 5b part 2, В3): the data of the live launch is found when the code runs
+# (lmx_graph_launch_head with the word data) and launched by the one binder's form -- `data()` over itself, `data(D)`
+# over D (lmx_graph_launch_formals, bound at translation as the interpreter binds it) -- through the launch of the
+# receiver call (lmx_graph_call_data). No form, or no Structure of the data, refuses where the code reaches it.
+fn: lm_graph_emit_data_launch (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: statement c.Lmx; @: temps int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    @@: formals char 0
+    size_t: count c.lmx_graph_count(statement)
+    int: structure temps[0]
+    int: data -1
+    int: status 0
+    temps[0] := temps[0] + 1
+    c.fprintf(f, "        @: void l2_v%d lmx_graph_launch_head(l2_g, lmx_call_code, ", structure)
+    status := lm_graph_emit_head(g, f, scope, statement)
+    c.fprintf(f, ")\n        if: l2_v%d = 0\n            %s\n", structure, leave_failure)
+    if: status != 0
+        return: status
+    formals := (cast: (@@: char) c.calloc(count + 1U, sizeof(@: char)))
+    status := 4
+    if: formals != 0
+        status := c.lmx_graph_launch_formals(g, 0, statement, formals)
+    if: status = 5
+        status := 0
+        c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
+    else:
+        if: status = 0 && count = 1U
+            status := lm_graph_emit_launch_operand(g, f, scope, statement, 0U, temps, 0, 0, 0U, @ data)
+        if: status = 0 && data >= 0
+            c.fprintf(f, "        if: lmx_graph_call_data(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", data, structure, leave_failure)
+        if: status = 0 && data < 0
+            c.fprintf(f, "        if: lmx_graph_call_data(l2_g, 0, (cast: (@: Lmx) l2_v%d), 1) != 0\n            %s\n", structure, leave_failure)
+    ---
+    c.free((cast: (@: void) formals))
+    return: status
+end: lm_graph_emit_data_launch
 
 # 1 when name is a formal of the method code: a place of its activation, an int place in this subset
 # (lmx_graph_call_shape), which a statement writes and never applies.

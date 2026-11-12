@@ -212,6 +212,11 @@ fn: lmx_graph_state () @: c.LmxGraphState
     state\w_fncall := lmx_graph_intern_in(state, "fncall", 6U)
     if: state\w_fncall = 0
         return: 0
+    # The reserved word node (the book, node): the space above the code a launch runs, never a place or a binding
+    # (lmx_graph_node_space; plan M11 5b part 2).
+    state\w_node := lmx_graph_intern_in(state, "node", 4U)
+    if: state\w_node = 0
+        return: 0
     if: state\w_until = 0 || state\w_finally = 0 || state\w_merge = 0 || state\w_include = 0 || state\w_predef = 0
         return: 0
     if: state\w_args = 0 || state\w_code = 0 || state\w_name = 0 || state\w_fm = 0

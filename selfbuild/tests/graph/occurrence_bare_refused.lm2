@@ -1,7 +1,12 @@
 # Two records of one name in data (the author 2026-11-11: a repeated declaration is one more occurrence): the bare path
 # Holder\Model is ambiguous and no first occurrence is chosen (the book, fields) -- answer 3 (plan M11 5a).
-Holder:
-    Model: a b
-    Model: c d e
-end: Holder
-int: seen length(Holder\Model)
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds the call main().
+# The bare path is read in the code of main (seen), and the call main() answers 3.
+sub: main () (
+    Holder:
+        Model: a b
+        Model: c d e
+    int: seen 0
+)
+    seen := length(Holder\Model)
+main()

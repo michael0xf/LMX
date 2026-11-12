@@ -1,10 +1,14 @@
-# The one-argument call runs a Structure over itself and selects no `data` child (the book, call-receivers): the places
-# Code declares in its data are not fields of Code itself, so the data lacks the variable the code uses -- answer 3. The
-# data is passed explicitly, before the code: `call: Code\data Code`.
-Code:
-    data:
+# The one-argument call runs a Structure over itself and takes no other Structure as its data (the book,
+# call-receivers): the places declared apart from Code, in CodeData, are not fields of Code itself, so the data lacks
+# the variable the code uses -- answer 3. The data is passed explicitly, before the code: `call: CodeData Code`.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds the call main().
+# The old text kept the places in a child block `data:` of Code, which the one-argument call does not select; the pair
+# is written apart.
+sub: main () (
+    CodeData:
         int: x 1
-    end: data
-    x := x + 1
-end: Code
-call: Code
+    Code:
+        x := x + 1
+)
+    call: Code
+main()

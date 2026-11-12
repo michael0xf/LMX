@@ -1,7 +1,15 @@
 # An atom that names its own holder finds the holder at the enclosing level (plan M11 5a, the executor's reading B3):
 # the atom is no record of A, so A\A is A itself, and so is A\A\A.
-A:
-    int: v 3
-    A
-end: A
-int: seen A\A\A\v
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# The path is read in the code of main (in_code) and from the root through main\data (seen); the enclosing level of A
+# is now the data of main.
+sub: main () (
+    A:
+        int: v 3
+        A
+    int: in_code 0
+)
+    in_code := A\A\A\v
+main()
+int: seen main\data\A\A\A\v
+int: seen_in_code main\data\in_code

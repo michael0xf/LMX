@@ -1,23 +1,29 @@
 # A record whose head is a reference place to an ordinary Structure launches that Structure by the same two forms (R22,
 # item 2; plan M11 5b): a record on a place head is never a declaration, so the root executes it now, as a callable's
-# code does -- `p()` runs Model over itself, `q(D)` and `q(data := D)` run Add over D.
-Model:
-    int: v 1
-    v := v + 1
-end: Model
-Add:
-    v := v + 10
-end: Add
-D:
-    int: v 0
-end: D
-@: p Model
-@: q Add
+# code does -- `p()` runs Model over itself, `q(main\data\D)` and `q(data := main\data\D)` run Add over D.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the reference places p and q stay
+# at the root and point into that data by path (a reference declaration in a data part is not executed yet). The dump
+# of the root prints main as written, so the places model_v and d_v hold what the dump of Model and D showed (3, 20).
+# The code of main is a bare `return`: a method with one parenthesized part and no code reads that part as its code.
+sub: main () (
+    Model:
+        int: v 1
+        v := v + 1
+    Add:
+        v := v + 10
+    D:
+        int: v 0
+)
+    return
+main()
+@: p main\data\Model
+@: q main\data\Add
 p()
-q(D)
+q(main\data\D)
 fn: f () int
     p()
-    q(data := D)
-    return: Model\v * 100 + D\v
-end: f
+    q(data := main\data\D)
+    return: main\data\Model\v * 100 + main\data\D\v
 int: seen f()
+int: model_v main\data\Model\v
+int: d_v main\data\D\v

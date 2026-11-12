@@ -7,14 +7,29 @@ int: i
 int: first 5
 :=: i 7
 int: second 7
-Box:
-    int: value 17
-    Child:
-        int: item 11
-    end: Child
-end: Box
-:=: (Box \ value) (root + 2)
-:=: ((Box \ Child) \ item) 11
+sub: main () (
+    Box:
+        int: value 1
+        Child:
+            int: item 2
+        end: Child
+    end: Box
+    CodeData:
+        int: x 1
+        int: y 2
+    end: CodeData
+    Code: (:= x (x + 1)) (:= y (x * 2))
+    Data:
+        int: y 30
+        int: x 10
+    end: Data
+    int: changed 0
+)
+    :=: (Box \ value) (root + 2)
+    :=: ((Box \ Child) \ item) 11
+    call: Data Code
+    :=: changed ((change Box))
+end: main
 fn: tick () int (
     int: calls 0
 )
@@ -39,28 +54,17 @@ end: bump
 bump:
 bump: 3
 int: procedure_count 5
-Code:
-    data:
-        int: x 1
-        int: y 2
-    end: data
-    :=: x (x + 1)
-    :=: y (x * 2)
-end: Code
-Data:
-    int: y 22
-    int: x 11
-end: Data
-call: Data Code
-int: data_x 11
-int: data_y 22
-int: model_x 1
 fn: change (Box: target) int
     :=: (target \ value) 17
     return: (target \ value)
 end: change
+main:
+int: data_x 11
+int: data_y 22
+int: model_x 1
 int: changed 17
 int: nested_value 11
+int: box_value 17
 fn: clean_path () int (
     int: x 1
 )

@@ -1,14 +1,20 @@
 # Slice 346 (the author 2026-11-10, LMX_blog/2026-11-10.md#receiver-args-only and #composed-form-breaks-structure): a
 # receiver in the tail of a form declares inside it and never turns the outer name into a variable. The author's line
 # `timeout: ms: int: time 500` declares the Structure timeout with the Structure ms inside and the place time in it --
-# read and written through the path timeout\ms\time. `holder: int: time` is a Structure holder with the field time.
-# `i: int: 5` and `x: 4` declare Structures with a value inside (one field each), no variable of an int.
-timeout: ms: int: time 500
-int: seen timeout\ms\time
-timeout\ms\time := 7
-int: again timeout\ms\time
-holder: int: time
-i: int: 5
-x: 4
-int: n_i length(i)
-int: n_x length(x)
+# read and written through the path timeout\ms\time (here main\data\timeout\ms\time). `holder: int: time` is a
+# Structure holder with the field time. `i: int: 5` and `x: 4` declare Structures with a value inside (one field each),
+# no variable of an int.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
+# and writes the Structures by paths through main\data. main has no code, so there is no call: its part code is the
+# empty `()`. The dump prints the description of main as written (time 500); the live value 7 is read by again.
+sub: main () (
+    timeout: ms: int: time 500
+    holder: int: time
+    i: int: 5
+    x: 4
+) ()
+int: seen main\data\timeout\ms\time
+main\data\timeout\ms\time := 7
+int: again main\data\timeout\ms\time
+int: n_i length(main\data\i)
+int: n_x length(main\data\x)

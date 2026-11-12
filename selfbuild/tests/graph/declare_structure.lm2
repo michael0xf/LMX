@@ -1,10 +1,14 @@
 # Slice 346 (the author 2026-11-10, LMX_blog/2026-11-10.md#colon-declares-not-assigns) and plan M11 5a (the author
 # 2026-11-11): `Struct1: Struct2` is a declaration, not an assignment. Declared again, Struct1 is one more occurrence of
 # the name -- its q w e r t stay -- and the second Struct1 holds the atom Struct2, not expanded: a path through it
-# reaches the Structure Struct2 itself, with its a, b, c. The first three lines are the author's example; a bare
-# Struct1 would be ambiguous, `data\[N]Struct1` selects an occurrence.
-Struct2: a b c
-Struct1: q w e r t
-Struct1: Struct2
-int: first length(data\[0]Struct1)
-int: through length(data\[1]Struct1\Struct2)
+# reaches the Structure Struct2 itself, with its a, b, c. The first three declarations are the author's example; a bare
+# Struct1 would be ambiguous, `main\data\[N]Struct1` selects an occurrence.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
+# the Structures by paths through main\data. main has no code, so there is no call: its part code is the empty `()`.
+sub: main () (
+    Struct2: a b c
+    Struct1: q w e r t
+    Struct1: Struct2
+) ()
+int: first length(main\data\[0]Struct1)
+int: through length(main\data\[1]Struct1\Struct2)

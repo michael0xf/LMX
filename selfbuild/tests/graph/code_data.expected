@@ -1,50 +1,63 @@
-Code:
-    data:
-        int: x 2
-        int: y 4
-    end: data
-    :=: x (x + 1)
-    :=: y (x * 2)
-end: Code
-Data:
-    int: extra 99
-    int: y 30
-    int: x 16
-end: Data
-call: Data Code
-int: explicit_x 11
-int: explicit_y 22
-int: own_unchanged 1
-call: (Code \ data) Code
-int: passed_x 2
-int: passed_y 4
-Self:
-    int: x 6
-    :=: x (x + 2)
-end: Self
-call: Self Self
-int: same_data 6
 fn: method (int: step 3) int (
     int: x 1
 )
     :=: x (x + step)
     return: x
 end: method
-call: Data method
+int: x 40
+sub: main () (
+    Code: (:= x (x + 1)) (:= y (x * 2))
+    CodeData:
+        int: x 1
+        int: y 2
+    end: CodeData
+    Data:
+        int: extra 99
+        int: y 30
+        int: x 10
+    end: Data
+    Self:
+        int: x 4
+        :=: x (x + 2)
+    end: Self
+    Free: (:= x (x + 1))
+    ReadSelected:
+        int: x
+        :=: x ((data \ x) + 1)
+    end: ReadSelected
+    int: explicit_x 0
+    int: explicit_y 0
+    int: own_unchanged 0
+    int: method_data 0
+    int: nested_call 0
+)
+    call: Data Code
+    :=: explicit_x (Data \ x)
+    :=: explicit_y (Data \ y)
+    :=: own_unchanged (CodeData \ x)
+    call: CodeData Code
+    call: Self Self
+    call: Data method
+    :=: method_data (Data \ x)
+    fn: nested () int
+        call: Data Code
+        return: (Data \ x)
+    end: nested
+    :=: nested_call ((nested))
+    call: Free
+    call: Data ReadSelected
+end: main
+main:
+int: explicit_x 11
+int: explicit_y 22
+int: own_unchanged 1
+int: passed_x 2
+int: passed_y 4
+int: same_data 6
 int: method_data 14
 int: method_own 1
-fn: nested () int
-    call: Data Code
-    return: (Data \ x)
-end: nested
 int: nested_call 15
-int: x 40
-Free: (:= x (x + 1))
-call: Free
 int: outer_free 40
-ReadSelected:
-    int: x
-    :=: x ((data \ x) + 1)
-end: ReadSelected
-call: Data ReadSelected
 int: selected_data 16
+int: data_y 30
+int: data_extra 99

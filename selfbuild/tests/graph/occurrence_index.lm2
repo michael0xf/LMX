@@ -1,7 +1,14 @@
 # The indexed path of an occurrence, `s\[N]name` (the book, fields): Holder\[1]Model is the second record Model of
 # Holder, with three fields (plan M11 5a).
-Holder:
-    Model: a b
-    Model: c d e
-end: Holder
-int: seen length(Holder\[1]Model)
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# The path is read in the code of main (in_code) and from the root through main\data (seen).
+sub: main () (
+    Holder:
+        Model: a b
+        Model: c d e
+    int: in_code 0
+)
+    in_code := length(Holder\[1]Model)
+main()
+int: seen length(main\data\Holder\[1]Model)
+int: seen_in_code main\data\in_code

@@ -1,18 +1,24 @@
-Self:
-    :=: y (x + 1)
-    int: x 5
-    int: y
-end: Self
-call: Self
+sub: main () (
+    Self:
+        :=: y (x + 1)
+        int: x 5
+        int: y
+    end: Self
+    Code:
+        :=: y (x + 1)
+        int: x
+        int: y
+    end: Code
+    Data:
+        int: x 5
+        int: y 0
+    end: Data
+)
+    call: Self
+    call: Data Code
+end: main
+main:
 int: literal_above 6
-Code:
-    :=: y (x + 1)
-    int: x
-    int: y
-end: Code
-Data:
-    int: x 5
-    int: y 6
-end: Data
-call: Data Code
 int: supplied_above 6
+int: self_x 5
+int: data_x 5

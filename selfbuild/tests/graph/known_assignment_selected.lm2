@@ -1,12 +1,15 @@
-Code:
-    data:
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds the call main().
+# The old Code carried a child block `data:` with y, which a launch over given data does not select; the pair is
+# written apart: CodeData holds x and y, the launch gets Data, which has no y, so the name y is unknown -- answer 3.
+sub: main () (
+    CodeData:
         int: x 1
         int: y 2
-    end: data
-    x := x + 1
-    y := x * 2
-end: Code
-Data:
-    int: x 10
-end: Data
-call: Data Code
+    Code:
+        x := x + 1
+        y := x * 2
+    Data:
+        int: x 10
+)
+    call: Data Code
+main()

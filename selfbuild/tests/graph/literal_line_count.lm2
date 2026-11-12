@@ -1,10 +1,20 @@
 # The line `int: x 5` writes what stands in its slot when it runs (the author 2026-11-11, R12; plan M11 5a, B5): the
 # first launch of Self finds 5 there and adds 1, publishing 6; the second finds the published 6 and gives 7.
-Self:
-    int: x 5
-    x := x + 1
-end: Self
-call: Self
-int: first Self\x
-call: Self
-int: second Self\x
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# Self is launched over itself in the code of main, which reads first and second after each launch; self_x is the x of
+# Self at the end, which the dump of the root Structure Self used to show.
+sub: main () (
+    Self:
+        int: x 5
+        x := x + 1
+    int: first 0
+    int: second 0
+)
+    call: Self
+    first := Self\x
+    call: Self
+    second := Self\x
+main()
+int: first main\data\first
+int: second main\data\second
+int: self_x main\data\Self\x

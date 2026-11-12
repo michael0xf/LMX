@@ -1,6 +1,10 @@
 # Closed references by name are no error (the author 2026-11-11, LMX_blog/2026-11-11.md#known-name-not-expanded; plan
 # M11 5a): A holds the atom B and B holds the atom A. Nothing is expanded, so both stay as written and nothing loops; A
 # has one field.
-A: B
-B: A
-int: seen length(A)
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
+# the Structures by paths through main\data. main has no code, so there is no call: its part code is the empty `()`.
+sub: main () (
+    A: B
+    B: A
+) ()
+int: seen length(main\data\A)

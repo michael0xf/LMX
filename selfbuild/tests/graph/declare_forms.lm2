@@ -1,25 +1,30 @@
 # Slice 346 (the book, colon-declares and forms-declare-or-call; the author 2026-11-10) and plan M11 5a (the author
-# 2026-11-11): what declares and what writes. A place is declared by its receiver (`int: i 1`, `@: p Model`) and written
-# by `:=`. A form `Name: tail` declares a Structure with the tail inside, its atoms not expanded: a path through an atom
-# reaches the entity its word names -- Holder\Model is the Structure Model, one instance reached through Holder, through
-# the reference p and by its own name; Pair\i is the place i, so a write through it is seen by i -- and an atom that
-# names nothing stays a word (unknown_word). Declared again, Pair is one more occurrence of the name: data\[0]Pair has
-# two fields, data\[1]Pair three; a bare Pair would be ambiguous.
+# 2026-11-11): what declares and what writes. A place is declared by its receiver (`int: i 1`, `@: p main\data\Model`)
+# and written by `:=`. A form `Name: tail` declares a Structure with the tail inside, its atoms not expanded: a path
+# through an atom reaches the entity its word names -- Holder\Model is the Structure Model, one instance reached through
+# Holder, through the reference p and by its own name; Pair\i is the place i, so a write through it is seen by i -- and
+# an atom that names nothing stays a word (unknown_word). Declared again, Pair is one more occurrence of the name:
+# main\data\[0]Pair has two fields, main\data\[1]Pair three; a bare Pair would be ambiguous.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
+# and writes the Structures by paths through main\data. main has no code, so there is no call: its part code is the
+# empty `()`. The atoms i and later name places of the root. The dump prints the description of main as written
+# (v 1); the live value 5 is read by through_model and through_ref.
+sub: main () (
+    Model:
+        int: v 1
+    Holder: Model unknown_word
+    Pair: a b
+    Pair: i Model later
+) ()
 int: i 1
 i := 6
 int: i2 i + 1
-Model:
-    int: v 1
-end: Model
-@: p Model
-Holder: Model unknown_word
-Holder\Model\v := 5
-int: through_model Model\v
+@: p main\data\Model
+main\data\Holder\Model\v := 5
+int: through_model main\data\Model\v
 int: through_ref p\v
-Pair: a b
-int: n_first length(data\[0]Pair)
-Pair: i Model later
-int: n_second length(data\[1]Pair)
-data\[1]Pair\i := 9
+int: n_first length(main\data\[0]Pair)
+int: n_second length(main\data\[1]Pair)
+main\data\[1]Pair\i := 9
 int: shared i
 int: later 3

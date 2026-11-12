@@ -1,9 +1,11 @@
 # The description of the result of fncall is a word of the language, written or held by a value; in this subset the
 # word int (the book, call-receivers). A Structure there describes no result this subset executes -- answer 5.
-Vars:
-    int: x 1
-end: Vars
-Body:
-    return: x + 1
-end: Body
-int: response fncall(Vars Vars Body)
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds the call main().
+sub: main () (
+    Vars:
+        int: x 1
+    Body:
+        return: x + 1
+)
+    int: response fncall(Vars Vars Body)
+main()

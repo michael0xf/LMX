@@ -1,14 +1,18 @@
 # Code launched over data it was given reads a Structure of that data by reference (plan M11 5b): Inner is found in the
 # registry of the launch's data, with no row of its own.
-Code:
-    int: y
-    y := Inner\x
-end: Code
-D:
-    Inner:
-        int: x 4
-    end: Inner
-    int: y 0
-end: D
-call: D Code
-int: seen D\y
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# Inner is written in the compact form inside D, so that the blocks in the parentheses stay one level. The fields of D,
+# which the dump of D showed, are the places inner_x and d_y of the root.
+sub: main () (
+    Code:
+        int: y
+        y := Inner\x
+    D:
+        Inner(int: x 4)
+        int: y 0
+)
+    call: D Code
+main()
+int: seen main\data\D\y
+int: inner_x main\data\D\Inner\x
+int: d_y main\data\D\y

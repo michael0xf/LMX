@@ -1,10 +1,20 @@
-M:
-    int: a 1
-end: M
-N:
-    int: a 5
-end: N
-int: r merge(M; N; M)\a
-int: s merge(N; M; N)\a
-int: m_a M\a
-int: n_a N\a
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+sub: main () (
+    M:
+        int: a 1
+    N:
+        int: a 5
+    int: r 0
+    int: s 0
+    int: m_a 0
+    int: n_a 0
+)
+    r := merge(M; N; M)\a
+    s := merge(N; M; N)\a
+    m_a := M\a
+    n_a := N\a
+main()
+int: r main\data\r
+int: s main\data\s
+int: m_a main\data\m_a
+int: n_a main\data\n_a

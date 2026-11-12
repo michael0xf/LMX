@@ -1,15 +1,21 @@
-M:
-    int: a 1
-end: M
-N:
-    int: a 5
-end: N
-R: merge(M; N; (@: p int @N\a))
-S: merge(M; (@: p int @N\a); N)
+# Plan M11 5v: M and N live in the data part of main, R and S stay root places; main reads M and N after the writes.
+sub: main () (
+    M:
+        int: a 1
+    N:
+        int: a 5
+    int: m_a 0
+    int: n_a 0
+)
+    m_a := M\a
+    n_a := N\a
+@: R merge(main\data\M; main\data\N; (@: p int @main\data\N\a))
+@: S merge(main\data\M; (@: p int @main\data\N\a); main\data\N)
 R\a := 9
 S\a := 7
 int: r_seen \R\p
 int: s_seen \S\p
-int: m_a M\a
-int: n_a N\a
+main()
+int: m_a main\data\m_a
+int: n_a main\data\n_a
 int: r_a R\a

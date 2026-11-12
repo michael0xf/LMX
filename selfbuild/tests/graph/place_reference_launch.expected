@@ -1,18 +1,25 @@
-Model:
-    int: v 3
-    :=: v (v + 1)
-end: Model
-Add: (:= v (v + 10))
-D:
-    int: v 20
-end: D
+sub: main () (
+    Model:
+        int: v 1
+        :=: v (v + 1)
+    end: Model
+    Add: (:= v (v + 10))
+    D:
+        int: v 0
+    end: D
+)
+    return
+end: main
+main:
 @: p Model
 @: q Add
 p:
-q: D
+q: ((main \ data) \ D)
 fn: f () int
     p:
-    q: (:= data D)
-    return: (((Model \ v) * 100) + (D \ v))
+    q: (:= data ((main \ data) \ D))
+    return: (((((main \ data) \ Model) \ v) * 100) + (((main \ data) \ D) \ v))
 end: f
 int: seen 320
+int: model_v 3
+int: d_v 20

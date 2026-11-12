@@ -1,21 +1,32 @@
-d1:
-    name: one
-    args:
-        int: a
-        int: b 1
-    end: args
-    return: int
-    code:
-        return: ((a * 10) + b)
-    end: code
-end: d1
-d2:
-    name: two
-    args:
-        int: b 4
-    end: args
-    return: int
-end: d2
+sub: main () (
+    d1:
+        name: one
+        args:
+            int: a
+            int: b 1
+        end: args
+        return: int
+        code:
+            return: ((a * 10) + b)
+        end: code
+    end: d1
+    d2:
+        name: two
+        args:
+            int: b 4
+        end: args
+        return: int
+    end: d2
+    int: r1 0
+    int: r2 0
+    int: r3 0
+)
+    :=: r1 ((h 1))
+    :=: r2 ((two 2))
+    :=: r3 ((h 1 7))
+end: main
+@: d1 d1
+@: d2 d2
 fn:
     h
     merge: d1 d2
@@ -23,6 +34,12 @@ end: fn
 fn:
     merge: d1 d2
 end: fn
+main:
 int: r1 14
 int: r2 24
 int: r3 17
+int: d1_b 1
+int: d2_b 4
+int: d2_args 1
+int: d1_parts 4
+int: d2_parts 3

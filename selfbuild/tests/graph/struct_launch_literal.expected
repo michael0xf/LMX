@@ -1,12 +1,18 @@
-Total:
-    int: sum 12
-end: Total
-Add: (:= (Total \ sum) ((Total \ sum) + v))
-fn: f () int
-    Add: (:= data ((int v 5)))
-    call: ((int v 3)) Add
-    return: (Total \ sum)
-end: f
+sub: main () (
+    Total:
+        int: sum 0
+    end: Total
+    Add: (:= (Total \ sum) ((Total \ sum) + v))
+    int: seen 0
+)
+    fn: f () int
+        Add: (:= data ((int v 5)))
+        call: ((int v 3)) Add
+        return: (Total \ sum)
+    end: f
+    :=: seen ((f))
+end: main
+main:
 int: seen 8
-call: ((int v 4)) Add
+call: ((int v 4)) ((main \ data) \ Add)
 int: after 12

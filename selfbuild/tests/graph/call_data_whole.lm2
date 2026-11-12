@@ -3,21 +3,24 @@
 # declaration reads the same place of the data. A literal value is data and stands in its place from the start (R12):
 # Self reads x = 5 above `int: x 5`, and Code reads the x of the Data it was given. A computed declaration is code,
 # executed at its line (computed_self_refused, computed_data_refused, computed_line_publishes).
-Self:
-    y := x + 1
-    int: x 5
-    int: y
-end: Self
-call: Self
-int: literal_above Self\y
-Code:
-    y := x + 1
-    int: x
-    int: y
-end: Code
-Data:
-    int: x 5
-    int: y 0
-end: Data
-call: Data Code
-int: supplied_above Data\y
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+sub: main () (
+    Self:
+        y := x + 1
+        int: x 5
+        int: y
+    Code:
+        y := x + 1
+        int: x
+        int: y
+    Data:
+        int: x 5
+        int: y 0
+)
+    call: Self
+    call: Data Code
+main()
+int: literal_above main\data\Self\y
+int: supplied_above main\data\Data\y
+int: self_x main\data\Self\x
+int: data_x main\data\Data\x

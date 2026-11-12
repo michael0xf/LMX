@@ -1,12 +1,14 @@
 # A computed declaration is code, executed at its line (the author 2026-11-11, R12; plan M11 5a): run over itself,
 # Computed finds the place x without a value above the line `int: x five()`, and the read is refused -- 5.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 fn: five () int
     return: 5
-end: five
-Computed:
-    y := x + 1
-    int: x five()
-    int: y
-end: Computed
-call: Computed
-int: computed_above Computed\y
+sub: main () (
+    Computed:
+        y := x + 1
+        int: x five()
+        int: y
+)
+    call: Computed
+main()
+int: computed_above main\data\Computed\y

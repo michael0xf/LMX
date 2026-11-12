@@ -1,10 +1,16 @@
-Point: a b
-fn: inner () int
-    return: (length Point)
-end: inner
-fn: outer () int (
-    Point: a b c
+sub: main () (
+    Point: a b
+    int: seen 0
 )
-    return: (inner)
-end: outer
+    fn: inner () int
+        return: (length Point)
+    end: inner
+    fn: outer () int (
+        Point: a b c
+    )
+        return: (inner)
+    end: outer
+    :=: seen ((outer))
+end: main
+main:
 int: seen 3

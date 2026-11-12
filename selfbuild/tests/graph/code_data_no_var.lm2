@@ -2,11 +2,15 @@
 # ordinary Structure runs over itself as its data. Code declares x at its own root level, so the write lands in Code\x;
 # the root's x is another place and stands. Until slice 353 the one-argument form selected a `data` child and refused a
 # Structure that had none.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call
+# main().
 int: x 5
-Code:
-    int: x
-    x := 7
-end: Code
-call: Code
-int: seen Code\x
+sub: main () (
+    Code:
+        int: x
+        x := 7
+)
+    call: Code
+main()
+int: seen main\data\Code\x
 int: root_x x

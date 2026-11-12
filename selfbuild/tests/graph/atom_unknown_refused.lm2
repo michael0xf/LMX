@@ -1,3 +1,7 @@
 # An atom that names nothing stays a word: a path through it reads no field -- answer 3 (plan M11 5a).
-Struct1: Nothing
-int: seen Struct1\Nothing\v
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
+# the Structures by paths through main\data. main has no code, so there is no call: its part code is the empty `()`.
+sub: main () (
+    Struct1: Nothing
+) ()
+int: seen main\data\Struct1\Nothing\v

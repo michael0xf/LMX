@@ -1,3 +1,4 @@
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 sub: add (int: delta 2) (int: sum 0)
     finally:
         sum := sum + 10
@@ -11,11 +12,13 @@ add: 3
 int: second add\data\sum
 call: add
 int: third add\data\sum
-Other:
-    int: sum 100
-end: Other
-call: Other add
-int: other_sum Other\sum
+sub: main () (
+    Other:
+        int: sum 100
+)
+    call: Other add
+main()
+int: other_sum main\data\Other\sum
 int: own_sum add\data\sum
 sub: early (int: x) (int: value 0)
     finally:

@@ -1,23 +1,30 @@
-Args:
-    int: a 5
-end: Args
-Vars:
-    int: x 13
-end: Vars
-Bump: (:= x (x + 1))
-Read:
-    return: x
-end: Read
-Add:
-    return: (x + a)
-end: Add
-call: (:= data Vars) (:= code Bump)
-call: (:= code Bump) (:= data Vars)
+sub: main () (
+    Args:
+        int: a 5
+    end: Args
+    Vars:
+        int: x 10
+    end: Vars
+    Bump: (:= x (x + 1))
+    Read:
+        return: x
+    end: Read
+    Add:
+        return: (x + a)
+    end: Add
+    int: in_method 0
+)
+    fn: inside () int
+        call: (:= code Bump) (:= data Vars)
+        return: (fncall (:= return int) (:= code Read) (:= data Vars))
+    end: inside
+    :=: in_method ((inside))
+end: main
+call: (:= data ((main \ data) \ Vars)) (:= code ((main \ data) \ Bump))
+call: (:= code ((main \ data) \ Bump)) (:= data ((main \ data) \ Vars))
 int: named 12
 int: mixed 12
 int: with_args 17
-fn: inside () int
-    call: (:= code Bump) (:= data Vars)
-    return: (fncall (:= return int) (:= code Read) (:= data Vars))
-end: inside
+main:
 int: in_method 13
+int: vars_x 13

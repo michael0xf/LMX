@@ -1,18 +1,40 @@
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the
+# call main(). The places av_a and av_fields keep what the dump of AV showed: the merges leave AV as written.
 fn: mytest (int: c 3; int: a) int
     return: c * 10 + a
-end: mytest
-AV:
-    int: a 8
-end: AV
 fn: wrap (int: x) int
     return: mytest(merge(mytest\args; (int: a x)))
-end: wrap
-int: r mytest(merge(mytest\args; (int: a 5)))
-int: both mytest(merge(mytest\args; (int: c 4; int: a 6)))
-int: nested mytest(merge(merge(mytest\args; (int: c 2)); (int: a 7)))
-int: named mytest(merge(mytest\args; AV))
-int: model mytest(merge(AV; (int: c 1)))
-int: body wrap(9)
-int: appended merge(AV; (int: z 9))\z
-int: kept merge(AV; (int: a 2))\a + AV\a
-int: after mytest(a := 1)
+sub: main () (
+    AV:
+        int: a 8
+    int: r 0
+    int: both 0
+    int: nested 0
+    int: named 0
+    int: model 0
+    int: body 0
+    int: appended 0
+    int: kept 0
+    int: after 0
+)
+    r := mytest(merge(mytest\args; (int: a 5)))
+    both := mytest(merge(mytest\args; (int: c 4; int: a 6)))
+    nested := mytest(merge(merge(mytest\args; (int: c 2)); (int: a 7)))
+    named := mytest(merge(mytest\args; AV))
+    model := mytest(merge(AV; (int: c 1)))
+    body := wrap(9)
+    appended := merge(AV; (int: z 9))\z
+    kept := merge(AV; (int: a 2))\a + AV\a
+    after := mytest(a := 1)
+main()
+int: r main\data\r
+int: both main\data\both
+int: nested main\data\nested
+int: named main\data\named
+int: model main\data\model
+int: body main\data\body
+int: appended main\data\appended
+int: kept main\data\kept
+int: after main\data\after
+int: av_a main\data\AV\a
+int: av_fields length(main\data\AV)

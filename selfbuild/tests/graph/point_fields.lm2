@@ -1,21 +1,28 @@
-Point:
-    int: y 0
-    int: x 0
-end: Point
-Reordered:
-    int: x 999
-    int: extra 17
-    int: y 3
-end: Reordered
-OnlyUsed:
-    int: y 4
-end: OnlyUsed
-fn: take (Point: p; int: q 2) int
-    return: p\y * 10 + q
-end: take
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 fn: bump (int: v) int
     return: v + 1
-end: bump
-int: reordered take(Reordered, 1)
-int: defaulted take(OnlyUsed)
-int: nested take(Reordered, bump(1))
+sub: main () (
+    Point:
+        int: y 0
+        int: x 0
+    Reordered:
+        int: x 999
+        int: extra 17
+        int: y 3
+    OnlyUsed:
+        int: y 4
+    int: reordered 0
+    int: defaulted 0
+    int: nested 0
+)
+    fn: take (Point: p; int: q 2) int
+        return: p\y * 10 + q
+    reordered := take(Reordered, 1)
+    defaulted := take(OnlyUsed)
+    nested := take(Reordered, bump(1))
+main()
+int: reordered main\data\reordered
+int: defaulted main\data\defaulted
+int: nested main\data\nested
+int: only_used_len length(main\data\OnlyUsed)
+int: reordered_len length(main\data\Reordered)

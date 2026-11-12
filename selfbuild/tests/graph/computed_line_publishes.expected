@@ -1,11 +1,15 @@
 fn: five () int
     return: 5
 end: five
-Computed:
-    int: x 5
-    int: y
-    :=: y (x + 1)
-end: Computed
-call: Computed
+sub: main () (
+    Computed:
+        int: x (five)
+        int: y
+        :=: y (x + 1)
+    end: Computed
+)
+    call: Computed
+end: main
+main:
 int: seen 6
 int: published 5

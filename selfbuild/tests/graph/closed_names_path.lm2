@@ -1,12 +1,14 @@
 # Closed references by name are no error (the author 2026-11-11; plan M11 5a): A holds the atom B, B holds the atom A,
 # and a path through them goes round -- A\B is B, A\B\A is A, A\B\A\B is B; nothing is expanded, so nothing loops and
 # the dump prints both blocks as written.
-A:
-    int: v 1
-    B
-end: A
-B:
-    int: v 2
-    A
-end: B
-int: seen A\B\A\B\v
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
+# the Structures by paths through main\data. main has no code, so there is no call: its part code is the empty `()`.
+sub: main () (
+    A:
+        int: v 1
+        B
+    B:
+        int: v 2
+        A
+) ()
+int: seen main\data\A\B\A\B\v

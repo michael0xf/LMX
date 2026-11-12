@@ -2,14 +2,23 @@
 # LMX_blog/2026-11-11.md#structure-call-by-name; R21, R22; plan M11 5b): in a callable's code `Own()` runs Own over
 # itself, `Bump(Counter)` and `Bump(data := Counter)` run Bump over the data Counter -- the one argument data, given by
 # position or by name.
-Own: (int: n 5; n := n + 1)
-Bump: (n := n + 1)
-Counter: (int: n 0)
-fn: f () int
-    Own()
-    Own()
-    Bump(Counter)
-    Bump(data := Counter)
-    return: Own\n * 10 + Counter\n
-end: f
-int: seen f()
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call
+# main(). The dump of the root prints main as written, so the places own_n and counter_n hold what the dump of Own and
+# Counter showed.
+sub: main () (
+    Own: (int: n 5; n := n + 1)
+    Bump: (n := n + 1)
+    Counter: (int: n 0)
+    int: seen 0
+)
+    fn: f () int
+        Own()
+        Own()
+        Bump(Counter)
+        Bump(data := Counter)
+        return: Own\n * 10 + Counter\n
+    seen := f()
+main()
+int: seen main\data\seen
+int: own_n main\data\Own\n
+int: counter_n main\data\Counter\n

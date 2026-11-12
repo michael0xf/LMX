@@ -1,11 +1,21 @@
 # The declaration line of an own place runs at every reach (the author 2026-11-11, R12; plan M11 5a, B5, B10): it writes
 # what stands in its slot -- the place's own cell, the literal 5 -- so each launch of Self ends with x = 5, although
 # the line above it added 1.
-Self:
-    x := x + 1
-    int: x 5
-end: Self
-call: Self
-int: first Self\x
-call: Self
-int: second Self\x
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+# Self is launched over itself in the code of main, which reads first and second after each launch; self_x is the x of
+# Self at the end.
+sub: main () (
+    Self:
+        x := x + 1
+        int: x 5
+    int: first 0
+    int: second 0
+)
+    call: Self
+    first := Self\x
+    call: Self
+    second := Self\x
+main()
+int: first main\data\first
+int: second main\data\second
+int: self_x main\data\Self\x

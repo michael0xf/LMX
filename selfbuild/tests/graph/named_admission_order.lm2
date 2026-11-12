@@ -1,16 +1,18 @@
-Point:
-    int: y 0
-end: Point
-fn: first () int (int: calls 0)
-    calls := calls + 1
-    return: 5
-end: first
-fn: second () int (int: calls 0)
-    calls := calls + 1
-    return: 7
-end: second
-fn: take (Point: p; int: q) int (int: calls 0)
-    calls := calls + 1
-    return: p\y + q
-end: take
-int: result take(p := first(); q := second())
+# Plan M11 5v: Point is in main's data part, the methods using it in its code part; the root holds a place and main().
+sub: main () (
+    Point:
+        int: y 0
+    int: result 0
+)
+    fn: first () int (int: calls 0)
+        calls := calls + 1
+        return: 5
+    fn: second () int (int: calls 0)
+        calls := calls + 1
+        return: 7
+    fn: take (Point: p; int: q) int (int: calls 0)
+        calls := calls + 1
+        return: p\y + q
+    result := take(p := first(); q := second())
+main()
+int: result main\data\result

@@ -1,47 +1,56 @@
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 fn: tst (int: c 3; int: a 2) int
     return: c * 10 + a
-end: tst
-Pack:
-    int: c 4
-    int: a 7
-end: Pack
-int: whole_both tst(Pack)
-Only:
-    int: a 5
-end: Only
-int: whole_one tst(Only)
 fn: mytest (int: c 3; int: a) int
     return: c * 10 + a
-end: mytest
-int: whole_required mytest(Only)
-Holder:
-    Inner:
-        int: c 6
+sub: main () (
+    Pack:
+        int: c 4
+        int: a 7
+    Only:
+        int: a 5
+    Holder:
+        Inner: (int: c 6; int: a 1)
+    Q:
+        int: z 0
+    s:
+        int: z 5
+        q: (int: z 1)
+    Extra:
         int: a 1
-    end: Inner
-end: Holder
-int: whole_path tst(Holder\Inner)
-Q:
-    int: z 0
-end: Q
-fn: k (Q: q; int: z 0) int
-    return: q\z * 10 + z
-end: k
-s:
-    int: z 5
-    q:
-        int: z 1
-    end: q
-end: s
-int: qz k(s)
-int: qz_named k(q := s)
-Extra:
-    int: a 1
-    int: z 9
-end: Extra
-fn: first (Extra: e; int: q 2) int
-    return: e\a * 10 + q
-end: first
-int: positional first(Extra)
-int: number tst(5)
-int: plain_int tst(whole_both)
+        int: z 9
+    int: whole_both 0
+    int: whole_one 0
+    int: whole_required 0
+    int: whole_path 0
+    int: qz 0
+    int: qz_named 0
+    int: positional 0
+    int: number 0
+    int: plain_int 0
+)
+    fn: k (Q: q; int: z 0) int
+        return: q\z * 10 + z
+    fn: first (Extra: e; int: q 2) int
+        return: e\a * 10 + q
+    whole_both := tst(Pack)
+    whole_one := tst(Only)
+    whole_required := mytest(Only)
+    whole_path := tst(Holder\Inner)
+    qz := k(s)
+    qz_named := k(q := s)
+    positional := first(Extra)
+    number := tst(5)
+    plain_int := tst(whole_both)
+main()
+int: whole_both main\data\whole_both
+int: whole_one main\data\whole_one
+int: whole_required main\data\whole_required
+int: whole_path main\data\whole_path
+int: qz main\data\qz
+int: qz_named main\data\qz_named
+int: positional main\data\positional
+int: number main\data\number
+int: plain_int main\data\plain_int
+int: only_fields length(main\data\Only)
+int: extra_fields length(main\data\Extra)

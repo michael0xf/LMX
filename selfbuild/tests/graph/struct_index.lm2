@@ -1,34 +1,66 @@
 # The index of a Structure (the book, structure-index): `S[i]` reads what slot i holds -- an untyped reference to the
 # cell of an int field, to the pointer of a field without a value, to a nested Structure --, `S[i] := p` gives the slot
 # another address after the field's admission, `length(S)` is the number of the fields.
-int: j 40
-S:
-    int: a 1
-    int: u
-    N:
-        int: x 7
-    end: N
-end: S
-int: n length(S)
-int: t_cell typeof(S[0])
-int: t_uninit typeof(S[1])
-int: t_nested typeof(S[2])
-@: p int S[0]
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+sub: main () (
+    int: j 40
+    S:
+        int: a 1
+        int: u
+        N: (int: x 7)
+    int: n 0
+    int: t_cell 0
+    int: t_uninit 0
+    int: t_nested 0
+    int: x_nested 0
+    int: n_nested 0
+    int: k 1
+    int: t_computed 0
+    int: t_method 0
+    int: t_filled 0
+    int: n_after 0
+    int: v_named 0
+    int: x_after 0
+)
+    n := length(S)
+    t_cell := typeof(S[0])
+    t_uninit := typeof(S[1])
+    t_nested := typeof(S[2])
+    S\a := 5
+    x_nested := S[2]\x
+    n_nested := length(S[2])
+    t_computed := typeof(S[k + 1])
+    fn: kind_of (int: i) int
+        return: typeof(S[i])
+    t_method := kind_of(2)
+    S[0] := @j
+    v_named := S\j
+    S[1] := S[0]
+    t_filled := typeof(S[1])
+    n_after := length(S)
+    x_after := S[2]\x
+# A reference is declared by a root record (a method takes no `@:` declaration yet, slice 356): p is taken before main()
+# runs and keeps the cell of a; q and r are taken after it and address what the slots hold when main() has finished.
+@: p int main\data\S[0]
 int: v_first \p
-S\a := 5
+main()
+int: j main\data\j
+int: n main\data\n
+int: t_cell main\data\t_cell
+int: t_uninit main\data\t_uninit
+int: t_nested main\data\t_nested
 int: v_same \p
-int: x_nested S[2]\x
-int: n_nested length(S[2])
-int: k 1
-int: t_computed typeof(S[k + 1])
-fn: kind_of (int: i) int
-    return: typeof(S[i])
-end: kind_of
-int: t_method kind_of(2)
-S[0] := @j
-@: q int S[0]
+int: x_nested main\data\x_nested
+int: n_nested main\data\n_nested
+int: k main\data\k
+int: t_computed main\data\t_computed
+int: t_method main\data\t_method
+@: q int main\data\S[0]
 int: v_moved \q
 int: v_kept \p
-S[1] := S[0]
-int: t_filled typeof(S[1])
-int: n_after length(S)
+int: t_filled main\data\t_filled
+int: n_after main\data\n_after
+int: v_named main\data\v_named
+int: x_after main\data\x_after
+@: r int main\data\S[1]
+int: v_filled \r

@@ -5,74 +5,105 @@
 #   response := fncall(args data return code)    fncall(data return code)    fncall(return code)
 #   call(args data code)                         call(code)
 # The formals are the fields of the arguments, independent cells of the launch; the data is written as it is.
-Args:
-    int: a 5
-    int: b 2
-end: Args
-Vars:
-    int: x 10
-    int: y 0
-end: Vars
-Body:
-    y := x + a
-    return: y * b
-end: Body
-int: response 0
-response := fncall(Args Vars int Body)
-int: after_y Vars\y
-int: args_kept Args\a
-NoArgs:
-    x := x + 1
-    return: x
-end: NoArgs
-int: second fncall(Vars int NoArgs)
-SelfFn:
-    int: n 3
-    n := n * 2
-    return: n + 1
-end: SelfFn
-int: third fncall(int SelfFn)
-int: self_n SelfFn\n
-Sub:
-    y := y + a + b
-end: Sub
-call(Args Vars Sub)
-int: sub_y Vars\y
-Self:
-    int: k 1
-    k := k + 4
-end: Self
-call(Self)
-int: self_k Self\k
-fncall(Vars int NoArgs)
-int: unused_result Vars\x
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 # The parts of a callable are such parts: the ordinary call and the launch by parts run the same body over the same data.
 fn: f (int: a 1) int (int: x 100)
     x := x + a
     return: x
-end: f
-int: plain f(4)
-int: by_parts fncall(f\args f\data f\return f\code)
-int: var_x f\data\x
-int: whole fncall(f\data int f)
-int: bare fncall(int f)
 sub: bump (int: d 2) (int: total 0)
     total := total + d
-end: bump
-bump(3)
-call(bump\args bump\data bump\code)
-int: bump_total bump\data\total
-# A composition: the arguments of a callable, the data of a Structure, the body of a third.
-Add:
-    y := x + a
-    return: y
-end: Add
-int: mixed fncall(f\args Vars int Add)
-int: mixed_y Vars\y
-# The receivers inside the body of a callable: the same launches, the Structures found from the body.
-fn: inside () int (int: got 0)
-    got := fncall(Args Vars int Add)
+# A composition: the arguments of a callable, the data of a Structure, the body of a third (mixed, in the code of main).
+# The receivers inside the body of a callable: the same launches, the Structures found from the body (inside, in main).
+sub: main () (
+    Args:
+        int: a 5
+        int: b 2
+    Vars:
+        int: x 10
+        int: y 0
+    Body:
+        y := x + a
+        return: y * b
+    NoArgs:
+        x := x + 1
+        return: x
+    SelfFn:
+        int: n 3
+        n := n * 2
+        return: n + 1
+    Sub:
+        y := y + a + b
+    Self:
+        int: k 1
+        k := k + 4
+    Add:
+        y := x + a
+        return: y
+    int: response 0
+    int: after_y 0
+    int: args_kept 0
+    int: second 0
+    int: third 0
+    int: self_n 0
+    int: sub_y 0
+    int: self_k 0
+    int: unused_result 0
+    int: plain 0
+    int: by_parts 0
+    int: var_x 0
+    int: whole 0
+    int: bare 0
+    int: bump_total 0
+    int: mixed 0
+    int: mixed_y 0
+    int: in_method 0
+)
+    response := fncall(Args Vars int Body)
+    after_y := Vars\y
+    args_kept := Args\a
+    second := fncall(Vars int NoArgs)
+    third := fncall(int SelfFn)
+    self_n := SelfFn\n
     call(Args Vars Sub)
-    return: got + Vars\y
-end: inside
-int: in_method inside()
+    sub_y := Vars\y
+    call(Self)
+    self_k := Self\k
+    fncall(Vars int NoArgs)
+    unused_result := Vars\x
+    plain := f(4)
+    by_parts := fncall(f\args f\data f\return f\code)
+    var_x := f\data\x
+    whole := fncall(f\data int f)
+    bare := fncall(int f)
+    bump(3)
+    call(bump\args bump\data bump\code)
+    bump_total := bump\data\total
+    mixed := fncall(f\args Vars int Add)
+    mixed_y := Vars\y
+    fn: inside () int (int: got 0)
+        got := fncall(Args Vars int Add)
+        call(Args Vars Sub)
+        return: got + Vars\y
+    in_method := inside()
+main()
+int: response main\data\response
+int: after_y main\data\after_y
+int: args_kept main\data\args_kept
+int: second main\data\second
+int: third main\data\third
+int: self_n main\data\self_n
+int: sub_y main\data\sub_y
+int: self_k main\data\self_k
+int: unused_result main\data\unused_result
+int: plain main\data\plain
+int: by_parts main\data\by_parts
+int: var_x main\data\var_x
+int: whole main\data\whole
+int: bare main\data\bare
+int: bump_total main\data\bump_total
+int: mixed main\data\mixed
+int: mixed_y main\data\mixed_y
+int: in_method main\data\in_method
+int: args_b main\data\Args\b
+int: vars_x main\data\Vars\x
+int: vars_y main\data\Vars\y

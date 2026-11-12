@@ -2,17 +2,21 @@
 # Structure as written, given by name to the record of a launch by name and as an operand of the receiver call -- in a
 # callable's code and at the root. As the only positional argument of a record it is read by P0 as the record's tail
 # (`Add((int: v 7))` is `Add: int: v 7`), whose one field is a place.
-Total:
-    int: sum 0
-end: Total
-Add:
-    Total\sum := Total\sum + v
-end: Add
-fn: f () int
-    Add(data := (int: v 5))
-    call((int: v 3); Add)
-    return: Total\sum
-end: f
-int: seen f()
-call((int: v 4); Add)
-int: after Total\sum
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places, the call
+# main() and the launch of Add by the path main\data\Add.
+sub: main () (
+    Total:
+        int: sum 0
+    Add:
+        Total\sum := Total\sum + v
+    int: seen 0
+)
+    fn: f () int
+        Add(data := (int: v 5))
+        call((int: v 3); Add)
+        return: Total\sum
+    seen := f()
+main()
+int: seen main\data\seen
+call((int: v 4); main\data\Add)
+int: after main\data\Total\sum

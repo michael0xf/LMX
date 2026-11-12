@@ -1,31 +1,65 @@
+sub: main () (
+    int: j 40
+    S:
+        int: a 1
+        int: u
+        N:
+            int: x 7
+        end: N
+    end: S
+    int: n 0
+    int: t_cell 0
+    int: t_uninit 0
+    int: t_nested 0
+    int: x_nested 0
+    int: n_nested 0
+    int: k 1
+    int: t_computed 0
+    int: t_method 0
+    int: t_filled 0
+    int: n_after 0
+    int: v_named 0
+    int: x_after 0
+)
+    :=: n ((length S))
+    :=: t_cell ((typeof (S [] 0)))
+    :=: t_uninit ((typeof (S [] 1)))
+    :=: t_nested ((typeof (S [] 2)))
+    :=: (S \ a) 5
+    :=: x_nested ((S [] 2) \ x)
+    :=: n_nested ((length (S [] 2)))
+    :=: t_computed ((typeof (S [] (k + 1))))
+    fn: kind_of (int: i) int
+        return: (typeof (S [] i))
+    end: kind_of
+    :=: t_method ((kind_of 2))
+    :=: (S [] 0) (@ j)
+    :=: v_named (S \ j)
+    :=: (S [] 1) (S [] 0)
+    :=: t_filled ((typeof (S [] 1)))
+    :=: n_after ((length S))
+    :=: x_after ((S [] 2) \ x)
+end: main
+@: p int @a
+int: v_first 1
+main:
 int: j 40
-S:
-    int: j 40
-    int: j 40
-    N:
-        int: x 7
-    end: N
-end: S
 int: n 3
 int: t_cell 2
 int: t_uninit 1001024
 int: t_nested 13
-@: p int @a
-int: v_first 1
-:=: (S \ a) 5
 int: v_same 5
 int: x_nested 7
 int: n_nested 1
 int: k 1
 int: t_computed 13
-fn: kind_of (int: i) int
-    return: (typeof (S [] i))
-end: kind_of
 int: t_method 13
-:=: (S [] 0) (@ j)
 @: q int @j
 int: v_moved 40
 int: v_kept 5
-:=: (S [] 1) (S [] 0)
 int: t_filled 2
 int: n_after 3
+int: v_named 40
+int: x_after 7
+@: r int @j
+int: v_filled 40

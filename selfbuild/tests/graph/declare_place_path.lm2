@@ -1,7 +1,10 @@
-# Slice 346 (the book, forms-declare-or-call): a form on a path head. Box\hits is a known place of an int, so
-# `Box\hits: 1` is refused (8); the value is written by `Box\hits := 1`.
-Box:
-    int: hits 0
-end: Box
-Box\hits: 1
-int: after Box\hits
+# Slice 346 (the book, forms-declare-or-call): a form on a path head. Box\hits (here main\data\Box\hits) is a known
+# place of an int, so `main\data\Box\hits: 1` is refused (8); the value is written by `main\data\Box\hits := 1`.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and reads
+# the Structures by paths through main\data. main has no code, so there is no call: its part code is the empty `()`.
+sub: main () (
+    Box:
+        int: hits 0
+) ()
+main\data\Box\hits: 1
+int: after main\data\Box\hits

@@ -1,9 +1,15 @@
 # The data of the launch answers before the levels around the code (plan M11 5b; R20: rows, formals, the registry of
-# the launch's data, then the lexical levels): the Point of f's data shadows the Point of the root.
-Point: a b
-fn: f () int (
-    Point: a b c
+# the launch's data, then the lexical levels): the Point of f's data shadows the Point of main, the level around f.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the
+# call main().
+sub: main () (
+    Point: a b
+    int: seen 0
 )
-    return: length(Point)
-end: f
-int: seen f()
+    fn: f () int (
+        Point: a b c
+    )
+        return: length(Point)
+    seen := f()
+main()
+int: seen main\data\seen

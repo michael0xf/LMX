@@ -1,14 +1,20 @@
 # Slice 334 (Codex check of 334): every actual of a receiver is received by its formal before the next actual is
 # evaluated. `fn: bad 7 int touch()` binds the form [name, args, return, code]; args receives 7, no Structure, so the
 # receiver is refused there (the interpreter answers 5; native and forced code fail there) before touch(), the body's
-# actual, is evaluated: Box\hits stays 0 in the graph the refused run prints (before 0; after never computed).
-Box:
-    int: hits 0
-end: Box
-fn: touch () int
+# actual, is evaluated: touch() never runs, so Box\hits stays 0 (before 0; after never computed). The dump prints the
+# data of touch as written, so the finally of the root copies Box\hits into at_end after the refusal: at_end is 0 here,
+# and 1 with `fn: ok (int: a) int touch()`, where touch() is evaluated first and the refusal comes later.
+# Plan M11 5v: the declaration of the ordinary Structure Box lives in the data part of touch, the only method that uses
+# it; the root reads Box by the path touch\data\Box and keeps the places, the finally and the refused receiver.
+fn: touch () int (
+    Box:
+        int: hits 0
+)
     Box\hits := Box\hits + 1
     return: 3
-end: touch
-int: before Box\hits
+int: at_end 9
+finally:
+    at_end := touch\data\Box\hits
+int: before touch\data\Box\hits
 fn: bad 7 int touch()
-int: after Box\hits
+int: after touch\data\Box\hits

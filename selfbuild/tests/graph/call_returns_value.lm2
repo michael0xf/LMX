@@ -1,9 +1,11 @@
 # call launches without a result (the book, call-receivers): a body that returns a value is refused where it returns
 # -- answer 5; its result is taken by fncall.
-Vars:
-    int: x 1
-end: Vars
-Body:
-    return: x + 1
-end: Body
-call: Vars Body
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds the call main().
+sub: main () (
+    Vars:
+        int: x 1
+    Body:
+        return: x + 1
+)
+    call: Vars Body
+main()

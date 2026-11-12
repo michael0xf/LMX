@@ -1,4 +1,10 @@
-M:
-    int: v 1
-end: M
-int: r merge(M; v: 9)\v
+# Plan M11 5v: M and the refused declaration r live in the data part of main; the root holds a place and the call main().
+sub: main () (
+    M:
+        int: v 1
+    int: r merge(M; v: 9)\v
+    int: out 0
+)
+    out := r
+main()
+int: r main\data\out

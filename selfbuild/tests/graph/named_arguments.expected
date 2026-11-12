@@ -27,16 +27,24 @@ fn: tick (int: n) int (
 end: tick
 int: written_order 21
 int: trace 12
-Point:
-    int: y 0
-    int: unused 0
-end: Point
-Data:
-    int: y 4
-end: Data
-fn: take (Point: p; int: q 2) int
-    return: (((p \ y) * 10) + q)
-end: take
+sub: main () (
+    Point:
+        int: y 0
+        int: unused 0
+    end: Point
+    Data:
+        int: y 4
+    end: Data
+    int: structural 0
+    int: structural_default 0
+)
+    fn: take (Point: p; int: q 2) int
+        return: (((p \ y) * 10) + q)
+    end: take
+    :=: structural ((take (:= q 7) (:= p Data)))
+    :=: structural_default ((take (:= p Data)))
+end: main
+main:
 int: structural 47
 int: structural_default 42
 sub: set (int: x 1; int: y 2) (
@@ -47,3 +55,4 @@ end: set
 set: (:= y 9)
 int: procedure 19
 int: later_default 32
+int: data_len 1

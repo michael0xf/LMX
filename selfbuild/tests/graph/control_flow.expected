@@ -45,21 +45,26 @@ fn: nested_loops () int
     while: (i < 2) ((int j 0) (while (j < 3) ((:= j (j + 1)) (if (j = 2) (break)) (:= sum (sum + 1)))) (:= i (i + 1)))
     return: ((sum * 10) + i)
 end: nested_loops
-Code:
-    while: (x < 3) ((:= x (x + 1)))
-    if: (x = 3) ((:= y (x * 10)))
-    else: (:= y 99)
-end: Code
-Data:
-    int: x 3
-    int: y 30
-end: Data
+sub: main () (
+    Code:
+        while: (x < 3) ((:= x (x + 1)))
+        if: (x = 3) ((:= y (x * 10)))
+        else: (:= y 99)
+    end: Code
+    Data:
+        int: x 0
+        int: y 0
+    end: Data
+)
+    call: Data Code
+end: main
 int: short_result 16
 int: call_count 2
 int: jump_result 35
 int: visible_inline 9
 int: nested_result 22
-call: Data Code
+main:
+int: data_x 3
 int: data_result 30
 int: root_loop 12
 while: (root_loop < 2) ((:= root_loop (root_loop + 1)) (mark))

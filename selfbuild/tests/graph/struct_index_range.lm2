@@ -1,7 +1,12 @@
 # An index outside the fields of a Structure is an execution error (the book, structure-index): the index counts the
 # immediate fields from zero.
-S:
-    int: a 1
-    int: b 2
-end: S
-int: t typeof(S[2])
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+sub: main () (
+    S:
+        int: a 1
+        int: b 2
+    int: t 0
+)
+    t := typeof(S[2])
+main()
+int: t main\data\t

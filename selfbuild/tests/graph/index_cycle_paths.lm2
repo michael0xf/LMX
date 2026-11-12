@@ -1,0 +1,18 @@
+# A cycle made by index writes (plan M11 5a): after `A[0] := B` and `B[0] := A`, A holds the Structure B itself and B
+# holds A, one instance each -- the tree the parser built became a graph with a cycle: A[0] is B, with one field (seen),
+# A[0][0] is A again, with one field (back), and A[0][0][0] is B once more (deep), so the chain of [0] does not stop at
+# the first return. The dump prints the data part of main as written, so the print of the cycle by name is not checked
+# here: the root Structures A and B of the fixture index_cycle_dump show it (R26, item 8).
+# The declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+sub: main () (
+    A:
+        Inner()
+    B:
+        Inner()
+)
+    A[0] := B
+    B[0] := A
+main()
+int: seen length(main\data\A[0])
+int: back length(main\data\A[0][0])
+int: deep length(main\data\A[0][0][0])

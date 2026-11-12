@@ -1,50 +1,60 @@
-Code:
-    data:
-        int: x 1
-        int: y 2
-    end: data
-    x := x + 1
-    y := x * 2
-end: Code
-Data:
-    int: extra 99
-    int: y 30
-    int: x 10
-end: Data
-call: Data Code
-int: explicit_x Data\x
-int: explicit_y Data\y
-int: own_unchanged Code\data\x
-call: Code\data Code
-int: passed_x Code\data\x
-int: passed_y Code\data\y
-Self:
-    int: x 4
-    x := x + 2
-end: Self
-call: Self Self
-int: same_data Self\x
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call
+# main(). The pair of the old text, Code with its child block `data:`, is written apart: CodeData holds the places, Code
+# holds the code.
 fn: method (int: step 3) int (int: x 1)
     x := x + step
     return: x
-end: method
-call: Data method
-int: method_data Data\x
-int: method_own method\data\x
-fn: nested () int
-    call: Data Code
-    return: Data\x
-end: nested
-int: nested_call nested()
 int: x 40
-Free:
-    x := x + 1
-end: Free
-call: Free
+sub: main () (
+    Code:
+        x := x + 1
+        y := x * 2
+    CodeData:
+        int: x 1
+        int: y 2
+    Data:
+        int: extra 99
+        int: y 30
+        int: x 10
+    Self:
+        int: x 4
+        x := x + 2
+    Free:
+        x := x + 1
+    ReadSelected:
+        int: x
+        x := data\x + 1
+    int: explicit_x 0
+    int: explicit_y 0
+    int: own_unchanged 0
+    int: method_data 0
+    int: nested_call 0
+)
+    call: Data Code
+    explicit_x := Data\x
+    explicit_y := Data\y
+    own_unchanged := CodeData\x
+    call: CodeData Code
+    call: Self Self
+    call: Data method
+    method_data := Data\x
+    fn: nested () int
+        call: Data Code
+        return: Data\x
+    nested_call := nested()
+    call: Free
+    call: Data ReadSelected
+main()
+int: explicit_x main\data\explicit_x
+int: explicit_y main\data\explicit_y
+int: own_unchanged main\data\own_unchanged
+int: passed_x main\data\CodeData\x
+int: passed_y main\data\CodeData\y
+int: same_data main\data\Self\x
+int: method_data main\data\method_data
+int: method_own method\data\x
+int: nested_call main\data\nested_call
 int: outer_free x
-ReadSelected:
-    int: x
-    x := data\x + 1
-end: ReadSelected
-call: Data ReadSelected
-int: selected_data Data\x
+int: selected_data main\data\Data\x
+int: data_y main\data\Data\y
+int: data_extra main\data\Data\extra

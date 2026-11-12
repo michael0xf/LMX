@@ -1,21 +1,27 @@
-Box:
-    int: hits 16
-    Inner:
-        int: v 42
-    end: Inner
-end: Box
-:=: (Box \ hits) 5
-:=: ((Box \ Inner) \ v) ((Box \ hits) + 2)
+sub: main () (
+    Box:
+        int: hits 0
+        Inner:
+            int: v 1
+        end: Inner
+    end: Box
+    int: t 0
+)
+    sub: bump (int: d 1)
+        :=: (Box \ hits) ((Box \ hits) + d)
+    end: bump
+    bump: 10
+    bump:
+    fn: twice (int: x) int
+        :=: ((Box \ Inner) \ v) (x * 2)
+        return: ((Box \ Inner) \ v)
+    end: twice
+    :=: t ((twice 21))
+end: main
+:=: (((main \ data) \ Box) \ hits) 5
+:=: ((((main \ data) \ Box) \ Inner) \ v) ((((main \ data) \ Box) \ hits) + 2)
 int: v1 7
-sub: bump (int: d 1)
-    :=: (Box \ hits) ((Box \ hits) + d)
-end: bump
-bump: 10
-bump:
-fn: twice (int: x) int
-    :=: ((Box \ Inner) \ v) (x * 2)
-    return: ((Box \ Inner) \ v)
-end: twice
+main:
 int: t 42
 int: h 16
 int: v2 42

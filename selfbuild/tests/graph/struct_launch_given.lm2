@@ -1,23 +1,20 @@
 # Code launched over data it was given is separated from that data too (R22, item 1; plan M11 5b): a record there whose
 # head is an ordinary Structure of the data launches it -- `Step(Inner)` and `Step(data := Inner)` run Step over Inner,
 # `Twice()` runs Twice over itself.
-Code:
-    Step(Inner)
-    Step(data := Inner)
-    Twice()
-end: Code
-D:
-    Inner:
-        int: x 1
-    end: Inner
-    Step:
-        x := x + 10
-    end: Step
-    Twice:
-        int: k 0
-        k := k + 2
-    end: Twice
-end: D
-call: D Code
-int: seen D\Inner\x
-int: twice D\Twice\k
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call
+# main(). The Structures inside D are written in one line each: a block closed by `end:` inside the parentheses of the
+# part data is a later step of 5b.
+sub: main () (
+    Code:
+        Step(Inner)
+        Step(data := Inner)
+        Twice()
+    D:
+        Inner: (int: x 1)
+        Step: (x := x + 10)
+        Twice: (int: k 0; k := k + 2)
+)
+    call: D Code
+main()
+int: seen main\data\D\Inner\x
+int: twice main\data\D\Twice\k

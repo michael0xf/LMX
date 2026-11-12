@@ -1,16 +1,24 @@
-Own:
-    int: n 7
-    :=: n (n + 1)
-end: Own
-Bump: (:= n (n + 1))
-Counter:
-    int: n 2
-end: Counter
-fn: f () int
+sub: main () (
     Own:
-    Own:
-    Bump: Counter
-    Bump: (:= data Counter)
-    return: (((Own \ n) * 10) + (Counter \ n))
-end: f
+        int: n 5
+        :=: n (n + 1)
+    end: Own
+    Bump: (:= n (n + 1))
+    Counter:
+        int: n 0
+    end: Counter
+    int: seen 0
+)
+    fn: f () int
+        Own:
+        Own:
+        Bump: Counter
+        Bump: (:= data Counter)
+        return: (((Own \ n) * 10) + (Counter \ n))
+    end: f
+    :=: seen ((f))
+end: main
+main:
 int: seen 72
+int: own_n 7
+int: counter_n 2

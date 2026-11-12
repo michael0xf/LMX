@@ -1,28 +1,32 @@
 # The arguments of the receivers call and fncall are named and are given by position or by name through `:=` (the
 # author 2026-11-11, LMX_blog/2026-11-11.md#structure-call-by-name; R22, item 4; plan M11 5b): one binder for every
 # receiver, at the root and in a callable's code; the operands are evaluated in the order they are written.
-Args:
-    int: a 5
-end: Args
-Vars:
-    int: x 10
-end: Vars
-Bump:
-    x := x + 1
-end: Bump
-Read:
-    return: x
-end: Read
-Add:
-    return: x + a
-end: Add
-call(data := Vars; code := Bump)
-call(code := Bump; data := Vars)
-int: named fncall(data := Vars; return := int; code := Read)
-int: mixed fncall(Vars; code := Read; return := int)
-int: with_args fncall(args := Args; data := Vars; return := int; code := Add)
-fn: inside () int
-    call(code := Bump; data := Vars)
-    return: fncall(return := int; code := Read; data := Vars)
-end: inside
-int: in_method inside()
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root keeps its launches over
+# the paths main\data\Name, holds the places and calls main().
+# The root launches stand before main(): they run over the data of main before its code does, as the original ran
+# them before inside(); the order fixes the values 12, 12, 17 and 13.
+sub: main () (
+    Args:
+        int: a 5
+    Vars:
+        int: x 10
+    Bump:
+        x := x + 1
+    Read:
+        return: x
+    Add:
+        return: x + a
+    int: in_method 0
+)
+    fn: inside () int
+        call(code := Bump; data := Vars)
+        return: fncall(return := int; code := Read; data := Vars)
+    in_method := inside()
+call(data := main\data\Vars; code := main\data\Bump)
+call(code := main\data\Bump; data := main\data\Vars)
+int: named fncall(data := main\data\Vars; return := int; code := main\data\Read)
+int: mixed fncall(main\data\Vars; code := main\data\Read; return := int)
+int: with_args fncall(args := main\data\Args; data := main\data\Vars; return := int; code := main\data\Add)
+main()
+int: in_method main\data\in_method
+int: vars_x main\data\Vars\x

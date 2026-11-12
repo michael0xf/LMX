@@ -1,17 +1,21 @@
+# Plan M11 5v: M lives in the data part of main; the alias P stays a root place; main reads M after the write through P.
 fn: f1 (int: a) int (int: calls 0)
     calls := calls + 1
     return: a * 10 + calls
-end: f1
 @: h f1
 int: r1 h(2)
 h(5)
 int: r2 f1(3)
 int: c1 f1\data\calls
 int: c2 h\data\calls
-M:
-    int: a 1
-end: M
-@: P M
+sub: main () (
+    M:
+        int: a 1
+    int: m_a 0
+)
+    m_a := M\a
+@: P main\data\M
 P\a := 7
-int: m_a M\a
+main()
+int: m_a main\data\m_a
 int: p_a P\a

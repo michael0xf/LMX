@@ -1,11 +1,14 @@
-Point:
-    int: y 0
-    int: x 0
-end: Point
-Candidate:
-    int: x 5
-end: Candidate
-fn: take (Point: p; int: q) int
-    return: p\y * 10 + q
-end: take
-int: r take(Candidate, 1)
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
+sub: main () (
+    Point:
+        int: y 0
+        int: x 0
+    Candidate:
+        int: x 5
+    int: r 0
+)
+    fn: take (Point: p; int: q) int
+        return: p\y * 10 + q
+    r := take(Candidate, 1)
+main()
+int: r main\data\r

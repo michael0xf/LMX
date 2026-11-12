@@ -1,20 +1,24 @@
 # Slice 346 (the book :375, "внешний b получает результат"; colon-declares) and plan M11 5a (the author 2026-11-11):
-# `R: merge(A; B)` declares the Structure R, and the receiver in its tail builds it. Declared again by `R: merge(B; A)`
-# and by `R: A B`, R is one more occurrence each time: data\[0]R is the first result (its y), data\[1]R the second (its
-# x), data\[2]R holds the atoms A and B (two fields); a bare R would be ambiguous. `S: S` declares S with the atom S
-# inside, not expanded; declared again it is a second occurrence with one field -- no cycle.
-A:
-    int: x 1
-end: A
-B:
-    int: y 2
-end: B
-R: merge(A; B)
+# the holder of a merge result is declared by the receiver `@` -- `@: R merge(A; B)` declares the place R, and the
+# receiver in its tail builds the Structure R holds; before plan M11 5v this was written `R: merge(A; B)`. Declared
+# again by `@: R merge(B; A)`, R is one more occurrence: data\[0]R is the first result (its y), data\[1]R the second
+# (its x); a bare R would be ambiguous. `R: A B` declares a Structure R with the atoms A and B (two fields). `S: S`
+# declares S with the atom S inside, not expanded; declared again it is a second occurrence with one field -- no cycle.
+# Plan M11 5v: the declarations of ordinary Structures (A, B, `R: A B`, S) live in the data part of main; the root holds
+# the places, the two merge holders among them, and reads the Structures by paths through main\data. main has no code,
+# so there is no call: its part code is the empty `()`.
+sub: main () (
+    A:
+        int: x 1
+    B:
+        int: y 2
+    R: A B
+    S: S
+    S: S
+) ()
+@: R merge(main\data\A; main\data\B)
 int: first data\[0]R\y
-R: merge(B; A)
+@: R merge(main\data\B; main\data\A)
 int: second data\[1]R\x
-R: A B
-int: n length(data\[2]R)
-S: S
-S: S
-int: m length(data\[1]S)
+int: n length(main\data\R)
+int: m length(main\data\[1]S)

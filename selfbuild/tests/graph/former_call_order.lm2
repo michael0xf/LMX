@@ -3,11 +3,14 @@
 # holds the statement and the second the place, so the launch takes the holder of the statement as its data and the
 # holder of the place as its code: that code declares x in data that has no x -- answer 3. Written `call: Data Code`
 # the same launch gives Data\x = 2 (the fixture code_data).
-Code:
-    x := x + 1
-end: Code
-Data:
-    int: x 1
-end: Data
-call: Code Data
-int: seen Data\x
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call
+# main().
+sub: main () (
+    Code:
+        x := x + 1
+    Data:
+        int: x 1
+)
+    call: Code Data
+main()
+int: seen main\data\Data\x

@@ -1,10 +1,11 @@
 # The index write gives a slot another address only after the field's admission (the book, structure-index): a slot
 # that holds a Structure refuses the address of an int cell.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 int: j 40
-S:
-    int: a 1
-    N:
-        int: x 7
-    end: N
-end: S
-S[1] := @j
+sub: main () (
+    S:
+        int: a 1
+        N: (int: x 7)
+)
+    S[1] := @j
+main()

@@ -312,3 +312,61 @@
 **Что не делал.** Не запускал интерпретатор и ничего не измерял; не сверял весь список проверок; строки и номера — по рабочему дереву на момент чтения (имена `data`, `code` и порядок `call: data code` в нём уже новые). Рабочие заметки описи — в моём scratchpad, в репозиторий не попадают.
 
 **Нарушение правил (докладываю, как велено).** В начале сеанса, до того как прочитал `to_opus.md`, я выполнил Glob `to_*.md` в корне репозитория (завис по таймауту, ничего не вывел) и Grep по `*.md` от корня репозитория (вернул три имени `.md`). Защищённое имя `l2_driver_launch.err` по выводу инструментов не показано и не открыто, но перечисление корня запрещено; после этого такого не делал.
+
+## 8. Дополнение: фикстуры срезов 355 и 356 (sonnet2, после перевода 5в, 2026-11-11)
+
+Опись выше сделана до срезов 355 и 356. Здесь — фикстуры, добавленные или переписанные этими срезами (по `git show --stat 28aff87a 7bfe3db6`: 23 и 22 файла `.lm2`, из них новых 17 и 21). Таблица собрана из ответов переводчиков и читателей подшага 5в ([итог](m11-step5v-result-20261111.md)): вид — по их разбору, статус — после правок читателей; подробная таблица по файлам — Приложение А итога. Опись выше устарела для трёх файлов: `root_visibility` (со среза 355 положительный: `int: seen x` выше `int: x 7` читает 7, ответ 0, `.expected` есть; ответ 3 был до среза 355; объявлений Structure в нём нет), `call_data_whole` (записей `Computed`, `Step`, `Made` в файле уже нет — они вынесены в `computed_*`; остались `Self`, `Code`, `Data`) и `declare_place_reference` (со среза 356 объявлений обычных Structure в корне нет).
+
+| Файл ± | Вид | Статус | Куда перенесено |
+| --- | --- | --- | --- |
+
+Срез 355:
+| atom_path_write.lm2 + | е+з | translated | `Struct1: Struct2` и блок `Struct2` (`int: v 4`) ушли в часть data метода `sub: main () (...)` в прежнем порядке (упоминание выше объявления); опер… |
+| atom_unknown_refused.lm2 - | е+з | translated | `Struct1: Nothing` и место `int: seen 0` — в data main; оператор (был инициализатор места корня `int: seen Struct1\Nothing\v`) — `seen := Struct1\N… |
+| call_data_whole.lm2 + | а, б, в | translated | Self, Code, Data -> data main (записи внутри Structure в прежнем порядке); call: Self и call: Data Code -> код main; в корне main() и два места lit… |
+| callable_over_given_data.lm2 + | а: D — данные запуска; код — метод sub:  | translated | Блок D (int: x 5, int: y 0) перенесён в часть data main; call: D f — оператор кода main; sub: f остался в корне (метод — не Structure); end: f и en… |
+| closed_names.lm2 + | е+д | translated | `A: B`, `B: A` и место `int: seen 0` — в data main; оператор `int: seen length(A)` стал `seen := length(A)` в коде main; корень: `main()` и `int: s… |
+| closed_names_path.lm2 + | д+з | translated | Блоки `A` (`int: v 1`, атом `B`) и `B` (`int: v 2`, атом `A`) — в data main, блоки в один уровень без строк закрытия, плюс `int: seen 0`; оператор … |
+| computed_data_refused.lm2 - | а+б | translated | `fn: five` остался в корне (метод); `Step` и `Made` — в data main; оператор `call: Made Step` — в код main (текст записи сохранён); корень: `main()… |
+| computed_line_publishes.lm2 + | в | translated | `fn: five` остался в корне; `Computed` (`int: x five()`, `int: y`, `y := x + 1`) — в data main; оператор `call: Computed` — в код main; корень: `ma… |
+| computed_self_refused.lm2 - | в | translated | `fn: five` остался в корне; `Computed` (`y := x + 1` выше `int: x five()`, затем `int: y`) — в data main; оператор `call: Computed` — в код main; к… |
+| declare_forms.lm2 + | е | translated | Model, Holder, Pair ушли в часть data метода main (sub: main () ( ... ) (); Model блоком в один уровень без закрытия). Корень сохранил места и запи… |
+| declare_merge.lm2 + | е+и | translated | A, B, R: A B, S: S, S: S ушли в часть data метода main (блоки A и B в один уровень без закрытия, код пустой ()). Две записи R: merge(A; B) и R: mer… |
+| declare_structure.lm2 + | е | translated | Struct2: a b c, Struct1: q w e r t, Struct1: Struct2 ушли в часть data метода main (код пустой ()). Корень: first и through с путями main\data\[N]S… |
+| holder_name_atom.lm2 + | д+з | translated | Structure A (поле v и атом A) перенесена в часть data метода sub: main; код main читает in_code := A\A\A\v (место in_code в data); корень вызывает … |
+| index_cycle_dump.lm2 + | з | proposal (печать цикла по имени ждёт подшага 5е) | Structure A и B с вложенной пустой Inner перенесены в часть data main (Inner записана компактно Inner(): пустое Inner: внутри скобок не строится, а… |
+| literal_line.lm2 + | в | translated | Structure Self (строки x := x + 1 и int: x 5) перенесена в часть data main вместе с местами first и second; call: Self и снимки first := Self\x, se… |
+| literal_line_count.lm2 + | в | translated | То же, что literal_line, с порядком строк Self как в оригинале (int: x 5, затем x := x + 1): Self и места first, second в часть data main; два call… |
+| mention_before_declaration.lm2 + | д+з | translated | Struct1: Struct2 (выше объявления) и блок Struct2 (int: v 4) перенесены в часть data main в прежнем порядке; код main читает in_code := Struct1\Str… |
+| occurrence_bare_refused.lm2 - | з | translated | Holder с двумя записями Model: a b и Model: c d e перенесена в часть data main вместе с местом seen; отказывающая запись теперь в коде main: seen :… |
+| occurrence_index.lm2 + | е+з: Holder — объявление с двумя записям | translated | Блок Holder (две записи Model) перенесён в часть data метода sub: main; в data добавлено место in_code, оператор кода main: in_code := length(Holde… |
+| post_loop.lm2 + | Repeat б; Data а; RepeatOwn г | translated | Repeat, Data, RepeatOwnData (бывший дочерний data: блок RepeatOwn), RepeatOwn (код), Self -> часть data метода main блоками в один уровень, тело un… |
+| root_occurrence_index.lm2 + | корень как данные | translated (корневая форма из мест; перевод в data main — новая фикстура data_part_occurrence_index) | Две записи Model перенесены в часть data main; место in_code; оператор кода in_code := length(data\[1]Model); корень: main(), int: seen length(main… |
+| root_repeat_refused.lm2 - | корень как данные | translated (корневая форма из мест; перевод в data main — новая фикстура data_part_repeat_refused) | Две записи Model перенесены в часть data main (int: seen 0 — место для оператора); отказывающая запись int: seen length(Model) стала оператором код… |
+| root_visibility.lm2 + | корень как данные | объявлений нет, не менялся | Не менялся (ни .lm2, ни .expected). Записи нулевого отступа: int: seen x и int: x 7 — обе ресивер int, объявлений обычных Structure нет |
+
+Срез 356:
+| call_named.lm2 + | ж+а+б | translated | Args, Vars, Bump, Read, Add — в часть data метода main (добавлено int: in_method 0); fn inside и in_method := inside() — в код main; пять корневых … |
+| callable_data_call.lm2 | — | методы `fn` с частью данных в скобках; в корне нет записей с головой — обычной Structure | не менялся (проверено мной по тексту оригинала) |
+| callable_data_path_write.lm2 | — | методы `fn` с частью данных в скобках; в корне нет записей с головой — обычной Structure | не менялся (проверено мной по тексту оригинала) |
+| callable_data_shadow.lm2 + | з | translated | Point: a b из корня -> часть data main; fn f со своим Point: a b c в data -> код main; int: seen f() -> int: seen 0 в data и seen := f() в коде mai… |
+| callable_data_structure.lm2 + | — | объявлений нет, не менялся | не менялась |
+| callable_data_write.lm2 | — | методы `fn` с частью данных в скобках; в корне нет записей с головой — обычной Structure | не менялся (проверено мной по тексту оригинала) |
+| callable_if_write.lm2 | — | методы `fn` с частью данных в скобках; в корне нет записей с головой — обычной Structure | не менялся (проверено мной по тексту оригинала) |
+| callable_part_names.lm2 | — | методы `fn` с частью данных в скобках; в корне нет записей с головой — обычной Structure | не менялся (проверено мной по тексту оригинала) |
+| caller_data_dynamic.lm2 + | з | translated | Point: a b из корня -> часть data main; fn inner и fn outer (со своим Point: a b c) рядом в коде main; int: seen outer() -> int: seen 0 в data и se… |
+| declare_place_reference.lm2 - | объявлений обычных Structure нет | объявлений нет, не менялся | не менялся |
+| given_data_structure.lm2 + | а+б+д: D — данные запуска с вложенной St | translated | Блоки Code и D перенесены в часть data main; вложенный блок Inner внутри D записан компактной формой Inner(int: x 4) (многоуровневый блок в скобках… |
+| inner_reads_outer.lm2 + | — | объявлений нет, не менялся | не менялась |
+| inner_write_local.lm2 | — | методы `fn` с частью данных в скобках; в корне нет записей с головой — обычной Structure | не менялся (проверено мной по тексту оригинала) |
+| place_reference_launch.lm2 + | д | translated | Model, Add, D -> часть data main (блоки в один уровень, без закрытий); тело main — голый return; места-ссылки @: p, @: q ОСТАЮТСЯ в корне, значения… |
+| place_reference_unknown.lm2 - | д+з | translated | Model -> часть data main (одноуровневый блок); тело main — голый return; @: p остаётся в корне со значением-путём main\data\Model; запись p: other … |
+| struct_launch_args.lm2 - | б+ж | translated | Bump, A — в часть data метода main (добавлено int: seen 0); fn f с записью Bump(args := A) и seen := f() — в код main; корень: main() и int: seen m… |
+| struct_launch_given.lm2 + | а+б+в | translated | Code и D — в часть data метода main; D — блок в один уровень, её Structure Inner, Step, Twice записаны компактно по строке (Inner: (int: x 1); Step… |
+| struct_launch_literal.lm2 + | б+з | translated | Total, Add — в часть data метода main (добавлено int: seen 0); fn f и seen := f() — в код main; корневой call((int: v 4); Add) остался в корне как … |
+| struct_launch_method.lm2 + | в+б+а | translated | Own, Bump, Counter — в часть data метода main (добавлено int: seen 0); fn f и seen := f() — в код main; корень: main(), seen и два новых места own_… |
+| struct_launch_operand.lm2 - | в | translated | S — в часть data метода main; запись int: r S() (текст тот же) — в код main; корень: main(). |
+| struct_launch_two.lm2 - | б | translated | Bump, A, B из корня -> часть data main; fn f с записью Bump(A B) и return: A\n -> код main; место корня int: seen f() -> int: seen 0 в data и seen … |
+| struct_root_declares.lm2 - | е | proposal | S и повтор S() из корня -> часть data main; чтение S\k из места корня -> код main (seen := S\k), int: seen 0 в data; корень: main() и int: seen mai… |
+
+Новые фикстуры 5в (в описи не было): `data_part_occurrence_index` (+ `.expected`, положительная) и `data_part_repeat_refused` (отрицательная, ответ 3) — те же правила, что `root_occurrence_index` и `root_repeat_refused`, но над повторами Structure `Model` в части data метода; `struct_launch_operand_root` (отрицательная, ответ 5) — запуск Structure через место-ссылку на месте операнда в корне.

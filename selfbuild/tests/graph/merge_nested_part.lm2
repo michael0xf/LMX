@@ -2,18 +2,28 @@
 # corresponding Structure parts of any operands by the same rules and the one map -- here two ordinary Structures with
 # a nested part P, the second giving P a new field v: R's P holds u (from A) and v (from B), R's x is A's. A and B stay
 # as written.
-A:
-    int: x 1
-    P:
-        int: u 2
-    end: P
-end: A
-B:
-    P:
-        int: v 3
-    end: P
-end: B
-R: merge(A; B)
+# Plan M11 5v: A and B live in the data part of main, R stays a root place; main reads the field counts of A and B.
+sub: main () (
+    A:
+        int: x 1
+        P: (int: u 2)
+    B:
+        P: (int: v 3)
+    int: a_count 0
+    int: a_p_count 0
+    int: b_count 0
+    int: b_p_count 0
+)
+    a_count := length(A)
+    a_p_count := length(A\P)
+    b_count := length(B)
+    b_p_count := length(B\P)
+@: R merge(main\data\A; main\data\B)
+main()
 int: u R\P\u
 int: v R\P\v
 int: x R\x
+int: a_count main\data\a_count
+int: a_p_count main\data\a_p_count
+int: b_count main\data\b_count
+int: b_p_count main\data\b_p_count

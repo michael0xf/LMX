@@ -1,9 +1,11 @@
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 fn: tst (int: c 3; int: a 2) int
     return: c * 10 + a
-end: tst
-Wrong:
-    c:
-        int: x 1
-    end: c
-end: Wrong
-int: result tst(Wrong)
+sub: main () (
+    Wrong:
+        c: (int: x 1)
+    int: result 0
+)
+    result := tst(Wrong)
+main()
+int: result main\data\result

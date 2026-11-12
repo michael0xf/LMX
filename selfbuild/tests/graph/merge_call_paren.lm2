@@ -1,8 +1,13 @@
-M:
-    int: f 1
-end: M
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the
+# call main().
 fn: f (int: x) int (int: calls 0)
     calls := calls + 1
     return: x
-end: f
-int: r merge(M; f(3))\f
+sub: main () (
+    M:
+        int: f 1
+    int: r 0
+)
+    r := merge(M; f(3))\f
+main()
+int: r main\data\r

@@ -1,12 +1,34 @@
 fn: mytest (int: c 3; int: a) int
     return: ((c * 10) + a)
 end: mytest
-AV:
-    int: a 8
-end: AV
 fn: wrap (int: x) int
     return: (mytest (merge (mytest \ args) ((int a x))))
 end: wrap
+sub: main () (
+    AV:
+        int: a 8
+    end: AV
+    int: r 0
+    int: both 0
+    int: nested 0
+    int: named 0
+    int: model 0
+    int: body 0
+    int: appended 0
+    int: kept 0
+    int: after 0
+)
+    :=: r ((mytest (merge (mytest \ args) ((int a 5)))))
+    :=: both ((mytest (merge (mytest \ args) ((int c 4) (int a 6)))))
+    :=: nested ((mytest (merge (merge (mytest \ args) ((int c 2))) ((int a 7)))))
+    :=: named ((mytest (merge (mytest \ args) AV)))
+    :=: model ((mytest (merge AV ((int c 1)))))
+    :=: body ((wrap 9))
+    :=: appended ((merge AV ((int z 9))) \ z)
+    :=: kept (((merge AV ((int a 2))) \ a) + (AV \ a))
+    :=: after ((mytest (:= a 1)))
+end: main
+main:
 int: r 35
 int: both 46
 int: nested 27
@@ -16,3 +38,5 @@ int: body 39
 int: appended 9
 int: kept 10
 int: after 31
+int: av_a 8
+int: av_fields 1

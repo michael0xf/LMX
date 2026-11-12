@@ -1,14 +1,15 @@
 # Data given to a launch is read as it is (the author 2026-11-11, R12; plan M11 5a): `call: Made Step` does not execute
 # the computed declaration of z in Made, so Step reads z without a value -- 5.
+# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places and the call main().
 fn: five () int
     return: 5
-end: five
-Step:
-    int: z
-    z := z + 1
-end: Step
-Made:
-    int: z five() + 1
-end: Made
-call: Made Step
-int: realized Made\z
+sub: main () (
+    Step:
+        int: z
+        z := z + 1
+    Made:
+        int: z five() + 1
+)
+    call: Made Step
+main()
+int: realized main\data\Made\z

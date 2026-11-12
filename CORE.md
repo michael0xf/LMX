@@ -186,7 +186,11 @@ read as any arguments are -- as code (the author's decision of 2026-11-11,
 `Model: Other` in `@: ptr Model: Other` is a call of `Model`, not a
 requirement with a candidate. The requirement and the candidate are written
 flat, in three fields: `@: ptr Model Other`, and `@: ptr Model 0` for a
-null address. The composed form with the
+null address. A launch form of a Structure at a place where a value is
+needed (an operand of an expression, an actual argument of a call, an
+initial value, an operand of `merge`) is an error: a launch has no result (the
+executor's reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md),
+Р22, item 3; Р25, item 4). The composed form with the
 place in the outer head (`i: int: 5`, `i: int()`, `ptr: @()`, `ptr: @: 0`,
 `ptr: @: Model: 0`), which N1–N6 retained, is withdrawn: `ms: int: time` in
 data is a Structure `ms` with a field `time`, not a place `ms`. No translation path
@@ -426,7 +430,12 @@ general algorithm, as code: `f(arg: v)` is a call of `arg`, only
 written flat, `@: ptr Model Other`; formals are declared by receivers
 (`int: arg default`, `@: arg Template`), a structural form among the
 formals is forbidden, and declarations of Structures are written in the
-data block -- `sub: proc () (struct1: Template1; struct2: Template2)`. The
+data block -- `sub: proc () (struct1: Template1; struct2: Template2)`. A
+launch form of a Structure at a place where a value is needed (an operand
+of an expression, an actual argument of a call, an initial value, an
+operand of `merge`) is an error: a launch has no result (the executor's
+reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md), Р22,
+item 3; Р25, item 4). The
 special name of the explicit reference to the data of a launch, the part of
 a callable of the same name and the data block are called `data` --
 formerly `var` --, and the part with the executable forms, like the

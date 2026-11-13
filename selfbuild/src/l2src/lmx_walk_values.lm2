@@ -6375,6 +6375,7 @@ fn: lmx_call_bind_whole (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size
     size_t: formals 0U
     size_t: nfields 0U
     size_t: i 0U
+    size_t: position 0U
     size_t: j 0U
     size_t: name 0U
     size_t: found (cast: (size_t) -1)
@@ -6395,7 +6396,6 @@ fn: lmx_call_bind_whole (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size
         return: c.LMX_WALK_UNSUPPORTED
     while: j < formals && lmx_walk_args_formal(arena, args, j) != 0
         j := j + 1U
-    ---
     if: j != count
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
     if: whole\present = 0 || whole\kind != c.LMX_WALK_VALUE_REFERENCE || whole\ref = 0 || c.lmx_range_classify(arena, (cast: (@: void) whole\ref)) != c.LMX_KIND_STRUCT
@@ -6414,31 +6414,30 @@ fn: lmx_call_bind_whole (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size
     while: j < count
         field_of[j] := (cast: (size_t) -1)
         j := j + 1U
-    ---
-    # The form: every field of the value a formal of the selected callable, by its name.
+    # A legacy lowered source also stores anonymous transport instructions.
+    # Its existing typed OP address identifies those instructions; an ordinary
+    # unnamed Structure is still a value. Count positions only among values,
+    # as the source shape does, and retain the actual physical field to read.
     while: status = c.LMX_WALK_OK && i < nfields
         name := c.lmx_implements_view_name(arena, given, i)
+        cell := c.lmx_graph_value_in(arena, given, i)
+        if: name = 0U && c.lmx_graph_node_in(arena, cell) != 0 && lmx_walk_code_in(arena, c.lmx_graph_value_in(arena, (cast: (@: c.Lmx) cell), 0U)) != 0
+            i := i + 1U
+            continue
         found := (cast: (size_t) -1)
         physical := (cast: (size_t) -1)
         answer := c.LMX_IMPLEMENTS_UNKNOWN
-        # A cell without a name is no field of the value: the step cell the native layout of a declared Structure keeps
-        # beside each place (the procedure's width is its kids and its steps; lmx_implements_view_name answers 0 for it,
-        # as for any unnamed cell -- the named view of implements reads the same cells the same way).
-        if: name != 0U
-            status := c.lmx_callable_named_formal(arena, args, name, @ found, @ physical, @ answer)
-            if: status = c.LMX_WALK_OK && answer = c.LMX_IMPLEMENTS_NO
-                status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
-            if: status = c.LMX_WALK_OK && answer != c.LMX_IMPLEMENTS_YES
-                status := c.LMX_WALK_UNSUPPORTED
-            # A name only a hidden input of the selected callable bears names no formal of it; two fields of one name
-            # select one formal twice.
-            if: status = c.LMX_WALK_OK && (found >= count || field_of[found] != (cast: (size_t) -1))
-                status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
-            if: status = c.LMX_WALK_OK
-                field_of[found] := i
-        ---
+        status := c.lmx_callable_actual_target(arena, args, position, (cast: (int) (name != 0U)), name, @ found, @ physical, @ answer)
+        if: status = c.LMX_WALK_OK && answer = c.LMX_IMPLEMENTS_NO
+            status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+        if: status = c.LMX_WALK_OK && answer != c.LMX_IMPLEMENTS_YES
+            status := c.LMX_WALK_UNSUPPORTED
+        if: status = c.LMX_WALK_OK && (found >= count || field_of[found] != (cast: (size_t) -1))
+            status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
+        if: status = c.LMX_WALK_OK
+            field_of[found] := i
+        position := position + 1U
         i := i + 1U
-    ---
     # The presence of every formal no field supplies: its current default, read, not evaluated (slice 293 at the form).
     j := 0U
     while: status = c.LMX_WALK_OK && j < count
@@ -6474,10 +6473,8 @@ fn: lmx_call_bind_whole (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size
                 status := lmx_walk_argument_storage(arena, item, expected, 0, code)
         ---
         j := j + 1U
-    ---
     c.free((cast: (@: void) field_of))
-    return: status
-end: lmx_call_bind_whole
+return: status
 
 # Slice 307, the review of Codex (item 3 -- the names and the form of a whole call before its one actual is evaluated, as
 # the names and the form of a written call come before its actuals, slice 305): the static field names of the actual's
@@ -6510,7 +6507,6 @@ fn: lmx_call_bind_whole_form (@: arena c.LmxArena; @: code c.Lmx; size_t: count;
         return: c.LMX_WALK_UNSUPPORTED
     while: j < formals && lmx_walk_args_formal(arena, args, j) != 0
         j := j + 1U
-    ---
     if: j != count
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
     if: count > (cast: (size_t) -1) / c.sizeof(c.int) - 1U
@@ -6522,10 +6518,7 @@ fn: lmx_call_bind_whole_form (@: arena c.LmxArena; @: code c.Lmx; size_t: count;
         found := (cast: (size_t) -1)
         physical := (cast: (size_t) -1)
         answer := c.LMX_IMPLEMENTS_UNKNOWN
-        if: names[i] = 0U
-            status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
-        if: status = c.LMX_WALK_OK
-            status := c.lmx_callable_named_formal(arena, args, names[i], @ found, @ physical, @ answer)
+        status := c.lmx_callable_actual_target(arena, args, i, (cast: (int) (names[i] != 0U)), names[i], @ found, @ physical, @ answer)
         if: status = c.LMX_WALK_OK && answer = c.LMX_IMPLEMENTS_NO
             status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
         if: status = c.LMX_WALK_OK && answer != c.LMX_IMPLEMENTS_YES
@@ -6535,7 +6528,6 @@ fn: lmx_call_bind_whole_form (@: arena c.LmxArena; @: code c.Lmx; size_t: count;
         if: status = c.LMX_WALK_OK
             taken[found] := 1
         i := i + 1U
-    ---
     j := 0U
     while: status = c.LMX_WALK_OK && j < count
         if: taken[j] = 0
@@ -6544,10 +6536,8 @@ fn: lmx_call_bind_whole_form (@: arena c.LmxArena; @: code c.Lmx; size_t: count;
                 status := c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL
         ---
         j := j + 1U
-    ---
     c.free((cast: (@: void) taken))
-    return: status
-end: lmx_call_bind_whole_form
+return: status
 
 # The ready phase of a selected call (slice 305 reshaped it): the written values, already evaluated and received by their
 # selected formals (lmx_walk_written_values), are laid in the selected callable's complete SOURCE order by the binding the

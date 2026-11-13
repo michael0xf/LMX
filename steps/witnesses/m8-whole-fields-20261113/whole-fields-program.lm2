@@ -1,0 +1,18 @@
+Pair(int: right 3; int: left 2)
+Q(int: x 0)
+fn: take_fields (int: left; int: right) int
+return: left * 10 + right
+fn: take_nested (@: left Q; int: right) int
+return: left\x * 10 + right
+fn: run () int
+    int: named take_fields(Pair)
+    int: written take_fields(((int: right 3; int: left 2)))
+    int: unnamed take_fields(((2 3)))
+    int: mixed take_fields(((4; int: right 6)))
+    int: nested take_nested((((int: x 2); int: right 3)))
+    int: nested_named take_nested(((left(int: x 2); int: right 3)))
+    if: named != 23 || written != 23 || unnamed != 23 || mixed != 46 || nested != 23 || nested_named != 23
+        return: 81
+    return: 7
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

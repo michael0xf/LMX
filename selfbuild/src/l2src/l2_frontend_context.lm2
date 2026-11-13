@@ -814,10 +814,13 @@ fn: lm_compiler_input_source_definition (int: mi; const: (@: stmt c.LmP0Node)) i
 end: lm_compiler_input_source_definition
 
 fn: lm_compiler_inert_source_row (int: mi; const: (@: stmt c.LmP0Node)) int
+    # Keeping an anonymous child's data field does not suppress the same
+    # body's execution in the surrounding activation.
+    if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE
+        return: -1
     if: lm_compiler_assignment_input(mi, stmt) >= 0 && lm_compiler_input_source_definition(mi, stmt) < 0
         return: -1
-    return: c.lm_compiler_ns_constructed_row(mi, stmt)
-end: lm_compiler_inert_source_row
+return: c.lm_compiler_ns_constructed_row(mi, stmt)
 
 fn: lm_compiler_name_cell (int: mi; const: (@: t c.LmP0Text)) int
     int: pi c.lm_compiler_param_find(mi, t)

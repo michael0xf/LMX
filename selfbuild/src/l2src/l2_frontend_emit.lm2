@@ -381,7 +381,7 @@ fn: lm_compiler_make_entry (const: (@: path char)) int
 end: lm_compiler_make_entry
 
 # Collect logical data bindings from the already registered child procedure.
-# Own rows are activation bindings; L2DataBinding keeps their physical origin.
+# Named own rows supply activation bindings; L2DataBinding keeps their physical origin.
 fn: lm_compiler_collect_data_bindings (int: ns; int: mi; const: (@: path char)) int
     @@: bindings c.L2DataBinding (cast: (@@: c.L2DataBinding) (@ c.l2_data_bindings))
     @@: procedures int (cast: (@@: int) (@ c.l2_ns_proc))
@@ -401,7 +401,7 @@ fn: lm_compiler_collect_data_bindings (int: ns; int: mi; const: (@: path char)) 
     int: limit owns[0]
     int: k 0
     while: k < limit
-        if: owners[0][k] = owner && hosts[0][k] = 0 && c.lm_compiler_data_binding_source(k) = k
+        if: owners[0][k] = owner && names[0][k] != 0 && hosts[0][k] = 0 && c.lm_compiler_data_binding_source(k) = k
             int: alias c.lm_compiler_own_add(mi, names[0][k], types[0][k], path, decls[0][k])
             if: alias < 0
                 return: 1
@@ -1641,11 +1641,13 @@ fn: lm_compiler_collect_source_definition (const: (@: stmt c.LmP0Node); int: mi;
     if: c.lm_compiler_own_off(mi, own) = (cast: (size_t) -1)
         c.lm_compiler_alloc_or(path, stmt, "size overflow")
         return: (cast: (int) (-1))
-    m_uses_cell[0][c.lm_compiler_own_off(mi, own)] := 1
+    if: name != 0
+        m_uses_cell[0][c.lm_compiler_own_off(mi, own)] := 1
     if: previous < 0
         m_own_cell[0][mi] := m_own_cell[0][mi] + 1
-    return: (cast: (int) (1))
-end: lm_compiler_collect_source_definition
+    # An anonymous body keeps its physical source field and is still walked
+    # by declaration collection in this activation, like every inline body.
+return: (cast: (int) (stmt\kind != c.LM_P0_NODE_STRUCTURE))
 
 # Original: l2src/l2trans.lm1:8088
 fn: lm_compiler_collect_decls (const: (@: body c.LmP0Structure); int: mi; const: (@: path char); int: depth; @: sn int) int
@@ -6029,6 +6031,30 @@ end: lm_compiler_check_body
 # Register values selected by a receiving Structure contract with the same
 # source-definition collector as named values, before widths are frozen.
 # The binding borrows the original prepared operand, including its boundary.
+fn: lm_compiler_argument_expression (@: value c.L2ValueSpan; int: mi) int
+    @: child c.L2ValueSpan
+    int: negative 0
+    size_t: magnitude 0U
+    int: exact -1
+    if: value = 0 || value\node = 0 || value\node\as = 0 || value\values = 0
+        return: 0
+    if: c.lm_compiler_body_expression((cast: (const: @: c.LmP0Structure) value\node\as\structure)) != 0
+        return: 1
+    if: value\value_n != 1
+        return: 0
+    child := value\values
+    if: child\node = 0
+        return: 0
+    if: child\node\kind = c.LM_P0_NODE_STRUCTURE
+        return: lm_compiler_argument_expression(child, mi)
+    if: c.lm_compiler_declaration((cast: (const: @: c.LmP0Node) child\node)) != 0 || c.lm_compiler_method_declaration_name((cast: (const: @: c.LmP0Node) child\node)) != 0
+        return: 0
+    # A scalar source field already has real storage. Other complete values
+    # keep their prepared expression view: calls still run, names still read.
+    if: child\node\kind = c.LM_P0_NODE_ATOM && child\node\as != 0 && c.lm_compiler_source_atom_scalar((cast: (const: @: c.LmP0Text) child\node\as\atom), @ negative, @ magnitude) >= 0
+        return: 0
+return: (cast: (int) (c.lm_compiler_value_span_type(child, mi, @ exact) != -99))
+
 fn: lm_compiler_collect_argument_structures (const: (@: path char)) int
     @@: sites_cell c.L2ApplicationSite (cast: (@@: c.L2ApplicationSite) (@ c.l2_application_sites))
     @: site c.L2ApplicationSite sites_cell[0]
@@ -6047,8 +6073,14 @@ fn: lm_compiler_collect_argument_structures (const: (@: path char)) int
         while: k < arguments\count
             actual := arguments\actuals + k
             value := @ actual\value
-            if: actual\written != 0 && c.lm_compiler_nsty_get(site\signature, k) >= 0 && value\grammar != 3 && value\count = 1 && value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE && c.lm_compiler_local_ns_entry(value\node, site\method, source_path) < 0
-                return: 1
+            if: actual\written != 0 && value\grammar != 3 && value\count = 1 && value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE && value\node\as != 0
+                # The same source definition serves either reception of the
+                # complete value or reception of its direct argument fields.
+                # A written arithmetic span keeps its ordinary expression view.
+                if: (c.lm_compiler_nsty_get(site\signature, k) >= 0 || arguments\whole != 0) && lm_compiler_argument_expression(value, site\method) = 0
+                    if: c.lm_compiler_local_ns_entry(value\node, site\method, source_path) < 0
+                        return: 1
+            ---
             k := k + 1
         site := site\allocated_next
 return: 0
@@ -7966,6 +7998,7 @@ end: lm_compiler_rw_ns_value
 fn: lm_compiler_rw_ns_value_at (int: parent; int: req; int: callee; int: home; int: role; @: out int) int
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
     @@: ns_parent_cell int (cast: (@@: int) (@ c.l2_ns_parent))
+    @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @@@: ns_at_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_at))
@@ -7986,6 +8019,13 @@ fn: lm_compiler_rw_ns_value_at (int: parent; int: req; int: callee; int: home; i
     # Copy closure must include it before the selected unit is published.
     if: c.lm_compiler_use_model_at(home, req, role) != 0
         return: (cast: (int) (1))
+    # The current namespace is already the running code occurrence. Its
+    # descendants use the same child edges below; this base needs no outer
+    # source field (the occurrence may itself be an expression operand).
+    if: callee >= 0 && ns_proc_cell[0][req] = callee
+        if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_NODE", 2, out) != 0
+            return: 1
+        return: (cast: (int) (rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, 0U) != c.LMX_WALK_OK\n            return: 1\n", \out) < 0))
     if: ns_parent_cell[0][req] >= 0
         child := c.lm_compiler_ns_field_in_parent(req)
         if: rw_emit_cell[0] != 0 && child < 0
@@ -13103,6 +13143,12 @@ fn: lm_compiler_rw_stmts_in (const: (@: body c.LmP0Structure); @: first c.LmP0Fi
             own := c.lm_compiler_own_by_decl(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value)))
             if: own >= 0 && c.lm_compiler_source_field_slot(source, own, slot) != 0
                 return: (cast: (int) (1))
+            if: field\value\kind = c.LM_P0_NODE_STRUCTURE
+                if: lm_compiler_rw_stmt(field, @ next, into, slot + 1, @ one) != 0
+                    return: 1
+                \made := \made + 1 + one
+                field := next
+                continue
             if: c.lm_compiler_assignment_input(rw_mi_cell[0], (cast: (const: @: c.LmP0Node) (field\value))) >= 0
                 if: lm_compiler_rw_stmt(field, @ next, into, slot + 1, @ one) != 0 || one != 1
                     return: 1
@@ -13188,7 +13234,7 @@ fn: lm_compiler_rw_fn_parts (int: mi; int: root; @: made int; @: one int) int
     @: construct_phase_cell int (cast: (@: int) (@ c.l2_construct_phase))
     const: (@: vars c.LmP0Node c.lm_compiler_fn_var_source(m_node_cell[0][mi]))
     @: var_body c.LmP0Structure 0
-    @: body c.LmP0Structure m_body_cell[0][mi]\as\structure
+    @: body c.LmP0Structure 0
     @: var_source c.L2SourceContainer
     @: body_source c.L2SourceContainer
     int: var_temp
@@ -13196,6 +13242,8 @@ fn: lm_compiler_rw_fn_parts (int: mi; int: root; @: made int; @: one int) int
     int: var_made 0
     int: body_made 0
     int: trailer_made 0
+    if: m_body_cell[0][mi] != 0 && m_body_cell[0][mi]\as != 0
+        body := m_body_cell[0][mi]\as\structure
     if: vars != 0
         var_body := vars\as\structure
     var_source := c.lm_compiler_source_container_part(var_body, 0, 1)
@@ -13218,7 +13266,7 @@ fn: lm_compiler_rw_fn_parts (int: mi; int: root; @: made int; @: one int) int
         return: (cast: (int) (1))
     if: lm_compiler_rw_source_frame(body_source, root, 0, -1, @ body_temp) != 0
         return: (cast: (int) (1))
-    if: lm_compiler_rw_stmts_in(body, (cast: (@: c.LmP0Field) (body\first_field)), body_temp, 0, body_source, @ body_made) != 0
+    if: lm_compiler_rw_method_stmts(mi, body_source, body_temp, 0, @ body_made) != 0
         return: (cast: (int) (1))
     if: lm_compiler_rw_trailer(mi, body_temp, body_made, @ trailer_made) != 0
         return: (cast: (int) (1))
@@ -13230,8 +13278,7 @@ fn: lm_compiler_rw_fn_parts (int: mi; int: root; @: made int; @: one int) int
         return: (cast: (int) (1))
     \made := var_made + body_made
     \one := trailer_made
-    return: (cast: (int) (0))
-end: lm_compiler_rw_fn_parts
+return: 0
 
 # Original: l2src/l2trans.lm1:32158
 fn: lm_compiler_rw_trailer (int: mi; int: into; int: slot; @: made int) int
@@ -14672,9 +14719,7 @@ fn: lm_compiler_rw_methods_count () int
                     return: (cast: (int) (1))
                 ---
             ---
-            present := (cast: (int) (i = e_cell[0] || m_body_cell[0][i] != 0 || c.lm_compiler_t7_host_site(i) >= 0 || c.lm_compiler_method_source_own(i) >= 0))
-            if: m_node_cell[0][i] != 0 && m_node_cell[0][i]\kind = c.LM_P0_NODE_FRAME && m_node_cell[0][i]\as != 0 && m_node_cell[0][i]\as\frame != 0 && m_node_cell[0][i]\as\frame\trailer != 0
-                present := 1
+            present := (cast: (int) (i = e_cell[0] || c.lm_compiler_m_native(i) != 0 || c.lm_compiler_t7_host_site(i) >= 0 || c.lm_compiler_method_source_own(i) >= 0))
             if: c.lm_compiler_pap_on(i) = 0 && (present != 0 || (i != e_cell[0] && c.lm_compiler_m_nsof(i) < 0))
                 if: m_body_cell[0][i] != 0 && (m_body_cell[0][i]\kind != c.LM_P0_NODE_STRUCTURE || m_body_cell[0][i]\as = 0 || m_body_cell[0][i]\as\structure = 0)
                     return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][i], "internal: a source method has no Structure body producer")))
@@ -14695,7 +14740,7 @@ fn: lm_compiler_rw_methods_count () int
                 c.lm_compiler_ml_free()
                 if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0 && c.lm_compiler_ml_collect((cast: (const: @: c.LmP0Structure) (m_body_cell[0][i]\as\structure)), i, src_cell[0]) != 0
                     return: (cast: (int) (1))
-                if: m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0
+                if: c.lm_compiler_fn_parts_on(i) != 0 || (m_body_cell[0][i] != 0 && m_body_cell[0][i]\as != 0 && m_body_cell[0][i]\as\structure != 0)
                     if: i = e_cell[0]
                         source := c.lm_compiler_source_container((cast: (@: c.LmP0Structure) cur_unit_cell[0]), 0)
                     else:
@@ -17225,7 +17270,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
         if: c.fprintf(out_cell[0], "# const: @(char l2_own%d) \"", k) < 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
-        if: c.lm_compiler_write_text(out_cell[0], own_name_cell[0][k]) != 0
+        if: own_name_cell[0][k] != 0 && c.lm_compiler_write_text(out_cell[0], own_name_cell[0][k]) != 0
             c.fclose(out_cell[0])
             return: (cast: (int) (1))
         if: c.fputs("\"\n", out_cell[0]) < 0
@@ -18742,6 +18787,7 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: kinds int 0
     @: models int 0
+    @@: source_names c.LmP0Text 0
     int: nf
     int: k 0
     int: n
@@ -18762,13 +18808,11 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
     kinds := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     models := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     if: kinds = 0 || models = 0
-        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, c.lm_compiler_alloc_or(src_cell[0], source_node, "out of memory"))))
-    status := c.lm_compiler_whole_fields(arguments, idx, mi, src_cell[0], source_node, kinds, models)
+        return: (cast: (int) (c.lm_compiler_whole_drop(source_names, kinds, models, c.lm_compiler_alloc_or(src_cell[0], source_node, "out of memory"))))
+    status := c.lm_compiler_whole_fields(arguments, idx, mi, src_cell[0], source_node, kinds, models, @ source_names, @ names)
     if: status != 1
-        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, c.lm_compiler_error_fatal(src_cell[0], source_node, "internal: a whole call lost its fields"))))
+        return: (cast: (int) (c.lm_compiler_whole_drop(source_names, kinds, models, c.lm_compiler_error_fatal(src_cell[0], source_node, "internal: a whole call lost its fields"))))
     while: k < nf
-        if: kinds[k] != 0 - 2
-            names := names + 1
         src := c.lm_compiler_whole_kind_number(kinds[k])
         n := 0
         dst := (cast: (int) (c.lm_compiler_route_type(n)))
@@ -18781,18 +18825,23 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
         k := k + 1
     ---
     if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_WHOLE", 3 + names + 3 * routes, out) != 0
-        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+        return: (cast: (int) (c.lm_compiler_whole_drop(source_names, kinds, models, 1)))
     whole := (cast: (int) (\out))
-    # The static field names (the review of Codex, 307, item 3): their count at slot 2, then the codes of the formals they
-    # name; the walk checks them against the callable selected now before the payload (lmx_call_bind_whole_form).
+    # Source field labels in source order; zero denotes a positional field.
+    # The same target matcher checks this form before evaluating its payload.
     if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", whole, names) < 0
-        return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+        return: (cast: (int) (c.lm_compiler_whole_drop(source_names, kinds, models, 1)))
     k := 0
-    while: k < nf
-        if: kinds[k] != 0 - 2
-            if: rw_emit_cell[0] != 0 && (c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, ", whole, slot) < 0 || c.lm_compiler_emit_unit_id_text(c.lm_compiler_fn(idx, k)) != 0 || c.fputs(") != c.LMX_WALK_OK\n            return: 1\n", out_cell[0]) < 0)
-                return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
-            slot := slot + 1
+    while: k < names
+        if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, ", whole, slot) < 0
+            return: c.lm_compiler_whole_drop(source_names, kinds, models, 1)
+        if: rw_emit_cell[0] != 0 && source_names[k] != 0 && c.lm_compiler_emit_unit_id_text(source_names[k]) != 0
+            return: c.lm_compiler_whole_drop(source_names, kinds, models, 1)
+        if: rw_emit_cell[0] != 0 && source_names[k] = 0 && c.fputs("0U", out_cell[0]) < 0
+            return: c.lm_compiler_whole_drop(source_names, kinds, models, 1)
+        if: rw_emit_cell[0] != 0 && c.fputs(") != c.LMX_WALK_OK\n            return: 1\n", out_cell[0]) < 0
+            return: c.lm_compiler_whole_drop(source_names, kinds, models, 1)
+        slot := slot + 1
         k := k + 1
     ---
     k := 0
@@ -18804,9 +18853,9 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
             receiver := (cast: (int) (c.lm_compiler_direct_receiver(src, dst)))
             if: receiver >= 0
                 if: rw_emit_cell[0] != 0 && c.fprintf(out_cell[0], "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", whole, slot, k) < 0
-                    return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+                    return: (cast: (int) (c.lm_compiler_whole_drop(source_names, kinds, models, 1)))
                 if: lm_compiler_rw_witness(whole, slot + 1, dst, 0) != 0 || lm_compiler_rw_method_occurrence(receiver, whole, @ occurrence) != 0 || c.lm_compiler_rw_put(whole, slot + 2, occurrence) != 0
-                    return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 1)))
+                    return: (cast: (int) (c.lm_compiler_whole_drop(source_names, kinds, models, 1)))
                 slot := slot + 3
             ---
             n := n + 1
@@ -18814,8 +18863,7 @@ fn: lm_compiler_rw_whole_routed (int: parent; int: idx; @: arguments c.L2Applica
         ---
         k := k + 1
     ---
-    return: (cast: (int) (c.lm_compiler_whole_drop(kinds, models, 0)))
-end: lm_compiler_rw_whole_routed
+return: c.lm_compiler_whole_drop(source_names, kinds, models, 0)
 
 # Slice 301 (CALLABLE-PLACE-TYPED-RECEPTION; Codex 301, item 2): the NAMED operand of a bound call with the routes of its
 # typed number after the payload -- for each other number type the program's direct receiver from the type the actual is

@@ -477,7 +477,7 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
     @: host c.LmP0Node c.lm_compiler_scope_host()
     int: i
     int: prior 0
-    if: mi < 0 || t = 0
+    if: mi < 0 || (t = 0 && at = 0)
         if: c.lm_compiler_error(path, at, "incompatible entry signature") != 0
             return: (cast: (int) (-1))
         return: (cast: (int) (-1))
@@ -491,7 +491,8 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
         host := lm_compiler_own_activation_host()
     # RR2c-3: the hidden row of a returned merge is named by the statement's own word, `return` (l2_return_merge): no
     # program binds a word of the language, so no written name reaches the row; the admission is for written names.
-    if: c.lm_compiler_frame_head(at, "return") = 0 && lm_compiler_bind_admit(t, (cast: (const: @: c.LmP0Node) (c.lm_compiler_bind_at(at, t))), path) != 0
+    # An unnamed source field has a place by occurrence, without a binding.
+    if: t != 0 && c.lm_compiler_frame_head(at, "return") = 0 && lm_compiler_bind_admit(t, (cast: (const: @: c.LmP0Node) (c.lm_compiler_bind_at(at, t))), path) != 0
         return: (cast: (int) (-1))
     i := c.lm_compiler_own_find_decl(mi, t, at)
     # A source statement is retained independently of its physical receiving
@@ -508,7 +509,7 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
         return: (cast: (int) (i))
     # Only the host participates: the immediately enclosing body, or the activation in a method with parts (above).  A
     # nested body of another host may shadow the name with its own first field.
-    if: c.lm_compiler_frame_head(at, "return") = 0
+    if: t != 0 && c.lm_compiler_frame_head(at, "return") = 0
         while: prior < own_n_cell[0]
             if: own_mi_cell[0][prior] = mi && own_host_cell[0][prior] = host && own_decl_cell[0][prior] != at && c.lm_compiler_text_same(own_name_cell[0][prior], t) != 0
                 # Slice 297 (REPEATED-DECL-TYPED-RECEPTION; the book provenance :428, :483; Codex 295 review): a repeat
@@ -550,8 +551,7 @@ fn: lm_compiler_own_add (int: mi; const: (@: t c.LmP0Text); int: ty; const: (@: 
     own_n_cell[0] := own_n_cell[0] + 1
     if: c.lm_compiler_own_nsty_set(own_n_cell[0] - 1, lm_compiler_declaration_model(at, 0)) != 0
         return: (cast: (int) (-1))
-    return: (cast: (int) (own_n_cell[0] - 1))
-end: lm_compiler_own_add
+return: own_n_cell[0] - 1
 
 # Original: l2src/l2trans.lm1:4957
 fn: lm_compiler_ml_array_head (const: (@: t c.LmP0Text)) int
@@ -20577,6 +20577,8 @@ fn: lm_compiler_whole_candidate (@: values c.L2ValueSpan; int: n; int: nf; int: 
     operand := values\node
     if: operand = 0 || values\grammar = 0 || values\grammar = 3 || operand\as = 0
         return: (cast: (int) (0))
+    if: operand\kind = c.LM_P0_NODE_STRUCTURE
+        return: 1
     if: operand\kind = c.LM_P0_NODE_ATOM
         atom := (cast: (const: @: c.LmP0Text) (operand\as\atom))
         if: atom = 0 || c.lm_compiler_num(atom) != 0 || c.lm_compiler_quoted(atom) != 0 || c.lm_compiler_char_literal(atom) >= 0 || c.lm_compiler_signed_num(atom) != 0 || c.lm_compiler_rw_prec(atom) != 0
@@ -20614,12 +20616,11 @@ fn: lm_compiler_whole_row_model (int: row; int: kind; int: ent) int
         return: (cast: (int) (-1))
     if: row >= 0
         model := lm_compiler_nsf_contract_model(row)
-    if: model < 0 && kind = 3
+    if: model < 0 && (kind = 2 || kind = 3)
         model := ent
     if: model < 0 && kind = 10 && row >= 0
         model := c.lm_compiler_nsf_pointee(row)
-    return: (cast: (int) (model))
-end: lm_compiler_whole_row_model
+return: model
 
 # One field joins the static shape of a Structure (lm_compiler_whole_shape): a field of a new name is appended; a field of a
 # name the shape has takes that field's place when the kinds agree (merge: a later operand writes the slot of its name) and
@@ -20627,9 +20628,9 @@ end: lm_compiler_whole_row_model
 # slots of one name, more fields than the shape can hold (more than the formals: not the whole).
 fn: lm_compiler_whole_shape_join (@@: names c.LmP0Text; @: kinds int; @: models int; @: count int; int: cap; const: (@: name c.LmP0Text); int: kind; int: model) int
     int: i 0
-    if: name = 0 || name\data = 0 || name\length = 0U
+    if: name != 0 && (name\data = 0 || name\length = 0U)
         return: (cast: (int) (1))
-    while: i < \count
+    while: name != 0 && i < \count
         if: c.lm_compiler_text_same(names[i], name) != 0
             if: kinds[i] != kind
                 return: (cast: (int) (1))
@@ -20637,25 +20638,24 @@ fn: lm_compiler_whole_shape_join (@@: names c.LmP0Text; @: kinds int; @: models 
                 models[i] := model
             return: (cast: (int) (0))
         i := i + 1
-    ---
     if: \count >= cap
         return: (cast: (int) (1))
     names[\count] := (cast: (@: c.LmP0Text) name)
     kinds[\count] := kind
     models[\count] := model
     \count := \count + 1
-    return: (cast: (int) (0))
-end: lm_compiler_whole_shape_join
+return: 0
 
 # The fields of a Structure the translation knows by its schema: the rows of a named Structure (its NSF rows: the name, the
 # kind, the model of a nested Structure or of a reference to one), or the slots of a declared merge result (lm_compiler_mrs_*).
-# 1: known and joined; 0: unknown (a row without a name, another schema).
+# An unnamed row keeps its position. 1: known and joined; 0: unknown schema.
 fn: lm_compiler_whole_schema_shape (int: schema; @@: names c.LmP0Text; @: kinds int; @: models int; @: count int; int: cap) int
     @: nsf_n_cell int (cast: (@: int) (@ c.l2_nsf_n))
     @@: nsf_owner_cell int (cast: (@@: int) (@ c.l2_nsf_owner))
     @@@: nsf_fname_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_nsf_fname))
     @@: nsf_kind_cell int (cast: (@@: int) (@ c.l2_nsf_kind))
     @@: nsf_ref_cell int (cast: (@@: int) (@ c.l2_nsf_ref))
+    @@@: nsf_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_nsf_name))
     @: mrs_n_cell int (cast: (@: int) (@ c.l2_mrs_n))
     @@: mrs_res_cell int (cast: (@@: int) (@ c.l2_mrs_res))
     @@: mrs_kind_cell int (cast: (@@: int) (@ c.l2_mrs_kind))
@@ -20665,16 +20665,21 @@ fn: lm_compiler_whole_schema_shape (int: schema; @@: names c.LmP0Text; @: kinds 
     int: kind
     int: model
     int: res
+    int: negative 0
+    size_t: magnitude 0U
     if: c.lm_compiler_schema_kind(schema) = 1
         while: k < nsf_n_cell[0]
             if: nsf_owner_cell[0][k] = schema
                 kind := nsf_kind_cell[0][k]
                 model := lm_compiler_whole_row_model(k, kind, nsf_ref_cell[0][k])
+                # A retained atom is an unnamed source field. Query its
+                # ordinary value type, using the same physical source body.
+                if: kind = 12
+                    kind := c.lm_compiler_own_nsf_kind(c.lm_compiler_source_atom_scalar((cast: (const: @: c.LmP0Text) nsf_name_cell[0][k]), @ negative, @ magnitude))
                 if: lm_compiler_whole_shape_join(names, kinds, models, count, cap, (cast: (const: @: c.LmP0Text) (nsf_fname_cell[0][k])), kind, model) != 0
                     return: (cast: (int) (0))
             ---
             k := k + 1
-        ---
         return: (cast: (int) (1))
     if: c.lm_compiler_schema_kind(schema) = 2
         res := c.lm_compiler_schema_index(schema)
@@ -20690,10 +20695,8 @@ fn: lm_compiler_whole_schema_shape (int: schema; @@: names c.LmP0Text; @: kinds 
                     return: (cast: (int) (0))
             ---
             k := k + 1
-        ---
         return: (cast: (int) (1))
-    return: (cast: (int) (0))
-end: lm_compiler_whole_schema_shape
+return: 0
 
 # The static shape of a merge written in the call (a merge result of no declaration): its operands' shapes joined in their
 # order (a later operand's same-named field takes the slot) -- a typed declaration (form 3: one field of its name and kind),
@@ -20779,6 +20782,13 @@ fn: lm_compiler_whole_shape (@: value c.L2ValueSpan; int: mi; const: (@: path ch
     \count := 0
     if: value = 0 || value\node = 0 || value\grammar = 0
         return: (cast: (int) (0))
+    model := c.lm_compiler_value_structure_model(value)
+    if: model >= 0
+        return: lm_compiler_whole_schema_shape(model, names, kinds, models, count, cap)
+    # An expression view retains its written group but delegates the value
+    # query to that same prepared operand, just like ordinary value reception.
+    if: value\node\kind = c.LM_P0_NODE_STRUCTURE && value\values != 0 && value\value_n = 1
+        return: lm_compiler_whole_shape((cast: (@: c.L2ValueSpan) value\values), mi, path, at, names, kinds, models, count, cap)
     status := c.lm_compiler_value_span_path(value, mi, @ selected)
     if: status = 3 || alloc_err_cell[0] != 0
         return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "cannot project a candidate path")))
@@ -20804,12 +20814,12 @@ fn: lm_compiler_whole_shape (@: value c.L2ValueSpan; int: mi; const: (@: path ch
     return: (cast: (int) (0))
 end: lm_compiler_whole_shape
 
-# Frees the two arrays a whole decision allocated and answers result.
-fn: lm_compiler_whole_drop (@: kinds int; @: models int; int: result) int
+# Release the optional source labels and the two type arrays of a whole decision.
+fn: lm_compiler_whole_drop (@@: names c.LmP0Text; @: kinds int; @: models int; int: result) int
+    c.lm_compiler_xfree((cast: (@: void) names))
     c.lm_compiler_xfree((cast: (@: void) kinds))
     c.lm_compiler_xfree((cast: (@: void) models))
-    return: (cast: (int) (result))
-end: lm_compiler_whole_drop
+return: result
 
 # Slice 307: the fields of the one actual bound to the formals of the selected callable -- the whole form (the book
 # #whole-arguments, the author's decision of 2026-11-07): every field of the actual's static shape names a formal, a number
@@ -20818,7 +20828,7 @@ end: lm_compiler_whole_drop
 # (lm_compiler_formal_default_kind 1, as the binder requires of an omitted formal).  out_kind[k] takes the kind of the field
 # bound to formal k (-2 for none), out_model[k] the model of a Structure field (-1 for none).  1: the whole form; 0: not
 # (the actual keeps its ordinary positional reading, with the binder's check of the omitted formals); -1: an error said.
-fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int: mi; const: (@: path char); const: (@: at c.LmP0Node); @: out_kind int; @: out_model int) int
+fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int: mi; const: (@: path char); const: (@: at c.LmP0Node); @: out_kind int; @: out_model int; @@@: source_names c.LmP0Text; @: source_count int) int
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @: actual c.L2ApplicationActual
     @@: names c.LmP0Text 0
@@ -20833,6 +20843,10 @@ fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int
     int: number
     int: result 1
     size_t: bits 0U
+    if: source_names != 0
+        source_names[0] := 0
+    if: source_count != 0
+        source_count[0] := 0
     if: arguments = 0 || idx < 0 || arguments\written_count != 1
         return: (cast: (int) (0))
     nf := m_arity_cell[0][idx]
@@ -20847,27 +20861,28 @@ fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int
     kinds := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     models := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     if: names = 0 || kinds = 0 || models = 0
-        c.lm_compiler_xfree((cast: (@: void) names))
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_alloc_or(path, at, "out of memory"))))
+        return: lm_compiler_whole_drop(names, kinds, models, c.lm_compiler_alloc_or(path, at, "out of memory"))
     k := 0
     while: k < nf
         out_kind[k] := 0 - 2
         out_model[k] := 0 - 1
         k := k + 1
-    ---
     status := lm_compiler_whole_shape((cast: (@: c.L2ValueSpan) (@ actual\value)), mi, path, at, names, kinds, models, @ count, nf)
     if: status != 1
         result := status
-    # Every field a formal of its name, of its kind's class.
+    # A named field selects its formal by name; an unnamed field selects
+    # its source position. This is the runtime whole-argument binding too.
     while: result = 1 && i < count
-        hit := 0 - 1
-        k := 0
-        while: k < nf && hit < 0
-            if: c.lm_compiler_text_same(names[i], c.lm_compiler_fn(idx, k)) != 0
-                hit := k
-            k := k + 1
+        hit := i
+        if: names[i] != 0
+            hit := -1
+            k := 0
+            while: k < nf && hit < 0
+                if: c.lm_compiler_text_same(names[i], c.lm_compiler_fn(idx, k)) != 0
+                    hit := k
+                k := k + 1
         ---
-        if: hit < 0 || out_kind[hit] != 0 - 2 || c.lm_compiler_cf_get(idx, hit) >= 0
+        if: hit < 0 || hit >= nf || out_kind[hit] != 0 - 2 || c.lm_compiler_cf_get(idx, hit) >= 0
             result := 0
         if: result = 1
             number := lm_compiler_whole_kind_number(kinds[i])
@@ -20885,20 +20900,20 @@ fn: lm_compiler_whole_fields (@: arguments c.L2ApplicationActuals; int: idx; int
             out_kind[hit] := kinds[i]
             out_model[hit] := models[i]
         i := i + 1
-    ---
     # Every formal no field supplies holds a built default.
     k := 0
     while: result = 1 && k < nf
         if: out_kind[k] = 0 - 2 && lm_compiler_formal_default_kind(idx, k, @ bits) != 1
             result := 0
         k := k + 1
-    ---
-    c.lm_compiler_xfree((cast: (@: void) names))
-    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, result)))
-end: lm_compiler_whole_fields
+    if: result = 1 && source_names != 0 && source_count != 0
+        source_names[0] := names
+        source_count[0] := count
+        names := 0
+return: lm_compiler_whole_drop(names, kinds, models, result)
 
 # Slice 307: the decision of CHECK for a call whose one actual may be the whole of its arguments (the binder's whole 2), on
-# the static shape of the actual (lm_compiler_whole_fields): when its direct fields name the formals of the selected
+# the static shape of the actual (lm_compiler_whole_fields): when its direct fields select the formals of the selected
 # callable (every other formal with a built default), the fields are the arguments -- whole 1 -- by the basic rule of the
 # book (#whole-arguments; the author, 2026-11-08: the case is decided by the basic rules, the body's reads of a formal have
 # no part in it, and no argument is searched for deeper in the Structure), and each Structure field is admitted at its
@@ -20938,13 +20953,13 @@ fn: lm_compiler_whole_decide (@: arguments c.L2ApplicationActuals; int: idx; int
     kinds := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     models := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     if: kinds = 0 || models = 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_alloc_or(path, at, "out of memory"))))
-    status := lm_compiler_whole_fields(arguments, idx, mi, path, at, kinds, models)
+        return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_alloc_or(path, at, "out of memory"))))
+    status := lm_compiler_whole_fields(arguments, idx, mi, path, at, kinds, models, 0, 0)
     if: status < 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+        return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, 1)))
     if: status = 0
         arguments\whole := 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, lm_compiler_bind_defaults_check(arguments, nf, 0, idx, callee, path, at))))
+        return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, lm_compiler_bind_defaults_check(arguments, nf, 0, idx, callee, path, at))))
     # The fields as the arguments: a Structure field is admitted at its formal by the first part of implements, here.
     k := 0
     while: k < nf
@@ -20952,20 +20967,20 @@ fn: lm_compiler_whole_decide (@: arguments c.L2ApplicationActuals; int: idx; int
             req := c.lm_compiler_nsty_get(idx, k)
             if: m_node_cell[0][idx] != 0 && m_node_cell[0][idx]\as != 0
                 if: lm_compiler_whole_applicable(models[k], req, idx, k, @ compatible) != 0 || alloc_err_cell[0] != 0
-                    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_alloc_or(path, at, "malformed implements descriptor"))))
+                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_alloc_or(path, at, "malformed implements descriptor"))))
                 if: compatible = 0
-                    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_error(path, at, "implements is false in function argument"))))
+                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_error(path, at, "implements is false in function argument"))))
                 ---
             else:
                 if: c.lm_compiler_admit_implements(models[k], req, req, 0, path, at, "function argument") != 0
-                    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, 1)))
                 ---
             ---
         ---
         k := k + 1
     ---
     arguments\whole := 1
-    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 0)))
+    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, 0)))
 end: lm_compiler_whole_decide
 
 # The routes of a native whole call (lm_compiler_emit_whole_call): three arrays -- l2_brw<fd> the formal a route serves,
@@ -21002,10 +21017,10 @@ fn: lm_compiler_emit_whole_routes (@: arguments c.L2ApplicationActuals; int: idx
     kinds := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     models := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     if: kinds = 0 || models = 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_alloc_or(src_cell[0], at, "out of memory"))))
-    status := lm_compiler_whole_fields(arguments, idx, mi, src_cell[0], at, kinds, models)
+        return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_alloc_or(src_cell[0], at, "out of memory"))))
+    status := lm_compiler_whole_fields(arguments, idx, mi, src_cell[0], at, kinds, models, 0, 0)
     if: status != 1
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_error_fatal(src_cell[0], at, "internal: a whole call lost its fields"))))
+        return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, c.lm_compiler_error_fatal(src_cell[0], at, "internal: a whole call lost its fields"))))
     while: k < nf
         src := lm_compiler_whole_kind_number(kinds[k])
         n := 0
@@ -21019,9 +21034,9 @@ fn: lm_compiler_emit_whole_routes (@: arguments c.L2ApplicationActuals; int: idx
         k := k + 1
     ---
     if: count = 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, (cast: (int) (c.sprintf(route_args, "0U, 0, 0, 0") < 0)))))
+        return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, (cast: (int) (c.sprintf(route_args, "0U, 0, 0, 0") < 0)))))
     if: c.fprintf(out_cell[0], "%s[]: size_t l2_brw%d %d\n%s[]: int l2_brt%d %d\n%s[]: @(void) l2_brc%d %d\n", ind, fd, count, ind, fd, count, ind, fd, count) < 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+        return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, 1)))
     k := 0
     while: k < nf
         src := lm_compiler_whole_kind_number(kinds[k])
@@ -21031,9 +21046,9 @@ fn: lm_compiler_emit_whole_routes (@: arguments c.L2ApplicationActuals; int: idx
             receiver := lm_compiler_direct_receiver(src, dst)
             if: receiver >= 0
                 if: c.lm_compiler_emit_input_value_type(c.lm_compiler_ft_of_own(dst), 0, type_text) != 0 || lm_compiler_occ_expr(receiver, unit_ref_cell[0], occ) != 0
-                    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, 1)))
                 if: c.fprintf(out_cell[0], "%sl2_brw%d[%d]: %dU\n%sl2_brt%d[%d]: %s\n%sl2_brc%d[%d]: (cast: (@: void) %s)\n", ind, fd, r, k, ind, fd, r, type_text, ind, fd, r, occ\data) < 0
-                    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+                    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, 1)))
                 r := r + 1
             ---
             n := n + 1
@@ -21041,7 +21056,7 @@ fn: lm_compiler_emit_whole_routes (@: arguments c.L2ApplicationActuals; int: idx
         ---
         k := k + 1
     ---
-    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, (cast: (int) (c.sprintf(route_args, "%dU, l2_brw%d, l2_brt%d, l2_brc%d", count, fd, fd, fd) < 0)))))
+    return: (cast: (int) (lm_compiler_whole_drop(0, kinds, models, (cast: (int) (c.sprintf(route_args, "%dU, l2_brw%d, l2_brt%d, l2_brc%d", count, fd, fd, fd) < 0)))))
 end: lm_compiler_emit_whole_routes
 
 # Slice 307 (CALL-WHOLE-ARGUMENTS-STRUCTURE): the native call whose one actual is the whole of its arguments (CHECK's
@@ -21170,16 +21185,16 @@ fn: lm_compiler_whole_applicable (int: cand; int: req; int: callee; int: input; 
     return: (cast: (int) (0))
 end: lm_compiler_whole_applicable
 
-# Slice 307, the review of Codex (item 3): the names and the form of a native whole call before its actual -- the formals
-# the static fields name (lm_compiler_whole_fields: out_kind != -2), as the codes of their spellings (the unit's table), in
-# l2_wn<fd>; lmx_call_bind_whole_form checks them against the callable selected now (l2_c<self_t>) with the defaults of
-# the other formals; its `call` is the caller's implicit `call` before the producer of the Structure runs.
+# Whole-field labels keep their source order. An unnamed label is zero,
+# so the selected callee binds that field by position even when its formal
+# names differ. Form checking still precedes evaluation of the producer.
 fn: lm_compiler_emit_whole_names (@: arguments c.L2ApplicationActuals; int: idx; int: mi; int: self_t; int: nact; int: fd; const: (@: ind char); const: (@: source_node c.LmP0Node)) int
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     @: kinds int 0
     @: models int 0
+    @@: source_names c.LmP0Text 0
     int: nf
     int: k 0
     int: n 0
@@ -21192,37 +21207,33 @@ fn: lm_compiler_emit_whole_names (@: arguments c.L2ApplicationActuals; int: idx;
     kinds := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     models := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) nf) * c.sizeof(c.int)))
     if: kinds = 0 || models = 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_alloc_or(src_cell[0], source_node, "out of memory"))))
-    status := lm_compiler_whole_fields(arguments, idx, mi, src_cell[0], source_node, kinds, models)
+        return: (cast: (int) (lm_compiler_whole_drop(source_names, kinds, models, c.lm_compiler_alloc_or(src_cell[0], source_node, "out of memory"))))
+    status := lm_compiler_whole_fields(arguments, idx, mi, src_cell[0], source_node, kinds, models, @ source_names, @ n)
     if: status != 1
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, c.lm_compiler_error_fatal(src_cell[0], source_node, "internal: a whole call lost its fields"))))
-    while: k < nf
-        if: kinds[k] != 0 - 2
-            n := n + 1
-        k := k + 1
-    ---
+        return: (cast: (int) (lm_compiler_whole_drop(source_names, kinds, models, c.lm_compiler_error_fatal(src_cell[0], source_node, "internal: a whole call lost its fields"))))
     if: n = 0
         if: c.fprintf(out_cell[0], "%sint: l2_wfs%d lmx_call_bind_whole_form(l2_call_arena, l2_c%d, %dU, 0, 0U)\n", ind, fd, self_t, nact) < 0
-            return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+            return: (cast: (int) (lm_compiler_whole_drop(source_names, kinds, models, 1)))
         ---
     else:
         if: c.fprintf(out_cell[0], "%s[]: size_t l2_wn%d %d\n", ind, fd, n) < 0
-            return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+            return: (cast: (int) (lm_compiler_whole_drop(source_names, kinds, models, 1)))
         k := 0
-        n := 0
-        while: k < nf
-            if: kinds[k] != 0 - 2
-                if: c.fprintf(out_cell[0], "%sl2_wn%d[%dU]: ", ind, fd, n) < 0 || c.lm_compiler_emit_unit_id_text(c.lm_compiler_fn(idx, k)) != 0 || c.fputs("\n", out_cell[0]) < 0
-                    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
-                n := n + 1
+        while: k < n
+            if: c.fprintf(out_cell[0], "%sl2_wn%d[%dU]: ", ind, fd, k) < 0
+                return: lm_compiler_whole_drop(source_names, kinds, models, 1)
+            if: source_names[k] != 0 && c.lm_compiler_emit_unit_id_text(source_names[k]) != 0
+                return: lm_compiler_whole_drop(source_names, kinds, models, 1)
+            if: source_names[k] = 0 && c.fputs("0U", out_cell[0]) < 0
+                return: lm_compiler_whole_drop(source_names, kinds, models, 1)
+            if: c.fputs("\n", out_cell[0]) < 0
+                return: lm_compiler_whole_drop(source_names, kinds, models, 1)
             k := k + 1
-        ---
         if: c.fprintf(out_cell[0], "%sint: l2_wfs%d lmx_call_bind_whole_form(l2_call_arena, l2_c%d, %dU, l2_wn%d, %dU)\n", ind, fd, self_t, nact, fd, n) < 0
-            return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+            return: (cast: (int) (lm_compiler_whole_drop(source_names, kinds, models, 1)))
     ---
     if: c.fprintf(out_cell[0], "%sif: l2_wfs%d = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CALL\n", ind, fd) < 0 || c.lm_compiler_emit_implicit_throw(mi, "call", ind) != 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
+        return: (cast: (int) (lm_compiler_whole_drop(source_names, kinds, models, 1)))
     if: c.fprintf(out_cell[0], "%s---\n%sif: l2_wfs%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_wfs%d)\n%s    return: 0\n%s---\n", ind, ind, fd, ind, fd, ind, ind) < 0
-        return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 1)))
-    return: (cast: (int) (lm_compiler_whole_drop(kinds, models, 0)))
-end: lm_compiler_emit_whole_names
+        return: (cast: (int) (lm_compiler_whole_drop(source_names, kinds, models, 1)))
+return: lm_compiler_whole_drop(source_names, kinds, models, 0)

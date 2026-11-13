@@ -1,0 +1,18 @@
+Q(int: x 0)
+Box(int: x 7)
+fn: take_number (int: value) int
+return: value
+fn: produce () int
+return: 7
+fn: take_value (@: value Q) int
+return: value\x
+fn: run () int
+    int: arithmetic take_number(((1 + 2)))
+    int: scalar take_number(((7)))
+    int: computed take_number(((produce())))
+    int: reference take_value(((Box)))
+    if: arithmetic != 3 || scalar != 7 || computed != 7 || reference != 7
+        return: 81
+    return: 7
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

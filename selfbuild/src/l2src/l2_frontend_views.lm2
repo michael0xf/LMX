@@ -260,20 +260,19 @@ fn: lm_compiler_own_find_decl (int: mi; const: (@: t c.LmP0Text); const: (@: at 
     @@: own_mi_cell int (cast: (@@: int) (@ c.l2_own_mi))
     int: i 0
     @: reuse c.L2OwnReuse own_reuses_cell[0]
-    if: t = 0 || at = 0
-        return: (cast: (int) (-1))
+    if: at = 0
+        return: -1
     while: i < own_n_cell[0]
-        if: own_decl_cell[0][i] = at && c.lm_compiler_text_same(own_name_cell[0][i], t)
+        if: own_decl_cell[0][i] = at && (own_name_cell[0][i] = t || c.lm_compiler_text_same(own_name_cell[0][i], t) != 0)
             if: own_mi_cell[0][i] = mi
                 return: (cast: (int) (i))
         ---
         i := i + 1
     while: reuse != 0
-        if: reuse\source = at && reuse\method = mi && reuse\own >= 0 && reuse\own < own_n_cell[0] && c.lm_compiler_text_same(own_name_cell[0][reuse\own], t) != 0
+        if: reuse\source = at && reuse\method = mi && reuse\own >= 0 && reuse\own < own_n_cell[0] && (own_name_cell[0][reuse\own] = t || c.lm_compiler_text_same(own_name_cell[0][reuse\own], t) != 0)
             return: (cast: (int) (reuse\own))
         reuse := reuse\allocated_next
-    return: (cast: (int) (-1))
-end: lm_compiler_own_find_decl
+return: -1
 
 fn: lm_compiler_own_source_after (int: row; int: previous) int
     @@@: own_decl_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_own_decl))

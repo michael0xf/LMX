@@ -1,0 +1,29 @@
+# The field collector must preserve the code facet of an anonymous child.
+# Same explicit Structure launch and lexical effect as struct_call_selected.
+int: seen 0
+fn: note (int: value) int
+    node\seen := value
+return: value
+fn: read_seen () int
+    return: node\seen
+Block:
+    int: padding 0
+    (
+        note(7)
+    )
+BlockData(int: padding 0; int: temporary 0)
+BlockWithPlace:
+    int: padding 0
+    (
+        int: temporary 2
+        note(temporary + 5)
+    )
+fn: run () int
+    call: Block Block
+    if: read_seen() != 7
+        return: 81
+    note(0)
+    call: BlockWithPlace BlockData
+return: read_seen()
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

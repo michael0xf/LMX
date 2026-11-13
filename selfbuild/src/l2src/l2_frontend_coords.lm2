@@ -864,7 +864,7 @@ fn: lm_compiler_ns_tail_rank (int: ns) int
     return: (cast: (int) (count))
 end: lm_compiler_ns_tail_rank
 
-# A place of explicit data: a number, a source definition, or a typed
+# A named receiving place of explicit data: a number, a source definition, or a typed
 # reference to non-graph data (its cell holds the reference; the data's place
 # row addresses that cell like a number's). Array and graph references still
 # need the implements admission of their data place (split_staged).
@@ -881,7 +881,9 @@ fn: lm_compiler_split_data_row (int: oi) int
     @@@: names c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_own_name))
     if: oi < 0 || oi >= own_n_cell[0]
         return: (cast: (int) (0))
-    if: c.lm_compiler_own_written(oi) != 0
+    # An anonymous source child keeps its physical field but declares no
+    # name for this activation's binding and named-place interface.
+    if: names[0][oi] = 0 || c.lm_compiler_own_written(oi) != 0
         return: 0
     if: c.lm_compiler_source_definition_ns(oi) >= 0 && c.lm_compiler_default_data_input(own_mi_cell[0][oi], c.lm_compiler_param_find(own_mi_cell[0][oi], names[0][oi])) != 0
         return: 0

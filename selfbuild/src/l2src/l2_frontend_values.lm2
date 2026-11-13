@@ -2389,17 +2389,15 @@ fn: lm_compiler_emit_source_failure (const: (@: ind char); const: (@: fail char)
     return: (cast: (int) (0))
 end: lm_compiler_emit_source_failure
 
-# A method the `fn` or the `sub` receiver produced: one Structure whose parts are args, the description of the return where there
-# is one, var and body (the book, #method-parts; lm_compiler_part_slot places them).  Slice 285 (SUB-OWN-FIELD-CALL): a `sub` was
-# a flat Structure of its header and its body's fields with no var, so a short call had no data and an own field no place.
+# A defined fn/sub has its ordinary parts also when its only code is a
+# return trailer. Reuse the implementation reader used by native emission;
+# a bodyless interface still has no implementation and gains no invented body.
 fn: lm_compiler_fn_parts_on (int: mi) int
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
-    @@@: m_body_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_body))
     @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
-    if: mi < 0 || mi >= m_n_cell[0] || m_body_cell[0][mi] = 0 || m_node_cell[0][mi] = 0
-        return: (cast: (int) (0))
-    return: (cast: (int) (c.lm_compiler_frame_head(m_node_cell[0][mi], "fn") != 0 || c.lm_compiler_frame_head(m_node_cell[0][mi], "sub") != 0))
-end: lm_compiler_fn_parts_on
+    if: mi < 0 || mi >= m_n_cell[0] || m_node_cell[0][mi] = 0 || c.lm_compiler_m_native(mi) = 0
+        return: 0
+return: (cast: (int) (c.lm_compiler_frame_head(m_node_cell[0][mi], "fn") != 0 || c.lm_compiler_frame_head(m_node_cell[0][mi], "sub") != 0))
 
 fn: lm_compiler_mad_is_return (const: (@: stmt c.LmP0Node); int: model) int
     @: only c.LmP0Field

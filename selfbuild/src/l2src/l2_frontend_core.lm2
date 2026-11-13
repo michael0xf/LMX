@@ -3712,21 +3712,23 @@ fn: lm_compiler_atom_only_tail (const: (@: fr c.LmP0Frame)) int
 end: lm_compiler_atom_only_tail
 
 # Original: l2src/l2trans.lm1:7120
-fn: lm_compiler_expr_only_tail (const: (@: fr c.LmP0Frame)) int
+fn: lm_compiler_body_expression (const: (@: body c.LmP0Structure)) int
     @: f c.LmP0Field
     int: span
-    if: fr = 0 || fr\body = 0
-        return: (cast: (int) (0))
-    if: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (fr\body))) < 1
-        return: (cast: (int) (0))
-    f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (fr\body\first_field)))
+    if: body = 0
+        return: 0
+    f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
     if: f = 0
-        return: (cast: (int) (0))
+        return: 0
     span := c.lm_compiler_discard_run(f)
     if: span < 2
-        return: (cast: (int) (0))
-    return: (cast: (int) ((cast: (int) (c.lm_compiler_skip_span(f, span) = 0))))
-end: lm_compiler_expr_only_tail
+        return: 0
+return: (cast: (int) (c.lm_compiler_skip_span(f, span) = 0))
+
+fn: lm_compiler_expr_only_tail (const: (@: fr c.LmP0Frame)) int
+    if: fr = 0
+        return: 0
+return: lm_compiler_body_expression((cast: (const: @: c.LmP0Structure) fr\body))
 
 # Original: l2src/l2trans.lm1:7178
 fn: lm_compiler_ref_bind_site (const: (@: stmt c.LmP0Node); int: mi; @@: out_word c.LmP0Text; @: out_meth int) int
@@ -4052,7 +4054,7 @@ fn: lm_compiler_emit_work_decl (int: k) int
         if: c.fprintf(out_cell[0], "    LmxWalkValue: %s\n    int: %s_status lmx_walk_value_cell(l2_program_arena, %s_from[0], @ %s)\n    if: %s_status != c.LMX_WALK_OK\n        lmx_call_note_walk_fail(%s_status)\n        return: 0\n    ---\n", cwv_name\data, cwv_name\data, cq_name\data, cwv_name\data, cwv_name\data, cwv_name\data) < 0
             return: 1
         # IDENTIFIER-CODES: the binding's name is the code of the own field's spelling (the unit's table).
-        if: c.fputs("    if: lmx_activation_bind(l2_program_arena, ", out_cell[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(out_cell[0], ", 0, c.LMX_TYPE_NONE, @ %s) != 0\n        lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n        return: 0\n    ---\n", cwv_name\data) < 0
+        if: own_name_cell[0][k] != 0 && (c.fputs("    if: lmx_activation_bind(l2_program_arena, ", out_cell[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(out_cell[0], ", 0, c.LMX_TYPE_NONE, @ %s) != 0\n        lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n        return: 0\n    ---\n", cwv_name\data) < 0)
             return: 1
         return: 0
     ---
@@ -4110,12 +4112,11 @@ fn: lm_compiler_emit_work_decl (int: k) int
     # as the entry load above, and current at every call because what is marked is published before each one
     # (lm_compiler_emit_publish, book 12).  The name is the code of the field's spelling (IDENTIFIER-CODES: the unit's
     # table l2_ids); the record is the trampoline's (lmx_call_prim_values / lmx_call0_mode), gone with the activation.
-    if: c.fputs("    lmx_activation_bind(l2_program_arena, ", out_cell[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(out_cell[0], ", (cast: (@: void) %s_from[0]), lmx_domain_type(l2_program_arena, %s_from[0]), 0)\n", cq_name\data, cq_name\data) < 0
+    if: own_name_cell[0][k] != 0 && (c.fputs("    lmx_activation_bind(l2_program_arena, ", out_cell[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(out_cell[0], ", (cast: (@: void) %s_from[0]), lmx_domain_type(l2_program_arena, %s_from[0]), 0)\n", cq_name\data, cq_name\data) < 0)
         return: 1
     # Once a published place is declared, its addresses enter the activation's
     # publication table (lm_compiler_emit_publish_table, the same planner).
-    return: (cast: (int) (c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)))
-end: lm_compiler_emit_work_decl
+return: c.lm_compiler_emit_publish_table(cur_mi_cell[0], k)
 
 # Original: l2src/l2trans.lm1:7670
 fn: lm_compiler_own_work_store (int: k0; const: (@: ind char); const: (@: val char)) int
@@ -8945,6 +8946,28 @@ fn: lm_compiler_ns_written_repeat (const: (@: fld c.LmP0Node); int: me) int
     return: 0
 end: lm_compiler_ns_written_repeat
 
+# Named and anonymous children use the same original source constructor.
+# Reserve the parent's field before recursion; a precollected child (data)
+# is linked here without constructing a second occurrence.
+fn: lm_compiler_ns_child (const: (@: source c.LmP0Node); int: owner; const: (@: name c.LmP0Text); const: (@: body c.LmP0Structure); int: child; const: (@: path char)) int
+    @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
+    @@: nsf_ref_cell int (cast: (@@: int) (@ c.l2_nsf_ref))
+    @@@: nsf_fname_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_nsf_fname))
+    int: row lm_compiler_nsf_push(2, 0U, 0, owner, source)
+    if: row < 0
+        c.lm_compiler_alloc_or(path, source, "out of memory")
+        return: -1
+    if: name != 0 && c.lm_compiler_bind_admit(name, c.lm_compiler_bind_at(source, name), path) != 0
+        return: -1
+    nsf_fname_cell[0][row] := (cast: (@: c.LmP0Text) name)
+    if: child < 0
+        child := ns_n_cell[0]
+        if: lm_compiler_take_ns_body(name, owner, body, source, source, path) != 0
+            return: -1
+        ---
+    nsf_ref_cell[0][row] := child
+return: row
+
 fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (@: body c.LmP0Structure); const: (@: defining c.LmP0Node); const: (@: at c.LmP0Node); const: (@: path char)) int
     @@@: ns_def_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_def_node))
     @@@: ns_def_body_cell c.LmP0Structure (cast: (@@@: c.LmP0Structure) (@ c.l2_ns_def_body))
@@ -8992,10 +9015,9 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
     ns_first_cell[0][me] := nsf_n_cell[0]
     unit_body := c.lm_compiler_part_source_body(body)
     f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (body\first_field)))
-    # A named Structure with no fields is the empty Structure type (book §9).
-    # `E: ()` / `end: E` is one empty Structure field; refs_open refuses a
-    # zero count, so the shape stays a node of length 0.
-    if: f = 0 || (c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next))) = 0 && c.lm_compiler_empty_struct((cast: (const: @: c.LmP0Node) (f\value))) != 0)
+    # Only an empty original body has no fields. An anonymous child keeps
+    # its own occurrence and position even when that child is empty.
+    if: f = 0
         ns_count_cell[0][me] := 0
         return: (cast: (int) (0))
     # Written data declarations are visible to the whole enclosing body.
@@ -9050,6 +9072,12 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
             nsf_name_cell[0][nsf_n_cell[0] - 1] := fld\as\atom
             count := count + 1
             f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
+            continue
+        if: fld != 0 && fld\kind = c.LM_P0_NODE_STRUCTURE && fld\as != 0 && fld\as\structure != 0 && lm_compiler_body_expression((cast: (const: @: c.LmP0Structure) fld\as\structure)) = 0
+            if: lm_compiler_ns_child(fld, me, 0, (cast: (const: @: c.LmP0Structure) fld\as\structure), -1, path) < 0
+                return: 1
+            count := count + 1
+            f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) f\next))
             continue
         # K03 S5: a field-declaring word applied to nothing -- bare `size_t` as `size_t()` -- is that field's
         # declaration, and its contract says what it lacks, at the word.
@@ -9139,20 +9167,11 @@ fn: lm_compiler_take_ns_body (const: (@: name c.LmP0Text); int: parent; const: (
         if: lm_compiler_ns_nested_def(fld, me) != 0
             if: c.lm_compiler_fn_close((cast: (const: @: c.LmP0Frame) (fld\as\frame)), (cast: (const: @: c.LmP0Text) (fld\as\frame\head)), 0) != 0
                 return: (cast: (int) (c.lm_compiler_error(path, at, "end target does not match close target")))
-            if: lm_compiler_nsf_push(2, 0U, 0, me, fld) < 0
-                return: (cast: (int) (c.lm_compiler_error(path, at, "out of memory")))
-            if: c.lm_compiler_bind_admit((cast: (const: @: c.LmP0Text) ((cast: (@: c.LmP0Text) fld\as\frame\head))), (cast: (const: @: c.LmP0Node) (c.lm_compiler_bind_at(fld, (cast: (const: @: c.LmP0Text) ((cast: (@: c.LmP0Text) fld\as\frame\head)))))), path) != 0
-                return: (cast: (int) (1))
-            nsf_fname_cell[0][nsf_n_cell[0] - 1] := (cast: (@: c.LmP0Text) fld\as\frame\head)
-            sub_ix := nsf_n_cell[0] - 1
             ref_ix := data_index
             if: fld != data_source
-                ref_ix := ns_n_cell[0]
-                if: lm_compiler_take_ns_body((cast: (const: @: c.LmP0Text) ((cast: (@: c.LmP0Text) fld\as\frame\head))), me, (cast: (const: @: c.LmP0Structure) (fld\as\frame\body)), fld, fld, path) != 0
-                    return: (cast: (int) (1))
-                ---
-            ---
-            nsf_ref_cell[0][sub_ix] := ref_ix
+                ref_ix := -1
+            if: lm_compiler_ns_child(fld, me, (cast: (const: @: c.LmP0Text) fld\as\frame\head), (cast: (const: @: c.LmP0Structure) fld\as\frame\body), ref_ix, path) < 0
+                return: 1
             count := count + 1
             f := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (f\next)))
             continue
@@ -9633,7 +9652,7 @@ fn: lm_compiler_ns_decl_constructor (int: ni; int: own) int
     if: ni < 0 || own < 0
         return: (cast: (int) (-1))
     while: row < nsf_n_cell[0]
-        if: nsf_owner_cell[0][row] = ni && nsf_source_cell[0][row] = own_decl_cell[0][own] && nsf_fname_cell[0][row] != 0 && nsf_fname_cell[0][row] = own_name_cell[0][own]
+        if: nsf_owner_cell[0][row] = ni && nsf_source_cell[0][row] = own_decl_cell[0][own] && nsf_fname_cell[0][row] = own_name_cell[0][own]
             kind := nsf_kind_cell[0][row]
             if: kind = 2 && (nsf_source_cell[0][row] != own_decl_cell[0][own] || nsf_ref_cell[0][row] != c.lm_compiler_own_nsty_get(own))
                 row := row + 1
@@ -9644,9 +9663,7 @@ fn: lm_compiler_ns_decl_constructor (int: ni; int: own) int
                 return: (cast: (int) (row))
         ---
         row := row + 1
-    ---
-    return: (cast: (int) (-1))
-end: lm_compiler_ns_decl_constructor
+return: -1
 
 # Original: l2src/l2trans.lm1:15735
 fn: lm_compiler_source_ns_constructor (@: source c.L2SourceContainer; int: own) int
@@ -15113,15 +15130,37 @@ fn: lm_compiler_rw_source_name (int: source_node; const: (@: text c.LmP0Text)) i
 end: lm_compiler_rw_source_name
 
 # Original: l2src/l2trans.lm1:30275
+# Decode a retained scalar once. Its constructor and static argument shape
+# use the same physical type, including char and unsigned literal storage.
+fn: lm_compiler_source_atom_scalar (const: (@: text c.LmP0Text); @: negative int; @: magnitude size_t) int
+    int: ch 0
+    int: suffix 0
+    \negative := 0
+    \magnitude := 0U
+    if: text = 0
+        return: -1
+    if: c.lm_compiler_rw_char_lit(text, @ ch) != 0
+        \magnitude := (cast: (size_t) ch)
+        return: 1
+    if: c.lm_compiler_rw_num_lit(text, negative, magnitude, @ suffix) != 0
+        if: suffix != 0
+            if: \negative != 0 || \magnitude > 4294967295U
+                return: -1
+            return: 3
+        if: (\negative = 0 && \magnitude > 2147483647U) || (\negative != 0 && \magnitude > 2147483648U)
+            return: -1
+        return: 0
+return: -1
+
 fn: lm_compiler_emit_source_atom (const: (@: text c.LmP0Text); const: (@: key char); const: (@: ind char); const: (@: parent char); const: (@: port_profile char); const: (@: fail char); const: (@: fail2 char)) int
     @: source_atom_n_cell int (cast: (@: int) (@ c.l2_source_atom_n))
     @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     int: t source_atom_n_cell[0]
     int: neg 0
-    int: suffix 0
     int: ch 0
     int: scalar 0
+    int: scalar_type
     size_t: magnitude 0U
     size_t: top (cast: (size_t) -1)
     size_t: cap
@@ -15135,26 +15174,24 @@ fn: lm_compiler_emit_source_atom (const: (@: text c.LmP0Text); const: (@: key ch
     if: text = 0 || parent = 0
         return: (cast: (int) (1))
     source_atom_n_cell[0] := source_atom_n_cell[0] + 1
-    if: c.lm_compiler_rw_char_lit(text, @ ch) != 0
+    scalar_type := lm_compiler_source_atom_scalar(text, @ neg, @ magnitude)
+    if: scalar_type = 1
+        ch := (cast: (int) magnitude)
         scalar := 1
         ctype := "c.char"
         type := "c.LMX_TYPE_CHAR"
         store := "lmx_char_store_known"
-    if: scalar = 0 && c.lm_compiler_rw_num_lit(text, @ neg, @ magnitude, @ suffix) != 0
+    if: scalar_type = 0 || scalar_type = 3
         scalar := 2
         ctype := "c.int"
         type := "c.LMX_TYPE_INT"
         store := "lmx_int_store_known"
-        if: suffix != 0
+        if: scalar_type = 3
             ctype := "c.unsigned"
             type := "c.LMX_TYPE_UNSIGNED"
             store := "lmx_unsigned_store_known"
         ---
     ---
-    # A number its primitive cell cannot hold keeps its written spelling as a
-    # symbolic leaf: a source cell never narrows what the program wrote.
-    if: scalar = 2 && ((suffix = 0 && ((neg = 0 && magnitude > 2147483647U) || (neg != 0 && magnitude > 2147483648U))) || (suffix != 0 && (neg != 0 || magnitude > 4294967295U)))
-        scalar := 0
     if: scalar != 0
         if: scalar = 1 && (c.fprintf(out_cell[0], "%sif: lmx_chars_init(l2_program_arena) != 0 && lmx_arena_find(l2_program_arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0\n", ind) < 0 || c.lm_compiler_emit_source_failure(ind, fail, fail2) != 0)
             return: (cast: (int) (1))

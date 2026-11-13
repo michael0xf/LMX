@@ -1,5 +1,36 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-13 — M11.5в: срез 369, кодовая приёмка пройдена
+
+База main 4af992cf, W3 f6a12979; seed — boot-m11-data-roles-01/g2 и graph-g2 того среза.
+Writer/build только Sol; pipeline runs/sol-m11-reference-work-20261113-01. Goal active, весь v3.
+Чужие два untracked в main не трогать. Работа идёт в прежнем W3.
+
+Source10 — 614 canonical-входов, manifest ddb10e8e74e509b2765c8ce99b14ff4b4ab045b5d6edaf2383d26a9efdf4a803;
+inputs.sha256 обновлён, 614 проверены, снимок в S. API graph68/run52, Work добавляет expected_kind:
+тип модельного места фиксируется один раз при связывании, preflight отвергает другую primitive-kind data до RHS.
+Инициализированные ссылки int/Structure, кодовый @, own wrapper8/9 с typed-cell5/6, snapshots,
+dirty и стандартная публикация реализованы. Ни слот, ни wrapper, ни адрес/тип T при записи не меняются.
+Чистый внешний снимок переживает публикацию/явную запись вложенного вызова; языковой flush ещё OPEN.
+Native использует общие helper; фиксированный вид модельного места выпускает одну RHS-ветвь.
+
+Переходные tool01/02 и runtime07 собраны штатно; driver aa07927c75e7f04fedf87bb0c9040e7a8e0c2118b9ba2dcd9b9f5999b3a078ef.
+Graph08 11708e4dc96fa169568c7a64ddce607832fba3489be680800f07cdb86001644c прошёл 9 случаев
+interp/native/forced, mutation целиком и 6 полных AFTER-сравнений отрицательных случаев.
+Новые ожидаемые значения: 2/1/4/2/2 и после вложенной записи 2/1/1; int-ref 41/40/41/41/41;
+числовой merge отказывает 2 до эффекта calls, несовместимое data-место модели — 4.
+12 новых mutation-проверок сохраняют адреса/типы и map-sharing, включая копию без первого write.
+Старые три mutation-отказа есть и на baseline368: тест x:expression переведён на := без смены 16/23/16.
+
+Полный bootstrap quick boot-m11-reference-work-01 прошёл настоящие G1/G2, по 9 smoke-строк.
+Все 13 проверок фиксированной точки и 614 входов прошли. Настоящий G2 заново собрал graph-tool;
+9 случаев в трёх режимах, весь mutation и 6 полных AFTER-сравнений прошли.
+Рабочая связка — boot-m11-reference-work-01/g2 и graph-m11-reference-work-g2-01/graph_trans-prod.exe.
+Штатные render semantics и docs check прошли: 35 пар семантики, 14 implements cases, 27 пар грамматики, 44 выдержки, 615 импортов, ссылки и LF индекса для 27 190 файлов; diff --check чист. Далее commit/push и продолжение шага 3. [Приёмка и границы](witnesses/m11-reference-work-20261113/notes.md).
+M11 ещё OPEN: вычисляемые fn/sub и перенос временных root merge-держателей, остальные
+адресные формы шага 3, root/self и повторы 5д, M11.7/test и рабочий frontend 8.
+M6/M13 overlap ссылочных полей merge, void/null/depth/arrays/descriptor и M14 остаются открытыми.
+
 ## 2026-11-13 — M11.5в/5г/6: срез 368 прошёл приёмку
 
 База main f89af2bd, W3 40ff020b; seed — boot-m11-ordinary-model-01/g2,

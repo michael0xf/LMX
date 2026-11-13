@@ -1,0 +1,44 @@
+sub: reset ()
+    :=: ((main \ data) \ pending) ((main \ data) \ A)
+end: reset
+sub: main () (
+    A:
+        int: x 1
+    end: A
+    B:
+        int: x 2
+    end: B
+    @: p A
+    @:
+        own
+        merge: A B
+    end: @
+    int: seen 0
+    int: published 0
+    int: merged 0
+    int: pending_work 0
+    int: pending_pub 0
+)
+    @:
+        body
+        merge: A B
+    end: @
+    :=: p B
+    :=: seen (p \ x)
+    :=: published ((data \ p) \ x)
+    :=: merged ((own \ x) + (body \ x))
+    @: pending A
+    :=: pending B
+    reset:
+    :=: pending_work (pending \ x)
+    :=: pending_pub ((data \ pending) \ x)
+end: main
+main:
+int: seen 2
+int: published 1
+int: merged 4
+int: target 2
+int: held 2
+int: pending_work 2
+int: pending_pub 1
+int: pending_target 1

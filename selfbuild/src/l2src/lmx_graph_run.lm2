@@ -48,13 +48,38 @@ fn: lmx_graph_work_row (@: frame c.LmxGraphFrame; @: name char) @: c.LmxGraphWor
     return: 0
 end: lmx_graph_work_row
 
+# Snapshot an initialized reference value into its own activation/operand cell.
+fn: lmx_graph_reference_value (@: g c.LmxGraph; @: value void) @: void
+    @: copy void 0
+    int: type 0
+    value := c.lmx_graph_reference_cell(g, value)
+    if: value = 0
+        return: (cast: (@: void) 0)
+    type := c.lmx_range_type_of(g\arena, value)
+    copy := c.lmx_arena_pointer_cells_profiled(g\arena, type, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: copy = 0 || c.lmx_arena_pointer_void_write(copy, c.lmx_arena_pointer_void_read(value)) != 0
+        return: (cast: (@: void) 0)
+return: copy
+
 fn: lmx_graph_work_load (@: g c.LmxGraph; @: row c.LmxGraphWork) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: copy void 0
+    int: kind 0
     if: row = 0 || state = 0
         return: 3
     if: row\slot = (cast: (size_t) -1)
         return: 0
     if: (row\loaded & 1) = 0
+        kind := c.lmx_graph_kind(g, row\cell)
+        if: row\expected_kind != 0 && kind != 4 && kind != row\expected_kind
+            return: 4
+        if: kind = 5 || kind = 6
+            copy := lmx_graph_reference_value(g, (cast: (@: void) row\cell))
+            if: copy = 0
+                return: 4
+            row\cell := copy
+            row\loaded := row\loaded | 1
+            return: 0
         # A computed declaration of data not executed yet (lmx_graph_data_cell): its place has no value, and the read
         # is refused, as that of a formal without an input (the author 2026-11-11, R12; plan M11 5a, B6) -- 5.
         if: c.lmx_graph_kind(g, row\cell) = 4 && c.lmx_graph_name_of(g, row\cell) = state\w_int
@@ -89,6 +114,9 @@ fn: lmx_graph_data_cell (@: g c.LmxGraph; @: data c.Lmx; size_t: slot) @: void
     if: cell != 0
         return: cell
     value := c.lmx_graph_get(data, slot)
+    cell := c.lmx_graph_reference_cell(g, value)
+    if: cell != 0
+        return: cell
     if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = state\w_int && c.lmx_graph_count((cast: (@: c.Lmx) value)) >= 2U
         return: value
     return: 0
@@ -100,7 +128,7 @@ fn: lmx_graph_data_twice (@: g c.LmxGraph; @: data c.Lmx; size_t: slot; @: name 
     int: kind 0
     while: i < c.lmx_graph_count(data)
         kind := c.lmx_graph_kind(g, c.lmx_graph_get(data, i))
-        if: (kind = 1 || kind = 3 || kind = 5 || kind = 6) && c.lmx_graph_slot_name(g, data, i) = name
+        if: (kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9) && c.lmx_graph_slot_name(g, data, i) = name
             return: 1
         i := i + 1U
     ---
@@ -158,6 +186,10 @@ fn: lmx_graph_work_capture (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
             return: 4
         ---
     ---
+    if: kind = 5 || kind = 6 || kind = 8 || kind = 9
+        value := lmx_graph_reference_value(g, value)
+    if: (kind = 5 || kind = 6 || kind = 8 || kind = 9) && value = 0
+        return: 4
     if: frame\count = frame\capacity
         capacity := (cast: (size_t) frame\capacity) * 2U + 8U
         rows := (cast: (@: c.LmxGraphWork) c.realloc((cast: (@: void) frame\rows), capacity * c.sizeof(c.LmxGraphWork)))
@@ -295,7 +327,7 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
             ---
         ---
         i := 0U
-        if: framed != 0 && word = state\w_int
+        if: framed != 0 && (word = state\w_int || word = state\w_at)
             word := c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U))
             if: frame\own = 0
                 status := lmx_graph_work_require(g, frame, word)
@@ -389,6 +421,7 @@ fn: lmx_graph_work_flush (@: g c.LmxGraph) int
     @: rows c.LmxGraphWork 0
     @: row c.LmxGraphWork 0
     @: cell void 0
+    @: physical void 0
     size_t: i 0U
     if: active = 0 || active\frame = 0
         return: 0
@@ -396,6 +429,20 @@ fn: lmx_graph_work_flush (@: g c.LmxGraph) int
     rows := frame\rows
     while: i < frame\count
         row := rows + i
+        if: row\dirty != 0 && row\slot != (cast: (size_t) -1) && (c.lmx_graph_kind(g, row\cell) = 5 || c.lmx_graph_kind(g, row\cell) = 6)
+            physical := c.lmx_graph_get(frame\data, row\slot)
+            cell := c.lmx_graph_reference_cell(g, physical)
+            if: cell != 0 && c.lmx_graph_assign_reference(g, frame\code, physical, row\cell) != 0
+                return: 4
+            if: cell = 0
+                cell := lmx_graph_reference_value(g, (cast: (@: void) row\cell))
+            if: cell = 0
+                return: 4
+            if: c.lmx_graph_reference_cell(g, physical) = 0 && c.lmx_graph_publish(g, frame\data, row\slot, cell) != 0
+                return: 4
+            row\dirty := 0
+            i := i + 1U
+            continue
         if: row\dirty != 0 && row\slot != (cast: (size_t) -1)
             # A computed declaration of data that got its value in this launch -- its line ran, or a write gave it --
             # is published into its slot: from then on the slot holds the place (R12; plan M11 5a).
@@ -471,7 +518,7 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @:
         raw := c.lmx_graph_get(model, i)
         kind := c.lmx_graph_kind(g, raw)
         head := c.lmx_graph_name_of(g, raw)
-        if: kind != 1 && kind != 3 && kind != 5 && kind != 6 && (kind != 4 || (head != state\w_int && head != state\w_at))
+        if: kind != 1 && kind != 3 && kind != 5 && kind != 6 && kind != 8 && kind != 9 && (kind != 4 || (head != state\w_int && head != state\w_at))
             i := i + 1U
             continue
         if: kind != 4 && c.lmx_graph_slot_name(g, model, i) = 0
@@ -479,15 +526,14 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @:
             continue
         row := rows + frame\count
         frame\count := frame\count + 1U
+        row\expected_kind := lmx_graph_own_kind(g, raw)
         row\name := c.lmx_graph_slot_name(g, model, i)
-        # A computed declaration `int: name expression` (an Lmx named int, §3.3) is the place name before its publication;
-        # a reference declaration `@: name T` in a data is not executed by this slice (5), as before.
-        if: row\name = state\w_int && c.lmx_graph_kind(g, c.lmx_graph_get(model, i)) = 4
+        # The declaration's name identifies its place before the initializer
+        # publishes the typed cell into this data slot.
+        if: (row\name = state\w_int || row\name = state\w_at) && c.lmx_graph_kind(g, c.lmx_graph_get(model, i)) = 4
             declaration := (cast: (@: c.Lmx) c.lmx_graph_get(model, i))
             row\name := c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 0U))
         ---
-        if: row\name = state\w_at && c.lmx_graph_kind(g, c.lmx_graph_get(model, i)) = 4
-            status := 5
         slot := i
         if: data != model
             slot := lmx_graph_data_slot(g, data, (cast: (@: char) row\name))
@@ -496,6 +542,8 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @:
         ---
         row\slot := slot
         row\cell := lmx_graph_data_cell(g, data, slot)
+        if: row\cell = 0 && frame\own = 0 && c.lmx_graph_name_of(g, c.lmx_graph_get(data, slot)) = state\w_at
+            status := 5
         if: row\name = 0
             status := 5
         i := i + 1U
@@ -571,6 +619,8 @@ fn: lmx_graph_named_int (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @: out i
             if: row != 0
                 if: row\slot = (cast: (size_t) -1)
                     return: c.lmx_graph_value_int(g, row\cell, out)
+                if: c.lmx_graph_kind(g, row\cell) = 5 || c.lmx_graph_kind(g, row\cell) = 6
+                    return: 4
                 status := lmx_graph_work_load(g, row)
                 if: status = 0
                     out[0] := row\number
@@ -601,6 +651,8 @@ fn: lmx_graph_operand_name (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: vo
         if: lmx_graph_named_int(g, scope, name, @ number) != 0
             return: 0
         return: c.lmx_graph_int(g, number)
+    if: kind = 5 || kind = 6 || kind = 8 || kind = 9
+        return: lmx_graph_reference_value(g, value)
     return: value
 end: lmx_graph_operand_name
 
@@ -630,8 +682,9 @@ fn: lmx_graph_local_int (@: g c.LmxGraph; @: code c.Lmx; @: name char) int
     return: 3
 end: lmx_graph_local_int
 
-# Check a known int destination without reading it or evaluating the RHS. No field is introduced here.
-fn: lmx_graph_known_int (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode) int
+# Preflight a primitive destination without reading its value or the RHS.
+fn: lmx_graph_known_place (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode; @: kind int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
     @: row c.LmxGraphWork 0
     @: args c.Lmx 0
@@ -646,7 +699,7 @@ fn: lmx_graph_known_int (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode
             if: lmx_graph_resolve(g, code, name) != 0
                 return: 4
             return: 3
-        value := c.lmx_graph_place_cell(g, code, slot)
+        value := c.lmx_graph_get(code, slot)
     else:
         if: active = 0 || active\code != code
             return: 5
@@ -667,12 +720,68 @@ fn: lmx_graph_known_int (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode
             ---
         ---
     ---
-    # A row of a launch may stand for a computed declaration of data not executed yet (lmx_graph_data_cell): the place
-    # exists, and a write gives it its value.
-    if: c.lmx_graph_kind(g, value) != 1 && (row = 0 || c.lmx_graph_kind(g, value) != 4)
+    if: c.lmx_graph_kind(g, value) = 3
+        value := c.lmx_arena_pointer_void_read(value)
+    if: kind = 0
+        return: 4
+    kind[0] := c.lmx_graph_kind(g, value)
+    if: kind[0] = 8 || kind[0] = 9
+        kind[0] := c.lmx_graph_kind(g, c.lmx_graph_reference_cell(g, value))
+    if: row != 0 && kind[0] = 4 && c.lmx_graph_name_of(g, value) = state\w_int
+        kind[0] := 1
+    if: kind[0] != 1 && kind[0] != 5 && kind[0] != 6
+        return: 4
+    if: row != 0 && row\expected_kind != 0 && kind[0] != row\expected_kind
+        return: 4
+return: 0
+
+# The numeric consumer stays strict when another primitive is writable.
+fn: lmx_graph_known_int (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode) int
+    int: kind 0
+    int: status lmx_graph_known_place(g, code, name, mode, @ kind)
+    if: status != 0
+        return: status
+    if: kind != 1
         return: 4
     return: 0
 end: lmx_graph_known_int
+
+# A bare reference write changes only its activation's stable working cell.
+# The row is reacquired after the RHS; physical writes use the same graph writer.
+fn: lmx_graph_store_reference (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mode; @: value void) int
+    @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
+    @: row c.LmxGraphWork 0
+    @: args c.Lmx 0
+    @: cell void 0
+    @: target void 0
+    size_t: slot 0U
+    int: kind 0
+    int: status lmx_graph_known_place(g, code, name, mode, @ kind)
+    if: status != 0
+        return: status
+    if: kind != 5 && kind != 6
+        return: 4
+    if: mode != 0
+        slot := lmx_graph_visible_slot(g, code, name)
+        return: c.lmx_graph_assign_reference(g, code, c.lmx_graph_get(code, slot), value)
+    status := c.lmx_graph_reference_payload(g, kind, value, @ target)
+    if: status != 0
+        return: status
+    if: active\frame != 0
+        row := lmx_graph_work_row((cast: (@: c.LmxGraphFrame) active\frame), name)
+    if: row != 0 && lmx_graph_work_load(g, row) != 0
+        return: 4
+    if: row != 0
+        cell := row\cell
+        if: c.lmx_arena_pointer_void_write(cell, target) != 0
+            return: 4
+        row\dirty := 1
+        return: 0
+    args := lmx_graph_activation_args(g, active)
+    slot := c.lmx_graph_formal(g, args, name)
+    if: active\refs = 0 || slot >= active\width
+        return: 3
+return: c.lmx_arena_pointer_void_write(active\refs[slot], target)
 
 # Explicit paths write the graph, even when they address this activation's data. They neither publish nor refresh
 # bare working values (semantics, working-state); only a later bare write marks that working place dirty.
@@ -730,26 +839,40 @@ fn: lmx_graph_eval_assignment (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lm
     @: left void c.lmx_graph_get(statement, 1U)
     @: name char c.lmx_graph_word_text(g, left)
     @: owner c.Lmx code
+    @: cell void 0
+    @: value void 0
     size_t: slot 0U
     int: number 0
+    int: kind 0
     int: status 0
     if: state = 0 || c.lmx_graph_count(statement) != 3U
         return: 2
     if: name = 0 && c.lmx_graph_index_form(g, left) != 0
         return: lmx_graph_eval_index_write(g, code, (cast: (@: c.Lmx) left), c.lmx_graph_get(statement, 2U))
     if: name != 0
-        status := lmx_graph_known_int(g, code, name, mode)
+        status := lmx_graph_known_place(g, code, name, mode, @ kind)
         slot := lmx_graph_visible_slot(g, code, name)
     else:
         status := lmx_graph_path_field(g, code, left, @ owner, @ slot)
         if: status != 0
             return: status
-        if: c.lmx_graph_place_cell(g, owner, slot) = 0
+        cell := c.lmx_graph_place_cell(g, owner, slot)
+        if: cell = 0
+            cell := c.lmx_graph_reference_cell(g, c.lmx_graph_get(owner, slot))
+        kind := c.lmx_graph_kind(g, cell)
+        if: kind != 1 && kind != 5 && kind != 6
             return: 4
         ---
     ---
     if: status != 0
         return: status
+    if: kind = 5 || kind = 6
+        status := lmx_graph_eval_value(g, code, c.lmx_graph_get(statement, 2U), @ value)
+        if: status != 0
+            return: status
+        if: name != 0
+            return: lmx_graph_store_reference(g, code, name, mode, value)
+        return: c.lmx_graph_assign_reference(g, code, cell, value)
     status := lmx_graph_eval_number(g, code, c.lmx_graph_get(statement, 2U), @ number)
     if: status != 0
         return: status
@@ -831,7 +954,7 @@ fn: lmx_graph_binding_name (@: g c.LmxGraph; @: owner c.Lmx; @: value void; int:
     @: head char c.lmx_graph_name_of(g, value)
     @: answer void 0
     place[0] := 0
-    if: kind = 3
+    if: kind = 3 || kind = 8 || kind = 9
         place[0] := 1
         return: c.lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
     if: kind = 1 || kind = 5 || kind = 6 || (kind = 2 && head != 0)
@@ -1154,6 +1277,8 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
     while: activation != 0
         if: activation\frame != 0
             row := lmx_graph_work_row((cast: (@: c.LmxGraphFrame) activation\frame), name)
+            if: row != 0 && (c.lmx_graph_kind(g, row\cell) = 5 || c.lmx_graph_kind(g, row\cell) = 6) && lmx_graph_work_load(g, row) != 0
+                return: 0
             if: row != 0
                 return: row\cell
             ---
@@ -1683,7 +1808,7 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
                 continue
             ---
         ---
-        if: kind = 5 || kind = 6
+        if: kind = 5 || kind = 6 || kind = 8 || kind = 9
             i := i + 1U
             continue
         head := c.lmx_graph_word_text(g, raw)
@@ -1858,7 +1983,22 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             i := i + 1U
             continue
         if: head = state\w_at
-            return: 5
+            kind := 6
+            if: n = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
+                kind := 5
+            if: n != 2U && kind != 5
+                return: 5
+            head := c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
+            status := lmx_graph_known_place(g, code, head, mode, @ number)
+            if: status != 0
+                return: status
+            if: number != kind
+                return: 4
+            status := lmx_graph_eval_value(g, code, c.lmx_graph_get(statement, n - 1U), @ raw)
+            if: status = 0
+                status := lmx_graph_store_reference(g, code, head, mode, raw)
+            i := i + 1U
+            continue
         if: head = state\w_include || head = state\w_predef
             i := i + 1U
             continue
@@ -2159,6 +2299,7 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
     int: kind (cast: (int) c.lmx_graph_kind(g, raw))
     int: number 0
     int: status 0
+    int: snapshot (cast: (int) (kind = 5 || kind = 6 || kind = 8 || kind = 9))
     if: out = 0 || kind = 0
         return: 2
     if: kind = 2
@@ -2203,6 +2344,7 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                     if: status != 0
                         return: status
                     ---
+                    snapshot := 1
                 else:
                     word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U))
                     if: count = 2U && word = state\w_at
@@ -2239,6 +2381,10 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
             ---
         ---
     ---
+    if: snapshot != 0 && c.lmx_graph_reference_cell(g, value) != 0
+        value := lmx_graph_reference_value(g, value)
+    if: snapshot != 0 && value = 0
+        return: 4
     out[0] := value
     return: 0
 end: lmx_graph_eval_value
@@ -3179,8 +3325,11 @@ fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n; @: chain
         while: i < c.lmx_graph_count(current) && status = 0
             value := c.lmx_graph_get(current, i)
             kind := c.lmx_graph_kind(g, value)
+            if: kind = 8 || kind = 9
+                value := c.lmx_graph_reference_cell(g, value)
+                kind := c.lmx_graph_kind(g, value)
             if: kind = 3 || kind = 5
-                if: c.lmx_graph_kind(g, c.lmx_arena_pointer_void_read(value)) != 1
+                if: c.lmx_graph_kind(g, c.lmx_arena_pointer_void_read(value)) != 1 && (kind = 3 || c.lmx_arena_pointer_void_read(value) != 0)
                     status := 5
                 ---
             else:
@@ -3233,9 +3382,9 @@ fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @
             return: 4
         copy := c.lmx_graph_int(g, number)
     else:
-        if: kind = 3 || kind = 5 || kind = 6
+        if: kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9
             referent := c.lmx_arena_pointer_void_read(value)
-            if: (kind = 6 && c.lmx_graph_kind(g, referent) != 4) || (kind != 6 && c.lmx_graph_kind(g, referent) != 1)
+            if: (kind = 3 && c.lmx_graph_kind(g, referent) != 1) || (kind = 8 && c.lmx_graph_kind(g, referent) != 5) || (kind = 9 && c.lmx_graph_kind(g, referent) != 6) || (kind = 5 && referent != 0 && c.lmx_graph_kind(g, referent) != 1) || (kind = 6 && referent != 0 && c.lmx_graph_kind(g, referent) != 4)
                 return: 5
             status := lmx_graph_merge_copy(g, map, referent, work, count, cap, @ target)
             if: status != 0
@@ -3243,11 +3392,12 @@ fn: lmx_graph_merge_copy (@: g c.LmxGraph; @: map c.LmxCopyMap; @: value void; @
             if: kind = 3
                 copy := c.lmx_graph_uninit_int_at(g, target)
             else:
-                if: kind = 5
-                    copy := c.lmx_graph_ref_int(g, target)
-                else:
-                    copy := c.lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) target))
-                ---
+                if: kind = 8 || kind = 9
+                    copy := c.lmx_graph_uninit_reference(g, kind - 3, target)
+                if: kind = 5 || kind = 6
+                    copy := lmx_graph_reference_value(g, value)
+                    if: copy = 0 || c.lmx_arena_pointer_void_write(copy, target) != 0
+                        return: 4
             ---
         else:
             if: kind = 2
@@ -3805,7 +3955,7 @@ fn: lmx_graph_place_slot (@: g c.LmxGraph; @: lmx c.Lmx; @: name char) size_t
         return: n
     while: i < n
         kind := c.lmx_graph_kind(g, c.lmx_graph_get(lmx, i))
-        if: (kind = 1 || kind = 3 || kind = 5 || kind = 6) && c.lmx_graph_slot_name(g, lmx, i) = name
+        if: (kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9) && c.lmx_graph_slot_name(g, lmx, i) = name
             return: i
         i := i + 1U
     ---
@@ -3817,27 +3967,27 @@ end: lmx_graph_place_slot
 # until, finally; a for header) -- a place `int: name [literal]` or a Frame `int: name expression` --, never in a nested
 # declaration or in the data of a call. Appended to names without duplicates; the list belongs to this construction.
 # 0, or 1 without memory.
-fn: lmx_graph_fn_own (@: g c.LmxGraph; @: value void; @@@: names char; @: count size_t; @: capacity size_t) int
+fn: lmx_graph_fn_own (@: g c.LmxGraph; @: value void; @@@: names void; @: count size_t; @: capacity size_t) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: current c.Lmx 0
     @: head char 0
     @: name char 0
-    @@: grown char 0
+    @@: grown void 0
     size_t: i 0U
     size_t: j 0U
     int: kind c.lmx_graph_kind(g, value)
     int: status 0
-    if: kind = 1
+    if: kind = 1 || kind = 5 || kind = 6
         name := c.lmx_graph_name_of(g, value)
     else:
-        if: kind = 3
+        if: kind = 3 || kind = 8 || kind = 9
             name := c.lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
         else:
             if: kind != 4
                 return: 0
             current := (cast: (@: c.Lmx) value)
             head := c.lmx_graph_name_of(g, value)
-            if: head = state\w_int
+            if: head = state\w_int || head = state\w_at
                 name := c.lmx_graph_word_text(g, c.lmx_graph_get(current, 0U))
             else:
                 if: head != 0 && head != state\w_if && head != state\w_else && head != state\w_while && head != state\w_for && head != state\w_until && head != state\w_finally
@@ -3852,22 +4002,48 @@ fn: lmx_graph_fn_own (@: g c.LmxGraph; @: value void; @@@: names char; @: count 
     ---
     if: name = 0
         return: 0
-    while: j < count[0] && names[0][j] != name
+    while: j < count[0] && lmx_graph_own_name(g, names[0][j]) != name
         j := j + 1U
     ---
     if: j < count[0]
         return: 0
     if: count[0] = capacity[0]
-        grown := (cast: (@@: char) c.realloc((cast: (@: void) names[0]), (capacity[0] * 2U + 8U) * sizeof(@: char)))
+        grown := (cast: (@@: void) c.realloc((cast: (@: void) names[0]), (capacity[0] * 2U + 8U) * sizeof(@: void)))
         if: grown = 0
             return: 1
         names[0] := grown
         capacity[0] := capacity[0] * 2U + 8U
     ---
-    names[0][count[0]] := name
+    names[0][count[0]] := value
     count[0] := count[0] + 1U
     return: 0
 end: lmx_graph_fn_own
+
+# The same declaration descriptions provide both own names and physical types.
+fn: lmx_graph_own_name (@: g c.LmxGraph; @: value void) @: char
+    int: place 0
+return: lmx_graph_binding_name(g, 0, value, 0, @ place)
+
+fn: lmx_graph_own_kind (@: g c.LmxGraph; @: value void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    int: kind c.lmx_graph_kind(g, value)
+    @: head char c.lmx_graph_name_of(g, value)
+    @: declaration c.Lmx (cast: (@: c.Lmx) value)
+    if: kind = 3 || kind = 8 || kind = 9
+        return: c.lmx_graph_kind(g, c.lmx_arena_pointer_void_read(value))
+    if: kind != 4
+        return: kind
+    if: head = state\w_int
+        return: 1
+    if: head != state\w_at
+        return: 0
+    if: c.lmx_graph_count(declaration) = 2U
+        return: 6
+    if: c.lmx_graph_count(declaration) != 3U
+        return: 0
+    if: c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 1U)) = state\w_int
+        return: 5
+return: 6
 
 # The data of the Structure fn/sub creates: a new Lmx under it, named data, holding the copy of the fields of the written
 # data -- through one source -> copy map in which the written data is the new data, so that the places, references and
@@ -3880,7 +4056,8 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     c.LmxCopyMap: map
     @@: work c.Lmx 0
-    @@: names char 0
+    @@: names void 0
+    @: name char 0
     @: vars c.Lmx 0
     @: copy void 0
     @: child c.Lmx 0
@@ -3899,11 +4076,12 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
     int: status 0
     int: mapped 0
     int: chain 0
+    int: kind 0
     out[0] := 0
     if: written != 0
         explicit := c.lmx_graph_count(written)
     capacity := explicit + 8U
-    names := (cast: (@@: char) c.calloc(capacity, sizeof(@: char)))
+    names := (cast: (@@: void) c.calloc(capacity, sizeof(@: void)))
     if: names = 0
         return: 1
     # The own fields are those the statements of the body declare, whatever Structure holds them (the body of a written
@@ -3914,7 +4092,8 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
     ---
     i := 0U
     while: i < own && status = 0
-        if: c.lmx_graph_formal(g, args, names[i]) >= c.lmx_graph_count(args) && (written = 0 || c.lmx_graph_formal(g, written, names[i]) >= explicit)
+        name := lmx_graph_own_name(g, names[i])
+        if: c.lmx_graph_formal(g, args, name) >= c.lmx_graph_count(args) && (written = 0 || c.lmx_graph_formal(g, written, name) >= explicit)
             names[kept] := names[i]
             kept := kept + 1U
         ---
@@ -3984,8 +4163,17 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
     ---
     i := 0U
     while: i < kept && status = 0
-        place := c.lmx_graph_uninit_int(g)
-        if: place = 0 || c.lmx_graph_name_address(g, c.lmx_arena_pointer_void_read(place), names[i]) != 0 || c.lmx_graph_put(vars, explicit + i, place) != 0
+        kind := lmx_graph_own_kind(g, names[i])
+        name := lmx_graph_own_name(g, names[i])
+        if: kind != 1 && kind != 5 && kind != 6
+            status := 5
+            break
+        place := 0
+        if: kind = 1
+            place := c.lmx_graph_uninit_int(g)
+        if: kind = 5 || kind = 6
+            place := c.lmx_graph_uninit_reference(g, kind, 0)
+        if: place = 0 || c.lmx_graph_name_address(g, c.lmx_arena_pointer_void_read(place), name) != 0 || c.lmx_graph_put(vars, explicit + i, place) != 0
             status := 1
         i := i + 1U
     ---
@@ -4944,7 +5132,7 @@ fn: lmx_graph_root_declares (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
         field := c.lmx_graph_get(root, i)
         kind := c.lmx_graph_kind(g, field)
         head := 0
-        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || (kind = 2 && c.lmx_graph_name_of(g, field) != 0)
+        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 2 && c.lmx_graph_name_of(g, field) != 0)
             head := c.lmx_graph_slot_name(g, root, i)
         else:
             if: kind = 4
@@ -5016,7 +5204,7 @@ fn: lmx_graph_space_reach (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
     if: value = 0
         return: 1
     kind := c.lmx_graph_kind(g, value)
-    if: kind = 1 || kind = 3 || kind = 5 || kind = 6
+    if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9
         return: 1
     if: kind != 4
         return: 0

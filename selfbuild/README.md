@@ -1,6 +1,21 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 368): own data runs only its implemented root
+Current continuation (2026-11-13, slice 369): supported initialized int/Structure references,
+implicit own uninit:T and code @ use the existing work map, snapshots and dirty publication.
+Publication keeps slot/wrapper/typed-cell identities and the clean outer snapshot after a nested write.
+The model's primitive kind is stored once in the existing row's expected_kind and checked before RHS.
+Native shares the preflight/writer and emits a single RHS path for fixed own model places.
+Full bootstrap quick built genuine G1/G2, nine smoke rows each. Thirteen fixed-point checks,
+614 canonical inputs, nine G2 graph cases in three modes, the full mutation command and six
+AFTER comparisons passed. Working tuple: boot-m11-reference-work-01/g2 with
+graph-m11-reference-work-g2-01/graph_trans-prod.exe.
+Normal semantics rendering and docs check passed, including LF for 27,190 indexed files; diff checks are clean.
+Continue to_sol step 3: computed fn/sub, remaining address forms and temporary root merge holders,
+then root/self. M11 remains open, as do reference overlap in merge, M13 and M14/flush.
+Live/suspended-frame GC roots are an explicit M14 task; normal collection currently follows execution.
+[Evidence and limits](../steps/witnesses/m11-reference-work-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 368): own data runs only its implemented root
 declaration receivers in the same frame; later initializers read the published cell.
 Ordinary data()/data(D) uses the shared resolve/launch/binder. Constructors prepare written
 fn/sub in data and code; unique data methods are read by name and path. All sixteen L1

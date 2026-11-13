@@ -1,0 +1,11 @@
+# A numeric receiving context refuses merge before its operands have effects.
+int: calls 0
+fn: tap () int ()
+    node\calls := node\calls + 1
+    return: 0
+sub: main () (
+    A()
+    int: dest 0
+)
+    dest := merge(A; tap())
+main()

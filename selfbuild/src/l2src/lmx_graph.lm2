@@ -458,6 +458,10 @@ fn: lmx_graph_kind (@: g c.LmxGraph; @: address void) int
         return: 6
     if: type = c.LMX_TYPE_GRAPH_REF
         return: 7
+    if: type = c.LMX_TYPE_UNINIT_GRAPH_INT_REF
+        return: 8
+    if: type = c.LMX_TYPE_UNINIT_GRAPH_LMX_REF
+        return: 9
     return: 0
 end: lmx_graph_kind
 
@@ -616,7 +620,7 @@ fn: lmx_graph_slot_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
     @: cell void 0
     if: value = 0
         return: 0
-    if: lmx_graph_kind(g, value) = 3
+    if: lmx_graph_kind(g, value) = 3 || lmx_graph_kind(g, value) = 8 || lmx_graph_kind(g, value) = 9
         cell := c.lmx_arena_pointer_void_read(value)
         return: lmx_graph_name_of(g, cell)
     return: lmx_graph_name_of(g, value)
@@ -799,6 +803,7 @@ end: lmx_graph_read_int
 fn: lmx_graph_deref_int (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index; @: out int) int
     @: pointer void lmx_graph_get(lmx, index)
     @: cell void 0
+    pointer := lmx_graph_reference_cell(g, pointer)
     if: out = 0 || lmx_graph_kind(g, pointer) != 5
         return: 2
     cell := c.lmx_arena_pointer_void_read(pointer)
@@ -823,6 +828,79 @@ fn: lmx_graph_assign_int (@: g c.LmxGraph; @: scope c.Lmx; @: lmx c.Lmx; size_t:
         return: 1
     return: c.lmx_int_store_known(cell, value)
 end: lmx_graph_assign_int
+
+# A reference declaration's stable typed cell, through its service indirection.
+# No payload is read, so this also selects a place without an initial address.
+fn: lmx_graph_reference_cell (@: g c.LmxGraph; @: value void) @: void
+    int: kind lmx_graph_kind(g, value)
+    int: expected 0
+    if: kind = 5 || kind = 6
+        return: value
+    if: kind != 8 && kind != 9
+        return: (cast: (@: void) 0)
+    expected := kind - 3
+    value := c.lmx_arena_pointer_void_read(value)
+    if: lmx_graph_kind(g, value) != expected
+        return: (cast: (@: void) 0)
+return: value
+
+# Allocate a real uninit:T declaration, or wrap an existing copied T cell.
+# The typed cell and the wrapper keep their addresses after every write.
+fn: lmx_graph_uninit_reference (@: g c.LmxGraph; int: kind; @: cell void) @: void
+    @: wrapper void 0
+    int: type 0
+    int: uninit 0
+    if: g = 0 || (kind != 5 && kind != 6)
+        return: (cast: (@: void) 0)
+    type := c.LMX_TYPE_GRAPH_INT_REF
+    uninit := c.LMX_TYPE_UNINIT_GRAPH_INT_REF
+    if: kind = 6
+        type := c.LMX_TYPE_GRAPH_LMX_REF
+        uninit := c.LMX_TYPE_UNINIT_GRAPH_LMX_REF
+    if: cell = 0
+        cell := c.lmx_arena_pointer_cells_profiled(g\arena, type, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: lmx_graph_kind(g, cell) != kind
+        return: (cast: (@: void) 0)
+    wrapper := c.lmx_arena_pointer_cells_profiled(g\arena, uninit, 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    if: wrapper = 0 || c.lmx_arena_pointer_void_write(wrapper, cell) != 0
+        return: (cast: (@: void) 0)
+return: wrapper
+
+# Admit a reference value without reading its referent's bytes or allocating.
+fn: lmx_graph_reference_payload (@: g c.LmxGraph; int: kind; @: value void; @@: out void) int
+    @: target void 0
+    int: given lmx_graph_kind(g, value)
+    if: given = 8 || given = 9
+        value := lmx_graph_reference_cell(g, value)
+        given := lmx_graph_kind(g, value)
+    if: out = 0
+        return: 4
+    if: kind = 5 && (given = 5 || given = 7)
+        target := c.lmx_arena_pointer_void_read(value)
+        if: given = 7 && lmx_graph_kind(g, target) = 3
+            target := c.lmx_arena_pointer_void_read(target)
+        if: lmx_graph_kind(g, target) != 1
+            return: 4
+        out[0] := target
+        return: 0
+    if: kind = 6
+        target := lmx_graph_target(g, value)
+        if: lmx_graph_kind(g, target) != 4
+            return: 4
+        out[0] := target
+        return: 0
+return: 4
+
+# Publish into the existing physical reference cell; a declaration slot and
+# its service pointer are never rebound by a reference assignment.
+fn: lmx_graph_assign_reference (@: g c.LmxGraph; @: scope c.Lmx; @: cell void; @: value void) int
+    @: target void 0
+    cell := lmx_graph_reference_cell(g, cell)
+    if: cell = 0 || lmx_graph_reference_payload(g, lmx_graph_kind(g, cell), value, @ target) != 0
+        return: 4
+    if: lmx_graph_invalidate(g, scope, 0, cell, cell) != 0
+        return: 4
+return: c.lmx_arena_pointer_void_write(cell, target)
 
 # A traversal-local set/queue. It contains addresses only, starts empty and is freed by its caller.
 fn: lmx_graph_scan_add (@@@: items c.Lmx; @: count size_t; @: cap size_t; @: value c.Lmx) int
@@ -1193,6 +1271,15 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE; @@: path 
             c.fprintf(f, "%d", c.lmx_int_value_known(value))
         ---
         return: 0
+    if: kind = 8 || kind = 9
+        text := lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
+        if: text = 0
+            return: 1
+        if: kind = 8
+            c.fprintf(f, "(@ %s int)", text)
+        if: kind = 9
+            c.fprintf(f, "(@ %s Lmx)", text)
+        return: 0
     if: kind = 3
         text := lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
         if: text = 0
@@ -1398,7 +1485,7 @@ fn: lmx_graph_dump_block (@: g c.LmxGraph; @: inner c.Lmx; @@: path void) int
     while: k < m
         field := lmx_graph_get(inner, k)
         kind := lmx_graph_kind(g, field)
-        if: kind = 3 || kind = 5 || kind = 6 || (kind = 1 && lmx_graph_name_of(g, field) != 0)
+        if: kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9 || (kind = 1 && lmx_graph_name_of(g, field) != 0)
             return: 1
         if: kind = 4 && lmx_graph_name_of(g, field) != 0
             if: lmx_graph_dump_statement_word(lmx_graph_name_of(g, field)) != 0
@@ -1504,6 +1591,16 @@ fn: lmx_graph_dump_at (@: g c.LmxGraph; @: lmx c.Lmx; @: f c.FILE; int: depth; @
             i := i + 1U
             continue
         ---
+        if: kind = 8 || kind = 9
+            name := lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
+            if: name = 0
+                return: 1
+            if: kind = 8
+                c.fprintf(f, "@: %s int\n", name)
+            if: kind = 9
+                c.fprintf(f, "@: %s Lmx\n", name)
+            i := i + 1U
+            continue
         if: kind = 5
             name := lmx_graph_name_of(g, value)
             head := lmx_graph_name_of(g, c.lmx_arena_pointer_void_read(value))
@@ -1716,10 +1813,15 @@ end: lmx_graph_ref_lmx
 fn: lmx_graph_target (@: g c.LmxGraph; @: value void) @: void
     @: held void 0
     int: kind lmx_graph_kind(g, value)
+    if: kind = 8 || kind = 9
+        value := lmx_graph_reference_cell(g, value)
+        kind := lmx_graph_kind(g, value)
     if: kind = 6
         return: c.lmx_arena_pointer_void_read(value)
     if: kind = 7
         held := c.lmx_arena_pointer_void_read(value)
+        if: lmx_graph_kind(g, held) = 8 || lmx_graph_kind(g, held) = 9
+            held := lmx_graph_reference_cell(g, held)
         if: lmx_graph_kind(g, held) = 6
             held := c.lmx_arena_pointer_void_read(held)
         if: lmx_graph_kind(g, held) = 4
@@ -1752,6 +1854,9 @@ fn: lmx_graph_address_of (@: g c.LmxGraph; @: value void; @@: out void) int
     int: kind lmx_graph_kind(g, value)
     if: g = 0 || out = 0
         return: 5
+    if: kind = 8 || kind = 9
+        value := lmx_graph_reference_cell(g, value)
+        kind := lmx_graph_kind(g, value)
     if: kind = 4
         out[0] := value
         return: 0
@@ -1839,8 +1944,12 @@ fn: lmx_graph_index_write (@: g c.LmxGraph; @: scope c.Lmx; @: value void; int: 
     given := lmx_graph_kind(g, address)
     if: held = 3
         held := 1
+    if: held = 8 || held = 9
+        held := held - 3
     if: given = 3
         given := 1
+    if: given = 8 || given = 9
+        given := given - 3
     if: held = 0 || held = 7 || held != given
         return: 4
     if: lmx_graph_write_slot(g, scope, inner, (cast: (size_t) index), address) != 0
@@ -1858,14 +1967,17 @@ fn: lmx_graph_length (@: g c.LmxGraph; @: value void; @: out int) int
     return: 0
 end: lmx_graph_length
 
-# The value a reference place of an int takes (`@: p int value`): an int reference as it is; an untyped reference whose
+# The value a reference place of an int takes (`@: p int value`): its own int-reference cell; an untyped reference whose
 # address is an int cell -- or the pointer of a place without a value, whose cell it stands for -- as a new int
 # reference to that cell (the admission by the region of the address, §2.2). 0 for any other value, or without memory.
 fn: lmx_graph_int_ref_of (@: g c.LmxGraph; @: value void) @: void
     @: held void 0
     int: kind lmx_graph_kind(g, value)
+    if: kind = 8
+        value := lmx_graph_reference_cell(g, value)
+        kind := lmx_graph_kind(g, value)
     if: kind = 5
-        return: value
+        return: lmx_graph_ref_int(g, c.lmx_arena_pointer_void_read(value))
     if: kind != 7
         return: 0
     held := c.lmx_arena_pointer_void_read(value)

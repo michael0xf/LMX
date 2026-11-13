@@ -467,9 +467,19 @@ row binds the published cell again so the next initializer reads it.
 An ordinary data()/data(D) record now uses the common resolve/launch/binder in runtime and native emission.
 The constructor prepares written fn/sub in both its data and code; the common binding_value
 reader returns the existing method after checking its source parent, without changing the source graph field.
-A unique written data method is checked by name and path. Indexed repeated methods,
-reference places and computed fn/sub in data, root/self and M14 remain open;
+A unique written data method is checked by name and path. At slice 368, indexed repeated methods,
+reference places and computed fn/sub in data, root/self and M14 remained open;
 [checks and limits](../steps/witnesses/m11-data-roles-20261113/notes.md).
+Slice 369 adds working values for the supported int/Structure references, a common known_place
+preflight and reference writer; known_int remains numeric. A code @ writes a data place,
+and its implicit own gets a real uninit:T with stable slot/wrapper/typed-cell identities.
+The working snapshot is separate from the published cell: dirty values publish at standard points,
+while a clean outer snapshot survives a nested call. The model's expected primitive kind is stored
+once in the map row's expected_kind; another data cannot change that type through the RHS.
+Native emits one RHS path for a fixed own model kind, retaining the same preflight and guard;
+other places stay dynamic. Normal header generation supplies graph68/run52 and Work's contract field.
+Full bootstrap quick built genuine G1/G2, nine smoke rows each; thirteen checks and 614 inputs passed. Genuine G2/graph repeated nine cases in three modes, the full mutation command and six AFTER comparisons;
+[checks and remaining work](../steps/witnesses/m11-reference-work-20261113/notes.md).
 The running code reads the formals, the body and
 the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, `lmx_graph_launch_result`), not from
 the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call

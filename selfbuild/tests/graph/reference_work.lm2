@@ -1,0 +1,33 @@
+# Own references keep working values distinct from published data.
+sub: reset () ()
+    main\data\pending := main\data\A
+sub: main () (
+    A(int: x 1)
+    B(int: x 2)
+    @: p A
+    @: own merge(A; B)
+    int: seen 0
+    int: published 0
+    int: merged 0
+    int: pending_work 0
+    int: pending_pub 0
+)
+    @: body merge(A; B)
+    p := B
+    seen := p\x
+    published := data\p\x
+    merged := own\x + body\x
+    @: pending A
+    pending := B
+    reset()
+    pending_work := pending\x
+    pending_pub := data\pending\x
+main()
+int: seen main\data\seen
+int: published main\data\published
+int: merged main\data\merged
+int: target main\data\p\x
+int: held main\data\body\x
+int: pending_work main\data\pending_work
+int: pending_pub main\data\pending_pub
+int: pending_target main\data\pending\x

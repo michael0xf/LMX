@@ -455,9 +455,12 @@ A launch is given by its parts. The work frame of an activation (`LmxGraphFrame`
 data, the parts of the launch: the Structure of the formals (`args`), the executable part (the frame member `body`; the
 part of a callable is called `code`, the frame member kept the former name), whether there is a result (`result`) and
 whether the data is the callable's own part `data` (`own`). The frame is opened by `lmx_graph_work_open_parts`; the
-former `lmx_graph_work_open_data` takes the parts from the code itself -- a callable's `args`, `data`, `code` and the
-presence of `return`, an ordinary Structure as its own executable part with its `data` child as the model of its
-places -- and calls the same function. The running code reads the formals, the body and
+`lmx_graph_work_open_data` takes the parts from the code itself -- a callable's `args`, `data`, `code` and the
+presence of `return`, an ordinary Structure as its own executable part without an implicit place model.
+Ordinary code requires places by scanning its body through the actual data map. Slice 367 removes selection
+of a `data` child as the model, also for a launch by given parts;
+[checks and remaining limits](../steps/witnesses/m11-ordinary-model-20261113/notes.md).
+The running code reads the formals, the body and
 the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, `lmx_graph_launch_result`), not from
 the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call
 `f(x)` therefore goes the same way as a launch that was given its parts.

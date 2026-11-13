@@ -1,0 +1,53 @@
+GRAPH-BEFORE-BEGIN
+sub: main () (
+    From:
+        int: x 7
+    end: From
+    To:
+        int: x 0
+    end: To
+    Self:
+        int: x 1
+        :=: x (x + 1)
+    end: Self
+    Copy: (data To)
+    Apply: (data)
+    int: copied 0
+    int: own 0
+)
+    call: From Copy
+    call: Self Apply
+    :=: copied (To \ x)
+    :=: own (Self \ x)
+end: main
+main:
+int: copied ((main \ data) \ copied)
+int: own ((main \ data) \ own)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: main () (
+    From:
+        int: x 7
+    end: From
+    To:
+        int: x 0
+    end: To
+    Self:
+        int: x 1
+        :=: x (x + 1)
+    end: Self
+    Copy: (data To)
+    Apply: (data)
+    int: copied 0
+    int: own 0
+)
+    call: From Copy
+    call: Self Apply
+    :=: copied (To \ x)
+    :=: own (Self \ x)
+end: main
+main:
+int: copied 0
+int: own 1
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

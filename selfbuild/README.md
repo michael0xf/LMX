@@ -1,6 +1,20 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 366): P0 keeps every written anonymous
+Current continuation (2026-11-13, slice 367): ordinary C no longer selects a
+data child as its place model, for either existing launch form. The same body scan
+and actual D map supply its frame; a callable retains its own data model.
+Normal bootstrap quick G1/G2 passed nine smoke rows each. All thirteen fixed-point
+checks and 602 canonical inputs passed. Genuine G2 rebuilt the graph tool; the new
+7/17 case and existing code_data passed interp/native/forced, as on the private bundle.
+The working tuple is boot-m11-ordinary-model-01/g2 with
+graph-m11-ordinary-model-g2-01/graph_trans-prod.exe. Normal semantics rendering and docs check
+passed, including LF for 27,149 indexed files; diff checks are clean.
+M11 remains open: ordinary data()/data(D) still yield 0/1 instead of 7/2; separating
+the data declaration pass from code execution and removing the old root/self paths
+come next. M11/test, M13, M14 and flush() remain open.
+[Evidence and limits](../steps/witnesses/m11-ordinary-model-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 366): P0 keeps every written anonymous
 Structure, including empty ones, trailers and nested documents, and admits bare head:.
 The language migration tool converted 35 reviewed declarations in 24 graph fixtures.
 A flat @: p T formal receives a supplied Structure through the existing shared admission.

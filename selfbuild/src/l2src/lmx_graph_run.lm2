@@ -428,8 +428,8 @@ fn: lmx_graph_work_finish (@: g c.LmxGraph; @: frame c.LmxGraphFrame; int: statu
 end: lmx_graph_work_finish
 
 # Open the work frame of one launch over its parts (the book, call-receivers): the Structure of its formals (0 for
-# none), the data it runs over, the model naming the places the code declares for its data -- a callable's own data,
-# the `data` child of an ordinary Structure, 0 for none -- its body and whether it returns a result. The same rows
+# none), the data it runs over, the callable's own data model or 0 for ordinary code,
+# its body and whether it returns a result. The same rows
 # cache and publish every launch: the call of a callable, an explicit code/data pair, a composition a receiver gave.
 fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @: data c.Lmx; @: model c.Lmx; @: body c.Lmx; int: result; @: frame c.LmxGraphFrame) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
@@ -520,15 +520,15 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @:
 end: lmx_graph_work_open_parts
 
 # The launch of code over data by the parts code itself carries: a callable has its args, data, code and result
-# description; an ordinary Structure is its own body, has no formals and no result, and names its data places in its
-# `data` child when it has one. The entry of native code (lm_graph_emit_methods) and the interpreter open their frame
-# here; a receiver that was given the parts opens it through lmx_graph_work_open_parts.
+# description; an ordinary Structure is its own body, has no formals or result,
+# and requires its places through the same body scan and data map. A child named
+# data is an ordinary written field, never an implicit model. Native entries and
+# the interpreter open their frame here; a receiver given the parts uses the same
+# lmx_graph_work_open_parts.
 fn: lmx_graph_work_open_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: frame c.LmxGraphFrame) int
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     if: c.lmx_graph_method(g, code) != 0
         return: lmx_graph_work_open_parts(g, code, c.lmx_graph_method_args(g, code), data, c.lmx_graph_method_data(g, code), c.lmx_graph_method_code(g, code), c.lmx_graph_has_result(g, code), frame)
-    return: lmx_graph_work_open_parts(g, code, 0, data, (cast: (@: c.Lmx) c.lmx_graph_field(g, (cast: (@: void) code), state\w_data)), code, 0, frame)
-end: lmx_graph_work_open_data
+return: lmx_graph_work_open_parts(g, code, 0, data, 0, code, 0, frame)
 
 fn: lmx_graph_work_open (@: g c.LmxGraph; @: code c.Lmx; @: frame c.LmxGraphFrame) int
     return: lmx_graph_work_open_data(g, code, c.lmx_graph_method_data(g, code), frame)
@@ -2792,7 +2792,6 @@ fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx;
         has := 1
     ---
     body := code
-    model := (cast: (@: c.Lmx) c.lmx_graph_field(g, (cast: (@: void) code), state\w_data))
     if: c.lmx_graph_method(g, code) != 0
         if: has != c.lmx_graph_has_result(g, code) && (has != 0 || given_args != 0)
             return: 5

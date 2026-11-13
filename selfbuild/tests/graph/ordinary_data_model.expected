@@ -1,0 +1,26 @@
+sub: main () (
+    From:
+        int: x 6
+    end: From
+    FromParts:
+        int: x 16
+    end: FromParts
+    To:
+        int: x 0
+    end: To
+    Change:
+        :=: x (x + 1)
+        return:
+        data: To
+    end: Change
+    int: short_result 0
+    int: parts_result 0
+)
+    call: From Change
+    call: (:= args ()) (:= data FromParts) (:= code Change)
+    :=: short_result (From \ x)
+    :=: parts_result (FromParts \ x)
+end: main
+main:
+int: short_result 7
+int: parts_result 17

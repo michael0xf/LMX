@@ -1,6 +1,16 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 360): M8 preparation adds the parser-driven
+Current continuation (2026-11-13, slice 361): the clean-graph whole-argument
+binder maps named fields by name and unnamed fields by their source position.
+The existing whole_arguments case now includes two unnamed fields (23) and
+a mixed chain (46). `TOOL 0 entry 0 -- graph-same LOG EXPECTED` compares the
+AFTER section of an existing run with its expected graph, using the same
+comparison as graph-check and performing no compilation or execution.
+The parser still normalizes groups. Written Structure values in the working
+frontend and general argument-group reception remain M8.2 work.
+[Evidence and continuation](../steps/witnesses/m8-argument-fields-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 360): M8 preparation adds the parser-driven
 group census, a borrowed description view in the working frontend, and the L2
 group-migrate command for reviewed declaration sites. The census found 24,723
 normalizations in 487 tracked .lm2 inputs. The parser still unwraps groups and

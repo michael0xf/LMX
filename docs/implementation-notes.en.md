@@ -85,6 +85,8 @@ The accepted P0 package (slice 359, 2026-11-13) uses one stream parser inside `(
 
 Slice 360 starts M8: the graph groups command records actual normalization events; 487 maintained .lm2 inputs contain 24,723 events. The working frontend gained a borrowed view of description groups, and L2 group-migrate can convert declaration sites selected from the report. General reception of the whole argument Structure is still pending, so normalization remains enabled. Exact inputs, commands and limits are in the [M8 witness](../steps/witnesses/m8-preparation-20261113/notes.md).
 
+Slice 361 extends the clean-graph binder of a computed argument Structure: a named field selects its formal by name and an unnamed field by its own position. New parts of the existing whole_arguments case produce 23 and 46. The L2 command `graph-same LOG EXPECTED` compares a completed log's AFTER section using the same comparison as graph-check, without rebuilding. Written Structure values in the working frontend and general reception of preserved groups remain unimplemented; P0 has not been switched. [Evidence and next step](../steps/witnesses/m8-argument-fields-20261113/notes.md).
+
 Copying a description preserves evidence of its address layout. A later
 argument can compose already known correspondences to that layout; the
 result is cached as an address map, not as a new full reception check

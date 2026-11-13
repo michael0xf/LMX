@@ -1347,8 +1347,8 @@ fn: lmx_graph_bind_formals (@: g c.LmxGraph; @: formals c.Lmx; @: expression c.L
     return: status
 end: lmx_graph_bind_formals
 
-# Does the Structure give formals of the signature by its fields -- every field named by a formal, each formal by one
-# field at most (the book, whole-arguments)? from[slot] 1 + the index of its field, 0 for none (the caller's array, width
+# Does the Structure give formals of the signature by its fields -- a named field by name, an unnamed field by position,
+# each formal by one field at most (the book, whole-arguments)? from[slot] 1 + the index of its field, 0 for none (the caller's array, width
 # + 1 long). The caller tells what an unsupplied formal needs (a default of a call; none for a receiver). 1 or 0.
 fn: lmx_graph_bind_fields (@: g c.LmxGraph; @: formals c.Lmx; @: structure c.Lmx; @: from size_t) int
     @: name char 0
@@ -1360,16 +1360,16 @@ fn: lmx_graph_bind_fields (@: g c.LmxGraph; @: formals c.Lmx; @: structure c.Lmx
         return: 0
     while: i < n
         name := c.lmx_graph_slot_name(g, structure, i)
-        slot := c.lmx_graph_formal(g, formals, name)
-        if: name = 0 || slot >= width
+        slot := i
+        if: name != 0
+            slot := c.lmx_graph_formal(g, formals, name)
+        if: slot >= width
             return: 0
         if: from[slot] != 0U
             return: 0
         from[slot] := i + 1U
         i := i + 1U
-    ---
-    return: 1
-end: lmx_graph_bind_fields
+return: 1
 
 # Bind written arguments to the selected method before evaluating any of them. The map and the seen set belong
 # only to this call; labels are canonical name addresses and the map stores physical formal slots, not name codes.

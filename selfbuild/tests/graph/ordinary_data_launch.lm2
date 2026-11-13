@@ -1,0 +1,20 @@
+# M11 5v: data is the current launch's ordinary Structure, not a model child.
+sub: main () (
+    From(int: x 7)
+    To(int: x 0)
+    Self(
+        int: x 1
+        x := x + 1
+    )
+    Copy(data(To))
+    Apply(data())
+    int: copied 0
+    int: own 0
+)
+    call(From Copy)
+    call(Self Apply)
+    copied := To\x
+    own := Self\x
+main()
+int: copied main\data\copied
+int: own main\data\own

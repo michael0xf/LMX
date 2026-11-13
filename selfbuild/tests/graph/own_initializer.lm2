@@ -3,9 +3,19 @@ fn: tick () int (int: calls 0)
     calls := calls + 1
     return: calls
 end: tick
-fn: cached () int (int: seeded tick())
+fn: cached () int (
+    int: seeded tick()
+    int: dependent seeded + 1
+    seeded := tick()
+    Nested(int: hidden tick())
+    test: tick()
+    data: tick()
+    if: 1
+        tick()
+)
     return: seeded
 end: cached
 int: first cached()
 int: second cached()
 int: calls tick\data\calls
+int: dependent cached\data\dependent

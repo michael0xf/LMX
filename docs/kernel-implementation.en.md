@@ -460,6 +460,16 @@ presence of `return`, an ordinary Structure as its own executable part without a
 Ordinary code requires places by scanning its body through the actual data map. Slice 367 removes selection
 of a `data` child as the model, also for a launch by given parts;
 [checks and remaining limits](../steps/witnesses/m11-ordinary-model-20261113/notes.md).
+Slice 368 replaces the call of own data with a pass over its implemented root declaration
+receivers in the same frame (`lmx_graph_data_run`). Other fields, including assignments,
+test, data, if and nested Structures, remain data. After a computed initializer, the work
+row binds the published cell again so the next initializer reads it.
+An ordinary data()/data(D) record now uses the common resolve/launch/binder in runtime and native emission.
+The constructor prepares written fn/sub in both its data and code; the common binding_value
+reader returns the existing method after checking its source parent, without changing the source graph field.
+A unique written data method is checked by name and path. Indexed repeated methods,
+reference places and computed fn/sub in data, root/self and M14 remain open;
+[checks and limits](../steps/witnesses/m11-data-roles-20261113/notes.md).
 The running code reads the formals, the body and
 the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, `lmx_graph_launch_result`), not from
 the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call

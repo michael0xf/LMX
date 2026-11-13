@@ -582,7 +582,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
                 c.fprintf(f, "        if: l2_t%d = 0\n            %s\n", right, leave_failure)
             c.fprintf(f, "        l2_t%d: l2_t%d %s l2_t%d\n", left, left, word, right)
             if: word = state\w_and || word = state\w_or
-                c.fprintf(f, "        l2_label%d: ()\n", finish)
+                c.fprintf(f, "        l2_label%d:\n", finish)
             temp[0] := left
             return: 0
         word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U))
@@ -819,7 +819,7 @@ end: lm_graph_emit_fncall
 # One proxy records the pending transfer and reaches either the cleanup body or its final dispatch. The word is
 # the same canonical arena string used by the interpreter. A failing cleanup retains the pending error.
 sub: lm_graph_emit_pending (@: f c.FILE; int: id; int: label; int: destination; @: word char; int: failed)
-    c.fprintf(f, "        l2_label%d: ()\n", label)
+    c.fprintf(f, "        l2_label%d:\n", label)
     if: failed != 0
         c.fprintf(f, "        l2_pending_error%d: 1\n", id)
     if: word != 0
@@ -875,7 +875,7 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     if: step_label >= 0
         lm_graph_emit_pending(f, id, id + 5, id, "continue", 0)
         protected_step := id + 10
-    c.fprintf(f, "        l2_label%d: ()\n        if: l2_pending_error%d != 0 || l2_pending_word%d = l2_pending_words%d\\w_return\n            if: lmx_graph_work_flush(l2_g) != 0\n                l2_pending_error%d: 1\n        ---\n", id, id, id, id, id)
+    c.fprintf(f, "        l2_label%d:\n        if: l2_pending_error%d != 0 || l2_pending_word%d = l2_pending_words%d\\w_return\n            if: lmx_graph_work_flush(l2_g) != 0\n                l2_pending_error%d: 1\n        ---\n", id, id, id, id, id)
     temps[1] := id + 6
     temps[2] := id + 7
     if: mode = 1
@@ -894,7 +894,7 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
         lm_graph_emit_pending(f, id, id + 9, id + 11, "redo", 0)
     if: step_label >= 0
         lm_graph_emit_pending(f, id, id + 10, id + 11, "continue", 0)
-    c.fprintf(f, "        l2_label%d: ()\n        if: l2_pending_error%d != 0\n            %s\n        if: l2_pending_word%d = l2_pending_words%d\\w_return\n            %s\n", id + 11, id, leave_failure, id, id, leave_return)
+    c.fprintf(f, "        l2_label%d:\n        if: l2_pending_error%d != 0\n            %s\n        if: l2_pending_word%d = l2_pending_words%d\\w_return\n            %s\n", id + 11, id, leave_failure, id, id, leave_return)
     if: exit_label >= 0
         c.fprintf(f, "        if: l2_pending_word%d = l2_pending_words%d\\w_break\n            goto: l2_label%d\n", id, id, exit_label)
     if: again_label >= 0
@@ -1231,7 +1231,7 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
             r := lm_graph_emit_apply_or(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ finish)
             if: r != 0
                 return: r
-            c.fprintf(f, "        %s\n        l2_label%d: ()\n", leave_failure, finish)
+            c.fprintf(f, "        %s\n        l2_label%d:\n", leave_failure, finish)
         else:
             lm_graph_emit_refused(head)
             c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
@@ -1367,14 +1367,6 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             continue
         if: head = state\w_fm
             return: 5
-        # A record headed by data launches the data of the live launch in the code of a callable -- the body of a
-        # method, mode 0 --, as the interpreter does (lm_graph_emit_data_launch); elsewhere it is passed by, as there.
-        if: head = state\w_data
-            if: mode = 0 && c.lmx_graph_method(g, code) != 0
-                status := lm_graph_emit_data_launch(g, f, code, statement, temps)
-            ---
-            i := i + 1U
-            continue
         if: head = state\w_finally
             return: lm_graph_emit_finally(g, f, code, body, i, to, statement, mode, exit_label, again_label, step_label, temps)
         if: head = state\w_if
@@ -1388,7 +1380,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             nested := (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U))
             if: status = 0
                 status := lm_graph_emit_block(g, f, code, nested, 0U, c.lmx_graph_count(nested), mode, exit_label, again_label, step_label, temps)
-            c.fprintf(f, "        goto: l2_label%d\n        l2_label%d: ()\n", end_label, next_label)
+            c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", end_label, next_label)
             i := i + 1U
             if: i < to && c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get(body, i)) = state\w_else
                 statement := (cast: (@: c.Lmx) c.lmx_graph_get(body, i))
@@ -1396,7 +1388,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                     status := lm_graph_emit_block(g, f, code, statement, 0U, c.lmx_graph_count(statement), mode, exit_label, again_label, step_label, temps)
                 i := i + 1U
             ---
-            c.fprintf(f, "        l2_label%d: ()\n", end_label)
+            c.fprintf(f, "        l2_label%d:\n", end_label)
             continue
         if: head = state\w_else
             return: 2
@@ -1416,7 +1408,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 status := lm_graph_emit_block(g, f, code, header, 0U, 1U, mode, exit_label, again_label, step_label, temps)
             if: head = state\w_until
                 c.fprintf(f, "        goto: l2_label%d\n", body_label)
-            c.fprintf(f, "        l2_label%d: ()\n", test_label)
+            c.fprintf(f, "        l2_label%d:\n", test_label)
             if: status = 0
                 if: head = state\w_for
                     status := lm_graph_emit_number(g, f, code, header, 1U, temps, 0, 0, 0U, @ result)
@@ -1425,16 +1417,16 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 ---
             ---
             if: head = state\w_until
-                c.fprintf(f, "        if: l2_t%d != 0\n            goto: l2_label%d\n        l2_label%d: ()\n", result, end_label, body_label)
+                c.fprintf(f, "        if: l2_t%d != 0\n            goto: l2_label%d\n        l2_label%d:\n", result, end_label, body_label)
             else:
-                c.fprintf(f, "        if: l2_t%d = 0\n            goto: l2_label%d\n        l2_label%d: ()\n", result, end_label, body_label)
+                c.fprintf(f, "        if: l2_t%d = 0\n            goto: l2_label%d\n        l2_label%d:\n", result, end_label, body_label)
             ---
             if: status = 0
                 status := lm_graph_emit_block(g, f, code, nested, 0U, c.lmx_graph_count(nested), mode, end_label, body_label, next_label, temps)
-            c.fprintf(f, "        l2_label%d: ()\n", next_label)
+            c.fprintf(f, "        l2_label%d:\n", next_label)
             if: status = 0 && head = state\w_for
                 status := lm_graph_emit_block(g, f, code, header, 2U, 3U, mode, exit_label, again_label, step_label, temps)
-            c.fprintf(f, "        goto: l2_label%d\n        l2_label%d: ()\n", test_label, end_label)
+            c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", test_label, end_label)
             i := i + 1U
             continue
         if: head = state\w_break || head = state\w_continue || head = state\w_redo
@@ -1512,7 +1504,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 ---
             ---
             if: finish >= 0
-                c.fprintf(f, "        l2_label%d: ()\n", finish)
+                c.fprintf(f, "        l2_label%d:\n", finish)
             i := i + 1U
             continue
         if: head = state\w_int
@@ -1543,7 +1535,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             # formal, a place or a Structure the translation knows, the code refuses the form where the program reaches
             # it, as the interpreter does (8 for a place that is no Structure, else 5).
             if: finish >= 0
-                c.fprintf(f, "        %s\n        l2_label%d: ()\n", leave_failure, finish)
+                c.fprintf(f, "        %s\n        l2_label%d:\n", leave_failure, finish)
             else:
                 if: lm_graph_emit_formal(g, code, head) != 0 || (c.lmx_graph_resolve(g, code, head) != 0 && c.lmx_graph_kind(g, c.lmx_graph_resolve(g, code, head)) != 4)
                     lm_graph_emit_refused(head)
@@ -2511,7 +2503,7 @@ fn: lm_graph_emit_apply_or (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: sta
     c.fprintf(f, ")))) = 0\n            goto: l2_label%d\n", other)
     if: status = 0
         status := lm_graph_emit_call(g, f, scope, statement, temps, decl_names, decl_slots, decl_n, @ result)
-    c.fprintf(f, "        goto: l2_label%d\n        l2_label%d: ()\n", other + 1, other)
+    c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", other + 1, other)
     if: status = 0
         c.fprintf(f, "        @: void l2_v%d lmx_graph_launch_head(l2_g, lmx_call_code, ", structure)
         status := lm_graph_emit_head(g, f, scope, statement)
@@ -2535,48 +2527,9 @@ fn: lm_graph_emit_apply_or (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: sta
         ---
         c.free((cast: (@: void) formals))
     ---
-    c.fprintf(f, "        goto: l2_label%d\n        l2_label%d: ()\n", other + 1, other + 2)
+    c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", other + 1, other + 2)
     return: status
 end: lm_graph_emit_apply_or
-
-# A record headed by data in the code of a callable, as the interpreter runs it (lmx_graph_block; the book,
-# #ordinary-var; plan M11 5b part 2, В3): the data of the live launch is found when the code runs
-# (lmx_graph_launch_head with the word data) and launched by the one binder's form -- `data()` over itself, `data(D)`
-# over D (lmx_graph_launch_formals, bound at translation as the interpreter binds it) -- through the launch of the
-# receiver call (lmx_graph_call_data). No form, or no Structure of the data, refuses where the code reaches it.
-fn: lm_graph_emit_data_launch (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: statement c.Lmx; @: temps int) int
-    c.LmxGraphEmitScratch: leave_storage
-    @: leave_failure char (cast: (@: char) leave_storage\failure)
-    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
-    @@: formals char 0
-    size_t: count c.lmx_graph_count(statement)
-    int: structure temps[0]
-    int: data -1
-    int: status 0
-    temps[0] := temps[0] + 1
-    c.fprintf(f, "        @: void l2_v%d lmx_graph_launch_head(l2_g, lmx_call_code, ", structure)
-    status := lm_graph_emit_head(g, f, scope, statement)
-    c.fprintf(f, ")\n        if: l2_v%d = 0\n            %s\n", structure, leave_failure)
-    if: status != 0
-        return: status
-    formals := (cast: (@@: char) c.calloc(count + 1U, sizeof(@: char)))
-    status := 4
-    if: formals != 0
-        status := c.lmx_graph_launch_formals(g, 0, statement, formals)
-    if: status = 5
-        status := 0
-        c.fprintf(f, "        if: 1\n            %s\n", leave_failure)
-    else:
-        if: status = 0 && count = 1U
-            status := lm_graph_emit_launch_operand(g, f, scope, statement, 0U, temps, 0, 0, 0U, @ data)
-        if: status = 0 && data >= 0
-            c.fprintf(f, "        if: lmx_graph_call_data(l2_g, (cast: (@: Lmx) l2_v%d), (cast: (@: Lmx) l2_v%d), 0) != 0\n            %s\n", data, structure, leave_failure)
-        if: status = 0 && data < 0
-            c.fprintf(f, "        if: lmx_graph_call_data(l2_g, 0, (cast: (@: Lmx) l2_v%d), 1) != 0\n            %s\n", structure, leave_failure)
-    ---
-    c.free((cast: (@: void) formals))
-    return: status
-end: lm_graph_emit_data_launch
 
 # 1 when name is a formal of the method code: a place of its activation, an int place in this subset
 # (lmx_graph_call_shape), which a statement writes and never applies.

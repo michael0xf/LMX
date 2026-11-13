@@ -6,9 +6,16 @@ fn: tick () int (
 end: tick
 fn: cached () int (
     int: seeded (tick)
+    int: dependent (seeded + 1)
+    :=: seeded ((tick))
+    Nested: (int hidden (tick))
+    test: (tick)
+    data: (tick)
+    if: 1 ((tick))
 )
     return: seeded
 end: cached
 int: first 1
 int: second 1
 int: calls 1
+int: dependent 2

@@ -1,6 +1,21 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 367): ordinary C no longer selects a
+Current continuation (2026-11-13, slice 368): own data runs only its implemented root
+declaration receivers in the same frame; later initializers read the published cell.
+Ordinary data()/data(D) uses the shared resolve/launch/binder. Constructors prepare written
+fn/sub in data and code; unique data methods are read by name and path. All sixteen L1
+labels now have an empty body (label:), keeping P0's preserved empty Structure semantics.
+Bootstrap quick built genuine G1/G2, nine smoke rows each; thirteen fixed-point checks
+and 606 canonical inputs passed. Genuine G2 rebuilt graph-tool; nine cases passed
+interp/native/forced. The working tuple is boot-m11-data-roles-01/g2 with
+graph-m11-data-roles-g2-01/graph_trans-prod.exe. Normal semantics rendering and docs check
+passed, including LF for 27,164 indexed files; diff checks are clean.
+Own reference places/merge holders come next (to_sol step 3), then root/self (step 4).
+Computed fn/sub in data and indexed repeated methods remain open, as do M11.7/8,
+M13/M14/flush. These modes do not establish compatible native copies or arbitrary C native.
+[Evidence and limits](../steps/witnesses/m11-data-roles-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 367): ordinary C no longer selects a
 data child as its place model, for either existing launch form. The same body scan
 and actual D map supply its frame; a callable retains its own data model.
 Normal bootstrap quick G1/G2 passed nine smoke rows each. All thirteen fixed-point

@@ -824,7 +824,7 @@ interpreter's answer 7; native and forced stop R0.
 | `word` | `const char *` | a word primitive: a pointer to the interned string of a spelling -- operators (`+`, `\`, `[]`, `:=`), receiver and language words (`fn`, `if`, `return`, `node`, `int`), any written name (§3.5) |
 | `ref` | `void *` | a reference cell: a slot of an Lmx field or of an Array element, the cell of a pointer `@: p T` after the first address write; holds the address of a primitive or an Lmx, or 0 |
 | `lmx:data`, `lmx:immutable`, `lmx:result` | `Lmx` | the header of an ordinary Structure, of an immutable Structure (`independent: immutable`) and of a Structure **created by executing the `fn` receiver** ([L2 §2.1](L2_spec_en.md#interpretable-tree): the pool of `fn` results receives only a structure created by executing `fn`, not a Structure with similar parts; [§3](L2_spec_en.md#type-by-range): ordinary and immutable in different regions, not a C type per model) |
-| `lmx:array<T>`, T ∈ {`int`, `char`, `unsigned char`, `size_t`, `unsigned`, `ulong`, `ref`} | `Lmx` | the header of a graph Array with the requirement T on its elements ([L2 §3](L2_spec_en.md#type-by-range): for an Array the range also tells the element type); the backing is `size` T elements, which are `void *` for `ref` (§3.1) |
+| `lmx:array<T>`, T ∈ {`int`, `char`, `unsigned char`, `size_t`, `unsigned`, `ulong`, `ref`} | `Lmx` | the header of a graph Array with the requirement T on its elements ([L2 §3](L2_spec_en.md#type-by-range): for an Array the range also tells the element type); the backing is `length` T elements, which are `void *` for `ref` (§3.1) |
 | `text` | `char` | string bytes: interned spellings of names and operators (§4), user string literals |
 | `name` | `{ void *address; const char *name }` | a row of the address → name table (§5.1) |
 
@@ -869,31 +869,35 @@ free cells are reused (decision; no compaction -- addresses are immovable).
 struct: Lmx
     @: parent Lmx        # structural parent (the lexical tree), 0 at the root
     LmxEntry: native     # the native entry or 0: the stored body is executed
-    size_t: size         # the number of fields of a Structure or of elements of an Array
-    @: data void         # address of elements; 0 for an empty Structure/Array
+    size_t: length       # the number of fields of a Structure or of elements of an Array
+    @: storage void     # address of elements; 0 for an empty Structure/Array
 ```
 
-This is the approved flat record: `parent/native/size/data` in that order, without an embedded `VoidArray`.
+This is the approved flat record: `parent/native/length/storage` in that order, without an embedded `VoidArray`.
 A reference points to the start of the header. Migration of the current generator remains open in
 [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 **A slot** of an ordinary Structure or `Array<@>` is a `ref` (`void *`) backing cell. It has a stable address and holds
-the address of its value -- a primitive (`uninit:T` included), an Lmx, or 0. A numeric `Array<T>` stores `size` T
+the address of its value -- a primitive (`uninit:T` included), an Lmx, or 0. A numeric `Array<T>` stores `length` T
 elements directly rather than references to separate cells. Codex's former explanation of reference backing for all
 Arrays is superseded by the [author's decision of 2026-11-13](../LMX_blog/2026-11-13-get-descriptor.md).
 The region of the address held in a slot tells how to read a reference value; the header's region tells an Array's
 kind and storage type (§2.2). Access uses the real type: a graph-slot address is `void **`, a numeric element address
-is `T *`. `size` is fixed at construction: a Structure does not grow by slots ([L2 §10](L2_spec_en.md#own)); `merge` builds
-a new Lmx; an Array carries exactly `size` elements ([L2 §5](L2_spec_en.md#method-array)). Header fields are not elements.
+is `T *`. `length` is fixed at construction: a Structure does not grow by slots ([L2 §10](L2_spec_en.md#own)); `merge` builds
+a new Lmx; an Array carries exactly `length` elements ([L2 §5](L2_spec_en.md#method-array)). Header fields are not elements.
 
 An ordinary Structure and `Array<@>` are interchangeable for indexing, named paths where names exist, `length`,
-admission, copying, execution, `typeof` and `getDescriptor`. An ARRAY/STRUCT category alone is no reason for refusal.
+admission, copying, execution, `typeof` and `descriptor`. An ARRAY/STRUCT category alone is no reason for refusal.
 Numeric Arrays and List retain their own contracts.
 
 <a id="get-descriptor"></a>
 ### 3.1.1 Header addresses
 
-Ordinary receiver `getDescriptor: S` returns an ordinary Structure of addresses of the actual `parent/native/size/data`
+One explicit argument S selects S; with no argument, `descriptor()` / `descriptor:` select the current data,
+as `descriptor(data)`, including inside nested control bodies. Code requires an explicit argument.
+The common call mechanism selects the argument; both variants share the same result-address contract.
+
+Ordinary receiver `descriptor: S` returns an ordinary Structure of addresses of the actual `parent/native/length/storage`
 fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **` ([exact form](L2_spec_en.md#get-descriptor)).
 A dereferenced write changes S's field immediately; writing a result field changes its own pointer.
 Clearing S.native selects the ordinary walker for the next call. There is no copy, proxy, writeback or separate opcode.
@@ -909,6 +913,21 @@ address nor its type: the slot leads to it through the same internal `uninit:T` 
 question of the second review is closed). Taking an address reads no unwritten bytes. The contracts of `@i`, of the
 reference value `@: p i`, of a formal's address and of a hidden input are distinct and are not mixed (the book:
 [addresses](LMX_semantics.en.md#explicit-copy), [dynamic visibility](LMX_semantics.en.md#dynamic)).
+
+<a id="header-receivers"></a>
+### 3.1.2 Reading the header through receivers
+
+`parent(S)`, `native(S)`, `length(S)`, `storage(S)` read the corresponding header values;
+without an argument they select the current launch's `data`. `native(S)` returns LmxEntry,
+0 when no native entry exists; obtaining the value does not invoke it. These are ordinary
+non-declaring receivers: same-headed data forms remain Structures, and paths select ordinary fields.
+After ordinary argument selection a field load suffices; do not construct descriptor, a temporary
+object, a property table or a separate graph walk. Values differ from their cell addresses in §3.1.1.
+Rename size/data to length/storage in the generator and all actual Lmx consumers, including the
+descriptor result; this does not rename same-named fields of other technical structures.
+data/code remain the Structure arguments of call; node keeps its existing calculation and activation
+contract, without a new node(S) or Lmx field. [Forms and rules](LMX_semantics.en.md#header-receivers),
+[plan M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 <a id="primitive-storage"></a>
 ### 3.2 The primitive (norm: the author, 17:22Z, 18:00Z, 18:10Z, 18:20Z, 19:02Z)

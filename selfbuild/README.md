@@ -13,8 +13,14 @@ graph-m8-values-01/graph_trans-prod.exe uses its runtime.
 Group normalization remains enabled. General whole-argument selection, declaration
 migration and the P0 switch remain open.
 [Evidence and continuation](../steps/witnesses/m8-structure-values-20261113/notes.md).
-The approved flat Lmx/getDescriptor work is recorded separately as open
+The approved flat Lmx/descriptor work is recorded separately as open
 [M13](../next_core_tasks_v3.md#flat-lmx-descriptor); its code is not implemented yet.
+The latest M13 clarification names the header parent/native/length/storage and adds
+ordinary parent/native/length/storage receivers with one argument or the current data by default.
+Same-headed data forms remain ordinary Structures; execution's data/code and node keep
+their contracts. This is documentation of pending code work, not a new verified build.
+Descriptor also accepts an explicit S or defaults to the current launch's data:
+`descriptor() = descriptor(data)`, including inside nested control bodies.
 
 Previous continuation (2026-11-13, slice 361): the clean-graph whole-argument
 binder maps named fields by name and unnamed fields by their source position.

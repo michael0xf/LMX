@@ -44,20 +44,33 @@ an `Lmx` Structure with fixed, typed element storage, not an unrelated
 `VoidArray` record used as the base of `Lmx`. Both ordinary Structures and
 graph Arrays have structural `parent` and `native`; their element/field
 storage has a fixed size after construction. The approved target header is
-flat `parent/native/size/data`, in that order, without `Lmx.array: VoidArray`.
+flat `parent/native/length/storage`, in that order, without `Lmx.array: VoidArray`.
 Numeric Arrays keep actual T-elements; Structure and Array<@> use pointer elements.
 The current nested layout and the remaining migration are recorded in the
 [implementation notes](docs/implementation-notes.en.md#l2-status).
 
 Structure and Array<@> are fully interchangeable for equivalent contents in
 indexing, length, naming, admission, copying, execution, typeof and descriptor
-access. The header does not add elements. `getDescriptor(S)` returns an ordinary
+access. The header does not add elements. `descriptor(S)` returns an ordinary
 Structure holding the four actual field addresses (`Lmx **`, `LmxEntry *`,
 `size_t *`, `void **`). Explicit `\(d\native) := 0` writes S.native; assigning
 `d\native` changes d's pointer field. Ordinary paths keep selecting user fields.
 There is no header snapshot, write-back or reflection infrastructure. General
 typed pointers and Array rank have no fixed numerical ceiling. This target is
 [M13](next_core_tasks_v3.md#flat-lmx-descriptor), not completed implementation.
+
+`descriptor()` also defaults to the current launch's data: it equals `descriptor(data)`,
+including inside nested control bodies. An explicit argument selects S, including code.
+Both variants return the selected Structure's actual field addresses through the same mechanism.
+
+Ordinary non-declaring receivers `parent(S)`, `native(S)`, `length(S)` and `storage(S)` read the
+corresponding header values. With no argument, `parent()`, `native()`, `length()` and `storage()`
+use the current launch's data; code requires an explicit argument. Reading a value
+does not construct a descriptor. Same-headed forms in data remain ordinary Structures,
+selected by paths and occurrence indices; there are no header pseudo-fields.
+The old physical names size/data become length/storage. Execution's data/code remain
+the Structure arguments of call, and node keeps its existing activation contract.
+See [receiver semantics](docs/LMX_semantics.en.md#header-receivers).
 
 A graph reference slot's address, its stored pointer, and its referent are
 distinct. `Lmx.parent` is the structural parent, not `Thread.parent`.

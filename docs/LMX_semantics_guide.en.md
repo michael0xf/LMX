@@ -118,11 +118,41 @@ withdrawn by the author's decision of 2026-11-10
 ([semantics](LMX_semantics.en.md#receiver-args-only)): in data `ms: int: time`
 declares a Structure `ms` with a field `time`, not a place `ms`.
 
-<a id="get-descriptor"></a>
-## Header-field addresses through getDescriptor
+<a id="header-receivers"></a>
+## Reading a Structure's header
 
-Let d be the result of the ordinary call `getDescriptor: S`. It is a Structure
-of addresses of fields `parent`, `native`, `size`, `data` of S's flat header.
+`parent(S)` gives the structural parent, `native(S)` the native entry or 0,
+`length(S)` the element count, and `storage(S)` the pointer to element storage.
+All four read values; `native(S)` does not invoke the entry it obtains.
+
+| Without an argument | Equivalent explicit argument |
+| --- | --- |
+| `parent()` | `parent(data)` |
+| `native()` | `native(data)` |
+| `length()` | `length(data)` |
+| `storage()` | `storage(data)` |
+
+In `call(D C)` this is data D; to select C, write, for example, `length(code)`.
+An inline `if` body does not switch launch data. A bare receiver name does not invoke it.
+The data form `length: 7` remains an ordinary Structure named `length`: with one occurrence,
+`data\length` selects it, while `length()` reads the length of the data itself. The same
+applies to parent/native/storage records; there are no special paths to the header.
+
+The physical header fields are now named parent/native/length/storage.
+`data` and `code` remain the Structure arguments of a launch; `node` keeps its existing
+meaning as the activation context. Reading these four values needs no descriptor;
+it returns addresses for writing, as shown below. [Contract](LMX_semantics.en.md#header-receivers),
+[open implementation M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+
+<a id="get-descriptor"></a>
+## Header-field addresses through descriptor
+
+`descriptor(S)` selects S; with no argument, `descriptor()` selects the current data, as `descriptor(data)`.
+This rule also applies inside nested control bodies. Code requires an explicit argument.
+Forms `descriptor: S` and `descriptor:` have the same contracts; in data, the form remains ordinary data.
+
+Let d be the result of the ordinary call `descriptor: S`. It is a Structure
+of addresses of fields `parent`, `native`, `length`, `storage` of S's flat header.
 For example, `\(d\native) := 0` writes zero to the actual S.native:
 the next call of S uses the walker. Writing `d\native := 0` changes
 only the pointer inside d. There is no snapshot or later synchronization.
@@ -132,7 +162,7 @@ including references and function pointers; the restriction on changing a bare
 Structure name does not prohibit this path. Pointer depth and Array rank are
 independent and have no fixed numeric limit. The address has S's ordinary
 lifetime bounds. The contract is approved; implementation is still pending:
-[`getDescriptor`](LMX_semantics.en.md#get-descriptor),
+[`descriptor`](LMX_semantics.en.md#get-descriptor),
 [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 <a id="callable-admission"></a>

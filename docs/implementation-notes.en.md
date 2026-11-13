@@ -50,9 +50,16 @@ The current generator already defines `Lmx` with `parent`, `native` and
 an embedded `VoidArray array`; `LmxArray` is an alias of `Lmx`. The old
 description of a separate Array without a header does not describe this state.
 The [approved layout](L2_spec_en.md#lmx) has flat fields `parent`,
-`native`, `size`, `data` in that order, without `Lmx.array`.
+`native`, `length`, `storage` in that order, without `Lmx.array`.
 Migration of the generator and all header accesses remains open in
 [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+
+The latest M13 clarification defines ordinary non-declaring parent/native/length/storage receivers:
+one argument S, or the current data when omitted. They read header values directly without
+constructing descriptor. Same-headed data forms remain ordinary Structures.
+`length(S)` for a Structure already exists in the clean graph; the other receivers, the no-argument
+variant and renamed fields still require implementation. data/code remain launch arguments;
+node and its ABI do not change. [Norm](LMX_semantics.en.md#header-receivers).
 
 An ordinary Structure and `Array<@>` have `void *` backing elements;
 such a slot's address is `void **`. A numeric Array stores typed T
@@ -60,9 +67,10 @@ elements directly. Element count is chosen at creation; published
 backing neither grows nor moves. Migration preserves typed storage,
 address-copy maps and `parent` for Arrays and nested Structures.
 Common operations must accept Structure and `Array<@>` interchangeably,
-without refusal based solely on the header category. `getDescriptor`
-is not implemented yet: its result must contain actual field addresses,
-with immediate writes through ordinary dereferencing
+without refusal based solely on the header category. `descriptor`
+is not implemented yet: it must select an explicit S or the current data when no argument is supplied:
+`descriptor() = descriptor(data)`, including inside nested control bodies.
+Both variants return actual field addresses with immediate writes through ordinary dereferencing
 ([contract](L2_spec_en.md#get-descriptor)). Arbitrary finite pointer depth
 and Array rank use the existing general algorithms; the old parser is
 not rewritten. Typed arena arrays remain storage, not standalone

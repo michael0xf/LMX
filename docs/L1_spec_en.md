@@ -15,9 +15,19 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 <a id="lmx"></a>
 ## 3. Lmx in L1
 
-The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `native`, `size`, `data` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `data` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed access and the separate List contract remain. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
+The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `native`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed access and the separate List contract remain. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
 
-Lowering ordinary receiver [`getDescriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write changes the original field immediately; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
+Lowering ordinary receiver [`descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write changes the original field immediately; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
+
+Lowering [`parent`, `native`, `length`, `storage`](L2_spec_en.md#header-receivers) reads the corresponding
+header field of the selected Lmx. With no argument it selects the current launch's data; code is explicit.
+Reading a value neither constructs descriptor nor allocates an auxiliary object.
+`data` and `code` keep their meaning as launch arguments; `node` semantics and ABI do not change.
+Same-headed data forms keep their ordinary structural projection, without header pseudo-fields.
+
+`descriptor` likewise accepts an explicit S or defaults to the current data:
+`descriptor() = descriptor(data)`. This choice also applies inside nested control bodies;
+lowering either variant returns the selected Structure's field addresses under one contract.
 
 <a id="interpretable-tree"></a>
 ### 3.1. Tree projection
@@ -34,7 +44,7 @@ Lowering preserves the full graph for the walker and `toLmx`; later mutation cha
 
 `LmxPool` and `LmxChunk` allocate fixed cells. Growth adds a chunk instead of moving live cells through `realloc`. Pool and range belong to the arena. See [L2 §4](L2_spec_en.md#pool).
 
-During incremental self-build, the translator emits C99 access to a graph Array's `void *data` through a pointer `T *` of the actual element type selected by the L2 pool type. That pool allocates and accesses cells of that very type with suitable alignment: a cast does not redefine the effective type of existing backing. Graph-reference slots retain their separate `void **` contract, not an incompatible `T **` access. Thus one common Array Structure lowers to different typed arrays without a new language object for every `T`.
+During incremental self-build, the translator emits C99 access to a graph Array's `void *storage` through a pointer `T *` of the actual element type selected by the L2 pool type. That pool allocates and accesses cells of that very type with suitable alignment: a cast does not redefine the effective type of existing backing. Graph-reference slots retain their separate `void **` contract, not an incompatible `T **` access. Thus one common Array Structure lowers to different typed arrays without a new language object for every `T`.
 
 <a id="method-array"></a>
 ## 6. Native entry and Array

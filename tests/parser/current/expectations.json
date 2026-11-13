@@ -287,5 +287,539 @@
     "exit": 1,
     "authority": "OPUS-P0-EMPTY-CLOSED-20260930-18: bare f: followed by another statement (a dedent, not an explicit closure) is still REJECT 32.",
     "diagnostic": "32@1:1"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_end_closes_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets the level rule is the one outside them -- `end: Point` is the tail cutter of the block Point, not a record of its own.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Point\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_end_closes_empty_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets `Point:` closed by `end: Point` is the explicitly closed empty body, as outside brackets.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=0\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_end_closes_nested_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets each `end:` closes its own block at its own level.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    frame head=\"Outer\" body=structure fields=2\n      frame head=\"Inner\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"1\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Inner\"\n      frame head=\"int\" body=structure fields=2\n        atom \"z\"\n        atom \"3\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Outer\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_end_closes_two_blocks.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): two blocks in one group, each closed by its `end:`.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"A\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"A\"\n    frame head=\"B\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"B\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_end_without_block_is_field.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the same reading as outside brackets -- an `end:` line with no block above it at its level is an ordinary record.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"x\"\n    frame head=\"end\" body=structure fields=1\n      atom \"Point\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_end_after_semicolon_is_field.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a group written on one line has no levels; `end: Point` after a semicolon is a field, as on one line outside brackets.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    frame head=\"Point\" body=structure fields=3\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"end\" body=structure fields=1\n        atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_fence_closes_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets the fence `---` is recognized and closes the block above it.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_fence_closes_empty_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets `Point:` closed by the fence is the explicitly closed empty body.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=0\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_fence_opens_structure.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the line deeper than the fence opens a nested anonymous Structure, as outside brackets.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n    structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n    frame head=\"int\" body=structure fields=2\n      atom \"z\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_fence_trailing_text_refused.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a fence with text after it is refused inside brackets as outside them -- REJECT 26.",
+    "diagnostic": "26@4:5"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_bare_return_closes_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #trailers-close-many-levels): the terminal form `return` is read inside brackets as outside them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"return\" fields=0\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/parenthesis_until_closes_loop.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #trailers-close-many-levels): the terminal form `until:` with a body of its own is read inside brackets as outside them.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Loop\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"until\" fields=3\n        atom \"n\"\n        atom \">\"\n        atom \"3\"\n    frame head=\"int\" body=structure fields=2\n      atom \"z\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_two_level_drop_refused.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets a level drop of more than one step without a tail cutter is a parse error -- REJECT 13 at the line that drops.",
+    "diagnostic": "13@5:5"
+  },
+  {
+    "path": "tests/parser/current/group_bracket_two_level_drop_refused.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #one-parser-everywhere-no-unwrap): the same parser inside square brackets -- a drop of more than one level without a tail cutter is REJECT 13.",
+    "diagnostic": "13@5:5"
+  },
+  {
+    "path": "tests/parser/current/group_bracket_end_closes_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #one-parser-everywhere-no-unwrap): inside a square bracket form `end: Point` is the tail cutter of the block Point.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Point\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_index_end_closes_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #one-parser-everywhere-no-unwrap): inside the index brackets of `x[` the lines are read by the same parser; the fields stand between the atoms `[` and `]` as before.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=5\n    atom \"x\"\n    atom \"[\"\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Point\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n    atom \"]\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_call_end_closes_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the arguments of a compact call written on several lines are read by the same parser -- `end: Point` closes the block.",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Point\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_inline_body_continuation.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #one-parser-everywhere-no-unwrap; closed questions parser-forms, form A): a line deeper than `y: a` opens a nested anonymous Structure -- y has the atom a and a Structure with b; z is the next field.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"y\" body=structure fields=2\n      atom \"a\"\n      structure fields=1\n        atom \"b\"\n    atom \"z\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_deeper_line_is_structure.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #one-parser-everywhere-no-unwrap; closed questions parser-forms, form B): a line deeper than the previous one opens a nested anonymous Structure and does not continue the list of fields.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=4\n    atom \"a\"\n    atom \"b\"\n    structure fields=1\n      atom \"c\"\n    atom \"d\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_dot_after_indent_is_atom.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #one-parser-everywhere-no-unwrap; closed questions parser-forms, form C): a dot after the spaces of the indentation is the atom `.`, not a level mark -- call has four fields.",
+    "stdout_exact": "structure fields=1\n  frame head=\"call\" body=structure fields=4\n    atom \".\"\n    frame head=\"int\" body=structure fields=2\n      atom \"a\"\n      atom \"b\"\n    atom \".\"\n    frame head=\"ret\" body=structure fields=1\n      atom \"int\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_tail_fields_then_lines.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the fields on the line of the opening bracket and the lines below it are fields of one group.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    frame head=\"int\" body=structure fields=2\n      atom \"a\"\n      atom \"1\"\n    frame head=\"int\" body=structure fields=2\n      atom \"b\"\n      atom \"2\"\n    frame head=\"int\" body=structure fields=2\n      atom \"c\"\n      atom \"3\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_leading_separator_line.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a line that starts with a separator continues the list of fields of the group -- two fields, no skipped position.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_skipped_position_across_lines.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a separator at the end of one line and a separator at the start of the next leave a skipped position between them, as on one line.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    atom \"a\"\n    PositionalSkip atom \"\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_expect_after_closed_frame.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a separator closing the Frame of one line and a separator starting the next line leave a skipped position after the Frame.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    frame head=\"x\" body=structure fields=1\n      atom \"a\"\n    PositionalSkip atom \"\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_shallow_line_refused.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a line of a group that stands to the left of the group's first line is outside the form -- REJECT 13.",
+    "diagnostic": "13@3:5"
+  },
+  {
+    "path": "tests/parser/current/group_nested_groups.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a multi-line group inside a multi-line group -- each is read by the same parser with its own levels.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"f\" body=structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"1\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      atom \"y\"\n    atom \"z\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_in_mark.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a multi-line group inside a Mix mark -- the same parser in curly and in round brackets.",
+    "stdout_exact": "structure fields=1\n  MIX structure fields=1\n    frame head=\"D\" body=structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_disabled_item.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): `%` disables an item with its vertical body inside a group as outside it.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    atom \"a\"\n    Inactive disabled \"b:\"\n    atom \"d\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_lost_paren_after.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): the first `)` closes the group, the second one was never opened -- REJECT 33 at it.",
+    "diagnostic": "33@3:1"
+  },
+  {
+    "path": "tests/parser/current/group_comment_lines.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): comment lines inside a group take no part in the levels, at any indentation.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/group_closing_on_content_line.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the closing bracket may stand at the end of the last line of the group.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_in_item.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a closing parenthesis without an opening one is a parse error in any document -- REJECT 33 at the parenthesis; the rest of the line is not dropped silently.",
+    "diagnostic": "33@1:6"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_alone.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a lost parenthesis as the whole item -- REJECT 33.",
+    "diagnostic": "33@1:1"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_after_group.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): the parenthesis after a closed group was never opened -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_in_plain_end.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a lost parenthesis in the body of a trailer -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_in_bracket_form.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a lost parenthesis inside a square bracket form -- REJECT 33.",
+    "diagnostic": "33@1:7"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_in_index.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a lost parenthesis inside index brackets -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/lost_bracket_in_item.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a closing square bracket without an opening one -- REJECT 33 (it was the general code 6 before).",
+    "diagnostic": "33@1:6"
+  },
+  {
+    "path": "tests/parser/current/lost_bracket_in_call.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a lost square bracket inside the arguments of a call -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_in_mark.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #braces-are-not-a-comment, #mark-errors-and-string-marks): curly braces are not a comment -- the content of a mark is read by the same parser, and a lost parenthesis inside it is REJECT 33.",
+    "diagnostic": "33@1:7"
+  },
+  {
+    "path": "tests/parser/current/lost_paren_in_mark_in_call.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #braces-are-not-a-comment): the parenthesis inside a mark does not pair with the opening one outside it; the mark has an error inside -- REJECT 33 at the parenthesis in the mark.",
+    "diagnostic": "33@1:9"
+  },
+  {
+    "path": "tests/parser/current/lost_bracket_in_mark.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #braces-are-not-a-comment, #lost-bracket-comment-in-mix-scanner): a lost square bracket inside a mark -- REJECT 33.",
+    "diagnostic": "33@1:7"
+  },
+  {
+    "path": "tests/parser/current/disabled_lost_paren.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); grammar, section 9: the light check of a disabled item keeps the balance of bounded forms -- a lost parenthesis is REJECT 33 there too.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/disabled_lost_bracket.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); grammar, section 9: a lost square bracket in a disabled item -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/disabled_lost_bracket_in_call.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); grammar, section 9: a lost square bracket inside a call of a disabled item -- REJECT 33.",
+    "diagnostic": "33@1:10"
+  },
+  {
+    "path": "tests/parser/current/disabled_lost_paren_in_bracket_form.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); grammar, section 9: a lost parenthesis inside a bracket form of a disabled item -- REJECT 33.",
+    "diagnostic": "33@1:9"
+  },
+  {
+    "path": "tests/parser/current/disabled_balanced_forms.lmx",
+    "exit": 0,
+    "authority": "Grammar, section 9: a disabled item with balanced nested forms passes the light check and is kept as one inactive placeholder.",
+    "stdout_exact": "structure fields=1\n  Inactive disabled \"x: f(a, [b, (c)]) [d]\"\n"
+  },
+  {
+    "path": "tests/parser/current/mark_comment_ends_at_brace.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): a `#` comment runs to the end of the line or of the document, and the document of a Mix mark ends at its `}` -- `{#)}` is a mark holding a comment.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    atom \"a\"\n    MIX structure fields=0\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/mark_comment_in_call.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): the parenthesis inside the comment of a mark pairs with nothing; the call closes at its own parenthesis.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    frame head=\"f\" body=structure fields=3\n      atom \"a\"\n      MIX structure fields=0\n      atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/mark_comment_multiline.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): in a mark written on several lines the comment of its last line ends at the closing `}`.",
+    "stdout_exact": "structure fields=2\n  frame head=\"x\" body=structure fields=2\n    atom \"a\"\n    MIX structure fields=1\n      structure fields=1\n        atom \"b\"\n  frame head=\"after\" body=structure fields=1\n    atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/mark_comment_nested.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): the comment of an inner mark ends at the inner `}`; the outer mark goes on.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    MIX structure fields=3\n      atom \"a\"\n      MIX structure fields=0\n      atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/disabled_mark_comment.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner): the light check of a disabled item passes a mark with a comment whole; the comment after it runs to the end of the line.",
+    "stdout_exact": "structure fields=1\n  Inactive disabled \"x: a {# c} b\"\n"
+  },
+  {
+    "path": "tests/parser/current/mark_inline_body_wrapped_once.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets; defect P0-MIX-DOUBLE-POSTPROCESS): each document is post-processed once -- inside a mark the continuation line of `Point: int: x 1` is one nested Structure, as outside the mark.",
+    "stdout_exact": "structure fields=1\n  MIX structure fields=1\n    frame head=\"Point\" body=structure fields=2\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"y\"\n          atom \"2\"\n"
+  },
+  {
+    "path": "tests/parser/current/mark_sole_structure_read_once.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #one-parser-everywhere-no-unwrap; defect P0-MIX-DOUBLE-POSTPROCESS): inside a mark `x: ((a, b))` gives what it gives outside -- one field, a Structure with a and b; the passes of the outer document do not run on the mark's content again.",
+    "stdout_exact": "structure fields=1\n  MIX structure fields=1\n    frame head=\"x\" body=structure fields=1\n      structure fields=2\n        atom \"a\"\n        atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_in_item.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: a closing brace that closes no mark is a lost bracket -- REJECT 33 (it was read as an atom before).",
+    "diagnostic": "33@1:6"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_in_word.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: a lost brace inside a word -- the word ends before it, REJECT 33 at the brace.",
+    "diagnostic": "33@1:5"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_alone.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: a lost brace as the whole item -- REJECT 33.",
+    "diagnostic": "33@1:1"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_in_call.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: a lost brace inside the arguments of a call -- REJECT 33.",
+    "diagnostic": "33@1:5"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_in_index.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: a lost brace inside index brackets -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_after_mark.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: the brace after a closed mark was never opened -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_in_c_surface.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: a closing brace bounds a C surface atom as the opening one does -- REJECT 33 at the brace.",
+    "diagnostic": "33@1:10"
+  },
+  {
+    "path": "tests/parser/current/lost_brace_in_group.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2: a lost brace inside a multi-line group -- REJECT 33 at its place in the file.",
+    "diagnostic": "33@2:7"
+  },
+  {
+    "path": "tests/parser/current/disabled_lost_brace.lmx",
+    "exit": 1,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner); executor's answer R27, item 2; grammar, section 9: a lost brace in a disabled item -- REJECT 33.",
+    "diagnostic": "33@1:8"
+  },
+  {
+    "path": "tests/parser/current/brace_in_protected_content.lmx",
+    "exit": 0,
+    "authority": "Grammar, section 24: a brace inside a string, a character literal, an exact identifier or a comment is content, not a bracket.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=3\n    atom \"\"}\"\"\n    atom \"'}'\"\n    atom \"`}`\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_tree.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string stays one whole atom; the mark with an error is passed by silently; the correct mark gives a mix tree of its own, kept at the atom with the number of the character it starts at.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"text{)}text{mix}\"\"\n      MIX at 12 structure fields=1\n        atom \"mix\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_empty.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks): an empty mark inside a string is a correct mark with an empty tree.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"a{}b\"\"\n      MIX at 2 structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_two.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): two correct marks of one string, each with its own tree and its own character number, in the order of the text.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"{a}{b: c}\"\"\n      MIX at 1 structure fields=1\n        atom \"a\"\n      MIX at 4 structure fields=1\n        frame head=\"b\" body=structure fields=1\n          atom \"c\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_nested.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks): a mark inside a mark of a string belongs to the tree of the outer mark, as in ordinary text.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"p{a {b} c}q\"\"\n      MIX at 2 structure fields=3\n        atom \"a\"\n        MIX structure fields=1\n          atom \"b\"\n        atom \"c\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_unclosed_then_closed.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks): a brace that opens no closed mark is ordinary text of the string; the walk goes on after it and finds the closed mark.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"{ {a}\"\"\n      MIX at 3 structure fields=1\n        atom \"a\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_error_passed_whole.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #braces-are-not-a-comment, #mark-errors-and-string-marks): a mark with an error inside is passed by whole, with what is nested in it; the correct mark after it gives its tree.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"{) {ok} } {z}\"\"\n      MIX at 11 structure fields=1\n        atom \"z\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_character_number.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mix-tree-at-character-of-atom): the place of a mark in the atom is counted in characters, not bytes -- 7 for a mark after the quote and six two-byte letters.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"жёлтый{a}\"\"\n      MIX at 7 structure fields=1\n        atom \"a\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_c_prefix.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks): a string with a C prefix is a string -- its content goes through the scanner; the character number counts the prefix and the quote.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"L\"ab{c}\"\"\n      MIX at 4 structure fields=1\n        atom \"c\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_triple.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks): a string in triple quotes is a string -- its content goes through the scanner.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"\"\"a{b}\"\"\"\"\n      MIX at 4 structure fields=1\n        atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_triple_multiline.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): a mark that spans lines inside a string in triple quotes; the line break before it counts as the characters it is written with -- one in a file with LF.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"\"\"line\n{a: b\n}\"\"\"\"\n      MIX at 8 structure fields=1\n        frame head=\"a\" body=structure fields=1\n          atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_block.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the content of a block string goes through the scanner; the character number is counted from the first character of the block's text.",
+    "stdout_exact": "structure fields=1\n  frame head=\"doc\" body=structure fields=1\n    atom \"alpha {m: 1} beta\n{) {z}\"\n      MIX at 6 structure fields=1\n        frame head=\"m\" body=structure fields=1\n          atom \"1\"\n      MIX at 21 structure fields=1\n        atom \"z\"\n    Tail cutter trailer spelling=\"end\" fields=1\n      atom \"doc\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_not_in_char_or_exact.lmx",
+    "exit": 0,
+    "authority": "Grammar, sections 6 and 19: a character literal and an exact identifier in backquotes are not strings -- their braces are content and give no marks.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=2\n    atom \"'{'\"\n    atom \"`a{b}`\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_not_in_head.lmx",
+    "exit": 0,
+    "authority": "Executor's reading: a quoted token in the position of a name is a head, not a string atom; it has no marks.",
+    "stdout_exact": "structure fields=1\n  frame head=\"\"a{b}\"\" body=structure fields=1\n    atom \"c\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_in_mark.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks): a string inside a mark keeps its marks; the spans of their trees are brought to the file with the tree of the outer mark.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    MIX structure fields=1\n      frame head=\"y\" body=structure fields=1\n        atom \"\"s{m}\"\"\n          MIX at 2 structure fields=1\n            atom \"m\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_in_group.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks, #same-parser-inside-brackets): a string inside a multi-line group keeps its marks.",
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"a\" body=structure fields=1\n      atom \"\"s{m}\"\"\n        MIX at 2 structure fields=1\n          atom \"m\"\n    atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_comment.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-11 (journal #lost-bracket-comment-in-mix-scanner, #mark-errors-and-string-marks): inside a string too the comment of a mark ends at its `}` -- a correct mark with an empty tree.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"a{#)}b\"\"\n      MIX at 2 structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_quote_inside.lmx",
+    "exit": 0,
+    "authority": "Executor's reading: the marks are looked for in the text of the string as written; an escaped quote inside the braces starts a quoted token for the scanner of marks, the token is not closed inside the string, so there is no closed mark and no tree.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"a{b \\\" c}d\"\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_backslash_brace.lmx",
+    "exit": 0,
+    "authority": "Executor's reading: the walk over the string has no escapes of its own -- a backslash before a brace does not hide it from the scanner of marks.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"a\\{b}c\"\"\n      MIX at 3 structure fields=1\n        atom \"b\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_disabled_item.lmx",
+    "exit": 0,
+    "authority": "Grammar, section 9: a disabled item is checked lightly and kept as one inactive placeholder; its strings are not walked for marks.",
+    "stdout_exact": "structure fields=1\n  Inactive disabled \"x: \"a{)}b\"\"\n"
+  },
+  {
+    "path": "tests/parser/current/string_mark_non_bmp_character.lmx",
+    "exit": 0,
+    "authority": "Author 2026-11-13: a non-BMP scalar is one character. This case retains the current raw-atom coordinate, including the opening quote; the M12 choice of raw or processed coordinates remains open.",
+    "stdout_exact": "structure fields=1\n  frame head=\"x\" body=structure fields=1\n    atom \"\"🙂{a}\"\"\n      MIX at 2 structure fields=1\n        atom \"a\"\n"
+  },
+  {
+    "path": "tests/parser/imported/01-old-worked/tests/brace_mark_string_payload.lmx",
+    "exit": 0,
+    "authority": "The saved P0 string-mark correction; the imported input remains unchanged.",
+    "stdout_file": "tests/parser/previous-l1/goldens/brace_mark_string_payload.stdout"
+  },
+  {
+    "path": "tests/parser/imported/02-lingvamyxa/tests/l1/p0_mix_string_boundary.lmx",
+    "exit": 0,
+    "authority": "The saved P0 string-mark correction; the imported input remains unchanged.",
+    "stdout_file": "tests/parser/previous-l1/goldens/l1_p0_mix_string_boundary.stdout"
+  },
+  {
+    "path": "tests/parser/imported/01-old-worked/tests/t0.lmx",
+    "exit": 0,
+    "authority": "The saved P0 string-mark correction; the imported input remains unchanged.",
+    "stdout_file": "tests/parser/previous-l1/goldens/t0.stdout"
+  },
+  {
+    "path": "tests/parser/imported/01-old-worked/tests/test4.lmx",
+    "exit": 0,
+    "authority": "The saved P0 string-mark correction; the imported input remains unchanged.",
+    "stdout_file": "tests/parser/previous-l1/goldens/test4.stdout"
+  },
+  {
+    "path": "tests/parser/imported/01-old-worked/tests/test3.lmx",
+    "exit": 1,
+    "authority": "One parser in every block: the saved historical case drops two levels without a cutter inside parentheses.",
+    "diagnostic": "13@26:3"
   }
 ]

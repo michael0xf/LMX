@@ -732,6 +732,7 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
     @: source c.LmP0Structure 0
     @: literal c.LmP0Field 0
     @: value void 0
+    @: block c.Lmx 0
     @: head char 0
     int: number 0
     int: status 0
@@ -768,6 +769,16 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         head := c.lmx_graph_intern(lm_graph_p0_data(text), lm_graph_p0_length(text))
         if: head = 0
             return: 1
+        # A named block keeps the same constructor in every position. A block inside a method's data must not
+        # become an until receiver wrapped around its own head merely because it is not a root field.
+        if: lm_graph_block_item(nd) != 0
+            status := lm_graph_build_fields(g, parent, lm_graph_p0_body(frame), 1, (cast: (@: c.LmP0Trailer) frame\trailer), @ block)
+            if: status != 0
+                return: status
+            if: c.lmx_graph_name_address(g, (cast: (@: void) block), head) != 0
+                return: 1
+            out[0] := (cast: (@: void) block)
+            return: 0
         # A literal primitive value has the same physical form everywhere, including a typed RHS.
         if: head = state\w_int && lm_graph_count_active(lm_graph_p0_body(frame)) = 1U
             literal := lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(frame)))
@@ -907,39 +918,10 @@ end: lm_graph_data_head
 # literal` an int place, each named at its cell; everything else is the written nd itself (a statement with a word
 # head, a bare atom, a block). 0, 1 without memory, 2 for a nd of no known kind.
 fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.LmP0Node) int
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: fr c.LmP0Frame 0
-    @: head char 0
     @: value void 0
-    @: structure c.Lmx 0
-    @: tail c.LmP0Trailer 0
     int: r 0
-    if: state = 0 || g = 0 || root = 0 || nd = 0
+    if: g = 0 || root = 0 || nd = 0
         return: 2
-    if: nd\kind = c.LM_P0_NODE_FRAME
-        fr := lm_graph_p0_frame(nd)
-        if: lm_graph_frame_admitted(fr) = 0
-            return: 2
-        if: (fr\flags & c.LM_P0_FRAME_ASSIGN) != 0U
-            r := lm_graph_build_node(g, root, nd, @ value)
-            if: r != 0
-                return: r
-            return: c.lmx_graph_put(root, slot, value)
-        head := c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr)))
-        if: head = 0
-            return: 1
-        if: fr\trailer != 0 && (lm_graph_data_head(head) != 0 || head = state\w_data)
-            tail := (cast: (@: c.LmP0Trailer) fr\trailer)
-            if: lm_graph_until_tail(tail) != 0 || (tail\spelling != 0 && c.lmx_graph_intern((cast: (@: char) tail\spelling\data), (cast: (size_t) tail\spelling\length)) = c.lmx_graph_intern("end", 3U))
-                r := lm_graph_build_fields(g, root, lm_graph_p0_body(fr), 1, tail, @ structure)
-                if: r != 0
-                    return: r
-                if: c.lmx_graph_name_address(g, (cast: (@: void) structure), head) != 0
-                    return: 1
-                return: c.lmx_graph_put(root, slot, (cast: (@: void) structure))
-            ---
-        ---
-    ---
     r := lm_graph_build_node(g, root, nd, @ value)
     if: r != 0
         return: r

@@ -81,51 +81,7 @@ arena. `implements` builds address correspondence from actually required
 fields; a numeric position alone is not its contract. Current failures
 and checks are in the [current kernel gate](../next_core_tasks_v3.md).
 
-The current kernel distinguishes selected code from supplied data; `fn`
-has four parts, `args/return/data/code`. The `call: data code` form is
-partly implemented: arbitrary actual code sources and admission of their
-data remain limited by M2/N4 in the [v3 plan](../next_core_tasks_v3.md).
-Before the decision of 2026-11-11 the parts were called `var/body` and
-the launch was written `call: code data`: the clean graph reads the new
-names and order since slice 354 and does not accept the former spellings
-or order, while the working frontend and its fixtures read the former
-spellings and order until step 8 of [M11](../next_core_tasks_v3.md#m11).
-Of the remaining rules of M11 the clean graph executes sub-step 5а (the
-pointer atom and visibility in data in both directions among others) since
-slice 355 and the first part of sub-step 5б since slice 356: the launch of a
-Structure by name (the author's decision of 2026-11-11,
-[journal](../LMX_blog/2026-11-11.md#structure-call-by-name)) in the code of a
-method and in code over given data -- `S()`, `S(D)`, `S(data := D)` -- and a
-form whose head is a place holding a reference to an ordinary Structure
-everywhere, the root of a unit included, as well as the named supply of the
-arguments of `call` and `fncall`. In the root of a unit and in a Structure
-over itself it does not yet execute the role of code of a form with an
-ordinary Structure as its head by name (sub-step 5г); the rest of reading
-forms by role -- sub-step 5в and the remainders of sub-steps 5б, 5д and 5е --
-is not executed yet. The working frontend executes none of these rules of M11
-(step 8).
-The P0 parser executes the rule for closing blocks ([grammar
-§15](LMX_grammar.en.md#levels)) outside brackets and inside curly brackets;
-inside round and square brackets it does not yet: a line `end: name` is read as
-a separate record, the fence `---` as two atoms, a jump of more than one
-level without a tail cutter is accepted, a deeper line continues the list of
-fields, and a dot after the indentation spaces is a level marker, whereas
-outside brackets a deeper line opens a nested anonymous Structure and such a
-dot is an atom ([grammar §14](LMX_grammar.en.md#bounded); defect
-`P0-BRACKET-CONTENT-SEPARATE-LOOP`, [steps/defects.md](../steps/defects.md)).
-The rest that P0 does not yet do under the author's decisions of 2026-11-11: a
-lost `)` is accepted (`x: a ) b` -- the rest of the line after `)` disappears);
-a comment `#` in a Mix mark is cut at the end of the outer line (`x: a {#)} b`
--- error 31, [§9](LMX_grammar.en.md#comments),
-[§19](LMX_grammar.en.md#mix)); the content of a string does not pass the Mix
-scanner (`x: "text{mix}"` -- one atom with no mix-tree); inside curly
-brackets a continuation line under a Frame with a body on the head line gets
-an extra Structure level (defect `P0-MIX-DOUBLE-POSTPROCESS`). The fix is the
-package of parser fixes in the second part of sub-step 5б of
-[M11](../next_core_tasks_v3.md#m11); section M8 (removal of the unwrapping of
-a sole Structure, which P0 still performs) stands in the queue right after it.
-Fixed slot counts are computed in advance; full admission of required
-fields must finish before execution. Do not guess an initialization change.
+The accepted P0 package (slice 359, 2026-11-13) uses one stream parser inside `()`, `[]` and `{}` and post-processes a nested document once; it recognizes lost closing brackets, the end of a comment at the Mix document boundary, and marks attached to an intact string atom. The L2 `parser-suite` command passed 139 cases, including five saved changes to historical inputs; 11 end-to-end graph cases passed interp/native/forced. Exact builds, bootstrap acceptance and limits are in the [witness](../steps/witnesses/p0-unified-documents-20261113/notes.md). M8 remains open: P0 unwraps a sole anonymous Structure and rejects bare `f:`. The working frontend still retains the former M11 semantics; the P0 fix does not migrate it.
 
 Copying a description preserves evidence of its address layout. A later
 argument can compose already known correspondences to that layout; the

@@ -46,5 +46,36 @@
     "stdout_file": "tests/parser/previous-l1/goldens/t2.stdout",
     "reason": "P0 sole-anonymous-container normalize: sources sole-Structure unwrap plus several System\\out\\println frames each lost one sole anonymous Structure around their expression fields; control-flow frames otherwise unchanged.",
     "commit": "bc228814aef8e0a1aadbe83266574cdb80ddfd3d"
+  },
+  {
+    "name": "tests/brace_mark_string_payload.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/brace_mark_string_payload.stdout",
+    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of text holds the tree of `{mark}` at character 6; nothing else changed.",
+    "commit": "slice 359"
+  },
+  {
+    "name": "tests/l1/p0_mix_string_boundary.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/l1_p0_mix_string_boundary.stdout",
+    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of balanced holds the tree of `{mark: nested}` at character 6. The other strings hold none: a brace without a pair is text, and the braces of quoted_close do not pair in the text as written -- the escaped quote starts a quoted token for the scanner of marks. Nothing else changed.",
+    "commit": "slice 359"
+  },
+  {
+    "name": "tests/t0.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/t0.stdout",
+    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of the paragraph holds the trees of `{color: red}` at character 14 and of `{end}` at character 34; nothing else changed.",
+    "commit": "slice 359"
+  },
+  {
+    "name": "tests/test4.lmx",
+    "stdout_file": "tests/parser/previous-l1/goldens/test4.stdout",
+    "reason": "The content of a string goes through the Mix scanner (the author, 2026-11-11, journal #mark-errors-and-string-marks, #mix-tree-at-character-of-atom): the string atom keeps its text whole and holds the mix tree of each correct mark at the number of the character the mark starts at. The string of the paragraph holds the trees of `{red}` at character 14 and of `{end}` at character 27; nothing else changed.",
+    "commit": "slice 359"
+  },
+  {
+    "name": "tests/test3.lmx",
+    "exit": 1,
+    "diagnostic": "13@26:3",
+    "reason": "One parser in every block (the author, 2026-11-11, journal #same-parser-inside-brackets): inside round brackets a level drop of more than one step without a tail cutter is a parse error, as outside brackets. The third group of the case drops from `. . . test2` to `. print`; its first two groups give the trees they gave.",
+    "commit": "slice 359"
   }
 ]

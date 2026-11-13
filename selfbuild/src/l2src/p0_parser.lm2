@@ -861,6 +861,16 @@ sub: lm_p0_trim_trailing_line_comment (const: (@@: text char); @: byte_count siz
                 ---
             ---
             continue
+        # A mark is one unit everywhere (fable2 for the author, 2026-11-11): a `#` inside a closed mark is the
+        # mark's own comment, not the line's.
+        if: (text[0][i] = '{')
+            int: mark_closed
+            size_t: mark_end
+            mark_end := lm_p0_scan_brace_mark_unchecked(text[0], byte_count[0], i, @ mark_closed)
+            if: mark_closed
+                i := mark_end
+                continue
+            ---
         if: (text[0][i] = '#')
             size_t: end_index
             end_index := (i + 1U)
@@ -954,6 +964,14 @@ end: lm_p0_skip_fence_block_unchecked
 
 # Original: parser.lm1:1039 lm_p0_find_layout_line_end
 fn: lm_p0_find_layout_line_end (const: (@: source char); size_t: byte_count; size_t: start) size_t
+    return: lm_p0_find_layout_line_end_from(source, byte_count, start, 0, 0U, 0U)
+end: lm_p0_find_layout_line_end
+
+# The end of the layout line that starts at start. A bracket opened on a line is continued by the lines deeper than
+# that line, so the scan needs the indent and the dots of the line it starts on. They are read at start, unless the
+# caller gives them: the first line of a bracket group's own document is the rest of the line the bracket stands on
+# and starts in the middle of it (has_prefix, lm_p0_parse_group).
+fn: lm_p0_find_layout_line_end_from (const: (@: source char); size_t: byte_count; size_t: start; int: has_prefix; size_t: prefix_indent; size_t: prefix_dots) size_t
     size_t: i
     size_t: depth
     size_t: current_line_indent
@@ -964,7 +982,11 @@ fn: lm_p0_find_layout_line_end (const: (@: source char); size_t: byte_count; siz
     i := start
     depth := 0U
     quote := '\0'
-    lm_p0_scan_layout_prefix(source, byte_count, start, @ ignored_content_offset, @ current_line_indent, @ current_line_dot_level)
+    if: has_prefix
+        current_line_indent := prefix_indent
+        current_line_dot_level := prefix_dots
+    else:
+        lm_p0_scan_layout_prefix(source, byte_count, start, @ ignored_content_offset, @ current_line_indent, @ current_line_dot_level)
     while: (i < byte_count)
         if: (quote != '\0')
             if: ((quote = '"') && (source[i] = '\\'))
@@ -1063,72 +1085,82 @@ fn: lm_p0_find_layout_line_end (const: (@: source char); size_t: byte_count; siz
         i := i + 1U
     ---
     return: i
-end: lm_p0_find_layout_line_end
+end: lm_p0_find_layout_line_end_from
+
+# What the content of a mark protects from the count of braces: a fenced block that starts at the start of a line, a
+# string, a character literal, an exact identifier and a comment. The index after the protected token that starts at
+# text[index], or index itself when none starts there. A comment runs to the end of its line or of its document, and a
+# mark's document ends at the closing `}` (the author, 2026-11-11, journal #lost-bracket-comment-in-mix-scanner):
+# `{#)}` is a mark holding a comment, so the comment stops before the brace.
+fn: lm_p0_mark_skip_protected (const: (@: text char); size_t: byte_count; size_t: index) size_t
+    size_t: i
+    size_t: prefixed_end
+    i := index
+    if: (lm_p0_index_is_line_start(text, i) && ((text[i] = '=') || (text[i] = '*')))
+        size_t: fence_end
+        fence_end := lm_p0_skip_fence_block_unchecked(text, byte_count, i, text[i])
+        if: (fence_end > i)
+            return: fence_end
+        ---
+    if: c.lm_p0_starts_python_string(text, byte_count, i)
+        return: lm_p0_skip_python_string_unchecked(text, byte_count, i)
+    prefixed_end := c.lm_p0_scan_c_prefixed_quote_token(text, byte_count, i)
+    if: (prefixed_end > i)
+        return: prefixed_end
+    if: ((text[i] = '\'') && (c.lm_p0_starts_python_string(text, byte_count, i) = 0))
+        return: c.lm_p0_scan_c_char_token(text, byte_count, i)
+    if: ((text[i] = '"') || (text[i] = '`'))
+        char: quote
+        quote := text[i]
+        i := i + 1U
+        while: (i < byte_count)
+            if: ((quote = '"') && (text[i] = '\\'))
+                size_t: line_break_width
+                if: ((i + 1U) < byte_count)
+                    line_break_width := c.lm_p0_line_break_width_at(text, byte_count, (i + 1U))
+                else:
+                    line_break_width := 0U
+                ---
+                if: (line_break_width > 0U)
+                    i := i + (1U + line_break_width)
+                else:
+                    if: ((i + 1U) < byte_count)
+                        i := i + 2U
+                    else:
+                        i := i + 1U
+                    ---
+                continue
+            if: ((((quote = '`') && (text[i] = '`')) && ((i + 1U) < byte_count)) && (text[(i + 1U)] = '`'))
+                i := i + 2U
+                continue
+            char: lm_p0_tmp_11
+            lm_p0_tmp_11 := text[i]
+            i := i + 1U
+            if: (lm_p0_tmp_11 = quote)
+                break
+            ---
+        ---
+        return: i
+    if: (text[i] = '#')
+        while: (((i < byte_count) && (c.lm_p0_is_line_break(text[i]) = 0)) && (text[i] != '}'))
+            i := i + 1U
+        ---
+        return: i
+    return: index
+end: lm_p0_mark_skip_protected
 
 # Original: parser.lm1:1147 lm_p0_scan_brace_mark_unchecked
 fn: lm_p0_scan_brace_mark_unchecked (const: (@: text char); size_t: byte_count; size_t: start; @: closed int) size_t
     size_t: i
     size_t: depth
+    size_t: next
     i := start
     depth := 0U
     closed[0] := 0
     while: (i < byte_count)
-        size_t: prefixed_end
-        if: (lm_p0_index_is_line_start(text, i) && ((text[i] = '=') || (text[i] = '*')))
-            size_t: fence_end
-            fence_end := lm_p0_skip_fence_block_unchecked(text, byte_count, i, text[i])
-            if: (fence_end > i)
-                i := fence_end
-                continue
-            ---
-        if: c.lm_p0_starts_python_string(text, byte_count, i)
-            i := lm_p0_skip_python_string_unchecked(text, byte_count, i)
-            continue
-        prefixed_end := c.lm_p0_scan_c_prefixed_quote_token(text, byte_count, i)
-        if: (prefixed_end > i)
-            i := prefixed_end
-            continue
-        if: ((text[i] = '\'') && (c.lm_p0_starts_python_string(text, byte_count, i) = 0))
-            i := c.lm_p0_scan_c_char_token(text, byte_count, i)
-            continue
-        if: ((text[i] = '"') || (text[i] = '`'))
-            char: quote
-            char: lm_p0_tmp_10
-            lm_p0_tmp_10 := text[i]
-            i := i + 1U
-            quote := lm_p0_tmp_10
-            while: (i < byte_count)
-                if: ((quote = '"') && (text[i] = '\\'))
-                    size_t: line_break_width
-                    if: ((i + 1U) < byte_count)
-                        line_break_width := c.lm_p0_line_break_width_at(text, byte_count, (i + 1U))
-                    else:
-                        line_break_width := 0U
-                    ---
-                    if: (line_break_width > 0U)
-                        i := i + (1U + line_break_width)
-                    else:
-                        if: ((i + 1U) < byte_count)
-                            i := i + 2U
-                        else:
-                            i := i + 1U
-                        ---
-                    continue
-                if: ((((quote = '`') && (text[i] = '`')) && ((i + 1U) < byte_count)) && (text[(i + 1U)] = '`'))
-                    i := i + 2U
-                    continue
-                char: lm_p0_tmp_11
-                lm_p0_tmp_11 := text[i]
-                i := i + 1U
-                if: (lm_p0_tmp_11 = quote)
-                    break
-                ---
-            ---
-            continue
-        if: (text[i] = '#')
-            while: ((i < byte_count) && (c.lm_p0_is_line_break(text[i]) = 0))
-                i := i + 1U
-            ---
+        next := lm_p0_mark_skip_protected(text, byte_count, i)
+        if: (next > i)
+            i := next
             continue
         if: (text[i] = '{')
             depth := depth + 1U
@@ -1512,47 +1544,187 @@ sub: lm_p0_copy_payload_diagnostic (@: document c.LmP0Document; const: (@: paylo
     lm_p0_position_in_slice((cast: (const: @: char) document\source), (cast: (size_t) document\source_length), (payload_offset + local_offset), 1U, 1U, (cast: (@: size_t) (@ document\diagnostic\line)), (cast: (@: size_t) (@ document\diagnostic\column)))
 end: lm_p0_copy_payload_diagnostic
 
+# The spans of a nested document's tree are written in its own coordinates. Moved into the outer document, the offset
+# of a node grows by the offset of the nested source, and its line and column are read from the outer source. The walk
+# goes through the tree in source order and keeps the place it has reached -- an offset with its line and column,
+# which starts at the nested source --, so the source is read once, not once for every node; a node that lies behind
+# the reached place is read from the start of the document.
 # Original: parser.lm1:1552 lm_p0_adjust_node_span_to_document
-sub: lm_p0_adjust_node_span_to_document (@: document c.LmP0Document; @: p0_node c.LmP0Node; size_t: base_offset)
+sub: lm_p0_adjust_node_span_to_document (@: document c.LmP0Document; @: p0_node c.LmP0Node; size_t: base_offset; @: at_offset size_t; @: at_line size_t; @: at_column size_t)
+    size_t: target
     if: (p0_node = 0)
         return
     p0_node\span\offset := p0_node\span\offset + base_offset
-    lm_p0_position_in_slice((cast: (const: @: char) document\source), (cast: (size_t) document\source_length), (cast: (size_t) p0_node\span\offset), 1U, 1U, (cast: (@: size_t) (@ p0_node\span\line)), (cast: (@: size_t) (@ p0_node\span\column)))
+    target := p0_node\span\offset
+    if: (target > (cast: (size_t) document\source_length))
+        target := document\source_length
+    if: (target < at_offset[0])
+        at_offset[0] := 0U
+        at_line[0] := 1U
+        at_column[0] := 1U
+    lm_p0_position_in_slice(((cast: (const: @: char) document\source) + at_offset[0]), ((cast: (size_t) document\source_length) - at_offset[0]), (target - at_offset[0]), at_line[0], at_column[0], at_line, at_column)
+    at_offset[0] := target
+    p0_node\span\line := at_line[0]
+    p0_node\span\column := at_column[0]
+    if: (p0_node\marks != 0)
+        lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\marks), base_offset, at_offset, at_line, at_column)
     if: (p0_node\kind = c.LM_P0_NODE_STRUCTURE)
-        lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\structure), base_offset)
+        lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\structure), base_offset, at_offset, at_line, at_column)
         if: (p0_node\as\structure\trailer != 0)
-            lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\structure\trailer\body), base_offset)
-        ---
-    else:
-        if: (p0_node\kind = c.LM_P0_NODE_FRAME)
-            lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\frame\body), base_offset)
-            if: (p0_node\as\frame\trailer != 0)
-                lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\frame\trailer\body), base_offset)
-            ---
-        ---
-    ---
+            lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\structure\trailer\body), base_offset, at_offset, at_line, at_column)
+        return
+    if: (p0_node\kind = c.LM_P0_NODE_FRAME)
+        lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\frame\body), base_offset, at_offset, at_line, at_column)
+        if: (p0_node\as\frame\trailer != 0)
+            lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\frame\trailer\body), base_offset, at_offset, at_line, at_column)
 end: lm_p0_adjust_node_span_to_document
 
 # Original: parser.lm1:1572 lm_p0_adjust_structure_spans_to_document
-sub: lm_p0_adjust_structure_spans_to_document (@: document c.LmP0Document; @: structure c.LmP0Structure; size_t: base_offset)
+sub: lm_p0_adjust_structure_spans_to_document (@: document c.LmP0Document; @: structure c.LmP0Structure; size_t: base_offset; @: at_offset size_t; @: at_line size_t; @: at_column size_t)
     @: field c.LmP0Field
     field := structure\first_field
     while: (field != 0)
-        lm_p0_adjust_node_span_to_document(document, (cast: (@: c.LmP0Node) field\value), base_offset)
+        lm_p0_adjust_node_span_to_document(document, (cast: (@: c.LmP0Node) field\value), base_offset, at_offset, at_line, at_column)
         field := field\next
-    ---
 end: lm_p0_adjust_structure_spans_to_document
+
+# Each document is post-processed once (the author, 2026-11-11: one parser in every block; defect
+# P0-MIX-DOUBLE-POSTPROCESS). A nested document runs the whole chain on its own tree before the tree is moved into the
+# outer document; its root fields are marked here, and the passes of the outer document pass a marked node by. The
+# node that holds them belongs to the outer document and is read there as usual.
+sub: lm_p0_mark_document_fields (@: structure c.LmP0Structure)
+    @: field c.LmP0Field
+    if: structure = 0
+        return
+    field := structure\first_field
+    while: field != 0
+        if: field\value != 0
+            field\value\flags := field\value\flags | c.LM_P0_NODE_DOCUMENT
+        field := field\next
+end: lm_p0_mark_document_fields
+
+# The chain of one nested document (lm_p0_parse_nested): the stream parse, the passes of post-processing, each once,
+# and the move of the tree into the outer document.
+fn: lm_p0_nested_chain (@: document c.LmP0Document; @: nested c.LmP0Document; size_t: base_offset; size_t: base_line; size_t: base_column; int: quiet; @@: out_structure c.LmP0Structure) int
+    size_t: at_offset
+    size_t: at_line
+    size_t: at_column
+    if: lm_p0_parse_stream(nested) = 0 || lm_p0_postprocess_node(nested, (cast: (@: c.LmP0Node) nested\root)) = 0
+        if: quiet = 0
+            lm_p0_copy_payload_diagnostic(document, nested, base_offset)
+        return: 0
+    lm_p0_close_empty_by_end_in_node((cast: (@: c.LmP0Node) nested\root))
+    if: lm_p0_validate_nonempty_colon_frames_in_node(nested, (cast: (const: @: c.LmP0Node) nested\root)) = 0 || lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) nested\root)) = 0
+        if: quiet = 0
+            lm_p0_copy_payload_diagnostic(document, nested, base_offset)
+        return: 0
+    if: c.lm_own_tree_cut(nested\tree_arena) != 0
+        if: quiet = 0
+            lm_p0_set_diagnostic(document, 1, base_line, base_column, "out of memory while promoting the lazy text edges of a nested document")
+        return: 0
+    if: c.lm_own_arena_absorb(document\tree_arena, nested\tree_arena) != 0
+        if: quiet = 0
+            lm_p0_set_diagnostic(document, 1, base_line, base_column, "out of memory while moving the tree of a nested document into the parser arena")
+        return: 0
+    out_structure[0] := nested\root\as\structure
+    nested\root\as\structure := 0
+    at_offset := base_offset
+    at_line := base_line
+    at_column := base_column
+    lm_p0_adjust_structure_spans_to_document(document, out_structure[0], base_offset, @ at_offset, @ at_line, @ at_column)
+    lm_p0_mark_document_fields(out_structure[0])
+    return: 1
+end: lm_p0_nested_chain
+
+# One nested document (the author, 2026-11-11: one parser in every block -- inside curly, round and square brackets):
+# the byte_count bytes at text, which lie in this document's source and start at its line base_line, column
+# base_column, are read by the same stream parser as a document of their own, with its own levels and its own stack,
+# and post-processed there once. The content of a Mix mark is such a document; so is the content of a multi-line
+# bracket group (group is 1: lm_p0_parse_stream reads the group's fields in the mode LmP0Document describes). The tree
+# is moved into this document's arena, its spans are brought to this document, its root fields are marked
+# (lm_p0_mark_document_fields), and the Structure of the root is given in out_structure. A diagnostic of the nested
+# document becomes this document's, at its place in this source. 1, or 0 with the diagnostic set. With quiet a nested
+# document that fails -- by an error in its text or without memory -- answers 0 and leaves this document as it was,
+# without a diagnostic: a mark inside a string that has an error inside is passed by (lm_p0_scan_string_marks).
+fn: lm_p0_parse_nested (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; size_t: base_line; size_t: base_column; int: group; unsigned: group_item_flags; size_t: group_indent; size_t: group_dots; int: quiet; @@: out_structure c.LmP0Structure) int
+    @: nested c.LmP0Document
+    size_t: base_offset
+    int: status
+    out_structure[0] := 0
+    if: lm_p0_pointer_source_offset(document, text, @ base_offset) = 0
+        if: quiet = 0
+            lm_p0_set_diagnostic(document, 1, base_line, base_column, "a nested document lies outside the source of its document")
+        return: 0
+    nested := c.lm_own_new_zero(c.sizeof(nested[0]))
+    if: nested = 0
+        if: quiet = 0
+            lm_p0_set_diagnostic(document, 1, base_line, base_column, "out of memory while creating a nested document")
+        return: 0
+    status := 0
+    if: lm_p0_document_init_owners(nested) != 0
+        if: quiet = 0
+            lm_p0_set_diagnostic(document, 1, base_line, base_column, "out of memory while creating the owners of a nested document")
+        ---
+    else:
+        nested\source := (cast: (@: char) text)
+        nested\source_length := byte_count
+        nested\group := group
+        nested\group_item_flags := group_item_flags
+        nested\group_indent := group_indent
+        nested\group_dots := group_dots
+        status := lm_p0_nested_chain(document, nested, base_offset, base_line, base_column, quiet, out_structure)
+    lm_p0_document_destroy_owners(nested)
+    c.lm_own_delete(nested, 0)
+    if: status = 0 && quiet = 0 && document\diagnostic\code = 0
+        lm_p0_set_diagnostic(document, 1, base_line, base_column, "a nested document failed without a diagnostic")
+    return: status
+end: lm_p0_parse_nested
+
+# The indent and the dots of the line a bracket stands on -- what the layout scan kept for it when it joined the
+# lines of the group (lm_p0_find_layout_line_end_from). The line is found back from the bracket in this document's
+# source; the first line of a bracket group's own document is the rest of the line its own bracket stands on, so a
+# bracket there stands on that same line.
+sub: lm_p0_group_open_prefix (@: document c.LmP0Document; const: (@: bracket char); @: out_indent size_t; @: out_dots size_t)
+    size_t: offset
+    size_t: line_start
+    size_t: content_offset
+    out_indent[0] := 0U
+    out_dots[0] := 0U
+    if: lm_p0_pointer_source_offset(document, bracket, @ offset) = 0
+        return
+    line_start := offset
+    while: ((line_start > 0U) && (c.lm_p0_is_line_break(document\source[(line_start - 1U)]) = 0))
+        line_start := line_start - 1U
+    if: ((line_start = 0U) && (document\group != 0))
+        out_indent[0] := document\group_indent
+        out_dots[0] := document\group_dots
+        return
+    lm_p0_scan_layout_prefix((cast: (const: @: char) document\source), (cast: (size_t) document\source_length), line_start, @ content_offset, out_indent, out_dots)
+end: lm_p0_group_open_prefix
+
+# The content of a multi-line bracket group -- the bytes between text[open_index] and text[close_index], with a line
+# break among them -- is a document of its own (lm_p0_parse_nested): the lines of the group are read by the stream
+# parser, as the lines of a file and of a Mix mark are, so the levels, the tail cutters and the fences work inside
+# round and square brackets as they do outside (the author, 2026-11-11, journal #same-parser-inside-brackets). A
+# group written on one line has no levels and stays with the loop of fields, which is what the stream runs on every
+# item. item_flags are the field flags of the group's own items.
+fn: lm_p0_parse_group (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; size_t: line; size_t: column; size_t: open_index; size_t: close_index; unsigned: item_flags; @@: out_structure c.LmP0Structure) int
+    size_t: base_line
+    size_t: base_column
+    size_t: open_indent
+    size_t: open_dots
+    lm_p0_position_in_slice(text, byte_count, open_index, line, column, @ base_line, @ base_column)
+    lm_p0_group_open_prefix(document, (text + open_index), @ open_indent, @ open_dots)
+    return: lm_p0_parse_nested(document, ((text + open_index) + 1U), ((close_index - open_index) - 1U), base_line, (base_column + 1U), 1, item_flags, open_indent, open_dots, 0, out_structure)
+end: lm_p0_parse_group
 
 # Original: parser.lm1:1581 lm_p0_record_mix_mark
 fn: lm_p0_record_mix_mark (@: document c.LmP0Document; @: structure c.LmP0Structure; const: (@: text char); size_t: byte_count; size_t: line; size_t: column; size_t: start; size_t: limit_index) int
     @: p0_node c.LmP0Node
+    @: payload c.LmP0Structure
     size_t: span_line
     size_t: span_column
     size_t: absolute_offset
-    size_t: payload_offset
-    size_t: payload_length
-    @: payload_document c.LmP0Document
-    int: status
 
     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
     if: p0_node = 0
@@ -1571,58 +1743,205 @@ fn: lm_p0_record_mix_mark (@: document c.LmP0Document; @: structure c.LmP0Struct
         lm_p0_free_node(p0_node)
         return: 0
 
-    payload_offset := p0_node\span\offset + 1U
+    # The content of the mark is a nested document; an empty mark keeps the node's own empty Structure.
     if: limit_index > start + 2U
-        payload_length := limit_index - start - 2U
-    else:
-        payload_length := 0U
-
-    ---
-    if: payload_length > 0U
-        payload_document := c.lm_own_new_zero(c.sizeof(payload_document[0]))
-        if: payload_document = 0
-            lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while creating MIX payload document")
+        if: lm_p0_parse_nested(document, (text + start + 1U), (limit_index - start - 2U), span_line, (span_column + 1U), 0, 0U, 0U, 0U, 0, @ payload) = 0
             return: 0
-
-        status := 0
-        if: lm_p0_document_init_owners(payload_document) != 0
-            lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while creating MIX payload owners")
-        else:
-            payload_document\source := (cast: (@: char) (text + start + 1U))
-            payload_document\source_length := payload_length
-            if: lm_p0_parse_stream(payload_document) = 0
-                lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
-            else:
-                if: lm_p0_postprocess_node(payload_document, (cast: (@: c.LmP0Node) payload_document\root)) = 0
-                    lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
-                else:
-                    lm_p0_close_empty_by_end_in_node((cast: (@: c.LmP0Node) payload_document\root))
-                    if: lm_p0_validate_nonempty_colon_frames_in_node(payload_document, (cast: (const: @: c.LmP0Node) payload_document\root)) = 0
-                        lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
-                    else:
-                        if: lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) payload_document\root)) = 0
-                            lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset)
-                        else:
-                            if: c.lm_own_tree_cut(payload_document\tree_arena) != 0
-                                lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while promoting MIX lazy text edges")
-                            else:
-                                if: c.lm_own_arena_absorb(document\tree_arena, payload_document\tree_arena) != 0
-                                    lm_p0_set_diagnostic(document, 1, span_line, span_column, "out of memory while moving MIX tree into parser arena")
-                                else:
-                                    p0_node\as\structure := payload_document\root\as\structure
-                                    payload_document\root\as\structure := 0
-                                    lm_p0_adjust_structure_spans_to_document(document, (cast: (@: c.LmP0Structure) p0_node\as\structure), payload_offset)
-                                    status := 1
-        ---
-
-        lm_p0_document_destroy_owners(payload_document)
-        c.lm_own_delete(payload_document, 0)
-        if: status = 0
-            return: 0
-
-        ---
+        p0_node\as\structure := payload
     return: 1
 end: lm_p0_record_mix_mark
+
+# The number of characters -- code points of UTF-8 -- in byte_count bytes at text: every byte that does not continue
+# a character begins one.
+fn: lm_p0_count_characters (const: (@: text char); size_t: byte_count) size_t
+    size_t: i
+    size_t: count
+    i := 0U
+    count := 0U
+    while: (i < byte_count)
+        if: (((cast: (unsigned) (cast: (c.uchar) text[i])) & 0xC0U) != 0x80U)
+            count := count + 1U
+        i := i + 1U
+    ---
+    return: count
+end: lm_p0_count_characters
+
+# One mark inside a string: the bytes text[start] .. text[limit_index - 1], `{` and `}` included; span_line and
+# span_column are the place of its `{`. Its content is a nested document read quietly. A mark that parses gives a MIX
+# node of its own, kept in the Structure marks of the string's atom and flagged LM_P0_NODE_STRING_MARK, with atom_char
+# -- the number of the atom's characters that stand before the mark: characters, not bytes, since the anchors of the
+# Mix document the parser will read are per character (the author, 2026-11-11, journal
+# #mix-tree-at-character-of-atom). A mark that does not parse gives nothing and no diagnostic. 0 only when the node
+# of a mark that parsed cannot be created.
+fn: lm_p0_record_string_mark (@: document c.LmP0Document; @: atom_node c.LmP0Node; const: (@: text char); size_t: start; size_t: limit_index; size_t: span_line; size_t: span_column; size_t: atom_char) int
+    @: mark_node c.LmP0Node
+    @: payload c.LmP0Structure
+    size_t: absolute_offset
+    payload := 0
+    if: (limit_index > (start + 2U))
+        if: (lm_p0_parse_nested(document, ((text + start) + 1U), ((limit_index - start) - 2U), span_line, (span_column + 1U), 0, 0U, 0U, 0U, 1, @ payload) = 0)
+            return: 1
+        ---
+    mark_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
+    if: (mark_node = 0)
+        return: 0
+    mark_node\flags := (mark_node\flags | c.LM_P0_NODE_MIX) | c.LM_P0_NODE_STRING_MARK
+    if: (payload != 0)
+        mark_node\as\structure := payload
+    mark_node\span\line := span_line
+    mark_node\span\column := span_column
+    mark_node\span\length := (limit_index - start)
+    if: lm_p0_pointer_source_offset(document, (text + start), @ absolute_offset)
+        mark_node\span\offset := absolute_offset
+    mark_node\atom_char := atom_char
+    if: (atom_node\marks = 0)
+        atom_node\marks := lm_p0_new_structure(document, span_line, span_column)
+        if: (atom_node\marks = 0)
+            return: 0
+        ---
+    return: lm_p0_append_field(document, (cast: (@: c.LmP0Structure) atom_node\marks), mark_node)
+end: lm_p0_record_string_mark
+
+# One more index on a growing array of indices -- the record LmP0IndentStack is such an array. 1, or 0 without memory.
+fn: lm_p0_positions_push (@: positions c.LmP0IndentStack; size_t: value) int
+    size_t: new_capacity
+    @: columns size_t
+    if: (positions\count = positions\capacity)
+        if: (positions\capacity = 0U)
+            new_capacity := 8U
+        else:
+            new_capacity := (positions\capacity * 2U)
+        ---
+        columns := c.lm_own_resize(positions\columns, (new_capacity * c.sizeof(columns[0])))
+        if: (columns = 0)
+            return: 0
+        positions\columns := columns
+        positions\capacity := new_capacity
+    positions\columns[positions\count] := value
+    positions\count := positions\count + 1U
+    return: 1
+end: lm_p0_positions_push
+
+# The marks inside a string (the author, 2026-11-11, journal #mark-errors-and-string-marks and
+# #mix-tree-at-character-of-atom): the content of a string literal goes through the Mix scanner. The string stays one
+# whole atom with its text as written; each correct mark gives a mix tree of its own, kept at the atom with the number
+# of the character the mark starts at (lm_p0_record_string_mark).
+#
+# The braces of the content are paired by nesting, as the scanner of marks pairs them in ordinary text: outside every
+# brace the content is the text of the string and only `{` is looked at there; after an opening brace the scanner's own
+# reading holds -- strings, character literals, exact identifiers, comments and fenced blocks protect the braces inside
+# them (lm_p0_mark_skip_protected). A pair that lies inside no other pair is a mark; it is read as one document and
+# passed whole, whether it parsed or not -- a mark with an error inside gives no tree and no diagnostic. A brace
+# without a pair is text. The walk reads the content as it is written and has no escapes of its own.
+#
+# The content is read twice, each time once through: the first pass pairs the braces and keeps the opening ones that
+# found no pair; the second pass, knowing them, meets every mark at its opening brace. The place and the character
+# number of a mark are counted on from the mark before it, so the work grows with the length of the string, not with
+# the number of its braces times its length.
+#
+# The content is text[content_start] .. text[content_end - 1]; the atom begins at text[atom_start], which stands at
+# atom_line, atom_column.
+fn: lm_p0_scan_string_marks (@: document c.LmP0Document; @: atom_node c.LmP0Node; const: (@: text char); size_t: content_start; size_t: content_end; size_t: atom_start; size_t: atom_line; size_t: atom_column) int
+    @: open c.LmP0IndentStack
+    size_t: first
+    size_t: i
+    size_t: next
+    size_t: passed
+    size_t: at
+    size_t: at_line
+    size_t: at_column
+    size_t: at_chars
+    int: status
+    first := content_start
+    while: ((first < content_end) && (text[first] != '{'))
+        first := first + 1U
+    ---
+    if: (first >= content_end)
+        return: 1
+    open := lm_p0_indent_stack_new_empty()
+    if: (open = 0)
+        lm_p0_set_diagnostic(document, 1, atom_line, atom_column, "out of memory while reading the marks of a string")
+        return: 0
+    status := 1
+    i := first
+    while: (i < content_end)
+        if: (open\count != 0U)
+            next := lm_p0_mark_skip_protected(text, content_end, i)
+            if: (next > i)
+                i := next
+                continue
+            ---
+        if: (text[i] = '{')
+            if: (lm_p0_positions_push(open, i) = 0)
+                lm_p0_set_diagnostic(document, 1, atom_line, atom_column, "out of memory while reading the marks of a string")
+                status := 0
+                break
+            ---
+        else:
+            if: ((text[i] = '}') && (open\count != 0U))
+                open\count := open\count - 1U
+            ---
+        i := i + 1U
+    ---
+    passed := 0U
+    at := atom_start
+    at_line := atom_line
+    at_column := atom_column
+    at_chars := 0U
+    i := first
+    while: ((status != 0) && (i < content_end))
+        if: (passed != 0U)
+            next := lm_p0_mark_skip_protected(text, content_end, i)
+            if: (next > i)
+                i := next
+                continue
+            ---
+        if: (text[i] = '{')
+            int: closed
+            size_t: mark_end
+            if: ((passed < (cast: (size_t) open\count)) && (open\columns[passed] = i))
+                passed := passed + 1U
+                i := i + 1U
+                continue
+            mark_end := lm_p0_scan_brace_mark_unchecked(text, content_end, i, @ closed)
+            if: closed
+                lm_p0_position_in_slice((text + at), (i - at), (i - at), at_line, at_column, @ at_line, @ at_column)
+                at_chars := at_chars + lm_p0_count_characters((text + at), (i - at))
+                at := i
+                if: (lm_p0_record_string_mark(document, atom_node, text, i, mark_end, at_line, at_column, at_chars) = 0)
+                    status := 0
+                ---
+                i := mark_end
+                continue
+            ---
+        i := i + 1U
+    ---
+    lm_p0_indent_stack_delete(open)
+    return: status
+end: lm_p0_scan_string_marks
+
+# The marks of a quoted atom text[start] .. text[end_index - 1], by the kind of its token. A string in double quotes,
+# with a C prefix or without, and a string in triple quotes are scanned; a character literal and an exact identifier in
+# backquotes are not -- they are no strings. A quoted token in the position of a name is a head, not an atom, and does
+# not come here. The atom's span already names the place of text[start].
+fn: lm_p0_scan_quoted_atom_marks (@: document c.LmP0Document; @: atom_node c.LmP0Node; const: (@: text char); size_t: byte_count; size_t: start; size_t: end_index) int
+    size_t: quote_index
+    if: (text[start] = '`')
+        return: 1
+    if: c.lm_p0_starts_python_string(text, byte_count, start)
+        if: (end_index < (start + 6U))
+            return: 1
+        return: lm_p0_scan_string_marks(document, atom_node, text, (start + 3U), (end_index - 3U), start, (cast: (size_t) atom_node\span\line), (cast: (size_t) atom_node\span\column))
+    quote_index := start
+    while: (((quote_index < end_index) && (text[quote_index] != '"')) && (text[quote_index] != '\''))
+        quote_index := quote_index + 1U
+    ---
+    if: ((quote_index >= end_index) || (text[quote_index] != '"'))
+        return: 1
+    if: (end_index < (quote_index + 2U))
+        return: 1
+    return: lm_p0_scan_string_marks(document, atom_node, text, (quote_index + 1U), (end_index - 1U), start, (cast: (size_t) atom_node\span\line), (cast: (size_t) atom_node\span\column))
+end: lm_p0_scan_quoted_atom_marks
 
 # Original: parser.lm1:1657 lm_p0_scan_c_char
 fn: lm_p0_scan_c_char (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; @: index size_t; size_t: line; size_t: base_column) int
@@ -1703,9 +2022,24 @@ fn: lm_p0_append_compact_atom_pieces (@: document c.LmP0Document; @: structure c
                 return: 0
             if: (lm_p0_find_matching_bracket(document, text, end_index, i, line, column, @ close_index) = 0)
                 return: 0
-            inner_index := 0U
-            if: (lm_p0_parse_fields_until(document, structure, ((text + i) + 1U), ((close_index - i) - 1U), line, ((column + i) + 1U), ((offset + i) + 1U), 0U, 0U, 0U, @ inner_index) = 0)
-                return: 0
+            # An index that spans lines is a document of its own (lm_p0_parse_group); its fields stand between the
+            # atoms `[` and `]`, as the fields of an index written on one line do.
+            if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
+                @: group_structure c.LmP0Structure
+                @: group_field c.LmP0Field
+                if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, 0U, @ group_structure) = 0)
+                    return: 0
+                group_field := group_structure\first_field
+                while: (group_field != 0)
+                    if: (lm_p0_append_field(document, structure, (cast: (@: c.LmP0Node) group_field\value)) = 0)
+                        return: 0
+                    group_field := group_field\next
+                ---
+            else:
+                inner_index := 0U
+                if: (lm_p0_parse_fields_until(document, structure, ((text + i) + 1U), ((close_index - i) - 1U), line, ((column + i) + 1U), ((offset + i) + 1U), 0U, 0U, 0U, @ inner_index) = 0)
+                    return: 0
+                ---
             if: (lm_p0_append_atom_slice(document, structure, text, byte_count, line, column, offset, close_index, (close_index + 1U)) = 0)
                 return: 0
             i := (close_index + 1U)
@@ -1934,6 +2268,13 @@ fn: lm_p0_find_matching_paren (@: document c.LmP0Document; const: (@: text char)
     i := open_index
     depth := 0U
     while: (i < byte_count)
+        # A mark is one unit everywhere (fable2 for the author, 2026-11-11): the parenthesis that pairs is never one
+        # inside a mark -- as the search for `]` skips it. `f(a {#)} b)` pairs its last `)`; in `f(a {)} b)` the
+        # mark's own `)` is lost there, an error of the mark's document.
+        if: (text[i] = '{')
+            if: (lm_p0_skip_brace_mark(document, text, byte_count, @ i, line, base_column) = 0)
+                return: 0
+            continue
         if: (text[i] = '#')
             while: ((i < byte_count) && (c.lm_p0_is_line_break(text[i]) = 0))
                 i := i + 1U
@@ -2141,7 +2482,7 @@ fn: lm_p0_field_start_looks_explicit_frame (@: document c.LmP0Document; const: (
                         return: 0
                     head_end := i
                 else:
-                    while: ((((((((i < byte_count) && (c.lm_p0_is_field_space(text[i]) = 0)) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (text[i] != '{')) && (text[i] != ':'))
+                    while: (((((((((i < byte_count) && (c.lm_p0_is_field_space(text[i]) = 0)) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (text[i] != '{')) && (text[i] != '}')) && (text[i] != ':'))
                         if: (text[i] = '[')
                             size_t: bracket_close_index
                             if: (lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ bracket_close_index) = 0)
@@ -2252,6 +2593,14 @@ fn: lm_p0_parse_append_node_and_update (@: document c.LmP0Document; @: structure
     return: 1
 end: lm_p0_parse_append_node_and_update
 
+# Does a list expect a field after this one -- as the loop of fields keeps it while it reads on: after a separator,
+# after a skipped position, after a Frame a separator closed?
+fn: lm_p0_field_expects_next (const: (@: p0_node c.LmP0Node)) int
+    if: ((p0_node\flags & (c.LM_P0_NODE_SEPARATOR_AFTER | c.LM_P0_NODE_POSITIONAL_SKIP)) != 0U)
+        return: 1
+    return: ((p0_node\kind = c.LM_P0_NODE_FRAME) && ((p0_node\as\frame\flags & c.LM_P0_FRAME_SEPARATOR_CLOSED) != 0U))
+end: lm_p0_field_expects_next
+
 # Original: parser.lm1:2236 lm_p0_parse_fields_until_with_layout
 fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_stack c.LmP0IndentStack; @: structure c.LmP0Structure; const: (@: text char); size_t: byte_count; size_t: line; size_t: column; size_t: offset; unsigned: flags; size_t: short_source_level; size_t: initial_source_level; size_t: layout_base_level; @: index size_t) int
     size_t: i
@@ -2276,6 +2625,11 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
     current_source_level := initial_source_level
     allow_empty_fields := ((flags & c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS) != 0U)
     expect_field := allow_empty_fields
+    # A list that goes on expects a field as its last field left it. The lines of a multi-line bracket group reach the
+    # group's Structure one item at a time (lm_p0_parse_item_fields_into): `a` on one line and `, b` on the next are
+    # two fields, and no position is skipped between them.
+    if: ((allow_empty_fields && (structure\last_field != 0)) && (structure\last_field\value != 0))
+        expect_field := lm_p0_field_expects_next((cast: (const: @: c.LmP0Node) structure\last_field\value))
     headless_group_after_separator := 0
     indent_stack_owned := 0
     restart_parse_context := 1
@@ -2339,6 +2693,9 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                     p0_node\span\offset := (offset + i)
                     p0_node\span\length := (next_offset - i)
                     if: (lm_p0_document_register_lazy_text(document, (cast: (const: @: char) p0_node\as\atom\data), (cast: (size_t) p0_node\as\atom\length), (cast: (const: @@: char) (@ p0_node\as\atom\data)), (cast: (size_t) p0_node\span\line), (cast: (size_t) p0_node\span\column)) = 0)
+                        lm_p0_stream_event_delete(block_event)
+                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    if: (lm_p0_scan_string_marks(document, p0_node, (cast: (const: @: char) block_event\text), 0U, (cast: (size_t) block_event\text_length), 0U, (field_line + 1U), 1U) = 0)
                         lm_p0_stream_event_delete(block_event)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                     if: (lm_p0_append_field(document, structure, p0_node) = 0)
@@ -2417,6 +2774,20 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
                     if: (p0_node = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    # A group that spans lines is a document of its own (lm_p0_parse_group).
+                    if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
+                        @: group_structure c.LmP0Structure
+                        if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
+                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                        p0_node\as\structure := group_structure
+                        p0_node\span\line := line
+                        lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (@: size_t) (@ p0_node\span\line)), (cast: (@: size_t) (@ p0_node\span\column)))
+                        p0_node\span\offset := (offset + start)
+                        p0_node\span\length := ((close_index - start) + 1U)
+                        i := (close_index + 1U)
+                        if: (lm_p0_parse_append_node_and_update(document, structure, p0_node, flags, allow_empty_fields, @ expect_field, @ headless_group_after_separator) = 0)
+                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                        continue
                     child_indent_stack := lm_p0_indent_stack_new_empty()
                     if: (child_indent_stack = 0)
                         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
@@ -2449,6 +2820,20 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                     p0_node := lm_p0_new_node(document, c.LM_P0_NODE_STRUCTURE)
                     if: (p0_node = 0)
                         return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    # A group that spans lines is a document of its own (lm_p0_parse_group).
+                    if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
+                        @: group_structure c.LmP0Structure
+                        if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
+                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                        p0_node\as\structure := group_structure
+                        p0_node\span\line := line
+                        lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (@: size_t) (@ p0_node\span\line)), (cast: (@: size_t) (@ p0_node\span\column)))
+                        p0_node\span\offset := (offset + start)
+                        p0_node\span\length := ((close_index - start) + 1U)
+                        i := (close_index + 1U)
+                        if: (lm_p0_parse_append_node_and_update(document, structure, p0_node, flags, allow_empty_fields, @ expect_field, @ headless_group_after_separator) = 0)
+                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                        continue
                     child_indent_stack := lm_p0_indent_stack_new_empty()
                     if: (child_indent_stack = 0)
                         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
@@ -2498,7 +2883,7 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                                     head_end := i
                                     quoted_head := 1
                                 else:
-                                    while: ((((((((i < byte_count) && (c.lm_p0_is_field_space(text[i]) = 0)) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (text[i] != '{')) && (text[i] != ':'))
+                                    while: (((((((((i < byte_count) && (c.lm_p0_is_field_space(text[i]) = 0)) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (text[i] != '{')) && (text[i] != '}')) && (text[i] != ':'))
                                         if: (text[i] = '[')
                                             size_t: bracket_close_index
                                             if: (lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ bracket_close_index) = 0)
@@ -2639,6 +3024,22 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                             p0_node\as\frame\flags := c.LM_P0_FRAME_COMPACT
                             if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                            # Arguments that span lines are a document of their own (lm_p0_parse_group).
+                            if: (lm_p0_count_line_breaks(text, (i + 1U), close_index) != 0U)
+                                @: group_structure c.LmP0Structure
+                                if: (lm_p0_parse_group(document, text, byte_count, line, column, i, close_index, c.LM_P0_FIELD_PARSE_ALLOW_EMPTY_FIELDS, @ group_structure) = 0)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                p0_node\as\frame\body := group_structure
+                                p0_node\span\line := line
+                                lm_p0_position_in_slice(text, byte_count, start, line, column, (cast: (@: size_t) (@ p0_node\span\line)), (cast: (@: size_t) (@ p0_node\span\column)))
+                                p0_node\span\offset := (offset + start)
+                                p0_node\span\length := ((close_index - start) + 1U)
+                                if: (lm_p0_document_register_lazy_text(document, (cast: (const: @: char) p0_node\as\frame\head\data), (cast: (size_t) p0_node\as\frame\head\length), (cast: (const: @@: char) (@ p0_node\as\frame\head\data)), (cast: (size_t) p0_node\span\line), (cast: (size_t) p0_node\span\column)) = 0)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                i := (close_index + 1U)
+                                if: (lm_p0_parse_append_node_and_update(document, structure, p0_node, flags, allow_empty_fields, @ expect_field, @ headless_group_after_separator) = 0)
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                continue
                             child_indent_stack := lm_p0_indent_stack_new_empty()
                             if: (child_indent_stack = 0)
                                 lm_p0_set_diagnostic(document, 1, line, column, "out of memory while creating indentation stack")
@@ -2668,6 +3069,17 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                                 size_t: diagnostic_line
                                 size_t: diagnostic_column
                                 lm_p0_position_in_slice(text, byte_count, start, line, column, @ diagnostic_line, @ diagnostic_column)
+                                # A `]` at a field start was never opened: every `[` takes its `]` with it (a bracket
+                                # form's slice, `x[`, a head's index) -- a lost bracket, as the lost `)` above.
+                                if: (text[start] = ']')
+                                    lm_p0_set_diagnostic(document, 33, diagnostic_line, diagnostic_column, "unmatched closing bracket")
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                                # A `}` met by the loop of fields closes no mark: an opening `{` takes the whole mark
+                                # with it wherever it stands, so this brace was never opened -- the same lost bracket
+                                # (fable2 for the author, answers R27, item 2).
+                                if: (text[start] = '}')
+                                    lm_p0_set_diagnostic(document, 33, diagnostic_line, diagnostic_column, "unmatched closing brace")
+                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                 lm_p0_set_diagnostic(document, 6, diagnostic_line, diagnostic_column, "unexpected character in field list")
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                             if: (quoted_head && (lm_p0_require_quoted_token_boundary(document, text, byte_count, head_end, line, column) = 0))
@@ -2689,6 +3101,8 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                             p0_node\span\length := (head_end - start)
                             if: (lm_p0_document_register_lazy_text(document, (cast: (const: @: char) p0_node\as\atom\data), (cast: (size_t) p0_node\as\atom\length), (cast: (const: @@: char) (@ p0_node\as\atom\data)), (cast: (size_t) p0_node\span\line), (cast: (size_t) p0_node\span\column)) = 0)
                                 return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                            if: (lm_p0_scan_quoted_atom_marks(document, p0_node, text, byte_count, start, head_end) = 0)
+                                return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                             i := head_end
                         ---
                     ---
@@ -2700,6 +3114,18 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
         if: restart_parse_context
             continue
         child_index := i
+        # A closing parenthesis this text never opened stops the loop before the end of the text -- the text of the
+        # call (an item of the stream, a trailer's body, the content of a mark or of `x[`) or the slice of a bracket
+        # form; a colon body and a headless group share their text with the context above, which meets the same
+        # parenthesis. The rest of the text is not lost silently: a lost bracket is an error in any document, at the
+        # bracket itself (the author, 2026-11-11, journal #lost-bracket-comment-in-mix-scanner).
+        frame := (cast: (@: c.LmP0FieldParseLoopFrame) c.lm_own_ptr_stack_top(parse_stack))
+        if: ((child_index < byte_count) && (text[child_index] = ')')) && ((frame = 0) || (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_BOUNDED_STRUCTURE) || (frame\continuation = c.LM_P0_FIELD_PARSE_LOOP_COMPACT_FRAME_BODY))
+            size_t: lost_line
+            size_t: lost_column
+            lm_p0_position_in_slice(text, byte_count, child_index, line, column, @ lost_line, @ lost_column)
+            lm_p0_set_diagnostic(document, 33, lost_line, lost_column, "unmatched closing parenthesis")
+            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
         if: indent_stack_owned
             lm_p0_indent_stack_delete(indent_stack)
             indent_stack := 0
@@ -2820,6 +3246,53 @@ fn: lm_p0_parse_fields_into (@: document c.LmP0Document; @: structure c.LmP0Stru
     index := 0U
     return: lm_p0_parse_fields_until(document, structure, text, byte_count, line, column, offset, c.LM_P0_FIELD_PARSE_ALLOW_HEADLESS_AFTER_SEPARATOR, 0U, 0U, @ index)
 end: lm_p0_parse_fields_into
+
+# The fields of one item of the stream. The items at the own level of a bracket group -- level 0 of the group's
+# document -- are the fields of the group and are read with the group's flags: a skipped position, `(a,,b)`, is a field
+# there. Deeper levels are ordinary blocks and are read as the lines of a file are.
+fn: lm_p0_parse_item_fields_into (@: document c.LmP0Document; @: structure c.LmP0Structure; const: (@: text char); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: level) int
+    size_t: index
+    index := 0U
+    if: ((document\group != 0) && (level = 0U))
+        return: lm_p0_parse_fields_until(document, structure, text, byte_count, line, column, offset, (cast: (unsigned) document\group_item_flags), 0U, 0U, @ index)
+    return: lm_p0_parse_fields_into(document, structure, text, byte_count, line, column, offset)
+end: lm_p0_parse_item_fields_into
+
+# The level of a line that starts with dots. In the document of a file and of a Mix mark the dots count the level.
+# In the document of a bracket group they count from the line the bracket stands on: the content of the group is one
+# dot deeper than that line, and fewer dots would leave the form.
+fn: lm_p0_stream_dot_level (@: document c.LmP0Document; size_t: dots; size_t: line; size_t: source_column; @: out_level size_t) int
+    if: (document\group = 0)
+        out_level[0] := dots
+        return: 1
+    if: (dots <= (cast: (size_t) document\group_dots))
+        lm_p0_set_diagnostic(document, 13, line, source_column, "bounded form continuation must stay inside the form")
+        return: 0
+    out_level[0] := ((dots - (cast: (size_t) document\group_dots)) - 1U)
+    return: 1
+end: lm_p0_stream_dot_level
+
+# The level of a line by its indent column. In the document of a file and of a Mix mark it is the place of the column
+# in the stack of indents. In the document of a bracket group the first line -- the rest of the line the bracket
+# stands on (group_tail) -- is at level 0 whatever stands before it, and the first indented line after it gives the
+# column of level 0 (base_set keeps that it was given); a later line left of that column would leave the form.
+fn: lm_p0_stream_indent_level (@: document c.LmP0Document; @: indent_stack c.LmP0IndentStack; int: group_tail; @: base_set int; size_t: indent_column; size_t: line; size_t: source_column; @: out_level size_t) int
+    if: (document\group = 0)
+        return: lm_p0_indent_level_from_column(document, indent_stack, indent_column, line, source_column, out_level)
+    if: group_tail
+        out_level[0] := 0U
+        return: 1
+    if: (base_set[0] = 0)
+        indent_stack\columns[0] := indent_column
+        indent_stack\count := 1U
+        base_set[0] := 1
+        out_level[0] := 0U
+        return: 1
+    if: (indent_column < indent_stack\columns[0])
+        lm_p0_set_diagnostic(document, 13, line, source_column, "bounded form continuation must stay inside the form")
+        return: 0
+    return: lm_p0_indent_level_from_column(document, indent_stack, indent_column, line, source_column, out_level)
+end: lm_p0_stream_indent_level
 
 # Original: parser.lm1:2712 lm_p0_stack_ensure
 fn: lm_p0_stack_ensure (@: document c.LmP0Document; @: stack c.LmP0Stack; size_t: level) int
@@ -3430,7 +3903,7 @@ fn: lm_p0_stream_apply_item_event (@: document c.LmP0Document; @: stack c.LmP0St
         @: previous_last c.LmP0Field
         @: field c.LmP0Field
         previous_last := parent\last_field
-        if: (lm_p0_parse_fields_into(document, parent, (cast: (const: @: char) event\text), (cast: (size_t) event\text_length), (cast: (size_t) event\line), (cast: (size_t) event\column), (cast: (size_t) event\offset)) = 0)
+        if: (lm_p0_parse_item_fields_into(document, parent, (cast: (const: @: char) event\text), (cast: (size_t) event\text_length), (cast: (size_t) event\line), (cast: (size_t) event\column), (cast: (size_t) event\offset), (cast: (size_t) event\level)) = 0)
             return: 0
         if: (previous_last != 0)
             field := previous_last\next
@@ -3474,6 +3947,8 @@ fn: lm_p0_stream_apply_item_event (@: document c.LmP0Document; @: stack c.LmP0St
         p0_node\span\length := event\text_length
         if: (lm_p0_document_register_lazy_text(document, (cast: (const: @: char) p0_node\as\atom\data), (cast: (size_t) p0_node\as\atom\length), (cast: (const: @@: char) (@ p0_node\as\atom\data)), (cast: (size_t) p0_node\span\line), (cast: (size_t) p0_node\span\column)) = 0)
             return: 0
+        if: (lm_p0_scan_string_marks(document, p0_node, (cast: (const: @: char) event\text), 0U, (cast: (size_t) event\text_length), 0U, ((cast: (size_t) event\line) + 1U), 1U) = 0)
+            return: 0
         ---
     p0_node\flags := p0_node\flags | event\node_flags
     if: (lm_p0_append_field(document, parent, p0_node) = 0)
@@ -3514,7 +3989,7 @@ fn: lm_p0_stream_apply_mix_event (@: document c.LmP0Document; @: stack c.LmP0Sta
         lm_p0_set_diagnostic(document, 8, (cast: (size_t) event\line), (cast: (size_t) event\column), "source level has no open parent structure")
         return: 0
     previous_last := parent\last_field
-    if: (lm_p0_parse_fields_into(document, parent, (cast: (const: @: char) event\text), (cast: (size_t) event\text_length), (cast: (size_t) event\line), (cast: (size_t) event\column), (cast: (size_t) event\offset)) = 0)
+    if: (lm_p0_parse_item_fields_into(document, parent, (cast: (const: @: char) event\text), (cast: (size_t) event\text_length), (cast: (size_t) event\line), (cast: (size_t) event\column), (cast: (size_t) event\offset), (cast: (size_t) event\level)) = 0)
         return: 0
     if: (previous_last != 0)
         field := previous_last\next
@@ -3589,7 +4064,11 @@ end: lm_p0_stream_block_string_level
 # Original: parser.lm1:3401 lm_p0_validate_disabled_item_text
 fn: lm_p0_validate_disabled_item_text (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; size_t: line; size_t: column) int
     size_t: i
+    size_t: paren_depth
+    size_t: bracket_depth
     i := 0U
+    paren_depth := 0U
+    bracket_depth := 0U
     if: (lm_p0_validate_dash_fence_line(document, text, byte_count, line, column) = 0)
         return: 0
     while: (i < byte_count)
@@ -3618,17 +4097,50 @@ fn: lm_p0_validate_disabled_item_text (@: document c.LmP0Document; const: (@: te
             if: (lm_p0_scan_quoted(document, text, byte_count, @ i, text[i], line, column) = 0)
                 return: 0
             continue
+        # The light check keeps the balance of both bounded forms (the grammar, section 9): an opening bracket must
+        # have its pair in this item (code 5 otherwise), and the scan goes on inside the form, so a closing bracket
+        # nobody opened is found at any depth -- the lost bracket's own code, as in an active item (the author,
+        # 2026-11-11, journal #lost-bracket-comment-in-mix-scanner).
         if: (text[i] = '(')
             size_t: close_index
             if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
                 return: 0
-            i := (close_index + 1U)
+            paren_depth := paren_depth + 1U
+            i := i + 1U
+            continue
+        if: (text[i] = '[')
+            size_t: bracket_close_index
+            if: (lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ bracket_close_index) = 0)
+                return: 0
+            bracket_depth := bracket_depth + 1U
+            i := i + 1U
             continue
         if: (text[i] = ')')
+            if: (paren_depth = 0U)
+                size_t: diagnostic_line
+                size_t: diagnostic_column
+                lm_p0_position_in_slice(text, byte_count, i, line, column, @ diagnostic_line, @ diagnostic_column)
+                lm_p0_set_diagnostic(document, 33, diagnostic_line, diagnostic_column, "unmatched closing parenthesis")
+                return: 0
+            paren_depth := paren_depth - 1U
+            i := i + 1U
+            continue
+        if: (text[i] = ']')
+            if: (bracket_depth = 0U)
+                size_t: diagnostic_line
+                size_t: diagnostic_column
+                lm_p0_position_in_slice(text, byte_count, i, line, column, @ diagnostic_line, @ diagnostic_column)
+                lm_p0_set_diagnostic(document, 33, diagnostic_line, diagnostic_column, "unmatched closing bracket")
+                return: 0
+            bracket_depth := bracket_depth - 1U
+            i := i + 1U
+            continue
+        # The marks were passed whole above, so a closing brace met here closes none.
+        if: (text[i] = '}')
             size_t: diagnostic_line
             size_t: diagnostic_column
             lm_p0_position_in_slice(text, byte_count, i, line, column, @ diagnostic_line, @ diagnostic_column)
-            lm_p0_set_diagnostic(document, 6, diagnostic_line, diagnostic_column, "unmatched closing parenthesis")
+            lm_p0_set_diagnostic(document, 33, diagnostic_line, diagnostic_column, "unmatched closing brace")
             return: 0
         i := i + 1U
     ---
@@ -3636,7 +4148,7 @@ fn: lm_p0_validate_disabled_item_text (@: document c.LmP0Document; const: (@: te
 end: lm_p0_validate_disabled_item_text
 
 # Original: parser.lm1:3447 lm_p0_disabled_scan_next_event
-fn: lm_p0_disabled_scan_next_event (@: document c.LmP0Document; @: indent_stack c.LmP0IndentStack; @: offset size_t; @: line size_t; @: event c.LmP0StreamEvent; @: has_event int) int
+fn: lm_p0_disabled_scan_next_event (@: document c.LmP0Document; @: indent_stack c.LmP0IndentStack; @: group_base_set int; @: offset size_t; @: line size_t; @: event c.LmP0StreamEvent; @: has_event int) int
     const: (@: source char)
     size_t: byte_count
     source := document\source
@@ -3687,6 +4199,9 @@ fn: lm_p0_disabled_scan_next_event (@: document c.LmP0Document; @: indent_stack 
                     p := p + 1U
                 ---
             ---
+            if: (lm_p0_stream_dot_level(document, level, line[0], ((cast: (size_t) (p - line_start)) + 1U), @ level) = 0)
+                return: 0
+            ---
         else:
             size_t: indent_column
             size_t: mark_skip
@@ -3704,7 +4219,7 @@ fn: lm_p0_disabled_scan_next_event (@: document c.LmP0Document; @: indent_stack 
             if: ((text_length = 0U) || (text[0] = '#'))
                 lm_p0_advance_layout_line(source, byte_count, line_start, line_end, offset, line)
                 continue
-            if: (lm_p0_indent_level_from_column(document, indent_stack, indent_column, line[0], ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
+            if: (lm_p0_stream_indent_level(document, indent_stack, 0, group_base_set, indent_column, line[0], ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
                 return: 0
             ---
         text := (source + p)
@@ -3815,7 +4330,7 @@ fn: lm_p0_disabled_state_accept_event (@: document c.LmP0Document; @: state c.Lm
 end: lm_p0_disabled_state_accept_event
 
 # Original: parser.lm1:3616 lm_p0_validate_disabled_block
-fn: lm_p0_validate_disabled_block (@: document c.LmP0Document; const: (@: indent_stack c.LmP0IndentStack); size_t: first_next_offset; size_t: first_next_line; size_t: base_level; const: (@: header_text char); size_t: header_length; size_t: header_line; size_t: header_column; @: out_offset size_t; @: out_line size_t) int
+fn: lm_p0_validate_disabled_block (@: document c.LmP0Document; const: (@: indent_stack c.LmP0IndentStack); int: group_base_set; size_t: first_next_offset; size_t: first_next_line; size_t: base_level; const: (@: header_text char); size_t: header_length; size_t: header_line; size_t: header_column; @: out_offset size_t; @: out_line size_t) int
     @: local_indent c.LmP0IndentStack
     @: state c.LmP0DisabledState
     @: event c.LmP0StreamEvent
@@ -3850,7 +4365,7 @@ fn: lm_p0_validate_disabled_block (@: document c.LmP0Document; const: (@: indent
         event_offset := offset
         event_line := line
         c.memset(event, 0, c.sizeof(event[0]))
-        if: (lm_p0_disabled_scan_next_event(document, local_indent, @ offset, @ line, event, @ has_event) = 0)
+        if: (lm_p0_disabled_scan_next_event(document, local_indent, @ group_base_set, @ offset, @ line, event, @ has_event) = 0)
             status := 0
             break
         if: (has_event = 0)
@@ -3891,12 +4406,14 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
     @: event c.LmP0StreamEvent
     int: status
     int: has_last_physical_level
+    int: group_base_set
     size_t: last_physical_level
     source := document\source
     byte_count := document\source_length
     offset := 0U
     line := 1U
     status := 1
+    group_base_set := 0
     has_last_physical_level := 0
     last_physical_level := 0U
     indent_stack := 0
@@ -3943,6 +4460,7 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
         size_t: text_length
         unsigned: node_flags
         int: has_leading_mix_prefix
+        int: group_tail
         size_t: mix_prefix_start
         size_t: mix_prefix_end
         line_start := offset
@@ -3963,7 +4481,10 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
         if: (document\diagnostic\code != 0)
             status := 0
             break
-        line_end := lm_p0_find_layout_line_end(source, byte_count, offset)
+        # The first line of a bracket group's document is the rest of the line the bracket stands on: it has no
+        # indent of its own, its dots are text, and a bracket opened on it is continued as that whole line is.
+        group_tail := ((document\group != 0) && (line_start = 0U))
+        line_end := lm_p0_find_layout_line_end_from(source, byte_count, offset, group_tail, (cast: (size_t) document\group_indent), (cast: (size_t) document\group_dots))
         raw_length := (line_end - line_start)
         if: ((raw_length > 0U) && (source[((line_start + raw_length) - 1U)] = '\r'))
             raw_length := raw_length - 1U
@@ -4019,7 +4540,7 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
             mix_prefix_end := (p + prefix_end)
             p := p + prefix_anchor
         ---
-        if: ((p < (line_start + raw_length)) && (source[p] = '.'))
+        if: (((group_tail = 0) && (p < (line_start + raw_length))) && (source[p] = '.'))
             dotted_level := 1
             while: ((p < (line_start + raw_length)) && (source[p] = '.'))
                 level := level + 1U
@@ -4027,6 +4548,10 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
                 while: ((p < (line_start + raw_length)) && c.lm_p0_is_horizontal_space(source[p]))
                     p := p + 1U
                 ---
+            ---
+            if: (lm_p0_stream_dot_level(document, level, line, ((cast: (size_t) (p - line_start)) + 1U), @ level) = 0)
+                status := 0
+                break
             ---
         else:
             size_t: indent_column
@@ -4043,7 +4568,7 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
                     break
                 lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ offset, @ line)
                 continue
-            if: (lm_p0_indent_level_from_column(document, indent_stack, indent_column, line, ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
+            if: (lm_p0_stream_indent_level(document, indent_stack, group_tail, @ group_base_set, indent_column, line, ((cast: (size_t) (text - (source + line_start))) + 1U), @ level) = 0)
                 status := 0
                 break
             ---
@@ -4090,7 +4615,7 @@ fn: lm_p0_parse_stream (@: document c.LmP0Document) int
             next_offset := line_start
             next_line := line
             lm_p0_advance_layout_line(source, byte_count, line_start, line_end, @ next_offset, @ next_line)
-            if: (lm_p0_validate_disabled_block(document, indent_stack, next_offset, next_line, level, text, text_length, line, header_column, @ disabled_next_offset, @ disabled_next_line) = 0)
+            if: (lm_p0_validate_disabled_block(document, indent_stack, group_base_set, next_offset, next_line, level, text, text_length, line, header_column, @ disabled_next_offset, @ disabled_next_line) = 0)
                 status := 0
                 break
             c.memset(event, 0, c.sizeof(event[0]))
@@ -4296,6 +4821,9 @@ fn: lm_p0_postprocess_run (@: document c.LmP0Document; @: stack c.LmOwnPtrStack)
             c.lm_own_delete(c.lm_own_ptr_stack_pop(stack), 0)
             if: (p0_node = 0)
                 continue
+            # A root field of a nested document was post-processed by that document; each document once.
+            if: ((p0_node\flags & c.LM_P0_NODE_DOCUMENT) != 0U)
+                continue
             if: (p0_node\kind = c.LM_P0_NODE_FRAME)
                 status := (((lm_p0_postprocess_push_trailer(stack, (cast: (@: c.LmP0Trailer) p0_node\as\frame\trailer)) = 0) && (lm_p0_postprocess_push_frame_wrap(stack, p0_node) = 0)) && (lm_p0_postprocess_push_structure(stack, (cast: (@: c.LmP0Structure) p0_node\as\frame\body)) = 0))
             else:
@@ -4442,6 +4970,9 @@ end: lm_p0_normalize_sole_anonymous_in_trailer
 fn: lm_p0_normalize_sole_anonymous_in_node (@: p0_node c.LmP0Node) int
     if: p0_node = 0
         return: 1
+    # A root field of a nested document: its own document normalized it once.
+    if: (p0_node\flags & c.LM_P0_NODE_DOCUMENT) != 0U
+        return: 1
     if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && p0_node\as\frame != 0
         if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) p0_node\as\frame\body)) = 0
             return: 0
@@ -4544,6 +5075,9 @@ end: lm_p0_end_closes_empty_colon
 sub: lm_p0_close_empty_by_end_in_node (@: p0_node c.LmP0Node)
     if: p0_node = 0 || p0_node\as = 0
         return
+    # A root field of a nested document: its own document closed it.
+    if: (p0_node\flags & c.LM_P0_NODE_DOCUMENT) != 0U
+        return
     if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as\frame != 0
         if: lm_p0_end_closes_empty_colon((cast: (const: @: c.LmP0Frame) p0_node\as\frame)) != 0
             p0_node\as\frame\trailer := 0
@@ -4589,6 +5123,9 @@ fn: lm_p0_validate_nonempty_colon_frames_in_node (@: document c.LmP0Document; co
     size_t: line 1U
     size_t: column 1U
     if: (p0_node = 0)
+        return: 1
+    # A root field of a nested document: its own document checked it.
+    if: (p0_node\flags & c.LM_P0_NODE_DOCUMENT) != 0U
         return: 1
     if: p0_node\span != 0
         line := p0_node\span\line
@@ -4941,6 +5478,12 @@ sub: lm_p0_dump_run (@: dump c.LmP0Dump; @: stack c.LmOwnPtrStack)
             ---
             if: ((p0_node\flags & c.LM_P0_NODE_MIX) != 0U)
                 lm_p0_dump_append_cstr(dump, "MIX ")
+                # A mark kept by a string atom is printed with the number of the atom's characters before it.
+                if: ((p0_node\flags & c.LM_P0_NODE_STRING_MARK) != 0U)
+                    lm_p0_dump_append_cstr(dump, "at ")
+                    lm_p0_dump_append_size(dump, (cast: (size_t) p0_node\atom_char))
+                    lm_p0_dump_append_cstr(dump, " ")
+                ---
             ---
             if: ((p0_node\flags & c.LM_P0_NODE_POSITIONAL_SKIP) != 0U)
                 lm_p0_dump_append_cstr(dump, "PositionalSkip ")
@@ -4968,6 +5511,9 @@ sub: lm_p0_dump_run (@: dump c.LmP0Dump; @: stack c.LmOwnPtrStack)
                         lm_p0_dump_append_cstr(dump, " ")
                         lm_p0_dump_text(dump, (cast: (const: @: c.LmP0Text) p0_node\as\atom))
                         lm_p0_dump_append_cstr(dump, "\n")
+                        if: (lm_p0_dump_push_structure(stack, (cast: (const: @: c.LmP0Structure) p0_node\marks), (indent + 1U)) != 0)
+                            dump\failed := 1
+                        ---
                     else:
                         if: (p0_node\kind = c.LM_P0_NODE_DISABLED)
                             lm_p0_dump_append_cstr(dump, lm_p0_node_kind_class_name((cast: (c.LmP0NodeKind) p0_node\kind)))

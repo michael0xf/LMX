@@ -1793,12 +1793,22 @@ fn: lm_graph_emit_file (const: (@: path char); const: (@: out_path char); int: f
     return: r
 end: lm_graph_emit_file
 
-# `p0 FILE`: the P0 tree of FILE as the parser dumps it (the builder's input, for the record of a slice).
+# `p0 FILE`: the P0 tree of FILE as the parser dumps it (the builder's input, for the record of a slice).  A file that
+# does not parse prints the parser's diagnostic -- its number, line and column, as the P0 tests record them
+# (tests/parser: `P0 parse error N at L:C`) -- and answers 2.
 fn: lm_graph_p0_file (const: (@: path char)) int
     @: doc c.LmP0Document 0
     @: dump char 0
+    @: diag c.LmP0Diagnostic 0
     if: c.lm_p0_parse_file(path, @ doc) != 0
-        c.fprintf(c.stderr, "graph: %s: cannot read or parse\n", path)
+        if: doc != 0
+            diag := (cast: (@: c.LmP0Diagnostic) c.lm_p0_document_diagnostic(doc))
+        ---
+        if: diag != 0
+            c.fprintf(c.stderr, "P0 parse error %d at %zu:%zu: %s\n", (cast: (int) (diag\code)), (cast: (size_t) (diag\line)), (cast: (size_t) (diag\column)), (cast: (@: char) (diag\message)))
+        else:
+            c.fprintf(c.stderr, "graph: %s: cannot read or parse\n", path)
+        ---
         if: doc != 0
             c.lm_p0_document_destroy(doc)
         return: 2

@@ -3,16 +3,6 @@ fn: repeat () int
     until: (i = 3) ((:= i (i + 1)))
     return: i
 end: repeat
-Repeat:
-    until: (x = 2) ((:= x (x + 1)))
-end: Repeat
-Data:
-    int: x 2
-end: Data
-int: result 3
-int: before_call 0
-call: Data Repeat
-int: after_call 2
 fn: condition () int (
     int: calls 0
 )
@@ -37,31 +27,70 @@ fn: body_fields () int
     until: (late = 4) ((int late))
     return: late
 end: body_fields
+fn: bare_body () int
+    int: i 1
+    until: 1 (i)
+    return: i
+end: bare_body
+sub: main () (
+    Repeat:
+        until: (x = 2) ((:= x (x + 1)))
+    end: Repeat
+    Data:
+        int: x 0
+    end: Data
+    RepeatOwn:
+        data:
+            int: x 0
+        end: data
+        until: (x = 2) ((:= x (x + 1)))
+    end: RepeatOwn
+    Self:
+        int: x 0
+        until: (x = 2) ((int x 0) (:= x (x + 2)))
+    end: Self
+    int: result 0
+    int: before_call 0
+    int: after_call 0
+    int: transitioned 0
+    int: left 0
+    int: early_result 0
+    int: from_body 0
+    int: condition_calls 0
+    int: root_value 0
+    int: own_before 0
+    int: own_after 0
+    int: same_data 0
+    int: bare_result 0
+)
+    :=: result ((repeat))
+    :=: before_call (Data \ x)
+    call: Data Repeat
+    :=: after_call (Data \ x)
+    :=: transitioned ((transitions))
+    :=: left ((leave))
+    :=: early_result ((early))
+    :=: from_body ((body_fields))
+    :=: condition_calls ((condition \ data) \ calls)
+    until: (root_value = 2) ((:= root_value (root_value + 1)) (continue))
+    :=: own_before ((RepeatOwn \ data) \ x)
+    call: (RepeatOwn \ data) RepeatOwn
+    :=: own_after ((RepeatOwn \ data) \ x)
+    call: Self Self
+    :=: same_data (Self \ x)
+    :=: bare_result ((bare_body))
+end: main
+main:
+int: result 3
+int: before_call 0
+int: after_call 2
 int: transitioned 3
 int: left 1
 int: early_result 9
 int: from_body 4
 int: condition_calls 2
 int: root_value 2
-until: (root_value = 2) ((:= root_value (root_value + 1)) (continue))
-RepeatOwn:
-    data:
-        int: x 2
-    end: data
-    until: (x = 2) ((data (int x 2)) (:= x (x + 1)))
-end: RepeatOwn
 int: own_before 0
-call: (RepeatOwn \ data) RepeatOwn
 int: own_after 2
-Self:
-    int: x 2
-    until: (x = 2) ((int x 2) (:= x (x + 2)))
-end: Self
-call: Self Self
 int: same_data 2
-fn: bare_body () int
-    int: i 1
-    until: 1 (i)
-    return: i
-end: bare_body
 int: bare_result 1

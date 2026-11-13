@@ -14,16 +14,15 @@ The migration contains 184 versions of P0 `.lmx` inputs; 301 frozen `printTree.l
 
 All 119 `.lmx` inputs in `lingvamyxa_prev` were additionally checked: every one is already represented by a byte-identical copy. Their provenance was added to those same manifest records.
 
-The current portable harness is `tools/run_parser.py`. It accepts a supplied `printTree`. Stable P0 has been migrated to `l1src`; the corrected dev copy and its driver are in [dev/l1src_sandbox](../../dev/l1src_sandbox/README.md). Historical scripts are retained for migrating additional checks and contain their original project paths/dependencies; they are archived harnesses, not a promise of standalone execution in LMX.
+The supported current-case check is the existing L2/L3 tool's `parser-suite` command. It takes a built graph tool and expectation JSON; each source is parsed once without rebuilding. It checks the complete tree or explicit fragments, and checks the P0 error code, line and column separately from process exit. Raw output and the result table are retained in a new OUT directory. A timeout or crash does not substitute for the required diagnostic.
 
-From the LMX root:
+From a new private working directory, with absolute paths:
 
 ```text
-python tools/check_docs.py
-python tools/run_parser.py --parser PATH_TO_PRINTTREE --profile historical --output build/historical
-python tools/run_parser.py --parser PATH_TO_PRINTTREE --profile previous-l1 --output build/previous-l1
-python tools/run_parser.py --parser PATH_TO_PRINTTREE --profile current --output build/current
+TOOL 0 entry 0 -- parser-suite REPO GRAPH_EXE REPO/tests/parser/current/expectations.json NEW_OUT
 ```
+
+Parser and tool sources are in `selfbuild/src` and `selfbuild/tools`. `tools/run_parser.py`, the old `printTree`, root `l1src` and `dev/` remain historical material, not a supported fallback. Documentation is checked by the language-owned `docs check` command in [READ.ME](../../READ.ME#docs-cycle). The old profiles and dated run results described below are history.
 
 `historical` checks the 131 cases in the old manifest: exit code and exact tree bytes, or error code/line/column. `previous-l1` checks the same corpus with pinned previous L1 admission changes. These profiles are historical regression, not a statement of the new norm. `current` checks new author clarifications; it must expose old implementation mismatches rather than conceal them. Rejection, crashing, and timeout are not interchangeable successful negative tests.
 

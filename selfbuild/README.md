@@ -1,5 +1,15 @@
 # Maintained L3/L2 source package
 
+Current continuation (2026-11-13, slice 359): Codex integrated the five P0 fixes and
+the shared constructor for nested named blocks. The canonical inputs.sha256 now has
+597 entries and equals the manifest used for bootstrap quick G1/G2. Both generations
+passed the 9-row smoke suite; tool L1/C are byte-equal and executables differ only
+by the PE link timestamp. The 139-case parser-suite and 33 focused graph checks passed.
+Exact commands, bundles, receipts and limits are in the
+[witness](../steps/witnesses/p0-unified-documents-20261113/notes.md).
+M8 and the remaining M11 migration are open. This is the transitional bootstrap,
+not final L3/L2 self-build acceptance; older dated slice notes below are history.
+
 Current owner (2026-11-09 01:25Z): Opus, the sole writer/build/docs, by Codex's handoff
 (CODEX-OPUS-TAKE-WRITER-20261109T0104Z-01); Codex is the instructor and reviewer, Fable is stopped.
 Owner on 2026-11-08 (history): Codex, the sole writer/build/docs; Fable and Opus were stopped. The clean-graph migration

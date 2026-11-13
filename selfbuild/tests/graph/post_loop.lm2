@@ -1,37 +1,27 @@
+# The post-loop witnesses retain their results; ordinary Structures are declared in main's data (M11.5v).
+# The multi-line data group uses the same P0 stream parser as the rest of the source.
 fn: repeat () int
     int: i 0
     ---
         i := i + 1
     until: i = 3
     return: i
-end: repeat
-Repeat:
-    x := x + 1
-until: x = 2
-Data:
-    int: x 0
-end: Data
-int: result repeat()
-int: before_call Data\x
-call: Data Repeat
-int: after_call Data\x
+
 fn: condition () int (int: calls 0)
     calls := calls + 1
     return: calls >= 2
-end: condition
+
 fn: transitions () int
     int: attempt 0
     ---
         attempt := attempt + 1
         if: attempt = 1
             redo()
-        end: if
         if: attempt = 2
             continue()
-        end: if
     until: condition()
     return: attempt
-end: transitions
+
 fn: leave () int
     int: n 0
     ---
@@ -39,52 +29,87 @@ fn: leave () int
         break()
     until: condition()
     return: n
-end: leave
+
 fn: early () int
     ---
         return: 9
     until: condition()
-end: early
+
 fn: body_fields () int
     late := 4
     ---
         int: late
     until: late = 4
     return: late
-end: body_fields
-int: transitioned transitions()
-int: left leave()
-int: early_result early()
-int: from_body body_fields()
-int: condition_calls condition\data\calls
-int: root_value 0
----
-    root_value := root_value + 1
-    continue()
-until: root_value = 2
-RepeatOwn:
-    data:
-        int: x 0
-    end: data
-    x := x + 1
-until: x = 2
-int: own_before RepeatOwn\data\x
-call: RepeatOwn\data RepeatOwn
-int: own_after RepeatOwn\data\x
-# The declaration line of an own place runs at every reach, each pass of the post-loop body too (the author 2026-11-11,
-# R12; plan M11 5a, B10): it writes x what stands in its slot, so the body reaches the condition in one pass. A counter
-# of several passes lives in data given separately (Repeat over Data above).
-Self:
-    int: x 0
-    x := x + 2
-until: x = 2
-call: Self Self
-int: same_data Self\x
+
 fn: bare_body () int
     int: i 1
     ---
         i
     until: 1
     return: i
-end: bare_body
-int: bare_result bare_body()
+
+sub: main () (
+    Repeat:
+        x := x + 1
+    until: x = 2
+    Data:
+        int: x 0
+    RepeatOwn:
+        data:
+            int: x 0
+        ---
+            x := x + 1
+        until: x = 2
+    # The own declaration is reached on each pass; it is not a persistent loop counter.
+    Self:
+        int: x 0
+        x := x + 2
+    until: x = 2
+    int: result 0
+    int: before_call 0
+    int: after_call 0
+    int: transitioned 0
+    int: left 0
+    int: early_result 0
+    int: from_body 0
+    int: condition_calls 0
+    int: root_value 0
+    int: own_before 0
+    int: own_after 0
+    int: same_data 0
+    int: bare_result 0
+)
+    result := repeat()
+    before_call := Data\x
+    call: Data Repeat
+    after_call := Data\x
+    transitioned := transitions()
+    left := leave()
+    early_result := early()
+    from_body := body_fields()
+    condition_calls := condition\data\calls
+    ---
+        root_value := root_value + 1
+        continue()
+    until: root_value = 2
+    own_before := RepeatOwn\data\x
+    call: RepeatOwn\data RepeatOwn
+    own_after := RepeatOwn\data\x
+    call: Self Self
+    same_data := Self\x
+    bare_result := bare_body()
+main()
+int: result main\data\result
+int: before_call main\data\before_call
+int: after_call main\data\after_call
+int: transitioned main\data\transitioned
+int: left main\data\left
+int: early_result main\data\early_result
+int: from_body main\data\from_body
+int: condition_calls main\data\condition_calls
+int: root_value main\data\root_value
+int: own_before main\data\own_before
+int: own_after main\data\own_after
+int: same_data main\data\same_data
+int: bare_result main\data\bare_result

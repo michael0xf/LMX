@@ -107,11 +107,23 @@ is not executed yet. The working frontend executes none of these rules of M11
 The P0 parser executes the rule for closing blocks ([grammar
 §15](LMX_grammar.en.md#levels)) outside brackets and inside curly brackets;
 inside round and square brackets it does not yet: a line `end: name` is read as
-a separate record, the fence `---` as two atoms, and a jump of more than one
-level without a tail cutter is accepted (defect
-`P0-BRACKET-CONTENT-SEPARATE-LOOP`, [steps/defects.md](../steps/defects.md));
-the fix is the second part of sub-step 5б of
-[M11](../next_core_tasks_v3.md#m11).
+a separate record, the fence `---` as two atoms, a jump of more than one
+level without a tail cutter is accepted, a deeper line continues the list of
+fields, and a dot after the indentation spaces is a level marker, whereas
+outside brackets a deeper line opens a nested anonymous Structure and such a
+dot is an atom ([grammar §14](LMX_grammar.en.md#bounded); defect
+`P0-BRACKET-CONTENT-SEPARATE-LOOP`, [steps/defects.md](../steps/defects.md)).
+The rest that P0 does not yet do under the author's decisions of 2026-11-11: a
+lost `)` is accepted (`x: a ) b` -- the rest of the line after `)` disappears);
+a comment `#` in a Mix mark is cut at the end of the outer line (`x: a {#)} b`
+-- error 31, [§9](LMX_grammar.en.md#comments),
+[§19](LMX_grammar.en.md#mix)); the content of a string does not pass the Mix
+scanner (`x: "text{mix}"` -- one atom with no mix-tree); inside curly
+brackets a continuation line under a Frame with a body on the head line gets
+an extra Structure level (defect `P0-MIX-DOUBLE-POSTPROCESS`). The fix is the
+package of parser fixes in the second part of sub-step 5б of
+[M11](../next_core_tasks_v3.md#m11); section M8 (removal of the unwrapping of
+a sole Structure, which P0 still performs) stands in the queue right after it.
 Fixed slot counts are computed in advance; full admission of required
 fields must finish before execution. Do not guess an initialization change.
 
@@ -169,51 +181,46 @@ replaced by it ([defect register](../steps/defects.md)).
 <a id="l3-status"></a>
 ## 4. L3 interpreter and admission
 
-The interpreter executes the constructed graph, not a second tree. The
-admission contract first analyzes accesses explicitly needed by a
-Consumer, then executes that Consumer's explicit behavioral checks.
-Without a Consumer, full structural suitability is checked. A successful
-address correspondence remains valid after values change; branch
-assignment admits the replacement candidate **before storage**. Do not
-invalidate correspondence or automatically rerun every check after each
-mutation. Translation checks only what correct C emission and explicit throws/catch
-obligations require. The admission `implements` is performed once -- when the
-clean graph is built -- and after the construction it is needed only where the
-candidate is selected while the program runs (the author's decision of
-2026-11-11, [book](LMX_semantics.en.md#data-code-roles)); an assignment of
-primitives is not checked for admissibility at run time (the rule speaks of
-the admission `implements`, not of conversion: the range check on receiving a
-number of another type, `u16(256)` into `u8`, remains at run time). For a
-candidate selected while the program runs, the actual value is admitted by the
-common runtime mechanism when the call or assignment is reached, without a
-body or future-branch preflight. At present the
-admission at construction is not yet performed: the clean graph admits each
-call at run time -- step 7 of [M11](../next_core_tasks_v3.md#m11).
-See [correspondence stability](LMX_semantics.en.md#correspondence-stability)
-and the [argument stage](LMX_semantics.en.md#argument-compatibility-stage).
+The interpreter executes the constructed graph. [Admission](LMX_semantics.en.md#admission) has two steps:
 
-Native/walker parity, publication, and the full source graph remain
-within [K01–K12](../next_core_tasks_v3.md); partial guarantees and old
-host/root workarounds do not close them.
+1. Used-interface checking through `implements`, once per candidate: at graph construction when the
+   candidate is known, otherwise when it is actually received at run time. This step executes neither
+   the candidate, the Consumer nor future bodies. Without a Consumer, it checks the explicitly stated
+   requirements of `bVar`, not full structural equality.
+2. Programmer-written `test` checks at actual run-time admission. Graph construction does not run them.
+   The first result of `0` stops admission immediately; remaining checks do not run.
+
+Knowing the candidate at construction neither removes the second step nor requires repeating the first.
+An established address correspondence survives value changes. Branch replacement admits the new
+candidate **before storage**; mutation itself does not rerun the test set.
+A numeric conversion's range check remains a check of the particular received value;
+performing `implements` once does not remove it.
+
+**Implementation status:** moving the first step to clean-graph construction is still unfinished —
+step 7 of [M11](../next_core_tasks_v3.md#m11). Updating the rule does not complete that step.
+Native/walker parity, publication and the full graph remain in [K01–K12](../next_core_tasks_v3.md).
+Details: [place correspondence](LMX_semantics.en.md#correspondence-stability),
+[argument reception](LMX_semantics.en.md#argument-compatibility-stage).
 
 <a id="test-receiver-proposal"></a>
 ### 4.1 test: adopted rule, unfinished implementation
 
-The `test` receiver is **adopted**, not a new proposal awaiting approval;
-see the [rule](LMX_semantics.en.md#test-receiver-contract). Without an
-explicit Consumer, checks come from receiving description `bVar`, not
-candidate `aVar`. Analytical suitability of necessary accesses is
-checked before running a test; behavioral success exists only on its
-completion. A test completes admission already in progress, not a
-restart of that same admission.
+`test` is an adopted receiver; see its [contract](LMX_semantics.en.md#test-receiver-contract).
+Checks belong to the receiving expression. Without an explicit Consumer they come from `bVar`, not `aVar`.
+The candidate's suitability for the checker's own accesses is established before the check runs.
+A check completes admission already in progress; it does not restart that same admission.
+Successful admission requires every check to succeed; the first `0` stops the list.
 
-Code and checks are not yet complete. The exact name `test` is reserved;
-ordinary user bindings with that name migrate to `mytest`. Do not rename
-`test2`/`test3`, strings, or verbatim historical quotations by substring.
-Implementation uses common P0, head resolution, addressing, and
-native/walker selection, without a hidden test catalogue, runtime names,
-`skip_tests`, or all-tests reruns after mutation. Representation of
-failure of the **whole** test set remains undecided.
+A direct pass over `data` executes only root-level declaration receivers. An executing receiver may
+reach code supplied to it, including `test`. A `test:` form does not run merely because it is present
+among the data; no separate recursive pass is needed to run tests.
+This is [general receiver behavior](LMX_semantics.en.md#data-root-declaration-execution).
+
+**Implementation is still unfinished.** Use common P0, head resolution, addressing and ordinary
+native/walker dispatch. Do not introduce a hidden test catalogue, runtime name table or `skip_tests`.
+The name `test` is reserved: an ordinary user method with exactly that name migrates to `mytest`;
+do not rename `test2`, `test3`, strings or historical quotations by substring.
+Move selfbuild component checks into the language as the components themselves are migrated.
 
 <a id="assign-named-merge"></a>
 ### 4.2 `:=`, named arguments, a `merge` of arguments and the whole argument Structure: adopted rule, implemented by slices 303 and 304, partly by 307 (the remainders of Codex's review of 307 are the next slice)
@@ -423,10 +430,14 @@ author's decision of 2026-11-10, P0 does not unwrap the sole anonymous
 Structure of an argument list: `f()`, `f:`, and `f:` with explicit `---`
 have one empty Frame/body shape, while `f: ()` is the same as `f(())`: one
 field, an empty Structure ([grammar](LMX_grammar.en.md#empty-colon)). At
-present P0 still unwraps a sole Structure and rejects bare `f:`
-([plan M8](../next_core_tasks_v3.md#m8)). Bare `f` is an atom, not a call.
+present P0 still unwraps a sole Structure and rejects bare `f:`; the fix is
+[section M8 of the plan](../next_core_tasks_v3.md#m8), which stands in the
+queue right after the package of parser fixes of the second part of
+sub-step 5б. Bare `f` is an atom, not a call.
 Historical goldens are not automatically normative. Remaining
 parser/consumer gaps and exact witnesses are in
 [parser fix](../next_parser_fix.md) and [v3 plan](../next_core_tasks_v3.md).
-Malformed Mix-mark and `{#...}` diagnostics must not be guessed from old
-source text.
+Mix-mark diagnostics: a mark with an error inside is a parse error outside
+strings (inside a string it does not fail the string), and `{#...}` is a mark
+with a comment, not an error ([grammar §19](LMX_grammar.en.md#mix)); exact
+error codes must not be guessed from old source text.

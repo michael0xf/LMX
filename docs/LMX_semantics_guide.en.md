@@ -3,17 +3,52 @@
 These are short non-normative examples. The [semantics](LMX_semantics.en.md)
 and [grammar](LMX_grammar.en.md) govern if they differ.
 
+<a id="data-receiver-execution"></a>
+## What runs during a data pass
+
+Data does not become a program body. A direct pass executes only root-level declaration receivers;
+executing such a receiver may call code supplied to it in the ordinary way.
+
+A data fragment, with `makeValue` declared separately as a method:
+
+```lmx
+Values:
+    int: x makeValue()
+    Nested:
+        int: y makeValue()
+end: Values
+```
+
+During a pass over the data of `Values`, the `int` receiver declares `x` and receives its value through
+`makeValue()`. The `Nested` form declares a nested Structure. Its `int: y ...` is not executed by this
+pass: it belongs to another data level. If execution of `makeValue` reaches `test`, it follows the
+ordinary rules; no separate traversal needs to search data for `test`.
+
+Here `end: Values` closes two levels. One level needs only a dedent; `return` may be the trailer of an
+executable definition. This is [formatting](../LMX_blog/2026-11-13.md#one-level-formatting), not a new parser
+restriction. See [data traversal](LMX_semantics.en.md#data-root-declaration-execution) for the rule.
+
+<a id="admission-stages"></a>
+## Two admission steps
+
+| When | What happens |
+|---|---|
+| Graph construction, known candidate | The used interface is checked. `test` is not executed. |
+| Actual admission at run time | A completed first step is not repeated. Specified `test` checks then execute. |
+| First check returns `0` | Admission stops immediately; remaining checks do not execute. |
+
+Knowing a candidate at construction does not remove the second step at actual admission. A value
+change alone does not rerun all checks. See [admission and test](LMX_semantics.en.md#admission).
+
 <a id="callable-description"></a>
 ## Explicit method-body composition
 
 ```lmx
 fn: add (int: x; int: y) int ()
-    return: x + y
-end: add
+return: x + y
 
 fn: add5 (int: x) int ()
     merge((int: y 5); add\code)
-end: add5
 ```
 
 `add` stores `args` with formals `x` and `y`, `return`, `data`, and `code`
@@ -33,7 +68,6 @@ An alternative `add5` puts the initializer in explicit `data` and keeps
 ```lmx
 fn: add5 (int: x) int (int: y 5)
     add\code
-end: add5
 ```
 
 A third, alternative definition changes `args` instead: here `y` is a
@@ -42,7 +76,6 @@ formal with default 5, not a body or `data` field:
 ```lmx
 fn: add5 merge(add\args; (int: y 5)) int ()
     add\code
-end: add5
 ```
 
 These are three mutually exclusive definitions of `add5`, not three

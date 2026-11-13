@@ -149,9 +149,9 @@ one, `data\if\y`.
 One occurrence allows `data\field`; two or more require `data\[N]field`
 with zero-based `N`, never automatic first-occurrence selection. Arbitrary
 `data` is not auto-completed: data that lacks a place the code uses is
-refused by admission, which is performed once, when the clean graph is
-built, and at run time only where the data or the code is selected while
-the program runs (§4). The v3 migration must reconcile
+refused by admission. Interface checking is performed once per candidate:
+at construction when known, otherwise on actual reception. Explicit `test`
+checks are the second step at run time and stop on the first `0` (§4). The v3 migration must reconcile
 parser, translator, native path, walker, and tests.
 
 `@x` addresses the real stored cell, not an evaluation temporary or ABI
@@ -298,10 +298,13 @@ The maintained source package is `selfbuild/` with the relative
 `src/l2src/`, `tools/` and `tests/` layout recorded in
 [selfbuild/README.md](selfbuild/README.md). Candidates remain in the named
 private stages listed by the current handoff. Translation checks correct C
-emission and explicit throws/catch obligations. Admission (`implements`) is
-performed once, when the clean graph is built, and at run time only where
-the candidate is selected while the program runs (§4); the translators
-still repeat it when the call or assignment is reached
+emission and explicit throws/catch obligations. Interface checking through
+`implements` is performed once per candidate: at construction when known,
+otherwise on actual reception. Construction does not execute `test`; actual
+run-time admission performs this second step and stops on the first `0`.
+A direct data pass executes only root-level declaration receivers; these may
+reach code supplied to them through ordinary execution. The translators
+still repeat admission when the call or assignment is reached
 ([plan](next_core_tasks_v3.md#m11), step 7). The shared collector and
 three-pass integration remain implementation work, not a completed guarantee.
 Parser normalization does not itself prove
@@ -430,7 +433,16 @@ general algorithm, as code: `f(arg: v)` is a call of `arg`, only
 written flat, `@: ptr Model Other`; formals are declared by receivers
 (`int: arg default`, `@: arg Template`), a structural form among the
 formals is forbidden, and declarations of Structures are written in the
-data block -- `sub: proc () (struct1: Template1; struct2: Template2)`. A
+data block -- `sub: proc () (struct1: Template1; struct2: Template2)`.
+This record is a header without code: `sub` has three fields in the
+record -- `name args code` -- or four -- `name args data code` (the last
+field is the code, `data` is an optional part before it), so the group
+after the arguments is `data` when code follows it (in body lines or in
+one more group), while a record with a single group after the arguments
+is the short form `name args code`; a method without executable forms
+writes the empty code part explicitly, `( … ) ()` (the executor's
+reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md), Р26,
+item 1). A
 launch form of a Structure at a place where a value is needed (an operand
 of an expression, an actual argument of a call, an initial value, an
 operand of `merge`) is an error: a launch has no result (the executor's

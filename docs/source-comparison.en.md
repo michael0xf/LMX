@@ -19,7 +19,15 @@ Substantive L1 changes:
 
 These provisions were not imported into the [new semantics](LMX_semantics.en.md). At initial extraction it contained only the opening supplied by the author and the transition to grammar.
 
-The author's 2026-09-23 correction to old §4.0.1: the sole anonymous container occupying the whole list is normalized already in P0, including nonempty bodies; `f()`, `f: ()`, and explicitly closed `f:` + `---` must yield the same empty Frame-body. A distinct empty Structure remains a value in a nontransparent position. This clarification **was not a difference between the two old files**; the normative result is incorporated into the [new grammar](LMX_grammar.en.md#empty-colon). Current parser goldens with different trees record the old implementation and need correction.
+**Current rule since 2026-11-10:** P0 does not unwrap a sole anonymous Structure.
+`f()`, `f:` and an explicitly empty vertical body give an empty Frame-body; `f: ()` is equivalent to
+`f(())` and contains one field, an empty Structure ([grammar, §18](LMX_grammar.en.md#empty-colon)).
+
+The historical author clarification of 2026-09-23 to old §4.0.1 required the opposite: normalizing a
+sole anonymous list container in P0, including nonempty ones, and equating the empty forms.
+It was not a difference between the two old files, but was withdrawn on 2026-11-10. Preserved source
+snapshots and old parser goldens record their respective versions; they do not establish today's
+unwrapping rule.
 
 Source SHA-256:
 

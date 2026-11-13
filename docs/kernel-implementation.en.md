@@ -1204,10 +1204,11 @@ fields of a model and the physical fields of a candidate is data of the receptio
 reception holds its map for the duration of the operations it needs (reading, writing, taking an address, publishing
 `dirty`), and the next traversal rebuilds it from the graph; the arena has no persistent `lmx_arena_impl`. If the language
 returns a value or a Structure to the user, that graph value is not mixed with the algorithm's internal cache. The text
-of [L2 §14](L2_spec_en.md#implements) about storing the correspondence is updated to this norm. The author's decision
-of 2026-11-11: `implements` is performed once -- when the clean graph is built --, and after the construction it is
-needed only where the candidate is selected while the program runs ([book](LMX_semantics.en.md#data-code-roles); the
-cases -- the [document](../steps/implements-runtime-cases-20261111.md)); the clean graph now admits every call at run
+of [L2 §14](L2_spec_en.md#implements) about storing the correspondence is updated to this norm. With the author's
+clarification of 2026-11-13, the interface-checking part of `implements` is performed once per candidate: at
+construction when known, otherwise on actual reception. Construction does not execute `test`; actual run-time
+admission performs this second step and stops on the first `0` ([book](LMX_semantics.en.md#admission); cases in the
+[document](../steps/implements-runtime-cases-20261111.md)). Implementation status: the clean graph now admits every call at run
 time and keeps no correspondence between calls -- step 7 of [section M11 of the plan](../next_core_tasks_v3.md#m11).
 
 <a id="interpreter"></a>
@@ -1458,8 +1459,8 @@ the form is one, `data`: that is an error, and the declaration of `Point` is wri
 [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6, Р7 and Р21; the decision --
 [journal](../LMX_blog/2026-11-11.md#structure-call-by-name)). A formal with
 a Structure requirement is written `@: p Point`, not `Point: p`, the parts `var` and `body` are called `data` and
-`code`, and the admission `implements` is performed once, when the graph is built
-([book](LMX_semantics.en.md#data-code-roles)). Of these rules the clean graph executes the names of the parts, `data`
+`code`. The interface-checking part of `implements` is performed once per candidate; graph construction does not
+execute `test`, which is the second step at actual run-time admission ([book](LMX_semantics.en.md#admission)). Of these rules the clean graph executes the names of the parts, `data`
 and `code` (slice 354), sub-step 5а (slice 355) and the first part of sub-step 5б (slice 356); the others it does not
 execute yet, and the description below is its current behaviour; the example is translated together with steps 5 and 8 of
 [section M11 of the plan](../next_core_tasks_v3.md#m11).

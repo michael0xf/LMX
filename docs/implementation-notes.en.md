@@ -161,9 +161,11 @@ landing in selfbuild -- its candidate is kept as WIP in the
 [record](../steps/witnesses/fix308-20261108/notes.md). The author's decisions
 of 2026-11-08 18:00–18:20Z ([journal](../LMX_blog/2026-11-08.md)): a distinct type
 "T without initialization" for every primitive, told apart by the region of the
-cell's address -- a pointer onto the pre-existing cell of the place; the
-pointer is replaced only at the first assignment, which writes into that same
-cell (19:02Z); every verification goes by arena addresses, addresses are
+cell's address -- a pointer onto the pre-existing cell of the place. Every write,
+including the first, goes into that same cell. The [later clarification](../LMX_blog/2026-11-08.md#uninit-pointer-preserved)
+preserves the Structure field and internal pointer: neither is replaced or redirected on the first write.
+This corrects the executor's earlier explanation rather than introducing a new language rule.
+Every verification goes by arena addresses, addresses are
 immovable; service operators and receivers have no separate codes; the term
 "primitive" replaces "atom". The directive
 ([journal](../LMX_blog/2026-11-08.md)) replaces the numeric-codes

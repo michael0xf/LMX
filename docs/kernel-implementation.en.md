@@ -895,6 +895,7 @@ question of the second review is closed). Taking an address reads no unwritten b
 reference value `@: p i`, of a formal's address and of a hidden input are distinct and are not mixed (the book:
 [addresses](LMX_semantics.en.md#explicit-copy), [dynamic visibility](LMX_semantics.en.md#dynamic)).
 
+<a id="primitive-storage"></a>
 ### 3.2 The primitive (norm: the author, 17:22Z, 18:00Z, 18:10Z, 18:20Z, 19:02Z)
 
 **The term.** The only entity of the graph that is not an Lmx is called a **primitive**; in the relays and journal sections

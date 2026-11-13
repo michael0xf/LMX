@@ -32,7 +32,26 @@ References stored as data form a graph and may produce cycles. Structural `paren
 
 Derived graph objects preserve the common `Lmx` contract. The pool and range identify the physical kind selected at construction and, for an Array, its element type. This classifies an address; it is not a stored name or opcode in the graph, nor a separate user-defined type for every Structure model. The old layout in which `Lmx` contains `VoidArray` remains transitional, not the template for the new Array variants.
 
-An arena classifies an address through a registered half-open `LmxRange` interval and its owning pool. A cell has no in-band type tag. Ordinary Structures and graph Arrays share the `Lmx` base while ranges distinguish storage shape and element type; user models do not generate one C type or pool apiece. Primitive, reference, graph-object, and backing pools differ by physical access contract. Typed arena arrays are storage, not separate language Arrays. Ordinary and `immutable` Structures are allocated in separate pools; an already published ordinary Structure cannot become `immutable` in place. `implements`, not physical type, establishes model compatibility. For every primitive type T there is a distinct type "T without initialization", told apart in the same way -- by the region of the cell's address (the author's decision of 2026-11-08): for a place `int: x` without a value the field refers to a pointer primitive "int without initialization" pointing at the pre-existing `int` cell of that place, for `int: x 0` to the `int` cell directly; the first assignment writes into that same cell and turns the field onto it, the cell's type and address do not change, and later writes go into it ([implementation specification §3.2](kernel-implementation.en.md#lmx)).
+An arena classifies an address through a registered half-open `LmxRange` interval and its owning pool. A cell has no in-band type tag. Ordinary Structures and graph Arrays share the `Lmx` base while ranges distinguish storage shape and element type; user models do not generate one C type or pool apiece. Primitive, reference, graph-object, and backing pools differ by physical access contract. Typed arena arrays are storage, not separate language Arrays. Ordinary and `immutable` Structures are allocated in separate pools; an already published ordinary Structure cannot become `immutable` in place. `implements`, not physical type, establishes model compatibility.
+
+Every primitive type T has a distinct type “T without initialization”, identified by its address region.
+A declaration without an initializer has its own pre-existing cell of T and an internal pointer to that cell:
+
+| Declaration | How the Structure field reaches the value |
+|---|---|
+| `int: x` | Field → internal `uninit:int` pointer → the `int` cell of `x` |
+| `int: x 0` | Field → the `int` cell of `x`, initially 0 |
+
+Here a Structure field is an address-holding cell, called a “slot” in the kernel specification.
+Assignment changes only the value in the existing cell of T. Even on the first write, neither the field nor
+its internal pointer is replaced or redirected; the cell's address and physical type remain unchanged too.
+For `int: x`, the indirect path is the same before and after `x := 5`, and a previously taken `@x` addresses
+that same cell. Internal storage does not make `x` a language pointer: its language type remains `int`.
+
+`uninit:T` describes a declaration without an initializer, not a “never written yet” flag.
+The earlier explanation about redirecting the field on its first write was superseded by the
+[author's later clarification of 2026-11-08](../LMX_blog/2026-11-08.md#uninit-pointer-preserved).
+See [kernel specification §3.2](kernel-implementation.en.md#primitive-storage) for the representation.
 
 <a id="pool"></a>
 ## 4. Typed pool

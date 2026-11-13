@@ -118,6 +118,23 @@ withdrawn by the author's decision of 2026-11-10
 ([semantics](LMX_semantics.en.md#receiver-args-only)): in data `ms: int: time`
 declares a Structure `ms` with a field `time`, not a place `ms`.
 
+<a id="get-descriptor"></a>
+## Header-field addresses through getDescriptor
+
+Let d be the result of the ordinary call `getDescriptor: S`. It is a Structure
+of addresses of fields `parent`, `native`, `size`, `data` of S's flat header.
+For example, `\(d\native) := 0` writes zero to the actual S.native:
+the next call of S uses the walker. Writing `d\native := 0` changes
+only the pointer inside d. There is no snapshot or later synchronization.
+
+An explicit field path or typed dereference allows an ordinary write,
+including references and function pointers; the restriction on changing a bare
+Structure name does not prohibit this path. Pointer depth and Array rank are
+independent and have no fixed numeric limit. The address has S's ordinary
+lifetime bounds. The contract is approved; implementation is still pending:
+[`getDescriptor`](LMX_semantics.en.md#get-descriptor),
+[M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+
 <a id="callable-admission"></a>
 ## What the callable interface check proves
 

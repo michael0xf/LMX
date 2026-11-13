@@ -46,18 +46,26 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-The current C record to migrate is `Lmx {VoidArray array, Lmx *parent,
-LmxEntry native}`; a separate Array is still allocated as `VoidArray {size,
-data}` without `parent` or `native`. This inverts the target architecture
-in [L2 §2](L2_spec_en.md#lmx): a graph Array must derive from the shared
-`Lmx` base and have a structural parent and native entry. The exact new
-C99 layout is not yet selected; constructors' and copier's current
-`sizeof(VoidArray)` cannot simply be reinterpreted as `sizeof(Lmx)`.
-Current `Lmx.array` contains `void *` child slots; a graph-slot address
-has type `void **`. Instance slot count is chosen at creation; published
-backing neither grows nor moves. Migration must preserve typed Array
-backing, address-copy maps, and reconstruction of `parent` for Arrays and
-nested Structures; typed arena arrays remain storage, not standalone
+The current generator already defines `Lmx` with `parent`, `native` and
+an embedded `VoidArray array`; `LmxArray` is an alias of `Lmx`. The old
+description of a separate Array without a header does not describe this state.
+The [approved layout](L2_spec_en.md#lmx) has flat fields `parent`,
+`native`, `size`, `data` in that order, without `Lmx.array`.
+Migration of the generator and all header accesses remains open in
+[M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+
+An ordinary Structure and `Array<@>` have `void *` backing elements;
+such a slot's address is `void **`. A numeric Array stores typed T
+elements directly. Element count is chosen at creation; published
+backing neither grows nor moves. Migration preserves typed storage,
+address-copy maps and `parent` for Arrays and nested Structures.
+Common operations must accept Structure and `Array<@>` interchangeably,
+without refusal based solely on the header category. `getDescriptor`
+is not implemented yet: its result must contain actual field addresses,
+with immediate writes through ordinary dereferencing
+([contract](L2_spec_en.md#get-descriptor)). Arbitrary finite pointer depth
+and Array rank use the existing general algorithms; the old parser is
+not rewritten. Typed arena arrays remain storage, not standalone
 language objects. Growing `Thread.children` is a **separate**
 List/DynamicArray, not an extension of Lmx or a program field. Launch
 service data belongs to the R0 stub. See [L2](L2_spec_en.md#lmx) and

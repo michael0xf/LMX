@@ -1,0 +1,27 @@
+Pair(int: left 0; int: right 0)
+Reader:
+    fn: get () int
+Empty()
+fn: pair_value (@: value Pair) int
+    return: value\left * 10 + value\right
+fn: reader_value (@: value Reader) int
+    return: value\get()
+fn: receive_empty (@: value Empty) int
+    if: value = 0
+        return: 81
+    return: 0
+fn: nested_value () int
+    return: reader_value(((
+        int: x 7
+        fn: get () int
+        return: node\x
+    )))
+fn: run () int
+    int: pair pair_value(((int: right 3; int: left 2)))
+    int: nested nested_value()
+    int: empty receive_empty((()))
+    if: pair != 23 || nested != 7 || empty != 0
+        return: 81
+    return: 7
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

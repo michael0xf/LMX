@@ -3824,10 +3824,21 @@ fn: lm_compiler_local_ns_entry (const: (@: stmt c.LmP0Node); int: mi; const: (@:
     @@: ns_local_cell int (cast: (@@: int) (@ c.l2_ns_local))
     @@@: ns_stmt_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_ns_stmt))
     @@: ns_count_cell int (cast: (@@: int) (@ c.l2_ns_count))
+    @: source_body c.LmP0Structure 0
+    @: source_name c.LmP0Text 0
     int: ni 0 - 1
     int: i 0
+    if: stmt = 0 || stmt\as = 0
+        return: -1
+    if: stmt\kind = c.LM_P0_NODE_STRUCTURE
+        source_body := stmt\as\structure
+    else:
+        if: stmt\kind != c.LM_P0_NODE_FRAME || stmt\as\frame = 0
+            return: -1
+        source_body := stmt\as\frame\body
+        source_name := stmt\as\frame\head
     while: i < ns_n_cell[0]
-        if: ns_at_cell[0][i] = stmt && ns_name_cell[0][i] = stmt\as\frame\head
+        if: ns_at_cell[0][i] = stmt && ns_name_cell[0][i] = source_name
             ni := i
         i := i + 1
     ---
@@ -3836,10 +3847,10 @@ fn: lm_compiler_local_ns_entry (const: (@: stmt c.LmP0Node); int: mi; const: (@:
     ni := ns_n_cell[0]
     # A typed-field constructor keeps its atoms as statements. A written-atom
     # definition keeps those atoms as content (kind 12), the same as the unit.
-    if: lm_compiler_atom_only_tail((cast: (const: @: c.LmP0Frame) (stmt\as\frame))) = 0
+    if: stmt\kind = c.LM_P0_NODE_FRAME && lm_compiler_atom_only_tail((cast: (const: @: c.LmP0Frame) (stmt\as\frame))) = 0
         atom_hold_cell[0] := 1
     ns_take_mi_cell[0] := mi
-    if: lm_compiler_take_ns_body((cast: (const: @: c.LmP0Text) (stmt\as\frame\head)), 0 - 1, (cast: (const: @: c.LmP0Structure) (stmt\as\frame\body)), stmt, stmt, path) != 0
+    if: lm_compiler_take_ns_body(source_name, -1, source_body, stmt, stmt, path) != 0
         atom_hold_cell[0] := 0
         ns_take_mi_cell[0] := 0 - 1
         return: (cast: (int) (0 - 1))
@@ -3855,7 +3866,7 @@ fn: lm_compiler_local_ns_entry (const: (@: stmt c.LmP0Node); int: mi; const: (@:
     ---
     # An expression span is the Structure's child, not a procedure. The take recorded it as a
     # statement; clear that so the method stays walked and the operator is stored later.
-    if: lm_compiler_expr_only_tail((cast: (const: @: c.LmP0Frame) (stmt\as\frame))) != 0
+    if: stmt\kind = c.LM_P0_NODE_FRAME && lm_compiler_expr_only_tail((cast: (const: @: c.LmP0Frame) (stmt\as\frame))) != 0
         ns_stmt_cell[0][ni] := 0
         ns_count_cell[0][ni] := 1
     # Register original bodies at the collection fixed point, independently
@@ -5353,6 +5364,9 @@ fn: lm_compiler_source_container_part (@: body c.LmP0Structure; int: inert; int:
     row\temp := -1
     row\fills := 0
     row\shell_state := 0
+    row\owner := 0
+    row\parent_temp := -1
+    row\parent_slot := -1
     row\place := 0
     row\fields := 0
     if: row\view_kind = 0 && part < 3
@@ -5752,7 +5766,7 @@ fn: lm_compiler_source_places_bind () int
                 ---
                 # A projected construction owns its own field relation. Only
                 # the original occurrence publishes the primary native map.
-                if: (row\view_kind = 0 && row\view_index = own_mi_cell[0][source_field\own]) || (row\view_kind = 2 && c.lm_compiler_method_body_result((cast: (int) (own_mi_cell[0][source_field\own]))) = row\view_index)
+                if: (row\view_kind = 0 && (row\view_index = own_mi_cell[0][source_field\own] || (row\owner != 0 && row\source_mi = own_mi_cell[0][source_field\own]))) || (row\view_kind = 2 && c.lm_compiler_method_body_result((cast: (int) (own_mi_cell[0][source_field\own]))) = row\view_index)
                     field := own_places_cell[0] + (cast: (int) (source_field\own))
                     field\holder := lm_compiler_port249_0_L2SourceField_place_holder(source_field)
                     field\child := lm_compiler_port249_0_L2SourceField_place_child(source_field)
@@ -6148,6 +6162,8 @@ fn: lm_compiler_source_plan_reset (int: base) int
     ruse_unit_cell[0] := source_unit
     while: row != 0
         row\temp := -1
+        row\parent_temp := -1
+        row\parent_slot := -1
         field := row\fields
         while: field != 0
             field\storage_temp := -1
@@ -6417,7 +6433,7 @@ fn: lm_compiler_source_fills_verify () int
     if: construct_phase_cell[0] != 2
         return: (cast: (int) (0))
     while: row != 0
-        if: row\view_kind = construct_view_kind_cell[0] && row\view_index = construct_view_index_cell[0] && row\fills != 1
+        if: row\view_kind = construct_view_kind_cell[0] && (construct_view_index_cell[0] < 0 || row\view_index = construct_view_index_cell[0]) && row\fills != 1
             return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "internal: a source container was not constructed")))
         row := row\allocated_next
     ---
@@ -8669,7 +8685,7 @@ fn: lm_compiler_ns_body_stmt_here (const: (@: source_node c.LmP0Node); int: me) 
     # no field (l2_ns_decl_first, K03 S5).  A `return: n` is one of them: the check says what it
     # says of every callable that returns nothing, in any place of the body.
     if: source_node\kind = c.LM_P0_NODE_FRAME && source_node\as != 0 && source_node\as\frame != 0 && source_node\as\frame\head != 0
-        if: c.lm_compiler_site_method(ns_take_mi_cell[0], (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0 || c.lm_compiler_root_names_method((cast: (const: @: c.LmP0Structure) (ns_at_cell[0][me]\as\frame\body)), (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0 || c.lm_compiler_unit_names_method((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0
+        if: c.lm_compiler_site_method(ns_take_mi_cell[0], (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) >= 0 || c.lm_compiler_root_names_method(c.lm_compiler_ns_defining_body(me), (cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0 || c.lm_compiler_unit_names_method((cast: (const: @: c.LmP0Text) (source_node\as\frame\head))) != 0
             return: (cast: (int) (1))
         # The operator `:=` declares nothing (the author, 2026-11-07; the book, assign-known): a Frame `:=` is a statement
         # of the body in every shape -- `zz := int: 5` as much as `zz := 5` -- and the check refuses the write of a place
@@ -10113,6 +10129,11 @@ fn: lm_compiler_value_model (@: value c.L2ValueSpan; int: mi; const: (@: path ch
         return: (cast: (int) (c.lm_compiler_alloc_or(path, at, "cannot project a candidate value")))
     if: value = 0 || value\node = 0 || value\count < 1 || value\grammar = 0
         return: (cast: (int) (2))
+    \model := c.lm_compiler_value_structure_model(value)
+    if: \model >= 0
+        if: exact_type != 0
+            \exact_type := c.lm_compiler_graph_code()
+        return: 0
     if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
         return: (cast: (int) (lm_compiler_value_model((cast: (@: c.L2ValueSpan) (value\values)), mi, path, at, model, exact_type)))
     status := c.lm_compiler_value_span_path(value, mi, @ selected)

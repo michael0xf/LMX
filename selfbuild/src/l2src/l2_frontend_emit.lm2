@@ -2280,6 +2280,21 @@ fn: lm_compiler_source_shell_emit (@: row c.L2SourceContainer; const: (@: root c
     ni := c.lm_compiler_m_nsof(mi)
     if: row\view_kind = 0
         scope := -1
+    # A value's original source has a physical attachment at its operand.
+    # Allocate its shell with the containing source's profile; the ordinary
+    # frame producer sets the final parent when that operand is constructed.
+    if: row\owner != 0
+        owner := row\owner
+        if: lm_compiler_source_shell_emit(owner, root) != 0
+            return: 1
+        if: c.fprintf(out_cell[0], "        @: Lmx l2_sc%zu lmx_struct_new_profiled(l2_sc%zu, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_sc%zu)))\n        if: l2_sc%zu = 0\n            return: 1\n", row\id, owner\id, owner\id, row\id) < 0
+            return: 1
+        if: row\width > 0 && c.fprintf(out_cell[0], "        if: lmx_arena_refs_open_profiled(l2_program_arena, l2_sc%zu, %uU, lmx_range_profile(l2_program_arena, (cast: (@: void) l2_sc%zu))) != 0\n            return: 1\n", row\id, (cast: (unsigned) row\width), owner\id) < 0
+            return: 1
+        if: ni >= 0 && c.fprintf(out_cell[0], "        l2_nsp[%d]: l2_sc%zu\n", ni, row\id) < 0
+            return: 1
+        row\shell_state := 2
+        return: 0
     if: row\root != 0 && c.lm_compiler_source_projected_entry(row) = 0 && ((ni < 0 && c.lm_compiler_method_source_own(mi) >= 0) || (ni >= 0 && (ns_local_cell[0][ni] >= 0 || (row\view_kind = 2 && ns_parent_cell[0][ni] >= 0))))
         if: ni >= 0
             field := c.lm_compiler_source_definition_field(ni, (cast: (int) (row\view_kind)), scope, @ owner)
@@ -2563,6 +2578,8 @@ fn: lm_compiler_source_callable_fill (@: source c.L2SourceContainer; int: phase)
     int: saved_cur cur_mi_cell[0]
     int: saved_t7 t7_walk_cell[0]
     int: saved_emit rw_emit_cell[0]
+    int: attachment_parent -1
+    int: attachment_root 1
     c.lm_compiler_construct_begin((cast: (int) (source\view_kind)), (cast: (int) (source\view_index)), phase)
     t7_walk_cell[0] := 0
     rw_mi_cell[0] := mi
@@ -2576,9 +2593,11 @@ fn: lm_compiler_source_callable_fill (@: source c.L2SourceContainer; int: phase)
         rw_t_cell[0] := rw_t_cell[0] + 1
         if: phase = 1
             source\temp := t
-        if: c.lm_compiler_construct_temp(t, -1, 1) != 0
+        if: source\owner != 0
+            attachment_parent := source\parent_temp
+            attachment_root := 0
+        if: c.lm_compiler_construct_temp(t, attachment_parent, attachment_root) != 0 || (source\owner != 0 && c.lm_compiler_construct_link(attachment_parent, (cast: (int) source\parent_slot), t) != 0)
             bad := 1
-        ---
     ---
     if: phase = 2
         if: c.lm_compiler_source_fill(source) != 0 || c.lm_compiler_frames_note(0, (cast: (size_t) (source\id))) != 0 || c.fprintf(out_cell[0], "        @: Lmx l2_rw%d l2_sc%zu\n", t, source\id) < 0
@@ -2644,6 +2663,11 @@ fn: lm_compiler_source_definition_roots (int: kind; int: index; int: phase) int
             row := source_containers_cell[0]
             while: row != 0
                 if: row\view_kind = kind && row\view_index = index && row\inert = 0
+                    if: row\owner != 0 && row\root = 0
+                        row\root := 1
+                        if: lm_compiler_source_callable_fill(row, phase) != 0
+                            return: 1
+                        changed := 1
                     field := row\fields
                     while: field != 0
                         ni := c.lm_compiler_source_definition_ns((cast: (int) (field\own)))
@@ -4920,6 +4944,10 @@ fn: lm_compiler_check_value_span (@: span c.L2ValueSpan; int: mi; const: (@: pat
     int: own
     if: span = 0 || span\first = 0 || span\node = 0
         return: (cast: (int) (c.lm_compiler_error(path, at, "unsupported body")))
+    # The ordinary Structure procedure checks its original fields and
+    # declaration candidates. Do not read that data as a numeric expression.
+    if: c.lm_compiler_value_structure_model(span) >= 0
+        return: 0
     where := span\node
     if: span\grammar = 0
         if: span\count = 1 && where\kind = c.LM_P0_NODE_ATOM && where\as != 0 && c.lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) (where\as\atom))) != 0
@@ -5998,6 +6026,33 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
 end: lm_compiler_check_body
 
 # Original: l2src/l2trans.lm1:20520
+# Register values selected by a receiving Structure contract with the same
+# source-definition collector as named values, before widths are frozen.
+# The binding borrows the original prepared operand, including its boundary.
+fn: lm_compiler_collect_argument_structures (const: (@: path char)) int
+    @@: sites_cell c.L2ApplicationSite (cast: (@@: c.L2ApplicationSite) (@ c.l2_application_sites))
+    @: site c.L2ApplicationSite sites_cell[0]
+    @: arguments c.L2ApplicationActuals
+    @: actual c.L2ApplicationActual
+    @: value c.L2ValueSpan
+    const: (@: source_path char)
+    int: k
+    while: site != 0
+        if: site\bound = 0 || site\signature < 0 || site\method < 0
+            site := site\allocated_next
+            continue
+        source_path := c.lm_compiler_method_src(site\method, path)
+        arguments := (cast: (@: c.L2ApplicationActuals) (@ site\arguments))
+        k := 0
+        while: k < arguments\count
+            actual := arguments\actuals + k
+            value := @ actual\value
+            if: actual\written != 0 && c.lm_compiler_nsty_get(site\signature, k) >= 0 && value\grammar != 3 && value\count = 1 && value\node != 0 && value\node\kind = c.LM_P0_NODE_STRUCTURE && c.lm_compiler_local_ns_entry(value\node, site\method, source_path) < 0
+                return: 1
+            k := k + 1
+        site := site\allocated_next
+return: 0
+
 fn: lm_compiler_parse_unit (const: (@: path char)) int
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
     @: ns_n_cell int (cast: (@: int) (@ c.l2_ns_n))
@@ -6040,18 +6095,16 @@ fn: lm_compiler_parse_unit (const: (@: path char)) int
             return: (cast: (int) (1))
         if: c.lm_compiler_collect_asgn_binds(path) != 0
             return: (cast: (int) (1))
+        if: registered_methods = m_n_cell[0] && registered_ns = ns_n_cell[0]
+            # Bind only after all original bodies and reference contracts
+            # are registered. A selected Structure value may add another
+            # original body; the same fixed point then registers its fields.
+            vis_on_cell[0] := 0
+            if: c.lm_compiler_ns_resolve_refs(path, 0) != 0 || c.lm_compiler_bind_calls(path) != 0
+                return: 1
+            if: lm_compiler_collect_argument_structures(path) != 0
+                return: 1
     ---
-    # Reference fields are source declarations too. Consumers of a local
-    # definition's schema must see their resolved callable/model target,
-    # not snapshot a still-unresolved row into the merge correspondence.
-    vis_on_cell[0] := 0
-    if: c.lm_compiler_ns_resolve_refs(path, 0) != 0
-        return: (cast: (int) (1))
-    # Bind actuals only after every original callable body and reference is
-    # registered. An earlier traversal could resolve a local scalar under
-    # its parent's method or destructively bind the wrong callable's inputs.
-    if: c.lm_compiler_bind_calls(path) != 0
-        return: (cast: (int) (1))
     # Merge results get their schemas after all original definitions exist,
     # but still before any body checking or dynamic/signature sizing. Both
     # scans retain the ordinary source-site visibility rules.
@@ -8199,6 +8252,8 @@ fn: lm_compiler_rw_reference_span (@: value c.L2ValueSpan; int: ty; int: parent;
     @: leaf char (cast: (@: char) leaf_storage\buffer)
     if: value = 0 || value\grammar = 0
         return: (cast: (int) (c.lm_compiler_rw_refuse(here_node_cell[0], "a reference value without prepared grammar")))
+    if: c.lm_compiler_value_structure_model(value) >= 0
+        return: lm_compiler_rw_structure_value(value, parent, out)
     if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
         return: (cast: (int) (lm_compiler_rw_reference_span((cast: (@: c.L2ValueSpan) (value\values)), ty, parent, out)))
     if: value\count = 0 || c.lm_compiler_value_null_literal(value) != 0
@@ -10536,6 +10591,53 @@ fn: lm_compiler_rw_children (@: span c.L2ValueSpan; int: ty; int: parent; @: out
 end: lm_compiler_rw_children
 
 # Original: l2src/l2trans.lm1:29466
+fn: lm_compiler_rw_structure_value (@: value c.L2ValueSpan; int: parent; @: out int) int
+    @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
+    @: construct_phase_cell int (cast: (@: int) (@ c.l2_construct_phase))
+    @: construct_view_kind_cell int (cast: (@: int) (@ c.l2_construct_view_kind))
+    @: construct_view_index_cell int (cast: (@: int) (@ c.l2_construct_view_index))
+    @@: source_containers_cell c.L2SourceContainer (cast: (@@: c.L2SourceContainer) (@ c.l2_source_containers))
+    @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    @: owner c.L2SourceContainer source_containers_cell[0]
+    @: source c.L2SourceContainer
+    @: attachment c.L2ConstructionTemp
+    int: mi rw_mi_cell[0]
+    int: ni c.lm_compiler_value_structure_model(value)
+    int: literal_type c.lm_compiler_graph_own()
+    if: ni < 0
+        return: 2
+    while: owner != 0 && (owner\view_kind != construct_view_kind_cell[0] || owner\view_index != construct_view_index_cell[0] || owner\source_mi != mi || owner\root = 0)
+        owner := owner\allocated_next
+    if: owner = 0 || ns_proc_cell[0][ni] < 0
+        return: c.lm_compiler_error(src_cell[0], (cast: (const: @: c.LmP0Node) value\node), "internal: a Structure value has no containing source")
+    if: c.lm_compiler_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
+        return: 1
+    rw_mi_cell[0] := ns_proc_cell[0][ni]
+    source := c.lm_compiler_source_container(value\node\as\structure, 0)
+    rw_mi_cell[0] := mi
+    if: source = 0
+        return: c.lm_compiler_alloc_or(src_cell[0], (cast: (const: @: c.LmP0Node) value\node), "a Structure value source could not be allocated")
+    source\owner := owner
+    if: construct_phase_cell[0] = 1
+        source\parent_temp := out[0]
+        source\parent_slot := 1
+        # A deferred original body may precede its containing body in the
+        # source list. Complete that same producer's edge once its operand
+        # is visited; no extra source node or borrowed-parent exception.
+        attachment := c.lm_compiler_construct_find((cast: (int) source\temp))
+        if: attachment != 0
+            attachment\parent := out[0]
+            if: c.lm_compiler_construct_link(out[0], 1, (cast: (int) source\temp)) != 0
+                return: 1
+    ---
+    if: construct_phase_cell[0] = 2
+        if: c.lm_compiler_frames_note(0, (cast: (size_t) source\id)) != 0 || c.fprintf(out_cell[0], "        l2_sc%zu\\parent: l2_rw%d\n        if: lmx_arena_ref_store(l2_program_arena, l2_rw%d, 1U, (cast: (@: void) l2_sc%zu)) != 0\n            return: 1\n", source\id, out[0], out[0], source\id) < 0
+            return: 1
+    ---
+return: c.lm_compiler_expr_site_note_role((cast: (const: @: c.LmP0Node) value\node), 1, 1, literal_type, 0, out)
+
 fn: lm_compiler_rw_span (@: span c.L2ValueSpan; int: ty; int: parent; @: out int) int
     @: rw_mi_cell int (cast: (@: int) (@ c.l2_rw_mi))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
@@ -10558,6 +10660,8 @@ fn: lm_compiler_rw_span (@: span c.L2ValueSpan; int: ty; int: parent; @: out int
     int: saved
     int: own
     @: name c.LmP0Node
+    if: c.lm_compiler_value_structure_model(span) >= 0
+        return: lm_compiler_rw_structure_value(span, parent, out)
     if: span\values != 0 && (span\grammar = 3 || c.lm_compiler_frame_head((cast: (const: @: c.LmP0Node) (span\node)), "@") = 0)
         return: (cast: (int) (lm_compiler_rw_children(span, ty, parent, out)))
     if: c.lm_compiler_prefix_rest(span, @ operand) = 0
@@ -14519,6 +14623,8 @@ fn: lm_compiler_rw_methods_count () int
     int: remaining m_n_cell[0]
     int: progressed
     int: owner
+    int: source_kind
+    int: source_index
     @: counted int
     @: source c.L2SourceContainer
     m_steps_cell[0] := (cast: (@: int) c.calloc((cast: (size_t) (m_n_cell[0] + 1)), c.sizeof(c.int)))
@@ -14546,11 +14652,16 @@ fn: lm_compiler_rw_methods_count () int
             if: owner >= 0 && counted[owner] = 0
                 i := i + 1
                 continue
+            source_kind := 0
+            source_index := i
             if: c.lm_compiler_method_body_result(i) >= 0
-                c.lm_compiler_construct_begin(2, c.lm_compiler_method_body_result(i), 0)
-            else:
-                c.lm_compiler_construct_begin(0, i, 0)
-            ---
+                source_kind := 2
+                source_index := c.lm_compiler_method_body_result(i)
+            source := c.lm_compiler_source_root(i)
+            if: source != 0 && source\owner != 0
+                source_kind := source\view_kind
+                source_index := source\view_index
+            c.lm_compiler_construct_begin(source_kind, source_index, 0)
             m_steps_cell[0][i] := 0 - 1
             rw_machine_cell[0] := 0
             rw_quiet_msg_cell[0] := c.lm_compiler_msg_drop(rw_quiet_msg_cell[0])
@@ -14711,6 +14822,8 @@ fn: lm_compiler_rw_method_emit_one (int: i; int: phase; const: (@: target char))
     int: tslot
     int: res c.lm_compiler_method_body_result(i)
     @: source c.L2SourceContainer c.lm_compiler_source_root(i)
+    int: attachment_parent -1
+    int: attachment_root 1
     if: m_steps_cell[0][i] <= 0 && source = 0 && (i = e_cell[0] || c.lm_compiler_m_nsof(i) >= 0)
         return: (cast: (int) (0))
     if: res >= 0
@@ -14718,6 +14831,10 @@ fn: lm_compiler_rw_method_emit_one (int: i; int: phase; const: (@: target char))
     else:
         c.lm_compiler_construct_begin(0, i, phase)
     ---
+    if: source != 0 && source\owner != 0
+        c.lm_compiler_construct_begin((cast: (int) source\view_kind), (cast: (int) source\view_index), phase)
+        attachment_parent := source\parent_temp
+        attachment_root := 0
     if: c.lm_compiler_rw_bseq_zero() != 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "out of memory")))
     c.lm_compiler_vis_method(i)
@@ -14737,7 +14854,7 @@ fn: lm_compiler_rw_method_emit_one (int: i; int: phase; const: (@: target char))
     c.lm_compiler_ml_free()
     if: m_body_cell[0][src] != 0 && m_body_cell[0][src]\as != 0 && m_body_cell[0][src]\as\structure != 0 && c.lm_compiler_ml_collect((cast: (const: @: c.LmP0Structure) (m_body_cell[0][src]\as\structure)), src, src_cell[0]) != 0
         bad := 1
-    if: c.lm_compiler_construct_temp(t, -1, 1) != 0
+    if: c.lm_compiler_construct_temp(t, attachment_parent, attachment_root) != 0 || (attachment_root = 0 && c.lm_compiler_construct_link(attachment_parent, (cast: (int) source\parent_slot), t) != 0)
         bad := 1
     if: source != 0
         source\temp := t
@@ -14750,7 +14867,11 @@ fn: lm_compiler_rw_method_emit_one (int: i; int: phase; const: (@: target char))
             bad := 1
         if: bad = 0 && target != 0 && c.fputs(target, out_cell[0]) < 0
             bad := 1
-        if: bad = 0 && target = 0 && lm_compiler_emit_build_occ(i) != 0
+        if: bad = 0 && target = 0 && source != 0
+            if: c.lm_compiler_frames_note(0, (cast: (size_t) source\id)) != 0 || c.fprintf(out_cell[0], "l2_sc%zu", source\id) < 0
+                bad := 1
+        ---
+        if: bad = 0 && target = 0 && source = 0 && lm_compiler_emit_build_occ(i) != 0
             bad := 1
         if: bad = 0 && c.fprintf(out_cell[0], "\n        if: l2_rw%d = 0\n            return: 1\n", t) < 0
             bad := 1
@@ -14787,11 +14908,7 @@ fn: lm_compiler_rw_method_emit_one (int: i; int: phase; const: (@: target char))
         return: (cast: (int) (1))
     if: m_steps_cell[0][i] >= 0 && made + one != m_steps_cell[0][i]
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][i], "internal: a method's steps changed between the passes")))
-    if: res >= 0
-        return: (cast: (int) (0))
-    ---
-    return: (cast: (int) (c.lm_compiler_source_fills_verify()))
-end: lm_compiler_rw_method_emit_one
+return: 0
 
 # Original: l2src/l2trans.lm1:35129
 fn: lm_compiler_frames_build_emit (int: i) int
@@ -14868,6 +14985,7 @@ fn: lm_compiler_rw_methods_emit (int: phase) int
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
     @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     @: construct_phase_cell int (cast: (@: int) (@ c.l2_construct_phase))
+    @: construct_view_kind_cell int (cast: (@: int) (@ c.l2_construct_view_kind))
     @: construct_view_index_cell int (cast: (@: int) (@ c.l2_construct_view_index))
     int: i 0
     int: input
@@ -14908,8 +15026,14 @@ fn: lm_compiler_rw_methods_emit (int: phase) int
     ---
     if: phase = 1 && lm_compiler_t7_emit_frames(phase) != 0
         return: (cast: (int) (1))
-    construct_phase_cell[0] := -1
+    # A source value's producer can follow the caller in this same physical
+    # view. Verify the complete primary construction once all methods filled
+    # it, rather than treating one method's finish as the end of the view.
+    construct_view_kind_cell[0] := 0
     construct_view_index_cell[0] := -1
+    if: phase = 2 && c.lm_compiler_source_fills_verify() != 0
+        return: 1
+    construct_phase_cell[0] := -1
     return: (cast: (int) (0))
 end: lm_compiler_rw_methods_emit
 

@@ -1777,12 +1777,21 @@ fn: lm_compiler_reference_source_value (@: value c.L2ValueSpan; int: mi; @: out 
     int: signature -1
     int: held -1
     int: bound 0
+    int: structure_model
     int: status
     if: out = 0
         return: (cast: (int) (c.lm_compiler_error_fatal(src_cell[0], here_node_cell[0], "internal: a prepared source query has no result")))
     c.lm_compiler_reference_record_source(0, mi, out)
     if: value = 0 || value\count < 1 || value\node = 0
         return: (cast: (int) (0))
+    structure_model := c.lm_compiler_value_structure_model(value)
+    if: structure_model >= 0
+        out\schema := structure_model
+        out\layout := structure_model
+        out\origin := value\node
+        out\origin_count := 1
+        out\origin_method := mi
+        return: 0
     # A transparent sole Structure denotes its existing child. Its source
     # construction is the child too,not an invented wrapper operation.
     if: value\values != 0 && value\value_n = 1 && (value\grammar = 3 || value\node\kind = c.LM_P0_NODE_STRUCTURE)
@@ -3109,6 +3118,10 @@ fn: lm_compiler_scan_value_span (@: span c.L2ValueSpan; int: mi; @: seen int; in
     int: oi
     if: span = 0 || span\node = 0
         return: (cast: (int) (1))
+    # The original source body's declarations are scanned under its own
+    # method. Their names are not free reads of this containing expression.
+    if: c.lm_compiler_value_structure_model(span) >= 0
+        return: 0
     if: span\grammar = 0
         if: span\count = 1 && span\node\kind = c.LM_P0_NODE_ATOM && span\node\as != 0 && c.lm_compiler_rw_prec((cast: (const: @: c.LmP0Text) (span\node\as\atom))) != 0
             return: (cast: (int) (0))
@@ -4503,6 +4516,7 @@ fn: lm_compiler_emit_live_literal_full (const: (@: source_node c.LmP0Node); int:
     int: value_tmp
     @: site c.L2ExpressionSite
     @: place c.L2GraphPlace
+    @: source c.L2SourceContainer
     const: (@: type_name char 0)
     const: (@: member char 0)
     c.L2FrontendScratchChar64: result_own_storage
@@ -4518,6 +4532,10 @@ fn: lm_compiler_emit_live_literal_full (const: (@: source_node c.LmP0Node); int:
     if: body_result >= 0
         kind := 2
         index := body_result
+    source := c.lm_compiler_source_root(mi)
+    if: source != 0
+        kind := source\view_kind
+        index := source\view_index
     site := c.lm_compiler_expr_site_find(kind, index, mi, source_node, 1, 1)
     if: site = 0
         # A leaf retained in another construction view is not a native-only
@@ -4525,7 +4543,7 @@ fn: lm_compiler_emit_live_literal_full (const: (@: source_node c.LmP0Node); int:
         site := expr_sites_cell[0]
         while: site != 0
             if: site\method = mi && site\node = source_node && site\count = 1 && site\role = 1
-                return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "a retained numeric leaf has no place in the selected code view")))
+                return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "a retained literal has no place in the selected code view")))
             site := site\allocated_next
         ---
         return: (cast: (int) (2))
@@ -4546,11 +4564,14 @@ fn: lm_compiler_emit_live_literal_full (const: (@: source_node c.LmP0Node); int:
     if: site\value_type = 36
         type_name := "c.LMX_TYPE_ULONG"
         member := "longnum"
+    if: site\value_type = c.lm_compiler_graph_own()
+        type_name := "c.LMX_TYPE_LMX"
+        member := "ref"
     if: type_name = 0 || c.lm_compiler_emit_live_code_place(place, ind, @ place_tmp) != 0
-        return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "a numeric expression has no valid retained literal place")))
+        return: (cast: (int) (c.lm_compiler_error(src_cell[0], source_node, "a value has no valid retained literal place")))
     value_tmp := tn_cell[0]
     tn_cell[0] := tn_cell[0] + 1
-    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_lv%d\n%sif: lmx_walk_native_numeric_lit(l2_call_arena, l2_cp%d, %s, @ l2_lv%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, value_tmp, ind, place_tmp, type_name, value_tmp, ind) < 0
+    if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_lv%d\n%sif: lmx_walk_native_lit(l2_call_arena, l2_cp%d, %s, @ l2_lv%d) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, value_tmp, ind, place_tmp, type_name, value_tmp, ind) < 0
         return: (cast: (int) (1))
     if: c.snprintf(result_own, 64U, "(l2_lv%d.%s)", value_tmp, member) < 0 || c.lm_compiler_tx_set(dest, result_own) != 0
         return: (cast: (int) (1))
@@ -12425,6 +12446,8 @@ fn: lm_compiler_emit_native_span_full (@: span c.L2ValueSpan; int: mi; const: (@
         context[0] := -1
     if: span = 0 || span\grammar = 0 || piece = 0
         return: (cast: (int) (1))
+    if: c.lm_compiler_value_structure_model(span) >= 0
+        return: lm_compiler_emit_live_literal_full((cast: (const: @: c.LmP0Node) span\node), mi, ind, dest, full_value)
     # A typed language unary operation uses the same record operation even
     # when its consumer asks only for a C value (for example a condition).
     # The numeric view reads the completed result; it never recomputes it.

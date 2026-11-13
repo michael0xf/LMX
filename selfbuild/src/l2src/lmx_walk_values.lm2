@@ -940,7 +940,7 @@ fn: lmx_walk_slot_store_ref (@: arena c.LmxArena; @: holder c.Lmx; size_t: index
     return: c.LMX_WALK_OK
 end: lmx_walk_slot_store_ref
 
-fn: lmx_walk_native_numeric_lit (@: arena c.LmxArena; @: code c.Lmx; int: expected_type; @: out c.LmxWalkValue) int
+fn: lmx_walk_native_lit (@: arena c.LmxArena; @: code c.Lmx; int: expected_type; @: out c.LmxWalkValue) int
     @: cell void 0
     int: status 0
     if: arena = 0 || code = 0 || out = 0 || c.lmx_domain_kind(arena, (cast: (@: void) code)) != c.LMX_KIND_STRUCT
@@ -948,18 +948,28 @@ fn: lmx_walk_native_numeric_lit (@: arena c.LmxArena; @: code c.Lmx; int: expect
     @: fields c.VoidArray @ code\array
     if: fields\size < 2U || c.lmx_walk_code_in(arena, c.lmx_graph_value_in(arena, code, 0U)) % c.LMX_WALK_OP_COUNT != c.LMX_WALK_OP_LIT
         return: c.LMX_WALK_INVALID
-    if: expected_type != c.LMX_TYPE_INT && expected_type != c.LMX_TYPE_CHAR && expected_type != c.LMX_TYPE_SIZE_T && expected_type != c.LMX_TYPE_UNSIGNED && expected_type != c.LMX_TYPE_ULONG
-        return: c.LMX_WALK_INVALID
     cell := (cast: (@: void) c.lmx_graph_value_in(arena, code, 1U))
     if: cell = 0
         return: c.LMX_WALK_INVALID
     status := lmx_walk_value_cell(arena, cell, out)
-    # value_cell reads the actual typed primitive. Compare only its numeric
-    # representation here, without changing the full source storage identity.
-    if: status != c.LMX_WALK_OK || out\present = 0 || out\kind != c.LMX_WALK_VALUE_NUMBER || c.lmx_type_base((cast: (int) out\type)) != expected_type
+    # Read the original primitive or Structure reference. The projection
+    # keeps the same source storage and ownership in either execution mode.
+    if: status != c.LMX_WALK_OK || out\present = 0 || c.lmx_type_base((cast: (int) out\type)) != expected_type
         return: c.LMX_WALK_INVALID
-    return: c.LMX_WALK_OK
-end: lmx_walk_native_numeric_lit
+return: c.LMX_WALK_OK
+
+# The bootstrap seed still calls this numeric ABI. Keep its stricter result
+# contract while sharing the graph-backed read with reference literals.
+fn: lmx_walk_native_numeric_lit (@: arena c.LmxArena; @: code c.Lmx; int: expected_type; @: out c.LmxWalkValue) int
+    int: status
+    if: expected_type != c.LMX_TYPE_INT && expected_type != c.LMX_TYPE_CHAR && expected_type != c.LMX_TYPE_SIZE_T && expected_type != c.LMX_TYPE_UNSIGNED && expected_type != c.LMX_TYPE_ULONG
+        return: c.LMX_WALK_INVALID
+    status := lmx_walk_native_lit(arena, code, expected_type, out)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: out\kind != c.LMX_WALK_VALUE_NUMBER
+        return: c.LMX_WALK_INVALID
+return: c.LMX_WALK_OK
 
 # Slice 259 (design 4.5 B2b-2b): the bit width of a numeric type's machine representation (C99: the bits of its largest
 # value, counted) -- the range of a shift count is [0, width of the left operand's promoted type).

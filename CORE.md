@@ -43,10 +43,21 @@ The target graph has a common `Lmx` Structure identity. A graph Array is
 an `Lmx` Structure with fixed, typed element storage, not an unrelated
 `VoidArray` record used as the base of `Lmx`. Both ordinary Structures and
 graph Arrays have structural `parent` and `native`; their element/field
-storage has a fixed size after construction. The exact C99 layout of the
-shared header and the Array-specific storage remains a migration decision;
-the current, inverted C layout is recorded only in the
+storage has a fixed size after construction. The approved target header is
+flat `parent/native/size/data`, in that order, without `Lmx.array: VoidArray`.
+Numeric Arrays keep actual T-elements; Structure and Array<@> use pointer elements.
+The current nested layout and the remaining migration are recorded in the
 [implementation notes](docs/implementation-notes.en.md#l2-status).
+
+Structure and Array<@> are fully interchangeable for equivalent contents in
+indexing, length, naming, admission, copying, execution, typeof and descriptor
+access. The header does not add elements. `getDescriptor(S)` returns an ordinary
+Structure holding the four actual field addresses (`Lmx **`, `LmxEntry *`,
+`size_t *`, `void **`). Explicit `\(d\native) := 0` writes S.native; assigning
+`d\native` changes d's pointer field. Ordinary paths keep selecting user fields.
+There is no header snapshot, write-back or reflection infrastructure. General
+typed pointers and Array rank have no fixed numerical ceiling. This target is
+[M13](next_core_tasks_v3.md#flat-lmx-descriptor), not completed implementation.
 
 A graph reference slot's address, its stored pointer, and its referent are
 distinct. `Lmx.parent` is the structural parent, not `Thread.parent`.

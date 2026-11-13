@@ -1,0 +1,14 @@
+Q(int: x 0)
+Box(int: x 7)
+fn: take_q (@: q Q) int
+    return: q\x
+fn: probe_group () int
+    return: take_q(((int: x 7)))
+fn: run () int
+    int: named take_q(Box)
+    int: written probe_group()
+    if: named != 7 || written != 7
+        return: 81
+    return: 7
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

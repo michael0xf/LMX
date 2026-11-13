@@ -1607,6 +1607,22 @@ fn: lm_compiler_anchor_of (int: m; const: (@: nm c.LmP0Text)) int
     return: (cast: (int) (anc_ns_cell[0][r]))
 end: lm_compiler_anchor_of
 
+# Count physical parent links only up to the enclosing source occurrence.
+# That occurrence can itself be retained inside another method's graph.
+fn: lm_compiler_source_lex_parent (@: owner c.L2SourceContainer; @: place c.L2GraphPlace; int: first; @: links int) int
+    int: mi owner\source_mi
+    @: root c.L2SourceContainer c.lm_compiler_source_root(mi)
+    @: stop c.L2GraphPlace 0
+    if: root != 0
+        stop := root\place
+    \links := first
+    while: place != stop
+        if: place = 0 || \links = c.INT_MAX
+            return: -2
+        \links := \links + 1
+        place := place\parent
+return: mi
+
 fn: lm_compiler_lex_parent (int: mi; @: links int) int
     @: m_n_cell int (cast: (@: int) (@ c.l2_m_n))
     @: e_cell int (cast: (@: int) (@ c.l2_e))
@@ -1616,14 +1632,27 @@ fn: lm_compiler_lex_parent (int: mi; @: links int) int
     @@: ns_proc_cell int (cast: (@@: int) (@ c.l2_ns_proc))
     @@: ns_eternal_cell int (cast: (@@: int) (@ c.l2_ns_eternal))
     @@: part_ns_cell int (cast: (@@: int) (@ c.l2_part_ns))
+    @@: source_containers_cell c.L2SourceContainer (cast: (@@: c.L2SourceContainer) (@ c.l2_source_containers))
     int: ni
     int: part
     @: owner c.L2SourceContainer 0
     @: field c.L2SourceField
     @: place c.L2GraphPlace
+    @: source c.L2SourceContainer source_containers_cell[0]
     \links := 1
     if: mi < 0 || mi >= m_n_cell[0] || mi = e_cell[0]
         return: (cast: (int) (-1))
+    # An unnamed source value belongs at its committed operand, rather than
+    # in a named declaration slot. Its complete place gives both the actual
+    # enclosing occurrence and the number of physical parent links to it.
+    while: source != 0
+        if: source\view_kind = 0 && source\source_mi = mi && source\owner != 0 && source\root != 0
+            owner := source\owner
+            place := source\place
+            if: place = 0
+                return: -2
+            return: lm_compiler_source_lex_parent(owner, place, 0, links)
+        source := source\allocated_next
     ni := c.lm_compiler_m_nsof(mi)
     if: ni < 0 && c.lm_compiler_method_source_own(mi) >= 0
         field := lm_compiler_source_definition_node_field(m_node_cell[0][mi], 0, -1, @ owner)
@@ -1635,13 +1664,7 @@ fn: lm_compiler_lex_parent (int: mi; @: links int) int
             ---
             return: (cast: (int) (-2))
         place := owner\place
-        while: place != 0
-            if: \links = c.INT_MAX
-                return: (cast: (int) (-2))
-            \links := \links + 1
-            place := place\parent
-        ---
-        return: (cast: (int) (owner\source_mi))
+        return: lm_compiler_source_lex_parent(owner, place, 1, links)
     ---
     if: ni >= 0
         if: ns_local_cell[0][ni] >= 0
@@ -1649,13 +1672,7 @@ fn: lm_compiler_lex_parent (int: mi; @: links int) int
             if: field = 0 || owner = 0
                 return: (cast: (int) (-2))
             place := owner\place
-            while: place != 0
-                if: \links = c.INT_MAX
-                    return: (cast: (int) (-2))
-                \links := \links + 1
-                place := place\parent
-            ---
-            return: (cast: (int) (owner\source_mi))
+            return: lm_compiler_source_lex_parent(owner, place, 1, links)
         ---
         if: ns_parent_cell[0][ni] >= 0
             return: (cast: (int) (ns_proc_cell[0][ns_parent_cell[0][ni]]))

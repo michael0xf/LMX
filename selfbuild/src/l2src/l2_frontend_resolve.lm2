@@ -4872,6 +4872,8 @@ fn: lm_compiler_value_span_type (@: span c.L2ValueSpan; int: mi; @: exact_type i
     @: name c.LmP0Node
     if: exact_type != 0
         \exact_type := -1
+    if: c.lm_compiler_value_structure_model(span) >= 0
+        return: c.lm_compiler_value_type_kind(c.lm_compiler_graph_code(), exact_type)
     status := lm_compiler_path_value_type(span, mi, @ ty)
     if: status != 1
         if: status != 0

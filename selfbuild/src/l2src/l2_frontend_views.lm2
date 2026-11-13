@@ -224,7 +224,7 @@ fn: lm_compiler_ns_original_body (int: ni) @: c.LmP0Structure
             return: (cast: (@: c.LmP0Structure) (0))
         ---
     else:
-        if: source_node\kind != c.LM_P0_NODE_STRUCTURE || lm_compiler_ns_part(ni) < 0
+        if: source_node\kind != c.LM_P0_NODE_STRUCTURE || (ns_name_cell[0][ni] != 0 && lm_compiler_ns_part(ni) < 0)
             return: (cast: (@: c.LmP0Structure) (0))
         ---
     return: (cast: (@: c.LmP0Structure) (body))
@@ -356,6 +356,10 @@ fn: lm_compiler_application_actual_empty (const: (@: actual c.L2ApplicationActua
     if: actual = 0 || signature < 0 || formal < 0 || lm_compiler_nsty_get(signature, formal) < 0
         return: (cast: (int) (0))
     value := @ actual\value
+    # A selected source value remains an actual even when it has no fields.
+    # Only the existing omitted/default form may stand for no supplied value.
+    if: c.lm_compiler_value_structure_model((cast: (@: c.L2ValueSpan) value)) >= 0
+        return: 0
     if: actual\structured != 0 && value\value_n = 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_empty_struct(value\node)))
@@ -444,7 +448,7 @@ fn: lm_compiler_source_root (int: mi) @: c.L2SourceContainer
     @: row c.L2SourceContainer source_containers_cell[0]
     int: res lm_compiler_method_body_result(mi)
     while: row != 0
-        if: row\root != 0 && row\source_mi = mi && ((res >= 0 && row\view_kind = 2 && row\view_index = res) || (res < 0 && row\view_kind = 0 && row\view_index = mi))
+        if: (row\root != 0 || row\owner != 0) && row\source_mi = mi && ((res >= 0 && row\view_kind = 2 && row\view_index = res) || (res < 0 && row\view_kind = 0 && (row\view_index = mi || row\owner != 0)))
             return: (cast: (@: c.L2SourceContainer) (row))
         row := row\allocated_next
     ---

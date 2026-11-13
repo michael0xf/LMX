@@ -1,6 +1,22 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 361): the clean-graph whole-argument
+Current continuation (2026-11-13, slice 362): a written Structure selected as
+a formal's data value keeps its original source object, fields and physical
+parent. A nested method uses that lexical source; an empty Structure remains
+a supplied value. Native and the walker read the same retained literal cell.
+The two focused L2 programs passed native/forced root0 in the ordinary G2 suite.
+Bootstrap quick built genuine G1/G2; G2 then built G3 through build-generation
+quick. Each generation passed nine smoke rows. Thirteen G2/G3 comparisons
+confirmed the fixed point and all 597 canonical inputs (source13).
+The working bundle is boot-m8-values-01/g3 in the current stage;
+graph-m8-values-01/graph_trans-prod.exe uses its runtime.
+Group normalization remains enabled. General whole-argument selection, declaration
+migration and the P0 switch remain open.
+[Evidence and continuation](../steps/witnesses/m8-structure-values-20261113/notes.md).
+The approved flat Lmx/getDescriptor work is recorded separately as open
+[M13](../next_core_tasks_v3.md#flat-lmx-descriptor); its code is not implemented yet.
+
+Previous continuation (2026-11-13, slice 361): the clean-graph whole-argument
 binder maps named fields by name and unnamed fields by their source position.
 The existing whole_arguments case now includes two unnamed fields (23) and
 a mixed chain (46). `TOOL 0 entry 0 -- graph-same LOG EXPECTED` compares the

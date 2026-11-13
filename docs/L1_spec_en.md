@@ -15,7 +15,9 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 <a id="lmx"></a>
 ## 3. Lmx in L1
 
-The target C projection of [L2 §2](L2_spec_en.md#lmx) gives an ordinary Structure and a language Array a common `Lmx` base: both are graph objects with structural `parent` and `native`. The Array specialization holds fixed, typed elements; primitive and reference elements retain their physical access rules. The current layout, in which `Lmx` embeds `VoidArray` as its first member, is transitional rather than the inheritance rule. The exact future C field order is not yet settled; see [implementation status](implementation-notes.en.md#l2-status). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
+The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `native`, `size`, `data` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `data` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed access and the separate List contract remain. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
+
+Lowering ordinary receiver [`getDescriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write changes the original field immediately; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
 
 <a id="interpretable-tree"></a>
 ### 3.1. Tree projection

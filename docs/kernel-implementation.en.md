@@ -824,7 +824,7 @@ interpreter's answer 7; native and forced stop R0.
 | `word` | `const char *` | a word primitive: a pointer to the interned string of a spelling -- operators (`+`, `\`, `[]`, `:=`), receiver and language words (`fn`, `if`, `return`, `node`, `int`), any written name (§3.5) |
 | `ref` | `void *` | a reference cell: a slot of an Lmx field or of an Array element, the cell of a pointer `@: p T` after the first address write; holds the address of a primitive or an Lmx, or 0 |
 | `lmx:data`, `lmx:immutable`, `lmx:result` | `Lmx` | the header of an ordinary Structure, of an immutable Structure (`independent: immutable`) and of a Structure **created by executing the `fn` receiver** ([L2 §2.1](L2_spec_en.md#interpretable-tree): the pool of `fn` results receives only a structure created by executing `fn`, not a Structure with similar parts; [§3](L2_spec_en.md#type-by-range): ordinary and immutable in different regions, not a C type per model) |
-| `lmx:array<T>`, T ∈ {`int`, `char`, `unsigned char`, `size_t`, `unsigned`, `ulong`, `ref`} | `Lmx` | the header of a graph Array with the requirement T on its elements ([L2 §3](L2_spec_en.md#type-by-range): for an Array the range also tells the element type); the backing is `count` `ref` slots (§3.1) |
+| `lmx:array<T>`, T ∈ {`int`, `char`, `unsigned char`, `size_t`, `unsigned`, `ulong`, `ref`} | `Lmx` | the header of a graph Array with the requirement T on its elements ([L2 §3](L2_spec_en.md#type-by-range): for an Array the range also tells the element type); the backing is `size` T elements, which are `void *` for `ref` (§3.1) |
 | `text` | `char` | string bytes: interned spellings of names and operators (§4), user string literals |
 | `name` | `{ void *address; const char *name }` | a row of the address → name table (§5.1) |
 
@@ -867,25 +867,40 @@ free cells are reused (decision; no compaction -- addresses are immovable).
 
 ```text
 struct: Lmx
-    @: Lmx parent        # structural parent (the lexical tree), 0 at the root
+    @: parent Lmx        # structural parent (the lexical tree), 0 at the root
     LmxEntry: native     # the native entry or 0: the stored body is executed
-    size_t: count        # the number of fields of a Structure or of elements of an Array
-    @: void storage      # the neutral address of the backing: the first of count slots; 0 for an empty Structure/Array
-end: Lmx
+    size_t: size         # the number of fields of a Structure or of elements of an Array
+    @: data void         # address of elements; 0 for an empty Structure/Array
 ```
 
-**A slot** is a `ref` (`void *`) cell of the backing: a field of a Structure or an element of an Array. It is the
-"`void *` field" of the author's words (§1 item 4): a slot has a stable address and holds the address of its value -- a
-primitive (`uninit:T` included), an Lmx, or 0. The backing of any Lmx, **the language Array included**, is `count` slots
-(one representation "in all structures", confirmed by Codex, review 2: there is no special inline form of a language Array
-even for an already filled array; the typed element cells themselves may lie contiguously in an immovable region; raw C
-storage and the `c.*` door are a separate existing contract, [L2 §19](L2_spec_en.md#lowlevel-array)). **How to read the
-value is told by the region of the address held in the slot**, and the kind of the Lmx itself by the region of its header
-(§2.2): an Array of references and a Structure both have slots and empty ones have no backing at all, so telling an Array
-from a Structure and learning the element requirement is possible only by the header's region. Access to a value cell
-goes through its real type by address classification, not by casting `void *` to an arbitrary array. `count` is fixed at
-construction: a Structure does not grow by slots ([L2 §10](L2_spec_en.md#own)); `merge` builds a new Lmx; an Array carries
-exactly `count` elements ([L2 §5](L2_spec_en.md#method-array)).
+This is the approved flat record: `parent/native/size/data` in that order, without an embedded `VoidArray`.
+A reference points to the start of the header. Migration of the current generator remains open in
+[M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+
+**A slot** of an ordinary Structure or `Array<@>` is a `ref` (`void *`) backing cell. It has a stable address and holds
+the address of its value -- a primitive (`uninit:T` included), an Lmx, or 0. A numeric `Array<T>` stores `size` T
+elements directly rather than references to separate cells. Codex's former explanation of reference backing for all
+Arrays is superseded by the [author's decision of 2026-11-13](../LMX_blog/2026-11-13-get-descriptor.md).
+The region of the address held in a slot tells how to read a reference value; the header's region tells an Array's
+kind and storage type (§2.2). Access uses the real type: a graph-slot address is `void **`, a numeric element address
+is `T *`. `size` is fixed at construction: a Structure does not grow by slots ([L2 §10](L2_spec_en.md#own)); `merge` builds
+a new Lmx; an Array carries exactly `size` elements ([L2 §5](L2_spec_en.md#method-array)). Header fields are not elements.
+
+An ordinary Structure and `Array<@>` are interchangeable for indexing, named paths where names exist, `length`,
+admission, copying, execution, `typeof` and `getDescriptor`. An ARRAY/STRUCT category alone is no reason for refusal.
+Numeric Arrays and List retain their own contracts.
+
+<a id="get-descriptor"></a>
+### 3.1.1 Header addresses
+
+Ordinary receiver `getDescriptor: S` returns an ordinary Structure of addresses of the actual `parent/native/size/data`
+fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **` ([exact form](L2_spec_en.md#get-descriptor)).
+A dereferenced write changes S's field immediately; writing a result field changes its own pointer.
+Clearing S.native selects the ordinary walker for the next call. There is no copy, proxy, writeback or separate opcode.
+S.parent may have the same numeric address as S: typed `Lmx **` access addresses the field, not a second Lmx.
+Taking the address neither extends S's lifetime nor transfers ownership. Arbitrary finite pointer depth and Array rank
+are independent; explicit paths and dereferenced writes use common typed operations, including references and function
+pointers. Restrictions on assignment through a bare Structure or function name do not prohibit them.
 
 The address `@x` ([L2 §18](L2_spec_en.md#lowlevel-address)): for a Structure/Array -- the address of the slot holding the
 reference to the header; for a primitive -- its typed cell, which exists from construction and changes neither its
@@ -1417,7 +1432,7 @@ travel, not addresses.
 |---|---|---|
 | `lmx_ids` (two tables "code → name", "name → code", unit codes `l2_ids[K]`, `LMX_ID_*`) | a numeric code as the identity of a spelling | replace by the string table (§4): identity is the string's address; word constants are the pointers of §6.2 |
 | `LmxSourceName {key, port, code, place_spec, model_layout, place_uses, place_callable}` and `lmx_source_names` | the binding "occurrence + port → code" with side place maps | replace by the address → name table (§5.1); no place maps: a field is a slot |
-| `lmx_walk_input_width` counts an ordinary Structure's interface by the positive ports of the name table; the emitter creates those rows (`lmx_source_name_set_at` by `m_dyn`) -- Codex's example | the interface is derived from a side table, not from the graph | a Structure's interface is its slots (`count`, named addresses); hidden inputs by §6.3 |
+| `lmx_walk_input_width` counts an ordinary Structure's interface by the positive ports of the name table; the emitter creates those rows (`lmx_source_name_set_at` by `m_dyn`) -- Codex's example | the interface is derived from a side table, not from the graph | a Structure's interface is its slots (`size`, named addresses); hidden inputs by §6.3 |
 | Place tables `[m, SIZE_MAX, (code, type)…]` (`lmx_source_places_set`, the `PLACE` frame, `LmxCallPlaces`) | a static description of a procedure's places beside the graph | remove: a place is a slot; a name is a word resolved by the traversal (§3.5) |
 | `LmxActivationBinding {code, storage, type, value}`, `lmx_activation_bind` | binding a name by code in an activation | remove: a formal/input is the address of a slot (§6.3), resolution is the traversal's table |
 | A place without an initializer | no hidden initialized flag and no promotion of internal indirection to a language reference type | a persistent `uninit:T` pointer onto the same T; every write goes into T, without rebinding the slot; `i` remains `int` (§3.2) |

@@ -10,7 +10,9 @@ The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an int
 <a id="lmx"></a>
 ## 2. `Lmx` Structure
 
-The target physical model has a common `Lmx` base for graph objects. A language Array is an `Lmx` Structure with fixed, typed element storage, not a separate `VoidArray` record serving as the base of `Lmx`. Both ordinary Structures and Arrays have structural `parent` and `native`; the exact C99 layout of the shared base and Array specialization remains a migration decision. The current inverted C layout is recorded only in the [implementation notes](implementation-notes.en.md#l2-status), not prescribed as the target.
+Graph objects share a flat `Lmx` with fields ordered `parent`, `native`, `size`, `data`: `@: parent Lmx`, `LmxEntry: native`, `size_t: size`, `@: data void`. `size` is the element count and `data` the address of their storage; the target record has no intermediate `array: VoidArray` field. A language Array retains this base, structural parent/native and fixed typed storage. A numeric Array stores T-elements directly at data; an ordinary Structure and Array<@> store `void *` elements. The header's address range supplies the type, not the spelling `void *data`. A reference points to the beginning of Lmx. This is the approved target of 2026-11-13; the generator's current nested record and the remaining migration are recorded in [implementation status](implementation-notes.en.md#l2-status).
+
+An ordinary Structure and an untyped-pointer Array<@> are fully interchangeable for the same contents: index, length, named access when names exist, admission, copying, execution, `typeof` and descriptor access follow the same rules. Equal C layout without those operations is insufficient. Numeric Arrays retain T-storage, and growable List remains separate. The header is not part of the element sequence: `S[i]` selects from data and `length(S)` reads size.
 
 `parent` describes structural nesting, not Message parentage. For an Array created at an `arr` field, its parent is the graph occurrence representing that field; for a Structure constructed as an owned Array element, its parent is the Array. Storing a reference to an existing Structure in an element does not reparent that referent. Likewise a mention of the name of a known Structure is not expanded -- neither by the parser nor when the clean graph is built: the tree holds an atom, a pointer to that Structure, while that Structure's `parent`, that is its place in the tree, does not change, and no subtree arises under the Structure that mentions it (the author's answers of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#known-name-not-expanded), [L3](LMX_semantics.en.md#colon-declares)). Lexical visibility follows the place of construction in the tree -- the structural `parent` -- not the position of the declaring line: visibility in data runs in both directions ([L3](LMX_semantics.en.md#declaration-visibility)); no additional hidden context is created. `native` selects a native entry; zero walks the stored body. A graph object has no stored name, model tag, or extra execution-state fields. Structure field count and Array element count are fixed at construction; addressable cells do not move. Primitive elements remain typed cells and need no individual `parent` field.
 
@@ -26,6 +28,24 @@ The walker executes the current suitable tree, including one constructed or modi
 Entity names live only in an external table. The walker may obtain the written head's name by its address to determine the head's role; this is not textual variable lookup for field access. The translator sees the parser tree, while completed `native` needs no name for invocation. Comments play no dispatch role. `toLmx` emits the current graph composition and order: an overwritten operator is not reconstructed from source or a hidden copy. Launch data, call status, and Thread membership are not appended to the program graph.
 
 References stored as data form a graph and may produce cycles. Structural `parent` forms a tree. Address classification determines a value's kind; the slot address and address stored in that slot are distinct.
+
+<a id="get-descriptor"></a>
+### 2.2. getDescriptor and actual header fields
+
+`getDescriptor: S` is an ordinary receiver. Its result d is an ordinary Structure with four named fields holding the addresses of the fields of live S:
+
+```text
+(
+    @@: parent Lmx
+    @: native LmxEntry
+    @: size size_t
+    @@: data void
+)
+```
+
+The machine types of the values are `Lmx **`, `LmxEntry *`, `size_t *` and `void **`, respectively. LmxEntry is already a function pointer; its cell's address keeps the real type without casting to `void **`. `\(d\native) := 0` changes S.native and selects the ordinary walker on the next call. `d\native := 0` changes only the ordinary pointer field in d. Reading an earlier address observes S's current field; obtaining another descriptor reaches the same physical cells. There is no header copy, write-back, proxy or separate registry.
+
+Pointer depth is any finite depth: taking an address adds one level, dereferencing removes one. Pointer depth and finite Array rank are independent and use general mechanisms. S.parent's address can numerically equal S: typed dereferencing of Lmx ** accesses the actual field rather than classifying it as a second independent Lmx. Qualification, explicit writes and lifetime retain their ordinary rules; obtaining a descriptor does not extend S's life. Ordinary `S\parent`/`S\native`/`S\size`/`S\data` paths select user fields, with no header exception. [Author decision](../LMX_blog/2026-11-13-get-descriptor.md), [open M13 implementation](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 <a id="type-by-range"></a>
 ## 3. Type by address range
@@ -146,6 +166,15 @@ L2 machine types retain the representation and numeric semantics of correspondin
 
 <a id="lowlevel-address"></a>
 ## 18. Addresses, loading, and writing
+
+Field addresses returned by [getDescriptor](#get-descriptor) are actual typed places:
+`Lmx **`, `LmxEntry *`, `size_t *`, `void **`. This differs from an ordinary graph-slot
+address `void **`: it cannot arbitrarily be read as `Lmx **`, whereas S.parent itself
+really has type `Lmx *`. Even if S.parent and S share a numeric address, an explicit
+dereference reads the field by its type. Loading and writing are general for any finite
+pointer depth, including references and function pointers. Explicit `S\field := value`
+and dereferenced writes are not assignment through a bare Structure or function name
+and are not prohibited by that rule.
 
 M3 orders flat declarations as name followed by requirement/value. A place is declared by the `@:` form enumerating its arguments: `@: p 0`, `@: p Model`, `@: p Model 0`, `@: p Model Other`; the form with the place in the outer head (`ptr: @: Model: 0`), which N1–N6 admitted, is withdrawn by the author's decision of 2026-11-10 ([semantics](LMX_semantics.en.md#receiver-args-only)). The first field is the place-name atom and is not invoked; the other fields are consumed under the ordinary expression rule: the arguments of a receiver are read by the one general algorithm, as code. A requirement with a candidate is written flat, in three fields: `@: p Model Other`, and a null address `@: p Model 0`. The nested form `@: p Model: Other` does not write a requirement with a candidate: `Model: Other` among the arguments of a receiver is a call of `Model` (a consequence of the author's decision of 2026-11-11 on the reading of arguments, [the roles `data` and `code`](LMX_semantics.en.md#data-code-roles); the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), О4); a launch form of a Structure at a place where a value is needed (an operand of an expression, an actual argument of a call, an initial value, an operand of `merge`) is an error: a launch has no result (the executor's reading, Р22, item 3; Р25, item 4). P0 does not single out these forms: parsing is common, while the `@:` contract assigns field roles. Initial `@: p` or `@: p 0` creates a void reference; a later address write does not retroactively add a requirement. Pointer depth `@ⁿ:` has no arbitrary numerical cap.
 

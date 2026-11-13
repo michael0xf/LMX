@@ -16,8 +16,107 @@
 # form -- compact or a block -- is listed (COLON-FORM) and left as written; so is a site whose Frame defines or
 # declares (6-10, COLON-DEFINES).  Nothing is found by the text: a line the census does not name is not touched,
 # and a row the text does not confirm changes nothing.
-
 # The part of path below root -- `\` read as `/`, ASCII letters without case -- or 0 when path is not below it.
+# M8: selected parser-report sites, relative-file TAB offset TAB exact-head, ordered by file and offset.
+# Removing only the colon and intervening whitespace preserves the group's own contents and closing bracket.
+fn: group_sites_write (@: path char; @: text char; @: skip char; size_t: n) int
+    @: out char c.malloc(n + 1U)
+    size_t: i 0U
+    size_t: j 0U
+    int: status 2
+    if: out = 0
+        return: 2
+    while: i < n
+        if: skip[i] = 0
+            out[j] := text[i]
+            j := j + 1U
+        i := i + 1U
+    status := file_write(path, out, j)
+    c.free(out)
+return: status
+
+fn: group_sites (@: root char; @: report char) int
+    size_t: n 0U
+    size_t: at 0U
+    size_t: ntext 0U
+    size_t: off 0U
+    size_t: after 0U
+    size_t: stop 0U
+    size_t: previous 0U
+    size_t: sites 0U
+    size_t: files 0U
+    @: data char file_read(report, @ n)
+    @: line char 0
+    @@: fields char c.calloc(3U, sizeof(@: char))
+    @: relative char 0
+    @: path char 0
+    @: text char 0
+    @: skip char 0
+    int: status 0
+    int: pending 0
+    if: data = 0 || fields = 0
+        return: 2
+    line := next_line(data, n, @ at)
+    while: line != 0 && status = 0
+        if: line[0] != 0 && line[0] != 35
+            if: tsv_split(line, fields, 3) != 3
+                status := 1
+                break
+            if: relative = 0 || c.strcmp(relative, fields[0]) != 0
+                if: relative != 0
+                    if: c.strcmp(relative, fields[0]) >= 0 || group_sites_write(path, text, skip, ntext) != 0
+                        status := 1
+                        break
+                    files := files + 1U
+                c.free(relative)
+                c.free(path)
+                c.free(text)
+                c.free(skip)
+                relative := txt_dup(fields[0])
+                path := txt_path(root, fields[0])
+                ntext := 0U
+                text := file_read(path, @ ntext)
+                skip := c.calloc(ntext + 1U, 1U)
+                pending := 0
+                if: relative = 0 || path = 0 || text = 0 || skip = 0
+                    status := 2
+                    break
+            ---
+            off := (cast: (size_t) c.strtoull(fields[1], 0, 10))
+            after := off + c.strlen(fields[2])
+            if: after < off || after >= ntext || (pending != 0 && off <= previous) || c.memcmp(text + off, fields[2], c.strlen(fields[2])) != 0 || text[after] != 58
+                c.printf("GROUP-UNCONFIRMED %s:%zu\n", fields[0], off)
+                status := 1
+                break
+            stop := after + 1U
+            while: stop < ntext && (text[stop] = 32 || text[stop] = 9 || text[stop] = 10 || text[stop] = 13)
+                stop := stop + 1U
+            if: stop >= ntext || text[stop] != 40
+                c.printf("GROUP-FORM %s:%zu\n", fields[0], off)
+                status := 1
+                break
+            while: after < stop
+                skip[after] := (cast: (char) 1)
+                after := after + 1U
+            previous := off
+            pending := 1
+            sites := sites + 1U
+        line := next_line(data, n, @ at)
+    if: status = 0 && pending != 0
+        status := group_sites_write(path, text, skip, ntext)
+        if: status = 0
+            files := files + 1U
+    ---
+    c.free(relative)
+    c.free(path)
+    c.free(text)
+    c.free(skip)
+    c.free(fields)
+    c.free(data)
+    c.printf("GROUP-MIGRATED %zu sites in %zu files, status %d\n", sites, files, status)
+return: status
+
+# The part of path below root, accepting Windows separators and case, or 0 when path is not below it.
 fn: colon_below (@: path char; @: root char) @: char
     size_t: i 0U
     int: a 0

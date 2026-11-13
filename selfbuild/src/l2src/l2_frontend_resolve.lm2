@@ -808,6 +808,7 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
     @: inner_contract c.L2TypeContract 0
     @: contract c.L2TypeContract 0
     @: frame c.LmP0Frame c.lm_compiler_application(source_node)
+    @: description c.LmP0Structure 0
     @: first c.LmP0Field
     @: name_field c.LmP0Field 0
     @: type_field c.LmP0Field 0
@@ -836,8 +837,11 @@ fn: lm_compiler_declaration (const: (@: source_node c.LmP0Node)) @: c.L2Declarat
         return: (cast: (@: c.L2Declaration) (0))
     if: frame\head = 0 || frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
         return: (cast: (@: c.L2Declaration) (0))
-    first := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (frame\body\first_field)))
-    n := c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (frame\body)))
+    description := (cast: (@: c.LmP0Structure) frame\body)
+    if: c.lm_compiler_head_word((cast: (const: @: c.LmP0Text) frame\head)) != 0 || c.lm_compiler_predef_receiver((cast: (const: @: c.LmP0Text) frame\head)) != 0
+        description := c.lm_compiler_description_body(description)
+    first := c.lm_compiler_next_active((cast: (@: c.LmP0Field) description\first_field))
+    n := c.lm_compiler_count_active(description)
     if: first = 0 || first\value = 0 || n < 1
         return: (cast: (@: c.L2Declaration) (0))
     depth := c.lm_compiler_address_depth((cast: (const: @: c.LmP0Text) (frame\head)))

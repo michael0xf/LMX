@@ -1,4 +1,4 @@
-# Source-only whole remaining P0 port from frozen224; not compiled or integrated.
+# Maintained P0 parser, originally ported from frozen224.
 # All 204 ordinary bodies; no retained handwritten L1/C body fallback.
 # The existing L3 ABI writer must provide the three activation scratch records.
 predef: "l1src/p0.h.lm1"
@@ -4954,20 +4954,25 @@ fn: lm_p0_normalize_sole_anonymous_container (@: body c.LmP0Structure) int
     inner\field_count := 0U
     only\value := 0
     only\next := 0
-    return: 1
+    return: 2
 end: lm_p0_normalize_sole_anonymous_container
 
 # Original: parser.lm1:4191 lm_p0_normalize_sole_anonymous_in_trailer
 fn: lm_p0_normalize_sole_anonymous_in_trailer (@: trailer c.LmP0Trailer) int
+    int: normalized 0
     if: trailer = 0
         return: 1
     if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) trailer\body)) = 0
         return: 0
-    return: lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) trailer\body))
+    normalized := lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) trailer\body))
+    if: normalized = 2
+        trailer\flags := trailer\flags | c.LM_P0_TRAILER_SOLE_GROUP
+    return: (cast: (int) (normalized != 0))
 end: lm_p0_normalize_sole_anonymous_in_trailer
 
 # Original: parser.lm1:4199 lm_p0_normalize_sole_anonymous_in_node
 fn: lm_p0_normalize_sole_anonymous_in_node (@: p0_node c.LmP0Node) int
+    int: normalized 0
     if: p0_node = 0
         return: 1
     # A root field of a nested document: its own document normalized it once.
@@ -4976,8 +4981,11 @@ fn: lm_p0_normalize_sole_anonymous_in_node (@: p0_node c.LmP0Node) int
     if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && p0_node\as\frame != 0
         if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) p0_node\as\frame\body)) = 0
             return: 0
-        if: lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) p0_node\as\frame\body)) = 0
+        normalized := lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) p0_node\as\frame\body))
+        if: normalized = 0
             return: 0
+        if: normalized = 2
+            p0_node\as\frame\flags := p0_node\as\frame\flags | c.LM_P0_FRAME_SOLE_GROUP
         return: lm_p0_normalize_sole_anonymous_in_trailer((cast: (@: c.LmP0Trailer) p0_node\as\frame\trailer))
     if: p0_node\kind = c.LM_P0_NODE_STRUCTURE && p0_node\as != 0
         if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) p0_node\as\structure)) = 0

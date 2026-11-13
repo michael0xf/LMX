@@ -144,6 +144,25 @@ fn: lm_compiler_count_active (const: (@: body c.LmP0Structure)) int
     return: (cast: (int) (lm_compiler_count_active_tail((cast: (@: c.LmP0Field) body\first_field))))
 end: lm_compiler_count_active
 
+# A consumer of a description reads parentheses as grouping. This borrowed view changes no P0 field or ownership;
+# ordinary Structure declarations and argument values keep their written boundaries.
+fn: lm_compiler_description_body (@: body c.LmP0Structure) @: c.LmP0Structure
+    @: only c.LmP0Field 0
+    @: item c.LmP0Node 0
+    @: inner c.LmP0Structure 0
+    while: body != 0 && body\trailer = 0
+        only := lm_compiler_next_active((cast: (@: c.LmP0Field) body\first_field))
+        if: only = 0 || lm_compiler_next_active((cast: (@: c.LmP0Field) only\next)) != 0
+            break
+        item := (cast: (@: c.LmP0Node) only\value)
+        if: item = 0 || item\kind != c.LM_P0_NODE_STRUCTURE || item\as = 0 || (item\flags & (c.LM_P0_NODE_MIX | c.LM_P0_NODE_POSITIONAL_SKIP)) != 0U
+            break
+        inner := (cast: (@: c.LmP0Structure) item\as\structure)
+        if: inner = 0 || inner\trailer != 0
+            break
+        body := inner
+return: body
+
 fn: lm_compiler_digits (const: (@: text c.LmP0Text)) int
     size_t: i
     if: text = 0 || text\data = 0 || text\length = 0U

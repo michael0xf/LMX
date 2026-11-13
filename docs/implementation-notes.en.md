@@ -83,6 +83,8 @@ and checks are in the [current kernel gate](../next_core_tasks_v3.md).
 
 The accepted P0 package (slice 359, 2026-11-13) uses one stream parser inside `()`, `[]` and `{}` and post-processes a nested document once; it recognizes lost closing brackets, the end of a comment at the Mix document boundary, and marks attached to an intact string atom. The L2 `parser-suite` command passed 139 cases, including five saved changes to historical inputs; 11 end-to-end graph cases passed interp/native/forced. Exact builds, bootstrap acceptance and limits are in the [witness](../steps/witnesses/p0-unified-documents-20261113/notes.md). M8 remains open: P0 unwraps a sole anonymous Structure and rejects bare `f:`. The working frontend still retains the former M11 semantics; the P0 fix does not migrate it.
 
+Slice 360 starts M8: the graph groups command records actual normalization events; 487 maintained .lm2 inputs contain 24,723 events. The working frontend gained a borrowed view of description groups, and L2 group-migrate can convert declaration sites selected from the report. General reception of the whole argument Structure is still pending, so normalization remains enabled. Exact inputs, commands and limits are in the [M8 witness](../steps/witnesses/m8-preparation-20261113/notes.md).
+
 Copying a description preserves evidence of its address layout. A later
 argument can compose already known correspondences to that layout; the
 result is cached as an address map, not as a new full reception check

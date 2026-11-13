@@ -1,6 +1,26 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 359): Codex integrated the five P0 fixes and
+Current continuation (2026-11-13, slice 360): M8 preparation adds the parser-driven
+group census, a borrowed description view in the working frontend, and the L2
+group-migrate command for reviewed declaration sites. The census found 24,723
+normalizations in 487 tracked .lm2 inputs. The parser still unwraps groups and
+rejects bare head:; general whole-argument binding is the next dependency.
+[Commands, receipts and limits](../steps/witnesses/m8-preparation-20261113/notes.md).
+
+Bootstrap quick G1/G2 passed nine smoke rows per generation. Frontend/tool L1 and C
+are byte-equal between generations; 139 parser cases, whole_arguments in three modes,
+and docs check passed. The canonical 597-entry manifest is source08; only the diagnostic
+graph command changed after the bootstrap inputs were captured, and it was built by G2.
+
+The census command is `GRAPH 0 entry 0 -- groups ROOT LIST NEW_OUT`. LIST contains
+explicit relative input paths, one per line; Mix rows are marked separately.
+`TOOL 0 entry 0 -- group-migrate ROOT SITES` applies only reviewed rows of the form
+relative-file TAB byte-offset TAB exact-head, ordered by file and offset. It verifies
+the written head, colon and group opening before changing A: (fields) to A(fields).
+It does not classify declarations by their names. No project declaration is migrated
+by slice 360; the command is ready for M8's consumer and source transition.
+
+Previous continuation (2026-11-13, slice 359): Codex integrated the five P0 fixes and
 the shared constructor for nested named blocks. The canonical inputs.sha256 now has
 597 entries and equals the manifest used for bootstrap quick G1/G2. Both generations
 passed the 9-row smoke suite; tool L1/C are byte-equal and executables differ only

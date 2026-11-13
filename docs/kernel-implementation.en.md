@@ -899,7 +899,7 @@ The common call mechanism selects the argument; both variants share the same res
 
 Ordinary receiver `descriptor: S` returns an ordinary Structure of addresses of the actual `parent/native/length/storage`
 fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **` ([exact form](L2_spec_en.md#get-descriptor)).
-A dereferenced write changes S's field immediately; writing a result field changes its own pointer.
+A dereferenced write addresses S's field; writing a result field addresses its own pointer. Publication follows the common frame contract.
 Clearing S.native selects the ordinary walker for the next call. There is no copy, proxy, writeback or separate opcode.
 S.parent may have the same numeric address as S: typed `Lmx **` access addresses the field, not a second Lmx.
 Taking the address neither extends S's lifetime nor transfers ownership. Arbitrary finite pointer depth and Array rank
@@ -1249,6 +1249,11 @@ time and keeps no correspondence between calls -- step 7 of [section M11 of the 
 <a id="interpreter"></a>
 ## 6. The interpreter
 
+The walker uses an ordinary frame's prepared working state: resolved places, values,
+dirty state and continuation. Field order below specifies logical execution order, not an obligation
+to reread a changed graph before every operation. Publication and continuation must agree
+with native, including nested calls and changes to executing code ([M14](../next_core_tasks_v3.md#native-structures)).
+
 ### 6.1 Traversal
 
 Executing a body is a walk over the Lmx of statements in field order. A statement is an Lmx (§3.3). The head of a named
@@ -1372,11 +1377,12 @@ through the same map. The name of a function created from a composition is the n
 (`fn: new_name merge(f1, f2)`), not a field and not the operands' names (§3.4). The implemented subset and its open
 parts: the status above (graph73).
 
-### 6.5 Resetting `native` on a write (decision; the norm is [L2 §11](L2_spec_en.md#call))
+### 6.5 Resetting `native` when a write is published (norm: [L2 §11](L2_spec_en.md#call))
 
-The norm ([L2 §11, the paragraph on writing](L2_spec_en.md#call)): the common write path, with the place and the value
-admitted, resets `native` of the **code places** linked to the changed cell (the direct path at the write, the working
-`dirty` at the publication checkpoint); **changing an ordinary data value keeps the entry**; the link to a code place
+The norm ([L2 §11, the paragraph on writing](L2_spec_en.md#call)): a write changes a frame working place and dirty state;
+at a standard publication checkpoint the common mechanism resets `native` of **code places** linked to the changed cell.
+An explicit path, alias or dereference selects the place, not immediate publication.
+**Changing an ordinary data value keeps the entry**; the link to a code place
 may belong to an enclosing Structure, not only to the Structure with the written slot; writing into the slot and
 removing the inputs of changed code are atomic for the next or a recursive dispatch; a refused invalidation stays before
 publication. The implementation tells **code from data by the place of the write**, not by transitive reachability of
@@ -1412,6 +1418,22 @@ primitive.
 
 <a id="native"></a>
 ## 7. Native
+
+An ordinary Structure C used as code is compiled by the same body emitter and frame mechanism
+as fn/sub. Its entry is installed in C.native and works with any admitted D through `call(D C)`:
+the existing admission and place map bind data at launch, including different field order.
+`call(C C)` is the same case; a fn/sub declaration, a name for C and data = code are not required.
+A Structure used only as data does not need its own native entry for that use.
+
+The frame reuses resolved addresses and typed working values. Dirty data and code are published
+after argument evaluation before control transfer, on specified exits and at yield.
+The graph write and removal of affected code entries are one publication before a new/recursive dispatch.
+Clearing native neither replaces machine instructions already executing nor restarts effects.
+The walker retains the same prepared-frame and continuation contract, including boundaries after nested calls.
+No artificial method, whole-graph copy, permanent versions, hot-patch/deoptimization or separate JIT is introduced.
+A dynamically selected compiled C uses its entry; a suitable runtime body without native uses the walker.
+Implementation of this addition remains **OPEN**: [M14](../next_core_tasks_v3.md#native-structures),
+[author's decision](../LMX_blog/2026-11-13.md#native-dirty-publication).
 
 The translator is a consumer of the clean Lmx graph (§1a), not of the parse tree: its input is the unit's built graph in
 the translation arena, and everything it knows about the program it reads from slots, cells, the address → name table and

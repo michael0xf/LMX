@@ -17,7 +17,7 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 
 The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `native`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed access and the separate List contract remain. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
 
-Lowering ordinary receiver [`descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write changes the original field immediately; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
+Lowering ordinary receiver [`descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write addresses the original field and is published by the standard frame mechanism; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
 
 Lowering [`parent`, `native`, `length`, `storage`](L2_spec_en.md#header-receivers) reads the corresponding
 header field of the selected Lmx. With no argument it selects the current launch's data; code is explicit.
@@ -80,6 +80,12 @@ R0 and the upper host scaffold use the common Thread mechanism. Launch data belo
 ## 11. Working state
 
 L1 kernel code implements loads of used own fields, `dirty` marks, and publication at checkpoints. This lowers [L3 semantics](LMX_semantics.en.md#dynamic), rather than redefining the language. Graph slots remain physically stable.
+
+Ordinary Structure C bodies and methods share native emission and frame entry/exit. One C.native
+works with different admitted D and their field orders through the existing place map; data = code
+is not required. Publication of code and data changes follows frame dirty state, including explicit addressed writes.
+Walker and native continuations after publication must agree; clearing an entry does not replace
+machine instructions already running. Implementation remains open in [M14](../next_core_tasks_v3.md#native-structures).
 
 <a id="call"></a>
 ## 12. Call

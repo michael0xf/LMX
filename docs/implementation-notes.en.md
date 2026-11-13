@@ -8,6 +8,19 @@ failures, commands, and dated results belong to the [v3 plan](../next_core_tasks
 [archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md).
 An old passing run does not prove a newer rule.
 
+## Addition of 2026-11-13: common native code and publication — OPEN
+
+[M14](../next_core_tasks_v3.md#native-structures) requires native code for ordinary C through the same mechanism
+as methods, without data = code, artificial fn or a new runtime. One entry works with different admitted D
+through the existing frame and place map. Dirty code and data, standard publication and continuation
+after it must agree between native and a walker optimized with frames.
+
+Reading main cde574b8 shows `lm_graph_collect_methods` still selects fn/sub results, with separate root emission.
+`lm_graph_emit_methods` installs an emitted address on the declaration; `lmx_graph_fn_make` transfers it
+to the constructed function. This neither compiles inside fn nor provides native for arbitrary nested C.
+This documentation clarification changes no code. The new rule does not establish M14 readiness;
+earlier direct-write witnesses do not specify publication timing for the new implementation.
+
 <a id="source-migration"></a>
 ## 1. Sources and migration boundary
 
@@ -70,7 +83,7 @@ Common operations must accept Structure and `Array<@>` interchangeably,
 without refusal based solely on the header category. `descriptor`
 is not implemented yet: it must select an explicit S or the current data when no argument is supplied:
 `descriptor() = descriptor(data)`, including inside nested control bodies.
-Both variants return actual field addresses with immediate writes through ordinary dereferencing
+Both variants return actual field addresses with writes through ordinary dereferencing and standard frame publication
 ([contract](L2_spec_en.md#get-descriptor)). Arbitrary finite pointer depth
 and Array rank use the existing general algorithms; the old parser is
 not rewritten. Typed arena arrays remain storage, not standalone

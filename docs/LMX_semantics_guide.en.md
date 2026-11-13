@@ -154,7 +154,7 @@ Forms `descriptor: S` and `descriptor:` have the same contracts; in data, the fo
 Let d be the result of the ordinary call `descriptor: S`. It is a Structure
 of addresses of fields `parent`, `native`, `length`, `storage` of S's flat header.
 For example, `\(d\native) := 0` writes zero to the actual S.native:
-the next call of S uses the walker. Writing `d\native := 0` changes
+after standard publication the next call of S uses the walker. Writing `d\native := 0` changes
 only the pointer inside d. There is no snapshot or later synchronization.
 
 An explicit field path or typed dereference allows an ordinary write,
@@ -183,6 +183,23 @@ form is one more occurrence of the name). Bare `myFunc` or `ptr` only
 reads a value. `(\ptr)()` calls after explicit dereference; `\ptr()`
 applies `\` to the **result** of the call under ordinary precedence,
 not through a special pointer-call rule.
+
+<a id="native-structures"></a>
+## Ordinary Structure native code and publication
+
+One body C receives a machine entry through the same mechanism as methods and works with any admitted D:
+`call(D C)`. The existing place map handles D's different field order. `call(C C)` is the same case;
+no artificial fn or native version for each D is needed. A Structure used only as data does not need
+its own native entry for that use; native(S) reads an entry and does not compile S.
+
+An admitted write changes a frame working place and dirty state. After actual-argument evaluation before
+control transfer, on specified exits and at yield, ready changes are published to resolved addresses.
+A path or dereference selects an actual address rather than immediate publication.
+Publication of a code change removes related native entries; an ordinary data write keeps the entry.
+Clearing the pointer neither replaces machine instructions already running nor repeats effects.
+The walker must reuse a prepared frame and agree with native on continuation after
+publication and a nested call. This introduces no new graph copy or version registry.
+[Rule](LMX_semantics.en.md#native-structures), [open M14 implementation](../next_core_tasks_v3.md#native-structures).
 
 <a id="native-merge"></a>
 ## Native code in a copy

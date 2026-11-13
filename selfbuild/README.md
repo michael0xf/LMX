@@ -22,6 +22,10 @@ their contracts. This is documentation of pending code work, not a new verified 
 Descriptor also accepts an explicit S or defaults to the current launch's data:
 `descriptor() = descriptor(data)`, including inside nested control bodies.
 
+[M14](../next_core_tasks_v3.md#native-structures) adds ordinary Structure native emission through
+the existing method/frame mechanism, without data = code. Dirty code/data publication and walker/native
+continuation must agree. This dependent execution work remains open; no implementation is claimed here.
+
 Previous continuation (2026-11-13, slice 361): the clean-graph whole-argument
 binder maps named fields by name and unnamed fields by their source position.
 The existing whole_arguments case now includes two unnamed fields (23) and

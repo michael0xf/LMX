@@ -577,6 +577,17 @@ the role of code of a form with an ordinary Structure as its head by name
 reads the former names and order and does not execute the launch by name
 (step 8).
 
+The existing place map and frame also serve ordinary Structure native bodies:
+one C.native executes with any admitted D, including reordered fields, through
+the same body emitter and entry/exit mechanism as methods. Neither fn/sub nor
+data = code is required. Data-only use does not require S.native. A dynamically
+selected compiled C uses its entry; suitable uncompiled runtime code uses the walker.
+Dirty data and code share publication checkpoints. Clearing native affects a new
+dispatch, not machine instructions already running; the walker must retain equivalent
+prepared-frame continuation after publication and nested calls. No artificial method,
+whole-graph copy or permanent version registry is introduced. Implementation is open in
+[M14](next_core_tasks_v3.md#native-structures).
+
 The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already
 computed `dirty` values go directly to their selected physical `data` slots
@@ -595,8 +606,8 @@ and invalidate an incompatible `native` when that body changes, including
 publication within `data` or through a code/data alias. Do not add a special
 execution path or hidden copy for this form. Entry into `call(code code)`
 alone does not invalidate anything. A working `dirty` value has not changed
-the graph until publication; a direct graph write reaches that boundary
-immediately. With the place and value admitted, follow the actual cell-to-code links, including enclosing code; commit the slot
+the graph until publication; explicit paths, aliases and dereferences select actual
+places and use that same frame dirty state and the standard publication checkpoints. With the place and value admitted, follow the actual cell-to-code links, including enclosing code; commit the slot
 and clear the affected code entries as one observable operation before another or
 recursive dispatch. A failed write
 or a compatible data-value update preserves the entry. L2 code needs a

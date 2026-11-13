@@ -588,6 +588,15 @@ prepared-frame continuation after publication and nested calls. No artificial me
 whole-graph copy or permanent version registry is introduced. Implementation is open in
 [M14](next_core_tasks_v3.md#native-structures).
 
+The publication contract does not require a universal assignment journal. Native determines
+needed stores and conditions statically where possible; dynamic places use only necessary frame
+change tracking. Computations, checks, effects, alias reads and publication timing are preserved.
+Ordinary non-declaring `flush()` takes no arguments and returns no value: it publishes ready dirty
+changes of the current frame and continues execution, with no new activation, yield, exit or Message
+publication. Successful publication clears dirty state; another flush without new changes writes nothing
+and repeats no evaluation/admission or cache load. Same-headed data remains ordinary data.
+The language receiver is an open M14 task; the existing internal publication helper is not its implementation.
+
 The `implements` field-address
 map is general for any admitted pair of Structures. At publication, already
 computed `dirty` values go directly to their selected physical `data` slots

@@ -201,6 +201,21 @@ The walker must reuse a prepared frame and agree with native on continuation aft
 publication and a nested call. This introduces no new graph copy or version registry.
 [Rule](LMX_semantics.en.md#native-structures), [open M14 implementation](../next_core_tasks_v3.md#native-structures).
 
+<a id="flush-receiver-contract"></a>
+## Explicit publication with flush()
+
+`flush()`, with no arguments or result, publishes the current frame's ready dirty changes and continues
+execution. Nested if/loop bodies use the same frame. It causes no new launch, exit, yield or Message publication.
+After successful publication dirty state is cleared: a second flush without new changes writes nothing,
+reevaluates no expressions/admission and reloads no cached values. Code changes use common invalidation.
+Bare atom flush does not invoke the receiver; in data, flush() remains an ordinary Structure.
+
+Publication semantics is shared; a universal journal of all assignments is unnecessary. Native determines
+required writes and conditions statically where possible; only dynamic places need necessary
+change tracking in the frame. Reducing writes preserves computations, checks, effects and alias observability
+at the same boundaries. [Contract](LMX_semantics.en.md#flush-receiver-contract),
+[open M14 implementation](../next_core_tasks_v3.md#native-structures).
+
 <a id="native-merge"></a>
 ## Native code in a copy
 

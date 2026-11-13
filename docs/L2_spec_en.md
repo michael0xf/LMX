@@ -173,6 +173,18 @@ No artificial method, whole-graph copy, permanent versions or hot-patch/deoptimi
 A dynamically selected compiled C uses native; a suitable runtime body without an entry uses the walker.
 This is the rule; implementation remains **OPEN** in [M14](../next_core_tasks_v3.md#native-structures).
 
+One publication semantics does not require a universal assignment journal. Native determines writes
+and their publication conditions statically where possible, without a lookup or allocation on every write
+or a mandatory dynamic dirty flag. Dynamic places need only necessary change tracking in the existing frame.
+Optimization preserves computations, checks, effects, alias reads and the moment publication becomes observable.
+
+Ordinary non-declaring receiver `flush()`, with no arguments or result, explicitly publishes the current frame's
+ready dirty changes and continues execution. It uses standard publication and code invalidation without a new
+frame, exit, yield or Message publication. Nested if/loop bodies use that same frame. Successful publication
+clears the corresponding dirty marks; repeating flush without changes writes nothing, reevaluates no
+expressions/admission and reloads no cached values. Bare atom does not invoke it; in data, `flush()` is an ordinary Structure.
+Form `flush:` has the same contract. [Rule](LMX_semantics.en.md#flush-receiver-contract); M14 code remains OPEN.
+
 <a id="child"></a>
 ## 12. Child reservation
 

@@ -25,6 +25,10 @@ Descriptor also accepts an explicit S or defaults to the current launch's data:
 [M14](../next_core_tasks_v3.md#native-structures) adds ordinary Structure native emission through
 the existing method/frame mechanism, without data = code. Dirty code/data publication and walker/native
 continuation must agree. This dependent execution work remains open; no implementation is claimed here.
+The next M14 requirement adds explicit current-frame publication through flush(), with no repeated writes
+without new changes. One publication semantics does not require an assignment journal: native should
+determine needed writes statically where possible, using dynamic frame tracking only where necessary.
+The language receiver remains unimplemented; the internal publication helper is existing groundwork.
 
 Previous continuation (2026-11-13, slice 361): the clean-graph whole-argument
 binder maps named fields by name and unnamed fields by their source position.

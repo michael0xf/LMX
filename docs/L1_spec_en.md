@@ -87,6 +87,12 @@ is not required. Publication of code and data changes follows frame dirty state,
 Walker and native continuations after publication must agree; clearing an entry does not replace
 machine instructions already running. Implementation remains open in [M14](../next_core_tasks_v3.md#native-structures).
 
+One publication contract does not require journaling every assignment. Native determines needed writes
+and conditions statically where possible; dynamic tracking remains only for places that need it.
+`flush()`, with no arguments or result, publishes the current frame's ready dirty changes and continues
+execution. After a successful flush, no new changes means no repeated write; computations, admission
+and cache reload are not repeated. [Contract](LMX_semantics.en.md#flush-receiver-contract).
+
 <a id="call"></a>
 ## 12. Call
 

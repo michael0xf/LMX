@@ -1416,6 +1416,17 @@ it as `data` -- its `native` is reset, while writing a value through the same re
 and a write into an existing cell obey one rule -- the slot's ownership decides. No `parent` is introduced for a
 primitive.
 
+<a id="flush-receiver-contract"></a>
+### 6.6. Explicit publication with flush()
+
+Ordinary non-declaring receiver flush(), with no arguments or result, publishes the current frame's ready
+dirty changes under the same contract as checkpoints. Execution continues without a new activation,
+exit, yield or Message publication. An if/loop body uses the same frame. Successful writes clear dirty state;
+repeating flush without new changes writes nothing, repeats no computations/admission and reloads no cached values.
+Bare atom flush does not invoke the receiver; flush() in data remains an ordinary Structure.
+Code publication and continuation follow §6.5/§7; no separate journal or whole-arena traversal is introduced.
+[Rule](LMX_semantics.en.md#flush-receiver-contract), [open M14 implementation](../next_core_tasks_v3.md#native-structures).
+
 <a id="native"></a>
 ## 7. Native
 
@@ -1426,7 +1437,7 @@ the existing admission and place map bind data at launch, including different fi
 A Structure used only as data does not need its own native entry for that use.
 
 The frame reuses resolved addresses and typed working values. Dirty data and code are published
-after argument evaluation before control transfer, on specified exits and at yield.
+after argument evaluation before control transfer, on specified exits, at yield and on explicit flush().
 The graph write and removal of affected code entries are one publication before a new/recursive dispatch.
 Clearing native neither replaces machine instructions already executing nor restarts effects.
 The walker retains the same prepared-frame and continuation contract, including boundaries after nested calls.
@@ -1434,6 +1445,13 @@ No artificial method, whole-graph copy, permanent versions, hot-patch/deoptimiza
 A dynamically selected compiled C uses its entry; a suitable runtime body without native uses the walker.
 Implementation of this addition remains **OPEN**: [M14](../next_core_tasks_v3.md#native-structures),
 [author's decision](../LMX_blog/2026-11-13.md#native-dirty-publication).
+
+One publication contract does not require a universal journal of every assignment. Native determines
+required writes and publication conditions statically where possible, keeping intermediate values in
+registers/locals without unnecessary dynamic dirty flags. Dynamic places need only necessary change
+tracking in the existing frame, without assignment history. Reducing physical writes preserves all
+required computations, checks, effects, alias observability and publication timing.
+Explicit flush() is another current-frame publication point with standard continuation.
 
 The translator is a consumer of the clean Lmx graph (§1a), not of the parse tree: its input is the unit's built graph in
 the translation arena, and everything it knows about the program it reads from slots, cells, the address → name table and

@@ -21,6 +21,14 @@ to the constructed function. This neither compiles inside fn nor provides native
 This documentation clarification changes no code. The new rule does not establish M14 readiness;
 earlier direct-write witnesses do not specify publication timing for the new implementation.
 
+The next M14 clarification requires one semantics without a universal journal of every assignment;
+native determines writes statically where possible, with dynamic tracking only for places that need it.
+Language receiver flush(), with no arguments or result, must publish the current frame's dirty changes and
+continue without a new activation or Message publication. Repeating it without new changes writes nothing.
+Internal `lmx_graph_work_flush` already publishes its supported working-place subset and clears dirty marks;
+this is an existing part of the common mechanism, not proof that the receiver or all M14 requirements are ready.
+[Contract](LMX_semantics.en.md#flush-receiver-contract); implementation remains OPEN.
+
 <a id="source-migration"></a>
 ## 1. Sources and migration boundary
 

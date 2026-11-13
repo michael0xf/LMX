@@ -1,6 +1,27 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 362): a written Structure selected as
+Current continuation (2026-11-13, slice 364): the clean graph reads written
+actuals by the selected formal's contract and the caller's context. Argument
+fields do not become names of the caller's frame. Native reads an anonymous
+whole operand through the walker's existing live value reader after preflight.
+Named scalar groups and grouped alias calls therefore agree in both modes.
+Bootstrap quick built genuine G1/G2 with nine smoke rows each. All thirteen
+fixed-point checks and 597 canonical inputs passed. G2 rebuilt the graph tool;
+all thirteen values, refusal before effects and whole_arguments passed
+interp/native/forced, including the three final refusal-state comparisons.
+The working bundle is boot-m8-graph-values-02/g2 with
+graph-m8-graph-values-g2-01/graph_trans-prod.exe. P0 normalization remains enabled;
+consumer contracts, declaration migration and the P0 switch remain M8 work.
+[Evidence and limits](../steps/witnesses/m8-graph-values-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 363): the working frontend
+receives written named, positional and mixed fields through the shared whole
+binder, including nested Structures. Anonymous source fields retain their code
+in the same activation. Bootstrap quick G1/G2, thirteen comparisons, 597 inputs,
+five native/forced programs and whole_arguments in three modes passed.
+The working bundle is boot-m8-whole-02/g2. [Evidence](../steps/witnesses/m8-whole-fields-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 362): a written Structure selected as
 a formal's data value keeps its original source object, fields and physical
 parent. A nested method uses that lexical source; an empty Structure remains
 a supplied value. Native and the walker read the same retained literal cell.
@@ -8,7 +29,7 @@ The two focused L2 programs passed native/forced root0 in the ordinary G2 suite.
 Bootstrap quick built genuine G1/G2; G2 then built G3 through build-generation
 quick. Each generation passed nine smoke rows. Thirteen G2/G3 comparisons
 confirmed the fixed point and all 597 canonical inputs (source13).
-The working bundle is boot-m8-values-01/g3 in the current stage;
+Its verified bundle is boot-m8-values-01/g3 in the current stage;
 graph-m8-values-01/graph_trans-prod.exe uses its runtime.
 Group normalization remains enabled. General whole-argument selection, declaration
 migration and the P0 switch remain open.

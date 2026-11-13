@@ -1,0 +1,13 @@
+# An absent required formal refuses the outer call before touch() runs.
+fn: touch () int (
+    Box(int: hits 0)
+)
+    Box\hits := Box\hits + 1
+    return: 7
+fn: pair (int: left; int: right) int
+    return: left * 10 + right
+int: at_end 9
+finally:
+    at_end := touch\data\Box\hits
+int: before touch\data\Box\hits
+int: result pair(((touch())))

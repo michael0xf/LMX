@@ -1,0 +1,61 @@
+fn: pair (int: left; int: right) int
+    return: ((left * 10) + right)
+end: pair
+fn: number (int: value) int
+    return: value
+end: number
+fn: produce () int
+    return: 7
+end: produce
+@: alias produce
+sub: main () (
+    Q:
+        int: x 0
+    end: Q
+    E:
+    int: control 0
+    int: named_fields 0
+    int: unnamed_fields 0
+    int: mixed_fields 0
+    int: written_value 0
+    int: empty_value 0
+    int: scalar 0
+    int: arithmetic 0
+    int: grouped_receiver 0
+    int: named_scalar 0
+    int: several_actuals 0
+    int: named_value 0
+)
+    fn: take (Q: value) int
+        return: (value \ x)
+    end: take
+    fn: empty (E: value) int
+        return: 7
+    end: empty
+    :=: control ((pair 2 3))
+    :=: named_fields ((pair ((int right 3) (int left 2))))
+    :=: unnamed_fields ((pair (2 3)))
+    :=: mixed_fields ((pair (4 (int right 6))))
+    :=: written_value ((take ((int x 7))))
+    :=: empty_value ((empty ()))
+    :=: scalar ((number (7)))
+    :=: arithmetic ((number ((1 + 2))))
+    :=: grouped_receiver ((number ((length Q))))
+    :=: named_scalar ((number (:= value ((7)))))
+    :=: several_actuals ((pair ((2)) 3))
+    :=: named_value ((take (:= value ((int x 7)))))
+end: main
+main:
+int: control 23
+int: named_fields 23
+int: unnamed_fields 23
+int: mixed_fields 46
+int: written_value 7
+int: empty_value 7
+int: scalar 7
+int: arithmetic 3
+int: grouped_receiver 1
+int: named_scalar 7
+int: several_actuals 23
+int: named_value 7
+int: alias_result 7

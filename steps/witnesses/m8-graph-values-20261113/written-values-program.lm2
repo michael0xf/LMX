@@ -1,0 +1,54 @@
+# M8: one written value supplies fields or a Structure in the same frame.
+fn: pair (int: left; int: right) int
+    return: left * 10 + right
+fn: number (int: value) int
+    return: value
+fn: produce () int
+    return: 7
+@: alias produce
+sub: main () (
+    Q(int: x 0)
+    E()
+    int: control 0
+    int: named_fields 0
+    int: unnamed_fields 0
+    int: mixed_fields 0
+    int: written_value 0
+    int: empty_value 0
+    int: scalar 0
+    int: arithmetic 0
+    int: grouped_receiver 0
+    int: named_scalar 0
+    int: several_actuals 0
+    int: named_value 0
+)
+    fn: take (Q: value) int
+        return: value\x
+    fn: empty (E: value) int
+        return: 7
+    control := pair(2 3)
+    named_fields := pair(((int: right 3; int: left 2)))
+    unnamed_fields := pair(((2 3)))
+    mixed_fields := pair(((4; int: right 6)))
+    written_value := take(((int: x 7)))
+    empty_value := empty((()))
+    scalar := number(((7)))
+    arithmetic := number(((1 + 2)))
+    grouped_receiver := number(((length(Q))))
+    named_scalar := number(value := (((7))))
+    several_actuals := pair(((2)) 3)
+    named_value := take(value := ((int: x 7)))
+main()
+int: control main\data\control
+int: named_fields main\data\named_fields
+int: unnamed_fields main\data\unnamed_fields
+int: mixed_fields main\data\mixed_fields
+int: written_value main\data\written_value
+int: empty_value main\data\empty_value
+int: scalar main\data\scalar
+int: arithmetic main\data\arithmetic
+int: grouped_receiver main\data\grouped_receiver
+int: named_scalar main\data\named_scalar
+int: several_actuals main\data\several_actuals
+int: named_value main\data\named_value
+int: alias_result number(((alias())))

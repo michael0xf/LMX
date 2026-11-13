@@ -255,6 +255,7 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
     @: lead char 0
     @: row c.LmxGraphWork 0
     int: framed 0
+    int: callable 0
     int: status c.lmx_graph_scan_add(@ queue, @ count, @ cap, body)
     while: at < count && status = 0
         current := queue[at]
@@ -268,6 +269,9 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
         framed := (cast: (int) (lead != 0 && current != body))
         if: framed != 0 && (lead = state\w_fn || lead = state\w_sub || lead = state\w_fm || lead = state\w_data)
             continue
+        callable := 0
+        if: framed != 0 && lmx_graph_language_word(state, lead) = 0
+            callable := c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, lmx_graph_resolve(g, (cast: (@: c.Lmx) frame\code), lead))))
         first := 0U
         if: framed != 0
             word := lead
@@ -313,7 +317,7 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
             # A named actual selects the callee's formal, or a formal of a launch (lmx_graph_scan_launch), never a free
             # input of this caller.
             if: framed != 0 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
-                if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, lmx_graph_resolve(g, (cast: (@: c.Lmx) frame\code), lead)))) != 0
+                if: callable != 0
                     if: c.lmx_graph_count((cast: (@: c.Lmx) raw)) != 3U
                         status := 5
                         break
@@ -331,6 +335,11 @@ fn: lmx_graph_work_scan (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body c.Lm
                 i := i + 1U
                 continue
             ---
+            # A callable receives this written Structure as data. Its fields
+            # are not declarations or free inputs of the caller's frame.
+            if: callable != 0 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && lmx_graph_group_expression(g, (cast: (@: c.Lmx) frame\code), raw) = 0
+                i := i + 1U
+                continue
             # Such an operand of a launch is data as written (lmx_graph_launch_operand; R21, item 4): this code reads
             # nothing of it.
             if: framed != 0 && lmx_graph_merge_literal(g, (cast: (@: c.Lmx) frame\code), raw) != 0 && lmx_graph_scan_launch(g, frame, lead) != 0
@@ -1249,13 +1258,48 @@ fn: lmx_graph_call_shape (@: g c.LmxGraph; @: code c.Lmx; size_t: actuals) int
     return: 0
 end: lmx_graph_call_shape
 
-# A call written with one positional actual that names a value without effects -- a name or a field path -- or that
-# is a merge may give the whole argument structure (the book, whole-arguments): a Structure whose direct fields name the
-# formals is supplied by its fields. The binder then checks the required formals once that value is known
-# (lmx_graph_call_single), still before any argument effect; the operands of a merge written in the call are evaluated
-# before that check, as for a held result. Literals, operations, addresses, calls and named actuals are ordinary
-# actuals. 1 for such a call, 0 otherwise.
-fn: lmx_graph_single_candidate (@: g c.LmxGraph; @: expression c.Lmx) int
+# An anonymous value keeps its own fields unless it denotes an expression.
+# Operations are already nested Lmx values; this reads their ordinary words,
+# without parsing precedence or changing the source graph. A grouped name or
+# application still evaluates, while a scalar field or nested data stays data.
+fn: lmx_graph_group_expression (@: g c.LmxGraph; @: scope c.Lmx; @: raw void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: value c.Lmx (cast: (@: c.Lmx) raw)
+    @: child void 0
+    @: word char 0
+    size_t: count 0U
+    int: kind 0
+    if: state = 0 || c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != 0
+        return: 0
+    count := c.lmx_graph_count(value)
+    if: count = 1U
+        child := c.lmx_graph_get(value, 0U)
+        kind := c.lmx_graph_kind(g, child)
+        if: kind = 2
+            return: (cast: (int) (c.lmx_graph_name_of(g, child) = 0))
+        if: kind != 4
+            return: 0
+        if: c.lmx_graph_name_of(g, child) != 0
+            # A language application still belongs to its existing receiver,
+            # including a receiver this subset must explicitly refuse.
+            return: (cast: (int) (c.lmx_graph_language_receiver(c.lmx_graph_name_of(g, child)) != 0 || lmx_graph_applies(g, scope, child) != 0))
+        return: lmx_graph_group_expression(g, scope, child)
+    word := c.lmx_graph_word_text(g, c.lmx_graph_get(value, 0U))
+    if: count = 2U
+        return: (cast: (int) (word = state\w_plus || word = state\w_minus || word = state\w_not || word = state\w_deref || word = state\w_at))
+    if: count = 3U
+        if: word = state\w_assign
+            return: 1
+        word := c.lmx_graph_word_text(g, c.lmx_graph_get(value, 1U))
+        return: (cast: (int) (word = state\w_deref || word = state\w_index || word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or))
+return: 0
+
+# One positional value without effects -- written data, a name or a field
+# path -- or a merge may supply the whole argument Structure. Its direct
+# fields bind by name or position through lmx_graph_call_single. The operands
+# of a merge run before that check, as for a held result. Operations, addresses,
+# calls and named actuals keep ordinary preflight before their effects.
+fn: lmx_graph_single_candidate (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: raw void 0
     @: path c.Lmx 0
@@ -1273,10 +1317,16 @@ fn: lmx_graph_single_candidate (@: g c.LmxGraph; @: expression c.Lmx) int
     if: c.lmx_graph_name_of(g, raw) != 0
         return: 0
     path := (cast: (@: c.Lmx) raw)
+    # Written data uses the same field/whole decision as a held Structure.
+    if: lmx_graph_group_expression(g, scope, raw) = 0
+        return: 1
     if: c.lmx_graph_count(path) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) = state\w_deref
         return: 1
-    return: 0
-end: lmx_graph_single_candidate
+    # A grouped name/path remains a value without effects. A grouped call or
+    # operation remains an ordinary actual, with shape checked before it runs.
+    if: c.lmx_graph_count(path) = 1U
+        return: lmx_graph_single_candidate(g, scope, path)
+return: 0
 
 # Bind the written actuals of expression to the formals of a signature before any of them is evaluated -- the one binder
 # of a call (lmx_graph_bind_call) and of the contract of a receiver (lmx_graph_receiver_bind). A positional actual takes
@@ -1373,7 +1423,7 @@ return: 1
 
 # Bind written arguments to the selected method before evaluating any of them. The map and the seen set belong
 # only to this call; labels are canonical name addresses and the map stores physical formal slots, not name codes.
-fn: lmx_graph_bind_call (@: g c.LmxGraph; @: code c.Lmx; @: expression c.Lmx; @: bindings size_t) int
+fn: lmx_graph_bind_call (@: g c.LmxGraph; @: scope c.Lmx; @: code c.Lmx; @: expression c.Lmx; @: bindings size_t) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: args c.Lmx 0
     @: argument c.Lmx 0
@@ -1395,7 +1445,7 @@ fn: lmx_graph_bind_call (@: g c.LmxGraph; @: code c.Lmx; @: expression c.Lmx; @:
         return: 5
     # A possible whole argument structure -- an empty Structure included, which is the empty field chain of a nullary
     # or default-only call -- is matched with the formals by lmx_graph_call_single once its value is known.
-    if: lmx_graph_single_candidate(g, expression) != 0
+    if: lmx_graph_single_candidate(g, scope, expression) != 0
         return: 0
     if: count > width
         return: 5
@@ -1484,6 +1534,12 @@ end: lmx_graph_admit_paths
 
 # Admit each already evaluated argument immediately, before evaluating the next. Int arguments receive independent
 # cells; a Structure is checked using its field names. The caller's transient refs array carries the admitted values.
+fn: lmx_graph_admit_int (@: g c.LmxGraph; int: number; @@: out void) int
+    out[0] := c.lmx_graph_int(g, number)
+    if: out[0] = 0
+        return: 4
+return: 0
+
 fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual void; @@: out void) int
     @: args c.Lmx c.lmx_graph_method_args(g, code)
     @: formal void c.lmx_graph_get(args, index)
@@ -1497,10 +1553,7 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
     if: kind = 1 || kind = 3
         if: c.lmx_graph_value_int(g, actual, @ number) != 0
             return: 4
-        out[0] := c.lmx_graph_int(g, number)
-        if: out[0] = 0
-            return: 4
-        return: 0
+        return: lmx_graph_admit_int(g, number, out)
     if: kind != 4
         return: 5
     # A formal `T: name` -- the declaration Frame named by its requirement T, with the name as its argument (§3.3).
@@ -1513,6 +1566,28 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
         out[0] := actual
     return: status
 end: lmx_graph_admit
+
+# Read a written actual by the selected formal's contract, then receive it.
+# A numeric formal reads a group as an expression; a Structure formal keeps
+# its data. The numeric result enters the same independent argument cell,
+# without allocating an intermediate cell just to copy it at admission.
+fn: lmx_graph_read_actual (@: g c.LmxGraph; @: scope c.Lmx; @: code c.Lmx; size_t: index; @: raw void; @@: out void) int
+    @: formal void c.lmx_graph_get(c.lmx_graph_method_args(g, code), index)
+    @: actual void 0
+    int: kind c.lmx_graph_kind(g, formal)
+    int: number 0
+    int: status 0
+    if: out = 0
+        return: 4
+    if: (kind = 1 || kind = 3) && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && lmx_graph_group_expression(g, scope, raw) = 0
+        status := lmx_graph_eval_number(g, scope, raw, @ number)
+        if: status != 0
+            return: status
+        return: lmx_graph_admit_int(g, number, out)
+    status := lmx_graph_eval_value(g, scope, raw, @ actual)
+    if: status = 0
+        status := lmx_graph_admit(g, code, index, actual, out)
+return: status
 
 # Sequential statements over the current method activation. Bodies stay in the graph on every call.
 # A control body is consumed in the same activation. Flow is the canonical word address, never an opcode or
@@ -2041,8 +2116,8 @@ fn: lmx_graph_eval_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @
     @: raw void 0
     int: status 4
     if: values != 0 && bindings != 0
-        status := lmx_graph_bind_call(g, code, expression, bindings)
-    if: status = 0 && lmx_graph_single_candidate(g, expression) != 0
+        status := lmx_graph_bind_call(g, scope, code, expression, bindings)
+    if: status = 0 && lmx_graph_single_candidate(g, scope, expression) != 0
         status := lmx_graph_eval_value(g, scope, c.lmx_graph_get(expression, 0U), @ actual)
         if: status = 0
             status := lmx_graph_call_single(g, code, actual, out)
@@ -2053,9 +2128,7 @@ fn: lmx_graph_eval_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @
         raw := c.lmx_graph_get(expression, i)
         if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
             raw := c.lmx_graph_get((cast: (@: c.Lmx) raw), 2U)
-        status := lmx_graph_eval_value(g, scope, raw, @ actual)
-        if: status = 0
-            status := lmx_graph_admit(g, code, bindings[i], actual, @ values[i])
+        status := lmx_graph_read_actual(g, scope, code, bindings[i], raw, @ values[i])
         i := i + 1U
     ---
     if: status = 0
@@ -2097,7 +2170,7 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                 return: 4
             ---
         else:
-            if: kind = 4
+            if: kind = 4 && lmx_graph_group_expression(g, scope, raw) != 0
                 expression := (cast: (@: c.Lmx) raw)
                 count := c.lmx_graph_count(expression)
                 word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))

@@ -124,6 +124,18 @@ Slice 360 starts M8: the graph groups command records actual normalization event
 
 Slice 361 extends the clean-graph binder of a computed argument Structure: a named field selects its formal by name and an unnamed field by its own position. New parts of the existing whole_arguments case produce 23 and 46. The L2 command `graph-same LOG EXPECTED` compares a completed log's AFTER section using the same comparison as graph-check, without rebuilding. Written Structure values in the working frontend and general reception of preserved groups remain unimplemented; P0 has not been switched. [Evidence and next step](../steps/witnesses/m8-argument-fields-20261113/notes.md).
 
+Later slices 362/363 let the working frontend receive a written Structure as a value or its direct named,
+unnamed and mixed fields. The source object, fields and parent are retained; an anonymous body remains
+both a data field and code of the same activation. Bootstrap quick G1/G2, the fixed point and focused
+native/forced checks passed; [slice 363 limits](../steps/witnesses/m8-whole-fields-20261113/notes.md).
+Slice 364 (source05) adds one group reader for the clean graph, native emission and frame planning:
+argument fields do not become names of the caller. An actual is read by the selected formal's contract,
+and an anonymous whole operand uses the same live-frame eval_value after preflight. Named scalar groups
+and alias calls give 7 in both paths. Bootstrap quick G1/G2, all thirteen comparisons and 597 inputs passed.
+G2 rebuilt the graph tool; thirteen values, refusal before effects and whole_arguments passed
+interp/native/forced, including matching refusal states. [Evidence and limits](../steps/witnesses/m8-graph-values-20261113/notes.md).
+P0 has not been switched; M8 and the following M11/M13/M14 remain open.
+
 Copying a description preserves evidence of its address layout. A later
 argument can compose already known correspondences to that layout; the
 result is cached as an address map, not as a new full reception check

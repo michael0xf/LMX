@@ -8,13 +8,14 @@
   {
     "path": "tests/parser/current/empty_parenthesized_argument.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: receiver: () sole container unwrap.",
-    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=1\n    structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/empty_vertical_then_parenthesized.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=2\n  frame head=\"receiver\" body=structure fields=0\n  frame head=\"receiver\" body=structure fields=0\n"
+    "stdout_exact": "structure fields=2\n  frame head=\"receiver\" body=structure fields=0\n  frame head=\"receiver\" body=structure fields=1\n    structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/empty_vertical_comment.lmx",
@@ -29,7 +30,8 @@
   {
     "path": "tests/parser/current/empty_parenthesized_nested.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"outer\" body=structure fields=1\n    frame head=\"receiver\" body=structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"outer\" body=structure fields=1\n    frame head=\"receiver\" body=structure fields=1\n      structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/empty_vertical_trailer.lmx",
@@ -39,22 +41,26 @@
   {
     "path": "tests/parser/current/empty_parenthesized_trailer.lmx",
     "exit": 0,
-    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=3\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    Tail cutter trailer spelling=\"return\" fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"fn\" body=structure fields=3\n    atom \"f\"\n    structure fields=0\n    atom \"int\"\n    Tail cutter trailer spelling=\"return\" fields=1\n      structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/missing_colon_argument.lmx",
-    "exit": 1,
-    "diagnostic": "32@1:1"
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"receiver\" body=structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/missing_colon_argument_semicolon.lmx",
-    "exit": 1,
-    "diagnostic": "32@1:1"
+    "exit": 0,
+    "stdout_exact": "structure fields=2\n  frame head=\"receiver\" body=structure fields=0\n  frame head=\"next\" body=structure fields=1\n    structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/missing_colon_argument_bounded.lmx",
-    "exit": 1,
-    "diagnostic": "32@1:2"
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  structure fields=1\n    frame head=\"receiver\" body=structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/compact_no_arguments.lmx",
@@ -75,8 +81,8 @@
   {
     "path": "tests/parser/current/empty_paren_f.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: f: () normalizes sole empty Structure away.",
-    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/empty_vertical_f.lmx",
@@ -86,15 +92,15 @@
   },
   {
     "path": "tests/parser/current/missing_colon_f.lmx",
-    "exit": 1,
-    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: bare f: still REJECT 32 (not delimiter-closed).",
-    "diagnostic": "32@1:1"
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/empty_paren_mystruct.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: mystruct: () same empty body as mystruct() (P0 parity only).",
-    "stdout_exact": "structure fields=1\n  frame head=\"mystruct\" body=structure fields=0\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"mystruct\" body=structure fields=1\n    structure fields=0\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/closed_fn_then_column0_return.lmx",
@@ -123,8 +129,8 @@
   {
     "path": "tests/parser/current/nonempty_colon_paren_f.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: f: (a b) sole container unwrap == f(a b).",
-    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    structure fields=2\n      atom \"a\"\n      atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/nonempty_vertical_f.lmx",
@@ -141,8 +147,8 @@
   {
     "path": "tests/parser/current/receiveMessage_colon_paren.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127: ADDENDUM: receiveMessage: (m) identical after normalize.",
-    "stdout_exact": "structure fields=1\n  frame head=\"receiveMessage\" body=structure fields=1\n    atom \"m\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"receiveMessage\" body=structure fields=1\n    structure fields=1\n      atom \"m\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/receiveMessage_vertical.lmx",
@@ -159,8 +165,8 @@
   {
     "path": "tests/parser/current/paren_sole_unwraps.lmx",
     "exit": 0,
-    "authority": "GROKBOT-P0-SOLE-CONTAINER-20260923-127 PART1b: f: (x) unwraps sole anonymous Structure.",
-    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    atom \"x\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=1\n    structure fields=1\n      atom \"x\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/sub_closed_by_bare_return.lmx",
@@ -260,9 +266,9 @@
   },
   {
     "path": "tests/parser/current/nested_record_empty_ping_refused.lmx",
-    "exit": 1,
-    "authority": "next_core_tasks.md §2 (the nested record): which field a line belongs to is decided by the common structure and indentation -- a field nested in the body of `ping` is an argument of `ping`, a field at the level of the outer `c` body is a neighbouring argument of `c`; the pair differs by the indentation of one line only (Opus, 2026-09-27); a bare `ping:` with its sibling at the same level is an empty colon Frame, refused (P0 error 32)",
-    "diagnostic": "32@2:5"
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"c\" body=structure fields=2\n    frame head=\"ping\" body=structure fields=0\n    frame head=\"field\" body=structure fields=1\n      atom \"1\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/empty_end_f.lmx",
@@ -278,69 +284,69 @@
   },
   {
     "path": "tests/parser/current/empty_end_other_target_refused.lmx",
-    "exit": 1,
-    "authority": "OPUS-P0-EMPTY-CLOSED-20260930-18: an end: naming another head does not close the empty f: -- REJECT 32 (the closure is end: <the Frame's own head>).",
-    "diagnostic": "32@1:1"
+    "exit": 0,
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=0\n    Tail cutter trailer spelling=\"end\" fields=1\n      atom \"h\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/empty_colon_then_statement_refused.lmx",
-    "exit": 1,
-    "authority": "OPUS-P0-EMPTY-CLOSED-20260930-18: bare f: followed by another statement (a dedent, not an explicit closure) is still REJECT 32.",
-    "diagnostic": "32@1:1"
+    "exit": 0,
+    "stdout_exact": "structure fields=2\n  frame head=\"f\" body=structure fields=0\n  frame head=\"g\" body=structure fields=1\n    atom \"1\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_end_closes_block.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets the level rule is the one outside them -- `end: Point` is the tail cutter of the block Point, not a record of its own.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Point\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_end_closes_empty_block.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets `Point:` closed by `end: Point` is the explicitly closed empty body, as outside brackets.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=0\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=0\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_end_closes_nested_block.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets each `end:` closes its own block at its own level.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    frame head=\"Outer\" body=structure fields=2\n      frame head=\"Inner\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"1\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Inner\"\n      frame head=\"int\" body=structure fields=2\n        atom \"z\"\n        atom \"3\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Outer\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=1\n      frame head=\"Outer\" body=structure fields=2\n        frame head=\"Inner\" body=structure fields=1\n          frame head=\"int\" body=structure fields=2\n            atom \"x\"\n            atom \"1\"\n          Tail cutter trailer spelling=\"end\" fields=1\n            atom \"Inner\"\n        frame head=\"int\" body=structure fields=2\n          atom \"z\"\n          atom \"3\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Outer\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_end_closes_two_blocks.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): two blocks in one group, each closed by its `end:`.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"A\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"A\"\n    frame head=\"B\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"B\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"A\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"1\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"A\"\n      frame head=\"B\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"y\"\n          atom \"2\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"B\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_end_without_block_is_field.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the same reading as outside brackets -- an `end:` line with no block above it at its level is an ordinary record.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"x\"\n    frame head=\"end\" body=structure fields=1\n      atom \"Point\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      atom \"x\"\n      frame head=\"end\" body=structure fields=1\n        atom \"Point\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_end_after_semicolon_is_field.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a group written on one line has no levels; `end: Point` after a semicolon is a field, as on one line outside brackets.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    frame head=\"Point\" body=structure fields=3\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"1\"\n      frame head=\"end\" body=structure fields=1\n        atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=1\n      frame head=\"Point\" body=structure fields=3\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"1\"\n        frame head=\"end\" body=structure fields=1\n          atom \"Point\"\n        frame head=\"int\" body=structure fields=2\n          atom \"y\"\n          atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_fence_closes_block.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets the fence `---` is recognized and closes the block above it.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_fence_closes_empty_block.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): inside round brackets `Point:` closed by the fence is the explicitly closed empty body.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=0\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=0\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_fence_opens_structure.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the line deeper than the fence opens a nested anonymous Structure, as outside brackets.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n    structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n    frame head=\"int\" body=structure fields=2\n      atom \"z\"\n      atom \"3\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=3\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n      structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"y\"\n          atom \"2\"\n      frame head=\"int\" body=structure fields=2\n        atom \"z\"\n        atom \"3\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_fence_trailing_text_refused.lmx",
@@ -351,14 +357,14 @@
   {
     "path": "tests/parser/current/parenthesis_bare_return_closes_block.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #trailers-close-many-levels): the terminal form `return` is read inside brackets as outside them.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"return\" fields=0\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"return\" fields=0\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/parenthesis_until_closes_loop.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #trailers-close-many-levels): the terminal form `until:` with a body of its own is read inside brackets as outside them.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Loop\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"until\" fields=3\n        atom \"n\"\n        atom \">\"\n        atom \"3\"\n    frame head=\"int\" body=structure fields=2\n      atom \"z\"\n      atom \"3\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Loop\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"until\" fields=3\n          atom \"n\"\n          atom \">\"\n          atom \"3\"\n      frame head=\"int\" body=structure fields=2\n        atom \"z\"\n        atom \"3\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_two_level_drop_refused.lmx",
@@ -375,8 +381,8 @@
   {
     "path": "tests/parser/current/group_bracket_end_closes_block.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets, #one-parser-everywhere-no-unwrap): inside a square bracket form `end: Point` is the tail cutter of the block Point.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"Point\" body=structure fields=1\n      frame head=\"int\" body=structure fields=2\n        atom \"x\"\n        atom \"4\"\n      Tail cutter trailer spelling=\"end\" fields=1\n        atom \"Point\"\n    frame head=\"int\" body=structure fields=2\n      atom \"y\"\n      atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_index_end_closes_block.lmx",
@@ -393,14 +399,14 @@
   {
     "path": "tests/parser/current/group_inline_body_continuation.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #one-parser-everywhere-no-unwrap; closed questions parser-forms, form A): a line deeper than `y: a` opens a nested anonymous Structure -- y has the atom a and a Structure with b; z is the next field.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"y\" body=structure fields=2\n      atom \"a\"\n      structure fields=1\n        atom \"b\"\n    atom \"z\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"y\" body=structure fields=2\n        atom \"a\"\n        structure fields=1\n          atom \"b\"\n      atom \"z\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_deeper_line_is_structure.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #one-parser-everywhere-no-unwrap; closed questions parser-forms, form B): a line deeper than the previous one opens a nested anonymous Structure and does not continue the list of fields.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=4\n    atom \"a\"\n    atom \"b\"\n    structure fields=1\n      atom \"c\"\n    atom \"d\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=4\n      atom \"a\"\n      atom \"b\"\n      structure fields=1\n        atom \"c\"\n      atom \"d\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_dot_after_indent_is_atom.lmx",
@@ -411,26 +417,26 @@
   {
     "path": "tests/parser/current/group_tail_fields_then_lines.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the fields on the line of the opening bracket and the lines below it are fields of one group.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    frame head=\"int\" body=structure fields=2\n      atom \"a\"\n      atom \"1\"\n    frame head=\"int\" body=structure fields=2\n      atom \"b\"\n      atom \"2\"\n    frame head=\"int\" body=structure fields=2\n      atom \"c\"\n      atom \"3\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=3\n      frame head=\"int\" body=structure fields=2\n        atom \"a\"\n        atom \"1\"\n      frame head=\"int\" body=structure fields=2\n        atom \"b\"\n        atom \"2\"\n      frame head=\"int\" body=structure fields=2\n        atom \"c\"\n        atom \"3\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_leading_separator_line.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a line that starts with a separator continues the list of fields of the group -- two fields, no skipped position.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      atom \"a\"\n      atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_skipped_position_across_lines.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a separator at the end of one line and a separator at the start of the next leave a skipped position between them, as on one line.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    atom \"a\"\n    PositionalSkip atom \"\"\n    atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=3\n      atom \"a\"\n      PositionalSkip atom \"\"\n      atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_expect_after_closed_frame.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a separator closing the Frame of one line and a separator starting the next line leave a skipped position after the Frame.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    frame head=\"x\" body=structure fields=1\n      atom \"a\"\n    PositionalSkip atom \"\"\n    atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=3\n      frame head=\"x\" body=structure fields=1\n        atom \"a\"\n      PositionalSkip atom \"\"\n      atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_shallow_line_refused.lmx",
@@ -441,20 +447,20 @@
   {
     "path": "tests/parser/current/group_nested_groups.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a multi-line group inside a multi-line group -- each is read by the same parser with its own levels.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"f\" body=structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"1\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      atom \"y\"\n    atom \"z\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"f\" body=structure fields=2\n        frame head=\"Point\" body=structure fields=1\n          frame head=\"int\" body=structure fields=2\n            atom \"x\"\n            atom \"1\"\n          Tail cutter trailer spelling=\"end\" fields=1\n            atom \"Point\"\n        atom \"y\"\n      atom \"z\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_in_mark.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): a multi-line group inside a Mix mark -- the same parser in curly and in round brackets.",
-    "stdout_exact": "structure fields=1\n  MIX structure fields=1\n    frame head=\"D\" body=structure fields=2\n      frame head=\"Point\" body=structure fields=1\n        frame head=\"int\" body=structure fields=2\n          atom \"x\"\n          atom \"4\"\n        Tail cutter trailer spelling=\"end\" fields=1\n          atom \"Point\"\n      frame head=\"int\" body=structure fields=2\n        atom \"y\"\n        atom \"2\"\n"
+    "stdout_exact": "structure fields=1\n  MIX structure fields=1\n    frame head=\"D\" body=structure fields=1\n      structure fields=2\n        frame head=\"Point\" body=structure fields=1\n          frame head=\"int\" body=structure fields=2\n            atom \"x\"\n            atom \"4\"\n          Tail cutter trailer spelling=\"end\" fields=1\n            atom \"Point\"\n        frame head=\"int\" body=structure fields=2\n          atom \"y\"\n          atom \"2\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_disabled_item.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): `%` disables an item with its vertical body inside a group as outside it.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=3\n    atom \"a\"\n    Inactive disabled \"b:\"\n    atom \"d\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=3\n      atom \"a\"\n      Inactive disabled \"b:\"\n      atom \"d\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_lost_paren_after.lmx",
@@ -465,14 +471,14 @@
   {
     "path": "tests/parser/current/group_comment_lines.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): comment lines inside a group take no part in the levels, at any indentation.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      atom \"a\"\n      atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/group_closing_on_content_line.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #same-parser-inside-brackets): the closing bracket may stand at the end of the last line of the group.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      atom \"a\"\n      atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/lost_paren_in_item.lmx",
@@ -609,8 +615,8 @@
   {
     "path": "tests/parser/current/mark_sole_structure_read_once.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #one-parser-everywhere-no-unwrap; defect P0-MIX-DOUBLE-POSTPROCESS): inside a mark `x: ((a, b))` gives what it gives outside -- one field, a Structure with a and b; the passes of the outer document do not run on the mark's content again.",
-    "stdout_exact": "structure fields=1\n  MIX structure fields=1\n    frame head=\"x\" body=structure fields=1\n      structure fields=2\n        atom \"a\"\n        atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  MIX structure fields=1\n    frame head=\"x\" body=structure fields=1\n      structure fields=1\n        structure fields=2\n          atom \"a\"\n          atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/lost_brace_in_item.lmx",
@@ -759,8 +765,8 @@
   {
     "path": "tests/parser/current/string_mark_in_group.lmx",
     "exit": 0,
-    "authority": "Author 2026-11-11 (journal #mark-errors-and-string-marks, #same-parser-inside-brackets): a string inside a multi-line group keeps its marks.",
-    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=2\n    frame head=\"a\" body=structure fields=1\n      atom \"\"s{m}\"\"\n        MIX at 2 structure fields=1\n          atom \"m\"\n    atom \"b\"\n"
+    "stdout_exact": "structure fields=1\n  frame head=\"D\" body=structure fields=1\n    structure fields=2\n      frame head=\"a\" body=structure fields=1\n        atom \"\"s{m}\"\"\n          MIX at 2 structure fields=1\n            atom \"m\"\n      atom \"b\"\n",
+    "authority": "M8, author 2026-11-10 (p0-no-unwrap): keep every written sole Structure; a bare head: has an empty body. Existing block attachment, skipped fields and Mix retain their source structure. The tree was reviewed against the input."
   },
   {
     "path": "tests/parser/current/string_mark_comment.lmx",
@@ -821,5 +827,11 @@
     "exit": 1,
     "authority": "One parser in every block: the saved historical case drops two levels without a cutter inside parentheses.",
     "diagnostic": "13@26:3"
+  },
+  {
+    "path": "tests/parser/current/preserved_groups.lmx",
+    "exit": 0,
+    "authority": "M8, author 2026-11-10: empty body, a single empty/nonempty Structure, direct fields and a vertical sole group retain distinct P0 trees.",
+    "stdout_exact": "structure fields=10\n  frame head=\"empty_call\" body=structure fields=0\n  frame head=\"empty_colon\" body=structure fields=0\n  frame head=\"colon_one\" body=structure fields=1\n    structure fields=1\n      atom \"a\"\n  frame head=\"call_one\" body=structure fields=1\n    structure fields=1\n      atom \"a\"\n  frame head=\"colon_empty\" body=structure fields=1\n    structure fields=0\n  frame head=\"call_empty\" body=structure fields=1\n    structure fields=0\n  frame head=\"colon_many\" body=structure fields=1\n    structure fields=2\n      atom \"a\"\n      atom \"b\"\n  frame head=\"direct_many\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n  frame head=\"direct_call\" body=structure fields=2\n    atom \"a\"\n    atom \"b\"\n  frame head=\"vertical_one\" body=structure fields=1\n    structure fields=2\n      atom \"a\"\n      atom \"b\"\n"
   }
 ]

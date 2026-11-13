@@ -1,5 +1,33 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-13 — M8 выполнен срезом 366, продолжать M11
+
+В wt/sol-m8-values-20261113-01 P0 сохраняет все написанные анонимные Structure и допускает пустое head:.
+35 просмотренных объявлений в 24 файлах чистого графа переведены group-migrate; parent эмитируется
+в порядке существующих временных меток. Общий допуск принимает переданное Structure для @: p T.
+Source04 — 600 canonical-входов, manifest a2dedb25390e9f927706b8bb3aa6250f25da901aa0fac9d5b2024b9438efe026.
+
+Bootstrap quick boot-m8-preserve-01 прошёл G1/G2, штатный build-generation quick — G3,
+по 9 smoke-строк без отказов. G1/G2 различались скобками frontend L1/C и backend C,
+при равных исполняемых образах и runtime. Все 13 проверок G2/G3 и 600 входов прошли.
+На настоящем G3 заново собран graph-tool: parser-suite 140, новый frontend-случай native/forced,
+p0_argument_structure и whole_arguments interp/native/forced — без отказов.
+До bootstrap также прошли 18 запусков трёх переведённых программ, 12 сравнений L1/C,
+контракт Structure/поля с результатом 7/7 и прежний P0 с отказами 4/1/1 на том же новом runtime.
+
+Рабочая связка — boot-m8-preserve-01/g3 с graph-m8-preserve-g3-01/graph_trans-prod.exe.
+База main — 2673bba2. Источники семантики/грамматики и ручные RU/EN заметки обновлены;
+штатные render semantics/grammar, docs check, diff --check прошли: 35 пар семантики,
+27 пар грамматики, 615 импортов, ссылки и LF индекса для 27 133 файлов. Срез готов к фиксации
+и push с сохранением двух чужих untracked в main. После фиксации продолжать код M11.
+[Свидетельство и границы](witnesses/m8-preserved-groups-20261113/notes.md).
+
+Далее M11.5в: убрать выбор дочернего data обычной Structure как модели мест и пропуск data(...)
+в коде вне вызываемых через общие кадр и путь запуска, без искусственного метода. Подготовлена
+проба runs/sol-m11-ordinary-data-20261113-01/ordinary_data_launch.lm2, ещё не запускалась.
+Пропуск return-трейлера построителем чистого графа и legacy written_form остаются M11;
+M11.7/test, M11.8, M13, M14 и flush() открыты. Единственный writer/build — Sol,
+pipeline runs/sol-m8-preserve-20261113-01, goal active.
 ## 2026-11-13 — M8.2: срез 365, продолжить миграцию групп
 
 В wt/sol-m8-values-20261113-01 принят общий заимствованный читатель написанного описания.

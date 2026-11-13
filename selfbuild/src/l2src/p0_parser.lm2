@@ -1,5 +1,5 @@
 # Maintained P0 parser, originally ported from frozen224.
-# All 204 ordinary bodies; no retained handwritten L1/C body fallback.
+# Ordinary parser bodies are L2; no retained handwritten L1/C body fallback.
 # The existing L3 ABI writer must provide the three activation scratch records.
 predef: "l1src/p0.h.lm1"
 predef: "l2src/p0_own.h.lm1"
@@ -1614,10 +1614,6 @@ fn: lm_p0_nested_chain (@: document c.LmP0Document; @: nested c.LmP0Document; si
             lm_p0_copy_payload_diagnostic(document, nested, base_offset)
         return: 0
     lm_p0_close_empty_by_end_in_node((cast: (@: c.LmP0Node) nested\root))
-    if: lm_p0_validate_nonempty_colon_frames_in_node(nested, (cast: (const: @: c.LmP0Node) nested\root)) = 0 || lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) nested\root)) = 0
-        if: quiet = 0
-            lm_p0_copy_payload_diagnostic(document, nested, base_offset)
-        return: 0
     if: c.lm_own_tree_cut(nested\tree_arena) != 0
         if: quiet = 0
             lm_p0_set_diagnostic(document, 1, base_line, base_column, "out of memory while promoting the lazy text edges of a nested document")
@@ -4922,92 +4918,6 @@ fn: lm_p0_wrap_fields_from_line (@: document c.LmP0Document; @: structure c.LmP0
     return: 1
 end: lm_p0_wrap_fields_from_line
 
-# Original: parser.lm1:4157 lm_p0_normalize_sole_anonymous_container
-fn: lm_p0_normalize_sole_anonymous_container (@: body c.LmP0Structure) int
-    @: only c.LmP0Field
-    @: container c.LmP0Node
-    @: inner c.LmP0Structure
-    if: body = 0
-        return: 1
-    if: body\field_count != 1U
-        return: 1
-    only := body\first_field
-    if: only = 0 || only\value = 0
-        return: 1
-    container := only\value
-    if: container\kind != c.LM_P0_NODE_STRUCTURE
-        return: 1
-    # Flagged/marked Structures (MIX / INACTIVE / POSITIONAL_SKIP) are not plain anonymous containers.
-    if: (container\flags & (c.LM_P0_NODE_INACTIVE | c.LM_P0_NODE_MIX | c.LM_P0_NODE_POSITIONAL_SKIP)) != 0U
-        return: 1
-    if: container\as = 0 || container\as\structure = 0
-        return: 1
-    inner := container\as\structure
-    # Opaque / trailer-bearing Structure stays a value field (one-level sole bag).
-    if: inner\trailer != 0
-        return: 1
-    body\first_field := inner\first_field
-    body\last_field := inner\last_field
-    body\field_count := inner\field_count
-    inner\first_field := 0
-    inner\last_field := 0
-    inner\field_count := 0U
-    only\value := 0
-    only\next := 0
-    return: 2
-end: lm_p0_normalize_sole_anonymous_container
-
-# Original: parser.lm1:4191 lm_p0_normalize_sole_anonymous_in_trailer
-fn: lm_p0_normalize_sole_anonymous_in_trailer (@: trailer c.LmP0Trailer) int
-    int: normalized 0
-    if: trailer = 0
-        return: 1
-    if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) trailer\body)) = 0
-        return: 0
-    normalized := lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) trailer\body))
-    if: normalized = 2
-        trailer\flags := trailer\flags | c.LM_P0_TRAILER_SOLE_GROUP
-    return: (cast: (int) (normalized != 0))
-end: lm_p0_normalize_sole_anonymous_in_trailer
-
-# Original: parser.lm1:4199 lm_p0_normalize_sole_anonymous_in_node
-fn: lm_p0_normalize_sole_anonymous_in_node (@: p0_node c.LmP0Node) int
-    int: normalized 0
-    if: p0_node = 0
-        return: 1
-    # A root field of a nested document: its own document normalized it once.
-    if: (p0_node\flags & c.LM_P0_NODE_DOCUMENT) != 0U
-        return: 1
-    if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && p0_node\as\frame != 0
-        if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) p0_node\as\frame\body)) = 0
-            return: 0
-        normalized := lm_p0_normalize_sole_anonymous_container((cast: (@: c.LmP0Structure) p0_node\as\frame\body))
-        if: normalized = 0
-            return: 0
-        if: normalized = 2
-            p0_node\as\frame\flags := p0_node\as\frame\flags | c.LM_P0_FRAME_SOLE_GROUP
-        return: lm_p0_normalize_sole_anonymous_in_trailer((cast: (@: c.LmP0Trailer) p0_node\as\frame\trailer))
-    if: p0_node\kind = c.LM_P0_NODE_STRUCTURE && p0_node\as != 0
-        if: lm_p0_normalize_sole_anonymous_in_structure((cast: (@: c.LmP0Structure) p0_node\as\structure)) = 0
-            return: 0
-        return: lm_p0_normalize_sole_anonymous_in_trailer((cast: (@: c.LmP0Trailer) p0_node\as\structure\trailer))
-    return: 1
-end: lm_p0_normalize_sole_anonymous_in_node
-
-# Original: parser.lm1:4215 lm_p0_normalize_sole_anonymous_in_structure
-fn: lm_p0_normalize_sole_anonymous_in_structure (@: structure c.LmP0Structure) int
-    const: (@: field c.LmP0Field)
-    if: structure = 0
-        return: 1
-    field := structure\first_field
-    while: (field != 0)
-        if: (lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) field\value)) = 0)
-            return: 0
-        field := field\next
-    ---
-    return: 1
-end: lm_p0_normalize_sole_anonymous_in_structure
-
 # Original: parser.lm1:4227 lm_p0_colon_frame_empty
 fn: lm_p0_colon_frame_empty (const: (@: frame c.LmP0Frame)) int
     if: frame = 0
@@ -5021,7 +4931,7 @@ fn: lm_p0_colon_frame_empty (const: (@: frame c.LmP0Frame)) int
     return: 1
 end: lm_p0_colon_frame_empty
 
-# Original: parser.lm1:4238 lm_p0_colon_trailer_empty
+# Empty colon trailers are also read by the existing attachment algorithm.
 fn: lm_p0_colon_trailer_empty (const: (@: trailer c.LmP0Trailer)) int
     if: trailer = 0
         return: 0
@@ -5031,10 +4941,7 @@ fn: lm_p0_colon_trailer_empty (const: (@: trailer c.LmP0Trailer)) int
         return: 1
     if: trailer\body\field_count != 0U
         return: 0
-    return: 1
-
-# Is node the atom whose bytes are name's?
-end: lm_p0_colon_trailer_empty
+return: 1
 
 # Original: parser.lm1:4250 lm_p0_atom_names
 fn: lm_p0_atom_names (const: (@: p0_node c.LmP0Node); const: (@: name c.LmP0Text)) int
@@ -5116,61 +5023,6 @@ sub: lm_p0_close_empty_by_end_in_structure (@: structure c.LmP0Structure)
     ---
 end: lm_p0_close_empty_by_end_in_structure
 
-# Original: parser.lm1:4319 lm_p0_validate_nonempty_colon_frames_in_trailer
-fn: lm_p0_validate_nonempty_colon_frames_in_trailer (@: document c.LmP0Document; const: (@: trailer c.LmP0Trailer)) int
-    if: (trailer = 0)
-        return: 1
-    if: lm_p0_colon_trailer_empty(trailer) != 0 && ((trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, 1U, 1U, "empty colon Frame is not allowed")
-        return: 0
-    return: lm_p0_validate_nonempty_colon_frames_in_structure(document, (cast: (const: @: c.LmP0Structure) trailer\body))
-end: lm_p0_validate_nonempty_colon_frames_in_trailer
-
-# Original: parser.lm1:4328 lm_p0_validate_nonempty_colon_frames_in_node
-fn: lm_p0_validate_nonempty_colon_frames_in_node (@: document c.LmP0Document; const: (@: p0_node c.LmP0Node)) int
-    size_t: line 1U
-    size_t: column 1U
-    if: (p0_node = 0)
-        return: 1
-    # A root field of a nested document: its own document checked it.
-    if: (p0_node\flags & c.LM_P0_NODE_DOCUMENT) != 0U
-        return: 1
-    if: p0_node\span != 0
-        line := p0_node\span\line
-        column := p0_node\span\column
-    ---
-    if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && lm_p0_colon_frame_empty((cast: (const: @: c.LmP0Frame) p0_node\as\frame)) != 0 && ((p0_node\as\frame\flags & c.LM_P0_FRAME_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
-        return: 0
-    if: p0_node\kind = c.LM_P0_NODE_FRAME && p0_node\as != 0 && lm_p0_colon_trailer_empty((cast: (const: @: c.LmP0Trailer) p0_node\as\frame\trailer)) != 0 && ((p0_node\as\frame\trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
-        return: 0
-    if: p0_node\kind = c.LM_P0_NODE_STRUCTURE && p0_node\as != 0 && lm_p0_colon_trailer_empty((cast: (const: @: c.LmP0Trailer) p0_node\as\structure\trailer)) != 0 && ((p0_node\as\structure\trailer\flags & c.LM_P0_TRAILER_DELIMITER_CLOSED) = 0U)
-        lm_p0_set_diagnostic(document, 32, line, column, "empty colon Frame is not allowed")
-        return: 0
-    if: (p0_node\kind = c.LM_P0_NODE_FRAME)
-        if: (lm_p0_validate_nonempty_colon_frames_in_structure(document, (cast: (const: @: c.LmP0Structure) p0_node\as\frame\body)) = 0)
-            return: 0
-        return: lm_p0_validate_nonempty_colon_frames_in_trailer(document, (cast: (const: @: c.LmP0Trailer) p0_node\as\frame\trailer))
-    if: (p0_node\kind = c.LM_P0_NODE_STRUCTURE)
-        if: (lm_p0_validate_nonempty_colon_frames_in_structure(document, (cast: (const: @: c.LmP0Structure) p0_node\as\structure)) = 0)
-            return: 0
-        return: lm_p0_validate_nonempty_colon_frames_in_trailer(document, (cast: (const: @: c.LmP0Trailer) p0_node\as\structure\trailer))
-    return: 1
-end: lm_p0_validate_nonempty_colon_frames_in_node
-
-# Original: parser.lm1:4356 lm_p0_validate_nonempty_colon_frames_in_structure
-fn: lm_p0_validate_nonempty_colon_frames_in_structure (@: document c.LmP0Document; const: (@: structure c.LmP0Structure)) int
-    const: (@: field c.LmP0Field)
-    field := structure\first_field
-    while: (field != 0)
-        if: (lm_p0_validate_nonempty_colon_frames_in_node(document, (cast: (const: @: c.LmP0Node) field\value)) = 0)
-            return: 0
-        field := field\next
-    ---
-    return: 1
-end: lm_p0_validate_nonempty_colon_frames_in_structure
-
 # Original: parser.lm1:4367 lm_p0_parse_bytes
 fn: lm_p0_parse_bytes (const: (@: source char); size_t: source_length; @@: out_document c.LmP0Document) int
     @: document c.LmP0Document
@@ -5196,9 +5048,6 @@ fn: lm_p0_parse_bytes (const: (@: source char); size_t: source_length; @@: out_d
     if: lm_p0_parse_stream(document)
         if: lm_p0_postprocess_node(document, (cast: (@: c.LmP0Node) document\root))
             lm_p0_close_empty_by_end_in_node((cast: (@: c.LmP0Node) document\root))
-            if: lm_p0_validate_nonempty_colon_frames_in_node(document, (cast: (const: @: c.LmP0Node) document\root))
-                lm_p0_normalize_sole_anonymous_in_node((cast: (@: c.LmP0Node) document\root))
-            ---
         ---
     if: (document\diagnostic\code = 0)
         if: (c.lm_own_tree_cut(document\tree_arena) != 0)

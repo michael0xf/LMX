@@ -1,0 +1,19 @@
+sub: main () (
+    Q:
+        int: x 0
+    end: Q
+    int: retained 0
+    int: unpacked 0
+)
+    fn: take_value (@: value Q) int
+        return: (value \ x)
+    end: take_value
+    fn: take_field (int: x) int
+        return: x
+    end: take_field
+    :=: retained ((take_value ((int x 7))))
+    :=: unpacked ((take_field ((int x 7))))
+end: main
+main:
+int: retained 7
+int: unpacked 7

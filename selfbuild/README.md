@@ -1,6 +1,23 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 365): written
+Current continuation (2026-11-13, slice 366): P0 keeps every written anonymous
+Structure, including empty ones, trailers and nested documents, and admits bare head:.
+The language migration tool converted 35 reviewed declarations in 24 graph fixtures.
+A flat @: p T formal receives a supplied Structure through the existing shared admission.
+Parent emission uses its existing temporary labels in order, without persistent IDs.
+Bootstrap quick built genuine G1/G2; ordinary quick built G3, with nine smoke rows each.
+All thirteen G2/G3 checks and 600 canonical inputs passed. G1/G2 still differed
+in output parentheses; the fixed point is G2/G3. Genuine G3 rebuilt the graph tool:
+140 parser cases, the new frontend native/forced case, Structure/value and whole_arguments
+interp/native/forced all passed. Twelve exact L1/C comparisons of three migrated programs
+and the old-P0 refusal on the same new runtime are retained in the witness.
+The working tuple is boot-m8-preserve-01/g3 with graph-m8-preserve-g3-01/graph_trans-prod.exe.
+Normal semantics/grammar rendering and docs check passed: 35 semantic chapters, 27 grammar sections, 615 imports, links and LF for 27,133 indexed files. M8 is complete. Next is M11's common ordinary-Structure frame,
+removing the data-child model and enabling data(...) outside callable code. Legacy
+written_form belongs to M11.8; M11/test, M13, M14 and flush() remain open.
+[Evidence and limits](../steps/witnesses/m8-preserved-groups-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 365): written
 names and result requirements use one borrowed group reader in fn/sub and
 fncall, including native. It neither resolves a name nor changes the graph.
 Bootstrap quick built genuine G1/G2 with nine smoke rows each. All thirteen

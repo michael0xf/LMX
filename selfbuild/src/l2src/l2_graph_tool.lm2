@@ -142,32 +142,44 @@ fn: lm_graph_emit_value (@: g c.LmxGraph; @: f c.FILE; @: value void; @: holder 
     return: status
 end: lm_graph_emit_value
 
-# All graph addresses exist before lexical parent edges are installed, including a parent reached after its child.
-fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap) int
+# All graph addresses exist before lexical parent edges are installed, including
+# a parent reached after its child. Use the emission's existing local labels to
+# order these writes independently of the source-address hash buckets.
+fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap; size_t: limit) int
     @: keys c.VoidDynamicArray @ map\keys
     @: base c.VoidArray (cast: (@: c.VoidArray) keys)
+    @: vals c.VoidArray (cast: (@: c.VoidArray) (@ map\vals))
     @@: sources void (cast: (@@: void) base\data)
+    @@: labels void (cast: (@@: void) vals\data)
+    @@: ordered c.Lmx (cast: (@@: c.Lmx) c.calloc(limit, sizeof(@: c.Lmx)))
     @: current c.Lmx 0
     size_t: i 0U
-    size_t: id 0U
+    size_t: id 1U
     size_t: parent 0U
+    int: status 0
+    if: ordered = 0
+        return: 1
     while: i < keys\capacity
         if: sources[i] != 0 && c.lmx_graph_kind(g, sources[i]) = 4
-            current := (cast: (@: c.Lmx) sources[i])
-            id := (cast: (size_t) c.lmx_copy_map_get(map, sources[i]))
-            parent := (cast: (size_t) c.lmx_copy_map_get(map, (cast: (@: void) current\parent)))
-            c.fprintf(f, "        l2_method: (cast: (@: Lmx) l2_gv%zu)\n", id)
-            if: current\parent = 0
-                c.fputs("        l2_method\\parent: 0\n", f)
-            else:
-                if: parent = 0U
-                    return: 1
-                c.fprintf(f, "        l2_method\\parent: (cast: (@: Lmx) l2_gv%zu)\n", parent)
-            ---
-        ---
+            ordered[(cast: (size_t) labels[i])] := (cast: (@: c.Lmx) sources[i])
         i := i + 1U
-    return: 0
-end: lm_graph_emit_parents
+    while: id < limit
+        current := ordered[id]
+        if: current = 0
+            id := id + 1U
+            continue
+        parent := (cast: (size_t) c.lmx_copy_map_get(map, (cast: (@: void) current\parent)))
+        if: current\parent != 0 && parent = 0U
+            status := 1
+            break
+        c.fprintf(f, "        l2_method: (cast: (@: Lmx) l2_gv%zu)\n", id)
+        if: current\parent = 0
+            c.fputs("        l2_method\\parent: 0\n", f)
+        else:
+            c.fprintf(f, "        l2_method\\parent: (cast: (@: Lmx) l2_gv%zu)\n", parent)
+        id := id + 1U
+    c.free((cast: (@: void) ordered))
+return: status
 
 # The name a root application of fn or sub gives (lmx_graph_fn_apply), as far as the translation reads it: the written
 # name the binder takes (lmx_graph_fn_decl_name), or the name part of the prepared Structure the translation's namespace
@@ -1727,7 +1739,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
         i := i + 1U
     ---
     if: r = 0
-        r := lm_graph_emit_parents(g, f, @ emitted)
+        r := lm_graph_emit_parents(g, f, @ emitted, next)
     c.lmx_copy_map_dispose(@ emitted)
     if: r != 0
         c.fclose(f)
@@ -1859,8 +1871,21 @@ fn: lm_graph_p0_file (const: (@: path char)) int
     c.lm_p0_document_destroy(doc)
 return: 0
 
-# M8's census observes the existing normalizer; it changes no grouping and guesses no head's semantic role.
-# Flags record the performed operation in P0 only. Mix payload is counted separately from executable source.
+# M8 observes a written sole anonymous group without changing its boundary or
+# guessing its head's semantic role. Mix payload is counted separately.
+fn: lm_graph_groups_sole (@: body c.LmP0Structure) int
+    @: only c.LmP0Field 0
+    @: item c.LmP0Node 0
+    if: body = 0 || body\field_count != 1U
+        return: 0
+    only := (cast: (@: c.LmP0Field) body\first_field)
+    if: only = 0 || only\value = 0
+        return: 0
+    item := (cast: (@: c.LmP0Node) only\value)
+    if: item\kind != c.LM_P0_NODE_STRUCTURE || item\as = 0 || item\as\structure = 0 || (item\flags & (c.LM_P0_NODE_INACTIVE | c.LM_P0_NODE_MIX | c.LM_P0_NODE_POSITIONAL_SKIP)) != 0U
+        return: 0
+return: (cast: (int) (item\as\structure\trailer = 0))
+
 sub: lm_graph_groups_row (@: out c.FILE; @: path char; @: kind char; int: metadata; @: owner c.LmP0Node; @: head c.LmP0Text; unsigned: flags; @: count size_t)
     c.fprintf(out, "%s\t%s\t%d\t%zu\t%zu\t%zu\t%u\t", path, kind, metadata, (cast: (size_t) owner\span\offset), (cast: (size_t) owner\span\line), (cast: (size_t) owner\span\column), flags)
     lm_graph_emit_quoted_bytes(out, (cast: (@: char) head\data), (cast: (size_t) head\length), 1)
@@ -1871,7 +1896,7 @@ return
 sub: lm_graph_groups_trailer (@: out c.FILE; @: path char; @: owner c.LmP0Node; @: tail c.LmP0Trailer; int: metadata; @: count size_t)
     if: tail = 0
         return
-    if: (tail\flags & c.LM_P0_TRAILER_SOLE_GROUP) != 0U
+    if: lm_graph_groups_sole((cast: (@: c.LmP0Structure) tail\body)) != 0
         lm_graph_groups_row(out, path, "trailer", metadata, owner, (cast: (@: c.LmP0Text) tail\spelling), (cast: (unsigned) tail\flags), count)
     lm_graph_groups_structure(out, path, (cast: (@: c.LmP0Structure) tail\body), metadata, count)
 return
@@ -1883,7 +1908,7 @@ sub: lm_graph_groups_node (@: out c.FILE; @: path char; @: item c.LmP0Node; int:
         metadata := 1
     if: item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0
         @: frame c.LmP0Frame (cast: (@: c.LmP0Frame) item\as\frame)
-        if: (frame\flags & c.LM_P0_FRAME_SOLE_GROUP) != 0U
+        if: lm_graph_groups_sole((cast: (@: c.LmP0Structure) frame\body)) != 0
             lm_graph_groups_row(out, path, "frame", metadata, item, (cast: (@: c.LmP0Text) frame\head), (cast: (unsigned) frame\flags), count)
         lm_graph_groups_structure(out, path, (cast: (@: c.LmP0Structure) frame\body), metadata, count)
         lm_graph_groups_trailer(out, path, item, (cast: (@: c.LmP0Trailer) frame\trailer), metadata, count)

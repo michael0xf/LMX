@@ -735,14 +735,21 @@ fn: lmx_graph_formal (@: g c.LmxGraph; @: lmx c.Lmx; @: name char) size_t
     return: n
 end: lmx_graph_formal
 
-# The written requirement of a declaration Frame (`T: name` names it T; `@: name T` has it in its second field).
+# The written requirement of a declaration Frame. The flat reference receiver
+# has name, model and an optional default; compatible single-field descriptions
+# carry their requirement in the head. An incomplete form gives no model.
 fn: lmx_graph_formal_model (@: g c.LmxGraph; @: declaration c.Lmx) @: char
     @: state c.LmxGraphState lmx_graph_state()
     @: head char lmx_graph_name_of(g, (cast: (@: void) declaration))
+    size_t: n lmx_graph_count(declaration)
     if: state = 0 || head = 0
         return: 0
     if: head = state\w_at
+        if: n < 2U || n > 3U
+            return: 0
         return: lmx_graph_word_text(g, lmx_graph_get(declaration, 1U))
+    if: n != 1U
+        return: 0
     return: head
 end: lmx_graph_formal_model
 

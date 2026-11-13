@@ -1,0 +1,44 @@
+GRAPH-BEFORE-BEGIN
+sub: main () (
+    Q:
+        int: x 0
+    end: Q
+    int: retained 0
+    int: unpacked 0
+)
+    fn: take_value (@: value Q) int
+        return: (value \ x)
+    end: take_value
+    fn: take_field (int: x) int
+        return: x
+    end: take_field
+    :=: retained ((take_value (int x 7)))
+    :=: unpacked ((take_field (int x 7)))
+end: main
+main:
+int: retained ((main \ data) \ retained)
+int: unpacked ((main \ data) \ unpacked)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: main () (
+    Q:
+        int: x 0
+    end: Q
+    int: retained 0
+    int: unpacked 0
+)
+    fn: take_value (@: value Q) int
+        return: (value \ x)
+    end: take_value
+    fn: take_field (int: x) int
+        return: x
+    end: take_field
+    :=: retained ((take_value (int x 7)))
+    :=: unpacked ((take_field (int x 7)))
+end: main
+main:
+int: retained ((main \ data) \ retained)
+int: unpacked ((main \ data) \ unpacked)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 4

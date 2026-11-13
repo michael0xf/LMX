@@ -1,0 +1,11 @@
+# M8: a retained argument Structure supplies its fields through the call binder.
+# An expression group remains one ordinary actual; the written return is grouped too.
+fn: add_fields (int: a; int: b) int
+return: (a + b)
+fn: run () int
+    int: operand 2
+    int: first add_fields((2 3))
+    int: second add_fields((operand) 3)
+    return: (first + second - 3)
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

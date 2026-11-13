@@ -1545,6 +1545,7 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
     @: formal void c.lmx_graph_get(args, index)
     @: model void 0
     @: declaration c.Lmx 0
+    @: requirement char 0
     int: kind (cast: (int) c.lmx_graph_kind(g, formal))
     int: status 0
     int: number 0
@@ -1556,11 +1557,13 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
         return: lmx_graph_admit_int(g, number, out)
     if: kind != 4
         return: 5
-    # A formal `T: name` -- the declaration Frame named by its requirement T, with the name as its argument (§3.3).
+    # Read the receiving declaration through its shared model query. The flat
+    # reference receiver and compatible descriptions use the same admission.
     declaration := (cast: (@: c.Lmx) formal)
-    if: c.lmx_graph_count(declaration) != 1U || c.lmx_graph_formal_model(g, declaration) = 0
+    requirement := c.lmx_graph_formal_model(g, declaration)
+    if: requirement = 0
         return: 5
-    model := lmx_graph_resolve(g, (cast: (@: c.Lmx) code\parent), c.lmx_graph_formal_model(g, declaration))
+    model := lmx_graph_resolve(g, (cast: (@: c.Lmx) code\parent), requirement)
     status := lmx_graph_admit_paths(g, code, c.lmx_graph_formal_name(g, args, index), model, actual)
     if: status = 0
         out[0] := actual

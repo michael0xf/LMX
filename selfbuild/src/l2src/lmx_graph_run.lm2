@@ -2875,6 +2875,7 @@ fn: lmx_graph_eval_fncall (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx;
     while: status = 0 && i < count
         raw := lmx_graph_launch_actual(g, expression, i)
         if: formals[i] = state\w_return
+            raw := lmx_graph_description_value(g, raw)
             result := c.lmx_graph_word_text(g, raw)
             if: result = 0 || lmx_graph_language_word(state, result) = 0
                 status := lmx_graph_eval_value(g, scope, raw, @ described)
@@ -4350,13 +4351,31 @@ fn: lmx_graph_string_value (@: g c.LmxGraph; @: value void) @: char
     return: canon
 end: lmx_graph_string_value
 
+# A word description reads anonymous grouping without resolving or applying the
+# written value. A numeric field stays a Structure; empty and multiple fields,
+# and every named form, keep their own description. The borrowed address is
+# shared by receiver contracts and explicit launch descriptions, never stored
+# back in the source graph.
+fn: lmx_graph_description_value (@: g c.LmxGraph; @: value void) @: void
+    @: child void 0
+    int: kind 0
+    while: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = 0 && c.lmx_graph_count((cast: (@: c.Lmx) value)) = 1U
+        child := c.lmx_graph_get((cast: (@: c.Lmx) value), 0U)
+        kind := c.lmx_graph_kind(g, child)
+        if: kind != 2 && kind != 4
+            break
+        value := child
+return: value
+
 # The name a written value gives a part name of a receiver -- the contract of a name, one for every receiver (the
 # author 2026-11-09: `fn: name := "test"; ...` creates test): an identifier word its own spelling, an ordinary string
 # literal its value (lmx_graph_string_value), the quotes being no part of it; 0 for any other value -- a word holding a
 # quote (a malformed, wide or character literal), an int, a Structure.
 fn: lmx_graph_name_value (@: g c.LmxGraph; @: value void) @: char
-    @: text char c.lmx_graph_word_text(g, value)
+    @: text char 0
     size_t: i 0U
+    value := lmx_graph_description_value(g, value)
+    text := c.lmx_graph_word_text(g, value)
     if: text = 0
         return: 0
     if: text[0] = (cast: (char) 34)
@@ -4525,6 +4544,8 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
                     raw := lmx_graph_frame_value(g, scope, raw)
                 ---
             ---
+            if: c.lmx_graph_kind(g, c.lmx_graph_get(chosen, slot)) = 2
+                raw := lmx_graph_description_value(g, raw)
             value := 0
             if: (c.lmx_graph_kind(g, raw) = 2 && c.lmx_graph_kind(g, c.lmx_graph_get(chosen, slot)) = 2) || (c.lmx_graph_kind(g, raw) = 4 && lmx_graph_applies(g, scope, raw) = 0)
                 value := raw
@@ -4592,6 +4613,8 @@ fn: lmx_graph_receiver_bind (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx; int
                         slot := 0U
                         while: slot < width && status = 0
                             values[slot] := lmx_graph_field_value(g, c.lmx_graph_get((cast: (@: c.Lmx) value), from[slot] - 1U))
+                            if: c.lmx_graph_kind(g, c.lmx_graph_get(chosen, slot)) = 2
+                                values[slot] := lmx_graph_description_value(g, values[slot])
                             status := lmx_graph_receiver_admit(g, c.lmx_graph_get(chosen, slot), values[slot])
                             slot := slot + 1U
                         ---
@@ -4675,6 +4698,7 @@ fn: lmx_graph_receiver_make (@: g c.LmxGraph; @: decl c.Lmx; @: form c.Lmx; @@: 
     ---
     if: name = 0 || args = 0 || (with_result != 0 && result = 0)
         return: 5
+    result := lmx_graph_description_value(g, result)
     name_out[0] := name
     return: lmx_graph_fn_make(g, decl, name, args, result, written, body, with_result, out)
 end: lmx_graph_receiver_make
@@ -4693,14 +4717,14 @@ fn: lmx_graph_fn_decl_name (@: g c.LmxGraph; @: decl c.Lmx) @: char
     if: g = 0 || state = 0 || w_name = 0 || c.lmx_graph_kind(g, (cast: (@: void) decl)) != 4
         return: 0
     n := c.lmx_graph_count(decl)
-    if: n > 1U && c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) = 2
+    if: n > 1U && c.lmx_graph_kind(g, lmx_graph_description_value(g, c.lmx_graph_get(decl, 0U))) = 2
         return: lmx_graph_name_value(g, c.lmx_graph_get(decl, 0U))
     while: i < n
         raw := c.lmx_graph_get(decl, i)
         inner := (cast: (@: c.Lmx) raw)
-        if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_count(inner) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U)) = state\w_assign && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 1U)) = w_name && c.lmx_graph_kind(g, c.lmx_graph_get(inner, 2U)) = 2
+        if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_count(inner) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U)) = state\w_assign && c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 1U)) = w_name
             return: lmx_graph_name_value(g, c.lmx_graph_get(inner, 2U))
-        if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = w_name && c.lmx_graph_count(inner) = 1U && c.lmx_graph_kind(g, c.lmx_graph_get(inner, 0U)) = 2
+        if: c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = w_name && c.lmx_graph_count(inner) = 1U
             return: lmx_graph_name_value(g, c.lmx_graph_get(inner, 0U))
         i := i + 1U
     ---

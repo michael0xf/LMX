@@ -755,7 +755,7 @@ fn: lm_graph_emit_fncall (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expre
     while: status = 0 && i < count
         if: formals[i] = state\w_return
             lm_graph_launch_actual(g, expression, i, @ holder, @ at)
-            word := c.lmx_graph_word_text(g, c.lmx_graph_get(holder, at))
+            word := c.lmx_graph_word_text(g, c.lmx_graph_description_value(g, c.lmx_graph_get(holder, at)))
             if: word = 0 || c.lmx_graph_language_word(state, word) = 0
                 word := 0
                 status := lm_graph_emit_operand(g, f, scope, holder, at, temps, decl_names, decl_slots, decl_n, @ described)

@@ -134,6 +134,12 @@ and an anonymous whole operand uses the same live-frame eval_value after preflig
 and alias calls give 7 in both paths. Bootstrap quick G1/G2, all thirteen comparisons and 597 inputs passed.
 G2 rebuilt the graph tool; thirteen values, refusal before effects and whole_arguments passed
 interp/native/forced, including matching refusal states. [Evidence and limits](../steps/witnesses/m8-graph-values-20261113/notes.md).
+Slice 365 (source01) reads written names and result requirements through one
+borrowed reader of anonymous grouping, without resolving names, applying values or changing the graph.
+The word formals of fn/sub, parts and both fncall paths use it. Bootstrap quick G1/G2,
+thirteen comparisons and 597 inputs passed. G2 rebuilt the graph tool; nine values and the existing
+fn_named_supply/fn_return_forms passed interp/native/forced.
+[Evidence and limits](../steps/witnesses/m8-receiver-groups-20261113/notes.md).
 P0 has not been switched; M8 and the following M11/M13/M14 remain open.
 
 Copying a description preserves evidence of its address layout. A later

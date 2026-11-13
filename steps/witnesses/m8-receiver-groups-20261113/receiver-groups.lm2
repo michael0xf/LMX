@@ -1,0 +1,20 @@
+fn: ((name: ((bundled)); args: (int: x); return: ((int)); code: (return: x + 1)))
+fn: direct (int: x) int
+    return: ((x + 2))
+fn: name: ((named)); args: ((int: x)); return: ((int)); code: ((return: x + 3))
+fn: name := ((assigned)); args := ((int: x)); return := ((int)); code := ((return: x + 4))
+fn: parted (args: (int: x); return: ((int)); code: (return: x + 5))
+sub: ((name: ((bump)); args: (int: x); data: (int: sum 0); code: (sum := sum + x)))
+fn: ((positional)) (int: x) ((int)) (return: x + 6)
+fn: constant () int
+    return: 7
+int: r1 bundled(6)
+int: r2 direct(5)
+int: r3 named(4)
+int: r4 assigned(3)
+int: r5 parted(2)
+bump(7)
+int: r6 bump\data\sum
+int: r7 positional(1)
+int: r8 fncall(((int)); constant\code)
+int: r9 fncall(return := ((int)); code := constant\code)

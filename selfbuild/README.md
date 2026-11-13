@@ -1,6 +1,17 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 364): the clean graph reads written
+Current continuation (2026-11-13, slice 365): written
+names and result requirements use one borrowed group reader in fn/sub and
+fncall, including native. It neither resolves a name nor changes the graph.
+Bootstrap quick built genuine G1/G2 with nine smoke rows each. All thirteen
+comparisons and 597 canonical inputs passed. G2 rebuilt the graph tool; nine
+values and the existing fn_named_supply/fn_return_forms passed in all three modes.
+The working tuple is boot-m8-receiver-groups-01/g2 with
+graph-m8-receiver-groups-g2-01/graph_trans-prod.exe. Declaration migration
+and the P0 switch remain open.
+[Evidence and limits](../steps/witnesses/m8-receiver-groups-20261113/notes.md).
+
+Previous continuation (2026-11-13, slice 364): the clean graph reads written
 actuals by the selected formal's contract and the caller's context. Argument
 fields do not become names of the caller's frame. Native reads an anonymous
 whole operand through the walker's existing live value reader after preflight.

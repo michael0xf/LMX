@@ -1,5 +1,19 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-13 — M8.2: срез 365, продолжить миграцию групп
+
+В wt/sol-m8-values-20261113-01 принят общий заимствованный читатель написанного описания.
+Имя и требование результата в fn/sub и fncall читают анонимную группу без выполнения и изменения
+исходного графа. Bootstrap quick boot-m8-receiver-groups-01 прошёл настоящие G1/G2, по 9 smoke-строк.
+Все 13 сравнений и 597 входов source01 прошли. Штатный G2 заново собрал graph-tool;
+девять значений, fn_named_supply и fn_return_forms прошли interp/native/forced.
+Рабочая связка — boot-m8-receiver-groups-01/g2 с graph-m8-receiver-groups-g2-01/graph_trans-prod.exe.
+Canonical source01 — f10fb377771baf38430a680d7a1430ba0da1e9fa34f745d4d2ed1136311fc737, 597 входов.
+[Свидетельство](witnesses/m8-receiver-groups-20261113/notes.md); дальше миграция объявлений и смена P0.
+База main — 36f07eba, срез 364 отправлен в origin. Два чужих untracked WIP сохраняются.
+Единственный writer/build — Sol, pipeline runs/sol-m8-receiver-groups-20261113-01.
+Goal продолжать основной v3 до конца active; M8/M11/M13/M14 и flush не закрыты.
+
 ## 2026-11-13 — M8.2: срез 364, продолжить потребителей и миграцию групп
 
 Source05 в wt/sol-m8-values-20261113-01 читает написанное значение чистого графа общим механизмом

@@ -1,5 +1,22 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез 375 — кодовая приёмка physical reference records пройдена.**
+Named5/6 читают текущую source reference после preflight;8/9 только проверяют тип. Write-only mapped
+row не читает старый payload, free-input/formal сохраняют ячейки. Source02 verify659, runtime01/graph01,
+pure0/0/4/4, private31 в трёх режимах, AFTER36/mutation24 прошли. Whole bootstrap01 quick построил
+настоящие G1/G2, по9 smoke, fixedpoint13/verify659; штатный G2 повторил31/AFTER36/mutation24.
+Render/docs check прошли:35/14/27/44/615, ссылки и LF индекса27389; оба diff --check чисты.
+Далее commit/push. Работа и коммиты прямо main.
+
+- [ ] Прямая native приёмка physical5/6/8/9 остаётся M14: нынешние Self/Types.data — ordinary fallback,
+  внешний native main не доказывает выполнение новой native physical-ветки. Использовать те же случаи
+  с настоящим native C, без искусственного метода/нового runner; current source и type-only обязательны.
+
+[Свидетельство](steps/witnesses/m11-physical-reference-code-20261114/notes.md). Весь v3 OPEN.
+
+- [ ] No-candidate primitive8 замкнуть через builder, formal/admit, рабочий frontend и serializer5/6/8/9;
+  сохранить cell name/sharing и значение после записи, без initialized-флага. Runtime-only пробы недостаточны.
+
 **2026-11-14, срез 374 — кодовая приёмка общего receiving-context пройдена в main.**
 Written Structure сохраняет поля у @2, Structure-reference assignment, length/typeof,
 base пути/индекса и launch; numeric/ref-int читаются выражением, merge — явный производитель.

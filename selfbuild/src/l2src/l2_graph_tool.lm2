@@ -1119,8 +1119,15 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
     while: i < n
         value := c.lmx_graph_get(root, i)
         kind := c.lmx_graph_kind(g, value)
-        # Literal places are values. The data registry already sees every slot.
-        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9
+        # Literal int places stand at the root. Reached reference declarations
+        # use the same block consumer as code over self or given data.
+        if: kind = 1 || kind = 3
+            i := i + 1U
+            continue
+        if: kind = 5 || kind = 6 || kind = 8 || kind = 9
+            r := lm_graph_emit_block(g, f, root, root, i, i + 1U, 2, -1, -1, -1, temps)
+            if: r != 0
+                return: r
             i := i + 1U
             continue
         if: kind != 4
@@ -1334,6 +1341,25 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             i := i + 1U
             continue
         if: kind = 5 || kind = 6 || kind = 8 || kind = 9
+            name := c.lmx_graph_slot_name(g, body, i)
+            if: name != 0
+                contract := kind
+                if: kind = 8 || kind = 9
+                    contract := kind - 3
+                number := temps[0]
+                temps[0] := temps[0] + 1
+                c.fprintf(f, "        int: l2_k%d 0\n        if: lmx_graph_known_place(l2_g, lmx_call_code, ", number)
+                lm_graph_emit_quoted_word(f, name)
+                c.fprintf(f, ", %d, @ l2_k%d) != 0\n            %s\n        if: l2_k%d != %d\n            %s\n", mode, number, leave_failure, number, contract, leave_failure)
+                if: kind = 5 || kind = 6
+                    status := lm_graph_emit_operand(g, f, code, body, i, temps, 0, 0, 0U, @ result)
+                    if: status != 0
+                        return: status
+                    c.fputs("        if: lmx_graph_store_reference(l2_g, lmx_call_code, ", f)
+                    lm_graph_emit_quoted_word(f, name)
+                    c.fprintf(f, ", %d, l2_v%d) != 0\n            %s\n", mode, result, leave_failure)
+                ---
+            ---
             i := i + 1U
             continue
         if: kind = 4 && c.lmx_graph_fn_result(g, raw) != 0

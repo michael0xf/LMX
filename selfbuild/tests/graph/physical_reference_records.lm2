@@ -1,0 +1,31 @@
+# Once a receiver has published its source reference, each later reach still
+# assigns that source's current payload to the place of the supplied data.
+sub: main () (
+    int: i 40
+    int: j 41
+    A(int: v 1)
+    B(int: v 2)
+    @: ip int @j
+    @: p B
+    Self:
+        @: ip int @i
+        @: p A
+    int: first_i 0
+    int: first_s 0
+    int: second_i 0
+    int: second_s 0
+)
+    call(Self)
+    call(data; Self)
+    first_i := \(data\ip)
+    first_s := data\p\v
+    Self\ip := @j
+    Self\p := B
+    call(data; Self)
+    second_i := \(data\ip)
+    second_s := data\p\v
+main()
+int: first_i main\data\first_i
+int: first_s main\data\first_s
+int: second_i main\data\second_i
+int: second_s main\data\second_s

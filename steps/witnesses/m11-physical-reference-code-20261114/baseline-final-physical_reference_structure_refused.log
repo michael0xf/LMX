@@ -1,0 +1,54 @@
+GRAPH-BEFORE-BEGIN
+int: before 0
+int: after 0
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: touch
+@: Bad ((@ p int (data [] (touch))) (int s 99))
+sub: main () (
+    int: i 3
+    A:
+        int: v 7
+    end: A
+    sub: Types ()
+        @: p int (@ i)
+        @: s A
+    end: Types
+)
+    :=: (node \ before) 1
+    call: Bad (Types \ data)
+    :=: (node \ after) 1
+end: main
+main:
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: before 1
+int: after 1
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: touch
+Bad:
+    @: p int (data [] (touch))
+    int: s 99
+end: Bad
+sub: main () (
+    int: i 3
+    A:
+        int: v 7
+    end: A
+    sub: Types ()
+        @: p int (@ i)
+        @: s A
+    end: Types
+)
+    :=: (node \ before) 1
+    call: Bad (Types \ data)
+    :=: (node \ after) 1
+end: main
+main:
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

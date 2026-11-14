@@ -1,0 +1,47 @@
+GRAPH-BEFORE-BEGIN
+int: before 0
+int: after 0
+sub: main () (
+    int: i 3
+    A:
+        int: v 7
+    end: A
+    @: p int (@ i)
+    @: s A
+    sub: Types ()
+        @: p int (@ i)
+        @: s A
+    end: Types
+)
+    :=: (node \ before) 1
+    call: data (Types \ data)
+    :=: (node \ after) 1
+end: main
+main:
+int: p_after (\ ((main \ data) \ p))
+int: s_after (((main \ data) \ s) \ v)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: before 1
+int: after 1
+sub: main () (
+    int: i 3
+    A:
+        int: v 7
+    end: A
+    @: p int (@ i)
+    @: s A
+    sub: Types ()
+        @: p int (@ i)
+        @: s A
+    end: Types
+)
+    :=: (node \ before) 1
+    call: data (Types \ data)
+    :=: (node \ after) 1
+end: main
+main:
+int: p_after 3
+int: s_after 7
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

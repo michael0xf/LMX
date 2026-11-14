@@ -1,5 +1,19 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез 375 — кодовая приёмка physical reference records пройдена в main.**
+374 принят и отправлен:ff07457cd6a9ba8f77e71d5349a8be59a787115f. Прежние scanner/known_place/store
+исполняют named5/6 как текущий source literal,8/9 как type-only. Write-only mapped row не читает
+старый payload; свободные snapshot cells и формалы сохраняются. Runtime01/graph01, Source02 verify659,
+четыре pure0/0/4/4, private31 в трёх режимах, AFTER36/mutation24 прошли; whole bootstrap01 прошёл:
+настоящие G1/G2, по9 smoke, fixedpoint13/verify659. Штатный G2 повторил31, AFTER36/mutation24.
+Render/docs check прошли:35/14/27/44/615, ссылки и LF индекса27389; оба diff --check чисты.
+Далее commit/push main. Self/Types.data пока обходчик:
+режим native main не доказывает выполнения новой native physical-ветки. Общую прямую приёмку
+внести в M14, без искусственных методов и отдельного runner. Далее no-candidate storage/formals/admit
+с замкнутыми builder/frontend/serializer5/6/8/9 и сохранением sharing,
+общий root/self и ordinary nested methods, M11.7/8, M13/M14. Все работы и коммиты прямо main.
+[Свидетельство](steps/witnesses/m11-physical-reference-code-20261114/notes.md). Весь goal active.
+
 **2026-11-14, срез 374 — кодовая приёмка общего receiving-context пройдена в main.**
 373 принят и отправлен: feadb715baf15124afca53d371e899cd0e79095f. Все новые изменения,
 сборки и коммиты прямо C:/Nyasha_Planet/LMX, main; отдельное дерево Sol не требуется.

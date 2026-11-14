@@ -1,5 +1,17 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез 375 — кодовая приёмка physical reference records пройдена в main.**
+Прежние scanner/known_place/store поддерживают named5/6 как текущий source literal и8/9 как type-only.
+Write-only mapped row получает incoming reference без старого payload; free-input/formal ячейки прежние.
+Runtime01/graph01, Source02 verify659, pure0/0/4/4 и private31 в трёх режимах прошли,
+AFTER36/mutation24 прошли; whole bootstrap01 построил настоящие G1/G2, по9 smoke,
+fixedpoint13/verify659. Штатный G2 повторил31 в трёх режимах, AFTER36/mutation24.
+Render/docs check прошли:35/14/27/44/615, ссылки и LF индекса27389; оба diff --check чисты. Далее commit/push main.
+Self/Types.data пока обходчик даже из native main; прямая приёмка новой native physical-ветки
+остаётся зависимостью M14, её не подменять внешним native или искусственным методом.
+[Свидетельство](steps/witnesses/m11-physical-reference-code-20261114/notes.md). Далее no-candidate storage,
+formals/admit, общий root/self и ordinary nested methods. M11.7/8, M13/M14 и весь v3 OPEN.
+
 **2026-11-14, срез 374 — кодовая приёмка M8 receiving-context пройдена в main.**
 Общий reader сохраняет written Structure у @2, ссылочного присваивания и структурных потребителей;
 numeric/ref-int и явный merge не меняют роли. Entry scan не делает поля данных входами,
@@ -1679,6 +1691,11 @@ Structure и записью значения, снимаются — шаг 6. �
      Для write-only mapped row без loaded1 готовить working reference из уже допущенного incoming
      target без чтения старого payload. Исключить free-input slot=-1 со стабильной snapshot cell;
      loaded1 rows и formal refs сохраняют прежний update. Это оптимизация прежнего writer, не новый storage.
+     **Срез375, runtime-приёмка пройдена:** код обоих consumers и write-only путь реализован,
+     pure40/1→41/2, type-only/отказы4 и31 случая в трёх режимах подтверждены. Whole bootstrap G1/G2,
+     fixedpoint13 и повтор штатным G2, AFTER36/mutation24 прошли. Self/Types.data сейчас ordinary fallback:
+     успех native main не доказывает выполнение новой native physical-ветки. Прямую приёмку
+     source-coordinate и8/9 без payload выполнить в общем native M14; оставить её OPEN до фактического запуска.
      Проверить также подготовку written nested fn/sub при запуске ordinary Structure в уже открытой
      namespace: space_open не должен пропускать необходимые construction bindings только из-за
      живого внешнего traversal. Не запускать initializer данных и не создавать искусственный метод;
@@ -1688,6 +1705,12 @@ Structure и записью значения, снимаются — шаг 6. �
      uninit_reference, с именем на cell5 и wrapper8 в слоте. Одновременно замкнуть formals/admit/
      actual-contract на primitive8 как обязательный int-reference formal без чтения payload;
      остальные @:p T и вычисляемые формы не сворачивать вслепую. Затем снять явный unsupported5.
+     Замкнуть это одним согласованным срезом: новое physical8 появляется в исходном графе до native emit,
+     поэтому существующий serializer должен переносить5/6/8/9 с общей source-address map, именем cell5/6
+     и прежним sharing. Не обнулять8 после записи и не вводить initialized-флаг. Рабочий frontend должен
+     читать8 в formal_type/declaration/reference и type-only block вместо cast к Frame; own_field и
+     dump_formal сохраняют имя через slot_name. Один лишь успех L3 runtime эту миграцию не закрывает:
+     обязательны настоящая самосборка и проверка formal/whole admission, без чтения payload подписи.
      Сохранить при миграции контролей смысл finally_scope (scoped_result=21) явным
      выбранным телом кода вместо самостоятельного anonymous value; в control_flow
      дать else непосредственный оператор, сохранив все числовые результаты. Общий
@@ -1990,6 +2013,12 @@ getDescriptor, без изменения возвращаемых адресов
    с разным порядком полей, а также над собой. Сверить native/обходчик на локальном dirty до публикации,
    публикации data, изменении исполняемого кода и следующем входе, включая продолжение после вложенного
    вызова. Проверить значения и порядок эффектов; native только внешнего main недостаточно.
+   Включить существующие physical_reference_records/type_only и два type-refused случая M11:
+   текущий payload source5/6 меняется40/1→41/2, source8/9 только проверяет тип без чтения/записи payload.
+   В срезе375 обычные Self/Types.data исполняются обходчиком, поэтому прямая native physical-ветка
+   ещё не покрыта фактическим запуском. После общего выпуска обычной/построенной C выполнить эти же
+   случаи её настоящим native, проверив current source coordinate после preflight; без особого runner
+   и искусственного callable. Отдельно сверить исходное поле после смены его ссылки, не повторяя трансляцию.
    В тот же небольшой набор добавить явный flush(), в том числе во вложенном теле управления:
    публикация без завершения запуска, отсутствие повторной записи при втором flush и обычная
    одноимённая запись в data. Проверить в выпущенном коде простого случая статические записи без

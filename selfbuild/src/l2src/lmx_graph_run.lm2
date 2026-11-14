@@ -367,7 +367,7 @@ fn: lmx_graph_work_scan_body (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: body
     while: i < to && status = 0
         raw := c.lmx_graph_get(body, i)
         kind := c.lmx_graph_kind(g, raw)
-        if: kind = 1 || kind = 3
+        if: kind = 1 || kind = 3 || kind = 5 || kind = 6 || kind = 8 || kind = 9
             name := c.lmx_graph_slot_name(g, body, i)
             if: name != 0
                 if: frame\own = 0
@@ -1058,7 +1058,9 @@ fn: lmx_graph_store_reference (@: g c.LmxGraph; @: code c.Lmx; @: name char; int
         return: status
     if: active\frame != 0
         row := lmx_graph_work_row((cast: (@: c.LmxGraphFrame) active\frame), name)
-    if: row != 0 && lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) = kind
+    # A write-only mapped place needs no old payload, including uninit:T.
+    # Free inputs already own stable snapshot cells; keep their update path.
+    if: row != 0 && row\slot != (cast: (size_t) -1) && (row\loaded & 1) = 0
         if: kind = 5
             cell := c.lmx_graph_ref_int(g, target)
         else:
@@ -2204,6 +2206,7 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
     int: status 0
     int: kind 0
     int: nested_mode mode
+    int: required_kind 0
     int: cleanup_status 0
     int: pending_result 0
     @: pending_flow char 0
@@ -2242,6 +2245,18 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             ---
         ---
         if: kind = 5 || kind = 6 || kind = 8 || kind = 9
+            name := c.lmx_graph_slot_name(g, body, i)
+            if: name != 0
+                required_kind := kind
+                if: kind = 8 || kind = 9
+                    required_kind := kind - 3
+                status := lmx_graph_known_place(g, code, name, mode, @ number)
+                if: status = 0 && number != required_kind
+                    status := 4
+                if: status = 0 && (kind = 5 || kind = 6)
+                    status := lmx_graph_store_reference(g, code, name, mode, raw)
+                ---
+            ---
             i := i + 1U
             continue
         # A constructed fn/sub is a value, not a written application Frame.

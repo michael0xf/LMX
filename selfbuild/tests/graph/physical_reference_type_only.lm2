@@ -1,0 +1,19 @@
+# Types is never called. Its implicit wrappers check the supplied places;
+# their unpromised payload must not be read or stored into the filled data.
+int: before 0
+int: after 0
+sub: main () (
+    int: i 3
+    A(int: v 7)
+    @: p int @i
+    @: s A
+    sub: Types () ()
+        @: p int @i
+        @: s A
+)
+    node\before := 1
+    call(data; Types\data)
+    node\after := 1
+main()
+int: p_after \(main\data\p)
+int: s_after main\data\s\v

@@ -1,5 +1,28 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г: срез 375, кодовая приёмка physical reference records пройдена
+
+374 принят и отправлен прямо из main: ff07457cd6a9ba8f77e71d5349a8be59a787115f.
+Все новые изменения, сборки и коммиты только C:/Nyasha_Planet/LMX, main; W3 — резервная копия.
+Единственный writer/build Sol, pipeline sol-m11-physical-reference-code-20261114-01, общий stage S.
+Scanner связывает named5/6/8/9 без загрузки; достигнутый consumer выполняет known_place до source read.
+5/6 записывают текущую literal reference исходного поля через store_reference;8/9 только проверяют тип.
+Write-only mapped row без loaded1 получает рабочую ссылку из incoming target без чтения старого payload;
+free-input slot=-1 и формалы сохраняют прежние стабильные ячейки. Корневой emitter использует общий block.
+Runtime01/graph01 построены из Source01; Source02 добавляет четыре пары фикстур, verify659,
+manifestb0717914f56dbc0e4dab4d5f027ba62a68fe980d7519da254484a91e8e80830d.
+Pure четыре прошли:40/1→41/2, type-only p3/s7; два отказа4 с before1/after0, raw Bad.p и calls0 сохранены.
+Private31 в трёх режимах, AFTER36 и mutation24 прошли; полный bootstrap01 quick прошёл:
+настоящие G1/G2, по9 smoke, fixedpoint13/verify659. Штатный G2 заново собрал graph-tool и повторил
+31 в трёх режимах, AFTER36/mutation24. Штатные render/docs check прошли:35/14/27/44/615,
+ссылки и LF индекса27389; оба diff --check чисты. Далее commit/push main.
+Важно: обычные Self/Types.data сейчас исполняются обходчиком даже из native main. Эти пробы подтверждают
+семантику в режимах, но не фактическое исполнение новой native physical-ветки. CURRENT source coordinate
+эмиттера проверен чтением кода; прямую native приёмку выполнить в M14 без искусственного метода/runner.
+После приёмки продолжать no-candidate storage/formals/admit и общий root/self, ordinary nested methods,
+M11.7/8, M13/M14; весь v3 OPEN, goal active. Чужие два untracked сохранить.
+[Приёмка и границы](witnesses/m11-physical-reference-code-20261114/notes.md).
+
 ## 2026-11-14 — M8: срез 374, кодовая приёмка receiving-context пройдена в main
 
 373 принят и отправлен прямо из main: feadb715baf15124afca53d371e899cd0e79095f.

@@ -1,0 +1,75 @@
+GRAPH-BEFORE-BEGIN
+sub: main () (
+    int: i 40
+    int: j 41
+    A:
+        int: v 1
+    end: A
+    B:
+        int: v 2
+    end: B
+    @: ip int (@ j)
+    @: p B
+    Self:
+        @: ip int (@ i)
+        @: p A
+    end: Self
+    int: first_i 0
+    int: first_s 0
+    int: second_i 0
+    int: second_s 0
+)
+    call: Self
+    call: data Self
+    :=: first_i (\ (data \ ip))
+    :=: first_s ((data \ p) \ v)
+    :=: (Self \ ip) (@ j)
+    :=: (Self \ p) B
+    call: data Self
+    :=: second_i (\ (data \ ip))
+    :=: second_s ((data \ p) \ v)
+end: main
+main:
+int: first_i ((main \ data) \ first_i)
+int: first_s ((main \ data) \ first_s)
+int: second_i ((main \ data) \ second_i)
+int: second_s ((main \ data) \ second_s)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: main () (
+    int: i 40
+    int: j 41
+    A:
+        int: v 1
+    end: A
+    B:
+        int: v 2
+    end: B
+    @: ip int (@ j)
+    @: p B
+    Self:
+        @: ip int (@ i)
+        @: p A
+    end: Self
+    int: first_i 0
+    int: first_s 0
+    int: second_i 0
+    int: second_s 0
+)
+    call: Self
+    call: data Self
+    :=: first_i (\ (data \ ip))
+    :=: first_s ((data \ p) \ v)
+    :=: (Self \ ip) (@ j)
+    :=: (Self \ p) B
+    call: data Self
+    :=: second_i (\ (data \ ip))
+    :=: second_s ((data \ p) \ v)
+end: main
+main:
+int: first_i 41
+int: first_s 2
+int: second_i 41
+int: second_s 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

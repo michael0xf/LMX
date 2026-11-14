@@ -5,20 +5,29 @@ sub: main () (
     B:
         int: y 2
     end: B
-    R: A B
+    Plain: (R A B)
     S: S
     S: S
+    @:
+        R
+        merge: A B
+    end: @
+    @:
+        R
+        merge: B A
+    end: @
 )
 end: main
-R:
-    int: x 1
-    int: y 2
-end: R
+main:
 int: first 2
-R:
-    int: y 2
-    int: x 1
-end: R
 int: second 1
 int: n 2
 int: m 1
+observed_first:
+    int: x 1
+    int: y 2
+end: observed_first
+observed_second:
+    int: y 2
+    int: x 1
+end: observed_second

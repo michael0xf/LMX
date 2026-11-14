@@ -499,6 +499,14 @@ The normal semantics rendering and docs check passed:35/14/27/44/615, LF27224; d
 Computed declarations in code/inline blocks,
 root/self and the whole M11 remain open;
 [checks and limits](../steps/witnesses/m11-computed-data-20261113/notes.md).
+Slice371 extends lookup of a constructed fn/sub to fn_result(), retaining owner/name/parent:
+a function description without a body remains available by name; method() is required at invocation.
+This retains the absence of code without creating an artificial empty body. The remaining fixtures'
+preparatory merge holders and references moved into own data; final readouts retain the complete
+result dump. Source02:626 inputs;15 cases in three modes, AFTER6/mutation, the full bootstrap01
+G1/G2, fixedpoint13 and the actual G2/graph passed. The normal render/docs check passed:
+35/14/27/44/615, LF27241; diff --check is clean;
+[change and checks](../steps/witnesses/m11-own-merge-references-20261113/notes.md).
 The running code reads the formals, the body and
 the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, `lmx_graph_launch_result`), not from
 the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call

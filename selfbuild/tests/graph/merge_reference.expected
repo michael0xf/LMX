@@ -5,25 +5,33 @@ sub: main () (
     N:
         int: a 5
     end: N
+    @:
+        R
+        merge: M N ((@ p int (@ (N \ a))))
+    end: @
+    @:
+        S
+        merge: M ((@ p int (@ (N \ a)))) N
+    end: @
     int: m_a 0
     int: n_a 0
 )
     :=: m_a (M \ a)
     :=: n_a (N \ a)
 end: main
-R:
-    int: a 9
-    @: p int @a
-end: R
-S:
-    int: a 7
-    @: p int @a
-end: S
-:=: (R \ a) 9
-:=: (S \ a) 7
+main:
+:=: (((main \ data) \ R) \ a) 9
+:=: (((main \ data) \ S) \ a) 7
 int: r_seen 9
 int: s_seen 7
-main:
 int: m_a 1
 int: n_a 5
 int: r_a 9
+observed_R:
+    int: a 9
+    @: p int @a
+end: observed_R
+observed_S:
+    int: a 7
+    @: p int @a
+end: observed_S

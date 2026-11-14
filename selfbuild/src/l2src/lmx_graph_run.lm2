@@ -1085,7 +1085,9 @@ fn: lmx_graph_binding_method (@: g c.LmxGraph; @: owner c.Lmx; @: source void) @
         made := (cast: (@: c.Lmx) row\value)
         if: made\parent != source
             continue
-        if: c.lmx_graph_method(g, made) = 0
+        # A constructed fn may describe a signature without code. Invocation
+        # checks callability; name lookup must retain that descriptor too.
+        if: c.lmx_graph_fn_result(g, (cast: (@: void) made)) = 0
             continue
         return: made
     return: 0

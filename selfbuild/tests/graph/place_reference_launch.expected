@@ -7,19 +7,26 @@ sub: main () (
     D:
         int: v 0
     end: D
+    @: p Model
+    @: q Add
+    int: seen 0
+    int: model_v 0
+    int: d_v 0
 )
-    return
+    p:
+    q: D
+    fn: f () int
+        p:
+        q: (:= data D)
+        return: (((Model \ v) * 100) + (D \ v))
+    end: f
+    :=: seen ((f))
+    :=: model_v (Model \ v)
+    :=: d_v (D \ v)
 end: main
 main:
-@: p Model
-@: q Add
-p:
-q: ((main \ data) \ D)
-fn: f () int
-    p:
-    q: (:= data ((main \ data) \ D))
-    return: (((((main \ data) \ Model) \ v) * 100) + (((main \ data) \ D) \ v))
-end: f
 int: seen 320
 int: model_v 3
 int: d_v 20
+@: observed_p Model
+@: observed_q Add

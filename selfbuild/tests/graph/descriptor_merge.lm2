@@ -2,11 +2,21 @@
 # the parts of the Structure of fn are composed -- args takes f2's default of b (7) into f1's formal b, return takes f2's
 # word -- and the code stays f1's. R is that Structure, data, held by the place `@: R merge(f1; f2)`; `fn: g R` makes the
 # function g of it: g(1) reads b from the new signature (17) where f1(1) reads f1's (12). f1 and f2 stay as written.
-# Plan M11 5v: R is the place `@: R merge(f1; f2)` (it was `R: merge(f1; f2)`); the root declares no ordinary Structure.
+# M11 5v: ordered own data first constructs R, then gives it to fn. The
+# final reference exposes the complete result after both numeric calls.
 fn: f1 (int: a; int: b 2) int
     return: a * 10 + b
 fn: f2 (int: b 7) int
-@: R merge(f1; f2)
-fn: g R
-int: r1 f1(1)
-int: r2 g(1)
+int: descriptor_parts length(f2)
+sub: main () (
+    @: R merge(f1; f2)
+    fn: g R
+    int: r1 0
+    int: r2 0
+)
+    r1 := f1(1)
+    r2 := g(1)
+main()
+int: r1 main\data\r1
+int: r2 main\data\r2
+@: observed_R main\data\R

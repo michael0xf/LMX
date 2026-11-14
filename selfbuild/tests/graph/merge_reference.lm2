@@ -1,21 +1,24 @@
-# Plan M11 5v: M and N live in the data part of main, R and S stay root places; main reads M and N after the writes.
+# M11 5v: construct R/S in own data, then write their copies by explicit paths.
+# Final references expose both complete copies without preparing any operation.
 sub: main () (
     M:
         int: a 1
     N:
         int: a 5
+    @: R merge(M; N; (@: p int @N\a))
+    @: S merge(M; (@: p int @N\a); N)
     int: m_a 0
     int: n_a 0
 )
     m_a := M\a
     n_a := N\a
-@: R merge(main\data\M; main\data\N; (@: p int @main\data\N\a))
-@: S merge(main\data\M; (@: p int @main\data\N\a); main\data\N)
-R\a := 9
-S\a := 7
-int: r_seen \R\p
-int: s_seen \S\p
 main()
+main\data\R\a := 9
+main\data\S\a := 7
+int: r_seen \main\data\R\p
+int: s_seen \main\data\S\p
 int: m_a main\data\m_a
 int: n_a main\data\n_a
-int: r_a R\a
+int: r_a main\data\R\a
+@: observed_R main\data\R
+@: observed_S main\data\S

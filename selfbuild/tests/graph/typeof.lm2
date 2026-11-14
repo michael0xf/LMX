@@ -1,21 +1,21 @@
 # typeof: the type of the region of the arena that holds the address a value stands for (the book, get-type). A
 # reference stands for the cell it holds, a Structure for its own header, a written zero for the null address.
-# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places. main has no
-# code, so there is no call: its part code is the empty `()`. The reference h stays a root place and points into that
-# data by path (a reference declaration in a data part is not executed yet).
+# M11 5v: Box and its reference h live in own data, initialized by main(). Its code is explicitly empty.
+# The root retains primitive places and observes types through explicit paths after initialization.
 int: i 5
 int: u
 @: p int @i
 sub: main () (
     Box:
         int: value 1
+    @: h Box
 ) ()
-@: h main\data\Box
+main()
 int: t_cell typeof(@i)
 int: t_ref typeof(p)
 int: t_uninit typeof(@u)
 int: t_box typeof(main\data\Box)
-int: t_held typeof(h)
+int: t_held typeof(main\data\h)
 int: t_null typeof(0)
 int: same t_cell = t_ref
 int: differs t_cell != t_box
@@ -23,3 +23,4 @@ fn: inside (int: a) int
     return: typeof(@a)
 end: inside
 int: t_formal inside(7)
+@: observed_h main\data\h

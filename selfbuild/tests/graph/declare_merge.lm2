@@ -4,21 +4,25 @@
 # again by `@: R merge(B; A)`, R is one more occurrence: data\[0]R is the first result (its y), data\[1]R the second
 # (its x); a bare R would be ambiguous. `R: A B` declares a Structure R with the atoms A and B (two fields). `S: S`
 # declares S with the atom S inside, not expanded; declared again it is a second occurrence with one field -- no cycle.
-# Plan M11 5v: the declarations of ordinary Structures (A, B, `R: A B`, S) live in the data part of main; the root holds
-# the places, the two merge holders among them, and reads the Structures by paths through main\data. main has no code,
-# so there is no call: its part code is the empty `()`.
+# M11 5v: both merge declarations remain separate data occurrences. Plain
+# retains the ordinary R without colliding with those two places. Root
+# observations expose both complete copies after the data pass.
 sub: main () (
     A:
         int: x 1
     B:
         int: y 2
-    R: A B
+    Plain:
+        R: A B
     S: S
     S: S
+    @: R merge(A; B)
+    @: R merge(B; A)
 ) ()
-@: R merge(main\data\A; main\data\B)
-int: first data\[0]R\y
-@: R merge(main\data\B; main\data\A)
-int: second data\[1]R\x
-int: n length(main\data\R)
+main()
+int: first main\data\[0]R\y
+int: second main\data\[1]R\x
+int: n length(main\data\Plain\R)
 int: m length(main\data\[1]S)
+@: observed_first main\data\[0]R
+@: observed_second main\data\[1]R

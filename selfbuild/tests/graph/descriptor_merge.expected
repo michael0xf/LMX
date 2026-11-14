@@ -2,7 +2,23 @@ fn: f1 (int: a; int: b 2) int
     return: ((a * 10) + b)
 end: f1
 fn: f2 (int: b 7) int
-R:
+int: descriptor_parts 3
+sub: main () (
+    @:
+        R
+        merge: f1 f2
+    end: @
+    fn: g R
+    int: r1 0
+    int: r2 0
+)
+    :=: r1 ((f1 1))
+    :=: r2 ((g 1))
+end: main
+main:
+int: r1 12
+int: r2 17
+observed_R:
     args:
         int: a
         int: b 7
@@ -12,7 +28,4 @@ R:
     code:
         return: ((a * 10) + b)
     end: code
-end: R
-fn: g R
-int: r1 12
-int: r2 17
+end: observed_R

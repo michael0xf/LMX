@@ -1,21 +1,32 @@
-# Plan M11 5v: M lives in the data part of main; the alias P stays a root place; main reads M after the write through P.
+# M11 5v: both function and data aliases are own places. The same f1
+# instance is called through h and directly; P writes the actual M.
 fn: f1 (int: a) int (int: calls 0)
     calls := calls + 1
     return: a * 10 + calls
-@: h f1
-int: r1 h(2)
-h(5)
-int: r2 f1(3)
-int: c1 f1\data\calls
-int: c2 h\data\calls
 sub: main () (
+    @: h f1
     M:
         int: a 1
+    @: P M
+    int: r1 0
+    int: r2 0
+    int: c1 0
+    int: c2 0
     int: m_a 0
 )
+    r1 := h(2)
+    h(5)
+    r2 := f1(3)
+    c1 := f1\data\calls
+    c2 := h\data\calls
+    P\a := 7
     m_a := M\a
-@: P main\data\M
-P\a := 7
 main()
+int: r1 main\data\r1
+int: r2 main\data\r2
+int: c1 main\data\c1
+int: c2 main\data\c2
 int: m_a main\data\m_a
-int: p_a P\a
+int: p_a main\data\P\a
+@: observed_h main\data\h
+@: observed_P main\data\P

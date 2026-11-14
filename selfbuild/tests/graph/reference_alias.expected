@@ -4,22 +4,32 @@ fn: f1 (int: a) int (
     :=: calls (calls + 1)
     return: ((a * 10) + calls)
 end: f1
-@: h f1
-int: r1 21
-h: 5
-int: r2 33
-int: c1 3
-int: c2 3
 sub: main () (
+    @: h f1
     M:
         int: a 1
     end: M
+    @: P M
+    int: r1 0
+    int: r2 0
+    int: c1 0
+    int: c2 0
     int: m_a 0
 )
+    :=: r1 ((h 2))
+    h: 5
+    :=: r2 ((f1 3))
+    :=: c1 ((f1 \ data) \ calls)
+    :=: c2 ((h \ data) \ calls)
+    :=: (P \ a) 7
     :=: m_a (M \ a)
 end: main
-@: P M
-:=: (P \ a) 7
 main:
+int: r1 21
+int: r2 33
+int: c1 3
+int: c2 3
 int: m_a 7
 int: p_a 7
+@: observed_h f1
+@: observed_P M

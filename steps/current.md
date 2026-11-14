@@ -1,5 +1,39 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-13 — M11.5в: срез371, кодовая приёмка пройдена
+
+370 принят и отправлен непосредственно из main: 0f3d1ded75e9738b454aa278b51bbb61554dcf8a,
+remote main совпал; полный bootstrap03/G1/G2, fixedpoint13,19 случаев в трёх режимах,
+AFTER12, mutation, render и docs check35/14/27/44/615 LF27224 прошли. Goal active, весь v3.
+Новые изменения и коммиты только main; W3 — контрольная копия. Чужие два untracked сохранены.
+Единственный writer/build Sol, pipeline sol-m11-own-merge-references-20261113-01, общий S.
+
+Перенесены6 root merge-держателей и7 адресных фикстур шага3 to_sol в own data. Конечные
+корневые ссылки только наблюдают готовые значения и сохраняют полный дамп копий; вычисления
+и вызовы через них не подготавливаются. Прежние числа и порядок полей сохранены. У struct_index
+p берётся до перестановки, implicit own q/r — после; first1, p5, q/r40 сохранены.
+У place_reference_unknown сначала main() готовит p, затем prepared_p1 и обычная Attempt
+над main.data достигает p(data := data\other): missing selector даёт3 после проверки головы.
+Bare missing в теле нормативно проверялся бы раньше; он отдельно покрыт closed/open_data_missing.
+
+Baseline370 обнаружил общий дефект: binding_method отбрасывал fn-descriptor без code через
+method(). Теперь поиск проверяет fn_result(), сохраняет owner/name/parent; callability остаётся
+условием вызова. Минимальная fn f2 без тела раньше давала3 даже в length(f2), теперь descriptor_parts3.
+Искусственная пустая code не добавлялась. У fn_return_forms старый golden до M8/366 потерял
+скобки p3 и имя/анонимность args/code: новый BEFORE и полные копии соответствуют сохранённым
+безымянным целям; zz1/2/3 и return/data/code наблюдаются целиком, p1/p2/p3 не вызываются.
+
+Source02:626 canonical-входов, verify/stage-copy прошли. Runtime01/graph01 построены штатно;
+код ядра после их Source01 не менялся, Source02 добавляет итоговую миграцию фикстур.
+Все13 pure-interpreter состояния совпали с независимыми golden. Все15 случаев в трёх
+режимах (13 миграций + reentry/grouped controls), AFTER6 и mutation прошли. Полный bootstrap01
+quick из принятого370 завершён: настоящие G1/G2, по9 smoke; fixedpoint13 и verify626 прошли.
+Настоящий G2 заново собрал graph-tool и повторил15 случаев в трёх режимах, AFTER6 и mutation.
+Рабочая связка — boot-m11-own-merge-refs-01/g2 и graph-m11-own-merge-refs-g2-01.
+Штатные render semantics и docs check прошли:35/14/27/44/615, LF27241; diff --check чист.
+Далее commit/push прямо из main. Затем шаг4 to_sol: root/self
+и повторы; M11.7/8, M13/M14 и GC живых кадров остаются OPEN.
+
 ## 2026-11-13 — документы M14: локальные значения и общий кеш прямого доступа
 
 По поручению автора источник семантики, ручные RU/EN пары L1/L2, спецификация ядра, руководство,

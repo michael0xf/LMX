@@ -3,12 +3,19 @@
 # of a part is its written field, not the block that holds it. p1, p2 and p3 all require `@: c.FILE`; a copy of each
 # (merge with one more field) shows the same part return: a reference to that written type form. The executors run
 # only int results, so none of the three is called here.
-# Plan M11 5v: R1, R2, R3 are the places `@: R1 merge(...)` (they were `R1: merge(...)`); the root declares no ordinary
-# Structure.
+# M11 5v: the copies are constructed in own data; final root references only
+# expose their full contents. M8 keeps the explicit groups of p3, whose
+# unnamed args/code targets therefore print as complete blocks.
 fn: p1 (int: a) @: c.FILE
     return: 0
 fn: name := p2; args := (int: a); return := (@: c.FILE); code := (return: 0)
 fn: name: p3; args: (int: a); return: (@: c.FILE); code: (return: 0)
-@: R1 merge(p1; (int: zz 1))
-@: R2 merge(p2; (int: zz 2))
-@: R3 merge(p3; (int: zz 3))
+sub: main () (
+    @: R1 merge(p1; (int: zz 1))
+    @: R2 merge(p2; (int: zz 2))
+    @: R3 merge(p3; (int: zz 3))
+) ()
+main()
+@: observed_R1 main\data\R1
+@: observed_R2 main\data\R2
+@: observed_R3 main\data\R3

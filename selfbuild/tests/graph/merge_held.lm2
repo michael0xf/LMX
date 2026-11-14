@@ -1,7 +1,12 @@
-# Plan M11 5v: the name that holds the result of merge is declared `@: pack merge(...)`, a place, not `pack: merge(...)`.
+# M11 5v: construct the held merge in own data. The final reference only
+# exposes its complete value; invocation reads the actual own place by path.
 fn: mytest (int: c 3; int: a) int
     return: c * 10 + a
-@: pack merge(mytest\args; (int: a 5))
-int: r mytest(pack)
+sub: main () (
+    @: pack merge(mytest\args; (int: a 5))
+) ()
+main()
+int: r mytest(main\data\pack)
 int: x 4
 int: y x + 1
+@: observed_pack main\data\pack

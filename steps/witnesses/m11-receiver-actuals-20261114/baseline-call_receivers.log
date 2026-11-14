@@ -1,0 +1,233 @@
+GRAPH-BEFORE-BEGIN
+fn: f (int: a 1) int (
+    int: x 100
+)
+    :=: x (x + a)
+    return: x
+end: f
+sub: bump (int: d 2) (
+    int: total 0
+)
+    :=: total (total + d)
+end: bump
+sub: main () (
+    Args:
+        int: a 5
+        int: b 2
+    end: Args
+    Vars:
+        int: x 10
+        int: y 0
+    end: Vars
+    Body:
+        :=: y (x + a)
+        return: (y * b)
+    end: Body
+    NoArgs:
+        :=: x (x + 1)
+        return: x
+    end: NoArgs
+    SelfFn:
+        int: n 3
+        :=: n (n * 2)
+        return: (n + 1)
+    end: SelfFn
+    Sub: (:= y ((y + a) + b))
+    Self:
+        int: k 1
+        :=: k (k + 4)
+    end: Self
+    Add:
+        :=: y (x + a)
+        return: y
+    end: Add
+    int: response 0
+    int: after_y 0
+    int: args_kept 0
+    int: second 0
+    int: third 0
+    int: self_n 0
+    int: sub_y 0
+    int: self_k 0
+    int: unused_result 0
+    int: plain 0
+    int: by_parts 0
+    int: var_x 0
+    int: whole 0
+    int: bare 0
+    int: bump_total 0
+    int: mixed 0
+    int: mixed_y 0
+    int: in_method 0
+)
+    :=: response (fncall Args Vars int Body)
+    :=: after_y (Vars \ y)
+    :=: args_kept (Args \ a)
+    :=: second (fncall Vars int NoArgs)
+    :=: third (fncall int SelfFn)
+    :=: self_n (SelfFn \ n)
+    call: Args Vars Sub
+    :=: sub_y (Vars \ y)
+    call: Self
+    :=: self_k (Self \ k)
+    fncall: Vars int NoArgs
+    :=: unused_result (Vars \ x)
+    :=: plain (f 4)
+    :=: by_parts (fncall (f \ args) (f \ data) (f \ return) (f \ code))
+    :=: var_x ((f \ data) \ x)
+    :=: whole (fncall (f \ data) int f)
+    :=: bare (fncall int f)
+    bump: 3
+    call: (bump \ args) (bump \ data) (bump \ code)
+    :=: bump_total ((bump \ data) \ total)
+    :=: mixed (fncall (f \ args) Vars int Add)
+    :=: mixed_y (Vars \ y)
+    fn: inside () int (
+        int: got 0
+    )
+        :=: got (fncall Args Vars int Add)
+        call: Args Vars Sub
+        return: (got + (Vars \ y))
+    end: inside
+    :=: in_method (inside)
+end: main
+main:
+int: response ((main \ data) \ response)
+int: after_y ((main \ data) \ after_y)
+int: args_kept ((main \ data) \ args_kept)
+int: second ((main \ data) \ second)
+int: third ((main \ data) \ third)
+int: self_n ((main \ data) \ self_n)
+int: sub_y ((main \ data) \ sub_y)
+int: self_k ((main \ data) \ self_k)
+int: unused_result ((main \ data) \ unused_result)
+int: plain ((main \ data) \ plain)
+int: by_parts ((main \ data) \ by_parts)
+int: var_x ((main \ data) \ var_x)
+int: whole ((main \ data) \ whole)
+int: bare ((main \ data) \ bare)
+int: bump_total ((main \ data) \ bump_total)
+int: mixed ((main \ data) \ mixed)
+int: mixed_y ((main \ data) \ mixed_y)
+int: in_method ((main \ data) \ in_method)
+int: args_b (((main \ data) \ Args) \ b)
+int: vars_x (((main \ data) \ Vars) \ x)
+int: vars_y (((main \ data) \ Vars) \ y)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f (int: a 1) int (
+    int: x 100
+)
+    :=: x (x + a)
+    return: x
+end: f
+sub: bump (int: d 2) (
+    int: total 0
+)
+    :=: total (total + d)
+end: bump
+sub: main () (
+    Args:
+        int: a 5
+        int: b 2
+    end: Args
+    Vars:
+        int: x 10
+        int: y 0
+    end: Vars
+    Body:
+        :=: y (x + a)
+        return: (y * b)
+    end: Body
+    NoArgs:
+        :=: x (x + 1)
+        return: x
+    end: NoArgs
+    SelfFn:
+        int: n 3
+        :=: n (n * 2)
+        return: (n + 1)
+    end: SelfFn
+    Sub: (:= y ((y + a) + b))
+    Self:
+        int: k 1
+        :=: k (k + 4)
+    end: Self
+    Add:
+        :=: y (x + a)
+        return: y
+    end: Add
+    int: response 0
+    int: after_y 0
+    int: args_kept 0
+    int: second 0
+    int: third 0
+    int: self_n 0
+    int: sub_y 0
+    int: self_k 0
+    int: unused_result 0
+    int: plain 0
+    int: by_parts 0
+    int: var_x 0
+    int: whole 0
+    int: bare 0
+    int: bump_total 0
+    int: mixed 0
+    int: mixed_y 0
+    int: in_method 0
+)
+    :=: response (fncall Args Vars int Body)
+    :=: after_y (Vars \ y)
+    :=: args_kept (Args \ a)
+    :=: second (fncall Vars int NoArgs)
+    :=: third (fncall int SelfFn)
+    :=: self_n (SelfFn \ n)
+    call: Args Vars Sub
+    :=: sub_y (Vars \ y)
+    call: Self
+    :=: self_k (Self \ k)
+    fncall: Vars int NoArgs
+    :=: unused_result (Vars \ x)
+    :=: plain (f 4)
+    :=: by_parts (fncall (f \ args) (f \ data) (f \ return) (f \ code))
+    :=: var_x ((f \ data) \ x)
+    :=: whole (fncall (f \ data) int f)
+    :=: bare (fncall int f)
+    bump: 3
+    call: (bump \ args) (bump \ data) (bump \ code)
+    :=: bump_total ((bump \ data) \ total)
+    :=: mixed (fncall (f \ args) Vars int Add)
+    :=: mixed_y (Vars \ y)
+    fn: inside () int (
+        int: got 0
+    )
+        :=: got (fncall Args Vars int Add)
+        call: Args Vars Sub
+        return: (got + (Vars \ y))
+    end: inside
+    :=: in_method (inside)
+end: main
+main:
+int: response 30
+int: after_y 15
+int: args_kept 5
+int: second 11
+int: third 7
+int: self_n 6
+int: sub_y 22
+int: self_k 5
+int: unused_result 12
+int: plain 104
+int: by_parts 105
+int: var_x 105
+int: whole 106
+int: bare 107
+int: bump_total 5
+int: mixed 13
+int: mixed_y 13
+int: in_method 41
+int: args_b 2
+int: vars_x 12
+int: vars_y 24
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

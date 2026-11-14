@@ -59,11 +59,11 @@ sub: main () (
     int: mixed_y 0
     int: in_method 0
 )
-    :=: response ((fncall Args Vars int Body))
+    :=: response (fncall Args Vars int Body)
     :=: after_y (Vars \ y)
     :=: args_kept (Args \ a)
-    :=: second ((fncall Vars int NoArgs))
-    :=: third ((fncall int SelfFn))
+    :=: second (fncall Vars int NoArgs)
+    :=: third (fncall int SelfFn)
     :=: self_n (SelfFn \ n)
     call: Args Vars Sub
     :=: sub_y (Vars \ y)
@@ -71,24 +71,24 @@ sub: main () (
     :=: self_k (Self \ k)
     fncall: Vars int NoArgs
     :=: unused_result (Vars \ x)
-    :=: plain ((f 4))
-    :=: by_parts ((fncall (f \ args) (f \ data) (f \ return) (f \ code)))
+    :=: plain (f 4)
+    :=: by_parts (fncall (f \ args) (f \ data) (f \ return) (f \ code))
     :=: var_x ((f \ data) \ x)
-    :=: whole ((fncall (f \ data) int f))
-    :=: bare ((fncall int f))
+    :=: whole (fncall (f \ data) int f)
+    :=: bare (fncall int f)
     bump: 3
     call: (bump \ args) (bump \ data) (bump \ code)
     :=: bump_total ((bump \ data) \ total)
-    :=: mixed ((fncall (f \ args) Vars int Add))
+    :=: mixed (fncall (f \ args) Vars int Add)
     :=: mixed_y (Vars \ y)
     fn: inside () int (
         int: got 0
     )
-        :=: got ((fncall Args Vars int Add))
+        :=: got (fncall Args Vars int Add)
         call: Args Vars Sub
         return: (got + (Vars \ y))
     end: inside
-    :=: in_method ((inside))
+    :=: in_method (inside)
 end: main
 main:
 int: response 30

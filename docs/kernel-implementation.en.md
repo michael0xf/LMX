@@ -1,6 +1,30 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice383; base382 `d0e384c1`.** Only Run changed:
+**Current state, 2026-11-14, slice384 -- bounded implementation, code acceptance passed; base383 `58bc7f3a`.** Direct named actuals of `fn`/`sub`
+bind formals through `:=` only; `by_head`/mode2 and the former `frame_value` are removed from Run.
+A whole descriptor is read as DATA: its colon fields are retained without execution. Structure formals `args`/`data`/`code`
+read an actual through common `read_received_value` with contract2: a written group is inert, an unknown named Frame reaches
+application and refuses3. `name`/`return` retain their written-description contract, including `@: c.FILE`.
+`fn_decl_name` is a graph-only query: direct supply is separate from one whole-DATA descriptor, with no recursive
+unwrapping or Space dependency (§3.4). The direct/whole-DATA positive pair gives12/12;
+reception order gives effects1/later0/refusal5, and a retained code group with a missing call has length1 without effects.
+Runtime01/Graph01, private32 triple,87 full AFTER checks,2 baseline checks and mutation24 passed.
+The first private32 retains3 FAILs: stale fn_prepared/call_receivers goldens and a static name at emit5.
+Seed383 confirmed six full AFTER checks; only13 synthetic RHS parenthesis lines were corrected, with numbers retained.
+The static-name probe and emit5 are retained: no native runtime was created for it. A new reached-name case with computed args
+and name-call/finally were checked by private02 on two new sources in three modes:5/before1/after0 and cleanup1.
+Source03 SHA-256 `ac0d0a1ca48bfdb488c44982ada095ef2e7516dd304831d5987a735c55f13e9f`.
+Whole bootstrap quick passed: genuine G1/G2, nine smoke cases each; fixedpoint13/verify798 PASS.
+Native trace02 confirmed actual root → `fn_apply` → `receiver_bind` evaluate1 → actual native producer:
+effects1/later0/body0/before1/after0, expected host exit1. The first GDB01 with missing args is retained and is not counted as proof.
+The genuine G2 graph-tool is built, SHA-256 `09f0e983a7baa2b892bd755c5845495355062e673b41ff6556a02a6899004f82`;
+G2 repeat:32 triple/21 full negative AFTER checks/mutation24 PASS. Tested code tuple384:
+boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+Normal render/docs check384 passed:35/14/27/44/615, links/LF; commit/push main follows.
+A common catalog/declaration view and formal validation are OPEN M11.5e;
+the working frontend's `by_head` is OPEN M11.8; full M11, external/computed CodeBody and M13/M14 remain OPEN.
+
+**Previous state, 2026-11-14, slice383; base382 `d0e384c1`.** Only Run changed:
 the common resolver distinguishes a pure query from a consuming read with a local status. Consuming raw fn/sub
 without an F for the corresponding scope/source prepares the reached block through existing `space_declarations`/evaluate0;
 sibling written methods are prepared in the existing order. Classification, slot requirements and binder queries stay pure
@@ -1219,8 +1243,11 @@ holds it; the next traversal creates its own F from the same written declaration
 installed on the declaration is also the entry of the F created. Declarations in a body are created by the same rule in
 the body's block.
 
-**The receiver's contract and the one binder (slices 333-334; the author 2026-11-09, [journal](../LMX_blog/2026-11-09.md);
-Codex, reviews of 333 and 334).** Every traversal begins by registering the contracts of the receivers `fn` and `sub` in
+**History of the receiver's contract and the one binder (slices333–335; the author 2026-11-09,
+[journal](../LMX_blog/2026-11-09.md); Codex, reviews333 and334).** The following describes the former implementation.
+Direct supply by head, `frame_value` and extracting a name from direct `name: word` are removed in Run384 under the author's
+decision of 2026-11-11; those statements are superseded. The current contract follows the historical paragraph; the verbatim journal is unchanged.
+Every traversal began by registering the contracts of the receivers `fn` and `sub` in
 the root's block of its namespace (`lmx_graph_receivers_open`): ordinary signatures, receivers with different numbers of
 arguments sharing one name -- `fn` [name, args, return, data, code], [name, args, return, code], [name, args, return],
 [name, parts]; `sub` [name, args, data, code], [name, args, code], [name, parts]. `name` and `return` are taken as written
@@ -1275,7 +1302,22 @@ author's decision of 2026-11-11 withdrew the supply of the parts by head: the ar
 code, `name: k2` there is a call of `name`, and only `:=` gives a named part --
 `fn: name := k1; args := (int: a); return := int; code := (return: a + 1)` (a consequence of the author's answer on
 `f(arg: v)`, the executor's reading -- [closed questions](../LMX_blog/q/colon-declares-answered-20261111.md), P5);
-the clean graph still accepts the supply by head -- step 5 of section M11.
+The former implementation still accepted direct supply by head; Run384 removes that branch, as described below.
+
+**Current Run contract, slice384 (bounded implementation).** One `bind_formals` binds direct actuals by position and through `:=`;
+a direct Frame `name: value` is never a label, regardless of whether a same-named callable exists:
+it is supplied positionally and read according to the receiving formal's contract.
+The form is chosen before actual evaluation, then each actual is received before the next. Structure formals
+`args`/`data`/`code` use existing `read_received_value` with contract2: a written group remains DATA,
+and anything else is read as a value. Thus `(missing_code())` as a body retains an inert call until body execution,
+while direct `missing_code()` producing a part does not become a ready descriptor and refuses3.
+The whole-arguments path uses `bind_fields` and `field_value` over DATA fields: `fn: (name: wrapped; args: ();
+return: int; code: (return: 7))` retains colon fields, while direct named supply writes `name := wrapped` and the other `:=` forms.
+Written-description formals `name`/`return` retain their role; `@: c.FILE` remains a requirement description.
+Without Space, `fn_decl_name` distinguishes a direct name/AST `name := value` from the unique DATA field `name` of one whole descriptor.
+A nested group does not become a new actual list; DATA fields are not executed to find the name. Duplicate direct actuals
+are still refused by the common binder. Actual validation of formal declarations needs a common catalog/
+declaration view and remains OPEN; this slice adds no narrow machine whitelist. The remaining frontend `by_head` belongs to M11.8.
 
 **Formals** are slots of `args` with the same representation as any place (§3.2): `int: q` → an `uninit:int` pointer onto
 the formal's `int` cell (named `q`) -- a mandatory formal; `int: q 0` → an `int` cell = 0 -- a default, read, not

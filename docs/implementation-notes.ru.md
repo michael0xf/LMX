@@ -75,7 +75,30 @@ L3 со вставками L2. L1 — только генерируемая ст
 <a id="l2-status"></a>
 ## 3. Translator-L2 и ядро
 
-**Текущее состояние, 2026-11-14, срез383; база382 `d0e384c1`.** Изменён только Run, ABI Run53/Frame прежний.
+**Текущее состояние, 2026-11-14, срез384 — ограниченная реализация, кодовая приёмка пройдена; база383 `58bc7f3a`.** Прямые именованные actuals `fn`/`sub`
+связываются только через `:=`. Whole descriptor сохраняет свои colon-поля в роли DATA, без исполнения.
+Structure-формалы `args`/`data`/`code` используют общий `read_received_value` с contract2: written group инертна,
+unknown named Frame читается как применение и отказывает3. Written-контракты `name`/`return`, включая `@: c.FILE`, сохранены.
+`fn_decl_name` не требует Space: direct name/AST `name := value` отделены от unique DATA field `name` одного whole descriptor;
+рекурсивного раскрытия вложенных групп и старой direct `name: value` label-ветки нет.
+Runtime01/Graph01, private32 triple,87 полных AFTER,2 baseline checks и mutation24 прошли.
+Первый private32 имел3 FAIL: stale golden fn_prepared/call_receivers и static-name emit5. Seed383 дал6/6 полных AFTER;
+исправлены только13 строк synthetic RHS parentheses, числа не менялись. Исходный static probe и emit5 сохранены,
+native runtime для него не создавался. Два новых исходника private02 проверили reached-name с computed args
+и name-call/finally во всех трёх режимах:5/before1/after0 и cleanup1. Direct/whole DATA даёт12/12;
+actual-order — effects1/later0/refusal5, инертный code-group — length1.
+Source03 SHA-256 `ac0d0a1ca48bfdb488c44982ada095ef2e7516dd304831d5987a735c55f13e9f`.
+Whole bootstrap quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify798 PASS.
+Native trace02: actual root → `fn_apply` → `receiver_bind` evaluate1 → actual native producer,
+effects1/later0/body0/before1/after0, ожидаемый host exit1. Первый GDB01 с missing args сохранён и доказательством не считается.
+Штатный G2 graph-tool построен, SHA-256 `09f0e983a7baa2b892bd755c5845495355062e673b41ff6556a02a6899004f82`;
+G2 repeat32 triple/21 полных negative AFTER/mutation24 PASS. Проверенная кодовая связка384:
+boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+Штатные render/docs-check384 прошли:35/14/27/44/615, ссылки/LF; далее commit/push main.
+Общий catalog/declaration view и formal validation — OPEN M11.5е; frontend `by_head` — OPEN M11.8;
+полный M11, внешний/вычисленный CodeBody, M13/M14 OPEN. Исторический by_head333–335 помечен в kernel §3.4.
+
+**Предыдущее состояние, 2026-11-14, срез383; база382 `d0e384c1`.** Изменён только Run, ABI Run53/Frame прежний.
 Один resolver обслуживает чистую классификацию и потребляющее чтение с локальным status. Только фактический read
 отсутствующей F достигнутого raw fn/sub готовит owner scope через прежний `space_declarations`/evaluate0.
 Соседние written методы готовятся одинаково до computed actuals; query binder не вызывает повторного входа в receiver.
@@ -432,7 +455,8 @@ Lmx-граф достаточен для описания всего, единс
   позиционный (62 и ровно один вызов `a`); неизвестное имя («zz is not
   an argument of tst») и позиционный после именованного — отказы
   трансляции. Части ресивера `table:` связываются по голове его
-  грамматики тем же связывателем в режиме `by_head`.
+  грамматики тем же связывателем в режиме `by_head`. Это оставшаяся ветвь рабочего frontend (OPEN M11.8);
+  прямую подачу частей `fn`/`sub` чистого графа срез384 связывает только по позиции или через `:=`.
 - Операнд `merge`, записанный «имя: тип: значение» — `(a: int: 5)` и
   голый `a: int: 5`, — типизированное поле, как форма объявления
   `(int: a 5)`: пишет слот модели своего имени, остальные поля

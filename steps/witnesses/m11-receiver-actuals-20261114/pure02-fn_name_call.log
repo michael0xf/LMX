@@ -1,0 +1,28 @@
+GRAPH-BEFORE-BEGIN
+fn: name (int: x) int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: x
+end: name
+int: at_end 9
+finally: (:= at_end ((name \ data) \ calls))
+int: r1 1
+fn: (name 7) (:= args ((int a))) (:= return int) (:= code ((return a)))
+int: r2 2
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: name (int: x) int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: x
+end: name
+int: at_end 1
+finally: (:= at_end ((name \ data) \ calls))
+int: r1 1
+fn: (name 7) (:= args ((int a))) (:= return int) (:= code ((return a)))
+int: r2 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5

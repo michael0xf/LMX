@@ -1,15 +1,8 @@
-# Slice 334 (Codex review of 333, item 2): the receiver fn binds its arguments by the one binder of a call against its
-# contracts -- ordinary signatures every traversal registers when it begins (fn: name, args, return, data, code; name,
-# args, return, code; name, args, return; name, parts) --: by position, by `:=`, and, for the parts of a receiver, by
-# head. `fn: name := k1; args := ...` and `fn: name: k2; args: ...` (the author's two named forms, 2026-11-09) create
-# their functions as the positional form does -- on entering the block, for their arguments are written -- with no
-# callable named name here. The value of `part := (...)` is the body written after `:=`, read as the block of a part
-# given by head is: several fields, none, a declaration, a statement. A part given by head is its Frame whatever it
-# holds (none, one field, a vertical block). sub binds its own contracts by the same binder. Slice 335 (Codex's answer
-# to the 334 questions: the author's `name := "test"` names test): a string literal gives a name by its value, its
-# escapes decoded by the rules of C ("t\x33" names t3).
+# M11.5e: fn/sub use the common binder. Direct named actuals use only `:=`; colon fields belong to one supplied
+# whole descriptor DATA. Written groups keep all their fields. Both forms preserve the previous numeric oracles,
+# defaults, own-data updates and string names ("t\x33" names t3).
 fn: name := k1; args := (int: a); return := int; code := (return: a + 1)
-fn: name: k2; args: (int: a); return: int; code: (return: a * 3)
+fn: name := k2; args := (int: a); return := int; code := (return: a * 3)
 int: r1 k1(4)
 int: r2 k2(4)
 int: r3 k1(k2(1))
@@ -18,10 +11,10 @@ int: r4 k3(4; 2)
 int: r5 k3(b := 1; a := 3)
 int: c3 k3\data\calls
 fn: name := k4; args := (); return := int; data := (int: n 7); code := (return: n)
-fn: name: k5; args: (); return: int; data: (int: m 8); code: (return: m + 1)
+fn: (name: k5; args: (); return: int; data: (int: m 8); code: (return: m + 1))
 int: r6 k4()
 int: r7 k5()
-fn:
+fn: (
     name: k6
     args:
         int: a
@@ -32,14 +25,14 @@ fn:
         int: d a - b
         return: d * 2
     end: code
-end: fn
+)
 int: r8 k6(9; 4)
 sub: name := s1; args := (int: d 1); data := (int: total 0); code := (total := total + d)
 s1(5)
 s1()
 int: total s1\data\total
 fn: name := "t1"; args := (int: a); return := int; code := (return: a + 100)
-fn: name: "t2"; args: (int: a); return: int; code: (return: a + 200)
+fn: (name: "t2"; args: (int: a); return: int; code: (return: a + 200))
 fn: name := "t\x33"; args := (int: a); return := int; code := (return: a + 300)
 int: r9 t1(1)
 int: r10 t2(2)

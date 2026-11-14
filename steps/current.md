@@ -1,5 +1,31 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5е: срез384, прямая подача актуалов, кодовая приёмка пройдена
+
+База383/58bc7f3a принята и отправлена. Работа только в основном main; root Sol — единственный code/test/build writer.
+Pipeline sol-m11-receiver-actuals-20261114-01. Baseline383 принимает старые direct colon parts и неизвестные
+missing_args()/missing_data()/missing_code() как готовые части, продолжая after2. Это нарушает CODE роль actuals.
+Общий binder принимает label только :=; by_head/mode2/frame_value удалены. Structure-актуалы читает прежний
+read_received_value(contract2), сохраняя written groups и whole descriptor DATA. Name/return description и @:c.FILE прежние.
+fn_decl_name различает direct и один whole DATA descriptor, без recursive unwrap/Space/evaluation.
+Пара12/12, unknown args/data/code refusal3/before1after0, actual-order effects1/later0/refusal5 и inert group length1 прошли.
+Runtime01/Graph01 PASS; ABI Run53/Frame прежний. Private32:29PASS,2stale golden RHS и static-name emit5.
+Seed383 подтвердил6 полных AFTER; исправлены13 старых скобочных строк, числа сохранены; binaries переиспользованы.
+87 полных AFTER +2baseline PASS. Только два изменённых fixture пересобраны private02:
+reached-name5/computed args/before1after0 и fn_name_call/finally at_end1/refusal5, оба triple PASS. Mutation24 PASS.
+Source03/798 frozen SHAac0d0a1ca48bfdb488c44982ada095ef2e7516dd304831d5987a735c55f13e9f; код после Source01 не менялся.
+Whole quick G1/G2, по9smoke, fixedpoint13/verify798 PASS. G2 graph-tool построен SHA09f0e983;
+G2 repeat32 triple/21negative AFTER/mutation24 PASS. Native trace02 actual root→fn_apply→receiver_bind→native producer PASS;
+первый GDB без argv/missingroots не proof, сохранён отдельно. Кодовая связка384:
+boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01. Штатный render35/14 и docs-check02 прошли:
+35/14/27/44/615, ссылки/LF27738 до staging. Первый docs-check01 тоже PASS, но из общего CWD;
+02 повторён из свежих CWD/PRIVATE_OUT. Финальный staged-index check03 прошёл: ссылки/LF27793,
+35/14/27/44/615. Его собственный LF receipt добавлен после проверки. Оба diff --check чисты; далее commit/push main.
+Полноценная проверка declarations формалов требует общего primitive/declaration view: narrow machine whitelist
+не вводить; эта часть M11.5е, а также M11.7/8/M13/M14 остаются OPEN. Исследование: graph-declaration-view-20261114.md.
+Документальные помощники закончили; root — sole writer/build ядра и проверок.
+Два чужих untracked сохранили SHA. Далее commit/push main и следующий пункт M11.5е. Goal ACTIVE.
+
 ## 2026-11-14 — M11.5д: срез383, чтение объявлений копии, приёмка пройдена
 
 382 принят и отправлен:d0e384c156701f2367a78d782f4a3c78f78cff28. Только main, root Sol writer/build.

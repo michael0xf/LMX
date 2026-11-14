@@ -1,5 +1,28 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез384 — M11.5е, actuals ресиверов, ограниченная реализация; кодовая приёмка пройдена.**
+Принят383; кодовая связка384 — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+Run-only, ABI Run53/Frame прежний. Общий bind_formals лишён by_head/mode2; прямые labels fn/sub — только `:=`.
+Structure-actuals читает общий read_received_value(contract2): written groups inert, unknown named Frame args/data/code
+даёт reached refusal3. Word name/return written-description, `@: c.FILE` и colon-поля whole-DATA descriptor сохранены.
+fn_decl_name — чистый graph-only query прямого positional/name:= либо одного whole-DATA descriptor,
+без recursive unwrap, lookup/eval/Space. Runtime01/Graph01/18 pure прошли.
+Private01 исполнил32 случая:29 PASS triple, два RHS golden mismatch и static-name emit5. У fn_prepared/call_receivers
+исправлены лишь13 скобочных строк, seed383 AFTER6/6 совпали, числа неизменны. Готовые binaries переиспользованы:
+private-after01 CHECKS89=87 full AFTER+2 baseline PASS. Private02 пересобрал только name_refused(computed args:=held_args,
+reached5/before1/after0) и fn_name_call(finally at_end1/refusal5); обе triple PASS. Written unsuitable name даёт5, не unknown3.
+Mutation24 PASS; Runtime01 driver SHA210c8f72/Graph01 SHA5f7bd3b4. Добавлены восемь fixture pairs и fn_name_call.expected;
+Source03:798 frozen SHAac0d0a1ca48bfdb488c44982ada095ef2e7516dd304831d5987a735c55f13e9f.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke, fixedpoint13/verify798.
+Штатный G2 graph rebuilt SHA09f0e983; G2 repeat32 triple/21 negative full AFTER/mutation24 PASS.
+Native-receiver-actuals02 подтвердил actual native root→fn_apply→receiver_bind(evaluate1)→producer body0,
+effects1/later0/before1/after0 и ожидаемый host exit1. Первый missing-argv01 сохранён как непринятый proof.
+Штатные render/docs check384 прошли:35/14/27/44/615, ссылки/LF. Далее commit/push main с сохранением чужого WIP.
+Полная formal-validation OPEN перед M11.7: общий declaration-view/canonical primitive catalog,
+без narrow machine whitelist. Legacy by_head рабочего frontend — M11.8 OPEN. Общий external/computed CodeBody,
+весь M11.7/8/M13/M14 OPEN. Все дополнения в основной v3, goal ACTIVE.
+[Свидетельство384](steps/witnesses/m11-receiver-actuals-20261114/notes.md).
+
 **2026-11-14, срез383 — raw bindings после копии и held F, ограниченная реализация; кодовая приёмка пройдена.**
 База382/d0e384c1 принята и отправлена; рабочая связка383 — boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
 Изменён только Run, ABI Run53/Frame прежний. Один resolver разделяет pure query без построения и consuming read
@@ -18,9 +41,9 @@ Whole bootstrap quick: настоящие G1/G2, по9 smoke, fixedpoint13/verif
 штатные render/docs check383 прошли:35/14/27/44/615, ссылки/LF27696 до staging; финальный index-check02 LF27737.
 Два класса имеют ограниченные private proofs; общий external/computed CodeBody, M11.7/8 и весь M11/M13/M14 OPEN.
 Native скопированных callee M14 этим не принят. Приёмка383 ограничена этим срезом; goal ACTIVE, продолжать v3.
-Следом до шага7 — M11.5е OPEN: прямые named actuals ресиверов только через `:=`, colon-поля целой переданной
-descriptor DATA остаются данными; structural formals в args отказывают при создании метода. Эти границы
-требуют своей реализации/приёмки, binder356 и копия383 их не закрывают.
+Прямые fn/sub labels только через `:=` и colon-поля whole descriptor DATA приняты по коду384.
+До шага7 — полная formal-validation OPEN: structural formals в args отказывают при создании метода;
+нужен общий declaration-view/canonical primitive catalog. Binder356, копия383 и ограниченный384 не закрывают весь M11.5е.
 
 **2026-11-14, срез382 — bounded CodeBody для else/finally, ограниченная реализация; кодовая приёмка пройдена.**
 База381/38cf026c принята и отправлена; рабочая связка382 — boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
@@ -745,9 +768,15 @@ G2 repeat25 triple/negative AFTER21/mutation24 и штатные render/docs che
 
 **5е:** имена Structure/функций слева от `:=` отказывают, указатель-переменная принимает ссылку; формалы —
 ресиверами; именованные фактические и части вызываемых — только `:=`; плоское требование с кандидатом.
-**OPEN до шага7:** прямые named actuals ресиверов принимать только через `:=`; colon-поля целой переданной
-descriptor DATA сохранять как обычные данные, не путать их с прямой подачей. Structural formals в args
-отказывают при создании метода. Нужны общая реализация и отдельная приёмка этих границ; binder356/копия383 их не закрывают.
+**Ограниченный384 до шага7, кодовая приёмка пройдена:** общий bind_formals без by_head/mode2; direct labels fn/sub только `:=`,
+Structure-actuals через общий read_received_value(contract2), written groups inert и unknown args/data/code Frames → reached3.
+fn_decl_name — чистый graph-only view прямых actuals либо одного whole-DATA descriptor; colon-поля DATA сохранены.
+Runtime01/Graph01/18 pure, reused AFTER89, private02-two triple и mutation24 PASS;
+настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify798, G2 repeat32 triple/negative AFTER21/mutation24
+и native trace02 PASS; только render/docs check384 и commit/push PENDING.
+**OPEN до шага7:** полная formal-validation, включая отказ structural formals в args при создании метода,
+через общий declaration-view/canonical primitive catalog, без narrow machine whitelist. Binder356/копия383/ограниченный384
+не закрывают весь M11.5е; legacy by_head рабочего frontend — отдельная зависимость M11.8.
 Сохранить общий binder, порядок эффектов и уже реализованную именованную подачу 356.
 
 Выход каждого подшага: новый механизм работает в обоих потребителях одного графа, целевые проверки подтверждают

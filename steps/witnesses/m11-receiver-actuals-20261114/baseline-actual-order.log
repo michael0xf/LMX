@@ -1,0 +1,46 @@
+GRAPH-BEFORE-BEGIN
+int: effects 0
+int: later 0
+int: before 0
+int: after 0
+fn: bad () int
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 7
+end: bad
+fn: later_code () int
+    :=: (node \ later) ((node \ later) + 1)
+    return: 9
+end: later_code
+:=: before 1
+fn:
+    f
+    bad:
+    int
+    later_code:
+end: fn
+:=: after 2
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: effects 1
+int: later 0
+int: before 1
+int: after 0
+fn: bad () int
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 7
+end: bad
+fn: later_code () int
+    :=: (node \ later) ((node \ later) + 1)
+    return: 9
+end: later_code
+:=: before 1
+fn:
+    f
+    bad:
+    int
+    later_code:
+end: fn
+:=: after 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5

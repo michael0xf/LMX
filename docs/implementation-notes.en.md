@@ -76,7 +76,30 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-**Current state, 2026-11-14, slice383; base382 `d0e384c1`.** Only Run changed; Run53/Frame ABI is unchanged.
+**Current state, 2026-11-14, slice384 -- bounded implementation, code acceptance passed; base383 `58bc7f3a`.** Direct named actuals of `fn`/`sub`
+bind through `:=` only. A whole descriptor retains its colon fields in the DATA role without execution.
+Structure formals `args`/`data`/`code` use common `read_received_value` with contract2: a written group is inert,
+an unknown named Frame is read as an application and refuses3. Written `name`/`return` contracts, including `@: c.FILE`, are retained.
+`fn_decl_name` needs no Space: a direct name/AST `name := value` is separate from the unique DATA field `name` of one whole descriptor;
+there is no recursive unwrapping of nested groups or former direct `name: value` label branch.
+Runtime01/Graph01, private32 triple,87 full AFTER checks,2 baseline checks and mutation24 passed.
+The first private32 had3 FAILs: stale fn_prepared/call_receivers goldens and static-name emit5. Seed383 gave6/6 full AFTER checks;
+only13 synthetic RHS parenthesis lines were corrected, with numbers unchanged. The original static probe and emit5 are retained;
+no native runtime was created for it. Two new private02 sources checked a reached name with computed args
+and name-call/finally in all three modes:5/before1/after0 and cleanup1. Direct/whole DATA gives12/12;
+actual order gives effects1/later0/refusal5, the inert code group length1.
+Source03 SHA-256 `ac0d0a1ca48bfdb488c44982ada095ef2e7516dd304831d5987a735c55f13e9f`.
+Whole bootstrap quick passed: genuine G1/G2, nine smoke cases each; fixedpoint13/verify798 PASS.
+Native trace02: actual root → `fn_apply` → `receiver_bind` evaluate1 → actual native producer,
+effects1/later0/body0/before1/after0, expected host exit1. The first GDB01 with missing args is retained and is not counted as proof.
+The genuine G2 graph-tool is built, SHA-256 `09f0e983a7baa2b892bd755c5845495355062e673b41ff6556a02a6899004f82`;
+G2 repeat32 triple/21 full negative AFTER checks/mutation24 PASS. Tested code tuple384:
+boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+Normal render/docs check384 passed:35/14/27/44/615, links/LF; commit/push main follows.
+A common catalog/declaration view and formal validation are OPEN M11.5e; frontend `by_head` is OPEN M11.8;
+full M11, external/computed CodeBody and M13/M14 remain OPEN. Historical by_head333–335 is marked in kernel §3.4.
+
+**Previous state, 2026-11-14, slice383; base382 `d0e384c1`.** Only Run changed; Run53/Frame ABI is unchanged.
 One resolver serves pure classification and consuming reads with a local status. Only an actual read
 of an absent F for reached raw fn/sub prepares the owner scope through existing `space_declarations`/evaluate0.
 Sibling written methods are prepared consistently before computed actuals; binder queries do not re-enter a receiver.
@@ -441,7 +464,8 @@ of the third:
   `a`); an unknown name ("zz is not an argument of tst") and a positional
   argument after a named one are translation refusals. The parts of the
   `table:` receiver are bound by the heads of its grammar by the same
-  binder in its `by_head` mode.
+  binder in its `by_head` mode. This is a remaining working-frontend path (OPEN M11.8);
+  slice384 binds direct `fn`/`sub` parts in the clean graph by position or through `:=` only.
 - A `merge` operand written name first -- `(a: int: 5)` and the bare
   `a: int: 5` -- is the typed field the declaration form `(int: a 5)`
   is: it writes the model's slot of its name, keeps the other fields and

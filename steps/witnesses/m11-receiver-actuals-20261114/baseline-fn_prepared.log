@@ -1,0 +1,91 @@
+GRAPH-BEFORE-BEGIN
+int: k 2
+sub: main () (
+    prepared:
+        name: triple
+        args:
+            int: a
+        end: args
+        return: int
+        data:
+            int: calls 0
+        end: data
+        code: ((:= calls (calls + 1)) (int last a) (return ((last * 3) + k)))
+    end: prepared
+    fn: prepared
+    fn: other prepared
+    int: r1 0
+    int: r2 0
+    int: c1 0
+    int: c2 0
+    int: r3 0
+    int: c3 0
+    int: c4 0
+)
+    :=: r1 (triple 5)
+    :=: r2 (triple 2)
+    :=: c1 ((triple \ data) \ calls)
+    :=: c2 ((triple \ data) \ last)
+    :=: r3 (other 3)
+    :=: c3 ((other \ data) \ calls)
+    :=: c4 ((other \ data) \ last)
+end: main
+:=: k 4
+main:
+int: r1 ((main \ data) \ r1)
+int: r2 ((main \ data) \ r2)
+int: c1 ((main \ data) \ c1)
+int: c2 ((main \ data) \ c2)
+int: r3 ((main \ data) \ r3)
+int: c3 ((main \ data) \ c3)
+int: c4 ((main \ data) \ c4)
+int: p_calls ((((main \ data) \ prepared) \ data) \ calls)
+int: p_fields (length (((main \ data) \ prepared) \ data))
+int: p_parts (length ((main \ data) \ prepared))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: k 4
+sub: main () (
+    prepared:
+        name: triple
+        args:
+            int: a
+        end: args
+        return: int
+        data:
+            int: calls 0
+        end: data
+        code: ((:= calls (calls + 1)) (int last a) (return ((last * 3) + k)))
+    end: prepared
+    fn: prepared
+    fn: other prepared
+    int: r1 0
+    int: r2 0
+    int: c1 0
+    int: c2 0
+    int: r3 0
+    int: c3 0
+    int: c4 0
+)
+    :=: r1 (triple 5)
+    :=: r2 (triple 2)
+    :=: c1 ((triple \ data) \ calls)
+    :=: c2 ((triple \ data) \ last)
+    :=: r3 (other 3)
+    :=: c3 ((other \ data) \ calls)
+    :=: c4 ((other \ data) \ last)
+end: main
+:=: k 4
+main:
+int: r1 19
+int: r2 10
+int: c1 2
+int: c2 2
+int: r3 13
+int: c3 1
+int: c4 3
+int: p_calls 0
+int: p_fields 1
+int: p_parts 5
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

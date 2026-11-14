@@ -1,5 +1,30 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез384 — M11.5е, actuals ресиверов, ограниченная реализация; кодовая приёмка пройдена.**
+
+- [x] Run-only, ABI Run53/Frame прежний; общий bind_formals без by_head/mode2, прямые labels fn/sub только через `:=`.
+  Structure-actuals через read_received_value(contract2), written groups inert, unknown named Frame args/data/code — reached refusal3.
+  Word name/return written-description, `@: c.FILE` и colon-поля whole-DATA descriptor сохранены.
+- [x] fn_decl_name — graph-only query прямой positional/name:= подачи либо одного whole-DATA descriptor,
+  без recursive unwrap, lookup/eval/Space. Runtime01/Graph01 и18 pure PASS.
+- [x] Private01:32 случая/29 PASS triple, два RHS golden mismatch и static-name emit5; у fn_prepared/call_receivers
+  исправлены лишь13 скобочных строк, seed383 AFTER6/6 совпали, числа сохранены. Готовые binaries переиспользованы:
+  private-after01 CHECKS89=87 full AFTER+2 baseline PASS. Private02 пересобрал только две изменённые fixture:
+  name_refused(computed args, reached5/before1/after0) и fn_name_call(finally at_end1/refusal5), обе triple PASS.
+  Прямое written unsuitable name даёт5, не unknown3. Mutation24 PASS; Source03:798 frozen SHAac0d0a1c.
+- [x] Настоящие G1/G2 quick, по9 smoke; fixedpoint13/verify798; штатный G2 graph rebuild SHA09f0e983,
+  G2 repeat32 triple/21 negative full AFTER/mutation24 PASS. Native-receiver-actuals02:
+  actual native root→fn_apply→receiver_bind(evaluate1)→producer body0, effects1/later0/before1/after0/ожидаемый host exit1.
+  Первый GDB missing-argv01 сохранён как непринятый proof.
+- [x] Штатные render/docs check384 прошли:35/14/27/44/615, ссылки/LF.
+- [x] Финальная проверка staged index03:35/14/27/44/615, ссылки/LF27793; чужой WIP сохранён.
+- [ ] До M11.7 — полная formal-validation/отказ structural formals при создании метода через общий declaration-view
+  и canonical primitive catalog, без narrow machine whitelist. Весь M11.5е partial.
+- [ ] Legacy by_head frontend M11.8, общий external/computed CodeBody, весь M11.7/8/M13/M14.
+  Принят383; кодовая связка384 — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+  Кодовая и документальная приёмка ограничены384; все следующие задачи включать в v3, goal ACTIVE.
+  [Свидетельство384](steps/witnesses/m11-receiver-actuals-20261114/notes.md).
+
 **2026-11-14, срез383 — raw bindings после копии и held F, ограниченная реализация; кодовая приёмка пройдена.**
 
 - [x] Run-only, ABI Run53/Frame прежний. Общий resolver: pure query без построения и consuming read со статусом вызывающего.
@@ -18,9 +43,11 @@
 - [ ] Общие варианты копии, external/computed CodeBody, M11.7/8, весь M11/M13/M14, включая native copied callee.
   Рабочая связка383 — boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
   Приёмка ограничена этим срезом; goal ACTIVE.
-- [ ] До шага7 — M11.5е: прямые named actuals ресиверов только через `:=`; colon-поля целой переданной
-  descriptor DATA остаются обычными данными. Реализация и отдельная приёмка этих границ OPEN.
-- [ ] До шага7 — отказ structural formals в args при создании метода; общий M11.5е не закрыт binder356/копией383.
+- [x] Ограниченный M11.5е срез384: direct labels fn/sub только `:=`, whole descriptor DATA colon fields сохранены;
+  Runtime01/Graph01/18 pure, reused AFTER89, private02-two triple/mutation24, G1/G2/fixedpoint13/verify798,
+  G2 repeat32 triple/AFTER21/mutation24/native trace02 PASS; только docs/commit/push384 PENDING.
+- [ ] До шага7 — полная formal-validation/отказ structural formals в args через общий declaration-view/canonical primitive catalog;
+  общий M11.5е не закрыт binder356/копией383/ограниченным срезом384, legacy frontend остаётся M11.8.
 
 **2026-11-14, срез382 — bounded CodeBody для else/finally, ограниченная реализация; кодовая приёмка пройдена.**
 

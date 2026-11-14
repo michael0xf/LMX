@@ -1,0 +1,13 @@
+# The local name is written, so namespace is closed before ordered data.
+# Actual labels are selectors even before its computed parts construct local.
+fn: outer () int (
+    prepared:
+        args:
+            int: a 2
+        return: int
+        code: (return: a * 3)
+    fn: local prepared
+)
+    return: local(a := 3)
+int: result outer()
+int: by_path fncall(int; outer\data\local)

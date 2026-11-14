@@ -1,0 +1,18 @@
+# An unknown local declaration name requires ordered data before final input
+# binding. A still missing free input then refuses before any code statement.
+int: calls 0
+fn: tick () int
+    node\calls := node\calls + 1
+    return: 1
+fn: missing () int (
+    prepared:
+        name: local
+        args: ()
+        return: int
+        code: (return: 7)
+    fn: prepared
+    int: seeded tick()
+)
+    node\calls := 99
+    return: absent
+int: result missing()

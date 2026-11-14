@@ -58,9 +58,11 @@ sub: main () (
     RepeatOwn:
         data:
             int: x 0
-        ---
-            x := x + 1
-        until: x = 2
+        code:
+            ---
+                x := x + 1
+            until: x = 2
+    end: RepeatOwn
     # The own declaration is reached on each pass; it is not a persistent loop counter.
     Self:
         int: x 0
@@ -94,7 +96,7 @@ sub: main () (
         continue()
     until: root_value = 2
     own_before := RepeatOwn\data\x
-    call: RepeatOwn\data RepeatOwn
+    call: RepeatOwn\data RepeatOwn\code
     own_after := RepeatOwn\data\x
     call: Self Self
     same_data := Self\x

@@ -1,0 +1,86 @@
+int: k 8
+fn: change () int
+    :=: (node \ k) 8
+    return: 1
+end: change
+fn: leaf () int
+    return: k
+end: leaf
+fn: sink (int: value) int
+    return: value
+end: sink
+fn: closed_numeric () int (
+    prepared:
+        args:
+            int: value
+        end: args
+        return: int
+        code: ((return value))
+    end: prepared
+    int: seeded (change)
+    fn: local prepared
+)
+    return: (sink ((local k)))
+end: closed_numeric
+int: closed_result 5
+int: closed_outside 8
+:=: k 5
+fn: open_numeric () int (
+    prepared_local:
+        args:
+            int: value
+        end: args
+        return: int
+        code: ((return value))
+    end: prepared_local
+    prepared_sink:
+        name: sink
+        args:
+            int: value
+        end: args
+        return: int
+        code: ((return value))
+    end: prepared_sink
+    int: seeded (change)
+    fn: local prepared_local
+    fn: prepared_sink
+)
+    return: (((sink ((local k))) * 10) + (leaf))
+end: open_numeric
+int: open_result 55
+int: open_outside 8
+:=: k 5
+fn: open_data () int (
+    Q:
+        int: z 0
+    end: Q
+    prepared_local:
+        args:
+            int: value
+        end: args
+        return: int
+        data:
+            int: calls 0
+        end: data
+        code: ((:= calls (calls + 1)) (return value))
+    end: prepared_local
+    prepared_sink:
+        name: sink
+        args: (@ value Q)
+        return: int
+        code: ((return (length value)))
+    end: prepared_sink
+    int: seeded (change)
+    fn: local prepared_local
+    fn: prepared_sink
+)
+    return: ((((sink ((local never))) * 100) + ((sink ((local k))) * 10)) + (leaf))
+end: open_data
+int: data_result 118
+int: data_calls 0
+int: data_outside 8
+fn: join (int: left 3; int: right 4) int
+    return: ((left * 10) + right)
+end: join
+int: whole_default 37
+int: empty_default 34

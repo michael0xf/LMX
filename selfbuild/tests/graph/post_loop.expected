@@ -43,7 +43,9 @@ sub: main () (
         data:
             int: x 0
         end: data
-        until: (x = 2) ((:= x (x + 1)))
+        code:
+            until: (x = 2) ((:= x (x + 1)))
+        end: code
     end: RepeatOwn
     Self:
         int: x 0
@@ -74,7 +76,7 @@ sub: main () (
     :=: condition_calls ((condition \ data) \ calls)
     until: (root_value = 2) ((:= root_value (root_value + 1)) (continue))
     :=: own_before ((RepeatOwn \ data) \ x)
-    call: (RepeatOwn \ data) RepeatOwn
+    call: (RepeatOwn \ data) (RepeatOwn \ code)
     :=: own_after ((RepeatOwn \ data) \ x)
     call: Self Self
     :=: same_data (Self \ x)

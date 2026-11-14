@@ -1,0 +1,42 @@
+# Own data creates computed fn/sub values in its existing traversal scope.
+# A second outer launch keeps those values and their counters. The source
+# descriptors stay unchanged; a whole descriptor's computed name works by path.
+int: k 5
+fn: change () int
+    node\k := 8
+    return: 1
+int: triple 90
+fn: outer () int (
+    prepared:
+        name: triple
+        args:
+            int: a 2
+        return: int
+        data:
+            int: calls 0
+        code: (calls := calls + 1; return: a * 3 + calls)
+    prepared_sub:
+        name: bump
+        args: ()
+        data:
+            int: n 0
+        code: (n := n + 1)
+    int: seeded change()
+    fn: prepared
+    sub: prepared_sub
+    int: initial triple(a := 1)
+    int: r 0
+)
+    bump()
+    r := triple(a := 2)
+    return: r * 10 + bump\data\n + k * 100
+int: first outer()
+int: second outer()
+int: by_path fncall(int; outer\data\triple)
+call(outer\data\bump)
+int: calls outer\data\triple\data\calls
+int: bumps outer\data\bump\data\n
+int: source_calls outer\data\prepared\data\calls
+int: source_bumps outer\data\prepared_sub\data\n
+int: initial outer\data\initial
+int: outside triple

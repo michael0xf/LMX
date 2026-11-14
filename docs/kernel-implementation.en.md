@@ -480,6 +480,25 @@ Native emits one RHS path for a fixed own model kind, retaining the same preflig
 other places stay dynamic. Normal header generation supplies graph68/run52 and Work's contract field.
 Full bootstrap quick built genuine G1/G2, nine smoke rows each; thirteen checks and 614 inputs passed. Genuine G2/graph repeated nine cases in three modes, the full mutation command and six AFTER comparisons;
 [checks and remaining work](../steps/witnesses/m11-reference-work-20261113/notes.md).
+Slice 370 admits computed fn/sub at the root of the current frame's own data through the same binder/make.
+The existing Space.rows select the constructed method by owner and the source declaration's parent;
+its computed name works in paths, and another launch in the same traversal retains its data.
+When a local declaration's name is still unknown, the existing frame's temporary binding_open
+distinguishes unfinished binding from a missing free input. Known external values are held at entry;
+a new local immediately overrides the entry fallback, including in the next initializer.
+After ordered data, a still missing input refuses before the body, without rereading an external source.
+A closed scope retains its refusal before data initializers. Native selects the callee in the live frame
+and checks its result before actuals, rather than treating a lexical fallback as the final target.
+A possible entry snapshot of an ambiguous argument lives in an existing frame row, but becomes
+an input for child calls only when its owner actually consumes it. Shape queries do not consume it.
+The reading selected by the live contract is carried in the temporary call map's tail and used alike
+by native code and the walker. An empty or partial whole Structure retains the common binder/defaults;
+P0 groups stay intact. Source08:624 inputs,19 cases in three modes, AFTER12 and mutation passed;
+the full bootstrap03 quick G1/G2,9 smoke rows each, fixedpoint13 and the actual G2/graph rerun passed.
+The normal semantics rendering and docs check passed:35/14/27/44/615, LF27224; diff --check is clean.
+Computed declarations in code/inline blocks,
+root/self and the whole M11 remain open;
+[checks and limits](../steps/witnesses/m11-computed-data-20261113/notes.md).
 The running code reads the formals, the body and
 the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, `lmx_graph_launch_result`), not from
 the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call

@@ -1,0 +1,70 @@
+# Receiving contracts read the preserved group as an expression or as data.
+# Entry snapshots precede ordered data; unused possible inputs stay private.
+int: k 5
+fn: change () int
+    node\k := 8
+    return: 1
+fn: leaf () int
+    return: k
+fn: sink (int: value) int
+    return: value
+fn: closed_numeric () int (
+    prepared:
+        args:
+            int: value
+        return: int
+        code: (return: value)
+    int: seeded change()
+    fn: local prepared
+)
+    return: sink((local(k)))
+int: closed_result closed_numeric()
+int: closed_outside k
+k := 5
+fn: open_numeric () int (
+    prepared_local:
+        args:
+            int: value
+        return: int
+        code: (return: value)
+    prepared_sink:
+        name: sink
+        args:
+            int: value
+        return: int
+        code: (return: value)
+    int: seeded change()
+    fn: local prepared_local
+    fn: prepared_sink
+)
+    return: sink((local(k))) * 10 + leaf()
+int: open_result open_numeric()
+int: open_outside k
+k := 5
+fn: open_data () int (
+    Q(int: z 0)
+    prepared_local:
+        args:
+            int: value
+        return: int
+        data:
+            int: calls 0
+        code: (calls := calls + 1; return: value)
+    prepared_sink:
+        name: sink
+        args:
+            @: value Q
+        return: int
+        code: (return: length(value))
+    int: seeded change()
+    fn: local prepared_local
+    fn: prepared_sink
+)
+    return: sink((local(never))) * 100 + sink((local(k))) * 10 + leaf()
+int: data_result open_data()
+int: data_calls open_data\data\local\data\calls
+int: data_outside k
+fn: join (int: left 3; int: right 4) int
+    return: left * 10 + right
+int: whole_default join((int: right 7))
+int: empty_default join(())

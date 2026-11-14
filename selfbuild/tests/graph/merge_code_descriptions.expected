@@ -6,9 +6,7 @@ sub: main () (
             int: b 1
         end: args
         return: int
-        code:
-            return: ((a * 10) + b)
-        end: code
+        code: ((return ((a * 10) + b)))
     end: d1
     d2:
         name: two
@@ -17,6 +15,13 @@ sub: main () (
         end: args
         return: int
     end: d2
+    fn:
+        h
+        merge: d1 d2
+    end: fn
+    fn:
+        merge: d1 d2
+    end: fn
     int: r1 0
     int: r2 0
     int: r3 0
@@ -25,15 +30,6 @@ sub: main () (
     :=: r2 ((two 2))
     :=: r3 ((h 1 7))
 end: main
-@: d1 d1
-@: d2 d2
-fn:
-    h
-    merge: d1 d2
-end: fn
-fn:
-    merge: d1 d2
-end: fn
 main:
 int: r1 14
 int: r2 24

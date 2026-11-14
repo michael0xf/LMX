@@ -6,17 +6,20 @@
 # stays as written. Slice 334 (Codex review of 333): `fn: other prepared` gives the same Structure to the form with a
 # separate name -- its field name is an ordinary field there -- and the data of other is completed the same way (last),
 # its counters its own.
-# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places, the
-# receivers `@` and `fn` that name them, and the call main(). The places p_calls, p_fields and p_parts keep what the
-# dump of prepared showed: it stays as written.
+# M11 5v: prepared and its computed declarations live in main's own data.
+# p_calls, p_fields and p_parts keep the original descriptor observations.
 int: k 2
 sub: main () (
     prepared:
         name: triple
-        args: (int: a)
+        args:
+            int: a
         return: int
-        data: (int: calls 0)
+        data:
+            int: calls 0
         code: (calls := calls + 1; int: last a; return: last * 3 + k)
+    fn: prepared
+    fn: other prepared
     int: r1 0
     int: r2 0
     int: c1 0
@@ -32,9 +35,6 @@ sub: main () (
     r3 := other(3)
     c3 := other\data\calls
     c4 := other\data\last
-@: prepared main\data\prepared
-fn: prepared
-fn: other prepared
 k := 4
 main()
 int: r1 main\data\r1
@@ -44,6 +44,6 @@ int: c2 main\data\c2
 int: r3 main\data\r3
 int: c3 main\data\c3
 int: c4 main\data\c4
-int: p_calls prepared\data\calls
-int: p_fields length(prepared\data)
-int: p_parts length(prepared)
+int: p_calls main\data\prepared\data\calls
+int: p_fields length(main\data\prepared\data)
+int: p_parts length(main\data\prepared)

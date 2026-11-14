@@ -22,6 +22,51 @@ Sol принял срез: штатный renderer пересоздал RU/EN и
 WIP 370 сохранён в W3 без изменения хешей; реализация общего кеша и уточнённого flush остаётся OPEN.
 [Квитанция](witnesses/m14-direct-cache-docs-20261113/notes.md).
 Очередь M11 и назначение единственного writer/build сохраняются; чужие untracked не затронуты.
+## 2026-11-13 — M11.5в: срез 370, кодовая приёмка source08 пройдена
+
+По уточнению автора кодинг и следующие коммиты идут прямо в main C:/Nyasha_Planet/LMX.
+База main — 5d5a4ea8 (документы M14 приняты и отправлены); кодовая база — принятый срез369.
+Прежний W3 остаётся контрольной копией WIP, новые сборки и коммиты в нём не нужны.
+Единственный writer/build Sol, runs/sol-m11-computed-data-20261113-01, общий S; компиляция завершена.
+
+WIP добавляет computed fn/sub в own data через прежние binder/make/Space.rows и кадр.
+Binding выбирается по owner, написанному имени при наличии и parent исходного Frame;
+повторный запуск сохраняет метод. Временный binding_open отделяет ещё неизвестные локальные
+имена от отсутствующих free inputs; local сразу затеняет entry fallback без повторного чтения
+внешнего источника. Native выбирает live-цель и проверяет результат до actuals.
+fn_prepared/merge_code_descriptions перенесены в own data; post_loop явно подаёт data/code.
+
+Source06: 622 входа, inputs.sha256 обновлён и verify622 прошёл; manifest
+79b471a85aeef4021786f7a2dc43d6b8a8123646d4389f15f54011120c31a8ae.
+Runtime03/graph04 прошли 15 случаев interp/native/forced, AFTER12 и весь mutation.
+Driver03:12ab50bb1386820c9b7ac3bcf54d1d8e68ba51bd6faf8e4862c68b5cb0f63e7a;
+graph04:a4e9f96c3022aed94cd5ac8ef13c706b04746c74431f4d744e9f056a60f37784.
+Bootstrap01 source05 прошёл настоящие G1/G2, по9 smoke, но это промежуточный образ.
+Bootstrap02 source06 остановлен только в своём дереве процессов после обнаружения дефекта:
+private grouped_deferred_input.lm2 даёт result8/outside8 вместо нормативных5/8.
+В sink((local(k))) numeric-формал требует выражение и entry-снимок k5 до initializer change→8.
+Scanner пропускает группу до создания local; нужен общий контрактный запрос scanner/read_actual,
+сопоставление через существующие bind_formals/bind_fields, без раскрытия групп P0 и fake methods.
+У bind_call ветка single_candidate возвращает0 без заполненной карты — не считать её готовой.
+Для неизвестной до data цели не подставлять прототип и не читать внешний источник поздно.
+Уточнение M14 об общем прямом кеше не меняет норму локального entry-снимка; кеш и flush OPEN.
+
+Source08: 624 canonical-входа, verify прошёл; manifest
+5ae4d48139a2e570fbe91eac99ed76382ffaa2c469e7fff4de46cccf1a8afdbf.
+Runtime06/graph05 прошли 19 случаев interp/native/forced, AFTER12 и весь mutation.
+grouped_actual_contract сохраняет closed5/8, open55/8, data118/calls0/8, whole37/empty34.
+Возможные entry-снимки неоднозначного actual удерживаются прежними строками, но не видны детям
+до потребления владельцем; классификация не потребляет их. Хвост существующей карты вызова
+несёт единственный live выбор чтения для native и обходчика. Нового persistent механизма нет.
+Runtime04 отказал из-за неполной generated frontend closure после прерванной bootstrap02;
+штатный frontend02 восстановил её, runtime05 и затем окончательный runtime06 собраны успешно.
+Bootstrap03 из принятого seed369 завершён: настоящие G1/G2, по9 smoke; fixedpoint13 и verify624
+прошли. Настоящий G2 заново собрал graph-tool и повторил19 случаев в трёх режимах, AFTER12 и
+mutation. Рабочая связка — boot-m11-computed-data-03/g2 и graph-m11-computed-data-g2-03.
+Штатные render semantics и docs check прошли:35/14/27/44/615, LF27224; diff --check чист.
+Далее commit/push прямо из main и продолжение шага3. Новые задачи включать в основной v3.
+[WIP и границы](witnesses/m11-computed-data-20261113/notes.md). Goal active, весь v3;
+продолжать шаг3 to_sol, затем шаг4. Остальные M11.7/8, M13/M14, GC живых кадров остаются OPEN.
 
 ## 2026-11-13 — M11.5в: срез 369, кодовая приёмка пройдена
 

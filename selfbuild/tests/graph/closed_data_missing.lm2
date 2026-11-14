@@ -1,0 +1,9 @@
+# With no pending local declarations, a missing free input is refused before
+# the data initializer can call tick or publish seeded. The body is not entered.
+int: calls 0
+fn: tick () int
+    node\calls := node\calls + 1
+    return: 1
+fn: missing () int (int: seeded tick())
+    return: absent
+int: result missing()

@@ -1,0 +1,198 @@
+GRAPH-BEFORE-BEGIN
+fn: repeat () int
+    int: i 0
+    until: (i = 3) ((:= i (i + 1)))
+    return: i
+end: repeat
+fn: condition () int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: (calls >= 2)
+end: condition
+fn: transitions () int
+    int: attempt 0
+    until: (condition) ((:= attempt (attempt + 1)) (if (attempt = 1) ((redo))) (if (attempt = 2) ((continue))))
+    return: attempt
+end: transitions
+fn: leave () int
+    int: n 0
+    until: (condition) ((:= n (n + 1)) (break))
+    return: n
+end: leave
+fn: early () int
+    until: (condition) ((return 9))
+end: early
+fn: body_fields () int
+    :=: late 4
+    until: (late = 4) ((int late))
+    return: late
+end: body_fields
+fn: bare_body () int
+    int: i 1
+    until: 1 (i)
+    return: i
+end: bare_body
+sub: main () (
+    Repeat:
+        until: (x = 2) ((:= x (x + 1)))
+    end: Repeat
+    Data:
+        int: x 0
+    end: Data
+    RepeatOwn:
+        data:
+            int: x 0
+        end: data
+        until: (x = 2) ((:= x (x + 1)))
+    end: RepeatOwn
+    Self:
+        int: x 0
+        until: (x = 2) ((int x 0) (:= x (x + 2)))
+    end: Self
+    int: result 0
+    int: before_call 0
+    int: after_call 0
+    int: transitioned 0
+    int: left 0
+    int: early_result 0
+    int: from_body 0
+    int: condition_calls 0
+    int: root_value 0
+    int: own_before 0
+    int: own_after 0
+    int: same_data 0
+    int: bare_result 0
+)
+    :=: result ((repeat))
+    :=: before_call (Data \ x)
+    call: Data Repeat
+    :=: after_call (Data \ x)
+    :=: transitioned ((transitions))
+    :=: left ((leave))
+    :=: early_result ((early))
+    :=: from_body ((body_fields))
+    :=: condition_calls ((condition \ data) \ calls)
+    until: (root_value = 2) ((:= root_value (root_value + 1)) (continue))
+    :=: own_before ((RepeatOwn \ data) \ x)
+    call: (RepeatOwn \ data) RepeatOwn
+    :=: own_after ((RepeatOwn \ data) \ x)
+    call: Self Self
+    :=: same_data (Self \ x)
+    :=: bare_result ((bare_body))
+end: main
+main:
+int: result ((main \ data) \ result)
+int: before_call ((main \ data) \ before_call)
+int: after_call ((main \ data) \ after_call)
+int: transitioned ((main \ data) \ transitioned)
+int: left ((main \ data) \ left)
+int: early_result ((main \ data) \ early_result)
+int: from_body ((main \ data) \ from_body)
+int: condition_calls ((main \ data) \ condition_calls)
+int: root_value ((main \ data) \ root_value)
+int: own_before ((main \ data) \ own_before)
+int: own_after ((main \ data) \ own_after)
+int: same_data ((main \ data) \ same_data)
+int: bare_result ((main \ data) \ bare_result)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: repeat () int
+    int: i 0
+    until: (i = 3) ((:= i (i + 1)))
+    return: i
+end: repeat
+fn: condition () int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: (calls >= 2)
+end: condition
+fn: transitions () int
+    int: attempt 0
+    until: (condition) ((:= attempt (attempt + 1)) (if (attempt = 1) ((redo))) (if (attempt = 2) ((continue))))
+    return: attempt
+end: transitions
+fn: leave () int
+    int: n 0
+    until: (condition) ((:= n (n + 1)) (break))
+    return: n
+end: leave
+fn: early () int
+    until: (condition) ((return 9))
+end: early
+fn: body_fields () int
+    :=: late 4
+    until: (late = 4) ((int late))
+    return: late
+end: body_fields
+fn: bare_body () int
+    int: i 1
+    until: 1 (i)
+    return: i
+end: bare_body
+sub: main () (
+    Repeat:
+        until: (x = 2) ((:= x (x + 1)))
+    end: Repeat
+    Data:
+        int: x 0
+    end: Data
+    RepeatOwn:
+        data:
+            int: x 0
+        end: data
+        until: (x = 2) ((:= x (x + 1)))
+    end: RepeatOwn
+    Self:
+        int: x 0
+        until: (x = 2) ((int x 0) (:= x (x + 2)))
+    end: Self
+    int: result 0
+    int: before_call 0
+    int: after_call 0
+    int: transitioned 0
+    int: left 0
+    int: early_result 0
+    int: from_body 0
+    int: condition_calls 0
+    int: root_value 0
+    int: own_before 0
+    int: own_after 0
+    int: same_data 0
+    int: bare_result 0
+)
+    :=: result ((repeat))
+    :=: before_call (Data \ x)
+    call: Data Repeat
+    :=: after_call (Data \ x)
+    :=: transitioned ((transitions))
+    :=: left ((leave))
+    :=: early_result ((early))
+    :=: from_body ((body_fields))
+    :=: condition_calls ((condition \ data) \ calls)
+    until: (root_value = 2) ((:= root_value (root_value + 1)) (continue))
+    :=: own_before ((RepeatOwn \ data) \ x)
+    call: (RepeatOwn \ data) RepeatOwn
+    :=: own_after ((RepeatOwn \ data) \ x)
+    call: Self Self
+    :=: same_data (Self \ x)
+    :=: bare_result ((bare_body))
+end: main
+main:
+int: result ((main \ data) \ result)
+int: before_call ((main \ data) \ before_call)
+int: after_call ((main \ data) \ after_call)
+int: transitioned ((main \ data) \ transitioned)
+int: left ((main \ data) \ left)
+int: early_result ((main \ data) \ early_result)
+int: from_body ((main \ data) \ from_body)
+int: condition_calls ((main \ data) \ condition_calls)
+int: root_value ((main \ data) \ root_value)
+int: own_before ((main \ data) \ own_before)
+int: own_after ((main \ data) \ own_after)
+int: same_data ((main \ data) \ same_data)
+int: bare_result ((main \ data) \ bare_result)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5

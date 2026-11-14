@@ -4,19 +4,23 @@
 # (it is not glued). `fn: h merge(d1, d2)` names the function h (the field name of the parts is an ordinary field); the
 # whole-Structure form `fn: merge(d1, d2)` takes the field name of its composition, two. d1 and d2 stay as written;
 # neither is a function.
-# Plan M11 5v: the declarations of ordinary Structures live in the data part of main; the root holds places, the
-# receivers `@` and `fn` that name them, and the call main(). The places d1_b, d2_b, d2_args, d1_parts and d2_parts keep
-# what the dump of d1 and d2 showed: they stay as written.
+# M11 5v: descriptors and their computed fn receivers live in main's own data.
+# The observations retain the original descriptors' values and part counts.
 sub: main () (
     d1:
         name: one
-        args: (int: a; int: b 1)
+        args:
+            int: a
+            int: b 1
         return: int
         code: (return: a * 10 + b)
     d2:
         name: two
-        args: (int: b 4)
+        args:
+            int: b 4
         return: int
+    fn: h merge(d1, d2)
+    fn: merge(d1, d2)
     int: r1 0
     int: r2 0
     int: r3 0
@@ -24,16 +28,12 @@ sub: main () (
     r1 := h(1)
     r2 := two(2)
     r3 := h(1; 7)
-@: d1 main\data\d1
-@: d2 main\data\d2
-fn: h merge(d1, d2)
-fn: merge(d1, d2)
 main()
 int: r1 main\data\r1
 int: r2 main\data\r2
 int: r3 main\data\r3
-int: d1_b d1\args\b
-int: d2_b d2\args\b
-int: d2_args length(d2\args)
-int: d1_parts length(d1)
-int: d2_parts length(d2)
+int: d1_b main\data\d1\args\b
+int: d2_b main\data\d2\args\b
+int: d2_args length(main\data\d2\args)
+int: d1_parts length(main\data\d1)
+int: d2_parts length(main\data\d2)

@@ -9,12 +9,10 @@ sub: main () (
         data:
             int: calls 0
         end: data
-        code:
-            :=: calls (calls + 1)
-            int: last a
-            return: ((last * 3) + k)
-        end: code
+        code: ((:= calls (calls + 1)) (int last a) (return ((last * 3) + k)))
     end: prepared
+    fn: prepared
+    fn: other prepared
     int: r1 0
     int: r2 0
     int: c1 0
@@ -31,9 +29,6 @@ sub: main () (
     :=: c3 ((other \ data) \ calls)
     :=: c4 ((other \ data) \ last)
 end: main
-@: prepared prepared
-fn: prepared
-fn: other prepared
 :=: k 4
 main:
 int: r1 19

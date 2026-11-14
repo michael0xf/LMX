@@ -292,7 +292,7 @@ sub: lm_graph_emit_leave_text (@: buffer char; int: label; int: status)
     return
 end: lm_graph_emit_leave_text
 
-fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; int: want_result; @: temp int) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
@@ -303,35 +303,30 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
     @: holder c.Lmx expression
     size_t: at 0U
     int: call_id temps[0]
+    int: done 0
     int: value 0
     int: status 0
     temps[0] := temps[0] + 1
     # The callee as the interpreter takes it: the resolved head, or the target of a reference to a callable.
-    c.fprintf(f, "        @: Lmx l2_call%d (cast: (@: Lmx) lmx_graph_target(l2_g, lmx_graph_resolve(l2_g, lmx_call_code, ", call_id)
+    c.fprintf(f, "        @: Lmx l2_call%d (cast: (@: Lmx) lmx_graph_target(l2_g, lmx_graph_operand_name(l2_g, lmx_call_code, ", call_id)
     status := lm_graph_emit_head(g, f, scope, expression)
-    c.fprintf(f, ")))\n        []: size_t l2_binding%d %zuU\n        if: lmx_graph_bind_call(l2_g, lmx_call_code, l2_call%d, (cast: (@: Lmx) ", call_id, count + 1U, call_id)
+    c.fputs(")))\n", f)
+    if: want_result != 0
+        c.fprintf(f, "        if: lmx_graph_has_result(l2_g, l2_call%d) = 0\n            %s\n", call_id, leave_failure)
+    c.fprintf(f, "        []: size_t l2_binding%d %zuU\n        if: lmx_graph_bind_call(l2_g, lmx_call_code, l2_call%d, (cast: (@: Lmx) ", call_id, count + 1U, call_id)
     if: status = 0
         status := lm_graph_emit_address(g, f, scope, expression)
-    # One positional actual naming a value without effects: the same kernel call as the interpreter's decides at run
-    # time whether its Structure is the whole argument structure (lmx_graph_call_single).
-    if: status = 0 && c.lmx_graph_single_candidate(g, scope, expression) != 0
-        c.fprintf(f, "), l2_binding%d) != 0\n            %s\n", call_id, leave_failure)
-        actual := c.lmx_graph_get(expression, 0U)
-        if: c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_name_of(g, actual) = 0
-            # A grouped head may resolve differently in the live caller.
-            # Read its value by the same reader as the walker after preflight;
-            # the selected callee then receives that value or its direct fields.
-            value := temps[0]
-            temps[0] := temps[0] + 1
-            c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_eval_value(l2_g, lmx_call_code, lmx_graph_get(", value)
-            status := lm_graph_emit_address(g, f, scope, expression)
-            c.fprintf(f, ", 0U), @ l2_v%d) != 0\n            %s\n", value, leave_failure)
-        else:
-            status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
-        c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_call_single(l2_g, l2_call%d, l2_v%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, value, call_id, leave_failure)
-        temp[0] := call_id
-        return: status
-    c.fprintf(f, "), l2_binding%d) != 0\n            %s\n        []: @(void) l2_args%d %zuU\n", call_id, leave_failure, call_id, count + 1U)
+    c.fprintf(f, "), l2_binding%d) != 0\n            %s\n        int: l2_t%d 0\n", call_id, leave_failure, call_id)
+    # The live target determines how the preserved argument is read. The
+    # binding map carries that choice; no lexical prediction is repeated here.
+    if: count = 1U && status = 0
+        done := temps[0]
+        value := done + 1
+        temps[0] := value + 1
+        c.fprintf(f, "        if: l2_binding%d[1U] != 0U\n            @: void l2_v%d lmx_graph_get(", call_id, value)
+        status := lm_graph_emit_address(g, f, scope, expression)
+        c.fprintf(f, ", 0U)\n            if: l2_binding%d[1U] = 1U && lmx_graph_eval_value(l2_g, lmx_call_code, l2_v%d, @ l2_v%d) != 0\n                %s\n            if: lmx_graph_call_single(l2_g, l2_call%d, l2_v%d, @ l2_t%d) != 0\n                %s\n            goto: l2_label%d\n", call_id, value, value, leave_failure, call_id, value, call_id, leave_failure, done)
+    c.fprintf(f, "        []: @(void) l2_args%d %zuU\n", call_id, count + 1U)
     while: i < count && status = 0
         holder := expression
         at := i
@@ -342,7 +337,7 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
             holder := (cast: (@: c.Lmx) actual)
             at := 2U
         actual := c.lmx_graph_get(holder, at)
-        if: c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_name_of(g, actual) = 0 && c.lmx_graph_group_expression(g, scope, actual) = 0
+        if: c.lmx_graph_written_group(g, actual) != 0
             value := temps[0]
             temps[0] := temps[0] + 1
             c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_read_actual(l2_g, lmx_call_code, l2_call%d, l2_binding%d[%zuU], lmx_graph_get(", value, call_id, call_id, i)
@@ -354,7 +349,9 @@ fn: lm_graph_emit_call (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
         c.fprintf(f, "        l2_args%d[%zuU]: l2_v%d\n", call_id, i, value)
         i := i + 1U
     ---
-    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_invoke_bound(l2_g, l2_call%d, l2_args%d, %zuU, l2_binding%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, call_id, count, call_id, call_id, leave_failure)
+    c.fprintf(f, "        if: lmx_graph_invoke_bound(l2_g, l2_call%d, l2_args%d, %zuU, l2_binding%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, count, call_id, call_id, leave_failure)
+    if: done != 0
+        c.fprintf(f, "        l2_label%d:\n", done)
     temp[0] := call_id
     return: status
 end: lm_graph_emit_call
@@ -555,22 +552,11 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
         # The receiver fncall (the book, call-receivers): the launch of the code it is given, with its result.
         if: word = state\w_fncall
             return: lm_graph_emit_fncall(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
-        method := c.lmx_graph_target(g, c.lmx_graph_resolve(g, scope, word))
-        if: c.lmx_graph_method(g, (cast: (@: c.Lmx) method)) != 0
-            if: c.lmx_graph_has_result(g, (cast: (@: c.Lmx) method)) = 0
-                return: 5
-            return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
-        if: method = 0 && c.lmx_graph_language_word(state, word) = 0
-            return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, temp)
-        # The record that launches an ordinary Structure, directly or through a reference place, gives no result (R22):
-        # the code refuses it where it reaches it, as the interpreter does (5).
-        if: c.lmx_graph_kind(g, method) = 4 && c.lmx_graph_language_word(state, word) = 0
-            left := temps[0]
-            temps[0] := temps[0] + 1
-            c.fprintf(f, "        int: l2_t%d 0\n        if: 1\n            %s\n", left, leave_failure)
-            temp[0] := left
-            return: 0
-        ---
+        # The live launch selects the callee before actuals, including a local
+        # declaration that shadows this translation's lexical fallback. Its
+        # result contract is checked before any actual can have an effect.
+        if: c.lmx_graph_language_word(state, word) = 0
+            return: lm_graph_emit_call(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, 1, temp)
         return: lm_graph_emit_number_refused(f, temps, temp)
     if: kind = 4
         expression := (cast: (@: c.Lmx) raw)
@@ -1253,7 +1239,7 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
             i := i + 1U
             continue
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, head)))) != 0
-            r := lm_graph_emit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ temp)
+            r := lm_graph_emit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n, 0, @ temp)
             if: r != 0
                 return: r
             i := i + 1U
@@ -1576,7 +1562,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
         if: mode != 0
             target := c.lmx_graph_target(g, c.lmx_graph_resolve(g, code, head))
             if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
-                status := lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, @ result)
+                status := lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, 0, @ result)
                 i := i + 1U
                 continue
             # A head this translation cannot resolve: the kernel decides when the code runs whether the statement
@@ -1626,7 +1612,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             continue
         target := c.lmx_graph_target(g, c.lmx_graph_resolve(g, code, head))
         if: c.lmx_graph_method(g, (cast: (@: c.Lmx) target)) != 0
-            status := lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, @ result)
+            status := lm_graph_emit_call(g, f, code, statement, temps, 0, 0, 0U, 0, @ result)
         else:
             # A head this translation cannot resolve, or resolves to an ordinary Structure, and that is no formal of this
             # method: the kernel decides when the code runs whether the statement applies a callable or launches a
@@ -2674,7 +2660,7 @@ fn: lm_graph_emit_apply_or (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: sta
     status := lm_graph_emit_head(g, f, scope, statement)
     c.fprintf(f, ")))) = 0\n            goto: l2_label%d\n", other)
     if: status = 0
-        status := lm_graph_emit_call(g, f, scope, statement, temps, decl_names, decl_slots, decl_n, @ result)
+        status := lm_graph_emit_call(g, f, scope, statement, temps, decl_names, decl_slots, decl_n, 0, @ result)
     c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", other + 1, other)
     if: status = 0
         c.fprintf(f, "        @: void l2_v%d lmx_graph_launch_head(l2_g, lmx_call_code, ", structure)

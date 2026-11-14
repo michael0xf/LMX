@@ -1,0 +1,53 @@
+# The primitive table of the translator (§GATE "all settings in tables", slice 2; Q36, Q41;
+# steps/table-receiver.md §7): lingvamyxa_prev's `primitive.description` (lm2/primitive.lm2), its columns and
+# rows verbatim.  The translator reads the columns class, cell and convert (l2_prim_kind): a row names a
+# primitive, `cell` 1 is a cell primitive, `convert` forbidden forbids a conversion to or from it.
+# The active profile includes the original 23 rows and the C99/profile aliases needed by declaration descriptions.
+# Ten additional rows are retained verbatim from lingvamyxa_prev/lm2/primitive.lm2; schar describes signed char,
+# and _Bool explicitly shares bool's contract. Recognition is separate from implemented storage/lowering.
+# Other legacy semantic/library rows are not imported merely because the old catalog contains them:
+# Cell Count Integer Flag Ratio Float Complex Atom Address Opaque Text usize isize categoryFlag bigint real decimal DecimalText.
+# Where the translator's tables live is open (Q46); until then this file is read beside the source, as
+# convert.lm2 is.
+table:
+    source
+    name: `primitive.description`
+    columns: (class: class) (categoryFlag: cell) (class: semantic) (categoryFlag: numeric) (categoryFlag: integer) (categoryFlag: floating) (categoryFlag: reference) (categoryFlag: opaque) (categoryFlag: callable) (categoryFlag: descriptor) (categoryFlag: signed) (class: width) (class: range) (class: spelling) (class: convert)
+    rows:
+             None     0  none    0  0  0  0  0  0  0  0  None      None                     void            forbidden
+             void     0  none    0  0  0  0  0  0  0  0  None      None                     void            forbidden
+
+             char     2  integer 1  1  0  0  0  0  0  1  profile   "C99-char(profile)"      char            keyed
+             schar    1  integer 1  1  0  0  0  0  0  1  profile   "SCHAR_MIN..SCHAR_MAX(profile)" "signed char" keyed
+             short    1  integer 1  1  0  0  0  0  0  1  profile   "C99-short(profile)"     short           keyed
+             int      1  integer 1  1  0  0  0  0  0  1  profile   "C99-int(profile)"       int             keyed
+             long     1  integer 1  1  0  0  0  0  0  1  profile   "C99-long(profile)"      long            keyed
+             llong    1  integer 1  1  0  0  0  0  0  1  profile   "C99-long-long(profile)" "long long"     keyed
+             float    1  float   1  0  1  0  0  0  0  0  profile   "C99-float(profile)"     float           keyed
+             double   1  float   1  0  1  0  0  0  0  0  profile   "C99-double(profile)"    double          keyed
+             flong    1  float   1  0  1  0  0  0  0  0  profile   "C99-long-double(profile)" "long double" keyed
+             signed   1  integer 1  1  0  0  0  0  0  1  profile   "C99-signed-int(profile)" signed         keyed
+             uchar    1  count   1  1  0  0  0  0  0  0  profile   "0..UCHAR_MAX(profile)"  "unsigned char" keyed
+             ushort   1  count   1  1  0  0  0  0  0  0  profile   "0..USHRT_MAX(profile)"  "unsigned short" keyed
+             unsigned 1  integer 1  1  0  0  0  0  0  0  profile   "C99-unsigned-int(profile)" unsigned     keyed
+             uint     1  count   1  1  0  0  0  0  0  0  profile   "0..UINT_MAX(profile)"   "unsigned int"  keyed
+             ulong    1  count   1  1  0  0  0  0  0  0  profile   "0..ULONG_MAX(profile)"  "unsigned long" keyed
+             ullong   1  count   1  1  0  0  0  0  0  0  profile   "0..ULLONG_MAX(profile)" "unsigned long long" keyed
+             size_t   1  count   1  1  0  0  0  0  0  0  profile   "0..SIZE_MAX(profile)"   size_t          keyed
+             Boolean  1  flag    0  0  0  0  0  0  0  0  fixed8    "-1..1"                  int8_t          keyed
+             bool     1  flag    0  0  0  0  0  0  0  0  fixed8    "0..1"                   _Bool           keyed
+             _Bool    1  flag    0  0  0  0  0  0  0  0  profile   "0..1"                   _Bool           keyed
+             u8       1  count   1  1  0  0  0  0  0  0  fixed8    "0..UINT8_MAX"           uint8_t         keyed
+             uint8    1  count   1  1  0  0  0  0  0  0  fixed8    "0..UINT8_MAX"           uint8_t         keyed
+             u16      1  count   1  1  0  0  0  0  0  0  fixed16   "0..UINT16_MAX"          uint16_t        keyed
+             u32      1  count   1  1  0  0  0  0  0  0  fixed32   "0..UINT32_MAX"          uint32_t        keyed
+             u64      1  count   1  1  0  0  0  0  0  0  fixed64   "0..UINT64_MAX"          uint64_t        keyed
+             i8       1  integer 1  1  0  0  0  0  0  1  fixed8    "INT8_MIN..INT8_MAX"     int8_t          keyed
+             int8     1  integer 1  1  0  0  0  0  0  1  fixed8    "INT8_MIN..INT8_MAX"     int8_t          keyed
+             i16      1  integer 1  1  0  0  0  0  0  1  fixed16   "INT16_MIN..INT16_MAX"   int16_t         keyed
+             i32      1  integer 1  1  0  0  0  0  0  1  fixed32   "INT32_MIN..INT32_MAX"   int32_t         keyed
+             i64      1  integer 1  1  0  0  0  0  0  1  fixed64   "INT64_MIN..INT64_MAX"   int64_t         keyed
+             f32      1  float   1  0  1  0  0  0  0  0  fixed32   "C99-float(profile)"     float           keyed
+             f64      1  float   1  0  1  0  0  0  0  0  fixed64   "C99-double(profile)"    double          keyed
+             FILE     1  opaqueHandle 0 0 0 1 1 0 0 0 profile    opaque                   FILE            keyed
+end: `primitive.description`

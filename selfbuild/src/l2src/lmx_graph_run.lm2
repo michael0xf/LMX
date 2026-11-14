@@ -5026,6 +5026,15 @@ fn: lmx_graph_fn_make (@: g c.LmxGraph; @: decl c.Lmx; @: name char; @: args c.L
         return: 5
     if: (body != 0 && c.lmx_graph_kind(g, (cast: (@: void) body)) != 4) || (written != 0 && c.lmx_graph_kind(g, (cast: (@: void) written)) != 4)
         return: 5
+    # Validate user args before allocating F or constructing its data. The receiver catalog's pseudoformals and
+    # generic data-field name projections remain unchanged; defaults and model contents are not executed here.
+    while: at < c.lmx_graph_count(args)
+        @: formal_name char c.lmx_graph_declaration_name(g, c.lmx_graph_get(args, at))
+        if: formal_name = 0 || formal_name = state\w_node
+            return: 5
+        at := at + 1U
+    ---
+    at := 0U
     if: with_result != 0
         count := count + 1U
         if: c.lmx_graph_kind(g, result) != 2 && c.lmx_graph_kind(g, result) != 4

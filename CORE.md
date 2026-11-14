@@ -9,7 +9,18 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice384; bounded implementation, code acceptance passed; base383): Run-only, Run53/Frame ABI unchanged.
+Current implementation note (2026-11-14, slice385; bounded implementation, code acceptance passed): generated primitive-profile data
+feeds the common declaration view, preserving physical cells and data/receiver-pseudoformal projections; Graph72/Run53 layouts stay unchanged.
+Source05:816 is frozen, SHAde6f1d57. Graph03/private03 checked quoted7/arity2/escaped8/arity1;40 private full AFTER checks passed.
+Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each; fixedpoint13/verify816 PASS.
+Genuine G2 rebuilt graph-tool, SHAe742dba04a06366ab8e45ab921f145a7d5b0bac4dc23142600e43093f3114021;
+G2 repeat15 in three modes/21 negative full AFTER PASS. The working code tuple is
+boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01. Normal render35/14 and docs-check35/14/27/44/615 passed;
+the final index check and commit/push385 follow.
+Array runtime and full M11.7/8/M13/M14 remain OPEN; these checks accept bounded declaration descriptions.
+See [record385](steps/witnesses/m11-formal-declarations-20261114/notes.md) and the [main plan](next_core_tasks_v3.md#m11), goal ACTIVE.
+
+Previous implementation note (2026-11-14, slice384; bounded implementation, code acceptance passed; base383): Run-only, Run53/Frame ABI unchanged.
 Common bind_formals no longer has by_head/mode2; direct fn/sub labels use only `:=`. Structure actuals pass through
 common read_received_value(contract2): written groups remain inert, unknown named args/data/code Frames produce reached refusal3.
 Word name/return written-description handling and `@: c.FILE` remain supported; colon fields in a whole-DATA descriptor stay data.
@@ -25,8 +36,8 @@ nine smoke rows each and fixedpoint13/verify798 passed. Genuine G2 rebuilt graph
 G2 repeat32 triple/21 negative full AFTER/mutation24 PASS. Native-receiver-actuals02 traced actual native
 root→fn_apply→receiver_bind(evaluate1)→producer body0, effects1/later0/before1/after0 and expected host exit1.
 The first missing-argv01 is retained as unaccepted proof. Normal render/docs check384 passed:35/14/27/44/615, links/LF.
-Commit/push main follows, preserving foreign WIP.
-The code tuple384 is boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01; final acceptance awaits those gates.
+Slice384 was accepted and pushed as62072bca, preserving foreign WIP.
+The code tuple384 is boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
 Full formal-validation remains OPEN before M11.7;
 use a common declaration view and canonical primitive catalog, not a narrow machine whitelist. Legacy frontend by_head
 is M11.8 OPEN; general external/computed CodeBody and full M11.7/8/M13/M14 remain OPEN. Acceptance is limited to this code slice.

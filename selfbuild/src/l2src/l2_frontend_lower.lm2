@@ -4805,9 +4805,9 @@ fn: lm_compiler_prim_kind (const: (@: name c.LmP0Text); @: out_cell int; @: out_
         # Said at its cause, one mechanism (l2_table_said): the site that asked adds nothing.
         lm_compiler_table_said(tb_path_cell[0][pr_t_cell[0]], tbx_arg_cell[0][k], "a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)")
         return: (cast: (int) (0))
-    if: out_cell != 0 && c.strcmp(ce, "1") = 0
+    if: out_cell != 0 && c.lm_compiler_payload_eq((cast: (const: @: c.LmP0Text) tbx_arg_cell[0][at + pr_c_cell[1]]\as\atom), "1") != 0
         \out_cell := 1
-    if: out_forbid != 0 && c.strcmp(cv, "forbidden") = 0
+    if: out_forbid != 0 && c.lm_compiler_payload_eq((cast: (const: @: c.LmP0Text) tbx_arg_cell[0][at + pr_c_cell[2]]\as\atom), "forbidden") != 0
         \out_forbid := 1
     return: (cast: (int) (1))
 end: lm_compiler_prim_kind

@@ -2140,6 +2140,29 @@ end: decls_write_all
 # (lmx_gc_graph, last) declares its functions itself: the collection's answers and the prototypes the kernel calls are
 # in lmx_gc.h.lm1, which decls_write_all writes, beside the Thread collector's (lmx_gc.lm2). 0, or 1 when a
 # step fails.
+# Source primitive metadata is projected by the same frontend that translates this generation. The generated
+# unit is data only; the clean graph's L2 queries retain the algorithms and never load source tables at runtime.
+fn: bld_primitive_profile (@: rec c.FILE; @: fe char; @: src char; @: out char; @: res int) int
+    @@: args char c.calloc(12U, sizeof(@: char))
+    int: n 0
+    if: args = 0
+        return: 1
+    n := bld_frontend_launch(args, 8, fe)
+    if: n < 0
+        c.free((cast: (@: void) args))
+        return: 1
+    args[n] := "--primitive-profile"
+    args[n + 1] := txt_path(src, "l2src/primitive.lm2")
+    args[n + 2] := txt_path(src, "l2src/lmx_primitive_profile.lm1")
+    if: bld_step(rec, args, n + 3, src, txt_path(out, "primitive-profile.log"), res) != 0
+        c.free((cast: (@: void) args))
+        return: 1
+    bld_hash_note(rec, args[n + 1])
+    bld_hash_note(rec, args[n + 2])
+    c.free((cast: (@: void) args))
+    return: 0
+end: bld_primitive_profile
+
 fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: fe char; @: out char; @: res int) int
     @@: list_names char c.calloc(9U, sizeof(@: char))
     @@: range_names char c.calloc(40U, sizeof(@: char))
@@ -2177,7 +2200,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
     @@: walk_value_names char c.calloc(177U, sizeof(@: char))
-    @@: graph_names char c.calloc(71U, sizeof(@: char))
+    @@: graph_names char c.calloc(72U, sizeof(@: char))
     @@: graph_run_names char c.calloc(53U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
@@ -2195,6 +2218,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     if: child_names = 0 || orphan_names = 0 || collector_names = 0 || reparent_names = 0 || thread_names = 0 || root_names = 0 || walk_value_names = 0 || graph_names = 0 || graph_run_names = 0
         return: 1
     if: decls_write_all(rec, stage) != 0
+        return: 1
+    if: bld_primitive_profile(rec, fe, src, out, res) != 0
         return: 1
     # The clean graph of slice 309 (docs/kernel-implementation.*.md): its constructor, tables and print (lmx_graph) and its
     # interpreter (lmx_graph_run); both write their headers.
@@ -2269,6 +2294,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_names[68] := "lmx_graph_slot_fact"
     graph_names[69] := "lmx_graph_slot_fact_put"
     graph_names[70] := "lmx_graph_slot_type"
+    graph_names[71] := "lmx_graph_declaration_name"
     graph_run_names[0] := "lmx_graph_eval"
     graph_run_names[1] := "lmx_graph_run"
     graph_run_names[2] := "lmx_graph_call"
@@ -3123,7 +3149,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 62, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 71, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 72, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 53, 1) != 0
         return: 1

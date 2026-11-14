@@ -1,6 +1,17 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice383; code acceptance passed): base382 is d0e384c1.
+Current continuation (2026-11-14, slice385; bounded implementation, code acceptance passed): generated primitive-profile data and
+the common declaration view preserve physical cells and data/receiver pseudoformals; Graph72/Run53 layouts stay unchanged.
+Frozen Source05:816 SHAde6f1d57; Graph03/private03 checked quoted7/arity2/escaped8/arity1, and40 private full AFTER checks passed.
+Whole bootstrap01 quick built genuine G1/G2, nine smoke rows each; fixedpoint13/verify816 PASS.
+Genuine G2 rebuilt graph-tool SHAe742dba04a06366ab8e45ab921f145a7d5b0bac4dc23142600e43093f3114021;
+G2 repeat15 in three modes/21 negative full AFTER PASS. The working code tuple is
+boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01. Render35/14 and docs-check35/14/27/44/615 passed;
+the final index check and commit/push385 follow.
+Array runtime and full M11.7/8/M13/M14 remain OPEN; goal ACTIVE.
+[Witness385](../steps/witnesses/m11-formal-declarations-20261114/notes.md); continue the [main v3 plan](../next_core_tasks_v3.md).
+
+Previous continuation (2026-11-14, slice383; code acceptance passed): base382 is d0e384c1.
 The resolver shares pure query and consuming-read contexts, with caller-local status.
 Reading an absent raw fn/sub prepares the reached scope through existing declarations;
 the copier/fn_data, source parents, Run53 and Frame ABI are unchanged. Ten pure cases

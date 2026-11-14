@@ -1,5 +1,37 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез385 — M11.5е, профиль примитивов и declaration-view; ограниченная кодовая приёмка пройдена.**
+
+- [x] Frontend `--primitive-profile` через общий parse/source-table/snapshot/pub path, generated data only;
+  Lower prim_kind нормализует quoted payload. Source profile35:10 verbatim old C99/profile aliases + явные `_Bool`/`schar`,
+  без слепого usize/isize/meta-import. Profile35 plain/quoted output и обычный Lower совпали;
+  malformed dup/cell2/snapshot-touch1 отказывают с сохранением прежнего OUT.
+- [x] Profile suffix в existing Graph receivers без manual primitive names; declaration_name query
+  Graph72/Run53, layouts прежние: primitive profile/C-door/any-depth @/qualifier/Array-family,
+  materialized cells и data/pseudoformal projections. fn_make проверяет user args до allocation/fn_data;
+  formal_model не признаёт любую голову Structure-моделью. Private formal probes: profile34/qualified3,
+  array/deep descriptions/default_calls0 и шесть reached badargs5/before1/after0; Array runtime этим не принят.
+- [x] Runtime02 SHA84b2f626/Graph01 SHA635e519e PASS; canonical quoting fix дал Graph02 SHA2668c71b при прежнем runtime.
+  Private13:12 triple PASS; p0_argument_structure7/7 с двумя старыми RHS-скобками исправлен после seed384 same AFTER.
+  Private-after01 —40 полных AFTER:39 в трёх режимах и один baseline, binaries переиспользованы. Private02 — два случая, triple PASS.
+- [x] Escaped-backtick helper/quoted fixture: Graph03 SHA87fe3b07, private03 changed quoted triple PASS:
+  result7/arity2/escaped_result8/escaped_arity1; quoted node refusal5. Builder name boundaries atom/head/place/block/path component/
+  occurrence label canonical, doubled backticks decoded; lexical markers/raw-selector dispatch прежние.
+  Frozen Source05:816 SHAde6f1d57c5143ad000872c9c13b4cf792ae771211489c37ba3bdccb2a7750edb.
+- [x] Wholeboot01 quick, настоящие G1/G2 по9 smoke; fixedpoint13/verify816 PASS.
+  Штатный G2 Graph SHAe742dba0, repeat15 triple и21 negative full AFTER PASS. Render35/14 выполнен.
+- [x] Docs-check35/14/27/44/615, links/LF27794 PASS из свежих CWD/PRIVATE_OUT.
+- [x] Финальный index-check02:35/14/27/44/615, links/LF27868 PASS; собственный LF receipt добавлен после проверки.
+- [ ] Commit/push main; чужой WIP сохранить.
+- [ ] До7: воспроизводимый generated source profile и один declaration-view для written/computed args,
+  direct positional/named/whole-DATA; primitive/default/model/reference/qualification/Array descriptions,
+  отказ structural args при создании F, сохранение evaluation timing и ordinary DATA/pseudoformals.
+  Нельзя заменять это machine whitelist или объявлять runtime family готовой по одному metadata description.
+- [ ] Отдельный M11.7 OPEN — quoted-selector encoding: exact name `[0]x` коллидирует с occurrence-string;
+  backslash внутри quoted path component разделяет компонент. Исправить existing общий selector mechanism без нового парсера;
+  canonical names/doubled backticks385 не закрывают предел. Не расширять им текущий formal-срез385.
+- [ ] Полный M11.5е/7/8/M13/M14. Принят/отправлен384/62072bca, рабочая связка пока384; goal ACTIVE.
+
 **2026-11-14, срез384 — M11.5е, actuals ресиверов, ограниченная реализация; кодовая приёмка пройдена.**
 
 - [x] Run-only, ABI Run53/Frame прежний; общий bind_formals без by_head/mode2, прямые labels fn/sub только через `:=`.
@@ -21,7 +53,7 @@
 - [ ] До M11.7 — полная formal-validation/отказ structural formals при создании метода через общий declaration-view
   и canonical primitive catalog, без narrow machine whitelist. Весь M11.5е partial.
 - [ ] Legacy by_head frontend M11.8, общий external/computed CodeBody, весь M11.7/8/M13/M14.
-  Принят383; кодовая связка384 — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+  Принят и отправлен384/62072bca; кодовая связка384 — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
   Кодовая и документальная приёмка ограничены384; все следующие задачи включать в v3, goal ACTIVE.
   [Свидетельство384](steps/witnesses/m11-receiver-actuals-20261114/notes.md).
 

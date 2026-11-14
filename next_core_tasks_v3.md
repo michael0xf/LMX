@@ -1,7 +1,42 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез385 — M11.5е, профиль примитивов и declaration-view; ограниченная кодовая приёмка пройдена.**
+Принят и отправлен384/62072bca; рабочая принятая связка — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+WIP frontend `--primitive-profile` использует общий parse/source-table/snapshot/pub path и выпускает только данные;
+Lower prim_kind нормализует quoted payload. Source primitive profile содержит35 строк:10 дословно перенесённых
+old C99/profile aliases и явные `_Bool`/`schar` добавлены как данные, без слепого импорта usize/isize/meta-категорий.
+Graph загружает profile suffix в существующий receivers, убирает ручные primitive names и получает общий
+declaration_name query (Graph72, Run53, layouts прежние). В WIP query различает primitive profile/C-door,
+любую глубину `@`, qualification и Array-family, сохраняя physical materialized cells и data/pseudoformal projections.
+fn_make проверяет user args до allocation/fn_data; formal_model больше не объявляет любую голову Structure-моделью.
+Runtime02 PASS SHA84b2f626/Graph01 PASS635e519e; canonical quoting fix построителя дал Graph02 PASS2668c71b
+при прежнем runtime. Private13:12 PASS triple, p0_argument_structure дал7/7 с двумя старыми RHS-скобками;
+seed384 подтвердил тот же AFTER, expected исправлен. Private-after01 дал40 полных AFTER:39 в трёх режимах
+и один baseline, готовые binaries переиспользованы. Private02 — два случая, triple PASS.
+После расширения escaped-backtick helper и quoted fixture Graph03 PASS SHA87fe3b07; private03 — изменённый quoted
+случай triple PASS: result7/arity2, escaped_result8/escaped_arity1. Formal-пробы дали profile34/qualified3,
+array/deep descriptions/default_calls0 и шесть reached badargs5/before1/after0; quoted node refusal5.
+Profile35 plain/quoted output и обычный Lower совпали; malformed dup/cell2/snapshot-touch1 отказывают без замены прежнего OUT.
+Общие name boundaries построителя — atom/head/place/block/path component/occurrence label — canonical,
+doubled backticks декодируются; lexical markers и raw-selector dispatch сохраняют прежние роли.
+Frozen Source05:816, SHAde6f1d57c5143ad000872c9c13b4cf792ae771211489c37ba3bdccb2a7750edb.
+Wholeboot01 quick прошёл: настоящие G1/G2 по9 smoke, fixedpoint13/verify816 PASS.
+Штатный G2 Graph SHAe742dba0, repeat15 triple и21 negative full AFTER PASS. Render35/14 прошёл;
+docs-check35/14/27/44/615 PASS, далее index-check/commit/push main. [Свидетельство385](steps/witnesses/m11-formal-declarations-20261114/notes.md).
+Старый baseline принимает structural `arg: Model`/`Model: arg`, computed-проба доходит до after2;
+broader primitive probe даёт arity8. Это измеренные старые ограничения, не приёмка385 и не норма.
+Root Model-reference admission4 относится отдельно к M11.7. Ранняя объединённая qualifier/Array/deep проба дала build2;
+новые положительные пробы проверяют описания, а не Array runtime или все receiving families.
+Profile/declaration-view и written/computed/direct positional/named/whole-DATA args имеют ограниченные private proofs;
+финальные gates и общий охват остаются OPEN, ordinary DATA/pseudoformals должны сохраняться.
+Нельзя подменять этот охват machine whitelist или принимать metadata-only description за исполнение её типа.
+Отдельный OPEN M11.7 — quoted-selector encoding: exact name `[0]x` коллидирует с occurrence-string,
+а backslash внутри quoted path component разделяет компонент. Исправлять существующий общий selector mechanism,
+без нового парсера; этот предел не включать в текущий formal-срез385.
+Весь M11.7/8/M13/M14 OPEN; все дальнейшие задачи включать в основной v3, goal ACTIVE.
+
 **2026-11-14, срез384 — M11.5е, actuals ресиверов, ограниченная реализация; кодовая приёмка пройдена.**
-Принят383; кодовая связка384 — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+Принят и отправлен384/62072bca; кодовая связка384 — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
 Изменён только Run, ABI Run53/Frame прежний. Общий bind_formals больше не имеет by_head/mode2;
 прямые labels fn/sub принимаются только через `:=`. Structure-actuals идут через общий read_received_value
 с contract2: written groups остаются данными, неизвестный named Frame args/data/code даёт достигнутый отказ3,
@@ -22,8 +57,7 @@ Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fix
 G2 repeat32 triple/21 negative full AFTER/mutation24 PASS. Native-receiver-actuals02 подтвердил actual native
 root→fn_apply→receiver_bind(evaluate1)→producer body0, effects1/later0/before1/after0 и ожидаемый host exit1.
 Первый GDB missing-argv01 сохранён как непринятый proof. Штатные render/docs check384 прошли:35/14/27/44/615, ссылки/LF.
-Далее commit/push main с сохранением чужого WIP;
-полную приёмку384 до их завершения не объявлять.
+Финальный staged index03 прошёл LF27793; срез384 принят и отправлен, чужой WIP сохранён.
 Полная formal-validation остаётся OPEN перед M11.7: нужен общий declaration-view и canonical primitive catalog,
 а не узкий список машинных типов. Legacy by_head рабочего frontend относится к M11.8 и остаётся OPEN,
 как общий external/computed CodeBody, весь M11.7/8/M13/M14. Все дальнейшие задачи включать в основной v3; goal ACTIVE.
@@ -1984,10 +2018,31 @@ Structure и записью значения, снимаются — шаг 6. �
      private02 пересобрал только name_refused(computed args, reached5/before1/after0) и fn_name_call(finally at_end1/refusal5),
      обе triple PASS. Mutation24 PASS; Source03:798 frozen ac0d0a1c. Настоящие G1/G2 quick, по9 smoke,
      fixedpoint13/verify798, G2 graph rebuild/repeat32 triple/negative AFTER21/mutation24 и native trace02 прошли.
-     Missing-argv trace01 не принят; штатные render/docs check384 и commit/push PENDING.
+     Missing-argv trace01 не принят; render/docs check384 и final index03 LF27793 прошли, принят/отправлен62072bca.
      **OPEN перед шагом7:** полная formal-validation, включая отказ structural formals в args при создании метода,
      через общий declaration-view/canonical primitive catalog, без narrow machine whitelist. Ни binder356,
      ни копия383, ни ограниченный срез384 не закрывают весь M11.5е. Legacy by_head frontend — отдельный OPEN M11.8.
+     **385 — зависимый profile/declaration-view, ограниченная кодовая приёмка пройдена:** frontend `--primitive-profile`
+     использует общий parse/source-table/snapshot/pub path, generated data only; Lower prim_kind нормализует quoted payload.
+     Source profile35 содержит явные old C99/profile aliases + `_Bool`/`schar`, без слепого usize/isize/meta-import.
+     Graph загружает profile suffix в existing receivers вместо ручных primitive names; общий declaration_name
+     (Graph72/Run53, layouts прежние) описывает primitive profile/C-door/any-depth @/qualifier/Array-family,
+     сохраняя materialized cells и data/pseudoformal projections. fn_make проверяет user args до allocation/fn_data;
+     formal_model не признаёт произвольную голову Structure-моделью. Runtime02/Graph01 прошли;
+     canonical/escaped quoting построителя проверены Graph02/03, runtime прежний. Private13:12 triple PASS,
+     p0_argument_structure7/7 с двумя старыми RHS-скобками исправлен после seed384 same AFTER;
+     private-after01 —40 full AFTER (39 в трёх режимах+один baseline), private02-two triple PASS.
+     Private03 changed quoted triple PASS: result7/arity2/escaped_result8/escaped_arity1; Graph03 SHA87fe3b07.
+     Name boundaries atom/head/place/block/path component/occurrence label canonical, doubled backticks decoded;
+     lexical markers/raw-selector dispatch прежние. Source05:816 frozen de6f1d57; wholeboot01 quick PASS,
+     G1/G2 по9 smoke, fixedpoint13/verify816, G2 Graph/repeat15 triple/negative AFTER21 PASS.
+     Render35/14 и docs-check35/14/27/44/615 прошли; далее index-check/commit. Array runtime и общий receiving coverage OPEN.
+     Приёмка перед7: generated profile воспроизводится из source table без ручного перечня типов;
+     written/computed args и direct positional/named/whole-DATA проходят один declaration-view.
+     Различить primitive с default, model/reference, qualifier и Array description; запретить structural args при создании F,
+     сохранить actual/default evaluation timing, ordinary DATA fields и receiver pseudoformals.
+     Более широкий declaration catalog не делает unsupported runtime family поддержанной; false machine whitelist запрещён.
+     Root Model-reference admission4 — отдельная M11.7; весь M11.5е/7/8/M13/M14 не закрыт.
      Срез 366 в зависимости M8 принимает переданное значение Structure для плоского `@: p T`
      общим запросом модели и допуском путей в обходчике/native. Это не реализация значений
      по умолчанию без actual, общего пути моделей или всех ссылочных мест M13.
@@ -2019,6 +2074,16 @@ Structure и записью значения, снимаются — шаг 6. �
    (счётчик в пробе); случаи документа проходят прежние проверки.
    Срез380 добавляет только disposable facts требований индексируемого физического места и сохранение NONE
    в пределах исполнения. Проверка Structure по используемому интерфейсу, test и полная миграция допуска OPEN.
+   **Ближайшие узкие шаги, OPEN:** [Structure-value и source-known preflight](steps/handoff/m11-admission-structure-value-20261114.md).
+   Сначала локальный `target(model/candidate)` перед kind4 gate в admit_paths, сохраняя общий resolver и выбранный actual.
+   Затем отдельный pure known-call-shape preflight; общий `implements`/`test` следует после него.
+   Это план, не реализованный допуск и не перенос в formal-срез385.
+   **OPEN — quoted-selector encoding (отдельно от formal-среза385):** exact name со значением `[0]x`
+   коллидирует со строковой записью occurrence selector, а backslash внутри quoted path component разделяет
+   компонент. Canonical name boundary и decoded doubled backticks385 этот предел не закрывают.
+   Исправить существующий общий selector mechanism, сохранив различие имени, occurrence selector и границы компонента,
+   без нового парсера и без расширения текущего formal-среза. Приёмка: quoted `[0]x` и явное вхождение `[0]x`
+   выбирают разные адреса; quoted компонент с backslash остаётся одним именем, обычный path separator действует как прежде.
 8. **Рабочий frontend** (понижение L3 и обходчик; сюда перенесены шаг 6 раздела M10 и шаг 5 раздела M9 для этого
    пути). Те же правила: чтение по ролям, имена `data` и `code`, порядок `data` перед `code`, атом-указатель без
    раскрытия и видимость в данных в обе стороны, формалы ресиверами, подача только `:=`, присваивание только

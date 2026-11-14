@@ -35,6 +35,7 @@ predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_graph_state.lm1"
+predef: "l2src/lmx_primitive_profile.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -105,17 +106,22 @@ end: lmx_graph_intern_in
 # reading consult by canonical address (§6.2, lmx_graph_language_receiver). 0, or 1 without
 # memory.
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
-    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent implements test post external send receive adopt length typeof cast sizeof int char unsigned ulong size_t short long float double signed _Bool enum struct include import predef prototype end"
+    @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent implements test post external send receive adopt length typeof cast sizeof enum struct include import predef prototype end"
+    const: (@: primitive_names char c.lmx_primitive_profile_names)
+    size_t: primitive_count c.lmx_primitive_profile_count
     @@: list char 0
     size_t: at 0U
     size_t: start 0U
     size_t: count 0U
+    size_t: row 0U
     while: words[at] != 0
         if: words[at] != 32 && (at = 0U || words[at - 1U] = 32)
             count := count + 1U
         at := at + 1U
     ---
-    list := (cast: (@@: char) c.calloc(count + 1U, sizeof(@: char)))
+    if: primitive_count > (cast: (size_t) -1) - count - 1U
+        return: 1
+    list := (cast: (@@: char) c.calloc(count + primitive_count + 1U, sizeof(@: char)))
     if: list = 0
         return: 1
     at := 0U
@@ -127,11 +133,26 @@ fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
         ---
         list[count] := lmx_graph_intern_in(state, (cast: (const: @: char) (words + start)), at - start)
         if: list[count] = 0
+            c.free((cast: (@: void) list))
             return: 1
         count := count + 1U
         if: words[at] != 0
             at := at + 1U
         ---
+    ---
+    at := 0U
+    while: row < primitive_count
+        start := at
+        while: primitive_names[at] != 0
+            at := at + 1U
+        ---
+        list[count] := lmx_graph_intern_in(state, primitive_names + start, at - start)
+        if: list[count] = 0
+            c.free((cast: (@: void) list))
+            return: 1
+        count := count + 1U
+        row := row + 1U
+        at := at + 1U
     ---
     state\receivers := list
     state\receivers_count := count
@@ -712,19 +733,128 @@ fn: lmx_graph_method_return (@: g c.LmxGraph; @: code c.Lmx) @: void
     return: lmx_graph_part(g, (cast: (@: void) code), (cast: (@: char) state\w_return))
 end: lmx_graph_method_return
 
+# A primitive declaring receiver of the active source profile, compared by canonical name addresses. The generated
+# cell flags distinguish None/void from places; no machine-backend whitelist or runtime table parser is involved.
+fn: lmx_graph_primitive_receiver (@: word char) int
+    @: state c.LmxGraphState lmx_graph_state()
+    const: (@: cells char c.lmx_primitive_profile_cells)
+    size_t: count c.lmx_primitive_profile_count
+    size_t: first 0U
+    size_t: i 0U
+    if: state = 0 || word = 0 || count > state\receivers_count
+        return: 0
+    first := state\receivers_count - count
+    while: i < count
+        if: state\receivers[first + i] = word
+            return: (cast: (int) (cells[i] != 0))
+        i := i + 1U
+    ---
+    return: 0
+end: lmx_graph_primitive_receiver
+
+# Local families of declaring contracts, not receiver opcodes: primitive/C type, reference, qualification, Array.
+# Pointer depth and rectangular Array rank are read from the complete canonical head, with no fixed ceiling.
+fn: lmx_graph_declaration_receiver (@: head char) int
+    size_t: i 0U
+    if: head = 0 || head[0] = 0
+        return: 0
+    if: head = lmx_graph_intern("const", 5U) || head = lmx_graph_intern("immutable", 9U) || head = lmx_graph_intern("independent", 11U)
+        return: 3
+    if: head[0] = 64
+        while: head[i] = 64
+            i := i + 1U
+        return: (cast: (int) (head[i] = 0)) * 2
+    if: head[0] = 91
+        while: head[i] = 91 && head[i + 1U] = 93
+            i := i + 2U
+        return: (cast: (int) (i != 0U && head[i] = 0)) * 4
+    if: head[0] = 99 && head[1] = 46 && head[2] != 0
+        return: 1
+    return: lmx_graph_primitive_receiver(head)
+end: lmx_graph_declaration_receiver
+
+# The declared place of one user formal. Typed materialized cells and contract-defined receiver compositions keep
+# their graph addresses. Only the receiving chain is read: default expressions and model data are never traversed
+# or evaluated as formals. Ordinary named Structures, including empty ones, are not declaring contracts.
+fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
+    @: current void raw
+    @: checkpoint void raw
+    @: child void 0
+    @: head char 0
+    @: name char 0
+    size_t: n 0U
+    size_t: power 1U
+    size_t: span 0U
+    int: kind 0
+    int: family 0
+    if: g = 0 || raw = 0
+        return: 0
+    while: current != 0
+        kind := lmx_graph_kind(g, current)
+        if: kind != 4
+            if: c.lmx_range_classify(g\arena, current) != c.LMX_KIND_PRIMITIVE
+                return: 0
+            if: kind = 3 || kind = 8 || kind = 9
+                current := c.lmx_arena_pointer_void_read(current)
+            return: lmx_graph_name_of(g, current)
+        head := lmx_graph_name_of(g, current)
+        family := lmx_graph_declaration_receiver(head)
+        n := lmx_graph_count((cast: (@: c.Lmx) current))
+        if: family = 0 || n = 0U
+            return: 0
+        child := lmx_graph_get((cast: (@: c.Lmx) current), 0U)
+        name := lmx_graph_word_text(g, child)
+        if: family != 3 && name != 0
+            if: (family = 1 && n > 2U) || (family = 2 && n > 3U)
+                return: 0
+            return: name
+        if: n != 1U
+            return: 0
+        # The direct primitive/reference contracts require an atom in their name position. A primitive may
+        # prefix the Array type chain; this does not license old `int: @: p` or `@: int: x` declarations.
+        if: family = 2
+            return: 0
+        if: family = 1 || family = 4
+            if: lmx_graph_kind(g, child) != 4 || lmx_graph_declaration_receiver(lmx_graph_name_of(g, child)) != 4
+                return: 0
+            ---
+        ---
+        # A qualifier consumes its written operand. One explicit group belongs to that operand's contract;
+        # this is not recursive unwrapping of an arbitrary args field or of its model/default.
+        if: family = 3 && lmx_graph_kind(g, child) = 4 && lmx_graph_name_of(g, child) = 0 && lmx_graph_count((cast: (@: c.Lmx) child)) = 1U
+            child := lmx_graph_get((cast: (@: c.Lmx) child), 0U)
+        if: child = checkpoint
+            return: 0
+        span := span + 1U
+        if: span = power
+            checkpoint := child
+            span := 0U
+            if: power <= (cast: (size_t) -1) / 2U
+                power := power * 2U
+            ---
+        ---
+        current := child
+    ---
+    return: 0
+end: lmx_graph_declaration_name
+
 # The name the field index of a declaration Structure (args, data) answers to: a place by the name of its cell, a
 # declaration Frame `T: name` or `@: name T` -- an Lmx named by its receiver (§3.3) -- by its first argument, an empty
 # named Lmx -- a Structure formal of a receiver's contract, with no written model -- by its own name.
 fn: lmx_graph_formal_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
     @: value void lmx_graph_get(lmx, index)
     @: inner c.Lmx 0
+    @: name char 0
     if: lmx_graph_kind(g, value) = 4
         inner := (cast: (@: c.Lmx) value)
         if: lmx_graph_count(inner) = 0U
             return: lmx_graph_name_of(g, value)
         if: lmx_graph_name_of(g, value) = 0
             return: 0
-        return: lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
+        name := lmx_graph_word_text(g, lmx_graph_get(inner, 0U))
+        if: name != 0
+            return: name
+        return: lmx_graph_declaration_name(g, value)
     return: lmx_graph_slot_name(g, lmx, index)
 end: lmx_graph_formal_name
 
@@ -742,9 +872,8 @@ fn: lmx_graph_formal (@: g c.LmxGraph; @: lmx c.Lmx; @: name char) size_t
     return: n
 end: lmx_graph_formal
 
-# The written requirement of a declaration Frame. The flat reference receiver
-# has name, model and an optional default; compatible single-field descriptions
-# carry their requirement in the head. An incomplete form gives no model.
+# The model named by a direct reference declaration: name, model and an optional default. Other primitive,
+# qualification and Array descriptions are not implicitly Structure models; their lowering is separate.
 fn: lmx_graph_formal_model (@: g c.LmxGraph; @: declaration c.Lmx) @: char
     @: state c.LmxGraphState lmx_graph_state()
     @: head char lmx_graph_name_of(g, (cast: (@: void) declaration))
@@ -755,9 +884,9 @@ fn: lmx_graph_formal_model (@: g c.LmxGraph; @: declaration c.Lmx) @: char
         if: n < 2U || n > 3U
             return: 0
         return: lmx_graph_word_text(g, lmx_graph_get(declaration, 1U))
-    if: n != 1U
-        return: 0
-    return: head
+    # Other accepted declaration descriptions (primitives, qualified/reference/Array compositions) do not become
+    # Structure models merely because they have a head. Their backend support is separate from this projection.
+    return: 0
 end: lmx_graph_formal_model
 
 # Shared address-typed reads for graph fields and activation arguments.
@@ -1992,10 +2121,13 @@ end: lmx_graph_target
 fn: lmx_graph_language_receiver (@: word char) int
     @: state c.LmxGraphState lmx_graph_state()
     size_t: i 0U
+    size_t: first 0U
+    const: (@: cells char c.lmx_primitive_profile_cells)
     if: state = 0 || word = 0
         return: 0
+    first := state\receivers_count - c.lmx_primitive_profile_count
     while: i < state\receivers_count
-        if: state\receivers[i] = word
+        if: state\receivers[i] = word && (i < first || cells[i - first] != 0)
             return: 1
         i := i + 1U
     ---

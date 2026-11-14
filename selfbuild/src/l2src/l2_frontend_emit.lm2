@@ -860,8 +860,127 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     return: (cast: (int) (0))
 end: lm_compiler_translate_unit
 
-# Original: l2src/l2trans.lm1:4034
-fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) int
+# Project the existing source primitive table into generated data for the clean graph. Parsing, source-table
+# loading, snapshots and publication are the normal translation's; no table parser or runtime frontend is added.
+# Names are canonical payloads, separated by NUL; the parallel bytes retain the cell flag of every source row.
+fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out_path char); const: (@: root c.LmP0Node)) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: diag_n_cell int (cast: (@: int) (@ c.l2_diag_n))
+    @@: pub_tmp_cell char (cast: (@@: char) (@ c.l2_pub_tmp))
+    const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
+    const: (@@: q_path_cell char (cast: (const: @@: char) (@ c.l2_q_path)))
+    const: (@@: q_at_cell c.LmP0Node (cast: (const: @@: c.LmP0Node) (@ c.l2_q_at)))
+    @: pr_t_cell int (cast: (@: int) (@ c.l2_pr_t))
+    @: pr_c_cell int (cast: (@: int) c.l2_pr_c)
+    @@: tb_nrow_cell int (cast: (@@: int) (@ c.l2_tb_nrow))
+    @@: tb_cell0_cell int (cast: (@@: int) (@ c.l2_tb_cell0))
+    @@: tb_ncol_cell int (cast: (@@: int) (@ c.l2_tb_ncol))
+    @@@: tbx_name_cell char (cast: (@@@: char) (@ c.l2_tbx_name))
+    @@@: tbx_arg_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_tbx_arg))
+    @@@: tb_path_cell char (cast: (@@@: char) (@ c.l2_tb_path))
+    @: names char 0
+    @: flags char 0
+    const: (@: text c.LmP0Text 0)
+    const: (@: bytes char 0)
+    c.LmP0Text: emitted
+    size_t: name_size 0U
+    size_t: total 0U
+    size_t: at 0U
+    int: row 0
+    int: count 0
+    int: slot 0
+    int: status 0
+    int: before_diag diag_n_cell[0]
+    src_cell[0] := in_path
+    q_path_cell[0] := in_path
+    q_at_cell[0] := root
+    if: c.lm_compiler_prim_load() != 0
+        return: 1
+    count := tb_nrow_cell[0][pr_t_cell[0]]
+    while: row < count
+        slot := tb_cell0_cell[0][pr_t_cell[0]] + row * tb_ncol_cell[0][pr_t_cell[0]]
+        if: tbx_name_cell[0][slot + pr_c_cell[0]] = 0
+            return: c.lm_compiler_table_said(tb_path_cell[0][pr_t_cell[0]], tbx_arg_cell[0][slot + pr_c_cell[0]], "a primitive profile class is not a name")
+        text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + pr_c_cell[0]]\as\atom)
+        bytes := text\data
+        name_size := text\length
+        if: name_size >= 2U && bytes[0] = 96 && bytes[name_size - 1U] = 96
+            name_size := name_size - 2U
+        if: name_size = 0U || name_size = (cast: (size_t) -1) || total >= (cast: (size_t) -1) - name_size - 1U
+            return: c.lm_compiler_table_said(tb_path_cell[0][pr_t_cell[0]], tbx_arg_cell[0][slot + pr_c_cell[0]], "invalid primitive profile class size")
+        if: c.lm_compiler_prim_row(text, 0) != row
+            return: c.lm_compiler_table_said(tb_path_cell[0][pr_t_cell[0]], tbx_arg_cell[0][slot + pr_c_cell[0]], "a primitive profile class is named twice")
+        if: tbx_name_cell[0][slot + pr_c_cell[1]] = 0
+            return: c.lm_compiler_table_said(tb_path_cell[0][pr_t_cell[0]], tbx_arg_cell[0][slot + pr_c_cell[1]], "a primitive profile cell flag is not 0 or 1")
+        text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + pr_c_cell[1]]\as\atom)
+        if: c.lm_compiler_payload_eq(text, "0") = 0 && c.lm_compiler_payload_eq(text, "1") = 0
+            return: c.lm_compiler_table_said(tb_path_cell[0][pr_t_cell[0]], tbx_arg_cell[0][slot + pr_c_cell[1]], "a primitive profile cell flag is not 0 or 1")
+        total := total + name_size + 1U
+        row := row + 1
+    ---
+    names := (cast: (@: char) c.lm_compiler_xmalloc(total + 1U))
+    flags := (cast: (@: char) c.lm_compiler_xmalloc((cast: (size_t) count) + 1U))
+    if: names = 0 || flags = 0
+        status := 1
+    row := 0
+    while: row < count && status = 0
+        slot := tb_cell0_cell[0][pr_t_cell[0]] + row * tb_ncol_cell[0][pr_t_cell[0]]
+        text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + pr_c_cell[0]]\as\atom)
+        bytes := text\data
+        name_size := text\length
+        if: name_size >= 2U && bytes[0] = 96 && bytes[name_size - 1U] = 96
+            bytes := bytes + 1U
+            name_size := name_size - 2U
+        ---
+        c.memcpy(names + at, bytes, name_size)
+        at := at + name_size
+        names[at] := 0
+        at := at + 1U
+        text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + pr_c_cell[1]]\as\atom)
+        flags[row] := (cast: (char) c.lm_compiler_payload_eq(text, "1"))
+        row := row + 1
+    ---
+    if: status = 0
+        status := c.lm_compiler_pub_prepare(out_path)
+    if: status = 0
+        out_cell[0] := c.fopen(pub_tmp_cell[0], "wb")
+        if: out_cell[0] = 0
+            status := 1
+        else:
+            if: c.fprintf(out_cell[0], "# Generated from primitive.description by the existing frontend table projection.\nsize_t: lmx_primitive_profile_count %dU\nconst: @: char lmx_primitive_profile_names ", count) < 0
+                status := 1
+            emitted\data := names
+            emitted\length := total
+            if: status = 0
+                status := c.lm_compiler_emit_cstr(@ emitted)
+            if: c.fputs("\nconst: @: char lmx_primitive_profile_cells ", out_cell[0]) < 0
+                status := 1
+            emitted\data := flags
+            emitted\length := (cast: (size_t) count)
+            if: status = 0
+                status := c.lm_compiler_emit_cstr(@ emitted)
+            if: c.fputc(10, out_cell[0]) = c.EOF
+                status := 1
+            if: c.fclose(out_cell[0]) != 0
+                status := 1
+            out_cell[0] := 0
+        ---
+    ---
+    c.lm_compiler_xfree((cast: (@: void) names))
+    c.lm_compiler_xfree((cast: (@: void) flags))
+    if: status = 0
+        status := c.lm_compiler_translation_failed(in_path, root)
+    if: status = 0
+        status := lm_compiler_pub_commit(out_path)
+    if: status != 0
+        if: pub_tmp_cell[0] != 0
+            c.remove(pub_tmp_cell[0])
+        return: c.lm_compiler_said_or(in_path, root, before_diag, "primitive profile generation failed")
+    return: 0
+end: lm_compiler_emit_primitive_profile
+
+# Both modes share parsing and source tables. A profile projection stops before translating program bodies.
+fn: lm_compiler_translate_mode (const: (@: in_path char); const: (@: out_path char); int: primitive_profile) int
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     @: diag_n_cell int (cast: (@: int) (@ c.l2_diag_n))
     @@: here_node_cell c.LmP0Node (cast: (@@: c.LmP0Node) (@ c.l2_here_node))
@@ -978,6 +1097,14 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
         lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
         tok_cell[0] := 0
         return: (cast: (int) (1))
+    if: primitive_profile != 0
+        status := lm_compiler_emit_primitive_profile(in_path, out_path, root)
+        c.lm_compiler_ns_procs_free()
+        c.lm_compiler_ns_def_free()
+        c.lm_compiler_bound_free()
+        lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) document))
+        tok_cell[0] := 0
+        return: status
     if: c.lm_compiler_unit_from_root(root, in_path, @ unit) != 0
         # A fatal query may leave an early analysis path directly, before a
         # phase boundary is reached. Complete its one diagnostic while the
@@ -1067,6 +1194,11 @@ fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) 
     lm_compiler_emit_doc_destroy((cast: (@: c.LmP0Document) (document)))
     tok_cell[0] := 0
     return: (cast: (int) (0))
+end: lm_compiler_translate_mode
+
+# The established translation API keeps its normal program mode.
+fn: lm_compiler_translate (const: (@: in_path char); const: (@: out_path char)) int
+    return: lm_compiler_translate_mode(in_path, out_path, 0)
 end: lm_compiler_translate
 
 # Original: l2src/l2trans.lm1:4875
@@ -18117,16 +18249,20 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
 end: lm_compiler_emit_unit
 
 # Original: l2src/l2trans.lm1:38474
-fn: lm_compiler_translate_program (const: (@: in_path char); const: (@: out_path char)) int
+fn: lm_compiler_translate_program_mode (const: (@: in_path char); const: (@: out_path char); int: primitive_profile) int
     @: os_select_cell int (cast: (@: int) (@ c.l2_os_select))
     @: os_mask_cell int (cast: (@: int) (@ c.l2_os_mask))
     int: r
     os_select_cell[0] := 0
     os_mask_cell[0] := 0
-    r := lm_compiler_translate(in_path, out_path)
+    r := lm_compiler_translate_mode(in_path, out_path, primitive_profile)
     os_select_cell[0] := 0
     lm_compiler_snap_free()
     return: (cast: (int) (r))
+end: lm_compiler_translate_program_mode
+
+fn: lm_compiler_translate_program (const: (@: in_path char); const: (@: out_path char)) int
+    return: lm_compiler_translate_program_mode(in_path, out_path, 0)
 end: lm_compiler_translate_program
 
 # Original: l2src/l2trans.lm1:38484
@@ -18154,11 +18290,17 @@ fn: lm_compiler_cli_main (int: argc; @@: argv char) int
     @: alloc_err_cell int (cast: (@: int) (@ c.l2_alloc_err))
     int: r
     int: a 1
+    int: primitive_profile 0
     @: af c.FILE
     const: (@: lg char)
     const: (@: rt char)
     c.setvbuf(c.l1_stdout(), 0, c._IONBF, 0)
     c.setvbuf(c.l1_stderr(), 0, c._IONBF, 0)
+    # A generated-data projection uses the same source/parts and publication transaction.
+    if: argc >= a + 3 && c.strcmp(argv[a], "--primitive-profile") = 0
+        primitive_profile := 1
+        a := a + 1
+    ---
     # The test knob `--walk-methods` (-193 T4a): a method with frames gets native 0.
     if: argc >= a + 3 && c.strcmp(argv[a], "--walk-methods") = 0
         walk_methods_cell[0] := 1
@@ -18207,8 +18349,11 @@ fn: lm_compiler_cli_main (int: argc; @@: argv char) int
         a := a + 2
     ---
     if: argc < a + 2
-        c.fputs("usage: l2trans.exe [--walk-methods] [--library (--construct NAME | --machine NAME ... [--header FILE])] [--provider NAME ...] [--snap-touch FILE] <source.lm2> [<part.lm2> ...] <output.lm1>\n", c.l1_stderr())
+        c.fputs("usage: l2trans.exe [--primitive-profile | --walk-methods] [--library (--construct NAME | --machine NAME ... [--header FILE])] [--provider NAME ...] [--snap-touch FILE] <source.lm2> [<part.lm2> ...] <output.lm1>\n", c.l1_stderr())
         return: (cast: (int) (1))
+    if: primitive_profile != 0 && (library_flag_cell[0] != 0 || walk_methods_cell[0] != 0 || provider_n_cell[0] != 0 || machine_n_cell[0] != 0 || header_path_cell[0] != 0)
+        c.fputs("l2trans error: --primitive-profile projects source data, without program/library options\n", c.l1_stderr())
+        return: 1
     if: library_flag_cell[0] != 0 && machine_n_cell[0] = 0 && lm_compiler_construct_name_ok(construct_name_cell[0]) = 0
         c.fputs("l2trans error: a library translation needs --construct NAME: a C name, not l2_ or lmx_, of its construction export\n", c.l1_stderr())
         return: (cast: (int) (1))
@@ -18265,7 +18410,7 @@ fn: lm_compiler_cli_main (int: argc; @@: argv char) int
         fail_left_cell[0] := c.atoi(c.getenv("L2_FAIL_MALLOC"))
     if: c.getenv("L2_ALLOC_TRACE") != 0
         alloc_trace_cell[0] := c.fopen(c.getenv("L2_ALLOC_TRACE"), "wb")
-    r := lm_compiler_translate_program(argv[a], argv[argc - 1])
+    r := lm_compiler_translate_program_mode(argv[a], argv[argc - 1], primitive_profile)
     # A failure that printed no located diagnostic is still a failure the
     # user must see; a silent exit 1 names nothing to fix.  It is an invariant break of the
     # translator (D-112): every refusal says where and why -- this line names the step that did

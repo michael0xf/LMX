@@ -1,0 +1,39 @@
+GRAPH-BEFORE-BEGIN
+sub: main () (
+    A:
+        int: v 1
+    end: A
+    B:
+        int: v 2
+    end: B
+    @: p B
+    Self: (@ p A)
+    int: seen 0
+)
+    call: Self
+    call: data Self
+    :=: seen ((data \ p) \ v)
+end: main
+main:
+int: seen ((main \ data) \ seen)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: main () (
+    A:
+        int: v 1
+    end: A
+    B:
+        int: v 2
+    end: B
+    @: p B
+    Self: (@ p A)
+    int: seen 0
+)
+    call: Self
+    call: data Self
+    :=: seen ((data \ p) \ v)
+end: main
+main:
+int: seen 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

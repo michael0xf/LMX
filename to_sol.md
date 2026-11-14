@@ -1,5 +1,20 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез 374 — кодовая приёмка общего receiving-context пройдена в main.**
+373 принят и отправлен: feadb715baf15124afca53d371e899cd0e79095f. Все новые изменения,
+сборки и коммиты прямо C:/Nyasha_Planet/LMX, main; отдельное дерево Sol не требуется.
+Один reader сохраняет written Structure у @2, Structure-reference assignment, length/typeof,
+base пути/индекса и операндов запуска; numeric/ref-int остаются выражениями, merge — производителем.
+Entry scan следует тому же контракту, unknown RHS-снимки optional; открытый namespace не
+фиксирует внешний fallback. Выбранное deferred-поле отказывает5 до запуска его вычисления.
+Source03 verify651; runtime02/graph01, четыре pure и private27 в трёх режимах прошли,
+AFTER30/mutation24 прошли. Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke,
+fixedpoint13 и verify651. Штатный G2 повторил27 в трёх режимах, AFTER30/mutation24.
+Штатные render/docs check прошли:35/14/27/44/615, ссылки и LF индекса27358;
+оба diff --check чисты. Далее commit/push main.
+Затем physical references в code, no-candidate storage и root/self; M11.7/8, M13/M14 OPEN.
+[Свидетельство](steps/witnesses/m8-received-values-20261114/notes.md). Goal active, весь v3.
+
 **2026-11-14, срез 373 — общий deferred @ с кандидатом, кодовая приёмка пройдена.** Base main6cef3208 принят и отправлен.
 Data-cell/тип/первый working store/flush используют прежнюю карту; initializer поданной D не
 запускается. Один binding search сохраняет приоритет formal/own/data-method; local_int выполняет

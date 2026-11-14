@@ -1,5 +1,27 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M8: срез 374, кодовая приёмка receiving-context пройдена в main
+
+373 принят и отправлен прямо из main: feadb715baf15124afca53d371e899cd0e79095f.
+Работать, собирать и коммитить только C:/Nyasha_Planet/LMX, main; отдельное дерево Sol не нужно.
+Единственный writer/build Sol, pipeline sol-m8-received-values-20261114-01, общий stage S.
+Общий receiving-value reader сохраняет written Structure в @2, Structure-reference assignment,
+структурных операторах и запуске. Числовой/ref-int контекст сохраняет чтение выражения;
+merge остаётся явным производителем. Потребители и entry scan используют существующий контракт.
+Неизвестное место хранит возможные RHS-снимки optional до потребления; открытая namespace
+не фиксирует тип внешнего fallback. Повторный optional scan сохраняет очередь посещения.
+Чтение выбранного deferred-поля отказывает5, не выдавая Frame объявления за готовую Structure.
+Парсер, API и поддерживаемый runner не менялись. Runtime02/graph01 построены из Source02;
+Source03 добавляет четыре пары фикстур, verify651, manifest97ebb18926f9bc1e66c5a250d3ce963b3c0cbf90676b731b178a8cb2ce656df5.
+Pure четыре0/0/5/4 и private27 interp/native/forced прошли; AFTER30 и mutation24 прошли.
+Полный bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13 и verify651 прошли.
+Штатный G2 заново собрал graph-tool и повторил27 в трёх режимах, AFTER30/mutation24.
+Штатные render semantics/docs check прошли:35/14/27/44/615, ссылки и LF индекса27358.
+Оба diff --check чисты; далее commit/push main собственного среза.
+Чужие два untracked сохранить. После приёмки продолжать physical reference records в code,
+no-candidate storage и общий root/self; M11.7/8, M13/M14 и весь v3 остаются OPEN. Goal active.
+[Приёмка и границы](witnesses/m8-received-values-20261114/notes.md).
+
 ## 2026-11-14 — M11.5г: срез 373, кодовая приёмка пройдена в main
 
 372 принят и отправлен прямо из main: 6cef32080ff515831786ac0f2bf253f944f9bbad.

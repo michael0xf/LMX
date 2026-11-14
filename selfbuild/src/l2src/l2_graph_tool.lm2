@@ -373,7 +373,7 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
         # The index of a Structure, `base[index]` (the book, structure-index), as the interpreter reads it: the base's
         # value and the index's number, then the kernel's read of the slot.
         if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) = state\w_index
-            status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
+            status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
             status := lm_graph_emit_number(g, f, scope, expression, 2U, temps, decl_names, decl_slots, decl_n, @ number)
@@ -383,7 +383,7 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             temp[0] := value
             return: 0
         if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) = state\w_deref
-            status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
+            status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
             # The path step, through an atom too, as the interpreter takes it (lmx_graph_step; plan M11 5a).
@@ -447,6 +447,29 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
     temp[0] := value
     return: 0
 end: lm_graph_emit_operand
+
+# A known Structure/address context keeps a written value in its source slot.
+# For a dynamic reference destination only live kind6 does so; live kind5
+# evaluates the same group after preflight, as the existing actual reader does.
+fn: lm_graph_emit_received_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holder c.Lmx; size_t: index; int: contract; int: receiving_kind; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    int: value 0
+    int: status 0
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    if: (contract = 2 || receiving_kind >= 0) && c.lmx_graph_written_group(g, c.lmx_graph_get(holder, index)) != 0
+        value := temps[0]
+        temps[0] := temps[0] + 1
+        c.fprintf(f, "        @: void l2_v%d lmx_graph_get(", value)
+        status := lm_graph_emit_address(g, f, scope, holder)
+        if: status != 0
+            return: status
+        c.fprintf(f, ", %zuU)\n", index)
+        if: receiving_kind >= 0
+            c.fprintf(f, "        if: l2_k%d != 6 && lmx_graph_eval_value(l2_g, lmx_call_code, l2_v%d, @ l2_v%d) != 0\n            %s\n", receiving_kind, value, value, leave_failure)
+        temp[0] := value
+        return: 0
+    return: lm_graph_emit_operand(g, f, scope, holder, index, temps, decl_names, decl_slots, decl_n, temp)
 
 # Compile one nested numeric expression. All grouping/precedence is already represented by its child Lmx fields.
 # A well-formed value without a numeric interpretation fails when reached.
@@ -512,7 +535,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
                 c.fprintf(f, "        int: l2_t%d %d\n", left, c.LMX_TYPE_NONE)
                 temp[0] := left
                 return: 0
-            status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
+            status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
             c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_address_type(l2_g, l2_v%d, @ l2_t%d) != 0\n            %s\n", left, value, left, leave_failure)
@@ -523,7 +546,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
         if: word = state\w_length
             if: c.lmx_graph_count(expression) != 1U
                 return: 5
-            status := lm_graph_emit_operand(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ value)
+            status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
             left := temps[0]
@@ -633,19 +656,8 @@ end: lm_graph_launch_actual
 fn: lm_graph_emit_launch_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; size_t: index; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; @: temp int) int
     @: holder c.Lmx 0
     size_t: at 0U
-    int: value 0
     lm_graph_launch_actual(g, expression, index, @ holder, @ at)
-    if: c.lmx_graph_merge_literal(g, scope, c.lmx_graph_get(holder, at)) != 0
-        value := temps[0]
-        temps[0] := temps[0] + 1
-        c.fprintf(f, "        @: void l2_v%d lmx_graph_get(", value)
-        if: lm_graph_emit_address(g, f, scope, holder) != 0
-            return: 3
-        c.fprintf(f, ", %zuU)\n", at)
-        temp[0] := value
-        return: 0
-    ---
-    return: lm_graph_emit_operand(g, f, scope, holder, at, temps, decl_names, decl_slots, decl_n, temp)
+    return: lm_graph_emit_received_operand(g, f, scope, holder, at, 2, -1, temps, decl_names, decl_slots, decl_n, temp)
 end: lm_graph_emit_launch_operand
 
 # call in native code (the book, call-receivers): the forms [code], [data code], [args data code], given by position or
@@ -901,7 +913,7 @@ fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: l
     int: status 0
     if: state = 0 || c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
         return: 2
-    status := lm_graph_emit_operand(g, f, code, path, 0U, temps, decl_names, decl_slots, decl_n, @ owner)
+    status := lm_graph_emit_received_operand(g, f, code, path, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ owner)
     if: status != 0
         return: status
     # The Structure holding the written place and its slot, as in the interpreter: the owner, or the target of a
@@ -956,15 +968,18 @@ fn: lm_graph_emit_model_kind (@: g c.LmxGraph; @: code c.Lmx; @: name char; int:
 return: 0
 
 # Emit only the selected primitive receiving context, after its preflight.
-fn: lm_graph_emit_assignment_value (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: statement c.Lmx; int: mode; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; int: kind; int: owner) int
+fn: lm_graph_emit_assignment_value (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: statement c.Lmx; int: mode; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; int: kind; int: receiving_kind; int: owner) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     @: name char c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U))
     int: value 0
+    int: contract 0
     int: status 0
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
     if: kind != 1
-        status := lm_graph_emit_operand(g, f, code, statement, 2U, temps, decl_names, decl_slots, decl_n, @ value)
+        if: kind = 6
+            contract := 2
+        status := lm_graph_emit_received_operand(g, f, code, statement, 2U, contract, receiving_kind, temps, decl_names, decl_slots, decl_n, @ value)
         if: status != 0
             return: status
         if: name = 0
@@ -1013,13 +1028,13 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
     # runs it (lmx_graph_eval_index_write): the base and the index, then the value's address, then the kernel's
     # admission and slot write.
     if: name = 0 && c.lmx_graph_index_form(g, left) != 0
-        status := lm_graph_emit_operand(g, f, code, (cast: (@: c.Lmx) left), 0U, temps, decl_names, decl_slots, decl_n, @ owner)
+        status := lm_graph_emit_received_operand(g, f, code, (cast: (@: c.Lmx) left), 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ owner)
         if: status != 0
             return: status
         status := lm_graph_emit_number(g, f, code, (cast: (@: c.Lmx) left), 2U, temps, decl_names, decl_slots, decl_n, @ value)
         if: status != 0
             return: status
-        status := lm_graph_emit_operand(g, f, code, statement, 2U, temps, decl_names, decl_slots, decl_n, @ source)
+        status := lm_graph_emit_received_operand(g, f, code, statement, 2U, 2, -1, temps, decl_names, decl_slots, decl_n, @ source)
         if: status != 0
             return: status
         c.fprintf(f, "        if: lmx_graph_index_write(l2_g, lmx_call_code, l2_v%d, l2_t%d, l2_v%d) != 0\n            %s\n", owner, value, source, leave_failure)
@@ -1040,16 +1055,16 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
     fixed_kind := lm_graph_emit_model_kind(g, code, name, mode)
     if: fixed_kind != 0
         c.fprintf(f, "        if: l2_k%d != %d\n            %s\n", place_kind, fixed_kind, leave_failure)
-        return: lm_graph_emit_assignment_value(g, f, code, statement, mode, temps, decl_names, decl_slots, decl_n, fixed_kind, owner)
+        return: lm_graph_emit_assignment_value(g, f, code, statement, mode, temps, decl_names, decl_slots, decl_n, fixed_kind, -1, owner)
     reference_label := temps[0]
     end_label := reference_label + 1
     temps[0] := temps[0] + 2
     c.fprintf(f, "        if: l2_k%d != 1\n            goto: l2_label%d\n", place_kind, reference_label)
-    status := lm_graph_emit_assignment_value(g, f, code, statement, mode, temps, decl_names, decl_slots, decl_n, 1, owner)
+    status := lm_graph_emit_assignment_value(g, f, code, statement, mode, temps, decl_names, decl_slots, decl_n, 1, -1, owner)
     if: status != 0
         return: status
     c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", end_label, reference_label)
-    status := lm_graph_emit_assignment_value(g, f, code, statement, mode, temps, decl_names, decl_slots, decl_n, 6, owner)
+    status := lm_graph_emit_assignment_value(g, f, code, statement, mode, temps, decl_names, decl_slots, decl_n, 0, place_kind, owner)
     c.fprintf(f, "        l2_label%d:\n", end_label)
     return: status
 end: lm_graph_emit_assignment
@@ -1202,7 +1217,7 @@ fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; 
                 name := c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
                 if: name = 0
                     return: 5
-                r := lm_graph_emit_operand(g, f, root, inner, 1U, temps, decl_names, decl_slots, decl_n, @ temp)
+                r := lm_graph_emit_received_operand(g, f, root, inner, 1U, 2, -1, temps, decl_names, decl_slots, decl_n, @ temp)
                 if: r != 0
                     return: r
                 c.fprintf(f, "        l2_c: lmx_graph_lmx_ref_of(l2_g, l2_v%d)\n        if: l2_c = 0 || lmx_graph_publish(l2_g, lmx_call_code, %zuU, l2_c) != 0\n            %s\n", temp, i, leave_failure)
@@ -1275,6 +1290,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     int: result 0
     int: status 0
     int: kind 0
+    int: contract 0
     int: number 0
     int: test_label 0
     int: body_label 0
@@ -1490,7 +1506,10 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             c.fprintf(f, ", %d, @ l2_k%d) != 0\n            %s\n        if: l2_k%d != %d\n            %s\n", mode, number, leave_failure, number, kind, leave_failure)
             if: status != 0
                 return: status
-            status := lm_graph_emit_operand(g, f, code, statement, n - 1U, temps, 0, 0, 0U, @ result)
+            contract := 0
+            if: kind = 6
+                contract := 2
+            status := lm_graph_emit_received_operand(g, f, code, statement, n - 1U, contract, -1, temps, 0, 0, 0U, @ result)
             if: status != 0
                 return: status
             c.fputs("        if: lmx_graph_store_reference(l2_g, lmx_call_code, ", f)

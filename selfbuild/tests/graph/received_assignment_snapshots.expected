@@ -1,0 +1,37 @@
+fn: State () int (
+    int: k 5
+    int: out 0
+    @: held ()
+    int: calls 0
+    fn: change () int
+        :=: (node \ k) 8
+        :=: (node \ calls) ((node \ calls) + 1)
+        return: 1
+    end: change
+    fn: leaf () int
+        return: k
+    end: leaf
+    fn: number () int (
+        int: prepared (change)
+    )
+        :=: (node \ out) (k)
+        return: (node \ out)
+    end: number
+    fn: literal () int (
+        int: prepared (change)
+    )
+        :=: (node \ held) (k)
+        return: (leaf)
+    end: literal
+)
+    return: 0
+end: State
+int: prepared 0
+@: Number number
+@: Literal literal
+int: numeric 5
+:=: ((State \ data) \ k) 5
+int: structural 8
+int: held_n 1
+int: outside 8
+int: changes 2

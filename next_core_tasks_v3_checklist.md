@@ -1,5 +1,16 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез 374 — кодовая приёмка общего receiving-context пройдена в main.**
+Written Structure сохраняет поля у @2, Structure-reference assignment, length/typeof,
+base пути/индекса и launch; numeric/ref-int читаются выражением, merge — явный производитель.
+Entry scan следует тому же контракту: optional RHS не становится входом без потребления,
+открытая namespace не фиксирует внешний fallback. Выбранный deferred Frame отказывает5.
+Source03 verify651; runtime02/graph01, private27 interp/native/forced, AFTER30/mutation24 прошли.
+Полный bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify651.
+Штатный G2 повторил27 в трёх режимах, AFTER30/mutation24. Render/docs check прошли:
+35/14/27/44/615, ссылки и LF индекса27358; оба diff --check чисты. Далее commit/push main.
+[Свидетельство](steps/witnesses/m8-received-values-20261114/notes.md). Весь M11/M13/M14 OPEN.
+
 **2026-11-14, срез 373 — вычисляемые ссылочные места.** Data-cell/expected-kind/preflight,
 первый рабочий store и прежний flush поддерживают raw @ с кандидатом без его запуска на входе.
 Classification и value reader используют один binding search с прежним приоритетом; local_int
@@ -13,10 +24,12 @@ Docs check прошёл: 35/14/27/44/615, ссылки и LF индекса 27 3
 остаётся OPEN (заранее существующие wrapper8/cell5, без lazy value и initialized-флага).
 Полный 5г, M11.7/8 и M13/M14 не закрыты.
 
-**M8 receiving-context вновь OPEN, 2026-11-14.** @2 неправильно читает сохранённую одно-полевую
-Structure `@: Code (int: p touch())`: baseline372 и WIP373 дают2 вместо Code length1/calls0.
-P0 сохраняет группу; исправлять общий потребитель Structure-value в обходчике/native и own data/code
-до дальнейшего root/self, не подбирать вложенные головы или число полей. Задача внесена в M8 v3/M11.8.
+**M8 receiving-context чистого графа принят срезом374, 2026-11-14.** @2 неправильно читал
+сохранённую одно-полевую Structure `@: Code (int: p touch())`: baseline372/373 дают2 вместо length1/calls0.
+P0 сохраняет группу; общий потребитель обходчика/native и own data/code теперь даёт1/calls0.
+Четыре новых случая прошли три режима; whole bootstrap G1/G2, fixedpoint13 и штатный G2 прошли.
+Миграция frontend M11.8 OPEN. Ordinary nested fn/sub без construction binding в живой namespace
+остаётся зависимостью общего root/self в M11; её не обходить искусственным методом.
 
 **2026-11-14, срез 372 — часть M11.5г принята.** Именованные записи root/self выбирают живую цель
 метода/обычной Structure, включая цель из поданных данных; прежний корневой declaration skip снят.

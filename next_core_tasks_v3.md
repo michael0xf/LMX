@@ -1,5 +1,17 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез 374 — кодовая приёмка M8 receiving-context пройдена в main.**
+Общий reader сохраняет written Structure у @2, ссылочного присваивания и структурных потребителей;
+numeric/ref-int и явный merge не меняют роли. Entry scan не делает поля данных входами,
+unknown-contract сохраняет optional снимки, не фиксируя тип внешнего fallback в открытой области.
+Выбранный deferred Frame отказывает5 как неопубликованное значение. Парсер/API не менялись.
+Runtime02/graph01, Source03 verify651, private27 в трёх режимах, AFTER30/mutation24 прошли.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke, fixedpoint13 и verify651.
+Штатный G2 повторил27 в трёх режимах, AFTER30/mutation24. Render/docs check прошли:
+35/14/27/44/615, ссылки и LF индекса27358; оба diff --check чисты. Далее commit/push main.
+[Свидетельство](steps/witnesses/m8-received-values-20261114/notes.md). Далее M11.5г–5е,
+physical reference records, no-candidate storage и root/self; M11.7/8, M13/M14 и весь v3 OPEN.
+
 **2026-11-14, срез 373 — кодовая приёмка вычисляемых ссылок M11.5г.** Прежняя карта принимает raw @ с
 кандидатом без запуска initializer поданных данных; первый store создаёт рабочую ссылку,
 штатный flush публикует её. Binding выбирается одним общим поиском, тип destination
@@ -851,13 +863,16 @@ Struct1: Struct2
 <a id="m8"></a>
 ### M8 — P0 не раскрывает единственную Structure; короткая форма без аргументов (решение 2026-11-10)
 
-**2026-11-14 — REOPENED: остаток receiving-context у ссылочного ресивера.** P0 сохраняет
+**2026-11-14 — receiving-context чистого графа принят срезом374.** P0 сохраняет
 группу, но минимальная `@: Code (int: p touch())` при последующем `length(Code)` сейчас
-отвечает2: это измерено на принятом372 и WIP373. По норме M8/Р17 результат — Code с одним
+отвечала2: это измерено на принятых372/373. По норме M8/Р17 результат — Code с одним
 написанным объявлением, n=1/calls=0, без запуска touch. Прежняя отметка завершения366
-не доказывает закрытия этого потребителя. После приёмки373 закрыть его перед дальнейшим
-root/self: общий контракт читателя Structure-value у @2, включая own data/code и native,
-вместо универсального раскрытия группы или выбора по вложенной голове/числу statements.
+не доказывала закрытия этого потребителя. Срез374 использует общий контракт читателя
+Structure-value у @2, own data/code и native, ссылочного присваивания, length/typeof,
+основания пути/индекса и запуска. Нет универсального раскрытия группы или выбора по вложенной
+голове/числу statements. Четыре новых случая и private27 в трёх режимах прошли, AFTER30/mutation24.
+Whole bootstrap quick построил настоящие G1/G2, по9 smoke; fixedpoint13/verify651 прошли.
+Штатный G2 повторил27 в трёх режимах, AFTER30/mutation24. Миграция рабочего frontend остаётся M11.8.
 [Минимальная проба](steps/witnesses/m11-deferred-refs-20261114/m8-one-field-reference-value.lm2),
 [правила значений](docs/LMX_semantics.ru.md#values), [Р12/Р17](LMX_blog/q/fable-self-answers-20261110.md).
 Это зависимость M11.8; парсер заново не переписывать и гарантии групп в P0 не ослаблять.
@@ -1664,6 +1679,11 @@ Structure и записью значения, снимаются — шаг 6. �
      Для write-only mapped row без loaded1 готовить working reference из уже допущенного incoming
      target без чтения старого payload. Исключить free-input slot=-1 со стабильной snapshot cell;
      loaded1 rows и formal refs сохраняют прежний update. Это оптимизация прежнего writer, не новый storage.
+     Проверить также подготовку written nested fn/sub при запуске ordinary Structure в уже открытой
+     namespace: space_open не должен пропускать необходимые construction bindings только из-за
+     живого внешнего traversal. Не запускать initializer данных и не создавать искусственный метод;
+     использовать общий space_declarations/кадр. Прототип ordinary State в witness374 даёт3,
+     тогда как подготовка настоящим fn State уже работает; этот разрыв не считать исправленным M8.
      No-candidate int-reference строить до первого index/typeof/path наблюдения существующим
      uninit_reference, с именем на cell5 и wrapper8 в слоте. Одновременно замкнуть formals/admit/
      actual-contract на primitive8 как обязательный int-reference formal без чтения payload;

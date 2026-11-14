@@ -1,0 +1,49 @@
+GRAPH-BEFORE-BEGIN
+int: before 0
+int: after 0
+sub: main () (
+    int: i 3
+    A:
+        int: v 7
+    end: A
+    Bad:
+        int: p 99
+        @: s A
+    end: Bad
+    sub: Types ()
+        @: p int (@ i)
+        @: s A
+    end: Types
+)
+    :=: (node \ before) 1
+    call: Bad (Types \ data)
+    :=: (node \ after) 1
+end: main
+@: observed ((main \ data) \ Bad)
+main:
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: before 1
+int: after 1
+sub: main () (
+    int: i 3
+    A:
+        int: v 7
+    end: A
+    Bad:
+        int: p 99
+        @: s A
+    end: Bad
+    sub: Types ()
+        @: p int (@ i)
+        @: s A
+    end: Types
+)
+    :=: (node \ before) 1
+    call: Bad (Types \ data)
+    :=: (node \ after) 1
+end: main
+@: observed Bad
+main:
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

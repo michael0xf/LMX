@@ -1,0 +1,38 @@
+GRAPH-BEFORE-BEGIN
+int: p 7
+int: before 0
+fn: outer () int (
+    prepared:
+        name: p
+        args: ()
+        return: int
+        code: ((return 1))
+    end: prepared
+    fn: prepared
+)
+    :=: (node \ before) 1
+    :=: p (missing)
+    return: 0
+end: outer
+int: observed (outer)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: p 7
+int: before 0
+fn: outer () int (
+    prepared:
+        name: p
+        args: ()
+        return: int
+        code: ((return 1))
+    end: prepared
+    fn: prepared
+)
+    :=: (node \ before) 1
+    :=: p (missing)
+    return: 0
+end: outer
+int: observed (outer)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

@@ -1,0 +1,118 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: touch
+@: Root ((int p (touch)))
+int: root_n (length Root)
+int: direct_n (length ((int p (touch))))
+int: missing_n (length (missing))
+int: group_type (typeof (missing))
+sub: Own () (
+    @: held ((int p (touch)))
+    int: seen 0
+    int: replaced 0
+    int: path_seen 0
+)
+    :=: seen ((length held))
+    :=: held ((int q (touch)))
+    :=: replaced ((length held))
+    :=: (data \ held) (missing_path)
+    :=: path_seen ((length (data \ held)))
+end: Own
+Own:
+int: own_n ((Own \ data) \ seen)
+int: replaced_n ((Own \ data) \ replaced)
+int: path_n ((Own \ data) \ path_seen)
+@: D ((@ held Missing) (int seen 0))
+@: Code ((@ held ((int p (touch)))) (:= seen ((length held))))
+call: D Code
+int: given_n (D \ seen)
+fn: Groups () int
+    @: one ((int p (touch)))
+    @: many (unbound_a unbound_b unbound_c)
+    @: empty ()
+    @: invocation ((fncall int touch))
+    return: (((((length one) * 1000) + ((length many) * 100)) + ((length empty) * 10)) + (length invocation))
+end: Groups
+int: method_counts (Groups)
+int: method_fields (length (Groups \ data))
+@: Slots ((Cell))
+:=: (Slots [] 0) ((int p (touch)))
+int: indexed_n (length (Slots [] 0))
+int: literal_calls (data \ calls)
+@:
+    merged
+    merge: ((int p (touch))) ((int q 2))
+end: @
+int: merged_n (length merged)
+int: merged_p (merged \ p)
+int: merge_calls (data \ calls)
+@: Numbers ((int x 40) (int y 41))
+@: pointer int (Numbers [] ((touch) - 6))
+int: address_value (\ pointer)
+@: twin int pointer
+int: reference_value (\ twin)
+int: final_calls (data \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: touch
+@: Root ((int p (touch)))
+int: root_n (length Root)
+int: direct_n (length ((int p (touch))))
+int: missing_n (length (missing))
+int: group_type (typeof (missing))
+sub: Own () (
+    @: held ((int p (touch)))
+    int: seen 0
+    int: replaced 0
+    int: path_seen 0
+)
+    :=: seen ((length held))
+    :=: held ((int q (touch)))
+    :=: replaced ((length held))
+    :=: (data \ held) (missing_path)
+    :=: path_seen ((length (data \ held)))
+end: Own
+Own:
+int: own_n ((Own \ data) \ seen)
+int: replaced_n ((Own \ data) \ replaced)
+int: path_n ((Own \ data) \ path_seen)
+@: D ((@ held Missing) (int seen 0))
+@: Code ((@ held ((int p (touch)))) (:= seen ((length held))))
+call: D Code
+int: given_n (D \ seen)
+fn: Groups () int
+    @: one ((int p (touch)))
+    @: many (unbound_a unbound_b unbound_c)
+    @: empty ()
+    @: invocation ((fncall int touch))
+    return: (((((length one) * 1000) + ((length many) * 100)) + ((length empty) * 10)) + (length invocation))
+end: Groups
+int: method_counts (Groups)
+int: method_fields (length (Groups \ data))
+@: Slots ((Cell))
+:=: (Slots [] 0) ((int p (touch)))
+int: indexed_n (length (Slots [] 0))
+int: literal_calls (data \ calls)
+@:
+    merged
+    merge: ((int p (touch))) ((int q 2))
+end: @
+int: merged_n (length merged)
+int: merged_p (merged \ p)
+int: merge_calls (data \ calls)
+@: Numbers ((int x 40) (int y 41))
+@: pointer int (Numbers [] ((touch) - 6))
+int: address_value (\ pointer)
+@: twin int pointer
+int: reference_value (\ twin)
+int: final_calls (data \ calls)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 2

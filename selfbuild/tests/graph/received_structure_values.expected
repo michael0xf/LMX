@@ -1,0 +1,73 @@
+int: calls 2
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: touch
+Root:
+    int: p (touch)
+end: Root
+int: root_n 1
+int: direct_n 1
+int: missing_n 1
+int: group_type 13
+sub: Own () (
+    @: held ((int p (touch)))
+    int: seen 0
+    int: replaced 0
+    int: path_seen 0
+)
+    :=: seen ((length held))
+    :=: held ((int q (touch)))
+    :=: replaced ((length held))
+    :=: (data \ held) (missing_path)
+    :=: path_seen ((length (data \ held)))
+end: Own
+Own:
+int: own_n 1
+int: replaced_n 1
+int: path_n 1
+D:
+    held:
+        int: p (touch)
+    end: held
+    int: seen 1
+end: D
+Code:
+    @: held ((int p (touch)))
+    :=: seen ((length held))
+end: Code
+call: D Code
+int: given_n 1
+fn: Groups () int
+    @: one ((int p (touch)))
+    @: many (unbound_a unbound_b unbound_c)
+    @: empty ()
+    @: invocation ((fncall int touch))
+    return: (((((length one) * 1000) + ((length many) * 100)) + ((length empty) * 10)) + (length invocation))
+end: Groups
+int: method_counts 1301
+int: method_fields 4
+Slots:
+    ---
+        int: p (touch)
+    ---
+end: Slots
+:=: (Slots [] 0) ((int p (touch)))
+int: indexed_n 1
+int: literal_calls 0
+merged:
+    int: p 7
+    int: q 2
+end: merged
+int: merged_n 2
+int: merged_p 7
+int: merge_calls 1
+Numbers:
+    int: x 40
+    int: y 41
+end: Numbers
+@: pointer int @y
+int: address_value 41
+@: twin int @y
+int: reference_value 41
+int: final_calls 2

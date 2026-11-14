@@ -75,7 +75,19 @@ L3 со вставками L2. L1 — только генерируемая ст
 <a id="l2-status"></a>
 ## 3. Translator-L2 и ядро
 
-**Текущее состояние, 2026-11-14, срез 376: приёмка пройдена.** После принятого receiving-context 374
+**Текущее состояние, 2026-11-14, срез 377: приёмка пройдена.** В ядре изменён только `lmx_graph_run.lm2`:
+`work_open_parts` готовит written fn/sub выбранных data/body перед work scan; `space_declare` повторно использует
+существующий binding области/raw source. State сохраняет F и её own data: first1/second2, leaf_count2/sub_count2,
+bumped2. Отдельные D/C дают 32/34, data_count12/code_count22, touch_calls0. Разные raw объявления leaf не объединяются:
+голое обращение к leaf отказывает с 3 до тела, before1/after0. Source02:673; private38 в трёх режимах, AFTER45/mutation24 прошли.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по 9 smoke, fixedpoint13/verify673. Штатный G2 заново собрал
+graph-tool и повторил 38 в трёх режимах, AFTER45/mutation24; runtime02 совпадает с G2.
+Render/docs check прошли:35/14/27/44/615, ссылки и LF27467; оба diff --check чисты.
+Рабочая связка: boot-m11-ordinary-nested-01/g2 и graph-m11-ordinary-nested-g2-01.
+Весь M11.5г, root-frame, computed ordinary declarations,
+M11.7/8 и M13/M14 остаются OPEN. [Свидетельство 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+**Предыдущее состояние, 2026-11-14, срез 376: принят `9039fa89`.** После принятого receiving-context 374
 и physical reference code 375 каноническое `@: p int` без кандидата предвыделяет wrapper8/cell5 до наблюдений.
 Обязательный formal8 использует reference-expression context3 и независимую cell5 допуска без чтения payload
 сигнатуры. Frontend/dump и serializer с одной картой адресов согласованы; type-only поле merge сохраняется,

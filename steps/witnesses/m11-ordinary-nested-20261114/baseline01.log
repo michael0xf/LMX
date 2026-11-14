@@ -1,0 +1,49 @@
+GRAPH-BEFORE-BEGIN
+@: State ((int out 0) (:= out ((leaf))) (fn leaf () int ((int count 0)) ((:= count (count + 1)) (return count))))
+call: State
+int: first (State \ out)
+call: State
+int: second (State \ out)
+int: touch_calls 0
+fn: touch () int
+    :=: (node \ touch_calls) ((node \ touch_calls) + 1)
+    return: 99
+end: touch
+@: D ((int out 0) (int cold (touch)) (fn leaf () int ((int count 10)) ((:= count (count + 1)) (return count))))
+@: C ((:= out ((leaf))))
+call: D C
+int: from_data (D \ out)
+call: D C
+int: from_data_again (D \ out)
+int: ignored_initializer (data \ touch_calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+State:
+    int: out 0
+    :=: out ((leaf))
+    fn: leaf () int (
+        int: count 0
+    )
+        :=: count (count + 1)
+        return: count
+    end: leaf
+end: State
+call: State
+int: first (State \ out)
+call: State
+int: second (State \ out)
+int: touch_calls 0
+fn: touch () int
+    :=: (node \ touch_calls) ((node \ touch_calls) + 1)
+    return: 99
+end: touch
+@: D ((int out 0) (int cold (touch)) (fn leaf () int ((int count 10)) ((:= count (count + 1)) (return count))))
+@: C ((:= out ((leaf))))
+call: D C
+int: from_data (D \ out)
+call: D C
+int: from_data_again (D \ out)
+int: ignored_initializer (data \ touch_calls)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

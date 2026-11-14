@@ -1,6 +1,21 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice 376 -- acceptance passed.** Canonical `@: p int`
+**Current state, 2026-11-14, slice 377 -- acceptance passed.** Only `lmx_graph_run.lm2` changes in the core:
+frame opening prepares written fn/sub in selected data/body before work scan, and repeated preparation reuses
+the existing scope/raw-source binding. State preserves F and its own data: first1/second2, leaf_count2/sub_count2,
+bumped2. Separate D/C give 32/34, data_count12/code_count22, touch_calls0. Two leaf declarations at different
+raw sources remain distinct occurrences; bare leaf refuses with 3 before the body, before1/after0. Source02:673;
+private38 in three modes and AFTER45/mutation24 passed. Whole bootstrap01 quick passed genuine G1/G2,
+nine smoke rows each, fixedpoint13/verify673. Genuine G2 rebuilt graph-tool and repeated 38 in three modes,
+AFTER45/mutation24; runtime02 matches G2. Normal render/docs check passed:
+35/14/27/44/615, links and index LF27467; both diff checks are clean.
+Source02 SHA-256: 1441737c4cf71b27ab81c4734846f1b30a469326f7146f1dc86c33f74f8e4fa9.
+Working tuple: boot-m11-ordinary-nested-01/g2 and graph-m11-ordinary-nested-g2-01.
+G2 graph SHA-256: 039e29be84a420aa7ace00c0ba6003472bb56146c3fb5a40093aba124d6d2f5a.
+The whole of M11.5г, root-frame work, computed ordinary declarations, M11.7/8, M13 and ordinary native M14 remain OPEN.
+[Witness 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+**Previous state, 2026-11-14, slice 376 -- accepted `9039fa89`.** Canonical `@: p int`
 without a candidate preallocates wrapper8/cell5 before index/typeof/path; a required formal8 receives an independent
 reference cell through common admission. Source04: 669; runtime02/graph03, five pure cases, private36 in three modes,
 AFTER42/mutation24 passed. Actual native TypeOnly with physical8 in method.code was confirmed by GDB trace03
@@ -1434,7 +1449,7 @@ unsupported: kind5 and permanent wrapper8/cell5 must pre-exist. It must not be r
 kind6, allocated lazily on the first write or checked for a prior write by its uninit wrapper.
 The initial payload of a true uninit:T is not promised and is not read by these checks.
 
-**Current slice 376.** Common `build_place` preallocates canonical `@: p int` as wrapper8 onto a named cell5
+**Accepted slice 376.** Common `build_place` preallocates canonical `@: p int` as wrapper8 onto a named cell5
 before block classification, so slot/index/typeof are available before the first store. A null trailer and checked
 `end: @` preserve the primitive form; `until` retains its previous postloop route. Compact non-colon `@`
 remains an expression. This does not complete the common M11.8 code-body consumer. Model/actual8 normalize to family5
@@ -1447,6 +1462,17 @@ by private GDB trace03: `lm_graph_body2` → `lm_graph_method2` → `lmx_call_pr
 with a normal exit. Ordinary Self/Types.data and direct native coverage of their physical5/6/9 remain M14 OPEN;
 arbitrary models, void, pointer depth and Array remain in M13.
 [Checks and limits 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
+
+**Written fn/sub preparation, slice 377.** When a frame opens, common `space_declarations` prepares directly written
+fn/sub in selected data/body before capturing free inputs, including entry within an existing traversal.
+When data=body, one pass suffices. A construction binding is identified by its scope and raw source address:
+re-entry preserves the same F and its own data; equal names at different source occurrences do not merge
+declarations. Bindings belong only to the current traversal; the next traversal creates its own F, while values
+retained by ordinary references remain alive. This prepares construction bindings, executing neither the body nor
+ordinary-data initializers. Computed declarations retain their previous route when execution reaches the record;
+computed ordinary declarations, the common root frame and M14 remain OPEN. Two pure cases confirm re-entry and
+refusal with 3 on bare access to distinct raw occurrences of one name; acceptance for 377, including render/docs check, passed.
+[Witness 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
 
 ### 6.4 Copying, merge, attaching
 

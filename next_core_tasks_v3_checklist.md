@@ -1,5 +1,15 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез377 — written nested fn/sub ordinary launch, кодовая приёмка пройдена.**
+376 принят и отправлен9039fa89. Entry готовит непосредственные written declarations data/body,
+повторный вход сохраняет F того же scope/raw и own data без запуска ordinary initializers.
+Source02 verify673; pure fn/sub counters2, D/C32/34/cold0 и duplicate refusal3,
+private38 в трёх режимах, AFTER45/mutation24 прошли. Whole bootstrap01 quick прошёл:
+настоящие G1/G2, по9 smoke, fixedpoint13/verify673; штатный G2/graph повторил38 в трёх режимах,
+AFTER45/mutation24. Render/docs check прошли:35/14/27/44/615, ссылки и LF27467;
+оба diff --check чисты, чужой WIP сохранён. Общий root frame, M11.7/8, M13/M14 остаются OPEN.
+[Свидетельство](steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
 **2026-11-14, срез 376 — canonical int-reference без кандидата, кодовая приёмка пройдена.**
 Constructor8/5, required formal8/context3/independent admit, frontend shape и serializer3/5/6/8/9
 замкнуты без initialized-флага; имена, parent и sharing сохраняются. Mixed literal8 вычисляет соседний initializer.

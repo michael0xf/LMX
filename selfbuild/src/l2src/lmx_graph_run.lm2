@@ -818,6 +818,13 @@ fn: lmx_graph_work_open_parts (@: g c.LmxGraph; @: code c.Lmx; @: args c.Lmx; @:
             status := 5
         i := i + 1U
     ---
+    # A launch enters these declaration scopes even inside a live traversal.
+    # Prepare written fn/sub through the common constructor before capturing
+    # names; ordinary data initializers remain untouched.
+    if: status = 0
+        status := lmx_graph_space_declarations(g, data)
+    if: status = 0 && body != data
+        status := lmx_graph_space_declarations(g, body)
     if: status = 0
         status := lmx_graph_work_scan(g, frame, body)
     # Only the callable's own data executes its retained initializers here, by its contract; other data is read as it
@@ -5465,12 +5472,18 @@ end: lmx_graph_fn_written
 # theirs in the body's block. 0; -1 an argument needs evaluation and -2 no form binds (both told where the traversal
 # reaches the Frame, lmx_graph_fn_apply); 1 without memory; 5 for a value of another kind.
 fn: lmx_graph_space_declare (@: g c.LmxGraph; @: scope c.Lmx; @: decl c.Lmx) int
-    @@: values void (cast: (@@: void) c.calloc(6U, sizeof(@: void)))
+    @@: values void 0
     @: form c.Lmx 0
     @: made c.Lmx 0
     @: name char 0
     @: body c.Lmx 0
     int: status 4
+    # Re-entering one written scope retains this declaration's constructed
+    # value and its own data. Equal names at different source addresses are
+    # still distinct declarations, not a name-based memoization.
+    if: lmx_graph_binding_method(g, scope, (cast: (@: void) decl)) != 0
+        return: 0
+    values := (cast: (@@: void) c.calloc(6U, sizeof(@: void)))
     if: values != 0
         status := lmx_graph_receiver_bind(g, scope, decl, 0, values, @ form)
     # No form of the contract binds the written actuals: refused, or applied, where the traversal reaches it.

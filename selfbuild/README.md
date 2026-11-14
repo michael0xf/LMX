@@ -1,6 +1,21 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice 376): acceptance passed. Canonical @:p int
+Current continuation (2026-11-14, slice 377): acceptance passed. Only lmx_graph_run.lm2 changes in the core:
+work_open_parts prepares directly written fn/sub in data/body before work scan; space_declare reuses the existing
+scope/raw-source binding. Re-entry preserves method instances and own data: State first1/second2,
+leaf_count2/sub_count2/bumped2; separate D/C 32/34, data_count12/code_count22, touch_calls0.
+Different raw leaf declarations remain distinct; bare leaf refuses with 3 before the body, before1/after0.
+Source02:673; private38 in three modes and AFTER45/mutation24 passed. Whole bootstrap01 quick passed genuine G1/G2,
+nine smoke rows each, fixedpoint13/verify673. Genuine G2 rebuilt graph-tool and repeated 38 in three modes,
+AFTER45/mutation24; runtime02 matches G2. Normal render/docs check passed:
+35/14/27/44/615, links and index LF27467; both diff checks are clean. Source02 SHA-256:
+1441737c4cf71b27ab81c4734846f1b30a469326f7146f1dc86c33f74f8e4fa9. Working tuple:
+boot-m11-ordinary-nested-01/g2 and graph-m11-ordinary-nested-g2-01. G2 graph SHA-256:
+039e29be84a420aa7ace00c0ba6003472bb56146c3fb5a40093aba124d6d2f5a.
+Ordinary code still uses the walker; full M11.5г, root-frame, computed ordinary declarations,
+M11.7/8 and M13/M14 remain OPEN. [Witness 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+Previous continuation (2026-11-14, slice 376): accepted `9039fa89`. Canonical @:p int
 without a candidate now preallocates wrapper8/cell5 before index/typeof/path; required formal8 uses reference-expression
 context3 and independent admission without reading signature payload. Nullable/end trailers preserve the primitive;
 until keeps its postloop route. Frontend/dump, the shared-map serializer and type-only fields beside computed merge

@@ -76,7 +76,19 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-**Current state, 2026-11-14, slice 376: acceptance passed.** After accepted receiving-context 374
+**Current state, 2026-11-14, slice 377: acceptance passed.** Only `lmx_graph_run.lm2` changes in the core:
+`work_open_parts` prepares written fn/sub in selected data/body before work scan; `space_declare` reuses
+the existing scope/raw-source binding. State preserves F and its own data: first1/second2, leaf_count2/sub_count2,
+bumped2. Separate D/C give 32/34, data_count12/code_count22, touch_calls0. Different raw leaf declarations do not merge:
+bare leaf refuses with 3 before the body, before1/after0. Source02:673; private38 in three modes and AFTER45/mutation24 passed.
+Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each, fixedpoint13/verify673. Genuine G2 rebuilt
+graph-tool and repeated 38 in three modes, AFTER45/mutation24; runtime02 matches G2.
+Render/docs check passed:35/14/27/44/615, links and LF27467; both diff checks are clean.
+Working tuple: boot-m11-ordinary-nested-01/g2 and graph-m11-ordinary-nested-g2-01.
+The whole of M11.5г, root-frame work, computed ordinary declarations,
+M11.7/8 and M13/M14 remain OPEN. [Witness 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+**Previous state, 2026-11-14, slice 376: accepted `9039fa89`.** After accepted receiving-context 374
 and physical reference code 375, canonical `@: p int` without a candidate preallocates wrapper8/cell5 before observations.
 A required formal8 uses reference-expression context3 and an independent admitted cell5 without reading signature
 payload. Frontend/dump and the single-address-map serializer are aligned; a type-only merge field is retained

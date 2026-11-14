@@ -1,6 +1,21 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**Текущее состояние, 2026-11-14, срез 376 — приёмка пройдена.** Каноническое `@: p int`
+**Текущее состояние, 2026-11-14, срез 377 — приёмка пройдена.** В ядре изменён только `lmx_graph_run.lm2`:
+открытие кадра готовит written fn/sub выбранных data/body перед work scan, а повторная подготовка использует
+существующий binding области и raw source. State сохраняет F и её own data: first1/second2, leaf_count2/sub_count2,
+bumped2. Отдельные D/C дают 32/34, data_count12/code_count22, touch_calls0. Два объявления leaf с разными
+raw source остаются разными вхождениями; голое обращение к leaf отказывает с 3 до тела, before1/after0. Source02:673;
+private38 в трёх режимах, AFTER45/mutation24 прошли. Whole bootstrap01 quick прошёл: настоящие G1/G2,
+по 9 smoke, fixedpoint13/verify673. Штатный G2 заново собрал graph-tool и повторил 38 в трёх режимах,
+AFTER45/mutation24; runtime02 совпадает с G2. Штатные render/docs check прошли:
+35/14/27/44/615, ссылки и LF индекса27467; оба diff --check чисты.
+Source02 SHA-256: 1441737c4cf71b27ab81c4734846f1b30a469326f7146f1dc86c33f74f8e4fa9.
+Рабочая связка: boot-m11-ordinary-nested-01/g2 и graph-m11-ordinary-nested-g2-01.
+G2 graph SHA-256: 039e29be84a420aa7ace00c0ba6003472bb56146c3fb5a40093aba124d6d2f5a.
+Весь M11.5г, root-frame, computed ordinary declarations, M11.7/8, M13 и ordinary native M14 остаются OPEN.
+[Свидетельство 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+**Предыдущее состояние, 2026-11-14, срез 376 — принят `9039fa89`.** Каноническое `@: p int`
 без кандидата предвыделяет wrapper8/cell5 до index/typeof/path; обязательный formal8 получает независимую
 reference cell через общий допуск. Source04: 669; runtime02/graph03, пять pure, private36 в трёх режимах,
 AFTER42/mutation24 прошли. Настоящий native TypeOnly с physical8 в method.code подтверждён GDB trace03
@@ -1352,7 +1367,7 @@ physical cell и её wrapper сохраняются. `known_place` провер
 Structure-reference kind6, лениво выделять при первой записи или проверять факт записи по uninit-wrapper.
 Начальный payload настоящего uninit:T не обещан и этими проверками не читается.
 
-**Текущий срез 376.** Общий `build_place` предвыделяет каноническое `@: p int` как wrapper8 на именованную cell5
+**Принятый срез 376.** Общий `build_place` предвыделяет каноническое `@: p int` как wrapper8 на именованную cell5
 до классификации блока, поэтому slot/index/typeof доступны до первого store. Null trailer и проверенный
 `end: @` не меняют форму примитива; `until` сохраняет прежний postloop путь. Compact non-colon `@`
 остаётся выражением. Общий code-body consumer M11.8 этим не завершён. Model/actual8 нормализуются к family5
@@ -1365,6 +1380,17 @@ TypeOnly8 подтверждено частным GDB trace03: `lm_graph_body2` 
 нормальный выход. Ordinary Self/Types.data и прямое native-покрытие их physical5/6/9 остаются M14 OPEN;
 произвольные модели, void, глубина указателей и Array — оставшаяся M13.
 [Проверки и границы 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
+
+**Подготовка written fn/sub, срез 377.** При открытии кадра общий `space_declarations` готовит непосредственные
+written fn/sub выбранных data/body до захвата свободных входов, включая вход внутри уже открытого обхода.
+Когда data=body, достаточно одного прохода. Construction binding определяется областью и адресом raw source:
+повторный вход сохраняет ту же F и её собственную data; одинаковые имена разных исходных вхождений не объединяют
+объявления. Связывания принадлежат только текущему обходу; следующий обход создаёт свои F, а удержанные обычными
+ссылками значения продолжают жить. Это подготовка construction bindings, а не исполнение body или ordinary-data
+initializers. Вычисляемые объявления сохраняют прежний маршрут по достижению записи; computed ordinary declarations,
+общий root-frame и M14 остаются OPEN. Две pure-пробы подтверждают повторный вход и отказ с 3 голого обращения
+к разным raw вхождениям одного имени;
+приёмка 377, включая render/docs check, пройдена. [Свидетельство 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
 
 ### 6.4 Копирование, merge, присоединение
 

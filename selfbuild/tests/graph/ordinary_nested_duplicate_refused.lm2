@@ -1,0 +1,15 @@
+# Two source declarations with the same name stay two occurrences. Entry
+# preparation must not merge them merely because their names are equal.
+int: before 0
+int: after 0
+@: Bad (
+    int: out 0
+    out := leaf()
+    fn: leaf () int
+        return: 1
+    fn: leaf () int
+        return: 2
+)
+before := 1
+call(Bad)
+after := 1

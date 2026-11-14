@@ -9,7 +9,19 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice 376; code acceptance passed): canonical no-candidate int-reference storage,
+Current implementation note (2026-11-14, slice 377; code acceptance passed): frame opening prepares written fn/sub in selected data/body
+before free-input scanning; the existing scope/raw-source binding preserves F and its own data on re-entry.
+Two pure cases passed: State 1/2 with leaf/sub counts2 and bumped2; D/C 32/34 with touch_calls0;
+bare leaf refuses with 3 before the body when two raw declarations share its name. Source02:673;
+private38 in three modes and AFTER45/mutation24 passed. Whole bootstrap01 quick passed genuine G1/G2,
+nine smoke rows each, fixedpoint13/verify673. Genuine G2 rebuilt graph-tool and repeated 38 in three modes,
+AFTER45/mutation24; runtime02 matches G2. Working tuple: boot-m11-ordinary-nested-01/g2 and
+graph-m11-ordinary-nested-g2-01. Normal render/docs check passed:
+35/14/27/44/615, links and index LF27467; both diff checks are clean.
+Full M11.5г, root-frame, computed ordinary declarations,
+M11.7/8 and M13/M14 remain open. [Witness 377](steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+Previous implementation note (2026-11-14, slice 376; accepted `9039fa89`): canonical no-candidate int-reference storage,
 required formal8 admission and actual native TypeOnly8 have passed private acceptance (Source04: 669,
 private36 in three modes, AFTER42/mutation24; direct GDB trace03). Whole bootstrap01 quick passed genuine G1/G2,
 nine smoke rows each, fixedpoint13/verify669. Genuine G2 rebuilt graph-tool and repeated 36 in three modes,

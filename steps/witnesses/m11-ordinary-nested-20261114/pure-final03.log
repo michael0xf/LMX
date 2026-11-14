@@ -1,0 +1,83 @@
+GRAPH-BEFORE-BEGIN
+@: State ((int out 0) (int bumps 0) (:= out ((leaf))) (bump) (fn leaf () int ((int count 0)) ((:= count (count + 1)) (return count))) (sub bump () ((int n 0)) ((:= n (n + 1)) (:= (node \ bumps) ((node \ bumps) + 1)))))
+call: State
+int: first (State \ out)
+call: State
+int: second (State \ out)
+int: leaf_count (((State \ leaf) \ data) \ count)
+int: sub_count (((State \ [1]bump) \ data) \ n)
+int: bumped (State \ bumps)
+int: touch_calls 0
+fn: touch () int
+    :=: (node \ touch_calls) ((node \ touch_calls) + 1)
+    return: 99
+end: touch
+@: D ((int out 0) (int cold (touch)) (fn leaf () int ((int count 10)) ((:= count (count + 1)) (return count))))
+@: C ((:= out ((leaf) + (code_leaf))) (fn code_leaf () int ((int count 20)) ((:= count (count + 1)) (return count))))
+call: D C
+int: from_data (D \ out)
+call: D C
+int: from_data_again (D \ out)
+int: data_count (((D \ leaf) \ data) \ count)
+int: code_count (((C \ code_leaf) \ data) \ count)
+int: ignored_initializer (data \ touch_calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+State:
+    int: out 2
+    int: bumps 2
+    :=: out ((leaf))
+    bump:
+    fn: leaf () int (
+        int: count 0
+    )
+        :=: count (count + 1)
+        return: count
+    end: leaf
+    sub: bump () (
+        int: n 0
+    )
+        :=: n (n + 1)
+        :=: (node \ bumps) ((node \ bumps) + 1)
+    end: bump
+end: State
+call: State
+int: first 1
+call: State
+int: second 2
+int: leaf_count 2
+int: sub_count 2
+int: bumped 2
+int: touch_calls 0
+fn: touch () int
+    :=: (node \ touch_calls) ((node \ touch_calls) + 1)
+    return: 99
+end: touch
+D:
+    int: out 34
+    int: cold (touch)
+    fn: leaf () int (
+        int: count 10
+    )
+        :=: count (count + 1)
+        return: count
+    end: leaf
+end: D
+C:
+    :=: out ((leaf) + (code_leaf))
+    fn: code_leaf () int (
+        int: count 20
+    )
+        :=: count (count + 1)
+        return: count
+    end: code_leaf
+end: C
+call: D C
+int: from_data 32
+call: D C
+int: from_data_again 34
+int: data_count 12
+int: code_count 22
+int: ignored_initializer 0
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

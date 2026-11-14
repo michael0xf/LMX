@@ -1,5 +1,16 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез377 — written nested fn/sub ordinary launch, кодовая приёмка пройдена в main.**
+376 принят и отправлен9039fa89. Общий entry перед capture готовит direct written declarations data/body;
+повторный вход сохраняет F того же scope/raw, его own data и отдельность одинаковых имён разных source.
+Ordinary initializers и computed fn_apply не расширены. Source02 verify673, runtime02/graph02,
+pure first1/second2, D/C32/34/cold0 и duplicate refusal3; private38 в трёх режимах,
+AFTER45/mutation24 прошли. Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke,
+fixedpoint13/verify673. Штатный G2/graph повторил38 в трёх режимах, AFTER45/mutation24.
+Render/docs check прошли:35/14/27/44/615, ссылки и LF27467; оба diff --check чисты. Далее commit/push main.
+Общий root frame, остальные5г/5д/5е/7/8 и M13/M14 OPEN. Goal ACTIVE.
+[Свидетельство](steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
 **2026-11-14, срез 376 — canonical int-reference без кандидата, кодовая приёмка пройдена в main.**
 Общий constructor предвыделяет8/5 до index/typeof/path; formal8 обязателен, context3/admit создаёт
 независимую cell5 без SIG payload. Frontend shape и serializer3/5/6/8/9 замкнуты одной map с именами,
@@ -1713,6 +1724,13 @@ Structure и записью значения, снимаются — шаг 6. �
      живого внешнего traversal. Не запускать initializer данных и не создавать искусственный метод;
      использовать общий space_declarations/кадр. Прототип ordinary State в witness374 даёт3,
      тогда как подготовка настоящим fn State уже работает; этот разрыв не считать исправленным M8.
+     **Срез377, кодовая приёмка:** work_open_parts перед work_scan готовит direct written fn/sub в data/body прежним
+     space_declarations; space_declare переиспользует F только того же scope/raw source. Ordinary State
+     видит leaf до объявления, повторные вызовы сохраняют own counter1→2; D/C методы сохраняют11/12
+     и21/22, дают32/34 без cold initializer. Два разных raw fn одинакового имени по-прежнему отказывают3.
+     Private38/AFTER45/mutation24, whole bootstrap01 G1/G2, fixedpoint13/verify673 и повтор штатным
+     G2/graph38/AFTER45/mutation24, render/docs check35/14/27/44/615/LF27467 прошли. Это не общий root frame,
+     не расширение computed ordinary fn_apply и не завершение M11.5г/M14.
      No-candidate int-reference строить до первого index/typeof/path наблюдения существующим
      uninit_reference, с именем на cell5 и wrapper8 в слоте. Одновременно замкнуть formals/admit/
      actual-contract на primitive8 как обязательный int-reference formal без чтения payload;

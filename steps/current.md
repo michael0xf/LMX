@@ -1,5 +1,24 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г: срез 377, written nested fn/sub обычного запуска, кодовая приёмка пройдена
+
+376 принят и отправлен из main:9039fa892658ba6c12f91e35f576c52b9f2a02a7.
+Работа, сборки и коммиты только C:/Nyasha_Planet/LMX, main; один writer/build Sol.
+Pipeline sol-m11-ordinary-nested-20261114-01. Baseline376 отказывает3 на ordinary State:
+leaf вызывается до written fn, созданный F обязан сохранять own count между двумя launches.
+WIP меняет только lmx_graph_run: work_open_parts готовит direct written declarations data/body
+прежним space_declarations до снимков; space_declare повторно использует только F того же raw source.
+Initializers обычной data не запускаются, computed fn_apply не расширен. Runtime02/graph02 и pure прошли:
+first1/second2, fn/sub counters2, D/C32/34/cold0, duplicate refusal3. Private38 в трёх режимах,
+AFTER45/mutation24 прошли. Source02 verify673, manifest1441737c. Whole bootstrap01 quick прошёл:
+настоящие G1/G2, по9 smoke; fixedpoint13/verify673 прошли. Штатный G2 заново собрал graph-tool
+и повторил38 в трёх режимах, AFTER45/mutation24. Рабочая связка boot-m11-ordinary-nested-01/g2
+и graph-m11-ordinary-nested-g2-01; runtime02 тождественен G2. Штатные render/docs check прошли:
+35/14/27/44/615, ссылки и LF индекса27467. Оба diff --check чисты; чужие два untracked
+сохранили прежние SHA. Далее commit/push main.
+После приёмки продолжить общий root frame, остатки5г/5д/5е/7/8 и M13/M14. Весь goal ACTIVE.
+Чужие два untracked сохранить; общий pipeline последовательный.
+
 ## 2026-11-14 — M11: срез 376, canonical int-reference без кандидата, кодовая приёмка пройдена
 
 375 принят и отправлен прямо из main:a8d37639689078d9295dce3b8b6e0e6a9842f627.

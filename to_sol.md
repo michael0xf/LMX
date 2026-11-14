@@ -1,5 +1,19 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез377 — written nested fn/sub ordinary launch, кодовая приёмка пройдена в main.**
+376 принят и отправлен:9039fa892658ba6c12f91e35f576c52b9f2a02a7. work_open_parts перед capture
+готовит direct written declarations data/body общим space_declarations; повторный space_declare
+сохраняет только F того же scope/raw source и его own data. Ordinary data initializer не выполняется.
+Runtime02/graph02 и pure first1/second2, fn/sub counters2, D/C32/34, cold_calls0 прошли;
+два разных fn одинакового имени сохраняют отказ3. Source02 verify673, manifest1441737c.
+Private38 в трёх режимах, AFTER45/mutation24 прошли. Whole bootstrap01 quick прошёл:
+настоящие G1/G2, по9 smoke; fixedpoint13/verify673. Штатный G2/graph повторил38 в трёх режимах,
+AFTER45/mutation24. Рабочая связка boot-m11-ordinary-nested-01/g2 и graph-m11-ordinary-nested-g2-01.
+Render/docs check прошли:35/14/27/44/615, ссылки и LF индекса27467;
+оба diff --check чисты, чужой WIP сохранён. Далее commit/push main.
+Далее общий root frame и остальные5г/5д/5е/7/8, M13/M14 OPEN. Goal ACTIVE.
+[Свидетельство](steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
 **2026-11-14, срез 376 — canonical @:p int без кандидата, кодовая приёмка пройдена в main.**
 375 принят и отправлен:a8d37639689078d9295dce3b8b6e0e6a9842f627. Common constructor создаёт8/5 до первого
 index/typeof/path, formal8 обязателен и допускается в независимую cell5 без чтения SIG payload.

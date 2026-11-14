@@ -1,0 +1,61 @@
+predef: "mixa_manager/mixa_shell_owner.h.lm1"
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+
+# Mixa\start. One letter: files\list, answer shell\show_rows,
+# unanswered shell\note_refused. Inside Files the call is
+# mixa_shell_files_list. The snapshot moves onto Shell. A refusal
+# leaves the rows already delivered. This is not mixa_app_main and
+# not mixa_app_main_msg, and it is not a second mail API.
+# The kernel post transport is not this body. The graph records the
+# letter; these are the ordinary calls that letter names.
+
+fn: mixa_shell_files_list (@: MixaFm fm; const: @(char path); @@: MixaFmEntry out_rows; @: size_t out_count) int
+fn: mixa_shell_files_release (@: MixaFm fm; @: MixaFmEntry rows; size_t: count) int
+
+fn: mixa_shell_show_rows (@: MixaShellOwner shell; @: MixaFm files; @: MixaFmEntry rows; size_t: count) int
+    if: shell = 0 || files = 0
+        return: 1
+    if: shell\rows != 0
+        if: shell\rows != (cast: (@: void) rows)
+            mixa_shell_files_release(files, (cast: (@: MixaFmEntry) shell\rows), shell\row_count)
+        ---
+    ---
+    shell\rows: (cast: (@: void) rows)
+    shell\row_count: count
+    shell\shown: shell\shown + 1
+return: 0
+
+fn: mixa_shell_note_refused (@: MixaShellOwner shell) int
+    if: shell = 0
+        return: 1
+    shell\refused: shell\refused + 1
+return: 0
+
+fn: mixa_shell_drop_rows (@: MixaShellOwner shell; @: MixaFm files) int
+    if: shell = 0 || files = 0
+        return: 1
+    if: shell\rows != 0
+        mixa_shell_files_release(files, (cast: (@: MixaFmEntry) shell\rows), shell\row_count)
+        shell\rows: 0
+        shell\row_count: 0U
+    ---
+return: 0
+
+fn: mixa_shell_start (@: MixaShellOwner shell; @: MixaFm files; const: @(MixaBackendVTable native); const: @(char root); size_t: cols; size_t: lines; @: MixaCellMetrics metrics) int
+    @: MixaFmEntry got
+    size_t: n
+    int: rc
+    if: shell = 0 || files = 0 || root = 0
+        return: 1
+    rc: mixa_shell_native_bind(shell, native, cols, lines, metrics)
+    if: rc != 0
+        return: rc
+    ---
+    got: 0
+    n: 0U
+    rc: mixa_shell_files_list(files, root, @ got, @ n)
+    if: rc != MIXA_FM_OK
+        mixa_shell_note_refused(shell)
+        return: rc
+    ---
+return: mixa_shell_show_rows(shell, files, got, n)

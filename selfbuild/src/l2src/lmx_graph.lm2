@@ -1361,6 +1361,9 @@ fn: lmx_graph_dump_formal (@: g c.LmxGraph; @: args c.Lmx; size_t: index; @: f c
         if: kind = 1
             c.fprintf(f, " %d", c.lmx_int_value_known(formal))
         return: 0
+    if: kind = 8
+        c.fprintf(f, "@: %s int", lmx_graph_slot_name(g, args, index))
+        return: 0
     if: kind != 4
         return: lmx_graph_dump_token(g, formal, f, path)
     declaration := (cast: (@: c.Lmx) formal)

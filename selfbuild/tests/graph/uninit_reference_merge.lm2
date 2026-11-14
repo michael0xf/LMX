@@ -1,0 +1,17 @@
+# A type-only field remains a physical place while the explicit merge
+# producer evaluates its neighboring computed initializer once.
+int: calls 0
+fn: touch () int
+    node\calls := node\calls + 1
+    return: 7
+@: Source (int: x 10)
+sub: Fill () ()
+    @: p int @(Source\x)
+@: Mixed merge((@: p int; int: q touch()))
+int: before_type typeof(Mixed[0])
+call(Mixed; Fill)
+int: seen \(Mixed\p)
+int: after_type typeof(Mixed[0])
+int: made length(Mixed)
+int: computed Mixed\q
+int: ran data\calls

@@ -1,6 +1,19 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**2026-11-14, slice 373 -- computed reference places; code acceptance passed.** The existing work map
+**Current state, 2026-11-14, slice 376 -- acceptance passed.** Canonical `@: p int`
+without a candidate preallocates wrapper8/cell5 before index/typeof/path; a required formal8 receives an independent
+reference cell through common admission. Source04: 669; runtime02/graph03, five pure cases, private36 in three modes,
+AFTER42/mutation24 passed. Actual native TypeOnly with physical8 in method.code was confirmed by GDB trace03
+in the private pipeline with a normal exit. Whole bootstrap01 quick passed: genuine G1/G2, nine smoke rows each,
+fixedpoint13/verify669. Genuine G2 rebuilt graph-tool and repeated 36 in three modes,
+AFTER42/mutation24; runtime02 is identical to the rebuilt runtime. Working tuple:
+boot-m11-uninit-reference-01/g2 and graph-m11-uninit-reference-g2-01. Normal render/docs check passed:
+35/14/27/44/615, links and index LF27434; both diff checks are clean. G2 direct trace01 also passed.
+Source04 SHA-256: de34eb33fb7f603d1ed08c8bf7f69da0c7ffe5cd473d3408f9e770f5e6840daf.
+M11.7/8, the whole of M11, M13 and ordinary native M14 remain open.
+[Witness 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
+
+**Previous state, 2026-11-14, slice 373 -- computed reference places; code acceptance passed.** The existing work map
 binds a retained raw `@` Frame with a candidate: three fields for an int reference, two for a Structure reference.
 Admission does not run the initializer. Reading or launching that place before a working write refuses with 5;
 the first write creates a working typed reference, and normal flush publishes it through the existing slot.
@@ -1410,7 +1423,7 @@ candidate), an argument is a frame cell found by position or by name (§5.1); re
 assignment of the frame's argument place. Reception, `implements` by used fields, conversion routes and throws follow the
 current book; the carrier changes, not the rules (`:=`, `merge`, positional `a(5)`/`a: 5`, q/z, AXBY are kept -- §11).
 
-**Slice 373 working rows.** `lmx_graph_data_cell` returns an existing primitive cell or a retained
+**Historical slice 373 working rows.** `lmx_graph_data_cell` returns an existing primitive cell or a retained
 computed declaration: `int` with a candidate or a supported raw `@` with a candidate (three fields/int reference,
 two/Structure reference). `work_require` binds the existing slot and records expected_kind without evaluating
 the initializer. `work_load` refuses5 when reading a retained Frame before a working write. The first write creates
@@ -1420,6 +1433,20 @@ existing physical cell and wrapper. `known_place` checks the destination type be
 unsupported: kind5 and permanent wrapper8/cell5 must pre-exist. It must not be represented as Structure-reference
 kind6, allocated lazily on the first write or checked for a prior write by its uninit wrapper.
 The initial payload of a true uninit:T is not promised and is not read by these checks.
+
+**Current slice 376.** Common `build_place` preallocates canonical `@: p int` as wrapper8 onto a named cell5
+before block classification, so slot/index/typeof are available before the first store. A null trailer and checked
+`end: @` preserve the primitive form; `until` retains its previous postloop route. Compact non-colon `@`
+remains an expression. This does not complete the common M11.8 code-body consumer. Model/actual8 normalize to family5
+in the existing map; the first write and normal publication preserve the original slot/wrapper/cell without reading old payload.
+Formal8 is required, actual-contract3 reads a reference expression, and admit creates an independent cell5 from the admitted
+actual; signature payload is not read and no default is introduced. Frontend/dump recognize physical8; the serializer
+preserves physical3/5/6/8/9, sharing, names and parent closure through one map. A type-only literal field passes through
+the existing deep merge-copy while its computed neighbor runs. Direct native execution of actual TypeOnly8 was confirmed
+by private GDB trace03: `lm_graph_body2` → `lm_graph_method2` → `lmx_call_prim_values`,
+with a normal exit. Ordinary Self/Types.data and direct native coverage of their physical5/6/9 remain M14 OPEN;
+arbitrary models, void, pointer depth and Array remain in M13.
+[Checks and limits 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
 
 ### 6.4 Copying, merge, attaching
 

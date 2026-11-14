@@ -1,5 +1,17 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез 376 — canonical int-reference без кандидата, кодовая приёмка пройдена в main.**
+Общий constructor предвыделяет8/5 до index/typeof/path; formal8 обязателен, context3/admit создаёт
+независимую cell5 без SIG payload. Frontend shape и serializer3/5/6/8/9 замкнуты одной map с именами,
+parent и текущими bits/sharing, без initialized-флага. Mixed literal8 сохраняет вычисление соседних полей.
+Source04 verify669, private36 в трёх режимах, AFTER42/mutation24 прошли. Настоящий native TypeOnly8
+подтверждён trace03 и прямым G2 trace01; ordinary C/native5/6/9 остаётся M14.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke, fixedpoint13/verify669.
+Штатный G2/graph повторил36 в трёх режимах, AFTER42/mutation24; render/docs check прошли:
+35/14/27/44/615, ссылки и LF индекса27434; оба diff --check чисты. Далее commit/push main.
+[Свидетельство](steps/witnesses/m11-uninit-reference-20261114/notes.md). Далее root/self, ordinary nested
+methods, 5д–5е/7–8; retained/computed/control-body M11.8 и полный M13/M14 остаются OPEN.
+
 **2026-11-14, срез 375 — кодовая приёмка physical reference records пройдена в main.**
 Прежние scanner/known_place/store поддерживают named5/6 как текущий source literal и8/9 как type-only.
 Write-only mapped row получает incoming reference без старого payload; free-input/formal ячейки прежние.
@@ -1711,6 +1723,15 @@ Structure и записью значения, снимаются — шаг 6. �
      читать8 в formal_type/declaration/reference и type-only block вместо cast к Frame; own_field и
      dump_formal сохраняют имя через slot_name. Один лишь успех L3 runtime эту миграцию не закрывает:
      обязательны настоящая самосборка и проверка formal/whole admission, без чтения payload подписи.
+     **Срез376, кодовая приёмка:** canonical nullable/end @:p int строится общим build_place в8/5;
+     предвыделение, alias старого wrapper, model/formal/whole8, независимость actual cell и mixed literal8
+     проверены. Serializer3/5/6/8/9 замкнут одной map с parent/names; frontend shape не cast-ит8 в Frame.
+     Private36/AFTER42/mutation24 прошли, настоящий TypeOnly8 native подтверждён breakpoint trace03.
+     Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify669 и повтор
+     штатным G2/graph36, AFTER42/mutation24 прошли. Прямой G2 trace01 также подтвердил TypeOnly8.
+     Render/docs check прошли:35/14/27/44/615, LF27434. Это не закрывает M11.8 для retained/computed
+     форм и control-body lowering; их прежние unsupported guards не превращать в Structure-reference kind6
+     и не обходить ленивой аллокацией. Общий root frame и полный M13/M14 остаются отдельными работами.
      Сохранить при миграции контролей смысл finally_scope (scoped_result=21) явным
      выбранным телом кода вместо самостоятельного anonymous value; в control_flow
      дать else непосредственный оператор, сохранив все числовые результаты. Общий
@@ -2019,6 +2040,9 @@ getDescriptor, без изменения возвращаемых адресов
    ещё не покрыта фактическим запуском. После общего выпуска обычной/построенной C выполнить эти же
    случаи её настоящим native, проверив current source coordinate после preflight; без особого runner
    и искусственного callable. Отдельно сверить исходное поле после смены его ссылки, не повторяя трансляцию.
+   Срез376 отдельно подтвердил physical8 в настоящем method.code: canonical constructor сделал поле до emit,
+   trace03 вошёл в lm_graph_body2 через lm_graph_method2/lmx_call_prim_values и завершился нормально.
+   Это доказательство type-only8 метода, а не native ordinary Self/Types.data; общий пункт M14 остаётся OPEN.
    В тот же небольшой набор добавить явный flush(), в том числе во вложенном теле управления:
    публикация без завершения запуска, отсутствие повторной записи при втором flush и обычная
    одноимённая запись в data. Проверить в выпущенном коде простого случая статические записи без

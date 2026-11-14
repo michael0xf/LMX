@@ -175,6 +175,9 @@ fn: lm_compiler_graph_formal_type (@: g c.LmxGraph; @: f c.FILE; @: args c.Lmx; 
     if: kind = 3
         c.fputs("int: ", f)
         return: 0
+    if: kind = 8
+        c.fputs("@: int ", f)
+        return: 0
     if: kind != 4
         return: 1
     decl := (cast: (@: c.Lmx) value)
@@ -257,6 +260,10 @@ fn: lm_compiler_graph_declaration (@: g c.LmxGraph; @: block c.Lmx; size_t: i; @
     type_out[0] := 0
     if: state = 0
         return: 0
+    if: kind = 8 && c.lmx_graph_slot_name(g, block, i) != 0
+        name_out[0] := c.lmx_graph_slot_name(g, block, i)
+        type_out[0] := (cast: (@: char) state\w_int)
+        return: 4
     if: kind = 3 || (kind = 1 && c.lmx_graph_slot_name(g, block, i) != 0)
         name_out[0] := c.lmx_graph_slot_name(g, block, i)
         type_out[0] := (cast: (@: char) state\w_int)
@@ -784,6 +791,8 @@ fn: lm_compiler_graph_reference (@: g c.LmxGraph; @: args c.Lmx; @@: names char;
     if: state = 0
         return: 0
     if: j < c.lmx_graph_count(args)
+        if: c.lmx_graph_kind(g, c.lmx_graph_get(args, j)) = 8
+            return: 1
         if: c.lmx_graph_kind(g, c.lmx_graph_get(args, j)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get(args, j)) = state\w_at
             return: 1
         return: 0
@@ -967,7 +976,7 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
         raw := c.lmx_graph_get(block, i)
         at[0] := at[0] + 1
         form := lm_compiler_graph_declaration(g, block, i, dheads, droles, dn, @ name, @ type)
-        if: form = 1
+        if: form = 1 || (form = 4 && c.lmx_graph_kind(g, raw) = 8)
             i := i + 1U
             continue
         if: form = 2

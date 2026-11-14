@@ -1,0 +1,40 @@
+GRAPH-BEFORE-BEGIN
+sub: main () (
+    int: early (typeof (D [] 0))
+    D: (@ p int)
+    C: (@ p int)
+    int: i 7
+    int: late 0
+    int: seen 0
+)
+    :=: (D \ p) (@ (data \ i))
+    call: D C
+    :=: late ((typeof (D [] 0)))
+    :=: seen (\ (D \ p))
+end: main
+main:
+int: early ((main \ data) \ early)
+int: late ((main \ data) \ late)
+int: seen ((main \ data) \ seen)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: main () (
+    int: early (typeof (D [] 0))
+    D: (@ p int)
+    C: (@ p int)
+    int: i 7
+    int: late 0
+    int: seen 0
+)
+    :=: (D \ p) (@ (data \ i))
+    call: D C
+    :=: late ((typeof (D [] 0)))
+    :=: seen (\ (D \ p))
+end: main
+main:
+int: early ((main \ data) \ early)
+int: late ((main \ data) \ late)
+int: seen ((main \ data) \ seen)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 4

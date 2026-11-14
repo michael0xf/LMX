@@ -1,0 +1,22 @@
+# Admission constructs all physical places before the ordered data traversal.
+# The initializer can inspect the index/header of a later declaration.
+sub: main () (
+    int: early typeof(D[0])
+    D:
+        @: p int
+    end: D
+    C:
+        @: p int
+    end: C
+    int: i 7
+    int: late 0
+    int: seen 0
+)
+    D\p := @(data\i)
+    call(D; C)
+    late := typeof(D[0])
+    seen := \(D\p)
+main()
+int: early main\data\early
+int: late main\data\late
+int: seen main\data\seen

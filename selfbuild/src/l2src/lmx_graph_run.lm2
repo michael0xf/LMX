@@ -1818,6 +1818,8 @@ fn: lmx_graph_actual_contract (@: g c.LmxGraph; @: code c.Lmx; size_t: index) in
     int: kind c.lmx_graph_kind(g, formal)
     if: kind = 1 || kind = 3
         return: 1
+    if: kind = 8
+        return: 3
     if: kind = 4 && c.lmx_graph_formal_model(g, (cast: (@: c.Lmx) formal)) != 0
         return: 2
     return: 0
@@ -1847,6 +1849,8 @@ fn: lmx_graph_written_whole (@: g c.LmxGraph; @: code c.Lmx; @: raw c.Lmx; @: fr
             return: 0
         if: contract = 2 && c.lmx_graph_kind(g, c.lmx_graph_target(g, field)) != 4
             return: 0
+        if: contract = 3 && kind != 5 && kind != 7 && kind != 8
+            return: 0
         i := i + 1U
     return: 1
 
@@ -1871,7 +1875,7 @@ fn: lmx_graph_call_reading (@: g c.LmxGraph; @: scope c.Lmx; @: code c.Lmx; @: e
     contract := lmx_graph_actual_contract(g, code, 0U)
     if: contract = 2
         return: 2
-    if: contract != 1
+    if: contract != 1 && contract != 3
         return: 0
     if: lmx_graph_single_candidate(g, scope, expression) != 0
         return: 1
@@ -2142,6 +2146,7 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
     @: model void 0
     @: declaration c.Lmx 0
     @: requirement char 0
+    @: target void 0
     int: kind (cast: (int) c.lmx_graph_kind(g, formal))
     int: status 0
     int: number 0
@@ -2151,6 +2156,14 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
         if: c.lmx_graph_value_int(g, actual, @ number) != 0
             return: 4
         return: lmx_graph_admit_int(g, number, out)
+    if: kind = 8
+        status := c.lmx_graph_reference_payload(g, 5, actual, @ target)
+        if: status != 0
+            return: status
+        out[0] := c.lmx_graph_ref_int(g, target)
+        if: out[0] = 0
+            return: 4
+        return: 0
     if: kind != 4
         return: 5
     # Read the receiving declaration through its shared model query. The flat
@@ -3571,6 +3584,13 @@ fn: lmx_graph_literal_field (@: g c.LmxGraph; @: raw void; @@: name char; @@: va
         if: name[0] = 0 || lmx_graph_language_word(state, name[0]) != 0
             return: 0
         return: 2
+    # A type-only reference is already a physical data field. Its ordinary
+    # structural copy belongs to the merge map; there is no initializer.
+    if: kind = 8 || kind = 9
+        name[0] := c.lmx_graph_name_of(g, c.lmx_graph_reference_cell(g, raw))
+        if: name[0] = 0 || lmx_graph_language_word(state, name[0]) != 0
+            return: 0
+        return: 4
     if: kind != 4
         return: 0
     field := (cast: (@: c.Lmx) raw)
@@ -3705,6 +3725,10 @@ fn: lmx_graph_merge_literal_put (@: g c.LmxGraph; @: literal c.Lmx; @: made c.Lm
     form := lmx_graph_literal_field(g, c.lmx_graph_get(literal, index), @ name, @ written)
     if: form = 0
         return: 5
+    if: form = 4
+        if: c.lmx_graph_put(made, index, c.lmx_graph_get(literal, index)) != 0
+            return: 4
+        return: 0
     if: written = 0
         place := c.lmx_graph_uninit_int(g)
         if: place = 0

@@ -9,6 +9,15 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
+Current implementation note (2026-11-14, slice 376; code acceptance passed): canonical no-candidate int-reference storage,
+required formal8 admission and actual native TypeOnly8 have passed private acceptance (Source04: 669,
+private36 in three modes, AFTER42/mutation24; direct GDB trace03). Whole bootstrap01 quick passed genuine G1/G2,
+nine smoke rows each, fixedpoint13/verify669. Genuine G2 rebuilt graph-tool and repeated 36 in three modes,
+AFTER42/mutation24; the rebuilt runtime matches runtime02. The working tuple is boot-m11-uninit-reference-01/g2 with
+graph-m11-uninit-reference-g2-01. Normal render/docs check passed (35/14/27/44/615, links, index LF27434);
+both diff checks are clean. G2 direct TypeOnly trace01 also passed; M11.7/8 and M13/M14 remain open.
+[Evidence and remaining limits](steps/witnesses/m11-uninit-reference-20261114/notes.md).
+
 ## 1. Engineering boundary
 
 L3 is the graph-level language. L2 adds machine operations and C99
@@ -487,12 +496,12 @@ collected in
 [steps/implements-runtime-cases-20261111.md](steps/implements-runtime-cases-20261111.md).
 The translators no longer have to find out where a call, a declaration of a
 Structure and an assignment stand -- the role says it --, and the branches
-that made this choice are to be removed. Apart from the names and the order
-of the parts, the clean graph executes sub-step 5а since slice 355 and the
-first part of sub-step 5б since slice 356 ([plan](next_core_tasks_v3.md#m11));
-the rest -- sub-step 5в and the remainders of sub-steps 5б, 5г, 5д and 5е --
-it does not execute yet, and the working frontend executes none of these
-rules until step 8.
+that made this choice are to be removed. The clean graph now has the own-data declaration pass,
+computed fn/sub construction, shared named root/self dispatch and the receiving contexts accepted in 374.
+Slice 375 executes named physical5/6 as current source literals and 8/9 as type-only records.
+Slice 376 constructs canonical no-candidate int-reference storage and required formal8 through the same mechanism;
+this does not close the whole of M11.5г, indexed repeated methods, remaining M11.7/8 or M13/M14.
+The working frontend's remaining M11 migration is step 8 of the [plan](next_core_tasks_v3.md#m11).
 
 The author's answers of 2026-11-11 to that decision
 ([declaring by a colon form](docs/LMX_semantics.en.md#colon-declares),
@@ -570,10 +579,11 @@ a receiver is not affected. Since slice 356 the clean graph executes the
 launch of a Structure by name in the code of a method and in code over given
 data -- `S()`, `S(D)`, `S(data := D)` -- and a form whose head is a place
 holding a reference to an ordinary Structure everywhere, the root of a unit
-included, as well as the named supply of the arguments of `call` and `fncall`;
-in the root of a unit and in a Structure over itself it does not yet execute
-the role of code of a form with an ordinary Structure as its head by name
-(sub-step 5г of the [plan](next_core_tasks_v3.md#m11)). The working frontend
+included, as well as the named supply of the arguments of `call` and `fncall`.
+Shared named-head dispatch also applies in the root and over self since 372; standalone anonymous
+written Structures remain values. This does not complete direct path-head calls or all of
+sub-step 5г of the [plan](next_core_tasks_v3.md#m11). Ordinary Structure native remains M14.
+The working frontend
 reads the former names and order and does not execute the launch by name
 (step 8).
 

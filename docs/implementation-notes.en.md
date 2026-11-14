@@ -76,6 +76,19 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
+**Current state, 2026-11-14, slice 376: acceptance passed.** After accepted receiving-context 374
+and physical reference code 375, canonical `@: p int` without a candidate preallocates wrapper8/cell5 before observations.
+A required formal8 uses reference-expression context3 and an independent admitted cell5 without reading signature
+payload. Frontend/dump and the single-address-map serializer are aligned; a type-only merge field is retained
+while its computed neighbor runs. Source04: 669, private36 in three modes and AFTER42/mutation24 passed.
+Actual native TypeOnly8 was confirmed by private GDB trace03 with a normal exit. Whole bootstrap01 quick passed:
+genuine G1/G2, nine smoke rows each, fixedpoint13/verify669. Genuine G2 rebuilt graph-tool and repeated 36
+in three modes, AFTER42/mutation24; runtime02 is identical to the rebuilt runtime. Working tuple:
+boot-m11-uninit-reference-01/g2 and graph-m11-uninit-reference-g2-01. Render/docs check passed:
+35/14/27/44/615, links and index LF27434; both diff checks are clean, G2 direct trace01 passed. The whole of M11.5г/M11.7/8,
+ordinary physical5/6/9 native in M14 and arbitrary models/void/depth/Array in M13 remain OPEN.
+[Witness 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
+
 The current generator already defines `Lmx` with `parent`, `native` and
 an embedded `VoidArray array`; `LmxArray` is an alias of `Lmx`. The old
 description of a separate Array without a header does not describe this state.
@@ -126,6 +139,13 @@ generator route, native/walker parity, or safety after freeing the source
 arena. `implements` builds address correspondence from actually required
 fields; a numeric position alone is not its contract. Current failures
 and checks are in the [current kernel gate](../next_core_tasks_v3.md).
+
+Historically the clean graph adopted parts `args/return/data/code` and the order `call: data code` in 354;
+355 executed sub-step 5а and 356 the first part of 5б, including launch by name over supplied data and named
+arguments of `call`/`fncall`. Later slices added the own-data declaration pass and computed fn/sub,
+and 372 extended shared named-head dispatch to the root and self. Their absence in 355/356 therefore
+does not describe the current kernel. Full M11.5г/M11.8 remain open; the working frontend retains
+the rules not yet migrated in step 8 of [M11](../next_core_tasks_v3.md#m11).
 
 The accepted P0 package (slice 359, 2026-11-13) uses one stream parser inside `()`, `[]` and `{}` and post-processes a nested document once; it recognizes lost closing brackets, the end of a comment at the Mix document boundary, and marks attached to an intact string atom. The L2 `parser-suite` command passed 139 cases, including five saved changes to historical inputs; 11 end-to-end graph cases passed interp/native/forced. Exact builds, bootstrap acceptance and limits are in the [witness](../steps/witnesses/p0-unified-documents-20261113/notes.md). That slice still unwrapped a sole anonymous Structure and rejected bare `f:`; both limits are removed in M8, slice 366 ([witness](../steps/witnesses/m8-preserved-groups-20261113/notes.md)). The working frontend still retains the former M11 semantics; the P0 fix does not migrate it.
 

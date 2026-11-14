@@ -1,0 +1,98 @@
+Breakpoint 1 at 0x140001bb3
+[New Thread 6024.0x40dc]
+[New Thread 6024.0x34f4]
+[New Thread 6024.0x2cf4]
+GRAPH-BEFORE-BEGIN
+@: S ((int x 10) (int y 20) (@ p int))
+@: Old ((@ spare int))
+int: before_type (typeof (S [] 2))
+int: old_before_type (typeof (Old [] 0))
+:=: (Old [] 0) (S [] 2)
+sub: WriteX ()
+    @: p int (@ (data \ x))
+end: WriteX
+sub: WriteY ()
+    @: p int (@ (data \ y))
+end: WriteY
+sub: TypeOnly ()
+    @: p int
+end: TypeOnly
+int: code_type (typeof ((TypeOnly \ code) [] 0))
+call: S WriteX
+int: first_source (\ (S \ p))
+int: first_alias (\ (Old \ p))
+call: S TypeOnly
+int: after_check (\ (Old \ p))
+fn: take (@: p int; int: x 0; int: y 0) int
+    :=: p (@ (S \ y))
+    return: (((\ p) + x) + y)
+end: take
+int: grouped (take ((@ (S \ x))))
+int: named (take (:= p ((S \ p))) (:= x 1) (:= y 2))
+int: whole (take S)
+int: after_formals (\ (S \ p))
+call: S WriteY
+int: last_source (\ (S \ p))
+int: last_alias (\ (Old \ p))
+int: after_type (typeof (S [] 2))
+int: old_after_type (typeof (Old [] 0))
+int: source_length (length S)
+int: alias_length (length Old)
+GRAPH-BEFORE-END
+
+Thread 1 hit Breakpoint 1, 0x00007ff7eb781bb3 in lm_graph_body2 ()
+#0  0x00007ff7eb781bb3 in lm_graph_body2 ()
+#1  0x00007ff7eb781d05 in lm_graph_method2 ()
+#2  0x00007ff7eb7ee6bf in lmx_call_prim_values ()
+#3  0x00007ff7eb7efd67 in lmx_graph_invoke_data ()
+#4  0x00007ff7eb7eea3d in lmx_graph_call_data ()
+GRAPH-AFTER-BEGIN
+S:
+    int: x 10
+    int: y 20
+    @: p int
+end: S
+Old:
+    @: p int
+end: Old
+int: before_type 1001028
+int: old_before_type 1001028
+:=: (Old [] 0) (S [] 2)
+sub: WriteX ()
+    @: p int (@ (data \ x))
+end: WriteX
+sub: WriteY ()
+    @: p int (@ (data \ y))
+end: WriteY
+sub: TypeOnly ()
+    @: p int
+end: TypeOnly
+int: code_type 1001028
+call: S WriteX
+int: first_source 10
+int: first_alias 10
+call: S TypeOnly
+int: after_check 10
+fn: take (@: p int; int: x 0; int: y 0) int
+    :=: p (@ (S \ y))
+    return: (((\ p) + x) + y)
+end: take
+int: grouped 20
+int: named 23
+int: whole 50
+int: after_formals 10
+call: S WriteY
+int: last_source 20
+int: last_alias 20
+int: after_type 1001028
+int: old_after_type 1001028
+int: source_length 3
+int: alias_length 1
+GRAPH-AFTER-END
+[New Thread 6024.0x1670]
+l2_eternal_driver: 81 checks, 0 roots
+[Thread 6024.0x1670 exited with code 0]
+[Thread 6024.0x2cf4 exited with code 0]
+[Thread 6024.0x34f4 exited with code 0]
+[Thread 6024.0x40dc exited with code 0]
+[Inferior 1 (process 6024) exited normally]

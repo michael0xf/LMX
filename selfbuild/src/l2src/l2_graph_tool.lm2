@@ -67,78 +67,100 @@ end: lm_graph_emit_name_row
 
 # One temporary source-address map covers the emitted graph, primitives and uninitialized referents. Each live
 # address is allocated once; subsequent edges use that generated local. The map is destroyed by this translation.
-fn: lm_graph_emit_value (@: g c.LmxGraph; @: f c.FILE; @: value void; @: holder char; size_t: k; @: map c.LmxCopyMap; @: next size_t) int
+fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.LmxCopyMap; @: next size_t; @: out size_t) int
     int: kind (cast: (int) c.lmx_graph_kind(g, value))
     @: inner c.Lmx 0
     @: text char 0
-    @: referent void 0
-    @: local char (cast: (@: char) c.malloc(96U))
+    @: pointer_type char 0
+    c.LmxGraphEmitScratch: name_storage
+    @: local char (cast: (@: char) name_storage\failure)
     size_t: id (cast: (size_t) c.lmx_copy_map_get(map, value))
     size_t: target 0U
     size_t: n 0U
     size_t: j 0U
     int: status 0
-    if: local = 0 || value = 0
-        c.free(local)
+    if: out = 0
         return: 1
-    if: id = 0U
-        id := next[0]
-        next[0] := id + 1U
-        if: c.lmx_copy_map_put(map, value, (cast: (@: void) id)) != 0
-            c.free(local)
+    out[0] := id
+    if: value = 0 || id != 0U
+        return: 0
+    id := next[0]
+    next[0] := id + 1U
+    out[0] := id
+    if: c.lmx_copy_map_put(map, value, (cast: (@: void) id)) != 0
+        return: 1
+    # Reserve and allocate before following any edge: a pointer target or a
+    # lexical parent may lead back to this very cell or Structure.
+    c.fprintf(f, "        @: void l2_gv%zu 0\n", id)
+    if: kind = 1
+        c.fprintf(f, "        l2_gv%zu: lmx_graph_int(l2_g, %d)\n", id, c.lmx_int_value_known(value))
+    if: kind = 2
+        text := c.lmx_graph_word_text(g, value)
+        if: text = 0
             return: 1
-        c.fprintf(f, "        @: void l2_gv%zu 0\n", id)
-        if: kind = 1
-            c.fprintf(f, "        l2_gv%zu: lmx_graph_int(l2_g, %d)\n", id, c.lmx_int_value_known(value))
-        else:
-            if: kind = 3
-                referent := c.lmx_arena_pointer_void_read(value)
-                target := (cast: (size_t) c.lmx_copy_map_get(map, referent))
-                if: target = 0U
-                    target := next[0]
-                    next[0] := target + 1U
-                    status := c.lmx_copy_map_put(map, referent, (cast: (@: void) target))
-                    c.fprintf(f, "        @: void l2_gv%zu lmx_int_new_profiled(arena, 0)\n", target)
-                c.fprintf(f, "        l2_gv%zu: lmx_arena_pointer_cells_profiled(arena, LMX_TYPE_UNINIT_INT, 0, sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, 1U)\n        if: l2_gv%zu = 0 || l2_gv%zu = 0 || lmx_arena_pointer_void_write(l2_gv%zu, l2_gv%zu) != 0\n            return: 1\n", id, id, target, id, target)
-                c.snprintf(local, 96U, "l2_gv%zu", target)
-                if: status = 0
-                    status := lm_graph_emit_name_row(g, f, referent, local)
-                ---
+        c.fprintf(f, "        l2_gv%zu: lmx_graph_word(l2_g, ", id)
+        lm_graph_emit_quoted(f, text)
+        c.fprintf(f, ", %zuU)\n", (cast: (size_t) c.strlen(text)))
+    if: kind = 4
+        inner := (cast: (@: c.Lmx) value)
+        n := c.lmx_graph_count(inner)
+        c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_graph_lmx(l2_g, 0, %zuU))\n", id, n)
+    if: kind = 3
+        pointer_type := "LMX_TYPE_UNINIT_INT"
+    if: kind = 5
+        pointer_type := "LMX_TYPE_GRAPH_INT_REF"
+    if: kind = 6
+        pointer_type := "LMX_TYPE_GRAPH_LMX_REF"
+    if: kind = 8
+        pointer_type := "LMX_TYPE_UNINIT_GRAPH_INT_REF"
+    if: kind = 9
+        pointer_type := "LMX_TYPE_UNINIT_GRAPH_LMX_REF"
+    if: pointer_type != 0
+        c.fprintf(f, "        l2_gv%zu: lmx_arena_pointer_cells_profiled(arena, %s, 0, sizeof(@: void), lmx_arena_pointer_void_read, lmx_arena_pointer_void_write, 1U)\n", id, pointer_type)
+    else:
+        if: kind != 1 && kind != 2 && kind != 4
+            return: 1
+    ---
+    c.fprintf(f, "        if: l2_gv%zu = 0\n            return: 1\n", id)
+    c.snprintf(local, 64U, "l2_gv%zu", id)
+    status := lm_graph_emit_name_row(g, f, value, local)
+    if: pointer_type != 0 && status = 0
+        # This copies a physical edge, including zero bits. It does not
+        # consume a language value or infer an initialized state.
+        status := lm_graph_emit_node(g, f, c.lmx_arena_pointer_void_read(value), map, next, @ target)
+        if: status = 0
+            if: target = 0U
+                c.fprintf(f, "        if: lmx_arena_pointer_void_write(l2_gv%zu, 0) != 0\n            return: 1\n", id)
             else:
-                if: kind = 2
-                    text := c.lmx_graph_word_text(g, value)
-                    if: text = 0
-                        status := 1
-                    else:
-                        c.fprintf(f, "        l2_gv%zu: lmx_graph_word(l2_g, ", id)
-                        lm_graph_emit_quoted(f, text)
-                        c.fprintf(f, ", %zuU)\n", (cast: (size_t) c.strlen(text)))
-                    ---
-                else:
-                    if: kind = 4
-                        inner := (cast: (@: c.Lmx) value)
-                        n := c.lmx_graph_count(inner)
-                        c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_graph_lmx(l2_g, 0, %zuU))\n", id, n)
-                        c.snprintf(local, 96U, "(cast: (@: Lmx) l2_gv%zu)", id)
-                        while: j < n && status = 0
-                            status := lm_graph_emit_value(g, f, c.lmx_graph_get(inner, j), local, j, map, next)
-                            j := j + 1U
-                        ---
-                    else:
-                        status := 1
-                    ---
-                ---
+                c.fprintf(f, "        if: lmx_arena_pointer_void_write(l2_gv%zu, l2_gv%zu) != 0\n            return: 1\n", id, target)
             ---
         ---
-        c.fprintf(f, "        if: l2_gv%zu = 0\n            return: 1\n", id)
-        c.snprintf(local, 96U, "l2_gv%zu", id)
-        if: status = 0 && kind != 3
-            status := lm_graph_emit_name_row(g, f, value, local)
+    ---
+    if: kind = 4 && status = 0
+        while: j < n && status = 0
+            status := lm_graph_emit_node(g, f, c.lmx_graph_get(inner, j), map, next, @ target)
+            if: status = 0 && target != 0U
+                c.fprintf(f, "        if: lmx_graph_put((cast: (@: Lmx) l2_gv%zu), %zuU, l2_gv%zu) != 0\n            return: 1\n", id, j, target)
+            else:
+                status := 1
+            ---
+            j := j + 1U
+        ---
+        if: status = 0 && inner\parent != 0
+            status := lm_graph_emit_node(g, f, (cast: (@: void) inner\parent), map, next, @ target)
         ---
     ---
+    return: status
+end: lm_graph_emit_node
+
+# A field edge uses the same map as every pointer and lexical parent edge.
+fn: lm_graph_emit_value (@: g c.LmxGraph; @: f c.FILE; @: value void; @: holder char; size_t: k; @: map c.LmxCopyMap; @: next size_t) int
+    size_t: id 0U
+    int: status lm_graph_emit_node(g, f, value, map, next, @ id)
+    if: status = 0 && id = 0U
+        return: 1
     if: status = 0
         c.fprintf(f, "        if: lmx_graph_put(%s, %zuU, l2_gv%zu) != 0\n            return: 1\n", holder, k, id)
-    c.free(local)
     return: status
 end: lm_graph_emit_value
 

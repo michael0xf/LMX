@@ -601,18 +601,23 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
     return: 0
 end: lm_graph_build_assignment
 
-# The place of a declaration Frame `int: name` (a place without a value) or `int: name literal` (an int place holding
-# the literal), named at its cell (§3.2); 0 for any other Frame, or without memory.
-fn: lm_graph_build_int_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
+# A statically described primitive place, named at its cell (§3.2): int with
+# no value or a literal, and the required int-reference without a candidate.
+# Other models and computed initializers keep their ordinary receiver Frame.
+fn: lm_graph_build_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: f1 c.LmP0Field 0
     @: f2 c.LmP0Field 0
     @: name c.LmP0Text 0
+    @: head char 0
     @: cell void 0
     @: value void 0
     size_t: n 0U
     int: v 0
-    if: state = 0 || fr = 0 || fr\body = 0 || c.lmx_graph_intern(lm_graph_p0_data(lm_graph_p0_head(fr)), lm_graph_p0_length(lm_graph_p0_head(fr))) != state\w_int
+    if: state = 0 || fr = 0 || fr\body = 0
+        return: 0
+    head := lm_graph_p0_name_word(lm_graph_p0_head(fr))
+    if: head != state\w_int && head != state\w_at
         return: 0
     n := lm_graph_count_active(lm_graph_p0_body(fr))
     f1 := lm_graph_next_active(lm_graph_p0_first(lm_graph_p0_body(fr)))
@@ -621,6 +626,17 @@ fn: lm_graph_build_int_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
     name := lm_graph_p0_atom(lm_graph_p0_value(f1))
     if: lm_graph_int_literal(name, @ v) != 0
         return: 0
+    if: head = state\w_at
+        if: (fr\flags & c.LM_P0_FRAME_COLON) = 0U || n != 2U
+            return: 0
+        f2 := lm_graph_next_active(lm_graph_p0_next(f1))
+        if: f2 = 0 || f2\value\kind != c.LM_P0_NODE_ATOM || lm_graph_p0_name_word(lm_graph_p0_atom(lm_graph_p0_value(f2))) != state\w_int
+            return: 0
+        cell := c.lmx_graph_uninit_reference(g, 5, 0)
+        value := c.lmx_graph_reference_cell(g, cell)
+        if: value = 0 || c.lmx_graph_name(g, value, lm_graph_p0_data(name), lm_graph_p0_length(name)) != 0
+            return: 0
+        return: cell
     if: n = 1U
         cell := c.lmx_graph_uninit_int(g)
         if: cell = 0
@@ -636,7 +652,7 @@ fn: lm_graph_build_int_place (@: g c.LmxGraph; @: fr c.LmP0Frame) @: void
     if: cell = 0 || c.lmx_graph_name(g, cell, lm_graph_p0_data(name), lm_graph_p0_length(name)) != 0
         return: 0
     return: cell
-end: lm_graph_build_int_place
+end: lm_graph_build_place
 
 # ---- What construction refuses (answer 2) ---------------------------------------------------------------------------
 
@@ -769,6 +785,16 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         head := c.lmx_graph_intern(lm_graph_p0_data(text), lm_graph_p0_length(text))
         if: head = 0
             return: 1
+        # A primitive declaration constructs its place before the remaining
+        # Frame is classified as a named block or an application. End has
+        # already been checked; a real postcondition keeps its loop lowering.
+        if: lm_graph_until_tail((cast: (@: c.LmP0Trailer) frame\trailer)) = 0
+            value := lm_graph_build_place(g, frame)
+            if: value != 0
+                out[0] := value
+                return: 0
+            ---
+        ---
         # A named block keeps the same constructor in every position. A block inside a method's data must not
         # become an until receiver wrapped around its own head merely because it is not a root field.
         if: lm_graph_block_item(nd) != 0
@@ -785,15 +811,6 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
             if: literal != 0 && literal\value\kind = c.LM_P0_NODE_ATOM && lm_graph_int_literal(lm_graph_p0_atom(lm_graph_p0_value(literal)), @ number) != 0
                 out[0] := c.lmx_graph_int(g, number)
                 return: (cast: (int) (out[0] = 0))
-            ---
-        ---
-        # A declaration of an int place in any Structure -- the root, a literal, args, data, a body -- is that place,
-        # named at its cell (§3.2; the author 2026-11-08: `int: i 5` is the primitive, everything by its address).
-        if: frame\trailer = 0
-            value := lm_graph_build_int_place(g, frame)
-            if: value != 0
-                out[0] := value
-                return: 0
             ---
         ---
         # A prefix operator applied in the compact form `-(2 + 3)` is that operation, as everywhere in an expression
@@ -837,7 +854,7 @@ fn: lm_graph_own_field (@: g c.LmxGraph; @: result c.Lmx; size_t: index; @: nd c
     int: kind c.lmx_graph_kind(g, c.lmx_graph_get(result, index))
     if: kind = 3
         return: 1
-    if: kind = 1 || kind = 5 || kind = 6
+    if: kind = 1 || kind = 5 || kind = 6 || kind = 8 || kind = 9
         return: (cast: (int) (c.lmx_graph_slot_name(g, result, index) != 0))
     if: kind = 4
         return: lm_graph_block_item(nd)

@@ -1,0 +1,36 @@
+# The physical wrapper exists before any value is written. An index alias
+# retains that wrapper while native writes publish to its original cell.
+@: S (int: x 10; int: y 20; @: p int)
+@: Old (
+    @: spare int
+    end: @
+)
+int: before_type typeof(S[2])
+int: old_before_type typeof(Old[0])
+Old[0] := S[2]
+sub: WriteX () ()
+    @: p int @(data\x)
+sub: WriteY () ()
+    @: p int @(data\y)
+sub: TypeOnly () ()
+    @: p int
+int: code_type typeof(TypeOnly\code[0])
+call(S; WriteX)
+int: first_source \(S\p)
+int: first_alias \(Old\p)
+call(S; TypeOnly)
+int: after_check \(Old\p)
+fn: take (@: p int; int: x 0; int: y 0) int
+    p := @(S\y)
+    return: \p + x + y
+int: grouped take((@(S\x)))
+int: named take(p := (S\p); x := 1; y := 2)
+int: whole take(S)
+int: after_formals \(S\p)
+call(S; WriteY)
+int: last_source \(S\p)
+int: last_alias \(Old\p)
+int: after_type typeof(S[2])
+int: old_after_type typeof(Old[0])
+int: source_length length(S)
+int: alias_length length(Old)

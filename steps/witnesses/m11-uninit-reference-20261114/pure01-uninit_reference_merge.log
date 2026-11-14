@@ -1,0 +1,47 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: touch
+@: Source ((int x 10))
+sub: Fill ()
+    @: p int (@ (Source \ x))
+end: Fill
+@:
+    Mixed
+    merge: ((@ p int) (int q (touch)))
+end: @
+int: before_type (typeof (Mixed [] 0))
+call: Mixed Fill
+int: seen (\ (Mixed \ p))
+int: after_type (typeof (Mixed [] 0))
+int: made (length Mixed)
+int: computed (Mixed \ q)
+int: ran (data \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 1
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: touch
+Source:
+    int: x 10
+end: Source
+sub: Fill ()
+    @: p int (@ (Source \ x))
+end: Fill
+Mixed:
+    @: p int
+    int: q 7
+end: Mixed
+int: before_type 1001028
+call: Mixed Fill
+int: seen 10
+int: after_type 1001028
+int: made 2
+int: computed 7
+int: ran 1
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

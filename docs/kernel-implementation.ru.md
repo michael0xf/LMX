@@ -1,6 +1,19 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**2026-11-14, срез 373 — вычисляемые ссылочные места; кодовая приёмка пройдена.** Прежняя work map
+**Текущее состояние, 2026-11-14, срез 376 — приёмка пройдена.** Каноническое `@: p int`
+без кандидата предвыделяет wrapper8/cell5 до index/typeof/path; обязательный formal8 получает независимую
+reference cell через общий допуск. Source04: 669; runtime02/graph03, пять pure, private36 в трёх режимах,
+AFTER42/mutation24 прошли. Настоящий native TypeOnly с physical8 в method.code подтверждён GDB trace03
+в частном конвейере с нормальным выходом. Whole bootstrap01 quick прошёл: настоящие G1/G2, по 9 smoke,
+fixedpoint13/verify669. Штатный G2 заново построил graph-tool и повторил 36 в трёх режимах,
+AFTER42/mutation24; runtime02 тождественен штатной сборке. Рабочая связка:
+boot-m11-uninit-reference-01/g2 и graph-m11-uninit-reference-g2-01. Штатные render/docs check прошли:
+35/14/27/44/615, ссылки и LF индекса27434; оба diff --check чисты. Прямой G2 trace01 также прошёл.
+Source04 SHA-256: de34eb33fb7f603d1ed08c8bf7f69da0c7ffe5cd473d3408f9e770f5e6840daf.
+M11.7/8, общий M11, M13 и ordinary native M14 этим не закрыты.
+[Свидетельство 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
+
+**Предыдущее состояние, 2026-11-14, срез 373 — вычисляемые ссылочные места; кодовая приёмка пройдена.** Прежняя work map
 связывает сохранённый raw Frame `@` с кандидатом: три поля для int-ссылки, два для Structure-ссылки.
 Допуск не запускает initializer. До рабочей записи чтение или запуск такого места отказывает с 5;
 первая запись создаёт рабочую typed reference, штатный flush публикует её через прежний слот.
@@ -1328,7 +1341,7 @@ dirty и продолжение. Порядок полей ниже задаёт
 по используемым полям, маршруты преобразований и броски — по действующей книге; меняется носитель, не правила (`:=`,
 `merge`, позиционные `a(5)`/`a: 5`, q/z, AXBY сохраняются — §11).
 
-**Рабочие строки среза 373.** `lmx_graph_data_cell` возвращает существующую primitive cell либо сохранённое
+**Исторические рабочие строки среза 373.** `lmx_graph_data_cell` возвращает существующую primitive cell либо сохранённое
 вычисляемое объявление: `int` с кандидатом или поддержанный raw `@` с кандидатом (три поля/int-reference,
 два/Structure-reference). `work_require` связывает прежний слот и фиксирует expected_kind; initializer при этом
 не вычисляется. `work_load` отказывает с 5 при чтении ещё не записанного retained Frame. Первая запись создаёт
@@ -1338,6 +1351,20 @@ physical cell и её wrapper сохраняются. `known_place` провер
 ещё не поддержано: kind5 и постоянные wrapper8/cell5 должны существовать заранее. Его нельзя представлять как
 Structure-reference kind6, лениво выделять при первой записи или проверять факт записи по uninit-wrapper.
 Начальный payload настоящего uninit:T не обещан и этими проверками не читается.
+
+**Текущий срез 376.** Общий `build_place` предвыделяет каноническое `@: p int` как wrapper8 на именованную cell5
+до классификации блока, поэтому slot/index/typeof доступны до первого store. Null trailer и проверенный
+`end: @` не меняют форму примитива; `until` сохраняет прежний postloop путь. Compact non-colon `@`
+остаётся выражением. Общий code-body consumer M11.8 этим не завершён. Model/actual8 нормализуются к family5
+в прежней карте; первая запись и штатная публикация сохраняют исходные slot/wrapper/cell без чтения старого payload.
+Formal8 обязателен, actual-contract3 читает reference expression, admit создаёт независимую cell5 из допущенного
+actual; payload сигнатуры не читается и умолчание не вводится. Frontend/dump распознают physical8; serializer
+сохраняет physical3/5/6/8/9, sharing, имена и parent closure одной картой. Type-only literal-field проходит
+прежнее глубокое merge-copy, соседний computed initializer выполняется. Прямое native-выполнение настоящего
+TypeOnly8 подтверждено частным GDB trace03: `lm_graph_body2` → `lm_graph_method2` → `lmx_call_prim_values`,
+нормальный выход. Ordinary Self/Types.data и прямое native-покрытие их physical5/6/9 остаются M14 OPEN;
+произвольные модели, void, глубина указателей и Array — оставшаяся M13.
+[Проверки и границы 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
 
 ### 6.4 Копирование, merge, присоединение
 

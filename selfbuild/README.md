@@ -1,6 +1,21 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice 373): the existing work map binds retained computed raw @
+Current continuation (2026-11-14, slice 376): acceptance passed. Canonical @:p int
+without a candidate now preallocates wrapper8/cell5 before index/typeof/path; required formal8 uses reference-expression
+context3 and independent admission without reading signature payload. Nullable/end trailers preserve the primitive;
+until keeps its postloop route. Frontend/dump, the shared-map serializer and type-only fields beside computed merge
+initializers are aligned. Source04: 669; runtime02/graph03, five pure cases, private36 in three modes,
+AFTER42/mutation24 passed. Private GDB trace03 directly reached actual TypeOnly's native physical8 body:
+lm_graph_body2 -> lm_graph_method2 -> lmx_call_prim_values, normal exit. Whole bootstrap01 quick passed:
+genuine G1/G2, nine smoke rows each, fixedpoint13/verify669. Genuine G2 rebuilt graph-tool and repeated 36
+in three modes, AFTER42/mutation24; its runtime is identical to private runtime02. Working tuple:
+boot-m11-uninit-reference-01/g2 and graph-m11-uninit-reference-g2-01. Normal render/docs check passed:
+35/14/27/44/615, links and index LF27434; both diff checks are clean. G2 direct TypeOnly trace01 also passed.
+Source04 SHA-256: de34eb33fb7f603d1ed08c8bf7f69da0c7ffe5cd473d3408f9e770f5e6840daf.
+Ordinary Self/Types.data physical5/6/9 native coverage remains M14; full M11.5г/M11.7/8 and M13 remain OPEN.
+[Witness and limits](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
+
+Previous continuation (2026-11-14, slice 373): the existing work map binds retained computed raw @
 places with a candidate (three fields/int reference, two fields/Structure reference).
 Admission does not execute their initializer; a read or head before a working write refuses with 5.
 The first write creates the working typed reference and normal flush publishes it;

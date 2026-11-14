@@ -1,5 +1,21 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез 376 — canonical @:p int без кандидата, кодовая приёмка пройдена в main.**
+375 принят и отправлен:a8d37639689078d9295dce3b8b6e0e6a9842f627. Common constructor создаёт8/5 до первого
+index/typeof/path, formal8 обязателен и допускается в независимую cell5 без чтения SIG payload.
+Frontend shape и serializer pointer3/5/6/8/9 замкнуты, sharing/parent/names/raw bits сохраняются одной map.
+Mixed literal8 не подавляет соседний initializer. Runtime02/graph03, pure0/0/5/4/0, private36 в трёх режимах,
+AFTER42/mutation24 и Source04 verify669 прошли. Trace03 доказал вход в настоящий native TypeOnly8.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify669.
+Штатный G2/graph повторил36 в трёх режимах, AFTER42/mutation24; прямой native trace G2 также прошёл.
+Рабочая связка boot-m11-uninit-reference-01/g2 и graph-m11-uninit-reference-g2-01.
+Render/docs check прошли:35/14/27/44/615, ссылки и LF индекса27434;
+оба diff --check чисты, чужие два untracked сохранены. Далее commit/push main.
+Ordinary C/native5/6/9 и весь M14 OPEN,
+retained/computed/control-body migration M11.8 и общие модели/void/depth/arrays M13 не закрыты.
+Далее общий root/self, ordinary nested methods и 5д–5е/7–8; все работы и коммиты прямо main.
+[Свидетельство](steps/witnesses/m11-uninit-reference-20261114/notes.md). Весь goal active.
+
 **2026-11-14, срез 375 — кодовая приёмка physical reference records пройдена в main.**
 374 принят и отправлен:ff07457cd6a9ba8f77e71d5349a8be59a787115f. Прежние scanner/known_place/store
 исполняют named5/6 как текущий source literal,8/9 как type-only. Write-only mapped row не читает

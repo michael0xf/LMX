@@ -1,5 +1,32 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11: срез 376, canonical int-reference без кандидата, кодовая приёмка пройдена
+
+375 принят и отправлен прямо из main:a8d37639689078d9295dce3b8b6e0e6a9842f627.
+Все изменения, сборки и коммиты только C:/Nyasha_Planet/LMX, main; W3 остаётся резервной копией.
+Единственный writer/build Sol, pipeline sol-m11-uninit-reference-20261114-01, общий stage S.
+Common build_place предвыделяет wrapper8/cell5 для canonical @:p int до index/typeof/path, с именем на cell5.
+Конструктор примитива идёт до классификации блока, поэтому корректный end не скрывает декларацию;
+реальный until сохраняет прежний loop lowering. Prefix @, другие модели и кандидаты не сворачиваются вслепую.
+Formal8 обязателен, получает reference-value context3 и независимую cell5 через общий admit без SIG payload.
+Frontend formal/declaration/reference/type-only block и dump_formal читают8 через общий slot_name.
+Serializer3/5/6/8/9 использует одну map, allocation-before-edge, имена каждой ячейки и parent closure;
+текущие pointer bits и sharing сохраняются без initialized-флага. Mixed literal8 идёт обычной copy merge.
+Runtime02/graph03 прошли пять pure0/0/5/4/0. Private36 в трёх режимах, AFTER42 и mutation24 прошли.
+Source04 verify669, manifestde34eb33fb7f603d1ed08c8bf7f69da0c7ffe5cd473d3408f9e770f5e6840daf; код заморожен.
+GDB trace03 подтвердил настоящий native TypeOnly: body2→method2→lmx_call_prim_values, normal exit.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify669 прошли.
+Штатный G2 заново собрал graph-tool, повторил36 в трёх режимах, AFTER42/mutation24.
+G2 trace01 также подтвердил вход body2→method2→lmx_call_prim_values и normal exit.
+Рабочая связка boot-m11-uninit-reference-01/g2 и graph-m11-uninit-reference-g2-01;
+штатные render/docs check прошли:35/14/27/44/615, ссылки и LF индекса27434.
+Оба diff --check чисты; чужие два untracked сохранили прежние SHA. Далее commit/push main.
+Ordinary native5/6/9 и общая компиляция C остаются M14 OPEN;
+retained/computed формы и bounded code-body/control migration — M11.8, общие модели/void/depth/arrays — M13.
+После приёмки продолжить общий root/self, ordinary nested methods, 5д–5е/7–8 и M13/M14.
+Чужие два untracked сохранить. Goal active, весь v3.
+[Свидетельство и границы](witnesses/m11-uninit-reference-20261114/notes.md).
+
 ## 2026-11-14 — M11.5г: срез 375, кодовая приёмка physical reference records пройдена
 
 374 принят и отправлен прямо из main: ff07457cd6a9ba8f77e71d5349a8be59a787115f.

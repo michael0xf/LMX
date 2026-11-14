@@ -1,5 +1,16 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез 376 — canonical int-reference без кандидата, кодовая приёмка пройдена.**
+Constructor8/5, required formal8/context3/independent admit, frontend shape и serializer3/5/6/8/9
+замкнуты без initialized-флага; имена, parent и sharing сохраняются. Mixed literal8 вычисляет соседний initializer.
+Source04 verify669, private36 interp/native/forced, AFTER42/mutation24 прошли. Native TypeOnly8 в настоящем
+method.code подтверждён trace03 и прямым G2 trace01, ordinary C/native5/6/9 и весь M14 OPEN.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke, fixedpoint13/verify669;
+штатный G2/graph повторил36 в трёх режимах, AFTER42/mutation24. Render/docs check прошли:
+35/14/27/44/615, ссылки и LF27434; оба diff --check чисты, чужой WIP сохранён. Далее commit/push main.
+Общие модели/void/depth/arrays M13, retained/computed/control-body M11.8 OPEN.
+[Свидетельство](steps/witnesses/m11-uninit-reference-20261114/notes.md). Работа и коммиты прямо main; весь v3 active.
+
 **2026-11-14, срез 375 — кодовая приёмка physical reference records пройдена.**
 Named5/6 читают текущую source reference после preflight;8/9 только проверяют тип. Write-only mapped
 row не читает старый payload, free-input/formal сохраняют ячейки. Source02 verify659, runtime01/graph01,

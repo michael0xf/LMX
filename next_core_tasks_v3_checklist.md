@@ -1,5 +1,38 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез387 — M11.7, source-known call-shape/default preflight; ограниченная кодовая готовность,22 случая приняты.**
+
+- [x] Graph73 declaration_view/default_presence0/1/-1; числовой0 в `@: p 0` отличается от WORD `0`,
+  qualifier наследует presence, Array-family может дать unknown. Run54 shared bind_call_mode/bind_fields_mode:
+  pure форма отделена от неизменённых runtime guards; Builder вызывает проход после всех полей.
+- [x] G0 Tool bridge6d048bec PASS; Runtime01/02 C-field type failures исправлены casts;
+  Runtime03b4688358, Graph01/02 6e3bb64a/aa29a2b3 PASS. Existing suite: runtime→frontend_objects→link.
+- [x] Pure unknown/duplicate/missing/order/nested-local/WORD0 →build5; inert/default/nonint проходят без effects,
+  FREE/path-head inert group дают7; positional/named/whole controls дают7/7/9.
+  GraphTool check FILE — три строки прежнего loader/runs0, не новый ABI-repair CLI/runner. Presence+char whole metadata check0/counter0;
+  old/new chars run3 — прежний runtime предел, indirect nonint runtime5/effects0 сохранён.
+- [x] Frozen Source06:843 SHA19dbb3ff5cc94e2c75ea34ce1b0534528babe3495171988d7c2fbf7f400bebde;
+  fresh stage P/sol-m11-construction-fresh01 до bootstrap без обоих Run headers(False/False).
+  Whole quick genuine G1/G2 по9 smoke, fixedpoint13(retained Run.h)/verify843 PASS.
+  G2 Graph d816ba5c2e71006183d9d9f7f99750487f5dc992b899f7426e7c939a9a2d95f6;
+  G2 runtime ff20e0647b81bee07eb81145bc132f2cd30f402dfacc2eb18fedd30172fc74e9.
+- [x] Все новые11 triple+presence check(12 maintained sources/5 expected) PASS; broad masks check0,
+  BODY exact-header guard на G2 build5. Три indirect-guard full AFTER PASS, binaries переиспользованы.
+- [x] Первичный extended22:21 PASS/1 stale known_assignment failure. Мигрирован только этот source/golden:
+  initialized i1/before_publish1/checkpoint(), formal @:target Box и RHS grouping, first5/second7 сохранены.
+  Только этот case пересобран — interp/native/forced и seed386/G2 full AFTER по новому golden PASS.
+  Все22 приняты:21 прежний результат переиспользован, повтор всего22 не выполнялся. Дефекта alias нет,
+  working local и physical cell различаются до checkpoint; OPEN для alias defect не требуется.
+- [x] Final Source07:843 SHAcbaac64eb9a44d3cbc338a230499f0f319057bad557628f4c876c9c3be326615;
+  diff06→07 ровно два known_assignment файла, code/compiler inputs прежние, verify/stage-copy PASS.
+  Whole построен на06; final fixedpoint02 повторил13 чистых сравнений/verify843 на07 PASS.
+- [x] Штатный G2 render semantics35 paired/14 cases/both snapshots PASS; grammar unchanged.
+- [x] Docs-check01 PASS35/14/27/44/615, links/LF27906.
+- [x] Final index-check02 PASS, links/LF27961; далее commit/push387. Кодовая связка — fresh stage/boot-m11-construction-shape-01/g2,
+  G2 Graph d816ba5c; accepted base386/713af718, goal ACTIVE.
+  [Свидетельство387](steps/witnesses/m11-construction-shape-20261114/notes.md).
+- [ ] Полный implements/test, dynamic/path targets, общий group contract M11.7, M11.8/M13/M14.
+
 **2026-11-14, срез386 — M11.7, локальная проекция Structure-value в допуске; ограниченная кодовая приёмка пройдена.**
 
 - [x] admit_paths локально target(model/candidate) перед прежним kind4 gate/used-path/type checks;
@@ -14,12 +47,13 @@
   Штатный G2 Graph SHA908154b9, repeat10 triple/6 negative full AFTER PASS. Render35/14 выполнен.
 - [x] Docs-check01:35/14/27/44/615, links/LF27869 PASS из свежих CWD/PRIVATE_OUT.
 - [x] Final index-check02:35/14/27/44/615, links/LF27905 PASS; свой LF receipt добавлен после проверки.
-- [ ] Commit/push386; чужой WIP сохранить.
-- [ ] Следующий отдельный код: pure known-call-shape/default preflight; общий implements/test M11.7 OPEN.
-- [ ] Зависимый Run54 ABI до Builder: в existing build_generation runtime перед frontend_objects, link после;
-  новый G0 Tool, реальные G1/G2 и свежий source stage без stale Run53 header. Нового генератора/CLI не вводить.
-- [ ] Quoted-selector encoding, M11.8, M13/M14. Принят/отправлен385/9edf9666;
-  рабочая принятая связка — boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01, goal ACTIVE.
+- [x] 386 принят и отправлен713af718; чужой WIP сохранён.
+- [x] Ограниченный preflight387: новый объём11 triple+presence и whole/fixedpoint/fresh-stage PASS;
+  все22 приняты через21 reuse+один migrated case, без общего повтора; docs/index/commit pending, общий implements/test M11.7 OPEN.
+- [x] Run54 ABI до Builder: existing runtime→frontend_objects→link, G0 Tool и реальные G1/G2/fresh stage
+  без stale headers проверены fixedpoint13 с retained Run.h. Нового генератора/CLI нет.
+- [ ] Quoted-selector encoding, M11.8, M13/M14. Принят/отправлен386/713af718;
+  рабочая принятая связка — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01, goal ACTIVE.
 
 **2026-11-14, срез385 — M11.5е, профиль примитивов и declaration-view; ограниченная кодовая приёмка пройдена.**
 

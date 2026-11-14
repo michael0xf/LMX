@@ -1,8 +1,41 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез387 — M11.7, source-known call-shape/default preflight; ограниченная кодовая готовность,22 случая приняты.**
+Принят и отправлен386/713af718; рабочая принятая связка — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
+Graph73 добавляет общий declaration_view/default_presence:0 — нет default,1 — есть,-1 — неизвестно;
+числовой ноль в `@: p 0` отличается от WORD `0`. Qualifier наследует presence, Array-family может оставить её неизвестной.
+Run54 preflight использует общие bind_call_mode/bind_fields_mode: pure проверка формы отделена от прежних runtime guards.
+Builder вызывает проход после построения всех полей; существующая suite сохраняет порядок runtime→frontend_objects→link.
+G0 bridge Tool SHA6d048bec PASS. Runtime01/02 отказали на явных C-field types, casts исправлены;
+Runtime03 SHAb4688358, Graph01 SHA6e3bb64a/Graph02 SHAaa29a2b3 PASS.
+Pure-пробы unknown/duplicate/missing/order/nested-local/WORD0 теперь дают build5. Инертные/default/nonint controls
+сохраняют успешное выполнение без effects; FREE и path-head с инертной группой дают result7. GraphTool `check FILE` — трёхстрочная ветвь прежнего loader
+с runs0 только для build/preflight, не отдельный ABI-repair CLI/runner. Presence+char whole metadata дают check0/counter0;
+старый и новый run3 на chars — прежний runtime предел. Indirect nonint сохраняет runtime refusal5/effects0.
+Frozen Source06:843 SHA19dbb3ff5cc94e2c75ea34ce1b0534528babe3495171988d7c2fbf7f400bebde.
+Fresh stage P/sol-m11-construction-fresh01 до bootstrap не имел Run.h.lm1/generated C header(False/False).
+Existing runtime→frontend objects→link прошёл whole quick с настоящими G1/G2 по9 smoke;
+fixedpoint13, включая retained Run.h, и verify843 PASS. Кодовая связка — boot-m11-construction-shape-01/g2;
+G2 Graph SHAd816ba5c2e71006183d9d9f7f99750487f5dc992b899f7426e7c939a9a2d95f6,
+runtime SHAff20e0647b81bee07eb81145bc132f2cd30f402dfacc2eb18fedd30172fc74e9.
+Все новые11 triple +presence check(12 maintained sources/5 expected) PASS, broad masks check0;
+BODY exact-header guard на G2 даёт build5. Три full AFTER indirect guard PASS, binaries переиспользованы.
+Первичный extended22 дал21 PASS/1 stale known_assignment failure. Мигрированы только его source/golden:
+initialized i1/before_publish1, обычные checkpoint() перед first5/second7, formal @:target Box и актуальный RHS grouping.
+Пересобран только этот case — interp/native/forced PASS; seed386 и G2 full AFTER совпали с новым golden.
+Все22 случая приняты:21 прежний результат переиспользован, повтор всего22 не выполнялся. Дефекта alias нет:
+working local и physical cell различаются до публикации. First5/second7 сохранены, добавлена настоящая publication boundary.
+Final Source07:843 SHAcbaac64eb9a44d3cbc338a230499f0f319057bad557628f4c876c9c3be326615;
+diff06→07 — ровно два known_assignment файла, code/compiler inputs прежние, verify/stage-copy PASS.
+Whole построен на Source06; final fixedpoint02 повторил13 чистых сравнений/verify843 на07, PASS.
+Штатный G2 render semantics PASS35 paired/14 cases/both snapshots; грамматика не менялась.
+Docs-check01 и final index-check02 PASS35/14/27/44/615, links/LF27906/27961; далее commit/push387 в main.
+Принятые22 случая не означают завершения всей M11.7.
+[Свидетельство387](steps/witnesses/m11-construction-shape-20261114/notes.md).
+Полный implements/test, dynamic/path targets, общий group contract M11.7 и M11.8/M13/M14 остаются OPEN; goal ACTIVE.
+
 **2026-11-14, срез386 — M11.7, локальная проекция Structure-value в допуске; ограниченная кодовая приёмка пройдена.**
-Принят и отправлен385/9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b; рабочая принятая связка —
-boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01.
+Принят и отправлен386/713af718; рабочая принятая связка — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
 admit_paths один раз локально применяет target(model/candidate) перед прежним kind4 gate и used-path/type checks.
 Общий resolver и возвращаемый selected actual не меняются. Нет recursive unwrap, поиска physical Model,
 cache/copy/publication. Run53/Graph72/layouts прежние. Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 PASS.
@@ -14,8 +47,9 @@ SHA59768bbeaeac8be960aff581fb0ccc6164a9f597a161e49ab36b9b7db9d856ac, verify/stag
 Whole bootstrap01 quick PASS: настоящие G1/G2 по9 smoke; fixedpoint13/verify826 PASS.
 Штатный G2 Graph SHA908154b9, repeat10 triple/6 negative full AFTER PASS.
 Кодовая связка386 — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
-Render35/14 и docs-check35/14/27/44/615 PASS; далее index-check/commit/push. [Свидетельство386](steps/witnesses/m11-admission-values-20261114/notes.md).
-Следующий код — отдельный pure known-call-shape/default preflight; общий implements/test M11.7 OPEN.
+Render35/14, docs-check35/14/27/44/615, final index02 LF27905 и diff-check PASS; принят/отправлен713af718,
+чужой WIP сохранён. [Свидетельство386](steps/witnesses/m11-admission-values-20261114/notes.md).
+Отдельный pure known-call-shape/default preflight реализован ограниченно в387; общий implements/test M11.7 OPEN.
 Quoted-selector encoding, M11.8, M13/M14 остаются OPEN; этот consumer fix их не расширяет, goal ACTIVE.
 
 **2026-11-14, срез385 — M11.5е, профиль примитивов и declaration-view; ограниченная кодовая приёмка пройдена.**
@@ -2095,27 +2129,50 @@ Structure и записью значения, снимаются — шаг 6. �
    (счётчик в пробе); случаи документа проходят прежние проверки.
    Срез380 добавляет только disposable facts требований индексируемого физического места и сохранение NONE
    в пределах исполнения. Проверка Structure по используемому интерфейсу, test и полная миграция допуска OPEN.
-   **386 WIP — локальная Structure-value проекция:** [Structure-value и source-known preflight](steps/handoff/m11-admission-structure-value-20261114.md).
+   **386 принят/отправлен713af718 — локальная Structure-value проекция:** [Structure-value и source-known preflight](steps/handoff/m11-admission-structure-value-20261114.md).
    admit_paths один раз локально делает `target(model/candidate)` перед прежним kind4 gate/used-path/type checks,
    сохраняя общий resolver и выбранный actual; без recursive unwrap, physical Model lookup, cache/copy/publication.
    Run53/Graph72/layouts прежние; Runtime01/Graph01 и пять pure прошли:7/7/7, shared8/8/model0/calls3,
    indexed7/8/9/NONE released1/cycle10/self_len3, snapshot9/9/20/20/effects1/unused99 и два refusal4/body0/before1after0.
    Private10 triple/6 negative full AFTER PASS; Source02/826 frozen59768bbe, whole bootstrap01 quick PASS,
    настоящие G1/G2 по9 smoke, fixedpoint13/verify826; штатный G2 Graph/repeat10 triple/negative AFTER6 PASS.
-   Render35/14 и docs-check35/14/27/44/615 PASS; далее index-check/commit386.
-   **Следующий отдельный код, OPEN:** pure known-call-shape/default preflight; общий `implements`/`test` следует после него.
-   Для нового входа Run54 обеспечить ABI до Builder: Run.h сейчас производит только bld_kernel_l2,
-   а ранние87 frontend headers и decls_write_all его не производят. В существующем build_generation
-   переставить runtime перед frontend_objects, сохранив прежние аргументы и link после них;
-   новый G0 Tool должен исполнять этот порядок. Приёмка — оба поколения и свежий source stage без stale Run53 header,
-   без новой CLI, параллельного генератора или зависимости runtime от новых frontend objects.
-   Это ограниченный consumer fix, не полный допуск и не расширение formal-среза385.
+   Render35/14, docs-check35/14/27/44/615, final index02 LF27905 и diff-check прошли;386 принят/отправлен713af718.
+   **387 — отдельный pure known-call-shape/default preflight, ограниченная кодовая готовность;22 случая приняты:** Graph73 declaration_view возвращает имя и
+   default_presence0/1/-1; числовой0 и WORD `0` различаются, qualifier наследует presence, Array-family может дать unknown.
+   Run54 shared bind_call_mode/bind_fields_mode отделяет pure форму от прежних runtime result guards.
+   Builder запускает проход после всех полей. Existing suite: runtime→frontend_objects→link; нужен fresh-stage proof без stale headers.
+   Tool bridge6d048bec, Runtime03b4688358 и Graph01/02(6e3bb64a/aa29a2b3) PASS после C-field cast fixes.
+   Pure unknown/duplicate/missing/order/nested-local/WORD0 →build5; inert/default/nonint controls проходят без effects,
+   FREE/path-head-group дают7; обычные positional/named/whole controls дают7/7/9.
+   GraphTool check FILE использует прежний loader/runs0; metadata presence+char whole check0/counter0,
+   old/new chars run3 — прежний runtime предел, indirect nonint runtime5/effects0 сохранён.
+   Frozen Source06:843 19dbb3ff; свежий stage P/sol-m11-construction-fresh01 начинал без обоих Run headers.
+   Whole quick genuine G1/G2 по9 smoke/fixedpoint13(retained Run.h)/verify843 PASS; G2 Graph d816ba5c/runtime ff20e064.
+   Все новые11 triple+presence check(12 sources/5 expected) PASS, broad masks check0; BODY exact-header guard G2 build5.
+   Три full AFTER indirect guard PASS(reuse binaries). Первичный extended22:21 PASS/1 stale known_assignment failure;
+   мигрирован и пересобран только этот case, triple/seed386-G2 full AFTER по новому golden PASS,21 прежний результат переиспользован.
+   Все22 приняты, без повторного прогона всего22. Final Source07:843 cbaac64e отличается от06 только known fixture pair,
+   code/compiler inputs прежние; verify/stage-copy и fixedpoint02(13 чистых сравнений/verify843) PASS. Whole построен на06.
+   Render semantics35 paired/14 cases/both snapshots и docs-check01 PASS35/14/27/44/615, links/LF27906;
+   grammar unchanged. Final index-check02 PASS, links/LF27961; далее commit/push387 в main.
+   Не объявлять повтор всего22 или полную M11.7. Полный `implements`/`test`,
+   dynamic/path targets и общий group contract остаются OPEN; этот WIP не объявляет M11.7 завершённым.
+   Это ограниченные подшаги M11.7, не полный допуск и не расширение formal-среза385.
+   **387 — known_assignment, legacy fixture migration выполнена:** прежний structural formal Box:target
+   давал seed386 run5/new build5. Контроль initialized i1 на seed386/G2 подтвердил before1/first5/second7:
+   working local меняется раньше physical cell, которую публикует обычный checkpoint(). Дефекта alias нет.
+   В fixture сохранены first5/second7, добавлены initialized i1/before_publish1/checkpoint(), formal @:target Box
+   и актуальный RHS grouping. Только этот case пересобран: triple и seed386/G2 full AFTER по новому golden PASS;
+   остальные21 результата переиспользованы. Final Source07 отличается лишь этой парой файлов; OPEN alias defect отсутствует.
    **OPEN — quoted-selector encoding (отдельно от formal-среза385):** exact name со значением `[0]x`
    коллидирует со строковой записью occurrence selector, а backslash внутри quoted path component разделяет
    компонент. Canonical name boundary и decoded doubled backticks385 этот предел не закрывают.
    Исправить существующий общий selector mechanism, сохранив различие имени, occurrence selector и границы компонента,
    без нового парсера и без расширения текущего formal-среза. Приёмка: quoted `[0]x` и явное вхождение `[0]x`
    выбирают разные адреса; quoted компонент с backslash остаётся одним именем, обычный path separator действует как прежде.
+   Следующий код после387: [точные producers/consumers и порядок двух срезов](steps/handoff/m11-selector-encoding-20261114.md).
+   Сначала сохранить различие WORD-name и occurrence в raw path step на spaced paths; затем общий P0 lexical compact patch.
+   Предложенная форма step — решение реализации, не новая норма; весь selector срез пока OPEN.
 8. **Рабочий frontend** (понижение L3 и обходчик; сюда перенесены шаг 6 раздела M10 и шаг 5 раздела M9 для этого
    пути). Те же правила: чтение по ролям, имена `data` и `code`, порядок `data` перед `code`, атом-указатель без
    раскрытия и видимость в данных в обе стороны, формалы ресиверами, подача только `:=`, присваивание только

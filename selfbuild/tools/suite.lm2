@@ -1371,13 +1371,14 @@ fn: build_generation (@: mode char; @: repo char; @: stage char; @: base char; @
         return: tool_check(0, "generation full: the full list", "not given")
     if: dir_make(out) != 0 || file_exists(txt_path(out, "bundle.sha256")) != 0
         return: tool_check(0, "generation: a fresh label", out)
-    c.printf("GENERATION step frontend objects\n")
-    x := bld_frontend_objects(repo, stage, base, previous_fe, txt_path(label, "frontend"))
-    if: tool_check(x = 0, "generation: the frontend's objects, backend and libc are built", txt_cat("failing step ", txt_int(x))) != 0
-        return: 1
     c.printf("GENERATION step runtime\n")
     x := bld_runtime(repo, stage, base, previous_fe, txt_path(label, "runtime"))
     if: tool_check(x = 0, "generation: the runtime is built, its kernel's L2 modules and C headers with it", txt_cat("failing step ", txt_int(x))) != 0
+        return: 1
+    # The kernel's generated ABI must precede Builder and every other frontend consumer of it.
+    c.printf("GENERATION step frontend objects\n")
+    x := bld_frontend_objects(repo, stage, base, previous_fe, txt_path(label, "frontend"))
+    if: tool_check(x = 0, "generation: the frontend's objects, backend and libc are built", txt_cat("failing step ", txt_int(x))) != 0
         return: 1
     prod := txt_path(out, "runtime/driver.o")
     obs := txt_path(out, "runtime/driver-observe.o")

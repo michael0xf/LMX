@@ -1,6 +1,29 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice386; bounded code acceptance passed, base385/9edf9666): admit_paths applies one local
+Current continuation (2026-11-14, slice387; bounded code readiness,22 cases accepted; base386/713af718): Graph73 declaration_view reports default
+presence without evaluation; Run54/shared binding separates pure source-known shape from the existing runtime guards.
+Source07:843;12 maintained sources and5 expected files were added. Seven build refusals include the BODY exact-header guard regression.
+Positive controls give7/7/9,effects0; broad presence check0; chars runtime3 on seed386/new is the prior limitation.
+Indirect runtime guard gives5/effects0. The formal/data/pending probe constructs with0/runs with5 on both seed386/new, not result7.
+Frozen Source06:843 SHA19dbb3ff5cc94e2c75ea34ce1b0534528babe3495171988d7c2fbf7f400bebde. Fresh stage
+P/sol-m11-construction-fresh01 began with no Run headers(False/False). Existing runtime→frontend objects→link passed
+whole quick genuine G1/G2, nine smoke rows each; fixedpoint13 including retained Run.h and verify843 PASS.
+Code tuple: boot-m11-construction-shape-01/g2; G2 Graph SHAd816ba5c2e71006183d9d9f7f99750487f5dc992b899f7426e7c939a9a2d95f6,
+runtime SHAff20e0647b81bee07eb81145bc132f2cd30f402dfacc2eb18fedd30172fc74e9. New11 triple +presence check
+(12 sources/5 expected) PASS; broad masks check0; BODY exact-header guard gives build5 on G2. Three indirect-guard full AFTER checks passed using existing binaries.
+Initial extended22:21 PASS/1 stale known_assignment failure. Only that source/golden pair was migrated to initialized i1,
+before_publish1, checkpoint() before first5/second7, formal @:target Box and current RHS grouping; only this case was rebuilt.
+Interp/native/forced PASS; seed386 and G2 full AFTER match the new golden. All22 are accepted through21 reused results
+plus the migrated case; no full22 rerun occurred. There is no alias defect: physical cells differ from working locals before publication.
+Final Source07:843 SHAcbaac64eb9a44d3cbc338a230499f0f319057bad557628f4c876c9c3be326615 changes only two known_assignment files from06;
+code/compiler inputs are unchanged, verify/stage-copy PASS. Whole used06; fixedpoint02 repeated13 clean comparisons/verify843 on07, PASS.
+G2 render semantics35 paired/14 cases/both snapshots and docs-check01 PASS35/14/27/44/615, links/LF27906;
+grammar unchanged. Final index-check02 PASS, links/LF27961; commit/push387 to main follow.
+Full implements/test/dynamic/path/group contracts,
+quoted selector and M11.8/M13/M14 remain OPEN. [Witness387](../steps/witnesses/m11-construction-shape-20261114/notes.md);
+continue the [main v3 plan](../next_core_tasks_v3.md), goal ACTIVE.
+
+Previous continuation (2026-11-14, slice386; bounded code acceptance passed, base385/9edf9666): admit_paths applies one local
 target(model/candidate) before its existing kind4 gate/used-path checks. Resolver, returned actual and snapshot identity stay unchanged;
 there is no recursive unwrap, physical Model lookup, cache/copy/publication. Run53/Graph72 layouts remain unchanged.
 Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 and private10 triple/6 negative full AFTER PASS: snapshot9/9/20,
@@ -9,7 +32,7 @@ SHA59768bbeaeac8be960aff581fb0ccc6164a9f597a161e49ab36b9b7db9d856ac.
 Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each; fixedpoint13/verify826 PASS.
 Genuine G2 rebuilt graph-tool SHA908154b9bbcefb94eddf238f0d93248087f171abbec9fee91e396ed1c7c7739e;
 G2 repeat10 triple/6 negative full AFTER PASS. Working code tuple: boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
-Render35/14 and docs-check35/14/27/44/615 passed; final index-check/commit/push386 follow.
+Render35/14, docs-check35/14/27/44/615, final index02 and diff-check passed;386 was accepted and pushed as713af718.
 Static preflight, full implements/test, quoted selector and M11.8/M13/M14 remain OPEN.
 [Witness386](../steps/witnesses/m11-admission-values-20261114/notes.md); continue the [main v3 plan](../next_core_tasks_v3.md), goal ACTIVE.
 

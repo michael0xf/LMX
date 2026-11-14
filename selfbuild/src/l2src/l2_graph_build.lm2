@@ -1024,6 +1024,9 @@ fn: lm_graph_build_root (@: g c.LmxGraph; @: doc c.LmP0Document; @@: out c.Lmx) 
         i := i + 1U
         f := lm_graph_next_active(lm_graph_p0_next(f))
     ---
+    r := c.lmx_graph_preflight(g, root)
+    if: r != 0
+        return: r
     out[0] := root
     return: 0
 end: lm_graph_build_root

@@ -2233,6 +2233,9 @@ fn: lm_graph_main (@@: args char; int: n) int
         return: lm_graph_mutation_check()
     if: n >= 2 && c.strcmp(args[1], "intern") = 0
         return: lm_graph_intern_check()
+    # Build/preflight only, through the same loader and dumps; no activation or executor is entered.
+    if: n = 3 && c.strcmp(args[1], "check") = 0
+        return: lm_graph_run_file(args[2], 0)
     if: n >= 3 && c.strcmp(args[1], "run") = 0
         if: n >= 4
             runs := c.atoi(args[3])
@@ -2258,7 +2261,7 @@ fn: lm_graph_main (@@: args char; int: n) int
         if: runs < 1
             return: 2
         return: lm_graph_emit_file(args[2], args[3], forced, check_root, runs)
-    c.fputs("graph_trans: usage: run FILE [COUNT] | emit|emit-check FILE OUT.lm1 native|forced [COUNT] | p0 FILE | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
+    c.fputs("graph_trans: usage: check FILE | run FILE [COUNT] | emit|emit-check FILE OUT.lm1 native|forced [COUNT] | p0 FILE | groups ROOT LIST NEW_OUT | intern\n", c.stderr)
     return: 2
 end: lm_graph_main
 

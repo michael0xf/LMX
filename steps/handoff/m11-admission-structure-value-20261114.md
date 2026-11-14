@@ -4,6 +4,14 @@
 Измеренный root baseline ниже передан основным writer; помощник сборок и запусков не делал.
 Этот handoff не закрывает M11.7/M13/M14.
 
+**Обновление writer после срезов386/387:** consumer-target исправлен в принятом386;
+описанный ниже source-known preflight и runtime-first порядок реализованы в387.
+Свежий stage без Run headers прошёл whole G1/G2 quick и fixedpoint13; все22 целевых случая приняты
+с отдельной миграцией known_assignment по норме публикации. Подробные результаты и границы —
+[свидетельство387](../witnesses/m11-construction-shape-20261114/notes.md).
+Ниже сохранён исходный исследовательский контекст; его OPEN относится к моменту исследования.
+Следующий код — [selector encoding](m11-selector-encoding-20261114.md), не повтор этих двух исправлений.
+
 ## Узкая граница текущего допуска
 
 Baseline `@: Model (int: v 0); fn: f (@: value Model) int (return: value\v); int: r f((int: v 7))`

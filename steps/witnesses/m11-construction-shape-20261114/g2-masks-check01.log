@@ -1,0 +1,57 @@
+GRAPH-BEFORE-BEGIN
+@: Empty ()
+fn: formal_mask (@: take Empty) int
+    fn: take (int: required) int
+        return: required
+    end: take
+end: formal_mask
+fn: data_mask () int (
+    @: take ()
+)
+    fn: take (int: required) int
+        return: required
+    end: take
+end: data_mask
+fn: pending_mask () int (
+    prepared:
+        args: ()
+        return: int
+        code: ((return 7))
+    end: prepared
+    fn: take prepared
+)
+    fn: take (int: required) int
+        return: required
+    end: take
+end: pending_mask
+int: result (pending_mask)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+@: Empty ()
+fn: formal_mask (@: take Empty) int
+    fn: take (int: required) int
+        return: required
+    end: take
+end: formal_mask
+fn: data_mask () int (
+    @: take ()
+)
+    fn: take (int: required) int
+        return: required
+    end: take
+end: data_mask
+fn: pending_mask () int (
+    prepared:
+        args: ()
+        return: int
+        code: ((return 7))
+    end: prepared
+    fn: take prepared
+)
+    fn: take (int: required) int
+        return: required
+    end: take
+end: pending_mask
+int: result (pending_mask)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

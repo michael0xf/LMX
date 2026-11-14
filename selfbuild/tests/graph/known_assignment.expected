@@ -1,11 +1,17 @@
 int: root 20
 :=: root 5
 :=: root 7
-int: i
+int: i 7
 @: p int @i
+sub: checkpoint ()
+    return:
+end: checkpoint
 :=: i 5
+int: before_publish 1
+checkpoint:
 int: first 5
 :=: i 7
+checkpoint:
 int: second 7
 sub: main () (
     Box:
@@ -28,7 +34,7 @@ sub: main () (
     :=: (Box \ value) (root + 2)
     :=: ((Box \ Child) \ item) 11
     call: Data Code
-    :=: changed ((change Box))
+    :=: changed (change Box)
 end: main
 fn: tick () int (
     int: calls 0
@@ -54,7 +60,7 @@ end: bump
 bump:
 bump: 3
 int: procedure_count 5
-fn: change (Box: target) int
+fn: change (@: target Box) int
     :=: (target \ value) 17
     return: (target \ value)
 end: change

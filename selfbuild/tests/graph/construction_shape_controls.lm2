@@ -1,0 +1,20 @@
+# Source-known shape and inert DATA are checked without running dead operands.
+int: effects 0
+fn: touch () int
+    node\effects := node\effects + 1
+    return: 1
+end: touch
+fn: take (int: value; int: other 2) int
+    return: value + other
+end: take
+fn: deferred (int: value touch()) int (return: value)
+fn: opaque () c.FILE (return: 0)
+(take(unknown := touch()))
+if: 0
+    deferred()
+    opaque()
+end: if
+int: positional take(5)
+int: named take(other := 4; value := 3)
+int: whole take((int: value 8; int: other 1))
+int: done 1

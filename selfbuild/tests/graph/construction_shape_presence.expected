@@ -1,0 +1,19 @@
+int: effects 0
+fn: produce () int
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 7
+end: produce
+fn: deferred (int: value) int
+    return: value
+end: deferred
+fn: qualified ((const ((int value 7)))) int
+    return: 1
+end: qualified
+fn: null_ref (@: p 0) int
+    return: 1
+end: null_ref
+fn: chars (char: x; char: y) int
+    return: 1
+end: chars
+if: 0 ((deferred) (qualified) (null_ref) (chars ((char x 'a') (char y 'b'))))
+int: done 1

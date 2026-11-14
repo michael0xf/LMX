@@ -1,5 +1,42 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7: срез387, ограниченная кодовая приёмка, docs далее
+
+386/713af7183aad7009ac549ef59a3b3607171655a7 принят и отправлен в main; docs/index/diff-check PASS.
+Только основное дерево main, root — code/test/build writer. Pipeline sol-m11-construction-shape-20261114-01.
+Seed — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
+Код WIP: общий Graph declaration_view с default-presence (не evaluation), Graph73;
+Run bind_call_mode отделяет pure shape от прежних runtime result/default guards, Run54 preflight.
+Builder зовёт pass после заполнения root; существующий build_generation переставлен runtime→frontend objects→link.
+Проход использует временный existing namespace, CodeBody roles, queues/known written bindings; без activation/capture/actuals/test.
+Формалы/data/pending/mutable и внешние FREE имена не объявлять известными через runtime read.
+Bridge G0 Tool01 собран PASS SHA6d048bec. Runtime01/02 отказали на двух C-field actuals без явного типа;
+casts исправлены. Review исправил application-head inert groups и CODE lookup, принимавший call Frame за DATA declaration.
+Общий view также именует pure whole DATA fields без machine whitelist. Runtime03 PASS SHAb4688358;
+Graph02 PASS SHAaa29a2b3, check FILE — прежний loader с runs0 без исполнения.
+Unknown/duplicate/missing/order/nested/WORD0 теперь build5; inert/default/nonint/FREE/path-group сохранены.
+Controls7/7/9/effects0; широкая presence check0/effects0. Char whole metadata имеет прежний runtime3
+и на seed386, и на новом коде. Indirect unsupported-result guard остаётся runtime5 до actual effects0.
+Review обнаружил ложный skip второго field for BODY: exact header identity исправлен в обоих readers;
+старая Graph02 check0 воспроизводит пропуск. Добавлены12 maintained sources и5 expected.
+Frozen Source06/843; verify/stage-copy PASS в новый sol-m11-construction-fresh01.
+До запуска bootstrap оба generated Run headers отсутствовали. Whole quick boot-m11-construction-shape-01
+с новым G0 Tool PASS: настоящие G1/G2 по9 smoke; fixedpoint13/verify843 PASS.
+G2 Graph SHAd816ba5c; G2 runtime SHA ff20e064; весь новый набор11 triple +presence check PASS.
+Extended22 сначала21PASS/1staleFAIL known_assignment. Старый Box:target даёт seed386 run5/new build5.
+Диагностика установила норму: i:= пишет working local, \p читает physical cell до publication;
+initialized i1 + обычные checkpoint() дают before1/first5/second7 в обеих версиях. Alias defect не найден.
+Known fixture мигрирована на эту норму с сохранением first5/second7; formal/RHS grouping актуализированы.
+Пересобран только этот случай: triple PASS;21 прежних успешных случаев переиспользованы, совокупно22 приняты.
+Три full negative AFTER runtime guard PASS на готовых binaries. Source07/843 SHA cbaac64e:
+от Source06 изменены только known_assignment.lm2/.expected; verify/stage-copy и fixedpoint02/13 PASS.
+Связка387 — sol-m11-construction-fresh01/boot-m11-construction-shape-01/g2 +graph-m11-construction-shape-g2-01.
+Render35/14, docs-check01 и final index-check02 PASS35/14/27/44/615, links/LF27906/27961; далее commit/push main.
+Свидетельство — steps/witnesses/m11-construction-shape-20261114/notes.md.
+Общий formal/data/pending mask probe строится; runtime5 одинаков на seed386/Graph02, не result7.
+Полный used-interface implements/test, quoted selector, M11.8/M13/M14 OPEN. Чужие два untracked сохранить.
+Goal ACTIVE; второй producer не запускать, helpers только read-only либо явно выделенные документы.
+
 ## 2026-11-14 — M11.7: срез386, code/docs PASS, index-check/commit далее
 
 385/9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b принят и отправлен в main; docs/index и оба diff-check PASS.

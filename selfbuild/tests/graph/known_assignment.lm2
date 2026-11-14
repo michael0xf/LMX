@@ -5,11 +5,16 @@
 int: root 1
 root := 5
 root:=int: 7
-int: i
+int: i 1
 @: p int @i
+sub: checkpoint ()
+    return:
 i := 5
+int: before_publish \p
+checkpoint()
 int: first \p
 i:=7
+checkpoint()
 int: second \p
 sub: main () (
     Box:
@@ -47,7 +52,7 @@ sub: bump (int: delta 2) (int: count 0)
 bump()
 bump: 3
 int: procedure_count bump\data\count
-fn: change (Box: target) int
+fn: change (@: target Box) int
     target\value := 17
     return: target\value
 main()

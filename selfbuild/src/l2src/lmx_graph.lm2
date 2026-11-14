@@ -776,7 +776,7 @@ end: lmx_graph_declaration_receiver
 # The declared place of one user formal. Typed materialized cells and contract-defined receiver compositions keep
 # their graph addresses. Only the receiving chain is read: default expressions and model data are never traversed
 # or evaluated as formals. Ordinary named Structures, including empty ones, are not declaring contracts.
-fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
+fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presence int) @: char
     @: current void raw
     @: checkpoint void raw
     @: child void 0
@@ -787,6 +787,7 @@ fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
     size_t: span 0U
     int: kind 0
     int: family 0
+    default_presence[0] := 0 - 1
     if: g = 0 || raw = 0
         return: 0
     while: current != 0
@@ -794,7 +795,10 @@ fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
         if: kind != 4
             if: c.lmx_range_classify(g\arena, current) != c.LMX_KIND_PRIMITIVE
                 return: 0
+            if: kind = 1 || kind = 2 || kind = 5 || kind = 6
+                default_presence[0] := 1
             if: kind = 3 || kind = 8 || kind = 9
+                default_presence[0] := 0
                 current := c.lmx_arena_pointer_void_read(current)
             return: lmx_graph_name_of(g, current)
         head := lmx_graph_name_of(g, current)
@@ -807,6 +811,20 @@ fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
         if: family != 3 && name != 0
             if: (family = 1 && n > 2U) || (family = 2 && n > 3U)
                 return: 0
+            if: family = 1
+                default_presence[0] := (cast: (int) (n = 2U))
+            if: family = 2
+                default_presence[0] := (cast: (int) (n = 3U))
+                if: n = 2U
+                    default_presence[0] := 0 - 1
+                    child := lmx_graph_get((cast: (@: c.Lmx) current), 1U)
+                    if: lmx_graph_word_text(g, child) != 0
+                        default_presence[0] := 0
+                    if: lmx_graph_kind(g, child) = 1 && c.lmx_int_value_known(child) = 0
+                        default_presence[0] := 1
+                    ---
+                ---
+            ---
             return: name
         if: n != 1U
             return: 0
@@ -836,7 +854,21 @@ fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
         current := child
     ---
     return: 0
+end: lmx_graph_declaration_view
+
+fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
+    int: presence 0 - 1
+    return: lmx_graph_declaration_view(g, raw, @ presence)
 end: lmx_graph_declaration_name
+
+# Default presence, not its value or evaluation: 0 absent, 1 present, -1 not yet known by this declaration view.
+# In particular an Array composition must not become a required formal merely because its lowering is pending.
+fn: lmx_graph_declaration_default (@: g c.LmxGraph; @: raw void) int
+    int: presence 0 - 1
+    if: lmx_graph_declaration_view(g, raw, @ presence) = 0
+        return: 0 - 1
+    return: presence
+end: lmx_graph_declaration_default
 
 # The name the field index of a declaration Structure (args, data) answers to: a place by the name of its cell, a
 # declaration Frame `T: name` or `@: name T` -- an Lmx named by its receiver (§3.3) -- by its first argument, an empty

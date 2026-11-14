@@ -1,0 +1,191 @@
+GRAPH-BEFORE-BEGIN
+int: root 1
+:=: root 5
+:=: root 7
+int: i 1
+@: p int (@ i)
+sub: checkpoint ()
+    return:
+end: checkpoint
+:=: i 5
+int: before_publish (\ p)
+checkpoint:
+int: first (\ p)
+:=: i 7
+checkpoint:
+int: second (\ p)
+sub: main () (
+    Box:
+        int: value 1
+        Child:
+            int: item 2
+        end: Child
+    end: Box
+    CodeData:
+        int: x 1
+        int: y 2
+    end: CodeData
+    Code: (:= x (x + 1)) (:= y (x * 2))
+    Data:
+        int: y 30
+        int: x 10
+    end: Data
+    int: changed 0
+)
+    :=: (Box \ value) (root + 2)
+    :=: ((Box \ Child) \ item) 11
+    call: Data Code
+    :=: changed (change Box)
+end: main
+fn: tick () int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: 3
+end: tick
+fn: local (int: arg) int
+    :=: x 7
+    int: x
+    :=: arg (arg + 1)
+    :=: x (x + arg)
+    :=: x (x + (tick))
+    return: x
+end: local
+int: local_result (local 4)
+int: calls ((tick \ data) \ calls)
+sub: bump (int: delta 2) (
+    int: count 0
+)
+    :=: count (count + delta)
+end: bump
+bump:
+bump: 3
+int: procedure_count ((bump \ data) \ count)
+fn: change (@: target Box) int
+    :=: (target \ value) 17
+    return: (target \ value)
+end: change
+main:
+int: data_x (((main \ data) \ Data) \ x)
+int: data_y (((main \ data) \ Data) \ y)
+int: model_x (((main \ data) \ CodeData) \ x)
+int: changed ((main \ data) \ changed)
+int: nested_value ((((main \ data) \ Box) \ Child) \ item)
+int: box_value (((main \ data) \ Box) \ value)
+fn: clean_path () int (
+    int: x 1
+)
+    :=: (data \ x) 9
+    return: ((x * 10) + (data \ x))
+end: clean_path
+int: clean_snapshot (clean_path)
+int: clean_published ((clean_path \ data) \ x)
+fn: dirty_path () int (
+    int: x 1
+)
+    :=: x 2
+    :=: (data \ x) 9
+    return: ((x * 100) + (data \ x))
+end: dirty_path
+int: dirty_snapshot (dirty_path)
+int: dirty_published ((dirty_path \ data) \ x)
+int: n 0
+for: ((:= n 0) (n < 3) (:= n (n + 1))) ((:= root (root + 1)))
+finally: (:= root (root + 10))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: root 20
+:=: root 5
+:=: root 7
+int: i 7
+@: p int @i
+sub: checkpoint ()
+    return:
+end: checkpoint
+:=: i 5
+int: before_publish 1
+checkpoint:
+int: first 5
+:=: i 7
+checkpoint:
+int: second 7
+sub: main () (
+    Box:
+        int: value 1
+        Child:
+            int: item 2
+        end: Child
+    end: Box
+    CodeData:
+        int: x 1
+        int: y 2
+    end: CodeData
+    Code: (:= x (x + 1)) (:= y (x * 2))
+    Data:
+        int: y 30
+        int: x 10
+    end: Data
+    int: changed 0
+)
+    :=: (Box \ value) (root + 2)
+    :=: ((Box \ Child) \ item) 11
+    call: Data Code
+    :=: changed (change Box)
+end: main
+fn: tick () int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: 3
+end: tick
+fn: local (int: arg) int
+    :=: x 7
+    int: x
+    :=: arg (arg + 1)
+    :=: x (x + arg)
+    :=: x (x + (tick))
+    return: x
+end: local
+int: local_result 15
+int: calls 1
+sub: bump (int: delta 2) (
+    int: count 0
+)
+    :=: count (count + delta)
+end: bump
+bump:
+bump: 3
+int: procedure_count 5
+fn: change (@: target Box) int
+    :=: (target \ value) 17
+    return: (target \ value)
+end: change
+main:
+int: data_x 11
+int: data_y 22
+int: model_x 1
+int: changed 17
+int: nested_value 11
+int: box_value 17
+fn: clean_path () int (
+    int: x 1
+)
+    :=: (data \ x) 9
+    return: ((x * 10) + (data \ x))
+end: clean_path
+int: clean_snapshot 19
+int: clean_published 9
+fn: dirty_path () int (
+    int: x 1
+)
+    :=: x 2
+    :=: (data \ x) 9
+    return: ((x * 100) + (data \ x))
+end: dirty_path
+int: dirty_snapshot 209
+int: dirty_published 2
+int: n 3
+for: ((:= n 0) (n < 3) (:= n (n + 1))) ((:= root (root + 1)))
+finally: (:= root (root + 10))
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

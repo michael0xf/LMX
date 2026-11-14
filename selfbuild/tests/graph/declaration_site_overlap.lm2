@@ -1,0 +1,14 @@
+# A CODE receiver writes DATA; bare reads and writes prefer the independent formal.
+fn: declaration (int: x) int (int: x 100)
+    int: x 2
+    return: x
+end: declaration
+fn: bare (int: x) int (int: x 100)
+    x := 2
+    return: x
+end: bare
+int: caller 7
+int: declared_result declaration(caller)
+int: declared_data declaration\data\x
+int: bare_result bare(caller)
+int: bare_data bare\data\x

@@ -1,5 +1,25 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7: срез389, code/docs PASS, final index/commit далее
+
+**2026-11-14, срез389 — общий declaration site → место кадра; все кодовые gates пройдены.**
+388/51929242c6b5928c875acc1bc55a8bf87e342809 принят/отправлен в основном main.
+Run57 добавляет place_site/place_store_int/place_store_reference; Graph74 и C layouts прежние.
+CODE int/@ требует выбранную DATA, bare WORD — formal-first. Exact self сохраняет physical occurrences;
+другая CODE использует unique DATA name. Назначение сохраняется до RHS стабильным token существующей row.
+fn_data учитывает явный CODE site при formal coincidence, но не добавляет поле поверх written DATA другого типа.
+root_occurrence_index теперь seen3, bare duplicate остаётся refusal3. Новые7 pairs, private36 triple и negative AFTER18 PASS.
+Copy-cursor regression найден и исправлен; own_publication меняет лишь старые RHS-скобки, числа21/2/22 сохранены.
+Frozen Source07:882 SHA58c44120bda44300403dcb057719be1c6395488c694ebe5b4c8c2a4b46355fd6;
+Runtime05 SHA92f2ee24/Graph02 SHAe03d4e22. Whole quick boot-m11-place-sites-01 genuine G1/G2 по9 smoke PASS;
+fixedpoint15/verify882/retained headers/privateRuntime05==G2driver PASS. G2 Graph a883ec4c, repeat36 triple/negative AFTER18 PASS.
+G2 render semantics35/14 и fresh docs-check02 PASS35/14/27/44/615, links/LF28085, grammar unchanged.
+Docs-check01 неверная relative link в новом current-блоке исправлена; код не менялся. Final index03/commit/push далее.
+Все code/build producers terminal, helpers вернули docs. Final index03 затем commit/push; чужие два untracked сохранить.
+Принятая кодовая связка — stage/boot-m11-place-sites-01/g2 + graph-m11-place-sites-g2-01.
+Полные M11.7/8/M13/M14 OPEN; следующий M11.7 — known references в written DATA, без autoexecution на step.
+[Свидетельство389](witnesses/m11-place-sites-20261114/notes.md). Goal ACTIVE; работа/коммиты прямо в main.
+
 ## 2026-11-14 — M11.7: срез388, ограниченная кодовая готовность, docs далее
 
 387/9897c99fd55408cab3531af809bb885dab5ea85e принят и отправлен в основном main;

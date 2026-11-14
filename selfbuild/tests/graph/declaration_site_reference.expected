@@ -1,0 +1,23 @@
+A:
+    int: x 7
+end: A
+B:
+    int: x 9
+end: B
+fn: declaration (@: p int) int (
+    @: p int (@ (A \ x))
+)
+    @: p int (@ (B \ x))
+    return: (\ p)
+end: declaration
+fn: bare (@: p int) int (
+    @: p int (@ (A \ x))
+)
+    :=: p (@ (B \ x))
+    return: (\ p)
+end: bare
+int: declared_result 7
+int: declared_data 9
+int: bare_result 9
+int: bare_data 7
+int: caller 7

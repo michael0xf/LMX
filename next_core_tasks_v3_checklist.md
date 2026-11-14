@@ -1,5 +1,20 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез389 — общий declaration site → existing frame row; кодовые gates и docs-check пройдены.**
+
+- [x] CODE int/@ declaration → DATA-only; bare WORD read/store → formal-first.
+  Exact self holder==selected DATA использует physical slot, без root exception; произвольная D не дополняется.
+- [x] До RHS сохранить стабильный token уже выбранного site/slot, после RHS заново получить existing row по token,
+  не хранить realloc-row pointer и не выбирать новое destination по имени/formal/payload.
+- [x] fn_data учитывает явный CODE site несмотря на одноимённый formal; любое существующее written DATA-вхождение
+  того же имени любого kind блокирует auto-add. Несовместимость не исправляется добавлением typed поля.
+- [x] Run57/Graph74, Runtime05/Graph02: новые7 pairs и private36 triple/negative AFTER18 PASS;
+  copy-cursor defect исправлен. root occurrence seen3, bare duplicate refusal3; old own_publication только RHS-скобки, числа21/2/22 прежние.
+- [x] Frozen Source07:882 SHA58c44120; whole boot-m11-place-sites-01 genuine G1/G2 по9 smoke PASS,
+  fixedpoint15/verify882/retained headers/privateRuntime05==G2driver PASS; G2 Graph a883ec4c/repeat36/negative AFTER18 PASS.
+- [x] G2 render semantics35/14 и docs-check02 PASS35/14/27/44/615, links/LF28085, grammar unchanged;
+  final index03 и commit/push389 далее. Полные M11.7/8/M13/M14 OPEN.
+
 **2026-11-14, срез388 — selector encoding и compact quote lexer; ограниченная кодовая готовность, G2 repeat20/21.**
 
 - [x] Graph74 occurrence reader: anonymous pair [WORD(decimal),WORD(name)], literal WORD literal;
@@ -19,8 +34,9 @@
 - [ ] Aggregate20/21: root_occurrence_index runtime3 у seed387/new, expected seen3 сохранить.
   OPEN M11.7 common site→existing frame row без root bypass, затем M14 alias/frame согласование.
   Подготовка389 по [site handoff](steps/handoff/m11-place-sites-20261114.md), не implementation388:
-  CODE formal-first, затем DATA; self identity — общий случай. Code над другой D использует unique canonical name,
-  не source-index; physical DATA-роль data_declaration не менять, destination через RHS сохранять.
+  CODE int/@ declaration → DATA-only, bare WORD read/store → formal-first; self identity выбирает точный DATA slot.
+  Code над другой D использует доказанное соответствие, не source-index; DATA initialization сохраняет свой physical slot.
+  До RHS выбрать стабильный site/slot token, после RHS получить прежнюю row, не перевыбирать destination.
 - [ ] Отдельный preexisting OPEN: written DATA `@: pick a` остаётся raw/step5 даже при одной ссылке;
   construction/admission gap(книга:815), не selector/duplicates, не autoexecute DATA on step(R12).
 - [x] Whole boot-m11-selector-encoding-01 PASS на прежнем sol-m11-construction-fresh01/main: genuine G1/G2 по9 smoke.

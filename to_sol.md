@@ -1,5 +1,23 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез389 — общий declaration site → место кадра; ограниченная кодовая приёмка и docs-check пройдены.**
+388/51929242c6b5928c875acc1bc55a8bf87e342809 принят/отправлен в основном main.
+Run57 добавляет place_site/place_store_int/place_store_reference; Graph74 и C layouts прежние.
+CODE int/@ требует выбранную DATA, bare WORD — formal-first. Exact self сохраняет physical occurrences;
+другая CODE использует unique DATA name. Назначение сохраняется до RHS стабильным token существующей row.
+fn_data учитывает явный CODE site при formal coincidence, но не добавляет поле поверх written DATA другого типа.
+root_occurrence_index теперь seen3, bare duplicate остаётся refusal3. Новые7 pairs, private36 triple и negative AFTER18 PASS.
+Copy-cursor regression найден и исправлен; own_publication меняет лишь старые RHS-скобки, числа21/2/22 сохранены.
+Frozen Source07:882 SHA58c44120bda44300403dcb057719be1c6395488c694ebe5b4c8c2a4b46355fd6;
+Runtime05 SHA92f2ee24/Graph02 SHAe03d4e22. Whole boot-m11-place-sites-01 quick PASS: настоящие G1/G2 по9 smoke.
+Fixedpoint15/verify882 PASS, включая Runtime05==G2driver и retained Graph74/Run57 headers.
+Штатный G2 Graph SHAa883ec4cdacc71f49bd3d0437df19542d1f261c8b59d8b55cc65a4bb2d8f4a5b;
+кодовая связка — stage/boot-m11-place-sites-01/g2 + graph-m11-place-sites-g2-01. G2 repeat36 triple/negative AFTER18 PASS.
+Штатный render semantics PASS35 paired/14 cases; grammar unchanged. Fresh docs-check02 PASS35/14/27/44/615, links/LF28085.
+Final index03 и commit/push следуют. Полные M11.7/8/M13/M14 OPEN; следующий M11.7 —
+[known references в written DATA](steps/handoff/m11-known-data-references-20261114.md), без autoexecution на step.
+[Свидетельство389](steps/witnesses/m11-place-sites-20261114/notes.md). Goal ACTIVE; работа/коммиты прямо в main.
+
 **2026-11-14, срез388 — selector encoding и compact quote lexer; ограниченная кодовая готовность, G2 repeat20/21.**
 387 принят/отправлен9897c99fd55408cab3531af809bb885dab5ea85e, foreign2 сохранены; рабочая принятая связка пока387.
 Graph74 occurrence reader принимает anonymous pair [WORD(decimal),WORD(name)], literal WORD literal;
@@ -15,8 +33,13 @@ Private21 initial18 PASS/3 FAIL; два old occurrence expected меняют л�
 Восемь full AFTER seed/new/binaries и9 runtime negative AFTER PASS(reuse). Aggregate20/21: root_occurrence_index runtime3
 у seed387/new, expected seen3 сохранить; OPEN common site→existing frame row без root bypass, следующий M11.7/M14.
 [Передача следующего общего кода](steps/handoff/m11-place-sites-20261114.md) фиксирует routes и сохранение bare ambiguity.
-Это подготовка389, не код388: CODE binder formal-first, затем DATA; self identity — общий случай, не root exception.
-Code над другой D использует unique canonical name, не source-index; data_declaration сохраняет physical DATA-роль.
+Уточнение389, ограниченная кодовая приёмка выше: CODE declaration выбирает только сопоставленное место выбранной DATA;
+bare WORD read/store сохраняет formal-first. Self identity — общий случай даже при одноимённом formal, не root exception.
+Code над другой D использует unique canonical name/существующее соответствие, не source-index; data_declaration сохраняет physical DATA-роль.
+fn_own→fn_data включает явный CODE site как собственное DATA-место метода и при совпадении с formal;
+bare/formal/dynamic input поля не создаёт, произвольная поданная D не дополняется. Destination token выбирается до RHS;
+после RHS строка получается по его стабильному индексу, без повторного name lookup или указателя на realloc rows.
+Docs-check389 пройден выше, полный M11/M14 остаётся OPEN.
 Отдельный preexisting written DATA `@: pick a` raw/step5 даже при одной ссылке — construction/admission gap(книга:815),
 не duplicates/selector; не исполнять DATA on step в обход R12.
 Frozen Source06:867 SHA19d3d5dc9a5f0ea49a60be7fe38319b32d677a87789bfd2f7e5455769141863d, verify/stage-copy PASS;
@@ -931,9 +954,12 @@ Array runtime и общий охват OPEN, Root Model-ref4 и quoted-selector 
   Ограниченный графовый срез не закрывает весь frontend M11.8.
 - OPEN M11.7 root_occurrence_index: runtime3 у seed387/new, expected seen3 сохранить; common site→existing frame row,
   без root bypass, затем общее M14 alias/frame согласование.
-  [Точная подготовка389](steps/handoff/m11-place-sites-20261114.md): CODE binder formal-first, затем DATA,
-  self identity — общий случай; Code над другой D — unique canonical name, не source-index. Physical DATA-роль
-  data_declaration прежняя; выбранный destination через RHS не перевыбирать. Это ещё не implementation388.
+  [Уточнение389](steps/handoff/m11-place-sites-20261114.md), ограниченная кодовая приёмка выше: CODE declaration → mapped DATA only,
+  bare WORD read/store → formal-first; self identity — общий случай даже при одноимённом formal. Code над другой D —
+  unique canonical name/существующее соответствие, не source-index. fn_own→fn_data включает явный CODE site в method own DATA
+  и при совпадении с formal; bare/formal/dynamic input поля не создаёт, произвольная D не дополняется. Physical DATA-роль
+  data_declaration прежняя. Выбрать destination token до RHS, после RHS получить row по стабильному индексу token;
+  не выбирать destination заново по имени и не держать указатель на realloc rows. Docs-check389 пройден выше; полный M11/M14 OPEN.
 - Отдельный preexisting OPEN: known `@: pick a` внутри written DATA raw/step5 даже для одной ссылки.
   Общий construction/admission gap(книга:815), не duplicates/selector; не autoexecute DATA on step(R12).
 - Это завершение удаления прежних ветвей, а не момент начала оптимизации: очевидные лишние операции

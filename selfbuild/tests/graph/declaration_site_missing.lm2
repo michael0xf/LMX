@@ -1,0 +1,17 @@
+# A formal cannot satisfy a missing DATA receiver requirement; no body or RHS runs.
+int: calls 0
+fn: side () int
+    node\calls := node\calls + 1
+    return: 2
+end: side
+@: Args (int: x 7)
+@: D (int: seen 0)
+@: Code (
+    seen := 1
+    int: x side()
+)
+int: before 0
+int: after 0
+before := 1
+call(Args D Code)
+after := 2

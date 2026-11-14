@@ -1,0 +1,63 @@
+GRAPH-BEFORE-BEGIN
+sub: main () (
+    D:
+        int: seen 0
+        int: pad 99
+        int: x 10
+    end: D
+    Code:
+        :=: seen x
+        int: x 2
+        int: x 3
+    end: Code
+    Inline:
+        int: pad 90
+        int: x 1
+        int: seen 0
+        if: 1 ((int x 7))
+        :=: seen x
+    end: Inline
+)
+    call: D Code
+    call: Inline
+end: main
+main:
+int: seen (((main \ data) \ D) \ seen)
+int: x (((main \ data) \ D) \ x)
+int: pad (((main \ data) \ D) \ pad)
+int: inline_seen (((main \ data) \ Inline) \ seen)
+int: inline_x (((main \ data) \ Inline) \ x)
+int: inline_pad (((main \ data) \ Inline) \ pad)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: main () (
+    D:
+        int: seen 0
+        int: pad 99
+        int: x 10
+    end: D
+    Code:
+        :=: seen x
+        int: x 2
+        int: x 3
+    end: Code
+    Inline:
+        int: pad 90
+        int: x 1
+        int: seen 0
+        if: 1 ((int x 7))
+        :=: seen x
+    end: Inline
+)
+    call: D Code
+    call: Inline
+end: main
+main:
+int: seen 10
+int: x 3
+int: pad 99
+int: inline_seen 7
+int: inline_x 7
+int: inline_pad 90
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

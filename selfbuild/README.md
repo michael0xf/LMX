@@ -1,5 +1,22 @@
 # Maintained L3/L2 source package
 
+Current slice389 (2026-11-14, bounded code acceptance and docs-check passed): Run57 binds CODE declaration sites to existing DATA rows, while bare WORD bindings
+are formal-first. Self preserves exact physical occurrences; distinct CODE projects a unique DATA name.
+A stable destination token is selected before the RHS and recovers the same row afterwards. Graph74 and C layouts are unchanged.
+fn_data retains explicit CODE sites even with same-name formals; existing written DATA prevents auto-add regardless of kind.
+The root occurrence regression now yields seen3; ambiguous bare names still refuse3. Seven new paired fixtures,
+private36 interpreter/native/forced and negative AFTER18 PASS. Runtime05/Graph02 include the copy-cursor fix.
+Frozen Source07:882 SHA58c44120bda44300403dcb057719be1c6395488c694ebe5b4c8c2a4b46355fd6;
+Runtime05 SHA92f2ee24a59ff613b0d027666905043294861d3a24fb6459cac652703065d2c0.
+Whole boot-m11-place-sites-01 quick PASS: genuine G1/G2, nine smoke rows each; fixedpoint15/verify882 PASS,
+including Runtime05==G2driver and retained Graph74/Run57 headers. The rebuilt G2 Graph is
+SHAa883ec4cdacc71f49bd3d0437df19542d1f261c8b59d8b55cc65a4bb2d8f4a5b;
+code tuple: stage/boot-m11-place-sites-01/g2 + graph-m11-place-sites-g2-01. G2 repeat36 triple/negative AFTER18 PASS.
+Normal semantics render PASS35 paired/14 cases; grammar unchanged. Fresh docs-check02 PASS35/14/27/44/615, links/LF28085.
+Final index03 and commit/push follow. Full M11.7/8/M13/M14 remain OPEN; next is
+[known references in written DATA](../steps/handoff/m11-known-data-references-20261114.md), without DATA autoexecution on step.
+See the [slice389 evidence](../steps/witnesses/m11-place-sites-20261114/notes.md).
+
 Current continuation (2026-11-14, slice388; bounded code readiness, G2 repeat20/21; accepted base387/9897c99f): Graph74 reads occurrences
 from anonymous [WORD(decimal),WORD(name)] pairs, keeping literal WORD literal, checked size_t and outputs unchanged on refusal.
 Run54 raw step/step_place reaches runtime/admission/native without new tags/state/layouts or intern/allocation on literal access.
@@ -10,8 +27,12 @@ Graph02 SHA91ae4fee480e554bc07f61c7c0e5296d2a40e1b21fb87b7c62434a3ac9cbfdae. New
 Private21 initially gave18 PASS/3 FAIL; only outer RHS parentheses changed in two old occurrence goldens, with numbers unchanged.
 Eight seed/new/binary full AFTER and nine negative AFTER comparisons PASS(reuse). Aggregate20/21 retains root_occurrence_index runtime3
 on seed387/new, expected seen3 unchanged: OPEN common site→existing frame row, no root bypass; M11.7/M14 remain dependent work.
-[Next389 plan](../steps/handoff/m11-place-sites-20261114.md), not code388: CODE binds activation formals before DATA,
-self identity is a shared case, Code over another D uses a unique canonical name rather than source-index; physical DATA initialization stays unchanged.
+[389 contract clarification](../steps/handoff/m11-place-sites-20261114.md), bounded code acceptance above: CODE declarations select mapped DATA only;
+bare WORD reads/stores remain formal-first. Self identity is shared even with a same-name formal; Code over another D uses
+a unique canonical name/existing correspondence rather than source-index. fn_own→fn_data retains explicit CODE sites as method own DATA
+even with same-name formals; bare/formal/dynamic inputs create no DATA place, and arbitrary supplied D is not extended.
+Select a destination token before the RHS and recover its row after the RHS by stable token index, without selecting by name again
+or retaining a pointer into reallocating rows. Physical DATA initialization stays unchanged; docs-check389 passed above and full M11/M14 remain OPEN.
 Separate preexisting written-DATA `@: pick a` stays raw/step5 even for one reference; fix construction/admission, not selector/duplicates or DATA autoexecution on step(R12).
 Frozen Source06:867 SHA19d3d5dc9a5f0ea49a60be7fe38319b32d677a87789bfd2f7e5455769141863d, verify/stage-copy PASS.
 Source04 built code,05 added fixtures,06 changed only two old goldens; Source06 code remains unchanged.

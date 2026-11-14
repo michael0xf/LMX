@@ -1,0 +1,16 @@
+# Reference receiver destinations are DATA; bare reference bindings are formal-first.
+@: A (int: x 7)
+@: B (int: x 9)
+fn: declaration (@: p int) int (@: p int @(A\x))
+    @: p int @(B\x)
+    return: \p
+end: declaration
+fn: bare (@: p int) int (@: p int @(A\x))
+    p := @(B\x)
+    return: \p
+end: bare
+int: declared_result declaration(@(A\x))
+int: declared_data \(declaration\data\p)
+int: bare_result bare(@(A\x))
+int: bare_data \(bare\data\p)
+int: caller A\x

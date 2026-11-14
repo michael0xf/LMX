@@ -1,0 +1,43 @@
+GRAPH-BEFORE-BEGIN
+sub: main () (
+    Args:
+        int: x 5
+    end: Args
+    Self:
+        int: x 2
+        int: x 3
+        int: seen 0
+        :=: x (x + 1)
+        :=: seen x
+    end: Self
+)
+    call: Args Self Self
+end: main
+main:
+int: args (((main \ data) \ Args) \ x)
+int: first (((main \ data) \ Self) \ [0]x)
+int: second (((main \ data) \ Self) \ [1]x)
+int: seen (((main \ data) \ Self) \ seen)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+sub: main () (
+    Args:
+        int: x 5
+    end: Args
+    Self:
+        int: x 2
+        int: x 3
+        int: seen 0
+        :=: x (x + 1)
+        :=: seen x
+    end: Self
+)
+    call: Args Self Self
+end: main
+main:
+int: args 5
+int: first 2
+int: second 3
+int: seen 6
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

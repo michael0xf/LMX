@@ -1,0 +1,26 @@
+# Distinct CODE projects by unique name; inline bodies share the selected DATA.
+sub: main () (
+    D:
+        int: seen 0
+        int: pad 99
+        int: x 10
+    Code:
+        seen := x
+        int: x 2
+        int: x 3
+    Inline:
+        int: pad 90
+        int: x 1
+        int: seen 0
+        if: 1 (int: x 7)
+        seen := x
+)
+    call(D Code)
+    call(Inline)
+main()
+int: seen main\data\D\seen
+int: x main\data\D\x
+int: pad main\data\D\pad
+int: inline_seen main\data\Inline\seen
+int: inline_x main\data\Inline\x
+int: inline_pad main\data\Inline\pad

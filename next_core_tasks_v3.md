@@ -1,5 +1,26 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез390 — известные ссылки при построении нового графа; кодовые gates и docs-check PASS.**
+389/95715038f916123872a56372c224357de91af216 принят и отправлен в основном main; чужие два untracked сохранены.
+Graph75 добавляет fresh push через существующий prior; Run58 — явный construct после P0-полей и до pure preflight.
+Три временные очереди DATA/CODE/EXPR не обходят сигнатуры или исходный method.DATA blueprint.
+CODE реально созданных F, включая F из копий DATA, исследуется; известный source-cell не исполняет CODE destination.
+Только прямые доказанные Structure/F и written DATA; formal/DATA/FREE/pending и mutable alias не подменяются lexical fallback.
+Изменяемая ссылка остаётся отложенным чтением, без fixedpoint/backfill. При новой подготовке Source Fn остаётся raw;
+held F — обычное графовое значение construction walk, bare F следующего walk — новая.
+Native image сохраняет FN-role/fields/parents/sharing через прежний map; начальный parent0 allocator отказ исправлен.
+Runtime03 SHA0633c73b/Graph02 SHA1c7ea326.18 логических проб обходчика и2 FN-image triple PASS; mutable mismatch1→2 исправлен.
+Семь новых pairs: совместимые13 positive scopes собраны одним графом; отдельный runs2 даёт bare1/held3/bare2/held4.
+Private43 interp/native/forced и33 full negative AFTER PASS, включая все36 принятых389 cases; старые expected не менялись.
+Frozen Source05:896 SHAfe85448c4a7a56f8b255be21acb2a43ab10d07d45b527d7bd6c90e17aa6371ef, verify/stage-copy PASS.
+Whole boot-m11-known-data-01 quick: настоящие G1/G2 по9 smoke PASS, fixedpoint15/verify896 PASS.
+G2 Graph17d12ce7 повторил все43 triple и33 negative AFTER PASS; privateRuntime03 совпадает с G2driver.
+Штатный render semantics35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28087;
+generated content/grammar unchanged. Final staged index проверяется перед commit/push390 прямо в main.
+Текущий охват — прямой двухаргументный @ source; source-known paths/прочие type fields, new runtime merge/fromLmx
+construction integration, полный M11.7/8/M13/M14 OPEN. Goal ACTIVE; один последовательный producer, root — code/test/build writer.
+[Свидетельство390](steps/witnesses/m11-known-data-20261114/notes.md).
+
 **2026-11-14, срез389 — общий declaration site → existing frame row; кодовые gates пройдены.**
 Run57 добавляет place_site/place_store_int/place_store_reference, Graph74 и layouts прежние.
 Runtime05/Graph02: private36 triple/negative AFTER18 PASS; исправлен найденный copy-cursor defect.
@@ -2182,6 +2203,9 @@ Structure и записью значения, снимаются — шаг 6. �
    (счётчик в пробе); случаи документа проходят прежние проверки.
    Срез380 добавляет только disposable facts требований индексируемого физического места и сохранение NONE
    в пределах исполнения. Проверка Structure по используемому интерфейсу, test и полная миграция допуска OPEN.
+   Перед подключением used-interface к pure preflight общий admit_paths должен читать Consumer по ролям:
+   инертные DATA/группы и CODE вложенных методов не расширяют интерфейс текущего Consumer автоматически.
+   Затем использовать уже выбранные bindings/reading после shape/default; неизвестный кандидат остаётся runtime-задачей.
    **386 принят/отправлен713af718 — локальная Structure-value проекция:** [Structure-value и source-known preflight](steps/handoff/m11-admission-structure-value-20261114.md).
    admit_paths один раз локально делает `target(model/candidate)` перед прежним kind4 gate/used-path/type checks,
    сохраняя общий resolver и выбранный actual; без recursive unwrap, physical Model lookup, cache/copy/publication.
@@ -2255,12 +2279,24 @@ Structure и записью значения, снимаются — шаг 6. �
    и privateRuntime05==G2driver совпали. Genuine G2 Graph a883ec4c/repeat36/negative AFTER18 PASS.
    G2 render35/14/docs-check02 PASS35/14/27/44/615, links/LF28085; final index03 и commit/push389 в main далее.
    [Свидетельство389](steps/witnesses/m11-place-sites-20261114/notes.md); полный M11.7/8/M13/M14 остаётся OPEN.
-   **Отдельный preexisting OPEN — known reference внутри written DATA:** `@: pick a` остаётся raw и step отказывает5
-   даже при одной ссылке. Это общий construction/admission gap(книга:815), не duplicates или selector encoding.
-   Разобрать общий construction/admission, не исполнять DATA автоматически при step в обход R12.
-   [Исследование следующего кода390](steps/handoff/m11-known-data-references-20261114.md) отделяет known-F proof
-   от mutable/formal/lexical fallback, construction boundary от space_open/preflight/translation и будущую приёмку.
-   Это кандидат, не реализация: anonymous-group hook один не закрывает все named/nested DATA в невызванных телах.
+   **390 — частичная реализация known reference construction, общий охват OPEN.**
+   Вместо recurring receiving/run hook введён явный новый construction walk Builder после всех P0-полей и до purepreflight.
+   Graph75 fresh push сохраняет/восстанавливает prior; Run58 construct использует прежние constructors, namespace и publication.
+   Raw fn/sub остаются raw; held constructor-F становится обычным значением графа, следующий walk создаёт новую bare F.
+   DATA/CODE/EXPR читаются по ролям: args/defaults/result и original method.DATA не материализуются; CODE реально
+   созданных F из DATA-копий обследуется как новое CODE occurrence. For-header condition остаётся EXPR.
+   Прямой двухаргументный @ сохраняет доказанные Structure/F/written DATA source cells, без CODE destination write,
+   исполнения calls/defaults/test, замораживания mutable alias или подбора formal/DATA/FREE/pending fallback.
+   Native image сохраняет actual FN-role/current parts/parents/sharing единым прежним map, не native C address и не namespace.
+   Runtime03/Graph02:7 new pairs, private43 triple/negative AFTER33 PASS; Source05:896 frozenfe85448c.
+   Wholequick actual G1/G2 по9 smoke/fixedpoint15/verify896 PASS; G2Graph17d12ce7/repeat43/AFTER33 PASS.
+   Render35/14 и docs-check01 PASS35/14/27/44/615, links/LF28087; final index перед commit/push390.
+   Full native held-F execution остаётся M14 OPEN.
+   Остаток: source-known paths/прочие принимающие type fields, actual new runtime merge/fromLmx constructor boundaries;
+   не встраивать backfill в step/read/work_open_parts. Полный M11.7 и M14 остаются OPEN.
+   [Передача390](steps/handoff/m11-known-data-references-20261114.md) сохраняет исходное исследование как историю:
+   recurring receiving hook не принят. Реализован явный construction walk; дальнейшее расширение использует
+   тот же declaration/admission механизм для paths/type fields, затем реальные новые результаты merge/fromLmx.
 8. **Рабочий frontend** (понижение L3 и обходчик; сюда перенесены шаг 6 раздела M10 и шаг 5 раздела M9 для этого
    пути). Те же правила: чтение по ролям, имена `data` и `code`, порядок `data` перед `code`, атом-указатель без
    раскрытия и видимость в данных в обе стороны, формалы ресиверами, подача только `:=`, присваивание только

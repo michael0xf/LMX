@@ -1,0 +1,25 @@
+GRAPH-BEFORE-BEGIN
+fn: a () int
+    return: 1
+end: a
+fn: b () int
+    return: 2
+end: b
+@: p a
+:=: p b
+@: q p
+int: seen (q)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: a () int
+    return: 1
+end: a
+fn: b () int
+    return: 2
+end: b
+@: p b
+:=: p b
+@: q b
+int: seen 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

@@ -531,6 +531,12 @@ fn: lmx_graph_code_argument (@: g c.LmxGraph; @: current c.Lmx; size_t: index) i
         return: 2
     return: 0
 
+# The middle field of an actual for-header is an expression, not a declaration.
+fn: lmx_graph_code_condition (@: g c.LmxGraph; @: scope c.Lmx; size_t: index) int
+    if: index = 1U && scope\parent != 0 && c.lmx_graph_get((cast: (@: c.Lmx) scope\parent), 0U) = (cast: (@: void) scope) && lmx_graph_code_argument(g, (cast: (@: c.Lmx) scope\parent), 0U) = 2
+        return: 1
+    return: 0
+
 # The borrowed view at an inline receiver's receiving boundary. Only a whole
 # tail (else/finally) selects its sole written argument group once. Bodies
 # already selected by if/loops keep all their fields, including inert groups.
@@ -2811,6 +2817,310 @@ fn: lmx_graph_preflight_scope (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; @:
     c.free((cast: (@: void) bindings))
     return: status
 end: lmx_graph_preflight_scope
+
+# Construction keeps only temporary role queues. Expression operands are not
+# lexical DATA scopes; fn signatures and method DATA never enter these queues.
+fn: lmx_graph_construct_has (@@: nodes c.Lmx; size_t: count; @: value c.Lmx) int
+    size_t: i 0U
+    while: i < count
+        if: nodes[i] = value
+            return: 1
+        i := i + 1U
+    return: 0
+
+fn: lmx_graph_construct_method (@: g c.LmxGraph; @: holder c.Lmx; @@: codes c.Lmx; size_t: count) @: c.Lmx
+    @: current c.Lmx holder
+    @: space c.LmxGraphSpace c.lmx_graph_space()
+    @: row c.LmxGraphSpaceRow 0
+    @: made c.Lmx 0
+    size_t: i 0U
+    while: current != 0 && space != 0
+        if: lmx_graph_construct_has(codes, count, current) != 0
+            i := 0U
+            while: i < space\count
+                row := space\rows + i
+                made := (cast: (@: c.Lmx) row\value)
+                if: c.lmx_graph_method(g, made) != 0 && c.lmx_graph_method_code(g, made) = current && lmx_graph_binding_method(g, (cast: (@: c.Lmx) row\scope), (cast: (@: void) made\parent)) = made
+                    return: made
+                i := i + 1U
+            ---
+        ---
+        current := (cast: (@: c.Lmx) current\parent)
+    return: (cast: (@: c.Lmx) 0)
+
+# A pending local declaration closes a construction-time outer fallback.
+fn: lmx_graph_construct_pending (@: g c.LmxGraph; @: scope c.Lmx; @: name char; int: code_role) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void 0
+    @: head char 0
+    @: declared char 0
+    size_t: i 0U
+    while: i < c.lmx_graph_count(scope)
+        if: code_role != 0 && lmx_graph_code_condition(g, scope, i) != 0
+            i := i + 1U
+            continue
+        raw := c.lmx_graph_get(scope, i)
+        head := c.lmx_graph_name_of(g, raw)
+        if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub)
+            declared := lmx_graph_fn_decl_name(g, (cast: (@: c.Lmx) raw))
+            if: declared = 0 || (declared = name && lmx_graph_binding_method(g, scope, raw) = 0)
+                return: 1
+            ---
+        ---
+        i := i + 1U
+    return: 0
+
+# Source-known values only: no activation resolver, old payload read, call or
+# lexical substitution for an unentered formal, DATA place or FREE input.
+fn: lmx_graph_construct_binding (@: g c.LmxGraph; @: holder c.Lmx; @: name char; @@: data c.Lmx; size_t: nd; @@: codes c.Lmx; size_t: nc) @: void
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: current c.Lmx holder
+    @: method c.Lmx lmx_graph_construct_method(g, holder, codes, nc)
+    @: body c.Lmx c.lmx_graph_method_code(g, method)
+    @: raw void 0
+    @: value void 0
+    @: head char 0
+    size_t: slot 0U
+    size_t: found 0U
+    int: kind 0
+    if: name = 0 || lmx_graph_language_word(state, name) != 0
+        return: (cast: (@: void) 0)
+    while: current != 0
+        if: lmx_graph_construct_has(codes, nc, current) != 0
+            if: method != 0
+                if: c.lmx_graph_formal(g, c.lmx_graph_method_args(g, method), name) < c.lmx_graph_count(c.lmx_graph_method_args(g, method))
+                    return: (cast: (@: void) 0)
+                if: lmx_graph_data_find(g, c.lmx_graph_method_data(g, method), name, 1, 0U, @ slot) != 0U
+                    return: (cast: (@: void) 0)
+                ---
+            ---
+            if: lmx_graph_construct_pending(g, current, name, 1) != 0
+                return: (cast: (@: void) 0)
+            found := lmx_graph_preflight_places(g, current, name, 1, @ slot)
+            if: found != 0U
+                if: found != 1U
+                    return: (cast: (@: void) 0)
+                return: (cast: (@: void) lmx_graph_preflight_written(g, current, slot, name))
+            if: current = body
+                return: (cast: (@: void) 0)
+            ---
+        else:
+            if: lmx_graph_construct_has(data, nd, current) != 0
+                found := lmx_graph_data_find(g, current, name, 1, 0U, @ slot)
+                if: found > 1U
+                    return: (cast: (@: void) 0)
+                if: found = 1U
+                    raw := c.lmx_graph_get(current, slot)
+                    head := c.lmx_graph_name_of(g, raw)
+                    if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub)
+                        value := (cast: (@: void) lmx_graph_binding_method(g, current, raw))
+                        if: value != 0 && c.lmx_graph_space_find(current, name) = value
+                            return: value
+                        return: (cast: (@: void) 0)
+                    kind := c.lmx_graph_kind(g, raw)
+                    # A mutable pointer is a deferred read, even when its
+                    # initial target was just constructed in this walk.
+                    if: kind = 1 || kind = 3
+                        return: raw
+                    if: kind = 4 && lmx_graph_construct_has(data, nd, (cast: (@: c.Lmx) raw)) != 0
+                        return: raw
+                    return: (cast: (@: void) 0)
+                ---
+                if: lmx_graph_construct_pending(g, current, name, 0) != 0
+                    return: (cast: (@: void) 0)
+            ---
+        ---
+        current := (cast: (@: c.Lmx) current\parent)
+    return: (cast: (@: void) 0)
+end: lmx_graph_construct_binding
+
+# One reference source field. A written DATA value is already a Structure;
+# expressions, unavailable values and true uninitialized references stay raw.
+fn: lmx_graph_construct_field (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; @@: data c.Lmx; size_t: nd; @@: codes c.Lmx; size_t: nc) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void c.lmx_graph_get(holder, index)
+    @: declaration c.Lmx (cast: (@: c.Lmx) raw)
+    @: candidate void 0
+    @: value void 0
+    @: cell void 0
+    @: name char 0
+    if: c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != state\w_at || c.lmx_graph_count(declaration) != 2U
+        return: 0
+    name := c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 0U))
+    if: name = 0 || lmx_graph_language_word(state, name) != 0
+        return: 0
+    candidate := c.lmx_graph_get(declaration, 1U)
+    if: c.lmx_graph_kind(g, candidate) = 2
+        value := lmx_graph_construct_binding(g, holder, c.lmx_graph_word_text(g, candidate), data, nd, codes, nc)
+    else:
+        if: c.lmx_graph_kind(g, candidate) = 4 && lmx_graph_construct_has(data, nd, (cast: (@: c.Lmx) candidate)) != 0
+            value := candidate
+        ---
+    ---
+    if: value = 0
+        return: 0
+    if: c.lmx_graph_kind(g, c.lmx_graph_target(g, value)) != 4
+        return: 4
+    cell := c.lmx_graph_lmx_ref_of(g, value)
+    if: cell = 0 || c.lmx_graph_publish(g, holder, index, cell) != 0
+        return: 4
+    return: 0
+end: lmx_graph_construct_field
+
+# An explicit new-graph construction, never a read/backfill of existing DATA.
+# Its own fresh namespace dies here; retained F values are ordinary graph
+# contents. A later preflight or execution creates its own independent F.
+fn: lmx_graph_construct (@: g c.LmxGraph; @: root c.Lmx) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: space c.LmxGraphSpace 0
+    @: row c.LmxGraphSpaceRow 0
+    @@: data c.Lmx 0
+    @@: codes c.Lmx 0
+    @@: expressions c.Lmx 0
+    size_t: nd 0U
+    size_t: nc 0U
+    size_t: ne 0U
+    size_t: cd 0U
+    size_t: cc 0U
+    size_t: ce 0U
+    size_t: ad 0U
+    size_t: ac 0U
+    size_t: ae 0U
+    size_t: af 0U
+    size_t: i 0U
+    size_t: at 0U
+    size_t: count 0U
+    @: current c.Lmx 0
+    @: selected c.Lmx 0
+    @: made c.Lmx 0
+    @: raw void 0
+    @: head char 0
+    @@: nodes c.Lmx 0
+    size_t: code_from 0U
+    size_t: code_to 0U
+    int: role 0
+    int: part 0
+    int: status 0
+    int: opened 0
+    if: g = 0 || state = 0 || c.lmx_graph_kind(g, (cast: (@: void) root)) != 4
+        return: 4
+    opened := c.lmx_graph_space_push_fresh(root)
+    if: opened < 0
+        return: 4
+    status := lmx_graph_receivers_open(g, root)
+    space := c.lmx_graph_space()
+    if: status = 0
+        status := c.lmx_graph_scan_add(@ data, @ nd, @ cd, root)
+    while: status = 0 && (ad < nd || ac < nc || ae < ne || af < space\count)
+        # Real F values created in copied method DATA also own CODE. Examine
+        # those new occurrences, never rewrite their source DATA blueprint.
+        while: af < space\count && status = 0
+            row := space\rows + af
+            made := (cast: (@: c.Lmx) row\value)
+            af := af + 1U
+            if: c.lmx_graph_method(g, made) != 0 && lmx_graph_binding_method(g, (cast: (@: c.Lmx) row\scope), (cast: (@: void) made\parent)) = made
+                status := c.lmx_graph_scan_add(@ codes, @ nc, @ cc, c.lmx_graph_method_code(g, made))
+            ---
+        ---
+        if: status != 0 || (ad >= nd && ac >= nc && ae >= ne)
+            break
+        role := 3
+        if: ad < nd
+            current := data[ad]
+            ad := ad + 1U
+            role := 1
+        else:
+            if: ac < nc
+                current := codes[ac]
+                ac := ac + 1U
+                role := 2
+            else:
+                current := expressions[ae]
+                ae := ae + 1U
+            ---
+        ---
+        if: role = 1
+            status := lmx_graph_space_declarations(g, current)
+        if: role = 2
+            if: lmx_graph_code_condition(g, current, 1U) != 0
+                status := lmx_graph_space_declarations_part(g, current, 0U, 1U)
+                if: status = 0
+                    status := lmx_graph_space_declarations_part(g, current, 2U, c.lmx_graph_count(current))
+                ---
+            else:
+                status := lmx_graph_space_declarations(g, current)
+            ---
+        ---
+        if: role = 3 && lmx_graph_code_body(g, current, 0U, @ selected, @ code_from, @ code_to) = 3
+            status := c.lmx_graph_scan_add(@ codes, @ nc, @ cc, selected)
+        head := c.lmx_graph_name_of(g, (cast: (@: void) current))
+        if: role = 3 && (head = state\w_fn || head = state\w_sub)
+            continue
+        i := 0U
+        while: i < c.lmx_graph_count(current) && status = 0
+            raw := c.lmx_graph_get(current, i)
+            if: c.lmx_graph_kind(g, raw) != 4
+                i := i + 1U
+                continue
+            head := c.lmx_graph_name_of(g, raw)
+            if: role = 2 && lmx_graph_code_condition(g, current, i) != 0
+                status := c.lmx_graph_scan_add(@ expressions, @ ne, @ ce, (cast: (@: c.Lmx) raw))
+                i := i + 1U
+                continue
+            if: head = state\w_fn || head = state\w_sub
+                # A method's code is examined even when it is never called;
+                # args/defaults, result and DATA keep their own contracts.
+                if: role != 3
+                    made := lmx_graph_binding_method(g, current, raw)
+                    if: made != 0 && c.lmx_graph_method_code(g, made) != 0
+                        status := c.lmx_graph_scan_add(@ codes, @ nc, @ cc, c.lmx_graph_method_code(g, made))
+                    ---
+                ---
+            else:
+                part := 0
+                if: role != 1
+                    part := lmx_graph_code_body(g, current, i, @ selected, @ code_from, @ code_to)
+                if: part != 0 && selected = raw
+                    status := c.lmx_graph_scan_add(@ codes, @ nc, @ cc, selected)
+                else:
+                    if: lmx_graph_written_group(g, raw) != 0 || (role = 1 && head != 0 && head != state\w_at && head != state\w_int && c.lmx_graph_method(g, (cast: (@: c.Lmx) c.lmx_graph_space_find(current, head))) = 0)
+                        status := c.lmx_graph_scan_add(@ data, @ nd, @ cd, (cast: (@: c.Lmx) raw))
+                    else:
+                        status := c.lmx_graph_scan_add(@ expressions, @ ne, @ ce, (cast: (@: c.Lmx) raw))
+                    ---
+                ---
+            ---
+            i := i + 1U
+        ---
+    ---
+    # Source-known values need no evaluation/fixedpoint over mutable aliases.
+    part := 0
+    while: part < 3 && status = 0
+        nodes := data
+        count := nd
+        if: part = 1
+            nodes := codes
+            count := nc
+        if: part = 2
+            nodes := expressions
+            count := ne
+        at := 0U
+        while: at < count && status = 0
+            current := nodes[at]
+            i := 0U
+            while: i < c.lmx_graph_count(current) && status = 0
+                status := lmx_graph_construct_field(g, current, i, data, nd, codes, nc)
+                i := i + 1U
+            at := at + 1U
+        ---
+        part := part + 1
+    ---
+    c.free((cast: (@: void) data))
+    c.free((cast: (@: void) codes))
+    c.free((cast: (@: void) expressions))
+    lmx_graph_space_close(opened)
+    return: status
+end: lmx_graph_construct
 
 # Construction uses a fresh traversal namespace and the same declaring contracts and binder as execution.
 # No activation, capture, default, actual or test runs here; no namespace survives this pass.
@@ -6339,13 +6649,13 @@ return: lmx_graph_space_declarations(g, c.lmx_graph_method_code(g, made))
 # its Structure in this traversal before the block runs: the names of fn and sub are visible in both directions of their
 # block (the book :435). The receiver applied to arguments the traversal computes creates its Structure where the
 # traversal reaches it (lmx_graph_fn_apply), and the name answers from there on.
-fn: lmx_graph_space_declarations (@: g c.LmxGraph; @: block c.Lmx) int
+fn: lmx_graph_space_declarations_part (@: g c.LmxGraph; @: block c.Lmx; size_t: from; size_t: to) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: value void 0
     @: head char 0
-    size_t: i 0U
+    size_t: i from
     int: status 0
-    while: i < c.lmx_graph_count(block) && status = 0
+    while: i < to && status = 0
         value := c.lmx_graph_get(block, i)
         head := c.lmx_graph_name_of(g, value)
         # An argument to evaluate, or no form: applied, or refused, where the traversal reaches it (lmx_graph_fn_apply).
@@ -6358,6 +6668,10 @@ fn: lmx_graph_space_declarations (@: g c.LmxGraph; @: block c.Lmx) int
         i := i + 1U
     ---
     return: status
+end: lmx_graph_space_declarations_part
+
+fn: lmx_graph_space_declarations (@: g c.LmxGraph; @: block c.Lmx) int
+    return: lmx_graph_space_declarations_part(g, block, 0U, c.lmx_graph_count(block))
 end: lmx_graph_space_declarations
 
 # The value a Structure gives for the part name of a receiver: the value of its field named name, by the one model of a

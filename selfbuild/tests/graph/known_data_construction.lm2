@@ -1,0 +1,139 @@
+# Known reference construction is distinct from CODE execution and pure preflight.
+
+# functions
+fn: kd_functions_a (int: x) int
+    return: x + 1
+end: kd_functions_a
+fn: kd_functions_b (int: x) int
+    return: x + 2
+end: kd_functions_b
+@: kd_functions_Calls (@: pick kd_functions_a; @: pick kd_functions_b)
+int: kd_functions_first kd_functions_Calls\[0]pick(10)
+int: kd_functions_second kd_functions_Calls\[1]pick(10)
+
+# nested
+@: kd_nested_Outer (
+    kd_nested_A(int: x 9)
+    kd_nested_Nested(@: pick kd_nested_A)
+    @: kd_nested_again kd_nested_A
+)
+int: kd_nested_first kd_nested_Outer\kd_nested_Nested\pick\x
+int: kd_nested_second kd_nested_Outer\kd_nested_again\x
+kd_nested_Outer\kd_nested_A\x := 19
+int: kd_nested_alias_after kd_nested_Outer\kd_nested_Nested\pick\x
+int: kd_nested_direct_after kd_nested_Outer\kd_nested_again\x
+
+# identity
+fn: kd_identity_f () int (int: n 0)
+    n := n + 1
+    return: n
+end: kd_identity_f
+@: kd_identity_Hold (@: p kd_identity_f; @: q kd_identity_f)
+int: kd_identity_bare1 kd_identity_f()
+int: kd_identity_held1 kd_identity_Hold\p()
+int: kd_identity_bare2 kd_identity_f()
+int: kd_identity_held2 kd_identity_Hold\q()
+
+# mutable
+fn: kd_mutable_a () int
+    return: 1
+end: kd_mutable_a
+fn: kd_mutable_b () int
+    return: 2
+end: kd_mutable_b
+@: kd_mutable_p kd_mutable_a
+kd_mutable_p := kd_mutable_b
+@: kd_mutable_q kd_mutable_p
+int: kd_mutable_seen kd_mutable_q()
+
+# cold
+fn: kd_cold_cold () int
+    fn: kd_cold_local (int: x) int
+        return: x + 1
+    end: kd_cold_local
+    @: pick kd_cold_local
+    return: 0
+end: kd_cold_cold
+int: kd_cold_source kd_cold_cold\code\pick(10)
+int: kd_cold_places length(kd_cold_cold\data)
+int: kd_cold_ran kd_cold_cold()
+int: kd_cold_target kd_cold_cold\data\pick(10)
+
+# free
+fn: kd_free_a () int (int: n 0)
+    n := n + 1
+    return: n
+end: kd_free_a
+fn: kd_free_use () int
+    @: pick kd_free_a
+    return: pick()
+end: kd_free_use
+@: kd_free_Hold (@: p kd_free_a)
+int: kd_free_bare kd_free_a()
+int: kd_free_free kd_free_use()
+int: kd_free_held kd_free_Hold\p()
+
+# method_data
+fn: kd_method_data_a (int: x) int
+    return: x + 1
+end: kd_method_data_a
+fn: kd_method_data_use () int (@: pick kd_method_data_a)
+    return: pick(10)
+end: kd_method_data_use
+int: kd_method_data_deferred length(kd_method_data_use\data[0])
+int: kd_method_data_result kd_method_data_use()
+int: kd_method_data_target kd_method_data_use\data\pick(10)
+
+# data_name
+@: kd_data_name_Outer (
+    data(
+        kd_data_name_A(int: x 7)
+        @: pick kd_data_name_A
+    )
+)
+int: kd_data_name_result kd_data_name_Outer\data\pick\x
+
+# data_pending
+fn: kd_data_pending_a () int
+    return: 1
+end: kd_data_pending_a
+@: kd_data_pending_Box (fn: kd_data_pending_prepared; @: pick kd_data_pending_a)
+int: kd_data_pending_deferred length(kd_data_pending_Box[1])
+
+# header
+fn: kd_header_cold () int
+    fn: kd_header_a () int
+        return: 1
+    end: kd_header_a
+    for: (int: kd_header_i 0; fn: kd_header_prepared; @: kd_header_p kd_header_a) ()
+    return: 0
+end: kd_header_cold
+int: kd_header_seen kd_header_cold\code\for[0]\kd_header_p()
+
+# copied_code
+int: kd_copied_code_outer_calls 0
+int: kd_copied_code_inner_calls 0
+fn: kd_copied_code_outer () int (
+    fn: kd_copied_code_inner () int
+        fn: kd_copied_code_local () int
+            return: 9
+        end: kd_copied_code_local
+        @: pick kd_copied_code_local
+        node\kd_copied_code_inner_calls := node\kd_copied_code_inner_calls + 1
+        return: 0
+    end: kd_copied_code_inner
+)
+    node\kd_copied_code_outer_calls := node\kd_copied_code_outer_calls + 1
+    return: 0
+end: kd_copied_code_outer
+@: kd_copied_code_Hold (@: kd_copied_code_held kd_copied_code_outer)
+int: kd_copied_code_result kd_copied_code_Hold\kd_copied_code_held\data\kd_copied_code_inner\code\pick()
+
+# self
+@: kd_self_Outer (kd_self_S(int: x 7; @: kd_self_self kd_self_S))
+int: kd_self_result kd_self_Outer\kd_self_S\kd_self_self\x
+
+# Deferred DATA aliases initialize only when their receiver is reached as CODE.
+@: kd_alias_run (@: first last; @: last kd_functions_a)
+call(kd_alias_run)
+int: kd_alias_reached kd_alias_run\first(10)

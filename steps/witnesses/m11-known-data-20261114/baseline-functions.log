@@ -1,0 +1,29 @@
+GRAPH-BEFORE-BEGIN
+fn: a (int: x) int
+    return: (x + 1)
+end: a
+fn: b (int: x) int
+    return: (x + 2)
+end: b
+@: Calls ((@ pick a) (@ pick b))
+int: first Calls\[0]pick(10)
+int: second Calls\[1]pick(10)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: a (int: x) int
+    return: (x + 1)
+end: a
+fn: b (int: x) int
+    return: (x + 2)
+end: b
+Calls:
+    @: pick a
+    @: pick b
+end: Calls
+int: first Calls\[0]pick(10)
+int: second Calls\[1]pick(10)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 5, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 5

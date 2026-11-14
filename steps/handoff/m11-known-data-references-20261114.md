@@ -1,5 +1,12 @@
 # M11: известные ссылки в written DATA
 
+**390, ограниченная реализация:** выбрана явная once construction boundary Builder до purepreflight, а не receiving/run hook.
+Private43 и G2 repeat43 triple/negative AFTER33 PASS, whole quick/fixedpoint15/render/docs-check01 PASS; final index перед коммитом. Подробности и текущие пределы —
+[свидетельство390](../witnesses/m11-known-data-20261114/notes.md) и основной v3.
+Ниже сохранено исходное read-only исследование до реализации; runtime receiving-only кандидат не принят:
+повторное чтение не доказывает новое создание DATA и может backfill unknown или нарушить native continuation.
+Mutable alias не становится known от одного физического initial target; fixedpoint по таким aliases не используется.
+
 2026-11-14. Исследование после388/51929242, по WIP389. Это **кандидат следующего кода390**,
 не реализация и не дополнительная норма. Разрешённая запись исследователя — только этот
 handoff; код, план, index и producers не менялись.
@@ -134,7 +141,7 @@ construction field получает физическое хранилище об
 сырой `graph_put` не является способом обойти этот контракт. Полный shared direct
 cache и языковой flush остаются OPEN; helper не должен вводить журнал присваиваний.
 
-## Будущая короткая приёмка, ещё не выполнена
+## Историческое предложение короткой приёмки до390
 
 - Witness a/b: first11, second12, оба stored reference fields, bare pick ambiguous3.
 - Один pick и два pick используют один constructor; никаких специальных правил

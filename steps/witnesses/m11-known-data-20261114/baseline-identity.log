@@ -1,0 +1,33 @@
+GRAPH-BEFORE-BEGIN
+fn: f () int (
+    int: n 0
+)
+    :=: n (n + 1)
+    return: n
+end: f
+@: Hold ((@ p f) (@ q f))
+int: bare1 (f)
+int: held1 Hold\p()
+int: bare2 (f)
+int: held2 Hold\q()
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f () int (
+    int: n 0
+)
+    :=: n (n + 1)
+    return: n
+end: f
+Hold:
+    @: p f
+    @: q f
+end: Hold
+int: bare1 1
+int: held1 Hold\p()
+int: bare2 (f)
+int: held2 Hold\q()
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 5, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 5

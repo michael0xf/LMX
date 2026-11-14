@@ -1,0 +1,41 @@
+GRAPH-BEFORE-BEGIN
+fn: f () int (
+    int: n 0
+)
+    :=: n (n + 1)
+    return: n
+end: f
+Hold:
+    @: p f
+    @: q f
+end: Hold
+int: bare1 0
+int: held1 0
+int: bare2 0
+int: held2 0
+:=: bare1 (f)
+:=: held1 Hold\p()
+:=: bare2 (f)
+:=: held2 Hold\q()
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f () int (
+    int: n 0
+)
+    :=: n (n + 1)
+    return: n
+end: f
+Hold:
+    @: p f
+    @: q f
+end: Hold
+int: bare1 1
+int: held1 3
+int: bare2 2
+int: held2 4
+:=: bare1 (f)
+:=: held1 Hold\p()
+:=: bare2 (f)
+:=: held2 Hold\q()
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

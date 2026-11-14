@@ -1,5 +1,25 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез390 — явное построение известных ссылок; кодовые gates и docs-check PASS.**
+
+- [x] Graph75 fresh push/prior restore и Run58 construct между P0-полями и отдельным pure preflight;
+  raw fn остаётся raw, retained constructor-F — обычное значение, следующий bare F свежий.
+- [x] Временные DATA/CODE/EXPR очереди: без signatures/defaults/original method.DATA materialization;
+  CODE actual-created F из DATA-копий включено, for-header condition EXPR. Source-cell construction не CODE destination write389.
+- [x] Доказанные прямые Structure/F/written DATA для @:name candidate, без mutable/formal/DATA/FREE/pending fallback,
+  userCODE/test/evaluation или backfill. Mutable regression1vs2 исправлен; native image FN-role/parents/shared map,
+  parent0 allocator failure исправлен. Ни новых layouts, ни постоянного registry/cache/journal.
+- [x] Семь новых pairs;13 positive scopes одним графом, отдельный runs2 bare1/held3/bare2/held4;
+  private43 triple/negative full AFTER33 PASS. Все36 предыдущих cases прошли без замены old expected.
+- [x] Frozen Source05:896 SHAfe85448c; whole quick actual G1/G2 по9 smoke/fixedpoint15/verify896 PASS;
+  G2 Graph17d12ce7 повторил43 triple/AFTER33 PASS. PrivateRuntime03==G2driver; render35/14 PASS, grammar unchanged.
+- [x] Fresh docs-check01 PASS35/14/27/44/615, links/LF28087; итоговый staged index проверяется перед commit/push390.
+  Полные M11.7/8/M13/M14 OPEN.
+- [ ] Общая construction-ready семантика source-known paths/прочих type fields и новых runtime merge/fromLmx values;
+  каждое подключение только к доказанной границе нового построения, без позднего исправления existing DATA.
+- [ ] Перед полным pure used-interface admission M11.7 сделать общий admit_paths role-safe для Consumer:
+  не включать автоматически инертные DATA/группы и CODE вложенных методов; затем использовать уже выбранные bindings/reading.
+
 **2026-11-14, срез389 — общий declaration site → existing frame row; кодовые gates и docs-check пройдены.**
 
 - [x] CODE int/@ declaration → DATA-only; bare WORD read/store → formal-first.

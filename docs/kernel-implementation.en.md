@@ -1,6 +1,22 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice388 -- bounded code and documentary acceptance are confirmed; commit/push follow.**
+**Current state, 2026-11-14, slice390 -- bounded implementation, code checks and docs-check passed.**
+After filling the P0 fields, `lm_graph_build_root` calls `lmx_graph_construct`, then a separate pure preflight (§1a).
+Construction owns a fresh namespace; held F values remain ordinary graph values, while raw `fn`/`sub`
+remain written declarations. Source-known reference candidates fill places without executing CODE,
+defaults, computed actuals or `test`; mutable aliases stay deferred (§3.5).
+Private43 in three modes, including 36 existing cases, and 33 complete AFTER checks passed. Separately,18 logical interpreter
+probes and2 FN-image cases in three modes passed. The initial mutable-alias mismatch1 instead of2 and native-image parent0/allocator failure are corrected.
+Whole `boot-m11-known-data-01` quick passed: genuine G1/G2, nine smoke cases each, fixedpoint15/verify896 PASS;
+private Runtime03 matches the G2 driver. The genuine G2 graph-tool is built, SHA-256
+`17d12ce77360e99af075fb90967e0b7aef76f94985566a89e49b617d4bfd058a`; the G2 repeat of all 43 cases in interp/native/forced
+and 33 complete negative AFTER checks on existing binaries passed. All code gates390 PASS.
+Normal render35/14 and fresh docs-check01 PASS35/14/27/44/615, links/LF28087; final index before commit.
+This route is bounded to direct two-argument `@`; paths, type fields and new construction
+during runtime `merge`/`fromLmx` remain OPEN. A held F without a native entry uses the walker.
+Full M11.7/8 and M13/M14 remain OPEN.
+
+**Previous state, 2026-11-14, slice388 -- bounded code and documentary acceptance are confirmed; commit/push follow.**
 An occurrence and a literal exact name differ by the structure of the right step of the existing path3 (§3.3):
 common `Graph.occurrence` (Graph74) reads an ordinary anonymous pair, and `Run.step`/`step_place` take a raw step (Run54).
 The same reader, admission and native use this selection; P0 preserves quoted components through the common head scanner.
@@ -1012,8 +1028,9 @@ source text ──► builder (parsing + construction) ──► a clean Lmx gra
 **The builder** is the only place where text becomes a graph: parsing (P0 today) and construction of cells in the regions
 of the receiving arena, interning of spellings (§4), filling of the address → name table (§5.1). Its boundary is the
 finished graph; the parse tree, its arenas and any working data of the builder are destroyed on leaving the construction
-(like traversal data, §5.2). The builder resolves no names: a written name stays in the graph as a word primitive (§3.5). It leaves the declarations
-of `fn`/`sub` as written, too: the consumer creates the Structure of a declaration in its own traversal (§3.4).
+(like traversal data, §5.2). Parsing and direct field filling retain a written name as a word primitive (§3.5), without
+a hidden binding for a future consumer. The declarations of `fn`/`sub` remain as written: the receiver creates F in a separate
+traversal, including the explicit slice390 construction below (§3.4).
 **The consumers** -- the interpreter (§6) and the translator (§7) -- read one and the same graph and prepare nothing in it
 for each other. The translator emits native bodies and the unit's loading code. The loading code is a **generated
 initialization of the same clean graph**: the exact cells in typed regions, their links, the rows of the address → name
@@ -1022,6 +1039,21 @@ the loader alike (a decision confirmed by Codex on 2026-11-08: this is not the f
 and hidden interfaces; the unit keeps no source text as a reserve for execution or recovery; embedding the P0 parser into
 loading is not required). Native bodies are bound to callables by the addresses of the built graph. Construction from
 `fromLmx`, `merge`, a child reservation and mail is the same constructor with the same boundary.
+
+**Explicit new-graph construction, slice390.** In `lm_graph_build_root` this phase follows the filling of all P0 fields
+and precedes pure `lmx_graph_preflight`. `lmx_graph_construct` opens its own fresh namespace through the existing
+`prior`, prepares proven written `fn`/`sub` through the common declaring contracts and retains admissible known candidates
+as ordinary reference-cell values. Every exit destroys the namespace and role queues and restores the previous traversal;
+preflight, translation and subsequent execution inherit no such table and do not repeat that materialization over existing
+DATA. Reached deferred declarations retain their ordinary runtime route.
+This is a separate construction walk, without executing CODE or deferred initializers.
+
+The traversal distinguishes data, code and expression roles through the existing contracts. Formals/their defaults, the
+result description and a method's source DATA do not become CODE; an ordinary user field named `data` does not by itself
+become method DATA. For an actually created F, including a nested F in a copy of an outer F's DATA, the phase examines
+its proven CODE and current declarations. This bounded subset does not require recursively materializing the CODE of
+every raw `fn` in the source DATA blueprint, and does not change that blueprint. Calls, computed actuals,
+defaults and `test` do not execute while finding a known candidate; this does not establish full M11 coverage.
 
 <a id="arena"></a>
 ## 2. The arena
@@ -1269,6 +1301,13 @@ holds it; the next traversal creates its own F from the same written declaration
 installed on the declaration is also the entry of the F created. Declarations in a body are created by the same rule in
 the body's block.
 
+In slice390 an independent construction walk also creates its own F values. If a reference place retains such an F, it
+outlives that namespace as an ordinary value with its current parts and own DATA. The very first subsequent execution
+starts with a clean table and creates another F for the bare name of the same raw declaration; the held F is not its
+persistent binding. Within one traversal, references to a proven F share one identity. Raw `fn`/`sub` is not replaced
+with that F, and ordinary `merge(F)` still produces an ordinary descriptor without restoring the FN role. A held F without
+a native entry uses the walker; verifying its preservation does not establish native coverage of general M14.
+
 **History of the receiver's contract and the one binder (slices333–335; the author 2026-11-09,
 [journal](../LMX_blog/2026-11-09.md); Codex, reviews333 and334).** The following describes the former implementation.
 Direct supply by head, `frame_value` and extracting a name from direct `name: word` are removed in Run384 under the author's
@@ -1388,9 +1427,10 @@ whatever the origin of the structure, so one constructor of F does it when the r
 (§3.4), not the builder; the consumer collects methods and inputs in a separate pass of its traversal, with its own
 temporary tables. Combine independent work within each stage, without passing its service state onward.
 
-The builder **does not bake** name resolution into the graph: every written name -- in a head, in an argument, in a path,
-in an operand of an expression, in the named supply `a := v` -- stays a word primitive with the canonical pointer to its
-string (§4). Resolving a name into a place is done by the consumer during its own traversal, taking into account the
+The builder **does not bake hidden bindings** for a future traversal into the graph: written heads, paths, expression
+operands and the names in the supply `a := v` retain word primitives with canonical string pointers (§4). Explicitly filling
+a reference place with a known language value during slice390 construction (§1a) is ordinary graph content, not a retained
+resolution table. Resolving a name into a place is done by the consumer during its own traversal, taking into account the
 current activation, the selected `code`/`data` and the current content of the graph: the nearest local binding of the
 calling expression, the dynamic input it inherited along the chain of activations, then the lexical fallback by `parent`
 ([book §12, :827–829](LMX_semantics.en.md#dynamic)); a field of the selected `data` in `call: data code` -- by its slots;
@@ -1408,6 +1448,14 @@ the same words during its translation with its own tables and emits native by th
 resets such native (§6.5). Verifiability: after construction the P0 tree is absent (its arenas are released), and the next
 traversal starts with empty tables -- checked by the clean-traversal criterion (§11 item 6b). `toLmx` prints a word by its
 string, and a named primitive or Lmx by the address → name table.
+
+In slice390 this route is bounded to the direct two-argument form `@: name candidate`: the construction-time reader proves a candidate
+through its current source occurrence, physical scope and created-F binding, or through a directly written Structure.
+It does not substitute a lexical match for a formal, own DATA
+place, pending declaration, ambiguous name or free input. A mutable alias is a deferred read even if its initial target
+is known in this traversal; its payload is not frozen and its chain is not evaluated to a fixed point.
+An unknown candidate stays written and uses ordinary runtime reception when it is actually obtained.
+Paths, additional type fields and applying this new phase during runtime `merge`/`fromLmx` remain OPEN.
 
 In slice 373 `lmx_graph_resolve_binding` returns the selected value and its working row in one search.
 Classification and the value reader use that shared selection with the existing priority of formals, own places
@@ -1474,6 +1522,10 @@ state; a repeated traversal after a change of the graph starts with clean tables
 content of the graph and the arena. The address → name table (§5.1), the interval index of the regions (§2.1) and the
 process string table with its byte index (§4) are not traversal tables: they are arena and process state, defined by the
 author as the means of learning a name, a type and a string; they are not mixed with the temporary traversal tables.
+
+In slice390 independent construction opens a fresh table even within an already active traversal:
+`lmx_graph_space_push_fresh` links it through the existing `prior`, and normal cleanup restores the previous table.
+Only explicitly retained language values enter the graph, not namespace rows or the construction role queues' proof.
 
 **What a traversal has (decision, open list):** the interpreter -- activation frames and their working values, the
 traversal's namespace (rows "block, name, value": the Structures the receivers of `fn`/`sub` declarations create on
@@ -1870,6 +1922,16 @@ goes by the address of the callable Lmx and its `native`. Where native must find
 unit). An emitted unit consists of: the unit's string table (bytes; at load one interning call per string, the result an
 array of pointers `l2_names[K]`), the exact region sizes, the generated initialization of the clean graph through the
 common constructor (§1a), the native bodies. Native/interpreter parity is checked by the same regressions on both routes.
+
+**Image of actually constructed values, slice390.** The native image serializes the current graph contents into the
+receiving arena through one temporary address map: a held F's fields, FN role, physical links and `parent` are preserved,
+and shared targets receive one destination address. Allocation precedes following edges, including parent, so a cycle
+does not create another copy. Generated loading restores links using its own cells' addresses; no host-process C addresses
+are embedded in the image. This preserves an existing value; it is not language `merge(F)` or a way to turn a raw
+declaration into a persistent F. An ordinary copy of F remains a descriptor; this work does not establish completeness
+of the text codec (§8). The initial parent0/allocator failure is corrected; 2 FN-image cases passed in three modes,
+as did whole G1/G2 quick and fixedpoint15/verify896. The G2 private43 triple/negative AFTER33 repeat on existing binaries
+passed; all code gates390 and normal render/docs-check PASS. The final index is checked before commit.
 
 <a id="codec"></a>
 ## 8. toLmx and fromLmx

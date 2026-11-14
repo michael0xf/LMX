@@ -104,7 +104,13 @@ fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.Lm
     if: kind = 4
         inner := (cast: (@: c.Lmx) value)
         n := c.lmx_graph_count(inner)
-        c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_graph_lmx(l2_g, 0, %zuU))\n", id, n)
+        if: c.lmx_graph_fn_result(g, value) != 0
+            # An image preserves a real constructed value, unlike language
+            # merge(F), which deliberately produces an ordinary descriptor.
+            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_node_new_role_profiled(arena, 0, LMX_POOL_ROLE_FN))\n        if: l2_gv%zu = 0 || lmx_arena_refs_open_owned(arena, (cast: (@: Lmx) l2_gv%zu), %zuU) != 0\n            return: 1\n", id, id, id, n)
+        else:
+            c.fprintf(f, "        l2_gv%zu: (cast: (@: void) lmx_graph_lmx(l2_g, 0, %zuU))\n", id, n)
+        ---
     if: kind = 3
         pointer_type := "LMX_TYPE_UNINIT_INT"
     if: kind = 5

@@ -1,5 +1,19 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез390 — ограниченная кодовая приёмка constructor известных reference DATA fields и docs-check пройдены.**
+Builder после заполнения P0 fields явно выполняет owned construction, затем pure preflight; Graph75 fresh-push/Run58 construct.
+Сохранённая F — обычное текущее значение; следующий обход создаёт новую F, временные bindings не переносятся.
+SOURCE references материализуются вне fn args/method DATA. Посещается CODE каждой действительно созданной F,
+включая созданные из DATA copies; исходный blueprint не переписывается. Mutable alias/FREE/formal/pending остаются deferred,
+без fixedpoint/backfill. Native image сохраняет FN role через existing map, profiled node role, поля/parents, без host pointer.
+Runtime03 SHA0633c73b/Graph02 SHA1c7ea326, frozen Source05:896 SHAfe85448c:18 самостоятельных logical probes обходчика
+и2 FN-image случая в interp/native/forced PASS; private43 triple/negative AFTER33 PASS. Whole boot-m11-known-data-01 quick PASS:
+настоящие G1/G2 по9 smoke; fixedpoint15/verify896/privateRuntime03==G2driver PASS. Штатный G2 Graph собран,
+SHA17d12ce77360e99af075fb90967e0b7aef76f94985566a89e49b617d4bfd058a; G2 repeat43 triple/negative AFTER33 PASS на готовых binaries.
+Все кодовые gates390 PASS; render35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28087; final index перед коммитом.
+Dynamic construction merge/fromLmx, source-known paths/type fields и полные M11.7/8/M13/M14 остаются OPEN.
+[Передача390](steps/handoff/m11-known-data-references-20261114.md). Работа и коммиты прямо в main.
+
 **2026-11-14, срез389 — общий declaration site → место кадра; ограниченная кодовая приёмка и docs-check пройдены.**
 388/51929242c6b5928c875acc1bc55a8bf87e342809 принят/отправлен в основном main.
 Run57 добавляет place_site/place_store_int/place_store_reference; Graph74 и C layouts прежние.

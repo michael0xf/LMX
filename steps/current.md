@@ -1,5 +1,32 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7: срез390, кодовые gates и docs-check PASS
+
+**2026-11-14, срез390 — известные ссылки при построении нового графа; кодовые gates и docs-check PASS.**
+389/95715038f916123872a56372c224357de91af216 принят и отправлен в основном main; чужие два untracked сохранены.
+Graph75 добавляет fresh push через существующий prior; Run58 — явный construct после P0-полей и до pure preflight.
+Три временные очереди DATA/CODE/EXPR не обходят сигнатуры или исходный method.DATA blueprint.
+CODE реально созданных F, включая F из копий DATA, исследуется; известный source-cell не исполняет CODE destination.
+Только прямые доказанные Structure/F и written DATA; formal/DATA/FREE/pending и mutable alias не подменяются lexical fallback.
+Изменяемая ссылка остаётся отложенным чтением, без fixedpoint/backfill. При новой подготовке Source Fn остаётся raw;
+held F — обычное графовое значение construction walk, bare F следующего walk — новая.
+Native image сохраняет FN-role/fields/parents/sharing через прежний map; начальный parent0 allocator отказ исправлен.
+Runtime03 SHA0633c73b/Graph02 SHA1c7ea326.18 логических проб обходчика и2 FN-image triple PASS; mutable mismatch1→2 исправлен.
+Семь новых pairs: совместимые13 positive scopes собраны одним графом; отдельный runs2 даёт bare1/held3/bare2/held4.
+Private43 interp/native/forced и33 full negative AFTER PASS, включая все36 принятых389 cases; старые expected не менялись.
+Frozen Source05:896 SHAfe85448c4a7a56f8b255be21acb2a43ab10d07d45b527d7bd6c90e17aa6371ef, verify/stage-copy PASS.
+Whole boot-m11-known-data-01 quick: настоящие G1/G2 по9 smoke PASS, fixedpoint15/verify896 PASS.
+G2 Graph17d12ce7 повторил все43 triple и33 negative AFTER PASS; privateRuntime03 совпадает с G2driver.
+Штатный render semantics35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28087;
+generated content/grammar unchanged. Final staged index проверяется перед commit/push390 прямо в main.
+Текущий охват — прямой двухаргументный @ source; source-known paths/прочие type fields, new runtime merge/fromLmx
+construction integration, полный M11.7/8/M13/M14 OPEN. Goal ACTIVE; один последовательный producer, root — code/test/build writer.
+[Свидетельство390](witnesses/m11-known-data-20261114/notes.md).
+
+Shared stage прежний sol-m11-construction-fresh01. Seed — boot-m11-place-sites-01/g2 и graph-m11-place-sites-g2-01.
+Pipeline sol-m11-known-data-20261114-01. Все code/build producers terminal; docs-check01 PASS, далее staging/index.
+Helpers вернули kernel RU/EN и четыре entry docs; root — единственный code/test/build writer.
+
 ## 2026-11-14 — M11.7: срез389, code/docs PASS, final index/commit далее
 
 **2026-11-14, срез389 — общий declaration site → место кадра; все кодовые gates пройдены.**

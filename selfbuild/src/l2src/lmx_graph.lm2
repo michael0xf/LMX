@@ -1292,9 +1292,16 @@ end: lmx_graph_space
 # goes on with that one), -1 without memory.
 fn: lmx_graph_space_push (@: root c.Lmx) int
     @@: top c.LmxGraphSpace (cast: (@@: c.LmxGraphSpace) (@ c.lmx_graph_space_top))
-    @: space c.LmxGraphSpace 0
     if: top[0] != 0
         return: 0
+    return: lmx_graph_space_push_fresh(root)
+end: lmx_graph_space_push
+
+# An independent construction owns its table even inside another live walk.
+# The existing prior link restores that walk on every constructor exit.
+fn: lmx_graph_space_push_fresh (@: root c.Lmx) int
+    @@: top c.LmxGraphSpace (cast: (@@: c.LmxGraphSpace) (@ c.lmx_graph_space_top))
+    @: space c.LmxGraphSpace 0
     space := (cast: (@: c.LmxGraphSpace) c.calloc(1U, c.sizeof(c.LmxGraphSpace)))
     if: space = 0
         return: -1
@@ -1302,7 +1309,7 @@ fn: lmx_graph_space_push (@: root c.Lmx) int
     space\prior := top[0]
     top[0] := space
     return: 1
-end: lmx_graph_space_push
+end: lmx_graph_space_push_fresh
 
 # End the live table (opened is the answer of its lmx_graph_space_push: only 1 ends it).
 sub: lmx_graph_space_pop (int: opened)

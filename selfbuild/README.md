@@ -1,5 +1,19 @@
 # Maintained L3/L2 source package
 
+Current slice390 (2026-11-14; bounded constructor code acceptance and docs-check passed): explicit Builder P0-fields → owned construction
+→ pure preflight; Graph75 fresh-push/Run58 construct. Stored F is an ordinary current value; the next walk creates fresh F,
+without transplanting temporary bindings. SOURCE references materialize outside fn args/method DATA; the CODE of every
+actually created F, including DATA copies, is visited without rewriting the blueprint. Mutable aliases/FREE/formals/pending
+values remain deferred, without fixedpoint/backfill. Native images preserve FN role through the existing map, profiled node role,
+fields/parents, without a host pointer. Runtime03 SHA0633c73b/Graph02 SHA1c7ea326, frozen Source05:896 SHAfe85448c:
+18 standalone interpreter probes and2 FN-image cases in interp/native/forced PASS; private43 triple/negative AFTER33 PASS.
+Whole boot-m11-known-data-01 quick PASS with genuine G1/G2, nine smoke rows each;
+fixedpoint15/verify896/privateRuntime03==G2driver PASS. The genuine G2 Graph was rebuilt:
+SHA17d12ce77360e99af075fb90967e0b7aef76f94985566a89e49b617d4bfd058a. G2 repeat43 triple/negative AFTER33 PASS on ready binaries.
+All code gates390 PASS; render35/14 and fresh docs-check01 PASS35/14/27/44/615, links/LF28087; final index before commit.
+Dynamic construction merge/fromLmx, source-known paths/type fields and full M11.7/8/M13/M14 remain OPEN.
+See the [390 handoff](../steps/handoff/m11-known-data-references-20261114.md). Work and commits remain directly on main.
+
 Current slice389 (2026-11-14, bounded code acceptance and docs-check passed): Run57 binds CODE declaration sites to existing DATA rows, while bare WORD bindings
 are formal-first. Self preserves exact physical occurrences; distinct CODE projects a unique DATA name.
 A stable destination token is selected before the RHS and recovers the same row afterwards. Graph74 and C layouts are unchanged.

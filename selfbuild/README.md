@@ -1,6 +1,32 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice387; bounded code readiness,22 cases accepted; base386/713af718): Graph73 declaration_view reports default
+Current continuation (2026-11-14, slice388; bounded code readiness, G2 repeat20/21; accepted base387/9897c99f): Graph74 reads occurrences
+from anonymous [WORD(decimal),WORD(name)] pairs, keeping literal WORD literal, checked size_t and outputs unchanged on refusal.
+Run54 raw step/step_place reaches runtime/admission/native without new tags/state/layouts or intern/allocation on literal access.
+Builder uses existing P0→expression for compound path/index/exact heads; P0 shares scan_head(main/lookahead) and compact_piece→scan_quoted,
+with a local compact-colon fix and unchanged whole-token/global boundaries. These are bounded graph clauses, not a legacy frontend migration.
+Final Runtime03 SHA9b1f3ad1e888c52eea53f64608adf544cb62a65ba74e75d7be4c74f8f9483348;
+Graph02 SHA91ae4fee480e554bc07f61c7c0e5296d2a40e1b21fb87b7c62434a3ac9cbfdae. New13 triple(8 positive+3 runtime refusal+2 build2;11 expected) PASS.
+Private21 initially gave18 PASS/3 FAIL; only outer RHS parentheses changed in two old occurrence goldens, with numbers unchanged.
+Eight seed/new/binary full AFTER and nine negative AFTER comparisons PASS(reuse). Aggregate20/21 retains root_occurrence_index runtime3
+on seed387/new, expected seen3 unchanged: OPEN common site→existing frame row, no root bypass; M11.7/M14 remain dependent work.
+[Next389 plan](../steps/handoff/m11-place-sites-20261114.md), not code388: CODE binds activation formals before DATA,
+self identity is a shared case, Code over another D uses a unique canonical name rather than source-index; physical DATA initialization stays unchanged.
+Separate preexisting written-DATA `@: pick a` stays raw/step5 even for one reference; fix construction/admission, not selector/duplicates or DATA autoexecution on step(R12).
+Frozen Source06:867 SHA19d3d5dc9a5f0ea49a60be7fe38319b32d677a87789bfd2f7e5455769141863d, verify/stage-copy PASS.
+Source04 built code,05 added fixtures,06 changed only two old goldens; Source06 code remains unchanged.
+Whole boot-m11-selector-encoding-01 passed genuine G1/G2, nine smoke rows each, on existing sol-m11-construction-fresh01/main.
+Fixedpoint15 PASS: FE/tool L1/C, driver/observed, retained Graph/Run headers, privateRuntime03==G2driver,
+normalized executables, backend and FrozenSource06/verify867. Code tuple:
+stage/boot-m11-selector-encoding-01/g2 + graph-m11-selector-encoding-g2-01, G2 Graph
+SHA0fcf70f9e9c41f04b2912ce1930cb256bd14afde87c0072a6acd330dd937236c.
+G2 repeat21 gave20 PASS/1 FAIL only root_occurrence_index in interp/native/forced; all13 new cases PASS, negative full AFTER9 PASS(reused binaries).
+Normal G2 render semantics and docs-check01 PASS35/14/27/44/615, links/LF27962; grammar unchanged.
+Final index-check02 PASS, links/LF28021; commit/push388 to main follow.
+No all21 PASS or full M11.7/8/M13/M14 claim. [Witness388](../steps/witnesses/m11-selector-encoding-20261114/notes.md);
+continue the [main v3 plan](../next_core_tasks_v3.md), goal ACTIVE.
+
+Previous continuation (2026-11-14, slice387; accepted/pushed9897c99fd55408cab3531af809bb885dab5ea85e): Graph73 declaration_view reports default
 presence without evaluation; Run54/shared binding separates pure source-known shape from the existing runtime guards.
 Source07:843;12 maintained sources and5 expected files were added. Seven build refusals include the BODY exact-header guard regression.
 Positive controls give7/7/9,effects0; broad presence check0; chars runtime3 on seed386/new is the prior limitation.
@@ -18,7 +44,7 @@ plus the migrated case; no full22 rerun occurred. There is no alias defect: phys
 Final Source07:843 SHAcbaac64eb9a44d3cbc338a230499f0f319057bad557628f4c876c9c3be326615 changes only two known_assignment files from06;
 code/compiler inputs are unchanged, verify/stage-copy PASS. Whole used06; fixedpoint02 repeated13 clean comparisons/verify843 on07, PASS.
 G2 render semantics35 paired/14 cases/both snapshots and docs-check01 PASS35/14/27/44/615, links/LF27906;
-grammar unchanged. Final index-check02 PASS, links/LF27961; commit/push387 to main follow.
+grammar unchanged. Final index-check02 PASS, links/LF27961;387 was accepted and pushed as9897c99f, preserving the two foreign files.
 Full implements/test/dynamic/path/group contracts,
 quoted selector and M11.8/M13/M14 remain OPEN. [Witness387](../steps/witnesses/m11-construction-shape-20261114/notes.md);
 continue the [main v3 plan](../next_core_tasks_v3.md), goal ACTIVE.

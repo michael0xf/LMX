@@ -3,6 +3,16 @@
 Дата: 2026-11-14. Это передача следующего ограниченного среза, не новая норма и не отчёт о реализации.
 Правок кода и запусков проверок в рамках этой передачи нет.
 
+**Обновление writer388:** оба описанных ниже graph/P0 шага реализованы ограниченно и прошли13 новых
+interp/native/forced случаев. Итоговая occurrence unit содержит два WORD (decimal digits, canonical name),
+без bracket markers: роль RHS path3 достаточна и не требует нового state field. Общий reader — Graph74,
+Run54 принимает raw step; compact producer использует прежний P0/expression builder, manual split удалён.
+Shared lexical head scanner и compact-piece wrapper используют прежний scan_quoted; локальный colon
+delimiter разрешён без изменения global quoted_token_boundary. Whole bootstrap388/fixedpoint15 и G2 repeat20/21
+пройдены в ограниченной приёмке с прежним root-case OPEN; docs-check01/final index-check02 также PASS.
+Это не весь M11.7/8/M13/M14. Исходное предложение четырёх WORD ниже сохранено
+как исследовательский контекст, не описание фактической unit. Новый статус — в steps/current.md.
+
 ## Доказанный дефект
 
 Точное имя после снятия границ и свёртки удвоенных backticks является обычным каноническим именем.

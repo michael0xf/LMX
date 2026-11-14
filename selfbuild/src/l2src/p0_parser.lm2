@@ -2001,6 +2001,15 @@ fn: lm_p0_append_positional_skip (@: document c.LmP0Document; @: structure c.LmP
 end: lm_p0_append_positional_skip
 
 # Original: parser.lm1:1714 lm_p0_append_compact_atom_pieces
+# The compact-piece reader delegates exact identifiers to the one quoted-token lexer.
+fn: lm_p0_compact_piece (@: document c.LmP0Document; const: (@: text char); size_t: end_index; size_t: start; int: allow_signed_number; size_t: line; size_t: column; @: piece_end size_t) int
+    piece_end[0] := start
+    if: start < end_index && text[start] = 96
+        return: lm_p0_scan_quoted(document, text, end_index, piece_end, (cast: (char) 96), line, column)
+    piece_end[0] := c.lm_p0_scan_compact_atom_piece(text, end_index, start, allow_signed_number)
+    return: 1
+end: lm_p0_compact_piece
+
 fn: lm_p0_append_compact_atom_pieces (@: document c.LmP0Document; @: structure c.LmP0Structure; const: (@: text char); size_t: byte_count; size_t: line; size_t: column; size_t: offset; size_t: start; size_t: end_index) int
     size_t: i
     int: allow_signed_number
@@ -2041,7 +2050,8 @@ fn: lm_p0_append_compact_atom_pieces (@: document c.LmP0Document; @: structure c
             i := (close_index + 1U)
             allow_signed_number := 0
             continue
-        piece_end := c.lm_p0_scan_compact_atom_piece(text, end_index, i, allow_signed_number)
+        if: lm_p0_compact_piece(document, text, end_index, i, allow_signed_number, line, column, @ piece_end) = 0
+            return: 0
         if: (piece_end <= i)
             piece_end := (i + 1U)
         ---
@@ -2448,52 +2458,81 @@ fn: lm_p0_find_colon (@: document c.LmP0Document; const: (@: text char); size_t:
 end: lm_p0_find_colon
 
 # Original: parser.lm1:2107 lm_p0_field_start_looks_explicit_frame
-fn: lm_p0_field_start_looks_explicit_frame (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; size_t: index; size_t: line; size_t: column) int
-    size_t: i
-    size_t: head_end
-    size_t: close_index
-    if: (index >= byte_count)
-        return: 0
-    i := index
-    if: (text[i] = '(')
-        if: (lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0)
-            return: 0
-        return: (((close_index + 1U) < byte_count) && (text[(close_index + 1U)] = ':'))
+# One head-span reader for the parser and its explicit-frame lookahead. Quoted path components
+# retain their boundaries; strings/chars/C surfaces retain their existing isolated-token rules.
+fn: lm_p0_scan_head (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; @: index size_t; size_t: line; size_t: column; @: quoted_head int) int
+    size_t: start index[0]
+    size_t: i start
+    size_t: close_index 0U
+    int: occurrence_label 0
+    size_t: diagnostic_line 0U
+    size_t: diagnostic_column 0U
+    quoted_head[0] := 0
+    if: i >= byte_count
+        return: 1
     if: c.lm_p0_starts_c_surface_atom(text, byte_count, i)
-        i := c.lm_p0_scan_c_surface_atom(text, byte_count, i)
-        head_end := i
-    else:
-        if: c.lm_p0_starts_c_prefixed_quote(text, byte_count, i)
-            if: (lm_p0_scan_c_prefixed_quote(document, text, byte_count, @ i, line, column) = 0)
+        index[0] := c.lm_p0_scan_c_surface_atom(text, byte_count, i)
+        return: 1
+    if: c.lm_p0_starts_c_prefixed_quote(text, byte_count, i)
+        quoted_head[0] := 1
+        return: lm_p0_scan_c_prefixed_quote(document, text, byte_count, index, line, column)
+    if: text[i] != 96 && (c.lm_p0_starts_python_string(text, byte_count, i) || text[i] = '"')
+        quoted_head[0] := 1
+        return: lm_p0_scan_quoted(document, text, byte_count, index, text[i], line, column)
+    if: text[i] = '\''
+        quoted_head[0] := 1
+        return: lm_p0_scan_c_char(document, text, byte_count, index, line, column)
+    if: text[i] = 96
+        if: lm_p0_scan_quoted(document, text, byte_count, @ i, (cast: (char) 96), line, column) = 0
+            return: 0
+        if: i >= byte_count || (text[i] != 92 && text[i] != '[')
+            index[0] := i
+            quoted_head[0] := 1
+            return: 1
+    ---
+    while: i < byte_count && c.lm_p0_is_field_space(text[i]) = 0 && c.lm_p0_is_field_separator(text[i]) = 0 && text[i] != '(' && text[i] != ')' && text[i] != '#' && text[i] != '{' && text[i] != '}' && text[i] != ':'
+        if: text[i] = '['
+            occurrence_label := (cast: (int) (i > start && text[i - 1U] = 92))
+            if: lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ close_index) = 0
                 return: 0
-            head_end := i
-        else:
-            if: ((c.lm_p0_starts_python_string(text, byte_count, i) || (text[i] = '"')) || (text[i] = '`'))
-                if: (lm_p0_scan_quoted(document, text, byte_count, @ i, text[i], line, column) = 0)
+            i := close_index + 1U
+            continue
+        if: text[i] = ']'
+            break
+        if: text[i] = 96 && i > start && (text[i - 1U] = 92 || occurrence_label != 0)
+            if: lm_p0_scan_quoted(document, text, byte_count, @ i, (cast: (char) 96), line, column) = 0
+                return: 0
+            occurrence_label := 0
+            if: i < byte_count && text[i] != 92 && text[i] != '[' && text[i] != ':'
+                if: lm_p0_require_quoted_token_boundary(document, text, byte_count, i, line, column) = 0
                     return: 0
-                head_end := i
-            else:
-                if: (text[i] = '\'')
-                    if: (lm_p0_scan_c_char(document, text, byte_count, @ i, line, column) = 0)
-                        return: 0
-                    head_end := i
-                else:
-                    while: (((((((((i < byte_count) && (c.lm_p0_is_field_space(text[i]) = 0)) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (text[i] != '{')) && (text[i] != '}')) && (text[i] != ':'))
-                        if: (text[i] = '[')
-                            size_t: bracket_close_index
-                            if: (lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ bracket_close_index) = 0)
-                                return: 0
-                            i := (bracket_close_index + 1U)
-                            continue
-                        if: (text[i] = ']')
-                            break
-                        i := i + 1U
-                    ---
-                    head_end := i
-                ---
             ---
+            continue
         ---
-    return: (((head_end > index) && (i < byte_count)) && ((text[i] = ':') || (text[i] = '(')))
+        if: c.lm_p0_starts_c_prefixed_quote(text, byte_count, i) || c.lm_p0_starts_python_string(text, byte_count, i) || text[i] = '"' || text[i] = 96 || text[i] = '\''
+            lm_p0_position_in_slice(text, byte_count, i, line, column, @ diagnostic_line, @ diagnostic_column)
+            lm_p0_set_diagnostic(document, 18, diagnostic_line, diagnostic_column, "missing separator before quoted token")
+            return: 0
+        occurrence_label := 0
+        i := i + 1U
+    ---
+    index[0] := i
+    return: 1
+end: lm_p0_scan_head
+
+fn: lm_p0_field_start_looks_explicit_frame (@: document c.LmP0Document; const: (@: text char); size_t: byte_count; size_t: index; size_t: line; size_t: column) int
+    size_t: i index
+    size_t: close_index 0U
+    int: quoted_head 0
+    if: index >= byte_count
+        return: 0
+    if: text[i] = '('
+        if: lm_p0_find_matching_paren(document, text, byte_count, i, line, column, @ close_index) = 0
+            return: 0
+        return: close_index + 1U < byte_count && text[close_index + 1U] = ':'
+    if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head) = 0
+        return: 0
+    return: i > index && i < byte_count && (text[i] = ':' || text[i] = '(')
 end: lm_p0_field_start_looks_explicit_frame
 
 # Original: parser.lm1:2154 lm_p0_field_parse_loop_frame_delete_any
@@ -2855,51 +2894,10 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                     restart_parse_context := 1
                     break
                 else:
-                    int: quoted_head
-                    quoted_head := 0
-                    if: c.lm_p0_starts_c_surface_atom(text, byte_count, i)
-                        i := c.lm_p0_scan_c_surface_atom(text, byte_count, i)
-                        head_end := i
-                    else:
-                        if: c.lm_p0_starts_c_prefixed_quote(text, byte_count, i)
-                            if: (lm_p0_scan_c_prefixed_quote(document, text, byte_count, @ i, line, column) = 0)
-                                return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                            head_end := i
-                            quoted_head := 1
-                        else:
-                            if: ((c.lm_p0_starts_python_string(text, byte_count, i) || (text[i] = '"')) || (text[i] = '`'))
-                                if: (lm_p0_scan_quoted(document, text, byte_count, @ i, text[i], line, column) = 0)
-                                    return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                                head_end := i
-                                quoted_head := 1
-                            else:
-                                if: (text[i] = '\'')
-                                    if: (lm_p0_scan_c_char(document, text, byte_count, @ i, line, column) = 0)
-                                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                                    head_end := i
-                                    quoted_head := 1
-                                else:
-                                    while: (((((((((i < byte_count) && (c.lm_p0_is_field_space(text[i]) = 0)) && (c.lm_p0_is_field_separator(text[i]) = 0)) && (text[i] != '(')) && (text[i] != ')')) && (text[i] != '#')) && (text[i] != '{')) && (text[i] != '}')) && (text[i] != ':'))
-                                        if: (text[i] = '[')
-                                            size_t: bracket_close_index
-                                            if: (lm_p0_find_matching_bracket(document, text, byte_count, i, line, column, @ bracket_close_index) = 0)
-                                                return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                                            i := (bracket_close_index + 1U)
-                                            continue
-                                        if: (text[i] = ']')
-                                            break
-                                        if: ((((c.lm_p0_starts_c_prefixed_quote(text, byte_count, i) || c.lm_p0_starts_python_string(text, byte_count, i)) || (text[i] = '"')) || (text[i] = '`')) || (text[i] = '\''))
-                                            size_t: diagnostic_line
-                                            size_t: diagnostic_column
-                                            lm_p0_position_in_slice(text, byte_count, i, line, column, @ diagnostic_line, @ diagnostic_column)
-                                            lm_p0_set_diagnostic(document, 18, diagnostic_line, diagnostic_column, "missing separator before quoted token")
-                                            return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
-                                        i := i + 1U
-                                    ---
-                                    head_end := i
-                                ---
-                            ---
-                        ---
+                    int: quoted_head 0
+                    if: lm_p0_scan_head(document, text, byte_count, @ i, line, column, @ quoted_head) = 0
+                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
+                    head_end := i
                     # The operator `:=` (the author, 2026-11-07; the grammar's operators section): one token, written compact
                     # (`a:=5`) or spaced (`a := 5`), never the colon head `a:` with a body `=5` -- the Frame of its left side
                     # (the head) and its right side (the body), flagged LM_P0_FRAME_ASSIGN, no colon.  Its body parses as a
@@ -2997,7 +2995,8 @@ fn: lm_p0_parse_fields_until_with_layout (@: document c.LmP0Document; @: indent_
                                         allow_signed_number := 0
                                         continue
                                     ---
-                                    piece_end := c.lm_p0_scan_compact_atom_piece(text, head_end, scan_start, allow_signed_number)
+                                    if: lm_p0_compact_piece(document, text, head_end, scan_start, allow_signed_number, line, column, @ piece_end) = 0
+                                        return: lm_p0_field_parse_fail(@ parse_stack, @ indent_stack, @ indent_stack_owned)
                                     if: piece_end <= scan_start || piece_end >= head_end
                                         break
                                     if: text[scan_start] = '+' || text[scan_start] = '-' || text[scan_start] = '~' || text[scan_start] = '*' || text[scan_start] = '/' || text[scan_start] = '%' || text[scan_start] = '&' || text[scan_start] = '|' || text[scan_start] = '^' || text[scan_start] = '<' || text[scan_start] = '>' || text[scan_start] = '=' || text[scan_start] = '!'

@@ -1,5 +1,40 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез388 — selector encoding и compact quote lexer; ограниченная кодовая готовность, G2 repeat20/21.**
+
+- [x] Graph74 occurrence reader: anonymous pair [WORD(decimal),WORD(name)], literal WORD literal;
+  checked size_t/out-preserved refusal. Run54 raw step/step_place/runtime/admission/native, literal access без intern/alloc,
+  без новых tags/state/layouts. Builder compound path/index/exact heads через existing P0→expression вместо manual split;
+  WORD head ordinary, nonWORD carrier. P0 scan_head(main/lookahead)/compact_piece→scan_quoted, локальный compact-colon fix,
+  whole-token/global boundaries прежние. Это ограниченный graph/P0 срез, не весь frontend M11.8.
+- [x] Runtime01 unknown ! исправлен на =0, Runtime02 PASS; final Runtime03 SHA9b1f3ad1,
+  Graph02 SHA91ae4fee. Новые13 sources/11 expected(8 positive+3 runtime refusal+2 build2) все triple PASS:
+  literal11/ordinal7/9, writes31/7/29, quoted ordinal4/6/8/16, admission71109/missing4body0before1after0,
+  huge2^128 ordinal refusal3, component7/9/70, root11/12/index12/call6, doubled tick7,
+  compact:=/colon9/3, lookahead2/untouched7, call heads11/12/13.
+- [x] Private21 initial18 PASS/3 FAIL: два old occurrence expected исправлены только по лишним RHS outer parentheses,
+  числа сохранены. Восемь full AFTER seed/new/binaries и9 runtime negative AFTER PASS(reuse).
+  Frozen Source06:867 SHA19d3d5dc9a5f0ea49a60be7fe38319b32d677a87789bfd2f7e5455769141863d, verify/stage-copy PASS.
+  Source04 построил код,05 добавил fixtures,06 меняет лишь два old golden.
+- [ ] Aggregate20/21: root_occurrence_index runtime3 у seed387/new, expected seen3 сохранить.
+  OPEN M11.7 common site→existing frame row без root bypass, затем M14 alias/frame согласование.
+  Подготовка389 по [site handoff](steps/handoff/m11-place-sites-20261114.md), не implementation388:
+  CODE formal-first, затем DATA; self identity — общий случай. Code над другой D использует unique canonical name,
+  не source-index; physical DATA-роль data_declaration не менять, destination через RHS сохранять.
+- [ ] Отдельный preexisting OPEN: written DATA `@: pick a` остаётся raw/step5 даже при одной ссылке;
+  construction/admission gap(книга:815), не selector/duplicates, не autoexecute DATA on step(R12).
+- [x] Whole boot-m11-selector-encoding-01 PASS на прежнем sol-m11-construction-fresh01/main: genuine G1/G2 по9 smoke.
+  Fixedpoint15 PASS: FE/tool L1/C, driver/observed, retained Graph+Run headers, privateRuntime03==G2driver,
+  normalized exes, backend, FrozenSource06/verify867; code Source06 не менялся.
+  G2 Graph0fcf70f9e9c41f04b2912ce1930cb256bd14afde87c0072a6acd330dd937236c;
+  tuple stage/boot-m11-selector-encoding-01/g2 + graph-m11-selector-encoding-g2-01.
+- [x] G2 repeat21:20 PASS/1 FAIL только root_occurrence_index в interp/native/forced; все13 new PASS.
+  G2 negative full AFTER9 PASS, binaries переиспользованы. Единственный OPEN выше сохранён, весь21 PASS не заявлять.
+- [x] Штатный G2 render semantics PASS35 paired/14 cases/both snapshots, grammar unchanged.
+- [x] Docs-check01 PASS35/14/27/44/615, links/LF27962.
+- [x] Final index-check02 PASS, links/LF28021; далее commit/push388. Полный M11.7/8/M13/M14 OPEN, goal ACTIVE.
+  [Свидетельство388](steps/witnesses/m11-selector-encoding-20261114/notes.md).
+
 **2026-11-14, срез387 — M11.7, source-known call-shape/default preflight; ограниченная кодовая готовность,22 случая приняты.**
 
 - [x] Graph73 declaration_view/default_presence0/1/-1; числовой0 в `@: p 0` отличается от WORD `0`,
@@ -28,8 +63,8 @@
   Whole построен на06; final fixedpoint02 повторил13 чистых сравнений/verify843 на07 PASS.
 - [x] Штатный G2 render semantics35 paired/14 cases/both snapshots PASS; grammar unchanged.
 - [x] Docs-check01 PASS35/14/27/44/615, links/LF27906.
-- [x] Final index-check02 PASS, links/LF27961; далее commit/push387. Кодовая связка — fresh stage/boot-m11-construction-shape-01/g2,
-  G2 Graph d816ba5c; accepted base386/713af718, goal ACTIVE.
+- [x] Final index-check02 PASS, links/LF27961;387 принят/отправлен9897c99fd55408cab3531af809bb885dab5ea85e, foreign2 сохранены.
+  Кодовая связка — fresh stage/boot-m11-construction-shape-01/g2, G2 Graph d816ba5c; goal ACTIVE.
   [Свидетельство387](steps/witnesses/m11-construction-shape-20261114/notes.md).
 - [ ] Полный implements/test, dynamic/path targets, общий group contract M11.7, M11.8/M13/M14.
 
@@ -82,9 +117,9 @@
   direct positional/named/whole-DATA; primitive/default/model/reference/qualification/Array descriptions,
   отказ structural args при создании F, сохранение evaluation timing и ordinary DATA/pseudoformals.
   Нельзя заменять это machine whitelist или объявлять runtime family готовой по одному metadata description.
-- [ ] Отдельный M11.7 OPEN — quoted-selector encoding: exact name `[0]x` коллидирует с occurrence-string;
-  backslash внутри quoted path component разделяет компонент. Исправить existing общий selector mechanism без нового парсера;
-  canonical names/doubled backticks385 не закрывают предел. Не расширять им текущий formal-срез385.
+- [x] Поддержанные quoted graph encoding/compact lexical clauses ограниченно реализованы388 через common raw selector/existing P0;
+  новые13 triple и G2 PASS, whole/fixedpoint15 PASS, G2 aggregate20/21; docs-check01/final index02 PASS, commit388 далее.
+  Formal385 и весь рабочий frontend M11.8 этим не закрыты.
 - [ ] Полный M11.5е/7/8/M13/M14. Принят/отправлен385/9edf9666, рабочая связка385; goal ACTIVE.
 
 **2026-11-14, срез384 — M11.5е, actuals ресиверов, ограниченная реализация; кодовая приёмка пройдена.**

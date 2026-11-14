@@ -1,6 +1,20 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice384 -- bounded implementation, code acceptance passed; base383 `58bc7f3a`.** Direct named actuals of `fn`/`sub`
+**Current state, 2026-11-14, slice388 -- bounded code and documentary acceptance are confirmed; commit/push follow.**
+An occurrence and a literal exact name differ by the structure of the right step of the existing path3 (§3.3):
+common `Graph.occurrence` (Graph74) reads an ordinary anonymous pair, and `Run.step`/`step_place` take a raw step (Run54).
+The same reader, admission and native use this selection; P0 preserves quoted components through the common head scanner.
+13 new cases passed in three modes; another 7 existing cases passed after golden formatting corrections only:
+20/21 in aggregate. Genuine G1/G2 whole quick passed nine smoke cases each; fixedpoint15/verify867 PASS.
+The genuine G2 graph-tool is built, SHA-256 prefix `0fcf70f9`; the G2 repeat gives the same 20/21, with all 13 new cases PASS.
+9 full negative AFTER checks passed by reusing the existing binaries.
+`root_occurrence_index` answers run3 under both seed387 and the new code;
+its numeric seen3 expectation is retained, and the common declaration-site → frame map remains OPEN.
+Source06:867, SHA-256 prefix `19d3d5dc`. Normal render and docs-check01 PASS35/14/27/44/615, links/LF27962;
+Final index-check02 PASS, links/LF28021; commit/push388 to main follow.
+Full M11.7/8 and M13/M14 remain OPEN.
+
+**Previous state, 2026-11-14, slice384 -- bounded implementation, code acceptance passed; base383 `58bc7f3a`.** Direct named actuals of `fn`/`sub`
 bind formals through `:=` only; `by_head`/mode2 and the former `frame_value` are removed from Run.
 A whole descriptor is read as DATA: its colon fields are retained without execution. Structure formals `args`/`data`/`code`
 read an actual through common `read_received_value` with contract2: a written group is inert, an unknown named Frame reaches
@@ -759,7 +773,8 @@ the atom-pointer with no expansion and visibility in data in both directions (su
 Р12–Р15 and Р19 in the [answers](../LMX_blog/q/fable-self-answers-20261110.md)). The registry of data is
 `lmx_graph_data_find`: the records of a data level that declare a name are read whole at every consultation, with no
 table; one record answers, with two or more the name without an index answers nothing (answer 3), and an occurrence is
-chosen by the word `[N]name`. The path step and the atom are `lmx_graph_step`, `lmx_graph_step_place` (the kernel
+chosen by the path `s\[N]name`; slice355's string encoding of the step is replaced in slice388 by the structural
+representation below. The path step and the atom are `lmx_graph_step`, `lmx_graph_step_place` (the kernel
 export, 43 names) and `lmx_graph_atom_target`: the atom of a declaration's tail is not bound when the declaration
 is executed and the slot is not rewritten, while the name of the atom is looked up when a path goes through it --
 lexically, from the holder outwards, by whole levels; a write through the atom writes the named place; the replacement
@@ -767,6 +782,17 @@ of the content on a repeated declaration is removed. The places and Structures o
 line, and `data` in a root executed over itself is the root. A computed declaration of the data supplied to a launch is
 not executed (`lmx_graph_data_realize` is removed, Р12): its place is without a value, and a read before a value answers
 5. The print of the graph carries a path: a Structure met on it again is printed by its name.
+
+**Implementation delta in slice388, with no change to occurrence-selection semantics.** The outer path retains three fields,
+`[owner, WORD("\\"), step]`. An occurrence step is an ordinary anonymous pair,
+`[WORD(decimal digits), WORD(canonical name)]`; an ordinary WORD always denotes a literal name, including `[0]x`.
+Common `lmx_graph_occurrence` (Graph74) reads this pair without evaluating its fields, checks `size_t` overflow
+before multiplication by 10, and leaves output parameters untouched for an invalid unit.
+`lmx_graph_step` and `lmx_graph_step_place` take a raw step; reads, writes, `lmx_graph_admit_path` and native
+use that same reader and the existing data registry. No new tag, registry or parser flag is added.
+A compact selector is consumed again through existing P0 and the expression builder instead of a separate byte split;
+common `lm_p0_scan_head` and the compact-piece reader use existing `lm_p0_scan_quoted`, preserving the boundaries
+of an exact root, quoted components and doubled backticks. Global `lm_p0_is_quoted_token_boundary` is unchanged.
 
 The checks of slice 355: 17 new and 6 changed fixtures of `tests/graph` (the list is in the
 [evidence](../steps/witnesses/data-registry-atom-20261111/notes.md)), 499 entries in `inputs.list`. Graph-check --

@@ -1,0 +1,27 @@
+GRAPH-BEFORE-BEGIN
+fn: a (int: x) int
+    return: (x + 1)
+end: a
+fn: b (int: x) int
+    return: (x + 2)
+end: b
+@: Calls ((@ pick a) (@ pick b))
+int: first Calls\[0]pick(10)
+int: second Calls\[1]pick(10)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: a (int: x) int
+    return: (x + 1)
+end: a
+fn: b (int: x) int
+    return: (x + 2)
+end: b
+Calls:
+    @: pick a
+    @: pick b
+end: Calls
+int: first Calls\[0]pick(10)
+int: second Calls\[1]pick(10)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5

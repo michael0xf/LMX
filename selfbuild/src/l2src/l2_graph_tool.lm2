@@ -391,8 +391,10 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             # The path step, through an atom too, as the interpreter takes it (lmx_graph_step; plan M11 5a).
             c.fputs("        if: lmx_graph_step(l2_g, l2_v", f)
             c.fprintf(f, "%d, ", value)
-            if: lm_graph_emit_word(g, f, scope, expression, 2U) != 0
+            c.fputs("lmx_graph_get(", f)
+            if: lm_graph_emit_address(g, f, scope, expression) != 0
                 return: 3
+            c.fputs(", 2U)", f)
             c.fprintf(f, ", @ l2_v%d) != 0\n            %s\n", value, leave_failure)
             c.fprintf(f, "        if: lmx_graph_reference_cell(l2_g, l2_v%d) != 0\n            l2_v%d: lmx_graph_reference_value(l2_g, l2_v%d)\n        if: l2_v%d = 0\n            %s\n", value, value, value, value, leave_failure)
             temp[0] := value
@@ -920,7 +922,9 @@ fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: l
     # The Structure holding the written place and its slot, as in the interpreter: the owner, or the target of a
     # reference to it; through an atom, the record the atom refers to.
     c.fprintf(f, "        size_t: l2_s%d 0U\n        if: lmx_graph_step_place(l2_g, l2_v%d, ", owner, owner)
-    status := lm_graph_emit_word(g, f, code, path, 2U)
+    c.fputs("lmx_graph_get(", f)
+    status := lm_graph_emit_address(g, f, code, path)
+    c.fputs(", 2U)", f)
     c.fprintf(f, ", @ l2_v%d, @ l2_s%d) != 0\n            %s\n", owner, owner, leave_failure)
     owner_out[0] := owner
     return: status

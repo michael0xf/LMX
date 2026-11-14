@@ -1512,11 +1512,84 @@ sub: lmx_graph_dump_again (@: g c.LmxGraph; @: value void; @: f c.FILE)
     return
 end: lmx_graph_dump_again
 
+# A path's occurrence step is an anonymous pair of WORDs: decimal ordinal and canonical name.
+# A WORD itself is always a literal name. No text opcode, evaluation, unwrap or allocation is involved.
+fn: lmx_graph_occurrence (@: g c.LmxGraph; @: raw void; @: index_out size_t; @@: name_out char) int
+    @: step c.Lmx (cast: (@: c.Lmx) raw)
+    @: digits char 0
+    @: name char 0
+    size_t: i 0U
+    size_t: index 0U
+    size_t: digit 0U
+    size_t: limit (cast: (size_t) -1)
+    if: index_out = 0 || name_out = 0 || lmx_graph_kind(g, raw) != 4 || lmx_graph_name_of(g, raw) != 0
+        return: 0
+    if: lmx_graph_count(step) != 2U
+        return: 0
+    digits := lmx_graph_word_text(g, lmx_graph_get(step, 0U))
+    name := lmx_graph_word_text(g, lmx_graph_get(step, 1U))
+    if: digits = 0 || digits[0] = (cast: (char) 0) || name = 0
+        return: 0
+    while: digits[i] != (cast: (char) 0)
+        if: digits[i] < 48 || digits[i] > 57
+            return: 0
+        digit := (cast: (size_t) (digits[i] - 48))
+        if: index > (limit - digit) / 10U
+            return: 0
+        index := index * 10U + digit
+        i := i + 1U
+    ---
+    index_out[0] := index
+    name_out[0] := name
+    return: 1
+end: lmx_graph_occurrence
+
+# Protect a selector component's exact boundary in the textual graph view.
+fn: lmx_graph_dump_selector_name (@: text char; @: f c.FILE) int
+    size_t: i 0U
+    int: quoted 0
+    int: b 0
+    if: text = 0
+        return: 1
+    if: text[0] = (cast: (char) 0) || (text[0] >= 48 && text[0] <= 57)
+        quoted := 1
+    while: text[i] != (cast: (char) 0)
+        b := (cast: (int) text[i])
+        if: ((b >= 65 && b <= 90) || (b >= 97 && b <= 122) || (b >= 48 && b <= 57) || b = 95 || b = 46) = 0
+            quoted := 1
+        i := i + 1U
+    ---
+    if: quoted != 0
+        c.fputc(96, f)
+    i := 0U
+    while: text[i] != (cast: (char) 0)
+        c.fputc((cast: (int) text[i]), f)
+        if: text[i] = 96
+            c.fputc(96, f)
+        i := i + 1U
+    ---
+    if: quoted != 0
+        c.fputc(96, f)
+    return: 0
+end: lmx_graph_dump_selector_name
+
+fn: lmx_graph_dump_selector (@: g c.LmxGraph; @: raw void; @: f c.FILE; @@: path void) int
+    @: name char lmx_graph_word_text(g, raw)
+    size_t: index 0U
+    if: name != 0
+        return: lmx_graph_dump_selector_name(name, f)
+    if: lmx_graph_occurrence(g, raw, @ index, @ name) != 0
+        c.fprintf(f, "[%zu]", index)
+        return: lmx_graph_dump_selector_name(name, f)
+    return: lmx_graph_dump_token(g, raw, f, path)
+end: lmx_graph_dump_selector
+
 # One field in the line form: a word by its spelling, an int by its value; a place as `(int name value)` or
 # `(int name)` and a reference place as `(@ name target)`; an Lmx in parentheses -- a Frame (an Lmx named by its head,
 # §3.3) as `(head arguments)`, an anonymous Structure or an expression as `(fields)` -- or by its name when it is on the
 # path of the print already (lmx_graph_dump_on_path). 0, or 1 when a cell is none of the graph's or without memory.
 fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE; @@: path void) int
+    @: state c.LmxGraphState lmx_graph_state()
     int: kind lmx_graph_kind(g, value)
     @: text char 0
     @: name char 0
@@ -1594,7 +1667,15 @@ fn: lmx_graph_dump_token (@: g c.LmxGraph; @: value void; @: f c.FILE; @@: path 
             if: printed != 0
                 c.fputs(" ", f)
             printed := 1
-            status := lmx_graph_dump_token(g, lmx_graph_get(inner, i), f, link)
+            if: state != 0 && text = 0 && n = 3U && i = 0U && lmx_graph_word_text(g, lmx_graph_get(inner, i)) != 0 && (lmx_graph_word_text(g, lmx_graph_get(inner, 1U)) = state\w_deref || lmx_graph_word_text(g, lmx_graph_get(inner, 1U)) = state\w_index)
+                status := lmx_graph_dump_selector_name(lmx_graph_word_text(g, lmx_graph_get(inner, i)), f)
+            else:
+                if: state != 0 && text = 0 && n = 3U && i = 2U && lmx_graph_word_text(g, lmx_graph_get(inner, 1U)) = state\w_deref
+                    status := lmx_graph_dump_selector(g, lmx_graph_get(inner, i), f, link)
+                else:
+                    status := lmx_graph_dump_token(g, lmx_graph_get(inner, i), f, link)
+                ---
+            ---
         ---
         i := i + 1U
     ---
@@ -1827,19 +1908,19 @@ fn: lmx_graph_dump_head (@: g c.LmxGraph; @: value void; @: f c.FILE; @@: path v
     @: state c.LmxGraphState lmx_graph_state()
     @: text char lmx_graph_word_text(g, value)
     @: op char 0
+    @: step void 0
     @: link c.Lmx (cast: (@: c.Lmx) value)
     if: text != 0
-        c.fputs(text, f)
-        return: 0
+        return: lmx_graph_dump_selector_name(text, f)
     if: state != 0 && lmx_graph_kind(g, value) = 4 && lmx_graph_count(link) = 3U
         op := lmx_graph_word_text(g, lmx_graph_get(link, 1U))
-        text := lmx_graph_word_text(g, lmx_graph_get(link, 2U))
-        if: op = state\w_index || (op = state\w_deref && text != 0)
+        step := lmx_graph_get(link, 2U)
+        if: op = state\w_index || op = state\w_deref
             if: lmx_graph_dump_head(g, lmx_graph_get(link, 0U), f, path) != 0
                 return: 1
             if: op = state\w_deref
-                c.fprintf(f, "\\%s", text)
-                return: 0
+                c.fputs("\\", f)
+                return: lmx_graph_dump_selector(g, step, f, path)
             c.fputs("[", f)
             if: lmx_graph_dump_token(g, lmx_graph_get(link, 2U), f, path) != 0
                 return: 1

@@ -1,5 +1,44 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7: срез388, ограниченная кодовая готовность, docs далее
+
+387/9897c99fd55408cab3531af809bb885dab5ea85e принят и отправлен в основном main;
+code/docs/index/diff-check PASS, чужие два untracked сохранены. Root — единственный code/test/build writer.
+Pipeline sol-m11-selector-encoding-20261114-01; stage прежний sol-m11-construction-fresh01.
+Seed — boot-m11-construction-shape-01/g2 + graph-m11-construction-shape-g2-01.
+Graph74 occurrence — общий pure reader anonymous pair [WORD(decimal), WORD(name)], checked size_t/out preserved.
+Literal WORD всегда literal, без intern/alloc на доступ. Run54 step/step_place принимают raw step;
+walk/native/admission используют тот же reader. Нет новых tags/state/layout/registry/parser flags.
+Builder сохраняет occurrence unit, compound selectors читает прежним P0→expression вместо manual split.
+P0 shared scan_head используется main/lookahead, compact_piece зовёт прежний scan_quoted;
+quoted root suffix/компоненты/doubled backticks защищены, global quoted boundary не расширен.
+Локальный compact-colon blocker исправлен; Graph.dump различает literal/occurrence и exact root boundary.
+Runtime01 отказал на неизвестном !; L2 condition=0 исправлен. Bridge Tool SHAfe318813 PASS;
+финальный Runtime03 SHA9b1f3ad1, Graph02 SHA91ae4fee PASS на Source04.
+13 новых source/11 expected добавлены. Все13 triple PASS: literal11/ord7/9/write31/7/29;
+quoted ord4/6/8/16, admission71109/missing4 до body0, huge ordinal3 вместо seed-wrap7,
+component7/9/70, root11/12/index12/call6, escaped7, compact colon9/3, inert lookahead2/7, heads11/12/13.
+Private21 сначала18PASS/3FAIL: два old RHS golden имели лишний outer group; числа3/3 сохранены,
+8 full AFTER seed/new/native/forced PASS с переиспользованием binaries. Ещё9 runtime-negative AFTER PASS.
+Aggregate20/21: root_occurrence_index даёт run3 и seed387, и новый код; его expected seen3 НЕ менять.
+Это общий declaration-site→existing frame-row gap до selector: work_scan_body требует ambiguous name x,
+walk/native declaration execution тоже теряют site. Следующий общий код без root-specific bypass,
+с сохранением ambiguous bare x, включить в основной M11.7/M14.
+Точные routes и кандидат общей карты — steps/handoff/m11-place-sites-20261114.md; реализация OPEN.
+Отдельный preexisting OPEN — известная @:pick a внутри written DATA остаётся raw/deferred и даёт step5;
+исправлять construction/admission по book815, не autoexecute DATA initializers внутри step (R12).
+Frozen Source06/867 SHA19d3d5dc9a5f0ea49a60be7fe38319b32d677a87789bfd2f7e5455769141863d;
+verify/stage-copy PASS. Source05 добавлял fixtures;06 изменил только два старых expected; code не менялся.
+Whole quick boot-m11-selector-encoding-01 PASS: настоящие G1/G2 по9 smoke; fixedpoint15/verify867 PASS.
+Сравнены оба retained ABI headers, оба runtime objects и private Runtime03 с G2, FE/tool L1/C,
+normalized executables, backend и frozen manifest. G2 Graph SHA0fcf70f9 построен штатно.
+G2 repeat21:20PASS/1known-rootFAIL, все13 новые cases PASS;9 full negative AFTER PASS на готовых binaries.
+Штатный render и docs-check01 PASS35/14/27/44/615, links/LF27962 из свежих CWD/PRIVATE_OUT.
+Final index-check02 PASS, links/LF28021; далее оба diff-check и commit/push main.
+G2 связка — boot-m11-selector-encoding-01/g2 +graph-m11-selector-encoding-g2-01.
+Все build/test producers terminal; не пересобирать неизменные code/compiler inputs. Helpers — выделенные docs.
+Полный implements/test, working frontend M11.8, M13/M14 OPEN; goal ACTIVE.
+
 ## 2026-11-14 — M11.7: срез387, ограниченная кодовая приёмка, docs далее
 
 386/713af7183aad7009ac549ef59a3b3607171655a7 принят и отправлен в main; docs/index/diff-check PASS.

@@ -9,7 +9,31 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice387; bounded code readiness,22 cases accepted; base386/713af718): Graph73 declaration_view reports
+Current implementation note (2026-11-14, slice388; bounded code readiness, G2 repeat20/21; accepted base387/9897c99f): Graph74 shares an occurrence reader
+for anonymous [WORD(decimal),WORD(name)] pairs; a literal WORD is always literal. size_t is checked and reader outputs survive refusal.
+Run54 step/step_place and runtime/admission/native consumers use raw steps; literal access interns/allocates nothing, with no new tags/state/layouts.
+Builder replaces manual splitting with existing P0→expression for compound path/index/exact heads, keeping WORD heads ordinary and nonWORD heads as carriers.
+P0 shares scan_head between main/lookahead and compact_piece→scan_quoted; whole-token/global boundaries remain unchanged, with a local compact-colon fix.
+Runtime03 SHA9b1f3ad1/Graph02 SHA91ae4fee and all new13 triple(8 positive+3 runtime refusal+2 build2;11 expected) PASS.
+Private21 initially gave18 PASS/3 FAIL; two old occurrence goldens changed only outer RHS parentheses, with no numeric change.
+Eight full AFTER seed/new/binaries and nine negative AFTER comparisons PASS through reuse. Aggregate20/21 retains root_occurrence_index runtime3
+on both seed387/new, with expected seen3 preserved: OPEN common site→existing frame-row fix without a root bypass, then M11.7/M14 alignment.
+[Next389 plan](steps/handoff/m11-place-sites-20261114.md), not implementation: CODE binds activation formals before DATA;
+self identity is a shared case. Code over another D uses a unique canonical name, not the source index; physical DATA initialization stays unchanged.
+A separate preexisting written-DATA `@: pick a` remains raw/step5 even for one reference: a construction/admission gap, not selectors or duplicates;
+step must not autoexecute DATA(R12). Frozen Source06:867 SHA19d3d5dc, verify/stage-copy PASS; Source04 built code,05 added fixtures,06 changes only two old goldens.
+Whole boot-m11-selector-encoding-01 passed in existing sol-m11-construction-fresh01/main: genuine G1/G2, nine smoke rows each.
+Fixedpoint15 PASS: FE/tool L1/C, driver/observed, retained Graph/Run headers, privateRuntime03==G2driver,
+normalized executables, backend and FrozenSource06/verify867. Source06 code is unchanged. Code tuple:
+stage/boot-m11-selector-encoding-01/g2 + graph-m11-selector-encoding-g2-01, G2 Graph
+SHA0fcf70f9e9c41f04b2912ce1930cb256bd14afde87c0072a6acd330dd937236c.
+G2 repeat21 gave20 PASS/1 FAIL only root_occurrence_index in interp/native/forced; all13 new cases PASS, negative full AFTER9 PASS by reusing binaries.
+Normal G2 render semantics and docs-check01 PASS35/14/27/44/615, links/LF27962; grammar unchanged.
+Final index-check02 PASS, links/LF28021; commit/push388 to main follow.
+No all21 PASS or full M11.7/8/M13/M14 claim, and no legacy frontend claim.
+See [record388](steps/witnesses/m11-selector-encoding-20261114/notes.md) and the [main plan](next_core_tasks_v3.md#m11), goal ACTIVE.
+
+Previous implementation note (2026-11-14, slice387; accepted/pushed9897c99fd55408cab3531af809bb885dab5ea85e): Graph73 declaration_view reports
 default presence without evaluation; Run54/shared binding separates pure source-known shape from existing runtime guards.
 Source07:843;12 maintained sources and5 expected files were added. Seven build refusals include the BODY exact-header guard regression;
 positive controls give7/7/9,effects0; broad presence check0. Chars runtime3 on seed386/new is the prior limitation;
@@ -29,7 +53,7 @@ SHAcbaac64eb9a44d3cbc338a230499f0f319057bad557628f4c876c9c3be326615 differs from
 code/compiler inputs are unchanged, verify/stage-copy PASS. Whole bootstrap used06; final fixedpoint02 repeated13 clean comparisons/verify843 on07, PASS.
 This does not complete full M11.7.
 G2 render semantics35 paired/14 cases/both snapshots and docs-check01 PASS35/14/27/44/615, links/LF27906;
-grammar unchanged. Final index-check02 PASS, links/LF27961; commit/push387 to main follow.
+grammar unchanged. Final index-check02 PASS, links/LF27961;387 was accepted and pushed as9897c99f, preserving the two foreign files.
 Full implements/test, dynamic/path/group contracts,
 quoted selector and M11.8/M13/M14 remain OPEN; [record387](steps/witnesses/m11-construction-shape-20261114/notes.md),
 continue the [main plan](next_core_tasks_v3.md#m11), goal ACTIVE.

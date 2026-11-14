@@ -1300,7 +1300,7 @@ fn: lmx_graph_path_field (@: g c.LmxGraph; @: code c.Lmx; @: left void; @@: owne
     status := lmx_graph_read_received_value(g, code, c.lmx_graph_get(path, 0U), 2, @ value)
     if: status != 0
         return: status
-    status := lmx_graph_step_place(g, value, c.lmx_graph_word_text(g, c.lmx_graph_get(path, 2U)), @ value, @ slot)
+    status := lmx_graph_step_place(g, value, c.lmx_graph_get(path, 2U), @ value, @ slot)
     if: status != 0
         return: status
     owner_out[0] := (cast: (@: c.Lmx) value)
@@ -1600,44 +1600,24 @@ fn: lmx_graph_data_find (@: g c.LmxGraph; @: data c.Lmx; @: name char; int: mode
     return: found
 end: lmx_graph_data_find
 
-# A step word `[N]name` (the book, fields: the indexed path of an occurrence, `s\[N]field`): 1 with N in index_out and
-# the canonical spelling of name in name_out; 0 for any other word.
-fn: lmx_graph_occurrence_word (@: word char; @: index_out size_t; @@: name_out char) int
-    size_t: text_size 0U
-    size_t: i 1U
-    size_t: index 0U
-    if: word = 0 || word[0] != 91
-        return: 0
-    text_size := c.strlen(word)
-    while: i < text_size && word[i] >= 48 && word[i] <= 57
-        index := index * 10U + (cast: (size_t) (word[i] - 48))
-        i := i + 1U
-    ---
-    if: i = 1U || i + 1U >= text_size || word[i] != 93
-        return: 0
-    name_out[0] := c.lmx_graph_intern((cast: (const: @: char) (word + i + 1U)), text_size - i - 1U)
-    if: name_out[0] = 0
-        return: 0
-    index_out[0] := index
-    return: 1
-end: lmx_graph_occurrence_word
-
-# The slot of owner the step `\word` of a path names: `[N]name` -- the record N of name in the registry of owner
+# The slot of owner the raw path step names: an occurrence pair selects record N of name in owner's registry
 # (lmx_graph_data_find); a bare name -- its only record, two or more being ambiguous (no first record is chosen, the
 # book, fields); without a record of that name -- the atom of owner written with that word, its own field
 # (`Struct1: Struct2`, the author 2026-11-11). The count of owner's slots for no such field or an ambiguous one.
-fn: lmx_graph_step_index (@: g c.LmxGraph; @: owner c.Lmx; @: word char) size_t
-    @: name char word
+fn: lmx_graph_step_index (@: g c.LmxGraph; @: owner c.Lmx; @: step void) size_t
+    @: name char c.lmx_graph_word_text(g, step)
     @: field void 0
     size_t: index 0U
     size_t: at 0U
     size_t: found 0U
     size_t: count 0U
     size_t: i 0U
-    if: g = 0 || word = 0 || c.lmx_graph_kind(g, (cast: (@: void) owner)) != 4
+    if: g = 0 || step = 0 || c.lmx_graph_kind(g, (cast: (@: void) owner)) != 4
         return: (cast: (size_t) -1)
     count := c.lmx_graph_count(owner)
-    if: lmx_graph_occurrence_word(word, @ index, @ name) != 0
+    if: name = 0
+        if: c.lmx_graph_occurrence(g, step, @ index, @ name) = 0
+            return: count
         found := lmx_graph_data_find(g, owner, name, 0, index, @ at)
         if: index < found
             return: at
@@ -1747,7 +1727,7 @@ fn: lmx_graph_atom_target (@: g c.LmxGraph; @: holder c.Lmx; @: word char; @@: o
 # the target of a reference, the same instance --; a field that is an atom answers the entity its word refers to
 # (lmx_graph_atom_target), and the slot keeps the atom. 0 and the value in out; 3 for no such field, an ambiguous name
 # or an atom that refers to nothing.
-fn: lmx_graph_step (@: g c.LmxGraph; @: value void; @: word char; @@: out void) int
+fn: lmx_graph_step (@: g c.LmxGraph; @: value void; @: step void; @@: out void) int
     @: base void c.lmx_graph_target(g, value)
     @: owner c.Lmx 0
     @: field void 0
@@ -1756,7 +1736,7 @@ fn: lmx_graph_step (@: g c.LmxGraph; @: value void; @: word char; @@: out void) 
     if: out = 0 || c.lmx_graph_kind(g, base) != 4
         return: 3
     owner := (cast: (@: c.Lmx) base)
-    slot := lmx_graph_step_index(g, owner, word)
+    slot := lmx_graph_step_index(g, owner, step)
     if: slot >= c.lmx_graph_count(owner)
         return: 3
     status := lmx_graph_binding_read(g, owner, slot, 1, @ field)
@@ -1780,7 +1760,7 @@ end: lmx_graph_step
 # refers to (lmx_graph_atom_target) -- a write through `Pair\i`, Pair holding the atom i, writes the place i itself, one
 # instance. 0 with the Structure holding the place in owner_out and its slot in slot_out; 3 for no such field, an
 # ambiguous name or an atom that refers to no record; 4 for a value that is no Structure.
-fn: lmx_graph_step_place (@: g c.LmxGraph; @: value void; @: word char; @@: owner_out void; @: slot_out size_t) int
+fn: lmx_graph_step_place (@: g c.LmxGraph; @: value void; @: step void; @@: owner_out void; @: slot_out size_t) int
     @: base void c.lmx_graph_target(g, value)
     @: owner c.Lmx 0
     @: field void 0
@@ -1791,7 +1771,7 @@ fn: lmx_graph_step_place (@: g c.LmxGraph; @: value void; @: word char; @@: owne
     if: c.lmx_graph_kind(g, base) != 4
         return: 4
     owner := (cast: (@: c.Lmx) base)
-    slot := lmx_graph_step_index(g, owner, word)
+    slot := lmx_graph_step_index(g, owner, step)
     if: slot >= c.lmx_graph_count(owner)
         return: 3
     field := c.lmx_graph_get(owner, slot)
@@ -2765,7 +2745,7 @@ end: lmx_graph_preflight
 fn: lmx_graph_admit_path (@: g c.LmxGraph; @: expression void; @: name char; @: model void; @: candidate void; @@: wanted void; @@: found void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: path c.Lmx 0
-    @: field char 0
+    @: field void 0
     int: status 0
     int: kind 0
     if: c.lmx_graph_word_text(g, expression) = name
@@ -2780,7 +2760,7 @@ fn: lmx_graph_admit_path (@: g c.LmxGraph; @: expression void; @: name char; @: 
     status := lmx_graph_admit_path(g, c.lmx_graph_get(path, 0U), name, model, candidate, wanted, found)
     if: status != 1
         return: status
-    field := c.lmx_graph_word_text(g, c.lmx_graph_get(path, 2U))
+    field := c.lmx_graph_get(path, 2U)
     # The same path step as a read (lmx_graph_step): through an atom of the model or of the candidate too.
     if: lmx_graph_step(g, wanted[0], field, wanted) != 0
         wanted[0] := 0
@@ -3510,7 +3490,7 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                     if: status != 0
                         return: status
                     # The path step, through an atom too (lmx_graph_step; plan M11 5a).
-                    status := lmx_graph_step(g, value, c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 2U)), @ value)
+                    status := lmx_graph_step(g, value, c.lmx_graph_get(expression, 2U), @ value)
                     if: status != 0
                         return: status
                     ---

@@ -16,10 +16,7 @@ end: held
 fn: scoped () int
     int: trace 0
     if: 0 ((finally (:= trace 99)))
-    ---
-        finally: (:= trace ((trace * 10) + 1))
-        :=: trace 2
-    ---
+    if: 1 ((finally (:= trace ((trace * 10) + 1))) (:= trace 2))
     return: trace
 end: scoped
 fn: jumps () int

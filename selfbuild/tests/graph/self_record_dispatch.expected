@@ -1,0 +1,29 @@
+int: global_calls 0
+sub: Step ()
+    :=: (node \ global_calls) ((node \ global_calls) + 100)
+end: Step
+sub: Worker ()
+    Step:
+end: Worker
+sub: main () (
+    Self:
+        Empty:
+        int: x 1
+        :=: x (x + 2)
+    end: Self
+    D:
+        Step:
+            int: n 0
+            :=: n (n + 1)
+        end: Step
+    end: D
+    int: seen 0
+)
+    call: Self
+    call: D Worker
+    :=: seen (Self \ x)
+end: main
+main:
+int: seen 3
+int: shadowed 1
+int: global_after 0

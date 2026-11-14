@@ -1,5 +1,39 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г: срез 372, кодовая приёмка пройдена в main
+
+Принятый 371 закоммичен и отправлен: 64533ddb0b70406daa914718be466d1b1d002ce0.
+Все новые правки, сборки и коммиты — C:/Nyasha_Planet/LMX, main. Старое W3 только резервная
+контрольная копия. Единственный writer/build Sol; pipeline sol-m11-root-self-20261114-01,
+runs/sol-m11-root-self-20261114-01; общий stage S, без параллельного docs producer.
+Удалены root_declares/root_declare/space_reach/code_apart и ненужные emitter classifiers;
+graph_run exports 50. Живая именованная голова выбирает метод/ordinary Structure одинаково.
+Written groups отдельным оператором остаются значениями. Scanner/own collector обходят только
+явно выбранное тело, пропускают созданные FN values; expression/optional entry contracts сохранены.
+Source05: 631 вход, verify прошёл. Runtime03/graph03 собраны, 16 случаев прошли в трёх
+режимах, AFTER3 и все 24 mutation checks прошли. Перенесены root_closed_names
+и index_cycle_dump с полным наблюдением закрытых имён и настоящего цикла; struct_root_declares
+теперь один S с двумя actual: отказ5 после reached1. Self/given dispatch проверяет 3/1/0.
+Anonymous value witness: calls2, quiet_fields0, after_body0, after_ast1, math5, after_math2,
+arithmetic14, body_x3. Prefix +(tick()+1) даёт настоящий operator AST; bare root tick()+1
+разбивается построителем на поля и не используется как доказательство operator AST.
+Книга RU/EN исправлена по Р17; штатный render semantics прошёл: 35 пар и 14 cases.
+Полный bootstrap01 прошёл настоящие G1/G2 со всеми 9 smoke каждый; fixedpoint13 прошёл.
+Штатный G2 заново собрал graph-tool: 18 случаев прошли в трёх режимах, AFTER3 и mutation24 прошли.
+Алгоритмы с Source03
+заморожены. Source05 отличается от Source04 только тремя строками двух контрольных фикстур
+и golden finally_scope: явные роли кода сохраняют все числа, включая scoped_result21.
+Pure run/AFTER обеих программ прошли; общий stage этим не менялся. Штатный docs-check02 прошёл:
+35/14/27/44/615, ссылки и LF индекса 27 273 файлов. Первый docs-check выявил CRLF в 18
+скопированных логах; собственные witness-файлы нормализованы в LF, повтор прошёл. Оба diff --check чисты.
+Далее commit/push main. Рабочая связка — m11-root-self-01/g2 с graph-m11-root-self-g2-01.
+[Приёмка и границы](witnesses/m11-root-self-20261114/notes.md).
+Далее завершить общий корневой маршрут и голову-путь, затем 5д–5е. M11.7/8, M13/M14 открыты.
+Минимальная зависимость корневого кадра: общий deferred-place contract для raw @ без запуска
+initializer; первый store создаёт рабочую ссылку, flush материализует её через прежнюю строку/слот.
+После этого переводить корневые ресиверы в local/store/finish одновременно для обоих исполнителей.
+Два чужих untracked сохранены; goal active, весь v3.
+
 ## 2026-11-13 — M11.5в: срез371, кодовая приёмка пройдена
 
 370 принят и отправлен непосредственно из main: 0f3d1ded75e9738b454aa278b51bbb61554dcf8a,

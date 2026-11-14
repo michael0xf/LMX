@@ -1,5 +1,15 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез 372 — часть M11.5г принята.** Именованные записи root/self выбирают живую цель
+метода/обычной Structure, включая цель из поданных данных; прежний корневой declaration skip снят.
+Standalone written groups — значения, их поля не исполняются и не попадают в own/input scan.
+Явные control bodies и operator AST сохраняют исполнение. Полный bootstrap quick G1/G2,
+по 9 smoke, fixedpoint13 и verify631 прошли. На заново собранном штатном G2/graph прошли
+18 случаев в трёх режимах, AFTER3 и mutation24. Штатная генерация семантики прошла (35/14),
+docs-check прошёл: 35/14/27/44/615, ссылки и LF индекса 27 273 файлов; diff --check чист.
+Полный общий root/self маршрут, голова-путь и весь 5г остаются OPEN.
+[Приёмка и границы](steps/witnesses/m11-root-self-20261114/notes.md).
+
 **Уточнение M14 — локальные значения и общий прямой кеш, 2026-11-13, код OPEN.**
 [Основной план](next_core_tasks_v3.md#native-structures), [норма](docs/LMX_semantics.ru.md#direct-access-cache).
 

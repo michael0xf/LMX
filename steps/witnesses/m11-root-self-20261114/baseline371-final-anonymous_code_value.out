@@ -1,0 +1,76 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: tick () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 4
+end: tick
+sub: quiet ()
+    ---
+        tick:
+    ---
+    ---
+        ---
+            tick:
+            +
+            int: 1
+        ---
+    ---
+    ---
+        int: phantom 7
+    ---
+    missing_a: missing_b missing_c
+end: quiet
+quiet:
+int: quiet_fields (length (quiet \ data))
+---
+    tick:
+---
+@: Body ((int x 1) ((tick)) (missing_a missing_b missing_c) (:= x (x + 2)))
+call: Body
+int: after_body (data \ calls)
++: ((tick) + 1)
+int: after_ast (data \ calls)
+int: math ((tick) + 1)
+int: after_math (data \ calls)
+int: arithmetic (2 + (3 * 4))
+int: body_x (Body \ x)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 0
+fn: tick () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 4
+end: tick
+sub: quiet ()
+    ---
+        tick:
+    ---
+    ---
+        ---
+            tick:
+            +
+            int: 1
+        ---
+    ---
+    ---
+        int: phantom 7
+    ---
+    missing_a: missing_b missing_c
+end: quiet
+quiet:
+int: quiet_fields (length (quiet \ data))
+---
+    tick:
+---
+@: Body ((int x 1) ((tick)) (missing_a missing_b missing_c) (:= x (x + 2)))
+call: Body
+int: after_body (data \ calls)
++: ((tick) + 1)
+int: after_ast (data \ calls)
+int: math ((tick) + 1)
+int: after_math (data \ calls)
+int: arithmetic (2 + (3 * 4))
+int: body_x (Body \ x)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

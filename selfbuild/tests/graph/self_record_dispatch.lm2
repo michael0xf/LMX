@@ -1,0 +1,23 @@
+# A record uses the same dispatch over self and over given data. The given
+# data's Step shadows the lexical callable; neither case needs a method wrapper.
+int: global_calls 0
+sub: Step () ()
+    node\global_calls := node\global_calls + 100
+sub: Worker () ()
+    Step()
+sub: main () (
+    Self:
+        Empty()
+        int: x 1
+        x := x + 2
+    D:
+        Step(int: n 0; n := n + 1)
+    int: seen 0
+)
+    call(Self)
+    call(D; Worker)
+    seen := Self\x
+main()
+int: seen main\data\seen
+int: shadowed main\data\D\Step\n
+int: global_after global_calls

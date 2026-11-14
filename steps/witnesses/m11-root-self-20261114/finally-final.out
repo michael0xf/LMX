@@ -1,0 +1,147 @@
+GRAPH-BEFORE-BEGIN
+fn: ordered () int (
+    int: trace 0
+)
+    finally: (:= trace ((trace * 10) + 1))
+    finally: (:= trace ((trace * 10) + 2))
+    return: 9
+end: ordered
+fn: held () int (
+    int: x 0
+    int: seen 0
+)
+    finally: (:= seen ((held \ data) \ x)) (:= x (x + 1))
+    :=: x 5
+    return: x
+end: held
+fn: scoped () int
+    int: trace 0
+    if: 0 ((finally (:= trace 99)))
+    if: 1 ((finally (:= trace ((trace * 10) + 1))) (:= trace 2))
+    return: trace
+end: scoped
+fn: jumps () int
+    int: i 0
+    int: trace 0
+    while: (i < 4) ((finally (:= trace ((trace * 10) + i))) (:= i (i + 1)) (if (i = 1) ((continue))) (if (i = 2) ((redo))) (if (i = 4) ((break))))
+    return: trace
+end: jumps
+fn: replacement () int (
+    int: trace 0
+)
+    finally: (:= trace (trace + 1))
+    finally: (return 7)
+    return: 3
+end: replacement
+fn: nested () int (
+    int: trace 0
+)
+    finally: (finally (:= trace ((trace * 10) + 3))) (:= trace ((trace * 10) + 2))
+    :=: trace 1
+    return: trace
+end: nested
+fn: cleanup_field () int
+    :=: late 4
+    finally: (int late) (:= late (late + 1))
+    return: late
+end: cleanup_field
+fn: cleanup_jump () int
+    int: i 0
+    int: trace 0
+    while: (i < 3) ((finally (:= trace ((trace * 10) + i)) (if (i < 3) ((continue)))) (:= i (i + 1)) (break))
+    return: trace
+end: cleanup_jump
+int: ordered_result (ordered)
+int: ordered_trace ((ordered \ data) \ trace)
+int: held_result (held)
+int: held_x ((held \ data) \ x)
+int: held_seen ((held \ data) \ seen)
+int: scoped_result (scoped)
+int: jump_result (jumps)
+int: replacement_result (replacement)
+int: replacement_trace ((replacement \ data) \ trace)
+int: nested_result (nested)
+int: nested_trace ((nested \ data) \ trace)
+int: cleanup_field_result (cleanup_field)
+int: cleanup_field_value ((cleanup_field \ data) \ late)
+int: cleanup_jump_result (cleanup_jump)
+int: root_trace 0
+finally: (:= root_trace ((root_trace * 10) + 1))
+int: after_registration (held_result + 10)
+:=: root_trace 2
+finally: (:= root_trace ((root_trace * 10) + 3))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: ordered () int (
+    int: trace 0
+)
+    finally: (:= trace ((trace * 10) + 1))
+    finally: (:= trace ((trace * 10) + 2))
+    return: 9
+end: ordered
+fn: held () int (
+    int: x 0
+    int: seen 0
+)
+    finally: (:= seen ((held \ data) \ x)) (:= x (x + 1))
+    :=: x 5
+    return: x
+end: held
+fn: scoped () int
+    int: trace 0
+    if: 0 ((finally (:= trace 99)))
+    if: 1 ((finally (:= trace ((trace * 10) + 1))) (:= trace 2))
+    return: trace
+end: scoped
+fn: jumps () int
+    int: i 0
+    int: trace 0
+    while: (i < 4) ((finally (:= trace ((trace * 10) + i))) (:= i (i + 1)) (if (i = 1) ((continue))) (if (i = 2) ((redo))) (if (i = 4) ((break))))
+    return: trace
+end: jumps
+fn: replacement () int (
+    int: trace 0
+)
+    finally: (:= trace (trace + 1))
+    finally: (return 7)
+    return: 3
+end: replacement
+fn: nested () int (
+    int: trace 0
+)
+    finally: (finally (:= trace ((trace * 10) + 3))) (:= trace ((trace * 10) + 2))
+    :=: trace 1
+    return: trace
+end: nested
+fn: cleanup_field () int
+    :=: late 4
+    finally: (int late) (:= late (late + 1))
+    return: late
+end: cleanup_field
+fn: cleanup_jump () int
+    int: i 0
+    int: trace 0
+    while: (i < 3) ((finally (:= trace ((trace * 10) + i)) (if (i < 3) ((continue)))) (:= i (i + 1)) (break))
+    return: trace
+end: cleanup_jump
+int: ordered_result 9
+int: ordered_trace 21
+int: held_result 5
+int: held_x 6
+int: held_seen 5
+int: scoped_result 21
+int: jump_result 1234
+int: replacement_result 7
+int: replacement_trace 1
+int: nested_result 1
+int: nested_trace 123
+int: cleanup_field_result 4
+int: cleanup_field_value 5
+int: cleanup_jump_result 123
+int: root_trace 231
+finally: (:= root_trace ((root_trace * 10) + 1))
+int: after_registration 15
+:=: root_trace 2
+finally: (:= root_trace ((root_trace * 10) + 3))
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

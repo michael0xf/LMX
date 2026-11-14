@@ -1,6 +1,20 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-13, slice 369): supported initialized int/Structure references,
+Current continuation (2026-11-14, slice 372): root/self named-head dispatch uses the shared
+resolution and launch mechanism; standalone written anonymous Structures remain values,
+without executing their fields or adding surrounding inputs or own places. Explicitly
+selected control bodies and consumed operator expressions retain their roles.
+The private bundle passed sixteen cases in interp/native/forced, three complete AFTER
+comparisons and mutation. Full bootstrap quick built genuine G1/G2, nine smoke rows each;
+all thirteen fixed-point checks and 631 canonical inputs passed. Genuine G2 rebuilt the graph
+tool: eighteen cases passed in three modes, three complete AFTER comparisons and all twenty-four
+mutation checks passed. Working tuple: m11-root-self-01/g2 with graph-m11-root-self-g2-01.
+Normal semantics rendering and docs check passed: 35/14/27/44/615, links and LF for 27,273
+indexed files. Both diff checks are clean.
+Root numeric/reference publication, direct path-head calls and the whole of M11.5г remain
+open, followed by 5д–5е, M11.7/8 and M13/M14. [Evidence and limits](../steps/witnesses/m11-root-self-20261114/notes.md).
+
+Previous continuation (2026-11-13, slice 369): supported initialized int/Structure references,
 implicit own uninit:T and code @ use the existing work map, snapshots and dirty publication.
 Publication keeps slot/wrapper/typed-cell identities and the clean outer snapshot after a nested write.
 The model's primitive kind is stored once in the existing row's expected_kind and checked before RHS.
@@ -311,10 +325,11 @@ the written one (the author 2026-11-09). A Structure made by `merge` of a callab
 it (slice 333). 67 graph-check runs passed.
 [Sources, receipts and limits](../steps/witnesses/fn-traversal-20261109/notes.md).
 
-The current graph61/tool32/rt51 applies Codex's review of slice 332: the words of the language are recognized by
+Historical graph61/tool32/rt51 applied Codex's review of slice 332: the words of the language are recognized by
 address; a field of the root is classified, and answers its name, from where the traversal reaches it
 (`lmx_graph_space_reach`, in both consumers), so `r: h(3)` after `h: f` defines `r` by the call and `int: seen x`
 before `int: x 7` is refused as an unknown name; the `var` of a function is copied through one map keeping its nesting.
+This describes that slice; slice 372 removes the root declaration/reach route named here.
 70 graph-check runs passed.
 
 The current graph64/tool33/rt53 applies the receiver `fn` to computed arguments where the traversal of the root

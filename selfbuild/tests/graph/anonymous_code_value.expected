@@ -1,0 +1,42 @@
+int: calls 2
+fn: tick () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 4
+end: tick
+sub: quiet ()
+    ---
+        tick:
+    ---
+    ---
+        ---
+            tick:
+            +
+            int: 1
+        ---
+    ---
+    ---
+        int: phantom 7
+    ---
+    missing_a: missing_b missing_c
+end: quiet
+quiet:
+int: quiet_fields 0
+---
+    tick:
+---
+Body:
+    int: x 3
+    ---
+        tick:
+    ---
+    missing_a: missing_b missing_c
+    :=: x (x + 2)
+end: Body
+call: Body
+int: after_body 0
++: ((tick) + 1)
+int: after_ast 1
+int: math 5
+int: after_math 2
+int: arithmetic 14
+int: body_x 3

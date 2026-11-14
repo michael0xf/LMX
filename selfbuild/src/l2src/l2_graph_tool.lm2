@@ -830,6 +830,9 @@ end: lm_graph_emit_pending
 # Registration protects the remaining statements of this scope. All their exits pass through this cleanup;
 # the cleanup itself targets a separate dispatch, so it cannot run itself again. Outer registrations still apply.
 fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.Lmx; size_t: at; size_t: to; @: cleanup c.Lmx; int: mode; int: exit_label; int: again_label; int: step_label; @: temps int) int
+    @: cleanup_body c.Lmx 0
+    size_t: cleanup_from 0U
+    size_t: cleanup_to 0U
     int: id temps[0]
     int: saved_failure temps[1]
     int: saved_return temps[2]
@@ -872,7 +875,8 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     c.fprintf(f, "        l2_label%d:\n        if: l2_pending_error%d != 0 || l2_pending_word%d = l2_pending_words%d\\w_return\n            if: lmx_graph_work_flush(l2_g) != 0\n                l2_pending_error%d: 1\n        ---\n", id, id, id, id, id)
     temps[1] := id + 6
     temps[2] := id + 7
-    status := lm_graph_emit_block(g, f, code, cleanup, 0U, c.lmx_graph_count(cleanup), mode, protected_exit, protected_again, protected_step, temps)
+    c.lmx_graph_code_body(g, cleanup, 0U, @ cleanup_body, @ cleanup_from, @ cleanup_to)
+    status := lm_graph_emit_block(g, f, code, cleanup_body, cleanup_from, cleanup_to, mode, protected_exit, protected_again, protected_step, temps)
     temps[1] := saved_failure
     temps[2] := saved_return
     if: status != 0
@@ -1084,6 +1088,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     @: name char 0
     size_t: i from
     size_t: n 0U
+    size_t: code_from 0U
+    size_t: code_to 0U
     @: leave_return char (cast: (@: char) leave_storage\returned)
     lm_graph_emit_leave_text(leave_return, temps[2], 0)
     int: result 0
@@ -1217,7 +1223,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             if: i < to && c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get(body, i)) = state\w_else
                 statement := (cast: (@: c.Lmx) c.lmx_graph_get(body, i))
                 if: status = 0
-                    status := lm_graph_emit_block(g, f, code, statement, 0U, c.lmx_graph_count(statement), mode, exit_label, again_label, step_label, temps)
+                    c.lmx_graph_code_body(g, statement, 0U, @ nested, @ code_from, @ code_to)
+                    status := lm_graph_emit_block(g, f, code, nested, code_from, code_to, mode, exit_label, again_label, step_label, temps)
                 i := i + 1U
             ---
             c.fprintf(f, "        l2_label%d:\n", end_label)

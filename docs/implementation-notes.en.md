@@ -76,7 +76,28 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-**Current state, 2026-11-14, slice381; base380 `c5ba5ef9`.** The existing frame gains
+**Current state, 2026-11-14, slice382; base381 `38cf026c`.** Common `code_body` returns
+a borrowed `body/from/to` through existing CodeBody roles. A whole `else`/`finally` tail containing a sole
+written group selects its fields once; an already selected body/remainder and nested standalone groups
+are not unwrapped again. The scanner, `fn_own`, walker, native and `code_parent` use this selection,
+retaining physical parents, source holder/raw index and the existing frame; Graph71/Run53/implements74.
+Runtime01/Graph01 and five pure cases passed: calls4 instead of2, cleanup trace21 instead of1,
+written Fn790/computed890 instead of90; own late7, cleanup return4-after5, inert fields0
+with unknown in a double group; refusal6 retains cleanup/root trace21. `finally` still registers
+without effects and runs on exit in reverse order. No descriptor is evaluated for selection.
+Code was built on Source01:751; Source02:761 adds only five fixture pairs, SHA-256
+`be5db8e3168082a1509b5b035f7d293b0f8ec40a6092c321b247647443e04d7f`.
+Private25 triple/75 full AFTER checks/mutation24 and native written/computed outer/fn_apply trace passed.
+Genuine G1/G2 quick with nine smoke cases each, fixedpoint13 and verify761 passed. The genuine G2 graph-tool is built,
+SHA-256 `f71df0958fda2d9be2e958b70fcd3b081e2248305aa07a68a7dbf6eda5b89316`.
+The G2 repeat (25 cases in three modes, 21 full negative AFTER checks, mutation24) and normal render/docs check382
+passed:35/14/27/44/615, links/LF. The working tuple is382: boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
+External/computed CodeBody, copying raw declarations and held F,
+full M11, M11.7/8 and M13/M14 remain OPEN; this slice does not establish ordinary native M14.
+The [copy-class reading](../steps/handoff/copy-construction-reading-20261114.md) separates a new binding from raw arguments
+and a copy of a held F's current parts as an ordinary value; source Space bindings are not transferred.
+
+**Previous state, 2026-11-14, slice381; base380 `c5ba5ef9`.** The existing frame gains
 `lexical_scope`: selecting an inline body changes the physical CodeBody cursor while `code`/`body`/`data`
 retain their identities. Common `work_scope` prepares written fn/sub only at entry; a computed F is created at its producer.
 The walker restores the cursor on flow/error; native sets it before each statement and at control labels.

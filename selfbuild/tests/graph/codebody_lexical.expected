@@ -1,0 +1,28 @@
+fn: leaf () int
+    return: 90
+end: leaf
+fn: outer () int (
+    int: inside 0
+    int: outside 0
+)
+    if: 0 ()
+    else: ((fn leaf () int ((return 7))) (:= inside (leaf)))
+    :=: outside (leaf)
+    return: ((inside * 100) + outside)
+end: outer
+int: result 790
+fn: computed () int (
+    prepared:
+        args: ()
+        return: int
+        code: ((return 8))
+    end: prepared
+    int: inside 0
+    int: outside 0
+)
+    if: 0 ()
+    else: ((fn leaf prepared) (:= inside (leaf)))
+    :=: outside (leaf)
+    return: ((inside * 100) + outside)
+end: computed
+int: computed_result 890

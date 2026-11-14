@@ -1,0 +1,91 @@
+Breakpoint 1 at 0x140002837
+Breakpoint 2 at 0x140001e11
+Breakpoint 3 at 0x14000275c
+Breakpoint 4 at 0x14006e420
+[New Thread 3404.0x12c8]
+[New Thread 3404.0x3104]
+[New Thread 3404.0x47e4]
+GRAPH-BEFORE-BEGIN
+fn: leaf () int
+    return: 90
+end: leaf
+fn: outer () int (
+    int: inside 0
+    int: outside 0
+)
+    if: 0 ()
+    else: ((fn leaf () int ((return 7))) (:= inside (leaf)))
+    :=: outside (leaf)
+    return: ((inside * 100) + outside)
+end: outer
+int: result (outer)
+fn: computed () int (
+    prepared:
+        args: ()
+        return: int
+        code: ((return 8))
+    end: prepared
+    int: inside 0
+    int: outside 0
+)
+    if: 0 ()
+    else: ((fn leaf prepared) (:= inside (leaf)))
+    :=: outside (leaf)
+    return: ((inside * 100) + outside)
+end: computed
+int: computed_result (computed)
+GRAPH-BEFORE-END
+NATIVE ROOT
+#0  0x00007ff6571b2837 in lm_graph_root ()
+#1  0x00007ff6571b2df9 in lm_graph_body ()
+#2  0x00007ff6572232f2 in lmx_call0_mode ()
+NATIVE WRITTEN OUTER
+#0  0x00007ff6571b1e11 in lm_graph_method1 ()
+#1  0x00007ff657219eaf in lmx_call_prim_values ()
+#2  0x00007ff657220377 in lmx_graph_invoke_data ()
+NATIVE COMPUTED OUTER
+#0  0x00007ff6571b275c in lm_graph_method2 ()
+#1  0x00007ff657219eaf in lmx_call_prim_values ()
+#2  0x00007ff657220377 in lmx_graph_invoke_data ()
+COMPUTED RECEIVER IN SELECTED ELSE
+#0  0x00007ff65721e420 in lmx_graph_fn_apply ()
+#1  0x00007ff6571b204d in lm_graph_body2 ()
+#2  0x00007ff6571b2804 in lm_graph_method2 ()
+#3  0x00007ff657219eaf in lmx_call_prim_values ()
+GRAPH-AFTER-BEGIN
+fn: leaf () int
+    return: 90
+end: leaf
+fn: outer () int (
+    int: inside 0
+    int: outside 0
+)
+    if: 0 ()
+    else: ((fn leaf () int ((return 7))) (:= inside (leaf)))
+    :=: outside (leaf)
+    return: ((inside * 100) + outside)
+end: outer
+int: result 790
+fn: computed () int (
+    prepared:
+        args: ()
+        return: int
+        code: ((return 8))
+    end: prepared
+    int: inside 0
+    int: outside 0
+)
+    if: 0 ()
+    else: ((fn leaf prepared) (:= inside (leaf)))
+    :=: outside (leaf)
+    return: ((inside * 100) + outside)
+end: computed
+int: computed_result 890
+GRAPH-AFTER-END
+[New Thread 3404.0x2370]
+l2_eternal_driver: 81 checks, 0 roots
+[Thread 3404.0x2370 exited with code 0]
+[Thread 3404.0x3104 exited with code 0]
+[Thread 3404.0x12c8 exited with code 0]
+[Thread 3404.0x47e4 exited with code 0]
+[Inferior 1 (process 3404) exited normally]

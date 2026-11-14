@@ -1,5 +1,30 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез382 — bounded CodeBody для else/finally, ограниченная реализация; кодовая приёмка пройдена.**
+База381/38cf026c принята и отправлена; рабочая связка382 — boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
+Run.code_body53 возвращает общий borrowed body/from/to по существующим ролям: sole written group выбирается один раз
+только на whole-tail receiving boundary else/finally. Уже выбранные method/ordinary/if/loop bodies повторно не раскрывать;
+самостоятельная внутренняя группа остаётся значением. Finally выполняется при unwind. Scanner, fn_own, обходчик,
+native и code_parent потребляют один вид, physical holder/parent и прежние code/data/активация сохраняются.
+Runtime01/Graph01 из Source01:751 PASS; пять pure: calls4, unwind21, written790/computed890,
+own late7/return4-after5/inert0 плюс missing group inert; error6 сохраняет cleanup/root trace21.
+Source02:761 добавляет только пять пар fixture; SHA be5db8e3168082a1509b5b035f7d293b0f8ec40a6092c321b247647443e04d7f.
+Private25 triple/AFTER75/mutation24 прошли; native trace actual written/computed outer и fn_apply PASS.
+Whole bootstrap quick: настоящие G1/G2, по9 smoke, fixedpoint13/verify761 PASS;
+штатный G2 пересобрал graph-tool, SHA f71df095. G2 repeat25 triple/negative AFTER21/mutation24 прошли;
+штатные render/docs check382 прошли:35/14/27/44/615, ссылки/LF27661 до staging; финальный index-check02 LF27695.
+Bounded structural gap реализован;
+общий external/computed CodeBody, новые bindings copied raw fn/sub,
+held F как Structure и явный fn-constructor, M11.7/8 и весь M13/M14 OPEN.
+Приёмка382 ограничена этим срезом; goal ACTIVE, продолжать основной v3.
+
+**Уточнение копии:** raw declaration и текущая F — разные значения. `merge(scope)` не переносит SourceSpace bindings;
+скопированный raw fn/sub строит новый binding из copied actuals. Реально достижимая через граф held F копируется
+с текущими parts/data/aliases как обычная Structure без FN-роли; явный `fn` затем создаёт свежие F/D общим конструктором.
+Warm3 → clone call4/source3 — контроль явного `fn:clone merge(leaf)` после прогрева source, не простого `merge(scope)`.
+Прежний кандидат наследования текущей SourceSpace F/data снят. Оба класса проверки OPEN;
+[основание и границы](steps/handoff/copy-construction-reading-20261114.md), вопроса к автору нет.
+
 **2026-11-14, срез 381 — computed fn/sub в CodeBody, ограниченная реализация; приёмка пройдена.**
 База 380/c5ba5ef9 принята. Общий frame.lexical_scope/work_scope хранит текущий physical CodeBody;
 body/code/data identity и активация прежние. Fn-name из if не экспортируется, DATA/кадр общие.
@@ -14,7 +39,8 @@ fixedpoint13/verify751 PASS; штатный G2 пересобрал graph-tool, 
 G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615,
 ссылки/LF27605 до staging. Финальный index-check02 прошёл LF27660. Рабочая связка381:
 boot-m11-computed-body-01/g2 + graph-m11-computed-body-g2-01; [свидетельство](steps/witnesses/m11-computed-body-20261114/notes.md).
-Остатки CodeBody else/finally/retained groups, copied lexical/current F data, M11.7/8, M13/M14 OPEN; goal ACTIVE.
+Остатки CodeBody else/finally/retained groups, новые bindings copied raw fn/sub, held F как Structure
+и явный fn-constructor, M11.7/8, M13/M14 OPEN; goal ACTIVE.
 
 **2026-11-14, срез380 — требования индексируемого места, кодовая приёмка пройдена.**
 База379 — d670a0e9. ImplContractFact/CopyMap текущего GraphSpace фиксируют требование до RHS;
@@ -28,7 +54,7 @@ Private67 triple/204 AFTER с reset2/mutation24 и actual native root/RHS trace 
 Штатные render/docs check380 прошли:35/14/27/44/615, ссылки и LF27563 до staging; final index03 LF27604.
 Кодовая связка boot-m11-slot-contract-01/g2 +
 graph-m11-slot-contract-g2-01; [свидетельство](steps/witnesses/m11-slot-contract-20261114/notes.md).
-Общий implements/test, copied lexical bindings и весь M13/M14 OPEN; ограниченный computed BODY срез381 описан выше.
+Общий implements/test, новые bindings copied raw fn/sub и весь M13/M14 OPEN; ограниченный computed BODY срез381 описан выше.
 Все дальнейшие дополнения вносить в основной v3; goal ACTIVE.
 
 **2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**
@@ -670,15 +696,21 @@ bootstrap достигает неподвижной точки, различия
 захват до RHS, NONE и копии в том же execution; общий implements остаётся OPEN.
 Уже работающие случаи 355 не реализовывать второй раз.
 
-**OPEN общих зависимостей:** copied lexical fn/sub binding требует соответствующих copied scope/source/parent,
-а не обращения к чужому construction binding или persistent таблице. Текущая own data уже созданной F
-переносится через ту же map, без повторного raw initializer; контроль source count3 → copied call4/source3
-включён в основной v3. Computed fn/sub в поддержанных CodeBody реализованы ограниченным срезом381:
+**OPEN общих зависимостей — два класса проверки:** copied raw fn/sub получает новый binding из copied actuals
+в своём scope/source/parent, без переноса SourceSpace bindings или persistent таблицы. Отдельно проверить held F,
+реально достижимую через граф: текущие parts/data/aliases копируются как обычная Structure одной map, без FN-роли;
+последующий явный fn создаёт свежие F/D общим конструктором. Source count3 → clone call4/source3 проверяется
+через явный `fn:clone merge(leaf)`, не простой `merge(scope)`. Прежний кандидат наследования SourceSpace F/data
+снят; [разбор нормы](steps/handoff/copy-construction-reading-20261114.md). Оба класса пока OPEN.
+Computed fn/sub в поддержанных CodeBody реализованы ограниченным срезом381:
 общий lexical_scope/work_scope, scope/name-sensitive pending, snapshots и closed-missing timing;
 имя fn/sub из if не выходит наружу при общей DATA. Private/native trace, настоящие G1/G2 quick и fixedpoint13/verify751 прошли;
 G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF.
-Общий охват else/finally/retained groups и рабочий frontend M11.8 остаются OPEN. Root named-parts probe380
-проверял перенос captured fact через fn_data; copied lexical/node-path/current F data зависимость этим не закрыта.
+Bounded else/finally/retained-group selector реализован ограниченным срезом382: genuine G1/G2/fixedpoint13/verify761 прошли;
+G2 repeat25 triple/negative AFTER21/mutation24 и штатные render/docs check382 прошли:35/14/27/44/615, ссылки/LF.
+Общий external/computed CodeBody consumer и рабочий frontend M11.8 остаются OPEN. Root named-parts probe380
+проверял перенос captured fact через fn_data; ни подготовка новых bindings copied raw scope,
+ни отдельная проверка held F/явного fn-constructor этим не закрыта.
 
 **5е:** имена Structure/функций слева от `:=` отказывают, указатель-переменная принимает ссылку; формалы —
 ресиверами; именованные фактические и части вызываемых — только `:=`; плоское требование с кандидатом.

@@ -9,7 +9,30 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice 381; bounded implementation, acceptance passed; base 380/c5ba5ef9): the existing
+Current implementation note (2026-11-14, slice382; bounded implementation, code acceptance passed; base381/38cf026c): common Run.code_body53
+returns a borrowed body/from/to view through existing argument roles. An else/finally whole tail selects its sole
+written group once. Already selected method/ordinary/if/loop bodies are not unwrapped again; a remaining standalone
+inner group stays a value. Finally runs during unwind. Scanner, fn_own, walker, native and code_parent use the same
+view without changing physical holder/parent, selected code/data or the activation. Runtime01/Graph01 built from
+Source01:751 passed five pure cases: calls4, unwind21, written790/computed890, own late7/return4-after5/inert0
+and an inert missing group; error6 retains cleanup/root trace21. Source02:761 adds only five fixture pairs,
+SHA be5db8e3. Private25 triple/AFTER75/mutation24 and actual native written/computed outer trace passed;
+genuine G1/G2 quick, nine smoke rows each and fixedpoint13/verify761 passed. Genuine G2 rebuilt graph-tool,
+SHA f71df095. G2 repeat25 triple/negative AFTER21/mutation24 and normal render/docs check382 passed:35/14/27/44/615, links/LF.
+The working tuple is382: boot-m11-codebody-01/g2 +
+graph-m11-codebody-g2-01. General external/computed CodeBody coverage, fresh bindings for copied raw fn/sub,
+held-F copying as Structure followed by an explicit fn constructor, M11.7/8 and full M13/M14 remain OPEN;
+Acceptance is limited to this slice. See the [main plan](next_core_tasks_v3.md#m11).
+
+Copy-reading clarification (2026-11-14): a raw declaration and its current F are separate values.
+Copied raw fn/sub in `merge(scope)` gets a fresh binding from copied actuals; SourceSpace bindings never transfer.
+A held F actually reachable through the graph copies its current parts/data/aliases as an ordinary Structure,
+without an automatic FN role. A later explicit fn creates fresh F/D through the common constructor.
+The warm3 → clone call4/source3 control belongs to explicit `fn:clone merge(leaf)` after warming the source,
+not to plain `merge(scope)`. The previous candidate inheriting SourceSpace's current F/data into a raw binding is withdrawn.
+Both proof classes remain OPEN; [normative reading](steps/handoff/copy-construction-reading-20261114.md).
+
+Previous implementation note (2026-11-14, slice 381; bounded implementation, acceptance passed; base 380/c5ba5ef9): the existing
 GraphFrame.lexical_scope selects the physical CodeBody through shared work_scope; body/code/data identity and
 the activation stay unchanged. Inline fn/sub names remain lexical while data and the frame are shared.
 Name-sensitive pending separates required admission bit 8, dynamic visibility bit 2 and AND-pending bit 4;
@@ -21,7 +44,8 @@ lexical/reentry/helper 790 and refusal boundaries are preserved. The actual Nati
 trace passed; a new dynamic callee still uses walker fallback. Genuine G1/G2 quick, nine smoke rows each,
 fixedpoint13/verify751 and the genuine G2 graph rebuild passed, graph SHA b8abfe4c.
 G2 repeat86 triple/negative AFTER102/mutation24 and normal render/docs check381 passed:35/14/27/44/615, links/LF. General CodeBody coverage
-(else/finally/retained groups), copied lexical bindings/current F data, M11.7/8 and full M13/M14 remain open.
+(else/finally/retained groups), fresh bindings for copied raw fn/sub, held F as Structure and explicit fn construction,
+M11.7/8 and full M13/M14 remain open.
 See the [main plan](next_core_tasks_v3.md#m11) and [record381](steps/witnesses/m11-computed-body-20261114/notes.md).
 
 Previous implementation note (2026-11-14, slice 380; code acceptance passed): index writes capture the physical
@@ -36,7 +60,7 @@ The 58 existing pure cases pass; nine targeted fixtures were added. Private67 in
 Genuine G1/G2 quick, nine smoke rows each and fixedpoint13/verify717 passed; rebuilt G2 graph repeated
 68 cases in three modes,84 negative AFTER/mutation24. Normal render/docs checks passed:35/14/27/44/615,
 links and LF27563 before staging; final index check03 passed LF27604. [Record380](steps/witnesses/m11-slot-contract-20261114/notes.md).
-The previous code tuple is380. Full used-interface implements/test, copied lexical construction bindings,
+The previous code tuple is380. Full used-interface implements/test, fresh construction bindings for copied raw fn/sub,
 M13 and M14 remain open; bounded computed BODY slice381 is described above.
 
 Previous implementation note (2026-11-14, slice 378; code acceptance passed): common root work frame/block0, native wrapper completion and

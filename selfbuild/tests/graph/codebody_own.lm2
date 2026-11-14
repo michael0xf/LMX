@@ -1,0 +1,16 @@
+fn: delayed () int
+    if: 0 ()
+    else: (int: late 7)
+    return: late
+fn: cleanup () int
+    late := 4
+    finally: (int: late; late := late + 1)
+    return: late
+sub: inert () ()
+    if: 0 ()
+    else: ((int: phantom 7; missing()))
+int: result delayed()
+int: held cleanup()
+int: after cleanup\data\late
+inert()
+int: fields length(inert\data)

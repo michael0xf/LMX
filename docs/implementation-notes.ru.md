@@ -75,7 +75,28 @@ L3 со вставками L2. L1 — только генерируемая ст
 <a id="l2-status"></a>
 ## 3. Translator-L2 и ядро
 
-**Текущее состояние, 2026-11-14, срез381; база380 `c5ba5ef9`.** В существующий кадр добавлен
+**Текущее состояние, 2026-11-14, срез382; база381 `38cf026c`.** Общий `code_body` возвращает
+заимствованный `body/from/to` по существующим CodeBody-ролям. Полный хвост `else`/`finally` из единственной
+написанной группы выбирает её поля один раз; уже выбранное тело/остаток и вложенные самостоятельные группы
+повторно не раскрываются. Scanner, `fn_own`, обходчик, native и `code_parent` используют этот выбор,
+сохраняя физические parent, source holder/raw index и прежний кадр; Graph71/Run53/implements74.
+Runtime01/Graph01 и пять pure-проб прошли: calls4 вместо2, cleanup trace21 вместо1,
+written Fn790/computed890 вместо90; own late7, cleanup return4-after5, inert fields0
+с unknown в двойной группе; отказ6 сохраняет cleanup/root trace21. `finally` по-прежнему регистрируется
+без эффектов и исполняется при выходе в обратном порядке. Descriptor ради выбора не вычисляется.
+Код собран на Source01:751; Source02:761 добавляет только пять fixture pairs, SHA-256
+`be5db8e3168082a1509b5b035f7d293b0f8ec40a6092c321b247647443e04d7f`.
+Private25 triple/75 полных AFTER/mutation24 и native trace written/computed outer/fn_apply прошли.
+Настоящие G1/G2 quick с девятью smoke каждый, fixedpoint13 и verify761 прошли. Штатный G2 graph-tool собран,
+SHA-256 `f71df0958fda2d9be2e958b70fcd3b081e2248305aa07a68a7dbf6eda5b89316`.
+Повтор G2 (25 случаев в трёх режимах, 21 полный negative AFTER, mutation24) и штатные render/docs check382
+прошли:35/14/27/44/615, ссылки/LF. Рабочая связка382 — boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
+Внешний/вычисленный CodeBody, копирование raw-объявлений и удержанных F,
+полный M11, M11.7/8 и M13/M14 OPEN; этот срез не подтверждает ordinary native M14.
+[Чтение copy-классов](../steps/handoff/copy-construction-reading-20261114.md) разделяет новый binding из raw-аргументов
+и копию текущих частей удержанной F как обычного значения; привязки исходного Space не переносятся.
+
+**Предыдущее состояние, 2026-11-14, срез381; база380 `c5ba5ef9`.** В существующий кадр добавлен
 `lexical_scope`: физический CodeBody меняется при выборе inline-тела, идентичности `code`/`body`/`data`
 сохраняются. Общий `work_scope` готовит written fn/sub только при входе; вычисляемая F создаётся на producer.
 Обходчик восстанавливает cursor при flow/error; native выставляет его перед каждым statement и на control labels.

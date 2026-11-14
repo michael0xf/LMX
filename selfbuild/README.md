@@ -1,6 +1,20 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice 379): acceptance passed in main; commit/push follows.
+Current continuation (2026-11-14, slice382; code acceptance passed): base381 is 38cf026c.
+The accepted tool/frontend/runtime tuple is boot-m11-codebody-01/g2 with
+graph-m11-codebody-g2-01. Run.code_body53 now shares the borrowed body/from/to
+view at else/finally boundaries: a sole written group is selected once, while an
+already selected body and a remaining inner group are not unwrapped again.
+Runtime01/Graph01, five pure cases, private25 in three modes,75 full AFTER checks,
+mutation24 and actual native written/computed outer trace passed. Source02 verifies761
+inputs, SHA be5db8e3168082a1509b5b035f7d293b0f8ec40a6092c321b247647443e04d7f.
+Genuine whole G1/G2 quick passed nine smoke rows each; fixedpoint13/verify761 passed.
+G2 rebuilt graph-tool f71df095; repeat25 triple/negative AFTER21/mutation24 and normal render/docs check382 passed:
+35/14/27/44/615, links/LF27661 before staging; final index check02 passed LF27695.
+External/computed CodeBody, copying live F/data, full M11, M13 and M14 remain OPEN.
+[Witness382](../steps/witnesses/m11-codebody-20261114/notes.md). The goal remains ACTIVE.
+
+Previous continuation (2026-11-14, slice 379): acceptance passed in main; commit/push follows.
 Base378: 369ded97. The application carrier [headExpr, WORD("()"), actualsLmx] and one head reader
 select the live target before actuals; existing binder/admission/ordinary launch preserve named Frames and groups.
 Runtime01/graph02 and seven pure cases passed: methods0/5/2/10/calls3, selected107/203/head1/effect1,

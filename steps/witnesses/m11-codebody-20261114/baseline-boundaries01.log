@@ -1,0 +1,39 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+sub: tick ()
+    :=: (node \ calls) ((node \ calls) + 1)
+end: tick
+sub: selected ()
+    if: 0 ()
+    else: (tick)
+    if: 0 ()
+    else: ((tick))
+    if: 0 ()
+    else: (((tick)))
+    finally: (tick)
+    finally: ((tick))
+    finally: (((tick)))
+end: selected
+selected:
+int: total (data \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 2
+sub: tick ()
+    :=: (node \ calls) ((node \ calls) + 1)
+end: tick
+sub: selected ()
+    if: 0 ()
+    else: (tick)
+    if: 0 ()
+    else: ((tick))
+    if: 0 ()
+    else: (((tick)))
+    finally: (tick)
+    finally: ((tick))
+    finally: (((tick)))
+end: selected
+selected:
+int: total 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

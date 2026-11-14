@@ -1,0 +1,25 @@
+GRAPH-BEFORE-BEGIN
+fn: ordered () int (
+    int: trace 0
+)
+    finally: (:= trace ((trace * 10) + 1))
+    finally: ((:= trace ((trace * 10) + 2)))
+    finally: (((:= trace ((trace * 10) + 3))))
+    return: 9
+end: ordered
+int: result (ordered)
+int: trace ((ordered \ data) \ trace)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: ordered () int (
+    int: trace 0
+)
+    finally: (:= trace ((trace * 10) + 1))
+    finally: ((:= trace ((trace * 10) + 2)))
+    finally: (((:= trace ((trace * 10) + 3))))
+    return: 9
+end: ordered
+int: result 9
+int: trace 1
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

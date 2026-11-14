@@ -1,5 +1,29 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г/8: срез382, bounded CodeBody else/finally, приёмка пройдена
+
+381 принят и отправлен:38cf026c53f3e55fcd099b1e617b71a2d9c35be8. Только main, root Sol writer/build.
+Pipeline sol-m11-codebody-20261114-01. Baseline381: direct/single/double else+finally дают calls2
+вместо4, cleanup trace1 вместо21, inline else Fn даёт90 вместо790, own late отказывает3.
+Общий structural borrowed body/from/to выбирает sole written group только на принимающей границе
+else/finally. Уже выбранные method/ordinary/if тела и остаток finally не раскрывать повторно.
+Согласовать scanner, fn_own, walker, native и lexical code_parent без изменения физического parent.
+Run53, один общий экспорт code_body; новых активаций/таблиц/opcode/парсера нет.
+Runtime01/Graph01 PASS, Run53. Пять pure дали calls4, trace21, written790/computed890,
+ownlate7/cleanup4-after5/inertfields0; error6 сохраняет cleanup/roottrace21.
+Source02/761 frozen:be5db8e3168082a1509b5b035f7d293b0f8ec40a6092c321b247647443e04d7f.
+Private25 triple/75 полных AFTER/mutation24 прошли. Native trace подтвердил actual root,
+written/computed outer и fn_apply выбранного else, normal exit; dynamic callee остаётся walker.
+Whole quick G1/G2 прошёл: настоящие поколения, по9 smoke; fixedpoint13/verify761 PASS.
+Штатный G2 graph-tool построен:f71df0958fda2d9be2e958b70fcd3b081e2248305aa07a68a7dbf6eda5b89316.
+G2 repeat25 triple/negative AFTER21/mutation24 и штатные render/docs check382 прошли:
+35/14/27/44/615, ссылки/LF27661 до staging; финальный index-check02 прошёл LF27695.
+Оба diff --check чисты; чужие два untracked сохранили SHA. Далее commit/push main.
+Рабочая связка382 — boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
+Уточнение копии raw declaration/held F внесено в основной v3 и steps/handoff/copy-construction-reading-20261114.md;
+нельзя переносить SourceSpace bindings или автоматически поднимать FN-role. Весь M11/M13/M14 OPEN, goal ACTIVE.
+Чужие два untracked сохранить. Общий конвейер последовательный, помощники только read-only.
+
 ## 2026-11-14 — M11.5г/8: срез381, computed fn/sub в BODY, приёмка пройдена
 
 380 принят и отправлен:c5ba5ef9c2693e2b817dbb9cdf90ce63cbf711f8. Только main, один writer/build Sol.

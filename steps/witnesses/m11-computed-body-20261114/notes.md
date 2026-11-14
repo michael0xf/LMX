@@ -118,9 +118,13 @@ b8abfe4c58cc5702009aa09f65ce0a9b040aec403602c1c31eec88989fbcce4f.
 
 Полный M11 не закрыт: общий bounded CodeBody consumer для сохранённых групп
 else/finally, рабочий frontend и полный implements/test M11.7/8 остаются OPEN.
-Copied lexical construction bindings должны сохранять текущую live F/data через
-ту же map, без повторного initializer; полный storage M13 и shared cache/flush/
-ordinary native/continuation M14 — отдельные открытые зависимости основного v3.
+Уточнение382 к прежнему чтению плана: copied raw fn/sub создаёт новый binding из
+скопированных actuals; текущие bindings SourceSpace не переносятся. Отдельно проверяется
+реально удержанная F: её current parts/data/aliases копируются как обычная Structure,
+а явный последующий fn создаёт свежие F/D. [Разбор](../../handoff/copy-construction-reading-20261114.md)
+сохраняет контроль3 → 4 именно для явного `fn:clone merge(leaf)`.
+Полный storage M13 и shared cache/flush/ordinary native/continuation M14 остаются OPEN;
+измеренные результаты381 выше не менялись.
 
 Грамматика и P0 не менялись. Пробы короткого computed receiver отделяют следующий
 return явным semicolon; общее построение Frame/receiver не заменено новым парсером.

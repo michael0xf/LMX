@@ -12,7 +12,9 @@
 
 [Памятка всем моделям / Guide for all models](READ.ME)
 
-Срез381 реализует computed fn/sub в поддержанных CodeBody через общий lexical cursor кадра.
-Private/triple/AFTER/mutation, native trace, настоящие G1/G2 quick и fixedpoint13/verify751 прошли.
-G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF.
-Границы 381 и открытые зависимости M11/M13/M14 — в [основном плане](next_core_tasks_v3.md).
+Срез382 реализует общий bounded CodeBody selector для else/finally; приёмка пройдена:
+одна written group выбирается один раз, уже выбранные тела и вложенные самостоятельные группы сохраняют уровень.
+Runtime01/Graph01, пять pure-проб, private25 triple/AFTER75/mutation24 и native trace прошли;
+настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify761 и пересборка graph-tool штатным G2 прошли.
+G2 repeat25 triple/negative AFTER21/mutation24 и штатные render/docs check382 прошли:35/14/27/44/615, ссылки/LF.
+Границы382 и открытые зависимости M11/M13/M14 — в [основном плане](next_core_tasks_v3.md).

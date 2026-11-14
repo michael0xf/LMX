@@ -162,13 +162,21 @@ end: lmx_graph_data_twice
 # Header and body keep their lexical holders; written groups and call data do not.
 fn: lmx_graph_code_parent (@: g c.LmxGraph; @: body c.Lmx) @: c.Lmx
     @: parent c.Lmx 0
+    @: selected c.Lmx 0
+    size_t: selected_from 0U
+    size_t: selected_to 0U
     size_t: i 0U
     int: role 0
     if: body = 0
         return: 0
     parent := (cast: (@: c.Lmx) body\parent)
-    if: lmx_graph_code_argument(g, body, 0U) = 3
+    if: lmx_graph_code_body(g, body, 0U, @ selected, @ selected_from, @ selected_to) = 3 && selected = body
         return: parent
+    if: parent != 0 && lmx_graph_code_argument(g, parent, 0U) = 3
+        lmx_graph_code_body(g, parent, 0U, @ selected, @ selected_from, @ selected_to)
+        if: selected = body
+            return: (cast: (@: c.Lmx) parent\parent)
+        ---
     while: parent != 0 && i < c.lmx_graph_count(parent)
         if: c.lmx_graph_get(parent, i) = (cast: (@: void) body)
             role := lmx_graph_code_argument(g, parent, i)
@@ -467,6 +475,32 @@ fn: lmx_graph_code_argument (@: g c.LmxGraph; @: current c.Lmx; size_t: index) i
         return: 2
     return: 0
 
+# The borrowed view at an inline receiver's receiving boundary. Only a whole
+# tail (else/finally) selects its sole written argument group once. Bodies
+# already selected by if/loops keep all their fields, including inert groups.
+# Neither selection nor execution changes the physical holder or its parent.
+fn: lmx_graph_code_body (@: g c.LmxGraph; @: current c.Lmx; size_t: index; @@: out_body c.Lmx; @: out_from size_t; @: out_to size_t) int
+    @: selected c.Lmx current
+    @: raw void 0
+    int: role lmx_graph_code_argument(g, current, index)
+    if: out_body = 0 || out_from = 0 || out_to = 0
+        return: 0
+    out_body[0] := 0
+    out_from[0] := 0U
+    out_to[0] := 0U
+    if: role = 0
+        return: 0
+    if: role = 1 || role = 2
+        raw := c.lmx_graph_get(current, index)
+        if: c.lmx_graph_kind(g, raw) != 4
+            return: 0
+        selected := (cast: (@: c.Lmx) raw)
+    if: role = 3 && c.lmx_graph_count(current) = 1U && lmx_graph_written_group(g, c.lmx_graph_get(current, 0U)) != 0
+        selected := (cast: (@: c.Lmx) c.lmx_graph_get(current, 0U))
+    out_body[0] := selected
+    out_to[0] := c.lmx_graph_count(selected)
+    return: role
+
 fn: lmx_graph_work_scan_word (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: word char) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: row c.LmxGraphWork 0
@@ -595,6 +629,8 @@ fn: lmx_graph_work_scan_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: b
     int: nested 0
     int: role 0
     @: header c.Lmx 0
+    size_t: code_from 0U
+    size_t: code_to 0U
     int: optional (cast: (int) (context = 2))
     int: framed 0
     int: call_head 0
@@ -616,7 +652,8 @@ fn: lmx_graph_work_scan_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: b
         # were normalized by their consumer, so a named field always has a head.
         framed := (cast: (int) (lead != 0))
         if: context = 0 && lmx_graph_code_argument(g, current, 0U) = 3
-            status := lmx_graph_work_scan_body(g, frame, current, 0U, n, @ queue, @ count, @ cap)
+            lmx_graph_code_body(g, current, 0U, @ header, @ code_from, @ code_to)
+            status := lmx_graph_work_scan_body(g, frame, header, code_from, code_to, @ queue, @ count, @ cap)
             continue
         if: framed != 0 && (lead = state\w_fn || lead = state\w_sub || lead = state\w_fm)
             continue
@@ -736,13 +773,12 @@ fn: lmx_graph_work_scan_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: b
                 ---
             ---
             if: context = 0 && framed != 0
-                role := lmx_graph_code_argument(g, current, i)
-                if: role = 1 && c.lmx_graph_kind(g, raw) = 4
-                    status := lmx_graph_work_scan_body(g, frame, (cast: (@: c.Lmx) raw), 0U, c.lmx_graph_count((cast: (@: c.Lmx) raw)), @ queue, @ count, @ cap)
+                role := lmx_graph_code_body(g, current, i, @ header, @ code_from, @ code_to)
+                if: role = 1
+                    status := lmx_graph_work_scan_body(g, frame, header, code_from, code_to, @ queue, @ count, @ cap)
                     i := i + 1U
                     continue
-                if: role = 2 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 3U
-                    header := (cast: (@: c.Lmx) raw)
+                if: role = 2 && code_to = 3U
                     status := lmx_graph_work_scan_body(g, frame, header, 0U, 1U, @ queue, @ count, @ cap)
                     raw := c.lmx_graph_get(header, 1U)
                     role_scope := frame\lexical_scope
@@ -2436,6 +2472,8 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
     size_t: i from
     size_t: n 0U
     size_t: slot 0U
+    size_t: code_from 0U
+    size_t: code_to 0U
     int: number 0
     int: status 0
     int: kind 0
@@ -2553,7 +2591,8 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
                 ---
             ---
             flow[0] := 0
-            cleanup_status := lmx_graph_block(g, code, statement, 0U, n, nested_mode, out, flow)
+            lmx_graph_code_body(g, statement, 0U, @ nested, @ code_from, @ code_to)
+            cleanup_status := lmx_graph_block(g, code, nested, code_from, code_to, nested_mode, out, flow)
             if: cleanup_status != 0
                 return: cleanup_status
             if: flow[0] = 0
@@ -2576,7 +2615,8 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
             if: i < to && c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get(body, i)) = state\w_else
                 statement := (cast: (@: c.Lmx) c.lmx_graph_get(body, i))
                 if: number = 0 && status = 0
-                    status := lmx_graph_block(g, code, statement, 0U, c.lmx_graph_count(statement), nested_mode, out, flow)
+                    lmx_graph_code_body(g, statement, 0U, @ nested, @ code_from, @ code_to)
+                    status := lmx_graph_block(g, code, nested, code_from, code_to, nested_mode, out, flow)
                 i := i + 1U
             ---
             continue
@@ -4673,6 +4713,8 @@ fn: lmx_graph_fn_own (@: g c.LmxGraph; @: value void; @@@: names void; @: count 
     size_t: j 0U
     int: role 0
     @: body c.Lmx 0
+    size_t: code_from 0U
+    size_t: code_to 0U
     int: kind c.lmx_graph_kind(g, value)
     int: status 0
     if: kind = 4 && c.lmx_graph_fn_result(g, value) != 0
@@ -4693,16 +4735,13 @@ fn: lmx_graph_fn_own (@: g c.LmxGraph; @: value void; @@@: names void; @: count 
                 if: head = 0
                     return: 0
                 if: lmx_graph_code_argument(g, current, 0U) = 3
-                    return: lmx_graph_fn_own_body(g, current, 0U, c.lmx_graph_count(current), names, count, capacity)
+                    lmx_graph_code_body(g, current, 0U, @ body, @ code_from, @ code_to)
+                    return: lmx_graph_fn_own_body(g, body, code_from, code_to, names, count, capacity)
                 while: i < c.lmx_graph_count(current) && status = 0
-                    role := lmx_graph_code_argument(g, current, i)
-                    body := (cast: (@: c.Lmx) c.lmx_graph_get(current, i))
-                    if: c.lmx_graph_kind(g, (cast: (@: void) body)) != 4
-                        i := i + 1U
-                        continue
+                    role := lmx_graph_code_body(g, current, i, @ body, @ code_from, @ code_to)
                     if: role = 1
-                        status := lmx_graph_fn_own_body(g, body, 0U, c.lmx_graph_count(body), names, count, capacity)
-                    if: role = 2 && c.lmx_graph_count(body) = 3U
+                        status := lmx_graph_fn_own_body(g, body, code_from, code_to, names, count, capacity)
+                    if: role = 2 && code_to = 3U
                         status := lmx_graph_fn_own_body(g, body, 0U, 1U, names, count, capacity)
                         if: status = 0
                             status := lmx_graph_fn_own_body(g, body, 2U, 3U, names, count, capacity)

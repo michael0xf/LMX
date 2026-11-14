@@ -1,5 +1,28 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез382 — bounded CodeBody для else/finally, ограниченная реализация; кодовая приёмка пройдена.**
+
+- [x] Общий Run.code_body53: borrowed body/from/to по прежним ролям; whole-tail выбирает sole written group один раз.
+  Выбранные method/ordinary/if/loop bodies не раскрываются повторно. Один вид у scanner/fn_own/обходчика/native/code_parent,
+  без изменения physical holder/parent, code/data identity и активации.
+- [x] Runtime01/Graph01 из Source01:751; пять pure: calls4, unwind21, written790/computed890,
+  own late7/return4-after5/inert0 и missing group inert; error6 с cleanup/root trace21.
+  Source02:761 добавляет только пять пар fixture, SHA be5db8e3.
+- [x] Private25 triple/AFTER75/mutation24; native trace actual written/computed outer и fn_apply.
+- [x] Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify761; штатный G2 пересобрал graph-tool, SHA f71df095.
+- [x] G2 repeat25 triple/negative AFTER21/mutation24 прошли.
+- [x] Штатные render/docs check382:35/14/27/44/615, ссылки/LF27661 до staging; финальный index-check02 LF27695.
+- [ ] Общий external/computed CodeBody consumer, новые bindings copied raw fn/sub, held F как Structure
+  и явный fn-constructor, M11.7/8, весь M13/M14.
+  Рабочая связка382 — boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
+  Приёмка ограничена этим срезом; goal ACTIVE.
+
+- [ ] Копия raw scope: новые fn/sub bindings из copied actuals; bindings SourceSpace не переносить.
+- [ ] Held F, реально достижимая через граф: копия текущих parts/data/aliases как обычной Structure без FN-роли;
+  последующий явный fn создаёт свежие F/D. Warm3 → call4/source3 проверять через `fn:clone merge(leaf)`,
+  не через простой `merge(scope)`. Прежний кандидат наследования SourceSpace F/data снят;
+  [разбор нормы](steps/handoff/copy-construction-reading-20261114.md). Оба класса реализации/проверки OPEN.
+
 **2026-11-14, срез 381 — computed fn/sub в CodeBody, ограниченная реализация; приёмка пройдена.**
 
 - [x] Поддержанные CodeBody roles: общий frame.lexical_scope/work_scope без смены body/code/data identity;
@@ -12,7 +35,8 @@
 - [x] Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify751; G2 graph-tool пересобран, SHA b8abfe4c.
 - [x] G2 repeat86 triple/negative AFTER102/mutation24 прошли.
 - [x] Штатные render/docs check381:35/14/27/44/615, ссылки/LF27605 до staging; финальный index-check02 LF27660.
-- [ ] Общий охват CodeBody else/finally/retained groups, copied lexical/current F data, M11.7/8, весь M13/M14.
+- [ ] Общий охват CodeBody else/finally/retained groups, новые bindings copied raw fn/sub,
+  held F как Structure и явный fn-constructor, M11.7/8, весь M13/M14.
   Кодовая связка381: boot-m11-computed-body-01/g2 + graph-m11-computed-body-g2-01; goal ACTIVE.
 
 **2026-11-14, срез380 — требования индексируемого места, кодовая приёмка пройдена.**
@@ -26,7 +50,7 @@
 - [x] Private67 в трёх режимах,204 AFTER включая reset2, mutation24; actual native root/prepare/RHS/write trace.
 - [x] Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify717; G2 graph68 в трёх режимах,84 AFTER/mutation24.
 - [x] Штатные render/docs check380:35/14/27/44/615, ссылки, LF27563 до staging; final index03 LF27604.
-- [ ] Общий implements Structure-моделей/test M11.7; copied lexical fn/sub construction bindings.
+- [ ] Общий implements Structure-моделей/test M11.7; новые construction bindings copied raw fn/sub.
 - [ ] Остатки computed CodeBody после ограниченного среза381 и общий охват retained/control bodies.
 - [ ] Полный M11/M13/M14. Кодовая связка380; goal ACTIVE.
 

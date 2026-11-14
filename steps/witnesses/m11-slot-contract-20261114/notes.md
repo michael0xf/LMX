@@ -106,17 +106,20 @@ slot_prepare → native rhs → index_write, затем внешнюю запи�
 implements и статический admission M11.7, полный M11, storage M13 и shared cache/
 flush/обычный native M14 остаются OPEN. Не проверять deep models текущим payload kind.
 
-Копирование лексического предка с raw fn/sub требует переноса construction binding
-через общее соответствие копии. Наблюдаемый отказ3 при пути к скопированному main
+Копирование лексического предка с raw fn/sub требует нового construction binding
+из скопированных аргументов. Наблюдаемый отказ3 при пути к скопированному main
 является также границей обходчика M11.5г/5д, не только native M14.
 Computed declaration с известным static name в nested BODY ещё может отказать3
 на capture; достигнутый fn_apply ограничен ROOT/own DATA и отказывает5 для nested BODY.
 Оба пункта включены в основной v3, без обхода искусственными методами.
 
-Для будущей правки copied binding нельзя просто повторить constructor от raw initializer:
-у уже созданной F должны копироваться текущие own data через ту же карту, без сброса
-накопленного состояния. Контроль должен сначала прогреть source count до3, затем
-получить copied call4 при неизменном source3; исходный контроль count0 этого не доказывает.
+Уточнение382 к прежнему чтению плана этого среза: raw declaration и созданная F — разные
+значения. Копия raw scope не переносит текущие bindings SourceSpace; новый binding читает
+скопированные actuals. Только реально удержанная F копируется как обычная Structure
+с её текущими data/aliases через ту же карту. Контроль source3 → clone call4/source3
+относится к явному `fn:clone merge(leaf)`, а не к простому `merge(scope)`; последующий fn
+создаёт свежие F/D. [Разбор и исправленная приёмка](../../handoff/copy-construction-reading-20261114.md).
+Измеренные результаты380 выше не менялись.
 
 Весь goal ACTIVE; после приёмки продолжить основной v3. Полный suite не запускался:
 штатная whole bootstrap quick сохраняет настоящие поколения и минимальные smoke.

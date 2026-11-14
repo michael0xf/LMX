@@ -1,0 +1,44 @@
+GRAPH-BEFORE-BEGIN
+fn: delayed () int
+    if: 0 ()
+    else: ((int late 7))
+    return: late
+end: delayed
+fn: cleanup () int
+    :=: late 4
+    finally: ((int late) (:= late (late + 1)))
+    return: late
+end: cleanup
+sub: inert ()
+    if: 0 ()
+    else: (((int phantom 7)))
+end: inert
+int: result (delayed)
+int: held (cleanup)
+int: after ((cleanup \ data) \ late)
+inert:
+int: fields (length (inert \ data))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: delayed () int
+    if: 0 ()
+    else: ((int late 7))
+    return: late
+end: delayed
+fn: cleanup () int
+    :=: late 4
+    finally: ((int late) (:= late (late + 1)))
+    return: late
+end: cleanup
+sub: inert ()
+    if: 0 ()
+    else: (((int phantom 7)))
+end: inert
+int: result (delayed)
+int: held (cleanup)
+int: after ((cleanup \ data) \ late)
+inert:
+int: fields (length (inert \ data))
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

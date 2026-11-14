@@ -1,6 +1,26 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice381; base380 `c5ba5ef9`.** The existing frame's `lexical_scope`
+**Current state, 2026-11-14, slice382; base381 `38cf026c`.** Common `code_body` returns
+borrowed `body/from/to` through existing control-argument roles (§6.3). For the whole
+`else`/`finally` tail, a sole written group is selected as the body once; an already selected body or its remainder
+is not unwrapped again. The scanner, `fn_own`, walker, native and `code_parent` use that same selection,
+without changing physical parents or adding a frame or registry; exports are Graph71/Run53/implements74.
+Runtime01/Graph01 and five pure cases passed: calls4 instead of2, cleanup trace21 instead of1,
+written Fn790/computed890 instead of90, own late7/cleanup return4-after5/inert fields0,
+including unknown inside a double group; the negative case gives6 with cleanup/root trace21.
+Code was built on Source01:751; Source02:761 adds only five fixture pairs, SHA-256
+`be5db8e3168082a1509b5b035f7d293b0f8ec40a6092c321b247647443e04d7f`.
+Private25 triple/75 full AFTER checks/mutation24 and native written/computed outer/fn_apply trace passed.
+Genuine G1/G2 quick with nine smoke cases each, fixedpoint13 and verify761 passed. The genuine G2 graph-tool is built,
+SHA-256 `f71df0958fda2d9be2e958b70fcd3b081e2248305aa07a68a7dbf6eda5b89316`.
+The G2 repeat (25 cases in three modes, 21 full negative AFTER checks, mutation24) and normal render/docs check382
+passed:35/14/27/44/615, links/LF. The working tuple is382: boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
+External or computed CodeBody,
+copying raw declarations and held F as distinct values, full M11, M11.7/8 and M13/M14 remain OPEN.
+Acceptance of the copy classes is separated in the [plan reading](../steps/handoff/copy-construction-reading-20261114.md):
+source Space bindings are not transferred, and applying `fn` anew remains a separate construction.
+
+**Previous state, 2026-11-14, slice381; base380 `c5ba5ef9`.** The existing frame's `lexical_scope`
 tracks the selected physical CodeBody, preserving `code`/`body`/`data`; the walker and native share
 `work_scope` (§6.3). Runtime06/graph02, 17 pure cases, the previous 67 full AFTER checks unchanged,
 private31 in three modes, AFTER93 and mutation24 passed on Source07:751. The final emitter-only optimization
@@ -1568,6 +1588,23 @@ an explicit merge constructor executes their computed initializers.
 Runtime06/graph02, the private checks, final Graph03/private02 inline triple, native trace and genuine
 G1/G2 quick with fixedpoint13/verify751, the G2 repeat (86 triple/AFTER102/mutation24) and normal render/docs check381 passed.
 This completes neither full M11, copying live F/data, M13 nor M14; a dynamic callee may use walker fallback.
+
+**Structural CodeBody view, slice382.** Common `code_body` reads the existing argument role and
+returns a borrowed `body/from/to` range. An already selected body argument (`if`, `while`, `until`,
+`for`) or for-header keeps its selected Structure and fields. For the whole-tail role of `else`/`finally`,
+the original Frame's fields are selected; only when the entire tail is one written anonymous group are
+that group's fields selected, exactly once. An ordinary `block` and its remainder already received a body and do not unwrap it again.
+Thus `else: tick()` preserves the call head, `else: (tick())` executes `tick()`, while in `else: ((tick()))`
+the selected body contains a standalone group value and there is no call. For `finally` the same selection applies
+when cleanup runs on exit, not at registration; reverse cleanup order is preserved.
+
+The scanner, own-place collection by `fn_own`, walker and native read one view. `code_parent` recognizes
+the selected group in the control lexical chain while retaining its real `parent`, source holder and raw index;
+a nested standalone group does not gain that role automatically. Neither a descriptor nor body fields are evaluated
+for selection, and no graph copy, new activation or table is created. Runtime01/Graph01 and five pure cases passed;
+private25 triple/75 AFTER checks/mutation24, native trace and genuine G1/G2 quick with fixedpoint13/verify761 passed.
+The G2 repeat (25 triple/21 negative AFTER checks/mutation24) and normal render/docs check382 passed. This is a bounded implementation of the existing contract
+and completes neither external/computed CodeBody, the full cycle of copying and applying fn anew, M11.7/8, M13 nor M14.
 
 ### 6.4 Copying, merge, attaching
 

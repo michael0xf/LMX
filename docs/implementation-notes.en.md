@@ -76,7 +76,27 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-**Current state, 2026-11-14, slice 378: acceptance passed.** Common root frame/block0,
+**Changes of 2026-11-14, slice380; code acceptance passed.** A physical slot's receiving
+descriptor lives in the existing `ImplContractFact`/`CopyMap` of the current `GraphSpace` for the whole execution,
+including nested calls and constructed copies. A lexical mention of a known Structure receives NONE;
+replacement by a Structure or int address does not replace it with the current content's type. The next independent
+traversal derives the descriptor anew from the current graph. Facts belong to neither names, `Work`, write history
+nor the serialized graph. Run prepares the descriptor after base/index and before RHS; Graph admits the address
+against retained kind/type before the existing write with invalidation. Initial payload is not read.
+The common assignment builder distinguishes a direct formed Frame from a written group, removing only
+the synthetic RHS list; assignment AST retains its previous exception.
+Graph71/Run51/implements74 and the static `contract_append` prototype from the L3 generator are aligned;
+Runtime02/graph02 passed checks. The atom cycle gives 7/41/9, lexical shadow 7 and fact growth 492.
+In the RHS probe an index selector invokes rhs: it changes root-held Holder[0] from A to C; calls=1,
+while the outer Slots write produces 7. Primitive subtype/ref refusal is 4 with effects=1 and old value 7;
+an out-of-bounds index gives 7 with effects=1. Private67 triple/204 AFTER including reset2/mutation24 and native trace passed.
+Whole bootstrap quick: genuine G1/G2, nine smoke rows each; fixedpoint13/verify717; G2 graph68 triple/84 AFTER/mutation24.
+Normal render/docs checks380 passed:35/14/27/44/615, links and LF27563 before staging.
+[Record380](../steps/witnesses/m11-slot-contract-20261114/notes.md).
+Deep Structure `implements`,
+static M11.7 checks, full M11 and M13/M14 remain OPEN.
+
+**Previous state, 2026-11-14, slice 378: acceptance passed.** Common root frame/block0,
 native wrapper completion and forced reuse replace the separate root emitter. Scalar values stand without capture;
 discarded AST uses the common value reader and computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
 Private01 executed 50 cases in three modes: 48 matched old goldens, 2 needed five independently derived

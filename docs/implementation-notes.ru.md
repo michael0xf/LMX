@@ -75,7 +75,27 @@ L3 со вставками L2. L1 — только генерируемая ст
 <a id="l2-status"></a>
 ## 3. Translator-L2 и ядро
 
-**Текущее состояние, 2026-11-14, срез 378: приёмка пройдена.** Общий root frame/block0,
+**Изменения 2026-11-14, срез380; кодовая приёмка пройдена.** Принимающее описание физического
+слота хранится в существующих `ImplContractFact`/`CopyMap` текущего `GraphSpace` на всё исполнение,
+включая вложенные вызовы и построенные копии. Лексическое упоминание известной Structure получает NONE;
+замена на Structure или адрес int не меняет его на тип текущего содержимого. Следующий независимый
+обход выводит описание заново из текущего графа. Факты не хранятся при именах, в `Work`, истории записей
+или сериализованном графе. Run готовит описание после base/index и до RHS, Graph допускает адрес по
+сохранённым kind/type, затем выполняется прежняя запись с инвалидизацией. Начальный payload не читается.
+Общий assignment builder отличает непосредственный formed Frame от written group, снимая только
+синтетический список RHS; assignment AST сохраняет прежнее исключение.
+Graph71/Run51/implements74 и статический `contract_append`-прототип из L3-генератора согласованы;
+Runtime02/graph02 прошли проверки. Atom-cycle даёт 7/41/9, lexical shadow — 7, рост facts — 492.
+В RHS-пробе индексный selector запускает rhs: тот меняет root-held Holder[0] с A на C; calls=1,
+внешняя запись в Slots даёт результат 7. Отказ primitive subtype/ref — 4 при effects=1 и старом значении 7;
+индекс вне границ — 7 при effects=1. Private67 triple/204 AFTER с reset2/mutation24 и native trace прошли.
+Whole bootstrap quick: настоящие G1/G2, по9 smoke; fixedpoint13/verify717; G2 graph68 triple/84 AFTER/mutation24.
+Штатные render/docs check380 прошли:35/14/27/44/615, ссылки и LF27563 до staging.
+[Свидетельство380](../steps/witnesses/m11-slot-contract-20261114/notes.md).
+Глубокий Structure `implements`,
+статические проверки M11.7, полный M11 и M13/M14 остаются OPEN.
+
+**Предыдущее состояние, 2026-11-14, срез 378: приёмка пройдена.** Общий root frame/block0,
 native wrapper с завершением кадра и forced reuse заменили отдельный root emitter. Scalar values стоят без capture;
 discarded AST читает общий value reader, computed body bindings используют прежние metadata/rows. Runtime01/graph01 и пять pure-проб прошли.
 В private01 исполнены 50 случаев в трёх режимах: 48 совпали со старыми golden, 2 потребовали пяти независимо выведенных

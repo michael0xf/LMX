@@ -1,5 +1,34 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5д/7: срез380, требования физического места, кодовая приёмка пройдена
+
+379 принят и отправлен:d670a0e9eb9ef4450907f88f0f058b20314f20b0. Только main, один writer/build.
+Pipeline sol-m11-slot-contract-20261114-01. Baseline379 ответил4 на первой записи в atom-slot.
+Норма требует сохранить отсутствие требования внутри всего исполнения, включая повторные записи и вызовы.
+Использовать существующие ImplContractFact/CopyMap как disposable receiving context GraphSpace;
+не возрождать SourceName/ports, не писать metadata physicalslot в name table, не хранить историю в Work.
+Следующий независимый обход читает текущий граф заново (§5.2); serializer не переносит прошлые facts.
+Bridge04 построен после verify/restore333 consumed inputs379. Runtime01 выявил cycle Graph↔Run header;
+низкоуровневые facts/type/admit перенесены в Graph, lexical slot_prepare остаётся Run до RHS.
+Graph71/Run51, implements append74+static prototype, два disposable поля Space.
+Source04/717 verified, SHA f255aebc815b78d24e40bf636a7d4421154fd76b45040dbc0afc66e24c0eb62e.
+Runtime02/graph02 прошли; general build_assignment снимает только synthetic single-Frame RHS container.
+Девять прежних golden изменились только формой этих скобок; ответы58 pure сохранены.
+Новые9 fixtures: atom7/41/9, lexical7, growth492/2/12, RHS calls1/seen7 после удаления A,
+merge/Fn-data copy41/2/2/41, typed4/old field, primitive subtype4/calls1/old7, bounds7/calls1.
+Private67 interp/native/forced,201 полных AFTER, second-walk reset4 во всех3 режимах и mutation24 прошли.
+GDB native-slot-rhs01: actual native root → slot_prepare → native RHS → index_write, normal exit.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify717 прошли.
+Штатный G2 graph-tool заново собран:84076e93b57dce186764cf23e94d394873f8eae2138638d24ed15d3a206f44c1.
+G2 повторил68 случаев в трёх режимах,84 полных negative AFTER/mutation24. Native/forced reset2 дают4.
+Штатные render/docs check380 прошли:35/14/27/44/615, ссылки и LF27563 до staging.
+Первый docs-check01 не получил существующий PRIVATE_OUT, повтор02 с каталогом прошёл; код не менялся.
+Финальный staged-index docs-check03 прошёл LF27604; оба diff --check чисты. Далее commit/push main.
+Copied lexical fn/sub construction binding и computed nested BODY/static name остаются OPEN M11.
+Кодовая связка boot-m11-slot-contract-01/g2 + graph-m11-slot-contract-g2-01.
+M11.7 целиком, M13 storage, M14 cache/flush/native остаются OPEN; goal ACTIVE.
+Чужие два untracked сохранить. Конвейер последовательный; helper agents только read-only.
+
 ## 2026-11-14 — M11.5г: срез379, общий вызов через выражение головы, приёмка пройдена
 
 378 принят и отправлен:369ded971a5ad42a8f014844886f62336afbfc7d. Только main,

@@ -1,0 +1,43 @@
+sub: main () (
+    A:
+        int: value 1
+    end: A
+    B:
+        int: value 7
+    end: B
+    C:
+        int: value 9
+        int: extra 2
+    end: C
+    Slots: A
+    int: j 41
+    @: p int (@ j)
+    int: copied_number 0
+    int: copied_length 0
+    int: source_length 0
+)
+    :=: (Slots [] 0) B
+    @:
+        copied
+        merge: Slots
+    end: @
+    :=: (copied [] 0) (@ j)
+    :=: p (copied [] 0)
+    :=: copied_number (\ p)
+    :=: (copied [] 0) C
+    :=: copied_length (length (copied [] 0))
+    :=: (Slots [] 0) C
+    :=: source_length (length (Slots [] 0))
+end: main
+main:
+int: copied_number 41
+int: copied_length 2
+int: source_length 2
+int: made_stage 2
+@: Src Slots
+sub: (:= name made) (:= args ()) (:= data Src) (:= code ((int number 41) (:= (data [] 0) (@ number))))
+:=: made_stage 1
+call: (data \ made)
+:=: made_stage 2
+@: result int @number
+int: made_number 41

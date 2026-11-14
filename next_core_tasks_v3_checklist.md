@@ -1,5 +1,20 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез380 — требования индексируемого места, кодовая приёмка пройдена.**
+
+- [x] Подготовить код disposable receiving context GraphSpace через ImplContractFact/CopyMap:
+  захват до RHS, неизменное NONE в текущем исполнении, копирование captured facts через merge/fn_data.
+  Следующий независимый обход читает текущий граф; SourceName/ports и сериализация facts не возвращаются.
+- [x] Pure: atom replacements, lexical lookup и growth; copy41/2/2/41;
+  реальный rhs() — calls1/seen7; subtype refusal4/effects1/old7 и bounds7/effects1.
+  Прежние58 pure проходят; добавлены девять адресных fixture. Девять старых golden меняют только скобки дампа.
+- [x] Private67 в трёх режимах,204 AFTER включая reset2, mutation24; actual native root/prepare/RHS/write trace.
+- [x] Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify717; G2 graph68 в трёх режимах,84 AFTER/mutation24.
+- [x] Штатные render/docs check380:35/14/27/44/615, ссылки, LF27563 до staging; final index03 LF27604.
+- [ ] Общий implements Structure-моделей/test M11.7; copied lexical fn/sub construction bindings.
+- [ ] Computed nested BODY/static-name availability общим scope/frame; исходный отказ не считать нормой.
+- [ ] Полный M11/M13/M14. Кодовая связка380; goal ACTIVE.
+
 **2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**
 База378 — 369ded97. Carrier [headExpr, WORD("()"), actualsLmx], единый выбор живой цели до actuals,
 прежние binder/admission/ordinary launch; named Frames и written groups сохранены.
@@ -480,7 +495,8 @@ tool-f02/rt-f03/graph-f03 в стадии `P/fable-main01`): операция я
 типа, запись `S[i] := p` с допуском по роду слота, `length(S)`, индекс за границей — ответ 7; 88 строк graph-check ×
 interp/native/forced — 264 PASS; мутант роняет фикстуру в трёх режимах; `bootstrap quick` `boot-f04` — 0 отказов,
 runtime G1 = G2 = `rt-f04` побайтно. Не сделано в шаге 4: прежний путь понижения индекса не знает; допуск записи не
-выполняет `implements` двух Structure; корень чистого графа не исполняет `@: q S[i]` без требования `int`.
+выполняет полный `implements` Structure-моделей; общие указатели остаются M13. Atom-slot index380:
+NONE, повторные замены и копии прошли pure/native/forced, G1/G2/fixedpoint/G2 repeat и render/docs check.
 **Шаги 1–3 не начаты:** в коде `fm` остаётся, Structure слева от `:=` P0 не разбирает. Голова-Structure перед
 двоеточием снята автором 2026-11-10.
 

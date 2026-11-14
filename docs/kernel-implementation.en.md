@@ -935,7 +935,7 @@ address it holds, an `int` value is no address, a written zero is the null addre
 ([record](../steps/witnesses/get-type-20261110/notes.md)). The index of a Structure is implemented in the clean graph
 ([record](../steps/witnesses/struct-index-20261110/notes.md)): the value of `S[i]` is a pointer cell of a region of its
 own, `LMX_TYPE_GRAPH_REF`, an "untyped reference" that holds any address of the arena and is never stored in a slot of
-the graph; the read is `lmx_graph_index`, the write with admission by the kind of what the slot holds is
+the graph; the read is `lmx_graph_index`, the write against the physical slot's temporary receiving descriptor (slice380, §5.2/§6.3) is
 `lmx_graph_index_write`, the number of slots is `lmx_graph_length`, and a place `@: p int` admits an untyped reference
 through `lmx_graph_int_ref_of` — one kernel operation each for both consumers. An index outside the fields is the
 interpreter's answer 7; native and forced stop R0.
@@ -1362,6 +1362,14 @@ regions for the pass; the builder -- the source → copy map of one `merge`/copy
 translator -- scopes, the signature intern, the unit's emission plan for the duration of its translation. None of them is
 read by `toLmx`, carried by copying or needed by the next traversal.
 
+**Receiving places, slice380.** `GraphSpace` owns the existing `ImplContractFact` and a `CopyMap`
+indexing facts by physical slot address for the whole execution and all its calls.
+The descriptor is fixed before RHS; the original NONE of an atom lexically naming a known Structure
+survives content replacement. This is neither a rule for every WORD nor dynamic name lookup.
+When constructing copies, the current traversal establishes facts for new slots through the existing source → copy map;
+the tables themselves belong to neither the graph, name table, `Work` nor serializer. `space_pop` releases contract and map.
+The next independent traversal derives its descriptor from the current graph, without declaration history.
+
 **`implements` correspondences (decision, confirmed by Codex 2026-11-08):** the proven correspondence between the used
 fields of a model and the physical fields of a candidate is data of the reception or traversal that established it: a
 reception holds its map for the duration of the operations it needs (reading, writing, taking an address, publishing
@@ -1511,6 +1519,19 @@ a legacy computed-int before normal publication remains OPEN in [M13](../next_co
 returning the address of `row.number` nor forcing publication to obtain an address. The shared cache, `flush()` and
 ordinary native M14, direct path-head calls and full M11.5г remain OPEN.
 [Observations and limits 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
+
+**Indexed writes, slice380.** The interpreter and native share this order: evaluate base/index, call Run
+`slot_prepare` before RHS, obtain the RHS address, then Graph `slot_admit` checks retained kind/type
+or NONE before the existing write with invalidation. Preparation evaluates no initializer and reads no
+initial uninit:T payload. Admission refusal retains the old slot; base/index errors keep their previous
+boundary after RHS. The common assignment builder removes only the synthetic list around a single
+formed Frame; written groups and the assignment-AST exception remain, without receiver-specific runtime unwrapping.
+Low-level facts/type/admit live in Graph without a Run-header dependency; lexical preparation lives in Run.
+Exports: Graph71, Run51, implements74; `contract_append` has a static prototype from the L3 generator.
+Runtime02/graph02, private67 triple/204 AFTER including reset2/mutation24/native trace, genuine G1/G2 quick,
+fixedpoint13/verify717 and G2 graph68 triple/84 AFTER/mutation24 passed; render/docs checks380 also passed.
+This kind/type admission
+completes neither deep Structure `implements`, static M11.7 checks nor M13/M14.
 
 ### 6.4 Copying, merge, attaching
 

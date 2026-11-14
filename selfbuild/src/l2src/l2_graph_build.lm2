@@ -581,8 +581,8 @@ end: lm_graph_path_text
 # A parser assignment flag becomes an ordinary Lmx operator and its operands. No parser flag survives.
 # The written selector is split here, once; consumers use the same nested field expression as every other path.
 # The operand is the body written after `:=`, read by the one model of a Frame (§3.3) as the body of a Frame given by
-# its head is: a single field that is a value -- a word, an unnamed int, an unnamed Lmx (an expression) -- is the
-# operand itself; any other body -- no field, several, a place, a Frame -- is the Structure of its fields as written
+# its head is: a single value -- a word, an unnamed int, an Lmx or a formed Frame -- is the operand itself.
+# Any other body -- no field, several, or a named primitive place -- is the Structure of its fields as written
 # (an unnamed Lmx), so that `args := (int: a)` gives the same Structure as `args: (int: a)`. An assignment written
 # there, `code := (total := total + d)`, is such a Frame -- a statement, no value: the operand is the body of that one
 # statement. A consumer that evaluates the operand reads a Structure of one field as that field (lmx_graph_eval_value,
@@ -609,7 +609,7 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
     if: state != 0 && c.lmx_graph_count((cast: (@: c.Lmx) rhs)) = 1U
         single := c.lmx_graph_get((cast: (@: c.Lmx) rhs), 0U)
         kind := c.lmx_graph_kind(g, single)
-        if: kind = 2 || kind = 5 || kind = 6 || ((kind = 1 || kind = 4) && c.lmx_graph_name_of(g, single) = 0)
+        if: kind = 2 || kind = 4 || kind = 5 || kind = 6 || (kind = 1 && c.lmx_graph_name_of(g, single) = 0)
             operand := single
         ---
         if: kind = 4 && c.lmx_graph_name_of(g, single) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) single), 0U)) = state\w_assign

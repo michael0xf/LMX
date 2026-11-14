@@ -22,6 +22,7 @@ predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
@@ -1159,6 +1160,73 @@ fn: lmx_graph_path_field (@: g c.LmxGraph; @: code c.Lmx; @: left void; @@: owne
     return: 0
 end: lmx_graph_path_field
 
+# Read the immutable requirement of this slot for the current execution.
+# An atom uses its lexical reader, never the caller's formals/dynamic inputs.
+fn: lmx_graph_slot_requirement (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; @: fact c.LmxImplContractFact) int
+    @: space c.LmxGraphSpace c.lmx_graph_space()
+    @: known c.LmxImplContractFact c.lmx_graph_slot_fact(space, holder, index)
+    @: held void c.lmx_graph_get(holder, index)
+    @: word char 0
+    @: owner c.Lmx 0
+    @: entity void 0
+    int: deferred 0
+    size_t: slot 0U
+    int: status 0
+    if: known != 0
+        fact[0] := known[0]
+        return: 0
+    c.memset((cast: (@: void) fact), 0, c.sizeof(c.LmxImplContractFact))
+    fact\owner := holder
+    fact\field := index
+    word := c.lmx_graph_word_text(g, held)
+    if: word != 0 && c.lmx_graph_name_of(g, held) = 0
+        entity := lmx_graph_atom_target(g, holder, word, @ owner, @ slot)
+    if: c.lmx_graph_kind(g, entity) != 4 || lmx_graph_deferred_kind(g, entity) != 0
+        deferred := lmx_graph_deferred_kind(g, held)
+        if: deferred = 0
+            status := c.lmx_graph_slot_type(g, held, fact)
+        else:
+            fact\kind := c.LMX_KIND_PRIMITIVE
+            fact\type := c.LMX_TYPE_INT
+            if: deferred = 5
+                fact\type := c.LMX_TYPE_GRAPH_INT_REF
+            if: deferred = 6
+                fact\type := c.LMX_TYPE_GRAPH_LMX_REF
+        ---
+    ---
+    if: status != 0
+        return: status
+    return: c.lmx_graph_slot_fact_put(space, fact)
+end: lmx_graph_slot_requirement
+
+# Freeze the receiving descriptor after reading base/index and before RHS
+# effects. Bounds/type failures retain their existing index_write boundary;
+# this preparation neither admits the incoming value nor changes the graph.
+fn: lmx_graph_slot_prepare (@: g c.LmxGraph; @: value void; int: index) int
+    @: base void c.lmx_graph_target(g, value)
+    c.LmxImplContractFact: fact
+    if: c.lmx_graph_kind(g, base) != 4 || index < 0 || (cast: (size_t) index) >= c.lmx_graph_count((cast: (@: c.Lmx) base))
+        return: 0
+    return: lmx_graph_slot_requirement(g, (cast: (@: c.Lmx) base), (cast: (size_t) index), @ fact)
+end: lmx_graph_slot_prepare
+
+
+
+# A constructor establishes the destination slot's receiving fact through its
+# existing source-to-copy correspondence. Absent facts add no preparation;
+# proofs are never serialized or retained for the next independent traversal.
+fn: lmx_graph_slot_fact_copy (@: source c.Lmx; size_t: from; @: destination c.Lmx; size_t: to) int
+    @: space c.LmxGraphSpace c.lmx_graph_space()
+    @: known c.LmxImplContractFact c.lmx_graph_slot_fact(space, source, from)
+    c.LmxImplContractFact: fact
+    if: known = 0
+        return: 0
+    fact := known[0]
+    fact\owner := destination
+    fact\field := to
+    return: c.lmx_graph_slot_fact_put(space, @ fact)
+end: lmx_graph_slot_fact_copy
+
 # A write through the index of a Structure, `base[index] := value` (the book, structure-index): the base and the index
 # first, then the value -- an address, not a number --, then the kernel's admission and slot write
 # (lmx_graph_index_write). 0; 4 or 7 as the kernel answers; the answer of an evaluation.
@@ -1171,6 +1239,9 @@ fn: lmx_graph_eval_index_write (@: g c.LmxGraph; @: code c.Lmx; @: left c.Lmx; @
     if: status != 0
         return: status
     status := lmx_graph_eval_number(g, code, c.lmx_graph_get(left, 2U), @ index)
+    if: status != 0
+        return: status
+    status := lmx_graph_slot_prepare(g, base, index)
     if: status != 0
         return: status
     status := lmx_graph_read_received_value(g, code, operand, 2, @ value)
@@ -4175,6 +4246,12 @@ fn: lmx_graph_merge_level (@: g c.LmxGraph; @: map c.LmxCopyMap; @@@: work c.Lmx
         ---
         k := k + 1U
     ---
+    i := 0U
+    while: i < total && status = 0
+        operand := (cast: (@: c.Lmx) values[from_k[i]])
+        status := lmx_graph_slot_fact_copy(operand, from_j[i], result, i)
+        i := i + 1U
+    ---
     c.free((cast: (@: void) names))
     c.free((cast: (@: void) first))
     c.free((cast: (@: void) parts))
@@ -4270,6 +4347,8 @@ fn: lmx_graph_merge_values (@: g c.LmxGraph; @@: values void; size_t: n; @@: out
             status := lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(operand, j), @ work, @ count, @ cap, @ copy)
             if: status = 0 && c.lmx_graph_put(child, j, copy) != 0
                 status := 4
+            if: status = 0
+                status := lmx_graph_slot_fact_copy(operand, j, child, j)
             ---
             j := j + 1U
         ---
@@ -4608,6 +4687,8 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
         status := lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(written, i), @ work, @ wcount, @ wcap, @ copy)
         if: status = 0 && c.lmx_graph_put(vars, i, copy) != 0
             status := 1
+        if: status = 0
+            status := lmx_graph_slot_fact_copy(written, i, vars, i)
         i := i + 1U
     ---
     while: at < wcount && status = 0
@@ -4618,6 +4699,8 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
             status := lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(operand, j), @ work, @ wcount, @ wcap, @ copy)
             if: status = 0 && c.lmx_graph_put(child, j, copy) != 0
                 status := 1
+            if: status = 0
+                status := lmx_graph_slot_fact_copy(operand, j, child, j)
             j := j + 1U
         ---
         # A copied Structure whose source parent lies outside the written data -- a Structure the data reaches by a

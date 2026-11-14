@@ -1020,6 +1020,7 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
         status := lm_graph_emit_number(g, f, code, (cast: (@: c.Lmx) left), 2U, temps, decl_names, decl_slots, decl_n, @ value)
         if: status != 0
             return: status
+        c.fprintf(f, "        if: lmx_graph_slot_prepare(l2_g, l2_v%d, l2_t%d) != 0\n            %s\n", owner, value, leave_failure)
         status := lm_graph_emit_received_operand(g, f, code, statement, 2U, 2, -1, temps, decl_names, decl_slots, decl_n, @ source)
         if: status != 0
             return: status

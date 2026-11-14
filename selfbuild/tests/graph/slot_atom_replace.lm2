@@ -1,0 +1,21 @@
+# A slot that began as an atom keeps no receiving requirement after writes.
+sub: main () (
+    A(int: value 1)
+    B(int: value 7)
+    C(int: value 9)
+    Slots(A)
+    int: j 41
+    int: first 0
+    int: second 0
+    int: third 0
+)
+    Slots[0] := B
+    first := Slots[0]\value
+    Slots[0] := @j
+    second := Slots\j
+    Slots[0] := C
+    third := Slots[0]\value
+main()
+int: first main\data\first
+int: second main\data\second
+int: third main\data\third

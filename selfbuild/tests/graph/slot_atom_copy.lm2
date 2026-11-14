@@ -1,0 +1,32 @@
+sub: main () (
+    A(int: value 1)
+    B(int: value 7)
+    C(int: value 9; int: extra 2)
+    Slots(A)
+    int: j 41
+    @: p int @j
+    int: copied_number 0
+    int: copied_length 0
+    int: source_length 0
+)
+    Slots[0] := B
+    @: copied merge(Slots)
+    copied[0] := @j
+    p := copied[0]
+    copied_number := \p
+    copied[0] := C
+    copied_length := length(copied[0])
+    Slots[0] := C
+    source_length := length(Slots[0])
+main()
+int: copied_number main\data\copied_number
+int: copied_length main\data\copied_length
+int: source_length main\data\source_length
+int: made_stage 0
+@: Src main\data\Slots
+sub: name := made; args := (); data := Src; code := (int: number 41; data[0] := @number)
+made_stage := 1
+call(data\made)
+made_stage := 2
+@: result int data\made\data[0]
+int: made_number \result

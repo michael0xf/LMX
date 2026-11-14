@@ -1,0 +1,18 @@
+sub: main () (
+    A:
+        int: value 1
+    end: A
+    B:
+        int: value 7
+    end: B
+    Slots: A
+    int: seen 0
+)
+    fn: patch (int: A) int
+        :=: (Slots [] 0) B
+        return: ((Slots [] 0) \ value)
+    end: patch
+    :=: seen (patch 9)
+end: main
+main:
+int: seen 7

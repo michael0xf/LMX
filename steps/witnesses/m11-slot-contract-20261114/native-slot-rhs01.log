@@ -1,0 +1,85 @@
+Breakpoint 1 at 0x140001e23
+Breakpoint 2 at 0x14002dc47
+Breakpoint 3 at 0x14002873a
+Breakpoint 4 at 0x140001d48
+[New Thread 14156.0x4744]
+[New Thread 14156.0x455c]
+[New Thread 14156.0x47bc]
+GRAPH-BEFORE-BEGIN
+int: calls 0
+int: seen 0
+@: Holder ((A (int value 1)) (B (int value 7)) (C (int value 9)) (Choices ((int value 7))) (Slots A))
+fn: rhs () int
+    :=: ((node \ Holder) [] 0) ((node \ Holder) \ C)
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: rhs
+:=: ((Holder \ Slots) [] 0) (merge ((Holder \ Choices) [] (rhs)))
+:=: seen (((Holder \ Slots) [] 0) \ value)
+GRAPH-BEFORE-END
+NATIVE ROOT
+#0  0x00007ff722041e23 in lm_graph_root ()
+#1  0x00007ff722042c46 in lm_graph_body ()
+#2  0x00007ff7220b1c72 in lmx_call0_mode ()
+#3  0x00007ff7220b2d20 in lmx_graph_call ()
+SLOT PREPARE
+#0  0x00007ff72206dc47 in lmx_graph_slot_prepare ()
+#1  0x00007ff722042206 in lm_graph_root ()
+#2  0x00007ff722042c46 in lm_graph_body ()
+#3  0x00007ff7220b1c72 in lmx_call0_mode ()
+#4  0x00007ff7220b2d20 in lmx_graph_call ()
+NATIVE RHS
+#0  0x00007ff722041d48 in lm_graph_method0 ()
+#1  0x00007ff7220a8a5f in lmx_call_prim_values ()
+#2  0x00007ff7220aecf7 in lmx_graph_invoke_data ()
+#3  0x00007ff7220af062 in lmx_graph_invoke_bound ()
+#4  0x00007ff7220424b5 in lm_graph_root ()
+SLOT PREPARE
+#0  0x00007ff72206dc47 in lmx_graph_slot_prepare ()
+#1  0x00007ff722041619 in lm_graph_body0 ()
+#2  0x00007ff722041df0 in lm_graph_method0 ()
+#3  0x00007ff7220a8a5f in lmx_call_prim_values ()
+#4  0x00007ff7220aecf7 in lmx_graph_invoke_data ()
+SLOT ADMIT AND WRITE
+#0  0x00007ff72206873a in lmx_graph_index_write ()
+#1  0x00007ff72204182f in lm_graph_body0 ()
+#2  0x00007ff722041df0 in lm_graph_method0 ()
+#3  0x00007ff7220a8a5f in lmx_call_prim_values ()
+#4  0x00007ff7220aecf7 in lmx_graph_invoke_data ()
+SLOT ADMIT AND WRITE
+#0  0x00007ff72206873a in lmx_graph_index_write ()
+#1  0x00007ff722042551 in lm_graph_root ()
+#2  0x00007ff722042c46 in lm_graph_body ()
+#3  0x00007ff7220b1c72 in lmx_call0_mode ()
+#4  0x00007ff7220b2d20 in lmx_graph_call ()
+GRAPH-AFTER-BEGIN
+int: calls 1
+int: seen 7
+Holder:
+    C:
+        int: value 9
+    end: C
+    B:
+        int: value 7
+    end: B
+    C:
+        int: value 9
+    end: C
+    Choices: ((int value 7))
+    Slots: ((int value 7))
+end: Holder
+fn: rhs () int
+    :=: ((node \ Holder) [] 0) ((node \ Holder) \ C)
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: rhs
+:=: ((Holder \ Slots) [] 0) (merge ((Holder \ Choices) [] (rhs)))
+:=: seen (((Holder \ Slots) [] 0) \ value)
+GRAPH-AFTER-END
+[New Thread 14156.0x2634]
+l2_eternal_driver: 81 checks, 0 roots
+[Thread 14156.0x2634 exited with code 0]
+[Thread 14156.0x455c exited with code 0]
+[Thread 14156.0x4744 exited with code 0]
+[Thread 14156.0x47bc exited with code 0]
+[Inferior 1 (process 14156) exited normally]

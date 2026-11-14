@@ -1,5 +1,20 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез380 — требования индексируемого места, кодовая приёмка пройдена.**
+База379 — d670a0e9. ImplContractFact/CopyMap текущего GraphSpace фиксируют требование до RHS;
+NONE переживает повторные замены и копируется соответствующими constructor slots merge/fn_data.
+Контекст исчезает после всего исполнения; новый обход читает текущий граф. Не возвращать SourceName/ports,
+metadata слота в name table, Work-history или сериализацию facts.
+Pure прошли: copy41/2/2/41; реальный rhs() в merge(Holder\Choices[rhs()]) — calls1/seen7;
+subtype refusal4/effects1/old7, bounds7/effects1. Добавлены9 fixture;9 старых golden меняют лишь synthetic RHS.
+Private67 triple/204 AFTER с reset2/mutation24 и actual native root/RHS trace прошли. Whole bootstrap quick:
+настоящие G1/G2, по9 smoke, fixedpoint13/717; G2 graph68 triple/84 AFTER/mutation24 прошли.
+Штатные render/docs check380 прошли:35/14/27/44/615, ссылки и LF27563 до staging; final index03 LF27604.
+Кодовая связка boot-m11-slot-contract-01/g2 +
+graph-m11-slot-contract-g2-01; [свидетельство](steps/witnesses/m11-slot-contract-20261114/notes.md).
+Общий implements/test, copied lexical bindings, computed nested BODY/static-name и весь M13/M14 OPEN.
+Все дальнейшие дополнения вносить в основной v3; goal ACTIVE.
+
 **2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**
 База378 — 369ded97. Carrier [headExpr, WORD("()"), actualsLmx], единый выбор живой цели до actuals,
 прежние binder/admission/ordinary launch; named Frames и written groups сохранены.
@@ -635,8 +650,17 @@ bootstrap достигает неподвижной точки, различия
 `struct_root_declares`, сохранить заменой смысл `root_closed_names` и защиту от циклов `index_cycle_dump`.
 
 **5д:** повторы объявлений мест в корне и явных данных, отказ неоднозначного голого пути, `data\[N]имя`,
-вложенные `data\if\if`, запись с головой-именем места как вхождение; запись по индексу в слот атома по новой норме.
+вложенные `data\if\if`, запись с головой-именем места как вхождение. Atom-slot index380 прошёл кодовую приёмку:
+захват до RHS, NONE и копии в том же execution; общий implements остаётся OPEN.
 Уже работающие случаи 355 не реализовывать второй раз.
+
+**OPEN общих зависимостей:** copied lexical fn/sub binding требует соответствующих copied scope/source/parent,
+а не обращения к чужому construction binding или persistent таблице. Текущая own data уже созданной F
+переносится через ту же map, без повторного raw initializer; контроль source count3 → copied call4/source3
+включён в основной v3. Computed fn/sub в nested BODY и доступность
+известного computed имени пока ограничены: возможен entry3 до producer, затем guard fn_apply даёт5 вне ROOT/own DATA.
+Расширять общий scope/frame/constructor с сохранением snapshots и closed-missing timing. Root named-parts probe380
+проверяет только перенос captured fact через fn_data; исходный nested BODY/node-path случай остаётся в v3.
 
 **5е:** имена Structure/функций слева от `:=` отказывают, указатель-переменная принимает ссылку; формалы —
 ресиверами; именованные фактические и части вызываемых — только `:=`; плоское требование с кандидатом.

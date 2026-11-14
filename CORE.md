@@ -9,7 +9,22 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice 378; code acceptance passed): common root work frame/block0, native wrapper completion and
+Current implementation note (2026-11-14, slice 380; code acceptance passed): index writes capture the physical
+place's requirement before RHS effects in the current GraphSpace, using existing ImplContractFact/CopyMap storage.
+Captured NONE survives repeated replacements and constructor copies through merge/fn_data within that execution.
+The context is discarded on exit; the next independent traversal derives requirements from the current graph.
+This adds no persistent SourceName/port metadata, slot entries in the name table, assignment history, or serialized proof.
+Pure cases passed: copy gives 41/2/2/41; an actual rhs() gives calls=1/seen=7;
+subtype refusal4 follows effects=1 and preserves old=7; bounds refusal7 also follows effects=1.
+The 58 existing pure cases pass; nine targeted fixtures were added. Private67 in all three modes,
+204 AFTER including reset2 and mutation24 passed; actual native root/prepare/RHS/write was traced.
+Genuine G1/G2 quick, nine smoke rows each and fixedpoint13/verify717 passed; rebuilt G2 graph repeated
+68 cases in three modes,84 negative AFTER/mutation24. Normal render/docs checks passed:35/14/27/44/615,
+links and LF27563 before staging; final index check03 passed LF27604. [Record380](steps/witnesses/m11-slot-contract-20261114/notes.md).
+The code tuple is380. Full used-interface implements/test, copied lexical construction bindings,
+computed nested BODY/static-name availability, M13 and M14 remain open; see the [main plan](next_core_tasks_v3.md#m11).
+
+Previous implementation note (2026-11-14, slice 378; code acceptance passed): common root work frame/block0, native wrapper completion and
 forced reuse replace the separate root emitter. Scalar values stand without capture; discarded AST uses the common
 value reader and computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
 Private01 executed 50 cases in three modes: 48 matched old goldens, 2 required five independently derived root-k snapshot updates;

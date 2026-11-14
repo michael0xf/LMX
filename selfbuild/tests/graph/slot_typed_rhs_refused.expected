@@ -1,0 +1,19 @@
+int: calls 1
+int: before 1
+int: after 0
+Holder:
+    A:
+        int: value 1
+    end: A
+    @: p A
+    Target:
+        int: value 7
+    end: Target
+end: Holder
+fn: rhs () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 1
+end: rhs
+:=: before 1
+:=: ((Holder \ Target) [] 0) (Holder [] (rhs))
+:=: after 1

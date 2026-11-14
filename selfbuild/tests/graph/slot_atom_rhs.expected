@@ -1,0 +1,22 @@
+int: calls 1
+int: seen 7
+Holder:
+    C:
+        int: value 9
+    end: C
+    B:
+        int: value 7
+    end: B
+    C:
+        int: value 9
+    end: C
+    Choices: ((int value 7))
+    Slots: ((int value 7))
+end: Holder
+fn: rhs () int
+    :=: ((node \ Holder) [] 0) ((node \ Holder) \ C)
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: rhs
+:=: ((Holder \ Slots) [] 0) (merge ((Holder \ Choices) [] (rhs)))
+:=: seen (((Holder \ Slots) [] 0) \ value)

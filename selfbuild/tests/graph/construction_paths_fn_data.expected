@@ -1,0 +1,30 @@
+fn: f () int (
+    int: value 7
+)
+    :=: value (value + 1)
+    return: value
+end: f
+D:
+    @: data_snapshot data
+    @: args_snapshot (f \ args)
+    @: code_snapshot (f \ code)
+end: D
+int: initial 11
+:=: initial ((D \ data_snapshot) \ value)
+int: args_deferred 2
+:=: args_deferred (length (D [] 1))
+int: code_deferred 2
+:=: code_deferred (length (D [] 2))
+int: first 8
+:=: first (f)
+int: after_first 11
+:=: after_first ((D \ data_snapshot) \ value)
+:=: ((D \ data_snapshot) \ value) 11
+int: changed 11
+:=: changed ((D \ data_snapshot) \ value)
+int: second 9
+:=: second (f)
+int: after_second 11
+:=: after_second ((D \ data_snapshot) \ value)
+int: current 9
+:=: current ((f \ data) \ value)

@@ -1,0 +1,21 @@
+fn: A () int
+    return: 7
+end: A
+fn: outer () int (
+    fn: prepared
+    fn: inner () int
+        @: p ((A) \ A)
+        return: 0
+    end: inner
+)
+    return: 0
+end: outer
+fn: descriptor ((args ()) (return int) (data ((fn prepared) (fn inner () int ((@ p ((A) \ A)) (return 0))))))
+Hold:
+    @: held outer
+    @: held_descriptor descriptor
+end: Hold
+int: body_raw 2
+int: descriptor_raw 2
+int: body_fields 2
+int: descriptor_fields 2

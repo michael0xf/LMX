@@ -1,5 +1,28 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез391 — source-known paths; кодовые gates и docs-check PASS.**
+Source03/private48 — промежуточные: bootstrap01 остановлен из-за actual F.data pending gap raw4 вместо2;
+исправление readonly lexical-DATA role в Runtime03 прошло private49; новый whole02/fixedpoint15 PASS.
+
+- [x] Общий pure path/physical-index/occurrence projector, exact source→F и lexical-only atoms;
+  сохранить bare masks и отложенные mutable links, включая F.args/code; F.data kind4 — общий прямой Structure случай.
+  Numeric index не разрешает атом и не создаёт F из raw fn. Без evaluator/нового persistent state.
+- [x] Шесть новых sources/пять expected, combined18 contexts/31 leaf oracles, FnData runs2, owned DATA method/descriptor2/2;
+  private49 triple/negative AFTER39 PASS, все43 прежних expected без изменений. Source07:907329fba48 frozen.
+- [x] Whole02 actualG1/G2 по9 smoke/fixedpoint15/verify907/Runtime03==G2driver PASS; G2 Graph0cc869f7 собран.
+- [x] G2 repeat49 triple/negative AFTER39 и render35/14 PASS, generated content/grammar unchanged.
+- [x] Fresh docs-check01 PASS35/14/27/44/615, links/LF28142; final index проверяется перед commit/push391.
+  Общий охват M11/M13/M14 OPEN.
+- [x] После whole02 terminal применены два format-only fixture variants без лишнего single-level end;
+  полные AFTER и все4 native/forced программы побайтно прежние. Затем убраны EOF blank lines в6 новых sources;
+  ещё10 programs byte-equal/build4 control PASS. Final manifest07/fixedpoint03/verify907, код/компиляторы прежние.
+- [ ] Реализовать общую typed receiving-chain/storage/admission зависимость M11.7/M13 перед общими type fields;
+  не стирать written Model/qualifiers и не заменять implements равенством physical slot facts.
+- [ ] Borrowed receiving-view + canonical type→physical descriptor через прежнюю generated primitive-profile source table;
+  существующий Value/receive/materialize и profiled allocators, без нового whitelist/registry и потери qualification.
+- [ ] Общий Graph name/role/fact producer для existing implements worker: именованный Model не превращать в positional,
+  raw Frame/uninit wrapper не сравнивать как готовое требование; status/UNKNOWN отдельно, test не выполнять при construction.
+
 **2026-11-14, срез390 — явное построение известных ссылок; кодовые gates и docs-check PASS.**
 
 - [x] Graph75 fresh push/prior restore и Run58 construct между P0-полями и отдельным pure preflight;

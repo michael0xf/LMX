@@ -1,5 +1,29 @@
 # LMX core architecture
 
+Current slice391 (2026-11-14; lexical actual-DATA fix, code gates and docs-check PASS), accepted/pushed base390/78041191 on main:
+only Run changes. Its private pure projector reuses step_index/occurrence and binding_method for the exact selected fn;
+Graph75/Run58, APIs and layouts are unchanged. A numeric index preserves the immediate Frame and does not reinterpret
+a selected WORD as an atom/F. Lexical atoms audit pending DATA/CODE scopes, not EXPR; mutable kind6 stays deferred.
+Actual F.data is direct kind4 and follows the generic Structure rule, without a field-name exception.
+Source03/private48 triple/AFTER39 PASS was interim. Bootstrap01 was stopped after actual F.data pending scopes gave raw4 instead of2.
+The new read-only construct_data_scope proves lexical DATA by FN-result owner and exact data identity, including bodyless descriptors.
+Actual DATA is not a materialization queue and is not executed; the source blueprint stays untouched.
+Runtime03 SHA6a610534/Graph03 SHA7aad957d PASS: method/descriptor now give raw2/2 and data width2/2.
+Six sources/five expected files now include construction_paths_owned_data; the combined18-context/31-leaf-oracle probe,
+FnData runs2(initial11/bare8/9/held11/current9), runtime refusals3/4 and build4 remain.
+Private02:49 triple/negative AFTER39 PASS; the previous43 expected files are unchanged. Whole boot-m11-construction-paths-02
+on Source05 PASS: genuine G1/G2, nine smoke rows each; fixedpoint15/verify907/Runtime03==G2driver PASS.
+Final frozen Source07:907 SHA329fba48883be5014759e1fc74c4236873286c6050b69567c4ce3206f23ce9c3:
+intermediate06 removed extra end markers from two fixtures after bootstrap ended;07 only removed EOF blank lines from six new sources.
+Full AFTER2, ten exact generated native/forced programs matching actual G2 case outputs and the build4 control PASS;
+fixedpoint03: all15 comparisons/verify907 PASS. Code/compiler inputs are unchanged, with no extra rebuild or whole bootstrap.
+The genuine G2 Graph was rebuilt:
+SHA0cc869f7c12b9b3d7ae57aec8957602fcfaabe0750759ab9f5a131195f17b5a5. G2 repeat49 triple/negative AFTER39 PASS.
+Render35/14 and fresh docs-check01 PASS35/14/27/44/615, links/LF28142; generated content/grammar unchanged, final staged index follows.
+Typed/qualified lowering, the future borrowed typed/name/fact bridge to the shared worker and interface admission
+M11.7/M13, runtime merge/fromLmx construction and full M11/M14 remain OPEN. See [evidence391](steps/witnesses/m11-construction-paths-20261114/notes.md).
+Work and commits remain directly on main.
+
 Current slice390 (2026-11-14; bounded constructor code acceptance and docs-check passed): Builder explicitly runs owned construction
 after filling P0 fields and before pure preflight; Graph75 fresh-push/Run58 construct. A stored F remains an ordinary
 current value; the next walk creates a fresh F, without transplanting temporary bindings. SOURCE references materialize

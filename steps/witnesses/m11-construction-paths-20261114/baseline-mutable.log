@@ -1,0 +1,47 @@
+GRAPH-BEFORE-BEGIN
+D:
+    A:
+        Leaf:
+            int: v 1
+        end: Leaf
+    end: A
+    B:
+        Leaf:
+            int: v 2
+        end: Leaf
+    end: B
+    @: current A
+    @: saved (current \ Leaf)
+end: D
+C:
+    @: saved (current \ Leaf)
+end: C
+int: deferred (length (D [] 3))
+:=: (D \ current) (D \ B)
+call: D C
+int: selected ((D \ saved) \ v)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+D:
+    A:
+        Leaf:
+            int: v 1
+        end: Leaf
+    end: A
+    B:
+        Leaf:
+            int: v 2
+        end: Leaf
+    end: B
+    @: current B
+    @: saved Leaf
+end: D
+C:
+    @: saved (current \ Leaf)
+end: C
+int: deferred 2
+:=: (D \ current) (D \ B)
+call: D C
+int: selected 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

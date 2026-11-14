@@ -1,5 +1,26 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез391 — source-known path projection M11.7; кодовые gates и docs-check PASS.**
+Source03/private48 не окончательная приёмка: bootstrap01 остановлен после подтверждённого pending gap actual F.data (raw4 вместо2).
+Private construct_data_scope распознаёт её как lexical DATA, не включая в materialization queue; method/descriptor теперь2/2.
+390 принят/отправлен780411910064984dd50a15ecab92b9dd5ea5bb22, все его gates PASS; работа прямо в main.
+Общий private projector использует прежние occurrence/physical-slot reader и exact source→F, без evaluator/step/target unwrap.
+Atom остаётся lexical-only; bare initializer сохраняет formal/DATA/FREE/pending masks. Любое ссылочное mutable ребро,
+включая args/code у F, остаётся deferred; текущая F.data — непосредственная Structure, общий kind4 случай.
+Счётчик индекса и вызов не вычисляются ради known proof. Индекс сохраняет raw Frame, path создаёт F только из exact fn source.
+Typed/qualified construction требует общего receiving view, typed storage и настоящего admission; распознавание
+declaration family само по себе этого не даёт. Не стирать Model/qualifier и не выдавать physical slot equality за implements.
+Эта зависимость остаётся в общем M11.7/M13, runtime merge/fromLmx integration и полный M11/M14 OPEN.
+Graph75/Run58/API/layouts прежние. Runtime03 SHA6a610534/Graph03 7aad957d; Final Source07:907 frozen329fba48.
+Шесть новых sources/пять expected: combined18 contexts/31 leaf oracles, FnData runs2, owned DATA и отказы3/4/build4.
+Private02 все49 interp/native/forced и full negative AFTER39 PASS, все43 прежних expected сохранены.
+Whole boot-m11-construction-paths-01 quick остановлен по дефекту; новый boot02 actualG1/G2 по9 smoke PASS.
+Fixedpoint15/verify907/privateRuntime03==G2driver PASS; G2Graph0cc869f7/repeat49 triple/AFTER39 PASS.
+Render35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28142; generated content/grammar unchanged, final index перед коммитом.
+Source06 отличается от05 оформлением двух новых fixture sources, Source07 убирает EOF blank lines в шести;
+полные AFTER и generated native/forced programs побайтно прежние (4+10 same), build4 control и final fixedpoint03/verify907 PASS.
+Root — sole code/test/build writer, один последовательный конвейер; полная приёмка391 впереди.
+
 **2026-11-14, срез390 — известные ссылки при построении нового графа; кодовые gates и docs-check PASS.**
 389/95715038f916123872a56372c224357de91af216 принят и отправлен в основном main; чужие два untracked сохранены.
 Graph75 добавляет fresh push через существующий prior; Run58 — явный construct после P0-полей и до pure preflight.
@@ -2294,6 +2315,16 @@ Structure и записью значения, снимаются — шаг 6. �
    Full native held-F execution остаётся M14 OPEN.
    Остаток: source-known paths/прочие принимающие type fields, actual new runtime merge/fromLmx constructor boundaries;
    не встраивать backfill в step/read/work_open_parts. Полный M11.7 и M14 остаются OPEN.
+   Срез391 расширяет source-known paths общим exact-slot projector; mutable F.parts не исключение из deferred read.
+   Текущая F.data физически kind4 и доступна по общему правилу, F.args/code kind6 остаются deferred.
+   Index сохраняет raw Frame/WORD address, path выбирает F только из exact written fn и отдельно lexical atom.
+   Graph75/Run58 прежние; Source07:907, Runtime03/Graph03: private02 все49 triple/negative AFTER39 PASS, old43 unchanged.
+   Bootstrap01 остановлен по actual F.data pending gap; audit-only DataScope исправлен и покрыт method/descriptor2/2.
+   Whole02 actualG1/G2 по9 smoke/fixedpoint15/verify907 PASS; G2Graph0cc869f7/repeat49/AFTER39, render35/14
+   и fresh docs-check01 PASS35/14/27/44/615, links/LF28142; final index перед commit/push391 прямо в main.
+   Общие type fields требуют borrowed receiving-chain view и согласованных name/publish/role readers, physical typed
+   storage и interface admission M11.7/M13. Текущие declaration_view/formal_model и kind0 не дают готового typed constructor:
+   нельзя снимать const/immutable/independent или подменять @:p Model Value обычной untyped ссылкой.
    [Передача390](steps/handoff/m11-known-data-references-20261114.md) сохраняет исходное исследование как историю:
    recurring receiving hook не принят. Реализован явный construction walk; дальнейшее расширение использует
    тот же declaration/admission механизм для paths/type fields, затем реальные новые результаты merge/fromLmx.
@@ -2387,6 +2418,23 @@ Structure и записью значения, снимаются — шаг 6. �
 Рабочее значение уже существующего mapped own int отделено от этой задачи: до публикации local3
 и @value/direct1 нормативны; formal/free-input сохраняет собственную ячейку активации и контроль7.
 Частный root-frame срез не объявляет эту construction-миграцию или весь M13/M14 завершёнными.
+
+**Общий typed construction bridge M11.7/M13 (исследование391):** расширять существующий borrowed declaration-view
+до receiving leaf/model/candidate и согласовать name/publish/role readers. Связать каноническое описание типа с
+физическим descriptor через существующую generated primitive-profile проекцию той же `primitive.description`
+(semantic/width/spelling/convert), без второй ручной таблицы имён. Нынешние names/cellflags и legacy Graph.kind
+не доказывают полноту typed storage. Использовать прежний Value-cell/load → receive → materialize и profiled
+scalar/pointer allocators с точными type/stride/profile/callbacks; дорастить существующий scalar transport до
+нужных типов, не выдать нынешний partial/FOREIGN-unsupported за полный каталог. Qualification требует выбранного
+profile/immutable physical type, а не безусловного profile0. Заполнение нового места отделять от защищённой записи
+в существующее DATA. Настоящий Model-interface admission M11.7 подключать к statusful общему worker:
+без Consumer уже есть admit_receiving_templates/full_receiver с uses=NULL, не нужно выдумывать receiving graph record.
+Нужен borrowed Graph name/role/receiving-fact producer для прежних named_view/contract_field/resolver contract/get:
+legacy worker читает arena source_names, а clean Graph — g.names; raw Frame/uninit wrapper не являются его готовым
+требованием. Читать Model по DATA роли без default/payload evaluation, сохранять UNKNOWN отдельно от доказанного YES.
+Карты/факты/request scratch принадлежат одной операции и уничтожаются прежним resolver teardown; test в construction
+не вызывается. Physical slot equality не заменяет этот интерфейс. `descriptor(S)` заголовка — адреса полей Lmx,
+не новый storage-type объект.
 
 Статус — **OPEN**. [ТЗ Astra](add_all_struct_fields.md) и
 [дословные уточнения автора](LMX_blog/2026-11-13-get-descriptor.md) дополняют K07/K09,

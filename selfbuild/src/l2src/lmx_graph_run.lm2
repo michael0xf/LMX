@@ -2870,6 +2870,66 @@ fn: lmx_graph_construct_pending (@: g c.LmxGraph; @: scope c.Lmx; @: name char; 
         i := i + 1U
     return: 0
 
+# Project an exact source slot, below the unique-name guard of a bare binding.
+# A selected occurrence of a written fn has its own F even beside namesakes.
+# Mutable references, including the named links of F, are never payload proofs.
+fn: lmx_graph_construct_slot (@: g c.LmxGraph; @: owner c.Lmx; size_t: slot; @@: data c.Lmx; size_t: nd; @@: codes c.Lmx; size_t: nc) @: void
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void c.lmx_graph_get(owner, slot)
+    @: head char c.lmx_graph_name_of(g, raw)
+    int: kind c.lmx_graph_kind(g, raw)
+    if: kind = 4 && (head = state\w_fn || head = state\w_sub)
+        return: (cast: (@: void) lmx_graph_binding_method(g, owner, raw))
+    if: kind = 1 || kind = 3
+        return: raw
+    if: kind = 2 && head = 0
+        return: lmx_graph_construct_atom(g, owner, c.lmx_graph_word_text(g, raw), data, nd, codes, nc)
+    # An explicit path selects the stored Frame as data, even when its head
+    # would be an application in CODE. Only a declaring place needs its value.
+    if: kind = 4 && c.lmx_graph_declaration_receiver(head) = 0
+        return: raw
+    return: (cast: (@: void) 0)
+
+# Actual F.data is a lexical DATA scope even when intentionally absent from the
+# materialization queue. This readonly role proof never scans its blueprint.
+fn: lmx_graph_construct_data_scope (@: g c.LmxGraph; @: scope c.Lmx; @@: data c.Lmx; size_t: nd) int
+    @: owner c.Lmx 0
+    if: lmx_graph_construct_has(data, nd, scope) != 0
+        return: 1
+    if: scope = 0
+        return: 0
+    owner := (cast: (@: c.Lmx) scope\parent)
+    if: c.lmx_graph_fn_result(g, (cast: (@: void) owner)) = 0
+        return: 0
+    return: (cast: (int) (c.lmx_graph_method_data(g, owner) = scope))
+
+# A selected atom has the ordinary lexical-only contract, not the initializer's
+# activation lookup. Audit skipped scopes for a still-pending local name, then
+# prove the exact slot returned by the existing nonconstructing atom reader.
+fn: lmx_graph_construct_atom (@: g c.LmxGraph; @: holder c.Lmx; @: name char; @@: data c.Lmx; size_t: nd; @@: codes c.Lmx; size_t: nc) @: void
+    @: owner c.Lmx 0
+    @: current c.Lmx holder
+    size_t: slot 0U
+    int: code_role 0
+    lmx_graph_atom_target(g, holder, name, @ owner, @ slot)
+    if: owner = 0 || slot >= c.lmx_graph_count(owner)
+        return: (cast: (@: void) 0)
+    while: current != 0 && current != owner
+        code_role := lmx_graph_construct_has(codes, nc, current)
+        if: code_role != 0 || lmx_graph_construct_data_scope(g, current, data, nd) != 0
+            if: lmx_graph_construct_pending(g, current, name, code_role) != 0
+                return: (cast: (@: void) 0)
+            ---
+        ---
+        # A callable's DATA is also a lexical level in the existing atom reader.
+        # Selection alone does not make a mutable value in that level known.
+        if: c.lmx_graph_method(g, current) != 0 && c.lmx_graph_method_data(g, current) = owner
+            break
+        current := (cast: (@: c.Lmx) current\parent)
+    if: current = 0
+        return: (cast: (@: void) 0)
+    return: lmx_graph_construct_slot(g, owner, slot, data, nd, codes, nc)
+
 # Source-known values only: no activation resolver, old payload read, call or
 # lexical substitution for an unentered formal, DATA place or FREE input.
 fn: lmx_graph_construct_binding (@: g c.LmxGraph; @: holder c.Lmx; @: name char; @@: data c.Lmx; size_t: nd; @@: codes c.Lmx; size_t: nc) @: void
@@ -2882,7 +2942,6 @@ fn: lmx_graph_construct_binding (@: g c.LmxGraph; @: holder c.Lmx; @: name char;
     @: head char 0
     size_t: slot 0U
     size_t: found 0U
-    int: kind 0
     if: name = 0 || lmx_graph_language_word(state, name) != 0
         return: (cast: (@: void) 0)
     while: current != 0
@@ -2917,14 +2976,7 @@ fn: lmx_graph_construct_binding (@: g c.LmxGraph; @: holder c.Lmx; @: name char;
                         if: value != 0 && c.lmx_graph_space_find(current, name) = value
                             return: value
                         return: (cast: (@: void) 0)
-                    kind := c.lmx_graph_kind(g, raw)
-                    # A mutable pointer is a deferred read, even when its
-                    # initial target was just constructed in this walk.
-                    if: kind = 1 || kind = 3
-                        return: raw
-                    if: kind = 4 && lmx_graph_construct_has(data, nd, (cast: (@: c.Lmx) raw)) != 0
-                        return: raw
-                    return: (cast: (@: void) 0)
+                    return: lmx_graph_construct_slot(g, current, slot, data, nd, codes, nc)
                 ---
                 if: lmx_graph_construct_pending(g, current, name, 0) != 0
                     return: (cast: (@: void) 0)
@@ -2933,6 +2985,55 @@ fn: lmx_graph_construct_binding (@: g c.LmxGraph; @: holder c.Lmx; @: name char;
         current := (cast: (@: c.Lmx) current\parent)
     return: (cast: (@: void) 0)
 end: lmx_graph_construct_binding
+
+# Pure Structure-value projection for a receiving reference. No generic read,
+# target unwrap, index reference allocation or evaluator runs here. Each finite
+# written selector chooses the same physical slot as the runtime reader.
+fn: lmx_graph_construct_value (@: g c.LmxGraph; @: holder c.Lmx; @: raw void; @@: data c.Lmx; size_t: nd; @@: codes c.Lmx; size_t: nc) @: void
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: path c.Lmx (cast: (@: c.Lmx) raw)
+    @: value void 0
+    @: index void 0
+    @: op char 0
+    size_t: slot 0U
+    int: number 0
+    int: kind c.lmx_graph_kind(g, raw)
+    if: kind = 2
+        return: lmx_graph_construct_binding(g, holder, c.lmx_graph_word_text(g, raw), data, nd, codes, nc)
+    if: kind != 4
+        return: (cast: (@: void) 0)
+    if: lmx_graph_construct_has(data, nd, path) != 0 && c.lmx_graph_declaration_receiver(c.lmx_graph_name_of(g, raw)) = 0
+        return: raw
+    if: c.lmx_graph_name_of(g, raw) != 0 || c.lmx_graph_count(path) != 3U
+        return: (cast: (@: void) 0)
+    op := c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U))
+    if: op != state\w_deref && op != state\w_index
+        return: (cast: (@: void) 0)
+    value := lmx_graph_construct_value(g, holder, c.lmx_graph_get(path, 0U), data, nd, codes, nc)
+    if: c.lmx_graph_kind(g, value) != 4
+        return: (cast: (@: void) 0)
+    if: op = state\w_deref
+        slot := lmx_graph_step_index(g, (cast: (@: c.Lmx) value), c.lmx_graph_get(path, 2U))
+    else:
+        index := c.lmx_graph_get(path, 2U)
+        if: c.lmx_graph_kind(g, index) != 1 || c.lmx_graph_name_of(g, index) != 0
+            return: (cast: (@: void) 0)
+        number := c.lmx_int_value_known(index)
+        if: number < 0
+            return: (cast: (@: void) 0)
+        slot := (cast: (size_t) number)
+    ---
+    if: slot >= c.lmx_graph_count((cast: (@: c.Lmx) value))
+        return: (cast: (@: void) 0)
+    if: op = state\w_index
+        # An index addresses the immediate value, unlike a named logical step:
+        # raw fn/declaration Frames stay Structures and atoms stay WORD cells.
+        # A mutable reference in that cell still supplies no payload proof.
+        raw := c.lmx_graph_get((cast: (@: c.Lmx) value), slot)
+        if: c.lmx_graph_kind(g, raw) = 4
+            return: raw
+        return: (cast: (@: void) 0)
+    return: lmx_graph_construct_slot(g, (cast: (@: c.Lmx) value), slot, data, nd, codes, nc)
 
 # One reference source field. A written DATA value is already a Structure;
 # expressions, unavailable values and true uninitialized references stay raw.
@@ -2950,13 +3051,7 @@ fn: lmx_graph_construct_field (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; 
     if: name = 0 || lmx_graph_language_word(state, name) != 0
         return: 0
     candidate := c.lmx_graph_get(declaration, 1U)
-    if: c.lmx_graph_kind(g, candidate) = 2
-        value := lmx_graph_construct_binding(g, holder, c.lmx_graph_word_text(g, candidate), data, nd, codes, nc)
-    else:
-        if: c.lmx_graph_kind(g, candidate) = 4 && lmx_graph_construct_has(data, nd, (cast: (@: c.Lmx) candidate)) != 0
-            value := candidate
-        ---
-    ---
+    value := lmx_graph_construct_value(g, holder, candidate, data, nd, codes, nc)
     if: value = 0
         return: 0
     if: c.lmx_graph_kind(g, c.lmx_graph_target(g, value)) != 4

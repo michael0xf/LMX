@@ -1,5 +1,28 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез391 — source-known path construction и lexical actual DATA; кодовые gates и docs-check PASS.**
+390/78041191 принят и отправлен в main. Изменён только Run: private pure projection использует общий step_index/occurrence
+и точное binding_method выбранного fn; Graph75/Run58, API и layouts прежние. Numeric index сохраняет immediate Frame,
+не переосмысляет выбранный WORD как atom/F. Lexical atom проверяет pending только в DATA/CODE, не в EXPR;
+mutable kind6 остаётся deferred. Direct kind4 actual F.data проходит общее правило Structure, без исключения по имени поля.
+Source03/private48 triple/AFTER39 PASS — промежуточный результат, не финальная приёмка391. Bootstrap01 остановлен:
+pending scope actual F.data давал raw4 вместо2. Новый read-only construct_data_scope доказывает lexical DATA по FN-result owner
+и точной data identity, включая bodyless descriptor; actual DATA не добавляется в materialization queue и не исполняется.
+Runtime03 SHA6a610534/Graph03 SHA7aad957d PASS; method/descriptor дают raw2/2 и data width2/2, blueprint не материализуется.
+Теперь6 sources/5 expected, включая construction_paths_owned_data; прежние combined18 contexts/31 leaf oracles,
+FnData runs2(initial11/bare8/9/held11/current9), refusals3/4/build4 сохранены. Private02:49 triple/negative AFTER39 PASS;
+старые43 expected не менялись. Whole boot-m11-construction-paths-02 на Source05 PASS: настоящие G1/G2 по9 smoke;
+fixedpoint15/verify907/Runtime03==G2driver PASS. Final frozen Source07:907
+SHA329fba48883be5014759e1fc74c4236873286c6050b69567c4ce3206f23ce9c3: промежуточный06 убрал лишний end в2 fixtures
+после завершения bootstrap,07 убрал только пустые строки EOF в6 новых sources. Full AFTER2, совпадение10 generated native/forced
+programs с фактическими G2 case outputs и build4 control PASS; fixedpoint03: все15 сравнений/verify907 PASS.
+Code/compiler inputs прежние, дополнительных пересборок или whole не было. Штатный G2 Graph собран:
+SHA0cc869f7c12b9b3d7ae57aec8957602fcfaabe0750759ab9f5a131195f17b5a5. G2 repeat49 triple/negative AFTER39 PASS.
+Render35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28142; generated content/grammar unchanged, final staged index далее.
+Typed/qualified lowering, будущий borrowed typed/name/fact bridge к общему worker и interface admission M11.7/M13,
+runtime merge/fromLmx construction и полный M11/M14 OPEN. [Свидетельство391](steps/witnesses/m11-construction-paths-20261114/notes.md).
+Работа и коммиты прямо в main.
+
 **2026-11-14, срез390 — ограниченная кодовая приёмка constructor известных reference DATA fields и docs-check пройдены.**
 Builder после заполнения P0 fields явно выполняет owned construction, затем pure preflight; Graph75 fresh-push/Run58 construct.
 Сохранённая F — обычное текущее значение; следующий обход создаёт новую F, временные bindings не переносятся.

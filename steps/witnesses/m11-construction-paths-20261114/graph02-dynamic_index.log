@@ -1,0 +1,43 @@
+GRAPH-BEFORE-BEGIN
+D:
+    S:
+        A:
+            int: v 1
+        end: A
+        B:
+            int: v 2
+        end: B
+    end: S
+    int: i 0
+    @: p (S [] i)
+end: D
+C:
+    @: p (S [] i)
+end: C
+int: raw (length (D [] 2))
+:=: (D \ i) 1
+call: D C
+int: seen ((D \ p) \ v)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+D:
+    S:
+        A:
+            int: v 1
+        end: A
+        B:
+            int: v 2
+        end: B
+    end: S
+    int: i 1
+    @: p B
+end: D
+C:
+    @: p (S [] i)
+end: C
+int: raw 2
+:=: (D \ i) 1
+call: D C
+int: seen 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

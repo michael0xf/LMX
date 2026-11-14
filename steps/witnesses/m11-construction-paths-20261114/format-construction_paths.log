@@ -1,0 +1,409 @@
+GRAPH-BEFORE-BEGIN
+cp_path_Outer:
+    cp_path_Box:
+        cp_path_Leaf:
+            int: cp_path_v 7
+        end: cp_path_Leaf
+    end: cp_path_Box
+    @: cp_path_p cp_path_Leaf
+end: cp_path_Outer
+int: cp_path_first ((cp_path_Outer \ cp_path_p) \ cp_path_v)
+:=: (((cp_path_Outer \ cp_path_Box) \ cp_path_Leaf) \ cp_path_v) 9
+int: cp_path_alias ((cp_path_Outer \ cp_path_p) \ cp_path_v)
+cp_occurrence_Cases:
+    cp_occurrence_S:
+        fn: cp_occurrence_f () int
+            return: 11
+        end: cp_occurrence_f
+        fn: cp_occurrence_f () int
+            return: 12
+        end: cp_occurrence_f
+    end: cp_occurrence_S
+    @: cp_occurrence_a cp_occurrence_f
+    @: cp_occurrence_b cp_occurrence_f
+end: cp_occurrence_Cases
+int: cp_occurrence_first cp_occurrence_Cases\cp_occurrence_a()
+int: cp_occurrence_second cp_occurrence_Cases\cp_occurrence_b()
+cp_mutable_D:
+    cp_mutable_A:
+        cp_mutable_Leaf:
+            int: cp_mutable_v 1
+        end: cp_mutable_Leaf
+    end: cp_mutable_A
+    cp_mutable_B:
+        cp_mutable_Leaf:
+            int: cp_mutable_v 2
+        end: cp_mutable_Leaf
+    end: cp_mutable_B
+    @: cp_mutable_current cp_mutable_A
+    @: cp_mutable_saved (cp_mutable_current \ cp_mutable_Leaf)
+end: cp_mutable_D
+cp_mutable_C:
+    @: cp_mutable_saved (cp_mutable_current \ cp_mutable_Leaf)
+end: cp_mutable_C
+int: cp_mutable_deferred (length (cp_mutable_D [] 3))
+:=: (cp_mutable_D \ cp_mutable_current) (cp_mutable_D \ cp_mutable_B)
+call: cp_mutable_D cp_mutable_C
+int: cp_mutable_selected ((cp_mutable_D \ cp_mutable_saved) \ cp_mutable_v)
+cp_atoms_D:
+    cp_atoms_A:
+        int: cp_atoms_v 7
+    end: cp_atoms_A
+    cp_atoms_Words: cp_atoms_A
+    @: cp_atoms_saved cp_atoms_A
+end: cp_atoms_D
+int: cp_atoms_seen ((cp_atoms_D \ cp_atoms_saved) \ cp_atoms_v)
+cp_index_D:
+    cp_index_A:
+        cp_index_Leaf:
+            int: cp_index_v 7
+        end: cp_index_Leaf
+    end: cp_index_A
+    @: cp_index_p cp_index_Leaf
+end: cp_index_D
+int: cp_index_seen ((cp_index_D \ cp_index_p) \ cp_index_v)
+cp_index_atom_D:
+    cp_index_atom_B:
+        int: cp_index_atom_v 7
+    end: cp_index_atom_B
+    cp_index_atom_A: cp_index_atom_B
+    @: cp_index_atom_p (cp_index_atom_A [] 0)
+    @: cp_index_atom_q cp_index_atom_B
+end: cp_index_atom_D
+int: cp_index_atom_raw (length (cp_index_atom_D [] 2))
+int: cp_index_atom_seen ((cp_index_atom_D \ cp_index_atom_q) \ cp_index_atom_v)
+cp_index_frames_D:
+    cp_index_frames_S:
+        fn: cp_index_frames_f () int
+            return: 11
+        end: cp_index_frames_f
+        @: cp_index_frames_pending cp_index_frames_missing
+    end: cp_index_frames_S
+    @: cp_index_frames_p fn
+    @: cp_index_frames_q @
+end: cp_index_frames_D
+int: cp_index_frames_f_fields (length (cp_index_frames_D \ cp_index_frames_p))
+int: cp_index_frames_decl_fields (length (cp_index_frames_D \ cp_index_frames_q))
+fn: cp_f_parts_f () int (
+    int: cp_f_parts_value 7
+)
+    return: cp_f_parts_value
+end: cp_f_parts_f
+cp_f_parts_D:
+    @: cp_f_parts_d data
+    @: cp_f_parts_a (cp_f_parts_f \ args)
+    @: cp_f_parts_c (cp_f_parts_f \ code)
+end: cp_f_parts_D
+int: cp_f_parts_d_raw (length (cp_f_parts_D [] 0))
+int: cp_f_parts_a_raw (length (cp_f_parts_D [] 1))
+int: cp_f_parts_c_raw (length (cp_f_parts_D [] 2))
+fn: cp_atom_formal_A () int
+    return: 9
+end: cp_atom_formal_A
+fn: cp_atom_formal_cold (int: cp_atom_formal_A) int
+    @: cp_atom_formal_p cp_atom_formal_A
+    @: cp_atom_formal_q cp_atom_formal_A
+    return: 0
+end: cp_atom_formal_cold
+int: cp_atom_formal_seen cp_atom_formal_cold\code\cp_atom_formal_p()
+int: cp_atom_formal_raw (length ((cp_atom_formal_cold \ code) [] 1))
+cp_dynamic_index_D:
+    cp_dynamic_index_S:
+        cp_dynamic_index_A:
+            int: cp_dynamic_index_v 1
+        end: cp_dynamic_index_A
+        cp_dynamic_index_B:
+            int: cp_dynamic_index_v 2
+        end: cp_dynamic_index_B
+    end: cp_dynamic_index_S
+    int: cp_dynamic_index_i 0
+    @: cp_dynamic_index_p (cp_dynamic_index_S [] cp_dynamic_index_i)
+end: cp_dynamic_index_D
+cp_dynamic_index_C:
+    @: cp_dynamic_index_p (cp_dynamic_index_S [] cp_dynamic_index_i)
+end: cp_dynamic_index_C
+int: cp_dynamic_index_raw (length (cp_dynamic_index_D [] 2))
+:=: (cp_dynamic_index_D \ cp_dynamic_index_i) 1
+call: cp_dynamic_index_D cp_dynamic_index_C
+int: cp_dynamic_index_seen ((cp_dynamic_index_D \ cp_dynamic_index_p) \ cp_dynamic_index_v)
+cp_application_D:
+    cp_application_S:
+        int: cp_application_calls 0
+        fn: cp_application_f (int: cp_application_x) int
+            :=: (node \ cp_application_calls) ((node \ cp_application_calls) + 1)
+            return: cp_application_x
+        end: cp_application_f
+        cp_application_f: 10
+    end: cp_application_S
+    @: cp_application_p cp_application_f
+end: cp_application_D
+int: cp_application_fields (length (cp_application_D \ cp_application_p))
+int: cp_application_effects ((cp_application_D \ cp_application_S) \ cp_application_calls)
+cp_pending_atom_D:
+    cp_pending_atom_A:
+        int: cp_pending_atom_v 7
+    end: cp_pending_atom_A
+    cp_pending_atom_Scope:
+        fn: cp_pending_atom_prepared
+        cp_pending_atom_Alias: cp_pending_atom_A
+        @: cp_pending_atom_p (cp_pending_atom_Alias \ cp_pending_atom_A)
+    end: cp_pending_atom_Scope
+end: cp_pending_atom_D
+int: cp_pending_atom_raw (length ((cp_pending_atom_D \ cp_pending_atom_Scope) [] 2))
+fn: cp_atom_free_a () int
+    return: 7
+end: cp_atom_free_a
+fn: cp_atom_free_cold () int
+    cp_atom_free_unknown: ((@ cp_atom_free_p cp_atom_free_a) (@ cp_atom_free_q cp_atom_free_a)) (fn cp_atom_free_prepared)
+    return: 0
+end: cp_atom_free_cold
+int: cp_atom_free_seen cp_atom_free_cold\code[0][0]\cp_atom_free_p()
+int: cp_atom_free_raw (length ((((cp_atom_free_cold \ code) [] 0) [] 0) [] 1))
+cp_forward_D:
+    @: cp_forward_p cp_forward_Leaf
+    cp_forward_Box:
+        cp_forward_Leaf:
+            int: cp_forward_v 8
+        end: cp_forward_Leaf
+    end: cp_forward_Box
+end: cp_forward_D
+int: cp_forward_seen ((cp_forward_D \ cp_forward_p) \ cp_forward_v)
+cp_self_D:
+    cp_self_Self:
+        cp_self_Child:
+            int: cp_self_v 6
+        end: cp_self_Child
+        @: cp_self_p cp_self_Child
+    end: cp_self_Self
+end: cp_self_D
+int: cp_self_seen (((cp_self_D \ cp_self_Self) \ cp_self_p) \ cp_self_v)
+cp_descriptor_D:
+    cp_descriptor_S: (fn cp_descriptor_f () int)
+    @: cp_descriptor_p cp_descriptor_f
+end: cp_descriptor_D
+int: cp_descriptor_fields (length (cp_descriptor_D \ cp_descriptor_p))
+int: cp_descriptor_args_count (length ((cp_descriptor_D \ cp_descriptor_p) \ args))
+cp_quoted_Q:
+    S:
+        a\b:
+            int: v 16
+        end: a\b
+    end: S
+    @: p a\b
+end: cp_quoted_Q
+int: cp_quoted_seen ((cp_quoted_Q \ p) \ v)
+fn: cpx_a () int
+    return: 7
+end: cpx_a
+fn: cpx_cold (@: cpx_a cpx_Any) int
+    cpx_unknown: ((@ cpx_p cpx_a) (@ cpx_q cpx_a)) (fn cpx_prepared)
+    return: 0
+end: cpx_cold
+int: cpx_seen cpx_cold\code[0][0]\cpx_p()
+int: cpx_raw (length ((((cpx_cold \ code) [] 0) [] 0) [] 1))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+cp_path_Outer:
+    cp_path_Box:
+        cp_path_Leaf:
+            int: cp_path_v 9
+        end: cp_path_Leaf
+    end: cp_path_Box
+    @: cp_path_p cp_path_Leaf
+end: cp_path_Outer
+int: cp_path_first 7
+:=: (((cp_path_Outer \ cp_path_Box) \ cp_path_Leaf) \ cp_path_v) 9
+int: cp_path_alias 9
+cp_occurrence_Cases:
+    cp_occurrence_S:
+        fn: cp_occurrence_f () int
+            return: 11
+        end: cp_occurrence_f
+        fn: cp_occurrence_f () int
+            return: 12
+        end: cp_occurrence_f
+    end: cp_occurrence_S
+    @: cp_occurrence_a cp_occurrence_f
+    @: cp_occurrence_b cp_occurrence_f
+end: cp_occurrence_Cases
+int: cp_occurrence_first 11
+int: cp_occurrence_second 12
+cp_mutable_D:
+    cp_mutable_A:
+        cp_mutable_Leaf:
+            int: cp_mutable_v 1
+        end: cp_mutable_Leaf
+    end: cp_mutable_A
+    cp_mutable_B:
+        cp_mutable_Leaf:
+            int: cp_mutable_v 2
+        end: cp_mutable_Leaf
+    end: cp_mutable_B
+    @: cp_mutable_current cp_mutable_B
+    @: cp_mutable_saved cp_mutable_Leaf
+end: cp_mutable_D
+cp_mutable_C:
+    @: cp_mutable_saved (cp_mutable_current \ cp_mutable_Leaf)
+end: cp_mutable_C
+int: cp_mutable_deferred 2
+:=: (cp_mutable_D \ cp_mutable_current) (cp_mutable_D \ cp_mutable_B)
+call: cp_mutable_D cp_mutable_C
+int: cp_mutable_selected 2
+cp_atoms_D:
+    cp_atoms_A:
+        int: cp_atoms_v 7
+    end: cp_atoms_A
+    cp_atoms_Words: cp_atoms_A
+    @: cp_atoms_saved cp_atoms_A
+end: cp_atoms_D
+int: cp_atoms_seen 7
+cp_index_D:
+    cp_index_A:
+        cp_index_Leaf:
+            int: cp_index_v 7
+        end: cp_index_Leaf
+    end: cp_index_A
+    @: cp_index_p cp_index_Leaf
+end: cp_index_D
+int: cp_index_seen 7
+cp_index_atom_D:
+    cp_index_atom_B:
+        int: cp_index_atom_v 7
+    end: cp_index_atom_B
+    cp_index_atom_A: cp_index_atom_B
+    @: cp_index_atom_p (cp_index_atom_A [] 0)
+    @: cp_index_atom_q cp_index_atom_B
+end: cp_index_atom_D
+int: cp_index_atom_raw 2
+int: cp_index_atom_seen 7
+cp_index_frames_D:
+    cp_index_frames_S:
+        fn: cp_index_frames_f () int
+            return: 11
+        end: cp_index_frames_f
+        @: cp_index_frames_pending cp_index_frames_missing
+    end: cp_index_frames_S
+    @: cp_index_frames_p fn
+    @: cp_index_frames_q @
+end: cp_index_frames_D
+int: cp_index_frames_f_fields 4
+int: cp_index_frames_decl_fields 2
+fn: cp_f_parts_f () int (
+    int: cp_f_parts_value 7
+)
+    return: cp_f_parts_value
+end: cp_f_parts_f
+cp_f_parts_D:
+    @: cp_f_parts_d data
+    @: cp_f_parts_a (cp_f_parts_f \ args)
+    @: cp_f_parts_c (cp_f_parts_f \ code)
+end: cp_f_parts_D
+int: cp_f_parts_d_raw 1
+int: cp_f_parts_a_raw 2
+int: cp_f_parts_c_raw 2
+fn: cp_atom_formal_A () int
+    return: 9
+end: cp_atom_formal_A
+fn: cp_atom_formal_cold (int: cp_atom_formal_A) int
+    @: cp_atom_formal_p cp_atom_formal_A
+    @: cp_atom_formal_q cp_atom_formal_A
+    return: 0
+end: cp_atom_formal_cold
+int: cp_atom_formal_seen 9
+int: cp_atom_formal_raw 2
+cp_dynamic_index_D:
+    cp_dynamic_index_S:
+        cp_dynamic_index_A:
+            int: cp_dynamic_index_v 1
+        end: cp_dynamic_index_A
+        cp_dynamic_index_B:
+            int: cp_dynamic_index_v 2
+        end: cp_dynamic_index_B
+    end: cp_dynamic_index_S
+    int: cp_dynamic_index_i 1
+    @: cp_dynamic_index_p cp_dynamic_index_B
+end: cp_dynamic_index_D
+cp_dynamic_index_C:
+    @: cp_dynamic_index_p (cp_dynamic_index_S [] cp_dynamic_index_i)
+end: cp_dynamic_index_C
+int: cp_dynamic_index_raw 2
+:=: (cp_dynamic_index_D \ cp_dynamic_index_i) 1
+call: cp_dynamic_index_D cp_dynamic_index_C
+int: cp_dynamic_index_seen 2
+cp_application_D:
+    cp_application_S:
+        int: cp_application_calls 0
+        fn: cp_application_f (int: cp_application_x) int
+            :=: (node \ cp_application_calls) ((node \ cp_application_calls) + 1)
+            return: cp_application_x
+        end: cp_application_f
+        cp_application_f: 10
+    end: cp_application_S
+    @: cp_application_p cp_application_f
+end: cp_application_D
+int: cp_application_fields 1
+int: cp_application_effects 0
+cp_pending_atom_D:
+    cp_pending_atom_A:
+        int: cp_pending_atom_v 7
+    end: cp_pending_atom_A
+    cp_pending_atom_Scope:
+        fn: cp_pending_atom_prepared
+        cp_pending_atom_Alias: cp_pending_atom_A
+        @: cp_pending_atom_p (cp_pending_atom_Alias \ cp_pending_atom_A)
+    end: cp_pending_atom_Scope
+end: cp_pending_atom_D
+int: cp_pending_atom_raw 2
+fn: cp_atom_free_a () int
+    return: 7
+end: cp_atom_free_a
+fn: cp_atom_free_cold () int
+    cp_atom_free_unknown: ((@ cp_atom_free_p cp_atom_free_a) (@ cp_atom_free_q cp_atom_free_a)) (fn cp_atom_free_prepared)
+    return: 0
+end: cp_atom_free_cold
+int: cp_atom_free_seen 7
+int: cp_atom_free_raw 2
+cp_forward_D:
+    @: cp_forward_p cp_forward_Leaf
+    cp_forward_Box:
+        cp_forward_Leaf:
+            int: cp_forward_v 8
+        end: cp_forward_Leaf
+    end: cp_forward_Box
+end: cp_forward_D
+int: cp_forward_seen 8
+cp_self_D:
+    cp_self_Self:
+        cp_self_Child:
+            int: cp_self_v 6
+        end: cp_self_Child
+        @: cp_self_p cp_self_Child
+    end: cp_self_Self
+end: cp_self_D
+int: cp_self_seen 6
+cp_descriptor_D:
+    cp_descriptor_S: (fn cp_descriptor_f () int)
+    @: cp_descriptor_p cp_descriptor_f
+end: cp_descriptor_D
+int: cp_descriptor_fields 3
+int: cp_descriptor_args_count 0
+cp_quoted_Q:
+    S:
+        a\b:
+            int: v 16
+        end: a\b
+    end: S
+    @: p a\b
+end: cp_quoted_Q
+int: cp_quoted_seen 16
+fn: cpx_a () int
+    return: 7
+end: cpx_a
+fn: cpx_cold (@: cpx_a cpx_Any) int
+    cpx_unknown: ((@ cpx_p cpx_a) (@ cpx_q cpx_a)) (fn cpx_prepared)
+    return: 0
+end: cpx_cold
+int: cpx_seen 7
+int: cpx_raw 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

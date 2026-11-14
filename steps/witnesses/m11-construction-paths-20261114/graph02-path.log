@@ -1,0 +1,27 @@
+GRAPH-BEFORE-BEGIN
+Outer:
+    Box:
+        Leaf:
+            int: v 7
+        end: Leaf
+    end: Box
+    @: p Leaf
+end: Outer
+int: first ((Outer \ p) \ v)
+:=: (((Outer \ Box) \ Leaf) \ v) 9
+int: alias ((Outer \ p) \ v)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Outer:
+    Box:
+        Leaf:
+            int: v 9
+        end: Leaf
+    end: Box
+    @: p Leaf
+end: Outer
+int: first 7
+:=: (((Outer \ Box) \ Leaf) \ v) 9
+int: alias 9
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

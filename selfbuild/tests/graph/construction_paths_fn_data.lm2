@@ -1,0 +1,23 @@
+fn: f () int (int: value 7)
+    value := value + 1
+    return: value
+@: D (@: data_snapshot f\data; @: args_snapshot f\args; @: code_snapshot f\code)
+int: initial 0
+initial := D\data_snapshot\value
+int: args_deferred 0
+args_deferred := length(D[1])
+int: code_deferred 0
+code_deferred := length(D[2])
+int: first 0
+first := f()
+int: after_first 0
+after_first := D\data_snapshot\value
+D\data_snapshot\value := 11
+int: changed 0
+changed := D\data_snapshot\value
+int: second 0
+second := f()
+int: after_second 0
+after_second := D\data_snapshot\value
+int: current 0
+current := f\data\value

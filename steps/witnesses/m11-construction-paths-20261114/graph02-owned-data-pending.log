@@ -1,0 +1,37 @@
+GRAPH-BEFORE-BEGIN
+fn: A () int
+    return: 7
+end: A
+fn: outer () int (
+    fn: prepared
+    fn: inner () int
+        @: p ((A) \ A)
+        return: 0
+    end: inner
+)
+    return: 0
+end: outer
+Hold:
+    @: held outer
+end: Hold
+int: raw (length (((((Hold \ held) \ data) \ inner) \ code) [] 0))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: A () int
+    return: 7
+end: A
+fn: outer () int (
+    fn: prepared
+    fn: inner () int
+        @: p ((A) \ A)
+        return: 0
+    end: inner
+)
+    return: 0
+end: outer
+Hold:
+    @: held outer
+end: Hold
+int: raw 4
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

@@ -1,5 +1,34 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7: срез391, кодовые gates и docs-check PASS
+
+**Коррекция после private48:** bootstrap01/session77929 остановлен по подтверждённому дефекту Source03:
+actual F.data исключена из materialization queue, но остаётся настоящим lexical DATA для pending audit.
+Graph02 давал raw4 вместо2 в method/descriptor DATA с pending fn. Исправляет private construct_data_scope;
+никакого исполнения DATA/blueprint или новой очереди нет. Runtime03/Graph03 собраны, method/descriptor теперь2/2.
+Private02 все49 triple/AFTER39 PASS. Final Source07:907 frozen; bootstrap01 не является приёмкой.
+
+Предыдущий goal turn — progress:390 принят и отправлен780411910064984dd50a15ecab92b9dd5ea5bb22.
+Прямо C:/Nyasha_Planet/LMX main; root sole code/test/build writer, helpers завершили read-only research.
+Чужие два untracked сохранять. Shared stage sol-m11-construction-fresh01; seed boot-m11-known-data-01/g2
+и graph-m11-known-data-g2-01. Новый pipeline sol-m11-construction-paths-20261114-01, один producer.
+Срез391: общий pure source-slot/path projector с прежним occurrence reader, exact raw fn→F и lexical-only atom lookup.
+Без чтения mutable payload: F.args/code deferred, F.data сейчас direct kind4 и доступна общим правилом.
+Index не разрешает atom/raw fn как path. Typed/qualified lowering и настоящий admission остаются общей зависимостью
+M11.7/M13, не стирать модель/квалификацию. Runtime merge/fromLmx construction integration и full M11/M14 OPEN.
+Baseline path/occurrence/atom/index отказывают5, mutable control даёт2; typed known model/value отказывает3 (не исправлено).
+Graph75/Run58/API/layouts прежние. Runtime03 SHA6a610534/Graph03 7aad957d, Source07:907329fba48 frozen.
+Шесть новых sources/пять expected:18 contexts/31 leaf, FnData runs2, owned DATA; private49 triple/AFTER39 PASS, old43 unchanged.
+Whole boot-m11-construction-paths-02 quick actualG1/G2 по9 smoke PASS; fixedpoint15/verify907/Runtime03==G2driver PASS.
+После terminal применены format-only варианты двух новых fixtures без лишнего single-level end; все4 native/forced программы
+побайтно прежние, AFTER equality PASS. Затем убраны EOF blank lines в6 новых sources, ещё10 program byte-equalities
+и build4 control PASS; final Source07 manifest/verify/stage-copy/fixedpoint03 PASS, код/компиляторы прежние.
+G2Graph0cc869f7/repeat49 triple/AFTER39 и render35/14 PASS; generated content/grammar unchanged.
+Все code/build producers terminal; fresh docs-check01 PASS35/14/27/44/615, links/LF28142.
+Далее staging/index, commit/push main; затем общий typed receiving/name/fact bridge M11.7/M13 по основному плану.
+Helpers вернули выделенные kernel и четыре entry docs; root — единственный writer/build ядра.
+[Свидетельство](witnesses/m11-construction-paths-20261114/notes.md). Goal ACTIVE, полная приёмка391 впереди.
+
 ## 2026-11-14 — M11.7: срез390, кодовые gates и docs-check PASS
 
 **2026-11-14, срез390 — известные ссылки при построении нового графа; кодовые gates и docs-check PASS.**

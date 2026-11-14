@@ -1,6 +1,39 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice390 -- bounded implementation, code checks and docs-check passed.**
+**Current state, 2026-11-14, slice391 -- bounded implementation; code gates and docs-check passed.**
+Only Run changes: private `construct_slot`/`construct_atom`/`construct_value` helpers extend bounded constructor390
+to proven paths. Exports Graph75/Run58, ABI, layout and the public API are unchanged. A named step uses
+`step_index`; a numeric index selects a physical slot and preserves its immediate value without turning raw `fn` into F
+or resolving a WORD as a Structure name.
+Only literal indices are used; index expressions are not executed. A named path retains exact source → F
+and the existing masks (§3.5). Typed/qualified/common admission, full M11.7/8, M13/M14 and new construction
+during runtime `merge`/`fromLmx` remain OPEN; a held F without a native entry uses the walker.
+6 sources/5 expected files were added, including `construction_paths_owned_data`; final Source07:907, SHA-256
+`329fba48883be5014759e1fc74c4236873286c6050b69567c4ce3206f23ce9c3`.
+The previous Source03/private48 triple and39 complete AFTER checks passed before the last correction, including43 existing
+cases with unchanged expectations; this is an intermediate result, not final acceptance391. The combined probe
+covers18 contexts/31 leaf oracles; a separate F.data probe checks two runs: initial11, bare8/9, held11/current9;
+producer values change through `:=` to existing places. Graph01's index/atom distinction bug is corrected in Graph02;
+the false EXPR pending blocker is also corrected. Final review found a missing pending audit for actual F.data,
+which was outside the materialization queue: a method and a bodyless descriptor gave4 instead of2. Private `construct_data_scope`
+corrects recognition of its lexical role without a materialization/blueprint walk; new Runtime03/Graph03 and the focused
+check passed: method/descriptor2/2, data width2/2. Runtime03 SHA-256
+`6a6105346ea9e3b841556ff5d29582dca09767931e7cc7bc9d2f88abad437582`, Graph03 SHA-256
+`7aad957de36545b74dc225c2214f302357b9bcf48a3ab41ca4f44cc6e1af37c6`.
+The owner stopped the first whole bootstrap01; its processes are terminated, with no acceptance claimed.
+Private02: all49 cases in interp/native/forced and39 complete AFTER checks passed; the previous43 cases' expectations are unchanged.
+Whole `boot-m11-construction-paths-02` passed: genuine G1/G2, nine smoke cases each, fixedpoint15/verify907 PASS;
+private Runtime03 matches the G2 driver. Intermediate Source06 differs from verified Source05 only in formatting two
+new fixture sources: a redundant single-level `end` after a bootstrap terminal was removed. Complete AFTER results match for2 cases,
+and four generated native/forced programs match byte-for-byte. Source07 additionally removes redundant trailing blank lines
+from the six new fixture sources:10 generated native/forced programs match the previous genuine G2 outputs byte-for-byte,
+build4 control PASS, fixedpoint03:15/verify907 PASS. Core and compiler-build inputs are unchanged;
+no additional whole was run for these fixture-only corrections. The genuine G2 graph-tool is built, SHA-256
+`0cc869f7c12b9b3d7ae57aec8957602fcfaabe0750759ab9f5a131195f17b5a5`.
+The G2 repeat of all49 cases in three modes and negative AFTER39 passed. Render35/14 PASS, generated content/grammar unchanged;
+Fresh docs-check01 PASS35/14/27/44/615, links/LF28142; final index391 is checked before commit.
+
+**Previous state, 2026-11-14, slice390 -- bounded implementation, code checks and docs-check passed.**
 After filling the P0 fields, `lm_graph_build_root` calls `lmx_graph_construct`, then a separate pure preflight (§1a).
 Construction owns a fresh namespace; held F values remain ordinary graph values, while raw `fn`/`sub`
 remain written declarations. Source-known reference candidates fill places without executing CODE,
@@ -1455,7 +1488,39 @@ It does not substitute a lexical match for a formal, own DATA
 place, pending declaration, ambiguous name or free input. A mutable alias is a deferred read even if its initial target
 is known in this traversal; its payload is not frozen and its chain is not evaluated to a fixed point.
 An unknown candidate stays written and uses ordinary runtime reception when it is actually obtained.
-Paths, additional type fields and applying this new phase during runtime `merge`/`fromLmx` remain OPEN.
+Known path extensions are described below; additional type fields and applying this new phase during runtime `merge`/`fromLmx` remain OPEN.
+
+**Source-known paths, slice391.** Private Run helpers `construct_slot`, `construct_atom` and `construct_value` read
+a proven source path without an activation resolver or expression evaluation. A named step uses the existing field
+selection and exact raw-source → F correspondence of the current construction walk. A selected atom continues through
+lexical lookup only; the pending audit examines actual DATA/CODE scopes, while EXPR creates no such scope.
+Nearest-formal, own-DATA, pending/ambiguous-binding and free-input masks for a bare name remain unchanged.
+
+A literal numeric index checks the physical slot bounds and yields the immediate address of its selected value:
+if that is a raw Structure/Frame, construction may retain that very value; it neither reapplies `fn` to the selected Frame
+nor turns a WORD into the Structure its spelling names lexically. Thus `A(B)` distinguishes `A\B` from `A[0]`: the latter
+selects a WORD cell. In bounded materializer391 such an index is not a known Structure, so its initializer stays raw;
+the reached runtime4 of bounded `@Struct` is not stated as a universal rule for receiver `@`. A computed index
+and a mutable reference stay deferred; construction reads neither their effects nor their initial payload.
+
+Classification follows the physical value, with no exceptions by the name of an F part. Current `F.data`, stored
+by `fn_make` through `graph_put` as direct kind4, is a known Structure under the generic case; current kind6 references
+in `F.args`/`F.code` stay deferred. For pending audit, private `construct_data_scope` separately recognizes actual
+lexical DATA: its `parent` is an FN result, and `method_data(parent)` points to that exact Structure. A full
+`method()!=0` is not required: a bodyless descriptor has its own DATA too. This role adds no DATA to the materialization
+queue, walks no source blueprint and executes no initializer. The missing audit was discovered after intermediate
+private48: a method and a bodyless descriptor answered4 instead of the required2; Runtime03/Graph03 give2/2,
+with data width still2/2. This changes no signature, method-DATA or CODE role, opens no early execution
+of their contents and adds no typed/qualified/common admission. Full M11.7, M13/M14 and applying the new phase
+to runtime `merge`/`fromLmx` remain OPEN. Private48 triple/AFTER39 predates this correction;
+after it, private02:49 interp/native/forced and AFTER39 passed on Source05:907, with the previous43 expected files unchanged.
+The first whole bootstrap01 was stopped without acceptance. Whole `boot-m11-construction-paths-02` passed with genuine G1/G2,
+nine smoke cases each, and fixedpoint15/verify907; Runtime03 matches the G2 driver. Intermediate Source06 changes the formatting
+of two fixture sources relative to Source05: complete AFTER2 and four generated native/forced programs match.
+Final Source07 removes redundant trailing blank lines from the six new sources:10 generated programs match genuine G2 outputs,
+with build4 control and fixedpoint03:15/verify907 PASS. Core and compiler-build inputs are unchanged,
+with no additional whole run. G2 repeat49 triple/AFTER39, render35/14 and fresh docs-check01 PASS;
+final index before commit.
 
 In slice 373 `lmx_graph_resolve_binding` returns the selected value and its working row in one search.
 Classification and the value reader use that shared selection with the existing priority of formals, own places

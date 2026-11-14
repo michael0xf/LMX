@@ -1,0 +1,28 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: touch
+@: D ((int p 0) (int seen 0))
+@: Code ((@ p int (data [] (touch))) (:= seen 1))
+call: D Code
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: touch
+D:
+    int: p 0
+    int: seen 0
+end: D
+Code:
+    @: p int (data [] (touch))
+    :=: seen 1
+end: Code
+call: D Code
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 4

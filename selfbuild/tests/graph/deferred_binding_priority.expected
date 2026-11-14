@@ -1,0 +1,43 @@
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 99
+end: touch
+fn: sink (int: value) int
+    return: value
+end: sink
+fn: formal (int: x) int
+    return: (sink x)
+end: formal
+fn: own () int
+    int: x 8
+    return: (sink x)
+end: own
+fn: local_method () int (
+    fn: x () int
+        return: 9
+    end: x
+)
+    return: (x)
+end: local_method
+D:
+    int: x 12
+    int: formal_result 7
+    int: own_result 8
+    int: method_result 9
+    int: written_result 12
+end: D
+Code:
+    int: x
+    :=: formal_result ((formal 7))
+    :=: own_result ((own))
+    :=: method_result ((local_method))
+    :=: x 12
+    :=: written_result ((sink x))
+end: Code
+call: D Code
+int: from_formal 7
+int: from_own 8
+int: from_method 9
+int: from_written 12
+int: ignored_initializer 0

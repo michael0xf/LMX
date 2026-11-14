@@ -1,0 +1,39 @@
+# A nearer formal, own local and data method shadow an outer deferred place.
+# Only the selected binding is read; x's initializer must remain unexecuted.
+int: calls 0
+fn: touch () int
+    node\calls := node\calls + 1
+    return: 99
+fn: sink (int: value) int
+    return: value
+fn: formal (int: x) int
+    return: sink(x)
+fn: own () int
+    int: x 8
+    return: sink(x)
+fn: local_method () int (
+    fn: x () int
+        return: 9
+)
+    return: x()
+@: D (
+    int: x touch()
+    int: formal_result 0
+    int: own_result 0
+    int: method_result 0
+    int: written_result 0
+)
+@: Code (
+    int: x
+    formal_result := formal(7)
+    own_result := own()
+    method_result := local_method()
+    x := 12
+    written_result := sink(x)
+)
+call(D; Code)
+int: from_formal D\formal_result
+int: from_own D\own_result
+int: from_method D\method_result
+int: from_written D\written_result
+int: ignored_initializer data\calls

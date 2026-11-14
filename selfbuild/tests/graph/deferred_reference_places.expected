@@ -1,0 +1,51 @@
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: touch
+sub: Writer () (
+    @: p int (data [] (touch))
+    int: seen 0
+)
+    @: p int (data [] 1)
+    :=: seen (\ p)
+end: Writer
+Self:
+    int: x 40
+    int: y 41
+    @: p int @y
+    :=: p (data [] 1)
+    int: seen 41
+    :=: seen (\ p)
+end: Self
+D:
+    int: x 11
+    int: y 13
+    Target:
+        int: n 30
+    end: Target
+    @: p int @y
+    @: s Target
+    int: seen 13
+    int: sseen 30
+end: D
+Code:
+    @: p int (data [] 1)
+    @: s Target
+    :=: seen (\ p)
+    :=: sseen (s \ n)
+end: Code
+D2:
+    int: x 21
+    int: y 23
+    @: p int @y
+    int: seen 23
+end: D2
+call: Self
+call: D Code
+call: D2 Writer
+int: self_seen 41
+int: given_seen 13
+int: structure_seen 30
+int: callable_seen 23
+int: ignored_initializers 0

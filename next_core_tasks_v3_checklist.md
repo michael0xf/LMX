@@ -1,5 +1,23 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез 373 — вычисляемые ссылочные места.** Data-cell/expected-kind/preflight,
+первый рабочий store и прежний flush поддерживают raw @ с кандидатом без его запуска на входе.
+Classification и value reader используют один binding search с прежним приоритетом; local_int
+не принимает reference declaration как int. Шесть pure случаев и 22 частных случая в трёх
+режимах подтверждены, AFTER24/mutation24 прошли; Source03 verify643. В одной старой строке
+исправлен ожидаемый2 вместо4 по принятому результату, код и уже готовые C-программы не менялись.
+Полный bootstrap quick построил настоящие G1/G2, по 9 smoke; fixedpoint13 прошёл. Штатный
+G2/graph повторил22 в трёх режимах, AFTER24/mutation24; render semantics35/14 прошёл.
+Docs check прошёл: 35/14/27/44/615, ссылки и LF индекса 27 317 файлов; оба diff --check чисты.
+@:p int без кандидата
+остаётся OPEN (заранее существующие wrapper8/cell5, без lazy value и initialized-флага).
+Полный 5г, M11.7/8 и M13/M14 не закрыты.
+
+**M8 receiving-context вновь OPEN, 2026-11-14.** @2 неправильно читает сохранённую одно-полевую
+Structure `@: Code (int: p touch())`: baseline372 и WIP373 дают2 вместо Code length1/calls0.
+P0 сохраняет группу; исправлять общий потребитель Structure-value в обходчике/native и own data/code
+до дальнейшего root/self, не подбирать вложенные головы или число полей. Задача внесена в M8 v3/M11.8.
+
 **2026-11-14, срез 372 — часть M11.5г принята.** Именованные записи root/self выбирают живую цель
 метода/обычной Structure, включая цель из поданных данных; прежний корневой declaration skip снят.
 Standalone written groups — значения, их поля не исполняются и не попадают в own/input scan.

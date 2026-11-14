@@ -1,0 +1,49 @@
+# A supplied data Structure never executes its computed reference initializers.
+# Self reaches its own receiver; a distinct Code writes the required data places.
+int: calls 0
+fn: touch () int
+    node\calls := node\calls + 1
+    return: 0
+sub: Writer () (
+    @: p int data[touch()]
+    int: seen 0
+)
+    @: p int data[1]
+    seen := \p
+@: Self (
+    int: x 40
+    int: y 41
+    @: p int data[0]
+    p := data[1]
+    int: seen 0
+    seen := \p
+)
+@: D (
+    int: x 11
+    int: y 13
+    Target(int: n 30)
+    @: p int data[touch()]
+    @: s Missing
+    int: seen 0
+    int: sseen 0
+)
+@: Code (
+    @: p int data[1]
+    @: s Target
+    seen := \p
+    sseen := s\n
+)
+@: D2 (
+    int: x 21
+    int: y 23
+    @: p int data[touch()]
+    int: seen 0
+)
+call(Self)
+call(D; Code)
+call(D2; Writer)
+int: self_seen Self\seen
+int: given_seen D\seen
+int: structure_seen D\sseen
+int: callable_seen D2\seen
+int: ignored_initializers data\calls

@@ -48,6 +48,28 @@ fn: lmx_graph_work_row (@: frame c.LmxGraphFrame; @: name char) @: c.LmxGraphWor
     return: 0
 end: lmx_graph_work_row
 
+# A supported computed declaring receiver. The source Frame is an unreadable
+# place until its reached initializer or an assignment supplies a value (R12).
+# This is not uninit:T storage: that has its real typed cell and wrapper.
+fn: lmx_graph_deferred_kind (@: g c.LmxGraph; @: value void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: declaration c.Lmx (cast: (@: c.Lmx) value)
+    @: head char 0
+    size_t: n 0U
+    if: state = 0 || c.lmx_graph_kind(g, value) != 4 || c.lmx_graph_fn_result(g, value) != 0
+        return: 0
+    head := c.lmx_graph_name_of(g, value)
+    n := c.lmx_graph_count(declaration)
+    if: head = state\w_int && n >= 2U
+        return: 1
+    if: head != state\w_at
+        return: 0
+    if: n = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 1U)) = state\w_int
+        return: 5
+    if: n = 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 1U)) != state\w_int
+        return: 6
+    return: 0
+
 # Snapshot an initialized reference value into its own activation/operand cell.
 fn: lmx_graph_reference_value (@: g c.LmxGraph; @: value void) @: void
     @: copy void 0
@@ -82,7 +104,7 @@ fn: lmx_graph_work_load (@: g c.LmxGraph; @: row c.LmxGraphWork) int
             return: 0
         # A computed declaration of data not executed yet (lmx_graph_data_cell): its place has no value, and the read
         # is refused, as that of a formal without an input (the author 2026-11-11, R12; plan M11 5a, B6) -- 5.
-        if: c.lmx_graph_kind(g, row\cell) = 4 && c.lmx_graph_name_of(g, row\cell) = state\w_int
+        if: lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) != 0
             return: 5
         if: c.lmx_graph_value_int(g, row\cell, @ row\number) != 0
             return: 4
@@ -99,11 +121,11 @@ fn: lmx_graph_data_slot (@: g c.LmxGraph; @: data c.Lmx; @: name char) size_t
     return: at
 end: lmx_graph_data_slot
 
-# The cell a launch reads for the place at slot of data (the author 2026-11-11, R12; plan M11 5a): the int cell of the
-# place; for a computed declaration of data not executed yet (`int: name expression`, still in its slot -- data given
-# to a launch is read as it is, its computed declarations are code) the declaration itself, the place without a value
-# that a read refuses (lmx_graph_work_load) and a write gives a value, published into the slot at the end of the launch
-# (lmx_graph_work_flush); 0 when the slot holds neither.
+# The cell a launch reads for a data place (the author 2026-11-11, R12; plan M11 5a): the primitive cell, or the retained
+# computed int/reference declaration with a candidate. Supplied data is read as it is; its initializer does not run.
+# A retained declaration has no computed result yet: a read refuses, a reached code receiver or assignment supplies
+# its working value, and the usual flush publishes it into that slot. True uninit:T wrappers keep their existing
+# typed storage and promise no initial payload; they are never treated as retained computations. 0 for neither.
 fn: lmx_graph_data_cell (@: g c.LmxGraph; @: data c.Lmx; size_t: slot) @: void
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: value void 0
@@ -117,7 +139,7 @@ fn: lmx_graph_data_cell (@: g c.LmxGraph; @: data c.Lmx; size_t: slot) @: void
     cell := c.lmx_graph_reference_cell(g, value)
     if: cell != 0
         return: cell
-    if: c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_name_of(g, value) = state\w_int && c.lmx_graph_count((cast: (@: c.Lmx) value)) >= 2U
+    if: lmx_graph_deferred_kind(g, value) != 0
         return: value
     return: 0
 end: lmx_graph_data_cell
@@ -245,7 +267,7 @@ sub: lmx_graph_input_used (@: g c.LmxGraph; @: name char)
         row\loaded := row\loaded | 2
     return
 
-# Bind a required int place to its actual data slot, by canonical name. No data is allocated or extended.
+# Bind a required place to its actual data slot, by canonical name. No data is allocated or extended.
 # Duplicate bare names are inadmissible. This map belongs only to the current activation.
 fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name char) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
@@ -264,8 +286,8 @@ fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
         return: 3
     if: slot >= c.lmx_graph_count(frame\data) || lmx_graph_data_twice(g, (cast: (@: c.Lmx) frame\data), slot, name) != 0
         return: 3
-    # The int place of data, or its computed declaration not executed yet (lmx_graph_data_cell). A reference declaration
-    # `@: name T` in data is not executed by this slice (5), as in the model of a launch.
+    # Bind the physical cell or the retained computed declaration. Its initializer
+    # is code and never runs merely because this data was supplied to a launch.
     cell := lmx_graph_data_cell(g, (cast: (@: c.Lmx) frame\data), slot)
     if: cell = 0 && c.lmx_graph_name_of(g, c.lmx_graph_get(frame\data, slot)) = state\w_at
         return: 5
@@ -284,6 +306,7 @@ fn: lmx_graph_work_require (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @: name c
     row\name := name
     row\slot := slot
     row\cell := cell
+    row\expected_kind := lmx_graph_own_kind(g, cell)
     frame\count := frame\count + 1U
     return: 0
 end: lmx_graph_work_require
@@ -834,46 +857,53 @@ fn: lmx_graph_named_int (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @: out i
     return: c.lmx_graph_value_int(g, value, out)
 end: lmx_graph_named_int
 
-fn: lmx_graph_operand_name (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
+# A value reader retains refusal status for a deferred place. Classification
+# through resolve must never expose its declaration as an ordinary Structure.
+fn: lmx_graph_operand_read (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: out void) int
+    @: row c.LmxGraphWork 0
     @: value void 0
     int: kind 0
     int: number 0
+    int: status 0
+    if: out = 0
+        return: 4
+    out[0] := 0
     lmx_graph_input_used(g, name)
-    value := lmx_graph_resolve(g, scope, name)
+    value := lmx_graph_resolve_binding(g, scope, name, @ row)
+    if: row != 0 && row\slot != (cast: (size_t) -1) && lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) != 0
+        status := lmx_graph_work_load(g, row)
+        if: status != 0
+            return: status
+        out[0] := c.lmx_graph_int(g, row\number)
+        if: out[0] = 0
+            return: 4
+        return: 0
+    if: value = 0
+        return: 3
     kind := c.lmx_graph_kind(g, value)
     if: kind = 1 || kind = 3
-        if: lmx_graph_named_int(g, scope, name, @ number) != 0
-            return: 0
-        return: c.lmx_graph_int(g, number)
+        status := lmx_graph_named_int(g, scope, name, @ number)
+        if: status != 0
+            return: status
+        value := c.lmx_graph_int(g, number)
     if: kind = 5 || kind = 6 || kind = 8 || kind = 9
-        return: lmx_graph_reference_value(g, value)
+        value := lmx_graph_reference_value(g, value)
+    if: value = 0
+        return: 4
+    out[0] := value
+    return: 0
+
+fn: lmx_graph_operand_name (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
+    @: value void 0
+    if: lmx_graph_operand_read(g, scope, name, @ value) != 0
+        return: 0
     return: value
 end: lmx_graph_operand_name
 
 # A typed declaration without a candidate verifies its already allocated local place; it reads no value and
 # resets nothing. Own fields were collected by construction, formals were admitted by the call.
 fn: lmx_graph_local_int (@: g c.LmxGraph; @: code c.Lmx; @: name char) int
-    @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
-    @: row c.LmxGraphWork 0
-    @: args c.Lmx 0
-    size_t: slot 0U
-    if: active = 0 || active\code != code
-        return: 5
-    if: active\frame != 0
-        row := lmx_graph_work_row((cast: (@: c.LmxGraphFrame) active\frame), name)
-        if: row != 0
-            # An int place, or a computed declaration of data not executed yet (lmx_graph_data_cell): its line gives it
-            # a value.
-            return: (cast: (int) (c.lmx_graph_kind(g, row\cell) != 1 && c.lmx_graph_kind(g, row\cell) != 4))
-        ---
-    ---
-    args := lmx_graph_activation_args(g, active)
-    if: args = 0
-        return: 3
-    slot := c.lmx_graph_formal(g, args, name)
-    if: active\refs != 0 && slot < active\width
-        return: (cast: (int) (c.lmx_graph_kind(g, active\refs[slot]) != 1))
-    return: 3
+    return: lmx_graph_known_int(g, code, name, 0)
 end: lmx_graph_local_int
 
 # Preflight a primitive destination without reading its value or the RHS.
@@ -922,8 +952,8 @@ fn: lmx_graph_known_place (@: g c.LmxGraph; @: code c.Lmx; @: name char; int: mo
     kind[0] := c.lmx_graph_kind(g, value)
     if: kind[0] = 8 || kind[0] = 9
         kind[0] := c.lmx_graph_kind(g, c.lmx_graph_reference_cell(g, value))
-    if: row != 0 && kind[0] = 4 && c.lmx_graph_name_of(g, value) = state\w_int
-        kind[0] := 1
+    if: row != 0 && kind[0] = 4
+        kind[0] := lmx_graph_deferred_kind(g, value)
     if: kind[0] != 1 && kind[0] != 5 && kind[0] != 6
         return: 4
     if: row != 0 && row\expected_kind != 0 && kind[0] != row\expected_kind
@@ -964,8 +994,22 @@ fn: lmx_graph_store_reference (@: g c.LmxGraph; @: code c.Lmx; @: name char; int
         return: status
     if: active\frame != 0
         row := lmx_graph_work_row((cast: (@: c.LmxGraphFrame) active\frame), name)
-    if: row != 0 && lmx_graph_work_load(g, row) != 0
-        return: 4
+    if: row != 0 && lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) = kind
+        if: kind = 5
+            cell := c.lmx_graph_ref_int(g, target)
+        else:
+            cell := c.lmx_graph_ref_lmx(g, (cast: (@: c.Lmx) target))
+        if: cell = 0
+            return: 4
+        row\cell := cell
+        row\loaded := row\loaded | 1
+        row\dirty := 1
+        return: 0
+    if: row != 0
+        status := lmx_graph_work_load(g, row)
+        if: status != 0
+            return: status
+        ---
     if: row != 0
         cell := row\cell
         if: c.lmx_arena_pointer_void_write(cell, target) != 0
@@ -1479,7 +1523,7 @@ end: lmx_graph_node_space
 
 # Resolve the current activation's formals, inherited inputs, then lexical graph fields. Each lookup consumes the
 # current graph and the live activation chain; no binding is saved in the graph or reused by the next traversal.
-fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
+fn: lmx_graph_resolve_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: selected c.LmxGraphWork) @: void
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: activation c.LmxActivation 0
     @: active_frame c.LmxGraphFrame 0
@@ -1494,6 +1538,7 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
     size_t: slot 0U
     size_t: at 0U
     size_t: found 0U
+    selected[0] := 0
     if: g = 0 || name = 0
         return: 0
     # The reserved word node names the space above the live launch's code (lmx_graph_node_space), never a binding: it is
@@ -1507,6 +1552,7 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
             if: row != 0 && (c.lmx_graph_kind(g, row\cell) = 5 || c.lmx_graph_kind(g, row\cell) = 6) && lmx_graph_work_load(g, row) != 0
                 return: 0
             if: row != 0
+                selected[0] := row
                 return: row\cell
             ---
             if: activation = g\arena\activation && name = state\w_data
@@ -1605,6 +1651,16 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
         current := (cast: (@: c.Lmx) current\parent)
     ---
     return: 0
+end: lmx_graph_resolve_binding
+
+# Classification and consumption share exactly one binding search. A deferred
+# declaration is not a callable/Structure value; the reader reports its status.
+fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
+    @: row c.LmxGraphWork 0
+    @: value void lmx_graph_resolve_binding(g, scope, name, @ row)
+    if: row != 0 && row\slot != (cast: (size_t) -1) && lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) != 0
+        return: 0
+    return: value
 end: lmx_graph_resolve
 
 # Shape/default preflight precedes evaluation of any actual. This migration executes int-returning fn bodies;
@@ -2287,6 +2343,10 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
             i := i + 1U
             continue
         if: head = state\w_at
+            # Typed references without a candidate need real pre-existing
+            # uninit:T storage; they are not deferred Structure candidates.
+            if: n = 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
+                return: 5
             kind := 6
             if: n = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
                 kind := 5
@@ -2610,9 +2670,9 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
     if: out = 0 || kind = 0
         return: 2
     if: kind = 2
-        value := lmx_graph_operand_name(g, scope, c.lmx_graph_word_text(g, raw))
-        if: value = 0
-            return: 3
+        status := lmx_graph_operand_read(g, scope, c.lmx_graph_word_text(g, raw), @ value)
+        if: status != 0
+            return: status
         ---
     else:
         if: kind = 4 && c.lmx_graph_name_of(g, raw) != 0
@@ -2890,6 +2950,8 @@ fn: lmx_graph_exec_statement (@: g c.LmxGraph; @: root c.Lmx; size_t: index) int
         # stands for -- a new named reference to that instance (lmx_graph_lmx_ref_of). A place is declared by its
         # receiver; `name: Structure` declares a Structure, it binds no reference.
         if: n = 2U
+            if: c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
+                return: 5
             name := c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
             if: name = 0
                 return: 5
@@ -4344,25 +4406,15 @@ fn: lmx_graph_own_name (@: g c.LmxGraph; @: value void) @: char
 return: lmx_graph_binding_name(g, 0, value, 0, @ place)
 
 fn: lmx_graph_own_kind (@: g c.LmxGraph; @: value void) int
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     int: kind c.lmx_graph_kind(g, value)
-    @: head char c.lmx_graph_name_of(g, value)
-    @: declaration c.Lmx (cast: (@: c.Lmx) value)
     if: kind = 3 || kind = 8 || kind = 9
         return: c.lmx_graph_kind(g, c.lmx_arena_pointer_void_read(value))
     if: kind != 4
         return: kind
-    if: head = state\w_int
-        return: 1
-    if: head != state\w_at
-        return: 0
-    if: c.lmx_graph_count(declaration) = 2U
-        return: 6
-    if: c.lmx_graph_count(declaration) != 3U
-        return: 0
-    if: c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 1U)) = state\w_int
-        return: 5
-return: 6
+    # Zero means an unsupported declaration, not a different physical type.
+    # In particular @:p int has kind5 without a candidate; construction of its
+    # real uninit:T storage remains open and must never masquerade as kind6.
+return: lmx_graph_deferred_kind(g, value)
 
 # The data of the Structure fn/sub creates: a new Lmx under it, named data, holding the copy of the fields of the written
 # data -- through one source -> copy map in which the written data is the new data, so that the places, references and

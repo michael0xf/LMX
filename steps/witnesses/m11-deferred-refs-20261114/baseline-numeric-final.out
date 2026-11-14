@@ -1,0 +1,31 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: touch
+@: D ((Target (int n 30)) (@ p Target) (int reached 0))
+@: Code ((int p (touch)) (:= reached 1))
+call: D Code
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 7
+end: touch
+D:
+    Target:
+        int: n 30
+    end: Target
+    @: p Target
+    int: reached 0
+end: D
+Code:
+    int: p (touch)
+    :=: reached 1
+end: Code
+call: D Code
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 5

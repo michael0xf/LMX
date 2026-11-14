@@ -1,6 +1,25 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice 372): root/self named-head dispatch uses the shared
+Current continuation (2026-11-14, slice 373): the existing work map binds retained computed raw @
+places with a candidate (three fields/int reference, two fields/Structure reference).
+Admission does not execute their initializer; a read or head before a working write refuses with 5.
+The first write creates the working typed reference and normal flush publishes it;
+existing initialized cells and wrappers retain their contract. One resolve_binding selection
+and its selected row feed classification and value consumption; local_int uses known_int.
+True @:p int without a candidate remains OPEN: kind5 and already allocated wrapper8/cell5 are required.
+The unsupported form refuses with 5 explicitly and never masquerades as kind6. An uninit wrapper
+is not an initialized flag; checks do not inspect unpromised payload. Runtime02/graph01 passed six pure-interpreter
+cases: places41/13/30/23 calls0; read/head5 after before1 calls0; reference/numeric4 calls0;
+priority7/8/9/12 calls0. Full bootstrap quick built genuine G1/G2, nine smoke rows each;
+thirteen fixed-point checks and 643 inputs passed. Genuine G2/graph repeated twenty-two cases
+in three modes, AFTER24 and mutation24. Working tuple: boot-m11-deferred-refs-01/g2 with
+graph-m11-deferred-refs-g2-01. Normal rendering and docs check passed: 35/14/27/44/615, links
+and LF for 27,317 indexed files; both diff checks are clean.
+An independent probe reopened the M8 consumer for @2 with a written one-field Structure; it comes next.
+The whole M11.5г, the shared root route
+and ordinary Structure native M14 remain OPEN. [Current state](../steps/current.md).
+
+Previous continuation (2026-11-14, slice 372): root/self named-head dispatch uses the shared
 resolution and launch mechanism; standalone written anonymous Structures remain values,
 without executing their fields or adding surrounding inputs or own places. Explicitly
 selected control bodies and consumed operator expressions retain their roles.

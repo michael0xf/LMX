@@ -1,0 +1,79 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 99
+end: touch
+fn: sink (int: value) int
+    return: value
+end: sink
+fn: formal (int: x) int
+    return: (sink x)
+end: formal
+fn: own () int
+    int: x 8
+    return: (sink x)
+end: own
+fn: local_method () int (
+    fn: x () int
+        return: 9
+    end: x
+)
+    return: (x)
+end: local_method
+@: D ((int x (touch)) (int formal_result 0) (int own_result 0) (int method_result 0) (int written_result 0))
+@: Code ((int x) (:= formal_result ((formal 7))) (:= own_result ((own))) (:= method_result ((local_method))) (:= x 12) (:= written_result ((sink x))))
+call: D Code
+int: from_formal (D \ formal_result)
+int: from_own (D \ own_result)
+int: from_method (D \ method_result)
+int: from_written (D \ written_result)
+int: ignored_initializer (data \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 0
+fn: touch () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 99
+end: touch
+fn: sink (int: value) int
+    return: value
+end: sink
+fn: formal (int: x) int
+    return: (sink x)
+end: formal
+fn: own () int
+    int: x 8
+    return: (sink x)
+end: own
+fn: local_method () int (
+    fn: x () int
+        return: 9
+    end: x
+)
+    return: (x)
+end: local_method
+D:
+    int: x 12
+    int: formal_result 7
+    int: own_result 8
+    int: method_result 9
+    int: written_result 0
+end: D
+Code:
+    int: x
+    :=: formal_result ((formal 7))
+    :=: own_result ((own))
+    :=: method_result ((local_method))
+    :=: x 12
+    :=: written_result ((sink x))
+end: Code
+call: D Code
+int: from_formal (D \ formal_result)
+int: from_own (D \ own_result)
+int: from_method (D \ method_result)
+int: from_written (D \ written_result)
+int: ignored_initializer (data \ calls)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 4

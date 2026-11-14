@@ -1,0 +1,32 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: tap () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: tap
+sub: main () (
+    A:
+    int: dest 0
+)
+    :=: dest ((merge A (tap)))
+end: main
+main:
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 0
+fn: tap () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: tap
+sub: main () (
+    A:
+    int: dest 0
+)
+    :=: dest ((merge A (tap)))
+end: main
+main:
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 2, expected 5
+l2_eternal_driver: 1 failed of 81
+graph: run answered 2

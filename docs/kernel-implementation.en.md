@@ -1,5 +1,21 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**2026-11-14, slice 373 -- computed reference places; code acceptance passed.** The existing work map
+binds a retained raw `@` Frame with a candidate: three fields for an int reference, two for a Structure reference.
+Admission does not run the initializer. Reading or launching that place before a working write refuses with 5;
+the first write creates a working typed reference, and normal flush publishes it through the existing slot.
+Existing initialized cells and wrappers retain their contract. `@: p int` without a candidate is OPEN:
+it requires kind5 and already allocated wrapper8/cell5; the form currently refuses explicitly with 5,
+is never treated as kind6 and does not allocate storage lazily. This is not refusal based on uninit:T contents.
+Runtime02/graph01 passed six pure-interpreter cases: places 41/13/30/23 with calls0; read and head -- 5
+after before1 with calls0; reference and numeric preflight -- 4 with calls0; binding priority 7/8/9/12 with calls0.
+Full bootstrap quick built genuine G1/G2, nine smoke rows each; thirteen fixed-point checks and 643 inputs passed.
+Genuine G2/graph repeated22 in three modes, AFTER24 and mutation24. Normal rendering and docs check passed:
+35/14/27/44/615, links and LF for 27,317 indexed files; both diff checks are clean.
+An independent probe reopened the M8 consumer for @2 with a written one-field Structure; it comes next.
+The whole of M11.5г, the shared root route and ordinary Structure native in M14 remain OPEN.
+[Current slice and limits](../steps/current.md).
+
 **2026-11-14, slice 372 -- root/self dispatch, M11.5г OPEN.** A named head is resolved against live data
 and calls a method or launches an ordinary Structure through the shared mechanism, including the root and a self launch.
 A standalone written anonymous Structure remains a value: its fields do not execute or add inputs or own places;
@@ -1217,6 +1233,11 @@ resets such native (§6.5). Verifiability: after construction the P0 tree is abs
 traversal starts with empty tables -- checked by the clean-traversal criterion (§11 item 6b). `toLmx` prints a word by its
 string, and a named primitive or Lmx by the address → name table.
 
+In slice 373 `lmx_graph_resolve_binding` returns the selected value and its working row in one search.
+Classification and the value reader use that shared selection with the existing priority of formals, own places
+and data methods. A retained deferred Frame is not exposed as an ordinary Structure or callable; the reader preserves
+its refusal5 until a working write. An outer same-named place does not replace an already selected nearer binding.
+
 <a id="names"></a>
 ## 4. Identifier strings (norm)
 
@@ -1388,6 +1409,17 @@ address of its slot in `args` (a description: the requirement, the default, `uni
 candidate), an argument is a frame cell found by position or by name (§5.1); receiving an argument is the first
 assignment of the frame's argument place. Reception, `implements` by used fields, conversion routes and throws follow the
 current book; the carrier changes, not the rules (`:=`, `merge`, positional `a(5)`/`a: 5`, q/z, AXBY are kept -- §11).
+
+**Slice 373 working rows.** `lmx_graph_data_cell` returns an existing primitive cell or a retained
+computed declaration: `int` with a candidate or a supported raw `@` with a candidate (three fields/int reference,
+two/Structure reference). `work_require` binds the existing slot and records expected_kind without evaluating
+the initializer. `work_load` refuses5 when reading a retained Frame before a working write. The first write creates
+only a working typed reference; the existing flush then publishes it through the same row/slot, preserving any
+existing physical cell and wrapper. `known_place` checks the destination type before RHS; `local_int` uses strict
+`known_int`, so a reference Frame cannot pass numeric preflight. True `@: p int` without a candidate remains
+unsupported: kind5 and permanent wrapper8/cell5 must pre-exist. It must not be represented as Structure-reference
+kind6, allocated lazily on the first write or checked for a prior write by its uninit wrapper.
+The initial payload of a true uninit:T is not promised and is not read by these checks.
 
 ### 6.4 Copying, merge, attaching
 

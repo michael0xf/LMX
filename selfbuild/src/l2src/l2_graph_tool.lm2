@@ -1476,6 +1476,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             i := i + 1U
             continue
         if: head = state\w_at
+            if: n = 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
+                return: 5
             kind := 6
             if: n = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
                 kind := 5

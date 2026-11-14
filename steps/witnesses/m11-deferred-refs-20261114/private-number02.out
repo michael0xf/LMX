@@ -1,0 +1,30 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: tap () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: tap
+sub: main () (
+    A:
+    int: dest 0
+)
+    :=: dest ((merge A (tap)))
+end: main
+main:
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 0
+fn: tap () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 0
+end: tap
+sub: main () (
+    A:
+    int: dest 0
+)
+    :=: dest ((merge A (tap)))
+end: main
+main:
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 2

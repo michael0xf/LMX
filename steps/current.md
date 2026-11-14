@@ -1,5 +1,42 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г: срез 373, кодовая приёмка пройдена в main
+
+372 принят и отправлен прямо из main: 6cef32080ff515831786ac0f2bf253f944f9bbad.
+Все новые изменения и сборки только C:/Nyasha_Planet/LMX, main; старое W3 — резервная копия.
+Единственный writer/build Sol, pipeline sol-m11-deferred-refs-20261114-01, общий stage S.
+Алгоритмы используют прежнюю work map: data_cell распознаёт поддержанные raw @ с
+кандидатом, work_require фиксирует expected_kind, known_place проверяет тип до RHS.
+Первый store создаёт только рабочую ссылку; штатный flush публикует её и далее сохраняет
+существующую physical cell. Initialized/uninit wrappers 8/9 этот путь не заменяет.
+Private resolve_binding — прежний общий поиск с выбранной строкой; classification и
+operand_read используют один поиск с прежним приоритетом формалов/мест/методов данных.
+Local_int сведен к known_int, чтобы raw @ не прошёл числовой preflight и не запустил RHS.
+Статус чтения retained declaration до working write — 5 по R12; это не проверка wrapper
+uninit:T на факт первой записи. Для настоящего uninit:T начальное значение не обещано.
+@:p int без кандидата остаётся явно OPEN: нужны заранее существующие wrapper8/cell5,
+первое присваивание не должно создавать их лениво. Эта форма больше не классифицируется
+как Structure reference kind6. Полный общий root/self, primitive reference records в code,
+M11.7/8 и M13/M14 ещё открыты. Не запускать data_run по обычной Structure.
+Добавлены шесть целевых lm2-проб с полными golden. Baseline372 на окончательном source:
+places5, priority4, read/head5 до before1, type4 и numeric5 без эффектов. Новые результаты:
+places41/13/30/23, priority7/8/9/12, read/head5 с before1, type/numeric4 до RHS, все calls0.
+Runtime02/graph01 построены; частные22 в трёх режимах подтверждены, AFTER24 и mutation24 прошли.
+В private01 одной старой строке ошибочно задан4 вместо принятого2; точный повтор обходчика
+с2 прошёл, оба native режима и все состояния прошли изначально. Код и C-программы не менялись.
+Source03 verify643, manifest9fd702d046e0ba704b24abd175296bd8ecccf853c9026d2a8d04aef327a145b3.
+Алгоритмы после Source02 заморожены; Source03 меняет комментарий и добавляет фикстуры.
+Полный bootstrap01 quick из372 прошёл: настоящие G1/G2, по 9 smoke; fixedpoint13 и verify643.
+Штатный G2 заново собрал graph-tool и повторил22 в трёх режимах, AFTER24/mutation24.
+Рабочая связка — boot-m11-deferred-refs-01/g2 и graph-m11-deferred-refs-g2-01.
+Штатные render/docs check прошли: 35/14/27/44/615, ссылки и LF индекса 27 317 файлов.
+Оба diff --check чисты; чужие два untracked сохранили прежние SHA. Далее commit/push main.
+[Приёмка и границы](witnesses/m11-deferred-refs-20261114/notes.md). Goal active, весь v3.
+Следующая приоритетная зависимость — вновь открытый M8 consumer: @2 одно-полевой written
+Structure даёт2 на372 и373 вместо n1/calls0. Проба и вывод из норм сохранены в witness;
+задача включена в M8 основного v3/M11.8. После приёмки373 исправить общий контракт чтения
+Structure-value, затем продолжать physical reference records, no-candidate storage и root/self.
+
 ## 2026-11-14 — M11.5г: срез 372, кодовая приёмка пройдена в main
 
 Принятый 371 закоммичен и отправлен: 64533ddb0b70406daa914718be466d1b1d002ce0.

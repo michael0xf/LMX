@@ -1,0 +1,16 @@
+# A numeric declaration cannot consume a deferred reference destination.
+# Its initializer is not reached when the destination has the wrong type.
+int: calls 0
+fn: touch () int
+    node\calls := node\calls + 1
+    return: 7
+@: D (
+    Target(int: n 30)
+    @: p Target
+    int: reached 0
+)
+@: Code (
+    int: p touch()
+    reached := 1
+)
+call(D; Code)

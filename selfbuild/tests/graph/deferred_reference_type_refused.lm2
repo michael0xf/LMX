@@ -1,0 +1,14 @@
+# The destination is checked before the candidate's effects.
+int: calls 0
+fn: touch () int
+    node\calls := node\calls + 1
+    return: 0
+@: D (
+    int: p 0
+    int: seen 0
+)
+@: Code (
+    @: p int data[touch()]
+    seen := 1
+)
+call(D; Code)

@@ -1,0 +1,15 @@
+fn: leaf () int (
+    int: count 0
+)
+    :=: count (count + 1)
+    return: count
+end: leaf
+@: held leaf
+int: source_call 1
+int: held_call 3
+int: source_count 1
+int: held_count 3
+:=: source_call (leaf)
+:=: held_call (held)
+:=: source_count ((leaf \ data) \ count)
+:=: held_count ((held \ data) \ count)

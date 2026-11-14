@@ -1,0 +1,75 @@
+GRAPH-BEFORE-BEGIN
+@: Scope ((int marks 0) (fn leaf () int ((int count 0)) ((:= count (count + 1)) (:= (node \ marks) ((node \ marks) + 1)) (return count))) (fn main () int ((return (leaf)))) (sub bump () ((int n 0)) ((:= n (n + 1)) (:= (node \ marks) ((node \ marks) + 10)))))
+call: Scope
+int: first Scope\leaf()
+int: second Scope\leaf()
+int: third Scope\leaf()
+@:
+    duplicate
+    merge: Scope
+end: @
+int: copied duplicate\main()
+int: copied_again duplicate\main()
+duplicate\bump()
+duplicate\bump()
+int: copy_count (((duplicate \ leaf) \ data) \ count)
+int: copy_sub (((duplicate \ bump) \ data) \ n)
+int: copy_marks (duplicate \ marks)
+int: source (((Scope \ leaf) \ data) \ count)
+int: source_marks (Scope \ marks)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Scope:
+    int: marks 3
+    fn: leaf () int (
+        int: count 0
+    )
+        :=: count (count + 1)
+        :=: (node \ marks) ((node \ marks) + 1)
+        return: count
+    end: leaf
+    fn: main () int
+        return: (leaf)
+    end: main
+    sub: bump () (
+        int: n 0
+    )
+        :=: n (n + 1)
+        :=: (node \ marks) ((node \ marks) + 10)
+    end: bump
+end: Scope
+call: Scope
+int: first 1
+int: second 2
+int: third 3
+duplicate:
+    int: marks 3
+    fn: leaf () int (
+        int: count 0
+    )
+        :=: count (count + 1)
+        :=: (node \ marks) ((node \ marks) + 1)
+        return: count
+    end: leaf
+    fn: main () int
+        return: (leaf)
+    end: main
+    sub: bump () (
+        int: n 0
+    )
+        :=: n (n + 1)
+        :=: (node \ marks) ((node \ marks) + 10)
+    end: bump
+end: duplicate
+int: copied duplicate\main()
+int: copied_again duplicate\main()
+duplicate\bump()
+duplicate\bump()
+int: copy_count (((duplicate \ leaf) \ data) \ count)
+int: copy_sub (((duplicate \ bump) \ data) \ n)
+int: copy_marks (duplicate \ marks)
+int: source (((Scope \ leaf) \ data) \ count)
+int: source_marks (Scope \ marks)
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

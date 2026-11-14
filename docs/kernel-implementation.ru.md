@@ -1,6 +1,31 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**Текущее состояние, 2026-11-14, срез382; база381 `38cf026c`.** Общий `code_body` возвращает
+**Текущее состояние, 2026-11-14, срез383; база382 `d0e384c1`.** Изменён только Run:
+общий resolver различает чистый query и потребляющее чтение с локальным status. Фактическое чтение raw fn/sub
+без F соответствующего scope/source готовит достигнутый блок прежним `space_declarations`/evaluate0;
+соседние written методы готовятся в прежнем порядке. Классификация, slot requirements и запросы binder остаются чистыми,
+не входят повторно в строящийся receiver. Ошибка конструктора сохраняет свой ответ, не превращаясь в missing3.
+Доказательство source/parent учитывает также объемлющий `node`. Copier, `fn_data`, Frame и Run53 ABI не менялись;
+нет нового registry/error field, переноса SourceSpace или восстановления FN-role обычной копии F.
+10 pure-проб прошли: raw Fn1/2/sub2/marks25 при source3; unentered1/2; named parts7/7;
+held aliases8/8/8/9 при source3/next4; explicit clone4/5/source3; ordinary descriptor5;
+malformed constructor5/before1/after0, pending3/touch0, ambiguity3; два обхода дают source1/held3.
+Private34 triple дал32 PASS и два расхождения только в synthetic assignment RHS parentheses прежних
+reference_alias/descriptor_merge. Seed382 подтвердил ту же форму шестью полными AFTER;
+исправлены четыре строки скобок, числа сохранены. Все102 полных AFTER на тех же binaries и mutation24 прошли.
+Trace подтвердил actual native root → consuming declaration → scope preparation7/7 и normal exit;
+новое callable может исполняться обходчиком, M14 OPEN. Код собран на Source01:761; Source02 добавляет10 fixture pairs,
+Source03 меняет только четыре прежние строки скобок:781 вход, SHA-256
+`4a7ed184d976b820d605f14c2e9a33970b16e0dae54c0ae95e83c35d9b5e5604`.
+Whole bootstrap quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify781 PASS. Штатный G2 graph-tool собран,
+SHA-256 `10dbb1b4dab7e7dd3395ea441d8a481ec795e6992bf60f3afa0be91bc0e35b59`.
+Повтор G2 (34 случая в трёх режимах, включая runs2; 33 полных negative AFTER; mutation24) прошёл;
+Штатные render/docs check383 прошли:35/14/27/44/615, ссылки/LF.
+Рабочая связка383 — boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
+Это ограниченная проверка copy-классов; полный M11, оставшиеся5е/7/8, внешний/вычисленный CodeBody,
+native copy и M13/M14 OPEN.
+
+**Предыдущее состояние, 2026-11-14, срез382; база381 `38cf026c`.** Общий `code_body` возвращает
 заимствованные `body/from/to` по существующим ролям аргументов управления (§6.3). Для полного хвоста
 `else`/`finally` единственная написанная группа выбирается телом один раз; уже выбранное тело и его остаток
 повторно не раскрываются. Scanner, `fn_own`, обходчик, native и `code_parent` используют тот же выбор,
@@ -1578,6 +1603,23 @@ private25 triple/75 AFTER/mutation24, native trace и настоящие G1/G2 q
 указывает на копию цели через ту же карту. Имя функции, созданной из композиции, — аргумент имени ресивера
 (`fn: new_name merge(f1, f2)`), не поле и не имена операндов (§3.4). Реализованное подмножество и открытое — в статусе
 выше (graph73).
+
+**Чтение скопированного объявления, срез383.** Query и потребление используют общий
+`resolve_binding_context`; query не строит F, поскольку тот же поиск нужен binder при создании receiver.
+`binding_source_read`/`binding_read` и atom reader при фактическом чтении разрешают подготовку достигнутого owner
+через прежний `space_declarations`/evaluate0. Подготовка всего блока сохраняет классификацию соседних written
+методов перед последующими computed actuals; computed producer не запускается преждевременно. Общий путь
+сохраняет точные scope/source/parent, включая объемлющий `node`, и прежний порядок разрешения/допуска места.
+Ошибки передаются локальным status этого чтения; malformed constructor5 не становится missing3,
+общего error latch в Space или кадре нет. Код merge и `fn_data` не меняется, чужие bindings не копируются.
+
+Raw-объявление в копии создаёт новую F из своих скопированных аргументов. Удержанная ссылкой F копируется
+с текущими частями и алиасами как обычная Structure; явный следующий `fn` создаёт новую F и новую own data.
+Чистые запросы не подменяют это потреблением и не классифицируют ordinary descriptor как вызываемое.
+Runtime01/Graph01,10 pure,102 полных AFTER34 случаев в трёх режимах на тех же binaries, mutation24 и native trace прошли;
+Whole bootstrap quick с настоящими G1/G2, по9 smoke и fixedpoint13/verify781, повтор G2 (34 triple/33 negative AFTER/mutation24)
+и штатные render/docs check383 прошли. Охват ограничен этими классами; полный M11, оставшиеся5е/7/8, внешний/вычисленный CodeBody,
+native copy и M13/M14 остаются OPEN.
 
 ### 6.5 Сброс `native` при публикации записи (норма — [L2 §11](L2_spec_ru.md#call))
 

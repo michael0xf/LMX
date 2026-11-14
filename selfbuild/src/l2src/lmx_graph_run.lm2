@@ -319,7 +319,9 @@ fn: lmx_graph_work_capture_context (@: g c.LmxGraph; @: frame c.LmxGraphFrame; @
         if: frame\own = 0
             return: lmx_graph_work_require(g, frame, name)
     ---
-    value := lmx_graph_resolve(g, (cast: (@: c.Lmx) frame\code), name)
+    status := lmx_graph_resolve_value(g, (cast: (@: c.Lmx) frame\code), name, 1, @ value)
+    if: status != 0
+        return: status
     # An open local namespace may still declare this name. Keep the entry
     # fallback (including absence); data publication binds the local value.
     if: value = 0 && frame\binding_open = 0 && pending = 0 && optional = 0
@@ -1087,7 +1089,9 @@ fn: lmx_graph_named_int (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @: out i
     @: value void 0
     int: status 0
     lmx_graph_input_used(g, name)
-    value := lmx_graph_resolve_binding(g, scope, name, @ row)
+    value := lmx_graph_resolve_binding_context(g, scope, name, @ row, 1, @ status)
+    if: status != 0
+        return: status
     if: row != 0 && row\slot != (cast: (size_t) -1)
         if: c.lmx_graph_kind(g, row\cell) = 5 || c.lmx_graph_kind(g, row\cell) = 6
             return: 4
@@ -1112,7 +1116,9 @@ fn: lmx_graph_operand_read (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: o
         return: 4
     out[0] := 0
     lmx_graph_input_used(g, name)
-    value := lmx_graph_resolve_binding(g, scope, name, @ row)
+    value := lmx_graph_resolve_binding_context(g, scope, name, @ row, 1, @ status)
+    if: status != 0
+        return: status
     if: row != 0 && row\slot != (cast: (size_t) -1) && lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) != 0
         status := lmx_graph_work_load(g, row)
         if: status != 0
@@ -1654,17 +1660,36 @@ fn: lmx_graph_step_index (@: g c.LmxGraph; @: owner c.Lmx; @: word char) size_t
     return: at
 end: lmx_graph_step_index
 
-# Read a declared field by its existing construction binding. The source Frame
-# stays in its slot; callers, lexical atoms and paths see the same method value.
-fn: lmx_graph_binding_value (@: g c.LmxGraph; @: owner c.Lmx; size_t: slot) @: void
+# Consume a declaration through the ordinary scope preparation. Pure name and
+# binding queries never enter this path: a receiver may query its own name while
+# it is being built. The reached scope uses the same declaration order as entry,
+# so sibling written methods classify later computed actuals consistently.
+fn: lmx_graph_binding_source_read (@: g c.LmxGraph; @: owner c.Lmx; @: raw void; int: prepare; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: raw void c.lmx_graph_get(owner, slot)
     @: head char c.lmx_graph_name_of(g, raw)
     @: made c.Lmx 0
+    int: status 0
+    out[0] := raw
     if: c.lmx_graph_kind(g, raw) != 4 || (head != state\w_fn && head != state\w_sub)
-        return: raw
+        return: 0
+    out[0] := 0
     made := lmx_graph_binding_method(g, owner, raw)
-return: (cast: (@: void) made)
+    if: made = 0 && prepare != 0
+        status := lmx_graph_space_declarations(g, owner)
+        if: status != 0
+            return: status
+        made := lmx_graph_binding_method(g, owner, raw)
+    out[0] := (cast: (@: void) made)
+    return: 0
+
+fn: lmx_graph_binding_read (@: g c.LmxGraph; @: owner c.Lmx; size_t: slot; int: prepare; @@: out void) int
+    return: lmx_graph_binding_source_read(g, owner, c.lmx_graph_get(owner, slot), prepare, out)
+
+# The non-constructing query shares the same selected field and source proof.
+fn: lmx_graph_binding_value (@: g c.LmxGraph; @: owner c.Lmx; size_t: slot) @: void
+    @: value void 0
+    lmx_graph_binding_read(g, owner, slot, 0, @ value)
+    return: value
 # The entity an atom of holder refers to, found when a path is read through it (the author 2026-11-11,
 # LMX_blog/2026-11-11.md#known-name-not-expanded; the executor's readings P1, B3): its word is looked up lexically from
 # the atom's place outwards, never through an activation -- the records of holder, whole, then the records of every
@@ -1673,7 +1698,7 @@ return: (cast: (@: void) made)
 # naming its own holder finds the holder at the enclosing level. The entity, with the level holding its record and the
 # record's slot in owner_out and slot_out (0 for a callable the namespace answers); 0 for none or for a level with two
 # or more records of the word.
-fn: lmx_graph_atom_target (@: g c.LmxGraph; @: holder c.Lmx; @: word char; @@: owner_out c.Lmx; @: slot_out size_t) @: void
+fn: lmx_graph_atom_target_context (@: g c.LmxGraph; @: holder c.Lmx; @: word char; @@: owner_out c.Lmx; @: slot_out size_t; int: prepare; @: status int) @: void
     @: current c.Lmx holder
     @: part c.Lmx 0
     @: value void 0
@@ -1681,12 +1706,16 @@ fn: lmx_graph_atom_target (@: g c.LmxGraph; @: holder c.Lmx; @: word char; @@: o
     size_t: found 0U
     owner_out[0] := 0
     slot_out[0] := 0U
+    status[0] := 0
     while: word != 0 && c.lmx_graph_kind(g, (cast: (@: void) current)) = 4
         found := lmx_graph_data_find(g, current, word, 1, 0U, @ at)
         if: found = 1U
             owner_out[0] := current
             slot_out[0] := at
-            return: lmx_graph_binding_value(g, current, at)
+            status[0] := lmx_graph_binding_read(g, current, at, prepare, @ value)
+            if: status[0] != 0
+                return: 0
+            return: value
         if: found > 1U
             return: 0
         value := c.lmx_graph_space_find(current, word)
@@ -1698,14 +1727,21 @@ fn: lmx_graph_atom_target (@: g c.LmxGraph; @: holder c.Lmx; @: word char; @@: o
             if: found = 1U
                 owner_out[0] := part
                 slot_out[0] := at
-                return: lmx_graph_binding_value(g, part, at)
+                status[0] := lmx_graph_binding_read(g, part, at, prepare, @ value)
+                if: status[0] != 0
+                    return: 0
+                return: value
             if: found > 1U
                 return: 0
         ---
         current := (cast: (@: c.Lmx) current\parent)
     ---
     return: 0
-end: lmx_graph_atom_target
+end: lmx_graph_atom_target_context
+
+fn: lmx_graph_atom_target (@: g c.LmxGraph; @: holder c.Lmx; @: word char; @@: owner_out c.Lmx; @: slot_out size_t) @: void
+    int: status 0
+    return: lmx_graph_atom_target_context(g, holder, word, owner_out, slot_out, 0, @ status)
 
 # The step `\word` of a path read from value: the field lmx_graph_step_index names in the Structure value stands for --
 # the target of a reference, the same instance --; a field that is an atom answers the entity its word refers to
@@ -1716,15 +1752,21 @@ fn: lmx_graph_step (@: g c.LmxGraph; @: value void; @: word char; @@: out void) 
     @: owner c.Lmx 0
     @: field void 0
     size_t: slot 0U
+    int: status 0
     if: out = 0 || c.lmx_graph_kind(g, base) != 4
         return: 3
     owner := (cast: (@: c.Lmx) base)
     slot := lmx_graph_step_index(g, owner, word)
     if: slot >= c.lmx_graph_count(owner)
         return: 3
-    field := lmx_graph_binding_value(g, owner, slot)
+    status := lmx_graph_binding_read(g, owner, slot, 1, @ field)
+    if: status != 0
+        return: status
     if: c.lmx_graph_kind(g, field) = 2 && c.lmx_graph_name_of(g, field) = 0
-        field := lmx_graph_atom_target(g, owner, c.lmx_graph_word_text(g, field), @ owner, @ slot)
+        field := lmx_graph_atom_target_context(g, owner, c.lmx_graph_word_text(g, field), @ owner, @ slot, 1, @ status)
+        if: status != 0
+            return: status
+    ---
     if: field = 0
         return: 3
     if: lmx_graph_deferred_kind(g, field) != 0
@@ -1743,6 +1785,7 @@ fn: lmx_graph_step_place (@: g c.LmxGraph; @: value void; @: word char; @@: owne
     @: owner c.Lmx 0
     @: field void 0
     size_t: slot 0U
+    int: status 0
     if: owner_out = 0 || slot_out = 0
         return: 3
     if: c.lmx_graph_kind(g, base) != 4
@@ -1753,7 +1796,10 @@ fn: lmx_graph_step_place (@: g c.LmxGraph; @: value void; @: word char; @@: owne
         return: 3
     field := c.lmx_graph_get(owner, slot)
     if: c.lmx_graph_kind(g, field) = 2 && c.lmx_graph_name_of(g, field) = 0
-        if: lmx_graph_atom_target(g, owner, c.lmx_graph_word_text(g, field), @ owner, @ slot) = 0 || owner = 0
+        field := lmx_graph_atom_target_context(g, owner, c.lmx_graph_word_text(g, field), @ owner, @ slot, 1, @ status)
+        if: status != 0
+            return: status
+        if: field = 0 || owner = 0
             return: 3
         ---
     ---
@@ -1785,7 +1831,7 @@ end: lmx_graph_node_passes
 
 # The space itself (lmx_graph_node_space): a control receiver or its body is passed through, above, by its name or by
 # the name of the Lmx it is a field of (an `if` is [condition, body], its body unnamed).
-fn: lmx_graph_node_space (@: g c.LmxGraph) @: void
+fn: lmx_graph_node_space (@: g c.LmxGraph; int: prepare; @: status int) @: void
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: activation c.LmxActivation 0
     @: code c.Lmx 0
@@ -1794,6 +1840,7 @@ fn: lmx_graph_node_space (@: g c.LmxGraph) @: void
     @: enclosing c.Lmx 0
     @: head char 0
     @: above char 0
+    @: value void 0
     if: g = 0 || state = 0
         return: 0
     activation := (cast: (@: c.LmxActivation) g\arena\activation)
@@ -1817,7 +1864,10 @@ fn: lmx_graph_node_space (@: g c.LmxGraph) @: void
             current := owner
             continue
         if: owner != 0 && owner\parent != 0 && (above = state\w_fn || above = state\w_sub)
-            enclosing := (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) owner\parent), lmx_graph_fn_decl_name(g, owner)))
+            status[0] := lmx_graph_binding_source_read(g, (cast: (@: c.Lmx) owner\parent), (cast: (@: void) owner), prepare, @ value)
+            if: status[0] != 0
+                return: 0
+            enclosing := (cast: (@: c.Lmx) value)
             if: c.lmx_graph_method(g, enclosing) != 0 && enclosing\parent = owner
                 return: (cast: (@: void) c.lmx_graph_method_data(g, enclosing))
             ---
@@ -1829,7 +1879,7 @@ end: lmx_graph_node_space
 
 # Resolve the current activation's formals, inherited inputs, then lexical graph fields. Each lookup consumes the
 # current graph and the live activation chain; no binding is saved in the graph or reused by the next traversal.
-fn: lmx_graph_resolve_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: selected c.LmxGraphWork) @: void
+fn: lmx_graph_resolve_binding_context (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: selected c.LmxGraphWork; int: prepare; @: status int) @: void
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: activation c.LmxActivation 0
     @: active_frame c.LmxGraphFrame 0
@@ -1845,12 +1895,13 @@ fn: lmx_graph_resolve_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@
     size_t: at 0U
     size_t: found 0U
     selected[0] := 0
+    status[0] := 0
     if: g = 0 || name = 0
         return: 0
     # The reserved word node names the space above the live launch's code (lmx_graph_node_space), never a binding: it is
     # read before the chain of activations, and no row, formal or field answers it.
     if: state != 0 && name = state\w_node
-        return: lmx_graph_node_space(g)
+        return: lmx_graph_node_space(g, prepare, status)
     activation := (cast: (@: c.LmxActivation) g\arena\activation)
     while: activation != 0
         if: activation\frame != 0
@@ -1883,7 +1934,9 @@ fn: lmx_graph_resolve_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@
             if: found > 1U
                 return: 0
             if: found = 1U
-                value := lmx_graph_binding_value(g, (cast: (@: c.Lmx) active_frame\data), at)
+                status[0] := lmx_graph_binding_read(g, (cast: (@: c.Lmx) active_frame\data), at, prepare, @ value)
+                if: status[0] != 0
+                    return: 0
                 head := c.lmx_graph_name_of(g, value)
                 if: c.lmx_graph_kind(g, value) = 4 && head != 0 && head != state\w_int && head != state\w_at
                     return: value
@@ -1924,7 +1977,9 @@ fn: lmx_graph_resolve_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@
         if: found > 1U
             return: 0
         if: found = 1U
-            value := lmx_graph_binding_value(g, current, at)
+            status[0] := lmx_graph_binding_read(g, current, at, prepare, @ value)
+            if: status[0] != 0
+                return: 0
             # A place declared by its receiver with a computed value, not executed yet (`int: x five()`, `@: h f` before
             # its line, R12): the place exists without a value -- the name answers nothing now, and no outer level does.
             head := c.lmx_graph_name_of(g, value)
@@ -1942,17 +1997,26 @@ fn: lmx_graph_resolve_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@
             part := c.lmx_graph_method_data(g, current)
             slot := c.lmx_graph_formal(g, part, name)
             if: slot < c.lmx_graph_count(part)
-                return: lmx_graph_binding_value(g, part, slot)
+                status[0] := lmx_graph_binding_read(g, part, slot, prepare, @ value)
+                if: status[0] != 0
+                    return: 0
+                return: value
             ---
         else:
             head := c.lmx_graph_name_of(g, (cast: (@: void) current))
             if: (head = state\w_fn || head = state\w_sub) && current\parent != 0
-                part := (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) current\parent), lmx_graph_fn_decl_name(g, current)))
+                status[0] := lmx_graph_binding_source_read(g, (cast: (@: c.Lmx) current\parent), (cast: (@: void) current), prepare, @ value)
+                if: status[0] != 0
+                    return: 0
+                part := (cast: (@: c.Lmx) value)
                 if: c.lmx_graph_method(g, part) != 0 && part\parent = current
                     part := c.lmx_graph_method_data(g, part)
                     slot := c.lmx_graph_formal(g, part, name)
                     if: slot < c.lmx_graph_count(part)
-                        return: lmx_graph_binding_value(g, part, slot)
+                        status[0] := lmx_graph_binding_read(g, part, slot, prepare, @ value)
+                        if: status[0] != 0
+                            return: 0
+                        return: value
                     ---
                 ---
             ---
@@ -1960,15 +2024,27 @@ fn: lmx_graph_resolve_binding (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@
         current := (cast: (@: c.Lmx) current\parent)
     ---
     return: 0
-end: lmx_graph_resolve_binding
+end: lmx_graph_resolve_binding_context
+
+# Query and consumption use one resolver. Only consumption may prepare a reached
+# written declaration; failures remain local to this read, not a Space latch.
+fn: lmx_graph_resolve_value (@: g c.LmxGraph; @: scope c.Lmx; @: name char; int: prepare; @@: out void) int
+    @: row c.LmxGraphWork 0
+    int: status 0
+    @: value void lmx_graph_resolve_binding_context(g, scope, name, @ row, prepare, @ status)
+    out[0] := 0
+    if: status != 0
+        return: status
+    if: row != 0 && row\slot != (cast: (size_t) -1) && lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) != 0
+        return: 0
+    out[0] := value
+    return: 0
 
 # Classification and consumption share exactly one binding search. A deferred
 # declaration is not a callable/Structure value; the reader reports its status.
 fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
-    @: row c.LmxGraphWork 0
-    @: value void lmx_graph_resolve_binding(g, scope, name, @ row)
-    if: row != 0 && row\slot != (cast: (size_t) -1) && lmx_graph_deferred_kind(g, (cast: (@: void) row\cell)) != 0
-        return: 0
+    @: value void 0
+    lmx_graph_resolve_value(g, scope, name, 0, @ value)
     return: value
 end: lmx_graph_resolve
 
@@ -2410,7 +2486,9 @@ fn: lmx_graph_admit (@: g c.LmxGraph; @: code c.Lmx; size_t: index; @: actual vo
     requirement := c.lmx_graph_formal_model(g, declaration)
     if: requirement = 0
         return: 5
-    model := lmx_graph_resolve(g, (cast: (@: c.Lmx) code\parent), requirement)
+    status := lmx_graph_resolve_value(g, (cast: (@: c.Lmx) code\parent), requirement, 1, @ model)
+    if: status != 0
+        return: status
     status := lmx_graph_admit_paths(g, code, c.lmx_graph_formal_name(g, args, index), model, actual)
     if: status = 0
         out[0] := actual
@@ -3058,7 +3136,9 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                         value := c.lmx_graph_get(expression, 1U)
                         if: c.lmx_graph_kind(g, value) = 2
                             lmx_graph_input_used(g, c.lmx_graph_word_text(g, value))
-                            value := lmx_graph_resolve(g, scope, c.lmx_graph_word_text(g, value))
+                            status := lmx_graph_resolve_value(g, scope, c.lmx_graph_word_text(g, value), 1, @ value)
+                            if: status != 0
+                                return: status
                             status := 0
                             if: value = 0
                                 status := 3

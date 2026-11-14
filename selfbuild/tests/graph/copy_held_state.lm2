@@ -1,0 +1,22 @@
+fn: leaf () int (int: count 0)
+    count := count + 1
+    return: count
+sub: hold () (
+    @: left leaf
+    @: right leaf
+    @: payload leaf\data
+    @: count_place int @(leaf\data\count)
+) ()
+hold()
+int: first leaf()
+int: second leaf()
+int: third leaf()
+@: copied merge(hold\data)
+copied\left\data\count := 8
+int: same copied\right\data\count
+int: direct copied\payload\count
+int: pointer \(copied\count_place)
+copied\payload\count := 9
+int: changed copied\left\data\count
+int: original leaf\data\count
+int: next leaf()

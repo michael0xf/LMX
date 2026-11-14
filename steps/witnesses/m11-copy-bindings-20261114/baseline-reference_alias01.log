@@ -1,0 +1,75 @@
+GRAPH-BEFORE-BEGIN
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: ((a * 10) + calls)
+end: f1
+sub: main () (
+    @: h f1
+    M:
+        int: a 1
+    end: M
+    @: P M
+    int: r1 0
+    int: r2 0
+    int: c1 0
+    int: c2 0
+    int: m_a 0
+)
+    :=: r1 (h 2)
+    h: 5
+    :=: r2 (f1 3)
+    :=: c1 ((f1 \ data) \ calls)
+    :=: c2 ((h \ data) \ calls)
+    :=: (P \ a) 7
+    :=: m_a (M \ a)
+end: main
+main:
+int: r1 ((main \ data) \ r1)
+int: r2 ((main \ data) \ r2)
+int: c1 ((main \ data) \ c1)
+int: c2 ((main \ data) \ c2)
+int: m_a ((main \ data) \ m_a)
+int: p_a (((main \ data) \ P) \ a)
+@: observed_h ((main \ data) \ h)
+@: observed_P ((main \ data) \ P)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+fn: f1 (int: a) int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: ((a * 10) + calls)
+end: f1
+sub: main () (
+    @: h f1
+    M:
+        int: a 1
+    end: M
+    @: P M
+    int: r1 0
+    int: r2 0
+    int: c1 0
+    int: c2 0
+    int: m_a 0
+)
+    :=: r1 (h 2)
+    h: 5
+    :=: r2 (f1 3)
+    :=: c1 ((f1 \ data) \ calls)
+    :=: c2 ((h \ data) \ calls)
+    :=: (P \ a) 7
+    :=: m_a (M \ a)
+end: main
+main:
+int: r1 21
+int: r2 33
+int: c1 3
+int: c2 3
+int: m_a 7
+int: p_a 7
+@: observed_h f1
+@: observed_P M
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

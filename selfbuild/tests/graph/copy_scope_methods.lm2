@@ -1,0 +1,26 @@
+@: Scope (
+    int: marks 0
+    fn: leaf () int (int: count 0)
+        count := count + 1
+        node\marks := node\marks + 1
+        return: count
+    fn: main () int
+        return: leaf()
+    sub: bump () (int: n 0)
+        n := n + 1
+        node\marks := node\marks + 10
+)
+call(Scope)
+int: first Scope\leaf()
+int: second Scope\leaf()
+int: third Scope\leaf()
+@: duplicate merge(Scope)
+int: copied duplicate\main()
+int: copied_again duplicate\main()
+duplicate\bump()
+duplicate\bump()
+int: copy_count duplicate\leaf\data\count
+int: copy_sub duplicate\bump\data\n
+int: copy_marks duplicate\marks
+int: source Scope\leaf\data\count
+int: source_marks Scope\marks

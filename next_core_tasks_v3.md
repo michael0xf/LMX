@@ -1,5 +1,32 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез383 — raw bindings после копии и held F, ограниченная реализация; кодовая приёмка пройдена.**
+База382/d0e384c1 принята и отправлена; рабочая связка383 — boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
+Изменён только Run, ABI Run53/Frame прежний. Один resolver различает чистый query и потребляющее чтение
+со статусом вызывающего. Первый actual read raw fn/sub без binding готовит достигнутый owner scope через
+прежний space_declarations/evaluate0; copier/fn_data не создают bindings и не переносят SourceSpace.
+Для enclosing node повторно используется точное source/parent proof. Запрос без потребления ничего не строит.
+Два класса копии различены по [разбору нормы](steps/handoff/copy-construction-reading-20261114.md),
+без наследования прогретой F при копии raw scope и без автоматической FN-роли у held descriptor.
+Десять pure прошли: raw fn1/2, sub2, marks25/source3; unentered1/2; named parts name7/7;
+held aliases8/8/8/9 при source3/next4; explicit clone4/5/source3; ordinary descriptor отказ5;
+malformed constructor5/before1/after0, pending3/touch0, ambiguity3; повтор run2 сбрасывает source1/held3.
+Private34 исполнены в трёх режимах:32 совпали; reference_alias/descriptor_merge выявили только старые
+synthetic RHS wrappers до380. Шесть baseline AFTER на seed382 совпали; исправлены четыре скобочные строки,
+числа не менялись. На тех же34 binaries прошли102 полных AFTER и mutation24.
+Native trace root → consuming declaration read → scope preparation дал name7/7/normal exit;
+это не приёмка native скопированных callee в M14. Source01:761 построил код, Source02 добавил20 fixture inputs,
+Source03:781 меняет лишь четыре скобочные golden-строки, frozen SHA4a7ed184d976b820d605f14c2e9a33970b16e0dae54c0ae95e83c35d9b5e5604.
+Whole bootstrap quick прошёл: настоящие G1/G2, по9 smoke, fixedpoint13/verify781.
+Штатный G2 пересобрал graph-tool, SHA10dbb1b4dab7e7dd3395ea441d8a481ec795e6992bf60f3afa0be91bc0e35b59.
+G2 repeat34 triple, включая runs2, negative AFTER33/mutation24 и штатные render/docs check383 прошли:
+35/14/27/44/615, ссылки/LF27696 до staging; финальный index-check02 прошёл LF27737.
+Оба класса копии имеют ограниченные private proofs; общий охват external/computed CodeBody,
+M11.7/8, весь M11/M13/M14 остаются OPEN. Приёмка383 ограничена этим срезом; goal ACTIVE.
+До шага7 остаются обязательства M11.5е: прямые named actuals ресиверов только через `:=`,
+colon-поля целой переданной descriptor DATA остаются обычными данными; structural formals в args отказывают.
+Реализация и отдельная приёмка этих границ OPEN.
+
 **2026-11-14, срез382 — bounded CodeBody для else/finally, ограниченная реализация; кодовая приёмка пройдена.**
 База381/38cf026c принята и отправлена; рабочая связка382 — boot-m11-codebody-01/g2 +
 graph-m11-codebody-g2-01. Общий `Run.code_body` (экспорт53) возвращает заимствованный вид body/from/to
@@ -28,7 +55,8 @@ bindings SourceSpace не переносятся. Реально достижи�
 как обычная Structure, без автоматической роли FN; последующий явный `fn` создаёт свежие F/D общим конструктором.
 Контроль warm3 → clone call4/source3 относится к явному `fn:clone merge(leaf)` после прогрева source,
 а не к простому `merge(scope)`. Прежнее требование восстановить в copied raw binding текущую F/data SourceSpace снято.
-Оба класса проверки пока OPEN; [разбор нормы](steps/handoff/copy-construction-reading-20261114.md).
+Ограниченные проверки обоих классов и final gates383 прошли;
+общие варианты копии не объявлены готовыми. [Разбор нормы](steps/handoff/copy-construction-reading-20261114.md).
 
 **2026-11-14, срез 381 — computed fn/sub в CodeBody, ограниченная реализация; приёмка пройдена.**
 Принятая база 380 — c5ba5ef9. В прежний GraphFrame добавлен lexical_scope текущего физического CodeBody;
@@ -1886,19 +1914,28 @@ Structure и записью значения, снимаются — шаг 6. �
      переносится в соответствующий constructor slot через существующую карту merge/fn_data.
      После освобождения GraphSpace новый независимый обход выводит требования из текущего графа.
      Общий implements используемого интерфейса Structure и test остаются частью шага7.
-     **OPEN — два отдельных класса копии и construction binding:**
+     **383 — два отдельных класса копии и construction binding, ограниченная реализация; кодовая приёмка пройдена:**
      1. При `merge(scope)` raw fn/sub в copied scope создаёт новый binding из своих скопированных actuals
         общим механизмом namespace/конструктора. SourceSpace bindings не переносятся; прогретая F и raw declaration
-        различны. Подготовку новых bindings, scope/source/parent и вызовы проверить отдельно, без persistent side tables.
+        различны. Первый потребляющий read готовит достигнутый owner scope через прежний space_declarations/evaluate0;
+        чистый query ничего не создаёт. Scope/source/parent proof используется также для enclosing node,
+        без persistent side tables, правок copier/fn_data или переноса namespace.
      2. Реально достижимая через граф held F копируется одной адресной map с текущими parts/data/aliases как обычная
         Structure. Само копирование не даёт роли FN. Последующий явный `fn` создаёт свежие F/D общим конструктором.
         Контроль: прогреть leaf count до3, выполнить явный `fn:clone merge(leaf)`, получить clone call4 при source3.
         Этот контроль не относится к простому `merge(scope)` и не требует переносить SourceSpace binding.
-     Оба класса проверки OPEN. Прежний кандидат восстановления текущей SourceSpace F/data в binding raw scope снят;
+     Десять pure, private34 triple с четырьмя скобочными исправлениями golden,102 full AFTER/mutation24
+     и actual native root→consuming read→scope prep trace прошли. Raw fn1/2, sub2/marks25/source3,
+     unentered1/2 и named parts7/7 подтверждают новый binding; held aliases8/8/8/9 при source3/next4,
+     explicit clone4/5/source3 и descriptor refusal5 подтверждают отдельный held-F класс.
+     Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify781 и пересборка graph-tool штатным G2 прошли;
+     G2 repeat34 triple с runs2/negative AFTER33/mutation24 и штатные render/docs check383 прошли:35/14/27/44/615, ссылки/LF.
+     Общий охват копии и native callee M14 OPEN.
+     Прежний кандидат восстановления текущей SourceSpace F/data в binding raw scope снят;
      [обоснование нормы](steps/handoff/copy-construction-reading-20261114.md). Не переносить namespace table
      и не превращать обычную descriptor-копию merge(F) в функцию автоматически.
-     Наблюдавшийся отказ3 пути node\main в computed F не является нормой языка и не закрывается380;
-     совместимый native копии остаётся отдельной зависимостью M14.
+     Наблюдавшийся отказ3 пути node\main в computed F не является нормой языка:383 проверяет точный
+     source/parent путь до name7/7; остальные варианты и совместимый native копии остаются зависимостями M11/M14.
    - **5е. Присваивание и аргументы.** Слева от `:=` место примитива или указатель-переменная; имя Structure или
      функции слева — отказ; справа имя Structure или функции даёт указатель. `f(arg: v)` — вызов `arg`; именованный
      аргумент и именованные части ресиверов `fn`, `sub` — только `:=`; аргументы всех ресиверов именованные и
@@ -1907,6 +1944,10 @@ Structure и записью значения, снимаются — шаг 6. �
      (`call(data := D; code := C)`), `fncall` и у записи запуска Structure по имени наравне с позиционной
      (**сделано в срезе 356**: один связыватель форм, фикстура `call_named`); структурная запись в `args` — отказ
      при создании метода; формал-ссылка `@: p T`; требование с кандидатом — `@: p Model value`.
+     **OPEN перед шагом7:** общая реализация и отдельная приёмка прямых named actuals ресиверов только через `:=`;
+     colon-поля целой переданной descriptor DATA — обычные данные, не прямая именованная подача.
+     Проверить отказ structural formals в args при создании метода. Наличие binder356 или приёмка копии383
+     не закрывают эти три границы и весь M11.5е.
      Срез 366 в зависимости M8 принимает переданное значение Structure для плоского `@: p T`
      общим запросом модели и допуском путей в обходчике/native. Это не реализация значений
      по умолчанию без actual, общего пути моделей или всех ссылочных мест M13.
@@ -1963,7 +2004,9 @@ Structure и записью значения, снимаются — шаг 6. �
    G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF.
    Общий охват external/computed CodeBody, рабочий frontend M11.8 и остальные M11
    остаются OPEN; новые bindings copied raw fn/sub и отдельная копия held F как Structure с явным fn-constructor
-   проверяются раздельно в зависимости5д, без переноса SourceSpace bindings.
+   проверены ограниченными private proofs383 в зависимости5д, без переноса SourceSpace bindings;
+   настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify781 и пересборка G2 graph прошли;
+   G2 repeat34 triple с runs2/negative AFTER33/mutation24 и штатные render/docs check383 прошли; общий охват этим не закрыт.
    **OPEN после среза379:** typed indirect expression-head application в graph machine frontend.
    Потреблять общий carrier, определить машинный тип головы и выбрать её один раз до actuals;
    сохранить порядок, preflight и различие nullary/одного written group. Пока этот путь выдаёт общий

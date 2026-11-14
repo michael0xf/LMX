@@ -76,7 +76,28 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-**Current state, 2026-11-14, slice382; base381 `38cf026c`.** Common `code_body` returns
+**Current state, 2026-11-14, slice383; base382 `d0e384c1`.** Only Run changed; Run53/Frame ABI is unchanged.
+One resolver serves pure classification and consuming reads with a local status. Only an actual read
+of an absent F for reached raw fn/sub prepares the owner scope through existing `space_declarations`/evaluate0.
+Sibling written methods are prepared consistently before computed actuals; binder queries do not re-enter a receiver.
+Scope/source/parent and the enclosing `node` retain their exact proof. A constructor failure does not become missing3;
+there is no new registry/error field, SourceSpace transfer or copier/`fn_data` hook. An ordinary descriptor stays a Structure.
+10 pure cases passed: raw Fn1/2/sub2/marks25/source3, unentered1/2, named parts7/7, held aliases8/8/8/9/source3/next4,
+explicit clone4/5/source3, ordinary descriptor5, malformed constructor5/before1/after0,
+pending3/touch0, ambiguity3 and two walks source1/held3. Private34 triple gave32 PASS and two shape-only differences in
+reference_alias/descriptor_merge; Seed382 reproduced the same full AFTER shape in all three modes.
+Only four synthetic RHS parenthesis lines were corrected; numbers are unchanged. All102 AFTER checks on the same binaries,
+mutation24 and the actual native root → consuming declaration → scope preparation7/7/normal exit trace passed.
+Code was built on Source01:761; Source02 adds10 fixture pairs, Source03 changes only four existing parenthesis lines:
+781 inputs, SHA-256 `4a7ed184d976b820d605f14c2e9a33970b16e0dae54c0ae95e83c35d9b5e5604`.
+Whole bootstrap quick passed: genuine G1/G2, nine smoke cases each; fixedpoint13/verify781 PASS. The genuine G2 graph-tool is built,
+SHA-256 `10dbb1b4dab7e7dd3395ea441d8a481ec795e6992bf60f3afa0be91bc0e35b59`.
+The G2 repeat (34 cases in three modes, including runs2; 33 full negative AFTER checks; mutation24) passed;
+Normal render/docs check383 passed:35/14/27/44/615, links/LF.
+The working tuple is383: boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
+Full M11, remaining5e/7/8, external/computed CodeBody, native copy and M13/M14 remain OPEN; a new callable may use the walker.
+
+**Previous state, 2026-11-14, slice382; base381 `38cf026c`.** Common `code_body` returns
 a borrowed `body/from/to` through existing CodeBody roles. A whole `else`/`finally` tail containing a sole
 written group selects its fields once; an already selected body/remainder and nested standalone groups
 are not unwrapped again. The scanner, `fn_own`, walker, native and `code_parent` use this selection,

@@ -1,5 +1,27 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез383 — raw bindings после копии и held F, ограниченная реализация; кодовая приёмка пройдена.**
+
+- [x] Run-only, ABI Run53/Frame прежний. Общий resolver: pure query без построения и consuming read со статусом вызывающего.
+  Первый actual read raw fn/sub без binding готовит owner scope через прежний space_declarations/evaluate0;
+  enclosing node использует точное source/parent proof. Copier/fn_data не готовят bindings; SourceSpace bindings не переносятся.
+- [x] Десять pure: raw fn1/2/sub2/marks25/source3, unentered1/2, name7/7;
+  held aliases8/8/8/9 при source3/next4, clone4/5/source3; descriptor5, malformed5/before1/after0,
+  pending3/touch0, ambiguity3; run2 reset source1/held3.
+- [x] Private34 triple исполнены:32 совпали; reference_alias/descriptor_merge потребовали лишь четыре скобочные
+  golden-строки старого synthetic RHS, шесть baseline AFTER на seed382 совпали. Числа неизменны;102 полных AFTER на тех же binaries,
+  mutation24 и native root→consuming read→scope prep trace7/7/normal exit прошли.
+  Source01:761 построил код,02 добавил20 fixture inputs,03:781 меняет лишь четыре скобочные строки; SHA4a7ed184.
+- [x] Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify781; штатный G2 пересобрал graph-tool, SHA10dbb1b4.
+- [x] G2 repeat34 triple, включая runs2, negative AFTER33/mutation24 прошли.
+- [x] Штатные render/docs check383:35/14/27/44/615, ссылки/LF27696 до staging; финальный index-check02 LF27737.
+- [ ] Общие варианты копии, external/computed CodeBody, M11.7/8, весь M11/M13/M14, включая native copied callee.
+  Рабочая связка383 — boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
+  Приёмка ограничена этим срезом; goal ACTIVE.
+- [ ] До шага7 — M11.5е: прямые named actuals ресиверов только через `:=`; colon-поля целой переданной
+  descriptor DATA остаются обычными данными. Реализация и отдельная приёмка этих границ OPEN.
+- [ ] До шага7 — отказ structural formals в args при создании метода; общий M11.5е не закрыт binder356/копией383.
+
 **2026-11-14, срез382 — bounded CodeBody для else/finally, ограниченная реализация; кодовая приёмка пройдена.**
 
 - [x] Общий Run.code_body53: borrowed body/from/to по прежним ролям; whole-tail выбирает sole written group один раз.
@@ -17,11 +39,11 @@
   Рабочая связка382 — boot-m11-codebody-01/g2 + graph-m11-codebody-g2-01.
   Приёмка ограничена этим срезом; goal ACTIVE.
 
-- [ ] Копия raw scope: новые fn/sub bindings из copied actuals; bindings SourceSpace не переносить.
-- [ ] Held F, реально достижимая через граф: копия текущих parts/data/aliases как обычной Structure без FN-роли;
+- [x] Ограниченный private383: копия raw scope получает новые fn/sub bindings из copied actuals; bindings SourceSpace не переносятся.
+- [x] Ограниченный private383: held F, реально достижимая через граф, копируется с текущими parts/data/aliases как Structure без FN-роли;
   последующий явный fn создаёт свежие F/D. Warm3 → call4/source3 проверять через `fn:clone merge(leaf)`,
   не через простой `merge(scope)`. Прежний кандидат наследования SourceSpace F/data снят;
-  [разбор нормы](steps/handoff/copy-construction-reading-20261114.md). Оба класса реализации/проверки OPEN.
+  [разбор нормы](steps/handoff/copy-construction-reading-20261114.md). Оба private proof и gates383 прошли; общий охват OPEN.
 
 **2026-11-14, срез 381 — computed fn/sub в CodeBody, ограниченная реализация; приёмка пройдена.**
 

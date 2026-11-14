@@ -1,6 +1,31 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice382; base381 `38cf026c`.** Common `code_body` returns
+**Current state, 2026-11-14, slice383; base382 `d0e384c1`.** Only Run changed:
+the common resolver distinguishes a pure query from a consuming read with a local status. Consuming raw fn/sub
+without an F for the corresponding scope/source prepares the reached block through existing `space_declarations`/evaluate0;
+sibling written methods are prepared in the existing order. Classification, slot requirements and binder queries stay pure
+and do not re-enter a receiver being constructed. A constructor failure keeps its answer rather than becoming missing3.
+The source/parent proof also covers the enclosing `node`. Copier, `fn_data`, Frame and Run53 ABI are unchanged;
+there is no new registry/error field, SourceSpace transfer or restoration of FN-role on an ordinary F copy.
+10 pure cases passed: raw Fn1/2/sub2/marks25 with source3; unentered1/2; named parts7/7;
+held aliases8/8/8/9 with source3/next4; explicit clone4/5/source3; ordinary descriptor5;
+malformed constructor5/before1/after0, pending3/touch0, ambiguity3; two walks give source1/held3.
+Private34 triple gave32 PASS and two differences only in synthetic assignment RHS parentheses of existing
+reference_alias/descriptor_merge. Seed382 confirmed that same shape through six full AFTER checks;
+four parenthesis lines were corrected, with numbers retained. All102 full AFTER checks on the same binaries and mutation24 passed.
+The trace confirmed actual native root → consuming declaration → scope preparation7/7 and normal exit;
+a new callable may use the walker, M14 OPEN. Code was built on Source01:761; Source02 adds10 fixture pairs,
+Source03 changes only four existing parenthesis lines:781 inputs, SHA-256
+`4a7ed184d976b820d605f14c2e9a33970b16e0dae54c0ae95e83c35d9b5e5604`.
+Whole bootstrap quick passed: genuine G1/G2, nine smoke cases each; fixedpoint13/verify781 PASS. The genuine G2 graph-tool is built,
+SHA-256 `10dbb1b4dab7e7dd3395ea441d8a481ec795e6992bf60f3afa0be91bc0e35b59`.
+The G2 repeat (34 cases in three modes, including runs2; 33 full negative AFTER checks; mutation24) passed;
+Normal render/docs check383 passed:35/14/27/44/615, links/LF.
+The working tuple is383: boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
+This is a bounded check of the copy classes; full M11, remaining5e/7/8, external/computed CodeBody,
+native copy and M13/M14 remain OPEN.
+
+**Previous state, 2026-11-14, slice382; base381 `38cf026c`.** Common `code_body` returns
 borrowed `body/from/to` through existing control-argument roles (§6.3). For the whole
 `else`/`finally` tail, a sole written group is selected as the body once; an already selected body or its remainder
 is not unwrapped again. The scanner, `fn_own`, walker, native and `code_parent` use that same selection,
@@ -1664,6 +1689,23 @@ through the reference take its target ([book :454](LMX_semantics.en.md#ordinary-
 through the same map. The name of a function created from a composition is the name argument of the receiver
 (`fn: new_name merge(f1, f2)`), not a field and not the operands' names (§3.4). The implemented subset and its open
 parts: the status above (graph73).
+
+**Reading a copied declaration, slice383.** Queries and consumption share
+`resolve_binding_context`; a query does not construct F because the binder needs that same search while creating a receiver.
+`binding_source_read`/`binding_read` and the atom reader permit preparation of a reached owner during an actual read
+through existing `space_declarations`/evaluate0. Preparing the block preserves the classification of sibling written
+methods before later computed actuals; a computed producer is not run early. The common path
+retains exact scope/source/parent, including the enclosing `node`, and the existing order of place resolution/admission.
+Failures travel through a status local to this read; malformed constructor5 does not become missing3,
+and no shared error latch is added to Space or the frame. Merge and `fn_data` code are unchanged; foreign bindings are not copied.
+
+A raw declaration in a copy creates a new F from its copied arguments. A held F is copied
+with its current parts and aliases as an ordinary Structure; a subsequent explicit `fn` creates a new F and new own data.
+Pure queries neither replace this with consumption nor classify an ordinary descriptor as callable.
+Runtime01/Graph01,10 pure cases,102 full AFTER checks of34 cases in three modes on the same binaries, mutation24 and native trace passed;
+Whole bootstrap quick with genuine G1/G2, nine smoke cases each and fixedpoint13/verify781, and the G2 repeat (34 triple/33 negative AFTER checks/mutation24)
+and normal render/docs check383 passed. Coverage is bounded to these classes; full M11, remaining5e/7/8, external/computed CodeBody,
+native copy and M13/M14 remain OPEN.
 
 ### 6.5 Resetting `native` when a write is published (norm: [L2 §11](L2_spec_en.md#call))
 

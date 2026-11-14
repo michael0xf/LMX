@@ -1,5 +1,42 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5д: срез383, чтение объявлений копии, приёмка пройдена
+
+382 принят и отправлен:d0e384c156701f2367a78d782f4a3c78f78cff28. Только main, root Sol writer/build.
+Pipeline sol-m11-copy-bindings-20261114-01. Explicit-current baseline382 уже проходит:
+leaf1/2/3, descriptor D3, clone4/source3, после descriptor D20 clone остаётся4, далее clone5/source4.
+Raw Scope оформлять @:Scope(...) и подготовить source через call(Scope): source leaf1/2/3,
+merge(Scope) сохраняет raw объявления, но actual duplicate\main() отказывает3.
+Первый probe с обычной root Scope отказывал5 по общему запуску, а не по копии; он не доказательство copy-gap.
+Общий read отсутствующей F готовит достигнутый owner scope прежним space_declarations/evaluate0:
+соседние written методы должны одинаково классифицировать последующие computed actuals.
+Query binding_method/binding_name и классификация остаются чистыми: нельзя повторно войти в строящийся receiver.
+Ошибки передавать через локальный status одного resolver/read, не превращать positive constructor failure в missing3.
+Не переносить SourceSpace, не менять FN-role копии и merge/fn_data, не вводить новый registry/frame.
+Runtime01/Graph01 PASS, прежний Run53 и Frame ABI. Общий context resolver и statusful binding/atom readers
+сохраняют query pure; фактическое чтение готовит owner scope, не copier/fn_data. Новых error fields нет.
+10 pure PASS: raw Fn1/2 и sub2, copy marks25/source3; unentered1/2, name-parts7/7;
+held aliases8/8/8/9 при source3/next4; clone4/5/source3; descriptor5, malformed constructor5,
+pending3/touch0, ambiguity3; второй обход даёт source1/held3 при свежих namespace bindings.
+Первый private34 выполнил все три режима:32 совпали, reference_alias/descriptor_merge имели старые
+synthetic RHS wrapper в expected. Seed382 подтвердил те же полные AFTER во всех6 сравнениях;
+исправлены только4 строки скобок, ответы21/33/3/3/7/7 и12/17 сохранены.
+Все102 AFTER тех же34 бинарников и mutation24 прошли; повторной C-сборки из-за expected не было.
+Native trace подтвердил actual root → consuming declaration read → scope preparation,7/7/normal exit.
+Source03/781 frozen:4a7ed184d976b820d605f14c2e9a33970b16e0dae54c0ae95e83c35d9b5e5604.
+Runtime/код не менялся после Source01;02 добавил10fixture pairs,03 — только4golden скобки.
+Whole quick G1/G2 прошёл: настоящие поколения, по9 smoke; fixedpoint13/verify781 PASS.
+Штатный G2 graph-tool построен:10dbb1b4dab7e7dd3395ea441d8a481ec795e6992bf60f3afa0be91bc0e35b59.
+G2 repeat34 triple/negative AFTER33/mutation24 и штатные render/docs check383 прошли:
+35/14/27/44/615, ссылки/LF27696 до staging; финальный index-check02 прошёл LF27737.
+Оба diff --check чисты; два чужих untracked сохранили SHA. Далее commit/push main.
+Рабочая связка383 — boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01; полный v3 goal ACTIVE.
+Далее commit/push main, затем M11.5е до7: direct named receiver actuals только:= при сохранении
+whole-descriptor DATA; structural formals запрещены. Общий M11.7/8, M13/M14 OPEN.
+Чужие два untracked сохранить; один последовательный конвейер. Код/тесты/build — только root.
+Документы делегированы: docs381_review — v3/checklist/to_sol/README/CORE;
+docs381_contract_final — semantics-book/kernel RUEN/implementation-notes RUEN. Остальное read-only.
+
 ## 2026-11-14 — M11.5г/8: срез382, bounded CodeBody else/finally, приёмка пройдена
 
 381 принят и отправлен:38cf026c53f3e55fcd099b1e617b71a2d9c35be8. Только main, root Sol writer/build.

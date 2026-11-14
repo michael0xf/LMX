@@ -75,7 +75,28 @@ L3 со вставками L2. L1 — только генерируемая ст
 <a id="l2-status"></a>
 ## 3. Translator-L2 и ядро
 
-**Текущее состояние, 2026-11-14, срез382; база381 `38cf026c`.** Общий `code_body` возвращает
+**Текущее состояние, 2026-11-14, срез383; база382 `d0e384c1`.** Изменён только Run, ABI Run53/Frame прежний.
+Один resolver обслуживает чистую классификацию и потребляющее чтение с локальным status. Только фактический read
+отсутствующей F достигнутого raw fn/sub готовит owner scope через прежний `space_declarations`/evaluate0.
+Соседние written методы готовятся одинаково до computed actuals; query binder не вызывает повторного входа в receiver.
+Scope/source/parent и объемлющий `node` сохраняют точное доказательство. Ошибка конструктора не становится missing3;
+нового registry/error field, SourceSpace transfer или copier/`fn_data` hook нет. Ordinary descriptor остаётся Structure.
+10 pure прошли: raw Fn1/2/sub2/marks25/source3, unentered1/2, named parts7/7, held aliases8/8/8/9/source3/next4,
+explicit clone4/5/source3, ordinary descriptor5, malformed constructor5/before1/after0,
+pending3/touch0, ambiguity3 и два обхода source1/held3. Private34 triple дал32 PASS и два shape-only расхождения
+reference_alias/descriptor_merge; Seed382 повторил ту же форму полных AFTER во всех трёх режимах.
+Исправлены только четыре строки synthetic RHS parentheses, числа прежние. Все102 AFTER на тех же binaries,
+mutation24 и trace actual native root → consuming declaration → scope preparation7/7/normal exit прошли.
+Код собран на Source01:761; Source02 добавляет10 fixture pairs, Source03 меняет только четыре прежние строки скобок:
+781 вход, SHA-256 `4a7ed184d976b820d605f14c2e9a33970b16e0dae54c0ae95e83c35d9b5e5604`.
+Whole bootstrap quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify781 PASS. Штатный G2 graph-tool собран,
+SHA-256 `10dbb1b4dab7e7dd3395ea441d8a481ec795e6992bf60f3afa0be91bc0e35b59`.
+Повтор G2 (34 случая в трёх режимах, включая runs2; 33 полных negative AFTER; mutation24) прошёл;
+Штатные render/docs check383 прошли:35/14/27/44/615, ссылки/LF.
+Рабочая связка383 — boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01.
+Полный M11, оставшиеся5е/7/8, внешний/вычисленный CodeBody, native copy и M13/M14 OPEN; новый callable может идти через walker.
+
+**Предыдущее состояние, 2026-11-14, срез382; база381 `38cf026c`.** Общий `code_body` возвращает
 заимствованный `body/from/to` по существующим CodeBody-ролям. Полный хвост `else`/`finally` из единственной
 написанной группы выбирает её поля один раз; уже выбранное тело/остаток и вложенные самостоятельные группы
 повторно не раскрываются. Scanner, `fn_own`, обходчик, native и `code_parent` используют этот выбор,

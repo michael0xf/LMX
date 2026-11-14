@@ -1,0 +1,26 @@
+fn: leaf () int (
+    int: count 0
+)
+    :=: count (count + 1)
+    return: count
+end: leaf
+sub: hold () (
+    @: left leaf
+    @: right leaf
+    @: payload (leaf \ data)
+    @: count_place int (@ ((leaf \ data) \ count))
+)
+end: hold
+hold:
+int: first 1
+int: second 2
+int: third 3
+@: copied data
+:=: (((copied \ left) \ data) \ count) 8
+int: same 8
+int: direct 8
+int: pointer 8
+:=: ((copied \ payload) \ count) 9
+int: changed 9
+int: original 3
+int: next 4

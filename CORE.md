@@ -9,7 +9,26 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice382; bounded implementation, code acceptance passed; base381/38cf026c): common Run.code_body53
+Current implementation note (2026-11-14, slice383; bounded implementation, code acceptance passed; base382/d0e384c1): only Run changes,
+with the Run53/Frame ABI unchanged. One resolver separates a pure query from a consuming read with caller-local status.
+The first actual read of an unbound raw fn/sub prepares its reached owner scope through existing space_declarations/evaluate0.
+Neither the copier nor fn_data creates bindings or transfers SourceSpace; enclosing node reuses exact source/parent proof.
+Ten pure cases passed: raw fn1/2/sub2/marks25/source3, unentered1/2, name7/7; held aliases8/8/8/9 at source3/next4;
+clone4/5/source3; descriptor5; malformed5/before1/after0; pending3/touch0; ambiguity3; run2 reset source1/held3.
+Private34 ran in three modes:32 matched; reference_alias/descriptor_merge needed only four pre380 synthetic-RHS
+golden parentheses lines. Six baseline AFTER checks on seed382 matched; numbers stayed unchanged. All102 full AFTER checks on
+the same34 binaries and mutation24 passed; actual native root→consuming declaration read→scope preparation traced7/7/normal exit.
+Source01:761 built code,02 adds20 fixture inputs,03:781 changes only four golden parentheses lines, SHA4a7ed184.
+Genuine G1/G2 quick, nine smoke rows each and fixedpoint13/verify781 passed. Genuine G2 rebuilt graph-tool,
+SHA10dbb1b4. G2 repeat34 triple including runs2/negative AFTER33/mutation24 and normal render/docs check383 passed:35/14/27/44/615, links/LF.
+The working tuple is383: boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01. Both copy classes have bounded
+private proofs; general external/computed CodeBody, M11.7/8 and full M11/M13/M14 remain OPEN. Native copied callees in
+M14 are not accepted by the native caller/scope trace. Acceptance is limited to this slice. See the [main plan](next_core_tasks_v3.md#m11).
+Before step7, M11.5e remains OPEN: direct named receiver actuals use only `:=`, while colon fields in a supplied whole
+descriptor DATA remain ordinary data; structural formals in args refuse during method construction.
+These boundaries require their own implementation and acceptance; binder356 and copy383 do not close them.
+
+Previous implementation note (2026-11-14, slice382; bounded implementation, code acceptance passed; base381/38cf026c): common Run.code_body53
 returns a borrowed body/from/to view through existing argument roles. An else/finally whole tail selects its sole
 written group once. Already selected method/ordinary/if/loop bodies are not unwrapped again; a remaining standalone
 inner group stays a value. Finally runs during unwind. Scanner, fn_own, walker, native and code_parent use the same
@@ -30,7 +49,9 @@ A held F actually reachable through the graph copies its current parts/data/alia
 without an automatic FN role. A later explicit fn creates fresh F/D through the common constructor.
 The warm3 → clone call4/source3 control belongs to explicit `fn:clone merge(leaf)` after warming the source,
 not to plain `merge(scope)`. The previous candidate inheriting SourceSpace's current F/data into a raw binding is withdrawn.
-Both proof classes remain OPEN; [normative reading](steps/handoff/copy-construction-reading-20261114.md).
+Both classes have bounded private proofs383; genuine G1/G2/fixedpoint13/verify781 passed.
+G2 repeat34 including runs2/AFTER33/mutation24 and docs383 passed; general coverage remains OPEN.
+See the [normative reading](steps/handoff/copy-construction-reading-20261114.md).
 
 Previous implementation note (2026-11-14, slice 381; bounded implementation, acceptance passed; base 380/c5ba5ef9): the existing
 GraphFrame.lexical_scope selects the physical CodeBody through shared work_scope; body/code/data identity and

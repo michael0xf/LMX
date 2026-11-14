@@ -1,6 +1,22 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice382; code acceptance passed): base381 is 38cf026c.
+Current continuation (2026-11-14, slice383; code acceptance passed): base382 is d0e384c1.
+The resolver shares pure query and consuming-read contexts, with caller-local status.
+Reading an absent raw fn/sub prepares the reached scope through existing declarations;
+the copier/fn_data, source parents, Run53 and Frame ABI are unchanged. Ten pure cases
+cover raw-copy bindings, current held state/aliases, explicit fresh construction,
+pending/ambiguity/constructor refusals and independent walks (source1/held3 on runs2).
+Private34 ran in three modes:32 initial matches and two stale pre380 RHS-wrapper goldens;
+Seed382 confirmed all six baseline AFTER checks. Only four parentheses changed, and all102
+full AFTER checks on the same binaries plus mutation24/native root trace passed.
+Source03:781 is frozen, SHA4a7ed184d976b820d605f14c2e9a33970b16e0dae54c0ae95e83c35d9b5e5604.
+Genuine G1/G2 quick, nine smoke rows each, fixedpoint13/verify781 and G2 graph rebuild passed.
+G2 repeat34 triple/negative AFTER33/mutation24 and normal render/docs check383 passed:
+35/14/27/44/615, links/LF27696 before staging; final index check02 passed LF27737.
+The working tuple is383: boot-m11-copy-bindings-01/g2 + graph-m11-copy-bindings-g2-01. M11.5e/7/8, external/computed
+CodeBody, native copied callees, M13 and M14 remain OPEN. [Witness383](../steps/witnesses/m11-copy-bindings-20261114/notes.md).
+
+Previous continuation (2026-11-14, slice382; code acceptance passed): base381 is 38cf026c.
 The accepted tool/frontend/runtime tuple is boot-m11-codebody-01/g2 with
 graph-m11-codebody-g2-01. Run.code_body53 now shares the borrowed body/from/to
 view at else/finally boundaries: a sole written group is selected once, while an

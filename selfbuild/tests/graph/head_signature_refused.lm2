@@ -1,0 +1,12 @@
+# A signature without code remains a function value and refuses in its binder.
+int: effects 0
+fn: touch () int
+    node\effects := node\effects + 1
+    return: 7
+@: Holder (
+    fn: missing (int: value) int
+)
+call(Holder)
+int: before 1
+Holder\missing(touch())
+int: after 0

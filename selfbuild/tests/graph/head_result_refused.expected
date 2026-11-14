@@ -1,0 +1,14 @@
+int: effects 0
+fn: touch () int
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 7
+end: touch
+Holder:
+    sub: step (int: value)
+        :=: (node \ effects) ((node \ effects) + value)
+    end: step
+end: Holder
+call: Holder
+int: before 1
+int: result Holder\step((touch))
+int: after 0

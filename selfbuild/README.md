@@ -1,6 +1,22 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice 378): acceptance passed. Common root work frame/block0,
+Current continuation (2026-11-14, slice 379): acceptance passed in main; commit/push follows.
+Base378: 369ded97. The application carrier [headExpr, WORD("()"), actualsLmx] and one head reader
+select the live target before actuals; existing binder/admission/ordinary launch preserve named Frames and groups.
+Runtime01/graph02 and seven pure cases passed: methods0/5/2/10/calls3, selected107/203/head1/effect1,
+ordinarySelf5/given11/quotedfield3; refusals8/5/5/5 occur before actual effects.
+All58 cases passed in three modes,174 full AFTER comparisons and mutation24, with previous goldens unchanged.
+Source03 verify699, SHA5900418f. Whole bootstrap01 quick built genuine G1/G2, nine smoke rows each;
+fixedpoint13 passed. Genuine G2/graph repeated58 cases in three modes, negative AFTER72/mutation24.
+Trace confirmed actual native root/choose/change and normal exit; nested Holder.first/second still use the walker.
+Two G2 machine probes confirmed the generic diagnostic; typed indirect application remains M11.8 OPEN.
+The shared index-text guard preserves exact identifiers with brackets. Normal semantics rendering and docs check
+passed:35/14/27/44/615, links and index LF; diff --check is clean.
+Code-tested tuple: boot-m11-head-application-01/g2 and graph-m11-head-application-g2-01.
+Full M11, stable physical-slot requirements/admission, M13 storage and shared cache/flush/ordinary native M14 remain OPEN.
+[Witness379](../steps/witnesses/m11-head-application-20261114/notes.md). The whole goal remains ACTIVE.
+
+Previous continuation (2026-11-14, slice 378): accepted `369ded97`. Common root work frame/block0,
 native wrapper completion and forced reuse replace the separate root emitter. Scalar values stand without capture;
 discarded AST uses eval_value/emit_operand, computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
 Private01 executed 50 cases in three modes; 48 matched old goldens, 2 needed five independently derived k-snapshot updates:

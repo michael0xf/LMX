@@ -448,12 +448,34 @@ fn: lm_graph_build_sequence (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0S
     return: status
 end: lm_graph_build_sequence
 
+# One expression-headed Frame is an application operator with a distinct
+# actuals Structure, including when it is empty. A written group keeps its
+# outer Structure and cannot be mistaken for this formed call.
+fn: lm_graph_build_application (@: g c.LmxGraph; @: parent c.Lmx; @: head void; @: source c.LmP0Structure; @: tail c.LmP0Trailer; @@: out void) int
+    @: actuals void 0
+    @: op void 0
+    @: application c.Lmx 0
+    int: status lm_graph_build_sequence(g, 0, source, 0, 0, 0, @ actuals)
+    if: status != 0
+        return: status
+    application := c.lmx_graph_lmx(g, parent, 3U)
+    op := c.lmx_graph_word(g, "()", 2U)
+    if: application = 0 || op = 0 || lm_graph_build_put(g, application, 0U, head) != 0 || lm_graph_build_put(g, application, 1U, op) != 0 || lm_graph_build_put(g, application, 2U, actuals) != 0
+        return: 1
+    out[0] := (cast: (@: void) application)
+    if: lm_graph_until_tail(tail) != 0
+        return: lm_graph_build_post(g, parent, application, tail, out)
+    return: 0
+end: lm_graph_build_application
+
 # Has the written selector an attached index, `base[index]` (grammar §22) -- a `[` that follows a name or another
 # index? The occurrence choice `owner\[N]field`, whose bracket follows the backslash, is none and keeps its own
 # reading. 1 or 0.
 fn: lm_graph_index_text (const: (@: bytes char); size_t: text_size) int
     size_t: i 1U
     int: found 0
+    if: text_size != 0U && bytes[0] = 96
+        return: 0
     while: i < text_size
         if: bytes[i] = 91
             if: bytes[i - 1U] = 92
@@ -773,14 +795,13 @@ fn: lm_graph_build_node (@: g c.LmxGraph; @: parent c.Lmx; @: nd c.LmP0Node; @@:
         if: (frame\flags & c.LM_P0_FRAME_ASSIGN) != 0U
             return: lm_graph_build_assignment(g, parent, frame, out)
         text := lm_graph_p0_head(frame)
-        # A Frame written on a path head, `owner\field: actuals` (Codex, review of 331: the path in field 0 of an
-        # ordinary Frame, the visible Lmx of the head expression, normalized here, once): the unnamed Lmx [path,
-        # actuals]; consumers resolve the head as any head (c.lmx_graph_path_head).
-        if: lm_graph_path_text(lm_graph_p0_data(text), lm_graph_p0_length(text)) != 0
+        # Preserve every selector used as the head of a formed Frame. The
+        # same selector builder handles paths and attached indices.
+        if: lm_graph_path_text(lm_graph_p0_data(text), lm_graph_p0_length(text)) != 0 || lm_graph_index_text(lm_graph_p0_data(text), lm_graph_p0_length(text)) != 0
             status := lm_graph_build_selector(g, lm_graph_p0_data(text), lm_graph_p0_length(text), @ value)
             if: status != 0
                 return: status
-            return: lm_graph_build_sequence(g, parent, lm_graph_p0_body(frame), 0, value, (cast: (@: c.LmP0Trailer) frame\trailer), out)
+            return: lm_graph_build_application(g, parent, value, lm_graph_p0_body(frame), (cast: (@: c.LmP0Trailer) frame\trailer), out)
         ---
         head := c.lmx_graph_intern(lm_graph_p0_data(text), lm_graph_p0_length(text))
         if: head = 0

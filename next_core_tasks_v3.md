@@ -1,5 +1,21 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**
+База378 — 369ded97. Carrier [headExpr, WORD("()"), actualsLmx], единый выбор живой цели до actuals,
+прежние binder/admission/ordinary launch; named Frames и written groups сохранены.
+Runtime01/graph02 и семь pure прошли: methods0/5/2/10/calls3, selected107/203/head1/effect1,
+ordinarySelf5/given11/quotedfield3; отказы8/5/5/5 до actual effects.
+58 случаев в трёх режимах,174 полных AFTER и mutation24 прошли без изменения прежних golden.
+Source03 verify699, SHA5900418f; whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke,
+fixedpoint13. Штатный G2/graph повторил58 в трёх режимах, negative AFTER72/mutation24.
+Trace подтвердил actual native root/choose/change и normal exit; nested Holder.first/second пока walker fallback.
+Две G2 machine-пробы подтвердили общий diagnostic; typed indirect lowering остаётся M11.8 OPEN.
+Exact-identifier index guard сохраняет имена со скобкой. Штатные render/docs-check прошли:
+35/14/27/44/615, ссылки и LF индекса; diff --check чист. Далее commit/push main.
+Рабочая кодовая связка boot-m11-head-application-01/g2 + graph-m11-head-application-g2-01.
+Полный M11, стабильные требования мест/общий допуск, M13 storage и shared cache/flush/ordinary native M14 OPEN.
+[Свидетельство](steps/witnesses/m11-head-application-20261114/notes.md). Весь goal ACTIVE.
+
 **2026-11-14, срез378 — общий root frame и CODE consumers, кодовая приёмка пройдена в main.**
 377 принят и отправлен04fbf275. Прежний work frame и block0 общие для root/native/forced;
 отдельный root emitter снят. Computed bindings сохраняют producer timing, bare scalar values не
@@ -1785,6 +1801,12 @@ Structure и записью значения, снимаются — шаг 6. �
      `root_repeat_refused`). Остаётся: запись с головой — именем места того же уровня как вхождение в пути (ответ
      Р19, пункт 2); повтор объявления переменной в корне единицы и в явной части `data` метода; вложенные вхождения
      `data\if\if`; запись по индексу в слот атома (раздел M6, шаг 4).
+     Зависимость индексной записи от шага7: допуск определяется прежним требованием физического места,
+     включая отсутствие требования, а не текущим referent. Контроль одного слота: atom → Structure →
+     адрес int → Structure, результаты7/41/9; отсутствие требования сохраняется после первой записи.
+     Одноразовый guard по kind WORD этого не обеспечивает. Использовать существующие механизмы
+     требований/допуска с допустимым временем жизни; не хранить историю в activation Work rows.
+     Первоначально типизированное Structure-поле сохраняет отрицательный контроль struct_index_admit.
    - **5е. Присваивание и аргументы.** Слева от `:=` место примитива или указатель-переменная; имя Structure или
      функции слева — отказ; справа имя Structure или функции даёт указатель. `f(arg: v)` — вызов `arg`; именованный
      аргумент и именованные части ресиверов `fn`, `sub` — только `:=`; аргументы всех ресиверов именованные и
@@ -1810,6 +1832,11 @@ Structure и записью значения, снимаются — шаг 6. �
    Начать разделение с own-ветви work_open_parts, которая пока зовёт lmx_graph_call(g, data),
    и пропусков data в block/emit_block. language_receiver — широкий входной список слов,
    включая args/code/data, а не готовый фильтр исполняемых ресиверов объявления.
+   **Частное снятие в срезах368–379:** own data_run отделён от CODE, root использует общий block/frame.
+   В379 удалены eval_path_statement/emit_path_statement; path_head заменён application_parts,
+   launch_head — единым application_head; emit_call/apply_or используют selected target и actuals view.
+   Бывший exec_statement сужен до own-data declaring receiver helper. Рабочий frontend и общий
+   construction admission остаются зависимыми OPEN частями; удалённые функции не восстанавливать.
    Проверка: опись с числом функций и строк до и после; фикстуры шагов 4, 5 и 8 проходят без изменений; графы и L1
    программ, не затронутых правилами, прежние.
 7. **Чистый граф: `implements` при построении.** Один проход допуска после построения графа — вызовы с известным
@@ -1826,6 +1853,13 @@ Structure и записью значения, снимаются — шаг 6. �
    становятся отрицательными. В частности, `tests/dyn/written_form.lm2` сохраняет отменённые присваивания
    структурной формой, прежний `var` и порядок `call`: переписать её по действующим ролям здесь,
    а не выдавать за миграцию M8 механическую замену двоеточия перед группой.
+   **OPEN после среза379:** typed indirect expression-head application в graph machine frontend.
+   Потреблять общий carrier, определить машинный тип головы и выбрать её один раз до actuals;
+   сохранить порядок, preflight и различие nullary/одного written group. Пока этот путь выдаёт общий
+   diagnostic до binary/colon dispatch; named module/C-door calls сохранены. Native graph-tool с общим
+   runtime head reader не является реализацией этого frontend. Сохранить общий exact-identifier guard
+   при распознавании attached index: скобки внутри exact identifier не становятся индексом;
+   использовать существующее построение выражений, без переписывания парсера.
    Проверка: полный набор; `bootstrap quick` — неподвижная точка; мутанты по правилам.
    Общее исполнение согласовать с [M14](#native-structures): обычная C и методы используют одни кадр,
    допуск и карту мест; публикация dirty кода/данных и продолжение совпадают у native и обходчика.

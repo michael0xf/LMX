@@ -1,5 +1,28 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г: срез379, общий вызов через выражение головы, приёмка пройдена
+
+378 принят и отправлен:369ded971a5ad42a8f014844886f62336afbfc7d. Только main,
+C:/Nyasha_Planet/LMX; один writer/build Sol, pipeline sol-m11-head-application-20261114-01.
+Baseline378 head-methods probe отказывает3: старый anonymous[path,actuals] теряет nullary Frame
+и неверно сканирует actuals. Новый общий carrier — [headExpr, WORD("()"), actualsLmx], без opcode/tag.
+Named Frames сохраняют форму; один query и head reader выбирают цель до actual effects.
+Producer bridge построен и проверен на прежнем ABI до полного stage sync; далее он собрал runtime01/graph02.
+Source03 verify699 заморожен. Семь pure,58 случаев в interp/native/forced,174 полных AFTER и mutation24 прошли.
+Первый AFTER manifest ошибочно называл forced log; исправлен только receipt path, готовые бинарники сохранены.
+Methods0/5/2/10/calls3; selected107/203/head1/effect1; ordinary Self5/given11/quotedfield3;
+отказы8/5/5/5 до actual effects. Exact identifier со скобкой сохраняет named Frame.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify699 прошли.
+Штатный G2/graph повторил58 в трёх режимах, negative AFTER72 и mutation24 прошли.
+Trace подтвердил actual native root/choose/change и normal exit; два machine-refusal G2 прошли.
+Рабочая связка boot-m11-head-application-01/g2 + graph-m11-head-application-g2-01.
+Штатные render/docs-check прошли:35/14/27/44/615, ссылки и LF; diff --check чист.
+Native root/choose/change поддержаны, nested Holder.first/second пока walker fallback; это OPEN M14.
+Typed indirect application graph machine frontend — OPEN M11.8, сейчас явный общий diagnostic.
+Staged-index docs-check02 прошёл:LF27562; оба diff --check чисты. Далее commit/push379 в main.
+Legacy computed-int M13, shared cache/flush/ordinary native M14 и полный M11 OPEN; goal ACTIVE.
+Сохранить два чужих untracked, конвейер последовательный.
+
 ## 2026-11-14 — M11.5г/M14: срез378, общий root frame, кодовая приёмка пройдена
 
 377 принят и отправлен:04fbf275c4801b648f8750d6d57f83641ae4f1f9. Только main в

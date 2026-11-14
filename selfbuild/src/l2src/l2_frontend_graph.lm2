@@ -537,7 +537,7 @@ fn: lm_compiler_graph_calls (@: g c.LmxGraph; @: value void) int
     # `c.sizeof` is the C operator (L2 §20), no call: it runs nothing.
     if: head = c.lmx_graph_intern("c.sizeof", 8U)
         return: 0
-    if: head != 0
+    if: head != 0 || c.lmx_graph_application_parts(g, value, 0, 0, 0) != 0
         return: 1
     while: j < c.lmx_graph_count(expression)
         if: lm_compiler_graph_calls(g, c.lmx_graph_get(expression, j)) != 0
@@ -722,6 +722,8 @@ fn: lm_compiler_graph_keep (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         return: 0
     expression := (cast: (@: c.Lmx) value)
     head := c.lmx_graph_name_of(g, value)
+    if: head = 0 && c.lmx_graph_application_parts(g, value, 0, 0, 0) != 0
+        return: lm_compiler_graph_refuse_at(src, fname, at, "expression-head application is not supported by the graph machine frontend")
     count := c.lmx_graph_count(expression)
     if: head = c.lmx_graph_intern("cast", 4U)
         if: count != 2U
@@ -870,6 +872,8 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
         return: lm_compiler_graph_refuse_at(src, fname, at, "the graph path of a machine function translates names, numbers, operations, paths, casts and calls: no other expression yet")
     expression := (cast: (@: c.Lmx) value)
     head := c.lmx_graph_name_of(g, value)
+    if: head = 0 && c.lmx_graph_application_parts(g, value, 0, 0, 0) != 0
+        return: lm_compiler_graph_refuse_at(src, fname, at, "expression-head application is not supported by the graph machine frontend")
     if: head != 0
         # `cast: (T) value`: the type Structure holds a word (a C scalar or door type) or a reference `@: T`.
         if: head = c.lmx_graph_intern("cast", 4U) && c.lmx_graph_count(expression) = 2U && c.lmx_graph_kind(g, c.lmx_graph_get(expression, 0U)) = 4
@@ -946,18 +950,14 @@ fn: lm_compiler_graph_expr (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args
     return: 0
 end: lm_compiler_graph_expr
 
-# The statements of block -- the body of a machine function, of an if or of an else --, each at level (four spaces a
-# level): `if: condition` with its body and the `else:` that follows it, each body closed by its tail cutter `---`;
-# `return: value`; the write of a field through a path head, `owner\field: value` (the unnamed Lmx [path, value],
-# lmx_graph_path_head); a declaration of an own place -- declared at the function's entry, written here when it is
-# written with a value --; the write of a formal or a place, `name: value`; a call. at counts the statements read. 0,
-# or the refusal.
+# The statements of a machine body: if/else, return, declarations, assignment
+# and named module/C-door calls. Expression-head application still requires
+# typed indirect-call lowering here; it is diagnosed before operator dispatch.
 fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: args c.Lmx; int: mi; @@: dheads char; @: droles int; size_t: dn; @@: names char; @@: types char; @: ptr int; size_t: n; int: k0; @@: kept c.Lmx; @: kn size_t; @: block c.Lmx; int: level; const: (@: src char); @: fname char; @: at int) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: raw void 0
     @: statement c.Lmx 0
     @: head char 0
-    @: path void 0
     @: next void 0
     @: left void 0
     @: value void 0
@@ -1007,9 +1007,8 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
             return: lm_compiler_graph_refuse_at(src, fname, at[0], "the graph path of a machine function translates if, else, return, declarations, writes and calls: no other statement yet")
         statement := (cast: (@: c.Lmx) raw)
         head := c.lmx_graph_name_of(g, raw)
-        path := 0
-        if: head = 0
-            path := c.lmx_graph_path_head(g, raw)
+        if: head = 0 && c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
+            return: lm_compiler_graph_refuse_at(src, fname, at[0], "expression-head application is not supported by the graph machine frontend")
         if: head = state\w_return && c.lmx_graph_count(statement) = 1U
             status := lm_compiler_graph_keep(g, f, root, args, mi, names, types, ptr, n, k0, kept, kn, c.lmx_graph_get(statement, 0U), level, 0, src, fname, at[0])
             if: status != 0
@@ -1097,8 +1096,6 @@ fn: lm_compiler_graph_block (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: arg
         # Plan M7, step 4 (the author, 2026-11-10; the book, forms-declare-or-call): a structural form declares or calls
         # and writes no known place.  The forms `owner\field: value` and `name: value`, name a formal or a place of the
         # function, wrote here before; the write is the operator `:=` above, and these are the refusal.
-        if: path != 0 && c.lmx_graph_count(statement) = 2U
-            return: lm_compiler_graph_refuse_at(src, fname, at[0], "a form with a colon declares and writes no known place: the field through this path is assigned with :=")
         if: head != 0 && c.lmx_graph_count(statement) = 1U && (c.lmx_graph_formal(g, args, head) < c.lmx_graph_count(args) || lm_compiler_graph_place_at(names, n, head) < n)
             return: lm_compiler_graph_refuse_at(src, fname, at[0], "a form with a colon declares and writes no known place: this formal or place of the function is assigned with :=")
         if: head != 0 && lm_compiler_graph_callee(g, root, raw) != 0

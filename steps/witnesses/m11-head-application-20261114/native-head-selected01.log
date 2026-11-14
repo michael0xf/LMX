@@ -1,0 +1,131 @@
+Breakpoint 1 at 0x14000260b
+Breakpoint 2 at 0x14006f168
+Breakpoint 3 at 0x1400019cd
+Breakpoint 4 at 0x140002530
+Breakpoint 5 at 0x14006c03a
+[New Thread 16800.0x1a4]
+[New Thread 16800.0xd4c]
+[New Thread 16800.0x3404]
+GRAPH-BEFORE-BEGIN
+int: head_reads 0
+int: effects 0
+@: Holder ((fn first ((int value)) int ((return (100 + value)))) (fn second ((int value)) int ((return (200 + value)))))
+call: Holder
+@: Slots ((@ selected (Holder \ first)))
+call: Slots
+fn: choose () int
+    :=: (node \ head_reads) ((node \ head_reads) + 1)
+    return: 0
+end: choose
+fn: change () int
+    :=: ((node \ Slots) \ selected) (Holder \ second)
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 7
+end: change
+int: first Slots[(choose)]((change))
+int: second Slots[0](3)
+int: head_count (data \ head_reads)
+int: effect_count (data \ effects)
+GRAPH-BEFORE-END
+NATIVE ROOT
+#0  0x00007ff6ea2b260b in lm_graph_root ()
+#1  0x00007ff6ea2b395b in lm_graph_body ()
+#2  0x00007ff6ea3239c2 in lmx_call0_mode ()
+#3  0x00007ff6ea324a70 in lmx_graph_call ()
+NESTED CALLEE WALKER FALLBACK
+#0  0x00007ff6ea31c03a in lmx_graph_method_run ()
+#1  0x00007ff6ea31ab80 in lmx_graph_call_data ()
+#2  0x00007ff6ea2b29bb in lm_graph_root ()
+#3  0x00007ff6ea2b395b in lm_graph_body ()
+#4  0x00007ff6ea3239c2 in lmx_call0_mode ()
+NESTED CALLEE WALKER FALLBACK
+#0  0x00007ff6ea31c03a in lmx_graph_method_run ()
+#1  0x00007ff6ea31ab80 in lmx_graph_call_data ()
+#2  0x00007ff6ea2b2b79 in lm_graph_root ()
+#3  0x00007ff6ea2b395b in lm_graph_body ()
+#4  0x00007ff6ea3239c2 in lmx_call0_mode ()
+APPLICATION HEAD
+#0  0x00007ff6ea31f168 in lmx_graph_application_head ()
+#1  0x00007ff6ea2b2c4b in lm_graph_root ()
+#2  0x00007ff6ea2b395b in lm_graph_body ()
+#3  0x00007ff6ea3239c2 in lmx_call0_mode ()
+#4  0x00007ff6ea324a70 in lmx_graph_call ()
+APPLICATION HEAD
+#0  0x00007ff6ea31f168 in lmx_graph_application_head ()
+#1  0x00007ff6ea31ad92 in lmx_graph_eval_application ()
+#2  0x00007ff6ea31cc41 in lmx_graph_eval_number ()
+#3  0x00007ff6ea31d640 in lmx_graph_eval_value ()
+#4  0x00007ff6ea31f22b in lmx_graph_application_head ()
+NATIVE CHOOSE
+#0  0x00007ff6ea2b19cd in lm_graph_method0 ()
+#1  0x00007ff6ea31a73f in lmx_call_prim_values ()
+#2  0x00007ff6ea320a17 in lmx_graph_invoke_data ()
+#3  0x00007ff6ea3212b4 in lmx_graph_eval_call ()
+#4  0x00007ff6ea31cc41 in lmx_graph_eval_number ()
+APPLICATION HEAD
+#0  0x00007ff6ea31f168 in lmx_graph_application_head ()
+#1  0x00007ff6ea2b2e56 in lm_graph_root ()
+#2  0x00007ff6ea2b395b in lm_graph_body ()
+#3  0x00007ff6ea3239c2 in lmx_call0_mode ()
+#4  0x00007ff6ea324a70 in lmx_graph_call ()
+NATIVE CHANGE
+#0  0x00007ff6ea2b2530 in lm_graph_method1 ()
+#1  0x00007ff6ea31a73f in lmx_call_prim_values ()
+#2  0x00007ff6ea320a17 in lmx_graph_invoke_data ()
+#3  0x00007ff6ea320d82 in lmx_graph_invoke_bound ()
+#4  0x00007ff6ea2b2f65 in lm_graph_root ()
+NESTED CALLEE WALKER FALLBACK
+#0  0x00007ff6ea31c03a in lmx_graph_method_run ()
+#1  0x00007ff6ea320c36 in lmx_graph_invoke_data ()
+#2  0x00007ff6ea320d82 in lmx_graph_invoke_bound ()
+#3  0x00007ff6ea2b300b in lm_graph_root ()
+#4  0x00007ff6ea2b395b in lm_graph_body ()
+APPLICATION HEAD
+#0  0x00007ff6ea31f168 in lmx_graph_application_head ()
+#1  0x00007ff6ea2b313e in lm_graph_root ()
+#2  0x00007ff6ea2b395b in lm_graph_body ()
+#3  0x00007ff6ea3239c2 in lmx_call0_mode ()
+#4  0x00007ff6ea324a70 in lmx_graph_call ()
+NESTED CALLEE WALKER FALLBACK
+#0  0x00007ff6ea31c03a in lmx_graph_method_run ()
+#1  0x00007ff6ea320c36 in lmx_graph_invoke_data ()
+#2  0x00007ff6ea320d82 in lmx_graph_invoke_bound ()
+#3  0x00007ff6ea2b33c9 in lm_graph_root ()
+#4  0x00007ff6ea2b395b in lm_graph_body ()
+GRAPH-AFTER-BEGIN
+int: head_reads 1
+int: effects 1
+Holder:
+    fn: first (int: value) int
+        return: (100 + value)
+    end: first
+    fn: second (int: value) int
+        return: (200 + value)
+    end: second
+end: Holder
+call: Holder
+Slots:
+    @: selected second
+end: Slots
+call: Slots
+fn: choose () int
+    :=: (node \ head_reads) ((node \ head_reads) + 1)
+    return: 0
+end: choose
+fn: change () int
+    :=: ((node \ Slots) \ selected) (Holder \ second)
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 7
+end: change
+int: first 107
+int: second 203
+int: head_count 1
+int: effect_count 1
+GRAPH-AFTER-END
+[New Thread 16800.0x32fc]
+l2_eternal_driver: 81 checks, 0 roots
+[Thread 16800.0x32fc exited with code 0]
+[Thread 16800.0xd4c exited with code 0]
+[Thread 16800.0x3404 exited with code 0]
+[Thread 16800.0x1a4 exited with code 0]
+[Inferior 1 (process 16800) exited normally]

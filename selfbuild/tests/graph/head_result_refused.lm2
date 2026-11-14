@@ -1,0 +1,13 @@
+# A value context requires a result before evaluating the actual.
+int: effects 0
+fn: touch () int
+    node\effects := node\effects + 1
+    return: 7
+@: Holder (
+    sub: step (int: value)
+        node\effects := node\effects + value
+)
+call(Holder)
+int: before 1
+int: result Holder\step(touch())
+int: after 0

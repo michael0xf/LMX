@@ -1,5 +1,26 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**
+База378 — 369ded97. Carrier [headExpr, WORD("()"), actualsLmx], единый выбор живой цели до actuals,
+прежние binder/admission/ordinary launch; named Frames и written groups сохранены.
+Runtime01/graph02 и семь pure прошли: methods0/5/2/10/calls3, selected107/203/head1/effect1,
+ordinarySelf5/given11/quotedfield3; отказы8/5/5/5 до actual effects.
+58 случаев в трёх режимах,174 полных AFTER и mutation24 прошли без изменения прежних golden.
+Source03 verify699, SHA5900418f; whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke,
+fixedpoint13. Штатный G2/graph повторил58 в трёх режимах, negative AFTER72/mutation24.
+Trace подтвердил actual native root/choose/change и normal exit; nested Holder.first/second пока walker fallback.
+Две G2 machine-пробы подтвердили общий diagnostic; typed indirect lowering остаётся M11.8 OPEN.
+Exact-identifier index guard сохраняет имена со скобкой. Штатные render/docs-check прошли:
+35/14/27/44/615, ссылки и LF индекса; diff --check чист. Далее commit/push main.
+Рабочая кодовая связка boot-m11-head-application-01/g2 + graph-m11-head-application-g2-01.
+Полный M11, стабильные требования мест/общий допуск, M13 storage и shared cache/flush/ordinary native M14 OPEN.
+[Свидетельство](steps/witnesses/m11-head-application-20261114/notes.md). Весь goal ACTIVE.
+
+- [x] Кодовая приёмка379:58 triple,174 AFTER, G1/G2/fixedpoint13, G2 AFTER72/mutation24.
+- [x] Штатные render/docs check379:35/14/27/44/615, ссылки и LF.
+- [ ] M11.8 typed indirect application graph machine frontend; общий допуск и стабильные требования мест M11.7.
+- [ ] Полный M13/M14; goal ACTIVE.
+
 **2026-11-14, срез378 — общий root frame, кодовая приёмка пройдена.**
 377 принят и отправлен04fbf275. Run/native/forced используют прежний frame; CODE block общий,
 старый root emitter удалён. Пять pure,51 triple outputs,153 full AFTER/mutation24 прошли.

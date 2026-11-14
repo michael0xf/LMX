@@ -1,5 +1,21 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**
+База378 — 369ded97. Carrier [headExpr, WORD("()"), actualsLmx], единый выбор живой цели до actuals,
+прежние binder/admission/ordinary launch; named Frames и written groups сохранены.
+Runtime01/graph02 и семь pure прошли: methods0/5/2/10/calls3, selected107/203/head1/effect1,
+ordinarySelf5/given11/quotedfield3; отказы8/5/5/5 до actual effects.
+58 случаев в трёх режимах,174 полных AFTER и mutation24 прошли без изменения прежних golden.
+Source03 verify699, SHA5900418f; whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke,
+fixedpoint13. Штатный G2/graph повторил58 в трёх режимах, negative AFTER72/mutation24.
+Trace подтвердил actual native root/choose/change и normal exit; nested Holder.first/second пока walker fallback.
+Две G2 machine-пробы подтвердили общий diagnostic; typed indirect lowering остаётся M11.8 OPEN.
+Exact-identifier index guard сохраняет имена со скобкой. Штатные render/docs-check прошли:
+35/14/27/44/615, ссылки и LF индекса; diff --check чист. Далее commit/push main.
+Рабочая кодовая связка boot-m11-head-application-01/g2 + graph-m11-head-application-g2-01.
+Полный M11, стабильные требования мест/общий допуск, M13 storage и shared cache/flush/ordinary native M14 OPEN.
+[Свидетельство](steps/witnesses/m11-head-application-20261114/notes.md). Весь goal ACTIVE.
+
 **2026-11-14, срез378 — общий root frame и CODE consumers, кодовая приёмка пройдена в main.**
 377 принят и отправлен:04fbf275c4801b648f8750d6d57f83641ae4f1f9. Run/native wrapper используют
 прежний work frame, forced переиспользует его; отдельный root emitter удалён. Block0 и native block
@@ -668,6 +684,12 @@ bootstrap достигает неподвижной точки, различия
   его аргументов не переставлять.
 - Менять frontend и его потребителей согласованными шагами через существующий bootstrap. На границе каждого
   шага должно быть ясно, каким предыдущим образом собирается новый; не удалять единственный работающий seed.
+- **OPEN после379:** typed indirect expression-head application в graph machine frontend: общий carrier,
+  машинный тип и однократный выбор head до actuals, сохранение порядка/preflight и nullary/одного written group.
+  Нынешний общий diagnostic до binary/colon dispatch сохранять до реализации; named module/C-door calls
+  работают прежним путём. Native graph-tool с общим runtime reader не закрывает этот пункт.
+  Сохранить общий exact-identifier index guard: скобки внутри точного имени не означают attached index;
+  продолжать существующий expression builder, без переписывания парсера.
 - Довести восемь смешанных примеров раздела 3
   [отчёта документов](steps/handoff/docs-pass-report-20261111.md) и описания пределов срезов 356–358.
   Сохранить уже внесённые решения Q1–Q17 с уточнением об отложенных пунктах из шага 0; отозванные чтения Р26 не возвращать. Фиксировать только фактически

@@ -1,0 +1,28 @@
+int: head_reads 1
+int: effects 1
+Holder:
+    fn: first (int: value) int
+        return: (100 + value)
+    end: first
+    fn: second (int: value) int
+        return: (200 + value)
+    end: second
+end: Holder
+call: Holder
+Slots:
+    @: selected second
+end: Slots
+call: Slots
+fn: choose () int
+    :=: (node \ head_reads) ((node \ head_reads) + 1)
+    return: 0
+end: choose
+fn: change () int
+    :=: ((node \ Slots) \ selected) (Holder \ second)
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 7
+end: change
+int: first 107
+int: second 203
+int: head_count 1
+int: effect_count 1

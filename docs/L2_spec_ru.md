@@ -2,6 +2,11 @@
 
 L2 задаёт механизмы ядра и машинные операции. Семантика L3 определяется в [спецификации LMX](LMX_semantics.ru.md), синтаксис — в [грамматике](LMX_grammar.ru.md), понижение в C99 — в [L1](L1_spec_ru.md). Этот документ не повторяет правила разрешения голов, объявления и вызова. Состояние реализации — в [заметках](implementation-notes.ru.md).
 
+**Состояние реализации, 2026-11-14, срез392:** ограниченные кодовые gates общего borrowed receiving/name reader пройдены;
+G2 render35/14 и оба snapshots, docs-check01/final index02 PASS; generated semantics/grammar unchanged. Commit/push далее.
+Model/default сохраняются как исходное описание, `c_names` — только проекция ролей; это не typed storage/admission
+или объединение aliases. Полные M11/M13/M14 OPEN. [Контракт и проверки392](kernel-implementation.ru.md).
+
 <a id="scope"></a>
 ## 1. Предмет
 

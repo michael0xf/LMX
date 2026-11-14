@@ -2,6 +2,11 @@
 
 L2 defines the kernel mechanisms and machine operations. L3 semantics are in the [LMX specification](LMX_semantics.en.md), syntax in the [grammar](LMX_grammar.en.md), and C99 lowering in [L1](L1_spec_en.md). This document does not restate head resolution, declaration, or call rules. Implementation status belongs to the [notes](implementation-notes.en.md).
 
+**Implementation status, 2026-11-14, slice392:** bounded code gates for the common borrowed receiving/name reader passed;
+G2 render35/14, both snapshots and docs-check01/final index02 PASS; generated semantics/grammar unchanged. Commit/push follow.
+Model/default remain source descriptions, and `c_names` is a role projection only; this establishes neither typed storage/admission
+nor alias unification. Full M11/M13/M14 remain OPEN. [Contract and checks392](kernel-implementation.en.md).
+
 <a id="scope"></a>
 ## 1. Scope
 

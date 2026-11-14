@@ -860,6 +860,22 @@ fn: lm_compiler_translate_unit (const: (@: unit c.LmP0Structure); const: (@: pat
     return: (cast: (int) (0))
 end: lm_compiler_translate_unit
 
+# A single imported C identifier from a spelling cell. Multiword C spellings have no invented door alias.
+fn: lm_compiler_profile_c_size (const: (@: text c.LmP0Text)) size_t
+    const: (@: bytes char text\data)
+    size_t: n text\length
+    size_t: i 0U
+    int: ch 0
+    if: n >= 2U && ((bytes[0] = 96 && bytes[n - 1U] = 96) || (bytes[0] = 34 && bytes[n - 1U] = 34))
+        bytes := bytes + 1U
+        n := n - 2U
+    while: i < n
+        ch := (cast: (int) bytes[i])
+        if: (ch < 65 || ch > 90) && (ch < 97 || ch > 122) && ch != 95 && (i = 0U || ch < 48 || ch > 57)
+            return: 0U
+        i := i + 1U
+    return: n
+
 # Project the existing source primitive table into generated data for the clean graph. Parsing, source-table
 # loading, snapshots and publication are the normal translation's; no table parser or runtime frontend is added.
 # Names are canonical payloads, separated by NUL; the parallel bytes retain the cell flag of every source row.
@@ -880,12 +896,17 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
     @@@: tb_path_cell char (cast: (@@@: char) (@ c.l2_tb_path))
     @: names char 0
     @: flags char 0
+    @: c_names char 0
     const: (@: text c.LmP0Text 0)
     const: (@: bytes char 0)
     c.LmP0Text: emitted
     size_t: name_size 0U
     size_t: total 0U
     size_t: at 0U
+    size_t: c_total 0U
+    size_t: c_at 0U
+    size_t: c_size 0U
+    int: spelling 0
     int: row 0
     int: count 0
     int: slot 0
@@ -897,6 +918,9 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
     if: c.lm_compiler_prim_load() != 0
         return: 1
     count := tb_nrow_cell[0][pr_t_cell[0]]
+    spelling := c.lm_compiler_table_col(pr_t_cell[0], "spelling")
+    if: spelling < 0
+        return: 1
     while: row < count
         slot := tb_cell0_cell[0][pr_t_cell[0]] + row * tb_ncol_cell[0][pr_t_cell[0]]
         if: tbx_name_cell[0][slot + pr_c_cell[0]] = 0
@@ -915,12 +939,24 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
         text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + pr_c_cell[1]]\as\atom)
         if: c.lm_compiler_payload_eq(text, "0") = 0 && c.lm_compiler_payload_eq(text, "1") = 0
             return: c.lm_compiler_table_said(tb_path_cell[0][pr_t_cell[0]], tbx_arg_cell[0][slot + pr_c_cell[1]], "a primitive profile cell flag is not 0 or 1")
+        c_size := 0U
+        if: c.lm_compiler_payload_eq(text, "1") != 0 && tbx_name_cell[0][slot + spelling] != 0
+            text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + spelling]\as\atom)
+            c_size := lm_compiler_profile_c_size(text)
+        if: c_size != 0U
+            if: c_total > (cast: (size_t) -1) - 3U || c_size > (cast: (size_t) -1) - c_total - 3U
+                return: 1
+            c_total := c_total + c_size + 2U
+        if: c_total >= (cast: (size_t) -1) - 1U
+            return: 1
+        c_total := c_total + 1U
         total := total + name_size + 1U
         row := row + 1
     ---
     names := (cast: (@: char) c.lm_compiler_xmalloc(total + 1U))
     flags := (cast: (@: char) c.lm_compiler_xmalloc((cast: (size_t) count) + 1U))
-    if: names = 0 || flags = 0
+    c_names := (cast: (@: char) c.lm_compiler_xmalloc(c_total + 1U))
+    if: names = 0 || flags = 0 || c_names = 0
         status := 1
     row := 0
     while: row < count && status = 0
@@ -938,6 +974,20 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
         at := at + 1U
         text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + pr_c_cell[1]]\as\atom)
         flags[row] := (cast: (char) c.lm_compiler_payload_eq(text, "1"))
+        c_size := 0U
+        if: flags[row] != 0 && tbx_name_cell[0][slot + spelling] != 0
+            text := (cast: (const: @: c.LmP0Text) tbx_arg_cell[0][slot + spelling]\as\atom)
+            c_size := lm_compiler_profile_c_size(text)
+        if: c_size != 0U
+            bytes := text\data
+            if: text\length != c_size
+                bytes := bytes + 1U
+            c_names[c_at] := 99
+            c_names[c_at + 1U] := 46
+            c.memcpy(c_names + c_at + 2U, bytes, c_size)
+            c_at := c_at + c_size + 2U
+        c_names[c_at] := 0
+        c_at := c_at + 1U
         row := row + 1
     ---
     if: status = 0
@@ -959,6 +1009,12 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
             emitted\length := (cast: (size_t) count)
             if: status = 0
                 status := c.lm_compiler_emit_cstr(@ emitted)
+            if: c.fputs("\nconst: @: char lmx_primitive_profile_c_names ", out_cell[0]) < 0
+                status := 1
+            emitted\data := c_names
+            emitted\length := c_total
+            if: status = 0
+                status := c.lm_compiler_emit_cstr(@ emitted)
             if: c.fputc(10, out_cell[0]) = c.EOF
                 status := 1
             if: c.fclose(out_cell[0]) != 0
@@ -968,6 +1024,7 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
     ---
     c.lm_compiler_xfree((cast: (@: void) names))
     c.lm_compiler_xfree((cast: (@: void) flags))
+    c.lm_compiler_xfree((cast: (@: void) c_names))
     if: status = 0
         status := c.lm_compiler_translation_failed(in_path, root)
     if: status = 0

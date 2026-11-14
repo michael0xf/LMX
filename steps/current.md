@@ -1,5 +1,39 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7/M13: срез392, кодовые gates и render PASS
+
+Предыдущий goal turn — progress: общий borrowed receiving/name reader дополнен logical whole-field guard
+и общим DATA shape proof. Работа/build/commit/push прямо C:/Nyasha_Planet/LMX main, без отдельного дерева Sol.
+391 принят/отправлен5be5c1a5ba72eee73a321af5b9ec6632ea9d20e6. Root единственный code/test/build writer;
+helpers вернули документы, чужие два untracked сохранить. Goal ACTIVE; полный v3 не завершён.
+
+Final frozen Source08:919 SHAb8b1b9b6095610b03bd26c80bc5c4988be3cfdc3c7b0eab0512a0c3994f44909.
+Private Runtime06 fe17a328/Graph02 69eab914: все21 interp/native/forced и negative AFTER15 PASS.
+Шесть новых source/expected pairs. Прежний construction_shape_presence исправлен с неизменённым expected;
+roles дают effects1/arithmetic15/called6/indexed12/via_whole13/done1, cold qualified/deep/Array/C инертны.
+Receiving root/model/default/qualifiers сохраняются; C-spelling profile доказывает только роль типа,
+не эквивалентность source classes. Physical numeric index и ready references сохраняют Frame route.
+
+Whole boot-m11-receiving-view-02 quick PASS: actualG1/G2 по9 smoke и tool startup/hash PASS.
+Fixedpoint:13 artifact comparisons PASS; устаревший canonical907 пересоздан штатно, ещё2 manifest checks
+PASS на919. Private Runtime06==G2driver; новых сборок для обновления манифеста не было.
+G2Graph9c44994b собран штатно, G2 interp21/fullAFTER21 PASS.42 native/forced generated programs,
+libc и backend побайтно прежние(44 checks), готовые private binaries переиспользованы без повторной компиляции/запуска.
+G1 frontend quoted/bare FILE profile byte-equal; G1/G2 frontend exe-same. Numeric probe подтверждает
+сохранённые два поля deep/model и computed-default; format dump сигнатуры их полностью не показывает.
+G2 render semantics35 paired/14 cases/both snapshots PASS; generated content и grammar unchanged.
+
+Все code/build producers terminal. Fresh-CWD/private-OUT docs-check01 PASS35/14/27/44/615, links/LF28235.
+Final staged index02 PASS35/14/27/44/615, links/LF28262, diff-check clean; далее commit/push392 main.
+Gate receipts/result annotations добавлены после проверки как outputs, не semantic inputs.
+Seed после приёмки — stage/boot-m11-receiving-view-02/g2 + graph-m11-receiving-view-g2-02.
+Stage: build2/codex_fix250generationchain01/sol-m11-construction-fresh01.
+Pipeline: build2/codex_fix250generationchain01/runs/sol-m11-receiving-view-20261114-01.
+История rejected whole01, normal generated-header repair и все хеши — [свидетельство392](witnesses/m11-receiving-view-20261114/notes.md).
+Не повторять terminal jobs. Полный typed storage/qualification/model/producer retention и35-row source/ABI
+bridge, operation-local Graph name/fact reader всего implements worker, runtime merge/fromLmx construction,
+полные M11.7/8/M13/M14 OPEN. Следующий общий код и зависимости находятся в основном v3/checklist.
+
 ## 2026-11-14 — M11.7: срез391, кодовые gates и docs-check PASS
 
 **Коррекция после private48:** bootstrap01/session77929 остановлен по подтверждённому дефекту Source03:

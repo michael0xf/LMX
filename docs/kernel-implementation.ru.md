@@ -1,6 +1,27 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**Текущее состояние, 2026-11-14, срез391 — ограниченная реализация; кодовые gates и docs-check пройдены.**
+**Текущее состояние, 2026-11-14, срез392 — ограниченные кодовые gates и docs-check01 пройдены.**
+`declaration_parts` заимствует receiving leaf/model/candidate и presence/known, сохраняя исходный root;
+DATA logical names требуют доказанного declaring-контракта (§3.5). C-spelling проекция расширяет прежний generated
+primitive profile; `c_names` доказывает роли source spellings, не объединяет C-типы с языковыми aliases.
+Произвольное `c.*` остаётся provisional UNKNOWN. Constructor не превращает receiving chains и их группы в DATA scopes;
+model/default и неподдержанные qualified/Array/deep/typed формы сохраняются raw, typed storage/admission не заявлены.
+Финальные private Runtime06/Graph02: префиксы SHA-256 `fe17a328`/`69eab914`; frozen Source08:919, SHA-256
+`b8b1b9b6095610b03bd26c80bc5c4988be3cfdc3c7b0eab0512a0c3994f44909`.
+Private21: все interp/native/forced и15 полных negative AFTER PASS; construction_shape_presence проходит с прежним expected.
+Шесть новых pairs; role oracles effects1/arithmetic15/called6/indexed12/via_whole13/done1.
+Whole02: настоящие G1/G2 по9 smoke и tool PASS. Fixedpoint:13 artifact checks и2 canonical checks PASS после
+регенерации canonical907→919, без пересборки artifacts. Штатный G2Graph SHA9c44994b построен;
+actual G2 interp21/full AFTER21 PASS. Его42 emitted native/forced images и2 libc/backend совпали побайтно —44 PASS;
+готовые private binaries переиспользованы без новой компиляции или повторного native/forced запуска.
+Actual G1 frontend подтвердил byte equality профиля с quoted FILE; normal profile SHA-256
+`d91946148a1c06809cd9ccd1a25a94cac303876a3032070ecb2fc7104a9facd5`; G1/G2 frontend exe equality PASS.
+G2 render35 paired/14 cases/оба snapshots PASS, generated semantics и grammar не изменились.
+Docs-check01/final index02 PASS35/14/27/44/615, links/LF28235/28262; commit/push392 далее. [Свидетельство392](../steps/witnesses/m11-receiving-view-20261114/notes.md)
+сохраняет полные проверки и историю промежуточных попыток.
+Общие typed storage/admission и actual C-door bridge, полный M11.7/8, M13/M14 и runtime `merge`/`fromLmx` OPEN.
+
+**Предыдущее состояние, 2026-11-14, срез391 — ограниченная реализация; кодовые gates и docs-check пройдены.**
 Изменён только Run: приватные `construct_slot`/`construct_atom`/`construct_value` расширяют bounded конструктор390
 на доказанные пути. Экспорты Graph75/Run58, ABI, layout и публичный API не меняются. Именованный шаг использует
 `step_index`; числовой индекс выбирает физический слот и сохраняет непосредственное значение, не превращая raw `fn` в F
@@ -1443,6 +1464,33 @@ fixture sources относительно Source05: полные AFTER2 и чет
 настоящего G2, build4 control и fixedpoint03:15/verify907 PASS. Ядро и входы сборки компилятора не менялись,
 дополнительный whole не выполнялся. Повтор G2 всех49 triple/AFTER39, render35/14 и fresh docs-check01 PASS;
 final index перед коммитом.
+
+**Borrowed receiving-view, срез392.** Общий `declaration_parts` читает только receiving-chain и возвращает заимствованные
+leaf/model/candidate, наличие кандидата и доказанность ресивера; вызывающий сохраняет исходный root со всеми
+qualifier/Array звеньями. Содержимое модели, default и mutable payload не обходится и не вычисляется. Двухаргументный
+`@` здесь остаётся неоднозначным; сигнатурный wrapper отдельно сохраняет прежний контракт presence: WORD — требование
+без default, явный0 — присутствующее значение. Этот вывод не переносится автоматически на ту же форму в DATA.
+
+DATA/CODE logical name выдаётся только для доказанного declaring-контракта. Generated exporter использует
+`primitive.spelling`: в C-проекцию попадают только строки cell1 с одним C-идентификатором. Поэтому `c.uint8_t` может
+быть доказан source spelling, а языковой alias `u8` сам по себе не доказывает тип `c.u8`. Остальные `c.*` сохраняют
+provisional UNKNOWN; ни префикс, ни число аргументов не заменяют роль реального C-объявления.
+
+Construction пропускает receiving-chain и её группы как отдельные DATA scopes; typed model не становится данными
+кандидата. Только прежний прямой `@` с двумя аргументами владеет своим literal-DATA operand и применяет bounded
+материализацию390/391. Неподдержанные qualifiers, Array, глубокие и typed объявления сохраняются целиком raw;
+logical-step guard сообщает unsupported вместо представления такой записи обычной Structure. Числовой индекс391
+по-прежнему выбирает непосредственный физический слот без переинтерпретации atom или `fn`.
+`call_single` проверяет логическое описание выбранного whole-field перед admission: raw declaring description
+не выдаётся за готовое значение Structure. Обычный whole-Group-as-first fallback сохранён; готовая reference,
+полученная физическим индексом, использует общий маршрут. `written_whole` сначала проверяет DATA shape через pure binder,
+default-presence и общий declaration proof, затем физические runtime kinds. Ранний contract1/3 gate из `call_reading`
+снят; char не попадает ошибочно в FREE scan. Whitelist языковых слов вместо receiving-контракта не вводится.
+Private21 triple/negative AFTER15 и whole02 с настоящими G1/G2 прошли; actual G2 interp21/full AFTER21 PASS.
+42 emitted native/forced images плюс2 libc/backend дали44 byte-equality PASS, без новой компиляции или повторного
+запуска готовых private binaries. Fixedpoint13 artifact/2 canonical checks и G2 render35/14/оба snapshots PASS;
+docs-check/index/commit/push392 ещё предстоят. Model/default остаются исходным receiving-описанием: это ещё не typed
+storage/admission или actual C-door general bridge. Они остаются OPEN вместе с M13 и полными M11.7/8/M14.
 
 В срезе 373 `lmx_graph_resolve_binding` одним поиском возвращает выбранное значение и его рабочую строку.
 Классификация и читатель значения используют этот общий выбор с прежним приоритетом формалов, собственных мест

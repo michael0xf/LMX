@@ -1655,6 +1655,7 @@ fn: lmx_graph_binding_name (@: g c.LmxGraph; @: owner c.Lmx; @: value void; int:
     int: kind c.lmx_graph_kind(g, value)
     @: head char c.lmx_graph_name_of(g, value)
     @: answer void 0
+    @: declared char 0
     place[0] := 0
     if: kind = 3 || kind = 8 || kind = 9
         place[0] := 1
@@ -1664,9 +1665,10 @@ fn: lmx_graph_binding_name (@: g c.LmxGraph; @: owner c.Lmx; @: value void; int:
         return: head
     if: kind != 4
         return: 0
-    if: head = state\w_int || head = state\w_at
+    declared := c.lmx_graph_declaration_place_name(g, value)
+    if: declared != 0
         place[0] := 1
-        return: c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) value), 0U))
+        return: declared
     if: head = state\w_fn || head = state\w_sub
         head := lmx_graph_fn_decl_name(g, (cast: (@: c.Lmx) value))
         if: head != 0
@@ -1872,7 +1874,7 @@ fn: lmx_graph_step (@: g c.LmxGraph; @: value void; @: step void; @@: out void) 
     ---
     if: field = 0
         return: 3
-    if: lmx_graph_deferred_kind(g, field) != 0
+    if: lmx_graph_deferred_kind(g, field) != 0 || (c.lmx_graph_kind(g, field) = 4 && c.lmx_graph_declaration_place_name(g, field) != 0)
         return: 5
     out[0] := field
     return: 0
@@ -1980,6 +1982,20 @@ fn: lmx_graph_node_space (@: g c.LmxGraph; int: prepare; @: status int) @: void
     return: 0
 end: lmx_graph_node_space
 
+# A recognized raw typed place is not a ready Structure value. Preserve legacy int/@
+# row eligibility; this guard covers the additional declaring families named by the shared view.
+# Classification closes lookup without evaluating it; consumption reports the unavailable lowering.
+fn: lmx_graph_binding_unlowered (@: g c.LmxGraph; @: value void; int: prepare; @: status int) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: head char c.lmx_graph_name_of(g, value)
+    if: c.lmx_graph_kind(g, value) != 4 || head = state\w_int || head = state\w_at
+        return: 0
+    if: c.lmx_graph_declaration_place_name(g, value) = 0
+        return: 0
+    if: prepare != 0
+        status[0] := 5
+    return: 1
+
 # Resolve the current activation's formals, inherited inputs, then lexical graph fields. Each lookup consumes the
 # current graph and the live activation chain; no binding is saved in the graph or reused by the next traversal.
 fn: lmx_graph_resolve_binding_context (@: g c.LmxGraph; @: scope c.Lmx; @: name char; @@: selected c.LmxGraphWork; int: prepare; @: status int) @: void
@@ -2012,6 +2028,8 @@ fn: lmx_graph_resolve_binding_context (@: g c.LmxGraph; @: scope c.Lmx; @: name 
             if: row != 0 && (c.lmx_graph_kind(g, row\cell) = 5 || c.lmx_graph_kind(g, row\cell) = 6) && lmx_graph_work_load(g, row) != 0
                 return: 0
             if: row != 0
+                if: lmx_graph_binding_unlowered(g, (cast: (@: void) row\cell), prepare, status) != 0
+                    return: 0
                 selected[0] := row
                 return: row\cell
             ---
@@ -2039,6 +2057,8 @@ fn: lmx_graph_resolve_binding_context (@: g c.LmxGraph; @: scope c.Lmx; @: name 
             if: found = 1U
                 status[0] := lmx_graph_binding_read(g, (cast: (@: c.Lmx) active_frame\data), at, prepare, @ value)
                 if: status[0] != 0
+                    return: 0
+                if: lmx_graph_binding_unlowered(g, value, prepare, status) != 0
                     return: 0
                 head := c.lmx_graph_name_of(g, value)
                 if: c.lmx_graph_kind(g, value) = 4 && head != 0 && head != state\w_int && head != state\w_at
@@ -2083,6 +2103,8 @@ fn: lmx_graph_resolve_binding_context (@: g c.LmxGraph; @: scope c.Lmx; @: name 
             status[0] := lmx_graph_binding_read(g, current, at, prepare, @ value)
             if: status[0] != 0
                 return: 0
+            if: lmx_graph_binding_unlowered(g, value, prepare, status) != 0
+                return: 0
             # A place declared by its receiver with a computed value, not executed yet (`int: x five()`, `@: h f` before
             # its line, R12): the place exists without a value -- the name answers nothing now, and no outer level does.
             head := c.lmx_graph_name_of(g, value)
@@ -2103,6 +2125,8 @@ fn: lmx_graph_resolve_binding_context (@: g c.LmxGraph; @: scope c.Lmx; @: name 
                 status[0] := lmx_graph_binding_read(g, part, slot, prepare, @ value)
                 if: status[0] != 0
                     return: 0
+                if: lmx_graph_binding_unlowered(g, value, prepare, status) != 0
+                    return: 0
                 return: value
             ---
         else:
@@ -2118,6 +2142,8 @@ fn: lmx_graph_resolve_binding_context (@: g c.LmxGraph; @: scope c.Lmx; @: name 
                     if: slot < c.lmx_graph_count(part)
                         status[0] := lmx_graph_binding_read(g, part, slot, prepare, @ value)
                         if: status[0] != 0
+                            return: 0
+                        if: lmx_graph_binding_unlowered(g, value, prepare, status) != 0
                             return: 0
                         return: value
                     ---
@@ -2241,8 +2267,9 @@ fn: lmx_graph_actual_contract (@: g c.LmxGraph; @: code c.Lmx; size_t: index) in
         return: 2
     return: 0
 
-# Match only existing physical field families. Admission remains the call's
-# action; this query neither evaluates fields nor constructs argument cells.
+# Prove a written DATA field chain independently of implemented storage families.
+# Declaring descriptions use the shared name view; other fields retain their
+# existing physical proof. Admission remains the call's action, without evaluation here.
 fn: lmx_graph_written_whole (@: g c.LmxGraph; @: code c.Lmx; @: raw c.Lmx; @: from size_t) int
     @: args c.Lmx c.lmx_graph_method_args(g, code)
     @: field void 0
@@ -2251,15 +2278,18 @@ fn: lmx_graph_written_whole (@: g c.LmxGraph; @: code c.Lmx; @: raw c.Lmx; @: fr
     int: contract 0
     int: kind 0
     c.memset((cast: (@: void) from), 0, (width + 1U) * sizeof(size_t))
-    if: lmx_graph_bind_fields(g, args, raw, from) = 0
+    if: lmx_graph_bind_fields_mode(g, args, raw, from, 1) = 0
         return: 0
     while: i < width
         if: from[i] = 0U
-            if: c.lmx_graph_kind(g, c.lmx_graph_get(args, i)) != 1
+            if: c.lmx_graph_declaration_default(g, c.lmx_graph_get(args, i)) = 0
                 return: 0
             i := i + 1U
             continue
         field := c.lmx_graph_get(raw, from[i] - 1U)
+        if: c.lmx_graph_declaration_place_name(g, field) != 0
+            i := i + 1U
+            continue
         kind := c.lmx_graph_kind(g, field)
         contract := lmx_graph_actual_contract(g, code, i)
         if: contract = 0 || (contract = 1 && kind != 1 && kind != 3)
@@ -2292,8 +2322,6 @@ fn: lmx_graph_call_reading (@: g c.LmxGraph; @: scope c.Lmx; @: code c.Lmx; @: e
     contract := lmx_graph_actual_contract(g, code, 0U)
     if: contract = 2
         return: 2
-    if: contract != 1 && contract != 3
-        return: 0
     if: lmx_graph_single_candidate(g, scope, expression) != 0
         return: 1
     if: from = 0
@@ -2552,6 +2580,8 @@ fn: lmx_graph_preflight_places (@: g c.LmxGraph; @: scope c.Lmx; @: name char; i
             i := i + 1U
             continue
         raw := c.lmx_graph_get(scope, i)
+        # This is a proof barrier, not DATA registration: an unresolved C-door
+        # description cannot prove that the outer function remains the target.
         if: c.lmx_graph_declaration_name(g, raw) = name
             return: (cast: (size_t) -1)
         head := c.lmx_graph_name_of(g, raw)
@@ -2854,6 +2884,11 @@ fn: lmx_graph_construct_pending (@: g c.LmxGraph; @: scope c.Lmx; @: name char; 
     @: raw void 0
     @: head char 0
     @: declared char 0
+    @: leaf void 0
+    @: model void 0
+    @: candidate void 0
+    int: presence 0 - 1
+    int: known 0
     size_t: i 0U
     while: i < c.lmx_graph_count(scope)
         if: code_role != 0 && lmx_graph_code_condition(g, scope, i) != 0
@@ -2861,6 +2896,9 @@ fn: lmx_graph_construct_pending (@: g c.LmxGraph; @: scope c.Lmx; @: name char; 
             continue
         raw := c.lmx_graph_get(scope, i)
         head := c.lmx_graph_name_of(g, raw)
+        declared := c.lmx_graph_declaration_parts(g, raw, @ leaf, @ model, @ candidate, @ presence, @ known)
+        if: declared = name && known = 0
+            return: 1
         if: c.lmx_graph_kind(g, raw) = 4 && (head = state\w_fn || head = state\w_sub)
             declared := lmx_graph_fn_decl_name(g, (cast: (@: c.Lmx) raw))
             if: declared = 0 || (declared = name && lmx_graph_binding_method(g, scope, raw) = 0)
@@ -3090,6 +3128,13 @@ fn: lmx_graph_construct (@: g c.LmxGraph; @: root c.Lmx) int
     @: made c.Lmx 0
     @: raw void 0
     @: head char 0
+    @: leaf void 0
+    @: model void 0
+    @: candidate void 0
+    @: declared char 0
+    int: presence 0 - 1
+    int: known 0
+    int: family 0
     @@: nodes c.Lmx 0
     size_t: code_from 0U
     size_t: code_to 0U
@@ -3134,6 +3179,12 @@ fn: lmx_graph_construct (@: g c.LmxGraph; @: root c.Lmx) int
                 ae := ae + 1U
             ---
         ---
+        # A queued expression can itself be a receiving root. Its operand
+        # group must not acquire DATA identity merely by being visited later.
+        head := c.lmx_graph_name_of(g, (cast: (@: void) current))
+        family := c.lmx_graph_declaration_receiver(head)
+        if: family != 0 && (family != 1 || c.lmx_graph_primitive_receiver(head) != 0)
+            continue
         if: role = 1
             status := lmx_graph_space_declarations(g, current)
         if: role = 2
@@ -3160,6 +3211,25 @@ fn: lmx_graph_construct (@: g c.LmxGraph; @: root c.Lmx) int
             head := c.lmx_graph_name_of(g, raw)
             if: role = 2 && lmx_graph_code_condition(g, current, i) != 0
                 status := c.lmx_graph_scan_add(@ expressions, @ ne, @ ce, (cast: (@: c.Lmx) raw))
+                i := i + 1U
+                continue
+            family := c.lmx_graph_declaration_receiver(head)
+            declared := c.lmx_graph_declaration_parts(g, raw, @ leaf, @ model, @ candidate, @ presence, @ known)
+            if: family != 0 && (family != 1 || c.lmx_graph_primitive_receiver(head) != 0)
+                # The receiving chain and its operand groups are not DATA scopes.
+                # Retain unsupported roots whole. Only the existing direct @ value
+                # constructor owns a literal DATA operand; typed models stay requirements.
+                if: declared = 0 || leaf != raw || family != 1
+                    candidate := 0
+                if: declared != 0 && leaf = raw && head = state\w_at && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 2U
+                    candidate := c.lmx_graph_get((cast: (@: c.Lmx) raw), 1U)
+                part := 0
+                if: head = state\w_at
+                    part := lmx_graph_written_group(g, candidate)
+                if: c.lmx_graph_kind(g, candidate) = 4 && part != 0
+                    status := c.lmx_graph_scan_add(@ data, @ nd, @ cd, (cast: (@: c.Lmx) candidate))
+                if: c.lmx_graph_kind(g, candidate) = 4 && part = 0
+                    status := c.lmx_graph_scan_add(@ expressions, @ ne, @ ce, (cast: (@: c.Lmx) candidate))
                 i := i + 1U
                 continue
             if: head = state\w_fn || head = state\w_sub
@@ -3202,6 +3272,11 @@ fn: lmx_graph_construct (@: g c.LmxGraph; @: root c.Lmx) int
         at := 0U
         while: at < count && status = 0
             current := nodes[at]
+            head := c.lmx_graph_name_of(g, (cast: (@: void) current))
+            family := c.lmx_graph_declaration_receiver(head)
+            if: family != 0 && (family != 1 || c.lmx_graph_primitive_receiver(head) != 0)
+                at := at + 1U
+                continue
             i := 0U
             while: i < c.lmx_graph_count(current) && status = 0
                 status := lmx_graph_construct_field(g, current, i, data, nd, codes, nc)
@@ -3885,6 +3960,7 @@ fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: given void; @: out
     size_t: slot 0U
     size_t: k 0U
     int: whole 0
+    int: received 0
     int: status 0
     if: c.lmx_graph_method(g, code) = 0 || out = 0
         return: 5
@@ -3912,7 +3988,13 @@ fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: given void; @: out
         while: i < width && whole != 0
             if: from[i] != 0U
                 field := c.lmx_graph_get(structure, from[i] - 1U)
-                if: lmx_graph_admit(g, code, i, field, @ values[k]) != 0
+                # Binding selected this field logically. An unlowered receiving
+                # descriptor is not its value; explicit numeric index values retain
+                # their physical-cell route and are not rewritten by this check.
+                received := 5
+                if: c.lmx_graph_kind(g, field) != 4 || c.lmx_graph_declaration_place_name(g, field) = 0
+                    received := lmx_graph_admit(g, code, i, field, @ values[k])
+                if: received != 0
                     whole := 0
                 else:
                     bindings[k] := i

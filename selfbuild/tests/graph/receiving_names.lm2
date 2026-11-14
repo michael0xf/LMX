@@ -1,0 +1,18 @@
+# Shared logical declaration names; receiving chains remain written until typed lowering.
+fn: rn_shadow () int
+    return: 7
+@: rn_qualified (rn_A(int: v 9); const: (@: rn_shadow rn_A); @: held rn_shadow)
+int: qualified_shape length(rn_qualified[2])
+int: qualified_inner length(rn_qualified[1][0][0])
+@: rn_primitive (char: rn_shadow 65; @: held rn_shadow)
+int: primitive_shape length(rn_primitive[1])
+@: rn_deep (rn_A(int: v 9); @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@: rn_shadow rn_A; @: held rn_shadow)
+int: deep_shape length(rn_deep[2])
+@: rn_array (char([]([](rn_shadow))); @: held rn_shadow)
+int: array_shape length(rn_array[1])
+@: rn_rect ([][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]: rn_shadow; @: held rn_shadow)
+int: rectangular_shape length(rn_rect[1])
+@: rn_ctype (c.uint8_t: rn_shadow 7; @: held rn_shadow)
+int: ctype_shape length(rn_ctype[1])
+@: rn_call (c.printf("x"))
+int: call_shape length(rn_call\`c.printf`)

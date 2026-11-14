@@ -1,5 +1,37 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез392 — общий borrowed receiving view/name/role M11.7/M13; ограниченная кодовая приёмка пройдена, docs-check далее.**
+Текущий gate: Runtime06/Graph02 и Source08:919, все21 triple/negative AFTER15 PASS.
+Прежний construction_shape_presence исправлен общим DATA shape proof/pure binder/default presence,
+его expected прежний. Logical whole-field guard сохраняет fallback и physical numeric-index route;
+6 новых pairs, oracles effects1/arithmetic15/called6/indexed12/via_whole13/done1.
+Whole02 quick PASS: настоящие G1/G2 по9 smoke. Fixedpoint:13 artifact-проверок и2 исправленные canonical-проверки на919 PASS.
+Штатный G2 Graph SHA9c44994b собран; G2 interp21/full AFTER21 PASS. Generated42 native/forced programs побайтно прежние,
+libc/backend ещё2 равенства PASS (всего44); ready native binaries переиспользованы без пересборки/лишнего повтора.
+G1 quoted FILE profile byte-equal bare, G1/G2 frontend exe-same. G2 render35/14 PASS, generated semantics/grammar unchanged.
+Docs-check/final index/commit/push392 ещё впереди.
+Более ранние Source05/whole01 ниже — промежуточные результаты, не финальная приёмка.
+Frontend01, Runtime04/Graph01 собраны; private19:18 triple PASS, одна прежняя ошибка контрольного
+construction_shape_presence(runtime3 и у принятого391 seed, полный AFTER совпадает с неизменённым expected).
+Разобрать и исправить её общим механизмом M11.7/M14, expected не менять. Все4 новых пары triple PASS,
+negative full AFTER12 PASS; не утверждать весь19 PASS. Whole quick01 остановлен по воспроизведённому whole-field
+admission bypass(calls1), Source05 не финальная приёмка. Runtime05/Source06 строится с logical whole-field guard
+и general written DATA shape proof до runtime-kind checks; ещё2 языковые пары, private21/whole02 впереди.
+Точка прежнего3: entry work_scan_context → call_reading/written_whole. Literal DATA char-field chain
+ошибочно становится required CODE/FREE при actual_contract=0 из-за неподдержанного scalar lowering.
+Исправить общую роль written DATA по declaration view/shape/binder, сохранив numeric expression groups;
+не добавлять char в language_word и не заменять ошибочный scan отказом runtime5. Исполнение до тела не доходит.
+Сохранить raw root объявления; leaf/model/candidate/presence/known — borrowed parts одной receiving chain,
+без переписывания root, model/default, parent или qualifier. Двухаргументный @ в FORMAL читает контракт модели;
+его нельзя смешивать с неоднозначностью model/candidate той же формы в DATA. DATA place-name query должен
+охватывать primitive, qualified, deep-reference и Array receiving chains одним механизмом.
+C-типы определяются существующим spelling/type описанием, не проверкой префикса c.*; неизвестный C-type —
+барьер known proof, без fallback к ordinary Structure или внешнему одноимённому значению.
+Constructor discovery не делает receiving chains/их служебные группы DATA scopes; настоящие operands читаются по ролям.
+Reached raw logical declaration пока unsupported; физический numeric index сохраняет прежний raw Frame/WORD контракт391.
+Полные typed storage/qualification/model retention, Graph name/fact bridge к existing implements worker,
+runtime merge construction и общий M11/M13/M14 остаются OPEN. Эта работа входит в основной v3.
+
 **2026-11-14, срез391 — source-known path projection M11.7; кодовые gates и docs-check PASS.**
 Source03/private48 не окончательная приёмка: bootstrap01 остановлен после подтверждённого pending gap actual F.data (raw4 вместо2).
 Private construct_data_scope распознаёт её как lexical DATA, не включая в materialization queue; method/descriptor теперь2/2.
@@ -2325,6 +2357,21 @@ Structure и записью значения, снимаются — шаг 6. �
    Общие type fields требуют borrowed receiving-chain view и согласованных name/publish/role readers, physical typed
    storage и interface admission M11.7/M13. Текущие declaration_view/formal_model и kind0 не дают готового typed constructor:
    нельзя снимать const/immutable/independent или подменять @:p Model Value обычной untyped ссылкой.
+   **392 — prerequisite общего receiving-view/name/role, ограниченная кодовая приёмка пройдена:** borrowed leaf/model/candidate/presence/known
+   оставляют исходный raw root и его qualifier/model/default на месте. FORMAL @2 сохраняет свой model-контракт отдельно
+   от DATA model/candidate ambiguity. DATA query получает имена мест из primitive/qualified/deep/Array chains;
+   C-type доказывает существующее spelling/type описание, неизвестный c.* остаётся proof barrier, не Structure fallback.
+   Discovery отличает receiving chain от DATA scope и выбирает реальные operands по ролям, без generic unwrap.
+   Raw logical declaration при достижении остаётся unsupported; numeric index по-прежнему выбирает физический Frame/WORD391.
+   Whole02 genuine G1/G2 по9 smoke и fixedpoint13 artifact+2 corrected canonical на919 PASS; G2 Graph9c44994b/interp21/AFTER21 PASS.
+   Native/forced42 programs и libc/backend2 byte-equal, ready binaries переиспользованы; profile quoted FILE и FE exe-same PASS.
+   G2 render35/14 PASS, generated semantics/grammar unchanged; docs-check/final index/commit ещё впереди.
+   Это не готовность typed storage/qualification/model retention, полного Model-interface admission
+   или Graph name/fact bridge existing implements worker; они остаются в общем [M13](#flat-lmx-descriptor)/M11.7,
+   вместе с новыми runtime merge/fromLmx construction boundaries и [M14](#native-structures).
+   Следующий общий код — operation-local Graph reader всех поверхностей прежнего implements worker и полный source-type→physical
+   bridge по35 строкам/15 столбцам primitive.description; требования и порядок ниже в M13, всё OPEN. c_names392 даёт role proof,
+   но не выбирает semantic source row или physical pool type по первому совпадению C spelling.
    [Передача390](steps/handoff/m11-known-data-references-20261114.md) сохраняет исходное исследование как историю:
    recurring receiving hook не принят. Реализован явный construction walk; дальнейшее расширение использует
    тот же declaration/admission механизм для paths/type fields, затем реальные новые результаты merge/fromLmx.
@@ -2419,7 +2466,12 @@ Structure и записью значения, снимаются — шаг 6. �
 и @value/direct1 нормативны; formal/free-input сохраняет собственную ячейку активации и контроль7.
 Частный root-frame срез не объявляет эту construction-миграцию или весь M13/M14 завершёнными.
 
-**Общий typed construction bridge M11.7/M13 (исследование391):** расширять существующий borrowed declaration-view
+**Общий typed construction bridge M11.7/M13 (исследование391; borrowed view/name/role — ограниченная кодовая приёмка392):**
+Whole02/fixedpoint artifact13+canonical2 на919/G2 interp21+AFTER21/byte equality44/render35/14 PASS; docs-check ещё впереди.
+Срез392 сохраняет raw root и borrowed
+leaf/model/candidate/presence/known; FORMAL @2 отличается
+от DATA ambiguity, receiving chains не становятся DATA scopes, неизвестный C-type закрывает known proof.
+Следующие storage/admission пункты этим не реализованы: расширять существующий borrowed declaration-view
 до receiving leaf/model/candidate и согласовать name/publish/role readers. Связать каноническое описание типа с
 физическим descriptor через существующую generated primitive-profile проекцию той же `primitive.description`
 (semantic/width/spelling/convert), без второй ручной таблицы имён. Нынешние names/cellflags и legacy Graph.kind
@@ -2435,6 +2487,34 @@ legacy worker читает arena source_names, а clean Graph — g.names; raw F
 Карты/факты/request scratch принадлежат одной операции и уничтожаются прежним resolver teardown; test в construction
 не вызывается. Physical slot equality не заменяет этот интерфейс. `descriptor(S)` заголовка — адреса полей Lmx,
 не новый storage-type объект.
+
+**Следующая реализация общего bridge — OPEN, не результат392.** Использовать LIVE
+[генератор заголовка](selfbuild/tools/build.lm2) и [общий implements worker](selfbuild/src/l2src/lmx_implements.lm2).
+В существующий `LmxImplResolve` добавить необязательный reader текущей операции: borrowed context, name/fact query,
+при потреблении payload — прежний current Value. Legacy-вызов без reader сохраняет прежний producer; Graph читает
+`g.names` и receiving roles без записи адаптационных имён/фактов в `arena.source_names`.
+Один прежний named mapping должен потреблять эти имена, сохраняя ordinal/bare/ambiguity правила. Через тот же reader
+провести required facts, обе candidate стороны, повторные kind/type проверки, ref enter и nested SOURCE context;
+нельзя подменить лишь `contract_field`, оставив затем чтение raw Frame или service wrapper как готового значения.
+Сохранять выбранные physical owner/index отдельно от semantic cell/value. Неизвестное имя не равно unnamed0,
+неинициализированный payload не равен отсутствующему полю; status/error и UNKNOWN/NO/YES передаются отдельно.
+Карты/факты/current Value/reader живут до полного drain/close; nested receiving сохраняет и восстанавливает reader
+вместе с source/contract. Full Model без Consumer проверяется прежним `require_root → drain → resolve_close`
+с полным интерфейсом, без guessed positional identity, публикации, test или исполнения Model/default.
+
+Source-type bridge сохраняет все35 строк и все15 столбцов `primitive.description`, включая source identity каждой
+записи, отдельно от C ABI binding. `Fact.type` — настоящий полный physical pool type, не номер строки, hash или alias code.
+Одинаковое spelling само по себе не стирает сведения строк и не доказывает ни равенство, ни различие их семантики.
+Для `c.int8_t` нельзя выбирать первую из строк Boolean/i8/int8; `c_names`392 подтверждает лишь допустимость роли,
+не назначает такой semantic row. Точный C ABI glue, включая multiword/quoted spelling, генерировать существующим
+путём; вариант общего L1 type alias требует реализации и проверки, не нового parser или ручного каталога.
+Дорастить существующие Value transport/load/store/receive/materialize и profiled allocators на нужные scalar families,
+сохраняя type/stride/profile/access callbacks. FILE получает binding из настоящей foreign/pointer policy;
+не угадывать его enum/type number и не заменять отсутствующую поддержку нулём.
+Пользовательский Model, qualifier, физический pool.profile и сохраняемый CODE producer имеют разные роли:
+Model не становится pool.profile, qualifier/model/default не исчезают при выборе borrowed leaf. После receiving view
+и physical descriptor bridge подключить полный Model-interface admission тем же worker; новые runtime merge/fromLmx
+construction boundaries и общий M14 остаются OPEN. Второй registry, graph copy, parser или частный план вместо v3 не вводить.
 
 Статус — **OPEN**. [ТЗ Astra](add_all_struct_fields.md) и
 [дословные уточнения автора](LMX_blog/2026-11-13-get-descriptor.md) дополняют K07/K09,

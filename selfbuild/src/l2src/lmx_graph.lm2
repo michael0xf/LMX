@@ -108,6 +108,7 @@ end: lmx_graph_intern_in
 fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
     @: words char "fn sub fm if else while for do until finally return break continue redo switch case catch throw throws synchronized call fncall merge table args code data const immutable independent implements test post external send receive adopt length typeof cast sizeof enum struct include import predef prototype end"
     const: (@: primitive_names char c.lmx_primitive_profile_names)
+    const: (@: c_names char c.lmx_primitive_profile_c_names)
     size_t: primitive_count c.lmx_primitive_profile_count
     @@: list char 0
     size_t: at 0U
@@ -119,9 +120,9 @@ fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
             count := count + 1U
         at := at + 1U
     ---
-    if: primitive_count > (cast: (size_t) -1) - count - 1U
+    if: primitive_count > ((cast: (size_t) -1) - count - 1U) / 2U
         return: 1
-    list := (cast: (@@: char) c.calloc(count + primitive_count + 1U, sizeof(@: char)))
+    list := (cast: (@@: char) c.calloc(count + primitive_count * 2U + 1U, sizeof(@: char)))
     if: list = 0
         return: 1
     at := 0U
@@ -141,6 +142,20 @@ fn: lmx_graph_receivers_in (@: state c.LmxGraphState) int
         ---
     ---
     at := 0U
+    while: row < primitive_count
+        start := at
+        while: c_names[at] != 0
+            at := at + 1U
+        if: at != start
+            list[count] := lmx_graph_intern_in(state, c_names + start, at - start)
+            if: list[count] = 0
+                c.free((cast: (@: void) list))
+                return: 1
+            count := count + 1U
+        row := row + 1U
+        at := at + 1U
+    at := 0U
+    row := 0U
     while: row < primitive_count
         start := at
         while: primitive_names[at] != 0
@@ -642,11 +657,15 @@ end: lmx_graph_place_cell
 fn: lmx_graph_slot_name (@: g c.LmxGraph; @: lmx c.Lmx; size_t: index) @: char
     @: value void lmx_graph_get(lmx, index)
     @: cell void 0
+    @: declared char 0
     if: value = 0
         return: 0
     if: lmx_graph_kind(g, value) = 3 || lmx_graph_kind(g, value) = 8 || lmx_graph_kind(g, value) = 9
         cell := c.lmx_arena_pointer_void_read(value)
         return: lmx_graph_name_of(g, cell)
+    declared := lmx_graph_declaration_place_name(g, value)
+    if: declared != 0
+        return: declared
     return: lmx_graph_name_of(g, value)
 end: lmx_graph_slot_name
 
@@ -749,6 +768,15 @@ fn: lmx_graph_primitive_receiver (@: word char) int
             return: (cast: (int) (cells[i] != 0))
         i := i + 1U
     ---
+    # Only C type spellings projected from the source table are proved types.
+    # The prefix precedes the unchanged primitive-row suffix in receivers.
+    if: word[0] != 99 || word[1] != 46
+        return: 0
+    i := 0U
+    while: i < first
+        if: state\receivers[i] = word
+            return: 1
+        i := i + 1U
     return: 0
 end: lmx_graph_primitive_receiver
 
@@ -773,10 +801,10 @@ fn: lmx_graph_declaration_receiver (@: head char) int
     return: lmx_graph_primitive_receiver(head)
 end: lmx_graph_declaration_receiver
 
-# The declared place of one user formal. Typed materialized cells and contract-defined receiver compositions keep
-# their graph addresses. Only the receiving chain is read: default expressions and model data are never traversed
-# or evaluated as formals. Ordinary named Structures, including empty ones, are not declaring contracts.
-fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presence int) @: char
+# Borrowed receiving parts: the caller retains raw, including every qualifier/Array receiver.
+# Only that chain is read, never model/default contents or mutable payloads. A two-field reference
+# remains ambiguous here; its operand is still available through leaf. C-door syntax alone is no type proof.
+fn: lmx_graph_declaration_parts (@: g c.LmxGraph; @: raw void; @@: leaf void; @@: model void; @@: candidate void; @: default_presence int; @: receiver_known int) @: char
     @: current void raw
     @: checkpoint void raw
     @: child void 0
@@ -787,7 +815,11 @@ fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presenc
     size_t: span 0U
     int: kind 0
     int: family 0
+    leaf[0] := 0
+    model[0] := 0
+    candidate[0] := 0
     default_presence[0] := 0 - 1
+    receiver_known[0] := 1
     if: g = 0 || raw = 0
         return: 0
     while: current != 0
@@ -795,6 +827,7 @@ fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presenc
         if: kind != 4
             if: c.lmx_range_classify(g\arena, current) != c.LMX_KIND_PRIMITIVE
                 return: 0
+            leaf[0] := current
             if: kind = 1 || kind = 2 || kind = 5 || kind = 6
                 default_presence[0] := 1
             if: kind = 3 || kind = 8 || kind = 9
@@ -803,6 +836,8 @@ fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presenc
             return: lmx_graph_name_of(g, current)
         head := lmx_graph_name_of(g, current)
         family := lmx_graph_declaration_receiver(head)
+        if: family = 1 && lmx_graph_primitive_receiver(head) = 0
+            receiver_known[0] := 0
         n := lmx_graph_count((cast: (@: c.Lmx) current))
         if: family = 0 || n = 0U
             return: 0
@@ -811,20 +846,18 @@ fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presenc
         if: family != 3 && name != 0
             if: (family = 1 && n > 2U) || (family = 2 && n > 3U)
                 return: 0
+            leaf[0] := current
             if: family = 1
                 default_presence[0] := (cast: (int) (n = 2U))
+            if: family = 1 && n = 2U
+                candidate[0] := lmx_graph_get((cast: (@: c.Lmx) current), 1U)
             if: family = 2
                 default_presence[0] := (cast: (int) (n = 3U))
-                if: n = 2U
-                    default_presence[0] := 0 - 1
-                    child := lmx_graph_get((cast: (@: c.Lmx) current), 1U)
-                    if: lmx_graph_word_text(g, child) != 0
-                        default_presence[0] := 0
-                    if: lmx_graph_kind(g, child) = 1 && c.lmx_int_value_known(child) = 0
-                        default_presence[0] := 1
-                    ---
-                ---
-            ---
+            if: family = 2 && n = 2U
+                default_presence[0] := 0 - 1
+            if: family = 2 && n = 3U
+                model[0] := lmx_graph_get((cast: (@: c.Lmx) current), 1U)
+                candidate[0] := lmx_graph_get((cast: (@: c.Lmx) current), 2U)
             return: name
         if: n != 1U
             return: 0
@@ -832,11 +865,8 @@ fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presenc
         # prefix the Array type chain; this does not license old `int: @: p` or `@: int: x` declarations.
         if: family = 2
             return: 0
-        if: family = 1 || family = 4
-            if: lmx_graph_kind(g, child) != 4 || lmx_graph_declaration_receiver(lmx_graph_name_of(g, child)) != 4
-                return: 0
-            ---
-        ---
+        if: (family = 1 || family = 4) && (lmx_graph_kind(g, child) != 4 || lmx_graph_declaration_receiver(lmx_graph_name_of(g, child)) != 4)
+            return: 0
         # A qualifier consumes its written operand. One explicit group belongs to that operand's contract;
         # this is not recursive unwrapping of an arbitrary args field or of its model/default.
         if: family = 3 && lmx_graph_kind(g, child) = 4 && lmx_graph_name_of(g, child) = 0 && lmx_graph_count((cast: (@: c.Lmx) child)) = 1U
@@ -847,14 +877,42 @@ fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presenc
         if: span = power
             checkpoint := child
             span := 0U
-            if: power <= (cast: (size_t) -1) / 2U
-                power := power * 2U
-            ---
-        ---
+        if: span = 0U && power <= (cast: (size_t) -1) / 2U
+            power := power * 2U
         current := child
-    ---
     return: 0
-end: lmx_graph_declaration_view
+
+# Signature presence retains the receiving contract of a direct @ operand.
+# This interpretation does not turn the same two-field DATA operand into a model or a value.
+fn: lmx_graph_declaration_view (@: g c.LmxGraph; @: raw void; @: default_presence int) @: char
+    @: leaf void 0
+    @: model void 0
+    @: candidate void 0
+    @: name char 0
+    @: operand void 0
+    int: known 0
+    name := lmx_graph_declaration_parts(g, raw, @ leaf, @ model, @ candidate, default_presence, @ known)
+    if: name = 0 || lmx_graph_kind(g, leaf) != 4 || lmx_graph_declaration_receiver(lmx_graph_name_of(g, leaf)) != 2 || lmx_graph_count((cast: (@: c.Lmx) leaf)) != 2U
+        return: name
+    operand := lmx_graph_get((cast: (@: c.Lmx) leaf), 1U)
+    if: lmx_graph_word_text(g, operand) != 0
+        default_presence[0] := 0
+    if: lmx_graph_kind(g, operand) = 1 && c.lmx_int_value_known(operand) = 0
+        default_presence[0] := 1
+    return: name
+
+# DATA/CODE names require a proved declaring contract, unlike provisional C types in a signature.
+fn: lmx_graph_declaration_place_name (@: g c.LmxGraph; @: raw void) @: char
+    @: leaf void 0
+    @: model void 0
+    @: candidate void 0
+    @: name char 0
+    int: presence 0 - 1
+    int: known 0
+    name := lmx_graph_declaration_parts(g, raw, @ leaf, @ model, @ candidate, @ presence, @ known)
+    if: known = 0
+        return: 0
+    return: name
 
 fn: lmx_graph_declaration_name (@: g c.LmxGraph; @: raw void) @: char
     int: presence 0 - 1
@@ -1269,7 +1327,7 @@ fn: lmx_graph_publish (@: g c.LmxGraph; @: root c.Lmx; size_t: index; @: value v
     @: name char 0
     if: lmx_graph_statement(g, statement) = 0
         return: 1
-    name := lmx_graph_word_text(g, lmx_graph_get((cast: (@: c.Lmx) statement), 0U))
+    name := lmx_graph_declaration_place_name(g, statement)
     if: name = 0 || lmx_graph_name_address(g, value, name) != 0
         return: 1
     if: lmx_graph_write_slot(g, root, root, index, value) != 0

@@ -1,6 +1,27 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice391 -- bounded implementation; code gates and docs-check passed.**
+**Current state, 2026-11-14, slice392 -- bounded code gates and docs-check01 passed.**
+`declaration_parts` borrows the receiving leaf/model/candidate and presence/known while retaining the original root;
+DATA logical names require a proven declaring contract (§3.5). The C-spelling projection extends the existing generated
+primitive profile; `c_names` proves source-spelling roles without unifying C types with language aliases.
+Arbitrary `c.*` remains provisional UNKNOWN. Construction does not turn receiving chains and their groups into DATA scopes;
+model/default and unsupported qualified/Array/deep/typed forms stay raw, with no typed storage/admission claimed.
+Final private Runtime06/Graph02: SHA-256 prefixes `fe17a328`/`69eab914`; frozen Source08:919, SHA-256
+`b8b1b9b6095610b03bd26c80bc5c4988be3cfdc3c7b0eab0512a0c3994f44909`.
+Private21: every interp/native/forced case and15 complete negative AFTER checks PASS; construction_shape_presence passes with its existing expected file.
+Six new pairs; role oracles effects1/arithmetic15/called6/indexed12/via_whole13/done1.
+Whole02: genuine G1/G2, nine smoke cases each, and tool PASS. Fixedpoint:13 artifact checks and2 canonical checks PASS after
+canonical907→919 regeneration, without rebuilding artifacts. The genuine G2Graph SHA9c44994b is built;
+actual G2 interp21/full AFTER21 PASS. Its42 emitted native/forced images and2 libc/backend files match byte-for-byte —44 PASS;
+ready private binaries were reused without a new compilation or native/forced rerun.
+The actual G1 frontend confirmed profile byte equality with quoted FILE; normal profile SHA-256
+`d91946148a1c06809cd9ccd1a25a94cac303876a3032070ecb2fc7104a9facd5`; G1/G2 frontend exe equality PASS.
+G2 render35 paired/14 cases/both snapshots PASS, with unchanged generated semantics and grammar.
+Docs-check01/final index02 PASS35/14/27/44/615, links/LF28235/28262; commit/push392 follow. [Record392](../steps/witnesses/m11-receiving-view-20261114/notes.md)
+retains the complete checks and history of intermediate attempts.
+General typed storage/admission and the actual C-door bridge, full M11.7/8, M13/M14 and runtime `merge`/`fromLmx` remain OPEN.
+
+**Previous state, 2026-11-14, slice391 -- bounded implementation; code gates and docs-check passed.**
 Only Run changes: private `construct_slot`/`construct_atom`/`construct_value` helpers extend bounded constructor390
 to proven paths. Exports Graph75/Run58, ABI, layout and the public API are unchanged. A named step uses
 `step_index`; a numeric index selects a physical slot and preserves its immediate value without turning raw `fn` into F
@@ -1521,6 +1542,33 @@ Final Source07 removes redundant trailing blank lines from the six new sources:1
 with build4 control and fixedpoint03:15/verify907 PASS. Core and compiler-build inputs are unchanged,
 with no additional whole run. G2 repeat49 triple/AFTER39, render35/14 and fresh docs-check01 PASS;
 final index before commit.
+
+**Borrowed receiving view, slice392.** Common `declaration_parts` reads only the receiving chain and returns borrowed
+leaf/model/candidate, candidate presence and receiver knowledge; the caller retains the original root with every
+qualifier/Array link. Model/default contents and mutable payloads are neither traversed nor evaluated. A two-argument
+`@` remains ambiguous here; the signature wrapper separately retains the previous presence contract: a WORD is a requirement
+without a default, while explicit0 is a present value. This conclusion is not automatically applied to the same form in DATA.
+
+A DATA/CODE logical name is returned only for a proven declaring contract. The generated exporter uses
+`primitive.spelling`: only cell1 rows with a single C identifier enter the C projection. Thus `c.uint8_t` can
+be proven by a source spelling, whereas language alias `u8` alone does not prove type `c.u8`. Other `c.*` forms retain
+provisional UNKNOWN; neither the prefix nor the argument count replaces the role of an actual C declaration.
+
+Construction skips the receiving chain and its groups as separate DATA scopes; a typed model does not become candidate
+data. Only the existing direct two-argument `@` owns its literal-DATA operand and applies bounded materialization390/391.
+Unsupported qualifiers, Array, deep and typed declarations remain wholly raw;
+the logical-step guard reports unsupported rather than presenting such a form as an ordinary Structure. Numeric indexing391
+still selects the immediate physical slot without reinterpreting an atom or `fn`.
+`call_single` checks the selected whole field's logical description before admission: a raw declaring description
+is not presented as a ready Structure value. Normal whole-Group-as-first fallback is preserved; a ready reference
+obtained by physical indexing uses the common route. `written_whole` first checks DATA shape through the pure binder,
+default presence and shared declaration proof, then physical runtime kinds. The early contract1/3 gate in `call_reading`
+is removed; char no longer incorrectly enters FREE scan. No language-word whitelist substitutes for the receiving contract.
+Private21 triple/negative AFTER15 and whole02 with genuine G1/G2 passed; actual G2 interp21/full AFTER21 PASS.
+42 emitted native/forced images plus2 libc/backend files gave44 byte-equality PASS, with no new compilation or rerun
+of ready private binaries. Fixedpoint13 artifact/2 canonical checks and G2 render35/14/both snapshots PASS;
+docs-check/index/commit/push392 still follow. Model/default remain source receiving descriptions: this is not yet typed
+storage/admission or an actual C-door general bridge. Those remain OPEN along with M13 and full M11.7/8/M14.
 
 In slice 373 `lmx_graph_resolve_binding` returns the selected value and its working row in one search.
 Classification and the value reader use that shared selection with the existing priority of formals, own places

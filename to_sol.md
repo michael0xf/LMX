@@ -1,5 +1,21 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез392 — ограниченная кодовая готовность receiving/name reader; docs-check01 PASS.**
+Borrowed `declaration_parts` сохраняет root/leaf/model/candidate/presence/known. Доказанные DATA logical names,
+receiving-chain scope guard и whole-field read guard используют общий контракт; fallback целой группы и numeric index391 сохранены.
+Model/default остаются исходным описанием: typed storage/admission ещё не реализованы. `c_names` доказывает роли
+source C spellings, не объединяет C-типы с языковыми aliases; actual C-door bridge остаётся OPEN.
+Frozen Source08:919 SHAb8b1b9b6, Runtime06 SHAfe17a328/Graph02 SHA69eab914. Private21 triple/negative AFTER15 PASS,
+старый construction_shape_presence — с неизменённым expected. Шесть новых pairs, roles1/15/6/12/13/1.
+Whole02: настоящие G1/G2 по9 smoke и tool PASS; fixedpoint13 artifact checks и2 canonical checks PASS после
+регенерации canonical907→919, без пересборки artifacts. G2Graph SHA9c44994b; actual G2 interp21/full AFTER21 PASS.
+42 emitted native/forced images и2 libc/backend совпали побайтно —44 PASS; готовые private binaries переиспользованы
+без новой компиляции или повторного native/forced запуска. G1 quoted-FILE profile byte equality и G1/G2 frontend exe equality PASS.
+G2 render35 paired/14 cases/оба snapshots PASS; generated semantics и grammar не изменились.
+Docs-check01 и final index02 PASS35/14/27/44/615, links/LF28235/28262; commit/push392 далее. Полные M11/M13/M14, runtime merge/fromLmx construction OPEN.
+Работа и коммиты прямо в main, отдельное дерево Sol не требуется; root writer/build, два чужих WIP сохранены.
+[Свидетельство392](steps/witnesses/m11-receiving-view-20261114/notes.md) хранит подробности и историю промежуточных попыток.
+
 **2026-11-14, срез391 — source-known path construction и lexical actual DATA; кодовые gates и docs-check PASS.**
 390/78041191 принят и отправлен в main. Изменён только Run: private pure projection использует общий step_index/occurrence
 и точное binding_method выбранного fn; Graph75/Run58, API и layouts прежние. Numeric index сохраняет immediate Frame,

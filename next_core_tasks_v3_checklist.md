@@ -1,5 +1,47 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез392 — общий borrowed receiving view/name/role M11.7/M13; ограниченная кодовая приёмка пройдена, docs-check далее.**
+
+- [ ] Финализировать392: Runtime06/Graph02/Source08:919, все21 triple/negative AFTER15 PASS;
+  whole02 quick PASS с настоящими G1/G2 по9 smoke; fixedpoint artifact13+2 corrected canonical на919 PASS.
+  G2 Graph9c44994b/interp21/full AFTER21 PASS; native/forced42 programs и libc/backend2 byte-equal (всего44),
+  ready binaries переиспользованы без пересборки/избыточного повтора. Quoted FILE profile G1 byte-equal bare, G1/G2 FE exe-same.
+  G2 render35/14 PASS, generated semantics/grammar unchanged; docs-check/final index/commit/push ещё впереди.
+  Старые Source05/whole01 результаты ниже — промежуточные. Полные M11/M13/M14 OPEN.
+
+- [ ] Финализировать приёмку392: frontend01 и Runtime04/Graph01 собраны, targeted19:18 triple PASS,
+  прежний construction_shape_presence runtime3 подтверждён и у391 seed; его полный AFTER совпадает с неизменённым expected.
+  Все4 новых пары/negative AFTER12 PASS. Whole quick01 остановлен по подтверждённому whole-field bypass(calls1).
+  Runtime05/Source06 строится с logical field guard и общим DATA shape proof; ещё2 пары, private21/whole02 впереди.
+  Весь19 и финальные gates не считать PASS.
+- [x] Private392 исправил прежний construction_shape_presence runtime3 общим DATA shape proof/pure binder/default
+  presence до runtime kinds; expected неизменён. Private21 triple/AFTER15 PASS, включая новый numeric/call/index role control.
+  Без whitelist char; полная whole/G2 приёмка392 ещё впереди.
+- [x] Raw root сохранён, leaf/model/candidate/presence/known заимствуются из общей receiving chain;
+  model/default/parent/qualifier не переписывать. FORMAL @2 model-контракт отделён от DATA model/candidate ambiguity.
+- [x] DATA place names читаются общим query для primitive/qualified/deep-reference/Array chains;
+  C-type определяется существующим spelling/type описанием, не c.* prefix. Unknown C-type — known-proof barrier без fallback.
+- [x] Constructor discovery не открывает receiving chains/служебные группы как DATA scopes; operands выбираются по ролям.
+  Reached raw logical declaration остаётся unsupported; numeric index сохраняет физический raw Frame/WORD контракт391.
+- [ ] Полные typed storage/qualification/model retention, Graph name/role/fact bridge existing implements worker,
+  runtime merge/fromLmx construction и M11.7/8/M13/M14 OPEN. Это prerequisite основного v3, не отдельный частный план.
+- [ ] Следующий общий M11.7/M13 код: optional operation-local Graph reader в existing LmxImplResolve
+  (borrowed context/name/fact и current Value при чтении payload). LIVE header generator — selfbuild/tools/build.lm2;
+  алгоритм — selfbuild/src/l2src/lmx_implements.lm2. Никакой мутации arena.source_names ради адаптации g.names.
+- [ ] Провести reader через ОДИН прежний named mapping, required facts, обе candidate стороны, повторные kind/type
+  проверки, ref enter и nested SOURCE. Сохранить physical owner/index, UNKNOWN/error и прежнюю ambiguity семантику;
+  lifetime до drain/close, сохранение/восстановление reader при nested receiving. Partial callback не считать bridge.
+- [ ] Full Model без Consumer: require_root → drain → resolve_close, весь интерфейс без guessed positional identity,
+  публикации или test/Model/default execution. Raw Model не выдавать за prepared receiving record.
+- [ ] Joint source-type bridge сохраняет35 строк/15 столбцов primitive.description и явную source identity отдельно
+  от C ABI binding. Fact.type остаётся настоящим physical pool type, не row index/hash/alias code.
+  По одному spelling не объединять сведения строк и не объявлять их семантику обязательно различной.
+- [ ] c.int8_t не выбирает первую Boolean/i8/int8 row; c_names392 — только role proof. Точный multiword/quoted C ABI glue
+  вести через существующую генерацию, включая проверяемый вариант L1 type alias, без whitelist/parser/registry.
+- [ ] Расширить существующие Value transport/load/store/receive/materialize и profiled scalar storage на нужные families;
+  FILE binding — настоящая foreign/pointer policy, без zero/enum guess. User Model не равен pool.profile;
+  qualifier/model/default/CODE producer retention сохраняются. Все эти требования OPEN по [основному M13](next_core_tasks_v3.md#flat-lmx-descriptor).
+
 **2026-11-14, срез391 — source-known paths; кодовые gates и docs-check PASS.**
 Source03/private48 — промежуточные: bootstrap01 остановлен из-за actual F.data pending gap raw4 вместо2;
 исправление readonly lexical-DATA role в Runtime03 прошло private49; новый whole02/fixedpoint15 PASS.

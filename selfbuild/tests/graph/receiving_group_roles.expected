@@ -1,0 +1,43 @@
+int: effects 1
+fn: produce () int
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 4
+end: produce
+fn: add (int: value; int: other 2) int
+    return: (value + other)
+end: add
+int: a 6
+int: b 7
+int: arithmetic 15
+int: called 6
+Any:
+end: Any
+fn: frame_value (@: value Any; int: other 12) int
+    return: other
+end: frame_value
+Carrier:
+    const: ((@ field Any))
+end: Carrier
+int: indexed 12
+Env:
+    Written: (const ((@ field Any)))
+    Pass:
+        @: value const
+        int: other 13
+    end: Pass
+end: Env
+int: via_whole 13
+fn: qualified ((const ((int value)))) int
+    return: 1
+end: qualified
+fn: deep (@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@: value) int
+    return: 1
+end: deep
+fn: array ((char ([] ([] value)))) int
+    return: 1
+end: array
+fn: profile (c.uint8_t: value) int
+    return: 1
+end: profile
+if: 0 ((qualified ((const ((int value 9))))) (deep ((@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ value c.FILE))) (array ((char ([] ([] value))))) (profile ((c.uint8_t value 7))))
+int: done 1

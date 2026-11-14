@@ -1,0 +1,38 @@
+Model:
+    int: v 0
+    int: unused 99
+end: Model
+int: effects 1
+fn: mutate () int
+    :=: ((main \ data) \ p) ((main \ data) \ B)
+    :=: (((main \ data) \ A) \ v) 9
+    :=: (Model \ unused) 99
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 0
+end: mutate
+sub: main () (
+    A:
+        int: v 7
+    end: A
+    B:
+        int: v 20
+    end: B
+    @: p A
+    int: selected 0
+    int: working 0
+    int: published 0
+)
+    fn: read (@: value Model; int: q) int
+        return: ((value \ v) + q)
+    end: read
+    :=: selected (read p (mutate))
+    :=: working (read p 0)
+    :=: published (read (data \ p) 0)
+end: main
+main:
+int: selected 9
+int: working 9
+int: published 20
+int: final 20
+int: model_unchanged 0
+int: model_unused 99

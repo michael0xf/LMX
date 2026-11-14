@@ -1,7 +1,27 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез386 — M11.7, локальная проекция Structure-value в допуске; ограниченная кодовая приёмка пройдена.**
+Принят и отправлен385/9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b; рабочая принятая связка —
+boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01.
+admit_paths один раз локально target(model/candidate) перед прежним kind4 gate/used-path/type checks;
+resolver и selected actual/out прежние. Без recursive unwrap/physical Model lookup/cache/copy/publication.
+Run53/Graph72/layouts прежние, Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 PASS. Пять pure прошли:
+literal/place/alias7/7/7 +shared write8/8/model0/calls3; indexed7/8/9/NONE released1/unused cycle10/self_len3;
+snapshot selected9/working9/published20/final20/effects1/model_unused99; два mismatch/missing4/body0/before1after0.
+Private10 triple/6 negative full AFTER PASS. Source01:816 построил код; Source02:826 заморожен,
+SHA59768bbeaeac8be960aff581fb0ccc6164a9f597a161e49ab36b9b7db9d856ac, verify/stage-copy PASS.
+Whole bootstrap01 quick PASS: настоящие G1/G2 по9 smoke; fixedpoint13/verify826 PASS.
+Штатный G2 Graph SHA908154b9, repeat10 triple/6 negative full AFTER PASS.
+Кодовая связка386 — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
+Render35/14 и docs-check35/14/27/44/615 PASS; далее index-check/commit/push. [Свидетельство386](steps/witnesses/m11-admission-values-20261114/notes.md).
+Следующий код — отдельный pure known-call-shape/default preflight; implements/test M11.7 OPEN.
+Зависимость Run54: existing build_generation должен сначала производить runtime/Run.h, затем frontend_objects и link;
+новый G0 Tool, приёмка обоих поколений и свежего source stage без stale Run53, без нового генератора/CLI.
+Quoted-selector encoding, M11.8/M13/M14 OPEN; consumer fix не расширять ими, goal ACTIVE.
+
 **2026-11-14, срез385 — M11.5е, профиль примитивов и declaration-view; ограниченная кодовая приёмка пройдена.**
-Принят и отправлен384/62072bca; рабочая принятая связка — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
+Принят и отправлен385/9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b; рабочая принятая связка —
+boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01.
 Frontend `--primitive-profile` подготовлен через общий parse/source-table/snapshot/pub path, generated data only;
 Lower prim_kind нормализует quoted payload. Source profile35 содержит10 verbatim old C99/profile aliases
 и явные `_Bool`/`schar` как данные, без слепого usize/isize/meta-import. Graph читает profile suffix в existing receivers,
@@ -20,12 +40,13 @@ lexical markers/raw-selector dispatch прежние. Frozen Source05:816
 SHAde6f1d57c5143ad000872c9c13b4cf792ae771211489c37ba3bdccb2a7750edb.
 Wholeboot01 quick прошёл: настоящие G1/G2 по9 smoke; fixedpoint13/verify816 PASS.
 Штатный G2 Graph SHAe742dba0, repeat15 triple/21 negative full AFTER PASS. Render35/14 выполнен,
-docs-check35/14/27/44/615 PASS, далее index-check/commit/push main. [Свидетельство385](steps/witnesses/m11-formal-declarations-20261114/notes.md).
+docs-check35/14/27/44/615 и final index02 links/LF27868 PASS; diff-check прошёл, принят/отправлен9edf9666,
+чужой WIP сохранён. [Свидетельство385](steps/witnesses/m11-formal-declarations-20261114/notes.md).
 Старый baseline принимает structural arg:Model/Model:arg/computed(after2), broader primitive probe даёт arity8;
 Root Model-reference admission4 — отдельная M11.7. Ранний combined qualifier/Array/deep build2 не был приёмкой;
 новые положительные пробы описаний не объявляют Array runtime/full receiving coverage готовыми.
-Written/computed/direct positional/named/whole-DATA args имеют ограниченные private proofs. Final gates и общий охват
-primitive/default/model/reference/qualification/Array descriptions остаются OPEN; обязательны отказ structural args
+Written/computed/direct positional/named/whole-DATA args имеют ограниченную приёмку385. Общий охват
+primitive/default/model/reference/qualification/Array descriptions остаётся OPEN; обязательны отказ structural args
 при создании F, сохранение evaluation timing и ordinary DATA/receiver pseudoformals. Не сужать язык machine whitelist;
 metadata acceptance не доказывает runtime family. Весь M11.5е/7/8/M13/M14 OPEN, goal ACTIVE; новые задачи в основной v3.
 Отдельный quoted-selector encoding OPEN в основном M11.7: exact name `[0]x` коллидирует с occurrence-string,
@@ -809,15 +830,15 @@ Runtime01/Graph01/18 pure, reused AFTER89, private02-two triple и mutation24 PA
 **OPEN до шага7:** полная formal-validation, включая отказ structural formals в args при создании метода,
 через общий declaration-view/canonical primitive catalog, без narrow machine whitelist. Binder356/копия383/ограниченный384
 не закрывают весь M11.5е; legacy by_head рабочего frontend — отдельная зависимость M11.8.
-**WIP385, частные проверки пройдены:** generated primitive profile через frontend `--primitive-profile`
+**Срез385, ограниченная приёмка пройдена:** generated primitive profile через frontend `--primitive-profile`
 и общий parse/source-table/snapshot/pub path; Graph72 declaration_name, Run53/layouts прежние.
 Профиль35 source rows нормализуется из quoted payload; explicit C99/profile aliases и `_Bool`/`schar` — данные,
 не ручной machine whitelist и не слепой импорт usize/isize/meta-категорий. Common query охватывает primitive/C-door,
 any-depth @/qualifier/Array-family; fn_make проверяет user args до allocation/fn_data, data/pseudoformal views сохраняются.
 Runtime02/Graph01 PASS, Graph02/03 canonical/escaped quoting при прежнем runtime PASS; private-after01 —40 full AFTER
 (39 в трёх режимах+один baseline), private02-two triple и private03 changed quoted triple PASS:
-result7/arity2/escaped_result8/escaped_arity1. Frozen Source05:816 de6f1d57; wholeboot01 quick выполняется,
-fixedpoint/G2 repeat/docs385 PENDING. Written/computed/direct positional/named/whole-DATA descriptions имеют bounded private proofs;
+result7/arity2/escaped_result8/escaped_arity1. Frozen Source05:816 de6f1d57; wholeboot01 quick/fixedpoint13/verify816,
+G2 repeat15 triple/AFTER21/render/docs/index02/diff-check прошли, принят/отправлен9edf9666. Охват ограничен385;
 Array runtime и общий охват OPEN, Root Model-ref4 и quoted-selector encoding — отдельные M11.7 задачи.
 Сохранить общий binder, порядок эффектов и уже реализованную именованную подачу 356.
 
@@ -826,6 +847,9 @@ Array runtime и общий охват OPEN, Root Model-ref4 и quoted-selector 
 
 ### Шаг 5. M11.6–7 — упростить код и перенести допуск
 
+- 386 WIP: admit_paths один раз локально target(model/candidate) перед старым kind4 gate, сохраняя resolver/selected actual.
+  Runtime01/Graph01 и пять pure прошли; private10 triple выполняется, freeze/whole/docs/commit386 PENDING.
+  Следующий отдельный код — pure known-call-shape/default preflight; общий implements/test M11.7 OPEN.
 - Отдельный OPEN M11.7: quoted-selector encoding различает exact name `[0]x` и occurrence-string,
   сохраняет backslash внутри одного quoted path component. Исправить existing общий selector mechanism без нового парсера;
   это следующий отдельный объём, не расширение formal-среза385.

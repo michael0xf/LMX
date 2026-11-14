@@ -1,5 +1,26 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез386 — M11.7, локальная проекция Structure-value в допуске; ограниченная кодовая приёмка пройдена.**
+
+- [x] admit_paths локально target(model/candidate) перед прежним kind4 gate/used-path/type checks;
+  resolver и out actual прежние, без recursive unwrap/physical Model lookup/cache/copy/publication.
+  Run53/Graph72/layouts прежние; Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 PASS.
+- [x] Пять pure: literal/place/alias7/7/7 +shared8/8/model0/calls3; indexed7/8/9, NONE-slot released1,
+  unused cycle10/self_len3; snapshot selected9/working9/published20/final20/effects1/model_unused99;
+  два mismatch/missing refusal4/body0/before1/after0.
+- [x] Private10 triple/6 negative full AFTER PASS. Source01:816 строил код; Source02:826 frozen
+  SHA59768bbeaeac8be960aff581fb0ccc6164a9f597a161e49ab36b9b7db9d856ac, verify/stage-copy PASS.
+- [x] Whole bootstrap01 quick PASS: настоящие G1/G2 по9 smoke; fixedpoint13/verify826 PASS.
+  Штатный G2 Graph SHA908154b9, repeat10 triple/6 negative full AFTER PASS. Render35/14 выполнен.
+- [x] Docs-check01:35/14/27/44/615, links/LF27869 PASS из свежих CWD/PRIVATE_OUT.
+- [x] Final index-check02:35/14/27/44/615, links/LF27905 PASS; свой LF receipt добавлен после проверки.
+- [ ] Commit/push386; чужой WIP сохранить.
+- [ ] Следующий отдельный код: pure known-call-shape/default preflight; общий implements/test M11.7 OPEN.
+- [ ] Зависимый Run54 ABI до Builder: в existing build_generation runtime перед frontend_objects, link после;
+  новый G0 Tool, реальные G1/G2 и свежий source stage без stale Run53 header. Нового генератора/CLI не вводить.
+- [ ] Quoted-selector encoding, M11.8, M13/M14. Принят/отправлен385/9edf9666;
+  рабочая принятая связка — boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01, goal ACTIVE.
+
 **2026-11-14, срез385 — M11.5е, профиль примитивов и declaration-view; ограниченная кодовая приёмка пройдена.**
 
 - [x] Frontend `--primitive-profile` через общий parse/source-table/snapshot/pub path, generated data only;
@@ -22,7 +43,7 @@
   Штатный G2 Graph SHAe742dba0, repeat15 triple и21 negative full AFTER PASS. Render35/14 выполнен.
 - [x] Docs-check35/14/27/44/615, links/LF27794 PASS из свежих CWD/PRIVATE_OUT.
 - [x] Финальный index-check02:35/14/27/44/615, links/LF27868 PASS; собственный LF receipt добавлен после проверки.
-- [ ] Commit/push main; чужой WIP сохранить.
+- [x] Diff-check прошёл;385 принят и отправлен9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b, чужой WIP сохранён.
 - [ ] До7: воспроизводимый generated source profile и один declaration-view для written/computed args,
   direct positional/named/whole-DATA; primitive/default/model/reference/qualification/Array descriptions,
   отказ structural args при создании F, сохранение evaluation timing и ordinary DATA/pseudoformals.
@@ -30,7 +51,7 @@
 - [ ] Отдельный M11.7 OPEN — quoted-selector encoding: exact name `[0]x` коллидирует с occurrence-string;
   backslash внутри quoted path component разделяет компонент. Исправить existing общий selector mechanism без нового парсера;
   canonical names/doubled backticks385 не закрывают предел. Не расширять им текущий formal-срез385.
-- [ ] Полный M11.5е/7/8/M13/M14. Принят/отправлен384/62072bca, рабочая связка пока384; goal ACTIVE.
+- [ ] Полный M11.5е/7/8/M13/M14. Принят/отправлен385/9edf9666, рабочая связка385; goal ACTIVE.
 
 **2026-11-14, срез384 — M11.5е, actuals ресиверов, ограниченная реализация; кодовая приёмка пройдена.**
 

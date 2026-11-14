@@ -9,14 +9,26 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice385; bounded implementation, code acceptance passed): generated primitive-profile data
+Current implementation note (2026-11-14, slice386; bounded code acceptance passed, base385/9edf9666): admit_paths locally applies
+target(model/candidate) once before the existing kind4 gate and used-path/type checks. Resolver and returned actual
+remain unchanged, preserving the selected snapshot; no recursive unwrapping, physical Model lookup, cache, copy or publication.
+Run53/Graph72 layouts stay unchanged. Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 and private10 triple/6 negative full AFTER PASS:
+snapshot9/9/20, index7/8/9/NONE1/unused cycle10+self_len3 and refusal4/body0.
+Frozen Source02:826 SHA59768bbe. Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each; fixedpoint13/verify826 PASS.
+Genuine G2 rebuilt graph-tool SHA908154b9bbcefb94eddf238f0d93248087f171abbec9fee91e396ed1c7c7739e;
+G2 repeat10 triple/6 negative full AFTER PASS. Working code tuple: boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
+Render35/14 and docs-check35/14/27/44/615 passed; final index-check/commit/push386 follow.
+Static preflight, full implements/test, quoted selector and M11.8/M13/M14 stay OPEN.
+See [record386](steps/witnesses/m11-admission-values-20261114/notes.md) and the [main plan](next_core_tasks_v3.md#m11), goal ACTIVE.
+
+Previous implementation note (2026-11-14, slice385; bounded implementation, acceptance passed): generated primitive-profile data
 feeds the common declaration view, preserving physical cells and data/receiver-pseudoformal projections; Graph72/Run53 layouts stay unchanged.
 Source05:816 is frozen, SHAde6f1d57. Graph03/private03 checked quoted7/arity2/escaped8/arity1;40 private full AFTER checks passed.
 Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each; fixedpoint13/verify816 PASS.
 Genuine G2 rebuilt graph-tool, SHAe742dba04a06366ab8e45ab921f145a7d5b0bac4dc23142600e43093f3114021;
 G2 repeat15 in three modes/21 negative full AFTER PASS. The working code tuple is
 boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01. Normal render35/14 and docs-check35/14/27/44/615 passed;
-the final index check and commit/push385 follow.
+final index02 and diff-check passed;385 was accepted and pushed as9edf9666.
 Array runtime and full M11.7/8/M13/M14 remain OPEN; these checks accept bounded declaration descriptions.
 See [record385](steps/witnesses/m11-formal-declarations-20261114/notes.md) and the [main plan](next_core_tasks_v3.md#m11), goal ACTIVE.
 

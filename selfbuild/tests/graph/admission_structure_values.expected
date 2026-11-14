@@ -1,0 +1,28 @@
+Model:
+    int: v 0
+    int: unused 0
+end: Model
+Candidate:
+    int: extra 99
+    int: v 8
+end: Candidate
+Alias:
+    int: extra 99
+    int: v 8
+end: Alias
+int: calls 3
+fn: read (@: value Model) int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: (value \ v)
+end: read
+fn: bump (@: value Model) int
+    :=: (value \ v) ((value \ v) + 1)
+    return: (value \ v)
+end: bump
+int: literal 7
+int: by_place 7
+int: by_alias 7
+int: updated 8
+int: shared 8
+int: same_alias 8
+int: untouched 0

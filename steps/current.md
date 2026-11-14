@@ -1,5 +1,29 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7: срез386, code/docs PASS, index-check/commit далее
+
+385/9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b принят и отправлен в main; docs/index и оба diff-check PASS.
+Только основное дерево main, root — code/test/build writer. Pipeline sol-m11-admission-values-20261114-01.
+Seed — boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01.
+Baseline385 root Model reference отказывает4. В admit_paths добавлен один target(model/candidate)
+на локальных уже выбранных значениях до прежнего kind4 gate. Resolver, out actual и snapshot identity прежние.
+Без recursive unwrap, физического Model lookup, публикации, нового cache или copies. Run53/Graph72/layouts прежние.
+Source01/816 строил код; Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 PASS. Пять fixture pairs добавлены в inputs.
+Private10 triple/6 negative full AFTER PASS: values7/7/7, shared8/model0/calls3;
+index7/8/9, NONE-slot released1, unused cycle10/self_len3; snapshot9/9/20/final20/effects1/model_unused99;
+missing/type refusal4/body0/before1after0. Ранняя cycle-проба с непредоставленным Self отказывала до допуска;
+контроль с известным Other создаёт цикл и проходит. Root Slots:=Alias probe тоже отказал до целевого вызова.
+Frozen Source02/826 SHA59768bbeaeac8be960aff581fb0ccc6164a9f597a161e49ab36b9b7db9d856ac;
+verify/stage-copy PASS. Whole bootstrap01 quick PASS: настоящие G1/G2 по9 smoke; fixedpoint13/verify826 PASS.
+Штатный G2 Graph SHA908154b9, repeat10 triple/6 negative full AFTER PASS. Render35/14 и docs-check01 PASS:
+35/14/27/44/615, links/LF27869 из свежих CWD/PRIVATE_OUT. Final index02 PASS:
+35/14/27/44/615, links/LF27905. Его LF receipt добавлен после проверки; далее оба diff-check/commit/push main.
+Кодовая связка386 — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
+Следом M11.7 source-known call shape/default preflight через существующие CodeBody/namespace/binder,
+отдельно от runtime result-only-int guard. Общий implements/test и quoted selector encoding OPEN.
+Помощники — read-only исследования; docs381_review выделены только README/CORE/selfbuild README.
+Чужие два untracked сохранить, goal ACTIVE.
+
 ## 2026-11-14 — M11.5е: срез385, code/docs PASS, index-check/commit далее
 
 384/62072bca принят и отправлен в main. Основное дерево; root — единственный code/test/build writer.

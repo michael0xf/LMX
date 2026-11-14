@@ -1,0 +1,81 @@
+GRAPH-BEFORE-BEGIN
+@: Model ((int v 0) (int unused 0))
+int: effects 0
+fn: mutate () int
+    :=: ((main \ data) \ p) ((main \ data) \ B)
+    :=: (((main \ data) \ A) \ v) 9
+    :=: (Model \ unused) 99
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 0
+end: mutate
+sub: main () (
+    A:
+        int: v 7
+    end: A
+    B:
+        int: v 20
+    end: B
+    @: p A
+    int: selected 0
+    int: working 0
+    int: published 0
+)
+    fn: read (@: value Model; int: q) int
+        return: ((value \ v) + q)
+    end: read
+    :=: selected (read p (mutate))
+    :=: working (read p 0)
+    :=: published (read (data \ p) 0)
+end: main
+main:
+int: selected ((main \ data) \ selected)
+int: working ((main \ data) \ working)
+int: published ((main \ data) \ published)
+int: final (((main \ data) \ p) \ v)
+int: model_unchanged (Model \ v)
+int: model_unused (Model \ unused)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Model:
+    int: v 0
+    int: unused 0
+end: Model
+int: effects 0
+fn: mutate () int
+    :=: ((main \ data) \ p) ((main \ data) \ B)
+    :=: (((main \ data) \ A) \ v) 9
+    :=: (Model \ unused) 99
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 0
+end: mutate
+sub: main () (
+    A:
+        int: v 7
+    end: A
+    B:
+        int: v 20
+    end: B
+    @: p A
+    int: selected 0
+    int: working 0
+    int: published 0
+)
+    fn: read (@: value Model; int: q) int
+        return: ((value \ v) + q)
+    end: read
+    :=: selected (read p (mutate))
+    :=: working (read p 0)
+    :=: published (read (data \ p) 0)
+end: main
+main:
+int: selected ((main \ data) \ selected)
+int: working ((main \ data) \ working)
+int: published ((main \ data) \ published)
+int: final (((main \ data) \ p) \ v)
+int: model_unchanged (Model \ v)
+int: model_unused (Model \ unused)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 4, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 4

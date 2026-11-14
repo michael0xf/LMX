@@ -1,0 +1,40 @@
+Model:
+    int: v 0
+    int: unused 0
+end: Model
+sub: main () (
+    Candidate:
+        int: extra 99
+        int: v 7
+        Other
+    end: Candidate
+    Other:
+        int: z 11
+    end: Other
+    Slots: Candidate
+    @: Alias Candidate
+    int: by_place 0
+    int: by_alias 0
+    int: by_index 0
+    int: released 0
+    int: cyclic 0
+)
+    fn: read (@: value Model; int: q) int
+        return: ((value \ v) + q)
+    end: read
+    :=: (Slots [] 0) Candidate
+    :=: by_place (read Candidate 0)
+    :=: by_alias (read Alias 1)
+    :=: by_index (read (Slots [] 0) 2)
+    :=: (Slots [] 0) Other
+    :=: released (length (Slots [] 0))
+    :=: (Candidate [] 2) Candidate
+    :=: cyclic (read Alias 3)
+end: main
+main:
+int: by_place 7
+int: by_alias 8
+int: by_index 9
+int: released 1
+int: cyclic 10
+int: self_len 3

@@ -2417,6 +2417,10 @@ fn: lmx_graph_admit_paths (@: g c.LmxGraph; @: code c.Lmx; @: name char; @: mode
     @: wanted void 0
     @: found void 0
     int: status 0
+    # This consumer needs Structure values. Resolve only the already selected reference snapshots;
+    # the caller retains its actual cell, and ordinary reads/assignments retain their place identity.
+    model := c.lmx_graph_target(g, model)
+    candidate := c.lmx_graph_target(g, candidate)
     if: c.lmx_graph_kind(g, model) != 4 || c.lmx_graph_kind(g, candidate) != 4
         return: 4
     status := c.lmx_graph_scan_add(@ queue, @ count, @ cap, c.lmx_graph_method_code(g, code))

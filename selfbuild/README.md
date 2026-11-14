@@ -1,13 +1,26 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice385; bounded implementation, code acceptance passed): generated primitive-profile data and
+Current continuation (2026-11-14, slice386; bounded code acceptance passed, base385/9edf9666): admit_paths applies one local
+target(model/candidate) before its existing kind4 gate/used-path checks. Resolver, returned actual and snapshot identity stay unchanged;
+there is no recursive unwrap, physical Model lookup, cache/copy/publication. Run53/Graph72 layouts remain unchanged.
+Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 and private10 triple/6 negative full AFTER PASS: snapshot9/9/20,
+index7/8/9/NONE1/unused cycle10+self_len3 and refusal4/body0. Frozen Source02:826
+SHA59768bbeaeac8be960aff581fb0ccc6164a9f597a161e49ab36b9b7db9d856ac.
+Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each; fixedpoint13/verify826 PASS.
+Genuine G2 rebuilt graph-tool SHA908154b9bbcefb94eddf238f0d93248087f171abbec9fee91e396ed1c7c7739e;
+G2 repeat10 triple/6 negative full AFTER PASS. Working code tuple: boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
+Render35/14 and docs-check35/14/27/44/615 passed; final index-check/commit/push386 follow.
+Static preflight, full implements/test, quoted selector and M11.8/M13/M14 remain OPEN.
+[Witness386](../steps/witnesses/m11-admission-values-20261114/notes.md); continue the [main v3 plan](../next_core_tasks_v3.md), goal ACTIVE.
+
+Previous continuation (2026-11-14, slice385; bounded implementation, acceptance passed): generated primitive-profile data and
 the common declaration view preserve physical cells and data/receiver pseudoformals; Graph72/Run53 layouts stay unchanged.
 Frozen Source05:816 SHAde6f1d57; Graph03/private03 checked quoted7/arity2/escaped8/arity1, and40 private full AFTER checks passed.
 Whole bootstrap01 quick built genuine G1/G2, nine smoke rows each; fixedpoint13/verify816 PASS.
 Genuine G2 rebuilt graph-tool SHAe742dba04a06366ab8e45ab921f145a7d5b0bac4dc23142600e43093f3114021;
 G2 repeat15 in three modes/21 negative full AFTER PASS. The working code tuple is
 boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01. Render35/14 and docs-check35/14/27/44/615 passed;
-the final index check and commit/push385 follow.
+final index02 and diff-check passed;385 was accepted and pushed as9edf9666.
 Array runtime and full M11.7/8/M13/M14 remain OPEN; goal ACTIVE.
 [Witness385](../steps/witnesses/m11-formal-declarations-20261114/notes.md); continue the [main v3 plan](../next_core_tasks_v3.md).
 

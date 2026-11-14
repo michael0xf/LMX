@@ -1,0 +1,85 @@
+GRAPH-BEFORE-BEGIN
+@: Model ((int v 0) (int unused 0))
+sub: main () (
+    Candidate:
+        int: extra 99
+        int: v 7
+        Other
+    end: Candidate
+    Other:
+        int: z 11
+    end: Other
+    Slots: Candidate
+    @: Alias Candidate
+    int: by_place 0
+    int: by_alias 0
+    int: by_index 0
+    int: released 0
+    int: cyclic 0
+)
+    fn: read (@: value Model; int: q) int
+        return: ((value \ v) + q)
+    end: read
+    :=: (Slots [] 0) Candidate
+    :=: by_place (read Candidate 0)
+    :=: by_alias (read Alias 1)
+    :=: by_index (read (Slots [] 0) 2)
+    :=: (Slots [] 0) Other
+    :=: released (length (Slots [] 0))
+    :=: (Candidate [] 2) Candidate
+    :=: cyclic (read Alias 3)
+end: main
+main:
+int: by_place ((main \ data) \ by_place)
+int: by_alias ((main \ data) \ by_alias)
+int: by_index ((main \ data) \ by_index)
+int: released ((main \ data) \ released)
+int: cyclic ((main \ data) \ cyclic)
+int: self_len (length (((main \ data) \ Candidate) [] 2))
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Model:
+    int: v 0
+    int: unused 0
+end: Model
+sub: main () (
+    Candidate:
+        int: extra 99
+        int: v 7
+        Other
+    end: Candidate
+    Other:
+        int: z 11
+    end: Other
+    Slots: Candidate
+    @: Alias Candidate
+    int: by_place 0
+    int: by_alias 0
+    int: by_index 0
+    int: released 0
+    int: cyclic 0
+)
+    fn: read (@: value Model; int: q) int
+        return: ((value \ v) + q)
+    end: read
+    :=: (Slots [] 0) Candidate
+    :=: by_place (read Candidate 0)
+    :=: by_alias (read Alias 1)
+    :=: by_index (read (Slots [] 0) 2)
+    :=: (Slots [] 0) Other
+    :=: released (length (Slots [] 0))
+    :=: (Candidate [] 2) Candidate
+    :=: cyclic (read Alias 3)
+end: main
+main:
+int: by_place ((main \ data) \ by_place)
+int: by_alias ((main \ data) \ by_alias)
+int: by_index ((main \ data) \ by_index)
+int: released ((main \ data) \ released)
+int: cyclic ((main \ data) \ cyclic)
+int: self_len (length (((main \ data) \ Candidate) [] 2))
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 4, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 4

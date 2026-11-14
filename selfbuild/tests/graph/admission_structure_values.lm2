@@ -1,0 +1,20 @@
+# M11.7: consume the selected Structure value without changing the caller's reference cell.
+@: Model (int: v 0; int: unused 0)
+@: Candidate (int: extra 99; int: v 7)
+@: Alias Candidate
+int: calls 0
+fn: read (@: value Model) int
+    node\calls := node\calls + 1
+    return: value\v
+end: read
+fn: bump (@: value Model) int
+    value\v := value\v + 1
+    return: value\v
+end: bump
+int: literal read((int: v 7))
+int: by_place read(Candidate)
+int: by_alias read(Alias)
+int: updated bump(Alias)
+int: shared Candidate\v
+int: same_alias Alias\v
+int: untouched Model\v

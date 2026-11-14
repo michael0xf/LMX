@@ -1,0 +1,31 @@
+# Indexed values consume their selected target without imposing a requirement on the NONE source slot.
+@: Model (int: v 0; int: unused 0)
+sub: main () (
+    Candidate(int: extra 99; int: v 7; Other)
+    Other(int: z 11)
+    Slots(Candidate)
+    @: Alias Candidate
+    int: by_place 0
+    int: by_alias 0
+    int: by_index 0
+    int: released 0
+    int: cyclic 0
+)
+    fn: read (@: value Model; int: q) int
+        return: value\v + q
+    end: read
+    Slots[0] := Candidate
+    by_place := read(Candidate, 0)
+    by_alias := read(Alias, 1)
+    by_index := read(Slots[0], 2)
+    Slots[0] := Other
+    released := length(Slots[0])
+    Candidate[2] := Candidate
+    cyclic := read(Alias, 3)
+main()
+int: by_place main\data\by_place
+int: by_alias main\data\by_alias
+int: by_index main\data\by_index
+int: released main\data\released
+int: cyclic main\data\cyclic
+int: self_len length(main\data\Candidate[2])

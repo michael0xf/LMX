@@ -1,12 +1,31 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез386 — M11.7, локальная проекция Structure-value в допуске; ограниченная кодовая приёмка пройдена.**
+Принят и отправлен385/9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b; рабочая принятая связка —
+boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01.
+admit_paths один раз локально применяет target(model/candidate) перед прежним kind4 gate и used-path/type checks.
+Общий resolver и возвращаемый selected actual не меняются. Нет recursive unwrap, поиска physical Model,
+cache/copy/publication. Run53/Graph72/layouts прежние. Runtime01 SHA075c4f9f/Graph01 SHA7317b6d5 PASS.
+Пять pure fixture прошли: literal/place/alias7/7/7 и shared write8/8/model0/calls3;
+indexed7/8/9, NONE-slot released1, unused cycle10/self_len3; snapshot selected9/working9/published20/final20,
+effects1/model_unused99; два mismatch/missing отказа4/body0/before1/after0.
+Private10 triple/6 negative full AFTER PASS. Source01:816 построил код; Source02:826 заморожен,
+SHA59768bbeaeac8be960aff581fb0ccc6164a9f597a161e49ab36b9b7db9d856ac, verify/stage-copy PASS.
+Whole bootstrap01 quick PASS: настоящие G1/G2 по9 smoke; fixedpoint13/verify826 PASS.
+Штатный G2 Graph SHA908154b9, repeat10 triple/6 negative full AFTER PASS.
+Кодовая связка386 — boot-m11-admission-values-01/g2 + graph-m11-admission-values-g2-01.
+Render35/14 и docs-check35/14/27/44/615 PASS; далее index-check/commit/push. [Свидетельство386](steps/witnesses/m11-admission-values-20261114/notes.md).
+Следующий код — отдельный pure known-call-shape/default preflight; общий implements/test M11.7 OPEN.
+Quoted-selector encoding, M11.8, M13/M14 остаются OPEN; этот consumer fix их не расширяет, goal ACTIVE.
+
 **2026-11-14, срез385 — M11.5е, профиль примитивов и declaration-view; ограниченная кодовая приёмка пройдена.**
-Принят и отправлен384/62072bca; рабочая принятая связка — boot-m11-receiver-actuals-01/g2 + graph-m11-receiver-actuals-g2-01.
-WIP frontend `--primitive-profile` использует общий parse/source-table/snapshot/pub path и выпускает только данные;
+Принят и отправлен385/9edf9666cd9fb5a2715a6e37c6b0db0330d06f5b; рабочая принятая связка —
+boot-m11-formal-declarations-01/g2 + graph-m11-formal-declarations-g2-01.
+Frontend `--primitive-profile` использует общий parse/source-table/snapshot/pub path и выпускает только данные;
 Lower prim_kind нормализует quoted payload. Source primitive profile содержит35 строк:10 дословно перенесённых
 old C99/profile aliases и явные `_Bool`/`schar` добавлены как данные, без слепого импорта usize/isize/meta-категорий.
 Graph загружает profile suffix в существующий receivers, убирает ручные primitive names и получает общий
-declaration_name query (Graph72, Run53, layouts прежние). В WIP query различает primitive profile/C-door,
+declaration_name query (Graph72, Run53, layouts прежние). Общий query различает primitive profile/C-door,
 любую глубину `@`, qualification и Array-family, сохраняя physical materialized cells и data/pseudoformal projections.
 fn_make проверяет user args до allocation/fn_data; formal_model больше не объявляет любую голову Structure-моделью.
 Runtime02 PASS SHA84b2f626/Graph01 PASS635e519e; canonical quoting fix построителя дал Graph02 PASS2668c71b
@@ -22,13 +41,14 @@ doubled backticks декодируются; lexical markers и raw-selector disp
 Frozen Source05:816, SHAde6f1d57c5143ad000872c9c13b4cf792ae771211489c37ba3bdccb2a7750edb.
 Wholeboot01 quick прошёл: настоящие G1/G2 по9 smoke, fixedpoint13/verify816 PASS.
 Штатный G2 Graph SHAe742dba0, repeat15 triple и21 negative full AFTER PASS. Render35/14 прошёл;
-docs-check35/14/27/44/615 PASS, далее index-check/commit/push main. [Свидетельство385](steps/witnesses/m11-formal-declarations-20261114/notes.md).
+docs-check35/14/27/44/615 и final index02 links/LF27868 PASS; diff-check прошёл. Принят и отправлен9edf9666,
+чужой WIP сохранён. [Свидетельство385](steps/witnesses/m11-formal-declarations-20261114/notes.md).
 Старый baseline принимает structural `arg: Model`/`Model: arg`, computed-проба доходит до after2;
 broader primitive probe даёт arity8. Это измеренные старые ограничения, не приёмка385 и не норма.
 Root Model-reference admission4 относится отдельно к M11.7. Ранняя объединённая qualifier/Array/deep проба дала build2;
 новые положительные пробы проверяют описания, а не Array runtime или все receiving families.
 Profile/declaration-view и written/computed/direct positional/named/whole-DATA args имеют ограниченные private proofs;
-финальные gates и общий охват остаются OPEN, ordinary DATA/pseudoformals должны сохраняться.
+приёмка ограничена385, общий охват остаётся OPEN, ordinary DATA/pseudoformals должны сохраняться.
 Нельзя подменять этот охват machine whitelist или принимать metadata-only description за исполнение её типа.
 Отдельный OPEN M11.7 — quoted-selector encoding: exact name `[0]x` коллидирует с occurrence-string,
 а backslash внутри quoted path component разделяет компонент. Исправлять существующий общий selector mechanism,
@@ -2036,7 +2056,8 @@ Structure и записью значения, снимаются — шаг 6. �
      Name boundaries atom/head/place/block/path component/occurrence label canonical, doubled backticks decoded;
      lexical markers/raw-selector dispatch прежние. Source05:816 frozen de6f1d57; wholeboot01 quick PASS,
      G1/G2 по9 smoke, fixedpoint13/verify816, G2 Graph/repeat15 triple/negative AFTER21 PASS.
-     Render35/14 и docs-check35/14/27/44/615 прошли; далее index-check/commit. Array runtime и общий receiving coverage OPEN.
+     Render35/14, docs-check35/14/27/44/615, index02 LF27868 и diff-check прошли; принят/отправлен9edf9666.
+     Array runtime и общий receiving coverage OPEN.
      Приёмка перед7: generated profile воспроизводится из source table без ручного перечня типов;
      written/computed args и direct positional/named/whole-DATA проходят один declaration-view.
      Различить primitive с default, model/reference, qualifier и Array description; запретить structural args при создании F,
@@ -2074,10 +2095,21 @@ Structure и записью значения, снимаются — шаг 6. �
    (счётчик в пробе); случаи документа проходят прежние проверки.
    Срез380 добавляет только disposable facts требований индексируемого физического места и сохранение NONE
    в пределах исполнения. Проверка Structure по используемому интерфейсу, test и полная миграция допуска OPEN.
-   **Ближайшие узкие шаги, OPEN:** [Structure-value и source-known preflight](steps/handoff/m11-admission-structure-value-20261114.md).
-   Сначала локальный `target(model/candidate)` перед kind4 gate в admit_paths, сохраняя общий resolver и выбранный actual.
-   Затем отдельный pure known-call-shape preflight; общий `implements`/`test` следует после него.
-   Это план, не реализованный допуск и не перенос в formal-срез385.
+   **386 WIP — локальная Structure-value проекция:** [Structure-value и source-known preflight](steps/handoff/m11-admission-structure-value-20261114.md).
+   admit_paths один раз локально делает `target(model/candidate)` перед прежним kind4 gate/used-path/type checks,
+   сохраняя общий resolver и выбранный actual; без recursive unwrap, physical Model lookup, cache/copy/publication.
+   Run53/Graph72/layouts прежние; Runtime01/Graph01 и пять pure прошли:7/7/7, shared8/8/model0/calls3,
+   indexed7/8/9/NONE released1/cycle10/self_len3, snapshot9/9/20/20/effects1/unused99 и два refusal4/body0/before1after0.
+   Private10 triple/6 negative full AFTER PASS; Source02/826 frozen59768bbe, whole bootstrap01 quick PASS,
+   настоящие G1/G2 по9 smoke, fixedpoint13/verify826; штатный G2 Graph/repeat10 triple/negative AFTER6 PASS.
+   Render35/14 и docs-check35/14/27/44/615 PASS; далее index-check/commit386.
+   **Следующий отдельный код, OPEN:** pure known-call-shape/default preflight; общий `implements`/`test` следует после него.
+   Для нового входа Run54 обеспечить ABI до Builder: Run.h сейчас производит только bld_kernel_l2,
+   а ранние87 frontend headers и decls_write_all его не производят. В существующем build_generation
+   переставить runtime перед frontend_objects, сохранив прежние аргументы и link после них;
+   новый G0 Tool должен исполнять этот порядок. Приёмка — оба поколения и свежий source stage без stale Run53 header,
+   без новой CLI, параллельного генератора или зависимости runtime от новых frontend objects.
+   Это ограниченный consumer fix, не полный допуск и не расширение formal-среза385.
    **OPEN — quoted-selector encoding (отдельно от formal-среза385):** exact name со значением `[0]x`
    коллидирует со строковой записью occurrence selector, а backslash внутри quoted path component разделяет
    компонент. Canonical name boundary и decoded doubled backticks385 этот предел не закрывают.

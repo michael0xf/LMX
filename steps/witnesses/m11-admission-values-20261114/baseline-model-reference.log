@@ -1,0 +1,38 @@
+GRAPH-BEFORE-BEGIN
+@: Model ((int v 0))
+@: Candidate ((int extra 99) (int v 7))
+@: Alias Candidate
+int: calls 0
+fn: f (@: value Model) int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: (value \ v)
+end: f
+int: literal (f ((int v 7)))
+int: by_place (f Candidate)
+int: by_alias (f Alias)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Model:
+    int: v 0
+end: Model
+Candidate:
+    int: extra 99
+    int: v 7
+end: Candidate
+Alias:
+    int: extra 99
+    int: v 7
+end: Alias
+int: calls 0
+fn: f (@: value Model) int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: (value \ v)
+end: f
+int: literal (f ((int v 7)))
+int: by_place (f Candidate)
+int: by_alias (f Alias)
+GRAPH-AFTER-END
+FAIL [exit] the launch's exit code is the expected one: R0's exit letter, or its success
+l2_eternal_driver: exit 4, expected 0
+l2_eternal_driver: 1 failed of 81
+graph: run answered 4

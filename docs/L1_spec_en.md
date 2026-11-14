@@ -83,15 +83,18 @@ L1 kernel code implements loads of used own fields, `dirty` marks, and publicati
 
 Ordinary Structure C bodies and methods share native emission and frame entry/exit. One C.native
 works with different admitted D and their field orders through the existing place map; data = code
-is not required. Publication of code and data changes follows frame dirty state, including explicit addressed writes.
+is not required. Local working values and dirty state belong to the frame; explicit addressed accesses
+use the direct-access cache shared within one execution. A boundary first publishes the current frame's
+local dirty values into shared state, then pending direct writes into the graph; flush() uses that same order.
 Walker and native continuations after publication must agree; clearing an entry does not replace
 machine instructions already running. Implementation remains open in [M14](../next_core_tasks_v3.md#native-structures).
 
 One publication contract does not require journaling every assignment. Native determines needed writes
 and conditions statically where possible; dynamic tracking remains only for places that need it.
-`flush()`, with no arguments or result, publishes the current frame's ready dirty changes and continues
-execution. After a successful flush, no new changes means no repeated write; computations, admission
-and cache reload are not repeated. [Contract](LMX_semantics.en.md#flush-receiver-contract).
+`flush()`, with no arguments or result, first publishes the current frame's local dirty values into shared
+cell state, then pending shared-cache writes into the graph, preserving other frames' locals.
+Execution continues; without changes no writes repeat after a successful flush. Computations,
+admission and local reloads are not repeated; the shared cache stays coherent with published cells. [Contract](LMX_semantics.en.md#flush-receiver-contract).
 
 <a id="call"></a>
 ## 12. Call

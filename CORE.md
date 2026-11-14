@@ -588,13 +588,23 @@ prepared-frame continuation after publication and nested calls. No artificial me
 whole-graph copy or permanent version registry is introduced. Implementation is open in
 [M14](next_core_tasks_v3.md#native-structures).
 
+Local working values and dirty state belong to individual frames. Direct-access caching is shared by
+all calls of one execution, including native/walker transitions, and is transparent: aliases of one
+addressed cell see the same current value, including pending direct writes. Local dirty publication
+also reconciles that shared state. A local pointer base can remain unchanged while a published pointer
+selects another object; changing an intermediate reference requires establishing the final address again.
+The cache belongs to traversal scratch and does not persist in the graph or arena between executions.
+See [local versus direct access](docs/LMX_semantics.en.md#direct-access-cache).
+
 The publication contract does not require a universal assignment journal. Native determines
-needed stores and conditions statically where possible; dynamic places use only necessary frame
-change tracking. Computations, checks, effects, alias reads and publication timing are preserved.
-Ordinary non-declaring `flush()` takes no arguments and returns no value: it publishes ready dirty
-changes of the current frame and continues execution, with no new activation, yield, exit or Message
-publication. Successful publication clears dirty state; another flush without new changes writes nothing
-and repeats no evaluation/admission or cache load. Same-headed data remains ordinary data.
+needed stores and conditions statically where possible; dynamic tracking covers only necessary local
+or shared direct-access places. Computations, checks, effects, alias reads and publication timing are preserved.
+Ordinary non-declaring `flush()` takes no arguments and returns no value: it first publishes the current
+frame's dirty own locals into shared cell state in forward field order, then stores pending shared-cache
+writes into the graph. Other frames' locals are neither published nor reloaded. Execution continues without
+a new activation, yield, exit or Message publication. Successful publication clears the corresponding
+local dirty and pending shared writes; a repeat without new changes writes nothing, reevaluates nothing
+and reloads no locals. The shared cache stays coherent with published cells. Same-headed data remains ordinary data.
 The language receiver is an open M14 task; the existing internal publication helper is not its implementation.
 
 The `implements` field-address
@@ -616,7 +626,7 @@ publication within `data` or through a code/data alias. Do not add a special
 execution path or hidden copy for this form. Entry into `call(code code)`
 alone does not invalidate anything. A working `dirty` value has not changed
 the graph until publication; explicit paths, aliases and dereferences select actual
-places and use that same frame dirty state and the standard publication checkpoints. With the place and value admitted, follow the actual cell-to-code links, including enclosing code; commit the slot
+places and use the direct-access cache shared within one execution, separate from frame-local working values. Both use the standard publication checkpoints. With the place and value admitted, follow the actual cell-to-code links, including enclosing code; commit the slot
 and clear the affected code entries as one observable operation before another or
 recursive dispatch. A failed write
 or a compatible data-value update preserves the entry. L2 code needs a

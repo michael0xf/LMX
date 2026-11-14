@@ -23,11 +23,20 @@ earlier direct-write witnesses do not specify publication timing for the new imp
 
 The next M14 clarification requires one semantics without a universal journal of every assignment;
 native determines writes statically where possible, with dynamic tracking only for places that need it.
-Language receiver flush(), with no arguments or result, must publish the current frame's dirty changes and
-continue without a new activation or Message publication. Repeating it without new changes writes nothing.
+Local working values remain in their frames. The direct-access cache is shared by all calls within one
+execution and reconciles the actual cell, including aliases and local dirty publication.
+Language receiver flush(), with no arguments or result, first publishes the current frame's dirty own locals
+into shared state, then pending shared-cache writes into the graph; it leaves other frames' locals alone.
+Execution continues without a new activation or Message publication. Repeating it without changes writes nothing.
 Internal `lmx_graph_work_flush` already publishes its supported working-place subset and clears dirty marks;
 this is an existing part of the common mechanism, not proof that the receiver or all M14 requirements are ready.
 [Contract](LMX_semantics.en.md#flush-receiver-contract); implementation remains OPEN.
+
+Reading main 035d3fcd shows local snapshots and their dirty state already separated from direct graph writes;
+this is not an implemented shared direct-access cache. Slice 369 preserves a local pointer snapshot, so
+p\x and data\p\x can legitimately select different objects. At the same address a stale direct read is
+not permitted. The new separation requires shared coherence rather than reloading locals after a call.
+[Rule](LMX_semantics.en.md#direct-access-cache); this documentation slice changes no code.
 
 <a id="source-migration"></a>
 ## 1. Sources and migration boundary

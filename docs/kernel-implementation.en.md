@@ -1272,6 +1272,20 @@ time and keeps no correspondence between calls -- step 7 of [section M11 of the 
 <a id="interpreter"></a>
 ## 6. The interpreter
 
+<a id="direct-access-cache"></a>
+Local working values and dirty state belong to activation frames. The direct-access cache belongs to
+one execution under §5.2 -- its root and all nested/recursive calls, including native/walker transitions.
+It reconciles the actual addressed cell for every path, index, dereference and local dirty publication.
+A direct write is accounted for by subsequent direct reads of that cell, including aliases;
+physical storage remains at the standard boundary. Local snapshots are not reloaded.
+Changing an intermediate reference requires establishing the path address again; base p in p\x may
+remain a local pointer and legitimately differ from data\p. Address reuse must account for this.
+A writer called outside the common mechanism requires reconciliation of affected direct cache state while retaining locals.
+Tracking necessary changed places of this traversal suffices: no permanent arena index, graph copy,
+per-write journal or mandatory lookup on every access. Live shared-cache references join existing
+execution roots alongside working values; no separate GC mechanism is needed.
+[Rule](LMX_semantics.en.md#direct-access-cache); the common implementation remains OPEN in M14.
+
 The walker uses an ordinary frame's prepared working state: resolved places, values,
 dirty state and continuation. Field order below specifies logical execution order, not an obligation
 to reread a changed graph before every operation. Publication and continuation must agree
@@ -1402,7 +1416,7 @@ parts: the status above (graph73).
 
 ### 6.5 Resetting `native` when a write is published (norm: [L2 §11](L2_spec_en.md#call))
 
-The norm ([L2 §11, the paragraph on writing](L2_spec_en.md#call)): a write changes a frame working place and dirty state;
+The norm ([L2 §11, the paragraph on writing](L2_spec_en.md#call)): a bare local write changes a frame working place and dirty state, while a direct write updates the addressed cell's shared state in the cache of one execution;
 at a standard publication checkpoint the common mechanism resets `native` of **code places** linked to the changed cell.
 An explicit path, alias or dereference selects the place, not immediate publication.
 **Changing an ordinary data value keeps the entry**; the link to a code place
@@ -1442,10 +1456,13 @@ primitive.
 <a id="flush-receiver-contract"></a>
 ### 6.6. Explicit publication with flush()
 
-Ordinary non-declaring receiver flush(), with no arguments or result, publishes the current frame's ready
-dirty changes under the same contract as checkpoints. Execution continues without a new activation,
+Ordinary non-declaring receiver flush(), with no arguments or result, first publishes the current frame's dirty
+own local values into shared cell state in forward field order, then stores pending shared direct-access
+writes into the graph. Checkpoints use the same order. Other local frames are not published.
+Execution continues without a new activation,
 exit, yield or Message publication. An if/loop body uses the same frame. Successful writes clear dirty state;
-repeating flush without new changes writes nothing, repeats no computations/admission and reloads no cached values.
+repeating flush without new changes writes nothing, repeats no computations/admission and reloads no locals.
+Publication must reconcile the shared cache; retaining a local snapshot does not apply to this cache.
 Bare atom flush does not invoke the receiver; flush() in data remains an ordinary Structure.
 Code publication and continuation follow §6.5/§7; no separate journal or whole-arena traversal is introduced.
 [Rule](LMX_semantics.en.md#flush-receiver-contract), [open M14 implementation](../next_core_tasks_v3.md#native-structures).
@@ -1459,7 +1476,8 @@ the existing admission and place map bind data at launch, including different fi
 `call(C C)` is the same case; a fn/sub declaration, a name for C and data = code are not required.
 A Structure used only as data does not need its own native entry for that use.
 
-The frame reuses resolved addresses and typed working values. Dirty data and code are published
+The frame reuses resolved addresses and typed local values; direct caching is shared within the execution.
+Local dirty values and pending direct writes to data and code are published
 after argument evaluation before control transfer, on specified exits, at yield and on explicit flush().
 The graph write and removal of affected code entries are one publication before a new/recursive dispatch.
 Clearing native neither replaces machine instructions already executing nor restarts effects.
@@ -1472,9 +1490,10 @@ Implementation of this addition remains **OPEN**: [M14](../next_core_tasks_v3.md
 One publication contract does not require a universal journal of every assignment. Native determines
 required writes and publication conditions statically where possible, keeping intermediate values in
 registers/locals without unnecessary dynamic dirty flags. Dynamic places need only necessary change
-tracking in the existing frame, without assignment history. Reducing physical writes preserves all
+tracking of locals in the frame and direct access in the shared execution cache, without assignment history. Reducing physical writes preserves all
 required computations, checks, effects, alias observability and publication timing.
-Explicit flush() is another current-frame publication point with standard continuation.
+Explicit flush() likewise publishes the current frame's local dirty values and pending shared-cache writes,
+with standard continuation and preservation of other frames' local values.
 
 The translator is a consumer of the clean Lmx graph (§1a), not of the parse tree: its input is the unit's built graph in
 the translation arena, and everything it knows about the program it reads from slots, cells, the address → name table and

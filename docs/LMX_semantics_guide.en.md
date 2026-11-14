@@ -192,8 +192,9 @@ One body C receives a machine entry through the same mechanism as methods and wo
 no artificial fn or native version for each D is needed. A Structure used only as data does not need
 its own native entry for that use; native(S) reads an entry and does not compile S.
 
-An admitted write changes a frame working place and dirty state. After actual-argument evaluation before
-control transfer, on specified exits and at yield, ready changes are published to resolved addresses.
+A bare local write changes the frame's working value and dirty state; direct access changes the addressed
+cell's shared state in the cache of one execution. After actual-argument evaluation before control transfer,
+on specified exits and at yield, ready changes are published to resolved addresses.
 A path or dereference selects an actual address rather than immediate publication.
 Publication of a code change removes related native entries; an ordinary data write keeps the entry.
 Clearing the pointer neither replaces machine instructions already running nor repeats effects.
@@ -204,17 +205,39 @@ publication and a nested call. This introduces no new graph copy or version regi
 <a id="flush-receiver-contract"></a>
 ## Explicit publication with flush()
 
-`flush()`, with no arguments or result, publishes the current frame's ready dirty changes and continues
-execution. Nested if/loop bodies use the same frame. It causes no new launch, exit, yield or Message publication.
+`flush()`, with no arguments or result, first transfers the current frame's dirty own local values into shared
+cell state in forward field order, then stores pending shared direct-access writes into the graph.
+Other frames' locals are not published. Execution continues.
+Nested if/loop bodies use the same frame. It causes no new launch, exit, yield or Message publication.
 After successful publication dirty state is cleared: a second flush without new changes writes nothing,
-reevaluates no expressions/admission and reloads no cached values. Code changes use common invalidation.
+reevaluates no expressions/admission and reloads no local values. The shared cache is reconciled with
+published cells. Code changes use common invalidation.
 Bare atom flush does not invoke the receiver; in data, flush() remains an ordinary Structure.
 
 Publication semantics is shared; a universal journal of all assignments is unnecessary. Native determines
 required writes and conditions statically where possible; only dynamic places need necessary
-change tracking in the frame. Reducing writes preserves computations, checks, effects and alias observability
+tracking: locals in their frame, direct access in the shared execution cache. Reducing writes preserves computations, checks, effects and alias observability
 at the same boundaries. [Contract](LMX_semantics.en.md#flush-receiver-contract),
 [open M14 implementation](../next_core_tasks_v3.md#native-structures).
+
+<a id="direct-access-cache"></a>
+## Local values and direct access
+
+Local x is an activation's working value. Direct a\x accesses a real cell through the cache shared by
+all calls within one execution, including native/walker transitions. Caching is transparent:
+after a write through a\x, a read through b\x accounts for it if they address one cell, even before physical publication.
+A local copy does not change by itself. All writers, including local dirty publication, reconcile the shared cache.
+
+If an outer call published x = 2 and an inner one published x = 9, on return the outer call reads bare x as 2
+and data\x as 9. Its clean local is not written back. With `x := 2; data\x := 9; flush()`, however,
+local x remains dirty: direct reading before flush gives 9; after local publication it gives 2.
+
+In p\x, base p can be a local pointer copy; p\x and data\p\x may then reach different objects.
+Coherence is required when their final address is the same. Changing a reference in a\child\x may change
+that address: caching a resolved path differs from caching the value of a stable cell.
+The cache lives only within the current execution; no assignment journal, graph copy or mandatory lookup
+on every access is required. A call modifying memory outside the common mechanism must reconcile affected
+direct-access state without reloading locals. [Rule](LMX_semantics.en.md#direct-access-cache).
 
 <a id="native-merge"></a>
 ## Native code in a copy

@@ -1,0 +1,22 @@
+int: touch_calls 0
+fn: touch () int
+    :=: (node \ touch_calls) ((node \ touch_calls) + 1)
+    return: 1
+end: touch
+D:
+    prepared:
+        args: ((int value 2))
+        return: int
+        code: ((return (value * 7)))
+    end: prepared
+    int: out 28
+    int: cold (touch)
+end: D
+C:
+    fn: local prepared
+    :=: out (local (:= value 4))
+end: C
+C: D
+int: result 28
+int: by_path 14
+int: cold_calls 0

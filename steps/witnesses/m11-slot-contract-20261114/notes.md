@@ -50,7 +50,8 @@ f255aebc815b78d24e40bf636a7d4421154fd76b45040dbc0afc66e24c0eb62e.
   last2/count12 после новой Structure в последнем слоте.
 - slot_atom_rhs: настоящий вызов rhs() в индексе операнда merge удаляет исходное A
   из Holder до внешней записи; calls1/seen7 доказывают подготовку требования до RHS.
-  Поля написанной literal Structure сами не вычисляются: ранняя исследовательская
+  Поля сохранённой Structure сами не вычисляются (явный merge-конструктор отдельно исполняет initializer);
+  ранняя исследовательская
   форма (int:trigger rhs()) не доказывала RHS effects и в принятую проверку не вошла.
 - slot_atom_copy: merge копирует ранее заменённый atom-slot; последовательные записи
   дают copied_number41/copied_length2/source_length2. Вычисляемый sub копирует Src

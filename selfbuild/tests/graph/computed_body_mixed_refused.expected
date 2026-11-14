@@ -1,0 +1,28 @@
+int: touches 1
+int: body_effect 0
+fn: touch () int
+    :=: (node \ touches) ((node \ touches) + 1)
+    return: 1
+end: touch
+fn: outer () int (
+    prepared_own:
+        name: other
+        args: ()
+        return: int
+        code: ((return 1))
+    end: prepared_own
+    prepared_inner:
+        name: local
+        args: ()
+        return: int
+        code: ((return 7))
+    end: prepared_inner
+    int: seeded (touch)
+    fn: prepared_own
+    int: inside 0
+)
+    if: 1 ((fn prepared_inner) (:= inside (local)))
+    if: 1 ((:= (node \ body_effect) 1) (return (local)))
+    return: 0
+end: outer
+int: result (outer)

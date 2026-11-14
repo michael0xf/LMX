@@ -1,0 +1,24 @@
+int: k 8
+local:
+end: local
+fn: change () int
+    :=: (node \ k) 8
+    return: 1
+end: change
+fn: sink (int: value) int
+    return: value
+end: sink
+fn: outer () int (
+    prepared:
+        name: local
+        args: ((int value))
+        return: int
+        code: ((return value))
+    end: prepared
+    int: seeded (change)
+)
+    fn: prepared
+    return: (sink ((local (k))))
+end: outer
+int: result 5
+int: outside 8

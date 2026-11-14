@@ -1,0 +1,51 @@
+World:
+    int: k 8
+    fn: change () int
+        :=: (node \ k) 8
+        return: 1
+    end: change
+    fn: leaf () int
+        return: k
+    end: leaf
+    fn: outer () int (
+        Q:
+            int: z 0
+        end: Q
+        prepared_sink:
+            args: ((@ value Q))
+            return: int
+            code: ((return (length value)))
+        end: prepared_sink
+        prepared_local:
+            args: ()
+            return: int
+            code: ((return 7))
+        end: prepared_local
+        prepared_number:
+            args: ((int value))
+            return: int
+            code: ((return value))
+        end: prepared_number
+        int: seeded (change)
+        int: held 0
+        int: inside 0
+        int: first 0
+        int: consumed 0
+        int: second 0
+    )
+        fn: sink prepared_sink
+        :=: held (sink (k))
+        if: 1 ((fn k prepared_local) (:= inside (k)))
+        :=: first (leaf)
+        fn: number prepared_number
+        :=: consumed (number (k))
+        :=: second (leaf)
+        return: (((held * 100) + (inside * 10)) + first)
+    end: outer
+end: World
+call: World
+int: result 178
+int: first 8
+int: consumed 5
+int: second 5
+int: outside 8

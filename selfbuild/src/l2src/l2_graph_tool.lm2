@@ -1059,6 +1059,21 @@ end: lm_graph_emit_assignment
 
 # Native method statements compute their own arithmetic/calls. The shared kernel only owns admission, working
 # cells and publication. Every return/error passes through the entry wrapper's work_finish.
+# Select only the lexical cursor of the current activation. Address generation
+# still uses the selected launch code; no inline activation or method is made.
+fn: lm_graph_emit_scope (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.Lmx; @: temps int) int
+    c.LmxGraphEmitScratch: leave_storage
+    @: leave_failure char (cast: (@: char) leave_storage\failure)
+    int: status 0
+    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
+    c.fputs("        if: lmx_graph_work_scope(l2_g, lmx_call_code, ", f)
+    status := lm_graph_emit_address(g, f, code, body)
+    if: status != 0
+        return: status
+    c.fprintf(f, ") != 0\n            %s\n", leave_failure)
+    return: 0
+end: lm_graph_emit_scope
+
 fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.Lmx; size_t: from; size_t: to; int: mode; int: exit_label; int: again_label; int: step_label; @: temps int) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
@@ -1085,7 +1100,12 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
     @: nested c.Lmx 0
     @: header c.Lmx 0
     @: raw void 0
+    status := lm_graph_emit_scope(g, f, code, body, temps)
     while: i < to && status = 0
+        if: i != from
+            status := lm_graph_emit_scope(g, f, code, body, temps)
+        if: status != 0
+            return: status
         raw := c.lmx_graph_get(body, i)
         kind := c.lmx_graph_kind(g, raw)
         # A declaration of an int place in a body runs at its written position (§3.2), at every reach, as in the
@@ -1201,6 +1221,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                 i := i + 1U
             ---
             c.fprintf(f, "        l2_label%d:\n", end_label)
+            if: status = 0
+                status := lm_graph_emit_scope(g, f, code, body, temps)
             continue
         if: head = state\w_else
             return: 2
@@ -1223,6 +1245,12 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             c.fprintf(f, "        l2_label%d:\n", test_label)
             if: status = 0
                 if: head = state\w_for
+                    status := lm_graph_emit_scope(g, f, code, header, temps)
+                else:
+                    status := lm_graph_emit_scope(g, f, code, body, temps)
+            ---
+            if: status = 0
+                if: head = state\w_for
                     status := lm_graph_emit_number(g, f, code, header, 1U, temps, 0, 0, 0U, @ result)
                 else:
                     status := lm_graph_emit_number(g, f, code, statement, 0U, temps, 0, 0, 0U, @ result)
@@ -1239,6 +1267,8 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             if: status = 0 && head = state\w_for
                 status := lm_graph_emit_block(g, f, code, header, 2U, 3U, mode, exit_label, again_label, step_label, temps)
             c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", test_label, end_label)
+            if: status = 0
+                status := lm_graph_emit_scope(g, f, code, body, temps)
             i := i + 1U
             continue
         if: head = state\w_break || head = state\w_continue || head = state\w_redo

@@ -76,7 +76,33 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-**Changes of 2026-11-14, slice380; code acceptance passed.** A physical slot's receiving
+**Current state, 2026-11-14, slice381; base380 `c5ba5ef9`.** The existing frame gains
+`lexical_scope`: selecting an inline body changes the physical CodeBody cursor while `code`/`body`/`data`
+retain their identities. Common `work_scope` prepares written fn/sub only at entry; a computed F is created at its producer.
+The walker restores the cursor on flow/error; native sets it before each statement and at control labels.
+A local F masks only its scope's FREE fallback, after data/formals, without shared inline promotion.
+A required input (bit8) is separate from an input visible to children (bit2); bit4 combines scoped pending
+under the rule that every required use must be pending. Optional snapshots stay private until consumption.
+Runtime06/graph02 and 17 pure cases passed: privacy178/8/5/5, fallback10550 and physical8;
+inline quiet90/selected790/reentry790/dynamic helper790, loop23, sub2/2 and indexed path3.
+The bare CODE path is ambiguous and refuses3: viewed as data, CODE includes call Frames as occurrences too.
+A wrong write refuses4 before RHS (calls0), bare Fn gives1; mixed missing gives3/touch1/body0,
+literal outside gives3/touch0. Fields of a retained written Structure in a data context do not execute;
+an explicit merge constructor executes computed initializers (existing received_structure_values: merge_calls1).
+The previous 67 full AFTER checks are unchanged; private31 triple/AFTER93/mutation24 passed on Source07:751.
+The final emitter-only optimization covers the first statement with the entry prefix without a repeated call;
+Graph03/private02 inline triple passed on Source08:751, SHA-256
+`b84c11fec03b4eb7fa7a35db19ebf732be8ab13975191eb704207dab0961e906`.
+The native trace confirmed actual native outer, `work_scope` and `fn_apply`. Genuine G1/G2 quick with nine smoke cases each,
+fixedpoint13 and verify751 passed. The genuine G2 graph-tool is built, SHA-256
+`b8abfe4c58cc5702009aa09f65ce0a9b040aec403602c1c31eec88989fbcce4f`.
+The genuine G2 repeat (86 cases in three modes, 102 full negative AFTER checks, mutation24) passed;
+normal render/docs check381 passed:35/14/27/44/615, links/LF. The working tuple is boot-m11-computed-body-01/g2
+and graph-m11-computed-body-g2-01; [record](../steps/witnesses/m11-computed-body-20261114/notes.md).
+Full M11, copying live F/data and M13/M14 remain OPEN. A dynamic new callee may use walker fallback;
+this is not acceptance of ordinary native M14.
+
+**Previous state, 2026-11-14, slice380; code acceptance passed.** A physical slot's receiving
 descriptor lives in the existing `ImplContractFact`/`CopyMap` of the current `GraphSpace` for the whole execution,
 including nested calls and constructed copies. A lexical mention of a known Structure receives NONE;
 replacement by a Structure or int address does not replace it with the current content's type. The next independent

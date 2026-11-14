@@ -1,0 +1,18 @@
+fn: leaf () int
+    return: 90
+end: leaf
+fn: outer (int: enabled) int (
+    prepared:
+        args: ()
+        return: int
+        code: (return: 7)
+    int: inside 0
+    int: outside 0
+)
+    inside := 0
+    if: enabled (fn: leaf prepared; inside := leaf())
+    outside := leaf()
+    return: inside * 100 + outside
+end: outer
+int: quiet outer(0)
+int: selected outer(1)

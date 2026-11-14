@@ -1,0 +1,23 @@
+int: k 8
+fn: local (int: value) int
+    return: (value + 100)
+end: local
+fn: change () int
+    :=: (node \ k) 8
+    return: 1
+end: change
+fn: outer () int (
+    prepared:
+        args: ((int value))
+        return: int
+        code: ((return (value * 10)))
+    end: prepared
+    int: seeded (change)
+    int: before 0
+)
+    :=: before (local (k))
+    fn: local prepared
+    return: ((before * 100) + (local (k)))
+end: outer
+int: result 10550
+int: outside 8

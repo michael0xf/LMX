@@ -75,7 +75,33 @@ L3 со вставками L2. L1 — только генерируемая ст
 <a id="l2-status"></a>
 ## 3. Translator-L2 и ядро
 
-**Изменения 2026-11-14, срез380; кодовая приёмка пройдена.** Принимающее описание физического
+**Текущее состояние, 2026-11-14, срез381; база380 `c5ba5ef9`.** В существующий кадр добавлен
+`lexical_scope`: физический CodeBody меняется при выборе inline-тела, идентичности `code`/`body`/`data`
+сохраняются. Общий `work_scope` готовит written fn/sub только при входе; вычисляемая F создаётся на producer.
+Обходчик восстанавливает cursor при flow/error; native выставляет его перед каждым statement и на control labels.
+Local F маскирует только FREE fallback своей области, после data/formals, без общей inline promotion.
+Обязательный input (бит8) отделён от видимого дочерним вызовам input (бит2); бит4 объединяет scoped pending
+по правилу «все обязательные употребления pending». Optional snapshots остаются частными до потребления.
+Runtime06/graph02 и 17 pure-проб прошли: privacy178/8/5/5, fallback10550 и physical8;
+inline quiet90/selected790/reentry790/dynamic helper790, loop23, sub2/2 и indexed path3.
+Голый CODE-path неоднозначен и отказывает3: при чтении CODE как данных call Frames тоже являются вхождениями.
+Wrong write отказывает4 до RHS (calls0), bare Fn даёт1; mixed missing — 3/touch1/body0,
+literal outside — 3/touch0. Поля сохранённой written Structure в контексте данных не исполняются;
+явный merge-конструктор исполняет вычисляемые initializers (прежняя received_structure_values: merge_calls1).
+Прежние 67 полных AFTER не изменились; private31 triple/AFTER93/mutation24 прошли на Source07:751.
+Финальная emitter-only оптимизация покрывает первый statement entry-prefix без повторного вызова;
+Graph03/private02 inline triple прошли на Source08:751, SHA-256
+`b84c11fec03b4eb7fa7a35db19ebf732be8ab13975191eb704207dab0961e906`.
+Native trace подтвердил actual native outer, `work_scope` и `fn_apply`. Настоящие G1/G2 quick с девятью smoke каждый,
+fixedpoint13 и verify751 прошли. Штатный G2 graph-tool собран, SHA-256
+`b8abfe4c58cc5702009aa09f65ce0a9b040aec403602c1c31eec88989fbcce4f`.
+Повтор штатным G2 (86 случаев в трёх режимах, 102 полных negative AFTER, mutation24) прошёл;
+штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF. Рабочая связка — boot-m11-computed-body-01/g2
+и graph-m11-computed-body-g2-01; [свидетельство](../steps/witnesses/m11-computed-body-20261114/notes.md).
+Полный M11, копирование live F/data, M13/M14 OPEN. Динамический новый callee может идти через walker fallback;
+это не приёмка ordinary native M14.
+
+**Предыдущее состояние, 2026-11-14, срез380; кодовая приёмка пройдена.** Принимающее описание физического
 слота хранится в существующих `ImplContractFact`/`CopyMap` текущего `GraphSpace` на всё исполнение,
 включая вложенные вызовы и построенные копии. Лексическое упоминание известной Structure получает NONE;
 замена на Structure или адрес int не меняет его на тип текущего содержимого. Следующий независимый

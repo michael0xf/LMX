@@ -12,6 +12,7 @@
 
 [Памятка всем моделям / Guide for all models](READ.ME)
 
-Срез380: требования индексируемого места и копирование NONE действуют в пределах одного исполнения.
-Кодовая приёмка, native, настоящая самосборка G1/G2 и штатные render/docs-check прошли.
-Связка380 и открытые зависимости M11/M13/M14 — в [основном плане](next_core_tasks_v3.md).
+Срез381 реализует computed fn/sub в поддержанных CodeBody через общий lexical cursor кадра.
+Private/triple/AFTER/mutation, native trace, настоящие G1/G2 quick и fixedpoint13/verify751 прошли.
+G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF.
+Границы 381 и открытые зависимости M11/M13/M14 — в [основном плане](next_core_tasks_v3.md).

@@ -1,6 +1,21 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**Текущее состояние, 2026-11-14, срез 378 — приёмка пройдена.** Два исходника ядра:
+**Текущее состояние, 2026-11-14, срез381; база380 `c5ba5ef9`.** `lexical_scope` существующего кадра
+отслеживает выбранный физический CodeBody, сохраняя `code`/`body`/`data`; обходчик и native используют общий
+`work_scope` (§6.3). Runtime06/graph02, 17 pure-проб, прежние 67 полных AFTER без изменений,
+private31 в трёх режимах, AFTER93 и mutation24 прошли на Source07:751. Финальная emitter-only оптимизация
+покрывает первый statement entry-prefix без повторного вызова. Graph03/private02 inline triple и native trace
+прошли на Source08:751, SHA-256 `b84c11fec03b4eb7fa7a35db19ebf732be8ab13975191eb704207dab0961e906`.
+Trace подтвердил actual native outer, `work_scope` и `fn_apply`. Настоящие G1/G2 quick с девятью smoke каждый,
+fixedpoint13 и verify751 прошли. Штатный G2 graph-tool собран, SHA-256
+`b8abfe4c58cc5702009aa09f65ce0a9b040aec403602c1c31eec88989fbcce4f`.
+Повтор штатным G2 (86 случаев в трёх режимах, 102 полных negative AFTER, mutation24) прошёл;
+штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF. Рабочая связка — boot-m11-computed-body-01/g2
+и graph-m11-computed-body-g2-01; [свидетельство](../steps/witnesses/m11-computed-body-20261114/notes.md).
+Полный M11, копирование live F с её data и M13/M14 остаются OPEN; динамически созданный callee может
+исполняться обходчиком, что не подтверждает ordinary native M14.
+
+**Предыдущее состояние, 2026-11-14, срез 378 — приёмка пройдена.** Два исходника ядра:
 корень использует общий work frame и block0; native wrapper завершает этот кадр, forced его переиспользует.
 Отдельный root emitter удалён. Scalar values стоят без capture; discarded AST читает общий value reader,
 computed body bindings используют прежние metadata/rows. Runtime01/graph01 и пять pure-проб прошли.
@@ -1450,6 +1465,27 @@ Runtime02/graph02, private67 triple/204 AFTER с reset2/mutation24/native trace,
 fixedpoint13/verify717 и G2 graph68 triple/84 AFTER/mutation24 прошли; render/docs check380 тоже прошли.
 Этот допуск kind/type
 не закрывает глубокий Structure `implements`, статические проверки M11.7 или M13/M14.
+
+**Лексический CodeBody, срез381.** `GraphFrame.lexical_scope` — курсор физического тела, а выбранные `code`, `body`
+и `data` остаются идентичностями запуска. Общий `work_scope` допускает CodeBody в пределах `frame.body`
+по существующим ролям аргументов управления; для own-data фазы допускается также сама `frame.data`.
+For-header и тело сохраняют свои физические области.
+При фактическом входе готовятся written fn/sub этого блока; вычисляемая F возникает только при достижении
+producer. Scope/raw source, `F.parent` и прежнее доказательство construction binding сохраняются.
+Обёртка `block` восстанавливает курсор при нормальном выходе, flow и ошибке; native выставляет его на входе,
+перед каждым statement и на control labels, включая loop condition/step и cleanup. Отдельной активации inline нет.
+
+Данные и формалы сохраняют приоритет. Local F затеняет только FREE fallback в своей лексической цепочке;
+inline binding не подменяет общую строку входа и не становится видимым соседнему или внешнему блоку.
+Pending-use проверяется в области каждого обращения. В прежнем `Work.loaded` бит8 отмечает обязательность
+входа при допуске, бит2 — потребление и видимость дочерним вызовам; optional snapshot не становится видимым
+от одной классификации. Бит4 разрешает отложенную проверку только если все обязательные употребления pending;
+закрытое внешнее обращение снимает его. Инициализатор явного merge сканируется в контексте своего выражения,
+не в оставшемся курсоре другого statement. Сохранённая Structure в контексте данных не исполняет свои поля;
+явный merge-конструктор исполняет их вычисляемые начальные значения.
+Runtime06/graph02, частные проверки, финальный Graph03/private02 inline triple, native trace и настоящие
+G1/G2 quick с fixedpoint13/verify751, повтор G2 (86 triple/AFTER102/mutation24) и штатные render/docs check381 прошли.
+Это не завершает весь M11, копирование live F/data, M13 или M14; динамический callee может использовать walker fallback.
 
 ### 6.4 Копирование, merge, присоединение
 

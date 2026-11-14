@@ -1,0 +1,20 @@
+fn: leaf () int
+    return: 90
+end: leaf
+fn: helper () int
+    return: (leaf)
+end: helper
+fn: outer () int (
+    prepared:
+        args: ()
+        return: int
+        code: ((return 7))
+    end: prepared
+    int: inside 0
+    int: outside 0
+)
+    if: 1 ((fn leaf prepared) (:= inside (helper)))
+    :=: outside (helper)
+    return: ((inside * 100) + outside)
+end: outer
+int: result 790

@@ -1,6 +1,21 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice 378 -- acceptance passed.** Two core sources change:
+**Current state, 2026-11-14, slice381; base380 `c5ba5ef9`.** The existing frame's `lexical_scope`
+tracks the selected physical CodeBody, preserving `code`/`body`/`data`; the walker and native share
+`work_scope` (§6.3). Runtime06/graph02, 17 pure cases, the previous 67 full AFTER checks unchanged,
+private31 in three modes, AFTER93 and mutation24 passed on Source07:751. The final emitter-only optimization
+covers the first statement with the entry prefix without a repeated call. Graph03/private02 inline triple and native trace
+passed on Source08:751, SHA-256 `b84c11fec03b4eb7fa7a35db19ebf732be8ab13975191eb704207dab0961e906`.
+The trace confirmed actual native outer, `work_scope` and `fn_apply`. Genuine G1/G2 quick with nine smoke cases each,
+fixedpoint13 and verify751 passed. The genuine G2 graph-tool is built, SHA-256
+`b8abfe4c58cc5702009aa09f65ce0a9b040aec403602c1c31eec88989fbcce4f`.
+The genuine G2 repeat (86 cases in three modes, 102 full negative AFTER checks, mutation24) passed;
+normal render/docs check381 passed:35/14/27/44/615, links/LF. The working tuple is boot-m11-computed-body-01/g2
+and graph-m11-computed-body-g2-01; [record](../steps/witnesses/m11-computed-body-20261114/notes.md).
+Full M11, copying a live F with its data and M13/M14 remain OPEN; a dynamically created callee may
+use walker fallback, which does not establish ordinary native M14.
+
+**Previous state, 2026-11-14, slice 378 -- acceptance passed.** Two core sources change:
 the root uses the common work frame and block0; the native wrapper finishes that frame and forced reuses it.
 The separate root emitter is removed. Scalar values stand without capture; discarded AST uses the common value reader,
 and computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
@@ -1532,6 +1547,27 @@ Runtime02/graph02, private67 triple/204 AFTER including reset2/mutation24/native
 fixedpoint13/verify717 and G2 graph68 triple/84 AFTER/mutation24 passed; render/docs checks380 also passed.
 This kind/type admission
 completes neither deep Structure `implements`, static M11.7 checks nor M13/M14.
+
+**Lexical CodeBody, slice381.** `GraphFrame.lexical_scope` is a cursor for the physical body; selected `code`, `body`
+and `data` retain their launch identities. Common `work_scope` admits a CodeBody within `frame.body`
+through existing control-argument roles; an own-data phase also admits `frame.data` itself.
+A for-header and body retain their physical scopes.
+Written fn/sub of the block are prepared at actual entry; a computed F appears only when execution reaches
+its producer. Scope/raw source, `F.parent` and the existing construction-binding proof are preserved.
+The `block` wrapper restores the cursor on normal exit, flow and error; native sets it on entry,
+before every statement and at control labels, including loop condition/step and cleanup. Inline opens no separate activation.
+
+Data and formals retain priority. A local F masks only the FREE fallback in its lexical chain;
+an inline binding neither replaces the shared input row nor becomes visible to a sibling or outer block.
+Pending uses are checked in each occurrence's scope. In existing `Work.loaded`, bit8 marks the required
+entry input, while bit2 marks consumption and visibility to child calls; classification alone does not expose
+an optional snapshot. Bit4 permits deferred validation only if every required use is pending;
+a closed outer use clears it. An explicit merge initializer is scanned in its expression's context,
+not with another statement's remaining cursor. A retained Structure in a data context does not execute its fields;
+an explicit merge constructor executes their computed initializers.
+Runtime06/graph02, the private checks, final Graph03/private02 inline triple, native trace and genuine
+G1/G2 quick with fixedpoint13/verify751, the G2 repeat (86 triple/AFTER102/mutation24) and normal render/docs check381 passed.
+This completes neither full M11, copying live F/data, M13 nor M14; a dynamic callee may use walker fallback.
 
 ### 6.4 Copying, merge, attaching
 

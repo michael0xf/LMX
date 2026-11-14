@@ -1,0 +1,26 @@
+sub: outer () (
+    prepared:
+        name: direct
+        args: ()
+        data: ((int count 0))
+        code: ((:= count (count + 1)))
+    end: prepared
+    prepared_inner:
+        args: ()
+        data: ((int count 0))
+        code: ((:= count (count + 1)))
+    end: prepared_inner
+    int: first 0
+    int: second 0
+)
+    sub: prepared
+    direct:
+    direct:
+    :=: first ((direct \ data) \ count)
+    if: 1 ((sub nested prepared_inner) (nested) (nested) (:= second ((nested \ data) \ count)))
+end: outer
+outer:
+int: direct 2
+int: nested 2
+call: ((outer \ code) \ direct)
+int: by_path ((((outer \ code) \ direct) \ data) \ count)

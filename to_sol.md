@@ -1,5 +1,21 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез 381 — computed fn/sub в CodeBody, ограниченная реализация; приёмка пройдена.**
+База 380/c5ba5ef9 принята. Общий frame.lexical_scope/work_scope хранит текущий physical CodeBody;
+body/code/data identity и активация прежние. Fn-name из if не экспортируется, DATA/кадр общие.
+Name-sensitive pending: 8 required admission, 2 dynamic visibility, 4 AND по required uses;
+фактический внешний read/write раскрывает fallback, scoped F — нет. Privacy 178/8/5/5 и fallback 10550/outside8 сохранены.
+Runtime06/graph02, Source07:751: прошли 17 pure и полные AFTER 67 прежних случаев без изменения ожиданий,
+private31 triple/AFTER93/mutation24 PASS. Ветки 90/790, reentry/helper 790, write4/calls0 и bare Fn1;
+sub 2/2, indexed path count3, bare ambiguity3. Source08:751 verified, SHA b84c11fe; Graph03/private02-inline triple
+после dedup первой native scope-записи прошли, Runtime06 не менялся. Actual NativeOuter/lexical scope/fn_apply
+trace прошёл; новый dynamic callee пока walker fallback. Whole bootstrap quick: настоящие G1/G2, по9 smoke,
+fixedpoint13/verify751 PASS; штатный G2 пересобрал graph-tool, SHA b8abfe4c.
+G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615,
+ссылки/LF27605 до staging. Финальный index-check02 прошёл LF27660. Рабочая связка381:
+boot-m11-computed-body-01/g2 + graph-m11-computed-body-g2-01; [свидетельство](steps/witnesses/m11-computed-body-20261114/notes.md).
+Остатки CodeBody else/finally/retained groups, copied lexical/current F data, M11.7/8, M13/M14 OPEN; goal ACTIVE.
+
 **2026-11-14, срез380 — требования индексируемого места, кодовая приёмка пройдена.**
 База379 — d670a0e9. ImplContractFact/CopyMap текущего GraphSpace фиксируют требование до RHS;
 NONE переживает повторные замены и копируется соответствующими constructor slots merge/fn_data.
@@ -12,7 +28,7 @@ Private67 triple/204 AFTER с reset2/mutation24 и actual native root/RHS trace 
 Штатные render/docs check380 прошли:35/14/27/44/615, ссылки и LF27563 до staging; final index03 LF27604.
 Кодовая связка boot-m11-slot-contract-01/g2 +
 graph-m11-slot-contract-g2-01; [свидетельство](steps/witnesses/m11-slot-contract-20261114/notes.md).
-Общий implements/test, copied lexical bindings, computed nested BODY/static-name и весь M13/M14 OPEN.
+Общий implements/test, copied lexical bindings и весь M13/M14 OPEN; ограниченный computed BODY срез381 описан выше.
 Все дальнейшие дополнения вносить в основной v3; goal ACTIVE.
 
 **2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**
@@ -657,10 +673,12 @@ bootstrap достигает неподвижной точки, различия
 **OPEN общих зависимостей:** copied lexical fn/sub binding требует соответствующих copied scope/source/parent,
 а не обращения к чужому construction binding или persistent таблице. Текущая own data уже созданной F
 переносится через ту же map, без повторного raw initializer; контроль source count3 → copied call4/source3
-включён в основной v3. Computed fn/sub в nested BODY и доступность
-известного computed имени пока ограничены: возможен entry3 до producer, затем guard fn_apply даёт5 вне ROOT/own DATA.
-Расширять общий scope/frame/constructor с сохранением snapshots и closed-missing timing. Root named-parts probe380
-проверяет только перенос captured fact через fn_data; исходный nested BODY/node-path случай остаётся в v3.
+включён в основной v3. Computed fn/sub в поддержанных CodeBody реализованы ограниченным срезом381:
+общий lexical_scope/work_scope, scope/name-sensitive pending, snapshots и closed-missing timing;
+имя fn/sub из if не выходит наружу при общей DATA. Private/native trace, настоящие G1/G2 quick и fixedpoint13/verify751 прошли;
+G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF.
+Общий охват else/finally/retained groups и рабочий frontend M11.8 остаются OPEN. Root named-parts probe380
+проверял перенос captured fact через fn_data; copied lexical/node-path/current F data зависимость этим не закрыта.
 
 **5е:** имена Structure/функций слева от `:=` отказывают, указатель-переменная принимает ссылку; формалы —
 ресиверами; именованные фактические и части вызываемых — только `:=`; плоское требование с кандидатом.

@@ -1,5 +1,37 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г/8: срез381, computed fn/sub в BODY, приёмка пройдена
+
+380 принят и отправлен:c5ba5ef9c2693e2b817dbb9cdf90ce63cbf711f8. Только main, один writer/build Sol.
+Pipeline sol-m11-computed-body-20261114-01; baseline380: written-name BODY3, whole-descriptor BODY5,
+ordinary C(D) BODY3. Нужно достигнутое создание через прежний receiver_bind/make/fn_apply,
+pending именно будущего имени при сохранении entry snapshots, closed-missing и ordered data.
+Общий frame/Space/CodeBody; без искусственных методов, нового namespace registry и eager descriptor execution.
+Inline lexical namespace проверяется по норме отдельно от общего frame/data; не выводить экспорт fn имени
+наружу if только из принадлежности одной активации. Физический raw parent сохраняется.
+Bridge01 PASS; Frame.lexical_scope и Run52. Runtime01–03 исправлены tail cutters,04 — C-type casts;
+runtime05/graph01 дали первые9 positive/refused. Privacy175 выявил смешение required/visible:
+bit8=required free input,2=dynamic visibility,4=AND pending; actual reads/writes активируют2.
+Runtime06/graph02 прошли:17 pure (privacy178/8/5/5, BODY9/12, C(D)28/14/cold0, snapshot10550,
+inline90/790, reentry790/790, groups5/8, loop23, sub2/2/path3, ранние отказы3/4/1).
+67 прежних pure и их полные AFTER совпали без новых golden; private31 interp/native/forced PASS.
+Source07 verify751, SHA4ba67c0198f6a8c419840d8596b70501adfd0e6246ebc66ba5c03fdeebd3fd52.
+AFTER93/mutation24 прошли. EmitBlock убрал дублирующий Scope prefix первой строки;
+Graph03/private02-inline triple прошли, Runtime06 не менялся. Source08 verify751 frozen:
+b84c11fec03b4eb7fa7a35db19ebf732be8ab13975191eb704207dab0961e906.
+GDB native-lexical-scope01 подтвердил actual NativeOuter, выбранный lexical body и fn_apply,
+quiet90/selected790/normal exit. Новая dynamic leaf пока walker fallback — M14 OPEN.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke; fixedpoint13/verify751 PASS.
+G2 graph-tool заново собран:b8abfe4c58cc5702009aa09f65ce0a9b040aec403602c1c31eec88989fbcce4f.
+G2 repeat86 triple/negative AFTER102/mutation24 прошли. Штатные render/docs check381 прошли:
+35/14/27/44/615, ссылки и LF27605 до staging; финальный index-check02 прошёл LF27660.
+Оба diff --check чисты; два чужих untracked сохранили SHA. Далее commit/push main.
+Рабочая связка381: boot-m11-computed-body-01/g2 + graph-m11-computed-body-g2-01.
+Весь v3 goal ACTIVE; после commit/push продолжить bounded CodeBody consumer else/finally,
+copied lexical/current F data, M11.7/8, M13/M14. Код/тесты/конвейер — только root Sol.
+Помощники закончили документальные правки, владение возвращено. Read-only review дефектов не нашёл.
+Чужие два untracked сохранить. Общий конвейер последовательный.
+
 ## 2026-11-14 — M11.5д/7: срез380, требования физического места, кодовая приёмка пройдена
 
 379 принят и отправлен:d670a0e9eb9ef4450907f88f0f058b20314f20b0. Только main, один writer/build.

@@ -1,5 +1,20 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез 381 — computed fn/sub в CodeBody, ограниченная реализация; приёмка пройдена.**
+
+- [x] Поддержанные CodeBody roles: общий frame.lexical_scope/work_scope без смены body/code/data identity;
+  fn-name из if лексический, кадр/DATA общие. Биты pending: 8 required / 2 visible / 4 AND; fallback включается фактическим чтением/записью.
+- [x] Runtime06/graph02, Source07:751: 17 pure, полные AFTER 67 прежних случаев без изменения ожиданий;
+  private31 triple/AFTER93/mutation24. Privacy 178/8/5/5, fallback 10550/outside8, ветки 90/790,
+  reentry 790/790, helper 790, write refusal4/calls0, bare Fn1; sub 2/2/indexed count3/bare ambiguity3.
+- [x] Source08:751 verified, SHA b84c11fe; Graph03/private02-inline triple после dedup первой native scope-записи.
+  Runtime06 не менялся; actual NativeOuter/lexical scope/fn_apply trace прошёл, новый callee пока walker fallback.
+- [x] Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify751; G2 graph-tool пересобран, SHA b8abfe4c.
+- [x] G2 repeat86 triple/negative AFTER102/mutation24 прошли.
+- [x] Штатные render/docs check381:35/14/27/44/615, ссылки/LF27605 до staging; финальный index-check02 LF27660.
+- [ ] Общий охват CodeBody else/finally/retained groups, copied lexical/current F data, M11.7/8, весь M13/M14.
+  Кодовая связка381: boot-m11-computed-body-01/g2 + graph-m11-computed-body-g2-01; goal ACTIVE.
+
 **2026-11-14, срез380 — требования индексируемого места, кодовая приёмка пройдена.**
 
 - [x] Подготовить код disposable receiving context GraphSpace через ImplContractFact/CopyMap:
@@ -12,7 +27,7 @@
 - [x] Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify717; G2 graph68 в трёх режимах,84 AFTER/mutation24.
 - [x] Штатные render/docs check380:35/14/27/44/615, ссылки, LF27563 до staging; final index03 LF27604.
 - [ ] Общий implements Structure-моделей/test M11.7; copied lexical fn/sub construction bindings.
-- [ ] Computed nested BODY/static-name availability общим scope/frame; исходный отказ не считать нормой.
+- [ ] Остатки computed CodeBody после ограниченного среза381 и общий охват retained/control bodies.
 - [ ] Полный M11/M13/M14. Кодовая связка380; goal ACTIVE.
 
 **2026-11-14, срез379 — общий вызов через выражение головы, кодовая приёмка пройдена в main.**

@@ -9,7 +9,22 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice 380; code acceptance passed): index writes capture the physical
+Current implementation note (2026-11-14, slice 381; bounded implementation, acceptance passed; base 380/c5ba5ef9): the existing
+GraphFrame.lexical_scope selects the physical CodeBody through shared work_scope; body/code/data identity and
+the activation stay unchanged. Inline fn/sub names remain lexical while data and the frame are shared.
+Name-sensitive pending separates required admission bit 8, dynamic visibility bit 2 and AND-pending bit 4;
+an actual external read/write exposes the frozen fallback, a scoped F does not. The 17 pure cases,
+67 old full AFTER cases unchanged and private31 triple/AFTER93/mutation24 passed on runtime06/graph02, Source07:751.
+Source08:751 is verified, SHA b84c11fe; Graph03/private02-inline triple passed after removal of the duplicate
+first-statement scope call, with Runtime06 unchanged. Privacy 178/8/5/5, fallback 10550/outside8,
+lexical/reentry/helper 790 and refusal boundaries are preserved. The actual NativeOuter/lexical scope/fn_apply
+trace passed; a new dynamic callee still uses walker fallback. Genuine G1/G2 quick, nine smoke rows each,
+fixedpoint13/verify751 and the genuine G2 graph rebuild passed, graph SHA b8abfe4c.
+G2 repeat86 triple/negative AFTER102/mutation24 and normal render/docs check381 passed:35/14/27/44/615, links/LF. General CodeBody coverage
+(else/finally/retained groups), copied lexical bindings/current F data, M11.7/8 and full M13/M14 remain open.
+See the [main plan](next_core_tasks_v3.md#m11) and [record381](steps/witnesses/m11-computed-body-20261114/notes.md).
+
+Previous implementation note (2026-11-14, slice 380; code acceptance passed): index writes capture the physical
 place's requirement before RHS effects in the current GraphSpace, using existing ImplContractFact/CopyMap storage.
 Captured NONE survives repeated replacements and constructor copies through merge/fn_data within that execution.
 The context is discarded on exit; the next independent traversal derives requirements from the current graph.
@@ -21,8 +36,8 @@ The 58 existing pure cases pass; nine targeted fixtures were added. Private67 in
 Genuine G1/G2 quick, nine smoke rows each and fixedpoint13/verify717 passed; rebuilt G2 graph repeated
 68 cases in three modes,84 negative AFTER/mutation24. Normal render/docs checks passed:35/14/27/44/615,
 links and LF27563 before staging; final index check03 passed LF27604. [Record380](steps/witnesses/m11-slot-contract-20261114/notes.md).
-The code tuple is380. Full used-interface implements/test, copied lexical construction bindings,
-computed nested BODY/static-name availability, M13 and M14 remain open; see the [main plan](next_core_tasks_v3.md#m11).
+The previous code tuple is380. Full used-interface implements/test, copied lexical construction bindings,
+M13 and M14 remain open; bounded computed BODY slice381 is described above.
 
 Previous implementation note (2026-11-14, slice 378; code acceptance passed): common root work frame/block0, native wrapper completion and
 forced reuse replace the separate root emitter. Scalar values stand without capture; discarded AST uses the common

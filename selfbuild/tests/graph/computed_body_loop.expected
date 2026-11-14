@@ -1,0 +1,13 @@
+fn: gate () int (
+    int: calls 0
+)
+    :=: calls (calls + 1)
+    return: (calls < 3)
+end: gate
+fn: outer () int (
+    int: steps 0
+)
+    while: (gate) ((fn gate () int ((return 0))) (:= steps (steps + 1)) (continue))
+    return: ((steps * 10) + ((gate \ data) \ calls))
+end: outer
+int: result 23

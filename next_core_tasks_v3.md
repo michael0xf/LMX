@@ -1,5 +1,24 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез 381 — computed fn/sub в CodeBody, ограниченная реализация; приёмка пройдена.**
+Принятая база 380 — c5ba5ef9. В прежний GraphFrame добавлен lexical_scope текущего физического CodeBody;
+общий work_scope сохраняет identity body/code/data и тот же кадр/DATA. Имя fn/sub из if остаётся лексическим
+и не экспортируется наружу. Pending зависит от имени и scope: бит 8 — required admission, 2 — dynamic visibility,
+4 — AND pending по required uses; фактическое внешнее чтение/запись включает 2, scoped F не раскрывает fallback.
+На runtime06/graph02, Source07:751 прошли 17 pure, полные AFTER 67 прежних случаев без изменения ожиданий,
+private31 в трёх режимах, AFTER93/mutation24. Privacy 178/8/5/5, fallback 10550/outside8,
+ветки 90/790, reentry 790/790, dynamic parent helper 790; typed write refusal4/calls0 и bare Fn refusal1.
+Sub counters 2/2, indexed path count3; bare path refusal3 учитывает call records при чтении CODE как DATA.
+После снятия повторного scope-вызова первой native-записи прошли Graph03/private02-inline в трёх режимах;
+Runtime06 не менялся. Source08:751 verified, SHA b84c11fec03b4eb7fa7a35db19ebf732be8ab13975191eb704207dab0961e906.
+Native trace подтвердил actual NativeOuter, lexical scope и fn_apply, quiet90/selected790/normal exit;
+новый dynamic callee использует walker fallback. Whole bootstrap quick прошёл: настоящие G1/G2, по9 smoke,
+fixedpoint13/verify751. Штатный G2 заново собрал graph-tool, SHA b8abfe4c58cc5702009aa09f65ce0a9b040aec403602c1c31eec88989fbcce4f.
+G2 repeat86 в трёх режимах, negative AFTER102 и mutation24 прошли. Штатные render/docs check381
+прошли:35/14/27/44/615, ссылки и LF27605 до staging; финальный index-check02 прошёл LF27660.
+Поддержанные CodeBody roles реализованы; общий охват else/finally/retained groups, copied lexical bindings
+с текущей own data F, M11.7/8, весь M13/M14 остаются OPEN. Приёмка381 ограничена этим срезом; goal ACTIVE.
+
 **2026-11-14, срез380 — требования индексируемого места, кодовая приёмка пройдена.**
 База379 — d670a0e9. Требование физического слота фиксируется до эффектов RHS и сохраняется
 в текущем GraphSpace через существующие ImplContractFact/CopyMap. NONE остаётся отсутствием требования
@@ -14,8 +33,8 @@ Primitive subtype refusal4 сохраняет old=7 после effects=1; bounds
 прошли. Whole bootstrap quick: настоящие G1/G2, по9 smoke; fixedpoint13/verify717 прошли.
 Штатный G2 заново собрал graph-tool и повторил68 случаев в трёх режимах,84 negative AFTER/mutation24.
 Native trace подтверждает root→prepare→RHS→write. Штатные render/docs check прошли:35/14/27/44/615,
-ссылки и LF27563 до staging; финальный index check03 прошёл LF27604. Далее commit/push main.
-Копированные lexical fn/sub bindings и computed nested BODY/static-name остаются OPEN ниже.
+ссылки и LF27563 до staging; финальный index check03 прошёл LF27604. Принят и отправлен c5ba5ef9.
+Копированные lexical fn/sub bindings остаются OPEN; ограниченный computed BODY срез381 описан выше.
 Полный implements M11.7, остальные M11, M13 и M14 не закрыты; кодовая связка380, goal ACTIVE.
 [Свидетельство380](steps/witnesses/m11-slot-contract-20261114/notes.md).
 
@@ -1820,8 +1839,8 @@ Structure и записью значения, снимаются — шаг 6. �
      заменяет прежнего (фикстуры `occurrence_bare_refused`, `occurrence_index`, `root_occurrence_index`,
      `root_repeat_refused`). Остаётся: запись с головой — именем места того же уровня как вхождение в пути (ответ
      Р19, пункт 2); повтор объявления переменной в корне единицы и в явной части `data` метода; вложенные вхождения
-     `data\if\if`. Atom-slot index (M6.4) реализуется срезом380, WIP; предварительные pure прошли,
-     native/самосборка и документальные gates ещё не завершены.
+     `data\if\if`. Atom-slot index (M6.4) принят срезом380/c5ba5ef9: pure/native/forced,
+     G1/G2/fixedpoint, G2 repeat и штатные render/docs gates прошли.
      Зависимость индексной записи от шага7: допуск определяется прежним требованием физического места,
      включая отсутствие требования, а не текущим referent. Контроль одного слота: atom → Structure →
      адрес int → Structure, результаты7/41/9; отсутствие требования сохраняется после первой записи.
@@ -1890,12 +1909,15 @@ Structure и записью значения, снимаются — шаг 6. �
    становятся отрицательными. В частности, `tests/dyn/written_form.lm2` сохраняет отменённые присваивания
    структурной формой, прежний `var` и порядок `call`: переписать её по действующим ролям здесь,
    а не выдавать за миграцию M8 механическую замену двоеточия перед группой.
-   **OPEN — computed fn/sub в nested BODY и static-name availability:** подготовка написанного метода,
-   достигнутый computed receiver и запись имени в namespace должны использовать существующий общий scope/frame.
-   Сейчас code_open открывает неизвестное computed имя, но известное ещё не созданное имя может дать early3;
-   fn_apply допускает ROOT/own DATA и отказывает nested BODY5. Сохранить entry snapshots и фазу closed-missing,
-   не вычислять descriptor заранее и не обходить границу искусственным методом. Root named-parts probe380
-   проверяет fn_data copy, но не закрывает этот исходный случай.
+   **381 — computed fn/sub в поддержанных CodeBody, ограниченная реализация:** общий frame.lexical_scope/work_scope,
+   имя-зависимый pending и прежний receiver/namespace сохраняют entry snapshots и closed-missing timing.
+   Scoped fn-name не выходит из if; кадр и DATA общие, descriptor не вычисляется заранее.
+   Required admission (бит 8) отделён от visibility (бит 2); pending (бит 4) агрегируется по всем required uses.
+   Private31 triple/AFTER93/mutation24, final Graph03/private02-inline и native trace прошли.
+   Настоящие G1/G2 quick, по9 smoke, fixedpoint13/verify751 и пересборка G2 graph прошли;
+   G2 repeat86 triple/negative AFTER102/mutation24 и штатные render/docs check381 прошли:35/14/27/44/615, ссылки/LF.
+   Общий охват CodeBody, включая else/finally/retained groups, рабочий frontend M11.8 и остальные M11
+   остаются OPEN; copied lexical scope/source/parent и текущая own data уже созданной F — отдельная зависимость5д.
    **OPEN после среза379:** typed indirect expression-head application в graph machine frontend.
    Потреблять общий carrier, определить машинный тип головы и выбрать её один раз до actuals;
    сохранить порядок, preflight и различие nullary/одного written group. Пока этот путь выдаёт общий

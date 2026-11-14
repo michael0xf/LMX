@@ -1,0 +1,18 @@
+int: x 7
+int: calls 0
+int: before 0
+fn: touch () int
+    node\calls := node\calls + 1
+    return: 9
+end: touch
+fn: outer () int (
+    prepared:
+        args: ()
+        return: int
+        code: (return: 7)
+)
+    node\before := 1
+    if: 1 (fn: x prepared; x := touch())
+    return: 0
+end: outer
+int: result outer()

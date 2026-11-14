@@ -1,0 +1,27 @@
+# Unknown computed names become visible at their producer. Each own data
+# belongs to the constructed value; the written descriptors stay unchanged.
+@: Prepared (
+    name: make
+    args: (int: a 2)
+    return: int
+    data:
+        int: calls 0
+    code: (calls := calls + 1; return: a * 10 + calls)
+)
+fn: Prepared
+int: first make()
+int: second make(a := 3)
+@: PreparedSub (
+    name: step
+    args: ()
+    data:
+        int: n 0
+    code: (n := n + 1)
+)
+sub: PreparedSub
+step()
+step()
+int: made_calls make\data\calls
+int: made_steps step\data\n
+int: source_calls Prepared\data\calls
+int: source_steps PreparedSub\data\n

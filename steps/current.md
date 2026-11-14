@@ -1,5 +1,34 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.5г/M14: срез378, общий root frame, кодовая приёмка пройдена
+
+377 принят и отправлен:04fbf275c4801b648f8750d6d57f83641ae4f1f9. Только main в
+C:/Nyasha_Planet/LMX; один writer/build Sol, pipeline sol-m11-root-frame-20261114-01.
+Baseline377 root snapshot: x8/snapshot8/again8/direct8 вместо нормативных8/1/1/8.
+Изменены common run/block и native root wrapper: прежний work_open_data/finish,
+mapped CODE stores, единственный frame в forced route, AFTER после публикации.
+Снят отдельный root emitter; computed fn/sub вызывают прежний binder по настоящему body/index,
+unknown code bindings живут до своего producer с прежними optional/free rows.
+Bare scalar values стоят в любом BODY; discarded operator AST читает value, без int admission.
+Три graph fixtures используют explicit return:/break: вместо bare-word flow; результаты сохраняются.
+Runtime01/graph01 и пять pure прошли: numeric snapshot1/1/direct8, reference10/direct20,
+mapped local3/address1/direct1, computed fn21/32/sub2/source0, early3/touches0, error6/x9.
+Первый private50 имел две golden delta из-за прежнего root k без frame: независимо изменены
+пять чисел, open_result55 сохранён. Дополнительный error-case проверен в трёх режимах;
+все153 полных AFTER51 случаев и mutation24 прошли на тех же бинарниках, без повторной C-сборки50.
+Добавлены full expected двух прежних negative finally observers12; три control fixture pairs перенесены.
+Source04 verify685, manifestb8e7d5a1. Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke;
+fixedpoint13/verify685. Штатный G2/graph заново построен,51 в трёх режимах, AFTER60/mutation24 прошли.
+Рабочая связка boot-m11-root-frame-01/g2 + graph-m11-root-frame-g2-01, runtime01 identicalG2.
+Одноразовый GDB trace01 подтвердил настоящий native root: root→body→call0_mode, normal exit;
+generated native не вызывает run. Штатные render/docs-check прошли:35/14/27/44/615,
+ссылки и LF индекса27517; оба diff --check чисты, чужие два untracked сохранили SHA.
+Далее commit/push main.
+Legacy computed-int физическая cell до публикации — OPEN M13, явно внесено в основной v3;
+у уже существующей mapped cell не подменять её адресом local snapshot и не вставлять flush ради @.
+После приёмки продолжить прямую path-head launch и остатки5г/5д/5е/7/8, M13/M14; goal ACTIVE.
+Сохранить два чужих untracked. Общий конвейер последовательный.
+
 ## 2026-11-14 — M11.5г: срез 377, written nested fn/sub обычного запуска, кодовая приёмка пройдена
 
 376 принят и отправлен из main:9039fa892658ba6c12f91e35f576c52b9f2a02a7.

@@ -1,5 +1,16 @@
 # Чеклист реализации LMX
 
+**2026-11-14, срез378 — общий root frame, кодовая приёмка пройдена.**
+377 принят и отправлен04fbf275. Run/native/forced используют прежний frame; CODE block общий,
+старый root emitter удалён. Пять pure,51 triple outputs,153 full AFTER/mutation24 прошли.
+Пять golden чисел независимо исправлены для root snapshot k5, без повторной C-сборки50.
+Source04 verify685; whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke, fixedpoint13.
+Штатный G2/graph51/AFTER60/mutation24 и actual native root trace01 прошли; render/docs-check
+35/14/27/44/615, ссылки и LF27517 прошли. Оба diff --check чисты, чужой WIP сохранён.
+Mapped local3/address1/direct1 и formal/freeinput7 различаются по норме. Legacy computed-int
+constructionM13, shared cache/flush/ordinary nativeM14, path-head и прочиеM11 остаются OPEN.
+[Свидетельство](steps/witnesses/m11-root-frame-20261114/notes.md). Goal ACTIVE.
+
 **2026-11-14, срез377 — written nested fn/sub ordinary launch, кодовая приёмка пройдена.**
 376 принят и отправлен9039fa89. Entry готовит непосредственные written declarations data/body,
 повторный вход сохраняет F того же scope/raw и own data без запуска ordinary initializers.

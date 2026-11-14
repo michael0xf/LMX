@@ -76,7 +76,23 @@ handler. Old `throw` payload machine limits are not L2/L3 limits.
 <a id="l2-status"></a>
 ## 3. Translator-L2 and kernel
 
-**Current state, 2026-11-14, slice 377: acceptance passed.** Only `lmx_graph_run.lm2` changes in the core:
+**Current state, 2026-11-14, slice 378: acceptance passed.** Common root frame/block0,
+native wrapper completion and forced reuse replace the separate root emitter. Scalar values stand without capture;
+discarded AST uses the common value reader and computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
+Private01 executed 50 cases in three modes: 48 matched old goldens, 2 needed five independently derived
+root-k snapshot updates (three outside8→5, data_result118→115, second892→592; open_result55 stays).
+The existing 50 binaries were not rebuilt; additional root_frame_error passed triple. In total 51 cases executed
+in three modes, 153 complete AFTER comparisons and mutation24 passed. Missing full AFTER expectations for
+finally_body_error/sub_error were added with root_trace12/seen12; three existing fixture pairs use explicit control Frames.
+Source04: 685; whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each, fixedpoint13/verify685. Genuine G2
+rebuilt graph-tool and repeated 51 cases in three modes, AFTER60/mutation24; runtime01 matches G2.
+Render/docs check passed:35/14/27/44/615, links and LF27517; both diff checks are clean, actual native root trace01 passed.
+Working tuple: boot-m11-root-frame-01/g2 and graph-m11-root-frame-g2-01.
+Mapped own int local3/address1/direct1 before publication does not change formal/free-input control7. Legacy computed-int
+preallocation remains M13 OPEN, closed by neither a row.number address nor forced flush. The shared cache/flush/ordinary
+native M14, path-head calls and full M11 remain OPEN. [Witness 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
+
+**Previous state, 2026-11-14, slice 377: accepted `04fbf275`.** Only `lmx_graph_run.lm2` changes in the core:
 `work_open_parts` prepares written fn/sub in selected data/body before work scan; `space_declare` reuses
 the existing scope/raw-source binding. State preserves F and its own data: first1/second2, leaf_count2/sub_count2,
 bumped2. Separate D/C give 32/34, data_count12/code_count22, touch_calls0. Different raw leaf declarations do not merge:

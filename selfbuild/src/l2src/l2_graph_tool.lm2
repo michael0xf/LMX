@@ -203,24 +203,6 @@ fn: lm_graph_emit_parents (@: g c.LmxGraph; @: f c.FILE; @: map c.LmxCopyMap; si
     c.free((cast: (@: void) ordered))
 return: status
 
-# The name a root application of fn or sub gives (lmx_graph_fn_apply), as far as the translation reads it: the written
-# name the binder takes (lmx_graph_fn_decl_name), or the name part of the prepared Structure the translation's namespace
-# answers by the written word (lmx_graph_fn_part); 0 when only the program knows it (a Structure an expression computes).
-fn: lm_graph_emit_fn_name (@: g c.LmxGraph; @: root c.Lmx; @: decl c.Lmx) @: char
-    @: value void 0
-    @: name char c.lmx_graph_fn_decl_name(g, decl)
-    if: name != 0
-        return: name
-    if: c.lmx_graph_count(decl) != 1U || c.lmx_graph_kind(g, c.lmx_graph_get(decl, 0U)) != 2
-        return: 0
-    value := c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_word_text(g, c.lmx_graph_get(decl, 0U))))
-    if: c.lmx_graph_kind(g, value) != 4
-        return: 0
-    value := c.lmx_graph_fn_part(g, (cast: (@: c.Lmx) value), c.lmx_graph_intern("name", 4U))
-    if: c.lmx_graph_kind(g, value) != 2
-        return: 0
-    return: c.lmx_graph_word_text(g, value)
-end: lm_graph_emit_fn_name
 
 # The emitter's table of the declarations its native body has emitted so far (§3.5: the translator's own resolution,
 # a table of its traversal): a declaration with a computed initializer names its slot from its statement on.
@@ -854,7 +836,6 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     int: protected_exit -1
     int: protected_again -1
     int: protected_step -1
-    int: cleanup_mode mode
     int: status 0
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
@@ -871,11 +852,7 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     c.fprintf(f, "        int: l2_pending_error%d 0\n        @: char l2_pending_word%d 0\n        @: LmxGraphState l2_pending_words%d lmx_graph_state()\n", id, id, id)
     temps[1] := id + 1
     temps[2] := id + 2
-    if: mode = 1
-        status := lm_graph_emit_statements_from(g, f, code, at + 1U, temps)
-    else:
-        status := lm_graph_emit_block(g, f, code, body, at + 1U, to, mode, protected_exit, protected_again, protected_step, temps)
-    ---
+    status := lm_graph_emit_block(g, f, code, body, at + 1U, to, mode, protected_exit, protected_again, protected_step, temps)
     temps[1] := saved_failure
     temps[2] := saved_return
     if: status != 0
@@ -895,9 +872,7 @@ fn: lm_graph_emit_finally (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body 
     c.fprintf(f, "        l2_label%d:\n        if: l2_pending_error%d != 0 || l2_pending_word%d = l2_pending_words%d\\w_return\n            if: lmx_graph_work_flush(l2_g) != 0\n                l2_pending_error%d: 1\n        ---\n", id, id, id, id, id)
     temps[1] := id + 6
     temps[2] := id + 7
-    if: mode = 1
-        cleanup_mode := 2
-    status := lm_graph_emit_block(g, f, code, cleanup, 0U, c.lmx_graph_count(cleanup), cleanup_mode, protected_exit, protected_again, protected_step, temps)
+    status := lm_graph_emit_block(g, f, code, cleanup, 0U, c.lmx_graph_count(cleanup), mode, protected_exit, protected_again, protected_step, temps)
     temps[1] := saved_failure
     temps[2] := saved_return
     if: status != 0
@@ -1091,216 +1066,6 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
     return: status
 end: lm_graph_emit_assignment
 
-fn: lm_graph_emit_statements_from (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; size_t: from; @: temps int) int
-    c.LmxGraphEmitScratch: leave_storage
-    @: leave_failure char (cast: (@: char) leave_storage\failure)
-    lm_graph_emit_leave_text(leave_failure, temps[1], 1)
-    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    size_t: n (cast: (size_t) c.lmx_graph_count(root))
-    @@: decl_names char c.calloc(n + 1U, sizeof(@: char))
-    @: decl_slots size_t c.calloc(n + 1U, c.sizeof(c.size_t))
-    size_t: decl_n 0U
-    size_t: i 0U
-    size_t: m 0U
-    size_t: end_at 0U
-    @: next c.Lmx 0
-    @: value void 0
-    @: inner c.Lmx 0
-    @: head char 0
-    @: name char 0
-    int: temp 0
-    int: r 0
-    int: finish -1
-    int: kind 0
-    if: state = 0 || decl_names = 0 || decl_slots = 0
-        return: 5
-    # Earlier computed declarations have already been published by the time this continuation is entered.
-    while: i < from
-        value := c.lmx_graph_get(root, i)
-        head := c.lmx_graph_name_of(g, value)
-        if: c.lmx_graph_kind(g, value) = 4 && head != 0
-            inner := (cast: (@: c.Lmx) value)
-            if: head = state\w_int || head = state\w_at
-                decl_names[decl_n] := c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
-                decl_slots[decl_n] := i
-                decl_n := decl_n + 1U
-            else:
-                # A root application of fn or sub before the continuation gave its name (lmx_graph_fn_apply).
-                if: (head = state\w_fn || head = state\w_sub) && c.lmx_graph_fn_written(g, inner) = 0
-                    name := lm_graph_emit_fn_name(g, root, inner)
-                    if: name != 0
-                        decl_names[decl_n] := name
-                        decl_slots[decl_n] := i
-                        decl_n := decl_n + 1U
-                    ---
-                ---
-            ---
-        ---
-        i := i + 1U
-    ---
-    while: i < n
-        value := c.lmx_graph_get(root, i)
-        kind := c.lmx_graph_kind(g, value)
-        # Literal int places stand at the root. Reached reference declarations
-        # use the same block consumer as code over self or given data.
-        if: kind = 1 || kind = 3
-            i := i + 1U
-            continue
-        if: kind = 5 || kind = 6 || kind = 8 || kind = 9
-            r := lm_graph_emit_block(g, f, root, root, i, i + 1U, 2, -1, -1, -1, temps)
-            if: r != 0
-                return: r
-            i := i + 1U
-            continue
-        if: kind != 4
-            i := i + 1U
-            continue
-        if: c.lmx_graph_fn_result(g, value) != 0
-            i := i + 1U
-            continue
-        inner := (cast: (@: c.Lmx) value)
-        m := c.lmx_graph_count(inner)
-        head := c.lmx_graph_name_of(g, value)
-        if: head = 0
-            # Operator trees execute; a preserved written group is a value.
-            if: m != 0U
-                head := c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
-            if: head = state\w_assign
-                r := lm_graph_emit_assignment(g, f, root, inner, 1, temps, decl_names, decl_slots, decl_n)
-                if: r != 0
-                    return: r
-                i := i + 1U
-                continue
-            if: c.lmx_graph_path_head(g, value) != 0
-                r := lm_graph_emit_path_statement(g, f, root, inner, temps, decl_names, decl_slots, decl_n)
-                if: r != 0
-                    return: r
-                i := i + 1U
-                continue
-            if: c.lmx_graph_written_group(g, value) != 0
-                i := i + 1U
-                continue
-            r := lm_graph_emit_number(g, f, root, root, i, temps, decl_names, decl_slots, decl_n, @ temp)
-            if: r != 0
-                return: r
-            i := i + 1U
-            continue
-        # A declaration of fn or sub with written arguments created its Structure when the block was entered, in both
-        # namespaces. The receiver applied to arguments the program computes runs where the program reaches it: the code
-        # calls the kernel's application (lmx_graph_fn_apply), and the function it creates is interpreted -- the
-        # translation creates no Structure and no native code for it.
-        if: head = state\w_fn || head = state\w_sub
-            if: c.lmx_graph_fn_written(g, inner) = 0
-                c.fprintf(f, "        if: lmx_graph_fn_apply(l2_g, lmx_call_code, %zuU) != 0\n            %s\n", i, leave_failure)
-                # The name it gives answers a function from here on when the program runs: a statement on it applies it,
-                # later operands find its published root slot through the same table.
-                name := lm_graph_emit_fn_name(g, root, inner)
-                if: name != 0
-                    decl_names[decl_n] := name
-                    decl_slots[decl_n] := i
-                    decl_n := decl_n + 1U
-                ---
-            ---
-            i := i + 1U
-            continue
-        if: head = state\w_fm
-            return: 5
-        if: head = state\w_finally
-            r := lm_graph_emit_finally(g, f, root, root, i, n, inner, 1, -1, -1, -1, temps)
-            c.free((cast: (@: void) decl_names))
-            c.free((cast: (@: void) decl_slots))
-            return: r
-        if: head = state\w_if || head = state\w_else || head = state\w_while || head = state\w_for || head = state\w_until || head = state\w_return
-            end_at := i + 1U
-            if: head = state\w_if && end_at < n && c.lmx_graph_kind(g, c.lmx_graph_get(root, end_at)) = 4
-                if: c.lmx_graph_name_of(g, c.lmx_graph_get(root, end_at)) = state\w_else
-                    end_at := end_at + 1U
-                ---
-            ---
-            r := lm_graph_emit_block(g, f, root, root, i, end_at, 2, -1, -1, -1, temps)
-            if: r != 0
-                return: r
-            i := end_at
-            continue
-        # The unit's C-door declarations stand; the program runs nothing for them (lmx_graph_exec_statement).
-        if: head = state\w_include || head = state\w_predef
-            i := i + 1U
-            continue
-        if: head = state\w_call
-            r := lm_graph_emit_explicit_call(g, f, root, inner, temps, decl_names, decl_slots, decl_n)
-            if: r != 0
-                return: r
-            i := i + 1U
-            continue
-        # fncall written as a statement: the launch runs and its result is not used.
-        if: head = state\w_fncall
-            r := lm_graph_emit_fncall(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ temp)
-            if: r != 0
-                return: r
-            i := i + 1U
-            continue
-        if: head = state\w_at
-            # `@: name value`: a reference place for the Structure or the callable the value stands for, as the
-            # interpreter reads it (lmx_graph_exec_statement) -- the same kernel operation at run time.
-            if: m = 2U
-                name := c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
-                if: name = 0
-                    return: 5
-                r := lm_graph_emit_received_operand(g, f, root, inner, 1U, 2, -1, temps, decl_names, decl_slots, decl_n, @ temp)
-                if: r != 0
-                    return: r
-                c.fprintf(f, "        l2_c: lmx_graph_lmx_ref_of(l2_g, l2_v%d)\n        if: l2_c = 0 || lmx_graph_publish(l2_g, lmx_call_code, %zuU, l2_c) != 0\n            %s\n", temp, i, leave_failure)
-                decl_names[decl_n] := name
-                decl_slots[decl_n] := i
-                decl_n := decl_n + 1U
-                i := i + 1U
-                continue
-            ---
-            if: m != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 1U)) != state\w_int
-                return: 5
-            name := c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
-            if: name = 0
-                return: 5
-            r := lm_graph_emit_operand(g, f, root, inner, 2U, temps, decl_names, decl_slots, decl_n, @ temp)
-            if: r != 0
-                return: r
-            # The place takes an int reference, or the address an index of a Structure read when it is an int cell's.
-            c.fprintf(f, "        l2_c: lmx_graph_int_ref_of(l2_g, l2_v%d)\n        if: l2_c = 0 || lmx_graph_publish(l2_g, lmx_call_code, %zuU, l2_c) != 0\n            %s\n", temp, i, leave_failure)
-            decl_names[decl_n] := name
-            decl_slots[decl_n] := i
-            decl_n := decl_n + 1U
-            i := i + 1U
-            continue
-        if: head = state\w_int
-            name := c.lmx_graph_word_text(g, c.lmx_graph_get(inner, 0U))
-            if: m < 2U || name = 0
-                return: 5
-            r := lm_graph_emit_expr(g, f, root, inner, 1U, m, temps, decl_names, decl_slots, decl_n, @ temp)
-            if: r != 0
-                return: r
-            c.fprintf(f, "        l2_c: lmx_graph_int(l2_g, l2_t%d)\n        if: l2_c = 0 || lmx_graph_publish(l2_g, lmx_call_code, %zuU, l2_c) != 0\n            %s\n", temp, i, leave_failure)
-            decl_names[decl_n] := name
-            decl_slots[decl_n] := i
-            decl_n := decl_n + 1U
-            i := i + 1U
-            continue
-        # Named records use their live target through the same dispatch as
-        # method code. A data field never becomes a declaration operation here.
-        finish := -1
-        r := lm_graph_emit_apply_or(g, f, root, inner, temps, decl_names, decl_slots, decl_n, @ finish)
-        if: r != 0
-            return: r
-        c.fprintf(f, "        %s\n        l2_label%d:\n", leave_failure, finish)
-        i := i + 1U
-    ---
-    c.free((cast: (@: void) decl_names))
-    c.free((cast: (@: void) decl_slots))
-    return: 0
-end: lm_graph_emit_statements_from
-
-fn: lm_graph_emit_statements (@: g c.LmxGraph; @: f c.FILE; @: root c.Lmx; @: temps int) int
-    return: lm_graph_emit_statements_from(g, f, root, 0U, temps)
-end: lm_graph_emit_statements
 
 # Native method statements compute their own arithmetic/calls. The shared kernel only owns admission, working
 # cells and publication. Every return/error passes through the entry wrapper's work_finish.
@@ -1388,28 +1153,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             i := i + 1U
             continue
         if: kind != 4
-            head := c.lmx_graph_word_text(g, raw)
-            target_label := -1
-            if: head = state\w_break
-                target_label := exit_label
-            if: head = state\w_continue
-                target_label := step_label
-            if: head = state\w_redo
-                target_label := again_label
-            if: head = state\w_return
-                if: c.lmx_graph_has_result(g, code) != 0
-                    return: 5
-                c.fprintf(f, "        %s\n", leave_return)
-                return: 0
-            if: head = state\w_break || head = state\w_continue || head = state\w_redo
-                if: target_label < 0
-                    return: 5
-                c.fprintf(f, "        goto: l2_label%d\n", target_label)
-            else:
-                if: mode = 0
-                    status := lm_graph_emit_number(g, f, code, body, i, temps, 0, 0, 0U, @ result)
-                ---
-            ---
+            # Raw primitive values stand; a bare word has no call arguments.
             i := i + 1U
             continue
         statement := (cast: (@: c.Lmx) raw)
@@ -1430,14 +1174,18 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             if: c.lmx_graph_written_group(g, raw) != 0
                 i := i + 1U
                 continue
-            status := lm_graph_emit_number(g, f, code, body, i, temps, 0, 0, 0U, @ result)
+            status := lm_graph_emit_operand(g, f, code, body, i, temps, 0, 0, 0U, @ result)
             i := i + 1U
             continue
-        # A declaration of fn or sub with written arguments created its Structure when its block was entered; the receiver
-        # applied to computed arguments in a body or an inline block is open, as in the interpreter (5).
+        # Computed receiver arguments run at this line through the same binder
+        # as the interpreter. Its actual holder owns the construction binding.
         if: head = state\w_fn || head = state\w_sub
             if: c.lmx_graph_fn_written(g, statement) = 0
-                return: 5
+                c.fputs("        if: lmx_graph_fn_apply(l2_g, ", f)
+                status := lm_graph_emit_address(g, f, code, body)
+                if: status != 0
+                    return: status
+                c.fprintf(f, ", %zuU) != 0\n            %s\n", i, leave_failure)
             i := i + 1U
             continue
         if: head = state\w_fm
@@ -1756,7 +1504,7 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     if: check_root = 0
         c.fputs("        if: lmx_graph_dump_marked(l2_g, lmx_call_code, c.stdout, \"BEFORE\") != 0\n            return: 1\n", f)
     if: forced = 0
-        r := lm_graph_emit_statements(g, f, root, temps)
+        r := lm_graph_emit_block(g, f, root, root, 0U, n, 0, -1, -1, -1, temps)
         if: r != 0
             c.fclose(f)
             c.free((cast: (@: void) methods))
@@ -1766,12 +1514,13 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     else:
         c.fputs("        if: lmx_graph_run(l2_g, lmx_call_code) != 0\n            return: 1\n", f)
     ---
-    if: check_root = 0
-        c.fputs("        if: lmx_graph_dump_marked(l2_g, lmx_call_code, c.stdout, \"AFTER\") != 0\n            return: 1\n", f)
     c.fputs("        return: 0\n    end: lm_graph_root\nend: external\n\n", f)
     # The root's entry: the run of the program is a traversal with its own namespace (lmx_graph_space_open), shared
     # when it is entered inside a live one.
-    c.fputs("external:\n    fn: lm_graph_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n        @: LmxGraph l2_g lmx_graph_find(lmx_call_arena)\n        int: l2_opened 0\n        int: l2_status 0\n        if: l2_g = 0 || lmx_call_code = 0\n            return: 1\n        if: lmx_graph_space_open(l2_g, lmx_call_code, @ l2_opened) != 0\n            return: 1\n        l2_status: lm_graph_root(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n        lmx_graph_space_close(l2_opened)\n        return: l2_status\n    end: lm_graph_body\nend: external\n\n", f)
+    c.fputs("external:\n    fn: lm_graph_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena lmx_call_arena; @: Lmx lmx_call_code; @: LmxWalkValue lmx_input_values; @: LmxWalkValue lmx_result_context) int\n        @: LmxGraph l2_g lmx_graph_find(lmx_call_arena)\n        LmxGraphFrame: l2_frame\n        int: l2_opened 0\n        int: l2_status 0\n        if: l2_g = 0 || lmx_call_code = 0\n            return: 1\n        if: lmx_graph_space_open(l2_g, lmx_call_code, @ l2_opened) != 0\n            return: 1\n        l2_status: lmx_graph_work_open_data(l2_g, lmx_call_code, (cast: (@: Lmx) owner), @ l2_frame)\n        if: l2_status != 0\n            lmx_graph_space_close(l2_opened)\n            return: 1\n        l2_status: lm_graph_root(owner, refs, nargs, dest, out, lmx_call_arena, lmx_call_code, lmx_input_values, lmx_result_context)\n        l2_status: lmx_graph_work_finish(l2_g, @ l2_frame, l2_status)\n", f)
+    if: check_root = 0
+        c.fputs("        if: l2_status = 0\n            if: lmx_graph_dump_marked(l2_g, lmx_call_code, c.stdout, \"AFTER\") != 0\n                l2_status: 1\n            ---\n        ---\n", f)
+    c.fputs("        lmx_graph_space_close(l2_opened)\n        return: l2_status\n    end: lm_graph_body\nend: external\n\n", f)
     # Only emit-check supplies a test host. The body keeps the language rule: returning 0 is NOT Message success.
     # Like the `run` command's host, this separate adapter completes its own test after a successful body. Ordinary
     # `emit` gets no adapter and still fails R0 when the source supplies neither success nor an exit Message.

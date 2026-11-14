@@ -75,7 +75,23 @@ L3 со вставками L2. L1 — только генерируемая ст
 <a id="l2-status"></a>
 ## 3. Translator-L2 и ядро
 
-**Текущее состояние, 2026-11-14, срез 377: приёмка пройдена.** В ядре изменён только `lmx_graph_run.lm2`:
+**Текущее состояние, 2026-11-14, срез 378: приёмка пройдена.** Общий root frame/block0,
+native wrapper с завершением кадра и forced reuse заменили отдельный root emitter. Scalar values стоят без capture;
+discarded AST читает общий value reader, computed body bindings используют прежние metadata/rows. Runtime01/graph01 и пять pure-проб прошли.
+В private01 исполнены 50 случаев в трёх режимах: 48 совпали со старыми golden, 2 потребовали пяти независимо выведенных
+root-k snapshot updates (три outside8→5, data_result118→115, second892→592; open_result55 сохранён).
+Готовые 50 binaries не пересобирались; дополнительный root_frame_error прошёл triple. Всего 51 случай исполнен
+в трёх режимах, 153 полных AFTER-сравнения и mutation24 прошли. Добавлены отсутствовавшие full AFTER
+finally_body_error/sub_error с root_trace12/seen12; три прежние fixture pairs используют явные control Frames.
+Source04: 685; whole bootstrap01 quick прошёл: настоящие G1/G2, по 9 smoke, fixedpoint13/verify685. Штатный G2 заново
+собрал graph-tool и повторил 51 случай в трёх режимах, AFTER60/mutation24; runtime01 совпадает с G2.
+Render/docs-check прошли:35/14/27/44/615, ссылки и LF27517; оба diff --check чисты, actual native root trace01 прошёл.
+Рабочая связка: boot-m11-root-frame-01/g2 и graph-m11-root-frame-g2-01.
+Mapped own int local3/address1/direct1 до публикации не меняет formal/free-input контроль7. Legacy computed-int
+preallocation остаётся M13 OPEN, не исправляется адресом row.number или forced flush. Общий shared cache/flush/ordinary
+native M14, path-head calls и полный M11 остаются OPEN. [Свидетельство 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
+
+**Предыдущее состояние, 2026-11-14, срез 377: принят `04fbf275`.** В ядре изменён только `lmx_graph_run.lm2`:
 `work_open_parts` готовит written fn/sub выбранных data/body перед work scan; `space_declare` повторно использует
 существующий binding области/raw source. State сохраняет F и её own data: first1/second2, leaf_count2/sub_count2,
 bumped2. Отдельные D/C дают 32/34, data_count12/code_count22, touch_calls0. Разные raw объявления leaf не объединяются:

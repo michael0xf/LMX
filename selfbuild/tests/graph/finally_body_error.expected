@@ -1,0 +1,14 @@
+fn: fail () int
+    return: (1 / 0)
+end: fail
+fn: failing_body () int (
+    int: count 0
+    int: seen 0
+)
+    finally: (:= seen ((failing_body \ data) \ count)) (:= count (count + 10))
+    :=: count 2
+    return: (fail)
+end: failing_body
+int: root_trace 12
+finally: (:= root_trace ((failing_body \ data) \ count))
+int: result (failing_body)

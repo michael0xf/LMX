@@ -1,0 +1,26 @@
+# Scalar fields stand as values in every BODY, without an implicit call or
+# input capture. Formed operator expressions still run their operands.
+int: calls 0
+fn: effect () int
+    node\calls := node\calls + 1
+    return: 4
+sub: quiet () ()
+    node\calls := node\calls + 1
+sub: hold () ()
+    unknown_inside
+    quiet
+    return
+    break
+unknown_outside
+quiet
+return
+break
+@: Bag (missing_a; quiet)
+Bag
+@(data\calls)
+hold()
+int: before_effect data\calls
++(effect() + 1)
+int: after_effect data\calls
+quiet()
+int: after_call data\calls

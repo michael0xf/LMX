@@ -1,0 +1,30 @@
+int: calls 2
+fn: effect () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 4
+end: effect
+sub: quiet ()
+    :=: (node \ calls) ((node \ calls) + 1)
+end: quiet
+sub: hold ()
+    unknown_inside
+    quiet
+    return
+    break
+end: hold
+unknown_outside
+quiet
+return
+break
+Bag:
+    missing_a
+    quiet
+end: Bag
+Bag
+@: (data \ calls)
+hold:
+int: before_effect 0
++: ((effect) + 1)
+int: after_effect 1
+quiet:
+int: after_call 2

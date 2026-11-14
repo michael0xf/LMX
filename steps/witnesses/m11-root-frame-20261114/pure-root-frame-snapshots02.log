@@ -1,0 +1,53 @@
+GRAPH-BEFORE-BEGIN
+int: x 1
+fn: change () int
+    :=: (node \ x) 8
+    return: 0
+end: change
+int: ignored (change)
+int: snapshot x
+int: again snapshot
+int: direct (data \ x)
+int: left 10
+int: right 20
+@: p int (@ left)
+sub: move ()
+    :=: (node \ p) (@ (node \ right))
+end: move
+move:
+int: reference_snapshot (\ p)
+int: reference_direct (\ (data \ p))
+int: value 1
+:=: value 3
+@: address int (@ value)
+int: address_before_publication (\ address)
+int: local_before_publication value
+int: physical_before_publication (data \ value)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: x 8
+fn: change () int
+    :=: (node \ x) 8
+    return: 0
+end: change
+int: ignored 0
+int: snapshot 1
+int: again 1
+int: direct 8
+int: left 10
+int: right 20
+@: p int @right
+sub: move ()
+    :=: (node \ p) (@ (node \ right))
+end: move
+move:
+int: reference_snapshot 10
+int: reference_direct 20
+int: value 3
+:=: value 3
+@: address int @value
+int: address_before_publication 1
+int: local_before_publication 3
+int: physical_before_publication 1
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

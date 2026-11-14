@@ -1,6 +1,26 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice 377 -- acceptance passed.** Only `lmx_graph_run.lm2` changes in the core:
+**Current state, 2026-11-14, slice 378 -- acceptance passed.** Two core sources change:
+the root uses the common work frame and block0; the native wrapper finishes that frame and forced reuses it.
+The separate root emitter is removed. Scalar values stand without capture; discarded AST uses the common value reader,
+and computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
+Private01 executed 50 cases in three modes: 48 matched their old goldens, 2 required five independently derived
+root snapshot k5 changes: three outside8→5, data_result118→115, second892→592;
+open_result55 is retained. The existing 50 binaries were not rebuilt. Additional root_frame_error passed triple;
+in total 51 cases executed in three modes, all 153 complete AFTER comparisons and mutation24 passed.
+finally_body_error/sub_error previously had no expected files; complete AFTER checks with root_trace12/seen12 were added.
+Three existing fixture pairs now use explicit control Frames. Source04: 685, SHA-256:
+b8e7d5a1a3742540b298ac30f0f1c2cc2f72fa776a358d14258ab1bd77e935d4.
+Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each, fixedpoint13/verify685. Genuine G2 rebuilt
+graph-tool and repeated 51 cases in three modes, AFTER60/mutation24; runtime01 matches G2.
+Render/docs check passed:35/14/27/44/615, links and LF27517; both diff checks are clean, actual native root trace01 passed.
+Working tuple: boot-m11-root-frame-01/g2 and graph-m11-root-frame-g2-01.
+G2 graph SHA-256: dff1d7202b123be1758e88248960da8ba6f64aed57929729ba8edf453255eed7.
+Full M11.5г, path-head calls,
+computed ordinary declarations, M11.7/8, legacy computed-int construction M13 and shared cache/flush/ordinary native M14 remain OPEN.
+[Witness 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
+
+**Previous state, 2026-11-14, slice 377 -- accepted `04fbf275`.** Only `lmx_graph_run.lm2` changes in the core:
 frame opening prepares written fn/sub in selected data/body before work scan, and repeated preparation reuses
 the existing scope/raw-source binding. State preserves F and its own data: first1/second2, leaf_count2/sub_count2,
 bumped2. Separate D/C give 32/34, data_count12/code_count22, touch_calls0. Two leaf declarations at different
@@ -1473,6 +1493,24 @@ ordinary-data initializers. Computed declarations retain their previous route wh
 computed ordinary declarations, the common root frame and M14 remain OPEN. Two pure cases confirm re-entry and
 refusal with 3 on bare access to distinct raw occurrences of one name; acceptance for 377, including render/docs check, passed.
 [Witness 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+**Root frame and addresses, slice 378.** The root executes through the same work frame and block0 as a supported code consumer;
+the native wrapper provides normal frame completion, while forced opens no second frame. There is no separate root emitter.
+A one-off GDB trace01 entered actual `lm_graph_root` through `lm_graph_body`/`lmx_call0_mode`
+and exited normally; the generated native root does not call `lmx_graph_run`.
+Scalar values need no capture; discarded AST is evaluated through common `eval_value`/`emit_operand` without requiring
+an int conversion of its result. Computed names appear when execution reaches their producer through existing metadata/rows;
+early access refuses before actual effects. This does not run ordinary-data initializers.
+
+Nested publication does not reload root locals: with graph x8, snapshot/again retain1 and direct reads8;
+the reference snapshot retains10 while direct reads20. Clean locals are not written back. For an existing mapped own int,
+working value3 differs from its physical cell still holding1: dereferencing @value and direct data\value both read1 before normal publication.
+This does not permit stale direct-cache values: local dirty has not yet been published. For a formal or free input,
+@x addresses its own activation cell, preserving control7 under Р28. Preallocating an addressable physical cell for
+a legacy computed-int before normal publication remains OPEN in [M13](../next_core_tasks_v3.md#flat-lmx-descriptor); an available working value permits neither
+returning the address of `row.number` nor forcing publication to obtain an address. The shared cache, `flush()` and
+ordinary native M14, direct path-head calls and full M11.5г remain OPEN.
+[Observations and limits 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
 
 ### 6.4 Copying, merge, attaching
 

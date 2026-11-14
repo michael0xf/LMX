@@ -1,0 +1,23 @@
+# Local primitive/reference snapshots survive a child's direct publication.
+int: x 1
+fn: change () int
+    node\x := 8
+    return: 0
+int: ignored change()
+int: snapshot x
+int: again snapshot
+int: direct data\x
+int: left 10
+int: right 20
+@: p int @left
+sub: move () ()
+    node\p := @(node\right)
+move()
+int: reference_snapshot \p
+int: reference_direct \(data\p)
+int: value 1
+value := 3
+@: address int @value
+int: address_before_publication \address
+int: local_before_publication value
+int: physical_before_publication data\value

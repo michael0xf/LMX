@@ -1,5 +1,16 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез378 — общий root frame и CODE consumers, кодовая приёмка пройдена в main.**
+377 принят и отправлен04fbf275. Прежний work frame и block0 общие для root/native/forced;
+отдельный root emitter снят. Computed bindings сохраняют producer timing, bare scalar values не
+создают input, discarded AST читается как value. Пять pure,51 triple case,153 full AFTER/mutation24
+прошли; в первом private50 были2 старых golden delta, пять чисел независимо исправлены без C-пересборки.
+Source04 verify685; whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke, fixedpoint13.
+Штатный G2/graph повторил51 в трёх режимах, AFTER60/mutation24. Trace01 доказал actual native root;
+render/docs-check прошли:35/14/27/44/615, ссылки и LF27517; оба diff --check чисты. Далее commit/push main.
+Typed computed storageM13, shared direct cache/flush/ordinary nativeM14 и path-head всё ещё OPEN.
+[Свидетельство](steps/witnesses/m11-root-frame-20261114/notes.md). Goal ACTIVE.
+
 **2026-11-14, срез377 — written nested fn/sub ordinary launch, кодовая приёмка пройдена в main.**
 376 принят и отправлен9039fa89. Общий entry перед capture готовит direct written declarations data/body;
 повторный вход сохраняет F того же scope/raw, его own data и отдельность одинаковых имён разных source.
@@ -1731,6 +1742,16 @@ Structure и записью значения, снимаются — шаг 6. �
      Private38/AFTER45/mutation24, whole bootstrap01 G1/G2, fixedpoint13/verify673 и повтор штатным
      G2/graph38/AFTER45/mutation24, render/docs check35/14/27/44/615/LF27467 прошли. Это не общий root frame,
      не расширение computed ordinary fn_apply и не завершение M11.5г/M14.
+     **Срез378, кодовая приёмка:** root открывает прежний work frame и выполняет block0; native wrapper finish
+     охватывает все inner exits, forced не открывает второй кадр. Отдельный root writer снят;
+     CODE numeric/ref/assignment используют прежнюю карту. Computed fn/sub получают настоящий body/index,
+     unknown namespace хранится только до своих producers с прежними free rows, без нового lookup fallback.
+     Пять pure и51 triple outputs/153 full AFTER/mutation24 подтверждены; whole G1/G2, fixedpoint13/verify685,
+     штатный G2/graph51/AFTER60/mutation24 прошли. Trace01 подтвердил настоящий native root;
+     render/docs-check35/14/27/44/615/LF27517 прошли.
+     Root snapshot1/1/direct8, ref10/direct20 и local3/address1/direct1 согласованы с поздней нормой.
+     Legacy computed-int storage до публикации явно перенесено в зависимую M13 construction работу ниже;
+     не подменять её temporary/local адресом и не публиковать кадр ради @. Общая M14 остаётся OPEN.
      No-candidate int-reference строить до первого index/typeof/path наблюдения существующим
      uninit_reference, с именем на cell5 и wrapper8 в слоте. Одновременно замкнуть formals/admit/
      actual-contract на primitive8 как обязательный int-reference formal без чтения payload;
@@ -1851,6 +1872,15 @@ Structure и записью значения, снимаются — шаг 6. �
 
 <a id="flat-lmx-descriptor"></a>
 ### M13 — Плоский Lmx, ресиверы заголовка и общие указатели/массивы (дополнение 2026-11-13)
+
+**Общая зависимость construction, выявленная срезом378:** legacy computed-int пока хранит raw Frame
+до штатной публикации и не предоставляет заранее физическую typed cell для @name. Предвыделить
+настоящее хранилище декларации общим construction-путём с сохранением вычисляемого CODE producer,
+адресов, slot/wrapper/cell, typeof/index/alias и обеих ролей. Не подменять его адресом row.number,
+временной operand-копией, новой служебной таблицей или принудительным flush ради адреса.
+Рабочее значение уже существующего mapped own int отделено от этой задачи: до публикации local3
+и @value/direct1 нормативны; formal/free-input сохраняет собственную ячейку активации и контроль7.
+Частный root-frame срез не объявляет эту construction-миграцию или весь M13/M14 завершёнными.
 
 Статус — **OPEN**. [ТЗ Astra](add_all_struct_fields.md) и
 [дословные уточнения автора](LMX_blog/2026-11-13-get-descriptor.md) дополняют K07/K09,

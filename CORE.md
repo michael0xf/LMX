@@ -9,7 +9,22 @@ checkpoint diary. Normative sources are the paired
 remains in the [pinned v2 snapshot](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md). An intended invariant below
 does not claim every current implementation path already satisfies it.
 
-Current implementation note (2026-11-14, slice 377; code acceptance passed): frame opening prepares written fn/sub in selected data/body
+Current implementation note (2026-11-14, slice 378; code acceptance passed): common root work frame/block0, native wrapper completion and
+forced reuse replace the separate root emitter. Scalar values stand without capture; discarded AST uses the common
+value reader and computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
+Private01 executed 50 cases in three modes: 48 matched old goldens, 2 required five independently derived root-k snapshot updates;
+open_result55 stayed. Existing 50 binaries were reused; added root_frame_error passed triple. All 51 cases executed in
+three modes, 153 full AFTER comparisons and mutation24 passed. Source04: 685; whole bootstrap01 quick passed genuine
+G1/G2, nine smoke rows each, fixedpoint13/verify685. Genuine G2 rebuilt graph-tool and repeated 51 cases in three modes,
+AFTER60/mutation24; runtime01 matches G2. Working tuple: boot-m11-root-frame-01/g2 with graph-m11-root-frame-g2-01.
+Normal render/docs check passed:35/14/27/44/615, links and index LF27517; both diff checks are clean.
+Actual native root trace01 also passed with a normal exit.
+Mapped own int local3/address1/direct1 before publication does not change formal/free-input control7.
+Legacy computed-int preallocation in M13 permits neither a row.number address nor forced flush as a substitute.
+That M13 work, shared cache/flush/ordinary native M14, path-head calls and full M11 remain open.
+[Witness 378](steps/witnesses/m11-root-frame-20261114/notes.md).
+
+Previous implementation note (2026-11-14, slice 377; accepted `04fbf275`): frame opening prepares written fn/sub in selected data/body
 before free-input scanning; the existing scope/raw-source binding preserves F and its own data on re-entry.
 Two pure cases passed: State 1/2 with leaf/sub counts2 and bumped2; D/C 32/34 with touch_calls0;
 bare leaf refuses with 3 before the body when two raw declarations share its name. Source02:673;

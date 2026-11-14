@@ -1,6 +1,26 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**Текущее состояние, 2026-11-14, срез 377 — приёмка пройдена.** В ядре изменён только `lmx_graph_run.lm2`:
+**Текущее состояние, 2026-11-14, срез 378 — приёмка пройдена.** Два исходника ядра:
+корень использует общий work frame и block0; native wrapper завершает этот кадр, forced его переиспользует.
+Отдельный root emitter удалён. Scalar values стоят без capture; discarded AST читает общий value reader,
+computed body bindings используют прежние metadata/rows. Runtime01/graph01 и пять pure-проб прошли.
+В private01 исполнены 50 случаев в трёх режимах: 48 совпали со старыми golden, 2 потребовали независимо
+выведенных пяти изменений из-за root snapshot k5: три outside8→5, data_result118→115, second892→592;
+open_result55 сохранён. Готовые 50 binaries не пересобирались. Дополнительный root_frame_error прошёл triple;
+всего 51 случай исполнен в трёх режимах, все 153 полных AFTER-сравнения и mutation24 прошли.
+У finally_body_error/sub_error прежде не было expected; добавлены полные AFTER с root_trace12/seen12.
+Три прежние fixture pairs переведены на явные control Frames. Source04: 685, SHA-256:
+b8e7d5a1a3742540b298ac30f0f1c2cc2f72fa776a358d14258ab1bd77e935d4.
+Whole bootstrap01 quick прошёл: настоящие G1/G2, по 9 smoke, fixedpoint13/verify685. Штатный G2 заново собрал
+graph-tool и повторил 51 случай в трёх режимах, AFTER60/mutation24; runtime01 совпадает с G2.
+Render/docs-check прошли:35/14/27/44/615, ссылки и LF27517; оба diff --check чисты, actual native root trace01 прошёл.
+Рабочая связка: boot-m11-root-frame-01/g2 и graph-m11-root-frame-g2-01.
+G2 graph SHA-256: dff1d7202b123be1758e88248960da8ba6f64aed57929729ba8edf453255eed7.
+Полный M11.5г, path-head calls,
+computed ordinary declarations, M11.7/8, legacy computed-int construction M13 и shared cache/flush/ordinary native M14 OPEN.
+[Свидетельство 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
+
+**Предыдущее состояние, 2026-11-14, срез 377 — принят `04fbf275`.** В ядре изменён только `lmx_graph_run.lm2`:
 открытие кадра готовит written fn/sub выбранных data/body перед work scan, а повторная подготовка использует
 существующий binding области и raw source. State сохраняет F и её own data: first1/second2, leaf_count2/sub_count2,
 bumped2. Отдельные D/C дают 32/34, data_count12/code_count22, touch_calls0. Два объявления leaf с разными
@@ -1391,6 +1411,24 @@ initializers. Вычисляемые объявления сохраняют п�
 общий root-frame и M14 остаются OPEN. Две pure-пробы подтверждают повторный вход и отказ с 3 голого обращения
 к разным raw вхождениям одного имени;
 приёмка 377, включая render/docs check, пройдена. [Свидетельство 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
+
+**Root frame и адреса, срез 378.** Корень исполняется тем же work frame и block0, что поддержанный code consumer;
+native wrapper обеспечивает штатное завершение кадра, forced не открывает второй. Отдельного root emitter нет.
+Одноразовый GDB trace01 вошёл в настоящий `lm_graph_root` через `lm_graph_body`/`lmx_call0_mode`
+и завершился нормально; сгенерированный native root не вызывает `lmx_graph_run`.
+Простые значения не требуют capture; discarded AST вычисляется общим `eval_value`/`emit_operand` без обязательного
+преобразования результата в int. Вычисляемые имена появляются при достижении producer через прежние metadata/rows;
+раннее обращение отказывает до actual effects. Ordinary data initializers от этого не запускаются.
+
+Вложенная публикация не перезагружает root locals: при графовой x8 snapshot/again сохраняют1, direct читает8;
+reference snapshot остаётся10, direct читает20. Чистые locals не публикуются обратно. У существующего mapped own int
+рабочее значение3 и физическая cell со значением1 различаются: разыменование @value и direct data\value до штатной публикации дают1.
+Это не разрешает direct cache возвращать устаревшее значение: local dirty ещё не опубликован. Для формала или
+free input @x адресует собственную cell активации, поэтому контроль7 по Р28 сохраняется. Предвыделение адресуемой
+physical cell legacy computed-int до обычной публикации остаётся OPEN в [M13](../next_core_tasks_v3.md#flat-lmx-descriptor); вычисленное working value не разрешает
+возвращать адрес `row.number` или принудительно публиковать кадр ради адреса. Общий shared cache, `flush()` и
+ordinary native M14, прямые path-head calls и полный M11.5г остаются OPEN.
+[Наблюдения и границы 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
 
 ### 6.4 Копирование, merge, присоединение
 

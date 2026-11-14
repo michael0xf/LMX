@@ -1,0 +1,35 @@
+GRAPH-BEFORE-BEGIN
+int: touches 0
+int: before 0
+int: after 0
+fn: touch () int
+    :=: (node \ touches) ((node \ touches) + 1)
+    return: 1
+end: touch
+@: Prepared ((name future) (args ((int a))) (return int) (code ((return a))))
+:=: before 1
+int: early (future (touch))
+fn: Prepared
+:=: after 1
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: touches 0
+int: before 1
+int: after 0
+fn: touch () int
+    :=: (node \ touches) ((node \ touches) + 1)
+    return: 1
+end: touch
+Prepared:
+    name: future
+    args: ((int a))
+    return: int
+    code: ((return a))
+end: Prepared
+:=: before 1
+int: early (future (touch))
+fn: Prepared
+:=: after 1
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots
+graph: run answered 3

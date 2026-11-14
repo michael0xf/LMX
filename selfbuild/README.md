@@ -1,6 +1,23 @@
 # Maintained L3/L2 source package
 
-Current continuation (2026-11-14, slice 377): acceptance passed. Only lmx_graph_run.lm2 changes in the core:
+Current continuation (2026-11-14, slice 378): acceptance passed. Common root work frame/block0,
+native wrapper completion and forced reuse replace the separate root emitter. Scalar values stand without capture;
+discarded AST uses eval_value/emit_operand, computed body bindings use existing metadata/rows. Runtime01/graph01 and five pure cases passed.
+Private01 executed 50 cases in three modes; 48 matched old goldens, 2 needed five independently derived k-snapshot updates:
+three outside8->5, data_result118->115, computed second892->592; open_result55 stays. Existing 50 binaries were reused.
+Additional root_frame_error passed triple; all 51 cases executed in three modes, 153 full AFTER comparisons and mutation24 passed.
+finally_body_error/sub_error gained missing full AFTER expectations (root_trace12/seen12); three existing fixture pairs use explicit control Frames.
+Source04: 685, SHA-256 b8e7d5a1a3742540b298ac30f0f1c2cc2f72fa776a358d14258ab1bd77e935d4.
+Whole bootstrap01 quick passed genuine G1/G2, nine smoke rows each, fixedpoint13/verify685. Genuine G2 rebuilt graph-tool
+and repeated 51 cases in three modes, AFTER60/mutation24; runtime01 matches G2.
+Render/docs check passed:35/14/27/44/615, links and LF27517; both diff checks are clean, actual native root trace01 passed.
+Working tuple: boot-m11-root-frame-01/g2 and graph-m11-root-frame-g2-01. G2 graph SHA-256:
+dff1d7202b123be1758e88248960da8ba6f64aed57929729ba8edf453255eed7. Mapped own int local3/address1/direct1 before publication
+and formal/free-input address control7 are distinct contracts. Legacy computed-int preallocation remains M13 OPEN;
+no row.number address or forced flush closes it. Shared cache/flush/ordinary native M14, path-head calls and full M11 remain OPEN.
+[Witness 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
+
+Previous continuation (2026-11-14, slice 377): accepted `04fbf275`. Only lmx_graph_run.lm2 changes in the core:
 work_open_parts prepares directly written fn/sub in data/body before work scan; space_declare reuses the existing
 scope/raw-source binding. Re-entry preserves method instances and own data: State first1/second2,
 leaf_count2/sub_count2/bumped2; separate D/C 32/34, data_count12/code_count22, touch_calls0.

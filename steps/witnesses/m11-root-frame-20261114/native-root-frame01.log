@@ -1,0 +1,70 @@
+Breakpoint 1 at 0x140001c5f
+[New Thread 16852.0x26b4]
+[New Thread 16852.0x3600]
+[New Thread 16852.0x34fc]
+GRAPH-BEFORE-BEGIN
+int: x 1
+fn: change () int
+    :=: (node \ x) 8
+    return: 0
+end: change
+int: ignored (change)
+int: snapshot x
+int: again snapshot
+int: direct (data \ x)
+int: left 10
+int: right 20
+@: p int (@ left)
+sub: move ()
+    :=: (node \ p) (@ (node \ right))
+end: move
+move:
+int: reference_snapshot (\ p)
+int: reference_direct (\ (data \ p))
+int: value 1
+:=: value 3
+@: address int (@ value)
+int: address_before_publication (\ address)
+int: local_before_publication value
+int: physical_before_publication (data \ value)
+GRAPH-BEFORE-END
+
+Thread 1 hit Breakpoint 1, 0x00007ff69e211c5f in lm_graph_root ()
+#0  0x00007ff69e211c5f in lm_graph_root ()
+#1  0x00007ff69e2136fd in lm_graph_body ()
+#2  0x00007ff69e282532 in lmx_call0_mode ()
+#3  0x00007ff69e2835e0 in lmx_graph_call ()
+#4  0x00007ff69e2137d1 in lm_graph_check_root ()
+GRAPH-AFTER-BEGIN
+int: x 8
+fn: change () int
+    :=: (node \ x) 8
+    return: 0
+end: change
+int: ignored 0
+int: snapshot 1
+int: again 1
+int: direct 8
+int: left 10
+int: right 20
+@: p int @right
+sub: move ()
+    :=: (node \ p) (@ (node \ right))
+end: move
+move:
+int: reference_snapshot 10
+int: reference_direct 20
+int: value 3
+:=: value 3
+@: address int @value
+int: address_before_publication 1
+int: local_before_publication 3
+int: physical_before_publication 1
+GRAPH-AFTER-END
+[New Thread 16852.0x27f4]
+l2_eternal_driver: 81 checks, 0 roots
+[Thread 16852.0x27f4 exited with code 0]
+[Thread 16852.0x26b4 exited with code 0]
+[Thread 16852.0x3600 exited with code 0]
+[Thread 16852.0x34fc exited with code 0]
+[Inferior 1 (process 16852) exited normally]

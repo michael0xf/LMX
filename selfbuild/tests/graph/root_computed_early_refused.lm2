@@ -1,0 +1,17 @@
+# Calling an unknown computed name before its producer refuses before actuals.
+int: touches 0
+int: before 0
+int: after 0
+fn: touch () int
+    node\touches := node\touches + 1
+    return: 1
+@: Prepared (
+    name: future
+    args: (int: a)
+    return: int
+    code: (return: a)
+)
+before := 1
+int: early future(touch())
+fn: Prepared
+after := 1

@@ -1,5 +1,21 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**2026-11-14, срез378 — общий root frame и CODE consumers, кодовая приёмка пройдена в main.**
+377 принят и отправлен:04fbf275c4801b648f8750d6d57f83641ae4f1f9. Run/native wrapper используют
+прежний work frame, forced переиспользует его; отдельный root emitter удалён. Block0 и native block
+исполняют CODE по общей карте, computed names появляются на producer, scalar fields стоят без capture.
+Runtime01/graph01, пять pure,51 случай в трёх режимах,153 full AFTER/mutation24 прошли.
+Private50 сначала имел2 устаревших golden: пять чисел независимо согласованы с root k5 snapshot,
+готовые бинарники переиспользованы. Новая error fixture6/x9 и два full negative golden12 дополняют приёмку.
+Source04 verify685, manifestb8e7d5a1. Whole bootstrap01 quick прошёл: настоящие G1/G2, по9 smoke;
+fixedpoint13/verify685. Штатный G2/graph повторил51 в трёх режимах, AFTER60/mutation24.
+Рабочая связка boot-m11-root-frame-01/g2 + graph-m11-root-frame-g2-01.
+Trace01 доказал actual native root→body→call0_mode и normal exit. Render/docs-check прошли:
+35/14/27/44/615, ссылки и LF27517; оба diff --check чисты, чужой WIP сохранён. Далее commit/push main.
+Mapped own local3 при address/direct1 до публикации нормативен; formal/free-input control7 сохранён.
+Legacy computed-int preallocation M13, shared cache/flush/ordinary native M14, path-head и остаткиM11 OPEN.
+[Свидетельство](steps/witnesses/m11-root-frame-20261114/notes.md). Весь goal ACTIVE.
+
 **2026-11-14, срез377 — written nested fn/sub ordinary launch, кодовая приёмка пройдена в main.**
 376 принят и отправлен:9039fa892658ba6c12f91e35f576c52b9f2a02a7. work_open_parts перед capture
 готовит direct written declarations data/body общим space_declarations; повторный space_declare

@@ -1,0 +1,62 @@
+GRAPH-BEFORE-BEGIN
+int: calls 0
+fn: effect () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 4
+end: effect
+sub: quiet ()
+    :=: (node \ calls) ((node \ calls) + 1)
+end: quiet
+sub: hold ()
+    unknown_inside
+    quiet
+    return
+    break
+end: hold
+unknown_outside
+quiet
+return
+break
+@: Bag (missing_a quiet)
+Bag
+@: (data \ calls)
+hold:
+int: before_effect (data \ calls)
++: ((effect) + 1)
+int: after_effect (data \ calls)
+quiet:
+int: after_call (data \ calls)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+int: calls 2
+fn: effect () int
+    :=: (node \ calls) ((node \ calls) + 1)
+    return: 4
+end: effect
+sub: quiet ()
+    :=: (node \ calls) ((node \ calls) + 1)
+end: quiet
+sub: hold ()
+    unknown_inside
+    quiet
+    return
+    break
+end: hold
+unknown_outside
+quiet
+return
+break
+Bag:
+    missing_a
+    quiet
+end: Bag
+Bag
+@: (data \ calls)
+hold:
+int: before_effect 0
++: ((effect) + 1)
+int: after_effect 1
+quiet:
+int: after_call 2
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

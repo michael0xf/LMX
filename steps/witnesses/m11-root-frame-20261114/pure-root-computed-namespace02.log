@@ -1,0 +1,44 @@
+GRAPH-BEFORE-BEGIN
+@: Prepared ((name make) (args ((int a 2))) (return int) (data (int calls 0)) (code ((:= calls (calls + 1)) (return ((a * 10) + calls)))))
+fn: Prepared
+int: first (make)
+int: second (make (:= a 3))
+@: PreparedSub ((name step) (args ()) (data (int n 0)) (code ((:= n (n + 1)))))
+sub: PreparedSub
+step:
+step:
+int: made_calls ((make \ data) \ calls)
+int: made_steps ((step \ data) \ n)
+int: source_calls ((Prepared \ data) \ calls)
+int: source_steps ((PreparedSub \ data) \ n)
+GRAPH-BEFORE-END
+GRAPH-AFTER-BEGIN
+Prepared:
+    name: make
+    args: ((int a 2))
+    return: int
+    data:
+        int: calls 0
+    end: data
+    code: ((:= calls (calls + 1)) (return ((a * 10) + calls)))
+end: Prepared
+fn: Prepared
+int: first 21
+int: second 32
+PreparedSub:
+    name: step
+    args: ()
+    data:
+        int: n 0
+    end: data
+    code: ((:= n (n + 1)))
+end: PreparedSub
+sub: PreparedSub
+step:
+step:
+int: made_calls 2
+int: made_steps 2
+int: source_calls 0
+int: source_steps 0
+GRAPH-AFTER-END
+l2_eternal_driver: 81 checks, 0 roots

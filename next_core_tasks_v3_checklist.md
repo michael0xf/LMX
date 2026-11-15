@@ -1,22 +1,31 @@
 # Чеклист реализации LMX
 
+**Срез393, ограниченная кодовая приёмка/docs PASS:** Source09:924/Runtime07; L2 all33 cell rows, qualifiers, unknown names и mutable refs/index-ref7
+native/forced/root0/root1 PASS. Private23 triple/AFTER15, actual G1/G2 quick/fixedpoint15, G2 interp23/AFTER22/image48,
+Unit08 и legacy2 PASS. Unit-only Source09/final canonical2 PASS, unchanged artifacts reused. Docs-check01 PASS35/14/27/44/615,
+links/LF28263; финальный индекс — gate перед коммитом.
+
+- [x] Подключить operation-local SourceReader к четырём прежним named routes, required/candidate facts и nested
+  Source context; pure Source entry использует require_root/drain/close(published0), без test/payload или permission.
+- [x] Сохранить35×15 raw literal descriptions отдельно physical Fact.type/ABI; exact row+receiving-chain proof
+  проверяется прежде low-box path. Неизвестные refs/Arrays/type остаются UNKNOWN.
+- [x] Принять pure Source393 по code/bootstrap/G2/docs gates; финальный индекс проверяется перед коммитом.
+- [ ] Продолжить runtime/current Value/typed storage/C ABI bridge M11/M13; полная приёмка этих работ OPEN.
+
 **2026-11-14, срез392 — общий borrowed receiving view/name/role M11.7/M13; ограниченная кодовая приёмка пройдена, docs-check далее.**
 
-- [ ] Финализировать392: Runtime06/Graph02/Source08:919, все21 triple/negative AFTER15 PASS;
+- [x] Финализировать392: Runtime06/Graph02/Source08:919, все21 triple/negative AFTER15 PASS;
   whole02 quick PASS с настоящими G1/G2 по9 smoke; fixedpoint artifact13+2 corrected canonical на919 PASS.
   G2 Graph9c44994b/interp21/full AFTER21 PASS; native/forced42 programs и libc/backend2 byte-equal (всего44),
   ready binaries переиспользованы без пересборки/избыточного повтора. Quoted FILE profile G1 byte-equal bare, G1/G2 FE exe-same.
-  G2 render35/14 PASS, generated semantics/grammar unchanged; docs-check/final index/commit/push ещё впереди.
+  G2 render35/14, docs-check/final index/diff PASS; commit/push b2899ec9. Generated semantics/grammar unchanged.
   Старые Source05/whole01 результаты ниже — промежуточные. Полные M11/M13/M14 OPEN.
 
-- [ ] Финализировать приёмку392: frontend01 и Runtime04/Graph01 собраны, targeted19:18 triple PASS,
-  прежний construction_shape_presence runtime3 подтверждён и у391 seed; его полный AFTER совпадает с неизменённым expected.
-  Все4 новых пары/negative AFTER12 PASS. Whole quick01 остановлен по подтверждённому whole-field bypass(calls1).
-  Runtime05/Source06 строится с logical field guard и общим DATA shape proof; ещё2 пары, private21/whole02 впереди.
-  Весь19 и финальные gates не считать PASS.
+- [x] Промежуточные Runtime04/Graph01 и stopped whole01 закрыты финальными Runtime06/Graph02/whole02 среза392.
+  Остановленный whole01 не является приёмкой; его не повторять. Итоговые gates указаны выше.
 - [x] Private392 исправил прежний construction_shape_presence runtime3 общим DATA shape proof/pure binder/default
   presence до runtime kinds; expected неизменён. Private21 triple/AFTER15 PASS, включая новый numeric/call/index role control.
-  Без whitelist char; полная whole/G2 приёмка392 ещё впереди.
+  Без whitelist char; итоговая whole/G2 приёмка392 прошла, b2899ec9 принят/отправлен.
 - [x] Raw root сохранён, leaf/model/candidate/presence/known заимствуются из общей receiving chain;
   model/default/parent/qualifier не переписывать. FORMAL @2 model-контракт отделён от DATA model/candidate ambiguity.
 - [x] DATA place names читаются общим query для primitive/qualified/deep-reference/Array chains;
@@ -25,13 +34,14 @@
   Reached raw logical declaration остаётся unsupported; numeric index сохраняет физический raw Frame/WORD контракт391.
 - [ ] Полные typed storage/qualification/model retention, Graph name/role/fact bridge existing implements worker,
   runtime merge/fromLmx construction и M11.7/8/M13/M14 OPEN. Это prerequisite основного v3, не отдельный частный план.
-- [ ] Следующий общий M11.7/M13 код: optional operation-local Graph reader в existing LmxImplResolve
-  (borrowed context/name/fact и current Value при чтении payload). LIVE header generator — selfbuild/tools/build.lm2;
+- [x] Optional operation-local Graph reader в existing LmxImplResolve для pure Source interface (WIP393,
+  borrowed context/name/fact; без чтения payload). LIVE header generator — selfbuild/tools/build.lm2;
   алгоритм — selfbuild/src/l2src/lmx_implements.lm2. Никакой мутации arena.source_names ради адаптации g.names.
-- [ ] Провести reader через ОДИН прежний named mapping, required facts, обе candidate стороны, повторные kind/type
-  проверки, ref enter и nested SOURCE. Сохранить physical owner/index, UNKNOWN/error и прежнюю ambiguity семантику;
+- [ ] Довести общий reader до runtime/current Value, typed reference enter и ABI/storage. Pure Source393 уже
+  проходит один named mapping, required/candidate facts и nested SOURCE до low-box/kind/type проверок;
+  refs/Arrays остаются UNKNOWN без payload. Сохранить physical owner/index, UNKNOWN/error и ambiguity семантику;
   lifetime до drain/close, сохранение/восстановление reader при nested receiving. Partial callback не считать bridge.
-- [ ] Full Model без Consumer: require_root → drain → resolve_close, весь интерфейс без guessed positional identity,
+- [x] Pure Model без Consumer393: require_root → drain → resolve_close, весь интерфейс без guessed positional identity,
   публикации или test/Model/default execution. Raw Model не выдавать за prepared receiving record.
 - [ ] Joint source-type bridge сохраняет35 строк/15 столбцов primitive.description и явную source identity отдельно
   от C ABI binding. Fact.type остаётся настоящим physical pool type, не row index/hash/alias code.

@@ -1,5 +1,14 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез393, 2026-11-14, ограниченная кодовая приёмка/docs PASS.** Работа/commit/push прямо C:/Nyasha_Planet/LMX main;392 принят b2899ec9.
+Pure SourceReader имени/fact подключён к прежнему implements worker, без новых графовых receiving records.
+35×15 raw literal source descriptions отделены от physical Fact.type и C ABI; all33 cell rows/qualifiers/unknown
+names/mutable refs/index-ref7 проверены L2 native/forced/root0/root1. @3 construction вызывает только интерфейсную
+фазу, сохраняет Model/default и не выполняет test. Private23/AFTER15, actual G1/G2 quick/fixedpoint15,
+G2 interp23/AFTER22/image48, Unit08/legacy2 и final canonical2/verify924 PASS; Source09 меняет лишь unit oracle.
+Render35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28263; финальный индекс — gate коммита. Runtime/current Value/typed
+storage, conversions/ABI и весь M11/M13/M14 остаются OPEN. Продолжать основной v3, goal ACTIVE.
+
 **2026-11-14, срез392 — ограниченная кодовая готовность receiving/name reader; docs-check01 PASS.**
 Borrowed `declaration_parts` сохраняет root/leaf/model/candidate/presence/known. Доказанные DATA logical names,
 receiving-chain scope guard и whole-field read guard используют общий контракт; fallback целой группы и numeric index391 сохранены.

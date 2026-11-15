@@ -1,0 +1,20 @@
+int: effects 0
+fn: touch () int
+    :=: (node \ effects) ((node \ effects) + 1)
+    return: 1
+end: touch
+box:
+    FactModel:
+        char: y
+        int: x
+        fn: test () int
+            return: (touch)
+        end: test
+    end: FactModel
+    FactValue:
+        int: x 11
+        char: y 7
+    end: FactValue
+    @: held FactModel FactValue
+end: box
+int: done 1

@@ -1,5 +1,15 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез393 — общий pure Source interface M11.7/M13; ограниченная кодовая приёмка/docs-check PASS.**
+392 принят/отправлен b2899ec937fa440bbf26afeec0cf5d3083c6e022; работа и коммиты прямо в main.
+Final Source09:924 (unit-only отличие от code08), Runtime07; all33 cell descriptions/qualifiers/unknown names/mutable refs/index-ref7
+прошли L2 native/forced/root0/root1. Reader подключён к прежним named maps и required/candidate facts,
+а @3 construction использует общий interface-only entry. Private23 triple/AFTER15, actual G1/G2 quick/fixedpoint15,
+G2 interp23/AFTER22/image48, Unit08 и legacy2 n/f/root0/root1, final canonical2/verify924 PASS. Render35/14 PASS;
+Fresh docs-check01 PASS35/14/27/44/615, links/LF28263; финальный индекс — gate перед коммитом.
+Готовые artifacts/binaries переиспользованы. Готовность v3 не заявлена.
+Typed storage, runtime admission/current Value, conversions/C ABI и полный M11/M13/M14 OPEN.
+
 **2026-11-14, срез392 — общий borrowed receiving view/name/role M11.7/M13; ограниченная кодовая приёмка пройдена, docs-check далее.**
 Текущий gate: Runtime06/Graph02 и Source08:919, все21 triple/negative AFTER15 PASS.
 Прежний construction_shape_presence исправлен общим DATA shape proof/pure binder/default presence,
@@ -2488,7 +2498,14 @@ legacy worker читает arena source_names, а clean Graph — g.names; raw F
 не вызывается. Physical slot equality не заменяет этот интерфейс. `descriptor(S)` заголовка — адреса полей Lmx,
 не новый storage-type объект.
 
-**Следующая реализация общего bridge — OPEN, не результат392.** Использовать LIVE
+**Pure Source bridge — срез393, code gates PASS; полный runtime/storage bridge OPEN.** Code08 читает35×15 raw literal source
+table через прежний exporter. Optional reader использует один прежний name matcher, четыре его caller routes,
+required facts и обе candidate стороны. Exact row identity и одинаковые receiving chains проверяются до low-box
+чтений; неизвестные ref/Array/type evidence сохраняют UNKNOWN. Карты unknown names отделены от unnamed0 и
+доказанного отсутствия. Physical kind/type/cell/owner/index сохраняются. Generic interface entry создаёт прежнюю
+операцию require_root/drain/close(published0); @3 construction отклоняет известный NO и сохраняет raw Model/default.
+Test/converter не исполняются; полного typed storage или runtime admission этот срез не доказывает.
+Остальной bridge ниже остаётся зависимой работой M11.7/M13. Использовать LIVE
 [генератор заголовка](selfbuild/tools/build.lm2) и [общий implements worker](selfbuild/src/l2src/lmx_implements.lm2).
 В существующий `LmxImplResolve` добавить необязательный reader текущей операции: borrowed context, name/fact query,
 при потреблении payload — прежний current Value. Legacy-вызов без reader сохраняет прежний producer; Graph читает

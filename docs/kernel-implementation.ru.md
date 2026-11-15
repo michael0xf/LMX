@@ -1,6 +1,16 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**Текущее состояние, 2026-11-14, срез392 — ограниченные кодовые gates и docs-check01 пройдены.**
+**Текущее состояние, 2026-11-14, срез393 — operation-local SourceReader для source interface; ограниченная кодовая приёмка/docs-check PASS.**
+Общий implements worker получает name/fact выбранного Source через заимствованный reader текущей операции (§3.5).
+Полная literal-проекция35 строк/15 колонок `primitive.description` отделена от физического `Fact.type` и ABI;
+совпадение C-spelling не объединяет source contracts. Все33 cell-row identity контроли прошли в private L2 native/forced
+с root0/1. Qualifier-chain сохраняется; references/Array дают UNKNOWN без чтения payload.
+Construction прямой трёхаргументной `@` проверяет известные candidate/Model только по интерфейсу: доказанно недостающее
+поле Model отказывает, `test` не исполняется, raw Model/default сохраняются. Typed storage и runtime admission не заявлены.
+Actual G1/G2 quick/fixedpoint15, G2 interp23/AFTER22/image48, Unit08 и legacy2 PASS; полной готовности typed
+storage/runtime admission или M11/M13/M14 это не означает. Render35/14 и docs-check01 PASS; финальный индекс проверяется перед коммитом.
+
+**Предыдущее состояние, 2026-11-14, срез392 — ограниченные кодовые gates и docs-check01 пройдены.**
 `declaration_parts` заимствует receiving leaf/model/candidate и presence/known, сохраняя исходный root;
 DATA logical names требуют доказанного declaring-контракта (§3.5). C-spelling проекция расширяет прежний generated
 primitive profile; `c_names` доказывает роли source spellings, не объединяет C-типы с языковыми aliases.
@@ -1491,6 +1501,24 @@ Private21 triple/negative AFTER15 и whole02 с настоящими G1/G2 пр�
 запуска готовых private binaries. Fixedpoint13 artifact/2 canonical checks и G2 render35/14/оба snapshots PASS;
 docs-check/index/commit/push392 ещё предстоят. Model/default остаются исходным receiving-описанием: это ещё не typed
 storage/admission или actual C-door general bridge. Они остаются OPEN вместе с M13 и полными M11.7/8/M14.
+
+**Source interface, срез393.** `LmxImplSourceReader` передаёт общему implements worker operation-local callbacks имени
+и receiving fact, без нового parser или постоянной карты имён/типов рядом с графом. Reader clean Graph использует
+тот же borrowed declaration view и `g.names`. Физический `Fact.type`/cell/ABI берётся прежним путём; отдельный source
+fact сохраняет исходный receiving root, описание примитива и порядок qualifier-chain. Модель, default и language-reference
+payload не вычисляются. Служебный uninit pointer позволяет узнать уже существующую cell, не читать её неполученное значение.
+
+Generated-проекция сохраняет literal35 rows ×15 columns исходной `primitive.description`. Точное source-описание
+не выводится из одного machine type или C-spelling; source aliases автоматически не объединяются. Положительные
+identity-проверки всех33 cell rows прошли в private L2 native/forced с root0/1. Это проверка source interface,
+не реализация physical storage этих33 типов. Qualifiers не стираются; недоказанные references/Array остаются UNKNOWN.
+
+Общий `lmx_implements_source_interface` владеет одной операцией: `require_root`, общий `drain`, затем `resolve_close`
+с `published=0` и закрытие scratch. Он не публикует permission, готовую receiving-map или постоянный proof, не запускает
+кандидат, преобразователь или `test`. Прямой `@: p Model Value` при известных Model/Value использует эту интерфейсную
+проверку; доказанное отсутствие требуемого поля даёт отказ. UNKNOWN не превращается в YES. Само объявление остаётся raw
+с Model/default: интерфейсная проверка не выделяет typed storage и не заменяет будущий runtime admission/test.
+Финальные gates393 идут; общий typed storage/runtime admission и полные M11/M13/M14 остаются OPEN.
 
 В срезе 373 `lmx_graph_resolve_binding` одним поиском возвращает выбранное значение и его рабочую строку.
 Классификация и читатель значения используют этот общий выбор с прежним приоритетом формалов, собственных мест

@@ -1,5 +1,16 @@
 # LMX core architecture
 
+Slice393 (2026-11-14), bounded code acceptance and docs-check PASS, on main after accepted392/b2899ec9: the existing implements resolver borrows an optional
+Graph SourceReader. Physical facts retain their meanings; exact source descriptions and receiving chains are
+separate borrowed evidence. One named mapper preserves unknown masks through all four routes. The generic pure
+interface entry owns require_root/drain/close(published0); @3 construction retains raw Model/default and never
+runs test or reads reference payloads. All33 cell rows/qualifiers/names/refs/index-ref7 passed private L2 n/f root0/1,
+private23 triple/negative AFTER15 PASS. Actual G1/G2 quick/fixedpoint15, G2 interp23/AFTER22/image48 and legacy2 PASS.
+Source09 only strengthens the unit oracle; actual G2 Unit08/final canonical2 PASS without rebuilding unchanged artifacts.
+Render35/14 and fresh docs-check01 PASS35/14/27/44/615, links/LF28263; the final index is the precommit gate.
+Full storage/runtime/ABI and M11/M13/M14 remain OPEN.
+See [evidence393](steps/witnesses/m11-declared-facts-20261114/notes.md).
+
 Current slice391 (2026-11-14; lexical actual-DATA fix, code gates and docs-check PASS), accepted/pushed base390/78041191 on main:
 only Run changes. Its private pure projector reuses step_index/occurrence and binding_method for the exact selected fn;
 Graph75/Run58, APIs and layouts are unchanged. A numeric index preserves the immediate Frame and does not reinterpret

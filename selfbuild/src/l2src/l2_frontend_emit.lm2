@@ -876,6 +876,113 @@ fn: lm_compiler_profile_c_size (const: (@: text c.LmP0Text)) size_t
         i := i + 1U
     return: n
 
+# Preserve every column of the selected source profile as literal table data.
+# The row address is a description identity, never a physical pool type. A nonliteral
+# cell leaves its row unavailable to this projection; it is not evaluated or invented.
+fn: lm_compiler_emit_profile_rows () int
+    @: out c.FILE c.l2_out
+    @: pr_t int (cast: (@: int) (@ c.l2_pr_t))
+    @@: tb_nrow int (cast: (@@: int) (@ c.l2_tb_nrow))
+    @@: tb_cell0 int (cast: (@@: int) (@ c.l2_tb_cell0))
+    @@: tb_ncol int (cast: (@@: int) (@ c.l2_tb_ncol))
+    @@: tb_col0 int (cast: (@@: int) (@ c.l2_tb_col0))
+    @@@: tbc_name c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_tbc_name))
+    @@@: tbx_name char (cast: (@@@: char) (@ c.l2_tbx_name))
+    @: buffer char 0
+    const: (@: bytes char 0)
+    const: (@: column c.LmP0Text 0)
+    c.LmP0Text: emitted
+    size_t: total 0U
+    size_t: largest 0U
+    size_t: size 0U
+    size_t: at 0U
+    int: rows tb_nrow[0][pr_t[0]]
+    int: columns tb_ncol[0][pr_t[0]]
+    int: row 0
+    int: col 0
+    int: slot 0
+    int: complete 0
+    int: status 0
+    while: col < columns
+        column := tbc_name[0][tb_col0[0][pr_t[0]] + col]
+        size := column\length
+        if: size = (cast: (size_t) -1) || total >= (cast: (size_t) -1) - size - 1U
+            return: 1
+        total := total + size + 1U
+        col := col + 1
+    largest := total
+    while: row < rows
+        slot := tb_cell0[0][pr_t[0]] + row * columns
+        col := 0
+        total := 0U
+        while: col < columns
+            bytes := tbx_name[0][slot + col]
+            size := 0U
+            if: bytes != 0
+                size := c.strlen(bytes)
+            if: size = (cast: (size_t) -1) || total >= (cast: (size_t) -1) - size - 1U
+                return: 1
+            total := total + size + 1U
+            col := col + 1
+        if: total > largest
+            largest := total
+        row := row + 1
+    buffer := (cast: (@: char) c.lm_compiler_xmalloc(largest + 1U))
+    if: buffer = 0
+        return: 1
+    col := 0
+    while: col < columns
+        column := tbc_name[0][tb_col0[0][pr_t[0]] + col]
+        bytes := column\data
+        size := column\length
+        if: size >= 2U && bytes[0] = 96 && bytes[size - 1U] = 96
+            bytes := bytes + 1U
+            size := size - 2U
+        c.memcpy(buffer + at, bytes, size)
+        at := at + size
+        buffer[at] := 0
+        at := at + 1U
+        col := col + 1
+    if: c.fprintf(out, "\nsize_t: lmx_primitive_profile_columns %dU\nconst: @: char lmx_primitive_profile_column_names ", columns) < 0
+        status := 1
+    emitted\data := buffer
+    emitted\length := at
+    if: status = 0
+        status := c.lm_compiler_emit_cstr(@ emitted)
+    if: c.fputs("\nfn: lmx_primitive_profile_row (size_t: row) const: @: char\n", out) < 0
+        status := 1
+    row := 0
+    while: row < rows && status = 0
+        slot := tb_cell0[0][pr_t[0]] + row * columns
+        col := 0
+        at := 0U
+        complete := 1
+        while: col < columns
+            bytes := tbx_name[0][slot + col]
+            if: bytes = 0
+                complete := 0
+                break
+            size := c.strlen(bytes)
+            c.memcpy(buffer + at, bytes, size)
+            at := at + size
+            buffer[at] := 0
+            at := at + 1U
+            col := col + 1
+        if: c.fprintf(out, "    if: row = %dU\n        return: ", row) < 0
+            status := 1
+        emitted\length := at
+        if: complete != 0 && status = 0
+            status := c.lm_compiler_emit_cstr(@ emitted)
+        if: complete = 0 && c.fputc(48, out) = c.EOF
+            status := 1
+        if: c.fputs("\n    end: if\n", out) < 0
+            status := 1
+        row := row + 1
+    if: c.fputs("    return: 0\nend: lmx_primitive_profile_row\n", out) < 0
+        status := 1
+    c.lm_compiler_xfree((cast: (@: void) buffer))
+    return: status
+
 # Project the existing source primitive table into generated data for the clean graph. Parsing, source-table
 # loading, snapshots and publication are the normal translation's; no table parser or runtime frontend is added.
 # Names are canonical payloads, separated by NUL; the parallel bytes retain the cell flag of every source row.
@@ -1015,6 +1122,8 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
             emitted\length := c_total
             if: status = 0
                 status := c.lm_compiler_emit_cstr(@ emitted)
+            if: status = 0
+                status := lm_compiler_emit_profile_rows()
             if: c.fputc(10, out_cell[0]) = c.EOF
                 status := 1
             if: c.fclose(out_cell[0]) != 0

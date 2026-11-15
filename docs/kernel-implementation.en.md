@@ -1,6 +1,16 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice392 -- bounded code gates and docs-check01 passed.**
+**Current state, 2026-11-14, slice393 -- an operation-local SourceReader for source interface; bounded code acceptance/docs-check PASS.**
+The common implements worker receives the selected Source's name/fact through a reader borrowed by the current operation (§3.5).
+The full literal35-row/15-column projection of `primitive.description` is separate from physical `Fact.type` and ABI;
+equal C spellings do not unify source contracts. All33 cell-row identity controls passed in private L2 native/forced
+with root0/1. The qualifier chain is retained; references/Array give UNKNOWN without reading payloads.
+Construction of direct three-argument `@` checks known candidate/Model by interface only: a proven missing Model field
+refuses, `test` does not execute, and raw Model/default remain. No typed storage or runtime admission is claimed.
+Actual G1/G2 quick/fixedpoint15, G2 interp23/AFTER22/image48, Unit08 and legacy2 PASS; this does not establish full
+typed storage/runtime admission or M11/M13/M14. Render35/14 and docs-check01 PASS; the final index is checked before commit.
+
+**Previous state, 2026-11-14, slice392 -- bounded code gates and docs-check01 passed.**
 `declaration_parts` borrows the receiving leaf/model/candidate and presence/known while retaining the original root;
 DATA logical names require a proven declaring contract (§3.5). The C-spelling projection extends the existing generated
 primitive profile; `c_names` proves source-spelling roles without unifying C types with language aliases.
@@ -1569,6 +1579,24 @@ Private21 triple/negative AFTER15 and whole02 with genuine G1/G2 passed; actual 
 of ready private binaries. Fixedpoint13 artifact/2 canonical checks and G2 render35/14/both snapshots PASS;
 docs-check/index/commit/push392 still follow. Model/default remain source receiving descriptions: this is not yet typed
 storage/admission or an actual C-door general bridge. Those remain OPEN along with M13 and full M11.7/8/M14.
+
+**Source interface, slice393.** `LmxImplSourceReader` supplies operation-local name and receiving-fact callbacks to the
+common implements worker, without a new parser or a persistent name/type map beside the graph. The clean Graph reader
+uses the same borrowed declaration view and `g.names`. Physical `Fact.type`/cell/ABI comes through the existing route;
+a separate source fact retains the original receiving root, primitive description and qualifier-chain order. Model/default
+and language-reference payloads are not evaluated. A service uninit pointer locates the existing cell without reading its unprovided value.
+
+The generated projection retains literal35 rows ×15 columns of source `primitive.description`. An exact source description
+is not inferred from a machine type or C spelling alone; source aliases are not automatically unified. Positive
+identity checks for all33 cell rows passed in private L2 native/forced with root0/1. This checks source interface,
+not physical storage for those33 types. Qualifiers are retained; unproved references/Array remain UNKNOWN.
+
+Common `lmx_implements_source_interface` owns one operation: `require_root`, shared `drain`, then `resolve_close`
+with `published=0` and scratch closure. It publishes no permission, ready receiving map or persistent proof, and runs
+neither candidate, converter nor `test`. Direct `@: p Model Value` uses this interface check for known Model/Value;
+a proven missing required field refuses. UNKNOWN does not become YES. The declaration itself stays raw
+with Model/default: an interface check allocates no typed storage and does not replace future runtime admission/test.
+Final gates393 are running; general typed storage/runtime admission and full M11/M13/M14 remain OPEN.
 
 In slice 373 `lmx_graph_resolve_binding` returns the selected value and its working row in one search.
 Classification and the value reader use that shared selection with the existing priority of formals, own places

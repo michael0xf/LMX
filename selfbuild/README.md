@@ -1,5 +1,17 @@
 # Maintained L3/L2 source package
 
+Slice393 (2026-11-14): bounded code acceptance and docs-check PASS; main after accepted392/b2899ec9.
+Working code bundle: `build2/codex_fix250generationchain01/sol-m11-construction-fresh01/boot-m11-declared-facts-01/g2`;
+Graph: sibling `graph-m11-declared-facts-g2-01/graph_trans-prod.exe`, SHAecc3d29b.
+The bundle's `tool/lmxtool-tool.exe` SHA256 is
+`6d51ee2a05395908f03613b3e5e16d8a29151b076e29cc85eb28c08c629eccb4`.
+Actual G1/G2 quick (9 smoke each), fixedpoint15, G2 interp23/AFTER22/image48 and legacy2 PASS.
+Final Source09:924 changes only the unit oracle after code Source08; G2 Unit08 n/f/root0/root1 and final canonical2 PASS.
+Reused private binaries are justified by identical runtime objects/generated programs/libc/backend; no second native build/run.
+Render35/14 and fresh docs-check01 PASS35/14/27/44/615, links/LF28263; the final index is checked before commit.
+Graph79/Run61/Implements76 expose the borrowed Source interface through the existing worker. Full storage/runtime/ABI
+and M11/M13/M14 remain OPEN. See [evidence393](../steps/witnesses/m11-declared-facts-20261114/notes.md).
+
 Current slice391 (2026-11-14; lexical actual-DATA fix, code gates and docs-check PASS), accepted/pushed base390/78041191 on main:
 only Run changes. Its private pure projector reuses step_index/occurrence and binding_method for the exact selected fn;
 Graph75/Run58, APIs and layouts are unchanged. A numeric index preserves the immediate Frame and does not reinterpret

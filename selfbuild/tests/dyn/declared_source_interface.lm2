@@ -1,0 +1,158 @@
+# The ordinary kernel interface operation reads declarations, not payloads.
+# Exercise every cell row of the active source profile, not a type whitelist.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+include: "<string.h>"
+include: "<stdio.h>"
+include: "<stdlib.h>"
+
+fn: ds_field (@: g c.LmxGraph; @: head char; @: name char) @: c.Lmx
+    @: raw c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    if: raw = 0 || c.lmx_graph_name(g, (cast: (@: void) raw), head, c.strlen(head)) != 0
+        return: (cast: (@: c.Lmx) 0)
+    if: c.lmx_graph_put(raw, 0U, c.lmx_graph_word(g, name, c.strlen(name))) != 0
+        return: (cast: (@: c.Lmx) 0)
+    return: raw
+
+fn: ds_check (@: g c.LmxGraph; @: value c.Lmx; @: req c.Lmx; int: expected) int
+    @: answer int c.calloc(1U, c.sizeof(c.int))
+    int: actual c.LMX_IMPLEMENTS_UNKNOWN
+    if: answer = 0
+        return: 1
+    if: c.lmx_graph_source_interface(g, value, req, answer) != c.LMX_WALK_OK
+        c.free(answer)
+        return: 1
+    actual := \answer
+    c.free(answer)
+    if: actual != expected
+        c.fprintf(c.stderr, "Source interface: expected %d, got %d\n", expected, actual)
+    return: (cast: (int) (actual != expected))
+
+fn: ds_qualified (@: g c.LmxGraph; @: leaf c.Lmx) @: c.Lmx
+    @: raw c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    if: raw = 0 || c.lmx_graph_name(g, (cast: (@: void) raw), "const", 5U) != 0
+        return: (cast: (@: c.Lmx) 0)
+    c.lmx_graph_put(raw, 0U, (cast: (@: void) leaf))
+    return: raw
+
+fn: run () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: state c.LmxGraphState 0
+    @: value c.Lmx 0
+    @: req c.Lmx 0
+    @: one c.Lmx 0
+    @: two c.Lmx 0
+    @: head char 0
+    @: reference void 0
+    @@: selected void 0
+    size_t: i 0U
+    size_t: count 0U
+    size_t: first 0U
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 80
+    g := c.lmx_graph_open(@ arena)
+    state := c.lmx_graph_state()
+    if: g = 0 || state = 0 || state\receivers_count < 35U
+        return: 81
+    value := c.lmx_graph_lmx(g, 0, 1U)
+    req := c.lmx_graph_lmx(g, 0, 1U)
+    if: value = 0 || req = 0
+        return: 82
+    first := state\receivers_count - 35U
+    while: i < 35U
+        head := state\receivers[first + i]
+        if: c.lmx_graph_primitive_description(head) = 0
+            i := i + 1U
+            continue
+        one := ds_field(g, head, "x")
+        two := ds_field(g, head, "x")
+        if: one = 0 || two = 0
+            return: 83
+        c.lmx_graph_put(value, 0U, (cast: (@: void) one))
+        c.lmx_graph_put(req, 0U, (cast: (@: void) two))
+        if: ds_check(g, value, req, c.LMX_IMPLEMENTS_YES) != 0
+            c.fprintf(c.stderr, "Source row: %s\n", head)
+            return: 84
+        count := count + 1U
+        i := i + 1U
+    if: count != 33U
+        return: 85
+    # Same C spelling is not evidence that Boolean and i8 share a contract.
+    one := ds_field(g, "Boolean", "x")
+    two := ds_field(g, "i8", "x")
+    c.lmx_graph_put(value, 0U, (cast: (@: void) one))
+    c.lmx_graph_put(req, 0U, (cast: (@: void) two))
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_UNKNOWN) != 0
+        return: 86
+    # A known absent field is NO.
+    two := ds_field(g, "int", "missing")
+    c.lmx_graph_put(req, 0U, (cast: (@: void) two))
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_NO) != 0
+        return: 87
+    # Unknown C declarations are not anonymous fields or ordinary Structures.
+    one := ds_field(g, "c.no_such_type", "x")
+    c.lmx_graph_put(value, 0U, (cast: (@: void) one))
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_UNKNOWN) != 0
+        return: 88
+    # A proved ordinal before an unknown candidate suffix remains available.
+    value := c.lmx_graph_lmx(g, 0, 2U)
+    two := ds_field(g, "int", "x")
+    c.lmx_graph_put(value, 0U, (cast: (@: void) two))
+    c.lmx_graph_put(value, 1U, (cast: (@: void) one))
+    two := ds_field(g, "int", "x")
+    c.lmx_graph_put(req, 0U, (cast: (@: void) two))
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_YES) != 0
+        return: 89
+    # An unavailable required name does not hide an independent known NO.
+    req := c.lmx_graph_lmx(g, 0, 2U)
+    one := ds_field(g, "c.no_such_type", "unknown")
+    two := ds_field(g, "int", "missing")
+    c.lmx_graph_put(req, 0U, (cast: (@: void) two))
+    c.lmx_graph_put(req, 1U, (cast: (@: void) one))
+    value := c.lmx_graph_lmx(g, 0, 1U)
+    two := ds_field(g, "int", "x")
+    c.lmx_graph_put(value, 0U, (cast: (@: void) two))
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_NO) != 0
+        return: 90
+    # The declaration of a mutable reference supplies no payload proof.
+    req := c.lmx_graph_lmx(g, 0, 1U)
+    two := c.lmx_graph_lmx(g, 0, 0U)
+    if: two = 0 || c.lmx_graph_name(g, (cast: (@: void) two), "x", 1U) != 0
+        return: 98
+    c.lmx_graph_put(req, 0U, (cast: (@: void) two))
+    reference := c.lmx_graph_ref_lmx(g, two)
+    if: reference = 0 || c.lmx_graph_name(g, reference, "x", 1U) != 0
+        return: 91
+    c.lmx_graph_put(value, 0U, reference)
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_UNKNOWN) != 0
+        return: 92
+    selected := c.calloc(1U, sizeof(@: void))
+    if: selected = 0 || c.lmx_graph_index(g, (cast: (@: void) req), 0, selected) != 0
+        return: 95
+    reference := \selected
+    c.free(selected)
+    if: c.lmx_graph_kind(g, reference) != 7 || c.lmx_graph_name(g, reference, "x", 1U) != 0
+        return: 96
+    c.lmx_graph_put(value, 0U, reference)
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_UNKNOWN) != 0
+        return: 97
+    # Equal qualifier chains are retained, not stripped to a naked scalar.
+    one := ds_field(g, "char", "x")
+    two := ds_field(g, "char", "x")
+    c.lmx_graph_put(value, 0U, (cast: (@: void) ds_qualified(g, one)))
+    c.lmx_graph_put(req, 0U, (cast: (@: void) ds_qualified(g, two)))
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_YES) != 0
+        return: 93
+    c.lmx_graph_put(req, 0U, (cast: (@: void) two))
+    if: ds_check(g, value, req, c.LMX_IMPLEMENTS_UNKNOWN) != 0
+        return: 94
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7
+
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

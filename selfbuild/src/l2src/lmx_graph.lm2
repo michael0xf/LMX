@@ -780,6 +780,26 @@ fn: lmx_graph_primitive_receiver (@: word char) int
     return: 0
 end: lmx_graph_primitive_receiver
 
+# Borrowed identity of the complete literal source description. The C door
+# has its own canonical spelling identity; it never selects an arbitrary
+# language row sharing that spelling (Boolean/i8/int8 are distinct).
+fn: lmx_graph_primitive_description (@: word char) @: void
+    @: state c.LmxGraphState lmx_graph_state()
+    const: (@: cells char c.lmx_primitive_profile_cells)
+    size_t: count c.lmx_primitive_profile_count
+    size_t: first 0U
+    size_t: i 0U
+    if: state = 0 || word = 0 || count > state\receivers_count
+        return: (cast: (@: void) 0)
+    first := state\receivers_count - count
+    while: i < count
+        if: state\receivers[first + i] = word && cells[i] != 0
+            return: (cast: (@: void) c.lmx_primitive_profile_row(i))
+        i := i + 1U
+    if: word[0] = 99 && word[1] = 46 && lmx_graph_primitive_receiver(word) != 0
+        return: (cast: (@: void) word)
+    return: (cast: (@: void) 0)
+
 # Local families of declaring contracts, not receiver opcodes: primitive/C type, reference, qualification, Array.
 # Pointer depth and rectangular Array rank are read from the complete canonical head, with no fixed ceiling.
 fn: lmx_graph_declaration_receiver (@: head char) int

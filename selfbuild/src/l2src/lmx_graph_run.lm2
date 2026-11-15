@@ -23,6 +23,8 @@ predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_implements_resolve.h.lm1"
+predef: "l2src/lmx_scratch.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
@@ -3073,6 +3075,132 @@ fn: lmx_graph_construct_value (@: g c.LmxGraph; @: holder c.Lmx; @: raw void; @@
         return: (cast: (@: void) 0)
     return: lmx_graph_construct_slot(g, (cast: (@: c.Lmx) value), slot, data, nd, codes, nc)
 
+# Every name in this operation uses canonical Graph addresses, transported
+# through the worker's opaque size_t key. No numeric identifier table is mixed
+# into that namespace. Unknown is separate from a proved anonymous place.
+fn: lmx_graph_source_name (@: context void; @: owner c.Lmx; size_t: field; @: out size_t; @: out_answer int) int
+    @: g c.LmxGraph (cast: (@: c.LmxGraph) context)
+    @: raw void c.lmx_graph_get(owner, field)
+    @: leaf void 0
+    @: model void 0
+    @: candidate void 0
+    @: name char 0
+    int: presence 0 - 1
+    int: known 0
+    if: out = 0 || out_answer = 0 || g = 0 || field >= c.lmx_graph_count(owner)
+        return: c.LMX_WALK_INVALID
+    out[0] := 0U
+    out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
+    name := c.lmx_graph_declaration_parts(g, raw, @ leaf, @ model, @ candidate, @ presence, @ known)
+    if: known = 0 || (name = 0 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_declaration_receiver(c.lmx_graph_name_of(g, raw)) != 0)
+        return: c.LMX_WALK_OK
+    if: name = 0
+        name := c.lmx_graph_slot_name(g, owner, field)
+    out[0] := (cast: (size_t) name)
+    out_answer[0] := c.LMX_IMPLEMENTS_YES
+    return: c.LMX_WALK_OK
+
+# Metadata only: the physical fact is preserved, and raw receiving chains are
+# borrowed with all their Models/defaults. Only a stable uninit service pointer
+# is followed; language references never yield payloads to construction proof.
+fn: lmx_graph_source_fact (@: context void; @: arena c.LmxArena; @: owner c.Lmx; size_t: field; int: interface; @: references c.Lmx; @: scratch c.LmxScratch; @: out c.LmxImplContractFact; @: out_answer int) int
+    @: g c.LmxGraph (cast: (@: c.LmxGraph) context)
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: raw void 0
+    @: current void 0
+    @: leaf void 0
+    @: model void 0
+    @: candidate void 0
+    @: name char 0
+    @: head char 0
+    @: room void 0
+    size_t: depth 0U
+    size_t: i 0U
+    int: presence 0 - 1
+    int: known 0
+    int: kind 0
+    int: status c.lmx_implements_contract_field(arena, owner, field, interface, references, out, out_answer)
+    if: status != c.LMX_WALK_OK || field = (cast: (size_t) -1)
+        return: status
+    raw := out\cell
+    kind := c.lmx_graph_kind(g, raw)
+    if: kind = 0
+        return: c.LMX_WALK_OK
+    if: kind = 1 || kind = 3
+        out\declared := 1
+        out\declared_raw := raw
+        out\declared_type := c.lmx_graph_primitive_description(state\w_int)
+        if: out\declared_type = 0
+            out\declared := 2
+        out_answer[0] := c.LMX_IMPLEMENTS_YES
+        return: c.LMX_WALK_OK
+    if: kind = 5 || kind = 6 || kind = 7 || kind = 8 || kind = 9
+        out\declared := 2
+        out\declared_raw := raw
+        out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
+        return: c.LMX_WALK_OK
+    if: kind != 4
+        return: c.LMX_WALK_OK
+    head := c.lmx_graph_name_of(g, raw)
+    if: c.lmx_graph_declaration_receiver(head) = 0
+        if: lmx_graph_language_word(state, head) != 0 || c.lmx_graph_method(g, (cast: (@: c.Lmx) raw)) != 0
+            out\executable := 1
+            out\declared := 2
+            out\declared_raw := raw
+            out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
+        return: c.LMX_WALK_OK
+    out\declared := 2
+    out\declared_raw := raw
+    out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
+    name := c.lmx_graph_declaration_parts(g, raw, @ leaf, @ model, @ candidate, @ presence, @ known)
+    if: name = 0 || known = 0
+        return: c.LMX_WALK_OK
+    kind := c.lmx_graph_kind(g, leaf)
+    if: kind = 1 || kind = 3
+        out\declared_type := c.lmx_graph_primitive_description(state\w_int)
+    else:
+        if: kind != 4 || c.lmx_graph_declaration_receiver(c.lmx_graph_name_of(g, leaf)) != 1
+            return: c.LMX_WALK_OK
+        out\declared_type := c.lmx_graph_primitive_description(c.lmx_graph_name_of(g, leaf))
+    if: out\declared_type = 0
+        return: c.LMX_WALK_OK
+    current := raw
+    while: current != leaf
+        current := c.lmx_graph_get((cast: (@: c.Lmx) current), 0U)
+        if: c.lmx_graph_kind(g, current) = 4 && c.lmx_graph_name_of(g, current) = 0
+            current := c.lmx_graph_get((cast: (@: c.Lmx) current), 0U)
+        depth := depth + 1U
+    if: depth > (cast: (size_t) -1) / c.sizeof(c.size_t)
+        return: c.LMX_WALK_NOMEM
+    if: depth != 0U
+        status := c.lmx_scratch_take(scratch, depth * c.sizeof(c.size_t), @ room)
+        if: status != c.LMX_SCRATCH_OK
+            if: status = c.LMX_SCRATCH_NOMEM
+                return: c.LMX_WALK_NOMEM
+            return: c.LMX_WALK_INVALID
+        out\declared_chain := (cast: (@: size_t) room)
+    current := raw
+    while: i < depth
+        out\declared_chain[i] := (cast: (size_t) c.lmx_graph_name_of(g, current))
+        current := c.lmx_graph_get((cast: (@: c.Lmx) current), 0U)
+        if: c.lmx_graph_kind(g, current) = 4 && c.lmx_graph_name_of(g, current) = 0
+            current := c.lmx_graph_get((cast: (@: c.Lmx) current), 0U)
+        i := i + 1U
+    out\declared_count := depth
+    out\declared := 1
+    out_answer[0] := c.LMX_IMPLEMENTS_YES
+    return: c.LMX_WALK_OK
+
+# Interface-only Source admission uses the existing operation and its scratch.
+# The result neither publishes a permission nor calls test/conversion code.
+fn: lmx_graph_source_interface (@: g c.LmxGraph; @: value c.Lmx; @: model c.Lmx; @: out_answer int) int
+    c.LmxImplSourceReader: reader
+    c.memset((cast: (@: void) (@ reader)), 0, c.sizeof(c.LmxImplSourceReader))
+    reader\context := (cast: (@: void) g)
+    reader\name := c.lmx_graph_source_name
+    reader\fact := c.lmx_graph_source_fact
+    return: c.lmx_implements_source_interface(g\arena, value, model, @ reader, out_answer)
+
 # One reference source field. A written DATA value is already a Structure;
 # expressions, unavailable values and true uninitialized references stay raw.
 fn: lmx_graph_construct_field (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; @@: data c.Lmx; size_t: nd; @@: codes c.Lmx; size_t: nc) int
@@ -3083,14 +3211,31 @@ fn: lmx_graph_construct_field (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; 
     @: value void 0
     @: cell void 0
     @: name char 0
-    if: c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != state\w_at || c.lmx_graph_count(declaration) != 2U
+    @: model void 0
+    size_t: count 0U
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    int: status
+    if: c.lmx_graph_kind(g, raw) != 4 || c.lmx_graph_name_of(g, raw) != state\w_at
+        return: 0
+    count := c.lmx_graph_count(declaration)
+    if: count != 2U && count != 3U
         return: 0
     name := c.lmx_graph_word_text(g, c.lmx_graph_get(declaration, 0U))
     if: name = 0 || lmx_graph_language_word(state, name) != 0
         return: 0
-    candidate := c.lmx_graph_get(declaration, 1U)
+    candidate := c.lmx_graph_get(declaration, count - 1U)
     value := lmx_graph_construct_value(g, holder, candidate, data, nd, codes, nc)
     if: value = 0
+        return: 0
+    if: count = 3U
+        model := lmx_graph_construct_value(g, holder, c.lmx_graph_get(declaration, 1U), data, nd, codes, nc)
+        if: model = 0
+            return: 0
+        status := lmx_graph_source_interface(g, (cast: (@: c.Lmx) value), (cast: (@: c.Lmx) model), @ answer)
+        if: status != c.LMX_WALK_OK || answer = c.LMX_IMPLEMENTS_NO
+            return: 4
+        # Interface proof does not supply typed storage or erase the written
+        # Model/default. Runtime admission/test is still a separate phase.
         return: 0
     if: c.lmx_graph_kind(g, c.lmx_graph_target(g, value)) != 4
         return: 4

@@ -1,5 +1,33 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7/M13: срез393, ограниченная кодовая приёмка и docs PASS
+
+392 принят и отправлен b2899ec937fa440bbf26afeec0cf5d3083c6e022. Goal ACTIVE.
+Работа, build, commit и push прямо C:/Nyasha_Planet/LMX main; отдельного дерева Sol нет.
+Root — единственный code/test/build writer; helpers вернули review и выделенную kernel RU/EN пару. Два чужих untracked сохранить.
+Seed — boot-m11-receiving-view-02/g2 и graph-m11-receiving-view-g2-02 в прежнем stage
+build2/codex_fix250generationchain01/sol-m11-construction-fresh01.
+Pipeline393 — build2/codex_fix250generationchain01/runs/sol-m11-declared-facts-20261114-01.
+Code Source08:924, Runtime07 c2b9adcc/Graph07 relink PASS; private23 triple/negative AFTER15 PASS.
+Unit07: все33 cell rows, qualifiers, unknown names и mutable refs/index-ref7 — native/forced/root0/root1 PASS.
+Whole boot-m11-declared-facts-01 quick: actual G1/G2 по9 smoke/tool startup PASS, fixedpoint15/verify924 PASS.
+G2 Graph ecc3d29b: actual interp23/full AFTER22 PASS;44 Graph images,2 Unit images и libc/backend совпали(48 checks).
+Private binaries переиспользованы. Legacy place_map/map_chain — actual G2 native/forced/root0/root1 PASS.
+Final Source09:924 SHAe155b90f9ebc14bf8eb0f96512b442d5be54e5c4ef89d1f3ff909afeff82efe2 отличается от08
+ТОЛЬКО усилением unit oracle для mutable refs к Structure. Compiler/kernel/ABI прежние; whole/artifacts не повторялись.
+Actual G2 Unit08 прошёл native/forced/root0/root1; final canonical2/verify924 PASS. Все producers terminal.
+G2 render semantics35/14/both snapshots PASS; generated content и grammar не менялись.
+Fresh docs-check01 PASS35/14/27/44/615, links/LF28263. Final indexed check01 также PASS35/14/27/44/615,
+links/LF28270; diff-check clean. Result annotations/receipt дописаны после проверки как outputs, не semantic inputs.
+Все gates393 PASS; commit/push выполняются прямо в main, далее общий bridge по v3.
+Принятая кодовая связка после docs gates — stage/boot-m11-declared-facts-01/g2 + graph-m11-declared-facts-g2-01.
+Exporter сохраняет исходные15 колонок/35 строк как raw literal descriptions отдельно от физических типов/ABI.
+Operation-local Graph name/fact reader подключён к существующему implements worker и @3 construction interface.
+Нельзя подменять physical Fact.type номером строки, объединять source contracts по C spelling,
+читать mutable payload ради Source proof или стирать model/qualifier до готового typed storage.
+Полные M11/M13/M14 и v3 OPEN; после commit/push продолжать общий runtime/current Value/typed storage/C ABI bridge.
+[Свидетельство393](witnesses/m11-declared-facts-20261114/notes.md).
+
 ## 2026-11-14 — M11.7/M13: срез392, кодовые gates и render PASS
 
 Предыдущий goal turn — progress: общий borrowed receiving/name reader дополнен logical whole-field guard

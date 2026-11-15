@@ -1172,9 +1172,6 @@ fn: lmx_walk_slot_bind (@: arena c.LmxArena; @: holder c.Lmx; size_t: index; @: 
             held_layout := c.lmx_implements_layout(arena, (cast: (@: c.Lmx) value\ref))
         ---
         if: model = 0 || value\ref = (cast: (@: void) model) || (held_layout != 0 && held_layout = c.lmx_implements_layout(arena, model))
-            status := c.lmx_code_write_admit(arena, holder, index, value\ref)
-            if: status != c.LMX_WALK_OK
-                return: status
             status := c.lmx_graph_ref_store_in(arena, holder, index, value\ref)
             if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
                 return: status
@@ -2640,9 +2637,6 @@ fn: lmx_walk_value_prepare_scalar_store (@: arena c.LmxArena; @: place c.LmxWalk
     status := lmx_walk_value_receive_scalar(value, place\type, (cast: (const: @: c.LmxScalarABI) pool\scalar_abi), received_p)
     if: status != c.LMX_WALK_OK
         return: status
-    status := c.lmx_code_cell_admit(arena, place\address)
-    if: status != c.LMX_WALK_OK
-        return: status
     if: context\source_type != 0
         received_p\source_type := context\source_type
     c.memcpy((cast: (@: void) out), (cast: (const: @: void) received_p), c.sizeof(c.LmxWalkValue))
@@ -2704,15 +2698,8 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
         return: status
     if: lmx_walk_value_number(received_p, @ number, @ ty) != c.LMX_WALK_OK || ty != place\type
         return: c.LMX_WALK_INVALID
-    # A number written into a cell that stands in a place of code drops the words above it (design 4.4); slice 274: it
-    # is refused first when one of them stands over a machine operation.
+    # A successful numeric code write drops the native entries above its cell.
     int: in_code (cast: (int) (c.lmx_range_links_of(arena, (cast: (@: void) place\address)) != 0))
-    if: in_code != 0
-        status := c.lmx_code_cell_admit(arena, (cast: (@: void) place\address))
-        if: status != c.LMX_WALK_OK
-            return: status
-        ---
-    ---
     status := lmx_walk_store_numeric_raw((cast: (@: void) place\address), ty, number)
     if: status = c.LMX_WALK_OK && place\context != 0
         c.lmx_value_context_copy(place\context, 0)
@@ -2792,9 +2779,6 @@ fn: lmx_walk_value_field_store (@: arena c.LmxArena; @: root c.Lmx; size_t: inde
             return: status
         return: lmx_walk_slot_rebind(arena, root, index, current_p)
     ---
-    status := c.lmx_code_write_admit(arena, root, index, raw)
-    if: status != c.LMX_WALK_OK
-        return: status
     status := c.lmx_graph_ref_store_in(arena, root, index, raw)
     if: status = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
         return: status

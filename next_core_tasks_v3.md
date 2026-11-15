@@ -17,7 +17,8 @@ Runtime получает общий код работающего сборщик
 а также write-time future-machine preflight. Общий ValueOwned store использует реальную ячейку и точный ABI;
 отказ protected write сохраняет cell/native, успешная правка кода обнуляет native после записи.
 Source09:935 canonical; genuine G1/G2 quick smoke9/0, fixedpoint38, actual G2 targeted2/0 и Graph7 triple PASS.
-[Свидетельство402](steps/witnesses/m14-raw-index-20261115/notes.md). Итоговые docs/index gates ещё pending.
+[Свидетельство402](steps/witnesses/m14-raw-index-20261115/notes.md). Документальный срез92902ada;
+final G2 docs/index PASS35/14/27/44/615, LF28297.
 Это физический index foundation, не полный Array namespace/path/receiving или новая модель кадров.
 Следующую связанную реализацию мест/чтения/записи/@/свободных входов и удаления публикации согласовать
 с полным обновлением M14 от Astra; не удалять общий copier, реальные receiving/GC и frame cleanup.

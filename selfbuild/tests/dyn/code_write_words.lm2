@@ -1,7 +1,7 @@
-# Slice 274 (U5 of the N4-U plan): what a write changes among the native words.  A data write keeps every word; a write of code drops
-# the words of the code that holds the place and of nothing that only refers to it; a word over a body with a machine operation cannot be
-# dropped, so such a write is the implicit `interpreter` before it changes anything; a call goes through the callee's word, so a caller
-# keeps its own.  `machined` is the body a false invalidation kills: it reads the root as every body does, and the walker cannot run it.
+# M14 2026-11-15: data writes keep unrelated native entries; code writes clear
+# affected entries without prechecking future execution. A reached machine-only
+# body still refuses in the walker. Calls through an unchanged caller dispatch
+# the current callee; merely referring to a changed body does not clear a caller.
 # Entry 7; 81.. name the failing check.
 int: k 7
 fn: machined () int
@@ -99,44 +99,30 @@ fn: swap_body () int
         return: 84
     return: 0
 end: swap_body
-# Machine code arriving: refused by name, the slot and the word as they were.
+# The write succeeds and unrelated native calls still work. The runtime's
+# code-links check covers native reset, physical contents and reached execution.
 fn: refuse_arriving () int
     @: quote refused_target refused_target
     @: src machine_body machine_body
-    int: caught 0
-    ---
-        put_body()
-        catch: interpreter ()
-            caught := 1
-    ---
-    if: caught != 1 || refused_target() != 1 || machine_body() != 4
+    put_body()
+    if: machine_body() != 4
         return: 85
     return: 0
 end: refuse_arriving
-# The formals of a `fn` and of a `sub` with a machine operation: a part of their code, refused the same way.
+# Changing a callable's inputs also clears its entry, without rejecting the write.
 fn: refuse_args_fn () int
     @: quote machined machined
     @: src replacement replacement
-    int: caught 0
-    ---
-        put_args()
-        catch: interpreter ()
-            caught := 1
-    ---
-    if: caught != 1 || machines_run() != 7
+    put_args()
+    if: k != 7
         return: 90
     return: 0
 end: refuse_args_fn
 fn: refuse_args_sub () int
     @: quote machined_sub machined_sub
     @: src plain_sub plain_sub
-    int: caught 0
-    ---
-        put_args()
-        catch: interpreter ()
-            caught := 1
-    ---
-    if: caught != 1 || machines_run() != 7
+    put_args()
+    if: k != 7
         return: 91
     return: 0
 end: refuse_args_sub

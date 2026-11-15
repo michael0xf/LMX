@@ -37,7 +37,7 @@ flush() и frozen требования слотов при S[n] заменены
   удалены; raw index использует общий physical pointer decoder и ValueOwned store без referent-kind whitelist.
   Bounds, физическая защита, native invalidation и именованный допуск сохранены; future-machine write preflight снят.
   Source09:935, genuine G1/G2 quick, fixedpoint38, actual G2 targeted2/0 и Graph7 triple PASS.
-  Это физический foundation, полный Array namespace/path/receiving OPEN; docs/index ещё pending.
+  Это физический foundation, полный Array namespace/path/receiving OPEN; final G2 docs/index PASS35/14/27/44/615, LF28297.
   [Свидетельство402](steps/witnesses/m14-raw-index-20261115/notes.md).
 - [ ] Следующий связанный кодовый шаг M14: activation-local places для чтения/записи/@/свободных входов
   и удаление implicit publication по полному обновлению Astra; сохранить receiving, snapshots, GC/cleanup.

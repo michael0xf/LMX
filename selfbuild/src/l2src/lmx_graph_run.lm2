@@ -1621,75 +1621,8 @@ fn: lmx_graph_path_field (@: g c.LmxGraph; @: code c.Lmx; @: left void; @@: owne
     return: 0
 end: lmx_graph_path_field
 
-# Read the immutable requirement of this slot for the current execution.
-# An atom uses its lexical reader, never the caller's formals/dynamic inputs.
-fn: lmx_graph_slot_requirement (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; @: fact c.LmxImplContractFact) int
-    @: space c.LmxGraphSpace c.lmx_graph_space()
-    @: known c.LmxImplContractFact c.lmx_graph_slot_fact(g, space, holder, index)
-    @: held void c.lmx_graph_get_in(g, holder, index)
-    @: word char 0
-    @: owner c.Lmx 0
-    @: entity void 0
-    int: deferred 0
-    size_t: slot 0U
-    int: status 0
-    if: known != 0
-        fact[0] := known[0]
-        return: 0
-    c.memset((cast: (@: void) fact), 0, c.sizeof(c.LmxImplContractFact))
-    fact\owner := holder
-    fact\field := index
-    word := c.lmx_graph_word_text(g, held)
-    if: word != 0 && c.lmx_graph_name_of(g, held) = 0
-        entity := lmx_graph_atom_target(g, holder, word, @ owner, @ slot)
-    if: c.lmx_graph_kind(g, entity) != 4 || lmx_graph_deferred_kind(g, entity) != 0
-        deferred := lmx_graph_deferred_kind(g, held)
-        if: deferred = 0
-            status := c.lmx_graph_slot_type(g, held, fact)
-        else:
-            fact\kind := c.LMX_KIND_PRIMITIVE
-            fact\type := c.LMX_TYPE_INT
-            if: deferred = 5
-                fact\type := c.LMX_TYPE_GRAPH_INT_REF
-            if: deferred = 6
-                fact\type := c.LMX_TYPE_GRAPH_LMX_REF
-        ---
-    ---
-    if: status != 0
-        return: status
-    return: c.lmx_graph_slot_fact_put(g, space, fact)
-end: lmx_graph_slot_requirement
-
-# Freeze the receiving descriptor after reading base/index and before RHS
-# effects. Bounds/type failures retain their existing index_write boundary;
-# this preparation neither admits the incoming value nor changes the graph.
-fn: lmx_graph_slot_prepare (@: g c.LmxGraph; @: value void; int: index) int
-    @: base void c.lmx_graph_target(g, value)
-    c.LmxImplContractFact: fact
-    if: c.lmx_graph_kind(g, base) != 4 || index < 0 || (cast: (size_t) index) >= c.lmx_graph_count((cast: (@: c.Lmx) base))
-        return: 0
-    return: lmx_graph_slot_requirement(g, (cast: (@: c.Lmx) base), (cast: (size_t) index), @ fact)
-end: lmx_graph_slot_prepare
-
-
-
-# A constructor establishes the destination slot's receiving fact through its
-# existing source-to-copy correspondence. Absent facts add no preparation;
-# proofs are never serialized or retained for the next independent traversal.
-fn: lmx_graph_slot_fact_copy (@: g c.LmxGraph; @: source c.Lmx; size_t: from; @: destination c.Lmx; size_t: to) int
-    @: space c.LmxGraphSpace c.lmx_graph_space()
-    @: known c.LmxImplContractFact c.lmx_graph_slot_fact(g, space, source, from)
-    c.LmxImplContractFact: fact
-    if: known = 0
-        return: 0
-    fact := known[0]
-    fact\owner := destination
-    fact\field := to
-    return: c.lmx_graph_slot_fact_put(g, space, @ fact)
-end: lmx_graph_slot_fact_copy
-
 # A write through the index of a Structure, `base[index] := value` (the book, structure-index): the base and the index
-# first, then the value -- an address, not a number --, then the kernel's admission and slot write
+# first, then the value -- an address, not a number --, then the physical slot write
 # (lmx_graph_index_write). 0; 4 or 7 as the kernel answers; the answer of an evaluation.
 fn: lmx_graph_eval_index_write (@: g c.LmxGraph; @: code c.Lmx; @: left c.Lmx; @: operand void) int
     @: base void 0
@@ -1700,9 +1633,6 @@ fn: lmx_graph_eval_index_write (@: g c.LmxGraph; @: code c.Lmx; @: left c.Lmx; @
     if: status != 0
         return: status
     status := lmx_graph_eval_number(g, code, c.lmx_graph_get_in(g, left, 2U), @ index)
-    if: status != 0
-        return: status
-    status := lmx_graph_slot_prepare(g, base, index)
     if: status != 0
         return: status
     status := lmx_graph_read_received_value(g, code, operand, 2, @ value)
@@ -6018,7 +5948,6 @@ end: lmx_graph_merge_seed
 
 fn: lmx_graph_merge_fill (@: g c.LmxGraph; @: head c.LmxGraphMergeLayout; @: map c.LmxCopyMap; @: todo c.LmxCopyStack) int
     @: plan c.LmxGraphMergeLayout head
-    @: source c.Lmx 0
     @: result c.Lmx 0
     @: copied void 0
     size_t: i 0U
@@ -6035,9 +5964,6 @@ fn: lmx_graph_merge_fill (@: g c.LmxGraph; @: head c.LmxGraphMergeLayout; @: map
                     if: c.lmx_graph_put_in(g, result, i, copied) != 0
                         return: 4
                 ---
-                source := (cast: (@: c.Lmx) plan\from_nodes[i])
-                if: lmx_graph_slot_fact_copy(g, source, (cast: (size_t) plan\from_j[i]), result, i) != 0
-                    return: 4
                 i := i + 1U
             ---
         ---
@@ -6549,7 +6475,7 @@ return: lmx_graph_deferred_kind(g, value)
 # refused or open (lmx_graph_merge_copy).
 # The receiving root already has its own name, parent and final width. Other
 # copied headers keep only mapped parents, as the previous fn_data copier did.
-# Name/fact projection happens after the shared value queue has succeeded.
+# Name projection happens after the shared value queue has succeeded.
 fn: lmx_graph_copy_metadata (@: g c.LmxGraph; @: map c.LmxCopyMap; @: receiving c.Lmx; size_t: name_count; @: receiving_roots c.LmxCopyMap) int
     @: key_view c.VoidArray (cast: (@: c.VoidArray) (@ map\keys))
     @@: keys void (cast: (@@: void) key_view\data)
@@ -6561,7 +6487,6 @@ fn: lmx_graph_copy_metadata (@: g c.LmxGraph; @: map c.LmxCopyMap; @: receiving 
     @: row c.LmxName 0
     size_t: count (cast: (size_t) key_view\size)
     size_t: i 0U
-    size_t: j 0U
     int: kind 0
     int: selected 0
     while: i < count
@@ -6577,14 +6502,6 @@ fn: lmx_graph_copy_metadata (@: g c.LmxGraph; @: map c.LmxCopyMap; @: receiving 
                 target_node := (cast: (@: c.Lmx) target)
                 if: target_node != receiving && selected = 0
                     target_node\parent := (cast: (@: c.Lmx) c.lmx_copy_map_get(map, (cast: (@: void) source_node\parent)))
-                if: selected = 0
-                    j := 0U
-                    while: j < c.lmx_graph_count(source_node)
-                        if: lmx_graph_slot_fact_copy(g, source_node, j, target_node, j) != 0
-                            return: 1
-                        j := j + 1U
-                    ---
-                ---
             ---
         ---
         i := i + 1U

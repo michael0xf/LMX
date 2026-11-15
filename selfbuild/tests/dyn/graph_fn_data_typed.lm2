@@ -5,6 +5,7 @@ predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_array_owned.h.lm1"
 predef: "l2src/lmx_gc.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<float.h>"
@@ -302,6 +303,103 @@ fn: fd_merge_word_aliases (@: g c.LmxGraph) int
     return: 0
 end: fd_merge_word_aliases
 
+# Both operations consume a pointer and use its exact raw address.
+fn: fd_index_value (@: g c.LmxGraph; @: holder c.Lmx; @: source void; @: expected void) int
+    @: read_value void 0
+    @: address void 0
+    if: c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, source) != 0 || c.lmx_graph_count(holder) != 1U
+        return: 1
+    if: c.lmx_graph_index(g, (cast: (@: void) holder), 0, @ read_value) != 0 || c.lmx_pointer_pool_in((cast: (@: c.LmxArena) g\arena), read_value) = 0
+        return: 1
+    address := c.lmx_pointer_value_in((cast: (@: c.LmxArena) g\arena), read_value)
+    if: address != expected
+        return: 1
+return: 0
+
+fn: fd_index_storage (@: g c.LmxGraph) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: holder c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: target c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: array c.LmxArray c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE, 1U, arena)
+    @: numeric c.LmxArray c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 1U, arena)
+    @: protected_node c.Lmx c.lmx_node_new_physical_role_profiled(arena, c.lmx_type_immutable(c.LMX_TYPE_STRUCT), 0, c.LMX_POOL_ROLE_PLAIN)
+    @: source void 0
+    const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    @: scalar void fd_cell(g, "indexScalar", abi, source, holder, 0, @ precise)
+    @: pointer void fd_merge_pointer(g, scalar, "indexPointer")
+    @: giving_uninit void c.lmx_graph_uninit_int(g)
+    @: immutable_service void c.lmx_arena_pointer_cells_profiled(arena, c.lmx_type_immutable(c.LMX_TYPE_UNINIT_INT), 0, sizeof(@: void), c.lmx_arena_pointer_void_read, c.lmx_arena_pointer_void_write, 1U)
+    @: explicit_reference void fd_merge_pointer(g, giving_uninit, "explicitUninitAddress")
+    @: opaque void c.malloc(1U)
+    @: cell void 0
+    @: context c.LmxWalkValue 0
+    @: read_value void 0
+    c.LmxWalkValue: prior
+    @: code_array c.LmxArray 0
+    int: number 0
+    if: holder = 0 || target = 0 || array = 0 || numeric = 0 || protected_node = 0 || scalar = 0 || pointer = 0 || giving_uninit = 0 || immutable_service = 0 || explicit_reference = 0 || opaque = 0 || c.lmx_arena_refs_open_owned(arena, protected_node, 1U) != 0 || c.lmx_graph_put_in(g, protected_node, 0U, scalar) != 0
+        return: 160
+    if: fd_index_value(g, holder, pointer, scalar) != 0 || fd_index_value(g, (cast: (@: c.Lmx) array), pointer, scalar) != 0
+        return: 161
+    cell := c.lmx_graph_cell_in(arena, (cast: (@: c.Lmx) array), 0U)
+    c.lmx_walk_value_clear(@ prior)
+    prior\model := holder
+    prior\source_type := source
+    if: c.lmx_pointer_store_context_in(arena, cell, scalar, @ prior) != 0 || c.lmx_pointer_store_in(arena, pointer, opaque) != 0
+        return: 162
+    if: fd_index_value(g, holder, pointer, opaque) != 0 || fd_index_value(g, (cast: (@: c.Lmx) array), pointer, opaque) != 0
+        return: 163
+    context := c.lmx_value_cell_context(arena, cell)
+    if: context = 0 || context\present = 0 || context\ref != opaque || context\model != 0 || context\source_type != 0 || c.memcmp(scalar, @ precise, abi\size) != 0
+        return: 164
+    if: c.lmx_pointer_store_in(arena, pointer, 0) != 0 || fd_index_value(g, holder, pointer, 0) != 0 || fd_index_value(g, (cast: (@: c.Lmx) array), pointer, 0) != 0
+        return: 165
+    c.free(opaque)
+    protected_node\native := (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_graph_index_write(g, protected_node, (cast: (@: void) protected_node), 0, (cast: (@: void) target)) = 0 || c.lmx_graph_get_in(g, protected_node, 0U) != scalar || protected_node\native != (cast: (c.LmxEntry) c.fd_callback)
+        return: 166
+    holder\native := (cast: (c.LmxEntry) c.fd_callback)
+    if: fd_index_value(g, holder, (cast: (@: void) target), (cast: (@: void) target)) != 0 || holder\native != 0
+        return: 167
+    array\native := (cast: (c.LmxEntry) c.fd_callback)
+    if: fd_index_value(g, (cast: (@: c.Lmx) array), (cast: (@: void) target), (cast: (@: void) target)) != 0 || array\native != 0
+        return: 168
+    if: c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, scalar) = 0 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target)
+        return: 169
+    cell := c.lmx_graph_cell_in(arena, (cast: (@: c.Lmx) numeric), 0U)
+    if: c.lmx_int_store_known(cell, 23) != 0 || c.lmx_graph_index_write(g, holder, (cast: (@: void) numeric), 0, pointer) = 0 || c.lmx_graph_value_int(g, cell, @ number) != 0 || number != 23
+        return: 170
+    if: c.lmx_pointer_store_in(arena, pointer, (cast: (@: void) array)) != 0 || c.lmx_graph_index(g, pointer, 0, @ read_value) != 0 || c.lmx_pointer_pool_in(arena, read_value) = 0 || c.lmx_pointer_value_in(arena, read_value) != (cast: (@: void) target)
+        return: 171
+    c.memset(immutable_service, 165, sizeof(@: void))
+    number := 23
+    if: c.lmx_graph_address_type(g, giving_uninit, @ number) != 5 || number != 23 || c.lmx_graph_address_type(g, immutable_service, @ number) != 5 || number != 23
+        return: 172
+    holder\native := (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, giving_uninit) != 4 || c.lmx_graph_index_write(g, holder, (cast: (@: void) holder), 0, immutable_service) != 4 || c.lmx_graph_get_in(g, holder, 0U) != (cast: (@: void) target) || holder\native != (cast: (c.LmxEntry) c.fd_callback)
+        return: 173
+    if: fd_index_value(g, holder, explicit_reference, giving_uninit) != 0
+        return: 174
+    # A direct Array is an address too. Nested indexing retains the ordinary
+    # reference-place interpretation before the exact physical pointer fallback.
+    if: fd_index_value(g, holder, (cast: (@: void) array), (cast: (@: void) array)) != 0
+        return: 175
+    target := c.lmx_graph_lmx(g, 0, 1U)
+    pointer := fd_merge_ref(g, target, "indexedReference")
+    if: target = 0 || pointer = 0 || c.lmx_graph_put_in(g, target, 0U, scalar) != 0 || c.lmx_graph_put_in(g, holder, 0U, pointer) != 0 || c.lmx_graph_index(g, (cast: (@: void) holder), 0, @ read_value) != 0 || c.lmx_graph_index(g, read_value, 0, @ read_value) != 0 || c.lmx_pointer_value_in(arena, read_value) != scalar
+        return: 176
+    # Mutating the actual primitive pointer cell of executable Array code must
+    # clear native even when decoding that field returns its Structure payload.
+    code_array := c.lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_TYPE_GRAPH_LMX_REF - c.LMX_TYPE_POINTER_BASE, 1U, arena)
+    cell := c.lmx_graph_cell_in(arena, (cast: (@: c.Lmx) code_array), 0U)
+    if: code_array = 0 || cell = 0 || c.lmx_pointer_store_in(arena, cell, (cast: (@: void) target)) != 0
+        return: 177
+    code_array\native := (cast: (c.LmxEntry) c.fd_callback)
+    if: c.lmx_graph_assign_reference(g, (cast: (@: c.Lmx) code_array), cell, (cast: (@: void) holder)) != 0 || c.lmx_pointer_value_in(arena, cell) != (cast: (@: void) holder) || code_array\native != 0
+        return: 178
+return: 0
+
 fn: fd_merge_singleton_alias (@: g c.LmxGraph) int
     @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
     @: p c.Lmx c.lmx_graph_lmx(g, 0, 1U)
@@ -561,6 +659,10 @@ fn: fd_mapped_check () int
     int: warm 0
     if: g = 0 || file = 0 || abi = 0 || abi != alias_abi || source = alias_source || physical = 0 || data = 0 || x = 0 || y = 0 || z = 0 || saved = 0 || empty = 0 || word_a = 0 || word_b = 0 || self = 0
         return: 81
+    status := fd_index_storage(g)
+    if: status != 0
+        c.fprintf(c.stderr, "index storage status %d\n", status)
+        return: status
     c.lmx_charptr_store_known(word_a, c.lmx_graph_intern("token", 5U))
     c.lmx_charptr_store_known(word_b, c.lmx_graph_intern("token", 5U))
     c.memset(empty, 165, abi\size)

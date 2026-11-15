@@ -66,7 +66,7 @@
 **402, кодовые gates PASS:** frozen index requirements/tables/fact-copy/emitted preparation и future-machine
 write preflight удалены. Реальные physical pointer cells используют общий ValueOwned store и native reset;
 Source09:935 canonical, genuine G1/G2 quick/fixedpoint38, actual G2 targeted2/0 и Graph7 triple PASS.
-[Свидетельство402](steps/witnesses/m14-raw-index-20261115/notes.md). Полный пакет Astra согласован; fresh docs-check PASS, final index pending;
+[Свидетельство402](steps/witnesses/m14-raw-index-20261115/notes.md). Документальный пакет92902ada; final G2 docs/index PASS35/14/27/44/615, LF28297;
 новые namespace/visibility/snapshots и полный Array path/receiving остаются OPEN.
 Следующую связанную вертикаль мест/чтения/записи/@/FREE и удаления публикации делать по полному обновлению M14.
 

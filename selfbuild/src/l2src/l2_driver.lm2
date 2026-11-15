@@ -729,6 +729,10 @@ end: ids_check
 # records with it, and the other Array of that interval keeps working.
 sub: code_links_check ()
     c.LmxArena: arena
+    c.LmxWalkFrame: code_frame
+    c.LmxWalkContext: code_context
+    c.LmxWalkValue: code_result
+    @: code_fp c.LmxWalkFrame @ code_frame
     @: a c.LmxArena 0
     @: root c.Lmx 0
     # The check's own names are its input, normalized once (IDENTIFIER-CODES).
@@ -862,12 +866,17 @@ sub: code_links_check ()
     check((cast: (int) (c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) renamed)) = 0 && referred\native != 0)), "code links: a named Structure replacing a named Structure keeps the word")
     statement := (cast: (@: c.Lmx) c.lmx_walk_frame(a, referred, c.LMX_WALK_OP_SET, 2U))
     check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, referred, 1U, (cast: (@: void) statement)) = 0 && referred\native = 0)), "code links: an operation arriving over a named Structure is a write of code")
-    # A word over a machine operation cannot be dropped: the write is refused before it changes anything, by name.
+    # Code writes clear native entries. Suitability is checked only on execution.
     check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@: void) machine)) = 0)), "code links: a machine operation installs under a node without a word")
     owner\native := word
     statement := (cast: (@: c.Lmx) c.lmx_walk_frame(a, owner, c.LMX_WALK_OP_SET, 2U))
-    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, owner, 1U, (cast: (@: void) statement)) = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER)), "code links: a write of code over a machine operation refuses by name")
-    check((cast: (int) (owner\native != 0 && c.lmx_arena_ref_value(owner, 1U) = 0 && c.lmx_range_links_of(a, (cast: (@: void) statement)) = 0)), "code links: the refused write left the word, the slot and the links")
+    check((cast: (int) (statement != 0 && c.lmx_arena_ref_store(a, owner, 1U, (cast: (@: void) statement)) = 0)), "code links: writing code beside a machine operation succeeds")
+    check((cast: (int) (owner\native = 0 && c.lmx_arena_ref_value(owner, 1U) = (cast: (@: void) statement) && c.lmx_range_links_of(a, (cast: (@: void) statement)) != 0)), "code links: the successful write updates the slot and links and clears native")
+    c.memset((cast: (@: void) code_fp), 0, c.sizeof(c.LmxWalkFrame))
+    c.memset((cast: (@: void) (@ code_context)), 0, c.sizeof(c.LmxWalkContext))
+    code_fp\arena := a
+    code_fp\context := (cast: (@: void) (@ code_context))
+    check((cast: (int) (c.lmx_walk_eval(code_fp, machine, @ code_result) = c.LMX_WALK_UNSUPPORTED)), "code links: a reached machine operation is still unsupported by the walker")
     check((cast: (int) (c.lmx_arena_ref_store(a, owner, 0U, (cast: (@: void) statement)) = 0 && owner\native = 0 && c.lmx_arena_ref_value(owner, 0U) = (cast: (@: void) statement))), "code links: a write taking the machine operation out is admitted and drops the word")
     # Two Arrays whose backings share one REF interval: the pool's chunk step is the first request's count (eight), so
     # the second Array fills a new chunk's first two cells and the third, made after a mark, the next two; each

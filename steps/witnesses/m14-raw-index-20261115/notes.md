@@ -89,6 +89,7 @@ Actual G2 Graph: 9185c1a7e2be51b790985510f571668c54ab0c56dd0600507c4b7ff46301209
 All code producers are terminal. The complete author-prepared Astra package was received and reviewed;
 normal render receipts pass35/14 and27/47. Fresh G2 docs-check01 passed35/14/27/44/615, LF28292.
 Review corrected the remaining four manual L1/L2 dirty-publication phrases; final document-only index02
-passed35/14/27/44/615, LF28296. Both diff checks pass. A separate documentary commit precedes code402;
-the code commit/push is still pending at this record.
+passed35/14/27/44/615, LF28296. Documentary commit92902adad375ae33ede003493c419a2306703522 precedes code402.
+The final code index03 passed35/14/27/44/615, LF28297. Only status/evidence records were updated afterward;
+source09 algorithms, tests and canonical935 did not change. Both working/cached diff checks pass before commit.
 The two original unrelated untracked artifacts retain their accepted401 hashes. The unbounded goal remains ACTIVE.

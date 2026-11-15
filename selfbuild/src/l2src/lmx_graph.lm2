@@ -22,7 +22,7 @@
 #     identifiers is comparing these addresses (the author, 18:02Z). The index of the search by bytes (texts, sizes) is
 #     heap state of the process, not a graph value.
 # Service tables belong to the executor's whole traversal (§5.2). The common
-# Space helpers here allocate/release its namespace and typed receiving facts.
+# Space helpers here allocate/release the traversal namespace.
 #
 # A machine module (L2 section 20): each function has a direct C-compatible entry; the build writes its header,
 # lmx_graph.h.lm1, from the exports named in bld_kernel_l2 (tools/build.lm2). Its records (LmxName, LmxGraph,
@@ -36,8 +36,6 @@ predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_graph_state.lm1"
 predef: "l2src/lmx_primitive_profile.lm1"
-predef: "l2src/lmx_graph_copy_owned.h.lm1"
-predef: "l2src/lmx_implements.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 include: "<string.h>"
@@ -1491,9 +1489,17 @@ end: lmx_graph_statement
 # Is value, a field of code, code too -- an expression, an anonymous body, a Frame -- rather than a named Structure the
 # namespace of the live traversal holds as data of that block, or a Structure a receiver created? 1 or 0. Without a live
 # traversal every named field counts as code (the conservative reading).
+fn: lmx_graph_field_pointer_value (@: g c.LmxGraph; @: holder c.Lmx; size_t: index) @: void
+    @: cell void c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), holder, index)
+    c.LmxPointerCellRead: read 0
+    c.LmxPointerCellWrite: write 0
+    if: cell != 0 && c.lmx_value_cell_access((cast: (@: c.LmxArena) g\arena), cell, @ read, @ write) = 0 && read != 0
+        return: read(cell)
+return: lmx_graph_get_in(g, holder, index)
+
 fn: lmx_graph_code_child (@: g c.LmxGraph; @: code c.Lmx; @: value void) int
     @: name char 0
-    if: lmx_graph_kind(g, value) != 4 || lmx_graph_fn_result(g, value) != 0
+    if: c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), value) = 0 || lmx_graph_fn_result(g, value) != 0
         return: 0
     name := lmx_graph_name_of(g, value)
     if: name != 0 && lmx_graph_space_find(code, name) = value
@@ -1520,10 +1526,10 @@ fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell v
         i := 0U
         while: i < lmx_graph_count(code) && result = 0
             if: lmx_graph_slot_name(g, code, i) != state\w_data
-                if: slot != 0 && c.lmx_graph_ref_cell_in((cast: (@: c.LmxArena) g\arena), code, i) = slot
+                if: (slot != 0 && c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), code, i) = slot) || (cell != 0 && c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), code, i) = cell)
                     result := 1
-                value := lmx_graph_target(g, lmx_graph_get_in(g, code, i))
-                if: result = 0 && lmx_graph_kind(g, value) = 4
+                value := lmx_graph_target(g, lmx_graph_field_pointer_value(g, code, i))
+                if: result = 0 && c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), value) != 0
                     if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
                         result := -1
                     ---
@@ -1534,8 +1540,8 @@ fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell v
     else:
         i := 0U
         while: i < lmx_graph_count(code) && result = 0
-            value := lmx_graph_get_in(g, code, i)
-            if: slot != 0 && c.lmx_graph_ref_cell_in((cast: (@: c.LmxArena) g\arena), code, i) = slot && (lmx_graph_code_child(g, code, value) != 0 || lmx_graph_code_child(g, code, replacement) != 0)
+            value := lmx_graph_field_pointer_value(g, code, i)
+            if: ((slot != 0 && c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), code, i) = slot) || (cell != 0 && c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), code, i) = cell)) && (lmx_graph_code_child(g, code, value) != 0 || lmx_graph_code_child(g, code, replacement) != 0)
                 result := 1
             if: result = 0 && lmx_graph_code_child(g, code, value) != 0
                 if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
@@ -1550,10 +1556,10 @@ fn: lmx_graph_code_uses (@: g c.LmxGraph; @: code c.Lmx; @: slot void; @: cell v
         at := at + 1U
         i := 0U
         while: i < lmx_graph_count(inner) && result = 0
-            value := lmx_graph_get_in(g, inner, i)
-            if: (slot != 0 && c.lmx_graph_ref_cell_in((cast: (@: c.LmxArena) g\arena), inner, i) = slot) || (cell != 0 && value = cell)
+            value := lmx_graph_field_pointer_value(g, inner, i)
+            if: (slot != 0 && c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), inner, i) = slot) || (cell != 0 && (value = cell || c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), inner, i) = cell))
                 result := 1
-            if: result = 0 && lmx_graph_kind(g, value) = 4 && lmx_graph_fn_result(g, value) = 0
+            if: result = 0 && c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), value) != 0 && lmx_graph_fn_result(g, value) = 0
                 if: lmx_graph_scan_add(@ queue, @ count, @ cap, (cast: (@: c.Lmx) value)) != 0
                     result := -1
                 ---
@@ -1568,7 +1574,7 @@ end: lmx_graph_code_uses
 # Fresh scan from the supplied traversal scope and its lexical parents, including shared Lmx children. First prepare
 # every affected entry; only then clear them, before the caller publishes the write. No reverse code index is retained.
 # Message/activation/mail root-set integration follows with those consumers; this slice supplies its complete root.
-fn: lmx_graph_invalidate (@: g c.LmxGraph; @: scope c.Lmx; @: slot void; @: cell void; @: replacement void) int
+fn: lmx_graph_invalidate_prepare (@: g c.LmxGraph; @: scope c.Lmx; @: slot void; @: cell void; @: replacement void; @@@: out c.Lmx; @: width size_t) int
     @@: nodes c.Lmx 0
     @@: affected c.Lmx 0
     size_t: count 0U
@@ -1583,8 +1589,10 @@ fn: lmx_graph_invalidate (@: g c.LmxGraph; @: scope c.Lmx; @: slot void; @: cell
     @: row c.LmxGraphSpaceRow 0
     int: failed 0
     int: used 0
-    if: g = 0 || lmx_graph_kind(g, (cast: (@: void) scope)) != 4
+    if: g = 0 || out = 0 || width = 0 || c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), (cast: (@: void) scope)) = 0
         return: 1
+    out[0] := 0
+    width[0] := 0U
     failed := lmx_graph_scan_add(@ nodes, @ count, @ cap, scope)
     # The Structures the receivers created in the live traversal are no fields of the graph: their native entries are
     # checked too, so a written body or signature is never run by a stale entry.
@@ -1608,41 +1616,68 @@ fn: lmx_graph_invalidate (@: g c.LmxGraph; @: scope c.Lmx; @: slot void; @: cell
                 failed := lmx_graph_scan_add(@ affected, @ n_affected, @ affected_cap, current)
             ---
         ---
-        if: failed = 0 && lmx_graph_kind(g, (cast: (@: void) current\parent)) = 4
+        if: failed = 0 && c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), (cast: (@: void) current\parent)) != 0
             failed := lmx_graph_scan_add(@ nodes, @ count, @ cap, (cast: (@: c.Lmx) current\parent))
         i := 0U
         while: i < lmx_graph_count(current) && failed = 0
-            value := lmx_graph_get_in(g, current, i)
-            if: lmx_graph_kind(g, value) = 4
+            value := lmx_graph_field_pointer_value(g, current, i)
+            if: c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), value) != 0
                 failed := lmx_graph_scan_add(@ nodes, @ count, @ cap, (cast: (@: c.Lmx) value))
             i := i + 1U
         ---
     ---
-    if: failed = 0
-        at := 0U
-        while: at < n_affected
-            current := affected[at]
-            current\native := 0
-            at := at + 1U
-        ---
-    ---
     c.free((cast: (@: void) nodes))
+    if: failed != 0
+        c.free((cast: (@: void) affected))
+        return: failed
+    out[0] := affected
+    width[0] := n_affected
+return: 0
+
+sub: lmx_graph_invalidate_finish (@@: affected c.Lmx; size_t: count)
+    size_t: i 0U
+    @: current c.Lmx 0
+    while: i < count
+        current := affected[i]
+        current\native := 0
+        i := i + 1U
     c.free((cast: (@: void) affected))
-    return: failed
-end: lmx_graph_invalidate
+return
+
+fn: lmx_graph_invalidate (@: g c.LmxGraph; @: scope c.Lmx; @: slot void; @: cell void; @: replacement void) int
+    @@: affected c.Lmx 0
+    size_t: count 0U
+    int: status lmx_graph_invalidate_prepare(g, scope, slot, cell, replacement, @ affected, @ count)
+    if: status = 0
+        lmx_graph_invalidate_finish(affected, count)
+return: status
 
 # Runtime replacement, separate from the constructor's raw put. The physical slot is the write target.
 fn: lmx_graph_write_slot (@: g c.LmxGraph; @: scope c.Lmx; @: holder c.Lmx; size_t: index; @: value void) int
-    @: slot void 0
-    if: lmx_graph_kind(g, (cast: (@: void) holder)) != 4
+    @: arena c.LmxArena 0
+    @: cell void 0
+    c.LmxPointerCellRead: read 0
+    c.LmxPointerCellWrite: write 0
+    @@: affected c.Lmx 0
+    size_t: count 0U
+    int: status 0
+    if: g = 0
         return: 1
-    slot := c.lmx_graph_ref_cell_in((cast: (@: c.LmxArena) g\arena), holder, index)
-    if: slot = 0 || (value != 0 && lmx_graph_kind(g, value) = 0)
+    arena := (cast: (@: c.LmxArena) g\arena)
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) holder)) = 0
         return: 1
-    if: lmx_graph_invalidate(g, scope, slot, 0, value) != 0
+    cell := c.lmx_graph_cell_in(arena, holder, index)
+    if: cell = 0 || c.lmx_value_cell_access(arena, cell, @ read, @ write) != 0 || write = 0 || c.lmx_range_write_exact_blocked(arena, cell, 0, 0, 0U) != 0
         return: 1
-    return: lmx_graph_put_in(g, holder, index, value)
-end: lmx_graph_write_slot
+    status := lmx_graph_invalidate_prepare(g, scope, cell, 0, value, @ affected, @ count)
+    if: status != 0
+        return: status
+    status := c.lmx_value_cell_store(arena, cell, 0, value, 0, write)
+    if: status = 0
+        lmx_graph_invalidate_finish(affected, count)
+    else:
+        c.free((cast: (@: void) affected))
+return: status
 
 # Publish a computed declaration through the same runtime write, naming it with the canonical word in that declaration:
 # the declaration Frame `int: name expression` (an Lmx named int, §3.3) has the name as its first argument. The new
@@ -1703,10 +1738,6 @@ sub: lmx_graph_space_pop (int: opened)
     if: opened != 1 || space = 0
         return
     top[0] := space\prior
-    if: space\receiving_index != 0
-        c.lmx_copy_map_dispose((cast: (@: c.LmxCopyMap) space\receiving_index))
-        c.free(space\receiving_index)
-    c.lmx_arena_impl_contract_release(space\receiving)
     c.free((cast: (@: void) space\rows))
     c.free((cast: (@: void) space))
     return
@@ -1755,110 +1786,6 @@ fn: lmx_graph_space_put (@: scope c.Lmx; @: name char; @: value void) int
     space\count := space\count + 1U
     return: 0
 end: lmx_graph_space_put
-
-# Disposable receiving facts use the existing typed contract storage and
-# address map. The consumer prepares lexical roles before RHS effects.
-fn: lmx_graph_slot_fact (@: g c.LmxGraph; @: space c.LmxGraphSpace; @: holder c.Lmx; size_t: index) @: c.LmxImplContractFact
-    @: contract c.LmxImplContract 0
-    @: facts c.LmxImplContractFactDynamicArray 0
-    @: list c.LmxImplContractFactArray 0
-    @: entry void 0
-    size_t: at 0U
-    if: g = 0 || space = 0 || space\receiving = 0 || space\receiving_index = 0
-        return: 0
-    contract := space\receiving
-    entry := c.lmx_copy_map_get((cast: (@: c.LmxCopyMap) space\receiving_index), c.lmx_graph_ref_cell_in((cast: (@: c.LmxArena) g\arena), holder, index))
-    if: entry = 0
-        return: 0
-    at := (cast: (size_t) entry) - 1U
-    facts := @ contract\facts
-    list := (cast: (@: c.LmxImplContractFactArray) facts)
-    if: at >= list\len
-        return: 0
-    return: list\data + at
-end: lmx_graph_slot_fact
-
-fn: lmx_graph_slot_fact_put (@: g c.LmxGraph; @: space c.LmxGraphSpace; @: fact c.LmxImplContractFact) int
-    @: contract c.LmxImplContract 0
-    @: map c.LmxCopyMap 0
-    @: facts c.LmxImplContractFactDynamicArray 0
-    @: list c.LmxImplContractFactArray 0
-    @: slot void 0
-    size_t: at 0U
-    if: space = 0
-        return: 0
-    if: g = 0
-        return: 4
-    slot := c.lmx_graph_ref_cell_in((cast: (@: c.LmxArena) g\arena), (cast: (@: c.Lmx) fact\owner), (cast: (size_t) fact\field))
-    if: slot = 0
-        return: 4
-    if: space\receiving = 0
-        contract := (cast: (@: c.LmxImplContract) c.calloc(1U, c.sizeof(c.LmxImplContract)))
-        map := (cast: (@: c.LmxCopyMap) c.calloc(1U, c.sizeof(c.LmxCopyMap)))
-        if: contract = 0 || map = 0
-            c.lmx_arena_impl_contract_release(contract)
-            c.free((cast: (@: void) map))
-            return: 4
-        contract\owners := 1U
-        if: c.lmx_copy_map_init(map) != 0
-            c.lmx_arena_impl_contract_release(contract)
-            c.free((cast: (@: void) map))
-            return: 4
-        space\receiving := contract
-        space\receiving_index := (cast: (@: void) map)
-    contract := space\receiving
-    map := (cast: (@: c.LmxCopyMap) space\receiving_index)
-    if: c.lmx_copy_map_get(map, slot) != 0
-        return: 0
-    facts := @ contract\facts
-    list := (cast: (@: c.LmxImplContractFactArray) facts)
-    at := list\len
-    if: c.lmx_implements_contract_append(contract, fact) != c.LMX_WALK_OK
-        return: 4
-    if: c.lmx_copy_map_put(map, slot, (cast: (@: void) (at + 1U))) != 0
-        list\len := at
-        return: 4
-    return: 0
-end: lmx_graph_slot_fact_put
-
-fn: lmx_graph_slot_type (@: g c.LmxGraph; @: value void; @: fact c.LmxImplContractFact) int
-    int: kind c.lmx_graph_kind(g, value)
-    if: kind = 0 || kind = 7
-        return: 4
-    if: kind = 3
-        value := c.lmx_arena_pointer_void_read(value)
-    if: kind = 8 || kind = 9
-        value := c.lmx_graph_reference_cell(g, value)
-    fact\kind := c.lmx_range_classify(g\arena, value)
-    fact\type := c.lmx_range_type_of(g\arena, value)
-    if: fact\kind = c.LMX_KIND_STRUCT
-        fact\type := 0
-    if: fact\kind = c.LMX_KIND_NONE
-        return: 4
-    return: 0
-end: lmx_graph_slot_type
-
-fn: lmx_graph_slot_admit (@: g c.LmxGraph; @: holder c.Lmx; size_t: index; @: address void) int
-    c.LmxImplContractFact: fact
-    c.LmxImplContractFact: candidate
-    @: known c.LmxImplContractFact lmx_graph_slot_fact(g, lmx_graph_space(), holder, index)
-    int: status 0
-    if: known != 0
-        fact := known[0]
-    else:
-        c.memset((cast: (@: void) @ fact), 0, c.sizeof(c.LmxImplContractFact))
-        status := lmx_graph_slot_type(g, lmx_graph_get_in(g, holder, index), @ fact)
-        if: status != 0
-            return: status
-    ---
-    if: fact\kind = c.LMX_KIND_NONE
-        return: 0
-    c.memset((cast: (@: void) @ candidate), 0, c.sizeof(c.LmxImplContractFact))
-    status := lmx_graph_slot_type(g, address, @ candidate)
-    if: status != 0 || fact\kind != candidate\kind || fact\type != candidate\type
-        return: 4
-    return: 0
-end: lmx_graph_slot_admit
 
 # ---- toLmx-like print (§8) ----------------------------------------------------------------------------------------
 
@@ -2645,20 +2572,22 @@ end: lmx_graph_language_receiver
 # an Lmx, an untyped one -- stands for the address it holds; any other value -- an int, a word -- is no address. 0 and
 # the address in out; 5 for a value that is no address.
 fn: lmx_graph_address_of (@: g c.LmxGraph; @: value void; @@: out void) int
+    @: pool c.LmxPool 0
     int: kind lmx_graph_kind(g, value)
     if: g = 0 || out = 0
         return: 5
     if: kind = 8 || kind = 9
         value := lmx_graph_reference_cell(g, value)
         kind := lmx_graph_kind(g, value)
-    if: kind = 4
+    if: c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), value) != 0
         out[0] := value
         return: 0
-    if: kind = 5 || kind = 6 || kind = 7
-        out[0] := c.lmx_arena_pointer_void_read(value)
+    pool := c.lmx_pointer_pool_in((cast: (@: c.LmxArena) g\arena), value)
+    # UNINIT_INT is a service pointer for an int place, not a pointer value.
+    if: pool != 0 && c.lmx_type_base((cast: (int) pool\type)) != c.LMX_TYPE_UNINIT_INT
+        out[0] := (cast: (@: void) pool\pointer_read(value))
         return: 0
-    return: 5
-end: lmx_graph_address_of
+return: 5
 
 # The type of the region of the arena that holds the address a value stands for (§2.1; the book, get-type; the
 # receiver typeof of both executors; lmx_graph_address_of). 0 and the type in out, LMX_TYPE_NONE for an address no
@@ -2698,39 +2627,49 @@ fn: lmx_graph_index_form (@: g c.LmxGraph; @: left void) int
     return: (cast: (int) (lmx_graph_word_text(g, lmx_graph_get_in(g, expression, 1U)) = state\w_index))
 end: lmx_graph_index_form
 
+fn: lmx_graph_index_node (@: g c.LmxGraph; @: value void) @: c.Lmx
+    @: current c.Lmx 0
+    @: address void 0
+    if: g = 0
+        return: 0
+    current := c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), lmx_graph_target(g, value))
+    if: current != 0
+        return: current
+    if: lmx_graph_address_of(g, value, @ address) != 0
+        return: 0
+return: c.lmx_graph_node_in((cast: (@: c.LmxArena) g\arena), address)
+
 # `S[i]`: an untyped reference to what slot index of the Structure value stands for holds -- the cell of an int field,
 # the pointer of a field without a value, a nested Structure, a word, a reference place. 0 and the reference in out; 4
 # for a value that stands for no Structure, or without memory; 7 for an index outside its fields.
 fn: lmx_graph_index (@: g c.LmxGraph; @: value void; int: index; @@: out void) int
-    @: base void lmx_graph_target(g, value)
-    @: inner c.Lmx 0
-    if: out = 0 || lmx_graph_kind(g, base) != 4
+    @: inner c.Lmx lmx_graph_index_node(g, value)
+    @: cell void 0
+    c.LmxPointerCellRead: read 0
+    c.LmxPointerCellWrite: write 0
+    if: out = 0 || inner = 0
         return: 4
-    inner := (cast: (@: c.Lmx) base)
     if: index < 0 || (cast: (size_t) index) >= lmx_graph_count(inner)
         return: 7
-    out[0] := lmx_graph_ref(g, lmx_graph_get_in(g, inner, (cast: (size_t) index)))
+    cell := c.lmx_graph_cell_in((cast: (@: c.LmxArena) g\arena), inner, (cast: (size_t) index))
+    if: cell = 0 || c.lmx_value_cell_access((cast: (@: c.LmxArena) g\arena), cell, @ read, @ write) != 0 || read = 0
+        return: 4
+    out[0] := lmx_graph_ref(g, read(cell))
     if: out[0] = 0
         return: 4
     return: 0
 end: lmx_graph_index
 
-# Replace one physical field after the receiving contract of this execution
-# admits its new address. The current payload never becomes a new requirement.
+# Store one pointer in the actual reference slot. Its former value imposes
+# no receiving requirement; interpretation reads the resulting current graph.
 fn: lmx_graph_index_write (@: g c.LmxGraph; @: scope c.Lmx; @: value void; int: index; @: source void) int
-    @: base void lmx_graph_target(g, value)
-    @: inner c.Lmx 0
+    @: inner c.Lmx lmx_graph_index_node(g, value)
     @: address void 0
-    if: lmx_graph_kind(g, base) != 4
+    if: inner = 0
         return: 4
-    inner := (cast: (@: c.Lmx) base)
     if: index < 0 || (cast: (size_t) index) >= lmx_graph_count(inner)
         return: 7
     if: lmx_graph_address_of(g, source, @ address) != 0
-        return: 4
-    if: address != 0 && lmx_graph_kind(g, address) = 0
-        return: 4
-    if: lmx_graph_slot_admit(g, inner, (cast: (size_t) index), address) != 0
         return: 4
     if: lmx_graph_write_slot(g, scope, inner, (cast: (size_t) index), address) != 0
         return: 4

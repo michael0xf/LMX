@@ -10,7 +10,8 @@ ValueOwned store. Invalidation is prepared before the store and completed only a
 is not prechecked by a code write; reached machine code still returns UNSUPPORTED. Source09:935, genuine G1/G2
 quick, fixedpoint38, actual G2 targeted2 and Graph7 triple PASS. Whole namespace/path/Array receiving and the
 replacement call-frame model remain OPEN. [Evidence402](steps/witnesses/m14-raw-index-20261115/notes.md).
-The complete author documentation package is reviewed and fresh docs-check passes; final index gates follow.
+The complete author documentation package is accepted as92902ada; final G2 docs/index checks pass35/14/27/44/615,
+with LF28297. The full replacement execution model remains OPEN.
 Work and commits stay directly on main.
 
 

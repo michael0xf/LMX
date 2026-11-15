@@ -20,6 +20,11 @@ Book/grammar после render не менялись. Далее явный docu
 Docs-index02 terminal PASS35/14/27/44/615, LF28296, actual G2 Tool402. Document-only index32,
 working/cached diff checks PASS; code402 manifests/source/tests и два чужих untracked вне него.
 Результат записан, отдельный документальный commit, затем code402 и push обоих прямо main.
+Документальный срез32 зафиксирован92902adad375ae33ede003493c419a2306703522.
+Code-only index19 прошёл fresh G2 docs-index03:35/14/27/44/615, LF28297, exit0.
+Далее только результаты/статус добавлены к проверенному code index; алгоритмы/источники Source09 не менялись.
+Полный source verify935/0 и оба diff checks выполняются перед code commit; fetch origin/main показал1/0,
+чужие два untracked сохраняются. Code commit и push обоих прямо main, затем общий field-value reader M14.
 
 ## 2026-11-15 — срез402: сырая индексная запись, кодовые gates PASS
 

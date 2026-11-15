@@ -7967,6 +7967,7 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     int: status c.LMX_WALK_OK
     int: said 0
     int: called 0
+    int: headers_answer c.LMX_IMPLEMENTS_UNKNOWN
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
     @: code_fields c.VoidArray 0
@@ -7986,9 +7987,10 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     if: record\fn = 0 || record\signature = 0 || lmx_walk_immutable(f, (cast: (@: void) record\owner)) != 0
         return: c.LMX_WALK_INVALID
     n := code_fields\size - 3U
-    inputs := c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) record\signature), 0U))
-    returns := c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) record\signature), 1U))
-    if: inputs = 0 || returns = 0
+    status := c.lmx_callable_headers_at((cast: (@: c.LmxArena) f\arena), (cast: (@: c.Lmx) record\signature), 0U, 1U, @ inputs, @ returns, @ headers_answer)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: headers_answer != c.LMX_IMPLEMENTS_YES
         return: c.LMX_WALK_INVALID
     inputs_fields := @ inputs\array
     returns_fields := @ returns\array

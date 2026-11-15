@@ -2108,6 +2108,35 @@ fn: lmx_callable_source_receiving (@: arena c.LmxArena; @: selected_args c.Lmx; 
     return: c.LMX_WALK_OK
 end: lmx_callable_source_receiving
 
+# Read explicitly selected physical header fields.
+# A compiled variant and a primitive signature are ordinary metadata Structures,
+# not executable fn values. Extra metadata fields do not change these choices.
+# SIZE_MAX for returns_edge explicitly selects no return header.
+fn: lmx_callable_headers_at (@: arena c.LmxArena; @: selected c.Lmx; size_t: args_edge; size_t: returns_edge; @@: out_args c.Lmx; @@: out_returns c.Lmx; @: out_answer int) int
+    @: args c.Lmx 0
+    @: returns c.Lmx 0
+    @: fields c.VoidArray 0
+    if: out_args = 0 || out_returns = 0 || out_answer = 0
+        return: c.LMX_WALK_INVALID
+    out_args[0] := 0
+    out_returns[0] := 0
+    out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
+    if: arena = 0
+        return: c.LMX_WALK_INVALID
+    if: c.lmx_graph_node_in(arena, (cast: (@: void) selected)) = 0
+        return: c.LMX_WALK_OK
+    fields := @ selected\array
+    if: args_edge < fields\size
+        args := c.lmx_graph_ref_struct_in(arena, selected, args_edge)
+    if: returns_edge < fields\size
+        returns := c.lmx_graph_ref_struct_in(arena, selected, returns_edge)
+    out_args[0] := args
+    out_returns[0] := returns
+    if: args != 0 && (returns != 0 || returns_edge = (cast: (size_t) -1))
+        out_answer[0] := c.LMX_IMPLEMENTS_YES
+    return: c.LMX_WALK_OK
+end: lmx_callable_headers_at
+
 # Select only an existing receiver-produced fn's args/return headers.
 # Pool role is its existing value classification, not a spelling match or
 # a new fn marker. Ordinary data with two/four fields is not a signature.
@@ -2116,11 +2145,10 @@ end: lmx_callable_source_receiving
 # Only SOURCE edges0/1 are consumed; vars/body are not inspected.
 fn: lmx_callable_headers (@: arena c.LmxArena; @: selected c.Lmx; @@: out_args c.Lmx; @@: out_returns c.Lmx; @: out_answer int) int
     @: pool c.LmxPool 0
-    @: args c.Lmx 0
-    @: returns c.Lmx 0
     size_t: count 0U
-    size_t: args_at (cast: (size_t) -1)
-    size_t: returns_at (cast: (size_t) -1)
+    size_t: args_edge (cast: (size_t) -1)
+    size_t: returns_edge (cast: (size_t) -1)
+    @: fields c.VoidArray 0
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
     int: status
     if: out_args = 0 || out_returns = 0 || out_answer = 0
@@ -2138,24 +2166,21 @@ fn: lmx_callable_headers (@: arena c.LmxArena; @: selected c.Lmx; @@: out_args c
     # A `fn` has four parts, its return header at edge 1; a `sub` three, and no return header: it returns no value (lmx_callable_part).
     if: lmx_callable_source_count(arena, selected, @ count) != 0 || (count != 4U && count != 3U)
         return: c.LMX_WALK_OK
-    status := lmx_implements_exec_coordinate(arena, selected, 0U, @ args_at, @ answer)
+    status := lmx_implements_exec_coordinate(arena, selected, 0U, @ args_edge, @ answer)
     if: status != c.LMX_WALK_OK
         return: status
-    if: answer = c.LMX_IMPLEMENTS_YES
-        args := c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, selected, args_at))
+    if: answer != c.LMX_IMPLEMENTS_YES
+        args_edge := (cast: (size_t) -1)
     if: count = 4U
-        status := lmx_implements_exec_coordinate(arena, selected, 1U, @ returns_at, @ answer)
+        status := lmx_implements_exec_coordinate(arena, selected, 1U, @ returns_edge, @ answer)
         if: status != c.LMX_WALK_OK
             return: status
-        if: answer = c.LMX_IMPLEMENTS_YES
-            returns := c.lmx_graph_node_in(arena, c.lmx_graph_value_in(arena, selected, returns_at))
+        if: answer != c.LMX_IMPLEMENTS_YES
+            # Required but unavailable is distinct from a sub's explicit void.
+            fields := @ selected\array
+            returns_edge := fields\size
         ---
-    # Independent known edges survive an unrelated unavailable header.
-    out_args[0] := args
-    out_returns[0] := returns
-    if: args != 0 && (returns != 0 || count = 3U)
-        out_answer[0] := c.LMX_IMPLEMENTS_YES
-    return: c.LMX_WALK_OK
+    return: lmx_callable_headers_at(arena, selected, args_edge, returns_edge, out_args, out_returns, out_answer)
 end: lmx_callable_headers
 
 fn: lmx_implements_call_positions (@: arena c.LmxArena; @: have c.Lmx; @: want c.Lmx; int: received) int

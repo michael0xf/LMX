@@ -8,6 +8,13 @@ replaces edit tracking/native reset; mandatory executable-code snapshots are can
 Sys\endturn exits through finally to the normal turn boundary; it does not compile by itself.
 Implementation is OPEN; dated receipts below describe earlier code.
 
+Step404's first reader prerequisite (2026-11-15): explicit physical signature headers are shared by
+callable and PRIM consumers. Metadata with five fields needs no fake FN role; SOURCE projection stays
+in the callable adapter. Implements77/Walk189, no new runtime state. Source02:935 canonical/verified,
+normal Tool-native-01/Runtime-native-01 and focused4/0 nf/root0/root1 pass with unchanged actual G2 frontend.
+This does not install call tables, select a compiled variant or remove native tracking.
+[Evidence404](../steps/witnesses/m14-native-signature-20261115/notes.md). Those remaining steps stay OPEN.
+
 Slice403 (2026-11-15), bounded code gates PASS: calls/return/finally carry the full scalar Value,
 including SOURCE/Model and exact ABI storage. Pending values survive cleanup/GC; ABI-proved numeric
 results share physical capture for addressing and delivery while retaining the caller's original context.

@@ -1382,6 +1382,8 @@ fn: decl_implements (@: f c.FILE) int
         return: 1
     if: c.fputs("\nprototype:\n    # The selected formal's own current receiving record, reached numerically.\n    # A legacy, partial or missing entry stays unavailable (answer UNKNOWN).\n    fn: lmx_callable_source_receiving (@: LmxArena arena; @: Lmx selected_args; size_t: index; @@: Lmx out; @: int out_answer) int\nend: prototype\n", f) < 0
         return: 1
+    if: c.fputs("# Explicit signature header selection; projection only, not callable classification.\nprototype:\n    fn: lmx_callable_headers_at (@: LmxArena arena; @: Lmx selected; size_t: args_edge; size_t: returns_edge; @@: Lmx out_args; @@: Lmx out_returns; @: int out_answer) int\nend: prototype\n", f) < 0
+        return: 1
     return: 0
 end: decl_implements
 
@@ -2236,7 +2238,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: source_names char c.calloc(15U, sizeof(@: char))
     @@: ids_names char c.calloc(6U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
-    @@: implements_names char c.calloc(76U, sizeof(@: char))
+    @@: implements_names char c.calloc(77U, sizeof(@: char))
     @@: copy_names char c.calloc(30U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(22U, sizeof(@: char))
@@ -2979,6 +2981,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     implements_names[73] := "lmx_implements_contract_append"
     implements_names[74] := "lmx_implements_contract_field"
     implements_names[75] := "lmx_implements_source_interface"
+    implements_names[76] := "lmx_callable_headers_at"
     list_names[0] := "lmx_list_len"
     list_names[1] := "lmx_list_cap"
     list_names[2] := "lmx_list_data"
@@ -3262,7 +3265,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_gc_graph", gc_graph_names, 5, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 76, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 77, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 30, 0) != 0
         return: 1

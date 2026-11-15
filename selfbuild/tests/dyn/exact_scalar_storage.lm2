@@ -593,6 +593,35 @@ fn: es_dispatch (@: arena c.LmxArena; @: g c.LmxGraph; @: code c.Lmx; @: witness
     c.free(before)
     return: 0
 
+# A compiled contract is metadata, not a fake callable. Header selection is
+# explicit even with extra fields, reordered edges or an unavailable edge.
+fn: es_compiled_headers (@: arena c.LmxArena; @: g c.LmxGraph; @: args c.Lmx; @: returns c.Lmx; @: witness void) int
+    @: variant c.Lmx c.lmx_graph_lmx(g, 0, 5U)
+    @: metadata void c.lmx_graph_word(g, "native-metadata", 15U)
+    @: got_args c.Lmx 0
+    @: got_returns c.Lmx 0
+    @: got_source void 0
+    @: got_witness void 0
+    int: answer c.LMX_IMPLEMENTS_UNKNOWN
+    if: variant = 0 || metadata = 0 || c.lmx_graph_put(variant, 0U, (cast: (@: void) args)) != 0 || c.lmx_graph_put(variant, 1U, (cast: (@: void) returns)) != 0 || c.lmx_graph_put(variant, 4U, metadata) != 0
+        return: 130
+    if: c.lmx_callable_headers_at(arena, variant, 0U, 1U, @ got_args, @ got_returns, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_YES || got_args != args || got_returns != returns || c.lmx_graph_fn_result(g, (cast: (@: void) variant)) != 0
+        return: 131
+    if: c.lmx_callable_entry(arena, got_returns, 0U, @ got_source, @ got_witness) != 0 || got_source = 0 || got_witness != witness
+        return: 132
+    if: c.lmx_graph_put(variant, 0U, metadata) != 0 || c.lmx_graph_put(variant, 4U, (cast: (@: void) args)) != 0 || c.lmx_callable_headers_at(arena, variant, 4U, 1U, @ got_args, @ got_returns, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_YES || got_args != args || got_returns != returns
+        return: 133
+    if: c.lmx_graph_put(variant, 4U, 0) != 0 || c.lmx_callable_headers_at(arena, variant, 4U, 1U, @ got_args, @ got_returns, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_UNKNOWN || got_args != 0 || got_returns != returns
+        return: 134
+    # Source edge5 must not alias LAST edge0 of a five-field structure.
+    if: c.lmx_graph_put(variant, 0U, (cast: (@: void) args)) != 0 || c.lmx_callable_headers_at(arena, variant, 5U, 1U, @ got_args, @ got_returns, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_UNKNOWN || got_args != 0 || got_returns != returns
+        return: 135
+    if: c.lmx_callable_headers_at(arena, variant, 0U, (cast: (size_t) -1), @ got_args, @ got_returns, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_YES || got_args != args || got_returns != 0
+        return: 136
+    if: c.lmx_callable_headers_at(arena, variant, 0U, 5U, @ got_args, @ got_returns, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_UNKNOWN || got_args != args || got_returns != 0 || c.lmx_graph_count(variant) != 5U
+        return: 137
+    return: 0
+
 fn: es_receiving (@: arena c.LmxArena; @: g c.LmxGraph) int
     @: code c.Lmx c.lmx_arena_take_struct_role(arena, 0, c.LMX_POOL_ROLE_FN)
     @: args c.Lmx c.lmx_graph_lmx(g, 0, 1U)
@@ -632,6 +661,9 @@ fn: es_receiving (@: arena c.LmxArena; @: g c.LmxGraph) int
     metadata\source_type := description
     if: c.lmx_graph_put(returns, 0U, (cast: (@: void) return_entry)) != 0 || c.lmx_graph_put(return_entry, 0U, (cast: (@: void) es_field(g, "double"))) != 0 || c.lmx_graph_put(return_entry, 1U, witness) != 0
         return: 97
+    status := es_compiled_headers(arena, g, args, returns, witness)
+    if: status != 0
+        return: status
     c.memset((cast: (@: void) (@ frame)), 0, c.sizeof(c.LmxWalkFrame))
     frame\arena := arena
     frame\code := code

@@ -3031,6 +3031,16 @@ M14 остаётся частью единственного основного 
    общие signature/header readers и binder/result helpers, затем снять обе freshness системы целиком.
    Формировать signature общими compiler producers из реального выбранного варианта, без копии тела,
    окружения или отдельного обходного реестра. Call-site Consumer не подменяет ABI callee.
+   Для metadata Variant выделено общее чтение явно выбранных физических args/returns полей,
+   используемое также прежними callable/PRIM readers. FN-адаптер предварительно применяет свою
+   SOURCE-проекцию; физический PRIM ABI не переводить в SOURCE-координаты и не подставлять fake receiver.
+   Это только необходимый reader: таблица call, producer и выбор compiled пары остаются частью404.
+   У выбранного варианта удерживать также его существующий static place_spec и передавать его явно
+   в LmxCallPlaces.requirements до DATA admission. SourceName.place_spec по одному адресу code не
+   представляет несколько бинарных вариантов; null spec выбранного native не означает live fallback.
+   model_layout/place_uses/place_callable физического принимающего слота сохраняют собственный смысл.
+   Проверить старые code_slot/ordinal users: внутренние compiled bindings используют выбранную карту,
+   явные data/code-обращения читают живой граф. Не вводить обязательный снимок code/exec-карты целиком.
    В короткую приёмку включить изменение live return size_t/ulong→int: прежний бинарный вход получает
    назначение прежней ширины, соседние bytes/context не повреждаются. Проверить выбор нового варианта
    после успешной явной компиляции и endturn; endturn без компиляции новой сигнатуры не создаёт.

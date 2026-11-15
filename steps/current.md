@@ -2,6 +2,36 @@
 
 ## 2026-11-15 — шаг404: compiled signature перед удалением native tracking
 
+Авторский c7f2825f принят в main: шесть call/fncall передают actuals, формалы находятся только
+в единой data; private: исключает конкретное поле из динамических источников, сохраняя
+лексический/явный доступ. M10/M14 остаются OPEN; старые launch/invoke и FN adapter предстоит заменить.
+Reader prerequisite не возвращает отдельную языковую часть formal args.
+Source02:935 уже canonical, repo/stage verify935/0 PASS. Docs-index01 и fresh docs-index02
+после принятия c7 PASS35/14/27/44/615, links/opening, LF28303, exit0.
+Все code producers terminal; штатная генерация semantic/grammar выполнена авторским c7.
+
+Текущий code progress404: выделен lmx_callable_headers_at для явно выбранных PHYSICAL args/returns
+полей обычного metadata S; SIZE_MAX — только явный void return. Existing FN adapter сначала
+выполняет свою SOURCE projection; PRIM остаётся полностью physical, включая inner counts/entries/actuals.
+Implements76→77, Walk189 прежний; новых состояний/таблиц/ролей нет. Fieldcount3/4 старого FN adapter
+не выдаётся за новую data/native модель: его полная замена по M14 ещё OPEN.
+Source02:935 frozen, stage403 повторно используется с новыми labels/receipts:
+build2/codex_fix250generationchain01/runs/sol-m14-native-signature-20261115-01.
+Source01 перед проверкой заменён Source02: test probes private callable_part заменены public Graph.fn_result,
+ошибочная SOURCE-policy PRIM найдена review и снята до сборки; callback protocol не менялся.
+Tool-native-01 normal PASS6e7d3350ec1a020f9cec86817216c1e6f0786c628502afc67af7029ff6e21faf.
+Runtime-native-01 normal PASS98 headers: C16e403b22b5adbd0161e2d6251a48556ff190711cdef76cf0ac55a8842759ccd,
+prodee05d323c183126c05d39583897113eef10485626a2e207760dda634516a6639,
+obs35e9e5485a02936d1b9b9e810db3bfacd2570b57d92fabf2054ca6b42ed4bb14.
+Focused01 PASS4/0, n/f/root0/root1: exact_scalar_storage (130–137 ordinary5metadata/explicitindices/
+unavailableedges/void/SOURCE-witness), execution_gc_roots (real PRIM pending args+GC),
+callable_place_signature, sub_parts. Actual G2 frontend unchanged; no parallel producer, all terminal.
+Нужные следующие зависимости404 подтверждены: selected place_spec из модуля в existing CallPlaces,
+без live fallback при выбранном native; audit internal ordinal compiled bindings отдельно от явных
+live code/data paths. Common native lookup не должен наследовать регистрацию лишь из copied native field.
+Canonical Source02 verified935/0; следующий шаг — final docs/code index
+и фиксация этого reader prerequisite, затем общий call binder и producer/calltable/selected pair.
+
 Индекс плана404 (основной v3/checklist/current) прошёл Tool03 docs-plan404:
 PASS35/14/27/44/615, links/opening, LF28300, exit0. Semantics/grammar sources не менялись;
 render не повторялся. Working/cached diff-check перед фиксацией. Это документальный порядок

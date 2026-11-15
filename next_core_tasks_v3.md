@@ -1,5 +1,21 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-15, срез396 — публичный primitive resolver и точное C spelling M11.7/M13, кодовые gates PASS.**
+395 принят/отправлен73196f98 прямо main. Активная primitive.description подключена к существующему interner;
+source word/depth/const/raw C сохранены отдельно от native spelling. Eligibility общая с exporter;
+unit aliases используют прежний module prefix и обратимое spelling, без runtime row guess или новой registry.
+Обычный L1 output потребляет существующий alias emitter. Private public scalar/deep/const/custom table gates PASS.
+Source11:931; whole01 actual G1/G2 quick/fixedpoint29/canonical931 PASS. Actual G2 recovery16 на готовых
+объектах и Graph3 triple PASS. Targeted01 как SUITE не PASS из-за ошибочного prod path; исправлены только links.
+G2 render35/14/both snapshots и fresh docs-check02 PASS35/14/27/44/615, links/LF28277.
+Финальный indexed01 PASS35/14/27/44/615, links/LF28283; commit/push396 — в [общем конвейере](steps/current.md).
+Partial recipe использует тот же явный module selection и для backend: изменённые модули переводятся,
+неизменные L2/L1 companions и libc берутся из verified closure. Whole G1/G2 по-прежнему строит все компоненты.
+Для custom-table приёмки existing machine suite допускает явный PRIMITIVE source input только своего unit;
+stage и таблица обычного owner не переписываются. В manifest/record должны сохраняться реальные входы.
+Обычные owned storage/typed Run/receiving/FFI/Array и общий кеш/flush остаются зависимыми работами основного v3;
+C ABI gate не закрывает их. [Текущий конвейер](steps/current.md).
+
 **2026-11-15, срез395 — корни живого исполнения M11/M13/M14, ограниченные кодовые gates/docs-check PASS.**
 394 принят2972b497 в main. Общий GC до sweep получает existing activation/call_places, полные Values и рабочие строки;
 borrowed operation spans живут в lane arena, включая подготовку до первого activation push. Это временные C-frame/scratch
@@ -2581,6 +2597,30 @@ WIP394 уточнение конвейера: exact C aliases генерирую
 Его n/f/root проверки не означают обход машинного тела и не закрывают обычное typed Run/receiving/FFI.
 Resolver публичных primitive имён и их точных C spellings остаётся частью обязательной общей интеграции;
 генерируемые aliases не становятся новым языковым каталогом или semantic type id.
+
+**После resolver396 — owned public scalar actual/result и общий receiving, OPEN.** Существующие native
+material/hidden/trampoline producers пока создают borrowed FOREIGN без type/ABI/source/Model, а материализующий
+путь исключает depth0 foreign. Для eligible public scalar подключить прежний foreign_capture с canonical ABI,
+физическим profile и полным producer context; уже complete Value не захватывать заново и не подменять его
+source ожидаемым формалом. Scalar ABI в текущем ядре сравнивается по identity LmxScalarABI*: похожий local
+descriptor с теми же sizeof/callbacks не является тем же ABI. Канонический physical binding брать существующим
+scalar_binding по C spelling, сохраняя semantic Source/Model каждого alias отдельно от первой физической строки.
+До typed dereference формала выполнять receive_scalar; продолжить ту же ветку в receive_formal и
+argument_storage, где сейчас FOREIGN пропускает numeric check или отвергается как не-NUMBER. Для cls6
+результата захватить owned l2_tv с context, а caller destination записать отдельно, без зависимости от C temporary.
+Whole/written/scatter mapping уже переносит complete Values — второго mapper не вводить. Приёмка: ordinary
+double epsilon actual/result, снимок первого actual через перезапись/GC вторым, wrong float/double ABI отказ
+до тела и whole-вариант. Для custom ACTIVE alias сохранить его исходный graph contract; resolver machine gate
+сам по себе не доказывает обычное typed исполнение или receiving.
+
+Зависимость этого шага: rw_header_parts/rw_signature_input сейчас сохраняют SOURCE foreign формала,
+но пропускают physical witness. Продолжить существующие rw_witness/emit_cell_new_ty: eligible scalar
+получает absent witness с canonical ABI, profile его реального slot и companion metadata соседнего SOURCE.
+Ожидаемый ABI в receiving брать из выбранного witness pool, не выводить из имени или размера.
+header_source/rw_declared_source/receiving_source уже сохраняют исходную декларацию и qualifiers.
+Для произвольной ACTIVE строки ещё нет общего runtime source_type: сохранить её immutable описание
+прежними rw_plain/rw_source_atom/rw_put и прямым metadata edge, затем читать общим Source reader.
+Не подменять custom alias строкой kernel profile с тем же C spelling и не вводить registry имён.
 
 **Pure Source bridge — срез393, code gates PASS; полный runtime/storage bridge OPEN.** Code08 читает35×15 raw literal source
 table через прежний exporter. Optional reader использует один прежний name matcher, четыре его caller routes,

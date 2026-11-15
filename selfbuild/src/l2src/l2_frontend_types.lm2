@@ -791,7 +791,7 @@ fn: lm_compiler_resolve_type_atom (const: (@: atom c.LmP0Text); int: depth; int:
     \out_ty := 0
     if: depth < 1
         return: (cast: (int) (2))
-    if: lm_compiler_ret_type_word(atom, 0, 0, @ leaf) = 0 && c.lm_compiler_prim_code_name(c.lm_compiler_result_value_ty(leaf)) != 0
+    if: (lm_compiler_ret_type_word(atom, 0, 0, @ leaf) = 0 && c.lm_compiler_prim_code_name(c.lm_compiler_result_value_ty(leaf)) != 0) || (c.lm_compiler_c_stmt_door(atom) = 0 && c.lm_compiler_primitive_scalar_row(atom) >= 0)
         \out_ty := c.lm_compiler_foreign_intern(atom, depth, is_const)
         if: \out_ty >= 100
             return: (cast: (int) (0))
@@ -845,17 +845,23 @@ end: lm_compiler_fnptr_local
 
 fn: lm_compiler_struct_local (const: (@: stmt c.LmP0Node); @@: out_name c.LmP0Text) int
     @: f c.LmP0Field
+    @: here int (cast: (@: int) (@ c.l2_here_mi))
+    int: scalar -1
     if: out_name = 0
         return: (cast: (int) (1))
     \out_name := 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_count_active(stmt\as\frame\body) != 1
+    if: here[0] >= 0 && c.lm_compiler_m_machine(here[0]) != 0 && c.lm_compiler_primitive_scalar_row((cast: (const: @: c.LmP0Text) stmt\as\frame\head)) >= 0
+        if: lm_compiler_ret_type_word((cast: (const: @: c.LmP0Text) stmt\as\frame\head), 0, 0, @ scalar) != 0
+            scalar := -1
+        ---
+    if: (scalar < 100 && c.lm_compiler_count_active(stmt\as\frame\body) != 1) || c.lm_compiler_count_active(stmt\as\frame\body) < 1
         return: (cast: (int) (1))
     f := c.lm_compiler_next_active(stmt\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || c.lm_compiler_bind_spelling(f\value\as\atom) = 0
         return: (cast: (int) (1))
-    if: lm_compiler_predef_has_type((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0 || lm_compiler_predef_has_fnptr((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
+    if: (scalar < 100 && lm_compiler_predef_has_type((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) = 0) || lm_compiler_predef_has_fnptr((cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
         return: (cast: (int) (1))
     \out_name := f\value\as\atom
     return: (cast: (int) (0))
@@ -867,6 +873,13 @@ fn: lm_compiler_ptr_type_word (const: (@: word c.LmP0Text); int: depth; @: out_t
         return: (cast: (int) (2))
     if: c.lm_compiler_core_pointer_type(word, depth, out_ty) = 0
         return: (cast: (int) (0))
+    # All type-word consumers (including sizeof and declaration role queries)
+    # use this same active scalar route. The explicit C door keeps its role.
+    if: c.lm_compiler_c_stmt_door(word) = 0 && c.lm_compiler_primitive_scalar_row(word) >= 0
+        \out_ty := c.lm_compiler_foreign_intern_parts(word, depth, 0, 0)
+        if: \out_ty >= 100
+            return: 0
+        return: 2
     # `@: T` of a named Structure is one level, `@: Lmx` (D-76; l2_resolve_type_atom).
     if: lm_compiler_type_model(word) >= 0 || c.lm_compiler_site_method(here_mi_cell[0], word) >= 0
         \out_ty := c.lm_compiler_foreign_intern(c.lm_compiler_lmx_text(), depth, 0)
@@ -1481,7 +1494,7 @@ fn: lm_compiler_cast_resolve (const: (@: source_node c.LmP0Node); @: out_ty int;
     if: c.lm_compiler_pointer_depth(ty) > 0
         return: (cast: (int) (c.lm_compiler_pointer_decl_text(ty, 0, 0, dest)))
     if: ty >= 100
-        return: (cast: (int) (c.lm_compiler_tok_tx(dest, foreign_name_cell[0][ty - 100])))
+        return: c.lm_compiler_native_type_text(ty, dest)
     if: c.lm_compiler_prim_code_name(ty) = 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_tx_set(dest, c.lm_compiler_prim_code_name(ty))))

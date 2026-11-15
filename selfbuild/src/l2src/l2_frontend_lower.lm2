@@ -3477,6 +3477,11 @@ fn: lm_compiler_scan_body (const: (@: body c.LmP0Structure); int: mi; @: seen in
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         if: c.lm_compiler_struct_local(stmt, @ slnm) = 0
+            last := c.lm_compiler_next_active((cast: (@: c.LmP0Field) stmt\as\frame\body\first_field))
+            n := c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body))
+            if: n > 1 && lm_compiler_scan_fields(c.lm_compiler_next_active((cast: (@: c.LmP0Field) last\next)), n - 1, mi, seen) != 0
+                return: 1
+            ---
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         if: c.lm_compiler_frame_head(stmt, "if")
@@ -16971,15 +16976,25 @@ fn: lm_compiler_emit_loc_stmt (const: (@: stmt c.LmP0Node); int: mi; const: (@: 
             return: (cast: (int) (2))
         return: (cast: (int) (0))
     if: c.lm_compiler_struct_local(stmt, @ lnm) = 0
+        # Evaluate a source initializer before opening the declaration line;
+        # an initializer call can itself emit temporary declarations.
+        if: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) > 1 && lm_compiler_emit_fields((cast: (@: c.LmP0Field) lm_compiler_port_field_next((cast: (const: @: c.LmP0Field) c.lm_compiler_next_active((cast: (@: c.LmP0Field) stmt\as\frame\body\first_field))))), c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) - 1, mi, ind, tok_cell[0]) != 0
+            return: 2
+        ---
         if: c.fprintf(out_cell[0], "%s", ind) < 0
             return: (cast: (int) (2))
-        if: c.lm_compiler_write_c_name(out_cell[0], (cast: (const: @: c.LmP0Text) (stmt\as\frame\head))) != 0
-            return: (cast: (int) (2))
+        lty := c.lm_compiler_foreign_byvalue((cast: (const: @: c.LmP0Text) stmt\as\frame\head))
+        if: lty >= 100
+            if: c.lm_compiler_emit_native_type(out_cell[0], lty) != 0
+                return: 2
+            ---
+        else:
+            if: c.lm_compiler_write_c_name(out_cell[0], (cast: (const: @: c.LmP0Text) stmt\as\frame\head)) != 0
+                return: 2
+            ---
         if: c.fputs(": ", out_cell[0]) < 0
             return: (cast: (int) (2))
         if: c.lm_compiler_write_text(out_cell[0], lnm) != 0
-            return: (cast: (int) (2))
-        if: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) > 1 && lm_compiler_emit_fields((cast: (@: c.LmP0Field) (lm_compiler_port_field_next((cast: (const: @: c.LmP0Field) (c.lm_compiler_next_active((cast: (@: c.LmP0Field) (stmt\as\frame\body\first_field)))))))), (cast: (int) (c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) - 1)), mi, ind, tok_cell[0]) != 0
             return: (cast: (int) (2))
         if: c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) (stmt\as\frame\body))) > 1 && c.fprintf(out_cell[0], " %s", tok_cell[0]\data) < 0
             return: (cast: (int) (2))

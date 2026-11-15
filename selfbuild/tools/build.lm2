@@ -821,7 +821,17 @@ fn: bld_frontend_selected (@: repo char; @: stage char; @: base char; @: previou
         a[0] := txt_path(out, "l1trans.exe")
         bld_hash_note(rec, reused_backend)
         bld_hash_note(rec, reused_libc)
-        if: file_copy(reused_backend, a[0]) != 0 || file_hash_same(reused_backend, a[0]) != 1 || file_copy(reused_libc, txt_path(out, "l2_libc.o")) != 0 || file_hash_same(reused_libc, txt_path(out, "l2_libc.o")) != 1
+        if: bld_backend_part_selected(only) != 0
+            if: bld_backend_selected(rec, stage, base, previous_fe, previous_backend, out, res, only) != 0
+                c.fclose(rec)
+                return: 2
+            ---
+        else:
+            if: file_copy(reused_backend, a[0]) != 0 || file_hash_same(reused_backend, a[0]) != 1
+                c.fclose(rec)
+                return: 2
+            ---
+        if: file_copy(reused_libc, txt_path(out, "l2_libc.o")) != 0 || file_hash_same(reused_libc, txt_path(out, "l2_libc.o")) != 1
             c.fclose(rec)
             return: 2
         bld_hash_note(rec, a[0])
@@ -923,6 +933,8 @@ fn: bld_p0_part_one_known (@: part char) int
         return: 1
     if: c.strcmp(part, "l2_frontend_useplan") = 0 || c.strcmp(part, "l2_frontend_lower") = 0 || c.strcmp(part, "l2_receiving_source") = 0 || c.strcmp(part, "l2_consumer_uses") = 0 || c.strcmp(part, "l2_frontend_core") = 0 || c.strcmp(part, "l2_frontend_emit") = 0
         return: 1
+    if: c.strcmp(part, "l1_backend_platform_win") = 0 || c.strcmp(part, "l1_backend_platform_posix") = 0 || c.strcmp(part, "l1_backend_text") = 0 || c.strcmp(part, "l1_backend_state_helpers") = 0 || c.strcmp(part, "l1_backend_emit") = 0
+        return: 1
     return: 0
 end: bld_p0_part_one_known
 
@@ -981,6 +993,19 @@ fn: bld_p0_part_selected (@: parts char; @: part char) int
     ---
     return: 0
 end: bld_p0_part_selected
+
+fn: bld_backend_part_selected (@: parts char) int
+    if: parts = 0
+        return: 0
+    return: (cast: (int) (bld_p0_part_selected(parts, "l1_backend_platform_win") != 0 || bld_p0_part_selected(parts, "l1_backend_platform_posix") != 0 || bld_p0_part_selected(parts, "l1_backend_text") != 0 || bld_p0_part_selected(parts, "l1_backend_state_helpers") != 0 || bld_p0_part_selected(parts, "l1_backend_emit") != 0))
+
+sub: bld_backend_drop_selected (@: stage char; @: parts char; @: part char)
+    if: bld_p0_part_selected(parts, part) != 0
+        os_file_remove(txt_cat3(txt_path(stage, "src/l2src"), "/", txt_cat(part, ".lm1")))
+        os_file_remove(txt_cat3(txt_path(stage, "src/l2src"), "/", txt_cat(part, ".h.lm1")))
+        os_file_remove(txt_cat3(txt_path(stage, "headers/l2src"), "/", txt_cat(part, ".lm1.h")))
+    ---
+    return
 
 # Remove every selected body/declaration before translating any consumer.
 # Unselected artifacts remain only through the caller's explicit manifests.
@@ -1059,6 +1084,10 @@ end: bld_libc
 # the step fails -- there is no fallback to the P0 tree for a module the recipe translates from its graph.
 # 0, or 1 when the translation fails.
 fn: bld_machine_module_from (@: rec c.FILE; @: fe char; int: graph; @: src char; @: base char; @: out char; @: res int; @: stem char; @@: names char; int: count; int: header) int
+    return: bld_machine_module_parts(rec, fe, graph, src, base, out, res, stem, names, count, header, 0)
+
+# An explicit table is a source input of this translation, not stage state.
+fn: bld_machine_module_parts (@: rec c.FILE; @: fe char; int: graph; @: src char; @: base char; @: out char; @: res int; @: stem char; @@: names char; int: count; int: header; @: primitive char) int
     @@: a char c.calloc(2U * (cast: (size_t) count) + 20U, sizeof(@: char))
     int: n 0
     int: k 0
@@ -1087,6 +1116,8 @@ fn: bld_machine_module_from (@: rec c.FILE; @: fe char; int: graph; @: src char;
     a[n] := txt_path(src, txt_cat3("l2src/", stem, ".lm2"))
     a[n + 1] := txt_path(src, "l2src/convert.lm2")
     a[n + 2] := txt_path(src, "l2src/primitive.lm2")
+    if: primitive != 0
+        a[n + 2] := primitive
     a[n + 3] := txt_path(src, txt_cat3("l2src/", stem, ".lm1"))
     # Bound of one machine-module translation: 6 h. The L2-port frontend needs more than an hour for l2_frontend_core
     # (G0 of boot42 stopped it at 3600 s; the seed takes 3710 s); the bound guards a hang, not the size of a module.
@@ -1097,7 +1128,7 @@ fn: bld_machine_module_from (@: rec c.FILE; @: fe char; int: graph; @: src char;
         bld_hash_note(rec, txt_path(src, txt_cat3("l2src/", stem, ".h.lm1")))
     bld_hash_note(rec, txt_path(src, txt_cat3("l2src/", stem, ".lm1")))
     return: 0
-end: bld_machine_module_from
+end: bld_machine_module_parts
 
 # One machine module translated by the frontend fe from the P0 tree (bld_machine_module_from).
 fn: bld_machine_module (@: rec c.FILE; @: fe char; @: src char; @: base char; @: out char; @: res int; @: stem char; @@: names char; int: count; int: header) int
@@ -4139,7 +4170,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     @@: consumer_names char c.calloc(6U, sizeof(@: char))
     @@: frontend_names char c.calloc(262U, sizeof(@: char))
     @@: frontend_alloc_names char c.calloc(20U, sizeof(@: char))
-    @@: frontend_value_names char c.calloc(167U, sizeof(@: char))
+    @@: frontend_value_names char c.calloc(173U, sizeof(@: char))
     @@: frontend_view_names char c.calloc(85U, sizeof(@: char))
     @@: frontend_context_names char c.calloc(111U, sizeof(@: char))
     @@: frontend_type_names char c.calloc(51U, sizeof(@: char))
@@ -4685,6 +4716,12 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_value_names[164] := "lm_compiler_emit_roots_loop_restore"
     frontend_value_names[165] := "lm_compiler_emit_roots_current_value"
     frontend_value_names[166] := "lm_compiler_emit_roots_place"
+    frontend_value_names[167] := "lm_compiler_profile_payload"
+    frontend_value_names[168] := "lm_compiler_primitive_scalar_spelling"
+    frontend_value_names[169] := "lm_compiler_primitive_scalar_row"
+    frontend_value_names[170] := "lm_compiler_native_type_text"
+    frontend_value_names[171] := "lm_compiler_emit_native_type"
+    frontend_value_names[172] := "lm_compiler_emit_scalar_aliases"
     frontend_view_names[0] := "lm_compiler_head_source_node"
     frontend_view_names[1] := "lm_compiler_dn"
     frontend_view_names[2] := "lm_compiler_dt"
@@ -6720,7 +6757,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_values") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_values", frontend_value_names, 167, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_values", frontend_value_names, 173, 1) != 0
             return: 1
         ---
     ---
@@ -6824,6 +6861,11 @@ end: decl_l1_backend_scratch
 # backend sources plus generated P0. All later bundle consumers select B1.
 # Backend algorithms are ordinary L2; L3 generates only the import/entry scaffold.
 fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char; @: previous_backend char; @: out char; @: res int) int
+    return: bld_backend_selected(rec, stage, base, previous_fe, previous_backend, out, res, 0)
+
+# The existing backend recipe, with explicit verified inputs for unselected
+# machine modules. Null keeps the whole-generation build unchanged.
+fn: bld_backend_selected (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char; @: previous_backend char; @: out char; @: res int; @: only char) int
     @@: names char c.calloc(75U, sizeof(@: char))
     @@: headers char c.calloc(11U, sizeof(@: char))
     @@: a char c.calloc(32U, sizeof(@: char))
@@ -6844,22 +6886,12 @@ fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char
         return: 1
     os_file_remove(scratch)
     os_file_remove(state)
-    os_file_remove(txt_path(src, "l2src/l1_backend_text.lm1"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_text.h.lm1"))
     os_file_remove(txt_path(stage, "headers/l1src/l1_backend_scratch.lm1.h"))
-    os_file_remove(txt_path(stage, "headers/l2src/l1_backend_text.lm1.h"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_state_helpers.lm1"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_state_helpers.h.lm1"))
-    os_file_remove(txt_path(stage, "headers/l2src/l1_backend_state_helpers.lm1.h"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_emit.lm1"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_emit.h.lm1"))
-    os_file_remove(txt_path(stage, "headers/l2src/l1_backend_emit.lm1.h"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_platform_win.lm1"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_platform_win.h.lm1"))
-    os_file_remove(txt_path(stage, "headers/l2src/l1_backend_platform_win.lm1.h"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_platform_posix.lm1"))
-    os_file_remove(txt_path(src, "l2src/l1_backend_platform_posix.h.lm1"))
-    os_file_remove(txt_path(stage, "headers/l2src/l1_backend_platform_posix.lm1.h"))
+    bld_backend_drop_selected(stage, only, "l1_backend_text")
+    bld_backend_drop_selected(stage, only, "l1_backend_state_helpers")
+    bld_backend_drop_selected(stage, only, "l1_backend_emit")
+    bld_backend_drop_selected(stage, only, "l1_backend_platform_win")
+    bld_backend_drop_selected(stage, only, "l1_backend_platform_posix")
     os_file_remove(source)
     os_file_remove(exe)
     if: decl_write(scratch, 52) != 0
@@ -6875,9 +6907,9 @@ fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char
     names[0] := "l1_replace_file"
     names[1] := "l1_getcwd"
     names[2] := "l1_path_is_absolute"
-    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_platform_win", names, 3, 1) != 0
+    if: bld_p0_part_selected(only, "l1_backend_platform_win") != 0 && bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_platform_win", names, 3, 1) != 0
         return: 1
-    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_platform_posix", names, 3, 1) != 0
+    if: bld_p0_part_selected(only, "l1_backend_platform_posix") != 0 && bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_platform_posix", names, 3, 1) != 0
         return: 1
     names[0] := "l1_text_eq"
     names[1] := "l1_head_is"
@@ -6954,7 +6986,7 @@ fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char
     names[72] := "l1_emit_hdr_enum"
     names[73] := "l1_hdr_fnptr_parts"
     names[74] := "l1_emit_hdr_type_alias"
-    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_text", names, 75, 1) != 0
+    if: bld_p0_part_selected(only, "l1_backend_text") != 0 && bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_text", names, 75, 1) != 0
         return: 1
     names[0] := "l1_is_type_name"
     names[1] := "l1_head_is_unknown_type"
@@ -7010,7 +7042,7 @@ fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char
     names[51] := "l1_hdr_cycle_msg"
     names[52] := "l1_hdr_diagnose_cycle"
     names[53] := "l1_hdr_check_item"
-    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_state_helpers", names, 54, 1) != 0
+    if: bld_p0_part_selected(only, "l1_backend_state_helpers") != 0 && bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_state_helpers", names, 54, 1) != 0
         return: 1
     names[0] := "l1_emit_call_frame"
     names[1] := "l1_emit_assign_index"
@@ -7065,7 +7097,7 @@ fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char
     names[50] := "l1_translate_unit"
     names[51] := "l1_translate"
     names[52] := "l1_cli_main"
-    if: bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_emit", names, 53, 1) != 0
+    if: bld_p0_part_selected(only, "l1_backend_emit") != 0 && bld_machine_module(rec, previous_fe, src, base, out, res, "l1_backend_emit", names, 53, 1) != 0
         return: 1
     if: bld_headers(previous_backend, stage, txt_path(out, "headers")) != 0
         return: 1
@@ -7117,7 +7149,7 @@ fn: bld_backend (@: rec c.FILE; @: stage char; @: base char; @: previous_fe char
     if: bld_hash_note(rec, source) != 0 || bld_hash_note(rec, cfile) != 0 || bld_hash_note(rec, exe) != 0
         return: 1
     return: 0
-end: bld_backend
+end: bld_backend_selected
 
 # Existing single C storage, printed as declarations only by ordinary L3.
 # Imported sequentially at the old state position, never by the public API.

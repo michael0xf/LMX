@@ -2048,7 +2048,7 @@ fn: lm_compiler_emit_foreign_formal (@: out c.FILE; int: ty; int: mi; int: fi; i
     if: arg = 2 && foreign_depth_cell[0][i] = 0
         if: c.fprintf(out, "    if: l2_received[%d].present = 0 || l2_received[%d].kind != c.LMX_WALK_VALUE_FOREIGN || l2_received_refs[%d] = 0\n        lmx_call_note_walk_fail(c.LMX_WALK_UNSUPPORTED)\n        return: 0\n    ---\n", fi, fi, fi) < 0
             return: 1
-        if: c.fputs("    @: ", out) < 0 || c.lm_compiler_write_text(out, foreign_name_cell[0][i]) != 0 || c.fprintf(out, " l2_b%d (cast: (@: ", fi) < 0 || c.lm_compiler_write_text(out, foreign_name_cell[0][i]) != 0 || c.fprintf(out, ") %s)\n", ref\data) < 0
+        if: c.fputs("    @: ", out) < 0 || c.lm_compiler_emit_native_type(out, ty) != 0 || c.fprintf(out, " l2_b%d (cast: (@: ", fi) < 0 || c.lm_compiler_emit_native_type(out, ty) != 0 || c.fprintf(out, ") %s)\n", ref\data) < 0
             return: (cast: (int) (1))
         ---
     if: arg = 2
@@ -2065,7 +2065,7 @@ fn: lm_compiler_emit_foreign_formal (@: out c.FILE; int: ty; int: mi; int: fi; i
         ---
     ---
     if: foreign_depth_cell[0][i] = 0
-        if: c.lm_compiler_write_text(out, foreign_name_cell[0][i]) != 0 || c.lm_compiler_tx_input_cname(ref, "l2_p", mi, fi, "") != 0 || c.fprintf(out, ": %s", ref\data) < 0
+        if: c.lm_compiler_emit_native_type(out, ty) != 0 || c.lm_compiler_tx_input_cname(ref, "l2_p", mi, fi, "") != 0 || c.fprintf(out, ": %s", ref\data) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     if: foreign_const_cell[0][i] != 0 && c.fputs("const: ", out) < 0
@@ -12755,7 +12755,7 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
         return: (cast: (int) (1))
     if: cls = 5 && c.fputs("        \\out: (cast: (@: void) l2_tv)\n", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: cls = 6 && (c.lm_compiler_value_decl_text(rt, 1, "l2_rv", declaration) != 0 || c.fprintf(out_cell[0], "        %s (cast: (@: ", declaration\data) < 0 || c.lm_compiler_write_text(out_cell[0], foreign_name_cell[0][rt - 100]) != 0 || c.fputs(") dest)\n        \\l2_rv: l2_tv\n        \\out: dest\n        lmx_walk_value_foreign(@ l2_actual_result, dest)\n", out_cell[0]) < 0)
+    if: cls = 6 && (c.lm_compiler_value_decl_text(rt, 1, "l2_rv", declaration) != 0 || c.fprintf(out_cell[0], "        %s (cast: (@: ", declaration\data) < 0 || c.lm_compiler_emit_native_type(out_cell[0], rt) != 0 || c.fputs(") dest)\n        \\l2_rv: l2_tv\n        \\out: dest\n        lmx_walk_value_foreign(@ l2_actual_result, dest)\n", out_cell[0]) < 0)
         return: (cast: (int) (1))
     if: cls >= 1 && cls <= 5
         descriptor := c.lm_compiler_input_is_descriptor(i, -1)

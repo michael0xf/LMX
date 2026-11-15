@@ -1,5 +1,17 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
+**Срез396, 2026-11-15 — public scalar resolver; ограниченные кодовые gates PASS.**
+Общий frontend interner сохраняет source word, глубину указателя, const и raw-C роль; native printer
+берёт точное scalar spelling из активной primitive.description. Translation-owned aliases проходят прежний
+L1 type emitter; номера runtime rows и совпадение C spelling не становятся semantic identity.
+Public scalar machine units, включая отдельную переставленную ACTIVE таблицу с ProbeReal, прошли private gates;
+обычный метод с double*** прошёл native/обходчик и root0/root1. Машинные FP assertions остаются native.
+Whole01 genuine G1/G2 quick/fixedpoint29/canonical931, actual G2 recovery16 и Graph3 triple PASS.
+Recovery использует готовые объекты после исправления ошибочного prod path; targeted01 SUITE не объявлен PASS.
+G2 render35/14, fresh docs-check02 и indexed01 PASS35/14/27/44/615, links/LF28277/28283.
+Owned scalar actual/result, runtime receiving/Run/FFI/Foreign-Array и общий кеш/flush остаются OPEN.
+Точные артефакты и пределы проверки — в [свидетельстве396](../steps/witnesses/m13-public-scalars-20261115/notes.md).
+
 **Срез395, 2026-11-15 — GC живого исполнения runtime/native; ограниченные кодовые gates PASS.**
 Marker до sweep проходит существующие activation/call_places, рабочие кадры и полные Values.
 Временные borrowed spans принадлежат arena исполнения и снимаются до rewind/free; собственные scratch chunks

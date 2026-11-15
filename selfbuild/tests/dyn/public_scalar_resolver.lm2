@@ -1,0 +1,75 @@
+# Public source names, not generated profile aliases. The assertion body is a
+# machine module; its ordinary owner exercises the standard four launch modes.
+# This is frontend/C ABI acceptance, not general typed Graph Run acceptance.
+include: "<float.h>" "<limits.h>" "<stdint.h>"
+
+fn: ps_float (float: x) float
+    return: x
+fn: ps_double (double: x) double
+    return: x
+fn: ps_llong (llong: x) llong
+    return: x
+fn: ps_flong (flong: x) flong
+    return: x
+fn: ps_boolean (Boolean: x) Boolean
+    return: x
+fn: ps_bool (bool: x) bool
+    return: x
+fn: ps_cbool (_Bool: x) _Bool
+    return: x
+fn: ps_i8 (i8: x) i8
+    return: x
+fn: ps_f32 (f32: x) f32
+    return: x
+fn: ps_f64 (f64: x) f64
+    return: x
+fn: ps_pointer (@@@: p double) @@@: double
+    return: p
+fn: ps_const (const: (@: p double)) double
+    return: \p
+
+fn: ps_check () int
+    float: f (cast: (float) 1) + c.FLT_EPSILON
+    double: d (cast: (double) 1) + c.DBL_EPSILON
+    llong: w c.LLONG_MAX - 2
+    flong: e (cast: (flong) 1) + c.LDBL_EPSILON
+    Boolean: b (cast: (Boolean) (0 - 1))
+    bool: t (cast: (bool) 1)
+    _Bool: u (cast: (_Bool) 1)
+    i8: s (cast: (i8) (0 - 1))
+    f32: a (cast: (f32) 1) + c.FLT_EPSILON
+    f64: z (cast: (f64) 1) + c.DBL_EPSILON
+    @: p double @ d
+    @@: pp double @ p
+    @@@: ppp double @ pp
+    # Check the original C constants too: matching an already narrowed local
+    # would not prove the selected ABI spelling or its precision.
+    if: w != c.LLONG_MAX - 2 || w <= c.INT_MAX
+        return: 89
+    if: f = 1 || f != 1 + c.FLT_EPSILON || sizeof(float) != sizeof(c.float)
+        return: 90
+    if: d = 1 || d != 1 + c.DBL_EPSILON || sizeof(double) != sizeof(c.double)
+        return: 91
+    if: e = 1 || e != 1 + c.LDBL_EPSILON
+        return: 92
+    if: b != 0 - 1 || s != 0 - 1
+        return: 93
+    if: a != f || z != d || sizeof(f32) != sizeof(c.float) || sizeof(f64) != sizeof(c.double)
+        return: 94
+    if: ps_float(f) != f || ps_double(d) != d
+        return: 81
+    if: ps_llong(w) != w || ps_flong(e) != e
+        return: 82
+    if: ps_boolean(b) != b || ps_i8(s) != s
+        return: 83
+    if: ps_bool(t) != t || ps_cbool(u) != u
+        return: 84
+    if: ps_f32(a) != a || ps_f64(z) != z
+        return: 85
+    if: ps_pointer(ppp) != ppp || ps_const(p) != d
+        return: 86
+    if: sizeof(Boolean) != sizeof(c.int8_t)
+        return: 87
+    if: sizeof(bool) != sizeof(c._Bool)
+        return: 88
+    return: 7

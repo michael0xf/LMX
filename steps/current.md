@@ -1,5 +1,51 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — срез396: public primitive resolver M11.7/M13, кодовые gates/docs-check PASS
+
+Работа, commit и push — прямо C:/Nyasha_Planet/LMX, branch main; отдельного дерева Sol нет.
+395 принят/отправлен73196f98420a9ff5d6c0837217bbe1a754b144c9. Goal ACTIVE.
+Root — единственный code/test/build writer; helpers завершили read-only review без существенных findings.
+Два прежних чужих untracked не менять и не индексировать. Все кодовые producers396 terminal.
+
+Pipeline396: build2/codex_fix250generationchain01/runs/sol-m13-public-scalars-20261115-01;
+artifact stage — build2/codex_fix250generationchain01/sol-m13-public-scalars-01, это каталог сборки.
+Frozen Source11:931 SHAae015927aa7075a1ca5a9716a6cb416cc0fe8ce6ff290f6313e73a6612739fd5.
+Canonical/source11 equality и verify repo/stage931 PASS. Code Source10; Source11 добавляет только ordinary fixture.
+Tool03 SHA5e5aad88/verify-record54/0/selftest0 failures PASS. Private FE07 hostedce2e5493,
+новый backend95ca3cc3, reuse102/ABI24/94 headers PASS; successful translations переиспользованы.
+
+Общий interner сохраняет source word/depth/const/raw-C; native printing берёт точное spelling активной
+primitive.description. Scalar eligibility общая с physical exporter. Unit aliases используют прежний module
+prefix и обратимое spelling, не runtime row. Existing L1 emitter принимает aliases обычного output.
+Partial frontend recipe выбирает backend modules прежним selector; whole по-прежнему строит всё.
+Machine suite допускает явный PRIMITIVE только своего unit, owner не теряет обычную таблицу.
+Private native03: public_scalar_resolver и отдельная ACTIVE ProbeReal table PASS, owners n/f/root0/root1.
+Обычный public_pointer_names с double*** PASS n/f/root0/root1; machine FP assertions остаются native.
+Старые exact_scalar_storage и forward_header twins controls native02 PASS.
+
+Whole01 genuine quick: actual G1 строит/проверяет whole G2, оба по9 smoke/tool startup/hash PASS.
+Fixedpoint02:29 PASS, включая полную consumed closure356 G1/G2 и canonical931. Подготовленный fixedpoint01
+с двумя cross-version runtime comparisons не запускался: новые aliases меняют generated C/runtime objects.
+Read-only review полного driver.c diff подтверждает только3 alias substitutions и2 пары include/typedef.
+Побайтовое равенство с seed395 не заявлено; новые G1/G2 prod/observe совпадают.
+Actual G2 frontend SHA6337a681, Tool SHAbf419e67, runtime prod90d44af7/observe8054aa95.
+Targeted01 как SUITE не PASS: root передал prod directory вместо driver.o, все8 links отказали.
+Без новой трансляции/C compile те же8 p.o перелинкованы внешним linker с правильным G2 driver.o.
+Штатный L2 driver проверил entry7 в16 запусках (4 cases × n/f × root0/root1), все exit0.
+Эти результаты — recovery gate, не переписанная SUITE4/0. Case4 — прежний exact_scalar_storage.
+G2 Graph01 SHAd8458bbc; declared_model_interface/construction_paths_owned_data/declared_model_missing
+PASS interp/native/forced, последний сохраняет expected build4. Graph checks3/0.
+
+Actual G2 docs render semantics PASS35 paired/14 cases/both snapshots; generated content не изменился.
+Docs-check01 не дошёл до EOL: root не создал PRIVATE_OUT, os_run не смог записать лог.
+Fresh docs-check02 с новыми CWD/PRIVATE_OUT PASS35/14/27/44/615, links/LF28277; git diff --check PASS.
+Explicit owned index26 и indexed docs-check01 PASS35/14/27/44/615, links/LF28283.
+Результаты gates добавлены как выходные annotations, не новые semantic inputs. Далее commit/push396 прямо main.
+Grammar/semantics source не менялись; не повторять кодовые gates без изменения входов или новой причины.
+Owned scalar actual/result, absent physical witness + исходный ACTIVE SOURCE, runtime receiving/Run/FFI,
+Foreign-Array и общий кеш/flush — следующие зависимые работы основного v3. Полные M11/M13/M14 OPEN.
+[Свидетельство396](witnesses/m13-public-scalars-20261115/notes.md).
+
 ## 2026-11-15 — M11/M13/M14: срез395, runtime/native execution GC roots
 
 Работа, commit и push — прямо C:/Nyasha_Planet/LMX, branch main; отдельное дерево Sol не требуется.

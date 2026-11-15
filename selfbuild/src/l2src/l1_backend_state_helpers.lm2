@@ -1126,6 +1126,10 @@ fn: l1_validate_implicit_node (const: (@: source_node c.LmP0Node); const: (@: pa
     if: source_node\kind = c.LM_P0_NODE_FRAME
         if: c.l1_text_is_receiver(source_node\as\frame\head) != 0
             return: (cast: (int) (c.l1_error(path, source_node, "reserved L1 name")))
+        # An explicit nested L1 body has its own import/declaration/validation
+        # boundary in emit_l1_body; do not validate it as an ordinary item here.
+        if: top != 0 && c.l1_text_eq(source_node\as\frame\head, "L1") != 0
+            return: 0
         # foreign: <name> registers a type the included C header declares.  It is
         # accepted in a unit as well as in a header -- a unit that takes a foreign
         # type as a local (LmP0Text, decContext) must be able to name it, and the
@@ -1134,7 +1138,7 @@ fn: l1_validate_implicit_node (const: (@: source_node c.LmP0Node); const: (@: pa
             if: c.l1_hdr_frame_name(source_node\as\frame) = 0
                 return: (cast: (int) (c.l1_error(path, source_node, "foreign type missing name")))
             ---
-            return: (cast: (int) (l1_hdr_type_add((cast: (const: @: c.LmP0Text) c.l1_hdr_frame_name(source_node\as\frame)), path, source_node, 103)))
+            return: 0
         ---
         if: top != 0 && l1_unit_item_ok((cast: (const: @: c.LmP0Text) source_node\as\frame\head)) = 0
             if: (source_node\as\frame\flags & c.LM_P0_FRAME_COLON) != 0U && l1_head_is_unknown_type((cast: (const: @: c.LmP0Text) source_node\as\frame\head))

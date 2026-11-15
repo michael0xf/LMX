@@ -1735,10 +1735,13 @@ fn: lm_compiler_array_count_is (const: (@: t c.LmP0Text)) int
 end: lm_compiler_array_count_is
 
 fn: lm_compiler_unimpl_numeric (const: (@: stmt c.LmP0Node)) const: @: char
+    @: here int (cast: (@: int) (@ c.l2_here_mi))
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
         return: (cast: (const: @: char) (0))
     if: lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) != 1 && lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body)) != 2
         return: (cast: (const: @: char) (0))
+    if: here[0] >= 0 && c.lm_compiler_m_machine(here[0]) != 0 && c.lm_compiler_primitive_scalar_row((cast: (const: @: c.LmP0Text) stmt\as\frame\head)) >= 0
+        return: (cast: (const: @: char) 0)
     if: lm_compiler_frame_head(stmt, "float")
         return: (cast: (const: @: char) ("by-value float local not yet implemented"))
     if: lm_compiler_frame_head(stmt, "short")

@@ -1,0 +1,10 @@
+# This unit receives public_scalar_table as its actual primitive input.
+# ProbeReal is absent from the runtime's catalog and uses a different row order.
+include: "<float.h>"
+fn: ps_active (ProbeReal: x) ProbeReal
+    return: x
+fn: ps_active_check () int
+    ProbeReal: x (cast: (ProbeReal) 1) + c.DBL_EPSILON
+    if: x = 1 || x != 1 + c.DBL_EPSILON || ps_active(x) != x || sizeof(ProbeReal) != sizeof(c.double)
+        return: 89
+    return: 7

@@ -876,18 +876,6 @@ fn: lm_compiler_profile_c_size (const: (@: text c.LmP0Text)) size_t
         i := i + 1U
     return: n
 
-# The existing literal payload slice, without the C-door identifier gate.
-# Multiword C type spellings remain ordinary type atoms for the L1 emitter.
-fn: lm_compiler_profile_payload (const: (@: text c.LmP0Text); @: out c.LmP0Text) int
-    const: (@: bytes char text\data)
-    size_t: n text\length
-    if: n >= 2U && ((bytes[0] = 96 && bytes[n - 1U] = 96) || (bytes[0] = 34 && bytes[n - 1U] = 34))
-        bytes := bytes + 1U
-        n := n - 2U
-    out\data := bytes
-    out\length := n
-    return: (cast: (int) (n != 0U))
-
 # Generate exact scalar access contracts from the SAME selected source rows.
 # Equal C spellings can share access functions; source descriptions stay distinct.
 # None/void, reference/opaque/callable/descriptor rows have no scalar binding.
@@ -937,22 +925,7 @@ fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
         current_name := names + row
         ids[row] := -1
         slot := tb_cell0[0][pr_t[0]] + row * width
-        complete := 1
-        col := 0
-        while: col < 5
-            if: columns[col] < 0 || tbx_name[0][slot + columns[col]] = 0
-                complete := 0
-                break
-            atom := (cast: (const: @: c.LmP0Text) tbx_arg[0][slot + columns[col]]\as\atom)
-            if: (col = 0 && c.lm_compiler_payload_eq(atom, "1") = 0) || (col != 0 && c.lm_compiler_payload_eq(atom, "0") = 0)
-                complete := 0
-                break
-            col := col + 1
-        if: complete != 0 && tbx_name[0][slot + spelling] != 0
-            atom := (cast: (const: @: c.LmP0Text) tbx_arg[0][slot + spelling]\as\atom)
-            complete := lm_compiler_profile_payload(atom, current_name)
-        else:
-            complete := 0
+        complete := c.lm_compiler_primitive_scalar_spelling(row, current_name)
         if: complete = 0
             row := row + 1
             continue
@@ -6210,6 +6183,11 @@ fn: lm_compiler_check_body (const: (@: body c.LmP0Structure); int: mi; const: (@
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && c.lm_compiler_struct_local(stmt, @ lnm) = 0 && c.lm_compiler_ml_find(lnm) >= 0
+            last := c.lm_compiler_next_active((cast: (@: c.LmP0Field) stmt\as\frame\body\first_field))
+            n := c.lm_compiler_count_active((cast: (const: @: c.LmP0Structure) stmt\as\frame\body))
+            if: n > 1 && lm_compiler_check_fields(c.lm_compiler_next_active((cast: (@: c.LmP0Field) last\next)), n - 1, mi, path, stmt) != 0
+                return: 1
+            ---
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
             continue
         # The walked root's typed reference `@: T r` (l2_root_ref_ns): its own field, counted and bound here as
@@ -6981,7 +6959,7 @@ fn: lm_compiler_emit_machine_module (const: (@: out_path char)) int
         c.remove(pub_tmp_cell[0])
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], 0, "the machine module's header cannot be opened")))
     out_cell[0] := header
-    if: c.lm_compiler_emit_machine_mark(header) != 0 || c.lm_compiler_emit_machine_preamble(header, (cast: (int) (header_path_cell[0] != 0))) != 0 || c.fputs("prototype:\n", header) < 0
+    if: c.lm_compiler_emit_machine_mark(header) != 0 || c.lm_compiler_emit_machine_preamble(header, (cast: (int) (header_path_cell[0] != 0))) != 0 || c.lm_compiler_emit_scalar_aliases(header) != 0 || c.fputs("prototype:\n", header) < 0
         bad := 1
     # An output with no header of its own declares all its functions in that one block.
     while: bad = 0 && i < m_n_cell[0]
@@ -17659,6 +17637,9 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: c.lm_compiler_write_defines(out_cell[0]) != 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
+    if: c.lm_compiler_emit_scalar_aliases(out_cell[0]) != 0
+        c.fclose(out_cell[0])
+        return: 1
     # An os program is translated for one target; its C translation unit must be of that target too.
     if: c.lm_compiler_program_has_os() != 0 && c.lm_compiler_emit_os_target_guard(out_cell[0]) != 0
         c.fclose(out_cell[0])

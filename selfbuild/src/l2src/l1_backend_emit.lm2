@@ -2967,6 +2967,21 @@ fn: l1_emit_l1_body (@: out c.FILE; const: (@: body c.LmP0Structure); const: (@:
             ---
         ---
         field := field\next
+    # Imports have registered their types. Register this body's aliases once,
+    # then validate uses and emit through the same declaration emitter as headers.
+    field := body\first_field
+    while: field != 0
+        if: c.l1_node_ignored((cast: (const: @: c.LmP0Node) field\value)) = 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_FRAME && (c.l1_text_eq((cast: (const: @: c.LmP0Text) field\value\as\frame\head), "type") != 0 || c.l1_text_eq((cast: (const: @: c.LmP0Text) field\value\as\frame\head), "foreign") != 0)
+            if: c.l1_hdr_check_item((cast: (const: @: c.LmP0Node) field\value), path) != 0
+                return: 1
+            ---
+        ---
+        field := field\next
+    field := body\first_field
+    while: field != 0
+        if: c.l1_validate_implicit_node((cast: (const: @: c.LmP0Node) field\value), path, 1) != 0
+            return: 1
+        field := field\next
     field := body\first_field
     while: field != 0
         if: c.l1_node_ignored((cast: (const: @: c.LmP0Node) (field\value))) = 0 && (field\value = 0 || field\value\kind != c.LM_P0_NODE_FRAME || c.l1_text_eq((cast: (const: @: c.LmP0Text) (field\value\as\frame\head)), (cast: (const: @: char) ("predef"))) = 0)
@@ -2984,12 +2999,12 @@ fn: l1_emit_implicit_l1 (@: out c.FILE; const: (@: root c.LmP0Node); const: (@: 
         return: (cast: (int) (c.l1_error((cast: (const: @: char) (path)), (cast: (const: @: c.LmP0Node) (0)), (cast: (const: @: char) ("empty implicit L1 body")))))
     if: c.l1_fn_register_node((cast: (const: @: c.LmP0Node) (root)), (cast: (const: @: char) (path))) != 0
         return: (cast: (int) (1))
-    if: c.l1_validate_implicit_node((cast: (const: @: c.LmP0Node) (root)), (cast: (const: @: char) (path)), (cast: (int) (1))) != 0
-        return: (cast: (int) (1))
     if: root\kind = c.LM_P0_NODE_STRUCTURE
         if: root\as\structure = 0 || root\as\structure\first_field = 0
             return: (cast: (int) (c.l1_error((cast: (const: @: char) (path)), (cast: (const: @: c.LmP0Node) (0)), (cast: (const: @: char) ("empty implicit L1 body")))))
         return: (cast: (int) (l1_emit_l1_body((cast: (@: c.FILE) (out)), (cast: (const: @: c.LmP0Structure) (root\as\structure)), (cast: (const: @: char) (path)), (cast: (int) (depth)))))
+    if: c.l1_validate_implicit_node(root, path, 1) != 0
+        return: 1
     if: root\kind = c.LM_P0_NODE_FRAME && c.l1_text_eq((cast: (const: @: c.LmP0Text) (root\as\frame\head)), (cast: (const: @: char) ("predef")))
         return: (cast: (int) (l1_emit_import((cast: (@: c.FILE) (out)), (cast: (const: @: c.LmP0Frame) (root\as\frame)), (cast: (const: @: char) (path)), (cast: (int) (depth)))))
     return: (cast: (int) (l1_emit_item((cast: (@: c.FILE) (out)), (cast: (const: @: c.LmP0Node) (root)), (cast: (const: @: char) (path)), (cast: (int) (1)), (cast: (int) (depth)))))
@@ -3226,6 +3241,8 @@ fn: l1_emit_item (@: out c.FILE; const: (@: source_node c.LmP0Node); const: (@: 
     # can use it, and emits nothing: the C spelling is the name itself.
     if: c.l1_text_eq((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), (cast: (const: @: char) ("foreign")))
         return: (cast: (int) (0))
+    if: c.l1_text_eq((cast: (const: @: c.LmP0Text) source_node\as\frame\head), "type") != 0
+        return: c.l1_emit_hdr_type_alias(out, (cast: (const: @: c.LmP0Frame) source_node\as\frame), path, source_node)
     if: c.l1_text_eq((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), (cast: (const: @: char) ("import"))) || c.l1_text_eq((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), (cast: (const: @: char) ("predef")))
         return: (cast: (int) (l1_emit_import((cast: (@: c.FILE) (out)), (cast: (const: @: c.LmP0Frame) (source_node\as\frame)), (cast: (const: @: char) (path)), (cast: (int) (depth)))))
     if: c.l1_text_eq((cast: (const: @: c.LmP0Text) (source_node\as\frame\head)), (cast: (const: @: char) ("os")))
@@ -3804,10 +3821,6 @@ fn: l1_translate_unit (const: (@: in_path char); const: (@: out_path char)) int
         if: root = 0
             c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
             c.fprintf((cast: (@: c.FILE) (c.stderr)), (cast: (const: @: char) ("l1trans error: %s:1:1: empty implicit L1 body\n")), in_path)
-            c.free((cast: (@: void) (tmp)))
-            return: (cast: (int) (1))
-        if: c.l1_validate_implicit_node((cast: (const: @: c.LmP0Node) (root)), (cast: (const: @: char) (in_path)), (cast: (int) (1))) != 0
-            c.lm_p0_document_destroy((cast: (@: c.LmP0Document) (document)))
             c.free((cast: (@: void) (tmp)))
             return: (cast: (int) (1))
         ---

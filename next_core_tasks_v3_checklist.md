@@ -1,5 +1,13 @@
 # Чеклист реализации LMX
 
+- [x] 396: active public primitive resolver, source-keyed interner и единая native spelling projection;
+  unit-owned aliases в прежнем L1 emitter, public scalar/deep/const/custom table приёмка.
+  Source11:931; whole01 G1/G2 quick/fixedpoint29, actual G2 recovery16 и Graph3 triple PASS;
+  render35/14/fresh docs-check02/indexed01 PASS35/14/27/44/615, links/LF28277/28283.
+- [ ] Общий owned scalar/Run/receiving/FFI/Foreign-Array после resolver, без int carrier и pointer-подмены scalar.
+- [ ] Для owned scalar receiving продолжить existing physical witness/SOURCE: absent scalar witness с canonical ABI
+  выбранного pool, исходная ACTIVE строка прямым metadata edge; совпадение C spelling не заменяет source identity.
+
 **Срез395 — runtime/native GC execution roots общего M11/M13/M14.** Source27:927/Frontend04/Runtime02;
 machine unit и обычный GC fixture PASS n/f/root0/root1 в [общем конвейере](steps/current.md).
 Whole01 genuine G1/G2 quick/fixedpoint31/canonical927, actual G2 targeted4 и Graph3 triple PASS;
@@ -29,7 +37,8 @@ render35/14, docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28270/
   и записи, не ограничиваться прямым тестом нового helper или source-interface доказательством393.
 - [x] Проверены generated scalar declaration header и source-maintained C99 backend keywords; прямой L2 machine unit
   собирать один раз через общий runner. Его обычный n/f/root owner не доказывает обход FP/64-bit тела или полный FFI.
-- [ ] Довести общий resolver публичных primitive names → точный C spelling; private generated alias не подменяет этот путь.
+- [x] Общий resolver eligible публичных scalar primitive names → точный C spelling подключён в396;
+  отдельные semantic source identity, runtime receiving/Run и Foreign-Array остаются OPEN.
 - [ ] Обязательные activation/current/pending Value GC roots остаются OPEN до закрытия receiving операции.
 - [ ] Foreign-Array ABI/typed backing остаётся обязательной частью OPEN bridge, не объявлять его scalar ABI реализацией.
 - [ ] Полная приёмка общего bridge: exact FP/llong/unsigned transport, stable cell/slot/typeof/alias, повторный CODE producer, owned lifetime,

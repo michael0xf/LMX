@@ -1,0 +1,11 @@
+# Ordinary methods, not a machine assertion body. The declared primitive name
+# supplies a pointer's C spelling and remains its source contract in both modes.
+fn: pointer_identity (@@@: p double) @@@: double
+    return: p
+fn: run () int
+    @@@: p double 0
+    if: pointer_identity(p) != 0
+        return: 81
+    return: 7
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

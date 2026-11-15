@@ -271,6 +271,176 @@ fn: lm_compiler_foreign_intern (const: (@: name c.LmP0Text); int: depth; int: is
     return: (cast: (int) (lm_compiler_foreign_intern_parts(name, depth, is_const, raw_c)))
 end: lm_compiler_foreign_intern
 
+# Literal table payload, borrowed from the selected source document.
+fn: lm_compiler_profile_payload (const: (@: text c.LmP0Text); @: out c.LmP0Text) int
+    const: (@: bytes char text\data)
+    size_t: n text\length
+    if: n >= 2U && ((bytes[0] = 96 && bytes[n - 1U] = 96) || (bytes[0] = 34 && bytes[n - 1U] = 34))
+        bytes := bytes + 1U
+        n := n - 2U
+    out\data := bytes
+    out\length := n
+    return: (cast: (int) (n != 0U))
+
+# The same eligibility as the physical scalar exporter, from the ACTIVE table.
+# A spelling never selects a semantic row: aliases keep their own source names.
+fn: lm_compiler_primitive_scalar_spelling (int: row; @: out c.LmP0Text) int
+    @: pr_table int (cast: (@: int) (@ c.l2_pr_t))
+    @@: rows int (cast: (@@: int) (@ c.l2_tb_nrow))
+    @@: widths int (cast: (@@: int) (@ c.l2_tb_ncol))
+    @@: first int (cast: (@@: int) (@ c.l2_tb_cell0))
+    @@@: names char (cast: (@@@: char) (@ c.l2_tbx_name))
+    @@@: nodes c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_tbx_arg))
+    const: (@: key char "cell")
+    @: entry_node c.LmP0Node 0
+    int: col 0
+    int: index 0
+    int: flag 0
+    if: out = 0 || c.lm_compiler_prim_load() != 0 || row < 0 || row >= rows[0][pr_table[0]]
+        return: 0
+    while: flag < 5
+        if: flag = 1
+            key := "reference"
+        if: flag = 2
+            key := "opaque"
+        if: flag = 3
+            key := "callable"
+        if: flag = 4
+            key := "descriptor"
+        col := c.lm_compiler_table_col(pr_table[0], key)
+        if: col < 0
+            return: 0
+        index := first[0][pr_table[0]] + row * widths[0][pr_table[0]] + col
+        entry_node := nodes[0][index]
+        if: names[0][index] = 0 || entry_node = 0 || entry_node\kind != c.LM_P0_NODE_ATOM || entry_node\as = 0
+            return: 0
+        if: (flag = 0 && c.lm_compiler_payload_eq((cast: (const: @: c.LmP0Text) entry_node\as\atom), "1") = 0) || (flag != 0 && c.lm_compiler_payload_eq((cast: (const: @: c.LmP0Text) entry_node\as\atom), "0") = 0)
+            return: 0
+        flag := flag + 1
+    col := c.lm_compiler_table_col(pr_table[0], "spelling")
+    if: col < 0
+        return: 0
+    index := first[0][pr_table[0]] + row * widths[0][pr_table[0]] + col
+    entry_node := nodes[0][index]
+    if: names[0][index] = 0 || entry_node = 0 || entry_node\kind != c.LM_P0_NODE_ATOM || entry_node\as = 0
+        return: 0
+    return: lm_compiler_profile_payload((cast: (const: @: c.LmP0Text) entry_node\as\atom), out)
+
+fn: lm_compiler_primitive_scalar_row (const: (@: name c.LmP0Text)) int
+    c.LmP0Text: spelling
+    int: row -1
+    # Type probing also occurs while source parts/predefs are being indexed.
+    # Absence at that phase is not a failed completed primitive-table load.
+    if: name = 0 || c.lm_compiler_table_find("primitive.description") < 0
+        return: -1
+    if: c.lm_compiler_prim_load() != 0
+        return: -1
+    row := c.lm_compiler_prim_row(name, 0)
+    if: lm_compiler_primitive_scalar_spelling(row, @ spelling) = 0
+        return: -1
+    return: row
+
+# Existing unit identity plus a reversible spelling, not a runtime row number.
+# Escaping non-alphanumeric bytes also distinguishes spaces from underscores.
+fn: lm_compiler_scalar_alias_name (const: (@: spelling c.LmP0Text); @: dest c.L2Tx) int
+    @: hash_a unsigned (cast: (@: unsigned) (@ c.l2_module_hash_a))
+    @: hash_b unsigned (cast: (@: unsigned) (@ c.l2_module_hash_b))
+    const: (@: digits char "0123456789abcdef")
+    c.L2FrontendScratchChar64: prefix
+    @: text char (cast: (@: char) prefix\buffer)
+    size_t: i 0U
+    int: ch 0
+    if: c.snprintf(text, 64U, "L2S%08X%08X_", hash_a[0], hash_b[0]) < 0 || c.lm_compiler_tx_set(dest, text) != 0
+        return: 1
+    while: i < spelling\length
+        ch := (cast: (int) spelling\data[i])
+        if: ch < 0
+            ch := ch + 256
+        if: (ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122) || (ch >= 48 && ch <= 57)
+            if: c.lm_compiler_tx_catn(dest, spelling\data + i, 1U) != 0
+                return: 1
+            ---
+        else:
+            if: c.lm_compiler_tx_cat(dest, "_") != 0 || c.lm_compiler_tx_catn(dest, digits + ch / 16, 1U) != 0 || c.lm_compiler_tx_catn(dest, digits + ch % 16, 1U) != 0
+                return: 1
+            ---
+        i := i + 1U
+    return: 0
+
+# Native spelling is a projection only. type_parts still returns the source word.
+fn: lm_compiler_native_type_text (int: raw; @: dest c.L2Tx) int
+    @: count int (cast: (@: int) (@ c.l2_foreign_n))
+    @@: raw_c int (cast: (@@: int) (@ c.l2_foreign_raw_c))
+    c.LmP0Text: word_storage
+    @: word c.LmP0Text @ word_storage
+    c.LmP0Text: spelling
+    int: depth 0
+    int: qualified 0
+    int: row -1
+    int: i raw - 100
+    if: dest = 0 || lm_compiler_type_parts(raw, word, @ depth, @ qualified) != 0
+        return: 1
+    if: raw >= 100 && i < count[0]
+        if: lm_compiler_foreign_native_void(i) != 0
+            return: c.lm_compiler_tx_set(dest, "void")
+        if: raw_c[0][i] = 0
+            row := lm_compiler_primitive_scalar_row(word)
+            if: row >= 0 && lm_compiler_primitive_scalar_spelling(row, @ spelling) != 0
+                return: lm_compiler_scalar_alias_name(@ spelling, dest)
+            ---
+        ---
+    ---
+    return: c.lm_compiler_tx_wrapn(dest, 0, word\data, word\length, 0)
+
+fn: lm_compiler_emit_native_type (@: out c.FILE; int: raw) int
+    c.L2FrontendScratchChar160: storage
+    c.L2Tx: value
+    @: text c.L2Tx c.lm_compiler_tx_local(@ value, (cast: (@: char) storage\buffer), 160U)
+    if: text = 0 || lm_compiler_native_type_text(raw, text) != 0
+        return: 1
+    return: (cast: (int) (c.fwrite(text\data, 1U, text\len, out) != text\len))
+
+fn: lm_compiler_emit_scalar_aliases (@: out c.FILE) int
+    @: count int (cast: (@: int) (@ c.l2_foreign_n))
+    @@: raw_c int (cast: (@@: int) (@ c.l2_foreign_raw_c))
+    @@@: words c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_foreign_name))
+    c.LmP0Text: spelling_storage
+    @: spelling c.LmP0Text @ spelling_storage
+    c.LmP0Text: earlier
+    c.L2FrontendScratchChar160: storage
+    c.L2Tx: value
+    @: text c.L2Tx c.lm_compiler_tx_local(@ value, (cast: (@: char) storage\buffer), 160U)
+    int: i 0
+    int: prior 0
+    int: row -1
+    int: old -1
+    int: started 0
+    while: i < count[0]
+        row := -1
+        if: raw_c[0][i] = 0
+            row := lm_compiler_primitive_scalar_row(words[0][i])
+        if: row < 0 || lm_compiler_primitive_scalar_spelling(row, spelling) = 0
+            i := i + 1
+            continue
+        prior := 0
+        while: prior < i
+            old := -1
+            if: raw_c[0][prior] = 0
+                old := lm_compiler_primitive_scalar_row(words[0][prior])
+            if: old >= 0 && lm_compiler_primitive_scalar_spelling(old, @ earlier) != 0 && c.lm_compiler_text_same(spelling, @ earlier) != 0
+                break
+            prior := prior + 1
+        if: prior = i
+            if: started = 0 && c.fputs("include: \"<stdint.h>\"\n", out) < 0
+                return: 1
+            started := 1
+            if: text = 0 || lm_compiler_scalar_alias_name(spelling, text) != 0 || c.fprintf(out, "type: %s ", text\data) < 0 || c.fwrite(spelling\data, 1U, spelling\length, out) != spelling\length || c.fputs("\n", out) < 0
+                return: 1
+            ---
+        ---
+        i := i + 1
+    return: 0
+
 fn: lm_compiler_foreign_intern_parts (const: (@: name c.LmP0Text); int: depth; int: is_const; int: raw_c) int
     @: foreign_n_cell int (cast: (@: int) (@ c.l2_foreign_n))
     @@: foreign_depth_cell int (cast: (@@: int) (@ c.l2_foreign_depth))
@@ -369,6 +539,8 @@ fn: lm_compiler_foreign_byvalue (const: (@: t c.LmP0Text)) int
     if: t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: (cast: (int) (lm_compiler_foreign_intern(t, 0, 0)))
     ---
+    if: lm_compiler_primitive_scalar_row(t) >= 0
+        return: lm_compiler_foreign_intern_parts(t, 0, 0, 0)
     # Bare foreign by-value names are refused (type-position rule, ticket 106 PART2).
     return: (cast: (int) (0 - 1))
 end: lm_compiler_foreign_byvalue
@@ -387,7 +559,7 @@ fn: lm_compiler_write_foreign_native (@: out c.FILE; int: i) int
     @@@: foreign_name_cell c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_foreign_name))
     if: lm_compiler_foreign_native_void(i) != 0
         return: (cast: (int) ((cast: (int) (c.fputs("void", out) < 0))))
-    return: (cast: (int) (c.lm_compiler_write_text(out, foreign_name_cell[0][i])))
+    return: lm_compiler_emit_native_type(out, 100 + i)
 end: lm_compiler_write_foreign_native
 
 fn: lm_compiler_emit_foreign_named (@: out c.FILE; int: ty; const: (@: prefix char); const: (@: name c.LmP0Text)) int
@@ -401,7 +573,7 @@ fn: lm_compiler_emit_foreign_named (@: out c.FILE; int: ty; const: (@: prefix ch
     if: prefix != 0 && c.fputs(prefix, out) < 0
         return: (cast: (int) (1))
     if: foreign_depth_cell[0][i] = 0
-        if: c.lm_compiler_write_text(out, foreign_name_cell[0][i]) != 0 || c.fputs(": ", out) < 0 || c.lm_compiler_write_text(out, name) != 0
+        if: lm_compiler_emit_native_type(out, ty) != 0 || c.fputs(": ", out) < 0 || c.lm_compiler_write_text(out, name) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     if: foreign_const_cell[0][i] != 0 && c.fputs("const: ", out) < 0
@@ -441,7 +613,7 @@ fn: lm_compiler_emit_foreign_temp (@: out c.FILE; int: ty; const: (@: ind char);
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     if: foreign_depth_cell[0][i] = 0
-        if: c.lm_compiler_write_text(out, foreign_name_cell[0][i]) != 0 || c.fprintf(out, ": l2_t%d\n", temp) < 0
+        if: lm_compiler_emit_native_type(out, ty) != 0 || c.fprintf(out, ": l2_t%d\n", temp) < 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     if: c.lm_compiler_emit_address_marks(out, foreign_depth_cell[0][i]) != 0 || c.fputs(": ", out) < 0
@@ -927,8 +1099,10 @@ fn: lm_compiler_ty_raw_c_members (int: ty) int
         return: (cast: (int) (0))
     if: foreign_name_cell[0][i] = 0
         return: (cast: (int) (0))
-    if: foreign_raw_c_cell[0][i] = 0 && c.lm_compiler_text_eq(foreign_name_cell[0][i], "Lmx")
-        return: (cast: (int) (0))
+    if: foreign_raw_c_cell[0][i] = 0
+        if: c.lm_compiler_text_eq(foreign_name_cell[0][i], "Lmx") || lm_compiler_primitive_scalar_row(foreign_name_cell[0][i]) >= 0
+            return: 0
+        ---
     return: (cast: (int) (1))
 end: lm_compiler_ty_raw_c_members
 
@@ -1045,7 +1219,10 @@ fn: lm_compiler_pointer_decl_text (int: raw; int: extra_depth; const: (@: name c
     if: dest = 0 || lm_compiler_type_parts(raw, word, @ depth, @ is_const) != 0 || depth + extra_depth < 1
         return: (cast: (int) (1))
     depth := depth + extra_depth
-    if: c.lm_compiler_tx_clear(dest) != 0
+    c.L2FrontendScratchChar160: native_storage
+    c.L2Tx: native_value
+    @: native_text c.L2Tx c.lm_compiler_tx_local(@ native_value, (cast: (@: char) native_storage\buffer), 160U)
+    if: native_text = 0 || lm_compiler_native_type_text(raw, native_text) != 0 || c.lm_compiler_tx_clear(dest) != 0
         return: (cast: (int) (1))
     if: is_const != 0 && c.lm_compiler_tx_cat(dest, "const: ") != 0
         return: (cast: (int) (1))
@@ -1065,7 +1242,7 @@ fn: lm_compiler_pointer_decl_text (int: raw; int: extra_depth; const: (@: name c
             return: (cast: (int) (1))
         ---
     else:
-        if: c.lm_compiler_tx_catn(dest, word\data, word\length) != 0
+        if: c.lm_compiler_tx_cat(dest, native_text\data) != 0
             return: (cast: (int) (1))
         ---
     if: name != 0 && (c.lm_compiler_tx_cat(dest, " ") != 0 || c.lm_compiler_tx_cat(dest, name) != 0)
@@ -1086,7 +1263,7 @@ fn: lm_compiler_value_decl_text (int: raw; int: extra_depth; const: (@: name cha
         return: (cast: (int) (lm_compiler_pointer_decl_text(raw, extra_depth, name, dest)))
     if: qualified != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_tx_wrapn(dest, 0, word\data, word\length, ": ") != 0
+    if: lm_compiler_native_type_text(raw, dest) != 0 || c.lm_compiler_tx_cat(dest, ": ") != 0
         return: (cast: (int) (1))
     return: (cast: (int) (c.lm_compiler_tx_cat(dest, name)))
 end: lm_compiler_value_decl_text
@@ -1967,7 +2144,7 @@ fn: lm_compiler_formal_local_decl (int: ft; const: (@: name char); @: dest c.L2T
     if: lm_compiler_pointer_depth(lm_compiler_formal_raw(ft)) > 0
         return: (cast: (int) (lm_compiler_pointer_decl_text(lm_compiler_formal_raw(ft), 0, name, dest)))
     if: lm_compiler_foreign_value_ft(ft) != 0
-        if: c.lm_compiler_tok_tx(dest, foreign_name_cell[0][ft - 100]) != 0 || c.lm_compiler_tx_cat(dest, ": ") != 0 || c.lm_compiler_tx_cat(dest, name) != 0
+        if: lm_compiler_native_type_text(ft, dest) != 0 || c.lm_compiler_tx_cat(dest, ": ") != 0 || c.lm_compiler_tx_cat(dest, name) != 0
             return: (cast: (int) (1))
         return: (cast: (int) (0))
     cty := c.lm_compiler_prim_code_name(ft)

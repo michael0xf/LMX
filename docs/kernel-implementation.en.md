@@ -1,5 +1,17 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Slice396, 2026-11-15 -- public scalar resolver; bounded code gates PASS.**
+The common frontend interner retains the source word, pointer depth, const and raw-C role; native printing
+selects the exact scalar spelling from the active primitive.description. Translation-owned aliases use the
+existing L1 type emitter; runtime row numbers and equal C spellings do not become semantic identity.
+Public scalar machine units, including a separate reordered ACTIVE table with ProbeReal, pass private gates;
+an ordinary method with double*** passes native/walker and root0/root1. Machine FP assertions remain native.
+Whole01 genuine G1/G2 quick/fixedpoint29/canonical931, actual G2 recovery16 and Graph3 triple PASS.
+Recovery reuses built objects after correcting the mistaken prod path; targeted01 SUITE is not reported as PASS.
+G2 render35/14, fresh docs-check02 and indexed01 PASS35/14/27/44/615, links/LF28277/28283.
+Owned scalar actual/result, runtime receiving/Run/FFI/Foreign-Array and the shared cache/flush remain OPEN.
+Exact artifacts and acceptance limits are in [witness396](../steps/witnesses/m13-public-scalars-20261115/notes.md).
+
 **Slice395, 2026-11-15 -- runtime/native execution GC roots; bounded code gates PASS.**
 Before sweep, the marker visits existing activation/call_places, working frames and complete Values.
 Temporary borrowed spans belong to the execution arena and detach before rewind/free; their owning scratch chunks

@@ -1,5 +1,14 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез396: кодовые gates и docs-check PASS.**395 принят/отправлен73196f98 прямо main.
+Active primitive.description подключена к общему resolver/interner/native printers; source identity и C spelling
+раздельны, unit aliases без runtime row guess проходят прежний L1 emitter. Private public/deep/const/custom table PASS.
+Whole01 genuine G1/G2 quick/fixedpoint29/canonical931 PASS; actual G2 recovery16 на готовых p.o и Graph3 triple PASS.
+Targeted01 SUITE сохранил ошибочный prod path/LD refusal; повторены только links и штатные L2 driver assertions.
+Owned scalar actual/result/absent witness/ACTIVE SOURCE/receiving/Run/FFI/Array и полные M11/M13/M14 OPEN.
+G2 render35/14/both snapshots, fresh docs-check02 и indexed01 PASS35/14/27/44/615, links/LF28277/28283.
+Продолжать основной v3 после commit/push396. Отдельное дерево Sol не требуется.
+
 **Срез395, 2026-11-15 — runtime/native execution GC roots;394 принят2972b497 прямо main.**
 Source27:927/Frontend04/Runtime02: execution_gc_roots и обычный execution_gc_native PASS n/f/root0/root1,
 включая pending actuals, рабочий снимок после очистки physical DATA, short-circuit, catch и последующий reclaim.

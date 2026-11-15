@@ -1,5 +1,10 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Slice400, 2026-11-15 -- common mapped copier and written DATA fn_data; code gates PASS.**
+Source04:934, genuine G1/G2 quick/fixedpoint32, actual G2 targeted5/0 and Graph6 triple PASS.
+Full overlap merge, scalar CODE-own and native/cache/flush M14 remain OPEN.
+[Witness400](../steps/witnesses/m13-mapped-data-20261115/notes.md), [current pipeline](../steps/current.md).
+
 **Slice399, 2026-11-15 -- written SOURCE and hidden transport; code gates PASS.** The common header-source
 refusal and scalar FREE default metadata output are fixed. Written SOURCE and Model/capture admission guards are preserved.
 Genuine G1/G2 quick/fixedpoint30, actual G2 targeted13/0 and Graph3 triple PASS; render/fresh docs check/final index PASS.
@@ -1879,6 +1884,24 @@ address of its slot in `args` (a description: the requirement, the default, `uni
 candidate), an argument is a frame cell found by position or by name (§5.1); receiving an argument is the first
 assignment of the frame's argument place. Reception, `implements` by used fields, conversion routes and throws follow the
 current book; the carrier changes, not the rules (`:=`, `merge`, positional `a(5)`/`a: 5`, q/z, AXBY are kept -- §11).
+
+**Common mapped copier and written DATA, slice400.** Same-arena `fn_data` uses the existing CopyMap/CopyStack:
+written→new DATA is registered before fields, followed by reserve, CODE-own completion and one shared drain.
+The CopyMap `value_policy` field selects operation policy:1 preserves physical profiles,2 defers Value edges,
+4 allocates ordinary parts from a held F. Graph reserve uses7 and drain retains5; existing mode0 is unchanged.
+This changes the machine ABI, so generated headers and runtime must agree on sizeof(CopyMap).
+The result role is selected before allocation; no shared pool is retagged. Only explicit fn creates a new F.
+FOREIGN/reference companions retain the complete snapshot until common relocation workers finish it; absent payload
+is neither read nor copied. WORD becomes a new physical cell with the same canonical TEXT pointer,
+complete type and selected profile; the common map preserves shared/distinct cells.
+After drain, Graph projects names, immutable slot facts and mapped parents. Receiving DATA retains its own
+data name, owner parent and completed width. There is no intermediate publication, Model/test execution or GC;
+the constructor owns cleanup. The map and queue live only for this construction.
+Private02 covers real parsed sub and ordinary Code over typed DATA, Model/backedge, precision,
+absence, WORD lifetime after source release, held ordinary parts and explicit fn; machine assertions are native.
+Private02 SUITE1/0 and existing controls02 SUITE4/0 PASS n/f/root0/root1. Whole/final gates are in
+[witness400](../steps/witnesses/m13-mapped-data-20261115/notes.md).
+Full overlap merge, scalar CODE-own/typed args/results/FFI/Array and native/cache/flush M14 remain OPEN.
 
 **Written SOURCE and hidden transport, slice399.** `rw_signature_input` requests original declared SOURCE
 only for a written formal whose index is below arity. A hidden input has no written formal:

@@ -1,5 +1,10 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
+**Срез400, 2026-11-15 — общий mapped copier и written DATA fn_data; кодовые gates PASS.**
+Source04:934, genuine G1/G2 quick/fixedpoint32, actual G2 targeted5/0 и Graph6 triple PASS.
+Полный overlap merge, scalar CODE-own и native/cache/flush M14 остаются OPEN.
+[Свидетельство400](../steps/witnesses/m13-mapped-data-20261115/notes.md), [текущий конвейер](../steps/current.md).
+
 **Срез399, 2026-11-15 — written SOURCE и hidden transport; кодовые gates PASS.** Исправлены общий
 header-source отказ и вывод scalar FREE default metadata. Guard written SOURCE и Model/capture admission сохранены.
 Genuine G1/G2 quick/fixedpoint30, actual G2 targeted13/0 и Graph3 triple PASS; render/fresh docs-check/final index PASS.
@@ -1797,6 +1802,24 @@ dirty и продолжение. Порядок полей ниже задаёт
 найденная позицией или именем (§5.1); приём аргумента — первое присваивание аргументного места кадра. Приём, `implements`
 по используемым полям, маршруты преобразований и броски — по действующей книге; меняется носитель, не правила (`:=`,
 `merge`, позиционные `a(5)`/`a: 5`, q/z, AXBY сохраняются — §11).
+
+**Общий mapped copier и written DATA, срез400.** Same-arena `fn_data` использует существующие CopyMap/CopyStack:
+written→new DATA регистрируется до полей, затем reserve, CODE-own completion и один общий drain.
+В CopyMap поле `value_policy` задаёт политику операции:1 сохраняет physical profiles,2 откладывает Value edges,
+4 выделяет ordinary parts из held F. Graph reserve использует7, drain сохраняет5; прежний режим0 не меняется.
+Это изменение машинного ABI, поэтому generated headers и runtime должны иметь одинаковый sizeof(CopyMap).
+Роль результата выбирается до allocation, общая pool не переназначается. Лишь явный fn создаёт новую F.
+FOREIGN/reference companions держат полный снимок до завершения общими relocation workers; absent payload
+не читается и не копируется. WORD переносится как новая physical cell с прежним canonical TEXT pointer,
+полным type и выбранным profile; общая карта сохраняет shared/distinct cells.
+После drain Graph переносит имена, immutable slot facts и mapped parents. Receiving DATA сохраняет своё
+имя data, owner parent и дополненную ширину. Промежуточной публикации, выполнения Model/test и GC нет;
+constructor владеет cleanup. Карта и очередь живут только в пределах этой construction.
+Private02 проверяет настоящий parsed sub и ordinary Code над typed DATA, Model/backedge, precision,
+absence, WORD lifetime после release source, held ordinary parts и explicit fn; machine assertions native.
+Private02 SUITE1/0 и прежние controls02 SUITE4/0 PASS n/f/root0/root1. Whole/final gates — в
+[свидетельстве400](../steps/witnesses/m13-mapped-data-20261115/notes.md).
+Полный overlap merge, scalar CODE-own/typed args/results/FFI/Array и native/cache/flush M14 остаются OPEN.
 
 **Written SOURCE и hidden transport, срез399.** `rw_signature_input` запрашивает original declared SOURCE
 лишь для письменного формала с индексом меньше arity. Скрытый вход не имеет письменного формала:

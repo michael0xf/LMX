@@ -1408,9 +1408,9 @@ fn: decl_graph_copy (@: f c.FILE) int
         return: 1
     if: c.fputs("# Read-only §10 construction preflight. `prior_profiles` are physical profile\n# roots which completed qualification before this root, not merely allocated\n# or sealed unit storage. `method_leaves` are exact fn/fm/sub occurrences from\n# the translator's source rows. `opaque_types` are numeric pointee type ids\n# which the source type table proves to be foreign C resources; no names or\n# permanent graph metadata enter this call.\ndefine: LMX_QUALIFY_OK 0\ndefine: LMX_QUALIFY_INVALID 1\ndefine: LMX_QUALIFY_NOMEM 2\n\n# Operation-local bookkeeping: open-addressing pointer map and a work list.\n# Their buffers may move on growth; the addresses stored IN them never move.\n# Open-addressing pointer map: two void* DynamicArrays (table size = capacity;\n# occupancy tracked in n). Keys/vals always allocated to capacity slots.\n\n\n\nstruct: LmxCopyMap\n    VoidDynamicArray: keys\n    VoidDynamicArray: vals\n", f) < 0
         return: 1
-    if: c.fputs("    size_t: n\n    # Scratch report for a remapped copy: first reached sealed source profile\n    # absent from this map. Not graph metadata, and cleared before each run.\n    @: Lmx unmapped\nend: LmxCopyMap\n\nstruct: LmxCopyStack\n    VoidDynamicArray: items\nend: LmxCopyStack\n\n# Machine scratch for a constructor's selected-profile coverage proof. These\n# intervals are never stored in the language graph or name/address registry.\nstruct: LmxQualifySpan\n    @: LmxPool pool\n    @: LmxChunk chunk\n    size_t: first\n    size_t: count\nend: LmxQualifySpan\n\nstruct: LmxQualifySpansDynamicArray\n    @: LmxQualifySpan data\n    size_t: size\n    size_t: capacity\nend: LmxQualifySpansDynamicArray\n\nprototype:\n    # Shared temporary address-map operations, including the receiving\n    # projection built by an enclosing constructor. No per-node metadata.\n    fn: lmx_copy_map_init (@: LmxCopyMap map) int\n", f) < 0
+    if: c.fputs("    size_t: n\n    # Scratch report for a remapped copy: first reached sealed source profile\n    # absent from this map. Not graph metadata, and cleared before each run.\n    @: Lmx unmapped\n    # Operation policy: 1 preserves profiles; 2 defers Value edges; 4 copies ordinary parts.\n    int: value_policy\nend: LmxCopyMap\n\nstruct: LmxCopyStack\n    VoidDynamicArray: items\nend: LmxCopyStack\n\n# Machine scratch for a constructor's selected-profile coverage proof. These\n# intervals are never stored in the language graph or name/address registry.\nstruct: LmxQualifySpan\n    @: LmxPool pool\n    @: LmxChunk chunk\n    size_t: first\n    size_t: count\nend: LmxQualifySpan\n\nstruct: LmxQualifySpansDynamicArray\n    @: LmxQualifySpan data\n    size_t: size\n    size_t: capacity\nend: LmxQualifySpansDynamicArray\n\nprototype:\n    # Shared temporary address-map operations, including the receiving\n    # projection built by an enclosing constructor. No per-node metadata.\n    fn: lmx_copy_map_init (@: LmxCopyMap map) int\n", f) < 0
         return: 1
-    if: c.fputs("    fn: lmx_copy_map_dispose (@: LmxCopyMap map) void\n    fn: lmx_copy_map_get (@: LmxCopyMap map; @: void key) @: void\n    fn: lmx_copy_map_put (@: LmxCopyMap map; @: void key; @: void value) int\n    # A profiled forest copy for relocating several qualified roots as one\n    # operation.  One source-address map spans every root, so aliases and\n    # cross-root cycles are preserved.  On success `relocated` owns the\n    # operation-local map buffers; the caller disposes it after using the\n    # addresses to prepare incoming-edge rewrites.  On failure it is empty.\n    # Root qualification/sealing and publication of incoming edges remain the\n    # caller's separate transaction; this function alone publishes neither.\n", f) < 0
+    if: c.fputs("    fn: lmx_copy_map_dispose (@: LmxCopyMap map) void\n    fn: lmx_copy_map_get (@: LmxCopyMap map; @: void key) @: void\n    fn: lmx_copy_map_put (@: LmxCopyMap map; @: void key; @: void value) int\n    # Same-arena synchronous receiving construction: caller owns map/queue.\n    fn: lmx_graph_copy_value_mapped_staged (@: LmxArena arena; @: void source; @: LmxCopyMap map; @: LmxCopyStack todo; @@: void out) int\n    fn: lmx_graph_copy_drain_mapped (@: LmxArena arena; @: LmxCopyMap map; @: LmxCopyStack todo; int: chain) int\n    fn: lmx_copy_stack_dispose (@: LmxCopyStack stack) void\n    # A profiled forest copy for relocating several qualified roots as one\n    # operation.  One source-address map spans every root, so aliases and\n    # cross-root cycles are preserved.  On success `relocated` owns the\n    # operation-local map buffers; the caller disposes it after using the\n    # addresses to prepare incoming-edge rewrites.  On failure it is empty.\n    # Root qualification/sealing and publication of incoming edges remain the\n    # caller's separate transaction; this function alone publishes neither.\n", f) < 0
         return: 1
     if: c.fputs("    fn: lmx_graph_copy_forest_profiled_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx dst_profile; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int\n    # Address-keyed source-profile -> destination-profile map. Each copied\n    # qualified branch keeps its own profile, but all roots share one address\n    # relocation map; no source graph metadata or runtime name key is added.\n    fn: lmx_graph_copy_forest_remapped_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap profile_map; @@: Lmx outs; @: LmxCopyMap pending; @: LmxCopyMap relocated) int\n    fn: lmx_graph_copy_map_dispose (@: LmxCopyMap relocated) void\n    # Complete an existing source->copy map with ONE receiving projection.\n", f) < 0
         return: 1
@@ -2235,7 +2235,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: ids_names char c.calloc(6U, sizeof(@: char))
     @@: gc_graph_names char c.calloc(5U, sizeof(@: char))
     @@: implements_names char c.calloc(76U, sizeof(@: char))
-    @@: copy_names char c.calloc(27U, sizeof(@: char))
+    @@: copy_names char c.calloc(30U, sizeof(@: char))
     @@: merge_names char c.calloc(24U, sizeof(@: char))
     @@: call_names char c.calloc(22U, sizeof(@: char))
     @@: post_names char c.calloc(23U, sizeof(@: char))
@@ -2886,6 +2886,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     copy_names[24] := "lmx_graph_copy_profiles_owned"
     copy_names[25] := "lmx_graph_copy_profiled_owned"
     copy_names[26] := "lmx_graph_copy_many_used_constructed_staged"
+    copy_names[27] := "lmx_graph_copy_value_mapped_staged"
+    copy_names[28] := "lmx_graph_copy_drain_mapped"
+    copy_names[29] := "lmx_copy_stack_dispose"
     implements_names[0] := "lmx_domain_register"
     implements_names[1] := "lmx_domain_kind"
     implements_names[2] := "lmx_domain_type"
@@ -3251,7 +3254,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_implements", implements_names, 76, 0) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 27, 0) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_copy_owned", copy_names, 30, 0) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_merge_owned", merge_names, 24, 0) != 0
         return: 1

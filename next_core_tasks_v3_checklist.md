@@ -1,5 +1,14 @@
 # Чеклист реализации LMX
 
+- [x] Ограниченный400: written DATA fn_data использует общий mapped copier/queue и полные scalar/reference
+  companions; WORD сохраняет canonical TEXT и physical type/profile, held F копируется ordinary parts.
+  Real parsed sub/ordinary Code, Model/backedge→newD, poisoned absence, sharing, names и cross-arena WORD lifetime:
+  private02 SUITE1/0 n/f/root0/root1 PASS; старые scalar/GC controls02 SUITE4/0 PASS.
+  Source04:934 frozen/canonical, whole G1/G2 quick smoke9/0 и fixedpoint32 PASS; actual G2 targeted5/0
+  и Graph6 triple PASS. Финальные docs/index gates — в [конвейере](steps/current.md).
+- [ ] Полный overlap merge на том же mapped bridge: все receiving aliases до drain, late scalar override по
+  исходному Value и точному ABI; public scalar CODE-own/typed args/results/FFI/Array/native M14 остаются OPEN.
+
 **Срез397, кодовые gates PASS:** bounded runtime04/private08: selected FOREIGN ABI, absent witness, exact owned storage,
 declared SOURCE результата, real portable RET(ARG), C/graph destinations и protected spans. Полный custom SOURCE
 через counted TEXT, source fact/copy/GC PASS. FE05 private raw compiler/Runtime07 ordinary os-walk-witness03

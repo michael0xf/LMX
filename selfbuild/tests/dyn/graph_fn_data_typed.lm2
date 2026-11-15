@@ -1,0 +1,251 @@
+# Real sub/fn construction and ordinary Code exercise the common copier.
+# The C ABI supplies exact scalar bytes and observes physical identities.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<float.h>"
+
+fn: fd_binding (@: name char; @@: source void) const: @: c.LmxScalarABI
+    return: c.lmx_graph_scalar_binding(c.lmx_graph_intern(name, c.strlen(name)), source)
+
+fn: fd_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: void
+    return: c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+
+fn: fd_cell (@: g c.LmxGraph; @: name char; const: (@: abi c.LmxScalarABI); @: source void; @: model c.Lmx; @: physical c.Lmx; @: bytes void) @: void
+    c.LmxWalkValue: context
+    c.LmxWalkValue: value
+    @: cp c.LmxWalkValue @ context
+    @: vp c.LmxWalkValue @ value
+    @: cell void 0
+    c.lmx_walk_value_clear(cp)
+    cp\source_type := source
+    cp\model := model
+    if: bytes = 0
+        cell := c.lmx_arena_scalar_cells_profiled(g\arena, c.LMX_TYPE_FOREIGN, physical, abi, 1U)
+        cp := c.lmx_value_cell_context(g\arena, cell)
+        if: cp = 0
+            return: 0
+        cp\source_type := source
+        cp\model := model
+    else:
+        if: c.lmx_walk_value_foreign_capture(g\arena, bytes, c.LMX_TYPE_FOREIGN, abi, physical, cp, vp) != c.LMX_WALK_OK
+            return: 0
+        cell := vp\ref
+    ---
+    if: cell = 0 || c.lmx_graph_name(g, cell, name, c.strlen(name)) != 0
+        return: 0
+    return: cell
+
+fn: fd_expect (@: arena c.LmxArena; @: cell void; const: (@: abi c.LmxScalarABI); @: source void; @: model c.Lmx; @: physical c.Lmx; @: bytes void) int
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, cell)
+    @: context c.LmxWalkValue c.lmx_value_cell_context(arena, cell)
+    if: pool = 0 || pool\type != c.LMX_TYPE_FOREIGN || pool\scalar_abi != abi || pool\profile != physical || context = 0 || context\present = 0 || context\ref != cell || context\type != pool\type || context\scalar_abi != abi || context\source_type != source || context\model != model || context\physical_profile != physical
+        return: 1
+    return: c.memcmp(cell, bytes, abi\size)
+
+fn: fd_count (@: g c.LmxGraph; @: parts c.Lmx; int: expected) int
+    @: data c.Lmx c.lmx_graph_method_data(g, parts)
+    size_t: slot c.lmx_graph_named(g, data, c.lmx_graph_intern("count", 5U))
+    int: actual 0
+    if: data = 0 || slot >= c.lmx_graph_count(data) || c.lmx_graph_value_int(g, c.lmx_graph_get(data, slot), @ actual) != 0 || actual != expected
+        return: 1
+    return: 0
+
+fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: after) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: source void 0
+    @: alias_source void 0
+    const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
+    const: (@: alias_abi c.LmxScalarABI fd_binding("f64", @ alias_source))
+    @: physical c.Lmx (cast: (@: c.Lmx) c.lmx_range_profile(arena, c.lmx_graph_get(original, 0U)))
+    @: make c.Lmx (cast: (@: c.Lmx) fd_named(g, (cast: (@: c.Lmx) original\parent), "Make"))
+    @: f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("F", 1U)))
+    @: source_held c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) original\parent), c.lmx_graph_intern("Held", 4U)))
+    @: held c.Lmx (cast: (@: c.Lmx) c.lmx_arena_pointer_void_read(c.lmx_graph_get(data, 9U)))
+    @: empty void c.lmx_graph_get(data, 4U)
+    @: context c.LmxWalkValue c.lmx_value_cell_context(arena, empty)
+    @: word void c.lmx_graph_get(data, 5U)
+    @: other_word void c.lmx_graph_get(data, 7U)
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, word)
+    double: zero (cast: (double) 0)
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: replacement c.strtod("3.5", 0)
+    double: x_value zero
+    double: y_value precise
+    double: initialized precise
+    int: touched 0
+    if: after != 0
+        x_value := precise
+        y_value := replacement
+    ---
+    if: abi = 0 || alias_abi != abi || f = 0 || c.lmx_graph_method(g, f) = 0 || data = original || data != c.lmx_graph_method_data(g, f) || data\parent != f || c.lmx_graph_count(data) != 11U || c.lmx_graph_name_of(g, (cast: (@: void) data)) != c.lmx_graph_intern("data", 4U)
+        return: 101
+    if: fd_expect(arena, c.lmx_graph_get(data, 0U), abi, source, data, physical, @ x_value) != 0 || fd_expect(arena, c.lmx_graph_get(data, 1U), abi, alias_source, data, physical, @ y_value) != 0 || fd_expect(arena, c.lmx_graph_get(data, 2U), abi, source, data, physical, @ replacement) != 0 || fd_expect(arena, c.lmx_graph_get(data, 3U), abi, source, data, physical, @ x_value) != 0
+        return: 102
+    if: fd_expect(arena, c.lmx_graph_get(original, 0U), abi, source, original, physical, @ zero) != 0 || fd_expect(arena, c.lmx_graph_get(original, 1U), abi, alias_source, original, physical, @ precise) != 0 || fd_expect(arena, c.lmx_graph_get(original, 3U), abi, source, original, physical, @ zero) != 0 || c.lmx_graph_get(data, 0U) = c.lmx_graph_get(original, 0U)
+        return: 103
+    if: abi\init(@ initialized) != 0 || empty = c.lmx_graph_get(original, 4U) || context = 0 || context\present != 0 || context\ref != empty || context\kind != c.LMX_WALK_VALUE_FOREIGN || context\type != c.LMX_TYPE_FOREIGN || context\scalar_abi != abi || context\source_type != alias_source || context\model != data || context\physical_profile != physical || c.memcmp(empty, @ initialized, abi\size) != 0
+        return: 104
+    if: word = 0 || word = c.lmx_graph_get(original, 5U) || word != c.lmx_graph_get(data, 6U) || other_word = word || other_word = c.lmx_graph_get(original, 7U) || pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, other_word) || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, c.lmx_graph_get(original, 5U))
+        return: 105
+    if: c.lmx_arena_pointer_void_read(c.lmx_graph_get(data, 8U)) != data || c.lmx_arena_pointer_void_read(c.lmx_graph_get(original, 8U)) != original || c.lmx_graph_slot_name(g, data, 10U) != c.lmx_graph_intern("touched", 7U)
+        return: 106
+    if: held = 0 || held = source_held || c.lmx_graph_fn_result(g, (cast: (@: void) held)) != 0 || c.lmx_graph_method(g, held) != 0 || fd_count(g, held, 3) != 0 || fd_count(g, source_held, 3) != 0
+        return: 107
+    if: after != 0
+        @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
+        if: c.lmx_graph_value_int(g, c.lmx_graph_get(data, 10U), @ touched) != 0 || touched != 7 || again = 0 || c.lmx_graph_method(g, again) = 0 || fd_count(g, again, 4) != 0 || c.lmx_graph_method_data(g, again) = c.lmx_graph_method_data(g, held)
+            return: 108
+        ---
+    ---
+    return: 0
+
+fn: fd_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: root c.Lmx (cast: (@: c.Lmx) code\parent)
+    @: original c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("D", 1U)))
+    @: data c.Lmx (cast: (@: c.Lmx) owner)
+    size_t: checked_slot c.lmx_graph_named(g, root, c.lmx_graph_intern("checked", 7U))
+    int: after (cast: (int) (c.lmx_graph_name_of(g, (cast: (@: void) code)) = c.lmx_graph_intern("Verify", 6U)))
+    int: checked 0
+    int: status 0
+    if: g = 0 || original = 0 || nargs != 0U || c.lmx_graph_value_int(g, c.lmx_graph_get(root, checked_slot), @ checked) != 0 || checked != after
+        return: 109
+    status := fd_verify_data(g, original, data, after)
+    if: status != 0
+        c.fprintf(c.stderr, "fn_data phase %d check %d\n", after, status)
+        return: status
+    if: after != 0
+        @: make c.Lmx (cast: (@: c.Lmx) fd_named(g, root, "Make"))
+        @: f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("F", 1U)))
+        @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
+        unsigned: gen c.lmx_arena_generation_next(arena)
+        if: c.lmx_gc_mark_value(arena, original, gen, 0) != c.LMX_GC_OK || c.lmx_gc_mark_value(arena, f, gen, 0) != c.LMX_GC_OK || c.lmx_gc_mark_value(arena, again, gen, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(arena, gen) != c.LMX_GC_OK || fd_verify_data(g, original, data, after) != 0
+            return: 110
+        ---
+    ---
+    if: c.lmx_graph_assign_int(g, code, root, checked_slot, after + 1) != 0
+        return: 111
+    if: out != 0
+        out[0] := 0
+    if: result != 0
+        c.lmx_walk_value_clear(result)
+    return: 0
+
+# The canonical TEXT interner outlives the source arena. This is the existing
+# cross-arena API with an explicitly selected destination physical profile.
+fn: fd_word_cross () int
+    c.LmxArena: src
+    c.LmxArena: dst
+    c.memset((cast: (@: void) (@ src)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ dst)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ src) != 0 || c.lmx_arena_open(@ dst) != 0
+        return: 112
+    @: sg c.LmxGraph c.lmx_graph_open(@ src)
+    @: dg c.LmxGraph c.lmx_graph_open(@ dst)
+    @: root c.Lmx c.lmx_graph_lmx(sg, 0, 3U)
+    @: copied c.Lmx 0
+    @: physical c.Lmx c.lmx_node_new_owned(@ dst)
+    @: word_a void c.lmx_graph_word(sg, "token", 5U)
+    @: word_b void c.lmx_graph_word(sg, "token", 5U)
+    @: canon char c.lmx_graph_word_text(sg, word_a)
+    c.LmxCopyMap: pending
+    c.LmxCopyMap: relocated
+    int: status 0
+    c.memset((cast: (@: void) (@ pending)), 0, c.sizeof(c.LmxCopyMap))
+    c.memset((cast: (@: void) (@ relocated)), 0, c.sizeof(c.LmxCopyMap))
+    if: sg = 0 || dg = 0 || root = 0 || physical = 0 || word_a = 0 || word_b = word_a || c.lmx_graph_put(root, 0U, word_a) != 0 || c.lmx_graph_put(root, 1U, word_a) != 0 || c.lmx_graph_put(root, 2U, word_b) != 0
+        return: 113
+    status := c.lmx_graph_copy_forest_profiled_staged(@ root, 1U, @ src, @ dst, 0, 0U, physical, @ copied, @ pending, @ relocated)
+    c.lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_GRAPH_COPY_OK)))
+    c.lmx_graph_copy_map_dispose(@ relocated)
+    if: status != c.LMX_GRAPH_COPY_OK || copied = 0 || c.lmx_graph_get(copied, 0U) = word_a || c.lmx_graph_get(copied, 0U) != c.lmx_graph_get(copied, 1U) || c.lmx_graph_get(copied, 2U) = word_b || c.lmx_graph_get(copied, 2U) = c.lmx_graph_get(copied, 0U)
+        return: 114
+    c.lmx_graph_close(sg)
+    c.lmx_arena_release(@ src)
+    @: first void c.lmx_graph_get(copied, 0U)
+    @: second void c.lmx_graph_get(copied, 2U)
+    @: pool c.LmxPool c.lmx_range_cell_pool(@ dst, first)
+    unsigned: gen c.lmx_arena_generation_next(@ dst)
+    if: pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(dg, first) != canon || c.lmx_graph_word_text(dg, second) != canon || c.strcmp(canon, "token") != 0 || c.lmx_gc_mark_value(@ dst, copied, gen, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ dst, gen) != c.LMX_GC_OK || c.lmx_graph_word_text(dg, c.lmx_graph_get(copied, 0U)) != canon
+        return: 115
+    c.lmx_graph_close(dg)
+    c.lmx_arena_release(@ dst)
+    return: 0
+
+fn: fd_mapped_check () int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 80
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: root c.Lmx 0
+    @: file c.FILE c.fopen("graph_fn_data_typed_code.lm2", "wb")
+    @: source void 0
+    @: alias_source void 0
+    const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
+    const: (@: alias_abi c.LmxScalarABI fd_binding("f64", @ alias_source))
+    double: zero (cast: (double) 0)
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: replacement c.strtod("3.5", 0)
+    @: physical c.Lmx c.lmx_node_new_owned(@ arena)
+    @: data c.Lmx c.lmx_graph_lmx(g, 0, 10U)
+    @: x void fd_cell(g, "x", abi, source, data, physical, @ zero)
+    @: y void fd_cell(g, "y", abi, alias_source, data, physical, @ precise)
+    @: z void fd_cell(g, "z", abi, source, data, physical, @ replacement)
+    @: saved void fd_cell(g, "saved", abi, source, data, physical, @ zero)
+    @: empty void fd_cell(g, "empty", abi, alias_source, data, physical, 0)
+    @: word_a void c.lmx_scalar_new_physical_profiled(@ arena, c.LMX_TYPE_WORD, physical)
+    @: word_b void c.lmx_scalar_new_physical_profiled(@ arena, c.LMX_TYPE_WORD, physical)
+    @: self void c.lmx_graph_ref_lmx(g, data)
+    @: held_ref void 0
+    @: held c.Lmx 0
+    @: make c.Lmx 0
+    @: before c.Lmx 0
+    @: verify c.Lmx 0
+    int: opened 0
+    int: status 0
+    int: checked 0
+    int: warm 0
+    if: g = 0 || file = 0 || abi = 0 || abi != alias_abi || source = alias_source || physical = 0 || data = 0 || x = 0 || y = 0 || z = 0 || saved = 0 || empty = 0 || word_a = 0 || word_b = 0 || self = 0
+        return: 81
+    c.lmx_charptr_store_known(word_a, c.lmx_graph_intern("token", 5U))
+    c.lmx_charptr_store_known(word_b, c.lmx_graph_intern("token", 5U))
+    c.memset(empty, 165, abi\size)
+    if: c.fputs("int: checked 0\nfn: Held () int (int: count 0)\n    count := count + 1\n    return: count\nend: Held\nBefore:\nend: Before\nVerify:\nend: Verify\nTransfer:\n    int: touched 7\n    x := y\n    y := z\n    saved := x\nend: Transfer\nMake:\n    sub: F () D Transfer\n    call: F\\data Before\n    F()\n    fn: Again F\\data\\held\n    Again()\n    call: F\\data Verify\nend: Make\n", file) < 0 || c.fclose(file) != 0
+        return: 82
+    status := c.lm_graph_build_file(g, "graph_fn_data_typed_code.lm2", @ root)
+    c.remove("graph_fn_data_typed_code.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 83
+    data\parent := root
+    if: c.lmx_graph_name(g, (cast: (@: void) data), "OriginalD", 9U) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("D", 1U), data) != 0
+        return: 84
+    held := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("Held", 4U)))
+    while: warm < 3
+        if: c.lmx_graph_call_data(g, 0, held, 1) != 0
+            return: 85
+        warm := warm + 1
+    ---
+    held_ref := c.lmx_graph_ref_lmx(g, held)
+    if: held_ref = 0 || c.lmx_graph_name(g, held_ref, "held", 4U) != 0 || c.lmx_graph_name(g, self, "self", 4U) != 0 || c.lmx_graph_put(data, 0U, x) != 0 || c.lmx_graph_put(data, 1U, y) != 0 || c.lmx_graph_put(data, 2U, z) != 0 || c.lmx_graph_put(data, 3U, saved) != 0 || c.lmx_graph_put(data, 4U, empty) != 0 || c.lmx_graph_put(data, 5U, word_a) != 0 || c.lmx_graph_put(data, 6U, word_a) != 0 || c.lmx_graph_put(data, 7U, word_b) != 0 || c.lmx_graph_put(data, 8U, self) != 0 || c.lmx_graph_put(data, 9U, held_ref) != 0
+        return: 86
+    make := (cast: (@: c.Lmx) fd_named(g, root, "Make"))
+    before := (cast: (@: c.Lmx) fd_named(g, root, "Before"))
+    verify := (cast: (@: c.Lmx) fd_named(g, root, "Verify"))
+    before\native := (cast: (c.LmxEntry) c.fd_callback)
+    verify\native := (cast: (c.LmxEntry) c.fd_callback)
+    status := c.lmx_graph_call_data(g, data, make, 0)
+    if: status != 0
+        c.fprintf(c.stderr, "fn_data Make status %d\n", status)
+        return: 87
+    if: c.lmx_graph_value_int(g, fd_named(g, root, "checked"), @ checked) != 0 || checked != 2 || fd_word_cross() != 0
+        return: 88
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7

@@ -210,7 +210,7 @@ fn: lmx_scalar_new_physical_profiled (@: arena c.LmxArena; int: physical_type; @
         ---
         return: (cast: (@: void) cell_uchar)
     ---
-    if: base_type = c.LMX_TYPE_CHAR_PTR
+    if: base_type = c.LMX_TYPE_CHAR_PTR || base_type = c.LMX_TYPE_WORD
         @: zero_charptr char 0
         @@: cell_charptr char (cast: (@@: char) c.lmx_arena_take_profiled(arena, c.sizeof(zero_charptr), c.LMX_KIND_PRIMITIVE, physical_type, value_profile))
         if: cell_charptr != 0

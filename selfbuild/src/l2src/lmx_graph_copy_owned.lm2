@@ -192,6 +192,7 @@ sub: lmx_copy_map_dispose (@: m c.LmxCopyMap)
     lmx_copy_map_set_keys_cap(m, 0U)
     m\n := 0U
     m\unmapped := 0
+    m\value_policy := 0
 end: lmx_copy_map_dispose
 
 fn: lmx_copy_map_get (@: m c.LmxCopyMap; @: key void) @: void
@@ -1594,9 +1595,11 @@ end: lmx_qualify_tree_preflight_full
 # A copy root, a Structure reached through a slot or an array element, and a structural
 # parent queued for the parent fixup are registered alike: since Q44 nothing is shared by
 # address for lying outside the copied subtree, so the copier keeps no "inside" set.
-fn: lmx_copy_target_profile (@: src_arena c.LmxArena; @: source void; @: inherited c.Lmx; @: profile_map c.LmxCopyMap) @: c.Lmx
+fn: lmx_copy_target_profile (@: src_arena c.LmxArena; @: source void; @: inherited c.Lmx; @: profile_map c.LmxCopyMap; @: map c.LmxCopyMap) @: c.Lmx
     @: source_profile c.Lmx
     @: selected c.Lmx
+    if: map != 0 && (map\value_policy & 1) != 0
+        return: (cast: (@: c.Lmx) c.lmx_range_profile(src_arena, source))
     if: profile_map = 0 || source = 0
         return: inherited
     ---
@@ -1653,6 +1656,7 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
     size_t: immutable_next 0U
     int: target_type c.LMX_TYPE_NONE
     int: cell_type c.LMX_TYPE_NONE
+    int: target_role c.LMX_POOL_ROLE_PLAIN
     int: view 0
     dst := (cast: (@: c.Lmx) lmx_copy_map_get(map, (cast: (@: void) src)))
     if: dst != 0
@@ -1681,8 +1685,11 @@ fn: lmx_copy_struct_storage (@: src c.Lmx; @: map c.LmxCopyMap; @: todo c.LmxCop
     ---
     pool := c.lmx_range_cell_pool(src_arena, (cast: (@: void) src))
     target_type := lmx_copy_target_type((cast: (int) pool\type), requested_type)
-    target_profile := lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map)
-    dst := c.lmx_node_new_physical_role_profiled(dst_arena, target_type, target_profile, pool\role)
+    target_profile := lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map, map)
+    target_role := pool\role
+    if: (map\value_policy & 4) != 0
+        target_role := c.LMX_POOL_ROLE_PLAIN
+    dst := c.lmx_node_new_physical_role_profiled(dst_arena, target_type, target_profile, target_role)
     if: dst = 0 || lmx_copy_map_put(map, (cast: (@: void) src), (cast: (@: void) dst)) != 0
         \status := c.LMX_GRAPH_COPY_NOMEM
         return: 0
@@ -1882,7 +1889,7 @@ fn: lmx_copy_ensure_graph (@: src c.Lmx; @: map c.LmxCopyMap; @: wholes c.LmxCop
             ---
         ---
         return: 0
-    cell_profile := lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map)
+    cell_profile := lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map, map)
     source_pool := c.lmx_range_cell_pool(src_arena, (cast: (@: void) src))
     if: source_pool = 0
         \status := c.LMX_GRAPH_COPY_INVALID
@@ -2207,6 +2214,19 @@ fn: lmx_copy_reference_fill_saved (@: dst_cell void; @: saved c.LmxWalkValue; @:
     return: 0
 end: lmx_copy_reference_fill_saved
 
+# Complete either an immediate or a staged reference snapshot. The payload
+# and all metadata use the same map; the source cell is not sampled again.
+fn: lmx_copy_reference_complete_saved (@: dst_cell void; @: saved c.LmxWalkValue; @: referent_owner void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @: map c.LmxCopyMap; @: wholes c.LmxCopyMap; @: todo c.LmxCopyStack; @: status int; @: dst_profile c.Lmx; @@: leaves c.Lmx; size_t: leaf_count; @: profile_map c.LmxCopyMap; int: requested_type) int
+    # CHAR_PTR retains the existing raw C-string payload policy.
+    if: c.lmx_type_base(saved\type) != c.LMX_TYPE_CHAR_PTR
+        saved\ref := lmx_copy_value((cast: (@: void) saved\ref), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
+        if: \status != c.LMX_GRAPH_COPY_OK
+            return: 1
+        ---
+    ---
+    return: lmx_copy_reference_fill_saved(dst_cell, saved, referent_owner, (cast: (@: void) saved\ref), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
+end: lmx_copy_reference_complete_saved
+
 # Both cells have already entered the ordinary physical map before any edge
 # is followed. Whole demand is recorded before recursion, as for Structures.
 fn: lmx_copy_reference_fill (@: src_cell void; @: dst_cell void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @: map c.LmxCopyMap; @: wholes c.LmxCopyMap; @: todo c.LmxCopyStack; @: status int; @: dst_profile c.Lmx; @@: leaves c.Lmx; size_t: leaf_count; @: profile_map c.LmxCopyMap; int: requested_type) int
@@ -2223,16 +2243,37 @@ fn: lmx_copy_reference_fill (@: src_cell void; @: dst_cell void; @: src_arena c.
     ---
     if: lmx_copy_reference_snapshot(src_cell, src_arena, saved, @ referent_owner, status) != 0
         return: 1
-    # CHAR_PTR retains the existing raw C-string payload policy. Its model,
-    # references and referent still follow the common physical relocation.
-    if: c.lmx_type_base(saved\type) != c.LMX_TYPE_CHAR_PTR
-        saved\ref := lmx_copy_value((cast: (@: void) saved\ref), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
-        if: \status != c.LMX_GRAPH_COPY_OK
+    return: lmx_copy_reference_complete_saved(dst_cell, saved, referent_owner, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
+end: lmx_copy_reference_fill
+
+# Complete a captured primitive context through the same physical map. The
+# destination companion owns the snapshot; payload bytes were already copied.
+fn: lmx_copy_scalar_finish (@: cell void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @: map c.LmxCopyMap; @: wholes c.LmxCopyMap; @: todo c.LmxCopyStack; @: status int; @: dst_profile c.Lmx; @@: leaves c.Lmx; size_t: leaf_count; @: profile_map c.LmxCopyMap; int: requested_type) int
+    @: context c.LmxWalkValue c.lmx_value_cell_context(dst_arena, cell)
+    @: pool c.LmxPool c.lmx_range_cell_pool(dst_arena, cell)
+    c.LmxWalkValue: saved
+    @: value c.LmxWalkValue @ saved
+    @: owner void 0
+    if: context = 0 || pool = 0 || pool\scalar_abi = 0
+        \status := c.LMX_GRAPH_COPY_INVALID
+        return: 1
+    c.memcpy((cast: (@: void) value), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
+    if: value\referent != 0
+        owner := c.lmx_value_context_cell_in(src_arena, (cast: (@: c.LmxWalkValue) value\referent))
+        if: owner = 0
+            \status := c.LMX_GRAPH_COPY_UNSUPPORTED
             return: 1
         ---
     ---
-    return: lmx_copy_reference_fill_saved(dst_cell, saved, referent_owner, (cast: (@: void) saved\ref), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
-end: lmx_copy_reference_fill
+    if: lmx_copy_value_context(value, owner, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type) != 0
+        return: 1
+    value\ref := cell
+    value\type := pool\type
+    value\physical_profile := pool\profile
+    value\scalar_abi := pool\scalar_abi
+    c.memcpy((cast: (@: void) context), (cast: (const: @: void) value), c.sizeof(c.LmxWalkValue))
+    return: 0
+end: lmx_copy_scalar_finish
 
 # One child value or array element: returns the destination reference for it,
 # copying language-owned mutable data exactly once per source address.
@@ -2264,7 +2305,6 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
     @: source_context c.LmxWalkValue 0
     c.LmxWalkValue: scalar_saved
     @: scalar_saved_p c.LmxWalkValue @ scalar_saved
-    @: scalar_referent void 0
     @: sequence_owner void
     int: ambiguous 0
     if: v = 0
@@ -2293,7 +2333,7 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
     # A method leaf is not a retention category. If it is not part of an
     # already proved retained immutable profile (handled above), its saved
     # Structure and code follow the same copy map as every ordinary value.
-    cell_profile := lmx_copy_target_profile(src_arena, v, dst_profile, profile_map)
+    cell_profile := lmx_copy_target_profile(src_arena, v, dst_profile, profile_map, map)
     known := lmx_copy_map_get(map, v)
     if: known != 0
         if: wholes != 0 && c.lmx_range_classify(src_arena, v) = c.LMX_KIND_STRUCT && lmx_copy_ensure_graph((cast: (@: c.Lmx) v), map, wholes, todo, src_arena, dst_arena, status, cell_profile, profile_map, requested_type) != 0
@@ -2441,29 +2481,45 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
             if: source_context = 0
                 \status := c.LMX_GRAPH_COPY_INVALID
                 return: (cast: (@: void) 0)
+            # Snapshot metadata before allocator/copy callbacks. An absent
+            # source has no readable payload but still carries its context.
+            c.memcpy((cast: (@: void) scalar_saved_p), (cast: (const: @: void) source_context), c.sizeof(c.LmxWalkValue))
             cell := c.lmx_arena_scalar_cells_profiled(dst_arena, target_type, cell_profile, pointer_pool\scalar_abi, 1U)
             if: cell = 0 || lmx_copy_map_put(map, v, cell) != 0
                 \status := c.LMX_GRAPH_COPY_NOMEM
                 return: (cast: (@: void) 0)
-            if: source_context\present != 0 && pointer_pool\scalar_abi\copy(cell, v) != 0
+            if: scalar_saved_p\present != 0 && pointer_pool\scalar_abi\copy(cell, v) != 0
                 \status := c.LMX_GRAPH_COPY_INVALID
                 return: (cast: (@: void) 0)
             scalar_context := c.lmx_value_cell_context(dst_arena, cell)
-            if: source_context != 0 && scalar_context != 0
-                c.memcpy((cast: (@: void) scalar_saved_p), (cast: (@: void) source_context), c.sizeof(c.LmxWalkValue))
-                scalar_saved_p\scalar_abi := pointer_pool\scalar_abi
-                scalar_referent := c.lmx_value_context_cell_in(src_arena, (cast: (@: c.LmxWalkValue) scalar_saved_p\referent))
-                if: scalar_saved_p\referent != 0 && scalar_referent = 0
-                    \status := c.LMX_GRAPH_COPY_UNSUPPORTED
-                    return: (cast: (@: void) 0)
+            if: scalar_context = 0
+                \status := c.LMX_GRAPH_COPY_INVALID
+                return: 0
+            scalar_saved_p\ref := cell
+            scalar_saved_p\type := target_type
+            scalar_saved_p\physical_profile := cell_profile
+            scalar_saved_p\scalar_abi := pointer_pool\scalar_abi
+            c.memcpy((cast: (@: void) scalar_context), (cast: (const: @: void) scalar_saved_p), c.sizeof(c.LmxWalkValue))
+            if: (map\value_policy & 2) != 0
+                if: lmx_copy_stack_push(todo, (cast: (@: c.Lmx) v)) != 0
+                    \status := c.LMX_GRAPH_COPY_NOMEM
+                    return: 0
                 ---
-                if: lmx_copy_value_context(scalar_saved_p, scalar_referent, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map, requested_type) != 0
-                    return: (cast: (@: void) 0)
-                scalar_saved_p\ref := cell
-                scalar_saved_p\type := target_type
-                scalar_saved_p\physical_profile := cell_profile
-                c.memcpy((cast: (@: void) scalar_context), (cast: (@: void) scalar_saved_p), c.sizeof(c.LmxWalkValue))
+            else:
+                if: lmx_copy_scalar_finish(cell, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map, requested_type) != 0
+                    return: 0
+                ---
+            ---
             return: cell
+        if: base_type = c.LMX_TYPE_WORD
+            if: c.lmx_range_stride(src_arena, v) != sizeof(@: char)
+                \status := c.LMX_GRAPH_COPY_INVALID
+                return: 0
+            cell := c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
+            if: cell = 0
+                \status := c.LMX_GRAPH_COPY_NOMEM
+                return: 0
+            c.lmx_charptr_store_known(cell, c.lmx_charptr_value_known(v))
         if: base_type = c.LMX_TYPE_CHAR
             cell := c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
             if: cell = 0
@@ -2509,22 +2565,24 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
             # kernel terminal keeps its address; a cycle ends at the map).  The
             # -186 k3 rule that shared the pointee is withdrawn.  The cell enters the
             # map before its pointee is copied, so a pointee that points back finds it.
-            pointer_pool := c.lmx_pointer_pool_in(src_arena, v)
-            if: pointer_pool = 0
-                if: base_type != c.LMX_TYPE_CHAR_PTR
-                    \status := c.LMX_GRAPH_COPY_INVALID
+            if: (map\value_policy & 2) != 0
+                if: lmx_copy_reference_snapshot(v, src_arena, scalar_saved_p, @ pointee, status) != 0
                     return: 0
                 ---
-                cell := c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
-            else:
-                cell := c.lmx_pointer_new_typed_profiled(target_type, dst_arena, cell_profile, pointer_pool\stride, pointer_pool\pointer_read, pointer_pool\pointer_write)
             ---
-            if: cell = 0
-                \status := c.LMX_GRAPH_COPY_NOMEM
+            cell := lmx_copy_reference_storage(v, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map, requested_type)
+            if: cell = 0 || \status != c.LMX_GRAPH_COPY_OK
                 return: 0
-            if: lmx_copy_map_put(map, v, cell) != 0
-                \status := c.LMX_GRAPH_COPY_NOMEM
-                return: 0
+            if: (map\value_policy & 2) != 0
+                scalar_context := c.lmx_value_cell_context(dst_arena, cell)
+                if: scalar_context = 0
+                    \status := c.LMX_GRAPH_COPY_INVALID
+                    return: 0
+                c.memcpy((cast: (@: void) scalar_context), (cast: (const: @: void) scalar_saved_p), c.sizeof(c.LmxWalkValue))
+                if: lmx_copy_stack_push(todo, (cast: (@: c.Lmx) v)) != 0
+                    \status := c.LMX_GRAPH_COPY_NOMEM
+                    return: 0
+                return: cell
             if: lmx_copy_reference_fill(v, cell, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map, requested_type) != 0
                 return: 0
             return: cell
@@ -2764,13 +2822,18 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
     @: part_dst_array c.VoidArray 0
     @: head_op c.LmxOp
     @: dst c.Lmx
-    @: cell_profile c.Lmx lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map)
+    @: cell_profile c.Lmx lmx_copy_target_profile(src_arena, (cast: (@: void) src), dst_profile, profile_map, map)
     @: source_value void
     @: copied void
     @: src_cell void
     @: dst_cell void
     @: element_pool c.LmxPool
     int: vtype
+    int: source_kind
+    @: saved_context c.LmxWalkValue 0
+    c.LmxWalkValue: captured
+    @: captured_p c.LmxWalkValue @ captured
+    @: referent_owner void 0
     @: head void
     @: index_cell void
     int: op 0
@@ -2780,6 +2843,29 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
     if: dst = 0
         \status := c.LMX_GRAPH_COPY_INVALID
         return: 1
+    # Staged scalar/reference work is dispatched before any Structure field
+    # is accessed. Its companion owns the original snapshot until this fill.
+    source_kind := c.lmx_range_classify(src_arena, (cast: (@: void) src))
+    if: source_kind = c.LMX_KIND_PRIMITIVE
+        vtype := c.lmx_range_type_of(src_arena, (cast: (@: void) src))
+        if: c.lmx_type_base(vtype) = c.LMX_TYPE_FOREIGN
+            return: lmx_copy_scalar_finish((cast: (@: void) dst), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map, requested_type)
+        if: c.lmx_type_reference_cell(vtype) = 0
+            \status := c.LMX_GRAPH_COPY_INVALID
+            return: 1
+        saved_context := c.lmx_value_cell_context(dst_arena, (cast: (@: void) dst))
+        if: saved_context = 0
+            \status := c.LMX_GRAPH_COPY_INVALID
+            return: 1
+        c.memcpy((cast: (@: void) captured_p), (cast: (const: @: void) saved_context), c.sizeof(c.LmxWalkValue))
+        if: captured_p\referent != 0
+            referent_owner := c.lmx_value_context_cell_in(src_arena, (cast: (@: c.LmxWalkValue) captured_p\referent))
+            if: referent_owner = 0
+                \status := c.LMX_GRAPH_COPY_UNSUPPORTED
+                return: 1
+            ---
+        ---
+        return: lmx_copy_reference_complete_saved((cast: (@: void) dst), captured_p, referent_owner, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map, requested_type)
     if: wholes != 0 && lmx_copy_map_get(wholes, (cast: (@: void) src)) = 0
         return: lmx_copy_link(src, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
     if: src\parent != 0
@@ -2927,6 +3013,53 @@ fn: lmx_copy_process (@: src c.Lmx; @: src_arena c.LmxArena; @: dst_arena c.LmxA
     ---
     return: 0
 end: lmx_copy_process
+
+# The queue engine is shared by ordinary complete copies and a constructor
+# which has already installed all of its receiving correspondences.
+fn: lmx_copy_drain (@: src_arena c.LmxArena; @: dst_arena c.LmxArena; @@: retain_profiles c.Lmx; size_t: retain_count; @: map c.LmxCopyMap; @: wholes c.LmxCopyMap; @: todo c.LmxCopyStack; @: links c.LmxCopyStack; @: status int; @: dst_profile c.Lmx; int: chain; @@: leaves c.Lmx; size_t: leaf_count; @: profile_map c.LmxCopyMap; int: requested_type) int
+    @: source c.Lmx 0
+    while: \status = c.LMX_GRAPH_COPY_OK && (lmx_copy_stack_items_len(todo) != 0U || lmx_copy_stack_items_len(links) != 0U)
+        if: lmx_copy_stack_items_len(todo) != 0U
+            source := lmx_copy_stack_pop(todo)
+            lmx_copy_process(source, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, chain, leaves, leaf_count, profile_map, requested_type)
+        else:
+            source := lmx_copy_stack_pop(links)
+            lmx_copy_link(source, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
+        ---
+    ---
+    return: \status
+end: lmx_copy_drain
+
+# Same-arena, synchronous construction only. Caller owns map/todo and installs
+# receiving seeds before reserve; no intermediate value is published or run.
+fn: lmx_graph_copy_value_mapped_staged (@: arena c.LmxArena; @: source void; @: map c.LmxCopyMap; @: todo c.LmxCopyStack; @@: out void) int
+    int: status c.LMX_GRAPH_COPY_OK
+    if: out = 0
+        return: c.LMX_GRAPH_COPY_INVALID
+    out[0] := 0
+    if: arena = 0 || map = 0 || todo = 0 || lmx_copy_map_keys_cap(map) = 0U
+        return: c.LMX_GRAPH_COPY_INVALID
+    # Physical profile is distinct from semantic Model. Existing complete and
+    # cross-arena APIs keep policy0. A graph-language constructor also copies
+    # held callable parts as ordinary data; only an explicit fn creates FN.
+    map\value_policy := map\value_policy | 7
+    out[0] := lmx_copy_value(source, arena, arena, 0, 0U, map, 0, todo, @ status, 0, 0, 0U, 0, c.LMX_TYPE_NONE)
+    return: status
+end: lmx_graph_copy_value_mapped_staged
+
+# Drain saved Value edges using the same map. Structural parent/name/fact
+# policy belongs to the receiving constructor; its seed root is never queued.
+fn: lmx_graph_copy_drain_mapped (@: arena c.LmxArena; @: map c.LmxCopyMap; @: todo c.LmxCopyStack; int: chain) int
+    c.LmxCopyStack: links
+    int: status c.LMX_GRAPH_COPY_OK
+    if: arena = 0 || map = 0 || todo = 0
+        return: c.LMX_GRAPH_COPY_INVALID
+    c.memset((cast: (@: void) (@ links)), 0, c.sizeof(c.LmxCopyStack))
+    map\value_policy := map\value_policy & ~2
+    lmx_copy_drain(arena, arena, 0, 0U, map, 0, todo, @ links, @ status, 0, chain, 0, 0U, 0, c.LMX_TYPE_NONE)
+    lmx_copy_stack_dispose(@ links)
+    return: status
+end: lmx_graph_copy_drain_mapped
 
 # Prepare the name of an actual copied place: the code its source occurrence binds (IDENTIFIER-CODES), carried as it is
 # -- no spelling is read or copied, so a copy into another arena keeps the name's identity. The private map keeps
@@ -3475,7 +3608,7 @@ fn: lmx_copy_reference_storage (@: src_cell void; @: src_arena c.LmxArena; @: ds
             return: 0
         ---
     ---
-    cell_profile := lmx_copy_target_profile(src_arena, src_cell, dst_profile, profile_map)
+    cell_profile := lmx_copy_target_profile(src_arena, src_cell, dst_profile, profile_map, map)
     owner := lmx_copy_sequence_cell_owner(src_arena, src_cell, @ ambiguous)
     if: ambiguous != 0
         \status := c.LMX_GRAPH_COPY_INVALID
@@ -3529,7 +3662,7 @@ fn: lmx_copy_reference_use (@: src_cell void; size_t: remaining; @@: out_source 
         \status := c.LMX_GRAPH_COPY_INVALID
         return: 0
     ---
-    cell_profile := lmx_copy_target_profile(src_arena, src_cell, dst_profile, profile_map)
+    cell_profile := lmx_copy_target_profile(src_arena, src_cell, dst_profile, profile_map, map)
     cell := lmx_copy_reference_storage(src_cell, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
     if: \status != c.LMX_GRAPH_COPY_OK || cell = 0
         return: 0
@@ -4046,17 +4179,7 @@ fn: lmx_copy_run (@@: sources c.Lmx; size_t: count; @: src_arena c.LmxArena; @: 
         off := off + use_len[u]
         u := u + 1U
     ---
-    # Copy edges until no Structure remains queued. Processing may queue more; in the
-    # used copy a processed or partly needed Structure's parent is linked in part.
-    while: status = c.LMX_GRAPH_COPY_OK && (lmx_copy_stack_items_len(todo) != 0U || lmx_copy_stack_items_len(links) != 0U)
-        if: lmx_copy_stack_items_len(todo) != 0U
-            src := lmx_copy_stack_pop(todo)
-            lmx_copy_process(src, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, chain, leaves, leaf_count, profile_map, requested_type)
-        else:
-            src := lmx_copy_stack_pop(links)
-            lmx_copy_link(src, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, leaves, leaf_count, profile_map, requested_type)
-        ---
-    ---
+    lmx_copy_drain(src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status, dst_profile, chain, leaves, leaf_count, profile_map, requested_type)
     # Parent fixup: a copied Structure points at a copied parent, an explicitly
     # retained qualified parent, or zero. A subtree may keep an outside
     # lexical parent physically owned by the destination. An unresolved parent

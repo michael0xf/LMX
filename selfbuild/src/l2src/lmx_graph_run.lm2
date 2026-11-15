@@ -5478,7 +5478,7 @@ fn: lmx_graph_merge_check (@: g c.LmxGraph; @@: values void; size_t: n; @: chain
                     if: kind = 2
                         chain[0] := 1
                     else:
-                        if: kind != 1 && value != 0
+                        if: kind != 1 && value != 0 && lmx_graph_scalar_pool(g, value) = 0
                             status := 5
                         ---
                     ---
@@ -6217,16 +6217,67 @@ return: lmx_graph_deferred_kind(g, value)
 # with a formal. A formal alone creates no DATA field. The field set is known before the Lmx is made; no initializer runs here
 # (they run at their written places). 0 and the data in out; 1 without memory; 4 or 5 for a written field whose copy is
 # refused or open (lmx_graph_merge_copy).
+# The receiving root already has its own name, parent and final width. Other
+# copied headers keep only mapped parents, as the previous fn_data copier did.
+# Name/fact projection happens after the shared value queue has succeeded.
+fn: lmx_graph_fn_data_metadata (@: g c.LmxGraph; @: map c.LmxCopyMap; @: receiving c.Lmx; size_t: name_count) int
+    @: key_view c.VoidArray (cast: (@: c.VoidArray) (@ map\keys))
+    @@: keys void (cast: (@@: void) key_view\data)
+    @: source void 0
+    @: target void 0
+    @: source_node c.Lmx 0
+    @: target_node c.Lmx 0
+    @: canon char 0
+    @: row c.LmxName 0
+    size_t: count (cast: (size_t) key_view\size)
+    size_t: i 0U
+    size_t: j 0U
+    int: kind 0
+    while: i < count
+        source := keys[i]
+        target := c.lmx_copy_map_get(map, source)
+        if: source != 0 && target != 0 && target != source
+            kind := c.lmx_range_classify(g\arena, source)
+            if: kind = c.LMX_KIND_STRUCT || kind = c.LMX_KIND_ARRAY
+                source_node := (cast: (@: c.Lmx) source)
+                target_node := (cast: (@: c.Lmx) target)
+                if: target_node != receiving
+                    target_node\parent := (cast: (@: c.Lmx) c.lmx_copy_map_get(map, (cast: (@: void) source_node\parent)))
+                j := 0U
+                while: j < c.lmx_graph_count(source_node)
+                    if: lmx_graph_slot_fact_copy(source_node, j, target_node, j) != 0
+                        return: 1
+                    j := j + 1U
+                ---
+            ---
+        ---
+        i := i + 1U
+    ---
+    i := 0U
+    while: i < name_count
+        # name_address may grow/reallocate the table; keep only copied fields.
+        row := g\names + i
+        source := row\address
+        canon := row\name
+        target := c.lmx_copy_map_get(map, source)
+        if: target != 0 && target != source && target != (cast: (@: void) receiving)
+            if: c.lmx_graph_name_address(g, target, canon) != 0
+                return: 1
+            ---
+        ---
+        i := i + 1U
+    ---
+    return: 0
+end: lmx_graph_fn_data_metadata
+
 fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: written c.Lmx; @: body c.Lmx; @@: out c.Lmx) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     c.LmxCopyMap: map
-    @@: work c.Lmx 0
+    c.LmxCopyStack: todo
     @@: names void 0
     @: name char 0
     @: vars c.Lmx 0
     @: copy void 0
-    @: child c.Lmx 0
-    @: operand c.Lmx 0
     @: place void 0
     @: source void (cast: (@: void) written)
     size_t: capacity 0U
@@ -6234,16 +6285,15 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
     size_t: written_at 0U
     size_t: own 0U
     size_t: kept 0U
-    size_t: wcount 0U
-    size_t: wcap 0U
-    size_t: at 0U
+    size_t: name_count (cast: (size_t) g\names_len)
     size_t: i 0U
-    size_t: j 0U
     int: status 0
     int: mapped 0
     int: chain 0
     int: kind 0
+    int: copied_status 0
     out[0] := 0
+    c.memset((cast: (@: void) (@ todo)), 0, c.sizeof(c.LmxCopyStack))
     if: written != 0
         explicit := c.lmx_graph_count(written)
     capacity := explicit + 8U
@@ -6293,43 +6343,16 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
     ---
     i := 0U
     while: i < explicit && status = 0
-        status := lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(written, i), @ work, @ wcount, @ wcap, @ copy)
+        copied_status := c.lmx_graph_copy_value_mapped_staged((cast: (@: c.LmxArena) g\arena), c.lmx_graph_get(written, i), @ map, @ todo, @ copy)
+        if: copied_status != c.LMX_GRAPH_COPY_OK
+            status := 5
+            if: copied_status = c.LMX_GRAPH_COPY_NOMEM
+                status := 1
+            ---
+        ---
         if: status = 0 && c.lmx_graph_put(vars, i, copy) != 0
             status := 1
-        if: status = 0
-            status := lmx_graph_slot_fact_copy(written, i, vars, i)
         i := i + 1U
-    ---
-    while: at < wcount && status = 0
-        operand := work[at]
-        child := (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand)))
-        j := 0U
-        while: j < c.lmx_graph_count(operand) && status = 0
-            status := lmx_graph_merge_copy(g, @ map, c.lmx_graph_get(operand, j), @ work, @ wcount, @ wcap, @ copy)
-            if: status = 0 && c.lmx_graph_put(child, j, copy) != 0
-                status := 1
-            if: status = 0
-                status := lmx_graph_slot_fact_copy(operand, j, child, j)
-            j := j + 1U
-        ---
-        # A copied Structure whose source parent lies outside the written data -- a Structure the data reaches by a
-        # reference -- takes that parent along when the copy resolves names through its chain: the parent is copied
-        # through the same map, whole, up to parent 0 (kernel §6.4, as lmx_graph_merge_values); the written data's own
-        # place in such a parent is the new data.
-        if: status = 0 && chain != 0 && operand\parent != 0
-            status := lmx_graph_merge_copy(g, @ map, (cast: (@: void) operand\parent), @ work, @ wcount, @ wcap, @ copy)
-        at := at + 1U
-    ---
-    # Parent edges once every copy exists, as in merge: a copied Structure keeps the nesting of its source -- its parent is
-    # the copy of its source's parent, the written data's children the new data's --; a source parent is none only when the
-    # copy needs no chain (no written name or callable). The new data itself is under F, whose lexical chain it has.
-    at := 0U
-    while: at < wcount && status = 0
-        operand := work[at]
-        child := (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand)))
-        if: child != 0
-            child\parent := (cast: (@: c.Lmx) c.lmx_copy_map_get(@ map, (cast: (@: void) operand\parent)))
-        at := at + 1U
     ---
     i := 0U
     while: i < kept && status = 0
@@ -6347,9 +6370,21 @@ fn: lmx_graph_fn_data (@: g c.LmxGraph; @: owner c.Lmx; @: args c.Lmx; @: writte
             status := 1
         i := i + 1U
     ---
+    if: status = 0 && mapped != 0
+        copied_status := c.lmx_graph_copy_drain_mapped(g\arena, @ map, @ todo, chain)
+        if: copied_status != c.LMX_GRAPH_COPY_OK
+            status := 5
+            if: copied_status = c.LMX_GRAPH_COPY_NOMEM
+                status := 1
+            ---
+        ---
+        if: status = 0
+            status := lmx_graph_fn_data_metadata(g, @ map, vars, name_count)
+        ---
+    ---
+    c.lmx_copy_stack_dispose(@ todo)
     if: mapped != 0
         c.lmx_copy_map_dispose(@ map)
-    c.free((cast: (@: void) work))
     c.free((cast: (@: void) names))
     if: status = 0
         out[0] := vars

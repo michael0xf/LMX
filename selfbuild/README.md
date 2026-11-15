@@ -1,5 +1,15 @@
 # Maintained L3/L2 source package
 
+Slice400 (2026-11-15), directly on main: common mapped copier and written DATA fn_data; bounded code gates PASS.
+The existing queue finishes complete scalar/reference snapshots; WORD retains physical type/profile and canonical TEXT.
+Held F copies are ordinary current parts; explicit fn creates a new callable. Real sub/typed DATA precision, absence,
+Model/backedge, names/sharing and cross-arena WORD lifetime pass private and actual G2 native/forced/root0/root1.
+Frozen/canonical Source04:934, genuine G1/G2 quick smoke9/0, fixedpoint32, actual G2 targeted5/0 and Graph6 triple PASS.
+Working G2: `build2/codex_fix250generationchain01/sol-m13-mapped-data-01/boot-m13-mapped-data-01/g2`;
+Tool SHA440a8ef6 and frontend SHAa42f1583. Final docs/index checks are in the [pipeline](../steps/current.md).
+Full overlap merge, scalar CODE-own/typed args/results/FFI/Array and M14 cache/flush/native remain OPEN.
+[Evidence400](../steps/witnesses/m13-mapped-data-20261115/notes.md). Goal remains ACTIVE.
+
 Slice397 (2026-11-15), directly on main: owned scalar receiving/returns and activation-local scalar places; code gates PASS.
 Runtime08/private13 SUITE1/0 covers full ACTIVE SOURCE, exact ABI, context/copy/GC and an escaped formal address
 after a real dispatcher/scratch exit. FE07 raw/hosted ordinary-witness05/06 passes native bindings5 and actual

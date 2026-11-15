@@ -1,5 +1,13 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез400, кодовые gates PASS:** written DATA fn_data использует общий mapped copier/queue; полный scalar/reference
+context, WORD lifetime/profile и held F ordinary parts сохранены. Лишь явный fn создаёт новую F.
+Source04:934 canonical/verify; private1/0+controls4/0, genuine G1/G2 quick smoke9/0, fixedpoint32,
+actual G2 targeted5/0 и Graph6 triple PASS. Expected не менялись. Render/docs/index — в [конвейере](steps/current.md).
+[Свидетельство400](steps/witnesses/m13-mapped-data-20261115/notes.md). Работа и коммиты прямо main; goal ACTIVE.
+Далее overlap merge: global receiving layout/alias closure до копирования, существующая physical projection,
+затем scalar CODE-own и остальные зависимые M11/M13/M14 задачи основного v3. Полные этапы OPEN.
+
 **Срез399, кодовые gates PASS:** original SOURCE запрашивается лишь для written formal ordinal<arity; hidden suffix сохраняет
 именованный transport с пустым SOURCE и прежним witness (пустым у FREE), полный actual Value не меняется.
 Три прежних отказа прошли L2 на FE01; два следующих Lower/L1/CC blockers исправлены typed pointer alias

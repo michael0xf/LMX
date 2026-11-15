@@ -1,5 +1,11 @@
 # LMX — путь к самосборке и почте (v3)
 
+**Срез400, 2026-11-15 — общий mapped copier и written DATA fn_data, кодовые gates PASS.**
+Source04:934/canonical, private1/0+controls4/0, genuine G1/G2 quick smoke9/0 и fixedpoint32 PASS.
+Actual G2 targeted5/0 и Graph6 triple PASS без изменения expected. Полный overlap merge и scalar CODE-own
+остаются следующими зависимыми работами ниже; весь M11/M13/M14 OPEN. [Конвейер](steps/current.md),
+[свидетельство400](steps/witnesses/m13-mapped-data-20261115/notes.md). Работа и коммиты прямо main; goal ACTIVE.
+
 **Срез397, 2026-11-15 — bounded owned scalar receiving/actual/result, кодовые gates PASS.**396 принят/отправлен41c1616d прямо main.
 Начата physical receiving часть: выбранный FOREIGN witness задаёт ABI независимо от present, а materializer
 проверяет exact owned cell/companion. Literal physical lookup включает multiword C spellings без подмены SOURCE.
@@ -2728,6 +2734,43 @@ CODE-own completion сейчас не вызывает пользователь�
 с caller-owned map; общий constructor владеет cleanup, names/facts и out. Не добавлять arena revert без отмены
 Graph names/facts на отменённые адреса. Optional map-root fields не нужны без реального GC-window; при будущем
 расширении lifetime потребуются настоящие roots для pending Values и map buffers с retarget при росте.
+Срез400 подключает written DATA fn_data к этому общему copier. В existing CopyMap политика операции
+сохраняет physical profiles, откладывает Value edges и выбирает ordinary parts для held F при allocation;
+режим0 прежних операций и cross-arena API сохраняется. Последнее обязательно по383: копия current F
+не получает FN-role автоматически, только явный fn создаёт новую F. Typed scalar/reference snapshots
+хранятся в companions, общая очередь завершает их перед names/facts/parent projection; rootwritten→vars
+не ставится в очередь и не меняет свой parent/name/ширину. Runtime02 и новый real sub/typed DATA unit
+прошли private n/f/root0/root1; exact scalar/Graph scalar/native GC controls4/0 PASS. Source04:934 frozen;
+штатная whole G1/G2 quick smoke9/0, fixedpoint32, actual G2 targeted5/0 и Graph6 triple PASS.
+Финальная проверка документов среза идёт в [общем конвейере](steps/current.md).
+Полный overlap merge использует тот же bridge: его late-alias фазу нельзя связывать с ещё не
+опубликованными g.names; брать ordinal из существующего layout names[]. Поздний scalar writer получает
+исходный RHS Value, затем общий drain переносит актуальный context; map_get(RHS) уже может быть receiving cell.
+Для receiving targets сохранять from_k/from_j→result ordinal, а не переносить facts всех operand roots j→j.
+Metadata-pass пропускает главный receiving result и mapped targets существующего nested: их first-model
+имена/parents выбирает merge_level. Иначе поздние roots перезапишут имя/parent либо facts другого ordinal.
+Receiving layout/seed вложенных композиций должен предшествовать reserve обычных Structure edges:
+ранняя ссылка/прямая Structure на позже composing root не должна закрепить старый target. Простая замена
+merge_copy при прежнем чередовании фаз недостаточна: queued source root после remap может затереть
+completed receiving layout во время drain. Сохранить общую карту и first-map alias rules; коротко проверить
+cross-field alias на nested receiving part, включая sibling references, без публикации промежуточного графа.
+При shared source part у sibling compositions receiving groups объединяются до final-width allocation;
+P{p},Q{q},R{r}, M{a→P,b→P}, N{a→Q,b→R} дают один target a=b с p/q/r. Сохранять написанный порядок
+write occurrences, включая повторный operand, независимо от map traversal.
+Owned merge делает flat pair replacement, recursive sibling closure в нём нет. Переиспользовать
+его физическую границу: lmx_merge_receive_slot, общий copy_project_mapped и copy_map_project для всего
+footprint (header/backing/slot, parent и полный scalar context). Проекция one-step: все keys сразу ведут
+в final targets, цепочки A→B→C заранее свести. Graph names/facts переносит consumer после final map;
+новый отдельный обходчик исправления указателей или scalar copier не нужен.
+Короткая приёмка merge: double/f64 late override с Model→late root, alias на позднюю scalar cell,
+merge(M; N; M) и отказ несовместимого ABI без опубликованного out.
+Public scalar CODE-own — связанная следующая вертикаль, не только allocation в fn_data: fn_own,
+work_scan_body/work_site/place_site, block_body и binding_unlowered должны читать тот же declaration_parts
+и общий scalar_binding с точным SOURCE/ABI, без списка отдельных scalar names. Отсутствующая FOREIGN
+cell сохраняет present0 после ABI.init; immutable receiving facts/index store проверяют точный ABI,
+а не только общий FOREIGN kind/type. Первый store остаётся записью в ту же physical cell.
+Qualified raw declarations до общего qualifier execution сохраняют явный OPEN/refusal: не снимать
+const/immutable/independent цепочку ради выделения обычной mutable FOREIGN cell.
 
 **Pure Source bridge — срез393, code gates PASS; полный runtime/storage bridge OPEN.** Code08 читает35×15 raw literal source
 table через прежний exporter. Optional reader использует один прежний name matcher, четыре его caller routes,

@@ -1,5 +1,48 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — срез400: общий mapped copier и written DATA fn_data, кодовые gates PASS
+
+Предыдущий goal turn — progress:399 принят/отправленc46e556a31257159efafcec6750cedfd9c59cc28 прямо main.
+Goal ACTIVE; root — единственный code/test/build writer, helpers read-only, два чужих untracked сохранять.
+Написан same-arena синхронный bridge existing map/queue: reserve Values→CODE-own completion→shared drain.
+FOREIGN snapshot берётся до callback, payload copy пропускается при present0, metadata сохраняется в новом
+companion до drain. Reference snapshot тоже не перечитывается. Scalar/reference completion и очередь общие
+с прежним copier; cross-arena/default policy0 сохраняется. WORD leaf переносит canonical TEXT pointer,
+полный physical type и выбранный profile. fn_data перестал использовать отдельный merge_copy для written fields.
+Graph consumer переносит names/frozen slot facts и задаёт только mapped parents; receiving root сохраняет owner/width/name.
+LmxCopyMap получил operation value_policy:1 сохраняет physical profiles,2 откладывает Value edges,4 создаёт
+обычные parts из held F. Graph mode7→5 при drain; policy0 других операций не меняет роль FN. Роль выбирается
+при allocation, общий pool не переназначается. Это сохраняет норму383: лишь явный fn создаёт новую F.
+Новых registries, parser или execution journal нет; промежуточный результат не публикуется, GC/dispatch между стадиями нет.
+
+Pipeline400: build2/codex_fix250generationchain01/runs/sol-m13-mapped-data-20261115-01;
+artifact stage — build2/codex_fix250generationchain01/sol-m13-mapped-data-01. Seed — actual399 G2.
+Tool01 построен с seed399 headers/runtime, PASSbd32b174; он только печатает новый CopyMap ABI и exports30.
+Runtime01 prefix PASS, Run отказал на первом untyped C-field argument; Source02 добавил явный cast.
+Recorded Run retry02 PASS; Runtime02 suffix восстановлен из реальных argv seed399, без повторения prefix.
+Первый recovery отказал лишь на порядке --library/--machine. Corrected recovery03:121 steps PASS,
+включая97 header commands, aggregate и prod/observe. Runtime02 SHAcf5bbc1d/a71a0b88; новый ABI согласован.
+Новый maintained graph_fn_data_typed выполняет real sub→fn_data→ordinary typed Code, не fake method:
+epsilon/absence/Model→newD, names, sharing/WORD, backedge, own touched, held F plain parts и explicit Again.
+WORD oracle проверяет отдельную cross-arena copy после release source и GC. Private01 отказал на reserved
+local name profile; Source04 переименовал его physical. Private02 SUITE1/0 n/f/root0/root1 PASS.
+Controls01 ошибочно склеил4 TSV rows; исправленный data-only Controls02 SUITE4/0 PASS: exact_scalar_storage,
+graph_scalar_working/public_scalar_calls/execution_gc_native. Expected не менялись.
+Frozen/canonical Source04:934 SHAc5c4960f2549e7b8ba9cf05433f8bc5c48d35cfa50236c12c7869922617aabfb,
+verify repo/stage PASS. Whole bootstrap01 terminal PASS: genuine G1/G2 quick, smoke9/0 каждый, consumed364.
+Fixedpoint04 CHECKS32/0 PASS, включая retained CopyOwned header, canonical934 и private Runtime02==G2driver
+в production/observed. Actual G2 targeted01 terminal PASS SUITE5/0: новый unit и прежние4 controls, n/f/root0/root1.
+G2 FEa42f1583/Tool440a8ef6. G2 Graph01 SHAcfd8aab4; Graph6 triple CHECKS6/0 PASS, включая
+copy_callable_current/copy_held_state/copy_named_parts, construction_paths_owned_data и Model positive/refusal.
+Все code/test producers terminal. Далее штатные render/docs-check/final index/commit/push400, прямо main.
+Actual G2 render01 PASS35 paired/14 cases/both snapshots; generated semantics и grammar unchanged.
+Fresh docs-check01 с отдельными precreated cwd/private PASS35/14/27/44/615, links/LF28288;
+git diff --check PASS. Финальный индекс с17 owned files проверяется перед commit/push400.
+Два чужих untracked сохраняются. [Свидетельство400](witnesses/m13-mapped-data-20261115/notes.md).
+Final indexed01 с отдельными fresh cwd/private PASS35/14/27/44/615, links/LF28290;17 owned files staged,
+working/index diff checks PASS. Commit/push400 прямо main; далее overlap merge основного v3, goal ACTIVE.
+Полный overlap merge, public scalar own fields, typed args/result/FFI/Array/native M14 остаются OPEN в основном v3.
+
 ## 2026-11-15 — срез399: written SOURCE и hidden transport, кодовые gates PASS
 
 Предыдущий goal turn — progress:398 принят/отправлен72b7438ef49531306ef23bc73c1e8e3371b48d20 прямо main.

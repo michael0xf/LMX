@@ -2692,10 +2692,19 @@ fn_data/merge сейчас идут собственным kind-based copier: п
 Types.contract_own/Helpers.unimpl_numeric и numeric/pointer split Core.emit_work_decl требуют общего Value
 consumer и arena scalar storage; одного снятия whitelist gate или FOREIGN place поверх C stack недостаточно.
 
-Перед следующим copier-срезом устранить общий original receiving source declared headers: struct_call_selected:21,
-unary_data_selection:20 и place_map:87 дают «a declared header lost its original receiving source» и на accepted397,
-и на398. Не снимать проверку, не менять expected и не подставлять current/reconstructed header вместо исходного
-receiving SOURCE. Повторять только эти failed translations и зависимые части; готовые398 gates сохранять.
+Срез399 устранил общий original receiving source blocker: struct_call_selected:21, unary_data_selection:20
+и place_map:87 давали один отказ на accepted397/398; expected сохранены. Call-contract передаёт hidden ordinal
+после arity в signature_input, который ошибочно запрашивал written formal SOURCE. Original SOURCE нужен только для0<=input<arity;
+hidden transport сохраняет пустой SOURCE описания, canonical input name и прежний witness (пустой у FREE), а actual Value
+сохраняет свой полный SOURCE/context. Callee header Model-capture admission и проверки оригинала письменного
+формала сохранены. Два следующих дефекта Lower at_entry FREE исправлены в том же L2 emitter: scalar metadata
+пишется через typed pointer projection элемента и обычные `\field:` targets после ABI validation, а member ABI
+argument сгруппирован typed const pointer cast. Generated L1 вручную не менялся; checks/presence/ABI semantics прежние.
+Source03/FE03 raw8036fbdb PASS/reuse102/ABI24; private repair03 SUITE3/0 n/f/root0/root1 и Model/capture
+controls01 SUITE4/0 PASS. Source03:933 frozen/canonical/verify; genuine G1/G2 quick smoke9/0, fixedpoint30,
+actual G2 targeted13/0 и Graph3 triple PASS. G2 render35/14 и fresh docs-check01 PASS35/14/27/44/615,
+links/LF28287; final indexed01 PASS35/14/27/44/615, links/LF28288.
+[Свидетельство399](steps/witnesses/m11-hidden-source-20261115/notes.md).
 
 Следующий зависимый copier-срез после398 — общий mapped/staged bridge существующего copier и written DATA фазы
 fn_data. Вызывающая операция сохраняет прежние LmxCopyMap/LmxCopyStack и seed written DATA→vars окончательной
@@ -2712,6 +2721,13 @@ sharing и backedge/Model→D; новая F.data независима, backedges
 Общий overlap merge остаётся обязательной следующей интеграцией того же bridge: все receiving roots и
 overlap aliases, включая вложенные и later override scalar, зарегистрировать до context drain. Layout и
 alias algorithm сохраняются; scalar override использует прежний ABI prepare/writer. Unary subset не заменяет merge.
+Mapped bridge для GraphRun заимствует existing map/queue внутри одной same-arena синхронной construction:
+reserve→CODE-own completion→drain, без промежуточной публикации, dispatch/poll, выполнения Model/test или GC.
+CODE-own completion сейчас не вызывает пользовательский код. Existing cross-arena copier сохраняет прежнее
+полное relocation; не переводить его молча на companion с ещё исходными edges. Helpers не делают своего rollback
+с caller-owned map; общий constructor владеет cleanup, names/facts и out. Не добавлять arena revert без отмены
+Graph names/facts на отменённые адреса. Optional map-root fields не нужны без реального GC-window; при будущем
+расширении lifetime потребуются настоящие roots для pending Values и map buffers с retarget при росте.
 
 **Pure Source bridge — срез393, code gates PASS; полный runtime/storage bridge OPEN.** Code08 читает35×15 raw literal source
 table через прежний exporter. Optional reader использует один прежний name matcher, четыре его caller routes,

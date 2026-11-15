@@ -1,5 +1,10 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
+**Срез399, 2026-11-15 — written SOURCE и hidden transport; кодовые gates PASS.** Исправлены общий
+header-source отказ и вывод scalar FREE default metadata. Guard written SOURCE и Model/capture admission сохранены.
+Genuine G1/G2 quick/fixedpoint30, actual G2 targeted13/0 и Graph3 triple PASS; render/fresh docs-check/final index PASS.
+[Текущий статус](../steps/current.md). Общий copier/construction и native M14 остаются OPEN.
+
 **Срез398, 2026-11-15 — полный scalar Value в рабочем GraphRun.** Обычная Code над supplied typed DATA
 сохраняет physical cell/slot, SOURCE места и RHS Model. Private06 и чувствительный GC mutant прошли;
 genuine G1/G2 quick/fixedpoint30 и Graph3 triple PASS. Actual G2:6 из9 rows PASS,3 старых L2 header-source
@@ -1792,6 +1797,18 @@ dirty и продолжение. Порядок полей ниже задаёт
 найденная позицией или именем (§5.1); приём аргумента — первое присваивание аргументного места кадра. Приём, `implements`
 по используемым полям, маршруты преобразований и броски — по действующей книге; меняется носитель, не правила (`:=`,
 `merge`, позиционные `a(5)`/`a: 5`, q/z, AXBY сохраняются — §11).
+
+**Written SOURCE и hidden transport, срез399.** `rw_signature_input` запрашивает original declared SOURCE
+лишь для письменного формала с индексом меньше arity. Скрытый вход не имеет письменного формала:
+его прежняя2-field transport запись сохраняет пустой SOURCE, имя и прежний witness (пустой у FREE). Это SOURCE описания
+входа, не actual Value: полный SOURCE/context значения по-прежнему переносится. Отдельный callee header
+сохраняет Model-capture admission; отсутствие исходного SOURCE у настоящего written formal остаётся ошибкой.
+Native default отсутствующего FREE задаёт scalar ABI/source metadata только после проверки ABI, через
+типизированный указатель на элемент массива Values. Generated L1 использует обычные `\field:` targets;
+indexed C-dot target не допустим, а `array[i]\field` неверно сделал бы struct элемент указателем.
+Private399 repair3/0 и capture/Model controls4/0 PASS без изменения expected; genuine G1/G2 quick/fixedpoint30,
+actual G2 targeted13/0 и Graph3 triple PASS.
+Это не завершение общего native M14.
 
 **Scalar working Value, срез398.** В прежней `LmxGraphWork` полный inline Value хранится отдельно от physical
 cell/slot, loaded/dirty и legacy number. FOREIGN определяется по точному pool/ABI/companion. До загрузки

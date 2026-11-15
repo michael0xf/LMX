@@ -1,5 +1,16 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез399, кодовые gates PASS:** original SOURCE запрашивается лишь для written formal ordinal<arity; hidden suffix сохраняет
+именованный transport с пустым SOURCE и прежним witness (пустым у FREE), полный actual Value не меняется.
+Три прежних отказа прошли L2 на FE01; два следующих Lower/L1/CC blockers исправлены typed pointer alias
+и группировкой ABI member argument для absent FREE scalar metadata writes. FE03 Lower-only PASS8036fbdb,
+успешный Emit01/runtime398 сохранены. Private repair3/0 и capture/Model controls4/0 PASS без изменения expected.
+Source03:933 frozen/canonical/verify PASS; genuine G1/G2 quick smoke9/0, fixedpoint30, actual G2 targeted13/0
+и Graph3 triple PASS. Runtime398 побайтно прежний. G2 render35/14 и fresh docs-check01 PASS35/14/27/44/615,
+links/LF28287; final indexed01 PASS35/14/27/44/615, links/LF28288,11 owned files. Commit/push прямо main,
+затем общий mapped copier/fn_data bridge.
+[Конвейер399](steps/current.md). Полные M11/M13/M14 остаются OPEN; goal ACTIVE.
+
 **Срез398, ограниченная кодовая приёмка PASS:** existing GraphRun row хранит полный scalar Value над supplied typed DATA, physical cell/slot стабильны,
 read/operand дают snapshot, ABI Model witness сохраняется до загрузки, absent metadata не теряются.
 Pure prepare_scalar_store выделен из общего writer; dirty publication сохраняет SOURCE места и RHS Model,

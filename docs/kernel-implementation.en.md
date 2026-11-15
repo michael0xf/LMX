@@ -1,5 +1,10 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Slice399, 2026-11-15 -- written SOURCE and hidden transport; code gates PASS.** The common header-source
+refusal and scalar FREE default metadata output are fixed. Written SOURCE and Model/capture admission guards are preserved.
+Genuine G1/G2 quick/fixedpoint30, actual G2 targeted13/0 and Graph3 triple PASS; render/fresh docs check/final index PASS.
+[Current status](../steps/current.md). Common copier/construction and native M14 remain OPEN.
+
 **Slice398, 2026-11-15 -- complete scalar Value in GraphRun working rows.** Ordinary Code over supplied typed DATA
 preserves physical cell/slot, the place's SOURCE and RHS Model. Private06 and the sensitive GC mutant passed;
 genuine G1/G2 quick/fixedpoint30 and Graph3 triple PASS. Actual G2:6 of9 rows PASS;3 existing L2 header-source
@@ -1874,6 +1879,18 @@ address of its slot in `args` (a description: the requirement, the default, `uni
 candidate), an argument is a frame cell found by position or by name (§5.1); receiving an argument is the first
 assignment of the frame's argument place. Reception, `implements` by used fields, conversion routes and throws follow the
 current book; the carrier changes, not the rules (`:=`, `merge`, positional `a(5)`/`a: 5`, q/z, AXBY are kept -- §11).
+
+**Written SOURCE and hidden transport, slice399.** `rw_signature_input` requests original declared SOURCE
+only for a written formal whose index is below arity. A hidden input has no written formal:
+its existing two-field transport entry keeps empty SOURCE, its name and existing witness (empty for FREE). This is the input
+description's SOURCE, not the actual Value: the Value's complete SOURCE/context still travels unchanged.
+The separate callee header keeps Model-capture admission; missing original SOURCE for a real written formal remains an error.
+An absent FREE native default installs scalar ABI/source metadata only after ABI validation, through
+a typed pointer to the Values array element. Generated L1 uses ordinary `\field:` targets;
+an indexed C-dot target is invalid, while `array[i]\field` would wrongly treat the struct element as a pointer.
+Private399 repair3/0 and capture/Model controls4/0 PASS without changing expected results; genuine G1/G2 quick/fixedpoint30,
+actual G2 targeted13/0 and Graph3 triple PASS.
+This does not complete common native M14.
 
 **Scalar working Value, slice398.** Existing `LmxGraphWork` stores a complete inline Value separately from physical
 cell/slot, loaded/dirty and legacy number. FOREIGN is proved by the exact pool/ABI/companion. Before loading,

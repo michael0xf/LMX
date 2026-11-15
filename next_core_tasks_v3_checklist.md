@@ -26,8 +26,11 @@ links/LF28283; финальный индекс проверяется перед
   Source11:933/Runtime04/private06 PASS1/0 n/f/root0/root1; Model ABI/absent metadata и GC mutant96 PASS.
   Genuine G1/G2 quick smoke9/0, fixedpoint30 и Graph3 triple PASS; actual G2 targeted9:6 PASS/3 preexisting L2 refusals.
   G2 render35/14/fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28285/28287; весь typed Run не закрыт.
-- [ ] Original receiving SOURCE declared headers: struct_call_selected:21, unary_data_selection:20, place_map:87;
-  одинаковый отказ на accepted397/398, aggregate9/6 не зелёный. Сохранить общую проверку и прежние expected.
+- [x] 399: original receiving SOURCE запрашивается только для written formals, hidden transport сохраняет имя/witness;
+  Lower выводит scalar default metadata через typed pointer targets и grouped ABI argument. Старые3 header-source
+  refusals закрыты, written SOURCE/Model guards и expected сохранены. Source03:933/FE03/reuse102/ABI24,
+  private repair3/0/controls4/0, genuine G1/G2 quick/fixedpoint30, actual G2 targeted13/0 и Graph3 triple PASS.
+  G2 render35/14, fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28287/28288; полные M11/M13/M14 не закрыты.
 - [ ] Общий mapped/staged copier/fn_data bridge с одной картой, reserve→drain context, WORD и Graph names/facts;
   затем тот же bridge для полного overlap merge, включая later override Model/backedges.
 - [ ] Public scalar own fields рабочего frontend: общий Value consumer/arena storage с dirty и SOURCE/Model;

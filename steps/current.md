@@ -1,5 +1,43 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — срез399: written SOURCE и hidden transport, кодовые gates PASS
+
+Предыдущий goal turn — progress:398 принят/отправлен72b7438ef49531306ef23bc73c1e8e3371b48d20 прямо main.
+Goal ACTIVE; root — единственный code/test/build writer, helpers read-only, два чужих untracked сохранять.
+Исправлен общий Emit.rw_signature_input: original rw_declared_source нужен лишь0<=input<arity.
+Hidden suffix сохраняет прежнюю2-field transport запись с пустым SOURCE, именем и прежним witness (пустым у FREE);
+free/foreign/scalar guards не меняются. Это не SOURCE actual Value. Callee header_parts отдельно сохраняет
+Model-capture admission3/free-witness2; Core/header_source/formal_decl_at продолжают требовать исходный SOURCE
+у настоящего письменного формала. Никаких fake sourceformals или special-case трёх программ.
+
+Pipeline399: build2/codex_fix250generationchain01/runs/sol-m11-hidden-source-20261115-01;
+artifact stage — build2/codex_fix250generationchain01/sol-m11-hidden-source-01. Seed — actual398 G2.
+Source01:933 SHA f8a4f185131ae106d4d64178042cd6100afa7a915b072c583c108141c3fbccac, manifest/stage-copy PASS.
+Seed398 stage verify PASS. Runtime398 и успешные artifacts сохранены; canonical пока accepted398.
+Fresh frontend01 Emit-only PASS45eca79b, reuse102/ABI24 и explicit backend/libc bundle.
+Repair01: все3 прошли L2, затем6 n/f L1 refusals malformed assignment target в прежнем Lower at_entry FREE
+scalar metadata init: индексированный struct печатался как `.field:`. Source02:933 заменяет только эти3 targets
+на canonical typed pointer alias после ABI validation, оставляя reads/checks/metadata прежними.
+Frontend02 Lower-only PASS36fd814a/reuse102/ABI24. Repair02 проходит L2/L1, но6 CC refusals в том же блоке:
+негруппированный scalar_abi member разбивается L1 arg parser на несколько C arguments. Иных CC errors нет.
+Source03:933 группирует ABI через typed const LmxScalarABI pointer cast; read-only review подтвердил L1 spelling.
+Frontend03 Lower-only PASS8036fbdb/reuse102/ABI24; successful Emit01/runtime398/backend/libc переиспользованы.
+Private repair03 SUITE3/0 n/f/root0/root1 PASS на исходных struct_call_selected/unary_data_selection/place_map.
+Controls01 SUITE4/0 PASS: free_model_admit/free_held_model/entry_admission_order и прежний static whole_field_refused,
+без изменения expected. Исходный written SOURCE error и Model/capture rules сохранены.
+Frozen/canonical Source03:933 SHAef6243a84ec74f814e71c6f955098141ac7786c005a8e557bb6111db5c7477f1,
+verify repo/stage PASS. Whole bootstrap01 genuine G1/G2 quick terminal PASS smoke9/0 каждый, consumed360.
+Fixedpoint03 CHECKS30/0 PASS; actual G2 FE56159699/Tool360694d8, runtime398 совпал побайтно.
+Actual G2 targeted01 SUITE13/0 PASS:12 positive n/f/root0/root1 и original static whole-field refusal n/f.
+Три старых header-source отказа закрыты без изменения expected. G2 Graph01 SHA64c7e354, Graph3 triple CHECKS3/0 PASS.
+Все code/test producers terminal. Actual G2 render01 PASS35 paired/14 cases/both snapshots;
+generated semantics и grammar unchanged. Fresh docs-check01 с отдельными precreated cwd/private
+PASS35/14/27/44/615, links/LF28287; git diff --check PASS. Final index/commit/push399 далее, прямо main.
+Final indexed01 с отдельными fresh cwd/private PASS35/14/27/44/615, links/LF28288;11 owned files staged,
+working/index diff checks PASS. Два чужих untracked и hashes сохранены. Commit/push399 прямо main;
+далее общий mapped copier/fn_data bridge v3, goal ACTIVE. Эта запись — output проверки, не новый semantic input.
+[Свидетельство399](witnesses/m11-hidden-source-20261115/notes.md). Далее общий mapped copier/fn_data bridge основного v3.
+
 ## 2026-11-15 — срез398: полный scalar Value в рабочем GraphRun, bounded code PASS
 
 Предыдущий goal turn — progress:397 принят/отправлен68aa72a1365d9429774f655563f03ccc6e6242a5 прямо main.

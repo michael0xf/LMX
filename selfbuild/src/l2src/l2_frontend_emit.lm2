@@ -7101,13 +7101,19 @@ end: lm_compiler_rw_signature_free
 fn: lm_compiler_rw_signature_input (int: parent; int: slot; int: mi; int: input) int
     @: rw_machine_cell int (cast: (@: int) (@ c.l2_rw_machine))
     @: rw_emit_cell int (cast: (@: int) (@ c.l2_rw_emit))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
     c.L2FrontendScratchChar128: place_storage
     @: place char (cast: (@: char) place_storage\buffer)
     int: entry
     if: c.lm_compiler_rw_plain(parent, 2, @ entry) != 0 || c.lm_compiler_rw_put(parent, slot, entry) != 0
         return: (cast: (int) (1))
-    if: c.lm_compiler_rw_declared_source(entry, mi, input) != 0
-        return: 1
+    # Only written formals have an original declared SOURCE. Hidden inputs
+    # retain their named transport entry and the existing physical witness.
+    if: input >= 0 && input < m_arity_cell[0][mi]
+        if: c.lm_compiler_rw_declared_source(entry, mi, input) != 0
+            return: 1
+        ---
+    ---
     # This is the Consumer's actual receiving formal place. Preserve its
     # declared name here, including ordinary dynamic inputs; admission never
     # parses inert SOURCE to recover it. The witness itself is not its owner.

@@ -8572,7 +8572,11 @@ fn: lm_compiler_emit_native_input_store (int: mi; int: fi; int: ft; const: (@: i
         if: at_entry != 0
             # An absent FREE default defines its initial type. These are
             # unfilled facts; the successful writer alone sets present.
-            if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present = 0 && l2_isv%d.kind = c.LMX_WALK_VALUE_FOREIGN\n%s    int: l2_idas%d lmx_walk_value_scalar_storage(l2_call_arena, @ l2_isv%d, c.LMX_TYPE_FOREIGN, l2_isv%d.scalar_abi)\n%s    if: l2_idas%d != c.LMX_WALK_OK\n%s        return: lmx_call_note_walk_fail(lmx_walk_boundary_status(l2_call_arena, l2_call_code, l2_idas%d))\n%s    ---\n%s    l2_input_values[%d].type: c.LMX_TYPE_FOREIGN\n%s    l2_input_values[%d].scalar_abi: l2_isv%d.scalar_abi\n%s    l2_input_values[%d].source_type: l2_isv%d.source_type\n%s---\n", ind, fi, snapshot, ind, snapshot, snapshot, snapshot, ind, snapshot, ind, snapshot, ind, ind, fi, ind, fi, snapshot, ind, fi, snapshot, ind) < 0
+            if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present = 0 && l2_isv%d.kind = c.LMX_WALK_VALUE_FOREIGN\n%s    int: l2_idas%d lmx_walk_value_scalar_storage(l2_call_arena, @ l2_isv%d, c.LMX_TYPE_FOREIGN, (cast: (const: @: LmxScalarABI) l2_isv%d.scalar_abi))\n%s    if: l2_idas%d != c.LMX_WALK_OK\n%s        return: lmx_call_note_walk_fail(lmx_walk_boundary_status(l2_call_arena, l2_call_code, l2_idas%d))\n%s    ---\n", ind, fi, snapshot, ind, snapshot, snapshot, snapshot, ind, snapshot, ind, snapshot, ind) < 0
+                return: 1
+            # L1 assignment targets use the same typed pointer projection as
+            # the surrounding default-input path, rather than indexed C dots.
+            if: c.fprintf(out_cell[0], "%s    @: LmxWalkValue l2_idc%d (cast: (@: LmxWalkValue) (l2_input_values + %d))\n%s    l2_idc%d\\type: c.LMX_TYPE_FOREIGN\n%s    l2_idc%d\\scalar_abi: l2_isv%d.scalar_abi\n%s    l2_idc%d\\source_type: l2_isv%d.source_type\n%s---\n", ind, snapshot, fi, ind, snapshot, ind, snapshot, snapshot, ind, snapshot, snapshot, ind) < 0
                 return: 1
             if: c.snprintf(type, 96U, "(cast: (int) l2_isv%d.type)", snapshot) < 0
                 return: 1

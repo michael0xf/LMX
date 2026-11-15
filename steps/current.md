@@ -1,5 +1,43 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — шаг404: compiled signature перед удалением native tracking
+
+Индекс плана404 (основной v3/checklist/current) прошёл Tool03 docs-plan404:
+PASS35/14/27/44/615, links/opening, LF28300, exit0. Semantics/grammar sources не менялись;
+render не повторялся. Working/cached diff-check перед фиксацией. Это документальный порядок
+следующей реализации, не кодовая приёмка404; code после403 не менялся. Producer terminal.
+
+403 принят/отправлен0bf49bf95a5b414e02fa81b348312296afd60ce6, main==origin/main;
+после него были только два прежних чужих untracked. Goal ACTIVE; root sole code/test/build writer.
+Все producers terminal. Source14:935 canonical SHA d8a0083b37742594ec874e8f666638330ee40a2571f02f4efdb691d8b30e7055.
+Новый пользователь подтвердил нормы пакета3d0ce661: M13/M14 реализация OPEN, snapshots/reset отменены.
+Следующая реальная зависимость снятия tracking — ABI выбранного binary variant.
+Walk.call_in перечитывает live signature (WalkValues7783–7850), dispatch_values6586 выделяет dest
+по live witness; FE Core12802–12805 пишет фиксированную compiled width. Старый size_t/ulong entry
+после live return→int может получить слишком маленький dest. Не снимать reset и не оставлять этот путь.
+GraphRun result_type2300 и result_receive3797/invoke_data4229 также читают live return WORD;
+GraphTool RET1401 вызывает этот reader, registration1558 ставит только function pointer в header native.
+Нужна предусмотренная M14 пара entry/compiled signature в обычном call/native descriptor арены Thread,
+с authority до binding/result allocation, без копии code/окружения и отдельного mini-registry.
+План и checklist дополнены404/приёмкой. Поддерживаемый код после403 ещё не менялся; producer не запущен.
+Readonly helper исследует existing rw_contract_parts/rw_signature_input/rw_call_contract_for и constructor
+PRIM signature для общего compiler producer. LmxPrimitive имеет fn/signature/owner; его register APIs
+найдены только как generated prototypes, implementation/consumer registration в maintained sources не найден:
+не выдавать неиспользуемую декларацию за готовый общий helper.
+Точный имеющийся producer: Emit7443 rw_method_contract(parent,mi,out) вызывает
+rw_call_contract_for(parent,mi,mi,NULL,out): все declared +hidden inputs в compile order,
+root[0]=inputs, root[1]=returns(0/1), entries=[SOURCE,witness], имя на owning input slot.
+Ни defaults, ни receiving record, ни THROWS в этом двухпольном contract нет: это physical
+entry signature, не полный callable semantic header. Native ABI выбирать по нему, семантический
+header не подменять упрощённой формой. Constructor PRIM реальный — allocator/fill Emit8705,
+signature assignment Core12984; register из legacy l2src/lmx_primitive.lm1 имеет устаревший API,
+поддерживаемым готовым helper не является. Existing GC/copy знают signature/owner этого carrier.
+Есть readonly deletion map Graph scan +CodeLink/Range side tracking: сохранить code_callable FN-role predicate,
+physical ranges/protection/receiving/GC. Inventory L2: managed Array Emit.check_resolved_indices/Lower.emit_path_index
+сохраняют отменённые per-level size_t/bounds/effects; raw machine C index уже signed/direct. Не удалять общие
+L3 index helpers: native/walker final-linear rectangular route пока не построен. Это зависимые M13 работы,
+не новая норма и не повод объявлять исполнение rank65 готовым по одному разбору описания.
+
 ## 2026-11-15 — актуальное продолжение403 и новый нормативный пакет
 
 Final code/docs index17 прошёл Tool03 docs-index02 PASS35/14/27/44/615, links/opening,

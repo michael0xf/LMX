@@ -1,0 +1,52 @@
+# The C boundary provides and observes precision; identity is ordinary L2.
+include: "<stdlib.h>" "<stdio.h>" "<string.h>"
+
+fn: produce () double
+    return: c.strtod("1.0000000000000002", 0)
+
+fn: other () double
+    return: c.strtod("3.5", 0)
+
+fn: identity (double: value) double
+    return: value
+
+fn: observe (double: value) int
+    @: text char c.malloc(64U)
+    if: text = 0
+        return: 81
+    if: c.snprintf(text, 64U, "%.17g", value) < 0
+        c.free(text)
+        return: 82
+    int: same c.strcmp(text, "1.0000000000000002")
+    c.free(text)
+    if: same != 0
+        return: 83
+    return: 7
+
+fn: assign_formal (double: value; double: replacement) double
+    value := replacement
+    return: value
+
+fn: address_formal (double: value; double: replacement) int
+    @: before double @ value
+    value := replacement
+    @: after double @ value
+    if: before != after
+        return: 84
+    return: observe(\before)
+
+fn: preserve (double: value) int
+    assign_formal(value, other())
+    return: observe(value)
+
+fn: run () int
+    if: observe(identity(identity(produce()))) != 7
+        return: 85
+    if: observe(assign_formal(other(), produce())) != 7
+        return: 86
+    if: address_formal(other(), produce()) != 7
+        return: 87
+    return: preserve(produce())
+
+send: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -7492,10 +7492,10 @@ fn: lm_compiler_emit_normal_return_full (int: mi; @: first c.LmP0Field; int: n; 
     if: mi < 0 || ind = 0 || first = 0 || n < 1 || c.lm_compiler_m_machine(mi) != 0
         return: 2
     cls := c.lm_compiler_tramp_class(mi)
-    if: cls < 1 || cls > 5 || lm_compiler_pap_on(mi) != 0 || c.lm_compiler_mad_on(mi) != 0 || c.lm_compiler_t7_host_site(mi) >= 0
+    if: cls < 1 || cls > 6 || (cls = 6 && c.lm_compiler_scalar_type_row(c.lm_compiler_sig_ret(mi)) < 0) || lm_compiler_pap_on(mi) != 0 || c.lm_compiler_mad_on(mi) != 0 || c.lm_compiler_t7_host_site(mi) >= 0
         return: 2
     target := c.lm_compiler_ret_ft(mi)
-    if: c.lm_compiler_formal_raw(target) = 8 || c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(target)) != 0
+    if: c.lm_compiler_formal_raw(target) = 8 || (c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(target)) != 0 && c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(target)) < 0)
         return: 2
     if: full = 0 || c.lm_compiler_tx_clear(full) != 0
         return: 1
@@ -7517,7 +7517,7 @@ fn: lm_compiler_emit_normal_return_full (int: mi; @: first c.LmP0Field; int: n; 
         if: c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(target)) > 0
             status := lm_compiler_emit_reference_value_at_context_full(first, n, target, -1, -1, mi, ind, tok_cell[0], -1, 0, @ result_context, full)
         else:
-            status := lm_compiler_emit_received_span_full(first, n, target, -1, at, mi, ind, tok_cell[0], full)
+            status := lm_compiler_emit_received_span_full_mode(first, n, target, -1, at, mi, ind, tok_cell[0], full, 1)
         ---
         if: status != 0
             return: 1
@@ -7538,13 +7538,19 @@ fn: lm_compiler_emit_normal_return_full (int: mi; @: first c.LmP0Field; int: n; 
             return: 1
         # A void converter can supply real absence with no raw result token.
         # Project the actual record only where its typed ABI output is consumed.
-        if: c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(target)) > 0
-            if: type = 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_formal_raw(target), 0, 0, type) != 0 || c.fprintf(out_cell[0], "%sif: %s\\kind != c.LMX_WALK_VALUE_REFERENCE\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n%sl2_out_result[0]: (cast: (%s) %s\\ref)\n", deep, record, deep, deep, deep, deep, type\data, record) < 0
+        if: c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(target)) >= 0
+            if: type = 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_formal_raw(target), 1, 0, type) != 0 || c.fprintf(out_cell[0], "%sl2_out_result[0]: ((cast: (%s) lmx_walk_value_storage(%s))[0])\n", deep, type\data, record) < 0
                 return: 1
             ---
         else:
-            if: lm_compiler_emit_numeric_cast_full(mi, target, deep, record, tok_cell[0], 0) != 0 || c.fprintf(out_cell[0], "%sl2_out_result[0]: %s\n", deep, tok_cell[0]\data) < 0
-                return: 1
+            if: c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(target)) > 0
+                if: type = 0 || c.lm_compiler_pointer_decl_text(c.lm_compiler_formal_raw(target), 0, 0, type) != 0 || c.fprintf(out_cell[0], "%sif: %s\\kind != c.LMX_WALK_VALUE_REFERENCE\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n%sl2_out_result[0]: (cast: (%s) %s\\ref)\n", deep, record, deep, deep, deep, deep, type\data, record) < 0
+                    return: 1
+                ---
+            else:
+                if: lm_compiler_emit_numeric_cast_full(mi, target, deep, record, tok_cell[0], 0) != 0 || c.fprintf(out_cell[0], "%sl2_out_result[0]: %s\n", deep, tok_cell[0]\data) < 0
+                    return: 1
+                ---
             ---
         ---
         if: c.fprintf(out_cell[0], "%s---\n%sreturn: 0\n", ind, ind) < 0
@@ -8137,7 +8143,7 @@ fn: lm_compiler_emit_native_input_default (int: mi; int: fi; int: ft; const: (@:
         return: 1
     # The sentinel is a field of an element of the input records: written
     # through that element's address, as the walker writes its own sentinel.
-    if: c.fprintf(out_cell[0], "%sif: l2_input_refs[%d] = 0\n%s    @: LmxWalkValue l2_dfi%d (cast: (@: LmxWalkValue) (l2_input_values + %d))\n%s    if: l2_dfi%d\\present < 0\n%s        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s        return: 0\n%s    ---\n%s    l2_dfi%d\\present: -1\n%s    @: Lmx l2_dfh%d l2_call_code\n", ind, fi, ind, t, fi, ind, t, ind, ind, ind, ind, t, ind, t) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present <= 0\n%s    @: LmxWalkValue l2_dfi%d (cast: (@: LmxWalkValue) (l2_input_values + %d))\n%s    if: l2_dfi%d\\present < 0\n%s        lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s        return: 0\n%s    ---\n%s    l2_dfi%d\\present: -1\n%s    @: Lmx l2_dfh%d l2_call_code\n", ind, fi, ind, t, fi, ind, t, ind, ind, ind, ind, t, ind, t) < 0
         return: 1
     while: depth > 0
         if: c.fprintf(out_cell[0], "%sif: l2_dfh%d = 0\n%s    l2_dfi%d\\present: 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n%sl2_dfh%d: l2_dfh%d\\parent\n", deep, t, deep, t, deep, deep, deep, deep, t, t) < 0
@@ -8254,6 +8260,7 @@ fn: lm_compiler_emit_native_input_read (int: mi; int: fi; int: ft; const: (@: in
     c.L2FrontendScratchChar64: record_storage
     @: record char (cast: (@: char) record_storage\buffer)
     int: reference
+    int: scalar 0
     int: place
     int: status
     int: t
@@ -8269,7 +8276,8 @@ fn: lm_compiler_emit_native_input_read (int: mi; int: fi; int: ft; const: (@: in
         return: 2
     ft := c.lm_compiler_formal_raw(ft)
     reference := c.lm_compiler_pointer_depth(ft)
-    if: ft >= 100 && reference = 0
+    scalar := (cast: (int) (c.lm_compiler_scalar_type_row(ft) >= 0))
+    if: ft >= 100 && reference = 0 && scalar = 0
         return: 2
     # Slice 255 (design 4.5 B2a): a free input is runtime-typed -- a full consumer takes its complete record (the lexical
     # default read first, as for every input); it has no typed raw projection: a raw consumer is a located limit of B2a.
@@ -8282,7 +8290,7 @@ fn: lm_compiler_emit_native_input_read (int: mi; int: fi; int: ft; const: (@: in
             return: 1
         if: lm_compiler_emit_native_input_default(mi, fi, ft, ind) != 0
             return: 1
-        if: c.fprintf(out_cell[0], "%sc.memcpy((cast: (@: void) (@ l2_cv%d)), (cast: (@: void) (l2_input_values + %d)), c.sizeof(c.LmxWalkValue))\n", ind, t, fi) < 0
+        if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].kind = c.LMX_WALK_VALUE_FOREIGN && l2_input_values[%d].scalar_abi != 0\n%s    int: l2_ifs%d lmx_walk_values_arg_read_scalar(l2_call_arena, l2_input_values, l2_input_refs, %dU, %dU, @ l2_cv%d)\n%s    if: l2_ifs%d != c.LMX_WALK_OK\n%s        lmx_call_note_walk_fail(l2_ifs%d)\n%s        return: 0\n%s    ---\n%selse:\n%s    c.memcpy((cast: (@: void) (@ l2_cv%d)), (cast: (@: void) (l2_input_values + %d)), c.sizeof(c.LmxWalkValue))\n%s---\n", ind, fi, fi, ind, t, m_arity_cell[0][mi] + m_dyn_cell[0][mi], fi, t, ind, t, ind, t, ind, ind, ind, ind, t, fi, ind) < 0
             return: 1
         if: c.lm_compiler_tx_clear(dest) != 0 || c.snprintf(record, 64U, "@ l2_cv%d", t) < 0 || c.lm_compiler_tx_set(full_value, record) != 0
             return: 1
@@ -8316,24 +8324,36 @@ fn: lm_compiler_emit_native_input_read (int: mi; int: fi; int: ft; const: (@: in
         return: 1
     if: lm_compiler_emit_native_input_default(mi, fi, ft, ind) != 0
         return: 1
-    if: full_value != 0
-        if: c.fprintf(out_cell[0], "%sc.memcpy((cast: (@: void) (@ l2_cv%d)), (cast: (@: void) (l2_input_values + %d)), c.sizeof(c.LmxWalkValue))\n", ind, t, fi) < 0
+    if: scalar != 0
+        if: c.fprintf(out_cell[0], "%sint: l2_ifs%d lmx_walk_values_arg_read_scalar(l2_call_arena, l2_input_values, l2_input_refs, %dU, %dU, @ l2_cv%d)\n%sif: l2_ifs%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_ifs%d)\n%s    return: 0\n%s---\n", ind, t, m_arity_cell[0][mi] + m_dyn_cell[0][mi], fi, t, ind, t, ind, t, ind, ind) < 0
             return: 1
         ---
     else:
-        if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, fi, ind, ind, ind) < 0
+        if: full_value != 0
+            if: c.fprintf(out_cell[0], "%sc.memcpy((cast: (@: void) (@ l2_cv%d)), (cast: (@: void) (l2_input_values + %d)), c.sizeof(c.LmxWalkValue))\n", ind, t, fi) < 0
+                return: 1
+            ---
+        else:
+            if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, fi, ind, ind, ind) < 0
+                return: 1
+            status := lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
+            if: status != 0
+                return: 1
+            if: c.fprintf(out_cell[0], "%sint: l2_ils%d lmx_walk_place_load(l2_call_arena, @ l2_ip%d, @ l2_cv%d)\n%sif: l2_ils%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_ils%d)\n%s    return: 0\n%s---\n", ind, t, place, t, ind, t, ind, t, ind, ind) < 0
+                return: 1
+            ---
+        ---
+    ---
+    if: scalar != 0 && full_value = 0
+        if: c.fprintf(out_cell[0], "%sif: l2_cv%d.present = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, t, ind, ind, ind) < 0
             return: 1
-        status := lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
-        if: status != 0
-            return: 1
-        if: c.fprintf(out_cell[0], "%sint: l2_ils%d lmx_walk_place_load(l2_call_arena, @ l2_ip%d, @ l2_cv%d)\n%sif: l2_ils%d != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(l2_ils%d)\n%s    return: 0\n%s---\n", ind, t, place, t, ind, t, ind, t, ind, ind) < 0
-            return: 1
+        ---
     ---
     if: c.lm_compiler_emit_roots_current_value(ind, "l2_cv", t) != 0 || c.lm_compiler_tx_set(dest, (cast: (const: @: char) raw\data)) != 0
         return: 1
     if: full_value != 0 && c.lm_compiler_tx_join(full_value, "@ ", record, 0, 0, 0) != 0
         return: 1
-    if: context != 0 && reference > 0
+    if: context != 0 && (reference > 0 || scalar != 0)
         context[0] := t
     return: 0
 end: lm_compiler_emit_native_input_read
@@ -8425,7 +8445,7 @@ fn: lm_compiler_native_input_place_type (int: mi; int: fi; int: ft; const: (@: i
         return: 2
     if: fi >= m_arity_cell[0][mi] + m_dyn_cell[0][mi]
         return: 2
-    if: c.lm_compiler_formal_raw(ft) >= 100 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(ft)) = 0
+    if: c.lm_compiler_formal_raw(ft) >= 100 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(ft)) = 0 && c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(ft)) < 0
         return: 2
     if: c.lm_compiler_emit_input_value_type(ft, (cast: (int) (c.lm_compiler_input_is_descriptor(mi, fi))), type) != 0
         return: 2
@@ -8453,6 +8473,43 @@ fn: lm_compiler_emit_native_input_place_text (int: mi; int: fi; const: (@: type 
     return: 0
 end: lm_compiler_emit_native_input_place_text
 
+# The static contract supplies an absent formal's ABI. Check a supplied RHS
+# before materializing any local cell; the same failure boundary handles it.
+fn: lm_compiler_emit_native_input_scalar_place (int: mi; int: fi; int: ft; const: (@: ind char); const: (@: value_record char); int: at_entry; @: place int) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    @@: m_arity_cell int (cast: (@@: int) (@ c.l2_m_arity))
+    @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
+    c.L2FrontendScratchChar64: abi_storage
+    c.L2FrontendScratchChar64: source_storage
+    c.L2FrontendScratchChar64: status_storage
+    c.L2Tx: abi_tx
+    c.L2Tx: source_tx
+    c.L2Tx: status_tx
+    @: abi c.L2Tx c.lm_compiler_tx_local(@ abi_tx, (cast: (@: char) abi_storage\buffer), 64U)
+    @: source c.L2Tx c.lm_compiler_tx_local(@ source_tx, (cast: (@: char) source_storage\buffer), 64U)
+    @: status c.L2Tx c.lm_compiler_tx_local(@ status_tx, (cast: (@: char) status_storage\buffer), 64U)
+    int: t
+    if: mi < 0 || fi < 0 || ind = 0 || place = 0 || abi = 0 || source = 0 || status = 0
+        return: 1
+    place[0] := -1
+    t := tn_cell[0]
+    tn_cell[0] := t + 1
+    if: c.fprintf(out_cell[0], "%sLmxWalkPlace: l2_ip%d\n", ind, t) < 0 || c.lm_compiler_emit_scalar_contract(c.lm_compiler_formal_raw(ft), ind, abi, source, status, 1) != 0
+        return: 1
+    if: value_record != 0 && value_record[0] != 0
+        if: c.fprintf(out_cell[0], "%sif: %s = c.LMX_WALK_OK\n%s    %s: lmx_walk_value_scalar_storage(l2_call_arena, %s, c.LMX_TYPE_FOREIGN, %s)\n%s---\n", ind, status\data, ind, status\data, value_record, abi\data, ind) < 0
+            return: 1
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "%sif: %s = c.LMX_WALK_OK\n%s    %s: lmx_walk_values_arg_place_scalar(l2_call_arena, l2_input_values, l2_input_refs, %dU, %dU, %s, %s, @ l2_ip%d)\n%s---\n%sif: %s = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, status\data, ind, status\data, m_arity_cell[0][mi] + m_dyn_cell[0][mi], fi, abi\data, source\data, t, ind, ind, status\data) < 0 || lm_compiler_emit_received_place_failure(mi, "convert", ind, at_entry) != 0
+        return: 1
+    if: c.fprintf(out_cell[0], "%s---\n%sif: %s != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(%s)\n%s    return: 0\n%s---\n", ind, ind, status\data, ind, status\data, ind, ind) < 0
+        return: 1
+    place[0] := t
+    return: 0
+end: lm_compiler_emit_native_input_scalar_place
+
 fn: lm_compiler_emit_native_input_place (int: mi; int: fi; int: ft; const: (@: ind char); @: place int) int
     c.L2FrontendScratchChar96: type_storage
     @: type char (cast: (@: char) type_storage\buffer)
@@ -8464,6 +8521,8 @@ fn: lm_compiler_emit_native_input_place (int: mi; int: fi; int: ft; const: (@: i
     status := lm_compiler_native_input_place_type(mi, fi, ft, ind, type)
     if: status != 0
         return: status
+    if: c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(ft)) >= 0
+        return: lm_compiler_emit_native_input_scalar_place(mi, fi, ft, ind, 0, 0, place)
     return: lm_compiler_emit_native_input_place_text(mi, fi, type, ind, place)
 end: lm_compiler_emit_native_input_place
 
@@ -8495,6 +8554,8 @@ fn: lm_compiler_emit_native_input_store (int: mi; int: fi; int: ft; const: (@: i
     tn_cell[0] := snapshot + 1
     if: c.fprintf(out_cell[0], "%sLmxWalkValue: l2_isv%d\n%sc.memcpy((cast: (@: void) (@ l2_isv%d)), (cast: (@: void) %s), c.sizeof(c.LmxWalkValue))\n", ind, snapshot, ind, snapshot, value_record) < 0
         return: 1
+    if: c.snprintf(record_name, 64U, "@ l2_isv%d", snapshot) < 0
+        return: 1
     # An absent RHS must not create an otherwise absent formal's place.
     if: lm_compiler_bump_ind(ind, @ deep) != 0 || c.fprintf(out_cell[0], "%sif: l2_isv%d.present != 0\n", ind, snapshot) < 0
         return: 1
@@ -8509,6 +8570,10 @@ fn: lm_compiler_emit_native_input_store (int: mi; int: fi; int: ft; const: (@: i
     # existing place's type, and a part method's free input read from its part root failed INVALID natively.
     if: c.lm_compiler_ft_is_free(ft) != 0
         if: at_entry != 0
+            # An absent FREE default defines its initial type. These are
+            # unfilled facts; the successful writer alone sets present.
+            if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present = 0 && l2_isv%d.kind = c.LMX_WALK_VALUE_FOREIGN\n%s    int: l2_idas%d lmx_walk_value_scalar_storage(l2_call_arena, @ l2_isv%d, c.LMX_TYPE_FOREIGN, l2_isv%d.scalar_abi)\n%s    if: l2_idas%d != c.LMX_WALK_OK\n%s        return: lmx_call_note_walk_fail(lmx_walk_boundary_status(l2_call_arena, l2_call_code, l2_idas%d))\n%s    ---\n%s    l2_input_values[%d].type: c.LMX_TYPE_FOREIGN\n%s    l2_input_values[%d].scalar_abi: l2_isv%d.scalar_abi\n%s    l2_input_values[%d].source_type: l2_isv%d.source_type\n%s---\n", ind, fi, snapshot, ind, snapshot, snapshot, snapshot, ind, snapshot, ind, snapshot, ind, ind, fi, ind, fi, snapshot, ind, fi, snapshot, ind) < 0
+                return: 1
             if: c.snprintf(type, 96U, "(cast: (int) l2_isv%d.type)", snapshot) < 0
                 return: 1
             status := lm_compiler_emit_native_input_place_text(mi, fi, type, ind, @ place)
@@ -8516,7 +8581,12 @@ fn: lm_compiler_emit_native_input_store (int: mi; int: fi; int: ft; const: (@: i
             status := lm_compiler_emit_native_input_place_text(mi, fi, "c.LMX_TYPE_NONE", ind, @ place)
         ---
     else:
-        status := lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
+        if: c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(ft)) >= 0
+            status := lm_compiler_emit_native_input_scalar_place(mi, fi, ft, ind, record_name, at_entry, @ place)
+        ---
+        else:
+            status := lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
+        ---
     ---
     if: status != 0
         return: 1
@@ -8569,7 +8639,7 @@ fn: lm_compiler_emit_free_input_address (int: mi; int: fi; int: ft; const: (@: i
         return: 1
     if: lm_compiler_emit_native_input_default(mi, fi, ft, ind) != 0
         return: 1
-    if: c.fprintf(out_cell[0], "%sif: l2_input_refs[%d] = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, fi, ind, ind, ind) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, fi, ind, ind, ind) < 0
         return: 1
     if: lm_compiler_emit_native_input_place_text(mi, fi, "c.LMX_TYPE_NONE", ind, @ place) != 0
         return: 1
@@ -8643,7 +8713,7 @@ fn: lm_compiler_emit_native_input_address (int: mi; const: (@: address c.L2Addre
         return: 1
     if: lm_compiler_emit_native_input_default(mi, fi, ft, ind) != 0
         return: 1
-    if: c.fprintf(out_cell[0], "%sif: l2_input_refs[%d] = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, fi, ind, ind, ind) < 0
+    if: c.fprintf(out_cell[0], "%sif: l2_input_values[%d].present = 0\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n%s    return: 0\n%s---\n", ind, fi, ind, ind, ind) < 0
         return: 1
     status := lm_compiler_emit_native_input_place(mi, fi, ft, ind, @ place)
     if: status != 0
@@ -9801,12 +9871,128 @@ fn: lm_compiler_emit_received_span (@: first c.LmP0Field; int: n; int: ty; int: 
     return: lm_compiler_emit_received_span_full(first, n, ty, model, stmt, mi, ind, dest, 0)
 end: lm_compiler_emit_received_span
 
+# A scalar keeps the completed producer record. An expected formal does not
+# supply the SOURCE of an opaque C producer; an explicit typed RETURN does.
+fn: lm_compiler_emit_scalar_receive_span_full (@: span c.L2ValueSpan; int: ty; int: model; const: (@: stmt c.LmP0Node); int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx; int: declared_source) int
+    @@: out c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: next int (cast: (@: int) (@ c.l2_tn))
+    const: (@@: src char (cast: (const: @@: char) (@ c.l2_src)))
+    c.L2ReferenceSource: source
+    @: source_p c.L2ReferenceSource @ source
+    c.L2AdmissionPlan: admission
+    @: site c.L2ExpressionSite 0
+    int: admission_kind 0
+    int: admission_index -1
+    int: raw c.lm_compiler_formal_raw(ty)
+    int: source_ft -1
+    int: source_context -1
+    int: t
+    int: rc
+    c.L2FrontendScratchChar64: input_storage
+    c.L2FrontendScratchChar64: abi_storage
+    c.L2FrontendScratchChar64: source_storage
+    c.L2FrontendScratchChar64: status_storage
+    c.L2FrontendScratchChar64: name_storage
+    c.L2FrontendScratchChar64: record_storage
+    c.L2FrontendScratchChar96: address_storage
+    c.L2FrontendScratchChar1024: pointer_storage
+    c.L2FrontendScratchChar1024: declaration_storage
+    c.L2Tx: input_tx
+    c.L2Tx: abi_tx
+    c.L2Tx: source_tx
+    c.L2Tx: status_tx
+    c.L2Tx: pointer_tx
+    c.L2Tx: declaration_tx
+    @: input c.L2Tx c.lm_compiler_tx_local(@ input_tx, (cast: (@: char) input_storage\buffer), 64U)
+    @: abi c.L2Tx c.lm_compiler_tx_local(@ abi_tx, (cast: (@: char) abi_storage\buffer), 64U)
+    @: declared c.L2Tx c.lm_compiler_tx_local(@ source_tx, (cast: (@: char) source_storage\buffer), 64U)
+    @: status c.L2Tx c.lm_compiler_tx_local(@ status_tx, (cast: (@: char) status_storage\buffer), 64U)
+    @: pointer c.L2Tx c.lm_compiler_tx_local(@ pointer_tx, (cast: (@: char) pointer_storage\buffer), 1024U)
+    @: declaration c.L2Tx c.lm_compiler_tx_local(@ declaration_tx, (cast: (@: char) declaration_storage\buffer), 1024U)
+    @: name char (cast: (@: char) name_storage\buffer)
+    @: record char (cast: (@: char) record_storage\buffer)
+    @: address char (cast: (@: char) address_storage\buffer)
+    # Complete availability/source probes before emitting the producer.
+    if: mi < 0 || c.lm_compiler_m_machine(mi) != 0 || c.lm_compiler_scalar_type_row(raw) < 0
+        return: 2
+    if: span = 0 || dest = 0 || ind = 0 || input = 0 || abi = 0 || declared = 0 || status = 0 || pointer = 0 || declaration = 0
+        return: 1
+    if: c.lm_compiler_pointer_decl_text(raw, 1, 0, pointer) != 0
+        return: 1
+    c.lm_compiler_value_span_type(span, mi, @ source_ft)
+    if: model >= 0
+        if: lm_compiler_reference_source_value(span, mi, @ source) != 0 || c.lm_compiler_admission_key(model, @ source, 1, -1, -1, -1, @ admission) != 0
+            return: 1
+        admission_index := c.lm_compiler_method_body_result((cast: (int) source_p\origin_method))
+        if: admission_index >= 0
+            admission_kind := 2
+        else:
+            admission_index := source_p\origin_method
+        ---
+        site := c.lm_compiler_admission_site(admission_kind, admission_index, (cast: (int) source_p\origin_method), @ admission)
+        if: site = 0 || site\state != 1 || site\place = 0
+            return: c.lm_compiler_error(src[0], stmt, "internal: native admission has no unique retained source operation")
+        ---
+    ---
+    if: lm_compiler_emit_native_span_full(span, mi, ind, dest, @ source_context, input) != 0
+        return: 1
+    if: input\data[0] = 0
+        if: source_ft != -12
+            return: c.lm_compiler_error(src[0], stmt, "a scalar producer without a value record")
+        if: declared_source != 0
+            rc := lm_compiler_emit_material_value_full(mi, raw, 0, ind, dest, source_context, input)
+            if: rc != 0
+                return: 1
+            ---
+        else:
+            t := next[0]
+            next[0] := t + 1
+            if: c.snprintf(name, 64U, "l2_sraw%d", t) < 0 || c.snprintf(record, 64U, "@ l2_srawv%d", t) < 0 || c.snprintf(address, 96U, "(cast: (@: void) (@ %s))", name) < 0 || c.lm_compiler_value_decl_text(raw, 0, name, declaration) != 0
+                return: 1
+            if: c.fprintf(out[0], "%s%s %s\n%sLmxWalkValue: l2_srawv%d\n", ind, declaration\data, dest\data, ind, t) < 0 || c.lm_compiler_emit_scalar_capture(raw, "l2_call_arena", address, 0, ind, record, "return: 0", 0) != 0
+                return: 1
+            if: c.lm_compiler_emit_roots_current_value(ind, "l2_srawv", t) != 0 || c.lm_compiler_tx_set(input, record) != 0
+                return: 1
+            ---
+        ---
+    ---
+    # Admission can attach receiving context without mutating the producer.
+    t := next[0]
+    next[0] := t + 1
+    if: c.snprintf(record, 64U, "@ l2_cv%d", t) < 0 || c.fprintf(out[0], "%sLmxWalkValue: l2_cv%d\n%sc.memcpy((cast: (@: void) (@ l2_cv%d)), (cast: (@: void) %s), c.sizeof(c.LmxWalkValue))\n", ind, t, ind, t, input\data) < 0
+        return: 1
+    if: c.lm_compiler_emit_roots_current_value(ind, "l2_cv", t) != 0 || c.lm_compiler_emit_scalar_contract(raw, ind, abi, declared, status, 0) != 0
+        return: 1
+    if: c.fprintf(out[0], "%sif: %s = c.LMX_WALK_OK\n%s    %s: lmx_walk_value_scalar_storage(l2_call_arena, %s, c.LMX_TYPE_FOREIGN, %s)\n%s---\n%sif: %s = c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT\n", ind, status\data, ind, status\data, record, abi\data, ind, ind, status\data) < 0 || lm_compiler_emit_received_place_failure(mi, "convert", ind, 0) != 0
+        return: 1
+    if: c.fprintf(out[0], "%s---\n%sif: %s != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(%s)\n%s    return: 0\n%s---\n", ind, ind, status\data, ind, status\data, ind, ind) < 0
+        return: 1
+    if: c.lm_compiler_tx_join(dest, "((cast: (", (cast: (const: @: char) pointer\data), ") lmx_walk_value_storage(", record, "))[0])") != 0
+        return: 1
+    if: model >= 0 && lm_compiler_emit_receiving_admit_context_record(ty, model, mi, ind, dest, @ source, -1, 0, 0, record) != 0
+        return: 1
+    if: full_value = 0
+        return: lm_compiler_emit_full_present_use(ind, record)
+    return: c.lm_compiler_tx_set(full_value, record)
+end: lm_compiler_emit_scalar_receive_span_full
+
 fn: lm_compiler_emit_received_span_full (@: first c.LmP0Field; int: n; int: ty; int: model; const: (@: stmt c.LmP0Node); int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx) int
+    return: lm_compiler_emit_received_span_full_mode(first, n, ty, model, stmt, mi, ind, dest, full_value, 0)
+end: lm_compiler_emit_received_span_full
+
+fn: lm_compiler_emit_received_span_full_mode (@: first c.LmP0Field; int: n; int: ty; int: model; const: (@: stmt c.LmP0Node); int: mi; const: (@: ind char); @: dest c.L2Tx; @: full_value c.L2Tx; int: declared_source) int
     if: full_value != 0 && c.lm_compiler_tx_clear(full_value) != 0
         return: 1
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     c.L2ValueSpan: value
     int: status
+    if: mi >= 0 && c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(ty)) >= 0
+        if: c.lm_compiler_value_expression_prepare(first, n, @ value) != 0
+            return: c.lm_compiler_alloc_or(src_cell[0], stmt, "cannot prepare the received expression")
+        status := lm_compiler_emit_scalar_receive_span_full(@ value, ty, model, stmt, mi, ind, dest, full_value, declared_source)
+        c.lm_compiler_value_span_release(@ value)
+        return: status
+    ---
     if: ty != 8 && c.lm_compiler_prim_code_name(ty) != 0
         if: c.lm_compiler_value_expression_prepare(first, n, @ value) != 0
             return: (cast: (int) (c.lm_compiler_alloc_or(src_cell[0], stmt, "cannot prepare the received expression")))
@@ -9814,7 +10000,7 @@ fn: lm_compiler_emit_received_span_full (@: first c.LmP0Field; int: n; int: ty; 
         c.lm_compiler_value_span_release(@ value)
         return: (cast: (int) (status))
     return: lm_compiler_emit_reference_value_at_context_full(first, n, ty, model, -1, mi, ind, dest, -1, 0, 0, full_value)
-end: lm_compiler_emit_received_span_full
+end: lm_compiler_emit_received_span_full_mode
 
 # Original: l2src/l2trans.lm1:26922
 fn: lm_compiler_emit_array_cell (const: (@: descriptor char); const: (@: index char); int: mi; const: (@: ind char); @: place c.L2Tx) int
@@ -11127,6 +11313,11 @@ fn: lm_compiler_emit_call_value_record (int: ft; int: descriptor; const: (@: val
     @: type char (cast: (@: char) type_storage\buffer)
     c.L2FrontendScratchChar64: name_storage
     @: name char (cast: (@: char) name_storage\buffer)
+    c.L2FrontendScratchChar96: address_storage
+    @: address char (cast: (@: char) address_storage\buffer)
+    c.L2FrontendScratchChar64: seed_storage
+    @: seed_name char (cast: (@: char) seed_storage\buffer)
+    const: (@: seed char 0)
     c.L2FrontendScratchChar1024: declaration_own_storage
     @: declaration_own char (cast: (@: char) declaration_own_storage\buffer)
     c.L2Tx: declaration_tx
@@ -11137,6 +11328,16 @@ fn: lm_compiler_emit_call_value_record (int: ft; int: descriptor; const: (@: val
         tn_cell[0] := tn_cell[0] + 1
         if: c.sprintf(name, "l2_arg%d", t) < 0 || c.lm_compiler_value_decl_text(ft, 0, name, declaration) != 0
             return: (cast: (int) (1))
+        if: c.lm_compiler_scalar_type_row(ft) >= 0
+            if: context >= 0
+                if: c.snprintf(seed_name, 64U, "@ l2_cv%d", context) < 0
+                    return: 1
+                seed := seed_name
+            ---
+            if: c.fprintf(out_cell[0], "%s%s %s\n", ind, declaration\data, value) < 0 || c.snprintf(address, 96U, "(cast: (@: void) (@ %s))", name) < 0
+                return: 1
+            return: c.lm_compiler_emit_scalar_capture(ft, "l2_call_arena", address, seed, ind, dest, "return: 0", 1)
+        ---
         return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%s%s %s\n%slmx_walk_value_foreign(%s, (cast: (@: void) (@ %s)))\n", ind, declaration\data, value, ind, dest, name) < 0))))
     if: c.lm_compiler_emit_input_value_type(ft, descriptor, type) != 0
         return: (cast: (int) (1))
@@ -11173,7 +11374,7 @@ fn: lm_compiler_emit_material_value_full (int: mi; int: ft; int: descriptor; con
     if: mi < 0 || ind = 0 || c.lm_compiler_m_machine(mi) != 0
         return: 2
     ft := c.lm_compiler_formal_raw(ft)
-    if: ft = 8 || (ft >= 100 && c.lm_compiler_pointer_depth(ft) = 0)
+    if: ft = 8 || (ft >= 100 && c.lm_compiler_pointer_depth(ft) = 0 && c.lm_compiler_scalar_type_row(ft) < 0)
         return: 2
     if: c.lm_compiler_emit_input_value_type(ft, descriptor, type) != 0
         return: 2
@@ -11186,7 +11387,7 @@ fn: lm_compiler_emit_material_value_full (int: mi; int: ft; int: descriptor; con
     if: lm_compiler_emit_call_value_record(ft, descriptor, name, context, ind, record) != 0
         return: 1
     # The shared numeric packer leaves its failure arm open for the caller.
-    if: c.lm_compiler_pointer_depth(ft) = 0
+    if: c.lm_compiler_pointer_depth(ft) = 0 && c.lm_compiler_scalar_type_row(ft) < 0
         if: c.fprintf(out_cell[0], "%s    return: 0\n%s---\n", ind, ind) < 0
             return: 1
         ---
@@ -11203,11 +11404,27 @@ fn: lm_compiler_emit_hidden_value_record (int: ft; const: (@: value char); int: 
     @: type char (cast: (@: char) type_storage\buffer)
     c.L2FrontendScratchChar64: alias_storage
     @: alias char (cast: (@: char) alias_storage\buffer)
+    c.L2FrontendScratchChar64: seed_storage
+    @: seed_name char (cast: (@: char) seed_storage\buffer)
+    const: (@: seed char 0)
+    c.L2FrontendScratchChar160: child_storage
+    c.L2Tx: child_tx
+    @: child c.L2Tx c.lm_compiler_tx_local(@ child_tx, (cast: (@: char) child_storage\buffer), 160U)
     int: t
     if: c.strcmp(value, "ABSENT") = 0
         return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%slmx_walk_value_clear(%s)\n", ind, dest) < 0))))
     if: c.strncmp(value, "REF:", 4U) != 0
         return: (cast: (int) (lm_compiler_emit_call_value_record(ft, 0, value, context, ind, dest)))
+    if: c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(ft)) >= 0
+        if: context >= 0
+            if: c.snprintf(seed_name, 64U, "@ l2_cv%d", context) < 0
+                return: 1
+            seed := seed_name
+        ---
+        if: child = 0 || c.lm_compiler_tx_set(child, ind) != 0 || c.lm_compiler_tx_cat(child, "    ") != 0 || c.fprintf(out_cell[0], "%slmx_walk_value_clear(%s)\n%sif: %s != 0\n", ind, dest, ind, value + 4) < 0 || c.lm_compiler_emit_scalar_capture(c.lm_compiler_formal_raw(ft), "l2_call_arena", value + 4, seed, (cast: (const: @: char) child\data), dest, "return: 0", 0) != 0 || c.fprintf(out_cell[0], "%s---\n", ind) < 0
+            return: 1
+        return: 0
+    ---
     if: c.lm_compiler_formal_raw(ft) >= 100 && c.lm_compiler_pointer_depth(c.lm_compiler_formal_raw(ft)) = 0
         return: (cast: (int) ((cast: (int) (c.fprintf(out_cell[0], "%slmx_walk_value_clear(%s)\n%sif: %s != 0\n%s    lmx_walk_value_foreign(%s, %s)\n%s---\n", ind, dest, ind, value + 4, ind, dest, value + 4, ind) < 0))))
     if: c.lm_compiler_emit_input_value_type(ft, 0, type) != 0 || c.fprintf(out_cell[0], "%sif: lmx_walk_value_load(l2_call_arena, %s, %s, %s) != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(c.LMX_WALK_INVALID)\n", ind, value + 4, type, dest, ind) < 0
@@ -19834,7 +20051,7 @@ fn: lm_compiler_emit_stmts_with_position (const: (@: body c.LmP0Structure); @: f
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && oi < 0 && si >= 0
             field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
         if: c.lm_compiler_frame_head(stmt, "if") = 0 && lm_compiler_is_char_decl(stmt) = 0 && c.lm_compiler_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0
-            if: c.lm_compiler_m_machine(mi) = 0 && c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))) = 0
+            if: c.lm_compiler_m_machine(mi) = 0 && (c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))) = 0 || c.lm_compiler_scalar_type_row(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(mi, fi))) >= 0)
                 if: store_full = 0 || c.lm_compiler_tx_clear(store_full) != 0
                     return: 1
                 # Slice 255 (design 4.5 B2a): a write through a free name -- the dynamic value (a literal is contextual) is received

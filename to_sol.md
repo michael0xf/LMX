@@ -1,5 +1,27 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез397, кодовые gates PASS:**396 принят/отправлен41c1616d прямо main. Runtime physical receiving,
+полный ACTIVE SOURCE и ordinary formal precision/store/address/caller-isolation проверены. Продолжать v3.
+Complete ACTIVE SOURCE проецировать прежним counted TEXT interner, с exact-start/stored-length proof;
+full schema/class/row identity отдельно от canonical C ABI. [Точный статус](steps/current.md).
+Runtime04/private08 уже PASS: полный custom SOURCE, source fact, copy/GC и прежние receiving/RET(ARG) gates.
+FE05 private raw compiler и ordinary os-walk-witness03 с Runtime07 PASS: identity действительно walked2, precise value;
+прежние controls4 PASS. Runtime07/private12-reuse подтвердили полные scalar local Values и read/store snapshots.
+Source25/Runtime08 private13 SUITE1/0 подтвердил escaped formal address
+через arena companion после real dispatcher/scratch exit/GC. Ordinary-witness04 forced PASS всех пяти методов,
+native FAIL4 exit86 на formal store сохранён. Source27/FE07 raw74dcfd67 исправил scalar receiving/typed-return SOURCE;
+ordinary-witness05 OSWALK0 PASS всех пяти методов, precision/store/address/caller-isolation n/f/prod/observe/root0/root1.
+Source28 добавляет full-suite row. Hosted, genuine G1/G2 quick smoke9/0, fixedpoint29 и actual G2 targeted6/0,
+ordinary-witness07/Graph3 triple PASS. G2 render35/14 и fresh docs-check01 PASS35/14/27/44/615,
+links/LF28283; финальный индекс перед коммитом. Runtime08 переиспользовать.
+После397 продолжать основной M13: полный рабочий Value в existing GraphRun frame при ordinary Code над typed DATA,
+place до RHS, ABI receive/store, dirty publication в прежнюю cell и GC row Value. Это не требует искусственного метода
+или нового scalar parser. Native/typed args/result/constructor/fn_data merge и public scalar own fields остаются
+связанными следующими работами. Конкретная вертикаль и её честные границы добавлены в основной v3.
+Для продолжения использовать existing owned[k]/callee refs[k]: полный Value отдельно от ленивого ABI-места,
+presence через owned.present, первый store/address по expected witness ABI. Transport project не менять;
+native activation retarget выполнить один раз на настоящие callee arrays, без фиктивного FREE resolve.
+
 **Срез396: кодовые gates и docs-check PASS.**395 принят/отправлен73196f98 прямо main.
 Active primitive.description подключена к общему resolver/interner/native printers; source identity и C spelling
 раздельны, unit aliases без runtime row guess проходят прежний L1 emitter. Private public/deep/const/custom table PASS.

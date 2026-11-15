@@ -441,6 +441,172 @@ fn: lm_compiler_emit_scalar_aliases (@: out c.FILE) int
         i := i + 1
     return: 0
 
+# Canonicalize literal SOURCE pairs only at the compiler input boundary.
+# The runtime identity contains every column and original literal token.
+fn: lm_compiler_scalar_column_compare (const: (@: a c.LmP0Text); const: (@: b c.LmP0Text)) int
+    c.LmP0Text: left_storage
+    c.LmP0Text: right_storage
+    @: left c.LmP0Text @ left_storage
+    @: right c.LmP0Text @ right_storage
+    size_t: common 0U
+    int: order 0
+    if: lm_compiler_profile_payload(a, left) = 0 || lm_compiler_profile_payload(b, right) = 0
+        return: 0
+    common := left\length
+    if: right\length < common
+        common := right\length
+    order := c.memcmp(left\data, right\data, common)
+    if: order != 0
+        return: order
+    if: left\length < right\length
+        return: -1
+    return: (cast: (int) (left\length > right\length))
+
+# 0 complete, 2 unavailable/nonliteral, 1 allocation/output failure.
+fn: lm_compiler_scalar_source_blob (int: row; @: out c.L2Tx) int
+    @: primitive_table int (cast: (@: int) (@ c.l2_pr_t))
+    @@: rows int (cast: (@@: int) (@ c.l2_tb_nrow))
+    @@: widths int (cast: (@@: int) (@ c.l2_tb_ncol))
+    @@: first int (cast: (@@: int) (@ c.l2_tb_cell0))
+    @@: column_first int (cast: (@@: int) (@ c.l2_tb_col0))
+    @@@: columns c.LmP0Text (cast: (@@@: c.LmP0Text) (@ c.l2_tbc_name))
+    @@@: values char (cast: (@@@: char) (@ c.l2_tbx_name))
+    @: key c.LmP0Text 0
+    @: prior c.LmP0Text 0
+    c.LmP0Text: payload_storage
+    @: payload c.LmP0Text @ payload_storage
+    const: (@: raw char 0)
+    int: width 0
+    int: slot 0
+    int: rank 0
+    int: column 0
+    int: previous -1
+    int: best -1
+    if: out = 0 || c.lm_compiler_prim_load() != 0 || row < 0 || row >= rows[0][primitive_table[0]]
+        return: 1
+    width := widths[0][primitive_table[0]]
+    slot := first[0][primitive_table[0]] + row * width
+    while: column < width
+        key := columns[0][column_first[0][primitive_table[0]] + column]
+        if: key = 0 || lm_compiler_profile_payload(key, payload) = 0 || values[0][slot + column] = 0
+            c.lm_compiler_tx_clear(out)
+            return: 2
+        column := column + 1
+    if: c.lm_compiler_tx_set(out, "primitive.description") != 0 || c.lm_compiler_tx_catn(out, "", 1U) != 0
+        return: 1
+    while: rank < width
+        best := -1
+        column := 0
+        while: column < width
+            key := columns[0][column_first[0][primitive_table[0]] + column]
+            if: previous >= 0
+                prior := columns[0][column_first[0][primitive_table[0]] + previous]
+                if: lm_compiler_scalar_column_compare(key, prior) <= 0
+                    column := column + 1
+                    continue
+                ---
+            if: best < 0 || lm_compiler_scalar_column_compare(key, columns[0][column_first[0][primitive_table[0]] + best]) < 0
+                best := column
+            column := column + 1
+        ---
+        if: best < 0
+            c.lm_compiler_tx_clear(out)
+            return: 2
+        key := columns[0][column_first[0][primitive_table[0]] + best]
+        raw := values[0][slot + best]
+        if: lm_compiler_profile_payload(key, payload) = 0 || c.lm_compiler_tx_catn(out, payload\data, payload\length) != 0 || c.lm_compiler_tx_catn(out, "", 1U) != 0 || c.lm_compiler_tx_catn(out, raw, c.strlen(raw)) != 0 || c.lm_compiler_tx_catn(out, "", 1U) != 0
+            return: 1
+        previous := best
+        rank := rank + 1
+    ---
+    return: 0
+
+# Emit one physical ABI and a separately validated complete ACTIVE SOURCE.
+# The caller consumes status through its existing failure/throw boundary.
+fn: lm_compiler_emit_scalar_contract (int: ft; const: (@: ind char); @: abi c.L2Tx; @: source c.L2Tx; @: status c.L2Tx; int: with_source) int
+    @@: out c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: next int (cast: (@: int) (@ c.l2_tn))
+    c.L2FrontendScratchChar64: name_storage
+    @: name char (cast: (@: char) name_storage\buffer)
+    c.L2FrontendScratchChar160: physical_storage
+    c.L2Tx: physical_tx
+    @: physical c.L2Tx c.lm_compiler_tx_local(@ physical_tx, (cast: (@: char) physical_storage\buffer), 160U)
+    c.L2FrontendScratchChar1024: blob_storage
+    c.L2Tx: blob_tx
+    @: blob c.L2Tx c.lm_compiler_tx_local(@ blob_tx, (cast: (@: char) blob_storage\buffer), 1024U)
+    c.LmP0Text: spelling_storage
+    c.LmP0Text: printed_storage
+    @: spelling c.LmP0Text @ spelling_storage
+    @: printed c.LmP0Text @ printed_storage
+    int: row lm_compiler_scalar_type_row(ft)
+    int: id next[0]
+    int: complete 0
+    int: failed 0
+    next[0] := next[0] + 1
+    if: row < 0 || ind = 0 || abi = 0 || source = 0 || status = 0 || physical = 0 || blob = 0 || lm_compiler_primitive_scalar_spelling(row, spelling) = 0
+        return: 1
+    if: c.snprintf(name, 64U, "l2_sabi%d", id) < 0 || c.lm_compiler_tx_set(abi, name) != 0 || c.snprintf(name, 64U, "l2_ssource%d", id) < 0 || c.lm_compiler_tx_set(source, name) != 0 || c.snprintf(name, 64U, "l2_sstatus%d", id) < 0 || c.lm_compiler_tx_set(status, name) != 0
+        return: 1
+    if: c.lm_compiler_tx_set(physical, "c.") != 0 || c.lm_compiler_tx_catn(physical, spelling\data, spelling\length) != 0
+        return: 1
+    printed\data := physical\data
+    printed\length := physical\len
+    if: c.fprintf(out[0], "%s@: void l2_physical%d 0\n%sconst: @(LmxScalarABI %s) lmx_graph_scalar_binding(lmx_graph_intern(", ind, id, ind, abi\data) < 0 || lm_compiler_emit_cstr(printed) != 0 || c.fprintf(out[0], ", %zuU), @ l2_physical%d)\n%s@: void %s 0\n%sint: %s c.LMX_WALK_OK\n%sif: %s = 0\n%s    %s: c.LMX_WALK_INVALID\n%s---\n", physical\len, id, ind, source\data, ind, status\data, ind, abi\data, ind, status\data, ind) < 0
+        failed := 1
+    complete := 2
+    if: with_source != 0
+        complete := lm_compiler_scalar_source_blob(row, blob)
+    if: complete = 1
+        failed := 1
+    if: complete = 0 && failed = 0
+        printed\data := blob\data
+        printed\length := blob\len
+        if: c.fprintf(out[0], "%sif: %s != 0\n%s    %s: lmx_graph_scalar_description(%s, ", ind, abi\data, ind, status\data, abi\data) < 0 || lm_compiler_emit_cstr(printed) != 0 || c.fprintf(out[0], ", %zuU, @ %s)\n%s---\n", blob\len, source\data, ind) < 0
+            failed := 1
+        ---
+    ---
+    return: failed
+
+# Material C storage becomes an owned exact Value once. A supplied complete
+# Value is forwarded by the caller instead of entering this adapter again.
+fn: lm_compiler_emit_scalar_capture (int: ft; const: (@: arena char); const: (@: storage char); const: (@: seed char); const: (@: ind char); const: (@: dest char); const: (@: fail char); int: declared_source) int
+    @@: out c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @: next int (cast: (@: int) (@ c.l2_tn))
+    c.L2FrontendScratchChar64: abi_storage
+    c.L2FrontendScratchChar64: source_storage
+    c.L2FrontendScratchChar64: status_storage
+    c.L2Tx: abi_tx
+    c.L2Tx: source_tx
+    c.L2Tx: status_tx
+    @: abi c.L2Tx c.lm_compiler_tx_local(@ abi_tx, (cast: (@: char) abi_storage\buffer), 64U)
+    @: source c.L2Tx c.lm_compiler_tx_local(@ source_tx, (cast: (@: char) source_storage\buffer), 64U)
+    @: status c.L2Tx c.lm_compiler_tx_local(@ status_tx, (cast: (@: char) status_storage\buffer), 64U)
+    int: id next[0]
+    next[0] := next[0] + 1
+    if: arena = 0 || storage = 0 || ind = 0 || dest = 0 || fail = 0 || abi = 0 || source = 0 || status = 0 || lm_compiler_emit_scalar_contract(ft, ind, abi, source, status, declared_source) != 0
+        return: 1
+    if: c.fprintf(out[0], "%sLmxWalkValue: l2_scontext%d\n%slmx_walk_value_clear(@ l2_scontext%d)\n", ind, id, ind, id) < 0
+        return: 1
+    if: seed != 0 && c.fprintf(out[0], "%smemcpy((cast: (@: void) (@ l2_scontext%d)), (cast: (const: @: void) (%s)), c.sizeof(c.LmxWalkValue))\n", ind, id, seed) < 0
+        return: 1
+    # Raw C transport has no producer SOURCE. Its expected formal must not
+    # invent a language alias; a supplied full context remains authoritative.
+    if: declared_source != 0 && c.fprintf(out[0], "%sif: l2_scontext%d.source_type = 0\n%s    l2_scontext%d.source_type: %s\n%s---\n", ind, id, ind, id, source\data, ind) < 0
+        return: 1
+    if: c.fprintf(out[0], "%s@: Lmx l2_sprofile%d lmx_range_profile(%s, %s)\n%sif: l2_scontext%d.physical_profile != 0\n%s    l2_sprofile%d: l2_scontext%d.physical_profile\n%s---\n", ind, id, arena, storage, ind, id, ind, id, id, ind) < 0
+        return: 1
+    if: c.fprintf(out[0], "%s@: LmxPool l2_spool%d lmx_range_cell_pool(%s, %s)\n%sint: l2_stype%d c.LMX_TYPE_FOREIGN\n%sint: l2_sdirect%d 0\n%sif: l2_spool%d != 0\n%s    if: l2_spool%d\\kind != c.LMX_KIND_PRIMITIVE || lmx_type_base(l2_spool%d\\type) != c.LMX_TYPE_FOREIGN || l2_spool%d\\scalar_abi != %s\n%s        %s: c.LMX_WALK_INVALID\n%s    ---\n%s    l2_stype%d: l2_spool%d\\type\n%s    l2_sprofile%d: l2_spool%d\\profile\n", ind, id, arena, storage, ind, id, ind, id, ind, id, ind, id, id, id, abi\data, ind, status\data, ind, ind, id, id, ind, id, id) < 0
+        return: 1
+    # A real raw graph cell supplies its own complete context and absence;
+    # loading it does not read an unfilled C object or replace its SOURCE.
+    if: seed = 0 && c.fprintf(out[0], "%s    if: %s = c.LMX_WALK_OK\n%s        %s: lmx_walk_value_load(%s, %s, l2_stype%d, %s)\n%s        l2_sdirect%d: 1\n%s    ---\n", ind, status\data, ind, status\data, arena, storage, id, dest, ind, id, ind) < 0
+        return: 1
+    if: c.fprintf(out[0], "%selse:\n%s    if: lmx_range_entry_at(%s, %s) != 0\n%s        %s: c.LMX_WALK_INVALID\n%s    ---\n%s---\n", ind, ind, arena, storage, ind, status\data, ind, ind) < 0
+        return: 1
+    if: c.fprintf(out[0], "%sif: %s = c.LMX_WALK_OK && l2_sdirect%d = 0\n%s    %s: lmx_walk_value_foreign_capture(%s, %s, l2_stype%d, %s, l2_sprofile%d, @ l2_scontext%d, %s)\n%s---\n%sif: %s != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(%s)\n%s    %s\n%s---\n", ind, status\data, id, ind, status\data, arena, storage, id, abi\data, id, id, dest, ind, ind, status\data, ind, status\data, ind, fail, ind) < 0
+        return: 1
+    return: 0
+
 fn: lm_compiler_foreign_intern_parts (const: (@: name c.LmP0Text); int: depth; int: is_const; int: raw_c) int
     @: foreign_n_cell int (cast: (@: int) (@ c.l2_foreign_n))
     @@: foreign_depth_cell int (cast: (@@: int) (@ c.l2_foreign_depth))
@@ -1037,6 +1203,8 @@ fn: lm_compiler_own_ty_of_param (int: ft) int
         return: (cast: (int) (c.lm_compiler_oc_pointer(ft)))
     if: ft = 0 || ft = 1 || ft = 2 || ft = 36
         return: (cast: (int) (ft))
+    if: lm_compiler_scalar_type_row(ft) >= 0
+        return: (cast: (int) c.lm_compiler_oc_scalar(ft))
     return: (cast: (int) (-1))
 end: lm_compiler_own_ty_of_param
 
@@ -2071,6 +2239,8 @@ fn: lm_compiler_emit_input_value_type (int: ft; int: descriptor; @: type char) i
         return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_DESC") < 0))))
     if: lm_compiler_pointer_depth(ft) > 0
         return: (cast: (int) (c.lm_compiler_ptr_cell_type(ft, type)))
+    if: lm_compiler_scalar_type_row(ft) >= 0
+        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_FOREIGN") < 0))
     if: ft = 0
         return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_INT") < 0))))
     if: ft = 1
@@ -2178,6 +2348,17 @@ fn: lm_compiler_tramp_class (int: mi) int
         return: (cast: (int) (1))
     return: (cast: (int) (0))
 end: lm_compiler_tramp_class
+
+fn: lm_compiler_scalar_type_row (int: ft) int
+    @: count int (cast: (@: int) (@ c.l2_foreign_n))
+    @@: raw_c int (cast: (@@: int) (@ c.l2_foreign_raw_c))
+    c.LmP0Text: word
+    int: depth 0
+    int: qualified 0
+    int: index ft - 100
+    if: index < 0 || index >= count[0] || raw_c[0][index] != 0 || lm_compiler_type_parts(ft, @ word, @ depth, @ qualified) != 0 || depth != 0
+        return: -1
+    return: lm_compiler_primitive_scalar_row(@ word)
 
 fn: lm_compiler_foreign_value_ft (int: ft) int
     @: foreign_n_cell int (cast: (@: int) (@ c.l2_foreign_n))
@@ -2834,6 +3015,8 @@ fn: lm_compiler_ret_cell_ty (int: mi) int
     int: rt lm_compiler_sig_ret(mi)
     int: cls lm_compiler_tramp_class(mi)
     int: fi rt - 100
+    if: cls = 6 && lm_compiler_scalar_type_row(rt) >= 0
+        return: (cast: (int) c.lm_compiler_oc_scalar(rt))
     if: rt = 1
         return: (cast: (int) (1))
     if: cls = 1

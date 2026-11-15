@@ -1,10 +1,30 @@
 # Чеклист реализации LMX
 
+**Срез397, кодовые gates PASS:** bounded runtime04/private08: selected FOREIGN ABI, absent witness, exact owned storage,
+declared SOURCE результата, real portable RET(ARG), C/graph destinations и protected spans. Полный custom SOURCE
+через counted TEXT, source fact/copy/GC PASS. FE05 private raw compiler/Runtime07 ordinary os-walk-witness03
+доказывают identity walked2/precision; прежние controls4 PASS. Scalar formal closure использует existing activation
+и ленивые места. Source25/Runtime08 private13 SUITE1/0: escaped @formal после real scratch-exit/GC PASS.
+Ordinary-witness04 native FAIL4 exit86 сохранён. Source27/FE07 full scalar receiving/typed-return SOURCE PASS;
+ordinary-witness05 OSWALK0: precision/store/stable address/caller-isolation, native bindings5/forced counts2/2/1/1/1.
+Source28:932 включает регрессию в full-suite. Genuine G1/G2 quick smoke9/0, fixedpoint29, actual G2 targeted6/0,
+ordinary-witness07 и Graph3 triple PASS. G2 render35/14 и fresh docs-check01 PASS35/14/27/44/615,
+links/LF28283; финальный индекс проверяется перед коммитом.
+
+- [x] Ограниченный397: owned scalar actual/return receiving по canonical physical ABI, полный ACTIVE SOURCE,
+  callee local place/read/store/escaped address; precision/stable address/caller-isolation ordinary n/f counts5,
+  real scratch-exit/GC и actual G1/G2/targeted6/Graph3 приёмка. Полный bridge остаётся OPEN.
+
 - [x] 396: active public primitive resolver, source-keyed interner и единая native spelling projection;
   unit-owned aliases в прежнем L1 emitter, public scalar/deep/const/custom table приёмка.
   Source11:931; whole01 G1/G2 quick/fixedpoint29, actual G2 recovery16 и Graph3 triple PASS;
   render35/14/fresh docs-check02/indexed01 PASS35/14/27/44/615, links/LF28277/28283.
 - [ ] Общий owned scalar/Run/receiving/FFI/Foreign-Array после resolver, без int carrier и pointer-подмены scalar.
+- [ ] Следующая typed Run вертикаль: полный Value в existing LmxGraphWork для ordinary Code над supplied typed DATA,
+  снимок operand/read, ABI store по заранее выбранному месту, dirty publication в прежнюю cell и GC полного row Value.
+  Source oracle epsilon/3.5 и float→double refusal; native/typed args/results/constructor и fn_data/merge отдельно OPEN.
+- [ ] Public scalar own fields рабочего frontend: общий Value consumer/arena storage с dirty и SOURCE/Model;
+  Types/Helpers gates и numeric/pointer split Core снимать совместно, FOREIGN place поверх C stack недопустим.
 - [ ] Для owned scalar receiving продолжить existing physical witness/SOURCE: absent scalar witness с canonical ABI
   выбранного pool, исходная ACTIVE строка прямым metadata edge; совпадение C spelling не заменяет source identity.
 

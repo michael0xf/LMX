@@ -480,11 +480,205 @@ fn: lmx_walk_value_receive_scalar (@: value c.LmxWalkValue; int: type; const: (@
         c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
     return: c.LMX_WALK_OK
 
+# Exact owned transport, shared by the binder, walker and native typed reader.
+# This validates physical metadata without granting semantic admission.
+fn: lmx_walk_value_scalar_storage (@: arena c.LmxArena; @: value c.LmxWalkValue; int: type; const: (@: abi c.LmxScalarABI)) int
+    @: pool c.LmxPool 0
+    @: stored c.LmxWalkValue 0
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || value = 0
+        return: c.LMX_WALK_INVALID
+    if: value\present = 0
+        return: c.LMX_WALK_OK
+    status := lmx_walk_value_receive_scalar(value, type, abi, value)
+    if: status != c.LMX_WALK_OK
+        return: status
+    pool := c.lmx_range_cell_pool(arena, value\ref)
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type != value\type || pool\scalar_abi != value\scalar_abi || pool\stride != abi\size || pool\profile != value\physical_profile
+        return: c.LMX_WALK_INVALID
+    stored := c.lmx_value_cell_context(arena, value\ref)
+    if: stored = 0
+        return: c.LMX_WALK_INVALID
+    if: stored\present != 0 && (stored\kind != c.LMX_WALK_VALUE_FOREIGN || stored\ref != value\ref || stored\type != pool\type || stored\scalar_abi != pool\scalar_abi || stored\physical_profile != pool\profile)
+        return: c.LMX_WALK_INVALID
+    return: c.LMX_WALK_OK
+
+# An evaluated mutable scalar is snapshotted before a later actual can write
+# its source cell. Immutable cells already are stable. No Model graph is copied.
+fn: lmx_walk_scalar_snapshot (@: arena c.LmxArena; @: value c.LmxWalkValue) int
+    int: status c.LMX_WALK_OK
+    if: value = 0
+        return: c.LMX_WALK_INVALID
+    if: value\present = 0 || value\kind != c.LMX_WALK_VALUE_FOREIGN || value\scalar_abi = 0
+        return: c.LMX_WALK_OK
+    status := lmx_walk_value_scalar_storage(arena, value, c.LMX_TYPE_FOREIGN, (cast: (const: @: c.LmxScalarABI) value\scalar_abi))
+    if: status != c.LMX_WALK_OK || value\type < 0
+        return: status
+    return: lmx_walk_value_foreign_capture(arena, (cast: (@: void) value\ref), (cast: (int) value\type), (cast: (const: @: c.LmxScalarABI) value\scalar_abi), (cast: (@: c.Lmx) value\physical_profile), value, value)
+
+# Full input records and local ABI places are different existing arrays.
+# This adapter is used only after transport validation, on callee-owned rows.
+fn: lmx_walk_values_detach_scalar (@: arena c.LmxArena; @: values c.LmxWalkValue; @@: refs void; size_t: width) int
+    @: item c.LmxWalkValue 0
+    size_t: i 0U
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || (width != 0U && (values = 0 || refs = 0))
+        return: c.LMX_WALK_INVALID
+    while: i < width
+        item := values + i
+        if: item\kind = c.LMX_WALK_VALUE_FOREIGN && item\scalar_abi != 0
+            status := lmx_walk_value_scalar_storage(arena, item, c.LMX_TYPE_FOREIGN, (cast: (const: @: c.LmxScalarABI) item\scalar_abi))
+            if: status != c.LMX_WALK_OK
+                return: status
+            ---
+        ---
+        i := i + 1U
+    ---
+    i := 0U
+    while: i < width
+        item := values + i
+        if: item\kind = c.LMX_WALK_VALUE_FOREIGN && item\scalar_abi != 0
+            status := lmx_walk_scalar_snapshot(arena, item)
+            if: status != c.LMX_WALK_OK
+                return: status
+            refs[i] := 0
+        i := i + 1U
+    ---
+    return: c.LMX_WALK_OK
+
+# The existing retarget operation, independent of FREE-name resolution.
+fn: lmx_activation_values (@: arena c.LmxArena; @: values c.LmxWalkValue; @@: refs void; size_t: width) int
+    @: record c.LmxActivation 0
+    if: arena = 0
+        return: c.LMX_WALK_INVALID
+    record := (cast: (@: c.LmxActivation) arena\activation)
+    if: record != 0
+        record\values := (cast: (@: void) values)
+        record\refs := refs
+        record\width := width
+    return: c.LMX_WALK_OK
+
+fn: lmx_walk_values_entry (@: arena c.LmxArena; @: values c.LmxWalkValue; @@: refs void; size_t: width) int
+    @: record c.LmxActivation 0
+    int: status lmx_walk_values_detach_scalar(arena, values, refs, width)
+    if: status != c.LMX_WALK_OK
+        return: status
+    record := (cast: (@: c.LmxActivation) arena\activation)
+    # Walker retarget checks its real frame identity in entry_resolve.
+    if: record != 0 && record\kind = 2
+        return: lmx_activation_values(arena, values, refs, width)
+    return: c.LMX_WALK_OK
+
+# First STORE/ADDRESS materializes the formal's own mutable cell. Publication
+# of refs[k] is last; failure leaves the actual and current record unchanged.
+fn: lmx_walk_values_arg_place_scalar (@: arena c.LmxArena; @: owned c.LmxWalkValue; @@: refs void; size_t: width; size_t: k; const: (@: abi c.LmxScalarABI); @: source_type void; @: out c.LmxWalkPlace) int
+    @: item c.LmxWalkValue 0
+    @: stored c.LmxWalkValue 0
+    @: pool c.LmxPool 0
+    @: cell void 0
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || owned = 0 || refs = 0 || out = 0 || k >= width || abi = 0 || abi\size = 0U || abi\init = 0 || abi\copy = 0
+        return: c.LMX_WALK_INVALID
+    item := owned + k
+    if: refs[k] = 0
+        if: item\present < 0
+            return: c.LMX_WALK_INVALID
+        status := lmx_walk_value_scalar_storage(arena, item, c.LMX_TYPE_FOREIGN, abi)
+        if: status != c.LMX_WALK_OK
+            return: status
+        cell := c.lmx_arena_scalar_cells_profiled(arena, c.LMX_TYPE_FOREIGN, 0, abi, 1U)
+        if: cell = 0
+            return: c.LMX_WALK_NOMEM
+        stored := c.lmx_value_cell_context(arena, cell)
+        if: stored = 0
+            return: c.LMX_WALK_INVALID
+        if: item\present != 0
+            if: abi\copy(cell, item\ref) != 0
+                return: c.LMX_WALK_INVALID
+            c.memcpy((cast: (@: void) stored), (cast: (const: @: void) item), c.sizeof(c.LmxWalkValue))
+        else:
+            # ABI.init initialized storage, not a present language value.
+            stored\source_type := source_type
+        ---
+        stored\kind := c.LMX_WALK_VALUE_FOREIGN
+        stored\type := c.LMX_TYPE_FOREIGN
+        stored\ref := cell
+        stored\scalar_abi := abi
+        stored\physical_profile := 0
+        c.memcpy((cast: (@: void) item), (cast: (const: @: void) stored), c.sizeof(c.LmxWalkValue))
+        refs[k] := cell
+    ---
+    cell := refs[k]
+    pool := c.lmx_range_cell_pool(arena, cell)
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type != c.LMX_TYPE_FOREIGN || pool\scalar_abi = 0 || pool\stride != pool\scalar_abi\size
+        return: c.LMX_WALK_INVALID
+    if: pool\scalar_abi != abi
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    out\address := cell
+    out\storage := cell
+    out\type := c.LMX_TYPE_FOREIGN
+    out\descriptor := 0
+    out\context := item
+    return: c.LMX_WALK_OK
+
+# A lazy formal is already a complete snapshot. A materialized one refreshes
+# its current record from its own companion, including writes through aliases.
+fn: lmx_walk_values_arg_read_scalar (@: arena c.LmxArena; @: owned c.LmxWalkValue; @@: refs void; size_t: width; size_t: k; @: out c.LmxWalkValue) int
+    @: item c.LmxWalkValue 0
+    @: stored c.LmxWalkValue 0
+    @: pool c.LmxPool 0
+    if: arena = 0 || owned = 0 || refs = 0 || out = 0 || k >= width
+        return: c.LMX_WALK_INVALID
+    item := owned + k
+    if: refs[k] != 0
+        pool := c.lmx_range_cell_pool(arena, refs[k])
+        stored := c.lmx_value_cell_context(arena, refs[k])
+        if: pool = 0 || stored = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type != c.LMX_TYPE_FOREIGN || pool\scalar_abi = 0 || pool\scalar_abi != item\scalar_abi || stored\ref != refs[k]
+            return: c.LMX_WALK_INVALID
+        c.memcpy((cast: (@: void) item), (cast: (const: @: void) stored), c.sizeof(c.LmxWalkValue))
+    ---
+    if: out != item
+        c.memcpy((cast: (@: void) out), (cast: (const: @: void) item), c.sizeof(c.LmxWalkValue))
+    # GUARD and every other consumer get a value, never a live view of a
+    # mutable local cell. The physical local address stays in refs[k].
+    return: lmx_walk_scalar_snapshot(arena, out)
+
+# Delivery at the common native call boundary. The Value stays authoritative;
+# a graph destination uses its normal writer, external typed C storage its ABI.
+fn: lmx_call_scalar_result (@: arena c.LmxArena; @: code c.Lmx; @: value c.LmxWalkValue; @: dest void; @@: out void) int
+    c.LmxWalkPlace: place
+    @: pool c.LmxPool 0
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || value = 0 || out = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    out[0] := 0
+    if: value\present = 0
+        return: 0
+    status := lmx_walk_value_scalar_storage(arena, value, c.LMX_TYPE_FOREIGN, (cast: (const: @: c.LmxScalarABI) value\scalar_abi))
+    if: status != c.LMX_WALK_OK
+        return: c.LMX_CALL_NOT_CALLABLE
+    if: dest = 0 || dest = value\ref
+        out[0] := value\ref
+        return: 0
+    pool := c.lmx_range_cell_pool(arena, dest)
+    if: pool != 0
+        c.memset((cast: (@: void) (@ place)), 0, c.sizeof(c.LmxWalkPlace))
+        place\address := dest
+        place\type := pool\type
+        status := lmx_walk_value_store(arena, @ place, value)
+        if: status != c.LMX_WALK_OK
+            return: c.lmx_call_note_walk_fail(lmx_walk_boundary_status(arena, code, status))
+        ---
+    else:
+        if: c.lmx_range_entry_at(arena, dest) != 0 || c.lmx_range_write_overlaps_profile(arena, dest, value\scalar_abi\size, 0, 0, 0U) != 0 || value\scalar_abi\copy(dest, value\ref) != 0
+            return: c.LMX_CALL_NOT_CALLABLE
+        ---
+    ---
+    out[0] := dest
+    return: 0
+
 # Slice 255 (design 4.5 B2a): a contextual literal -- a number with no type of its own (LMX_TYPE_NONE; the magnitude in
-# `wide`, the U spelling in `natural`).  It takes the type of the operand or of the place it meets (lmx_walk_value_bin,
-# lmx_walk_value_receive), as the frontend's rw_unify types a literal statically from its neighbour; alone it is an int (U:
-# unsigned).  Native code emits it for a literal in a runtime-typed expression; the walker makes one of a LIT operand beside a
-# non-literal operand.
+# `wide`, the U spelling in `natural`). It takes the type of the operand or place it meets; alone it is int (U: unsigned).
 fn: lmx_walk_value_lit (@: out c.LmxWalkValue; size_t: magnitude; int: usuf) int
     if: out = 0
         return: c.LMX_WALK_INVALID
@@ -1907,7 +2101,7 @@ fn: lmx_walk_args_open_values (@: f c.LmxWalkFrame; @: values c.LmxWalkValue) in
     ---
     f\args := mine
     f\nargs := width
-    return: c.LMX_WALK_OK
+    return: lmx_walk_values_detach_scalar((cast: (@: c.LmxArena) f\arena), owned, mine, width)
 end: lmx_walk_args_open_values
 
 fn: lmx_walk_args_open (@: f c.LmxWalkFrame) int
@@ -1974,6 +2168,8 @@ fn: lmx_walk_values_arg_place (@: arena c.LmxArena; @: owned c.LmxWalkValue; @@:
         ---
         ty := item\type
     ---
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN
+        return: lmx_walk_values_arg_place_scalar(arena, owned, inputs, width, k, (cast: (const: @: c.LmxScalarABI) item\scalar_abi), (cast: (@: void) item\source_type), out)
     # A reference to a Structure is one value under the LMX code and under a typed reference's pointer code (lmx_walk_value_receive_graph): a host's typed place, read by a
     # nested method, holds it so.  Only such a witness takes it: an opaque pointee, and the kernel's actual pointee a Structure.  The record keeps its own type and qualifier.
     if: item\present != 0 && item\type != ty
@@ -2008,6 +2204,34 @@ fn: lmx_walk_arg_place (@: f c.LmxWalkFrame; size_t: k; int: ty; @: out c.LmxWal
         return: c.LMX_WALK_INVALID
     return: lmx_walk_values_arg_place((cast: (@: c.LmxArena) f\arena), (cast: (@: c.LmxWalkValue) f\argown), (cast: (@@: void) f\args), (cast: (size_t) f\nargs), k, ty, out)
 end: lmx_walk_arg_place
+
+fn: lmx_walk_scalar_witness_storage (@: arena c.LmxArena; @: value c.LmxWalkValue; @: witness void) int
+    @: expected c.LmxPool c.lmx_range_cell_pool(arena, witness)
+    if: expected = 0 || expected\kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(expected\type) != c.LMX_TYPE_FOREIGN || expected\scalar_abi = 0
+        return: c.LMX_WALK_INVALID
+    if: expected\stride != expected\scalar_abi\size || expected\scalar_abi\size = 0U || expected\scalar_abi\init = 0 || expected\scalar_abi\copy = 0
+        return: c.LMX_WALK_INVALID
+    return: lmx_walk_value_scalar_storage(arena, value, (cast: (int) expected\type), (cast: (const: @: c.LmxScalarABI) expected\scalar_abi))
+
+# A written typed ARG/SET_ARG carries the selected physical witness. An
+# absent scalar's ABI comes from that witness, never from FOREIGN's code.
+fn: lmx_walk_arg_place_witness (@: f c.LmxWalkFrame; size_t: k; int: ty; @: witness void; @: out c.LmxWalkPlace) int
+    @: pool c.LmxPool 0
+    @: declared c.LmxWalkValue 0
+    @: source_type void 0
+    @: arena c.LmxArena 0
+    if: f = 0
+        return: c.LMX_WALK_INVALID
+    if: c.lmx_type_base(ty) != c.LMX_TYPE_FOREIGN || witness = 0
+        return: lmx_walk_arg_place(f, k, ty, out)
+    arena := (cast: (@: c.LmxArena) f\arena)
+    pool := c.lmx_range_cell_pool(arena, witness)
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(pool\type) != c.LMX_TYPE_FOREIGN || pool\scalar_abi = 0 || pool\stride != pool\scalar_abi\size
+        return: c.LMX_WALK_INVALID
+    declared := c.lmx_value_cell_context(arena, witness)
+    if: declared != 0
+        source_type := (cast: (@: void) declared\source_type)
+    return: lmx_walk_values_arg_place_scalar(arena, (cast: (@: c.LmxWalkValue) f\argown), (cast: (@@: void) f\args), (cast: (size_t) f\nargs), k, (cast: (const: @: c.LmxScalarABI) pool\scalar_abi), source_type, out)
 
 # The place's context is snapshot, its recorded reference with it, before the
 # load (out may alias it). After a raw read it is laid over the loaded REF only
@@ -2143,6 +2367,10 @@ fn: lmx_walk_place_load (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: out c.
 end: lmx_walk_place_load
 
 fn: lmx_walk_place_context (@: arena c.LmxArena; @: place c.LmxWalkPlace) @: c.LmxWalkValue
+    if: place = 0
+        return: 0
+    if: place\descriptor = 0 && c.lmx_type_base(place\type) = c.LMX_TYPE_FOREIGN
+        return: c.lmx_value_cell_context(arena, place\address)
     if: place\context != 0
         return: (cast: (@: c.LmxWalkValue) place\context)
     if: place\descriptor != 0
@@ -2418,8 +2646,9 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
         if: status != c.LMX_WALK_OK
             return: status
         scalar_context := c.lmx_value_cell_context(arena, place\address)
-        if: scalar_context != 0
-            declared_source := (cast: (@: void) scalar_context\source_type)
+        if: scalar_context = 0
+            return: c.LMX_WALK_INVALID
+        declared_source := (cast: (@: void) scalar_context\source_type)
         if: scalar_pool\scalar_abi\copy(place\address, received_p\ref) != 0
             return: c.LMX_WALK_INVALID
         if: scalar_context != 0
@@ -2430,6 +2659,8 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
             if: declared_source != 0
                 scalar_context\source_type := declared_source
         ---
+        if: place\context != 0 && place\context != scalar_context
+            c.memcpy((cast: (@: void) place\context), (cast: (const: @: void) scalar_context), c.sizeof(c.LmxWalkValue))
         c.lmx_code_changed_cell(arena, place\address)
         return: c.LMX_WALK_OK
     if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
@@ -2728,9 +2959,37 @@ fn: lmx_walk_value_length (@: arena c.LmxArena; @: value c.LmxWalkValue; @: out 
 end: lmx_walk_value_length
 
 fn: lmx_walk_arg_write (@: f c.LmxWalkFrame; size_t: k; int: ty; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
+    return: lmx_walk_arg_write_witness(f, k, ty, 0, value, out)
+end: lmx_walk_arg_write
+
+# A free absent input's actual default itself defines its initial type.
+fn: lmx_walk_scalar_default_place (@: f c.LmxWalkFrame; size_t: k; @: value c.LmxWalkValue; @: out c.LmxWalkPlace) int
+    @: arena c.LmxArena 0
+    int: status c.LMX_WALK_OK
+    if: f = 0 || value = 0 || value\present = 0 || value\scalar_abi = 0
+        return: c.LMX_WALK_INVALID
+    arena := (cast: (@: c.LmxArena) f\arena)
+    status := lmx_walk_value_scalar_storage(arena, value, c.LMX_TYPE_FOREIGN, (cast: (const: @: c.LmxScalarABI) value\scalar_abi))
+    if: status != c.LMX_WALK_OK
+        return: status
+    status := lmx_walk_values_arg_place_scalar(arena, (cast: (@: c.LmxWalkValue) f\argown), (cast: (@@: void) f\args), (cast: (size_t) f\nargs), k, (cast: (const: @: c.LmxScalarABI) value\scalar_abi), (cast: (@: void) value\source_type), out)
+    if: status != c.LMX_WALK_OK
+        return: status
+    return: lmx_walk_value_store(arena, out, value)
+
+fn: lmx_walk_arg_write_witness (@: f c.LmxWalkFrame; size_t: k; int: ty; @: witness void; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
     c.LmxWalkPlace: local
     @: place c.LmxWalkPlace @ local
-    int: status lmx_walk_arg_place(f, k, ty, place)
+    int: status c.LMX_WALK_OK
+    if: f = 0
+        return: c.LMX_WALK_INVALID
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN && witness != 0
+        status := lmx_walk_scalar_witness_storage((cast: (@: c.LmxArena) f\arena), value, witness)
+        if: status != c.LMX_WALK_OK
+            return: status
+        ---
+    ---
+    status := lmx_walk_arg_place_witness(f, k, ty, witness, place)
     if: status != c.LMX_WALK_OK
         return: status
     @: arena c.LmxArena (cast: (@: c.LmxArena) f\arena)
@@ -2738,7 +2997,7 @@ fn: lmx_walk_arg_write (@: f c.LmxWalkFrame; size_t: k; int: ty; @: value c.LmxW
     if: status != c.LMX_WALK_OK
         return: status
     return: lmx_walk_place_load(arena, place, out)
-end: lmx_walk_arg_write
+end: lmx_walk_arg_write_witness
 
 fn: lmx_walk_array_elem_meta (int: aty; @: out_ety int; @: out_stride size_t) int
     ulong: ulong_probe 0U
@@ -2781,10 +3040,30 @@ end: lmx_walk_array_elem_meta
 # One raw native result boundary: absent witness is not a present null reference.
 fn: lmx_walk_native_result_context (@: f c.LmxWalkFrame; @: witness void; @: raw void; @: out c.LmxWalkValue; @: context c.LmxWalkValue) int
     int: ty 0
+    int: status c.LMX_WALK_OK
+    @: scalar_pool c.LmxPool 0
+    @: declared c.LmxWalkValue 0
+    c.LmxWalkValue: source_context
     if: witness = 0
         lmx_walk_value_clear(out)
         return: c.LMX_WALK_OK
     ty := lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN
+        scalar_pool := c.lmx_range_cell_pool((cast: (@: c.LmxArena) f\arena), witness)
+        if: scalar_pool = 0 || scalar_pool\scalar_abi = 0 || scalar_pool\stride != scalar_pool\scalar_abi\size
+            return: c.LMX_WALK_INVALID
+        if: context != 0
+            status := lmx_walk_value_receive_scalar(context, ty, (cast: (const: @: c.LmxScalarABI) scalar_pool\scalar_abi), out)
+            if: status != c.LMX_WALK_OK
+                return: status
+            return: lmx_walk_argument_storage((cast: (@: c.LmxArena) f\arena), out, witness, 0, 0)
+        ---
+        lmx_walk_value_clear(@ source_context)
+        declared := c.lmx_value_cell_context((cast: (@: c.LmxArena) f\arena), witness)
+        if: declared != 0
+            source_context\source_type := declared\source_type
+        return: lmx_walk_value_foreign_capture((cast: (@: c.LmxArena) f\arena), raw, ty, (cast: (const: @: c.LmxScalarABI) scalar_pool\scalar_abi), (cast: (@: c.Lmx) scalar_pool\profile), @ source_context, out)
+    ---
     if: c.lmx_type_base(ty) >= c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) = c.LMX_TYPE_LMX || c.lmx_type_base(ty) = c.LMX_TYPE_DESC || c.lmx_type_base(ty) = c.LMX_TYPE_CHAR_PTR
         if: context != 0
             return: lmx_walk_value_ref_context(out, ty, raw, context)
@@ -2801,10 +3080,30 @@ end: lmx_walk_native_result
 
 fn: lmx_walk_result_dest (@: arena c.LmxArena; @: witness void; @: temp c.LmxWalkValue) @: void
     int: ty 0
+    @: scalar_pool c.LmxPool 0
+    @: cell void 0
+    @: metadata c.LmxWalkValue 0
+    @: declared c.LmxWalkValue 0
     lmx_walk_value_clear(temp)
     if: witness = 0
         return: 0
     ty := lmx_walk_witness_type(arena, witness)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN
+        scalar_pool := c.lmx_range_cell_pool(arena, witness)
+        if: scalar_pool = 0 || scalar_pool\kind != c.LMX_KIND_PRIMITIVE || scalar_pool\type != ty || scalar_pool\scalar_abi = 0
+            return: 0
+        if: scalar_pool\scalar_abi\size = 0U || scalar_pool\scalar_abi\init = 0 || scalar_pool\scalar_abi\copy = 0 || scalar_pool\stride != scalar_pool\scalar_abi\size
+            return: 0
+        cell := c.lmx_arena_scalar_cells_profiled(arena, ty, scalar_pool\profile, scalar_pool\scalar_abi, 1U)
+        metadata := c.lmx_value_cell_context(arena, cell)
+        if: cell = 0 || metadata = 0
+            return: 0
+        declared := c.lmx_value_cell_context(arena, witness)
+        if: declared != 0
+            metadata\source_type := declared\source_type
+        c.memcpy((cast: (@: void) temp), (cast: (const: @: void) metadata), c.sizeof(c.LmxWalkValue))
+        return: cell
+    ---
     if: c.lmx_type_base(ty) >= c.LMX_TYPE_POINTER_BASE || c.lmx_type_base(ty) = c.LMX_TYPE_LMX || c.lmx_type_base(ty) = c.LMX_TYPE_DESC || c.lmx_type_base(ty) = c.LMX_TYPE_CHAR_PTR
         lmx_walk_value_ref(temp, ty, 0)
     else:
@@ -3383,6 +3682,7 @@ fn: lmx_walk_snapshot_args (@: f c.LmxWalkFrame; @: body c.Lmx) int
     c.LmxWalkPlace: place
     size_t: i 0U
     int: status
+    @: current c.LmxWalkValue 0
     if: f = 0 || body = 0
         return: c.LMX_WALK_INVALID
     @: entry_probe c.Lmx 0
@@ -3402,6 +3702,11 @@ fn: lmx_walk_snapshot_args (@: f c.LmxWalkFrame; @: body c.Lmx) int
     i := 0U
     while: i < f\nargs
         if: entries[i] != 0
+            current := (cast: (@: c.LmxWalkValue) f\argown) + i
+            if: current\present != 0 && current\kind = c.LMX_WALK_VALUE_FOREIGN && current\scalar_abi != 0
+                i := i + 1U
+                continue
+            ---
             status := c.lmx_walk_place(f, (cast: (@: void) entries[i]), 0, @ place)
             if: status != c.LMX_WALK_OK
                 return: status
@@ -4263,12 +4568,18 @@ fn: lmx_walk_place_mode_in (@: f c.LmxWalkFrame; @: operand void; int: write; in
     ---
     if: op = c.LMX_WALK_OP_ARG
         index := c.lmx_size_value_known(c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U))
-        type := lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U))
+        witness := c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U)
+        type := lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness)
         if: index >= f\nargs || f\args = 0
             return: c.LMX_WALK_INVALID
         args := (cast: (@@: void) f\args)
-        if: args[index] = 0
+        if: f\argown = 0
+            return: c.LMX_WALK_INVALID
+        own := (cast: (@: c.LmxWalkValue) f\argown) + index
+        if: own\present <= 0 && (args[index] = 0 || (own\kind = c.LMX_WALK_VALUE_FOREIGN && own\scalar_abi != 0))
             if: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U) = 0
+                if: c.lmx_type_base(type) = c.LMX_TYPE_FOREIGN
+                    return: lmx_walk_arg_place_witness(f, index, type, witness, out)
                 return: c.LMX_WALK_INVALID
             if: f\argown = 0
                 return: c.LMX_WALK_INVALID
@@ -4284,13 +4595,23 @@ fn: lmx_walk_place_mode_in (@: f c.LmxWalkFrame; @: operand void; int: write; in
             # Slice 255 (design 4.5 B2a): without a static witness the place is typed by the default's value.
             if: type = c.LMX_TYPE_NONE
                 type := holder_p\type
-            status := lmx_walk_arg_place(f, index, type, out)
+            if: c.lmx_type_base(type) = c.LMX_TYPE_FOREIGN
+                if: witness != 0
+                    status := lmx_walk_argument_storage((cast: (@: c.LmxArena) f\arena), holder_p, witness, 0, 0)
+                    if: status != c.LMX_WALK_OK
+                        return: status
+                    ---
+                else:
+                    return: lmx_walk_scalar_default_place(f, index, holder_p, out)
+                ---
+            ---
+            status := lmx_walk_arg_place_witness(f, index, type, witness, out)
             if: status != c.LMX_WALK_OK
                 return: status
             status := lmx_walk_value_store((cast: (@: c.LmxArena) f\arena), out, @ holder)
             return: status
         ---
-        return: lmx_walk_arg_place(f, index, type, out)
+        return: lmx_walk_arg_place_witness(f, index, type, witness, out)
     if: op = c.LMX_WALK_OP_DEREF
         status := c.lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 1U), @ holder)
         if: status != c.LMX_WALK_OK
@@ -5011,6 +5332,12 @@ end: lmx_call_formal_reception
 # walker's static and selected calls and the native binder (lmx_call_bind_receive) call it before the next actual runs;
 # the entry's own reception then finds the value admitted.
 fn: lmx_call_receive_formal (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size_t: index; @: item c.LmxWalkValue) int
+    int: status lmx_call_receive_formal_in(arena, code, data, index, item)
+    if: status != c.LMX_WALK_OK
+        return: status
+    return: lmx_walk_scalar_snapshot(arena, item)
+
+fn: lmx_call_receive_formal_in (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; size_t: index; @: item c.LmxWalkValue) int
     @: args c.Lmx 0
     @: returns c.Lmx 0
     @: source void 0
@@ -5019,6 +5346,7 @@ fn: lmx_call_receive_formal (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; 
     @: record c.Lmx 0
     @: witness void 0
     @: model c.Lmx 0
+    @: scalar_pool c.LmxPool 0
     int: ty 0
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
     int: status c.LMX_WALK_OK
@@ -5051,10 +5379,20 @@ fn: lmx_call_receive_formal (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; 
             return: c.LMX_WALK_INVALID
         return: lmx_walk_value_admit(arena, item, model, record)
     ---
+    # An unfilled witness still has its exact physical scalar contract.
+    # Inspect that pool without loading the witness's absent payload.
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN
+        scalar_pool := c.lmx_range_cell_pool(arena, expected)
+        if: scalar_pool = 0 || scalar_pool\kind != c.LMX_KIND_PRIMITIVE || scalar_pool\type != ty || scalar_pool\scalar_abi = 0
+            return: c.LMX_WALK_INVALID
+        if: scalar_pool\scalar_abi\size = 0U || scalar_pool\scalar_abi\init = 0 || scalar_pool\scalar_abi\copy = 0 || scalar_pool\stride != scalar_pool\scalar_abi\size
+            return: c.LMX_WALK_INVALID
+        return: lmx_walk_value_scalar_storage(arena, item, ty, (cast: (const: @: c.LmxScalarABI) scalar_pool\scalar_abi))
+    ---
     if: lmx_walk_numeric_type(arena, expected) != 0 && item\kind != c.LMX_WALK_VALUE_NUMBER
         return: lmx_walk_value_receive(item, ty, item)
     return: c.LMX_WALK_OK
-end: lmx_call_receive_formal
+end: lmx_call_receive_formal_in
 
 # Slice 305 (CALL-ARGUMENT-ORDER-AXBY): the reception of the written actual k by the selected formal the current binding
 # gives it (lmx_callable_bound_operand) -- a number through the route its NAMED operand carries for that formal's number
@@ -5341,12 +5679,21 @@ end: lmx_walk_scatter_written
 # after common reception, without re-evaluating its written payload.
 fn: lmx_walk_argument_storage (@: arena c.LmxArena; @: received c.LmxWalkValue; @: witness void; @: child void; @: receiver c.Lmx) int
     @: pointee void 0
+    @: expected_pool c.LmxPool 0
     int: ty
     if: arena = 0 || received = 0
         return: c.LMX_WALK_INVALID
     if: received\present = 0
         return: c.LMX_WALK_OK
     ty := lmx_walk_witness_type(arena, witness)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN
+        expected_pool := c.lmx_range_cell_pool(arena, witness)
+        if: expected_pool = 0 || expected_pool\kind != c.LMX_KIND_PRIMITIVE || expected_pool\type != ty || expected_pool\scalar_abi = 0
+            return: c.LMX_WALK_INVALID
+        if: expected_pool\scalar_abi\size = 0U || expected_pool\scalar_abi\init = 0 || expected_pool\scalar_abi\copy = 0 || expected_pool\stride != expected_pool\scalar_abi\size
+            return: c.LMX_WALK_INVALID
+        return: lmx_walk_value_scalar_storage(arena, received, ty, (cast: (const: @: c.LmxScalarABI) expected_pool\scalar_abi))
+    ---
     # A typed graph-reference witness retains its permitted address category.
     # Reading its referent here is not following the actual pointer twice.
     if: ty >= c.LMX_TYPE_POINTER_BASE && c.lmx_range_classify(arena, witness) = c.LMX_KIND_PRIMITIVE
@@ -7665,7 +8012,7 @@ fn: lmx_walk_result_receive (@: f c.LmxWalkFrame; @: value c.LmxWalkValue) int
     int: status c.LMX_WALK_OK
     if: f = 0 || value = 0 || value\present = 0 || f\code = 0
         return: c.LMX_WALK_OK
-    if: value\kind != c.LMX_WALK_VALUE_NUMBER && value\kind != c.LMX_WALK_VALUE_REFERENCE
+    if: value\kind != c.LMX_WALK_VALUE_NUMBER && value\kind != c.LMX_WALK_VALUE_REFERENCE && value\kind != c.LMX_WALK_VALUE_FOREIGN
         return: c.LMX_WALK_OK
     if: c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), (cast: (@: void) f\code)) = 0
         return: c.LMX_WALK_OK
@@ -7679,6 +8026,11 @@ fn: lmx_walk_result_receive (@: f c.LmxWalkFrame; @: value c.LmxWalkValue) int
     ty := c.lmx_type_base(lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), witness))
     if: ty = c.LMX_TYPE_NONE
         return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_FOREIGN
+        status := lmx_walk_argument_storage((cast: (@: c.LmxArena) f\arena), value, witness, 0, 0)
+        if: status != c.LMX_WALK_OK
+            return: status
+        return: lmx_walk_scalar_snapshot((cast: (@: c.LmxArena) f\arena), value)
     status := lmx_walk_value_receive(value, ty, @ received)
     if: status != c.LMX_WALK_OK
         return: status
@@ -7832,6 +8184,32 @@ fn: lmx_walk_eval_result_in (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxW
         if: index >= f\nargs || f\args = 0
             return: c.LMX_WALK_INVALID
         args := (cast: (@@: void) f\args)
+        @: input c.LmxWalkValue (cast: (@: c.LmxWalkValue) f\argown)
+        if: input = 0
+            return: c.LMX_WALK_INVALID
+        input := input + index
+        if: input\kind = c.LMX_WALK_VALUE_FOREIGN && input\scalar_abi != 0
+            if: input\present < 0
+                return: c.LMX_WALK_INVALID
+            if: input\present = 0 && c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U) = 0
+                return: lmx_walk_values_arg_read_scalar((cast: (@: c.LmxArena) f\arena), (cast: (@: c.LmxWalkValue) f\argown), args, (cast: (size_t) f\nargs), index, out)
+            ---
+        ---
+        if: input\kind = c.LMX_WALK_VALUE_FOREIGN && input\scalar_abi != 0 && input\present != 0
+            want := c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U)
+            a := lmx_walk_witness_type((cast: (@: c.LmxArena) f\arena), want)
+            if: c.lmx_type_base(a) = c.LMX_TYPE_FOREIGN
+                status := lmx_walk_scalar_witness_storage((cast: (@: c.LmxArena) f\arena), input, want)
+                if: status != c.LMX_WALK_OK
+                    return: status
+                ---
+            else:
+                if: a != c.LMX_TYPE_NONE
+                    return: lmx_walk_value_receive(input, a, out)
+                ---
+            ---
+            return: lmx_walk_values_arg_read_scalar((cast: (@: c.LmxArena) f\arena), (cast: (@: c.LmxWalkValue) f\argown), args, (cast: (size_t) f\nargs), index, out)
+        ---
         if: args[index] = 0
             if: c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U) = 0
                 return: c.LMX_WALK_OK
@@ -7847,7 +8225,7 @@ fn: lmx_walk_eval_result_in (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxW
         status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
-        return: lmx_walk_arg_write(f, index, a, @ value, out)
+        return: lmx_walk_arg_write_witness(f, index, a, (cast: (@: void) c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U)), @ value, out)
     if: op = c.LMX_WALK_OP_SELF
         return: lmx_walk_projection(f, operand, 0, out)
     if: op = c.LMX_WALK_OP_LAYOUT_SWITCH
@@ -8449,6 +8827,9 @@ fn: lmx_walk_call_prim_dispatch (@: arena c.LmxArena; @: code c.Lmx; @: data c.L
     if: got\kind = c.LMX_WALK_VALUE_REFERENCE
         out[0] := got\ref
         return: 0
+    if: got\kind = c.LMX_WALK_VALUE_FOREIGN
+        return: lmx_call_scalar_result(arena, code, got, dest, out)
+    ---
     if: dest = 0
         return: 0
     if: lmx_walk_value_number(got, @ wv, @ rty) != c.LMX_WALK_OK
@@ -8554,11 +8935,13 @@ fn: lmx_activation_inputs_find (@: arena c.LmxArena; @: record c.LmxActivation; 
     code := record\code
     while: i < record\width
         item := values + i
-        if: item\present != 0 && lmx_activation_input_formal(arena, code, i) = want_formal
+        if: (item\present != 0 || (item\kind = c.LMX_WALK_VALUE_FOREIGN && item\scalar_abi != 0)) && lmx_activation_input_formal(arena, code, i) = want_formal
             name := lmx_activation_input_name(arena, code, i)
             if: lmx_activation_name_is(name, wanted) != 0
+                if: item\kind = c.LMX_WALK_VALUE_FOREIGN && item\scalar_abi != 0 && record\refs != 0
+                    return: (cast: (int) (lmx_walk_values_arg_read_scalar(arena, values, (cast: (@@: void) record\refs), (cast: (size_t) record\width), i, out) = c.LMX_WALK_OK && out\present != 0))
                 c.memcpy((cast: (@: void) out), (cast: (@: void) item), c.sizeof(c.LmxWalkValue))
-                return: 1
+                return: (cast: (int) (out\present != 0))
             ---
         ---
         i := i + 1U
@@ -8998,6 +9381,7 @@ fn: lmx_activation_resolve_input (@: arena c.LmxArena; size_t: k; @@: refs void;
     @: code c.Lmx 0
     size_t: name 0U
     @: item c.LmxWalkValue 0
+    int: status c.LMX_WALK_OK
     if: arena = 0
         return: 0
     record := (cast: (@: c.LmxActivation) arena\activation)
@@ -9006,9 +9390,7 @@ fn: lmx_activation_resolve_input (@: arena c.LmxArena; size_t: k; @@: refs void;
     # The native entry receives into arrays of its own declared width (the generated trampoline wrapper projects the
     # caller's): those are the activation's inputs from here on -- for this resolution and for the callees' lookups.
     if: values != 0
-        record\values := (cast: (@: void) values)
-        record\refs := refs
-        record\width := width
+        lmx_activation_values(arena, values, refs, width)
     ---
     if: record\values = 0 || k >= record\width
         return: 0
@@ -9033,9 +9415,17 @@ fn: lmx_activation_resolve_input (@: arena c.LmxArena; size_t: k; @@: refs void;
             return: 0
         ---
     ---
+    status := lmx_walk_scalar_snapshot(arena, item)
+    if: status != c.LMX_WALK_OK
+        c.lmx_call_note_walk_fail(status)
+        c.abort()
+        return: 0
+    ---
     @@: out_refs void (cast: (@@: void) record\refs)
     if: out_refs != 0
         out_refs[k] := lmx_walk_value_storage(item)
+        if: item\kind = c.LMX_WALK_VALUE_FOREIGN && item\scalar_abi != 0
+            out_refs[k] := 0
     ---
     return: 1
 end: lmx_activation_resolve_input

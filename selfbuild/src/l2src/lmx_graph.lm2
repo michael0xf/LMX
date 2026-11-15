@@ -811,6 +811,16 @@ fn: lmx_graph_scalar_binding (@: word char; @@: description void) const: @: c.Lm
     size_t: i 0U
     size_t: at 0U
     size_t: n 0U
+    size_t: column 0U
+    size_t: spelling c.lmx_primitive_profile_columns
+    size_t: payload_at 0U
+    const: (@: columns char c.lmx_primitive_profile_column_names)
+    const: (@: payload char 0)
+    const: (@: spelling_bytes char 0)
+    size_t: spelling_size 0U
+    @: physical char 0
+    if: description = 0
+        return: (cast: (const: @: c.LmxScalarABI) 0)
     description[0] := 0
     if: state = 0 || word = 0 || count > state\receivers_count
         return: (cast: (const: @: c.LmxScalarABI) 0)
@@ -820,7 +830,7 @@ fn: lmx_graph_scalar_binding (@: word char; @@: description void) const: @: c.Lm
             description[0] := (cast: (@: void) c.lmx_primitive_profile_row(i))
             return: c.lmx_primitive_profile_scalar(i)
         i := i + 1U
-    if: word[0] != 99 || word[1] != 46 || lmx_graph_primitive_receiver(word) = 0
+    if: word[0] != 99 || word[1] != 46
         return: (cast: (const: @: c.LmxScalarABI) 0)
     i := 0U
     while: i < count
@@ -831,10 +841,240 @@ fn: lmx_graph_scalar_binding (@: word char; @@: description void) const: @: c.Lm
             return: abi
         at := at + n + 1U
         i := i + 1U
+    # A physical C spelling may contain spaces (long double, unsigned long
+    # long). It is queried here as literal source data, not as a receiver.
+    # The public row selected above remains a separate semantic output.
+    at := 0U
+    while: column < c.lmx_primitive_profile_columns
+        n := c.strlen(columns + at)
+        if: lmx_graph_intern(columns + at, n) = lmx_graph_intern("spelling", 8U)
+            spelling := column
+            break
+        at := at + n + 1U
+        column := column + 1U
+    if: spelling = c.lmx_primitive_profile_columns
+        return: (cast: (const: @: c.LmxScalarABI) 0)
+    physical := lmx_graph_intern(word + 2U, c.strlen(word + 2U))
+    i := 0U
+    while: i < count
+        abi := c.lmx_primitive_profile_scalar(i)
+        payload := c.lmx_primitive_profile_row(i)
+        if: abi != 0 && payload != 0
+            column := 0U
+            payload_at := 0U
+            while: column < spelling
+                payload_at := payload_at + c.strlen(payload + payload_at) + 1U
+                column := column + 1U
+            spelling_bytes := payload + payload_at
+            spelling_size := c.strlen(spelling_bytes)
+            if: spelling_size >= 2U && ((spelling_bytes[0] = 34 && spelling_bytes[spelling_size - 1U] = 34) || (spelling_bytes[0] = 96 && spelling_bytes[spelling_size - 1U] = 96))
+                spelling_bytes := spelling_bytes + 1U
+                spelling_size := spelling_size - 2U
+            ---
+            if: lmx_graph_intern(spelling_bytes, spelling_size) = physical
+                description[0] := (cast: (@: void) word)
+                return: abi
+            ---
+        ---
+        i := i + 1U
     return: (cast: (const: @: c.LmxScalarABI) 0)
 
-fn: lmx_graph_scalar_source (const: (@: abi c.LmxScalarABI); @: description void) int
+# Counted descriptions share the existing immutable TEXT interner. Prove an
+# exact stored start and length before reading a retained description.
+fn: lmx_graph_intern_exact_size (@: address void; @: out size_t) int
+    @: state c.LmxGraphState lmx_graph_state()
     size_t: i 0U
+    if: out = 0
+        return: 0
+    out[0] := 0U
+    if: state = 0 || address = 0
+        return: 0
+    while: i < state\count
+        if: (cast: (@: void) state\texts[i]) = address
+            out[0] := state\sizes[i]
+            return: 1
+        i := i + 1U
+    ---
+    return: 0
+
+fn: lmx_graph_source_end (const: (@: bytes char); size_t: nb; size_t: at) size_t
+    while: at < nb && bytes[at] != 0
+        at := at + 1U
+    return: at
+
+fn: lmx_graph_source_payload (const: (@: bytes char); size_t: start; size_t: limit; @: at size_t; @: nb size_t) int
+    at[0] := start
+    nb[0] := limit - start
+    if: nb[0] >= 2U && ((bytes[start] = 34 && bytes[limit - 1U] = 34) || (bytes[start] = 96 && bytes[limit - 1U] = 96))
+        at[0] := start + 1U
+        nb[0] := nb[0] - 2U
+    return: 0
+
+fn: lmx_graph_source_key (const: (@: bytes char); size_t: start; size_t: limit; const: (@: key char)) int
+    size_t: n c.strlen(key)
+    return: (cast: (int) (limit - start = n && c.memcmp(bytes + start, key, n) = 0))
+
+# Input-boundary validation of sorted schema/literal-token pairs. Original
+# tokens remain part of identity; only eligibility/spelling reads unquote.
+fn: lmx_graph_scalar_record (const: (@: bytes char); size_t: nb; @: spelling_at size_t; @: spelling_size size_t; @: columns size_t) int
+    size_t: at c.strlen("primitive.description")
+    size_t: key 0U
+    size_t: key_end 0U
+    size_t: val 0U
+    size_t: val_end 0U
+    size_t: previous 0U
+    size_t: previous_size 0U
+    size_t: n 0U
+    size_t: common 0U
+    size_t: payload 0U
+    size_t: payload_size 0U
+    int: cmp 0
+    int: required 0
+    spelling_at[0] := 0U
+    spelling_size[0] := 0U
+    columns[0] := 0U
+    if: bytes = 0 || nb <= at || bytes[at] != 0 || c.memcmp(bytes, "primitive.description", at) != 0
+        return: 0
+    at := at + 1U
+    while: at < nb
+        key := at
+        key_end := lmx_graph_source_end(bytes, nb, key)
+        if: key_end = nb || key_end = key
+            return: 0
+        val := key_end + 1U
+        val_end := lmx_graph_source_end(bytes, nb, val)
+        if: val_end = nb || val_end = val
+            return: 0
+        n := key_end - key
+        if: columns[0] != 0U
+            common := n
+            if: previous_size < common
+                common := previous_size
+            cmp := c.memcmp(bytes + previous, bytes + key, common)
+            if: cmp > 0 || (cmp = 0 && previous_size >= n)
+                return: 0
+            ---
+        ---
+        previous := key
+        previous_size := n
+        lmx_graph_source_payload(bytes, val, val_end, @ payload, @ payload_size)
+        if: lmx_graph_source_key(bytes, key, key_end, "class") != 0
+            if: payload_size = 0U
+                return: 0
+            required := required + 1
+        if: lmx_graph_source_key(bytes, key, key_end, "cell") != 0
+            if: payload_size != 1U || bytes[payload] != 49
+                return: 0
+            required := required + 1
+        if: lmx_graph_source_key(bytes, key, key_end, "reference") != 0 || lmx_graph_source_key(bytes, key, key_end, "opaque") != 0 || lmx_graph_source_key(bytes, key, key_end, "callable") != 0 || lmx_graph_source_key(bytes, key, key_end, "descriptor") != 0
+            if: payload_size != 1U || bytes[payload] != 48
+                return: 0
+            required := required + 1
+        if: lmx_graph_source_key(bytes, key, key_end, "spelling") != 0
+            if: payload_size = 0U
+                return: 0
+            spelling_at[0] := payload
+            spelling_size[0] := payload_size
+            required := required + 1
+        columns[0] := columns[0] + 1U
+        at := val_end + 1U
+    ---
+    return: (cast: (int) (at = nb && required = 7))
+
+# The generated profile is trusted NUL-delimited source data.
+fn: lmx_graph_source_pair_token (size_t: row; const: (@: key char); @: token_size size_t) const: @: char
+    const: (@: names char c.lmx_primitive_profile_column_names)
+    const: (@: values char c.lmx_primitive_profile_row(row))
+    size_t: column 0U
+    size_t: ni 0U
+    size_t: vi 0U
+    token_size[0] := 0U
+    if: values = 0
+        return: 0
+    while: column < c.lmx_primitive_profile_columns
+        if: c.strcmp(names + ni, key) = 0
+            token_size[0] := c.strlen(values + vi)
+            return: values + vi
+        ni := ni + c.strlen(names + ni) + 1U
+        vi := vi + c.strlen(values + vi) + 1U
+        column := column + 1U
+    ---
+    return: 0
+
+# Physical proof only; no language alias is selected by this query.
+fn: lmx_graph_scalar_record_abi (const: (@: abi c.LmxScalarABI); const: (@: bytes char); size_t: spelling_at; size_t: spelling_size) int
+    const: (@: token char 0)
+    size_t: i 0U
+    size_t: n 0U
+    size_t: lo 0U
+    size_t: count 0U
+    while: i < c.lmx_primitive_profile_count
+        if: c.lmx_primitive_profile_scalar(i) = abi
+            token := lmx_graph_source_pair_token(i, "spelling", @ n)
+            if: token != 0
+                lmx_graph_source_payload(token, 0U, n, @ lo, @ count)
+                if: count = spelling_size && c.memcmp(token + lo, bytes + spelling_at, count) = 0
+                    return: 1
+                ---
+            ---
+        ---
+        i := i + 1U
+    ---
+    return: 0
+
+# Full raw source equality, called only after bounded record validation.
+fn: lmx_graph_scalar_record_row (const: (@: bytes char); size_t: nb; size_t: columns; size_t: row) int
+    const: (@: token char 0)
+    size_t: at c.strlen("primitive.description") + 1U
+    size_t: key_end 0U
+    size_t: val 0U
+    size_t: val_end 0U
+    size_t: n 0U
+    if: columns != c.lmx_primitive_profile_columns
+        return: 0
+    while: at < nb
+        key_end := lmx_graph_source_end(bytes, nb, at)
+        val := key_end + 1U
+        val_end := lmx_graph_source_end(bytes, nb, val)
+        token := lmx_graph_source_pair_token(row, bytes + at, @ n)
+        if: token = 0 || n != val_end - val || c.memcmp(token, bytes + val, n) != 0
+            return: 0
+        at := val_end + 1U
+    ---
+    return: 1
+
+fn: lmx_graph_scalar_description (const: (@: abi c.LmxScalarABI); const: (@: bytes char); size_t: nb; @@: out void) int
+    size_t: spelling_at 0U
+    size_t: spelling_size 0U
+    size_t: columns 0U
+    size_t: row 0U
+    @: identity char 0
+    if: out = 0
+        return: c.LMX_WALK_INVALID
+    out[0] := 0
+    if: abi = 0 || lmx_graph_scalar_record(bytes, nb, @ spelling_at, @ spelling_size, @ columns) = 0
+        return: c.LMX_WALK_OK
+    if: lmx_graph_scalar_record_abi(abi, bytes, spelling_at, spelling_size) = 0
+        return: c.LMX_WALK_OK
+    while: row < c.lmx_primitive_profile_count
+        if: c.lmx_primitive_profile_scalar(row) = abi && lmx_graph_scalar_record_row(bytes, nb, columns, row) != 0
+            out[0] := (cast: (@: void) c.lmx_primitive_profile_row(row))
+            return: c.LMX_WALK_OK
+        row := row + 1U
+    ---
+    identity := lmx_graph_intern(bytes, nb)
+    if: identity = 0
+        return: c.LMX_WALK_NOMEM
+    out[0] := (cast: (@: void) identity)
+    return: c.LMX_WALK_OK
+
+fn: lmx_graph_scalar_source (const: (@: abi c.LmxScalarABI); @: description void) int
+    const: (@: bytes char (cast: (const: @: char) description))
+    size_t: i 0U
+    size_t: nb 0U
+    size_t: spelling_at 0U
+    size_t: spelling_size 0U
+    size_t: columns 0U
     @: selected void 0
     if: abi = 0 || description = 0
         return: 0
@@ -842,9 +1082,14 @@ fn: lmx_graph_scalar_source (const: (@: abi c.LmxScalarABI); @: description void
         if: (cast: (@: void) c.lmx_primitive_profile_row(i)) = description && c.lmx_primitive_profile_scalar(i) = abi
             return: 1
         i := i + 1U
-    if: lmx_graph_intern_owned((cast: (@: char) description)) != 0 && lmx_graph_scalar_binding((cast: (@: char) description), @ selected) = abi && selected = description
-        return: 1
-    return: 0
+    ---
+    if: lmx_graph_intern_exact_size(description, @ nb) = 0
+        return: 0
+    if: nb >= 3U && bytes[0] = 99 && bytes[1] = 46 && lmx_graph_source_end(bytes, nb, 0U) = nb
+        return: (cast: (int) (lmx_graph_scalar_binding((cast: (@: char) description), @ selected) = abi && selected = description))
+    if: lmx_graph_scalar_record(bytes, nb, @ spelling_at, @ spelling_size, @ columns) = 0
+        return: 0
+    return: lmx_graph_scalar_record_abi(abi, bytes, spelling_at, spelling_size)
 
 # Local families of declaring contracts, not receiver opcodes: primitive/C type, reference, qualification, Array.
 # Pointer depth and rectangular Array rank are read from the complete canonical head, with no fixed ceiling.

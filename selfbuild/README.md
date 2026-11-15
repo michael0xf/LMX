@@ -1,5 +1,17 @@
 # Maintained L3/L2 source package
 
+Slice397 (2026-11-15), directly on main: owned scalar receiving/returns and activation-local scalar places; code gates PASS.
+Runtime08/private13 SUITE1/0 covers full ACTIVE SOURCE, exact ABI, context/copy/GC and an escaped formal address
+after a real dispatcher/scratch exit. FE07 raw/hosted ordinary-witness05/06 passes native bindings5 and actual
+forced counts2/2/1/1/1, precision/store/stable address/caller isolation. The ordinary regression is in full-suite.
+Frozen Source28:932 equals the canonical manifest; Tool02 SHA1499e18c is freshly built with WalkValues185.
+Genuine G1/G2 quick passes smoke9/0 each and fixedpoint29. Actual G2 targeted6/0, ordinary-witness07 and Graph3 triple PASS.
+Working bundle: `build2/codex_fix250generationchain01/sol-m13-scalar-receiving-01/boot-m13-scalar-receiving-01/g2`;
+its Tool SHAfc1245d5 and frontend SHA5de49953. G2 render35/14 and fresh docs-check01 PASS35/14/27/44/615,
+links/LF28283. The final index is checked before commit; generated semantics and grammar are unchanged.
+Typed Run/FFI/Foreign-Array and the shared M14 cache/flush remain OPEN. See [current pipeline](../steps/current.md)
+and [evidence397](../steps/witnesses/m13-scalar-receiving-20261115/notes.md).
+
 Slice393 (2026-11-14): bounded code acceptance and docs-check PASS; main after accepted392/b2899ec9.
 Working code bundle: `build2/codex_fix250generationchain01/sol-m11-construction-fresh01/boot-m11-declared-facts-01/g2`;
 Graph: sibling `graph-m11-declared-facts-g2-01/graph_trans-prod.exe`, SHAecc3d29b.

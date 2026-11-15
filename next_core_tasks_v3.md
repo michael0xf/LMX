@@ -1,5 +1,18 @@
 # LMX — путь к самосборке и почте (v3)
 
+**Срез397, 2026-11-15 — bounded owned scalar receiving/actual/result, кодовые gates PASS.**396 принят/отправлен41c1616d прямо main.
+Начата physical receiving часть: выбранный FOREIGN witness задаёт ABI независимо от present, а materializer
+проверяет exact owned cell/companion. Literal physical lookup включает multiword C spellings без подмены SOURCE.
+Runtime receiving/RET(ARG)/полный ACTIVE SOURCE/source fact/copy/GC — bounded PASS; actual/result producers
+и native formal closure реализованы в WIP. FE05/Runtime07 ordinary identity реально walked2 с точным double.
+Source25/Runtime08 private13 SUITE1/0 проверил escaped @formal после завершения activation и GC.
+Source27/FE07 исправил native formal store/full scalar receiving и typed-return SOURCE. Ordinary-witness05
+OSWALK0 PASS n/f/prod/observe/root0/root1: precise double, stable address, caller-isolation, forced counts5.
+Source28:932 включает ordinary regression в full-suite. Genuine G1/G2 quick smoke9/0, fixedpoint29,
+actual G2 targeted6/0/ordinary-witness07/Graph3 triple PASS. G2 render35/14 и fresh docs-check01
+PASS35/14/27/44/615, links/LF28283; финальный индекс перед коммитом. Общий typed Run/FFI/Foreign-Array OPEN;
+runtime gate сам по себе не закрывает ordinary typed execution. [Текущий конвейер](steps/current.md).
+
 **2026-11-15, срез396 — публичный primitive resolver и точное C spelling M11.7/M13, кодовые gates PASS.**
 395 принят/отправлен73196f98 прямо main. Активная primitive.description подключена к существующему interner;
 source word/depth/const/raw C сохранены отдельно от native spelling. Eligibility общая с exporter;
@@ -2598,29 +2611,75 @@ WIP394 уточнение конвейера: exact C aliases генерирую
 Resolver публичных primitive имён и их точных C spellings остаётся частью обязательной общей интеграции;
 генерируемые aliases не становятся новым языковым каталогом или semantic type id.
 
-**После resolver396 — owned public scalar actual/result и общий receiving, OPEN.** Существующие native
-material/hidden/trampoline producers пока создают borrowed FOREIGN без type/ABI/source/Model, а материализующий
-путь исключает depth0 foreign. Для eligible public scalar подключить прежний foreign_capture с canonical ABI,
+**После resolver396 — owned public scalar actual/result и общий receiving: WIP397, полная приёмка OPEN.**
+На baseline396 native material/hidden/trampoline producers создавали borrowed FOREIGN без type/ABI/source/Model,
+а материализующий путь исключал depth0 foreign. В397 eligible public scalar использует прежний foreign_capture с canonical ABI,
 физическим profile и полным producer context; уже complete Value не захватывать заново и не подменять его
 source ожидаемым формалом. Scalar ABI в текущем ядре сравнивается по identity LmxScalarABI*: похожий local
 descriptor с теми же sizeof/callbacks не является тем же ABI. Канонический physical binding брать существующим
 scalar_binding по C spelling, сохраняя semantic Source/Model каждого alias отдельно от первой физической строки.
-До typed dereference формала выполнять receive_scalar; продолжить ту же ветку в receive_formal и
-argument_storage, где сейчас FOREIGN пропускает numeric check или отвергается как не-NUMBER. Для cls6
+До typed dereference формала выполнять receive_scalar; та же ветка в receive_formal и
+argument_storage проверяет selected physical ABI. Для cls6
 результата захватить owned l2_tv с context, а caller destination записать отдельно, без зависимости от C temporary.
 Whole/written/scatter mapping уже переносит complete Values — второго mapper не вводить. Приёмка: ordinary
 double epsilon actual/result, снимок первого actual через перезапись/GC вторым, wrong float/double ABI отказ
 до тела и whole-вариант. Для custom ACTIVE alias сохранить его исходный graph contract; resolver machine gate
 сам по себе не доказывает обычное typed исполнение или receiving.
 
-Зависимость этого шага: rw_header_parts/rw_signature_input сейчас сохраняют SOURCE foreign формала,
-но пропускают physical witness. Продолжить существующие rw_witness/emit_cell_new_ty: eligible scalar
+Зависимость этого шага: rw_header_parts/rw_signature_input на baseline396 сохраняли SOURCE foreign формала,
+но пропускали physical witness. В397 существующие rw_witness/emit_cell_new_ty продолжены: eligible scalar
 получает absent witness с canonical ABI, profile его реального slot и companion metadata соседнего SOURCE.
 Ожидаемый ABI в receiving брать из выбранного witness pool, не выводить из имени или размера.
 header_source/rw_declared_source/receiving_source уже сохраняют исходную декларацию и qualifiers.
-Для произвольной ACTIVE строки ещё нет общего runtime source_type: сохранить её immutable описание
-прежними rw_plain/rw_source_atom/rw_put и прямым metadata edge, затем читать общим Source reader.
-Не подменять custom alias строкой kernel profile с тем же C spelling и не вводить registry имён.
+Для произвольной ACTIVE строки на baseline396 не было общего runtime source_type. Продолжение397 использует
+прежний counted TEXT interner для полного immutable source description: prefix primitive.description,
+затем пары «имя колонки — исходный literal token» с NUL-разделителями и точным размером. Все колонки,
+включая class, входят в identity; пары упорядочиваются на входной границе, перестановка колонок её не меняет.
+Это metadata edge в существующий TEXT, без второй registry или runtime связывания типа по имени.
+Полное совпадение schema+row+ABI с kernel profile сохраняет прежний row pointer; один C spelling этого не доказывает.
+Custom complete description канонизируется целиком. Nonliteral/unavailable evidence остаётся UNKNOWN.
+Runtime04/private08 ограниченно проверили полный kernel/custom description, schema/class distinction,
+exact-start/stored-length отказ, source fact, copy и настоящий GC. Source28:932/Runtime08 private13 SUITE1/0
+проверил отдельные local Values, stable place, immutable caller, alias/read snapshots, unfilled bytes и escaped
+RET(ADDRESS(ARG0)) после реального scratch-exit/GC. FE07 raw74dcfd67/hosteddd17e269, ordinary-witness05/06
+OSWALK0 проверили precision/store/stable address/caller-isolation: bindings5 native и actual forced counts2/2/1/1/1.
+Source28 добавляет ordinary regression в full-suite; canonical932 совпадает со frozen snapshot.
+Genuine G1/G2 quick/fixedpoint29 и actual G2 targeted6/0/ordinary-witness07/Graph3 triple PASS.
+Полный bridge остаётся OPEN. Formal read/store/address реализованы совместно:
+чтение сохраняет полный входной context, присваивание/адрес используют собственное место активации,
+не меняют caller physical cell и не снимают его qualifiers. Raw C formal fallback и отдельное включение
+full read после него не обеспечивают эту closure. Продолжить существующие кадры и рабочие места M14,
+без нового флага Value, registry, универсального журнала или обязательного поиска на каждом доступе.
+Конкретное продолжение: existing owned[k] и callee-owned refs[k] разделяют current Value и локальное
+ABI-место. Scalar refs[k]=0 означает ленивое место, owned.present определяет наличие значения. Первый
+store/address создаёт mutable cell по expected ABI existing witness/static contract, сохраняя caller storage;
+повторный address стабилен. Исходный transport project сохраняет ref==Value.storage, разделение начинается
+только в собственной активации. Defaults/ARG должны читать owned.present. Native activation один раз получает
+реальные projected arrays через выделенный существующий retarget-шаг; не вызывать фиктивный FREE resolve.
+Absent scalar store не может угадывать ABI из FOREIGN40. Оставшаяся ordinary приёмка включает snapshot первого actual до следующего
+actual/GC: mutable physical cell после его вычисления не должна менять уже полученное значение, Model-граф не копировать.
+scalar_source по-прежнему означает immortal source: перед разбором обязательно exact-start membership
+через existing GraphState.texts/sizes и bounded parse по stored length. intern_owned и strlen для whole blob
+недостаточны. ABI проверяется отдельно от class/полного SOURCE; Model/physical profile не подменяются.
+Так используется существующее представление raw profile descriptions и interner, без расширения SourceContainer
+новыми row coordinates. Старый вариант per-witness graph row снят: он терял shared identity между views.
+
+Следующая кодовая вертикаль общего typed Run: ordinary Structure над уже существующей typed DATA,
+через прежний `lmx_graph_call_data`, без искусственного метода и изменения ABI формалов/результатов.
+В existing `LmxGraphWork` хранить полный рабочий Value, сохранив исходные physical cell/slot и loaded/dirty;
+work_load/operand_read должны давать снимок, а не alias или int carrier. FOREIGN узнавать по настоящему
+pool/ABI/context, не по legacy Graph.kind. Место выбирать до RHS, после RHS получать строку по стабильному
+индексу; realloc не позволяет удерживать row pointer. Generic Value store принимает RHS по ABI этого места.
+work_flush публикует только dirty через прежний cell_place/value_store, не заменяет DATA slot/cell и сохраняет
+локальный снимок; повтор без новых изменений ничего не пишет. GC кадра обязан удерживать полный row Value.
+Настоящий oracle: source body `x := y; y := z; saved := x` над supplied double DATA с epsilon/3.5,
+с сохранением адресов/SOURCE/Model и отказом float→double до записи. Существующий scalar producer задаёт
+typed DATA; новый parser double literals ради этого не нужен. Native emission, typed args/result и constructor
+остаются отдельными зависимостями общего исполнения M14, а не считаются готовыми по interpreter gate.
+fn_data/merge сейчас идут собственным kind-based copier: продолжить их через уже готовую FOREIGN ветвь
+общего copier, без второго scalar copier. Обычные public scalar own fields рабочего frontend также OPEN:
+Types.contract_own/Helpers.unimpl_numeric и numeric/pointer split Core.emit_work_decl требуют общего Value
+consumer и arena scalar storage; одного снятия whitelist gate или FOREIGN place поверх C stack недостаточно.
 
 **Pure Source bridge — срез393, code gates PASS; полный runtime/storage bridge OPEN.** Code08 читает35×15 raw literal source
 table через прежний exporter. Optional reader использует один прежний name matcher, четыре его caller routes,

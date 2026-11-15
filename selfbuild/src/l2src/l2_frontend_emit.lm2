@@ -7106,6 +7106,8 @@ fn: lm_compiler_rw_signature_input (int: parent; int: slot; int: mi; int: input)
     int: entry
     if: c.lm_compiler_rw_plain(parent, 2, @ entry) != 0 || c.lm_compiler_rw_put(parent, slot, entry) != 0
         return: (cast: (int) (1))
+    if: c.lm_compiler_rw_declared_source(entry, mi, input) != 0
+        return: 1
     # This is the Consumer's actual receiving formal place. Preserve its
     # declared name here, including ordinary dynamic inputs; admission never
     # parses inert SOURCE to recover it. The witness itself is not its owner.
@@ -7117,7 +7119,7 @@ fn: lm_compiler_rw_signature_input (int: parent; int: slot; int: mi; int: input)
     # Slice 255 (design 4.5 B2a): a free input's signature entry has no static witness.
     if: c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, input)) != 0
         return: (cast: (int) (0))
-    if: c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(mi, input)) != 0 && c.lm_compiler_input_is_descriptor(mi, input) = 0
+    if: c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(mi, input)) != 0 && c.lm_compiler_scalar_type_row(c.lm_compiler_input_ft(mi, input)) < 0 && c.lm_compiler_input_is_descriptor(mi, input) = 0
         rw_machine_cell[0] := 1
         return: (cast: (int) (0))
     return: (cast: (int) (lm_compiler_rw_witness(entry, 1, (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(mi, input)))), (cast: (int) (c.lm_compiler_input_is_descriptor(mi, input))))))
@@ -7215,13 +7217,12 @@ fn: lm_compiler_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
         return: (cast: (int) (1))
     if: graph != 0
         return: (cast: (int) (0))
-    # A foreign by-value input is native C storage with no graph cell. Its
-    # witness place stays empty, as its place in the method's own declared
-    # part does, and the body that transports it is native-only.
+    # Opaque C records remain native-only. Public scalar inputs have an
+    # exact owned witness; no number conversion is involved.
     # Slice 255 (design 4.5 B2a): a free input's ARG carries no static witness (the slot stays empty).
     if: callable < 0 && model < 0 && c.lm_compiler_ft_is_free(c.lm_compiler_input_ft(mi, j)) != 0
         return: (cast: (int) (0))
-    if: callable < 0 && model < 0 && c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(mi, j)) != 0
+    if: callable < 0 && model < 0 && c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(mi, j)) != 0 && c.lm_compiler_scalar_type_row(c.lm_compiler_input_ft(mi, j)) < 0
         rw_machine_cell[0] := 1
         return: (cast: (int) (0))
     return: (cast: (int) (lm_compiler_rw_witness(parent, slot, (cast: (int) (c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(mi, j)))), (cast: (int) (c.lm_compiler_input_is_descriptor(mi, j))))))
@@ -7305,7 +7306,7 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         # and type. Projection changes its physical slot, not its interface.
         if: c.lm_compiler_rw_declared_source(entry, mi, j) != 0
             return: (cast: (int) (1))
-        if: descriptor != 0 || c.lm_compiler_foreign_value_ft(c.lm_compiler_ft(mi, j)) = 0
+        if: descriptor != 0 || c.lm_compiler_foreign_value_ft(c.lm_compiler_ft(mi, j)) = 0 || c.lm_compiler_oc_is_scalar(ty) != 0
             if: lm_compiler_rw_witness(entry, 1, ty, descriptor) != 0
                 return: (cast: (int) (1))
             ---
@@ -9982,9 +9983,9 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     # (l2_rw_dyn_arg).  No third graph.
     # A result is an int, a size_t, an unsigned or a ulong (-178): the walk hands a trampoline of a
     # wider type a destination of that type, by the class of the callee's return cell (rtype).
-    # A foreign by-value result (class 6) is delivered into exact C storage
-    # and has no graph cell: the call is retained whole, native-only.
-    if: c.lm_compiler_tramp_class(idx) > 4 && c.lm_compiler_mad_on(idx) = 0 && c.lm_compiler_own_is_pointer(c.lm_compiler_ret_cell_ty(idx)) = 0
+    # Public scalars retain exact owned storage through the common Value
+    # transport. Opaque foreign C records retain their native route.
+    if: c.lm_compiler_tramp_class(idx) > 4 && c.lm_compiler_mad_on(idx) = 0 && c.lm_compiler_own_is_pointer(c.lm_compiler_ret_cell_ty(idx)) = 0 && c.lm_compiler_oc_is_scalar(c.lm_compiler_ret_cell_ty(idx)) = 0
         if: c.lm_compiler_tramp_class(idx) != 6
             return: (cast: (int) (c.lm_compiler_rw_refuse(source_node, "a call whose result is not a number")))
         rw_machine_cell[0] := 1
@@ -9994,7 +9995,7 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
     # method's occurrence by reference.
     j := 0
     while: j < m_arity_cell[0][idx]
-        if: c.lm_compiler_cf_get(idx, j) < 0 && c.lm_compiler_rw_num_ty(c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, j))) = 0 && c.lm_compiler_own_is_pointer(c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, j))) = 0 && c.lm_compiler_nsty_get(idx, j) < 0
+        if: c.lm_compiler_cf_get(idx, j) < 0 && c.lm_compiler_rw_num_ty(c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, j))) = 0 && c.lm_compiler_own_is_pointer(c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, j))) = 0 && c.lm_compiler_oc_is_scalar(c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, j))) = 0 && c.lm_compiler_nsty_get(idx, j) < 0
             # A foreign by-value input travels in exact C storage: the
             # written actual keeps its place and the call is native-only.
             if: c.lm_compiler_foreign_value_ft(c.lm_compiler_input_ft(idx, j)) = 0
@@ -10195,7 +10196,7 @@ fn: lm_compiler_rw_call_arguments (const: (@: source_node c.LmP0Node); @: given 
                         ---
                     else:
                         if: c.lm_compiler_foreign_value_ft(c.lm_compiler_formal_raw(c.lm_compiler_input_ft(idx, k))) != 0
-                            if: lm_compiler_rw_evaluate_span(value, -1, site, @ arg) != 0
+                            if: lm_compiler_rw_evaluate_span(value, (cast: (int) c.lm_compiler_own_ty_of_param(c.lm_compiler_input_ft(idx, k))), site, @ arg) != 0
                                 return: (cast: (int) (1))
                             ---
                         else:
@@ -11266,8 +11267,15 @@ fn: lm_compiler_rw_bin (@: tok c.L2ValueSpan; int: lo; int: hi; int: ty; int: pa
     int: machine_kind
     if: lo = hi
         return: (cast: (int) (lm_compiler_rw_span(tok + lo, ty, parent, out)))
+    # Owned scalar transport does not make FOREIGN an integer operand.
+    # Preserve the existing whole native route for scalar operators until
+    # the common scalar operation supplies their exact C semantics.
+    if: c.lm_compiler_oc_is_scalar(c.lm_compiler_rw_tyof(tok, lo, hi)) != 0
+        return: (cast: (int) c.lm_compiler_rw_refuse(c.lm_compiler_span_node(tok, lo), "a scalar operation"))
     best := c.lm_compiler_rw_split(tok, lo, hi)
     bestp := c.lm_compiler_rw_prec(lm_compiler_port249_1_LmP0Node_as_atom((cast: (const: @: c.LmP0Node) (c.lm_compiler_span_node(tok, best)))))
+    if: c.lm_compiler_oc_is_scalar(c.lm_compiler_rw_tyof(tok, lo, best - 1)) != 0 || c.lm_compiler_oc_is_scalar(c.lm_compiler_rw_tyof(tok, best + 1, hi)) != 0
+        return: (cast: (int) c.lm_compiler_rw_refuse(c.lm_compiler_span_node(tok, best), "a scalar operation"))
     ot := ty
     left_ty := ty
     right_ty := ty
@@ -16931,6 +16939,32 @@ fn: lm_compiler_emit_cell_new_ty (int: ty; size_t: n; const: (@: owner char); si
     @: pty char (cast: (@: char) pty_storage\buffer)
     c.L2FrontendScratchChar192: array_parent_storage
     @: array_parent char (cast: (@: char) array_parent_storage\buffer)
+    if: c.lm_compiler_oc_is_scalar(ty) != 0
+        c.L2FrontendScratchChar64: abi_storage
+        c.L2FrontendScratchChar64: source_storage
+        c.L2FrontendScratchChar64: status_storage
+        c.L2Tx: abi_tx
+        c.L2Tx: source_tx
+        c.L2Tx: status_tx
+        @: abi c.L2Tx c.lm_compiler_tx_local(@ abi_tx, (cast: (@: char) abi_storage\buffer), 64U)
+        @: source c.L2Tx c.lm_compiler_tx_local(@ source_tx, (cast: (@: char) source_storage\buffer), 64U)
+        @: status c.L2Tx c.lm_compiler_tx_local(@ status_tx, (cast: (@: char) status_storage\buffer), 64U)
+        @: next int (cast: (@: int) (@ c.l2_tn))
+        int: id next[0]
+        if: abi = 0 || source = 0 || status = 0 || c.lm_compiler_emit_scalar_contract((cast: (int) c.lm_compiler_oc_ft(ty)), ind, abi, source, status, 1) != 0
+            return: 1
+        if: c.fprintf(out_cell[0], "%sif: %s != c.LMX_WALK_OK\n%s    lmx_call_note_walk_fail(%s)\n%s    %s\n", ind, status\data, ind, status\data, ind, fail) < 0
+            return: 1
+        if: fail2 != 0 && c.fprintf(out_cell[0], "%s    %s\n", ind, fail2) < 0
+            return: 1
+        if: c.fprintf(out_cell[0], "%s---\n%s%s[0]: lmx_arena_scalar_cells_profiled(l2_program_arena, c.LMX_TYPE_FOREIGN, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)), %s, 1U)\n%sif: %s[0] != 0\n%s    @: LmxWalkValue l2_scell%d lmx_value_cell_context(l2_program_arena, %s[0])\n%s    if: l2_scell%d = 0\n%s        %s\n", ind, ind, slot, slot, abi\data, ind, slot, ind, id, slot, ind, id, ind, fail) < 0
+            return: 1
+        if: fail2 != 0 && c.fprintf(out_cell[0], "%s        %s\n", ind, fail2) < 0
+            return: 1
+        if: c.fprintf(out_cell[0], "%s    ---\n%s    l2_scell%d\\source_type: %s\n%s---\n", ind, ind, id, source\data, ind) < 0
+            return: 1
+        ---
+    ---
     if: c.lm_compiler_own_is_array(ty) != 0
         if: place != 0
             if: c.sprintf(array_parent, "%s", place) < 0
@@ -16967,7 +17001,7 @@ fn: lm_compiler_emit_cell_new_ty (int: ty; size_t: n; const: (@: owner char); si
         return: (cast: (int) (1))
     if: ty = c.lm_compiler_oc_darray() && c.fprintf(out_cell[0], "%s%s[0]: lmx_array_ref_new_child_profiled(%s, c.LMX_TYPE_ARRAY_OF_DESC, %zuU, l2_program_arena, lmx_range_profile(l2_program_arena, (cast: (@: void) %s)))\n", ind, slot, array_parent, n, slot) < 0
         return: (cast: (int) (1))
-    if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 36 && c.lm_compiler_own_is_pointer(ty) = 0 && c.lm_compiler_own_is_array(ty) = 0
+    if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 36 && c.lm_compiler_own_is_pointer(ty) = 0 && c.lm_compiler_own_is_array(ty) = 0 && c.lm_compiler_oc_is_scalar(ty) = 0
         return: (cast: (int) (0))
     if: c.fprintf(out_cell[0], "%sif: %s[0] = 0\n%s    %s\n", ind, slot, ind, fail) < 0
         return: (cast: (int) (1))
@@ -17582,7 +17616,7 @@ fn: lm_compiler_emit_unit (const: (@: out_path char)) int
     if: (ebr_n_cell[0] > 0 || copy_header != 0) && c.fprintf(out_cell[0], "predef: \"%slmx_graph_copy_owned.h.lm1\"\n", rt_root_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
-    if: c.fprintf(out_cell[0], "predef: \"%slmx_source_names.h.lm1\" \"%slmx_array_owned.h.lm1\" \"%slmx_chars.h.lm1\"\n", rt_root_cell[0], rt_root_cell[0], rt_root_cell[0]) < 0
+    if: c.fprintf(out_cell[0], "predef: \"%slmx_source_names.h.lm1\" \"%slmx_array_owned.h.lm1\" \"%slmx_chars.h.lm1\" \"%slmx_graph.h.lm1\"\n", rt_root_cell[0], rt_root_cell[0], rt_root_cell[0], rt_root_cell[0]) < 0
         c.fclose(out_cell[0])
         return: (cast: (int) (1))
     # Completed namespace constructors and receiving admissions publish through
@@ -19044,6 +19078,7 @@ fn: lm_compiler_rw_call_contract_for (int: parent; int: mi; int: hidden; @: argu
     @@: m_dyn_cell int (cast: (@@: int) (@ c.l2_m_dyn))
     int: inputs
     int: returns
+    int: entry
     int: j 0
     int: w m_arity_cell[0][mi]
     int: n 0
@@ -19057,8 +19092,10 @@ fn: lm_compiler_rw_call_contract_for (int: parent; int: mi; int: hidden; @: argu
         n := n + m_dyn_cell[0][hidden]
     if: c.lm_compiler_rw_contract_parts(parent, n, nr, 2, out, @ inputs, @ returns) != 0
         return: (cast: (int) (1))
-    if: nr != 0 && lm_compiler_rw_signature_witness(returns, 0, rty, descriptor) != 0
-        return: (cast: (int) (1))
+    if: nr != 0
+        if: c.lm_compiler_rw_plain(returns, 2, @ entry) != 0 || c.lm_compiler_rw_put(returns, 0, entry) != 0 || c.lm_compiler_rw_declared_source(entry, mi, -1) != 0 || lm_compiler_rw_witness(entry, 1, rty, descriptor) != 0
+            return: 1
+        ---
     while: j < w
         if: lm_compiler_rw_signature_input(inputs, j, mi, lm_compiler_rw_contract_formal(arguments, j)) != 0
             return: (cast: (int) (1))

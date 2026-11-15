@@ -6,6 +6,7 @@ predef: "l2src/lmx_primitive_profile.h.lm1"
 predef: "l2src/lmx_graph_run.h.lm1"
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_graph_copy_owned.h.lm1"
@@ -233,10 +234,13 @@ fn: es_values (@: arena c.LmxArena; @: g c.LmxGraph) int
     c.free(count)
     return: 0
 
-fn: es_copy (@: arena c.LmxArena; @: g c.LmxGraph) int
+fn: es_copy (@: arena c.LmxArena; @: g c.LmxGraph; @: source_type void) int
     c.LmxArena: destination
     c.LmxCopyMap: footprint
     c.LmxCopyMap: projection
+    c.LmxImplContractFact: fact
+    int: answer 0
+    unsigned: generation 0U
     @@: description void c.calloc(1U, sizeof(@: void))
     @@: cell void c.calloc(1U, sizeof(@: void))
     @@: copied c.Lmx c.calloc(1U, sizeof(@: c.Lmx))
@@ -251,9 +255,13 @@ fn: es_copy (@: arena c.LmxArena; @: g c.LmxGraph) int
     if: description = 0 || cell = 0 || copied = 0 || source = 0 || root = 0 || c.lmx_arena_open(@ destination) != 0
         return: 51
     abi := es_binding("double", description)
+    if: source_type != 0
+        description[0] := source_type
     \source := (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
     if: es_capture(arena, source, abi, description[0], root, cell) != 0 || c.lmx_graph_put(root, 0U, cell[0]) != 0
         return: 52
+    if: c.lmx_graph_source_fact((cast: (@: void) g), arena, root, 0U, 0, 0, 0, @ fact, @ answer) != c.LMX_WALK_OK || answer != c.LMX_IMPLEMENTS_YES || fact\declared != 1 || fact\declared_type != description[0] || fact\cell != cell[0] || fact\kind != c.LMX_KIND_PRIMITIVE || fact\type != c.LMX_TYPE_FOREIGN || fact\scalar_abi != abi
+        return: 129
     if: c.lmx_graph_copy_owned(root, arena, @ destination, copied) != c.LMX_GRAPH_COPY_OK || copied[0] = root
         return: 53
     copy_cell := c.lmx_graph_get(copied[0], 0U)
@@ -264,6 +272,12 @@ fn: es_copy (@: arena c.LmxArena; @: g c.LmxGraph) int
     c.free(source)
     if: \result != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
         return: 55
+    generation := c.lmx_arena_generation_next(@ destination)
+    if: generation = 0U || c.lmx_gc_mark_value(@ destination, (cast: (@: void) copied[0]), generation, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ destination, generation) != c.LMX_GC_OK
+        return: 130
+    context := c.lmx_value_cell_context(@ destination, copy_cell)
+    if: context = 0 || context\ref != copy_cell || context\model != copied[0] || context\source_type != description[0] || context\scalar_abi != abi || context\physical_profile != 0 || \result != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 131
     absorb := (cast: (@: c.Lmx) c.lmx_node_new_owned(@ destination))
     if: absorb = 0 || c.lmx_copy_map_init(@ footprint) != 0 || c.lmx_copy_map_init(@ projection) != 0
         return: 56
@@ -282,6 +296,66 @@ fn: es_copy (@: arena c.LmxArena; @: g c.LmxGraph) int
     c.free(cell)
     c.free(copied)
     return: 0
+
+fn: es_source_factory (@: arena c.LmxArena; @: g c.LmxGraph) int
+    # Sorted pairs are the factory boundary; compiler ordering has its own gate.
+    const: (@: legacy char "primitive.description\000callable\0000\000cell\0001\000class\000double\000convert\000keyed\000descriptor\0000\000floating\0001\000integer\0000\000numeric\0001\000opaque\0000\000range\000\"C99-double(profile)\"\000reference\0000\000semantic\000float\000signed\0000\000spelling\000double\000width\000profile\000")
+    const: (@: custom char "primitive.description\000callable\0000\000cell\0001\000class\000ProbeReal\000convert\000keyed\000descriptor\0000\000floating\0001\000integer\0000\000numeric\0001\000opaque\0000\000range\000\"C99-double(profile)\"\000reference\0000\000semantic\000float\000signed\0000\000spelling\000double\000width\000profile\000")
+    const: (@: other char "primitive.description\000callable\0000\000cell\0001\000class\000ProbeTwin\000convert\000keyed\000descriptor\0000\000floating\0001\000integer\0000\000numeric\0001\000opaque\0000\000range\000\"C99-double(profile)\"\000reference\0000\000semantic\000float\000signed\0000\000spelling\000double\000width\000profile\000")
+    const: (@: minimal char "primitive.description\000callable\0000\000cell\0001\000class\000ProbeReal\000descriptor\0000\000opaque\0000\000reference\0000\000spelling\000double\000")
+    const: (@: malformed char "primitive.description\000callable\0000\000cell\0001\000class\000ProbeReal\000class\000ProbeTwin\000descriptor\0000\000opaque\0000\000reference\0000\000spelling\000double\000")
+    @: kernel void 0
+    @: float_source void 0
+    @: selected void 0
+    @: probe void 0
+    @: twin void 0
+    @: small void 0
+    @: bad void 0
+    const: (@: abi c.LmxScalarABI es_binding("double", @ kernel))
+    const: (@: wrong_abi c.LmxScalarABI es_binding("float", @ float_source))
+    @: bytes char c.malloc(217U)
+    @: before char c.malloc(217U)
+    @: wrapped char c.malloc(218U)
+    @: wrapped_text char 0
+    @: short_text char 0
+    @: malformed_text char 0
+    if: abi = 0 || wrong_abi = 0 || kernel = 0 || bytes = 0 || before = 0 || wrapped = 0
+        return: 113
+    if: c.lmx_graph_scalar_description(abi, legacy, 214U, @ selected) != c.LMX_WALK_OK || selected != kernel
+        return: 114
+    if: c.lmx_graph_scalar_description(abi, custom, 217U, @ probe) != c.LMX_WALK_OK || probe = 0 || probe = kernel || c.lmx_graph_scalar_source(abi, probe) = 0
+        return: 115
+    if: c.lmx_graph_scalar_description(abi, other, 217U, @ twin) != c.LMX_WALK_OK || twin = 0 || twin = probe || twin = kernel || c.lmx_graph_scalar_source(abi, twin) = 0
+        return: 116
+    if: c.lmx_graph_scalar_description(abi, minimal, 106U, @ small) != c.LMX_WALK_OK || small = 0 || small = probe || small = kernel || c.lmx_graph_scalar_source(abi, small) = 0
+        return: 117
+    c.memcpy((cast: (@: void) bytes), (cast: (const: @: void) custom), 217U)
+    c.memcpy((cast: (@: void) before), (cast: (const: @: void) bytes), 217U)
+    if: c.lmx_graph_scalar_description(abi, bytes, 217U, @ selected) != c.LMX_WALK_OK || selected != probe || probe = (cast: (@: void) bytes) || c.lmx_graph_scalar_source(abi, (cast: (@: void) bytes)) != 0
+        return: 118
+    wrapped[0] := 33
+    c.memcpy((cast: (@: void) (wrapped + 1U)), (cast: (const: @: void) bytes), 217U)
+    wrapped_text := c.lmx_graph_intern(wrapped, 218U)
+    short_text := c.lmx_graph_intern(bytes, 216U)
+    if: wrapped_text = 0 || short_text = 0 || c.lmx_graph_scalar_source(abi, (cast: (@: void) (wrapped_text + 1U))) != 0 || c.lmx_graph_scalar_source(abi, (cast: (@: void) short_text)) != 0
+        return: 119
+    bad := probe
+    if: c.lmx_graph_scalar_description(wrong_abi, bytes, 217U, @ bad) != c.LMX_WALK_OK || bad != 0 || c.lmx_graph_scalar_source(wrong_abi, probe) != 0
+        return: 120
+    bad := probe
+    if: c.lmx_graph_scalar_description(abi, bytes, 216U, @ bad) != c.LMX_WALK_OK || bad != 0
+        return: 121
+    bad := probe
+    if: c.lmx_graph_scalar_description((cast: (const: @: c.LmxScalarABI) 0), bytes, 217U, @ bad) != c.LMX_WALK_OK || bad != 0 || c.memcmp((cast: (const: @: void) before), (cast: (const: @: void) bytes), 217U) != 0
+        return: 122
+    malformed_text := c.lmx_graph_intern(malformed, 122U)
+    bad := probe
+    if: malformed_text = 0 || c.lmx_graph_scalar_description(abi, malformed, 122U, @ bad) != c.LMX_WALK_OK || bad != 0 || c.lmx_graph_scalar_source(abi, (cast: (@: void) malformed_text)) != 0
+        return: 123
+    c.free(bytes)
+    c.free(before)
+    c.free(wrapped)
+    return: es_copy(arena, g, probe)
 
 fn: es_qualify (@: arena c.LmxArena) int
     @@: description void c.calloc(1U, sizeof(@: void))
@@ -378,6 +452,397 @@ fn: es_unfilled () int
     c.free(copied)
     return: 0
 
+fn: es_physical_binding (@: public_name char; @: c_name char) int
+    @: semantic void 0
+    @: physical void 0
+    const: (@: public_abi c.LmxScalarABI es_binding(public_name, @ semantic))
+    const: (@: physical_abi c.LmxScalarABI es_binding(c_name, @ physical))
+    if: public_abi = 0 || physical_abi != public_abi || semantic = 0 || physical = 0 || physical = semantic
+        return: 83
+    if: physical != (cast: (@: void) c.lmx_graph_intern(c_name, c.strlen(c_name))) || c.lmx_graph_scalar_source(physical_abi, physical) = 0
+        return: 84
+    return: 0
+
+# These are real selected callable SOURCE/witness entries. The witness is
+# unfilled; only entry[2] could be a default. No scalar payload is read here.
+fn: es_selected_receive (@: arena c.LmxArena; @: code c.Lmx; @: value c.LmxWalkValue) int
+    size_t: slot 0U
+    size_t: plan 0U
+    return: c.lmx_call_bind_receive(arena, code, 1U, 1U, @ slot, @ plan, 0U, value, 0U, 0, 0, 0)
+
+fn: es_operation (@: arena c.LmxArena; @: parent c.Lmx; int: role; size_t: width) @: c.Lmx
+    @: frame c.Lmx c.lmx_walk_plain(arena, parent, width)
+    @: op void c.lmx_walk_role_cell(arena, role, 0)
+    if: frame = 0 || op = 0 || c.lmx_graph_put(frame, 0U, op) != 0
+        return: 0
+    return: frame
+
+# Execute a real portable RET(ARG) body through the existing dispatcher.
+# Its complete scalar result must reach both native C and graph destinations.
+fn: es_dispatch (@: arena c.LmxArena; @: g c.LmxGraph; @: code c.Lmx; @: witness void; @: value c.LmxWalkValue; const: (@: abi c.LmxScalarABI)) int
+    @: vars c.Lmx c.lmx_graph_lmx(g, code, 0U)
+    @: body c.Lmx c.lmx_graph_lmx(g, code, 1U)
+    @: ret c.Lmx es_operation(arena, body, c.LMX_WALK_OP_RET, 2U)
+    @: arg c.Lmx es_operation(arena, ret, c.LMX_WALK_OP_ARG, 4U)
+    @: index void c.lmx_size_new_profiled(arena, 0)
+    @@: refs void c.calloc(1U, sizeof(@: void))
+    @@: output void c.calloc(1U, sizeof(@: void))
+    @: destination void 0
+    @: protected void 0
+    @: before char c.malloc(2U * abi\size)
+    double: copied (cast: (double) 0)
+    @: read c.LmxScalarType9 0
+    c.LmxWalkValue: result
+    @: result_p c.LmxWalkValue @ result
+    int: status 0
+    if: vars = 0 || body = 0 || ret = 0 || arg = 0 || index = 0 || refs = 0 || output = 0 || before = 0
+        return: 103
+    if: c.lmx_size_store_known(index, 0U) != 0 || c.lmx_graph_put(code, 2U, (cast: (@: void) vars)) != 0 || c.lmx_graph_put(code, 3U, (cast: (@: void) body)) != 0 || c.lmx_graph_put(body, 0U, (cast: (@: void) ret)) != 0 || c.lmx_graph_put(ret, 1U, (cast: (@: void) arg)) != 0 || c.lmx_graph_put(arg, 1U, index) != 0 || c.lmx_graph_put(arg, 3U, witness) != 0
+        return: 104
+    refs[0] := c.lmx_walk_value_storage(value)
+    c.lmx_walk_value_clear(@ result)
+    if: c.lmx_walk_call_prim_dispatch(arena, code, vars, refs, 1U, 0, output, value, @ result) != 0 || result\present = 0 || result\kind != c.LMX_WALK_VALUE_FOREIGN || result\scalar_abi != abi || result\source_type != value\source_type || result\model != value\model || result\physical_profile != value\physical_profile || output[0] != result\ref
+        return: 105
+    read := (cast: (@: c.LmxScalarType9) result\ref)
+    if: \read != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 106
+    if: c.lmx_walk_call_prim_dispatch(arena, code, vars, refs, 1U, @ copied, output, value, @ result) != 0 || copied = (cast: (double) 1) || copied != (cast: (double) 1) + c.DBL_EPSILON
+        return: 107
+    destination := c.lmx_arena_scalar_cells_profiled(arena, c.LMX_TYPE_FOREIGN, value\physical_profile, abi, 1U)
+    if: destination = 0 || c.lmx_walk_call_prim_dispatch(arena, code, vars, refs, 1U, destination, output, value, @ result) != 0 || output[0] != destination
+        return: 108
+    read := (cast: (@: c.LmxScalarType9) destination)
+    if: \read != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 109
+    protected := c.lmx_arena_scalar_cells_profiled(arena, 0 - c.LMX_TYPE_FOREIGN, 0, abi, 2U)
+    if: protected = 0
+        return: 110
+    c.memcpy((cast: (@: void) before), protected, 2U * abi\size)
+    status := c.lmx_walk_call_prim_dispatch(arena, code, vars, refs, 1U, (cast: (@: void) ((cast: (@: char) protected) + 1U)), output, value, @ result)
+    if: status != c.LMX_CALL_NOT_CALLABLE || c.memcmp((cast: (const: @: void) before), protected, 2U * abi\size) != 0
+        return: 111
+    status := c.lmx_walk_call_prim_dispatch(arena, code, vars, refs, 1U, (cast: (@: void) ((cast: (size_t) protected) - 1U)), output, value, @ result)
+    if: status != c.LMX_CALL_NOT_CALLABLE || c.memcmp((cast: (const: @: void) before), protected, 2U * abi\size) != 0
+        return: 112
+    c.free(refs)
+    c.free(output)
+    c.free(before)
+    return: 0
+
+fn: es_receiving (@: arena c.LmxArena; @: g c.LmxGraph) int
+    @: code c.Lmx c.lmx_arena_take_struct_role(arena, 0, c.LMX_POOL_ROLE_FN)
+    @: args c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: returns c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: return_entry c.Lmx c.lmx_graph_lmx(g, returns, 2U)
+    @: entry c.Lmx c.lmx_graph_lmx(g, args, 4U)
+    @: model c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: physical c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: description void 0
+    @: other_description void 0
+    const: (@: abi c.LmxScalarABI es_binding("double", @ description))
+    const: (@: other_abi c.LmxScalarABI es_binding("float", @ other_description))
+    @: witness void 0
+    @: metadata c.LmxWalkValue 0
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    float: narrow (cast: (float) 1) + c.FLT_EPSILON
+    c.LmxWalkValue: context
+    c.LmxWalkValue: value
+    c.LmxWalkValue: before
+    @: prior c.LmxWalkValue @ before
+    @: original_input void 0
+    double: changed (cast: (double) 9)
+    c.LmxWalkValue: destination_value
+    c.LmxWalkValue: result_value
+    @: value_p c.LmxWalkValue @ value
+    c.LmxWalkFrame: frame
+    @: destination void 0
+    int: status 0
+    if: code = 0 || args = 0 || returns = 0 || return_entry = 0 || entry = 0 || model = 0 || physical = 0 || abi = 0 || other_abi = 0
+        return: 85
+    if: c.lmx_arena_refs_open_owned(arena, code, 4U) != 0 || c.lmx_graph_put(code, 0U, (cast: (@: void) args)) != 0 || c.lmx_graph_put(code, 1U, (cast: (@: void) returns)) != 0 || c.lmx_graph_put(args, 0U, (cast: (@: void) entry)) != 0
+        return: 86
+    witness := c.lmx_arena_scalar_cells_profiled(arena, c.LMX_TYPE_FOREIGN, physical, abi, 1U)
+    metadata := c.lmx_value_cell_context(arena, witness)
+    if: witness = 0 || metadata = 0 || metadata\present != 0 || c.lmx_graph_put(entry, 0U, (cast: (@: void) es_field(g, "double"))) != 0 || c.lmx_graph_put(entry, 1U, witness) != 0
+        return: 87
+    metadata\source_type := description
+    if: c.lmx_graph_put(returns, 0U, (cast: (@: void) return_entry)) != 0 || c.lmx_graph_put(return_entry, 0U, (cast: (@: void) es_field(g, "double"))) != 0 || c.lmx_graph_put(return_entry, 1U, witness) != 0
+        return: 97
+    c.memset((cast: (@: void) (@ frame)), 0, c.sizeof(c.LmxWalkFrame))
+    frame\arena := arena
+    frame\code := code
+    c.memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkValue))
+    context\source_type := other_description
+    context\model := model
+    if: c.lmx_walk_value_foreign_capture(arena, @ narrow, c.LMX_TYPE_FOREIGN, other_abi, physical, @ context, @ value) != c.LMX_WALK_OK
+        return: 88
+    c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) (@ value)), c.sizeof(c.LmxWalkValue))
+    status := es_selected_receive(arena, code, @ value)
+    if: status != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT || c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) (@ value)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 89
+    if: c.lmx_walk_native_result_context(@ frame, witness, value_p\ref, @ result_value, @ value) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT || c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) (@ value)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 90
+    context\source_type := description
+    if: c.lmx_walk_value_foreign_capture(arena, @ precise, c.LMX_TYPE_FOREIGN, abi, physical, @ context, @ value) != c.LMX_WALK_OK
+        return: 91
+    c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) (@ value)), c.sizeof(c.LmxWalkValue))
+    original_input := (cast: (@: void) value_p\ref)
+    if: es_selected_receive(arena, code, @ value) != c.LMX_WALK_OK || value_p\ref = original_input || c.memcmp((cast: (const: @: void) original_input), value_p\ref, abi\size) != 0 || c.lmx_walk_native_result_context(@ frame, witness, value_p\ref, @ result_value, @ value) != c.LMX_WALK_OK || metadata\present != 0
+        return: 92
+    # Only the owned storage address changes: the complete context survives.
+    prior\ref := value_p\ref
+    if: c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) (@ value)), c.sizeof(c.LmxWalkValue)) != 0 || abi\copy(original_input, @ changed) != 0 || c.memcmp(value_p\ref, (cast: (const: @: void) (@ precise)), abi\size) != 0
+        return: 92
+    destination := c.lmx_walk_native_dest(@ frame, witness, @ destination_value)
+    if: destination = 0 || destination_value\present != 0 || destination_value\scalar_abi != abi || destination_value\physical_profile != physical || destination_value\source_type != description || destination_value\model != 0 || abi\copy(destination, @ precise) != 0
+        return: 100
+    if: c.lmx_walk_native_result_context(@ frame, witness, destination, @ result_value, @ value) != c.LMX_WALK_OK || c.memcmp((cast: (const: @: void) (@ value)), (cast: (const: @: void) (@ result_value)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 101
+    if: c.lmx_walk_native_result_context(@ frame, witness, destination, @ result_value, 0) != c.LMX_WALK_OK || result_value\present = 0 || result_value\ref = destination || result_value\scalar_abi != abi || result_value\source_type != description || result_value\model != 0
+        return: 102
+    status := es_dispatch(arena, g, code, witness, @ value, abi)
+    if: status != 0
+        return: status
+    # A non-cell address is rejected while decoding the header, before
+    # FOREIGN reception; preserve that existing UNSUPPORTED boundary.
+    if: c.lmx_graph_put(entry, 1U, (cast: (@: void) ((cast: (@: char) witness) + 1U))) != 0 || c.lmx_range_cell_pool(arena, (cast: (@: void) ((cast: (@: char) witness) + 1U))) != 0 || es_selected_receive(arena, code, @ value) != c.LMX_WALK_UNSUPPORTED || c.lmx_walk_native_result_context(@ frame, (cast: (@: void) ((cast: (@: char) witness) + 1U)), value_p\ref, @ result_value, @ value) != c.LMX_WALK_INVALID
+        return: 93
+    if: c.lmx_graph_put(entry, 1U, witness) != 0
+        return: 94
+    c.lmx_walk_value_clear(@ value)
+    if: es_selected_receive(arena, code, @ value) != c.LMX_WALK_OK
+        return: 94
+    if: c.lmx_walk_value_foreign(@ value, @ precise) != c.LMX_WALK_OK
+        return: 95
+    value\type := c.LMX_TYPE_FOREIGN
+    value\scalar_abi := abi
+    if: c.lmx_walk_native_result_context(@ frame, witness, @ precise, @ result_value, @ value) != c.LMX_WALK_INVALID
+        return: 96
+    return: 0
+
+fn: es_argument_scalar () int
+    c.LmxArena: arena
+    c.LmxExecutionRoots: roots
+    @: mark c.LmxExecutionRoots 0
+    c.LmxWalkValue: actual
+    c.LmxWalkValue: owned
+    c.LmxWalkValue: before
+    c.LmxWalkValue: context
+    c.LmxWalkValue: replacement
+    c.LmxWalkValue: absent
+    c.LmxWalkValue: loaded
+    c.LmxWalkValue: alias
+    @: actual_p c.LmxWalkValue @ actual
+    @: owned_p c.LmxWalkValue @ owned
+    @: context_p c.LmxWalkValue @ context
+    @: replacement_p c.LmxWalkValue @ replacement
+    @: absent_p c.LmxWalkValue @ absent
+    @: loaded_p c.LmxWalkValue @ loaded
+    @: alias_p c.LmxWalkValue @ alias
+    c.LmxWalkPlace: place
+    c.LmxWalkPlace: repeated
+    c.LmxWalkPlace: absent_place
+    @: place_p c.LmxWalkPlace @ place
+    @: repeated_p c.LmxWalkPlace @ repeated
+    @: absent_place_p c.LmxWalkPlace @ absent_place
+    @: stored c.LmxWalkValue 0
+    @: pool c.LmxPool 0
+    @: formal_source void 0
+    @: actual_source void 0
+    @: float_source void 0
+    const: (@: abi c.LmxScalarABI es_binding("double", @ formal_source))
+    const: (@: actual_abi c.LmxScalarABI es_binding("f64", @ actual_source))
+    const: (@: wrong_abi c.LmxScalarABI es_binding("float", @ float_source))
+    @@: caller_refs void c.calloc(1U, sizeof(@: void))
+    @@: refs void c.calloc(1U, sizeof(@: void))
+    @@: absent_refs void c.calloc(1U, sizeof(@: void))
+    @: caller_bytes char 0
+    @: physical c.Lmx 0
+    @: model_a c.Lmx 0
+    @: model_profile c.Lmx 0
+    @: model_b c.Lmx 0
+    @: current void 0
+    @: witness void 0
+    @: read c.LmxScalarType9 0
+    @: saved_read c.LmxScalarType9 0
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: changed (cast: (double) 9)
+    double: zero (cast: (double) 0)
+    unsigned: generation 0U
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: abi = 0 || actual_abi != abi || wrong_abi = 0 || actual_source = formal_source || caller_refs = 0 || refs = 0 || absent_refs = 0 || c.lmx_arena_open(@ arena) != 0
+        return: 140
+    caller_bytes := c.malloc(abi\size)
+    physical := (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    model_a := (cast: (@: c.Lmx) c.lmx_node_new_profiled(@ arena, physical))
+    model_profile := (cast: (@: c.Lmx) c.lmx_node_new_owned(@ arena))
+    model_b := (cast: (@: c.Lmx) c.lmx_node_new_profiled(@ arena, model_profile))
+    if: caller_bytes = 0 || physical = 0 || model_a = 0 || model_profile = 0 || model_b = 0
+        return: 141
+    c.lmx_walk_value_clear(context_p)
+    context_p\source_type := actual_source
+    context_p\model := model_a
+    if: c.lmx_walk_value_foreign_capture(@ arena, @ precise, 0 - c.LMX_TYPE_FOREIGN, abi, physical, context_p, actual_p) != c.LMX_WALK_OK
+        return: 142
+    caller_refs[0] := c.lmx_walk_value_storage(actual_p)
+    refs[0] := caller_refs[0]
+    c.memcpy((cast: (@: void) caller_bytes), actual_p\ref, abi\size)
+    c.memcpy((cast: (@: void) owned_p), (cast: (const: @: void) actual_p), c.sizeof(c.LmxWalkValue))
+    c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) owned_p), c.sizeof(c.LmxWalkValue))
+    if: c.lmx_walk_values_entry(@ arena, owned_p, refs, 1U) != c.LMX_WALK_OK || refs[0] != 0 || caller_refs[0] != actual_p\ref || c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) owned_p), c.sizeof(c.LmxWalkValue)) != 0
+        return: 143
+    if: c.lmx_walk_values_arg_place_scalar(@ arena, owned_p, refs, 1U, 0U, wrong_abi, float_source, place_p) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT || refs[0] != 0 || c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) owned_p), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) caller_bytes), actual_p\ref, abi\size) != 0
+        return: 144
+    # The still-lazy actual and the later RHS Model are explicit roots.
+    mark := c.lmx_execution_roots_mark(@ arena)
+    c.lmx_execution_roots_push(@ arena, @ roots, (cast: (@: void) owned_p), 1U, 0, 0U, (cast: (@: void) model_b), 0)
+    generation := c.lmx_arena_generation_next(@ arena)
+    if: c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK || c.lmx_range_cell_pool(@ arena, owned_p\ref) = 0 || c.lmx_range_cell_pool(@ arena, (cast: (@: void) owned_p\model)) = 0
+        return: 145
+    if: c.lmx_walk_values_arg_place_scalar(@ arena, owned_p, refs, 1U, 0U, abi, formal_source, place_p) != c.LMX_WALK_OK || place_p\address = 0 || place_p\address = actual_p\ref || refs[0] != place_p\address || owned_p\ref != place_p\address || owned_p\type != c.LMX_TYPE_FOREIGN || owned_p\source_type != actual_source || owned_p\model != model_a || (cast: (@: void) place_p\context) != (cast: (@: void) owned_p)
+        return: 146
+    current := place_p\address
+    pool := c.lmx_range_cell_pool(@ arena, current)
+    stored := c.lmx_value_cell_context(@ arena, current)
+    read := (cast: (@: c.LmxScalarType9) current)
+    if: pool = 0 || pool\type != c.LMX_TYPE_FOREIGN || pool\profile != owned_p\physical_profile || stored = 0 || stored = owned_p || stored\present = 0 || stored\source_type != actual_source || stored\model != model_a || \read != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 147
+    if: c.lmx_walk_values_arg_place_scalar(@ arena, owned_p, refs, 1U, 0U, abi, formal_source, repeated_p) != c.LMX_WALK_OK || repeated_p\address != current || c.lmx_walk_values_arg_read_scalar(@ arena, owned_p, refs, 1U, 0U, loaded_p) != c.LMX_WALK_OK || loaded_p\ref = current
+        return: 148
+    saved_read := (cast: (@: c.LmxScalarType9) loaded_p\ref)
+    c.lmx_walk_value_clear(context_p)
+    context_p\source_type := formal_source
+    context_p\model := model_b
+    if: c.lmx_walk_value_foreign_capture(@ arena, @ changed, 0 - c.LMX_TYPE_FOREIGN, abi, 0, context_p, replacement_p) != c.LMX_WALK_OK || c.lmx_walk_value_store(@ arena, place_p, replacement_p) != c.LMX_WALK_OK
+        return: 149
+    stored := c.lmx_value_cell_context(@ arena, current)
+    if: stored = 0 || owned_p\present = 0 || owned_p\ref != current || owned_p\source_type != actual_source || owned_p\model != model_b || stored\source_type != owned_p\source_type || stored\model != owned_p\model || \read != (cast: (c.LmxScalarType9) 9) || \saved_read != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON || c.memcmp((cast: (const: @: void) caller_bytes), actual_p\ref, abi\size) != 0
+        return: 150
+    # Escaping addresses retain the arena companion, never an activation array.
+    if: c.lmx_walk_place_address(@ arena, place_p, alias_p) != c.LMX_WALK_OK || alias_p\referent != stored || alias_p\referent = owned_p
+        return: 157
+    replacement_p\references := model_b
+    if: c.lmx_walk_value_deref_actual(@ arena, alias_p, repeated_p) != c.LMX_WALK_OK || c.lmx_walk_value_store(@ arena, repeated_p, replacement_p) != c.LMX_WALK_OK || c.lmx_walk_values_arg_read_scalar(@ arena, owned_p, refs, 1U, 0U, loaded_p) != c.LMX_WALK_OK || owned_p\references != model_b || loaded_p\references != model_b
+        return: 158
+    # A typed alias without referent updates its physical companion; read refreshes current.
+    alias_p\referent := 0
+    replacement_p\references := model_a
+    if: c.lmx_walk_value_deref_actual(@ arena, alias_p, repeated_p) != c.LMX_WALK_OK || c.lmx_walk_value_store(@ arena, repeated_p, replacement_p) != c.LMX_WALK_OK || c.lmx_walk_values_arg_read_scalar(@ arena, owned_p, refs, 1U, 0U, loaded_p) != c.LMX_WALK_OK || owned_p\references != model_a || loaded_p\references != model_a
+        return: 151
+    c.lmx_execution_roots_remove(@ arena, @ roots)
+    c.lmx_execution_roots_push(@ arena, @ roots, 0, 0U, refs, 1U, 0, 0)
+    generation := c.lmx_arena_generation_next(@ arena)
+    if: c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK || c.lmx_range_cell_pool(@ arena, current) = 0 || c.lmx_range_cell_pool(@ arena, (cast: (@: void) model_b)) = 0 || c.lmx_walk_place_load(@ arena, place_p, loaded_p) != c.LMX_WALK_OK || loaded_p\present = 0 || loaded_p\source_type != actual_source || loaded_p\model != model_b || \read != (cast: (c.LmxScalarType9) 9)
+        return: 152
+    # Poison unfilled bytes; materialization must use ABI.init without reading them.
+    witness := c.lmx_arena_scalar_cells_profiled(@ arena, 0 - c.LMX_TYPE_FOREIGN, 0, abi, 1U)
+    stored := c.lmx_value_cell_context(@ arena, witness)
+    if: witness = 0 || stored = 0 || stored\present != 0
+        return: 153
+    c.memset(witness, 165, abi\size)
+    c.memcpy((cast: (@: void) absent_p), (cast: (const: @: void) stored), c.sizeof(c.LmxWalkValue))
+    absent_refs[0] := witness
+    if: c.lmx_walk_values_entry(@ arena, absent_p, absent_refs, 1U) != c.LMX_WALK_OK || absent_refs[0] != 0 || c.lmx_walk_values_arg_place_scalar(@ arena, absent_p, absent_refs, 1U, 0U, abi, formal_source, absent_place_p) != c.LMX_WALK_OK || absent_place_p\address = 0 || absent_place_p\address = witness || absent_p\present != 0 || absent_p\scalar_abi != abi || absent_p\source_type != formal_source
+        return: 154
+    stored := c.lmx_value_cell_context(@ arena, absent_place_p\address)
+    if: stored = 0 || stored\present != 0 || stored\scalar_abi != abi || stored\source_type != formal_source || c.memcmp(absent_place_p\address, (cast: (const: @: void) (@ zero)), abi\size) != 0 || c.lmx_walk_value_load(@ arena, absent_place_p\address, c.LMX_TYPE_FOREIGN, loaded_p) != c.LMX_WALK_OK || loaded_p\present != 0
+        return: 155
+    c.lmx_execution_roots_restore(@ arena, mark)
+    generation := c.lmx_arena_generation_next(@ arena)
+    if: c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK || c.lmx_range_cell_pool(@ arena, current) != 0
+        return: 156
+    c.free(caller_bytes)
+    c.free(caller_refs)
+    c.free(refs)
+    c.free(absent_refs)
+    c.lmx_arena_release(@ arena)
+    return: 0
+
+fn: es_escaped_scalar () int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 160
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: code c.Lmx c.lmx_arena_take_struct_role(@ arena, 0, c.LMX_POOL_ROLE_FN)
+    @: args c.Lmx c.lmx_graph_lmx(g, code, 1U)
+    @: returns c.Lmx c.lmx_graph_lmx(g, code, 1U)
+    @: entry c.Lmx c.lmx_graph_lmx(g, args, 4U)
+    @: return_entry c.Lmx c.lmx_graph_lmx(g, returns, 2U)
+    @: data c.Lmx c.lmx_graph_lmx(g, code, 0U)
+    @: body c.Lmx c.lmx_graph_lmx(g, code, 1U)
+    @: ret c.Lmx es_operation(@ arena, body, c.LMX_WALK_OP_RET, 2U)
+    @: address c.Lmx es_operation(@ arena, ret, c.LMX_WALK_OP_ADDRESS, 3U)
+    @: arg c.Lmx es_operation(@ arena, address, c.LMX_WALK_OP_ARG, 4U)
+    @: input_source c.Lmx es_field(g, "double")
+    @: return_source c.Lmx es_field(g, "@")
+    @: model c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: description void 0
+    const: (@: abi c.LmxScalarABI es_binding("double", @ description))
+    @: witness void c.lmx_arena_scalar_cells_profiled(@ arena, c.LMX_TYPE_FOREIGN, 0, abi, 1U)
+    @: pointer_witness void c.lmx_pointer_new_profiled(c.LMX_TYPE_CELL_POINTER, @ arena, 0)
+    @: index void c.lmx_size_new_profiled(@ arena, 0)
+    @@: refs void c.calloc(1U, sizeof(@: void))
+    @@: output void c.calloc(1U, sizeof(@: void))
+    c.LmxWalkValue: context
+    c.LmxWalkValue: actual
+    c.LmxWalkValue: escaped
+    c.LmxWalkValue: loaded
+    c.LmxWalkValue: replacement
+    @: context_p c.LmxWalkValue @ context
+    @: actual_p c.LmxWalkValue @ actual
+    @: escaped_p c.LmxWalkValue @ escaped
+    @: loaded_p c.LmxWalkValue @ loaded
+    @: replacement_p c.LmxWalkValue @ replacement
+    @: stored c.LmxWalkValue 0
+    c.LmxWalkPlace: place
+    @: place_p c.LmxWalkPlace @ place
+    c.LmxExecutionRoots: roots
+    @: mark c.LmxExecutionRoots c.lmx_execution_roots_mark(@ arena)
+    @: read c.LmxScalarType9 0
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: changed (cast: (double) 9)
+    unsigned: generation 0U
+    if: g = 0 || code = 0 || args = 0 || returns = 0 || entry = 0 || return_entry = 0 || data = 0 || body = 0 || ret = 0 || address = 0 || arg = 0 || input_source = 0 || return_source = 0 || model = 0 || abi = 0 || witness = 0 || pointer_witness = 0 || index = 0 || refs = 0 || output = 0
+        return: 161
+    stored := c.lmx_value_cell_context(@ arena, witness)
+    if: stored = 0 || c.lmx_arena_refs_open_owned(@ arena, code, 4U) != 0 || c.lmx_size_store_known(index, 0U) != 0
+        return: 162
+    stored\source_type := description
+    if: c.lmx_graph_put(code, 0U, (cast: (@: void) args)) != 0 || c.lmx_graph_put(code, 1U, (cast: (@: void) returns)) != 0 || c.lmx_graph_put(code, 2U, (cast: (@: void) data)) != 0 || c.lmx_graph_put(code, 3U, (cast: (@: void) body)) != 0 || c.lmx_graph_put(args, 0U, (cast: (@: void) entry)) != 0 || c.lmx_graph_put(entry, 0U, (cast: (@: void) input_source)) != 0 || c.lmx_graph_put(entry, 1U, witness) != 0 || c.lmx_graph_put(returns, 0U, (cast: (@: void) return_entry)) != 0 || c.lmx_graph_put(return_entry, 0U, (cast: (@: void) return_source)) != 0 || c.lmx_graph_put(return_entry, 1U, pointer_witness) != 0
+        return: 162
+    if: c.lmx_graph_put(body, 0U, (cast: (@: void) ret)) != 0 || c.lmx_graph_put(ret, 1U, (cast: (@: void) address)) != 0 || c.lmx_graph_put(address, 1U, (cast: (@: void) arg)) != 0 || c.lmx_graph_put(arg, 1U, index) != 0 || c.lmx_graph_put(arg, 3U, witness) != 0
+        return: 162
+    c.lmx_walk_value_clear(context_p)
+    context_p\source_type := description
+    context_p\model := model
+    if: c.lmx_walk_value_foreign_capture(@ arena, @ precise, 0 - c.LMX_TYPE_FOREIGN, abi, 0, context_p, actual_p) != c.LMX_WALK_OK
+        return: 163
+    refs[0] := c.lmx_walk_value_storage(actual_p)
+    c.lmx_walk_value_clear(escaped_p)
+    if: c.lmx_walk_call_prim_dispatch(@ arena, code, data, refs, 1U, 0, output, actual_p, escaped_p) != 0 || escaped_p\present = 0 || escaped_p\kind != c.LMX_WALK_VALUE_REFERENCE || escaped_p\type != c.LMX_TYPE_CELL_POINTER || escaped_p\ref = 0 || escaped_p\ref = actual_p\ref || output[0] != escaped_p\ref || arena\activation != 0 || arena\execution_roots != mark
+        return: 164
+    # The real activation has popped and its separate scratch arena is released.
+    stored := c.lmx_value_cell_context(@ arena, escaped_p\ref)
+    if: stored = 0 || escaped_p\referent != stored || stored\ref != escaped_p\ref || stored\source_type != description || stored\model != model || stored\referent != 0
+        return: 165
+    c.lmx_graph_close(g)
+    c.lmx_execution_roots_push(@ arena, @ roots, (cast: (@: void) escaped_p), 1U, 0, 0U, 0, 0)
+    generation := c.lmx_arena_generation_next(@ arena)
+    if: c.lmx_gc_sweep(@ arena, generation) != c.LMX_GC_OK || c.lmx_range_cell_pool(@ arena, escaped_p\ref) = 0 || c.lmx_range_cell_pool(@ arena, (cast: (@: void) model)) = 0 || escaped_p\referent != c.lmx_value_cell_context(@ arena, escaped_p\ref) || c.lmx_walk_value_deref_actual(@ arena, escaped_p, place_p) != c.LMX_WALK_OK || c.lmx_walk_place_load(@ arena, place_p, loaded_p) != c.LMX_WALK_OK || loaded_p\present = 0 || loaded_p\scalar_abi != abi || loaded_p\source_type != description || loaded_p\model != model
+        return: 166
+    read := (cast: (@: c.LmxScalarType9) loaded_p\ref)
+    if: \read != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON || c.lmx_walk_value_foreign_capture(@ arena, @ changed, 0 - c.LMX_TYPE_FOREIGN, abi, 0, stored, replacement_p) != c.LMX_WALK_OK || c.lmx_walk_value_store(@ arena, place_p, replacement_p) != c.LMX_WALK_OK || c.lmx_walk_place_load(@ arena, place_p, loaded_p) != c.LMX_WALK_OK
+        return: 167
+    read := (cast: (@: c.LmxScalarType9) loaded_p\ref)
+    if: \read != (cast: (c.LmxScalarType9) 9) || escaped_p\referent != stored || stored\ref != escaped_p\ref || stored\source_type != description || stored\model != model || stored\referent != 0
+        return: 168
+    c.lmx_execution_roots_restore(@ arena, mark)
+    c.free(refs)
+    c.free(output)
+    c.lmx_arena_release(@ arena)
+    return: 0
+
 fn: es_storage_check () int
     c.LmxArena: arena
     @: g c.LmxGraph 0
@@ -392,11 +857,31 @@ fn: es_storage_check () int
     if: status = 0
         status := es_values(@ arena, g)
     if: status = 0
-        status := es_copy(@ arena, g)
+        status := es_copy(@ arena, g, 0)
+    if: status = 0
+        status := es_source_factory(@ arena, g)
     if: status = 0
         status := es_qualify(@ arena)
     if: status = 0
         status := es_unfilled()
+    if: status = 0
+        status := es_physical_binding("flong", "c.long double")
+    if: status = 0
+        status := es_physical_binding("llong", "c.long long")
+    if: status = 0
+        status := es_physical_binding("ullong", "c.unsigned long long")
+    if: status = 0
+        status := es_physical_binding("schar", "c.signed char")
+    if: status = 0
+        status := es_physical_binding("ushort", "c.unsigned short")
+    if: status = 0
+        status := es_physical_binding("ulong", "c.unsigned long")
+    if: status = 0
+        status := es_receiving(@ arena, g)
+    if: status = 0
+        status := es_argument_scalar()
+    if: status = 0
+        status := es_escaped_scalar()
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
     if: status != 0

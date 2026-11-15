@@ -1,5 +1,17 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Slice397, 2026-11-15 -- owned scalar receiving and formal places; bounded code gates PASS.**
+Complete ACTIVE SOURCE is canonicalized by the existing counted TEXT interner separately from physical ABI.
+Scalar actuals/returns retain the complete Value; the callee current Value and lazy mutable place are separate.
+The first store/address creates its own cell and subsequent addresses are stable; an escaped pointer retains
+the arena companion after activation exit. Direct stores update current; a read after an alias write refreshes
+it from the companion and produces a snapshot. Runtime08/private13 SUITE1/0 covers a real dispatcher/scratch exit/GC.
+FE07 raw/hosted ordinary-witness05/06 OSWALK0 confirms precision/store/address/caller isolation native/walker.
+Source28:932/canonical, genuine G1/G2 quick smoke9/0, fixedpoint29 and actual G2 targeted6/0,
+ordinary-witness07/Graph3 triple PASS. G2 render35/14 and fresh docs-check01 PASS35/14/27/44/615, links/LF28283;
+the final index is checked before commit. Semantics source and grammar are unchanged.
+Typed Run/FFI/Foreign-Array and the shared M14 cache/flush remain OPEN. [Witness397](../steps/witnesses/m13-scalar-receiving-20261115/notes.md).
+
 **Slice396, 2026-11-15 -- public scalar resolver; bounded code gates PASS.**
 The common frontend interner retains the source word, pointer depth, const and raw-C role; native printing
 selects the exact scalar spelling from the active primitive.description. Translation-owned aliases use the

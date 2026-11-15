@@ -1,5 +1,17 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
+**Срез397, 2026-11-15 — owned scalar receiving и места формалов, ограниченные кодовые gates PASS.**
+Полный ACTIVE SOURCE канонизируется прежним counted TEXT interner отдельно от physical ABI.
+Scalar actual/return сохраняет полный Value; callee current Value и ленивое mutable место разделены.
+Первый store/address создаёт собственную ячейку, последующие адреса стабильны; escaped pointer удерживает
+arena companion после завершения активации. Прямая запись обновляет current, чтение после alias обновляет его
+из companion и выдаёт снимок. Runtime08/private13 SUITE1/0 проверяет настоящий dispatcher/scratch exit/GC.
+FE07 raw/hosted ordinary-witness05/06 OSWALK0 подтверждает precision/store/address/caller-isolation native/walker.
+Source28:932/canonical, genuine G1/G2 quick smoke9/0, fixedpoint29 и actual G2 targeted6/0,
+ordinary-witness07/Graph3 triple PASS. G2 render35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28283;
+финальная проверка индекса — перед коммитом. Semantics source и grammar не менялись.
+Typed Run/FFI/Foreign-Array и общий кеш/flush M14 остаются OPEN. [Свидетельство397](../steps/witnesses/m13-scalar-receiving-20261115/notes.md).
+
 **Срез396, 2026-11-15 — public scalar resolver; ограниченные кодовые gates PASS.**
 Общий frontend interner сохраняет source word, глубину указателя, const и raw-C роль; native printer
 берёт точное scalar spelling из активной primitive.description. Translation-owned aliases проходят прежний

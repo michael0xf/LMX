@@ -570,6 +570,8 @@ end: lmx_pointer_fill_in
 fn: lmx_value_address_context (@: arena c.LmxArena; @: cell void; @: address c.LmxWalkValue) @: c.LmxWalkValue
     if: cell != 0 && address != 0 && address\ref = cell && address\referent != 0
         return: (cast: (@: c.LmxWalkValue) address\referent)
+    if: c.lmx_type_base(c.lmx_domain_type(arena, cell)) = c.LMX_TYPE_FOREIGN
+        return: lmx_value_cell_context(arena, cell)
     return: lmx_pointer_cell_context(arena, cell)
 end: lmx_value_address_context
 

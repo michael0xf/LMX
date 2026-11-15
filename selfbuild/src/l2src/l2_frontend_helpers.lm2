@@ -1556,44 +1556,56 @@ end: lm_compiler_ptr_cell_type
 fn: lm_compiler_ft_of_own (int: oty) int
     if: oty = 3
         return: (cast: (int) (34))
-    if: lm_compiler_oc_is_pointer(oty) != 0
+    if: lm_compiler_oc_is_pointer(oty) != 0 || lm_compiler_oc_is_scalar(oty) != 0
         return: (cast: (int) (lm_compiler_oc_ft(oty)))
     return: (cast: (int) (oty))
 end: lm_compiler_ft_of_own
 
 fn: lm_compiler_oc_pointer (int: ft) int
-    return: (cast: (int) (1000 + 2 * ft))
+    if: ft < 0 || ft > (c.INT_MAX - 1000) / 3
+        return: -1
+    return: (cast: (int) (1000 + 3 * ft))
 end: lm_compiler_oc_pointer
 
 fn: lm_compiler_oc_parray (int: ft) int
-    return: (cast: (int) (1001 + 2 * ft))
+    if: ft < 0 || ft > (c.INT_MAX - 1001) / 3
+        return: -1
+    return: (cast: (int) (1001 + 3 * ft))
 end: lm_compiler_oc_parray
+
+fn: lm_compiler_oc_scalar (int: ft) int
+    if: ft < 0 || ft > (c.INT_MAX - 1002) / 3
+        return: -1
+    return: (cast: (int) (1002 + 3 * ft))
+
+fn: lm_compiler_oc_is_scalar (int: oty) int
+    return: (cast: (int) (oty >= 1000 && (oty - 1000) % 3 = 2))
 
 fn: lm_compiler_oc_darray () int
     return: (cast: (int) (44))
 end: lm_compiler_oc_darray
 
 fn: lm_compiler_oc_is_pointer (int: oty) int
-    return: (cast: (int) ((cast: (int) (oty >= 1000 && (oty - 1000) % 2 = 0))))
+    return: (cast: (int) ((cast: (int) (oty >= 1000 && (oty - 1000) % 3 = 0))))
 end: lm_compiler_oc_is_pointer
 
 fn: lm_compiler_oc_is_parray (int: oty) int
-    return: (cast: (int) ((cast: (int) (oty >= 1000 && (oty - 1000) % 2 = 1))))
+    return: (cast: (int) ((cast: (int) (oty >= 1000 && (oty - 1000) % 3 = 1))))
 end: lm_compiler_oc_is_parray
 
 fn: lm_compiler_oc_is_ref (int: oty) int
-    return: (cast: (int) ((cast: (int) (oty >= 1000))))
+    return: (cast: (int) ((cast: (int) (oty >= 1000 && (oty - 1000) % 3 != 2))))
 end: lm_compiler_oc_is_ref
 
 fn: lm_compiler_oc_ft (int: oty) int
-    return: (cast: (int) ((oty - 1000) / 2))
+    return: (cast: (int) ((oty - 1000) / 3))
 end: lm_compiler_oc_ft
 
 fn: lm_compiler_dt_of_own (int: oty) int
     # The free own type (45) is the free dynamic type (46): slice 255.
     if: oty = 45
         return: (cast: (int) (46))
-    if: oty < 0 || lm_compiler_own_store_helper(oty) = 0
+    if: oty < 0 || (lm_compiler_own_store_helper(oty) = 0 && lm_compiler_oc_is_scalar(oty) = 0)
         return: (cast: (int) (0))
     return: (cast: (int) (oty + 1))
 end: lm_compiler_dt_of_own

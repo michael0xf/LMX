@@ -1,5 +1,130 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — срез397: owned scalar receiving/actual/result M11.7/M13, code/docs/index PASS
+
+Предыдущий goal turn — progress:396 принят/отправлен41c1616d4b6b8d6f31c3f2e7c382c39bc2b8e876 прямо main.
+Root — единственный code/test/build writer; helpers read-only. Два чужих untracked сохранить. Goal ACTIVE.
+Продолжение formal closure: Source23:932 SHA2d0a7199; Runtime07 prodE7BF72A8/observe80393031 PASS.
+Private12-reuse использовал неизменный unit p.o Source21: исправлены только recorded linker args,
+выполнены четыре настоящих L2 driver assertions n/f/root0/root1 PASS. Это не новый SUITE receipt.
+WalkValues185/ValueOwned: callee scalar refs0, отдельная mutable cell при первом store/address,
+полный current Value, retarget реальной native activation, чтение со snapshot и синхронизация алиасов.
+Receiving/read/valued-return делают snapshot; argument_storage и scalar_result — чистая проверка/доставка.
+Private09/10/11 сохранены как FAIL: старый ref oracle92, лишние captures101 и105 исправлены без ослабления context.
+Source24:932 SHAc3dd3185; FE05 raw00bc9c79 PASS reuse98/ABI24, переведены только Lower/Core.
+Native formal read/place/store/entry подключены; ordinary-witness03 FE05/Runtime07 PASS: precision и identity walked2.
+Source25 добавляет устойчивый arena companion для адреса scalar formal вместо ссылки на activation array,
+real RET(ADDRESS(ARG0))→выход из scratch→GC→read/store test и ordinary assign/address/caller-isolation fixture.
+WalkValues L2/SAME185 и Runtime08 aggregate/prod/observe PASS (61B6028A/D0F1C734).
+Fresh private13 SUITE1/0 PASS n/f/root0/root1, включая настоящий escaped-address dispatcher/scratch exit/GC.
+Ordinary-witness04 forced PASS: identity2/assign2/address1/preserve1/run1; native FAIL4 exit86, старое значение
+после store. Это не приёмка. Source26 исправил bare formal-store gate и class6scalar normal-return path;
+FE06 rawa70c0cf5 PASS onlyLower/reuse102/ABI24, ordinary на известном receiving blocker не повторялся.
+Source27 добавляет scalar receiving полного Value, ABI validation и typed storage projection, не reference/numeric
+адаптер. Только opaque C producer захватывается: expected formal даёт UNKNOWN SOURCE, explicit typed RETURN
+может объявить SOURCE. Transparent actual сохраняется целиком; Model использует existing admission operation.
+FE07 raw74dcfd67 PASS onlyLower/reuse102/ABI24. Ordinary-witness05 OSWALK0 PASS: все пять native bindings,
+никакого walked body у native; forced действительно identity2/assign2/address1/preserve1/run1; prod/observe/root0/root1.
+Прежний FAIL4 receipt04 сохранён. Стабильный адрес и caller-isolation проверены обычным L2, без numeric carrier.
+Source28:932 добавляет только row full-suite для этой регрессии; compiler/runtime code остаётся Source27/25.
+Fresh Tool02 PASS1499e18c; штатный hosted link FE07 PASSdd17e269 на готовых frontend objects.
+Hosted ordinary-witness06 OSWALK0 PASS всех пяти методов. Frozen/canonical Source28:932
+SHA2cf005444a8ba5990bb10146d375431a88401cf58969d2a140de75220995ee2a, verify repo/stage PASS.
+Bootstrap01 quick terminal PASS: genuine G1/G2 smoke9/0 каждый, новые Tool и consumed closure356.
+Fixedpoint28 CHECKS29/0 PASS; actual G2 targeted01 SUITE6/0 и ordinary-witness07 OSWALK0 counts5 PASS.
+G2 Graph01 SHA8cd2b4f4, CHECKS3/0 interp/native/forced PASS, прежний missing-model build4 сохранён.
+Все code/test producers terminal. Actual G2 FE5de49953/Toolfc1245d5; runtime61b6028a/d0f1c734 совпадает с Runtime08.
+G2 render01 PASS35 paired/14 cases/both snapshots, generated semantics unchanged, grammar unchanged.
+Fresh docs-check01 с заранее созданными cwd/private dirs PASS35/14/27/44/615, links/LF28283; git diff --check PASS.
+Final indexed01 с fresh cwd/private PASS35/14/27/44/615, links/LF28285,23 owned files staged;
+working/index diff --check PASS. Результаты дописаны как outputs проверки, не новые semantic inputs.
+Commit/push397 выполняются прямо main; затем продолжать основной v3, goal ACTIVE.
+Подготовлены data-only списки в OUT: fixedpoint28.tsv, g2-targeted28.tsv, g2-graph-checks01.tsv;
+все пути переведены на текущий boot/stage/Graph. Prod suite принимает driver.o, observe — driver-observe.o.
+После397 основная следующая кодовая вертикаль M13 — existing GraphRun working Value над supplied typed DATA,
+place-before-RHS, ABI writer, dirty flush в прежнюю cell и GC полного Value; конкретика добавлена в основной v3.
+Runtime08, ValueOwned и успешные private compiler translations не повторять; whole строит настоящие поколения.
+Полные typed Run/constructor/own-field/FFI/Array и M11/M13/M14 не объявлять готовыми.
+Новое продолжение: Source14:931 SHA938923d9710a0af98312861fd9a68ec9a2582979c7edb26b141bf7eb5b83ee37,
+Runtime04 prod1ecb390f/observe7616a983, private08 PASS n/f/root0/root1. Полный ACTIVE SOURCE проходит
+прежний counted TEXT interner, bounded exact-start/length proof, source fact, copy и настоящий GC.
+Graph82/WalkValues182 реально переведены; остальные успешные runtime modules/driver source переиспользованы.
+Source15:931 SHA4136cb8aa99f1e6b33f3a7b7286e310d3695a00515fa7374dcab738726c8f1e6 меняет лишь
+новый frontend helper local table→primitive_table. Helpers264 и Values176 уже прошли L2;
+Frontend02 проверил reuse90/ABI24 и перевёл Values/Lower/Core/Emit; L1 aggregate PASS.
+Его C compile отказал на новых вызовах несуществующего tx_release. Они сняты: Tx growth уже принадлежит
+прежнему text-room allocator. Core/Emit и их headers сохраняются; Frontend03 повторит только Values/Lower.
+Source16:931 SHA8cc71b9b4f392cb66b3f7b09a2a94a9fb5445a508a6689d675e5d118cecfd8c1 содержит только это
+удаление трёх вызовов. Frontend03/reuse98/ABI24 PASS, raw frontend SHAa58960aa; это ещё не hosted/G2 gate.
+Source17:932 добавляет обычный public_scalar_calls. Ordinary01 n/f/root0/root1 PASS по точному decimal epsilon,
+но os-walk-witness01 честно FAIL3: identity остался native, walked0 вместо2. Этот gate не считать пройденным.
+Остались generic rw_may result/formal gates Core: они теперь признают oc_is_scalar отдельно от rw_num_ty.
+Source18:932 SHAa2f81726d3c5407f950a65c817643c4156c90f3b58075505b059cee6b32e9cce;
+Frontend04/reuse102/ABI24 PASS, raw frontend SHA733ed11d. Os-walk-witness02 PASS0: native identity walked0,
+forced без native binding и действительно walked2 при root0/root1; precise decimal сохранён в prod/observe.
+Frontend-controls01 PASS4/0 на FE04: public resolver, ACTIVE custom table, expanded exact scalar unit и deep pointer.
+Это private raw compiler gates, не actual hosted/G2. Все producers terminal; готовые gates не повторять без причины.
+Общий scalar formal read/store/address ещё OPEN: raw C fallback теряет входной SOURCE/Model;
+простое снятие read gate без working-place closure создаёт устаревший full Value после записи.
+Сначала согласовать их через существующие кадры/места, не писать в caller physical cell и не снимать qualifiers.
+Это зависимая работа M13/M14 перед ordinary identity/snapshot/ABI/whole gates; готовность frontend не заявлять.
+Выбранное дальнейшее решение использует существующие callee-owned arrays: owned[k] хранит полный current Value,
+refs[k]=0 у scalar означает ещё не созданное локальное ABI-место, а не отсутствие значения. Первый store/address
+материализует собственную mutable cell по expected ABI; повторный адрес сохраняется. Transport project и
+исходные actual refs остаются прежними. Defaults/ARG читают owned.present. Native entry один раз переназначает
+existing activation record на реальные projected arrays, чтобы nested FREE и GC видели локальное состояние.
+Absent scalar store требует ABI существующего witness/static contract; не выводить его из FOREIGN40 или sizeof.
+Точки продолжения: args_open_values/local entry после transport validation; scalar branch values_arg_place;
+ARG place_mode/eval и native hidden-default checks по owned.present; Core scalar typed input через Value.storage;
+scalar store обновляет physical companion и отдельный place.context. Existing retarget из activation_resolve_input
+выделить без фиктивного FREE вызова. Positive mutable FOREIGN snapshot делать на общей границе receiving/argument_storage
+до следующего actual, immutable physical cell сохранять; копировать scalar bytes/context, не Model-граф.
+Предыдущий этап: Runtime03/private07 PASS, его producers terminal. Runtime code Source08:931
+SHA7994d89842c1c224b7523fb79bfcf0150d4823b2405bf678a2d138c51ae6ca91.
+Runtime prod88ca30d4/observe72cdb007; новый direct RET(ARG) действительно исполняется общим обходчиком,
+передаёт precise double в C/graph destinations и отказывает protected interior/span без изменения bytes.
+Это bounded runtime gate, не готовый ordinary frontend bridge. Helpers264/Values174 OC3 WIP ещё не собран.
+Следующее: complete ACTIVE counted-TEXT description factory + общий owned capture emitter/witness paths.
+Сохранить прошедшие runtime/test artifacts; canonical manifest/whole/docs/index/commit397 ещё OPEN.
+Общий receive_formal теперь проверяет FOREIGN ABI по выбранному physical witness, даже present0;
+argument_storage дополнительно требует exact owned scalar cell/companion, сохраняя полный actual context.
+Scalar binding продолжает прежний lookup точным literal spelling, включая quoted multiword C types;
+SOURCE row и C ABI остаются раздельными. Подготовлены проверки настоящих selected callable entries:
+double/float mismatch без изменения actual, absent witness, internal address, borrowed storage и multiword bindings.
+Код ещё не принят. Сначала штатный Runtime01 + extended exact_scalar_storage, затем общий frontend bridge.
+Pipeline397: build2/codex_fix250generationchain01/runs/sol-m13-scalar-receiving-20261115-01;
+artifact stage — build2/codex_fix250generationchain01/sol-m13-scalar-receiving-01. Seed — actual396 G2.
+Owned actual/result producer, physical witnesses/SOURCE, ordinary lowering, typed Run/FFI/Array и M14 OPEN.
+Не объявлять runtime receiving gate готовностью ordinary scalar execution; продолжать зависимые работы v3.
+Runtime01 остановился на новом internal call с field ABI; явный const ABI cast исправил только WalkValues.
+Его recorded argv переведён повторно один раз; остальные successful L2 сохранены. Runtime02 aggregate
+использует эти outputs и неизменный generated driver396. Resume ABI5 PASS; из94 остальных headers93 совпали,
+у ValueOwned изменился лишь unused alias prefix — его C header выпущен из actual L1 заново.
+95 прежних C headers переиспользованы. Первые CC не нашли header из-за ошибочного nested copy;
+копия восстановлена, новый prodEA68F737/observeED3817BC построены, исходники/переводы не повторялись.
+Source03 содержит последний runtime code; Source04–07 меняют только unit fixture.
+Private01: ordinary public_pointer_names PASS n/f/root0/root1; extended unit CC отказал private helper declarations.
+Private02 отказал by-value field внутри C arguments; теперь используется typed pointer alias.
+Private03/04 исполнились, но новые oracles93/94 не учитывали existing header decoding:
+не-cell адрес даёт UNSUPPORTED до receiving; absent actual проверяется с восстановленным valid witness.
+Эти ожидания исправлены без изменения runtime. Final private05/Source07 PASS: expanded exact scalar unit
+native assertions и ordinary owner n/f/root0/root1,6 multiword bindings, selected bind_receive, result storage/context,
+неизменность full actual при ABI mismatch, present0 witness, malformed header и borrowed storage.
+Новых runtime helpers через public ABI ради теста не открывали; result_receive/prim_dispatch требуют ordinary gate далее.
+Текущий WIP frontend: existing OC key расширен на pointer/Array/scalar без новой registry и без int carrier;
+Helpers264/Values174 + recipe counts написаны, ещё не собирались. Source07 не содержит этих дальнейших frontend edits.
+Read-only review нашёл две последующие проблемы: raw result терял declared SOURCE, а raw C destination
+при interior адресе arena обходил write barrier. Runtime03 сохраняет только source_type от return witness
+в absent destination/context0 capture; full supplied actual context не переписывает. Raw destination
+проверяет interval membership и прежний range_write_overlaps_profile по полному ABI span.
+Private06/Source08 PASS: весь expanded scalar unit и настоящий portable RET(ARG) dispatcher, точный epsilon,
+optional C destination, normal graph writer, protected cell+1 и span перед protected cell; bytes неизменны.
+Повторно переведён только изменённый WalkValues, его header ABI прежний; остальные outputs/C headers сохранены.
+Source09 усиливает только unit oracle: result.physical_profile обязан совпасть с producer physical_profile.
+Final private07 PASS n/f/root0/root1; Runtime03 не пересобирался. Входной admission проверяет отдельный
+selected bind_receive; dispatcher body проверяет RET receiving/transport, обычный frontend gate ещё обязателен.
+[Свидетельство WIP397](witnesses/m13-scalar-receiving-20261115/notes.md).
+
 ## 2026-11-15 — срез396: public primitive resolver M11.7/M13, кодовые gates/docs-check PASS
 
 Работа, commit и push — прямо C:/Nyasha_Planet/LMX, branch main; отдельного дерева Sol нет.

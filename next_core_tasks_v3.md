@@ -1,5 +1,20 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-14, срез394 — exact scalar ABI foundation M11.7/M13; кодовые gates и docs-check PASS.**
+Из source `primitive.description` генерируется C ABI для32 non-reference/non-opaque scalar rows из35:
+None/void не имеют cells, FILE остаётся opaque без угаданного scalar/pointer binding. Source identity и receiving Model
+сохраняются отдельно от C ABI и физического pool.profile; одинаковое C spelling может разделять access callbacks,
+но не объединяет семантические описания. Изменения используют существующие pool и Value owned FOREIGN
+capture/load/receive/materialize/store, общий copier и GC, без нового parser/registry или частного плана.
+Source16:925, Frontend05, Runtime11 prod/observe PASS. Unit-machine06: обычный owner n/f/root0/root1 PASS,
+machine C ABI body native. Сырой allocator оставляет
+present=0, load/copy не читают absent payload, metadata удерживается GC; capture/copy проверяют физическое владение.
+Tool selftest с15 malformed rows PASS. Whole03 quick: genuine G1/G2 по9 smoke/fixedpoint20 PASS;
+actual G2 targeted4 n/f/root0/root1 и Graph3 triple PASS. Полная приёмка общего bridge не заявлена.
+G2 render35/14/both snapshots, fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28270/28273.
+Обязательные Run working/receiving/FFI integration, activation/pending GC roots и foreign-Array ABI остаются OPEN.
+Полные M11/M13/M14 не закрыты. [Текущий WIP](steps/current.md); root — единственный code/test/build writer в main.
+
 **2026-11-14, срез393 — общий pure Source interface M11.7/M13; ограниченная кодовая приёмка/docs-check PASS.**
 392 принят/отправлен b2899ec937fa440bbf26afeec0cf5d3083c6e022; работа и коммиты прямо в main.
 Final Source09:924 (unit-only отличие от code08), Runtime07; all33 cell descriptions/qualifiers/unknown names/mutable refs/index-ref7
@@ -2497,6 +2512,38 @@ legacy worker читает arena source_names, а clean Graph — g.names; raw F
 Карты/факты/request scratch принадлежат одной операции и уничтожаются прежним resolver teardown; test в construction
 не вызывается. Physical slot equality не заменяет этот интерфейс. `descriptor(S)` заголовка — адреса полей Lmx,
 не новый storage-type объект.
+
+**Exact scalar ABI и owned Value — WIP394, зависимая работа того же M11.7/M13.** Генерировать архитектурный
+access contract из тех же source rows:32 cell rows без reference/opaque/callable/descriptor используют точные C type,
+`sizeof`/stride и typed init/copy callbacks, включая multiword spelling. Из35 строк None/void не задают cell,
+FILE остаётся opaque и требует настоящего foreign/reference binding; не назначать ему scalar ABI или нулевой ресурс.
+Общие callbacks одинаковых C spellings — только физическое переиспользование, не semantic alias или выбор первого
+source-класса. `Fact.type`, source identity/Model и qualification/pool.profile сохраняют разные роли.
+
+Развивать существующие arena/pool и полный Value route: owned FOREIGN capture из локального или изменяемого C-объекта,
+load → receive → materialize/store с точным scalar ABI и сохранением context. Нельзя пропускать значение через
+универсальный `size_t`/`double` carrier с потерей точности или удерживать адрес локала после выхода. Новая mutable materialization принадлежит arena;
+immutable identity и physical type/profile сохраняются по общему контракту. Компоновка и записи сохраняют Model,
+qualifier/default и вычисляемый CODE producer; ABI equality не заменяет semantic conversion/admission.
+Общий copier/qualification/GC должен сохранять payload, source/Model/references/profile и companion/referent edges,
+sharing и циклы прежней картой; проверка metadata не читает uninitialized payload. Наличие этих WIP-веток ещё не
+доказывает полный lifetime: activation/current/pending Value должны входить в GC roots до закрытия receiving операции.
+
+Обязательная оставшаяся интеграция **OPEN**: Run working values, полное receiving и FFI, activation/pending GC roots,
+а также foreign-Array ABI/typed backing. Их нельзя исключить из приёмки ради готового scalar helper. Проверить exact
+FP/llong/unsigned transport, устойчивые cell/slot/typeof/alias, повторный CODE producer, source lifetime после копии,
+сохранение Model/qualifiers и отказ несовместимой записи до изменения значения. Использовать существующие Value,
+typed reception, copy/GC и qualification контроли; не объявлять такую приёмку только по сборке frontend.
+Source16/Runtime11/Unit-machine06, whole03 quick/fixedpoint20, G2 targeted4 и Graph3 triple PASS. Полный bridge и M13 не закрыты;
+[актуальный статус](steps/current.md). Последовательные gates ведёт root в общем конвейере.
+
+WIP394 уточнение конвейера: exact C aliases генерируются из тех же rows в declaration-only header,
+исполняемый profile содержит access callbacks. Backend должен признавать фундаментальные C99 `signed` и `_Bool`.
+Прямую C ABI-приёмку ядра вести поддерживаемым L2 machine unit через существующие module/build/run операции:
+общая строка runner `machine SOURCE ENTRY MODES EXPORT` переводит unit один раз и проверяет обычного L2 owner.
+Его n/f/root проверки не означают обход машинного тела и не закрывают обычное typed Run/receiving/FFI.
+Resolver публичных primitive имён и их точных C spellings остаётся частью обязательной общей интеграции;
+генерируемые aliases не становятся новым языковым каталогом или semantic type id.
 
 **Pure Source bridge — срез393, code gates PASS; полный runtime/storage bridge OPEN.** Code08 читает35×15 raw literal source
 table через прежний exporter. Optional reader использует один прежний name matcher, четыре его caller routes,

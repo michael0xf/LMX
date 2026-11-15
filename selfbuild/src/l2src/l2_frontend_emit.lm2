@@ -876,6 +876,127 @@ fn: lm_compiler_profile_c_size (const: (@: text c.LmP0Text)) size_t
         i := i + 1U
     return: n
 
+# The existing literal payload slice, without the C-door identifier gate.
+# Multiword C type spellings remain ordinary type atoms for the L1 emitter.
+fn: lm_compiler_profile_payload (const: (@: text c.LmP0Text); @: out c.LmP0Text) int
+    const: (@: bytes char text\data)
+    size_t: n text\length
+    if: n >= 2U && ((bytes[0] = 96 && bytes[n - 1U] = 96) || (bytes[0] = 34 && bytes[n - 1U] = 34))
+        bytes := bytes + 1U
+        n := n - 2U
+    out\data := bytes
+    out\length := n
+    return: (cast: (int) (n != 0U))
+
+# Generate exact scalar access contracts from the SAME selected source rows.
+# Equal C spellings can share access functions; source descriptions stay distinct.
+# None/void, reference/opaque/callable/descriptor rows have no scalar binding.
+fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
+    @: out c.FILE c.l2_out
+    @: pr_t int (cast: (@: int) (@ c.l2_pr_t))
+    @@: tb_nrow int (cast: (@@: int) (@ c.l2_tb_nrow))
+    @@: tb_ncol int (cast: (@@: int) (@ c.l2_tb_ncol))
+    @@: tb_cell0 int (cast: (@@: int) (@ c.l2_tb_cell0))
+    @@@: tbx_name char (cast: (@@@: char) (@ c.l2_tbx_name))
+    @@@: tbx_arg c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_tbx_arg))
+    @: ids int 0
+    @: names c.LmP0Text 0
+    @: current_name c.LmP0Text 0
+    @: prior_name c.LmP0Text 0
+    @: columns int 0
+    const: (@: atom c.LmP0Text 0)
+    int: rows tb_nrow[0][pr_t[0]]
+    int: width tb_ncol[0][pr_t[0]]
+    int: spelling c.lm_compiler_table_col(pr_t[0], "spelling")
+    int: row 0
+    int: col 0
+    int: slot 0
+    int: prior 0
+    int: complete 0
+    int: status 0
+    if: rows < 0 || spelling < 0
+        return: 1
+    ids := (cast: (@: int) c.lm_compiler_xmalloc((cast: (size_t) rows) * c.sizeof(c.int)))
+    names := (cast: (@: c.LmP0Text) c.lm_compiler_xmalloc((cast: (size_t) rows) * c.sizeof(c.LmP0Text)))
+    columns := (cast: (@: int) c.lm_compiler_xmalloc(5U * c.sizeof(c.int)))
+    if: ids = 0 || names = 0 || columns = 0
+        c.lm_compiler_xfree((cast: (@: void) ids))
+        c.lm_compiler_xfree((cast: (@: void) names))
+        c.lm_compiler_xfree((cast: (@: void) columns))
+        return: 1
+    columns[0] := c.lm_compiler_table_col(pr_t[0], "cell")
+    columns[1] := c.lm_compiler_table_col(pr_t[0], "reference")
+    columns[2] := c.lm_compiler_table_col(pr_t[0], "opaque")
+    columns[3] := c.lm_compiler_table_col(pr_t[0], "callable")
+    columns[4] := c.lm_compiler_table_col(pr_t[0], "descriptor")
+    if: header != 0 && c.fputs("# Generated exact scalar C aliases from primitive.description.\npredef: \"l2src/lmx.h.lm1\"\ninclude: \"<stdint.h>\"\n", out) < 0
+        status := 1
+    if: header = 0 && c.fputs("\npredef: \"l2src/lmx_primitive_profile.h.lm1\"\n", out) < 0
+        status := 1
+    while: row < rows && status = 0
+        current_name := names + row
+        ids[row] := -1
+        slot := tb_cell0[0][pr_t[0]] + row * width
+        complete := 1
+        col := 0
+        while: col < 5
+            if: columns[col] < 0 || tbx_name[0][slot + columns[col]] = 0
+                complete := 0
+                break
+            atom := (cast: (const: @: c.LmP0Text) tbx_arg[0][slot + columns[col]]\as\atom)
+            if: (col = 0 && c.lm_compiler_payload_eq(atom, "1") = 0) || (col != 0 && c.lm_compiler_payload_eq(atom, "0") = 0)
+                complete := 0
+                break
+            col := col + 1
+        if: complete != 0 && tbx_name[0][slot + spelling] != 0
+            atom := (cast: (const: @: c.LmP0Text) tbx_arg[0][slot + spelling]\as\atom)
+            complete := lm_compiler_profile_payload(atom, current_name)
+        else:
+            complete := 0
+        if: complete = 0
+            row := row + 1
+            continue
+        prior := 0
+        while: prior < row
+            prior_name := names + prior
+            if: ids[prior] >= 0 && prior_name\length = current_name\length && c.memcmp(prior_name\data, current_name\data, current_name\length) = 0
+                ids[row] := ids[prior]
+                break
+            prior := prior + 1
+        if: ids[row] < 0
+            ids[row] := row
+            if: header != 0
+                if: c.fprintf(out, "type: LmxScalarType%d ", row) < 0 || c.fwrite(current_name\data, 1U, current_name\length, out) != current_name\length || c.fprintf(out, "\ndefine: LMX_SCALAR_SIZE%d `sizeof(LmxScalarType%d)`\n", row, row) < 0
+                    status := 1
+                ---
+            else:
+                if: c.fprintf(out, "fn: lmx_scalar_init%d (@: void cell) int\n    if: cell = 0\n        return: 1\n    end: if\n    @: LmxScalarType%d dst (cast: (@: LmxScalarType%d) cell)\n    \\dst: (cast: (LmxScalarType%d) 0)\n    return: 0\nend: lmx_scalar_init%d\n", row, row, row, row, row) < 0
+                    status := 1
+                if: c.fprintf(out, "fn: lmx_scalar_copy%d (@: void cell; @: void source) int\n    if: cell = 0 || source = 0\n        return: 1\n    end: if\n    @: LmxScalarType%d dst (cast: (@: LmxScalarType%d) cell)\n    @: LmxScalarType%d src (cast: (@: LmxScalarType%d) source)\n    \\dst: \\src\n    return: 0\nend: lmx_scalar_copy%d\n", row, row, row, row, row, row) < 0
+                    status := 1
+                if: c.fprintf(out, "c.array:\n    const:\n        [1]: LmxScalarABI lmx_scalar_abi%d ((c.LMX_SCALAR_SIZE%d c.lmx_scalar_init%d c.lmx_scalar_copy%d))\n    end: const\nend: c.array\n", row, row, row, row) < 0
+                    status := 1
+                ---
+            ---
+        ---
+        row := row + 1
+    if: header = 0
+        if: c.fputs("fn: lmx_primitive_profile_scalar (size_t: row) const: @: LmxScalarABI\n", out) < 0
+            status := 1
+        row := 0
+        while: row < rows && status = 0
+            if: ids[row] >= 0 && c.fprintf(out, "    if: row = %dU\n        return: @ lmx_scalar_abi%d[0]\n    end: if\n", row, ids[row]) < 0
+                status := 1
+            row := row + 1
+        if: c.fputs("    return: 0\nend: lmx_primitive_profile_scalar\n", out) < 0
+            status := 1
+        ---
+    ---
+    c.lm_compiler_xfree((cast: (@: void) ids))
+    c.lm_compiler_xfree((cast: (@: void) names))
+    c.lm_compiler_xfree((cast: (@: void) columns))
+    return: status
+
 # Preserve every column of the selected source profile as literal table data.
 # The row address is a description identity, never a physical pool type. A nonliteral
 # cell leaves its row unavailable to this projection; it is not evaluated or invented.
@@ -981,6 +1102,44 @@ fn: lm_compiler_emit_profile_rows () int
     if: c.fputs("    return: 0\nend: lmx_primitive_profile_row\n", out) < 0
         status := 1
     c.lm_compiler_xfree((cast: (@: void) buffer))
+    return: status
+
+# L1 type aliases belong in a declaration header. Publish that companion by
+# the same compiler output path before the executable profile projection.
+fn: lm_compiler_emit_profile_scalar_header (const: (@: out_path char)) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    @@: pub_tmp char (cast: (@@: char) (@ c.l2_pub_tmp))
+    @: header_path char 0
+    size_t: n c.strlen(out_path)
+    size_t: prefix 0U
+    size_t: i 0U
+    int: status 0
+    while: i < n
+        if: out_path[i] = 47 || out_path[i] = 92
+            prefix := i + 1U
+        i := i + 1U
+    if: prefix > (cast: (size_t) -1) - 32U
+        return: 1
+    header_path := (cast: (@: char) c.lm_compiler_xmalloc(prefix + 32U))
+    if: header_path = 0
+        return: 1
+    c.memcpy(header_path, out_path, prefix)
+    c.strcpy(header_path + prefix, "lmx_primitive_profile.h.lm1")
+    status := c.lm_compiler_pub_prepare(header_path)
+    if: status = 0
+        out_cell[0] := c.fopen(pub_tmp[0], "wb")
+        if: out_cell[0] = 0
+            status := 1
+        else:
+            status := lm_compiler_emit_profile_scalar_bindings(1)
+            if: c.fclose(out_cell[0]) != 0
+                status := 1
+            out_cell[0] := 0
+        ---
+    ---
+    if: status = 0
+        status := lm_compiler_pub_commit(header_path)
+    c.lm_compiler_xfree((cast: (@: void) header_path))
     return: status
 
 # Project the existing source primitive table into generated data for the clean graph. Parsing, source-table
@@ -1098,6 +1257,8 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
         row := row + 1
     ---
     if: status = 0
+        status := lm_compiler_emit_profile_scalar_header(out_path)
+    if: status = 0
         status := c.lm_compiler_pub_prepare(out_path)
     if: status = 0
         out_cell[0] := c.fopen(pub_tmp_cell[0], "wb")
@@ -1124,6 +1285,8 @@ fn: lm_compiler_emit_primitive_profile (const: (@: in_path char); const: (@: out
                 status := c.lm_compiler_emit_cstr(@ emitted)
             if: status = 0
                 status := lm_compiler_emit_profile_rows()
+            if: status = 0
+                status := lm_compiler_emit_profile_scalar_bindings(0)
             if: c.fputc(10, out_cell[0]) = c.EOF
                 status := 1
             if: c.fclose(out_cell[0]) != 0

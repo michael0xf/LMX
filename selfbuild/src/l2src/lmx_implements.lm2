@@ -65,6 +65,15 @@ end: lmx_domain_known
 #
 # The arena is the one whose index answers for both operands: a domain question is
 # asked of an address, and the answer comes from the arena the address lives in.
+fn: lmx_implements_scalar_abi (@: arena c.LmxArena; @: value void; @: req void) int
+    @: a c.LmxPool c.lmx_range_cell_pool(arena, value)
+    @: b c.LmxPool c.lmx_range_cell_pool(arena, req)
+    if: a = 0 || b = 0 || a\scalar_abi = 0 || b\scalar_abi = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: a\scalar_abi != b\scalar_abi || a\stride != b\stride || a\stride != a\scalar_abi\size
+        return: c.LMX_IMPLEMENTS_NO
+    return: c.LMX_IMPLEMENTS_YES
+
 fn: lmx_implements (@: arena c.LmxArena; @: varA void; @: varB void; @: consumer void) int
     int: kindA
     int: kindB
@@ -82,6 +91,8 @@ fn: lmx_implements (@: arena c.LmxArena; @: varA void; @: varB void; @: consumer
         return: c.LMX_IMPLEMENTS_NO
     if: typeB != typeA
         return: c.LMX_IMPLEMENTS_NO
+    if: kindA = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(typeA) = c.LMX_TYPE_FOREIGN
+        return: lmx_implements_scalar_abi(arena, varA, varB)
     return: c.LMX_IMPLEMENTS_YES
 end: lmx_implements
 
@@ -1519,6 +1530,7 @@ fn: lmx_implements_contract_field (@: arena c.LmxArena; @: owner c.Lmx; size_t: 
     @: cell void
     int: kind
     int: type
+    @: scalar_pool c.LmxPool 0
     if: out_answer = 0
         return: c.LMX_WALK_INVALID
     out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
@@ -1554,6 +1566,11 @@ fn: lmx_implements_contract_field (@: arena c.LmxArena; @: owner c.Lmx; size_t: 
         return: c.LMX_WALK_INVALID
     out\kind := kind
     out\type := type
+    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) = c.LMX_TYPE_FOREIGN
+        scalar_pool := c.lmx_range_cell_pool(arena, cell)
+        if: scalar_pool != 0
+            out\scalar_abi := scalar_pool\scalar_abi
+    ---
     if: kind = c.LMX_KIND_STRUCT
         if: interface != 0 && lmx_domain_kind(arena, c.lmx_graph_value_in(arena, (cast: (@: c.Lmx) cell), 0U)) = c.LMX_DOMAIN_KIND_OP
             out\executable := 1
@@ -1857,7 +1874,7 @@ fn: lmx_implements_contract_matches (@: arena c.LmxArena; @: contract c.LmxImplC
         if: (old\kind = c.LMX_KIND_PRIMITIVE && (c.lmx_type_base(old\type) = c.LMX_TYPE_LMX || c.lmx_type_base(old\type) = c.LMX_TYPE_DESC)) || (current\kind = c.LMX_KIND_PRIMITIVE && (c.lmx_type_base(current_type) = c.LMX_TYPE_LMX || c.lmx_type_base(current_type) = c.LMX_TYPE_DESC))
             out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
             return: c.LMX_WALK_OK
-        if: current\kind != old\kind || current\type != old\type || current\extent != old\extent || current\child != old\child || current\reference != old\reference || current\executable != old\executable
+        if: current\kind != old\kind || current\type != old\type || current\scalar_abi != old\scalar_abi || current\extent != old\extent || current\child != old\child || current\reference != old\reference || current\executable != old\executable
             out_answer[0] := c.LMX_IMPLEMENTS_NO
             return: c.LMX_WALK_OK
         i := i + 1U
@@ -3719,6 +3736,15 @@ fn: lmx_implements_walk_project_resolve (@: arena c.LmxArena; @: varA c.Lmx; @: 
                 if: c.lmx_type_base(lmx_domain_type(arena, a)) != c.lmx_type_base(typeC) || c.lmx_type_base(lmx_domain_type(arena, b)) != c.lmx_type_base(typeC)
                     answer := c.LMX_IMPLEMENTS_NO
                     break
+                ---
+                if: c.lmx_type_base(typeC) = c.LMX_TYPE_FOREIGN
+                    field_answer := lmx_implements_scalar_abi(arena, a, c)
+                    other_answer := lmx_implements_scalar_abi(arena, b, c)
+                    if: field_answer = c.LMX_IMPLEMENTS_NO || other_answer = c.LMX_IMPLEMENTS_NO
+                        answer := c.LMX_IMPLEMENTS_NO
+                        break
+                    if: field_answer != c.LMX_IMPLEMENTS_YES || other_answer != c.LMX_IMPLEMENTS_YES
+                        uncertain := 1
                 ---
             ---
         ---

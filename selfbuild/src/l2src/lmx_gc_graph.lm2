@@ -14,6 +14,7 @@
 predef: "l2src/lmx_gc.h.lm1"
 predef: "l2src/lmx_arena_blocks.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
@@ -43,6 +44,8 @@ fn: lmx_gc_scalar (@: pool c.LmxPool) int
         return: 1
     if: base_type = c.LMX_TYPE_SIZE_T || base_type = c.LMX_TYPE_ULONG
         return: 1
+    if: base_type = c.LMX_TYPE_FOREIGN
+        return: 1
     return: 0
 end: lmx_gc_scalar
 
@@ -55,6 +58,24 @@ fn: lmx_gc_word (@: arena c.LmxArena; @@: slot void; unsigned: gen; int: depth) 
         return: c.LMX_GC_OK
     return: lmx_gc_mark_value(arena, slot[0], gen, depth + 1)
 end: lmx_gc_word
+
+# Complete Values retain their explicit graph dependencies. Exact scalar ABI
+# records are module metadata; only their owned storage is an arena edge.
+fn: lmx_gc_value (@: arena c.LmxArena; @: value c.LmxWalkValue; unsigned: gen; int: depth) int
+    @: referent_owner void 0
+    int: status c.LMX_GC_OK
+    if: value = 0
+        return: status
+    if: value\present != 0 && (value\kind = c.LMX_WALK_VALUE_REFERENCE || (value\kind = c.LMX_WALK_VALUE_FOREIGN && value\scalar_abi != 0))
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\ref), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\model), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\references), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\physical_profile), gen, depth + 1))
+    status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\source_type), gen, depth + 1))
+    referent_owner := c.lmx_value_context_cell_in(arena, (cast: (@: c.LmxWalkValue) value\referent))
+    if: referent_owner != 0
+        return: lmx_gc_note(status, lmx_gc_mark_value(arena, referent_owner, gen, depth + 1))
+    return: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) value\referent), gen, depth + 1))
 
 # Every cell of one chunk, walked by what the chunk IS (the array's kind and type).
 fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; unsigned: gen; int: depth) int
@@ -72,7 +93,9 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
     @: referent_owner void 0
     int: status 0
     status := c.LMX_GC_OK
-    if: pool = 0 || chunk = 0 || lmx_gc_scalar(pool) != 0
+    if: pool = 0 || chunk = 0
+        return: c.LMX_GC_OK
+    if: lmx_gc_scalar(pool) != 0 && chunk\value_contexts = 0
         return: c.LMX_GC_OK
     if: (pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_KIND_ARRAY) && pool\stride != c.sizeof(c.Lmx)
         return: c.LMX_GC_INVALID
@@ -83,9 +106,17 @@ fn: lmx_gc_cells (@: arena c.LmxArena; @: pool c.LmxPool; @: chunk c.LmxChunk; u
     stride := (cast: (size_t) pool\stride)
     # Marking allocates nothing, so the chunk's count of cells does not change during the walk.
     cells := (cast: (size_t) c.lmx_chunk_cells(chunk, stride))
+    if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) pool\profile), gen, depth + 1))
     index := 0U
     while: index < cells
         cell := (cast: (@: char) c.lmx_chunk_data(chunk)) + (index * stride)
+        if: pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
+            if: chunk\value_contexts != 0
+                contexts := chunk\value_contexts
+                status := lmx_gc_note(status, lmx_gc_value(arena, contexts + index, gen, depth + 1))
+            index := index + 1U
+            continue
         if: pool\kind = c.LMX_KIND_STRUCT || pool\kind = c.LMX_KIND_ARRAY
             # Structure and Array have the same graph header. Follow their
             # parent and physical backing; neither size nor native is an edge.

@@ -1,5 +1,14 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез394, 2026-11-14 — main, Source16:925/Frontend05/Runtime11.** Unit-machine06 n/f/root0/root1 и Tool selftest PASS;
+all32 exact scalar bindings, owned snapshots, отсутствие без чтения payload, copy/qualification/GC metadata и guards.
+Машинные C ABI assertions остаются native; обычный generated L2 owner проверяется n/f/root0/root1.
+Whole03 quick PASS: реальные G1/G2 по9 smoke, fixedpoint20; G2 targeted4 n/f/root0/root1 и Graph3 triple PASS.
+G2 render35/14/both snapshots, fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28270/28273.
+Цель ACTIVE. Полные public primitive resolver, Run working/receiving/FFI,
+activation/pending GC roots и Foreign-Array ABI остаются в основном v3; полный M11/M13/M14 OPEN.
+[Состояние общего последовательного конвейера](steps/current.md). Все code/commit/push — прямо C:/Nyasha_Planet/LMX main.
+
 **Срез393, 2026-11-14, ограниченная кодовая приёмка/docs PASS.** Работа/commit/push прямо C:/Nyasha_Planet/LMX main;392 принят b2899ec9.
 Pure SourceReader имени/fact подключён к прежнему implements worker, без новых графовых receiving records.
 35×15 raw literal source descriptions отделены от physical Fact.type и C ABI; all33 cell rows/qualifiers/unknown

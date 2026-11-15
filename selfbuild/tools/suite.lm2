@@ -258,6 +258,18 @@ fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
             return: 1
         return: 0
     ---
+    if: c.strcmp(fld[0], "machine") = 0
+        if: nf != 5
+            why[0] := "machine takes SOURCE ENTRY MODES EXPORT"
+            return: 1
+        if: fld[1][0] = (cast: (char) 0) || parse_entry(fld[2], entry) != 0 || runs_modes_ok(fld[3]) = 0
+            why[0] := "machine needs SOURCE, decimal C int ENTRY and run MODES"
+            return: 1
+        if: fld[4][0] = (cast: (char) 0) || c.strspn(fld[4], "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_") = 0U || c.strspn(fld[4], "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789") != c.strlen(fld[4])
+            why[0] := "EXPORT is no single C identifier"
+            return: 1
+        return: 0
+    ---
     if: c.strcmp(fld[0], "refuses") = 0
         if: nf != 4
             why[0] := "refuses takes SOURCE NEEDLE MODES"
@@ -309,7 +321,7 @@ fn: suite_row_check (@@: fld char; int: nf; @: entry int; @@: why char) int
             return: 1
         return: 0
     ---
-    why[0] := "an unknown kind (runs, refuses, twins, links)"
+    why[0] := "an unknown kind (runs, machine, refuses, twins, links)"
     return: 1
 end: suite_row_check
 
@@ -382,6 +394,46 @@ fn: suite_runs (@: repo char; @: stage char; @: base char; @: fe char; @: prod c
     ---
     return: f
 end: suite_runs
+
+# A maintained machine-ABI unit is translated once by the existing module
+# route. The ordinary generated L2 owner then uses the usual n/f/root gates.
+# Its C call does not claim that the machine unit's assertions were walked.
+fn: suite_machine (@: repo char; @: stage char; @: base char; @: fe char; @: prod char; @: source char; @: export char; int: entry; @: modes char; @: out char; @: name char; @: rec c.FILE; @: cls int; @: fl c.FILE) int
+    @@: names char c.calloc(1U, sizeof(@: char))
+    @@: args char c.calloc(3U, sizeof(@: char))
+    @: res int c.calloc(2U, c.sizeof(c.int))
+    @: src char txt_path(stage, "src")
+    @: dir char txt_path(out, txt_cat(name, "-machine"))
+    @: stem char txt_cat3("lmx_unit_", export, txt_cat("_", name))
+    @: unit_source char txt_path(src, txt_cat3("l2src/", stem, ".lm2"))
+    @: owner char txt_path(dir, "owner.lm2")
+    @: file c.FILE 0
+    @: backend char bld_bundle_backend(fe)
+    int: status 0
+    if: names = 0 || args = 0 || res = 0 || src = 0 || dir = 0 || stem = 0 || unit_source = 0 || owner = 0 || backend = 0
+        return: 1
+    if: dir_make(dir) != 0 || file_copy(source, unit_source) != 0 || file_hash_same(source, unit_source) != 1
+        return: ccheck(0, txt_cat(name, " machine input"), "copy the declared source into the generated module namespace", cls, 1, source, fl)
+    bld_hash_note(rec, source)
+    names[0] := export
+    status := bld_machine_module(rec, fe, src, base, dir, res, stem, names, 1, 1)
+    if: status != 0
+        return: ccheck(0, txt_cat(name, " machine module"), "L2 translation failed", cls, cls_build(1, res), txt_path(dir, txt_cat(stem, ".L2.log")), fl)
+    args[0] := backend
+    args[1] := txt_path(src, txt_cat3("l2src/", stem, ".h.lm1"))
+    args[2] := txt_path(stage, txt_cat3("headers/l2src/", stem, ".lm1.h"))
+    status := bld_step(rec, args, 3, src, txt_path(dir, "unit-header.L1.log"), res)
+    if: status != 0
+        return: ccheck(0, txt_cat(name, " machine header"), "L1 header generation failed", cls, cls_build(2, res), txt_path(dir, "unit-header.L1.log"), fl)
+    file := os_file_open(owner, "wb")
+    if: file = 0
+        return: ccheck(0, txt_cat(name, " machine owner"), "cannot write the L2 owner", cls, 1, owner, fl)
+    status := (cast: (int) (c.fprintf(file, "# Generated ordinary owner of the machine-ABI unit.\npredef: \"l2src/%s.lm1\"\nfn: run () int\n    return: c.%s()\nsend: exit(exit_code: run(); stdout: \"\"; stderr: \"\")\nreturn\n", stem, export) < 0))
+    if: c.fclose(file) != 0
+        status := 1
+    if: status != 0
+        return: ccheck(0, txt_cat(name, " machine owner"), "cannot finish the L2 owner", cls, 1, owner, fl)
+    return: suite_runs(repo, stage, base, fe, prod, owner, 0, entry, modes, out, name, rec, cls, fl)
 
 # A program linked with libraries (S8.1): each item PATH=NAME of libs (PATH relative to the list's directory dir) is a
 # library built by fe with `--library --construct NAME` as a C object only, under out/<name>-libs, in each mode of the
@@ -683,6 +735,8 @@ fn: fixture_suite (@: list char; @: repo char; @: stage char; @: base char; @: f
                     f := f + ccheck(0, txt_cat3(name, ": ", here), txt_cat("a missing input: ", gone), cls, 1, 0, fl)
                 if: gone = 0 && c.strcmp(fld[0], "runs") = 0
                     f := f + suite_runs(repo, stage, base, fe, prod, source, extra, entry[0], fld[3], out, name, rec, cls, fl)
+                if: gone = 0 && c.strcmp(fld[0], "machine") = 0
+                    f := f + suite_machine(repo, stage, base, fe, prod, source, fld[4], entry[0], fld[3], out, name, rec, cls, fl)
                 if: gone = 0 && c.strcmp(fld[0], "links") = 0
                     f := f + suite_links(repo, stage, base, fe, prod, dir, source, fld[4], entry[0], fld[3], out, name, rec, cls, fl)
                 if: gone = 0 && c.strcmp(fld[0], "refuses") = 0

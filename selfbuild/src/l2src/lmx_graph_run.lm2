@@ -3114,6 +3114,8 @@ fn: lmx_graph_source_fact (@: context void; @: arena c.LmxArena; @: owner c.Lmx;
     @: name char 0
     @: head char 0
     @: room void 0
+    @: scalar_pool c.LmxPool 0
+    @: scalar_context c.LmxWalkValue 0
     size_t: depth 0U
     size_t: i 0U
     int: presence 0 - 1
@@ -3123,6 +3125,17 @@ fn: lmx_graph_source_fact (@: context void; @: arena c.LmxArena; @: owner c.Lmx;
     if: status != c.LMX_WALK_OK || field = (cast: (size_t) -1)
         return: status
     raw := out\cell
+    scalar_pool := c.lmx_range_cell_pool(arena, raw)
+    if: scalar_pool != 0 && scalar_pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(scalar_pool\type) = c.LMX_TYPE_FOREIGN
+        scalar_context := c.lmx_value_cell_context(arena, raw)
+        out\declared_raw := raw
+        out\declared := 2
+        out_answer[0] := c.LMX_IMPLEMENTS_UNKNOWN
+        if: scalar_context != 0 && scalar_pool\type = c.LMX_TYPE_FOREIGN && scalar_pool\profile = 0 && c.lmx_graph_scalar_source(scalar_pool\scalar_abi, scalar_context\source_type) != 0
+            out\declared_type := scalar_context\source_type
+            out\declared := 1
+            out_answer[0] := c.LMX_IMPLEMENTS_YES
+        return: c.LMX_WALK_OK
     kind := c.lmx_graph_kind(g, raw)
     if: kind = 0
         return: c.LMX_WALK_OK

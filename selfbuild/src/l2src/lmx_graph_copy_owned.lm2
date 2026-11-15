@@ -6,6 +6,7 @@ predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_array_owned.lm1"
 predef: "l2src/lmx_array_ref_owned.lm1"
 predef: "l2src/lmx_list_owned.lm1"
@@ -864,7 +865,18 @@ fn: lmx_qualify_pointer_edge (@: arena c.LmxArena; @: p void; int: type_id; @: s
     return: lmx_qualify_edge(arena, p, selected_profile, prior, prior_count, closure, seen, todo, lmx_qualify_opaque_type(type_id, opaque_types, opaque_count))
 end: lmx_qualify_pointer_edge
 
-# These are explicit edges of a stored reference value. A referent names the
+# A scalar companion is metadata of this exact physical cell. Checking it
+# does not load or copy the scalar payload, including an unfilled cell.
+fn: lmx_copy_scalar_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkValue
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, cell)
+    @: value c.LmxWalkValue c.lmx_value_cell_context(arena, cell)
+    if: pool = 0 || pool\scalar_abi = 0 || pool\scalar_abi\size = 0U || pool\scalar_abi\init = 0 || pool\scalar_abi\copy = 0 || pool\stride != pool\scalar_abi\size || value = 0
+        return: 0
+    if: value\present != 0 && (value\kind != c.LMX_WALK_VALUE_FOREIGN || value\ref != cell || value\type != pool\type || value\scalar_abi != pool\scalar_abi || value\physical_profile != pool\profile)
+        return: 0
+    return: value
+
+# These are explicit edges of a stored value. A referent names the
 # companion of a real physical cell; qualify that cell, never metadata memory.
 fn: lmx_qualify_value_context (@: arena c.LmxArena; @: value c.LmxWalkValue; @: selected_profile c.Lmx; @@: prior c.Lmx; size_t: prior_count; @: closure c.LmxCopyMap; @: seen c.LmxCopyMap; @: todo c.LmxCopyStack) int
     @: owner void 0
@@ -880,6 +892,8 @@ fn: lmx_qualify_value_context (@: arena c.LmxArena; @: value c.LmxWalkValue; @: 
     status := lmx_qualify_edge(arena, (cast: (@: void) value\model), selected_profile, prior, prior_count, closure, seen, todo, 0)
     if: status = c.LMX_QUALIFY_OK
         status := lmx_qualify_edge(arena, (cast: (@: void) value\references), selected_profile, prior, prior_count, closure, seen, todo, 0)
+    if: status = c.LMX_QUALIFY_OK && c.lmx_graph_scalar_source(value\scalar_abi, value\source_type) = 0
+        status := lmx_qualify_edge(arena, (cast: (@: void) value\source_type), selected_profile, prior, prior_count, closure, seen, todo, 0)
     if: status = c.LMX_QUALIFY_OK
         status := lmx_qualify_edge(arena, owner, selected_profile, prior, prior_count, closure, seen, todo, 0)
     return: status
@@ -1267,6 +1281,14 @@ fn: lmx_qualify_tree_preflight (@: arena c.LmxArena; @: root c.Lmx; @@: prior_pr
         p := (cast: (@: void) lmx_copy_stack_pop(todo))
         kind := c.lmx_range_classify(arena, p)
         vtype := c.lmx_range_type_of(arena, p)
+        if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(vtype) = c.LMX_TYPE_FOREIGN
+            reference_value := lmx_copy_scalar_context(arena, p)
+            if: reference_value = 0
+                status := c.LMX_QUALIFY_INVALID
+                break
+            status := lmx_qualify_value_context(arena, reference_value, selected_profile, prior_profiles, prior_count, closure, seen, todo)
+            reference_value := @ reference_storage
+        ---
         if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell(vtype) != 0
             if: c.lmx_walk_value_load(arena, p, vtype, reference_value) != c.LMX_WALK_OK
                 status := c.LMX_QUALIFY_INVALID
@@ -1376,6 +1398,8 @@ fn: lmx_qualify_cover_context (@: arena c.LmxArena; @: value c.LmxWalkValue; @: 
     status := lmx_qualify_cover_enqueue(arena, selected_profile, (cast: (@: void) value\model), 0, seen, todo)
     if: status = c.LMX_QUALIFY_OK
         status := lmx_qualify_cover_enqueue(arena, selected_profile, (cast: (@: void) value\references), 0, seen, todo)
+    if: status = c.LMX_QUALIFY_OK && c.lmx_graph_scalar_source(value\scalar_abi, value\source_type) = 0
+        status := lmx_qualify_cover_enqueue(arena, selected_profile, (cast: (@: void) value\source_type), 0, seen, todo)
     if: status = c.LMX_QUALIFY_OK
         status := lmx_qualify_cover_enqueue(arena, selected_profile, owner, 0, seen, todo)
     return: status
@@ -1502,6 +1526,14 @@ fn: lmx_qualify_profile_coverage (@: arena c.LmxArena; @: root c.Lmx) int
             ---
         else:
             vtype := c.lmx_range_type_of(arena, p)
+            if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(vtype) = c.LMX_TYPE_FOREIGN
+                reference_value := lmx_copy_scalar_context(arena, p)
+                if: reference_value = 0
+                    status := c.LMX_QUALIFY_INVALID
+                    break
+                status := lmx_qualify_cover_context(arena, reference_value, selected_profile, seen, todo)
+                reference_value := @ reference_storage
+            ---
             if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_reference_cell(vtype) != 0
                 if: c.lmx_walk_value_load(arena, p, vtype, reference_value) != c.LMX_WALK_OK
                     status := c.LMX_QUALIFY_INVALID
@@ -2127,11 +2159,15 @@ fn: lmx_copy_value_context (@: value c.LmxWalkValue; @: referent_owner void; @: 
     value\references := (cast: (@: c.Lmx) lmx_copy_context_target((cast: (@: void) value\references), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type))
     if: \status != c.LMX_GRAPH_COPY_OK
         return: 1
+    if: c.lmx_graph_scalar_source(value\scalar_abi, value\source_type) = 0
+        value\source_type := (cast: (@: void) lmx_copy_context_target((cast: (@: void) value\source_type), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type))
+    if: \status != c.LMX_GRAPH_COPY_OK
+        return: 1
     if: referent_owner != 0
         copied_owner := lmx_copy_context_target(referent_owner, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, dst_profile, leaves, leaf_count, profile_map, requested_type)
         if: \status != c.LMX_GRAPH_COPY_OK
             return: 1
-        copied_context := c.lmx_pointer_cell_context(dst_arena, copied_owner)
+        copied_context := c.lmx_value_cell_context(dst_arena, copied_owner)
         if: copied_context = 0
             \status := c.LMX_GRAPH_COPY_INVALID
             return: 1
@@ -2224,6 +2260,11 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
     @: pointee void
     @: slot_owner c.Lmx
     @: pointer_pool c.LmxPool
+    @: scalar_context c.LmxWalkValue 0
+    @: source_context c.LmxWalkValue 0
+    c.LmxWalkValue: scalar_saved
+    @: scalar_saved_p c.LmxWalkValue @ scalar_saved
+    @: scalar_referent void 0
     @: sequence_owner void
     int: ambiguous 0
     if: v = 0
@@ -2391,6 +2432,38 @@ fn: lmx_copy_value (@: v void; @: src_arena c.LmxArena; @: dst_arena c.LmxArena;
             return: 0
         return: cell
     if: kind = c.LMX_KIND_PRIMITIVE
+        if: base_type = c.LMX_TYPE_FOREIGN
+            pointer_pool := c.lmx_range_cell_pool(src_arena, v)
+            if: pointer_pool = 0 || pointer_pool\scalar_abi = 0 || pointer_pool\stride != pointer_pool\scalar_abi\size
+                \status := c.LMX_GRAPH_COPY_INVALID
+                return: (cast: (@: void) 0)
+            source_context := lmx_copy_scalar_context(src_arena, v)
+            if: source_context = 0
+                \status := c.LMX_GRAPH_COPY_INVALID
+                return: (cast: (@: void) 0)
+            cell := c.lmx_arena_scalar_cells_profiled(dst_arena, target_type, cell_profile, pointer_pool\scalar_abi, 1U)
+            if: cell = 0 || lmx_copy_map_put(map, v, cell) != 0
+                \status := c.LMX_GRAPH_COPY_NOMEM
+                return: (cast: (@: void) 0)
+            if: source_context\present != 0 && pointer_pool\scalar_abi\copy(cell, v) != 0
+                \status := c.LMX_GRAPH_COPY_INVALID
+                return: (cast: (@: void) 0)
+            scalar_context := c.lmx_value_cell_context(dst_arena, cell)
+            if: source_context != 0 && scalar_context != 0
+                c.memcpy((cast: (@: void) scalar_saved_p), (cast: (@: void) source_context), c.sizeof(c.LmxWalkValue))
+                scalar_saved_p\scalar_abi := pointer_pool\scalar_abi
+                scalar_referent := c.lmx_value_context_cell_in(src_arena, (cast: (@: c.LmxWalkValue) scalar_saved_p\referent))
+                if: scalar_saved_p\referent != 0 && scalar_referent = 0
+                    \status := c.LMX_GRAPH_COPY_UNSUPPORTED
+                    return: (cast: (@: void) 0)
+                ---
+                if: lmx_copy_value_context(scalar_saved_p, scalar_referent, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status, cell_profile, leaves, leaf_count, profile_map, requested_type) != 0
+                    return: (cast: (@: void) 0)
+                scalar_saved_p\ref := cell
+                scalar_saved_p\type := target_type
+                scalar_saved_p\physical_profile := cell_profile
+                c.memcpy((cast: (@: void) scalar_context), (cast: (@: void) scalar_saved_p), c.sizeof(c.LmxWalkValue))
+            return: cell
         if: base_type = c.LMX_TYPE_CHAR
             cell := c.lmx_scalar_new_physical_profiled(dst_arena, target_type, cell_profile)
             if: cell = 0
@@ -3098,13 +3171,15 @@ fn: lmx_copy_project_context (@: arena c.LmxArena; @: value c.LmxWalkValue; @: p
         if: owner = 0
             return: c.LMX_GRAPH_COPY_UNSUPPORTED
         projected_owner := lmx_copy_project_address(projection, owner)
-        projected_context := c.lmx_pointer_cell_context(arena, projected_owner)
+        projected_context := c.lmx_value_cell_context(arena, projected_owner)
         if: projected_context = 0
             return: c.LMX_GRAPH_COPY_INVALID
         value\referent := projected_context
     ---
     value\model := (cast: (@: c.Lmx) lmx_copy_project_address(projection, (cast: (@: void) value\model)))
     value\references := (cast: (@: c.Lmx) lmx_copy_project_address(projection, (cast: (@: void) value\references)))
+    value\physical_profile := (cast: (@: c.Lmx) lmx_copy_project_address(projection, (cast: (@: void) value\physical_profile)))
+    value\source_type := (cast: (@: void) lmx_copy_project_address(projection, (cast: (@: void) value\source_type)))
     return: c.LMX_GRAPH_COPY_OK
 end: lmx_copy_project_context
 
@@ -3128,6 +3203,17 @@ fn: lmx_copy_project_cell (@: arena c.LmxArena; @: cell void; @: projection c.Lm
         return: c.LMX_GRAPH_COPY_INVALID
     kind := pool\kind
     type := pool\type
+    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) = c.LMX_TYPE_FOREIGN
+        saved := lmx_copy_scalar_context(arena, cell)
+        if: saved = 0
+            return: c.LMX_GRAPH_COPY_INVALID
+        status := lmx_copy_project_context(arena, saved, projection)
+        if: status != c.LMX_GRAPH_COPY_OK
+            return: status
+        if: saved\present != 0
+            saved\ref := cell
+            saved\physical_profile := pool\profile
+        return: c.LMX_GRAPH_COPY_OK
     if: kind = c.LMX_KIND_CHILDREN || kind = c.LMX_KIND_REF || kind = c.LMX_KIND_FIELD_ADDRESSES
         if: pool\stride != sizeof(@: void)
             return: c.LMX_GRAPH_COPY_INVALID
@@ -3234,7 +3320,7 @@ fn: lmx_copy_project_object (@: arena c.LmxArena; @: value void; @: projection c
                     while: i < part_graph_node_array\size && status = c.LMX_GRAPH_COPY_OK
                         mapped := projected_cells[i]
                         new_pool := c.lmx_range_cell_pool(arena, mapped)
-                        if: new_pool = 0 || i > (((cast: (size_t) -1) - (cast: (size_t) first)) / stride) || (cast: (size_t) mapped) != (cast: (size_t) first) + i * stride || new_pool\kind != old_pool\kind || new_pool\type != old_pool\type || new_pool\stride != stride || new_pool\pointer_read != old_pool\pointer_read || new_pool\pointer_write != old_pool\pointer_write
+                        if: new_pool = 0 || i > (((cast: (size_t) -1) - (cast: (size_t) first)) / stride) || (cast: (size_t) mapped) != (cast: (size_t) first) + i * stride || new_pool\kind != old_pool\kind || new_pool\type != old_pool\type || new_pool\stride != stride || new_pool\pointer_read != old_pool\pointer_read || new_pool\pointer_write != old_pool\pointer_write || new_pool\scalar_abi != old_pool\scalar_abi
                             status := c.LMX_GRAPH_COPY_INVALID
                         i := i + 1U
                     ---

@@ -1,6 +1,18 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
-**Текущее состояние, 2026-11-14, срез393 — operation-local SourceReader для source interface; ограниченная кодовая приёмка/docs-check PASS.**
+**Текущее состояние, 2026-11-14, срез394 — exact scalar ABI foundation; ограниченные кодовые gates и docs-check PASS.**
+Из тех же35 Source rows генерируются header type aliases и profile bodies для32 scalar bindings (§3.2):
+None/void без cells, FILE opaque без угаданного binding. Source identity, C ABI и physical profile остаются раздельными.
+Machine C ABI unit прошёл native/forced с обычным owner и root0/root1: все32 bindings, точность float/double/flong,
+i64/u64 limits, ABI rejection/protected write без изменения значения, immutable identity с nonzero physicalProfile,
+copy/projection/qualification/GC. FP assertions остаются в native C ABI unit; общего L3 FP исполнения это не доказывает.
+Обычный Graph.kind для Foreign остаётся0; SourceFact читает доказанные typed metadata до этого fallback (§3.5).
+Публичный primitive→frontend resolver, Run working/receiving/FFI, activation/pending GC roots и Foreign-Array ABI OPEN.
+Source16:925, genuine G1/G2 quick по9 smoke/fixedpoint20 PASS; actual G2 targeted4 n/f/root0/root1 и Graph3 triple PASS.
+G2 render35/14, fresh docs-check01 и final indexed01 PASS; links/LF28270/28273.
+Полная приёмка общего bridge и M11/M13/M14 не заявлена.
+
+**Предыдущее состояние, 2026-11-14, срез393 — operation-local SourceReader для source interface; ограниченная кодовая приёмка/docs-check PASS.**
 Общий implements worker получает name/fact выбранного Source через заимствованный reader текущей операции (§3.5).
 Полная literal-проекция35 строк/15 колонок `primitive.description` отделена от физического `Fact.type` и ABI;
 совпадение C-spelling не объединяет source contracts. Все33 cell-row identity контроли прошли в private L2 native/forced
@@ -1238,6 +1250,31 @@ data/code остаются аргументами-Structure call, а node сох
 значение не обещано; проверки не читают его и не требуют нуля, случайности или специальной ошибки. Сигнатура описывает
 обязательность/умолчание и не меняется при вызове; фактические аргументы принимаются в отдельные места кадра.
 
+**Exact scalar foundation, WIP394.** `LmxScalarABI {size, init, copy}` описывает точный доступ к C scalar object.
+Один прежний exporter выбирает32 non-reference/non-opaque rows из Source35 и выпускает type aliases в generated header,
+а typed init/copy и ABI records — в profile body. Это одна source-проекция; одинаковые C spellings могут разделять
+access callbacks, сохраняя различные source descriptions. None/void не получают cell, FILE не получает scalar ABI.
+
+`lmx_arena_scalar_cells_profiled` использует прежние arena/pool; `pool.scalar_abi` входит в физический ключ вместе
+с type/stride/profile. ABI не является Model, а pool.profile не заменяет source identity. Полный Value хранит
+`scalar_abi`, `physical_profile`, `source_type` отдельно от прежних model/references/referent. Owned FOREIGN capture
+сохраняет объект в arena, не адрес локала: mutable load/materialize создаёт собственное storage, а подходящая immutable
+cell сохраняет identity, полный physical type и profile. `receive_scalar` проверяет ABI; store использует protected/code
+guards до typed copy. Это точный representation transport, не semantic conversion или полное runtime admission.
+
+Сырой allocator создаёт C storage с `present=0`, без current Value. Load и copy сохраняют отсутствие,
+не читают source payload; GC удерживает metadata и physical pool.profile и в этом состоянии. Capture проверяет
+ABI/stride уже зарегистрированного FOREIGN source до копирования. Copy отвергает ненулевой referent без найденного
+физического владельца. Отображение storage на написанные L3 declarations входит в открытый construction bridge.
+
+Общий copier/projection/qualification и GC учитывают scalar payload и cell companion с его графовыми зависимостями;
+ABI record остаётся metadata generated module. Runtime11 prod/observe собран; machine unit прошёл native/forced при обычном
+owner/root0/root1, включая точность FP, i64/u64 limits, несовместимый ABI, protected write/no mutation, nonzero-profile
+immutable identity и copy/projection/qualification/GC. Это ограниченная unit-проверка foundation: public primitive resolver,
+Run working/receiving/FFI, activation/pending Value GC roots и Foreign-Array ABI остаются обязательными OPEN работами.
+Source16/Unit-machine06 также проверяет незаполненное storage и отказ capture/copy до потери владения. Whole G1/G2
+quick/fixedpoint20 и G2 targeted gates PASS; полная приёмка общего bridge впереди, M13 не закрыт.
+
 ### 3.3 Выражение (норма: пример автора `x+1`)
 
 `x + 1` — Lmx обычного вида из трёх полей: поле 0 → примитив-слово `x` (написанное имя: ячейка `word` с каноническим
@@ -1518,7 +1555,11 @@ identity-проверки всех33 cell rows прошли в private L2 native
 кандидат, преобразователь или `test`. Прямой `@: p Model Value` при известных Model/Value использует эту интерфейсную
 проверку; доказанное отсутствие требуемого поля даёт отказ. UNKNOWN не превращается в YES. Само объявление остаётся raw
 с Model/default: интерфейсная проверка не выделяет typed storage и не заменяет будущий runtime admission/test.
-Финальные gates393 идут; общий typed storage/runtime admission и полные M11/M13/M14 остаются OPEN.
+Ограниченные code/docs gates393 PASS; общий typed storage/runtime admission и полные M11/M13/M14 остаются OPEN.
+
+В WIP394 SourceFact отдельно читает доказанные scalar-pool/companion metadata до прежнего `Graph.kind=0` fallback
+для Foreign. Физические kind/type/cell не заменяются source row или ABI pointer; plain validated source evidence может
+дать YES, недоказанное или qualified evidence остаётся UNKNOWN. Это не включает общий Foreign runtime в старый Graph.kind.
 
 В срезе 373 `lmx_graph_resolve_binding` одним поиском возвращает выбранное значение и его рабочую строку.
 Классификация и читатель значения используют этот общий выбор с прежним приоритетом формалов, собственных мест

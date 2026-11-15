@@ -1,6 +1,18 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
-**Current state, 2026-11-14, slice393 -- an operation-local SourceReader for source interface; bounded code acceptance/docs-check PASS.**
+**Current state, 2026-11-14, slice394 -- exact scalar ABI foundation; bounded code gates and docs-check PASS.**
+The same35 Source rows generate header type aliases and profile bodies for32 scalar bindings (§3.2):
+None/void have no cells, FILE remains opaque without a guessed binding. Source identity, C ABI and physical profile remain separate.
+The machine C ABI unit passed native/forced with an ordinary owner and root0/root1: all32 bindings, float/double/flong precision,
+i64/u64 limits, ABI rejection/protected write without mutation, immutable identity with nonzero physicalProfile,
+and copy/projection/qualification/GC. FP assertions remain in the native C ABI unit; this does not establish general L3 FP execution.
+Ordinary Graph.kind for Foreign remains0; SourceFact reads proven typed metadata before that fallback (§3.5).
+Public primitive→frontend resolution, Run working/receiving/FFI, activation/pending GC roots and Foreign-Array ABI remain OPEN.
+Source16:925, genuine G1/G2 quick with9 smoke each/fixedpoint20 PASS; actual G2 targeted4 n/f/root0/root1 and Graph3 triple PASS.
+G2 render35/14, fresh docs-check01 and final indexed01 PASS; links/LF28270/28273.
+Full acceptance of the common bridge and M11/M13/M14 is not claimed.
+
+**Previous state, 2026-11-14, slice393 -- an operation-local SourceReader for source interface; bounded code acceptance/docs-check PASS.**
 The common implements worker receives the selected Source's name/fact through a reader borrowed by the current operation (§3.5).
 The full literal35-row/15-column projection of `primitive.description` is separate from physical `Fact.type` and ABI;
 equal C spellings do not unify source contracts. All33 cell-row identity controls passed in private L2 native/forced
@@ -1302,6 +1314,31 @@ latest clarification. Before a write no initial value is promised; checks do not
 randomness or a special error. A signature describes mandatory/default arguments and remains unchanged by calls;
 actual arguments are received into separate frame places.
 
+**Exact scalar foundation, WIP394.** `LmxScalarABI {size, init, copy}` describes exact access to a C scalar object.
+One existing exporter selects32 non-reference/non-opaque rows from Source35 and emits type aliases in the generated header,
+with typed init/copy and ABI records in the profile body. This is one source projection; equal C spellings can share
+access callbacks while retaining distinct source descriptions. None/void receive no cell, and FILE receives no scalar ABI.
+
+`lmx_arena_scalar_cells_profiled` uses the existing arena/pool; `pool.scalar_abi` enters the physical key along with
+type/stride/profile. ABI is not a Model, and pool.profile does not replace source identity. The complete Value stores
+`scalar_abi`, `physical_profile`, `source_type` separately from existing model/references/referent. Owned FOREIGN capture
+retains the object in the arena rather than a local address: mutable load/materialize owns its storage, while a suitable immutable
+cell preserves identity, full physical type and profile. `receive_scalar` checks ABI; store applies protected/code
+guards before typed copy. This is exact representation transport, not semantic conversion or complete runtime admission.
+
+The raw allocator creates C storage with `present=0`, without a current Value. Load and copy preserve absence
+without reading source payload; GC retains metadata and the physical pool.profile in this state too. Capture checks
+the ABI/stride of a registered FOREIGN source before copying. Copy rejects a nonzero referent whose physical owner
+cannot be found. Mapping storage to written L3 declarations remains part of the open construction bridge.
+
+Common copy/projection/qualification and GC account for scalar payload and its cell companion's graph dependencies;
+the ABI record remains generated-module metadata. Runtime11 prod/observe is built; the machine unit passed native/forced with an ordinary
+owner/root0/root1, including FP precision, i64/u64 limits, incompatible ABI, protected write/no mutation, nonzero-profile
+immutable identity and copy/projection/qualification/GC. This is a bounded foundation unit check: public primitive resolution,
+Run working/receiving/FFI, activation/pending Value GC roots and Foreign-Array ABI remain required OPEN work.
+Source16/Unit-machine06 also checks unfilled storage and capture/copy refusal before ownership is lost. Whole G1/G2
+quick/fixedpoint20 and G2 targeted gates PASS; full acceptance of the common bridge still follows, and M13 is not complete.
+
 ### 3.3 An expression (norm: the author's example `x+1`)
 
 `x + 1` is an Lmx of the ordinary kind with three fields: field 0 → the word primitive `x` (the written name: a `word`
@@ -1596,7 +1633,11 @@ with `published=0` and scratch closure. It publishes no permission, ready receiv
 neither candidate, converter nor `test`. Direct `@: p Model Value` uses this interface check for known Model/Value;
 a proven missing required field refuses. UNKNOWN does not become YES. The declaration itself stays raw
 with Model/default: an interface check allocates no typed storage and does not replace future runtime admission/test.
-Final gates393 are running; general typed storage/runtime admission and full M11/M13/M14 remain OPEN.
+Bounded code/docs gates393 PASS; general typed storage/runtime admission and full M11/M13/M14 remain OPEN.
+
+In WIP394 SourceFact separately reads proven scalar-pool/companion metadata before the existing `Graph.kind=0` fallback
+for Foreign. Physical kind/type/cell are not replaced by a source row or ABI pointer; plain validated source evidence can
+give YES, while unproved or qualified evidence stays UNKNOWN. This does not add general Foreign runtime support to old Graph.kind.
 
 In slice 373 `lmx_graph_resolve_binding` returns the selected value and its working row in one search.
 Classification and the value reader use that shared selection with the existing priority of formals, own places

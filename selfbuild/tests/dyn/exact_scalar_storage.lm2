@@ -1,0 +1,404 @@
+# Exact C scalar transport keeps bytes in stable owned cells. The source row
+# remains semantic evidence, separate from the physical C access contract.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_primitive_profile.h.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_graph_copy_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_implements.h.lm1"
+include: "<stdlib.h>" "<string.h>" "<float.h>" "<stdint.h>"
+
+fn: es_binding (@: name char; @@: description void) const: @: c.LmxScalarABI
+    return: c.lmx_graph_scalar_binding(c.lmx_graph_intern(name, c.strlen(name)), description)
+
+fn: es_field (@: g c.LmxGraph; @: head char) @: c.Lmx
+    @: raw c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    if: raw = 0 || c.lmx_graph_name(g, (cast: (@: void) raw), head, c.strlen(head)) != 0
+        return: (cast: (@: c.Lmx) 0)
+    if: c.lmx_graph_put(raw, 0U, c.lmx_graph_word(g, "x", 1U)) != 0
+        return: (cast: (@: c.Lmx) 0)
+    return: raw
+
+# Return from this helper before the caller uses its complete Value. Loading
+# and materializing use the ordinary kernel operations, not numeric projection.
+fn: es_capture (@: arena c.LmxArena; @: source void; const: (@: abi c.LmxScalarABI); @: description void; @: model c.Lmx; @@: out void) int
+    c.LmxWalkValue: context
+    c.LmxWalkValue: value
+    c.LmxWalkValue: received
+    c.LmxWalkValue: loaded
+    c.memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkValue))
+    context\source_type := description
+    context\model := model
+    if: c.lmx_walk_value_foreign_capture(arena, source, c.LMX_TYPE_FOREIGN, abi, 0, @ context, @ value) != c.LMX_WALK_OK
+        return: 1
+    if: value\ref = source || value\scalar_abi != abi || value\source_type != description || value\model != model
+        return: 2
+    if: c.lmx_walk_value_receive_scalar(@ value, c.LMX_TYPE_FOREIGN, abi, @ received) != c.LMX_WALK_OK
+        return: 3
+    if: c.lmx_walk_value_materialize(arena, @ received, out) != c.LMX_WALK_OK || out[0] = value\ref
+        return: 4
+    if: c.lmx_walk_value_load(arena, out[0], c.LMX_TYPE_FOREIGN, @ loaded) != c.LMX_WALK_OK
+        return: 5
+    if: loaded\ref = out[0] || loaded\scalar_abi != abi || loaded\source_type != description || loaded\model != model
+        return: 6
+    return: 0
+
+fn: es_rows (@: arena c.LmxArena; @: g c.LmxGraph) int
+    @: state c.LmxGraphState c.lmx_graph_state()
+    @@: description void c.calloc(1U, sizeof(@: void))
+    @@: cell void c.calloc(1U, sizeof(@: void))
+    @: answer int c.calloc(1U, c.sizeof(c.int))
+    const: (@: abi c.LmxScalarABI 0)
+    @: source void 0
+    @: head char 0
+    @: value c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: req c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    size_t: first 0U
+    size_t: row 0U
+    size_t: bound 0U
+    size_t: absent 0U
+    if: state = 0 || description = 0 || cell = 0 || answer = 0 || value = 0 || req = 0 || state\receivers_count < 35U
+        return: 11
+    first := state\receivers_count - 35U
+    while: row < 35U
+        head := state\receivers[first + row]
+        abi := c.lmx_graph_scalar_binding(head, description)
+        if: abi = 0
+            if: c.strcmp(head, "None") != 0 && c.strcmp(head, "void") != 0 && c.strcmp(head, "FILE") != 0
+                return: 12
+            absent := absent + 1U
+        else:
+            if: abi\size = 0U || abi\init = 0 || abi\copy = 0 || description[0] = 0
+                return: 13
+            source := c.malloc(abi\size)
+            if: source = 0 || abi\init(source) != 0 || es_capture(arena, source, abi, description[0], 0, cell) != 0
+                return: 14
+            c.free(source)
+            if: c.lmx_graph_name(g, cell[0], "x", 1U) != 0
+                return: 15
+            c.lmx_graph_put(value, 0U, cell[0])
+            c.lmx_graph_put(req, 0U, (cast: (@: void) es_field(g, head)))
+            if: c.lmx_graph_source_interface(g, value, req, answer) != c.LMX_WALK_OK || \answer != c.LMX_IMPLEMENTS_YES
+                return: 16
+            if: c.strcmp(head, "Boolean") = 0
+                c.lmx_graph_put(req, 0U, (cast: (@: void) es_field(g, "i8")))
+                # Shared C access is not a proof between distinct source rows.
+                if: c.lmx_graph_source_interface(g, value, req, answer) != c.LMX_WALK_OK || \answer != c.LMX_IMPLEMENTS_UNKNOWN
+                    return: 18
+                ---
+            ---
+            bound := bound + 1U
+        ---
+        row := row + 1U
+    if: bound != 32U || absent != 3U
+        return: 17
+    c.free(description)
+    c.free(cell)
+    c.free(answer)
+    return: 0
+
+fn: es_values (@: arena c.LmxArena; @: g c.LmxGraph) int
+    @@: description void c.calloc(1U, sizeof(@: void))
+    @@: other_description void c.calloc(1U, sizeof(@: void))
+    @@: output void c.calloc(1U, sizeof(@: void))
+    const: (@: abi c.LmxScalarABI 0)
+    const: (@: other_abi c.LmxScalarABI 0)
+    @: source c.LmxScalarType9 c.calloc(1U, sizeof(c.LmxScalarType9))
+    @: result c.LmxScalarType9 0
+    @: fixed_read c.LmxScalarType9 0
+    @: fraction c.LmxScalarType8 c.calloc(1U, sizeof(c.LmxScalarType8))
+    @: fraction_result c.LmxScalarType8 0
+    @: extended c.LmxScalarType10 c.calloc(1U, sizeof(c.LmxScalarType10))
+    @: extended_result c.LmxScalarType10 0
+    @: wide c.LmxScalarType31 c.calloc(1U, sizeof(c.LmxScalarType31))
+    @: wide_result c.LmxScalarType31 0
+    @: count c.LmxScalarType26 c.calloc(1U, sizeof(c.LmxScalarType26))
+    @: count_result c.LmxScalarType26 0
+    @: model c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: physical c.Lmx c.lmx_graph_lmx(g, 0, 0U)
+    @: destination void 0
+    @: context c.LmxWalkValue 0
+    @: chunk c.LmxChunk 0
+    c.LmxWalkValue: value
+    c.LmxWalkValue: fixed_value
+    c.LmxWalkValue: received
+    c.LmxWalkPlace: place
+    if: description = 0 || other_description = 0 || output = 0 || source = 0 || fraction = 0 || extended = 0 || wide = 0 || count = 0 || model = 0 || physical = 0 || physical = model
+        return: 21
+    abi := es_binding("double", description)
+    \source := (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+    if: es_capture(arena, source, abi, description[0], model, output) != 0
+        return: 22
+    result := (cast: (@: c.LmxScalarType9) output[0])
+    \source := (cast: (c.LmxScalarType9) 9)
+    if: \result != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 23
+    destination := output[0]
+    c.memset((cast: (@: void) (@ place)), 0, c.sizeof(c.LmxWalkPlace))
+    place\address := destination
+    place\type := c.LMX_TYPE_FOREIGN
+    if: c.lmx_walk_value_foreign_owned(arena, @ value, source, abi) != c.LMX_WALK_OK || c.lmx_walk_value_store(arena, @ place, @ value) != c.LMX_WALK_OK
+        return: 24
+    if: \result != (cast: (c.LmxScalarType9) 9) || place\address != destination
+        return: 25
+    \source := (cast: (c.LmxScalarType9) 17)
+    if: c.lmx_walk_value_foreign_owned(arena, @ value, source, abi) != c.LMX_WALK_OK || c.lmx_walk_value_store(arena, @ place, @ value) != c.LMX_WALK_OK
+        return: 26
+    context := c.lmx_value_cell_context(arena, destination)
+    if: \result != (cast: (c.LmxScalarType9) 17) || context = 0 || context\source_type != description[0]
+        return: 27
+    other_abi := es_binding("i64", other_description)
+    \wide := c.INT64_MAX - 2
+    if: es_capture(arena, wide, other_abi, other_description[0], 0, output) != 0
+        return: 28
+    wide_result := (cast: (@: c.LmxScalarType31) output[0])
+    \wide := c.INT64_MIN + 2
+    if: \wide_result != c.INT64_MAX - 2
+        return: 29
+    if: c.lmx_walk_value_foreign_owned(arena, @ value, wide, other_abi) != c.LMX_WALK_OK
+        return: 30
+    if: c.lmx_walk_value_store(arena, @ place, @ value) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT || \result != (cast: (c.LmxScalarType9) 17)
+        return: 31
+    if: c.lmx_implements(arena, destination, output[0], 0) != c.LMX_IMPLEMENTS_NO
+        return: 32
+    if: c.lmx_walk_value_foreign_capture(arena, destination, c.LMX_TYPE_FOREIGN, other_abi, 0, 0, @ received) != c.LMX_WALK_INVALID
+        return: 49
+    if: c.lmx_walk_value_foreign_owned(arena, @ value, wide, other_abi) != c.LMX_WALK_OK || c.lmx_walk_value_materialize(arena, @ value, output) != c.LMX_WALK_OK
+        return: 33
+    wide_result := (cast: (@: c.LmxScalarType31) output[0])
+    if: \wide_result != c.INT64_MIN + 2
+        return: 34
+    other_abi := es_binding("u64", other_description)
+    \count := c.UINT64_MAX - 1
+    if: es_capture(arena, count, other_abi, other_description[0], 0, output) != 0
+        return: 35
+    count_result := (cast: (@: c.LmxScalarType26) output[0])
+    \count := (cast: (c.LmxScalarType26) 0)
+    if: \count_result != c.UINT64_MAX - 1
+        return: 36
+    other_abi := es_binding("flong", other_description)
+    \extended := (cast: (c.LmxScalarType10) 1) + c.LDBL_EPSILON
+    if: es_capture(arena, extended, other_abi, other_description[0], 0, output) != 0
+        return: 37
+    extended_result := (cast: (@: c.LmxScalarType10) output[0])
+    \extended := (cast: (c.LmxScalarType10) 9)
+    if: \extended_result != (cast: (c.LmxScalarType10) 1) + c.LDBL_EPSILON
+        return: 38
+    other_abi := es_binding("float", other_description)
+    \fraction := (cast: (c.LmxScalarType8) 5) / (cast: (c.LmxScalarType8) 4)
+    if: es_capture(arena, fraction, other_abi, other_description[0], 0, output) != 0
+        return: 45
+    fraction_result := (cast: (@: c.LmxScalarType8) output[0])
+    \fraction := (cast: (c.LmxScalarType8) 9)
+    if: \fraction_result != (cast: (c.LmxScalarType8) 5) / (cast: (c.LmxScalarType8) 4)
+        return: 46
+    other_abi := es_binding("flong", other_description)
+    if: c.lmx_walk_value_foreign_capture(arena, destination, c.LMX_TYPE_FOREIGN, other_abi, 0, 0, @ received) != c.LMX_WALK_INVALID
+        return: 48
+    if: c.lmx_walk_value_foreign_capture(arena, result, 0 - c.LMX_TYPE_FOREIGN, abi, physical, context, @ fixed_value) != c.LMX_WALK_OK
+        return: 39
+    if: c.lmx_walk_value_receive_scalar(@ fixed_value, c.LMX_TYPE_FOREIGN, abi, @ received) != c.LMX_WALK_OK || received\type != 0 - c.LMX_TYPE_FOREIGN || received\physical_profile != physical
+        return: 40
+    if: c.lmx_walk_value_materialize(arena, @ received, output) != c.LMX_WALK_OK || output[0] != fixed_value\ref || c.lmx_range_profile(arena, output[0]) != physical
+        return: 41
+    place\address := output[0]
+    place\type := 0 - c.LMX_TYPE_FOREIGN
+    fixed_read := (cast: (@: c.LmxScalarType9) output[0])
+    \source := (cast: (c.LmxScalarType9) 23)
+    if: c.lmx_walk_value_foreign_owned(arena, @ value, source, abi) != c.LMX_WALK_OK || c.lmx_walk_value_store(arena, @ place, @ value) != c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+        return: 42
+    if: \fixed_read != (cast: (c.LmxScalarType9) 17)
+        return: 47
+    # GC follows metadata, while the scalar bytes are never guessed as edges.
+    context := c.lmx_value_cell_context(arena, destination)
+    context\model := model
+    if: c.lmx_gc_mark_value(arena, destination, 17U, 0) != c.LMX_GC_OK
+        return: 43
+    chunk := c.lmx_pool_chunk_at(c.lmx_range_cell_pool(arena, (cast: (@: void) model)), (cast: (@: void) model))
+    if: chunk = 0 || chunk\mark != 17U
+        return: 44
+    c.free(description)
+    c.free(other_description)
+    c.free(output)
+    c.free(source)
+    c.free(fraction)
+    c.free(extended)
+    c.free(wide)
+    c.free(count)
+    return: 0
+
+fn: es_copy (@: arena c.LmxArena; @: g c.LmxGraph) int
+    c.LmxArena: destination
+    c.LmxCopyMap: footprint
+    c.LmxCopyMap: projection
+    @@: description void c.calloc(1U, sizeof(@: void))
+    @@: cell void c.calloc(1U, sizeof(@: void))
+    @@: copied c.Lmx c.calloc(1U, sizeof(@: c.Lmx))
+    const: (@: abi c.LmxScalarABI 0)
+    @: source c.LmxScalarType9 c.calloc(1U, sizeof(c.LmxScalarType9))
+    @: result c.LmxScalarType9 0
+    @: root c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: absorb c.Lmx 0
+    @: context c.LmxWalkValue 0
+    @: copy_cell void 0
+    c.memset((cast: (@: void) (@ destination)), 0, c.sizeof(c.LmxArena))
+    if: description = 0 || cell = 0 || copied = 0 || source = 0 || root = 0 || c.lmx_arena_open(@ destination) != 0
+        return: 51
+    abi := es_binding("double", description)
+    \source := (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+    if: es_capture(arena, source, abi, description[0], root, cell) != 0 || c.lmx_graph_put(root, 0U, cell[0]) != 0
+        return: 52
+    if: c.lmx_graph_copy_owned(root, arena, @ destination, copied) != c.LMX_GRAPH_COPY_OK || copied[0] = root
+        return: 53
+    copy_cell := c.lmx_graph_get(copied[0], 0U)
+    context := c.lmx_value_cell_context(@ destination, copy_cell)
+    if: copy_cell = cell[0] || context = 0 || context\ref != copy_cell || context\model != copied[0] || context\source_type != description[0] || context\scalar_abi != abi
+        return: 54
+    result := (cast: (@: c.LmxScalarType9) copy_cell)
+    c.free(source)
+    if: \result != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 55
+    absorb := (cast: (@: c.Lmx) c.lmx_node_new_owned(@ destination))
+    if: absorb = 0 || c.lmx_copy_map_init(@ footprint) != 0 || c.lmx_copy_map_init(@ projection) != 0
+        return: 56
+    # A graph type description is an edge; a validated module row is not.
+    context\source_type := (cast: (@: void) copied[0])
+    if: c.lmx_copy_map_put(@ footprint, copy_cell, copy_cell) != 0 || c.lmx_copy_map_put(@ projection, (cast: (@: void) copied[0]), (cast: (@: void) absorb)) != 0
+        return: 57
+    if: c.lmx_graph_copy_project_mapped(@ destination, @ footprint, @ projection, 0) != c.LMX_GRAPH_COPY_OK
+        return: 58
+    if: context\model != absorb || context\source_type != (cast: (@: void) absorb) || context\ref != copy_cell || context\physical_profile != 0 || \result != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 59
+    c.lmx_copy_map_dispose(@ footprint)
+    c.lmx_copy_map_dispose(@ projection)
+    c.lmx_arena_release(@ destination)
+    c.free(description)
+    c.free(cell)
+    c.free(copied)
+    return: 0
+
+fn: es_qualify (@: arena c.LmxArena) int
+    @@: description void c.calloc(1U, sizeof(@: void))
+    const: (@: abi c.LmxScalarABI 0)
+    @: source c.LmxScalarType9 c.calloc(1U, sizeof(c.LmxScalarType9))
+    @: seal c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(arena))
+    @: outside c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(arena))
+    @: root c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_profiled(arena, seal))
+    @: context c.LmxWalkValue 0
+    c.LmxWalkValue: value
+    c.LmxWalkValue: metadata
+    if: description = 0 || source = 0 || seal = 0 || outside = 0 || root = 0 || c.lmx_arena_refs_open_profiled(arena, root, 1U, seal) != 0
+        return: 61
+    abi := es_binding("double", description)
+    c.memset((cast: (@: void) (@ metadata)), 0, c.sizeof(c.LmxWalkValue))
+    metadata\source_type := description[0]
+    \source := (cast: (c.LmxScalarType9) 7)
+    if: c.lmx_walk_value_foreign_capture(arena, source, c.LMX_TYPE_FOREIGN, abi, seal, @ metadata, @ value) != c.LMX_WALK_OK || c.lmx_arena_ref_store(arena, root, 0U, (cast: (@: void) value\ref)) != 0
+        return: 62
+    context := c.lmx_value_cell_context(arena, (cast: (@: void) value\ref))
+    if: context = 0 || c.lmx_qualify_tree_preflight_full(arena, root, 0, 0U, 0, 0U, 0, 0U) != c.LMX_QUALIFY_OK
+        return: 63
+    # The declaration's metadata survives without a current value as well.
+    context\present := 0
+    context\model := outside
+    if: c.lmx_qualify_tree_preflight_full(arena, root, 0, 0U, 0, 0U, 0, 0U) != c.LMX_QUALIFY_INVALID
+        return: 64
+    context\model := 0
+    context\source_type := (cast: (@: void) outside)
+    if: c.lmx_qualify_tree_preflight_full(arena, root, 0, 0U, 0, 0U, 0, 0U) != c.LMX_QUALIFY_INVALID
+        return: 65
+    context\source_type := description[0]
+    if: c.lmx_qualify_tree_preflight_full(arena, root, 0, 0U, 0, 0U, 0, 0U) != c.LMX_QUALIFY_OK
+        return: 66
+    c.free(source)
+    c.free(description)
+    return: 0
+
+fn: es_unfilled () int
+    c.LmxArena: source_arena
+    c.LmxArena: target_arena
+    @@: description void c.calloc(1U, sizeof(@: void))
+    @@: output void c.calloc(1U, sizeof(@: void))
+    @@: copied c.Lmx c.calloc(1U, sizeof(@: c.Lmx))
+    const: (@: abi c.LmxScalarABI 0)
+    @: root c.Lmx 0
+    @: model c.Lmx 0
+    @: cell void 0
+    @: copy_cell void 0
+    @: context c.LmxWalkValue 0
+    @: copy_context c.LmxWalkValue 0
+    @: chunk c.LmxChunk 0
+    c.LmxWalkValue: value
+    c.memset((cast: (@: void) (@ source_arena)), 0, c.sizeof(c.LmxArena))
+    c.memset((cast: (@: void) (@ target_arena)), 0, c.sizeof(c.LmxArena))
+    if: description = 0 || output = 0 || copied = 0 || c.lmx_arena_open(@ source_arena) != 0 || c.lmx_arena_open(@ target_arena) != 0
+        return: 71
+    root := (cast: (@: c.Lmx) c.lmx_node_new_owned(@ source_arena))
+    model := (cast: (@: c.Lmx) c.lmx_node_new_owned(@ source_arena))
+    abi := es_binding("double", description)
+    cell := c.lmx_arena_scalar_cells_profiled(@ source_arena, c.LMX_TYPE_FOREIGN, 0, abi, 1U)
+    context := c.lmx_value_cell_context(@ source_arena, cell)
+    if: root = 0 || model = 0 || cell = 0 || context = 0 || context\present != 0 || context\scalar_abi != abi
+        return: 72
+    context\model := model
+    context\source_type := description[0]
+    if: c.lmx_arena_refs_open_owned(@ source_arena, root, 1U) != 0 || c.lmx_arena_ref_store(@ source_arena, root, 0U, cell) != 0
+        return: 73
+    if: c.lmx_walk_value_load(@ source_arena, cell, c.LMX_TYPE_FOREIGN, @ value) != c.LMX_WALK_OK || value\present != 0
+        return: 74
+    if: c.lmx_walk_value_materialize(@ source_arena, @ value, output) != c.LMX_WALK_OK || output[0] != 0
+        return: 75
+    context\referent := @ value
+    if: c.lmx_graph_copy_owned(root, @ source_arena, @ target_arena, copied) != c.LMX_GRAPH_COPY_UNSUPPORTED || copied[0] != 0
+        return: 83
+    context\referent := 0
+    if: c.lmx_graph_copy_owned(root, @ source_arena, @ target_arena, copied) != c.LMX_GRAPH_COPY_OK
+        return: 76
+    copy_cell := c.lmx_graph_get(copied[0], 0U)
+    copy_context := c.lmx_value_cell_context(@ target_arena, copy_cell)
+    if: copy_cell = cell || copy_context = 0 || copy_context\present != 0 || copy_context\model = 0 || copy_context\model = model || copy_context\source_type != description[0] || copy_context\scalar_abi != abi
+        return: 77
+    if: c.lmx_walk_value_load(@ target_arena, copy_cell, c.LMX_TYPE_FOREIGN, @ value) != c.LMX_WALK_OK || value\present != 0
+        return: 78
+    if: c.lmx_gc_mark_value(@ source_arena, cell, 29U, 0) != c.LMX_GC_OK
+        return: 79
+    chunk := c.lmx_pool_chunk_at(c.lmx_range_cell_pool(@ source_arena, (cast: (@: void) model)), (cast: (@: void) model))
+    if: chunk = 0 || chunk\mark != 29U
+        return: 82
+    c.lmx_arena_release(@ target_arena)
+    c.lmx_arena_release(@ source_arena)
+    c.free(description)
+    c.free(output)
+    c.free(copied)
+    return: 0
+
+fn: es_storage_check () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 80
+    g := c.lmx_graph_open(@ arena)
+    if: g = 0
+        return: 81
+    status := es_rows(@ arena, g)
+    if: status = 0
+        status := es_values(@ arena, g)
+    if: status = 0
+        status := es_copy(@ arena, g)
+    if: status = 0
+        status := es_qualify(@ arena)
+    if: status = 0
+        status := es_unfilled()
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    if: status != 0
+        return: status
+    return: 7

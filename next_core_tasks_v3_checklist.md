@@ -1,5 +1,27 @@
 # Чеклист реализации LMX
 
+**Срез394 — exact scalar ABI и owned Value общего M11.7/M13.** Source16:925/Frontend05/Runtime11;
+Unit-machine06/Tool selftest, whole03 genuine G1/G2 quick/fixedpoint20 PASS. G2 targeted4 и Graph3 triple PASS;
+render35/14, docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28270/28273. Полный bridge/M13 OPEN. [Текущий WIP](steps/current.md).
+
+- [x] Текущий source-generated ABI для32 non-reference/non-opaque scalar rows из35 через существующий exporter:
+  точные C type/sizeof/stride/init/copy, включая multiword spelling. None/void без cells; FILE opaque без угаданного binding.
+- [ ] Сохранить source identity/receiving Model отдельно от C ABI и physical pool.profile. Совпадение spelling/access
+  callbacks не объединяет aliases и не выбирает первый semantic row; ABI equality не заменяет admission/conversion.
+- [ ] Проверить существующие pool и Value owned FOREIGN capture/load/receive/materialize/store без числового carrier
+  или dangling C-local address; сохранять context, Model/qualifiers/default/CODE producer и immutable physical identity.
+- [ ] Довести общий copier/qualification/GC на exact scalar payload и все companion/source/Model/profile/referent edges,
+  sharing/циклы прежней картой, без чтения uninitialized payload. Helper-only coverage не завершает lifetime.
+- [ ] Обязательная Run working/receiving/FFI integration остаётся OPEN; подключить общий Value route к реальным вызовам
+  и записи, не ограничиваться прямым тестом нового helper или source-interface доказательством393.
+- [x] Проверены generated scalar declaration header и source-maintained C99 backend keywords; прямой L2 machine unit
+  собирать один раз через общий runner. Его обычный n/f/root owner не доказывает обход FP/64-bit тела или полный FFI.
+- [ ] Довести общий resolver публичных primitive names → точный C spelling; private generated alias не подменяет этот путь.
+- [ ] Обязательные activation/current/pending Value GC roots остаются OPEN до закрытия receiving операции.
+- [ ] Foreign-Array ABI/typed backing остаётся обязательной частью OPEN bridge, не объявлять его scalar ABI реализацией.
+- [ ] Полная приёмка общего bridge: exact FP/llong/unsigned transport, stable cell/slot/typeof/alias, повторный CODE producer, owned lifetime,
+  Model/qualifier retention и отказ несовместимой записи до изменения. Полные M11/M13/M14 оставить OPEN до всех gates.
+
 **Срез393, ограниченная кодовая приёмка/docs PASS:** Source09:924/Runtime07; L2 all33 cell rows, qualifiers, unknown names и mutable refs/index-ref7
 native/forced/root0/root1 PASS. Private23 triple/AFTER15, actual G1/G2 quick/fixedpoint15, G2 interp23/AFTER22/image48,
 Unit08 и legacy2 PASS. Unit-only Source09/final canonical2 PASS, unchanged artifacts reused. Docs-check01 PASS35/14/27/44/615,

@@ -364,8 +364,8 @@ fn: lmx_pointer_store_in (@: arena c.LmxArena; @: cell void; @: value void) int
     return: lmx_pointer_store_context_in(arena, cell, value, 0)
 end: lmx_pointer_store_in
 
-fn: lmx_pointer_cell_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkValue
-    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, cell))
+fn: lmx_value_cell_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkValue
+    @: pool c.LmxPool (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, cell))
     @: chunk c.LmxChunk 0
     @: contexts c.LmxWalkValue 0
     size_t: index 0U
@@ -377,7 +377,12 @@ fn: lmx_pointer_cell_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkVal
     contexts := (cast: (@: c.LmxWalkValue) chunk\value_contexts)
     index := ((cast: (size_t) cell) - (cast: (size_t) c.lmx_chunk_data(chunk))) / (cast: (size_t) pool\stride)
     return: contexts + index
-end: lmx_pointer_cell_context
+end: lmx_value_cell_context
+
+fn: lmx_pointer_cell_context (@: arena c.LmxArena; @: cell void) @: c.LmxWalkValue
+    if: c.lmx_pointer_pool_in(arena, cell) = 0
+        return: (cast: (@: c.LmxWalkValue) 0)
+    return: lmx_value_cell_context(arena, cell)
 
 # Inverse of the existing arena cell/companion relation, including imported
 # ranges. Metadata addresses need no registry or entries in the graph-copy map.
@@ -399,7 +404,7 @@ fn: lmx_value_context_cell_in (@: arena c.LmxArena; @: context c.LmxWalkValue) @
     ---
     while: index < c.lmx_arena_index_len(arena)
         entry := c.lmx_arena_index_data(arena) + index
-        pool := (cast: (@: c.LmxPool) c.lmx_pointer_pool_in(arena, (cast: (@: void) entry\lo)))
+        pool := (cast: (@: c.LmxPool) c.lmx_range_cell_pool(arena, (cast: (@: void) entry\lo)))
         if: pool != 0
             stride := (cast: (size_t) pool\stride)
             # Use the same published chunk accessor as the forward lookup.
@@ -413,7 +418,7 @@ fn: lmx_value_context_cell_in (@: arena c.LmxArena; @: context c.LmxWalkValue) @
                         ordinal := offset / context_stride
                         if: ordinal < c.lmx_chunk_cells(chunk, stride)
                             cell := (cast: (@: void) ((cast: (@: char) c.lmx_chunk_data(chunk)) + ordinal * stride))
-                            if: lmx_pointer_cell_context(arena, cell) = context
+                            if: lmx_value_cell_context(arena, cell) = context
                                 return: cell
                             ---
                         ---

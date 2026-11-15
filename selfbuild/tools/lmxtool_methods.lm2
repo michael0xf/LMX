@@ -1121,7 +1121,7 @@ fn: test_record (@: self char; @: ev char) int
 end: test_record
 
 # The suite's schema (R170-2) and its controls' evaluation (R170-3), without a build: each malformed row is a
-# SCHEMA failure (ten rows, ten failures, nothing else); a list without rows fails; a missing source is an INFRA
+# SCHEMA failure (fifteen rows, fifteen failures, nothing else); a list without rows fails; a missing source is an INFRA
 # failure; ENTRY is a decimal C int over the whole range and nothing else; control_eval_r on failure lines.
 fn: test_suite_schema (@: dir char) int
     @: sd char txt_path(dir, "schema")
@@ -1138,11 +1138,11 @@ fn: test_suite_schema (@: dir char) int
     file_write(txt_path(sd, "x.lm2"), "return\n", 7U)
     file_write(txt_path(sd, "y.lm2"), "return\n", 7U)
     list := txt_path(sd, "bad.tsv")
-    text := "# ten malformed rows\nbogus\tx.lm2\t7\tn\nruns\tx.lm2\t7\nruns\tx.lm2\t12a\tn\nruns\tx.lm2\t2147483648\tn\nruns\tx.lm2\t7\tq\nruns\tx.lm2\t7\tnn\nrefuses\tx.lm2\t\tn\ntwins\tx.lm2\t7\tnf\ty.lm2\t\ntwins\tx.lm2\t7\tnf\ty.lm2\ta,,b\nruns\tx.lm2\t7\tn\tx.lm2\textra\n"
+    text := "# fifteen malformed rows\nbogus\tx.lm2\t7\tn\nruns\tx.lm2\t7\nruns\tx.lm2\t12a\tn\nruns\tx.lm2\t2147483648\tn\nruns\tx.lm2\t7\tq\nruns\tx.lm2\t7\tnn\nrefuses\tx.lm2\t\tn\ntwins\tx.lm2\t7\tnf\ty.lm2\t\ntwins\tx.lm2\t7\tnf\ty.lm2\ta,,b\nruns\tx.lm2\t7\tn\tx.lm2\textra\nmachine\tx.lm2\t7\tnf\nmachine\tx.lm2\t7\tnf\t\nmachine\tx.lm2\t7\tnf\tbad-name\nmachine\tx.lm2\t12a\tnf\tes_probe\nmachine\tx.lm2\t7\tq\tes_probe\n"
     file_write(list, text, c.strlen(text))
     x := fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-bad"))
     fail := txt_path(sd, "out-bad/failures.tsv")
-    f := f + tool_check(x = 10 && control_eval_r(fail, "SCHEMA", why) = 0, "schema: ten malformed rows, ten SCHEMA failures and no other", txt_cat3(txt_int(x), " failures; ", why[0]))
+    f := f + tool_check(x = 15 && control_eval_r(fail, "SCHEMA", why) = 0, "schema: fifteen malformed rows, fifteen SCHEMA failures and no other", txt_cat3(txt_int(x), " failures; ", why[0]))
     list := txt_path(sd, "empty.tsv")
     file_write(list, "# no row\n\n", 10U)
     x := fixture_suite(list, sd, sd, sd, txt_path(sd, "fe.exe"), txt_path(sd, "rt.o"), txt_path(sd, "obs.o"), txt_path(sd, "out-empty"))
@@ -1565,6 +1565,10 @@ fn: tool_main (@@: args char; int: n) int
         if: bld_frontend_host(args[2], args[3], args[4], args[5], args[6], args[7]) != 0
             return: 1
         return: 0
+    if: n >= 8 && c.strcmp(args[1], "build-frontend-link") = 0
+        if: bld_frontend_link(args[2], args[3], args[4], args[5], args[6], args[7]) != 0
+            return: 1
+        return: 0
     if: n >= 11 && c.strcmp(args[1], "graph-check") = 0
         int: expected_exit 0
         @: runs char "1"
@@ -1605,6 +1609,6 @@ fn: tool_main (@@: args char; int: n) int
     r := child(args, n)
     if: r >= 0
         return: r
-    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | group-migrate ROOT SITES | checks LIST | steps LIST | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE PREVIOUS-FRONTEND LABEL | build-frontend-part REPO STAGE BASE PREVIOUS-FRONTEND LABEL MODULE REUSE-MANIFEST ABI-MANIFEST | build-runtime REPO STAGE BASE HOSTED-FRONTEND LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | build-generation quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | bootstrap quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE HOSTED-FRONTEND RUNTIME-DIR LABEL SMOKE-LIST | build-frontend-host REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | build-graph REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | graph-same LOG EXPECTED | graph-check REPO STAGE BASE FRONTEND RUNTIME-DIR GRAPH-EXE OUT SOURCE EXPECTED [EXPECTED-EXIT=0|1|2 [RUNS [ANSWER]]]\n")
+    c.fprintf(c.stderr, "lmxtool: usage: selftest DIR [CHILD] | build-child REPO STAGE BASE FRONTEND RUNTIME OUT | sha256 FILE | rows PS1 OUT | stage-copy MANIFEST FROM TO | manifest LIST ROOT OUT | verify MANIFEST ROOT | deps RECORD | group-migrate ROOT SITES | checks LIST | steps LIST | same A B | exe-same A B | gate REPO STAGE BASE FRONTEND CENSUS-FRONTEND MUTANT-FRONTEND BOTH-FRONTEND RUNTIME OBSERVED LIST CENSUS-LIST OUT | replay ROWS SANDBOX WORK FRONTEND-A FRONTEND-B OUT FIRST COUNT | suite LIST REPO STAGE BASE FRONTEND RUNTIME OUT [OBSERVED] | os-walk-witness REPO STAGE BASE FRONTEND PROD OBS SOURCE OUT ENTRY SPEC | build-frontend REPO STAGE BASE PREVIOUS-FRONTEND LABEL | build-frontend-part REPO STAGE BASE PREVIOUS-FRONTEND LABEL MODULE REUSE-MANIFEST ABI-MANIFEST | build-runtime REPO STAGE BASE HOSTED-FRONTEND LABEL | build-self REPO STAGE BASE FRONTEND RUNTIME LABEL | build-generation quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | bootstrap quick|full REPO STAGE BASE PREVIOUS-HOSTED-FRONTEND LABEL SMOKE-LIST [FULL-LIST] | rebuild frontend|runtime|tool|none REPO STAGE BASE HOSTED-FRONTEND RUNTIME-DIR LABEL SMOKE-LIST | build-frontend-host REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | build-frontend-link REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | build-graph REPO STAGE BASE FRONTEND RUNTIME-DIR LABEL | graph-same LOG EXPECTED | graph-check REPO STAGE BASE FRONTEND RUNTIME-DIR GRAPH-EXE OUT SOURCE EXPECTED [EXPECTED-EXIT=0|1|2 [RUNS [ANSWER]]]\n")
     return: 2
 end: tool_main

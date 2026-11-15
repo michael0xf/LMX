@@ -365,6 +365,60 @@ fn: lmx_walk_value_foreign (@: value c.LmxWalkValue; @: storage void) int
     return: c.LMX_WALK_OK
 end: lmx_walk_value_foreign
 
+# Capture the exact C object in the caller's arena. Value copies then borrow
+# stable owned storage, not a callee local or an original mutable cell. An
+# already immutable physical cell retains its identity and stored context.
+fn: lmx_walk_value_foreign_capture (@: arena c.LmxArena; @: storage void; int: type; const: (@: abi c.LmxScalarABI); @: pool_profile c.Lmx; @: context c.LmxWalkValue; @: out c.LmxWalkValue) int
+    c.LmxWalkValue: saved
+    @: cell void 0
+    @: pool c.LmxPool 0
+    @: stored c.LmxWalkValue 0
+    if: arena = 0 || storage = 0 || out = 0 || c.lmx_type_base(type) != c.LMX_TYPE_FOREIGN || abi = 0 || abi\size = 0U || abi\init = 0 || abi\copy = 0
+        return: c.LMX_WALK_INVALID
+    if: context = 0
+        c.memset((cast: (@: void) (@ saved)), 0, c.sizeof(c.LmxWalkValue))
+    else:
+        c.memcpy((cast: (@: void) (@ saved)), (cast: (@: void) context), c.sizeof(c.LmxWalkValue))
+    pool := c.lmx_range_cell_pool(arena, storage)
+    if: pool != 0 && pool\kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN
+        if: pool\scalar_abi != abi || pool\stride != abi\size
+            return: c.LMX_WALK_INVALID
+        ---
+    ---
+    if: type < 0 && pool != 0 && pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = type && pool\profile = pool_profile && pool\scalar_abi = abi && pool\stride = abi\size
+        cell := storage
+    else:
+        cell := c.lmx_arena_scalar_cells_profiled(arena, type, pool_profile, abi, 1U)
+        if: cell = 0
+            return: c.LMX_WALK_NOMEM
+        if: abi\copy(cell, storage) != 0
+            return: c.LMX_WALK_INVALID
+        stored := c.lmx_value_cell_context(arena, cell)
+    saved\present := 1
+    saved\kind := c.LMX_WALK_VALUE_FOREIGN
+    saved\type := type
+    saved\ref := cell
+    saved\scalar_abi := abi
+    saved\physical_profile := pool_profile
+    if: stored != 0
+        c.memcpy((cast: (@: void) stored), (cast: (@: void) (@ saved)), c.sizeof(c.LmxWalkValue))
+    c.memcpy((cast: (@: void) out), (cast: (@: void) (@ saved)), c.sizeof(c.LmxWalkValue))
+    return: c.LMX_WALK_OK
+
+fn: lmx_walk_value_foreign_owned (@: arena c.LmxArena; @: value c.LmxWalkValue; @: storage void; const: (@: abi c.LmxScalarABI)) int
+    return: lmx_walk_value_foreign_capture(arena, storage, c.LMX_TYPE_FOREIGN, abi, 0, 0, value)
+
+# This is exact representation transport. Semantic Model/conversion admission
+# remains the receiving operation's responsibility, as for typed scalar writes.
+fn: lmx_walk_value_receive_scalar (@: value c.LmxWalkValue; int: type; const: (@: abi c.LmxScalarABI); @: out c.LmxWalkValue) int
+    if: value = 0 || out = 0 || value\present = 0 || c.lmx_type_base(type) != c.LMX_TYPE_FOREIGN || abi = 0
+        return: c.LMX_WALK_INVALID
+    if: value\kind != c.LMX_WALK_VALUE_FOREIGN || value\ref = 0 || c.lmx_type_base(value\type) != c.LMX_TYPE_FOREIGN || value\scalar_abi != abi
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_CONVERT
+    if: out != value
+        c.memcpy((cast: (@: void) out), (cast: (@: void) value), c.sizeof(c.LmxWalkValue))
+    return: c.LMX_WALK_OK
+
 # Slice 255 (design 4.5 B2a): a contextual literal -- a number with no type of its own (LMX_TYPE_NONE; the magnitude in
 # `wide`, the U spelling in `natural`).  It takes the type of the operand or of the place it meets (lmx_walk_value_bin,
 # lmx_walk_value_receive), as the frontend's rw_unify types a literal statically from its neighbour; alone it is an int (U:
@@ -528,6 +582,8 @@ fn: lmx_walk_value_receive (@: value c.LmxWalkValue; int: ty; @: out c.LmxWalkVa
     int: status
     if: value = 0 || out = 0 || c.lmx_type_base(ty) = c.LMX_TYPE_NONE || value\present = 0
         return: c.LMX_WALK_INVALID
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN && value\scalar_abi != 0
+        return: lmx_walk_value_receive_scalar(value, ty, (cast: (const: @: c.LmxScalarABI) value\scalar_abi), out)
     # Slice 297 (CALLABLE-PLACE-NAMED-RECEPTION; Codex 294 review): a contextual literal outside the place's type -- 300 at a
     # char formal of the callable a call selected -- is the implicit `convert` before anything receives it.
     if: value\kind = c.LMX_WALK_VALUE_NUMBER && c.lmx_type_base(value\type) = c.LMX_TYPE_NONE && lmx_walk_value_lit_fits(value, ty) = 0
@@ -637,6 +693,7 @@ end: lmx_walk_value_unary
 # (lmx_value_loaded_context).
 fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c.LmxWalkValue) int
     int: base_type 0
+    @: pool c.LmxPool 0
     c.LmxWalkValue: current
     @: current_value c.LmxWalkValue @ current
     c.LmxPointerCellRead: read c.lmx_pointer_value_known
@@ -646,6 +703,17 @@ fn: lmx_walk_value_load (@: arena c.LmxArena; @: storage void; int: ty; @: out c
         lmx_walk_value_clear(out)
         return: c.LMX_WALK_OK
     base_type := c.lmx_type_base(ty)
+    if: base_type = c.LMX_TYPE_FOREIGN
+        pool := c.lmx_range_cell_pool(arena, storage)
+        if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type != ty || pool\scalar_abi = 0 || pool\stride != pool\scalar_abi\size
+            return: c.LMX_WALK_INVALID
+        current_value := c.lmx_value_cell_context(arena, storage)
+        if: current_value = 0
+            return: c.LMX_WALK_INVALID
+        if: current_value\present = 0
+            lmx_walk_value_clear(out)
+            return: c.LMX_WALK_OK
+        return: lmx_walk_value_foreign_capture(arena, storage, ty, (cast: (const: @: c.LmxScalarABI) pool\scalar_abi), (cast: (@: c.Lmx) pool\profile), current_value, out)
     if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
         if: c.lmx_value_cell_access(arena, storage, @ read, @ write) != 0 || read = 0
             return: c.LMX_WALK_INVALID
@@ -793,6 +861,11 @@ fn: lmx_walk_value_materialize (@: arena c.LmxArena; @: value c.LmxWalkValue; @@
         return: c.LMX_WALK_OK
     if: arena = 0 || arena\source_view != 0U
         return: c.LMX_WALK_INVALID
+    if: saved\kind = c.LMX_WALK_VALUE_FOREIGN && saved\scalar_abi != 0
+        status := lmx_walk_value_foreign_capture(arena, (cast: (@: void) saved\ref), saved\type, (cast: (const: @: c.LmxScalarABI) saved\scalar_abi), (cast: (@: c.Lmx) saved\physical_profile), @ saved, @ saved)
+        if: status = c.LMX_WALK_OK
+            outcell[0] := saved\ref
+        return: status
     if: saved\kind = c.LMX_WALK_VALUE_NUMBER
         status := lmx_walk_value_number(@ saved, @ number, @ ty)
         if: status != c.LMX_WALK_OK
@@ -2265,11 +2338,39 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
     size_t: number 0U
     int: ty 0
     int: status 0
+    @: scalar_pool c.LmxPool 0
+    @: scalar_context c.LmxWalkValue 0
+    @: declared_source void 0
     if: value\present = 0 || place\address = 0 || place\descriptor != 0
         return: c.LMX_WALK_INVALID
     if: c.lmx_range_write_exact_blocked(arena, place\address, 0, 0, 0U) != 0
         return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
     int: base_type c.lmx_type_base(place\type)
+    if: base_type = c.LMX_TYPE_FOREIGN
+        scalar_pool := c.lmx_range_cell_pool(arena, place\address)
+        if: scalar_pool = 0 || scalar_pool\type != place\type || scalar_pool\scalar_abi = 0
+            return: c.LMX_WALK_INVALID
+        status := lmx_walk_value_receive_scalar(value, place\type, (cast: (const: @: c.LmxScalarABI) scalar_pool\scalar_abi), received_p)
+        if: status != c.LMX_WALK_OK
+            return: status
+        status := c.lmx_code_cell_admit(arena, place\address)
+        if: status != c.LMX_WALK_OK
+            return: status
+        scalar_context := c.lmx_value_cell_context(arena, place\address)
+        if: scalar_context != 0
+            declared_source := (cast: (@: void) scalar_context\source_type)
+        if: scalar_pool\scalar_abi\copy(place\address, received_p\ref) != 0
+            return: c.LMX_WALK_INVALID
+        if: scalar_context != 0
+            c.memcpy((cast: (@: void) scalar_context), (cast: (@: void) received_p), c.sizeof(c.LmxWalkValue))
+            scalar_context\ref := place\address
+            scalar_context\type := scalar_pool\type
+            scalar_context\physical_profile := scalar_pool\profile
+            if: declared_source != 0
+                scalar_context\source_type := declared_source
+        ---
+        c.lmx_code_changed_cell(arena, place\address)
+        return: c.LMX_WALK_OK
     if: base_type >= c.LMX_TYPE_POINTER_BASE || base_type = c.LMX_TYPE_LMX || base_type = c.LMX_TYPE_DESC || base_type = c.LMX_TYPE_CHAR_PTR
         # Slice 272: another kind of value is the implicit `convert` before the write (the book :777); the contextual literal 0
         # is the present null, as a typed program writes `p: 0`.

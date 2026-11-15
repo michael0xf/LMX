@@ -1,5 +1,50 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-14 — M11.7/M13: срез394, кодовые gates и docs-check PASS
+
+393 принят/отправлен328012416dd2d6349be15bb6e532a430e61c0d62. Goal ACTIVE, предыдущий turn — progress.
+Main C:/Nyasha_Planet/LMX, root — единственный code/test/build writer; helpers выполняют read-only review.
+Два чужих untracked сохранять. Все producers393 terminal; seed — boot-m11-declared-facts-01/g2
+и graph-m11-declared-facts-g2-01 в прежнем sol-m11-construction-fresh01.
+Pipeline394: build2/codex_fix250generationchain01/runs/sol-m13-exact-storage-20261114-01.
+Общий следующий код: source-generated exact C scalar bindings, явный ABI в existing pool/Value,
+owned FOREIGN snapshot/load/receive/materialize/store, copy/GC через прежние механизмы.
+Не сузить FP/llong через int/size_t; semantic source identity, Model и physical profile различны.
+None/void не имеют ячеек; FILE не получает sizeof(FILE), ноль или угаданную pointer depth.
+Run working values/receiving и полная construction-миграция входят в общий v3 и остаются обязательными,
+пока не подключены и не проверены. Не выдавать foundation за готовность полного M11/M13/M14.
+
+Source16:925 — текущий frozen WIP; manifests/logs лежат в pipeline394 выше. Exporter генерирует
+declaration-only lmx_primitive_profile.h.lm1 и executable profile тем же selector каталога. Backend признаёт
+C99 signed/_Bool. Frontend05 готов: frontend exe015aa50e переиспользован из04, изменён только backend8e938cf1.
+Старые frontend/tool host должны использовать точный ABI393 своего runtime, не новые partial C headers:
+для bridge02 и frontend04 выделен build-artifact stage sol-m11-construction-fresh01/abi-bridge393 с exact393
+boot/g2/consumed-inputs src+headers. Это не git worktree; code/commit остаются main. Bridge04 e5fa9dd4 готов,
+его selftest01 PASS, включая15 malformed schema rows. Общий runner machine SOURCE ENTRY MODES EXPORT переводит
+машинный L2 unit один раз; обычный generated fn run owner проходит прежние n/f/root gates, само тело unit native.
+Runtime11 prod/observe BUILT через reuse неизменных modules: SHA664a7d41/3884ac55.
+Unit-machine05 PASS n/f/root0/root1: all32 bindings/Source proof, Boolean/i8 UNKNOWN, FP/64-bit/long double,
+wrong ABI store/no mutation, nonzero physical profile/immutable identity, copy/projection/qualification/GC.
+После review Source15/16 добавляют capture ABI/stride guard, отсутствие через existing present=0 без чтения/копии
+payload и удержание его metadata, отказ копии unowned referent. Unit-machine06 PASS n/f/root0/root1 включает эти regressions.
+Whole01 Root остановил во время G1 frontend translation после найденного capture gap; это НЕ PASS и не пауза goal.
+Завершённые outputs сохранены. Whole02 остановился на header generation: после прерванного01 отсутствовали
+compiler .h.lm1/body outputs. Восстановлены только10 missing compiler artifacts из bridge393 при равенстве source SHA;
+список в restored-compiler-artifacts02.txt, kernel sources не менялись. Source16/canonical/verify925 PASS;
+Genuine whole03 quick PASS как boot-m13-exact-storage-03: actual G1 builds/tests G2, по9 smoke и tool startup/hash.
+Fixedpoint01:20 PASS, включая header/full profile/Value ABI/C sources/PE/canonical; Runtime11==G1==G2 driver.
+Actual G2 targeted01:4 rows n/f/root0/root1 PASS (machine C ABI assertions, Source33 и legacy place_map/map_chain).
+G2 Graph ece0680e: Graph-checks02 три случая interp/native/forced PASS, включая missing Model build4.
+Все code producers terminal; G2 semantics render01 PASS35 paired/14 cases/both snapshots.
+Fresh docs-check01 PASS35/14/27/44/615, links/LF28270; generated semantics и grammar не изменились.
+Final indexed01 PASS35/14/27/44/615, links/LF28273; diff-check clean. Результаты дописаны после проверки как outputs,
+не semantic inputs. Все gates394 PASS; commit/push прямо в main. Только receipt/docs уточнения после Source16, code gates не повторяются.
+Public primitive→frontend resolver, Run working/receiving/FFI, activation/pending GC roots и foreign-Array ABI OPEN.
+Следующая зависимая работа — GC execution roots через existing arena.activation/call_places до подключения owned scalar
+к обычным вызовам. Маркировать current/pending Values и выбранные physical places на весь срок операции;
+scratch-span не должен исчезать при возврате helper до scatter/default/admission/dispatch. Это прежние требования v3/M14,
+не отдельный план: без fake bindings, глобального registry или value_load внутри GC. Code writer и producer остаётся root.
+
 ## 2026-11-14 — M11.7/M13: срез393, ограниченная кодовая приёмка и docs PASS
 
 392 принят и отправлен b2899ec937fa440bbf26afeec0cf5d3083c6e022. Goal ACTIVE.

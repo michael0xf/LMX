@@ -24,10 +24,13 @@ predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
 predef: "l2src/lmx_range.lm1"
 include: "<stdlib.h>"
 include: "<stdint.h>"
+include: "<string.h>"
 
 # The arena's index: its rows, their count and its room, through the address of the arena's by-value dynamic array.
 fn: lmx_arena_index_data (@: arena c.LmxArena) @: c.LmxRange
@@ -146,6 +149,9 @@ fn: lmx_arena_find_profiled (@: arena c.LmxArena; int: kind; int: type; @: pool_
         return: 0
     pool := (cast: (@: LmxPool) arena\arrays)
     while: pool != 0
+        if: pool\scalar_abi != 0
+            pool := pool\next
+            continue
         if: pool\kind = kind && pool\type = type && pool\profile = pool_profile && pool\role = c.LMX_POOL_ROLE_PLAIN
             if: kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_reference_cell(type) = 0
                 return: pool
@@ -337,6 +343,8 @@ fn: lmx_arena_take_n_profiled (@: arena c.LmxArena; size_t: stride; int: kind; i
     @: array c.LmxPool 0
     if: arena = 0 || stride = 0U || count = 0U || arena\source_view != 0U
         return: 0
+    if: kind = c.LMX_KIND_PRIMITIVE && c.lmx_type_base(type) = c.LMX_TYPE_FOREIGN
+        return: 0
     if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@: void) pool_profile)) != c.LMX_KIND_STRUCT
         return: 0
     if: count > ((cast: (size_t) -1) / stride)
@@ -507,6 +515,50 @@ fn: lmx_arena_pointer_cells_profiled (@: arena c.LmxArena; int: type; @: pool_pr
     ---
     return: cell
 end: lmx_arena_pointer_cells_profiled
+
+# Exact scalar objects share the ordinary arena arrays. The physical access
+# contract is part of the pool key, separately from any language Model/profile.
+fn: lmx_arena_scalar_cells_profiled (@: arena c.LmxArena; int: type; @: pool_profile c.Lmx; const: (@: abi c.LmxScalarABI); size_t: count) @: void
+    @: pool c.LmxPool 0
+    @: cell void 0
+    @: item void 0
+    @: context c.LmxWalkValue 0
+    size_t: i 0U
+    if: arena = 0 || arena\source_view != 0U || c.lmx_type_base(type) != c.LMX_TYPE_FOREIGN || abi = 0 || abi\size = 0U || abi\init = 0 || abi\copy = 0 || count = 0U || count > (cast: (size_t) -1) / abi\size
+        return: (cast: (@: void) 0)
+    if: pool_profile != 0 && c.lmx_range_classify(arena, (cast: (@: void) pool_profile)) != c.LMX_KIND_STRUCT
+        return: (cast: (@: void) 0)
+    pool := (cast: (@: c.LmxPool) arena\arrays)
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_PRIMITIVE && pool\type = type && pool\profile = pool_profile && pool\stride = abi\size && pool\scalar_abi = abi
+            break
+        pool := pool\next
+    if: pool = 0
+        pool := c.lmx_pool_make_profiled(arena, count * abi\size, abi\size, c.LMX_KIND_PRIMITIVE, type, pool_profile)
+        if: pool = 0
+            return: (cast: (@: void) 0)
+        pool\scalar_abi := abi
+        cell := c.lmx_chunk_data(pool\head)
+    else:
+        cell := c.lmx_pool_take_n(arena, pool, count)
+    if: cell = 0
+        return: (cast: (@: void) 0)
+    while: i < count
+        item := (cast: (@: void) ((cast: (@: char) cell) + i * abi\size))
+        if: abi\init(item) != 0
+            return: (cast: (@: void) 0)
+        context := (cast: (@: c.LmxWalkValue) c.lmx_value_cell_context(arena, item))
+        if: context = 0
+            return: (cast: (@: void) 0)
+        # C object initialization does not publish a language value.
+        c.memset((cast: (@: void) context), 0, c.sizeof(c.LmxWalkValue))
+        context\kind := c.LMX_WALK_VALUE_FOREIGN
+        context\type := type
+        context\ref := item
+        context\scalar_abi := abi
+        context\physical_profile := pool_profile
+        i := i + 1U
+    return: cell
 
 # An arena-local primitive owner is the arena object, not a cell in one of its
 # arrays. Attaching the arrays transfers that ownership too. This is a

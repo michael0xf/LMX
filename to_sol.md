@@ -34,6 +34,13 @@
 Нижележащие датированные приёмки и старые описания реализации — история, не поручение достроить отменённый механизм.
 Кодовые срезы400/401 сами по себе этих изменений не подтверждают.
 
+**401, кодовые gates PASS:** typed overlap merge использует прежний mapped copier и receiving closure;
+физические aliases, Model, scalar/WORD precision и повторные writes сохраняются. Graph84 добавляет
+managed get_in/put_in с явным g; Source07:934 canonical, genuine G1/G2 quick/fixedpoint36,
+actual G2 targeted5/0 и Graph6 triple PASS. [Свидетельство401](steps/witnesses/m13-overlap-20261115/notes.md).
+Документальная замена модели принята/отправлена a3efab92. Следующий кодовый срез — удаление frozen
+index facts, таблиц и переносов по новой M14; прежнюю CODE-own graph-allocation вертикаль не продолжать.
+
 
 
 **Срез400, кодовые gates PASS:** written DATA fn_data использует общий mapped copier/queue; полный scalar/reference

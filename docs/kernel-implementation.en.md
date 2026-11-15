@@ -4,6 +4,13 @@
 [single M14 and sys tools](../next_core_tasks_v3.md#native-structures). Dated records below describe implementation history;
 their load-dirty, shared-cache, and flush references are not tasks to continue those mechanisms.
 
+**Slice401, 2026-11-15 -- typed overlap merge; bounded code gates PASS.**
+Receiving closure fixes final layouts before Value edges; the common copier preserves scalar/WORD,
+shared CHILDREN and reference Value cells. Graph84 get_in/put_in take explicit Graph context;
+the legacy raw ABI remains for direct backing. Source07:934, G1/G2 quick/fixedpoint36,
+G2 targeted5/0 and Graph6 triple PASS. This uses the earlier execution model; replacement M14 remains OPEN.
+[Witness401](../steps/witnesses/m13-overlap-20261115/notes.md).
+
 
 **Slice400, 2026-11-15 -- common mapped copier and written DATA fn_data; code gates PASS.**
 Source04:934, genuine G1/G2 quick/fixedpoint32, actual G2 targeted5/0 and Graph6 triple PASS.

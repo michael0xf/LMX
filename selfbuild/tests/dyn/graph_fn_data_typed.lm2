@@ -13,7 +13,7 @@ fn: fd_binding (@: name char; @@: source void) const: @: c.LmxScalarABI
     return: c.lmx_graph_scalar_binding(c.lmx_graph_intern(name, c.strlen(name)), source)
 
 fn: fd_named (@: g c.LmxGraph; @: root c.Lmx; @: name char) @: void
-    return: c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern(name, c.strlen(name))))
+    return: c.lmx_graph_get_in(g, root, c.lmx_graph_named(g, root, c.lmx_graph_intern(name, c.strlen(name))))
 
 fn: fd_cell (@: g c.LmxGraph; @: name char; const: (@: abi c.LmxScalarABI); @: source void; @: model c.Lmx; @: physical c.Lmx; @: bytes void) @: void
     c.LmxWalkValue: context
@@ -51,7 +51,7 @@ fn: fd_count (@: g c.LmxGraph; @: parts c.Lmx; int: expected) int
     @: data c.Lmx c.lmx_graph_method_data(g, parts)
     size_t: slot c.lmx_graph_named(g, data, c.lmx_graph_intern("count", 5U))
     int: actual 0
-    if: data = 0 || slot >= c.lmx_graph_count(data) || c.lmx_graph_value_int(g, c.lmx_graph_get(data, slot), @ actual) != 0 || actual != expected
+    if: data = 0 || slot >= c.lmx_graph_count(data) || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, data, slot), @ actual) != 0 || actual != expected
         return: 1
     return: 0
 
@@ -61,15 +61,15 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
     @: alias_source void 0
     const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
     const: (@: alias_abi c.LmxScalarABI fd_binding("f64", @ alias_source))
-    @: physical c.Lmx (cast: (@: c.Lmx) c.lmx_range_profile(arena, c.lmx_graph_get(original, 0U)))
+    @: physical c.Lmx (cast: (@: c.Lmx) c.lmx_range_profile(arena, c.lmx_graph_get_in(g, original, 0U)))
     @: make c.Lmx (cast: (@: c.Lmx) fd_named(g, (cast: (@: c.Lmx) original\parent), "Make"))
     @: f c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("F", 1U)))
     @: source_held c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find((cast: (@: c.Lmx) original\parent), c.lmx_graph_intern("Held", 4U)))
-    @: held c.Lmx (cast: (@: c.Lmx) c.lmx_arena_pointer_void_read(c.lmx_graph_get(data, 9U)))
-    @: empty void c.lmx_graph_get(data, 4U)
+    @: held c.Lmx (cast: (@: c.Lmx) c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, data, 9U)))
+    @: empty void c.lmx_graph_get_in(g, data, 4U)
     @: context c.LmxWalkValue c.lmx_value_cell_context(arena, empty)
-    @: word void c.lmx_graph_get(data, 5U)
-    @: other_word void c.lmx_graph_get(data, 7U)
+    @: word void c.lmx_graph_get_in(g, data, 5U)
+    @: other_word void c.lmx_graph_get_in(g, data, 7U)
     @: pool c.LmxPool c.lmx_range_cell_pool(arena, word)
     double: zero (cast: (double) 0)
     double: precise (cast: (double) 1) + c.DBL_EPSILON
@@ -84,21 +84,21 @@ fn: fd_verify_data (@: g c.LmxGraph; @: original c.Lmx; @: data c.Lmx; int: afte
     ---
     if: abi = 0 || alias_abi != abi || f = 0 || c.lmx_graph_method(g, f) = 0 || data = original || data != c.lmx_graph_method_data(g, f) || data\parent != f || c.lmx_graph_count(data) != 11U || c.lmx_graph_name_of(g, (cast: (@: void) data)) != c.lmx_graph_intern("data", 4U)
         return: 101
-    if: fd_expect(arena, c.lmx_graph_get(data, 0U), abi, source, data, physical, @ x_value) != 0 || fd_expect(arena, c.lmx_graph_get(data, 1U), abi, alias_source, data, physical, @ y_value) != 0 || fd_expect(arena, c.lmx_graph_get(data, 2U), abi, source, data, physical, @ replacement) != 0 || fd_expect(arena, c.lmx_graph_get(data, 3U), abi, source, data, physical, @ x_value) != 0
+    if: fd_expect(arena, c.lmx_graph_get_in(g, data, 0U), abi, source, data, physical, @ x_value) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, data, 1U), abi, alias_source, data, physical, @ y_value) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, data, 2U), abi, source, data, physical, @ replacement) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, data, 3U), abi, source, data, physical, @ x_value) != 0
         return: 102
-    if: fd_expect(arena, c.lmx_graph_get(original, 0U), abi, source, original, physical, @ zero) != 0 || fd_expect(arena, c.lmx_graph_get(original, 1U), abi, alias_source, original, physical, @ precise) != 0 || fd_expect(arena, c.lmx_graph_get(original, 3U), abi, source, original, physical, @ zero) != 0 || c.lmx_graph_get(data, 0U) = c.lmx_graph_get(original, 0U)
+    if: fd_expect(arena, c.lmx_graph_get_in(g, original, 0U), abi, source, original, physical, @ zero) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, original, 1U), abi, alias_source, original, physical, @ precise) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, original, 3U), abi, source, original, physical, @ zero) != 0 || c.lmx_graph_get_in(g, data, 0U) = c.lmx_graph_get_in(g, original, 0U)
         return: 103
-    if: abi\init(@ initialized) != 0 || empty = c.lmx_graph_get(original, 4U) || context = 0 || context\present != 0 || context\ref != empty || context\kind != c.LMX_WALK_VALUE_FOREIGN || context\type != c.LMX_TYPE_FOREIGN || context\scalar_abi != abi || context\source_type != alias_source || context\model != data || context\physical_profile != physical || c.memcmp(empty, @ initialized, abi\size) != 0
+    if: abi\init(@ initialized) != 0 || empty = c.lmx_graph_get_in(g, original, 4U) || context = 0 || context\present != 0 || context\ref != empty || context\kind != c.LMX_WALK_VALUE_FOREIGN || context\type != c.LMX_TYPE_FOREIGN || context\scalar_abi != abi || context\source_type != alias_source || context\model != data || context\physical_profile != physical || c.memcmp(empty, @ initialized, abi\size) != 0
         return: 104
-    if: word = 0 || word = c.lmx_graph_get(original, 5U) || word != c.lmx_graph_get(data, 6U) || other_word = word || other_word = c.lmx_graph_get(original, 7U) || pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, other_word) || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, c.lmx_graph_get(original, 5U))
+    if: word = 0 || word = c.lmx_graph_get_in(g, original, 5U) || word != c.lmx_graph_get_in(g, data, 6U) || other_word = word || other_word = c.lmx_graph_get_in(g, original, 7U) || pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, other_word) || c.lmx_graph_word_text(g, word) != c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, original, 5U))
         return: 105
-    if: c.lmx_arena_pointer_void_read(c.lmx_graph_get(data, 8U)) != data || c.lmx_arena_pointer_void_read(c.lmx_graph_get(original, 8U)) != original || c.lmx_graph_slot_name(g, data, 10U) != c.lmx_graph_intern("touched", 7U)
+    if: c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, data, 8U)) != data || c.lmx_arena_pointer_void_read(c.lmx_graph_get_in(g, original, 8U)) != original || c.lmx_graph_slot_name(g, data, 10U) != c.lmx_graph_intern("touched", 7U)
         return: 106
     if: held = 0 || held = source_held || c.lmx_graph_fn_result(g, (cast: (@: void) held)) != 0 || c.lmx_graph_method(g, held) != 0 || fd_count(g, held, 3) != 0 || fd_count(g, source_held, 3) != 0
         return: 107
     if: after != 0
         @: again c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(make, c.lmx_graph_intern("Again", 5U)))
-        if: c.lmx_graph_value_int(g, c.lmx_graph_get(data, 10U), @ touched) != 0 || touched != 7 || again = 0 || c.lmx_graph_method(g, again) = 0 || fd_count(g, again, 4) != 0 || c.lmx_graph_method_data(g, again) = c.lmx_graph_method_data(g, held)
+        if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, data, 10U), @ touched) != 0 || touched != 7 || again = 0 || c.lmx_graph_method(g, again) = 0 || fd_count(g, again, 4) != 0 || c.lmx_graph_method_data(g, again) = c.lmx_graph_method_data(g, held)
             return: 108
         ---
     ---
@@ -113,7 +113,7 @@ fn: fd_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: 
     int: after (cast: (int) (c.lmx_graph_name_of(g, (cast: (@: void) code)) = c.lmx_graph_intern("Verify", 6U)))
     int: checked 0
     int: status 0
-    if: g = 0 || original = 0 || nargs != 0U || c.lmx_graph_value_int(g, c.lmx_graph_get(root, checked_slot), @ checked) != 0 || checked != after
+    if: g = 0 || original = 0 || nargs != 0U || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, root, checked_slot), @ checked) != 0 || checked != after
         return: 109
     status := fd_verify_data(g, original, data, after)
     if: status != 0
@@ -158,24 +158,372 @@ fn: fd_word_cross () int
     int: status 0
     c.memset((cast: (@: void) (@ pending)), 0, c.sizeof(c.LmxCopyMap))
     c.memset((cast: (@: void) (@ relocated)), 0, c.sizeof(c.LmxCopyMap))
-    if: sg = 0 || dg = 0 || root = 0 || physical = 0 || word_a = 0 || word_b = word_a || c.lmx_graph_put(root, 0U, word_a) != 0 || c.lmx_graph_put(root, 1U, word_a) != 0 || c.lmx_graph_put(root, 2U, word_b) != 0
+    if: sg = 0 || dg = 0 || root = 0 || physical = 0 || word_a = 0 || word_b = word_a || c.lmx_graph_put_in(sg, root, 0U, word_a) != 0 || c.lmx_graph_put_in(sg, root, 1U, word_a) != 0 || c.lmx_graph_put_in(sg, root, 2U, word_b) != 0
         return: 113
     status := c.lmx_graph_copy_forest_profiled_staged(@ root, 1U, @ src, @ dst, 0, 0U, physical, @ copied, @ pending, @ relocated)
     c.lmx_copy_names_finish(@ pending, (cast: (int) (status = c.LMX_GRAPH_COPY_OK)))
     c.lmx_graph_copy_map_dispose(@ relocated)
-    if: status != c.LMX_GRAPH_COPY_OK || copied = 0 || c.lmx_graph_get(copied, 0U) = word_a || c.lmx_graph_get(copied, 0U) != c.lmx_graph_get(copied, 1U) || c.lmx_graph_get(copied, 2U) = word_b || c.lmx_graph_get(copied, 2U) = c.lmx_graph_get(copied, 0U)
+    if: status != c.LMX_GRAPH_COPY_OK || copied = 0 || c.lmx_graph_get_in(dg, copied, 0U) = word_a || c.lmx_graph_get_in(dg, copied, 0U) != c.lmx_graph_get_in(dg, copied, 1U) || c.lmx_graph_get_in(dg, copied, 2U) = word_b || c.lmx_graph_get_in(dg, copied, 2U) = c.lmx_graph_get_in(dg, copied, 0U)
         return: 114
     c.lmx_graph_close(sg)
     c.lmx_arena_release(@ src)
-    @: first void c.lmx_graph_get(copied, 0U)
-    @: second void c.lmx_graph_get(copied, 2U)
+    @: first void c.lmx_graph_get_in(dg, copied, 0U)
+    @: second void c.lmx_graph_get_in(dg, copied, 2U)
     @: pool c.LmxPool c.lmx_range_cell_pool(@ dst, first)
     unsigned: gen c.lmx_arena_generation_next(@ dst)
-    if: pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(dg, first) != canon || c.lmx_graph_word_text(dg, second) != canon || c.strcmp(canon, "token") != 0 || c.lmx_gc_mark_value(@ dst, copied, gen, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ dst, gen) != c.LMX_GC_OK || c.lmx_graph_word_text(dg, c.lmx_graph_get(copied, 0U)) != canon
+    if: pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(dg, first) != canon || c.lmx_graph_word_text(dg, second) != canon || c.strcmp(canon, "token") != 0 || c.lmx_gc_mark_value(@ dst, copied, gen, 0) != c.LMX_GC_OK || c.lmx_gc_sweep(@ dst, gen) != c.LMX_GC_OK || c.lmx_graph_word_text(dg, c.lmx_graph_get_in(dg, copied, 0U)) != canon
         return: 115
     c.lmx_graph_close(dg)
     c.lmx_arena_release(@ dst)
     return: 0
+
+fn: fd_merge_callback (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: g c.LmxGraph c.lmx_graph_find(arena)
+    @: root c.Lmx (cast: (@: c.Lmx) code\parent)
+    @: m c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("M", 1U)))
+    @: n c.Lmx (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("N", 1U)))
+    @: merged c.Lmx (cast: (@: c.Lmx) owner)
+    @: source void 0
+    @: alias_source void 0
+    const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
+    const: (@: alias_abi c.LmxScalarABI fd_binding("f64", @ alias_source))
+    @: cell void c.lmx_graph_get_in(g, merged, 0U)
+    @: pointer void fd_named(g, merged, "cellAlias")
+    @: slot_pointer void fd_named(g, merged, "slotAlias")
+    @: context c.LmxWalkValue c.lmx_value_cell_context(arena, pointer)
+    size_t: checked_slot c.lmx_graph_named(g, root, c.lmx_graph_intern("merge_checks", 12U))
+    int: checked 0
+    double: zero (cast: (double) 0)
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: expected precise
+    if: c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, root, checked_slot), @ checked) != 0 || checked < 0 || checked > 1
+        return: 120
+    if: checked = 1
+        expected := zero
+    if: nargs != 0U || merged = m || merged = n || c.lmx_graph_count(merged) != 4U || c.lmx_graph_named(g, merged, c.lmx_graph_intern("x", 1U)) != 0U || merged\parent != 0 || fd_expect(arena, cell, abi, source, merged, 0, @ expected) != 0
+        return: 121
+    if: pointer = 0 || slot_pointer = 0 || c.lmx_pointer_value_in(arena, pointer) != cell || c.lmx_pointer_value_in(arena, slot_pointer) != c.lmx_graph_ref_cell_in(arena, merged, 0U) || context = 0 || context\referent != c.lmx_value_cell_context(arena, cell)
+        return: 122
+    if: fd_expect(arena, c.lmx_graph_get_in(g, m, 0U), abi, source, m, 0, @ zero) != 0 || fd_expect(arena, c.lmx_graph_get_in(g, n, 2U), alias_abi, alias_source, n, 0, @ precise) != 0 || c.lmx_pointer_value_in(arena, c.lmx_graph_get_in(g, n, 0U)) != c.lmx_graph_get_in(g, n, 2U) || c.lmx_pointer_value_in(arena, c.lmx_graph_get_in(g, n, 1U)) != c.lmx_graph_ref_cell_in(arena, n, 2U)
+        return: 123
+    if: c.lmx_graph_assign_int(g, code, root, checked_slot, checked + 1) != 0
+        return: 124
+    if: out != 0
+        out[0] := 0
+    if: result != 0
+        c.lmx_walk_value_clear(result)
+    return: 0
+end: fd_merge_callback
+
+fn: fd_merge_ref (@: g c.LmxGraph; @: target c.Lmx; @: name char) @: void
+    @: cell void c.lmx_graph_ref_lmx(g, target)
+    if: cell = 0 || c.lmx_graph_name(g, cell, name, c.strlen(name)) != 0
+        return: 0
+    return: cell
+end: fd_merge_ref
+
+# Shared P in three siblings is composed with Q,R,Q. One receiving header
+# must contain p/q/r, and the final q comes from the repeated late Q.
+fn: fd_merge_siblings (@: g c.LmxGraph) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: p c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: q c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: r c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: m c.Lmx c.lmx_graph_lmx(g, 0, 3U)
+    @: n c.Lmx c.lmx_graph_lmx(g, 0, 3U)
+    @: copied void 0
+    @: common c.Lmx 0
+    @: source void 0
+    const: (@: abi c.LmxScalarABI fd_binding("f64", @ source))
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: replacement c.strtod("3.5", 0)
+    @: p_value void c.lmx_graph_int(g, 1)
+    @: q_value void fd_cell(g, "q", abi, source, q, 0, @ precise)
+    @: r_value void c.lmx_graph_int(g, 3)
+    @: r_q void fd_cell(g, "q", abi, source, r, 0, @ replacement)
+    @@: operands void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    int: status 0
+    int: number 0
+    if: p = 0 || q = 0 || r = 0 || m = 0 || n = 0 || p_value = 0 || q_value = 0 || r_value = 0 || r_q = 0 || operands = 0
+        return: 125
+    if: c.lmx_graph_name(g, p_value, "p", 1U) != 0 || c.lmx_graph_name(g, r_value, "r", 1U) != 0 || c.lmx_graph_put_in(g, p, 0U, p_value) != 0 || c.lmx_graph_put_in(g, q, 0U, q_value) != 0 || c.lmx_graph_put_in(g, r, 0U, r_value) != 0 || c.lmx_graph_put_in(g, r, 1U, r_q) != 0
+        return: 126
+    if: c.lmx_graph_put_in(g, m, 0U, fd_merge_ref(g, p, "a")) != 0 || c.lmx_graph_put_in(g, m, 1U, fd_merge_ref(g, p, "b")) != 0 || c.lmx_graph_put_in(g, m, 2U, fd_merge_ref(g, p, "c")) != 0 || c.lmx_graph_put_in(g, n, 0U, fd_merge_ref(g, q, "a")) != 0 || c.lmx_graph_put_in(g, n, 1U, fd_merge_ref(g, r, "b")) != 0 || c.lmx_graph_put_in(g, n, 2U, fd_merge_ref(g, q, "c")) != 0
+        return: 127
+    operands[0] := m
+    operands[1] := n
+    status := c.lmx_graph_merge_values(g, operands, 2U, @ copied)
+    c.free((cast: (@: void) operands))
+    if: status != 0 || copied = 0
+        return: 128
+    common := (cast: (@: c.Lmx) c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "a")))
+    if: common = 0 || common = p || common = q || common = r || c.lmx_graph_count(common) != 3U || c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "b")) != common || c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "c")) != common
+        return: 129
+    if: fd_expect(arena, fd_named(g, common, "q"), abi, source, common, 0, @ precise) != 0 || c.lmx_graph_value_int(g, fd_named(g, common, "p"), @ number) != 0 || number != 1 || c.lmx_graph_value_int(g, fd_named(g, common, "r"), @ number) != 0 || number != 3 || fd_expect(arena, q_value, abi, source, q, 0, @ precise) != 0 || fd_expect(arena, r_q, abi, source, r, 0, @ replacement) != 0
+        return: 130
+    return: 0
+end: fd_merge_siblings
+
+fn: fd_merge_pointer (@: g c.LmxGraph; @: target void; @: name char) @: void
+    @: cell void c.lmx_pointer_new_profiled(c.LMX_TYPE_CELL_POINTER, (cast: (@: c.LmxArena) g\arena), 0)
+    if: cell = 0 || c.lmx_pointer_store_in(g\arena, cell, target) != 0 || c.lmx_graph_name(g, cell, name, c.strlen(name)) != 0
+        return: 0
+    return: cell
+end: fd_merge_pointer
+
+fn: fd_merge_word_aliases (@: g c.LmxGraph) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: physical c.Lmx c.lmx_node_new_owned(arena)
+    @: m c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: n c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: first void c.lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_WORD, physical)
+    @: late void c.lmx_scalar_new_physical_profiled(arena, c.LMX_TYPE_WORD, physical)
+    @: copied void 0
+    @: cell void 0
+    @: pool c.LmxPool 0
+    @: old_text char c.lmx_graph_intern("old", 3U)
+    @: new_text char c.lmx_graph_intern("new", 3U)
+    @@: operands void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    int: status 0
+    if: physical = 0 || m = 0 || n = 0 || first = 0 || late = 0 || operands = 0 || c.lmx_charptr_store_known(first, old_text) != 0 || c.lmx_charptr_store_known(late, new_text) != 0 || c.lmx_graph_name(g, first, "x", 1U) != 0 || c.lmx_graph_name(g, late, "x", 1U) != 0
+        return: 140
+    if: c.lmx_graph_put_in(g, m, 0U, first) != 0 || c.lmx_graph_put_in(g, m, 1U, fd_merge_pointer(g, first, "firstWord")) != 0 || c.lmx_graph_put_in(g, n, 0U, fd_merge_pointer(g, late, "lateWord")) != 0 || c.lmx_graph_put_in(g, n, 1U, late) != 0
+        return: 141
+    operands[0] := m
+    operands[1] := n
+    status := c.lmx_graph_merge_values(g, operands, 2U, @ copied)
+    c.free((cast: (@: void) operands))
+    if: status != 0 || copied = 0
+        return: 142
+    cell := fd_named(g, (cast: (@: c.Lmx) copied), "x")
+    pool := c.lmx_range_cell_pool(arena, cell)
+    if: cell = first || cell = late || pool = 0 || pool\type != c.LMX_TYPE_WORD || pool\profile != physical || c.lmx_graph_word_text(g, cell) != new_text || c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "firstWord")) != cell || c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "lateWord")) != cell || c.lmx_graph_word_text(g, first) != old_text || c.lmx_graph_word_text(g, late) != new_text
+        return: 143
+    return: 0
+end: fd_merge_word_aliases
+
+fn: fd_merge_singleton_alias (@: g c.LmxGraph) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: p c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: q c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: r c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: m c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: n c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: o c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: first void c.lmx_graph_int(g, 1)
+    @: middle void c.lmx_graph_int(g, 2)
+    @: last void c.lmx_graph_int(g, 3)
+    @: copied void 0
+    @: common c.Lmx 0
+    @@: operands void (cast: (@@: void) c.calloc(3U, sizeof(@: void)))
+    int: number 0
+    int: status 0
+    if: p = 0 || q = 0 || r = 0 || m = 0 || n = 0 || o = 0 || first = 0 || middle = 0 || last = 0 || operands = 0 || c.lmx_graph_name(g, first, "x", 1U) != 0 || c.lmx_graph_name(g, middle, "x", 1U) != 0 || c.lmx_graph_name(g, last, "x", 1U) != 0
+        return: 144
+    if: c.lmx_graph_put_in(g, p, 0U, first) != 0 || c.lmx_graph_put_in(g, q, 0U, middle) != 0 || c.lmx_graph_put_in(g, r, 0U, last) != 0 || c.lmx_graph_put_in(g, m, 0U, fd_merge_ref(g, p, "a")) != 0 || c.lmx_graph_put_in(g, m, 1U, fd_merge_ref(g, q, "b")) != 0 || c.lmx_graph_put_in(g, n, 0U, fd_merge_ref(g, q, "a")) != 0 || c.lmx_graph_put_in(g, o, 0U, fd_merge_ref(g, r, "a")) != 0
+        return: 145
+    operands[0] := m
+    operands[1] := n
+    operands[2] := o
+    status := c.lmx_graph_merge_values(g, operands, 3U, @ copied)
+    c.free((cast: (@: void) operands))
+    if: status != 0 || copied = 0
+        return: 146
+    common := (cast: (@: c.Lmx) c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "a")))
+    if: common = 0 || c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "b")) != common || c.lmx_graph_value_int(g, fd_named(g, common, "x"), @ number) != 0 || number != 3 || c.lmx_graph_value_int(g, middle, @ number) != 0 || number != 2
+        return: 147
+    return: 0
+end: fd_merge_singleton_alias
+
+fn: fd_merge_parent_alias (@: g c.LmxGraph) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: p c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: q c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: m c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: n c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: source void 0
+    const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
+    double: zero (cast: (double) 0)
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    @: a void fd_cell(g, "x", abi, source, 0, 0, @ zero)
+    @: b void fd_cell(g, "x", abi, source, 0, 0, @ precise)
+    @: q_value void c.lmx_graph_int(g, 3)
+    @: copied void 0
+    @: child c.Lmx 0
+    @: cell void 0
+    @@: operands void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    int: status 0
+    int: number 0
+    if: p = 0 || q = 0 || m = 0 || n = 0 || a = 0 || b = 0 || q_value = 0 || operands = 0 || c.lmx_graph_name(g, q_value, "q", 1U) != 0 || c.lmx_graph_put_in(g, p, 0U, b) != 0 || c.lmx_graph_put_in(g, q, 0U, q_value) != 0 || c.lmx_graph_put_in(g, m, 0U, a) != 0 || c.lmx_graph_put_in(g, m, 1U, fd_merge_ref(g, p, "child")) != 0 || c.lmx_graph_put_in(g, n, 0U, b) != 0 || c.lmx_graph_put_in(g, n, 1U, fd_merge_ref(g, q, "child")) != 0
+        return: 150
+    operands[0] := m
+    operands[1] := n
+    status := c.lmx_graph_merge_values(g, operands, 2U, @ copied)
+    c.free((cast: (@: void) operands))
+    if: status != 0 || copied = 0
+        return: 151
+    cell := fd_named(g, (cast: (@: c.Lmx) copied), "x")
+    child := (cast: (@: c.Lmx) c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "child")))
+    if: child = 0 || fd_named(g, child, "x") != cell || cell = a || cell = b || fd_expect(arena, cell, abi, source, 0, 0, @ precise) != 0 || c.lmx_graph_value_int(g, fd_named(g, child, "q"), @ number) != 0 || number != 3 || fd_expect(arena, a, abi, source, 0, 0, @ zero) != 0 || fd_expect(arena, b, abi, source, 0, 0, @ precise) != 0
+        return: 152
+    return: 0
+end: fd_merge_parent_alias
+
+fn: fd_merge_shared_slots (@: g c.LmxGraph) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: holder c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: m c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: first void c.lmx_graph_int(g, 5)
+    @: replacement void c.lmx_graph_int(g, 9)
+    @: copied void 0
+    @@: cells void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    @@: operands void (cast: (@@: void) c.calloc(1U, sizeof(@: void)))
+    int: status 0
+    int: value 0
+    if: holder = 0 || m = 0 || first = 0 || replacement = 0 || cells = 0 || operands = 0 || c.lmx_graph_name(g, first, "x", 1U) != 0 || c.lmx_graph_put_in(g, holder, 0U, first) != 0
+        return: 153
+    cells[0] := (cast: (@: void) c.lmx_graph_ref_cell_in(arena, holder, 0U))
+    cells[1] := cells[0]
+    if: c.lmx_graph_fields_bind(arena, m, cells) != 0 || c.lmx_graph_get_in(g, m, 0U) != first || c.lmx_graph_get_in(g, m, 1U) != first
+        return: 154
+    operands[0] := m
+    status := c.lmx_graph_merge_values(g, operands, 1U, @ copied)
+    c.free((cast: (@: void) operands))
+    c.free((cast: (@: void) cells))
+    if: status != 0 || copied = 0
+        return: 155
+    if: c.lmx_graph_count((cast: (@: c.Lmx) copied)) != 2U || c.lmx_graph_ref_cell_in(arena, (cast: (@: c.Lmx) copied), 0U) != c.lmx_graph_ref_cell_in(arena, (cast: (@: c.Lmx) copied), 1U) || c.lmx_graph_ref_cell_in(arena, (cast: (@: c.Lmx) copied), 0U) = c.lmx_graph_ref_cell_in(arena, holder, 0U) || c.lmx_graph_get_in(g, (cast: (@: c.Lmx) copied), 0U) = first || c.lmx_graph_get_in(g, (cast: (@: c.Lmx) copied), 0U) != c.lmx_graph_get_in(g, (cast: (@: c.Lmx) copied), 1U) || c.lmx_graph_value_int(g, c.lmx_graph_get_in(g, (cast: (@: c.Lmx) copied), 0U), @ value) != 0 || value != 5
+        return: 156
+    if: c.lmx_graph_put_in(g, (cast: (@: c.Lmx) copied), 0U, replacement) != 0 || c.lmx_graph_get_in(g, (cast: (@: c.Lmx) copied), 1U) != replacement || c.lmx_graph_get_in(g, holder, 0U) != first
+        return: 156
+    return: 0
+end: fd_merge_shared_slots
+
+fn: fd_merge_reference_cell (@: g c.LmxGraph) int
+    @: arena c.LmxArena (cast: (@: c.LmxArena) g\arena)
+    @: p c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: q c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: m c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: n c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: p_value void c.lmx_graph_int(g, 1)
+    @: q_value void c.lmx_graph_int(g, 2)
+    @: late_ref void fd_merge_ref(g, q, "a")
+    @: copied void 0
+    @: reference void 0
+    @: common c.Lmx 0
+    @: target void 0
+    @@: operands void (cast: (@@: void) c.calloc(2U, sizeof(@: void)))
+    int: status 0
+    if: p = 0 || q = 0 || m = 0 || n = 0 || p_value = 0 || q_value = 0 || late_ref = 0 || operands = 0 || c.lmx_graph_name(g, p_value, "p", 1U) != 0 || c.lmx_graph_name(g, q_value, "q", 1U) != 0 || c.lmx_graph_put_in(g, p, 0U, p_value) != 0 || c.lmx_graph_put_in(g, q, 0U, q_value) != 0 || c.lmx_graph_put_in(g, m, 0U, fd_merge_ref(g, p, "a")) != 0 || c.lmx_graph_put_in(g, n, 0U, fd_merge_pointer(g, late_ref, "ptr")) != 0 || c.lmx_graph_put_in(g, n, 1U, late_ref) != 0
+        return: 157
+    operands[0] := m
+    operands[1] := n
+    status := c.lmx_graph_merge_values(g, operands, 2U, @ copied)
+    c.free((cast: (@: void) operands))
+    if: status != 0 || copied = 0
+        return: 158
+    reference := fd_named(g, (cast: (@: c.Lmx) copied), "a")
+    common := (cast: (@: c.Lmx) c.lmx_pointer_value_in(arena, reference))
+    target := c.lmx_pointer_value_in(arena, fd_named(g, (cast: (@: c.Lmx) copied), "ptr"))
+    if: reference = 0 || common = 0 || c.lmx_graph_count(common) != 2U || target != reference || target = c.lmx_graph_ref_cell_in(arena, (cast: (@: c.Lmx) copied), 0U) || target = common || c.lmx_pointer_value_in(arena, late_ref) != q
+        return: 159
+    return: 0
+end: fd_merge_reference_cell
+
+fn: fd_merge_physical_aliases (@: g c.LmxGraph) int
+    int: first fd_merge_parent_alias(g)
+    int: second fd_merge_shared_slots(g)
+    int: third fd_merge_reference_cell(g)
+    c.fprintf(c.stderr, "merge physical aliases parent=%d slots=%d reference=%d\n", first, second, third)
+    if: first != 0
+        return: first
+    if: second != 0
+        return: second
+    return: third
+end: fd_merge_physical_aliases
+
+fn: fd_merge_check () int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 131
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: root c.Lmx 0
+    @: file c.FILE c.fopen("graph_merge_typed_code.lm2", "wb")
+    @: m c.Lmx c.lmx_graph_lmx(g, 0, 2U)
+    @: n c.Lmx c.lmx_graph_lmx(g, 0, 3U)
+    @: bad c.Lmx c.lmx_graph_lmx(g, 0, 1U)
+    @: source void 0
+    @: alias_source void 0
+    @: bad_source void 0
+    const: (@: abi c.LmxScalarABI fd_binding("double", @ source))
+    const: (@: alias_abi c.LmxScalarABI fd_binding("f64", @ alias_source))
+    const: (@: bad_abi c.LmxScalarABI fd_binding("float", @ bad_source))
+    double: zero (cast: (double) 0)
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    float: bad_value (cast: (float) 1)
+    @: x void fd_cell(g, "x", abi, source, m, 0, @ zero)
+    @: late void fd_cell(g, "x", alias_abi, alias_source, n, 0, @ precise)
+    @: mismatch void fd_cell(g, "x", bad_abi, bad_source, bad, 0, @ bad_value)
+    @: only_m void c.lmx_graph_int(g, 8)
+    @: cell_pointer void 0
+    @: slot_pointer void c.lmx_pointer_new_profiled(c.LMX_TYPE_CELL_POINTER, @ arena, 0)
+    c.LmxWalkPlace: place
+    c.LmxWalkValue: address
+    @: verify c.Lmx 0
+    @: work c.Lmx 0
+    @: bad_work c.Lmx 0
+    @: bad_data c.Lmx 0
+    @: prior void 0
+    size_t: bad_slot 0U
+    int: opened 0
+    int: checked 0
+    int: status 0
+    if: g = 0 || file = 0 || m = 0 || n = 0 || bad = 0 || abi = 0 || alias_abi != abi || bad_abi = 0 || bad_abi = abi || x = 0 || late = 0 || mismatch = 0 || only_m = 0 || slot_pointer = 0
+        return: 132
+    if: c.lmx_walk_cell_place(@ arena, late, 0, @ place) != c.LMX_WALK_OK || c.lmx_walk_place_address(@ arena, @ place, @ address) != c.LMX_WALK_OK || c.lmx_walk_value_materialize(@ arena, @ address, @ cell_pointer) != c.LMX_WALK_OK
+        return: 133
+    if: c.lmx_graph_name(g, only_m, "onlyM", 5U) != 0 || c.lmx_graph_name(g, cell_pointer, "cellAlias", 9U) != 0 || c.lmx_graph_name(g, slot_pointer, "slotAlias", 9U) != 0 || c.lmx_graph_put_in(g, m, 0U, x) != 0 || c.lmx_graph_put_in(g, m, 1U, only_m) != 0 || c.lmx_graph_put_in(g, n, 0U, cell_pointer) != 0 || c.lmx_graph_put_in(g, n, 1U, slot_pointer) != 0 || c.lmx_graph_put_in(g, n, 2U, late) != 0 || c.lmx_graph_put_in(g, bad, 0U, mismatch) != 0 || c.lmx_pointer_store_in(@ arena, slot_pointer, c.lmx_graph_ref_cell_in(@ arena, n, 2U)) != 0
+        return: 134
+    if: c.fputs("int: merge_checks 0\nVerifyMerge:\nend: VerifyMerge\nsub: MergeWork () ()\n    @: merged merge(M; N)\n    call: merged VerifyMerge\n    @: merged merge(M; N; M)\n    call: merged VerifyMerge\nend: MergeWork\nsub: BadMergeWork () ()\n    @: merged merge(M; Bad)\n    call: merged VerifyMerge\nend: BadMergeWork\n", file) < 0 || c.fclose(file) != 0
+        return: 135
+    status := c.lm_graph_build_file(g, "graph_merge_typed_code.lm2", @ root)
+    c.remove("graph_merge_typed_code.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("M", 1U), m) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("N", 1U), n) != 0 || c.lmx_graph_space_put(root, c.lmx_graph_intern("Bad", 3U), bad) != 0
+        return: 136
+    m\parent := root
+    n\parent := root
+    bad\parent := root
+    verify := (cast: (@: c.Lmx) fd_named(g, root, "VerifyMerge"))
+    verify\native := (cast: (c.LmxEntry) c.fd_merge_callback)
+    work := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("MergeWork", 9U)))
+    bad_work := (cast: (@: c.Lmx) c.lmx_graph_space_find(root, c.lmx_graph_intern("BadMergeWork", 12U)))
+    bad_data := c.lmx_graph_method_data(g, bad_work)
+    bad_slot := c.lmx_graph_named(g, bad_data, c.lmx_graph_intern("merged", 6U))
+    prior := c.lmx_graph_reference_cell(g, c.lmx_graph_get_in(g, bad_data, bad_slot))
+    status := c.lmx_graph_call_data(g, 0, work, 1)
+    if: status != 0
+        c.fprintf(c.stderr, "merge work status %d\n", status)
+        return: 137
+    if: c.lmx_graph_value_int(g, fd_named(g, root, "merge_checks"), @ checked) != 0 || checked != 2
+        return: 138
+    status := fd_merge_siblings(g)
+    if: status = 0
+        status := fd_merge_word_aliases(g)
+    if: status = 0
+        status := fd_merge_singleton_alias(g)
+    if: status = 0
+        status := fd_merge_physical_aliases(g)
+    if: status != 0
+        return: status
+    status := c.lmx_graph_call_data(g, 0, bad_work, 1)
+    if: status != 4 || prior = 0 || c.lmx_graph_reference_cell(g, c.lmx_graph_get_in(g, bad_data, bad_slot)) != prior || c.lmx_pointer_value_in(@ arena, prior) != 0 || c.lmx_graph_value_int(g, fd_named(g, root, "merge_checks"), @ checked) != 0 || checked != 2 || fd_expect(@ arena, x, abi, source, m, 0, @ zero) != 0
+        return: 139
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 0
+end: fd_merge_check
 
 fn: fd_mapped_check () int
     c.LmxArena: arena
@@ -232,7 +580,7 @@ fn: fd_mapped_check () int
         warm := warm + 1
     ---
     held_ref := c.lmx_graph_ref_lmx(g, held)
-    if: held_ref = 0 || c.lmx_graph_name(g, held_ref, "held", 4U) != 0 || c.lmx_graph_name(g, self, "self", 4U) != 0 || c.lmx_graph_put(data, 0U, x) != 0 || c.lmx_graph_put(data, 1U, y) != 0 || c.lmx_graph_put(data, 2U, z) != 0 || c.lmx_graph_put(data, 3U, saved) != 0 || c.lmx_graph_put(data, 4U, empty) != 0 || c.lmx_graph_put(data, 5U, word_a) != 0 || c.lmx_graph_put(data, 6U, word_a) != 0 || c.lmx_graph_put(data, 7U, word_b) != 0 || c.lmx_graph_put(data, 8U, self) != 0 || c.lmx_graph_put(data, 9U, held_ref) != 0
+    if: held_ref = 0 || c.lmx_graph_name(g, held_ref, "held", 4U) != 0 || c.lmx_graph_name(g, self, "self", 4U) != 0 || c.lmx_graph_put_in(g, data, 0U, x) != 0 || c.lmx_graph_put_in(g, data, 1U, y) != 0 || c.lmx_graph_put_in(g, data, 2U, z) != 0 || c.lmx_graph_put_in(g, data, 3U, saved) != 0 || c.lmx_graph_put_in(g, data, 4U, empty) != 0 || c.lmx_graph_put_in(g, data, 5U, word_a) != 0 || c.lmx_graph_put_in(g, data, 6U, word_a) != 0 || c.lmx_graph_put_in(g, data, 7U, word_b) != 0 || c.lmx_graph_put_in(g, data, 8U, self) != 0 || c.lmx_graph_put_in(g, data, 9U, held_ref) != 0
         return: 86
     make := (cast: (@: c.Lmx) fd_named(g, root, "Make"))
     before := (cast: (@: c.Lmx) fd_named(g, root, "Before"))
@@ -248,4 +596,8 @@ fn: fd_mapped_check () int
     c.lmx_graph_space_close(opened)
     c.lmx_graph_close(g)
     c.lmx_arena_release(@ arena)
+    status := fd_merge_check()
+    if: status != 0
+        c.fprintf(c.stderr, "merge checks status %d\n", status)
+        return: status
     return: 7

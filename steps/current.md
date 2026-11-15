@@ -22,6 +22,18 @@ Indexed docs03 выявил stale semantics: book был дополнен во �
 Render03 повторил35/14 по последнему источнику; далее indexed04 перед commit, без изменения кода.
 Indexed04 terminal PASS35/14/27/44/615, links/LF28291; working/cached diff checks PASS.
 Документальный срез26 фиксируется/отправляется прямо main; восемь code/source WIP401 не staged.
+Документальный пакет26 принят/отправлен прямо main: a3efab9209ba0fdac508ce488a542796980b5f6a.
+Код401 готов к отдельной фиксации: Source07:934 SHA6d77aba1, все code gates выше PASS;
+новые данные и границы — [свидетельство401](witnesses/m13-overlap-20261115/notes.md).
+Финальный индекс кода/статуса и docs-check проверяются перед commit/push401; code inputs не менялись.
+Далее новая M14: полное удаление frozen index requirements, receiving/receiving_index namespace fields,
+fact-copy и emitted slot_prepare; Graph84→81/Run61→60. Общие implements и receiving merge maps сохранить.
+Не считать Graph kind0 отказом указателя: address_of должен использовать existing pointer_pool_in/accessor.
+Физический guard/prepare write должен предшествовать native invalidation; не вводить второй fallible prepare после него.
+Полные M11/M13/M14 OPEN, goal ACTIVE. Старые CODE-own append/dirty/cache/flush задания отменены.
+Финальный кодовый indexed05 terminal PASS35/14/27/44/615, links/LF28292; final source verify934/0 PASS.
+18 owned files в индексе, working/cached diff checks PASS. Кодовый commit/push401 прямо main;
+далее удаление отменённых index-slot facts по новой M14, без продолжения старого dirty-механизма.
 
 ## 2026-11-15 — последнее дополнение документации: sys\indexof
 

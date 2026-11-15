@@ -134,7 +134,7 @@ end: lm_graph_int_literal
 # Only construction assigns a parent while putting a written child. Runtime writes go through invalidation.
 fn: lm_graph_build_put (@: g c.LmxGraph; @: parent c.Lmx; size_t: index; @: value void) int
     @: child c.Lmx 0
-    if: c.lmx_graph_put(parent, index, value) != 0
+    if: c.lmx_graph_put_in(g, parent, index, value) != 0
         return: 1
     if: c.lmx_graph_kind(g, value) = 4
         child := (cast: (@: c.Lmx) value)
@@ -579,12 +579,12 @@ fn: lm_graph_build_assignment (@: g c.LmxGraph; @: parent c.Lmx; @: frame c.LmP0
         return: status
     operand := rhs
     if: state != 0 && c.lmx_graph_count((cast: (@: c.Lmx) rhs)) = 1U
-        single := c.lmx_graph_get((cast: (@: c.Lmx) rhs), 0U)
+        single := c.lmx_graph_get_in(g, (cast: (@: c.Lmx) rhs), 0U)
         kind := c.lmx_graph_kind(g, single)
         if: kind = 2 || kind = 4 || kind = 5 || kind = 6 || (kind = 1 && c.lmx_graph_name_of(g, single) = 0)
             operand := single
         ---
-        if: kind = 4 && c.lmx_graph_name_of(g, single) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) single), 0U)) = state\w_assign
+        if: kind = 4 && c.lmx_graph_name_of(g, single) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, (cast: (@: c.Lmx) single), 0U)) = state\w_assign
             operand := rhs
         ---
     ---
@@ -871,7 +871,7 @@ end: lm_graph_block_item
 # Is field index of result, built from the written field nd, a data field of its Structure -- a named place, the data
 # part, a named block -- rather than a statement (a Frame named by its head, §3.3)? 1 or 0.
 fn: lm_graph_own_field (@: g c.LmxGraph; @: result c.Lmx; size_t: index; @: nd c.LmP0Node) int
-    int: kind c.lmx_graph_kind(g, c.lmx_graph_get(result, index))
+    int: kind c.lmx_graph_kind(g, c.lmx_graph_get_in(g, result, index))
     if: kind = 3
         return: 1
     if: kind = 1 || kind = 5 || kind = 6 || kind = 8 || kind = 9
@@ -904,7 +904,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         else:
             status := lm_graph_build_node(g, result, lm_graph_p0_value(item), @ value)
             if: status = 0
-                status := c.lmx_graph_put(result, i, value)
+                status := c.lmx_graph_put_in(g, result, i, value)
             ---
         ---
         i := i + 1U
@@ -929,7 +929,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         item := lm_graph_next_active(lm_graph_p0_first(source))
         while: i < c.lmx_graph_count(result) && item != 0 && status = 0
             if: lm_graph_own_field(g, result, i, lm_graph_p0_value(item)) != 0
-                status := lm_graph_build_put(g, outer, j, c.lmx_graph_get(result, i))
+                status := lm_graph_build_put(g, outer, j, c.lmx_graph_get_in(g, result, i))
                 j := j + 1U
             i := i + 1U
             item := lm_graph_next_active(lm_graph_p0_next(item))
@@ -937,7 +937,7 @@ fn: lm_graph_build_fields (@: g c.LmxGraph; @: parent c.Lmx; @: source c.LmP0Str
         if: status = 0
             status := lm_graph_build_post(g, outer, result, tail, @ loop)
         if: status = 0
-            status := c.lmx_graph_put(outer, own_count, loop)
+            status := c.lmx_graph_put_in(g, outer, own_count, loop)
         result := outer
     ---
     out[0] := result
@@ -962,7 +962,7 @@ fn: lm_graph_build_field (@: g c.LmxGraph; @: root c.Lmx; size_t: slot; @: nd c.
     r := lm_graph_build_node(g, root, nd, @ value)
     if: r != 0
         return: r
-    return: c.lmx_graph_put(root, slot, value)
+    return: c.lmx_graph_put_in(g, root, slot, value)
 end: lm_graph_build_field
 
 # The root of a parsed document as a root Lmx of the arena of g: one slot per active field, built in the written order.

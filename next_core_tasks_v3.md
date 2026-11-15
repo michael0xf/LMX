@@ -12,6 +12,15 @@ Runtime получает общий код работающего сборщик
 Отчёты срезов ниже описывают сделанный код и не переопределяют эту норму; старые OPEN-пункты
 о публикации/кеше/flush отменены, даже если встречаются в исторической записи.
 
+**Срез401, 2026-11-15 — ограниченная интеграция typed overlap merge, кодовые gates PASS.**
+Common mapped copier и receiving-group closure сохраняют scalar/WORD/reference cells, shared CHILDREN,
+parent-before-child aliases и порядок повторных writes. Managed Graph readers/writers используют явный g.
+Source07:934 canonical; private1/0+controls4/0, genuine G1/G2 quick/fixedpoint36, actual G2 targeted5/0
+и Graph6 triple PASS. [Свидетельство401](steps/witnesses/m13-overlap-20261115/notes.md).
+Это проверка копирования на прежнем исполнении, не приёмка новой M14. Далее удалить frozen index facts,
+их namespace tables, переносы и emitter preparation. Общие implements/physical guards/merge layouts сохранить.
+Image slot-alias topology, полный typed image и остальные M11/M13/M14 остаются OPEN.
+
 
 
 **Срез400, 2026-11-15 — общий mapped copier и written DATA fn_data, кодовые gates PASS.**

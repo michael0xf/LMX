@@ -4,6 +4,13 @@
 [единый M14 и sys-инструменты](../next_core_tasks_v3.md#native-structures). Датированные отчёты ниже —
 история реализации; упоминания load-dirty, общего кеша и flush в них не являются заданиями продолжать эти механизмы.
 
+**Срез401, 2026-11-15 — typed overlap merge; ограниченные кодовые gates PASS.**
+Receiving closure задаёт окончательные layouts до Value edges; common copier сохраняет scalar/WORD,
+общие CHILDREN и reference Value cells. Graph84 get_in/put_in используют явный Graph context;
+legacy raw ABI остаётся для прямого backing. Source07:934, G1/G2 quick/fixedpoint36,
+G2 targeted5/0 и Graph6 triple PASS. Это прежняя модель исполнения; новая M14 остаётся OPEN.
+[Свидетельство401](../steps/witnesses/m13-overlap-20261115/notes.md).
+
 
 **Срез400, 2026-11-15 — общий mapped copier и written DATA fn_data; кодовые gates PASS.**
 Source04:934, genuine G1/G2 quick/fixedpoint32, actual G2 targeted5/0 и Graph6 triple PASS.

@@ -20,6 +20,14 @@ flush() и frozen требования слотов при S[n] заменены
   native/storage/descriptor/typeof/toLmx/fromLmx/assert. length и parent остаются вне sys.
 - [ ] Уточнены оставшиеся вопросы M14; пройдены только затронутые языковые проверки и штатные docs gates.
 
+- [x] Ограниченный401: общий typed overlap merge с receiving-group closure, root-first aliases,
+  shared CHILDREN backing и late composed REF_LMX Value-cell. Source07:934 canonical; private1/0,
+  controls4/0, genuine G1/G2 quick, fixedpoint36, actual G2 targeted5/0 и Graph6 triple PASS.
+  Это не новая модель исполнения — [свидетельство401](steps/witnesses/m13-overlap-20261115/notes.md).
+- [ ] Ближайший кодовый шаг новой M14: удалить frozen index-slot requirements вместе с receiving tables,
+  переносами facts и emitted slot_prepare; использовать общий physical pointer decoder без referent-kind whitelist.
+  Bounds, физическую защиту записи, native invalidation и именованный допуск сохранить.
+
 
 
 - [x] Ограниченный400: written DATA fn_data использует общий mapped copier/queue и полные scalar/reference

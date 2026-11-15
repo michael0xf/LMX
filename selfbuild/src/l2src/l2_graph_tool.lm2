@@ -144,9 +144,9 @@ fn: lm_graph_emit_node (@: g c.LmxGraph; @: f c.FILE; @: value void; @: map c.Lm
     ---
     if: kind = 4 && status = 0
         while: j < n && status = 0
-            status := lm_graph_emit_node(g, f, c.lmx_graph_get(inner, j), map, next, @ target)
+            status := lm_graph_emit_node(g, f, c.lmx_graph_get_in(g, inner, j), map, next, @ target)
             if: status = 0 && target != 0U
-                c.fprintf(f, "        if: lmx_graph_put((cast: (@: Lmx) l2_gv%zu), %zuU, l2_gv%zu) != 0\n            return: 1\n", id, j, target)
+                c.fprintf(f, "        if: lmx_graph_put_in(l2_g, (cast: (@: Lmx) l2_gv%zu), %zuU, l2_gv%zu) != 0\n            return: 1\n", id, j, target)
             else:
                 status := 1
             ---
@@ -166,7 +166,7 @@ fn: lm_graph_emit_value (@: g c.LmxGraph; @: f c.FILE; @: value void; @: holder 
     if: status = 0 && id = 0U
         return: 1
     if: status = 0
-        c.fprintf(f, "        if: lmx_graph_put(%s, %zuU, l2_gv%zu) != 0\n            return: 1\n", holder, k, id)
+        c.fprintf(f, "        if: lmx_graph_put_in(l2_g, %s, %zuU, l2_gv%zu) != 0\n            return: 1\n", holder, k, id)
     return: status
 end: lm_graph_emit_value
 
@@ -242,12 +242,12 @@ fn: lm_graph_emit_address (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: targ
     parent := (cast: (@: c.Lmx) target\parent)
     if: parent = 0
         return: 3
-    while: i < c.lmx_graph_count(parent) && c.lmx_graph_get(parent, i) != (cast: (@: void) target)
+    while: i < c.lmx_graph_count(parent) && c.lmx_graph_get_in(g, parent, i) != (cast: (@: void) target)
         i := i + 1U
     ---
     if: i >= c.lmx_graph_count(parent)
         return: 3
-    c.fputs("(cast: (@: Lmx) lmx_graph_get(", f)
+    c.fputs("(cast: (@: Lmx) lmx_graph_get_in(l2_g, ", f)
     if: lm_graph_emit_address(g, f, scope, parent) != 0
         return: 3
     c.fprintf(f, ", %zuU))", i)
@@ -264,7 +264,7 @@ fn: lm_graph_emit_head (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: express
 end: lm_graph_emit_head
 
 fn: lm_graph_emit_word (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expression c.Lmx; size_t: index) int
-    c.fputs("lmx_graph_word_text(l2_g, lmx_graph_get(", f)
+    c.fputs("lmx_graph_word_text(l2_g, lmx_graph_get_in(l2_g, ", f)
     if: lm_graph_emit_address(g, f, scope, expression) != 0
         return: 3
     c.fprintf(f, ", %zuU))", index)
@@ -313,24 +313,24 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
         done := temps[0]
         value := done + 1
         temps[0] := value + 1
-        c.fprintf(f, "        if: l2_binding%d[1U] != 0U\n            @: void l2_v%d lmx_graph_get(", call_id, value)
+        c.fprintf(f, "        if: l2_binding%d[1U] != 0U\n            @: void l2_v%d lmx_graph_get_in(l2_g, ", call_id, value)
         status := lm_graph_emit_address(g, f, scope, expression)
         c.fprintf(f, ", 0U)\n            if: l2_binding%d[1U] = 1U && lmx_graph_eval_value(l2_g, lmx_call_code, l2_v%d, @ l2_v%d) != 0\n                %s\n            if: lmx_graph_call_single(l2_g, l2_call%d, l2_v%d, @ l2_t%d) != 0\n                %s\n            goto: l2_label%d\n", call_id, value, value, leave_failure, call_id, value, call_id, leave_failure, done)
     c.fprintf(f, "        []: @(void) l2_args%d %zuU\n", call_id, count + 1U)
     while: i < count && status = 0
         holder := expression
         at := i
-        actual := c.lmx_graph_get(expression, at)
-        if: c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_name_of(g, actual) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) actual), 0U)) = state\w_assign
+        actual := c.lmx_graph_get_in(g, expression, at)
+        if: c.lmx_graph_kind(g, actual) = 4 && c.lmx_graph_name_of(g, actual) = 0 && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, (cast: (@: c.Lmx) actual), 0U)) = state\w_assign
             if: c.lmx_graph_count((cast: (@: c.Lmx) actual)) != 3U
                 return: 5
             holder := (cast: (@: c.Lmx) actual)
             at := 2U
-        actual := c.lmx_graph_get(holder, at)
+        actual := c.lmx_graph_get_in(g, holder, at)
         if: c.lmx_graph_written_group(g, actual) != 0
             value := temps[0]
             temps[0] := temps[0] + 1
-            c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_read_actual(l2_g, lmx_call_code, l2_call%d, l2_binding%d[%zuU], lmx_graph_get(", value, call_id, call_id, i)
+            c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_read_actual(l2_g, lmx_call_code, l2_call%d, l2_binding%d[%zuU], lmx_graph_get_in(l2_g, ", value, call_id, call_id, i)
             status := lm_graph_emit_address(g, f, scope, holder)
             c.fprintf(f, ", %zuU), @ l2_v%d) != 0\n            %s\n", at, value, leave_failure)
         else:
@@ -353,7 +353,7 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: raw void c.lmx_graph_get(holder, index)
+    @: raw void c.lmx_graph_get_in(g, holder, index)
     @: expression c.Lmx 0
     @: args c.Lmx 0
     @: word char c.lmx_graph_word_text(g, raw)
@@ -380,7 +380,7 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
         count := c.lmx_graph_count(expression)
         # The index of a Structure, `base[index]` (the book, structure-index), as the interpreter reads it: the base's
         # value and the index's number, then the kernel's read of the slot.
-        if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) = state\w_index
+        if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U)) = state\w_index
             status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
@@ -390,14 +390,14 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             c.fprintf(f, "        if: lmx_graph_index(l2_g, l2_v%d, l2_t%d, @ l2_v%d) != 0\n            %s\n", value, number, value, leave_failure)
             temp[0] := value
             return: 0
-        if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) = state\w_deref
+        if: count = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U)) = state\w_deref
             status := lm_graph_emit_received_operand(g, f, scope, expression, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ value)
             if: status != 0
                 return: status
             # The path step, through an atom too, as the interpreter takes it (lmx_graph_step; plan M11 5a).
             c.fputs("        if: lmx_graph_step(l2_g, l2_v", f)
             c.fprintf(f, "%d, ", value)
-            c.fputs("lmx_graph_get(", f)
+            c.fputs("lmx_graph_get_in(l2_g, ", f)
             if: lm_graph_emit_address(g, f, scope, expression) != 0
                 return: 3
             c.fputs(", 2U)", f)
@@ -405,9 +405,9 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             c.fprintf(f, "        if: lmx_graph_reference_cell(l2_g, l2_v%d) != 0\n            l2_v%d: lmx_graph_reference_value(l2_g, l2_v%d)\n        if: l2_v%d = 0\n            %s\n", value, value, value, value, leave_failure)
             temp[0] := value
             return: 0
-        word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U))
+        word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 0U))
         if: count = 2U && word = state\w_at
-            if: c.lmx_graph_kind(g, c.lmx_graph_get(expression, 1U)) = 2
+            if: c.lmx_graph_kind(g, c.lmx_graph_get_in(g, expression, 1U)) = 2
                 value := temps[0]
                 temps[0] := temps[0] + 1
                 c.fprintf(f, "        @: void l2_v%d lmx_graph_resolve(l2_g, lmx_call_code, ", value)
@@ -446,7 +446,7 @@ fn: lm_graph_emit_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: hold
             c.fputs(")\n", f)
         ---
     else:
-        c.fprintf(f, "        @: void l2_v%d lmx_graph_get(", value)
+        c.fprintf(f, "        @: void l2_v%d lmx_graph_get_in(l2_g, ", value)
         if: lm_graph_emit_address(g, f, scope, holder) != 0
             return: 3
         c.fprintf(f, ", %zuU)\n", index)
@@ -467,10 +467,10 @@ fn: lm_graph_emit_received_operand (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx
     int: value 0
     int: status 0
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
-    if: (contract = 2 || receiving_kind >= 0) && c.lmx_graph_written_group(g, c.lmx_graph_get(holder, index)) != 0
+    if: (contract = 2 || receiving_kind >= 0) && c.lmx_graph_written_group(g, c.lmx_graph_get_in(g, holder, index)) != 0
         value := temps[0]
         temps[0] := temps[0] + 1
-        c.fprintf(f, "        @: void l2_v%d lmx_graph_get(", value)
+        c.fprintf(f, "        @: void l2_v%d lmx_graph_get_in(l2_g, ", value)
         status := lm_graph_emit_address(g, f, scope, holder)
         if: status != 0
             return: status
@@ -499,7 +499,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: raw void c.lmx_graph_get(holder, index)
+    @: raw void c.lmx_graph_get_in(g, holder, index)
     @: expression c.Lmx 0
     @: word char 0
     @: method void 0
@@ -540,7 +540,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
                 return: 5
             left := temps[0]
             temps[0] := temps[0] + 1
-            method := c.lmx_graph_get(expression, 0U)
+            method := c.lmx_graph_get_in(g, expression, 0U)
             if: c.lmx_graph_kind(g, method) = 1 && c.lmx_graph_name_of(g, method) = 0 && c.lmx_int_value_known(method) = 0
                 c.fprintf(f, "        int: l2_t%d %d\n", left, c.LMX_TYPE_NONE)
                 temp[0] := left
@@ -578,7 +578,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
         if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
             return: lm_graph_emit_application(g, f, scope, expression, temps, decl_names, decl_slots, decl_n, 1, temp)
         count := c.lmx_graph_count(expression)
-        word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U))
+        word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U))
         if: count = 3U && (word = state\w_plus || word = state\w_minus || word = state\w_star || word = state\w_slash || word = state\w_percent || word = state\w_eq || word = state\w_ne || word = state\w_lt || word = state\w_le || word = state\w_gt || word = state\w_ge || word = state\w_and || word = state\w_or)
             status := lm_graph_emit_number(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, @ left)
             if: status != 0
@@ -603,7 +603,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
                 c.fprintf(f, "        l2_label%d:\n", finish)
             temp[0] := left
             return: 0
-        word := c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 0U))
+        word := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 0U))
         if: count = 2U && (word = state\w_plus || word = state\w_minus || word = state\w_not)
             status := lm_graph_emit_number(g, f, scope, expression, 1U, temps, decl_names, decl_slots, decl_n, @ left)
             if: status != 0
@@ -627,7 +627,7 @@ fn: lm_graph_emit_number (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: holde
             return: lm_graph_emit_number(g, f, scope, expression, 0U, temps, decl_names, decl_slots, decl_n, temp)
         # A field path gives the int of its place; the index of a Structure gives an address, which has no int: the code
         # refuses it when it runs, as the interpreter does.
-        if: count != 3U || (c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_deref && c.lmx_graph_word_text(g, c.lmx_graph_get(expression, 1U)) != state\w_index)
+        if: count != 3U || (c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U)) != state\w_deref && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, expression, 1U)) != state\w_index)
             return: lm_graph_emit_number_refused(f, temps, temp)
         ---
     ---
@@ -651,10 +651,10 @@ end: lm_graph_emit_expr
 # operand of `name := value` -- its holder and index in out --, or the actual itself.
 sub: lm_graph_launch_actual (@: g c.LmxGraph; @: expression c.Lmx; size_t: index; @@: holder c.Lmx; @: at size_t)
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: raw void c.lmx_graph_get(expression, index)
+    @: raw void c.lmx_graph_get_in(g, expression, index)
     holder[0] := expression
     at[0] := index
-    if: state != 0 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get((cast: (@: c.Lmx) raw), 0U)) = state\w_assign
+    if: state != 0 && c.lmx_graph_kind(g, raw) = 4 && c.lmx_graph_name_of(g, raw) = 0 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, (cast: (@: c.Lmx) raw), 0U)) = state\w_assign
         holder[0] := (cast: (@: c.Lmx) raw)
         at[0] := 2U
     ---
@@ -774,7 +774,7 @@ fn: lm_graph_emit_fncall (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expre
     while: status = 0 && i < count
         if: formals[i] = state\w_return
             lm_graph_launch_actual(g, expression, i, @ holder, @ at)
-            word := c.lmx_graph_word_text(g, c.lmx_graph_description_value(g, c.lmx_graph_get(holder, at)))
+            word := c.lmx_graph_word_text(g, c.lmx_graph_description_value(g, c.lmx_graph_get_in(g, holder, at)))
             if: word = 0 || c.lmx_graph_language_word(state, word) = 0
                 word := 0
                 status := lm_graph_emit_operand(g, f, scope, holder, at, temps, decl_names, decl_slots, decl_n, @ described)
@@ -920,7 +920,7 @@ fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: l
     @: path c.Lmx (cast: (@: c.Lmx) left)
     int: owner 0
     int: status 0
-    if: state = 0 || c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get(path, 1U)) != state\w_deref
+    if: state = 0 || c.lmx_graph_kind(g, left) != 4 || c.lmx_graph_count(path) != 3U || c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, path, 1U)) != state\w_deref
         return: 2
     status := lm_graph_emit_received_operand(g, f, code, path, 0U, 2, -1, temps, decl_names, decl_slots, decl_n, @ owner)
     if: status != 0
@@ -928,7 +928,7 @@ fn: lm_graph_emit_field_place (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: l
     # The Structure holding the written place and its slot, as in the interpreter: the owner, or the target of a
     # reference to it; through an atom, the record the atom refers to.
     c.fprintf(f, "        size_t: l2_s%d 0U\n        if: lmx_graph_step_place(l2_g, l2_v%d, ", owner, owner)
-    c.fputs("lmx_graph_get(", f)
+    c.fputs("lmx_graph_get_in(l2_g, ", f)
     status := lm_graph_emit_address(g, f, code, path)
     c.fputs(", 2U)", f)
     c.fprintf(f, ", @ l2_v%d, @ l2_s%d) != 0\n            %s\n", owner, owner, leave_failure)
@@ -955,7 +955,7 @@ fn: lm_graph_emit_model_kind (@: g c.LmxGraph; @: code c.Lmx; @: name char; int:
     slot := c.lmx_graph_formal(g, model, name)
     if: slot >= c.lmx_graph_count(model)
         return: 0
-    value := c.lmx_graph_get(model, slot)
+    value := c.lmx_graph_get_in(g, model, slot)
     kind := c.lmx_graph_kind(g, value)
     if: kind = 3
         return: 1
@@ -983,7 +983,7 @@ end: lm_graph_emit_site
 fn: lm_graph_emit_assignment_value (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: statement c.Lmx; int: mode; @: temps int; @@: decl_names char; @: decl_slots size_t; size_t: decl_n; int: kind; int: receiving_kind; int: owner) int
     c.LmxGraphEmitScratch: leave_storage
     @: leave_failure char (cast: (@: char) leave_storage\failure)
-    @: name char c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U))
+    @: name char c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, statement, 1U))
     int: value 0
     int: contract 0
     int: status 0
@@ -1025,7 +1025,7 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
     @: leave_failure char (cast: (@: char) leave_storage\failure)
     lm_graph_emit_leave_text(leave_failure, temps[1], 1)
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
-    @: left void c.lmx_graph_get(statement, 1U)
+    @: left void c.lmx_graph_get_in(g, statement, 1U)
     @: name char c.lmx_graph_word_text(g, left)
     int: owner 0
     int: value 0
@@ -1068,7 +1068,7 @@ fn: lm_graph_emit_assignment (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: st
     else:
         c.fprintf(f, "        int: l2_k%d 0\n", place_kind)
         status := lm_graph_emit_field_place(g, f, code, left, temps, decl_names, decl_slots, decl_n, @ owner)
-        c.fprintf(f, "        @: void l2_c%d lmx_graph_reference_cell(l2_g, lmx_graph_get((cast: (@: Lmx) l2_v%d), l2_s%d))\n        l2_k%d: lmx_graph_kind(l2_g, l2_c%d)\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) != 0\n            l2_k%d: 1\n        if: l2_k%d != 1 && l2_k%d != 5 && l2_k%d != 6\n            %s\n", owner, owner, owner, place_kind, owner, owner, owner, place_kind, place_kind, place_kind, place_kind, leave_failure)
+        c.fprintf(f, "        @: void l2_c%d lmx_graph_reference_cell(l2_g, lmx_graph_get_in(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d))\n        l2_k%d: lmx_graph_kind(l2_g, l2_c%d)\n        if: lmx_graph_place_cell(l2_g, (cast: (@: Lmx) l2_v%d), l2_s%d) != 0\n            l2_k%d: 1\n        if: l2_k%d != 1 && l2_k%d != 5 && l2_k%d != 6\n            %s\n", owner, owner, owner, place_kind, owner, owner, owner, place_kind, place_kind, place_kind, place_kind, leave_failure)
     ---
     if: status != 0
         return: status
@@ -1141,7 +1141,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             status := lm_graph_emit_scope(g, f, code, body, temps)
         if: status != 0
             return: status
-        raw := c.lmx_graph_get(body, i)
+        raw := c.lmx_graph_get_in(g, body, i)
         kind := c.lmx_graph_kind(g, raw)
         # A declaration of an int place in a body runs at its written position (§3.2), at every reach, as in the
         # interpreter (plan M11 5a, B5, B10): a literal declaration writes into the activation's place what stands in its
@@ -1157,7 +1157,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
                     return: status
                 c.fprintf(f, "        if: l2_k%d != 1\n            %s\n", number, leave_failure)
                 if: kind = 1
-                    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_get(", number)
+                    c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_value_int(l2_g, lmx_graph_get_in(l2_g, ", number)
                     if: lm_graph_emit_address(g, f, code, body) != 0
                         return: 3
                     c.fprintf(f, ", %zuU), @ l2_t%d) != 0\n            %s\n", i, number, leave_failure)
@@ -1214,7 +1214,7 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
         head := c.lmx_graph_name_of(g, raw)
         if: head = 0
             if: n != 0U
-                head := c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 0U))
+                head := c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, statement, 0U))
             if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
                 status := lm_graph_emit_application(g, f, code, statement, temps, 0, 0, 0U, 0, @ result)
                 i := i + 1U
@@ -1245,20 +1245,20 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
         if: head = state\w_finally
             return: lm_graph_emit_finally(g, f, code, body, i, to, statement, mode, exit_label, again_label, step_label, temps)
         if: head = state\w_if
-            if: n != 2U || c.lmx_graph_kind(g, c.lmx_graph_get(statement, 1U)) != 4
+            if: n != 2U || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, statement, 1U)) != 4
                 return: 2
             end_label := temps[0]
             next_label := end_label + 1
             temps[0] := temps[0] + 2
             status := lm_graph_emit_number(g, f, code, statement, 0U, temps, 0, 0, 0U, @ result)
             c.fprintf(f, "        if: l2_t%d = 0\n            goto: l2_label%d\n", result, next_label)
-            nested := (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U))
+            nested := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, statement, 1U))
             if: status = 0
                 status := lm_graph_emit_block(g, f, code, nested, 0U, c.lmx_graph_count(nested), mode, exit_label, again_label, step_label, temps)
             c.fprintf(f, "        goto: l2_label%d\n        l2_label%d:\n", end_label, next_label)
             i := i + 1U
-            if: i < to && c.lmx_graph_kind(g, c.lmx_graph_get(body, i)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get(body, i)) = state\w_else
-                statement := (cast: (@: c.Lmx) c.lmx_graph_get(body, i))
+            if: i < to && c.lmx_graph_kind(g, c.lmx_graph_get_in(g, body, i)) = 4 && c.lmx_graph_name_of(g, c.lmx_graph_get_in(g, body, i)) = state\w_else
+                statement := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, body, i))
                 if: status = 0
                     c.lmx_graph_code_body(g, statement, 0U, @ nested, @ code_from, @ code_to)
                     status := lm_graph_emit_block(g, f, code, nested, code_from, code_to, mode, exit_label, again_label, step_label, temps)
@@ -1271,10 +1271,10 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
         if: head = state\w_else
             return: 2
         if: head = state\w_while || head = state\w_for || head = state\w_until
-            if: n != 2U || c.lmx_graph_kind(g, c.lmx_graph_get(statement, 1U)) != 4
+            if: n != 2U || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, statement, 1U)) != 4
                 return: 2
-            nested := (cast: (@: c.Lmx) c.lmx_graph_get(statement, 1U))
-            header := (cast: (@: c.Lmx) c.lmx_graph_get(statement, 0U))
+            nested := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, statement, 1U))
+            header := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, statement, 0U))
             test_label := temps[0]
             body_label := test_label + 1
             next_label := test_label + 2
@@ -1351,10 +1351,10 @@ fn: lm_graph_emit_block (@: g c.LmxGraph; @: f c.FILE; @: code c.Lmx; @: body c.
             i := i + 1U
             continue
         if: head = state\w_at
-            if: n = 2U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
+            if: n = 2U && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, statement, 1U)) = state\w_int
                 return: 5
             kind := 6
-            if: n = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get(statement, 1U)) = state\w_int
+            if: n = 3U && c.lmx_graph_word_text(g, c.lmx_graph_get_in(g, statement, 1U)) = state\w_int
                 kind := 5
             if: n != 2U && kind != 5
                 return: 5
@@ -1468,7 +1468,7 @@ fn: lm_graph_collect_methods (@: g c.LmxGraph; @: root c.Lmx; @@@: methods c.Lmx
         ---
         i := 0U
         while: i < c.lmx_graph_count(current) && status = 0
-            value := c.lmx_graph_get(current, i)
+            value := c.lmx_graph_get_in(g, current, i)
             if: c.lmx_graph_kind(g, value) = 4
                 status := c.lmx_graph_scan_add(@ queue, @ count, @ capacity, (cast: (@: c.Lmx) value))
             i := i + 1U
@@ -1589,19 +1589,19 @@ fn: lm_graph_emit_program (@: g c.LmxGraph; @: root c.Lmx; const: (@: out_path c
     # Like the `run` command's host, this separate adapter completes its own test after a successful body. Ordinary
     # `emit` gets no adapter and still fails R0 when the source supplies neither success nor an exit Message.
     if: check_root != 0
-        c.fprintf(f, "external:\n    fn: lm_graph_check_root (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena arena; @: Lmx code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph g lmx_graph_find(arena)\n        @: Lmx unit (cast: (@: Lmx) lmx_graph_get(code, 0U))\n        int: status 0\n        int: count 0\n        if: g = 0 || unit = 0 || lmx_graph_dump_marked(g, unit, c.stdout, \"BEFORE\") != 0\n            return: 1\n        while: count < %d && status = 0\n            status: lmx_graph_call(g, unit)\n            count: count + 1\n        ---\n        if: lmx_graph_dump_marked(g, unit, c.stdout, \"AFTER\") != 0\n            return: 1\n        if: status != 0\n            return: status\n        @: LmxThread thread lmx_thread_current()\n        @: LmxMsg message lmx_thread_message(thread)\n        if: message = 0\n            return: 1\n        message\\success: (cast: (LmxFlag) 1)\n        return: 0\n    end: lm_graph_check_root\nend: external\n\n", runs)
+        c.fprintf(f, "external:\n    fn: lm_graph_check_root (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out; @: LmxArena arena; @: Lmx code; @: LmxWalkValue input; @: LmxWalkValue result) int\n        @: LmxGraph g lmx_graph_find(arena)\n        @: Lmx unit (cast: (@: Lmx) lmx_graph_get_in(g, code, 0U))\n        int: status 0\n        int: count 0\n        if: g = 0 || unit = 0 || lmx_graph_dump_marked(g, unit, c.stdout, \"BEFORE\") != 0\n            return: 1\n        while: count < %d && status = 0\n            status: lmx_graph_call(g, unit)\n            count: count + 1\n        ---\n        if: lmx_graph_dump_marked(g, unit, c.stdout, \"AFTER\") != 0\n            return: 1\n        if: status != 0\n            return: status\n        @: LmxThread thread lmx_thread_current()\n        @: LmxMsg message lmx_thread_message(thread)\n        if: message = 0\n            return: 1\n        message\\success: (cast: (LmxFlag) 1)\n        return: 0\n    end: lm_graph_check_root\nend: external\n\n", runs)
     # Ordinary emission builds the program in R0. A private emit-check host owns a separate program root, so clearing
     # the program's native entry cannot erase the adapter or change the program's lexical parent.
     c.fputs("external:\n    fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int\n        @: LmxGraph l2_g 0\n        @: void l2_c 0\n        @: Lmx lmx_call_code 0\n        @: Lmx l2_method 0\n", f)
     c.fputs("        l2_g: lmx_graph_open(arena)\n        if: l2_g = 0 || graph = 0\n            return: 1\n        l2_program_arena: arena\n        l2_program_root_graph: graph\n        l2_program_unit: graph\n", f)
     if: check_root != 0
-        c.fprintf(f, "        l2_program_unit: lmx_graph_lmx(l2_g, 0, %zuU)\n        if: l2_program_unit = 0 || lmx_graph_put(graph, 0U, (cast: (@: void) l2_program_unit)) != 0\n            return: 1\n", n)
+        c.fprintf(f, "        l2_program_unit: lmx_graph_lmx(l2_g, 0, %zuU)\n        if: l2_program_unit = 0 || lmx_graph_put_in(l2_g, graph, 0U, (cast: (@: void) l2_program_unit)) != 0\n            return: 1\n", n)
     c.fputs("        @: void l2_gv1 (cast: (@: void) l2_program_unit)\n", f)
     r := c.lmx_copy_map_init(@ emitted)
     if: r = 0
         r := c.lmx_copy_map_put(@ emitted, (cast: (@: void) root), (cast: (@: void) 1U))
     while: i < n && r = 0
-        value := c.lmx_graph_get(root, i)
+        value := c.lmx_graph_get_in(g, root, i)
         r := lm_graph_emit_value(g, f, value, "l2_program_unit", i, @ emitted, @ next)
         i := i + 1U
     ---
@@ -2027,7 +2027,7 @@ fn: lm_graph_mutation_var_chain (@: g c.LmxGraph) int
     link := c.lmx_graph_ref_lmx(g, inner)
     if: link = 0 || c.lmx_graph_name(g, k, "k", 1U) != 0 || c.lmx_graph_name(g, (cast: (@: void) outer), "P", 1U) != 0 || c.lmx_graph_name(g, (cast: (@: void) inner), "C", 1U) != 0 || c.lmx_graph_name(g, link, "c", 1U) != 0
         return: 1
-    if: c.lmx_graph_put(outer, 0U, k) != 0 || c.lmx_graph_put(outer, 1U, (cast: (@: void) inner)) != 0 || c.lmx_graph_put(inner, 0U, c.lmx_graph_word(g, "k", 1U)) != 0 || c.lmx_graph_put(written, 0U, link) != 0
+    if: c.lmx_graph_put_in(g, outer, 0U, k) != 0 || c.lmx_graph_put_in(g, outer, 1U, (cast: (@: void) inner)) != 0 || c.lmx_graph_put_in(g, inner, 0U, c.lmx_graph_word(g, "k", 1U)) != 0 || c.lmx_graph_put_in(g, written, 0U, link) != 0
         return: 1
     name := c.lmx_graph_intern("probe", 5U)
     field := c.lmx_graph_intern("k", 1U)
@@ -2038,12 +2038,12 @@ fn: lm_graph_mutation_var_chain (@: g c.LmxGraph) int
     if: status = 0
         vars := c.lmx_graph_method_data(g, made)
     if: vars != 0 && c.lmx_graph_count(vars) = 1U
-        held := c.lmx_graph_get(vars, 0U)
+        held := c.lmx_graph_get_in(g, vars, 0U)
         copied := (cast: (@: c.Lmx) c.lmx_graph_target(g, held))
     ---
     if: copied != 0 && copied\parent != 0
         kept := c.lmx_graph_field(g, (cast: (@: void) copied\parent), field)
-    return: lm_graph_mutation_report("var-copy-keeps-the-lexical-chain-of-a-reached-structure", (cast: (int) (status = 0 && c.lmx_graph_kind(g, held) = 6 && copied != inner && copied\parent != 0 && copied\parent != outer && kept != k && c.lmx_graph_value_int(g, kept, @ value) = 0 && value = 7 && inner\parent = outer && c.lmx_graph_target(g, c.lmx_graph_get(written, 0U)) = (cast: (@: void) inner))))
+    return: lm_graph_mutation_report("var-copy-keeps-the-lexical-chain-of-a-reached-structure", (cast: (int) (status = 0 && c.lmx_graph_kind(g, held) = 6 && copied != inner && copied\parent != 0 && copied\parent != outer && kept != k && c.lmx_graph_value_int(g, kept, @ value) = 0 && value = 7 && inner\parent = outer && c.lmx_graph_target(g, c.lmx_graph_get_in(g, written, 0U)) = (cast: (@: void) inner))))
 end: lm_graph_mutation_var_chain
 
 # First/later writes preserve uninit reference identities; one construction map
@@ -2080,36 +2080,36 @@ fn: lm_graph_mutation_reference (@: g c.LmxGraph; int: kind) int
         second_value := second
     if: written = 0 || args = 0 || body = 0 || decl = 0 || wrapper = 0 || cell = 0 || first_value = 0 || second_value = 0 || word = 0 || name = 0
         return: 1
-    if: c.lmx_graph_name(g, cell, "r", 1U) != 0 || c.lmx_graph_put(written, 0U, wrapper) != 0 || c.lmx_graph_put(written, 1U, cell) != 0 || c.lmx_graph_put(written, 2U, first) != 0
+    if: c.lmx_graph_name(g, cell, "r", 1U) != 0 || c.lmx_graph_put_in(g, written, 0U, wrapper) != 0 || c.lmx_graph_put_in(g, written, 1U, cell) != 0 || c.lmx_graph_put_in(g, written, 2U, first) != 0
         return: 1
     c.printf("MUTATION-REFERENCE kind%d\n", kind)
     status := c.lmx_graph_fn_make(g, decl, name, args, word, written, body, 1, @ made)
     if: status = 0
         copied := c.lmx_graph_method_data(g, made)
     if: copied != 0
-        copied_wrapper := c.lmx_graph_get(copied, 0U)
-        copied_cell := c.lmx_graph_get(copied, 1U)
+        copied_wrapper := c.lmx_graph_get_in(g, copied, 0U)
+        copied_cell := c.lmx_graph_get_in(g, copied, 1U)
     fails := fails + lm_graph_mutation_report("unwritten-reference-copy-keeps-service-wrapper-and-shared-cell", (cast: (int) (status = 0 && copied_wrapper != wrapper && copied_cell != cell && c.lmx_graph_kind(g, copied_wrapper) = kind + 3 && c.lmx_graph_kind(g, copied_cell) = kind && c.lmx_graph_reference_cell(g, copied_wrapper) = copied_cell)))
     if: fails != 0
         return: fails
     status := c.lmx_graph_assign_reference(g, written, wrapper, first_value)
-    fails := fails + lm_graph_mutation_report("reference-first-write-keeps-slot-wrapper-and-typed-cell", (cast: (int) (status = 0 && c.lmx_graph_get(written, 0U) = wrapper && c.lmx_graph_kind(g, wrapper) = kind + 3 && c.lmx_graph_reference_cell(g, wrapper) = cell && c.lmx_graph_kind(g, cell) = kind && c.lmx_arena_pointer_void_read(cell) = first)))
+    fails := fails + lm_graph_mutation_report("reference-first-write-keeps-slot-wrapper-and-typed-cell", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, written, 0U) = wrapper && c.lmx_graph_kind(g, wrapper) = kind + 3 && c.lmx_graph_reference_cell(g, wrapper) = cell && c.lmx_graph_kind(g, cell) = kind && c.lmx_arena_pointer_void_read(cell) = first)))
     status := c.lmx_graph_assign_reference(g, written, wrapper, wrapper)
     fails := fails + lm_graph_mutation_report("reference-service-wrapper-is-a-value-of-its-type", (cast: (int) (status = 0 && c.lmx_arena_pointer_void_read(cell) = first)))
     status := c.lmx_graph_fn_make(g, decl, name, args, word, written, body, 1, @ made)
     if: status = 0
         copied := c.lmx_graph_method_data(g, made)
     if: copied != 0
-        copied_wrapper := c.lmx_graph_get(copied, 0U)
-        copied_cell := c.lmx_graph_get(copied, 1U)
-        copied_target := c.lmx_graph_get(copied, 2U)
+        copied_wrapper := c.lmx_graph_get_in(g, copied, 0U)
+        copied_cell := c.lmx_graph_get_in(g, copied, 1U)
+        copied_target := c.lmx_graph_get_in(g, copied, 2U)
     fails := fails + lm_graph_mutation_report("reference-copy-map-keeps-wrapper-cell-and-target-sharing", (cast: (int) (status = 0 && copied_wrapper != wrapper && copied_cell != cell && copied_target != first && c.lmx_graph_kind(g, copied_wrapper) = kind + 3 && c.lmx_graph_kind(g, copied_cell) = kind && c.lmx_graph_reference_cell(g, copied_wrapper) = copied_cell && c.lmx_arena_pointer_void_read(copied_cell) = copied_target)))
     if: fails != 0
         return: fails
     status := c.lmx_graph_assign_reference(g, copied, copied_wrapper, second_value)
     fails := fails + lm_graph_mutation_report("reference-copy-write-keeps-source-target", (cast: (int) (status = 0 && c.lmx_arena_pointer_void_read(copied_cell) = second && c.lmx_arena_pointer_void_read(cell) = first)))
     status := c.lmx_graph_assign_reference(g, written, cell, second_value)
-    fails := fails + lm_graph_mutation_report("reference-later-write-through-saved-cell-keeps-identities", (cast: (int) (status = 0 && c.lmx_graph_get(written, 0U) = wrapper && c.lmx_graph_reference_cell(g, wrapper) = cell && c.lmx_graph_kind(g, wrapper) = kind + 3 && c.lmx_graph_kind(g, cell) = kind && c.lmx_arena_pointer_void_read(cell) = second)))
+    fails := fails + lm_graph_mutation_report("reference-later-write-through-saved-cell-keeps-identities", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, written, 0U) = wrapper && c.lmx_graph_reference_cell(g, wrapper) = cell && c.lmx_graph_kind(g, wrapper) = kind + 3 && c.lmx_graph_kind(g, cell) = kind && c.lmx_arena_pointer_void_read(cell) = second)))
 return: fails
 
 # Shared code, a data alias to its literal, and a cycle are ordinary Lmx slots. There is no retained reverse index.
@@ -2151,25 +2151,25 @@ fn: lm_graph_mutation_check () int
         return: 1
     if: c.lmx_graph_name(g, x, "x", 1U) != 0
         return: 1
-    if: c.lmx_graph_put(scope, 0U, (cast: (@: void) a)) != 0 || c.lmx_graph_put(scope, 1U, (cast: (@: void) b)) != 0 || c.lmx_graph_put(scope, 2U, (cast: (@: void) data)) != 0 || c.lmx_graph_put(scope, 3U, (cast: (@: void) fresh)) != 0 || c.lmx_graph_put(scope, 4U, (cast: (@: void) scope)) != 0
+    if: c.lmx_graph_put_in(g, scope, 0U, (cast: (@: void) a)) != 0 || c.lmx_graph_put_in(g, scope, 1U, (cast: (@: void) b)) != 0 || c.lmx_graph_put_in(g, scope, 2U, (cast: (@: void) data)) != 0 || c.lmx_graph_put_in(g, scope, 3U, (cast: (@: void) fresh)) != 0 || c.lmx_graph_put_in(g, scope, 4U, (cast: (@: void) scope)) != 0
         return: 1
-    if: c.lmx_graph_put(a, 0U, x) != 0 || c.lmx_graph_put(a, 1U, (cast: (@: void) statement)) != 0 || c.lmx_graph_put(b, 0U, x) != 0 || c.lmx_graph_put(b, 1U, (cast: (@: void) statement)) != 0 || c.lmx_graph_put(data, 0U, literal) != 0 || c.lmx_graph_put(fresh, 0U, uninit) != 0
+    if: c.lmx_graph_put_in(g, a, 0U, x) != 0 || c.lmx_graph_put_in(g, a, 1U, (cast: (@: void) statement)) != 0 || c.lmx_graph_put_in(g, b, 0U, x) != 0 || c.lmx_graph_put_in(g, b, 1U, (cast: (@: void) statement)) != 0 || c.lmx_graph_put_in(g, data, 0U, literal) != 0 || c.lmx_graph_put_in(g, fresh, 0U, uninit) != 0
         return: 1
-    if: c.lmx_graph_put(statement, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || c.lmx_graph_put(statement, 1U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put(statement, 2U, (cast: (@: void) expression)) != 0 || c.lmx_graph_put(expression, 0U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put(expression, 1U, plus) != 0 || c.lmx_graph_put(expression, 2U, literal) != 0
+    if: c.lmx_graph_put_in(g, statement, 0U, c.lmx_graph_word(g, ":=", 2U)) != 0 || c.lmx_graph_put_in(g, statement, 1U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put_in(g, statement, 2U, (cast: (@: void) expression)) != 0 || c.lmx_graph_put_in(g, expression, 0U, c.lmx_graph_word(g, "x", 1U)) != 0 || c.lmx_graph_put_in(g, expression, 1U, plus) != 0 || c.lmx_graph_put_in(g, expression, 2U, literal) != 0
         return: 1
     a\native := (cast: (c.LmxEntry) c.lm_graph_native_probe)
     b\native := (cast: (c.LmxEntry) c.lm_graph_native_probe)
     fresh\native := (cast: (c.LmxEntry) c.lm_graph_native_probe)
     same_cell := c.lmx_graph_place_cell(g, fresh, 0U)
     status := c.lmx_graph_assign_int(g, scope, fresh, 0U, 5)
-    fails := fails + lm_graph_mutation_report("first-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get(fresh, 0U) = uninit && c.lmx_graph_kind(g, uninit) = 3 && c.lmx_arena_pointer_void_read(uninit) = same_cell && c.lmx_graph_kind(g, same_cell) = 1 && fresh\native != 0 && c.lmx_graph_read_int(g, fresh, 0U, @ value) = 0 && value = 5)))
+    fails := fails + lm_graph_mutation_report("first-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_graph_kind(g, uninit) = 3 && c.lmx_arena_pointer_void_read(uninit) = same_cell && c.lmx_graph_kind(g, same_cell) = 1 && fresh\native != 0 && c.lmx_graph_read_int(g, fresh, 0U, @ value) = 0 && value = 5)))
     status := c.lmx_graph_assign_int(g, scope, fresh, 0U, 7)
-    fails := fails + lm_graph_mutation_report("later-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get(fresh, 0U) = uninit && c.lmx_arena_pointer_void_read(uninit) = same_cell && fresh\native != 0 && c.lmx_graph_value_int(g, same_cell, @ value) = 0 && value = 7)))
+    fails := fails + lm_graph_mutation_report("later-write-preserves-slot-pointer-cell-and-entry", (cast: (int) (status = 0 && c.lmx_graph_get_in(g, fresh, 0U) = uninit && c.lmx_arena_pointer_void_read(uninit) = same_cell && fresh\native != 0 && c.lmx_graph_value_int(g, same_cell, @ value) = 0 && value = 7)))
     status := c.lmx_graph_assign_int(g, scope, a, 0U, 9)
     fails := fails + lm_graph_mutation_report("ordinary-data-write-preserves-both-entries", (cast: (int) (status = 0 && a\native != 0 && b\native != 0 && c.lmx_graph_read_int(g, b, 0U, @ value) = 0 && value = 9)))
     fails := fails + lm_graph_mutation_report("preserved-entry-is-dispatched", (cast: (int) (c.lmx_graph_call(g, a) = 77)))
     status := c.lmx_graph_write_slot(g, scope, expression, 1U, (cast: (@: void) (@ value)))
-    fails := fails + lm_graph_mutation_report("foreign-value-refused-before-publication", (cast: (int) (status != 0 && c.lmx_graph_get(expression, 1U) = plus && a\native != 0 && b\native != 0)))
+    fails := fails + lm_graph_mutation_report("foreign-value-refused-before-publication", (cast: (int) (status != 0 && c.lmx_graph_get_in(g, expression, 1U) = plus && a\native != 0 && b\native != 0)))
     status := c.lmx_graph_assign_int(g, scope, data, 0U, 7)
     fails := fails + lm_graph_mutation_report("literal-written-through-data-alias-clears-both", (cast: (int) (status = 0 && a\native = 0 && b\native = 0 && fresh\native != 0)))
     status := c.lmx_graph_call(g, a)
@@ -2223,16 +2223,16 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     # data registry, without executing a declaration on the way to r.
     if: c.lmx_graph_space_open(g, root, @ opened) != 0
         return: 1
-    point := (cast: (@: c.Lmx) c.lmx_graph_get(root, 0U))
+    point := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, root, 0U))
     method := (cast: (@: c.Lmx) c.lmx_graph_target(g, c.lmx_graph_resolve(g, root, c.lmx_graph_intern("take", 4U))))
     if: c.lmx_graph_method(g, method) = 0
         return: 1
     args := c.lmx_graph_method_args(g, method)
     body := c.lmx_graph_method_code(g, method)
-    statement := (cast: (@: c.Lmx) c.lmx_graph_get(body, 0U))
-    expression := (cast: (@: c.Lmx) c.lmx_graph_get(statement, 0U))
-    product := (cast: (@: c.Lmx) c.lmx_graph_get(expression, 0U))
-    required := c.lmx_graph_get(args, 1U)
+    statement := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, body, 0U))
+    expression := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, statement, 0U))
+    product := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, expression, 0U))
+    required := c.lmx_graph_get_in(g, args, 1U)
     method\native := (cast: (c.LmxEntry) c.lm_graph_native_probe)
     status := c.lmx_graph_assign_int(g, root, point, 0U, 3)
     fails := fails + lm_graph_mutation_report("method-data-write-preserves-entry", (cast: (int) (status = 0 && method\native != 0)))
@@ -2251,10 +2251,10 @@ fn: lm_graph_method_mutation (const: (@: path char)) int
     status := c.lmx_graph_invoke(g, method, values, 2U, @ answer)
     fails := fails + lm_graph_mutation_report("method-next-body-result59", (cast: (int) (status = 0 && answer = 59)))
     method\native := (cast: (c.LmxEntry) c.lm_graph_native_probe)
-    formal := (cast: (@: c.Lmx) c.lmx_graph_get(args, 0U))
+    formal := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, args, 0U))
     status := c.lmx_graph_write_slot(g, root, formal, 0U, c.lmx_graph_word(g, "Point", 5U))
     fails := fails + lm_graph_mutation_report("method-written-formal-clears-entry", (cast: (int) (status = 0 && method\native = 0)))
-    fails := fails + lm_graph_mutation_report("method-formal-and-activation-lifetime", (cast: (int) (required = c.lmx_graph_get(args, 1U) && c.lmx_graph_kind(g, required) = 3 && arena\activation = 0)))
+    fails := fails + lm_graph_mutation_report("method-formal-and-activation-lifetime", (cast: (int) (required = c.lmx_graph_get_in(g, args, 1U) && c.lmx_graph_kind(g, required) = 3 && arena\activation = 0)))
     c.lmx_graph_space_close(opened)
     c.free((cast: (@: void) values))
     c.lmx_graph_close(g)
@@ -2331,7 +2331,7 @@ fn: lm_graph_emit_merge (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expres
     temps[0] := temps[0] + 1
     c.fprintf(f, "        []: @(void) l2_ops%d %zuU\n", ops, n + 1U)
     while: j < n && status = 0
-        raw := c.lmx_graph_get(expression, j)
+        raw := c.lmx_graph_get_in(g, expression, j)
         if: c.lmx_graph_merge_literal(g, scope, raw) != 0
             literal := (cast: (@: c.Lmx) raw)
             made := temps[0]
@@ -2345,11 +2345,11 @@ fn: lm_graph_emit_merge (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: expres
                 # Frame `int: name value` has its value second, a Frame `@: name int value` third
                 # (lmx_graph_literal_field).
                 value := -1
-                if: c.lmx_graph_kind(g, c.lmx_graph_get(literal, i)) = 1
+                if: c.lmx_graph_kind(g, c.lmx_graph_get_in(g, literal, i)) = 1
                     status := lm_graph_emit_operand(g, f, scope, literal, i, temps, decl_names, decl_slots, decl_n, @ value)
                 ---
-                if: c.lmx_graph_kind(g, c.lmx_graph_get(literal, i)) = 4
-                    element := (cast: (@: c.Lmx) c.lmx_graph_get(literal, i))
+                if: c.lmx_graph_kind(g, c.lmx_graph_get_in(g, literal, i)) = 4
+                    element := (cast: (@: c.Lmx) c.lmx_graph_get_in(g, literal, i))
                     at := 1U
                     if: c.lmx_graph_name_of(g, (cast: (@: void) element)) = state\w_at
                         at := 2U
@@ -2417,7 +2417,7 @@ fn: lm_graph_emit_application (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @: 
         status := lm_graph_emit_head(g, f, scope, application)
         c.fputs(", 0", f)
     else:
-        c.fputs("0, lmx_graph_get(", f)
+        c.fputs("0, lmx_graph_get_in(l2_g, ", f)
         status := lm_graph_emit_address(g, f, scope, application)
         c.fputs(", 0U)", f)
     ---

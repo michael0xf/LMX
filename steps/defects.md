@@ -1,5 +1,15 @@
 # Дефекты — отдельный список (автор, 2026-09-24: «дефекты вносите в отдельный список и поправляйте сразу как находите»)
 
+### GRAPH-MERGE-PHYSICAL-ALIASES — 2026-11-15, Codex, FIXED в срезе401
+
+Во время WIP401 новый overlap worker нарушал parent-before-child first-map order, разделял общие
+CHILDREN slots и отдельно копировал late REF_LMX Value-cell composing part. Source06 воспроизвёл
+все три отказа152/156/159 на Runtime03. Source07 заранее регистрирует receiving headers, затем
+выполняет root-first per-group bind/places/aliases до children; managed get_in/put_in учитывают
+реальное backing. Private и actual G2 regression PASS, fixedpoint36 и Graph6 triple PASS.
+[Точные свидетельства и границы](witnesses/m13-overlap-20261115/notes.md). Это исправление WIP copier,
+не приёмка новой M14. Удаление отменённых slot facts и новая модель кадров остаются OPEN.
+
 ### GRAPH-FN-RETURN-TRAILER-IGNORED — 2026-11-13, Codex, OPEN
 
 Чистый граф пропускает return-трейлер определения fn. Минимальный

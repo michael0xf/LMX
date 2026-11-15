@@ -1226,6 +1226,8 @@ fn: decl_arena (@: f c.FILE) int
         return: 1
     if: c.fputs("    fn: lmx_arena_index_len (@: LmxArena arena) size_t\n    fn: lmx_arena_index_cap (@: LmxArena arena) size_t\n    fn: lmx_arena_index_set_data (@: LmxArena arena; @: LmxRange data) void\n    fn: lmx_arena_index_set_len (@: LmxArena arena; size_t: len) void\n    fn: lmx_arena_index_set_cap (@: LmxArena arena; size_t: capacity) void\nend: prototype\n", f) < 0
         return: 1
+    if: c.fputs("\n# Scratch of ONE Graph merge; no record or address is published in its graph.\nstruct: LmxGraphMergeLayout\n    @: LmxGraphMergeLayout next\n    @: LmxGraphMergeLayout leader\n    size_t: order\n    @@: Lmx sources\n    size_t: count\n    size_t: capacity\n    @@: char names\n    @@: void first\n    @@: Lmx from_nodes\n    @: size_t from_j\n    @: int wrote\n    size_t: width\n    @: Lmx target\nend: LmxGraphMergeLayout\n\nstruct: LmxGraphMergeJob\n    @: LmxGraphMergeJob parent\n    @@: void values\n    size_t: count\nend: LmxGraphMergeJob\n", f) < 0
+        return: 1
     return: 0
 end: decl_arena
 
@@ -2255,7 +2257,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
     @@: walk_value_names char c.calloc(186U, sizeof(@: char))
-    @@: graph_names char c.calloc(82U, sizeof(@: char))
+    @@: graph_names char c.calloc(84U, sizeof(@: char))
     @@: graph_run_names char c.calloc(61U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
@@ -2360,6 +2362,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_names[79] := "lmx_graph_scalar_binding"
     graph_names[80] := "lmx_graph_scalar_source"
     graph_names[81] := "lmx_graph_scalar_description"
+    graph_names[82] := "lmx_graph_get_in"
+    graph_names[83] := "lmx_graph_put_in"
     graph_run_names[0] := "lmx_graph_eval"
     graph_run_names[1] := "lmx_graph_run"
     graph_run_names[2] := "lmx_graph_call"
@@ -3242,7 +3246,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 63, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 82, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 84, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 61, 1) != 0
         return: 1

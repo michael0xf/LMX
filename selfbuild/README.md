@@ -6,6 +6,15 @@ and grouped sys tools (translate returns L1 and diagnostics). Existing accepted 
 still describe their actual earlier behavior; they do not establish this replacement. No speculative runtime;
 share necessary working builder code for concrete operations.
 
+Slice401 (2026-11-15), bounded code gates PASS: the common mapped copier supports typed overlapping Graph merge.
+Receiving-group closure fixes final layouts before Value edges. Root-first place/alias preparation preserves
+shared physical CHILDREN slots and reference Value cells. Managed consumers use explicit Graph get_in/put_in.
+Source07:934 is frozen/canonical; genuine G1/G2 quick, fixedpoint36, actual G2 targeted5 and Graph6 triple PASS.
+Working G2: `build2/codex_fix250generationchain01/sol-m13-overlap-01/boot-m13-overlap-01/g2`;
+frontend SHA9bd2a170, Tool SHA1e999065. [Evidence401](../steps/witnesses/m13-overlap-20261115/notes.md).
+This does not implement the replacement call-frame model. Next: remove frozen index-slot requirements,
+their tables, metadata transfers and emitted preparation under the new M14. Full M11/M13/M14 remain OPEN.
+
 
 Slice400 (2026-11-15), directly on main: common mapped copier and written DATA fn_data; bounded code gates PASS.
 The existing queue finishes complete scalar/reference snapshots; WORD retains physical type/profile and canonical TEXT.

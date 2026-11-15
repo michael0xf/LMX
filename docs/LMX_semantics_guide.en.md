@@ -4,29 +4,19 @@ These are short non-normative examples. The [semantics](LMX_semantics.en.md)
 and [grammar](LMX_grammar.en.md) govern if they differ.
 
 <a id="data-receiver-execution"></a>
-## What runs during a data pass
+## Preparation does not execute the program
 
-Data does not become a program body. A direct pass executes only root-level declaration receivers;
-executing such a receiver may call code supplied to it in the ordinary way.
-
-A data fragment, with `makeValue` declared separately as a method:
+The builder folds ready declarations without calls. Namespace preparation considers only data/code
+root declarations, visiting neither nested branches nor graph references. In
 
 ```lmx
-Values:
-    int: x makeValue()
-    Nested:
-        int: y makeValue()
-end: Values
+mark()
+int: y makeValue()
 ```
 
-During a pass over the data of `Values`, the `int` receiver declares `x` and receives its value through
-`makeValue()`. The `Nested` form declares a nested Structure. Its `int: y ...` is not executed by this
-pass: it belongs to another data level. If execution of `makeValue` reaches `test`, it follows the
-ordinary rules; no separate traversal needs to search data for `test`.
-
-Here `end: Values` closes two levels. One level needs only a dedent; `return` may be the trailer of an
-executable definition. This is [formatting](../LMX_blog/2026-11-13.md#one-level-formatting), not a new parser
-restriction. See [data traversal](LMX_semantics.en.md#data-root-declaration-execution) for the rule.
+preparation does not move makeValue() before mark(). Executing a reached receiver remains an ordinary
+call and may execute code passed to it; this does not permit eager execution of all data initializers.
+A supplied actual suppresses its corresponding initializer. [Norm](LMX_semantics.en.md#call-frame-20261115).
 
 <a id="admission-stages"></a>
 ## Two admission steps
@@ -41,58 +31,13 @@ Knowing a candidate at construction does not remove the second step at actual ad
 change alone does not rerun all checks. See [admission and test](LMX_semantics.en.md#admission).
 
 <a id="callable-description"></a>
-## Explicit method-body composition
+## Input description and composition
 
-```lmx
-fn: add (int: x; int: y) int ()
-return: x + y
-
-fn: add5 (int: x) int ()
-    merge((int: y 5); add\code)
-```
-
-`add` stores `args` with formals `x` and `y`, `return`, `data`, and `code`
-with the `return: x + y` statement as separate parts. The `add\code` path
-selects the `code` part itself. `merge` builds an `add5` body containing `int: y 5`
-and that statement; `add5(1)` gives 6. The operand `(int: y 5)` is written in
-parentheses: the list of arguments is read as code, and a bare `int: y 5` in it
-would be a call of the receiver, not a field of the operand. The `add5` header
-declares only formal `x`: the field `y` in its new body becomes neither a
-formal nor a formal default. `merge(add; (int: y 5))` is not equivalent: the outer `add`
-method Structure has `args`, `return`, `data`, and `code` parts, but no
-immediate `y` field.
-
-An alternative `add5` puts the initializer in explicit `data` and keeps
-`add`'s body:
-
-```lmx
-fn: add5 (int: x) int (int: y 5)
-    add\code
-```
-
-A third, alternative definition changes `args` instead: here `y` is a
-formal with default 5, not a body or `data` field:
-
-```lmx
-fn: add5 merge(add\args; (int: y 5)) int ()
-    add\code
-```
-
-These are three mutually exclusive definitions of `add5`, not three
-consecutive declarations in one scope. The full `fn` form explicitly
-supplies `data` after the result description; the short source form omits
-that argument but produces the same addressable empty `data` part.
-Unary `int: x` describes a typed place without an initial value and,
-in a signature, a formal without a default.
-
-The `merge` result separately undergoes [admission](LMX_semantics.en.md#admission);
-the body's free names follow [dynamic resolution](LMX_semantics.en.md#dynamic).
-
-The header `fn: add (int: x; int: y) int` **without a body** is the third
-form: an interface descriptor that can be passed by reference but cannot
-be invoked directly as an executable `add` body. With a body after that
-header it is the short executable definition with an addressable empty
-`data`. The full form with `()` after the result supplies `data` explicitly.
+A callable has one input data part instead of former args and data. It is not completed with body fields:
+code locals belong to the call namespace. The old three add5 examples with separate args/data therefore
+no longer state the current norm. merge still explicitly constructs a new graph; it is not hidden call
+initialization. A signature without code describes a call; C parameters derive from actual argument sets.
+[Exact task and remaining syntax migration](../next_core_tasks_v3.md#native-structures).
 
 <a id="receiver-arities"></a>
 ## Place and value with `int` and `@`
@@ -121,16 +66,16 @@ declares a Structure `ms` with a field `time`, not a place `ms`.
 <a id="header-receivers"></a>
 ## Reading a Structure's header
 
-`parent(S)` gives the structural parent, `native(S)` the native entry or 0,
-`length(S)` the element count, and `storage(S)` the pointer to element storage.
-All four read values; `native(S)` does not invoke the entry it obtains.
+`parent(S)` gives the structural parent, `sys\native(S)` the native entry or 0,
+`length(S)` the element count, and `sys\storage(S)` the pointer to element storage.
+All four read values; `sys\native(S)` does not invoke the entry it obtains.
 
 | Without an argument | Equivalent explicit argument |
 | --- | --- |
 | `parent()` | `parent(data)` |
-| `native()` | `native(data)` |
+| `sys\native()` | `sys\native(data)` |
 | `length()` | `length(data)` |
-| `storage()` | `storage(data)` |
+| `sys\storage()` | `sys\storage(data)` |
 
 In `call(D C)` this is data D; to select C, write, for example, `length(code)`.
 An inline `if` body does not switch launch data. A bare receiver name does not invoke it.
@@ -147,14 +92,14 @@ it returns addresses for writing, as shown below. [Contract](LMX_semantics.en.md
 <a id="get-descriptor"></a>
 ## Header-field addresses through descriptor
 
-`descriptor(S)` selects S; with no argument, `descriptor()` selects the current data, as `descriptor(data)`.
+`sys\descriptor(S)` selects S; with no argument, `sys\descriptor()` selects the current data, as `sys\descriptor(data)`.
 This rule also applies inside nested control bodies. Code requires an explicit argument.
-Forms `descriptor: S` and `descriptor:` have the same contracts; in data, the form remains ordinary data.
+Forms `sys\descriptor: S` and `sys\descriptor:` have the same contracts; in data, the form remains ordinary data.
 
-Let d be the result of the ordinary call `descriptor: S`. It is a Structure
+Let d be the result of the ordinary call `sys\descriptor: S`. It is a Structure
 of addresses of fields `parent`, `native`, `length`, `storage` of S's flat header.
 For example, `\(d\native) := 0` writes zero to the actual S.native:
-after standard publication the next call of S uses the walker. Writing `d\native := 0` changes
+the next call of S uses the walker. Writing `d\native := 0` changes
 only the pointer inside d. There is no snapshot or later synchronization.
 
 An explicit field path or typed dereference allows an ordinary write,
@@ -162,8 +107,24 @@ including references and function pointers; the restriction on changing a bare
 Structure name does not prohibit this path. Pointer depth and Array rank are
 independent and have no fixed numeric limit. The address has S's ordinary
 lifetime bounds. The contract is approved; implementation is still pending:
-[`descriptor`](LMX_semantics.en.md#get-descriptor),
+[`sys\descriptor`](LMX_semantics.en.md#get-descriptor),
 [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+
+<a id="system-indexof"></a>
+## A field's index
+
+`sys\indexof(field parent)` returns the physical index of the unique occurrence of `field` among
+the immediate elements of Structure `parent`. An absent field or multiple occurrences of the same
+reference produce an error under the ordinary failure rules.
+
+`sys\indexof(field index parent)` selects occurrence `index` of that same reference, counted from zero,
+and returns its physical index in `parent`. A missing selected occurrence is an error.
+The occurrence number and returned index differ: when a reference occurs at positions 2 and 5,
+`index = 1` returns 5. Both forms receive `parent` explicitly; there is no zero-argument form.
+
+Lookup uses the field's identity/reference, not an equal name or primitive value. It follows neither
+nested Structures nor graph references. Structure and Array<@> use one mechanism for reading immediate
+elements. Reuse existing addressing; no reverse-index table or per-write maintenance is needed.
 
 <a id="callable-admission"></a>
 ## What the callable interface check proves
@@ -185,59 +146,35 @@ applies `\` to the **result** of the call under ordinary precedence,
 not through a special pointer-call rule.
 
 <a id="native-structures"></a>
-## Ordinary Structure native code and publication
+## Native and interpreter frames
 
-One body C receives a machine entry through the same mechanism as methods and works with any admitted D:
-`call(D C)`. The existing place map handles D's different field order. `call(C C)` is the same case;
-no artificial fn or native version for each D is needed. A Structure used only as data does not need
-its own native entry for that use; native(S) reads an entry and does not compile S.
+<a id="call-frame-20261115"></a>
+Every call, including `call(D,C)`, creates a local namespace. For fn/sub/catch, former args/data
+become one input data part. Supplied values replace the corresponding frame initializers;
+a replaced initializer is not executed. Preparation considers only data/code roots, without
+visiting branches or graph references. Code places are never appended to source data.
 
-A bare local write changes the frame's working value and dirty state; direct access changes the addressed
-cell's shared state in the cache of one execution. After actual-argument evaluation before control transfer,
-on specified exits and at yield, ready changes are published to resolved addresses.
-A path or dereference selects an actual address rather than immediate publication.
-Publication of a code change removes related native entries; an ordinary data write keeps the entry.
-Clearing the pointer neither replaces machine instructions already running nor repeats effects.
-The walker must reuse a prepared frame and agree with native on continuation after
-publication and a nested call. This introduces no new graph copy or version registry.
-[Rule](LMX_semantics.en.md#native-structures), [open M14 implementation](../next_core_tasks_v3.md#native-structures).
+Ready declarations fold during clean-graph construction without program calls.
+Computed declarations are not executed early; uninit:T types remain.
+Repeated `int: x bump()` retains computation and assignment to visible x; only the new C declaration
+is omitted. A new branch name is visible at its level and below, not outside. Repeated source-graph
+fields remain separate occurrences selected by `S\[n]x`.
+
+Bare x and @x address the call's local cell; `data\`, `code\`, and `@(data\x)` address the source graph.
+Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
+direct writes are observed through actual aliases in execution order.
+
+The executable code snapshot is selected at entry before initializers. Changing source code clears
+its native; an entered frame continues its selected snapshot. Methods and ordinary Structures share
+compilation without data=code. C signatures derive from actual calls; different argument sets yield
+different signatures. A header without code describes a call.
+[Norm and remaining clarifications](LMX_semantics.en.md#call-frame-20261115),
+[single M14 task](../next_core_tasks_v3.md#native-structures).
 
 <a id="flush-receiver-contract"></a>
-## Explicit publication with flush()
-
-`flush()`, with no arguments or result, first transfers the current frame's dirty own local values into shared
-cell state in forward field order, then stores pending shared direct-access writes into the graph.
-Other frames' locals are not published. Execution continues.
-Nested if/loop bodies use the same frame. It causes no new launch, exit, yield or Message publication.
-After successful publication dirty state is cleared: a second flush without new changes writes nothing,
-reevaluates no expressions/admission and reloads no local values. The shared cache is reconciled with
-published cells. Code changes use common invalidation.
-Bare atom flush does not invoke the receiver; in data, flush() remains an ordinary Structure.
-
-Publication semantics is shared; a universal journal of all assignments is unnecessary. Native determines
-required writes and conditions statically where possible; only dynamic places need necessary
-tracking: locals in their frame, direct access in the shared execution cache. Reducing writes preserves computations, checks, effects and alias observability
-at the same boundaries. [Contract](LMX_semantics.en.md#flush-receiver-contract),
-[open M14 implementation](../next_core_tasks_v3.md#native-structures).
-
 <a id="direct-access-cache"></a>
-## Local values and direct access
-
-Local x is an activation's working value. Direct a\x accesses a real cell through the cache shared by
-all calls within one execution, including native/walker transitions. Caching is transparent:
-after a write through a\x, a read through b\x accounts for it if they address one cell, even before physical publication.
-A local copy does not change by itself. All writers, including local dirty publication, reconcile the shared cache.
-
-If an outer call published x = 2 and an inner one published x = 9, on return the outer call reads bare x as 2
-and data\x as 9. Its clean local is not written back. With `x := 2; data\x := 9; flush()`, however,
-local x remains dirty: direct reading before flush gives 9; after local publication it gives 2.
-
-In p\x, base p can be a local pointer copy; p\x and data\p\x may then reach different objects.
-Coherence is required when their final address is the same. Changing a reference in a\child\x may change
-that address: caching a resolved path differs from caching the value of a stable cell.
-The cache lives only within the current execution; no assignment journal, graph copy or mandatory lookup
-on every access is required. A call modifying memory outside the common mechanism must reconcile affected
-direct-access state without reloading locals. [Rule](LMX_semantics.en.md#direct-access-cache).
+The old flush() and shared-cache examples are withdrawn: only explicit operations change the source graph;
+local variables are never written back.
 
 <a id="native-merge"></a>
 ## Native code in a copy

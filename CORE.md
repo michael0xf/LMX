@@ -1,5 +1,10 @@
 # LMX core architecture
 
+**2026-11-15 replacement:** [call frames without write-back](docs/LMX_semantics.en.md#call-frame-20261115),
+[M14 and sys tools](next_core_tasks_v3.md#native-structures) replace load-dirty, local publication,
+shared caching, flush, and frozen physical-slot requirements. Dated receipts below remain implementation history.
+
+
 Slice393 (2026-11-14), bounded code acceptance and docs-check PASS, on main after accepted392/b2899ec9: the existing implements resolver borrows an optional
 Graph SourceReader. Physical facts retain their meanings; exact source descriptions and receiving chains are
 separate borrowed evidence. One named mapper preserves unknown masks through all four routes. The generic pure
@@ -326,7 +331,7 @@ The current nested layout and the remaining migration are recorded in the
 
 Structure and Array<@> are fully interchangeable for equivalent contents in
 indexing, length, naming, admission, copying, execution, typeof and descriptor
-access. The header does not add elements. `descriptor(S)` returns an ordinary
+access. The header does not add elements. `sys\descriptor(S)` returns an ordinary
 Structure holding the four actual field addresses (`Lmx **`, `LmxEntry *`,
 `size_t *`, `void **`). Explicit `\(d\native) := 0` writes S.native; assigning
 `d\native` changes d's pointer field. Ordinary paths keep selecting user fields.
@@ -334,12 +339,12 @@ There is no header snapshot, write-back or reflection infrastructure. General
 typed pointers and Array rank have no fixed numerical ceiling. This target is
 [M13](next_core_tasks_v3.md#flat-lmx-descriptor), not completed implementation.
 
-`descriptor()` also defaults to the current launch's data: it equals `descriptor(data)`,
+`sys\descriptor()` also defaults to the current launch's data: it equals `sys\descriptor(data)`,
 including inside nested control bodies. An explicit argument selects S, including code.
 Both variants return the selected Structure's actual field addresses through the same mechanism.
 
-Ordinary non-declaring receivers `parent(S)`, `native(S)`, `length(S)` and `storage(S)` read the
-corresponding header values. With no argument, `parent()`, `native()`, `length()` and `storage()`
+Ordinary non-declaring receivers `parent(S)`, `sys\native(S)`, `length(S)` and `sys\storage(S)` read the
+corresponding header values. With no argument, `parent()`, `sys\native()`, `length()` and `sys\storage()`
 use the current launch's data; code requires an explicit argument. Reading a value
 does not construct a descriptor. Same-headed forms in data remain ordinary Structures,
 selected by paths and occurrence indices; there are no header pseudo-fields.
@@ -392,73 +397,30 @@ head --, not an Array element or a second data-field namespace.
 
 ## 3. Callable graph representation and activation
 
-An executable method is an ordinary Structure occurrence: its signature
-and body remain in the graph, without a permanent companion data graph.
-Execution selects code and data positions and uses a machine activation
-for arguments, locals, and return. Roles are positional, not intrinsic
-Structure labels. The selected occurrence's `native` word chooses native
-entry or L3 walker. Both paths must implement the same operation. If code
-and data layouts differ, a prepared `implements` address map governs used
-fields; equal slot numbers are not assumed.
+A callable remains an ordinary source Structure. Former args/data merge into one input data part;
+return where applicable and code remain. Every call, including call(D,C), creates its own namespace.
+Only root declarations of data and code prepare that namespace; no branch traversal or graph-reference
+walk occurs. Code locals never auto-fill source data. Ready declarations fold at clean-graph construction
+without program calls; computed declarations are not executed early. Types without a value remain.
 
-`node` names the lexical parent and `self` the active Structure under the
-call ABI. Transport distinguishes absent arguments from present null
-references. The actual selected body determines hidden inputs and
-`throws`; a slot model or `native != 0` cannot substitute for that
-preparation. See [L2 §§10–11](docs/L2_spec_en.md#own) and
-[v3 M2](next_core_tasks_v3.md).
+Actuals replace corresponding frame defaults, suppressing those original initializers. Bare x and @x
+use the same call-local cell; data\x, code\x, and @(data\x) address the source graph. Local writes
+never publish back. Nested and recursive calls have independent locals. Direct writes affect actual cells
+in sequential order, with no separate shared direct-access cache or flush receiver.
 
-### 3.1 Body fields, occurrences, and own-state
+### 3.1 Declarations and code snapshots
 
-One immediately enclosing Structure has one namespace, and what a
-declaration does follows from the role of its Structure in the launch
-([the roles `data` and `code`](docs/LMX_semantics.en.md#data-code-roles)).
-In code a declaration of a place by a receiver is a type check with an
-assignment into the place of the selected `data`; a repeated one
-(`int: i 6` on a known `i`) is an out-of-turn type check with an assignment
-and creates no second field. In data every declaring form is an occurrence
-of its name: a repeated declaration is one more occurrence, which neither
-replaces the former one nor writes into it, and after it the name is
-addressed only with the index of an occurrence. A Structure that is its own
-data first initializes the variables of its root level; this prepares the
-places only: a computed initial value is computed when execution reaches the
-line of its declaration, and the data part of a method executes its own
-initial values on entry. In data
-`Struct1: Struct2` declares the Structure `Struct1` with the one atom
-`Struct2`, a pointer to the Structure `Struct2`: a mention of a known
-Structure is not expanded, and only that atom stands in the tree under
-`Struct1`; in code the same form is a call of `Struct1`. The names of
-Structures and functions are not assigned: `Struct1 := Struct2`, which the
-decision of 2026-11-10 called the assignment, was withdrawn by the author
-on 2026-11-11 -- pointer variables are assigned
-([semantics](docs/LMX_semantics.en.md#colon-declares)).
-Assignment never appends a slot. An explicit `call`, the launch of a Structure
-by its name (§9) or a callable invocation (including `fn`) starts
-its own binding scope; its own field may shadow an outer one. There is no
-shadowing within one callable. Inline `if`/`for` are operators of that
-activation, not scopes, even though represented as Structures. A
-declaration by a receiver written under them likewise writes into the
-selected `data`, not declaring a new field in `code`. A structural form in
-executable code, `name: ... end: name` included, is a call of its head,
-neither such a write nor a declaration; the declarations of `fn`, `sub` and
-`catch` retain their own contracts. The registry of the forms of `data` is
-built over its root level: a nested form belongs to its own Structure, does
-not become a root-level form and is reached by a path through the enclosing
-one, `data\if\y`.
-One occurrence allows `data\field`; two or more require `data\[N]field`
-with zero-based `N`, never automatic first-occurrence selection. Arbitrary
-`data` is not auto-completed: data that lacks a place the code uses is
-refused by admission. Interface checking is performed once per candidate:
-at construction when known, otherwise on actual reception. Explicit `test`
-checks are the second step at run time and stop on the first `0` (§4). The v3 migration must reconcile
-parser, translator, native path, walker, and tests.
+Repeated int: x bump() retains bump(), type reception, and assignment to the visible x; only a repeated
+C declaration is omitted. Repeated graph fields remain separate occurrences selected by S\[n]x.
+New branch-local names are visible there and below, not outside. Address lifetime follows ordinary
+language rules; a local address is not replaced with the source graph's address.
 
-`@x` addresses the real stored cell, not an evaluation temporary or ABI
-box: for a Structure/Array reference, the graph's `void *` slot; for a
-primitive, its typed cell. Pointer depth is preserved. Native access to a
-graph slot follows its actual C99 `void *` storage, not aliasing through
-`Lmx **`. The general `\` operator and expression precedence are not
-specialized for function pointers. See [L2 §18](docs/L2_spec_en.md#lowlevel-address).
+Entry selects an executable code snapshot before initializers. The walker retains the corresponding
+copy; native agrees observably. Explicit source-code mutation clears affected native for the next call;
+the current call continues its selected snapshot. Methods and ordinary Structures share compilation
+without data=code. C signatures derive from actual calls; different supplied argument sets produce
+different signatures. A signature without code describes a call, not a full particular function.
+[Norm and remaining questions](docs/LMX_semantics.en.md#call-frame-20261115).
 
 ## 4. Declaration, assignment, call, and admission
 
@@ -618,315 +580,32 @@ two genuine self-replacements from supported L3/L2 sources with L1 only
 generated between them and C99. The published package has real whole G1/G2 quick generations; the final
 normative acceptance still requires the open plan items and final FULL.
 
-## 9. Known incomplete boundaries (at this snapshot)
+## 9. Current implementation gap and helper tools
 
-The active dependencies are in [v3](next_core_tasks_v3.md); historical
-tests and debt records remain in [pinned v2](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md) and
-[defects](steps/defects.md). Same-name assignment, explicit calls,
-pointer/address parity, cross-arena copy, admission maps,
-immutable-owner checks, native/walker parity, and both self-build
-generations need end-to-end evidence. Do not infer completion here.
+Accepted slices through400 and WIP401 contain earlier working-value publication and receiving-slot
+machinery. They are not evidence that the 2026-11-15 model is implemented. The sole current task is
+[M14](next_core_tasks_v3.md#native-structures): remove load-dirty, work flush boundaries, frozen slot
+admission, their tables/fact copies/generator branches, and old tests requiring the withdrawn refusals.
+Preserve necessary typed storage, ordinary GC/copying, and genuine receiving contracts.
 
-The next-generation method layout and explicit `call: data code` are
-**accepted implementation work**, not merely research. The target method
-Structure has addressable `args`, result description, `data`, and `code`;
-`data` is a separate argument before `code` and after the result type
-where present. Its explicit fields and eligible missing body fields are
-settled before constructing the Structure, without executing `data` or
-`code`. The method's `data` is read in the role of data: the declarations
-by receivers of places act in it, while assignments and all other code in
-it are not executed. At method entry the computed initial values of those
-declarations are evaluated -- this is the contract of the method itself; in data
-supplied to a launch separately a computed declaration is not executed (the
-executor's reading, answers Р12 and Р14, item В9). Publication writes a result into the slot of its declaration
-and may replace the stored initializer; the next entry sees the current graph,
-not an initializer already removed from it. This automatic layout
-belongs to that method's specific body and `data`, not to arbitrary call
-data. An ordinary Structure receives no automatic fields from the body: its
-data is passed to the launch explicitly. A child block `data:` inside an
-executed Structure is in code a form with the head `data`, a launch of the
-data of the current launch with the block in the place of the argument, and as
-a rule it is refused (see the launch by name below); the data
-and the code of such a pair are written apart -- as two Structures of data
-or as the parts `data` and `code` of a method, `call(m\data m\code)` (the
-executor's reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md),
-part Р). The general `call: data code` receives
-two Structures and admits fields required by `code` against the supplied
-`data` before execution. Declarations by receivers under inline control flow
-use that same prepared map of the root level of `data`; a form nested in
-the data is not a root-level form, and a name with several occurrences
-requires an index. They
-do not append slots to `data`. Method
-`data` fields are preallocated from its particular body, whereas arbitrary
-selected `data` must already contain every required place. Thus
-`call(m\data m\code)` passes the declared data through a prepared
-code-to-data address map. Unary `call: code` executes the code over itself
-as data (the author's decision of 2026-11-11,
-[the receivers `call` and `fncall`](docs/LMX_semantics.en.md#call-receivers));
-it selects no child `data` block, and the data is passed explicitly. It
-fabricates no data: a place the code requires and does not hold itself is
-not found, and the call refuses. Explicit
-`call: code code` is the same form, under the general admission,
-graph-write, and `native`-validity rules; it is a universality test for
-Structures. The receivers `fncall(args data return code)`,
-`fncall(data return code)`, `fncall(return code)`, `call(args data code)`,
-`call(data code)` and `call(code)` receive the parts of a launch explicitly:
-an addition to the existing mechanisms, neither a declaration nor the
-ordinary call -- `fn`, `sub` and `catch` are declared and called as before,
-and the interpreter launches them through this same open mechanism (the clean
-graph does not execute `catch` yet: that is the present state of the
-implementation, not the norm), which can call any composition of Structures.
-In every receiver the arguments are named and are supplied by position or by
-name with the operator `:=` (the executor's reading of the author's correction
-of 2026-11-11, [journal](LMX_blog/2026-11-11.md#structure-call-by-name)):
-`call(data := D; code := C)`,
-`fncall(args := A; data := D; return := int; code := C)`, the parts of `fn`
-and `sub`. In code an ordinary Structure is also launched by a form with its
-name as the head, `A()` as `call(A, A)` and `A(D)` as `call(D, A)`: a
-launch form of its own, not a form of a receiver (see the launch by name
-below).
-`fn`, `sub` and `catch` differ from
-an ordinary Structure in completing their `data` when the graph is built;
-data is read as a whole, so a name used above the line of its declaration
-reads the same place. The clean graph -- its interpreter and the `native` it
-emits -- executes these receivers since slice 353; the working frontend does
-not yet ([plan](next_core_tasks_v3.md#m10)). The data stands before the
-code in every form (the author's answer of 2026-11-11): the two-argument
-launch is `call: data code`; the clean graph reads it since slice 354 and no
-longer accepts the former `call: code data` (step 4 of
-[plan section M11](next_core_tasks_v3.md#m11)), while the working frontend and
-its fixtures still read the former order (step 8).
+S[n] := p and voidarray[n] := p store a void* without a former field contract. S\[n]x and
+voidarray\[n]x select a named occurrence; named assignment checks the field requirement during
+clean-graph construction where known. The raw store assigns no name or type to the slot.
 
-The author's decision of 2026-11-11 on the roles `data` and `code`
-([the roles `data` and `code`](docs/LMX_semantics.en.md#data-code-roles))
-narrows the rules above; it changes and extends none of them (except the
-change of the spellings `var` → `data` and `body` → `code`, of the order
-`call: data code` and of the moment of the admission `implements`;
-[journal](LMX_blog/2026-11-11.md#data-code-roles),
-[order](LMX_blog/2026-11-11.md#data-before-code)). A Structure
-takes part in a launch as data or as code -- the launch gives the role, not
-the Structure itself --, and a written form is read by
-that role. In data a structural form declares a Structure, whatever its
-head -- a written call and the control receivers are Structures there,
-addressed `data\if`, `data\if\if`, with an index when several --, the
-declarations by receivers of places act, and assignments and all other code
-are not executed: an assignment there is just a field that an index
-reaches. A repeated declaration in data is one more occurrence of the name;
-it neither replaces the former one nor writes into it, and after it the name
-is addressed only with the index of an occurrence, `data\[N]name`. In code
-every form is a call: a declaration by a receiver
-is a type check with an assignment, `Model: KnownStruct` is a call of
-`Model` and an error when `Model` names neither a callable nor a Structure;
-code declares no Structure, while the declarations of `fn`, `sub` and `catch`
-stay, a callable declared in data is called directly by its name, and an
-ordinary Structure of the data is launched by a form with its name as the
-head (see the launch by name below). An unnamed Structure
-in code is not a call: `(a b c) := myFn()` is a group assignment
-([book](docs/LMX_semantics.en.md#data-code-roles),
-[journal](LMX_blog/2026-11-11.md#unnamed-structure-not-call)). Only values are
-assigned -- primitives and pointers to Structures and to functions:
-`Model := KnownStruct3` is an error, a pointer variable is declared by
-`@: ptr KnownStruct`. Arguments of calls and of receivers are read by one
-general algorithm, as code: `f(arg: v)` is a call of `arg`, only
-`f(arg := v)` is a named argument, and a requirement with a candidate is
-written flat, `@: ptr Model Other`; formals are declared by receivers
-(`int: arg default`, `@: arg Template`), a structural form among the
-formals is forbidden, and declarations of Structures are written in the
-data block -- `sub: proc () (struct1: Template1; struct2: Template2)`.
-This record is a header without code: `sub` has three fields in the
-record -- `name args code` -- or four -- `name args data code` (the last
-field is the code, `data` is an optional part before it), so the group
-after the arguments is `data` when code follows it (in body lines or in
-one more group), while a record with a single group after the arguments
-is the short form `name args code`; a method without executable forms
-writes the empty code part explicitly, `( … ) ()` (the executor's
-reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md), Р26,
-item 1). A
-launch form of a Structure at a place where a value is needed (an operand
-of an expression, an actual argument of a call, an initial value, an
-operand of `merge`) is an error: a launch has no result (the executor's
-reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md), Р22,
-item 3; Р25, item 4). The
-special name of the explicit reference to the data of a launch, the part of
-a callable of the same name and the data block are called `data` --
-formerly `var` --, and the part with the executable forms, like the
-argument of the receivers `fn`, `sub`, `catch` of the same name, is called
-`code`, formerly `body`; the parts of a callable are `args`, `return`,
-`data`, `code`. The clean graph reads these names since slice 354 and no
-longer accepts the former ones (step 4 of
-[plan section M11](next_core_tasks_v3.md#m11)); the working frontend, with its
-fixtures and the project's sources, still uses `var` and `body` until step 8.
-`implements` is performed once, when the
-clean graph is built; the cases in which it is still needed at run time are
-collected in
-[steps/implements-runtime-cases-20261111.md](steps/implements-runtime-cases-20261111.md).
-The translators no longer have to find out where a call, a declaration of a
-Structure and an assignment stand -- the role says it --, and the branches
-that made this choice are to be removed. The clean graph now has the own-data declaration pass,
-computed fn/sub construction, shared named root/self dispatch and the receiving contexts accepted in 374.
-Slice 375 executes named physical5/6 as current source literals and 8/9 as type-only records.
-Slice 376 constructs canonical no-candidate int-reference storage and required formal8 through the same mechanism;
-this does not close the whole of M11.5г, indexed repeated methods, remaining M11.7/8 or M13/M14.
-The working frontend's remaining M11 migration is step 8 of the [plan](next_core_tasks_v3.md#m11).
+Construction and checking first work in the builder, optimized for actual tasks. Move needed working
+parts to runtime only for a concrete operation and share the code. No speculative second builder,
+universal wrappers, or future states. sys\check and sys\checkL3 return diagnostics; sys\translate
+returns L1 text and errors without executing S, compiling native, or serializing it as LMX.
 
-The author's answers of 2026-11-11 to that decision
-([declaring by a colon form](docs/LMX_semantics.en.md#colon-declares),
-[visibility](docs/LMX_semantics.en.md#declaration-visibility)). A mention of
-the name of a known Structure is expanded nowhere -- neither by the parser
-nor when the clean graph is built: in `Model: knownModel` the Structure
-`Model` has the one atom `knownModel`, a pointer to the Structure
-`knownModel`, immutable by name; it begins to refer to it at interpretation
-and translation, and a path through it continues into its fields
-(`Model\knownModel\a` is the field `a` of `knownModel` itself), but no
-subtree arises under `Model`, and the `parent` of
-`knownModel` -- its place in the tree -- does not change. The slot of the
-atom may be rewritten by index (`Model[0] := …`); a mutable reference is
-declared by `Model: @: ptr knownModel`. Visibility in data runs in both
-directions: a name declared by a form of the data is available both to the
-code over that data and to the other forms of the same data, above and
-below the declaration; the order in which statements are executed stays,
-and a name being available does not mean its value is already computed.
-References by name that close into a cycle (`A: B` and `B: A`) are no
-error; the arguments of calls name Structures the same way, by name and
-without expansion. A Structure launched over itself -- `call(code)`, the same as
-`call(code code)`, and the root of a unit -- has no rules of its own: its
-forms are read in both roles by the general rules, no declaration "of its
-own" is skipped, and an uncertainty is an error
-([journal](LMX_blog/2026-11-11.md#self-launch-no-own-rules)). The executor's
-reading from that ([answers](LMX_blog/q/fable-self-answers-20261110.md),
-part Р): a declaration of a Structure among the executed forms is still, as a
-rule, an error, but for another reason (answer Р21): in code the form by which
-the same data declares an ordinary Structure launches that Structure, and its
-own tail stands in the place of the argument -- two or more fields in the tail
-are not a defined number of arguments, one field is the data of the launch and
-must give a Structure; only the degenerate forms do not refuse: an empty tail,
-a single atom that names a Structure, a single unnamed Structure in
-parentheses. So an executed Structure (the root of a unit, the body of a
-method, a Structure launched by `call` or by name) holds no declarations of
-Structures; they are written in data -- in the `data` part of a method, in a
-Structure the launch receives as data, in a written Structure in a value
-position.
-
-A Structure is launched in code by its name (the author's decision of
-2026-11-11, [journal](LMX_blog/2026-11-11.md#structure-call-by-name); the
-executor's reading -- [answers](LMX_blog/q/fable-self-answers-20261110.md),
-answer Р21). In code a form whose head is an ordinary Structure launches it
-(before the decision of 2026-11-11 such a form was refused in code, and an
-ordinary Structure was executed only by the receiver `call`): `S()` is the
-same as `call(S, S)` (the Structure over itself), `S(D)` is the same as
-`call(D, S)` (the Structure over the given data); so are the short form
-`S: D` and the block form. It is a launch form of its own, not a form of a
-receiver: the receivers `call` and `fncall` remain the general mechanism
-([the receivers `call` and `fncall`](docs/LMX_semantics.en.md#call-receivers)),
-and the formals are supplied by `call(args data code)` -- there is no launch
-form with the argument `args`. The argument is one and is named `data`, the
-name by which executed code refers to the data of its own launch
-([the special name `data`](docs/LMX_semantics.en.md#ordinary-var)): `S(D)` and
-`S(data := D)` are one form. It must give a Structure (a name, a path, a place
-with a reference, an unnamed Structure written in parentheses), otherwise it
-is an error; so are an argument of another name and two or more positional
-arguments. The head is a place with a reference: what the reference points to
-is called -- a callable (a call through a pointer) or a Structure (launched by
-the same forms); a place of a number, an empty reference and an unknown name
-are errors, as is a head that names neither a callable nor a Structure.
-`data()` in code launches the data of the current launch over itself. In
-data nothing changes: `S()` still declares an empty Structure `S`, and `S(D)`
-a Structure `S` with an atom `D`; nothing is called (for `S()` confirmed by the
-author, [journal](LMX_blog/2026-11-11.md#structure-head-call-refuses-in-code);
-for `S(D)` the executor's reading, answer Р21, item 2). In a
-Structure launched over itself and in the root of a unit each form is read in
-both roles, so the form `S()` there is at once a declaration of one more `S`
-and a call: if `S` is declared in the same Structure, the name has two
-occurrences, without an index it does not answer, and the call is refused; if
-`S` is declared outside, the form declares its own empty `S`, and that one is
-launched, not the outer one. There is no rule of its own, and the same
-Structure is launched there by the receiver `call`; the call of a method or of
-a receiver is not affected. Since slice 356 the clean graph executes the
-launch of a Structure by name in the code of a method and in code over given
-data -- `S()`, `S(D)`, `S(data := D)` -- and a form whose head is a place
-holding a reference to an ordinary Structure everywhere, the root of a unit
-included, as well as the named supply of the arguments of `call` and `fncall`.
-Shared named-head dispatch also applies in the root and over self since 372; standalone anonymous
-written Structures remain values. This does not complete direct path-head calls or all of
-sub-step 5г of the [plan](next_core_tasks_v3.md#m11). Ordinary Structure native remains M14.
-The working frontend
-reads the former names and order and does not execute the launch by name
-(step 8).
-
-The existing place map and frame also serve ordinary Structure native bodies:
-one C.native executes with any admitted D, including reordered fields, through
-the same body emitter and entry/exit mechanism as methods. Neither fn/sub nor
-data = code is required. Data-only use does not require S.native. A dynamically
-selected compiled C uses its entry; suitable uncompiled runtime code uses the walker.
-Dirty data and code share publication checkpoints. Clearing native affects a new
-dispatch, not machine instructions already running; the walker must retain equivalent
-prepared-frame continuation after publication and nested calls. No artificial method,
-whole-graph copy or permanent version registry is introduced. Implementation is open in
-[M14](next_core_tasks_v3.md#native-structures).
-
-Local working values and dirty state belong to individual frames. Direct-access caching is shared by
-all calls of one execution, including native/walker transitions, and is transparent: aliases of one
-addressed cell see the same current value, including pending direct writes. Local dirty publication
-also reconciles that shared state. A local pointer base can remain unchanged while a published pointer
-selects another object; changing an intermediate reference requires establishing the final address again.
-The cache belongs to traversal scratch and does not persist in the graph or arena between executions.
-See [local versus direct access](docs/LMX_semantics.en.md#direct-access-cache).
-
-The publication contract does not require a universal assignment journal. Native determines
-needed stores and conditions statically where possible; dynamic tracking covers only necessary local
-or shared direct-access places. Computations, checks, effects, alias reads and publication timing are preserved.
-Ordinary non-declaring `flush()` takes no arguments and returns no value: it first publishes the current
-frame's dirty own locals into shared cell state in forward field order, then stores pending shared-cache
-writes into the graph. Other frames' locals are neither published nor reloaded. Execution continues without
-a new activation, yield, exit or Message publication. Successful publication clears the corresponding
-local dirty and pending shared writes; a repeat without new changes writes nothing, reevaluates nothing
-and reloads no locals. The shared cache stays coherent with published cells. Same-headed data remains ordinary data.
-The language receiver is an open M14 task; the existing internal publication helper is not its implementation.
-
-The `implements` field-address
-map is general for any admitted pair of Structures. At publication, already
-computed `dirty` values go directly to their selected physical `data` slots
-through that map if necessary: no expression evaluation, repeated admission,
-or copy of the full Structure. The normal split gives the compiler and walker
-an execution-source role for `code` and a writable-state role for `data`:
-those roles do not establish code stability by predicting writes or aliases.
-This is not an `immutable` qualification of the whole `code` Structure.
-`call: code code` deliberately removes that separation to exercise general
-code mutation and `native` invalidation, including eventual on-the-fly
-recompilation; it does not require a special executor. All Structures follow the same representation
-and mutation rules, subject to their qualifications: a `data` part does not make the rest of its
-Structure untouchable. A general graph-write mechanism
-must distinguish a data-value update from a change to the executable body
-and invalidate an incompatible `native` when that body changes, including
-publication within `data` or through a code/data alias. Do not add a special
-execution path or hidden copy for this form. Entry into `call(code code)`
-alone does not invalidate anything. A working `dirty` value has not changed
-the graph until publication; explicit paths, aliases and dereferences select actual
-places and use the direct-access cache shared within one execution, separate from frame-local working values. Both use the standard publication checkpoints. With the place and value admitted, follow the actual cell-to-code links, including enclosing code; commit the slot
-and clear the affected code entries as one observable operation before another or
-recursive dispatch. A failed write
-or a compatible data-value update preserves the entry. L2 code needs a
-matching native replacement or refusal before publishing an incompatible
-mutation: the L3 walker cannot serve as its fallback. Because `code` may be a reference to any
-suitable Structure, `call`
-never adds fields to `data`. External values resolve
-during execution and do not populate namesake data fields by coincidence;
-an activation may change its working `k` without creating `code\k`.
-External fields change only through an explicit path such as `node\k`.
-No additional runtime variable-binding table or second graph is introduced;
-the walker uses the existing address-to-name table to recognize Frame heads.
-
-This is a target contract, **not** a claim that the current translator,
-walker, or physical method ABI already implements it. `Lmx` slots stay
-fixed: determine all slots before allocation; a different `merge` result
-gets a new allocation, not an in-place extension. Native reuse requires
-proof of the used address/type and code→data contract, not only unchanged
-body text. Remaining details are worked out in the accepted stage using
-[the design record](steps/next_generation_model_20261014.md) -- written
-before the decisions of 2026-11-10 and 2026-11-11 and in the former
-spellings; where it differs, those decisions prevail -- and
-[v3](next_core_tasks_v3.md), with contradictions returned to the author
-before a one-off implementation. No second data graph is introduced.
+Group helper receivers under sys rather than reserving global names: native, storage, descriptor,
+typeof, sys\toLmx, sys\fromLmx, assert, check, checkL3, translate, indexof. length remains public by the author's instruction;
+parent remains ordinary structural navigation. Header field names remain unchanged.
+sys\indexof(field parent) returns the unique occurrence's physical index; absence or ambiguity is an error.
+sys\indexof(field index parent) selects occurrence index of the same reference, counted from zero,
+and returns its physical position; a missing occurrence is an error. Use the same immediate-element
+access for Structure/Array<@>, without an auxiliary reverse-index table.
+[Group contract](docs/LMX_semantics.en.md#system-receivers). Earlier detailed receipts remain in
+the dated records and witnesses; focused language checks, not new runtime infrastructure, establish progress.
 
 ## 10. Source map
 

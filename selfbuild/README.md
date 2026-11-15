@@ -1,5 +1,12 @@
 # Maintained L3/L2 source package
 
+**2026-11-15 target change:** [M14](../next_core_tasks_v3.md#native-structures) now requires unified data,
+local call frames without write-back, signatures from actual calls, raw Structure/void-array index writes,
+and grouped sys tools (translate returns L1 and diagnostics). Existing accepted artifacts/receipts below
+still describe their actual earlier behavior; they do not establish this replacement. No speculative runtime;
+share necessary working builder code for concrete operations.
+
+
 Slice400 (2026-11-15), directly on main: common mapped copier and written DATA fn_data; bounded code gates PASS.
 The existing queue finishes complete scalar/reference snapshots; WORD retains physical type/profile and canonical TEXT.
 Held F copies are ordinary current parts; explicit fn creates a new callable. Real sub/typed DATA precision, absence,
@@ -405,7 +412,7 @@ ordinary parent/native/length/storage receivers with one argument or the current
 Same-headed data forms remain ordinary Structures; execution's data/code and node keep
 their contracts. This is documentation of pending code work, not a new verified build.
 Descriptor also accepts an explicit S or defaults to the current launch's data:
-`descriptor() = descriptor(data)`, including inside nested control bodies.
+`sys\descriptor() = sys\descriptor(data)`, including inside nested control bodies.
 
 [M14](../next_core_tasks_v3.md#native-structures) adds ordinary Structure native emission through
 the existing method/frame mechanism, without data = code. Dirty code/data publication and walker/native

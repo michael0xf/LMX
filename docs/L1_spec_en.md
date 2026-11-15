@@ -17,22 +17,28 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 
 The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `native`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed access and the separate List contract remain. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
 
-Lowering ordinary receiver [`descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write addresses the original field and is published by the standard frame mechanism; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
+Lowering ordinary receiver [`sys\descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write directly addresses and changes the original field; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
 
-Lowering [`parent`, `native`, `length`, `storage`](L2_spec_en.md#header-receivers) reads the corresponding
+Lowering [`parent`, `sys\native`, `length`, `sys\storage`](L2_spec_en.md#header-receivers) reads the corresponding
 header field of the selected Lmx. With no argument it selects the current launch's data; code is explicit.
 Reading a value neither constructs descriptor nor allocates an auxiliary object.
 `data` and `code` keep their meaning as launch arguments; `node` semantics and ABI do not change.
 Same-headed data forms keep their ordinary structural projection, without header pseudo-fields.
 
-`descriptor` likewise accepts an explicit S or defaults to the current data:
-`descriptor() = descriptor(data)`. This choice also applies inside nested control bodies;
+`sys\descriptor` likewise accepts an explicit S or defaults to the current data:
+`sys\descriptor() = sys\descriptor(data)`. This choice also applies inside nested control bodies;
 lowering either variant returns the selected Structure's field addresses under one contract.
 
 <a id="interpretable-tree"></a>
 ### 3.1. Tree projection
 
-Lowering preserves the full graph for the walker and `toLmx`; later mutation changes that same graph. It allocates no `leaf` wrapper for an already typed primitive cell and stores no names in graph records. The name table and comments serve text output of the current graph, not execution. The full contract is [L2 §2.1](L2_spec_en.md#interpretable-tree).
+Lowering preserves the full graph for the walker and `sys\toLmx`; later mutation changes that same graph. It allocates no `leaf` wrapper for an already typed primitive cell and stores no names in graph records. The name table and comments serve text output of the current graph, not execution. The full contract is [L2 §2.1](L2_spec_en.md#interpretable-tree).
+
+Lowering `sys\indexof(field parent)` finds the unique reference occurrence and returns its physical
+index; absence or ambiguity is an error. `sys\indexof(field index parent)` selects occurrence index,
+counted from zero, and returns its physical position; a missing occurrence is an error.
+Use common Structure/Array<@> addressing without an additional index table.
+[L2 contract](L2_spec_en.md#system-indexof).
 
 <a id="type-by-range"></a>
 ## 4. Type by range
@@ -77,24 +83,30 @@ R0 and the upper host scaffold use the common Thread mechanism. Launch data belo
 `LmxPost` holds `staged`, `outbox`, and FIFO `inbox`. An incoming slot is the pair `[target, source_arena]`; the recipient owner attaches the donor before releasing the target. The inbox ring uses a separate DynamicArray with movable backing and a mailbox monitor; it is not the fixed graph slots of a Structure. See [L2 §9](L2_spec_en.md#mailbox).
 
 <a id="own"></a>
-## 11. Working state
+## 11. Local call frame
 
-L1 kernel code implements loads of used own fields, `dirty` marks, and publication at checkpoints. This lowers [L3 semantics](LMX_semantics.en.md#dynamic), rather than redefining the language. Graph slots remain physically stable.
+<a id="call-frame-20261115"></a>
+Every call, including `call(D,C)`, creates a local namespace. For fn/sub/catch, former args/data
+become one input data part. Supplied values replace the corresponding frame initializers;
+a replaced initializer is not executed. Preparation considers only data/code roots, without
+visiting branches or graph references. Code places are never appended to source data.
 
-Ordinary Structure C bodies and methods share native emission and frame entry/exit. One C.native
-works with different admitted D and their field orders through the existing place map; data = code
-is not required. Local working values and dirty state belong to the frame; explicit addressed accesses
-use the direct-access cache shared within one execution. A boundary first publishes the current frame's
-local dirty values into shared state, then pending direct writes into the graph; flush() uses that same order.
-Walker and native continuations after publication must agree; clearing an entry does not replace
-machine instructions already running. Implementation remains open in [M14](../next_core_tasks_v3.md#native-structures).
+Ready declarations fold during clean-graph construction without program calls.
+Computed declarations are not executed early; uninit:T types remain.
+Repeated `int: x bump()` retains computation and assignment to visible x; only the new C declaration
+is omitted. A new branch name is visible at its level and below, not outside. Repeated source-graph
+fields remain separate occurrences selected by `S\[n]x`.
 
-One publication contract does not require journaling every assignment. Native determines needed writes
-and conditions statically where possible; dynamic tracking remains only for places that need it.
-`flush()`, with no arguments or result, first publishes the current frame's local dirty values into shared
-cell state, then pending shared-cache writes into the graph, preserving other frames' locals.
-Execution continues; without changes no writes repeat after a successful flush. Computations,
-admission and local reloads are not repeated; the shared cache stays coherent with published cells. [Contract](LMX_semantics.en.md#flush-receiver-contract).
+Bare x and @x address the call's local cell; `data\`, `code\`, and `@(data\x)` address the source graph.
+Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
+direct writes are observed through actual aliases in execution order.
+
+The executable code snapshot is selected at entry before initializers. Changing source code clears
+its native; an entered frame continues its selected snapshot. Methods and ordinary Structures share
+compilation without data=code. C signatures derive from actual calls; different argument sets yield
+different signatures. A header without code describes a call.
+[Norm and remaining clarifications](LMX_semantics.en.md#call-frame-20261115),
+[single M14 task](../next_core_tasks_v3.md#native-structures).
 
 <a id="call"></a>
 ## 12. Call

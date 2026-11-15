@@ -1,5 +1,121 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — новая M14 имеет приоритет
+
+В ходе WIP401 появились подготовленные авторские уточнения: начало to_sol.md и M14 основного v3 заменяют
+load-dirty/публикацию локалов/общий кеш/flush, отдельные args/data и автодополнение DATA из CODE.
+Новая реализация OPEN. Закончить независимый overlap merge401, принять/перегенерировать документы,
+далее удалять frozen slot requirements вместе с таблицами, переносами facts и ветками emitted index writes.
+Не продолжать прежнюю scalar CODE-own вертикаль с записью локалов в граф.
+Read-only review нашло старые нормативные остатки в книге; RU/EN source исправлен перед генерацией.
+Все code producers401 terminal PASS: whole G1/G2 quick0, fixedpoint36/0, G2 targeted5/0, Graph6 triple6/0.
+Private Runtime04 равен G2 в обоих вариантах; Graph SHA713e61b7fa67a78ff7f2048f2c8def762f160c0213c61c2818e5ef053c0166a6.
+Документальный пакет фиксируется отдельно, сохраняя кодовый WIP401 и чужие файлы.
+Старые PASS ниже не подтверждают новую модель кадров; очередь продолжается в основном v3, goal ACTIVE.
+Штатные G2 render02 semantics PASS35/14 и grammar PASS27 sections/47 source excerpts.
+Первый docs-check01 остановился на stale grammar; после обновлённых sources и обеих генераций
+fresh docs-check02 с отдельными precreated cwd/private PASS35/14/27/44/615, links/LF28290.
+git diff --check PASS. Документальный индекс включает только26 согласованных путей; кодовый WIP401
+и два чужих untracked вне него. Коммит и push документов прямо main, затем кодовый срез401.
+Первый cached diff check нашёл лишнюю пустую строку EOF нового журнала; исправлено, оба diff checks PASS.
+Indexed docs03 выявил stale semantics: book был дополнен во время EOL-фазы docs02, уже после semantic verify.
+Render03 повторил35/14 по последнему источнику; далее indexed04 перед commit, без изменения кода.
+Indexed04 terminal PASS35/14/27/44/615, links/LF28291; working/cached diff checks PASS.
+Документальный срез26 фиксируется/отправляется прямо main; восемь code/source WIP401 не staged.
+
+## 2026-11-15 — последнее дополнение документации: sys\indexof
+
+Добавлены обе формы в источник семантики, ручные RU/EN пары, add_all_struct_fields.md,
+to_sol.md, основной v3 и чек-лист. sys\indexof(field parent) требует единственного вхождения,
+иначе ошибка. sys\indexof(field index parent) выбирает вхождение той же ссылки с номером index
+и возвращает его физический индекс в parent; нумерация с нуля, отсутствие вхождения — ошибка.
+Общий доступ Structure/Array<@>, без таблицы обратных индексов и обновления её при записях.
+Дословный ответ автора добавлен в LMX_blog/2026-11-15.md#system-indexof.
+Рендер и финальный docs-check должны включать это уточнение, а не промежуточную форму с одним вызовом.
+
+## 2026-11-15 — документальное уточнение: новая модель кадров и sys
+
+По последним ответам автора обновлены источник семантики, источник грамматики, ручные RU/EN пары,
+CORE/READ.ME, add_all_struct_fields.md, to_sol.md, основной v3 и его чек-лист.
+Действующая постановка — [M14](../next_core_tasks_v3.md#native-structures), включая
+[sys-инструменты](../next_core_tasks_v3.md#graph-tools); дословные уточнения —
+[журнал автора](../LMX_blog/2026-11-15.md). Это документация, не приёмка нового поведения кода.
+
+Единая data вместо args/data; свежий namespace с root-only подготовкой, без автозаполнения графа.
+Локальные x/@x отделены от исходных data\/code\, обратной публикации нет. Load-dirty, общий кеш,
+flush и требования прежнего поля при S[n] отменены. Удалять также их таблицы, переносы и генерацию.
+uninit:T сохранить. Снимок code — до инициализаторов, правка исходного code обнуляет native.
+C-сигнатуры — из реальных вызовов. Проверки и translate находятся в sys; translate возвращает L1
+и ошибки, не LMX. В sys также native/storage/descriptor/typeof/toLmx/fromLmx/assert; length и parent
+остаются общедоступными. Runtime получает необходимый общий код работающего сборщика под реальную задачу.
+
+Проверены структура источников (35 RU/EN глав, 27 разделов грамматики), JSON и git diff --check.
+Штатные render semantics/grammar и docs check ещё не выполнены для этого документального среза:
+замок общего pipeline удерживает Sol для приёмки401; bootstrap401 уже завершён PASS.
+Генерируемые документы вручную не редактировались.
+Ниже WIP401 сохранён отдельно; его старые cache/flush OPEN не означают продолжения отменённых задач.
+
+## 2026-11-15 — WIP401: общий overlap merge и receiving layouts
+
+Предыдущий goal turn — progress:400 принят/отправленa7a8f0dc82c9e3bf3d2d534a452101e30a6b439a прямо main.
+Goal ACTIVE. Root — sole code/test/build writer; helpers read-only, два чужих untracked сохранять.
+Написаны receiving-group closure и retained layout arrays, source-header/CHILDREN-coordinate seeds,
+первые primitive cells и late aliases, fill/replay с exact ordered tuple guard текущего пути, общий drain.
+Полные scalar overrides читают исходный RHS, Model переносится при drain; metadata пропускает receiving roots.
+Прежние merge_copy/merge_level удалены. Это WIP: Source05 скомпилирован и прошёл private, ещё не принят.
+Два временных records генерируются существующим decl_arena header; новых maintained L1/C исходников нет.
+Layout closure исполняет только finite source membership, без initializer/Model/test и публикации.
+Source06 regression oracles воспроизвели все три дефекта на Runtime03: parent scalar alias152,
+shared CHILDREN156 и late REF_LMX Value-cell159; private02 terminal SUITE1/4 FAIL.
+Source07:934 SHA6d77aba13d762338c965c8ca80e8582f69149f9f7305b8ad5ab26b0da9950d66:
+все receiving headers seed заранее, затем root-first DFS с отдельной operation prepared map;
+каждая группа завершает canonical fields_bind, source-slot aliases, first places и late aliases перед children.
+First kind6 резервируется с deferred payload; late6 alias требует один доказанный receiving target исходных pointees.
+Graph84 добавляет get_in/put_in с явным g и existing physical access; Graph/Run/frontend/build/emitted runtime
+читают реальную ячейку, slot facts и invalidation тоже используют canonical ref_cell_in. Raw ABI оставлен direct-backed.
+Fresh Tool03 normal PASS47f679364068283ca228b1c9d0810af02fe9e5fd52a04b2336b54ecdcae69576.
+Runtime04 normal PASS98 headers, prod946ca1804bd45b2880680f1a227574a8f7397ba513d0f798b11901a882d7e1aa,
+observe35962b94851043425c675ec178357478f2359fef9c5206100d4c28770ef38941.
+Private03 SUITE1/0 и прежние scalar/GC controls01 SUITE4/0 PASS n/f/root0/root1, expected не менялись.
+Все private producers terminal. Source07 далее frozen/canonical; whole/fixedpoint/actual G2/Graph/docs ещё pending.
+Реализация image slot-alias topology и typed image остаётся отдельной зависимостью M13 в основном v3.
+Порядок replay/cycles/sibling aliases проверяется helpers; ожидаются реальные runtime oracles.
+Typed pointer/CHILDREN alias допуск согласован с pointer_pool_in и полным walk_value_load snapshot;
+chain preflight посещает реальные typed cells/слоты и metadata edges, payload scalar не интерпретирует.
+Tool01 PASS787e4fa7; Source02:934/runtime01 prefix through Graph PASS, Run отказал на reserved node5446.
+Source03:934 SHA3817e420 исправляет current_node, добавляет полный pointer snapshot через walk_value_load
+и настоящий parsed merge(M;N)/merge(M;N;M) unit: exact epsilon, Model, SOURCE, value/CHILDREN pointers,
+reordered late x, shared sibling P/Q/R с Q/R/Q replay и float/double refusal без записи destination.
+Recorded Run retry03 отказал6018 на machine unit-name read: scratch records ошибочно были в body-only
+graph_state.lm1, не видимом Run. Перенесены в существующий decl_arena header с остальными Graph records;
+никаких anchor duplicates или maintained L1. Source04 и fresh Tool02 далее; canonical пока400.
+Tool02 active session47570; источник Source04 заморожен. Runtime01 и Run retry03 terminal FAIL выше;
+после Tool02 нужен Runtime02 с новыми declarations, затем unit и прежние copy/Graph controls.
+Tool02 L2/L1 PASS, CC первоначально отказал на missing arena C header после Runtime01 clear.
+Recorded CC/LD recovery с coherent400 private headers и собственным Methods header PASS11542a67;
+первая recoveryCC без Methods overlay отказала на unit-owned char alias, C/L2 source не менялся.
+Runtime02 Source04 полностью PASS899f44fb/c0449efa,98 C headers. Ревью выявило WORD replacement/latealias
+и singleton replay reset. Source05:934 SHA344078e920602e587a5bce6eef321a94acc8307424ad50754848d62c280bc274:
+WORD reserve+aliases+guarded inplace spelling; replay первого model не сбрасывает payload, singleton alias
+не исполняется как запись, настоящая late contribution получает force_model. Добавлены оба regression oracles.
+Recorded Run retry05 PASS; Runtime03 aggregate/prod/observe PASS30f15839/98a3f4d3, без повтора98 headers/prefix.
+Private01 terminal PASS SUITE1/0 n/f/root0/root1: весь прежний fn_data unit и новые parsed merge/alias cases.
+Все producers terminal; canonical пока accepted400. Whole/Graph/остаточные controls/docs/commit401 ещё не выполнены.
+Перед freeze согласовать ещё два alias случая из code inspection: head-first child reservation может занять
+late source scalar до parent aliases (M.x=A,N.x=B,P.x=B в nested child); порядок first-map прежнего worker
+был parent places+aliases перед child. Также receiving header с повторными/shared physical CHILDREN slots
+сейчас только seed map, но не fields_bind: нужны canonical реальные адреса в его backing. Следующий шаг —
+короткие oracles этих случаев, root-first places/aliases и existing fields_bind, затем прежние copy/Graph gates.
+Также проверить CELL_POINTER на late REF_LMX value-cell (N.a), отдельно от указателя на её CHILDREN-слот
+или header P/Q: при композиции a её primitive-place aliases тоже должны вести в result.a. Kind6 пока
+не включён в reserve/late-alias places; generic null/reference assignment вне композиции отдельно OPEN.
+
+Pipeline401: build2/codex_fix250generationchain01/runs/sol-m13-overlap-20261115-01;
+artifact stage — build2/codex_fix250generationchain01/sol-m13-overlap-01; seed — actual400 G2.
+Canonical пока accepted400 Source04:934. Сначала fresh Tool01 с coherent400 headers/runtime,
+затем source/test уточнения и runtime с новыми scratch declarations. Не менять источники при active producer.
+Полный overlap/typed args/results/FFI/Array/native/cache/flush и M11/M13/M14 остаются OPEN.
+
 ## 2026-11-15 — срез400: общий mapped copier и written DATA fn_data, кодовые gates PASS
 
 Предыдущий goal turn — progress:399 принят/отправленc46e556a31257159efafcec6750cedfd9c59cc28 прямо main.

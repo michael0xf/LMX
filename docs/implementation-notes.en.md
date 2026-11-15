@@ -8,35 +8,19 @@ failures, commands, and dated results belong to the [v3 plan](../next_core_tasks
 [archived v2 plan](https://github.com/michael0xf/LMX/blob/0e0a2978eb237e145e54715de805a88e65264ba4/next_core_tasks_v2.md).
 An old passing run does not prove a newer rule.
 
-## Addition of 2026-11-13: common native code and publication — OPEN
+## Replacement model of 2026-11-15 — implementation OPEN
 
-[M14](../next_core_tasks_v3.md#native-structures) requires native code for ordinary C through the same mechanism
-as methods, without data = code, artificial fn or a new runtime. One entry works with different admitted D
-through the existing frame and place map. Dirty code and data, standard publication and continuation
-after it must agree between native and a walker optimized with frames.
+The norm now uses unified data, local frames without write-back, a code snapshot, and signatures
+derived from actual calls. Load-dirty, the shared direct-access cache, flush(), and frozen former-field
+requirements on S[n] writes are cancelled. [M14](../next_core_tasks_v3.md#native-structures) removes
+their supporting tables, fact transfers, and generator branches, not extra conditions bypassing checks.
+Types without a value remain. Helper tools are grouped under sys; translate returns L1 and errors.
 
-Reading main cde574b8 shows `lm_graph_collect_methods` still selects fn/sub results, with separate root emission.
-`lm_graph_emit_methods` installs an emitted address on the declaration; `lmx_graph_fn_make` transfers it
-to the constructed function. This neither compiles inside fn nor provides native for arbitrary nested C.
-This documentation clarification changes no code. The new rule does not establish M14 readiness;
-earlier direct-write witnesses do not specify publication timing for the new implementation.
-
-The next M14 clarification requires one semantics without a universal journal of every assignment;
-native determines writes statically where possible, with dynamic tracking only for places that need it.
-Local working values remain in their frames. The direct-access cache is shared by all calls within one
-execution and reconciles the actual cell, including aliases and local dirty publication.
-Language receiver flush(), with no arguments or result, first publishes the current frame's dirty own locals
-into shared state, then pending shared-cache writes into the graph; it leaves other frames' locals alone.
-Execution continues without a new activation or Message publication. Repeating it without changes writes nothing.
-Internal `lmx_graph_work_flush` already publishes its supported working-place subset and clears dirty marks;
-this is an existing part of the common mechanism, not proof that the receiver or all M14 requirements are ready.
-[Contract](LMX_semantics.en.md#flush-receiver-contract); implementation remains OPEN.
-
-Reading main 035d3fcd shows local snapshots and their dirty state already separated from direct graph writes;
-this is not an implemented shared direct-access cache. Slice 369 preserves a local pointer snapshot, so
-p\x and data\p\x can legitimately select different objects. At the same address a stale direct read is
-not permitted. The new separation requires shared coherence rather than reloading locals after a call.
-[Rule](LMX_semantics.en.md#direct-access-cache); this documentation slice changes no code.
+This documentation change does not change code. Slices through400 and current WIP401 describe the
+previous mechanism: work_load/work_flush do not prove the new model; old PASS results and expected
+refusals must be assessed against the new contract. Records below remain history, not new norms.
+Runtime receives shared builder code for concrete tasks only; sys\check and sys\translate are such
+tasks, without speculative separate infrastructure.
 
 <a id="source-migration"></a>
 ## 1. Sources and migration boundary
@@ -249,10 +233,10 @@ elements directly. Element count is chosen at creation; published
 backing neither grows nor moves. Migration preserves typed storage,
 address-copy maps and `parent` for Arrays and nested Structures.
 Common operations must accept Structure and `Array<@>` interchangeably,
-without refusal based solely on the header category. `descriptor`
+without refusal based solely on the header category. `sys\descriptor`
 is not implemented yet: it must select an explicit S or the current data when no argument is supplied:
-`descriptor() = descriptor(data)`, including inside nested control bodies.
-Both variants return actual field addresses with writes through ordinary dereferencing and standard frame publication
+`sys\descriptor() = sys\descriptor(data)`, including inside nested control bodies.
+Both variants return actual field addresses with direct writes through ordinary dereferencing
 ([contract](L2_spec_en.md#get-descriptor)). Arbitrary finite pointer depth
 and Array rank use the existing general algorithms; the old parser is
 not rewritten. Typed arena arrays remain storage, not standalone

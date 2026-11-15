@@ -1,5 +1,10 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Norm of 2026-11-15:** [local frames without write-back](LMX_semantics.en.md#call-frame-20261115),
+[single M14 and sys tools](../next_core_tasks_v3.md#native-structures). Dated records below describe implementation history;
+their load-dirty, shared-cache, and flush references are not tasks to continue those mechanisms.
+
+
 **Slice400, 2026-11-15 -- common mapped copier and written DATA fn_data; code gates PASS.**
 Source04:934, genuine G1/G2 quick/fixedpoint32, actual G2 targeted5/0 and Graph6 triple PASS.
 Full overlap merge, scalar CODE-own and native/cache/flush M14 remain OPEN.
@@ -93,7 +98,7 @@ The actual G1 frontend confirmed profile byte equality with quoted FILE; normal 
 G2 render35 paired/14 cases/both snapshots PASS, with unchanged generated semantics and grammar.
 Docs-check01/final index02 PASS35/14/27/44/615, links/LF28235/28262; commit/push392 follow. [Record392](../steps/witnesses/m11-receiving-view-20261114/notes.md)
 retains the complete checks and history of intermediate attempts.
-General typed storage/admission and the actual C-door bridge, full M11.7/8, M13/M14 and runtime `merge`/`fromLmx` remain OPEN.
+General typed storage/admission and the actual C-door bridge, full M11.7/8, M13/M14 and runtime `merge`/`sys\fromLmx` remain OPEN.
 
 **Previous state, 2026-11-14, slice391 -- bounded implementation; code gates and docs-check passed.**
 Only Run changes: private `construct_slot`/`construct_atom`/`construct_value` helpers extend bounded constructor390
@@ -102,7 +107,7 @@ to proven paths. Exports Graph75/Run58, ABI, layout and the public API are uncha
 or resolving a WORD as a Structure name.
 Only literal indices are used; index expressions are not executed. A named path retains exact source → F
 and the existing masks (§3.5). Typed/qualified/common admission, full M11.7/8, M13/M14 and new construction
-during runtime `merge`/`fromLmx` remain OPEN; a held F without a native entry uses the walker.
+during runtime `merge`/`sys\fromLmx` remain OPEN; a held F without a native entry uses the walker.
 6 sources/5 expected files were added, including `construction_paths_owned_data`; final Source07:907, SHA-256
 `329fba48883be5014759e1fc74c4236873286c6050b69567c4ce3206f23ce9c3`.
 The previous Source03/private48 triple and39 complete AFTER checks passed before the last correction, including43 existing
@@ -141,7 +146,7 @@ private Runtime03 matches the G2 driver. The genuine G2 graph-tool is built, SHA
 and 33 complete negative AFTER checks on existing binaries passed. All code gates390 PASS.
 Normal render35/14 and fresh docs-check01 PASS35/14/27/44/615, links/LF28087; final index before commit.
 This route is bounded to direct two-argument `@`; paths, type fields and new construction
-during runtime `merge`/`fromLmx` remain OPEN. A held F without a native entry uses the walker.
+during runtime `merge`/`sys\fromLmx` remain OPEN. A held F without a native entry uses the walker.
 Full M11.7/8 and M13/M14 remain OPEN.
 
 **Previous state, 2026-11-14, slice388 -- bounded code and documentary acceptance are confirmed; commit/push follow.**
@@ -1120,7 +1125,7 @@ of this document and in §6.1. The working frontend reads the former names and o
    index of typed regions (§2.1) and the string table with its index (§4) are arena and process state, not traversal
    tables; they are not mixed with the temporary traversal tables.
 6. **Identifiers are reused strings with stable addresses.** A spelling is interned at input (parsing text, loading a
-   unit, `fromLmx`, attaching a foreign region); from then on a name is a pointer to the single string of that spelling,
+   unit, `sys\fromLmx`, attaching a foreign region); from then on a name is a pointer to the single string of that spelling,
    and identifiers are compared by pointer. No string comparison in an executor and no separate numeric code as identity.
    Each process has one canonical pointer per spelling; the pointers of the translator's process are not the addresses of
    another process, so a loaded unit normalizes its strings into the loading process's pointers at load (§4, §7).
@@ -1136,8 +1141,7 @@ of this document and in §6.1. The working frontend reads the former names and o
    no plans, no traversal data, no stored results of name resolution (§3.5), none disguised as Lmx. The P0 parse tree is
    the builder's internal matter, not a mandatory input of the translator; saved translator tables are not an input of
    the interpreter.
-9. **Native and the interpreter execute one and the same graph** with one semantics of reading, writing, `dirty` and
-   publication ([L2 §10–11](L2_spec_en.md#own)); emitted `native` needs no names at a call; the interpreter recognizes a
+9. **Native and the interpreter execute one and the same graph** with one semantics of local frames, direct writes, and code snapshots ([L2 §10–11](L2_spec_en.md#own)); emitted `native` needs no names at a call; the interpreter recognizes a
    head by the address of its word and finds places by name through the tables of its own traversal (§5.2, §6.2).
 10. **What is unclear is asked, not guessed.** Questions go to Codex as a minimal case; what Codex forwards to the author
     is not implemented before the answer, the rest continues. The author's model is not reopened.
@@ -1162,11 +1166,11 @@ traversal, including the explicit slice390 construction below (§3.4).
 **The consumers** -- the interpreter (§6) and the translator (§7) -- read one and the same graph and prepare nothing in it
 for each other. The translator emits native bodies and the unit's loading code. The loading code is a **generated
 initialization of the same clean graph**: the exact cells in typed regions, their links, the rows of the address → name
-table, the `native` references -- through the common low-level graph constructor used by parsing, by `fromLmx` and by
+table, the `native` references -- through the common low-level graph constructor used by parsing, by `sys\fromLmx` and by
 the loader alike (a decision confirmed by Codex on 2026-11-08: this is not the former generated operations, place tables
 and hidden interfaces; the unit keeps no source text as a reserve for execution or recovery; embedding the P0 parser into
 loading is not required). Native bodies are bound to callables by the addresses of the built graph. Construction from
-`fromLmx`, `merge`, a child reservation and mail is the same constructor with the same boundary.
+`sys\fromLmx`, `merge`, a child reservation and mail is the same constructor with the same boundary.
 
 **Explicit new-graph construction, slice390.** In `lm_graph_build_root` this phase follows the filling of all P0 fields
 and precedes pure `lmx_graph_preflight`. `lmx_graph_construct` opens its own fresh namespace through the existing
@@ -1196,7 +1200,7 @@ ordered by address and lives outside the graph as arena state (not a traversal t
 from an address, §1 item 2). Today's `LmxPool`/`LmxChunk`/`LmxRange` are the same idea (a pool of chunks of one stride,
 intervals), but with profiles, roles and side arrays (`links`, `slot_owner`, `holder`, `side_cells`) that §9 removes.
 
-A program gets the same answer from the receiver `typeof(arg)` — the code of the type of the region that holds the
+A program gets the same answer from the receiver `sys\typeof(arg)` — the code of the type of the region that holds the
 address — and reads a Structure's slots as an array of references `S[i]` (author's decisions of 2026-11-10:
 [book](LMX_semantics.en.md#get-type), [journal](../LMX_blog/2026-11-10.md)); the numeric values of the codes are not
 fixed by the norm. The receiver is implemented in the clean graph by one kernel operation for both consumers —
@@ -1238,7 +1242,7 @@ produce no region types: a Structure of any model is an `lmx` cell plus its slot
 Before translation the unit's graph is known in full, so an emitted unit declares the **exact** sizes of its regions by
 type (the number of `int`, `uninit:int`, `ref`, `lmx:*`, `word`, … cells, the length of `text`) and builds the graph in
 them without intermediate dynamic arrays (the cell of T of a place without a value is allocated at construction together
-with the `uninit:T` pointer onto it, §3.2). Growth at run time -- `merge`, a receiver's result, `fromLmx`, a child
+with the `uninit:T` pointer onto it, §3.2). Growth at run time -- `merge`, a receiver's result, `sys\fromLmx`, a child
 reservation, attaching mail, executing a declaration with an initializer (§3.4) -- takes cells from the current region of
 the needed type and attaches a new one when it is full; the size of a new region is the arena's policy (decision; not
 less than requested), the addresses of earlier cells do not change. `lmx_arena_attach` moves the donor's regions into the
@@ -1283,38 +1287,36 @@ is `T *`. `length` is fixed at construction: a Structure does not grow by slots 
 a new Lmx; an Array carries exactly `length` elements ([L2 §5](L2_spec_en.md#method-array)). Header fields are not elements.
 
 An ordinary Structure and `Array<@>` are interchangeable for indexing, named paths where names exist, `length`,
-admission, copying, execution, `typeof` and `descriptor`. An ARRAY/STRUCT category alone is no reason for refusal.
+admission, copying, execution, `sys\typeof` and `sys\descriptor`. An ARRAY/STRUCT category alone is no reason for refusal.
 Numeric Arrays and List retain their own contracts.
 
 <a id="get-descriptor"></a>
 ### 3.1.1 Header addresses
 
-One explicit argument S selects S; with no argument, `descriptor()` / `descriptor:` select the current data,
-as `descriptor(data)`, including inside nested control bodies. Code requires an explicit argument.
+One explicit argument S selects S; with no argument, `sys\descriptor()` / `sys\descriptor:` select the current data,
+as `sys\descriptor(data)`, including inside nested control bodies. Code requires an explicit argument.
 The common call mechanism selects the argument; both variants share the same result-address contract.
 
-Ordinary receiver `descriptor: S` returns an ordinary Structure of addresses of the actual `parent/native/length/storage`
+Ordinary receiver `sys\descriptor: S` returns an ordinary Structure of addresses of the actual `parent/native/length/storage`
 fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **` ([exact form](L2_spec_en.md#get-descriptor)).
-A dereferenced write addresses S's field; writing a result field addresses its own pointer. Publication follows the common frame contract.
+A dereferenced write addresses S's field; writing a result field addresses its own pointer. The write directly changes the addressed graph cell.
 Clearing S.native selects the ordinary walker for the next call. There is no copy, proxy, writeback or separate opcode.
 S.parent may have the same numeric address as S: typed `Lmx **` access addresses the field, not a second Lmx.
 Taking the address neither extends S's lifetime nor transfers ownership. Arbitrary finite pointer depth and Array rank
 are independent; explicit paths and dereferenced writes use common typed operations, including references and function
 pointers. Restrictions on assignment through a bare Structure or function name do not prohibit them.
 
-The address `@x` ([L2 §18](L2_spec_en.md#lowlevel-address)): for a Structure/Array -- the address of the slot holding the
-reference to the header; for a primitive -- its typed cell, which exists from construction and changes neither its
-address nor its type: the slot leads to it through the same internal `uninit:T` pointer before and after writes, and an
-`@i` taken before the first write addresses the same `int` cell as after it (the author's same-cell clarification; the
-question of the second review is closed). Taking an address reads no unwritten bytes. The contracts of `@i`, of the
-reference value `@: p i`, of a formal's address and of a hidden input are distinct and are not mixed (the book:
-[addresses](LMX_semantics.en.md#explicit-copy), [dynamic visibility](LMX_semantics.en.md#dynamic)).
+Address `@x` of a namespace variable belongs to the current call's local cell; `@(data\x)`
+belongs to the source graph. They are different places. The selected place's typed cell retains its
+address and type on writes, including through uninit:T; taking an address does not read absent payload.
+Do not substitute a source field for the local cell to preserve former behavior.
+[L2](L2_spec_en.md#lowlevel-address).
 
 <a id="header-receivers"></a>
 ### 3.1.2 Reading the header through receivers
 
-`parent(S)`, `native(S)`, `length(S)`, `storage(S)` read the corresponding header values;
-without an argument they select the current launch's `data`. `native(S)` returns LmxEntry,
+`parent(S)`, `sys\native(S)`, `length(S)`, `sys\storage(S)` read the corresponding header values;
+without an argument they select the current launch's `data`. `sys\native(S)` returns LmxEntry,
 0 when no native entry exists; obtaining the value does not invoke it. These are ordinary
 non-declaring receivers: same-headed data forms remain Structures, and paths select ordinary fields.
 After ordinary argument selection a field load suffices; do not construct descriptor, a temporary
@@ -1324,6 +1326,22 @@ descriptor result; this does not rename same-named fields of other technical str
 data/code remain the Structure arguments of call; node keeps its existing calculation and activation
 contract, without a new node(S) or Lmx field. [Forms and rules](LMX_semantics.en.md#header-receivers),
 [plan M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+
+<a id="system-indexof"></a>
+### 3.1.3. A field's index
+
+`sys\indexof(field parent)` returns the physical index of the unique occurrence of `field` among
+the immediate elements of Structure `parent`. An absent field or multiple occurrences of the same
+reference produce an error under the ordinary failure rules.
+
+`sys\indexof(field index parent)` selects occurrence `index` of that same reference, counted from zero,
+and returns its physical index in `parent`. A missing selected occurrence is an error.
+The occurrence number and returned index differ: when a reference occurs at positions 2 and 5,
+`index = 1` returns 5. Both forms receive `parent` explicitly; there is no zero-argument form.
+
+Lookup uses the field's identity/reference, not an equal name or primitive value. It follows neither
+nested Structures nor graph references. Structure and Array<@> use one mechanism for reading immediate
+elements. Reuse existing addressing; no reverse-index table or per-write maintenance is needed.
 
 <a id="primitive-storage"></a>
 ### 3.2 The primitive (norm: the author, 17:22Z, 18:00Z, 18:10Z, 18:20Z, 19:02Z)
@@ -1430,160 +1448,43 @@ the head stayed one word: at the root `Box\hits: 5` defined a new place named `B
 anonymous body whose first statement were a bare path read followed by another statement has the same form and is
 read as this statement (such a read has no effect).
 
-### 3.4 Callables, `data` and `code` (norm + decision)
+### 3.4 Callables and namespace
 
-`fn: take (Point: p; int: q) int … end: take` is the Lmx of the written Frame, **of the ordinary kind** (§2.2), named
-`fn` (§3.3), with the receiver's five arguments: `name` -- the word primitive `take`, `args` -- the Lmx of the formals,
-`return` -- the result requirement (the word `int`), `data` -- the Lmx of own fields, `code` -- the Lmx of statements
-([book](LMX_semantics.en.md#method-parts)); the short form without `data` has four arguments, the descriptor without a
-body three. The author's decision of 2026-11-11 calls the part `data` (formerly `var`) and the part `code` (formerly
-`body`), and writes a formal with a Structure requirement `@: p Point`: a form `Point: p` in the description of the
-formals would declare a Structure and is forbidden ([book](LMX_semantics.en.md#data-code-roles)); since slice 354 the
-clean graph reads the names `data` and `code` (it does not accept the former `var`, `body`), but it still reads a formal
-with a Structure requirement in the former form `Point: p` (steps 4 and 5е of
-[section M11 of the plan](../next_core_tasks_v3.md#m11)). `sub: … end: sub` is the Lmx `sub` with the arguments
-`name`, `args`, `data` (when written) and `code`; `fm` is not executed by this slice and refuses explicitly. The
-declaration stays in the graph as written: the builder neither
-normalizes it nor completes `data`. **Each traversal** -- the interpreter's execution of the root, a translation of the
-unit -- applies the receiver `fn`/`sub` to the declaration's arguments on entering its block and creates, in its own
-namespace (§5.2), the Structure F «по тому же правилу по которому int: i 5 создаёт i» (the author 2026-11-09,
-[journal](../LMX_blog/2026-11-09.md)): an Lmx in the `lmx:result` region ([L2 §2.1](L2_spec_en.md#interpretable-tree))
-with `parent` on the declaration, named by the value of the `name` argument; its fields are the named references `args`
-and `code` onto the declaration's arguments (no copy: the arguments keep their address, `parent` and namelessness), an
-own word cell of the requirement `return`, and a new Lmx `data` (below). The `lmx:result` region classifies the result of
-executing the receiver, not the definition and not a Structure with similar parts: a copy of F through `merge` is a
-Structure, not a function; the receiver makes a function of it (`fn: g merge(f1)`, below). Leaving a traversal
-frees its service tables and their roots (the namespace, §5.2), not F as a value: an F the program holds by an ordinary
-reference of the graph stays an ordinary live value (Codex's answer of 06:05, §5.2), and without such a reference nothing
-holds it; the next traversal creates its own F from the same written declaration; the `native` entry a translation
-installed on the declaration is also the entry of the F created. Declarations in a body are created by the same rule in
-the body's block.
+<a id="call-frame-20261115"></a>
+Every call, including `call(D,C)`, creates a local namespace. For fn/sub/catch, former args/data
+become one input data part. Supplied values replace the corresponding frame initializers;
+a replaced initializer is not executed. Preparation considers only data/code roots, without
+visiting branches or graph references. Code places are never appended to source data.
 
-In slice390 an independent construction walk also creates its own F values. If a reference place retains such an F, it
-outlives that namespace as an ordinary value with its current parts and own DATA. The very first subsequent execution
-starts with a clean table and creates another F for the bare name of the same raw declaration; the held F is not its
-persistent binding. Within one traversal, references to a proven F share one identity. Raw `fn`/`sub` is not replaced
-with that F, and ordinary `merge(F)` still produces an ordinary descriptor without restoring the FN role. A held F without
-a native entry uses the walker; verifying its preservation does not establish native coverage of general M14.
+Ready declarations fold during clean-graph construction without program calls.
+Computed declarations are not executed early; uninit:T types remain.
+Repeated `int: x bump()` retains computation and assignment to visible x; only the new C declaration
+is omitted. A new branch name is visible at its level and below, not outside. Repeated source-graph
+fields remain separate occurrences selected by `S\[n]x`.
 
-**History of the receiver's contract and the one binder (slices333–335; the author 2026-11-09,
-[journal](../LMX_blog/2026-11-09.md); Codex, reviews333 and334).** The following describes the former implementation.
-Direct supply by head, `frame_value` and extracting a name from direct `name: word` are removed in Run384 under the author's
-decision of 2026-11-11; those statements are superseded. The current contract follows the historical paragraph; the verbatim journal is unchanged.
-Every traversal began by registering the contracts of the receivers `fn` and `sub` in
-the root's block of its namespace (`lmx_graph_receivers_open`): ordinary signatures, receivers with different numbers of
-arguments sharing one name -- `fn` [name, args, return, data, code], [name, args, return, code], [name, args, return],
-[name, parts]; `sub` [name, args, data, code], [name, args, code], [name, parts]. `name` and `return` are taken as written
-(a word, or a written form such as the type `@: c.FILE`), the other formals are Structures. A Frame `fn`/`sub` binds its
-actuals by the one binder of a call (`lmx_graph_bind_formals`, which `lmx_graph_bind_call` uses too): by position; by
-`:=` (`name := k1`); and, for the parts of a receiver's written form, by head (`name: k2; args: (...)`: a Frame whose head
-names a formal and answers no callable in scope, whatever fields it holds -- none, one, a vertical block). The value of
-`part := ...` is the body written after `:=`, read by the one model of a Frame as the block of a part given by head is:
-a single value is itself, any other body -- no field, several, a declaration, a statement -- is the Structure of its
-fields as written (`lm_graph_build_assignment`, `lmx_graph_frame_value`), so `args := (int: a)` and `args: (int: a)` give
-the same `args`; a consumer that evaluates the operand reads a Structure of one field as that field, as before. The
-first form all of whose formals the actuals bind is chosen before any actual is evaluated; else one actual is the whole
-argument structure (`fn: prepared`): a Structure whose fields give exactly the formals of a form (`lmx_graph_bind_fields`,
-the book's whole-arguments), read by their values (`lmx_graph_field_value`). What is written for a formal stands as
-written where it applies nothing (`lmx_graph_applies`: merge, or a Frame whose head answers a callable in scope, is an
-application); an application, or a name a Structure formal resolves, is evaluated once, in order, and each value is
-received by its formal before the next actual is evaluated (`lmx_graph_receiver_admit`: a formal taken as written
-receives a word or a written form, a Structure formal a Structure): `fn: bad 7 int touch()` is refused (5) before
-`touch()` runs. For a formal taken as written the value of a part is its written field -- the single field of
-`return: ...`, the operand of `return := ...` -- so one requirement is one value in every form (slice 335: `@: c.FILE`
-by position, by head and by `:=` gives one part `return`, `fn_return_forms`). The receiver's action is one:
-`lmx_graph_receiver_make` and the constructor `lmx_graph_fn_make` (its `data` by `lmx_graph_fn_data`); the name is given by
-the contract of a name (`lmx_graph_name_value`): an identifier its spelling, an ordinary string literal its value, the
-escapes decoded by the rules of C (grammar §6, `lmx_graph_string_value`; the author's `name := "test"` creates `test`,
-`"t\x33"` names `t3`); any other value -- 5. A declaration whose actuals bind with no evaluation
-(`lmx_graph_fn_written`) creates F on entering its block, and the name is visible in the whole block
-([the book](LMX_semantics.en.md#declaration-visibility)); the receiver applied to arguments the traversal computes -- the
-whole prepared Structure (`fn: prepared`), the written name and a Structure of the parts (`fn: new_name merge(f1, f2)`),
-any form whose part an expression gives -- creates F where the traversal reaches its Frame (`lmx_graph_fn_apply`), and the
-name answers from there on («в любой момент можем подставить заготовленную структуру ресиверу fn и это будет объявлением
-функции в namespace»). A written name is checked before any argument is evaluated. In a Structure of the parts a field
-`name` is an ordinary field, not the name; every part is read by the one model of a Frame (`lmx_graph_fn_part`; as at the
-root, §6.1), whatever Structure is given (code, a `merge` result, a created function), and the name is never taken from
-the operands' names. F's `parent` is the Frame of the application, and the free names of its body resolve from it
-(§3.5): the name `f1` in a body `merge` copied is the function `f1` of this block, `k` the root's place as it is at the
-call. With a callable named `name` in scope, `fn: name: 7; ...` applies that callable (its head answers it: the ordinary
-call, once) and its value binds no part (5); `fn: name := k3; ...` names the part explicitly whatever callable exists
-(the author 2026-11-09). The executors run results whose requirement is `int` (`lmx_graph_call_shape`); another
-requirement stays the function's own -- the empty Structure of the author's `return: ()` is not replaced by `int`, and a
-call of such a function is refused (5, `fn_author_forms`).
-Refusals: a name that already answers in this block -- 4; no form, a value its formal does not receive, a field outside
-the contract, no name, `args` or result requirement -- 5 (`fn: merge(f1, f2)`); a computed application in a body or an
-inline block -- 5 (a repeated activation would bind the name again; an implementation limit). The binder's name map is
-shared by calls and receivers (`lmx_graph_bind_formals`, `lmx_graph_bind_fields`; by head only for the parts of a
-receiver); the reception is each signature's own: the typed formals of a callable through `lmx_graph_admit`, the formals
-of a receiver's contract through `lmx_graph_receiver_admit`. The translator names a written declaration by
-`lmx_graph_fn_decl_name` (the word at the first position, of `name := word` or of `name: word`) and installs native code
-on it; a computed application is the root code's call of `lmx_graph_fn_apply`, and a call of such a function goes to the
-interpreter (graph73: `fn_named_supply`, `fn_name_collision`, `fn_name_call`, `fn_bad_args`, `fn_return_forms`,
-`fn_author_forms`, `fn_prepared`, `fn_new_name`, `fn_without_name`, `descriptor_merge`, the fixtures of merge). The
-author's decision of 2026-11-11 withdrew the supply of the parts by head: the arguments of a receiver are read as
-code, `name: k2` there is a call of `name`, and only `:=` gives a named part --
-`fn: name := k1; args := (int: a); return := int; code := (return: a + 1)` (a consequence of the author's answer on
-`f(arg: v)`, the executor's reading -- [closed questions](../LMX_blog/q/colon-declares-answered-20261111.md), P5);
-The former implementation still accepted direct supply by head; Run384 removes that branch, as described below.
+Bare x and @x address the call's local cell; `data\`, `code\`, and `@(data\x)` address the source graph.
+Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
+direct writes are observed through actual aliases in execution order.
 
-**Current Run contract, slice384 (bounded implementation).** One `bind_formals` binds direct actuals by position and through `:=`;
-a direct Frame `name: value` is never a label, regardless of whether a same-named callable exists:
-it is supplied positionally and read according to the receiving formal's contract.
-The form is chosen before actual evaluation, then each actual is received before the next. Structure formals
-`args`/`data`/`code` use existing `read_received_value` with contract2: a written group remains DATA,
-and anything else is read as a value. Thus `(missing_code())` as a body retains an inert call until body execution,
-while direct `missing_code()` producing a part does not become a ready descriptor and refuses3.
-The whole-arguments path uses `bind_fields` and `field_value` over DATA fields: `fn: (name: wrapped; args: ();
-return: int; code: (return: 7))` retains colon fields, while direct named supply writes `name := wrapped` and the other `:=` forms.
-Written-description formals `name`/`return` retain their role; `@: c.FILE` remains a requirement description.
-Without Space, `fn_decl_name` distinguishes a direct name/AST `name := value` from the unique DATA field `name` of one whole descriptor.
-A nested group does not become a new actual list; DATA fields are not executed to find the name. Duplicate direct actuals
-are still refused by the common binder. Actual validation of formal declarations needs a common catalog/
-declaration view and remains OPEN; this slice adds no narrow machine whitelist. The remaining frontend `by_head` belongs to M11.8.
+The executable code snapshot is selected at entry before initializers. Changing source code clears
+its native; an entered frame continues its selected snapshot. Methods and ordinary Structures share
+compilation without data=code. C signatures derive from actual calls; different argument sets yield
+different signatures. A header without code describes a call.
+[Norm and remaining clarifications](LMX_semantics.en.md#call-frame-20261115),
+[single M14 task](../next_core_tasks_v3.md#native-structures).
 
-**Formals** are slots of `args` with the same representation as any place (§3.2): `int: q` → an `uninit:int` pointer onto
-the formal's `int` cell (named `q`) -- a mandatory formal; `int: q 0` → an `int` cell = 0 -- a default, read, not
-evaluated; `int: q f()` → the Lmx of the initializer -- a computed default, evaluated at each call that omits `q` (the
-author's decision on computed defaults, [journal 2026-11-07](../LMX_blog/2026-11-07.md)); `@: p` without an address → an
-`uninit:ref` pointer onto a `ref` cell; `Point: p` without a value (the former form of a formal with a Structure
-requirement; by the norm `@: p Point`, above) → the slot points at the **ordinary declaration Lmx**
-from the source graph -- the Frame `Point: p`, an Lmx named by the requirement `Point` with the name word `p` as its field
-(§3.3) -- which keeps the requirement `Point` and the absence of a candidate -- with no separate non-Lmx entity or `uninit:lmx` mark (a representation decision, confirmed by
-Codex, review 2). A formal's description is not executed as a body ([book :684](LMX_semantics.en.md#method-parts)); the
-actual binding of an argument and the default are not mixed ([book, callable parts](LMX_semantics.en.md#method-parts)); the formal's value in
-a call lives in the activation frame (§6.3), and the `args` slot is not changed by a call.
-
-**`data`** is an ordinary Lmx of slots onto primitives and nested Lmx; the `data` part of a callable is the same Lmx: a field with a
-computed initializer (`int: r take(Point, 1)`) holds in its slot, until executed, the address of the Lmx of the
-declaration statement -- the Frame named `int` with the arguments: the name word `r` and the call Lmx named `take`
-(§3.3): a declaration not yet executed, with no hidden source and no early execution of effects at construction.
-Executing the statement is the first assignment of the place `r`: an `int` cell is taken from the region, the slot is
-rewritten to its address, the published value replaces the initializer ([book](LMX_semantics.en.md#ordinary-var), §10);
-later writes into `r` go into that cell. The `data` of a callable is the `data` of its F of the current traversal: the
-general copy of the written `data` through one source → copy map (places, references and Structures keep their sharing
-and nesting inside the copy, and the needed lexical ancestors of what the copy reaches by a reference are copied through
-the same map, whole, up to parent 0, as in `merge`, §6.4) and places without a value for the own fields the body's
-statements declare that are neither formals nor fields of the written
-`data`; the completion is the same whatever the origin of the structure (the author 2026-11-09, journal, the part was then called `var`: «var дополняется
-одинаково при любом происхождении подготовленных структур»); no initializer runs then -- they run at their written
-places, and publication changes the copy, not the declaration's written `data`. An activation is not a graph: its working
-values, argument places and temporaries live in the executor's C frame (§6.3).
+The source callable Structure retains its head and written data/return/code parts. The local namespace
+is not its child field. The code snapshot is execution state, not a second permanent graph.
+Former args and code-to-data auto-fill are removed through one representation/consumer change,
+not parallel semantic paths. Exact new abbreviated headers still require agreement.
 
 ### 3.5 Names: words in the graph, resolution by the traversal (decision, checked by Codex, review 2)
 
-The author's visibility clarification of 2026-11-08 (the part was then called `var`): in a body with automatic `data` completion, all own fields are visible
-from the first statement, whether explicit in `data` or added from the body. A body initializer executes at its written
-position. No field-origin marker is needed. By the author's decision of 2026-11-11 the same holds for any data: a
-name declared by a form of the data is available both to the code over it and to its other forms, wherever the line
-of the declaration stands; a name being available does not mean its value is already computed
-([book](LMX_semantics.en.md#declaration-visibility)). For the data supplied to a launch the clean graph executes
-this since slice 353 (`call_data_whole`), for the root of a unit since slice 355: the places and Structures of the root
-answer above and below their line (§5.2; sub-step 5а of [section M11 of the plan](../next_core_tasks_v3.md#m11)).
-By the author's direction of 2026-11-09 the completion of `data` is the same
-whatever the origin of the structure, so one constructor of F does it when the receiver is applied in each traversal
-(§3.4), not the builder; the consumer collects methods and inputs in a separate pass of its traversal, with its own
-temporary tables. Combine independent work within each stage, without passing its service state onward.
+Root-name visibility does not depend on declaration-line position. Namespace preparation considers only
+data/code roots, without auto-filling graph data. A new branch name is visible at its level and below,
+not outside; repeating a visible declaration uses the selected place. Name availability does not imply
+that its computed value already exists. The 2026-11-15 clarification replaces the old auto-fill wording.
+[Norm](LMX_semantics.en.md#call-frame-20261115).
 
 The builder **does not bake hidden bindings** for a future traversal into the graph: written heads, paths, expression
 operands and the names in the supply `a := v` retain word primitives with canonical string pointers (§4). Explicitly filling
@@ -1604,7 +1505,7 @@ name of the atom is looked up when a path is read through it (sub-step 5а of
 activations each live in their own frame and are not read from the shared formal or its default. The translator resolves
 the same words during its translation with its own tables and emits native by the addresses found (§7); a change of code
 resets such native (§6.5). Verifiability: after construction the P0 tree is absent (its arenas are released), and the next
-traversal starts with empty tables -- checked by the clean-traversal criterion (§11 item 6b). `toLmx` prints a word by its
+traversal starts with empty tables -- checked by the clean-traversal criterion (§11 item 6b). `sys\toLmx` prints a word by its
 string, and a named primitive or Lmx by the address → name table.
 
 In slice390 this route is bounded to the direct two-argument form `@: name candidate`: the construction-time reader proves a candidate
@@ -1613,7 +1514,7 @@ It does not substitute a lexical match for a formal, own DATA
 place, pending declaration, ambiguous name or free input. A mutable alias is a deferred read even if its initial target
 is known in this traversal; its payload is not frozen and its chain is not evaluated to a fixed point.
 An unknown candidate stays written and uses ordinary runtime reception when it is actually obtained.
-Known path extensions are described below; additional type fields and applying this new phase during runtime `merge`/`fromLmx` remain OPEN.
+Known path extensions are described below; additional type fields and applying this new phase during runtime `merge`/`sys\fromLmx` remain OPEN.
 
 **Source-known paths, slice391.** Private Run helpers `construct_slot`, `construct_atom` and `construct_value` read
 a proven source path without an activation resolver or expression evaluation. A named step uses the existing field
@@ -1637,7 +1538,7 @@ queue, walks no source blueprint and executes no initializer. The missing audit 
 private48: a method and a bodyless descriptor answered4 instead of the required2; Runtime03/Graph03 give2/2,
 with data width still2/2. This changes no signature, method-DATA or CODE role, opens no early execution
 of their contents and adds no typed/qualified/common admission. Full M11.7, M13/M14 and applying the new phase
-to runtime `merge`/`fromLmx` remain OPEN. Private48 triple/AFTER39 predates this correction;
+to runtime `merge`/`sys\fromLmx` remain OPEN. Private48 triple/AFTER39 predates this correction;
 after it, private02:49 interp/native/forced and AFTER39 passed on Source05:907, with the previous43 expected files unchanged.
 The first whole bootstrap01 was stopped without acceptance. Whole `boot-m11-construction-paths-02` passed with genuine G1/G2,
 nine smoke cases each, and fixedpoint15/verify907; Runtime03 matches the G2 driver. Intermediate Source06 changes the formatting
@@ -1711,8 +1612,8 @@ string table (decision: one per process, like today's `lmx_ids`, but holding str
 exists for the whole process and is needed only at the input boundary. Interning -- the only operation that compares
 bytes -- runs at the input boundaries: P0 parsing (every atom and head receives the pointer to its string together with
 the token's bytes), unit loading (the unit's strings are already interned by the translator -- the emitted code carries
-their table and turns it into process addresses once at load), `fromLmx`, attaching regions of another process (§8). From
-then on pointers everywhere: comparing identifiers is comparing addresses of strings in the arena (§1 item 2); `toLmx`
+their table and turns it into process addresses once at load), `sys\fromLmx`, attaching regions of another process (§8). From
+then on pointers everywhere: comparing identifiers is comparing addresses of strings in the arena (§1 item 2); `sys\toLmx`
 prints the bytes by pointer. An exact identifier in backquotes is the same string as its value without the quotes
 ([grammar §§3.4.2–3.4.3](LMX_grammar.en.md)). User string values are not identifiers and are not interned. There is no
 numeric code of a spelling, an operator or a receiver: the author's decision of 2026-11-07 about the code is replaced by
@@ -1733,7 +1634,7 @@ Operations: `name_of(address)` (bisection by address in the ordered table or an 
 value -- the address of the cell of T behind the `uninit:T` pointer) is named `name`: a walk over the Lmx's slots with one
 `name_of` per slot and pointer comparison. A place's cell is named from construction, and the first assignment changes
 nothing in the table (§3.2). The table is filled at construction (the names of declarations), at `merge`/copying (the
-copy of a named address gets a row with the same name pointer), at `fromLmx`; the rows of dead addresses are removed by
+copy of a named address gets a row with the same name pointer), at `sys\fromLmx`; the rows of dead addresses are removed by
 collection. Uniqueness follows the book ([names and paths](LMX_semantics.en.md#fields); the author's decisions of
 2026-11-11): in a Structure as **data** every declaring form of its root level is an occurrence of the name; a sole
 occurrence is addressed by the bare name, and `named_field` over it is unambiguous, while with two or more the bare
@@ -1750,78 +1651,27 @@ The name table does not change the semantics of repeated
 declarations or its narrow pause (REPEATED-DECL-OTHER-KINDS). This is the only structure of names; there is no
 `LmxSourceName (key, port) → code`, no "place tables", no ordinal numbers of names.
 
-### 5.2 Service traversal tables (norm: "do them as you like", but "kept nowhere outside a traversal")
+### 5.2 Service tables for concrete work
 
-**Lifetime.** A traversal is one execution (the activation of a root and everything it calls), one translation of a unit,
-one collection pass, one construction (`merge`, a copy, `fromLmx`, loading). Service traversal tables are created empty
-on entering a traversal, live in its frame (the C stack or the traversal's scratch) and are destroyed on **every** exit
--- normal, by a throw, by an error and by a Thread stop; nothing remains for the next traversal. They are not in the
-graph, beside it, in the arena as mandatory preparation, in a module, a cache, a static variable or any other hidden
-state; a repeated traversal after a change of the graph starts with clean tables and gets everything from the current
-content of the graph and the arena. The address → name table (§5.1), the interval index of the regions (§2.1) and the
-process string table with its byte index (§4) are not traversal tables: they are arena and process state, defined by the
-author as the means of learning a name, a type and a string; they are not mixed with the temporary traversal tables.
+Name tables, typed-arena ranges, canonical strings, and necessary copy maps retain their existing
+responsibilities. Namespace and local places belong to a call; temporary construction and copying
+tables belong to that operation and are released on its exits. No frame-publication tables,
+shared-cache coherence, or former physical-slot requirements for S[n] are needed. Removing a check
+includes its tables and fact transfers.
 
-In slice390 independent construction opens a fresh table even within an already active traversal:
-`lmx_graph_space_push_fresh` links it through the existing `prior`, and normal cleanup restores the previous table.
-Only explicitly retained language values enter the graph, not namespace rows or the construction role queues' proof.
-
-**What a traversal has (decision, open list):** the interpreter -- activation frames and their working values, the
-traversal's namespace (rows "block, name, value": the Structures the receivers of `fn`/`sub` declarations create on
-entering their block, §3.4 -- in the whole block, and those an application of the receiver to computed arguments creates
--- from its Frame on (`lmx_graph_fn_apply`); the places and Structures of the root are not in the namespace: they answer
-above and below their line (the author's decision of 2026-11-11 on visibility in data in both directions --
-[the book](LMX_semantics.en.md#declaration-visibility); the clean graph executes it since slice 355, sub-step 5а of
-[section M11 of the plan](../next_core_tasks_v3.md#m11)); the complete data registry is available before code.
-slice 372 no longer declares root forms separately through `lmx_graph_space_reach`; a named form in code
-uses shared resolution and launch. The namespace is made empty on entering the traversal and freed on leaving it,
-`lmx_graph_space_*`; a name is resolved for the current activation and the selected `code`/`data` by it and by the
-frames, §3.5), working `implements` maps for the given reception; the collector -- the liveness map by
-regions for the pass; the builder -- the source → copy map of one `merge`/copy, the parse tree and the parsing arenas; the
-translator -- scopes, the signature intern, the unit's emission plan for the duration of its translation. None of them is
-read by `toLmx`, carried by copying or needed by the next traversal.
-
-**Receiving places, slice380.** `GraphSpace` owns the existing `ImplContractFact` and a `CopyMap`
-indexing facts by physical slot address for the whole execution and all its calls.
-The descriptor is fixed before RHS; the original NONE of an atom lexically naming a known Structure
-survives content replacement. This is neither a rule for every WORD nor dynamic name lookup.
-When constructing copies, the current traversal establishes facts for new slots through the existing source → copy map;
-the tables themselves belong to neither the graph, name table, `Work` nor serializer. `space_pop` releases contract and map.
-The next independent traversal derives its descriptor from the current graph, without declaration history.
-
-**`implements` correspondences (decision, confirmed by Codex 2026-11-08):** the proven correspondence between the used
-fields of a model and the physical fields of a candidate is data of the reception or traversal that established it: a
-reception holds its map for the duration of the operations it needs (reading, writing, taking an address, publishing
-`dirty`), and the next traversal rebuilds it from the graph; the arena has no persistent `lmx_arena_impl`. If the language
-returns a value or a Structure to the user, that graph value is not mixed with the algorithm's internal cache. The text
-of [L2 §14](L2_spec_en.md#implements) about storing the correspondence is updated to this norm. With the author's
-clarification of 2026-11-13, the interface-checking part of `implements` is performed once per candidate: at
-construction when known, otherwise on actual reception. Construction does not execute `test`; actual run-time
-admission performs this second step and stops on the first `0` ([book](LMX_semantics.en.md#admission); cases in the
-[document](../steps/implements-runtime-cases-20261111.md)). Implementation status: the clean graph now admits every call at run
-time and keeps no correspondence between calls -- step 7 of [section M11 of the plan](../next_core_tasks_v3.md#m11).
+Resolve known names and requirements through common builder code during clean-graph construction.
+Do not prepare separate runtime tables for hypothetical dynamic behavior. Explicit sys\check,
+sys\checkL3, and sys\translate use the necessary parts of the working builder, not a second implementation.
+Clean-graph checking executes neither user initializers nor test.
+[Single task](../next_core_tasks_v3.md#graph-tools).
 
 <a id="interpreter"></a>
 ## 6. The interpreter
 
 <a id="direct-access-cache"></a>
-Local working values and dirty state belong to activation frames. The direct-access cache belongs to
-one execution under §5.2 -- its root and all nested/recursive calls, including native/walker transitions.
-It reconciles the actual addressed cell for every path, index, dereference and local dirty publication.
-A direct write is accounted for by subsequent direct reads of that cell, including aliases;
-physical storage remains at the standard boundary. Local snapshots are not reloaded.
-Changing an intermediate reference requires establishing the path address again; base p in p\x may
-remain a local pointer and legitimately differ from data\p. Address reuse must account for this.
-A writer called outside the common mechanism requires reconciliation of affected direct cache state while retaining locals.
-Tracking necessary changed places of this traversal suffices: no permanent arena index, graph copy,
-per-write journal or mandatory lookup on every access. Live shared-cache references join existing
-execution roots alongside working values; no separate GC mechanism is needed.
-[Rule](LMX_semantics.en.md#direct-access-cache); the common implementation remains OPEN in M14.
-
-The walker uses an ordinary frame's prepared working state: resolved places, values,
-dirty state and continuation. Field order below specifies logical execution order, not an obligation
-to reread a changed graph before every operation. Publication and continuation must agree
-with native, including nested calls and changes to executing code ([M14](../next_core_tasks_v3.md#native-structures)).
+Call-local places are independent of the source graph. A direct path or dereference uses the actually
+addressed cell. A separate shared cache and load-dirty are cancelled; optimization preserves sequential
+observable behavior. [Norm](LMX_semantics.en.md#call-frame-20261115).
 
 ### 6.1 Traversal
 
@@ -1876,161 +1726,23 @@ formals, own fields); not found -- the implicit throw by the book. Since slice 3
 
 ### 6.3 Activation
 
-An activation is the executor's C frame (like today's `LmxWalkFrame`): the selected code and data, the arena, `node` (the
-callable's lexical parent), the argument and working-value cells, the result, the throw pad, the name resolution table of
-this traversal. The working values of own fields are the frame's cache, published into the graph's cells at checkpoints
-([book §12](LMX_semantics.en.md#dynamic)); no "bindings by code" (`LmxActivationBinding`) are needed: a formal is the
-address of its slot in `args` (a description: the requirement, the default, `uninit:T` or a declaration without a
-candidate), an argument is a frame cell found by position or by name (§5.1); receiving an argument is the first
-assignment of the frame's argument place. Reception, `implements` by used fields, conversion routes and throws follow the
-current book; the carrier changes, not the rules (`:=`, `merge`, positional `a(5)`/`a: 5`, q/z, AXBY are kept -- §11).
+A frame holds local values, namespace, and control for its call. Root data declarations map to inputs;
+root code declarations absent from the input places then supply remaining locals. Preparation visits
+neither nested branches nor graph references. Ready values use ordinary copying; computed declarations
+are not executed early. uninit:T retains absence of a value.
 
-**Common mapped copier and written DATA, slice400.** Same-arena `fn_data` uses the existing CopyMap/CopyStack:
-written→new DATA is registered before fields, followed by reserve, CODE-own completion and one shared drain.
-The CopyMap `value_policy` field selects operation policy:1 preserves physical profiles,2 defers Value edges,
-4 allocates ordinary parts from a held F. Graph reserve uses7 and drain retains5; existing mode0 is unchanged.
-This changes the machine ABI, so generated headers and runtime must agree on sizeof(CopyMap).
-The result role is selected before allocation; no shared pool is retagged. Only explicit fn creates a new F.
-FOREIGN/reference companions retain the complete snapshot until common relocation workers finish it; absent payload
-is neither read nor copied. WORD becomes a new physical cell with the same canonical TEXT pointer,
-complete type and selected profile; the common map preserves shared/distinct cells.
-After drain, Graph projects names, immutable slot facts and mapped parents. Receiving DATA retains its own
-data name, owner parent and completed width. There is no intermediate publication, Model/test execution or GC;
-the constructor owns cleanup. The map and queue live only for this construction.
-Private02 covers real parsed sub and ordinary Code over typed DATA, Model/backedge, precision,
-absence, WORD lifetime after source release, held ordinary parts and explicit fn; machine assertions are native.
-Private02 SUITE1/0 and existing controls02 SUITE4/0 PASS n/f/root0/root1. Whole/final gates are in
-[witness400](../steps/witnesses/m13-mapped-data-20261115/notes.md).
-Full overlap merge, scalar CODE-own/typed args/results/FFI/Array and native/cache/flush M14 remain OPEN.
+@x addresses this call's local cell; @(data\x) addresses the original graph cell. Do not merge them
+to preserve the former stable-cell model. Local-place pointers follow ordinary lifetime rules;
+introduce no speculative escaped-local infrastructure. Recursive/repeated calls receive other local places.
+Return and nested calls neither publish these places nor reload suspended callers' locals.
 
-**Written SOURCE and hidden transport, slice399.** `rw_signature_input` requests original declared SOURCE
-only for a written formal whose index is below arity. A hidden input has no written formal:
-its existing two-field transport entry keeps empty SOURCE, its name and existing witness (empty for FREE). This is the input
-description's SOURCE, not the actual Value: the Value's complete SOURCE/context still travels unchanged.
-The separate callee header keeps Model-capture admission; missing original SOURCE for a real written formal remains an error.
-An absent FREE native default installs scalar ABI/source metadata only after ABI validation, through
-a typed pointer to the Values array element. Generated L1 uses ordinary `\field:` targets;
-an indexed C-dot target is invalid, while `array[i]\field` would wrongly treat the struct element as a pointer.
-Private399 repair3/0 and capture/Model controls4/0 PASS without changing expected results; genuine G1/G2 quick/fixedpoint30,
-actual G2 targeted13/0 and Graph3 triple PASS.
-This does not complete common native M14.
+Executable code is selected as a snapshot before initializers. Native and interpreter continue that
+selected version; changing the original graph affects the next entry after native is cleared, without
+restarting the current call. Snapshot boundaries and early computed-declaration consumption remain M14 questions.
 
-**Scalar working Value, slice398.** Existing `LmxGraphWork` stores a complete inline Value separately from physical
-cell/slot, loaded/dirty and legacy number. FOREIGN is proved by the exact pool/ABI/companion. Before loading,
-row.Value may carry an absent ABI witness of the physical Model; an incompatible actual refuses before reading,
-including a legacy actual in a scalar place. An absent scalar retains metadata without reading its payload.
-Reads/operands produce independent snapshots; the place is selected before RHS and the row is reacquired by stable token
-after RHS. A working write prepares the complete Value by destination ABI before changing the row and dirty state.
-Publication through the common writer preserves cell/slot and the local snapshot, clearing dirty only after success;
-a clean row is neither republished nor reloaded after a nested call. GC retains the complete row.Value and physical cell.
-This supports interpreted ordinary Code over already supplied typed DATA. Scalar formal/free mutation refuses
-before RHS; typed args/results, constructors, public own fields, fn_data/merge and common native/cache/flush remain OPEN.
-
-**Historical slice 373 working rows.** `lmx_graph_data_cell` returns an existing primitive cell or a retained
-computed declaration: `int` with a candidate or a supported raw `@` with a candidate (three fields/int reference,
-two/Structure reference). `work_require` binds the existing slot and records expected_kind without evaluating
-the initializer. `work_load` refuses5 when reading a retained Frame before a working write. The first write creates
-only a working typed reference; the existing flush then publishes it through the same row/slot, preserving any
-existing physical cell and wrapper. `known_place` checks the destination type before RHS; `local_int` uses strict
-`known_int`, so a reference Frame cannot pass numeric preflight. True `@: p int` without a candidate remains
-unsupported: kind5 and permanent wrapper8/cell5 must pre-exist. It must not be represented as Structure-reference
-kind6, allocated lazily on the first write or checked for a prior write by its uninit wrapper.
-The initial payload of a true uninit:T is not promised and is not read by these checks.
-
-**Accepted slice 376.** Common `build_place` preallocates canonical `@: p int` as wrapper8 onto a named cell5
-before block classification, so slot/index/typeof are available before the first store. A null trailer and checked
-`end: @` preserve the primitive form; `until` retains its previous postloop route. Compact non-colon `@`
-remains an expression. This does not complete the common M11.8 code-body consumer. Model/actual8 normalize to family5
-in the existing map; the first write and normal publication preserve the original slot/wrapper/cell without reading old payload.
-Formal8 is required, actual-contract3 reads a reference expression, and admit creates an independent cell5 from the admitted
-actual; signature payload is not read and no default is introduced. Frontend/dump recognize physical8; the serializer
-preserves physical3/5/6/8/9, sharing, names and parent closure through one map. A type-only literal field passes through
-the existing deep merge-copy while its computed neighbor runs. Direct native execution of actual TypeOnly8 was confirmed
-by private GDB trace03: `lm_graph_body2` → `lm_graph_method2` → `lmx_call_prim_values`,
-with a normal exit. Ordinary Self/Types.data and direct native coverage of their physical5/6/9 remain M14 OPEN;
-arbitrary models, void, pointer depth and Array remain in M13.
-[Checks and limits 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
-
-**Written fn/sub preparation, slice 377.** When a frame opens, common `space_declarations` prepares directly written
-fn/sub in selected data/body before capturing free inputs, including entry within an existing traversal.
-When data=body, one pass suffices. A construction binding is identified by its scope and raw source address:
-re-entry preserves the same F and its own data; equal names at different source occurrences do not merge
-declarations. Bindings belong only to the current traversal; the next traversal creates its own F, while values
-retained by ordinary references remain alive. This prepares construction bindings, executing neither the body nor
-ordinary-data initializers. Computed declarations retain their previous route when execution reaches the record;
-computed ordinary declarations, the common root frame and M14 remain OPEN. Two pure cases confirm re-entry and
-refusal with 3 on bare access to distinct raw occurrences of one name; acceptance for 377, including render/docs check, passed.
-[Witness 377](../steps/witnesses/m11-ordinary-nested-20261114/notes.md).
-
-**Root frame and addresses, slice 378.** The root executes through the same work frame and block0 as a supported code consumer;
-the native wrapper provides normal frame completion, while forced opens no second frame. There is no separate root emitter.
-A one-off GDB trace01 entered actual `lm_graph_root` through `lm_graph_body`/`lmx_call0_mode`
-and exited normally; the generated native root does not call `lmx_graph_run`.
-Previous simple legacy values need no FOREIGN capture; eligible scalar FOREIGN receives a complete owned snapshot
-through the common Value producer (slice398). Discarded AST is evaluated through common `eval_value`/`emit_operand` without requiring
-an int conversion of its result. Computed names appear when execution reaches their producer through existing metadata/rows;
-early access refuses before actual effects. This does not run ordinary-data initializers.
-
-Nested publication does not reload root locals: with graph x8, snapshot/again retain1 and direct reads8;
-the reference snapshot retains10 while direct reads20. Clean locals are not written back. For an existing mapped own int,
-working value3 differs from its physical cell still holding1: dereferencing @value and direct data\value both read1 before normal publication.
-This does not permit stale direct-cache values: local dirty has not yet been published. For a formal or free input,
-@x addresses its own activation cell, preserving control7 under Р28. Preallocating an addressable physical cell for
-a legacy computed-int before normal publication remains OPEN in [M13](../next_core_tasks_v3.md#flat-lmx-descriptor); an available working value permits neither
-returning the address of `row.number` nor forcing publication to obtain an address. The shared cache, `flush()` and
-ordinary native M14, direct path-head calls and full M11.5г remain OPEN.
-[Observations and limits 378](../steps/witnesses/m11-root-frame-20261114/notes.md).
-
-**Indexed writes, slice380.** The interpreter and native share this order: evaluate base/index, call Run
-`slot_prepare` before RHS, obtain the RHS address, then Graph `slot_admit` checks retained kind/type
-or NONE before the existing write with invalidation. Preparation evaluates no initializer and reads no
-initial uninit:T payload. Admission refusal retains the old slot; base/index errors keep their previous
-boundary after RHS. The common assignment builder removes only the synthetic list around a single
-formed Frame; written groups and the assignment-AST exception remain, without receiver-specific runtime unwrapping.
-Low-level facts/type/admit live in Graph without a Run-header dependency; lexical preparation lives in Run.
-Exports: Graph71, Run51, implements74; `contract_append` has a static prototype from the L3 generator.
-Runtime02/graph02, private67 triple/204 AFTER including reset2/mutation24/native trace, genuine G1/G2 quick,
-fixedpoint13/verify717 and G2 graph68 triple/84 AFTER/mutation24 passed; render/docs checks380 also passed.
-This kind/type admission
-completes neither deep Structure `implements`, static M11.7 checks nor M13/M14.
-
-**Lexical CodeBody, slice381.** `GraphFrame.lexical_scope` is a cursor for the physical body; selected `code`, `body`
-and `data` retain their launch identities. Common `work_scope` admits a CodeBody within `frame.body`
-through existing control-argument roles; an own-data phase also admits `frame.data` itself.
-A for-header and body retain their physical scopes.
-Written fn/sub of the block are prepared at actual entry; a computed F appears only when execution reaches
-its producer. Scope/raw source, `F.parent` and the existing construction-binding proof are preserved.
-The `block` wrapper restores the cursor on normal exit, flow and error; native sets it on entry,
-before every statement and at control labels, including loop condition/step and cleanup. Inline opens no separate activation.
-
-Data and formals retain priority. A local F masks only the FREE fallback in its lexical chain;
-an inline binding neither replaces the shared input row nor becomes visible to a sibling or outer block.
-Pending uses are checked in each occurrence's scope. In existing `Work.loaded`, bit8 marks the required
-entry input, while bit2 marks consumption and visibility to child calls; classification alone does not expose
-an optional snapshot. Bit4 permits deferred validation only if every required use is pending;
-a closed outer use clears it. An explicit merge initializer is scanned in its expression's context,
-not with another statement's remaining cursor. A retained Structure in a data context does not execute its fields;
-an explicit merge constructor executes their computed initializers.
-Runtime06/graph02, the private checks, final Graph03/private02 inline triple, native trace and genuine
-G1/G2 quick with fixedpoint13/verify751, the G2 repeat (86 triple/AFTER102/mutation24) and normal render/docs check381 passed.
-This completes neither full M11, copying live F/data, M13 nor M14; a dynamic callee may use walker fallback.
-
-**Structural CodeBody view, slice382.** Common `code_body` reads the existing argument role and
-returns a borrowed `body/from/to` range. An already selected body argument (`if`, `while`, `until`,
-`for`) or for-header keeps its selected Structure and fields. For the whole-tail role of `else`/`finally`,
-the original Frame's fields are selected; only when the entire tail is one written anonymous group are
-that group's fields selected, exactly once. An ordinary `block` and its remainder already received a body and do not unwrap it again.
-Thus `else: tick()` preserves the call head, `else: (tick())` executes `tick()`, while in `else: ((tick()))`
-the selected body contains a standalone group value and there is no call. For `finally` the same selection applies
-when cleanup runs on exit, not at registration; reverse cleanup order is preserved.
-
-The scanner, own-place collection by `fn_own`, walker and native read one view. `code_parent` recognizes
-the selected group in the control lexical chain while retaining its real `parent`, source holder and raw index;
-a nested standalone group does not gain that role automatically. Neither a descriptor nor body fields are evaluated
-for selection, and no graph copy, new activation or table is created. Runtime01/Graph01 and five pure cases passed;
-private25 triple/75 AFTER checks/mutation24, native trace and genuine G1/G2 quick with fixedpoint13/verify761 passed.
-The G2 repeat (25 triple/21 negative AFTER checks/mutation24) and normal render/docs check382 passed. This is a bounded implementation of the existing contract
-and completes neither external/computed CodeBody, the full cycle of copying and applying fn anew, M11.7/8, M13 nor M14.
+Slices through400 implemented working rows with loaded/dirty and publication: that previous mechanism
+must be simplified while retaining necessary typed storage and the ordinary stack/GC. Those functions
+do not establish the new model. [M14](../next_core_tasks_v3.md#native-structures) lists concrete removal sites.
 
 ### 6.4 Copying, merge, attaching
 
@@ -2041,7 +1753,7 @@ their types in the receiving arena, slots are rewritten by the map, `parent` ont
 are kept ([L2 §13](L2_spec_en.md#copy-merge)); the rows of the name table are copied with the same name pointer for the
 copies' addresses; interned strings are shared by the process, nothing to copy. Attaching the regions of another arena of
 the same process touches neither cells nor names; attaching from another process (mail between processes, §8) passes
-through a `fromLmx`-like interning boundary. `independent: immutable` follows the book.
+through a `sys\fromLmx`-like interning boundary. `independent: immutable` follows the book.
 
 Operands of `merge` are ordinary expressions with their general meaning (the author, 2026-11-08,
 [journal](../LMX_blog/2026-11-08.md)): a head naming a function is applied once and its result is the operand, and a
@@ -2108,116 +1820,40 @@ Whole bootstrap quick with genuine G1/G2, nine smoke cases each and fixedpoint13
 and normal render/docs check383 passed. Coverage is bounded to these classes; full M11, remaining5e/7/8, external/computed CodeBody,
 native copy and M13/M14 remain OPEN.
 
-### 6.5 Resetting `native` when a write is published (norm: [L2 §11](L2_spec_en.md#call))
+### 6.5 Source-code mutation clears native
 
-The norm ([L2 §11, the paragraph on writing](L2_spec_en.md#call)): a bare local write changes a frame working place and dirty state, while a direct write updates the addressed cell's shared state in the cache of one execution;
-at a standard publication checkpoint the common mechanism resets `native` of **code places** linked to the changed cell.
-An explicit path, alias or dereference selects the place, not immediate publication.
-**Changing an ordinary data value keeps the entry**; the link to a code place
-may belong to an enclosing Structure, not only to the Structure with the written slot; writing into the slot and
-removing the inputs of changed code are atomic for the next or a recursive dispatch; a refused invalidation stays before
-publication. The implementation tells **code from data by the place of the write**, not by transitive reachability of
-the graph and not by the name or the reference through which the write is made: the write path knows the slot it writes
-into and the Lmx that slot belongs to. An **executed Lmx** is one that execution reads as code: a callable
-`fn`/`sub`/method with its parts `args`, `return`, `code` (formerly `body`; the callable's own fields are the part
-`data`, formerly `var`, §3.4); an ordinary executed Structure without `fn` parts -- the
-Message root with statements, a Structure executed through `call: data code` or `call: code code` ([L2
-§11](L2_spec_en.md#call)) or, in code, by a launch by name (`S()`, `S(D)`;
-[journal](../LMX_blog/2026-11-11.md#structure-call-by-name)); a statement inside them; a declaration statement not yet
-executed (§3.4). A slot belongs to
-**code** if execution reads its content as a part of a statement of an executed Lmx -- the head, a word, a literal, an
-operand, a nested statement; then the code itself changes, and the `native` of that Lmx and of every callable whose code
-contains or refers to it are reset. A slot belongs to **data** if it is the place of a value the executed code reads: a
-declared place after its declaration ran (`int: x 5` -- the cell `x`), a field of a data Structure, of the part `data`
-or of the root as a store of values -- such a write keeps `native`. The role is read from the Lmx itself and the slot's
-position in it, not from the names `args`/`return`/`code`, not from the name of the destination place and not from the
-reference: a write through an alias, or through a Structure handed over as `data`, into a statement of an Lmx that
-anyone executes is a write into code, and `native` is reset; the name `data` by itself grants no exemption from
-invalidation. For a write into code, the `native` of the callables in whose parts the changed Lmx lies (the `parent`
-chain) and of the callables whose code refers to it by a slot (a shared code substructure after `merge`/copying, or a
-reference to code held in data) are reset -- the latter are found by a **fresh traversal** from the roots of the current
-traversal (the Message root, the live activations, the mail) over the statements of the executed Lmx with `native` ≠ 0
-and over the Lmx references inside them, without entering data values; there is no index between traversals, only a map
-**of this traversal** is allowed (§5.2). Separate witnesses (§11 item 6): (1) changing an ordinary `x` read by the body
-(a field of the root, of the part `data` or a declared place) -- `native` kept, the next call reads the new value; (2)
-changing a literal or an operator in `code` -- every `native` whose code contains or refers to it is reset; (3) code shared by two
-callables (code aliases) -- both are reset; (4) a change incompatible with the former entry -- a refusal before
-publication; (5) changing a statement of an ordinary executed Structure without `fn` parts through a reference handed to
-it as `data` -- its `native` is reset, while writing a value through the same reference keeps it. The first assignment
-and a write into an existing cell obey one rule -- the slot's ownership decides. No `parent` is introduced for a
-primitive.
+An explicit write to executable source code clears affected native before the next dispatch.
+Changing a local variable is not a source-graph change. The current frame continues its snapshot
+selected at entry before initializers; completed effects are not repeated. Use the existing common
+invalidation mechanism, without a publication journal, version registry, or deoptimization.
 
 <a id="flush-receiver-contract"></a>
-### 6.6. Explicit publication with flush()
+### 6.6 Removal of flush()
 
-Ordinary non-declaring receiver flush(), with no arguments or result, first publishes the current frame's dirty
-own local values into shared cell state in forward field order, then stores pending shared direct-access
-writes into the graph. Checkpoints use the same order. Other local frames are not published.
-Execution continues without a new activation,
-exit, yield or Message publication. An if/loop body uses the same frame. Successful writes clear dirty state;
-repeating flush without new changes writes nothing, repeats no computations/admission and reloads no locals.
-Publication must reconcile the shared cache; retaining a local snapshot does not apply to this cache.
-Bare atom flush does not invoke the receiver; flush() in data remains an ordinary Structure.
-Code publication and continuation follow §6.5/§7; no separate journal or whole-arena traversal is introduced.
-[Rule](LMX_semantics.en.md#flush-receiver-contract), [open M14 implementation](../next_core_tasks_v3.md#native-structures).
+The flush receiver and local-frame publication are withdrawn by the 2026-11-15 decision. Remove
+their supporting checks, tables, transfers, and generation. Message publication and exposing a
+construction result are not local-frame write-back and retain their separate contracts.
 
 <a id="native"></a>
 ## 7. Native
 
-An ordinary Structure C used as code is compiled by the same body emitter and frame mechanism
-as fn/sub. Its entry is installed in C.native and works with any admitted D through `call(D C)`:
-the existing admission and place map bind data at launch, including different field order.
-`call(C C)` is the same case; a fn/sub declaration, a name for C and data = code are not required.
-A Structure used only as data does not need its own native entry for that use.
+Methods and ordinary Structures share body and frame emission, without data=code.
+C signatures are determined by actual calls; different supplied argument sets give different signatures.
+A signature without code describes a call, not an entire fn/sub. Do not introduce a speculative variant
+registry or universal adapters. Preserve static optimizations justified by actual inputs and operations.
 
-The frame reuses resolved addresses and typed local values; direct caching is shared within the execution.
-Local dirty values and pending direct writes to data and code are published
-after argument evaluation before control transfer, on specified exits, at yield and on explicit flush().
-The graph write and removal of affected code entries are one publication before a new/recursive dispatch.
-Clearing native neither replaces machine instructions already executing nor restarts effects.
-The walker retains the same prepared-frame and continuation contract, including boundaries after nested calls.
-No artificial method, whole-graph copy, permanent versions, hot-patch/deoptimization or separate JIT is introduced.
-A dynamically selected compiled C uses its entry; a suitable runtime body without native uses the walker.
-Implementation of this addition remains **OPEN**: [M14](../next_core_tasks_v3.md#native-structures),
-[author's decision](../LMX_blog/2026-11-13.md#native-dirty-publication).
+Current lm_graph_emit_methods installs the compiled address in the declaration's native;
+lmx_graph_fn_make transfers decl\native into made\native. Generalize this emission for ordinary C:
+native outer main does not prove a nested C is native. sys\native(S) only reads the field, without compiling.
+sys\translate(S) returns L1 and diagnostics; it neither installs native nor executes S.
 
-One publication contract does not require a universal journal of every assignment. Native determines
-required writes and publication conditions statically where possible, keeping intermediate values in
-registers/locals without unnecessary dynamic dirty flags. Dynamic places need only necessary change
-tracking of locals in the frame and direct access in the shared execution cache, without assignment history. Reducing physical writes preserves all
-required computations, checks, effects, alias observability and publication timing.
-Explicit flush() likewise publishes the current frame's local dirty values and pending shared-cache writes,
-with standard continuation and preservation of other frames' local values.
-
-The translator is a consumer of the clean Lmx graph (§1a), not of the parse tree: its input is the unit's built graph in
-the translation arena, and everything it knows about the program it reads from slots, cells, the address → name table and
-the regions; it resolves the names itself during its translation (§3.5), and its scopes, signature intern and emission plan
-are tables of its traversal, destroyed when the translation ends (§5.2). For every body with `native` it emits C code that
-reads and writes **the same cells**: a field's slot is known as the k-th `ref` cell of the backing of the selected Lmx, the
-value's type by the region of the address in the slot and the declaration, values are machine operations on the cells;
-the temporary results of expressions live in the C frame and are not addressable ([L2 §18](L2_spec_en.md#lowlevel-address));
-the first assignment of a place without a value is the same kernel operation as in the interpreter (a write into the
-pre-existing cell of T without changing the slot or internal pointer), as are later writes. No names are needed at a call -- the call
-goes by the address of the callable Lmx and its `native`. Where native must find a field by name at run time (the data of
-`call: data code`, dynamic visibility), it calls the kernel's same `named_field` with the string pointer (a constant of the
-unit). An emitted unit consists of: the unit's string table (bytes; at load one interning call per string, the result an
-array of pointers `l2_names[K]`), the exact region sizes, the generated initialization of the clean graph through the
-common constructor (§1a), the native bodies. Native/interpreter parity is checked by the same regressions on both routes.
-
-**Image of actually constructed values, slice390.** The native image serializes the current graph contents into the
-receiving arena through one temporary address map: a held F's fields, FN role, physical links and `parent` are preserved,
-and shared targets receive one destination address. Allocation precedes following edges, including parent, so a cycle
-does not create another copy. Generated loading restores links using its own cells' addresses; no host-process C addresses
-are embedded in the image. This preserves an existing value; it is not language `merge(F)` or a way to turn a raw
-declaration into a persistent F. An ordinary copy of F remains a descriptor; this work does not establish completeness
-of the text codec (§8). The initial parent0/allocator failure is corrected; 2 FN-image cases passed in three modes,
-as did whole G1/G2 quick and fixedpoint15/verify896. The G2 private43 triple/negative AFTER33 repeat on existing binaries
-passed; all code gates390 and normal render/docs-check PASS. The final index is checked before commit.
+Frame and snapshot contracts are in section 6; [plan and focused acceptance](../next_core_tasks_v3.md#native-structures).
+Implementation of the new model is OPEN. Old receipts remain history.
 
 <a id="codec"></a>
-## 8. toLmx and fromLmx
+## 8. sys\toLmx and sys\fromLmx
 
-`toLmx` walks the current graph: for a slot it prints the cell's value by the region's type. The presence of `uninit:T`
+`sys\toLmx` walks the current graph: for a slot it prints the cell's value by the region's type. The presence of `uninit:T`
 alone does not permit discarding the target cell's contents after writes. The current slice's diagnostic print keeps
 the form `int: x` and is not yet a complete serialization of a modified graph. The full codec must preserve both the
 link and the contents of T. The address's name comes from the address → name table (if any), a word is printed as
@@ -2225,7 +1861,7 @@ the bytes of its interned string, an Lmx recursively (an Lmx with a word head as
 named target as `@: name target`, to an unnamed Structure (the parts `args`, `code` of a `merge` copy) as the block of
 that Structure under the reference's name, a named word place as `name: word`: the text a prepared Structure has
 (slice 333); the order and the
-composition are the current ones ([book](LMX_semantics.en.md#source-codec)). `fromLmx` parses the text with the common P0,
+composition are the current ones ([book](LMX_semantics.en.md#source-codec)). `sys\fromLmx` parses the text with the common P0,
 interns the spellings (§4), builds Lmx and primitives in the regions of the receiver's arena (a place without a value -- a
 cell of T and an `uninit:T` pointer onto it; names -- words), fills the name table. Between processes bytes of text
 travel, not addresses.
@@ -2256,87 +1892,24 @@ What stays: `Lmx.parent`, `Lmx.native`, the arena with regions and the interval 
 as a rule (its carrier is a service table of the reception), copying by one map, collection by reachability.
 
 <a id="example"></a>
-## 10. A worked example
+## 10. Worked frame example
 
-Historical example of the former root route: the forms and results below are retained as a description of that slice,
-not as an executable slice 372 input. Former declarations of ordinary Structures at the root now also have the call role;
-the data of a current version must be supplied explicitly under the M11 rules.
+Let source D contain x=1, and selected body C execute `x := 2` followed by `data\x := 9`.
+This describes call(D,C), not a new header syntax.
 
-```text
-Point:
-    int: y 0
-    int: x 0
-end: Point
-fn: take (Point: p; int: q) int
-    return: p\y * 10 + q
-end: take
-int: r take(Point, 1)
-```
+| Point | Frame-local x | Source D\x |
+| --- | --- | --- |
+| After root-place preparation | 1 | 1 |
+| After x := 2 | 2 | 1 |
+| After data\x := 9 | 2 | 9 |
+| After return | Frame ended | 9 |
 
-The example is written as the current implementation executes it. By the roles of the author's decision of 2026-11-11
-it mixes forms of data and of code: the block `Point: … end: Point` is a form of data, the declaration of an ordinary
-Structure; `fn: take … end: take` is the declaration of a callable, which acts in both roles; `int: r take(Point, 1)`
-is a declaration by a receiver with a computed value: in data it declares the place `r`, in code it is a type check
-with an assignment. The root of a unit is launched as a Structure over itself, so by the norm the block `Point`, when
-execution reaches it, is read in code as a call of the declared `Point` with its own tail in the place of the argument,
-and the two fields of the tail (`int: y 0` and `int: x 0`) are not a defined number of arguments, since the argument of
-the form is one, `data`: that is an error, and the declaration of `Point` is written in data (the executor's reading --
-[answers](../LMX_blog/q/fable-self-answers-20261110.md), Р6, Р7 and Р21; the decision --
-[journal](../LMX_blog/2026-11-11.md#structure-call-by-name)). A formal with
-a Structure requirement is written `@: p Point`, not `Point: p`, the parts `var` and `body` are called `data` and
-`code`. The interface-checking part of `implements` is performed once per candidate; graph construction does not
-execute `test`, which is the second step at actual run-time admission ([book](LMX_semantics.en.md#admission)). Of these rules the clean graph executes the names of the parts, `data`
-and `code` (slice 354), sub-step 5а (slice 355) and the first part of sub-step 5б (slice 356); the others it does not
-execute yet, and the description below is its current behaviour; the example is translated together with steps 5 and 8 of
-[section M11 of the plan](../next_core_tasks_v3.md#m11).
+`@x` addresses the second column; `@(data\x)` the third. Return does not copy 2 into D.
+A new call gets a fresh namespace from current input data. Executable C is selected as a snapshot
+before initializers. Changing source C clears native for the next entry while preserving the current continuation.
 
-**The graph after construction, before execution.** The unit's root is an `lmx:data` Lmx with three slots. Slot 0 → the
-Lmx `Point` (`lmx:data`, two slots → `int` cells 0 and 0 in the `int` region; the name table rows for those cells'
-addresses are `y`, `x`; for the Lmx's address, `Point`). Slot 1 → the declaration -- the Lmx of the written Frame named
-`fn` (§3.4), with five argument fields: the word `take` (the `name` argument); `args` -- an Lmx with two slots: the
-formal's Frame `Point: p` -- an Lmx named `Point` with the word `p` as its field -- and an `uninit:int` pointer onto the
-unwritten `int` cell of the formal `q` (a mandatory formal; the row `q` is for that cell's address); `return` -- the
-word `int`; `data` -- an empty Lmx; `code` -- an Lmx with one statement. Slot 2 → the Frame of the declaration `int: r
-take(Point, 1)` -- an Lmx named `int`: field 0 → the word `r`, field 1 → the call Lmx named `take`: field 0 → the word
-`Point`, field 1 → an `int` cell 1. Nothing is resolved in advance: `take` and `Point` are words; there is no function
-`take` in the graph -- the traversal creates it; there is no cell `r` yet -- the initializer is not evaluated, slot 2
-holds the statement (§3.4). The statement of the body is an Lmx named `return` with the field `E` = `[[[p, \, y], *,
-10], +, q]`: the names and operators of the expression are words (`p`, `\`, `y`, `*`, `+`, `q`), `10` is an `int` cell.
-
-The unit's regions: `lmx:data` -- the root, `Point`, the declaration and its Lmx `args`, `data`, `code`, the formal's
-Frame `Point: p`, the `return` statement, the three expression Lmx of `E`, the Frame of the declaration of `r`, the call
-Lmx; `int` -- `y`, `x`, the cell of `q`, `1`, `10`; `uninit:int` -- the pointer onto the cell of `q`; `word` -- `take`
-(the name), `p` (the formal), `int` (the result requirement), `r`, `Point` (the call), `p`, `\`, `y`, `*`, `+`, `q`;
-`ref` -- the slots of all Lmx; `text` -- the strings `Point y x take p q return r int fn` and the language words of the
-kernel. The name table: `Point`, `y`, `x`, `fn` (the declaration), `Point` (the formal's Frame), `q`, `return`, `int`
-(the Frame of the declaration of `r`), `take` (the call's Frame) -- for the addresses of the Lmx and primitives
-themselves; no row `r` yet. `toLmx` prints the same program by the names of the Lmx and their fields: the declaration as
-`fn: take (Point: p; int: q) int`, slot 2 as the declaration of `r` with the call.
-
-**Execution.** The traversal begins with an empty namespace (§5.2). On entering the root's block the receiver `fn` is
-applied to the arguments of the declaration in slot 1: F is created -- an Lmx in `lmx:result` with `parent` on the
-declaration, named `take` (the table row for F's address), with the reference fields `args` and `code` onto the
-declaration's parts, an own word cell `return` and a new empty `data` (the body has no own fields); the namespace gets
-the row "root, `take`, F". Then the interpreter walks the root by slots; slot 0 is the named Structure `Point`: the
-traversal reads it as a declaration (`lmx_graph_space_reach`), and it answers its name above and below its line (§5.2);
-slot 1 is the declaration, its F already created; slot 2 is a Frame `int` → a declaration with a computed
-initializer; the call Lmx: the name `take` is resolved by the traversal's namespace into F → a call; an activation in a
-C frame; the frame's argument places receive their first assignment: the word `Point` is resolved into the Lmx `Point`,
-`p` receives its address by `implements` (the used field `y`; the correspondence map is data of this reception, §5.2),
-the `int` cell of the frame's argument place `q` receives 1; F's body -- through the reference `code`, the declaration's
-body: `return`; `E`: `p\y` → `named_field(value of p, y)` → the `int` cell 0; `0 * 10 + 1` = 1 (temporaries in the
-frame). The result 1 is the first assignment of the place `r`: a new `int` cell from the `int` region, 1 is written into
-it, the row `r` for its address is added to the name table, the root's slot 2 is rewritten from the statement's address
-to this cell's address; the declaration statement and the call Lmx, referred to by nobody else, are collected (§2.4).
-Now `toLmx` prints `int: r 1` -- the published value replaced the initializer
-([book](LMX_semantics.en.md#ordinary-var)); a later `r := 2` writes 2 into the same cell (a data write, `native` entries
-are kept, §6.5). On leaving the traversal the namespace is freed, and nobody holds F any more, since the program kept no reference to it; the declaration in slot 1
-stays as written, and the next traversal creates its own F. Native for `take`: the translator created F in its
-translation namespace by the same application of the receiver, resolved the words `p`, `y`, `q` and emitted C code that
-reads the formal `p`'s slot of its frame, calls `named_field` with the constant `l2_names[Y]`, reads the `int` cell,
-multiplies, adds the cell of `q`, returns; the unit's loading code is the generated initialization of this same graph
-through the common constructor (§1a): region sizes, cells, slots and words, the rows of the name table, `native` at the
-declaration `take` -- the F of every traversal takes it.
+D[n] := p stores only void*: no former x requirement or slot fact is transferred. Named D\x := value
+selects the current named place and checks its requirement during clean-graph construction where known.
 
 <a id="transition"></a>
 ## 11. The transition plan (agreed with Codex in the second review)
@@ -2356,7 +1929,7 @@ and publication of 308 are not run; the task is closed neither by a document nor
    -- 7 at the same address; the author, 19:02Z), and separate clean traversals (a second traversal of the same graph with
    empty tables); (c) the example of §10 in full -- regions with `uninit:int`, slots, word primitives, the address → name
    table, the interpreter by §6, the translator by §7 with native for `take` and the generated initialization of the graph,
-   `toLmx` before and after, native/interpreter parity, the clean-traversal criterion (item 6b). The new path is built
+   `sys\toLmx` before and after, native/interpreter parity, the clean-traversal criterion (item 6b). The new path is built
    beside the old one under a separate tool entry and does not touch the old emission until it covers the fixture.
 1. **Extending the graph by the registry's fixtures**, in groups by risk: expressions and `:=`, `merge` and copying, Array
    (slots, §3.1), `data` and `call: data code`, throws and `catch`, dynamic visibility, the named supply, q/z, AXBY
@@ -2433,10 +2006,10 @@ and publication of 308 are not run; the task is closed neither by a document nor
    Python/Perl runner): a program P (1) is built and executed -- the result R1 is compared with the expected E1, on native
    and on the interpreter each; (2) is changed during execution (a field write, `merge`, code built from data) and
    executed again -- the result R2 is compared with the expected result E2 of the **changed** program (not with R1),
-   native and interpreter each for that state; (3) `toLmx` of the changed graph, `fromLmx` into a **second arena alive at
+   native and interpreter each for that state; (3) `sys\toLmx` of the changed graph, `sys\fromLmx` into a **second arena alive at
    the same time as the first**, execution there -- R3 = E2, and the next clean traversal of the first arena yields E2
    again; between traversals no live object of traversal tables and no P0 tree exist in the process (a release check on
-   all exits, including a throw and a Thread stop); (c) `toLmx` of a unit with a data Structure, the `data` part of a
+   all exits, including a throw and a Thread stop); (c) `sys\toLmx` of a unit with a data Structure, the `data` part of a
    method (formerly `var`), a place without a value, a method, an expression and an Array matches the program in
    composition and order; (d) the separate witnesses of the
    `native` reset (§6.5); (e) native/interpreter parity on the whole registry; (f) the full self-build.

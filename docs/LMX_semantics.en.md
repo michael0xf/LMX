@@ -513,7 +513,7 @@ Inputs and code's own variables are activation-local places; assignment writes b
 <a id="forms-declare-or-call"></a>
 #### Structural forms declare or call
 
-Author's decision of 2026-11-10 ([journal](../LMX_blog/2026-11-10.md#forms-declare-or-call)). Every structural form — the compact one with parentheses `head(args)`, the short one `head: args` and the block one — either declares or calls something: it declares a place, a Structure or a callable under the earlier rules, or applies a receiver, a callable or a Structure to its tail. Which of the two is given by the role: in data the form declares, in code it calls (the decision of 2026-11-11, [the roles `data` and `code`](#data-code-roles)). A structural form does not assign. `i: 6` on a known place `i` is an error in code: a colon form no longer serves as a write of a value, and such a form cannot be a declaration of `i` — a declaration of a place has a requirement and a form of its own, `int: i 6` ([declaring a place](#receiver-args-only)); the place itself may have been declared anywhere in the method, its `data` included. A value is written into a known place only by the `:=` operator and the compound assignments ([writing a known place](#assign-known)) or by a repeated declaration by a receiver in code: `i := 6` or `int: i 6`. The decision itself writes the repeated declaration in the composed form `i: int: 6`, which the author withdrew later the same day. The rule concerns translation and interpretation; P0 does not change and builds the same Frame: it is read by the role of the Structure in the launch, and in code the common resolution finds its head.
+Author's decision of 2026-11-10 ([journal](../LMX_blog/2026-11-10.md#forms-declare-or-call)). Every structural form — the compact one with parentheses `head(args)`, the short one `head: args` and the block one — either declares or calls something: it declares a place, a Structure or a callable under the earlier rules, or applies a receiver, a callable or a Structure to its tail. Which of the two is given by the role: in data the form declares, in code it calls (the decision of 2026-11-11, [the roles `data` and `code`](#data-code-roles)). A structural form does not assign. `i: 6` on a known place `i` is an error in code: a colon form no longer serves as a write of a value, and such a form cannot be a declaration of `i` — a declaration of a place has a requirement and a form of its own, `int: i 6` ([declaring a place](#receiver-args-only)); the place must be available at the point of use under the [common visibility rule](#declaration-visibility); root `data` inputs are available to `code`, while `code` variables and `const` are visible sequentially. A value is written into a known place only by the `:=` operator and the compound assignments ([writing a known place](#assign-known)) or by a repeated declaration by a receiver in code: `i := 6` or `int: i 6`. The decision itself writes the repeated declaration in the composed form `i: int: 6`, which the author withdrew later the same day. The rule concerns translation and interpretation; P0 does not change and builds the same Frame: it is read by the role of the Structure in the launch, and in code the common resolution finds its head.
 
 In code a form whose head is an ordinary Structure launches it (the author's decision of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#structure-call-by-name); the executor's reading -- [answers](../LMX_blog/q/fable-self-answers-20261110.md), Р21): `A()` is the same as `call(A, A)` (the Structure over itself), `A(D)` is the same as `call(D, A)` (the Structure over the given data `D`); so are the short form `A: D` and the block form. It is a launch form of its own, not a form of a receiver: the receivers `call` and `fncall` remain the general mechanism of launch ([the receivers `call` and `fncall`](#call-receivers)). The argument of the form is one and is named `data` -- by the same name by which executable code calls the data of its launch ([the special name `data`](#ordinary-var)); like the arguments of receivers, it is supplied by position or by name: `A(D)` and `A(data := D)` are one form; the form has no argument `args`; actual values are supplied through the `args` of `call`, while `data` describes the formals. Another argument name and two or more positional arguments are an error; the argument must give a Structure: a name, a path, a place holding a reference or an unnamed Structure written in parentheses. It is also an error when the head names neither a callable nor a Structure. In data nothing changes: `A()` still declares an empty Structure `A`, and `A(D)` a Structure `A` with an atom `D`; nothing is called (before the decision of 2026-11-11 such a form was refused in code, and an ordinary Structure was executed only by the receiver `call`).
 
@@ -532,7 +532,7 @@ The author's directive of 2026-11-07 ([journal](../LMX_blog/2026-11-07.md)): the
 <a id="group-assign"></a>
 #### Group positional assignment
 
-Author's decisions of 2026-11-10 ([journal](../LMX_blog/2026-11-10.md#no-structure-head)). The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := c, a, b` assigns by position — the first value to the first place, the second to the second, the third to the third. The author first wrote this form with a colon, `(a b c): c, a, b`; after the rule that structural forms do not assign ([structural forms](#forms-declare-or-call)) it is written with `:=`, and a Structure as the head of a Frame before a colon is not introduced. All right-hand values are computed before the first write, so this statement rotates the three values. Each position is written by the rules of `:=`: the place must be declared — anywhere in the method, because a method's own places are visible throughout its body, and by the decision of 2026-11-11 the same holds for any data — it is read as a whole; an unknown name, the name of a Structure or a function name on the left is an error, and each value passes the ordinary admission of its place. When the right side is one call whose result is a Structure, the places receive its fields by position, and the names of the result's fields are not compared: `(a, b, c) := myFn()` ([Structure result](#structure-result)). A different number of places and values is a refusal: at translation when the number is known, otherwise at execution before the first write. A Structure on the left holds at least one place; the head `()` with empty parentheses remains the earlier separate form ([grammar](LMX_grammar.en.md#bounded)). Neither native code nor the walker implements this yet ([plan](../next_core_tasks_v3.md#m6)).
+Author's decisions of 2026-11-10 ([journal](../LMX_blog/2026-11-10.md#no-structure-head)). The left side of the `:=` operator may be an unnamed Structure of places: `(a b c) := c, a, b` assigns by position — the first value to the first place, the second to the second, the third to the third. The author first wrote this form with a colon, `(a b c): c, a, b`; after the rule that structural forms do not assign ([structural forms](#forms-declare-or-call)) it is written with `:=`, and a Structure as the head of a Frame before a colon is not introduced. All right-hand values are computed before the first write, so this statement rotates the three values. Each position is written by the rules of `:=`: the place must be available at the assignment site under the [common visibility rule](#declaration-visibility). Variables and `const` are visible sequentially; grouping does not change that rule. An explicit path selects a field under the ordinary path rules; this does not make its bare name visible before declaration. For name-based access, an unknown name, the name of a Structure or a function name on the left is an error, and each value passes the ordinary admission of its place. When the right side is one call whose result is a Structure, the places receive its fields by position, and the names of the result's fields are not compared: `(a, b, c) := myFn()` ([Structure result](#structure-result)). A different number of places and values is a refusal: at translation when the number is known, otherwise at execution before the first write. A Structure on the left holds at least one place; the head `()` with empty parentheses remains the earlier separate form ([grammar](LMX_grammar.en.md#bounded)). Neither native code nor the walker implements this yet ([plan](../next_core_tasks_v3.md#m6)).
 
 <a id="qualification"></a>
 ## 10. const, immutable and independent
@@ -729,6 +729,43 @@ The rule is identical for ordinary calls, Structure launches and all `call`/`fnc
 
 [Author's words](../LMX_blog/2026-11-15.md#private-binding).
 
+<a id="private-examples"></a>
+#### Examples of private: in data and code
+
+These examples show the specified semantics; implementing private remains an [M14 task](../next_core_tasks_v3.md#private-binding-plan). They use ordinary receiver composition: `private: (int: x 10)` marks the declared field x. Parentheses delimit the argument; the declaration creates neither a separate wrapper Structure nor a field named private.
+
+In the data role:
+
+~~~lmx
+Library:
+    private: (int: x 10)
+    fn: read () int (return: x)
+~~~
+
+Field Library\x holds 10. If Library\read() has no other eligible dynamic x, its free name x is found in its lexical parent Library, and the result is 10. Private does not prevent this: the field was selected lexically.
+
+In the code role:
+
+~~~lmx
+fn: run () int
+    private: (int: x 20)
+    x := 21
+    return: Library\read()
+~~~
+
+Bare x inside run is available after its declaration; assignment changes its local cell to 21. This value is excluded from the next call's dynamic sources, so, with no other dynamic x, Library\read() uses lexical Library\x and returns 10. Removing private only from the declaration inside run changes the result to 21: the ordinary dynamic source precedes the lexical source. Private on Library\x does not prohibit selecting a different, unmarked dynamic source.
+
+Direct access in code remains:
+
+~~~lmx
+Library\x := 30
+int: observed Library\x
+~~~
+
+`observed` receives 30 regardless of same-named dynamic variables. A later run() returns 30 through lexical lookup under the same conditions. Private does not make the field const. The value may also be passed explicitly: f(Library\x) follows f's ordinary contract.
+
+In run, bare x and source run\code\x remain distinct places under the [frame rule](#call-frame-20261115): after local x := 21, the source declaration still holds 20. Private introduces neither write-back nor a restriction on direct access.
+
 <a id="call-frame-20261115"></a>
 ### Call frames without write-back — decision of 2026-11-15
 
@@ -859,7 +896,7 @@ without compilation, endturn alone promises no native refresh. [Full contract](#
 
 `throw: Name(arguments)` evaluates an explicit payload and leaves the current activation under the [exit rules](#exits), without returning its declared result. The selected `catch: Name (...)` parameters receive the payload. A handler's repeat call begins a new activation from the start and does not resume the abandoned frame.
 
-`catch` is a landing pad in the caller's block, not an ordinary nested `sub`. Its body is skipped on the initial straight-line pass. When the corresponding failure arrives, its body runs and execution continues with the statements after that `catch`. Consequently, a handler before a call re-enters the following region; a handler after the call continues past itself. The region ends at the next `catch` in the same block or the block's end. The handler covers every call of its block, including calls made from statement blocks nested inside it (`if`, `while`, `for`, an anonymous `---`): a handler, like callables created by the receivers `fn`, `sub`, is visible throughout its block in both directions. A sibling block is not covered. Visibility in data runs in both directions too: a place, an ordinary named Structure and a reference to a method declared by a form of data are available both above and below the line of the declaration ([declaration visibility](#declaration-visibility)).
+`catch` is a landing pad in the caller's block, not an ordinary nested `sub`. Its body is skipped on the initial straight-line pass. When the corresponding failure arrives, its body runs and execution continues with the statements after that `catch`. Consequently, a handler before a call re-enters the following region; a handler after the call continues past itself. The region ends at the next `catch` in the same block or the block's end. The handler covers every call of its block, including calls made from statement blocks nested inside it (`if`, `while`, `for`, an anonymous `---`): a handler, like callables created by the receivers `fn`, `sub`, is visible throughout its block in both directions. A sibling block is not covered. This is bidirectional visibility of a callable name, not of all data places. Variables, including `const` and variables holding method pointers, are visible sequentially; names of named Structures and callables are visible in both directions under the [common visibility rule](#declaration-visibility).
 
 Two same-named handlers in one block are prohibited; separate nested blocks can each have one. Delivery selects the handler by the calling block, not a same-named handler in a sibling block. Throwing the same name inside a handler does not re-enter it: this is a failure in the enclosing calling context. An unhandled name propagates only through matching `throws` declarations.
 

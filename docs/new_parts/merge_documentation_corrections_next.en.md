@@ -9,9 +9,9 @@ and [earlier correction](merge_documentation_corrections.en.md).
 
 | Finding in the old task | Outcome and current boundary |
 | --- | --- |
-| N01 — callable descriptions | [Author answer Q48](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/response48.md) belongs to the former whole-callable example. Under the current [explicit body composition](../LMX_semantics.en.md#composition), `merge(y: int: 5; add\body)` puts `y` in the new body, not in `args`; `add5` declares only formal `x`. The old claim that this example supplies a default for formal `y` is superseded. The separate `merge(add\args; y: int: 5)` alternative does set a formal default. |
-| N02 — working-state publication | The temporary denial of load/cache/dirty was withdrawn; [current publication](../LMX_semantics.en.md#publication) and the [dirty note](dirty.md) govern. |
-| N03 — same-name occurrence choice | The former last-occurrence and `[N]field` answers were superseded. Current [M3](../../next_core_tasks_v3.md) has one place per name in a Structure; a repeated declaring form assigns, and `node\[N]field` is removed. Do not restore the old selector tests as a gate. |
+| N01 — callable descriptions | [Author answer Q48](https://github.com/michael0xf/LMX/blob/0a764078/LMX_blog/q/response48.md) belongs to the former whole-callable example. Under the current [composition contract](../LMX_semantics.en.md#composition), composing code and composing the input description are distinct operations. Input declarations/defaults belong to the callable's single `data`; `args` in [call/fncall](../LMX_semantics.en.md#call-receivers) is the actual supplied-value Structure. Former separate-formal-part examples no longer define the language. |
+| N02 — working-state publication | [Current M14 call frames](../LMX_semantics.en.md#call-frame-20261115) have independent locals without write-back. Load-dirty, a shared direct-access value cache and flush() are cancelled. Earlier publication decisions are historical. |
+| N03 — same-name occurrence choice | Repeated physical fields remain distinct and use `S\[N]field`; in code a repeated declaration updates the already visible local under the common rules. See [current names and paths](../LMX_semantics.en.md#fields) and [M14](../../next_core_tasks_v3.md#native-structures). |
 | N04 — overloaded prose | The bilingual composition section was split editorially. Subsequent rules govern any later rewrite; old paragraph count is not an acceptance condition. |
 
 Other still-useful conclusions: `merge` copies the used mutable graph,

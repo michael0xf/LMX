@@ -84,9 +84,51 @@ R0 and the upper host scaffold use the common Thread mechanism. Launch data belo
 <a id="own"></a>
 ## 11. Local call frame
 
+<a id="call-receivers"></a>
+### The `call` and `fncall` receivers
+
+| Form | Supplied values `args` | Input `data` | Result |
+|---|---|---|---|
+| `call(args data code)` | `args` | `data` | none |
+| `call(data code)` | not supplied | `data` | none |
+| `call(code)` | not supplied | `code` | none |
+| `fncall(args data return code)` | `args` | `data` | according to `return` |
+| `fncall(data return code)` | not supplied | `data` | according to `return` |
+| `fncall(return code)` | not supplied | `code` | according to `return` |
+
+`args` is the Structure of actual supplied values, exactly the argument Structure
+of an ordinary `call`. It is not formal declarations, a signature, or a separate
+callable part. `data` describes input places, requirements, and defaults.
+`return` describes the result; `code` is the executable Structure. `call` returns
+no value; `fncall` returns a result according to `return`.
+
+Forms without `args` supply no additional actual values. Omitted `data` means `code`
+itself: `call(C)` equals `call(C C)`, and `fncall(R C)` equals `fncall(C R C)`.
+A child `data` field inside `code` is not selected automatically. These are
+abbreviations of one operation, without requiring an empty Structure allocation
+or a new service object for omitted `args`.
+
+All forms and ordinary method/Structure calls share one interpreter path:
+select parts → bind actuals to data → common admission → fresh namespace → execution and result.
+Receiving actuals neither changes source data nor runs entry initializers.
+Calls from test and converters use the same mechanism. Known native-to-native calls
+may still go directly through C without graph packaging.
+[Full contract and named arguments](LMX_semantics.en.md#call-receivers).
+
+<a id="private-binding"></a>
+### Receiver private:
+
+`private:` excludes the marked field and its corresponding binding from a call's dynamic
+sources. Direct visibility from anywhere, explicit paths, and ordinary lexical lookup remain;
+sequential visibility and explicit argument passing do not change.
+Skipping the field follows the common binding order for every call/fncall form, ordinary call,
+interpreter and native execution. This is a field property, not a global name ban or access
+protection. Use the common binder without a separate registry or checks on direct reads.
+[Full contract](LMX_semantics.en.md#private-binding).
+
 <a id="call-frame-20261115"></a>
-Every call, including `call(D,C)`, creates its own namespace. For fn/sub/catch, args/data
-are unified into one input data; short headers remain. An actual replaces the corresponding
+Every call creates its own namespace. For fn/sub/catch, unified data describes the inputs;
+args in call/fncall contains actual values. Short headers remain. An actual replaces the corresponding
 source declaration in the frame, and its initializer does not execute. Preparation collects only
 data/code roots, without visiting branches or graph references or auto-filling source data.
 

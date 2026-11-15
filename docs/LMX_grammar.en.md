@@ -257,6 +257,10 @@ The two-field `int: i 5` is a Frame with two neighboring fields, and the three-f
 
 When an indented body follows existing inline arguments, the down/up level transition preserves a new Structure-field boundary. Vertical tokens must not simply be flattened into the inline tail. Ordinary P0 does not infer argument counts from head signatures.
 
+All six launch forms use the same Frame and ordinary argument parsing: `call(args data code)`, `call(data code)`, `call(code)`, `fncall(args data return code)`, `fncall(data return code)`, `fncall(return code)`. The consumer binds positional and named parts after P0. `args` is the Structure of actual supplied values, as in an ordinary call; input declarations belong to `data`. This introduces neither special signature syntax nor a call/fncall parser branch. Abbreviations and the common execution path are defined by [semantics](LMX_semantics.en.md#call-receivers).
+
+`private:` is also an ordinary P0 receiver form. Excluding the marked field from dynamic binding belongs to the consumer and changes neither direct visibility nor name parsing ([semantics](LMX_semantics.en.md#private-binding)).
+
 **Source excerpt** — `Lingvamyxa_spec.txt`, 2606–2606.
 
 ````text

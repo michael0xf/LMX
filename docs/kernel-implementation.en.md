@@ -781,15 +781,10 @@ of 2026-11-11 on launching code over data ([journal](../LMX_blog/2026-11-11.md#c
 reads the one-argument `call` as before; a name used above the line of its declaration it still rejects by the
 former rule of the book.
 
-A launch is given by its parts. The work frame of an activation (`LmxGraphFrame`) keeps, besides the code and the
-data, the parts of the launch: the Structure of the formals (`args`), the executable part (the frame member `body`; the
-part of a callable is called `code`, the frame member kept the former name), whether there is a result (`result`) and
-whether the data is the callable's own part `data` (`own`). The frame is opened by `lmx_graph_work_open_parts`; the
-`lmx_graph_work_open_data` takes the parts from the code itself -- a callable's `args`, `data`, `code` and the
-presence of `return`, an ordinary Structure as its own executable part without an implicit place model.
-Ordinary code requires places by scanning its body through the actual data map. Slice 367 removes selection
-of a `data` child as the model, also for a launch by given parts;
-[checks and remaining limits](../steps/witnesses/m11-ordinary-model-20261113/notes.md).
+The current launch receives actuals separately from the input description data. Explicit receivers and
+ordinary calls converge on one frame and execution worker; args is not read as formal declarations.
+Migration of the former LmxGraphFrame/work_open_parts belongs to [M10 with M14](../next_core_tasks_v3.md#m10).
+The historical place-model changes367 are in their [receipt](../steps/witnesses/m11-ordinary-model-20261113/notes.md).
 Slice 368 replaces the call of own data with a pass over its implemented root declaration
 receivers in the same frame (`lmx_graph_data_run`). Other fields, including assignments,
 test, data, if and nested Structures, remain data. After a computed initializer, the work
@@ -842,68 +837,19 @@ the result from the frame (`lmx_graph_activation_args`, `lmx_graph_method_run`, 
 the Structure of the method; an activation without a frame answers by the Structure, as before. The ordinary call
 `f(x)` therefore goes the same way as a launch that was given its parts.
 
-The receivers. `lmx_graph_launch(g, args, data, result, code, out)` is the launch by given parts. The formals are
-the fields of the Structure of the arguments: an `int` place gives the launch an independent cell, a reference place
-is passed as it is; a place without a value and any other field is answer 5. The data is not completed and must
-have every place the code declares or uses (`lmx_graph_work_require`). The description of the result is the word
-`int`, otherwise 5: the same limit as for `fn`. With no data an ordinary Structure runs over itself and a callable
-over its own part `data`; a callable given without arguments keeps its own contract and its own entry
-(`lmx_graph_invoke_data`). `call` with three arguments and `fncall` with two, three and four call this launch
-(`lmx_graph_eval_explicit_call`, `lmx_graph_eval_fncall`); the one-argument `call` over an ordinary Structure
-executes it over itself, the two-argument one is `call: data code` -- the data before the code everywhere (the
-author's answer of 2026-11-11 to question P6, [journal](../LMX_blog/2026-11-11.md#data-before-code); the clean graph
-reads this order since slice 354, step 4 of [section M11 of the plan](../next_core_tasks_v3.md#m11)). A form written in
-the former order, `call: code data`, is read by the same rule -- the first operand is the data, the second the code --
-and is refused with answer 3 when the first holds no place that the second declares (the fixture
-`former_call_order`). The working frontend reads only the former order (step 8 of section M11). `fncall` is a word of
-the language (`w_fncall`, the list of receiver words). The emitted `native` calls the same launch of the kernel (`lm_graph_emit_fncall`,
-`lm_graph_emit_explicit_call`); a wrong number of arguments it emits as a refusal where the code runs.
+The receivers use the [six current forms](LMX_semantics.en.md#call-receivers).
+args supplies values; data describes inputs, return describes the result, and code is the body.
+Abbreviations supply no actuals and use code as data, not a callable's child data.
+Ordinary and explicit calls must share binding/admission/frame/result; M10/M14 replace the
+separate callable-without-args route and the former int-only result handling.
+The old launch implementation does not establish acceptance of the new model.
+The [checks353](../steps/witnesses/call-receivers-20261111/notes.md) remain historical evidence.
 
-Data is read as a whole. Before the places are bound, `lmx_graph_data_realize` executes the computed declarations
-of the root level of the data (`int: name expression`, still a statement in its slot) in field order and publishes
-the result into the same slot -- once: from then on the slot holds the place. This is done for every launch except
-that of a callable over its own part `data`: the entry of a method executes that content, as before. In a Structure
-over itself a computed declaration is therefore executed before the first statement and is not executed again on
-its own line. So the executor's answers М8 and Н11 read it; the answer [Р12](../LMX_blog/q/fable-self-answers-20261110.md)
-withdrew that reading as a norm: a computed initial value is executed on its own line, in the role of code, once, while
-in the role of data nothing is executed -- a declaration in data with a computed initial value creates a place without
-a value, while a literal is a value of the data and stands in the place from the start. By the answer Р14 (item В9)
-this concerns data supplied to a launch separately and the root of a unit; the own data of a callable are still
-executed at entry -- the contract of a method. The clean graph executed the former reading until slice 355; since slice
-355 it does not execute a computed declaration of the data supplied to a launch -- sub-step 5а of
-[section M11 of the plan](../next_core_tasks_v3.md#m11).
-
-The checks of slice 353: the fixtures of `tests/graph` -- `call_receivers` (the six forms, `fncall` as a statement,
-the receivers in the body of a method, the parts of a method one by one, a `sub` by its parts, a composition of the
-parts of three structures) and `call_data_whole` (the value of a field above the line of its declaration, a computed
-initial value, executed once) pass in the modes of the interpreter, `native` and `forced`; the refusals are
-`call_var_not_selected`, `call_data_lacks`, `call_self_repeat` (answer 3), `fncall_arity`, `call_arity`,
-`call_returns_value`, `fncall_no_result`, `fncall_result_word` (answer 5). `code_data` and `post_loop` pass `var`
-explicitly, with the former values; `code_data_no_var` turned from a refusal into a positive row. All 109 rows of
-graph-check pass in the three modes -- 327 PASS. A mutant -- the launch takes its data from the Structure of the
-code, not from the given part -- fails `call_receivers` in all three modes. `bootstrap quick` -- 0 failures, the
-generations are the same; `l1trans` is the former one; the hosted frontend, the tool and `driver.o` are others: they
-contain the kernel of the clean graph and the header template. The full suite of the working frontend on the new
-runtime -- `SUITE 162 rows, 0 failures`.
-
-[Slice 354](../steps/witnesses/data-code-names-order-20261111/notes.md) executed in the clean graph the names `data`
-and `code` and the order `data` before `code` (step 4 of [section M11 of the plan](../next_core_tasks_v3.md#m11); the
-author's decisions of 2026-11-11 -- [the roles `data` and `code`](../LMX_blog/2026-11-11.md#data-code-roles) and
-[`data` before `code`](../LMX_blog/2026-11-11.md#data-before-code)). The words of the graph state `w_var` and `w_body`
-are replaced by `w_data` and `w_code` (the header template of the state in `tools/build.lm2` and the kernel); `var` and
-`body` are removed from the list of the language words of the clean graph. The kernel operations
-`lmx_graph_method_var` and `lmx_graph_method_body` are called `lmx_graph_method_data` and `lmx_graph_method_code`; the
-contracts of the receivers `fn` and `sub` name their arguments `name, args, return, data, code` (`sub` without
-`return`), the parts of the created Structure are `args`, `return`, `data`, `code`. The former spellings have no
-special meaning: `var` and `body` are ordinary names. The two-argument `call` reads the data as the first argument and
-the code as the second: `lmx_graph_eval_explicit_call` evaluates operand 0 as the data and operand 1 as the code, in
-the order written, and `lm_graph_emit_explicit_call` emits the same; the kernel operation is
-`lmx_graph_call_data(g, given_data, given_code, shorthand)`, the one-argument form calls it with data 0 and the mark of
-the short form; the three-argument `call` and `fncall` kept their order -- the data already stood before the code in
-them. The order of the parameters of the other internal procedures of the kernel (`lmx_graph_invoke_data`,
-`lmx_graph_work_open_data`, `lmx_call_prim` -- the code, then the data) did not change: it is no form of the language
-(the executor's answer Р5), and the header template of the working frontend's traverser still describes its operation
-as before, `call: code data`.
+[Slice354](../steps/witnesses/data-code-names-order-20261111/notes.md) changed names to data/code
+and the two-argument call order to data before code. Those decisions remain.
+A current callable contains unified data, return when a result exists, and code;
+launch receivers use args for actual values. Historical field names in internal
+C/L2 procedures do not define an additional language contract.
 
 The checks of slice 354: in 60 tracked files of `tests/graph` (44 sources and 16 expectations) `var` → `data` and
 `body` → `code` (in `merge_arguments` the name `body` is a variable and stayed); 18 two-argument `call` lines in 11
@@ -975,7 +921,7 @@ everywhere, the root included; a head that is a number place is answer 8; no for
 of another name), and a launch form in the place of an operand, are 5. One binder (`lmx_graph_receiver_form_of`) chooses
 the form of `call`, `fncall` and of the launch form by the written actuals -- by position or by name through `:=` --
 before any of them is evaluated; the emitted code binds the form at translation (`lmx_graph_launch_formals` -- an
-export; the export list of the interpreter has 45 names). The parts `args`, `data`, `code`, `return` of a callable
+export; the export list of the interpreter has 45 names). The data/code/return parts of a callable (args supplies actual values, not a callable part)
 answer in its code (`lmx_graph_resolve`); the Structures of the data of a launch are found by the registry of the data
 of the launch (`lmx_graph_data_find`): a name is searched by the rows of the frame, the formals, the registry of the
 data of the launch and the lexical levels (Р20), and a Structure answers by reference, there is one instance.
@@ -1063,8 +1009,8 @@ Structure (before the decision such a form was refused in code, and an ordinary 
 receiver `call`). In code such a form launches that Structure: `S()` is the same as `call(S, S)` (the Structure over
 itself), `S(D)` is the same as `call(D, S)` (the Structure over the given data `D`); so are the short form `S: D` and the
 block form. It is a launch form of its own, not a form of a receiver: the receivers `call` and `fncall` remain the general
-mechanism ([the receivers `call` and `fncall`](LMX_semantics.en.md#call-receivers)), the formals are supplied by the
-receiver `call`, and there is no launch form of a Structure with an argument `args`. The form has one argument and it is
+mechanism ([the receivers `call` and `fncall`](LMX_semantics.en.md#call-receivers)): args supplies actual values,
+and data describes inputs. The short S(D) form has only its data argument; explicit call also accepts args. The form has one argument and it is
 named `data` -- by the same name by which executed code names the data of its launch
 ([the special name `data`](LMX_semantics.en.md#ordinary-var)); it is supplied by position or by name, `S(D)` and
 `S(data := D)` are one form, just as with the receivers, whose arguments are named and are supplied by position or by
@@ -1464,9 +1410,51 @@ read as this statement (such a read has no effect).
 
 ### 3.4 Callables and namespace
 
+<a id="call-receivers"></a>
+### The `call` and `fncall` receivers
+
+| Form | Supplied values `args` | Input `data` | Result |
+|---|---|---|---|
+| `call(args data code)` | `args` | `data` | none |
+| `call(data code)` | not supplied | `data` | none |
+| `call(code)` | not supplied | `code` | none |
+| `fncall(args data return code)` | `args` | `data` | according to `return` |
+| `fncall(data return code)` | not supplied | `data` | according to `return` |
+| `fncall(return code)` | not supplied | `code` | according to `return` |
+
+`args` is the Structure of actual supplied values, exactly the argument Structure
+of an ordinary `call`. It is not formal declarations, a signature, or a separate
+callable part. `data` describes input places, requirements, and defaults.
+`return` describes the result; `code` is the executable Structure. `call` returns
+no value; `fncall` returns a result according to `return`.
+
+Forms without `args` supply no additional actual values. Omitted `data` means `code`
+itself: `call(C)` equals `call(C C)`, and `fncall(R C)` equals `fncall(C R C)`.
+A child `data` field inside `code` is not selected automatically. These are
+abbreviations of one operation, without requiring an empty Structure allocation
+or a new service object for omitted `args`.
+
+All forms and ordinary method/Structure calls share one interpreter path:
+select parts → bind actuals to data → common admission → fresh namespace → execution and result.
+Receiving actuals neither changes source data nor runs entry initializers.
+Calls from test and converters use the same mechanism. Known native-to-native calls
+may still go directly through C without graph packaging.
+[Full contract and named arguments](LMX_semantics.en.md#call-receivers).
+
+<a id="private-binding"></a>
+### Receiver private:
+
+`private:` excludes the marked field and its corresponding binding from a call's dynamic
+sources. Direct visibility from anywhere, explicit paths, and ordinary lexical lookup remain;
+sequential visibility and explicit argument passing do not change.
+Skipping the field follows the common binding order for every call/fncall form, ordinary call,
+interpreter and native execution. This is a field property, not a global name ban or access
+protection. Use the common binder without a separate registry or checks on direct reads.
+[Full contract](LMX_semantics.en.md#private-binding).
+
 <a id="call-frame-20261115"></a>
-Every call, including `call(D,C)`, creates its own namespace. For fn/sub/catch, args/data
-are unified into one input data; short headers remain. An actual replaces the corresponding
+Every call creates its own namespace. For fn/sub/catch, unified data describes the inputs;
+args in call/fncall contains actual values. Short headers remain. An actual replaces the corresponding
 source declaration in the frame, and its initializer does not execute. Preparation collects only
 data/code roots, without visiting branches or graph references or auto-filling source data.
 
@@ -1508,7 +1496,7 @@ explicit writes are observed through actual aliases in execution order.
 
 The source callable Structure retains its head and written data/return/code parts. The local namespace
 is not its child field. No executable-code copy is required to equalize the time at which edits take effect.
-Former args and code-to-data auto-fill are removed through one representation/consumer change,
+The former args declaration part and code-to-data auto-fill are removed through one representation/consumer change,
 not parallel semantic paths. Abbreviated fn/sub/catch headers remain with unified data;
 a header without code describes a call signature, not a separate complete function.
 

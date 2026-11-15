@@ -1,5 +1,9 @@
 # LMX core architecture
 
+`private:` исключает поле из динамического связывания вызовов; прямая и обычная лексическая
+видимость сохраняются. Использовать общий binder без системы ограничений доступа:
+[норма](docs/LMX_semantics.ru.md#private-binding), [задача M14](next_core_tasks_v3.md#private-binding-plan).
+
 **2026-11-15 replacement:** [call frames without write-back](docs/LMX_semantics.en.md#call-frame-20261115),
 [M14 and sys tools](next_core_tasks_v3.md#native-structures) replace load-dirty, local publication,
 shared caching, flush, and frozen physical-slot requirements. Dated receipts below remain implementation history.
@@ -385,8 +389,9 @@ head --, not an Array element or a second data-field namespace.
 
 ## 3. Callable graph representation and activation
 
-A callable remains an ordinary source Structure. Former args/data merge into one input data part;
-return where applicable and code remain. Every call, including call(D,C), creates its own namespace.
+A callable remains an ordinary source Structure with one input data description;
+return where applicable and code remain. The args parameter of call/fncall supplies actual values,
+not declarations. Every call creates its own namespace.
 Only root declarations of data and code prepare that namespace; no branch traversal or graph-reference
 walk occurs. Code locals never auto-fill source data. Ready declarations fold at clean-graph construction
 without program calls. There is no initializer execution at entry; unused computed inputs are never
@@ -484,12 +489,16 @@ Method-created callables and ordinary named
 Structures retain their different contracts. Generated L1 is migrated
 after L2/L3; see [v3 M1–M4 and N1–N6](next_core_tasks_v3.md).
 
-The `fn` receiver distinguishes three source shapes after common P0:
-`name args return` is a bodyless interface descriptor;
-`name args return code` is executable and creates an addressable empty
-`data` part; `name args return data code` supplies that part explicitly.
-The descriptor gains no invented body, and existing short definitions
-need no mass insertion of `()`.
+The `fn` receiver consumes its name, unified input data, return description, and code where present
+after common P0. A header without code describes a call interface; existing short definitions remain
+with unified data. There is no separate args declaration part and no auto-created data copied from code.
+
+The launch forms are `call(args data code)`, `call(data code)`, `call(code)`,
+`fncall(args data return code)`, `fncall(data return code)`, and `fncall(return code)`.
+Omitted args supplies no additional actuals; omitted data means code. An ordinary call selects
+parts from its callee and supplies the same actuals to this shared binding/admission/frame/result path.
+Pointer calls, fn/sub/catch, and ordinary Structures use that interpreter worker; known native-to-native
+calls remain direct C calls. [Contract](docs/LMX_semantics.en.md#call-receivers), [M10](next_core_tasks_v3.md#m10).
 
 `implements` checks the actual Consumer's explicitly required accesses;
 without a Consumer, full suitability is checked. It is performed once, when

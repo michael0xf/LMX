@@ -142,7 +142,8 @@ data — явная ссылка на данные запуска; `data\field` 
 ### О9. Где действуют объявления fn, sub, catch?
 
 В обеих ролях: в data как объявления, в code как вызовы объявляющих ресиверов.
-У callable одна входная data вместо раздельных args/data; вызов создаёт новый namespace.
+У callable одна входная data; вызов создаёт новый namespace.
+Параметр args у call/fncall содержит actuals, а не отдельное описание входов.
 Имена callable видны в обе стороны, переменные с указателями на callable — последовательно.
 [Части вызываемого](../../docs/LMX_semantics.ru.md#method-parts),
 [видимость](../../docs/LMX_semantics.ru.md#declaration-visibility).
@@ -229,6 +230,11 @@ test при построении не вызывается. При фактич�
 для исполнения или native-компиляции нет.
 [Структурные формы](../../docs/LMX_semantics.ru.md#forms-declare-or-call),
 [роли data/code](../../docs/LMX_semantics.ru.md#data-code-roles).
+
+Для явной подачи actuals предусмотрены call(args data code) и fncall(args data return code),
+а также четыре сокращения из [общего контракта](../../docs/LMX_semantics.ru.md#call-receivers).
+args — та же Structure поданных значений, что у обычного вызова; data описывает входы.
+Интерпретатор не выделяет для этих форм отдельный исполнитель.
 
 ### Р27. Один ли парсер внутри всех скобок и что делать с потерянной скобкой?
 

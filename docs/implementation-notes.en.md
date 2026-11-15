@@ -436,29 +436,12 @@ of the third:
   is: it writes the model's slot of its name, keeps the other fields and
   does not write the model; the parentheses of the second operand are
   optional.
-- The `merge` operand "a part of a callable", `f\args` (slice 304,
-  [record](../steps/witnesses/fix304-20261107/notes.md); native and the
-  walker, both roots): the `args` part of a callable is read as the
-  Structure of its formals -- one field per written formal, in the
-  formals' order, holding the formal's current default (the value the
-  formal takes when a call omits it); a formal with no current default --
-  a required one, or one whose written default this translation does not
-  build -- holds no value: its slot stays empty, no zero is invented, and
-  the operand is admitted only when a later operand of the same `merge`
-  writes that field, else refused at the operand (Codex's review of 304;
-  an explicit zero `int: z 0` is a value). The kernel reads it -- one function of both executors
-  (`lmx_callable_args_value`; the walker's program takes it as a
-  primitive over the callable's occurrence); the operand is recognized by
-  the common path resolution (its last step is the `args` part of a
-  method), the result's fields are the typed fields of the formals'
-  declarations. `merge(tst\args; (a: int: 5))` reads `a` = 5 and `c` = 3,
-  the bare form `a: int: 5` the same, `merge(tst\args)` reads `c` = 3 and
-  `a` = 0; `tst\args` is not written. Implementation limits, not rules of
-  the language: a formal of another type than a number has no field kind
-  in the result's map -- a refusal at the operand ("a formal that is not
-  a number is not lowered as a field of the args part yet"); a path into
-  the args part (`tst\args\c`) is not resolved ("unknown field path
-  segment").
+- Slice 304 checked the former separate formal-description part; its details and results
+  remain in the [receipt](../steps/witnesses/fix304-20261107/notes.md).
+  The current model stores input declarations and defaults in `f\data`, whereas the
+  `args` of `call`/`fncall` contains actual supplied values.
+  This distinction and the common call path are an [open M10/M14 migration](../next_core_tasks_v3.md#m10),
+  not behaviour already implemented by slice 304.
 - The whole argument Structure from one Structure (slice 307,
   [record](../steps/witnesses/fix307-20261108/notes.md); native and the
   walker, both roots): a call with a single Structure argument does not

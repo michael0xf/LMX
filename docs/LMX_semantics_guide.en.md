@@ -64,51 +64,39 @@ withdrawn by the author's decision of 2026-11-10
 declares a Structure `ms` with a field `time`, not a place `ms`.
 
 <a id="header-receivers"></a>
-## Reading a Structure's header
+## Header and service tables
 
-`parent(S)` gives the structural parent, `sys\native(S)` the native entry or 0,
-`length(S)` the element count, and `sys\storage(S)` the pointer to element storage.
-All four read values; `sys\native(S)` does not invoke the entry it obtains.
+Lmx's flat header contains parent/length/storage. `parent(S)`, `length(S)`, and `sys\storage(S)`
+load these fields directly. `sys\native(S)` returns the native descriptor of variants from call's tables,
+or 0; `sys\capacity(S)` returns reserved capacity from the arena table. All five no-argument forms
+select current data; code requires an explicit argument. Reading neither compiles nor invokes native.
 
-| Without an argument | Equivalent explicit argument |
-| --- | --- |
-| `parent()` | `parent(data)` |
-| `sys\native()` | `sys\native(data)` |
-| `length()` | `length(data)` |
-| `sys\storage()` | `sys\storage(data)` |
+These receivers execute only in code; same-headed data forms remain ordinary data.
+For example, data\length selects a user field while length() reads launch data's length.
+data/code remain call arguments; node keeps its existing meaning.
 
-In `call(D C)` this is data D; to select C, write, for example, `length(code)`.
-An inline `if` body does not switch launch data. A bare receiver name does not invoke it.
-The data form `length: 7` remains an ordinary Structure named `length`: with one occurrence,
-`data\length` selects it, while `length()` reads the length of the data itself. The same
-applies to parent/native/storage records; there are no special paths to the header.
-
-The physical header fields are now named parent/native/length/storage.
-`data` and `code` remain the Structure arguments of a launch; `node` keeps its existing
-meaning as the activation context. Reading these four values needs no descriptor;
-it returns addresses for writing, as shown below. [Contract](LMX_semantics.en.md#header-receivers),
-[open implementation M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+Structure and Array<@> are interchangeable; numeric Array<T> stores T elements. All arrays have variable
+length and a common allocation mechanism. sys\resize(S,n) changes length; sys\reserve(S,n) changes reserve only.
+Capacity belongs to an arena table, not the header. The descriptor address stays stable; storage may move.
+In L2 an index, including a negative one, only computes an offset. In L3 adjacent [i][j] yield one linear
+index and one length check; an L3 element reference contains the Array descriptor reference and index,
+not storage. A raw L2 address is not repaired when storage moves.
+[Contract](LMX_semantics.en.md#array-capacity), [implementation OPEN](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 <a id="get-descriptor"></a>
 ## Header-field addresses through descriptor
 
-`sys\descriptor(S)` selects S; with no argument, `sys\descriptor()` selects the current data, as `sys\descriptor(data)`.
-This rule also applies inside nested control bodies. Code requires an explicit argument.
-Forms `sys\descriptor: S` and `sys\descriptor:` have the same contracts; in data, the form remains ordinary data.
+`sys\descriptor(S)` returns an ordinary Structure of three actual parent/length/storage field addresses:
+Lmx **, size_t *, void **. Omitting the argument selects current data, including inside control bodies.
+The result contains neither native nor capacity.
 
-Let d be the result of the ordinary call `sys\descriptor: S`. It is a Structure
-of addresses of fields `parent`, `native`, `length`, `storage` of S's flat header.
-For example, `\(d\native) := 0` writes zero to the actual S.native:
-the next call of S uses the walker. Writing `d\native := 0` changes
-only the pointer inside d. There is no snapshot or later synchronization.
+With d = sys\descriptor(S), `\(d\length) := n` directly changes S's length; `d\length := p` changes
+the pointer in d itself. The first example does not allocate storage; sys\resize performs a consistent
+resize. There is no header copy, proxy, write-back, or special assignment.
 
-An explicit field path or typed dereference allows an ordinary write,
-including references and function pointers; the restriction on changing a bare
-Structure name does not prohibit this path. Pointer depth and Array rank are
-independent and have no fixed numeric limit. The address has S's ordinary
-lifetime bounds. The contract is approved; implementation is still pending:
-[`sys\descriptor`](LMX_semantics.en.md#get-descriptor),
-[M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+Ordinary typed dereferences and paths permit reference/function-pointer writes; restricting changes
+to a bare Structure name does not restrict a path. Pointer depth and array rank are arbitrary finite
+values; address lifetime remains ordinary. [Exact form](L2_spec_en.md#get-descriptor).
 
 <a id="system-indexof"></a>
 ## A field's index
@@ -177,13 +165,13 @@ the examined native path already has l2_tN, so &l2_tN requires no additional all
 A ready place is addressed directly; reading the result does not replace the source declaration.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
 
-Entry selects a snapshot of only the code that compilation puts into the corresponding C function.
-This is not the entire lexical tree. Bindings are passed as hidden arguments; the lexical environment
-and other functions' code are not copied for the snapshot. Function-code selection is shared.
-Changing source code clears native for the next call;
-an active frame continues its selected snapshot. Methods and ordinary Structures share compilation
-without data=code. Different actual argument sets produce different C signatures;
-a header without code describes a call.
+Mandatory copying of executable code at entry is withdrawn, including the former copy of only
+the corresponding C function's code. Selected local values/descriptions remain independent;
+binding uses hidden arguments without an environment copy. Methods and ordinary Structures share
+compilation without data=code; distinct actual supplies produce distinct C signatures.
+Known native calls known native directly in C. Graph writes do not clear native: updating it requires
+explicit compilation and an endturn boundary. Before that boundary the time at which
+executable graph changes take effect is unspecified.
 
 Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
 explicit writes are observed through actual aliases in execution order.
@@ -196,17 +184,29 @@ The old flush() and shared-cache examples are withdrawn: only explicit operation
 local variables are never written back.
 
 <a id="native-merge"></a>
-## Native code in a copy
+## Compilation, mutation, and the next turn
 
-A copy has its own mutable graph; sharing a machine implementation address
-does not share that graph. If merge selects a different body, the old native
-entry no longer describes the selected code. With the same implementation,
-the copy's graph can be passed as data only when the used layout and address
-map remain compatible; without a suitable native entry, the completed graph
-runs in the interpreter. An `implements` map aligns physical fields but
-neither selects code nor stores runtime names. The `call: data code` split
-and addressable method parts are an [approved coding target](../next_core_tasks_v3.md);
-the compatible ABI is not fully implemented yet.
+Native descriptors of all Structures belong to call's tables in the arena. Only fn/sub/catch receive
+an ordinary native field referencing the same descriptor. Known native calls inside native go
+directly to C with necessary hidden arguments. Copy/merge neither compile a new body nor install
+its call-table binding; explicit compilation or restoration establishes that binding.
+
+`sys\compile(S)` builds/checks a clean graph without running the program, translates to L1/C,
+compiles/links machine code, and registers a successful result; diagnostics are returned.
+Graph writes neither clear native nor trigger change tracking. If A directly calls B, changing that
+call requires compiling the unit containing A and B, not B alone.
+
+`sys\endturn()` exits to the ordinary turn boundary through all registered finally blocks.
+Catch does not intercept it and control does not return to its call site; it does not itself stop
+a Thread/Message. Before the boundary, executable graph edits take effect at an unspecified time.
+Successful explicit compilation followed by the boundary guarantees the update at the next entry.
+Endturn alone compiles/checks nothing and publishes no locals.
+[Full contract](LMX_semantics.en.md#explicit-compilation).
+
+`sys\toLmx(Thread)` saves the selected Thread and serializable contents of all tables in its arena,
+including call/native tables. After a same-platform restart, ready binaries are used through
+module/entry identifiers without retranslating. External tables are not silently added to an
+arbitrary S; R0 is a particular Thread, not the only root capable of this persistence.
 
 <a id="factory-result"></a>
 ## A returned method

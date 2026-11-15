@@ -62,7 +62,7 @@ Every language rule is universal within its declared domain and applies uniforml
 
 L3 retains graph mutation, structural calls, tables, messages and local actors. Low-level address operations, raw memory access, raw machine interfaces and explicit low-level synchronization belong to [L2](L2_spec_en.md). The level distinction does not by itself establish computational purity, user authority or a separate security system.
 
-A file extension selects its outer profile: `.lm1` selects direct L1 lowering, `.lm2` L2, and `.lm3` L3. `.lm4` and `.lm5` do not select current profiles. The file is itself a Structure: its root body is an L3 Structure executed from the start in every profile, including `.lm2` -- an interpreted body has no L2 operations, because the interpreter executes only L3; there is no `main` function. L3 is compiled by the same rules as L2; the one difference: a constructed L3 graph *may* be executed by the interpreter, L2 operations may not. A filled `native` word selects native execution; an empty word selects the interpreter, which executes only L3. The rule that native execution is enabled only inside methods is withdrawn. A Thread has no "interpreted / native" modes -- the only switch is the callable occurrence's sys\descriptor: with a native address it executes natively, without one it is interpreted. The value of executing a file (its exit code) is the value of the root body's last evaluated expression; the root, like every callable Structure, declares no result, and `return` in it is bare only. A service profile may select an explicit function, `start`, a handler or a message send. The entry point receives control after its environment and runtime graph are prepared.
+A file extension selects its outer profile: `.lm1` selects direct L1 lowering, `.lm2` L2, and `.lm3` L3. `.lm4` and `.lm5` do not select current profiles. The file is itself a Structure: its root body is an L3 Structure executed from the start in every profile, including `.lm2` -- an interpreted body has no L2 operations, because the interpreter executes only L3; there is no `main` function. L3 is compiled by the same rules as L2; the one difference: a constructed L3 graph *may* be executed by the interpreter, L2 operations may not. A suitable entry in call tables selects native execution; in its absence the interpreter executes admissible L3. The rule that native execution is enabled only inside methods is withdrawn. A Thread has no "interpreted / native" modes -- the registered native variant for the particular call or the walker is selected; known native calls lower directly to C. The value of executing a file (its exit code) is the value of the root body's last evaluated expression; the root, like every callable Structure, declares no result, and `return` in it is bare only. A service profile may select an explicit function, `start`, a handler or a message send. The entry point receives control after its environment and runtime graph are prepared.
 
 The model supports interpretation of the constructed L3 graph and translation preserving the same semantics. The interpreter executes L3 only: not source text, L1/L2 or `c.*` operations. The interpreter's implementation does not expand the language of the interpreted program. L2 defines machine mechanisms, L3 defines high-level programs, and L1 is an intermediate lowering stage toward C99. The parser, graph interpreter and translator serve different purposes. Grammatical forms, body boundaries, literals, comments and normalization are defined in the [grammar specification](LMX_grammar.en.md).
 
@@ -97,9 +97,10 @@ A Structure is an ordered collection of direct fields. Fields hold references to
 Helper operations are grouped under `sys\` and called through ordinary paths. Member names do not
 become globally reserved words. The group contains `sys\check(S)` (clean-graph name and statically known
 requirement checks), `sys\checkL3(S)` (body suitability for the L3 interpreter), `sys\translate(S)`,
-and `sys\native`, `sys\storage`, `sys\descriptor`, `sys\typeof`, `sys\toLmx`, `sys\fromLmx`, `sys\assert`.
+`sys\compile(S)`, `sys\endturn()`, and `sys\native`, `sys\storage`, `sys\descriptor`,
+`sys\capacity`, `sys\resize`, `sys\reserve`, `sys\typeof`, `sys\toLmx`, `sys\fromLmx`, `sys\assert`.
 `length` stays globally available by the author's decision; `parent` remains ordinary structural navigation.
-Lmx header fields remain parent/native/length/storage.
+Lmx header fields are parent/length/storage; neither native nor capacity is in the header.
 
 Checks return diagnostics and use the working builder's code. They execute neither the inspected program,
 initializers, nor user test. `sys\translate(S)` lowers a Structure to **L1 text**, returning an ordinary
@@ -109,6 +110,12 @@ nor executes S; it performs necessary checks through shared code without a requi
 The builder is the initial implementation; needed parts move into runtime for these concrete operations,
 without another builder, universal wrappers, or extra states.
 This is an [M14 implementation task](../next_core_tasks_v3.md#graph-tools), not a claim of availability.
+
+Compilation is the entire explicitly requested chain: clean-graph construction and checking, lowering to L1
+and C, machine compilation, and registration of resulting entries. `sys\compile(S)` applies it to selected
+root S and returns the result and diagnostics through the common mechanism; failure installs no new native.
+It does not execute S or run automatically on a write. `sys\translate` still returns only L1.
+[Native and turn-boundary contract](#explicit-compilation).
 
 <a id="system-indexof"></a>
 #### A field's index in its parent Structure
@@ -135,22 +142,23 @@ These ordinary non-declaring receivers accept one Structure S, including an Arra
 | Call | Result | Without an argument |
 | --- | --- | --- |
 | `parent(S)` | S's structural parent, the value of header field `parent`; 0 at a root | `parent()` — `parent(data)` |
-| `sys\native(S)` | S's native entry of type LmxEntry; 0 when absent; reading it does not invoke it | `sys\native()` — `sys\native(data)` |
+| `sys\native(S)` | S's native descriptor from call tables, including signature variants; 0 when absent; reading does not invoke it | `sys\native()` — `sys\native(data)` |
 | `length(S)` | The number of immediate Structure fields or Array elements, the value of `length` | `length()` — `length(data)` |
 | `sys\storage(S)` | The pointer to element storage, the value of `storage` | `sys\storage()` — `sys\storage(data)` |
+| `sys\capacity(S)` | Capacity in elements from the arena table keyed by S's address | `sys\capacity()` — `sys\capacity(data)` |
 
 Here `data` is the current launch's data. An inline control receiver's body does not change it; an independent `call(D C)` supplies data D and code C. `parent(code)`, `sys\native(code)`, `length(code)` and `sys\storage(code)` select the code explicitly. The colon form has the same contract, for example `parent: S`; a bare atom `parent`, `native`, `length` or `storage` does not invoke a receiver.
 
 In the role of `code` the receiver executes; in the role of `data` a same-headed structural form remains data. With one occurrence, `data\parent`, `data\native`, `data\length` and `data\storage` select the written Structures just as `data\for` does; repeated names require the ordinary occurrence index. Paths gain no header pseudo-fields. A direct data pass executes only root-level declaration receivers; code passed to such a receiver may execute under its general contract ([rule](#data-root-declaration-execution)).
 
-In Lmx's physical header the former `size` and `data` are renamed to `length` and `storage`; the final order is `parent/native/length/storage`. During execution `data` and `code` remain accessible as the Structure fields/arguments of a `call` launch, under the existing visibility rules. Their meaning is separate from the storage pointer. `node` keeps its existing contract as the reserved activation context, unchanged throughout nested bodies; no `node(S)` receiver is introduced.
+In Lmx's physical header the former `size` and `data` are renamed to `length` and `storage`; the final order is `parent/length/storage`. Native descriptors reside in call tables in the Thread's arena; capacity resides in another table of the same arena. During execution `data` and `code` remain accessible as the Structure fields/arguments of a `call` launch, under the existing visibility rules. Their meaning is separate from the storage pointer. `node` keeps its existing contract as the reserved activation context, unchanged throughout nested bodies; no `node(S)` receiver is introduced.
 
-Each receiver returns a field's value without constructing a descriptor. `sys\descriptor` below returns addresses of the fields themselves for explicit writes. [Author's decision](../LMX_blog/2026-11-13-get-descriptor.md#header-receivers); implementation of the new variants and renaming remains open in [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+Reading parent/length/storage accesses its header field directly; native/capacity use their corresponding tables. None of these queries constructs an auxiliary descriptor. `sys\descriptor` below returns addresses of actual fields for explicit writes. [Author's decision](../LMX_blog/2026-11-15-explicit-compilation.md#arrays-native-proposal); implementation remains open in [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 <a id="get-descriptor"></a>
 `sys\descriptor(S)` and `sys\descriptor: S` select an explicitly supplied Structure. With no argument, `sys\descriptor()` and `sys\descriptor:` equal `sys\descriptor(data)` for the current launch's data, including inside nested control bodies; code requires an explicit argument. In data, a same-headed form remains an ordinary Structure. Both variants return the selected Structure's field addresses under the same contract. [Author's decision](../LMX_blog/2026-11-13-get-descriptor.md#descriptor-current-data).
 
-Ordinary receiver `sys\descriptor: S` returns a Structure d containing addresses of S's actual header fields: `parent`, `native`, `length`, `storage`, in that order, without nested VoidArray. Address types are `Lmx **`, `LmxEntry *`, `size_t *`, `void **`; LmxEntry is already a function pointer. `\(d\native) := 0` directly changes S.native, so the next call selects the walker; `d\native := 0` changes only the pointer inside d. These are live field addresses, not a copy or proxy. The descriptor neither extends S's lifetime nor transfers ownership. `S\native` selects an ordinary user field. [L2 contract](L2_spec_en.md#get-descriptor), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+Ordinary receiver `sys\descriptor: S` returns a Structure d containing addresses of S's three actual header fields: `parent`, `length`, `storage`, in that order, without nested VoidArray. Address types are `Lmx **`, `size_t *`, `void **`. `\(d\length) := n` directly changes S.length; `d\length := p` changes only the pointer inside d. These are live field addresses, not a copy or proxy. A direct length write does not allocate storage; `sys\resize` performs coordinated resizing. The descriptor neither extends S's lifetime nor transfers ownership. Native and capacity are not its fields; `S\native` selects an ordinary field if present. [L2 contract](L2_spec_en.md#get-descriptor), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 Pointer depth and Array rank are independent arbitrary finite quantities; the language has no fixed limit. Taking an address adds a pointer level and dereferencing removes one. An explicit write through `S\field` or a typed dereference follows the place's general requirement, including references and function pointers. Restrictions on assignment through a bare Structure or function name and on implicit external lookup do not prohibit such explicit writes.
 
@@ -203,7 +211,7 @@ For example, `int: y give()` declares the named place `y`, a graph field in data
 
 A call creates a new namespace. Nested control bodies in that call do not create an activation, but new local names belong to their lexical branch. Re-declaring an already visible variable creates no second C variable. This does not collapse repeated declarations in the source graph. Root preparation neither lifts branch declarations nor completes `data` with `code` fields.
 
-A Structure's field count and positions are fixed at construction. Graph fields follow strictly lexical order; native-code emission order does not authorize rearranging the graph's fields. Updating an existing field replaces its stored reference; it does not append an occurrence. A different set of fields requires a new Structure. Array operations follow their own contracts and do not change this Structure rule.
+A Structure's initial field count and order follow construction and lexical order; native-emission order does not authorize rearrangement. Updating an existing field replaces its stored reference without appending an occurrence. Structure and Array<@> share explicit resizing through sys\resize and sys\reserve; length changes only through an explicit size operation or explicit header write, not implicitly on an element store. See [variable Arrays](#array-capacity).
 
 <a id="descriptions"></a>
 ## 5. Explicit value descriptions and conversions
@@ -344,7 +352,7 @@ A new free dynamic input changes the method interface and requires affected call
 <a id="admission-case-11"></a>
 ### 11. Changing an existing Structure
 
-A created Structure has fixed field count and slot addresses; a different field count requires another Structure.
+A Structure uses common variable-array resizing: sys\resize changes length and, when necessary, storage; the descriptor address stays stable. Raw addresses into old storage are not repaired automatically; an L3 element reference holds the descriptor and index.
 
 <a id="admission-case-12"></a>
 ### 12. Reliable numeric conversion
@@ -589,7 +597,7 @@ A variable-declaration receiver in code works with the call-local namespace: its
 
 Ordinary `call(D, C)` uses the same fresh-namespace model. D's root declarations provide inputs; C's root declarations provide the remaining locals. Preparation neither changes D or C nor executes computed declarations early. Paths `data\` and `code\` retain the original D and C.
 
-Coincidence of `code` and `data`, and call entry itself, do not clear `native`. A local write does not change the source graph. An explicit source-code change clears the affected `native` before the next call; the current activation continues the snapshot of the corresponding C function's code, selected at entry before statements execute.
+Neither call entry, code/data coincidence, nor a graph write clears native. A local write changes only the namespace; an explicit write changes the source graph. Updating machine execution requires [explicit compilation](#explicit-compilation); endturn alone does not perform it.
 
 An executable body is a structural expression; declaring a named Structure or method does not execute it. The bare name of an ordinary Structure denotes a reference to it; explicit receiver `call: A` or, in code, the form `A()` executes it without arguments or result. The forms `A()` and `A: ()` are read by the role: in data they are structural forms of a declaration of `A`, first or repeated, and call nothing (the author's answer of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#structure-head-call-refuses-in-code)), while in code each is a call of `A`: if `A` is an ordinary Structure, `A()` launches it over itself, the same as `call(A, A)` (the author's decision of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#structure-call-by-name); before this decision such a form was refused in code, and an ordinary Structure was executed only by the receiver `call`). It is an error when the head names neither a callable nor a Structure. `fn` declares one result, which may be a Structure with several fields ([Structure result](#structure-result)); `sub` returns no value. A signature specifies arguments, result, and `throws` but does not itself execute.
 
@@ -599,7 +607,7 @@ A path through a Structure reads a field without adding an invocation of the sel
 
 A callable occurrence has its own structural identity and a `parent` link into its above-method lexical space. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.
 
-Entry creates a call frame and selects the executable `code` snapshot. Native and interpreter must agree observably; the frame is not another permanent program Structure and is never written back. Only the code compiled into the corresponding C function is copied, not the entire lexical tree. Bindings are passed as hidden arguments and require no lexical-environment copy; this is the [agreed boundary](#activation-history).
+Entry creates a local frame without write-back. A mandatory executable-code copy is cancelled: edit-application timing before endturn is unspecified, while native updates require explicit compilation. Other execution rules remain shared by native and the walker. Bindings use hidden arguments without a lexical-environment copy; see the [boundary](#explicit-compilation).
 
 Source `data`, `return`, and `code` belong to the callable Structure; the local namespace belongs to the activation. Re-declaring a variable in code retains its type contract, computation, and assignment; only the repeated C declaration is omitted.
 
@@ -626,7 +634,7 @@ A formal parameter with a default remains part of the full accepted interface, n
 
 An ordinary Structure C and a method share body and frame compilation. `call(D, C)` requires neither `data = code`, a named C, nor an artificial `fn`. Entries and C signatures derive from actual calls rather than the complete input model. Different argument sets give different signatures; this does not justify a speculative version registry or universal adapter.
 
-`sys\native(C)` only reads the native address. Changing source code clears the affected `native`; the next dispatch selects an available entry or the applicable L3 interpreter. The current frame continues its code snapshot taken at entry before executing statements. Local variable writes are never published; direct writes affect the selected graph. [Complete contract](#call-frame-20261115), [M14](../next_core_tasks_v3.md#native-structures).
+`sys\native(C)` obtains the native descriptor from call tables without executing it. Writes are not tracked for native and do not clear entries; explicit compilation performs updates. Known native calls go directly to known C functions; dynamic calls select a suitable table variant. Locals are not published and explicit writes change the graph. [Complete contract](#explicit-compilation), [M14](../next_core_tasks_v3.md#native-structures).
 
 <a id="whole-arguments"></a>
 A call with a single Structure argument does not differ from a call with the chain of its fields. This is a rule of call binding, not of the parser: P0 does not unwrap an anonymous Structure written in the call (author's decision of 2026-11-10, [grammar](LMX_grammar.en.md#empty-colon)), and a callable receives it just as the computed result of `merge` given as the only argument: the result's fields become the whole argument Structure (the author's clarification of 2026-11-07, [journal](../LMX_blog/2026-11-07.md)). The author's example; the name `test` is a word of the language, hence `mytest` here, and the field of the second operand, which the author wrote in the former form `a: int: 5`, is written `int: a 5` here ([declaring a place](#receiver-args-only)):
@@ -682,9 +690,50 @@ Taking an address also obtains a computed value: for input `int: x next()`, `@x`
 
 Re-declaring an already visible name introduces no additional C variable but retains the other actions: `int: x bump()` evaluates bump(), performs ordinary admission, and assigns the existing x. A new branch name is visible from its declaration at its level and below, not outside. Two declarations in data remain two physical occurrences, `S\[0]x` and `S\[1]x`; `S\x` is ambiguous. Sequential visibility of variables and const removes the old early bare-name access to a future local. If a written computed declaration was already read through an explicit path, later reaching its code statement still executes the RHS again. Early consumption does not remove a future statement; there are no separate exceptions or hidden computation cache.
 
-Entry selects the executable code snapshot before its statements run; there is no entry initializer-execution phase. The snapshot covers only what compilation puts into the corresponding C function. This is not the entire lexical tree: bindings are passed as hidden arguments; the lexical environment and other functions' code are not copied for this snapshot. The common selection of code for the function determines the boundary, without a separate full-tree copy or traversal of graph-reference targets ([author's clarification](../LMX_blog/2026-11-15.md#m14-function-snapshot)). The interpreter retains the corresponding copy of the selected code; native preserves the same observable behavior. Changing source code clears its native before the next call. An entered frame continues its selected snapshot. Additional versions, a journal, or a separate self-modification system are unnecessary.
+Execution of mutable code follows [explicit compilation and the endturn boundary](#explicit-compilation). A mandatory code snapshot at entry is cancelled; selected local namespace values/descriptions remain independent. There is still no initializer-execution phase at entry.
 
 C signatures are derived from actual calls. Different supplied argument sets yield different signatures; the full `data` description does not itself become every C entry's parameter list. A signature without `code` describes that call, not an entire particular `fn` or `sub`. Ordinary Structures and methods share body and frame compilation; `data = code` is not required.
+
+<a id="explicit-compilation"></a>
+### Explicit compilation, native, and endturn
+
+Compilation of an explicitly selected root includes clean-graph construction and checking without program
+calls, lowering to L1 and C, machine compilation, and entry registration in `call` tables.
+`sys\compile(S)` invokes this shared chain; `sys\translate(S)` stops at L1 text.
+Failure returns diagnostics and provides no new native entry. Complete the builder implementation first;
+runtime reuses its required parts for this concrete operation, without a second compiler.
+
+Native is an explicit descriptor: an ordinary Structure with machine-entry variants and their signatures,
+references to the binary module and its entries, and L1/C source paths. Its primary storage is the `call`
+tables shared by methods and ordinary Structures. Translation of fn/sub/catch adds a missing ordinary
+`native` field to the clean graph, referring to that same descriptor. Other Structures receive no automatic
+field. Lmx has no native header field. `sys\native(S)` obtains the descriptor through the tables;
+dynamic call selects by target Structure and actual signature. Without a suitable native entry,
+admissible L3 executes through the walker.
+
+A known native-to-native call lowers directly to the selected C function: ordinary parameters and necessary
+hidden binding arguments, without graph traversal, call-table lookup, universal actual packaging, or a graph
+frame just to arrange the call. Explicit program accesses to data/code remain. This is the primary generation
+route, not a deferred optimization.
+
+A write immediately changes the addressed graph and is not tracked for native. It neither clears entries
+nor starts checking or compilation, and maintains no reverse machine-code dependencies. Remove those
+traversals, tables, transfers, and generator branches together with the checks. Ordinary memory/reference
+duties remain; they are not native-freshness tracking. Without explicit compilation a graph edit promises
+neither updated machine code nor automatic program repair.
+
+Before the turn ends, the time an edit affects execution is unspecified: the walker may see it before native.
+Copying code to equalize this timing is unnecessary, including the former per-C-function code snapshot.
+Selected namespace places remain independent of source data; bindings use hidden arguments and the lexical
+environment is not copied. After successful explicit compilation and endturn, the next entry uses the
+prepared update. Endturn alone neither detects edits nor checks or compiles the graph.
+
+A direct C call A→B belongs to compiled A. Recompiling only B does not rewrite old A: updating that chain
+requires explicitly compiling a common unit containing the needed callers and targets. This is compilation
+work, without observing assignments or looking up native before each direct call. Old active machine frames,
+including finally, must finish before their machine code is released.
+[Author's decisions](../LMX_blog/2026-11-15-explicit-compilation.md).
+
 
 <a id="direct-access-cache"></a>
 ### Direct access without a separate language cache
@@ -701,7 +750,7 @@ Neither the `data` nor the `code` frame is published into the graph. Remove load
 
 The call stack remains the sole implicit activation history: the ordinary C stack for native and the corresponding control stack for the interpreter. Recursive and nested calls have different local cells, including different `@x` addresses. Return, `throw`, `finally`, `retry`, and `yield` introduce no write-back of these cells. Explicitly passed references preserve their targets' identity.
 
-The earlier M14 questions are resolved: entry executes no initializers; variables and const have sequential visibility; a previously consumed declaration executes again when its statement is reached; the code snapshot is limited to code compiled into the corresponding C function; short fn/sub/catch headers remain with unified data. Frame-place independence and the computed-field result address are also specified above. This is agreed semantics, not a claim of completed implementation. [The author's answers](../LMX_blog/2026-11-15.md), [single implementation plan](../next_core_tasks_v3.md#native-structures).
+The earlier M14 questions are resolved: entry executes no initializers; variables and const have sequential visibility; a previously consumed declaration executes again when its statement is reached; the mandatory code snapshot is replaced by explicit compilation and the endturn boundary; short fn/sub/catch headers remain with unified data. Frame-place independence and the computed-field result address are also specified above. This is agreed semantics, not a claim of completed implementation. [The author's answers](../LMX_blog/2026-11-15.md), [later clarification](../LMX_blog/2026-11-15-explicit-compilation.md), [single implementation plan](../next_core_tasks_v3.md#native-structures).
 
 <a id="branches"></a>
 ## 13. Branches and loops
@@ -734,6 +783,17 @@ An exit that destroys an activation evaluates and retains its result or payload 
 Inputs and other locals are not written back, and the caller's locals are not reloaded. Explicit cleanup writes affect the addressed graph. Every activation crossed by an exit performs its cleanups. Return preserves the result reference's identity and does not itself trigger actor end-of-turn collection.
 
 An exit inside a running cleanup does not re-enter it. Remaining outer cleanups retain their obligations; nested calls use ordinary frames without publication. Stopping or cancellation does not bypass these rules.
+
+<a id="endturn-receiver"></a>
+`sys\endturn()` is a system exit to the current turn's ordinary boundary. It propagates through nested
+calls and runs registered finally cleanups of exited scopes in the usual reverse order.
+An ordinary catch does not intercept it; it neither returns to its call site nor retains a stack continuation.
+Ordinary end-of-turn processing follows cleanup. The receiver itself changes neither running nor success
+and does not declare the Message completed; a subsequent turn, if scheduled, starts at the ordinary entry.
+Use the common exit mechanism, not a separate stack walk or a jump bypassing finally.
+It is not flush, publishes no locals, detects no edits, and starts no compilation.
+After successful explicit compilation and this boundary, the next entry uses the prepared update;
+without compilation, endturn alone promises no native refresh. [Full contract](#explicit-compilation).
 
 <a id="exceptions"></a>
 ## 15. Declared failures and diagnostics
@@ -813,13 +873,32 @@ Producer inputs are fixed when its activation begins. A later `next` caller does
 <a id="arrays"></a>
 ## 17. Arrays and backing
 
-An ordinary Structure and a reference Array `Array<@>` are fully interchangeable: indexing, named paths where names exist, `length`, admission, copying, execution, `sys\typeof` and `sys\descriptor` use the common contract. An ARRAY/STRUCT category alone is no reason for refusal. `length` reads the header field `length`; `parent/native/length/storage` are not counted as elements. A numeric `Array<T>` stores T directly, while List retains its separate growing contract. Finite rectangular Array rank has no fixed limit and is independent of pointer depth. [Approved layout](L2_spec_en.md#lmx) and [open M13 implementation](../next_core_tasks_v3.md#flat-lmx-descriptor).
+An ordinary Structure and a reference Array `Array<@>` are fully interchangeable: indexing, named paths where names exist, `length`, admission, copying, execution, `sys\typeof` and `sys\descriptor` use the common contract. An ARRAY/STRUCT category alone is no reason for refusal. `length` reads the header field `length`; `parent/length/storage` are not counted as elements. A numeric `Array<T>` stores T directly. Structures, Arrays, and service lists share length and capacity management. Finite rectangular Array rank has no fixed limit and is independent of pointer depth. [Approved layout](L2_spec_en.md#lmx) and [open M13 implementation](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 An ordinary Array is a typed graph Structure with stable reference identity. Constructor `[]` creates it when execution reaches the construction site. In `[]: arr ( ... )`, binding occurrence `arr` belongs to the current Structure, the Array's structural parent is that `arr` occurrence, and structural elements materialized from the arguments have the Array as their parent. Parentheses around the arguments create no extra anonymous wrapper in the Array: P0 does not unwrap them, but the receiver `[]` reads the Structure written in them by its own contract, as the list of its arguments ([general rule](#values)). In data `MyLmxStructFromArray: arr` declares a Structure `MyLmxStructFromArray` with the one atom `arr`; that atom is a pointer to **that same Array**, a reference immutable by name: in the tree under `MyLmxStructFromArray` stands only the atom, the Array is neither reconstructed nor copied, and its `parent` does not change ([declaring a Structure](#colon-declares)); a pointer variable to that same Array is declared by `@: p arr`, and in code the form `MyLmxStructFromArray: arr` is a call of its head. A Structure field holding an Array reference is not the Array itself. Passing a reference does not copy elements; an element mutation is visible through other references, whereas rebinding a local reference is not.
 
 An owning Array has one contiguous rectangular block of elements. Nested dimensions do not mean separately allocated rows. For shape `[d0, …, dN−1]`, element count is the product of dimensions, with the last index varying fastest. An Array of references to other Arrays is a different value, not a replacement for a rectangular multidimensional Array. A structural element is nested under the Array; a primitive element occupies its storage but acquires no separate `parent` field.
 
-A graph Array has the common `Lmx` base with its own `parent` and `native`; its typed element backing is not a separate graph Array value. The L1 physical hierarchy must change accordingly: Array is built on `Lmx`, rather than `Lmx` being built on a standalone Array descriptor. The exact layout belongs to [L2](L2_spec_en.md#lmx), but the common structural parent and reference identity do not depend on the element type. A base Array has a fixed element count: it does not grow, resize, append, or switch backing. Dynamic membership, capacity and growth belong to a separate List (`KIND_LIST`); a cell address in its replaceable backing does not survive growth.
+A graph Array has the common Lmx base with parent/length/storage and a stable descriptor address; its typed storage is not a separate graph Array. Structures and Arrays have variable length and capacity. The former fixed-Array/separately-growing-List distinction is cancelled: one mechanism serves both operations and all element types. Native resides in call tables, not in the header.
+
+<a id="array-capacity"></a>
+The arena holds a table “Structure descriptor address → capacity”, measured in elements.
+It supports common allocation and resizing, but is not consulted by ordinary indexing.
+`sys\resize(S, n)` changes length and provides storage as needed; `sys\reserve(S, n)` ensures capacity
+without changing length; `sys\capacity(S)` reads the table.
+Storage may move while the Array descriptor retains its address. Service arrays use the same mechanism;
+do not add capacity to Lmx, a hidden prefix, or a separate DynamicArray family.
+Existing typed-allocation and release duties belong to that same mechanism.
+
+<a id="l3-array-reference"></a>
+An L3 pointer to an Array element has a type distinct from a raw L2 pointer and stores a reference to the
+Array descriptor itself plus an explicit index. It stores no storage address and needs no repair when
+storage moves. Access uses current descriptor length/storage and one final linear index.
+Intermediate `[i][j]` steps create no additional descriptors. An L3 primitive pointer also has its own type;
+reuse typed-reference and uninit:T foundations without conflating reference type with absence of a value.
+Pointer depth remains arbitrary and finite. L2 retains raw machine addresses, without automatically
+moving an earlier obtained address along with storage.
+
 
 `length(array)` reads the Array's element count; for a rectangular Array this is the total count, not its first dimension. Physical backing need not retain dimensions and cannot reconstruct them from the total element count. The containing Structure's field count, Array length and service-pool size are distinct.
 
@@ -833,7 +912,9 @@ Built-in machine element types retain their [C99 target-profile meaning](L2_spec
 
 A full N-dimensional rectangular Array index contains N integer coordinates. For a rectangular Array, coordinates are reduced to one linear element index in row-major order: `k = (...((i0 * d1 + i1) * d2 + i2)...)`. L3 checks only the final element against the descriptor's total length: `0 <= k < length(array)`. It does not check each coordinate against its dimension or store a vector of dimension lengths for those checks. For example, in a `[2,3]` rectangle, `[0,3]` has linear index 3 and selects the same element as `[1,0]`; linear index 6 raises implicit `throw: interpreter` rather than returning `None`. Computing the index must not wrap an out-of-range mathematical result into a valid element. An Array of references to Arrays is different: each step accesses another actual Array with its own descriptor.
 
-Adjacent indices `matrix[i][j]` address one flat Array using strides known from its description, whereas `a[i]\[j]` addresses the previously selected value after `\` ([paths](#fields)). The descriptor does not recover dimensions, and an incomplete index spelling does not by itself construct a separate row Array or hidden view descriptor. These access checks belong only to L3, whether executed natively or interpreted: [L2 access](L2_spec_en.md#lowlevel-address), including obtaining a graph-backed element's address, works without them. Operation checks do not constitute a separate candidate-admission mechanism in place of [analysis and unit tests](#admission).
+Adjacent indices `matrix[i][j]` address one flat Array using strides known from its description, whereas `a[i]\[j]` addresses the previously selected value after `` ([paths](#fields)). The descriptor does not recover dimensions, and an incomplete index spelling does not by itself construct a separate row Array or hidden view descriptor. These access checks belong only to L3, whether executed natively or interpreted: [L2 access](L2_spec_en.md#lowlevel-address), including obtaining a graph-backed element's address, works without them. Operation checks do not constitute a separate candidate-admission mechanism in place of [analysis and unit tests](#admission).
+
+L2 indexing of any finite rank, including `array[-1]`, is offset calculation and ordinary access. Emit no length, index-sign, arena-membership, or former-field-requirement checks. Do not turn a signed offset into an early rejection by receiving it into size_t. Reading, writing, and address-taking share one calculation; L3 adds one final-element check rather than a check for each bracket.
 
 An Array copy has separate backing; passing a reference does not itself create it. Returning a reference must not hide copying to repair lifetime. Shared backing retains ordinary Message ownership boundaries.
 
@@ -888,7 +969,7 @@ A header describes inputs and the result but is not an additional merge operand 
 
 ### Native implementation reuse and copied callable occurrences
 
-`native` belongs to the selected executable body, not to the `merge` operation. Unchanged `code` text alone does not authorize reuse of an old implementation: actual admission must prepare compatible places, value representations and the code→data map, while preserving the written signature, result and declared failures. This checks the current contract; it is not a forecast of future execution or a body certificate. Under those conditions the implementation receives the new copy's graph; otherwise a matching implementation of the new body or, for L3, the interpreter is selected. Method implementations are not spliced together. A nested callable occurrence is copied as a Structure under the common rule (except an [eternal branch](#eternal)); sharing an implementation address does not share mutable graph storage.
+Native descriptors belong to call's tables in the arena; an ordinary fn/sub/catch native field references such a descriptor. Copy/merge preserve these links by ordinary graph rules, but neither compile new code nor register a new native entry for their result. Explicit compilation or restoration binds the new graph to suitable machine variants. Actual-input admission keeps its ordinary contract; it is neither an edit-tracking service nor a code-identity check on every dispatch. Method implementations are not spliced together. A nested callable is copied as a Structure (except an [eternal branch](#eternal)); shared machine code does not imply a shared mutable graph.
 
 Different physical field positions do not by themselves invalidate the selected native implementation: a successful `implements` table maps receiving-description field addresses to candidate field addresses. Correspondences compose across successive compositions. The table is not another graph, performs no repeated field-name lookup, and does not itself select the executable body.
 
@@ -926,7 +1007,9 @@ Module linking resolves only explicitly selected operations and construction rec
 
 `sys\toLmx` emits LMX text of the current graph with canonical names and retained comments. An explicitly overwritten construct is emitted in its current form; neither history nor native reconstructs earlier source. Local execution does not publish its frame or replace the initializer in source data. This serialization differs from `sys\translate`, which returns L1 text for subsequent compilation and lowering errors.
 
-`sys\fromLmx` parses text under the ordinary language rules; at the input boundary it interns each identifier spelling and obtains the address of its canonical string in the receiving arena ([names and paths](#fields)). Portable persistence conveys current content and identities, not a memory image of native addresses, allocator state, and foreign descriptors. Those require separate resource policies without losing the current constructs, names, or comments being preserved.
+The argument of `sys\toLmx(S)` selects the saved Structure. For an L3 Thread it also saves all tables of that Thread's arena, including call tables and native descriptors. The arena owns these tables; they are not fields of R0, and R0 is not the only eligible Thread. External arena tables are not silently attached to an arbitrary S. Preserve order and empty positions, shared references, cycles, names, and typed values: this is a reconstructable current graph, not merely source-like output.
+
+`sys\fromLmx` parses the saved graph through shared construction code and interns names in the receiving arena. Restoring a clean graph after restart on the same platform does not require retranslating the whole program. Saved native descriptors bind to ready binary modules and entry names for the corresponding ABI; old machine addresses are not copied. L1/C paths remain ordinary data but do not replace a binary-module and entry reference. The capacity table is rebuilt from allocated storage, for example capacity = length; prior reserve need not be saved. This is an implementation requirement, not a claim that the present graph dumper is complete.
 
 <a id="memory"></a>
 ## 22. Ownership, reachability and lifetime

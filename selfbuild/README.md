@@ -1,10 +1,12 @@
 # Maintained L3/L2 source package
 
-**2026-11-15 target change:** [M14](../next_core_tasks_v3.md#native-structures) now requires unified data,
-local call frames without write-back, signatures from actual calls, raw Structure/void-array index writes,
-and grouped sys tools (translate returns L1 and diagnostics). Existing accepted artifacts/receipts below
-still describe their actual earlier behavior; they do not establish this replacement. No speculative runtime;
-share necessary working builder code for concrete operations.
+**2026-11-15 target change:** [M13](../next_core_tasks_v3.md#flat-lmx-descriptor) and
+[M14](../next_core_tasks_v3.md#explicit-compilation-plan) require unified data, independent locals without
+write-back, variable arrays, parent/length/storage and arena tables for capacity/call-native descriptors.
+ToLmx(Thread) saves its arena tables. Known native calls are direct C calls. Explicit sys\compile
+replaces edit tracking/native reset; mandatory executable-code snapshots are cancelled.
+Sys\endturn exits through finally to the normal turn boundary; it does not compile by itself.
+Implementation is OPEN; dated receipts below describe earlier code.
 
 Slice402 (2026-11-15), bounded code gates PASS: raw Structure/pointer-Array index writes use exact physical cells
 and the common ValueOwned store. Frozen slot requirements/tables/transfers/emitted preparation and future-machine
@@ -426,12 +428,10 @@ migration and the P0 switch remain open.
 [Evidence and continuation](../steps/witnesses/m8-structure-values-20261113/notes.md).
 The approved flat Lmx/descriptor work is recorded separately as open
 [M13](../next_core_tasks_v3.md#flat-lmx-descriptor); its code is not implemented yet.
-The latest M13 clarification names the header parent/native/length/storage and adds
-ordinary parent/native/length/storage receivers with one argument or the current data by default.
-Same-headed data forms remain ordinary Structures; execution's data/code and node keep
-their contracts. This is documentation of pending code work, not a new verified build.
-Descriptor also accepts an explicit S or defaults to the current launch's data:
-`sys\descriptor() = sys\descriptor(data)`, including inside nested control bodies.
+The latest M13 target has parent/length/storage, capacity/call-native tables in the arena, variable
+arrays, three descriptor addresses and no-argument getters from current data. Explicit native
+compilation and sys\endturn are specified at the top and in the main plan. The following dirty/cache
+paragraphs are historical requirements superseded by the 2026-11-15 model, not pending coding tasks.
 
 [M14](../next_core_tasks_v3.md#native-structures) adds ordinary Structure native emission through
 the existing method/frame mechanism, without data = code. Dirty code/data publication and walker/native

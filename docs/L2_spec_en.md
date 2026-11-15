@@ -13,69 +13,69 @@ nor alias unification. Full M11/M13/M14 remain OPEN. [Contract and checks392](ke
 The target chain is L3 with L2 insertions → generated L1 → C99. L1 is an intermediate language. The interpreter executes the stored L3 graph; L2 operations require native lowering.
 
 <a id="lmx"></a>
-## 2. `Lmx` Structure
+## 2. The `Lmx` structure
 
-Graph objects share a flat `Lmx` with fields ordered `parent`, `native`, `length`, `storage`: `@: parent Lmx`, `LmxEntry: native`, `size_t: length`, `@: storage void`. `length` is the element count and `storage` the address of their storage; the target record has no intermediate `array: VoidArray` field. A language Array retains this base, structural parent/native and fixed typed storage. A numeric Array stores T-elements directly at storage; an ordinary Structure and Array<@> store `void *` elements. The header's address range supplies the type, not the spelling `void *storage`. A reference points to the beginning of Lmx. This is the approved target of 2026-11-13; the generator's current nested record and the remaining migration are recorded in [implementation status](implementation-notes.en.md#l2-status).
+Structures and Arrays share a flat `parent/length/storage` header, without native, capacity,
+or an embedded VoidArray. In L2 order: `@: parent Lmx`, `size_t: length`, `@: storage void`.
+A reference points to the header's start. Structure and Array<@> store void* elements and are fully
+interchangeable in indexing, named paths, admission, copying, and execution.
+Numeric Array<T> stores T itself; arena typed allocation determines its type.
 
-An ordinary Structure and an untyped-pointer Array<@> are fully interchangeable for the same contents: index, length, named access when names exist, admission, copying, execution, `sys\typeof` and descriptor access follow the same rules. Equal C layout without those operations is insufficient. Numeric Arrays retain T-storage, and growable List remains separate. The header is not part of the element sequence: `S[i]` selects from storage and `length(S)` reads length.
-
-`parent` describes structural nesting, not Message parentage. For an Array created at an `arr` field, its parent is the graph occurrence representing that field; for a Structure constructed as an owned Array element, its parent is the Array. Storing a reference to an existing Structure in an element does not reparent that referent. Likewise a mention of the name of a known Structure is not expanded -- neither by the parser nor when the clean graph is built: the tree holds an atom, a pointer to that Structure, while that Structure's `parent`, that is its place in the tree, does not change, and no subtree arises under the Structure that mentions it (the author's answers of 2026-11-11, [journal](../LMX_blog/2026-11-11.md#known-name-not-expanded), [L3](LMX_semantics.en.md#colon-declares)). Structural `parent` defines lexical nesting. Within it, variables and const are visible sequentially from their initial declaration, while named Structures and callables are bidirectional ([L3](LMX_semantics.en.md#declaration-visibility)); no additional hidden context is created. `native` selects a native entry; zero walks the stored body. A graph object has no stored name, model tag, or extra execution-state fields. Structure field count and Array element count are fixed at construction; addressable cells do not move. Primitive elements remain typed cells and need no individual `parent` field.
+Parent is the structural parent. Passing an existing value's reference neither changes parent nor
+expands it into the tree. An Array descriptor retains its address; length and storage use common size
+management. Separate fixed-Array and specially growing List contracts are cancelled.
+Native descriptors reside in call tables; fn/sub/catch have an ordinary native reference field added
+during translation if absent. Other Structures receive no automatic field.
+[Norm](LMX_semantics.en.md#explicit-compilation), [open M13 migration](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 <a id="interpretable-tree"></a>
 ### 2.1. Interpretable tree
 
-A resolved receiver selects the typed pool when its result is constructed; similarity to fields already declared in `data` does not turn their owner into that receiver's result. In particular, only a Structure produced by executing `fn` enters the pool of `fn` results, not an arbitrary Structure with similar parts in `data`.
+The clean graph retains written declarations, operators, values, and nested bodies; C emission does
+not rearrange them. A primitive cell needs no extra leaf wrapper. Names reside in the common canonical
+string-address table, not in Lmx. A launch supplies the data/code roles.
+A direct data pass executes only root-level declaration receivers under their general rules.
 
-The stored graph is the program: declarations, values, operators, and nested bodies initially follow source order; later writes change this same graph. Native lowering does not replace it with a second AST or data graph. A primitive already has a typed arena cell; it needs no redundant `leaf` or Structure wrapper. Atoms still part of the current program are retained.
-
-The walker executes the current suitable tree, including one constructed or modified at runtime: editing data later supplied as `code` is code construction. This requires no prior translation, stored translator-prepared result, hidden source copy, or prepared flag. Traversing the current graph and ordinarily resolving its operations is execution, not prohibited reparsing of source text. Common receiver, admission, and address-map rules remain; they allow different working-frame forms over one stored graph. This is the rule, not a claim that the current kernel fully supports runtime code construction. [Author clarification, 2026-10-23](../LMX_blog/2026-10-23.md).
-
-Entity names live only in an external table. The walker may obtain the written head's name by its address to determine the head's role; this is not textual variable lookup for field access. The translator consumes the same constructed Lmx graph, while completed `native` needs no name for invocation. Comments play no dispatch role. `sys\toLmx` emits the current graph composition and order: an overwritten operator is not reconstructed from source or a hidden copy. Launch data, call status, and Thread membership are not appended to the program graph.
-
-References stored as data form a graph and may produce cycles. Structural `parent` forms a tree. Address classification determines a value's kind; the slot address and address stored in that slot are distinct.
+Ordinary operations can construct and change a graph. Writes are not tracked for native, do not check
+future executability, and do not start compilation. The builder and explicitly invoked sys tools check
+a clean graph. The walker executes admissible L3; explicit compilation updates machine execution.
+`sys\toLmx(S)` saves selected S in its current form, without reconstructing earlier source.
+See [semantics](LMX_semantics.en.md#source-codec).
 
 <a id="get-descriptor"></a>
 ### 2.2. descriptor and actual header fields
 
-The receiver has variants with S and with no argument: `sys\descriptor()` / `sys\descriptor:` equal
-`sys\descriptor(data)` for the current launch's data, including inside nested control bodies.
-Code requires an explicit argument. Both variants return the selected Structure's field addresses;
-a same-headed data form remains an ordinary Structure.
-
-`sys\descriptor: S` is an ordinary receiver. Its result d is an ordinary Structure with four named fields holding the addresses of the fields of live S:
+`sys\descriptor(S)` returns an ordinary Structure of S's live field addresses. Without an argument it
+selects the current launch's data, including inside nested control bodies. Code is explicit.
 
 ```text
 (
     @@: parent Lmx
-    @: native LmxEntry
     @: length size_t
     @@: storage void
 )
 ```
 
-The machine types of the values are `Lmx **`, `LmxEntry *`, `size_t *` and `void **`, respectively. LmxEntry is already a function pointer; its cell's address keeps the real type without casting to `void **`. `\(d\native) := 0` addresses S.native; after writing zero the next call selects the walker. `d\native := 0` changes only the ordinary pointer field in d. Reading an earlier address observes S's current field; obtaining another descriptor reaches the same physical cells. There is no header copy, write-back, proxy or separate registry.
-
-Pointer depth is any finite depth: taking an address adds one level, dereferencing removes one. Pointer depth and finite Array rank are independent and use general mechanisms. S.parent's address can numerically equal S: typed dereferencing of Lmx ** accesses the actual field rather than classifying it as a second independent Lmx. Qualification, explicit writes and lifetime retain their ordinary rules; obtaining a descriptor does not extend S's life. Ordinary `S\parent`/`S\native`/`S\length`/`S\storage` paths select user fields, with no header exception. [Author decision](../LMX_blog/2026-11-13-get-descriptor.md), [open M13 implementation](../next_core_tasks_v3.md#flat-lmx-descriptor).
+Machine types are Lmx**, size_t*, void**. `\(d\length) := n` changes S.length;
+`d\length := p` changes only the pointer in d. This is neither a copy, proxy, nor write-back.
+Writing length itself allocates no storage; sys\resize performs coordinated resizing.
+Native and capacity are absent from the result because they are not header fields. Obtaining descriptor
+does not extend S's lifetime. The first field's address may equal S, but typed dereferencing does not
+classify it as another standalone Lmx. Pointer depth is arbitrary and finite.
 
 <a id="header-receivers"></a>
-### 2.3. Reading the header through receivers
+### 2.3. Reading the header and service tables
 
-`parent(S)`, `sys\native(S)`, `length(S)` and `sys\storage(S)` return the values of S.parent (`Lmx *`),
-S.native (`LmxEntry`), S.length (`size_t`) and S.storage (`void *`), respectively. `parent()`, `sys\native()`, `length()` and `sys\storage()`
-select the current launch's `data`, equivalent to the explicit argument `data`. Selecting `code`
-requires an explicit argument. A root's parent is 0. Length counts elements, excluding header fields.
-`sys\native(S)` returns 0 when no native entry exists; reading the entry does not invoke it.
+parent(S), length(S), sys\storage(S) directly read parent, length, storage.
+sys\native(S) returns the ordinary native descriptor from call tables, including signature variants,
+or 0 when absent. sys\capacity(S) reads capacity in elements from the arena table.
+These queries construct no auxiliary descriptor. Every zero-argument form selects current data;
+code requires an explicit argument. A same-headed data form remains an ordinary Structure like data\for.
+Ordinary paths S\parent, S\length, S\storage, and S\native select written fields without pseudo-fields.
 
-These are ordinary non-declaring receivers: they execute in `code`, while a same-headed form in
-`data` remains a user Structure reached by ordinary paths and occurrence indices. A bare atom
-does not invoke a receiver. Parsing is shared; reading a value neither constructs descriptor
-nor allocates an object. Separately, `sys\descriptor` returns addresses of the
-`parent/native/length/storage` cells for explicit writes.
-
-Renaming physical fields `size` → `length`, `data` → `storage` does not change the Structure arguments
-`data` and `code` of a `call` launch. `node` keeps the current activation's existing contract and ABI;
-there is no new `node(S)` or hidden Lmx field. [Semantics and forms](LMX_semantics.en.md#header-receivers),
-[open implementation M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
+Data/code remain launch arguments and node the existing activation context.
+sys\resize(S, n) changes length and provides storage; sys\reserve(S, n) ensures capacity without changing
+length. All auxiliary operations belong to sys and reserve no global member names.
 
 <a id="system-indexof"></a>
 ### 2.4. A field's index
@@ -129,12 +129,29 @@ In a graph Array, `void *storage` holds the backing address of the selected type
 <a id="method-array"></a>
 ## 5. Native entry and Array
 
-`LmxEntry` is the native-entry word, not a second method object. A graph Array carries the common `Lmx` base and exactly its fixed count of typed elements. It has no dynamic reserve and does not move published addressable cells. With `[]: arr (...)`, the Array value retains its graph position; a later form of data `MyLmxStructFromArray: arr` neither constructs another object nor reconstructs a Structure from bytes: under the general rule it declares a Structure `MyLmxStructFromArray` with the one atom `arr` -- a pointer to that same Array, immutable by name, and the `parent` of that Array does not change ([§2](#lmx), [L3](LMX_semantics.en.md#colon-declares)). A pointer variable to that same Array is declared by `@: p arr`; in code the form `MyLmxStructFromArray: arr` is a call of its head, not a declaration. A dynamic List is a separate type and contract; its movable backing is not used for addressable Structure or Array slots.
+Native is an ordinary descriptor in call tables containing entry variants, signatures, binary-module/entry names, and L1/C paths. Machine addresses are bindings of the current process, not persistent addresses for another run. A language Array has the common Lmx base and variable length/capacity; typed storage may move. Strings remain exact-length char Arrays without trailing NUL; NUL belongs to the C door.
 
 <a id="arena"></a>
 ## 6. Arena
 
 Each Message owns one logical arena, which may contain multiple chunks and ranges. `lmx_arena_attach` transfers ownership without moving addresses. `mark/revert` rolls back a failed copy or `merge` construction. Simple mode retains classification and address stability but does not run GC. An independent immutable branch may remain in its owner's arena under the [L3 contract](LMX_semantics.en.md#eternal); a separate pool alone grants no such right.
+
+
+<a id="array-capacity"></a>
+### 6.1. Common variable-size Arrays and capacity
+
+Allocation and resizing use the common dynamic-array mechanism, including service arrays.
+The arena stores “descriptor address → capacity” in elements. Neither Lmx nor a hidden prefix contains
+capacity; remove a separate VoidDynamicArray family introduced merely for growth.
+Maintain the table on allocation/resizing/release, not on every indexed access.
+Stable standalone cells and canonical strings do not move; this requires no separate Array per cell.
+Restoration may begin with capacity = length.
+
+An L3 Array-element pointer has its own type with an Array-descriptor reference and explicit index.
+It stores no storage address: access derives the element address from the current header and final offset.
+Moving storage needs no pointer traversal. L3 primitive pointers also have their own type;
+reuse typed-reference and uninit:T foundations while retaining the distinction between a reference and absence.
+An L2 pointer remains a raw address. Arbitrary finite pointer depth and Array rank share general mechanisms.
 
 <a id="message"></a>
 ## 7. Message record
@@ -158,12 +175,12 @@ R0 is an ordinary child Thread of the top host scaffold. Launch data and setting
 
 Each Thread owns an `LmxPost`. `staged` prepares the current turn's messages, a successful boundary publishes them to `outbox`, and `inbox` holds admitted but untaken messages. An `inbox` element is the inseparable pair `[target, source_arena]`: the producer does not mutate the recipient arena; its owner attaches the donor before releasing the target. Failure retains the pair. Admission order is FIFO.
 
-`inbox` is a ring over a separate DynamicArray; its backing may move but is not an addressable graph slot. One reentrant monitor owned by `LmxPost` covers admission, take, and count. `outbox` and `staged` remain owner-local. `post` uses this same mailbox for an ordinary LMX call, not another transport. The language API is specified in [L3](LMX_semantics.en.md#thread-message-api).
+`inbox` is a ring over a common variable-size Array with external capacity. One reentrant LmxPost monitor covers admission, take, and count; outbox/staged remain owner-local. Post uses the same mailbox; see the [language API](LMX_semantics.en.md#thread-message-api).
 
 <a id="own"></a>
 ## 10. Structure execution
 
-Execution uses the source Structure and a separate local call frame under the [new norm](LMX_semantics.en.md#call-frame-20261115). Native and interpreter agree on preparation, the code snapshot, local values, and direct graph access. Locals are never written back. Fn/sub/catch have unified input data, return where applicable, and code. Existing physical graph slots remain stable; assignment does not append a slot.
+Execution uses the source Structure and a local namespace under the [norm](LMX_semantics.en.md#call-frame-20261115). Locals are not published and element assignment does not change length. Explicit common operations change size. Edit-application timing for executable code follows the [endturn boundary](LMX_semantics.en.md#explicit-compilation).
 
 <a id="call"></a>
 ## 11. Call
@@ -197,13 +214,11 @@ the examined native path already has l2_tN, so &l2_tN requires no additional all
 A ready place is addressed directly; reading the result does not replace the source declaration.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
 
-Entry selects a snapshot of only the code that compilation puts into the corresponding C function.
-This is not the entire lexical tree. Bindings are passed as hidden arguments; the lexical environment
-and other functions' code are not copied for the snapshot. Function-code selection is shared.
-Changing source code clears native for the next call;
-an active frame continues its selected snapshot. Methods and ordinary Structures share compilation
-without data=code. Different actual argument sets produce different C signatures;
-a header without code describes a call.
+A mandatory executable-code snapshot at entry is cancelled. Edit-application timing before endturn
+is unspecified. Selected namespace values/descriptions remain independent of source data;
+bindings use hidden arguments and the environment is not copied. Methods and ordinary Structures
+share compilation without data=code; different actuals yield different C signatures.
+Graph writes do not clear native: updates require explicit compilation.
 
 Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
 explicit writes are observed through actual aliases in execution order.
@@ -212,16 +227,44 @@ explicit writes are observed through actual aliases in execution order.
 
 <a id="native-structures"></a>
 <a id="direct-access-cache"></a>
-### 11.1. Native and direct access
+<a id="explicit-compilation"></a>
+### 11.1. Explicit compilation and direct native calls
 
-`S[n] := p` is identical for a Structure and an @ array: store void*, without former-field admission.
-`S\[n]x` and `voidarray\[n]x` are structural accesses; named assignment checks the field requirement,
-during clean-graph construction where possible. Remove redundant slot checks with their tables,
-fact transfers, and generated branches. Common construction tools first work in the builder;
-move needed parts into runtime for concrete tasks, sharing code. No speculative cache or infrastructure.
-Ordinary static C optimizations may preserve observable behavior.
-The [sys helper-receiver group](../next_core_tasks_v3.md#graph-tools) includes checking and translate:
-the latter returns L1 text and errors, not an LMX serialization.
+`sys\compile(S)` means clean-graph construction/checking → L1 → C → machine compilation →
+registration of resulting variants in call tables. Reuse working builder code;
+runtime receives only the parts needed for this concrete operation. sys\translate returns L1 and errors,
+not LMX or installed native. Failed compilation installs no new entry.
+
+Known native code calls the known variant directly in C with actual and hidden arguments.
+That call needs no graph packaging, call-table lookup, or universal trampoline.
+Dynamic selection uses call tables. One code may have multiple actual signatures.
+Explicit program data/code accesses and necessary reference passing remain.
+
+Graph edits are not tracked for native. Remove automatic clearing, dependency scans, reverse
+invalidation tables and maintenance, transfers, and generation. Do not replace them with dirty,
+versions, per-endturn hashing, or a universal journal. Ordinary memory mechanisms remain only
+for their actual purposes. Without explicit compilation machine code need not refresh.
+
+For a direct A→B link, compiling only B does not rewrite old A. Updating that chain requires explicit
+compilation of a common unit containing the needed callers and targets. This is builder work,
+not a check at every call. Ready binaries of the corresponding ABI can bind to a restored clean
+graph without retranslating it. ToLmx saves the selected Structure; for an L3 Thread this includes
+all tables of its arena, including call/native. The arena owns them, not R0's fields;
+external tables are not automatically attached to arbitrary S.
+
+<a id="endturn-receiver"></a>
+### 11.2. sys\endturn
+
+sys\endturn() ends the current turn through the common exit mechanism. Registered finally cleanups
+of exited scopes run in reverse order; ordinary catch does not intercept this system exit.
+It neither returns to its call site nor retains a stack continuation.
+Ordinary turn-boundary processing follows cleanup. The receiver itself changes neither running nor
+success and does not complete the Message; a subsequent turn starts at its ordinary entry.
+Before the boundary, edit-application timing may differ between walker and native.
+After successful explicit compilation and endturn the next entry uses the prepared update.
+Endturn alone detects no changes, compiles nothing, and publishes no locals; it is not flush.
+Old machine code is not released while its frames and finally cleanups are still executing.
+[Norm](LMX_semantics.en.md#endturn-receiver), [source](../LMX_blog/2026-11-15-explicit-compilation.md).
 
 <a id="child"></a>
 ## 12. Child reservation
@@ -261,7 +304,7 @@ L2 machine types retain the representation and numeric semantics of correspondin
 ## 18. Addresses, loading, and writing
 
 Field addresses returned by [descriptor](#get-descriptor) are actual typed places:
-`Lmx **`, `LmxEntry *`, `size_t *`, `void **`. This differs from an ordinary graph-slot
+`Lmx **`, `size_t *`, `void **`. This differs from an ordinary graph-slot
 address `void **`: it cannot arbitrarily be read as `Lmx **`, whereas S.parent itself
 really has type `Lmx *`. Even if S.parent and S share a numeric address, an explicit
 dereference reads the field by its type. Loading and writing are general for any finite
@@ -280,6 +323,11 @@ In the existing native path, `emit_call_result_value` declares typed `l2_tN`, an
 A reference field retains its exact pointer type; a primitive uses its typed cell. An ordinary graph slot physically holds void*; an alias through Lmx** does not replace that representation. Pointer depth is unrestricted; an evaluation temporary's address does not replace a ready place's own address.
 
 Prefix `\p` follows a reference; `p\field` accesses either a graph field or an explicitly imported machine ABI according to `p`'s category. `@array[i]` addresses the actual backing element. L2 adds no automatic bounds check; checked access belongs to L3. Address operations neither bypass `const`/`immutable` nor extend target lifetime.
+
+L2 indexing `[]`, `[][]`, `[][][]` of arbitrary finite rank, including `array[-1]`, computes an offset
+without length, sign, arena, or former-field checks. Reads, writes, and address-taking share one path.
+In L3 adjacent indices reduce to one linear index and one check against current length;
+per-coordinate checks, temporary rows, and intermediate descriptors are unnecessary.
 
 <a id="lowlevel-array"></a>
 ## 19. Raw C storage

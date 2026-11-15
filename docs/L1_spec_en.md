@@ -15,15 +15,14 @@ L1 resolves its C-like declarations and expressions. Prefix `@x` takes the addre
 <a id="lmx"></a>
 ## 3. Lmx in L1
 
-The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `native`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed access and the separate List contract remain. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
+The target C projection of [L2 §2](L2_spec_en.md#lmx) is a flat `Lmx` header with fields `parent`, `length`, `storage` in precisely this order, without an embedded `VoidArray`. A Structure or Array reference points to the start of the header. An ordinary Structure and `Array<@>` hold `void *` elements in `storage` and are interchangeable in common operations; a numeric `Array<T>` stores T elements directly. Typed storage and common resizing apply to all Arrays; capacity resides in the arena table. This layout is approved; migrating the current generator remains open: [implementation status](implementation-notes.en.md#l2-status), [M13](../next_core_tasks_v3.md#flat-lmx-descriptor). Graph records gain no name, model tag, or hidden execution fields. Thread's dynamic child List remains separate.
 
-Lowering ordinary receiver [`sys\descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the four actual header fields: `Lmx **`, `LmxEntry *`, `size_t *`, `void **`. A dereferenced write directly addresses and changes the original field; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
+Lowering ordinary receiver [`sys\descriptor`](L2_spec_en.md#get-descriptor) returns a Structure of addresses of the three actual header fields: `Lmx **`, `size_t *`, `void **`. A dereferenced write directly addresses and changes the original field; writing a field of the returned Structure changes its pointer. There is no proxy, delayed writeback, or new opcode. Arbitrary finite pointer depth and Array rank use the common typed path; L1 retains its own “type — name” declaration order.
 
-Lowering [`parent`, `sys\native`, `length`, `sys\storage`](L2_spec_en.md#header-receivers) reads the corresponding
-header field of the selected Lmx. With no argument it selects the current launch's data; code is explicit.
-Reading a value neither constructs descriptor nor allocates an auxiliary object.
-`data` and `code` keep their meaning as launch arguments; `node` semantics and ABI do not change.
-Same-headed data forms keep their ordinary structural projection, without header pseudo-fields.
+Lowering parent/length/sys\storage reads header fields; sys\native obtains the native descriptor from
+call tables and sys\capacity reads the arena capacity table. No argument selects current data.
+None of these queries builds an auxiliary descriptor. Data/code and node retain their roles.
+sys\resize/sys\reserve use common variable-size Arrays. Lmx contains neither native nor capacity.
 
 `sys\descriptor` likewise accepts an explicit S or defaults to the current data:
 `sys\descriptor() = sys\descriptor(data)`. This choice also applies inside nested control bodies;
@@ -55,7 +54,7 @@ During incremental self-build, the translator emits C99 access to a graph Array'
 <a id="method-array"></a>
 ## 6. Native entry and Array
 
-`LmxEntry` is the native-entry word; there is no second method record. A language Array lowers as a graph object with the common `Lmx` base and fixed, typed backing, not as a standalone `VoidArray` outside the graph. Dynamic List is implemented separately and does not replace fixed Structure slots or Array elements. See [L2 §5](L2_spec_en.md#method-array).
+Native descriptors are ordinary Structures in call tables in the Thread's arena, with signature variants, binary-module/entry names, and L1/C paths. Translation adds a missing ordinary native reference field to fn/sub/catch, not to other Structures. Arrays use the common Lmx and variable-size typed storage; separate List growth and embedded capacity are removed. See [L2](L2_spec_en.md#method-array).
 
 <a id="arena"></a>
 ## 7. Arena
@@ -80,7 +79,7 @@ R0 and the upper host scaffold use the common Thread mechanism. Launch data belo
 <a id="mailbox"></a>
 ## 10. Mailbox
 
-`LmxPost` holds `staged`, `outbox`, and FIFO `inbox`. An incoming slot is the pair `[target, source_arena]`; the recipient owner attaches the donor before releasing the target. The inbox ring uses a separate DynamicArray with movable backing and a mailbox monitor; it is not the fixed graph slots of a Structure. See [L2 §9](L2_spec_en.md#mailbox).
+`LmxPost` holds `staged`, `outbox`, and FIFO `inbox`. An incoming slot is the pair `[target, source_arena]`; the recipient owner attaches the donor before releasing the target. The inbox ring uses a common variable-size Array with external capacity, movable storage, and a mailbox monitor. See [L2 §9](L2_spec_en.md#mailbox).
 
 <a id="own"></a>
 ## 11. Local call frame
@@ -114,13 +113,11 @@ the examined native path already has l2_tN, so &l2_tN requires no additional all
 A ready place is addressed directly; reading the result does not replace the source declaration.
 Lifetime remains ordinary. @f() was a research example, not a separate support or prohibition task.
 
-Entry selects a snapshot of only the code that compilation puts into the corresponding C function.
-This is not the entire lexical tree. Bindings are passed as hidden arguments; the lexical environment
-and other functions' code are not copied for the snapshot. Function-code selection is shared.
-Changing source code clears native for the next call;
-an active frame continues its selected snapshot. Methods and ordinary Structures share compilation
-without data=code. Different actual argument sets produce different C signatures;
-a header without code describes a call.
+Copying code to equalize edit-application timing is cancelled. Native and the walker may apply an edit
+at different times before endturn; namespace independence remains. Bindings use hidden arguments without
+an environment copy. Graph edits neither clear native nor start checking/compilation.
+Methods and ordinary Structures share compilation without data=code; different actuals yield different
+C signatures, and a header without code describes a call.
 
 Local frames are not published. Load-dirty, the shared direct-access cache, and flush() are cancelled;
 explicit writes are observed through actual aliases in execution order.
@@ -128,16 +125,24 @@ explicit writes are observed through actual aliases in execution order.
 [single M14 task](../next_core_tasks_v3.md#native-structures).
 
 <a id="call"></a>
-## 12. Call
+## 12. Calls and explicit compilation
 
-The native-entry and primitive callback has one shape:
+Known native calls the known variant directly in C using the selected actual signature and necessary
+hidden arguments. Arranging this call needs no graph, call-table lookup, universal actual packaging,
+or trampoline. Dynamic calls select variants in call tables; their internal ABI is not mandatory
+packaging for all static calls.
 
-```c
-int (void *owner, void **refs, size_t nargs,
-     void *dest, void **out, LmxArena *arena, Lmx *code)
-```
+sys\compile(S) explicitly performs clean-graph construction/checking → L1 → C → machine compilation
+and entry registration; sys\translate returns only L1 and diagnostics. Graph writes are not tracked
+for native: no automatic reset, reverse invalidation, or rebuild. For a direct A→B chain, updating A
+requires compiling the unit with A and the needed B, not merely replacing B's table record.
+The maintained compiler source remains L2/L3; L1/C are generated artifacts.
 
-`owner` denotes active data, `code` the selected executable occurrence, and `arena` the actual call arena. A nonnull `refs[k]` points to argument value storage; null means absence. An object pointer value goes into a canonical `void *` cell; casting `T **` to `void **` is not a value conversion. The callback integer return is status, not the user's result. `dest` and `out` carry the result under the declared contract; a null reference can be a present result. Native/walker selection and the code→data map are specified in [L2 §11](L2_spec_en.md#call).
+sys\endturn() lowers through the common system-exit mechanism with finally to the turn boundary.
+Ordinary catch does not intercept it; the call does not return or retain a stack continuation.
+The receiver itself changes neither running nor success. After successful explicit compilation and
+endturn, the next entry uses the prepared update; without compilation endturn detects and repairs
+no edits. It is neither flush nor local publication. See [L2](L2_spec_en.md#explicit-compilation).
 
 <a id="child"></a>
 ## 13. Child
@@ -147,7 +152,12 @@ A child is built in its own arena. Publication adds its reference to `Thread.chi
 <a id="copy-merge"></a>
 ## 14. Copy and merge
 
-`lmx_graph_copy_owned` and `lmx_merge_owned` implement a complete traversal using one source→copy map: repeated references reach one copy, and internal references and `parent` are rebased. Typed executable-operation records are copied with the body. The `native` word transfers when the selected body and the current contract of prepared places, value representations and the admission address map are preserved. This is not a forecast of future writes or aliases: an actual code write clears `native` under the shared L2 rule. L1 does not re-decide what a source Frame is: under [L3](LMX_semantics.en.md#forms-declare-or-call) a structural form declares or calls -- the role of the Structure in the launch gives which of the two -- and a value is written into a known place by the operator `:=`. See [L2 §13](L2_spec_en.md#copy-merge).
+`lmx_graph_copy_owned` and `lmx_merge_owned` use a common source→copy map for fields, internal references, and parent. Native descriptors and ordinary native fields follow ordinary graph-copy rules; copying does not prove machine-entry suitability for a new Structure or register it automatically. Explicit compilation or restoration of saved tables for the selected root establishes entry bindings. See [L2](L2_spec_en.md#copy-merge).
+
+sys\toLmx of a selected L3 Thread saves all tables of its arena, including call/native, not merely
+R0's fields. sys\fromLmx restores the clean graph and ready ABI-compatible binary bindings after
+a same-platform restart by module/entry name, without retranslating.
+External tables are not automatically attached to an arbitrary S.
 
 <a id="implements"></a>
 ## 15. implements
@@ -183,6 +193,11 @@ L1 retains the target platform's C99 representation and numeric semantics. An L1
 | `a[i]: value` | `a[i] = value` |
 
 The table states the target unified spelling; transitional hand-written L1 may still need declaration-order migration. An addressable target needs valid C storage. `value\field` is a pointer step; by-value C aggregate access needs an explicit C form. `const: @(char p)` lowers to `const char *p` and protects the characters, not the pointer cell. This is not L3 deep immutability.
+
+L2 indexing, including `array[-1]` and any finite adjacent-index chain, lowers to an offset calculation
+without length/sign/arena checks. L3 uses its own Array-descriptor-reference type with index and one
+final-element check; that reference stores no storage address. L3 primitive pointers also have a separate
+type using the common typed-reference foundations.
 
 <a id="lowlevel-array"></a>
 ## 20. Array and raw C arrays

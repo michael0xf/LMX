@@ -15,7 +15,7 @@ A simple AI chat sends a complete LMX command document and receives an actual LM
 <a id="constraints"></a>
 ## 2. Fixed constraints
 
-The program graph remains the sole authoritative representation of its current state; an external table supplies names for translation and `toLmx`, but does not reconstruct overwritten source operators. Comments do not take part in execution. Chat operations use ordinary admission, `merge`, ownership, protection, and Message transport. The adapter does not directly write into another owner's arena, present a model prediction as execution evidence, or bypass access rules. A repeated declaration at one level assigns to the existing field under the current general rule; it creates no second same-name slot.
+The program graph remains the sole authoritative representation of its current state; an external table supplies names for translation and `toLmx`, but does not reconstruct overwritten source operators. Comments do not take part in execution. Chat operations use ordinary admission, `merge`, ownership, protection, and Message transport. The adapter does not directly write into another owner's arena, present a model prediction as execution evidence, or bypass access rules. Repeated declarations in data remain distinct occurrences addressed as S\[n]field. In code, redeclaring a visible name preserves the RHS and local assignment without a second C variable.
 
 <a id="roles"></a>
 ## 3. Roles
@@ -64,7 +64,17 @@ This illustrates a proposed form, not an additional `insert` grammar.
 <a id="placement"></a>
 ## 10. Placement in a live application
 
-Constructing a result and making it part of application state are distinct. Fixed slots of an existing `Lmx` are not stretched or moved: a different field set requires a new value and ordinary placement. Assignment updates an existing place after admission without creating a second same-name slot. Active code and continuation are not overwritten with arbitrary bytes; a new version is installed at an allowed boundary. The old version lives while existing references and activations retain it. There is no automatic rollback of file, mail, or other effects.
+Structure uses common variable-array resizing: sys\resize changes length/storage while preserving
+the descriptor address. L2 storage addresses are not repaired after relocation;
+an L3 element reference holds the descriptor and index. An element assignment does not append a field.
+
+Graph edits are not tracked to clear native. Explicit sys\compile prepares a machine update through
+clean-graph construction/checking → L1 → C → compilation/registration. sys\endturn runs registered
+finally blocks to the ordinary turn boundary; catch does not intercept it and it does not return
+to its call site. Before the boundary, executable edit timing is unspecified; only successful
+compilation followed by endturn guarantees the updated next entry. Endturn itself does not compile.
+Old machine code remains alive through its frames/finally; a code snapshot is not required.
+There is no automatic rollback of file, mail, or other effects. [Contract](../LMX_semantics.en.md#explicit-compilation).
 
 <a id="interpreter"></a>
 ## 11. Interpreter control
@@ -130,7 +140,7 @@ First locate the actual codec, translator, copier, driver, and mailbox. Then add
 1. A complete permitted graph with shared references, cycles, and comments is represented without hidden truncation.
 2. New source is translated; invalid source does not change the target.
 3. A prepared operand is copied without textual retranslating and without dangling references into a released arena.
-4. Data change occurs at its owner; active references and fixed slots remain valid.
+4. Data changes occur at their owner; resizing preserves descriptors, and storage addresses follow the common lifetime contract.
 5. `next` advances the selected execution, not another Thread; native granularity is reported honestly.
 6. Failure, timeout, and a lost answer do not become confirmed success or automatic cancellation.
 7. Access and protection hold for inspection and mutation.

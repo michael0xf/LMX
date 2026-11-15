@@ -10,24 +10,22 @@ An old passing run does not prove a newer rule.
 
 ## Replacement model of 2026-11-15 — implementation OPEN
 
-The norm now uses unified data, local frames without write-back, a code snapshot, and signatures
-derived from actual calls. Load-dirty, the shared direct-access cache, flush(), and frozen former-field
-requirements on S[n] writes are cancelled. [M14](../next_core_tasks_v3.md#native-structures) removes
-their supporting tables, fact transfers, and generator branches, not extra conditions bypassing checks.
-Types without a value remain. Helper tools are grouped under sys; translate returns L1 and errors.
-No initializers execute at entry; unused computed inputs are not called. Variables and const have
-sequential visibility; Structures/callables remain bidirectional. Local bindings are independent of
-source fields immediately at entry, including lexical/dynamic ones. The code snapshot covers only what
-compilation puts into the corresponding C function, not the entire lexical tree; hidden arguments
-carry bindings without copying the environment. For int: field getValue(), @(data\field) addresses the existing result (native
-&l2_tN), without separate storage or replacing the source declaration. These are agreed clarifications
-of the [norm](LMX_semantics.en.md#call-frame-20261115), not a new code PASS.
+The norm uses unified input data, independent local values/descriptions, no entry-time initializer
+execution or write-back, sequential visibility for variables/const, and bidirectional visibility for
+Structure/callable names. A computed field's address is its ordinary result address, not a separate heap.
+Remove load-dirty, cache/flush, frozen former-field requirements on raw writes, and their supporting infrastructure.
 
-This documentation change does not change code. Slices through400 and current WIP401 describe the
-previous mechanism: work_load/work_flush do not prove the new model; old PASS results and expected
-refusals must be assessed against the new contract. Records below remain history, not new norms.
-Runtime receives shared builder code for concrete tasks only; sys\check and sys\translate are such
-tasks, without speculative separate infrastructure.
+The latest decision cancels mandatory code snapshots and automatic native clearing on writes.
+Explicit sys\compile covers clean graph → L1 → C → machine compilation/registration.
+sys\endturn only exits through finally to the turn boundary; only successful compilation followed
+by that boundary guarantees an updated entry. Known native calls known native directly in C.
+Call tables/descriptors belong to the arena; sys\toLmx(Thread) saves its arena's tables, not only R0.
+[Full contract](LMX_semantics.en.md#explicit-compilation).
+
+Implementation of [M13/M14](../next_core_tasks_v3.md#explicit-compilation-plan) remains OPEN.
+This edit changes documentation, not code. Dated slices below describe the former mechanism;
+their PASS results do not prove the new norm. Checking/compilation first work in the builder;
+move shared working code into runtime only for a concrete task.
 
 <a id="source-migration"></a>
 ## 1. Sources and migration boundary
@@ -219,38 +217,14 @@ boot-m11-uninit-reference-01/g2 and graph-m11-uninit-reference-g2-01. Render/doc
 ordinary physical5/6/9 native in M14 and arbitrary models/void/depth/Array in M13 remain OPEN.
 [Witness 376](../steps/witnesses/m11-uninit-reference-20261114/notes.md).
 
-The current generator already defines `Lmx` with `parent`, `native` and
-an embedded `VoidArray array`; `LmxArray` is an alias of `Lmx`. The old
-description of a separate Array without a header does not describe this state.
-The [approved layout](L2_spec_en.md#lmx) has flat fields `parent`,
-`native`, `length`, `storage` in that order, without `Lmx.array`.
-Migration of the generator and all header accesses remains open in
-[M13](../next_core_tasks_v3.md#flat-lmx-descriptor).
-
-The latest M13 clarification defines ordinary non-declaring parent/native/length/storage receivers:
-one argument S, or the current data when omitted. They read header values directly without
-constructing descriptor. Same-headed data forms remain ordinary Structures.
-`length(S)` for a Structure already exists in the clean graph; the other receivers, the no-argument
-variant and renamed fields still require implementation. data/code remain launch arguments;
-node and its ABI do not change. [Norm](LMX_semantics.en.md#header-receivers).
-
-An ordinary Structure and `Array<@>` have `void *` backing elements;
-such a slot's address is `void **`. A numeric Array stores typed T
-elements directly. Element count is chosen at creation; published
-backing neither grows nor moves. Migration preserves typed storage,
-address-copy maps and `parent` for Arrays and nested Structures.
-Common operations must accept Structure and `Array<@>` interchangeably,
-without refusal based solely on the header category. `sys\descriptor`
-is not implemented yet: it must select an explicit S or the current data when no argument is supplied:
-`sys\descriptor() = sys\descriptor(data)`, including inside nested control bodies.
-Both variants return actual field addresses with direct writes through ordinary dereferencing
-([contract](L2_spec_en.md#get-descriptor)). Arbitrary finite pointer depth
-and Array rank use the existing general algorithms; the old parser is
-not rewritten. Typed arena arrays remain storage, not standalone
-language objects. Growing `Thread.children` is a **separate**
-List/DynamicArray, not an extension of Lmx or a program field. Launch
-service data belongs to the R0 stub. See [L2](L2_spec_en.md#lmx) and
-[Thread](L2_spec_en.md#thread).
+The current generator still uses parent/native/embedded VoidArray: this is the former ABI.
+The target record contains only parent/length/storage, with capacity in an arena table and native
+descriptors in call's tables in the same arena. Structure/Array<@> are interchangeable; numeric Array stores T.
+All variable-size arrays share allocation/resizing, including service Thread.children.
+The header stays stable; storage may move. Remove separate inline capacity in DynamicArray.
+L2 indexing has no checks; L3 checks one linear index and holds the descriptor reference plus index.
+sys\descriptor returns three actual addresses; sys\native/sys\capacity query tables.
+[Contract and status](L2_spec_en.md#lmx), [plan](../next_core_tasks_v3.md#flat-lmx-descriptor).
 
 `LmxThread` embeds `LmxMsg message` by value as its first field; a
 plain `LmxMsg` does not expose the Thread tail. The sole child List,

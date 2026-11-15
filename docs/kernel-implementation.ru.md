@@ -1,5 +1,12 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
+**Срез398, 2026-11-15 — полный scalar Value в рабочем GraphRun.** Обычная Code над supplied typed DATA
+сохраняет physical cell/slot, SOURCE места и RHS Model. Private06 и чувствительный GC mutant прошли;
+genuine G1/G2 quick/fixedpoint30 и Graph3 triple PASS. Actual G2:6 из9 rows PASS,3 старых L2 header-source
+refusals воспроизводятся на accepted397 и остаются OPEN. G2 render35/14, fresh docs-check и final index PASS.
+Native/typed args/results/construction,
+общий кеш и flush остаются OPEN. [Текущий статус](../steps/current.md).
+
 **Срез397, 2026-11-15 — owned scalar receiving и места формалов, ограниченные кодовые gates PASS.**
 Полный ACTIVE SOURCE канонизируется прежним counted TEXT interner отдельно от physical ABI.
 Scalar actual/return сохраняет полный Value; callee current Value и ленивое mutable место разделены.
@@ -1297,6 +1304,11 @@ access callbacks, сохраняя различные source descriptions. None/
 cell сохраняет identity, полный physical type и profile. `receive_scalar` проверяет ABI; store использует protected/code
 guards до typed copy. Это точный representation transport, не semantic conversion или полное runtime admission.
 
+В срезе398 `prepare_scalar_store` выделен из той же FOREIGN-ветви общего writer: чисто проверяет физическое
+место и ABI назначения, сохраняет declared SOURCE места и полный RHS Model/context. Он не выделяет storage,
+не публикует payload/companion и не делает snapshot. Рабочий GraphRun отдельно создаёт owned snapshot;
+физическая публикация использует прежний `cell_place/value_store` с теми же guards и typed copy.
+
 Сырой allocator создаёт C storage с `present=0`, без current Value. Load и copy сохраняют отсутствие,
 не читают source payload; GC удерживает metadata и physical pool.profile и в этом состоянии. Capture проверяет
 ABI/stride уже зарегистрированного FOREIGN source до копирования. Copy отвергает ненулевой referent без найденного
@@ -1781,6 +1793,17 @@ dirty и продолжение. Порядок полей ниже задаёт
 по используемым полям, маршруты преобразований и броски — по действующей книге; меняется носитель, не правила (`:=`,
 `merge`, позиционные `a(5)`/`a: 5`, q/z, AXBY сохраняются — §11).
 
+**Scalar working Value, срез398.** В прежней `LmxGraphWork` полный inline Value хранится отдельно от physical
+cell/slot, loaded/dirty и legacy number. FOREIGN определяется по точному pool/ABI/companion. До загрузки
+row.Value может нести absent ABI witness физической Model; несовместимое actual отказывает до чтения,
+включая legacy actual вместо scalar. Отсутствующее scalar значение сохраняет metadata без чтения payload.
+Read/operand создают независимый снимок; место выбирается до RHS, после RHS row получается по стабильному token.
+Рабочая запись сначала полностью готовит Value по ABI назначения, затем меняет row и dirty. Публикация через
+общий writer сохраняет cell/slot и локальный снимок, очищая dirty только после успеха; чистая row не записывается
+повторно и не перечитывается после вложенного вызова. GC удерживает полный row.Value вместе с physical cell.
+Это interpreter-поддержка ordinary Code над уже supplied typed DATA. Scalar formal/free mutation отказывает
+до RHS; typed args/result, constructor, public own fields, fn_data/merge и общий native/cache/flush ещё OPEN.
+
 **Исторические рабочие строки среза 373.** `lmx_graph_data_cell` возвращает существующую primitive cell либо сохранённое
 вычисляемое объявление: `int` с кандидатом или поддержанный raw `@` с кандидатом (три поля/int-reference,
 два/Structure-reference). `work_require` связывает прежний слот и фиксирует expected_kind; initializer при этом
@@ -1821,7 +1844,8 @@ initializers. Вычисляемые объявления сохраняют п�
 native wrapper обеспечивает штатное завершение кадра, forced не открывает второй. Отдельного root emitter нет.
 Одноразовый GDB trace01 вошёл в настоящий `lm_graph_root` через `lm_graph_body`/`lmx_call0_mode`
 и завершился нормально; сгенерированный native root не вызывает `lmx_graph_run`.
-Простые значения не требуют capture; discarded AST вычисляется общим `eval_value`/`emit_operand` без обязательного
+Прежние простые legacy-значения не требуют FOREIGN capture; eligible scalar FOREIGN получает полный owned snapshot
+через общий Value producer (срез398). Discarded AST вычисляется общим `eval_value`/`emit_operand` без обязательного
 преобразования результата в int. Вычисляемые имена появляются при достижении producer через прежние metadata/rows;
 раннее обращение отказывает до actual effects. Ordinary data initializers от этого не запускаются.
 

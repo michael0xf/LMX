@@ -1,5 +1,50 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — срез398: полный scalar Value в рабочем GraphRun, bounded code PASS
+
+Предыдущий goal turn — progress:397 принят/отправлен68aa72a1365d9429774f655563f03ccc6e6242a5 прямо main.
+Root — единственный code/test/build writer; helpers read-only, два чужих untracked сохранять. Goal ACTIVE.
+Написаны inline Value в existing LmxGraphWork, scalar physical proof по pool/ABI/companion, entry/read snapshots,
+stable-token DATA store, dirty publication в прежнюю physical cell и GC row Value. Общий scalar writer выделяет
+pure prepare_scalar_store (WalkValues186), SOURCE места/RHS Model сохраняются; подготовка не публикует payload.
+Read-only review исправил обход expected_kind и поздний отказ scalar formal/free mutation; эта последняя
+вертикаль остаётся OPEN и отказывает до RHS. Native/typed args/result/constructor/own fields/fn_data merge OPEN.
+Новый maintained graph_scalar_working machine unit выполняет настоящий parsed ordinary Code над typed DATA:
+epsilon/3.5, aliases/SOURCE/Model, ABI refusal, poison unfilled, snapshot после публикации и GC без физических
+Model A edges. Callback очищает Model A во всех companions chunk, иначе coarse chunk GC дал бы ложный PASS.
+GC mutant с отключённым row.Value mark подтверждает чувствительность последнего oracle.
+
+Pipeline398: build2/codex_fix250generationchain01/runs/sol-m13-graph-scalars-20261115-01;
+artifact stage — build2/codex_fix250generationchain01/sol-m13-graph-scalars-01; seed — actual397 G2.
+Frozen Source11:933 SHAd45261dc7f56f2734df8d7e41a3bc52c010bf8eeb8f65417b130ba8445d089e8,
+canonical обновлён, verify repo/stage PASS. Fresh Tool01 PASS0200d736;
+он построен с seed397 runtime (transitional tool не создаёт GraphWork instances), уже генерирует новый common ABI.
+Runtime01/02 terminal FAIL на внутренних L2-call C member arguments GraphRun:145/423; им нужны явные C casts.
+Source04/05 исправляют casts и nested C-call argument; recorded Run retry04 PASS. Runtime03 полностью PASS;
+Source10 добавляет ABI Model witness в row.Value, проверку до legacy/scalar load и после RHS, absent metadata snapshot.
+Recorded Run retry05 PASS; Runtime04 aggregate/prod/observe PASS65e5a94f/24cb9ed1 на готовых остальных modules.
+Run C header реально пересоздан; прежний declaration изменился. Private04 Source09 PASS1/0.
+Private05 Source10 FAIL CC: unit вызвал private open_parts; Source11 использует существующий public open_data
+с настоящим Read sub для отдельной Model-проверки, без расширения API. Private06 PASS1/0 n/f/root0/root1:
+обычные Copy/Fill/Snapshot по-прежнему исполняются через call_data над supplied DATA без искусственных методов.
+GC mutant01 отключил только row.Value mark в artifact stage, relink готовых unit objects дал ожидаемый96
+во всех n/f/root0/root1; здоровые GC source/body восстановлены, verify stage PASS.
+Whole bootstrap01 genuine G1/G2 quick terminal PASS: smoke9/0 каждый, consumed360. Fixedpoint11 CHECKS30/0 PASS,
+включая canonical933/verify и Runtime04==G2driver. Actual G2 FE09b7ad2a/Tool510f0c15.
+Actual G2 targeted01 SUITE9/6:6 rows PASS n/f/root0/root1, включая новый unit и exact scalar/GC/public calls;
+struct_call_selected:21, unary_data_selection:20 и place_map:87 ×nf отказывают на L2:
+«a declared header lost its original receiving source». Baseline397 controls01 на тех же inputs дают те же
+первые diagnostics и не оставляют L1: это preexisting blocker, expected не менять и aggregate не считать PASS.
+Следующий кодовый шаг — общий original header receiving source, затем mapped copier/fn_data bridge v3.
+G2 Graph01 SHAed1bc637 и Graph3 triple CHECKS3/0 PASS, прежний missing-model build4 сохранён.
+Все code/test producers terminal. Actual G2 render01 PASS35 paired/14 cases/both snapshots;
+generated semantics и grammar unchanged. Fresh docs-check01 с заранее созданными cwd/private dirs
+PASS35/14/27/44/615, links/LF28285; git diff --check PASS. Final index/commit/push398 далее, прямо main.
+Final indexed01 с отдельными fresh cwd/private PASS35/14/27/44/615, links/LF28287;16 owned files staged,
+working/index diff checks PASS. Два чужих untracked и их hashes сохранены. Commit/push398 выполняются прямо main;
+далее original receiving source blocker и основной v3, goal ACTIVE. Эта запись — output проверки, не новый semantic input.
+[Свидетельство398](witnesses/m13-graph-scalars-20261115/notes.md) хранит точные входы, приёмку и исправленные отказы.
+
 ## 2026-11-15 — срез397: owned scalar receiving/actual/result M11.7/M13, code/docs/index PASS
 
 Предыдущий goal turn — progress:396 принят/отправлен41c1616d4b6b8d6f31c3f2e7c382c39bc2b8e876 прямо main.

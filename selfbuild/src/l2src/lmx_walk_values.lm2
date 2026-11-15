@@ -2619,6 +2619,36 @@ fn: lmx_walk_value_store (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value
     return: lmx_walk_value_store_with_writer(arena, place, value, write)
 end: lmx_walk_value_store
 
+# Prepare the same scalar write for a working Value or its physical publisher.
+# No payload, companion or working record changes until the caller commits it.
+fn: lmx_walk_value_prepare_scalar_store (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
+    c.LmxWalkValue: received
+    @: received_p c.LmxWalkValue @ received
+    @: pool c.LmxPool 0
+    @: context c.LmxWalkValue 0
+    int: status c.LMX_WALK_OK
+    if: arena = 0 || place = 0 || value = 0 || out = 0 || value\present = 0 || place\address = 0 || place\descriptor != 0 || c.lmx_type_base(place\type) != c.LMX_TYPE_FOREIGN
+        return: c.LMX_WALK_INVALID
+    pool := c.lmx_range_cell_pool(arena, place\address)
+    if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || pool\type != place\type || pool\scalar_abi = 0 || pool\scalar_abi\size = 0U || pool\stride != pool\scalar_abi\size || pool\scalar_abi\init = 0 || pool\scalar_abi\copy = 0
+        return: c.LMX_WALK_INVALID
+    context := c.lmx_value_cell_context(arena, place\address)
+    if: context = 0
+        return: c.LMX_WALK_INVALID
+    if: c.lmx_range_write_exact_blocked(arena, place\address, 0, 0, 0U) != 0
+        return: c.LMX_WALK_THROWN + c.LMX_WALK_NAME_INTERPRETER
+    status := lmx_walk_value_receive_scalar(value, place\type, (cast: (const: @: c.LmxScalarABI) pool\scalar_abi), received_p)
+    if: status != c.LMX_WALK_OK
+        return: status
+    status := c.lmx_code_cell_admit(arena, place\address)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: context\source_type != 0
+        received_p\source_type := context\source_type
+    c.memcpy((cast: (@: void) out), (cast: (const: @: void) received_p), c.sizeof(c.LmxWalkValue))
+    return: c.LMX_WALK_OK
+end: lmx_walk_value_prepare_scalar_store
+
 # The physical writer may describe a native typed working cell. Admission,
 # numeric storage, pointer context and write barriers remain the same operation.
 fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPlace; @: value c.LmxWalkValue; c.LmxPointerCellWrite: write) int
@@ -2629,7 +2659,6 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
     int: status 0
     @: scalar_pool c.LmxPool 0
     @: scalar_context c.LmxWalkValue 0
-    @: declared_source void 0
     if: value\present = 0 || place\address = 0 || place\descriptor != 0
         return: c.LMX_WALK_INVALID
     if: c.lmx_range_write_exact_blocked(arena, place\address, 0, 0, 0U) != 0
@@ -2637,18 +2666,12 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
     int: base_type c.lmx_type_base(place\type)
     if: base_type = c.LMX_TYPE_FOREIGN
         scalar_pool := c.lmx_range_cell_pool(arena, place\address)
-        if: scalar_pool = 0 || scalar_pool\type != place\type || scalar_pool\scalar_abi = 0
-            return: c.LMX_WALK_INVALID
-        status := lmx_walk_value_receive_scalar(value, place\type, (cast: (const: @: c.LmxScalarABI) scalar_pool\scalar_abi), received_p)
-        if: status != c.LMX_WALK_OK
-            return: status
-        status := c.lmx_code_cell_admit(arena, place\address)
+        status := lmx_walk_value_prepare_scalar_store(arena, place, value, received_p)
         if: status != c.LMX_WALK_OK
             return: status
         scalar_context := c.lmx_value_cell_context(arena, place\address)
         if: scalar_context = 0
             return: c.LMX_WALK_INVALID
-        declared_source := (cast: (@: void) scalar_context\source_type)
         if: scalar_pool\scalar_abi\copy(place\address, received_p\ref) != 0
             return: c.LMX_WALK_INVALID
         if: scalar_context != 0
@@ -2656,8 +2679,6 @@ fn: lmx_walk_value_store_with_writer (@: arena c.LmxArena; @: place c.LmxWalkPla
             scalar_context\ref := place\address
             scalar_context\type := scalar_pool\type
             scalar_context\physical_profile := scalar_pool\profile
-            if: declared_source != 0
-                scalar_context\source_type := declared_source
         ---
         if: place\context != 0 && place\context != scalar_context
             c.memcpy((cast: (@: void) place\context), (cast: (const: @: void) scalar_context), c.sizeof(c.LmxWalkValue))

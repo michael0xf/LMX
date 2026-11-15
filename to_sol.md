@@ -1,5 +1,19 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез398, ограниченная кодовая приёмка PASS:** existing GraphRun row хранит полный scalar Value над supplied typed DATA, physical cell/slot стабильны,
+read/operand дают snapshot, ABI Model witness сохраняется до загрузки, absent metadata не теряются.
+Pure prepare_scalar_store выделен из общего writer; dirty publication сохраняет SOURCE места и RHS Model,
+очищает dirty после успешной записи, retained snapshot не перечитывается. GC маркирует полный row Value.
+Source11:933 frozen/canonical/verify PASS; Runtime04/private06 PASS1/0 n/f/root0/root1.
+GC mutant без row.Value mark даёт отдельный96 во всех четырёх режимах; stage восстановлен.
+Genuine whole01 G1/G2 quick smoke9/0, fixedpoint30 и Graph3 triple PASS. Actual G2 targeted9:6 rows PASS,
+3 старых header-source refusals ×nf воспроизводятся на accepted397; aggregate SUITE9/6 не считать зелёным.
+Следующий кодовый шаг — общий original receiving source для этих declared headers, затем mapped copier/fn_data
+bridge основного v3. G2 render35/14 и fresh docs-check01 PASS35/14/27/44/615, links/LF28285;
+final indexed01 PASS35/14/27/44/615, links/LF28287,16 owned files; commit/push прямо main.
+Native/typed args/result/constructor/own fields/fn_data merge,
+общий кеш и flush остаются OPEN. [Текущий конвейер](steps/current.md); работа и коммиты прямо main.
+
 **Срез397, кодовые gates PASS:**396 принят/отправлен41c1616d прямо main. Runtime physical receiving,
 полный ACTIVE SOURCE и ordinary formal precision/store/address/caller-isolation проверены. Продолжать v3.
 Complete ACTIVE SOURCE проецировать прежним counted TEXT interner, с exact-start/stored-length proof;

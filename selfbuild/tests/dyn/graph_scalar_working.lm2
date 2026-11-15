@@ -1,0 +1,238 @@
+# The assertion owner uses the C ABI. The Code bodies below are parsed and
+# executed as ordinary Structures over supplied typed DATA, without a fake fn.
+predef: "l2src/l2_graph_build.lm1"
+predef: "l2src/lmx_graph_run.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<float.h>"
+
+fn: gs_binding (@: name char; @@: source void) const: @: c.LmxScalarABI
+    return: c.lmx_graph_scalar_binding(c.lmx_graph_intern(name, c.strlen(name)), source)
+
+fn: gs_cell (@: g c.LmxGraph; @: name char; const: (@: abi c.LmxScalarABI); @: source void; @: model c.Lmx; @: physical c.Lmx; @: bytes void) @: void
+    c.LmxWalkValue: context
+    c.LmxWalkValue: value
+    @: context_p c.LmxWalkValue @ context
+    @: value_p c.LmxWalkValue @ value
+    @: cell void 0
+    c.lmx_walk_value_clear(context_p)
+    context_p\source_type := source
+    context_p\model := model
+    if: bytes = 0
+        cell := c.lmx_arena_scalar_cells_profiled(g\arena, c.LMX_TYPE_FOREIGN, physical, abi, 1U)
+        context_p := c.lmx_value_cell_context(g\arena, cell)
+        if: context_p = 0
+            return: 0
+        context_p\source_type := source
+        context_p\model := model
+    else:
+        if: c.lmx_walk_value_foreign_capture(g\arena, bytes, c.LMX_TYPE_FOREIGN, abi, physical, context_p, value_p) != c.LMX_WALK_OK
+            return: 0
+        cell := value_p\ref
+    ---
+    if: cell = 0 || c.lmx_graph_name(g, cell, name, c.strlen(name)) != 0
+        return: 0
+    return: cell
+
+fn: gs_write (@: arena c.LmxArena; @: cell void; @: bytes void; @: model c.Lmx) int
+    @: context c.LmxWalkValue c.lmx_value_cell_context(arena, cell)
+    c.LmxWalkPlace: place
+    c.LmxWalkValue: value
+    if: context = 0 || c.lmx_walk_cell_place(arena, cell, 0, @ place) != c.LMX_WALK_OK
+        return: 1
+    c.LmxWalkValue: producer
+    @: producer_p c.LmxWalkValue @ producer
+    c.memcpy((cast: (@: void) producer_p), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
+    producer_p\model := model
+    if: c.lmx_walk_value_foreign_capture(arena, bytes, c.LMX_TYPE_FOREIGN, (cast: (const: @: c.LmxScalarABI) context\scalar_abi), (cast: (@: c.Lmx) context\physical_profile), producer_p, @ value) != c.LMX_WALK_OK
+        return: 1
+    return: c.lmx_walk_value_store(arena, @ place, @ value)
+
+fn: gs_expect (@: arena c.LmxArena; @: cell void; const: (@: abi c.LmxScalarABI); @: source void; @: model c.Lmx; @: physical c.Lmx; @: bytes void) int
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, cell)
+    @: context c.LmxWalkValue c.lmx_value_cell_context(arena, cell)
+    if: pool = 0 || pool\type != c.LMX_TYPE_FOREIGN || pool\scalar_abi != abi || pool\profile != physical || context = 0 || context\present = 0 || context\ref != cell || context\scalar_abi != abi || context\source_type != source || context\model != model || context\physical_profile != physical
+        return: 1
+    return: c.memcmp(cell, bytes, abi\size)
+
+# A real callable supplies its physical model to the public frame entry.
+# Its first model row must retain ABI/context even for a present0 input.
+fn: gs_model_entry (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @: model c.Lmx; const: (@: absent_abi c.LmxScalarABI); @: source void; @: receiving_model c.Lmx) int
+    c.LmxActivation: activation
+    c.LmxGraphFrame: frame
+    @: frame_p c.LmxGraphFrame @ frame
+    @: row c.LmxGraphWork 0
+    @: current c.LmxWalkValue 0
+    int: status c.lmx_activation_push(g\arena, @ activation, 2, code, 0, 0, 0U, 0)
+    if: status != 0
+        return: 98
+    if: c.lmx_graph_method_data(g, code) != model
+        c.lmx_activation_pop(g\arena, @ activation)
+        return: 98
+    status := c.lmx_graph_work_open_data(g, code, data, frame_p)
+    if: status = 0
+        row := frame_p\rows
+        current := (cast: (@: c.LmxWalkValue) (@ row\value))
+        if: absent_abi != 0 && (frame_p\count = 0U || current\present != 0 || current\kind != c.LMX_WALK_VALUE_FOREIGN || current\scalar_abi != absent_abi || current\source_type != source || current\model != receiving_model)
+            status := 98
+        status := c.lmx_graph_work_finish(g, frame_p, status)
+    ---
+    c.lmx_activation_pop(g\arena, @ activation)
+    return: status
+
+# Both physical copies lose Model A; only the outer working Values retain it.
+fn: gs_touch (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: data c.Lmx (cast: (@: c.Lmx) owner)
+    @: replacement void c.lmx_graph_get(data, 2U)
+    c.LmxWalkValue: value
+    c.LmxWalkPlace: place
+    @: original c.LmxWalkValue c.lmx_value_cell_context(arena, c.lmx_graph_get(data, 1U))
+    @: model_a c.Lmx 0
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, replacement)
+    @: chunk c.LmxChunk 0
+    @: contexts c.LmxWalkValue 0
+    size_t: i 0U
+    size_t: cleared 0U
+    if: data = code || nargs != 0U || c.lmx_walk_value_cell(arena, replacement, @ value) != c.LMX_WALK_OK
+        return: 91
+    if: original = 0 || pool = 0
+        return: 95
+    model_a := original\model
+    while: i < 2U
+        if: c.lmx_walk_cell_place(arena, c.lmx_graph_get(data, i), 0, @ place) != c.LMX_WALK_OK || c.lmx_walk_value_store(arena, @ place, @ value) != c.LMX_WALK_OK
+            return: 92
+        i := i + 1U
+    ---
+    # Chunk GC follows every physical companion, including obsolete snapshots.
+    # Remove those physical edges; the independent current row Values keep A.
+    chunk := c.lmx_pool_chunk_head(pool)
+    while: chunk != 0
+        contexts := (cast: (@: c.LmxWalkValue) chunk\value_contexts)
+        i := 0U
+        while: contexts != 0 && i < c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride))
+            original := contexts + i
+            if: original\model = model_a
+                original\model := 0
+                cleared := cleared + 1U
+            i := i + 1U
+        ---
+        chunk := (cast: (@: c.LmxChunk) chunk\next)
+    ---
+    if: model_a = 0 || cleared = 0U
+        return: 95
+    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK
+        return: 93
+    if: out != 0
+        out[0] := 0
+    if: result != 0
+        c.lmx_walk_value_clear(result)
+    return: 0
+
+fn: gs_working_check () int
+    c.LmxArena: arena
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 80
+    @: g c.LmxGraph c.lmx_graph_open(@ arena)
+    @: root c.Lmx 0
+    @: file c.FILE c.fopen("graph_scalar_working_code.lm2", "wb")
+    @: source void 0
+    @: alias_source void 0
+    @: float_source void 0
+    const: (@: abi c.LmxScalarABI gs_binding("double", @ source))
+    const: (@: alias_abi c.LmxScalarABI gs_binding("f64", @ alias_source))
+    const: (@: narrow_abi c.LmxScalarABI gs_binding("float", @ float_source))
+    double: zero (cast: (double) 0)
+    double: precise (cast: (double) 1) + c.DBL_EPSILON
+    double: replacement c.strtod("3.5", 0)
+    float: narrow (cast: (float) 1) + c.FLT_EPSILON
+    @: physical c.Lmx c.lmx_node_new_owned(@ arena)
+    @: profile_a c.Lmx c.lmx_node_new_owned(@ arena)
+    @: profile_b c.Lmx c.lmx_node_new_owned(@ arena)
+    @: model_a c.Lmx c.lmx_node_new_profiled(@ arena, profile_a)
+    @: model_b c.Lmx c.lmx_node_new_profiled(@ arena, profile_b)
+    @: data c.Lmx c.lmx_graph_lmx(g, 0, 4U)
+    @: x void gs_cell(g, "x", abi, source, model_b, physical, @ zero)
+    @: y void gs_cell(g, "y", abi, alias_source, model_a, physical, @ precise)
+    @: z void gs_cell(g, "z", abi, source, model_b, physical, @ replacement)
+    @: saved void gs_cell(g, "saved", abi, source, model_b, physical, @ zero)
+    @: empty void gs_cell(g, "empty", abi, source, model_b, physical, 0)
+    @: copy_code c.Lmx 0
+    @: fill_code c.Lmx 0
+    @: snapshot_code c.Lmx 0
+    @: touch_code c.Lmx 0
+    @: read_code c.Lmx 0
+    @: rejected c.Lmx 0
+    @: empty_data c.Lmx 0
+    @: wrong void 0
+    @: scalar_model c.Lmx 0
+    @: scalar_actual c.Lmx 0
+    @: wrong_x void 0
+    @: absent_x void 0
+    @: context c.LmxWalkValue 0
+    c.LmxWalkValue: before
+    c.LmxWalkValue: absent
+    int: status 0
+    int: opened 0
+    if: g = 0 || file = 0 || abi = 0 || alias_abi != abi || alias_source = source || narrow_abi = 0 || physical = 0 || profile_a = 0 || profile_b = 0 || model_a = 0 || model_b = 0 || data = 0 || x = 0 || y = 0 || z = 0 || saved = 0 || empty = 0
+        return: 81
+    if: c.fputs("Copy:\n    x := y\n    y := z\n    saved := x\nend: Copy\n\nFill:\n    empty := y\nend: Fill\n\nsub: Read ()\n    saved := x\nend: Read\n\nTouch:\nend: Touch\n\nSnapshot:\n    x := y\n    call: data Touch\n    saved := x\nend: Snapshot\n", file) < 0 || c.fclose(file) != 0
+        return: 82
+    status := c.lm_graph_build_file(g, "graph_scalar_working_code.lm2", @ root)
+    c.remove("graph_scalar_working_code.lm2")
+    if: status != 0 || root = 0
+        return: 83
+    if: c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 83
+    copy_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Copy", 4U))))
+    fill_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Fill", 4U))))
+    snapshot_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Snapshot", 8U))))
+    touch_code := (cast: (@: c.Lmx) c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("Touch", 5U))))
+    read_code := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Read", 4U)))
+    if: copy_code = 0 || fill_code = 0 || snapshot_code = 0 || touch_code = 0 || c.lmx_graph_put(data, 0U, x) != 0 || c.lmx_graph_put(data, 1U, y) != 0 || c.lmx_graph_put(data, 2U, z) != 0 || c.lmx_graph_put(data, 3U, saved) != 0
+        return: 84
+    if: c.lmx_graph_call_data(g, data, copy_code, 0) != 0 || gs_expect(@ arena, x, abi, source, model_a, physical, @ precise) != 0 || gs_expect(@ arena, saved, abi, source, model_a, physical, @ precise) != 0 || gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement) != 0
+        return: 85
+    if: c.lmx_graph_get(data, 0U) != x || c.lmx_graph_get(data, 1U) != y || c.lmx_graph_get(data, 2U) != z || c.lmx_graph_get(data, 3U) != saved
+        return: 86
+    rejected := c.lmx_graph_lmx(g, 0, 4U)
+    wrong := gs_cell(g, "y", narrow_abi, float_source, 0, physical, @ narrow)
+    context := c.lmx_value_cell_context(@ arena, x)
+    c.memcpy((cast: (@: void) (@ before)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue))
+    if: rejected = 0 || wrong = 0 || c.lmx_graph_put(rejected, 0U, x) != 0 || c.lmx_graph_put(rejected, 1U, wrong) != 0 || c.lmx_graph_put(rejected, 2U, z) != 0 || c.lmx_graph_put(rejected, 3U, saved) != 0 || c.lmx_graph_call_data(g, rejected, copy_code, 0) != 4 || gs_expect(@ arena, x, abi, source, model_a, physical, @ precise) != 0 || c.memcmp((cast: (const: @: void) (@ before)), (cast: (const: @: void) context), c.sizeof(c.LmxWalkValue)) != 0 || c.lmx_graph_get(rejected, 0U) != x
+        return: 87
+    empty_data := c.lmx_graph_lmx(g, 0, 2U)
+    c.memset(empty, 165, abi\size)
+    if: empty_data = 0 || c.lmx_walk_value_cell(@ arena, empty, @ absent) != c.LMX_WALK_OK || absent\present != 0 || c.lmx_graph_put(empty_data, 0U, empty) != 0 || c.lmx_graph_put(empty_data, 1U, y) != 0 || c.lmx_graph_call_data(g, empty_data, fill_code, 0) != 0 || gs_expect(@ arena, empty, abi, source, model_b, physical, @ replacement) != 0 || c.lmx_graph_get(empty_data, 0U) != empty
+        return: 88
+    scalar_model := c.lmx_graph_lmx(g, 0, 1U)
+    scalar_actual := c.lmx_graph_lmx(g, 0, 2U)
+    wrong_x := gs_cell(g, "x", narrow_abi, float_source, 0, physical, @ narrow)
+    absent_x := gs_cell(g, "x", abi, alias_source, model_b, physical, 0)
+    if: scalar_model = 0 || scalar_actual = 0 || wrong_x = 0 || absent_x = 0 || read_code = 0 || c.lmx_graph_method(g, read_code) = 0 || c.lmx_graph_name(g, (cast: (@: void) scalar_model), "data", 4U) != 0 || c.lmx_graph_put(read_code, c.lmx_graph_named(g, read_code, c.lmx_graph_intern("data", 4U)), scalar_model) != 0 || c.lmx_graph_put(scalar_model, 0U, x) != 0 || c.lmx_graph_put(scalar_actual, 0U, wrong_x) != 0 || c.lmx_graph_put(scalar_actual, 1U, saved) != 0
+        return: 97
+    if: gs_model_entry(g, read_code, scalar_actual, scalar_model, 0, 0, 0) != 4
+        return: 97
+    if: c.lmx_graph_put(scalar_actual, 0U, absent_x) != 0 || gs_model_entry(g, read_code, scalar_actual, scalar_model, abi, alias_source, model_b) != 0
+        return: 98
+    if: gs_write(@ arena, x, @ zero, model_b) != 0 || gs_write(@ arena, y, @ precise, model_a) != 0 || gs_write(@ arena, saved, @ zero, model_b) != 0
+        return: 89
+    touch_code\native := (cast: (c.LmxEntry) c.gs_touch)
+    status := c.lmx_graph_call_data(g, data, snapshot_code, 0)
+    if: status != 0
+        c.fprintf(c.stderr, "graph scalar Snapshot status %d\n", status)
+        return: 90
+    if: c.lmx_range_cell_pool(@ arena, (cast: (@: void) model_a)) = 0
+        return: 96
+    if: gs_expect(@ arena, saved, abi, source, model_a, physical, @ precise) != 0 || gs_expect(@ arena, x, abi, source, model_b, physical, @ replacement) != 0 || gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement) != 0
+        c.fprintf(c.stderr, "graph scalar Snapshot checks saved=%d x=%d y=%d\n", gs_expect(@ arena, saved, abi, source, model_a, physical, @ precise), gs_expect(@ arena, x, abi, source, model_b, physical, @ replacement), gs_expect(@ arena, y, abi, alias_source, model_b, physical, @ replacement))
+        return: 90
+    if: arena\activation != 0 || arena\execution_roots != 0 || c.lmx_graph_get(data, 0U) != x || c.lmx_graph_get(data, 3U) != saved
+        return: 94
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 7

@@ -1,5 +1,12 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Slice398, 2026-11-15 -- complete scalar Value in GraphRun working rows.** Ordinary Code over supplied typed DATA
+preserves physical cell/slot, the place's SOURCE and RHS Model. Private06 and the sensitive GC mutant passed;
+genuine G1/G2 quick/fixedpoint30 and Graph3 triple PASS. Actual G2:6 of9 rows PASS;3 existing L2 header-source
+refusals reproduce on accepted397 and remain OPEN. G2 render35/14, fresh docs check and final index PASS.
+Native/typed args/results/construction,
+the shared cache and flush remain OPEN. [Current status](../steps/current.md).
+
 **Slice397, 2026-11-15 -- owned scalar receiving and formal places; bounded code gates PASS.**
 Complete ACTIVE SOURCE is canonicalized by the existing counted TEXT interner separately from physical ABI.
 Scalar actuals/returns retain the complete Value; the callee current Value and lazy mutable place are separate.
@@ -1361,6 +1368,11 @@ retains the object in the arena rather than a local address: mutable load/materi
 cell preserves identity, full physical type and profile. `receive_scalar` checks ABI; store applies protected/code
 guards before typed copy. This is exact representation transport, not semantic conversion or complete runtime admission.
 
+In slice398, `prepare_scalar_store` is factored from the same FOREIGN branch of the common writer: it purely
+checks the physical place and destination ABI, preserving the place's declared SOURCE and complete RHS Model/context.
+It allocates no storage, publishes no payload/companion and makes no snapshot. Working GraphRun separately produces
+an owned snapshot; physical publication uses the existing `cell_place/value_store` with the same guards and typed copy.
+
 The raw allocator creates C storage with `present=0`, without a current Value. Load and copy preserve absence
 without reading source payload; GC retains metadata and the physical pool.profile in this state too. Capture checks
 the ABI/stride of a registered FOREIGN source before copying. Copy rejects a nonzero referent whose physical owner
@@ -1863,6 +1875,17 @@ candidate), an argument is a frame cell found by position or by name (§5.1); re
 assignment of the frame's argument place. Reception, `implements` by used fields, conversion routes and throws follow the
 current book; the carrier changes, not the rules (`:=`, `merge`, positional `a(5)`/`a: 5`, q/z, AXBY are kept -- §11).
 
+**Scalar working Value, slice398.** Existing `LmxGraphWork` stores a complete inline Value separately from physical
+cell/slot, loaded/dirty and legacy number. FOREIGN is proved by the exact pool/ABI/companion. Before loading,
+row.Value may carry an absent ABI witness of the physical Model; an incompatible actual refuses before reading,
+including a legacy actual in a scalar place. An absent scalar retains metadata without reading its payload.
+Reads/operands produce independent snapshots; the place is selected before RHS and the row is reacquired by stable token
+after RHS. A working write prepares the complete Value by destination ABI before changing the row and dirty state.
+Publication through the common writer preserves cell/slot and the local snapshot, clearing dirty only after success;
+a clean row is neither republished nor reloaded after a nested call. GC retains the complete row.Value and physical cell.
+This supports interpreted ordinary Code over already supplied typed DATA. Scalar formal/free mutation refuses
+before RHS; typed args/results, constructors, public own fields, fn_data/merge and common native/cache/flush remain OPEN.
+
 **Historical slice 373 working rows.** `lmx_graph_data_cell` returns an existing primitive cell or a retained
 computed declaration: `int` with a candidate or a supported raw `@` with a candidate (three fields/int reference,
 two/Structure reference). `work_require` binds the existing slot and records expected_kind without evaluating
@@ -1903,7 +1926,8 @@ refusal with 3 on bare access to distinct raw occurrences of one name; acceptanc
 the native wrapper provides normal frame completion, while forced opens no second frame. There is no separate root emitter.
 A one-off GDB trace01 entered actual `lm_graph_root` through `lm_graph_body`/`lmx_call0_mode`
 and exited normally; the generated native root does not call `lmx_graph_run`.
-Scalar values need no capture; discarded AST is evaluated through common `eval_value`/`emit_operand` without requiring
+Previous simple legacy values need no FOREIGN capture; eligible scalar FOREIGN receives a complete owned snapshot
+through the common Value producer (slice398). Discarded AST is evaluated through common `eval_value`/`emit_operand` without requiring
 an int conversion of its result. Computed names appear when execution reaches their producer through existing metadata/rows;
 early access refuses before actual effects. This does not run ordinary-data initializers.
 

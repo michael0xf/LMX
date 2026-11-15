@@ -2676,10 +2676,42 @@ work_flush публикует только dirty через прежний cell_
 с сохранением адресов/SOURCE/Model и отказом float→double до записи. Существующий scalar producer задаёт
 typed DATA; новый parser double literals ради этого не нужен. Native emission, typed args/result и constructor
 остаются отдельными зависимостями общего исполнения M14, а не считаются готовыми по interpreter gate.
+Ограниченный срез398 реализует эту interpreter-вертикаль: полный inline row.Value, physical pool/ABI/companion proof,
+снимки read/operand и отсутствующего значения с metadata, ABI witness физической Model до загрузки,
+stable-token store и dirty publication общим writer в прежнюю cell. Scalar formal/free mutation пока
+отказывает до RHS: отдельные callee places не подменять местами вызывающего. Machine unit исполняет
+parsed ordinary Copy/Fill/Snapshot через call_data; отдельный настоящий Read sub проверяет Model entry
+через существующий public open_data. Private06 PASS1/0 n/f/root0/root1; GC mutant без row.Value mark
+даёт отдельный96, здоровые stage outputs восстановлены. Source11:933 frozen/canonical; genuine G1/G2 quick
+smoke9/0, fixedpoint30 и Graph3 triple PASS. Actual G2 targeted9:6 rows PASS,3 старых header-source refusals
+×nf воспроизводятся на accepted397, aggregate SUITE9/6 остаётся FAIL. Actual G2 render35/14 и fresh
+docs-check01 PASS35/14/27/44/615, links/LF28285; final indexed01 PASS35/14/27/44/615, links/LF28287.
+[Свидетельство398](steps/witnesses/m13-graph-scalars-20261115/notes.md) отделяет выполненное от зависимых работ.
 fn_data/merge сейчас идут собственным kind-based copier: продолжить их через уже готовую FOREIGN ветвь
 общего copier, без второго scalar copier. Обычные public scalar own fields рабочего frontend также OPEN:
 Types.contract_own/Helpers.unimpl_numeric и numeric/pointer split Core.emit_work_decl требуют общего Value
 consumer и arena scalar storage; одного снятия whitelist gate или FOREIGN place поверх C stack недостаточно.
+
+Перед следующим copier-срезом устранить общий original receiving source declared headers: struct_call_selected:21,
+unary_data_selection:20 и place_map:87 дают «a declared header lost its original receiving source» и на accepted397,
+и на398. Не снимать проверку, не менять expected и не подставлять current/reconstructed header вместо исходного
+receiving SOURCE. Повторять только эти failed translations и зависимые части; готовые398 gates сохранять.
+
+Следующий зависимый copier-срез после398 — общий mapped/staged bridge существующего copier и written DATA фазы
+fn_data. Вызывающая операция сохраняет прежние LmxCopyMap/LmxCopyStack и seed written DATA→vars окончательной
+ширины; bridge не создаёт отдельную карту на каждый leaf. Резервировать FOREIGN/reference storage и map edge
+до переноса context, затем drain прежним value_context/reference_fill: сохранённый полный context берётся
+из отложенного companion, без повторного чтения mutable source и без чтения absent payload. Та же фаза
+используется обычным copy_run; второго scalar/context copier не вводить. Общему copier недостаёт WORD leaf:
+сохранять canonical TEXT spelling pointer с physical type/stride/profile, не превращать WORD в CHAR_PTR.
+Legacy Graph references/UNINIT уже входят в pointer interval, расширять whitelist для них не нужно.
+Graph g.names и slot facts переносить после успеха по этой же физической карте, сохраняя заранее именованный
+receiving root; при same-Graph ограничить исходную длину names и не держать row pointer через realloc.
+Приёмка: настоящий sub с supplied typed D и добавленным CODE-own int, double epsilon, poisoned absence,
+sharing и backedge/Model→D; новая F.data независима, backedges/Model указывают на неё, source D не меняется.
+Общий overlap merge остаётся обязательной следующей интеграцией того же bridge: все receiving roots и
+overlap aliases, включая вложенные и later override scalar, зарегистрировать до context drain. Layout и
+alias algorithm сохраняются; scalar override использует прежний ABI prepare/writer. Unary subset не заменяет merge.
 
 **Pure Source bridge — срез393, code gates PASS; полный runtime/storage bridge OPEN.** Code08 читает35×15 raw literal source
 table через прежний exporter. Optional reader использует один прежний name matcher, четыре его caller routes,

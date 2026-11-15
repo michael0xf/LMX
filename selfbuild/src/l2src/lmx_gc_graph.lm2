@@ -455,6 +455,7 @@ fn: lmx_gc_graph_frames (@: arena c.LmxArena; @: frame c.LmxGraphFrame; unsigned
         while: i < frame\count && status = c.LMX_GC_OK
             row := rows + i
             status := lmx_gc_mark_value(arena, (cast: (@: void) row\cell), gen, 0)
+            status := lmx_gc_note(status, lmx_gc_value(arena, (cast: (@: c.LmxWalkValue) (@ row\value)), gen, 0))
             i := i + 1U
         frame := (cast: (@: c.LmxGraphFrame) frame\prior)
     return: status

@@ -20,9 +20,16 @@ links/LF28283; финальный индекс проверяется перед
   Source11:931; whole01 G1/G2 quick/fixedpoint29, actual G2 recovery16 и Graph3 triple PASS;
   render35/14/fresh docs-check02/indexed01 PASS35/14/27/44/615, links/LF28277/28283.
 - [ ] Общий owned scalar/Run/receiving/FFI/Foreign-Array после resolver, без int carrier и pointer-подмены scalar.
-- [ ] Следующая typed Run вертикаль: полный Value в existing LmxGraphWork для ordinary Code над supplied typed DATA,
+- [x] Ограниченная typed Run вертикаль398: полный Value в existing LmxGraphWork для ordinary Code над supplied typed DATA,
   снимок operand/read, ABI store по заранее выбранному месту, dirty publication в прежнюю cell и GC полного row Value.
   Source oracle epsilon/3.5 и float→double refusal; native/typed args/results/constructor и fn_data/merge отдельно OPEN.
+  Source11:933/Runtime04/private06 PASS1/0 n/f/root0/root1; Model ABI/absent metadata и GC mutant96 PASS.
+  Genuine G1/G2 quick smoke9/0, fixedpoint30 и Graph3 triple PASS; actual G2 targeted9:6 PASS/3 preexisting L2 refusals.
+  G2 render35/14/fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28285/28287; весь typed Run не закрыт.
+- [ ] Original receiving SOURCE declared headers: struct_call_selected:21, unary_data_selection:20, place_map:87;
+  одинаковый отказ на accepted397/398, aggregate9/6 не зелёный. Сохранить общую проверку и прежние expected.
+- [ ] Общий mapped/staged copier/fn_data bridge с одной картой, reserve→drain context, WORD и Graph names/facts;
+  затем тот же bridge для полного overlap merge, включая later override Model/backedges.
 - [ ] Public scalar own fields рабочего frontend: общий Value consumer/arena storage с dirty и SOURCE/Model;
   Types/Helpers gates и numeric/pointer split Core снимать совместно, FOREIGN place поверх C stack недопустим.
 - [ ] Для owned scalar receiving продолжить existing physical witness/SOURCE: absent scalar witness с canonical ABI

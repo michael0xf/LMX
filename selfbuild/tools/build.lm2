@@ -2256,9 +2256,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     @@: reparent_names char c.calloc(18U, sizeof(@: char))
     @@: thread_names char c.calloc(44U, sizeof(@: char))
     @@: root_names char c.calloc(34U, sizeof(@: char))
-    @@: walk_value_names char c.calloc(186U, sizeof(@: char))
-    @@: graph_names char c.calloc(81U, sizeof(@: char))
-    @@: graph_run_names char c.calloc(60U, sizeof(@: char))
+    @@: walk_value_names char c.calloc(189U, sizeof(@: char))
+    @@: graph_names char c.calloc(83U, sizeof(@: char))
+    @@: graph_run_names char c.calloc(67U, sizeof(@: char))
     @: src char txt_path(stage, "src")
     if: list_names = 0 || range_names = 0 || pool_names = 0 || block_names = 0 || arena_names = 0 || src = 0
         return: 1
@@ -2361,6 +2361,8 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_names[78] := "lmx_graph_scalar_description"
     graph_names[79] := "lmx_graph_get_in"
     graph_names[80] := "lmx_graph_put_in"
+    graph_names[81] := "lmx_graph_scalar_type"
+    graph_names[82] := "lmx_graph_scalar_box"
     graph_run_names[0] := "lmx_graph_eval"
     graph_run_names[1] := "lmx_graph_run"
     graph_run_names[2] := "lmx_graph_call"
@@ -2421,6 +2423,13 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     graph_run_names[57] := "lmx_graph_source_name"
     graph_run_names[58] := "lmx_graph_source_fact"
     graph_run_names[59] := "lmx_graph_source_interface"
+    graph_run_names[60] := "lmx_graph_invoke_value"
+    graph_run_names[61] := "lmx_graph_invoke_bound_value"
+    graph_run_names[62] := "lmx_graph_call_single_value"
+    graph_run_names[63] := "lmx_graph_launch_value"
+    graph_run_names[64] := "lmx_graph_result_int"
+    graph_run_names[65] := "lmx_graph_result_receive"
+    graph_run_names[66] := "lmx_graph_result_cell"
     clock_names[0] := "lmx_clock_now"
     clock_names[1] := "lmx_clock_ticks"
     clock_names[2] := "lmx_clock_since"
@@ -2790,6 +2799,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
     walk_value_names[183] := "lmx_walk_values_arg_place_scalar"
     walk_value_names[184] := "lmx_walk_values_arg_read_scalar"
     walk_value_names[185] := "lmx_walk_value_prepare_scalar_store"
+    walk_value_names[186] := "lmx_walk_result_storage"
+    walk_value_names[187] := "lmx_walk_scalar_snapshot"
+    walk_value_names[188] := "lmx_call_result_value"
     post_names[0] := "lmx_post_init"
     post_names[1] := "lmx_post_api"
     post_names[2] := "lmx_post_admits"
@@ -3240,9 +3252,9 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_value_owned", value_names, 63, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 81, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph", graph_names, 83, 1) != 0
         return: 1
-    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 60, 1) != 0
+    if: bld_machine_module(rec, fe, src, base, out, res, "lmx_graph_run", graph_run_names, 67, 1) != 0
         return: 1
     if: bld_machine_module(rec, fe, src, base, out, res, "lmx_ids", ids_names, 6, 0) != 0
         return: 1
@@ -3296,7 +3308,7 @@ fn: bld_kernel_l2 (@: rec c.FILE; @: repo char; @: stage char; @: base char; @: 
         return: 1
     # Value, typed-role and throws-boundary operations are now maintained L2.
     # Its remaining activation engine still predefs this generated module.
-    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 186, 1)
+    return: bld_machine_module(rec, fe, src, base, out, res, "lmx_walk_values", walk_value_names, 189, 1)
 end: bld_kernel_l2
 
 # L3 declaration writer; all executable algorithm bodies are ordinary L2.
@@ -4178,7 +4190,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     @@: consumer_names char c.calloc(6U, sizeof(@: char))
     @@: frontend_names char c.calloc(264U, sizeof(@: char))
     @@: frontend_alloc_names char c.calloc(20U, sizeof(@: char))
-    @@: frontend_value_names char c.calloc(176U, sizeof(@: char))
+    @@: frontend_value_names char c.calloc(177U, sizeof(@: char))
     @@: frontend_view_names char c.calloc(85U, sizeof(@: char))
     @@: frontend_context_names char c.calloc(111U, sizeof(@: char))
     @@: frontend_type_names char c.calloc(51U, sizeof(@: char))
@@ -4735,6 +4747,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
     frontend_value_names[173] := "lm_compiler_scalar_type_row"
     frontend_value_names[174] := "lm_compiler_emit_scalar_contract"
     frontend_value_names[175] := "lm_compiler_emit_scalar_capture"
+    frontend_value_names[176] := "lm_compiler_input_value_type_name"
     frontend_view_names[0] := "lm_compiler_head_source_node"
     frontend_view_names[1] := "lm_compiler_dn"
     frontend_view_names[2] := "lm_compiler_dt"
@@ -6770,7 +6783,7 @@ fn: bld_p0_l2_selected (@: rec c.FILE; @: repo char; @: stage char; @: base char
         ---
     ---
     if: bld_p0_part_selected(only, "l2_frontend_values") != 0
-        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_values", frontend_value_names, 176, 1) != 0
+        if: bld_machine_module(rec, previous_fe, src, base, out, res, "l2_frontend_values", frontend_value_names, 177, 1) != 0
             return: 1
         ---
     ---

@@ -478,6 +478,17 @@ fn: es_operation (@: arena c.LmxArena; @: parent c.Lmx; int: role; size_t: width
     return: frame
 
 # Execute a real portable RET(ARG) body through the existing dispatcher.
+# A native C-ABI producer needs its declared-width destination before entry.
+# The common delivery retains the actual SOURCE/Model from the supplied Value.
+fn: es_result_entry (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: input c.LmxWalkValue; @: result c.LmxWalkValue) int
+    if: dest = 0 || out = 0 || input = 0 || result = 0 || nargs != 1U
+        return: 1
+    if: c.lmx_call_scalar_result(arena, code, input, dest, out) != 0
+        return: 1
+    c.memcpy((cast: (@: void) result), (cast: (const: @: void) input), c.sizeof(c.LmxWalkValue))
+    result\ref := dest
+    return: 0
+
 # Its complete scalar result must reach both native C and graph destinations.
 fn: es_dispatch (@: arena c.LmxArena; @: g c.LmxGraph; @: code c.Lmx; @: witness void; @: value c.LmxWalkValue; const: (@: abi c.LmxScalarABI)) int
     @: vars c.Lmx c.lmx_graph_lmx(g, code, 0U)
@@ -493,6 +504,18 @@ fn: es_dispatch (@: arena c.LmxArena; @: g c.LmxGraph; @: code c.Lmx; @: witness
     double: copied (cast: (double) 0)
     @: read c.LmxScalarType9 0
     c.LmxWalkValue: result
+    c.LmxWalkValue: destination_value
+    c.LmxWalkValue: pending
+    c.LmxWalkValue: numeric
+    c.LmxWalkValue: canary
+    c.LmxWalkValue: prior_context
+    c.LmxWalkValue: wrong_context
+    @: wrong_source void 0
+    const: (@: wrong_abi c.LmxScalarABI es_binding("float", @ wrong_source))
+    @: wrong_dest void 0
+    @: wrong_bytes void 0
+    @: protected_int void 0
+    @: stored c.LmxWalkValue 0
     @: result_p c.LmxWalkValue @ result
     int: status 0
     if: vars = 0 || body = 0 || ret = 0 || arg = 0 || index = 0 || refs = 0 || output = 0 || before = 0
@@ -508,12 +531,53 @@ fn: es_dispatch (@: arena c.LmxArena; @: g c.LmxGraph; @: code c.Lmx; @: witness
         return: 106
     if: c.lmx_walk_call_prim_dispatch(arena, code, vars, refs, 1U, @ copied, output, value, @ result) != 0 || copied = (cast: (double) 1) || copied != (cast: (double) 1) + c.DBL_EPSILON
         return: 107
-    destination := c.lmx_arena_scalar_cells_profiled(arena, c.LMX_TYPE_FOREIGN, value\physical_profile, abi, 1U)
-    if: destination = 0 || c.lmx_walk_call_prim_dispatch(arena, code, vars, refs, 1U, destination, output, value, @ result) != 0 || output[0] != destination
+    destination := c.lmx_walk_result_storage(arena, c.LMX_TYPE_FOREIGN, abi, (cast: (@: c.Lmx) value\physical_profile), value\source_type, @ destination_value)
+    if: destination = 0 || destination_value\present != 0 || destination_value\ref != destination || destination_value\scalar_abi != abi || destination_value\physical_profile != value\physical_profile || destination_value\source_type != value\source_type || destination_value\model != 0
+        return: 108
+    code\native := (cast: (c.LmxEntry) c.es_result_entry)
+    status := c.lmx_call_prim_values(arena, code, vars, refs, 1U, destination, output, value, @ result)
+    code\native := 0
+    if: status != 0 || output[0] != destination || result\present = 0 || result\ref != destination || result\scalar_abi != abi || result\source_type != value\source_type || result\model != value\model || result\physical_profile != value\physical_profile
         return: 108
     read := (cast: (@: c.LmxScalarType9) destination)
     if: \read != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
         return: 109
+    if: c.lmx_call_result_value(arena, code, value, destination, output, @ result) != 0 || output[0] != destination || c.memcmp((cast: (const: @: void) (@ result)), (cast: (const: @: void) value), c.sizeof(c.LmxWalkValue)) != 0
+        return: 114
+    if: c.lmx_walk_value_cell(arena, destination, @ pending) != c.LMX_WALK_OK || pending\ref = destination
+        return: 115
+    read[0] := (cast: (c.LmxScalarType9) 9)
+    if: c.lmx_call_result_value(arena, code, @ pending, 0, output, @ result) != 0 || output[0] != pending\ref || c.memcmp((cast: (const: @: void) (@ result)), (cast: (const: @: void) (@ pending)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 115
+    read := (cast: (@: c.LmxScalarType9) output[0])
+    if: read[0] != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON || c.lmx_range_cell_pool(arena, output[0]) = 0
+        return: 115
+    if: c.lmx_walk_value_num(@ numeric, c.LMX_TYPE_INT, 73U) != c.LMX_WALK_OK || c.lmx_call_result_value(arena, code, @ numeric, 0, output, @ result) != 0 || output[0] != 0 || c.memcmp((cast: (const: @: void) (@ result)), (cast: (const: @: void) (@ numeric)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 116
+    if: wrong_abi = 0
+        return: 117
+    wrong_dest := c.lmx_walk_result_storage(arena, c.LMX_TYPE_FOREIGN, wrong_abi, 0, wrong_source, @ wrong_context)
+    wrong_bytes := c.malloc(wrong_abi\size)
+    stored := c.lmx_value_cell_context(arena, wrong_dest)
+    if: wrong_dest = 0 || wrong_bytes = 0 || stored = 0
+        return: 117
+    c.memcpy(wrong_bytes, wrong_dest, wrong_abi\size)
+    c.memcpy((cast: (@: void) (@ wrong_context)), (cast: (const: @: void) stored), c.sizeof(c.LmxWalkValue))
+    c.memcpy((cast: (@: void) (@ canary)), (cast: (const: @: void) (@ numeric)), c.sizeof(c.LmxWalkValue))
+    c.memcpy((cast: (@: void) (@ prior_context)), (cast: (const: @: void) (@ canary)), c.sizeof(c.LmxWalkValue))
+    output[0] := destination
+    status := c.lmx_call_result_value(arena, code, value, wrong_dest, output, @ canary)
+    if: status != 3 || output[0] != destination || c.memcmp(wrong_dest, wrong_bytes, wrong_abi\size) != 0 || c.memcmp((cast: (const: @: void) stored), (cast: (const: @: void) (@ wrong_context)), c.sizeof(c.LmxWalkValue)) != 0 || c.memcmp((cast: (const: @: void) (@ canary)), (cast: (const: @: void) (@ prior_context)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 117
+    protected_int := c.lmx_scalar_new_physical_profiled(arena, c.lmx_type_immutable(c.LMX_TYPE_INT), 0)
+    if: protected_int = 0
+        return: 118
+    c.memcpy((cast: (@: void) (@ canary)), (cast: (const: @: void) (@ pending)), c.sizeof(c.LmxWalkValue))
+    c.memcpy((cast: (@: void) (@ prior_context)), (cast: (const: @: void) (@ canary)), c.sizeof(c.LmxWalkValue))
+    status := c.lmx_call_result_value(arena, code, @ numeric, protected_int, output, @ canary)
+    if: status != 4 || output[0] != destination || c.lmx_int_value_known(protected_int) != 0 || c.memcmp((cast: (const: @: void) (@ canary)), (cast: (const: @: void) (@ prior_context)), c.sizeof(c.LmxWalkValue)) != 0
+        return: 118
+    c.free(wrong_bytes)
     protected := c.lmx_arena_scalar_cells_profiled(arena, 0 - c.LMX_TYPE_FOREIGN, 0, abi, 2U)
     if: protected = 0
         return: 110

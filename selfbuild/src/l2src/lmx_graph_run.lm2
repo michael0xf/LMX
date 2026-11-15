@@ -2294,20 +2294,41 @@ fn: lmx_graph_resolve (@: g c.LmxGraph; @: scope c.Lmx; @: name char) @: void
     return: value
 end: lmx_graph_resolve
 
-# Shape/default preflight precedes evaluation of any actual. This migration executes int-returning fn bodies;
-# explicit int own fields use the shared working-cache/publication mechanism. Other receiver/result forms refuse.
+# The direct scalar result description is borrowed from the callable. Compound
+# type/Model contracts still require the common description receiver; do not
+# infer them from shape, storage size, or the fields of an opaque Model.
+fn: lmx_graph_result_type (@: g c.LmxGraph; @: code c.Lmx; @@: abi_out void; @@: source_out void) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: word char 0
+    const: (@: abi c.LmxScalarABI 0)
+    abi_out[0] := 0
+    source_out[0] := 0
+    if: c.lmx_graph_method(g, code) = 0
+        # The existing ordinary explicit-launch contract is INT. Its wider
+        # written description will be consumed together with launch receiving.
+        word := state\w_int
+    else:
+        word := c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code))
+    ---
+    abi := c.lmx_graph_scalar_binding(word, source_out)
+    abi_out[0] := (cast: (@: void) abi)
+    return: c.lmx_graph_scalar_type(abi)
+end: lmx_graph_result_type
+
+# Shape/default preflight precedes evaluation of any actual.
 fn: lmx_graph_call_shape (@: g c.LmxGraph; @: code c.Lmx; size_t: actuals) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: args c.Lmx 0
+    @: result_abi void 0
+    @: result_source void 0
     size_t: i actuals
     if: c.lmx_graph_method(g, code) = 0
         return: 5
     args := c.lmx_graph_method_args(g, code)
     if: actuals > c.lmx_graph_count(args)
         return: 5
-    # An implementation boundary of this slice, not a norm: a result is executed when its written requirement is int.
     if: c.lmx_graph_has_result(g, code) != 0
-        if: c.lmx_graph_word_text(g, c.lmx_graph_method_return(g, code)) != state\w_int
+        if: lmx_graph_result_type(g, code, @ result_abi, @ result_source) = c.LMX_TYPE_NONE
             return: 5
         ---
     ---
@@ -3756,11 +3777,83 @@ return: status
 # retained plan. Mode 0 uses activation places, including at the unit root.
 # Inline execution keeps the activation and restores its lexical cursor on
 # every normal/flow/error return. The physical body is never the launch identity.
-fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from; size_t: to; int: mode; @: out int; @@: flow char) int
+# Only numeric consumers project the transported Value. This is not the
+# evaluator or the receiving contract of a general result.
+fn: lmx_graph_result_int (@: g c.LmxGraph; @: value c.LmxWalkValue; @: out int) int
+    if: value = 0 || out = 0 || value\present = 0
+        return: 5
+    if: value\kind = c.LMX_WALK_VALUE_FOREIGN
+        if: c.lmx_graph_value_int(g, value\ref, out) != 0
+            return: 4
+        return: 0
+    if: value\kind != c.LMX_WALK_VALUE_NUMBER || c.lmx_type_base(value\type) != c.LMX_TYPE_INT
+        return: 4
+    out[0] := value\number
+    return: 0
+end: lmx_graph_result_int
+
+# Direct scalar reception uses the physical type proved for the selected ABI.
+# SOURCE/Model remain the actual value's context, without additional permission.
+fn: lmx_graph_result_receive (@: g c.LmxGraph; @: code c.Lmx; @: value c.LmxWalkValue) int
+    c.LmxWalkValue: received
+    c.LmxWalkValue: physical
+    @: abi void 0
+    @: source void 0
+    int: ty lmx_graph_result_type(g, code, @ abi, @ source)
+    if: ty = c.LMX_TYPE_NONE
+        return: 5
+    if: value = 0 || value\present = 0
+        return: 4
+    if: ty = c.LMX_TYPE_FOREIGN
+        if: c.lmx_walk_value_receive_scalar(value, ty, (cast: (const: @: c.LmxScalarABI) abi), @ received) != c.LMX_WALK_OK
+            return: 4
+        ---
+    else:
+        if: value\kind = c.LMX_WALK_VALUE_FOREIGN
+            if: c.lmx_walk_value_scalar_storage(g\arena, value, c.LMX_TYPE_FOREIGN, (cast: (const: @: c.LmxScalarABI) abi)) != c.LMX_WALK_OK
+                return: 4
+            if: c.lmx_walk_value_load(g\arena, value\ref, ty, @ physical) != c.LMX_WALK_OK
+                return: 4
+            physical\source_type := value\source_type
+            physical\model := value\model
+            physical\references := value\references
+            physical\physical_profile := value\physical_profile
+            physical\scalar_abi := value\scalar_abi
+            c.memcpy((cast: (@: void) (@ received)), (cast: (const: @: void) (@ physical)), c.sizeof(c.LmxWalkValue))
+        else:
+            if: c.lmx_walk_value_receive(value, ty, @ received) != c.LMX_WALK_OK
+                return: 4
+            ---
+        ---
+    ---
+    if: c.lmx_walk_scalar_snapshot(g\arena, @ received) != c.LMX_WALK_OK
+        return: 4
+    c.memcpy((cast: (@: void) value), (cast: (const: @: void) (@ received)), c.sizeof(c.LmxWalkValue))
+    return: 0
+end: lmx_graph_result_receive
+
+fn: lmx_graph_return_value (@: g c.LmxGraph; @: code c.Lmx; @: statement c.Lmx; @: out c.LmxWalkValue) int
+    c.LmxWalkValue: value
+    int: status 0
+    if: out = 0 || c.lmx_graph_count(statement) != 1U
+        return: 5
+    status := lmx_graph_eval_record(g, code, c.lmx_graph_get_in(g, statement, 0U), @ value)
+    if: status != 0
+        return: status
+    status := lmx_graph_result_receive(g, code, @ value)
+    if: status = 0
+        c.memcpy((cast: (@: void) out), (cast: (const: @: void) (@ value)), c.sizeof(c.LmxWalkValue))
+    return: status
+end: lmx_graph_return_value
+
+fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from; size_t: to; int: mode; @: out c.LmxWalkValue; @@: flow char) int
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
     @: frame c.LmxGraphFrame 0
     @: prior_scope c.Lmx 0
+    @: roots_mark c.LmxExecutionRoots c.lmx_execution_roots_mark(g\arena)
+    c.LmxExecutionRoots: result_roots
     int: status 0
+    c.lmx_execution_roots_push(g\arena, @ result_roots, (cast: (@: void) out), 1U, 0, 0U, (cast: (@: void) body), 0)
     if: active != 0 && active\code = code && active\frame != 0
         frame := (cast: (@: c.LmxGraphFrame) active\frame)
         prior_scope := frame\lexical_scope
@@ -3769,10 +3862,11 @@ fn: lmx_graph_block (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from
         status := lmx_graph_block_body(g, code, body, from, to, mode, out, flow)
     if: frame != 0
         frame\lexical_scope := prior_scope
+    c.lmx_execution_roots_restore(g\arena, roots_mark)
     return: status
 end: lmx_graph_block
 
-fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from; size_t: to; int: mode; @: out int; @@: flow char) int
+fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t: from; size_t: to; int: mode; @: out c.LmxWalkValue; @@: flow char) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: statement c.Lmx 0
     @: nested c.Lmx 0
@@ -3794,8 +3888,11 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
     int: nested_mode mode
     int: required_kind 0
     int: cleanup_status 0
-    int: pending_result 0
+    c.LmxWalkValue: pending_result
+    c.LmxExecutionRoots: pending_roots
+    @: roots_mark c.LmxExecutionRoots 0
     @: pending_flow char 0
+    c.lmx_walk_value_clear(@ pending_result)
     while: i < to && status = 0 && flow[0] = 0
         status := lmx_graph_work_scope(g, code, body)
         if: status != 0
@@ -3905,24 +4002,28 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
             status := lmx_graph_block(g, code, body, i + 1U, to, mode, out, flow)
             pending_flow := flow[0]
             if: pending_flow = state\w_return
-                pending_result := out[0]
+                c.memcpy((cast: (@: void) (@ pending_result)), (cast: (const: @: void) out), c.sizeof(c.LmxWalkValue))
             if: status != 0 || pending_flow = state\w_return
                 cleanup_status := lmx_graph_work_flush(g)
                 if: cleanup_status != 0
                     status := cleanup_status
                 ---
             ---
+            roots_mark := c.lmx_execution_roots_mark(g\arena)
+            c.lmx_execution_roots_push(g\arena, @ pending_roots, (cast: (@: void) (@ pending_result)), 1U, 0, 0U, 0, 0)
             flow[0] := 0
             lmx_graph_code_body(g, statement, 0U, @ nested, @ code_from, @ code_to)
             cleanup_status := lmx_graph_block(g, code, nested, code_from, code_to, nested_mode, out, flow)
             if: cleanup_status != 0
+                c.lmx_execution_roots_restore(g\arena, roots_mark)
                 return: cleanup_status
             if: flow[0] = 0
                 flow[0] := pending_flow
                 if: pending_flow = state\w_return
-                    out[0] := pending_result
+                    c.memcpy((cast: (@: void) out), (cast: (const: @: void) (@ pending_result)), c.sizeof(c.LmxWalkValue))
                 ---
             ---
+            c.lmx_execution_roots_restore(g\arena, roots_mark)
             return: status
         if: head = state\w_if
             if: n != 2U || c.lmx_graph_kind(g, c.lmx_graph_get_in(g, statement, 1U)) != 4
@@ -4009,7 +4110,7 @@ fn: lmx_graph_block_body (@: g c.LmxGraph; @: code c.Lmx; @: body c.Lmx; size_t:
             else:
                 if: lmx_graph_launch_result(g, code) = 0
                     return: 5
-                status := lmx_graph_eval(g, code, statement, 0U, n, out)
+                status := lmx_graph_return_value(g, code, statement, out)
             ---
             flow[0] := state\w_return
             return: status
@@ -4098,7 +4199,7 @@ end: lmx_graph_launch_result
 
 # The code of the live launch runs to its end or to its return: the code part the launch was opened with
 # (lmx_graph_work_open_parts): for a callable its own part code, for an ordinary Structure the Structure itself.
-fn: lmx_graph_method_run (@: g c.LmxGraph; @: code c.Lmx; @: out int) int
+fn: lmx_graph_method_run_value (@: g c.LmxGraph; @: code c.Lmx; @: out c.LmxWalkValue) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: active c.LmxActivation (cast: (@: c.LmxActivation) g\arena\activation)
     @: frame c.LmxGraphFrame 0
@@ -4121,11 +4222,11 @@ fn: lmx_graph_method_run (@: g c.LmxGraph; @: code c.Lmx; @: out int) int
     if: lmx_graph_launch_result(g, code) != 0 && flow != state\w_return
         return: 5
     return: 0
-end: lmx_graph_method_run
+end: lmx_graph_method_run_value
 
 # Invoke with arguments that have already passed admission. Missing literal defaults are copied into this call's
 # private places. Native and interpretation share the ordinary activation ABI; the signature graph remains intact.
-fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: actuals void; size_t: count; @: bindings size_t; @: out int) int
+fn: lmx_graph_invoke_data_value (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: actuals void; size_t: count; @: bindings size_t; @: out c.LmxWalkValue) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: args c.Lmx 0
     @: body c.Lmx 0
@@ -4134,12 +4235,23 @@ fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: ac
     @: returned void 0
     c.LmxActivation: activation
     c.LmxGraphFrame: frame
+    c.LmxWalkValue: result_value
+    c.LmxWalkValue: destination_value
+    c.LmxExecutionRoots: result_roots
+    c.LmxExecutionRoots: destination_roots
+    @: roots_mark c.LmxExecutionRoots 0
+    @: destination void 0
+    @: result_abi void 0
+    @: result_source void 0
+    int: result_type c.LMX_TYPE_NONE
     size_t: width 0U
     size_t: i 0U
     size_t: slot 0U
     int: status 0
     if: c.lmx_graph_method(g, code) = 0 || out = 0
         return: 5
+    c.lmx_walk_value_clear(@ result_value)
+    c.lmx_walk_value_clear(@ destination_value)
     args := c.lmx_graph_method_args(g, code)
     width := c.lmx_graph_count(args)
     if: bindings = 0
@@ -4181,30 +4293,72 @@ fn: lmx_graph_invoke_data (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; @@: ac
     if: status = 0
         status := lmx_graph_work_flush(g)
     if: status = 0
+        roots_mark := c.lmx_execution_roots_mark(g\arena)
+        c.lmx_execution_roots_push(g\arena, @ result_roots, (cast: (@: void) (@ result_value)), 1U, refs, width, (cast: (@: void) code), (cast: (@: void) data))
+        c.lmx_execution_roots_push(g\arena, @ destination_roots, (cast: (@: void) (@ destination_value)), 1U, 0, 0U, 0, 0)
         if: code\native != 0
-            status := c.lmx_call_prim(g\arena, code, data, refs, width, (cast: (@: void) out), @ returned)
+            if: c.lmx_graph_has_result(g, code) != 0
+                result_type := lmx_graph_result_type(g, code, @ result_abi, @ result_source)
+                destination := c.lmx_walk_result_storage(g\arena, result_type, (cast: (const: @: c.LmxScalarABI) result_abi), 0, result_source, @ destination_value)
+                if: destination = 0
+                    status := 4
+                ---
+            ---
+            if: status = 0
+                status := c.lmx_call_prim_values(g\arena, code, data, refs, width, destination, @ returned, 0, @ result_value)
+                if: status = 0 && c.lmx_graph_has_result(g, code) != 0
+                    status := lmx_graph_result_receive(g, code, @ result_value)
+                ---
+            ---
         else:
             status := c.lmx_activation_push(g\arena, @ activation, 2, code, refs, 0, width, 0)
             if: status = 0
                 status := lmx_graph_work_open_data(g, code, data, @ frame)
                 if: status = 0
-                    status := lmx_graph_method_run(g, code, out)
+                    status := lmx_graph_method_run_value(g, code, @ result_value)
                     status := lmx_graph_work_finish(g, @ frame, status)
                 ---
                 c.lmx_activation_pop(g\arena, @ activation)
             ---
         ---
+        if: status = 0
+            c.memcpy((cast: (@: void) out), (cast: (const: @: void) (@ result_value)), c.sizeof(c.LmxWalkValue))
+        c.lmx_execution_roots_restore(g\arena, roots_mark)
     ---
     c.free((cast: (@: void) refs))
     return: status
-end: lmx_graph_invoke_data
+end: lmx_graph_invoke_data_value
+
+fn: lmx_graph_invoke_value (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: out c.LmxWalkValue) int
+    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), actuals, count, 0, out)
+end: lmx_graph_invoke_value
+
+fn: lmx_graph_invoke_bound_value (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: bindings size_t; @: out c.LmxWalkValue) int
+    return: lmx_graph_invoke_data_value(g, code, c.lmx_graph_method_data(g, code), actuals, count, bindings, out)
+end: lmx_graph_invoke_bound_value
 
 fn: lmx_graph_invoke (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: out int) int
-    return: lmx_graph_invoke_data(g, code, c.lmx_graph_method_data(g, code), actuals, count, 0, out)
+    c.LmxWalkValue: result
+    int: status 0
+    if: out = 0
+        return: 5
+    c.lmx_walk_value_clear(@ result)
+    status := lmx_graph_invoke_value(g, code, actuals, count, @ result)
+    if: status = 0 && c.lmx_graph_has_result(g, code) != 0
+        status := lmx_graph_result_int(g, @ result, out)
+    return: status
 end: lmx_graph_invoke
 
 fn: lmx_graph_invoke_bound (@: g c.LmxGraph; @: code c.Lmx; @@: actuals void; size_t: count; @: bindings size_t; @: out int) int
-    return: lmx_graph_invoke_data(g, code, c.lmx_graph_method_data(g, code), actuals, count, bindings, out)
+    c.LmxWalkValue: result
+    int: status 0
+    if: out = 0
+        return: 5
+    c.lmx_walk_value_clear(@ result)
+    status := lmx_graph_invoke_bound_value(g, code, actuals, count, bindings, @ result)
+    if: status = 0 && c.lmx_graph_has_result(g, code) != 0
+        status := lmx_graph_result_int(g, @ result, out)
+    return: status
 end: lmx_graph_invoke_bound
 
 # The call of one positional actual that names a value without effects (lmx_graph_single_candidate), once that value
@@ -4217,7 +4371,7 @@ end: lmx_graph_invoke_bound
 # method decides by its formals and the value's direct fields: no tree search, no second reading, no conversion table
 # yet (an implementation boundary of this subset). The arrays belong only to this call. 0, or the refusal of the form
 # (5) or of a reception.
-fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: given void; @: out int) int
+fn: lmx_graph_call_single_value (@: g c.LmxGraph; @: code c.Lmx; @: given void; @: out c.LmxWalkValue) int
     # A reference to a Structure stands for that Structure as the whole argument structure (lmx_graph_target).
     @: value void c.lmx_graph_target(g, given)
     @: args c.Lmx 0
@@ -4293,14 +4447,26 @@ fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: given void; @: out
         k := 1U
     ---
     if: status = 0
-        status := lmx_graph_invoke_bound(g, code, values, k, bindings, out)
+        status := lmx_graph_invoke_bound_value(g, code, values, k, bindings, out)
     c.free((cast: (@: void) values))
     c.free((cast: (@: void) bindings))
     c.free((cast: (@: void) from))
     return: status
+end: lmx_graph_call_single_value
+
+fn: lmx_graph_call_single (@: g c.LmxGraph; @: code c.Lmx; @: given void; @: out int) int
+    c.LmxWalkValue: result
+    int: status 0
+    if: out = 0
+        return: 5
+    c.lmx_walk_value_clear(@ result)
+    status := lmx_graph_call_single_value(g, code, given, @ result)
+    if: status = 0 && c.lmx_graph_has_result(g, code) != 0
+        status := lmx_graph_result_int(g, @ result, out)
+    return: status
 end: lmx_graph_call_single
 
-fn: lmx_graph_eval_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: code c.Lmx; @: out int) int
+fn: lmx_graph_eval_call_value (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: code c.Lmx; @: out c.LmxWalkValue) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     size_t: count (cast: (size_t) c.lmx_graph_count(expression))
     size_t: i 0U
@@ -4316,7 +4482,7 @@ fn: lmx_graph_eval_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @
         if: bindings[count] = 1U
             status := lmx_graph_eval_value(g, scope, actual, @ actual)
         if: status = 0
-            status := lmx_graph_call_single(g, code, actual, out)
+            status := lmx_graph_call_single_value(g, code, actual, out)
         c.free((cast: (@: void) values))
         c.free((cast: (@: void) bindings))
         return: status
@@ -4328,19 +4494,74 @@ fn: lmx_graph_eval_call (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @
         i := i + 1U
     ---
     if: status = 0
-        status := lmx_graph_invoke_bound(g, code, values, count, bindings, out)
+        status := lmx_graph_invoke_bound_value(g, code, values, count, bindings, out)
     c.free((cast: (@: void) values))
     c.free((cast: (@: void) bindings))
     return: status
-end: lmx_graph_eval_call
+end: lmx_graph_eval_call_value
 
 # Evaluate an address-valued operand. A path returns the actual current field cell/Structure; arithmetic and a call
 # create a result cell only where a receiving boundary needs an address. Arithmetic's intermediate ints stay local.
+fn: lmx_graph_result_cell (@: g c.LmxGraph; @: value c.LmxWalkValue; @@: out void) int
+    c.LmxWalkValue: boxed
+    if: g = 0 || value = 0 || out = 0 || value\present = 0
+        return: 4
+    # A scalar return was already saved before cleanup. Its ordinary result
+    # cell is also its address; do not copy it again merely to supply an address.
+    if: value\kind = c.LMX_WALK_VALUE_FOREIGN && value\scalar_abi != 0
+        if: c.lmx_walk_value_scalar_storage(g\arena, value, c.LMX_TYPE_FOREIGN, (cast: (const: @: c.LmxScalarABI) value\scalar_abi)) != c.LMX_WALK_OK
+            return: 4
+        out[0] := value\ref
+        return: 0
+    if: value\kind = c.LMX_WALK_VALUE_NUMBER && value\scalar_abi != 0
+        if: c.lmx_graph_scalar_box(g\arena, value, @ boxed) != c.LMX_WALK_OK
+            return: 4
+        c.memcpy((cast: (@: void) value), (cast: (const: @: void) (@ boxed)), c.sizeof(c.LmxWalkValue))
+        out[0] := boxed\ref
+        return: 0
+    if: c.lmx_walk_value_materialize(g\arena, value, out) != c.LMX_WALK_OK
+        return: 4
+    return: 0
+end: lmx_graph_result_cell
+
+# A value consumer keeps an application's authoritative result record. Its
+# ordinary address is a separate need; reloading a cell can lose per-Value
+# semantic context, including across cleanup, even when payload bytes agree.
+fn: lmx_graph_eval_record (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @: out c.LmxWalkValue) int
+    @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
+    @: word char 0
+    @: cell void 0
+    int: status 0
+    if: g = 0 || out = 0
+        return: 4
+    if: c.lmx_graph_kind(g, raw) = 4
+        word := c.lmx_graph_name_of(g, raw)
+        if: word = 0 && c.lmx_graph_count((cast: (@: c.Lmx) raw)) = 1U && lmx_graph_group_expression(g, scope, raw) != 0
+            return: lmx_graph_eval_record(g, scope, c.lmx_graph_get_in(g, (cast: (@: c.Lmx) raw), 0U), out)
+        if: word = state\w_fncall
+            return: lmx_graph_eval_fncall_value(g, scope, (cast: (@: c.Lmx) raw), out)
+        if: word = 0 || lmx_graph_language_word(state, word) = 0
+            if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
+                return: lmx_graph_eval_application_value(g, scope, (cast: (@: c.Lmx) raw), 1, out)
+            ---
+        ---
+    ---
+    status := lmx_graph_eval_value(g, scope, raw, @ cell)
+    if: status != 0
+        return: status
+    if: c.lmx_graph_kind(g, cell) = 3
+        cell := c.lmx_arena_pointer_void_read(cell)
+    if: c.lmx_walk_value_cell(g\arena, cell, out) != c.LMX_WALK_OK
+        return: 4
+    return: 0
+end: lmx_graph_eval_record
+
 fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out void) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: expression c.Lmx 0
     @: value void raw
     @: word char 0
+    c.LmxWalkValue: result
     size_t: count 0U
     int: kind (cast: (int) c.lmx_graph_kind(g, raw))
     int: number 0
@@ -4359,10 +4580,24 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
         ---
     else:
         if: kind = 4 && c.lmx_graph_name_of(g, raw) != 0
-            # A Frame: merge builds a new Structure from its operands (the book, composition; lmx_graph_eval_merge); any
-            # other is the application of its head, an int result in a new cell.
+            # A Frame supplies the full result of its written head. Only the
+            # numerical built-in receivers below use the numerical evaluator.
             if: c.lmx_graph_name_of(g, raw) = state\w_merge
                 return: lmx_graph_eval_merge(g, scope, (cast: (@: c.Lmx) raw), out)
+            word := c.lmx_graph_name_of(g, raw)
+            if: word != state\w_typeof && word != state\w_length
+                c.lmx_walk_value_clear(@ result)
+                if: word = state\w_fncall
+                    status := lmx_graph_eval_fncall_value(g, scope, (cast: (@: c.Lmx) raw), @ result)
+                else:
+                    if: lmx_graph_language_word(state, word) != 0
+                        return: 2
+                    status := lmx_graph_eval_application_value(g, scope, (cast: (@: c.Lmx) raw), 1, @ result)
+                ---
+                if: status != 0
+                    return: status
+                return: lmx_graph_result_cell(g, @ result, out)
+            ---
             status := lmx_graph_eval_number(g, scope, raw, @ number)
             if: status != 0
                 return: status
@@ -4371,6 +4606,13 @@ fn: lmx_graph_eval_value (@: g c.LmxGraph; @: scope c.Lmx; @: raw void; @@: out 
                 return: 4
             ---
         else:
+            if: c.lmx_graph_application_parts(g, raw, 0, 0, 0) != 0
+                c.lmx_walk_value_clear(@ result)
+                status := lmx_graph_eval_application_value(g, scope, (cast: (@: c.Lmx) raw), 1, @ result)
+                if: status != 0
+                    return: status
+                return: lmx_graph_result_cell(g, @ result, out)
+            ---
             if: kind = 4 && lmx_graph_group_expression(g, scope, raw) != 0
                 expression := (cast: (@: c.Lmx) raw)
                 count := c.lmx_graph_count(expression)
@@ -4653,12 +4895,13 @@ fn: lmx_graph_run (@: g c.LmxGraph; @: root c.Lmx) int
     @: active c.LmxActivation 0
     c.LmxGraphFrame: frame
     @: flow char 0
-    int: number 0
+    c.LmxWalkValue: result
     int: status 0
     int: opened 0
     int: owned 0
     if: g = 0 || root = 0
         return: 5
+    c.lmx_walk_value_clear(@ result)
     status := lmx_graph_space_open(g, root, @ opened)
     if: status != 0
         return: status
@@ -4674,7 +4917,7 @@ fn: lmx_graph_run (@: g c.LmxGraph; @: root c.Lmx) int
         ---
     ---
     if: status = 0
-        status := lmx_graph_block(g, root, root, 0U, c.lmx_graph_count(root), 0, @ number, @ flow)
+        status := lmx_graph_block(g, root, root, 0U, c.lmx_graph_count(root), 0, @ result, @ flow)
     if: status = 0 && flow != 0 && flow != state\w_return
         status := 5
     if: owned != 0
@@ -4834,7 +5077,7 @@ end: lmx_graph_application_head
 # The same selected head uses the existing callable binder/admission, or the
 # ordinary launch contract. A value context requires a declared result before
 # any actual effects; a signature without code is refused by the same binder.
-fn: lmx_graph_eval_application (@: g c.LmxGraph; @: scope c.Lmx; @: application c.Lmx; int: want_result; @: out int) int
+fn: lmx_graph_eval_application_value (@: g c.LmxGraph; @: scope c.Lmx; @: application c.Lmx; int: want_result; @: out c.LmxWalkValue) int
     @: name char 0
     @: head void 0
     @: args c.Lmx 0
@@ -4848,10 +5091,25 @@ fn: lmx_graph_eval_application (@: g c.LmxGraph; @: scope c.Lmx; @: application 
     if: c.lmx_graph_fn_result(g, target) != 0
         if: want_result != 0 && c.lmx_graph_has_result(g, (cast: (@: c.Lmx) target)) = 0
             return: 5
-        return: lmx_graph_eval_call(g, scope, args, (cast: (@: c.Lmx) target), out)
+        return: lmx_graph_eval_call_value(g, scope, args, (cast: (@: c.Lmx) target), out)
     if: want_result != 0
         return: 5
-    return: lmx_graph_eval_launch_record(g, scope, args, target)
+    status := lmx_graph_eval_launch_record(g, scope, args, target)
+    if: status = 0
+        c.lmx_walk_value_clear(out)
+    return: status
+end: lmx_graph_eval_application_value
+
+fn: lmx_graph_eval_application (@: g c.LmxGraph; @: scope c.Lmx; @: application c.Lmx; int: want_result; @: out int) int
+    c.LmxWalkValue: result
+    int: status 0
+    if: out = 0
+        return: 5
+    c.lmx_walk_value_clear(@ result)
+    status := lmx_graph_eval_application_value(g, scope, application, want_result, @ result)
+    if: status = 0 && want_result != 0
+        status := lmx_graph_result_int(g, @ result, out)
+    return: status
 end: lmx_graph_eval_application
 
 # The record that launches an ordinary Structure by name (the author 2026-11-11,
@@ -4949,9 +5207,11 @@ fn: lmx_graph_call_data (@: g c.LmxGraph; @: given_data c.Lmx; @: given_code c.L
     c.LmxGraphFrame: frame
     @: returned void 0
     int: number 0
+    c.LmxWalkValue: result
     int: status 0
     if: state = 0 || c.lmx_graph_kind(g, (cast: (@: void) code)) != 4
         return: 5
+    c.lmx_walk_value_clear(@ result)
     if: shorthand != 0
         if: c.lmx_graph_method(g, code) != 0
             data := c.lmx_graph_method_data(g, code)
@@ -4965,7 +5225,7 @@ fn: lmx_graph_call_data (@: g c.LmxGraph; @: given_data c.Lmx; @: given_code c.L
         return: 5
     # Callable arguments retain their own contract; this explicit nullary form has no actual arguments.
     if: c.lmx_graph_method(g, code) != 0
-        return: lmx_graph_invoke_data(g, code, data, 0, 0U, 0, @ number)
+        return: lmx_graph_invoke_data_value(g, code, data, 0, 0U, 0, @ result)
     status := lmx_graph_work_flush(g)
     if: status != 0
         return: status
@@ -4975,7 +5235,7 @@ fn: lmx_graph_call_data (@: g c.LmxGraph; @: given_data c.Lmx; @: given_code c.L
     if: status = 0
         status := lmx_graph_work_open_data(g, code, data, @ frame)
         if: status = 0
-            status := lmx_graph_method_run(g, code, @ number)
+            status := lmx_graph_method_run_value(g, code, @ result)
             status := lmx_graph_work_finish(g, @ frame, status)
         ---
         c.lmx_activation_pop(g\arena, @ activation)
@@ -4994,7 +5254,7 @@ end: lmx_graph_call_data
 # every place the code declares or uses (lmx_graph_work_require) -- only fn, sub and catch complete their data, when
 # the graph is built. The result of this subset is an int, so its description must be the word int
 # (lmx_graph_call_shape); a launch with a result must return one. 0 and the result in out, or the interpreter's answer.
-fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx; @: result char; @: given_code c.Lmx; @: out int) int
+fn: lmx_graph_launch_value (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx; @: result char; @: given_code c.Lmx; @: out c.LmxWalkValue) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @: code c.Lmx (cast: (@: c.Lmx) c.lmx_graph_target(g, (cast: (@: void) given_code)))
     @: args c.Lmx (cast: (@: c.Lmx) c.lmx_graph_target(g, (cast: (@: void) given_args)))
@@ -5009,7 +5269,9 @@ fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx;
     size_t: i 0U
     int: kind 0
     int: has 0
-    int: number 0
+    c.LmxWalkValue: returned
+    c.LmxExecutionRoots: result_roots
+    @: roots_mark c.LmxExecutionRoots 0
     int: status 0
     if: state = 0 || c.lmx_graph_kind(g, (cast: (@: void) code)) != 4
         return: 5
@@ -5017,6 +5279,7 @@ fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx;
         return: 5
     if: given_data != 0 && c.lmx_graph_kind(g, (cast: (@: void) data)) != 4
         return: 5
+    c.lmx_walk_value_clear(@ returned)
     if: result != 0
         if: result != state\w_int || out = 0
             return: 5
@@ -5030,9 +5293,9 @@ fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx;
         if: data = 0
             data := model
         if: given_args = 0
-            status := lmx_graph_invoke_data(g, code, data, 0, 0U, 0, @ number)
-            if: status = 0 && has != 0
-                out[0] := number
+            status := lmx_graph_invoke_data_value(g, code, data, 0, 0U, 0, @ returned)
+            if: status = 0 && out != 0
+                c.memcpy((cast: (@: void) out), (cast: (const: @: void) (@ returned)), c.sizeof(c.LmxWalkValue))
             return: status
         body := c.lmx_graph_method_code(g, code)
     ---
@@ -5062,19 +5325,34 @@ fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx;
     if: status = 0
         status := lmx_graph_work_flush(g)
     if: status = 0
+        roots_mark := c.lmx_execution_roots_mark(g\arena)
+        c.lmx_execution_roots_push(g\arena, @ result_roots, (cast: (@: void) (@ returned)), 1U, refs, width, (cast: (@: void) code), (cast: (@: void) data))
         status := c.lmx_activation_push(g\arena, @ activation, 2, code, refs, 0, width, 0)
         if: status = 0
             status := lmx_graph_work_open_parts(g, code, args, data, model, body, has, @ frame)
             if: status = 0
-                status := lmx_graph_method_run(g, code, @ number)
+                status := lmx_graph_method_run_value(g, code, @ returned)
                 status := lmx_graph_work_finish(g, @ frame, status)
             ---
             c.lmx_activation_pop(g\arena, @ activation)
         ---
+        if: status = 0 && out != 0
+            c.memcpy((cast: (@: void) out), (cast: (const: @: void) (@ returned)), c.sizeof(c.LmxWalkValue))
+        c.lmx_execution_roots_restore(g\arena, roots_mark)
     ---
     c.free((cast: (@: void) refs))
-    if: status = 0 && has != 0
-        out[0] := number
+    return: status
+end: lmx_graph_launch_value
+
+fn: lmx_graph_launch (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data c.Lmx; @: result char; @: given_code c.Lmx; @: out int) int
+    c.LmxWalkValue: returned
+    int: status 0
+    if: result != 0 && out = 0
+        return: 5
+    c.lmx_walk_value_clear(@ returned)
+    status := lmx_graph_launch_value(g, given_args, given_data, result, given_code, @ returned)
+    if: status = 0 && result != 0
+        status := lmx_graph_result_int(g, @ returned, out)
     return: status
 end: lmx_graph_launch
 
@@ -5084,7 +5362,7 @@ end: lmx_graph_launch
 # The arguments, the data and the code are operands of a launch (lmx_graph_launch_operand); the description is a word of
 # the language written as it is (`int`) or a value that holds one (the return part of a callable, `f\return`). The
 # operands are evaluated in the order they are written, each received before the next. 0 and the result in out.
-fn: lmx_graph_eval_fncall (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: out int) int
+fn: lmx_graph_eval_fncall_value (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: out c.LmxWalkValue) int
     @: state c.LmxGraphState (cast: (@: c.LmxGraphState) c.lmx_graph_state())
     @@: formals char 0
     @: head char 0
@@ -5136,7 +5414,19 @@ fn: lmx_graph_eval_fncall (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx;
         return: status
     if: code = 0
         return: 5
-    return: lmx_graph_launch(g, (cast: (@: c.Lmx) args), (cast: (@: c.Lmx) data), result, (cast: (@: c.Lmx) code), out)
+    return: lmx_graph_launch_value(g, (cast: (@: c.Lmx) args), (cast: (@: c.Lmx) data), result, (cast: (@: c.Lmx) code), out)
+end: lmx_graph_eval_fncall_value
+
+fn: lmx_graph_eval_fncall (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.Lmx; @: out int) int
+    c.LmxWalkValue: result
+    int: status 0
+    if: out = 0
+        return: 5
+    c.lmx_walk_value_clear(@ result)
+    status := lmx_graph_eval_fncall_value(g, scope, expression, @ result)
+    if: status = 0
+        status := lmx_graph_result_int(g, @ result, out)
+    return: status
 end: lmx_graph_eval_fncall
 
 # ---- merge in the clean graph (the book, composition and whole-arguments; kernel §6.4) -----------------------------

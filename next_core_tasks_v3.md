@@ -3006,6 +3006,10 @@ M14 остаётся частью единственного основного 
    При переносе на явную компиляцию ABI назначения и приёма результата native брать из выбранного
    скомпилированного варианта таблицы call. Чтение изменённого return WORD живого графа не выбирает
    ABI уже существующего бинарного входа. Снимок полученного значения до finally сохраняется.
+   Ограниченный физический перенос403 проверен: Source12 genuine G1/G2/fixedpoint30;
+   финальный Source14 delivery factor — normal Runtime06 + actual G2 focused2/0 и Graph2 triples.
+   [Точная граница приёмки403](steps/witnesses/m14-field-values-20261115/notes.md).
+   Общий computed reader/local namespace, compound TypeView/formal receiving и новая native-модель OPEN.
 4. **Общий native и прямые C-вызовы.** Методы и обычные Structure проходят один выпуск тела/кадра
    без data=code и искусственного fn. C-сигнатуры выводятся из реальных вызовов; разные наборы actuals
    дают разные варианты входа. Заголовок без code описывает вызов, не полную fn/sub.

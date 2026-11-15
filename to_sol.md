@@ -104,6 +104,17 @@ automatic native reset и фиксированный Array. Реализация
 Нижележащие датированные приёмки и старые описания реализации — история, не поручение достроить отменённый механизм.
 Кодовые срезы400/401 сами по себе этих изменений не подтверждают.
 
+**403, ограниченная кодовая приёмка PASS:** full scalar Value проходит call/return/finally/native;
+SOURCE/Model/ABI и pending result до cleanup сохраняются. Числовой результат с доказанным ABI использует
+общий physical capture для адреса и записи в FOREIGN; context остаётся исходным. Live namespace prior-chain
+маркируется GC. Source12 genuine G1/G2 quick smoke9/0 и fixedpoint30 PASS. Финальная небольшая правка
+Source14:935 принята normal Tool03/Runtime06 с неизменённым actual G2 frontend: focused2/0 nf/root0/root1
+и Graph finally/named triples PASS; новая whole-самосборка Source14 не заявляется. Canonical verify935/0.
+Документальный пакет3d0ce661 отправлен; финальный code index/docs-check — в steps/current.
+[Свидетельство403](steps/witnesses/m14-field-values-20261115/notes.md). Computed reader/local independence,
+compound TypeView/formal receiving и полные M13/M14 остаются OPEN. Следующие изменения native должны
+использовать описание выбранного compiled call variant, без определения ABI по изменённому живому code.
+
 **402, кодовые gates PASS:** frozen index requirements/tables/fact-copy/emitted preparation и future-machine
 write preflight удалены. Реальные physical pointer cells используют общий ValueOwned store и native reset;
 Source09:935 canonical, genuine G1/G2 quick/fixedpoint38, actual G2 targeted2/0 и Graph7 triple PASS.

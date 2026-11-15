@@ -2231,27 +2231,39 @@ fn: lm_compiler_array_place_release (@: place c.L2ArrayPlace) int
     return: (cast: (int) (0))
 end: lm_compiler_array_place_release
 
-fn: lm_compiler_emit_input_value_type (int: ft; int: descriptor; @: type char) int
+# One physical type projection for both L2 expressions and generated L1.
+# Pointer codes are formatted separately; these names have no c. prefix.
+fn: lm_compiler_input_value_type_name (int: ft; int: descriptor) const: @: char
     ft := lm_compiler_formal_raw(ft)
     if: descriptor != 0
-        return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_LMX") < 0))))
+        return: "LMX_TYPE_LMX"
     if: ft = lm_compiler_array_desc_ty()
-        return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_DESC") < 0))))
+        return: "LMX_TYPE_DESC"
     if: lm_compiler_pointer_depth(ft) > 0
-        return: (cast: (int) (c.lm_compiler_ptr_cell_type(ft, type)))
+        return: 0
     if: lm_compiler_scalar_type_row(ft) >= 0
-        return: (cast: (int) (c.sprintf(type, "c.LMX_TYPE_FOREIGN") < 0))
+        return: "LMX_TYPE_FOREIGN"
     if: ft = 0
-        return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_INT") < 0))))
+        return: "LMX_TYPE_INT"
     if: ft = 1
-        return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_CHAR") < 0))))
+        return: "LMX_TYPE_CHAR"
     if: ft = 2
-        return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_SIZE_T") < 0))))
+        return: "LMX_TYPE_SIZE_T"
     if: ft = 33 || ft = 34
-        return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_UNSIGNED") < 0))))
+        return: "LMX_TYPE_UNSIGNED"
     if: ft = 36
-        return: (cast: (int) ((cast: (int) (c.sprintf(type, "c.LMX_TYPE_ULONG") < 0))))
-    return: (cast: (int) (1))
+        return: "LMX_TYPE_ULONG"
+    return: 0
+end: lm_compiler_input_value_type_name
+
+fn: lm_compiler_emit_input_value_type (int: ft; int: descriptor; @: type char) int
+    const: (@: selected char lm_compiler_input_value_type_name(ft, descriptor))
+    if: selected != 0
+        return: (cast: (int) (c.sprintf(type, "c.%s", selected) < 0))
+    ft := lm_compiler_formal_raw(ft)
+    if: descriptor = 0 && lm_compiler_pointer_depth(ft) > 0
+        return: (cast: (int) (c.lm_compiler_ptr_cell_type(ft, type)))
+    return: 1
 end: lm_compiler_emit_input_value_type
 
 fn: lm_compiler_call_status (int: mi; int: idx) int

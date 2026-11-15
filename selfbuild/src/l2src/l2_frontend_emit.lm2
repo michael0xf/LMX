@@ -876,6 +876,43 @@ fn: lm_compiler_profile_c_size (const: (@: text c.LmP0Text)) size_t
         i := i + 1U
     return: n
 
+# A NUMBER representation is available only when its emitted native spelling
+# exactly matches this row's C object. Source class alone is not that proof.
+fn: lm_compiler_profile_scalar_type_name (int: row; const: (@: spelling c.LmP0Text)) const: @: char
+    @: pr_t int (cast: (@: int) (@ c.l2_pr_t))
+    @@: rows int (cast: (@@: int) (@ c.l2_tb_nrow))
+    @@: widths int (cast: (@@: int) (@ c.l2_tb_ncol))
+    @@: first int (cast: (@@: int) (@ c.l2_tb_cell0))
+    @@@: nodes c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_tbx_arg))
+    @: item c.LmP0Node 0
+    c.LmP0Text: class_word
+    c.L2FrontendScratchChar160: native_storage
+    c.L2Tx: native_tx
+    @: native_text c.L2Tx c.lm_compiler_tx_local(@ native_tx, (cast: (@: char) native_storage\buffer), 160U)
+    const: (@: selected char 0)
+    int: class_col c.lm_compiler_table_col(pr_t[0], "class")
+    int: at 0
+    int: retcode 0
+    int: ft 0
+    if: spelling = 0 || row < 0 || row >= rows[0][pr_t[0]] || class_col < 0 || native_text = 0
+        return: "LMX_TYPE_FOREIGN"
+    at := first[0][pr_t[0]] + row * widths[0][pr_t[0]] + class_col
+    item := nodes[0][at]
+    if: item = 0 || item\kind != c.LM_P0_NODE_ATOM || item\as = 0 || item\as\atom = 0
+        return: "LMX_TYPE_FOREIGN"
+    if: c.lm_compiler_profile_payload((cast: (const: @: c.LmP0Text) item\as\atom), @ class_word) = 0
+        return: "LMX_TYPE_FOREIGN"
+    if: c.lm_compiler_ret_type_word(@ class_word, 0, 0, @ retcode) != 0
+        return: "LMX_TYPE_FOREIGN"
+    ft := c.lm_compiler_result_value_ty(retcode)
+    selected := c.lm_compiler_input_value_type_name(ft, 0)
+    if: selected = 0 || c.lm_compiler_native_type_text(ft, native_text) != 0
+        return: "LMX_TYPE_FOREIGN"
+    if: native_text\len != spelling\length || c.memcmp(native_text\data, spelling\data, spelling\length) != 0
+        return: "LMX_TYPE_FOREIGN"
+    return: selected
+end: lm_compiler_profile_scalar_type_name
+
 # Generate exact scalar access contracts from the SAME selected source rows.
 # Equal C spellings can share access functions; source descriptions stay distinct.
 # None/void, reference/opaque/callable/descriptor rows have no scalar binding.
@@ -893,6 +930,7 @@ fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
     @: prior_name c.LmP0Text 0
     @: columns int 0
     const: (@: atom c.LmP0Text 0)
+    const: (@: type_name char 0)
     int: rows tb_nrow[0][pr_t[0]]
     int: width tb_ncol[0][pr_t[0]]
     int: spelling c.lm_compiler_table_col(pr_t[0], "spelling")
@@ -953,7 +991,11 @@ fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
             ---
         ---
         row := row + 1
-    if: header = 0
+    if: header != 0
+        if: status = 0 && c.fputs("\nprototype:\n    fn: lmx_primitive_profile_scalar (size_t: row) const: @: LmxScalarABI\n    fn: lmx_primitive_profile_scalar_type (size_t: row) int\nend: prototype\n", out) < 0
+            status := 1
+        ---
+    else:
         if: c.fputs("fn: lmx_primitive_profile_scalar (size_t: row) const: @: LmxScalarABI\n", out) < 0
             status := 1
         row := 0
@@ -964,6 +1006,19 @@ fn: lm_compiler_emit_profile_scalar_bindings (int: header) int
         if: c.fputs("    return: 0\nend: lmx_primitive_profile_scalar\n", out) < 0
             status := 1
         ---
+        if: status = 0 && c.fputs("\nfn: lmx_primitive_profile_scalar_type (size_t: row) int\n", out) < 0
+            status := 1
+        row := 0
+        while: row < rows && status = 0
+            if: ids[row] >= 0
+                type_name := lm_compiler_profile_scalar_type_name(row, names + row)
+                if: c.fprintf(out, "    if: row = %dU\n        return: %s\n    end: if\n", row, type_name) < 0
+                    status := 1
+                ---
+            ---
+            row := row + 1
+        if: status = 0 && c.fputs("    return: LMX_TYPE_NONE\nend: lmx_primitive_profile_scalar_type\n", out) < 0
+            status := 1
     ---
     c.lm_compiler_xfree((cast: (@: void) ids))
     c.lm_compiler_xfree((cast: (@: void) names))

@@ -34,6 +34,7 @@ predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_graph_state.lm1"
 predef: "l2src/lmx_primitive_profile.lm1"
 predef: "l1src/libc_abi.lm1"
@@ -793,6 +794,42 @@ fn: lmx_graph_primitive_receiver (@: word char) int
     return: 0
 end: lmx_graph_primitive_receiver
 
+# The physical kernel code proved by the same frontend projection as this
+# exact ABI. Shared spellings share access, never SOURCE identity or admission.
+fn: lmx_graph_scalar_type (const: (@: abi c.LmxScalarABI)) int
+    size_t: i 0U
+    int: ty c.LMX_TYPE_NONE
+    if: abi = 0
+        return: c.LMX_TYPE_NONE
+    while: i < c.lmx_primitive_profile_count
+        if: c.lmx_primitive_profile_scalar(i) = abi
+            ty := c.lmx_primitive_profile_scalar_type(i)
+            if: ty != c.LMX_TYPE_NONE && ty != c.LMX_TYPE_FOREIGN
+                return: ty
+            ---
+        ---
+        i := i + 1U
+    return: c.LMX_TYPE_FOREIGN
+end: lmx_graph_scalar_type
+
+# An ABI-proved inline number uses the same physical scalar capture for an
+# address request and for delivery into an ABI cell. Admission stays at the
+# receiving writer; the caller chooses whether to retain the boxed record.
+fn: lmx_graph_scalar_box (@: arena c.LmxArena; @: value c.LmxWalkValue; @: out c.LmxWalkValue) int
+    @: storage void 0
+    int: ty c.LMX_TYPE_FOREIGN
+    int: physical_type c.LMX_TYPE_NONE
+    if: arena = 0 || value = 0 || out = 0 || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER || value\scalar_abi = 0
+        return: c.LMX_WALK_INVALID
+    physical_type := lmx_graph_scalar_type((cast: (const: @: c.LmxScalarABI) value\scalar_abi))
+    if: physical_type = c.LMX_TYPE_NONE || physical_type = c.LMX_TYPE_FOREIGN || physical_type != c.lmx_type_base(value\type)
+        return: c.LMX_WALK_INVALID
+    if: value\type < 0
+        ty := c.lmx_type_immutable(ty)
+    storage := c.lmx_walk_value_storage(value)
+    return: c.lmx_walk_value_foreign_capture(arena, storage, ty, (cast: (const: @: c.LmxScalarABI) value\scalar_abi), (cast: (@: c.Lmx) value\physical_profile), value, out)
+end: lmx_graph_scalar_box
+
 # Borrowed identity of the complete literal source description. The C door
 # has its own canonical spelling identity; it never selects an arbitrary
 # language row sharing that spelling (Boolean/i8/int8 are distinct).
@@ -1306,10 +1343,26 @@ end: lmx_graph_formal_model
 # Shared address-typed reads for graph fields and activation arguments.
 fn: lmx_graph_value_int (@: g c.LmxGraph; @: value void; @: out int) int
     int: kind lmx_graph_kind(g, value)
+    @: pool c.LmxPool 0
+    @: context c.LmxWalkValue 0
+    if: g = 0 || out = 0
+        return: 1
     if: kind = 3
         value := c.lmx_arena_pointer_void_read(value)
         kind := lmx_graph_kind(g, value)
-    if: out = 0 || kind != 1
+    # An addressable result can retain its full scalar context in an ordinary
+    # ABI cell. Read it numerically only when the frontend proved this exact
+    # C access contract to be INT; physical kind/profile stay unchanged.
+    if: kind = 0
+        pool := c.lmx_range_cell_pool(g\arena, value)
+        if: pool = 0 || pool\kind != c.LMX_KIND_PRIMITIVE || c.lmx_type_base(pool\type) != c.LMX_TYPE_FOREIGN || pool\scalar_abi = 0 || pool\stride != pool\scalar_abi\size || lmx_graph_scalar_type((cast: (const: @: c.LmxScalarABI) pool\scalar_abi)) != c.LMX_TYPE_INT
+            return: 1
+        context := c.lmx_value_cell_context(g\arena, value)
+        if: context = 0 || context\present = 0 || context\kind != c.LMX_WALK_VALUE_FOREIGN || context\ref != value || context\type != pool\type || context\scalar_abi != pool\scalar_abi || context\physical_profile != pool\profile
+            return: 1
+        kind := 1
+    ---
+    if: kind != 1
         return: 1
     out[0] := c.lmx_int_value_known(value)
     return: 0

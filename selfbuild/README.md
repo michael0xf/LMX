@@ -8,6 +8,18 @@ replaces edit tracking/native reset; mandatory executable-code snapshots are can
 Sys\endturn exits through finally to the normal turn boundary; it does not compile by itself.
 Implementation is OPEN; dated receipts below describe earlier code.
 
+Slice403 (2026-11-15), bounded code gates PASS: calls/return/finally carry the full scalar Value,
+including SOURCE/Model and exact ABI storage. Pending values survive cleanup/GC; ABI-proved numeric
+results share physical capture for addressing and delivery while retaining the caller's original context.
+Live prior namespace rows are existing GC roots. Graph83/Run67/Walk189; no extra result heap or state.
+Source12 passed genuine G1/G2 quick smoke9/0 and fixedpoint30. The small final Source14 delivery fix
+was built normally as Tool03/Runtime06 with unchanged actual G2 frontend; focused2/0 nf/root0/root1
+and Graph finally/named triples pass. Source14:935 canonical/verified; this is not a new Source14 bootstrap.
+Stage: `build2/codex_fix250generationchain01/sol-m14-field-values-01`; Tool03 SHAaed079b8,
+Runtime06 prod2c56f1f1, observe895850c5, Graph02 SHAa5138237.
+[Evidence403](../steps/witnesses/m14-field-values-20261115/notes.md). Documentary package3d0ce661 is pushed.
+Computed field consumption, independent locals, compound/formal receiving and the remaining M13/M14 work stay OPEN.
+
 Slice402 (2026-11-15), bounded code gates PASS: raw Structure/pointer-Array index writes use exact physical cells
 and the common ValueOwned store. Frozen slot requirements/tables/transfers/emitted preparation and future-machine
 write preflight are removed. Physical barriers, current payload interpretation and native reset remain.

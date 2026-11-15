@@ -4,6 +4,7 @@
 predef: "l2src/lmx_walk.h.lm1"
 predef: "l2src/lmx_walk_state_decl.lm1"
 predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_primitive.h.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
@@ -676,6 +677,70 @@ fn: lmx_call_scalar_result (@: arena c.LmxArena; @: code c.Lmx; @: value c.LmxWa
     ---
     out[0] := dest
     return: 0
+
+# Delivery of an already received result. Cleanup and reception belong to the
+# caller; this is the common successful boundary for native and walked bodies.
+# Keep the Value until delivery succeeds, including when an output aliases it.
+fn: lmx_call_result_value (@: arena c.LmxArena; @: code c.Lmx; @: value c.LmxWalkValue; @: dest void; @@: out void; @: context c.LmxWalkValue) int
+    c.LmxWalkValue: saved
+    c.LmxWalkValue: boxed
+    c.LmxWalkPlace: place
+    @: write_value c.LmxWalkValue 0
+    @: pool c.LmxPool 0
+    @: delivered void 0
+    size_t: number 0U
+    size_t: width 0U
+    int: ty c.LMX_TYPE_NONE
+    int: status 0
+    if: arena = 0 || value = 0 || out = 0
+        return: c.LMX_CALL_NOT_CALLABLE
+    c.memcpy((cast: (@: void) (@ saved)), (cast: (const: @: void) value), c.sizeof(c.LmxWalkValue))
+    if: saved\present != 0
+        if: saved\kind = c.LMX_WALK_VALUE_REFERENCE
+            delivered := saved\ref
+        else:
+            if: saved\kind = c.LMX_WALK_VALUE_FOREIGN
+                status := lmx_call_scalar_result(arena, code, @ saved, dest, @ delivered)
+            else:
+                if: lmx_walk_value_number(@ saved, @ number, @ ty) != c.LMX_WALK_OK
+                    return: c.LMX_CALL_NOT_CALLABLE
+                if: dest != 0
+                    pool := c.lmx_range_cell_pool(arena, dest)
+                    if: pool != 0
+                        c.memset((cast: (@: void) (@ place)), 0, c.sizeof(c.LmxWalkPlace))
+                        place\address := dest
+                        place\type := pool\type
+                        write_value := @ saved
+                        if: c.lmx_type_base(pool\type) = c.LMX_TYPE_FOREIGN && saved\scalar_abi != 0 && pool\scalar_abi = saved\scalar_abi
+                            status := c.lmx_graph_scalar_box(arena, @ saved, @ boxed)
+                            if: status != c.LMX_WALK_OK
+                                return: c.lmx_call_note_walk_fail(lmx_walk_boundary_status(arena, code, status))
+                            write_value := @ boxed
+                        ---
+                        status := lmx_walk_value_store(arena, @ place, write_value)
+                        if: status != c.LMX_WALK_OK
+                            return: c.lmx_call_note_walk_fail(lmx_walk_boundary_status(arena, code, status))
+                        ---
+                    else:
+                        width := lmx_walk_type_size(ty)
+                        if: width = 0U || c.lmx_range_entry_at(arena, dest) != 0 || c.lmx_range_write_overlaps_profile(arena, dest, width, 0, 0, 0U) != 0
+                            return: c.LMX_CALL_NOT_CALLABLE
+                        if: lmx_walk_store_numeric_raw(dest, ty, number) != c.LMX_WALK_OK
+                            return: c.LMX_CALL_NOT_CALLABLE
+                        ---
+                    ---
+                    delivered := dest
+                ---
+            ---
+        ---
+    ---
+    if: status != 0
+        return: status
+    out[0] := delivered
+    if: context != 0
+        c.memcpy((cast: (@: void) context), (cast: (const: @: void) (@ saved)), c.sizeof(c.LmxWalkValue))
+    return: 0
+end: lmx_call_result_value
 
 # Slice 255 (design 4.5 B2a): a contextual literal -- a number with no type of its own (LMX_TYPE_NONE; the magnitude in
 # `wide`, the U spelling in `natural`). It takes the type of the operand or place it meets; alone it is int (U: unsigned).
@@ -3083,29 +3148,25 @@ fn: lmx_walk_native_result (@: f c.LmxWalkFrame; @: witness void; @: raw void; @
     return: lmx_walk_native_result_context(f, witness, raw, out, 0)
 end: lmx_walk_native_result
 
-fn: lmx_walk_result_dest (@: arena c.LmxArena; @: witness void; @: temp c.LmxWalkValue) @: void
-    int: ty 0
-    @: scalar_pool c.LmxPool 0
+# Physical result storage is selected from an already resolved contract.
+# The caller owns temp; this operation grants no semantic admission and
+# creates no witness, signature or additional result lifetime.
+fn: lmx_walk_result_storage (@: arena c.LmxArena; int: ty; const: (@: abi c.LmxScalarABI); @: physical c.Lmx; @: source void; @: temp c.LmxWalkValue) @: void
     @: cell void 0
     @: metadata c.LmxWalkValue 0
-    @: declared c.LmxWalkValue 0
-    lmx_walk_value_clear(temp)
-    if: witness = 0
+    if: temp = 0
         return: 0
-    ty := lmx_walk_witness_type(arena, witness)
+    lmx_walk_value_clear(temp)
+    if: arena = 0 || c.lmx_type_base(ty) = c.LMX_TYPE_NONE
+        return: 0
     if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN
-        scalar_pool := c.lmx_range_cell_pool(arena, witness)
-        if: scalar_pool = 0 || scalar_pool\kind != c.LMX_KIND_PRIMITIVE || scalar_pool\type != ty || scalar_pool\scalar_abi = 0
+        if: abi = 0 || abi\size = 0U || abi\init = 0 || abi\copy = 0
             return: 0
-        if: scalar_pool\scalar_abi\size = 0U || scalar_pool\scalar_abi\init = 0 || scalar_pool\scalar_abi\copy = 0 || scalar_pool\stride != scalar_pool\scalar_abi\size
-            return: 0
-        cell := c.lmx_arena_scalar_cells_profiled(arena, ty, scalar_pool\profile, scalar_pool\scalar_abi, 1U)
+        cell := c.lmx_arena_scalar_cells_profiled(arena, ty, physical, abi, 1U)
         metadata := c.lmx_value_cell_context(arena, cell)
         if: cell = 0 || metadata = 0
             return: 0
-        declared := c.lmx_value_cell_context(arena, witness)
-        if: declared != 0
-            metadata\source_type := declared\source_type
+        metadata\source_type := source
         c.memcpy((cast: (@: void) temp), (cast: (const: @: void) metadata), c.sizeof(c.LmxWalkValue))
         return: cell
     ---
@@ -3116,7 +3177,32 @@ fn: lmx_walk_result_dest (@: arena c.LmxArena; @: witness void; @: temp c.LmxWal
             return: 0
         ---
     ---
+    temp\physical_profile := physical
+    temp\source_type := source
     return: lmx_walk_value_storage(temp)
+end: lmx_walk_result_storage
+
+fn: lmx_walk_result_dest (@: arena c.LmxArena; @: witness void; @: temp c.LmxWalkValue) @: void
+    int: ty 0
+    @: scalar_pool c.LmxPool 0
+    @: declared c.LmxWalkValue 0
+    @: source void 0
+    if: temp = 0
+        return: 0
+    lmx_walk_value_clear(temp)
+    if: witness = 0
+        return: 0
+    ty := lmx_walk_witness_type(arena, witness)
+    if: c.lmx_type_base(ty) = c.LMX_TYPE_FOREIGN
+        scalar_pool := c.lmx_range_cell_pool(arena, witness)
+        if: scalar_pool = 0 || scalar_pool\kind != c.LMX_KIND_PRIMITIVE || scalar_pool\type != ty || scalar_pool\scalar_abi = 0 || scalar_pool\stride != scalar_pool\scalar_abi\size
+            return: 0
+        declared := c.lmx_value_cell_context(arena, witness)
+        if: declared != 0
+            source := declared\source_type
+        return: lmx_walk_result_storage(arena, ty, (cast: (const: @: c.LmxScalarABI) scalar_pool\scalar_abi), (cast: (@: c.Lmx) scalar_pool\profile), source, temp)
+    ---
+    return: lmx_walk_result_storage(arena, ty, 0, 0, 0, temp)
 end: lmx_walk_result_dest
 
 fn: lmx_walk_native_dest (@: f c.LmxWalkFrame; @: witness void; @: temp c.LmxWalkValue) @: void
@@ -8788,8 +8874,6 @@ fn: lmx_walk_call_prim_dispatch (@: arena c.LmxArena; @: code c.Lmx; @: data c.L
     @: context c.LmxWalkContext @ ctx
     @: got c.LmxWalkValue @ result
     int: st
-    int: rty 0
-    size_t: wv 0U
     if: out = 0
         return: c.LMX_CALL_NOT_CALLABLE
     out[0] := 0
@@ -8823,26 +8907,7 @@ fn: lmx_walk_call_prim_dispatch (@: arena c.LmxArena; @: code c.Lmx; @: data c.L
         ---
         return: c.lmx_call_note_walk_fail(st)
     ---
-    # Normal completion forwards the actual Value, including zero/null and
-    # absence. Inputs have already been consumed, so an aliased output is safe.
-    if: lmx_result_context != 0
-        c.memcpy((cast: (@: void) lmx_result_context), (cast: (const: @: void) got), c.sizeof(c.LmxWalkValue))
-    if: got\present = 0
-        return: 0
-    if: got\kind = c.LMX_WALK_VALUE_REFERENCE
-        out[0] := got\ref
-        return: 0
-    if: got\kind = c.LMX_WALK_VALUE_FOREIGN
-        return: lmx_call_scalar_result(arena, code, got, dest, out)
-    ---
-    if: dest = 0
-        return: 0
-    if: lmx_walk_value_number(got, @ wv, @ rty) != c.LMX_WALK_OK
-        return: c.LMX_CALL_NOT_CALLABLE
-    if: lmx_walk_store_numeric_raw(dest, rty, wv) != c.LMX_WALK_OK
-        return: c.LMX_CALL_NOT_CALLABLE
-    out[0] := dest
-    return: 0
+    return: lmx_call_result_value(arena, code, got, dest, out, lmx_result_context)
 end: lmx_walk_call_prim_dispatch
 
 # Same inherited storage, through the existing typed-address write mechanism

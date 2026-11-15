@@ -19,6 +19,7 @@ predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 
@@ -470,8 +471,27 @@ fn: lmx_gc_mark_execution (@: arena c.LmxArena; unsigned: gen) int
     @: roots c.LmxExecutionRoots (cast: (@: c.LmxExecutionRoots) arena\execution_roots)
     @: place c.LmxWalkPlace 0
     @: scratch c.LmxScratch 0
+    @: space c.LmxGraphSpace c.lmx_graph_space()
+    @: space_rows c.LmxGraphSpaceRow 0
+    @: space_row c.LmxGraphSpaceRow 0
     size_t: i 0U
     int: status c.LMX_GC_OK
+    # A live traversal owns its constructed callable values and receiver
+    # catalogs in these existing rows. They are ordinary GC edges for the
+    # lifetime of that table, including suspended outer construction scopes.
+    while: space != 0 && status = c.LMX_GC_OK
+        space_rows := space\rows
+        if: space\count > space\cap || (space\count != 0U && space_rows = 0)
+            return: c.LMX_GC_INVALID
+        status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) space\root), gen, 0))
+        i := 0U
+        while: i < space\count && status = c.LMX_GC_OK
+            space_row := space_rows + i
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) space_row\scope), gen, 0))
+            status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) space_row\value), gen, 0))
+            i := i + 1U
+        space := space\prior
+    ---
     while: active != 0 && status = c.LMX_GC_OK
         status := lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) active\code), gen, 0))
         status := lmx_gc_note(status, lmx_gc_values(arena, (cast: (@: c.LmxWalkValue) active\values), active\width, gen))

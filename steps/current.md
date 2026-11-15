@@ -1,5 +1,182 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — актуальное продолжение403 и новый нормативный пакет
+
+Final code/docs index17 прошёл Tool03 docs-index02 PASS35/14/27/44/615, links/opening,
+LF28300. Working/cached diff-check PASS; все producers terminal, Source14 неизменён.
+После gate добавляется только этот статус/receipt, затем commit/push403 прямо main.
+Два чужих untracked исключены и сохраняют исходные SHA. Goal ACTIVE, полные M13/M14 OPEN.
+
+Все code producers terminal. Runtime06 normal PASS98 headers:
+C26453ffa3612b2e399cfec7695c2b142f123285489c7ef8827c05f6f23d7309d;
+prod2c56f1f1f24daba3c29b19bb45eabfac8baa22722c9b03eeb0916c1111fa0c70;
+obs895850c5e6c37c24249915ce6031821ea25787899b2e5766af592e3b608a7048.
+Private10 actual G2 frontend +Runtime06 PASS2/0, n/f/root0/root1, включая110/111/112 positive/canaries.
+Graph02 normal PASSa513823776a811a7b9153efb18cbc829ea05e884fe7722a40ba7de3ff99f2cfd;
+finally_scope и call_named PASS interpreter/native/forced. Code Source14 frozen/canonical935,
+SHA d8a0083b37742594ec874e8f666638330ee40a2571f02f4efdb691d8b30e7055;
+repo/stage verify935/0 PASS. Новая whole Source14 не требуется для этого небольшого stateless factor:
+полная Source12 G1/G2 основа и отдельная Source14 normal/focused приёмка явно разделены в receipt.
+Следующее: explicit owned code/docs index, final docs-check/diff-check, commit/push403;
+затем общий reader/локальные places и снятие старого native tracking с compiled-signature authority.
+Helpers дали read-only deletion map обеих freshness систем и managed-L2 индексных checks;
+сохранять физическое receiving/protection/GC и настоящие L3 bounds, не удалять их по имени.
+Goal ACTIVE, M13/M14 OPEN; два чужих untracked прежние. Нижеследующая хронология — уже исполненные шаги.
+
+Document-only30 зафиксирован/отправлен3d0ce661489f5d4ca9ac815f17b21766bf5b5859 прямо main.
+Actual G2 docs-index01 PASS35/14/27/44/615, LF28299; рабочий/cached diff-check PASS.
+Source12 whole01 terminal PASS: genuine G1/G2 quick smoke9/0, BOOTSTRAP0;
+fixedpoint02 PASS30 checks, consumed manifests364/0 и source935/0. Fixedpoint01 ошибочно
+требовал несуществующий standalone GCGraph.h; остальные30 прошли, исправлен только список сравнения.
+Source13 добавил GSForward delivery до result_cell. Private09 на Runtime05 собрался в n/f,
+все4 исполнения дали exit110: настоящий отрицательный контроль новой same-ABI границы.
+Source14 выносит ABI-proof/capture в общий Graph.scalar_box: Graph83, Run67/Walk189 прежние.
+Run materialization нормализует свой Value; delivery использует временный boxed только для writer,
+исходный NUMBER context сохраняется. Несовместимый ABI/защищённый FOREIGN проверяются canaries.
+Новых состояния/таблиц нет; imports ацикличны через существующий Walk.h. Tool03 строится normal
+actual G2 frontend, exec61282; после terminal — normal Runtime06 и focused проверки. Canonical покаSource12.
+Нижеследующие промежуточные указания про exec13695 уже исполнены; новая очередь — эта.
+
+Goal ACTIVE; работа и фиксация прямо main. Последние нормы — начало to_sol и M14:
+явные sys\compile/endturn, без обязательного снимка code и автоматического native reset.
+Нижележащая хронология403 сохраняет промежуточные решения и не заменяет эти нормы.
+Source12:935 заморожен; bootstrap whole01 (exec13695) выполняется последовательно,
+G1 runtime/frontend/tool уже собраны. До terminal не менять code/stage и не запускать другой producer.
+Review обнаружил незакрытую границу NUMBER с доказанным scalar ABI → совместимый managed FOREIGN dest.
+После bootstrap исправить её общим physical transport, сохранив исходный result context;
+отдельная проверка должна брать настоящий GSForward result до его materialization.
+Полный авторский документальный пакет подготовлен и сохранён. Render semantics35/14 и grammar27/47
+прошли; docs-check был остановлен автором при обнаружении bootstrap и приёмкой не является.
+В активном M11.8 устранено оставшееся требование code snapshot/invalidation. После освобождения
+конвейера выполнить полный docs-check, записать результат, commit/push документального среза,
+сохранив код403 и два чужих untracked. Затем закончить проверку403 и продолжать основной v3.
+
+## 2026-11-15 — WIP403: общий Value результата и чтение вычисляемого поля
+
+Предыдущий goal turn — progress: docs32 92902ada и code402 67d8f00e приняты/отправлены прямо main;
+main==origin/main, только два чужих untracked с прежними SHA. Goal ACTIVE; root sole code/test/build writer.
+Полный пакет M14 перечитан; нормы закрыты, новая реализация OPEN. Helpers исследуют read-only.
+Выявлен общий blocker reader: GraphRun и GraphTool сохраняют только int result, включая pending finally;
+data_declaration — старый int/@int publish helper, не generic executor. Не делать int-only split.
+Начата связанная вертикаль полного Value: из existing walk_result_dest выделено physical result_storage
+по разрешённому type/ABI/profile/SOURCE; witness caller теперь делегирует ему. WalkValues186→187,
+без нового result pool, witness или lifetime state. Прежний exact_scalar_storage расширен реальным native
+producer, которому до входа передаётся exact destination; проверяются epsilon и actual SOURCE/Model/context.
+Это ещё не скомпилировано/не принято. Canonical пока accepted402 Source09:935.
+Далее full result через application/invoke/return/native; snapshot до finally и existing roots, delivery только
+после successful cleanup. Numeric APIs будут проекциями. Graph refs ABI не подменять Value.storage молча.
+Дальше общий receiving consumer/field_read без source publish, local place authority и удаление dirty.
+Никакого whole-lexical/descriptor-forest/окружения copy: снимок только C-function code, binding hidden args.
+Stage403 — build2/codex_fix250generationchain01/sol-m14-field-values-01;
+receipts — build2/codex_fix250generationchain01/runs/sol-m14-field-values-20261115-01. No active producer.
+Source01:935 staged SHA7a60cb7800f92e552c73ae9ed5e880df194308d0bb348e957ddd41b1b7a54233;
+canonical не менялся. Fresh Tool01 normal PASS059d2e6ce842953795d3684fc2a2b8f98bbd615acbb7a10722e5ba0aa3712af3.
+Runtime01 normal PASS,98 headers, WalkValues187; driver.c2e5b2ce1d0fa5595705e6808c72530f6e68b31f6a9a5f3ec277666c6c0da2713,
+prod00bf58e4d69c5331f470a7bfe1250c71028429bd826e32648facd636b8ec682e,
+observeefb7d67df2afd528b677b031676100789b454d8879c19a8d198d30eda4a6eb1c.
+Private01 exact_scalar_storage SUITE1/0 PASS, native/forced/root0/root1; настоящий native entry требует
+exact destination до входа и передаёт actual SOURCE/Model/ABI. Прежние witness/receiving/precision cases сохранены.
+Все producers terminal. Это только необходимый physical destination factor, не полный result-flow или M14.
+Следующее: провести полный Value через return/finally/call/native; старые int entrypoints только проекции.
+Name-free type-view должен сохранять opaque Model root, даже singleton; допустимый constructor-chain
+разбирается общими правилами declaration_parts, без второго парсера и без обхода полей Model.
+Разрешённый return type берётся из действующего SOURCE/ABI projection; ABI-size не доказывает C typedef
+compatibility, raw Model/decl нельзя выдавать за six-field receiving instruction или Walk witness.
+Existing FE helpers для projection: ret_type_word, result_value_ty, native_type_text и emit_input_value_type;
+в новом primitive_profile projection NUMBER код допустим только при точном совпадении native C spelling
+с уже выбранным ABI. Custom class int/spelling double остаётся FOREIGN, SOURCE не переименовывать.
+Pointer branch текущего factory — прежний canonical reference temporary, не произвольный C pointer ABI.
+
+Source02:935 staged SHA86e2b6c347a906aa291dc8d328069dad77d823d6ac682ed7a1744873369f156a.
+Tool02 normal PASSdf2d4e35bb7b5f28a830bf0a6ab57b074a80062c63ffd9b9e0c77378009fcea3;
+Frontend01 normal PASS7c93c0689100d82a0ec4bbbe076e6057d727f12dd0072b6e69a32a52e5163c79,
+Cdd03345e7bb874a5c009e1ea01487c66ff2a30108adcc8129fd8c76ba6ce2327.
+Run full Value через block/finally/invoke/application/launch; native RET сохраняет Value до cleanup,
+wrapper доставляет через общий lmx_call_result_value только после успешного work_finish.
+Graph82/Run67/Walk189; FEValues177. Перенесён существующий TYPE selector и exact-C-spelling projection;
+прямые scalar WORD return поддерживаются по выбранному ABI, compound TypeView/Model пока OPEN.
+Source03 добавляет контекст NUMBER→existing FOREIGN cell на адресуемой границе и общий INT reader
+лишь после физического ABI proof. Plain numeric pools/Graph kind не меняются, новые таблицы не вводятся.
+Расширены прежние exact_scalar_storage/graph_scalar_working: delivery canaries, real parsed scalar Fn,
+pending epsilon/SOURCE/Model через finally+GC, cleanup return, тот же result address и C-int forwarding.
+Эти новые runtime/test изменения пока НЕ проверены. Foreign image emission/typed native GraphTool oracle,
+полный formal receiving, compound return/TypeView и M14 namespace/visibility/snapshot остаются OPEN.
+Все producers terminal перед Source03. Следующий producer — Runtime02 с Frontend01; canonical пока402.
+Runtime02 terminal FAIL на L2 GraphRun:4526: raw C member g\arena нельзя сохранить перед следующим
+вычисляемым actual. Source04 разделяет вызов value_storage и ABI capture, без правки generated L1/C.
+Read-only review нашёл две дополнительные границы: NUMBER+ABI materialization теперь нормализует сам
+Value в его единственную existing FOREIGN cell; последующие result_cell переиспользуют её. Numeric projection
+читает такую cell общим INT reader. Return/native RET потребляют full record приложения непосредственно,
+без обратного чтения companion: semantic Model может принадлежать самому Value. GSForwardHold проверяет
+эту передачу после очистки physical Model companions. Не перезаписывать общий companion ради такого context.
+Protected-INT canary исправлен: отличается от входного NUMBER, поэтому преждевременный context copy обнаружим.
+Перед Source04 все producers terminal; FE01 и Tool02 переиспользуются, их источники не менялись.
+Source04:935 SHA7618cc623f5aa65d6734dae2b92b7078452d06fafbe38a3ad7bfb1aced30a4ad.
+Runtime03 с raw FE01 прошёл обновлённые Graph/Run L2 modules, затем ожидаемо отказал на --graph
+неизменённого Clock: нужен hosted frontend. Штатный build-frontend-link на готовых FE01 objects
+и ABI-совместимом Runtime01 bridge PASS52de7ca5ff94d549c7f934c7cb9c8e0c54c987d211965046ebd9c94508c32e2f;
+raw7c93 сохранён отдельно как frontend-field-01/l2trans-raw.exe. После этого normal Runtime04 PASS:
+driver.Ca172648e9aa2d7539a113701ac21609cf25633e5e3214bfb78d18bee968a9a56;
+prod5ccbb6c9912bbab3df22bc1b5da8aff2aaca54156cd82bd6526d4445ca8e10ef;
+obsdbb341b38ad8da07daa996c9740e36123b7f982c10ca2cad3e5244e23197177a,98 headers.
+Private02 exact_scalar_storage PASS n/f/root0/root1, включая delivery canaries/нулевой dest/pending snapshot.
+GraphScalar обе сборки остановились CC на трёх memcmp с raw C member returned.ref как аргументом.
+Source05 только группирует этот actual явным pointer cast; runtime/FE повторно не собирать.
+Private02 aggregate SUITE2/2 — не зелёный. Следующая приёмка — только исправленный GraphScalar.
+Source05 SHA00ea61acd691a8c8f8a97f7fa0baa34d5525d2f78c11f232f13bdf1e44dc318b;
+Private03 GS n/f built PASS, все4 исполнения exit100 (подготовка Fn после прежнего explicit GC).
+Source06 добавил diagnostics; Private04 native built, оба root exit100: все5 выбранных Fn null.
+Source07 удерживает настоящие C API references на эти Fn existing execution_roots до collector,
+не полагаясь на общий allocation chunk/namespace lookup после sweep. Runtime leak assertions сравнивают
+с корнем самого C owner и после restore — с прежним mark; ModelA непосредственно этим root не удерживается.
+Runtime04/FE прежние. Проверить новый GS source; код ядра с Source04 не менялся.
+Private05 Source07 дошёл до GSHold, оба native root exit102; Source08/Private06 уточнил status5;
+Source09/Private07: shape0/entry0, status5. Interactive GDB на готовом private07 p-prod (без правки C/L1)
+показал return_value0, затем cleanup eval_explicit_call5 и launch_formals5. GDB закрыт, inferior завершён;
+попытка gdb-return01.log содержит неуспешную передачу argv, не приёмку; saved logging этой версии GDB
+не включился. Реальные штатные negative receipts — private07 run-root0/1.log.
+Read-only helper подтвердил общий GC root omission: receiver catalogs и созданные F живут в GraphSpace.rows,
+но прежний mark_execution их не обходит. Source10 добавляет в existing markExecution всю live prior-chain,
+root/row.scope/row.value с count/cap/rows guard. Нового состояния/layout/registry нет; pop убирает корни.
+Обновлён основной v3. Следующий producer Runtime05; прежний Runtime04 сохраняется negative baseline.
+Source10:935 SHA0f5ab7bb9b60c653952457bd941d1b1e90f819c1305c5b0a0f2607f916d73484.
+Runtime05 normal PASS,98 headers: Cb29ccbd8a0ac120070a987e95ad9d601436d5f121664a6d88b02415340aa0517;
+prod1d0c75bcb20e7c4d180aea099e231899618f4d5fd680079d912346bed94a6f4e;
+obs49914db77d9fc7dbd3c6e3438054c833f72fda60dce3ce00515935785ff9eb3e.
+Source11 расширяет существующий gs_touch: перед sweep открывается настоящий fresh namespace данных,
+затем закрывается. Так проверяется сохранение receiver catalog по prior-chain, а не только top scope.
+ModelA не добавляется отдельным корнем. Runtime05 повторно не собирать, меняется лишь fixture.
+Source11:935 SHAb99394163d14e3baa8ac1bee1ece13e0bf53101950e0e0f1fad34f98c58ab3b3;
+Private08 PASS SUITE2/0 (exactScalar +GS), n/f/root0/root1. Controls01 PASS SUITE3/0:
+execution_gc_roots, execution_gc_native, graph_fn_data_typed во всех n/f/root0/root1.
+Все producers terminal. Native scalar Graph image всё ещё OPEN; эти scalar Fn исполняются GraphRun
+под C-ABI assertion owner. Настоящий GraphTool native-return путь проверить отдельными int/control triples.
+В дереве параллельно появился авторский explicit-compilation пакет (semantics-book, L1/L2 RU/EN,
+LMX_blog/2026-11-15-explicit-compilation.md); не перезаписывать и не коммитить незавершённым.
+Новая норма отменяет слежение/native invalidation и обязательный снимок code. Value snapshots/roots403
+сохраняются; дальнейший ABI назначения native выбирать из compiled call variant, не из изменённого
+return WORD. Это внесено в основной v3. to_sol/M14 пока ожидают синхронизации авторским пакетом.
+Graph01 normal PASS702f6a6408c159c68eabbb29be9d0d75eb23d2fb37183a38becd95145fce6ebe.
+Graph finally_scope и fn_alias_call PASS interp/native/forced. call_named выполняется0 во всех режимах,
+числа12/12/17/13 прежние; golden содержал старое ((inside)) вместо (inside). Accepted402 baseline
+graph-check воспроизвёл тот же отказ, Tool.same подтвердил byte-identical interp logs (SAME1).
+Source12 исправляет только эту лишнюю пару скобок в expected; code/FE/Runtime/Graph не пересобирать.
+finally_error native/forced дают ожидаемый error exit1; interpreter отвечает6, не default1.
+Первый graph-finally-error01 поэтому aggregate FAIL, повторить с явным interpreter answer6;
+несуществующий expected для отрицательного exit не используется как AFTER oracle.
+call_named existing interp/native/forced outputs прошли GRAPH-SAME1 после только golden correction;
+без пересборки. finally_error03 повторил genuine argv с answer6: driver82/0; весь log SAME1 с accepted402.
+finally_error02 с ошибочным --run — не приёмка; настоящий CLI argument — run.
+Source12:935 canonical SHA172735eb60603f0445369a7908750ab4a677a69a40717beab9bfbe69762fc1be;
+repository и stage VERIFIED935/0. Начат штатный whole01 bootstrap quick, label boot-m14-field-values-01,
+Tool02 + hosted FE52de, smoke-kernel225. Producer exec session13695 ещё работает: G1 runtime готов,
+сейчас G1 frontend/Lower. Не менять code/stage и не запускать параллельный producer/docs-check.
+Draft witness — [403](witnesses/m14-field-values-20261115/notes.md); whole/G2/docs/коммиты ещё pending.
+Новый to_sol и M14 explicit-compilation прочитаны: цель — call/native tables арены Thread,
+toLmx(Thread) сохраняет её таблицы; отменены обязательный снимок code и automatic native tracking/reset.
+Снимок значения до cleanup остаётся. Авторский пакет продолжает править документацию в основном дереве;
+сохранить его изменения и после общей code-приёмки выполнить штатные render/check в том же конвейере.
+
 ## 2026-11-15 — полный пакет M14 получен; финальная фиксация402
 
 Предыдущий goal turn — progress: завершены genuine G1/G2 quick, fixedpoint38, actual G2 targeted2 и Graph7 triple;

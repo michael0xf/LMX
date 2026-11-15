@@ -119,7 +119,7 @@ The method's var argument and call's selected data retain their own contracts.
 Method references are assigned with `@` first: `@: ptr method`; its name
 arguments are bare atoms and atoms do not invoke.
 
-See [the resolved question](../../../LMX_blog/q/ordinary_var_execution_20261103.md)
+See [the resolved question](https://github.com/michael0xf/LMX/blob/495e8435ede179ed6e6dd1c4a95d4f7445718317/LMX_blog/q/ordinary_var_execution_20261103.md)
 and [verbatim source/history](../../../LMX_blog/2026-11-03.md). Prior measured
 refusals above remain historical results, not a normative oracle or an
 implementation PASS. Implement the clarified common semantics in a subsequent

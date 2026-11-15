@@ -1,0 +1,435 @@
+# Actual mark/sweep with execution-only roots. These exact-double assertions
+# use the C ABI; ordinary language FP/FFI remains a separate integration.
+predef: "l2src/lmx_arena.h.lm1"
+predef: "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_graph.h.lm1"
+predef: "l2src/lmx_primitive_profile.h.lm1"
+predef: "l2src/lmx_walk.h.lm1"
+predef: "l2src/lmx_walk_values.h.lm1"
+predef: "l2src/lmx_value_owned.h.lm1"
+predef: "l2src/lmx_arena_refs.h.lm1"
+predef: "l2src/lmx_gc.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_scratch.h.lm1"
+include: "<stdlib.h>" "<string.h>" "<float.h>"
+
+# The ordinary-language sibling fixture observes addresses through C heap
+# metadata. This state is deliberately outside the graph and its roots.
+fn: eg_lang_arena () @: c.LmxArena
+    @: thread c.LmxThread c.lmx_thread_current()
+    if: thread = 0 || thread\slot = 0
+        return: (cast: (@: c.LmxArena) 0)
+    @: slot c.LmxSchedule (cast: (@: c.LmxSchedule) thread\slot)
+    return: (cast: (@: c.LmxArena) slot\arena)
+
+fn: eg_lang_open () @: void
+    @@: state void c.calloc(2U, sizeof(@: void))
+    @: counters int c.calloc(2U, c.sizeof(c.int))
+    if: state = 0 || counters = 0
+        c.free(state)
+        c.free(counters)
+        return: (cast: (@: void) 0)
+    state[1] := (cast: (@: void) counters)
+    return: (cast: (@: void) state)
+
+fn: eg_lang_note (@: raw void; @: graph void) int
+    @@: state void (cast: (@@: void) raw)
+    @: arena c.LmxArena eg_lang_arena()
+    @: pool c.LmxPool c.lmx_range_cell_pool(arena, graph)
+    @: chunk c.LmxChunk c.lmx_pool_chunk_at(pool, graph)
+    if: state = 0
+        return: 91
+    @: counters int (cast: (@: int) state[1])
+    state[0] := graph
+    if: arena = 0 || pool = 0 || chunk = 0
+        counters[1] := 92
+        return: 92
+    if: pool\kind != c.LMX_KIND_STRUCT || pool\type != c.LMX_TYPE_STRUCT || c.lmx_pool_is_sealed(pool) != 0
+        counters[1] := 93
+        return: 93
+    # A neighbouring live header must not make a missing root look correct.
+    if: c.lmx_chunk_cells(chunk, (cast: (size_t) pool\stride)) != 1U || c.lmx_chunk_room(chunk, (cast: (size_t) pool\stride)) != 1U
+        counters[1] := 94
+        return: 94
+    return: 0
+
+fn: eg_lang_collect (@: raw void; int: expected_live) int
+    @@: state void (cast: (@@: void) raw)
+    @: arena c.LmxArena eg_lang_arena()
+    @: thread c.LmxThread c.lmx_thread_current()
+    if: state = 0 || arena = 0 || thread = 0 || arena\simple != 0U
+        c.fprintf(c.stderr, "execution_gc_native: no ordinary current arena\n")
+        return: 95
+    @: counters int (cast: (@: int) state[1])
+    counters[0] := counters[0] + 1
+    if: counters[1] != 0
+        c.fprintf(c.stderr, "execution_gc_native: isolated header check %d\n", counters[1])
+        return: counters[1]
+    if: c.lmx_gc_collect(arena, thread) != c.LMX_GC_OK
+        c.fprintf(c.stderr, "execution_gc_native: collection refused\n")
+        return: 96
+    int: live (cast: (int) (c.lmx_range_cell_pool(arena, state[0]) != 0))
+    if: live != expected_live
+        c.fprintf(c.stderr, "execution_gc_native: live %d expected %d\n", live, expected_live)
+        return: 97
+    return: 7
+
+fn: eg_lang_count (@: raw void) int
+    @@: state void (cast: (@@: void) raw)
+    @: counters int (cast: (@: int) state[1])
+    return: counters[0]
+
+sub: eg_lang_close (@: raw void)
+    @@: state void (cast: (@@: void) raw)
+    if: state != 0
+        c.free(state[1])
+        c.free(state)
+end: eg_lang_close
+
+# A fresh physical profile gives this node its own pool/chunk. Otherwise a
+# different marked header in a shared chunk could mask the missing root.
+fn: eg_node (@: arena c.LmxArena) @: c.Lmx
+    @: owner c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_owned(arena))
+    @: created c.Lmx (cast: (@: c.Lmx) c.lmx_node_new_profiled(arena, owner))
+    if: owner = 0 || created = 0
+        return: (cast: (@: c.Lmx) 0)
+    # Keep parent absent: the profile must survive as physical metadata,
+    # not through an extra structural edge supplied by this test.
+    return: created
+
+# Build an isolated plain value, not a copy of a registered Model. Copying a
+# requirement would retain a real admission edge from its original candidate.
+fn: eg_lang_fresh () @: void
+    @: arena c.LmxArena eg_lang_arena()
+    @: header c.Lmx eg_node(arena)
+    @: number int c.lmx_int_new_owned(arena)
+    if: arena = 0 || header = 0 || number = 0
+        return: (cast: (@: void) 0)
+    \number := 73
+    if: c.lmx_arena_refs_open_owned(arena, header, 1U) != 0 || c.lmx_arena_ref_store(arena, header, 0U, (cast: (@: void) number)) != 0
+        return: (cast: (@: void) 0)
+    return: (cast: (@: void) header)
+
+fn: eg_lang_peek (@: source void) int
+    @: header c.Lmx (cast: (@: c.Lmx) source)
+    @: cell void c.lmx_arena_ref_value(header, 0U)
+    if: cell = 0
+        return: -1
+    return: c.lmx_int_value_known(cell)
+
+fn: eg_sweep (@: arena c.LmxArena) int
+    return: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena))
+
+fn: eg_snapshot (@: arena c.LmxArena; const: (@: abi c.LmxScalarABI); @: description void; @: out c.LmxWalkValue) int
+    c.LmxWalkValue: context
+    @: ctx c.LmxWalkValue @ context
+    @: source c.LmxScalarType9 c.calloc(1U, c.sizeof(c.LmxScalarType9))
+    @: physical c.Lmx eg_node(arena)
+    c.memset((cast: (@: void) ctx), 0, c.sizeof(c.LmxWalkValue))
+    ctx\model := eg_node(arena)
+    ctx\source_type := description
+    if: source = 0 || physical = 0 || ctx\model = 0
+        return: 11
+    \source := (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+    int: status c.lmx_walk_value_foreign_capture(arena, source, c.LMX_TYPE_FOREIGN, abi, physical, ctx, out)
+    \source := (cast: (c.LmxScalarType9) 23)
+    c.free(source)
+    return: status
+
+fn: eg_live (@: arena c.LmxArena; @: value c.LmxWalkValue) int
+    if: value = 0 || value\present = 0 || value\scalar_abi = 0
+        return: 12
+    if: c.lmx_range_cell_pool(arena, (cast: (@: void) value\ref)) = 0
+        return: 13
+    if: value\model = 0 || c.lmx_range_cell_pool(arena, (cast: (@: void) value\model)) = 0
+        return: 14
+    if: value\physical_profile = 0 || c.lmx_range_cell_pool(arena, (cast: (@: void) value\physical_profile)) = 0
+        return: 15
+    @: model_profile c.Lmx c.lmx_range_profile(arena, (cast: (@: void) value\model))
+    @: physical_profile c.Lmx c.lmx_range_profile(arena, (cast: (@: void) value\physical_profile))
+    if: model_profile = 0 || physical_profile = 0 || c.lmx_range_cell_pool(arena, (cast: (@: void) model_profile)) = 0 || c.lmx_range_cell_pool(arena, (cast: (@: void) physical_profile)) = 0
+        return: 18
+    if: value\source_type = 0 || c.lmx_graph_scalar_source((cast: (const: @: c.LmxScalarABI) value\scalar_abi), (cast: (@: void) value\source_type)) = 0
+        return: 16
+    @: read c.LmxScalarType9 (cast: (@: c.LmxScalarType9) value\ref)
+    if: \read != (cast: (c.LmxScalarType9) 1) + c.DBL_EPSILON
+        return: 17
+    return: 0
+
+fn: eg_route (@: arena c.LmxArena; const: (@: abi c.LmxScalarABI); @: description void; int: route) int
+    c.LmxWalkValue: value
+    c.LmxActivation: act
+    c.LmxWalkFrame: frame
+    c.LmxWalkWork: work
+    c.LmxExecutionRoots: roots
+    c.LmxExecutionRoots: younger
+    @: f c.LmxWalkFrame @ frame
+    @: w c.LmxWalkWork @ work
+    @: v c.LmxWalkValue @ value
+    @: mark c.LmxExecutionRoots c.lmx_execution_roots_mark(arena)
+    @: orphan void 0
+    int: status eg_snapshot(arena, abi, description, v)
+    if: status != 0
+        return: 21
+    orphan := c.lmx_arena_scalar_cells_profiled(arena, c.LMX_TYPE_FOREIGN, 0, abi, 1U)
+    if: orphan = 0
+        return: 22
+    c.memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
+    c.memset((cast: (@: void) w), 0, c.sizeof(c.LmxWalkWork))
+    if: route = 0
+        status := c.lmx_activation_push(arena, @ act, 2, 0, 0, (cast: (@: void) v), 1U, 0)
+    else:
+        if: route = 1
+            c.memcpy((cast: (@: void) (@ w\value)), (cast: (@: void) v), c.sizeof(c.LmxWalkValue))
+            f\work := w
+            f\nwork := 1U
+            status := c.lmx_activation_push(arena, @ act, 1, 0, 0, 0, 0U, (cast: (@: void) f))
+        else:
+            c.lmx_execution_roots_push(arena, @ roots, (cast: (@: void) v), 1U, 0, 0U, 0, 0)
+            c.lmx_execution_roots_push(arena, @ younger, 0, 0U, 0, 0U, 0, 0)
+        ---
+    ---
+    if: status = 0
+        status := eg_sweep(arena)
+    if: status = 0
+        status := eg_live(arena, v)
+    if: status = 0 && c.lmx_range_cell_pool(arena, orphan) != 0
+        status := 23
+    if: route < 2
+        c.lmx_activation_pop(arena, @ act)
+    else:
+        # Keep the younger span while removing its older neighbour.
+        c.lmx_execution_roots_remove(arena, @ roots)
+    ---
+    if: status = 0
+        status := eg_sweep(arena)
+    if: status = 0 && (c.lmx_range_cell_pool(arena, (cast: (@: void) v\ref)) != 0 || c.lmx_range_cell_pool(arena, (cast: (@: void) v\model)) != 0)
+        status := 24
+    c.lmx_execution_roots_restore(arena, mark)
+    if: arena\activation != 0 || arena\execution_roots != mark
+        return: 25
+    return: status
+
+# GC runs inside the real selected native entry, with data distinct from code.
+# The callback never manually marks either data or its input snapshot.
+fn: eg_native_entry (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: data c.Lmx (cast: (@: c.Lmx) owner)
+    if: owner = (cast: (@: void) code) || nargs != 1U || inputs = 0 || dest = 0 || out = 0
+        return: 31
+    if: eg_sweep(arena) != c.LMX_GC_OK
+        return: 32
+    if: c.lmx_range_cell_pool(arena, owner) = 0 || eg_live(arena, inputs) != 0
+        return: 33
+    @: number void c.lmx_arena_ref_value(data, 0U)
+    if: number = 0 || c.lmx_int_value_known(number) != 73
+        return: 34
+    @: answer int (cast: (@: int) dest)
+    \answer := 7
+    out[0] := dest
+    return: c.lmx_walk_value_num(result, c.LMX_TYPE_INT, 7U)
+
+fn: eg_native (@: arena c.LmxArena; const: (@: abi c.LmxScalarABI); @: description void) int
+    c.LmxWalkValue: value
+    c.LmxWalkValue: result
+    @: v c.LmxWalkValue @ value
+    @: code c.Lmx eg_node(arena)
+    @: data c.Lmx eg_node(arena)
+    @: number int c.lmx_int_new_owned(arena)
+    @@: output void c.calloc(1U, sizeof(@: void))
+    @: answer int c.calloc(1U, c.sizeof(c.int))
+    if: code = 0 || data = 0 || number = 0 || output = 0 || answer = 0 || eg_snapshot(arena, abi, description, v) != 0
+        return: 35
+    \number := 73
+    if: c.lmx_arena_refs_open_owned(arena, data, 1U) != 0 || c.lmx_arena_ref_store(arena, data, 0U, (cast: (@: void) number)) != 0
+        return: 36
+    code\native := (cast: (c.LmxEntry) c.eg_native_entry)
+    if: c.lmx_call_prim_values(arena, code, data, 0, 1U, (cast: (@: void) answer), output, v, @ result) != 0 || \answer != 7
+        return: 37
+    if: arena\activation != 0 || arena\execution_roots != 0
+        return: 38
+    if: eg_sweep(arena) != c.LMX_GC_OK
+        return: 39
+    if: c.lmx_range_cell_pool(arena, (cast: (@: void) data)) != 0 || c.lmx_range_cell_pool(arena, (cast: (@: void) v\ref)) != 0
+        return: 40
+    c.free(answer)
+    c.free(output)
+    return: 0
+
+# Only observation tokens live in this foreign C buffer. The graph holds its
+# opaque address, never its contents, so saved snapshot pointers are not roots.
+fn: eg_state (@: owner void) @@: void
+    @: data c.Lmx (cast: (@: c.Lmx) owner)
+    return: (cast: (@@: void) c.lmx_charptr_value_known(c.lmx_arena_ref_value(data, 1U)))
+
+fn: eg_box_live (@: arena c.LmxArena; @@: state void) int
+    if: c.lmx_range_cell_pool(arena, state[1]) = 0 || c.lmx_range_cell_pool(arena, state[2]) = 0 || c.lmx_range_cell_pool(arena, state[3]) = 0
+        return: 51
+    if: c.lmx_arena_ref_value((cast: (@: c.Lmx) state[2]), 0U) != state[1]
+        return: 52
+    return: eg_live(arena, c.lmx_value_cell_context(arena, state[1]))
+
+fn: eg_make_box (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @@: state void eg_state(owner)
+    @: data c.Lmx (cast: (@: c.Lmx) owner)
+    @: box c.Lmx eg_node(arena)
+    c.LmxWalkValue: snapshot
+    @: v c.LmxWalkValue @ snapshot
+    if: nargs != 0U || box = 0 || c.lmx_walk_value_load(arena, c.lmx_arena_ref_value(data, 0U), c.LMX_TYPE_FOREIGN, v) != 0
+        return: c.LMX_PRIMITIVE_FAIL
+    if: c.lmx_arena_refs_open_owned(arena, box, 1U) != 0 || c.lmx_arena_ref_store(arena, box, 0U, (cast: (@: void) v\ref)) != 0 || c.lmx_arena_ref_store(arena, data, 0U, 0) != 0
+        return: c.LMX_PRIMITIVE_FAIL
+    state[1] := (cast: (@: void) v\ref)
+    state[2] := (cast: (@: void) box)
+    state[3] := (cast: (@: void) v\model)
+    if: c.lmx_walk_value_ref(result, c.LMX_TYPE_LMX, (cast: (@: void) box)) != 0
+        return: c.LMX_PRIMITIVE_FAIL
+    result\model := (cast: (@: c.Lmx) v\model)
+    out[0] := (cast: (@: void) box)
+    return: c.LMX_PRIMITIVE_OK
+
+fn: eg_collect_actual (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @@: state void eg_state(owner)
+    @: saved c.LmxWalkValue c.lmx_value_cell_context(arena, state[1])
+    @: scratch c.LmxScratch (cast: (@: c.LmxScratch) state[7])
+    @: number int (cast: (@: int) dest)
+    if: nargs != 0U || saved = 0 || scratch = 0 || number = 0
+        return: c.LMX_PRIMITIVE_FAIL
+    state[4] := c.lmx_arena_scalar_cells_profiled(arena, c.LMX_TYPE_FOREIGN, 0, (cast: (const: @: c.LmxScalarABI) saved\scalar_abi), 1U)
+    if: state[4] = 0 || c.lmx_scratch_take(scratch, sizeof(@: void), state + 6) != 0
+        return: c.LMX_PRIMITIVE_FAIL
+    # A pointer-looking scratch metadata word must not retain this orphan.
+    @@: metadata void (cast: (@@: void) state[6])
+    metadata[0] := state[4]
+    if: eg_sweep(arena) != 0 || eg_box_live(arena, state) != 0 || c.lmx_range_cell_pool(arena, state[4]) != 0
+        return: c.LMX_PRIMITIVE_FAIL
+    \number := 7
+    out[0] := dest
+    return: c.lmx_walk_value_num(result, c.LMX_TYPE_INT, 7U)
+
+fn: eg_take_actuals (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @@: state void eg_state(owner)
+    @: first c.LmxWalkValue inputs
+    @: second c.LmxWalkValue inputs + 1
+    @: seen int (cast: (@: int) state[5])
+    @: answer int (cast: (@: int) dest)
+    if: nargs != 2U || inputs = 0 || answer = 0 || first\ref != state[2] || (cast: (@: void) first\model) != state[3] || second\number != 7 || eg_box_live(arena, state) != 0
+        return: c.LMX_PRIMITIVE_FAIL
+    \seen := 7
+    \answer := 7
+    out[0] := dest
+    return: c.lmx_walk_value_num(result, c.LMX_TYPE_INT, 7U)
+
+fn: eg_header (@: arena c.LmxArena; @: parent c.Lmx; size_t: count; @: first void; @: second void) @: c.Lmx
+    @: header c.Lmx c.lmx_walk_plain(arena, parent, count)
+    size_t: i 0U
+    while: header != 0 && i < count
+        @: entry c.Lmx c.lmx_walk_plain(arena, header, 2U)
+        @: witness void first
+        if: i != 0U
+            witness := second
+        if: entry = 0 || c.lmx_graph_ref_store_in(arena, entry, 1U, witness) != 0 || c.lmx_graph_ref_store_in(arena, header, i, entry) != 0
+            return: (cast: (@: c.Lmx) 0)
+        i := i + 1U
+    return: header
+
+fn: eg_primitive (@: arena c.LmxArena; @: parent c.Lmx; @: owner c.Lmx; c.LmxPrimitiveEntry: entry; size_t: count; @: first void; @: second void; @: witness void) @: c.Lmx
+    @: signature c.Lmx c.lmx_walk_plain(arena, parent, 2U)
+    @: args c.Lmx eg_header(arena, signature, count, first, second)
+    @: returns c.Lmx eg_header(arena, signature, 1U, witness, 0)
+    @: record c.LmxPrimitive (cast: (@: c.LmxPrimitive) c.lmx_arena_take(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    @: frame c.Lmx c.lmx_walk_frame(arena, parent, c.LMX_WALK_OP_PRIM, 3U + count)
+    if: signature = 0 || args = 0 || returns = 0 || record = 0 || frame = 0
+        return: (cast: (@: c.Lmx) 0)
+    record\fn := entry
+    record\signature := signature
+    record\owner := owner
+    if: c.lmx_graph_ref_store_in(arena, signature, 0U, args) != 0 || c.lmx_graph_ref_store_in(arena, signature, 1U, returns) != 0 || c.lmx_graph_ref_store_in(arena, frame, 1U, (cast: (@: void) record)) != 0
+        return: (cast: (@: c.Lmx) 0)
+    return: frame
+
+# The first actual creates an owned snapshot and detaches its giving field;
+# the second collects. Only the pending argument vector retains the new box.
+# mode1 also exercises a public standalone frame, before any Walk activation.
+fn: eg_walk_pending (@: arena c.LmxArena; const: (@: abi c.LmxScalarABI); @: description void; int: mode) int
+    c.LmxScratch: scratch
+    c.LmxPool: cells
+    c.LmxWalkContext: context
+    c.LmxWalkFrame: frame
+    c.LmxWalkValue: original
+    c.LmxWalkValue: result
+    @: s c.LmxScratch @ scratch
+    @: cx c.LmxWalkContext @ context
+    @: f c.LmxWalkFrame @ frame
+    @: v c.LmxWalkValue @ original
+    @: code c.Lmx eg_node(arena)
+    @: data c.Lmx eg_node(arena)
+    @@: state void c.calloc(8U, sizeof(@: void))
+    @: seen int c.calloc(1U, c.sizeof(c.int))
+    @: opaque void c.lmx_charptr_new_owned(arena)
+    @: int_witness void c.lmx_int_new_owned(arena)
+    @: ref_witness void c.lmx_pointer_new_owned(c.LMX_TYPE_LMX, arena)
+    int: status 0
+    c.memset((cast: (@: void) s), 0, c.sizeof(c.LmxScratch))
+    c.memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    c.memset((cast: (@: void) cx), 0, c.sizeof(c.LmxWalkContext))
+    c.memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
+    if: code = 0 || data = 0 || state = 0 || seen = 0 || opaque = 0 || int_witness = 0 || ref_witness = 0 || eg_snapshot(arena, abi, description, v) != 0
+        return: 61
+    state[5] := (cast: (@: void) seen)
+    state[7] := (cast: (@: void) s)
+    if: c.lmx_arena_refs_open_owned(arena, code, 1U) != 0 || c.lmx_arena_refs_open_owned(arena, data, 2U) != 0 || c.lmx_charptr_store_known(opaque, (cast: (@: char) state)) != 0 || c.lmx_arena_ref_store(arena, data, 0U, (cast: (@: void) v\ref)) != 0 || c.lmx_arena_ref_store(arena, data, 1U, opaque) != 0
+        return: 62
+    @: make c.Lmx eg_primitive(arena, code, data, (cast: (c.LmxPrimitiveEntry) c.eg_make_box), 0U, 0, 0, ref_witness)
+    @: collect c.Lmx eg_primitive(arena, code, data, (cast: (c.LmxPrimitiveEntry) c.eg_collect_actual), 0U, 0, 0, int_witness)
+    @: take c.Lmx eg_primitive(arena, code, data, (cast: (c.LmxPrimitiveEntry) c.eg_take_actuals), 2U, ref_witness, int_witness, int_witness)
+    if: make = 0 || collect = 0 || take = 0 || c.lmx_graph_ref_store_in(arena, take, 3U, make) != 0 || c.lmx_graph_ref_store_in(arena, take, 4U, collect) != 0 || c.lmx_graph_ref_store_in(arena, code, 0U, take) != 0 || c.lmx_scratch_open(s, arena, @ cells, 8U) != 0
+        return: 63
+    cx\arena := arena
+    cx\scratch := s
+    if: mode = 0
+        status := c.lmx_walk_activate_parts_values(cx, code, code, code, data, 0, 0U, 0, @ result)
+    else:
+        status := c.lmx_walk_enter_parts_values(f, cx, code, code, code, data, 0, 0U, 0)
+        if: status = 0
+            status := c.lmx_walk_eval(f, take, @ result)
+    ---
+    if: status != 0 || \seen != 7 || arena\activation != 0 || arena\execution_roots != 0 || s\top != 0U
+        return: 64 + mode
+    if: c.lmx_scratch_close(s) != 0 || eg_sweep(arena) != 0
+        return: 66
+    if: c.lmx_range_cell_pool(arena, state[1]) != 0 || c.lmx_range_cell_pool(arena, state[2]) != 0
+        return: 67
+    c.free(seen)
+    c.free(state)
+    return: 0
+
+fn: eg_roots_check () int
+    c.LmxArena: arena
+    @: graph c.LmxGraph 0
+    @@: description void c.calloc(1U, sizeof(@: void))
+    const: (@: abi c.LmxScalarABI 0)
+    int: route 0
+    int: status 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: description = 0 || c.lmx_arena_open(@ arena) != 0
+        return: 41
+    graph := c.lmx_graph_open(@ arena)
+    abi := c.lmx_graph_scalar_binding(c.lmx_graph_intern("double", 6U), description)
+    if: graph = 0 || abi = 0 || description[0] = 0
+        return: 42
+    while: route < 3 && status = 0
+        status := eg_route(@ arena, abi, description[0], route)
+        route := route + 1
+    if: status = 0
+        status := eg_native(@ arena, abi, description[0])
+    if: status = 0
+        status := eg_walk_pending(@ arena, abi, description[0], 0)
+    if: status = 0
+        status := eg_walk_pending(@ arena, abi, description[0], 1)
+    c.lmx_graph_close(graph)
+    c.lmx_arena_release(@ arena)
+    c.free(description)
+    if: status != 0
+        return: status
+    return: 7

@@ -16,6 +16,67 @@ predef: "l2src/lmx_chars.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<string.h>" "<limits.h>"
 
+# A pending Value vector and its root descriptor share one existing scratch
+# allocation. Both leave only when the owning operation rewinds its mark.
+fn: lmx_walk_value_vector (@: arena c.LmxArena; @: scratch c.LmxScratch; size_t: count; @@: out c.LmxWalkValue) int
+    @: room void 0
+    @: values c.LmxWalkValue 0
+    @: roots c.LmxExecutionRoots 0
+    size_t: bytes 0U
+    int: status
+    if: arena = 0 || scratch = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    out[0] := 0
+    if: count = 0U
+        return: c.LMX_WALK_OK
+    if: count > ((cast: (size_t) -1) - c.sizeof(c.LmxExecutionRoots)) / c.sizeof(c.LmxWalkValue)
+        return: c.LMX_WALK_NOMEM
+    bytes := count * c.sizeof(c.LmxWalkValue)
+    status := c.lmx_scratch_take(scratch, bytes + c.sizeof(c.LmxExecutionRoots), @ room)
+    if: status != c.LMX_SCRATCH_OK
+        if: status = c.LMX_SCRATCH_NOMEM
+            return: c.LMX_WALK_NOMEM
+        return: c.LMX_WALK_INVALID
+    c.memset(room, 0, bytes + c.sizeof(c.LmxExecutionRoots))
+    values := (cast: (@: c.LmxWalkValue) room)
+    # Value contains pointers and size_t, so its array end has the alignment
+    # of this descriptor's pointer/size_t fields too.
+    roots := (cast: (@: c.LmxExecutionRoots) ((cast: (@: char) room) + bytes))
+    c.lmx_execution_roots_push(arena, roots, room, count, 0, 0U, 0, 0)
+    roots\scratch := (cast: (@: void) scratch)
+    out[0] := values
+    return: c.LMX_WALK_OK
+
+fn: lmx_walk_ref_vector (@: arena c.LmxArena; @: scratch c.LmxScratch; size_t: count; @@@: out void) int
+    @: room void 0
+    @: pointer_probe void 0
+    @@: refs void 0
+    @: roots c.LmxExecutionRoots 0
+    size_t: bytes 0U
+    int: status
+    if: arena = 0 || scratch = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    out[0] := 0
+    if: count = 0U
+        return: c.LMX_WALK_OK
+    if: count > ((cast: (size_t) -1) - c.sizeof(c.LmxExecutionRoots)) / sizeof(pointer_probe)
+        return: c.LMX_WALK_NOMEM
+    bytes := count * sizeof(pointer_probe)
+    status := c.lmx_scratch_take(scratch, bytes + c.sizeof(c.LmxExecutionRoots), @ room)
+    if: status != c.LMX_SCRATCH_OK
+        if: status = c.LMX_SCRATCH_NOMEM
+            return: c.LMX_WALK_NOMEM
+        return: c.LMX_WALK_INVALID
+    c.memset(room, 0, bytes + c.sizeof(c.LmxExecutionRoots))
+    # The descriptor contains void pointers, so its array end is aligned for
+    # the following void* elements on the selected C ABI as well.
+    roots := (cast: (@: c.LmxExecutionRoots) room)
+    refs := (cast: (@@: void) ((cast: (@: char) room) + c.sizeof(c.LmxExecutionRoots)))
+    c.lmx_execution_roots_push(arena, roots, 0, 0U, refs, count, 0, 0)
+    roots\scratch := (cast: (@: void) scratch)
+    out[0] := refs
+    return: c.LMX_WALK_OK
+
 fn: lmx_walk_store_size (@: arena c.LmxArena; @: code c.Lmx; size_t: slot; size_t: value) int
     @: cell void (cast: (@: void) c.lmx_arena_take_profiled(arena, sizeof(value), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, c.lmx_range_profile(arena, (cast: (@: void) code))))
     if: cell = 0
@@ -3612,6 +3673,7 @@ fn: lmx_walk_activate_parts_values (@: context c.LmxWalkContext; @: code c.Lmx; 
     c.LmxActivation: act
     @: f c.LmxWalkFrame 0
     @: pm c.LmxScratchMark 0
+    @: roots_mark c.LmxExecutionRoots 0
     int: status
     int: a 0
     if: context = 0 || context\scratch = 0
@@ -3629,7 +3691,9 @@ fn: lmx_walk_activate_parts_values (@: context c.LmxWalkContext; @: code c.Lmx; 
         return: c.LMX_WALK_INVALID
     # Slice 254 (design 4.5): this activation's record joins the chain before its entry resolves its free inputs; it
     # leaves with the activation, below, whichever way the activation ends.
-    c.lmx_activation_push((cast: (@: c.LmxArena) context\arena), @ act, 1, code, args, 0, nargs, (cast: (@: void) f))
+    roots_mark := c.lmx_execution_roots_mark((cast: (@: c.LmxArena) context\arena))
+    c.memset((cast: (@: void) f), 0, c.sizeof(c.LmxWalkFrame))
+    c.lmx_activation_push((cast: (@: c.LmxArena) context\arena), @ act, 1, code, args, (cast: (@: void) values), nargs, (cast: (@: void) f))
     status := lmx_walk_enter_parts_values(f, context, code, body, source, data, args, nargs, values)
     # An output may be the caller's input record. Snapshot all inputs first;
     # no subsequent callee place borrows that record or its scalar storage.
@@ -3656,6 +3720,7 @@ fn: lmx_walk_activate_parts_values (@: context c.LmxWalkContext; @: code c.Lmx; 
     if: status >= c.LMX_WALK_THROWN && result != 0
         lmx_walk_value_ref(result, c.LMX_TYPE_LMX, (cast: (@: void) f\payload))
     ---
+    c.lmx_execution_roots_restore((cast: (@: c.LmxArena) context\arena), roots_mark)
     c.lmx_activation_pop((cast: (@: c.LmxArena) context\arena), @ act)
     if: c.lmx_scratch_rewind(scratch, pm) != c.LMX_SCRATCH_OK && (status = c.LMX_WALK_OK || status = c.LMX_WALK_STOPPED)
         status := c.LMX_WALK_INVALID
@@ -4009,7 +4074,7 @@ fn: lmx_walk_admit_op (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue
     return: lmx_walk_admit_in(f, 0, code, out)
 end: lmx_walk_admit_op
 
-fn: lmx_walk_admit_in (@: f c.LmxWalkFrame; @: receiver c.Lmx; @: code c.Lmx; @: out c.LmxWalkValue) int
+fn: lmx_walk_admit_in_body (@: f c.LmxWalkFrame; @: receiver c.Lmx; @: code c.Lmx; @: out c.LmxWalkValue) int
     c.LmxWalkFrame: space
     @: mf c.LmxWalkFrame f
     @: model c.Lmx 0
@@ -4018,7 +4083,10 @@ fn: lmx_walk_admit_in (@: f c.LmxWalkFrame; @: receiver c.Lmx; @: code c.Lmx; @:
     size_t: payload_from_letter 0U
     int: status
     int: answer
+    c.LmxExecutionRoots: output_roots
+    c.LmxExecutionRoots: model_roots
     lmx_walk_value_clear(out)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ output_roots, (cast: (@: void) out), 1U, 0, 0U, (cast: (@: void) code), 0)
     @: fields c.VoidArray @ code\array
     if: fields\size < 5U
         return: c.LMX_WALK_INVALID
@@ -4048,6 +4116,7 @@ fn: lmx_walk_admit_in (@: f c.LmxWalkFrame; @: receiver c.Lmx; @: code c.Lmx; @:
         return: status
     if: model = 0 || lmx_walk_kind(f, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_INVALID
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ model_roots, 0, 0U, 0, 0U, (cast: (@: void) model), 0)
     cell := c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U)
     if: cell != 0
         if: lmx_walk_load_numeric((cast: (@: c.LmxArena) f\arena), cell, @ payload_from_letter) != c.LMX_WALK_OK || payload_from_letter > 1U
@@ -4084,7 +4153,19 @@ fn: lmx_walk_admit_in (@: f c.LmxWalkFrame; @: receiver c.Lmx; @: code c.Lmx; @:
         return: answer
     f\payload := 0
     return: answer
-end: lmx_walk_admit_in
+end: lmx_walk_admit_in_body
+
+fn: lmx_walk_admit_in (@: f c.LmxWalkFrame; @: receiver c.Lmx; @: code c.Lmx; @: out c.LmxWalkValue) int
+    @: arena c.LmxArena 0
+    @: roots_mark c.LmxExecutionRoots 0
+    int: status
+    if: f = 0 || code = 0 || out = 0
+        return: c.LMX_WALK_INVALID
+    arena := (cast: (@: c.LmxArena) f\arena)
+    roots_mark := c.lmx_execution_roots_mark(arena)
+    status := lmx_walk_admit_in_body(f, receiver, code, out)
+    c.lmx_execution_roots_restore(arena, roots_mark)
+    return: status
 
 # Physical places, actual values, body/throw execution and capture use the same ABI.
 
@@ -4112,7 +4193,7 @@ fn: lmx_walk_shape_min (int: op) size_t
     return: 1U
 end: lmx_walk_shape_min
 
-fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: closed; @@: trail void; @: out c.LmxWalkPlace; @@: out_model c.Lmx; @@: out_holder c.Lmx; @: out_index size_t) int
+fn: lmx_walk_place_mode_in (@: f c.LmxWalkFrame; @: operand void; int: write; int: closed; @@: trail void; @: out c.LmxWalkPlace; @@: out_model c.Lmx; @@: out_holder c.Lmx; @: out_index size_t) int
     c.LmxWalkValue: holder
     @: holder_p c.LmxWalkValue @ holder
     @: code c.Lmx (cast: (@: c.Lmx) operand)
@@ -4140,9 +4221,16 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
     @: code_fields c.VoidArray 0
     @@: args void 0
     @: pointer_probe void 0
+    c.LmxExecutionRoots: holder_roots
+    c.LmxExecutionRoots: operand_roots
     if: f = 0 || operand = 0 || out = 0
         return: c.LMX_WALK_INVALID
     c.memset((cast: (@: void) out), 0, c.sizeof(c.LmxWalkPlace))
+    lmx_walk_value_clear(holder_p)
+    if: closed = 0
+        c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ holder_roots, (cast: (@: void) holder_p), 1U, 0, 0U, 0, 0)
+        c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ operand_roots, 0, 0U, 0, 0U, operand, (cast: (@: void) out))
+    ---
     if: out_model != 0
         out_model[0] := 0
     op := lmx_walk_node(f, operand)
@@ -4404,7 +4492,19 @@ fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: 
         ---
     ---
     return: lmx_walk_cell_place((cast: (@: c.LmxArena) f\arena), cell, (cast: (@: void) slot), out)
-end: lmx_walk_place_mode
+end: lmx_walk_place_mode_in
+
+fn: lmx_walk_place_mode (@: f c.LmxWalkFrame; @: operand void; int: write; int: closed; @@: trail void; @: out c.LmxWalkPlace; @@: out_model c.Lmx; @@: out_holder c.Lmx; @: out_index size_t) int
+    @: arena c.LmxArena 0
+    @: roots_mark c.LmxExecutionRoots 0
+    int: status
+    if: f = 0
+        return: c.LMX_WALK_INVALID
+    arena := (cast: (@: c.LmxArena) f\arena)
+    roots_mark := c.lmx_execution_roots_mark(arena)
+    status := lmx_walk_place_mode_in(f, operand, write, closed, trail, out, out_model, out_holder, out_index)
+    c.lmx_execution_roots_restore(arena, roots_mark)
+    return: status
 
 fn: lmx_walk_place (@: f c.LmxWalkFrame; @: operand void; int: write; @: out c.LmxWalkPlace) int
     return: lmx_walk_place_mode(f, operand, write, 0, 0, out, 0, 0, 0)
@@ -5057,13 +5157,9 @@ fn: lmx_walk_written_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
         return: c.LMX_WALK_INVALID
     if: transport_count > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue)
         return: c.LMX_WALK_NOMEM
-    status := c.lmx_scratch_take(scratch, transport_count * c.sizeof(c.LmxWalkValue), @ room)
-    if: status != c.LMX_SCRATCH_OK
-        if: status = c.LMX_SCRATCH_NOMEM
-            return: c.LMX_WALK_NOMEM
-        return: c.LMX_WALK_INVALID
-    values := (cast: (@: c.LmxWalkValue) room)
-    c.memset(room, 0, transport_count * c.sizeof(c.LmxWalkValue))
+    status := lmx_walk_value_vector(arena, scratch, transport_count, @ values)
+    if: status != c.LMX_WALK_OK
+        return: status
     while: i < written_count
         current := values + i
         named := 0
@@ -5205,14 +5301,9 @@ fn: lmx_walk_scatter_written (@: f c.LmxWalkFrame; @: selected_args c.Lmx; @: wr
     if: count > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue) || count > (cast: (size_t) -1) / c.sizeof(c.int)
         return: c.LMX_WALK_NOMEM
     if: count != 0U
-        scratch_status := c.lmx_scratch_take(scratch, count * c.sizeof(c.LmxWalkValue), @ room)
-        if: scratch_status != c.LMX_SCRATCH_OK
-            if: scratch_status = c.LMX_SCRATCH_NOMEM
-                return: c.LMX_WALK_NOMEM
-            return: c.LMX_WALK_INVALID
-        ---
-        values := (cast: (@: c.LmxWalkValue) room)
-        c.memset(room, 0, count * c.sizeof(c.LmxWalkValue))
+        status := lmx_walk_value_vector((cast: (@: c.LmxArena) f\arena), scratch, count, @ values)
+        if: status != c.LMX_WALK_OK
+            return: status
         scratch_status := c.lmx_scratch_take(scratch, count * c.sizeof(c.int), @ room)
         if: scratch_status != c.LMX_SCRATCH_OK
             if: scratch_status = c.LMX_SCRATCH_NOMEM
@@ -5345,10 +5436,9 @@ fn: lmx_walk_actuals_values (@: f c.LmxWalkFrame; @: code c.Lmx; size_t: first; 
         return: c.LMX_WALK_INVALID
     context := (cast: (@: c.LmxWalkContext) f\context)
     scratch := (cast: (@: c.LmxScratch) context\scratch)
-    if: c.lmx_scratch_take(scratch, n * c.sizeof(c.LmxWalkValue), @ room) != c.LMX_SCRATCH_OK
-        return: c.LMX_WALK_NOMEM
-    values := (cast: (@: c.LmxWalkValue) room)
-    c.memset(room, 0, n * c.sizeof(c.LmxWalkValue))
+    status := lmx_walk_value_vector((cast: (@: c.LmxArena) f\arena), scratch, n, @ values)
+    if: status != c.LMX_WALK_OK
+        return: status
     if: c.lmx_scratch_take(scratch, n * sizeof(pointer_probe), @ room) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_NOMEM
     refs := (cast: (@@: void) room)
@@ -5569,10 +5659,9 @@ fn: lmx_walk_throw (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) i
     if: n != 0U
         context := (cast: (@: c.LmxWalkContext) f\context)
         scratch := (cast: (@: c.LmxScratch) context\scratch)
-        if: c.lmx_scratch_take(scratch, n * c.sizeof(c.LmxWalkValue), @ room) != c.LMX_SCRATCH_OK
-            return: c.LMX_WALK_NOMEM
-        values := (cast: (@: c.LmxWalkValue) room)
-        c.memset(room, 0, n * c.sizeof(c.LmxWalkValue))
+        status := lmx_walk_value_vector((cast: (@: c.LmxArena) f\arena), scratch, n, @ values)
+        if: status != c.LMX_WALK_OK
+            return: status
         while: i < n
             child := c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), actuals, i)
             if: child = 0
@@ -5893,7 +5982,7 @@ end: lmx_walk_immutable
 # Select this call's actual code/data through the ordinary selection path.
 # A deferred receiving edge uses the same path BEFORE evaluating its raw
 # actual. Only graph occurrences are retained, never an early native word.
-fn: lmx_walk_select_call (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t: arg_at; @: raw_selector void; @: raw_data void; @: raw_contract void; @@: out_callee c.Lmx; @@: out_data c.Lmx; @@: out_contract c.Lmx; @@: out_tokens char; @@: out_place_map size_t) int
+fn: lmx_walk_select_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t: arg_at; @: raw_selector void; @: raw_data void; @: raw_contract void; @@: out_callee c.Lmx; @@: out_data c.Lmx; @@: out_contract c.Lmx; @@: out_tokens char; @@: out_place_map size_t) int
     c.LmxWalkValue: selected
     @: selected_p c.LmxWalkValue @ selected
     @: callee c.Lmx 0
@@ -5906,6 +5995,8 @@ fn: lmx_walk_select_call (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t: a
     @: context c.LmxWalkContext 0
     int: split_call 0
     int: status c.LMX_WALK_OK
+    c.LmxExecutionRoots: selected_roots
+    c.LmxExecutionRoots: contract_roots
     if: out_callee = 0 || out_data = 0 || out_contract = 0 || out_tokens = 0 || out_place_map = 0
         return: c.LMX_WALK_INVALID
     out_callee[0] := 0
@@ -5915,6 +6006,9 @@ fn: lmx_walk_select_call (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t: a
     out_place_map[0] := 0
     if: f = 0
         return: c.LMX_WALK_INVALID
+    lmx_walk_value_clear(selected_p)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ selected_roots, (cast: (@: void) selected_p), 1U, 0, 0U, (cast: (@: void) code), 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ contract_roots, 0, 0U, 0, 0U, raw_contract, 0)
     split_call := (cast: (int) (op = c.LMX_WALK_OP_EXEC))
     if: arg_at = 2U
         callee := c.lmx_graph_node_in((cast: (@: c.LmxArena) f\arena), raw_selector)
@@ -6003,7 +6097,19 @@ fn: lmx_walk_select_call (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t: a
     out_tokens[0] := tokens
     out_place_map[0] := place_map
     return: c.LMX_WALK_OK
-end: lmx_walk_select_call
+end: lmx_walk_select_call_in
+
+fn: lmx_walk_select_call (@: f c.LmxWalkFrame; @: code c.Lmx; int: op; size_t: arg_at; @: raw_selector void; @: raw_data void; @: raw_contract void; @@: out_callee c.Lmx; @@: out_data c.Lmx; @@: out_contract c.Lmx; @@: out_tokens char; @@: out_place_map size_t) int
+    @: arena c.LmxArena 0
+    @: roots_mark c.LmxExecutionRoots 0
+    int: status
+    if: f = 0
+        return: c.LMX_WALK_INVALID
+    arena := (cast: (@: c.LmxArena) f\arena)
+    roots_mark := c.lmx_execution_roots_mark(arena)
+    status := lmx_walk_select_call_in(f, code, op, arg_at, raw_selector, raw_data, raw_contract, out_callee, out_data, out_contract, out_tokens, out_place_map)
+    c.lmx_execution_roots_restore(arena, roots_mark)
+    return: status
 
 # The synchronous values dispatch shared by ordinary calls and a captured
 # receiver after its values have been materialized. Its caller owns the
@@ -6019,9 +6125,20 @@ fn: lmx_walk_dispatch_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lm
     size_t: key 0U
     int: said 0
     int: status c.LMX_WALK_OK
+    c.LmxExecutionRoots: temp_roots
+    c.LmxExecutionRoots: result_roots
+    c.LmxExecutionRoots: input_roots
+    @: roots_mark c.LmxExecutionRoots 0
+    @: entry_mark c.LmxExecutionRoots 0
     if: f = 0 || out = 0
         return: c.LMX_WALK_INVALID
     context := (cast: (@: c.LmxWalkContext) f\context)
+    roots_mark := c.lmx_execution_roots_mark((cast: (@: c.LmxArena) f\arena))
+    lmx_walk_value_clear(@ temp)
+    lmx_walk_value_clear(@ result_context)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ temp_roots, (cast: (@: void) (@ temp)), 1U, 0, 0U, (cast: (@: void) data), 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ result_roots, (cast: (@: void) (@ result_context)), 1U, @ raw, 1U, (cast: (@: void) callee), 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ input_roots, (cast: (@: void) values), n, refs, n, rtype, 0)
     # Actuals and publication may mutate the selected code or its native
     # word. Select dispatch at the boundary, after those effects, not from
     # a value cached while resolving the callee.
@@ -6031,8 +6148,10 @@ fn: lmx_walk_dispatch_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lm
         dest := lmx_walk_result_dest((cast: (@: c.LmxArena) f\arena), rtype, @ temp)
         lmx_walk_value_clear(@ result_context)
         # Slice 254: the native activation's record, child of this frame's.
+        entry_mark := c.lmx_execution_roots_mark((cast: (@: c.LmxArena) f\arena))
         c.lmx_activation_push((cast: (@: c.LmxArena) f\arena), @ act, 2, callee, refs, (cast: (@: void) values), n, 0)
         said := entry((cast: (@: void) data), refs, n, dest, @ raw, (cast: (@: c.LmxArena) f\arena), callee, values, @ result_context)
+        c.lmx_execution_roots_restore((cast: (@: c.LmxArena) f\arena), entry_mark)
         c.lmx_activation_pop((cast: (@: c.LmxArena) f\arena), @ act)
         if: c.lmx_msg_poll_escape() != 0
             status := c.LMX_WALK_STOPPED
@@ -6059,6 +6178,7 @@ fn: lmx_walk_dispatch_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lm
         status := lmx_walk_activate_values(context, callee, data, refs, n, values, out)
         context\split_entry := 0
     ---
+    c.lmx_execution_roots_restore((cast: (@: c.LmxArena) f\arena), roots_mark)
     return: status
 end: lmx_walk_dispatch_values
 
@@ -6400,6 +6520,8 @@ fn: lmx_call_bind_finish (@: arena c.LmxArena; @: code c.Lmx; size_t: count; siz
     size_t: j 0U
     int: answer c.LMX_IMPLEMENTS_UNKNOWN
     int: status c.LMX_WALK_OK
+    c.LmxExecutionRoots: bound_roots
+    @: roots_mark c.LmxExecutionRoots 0
     if: arena = 0 || code = 0 || written_count > count || (count != 0U && values = 0) || (written_count != 0U && (slots = 0 || plan = 0))
         return: c.LMX_WALK_INVALID
     status := c.lmx_callable_headers(arena, code, @ args, @ returns, @ answer)
@@ -6417,6 +6539,8 @@ fn: lmx_call_bind_finish (@: arena c.LmxArena; @: code c.Lmx; size_t: count; siz
     occupied := (cast: (@: int) c.calloc(count, c.sizeof(c.int)))
     if: bound = 0 || occupied = 0
         status := c.LMX_WALK_NOMEM
+    roots_mark := c.lmx_execution_roots_mark(arena)
+    c.lmx_execution_roots_push(arena, @ bound_roots, (cast: (@: void) bound), count, 0, 0U, (cast: (@: void) code), 0)
     while: status = c.LMX_WALK_OK && i < written_count
         j := plan[i]
         if: slots[i] >= count || j >= count || occupied[j] != 0
@@ -6435,6 +6559,7 @@ fn: lmx_call_bind_finish (@: arena c.LmxArena; @: code c.Lmx; size_t: count; siz
     ---
     if: status = c.LMX_WALK_OK
         c.memcpy((cast: (@: void) values), (cast: (@: void) bound), count * c.sizeof(c.LmxWalkValue))
+    c.lmx_execution_roots_restore(arena, roots_mark)
     c.free((cast: (@: void) occupied))
     c.free((cast: (@: void) bound))
     return: status
@@ -6807,9 +6932,9 @@ fn: lmx_walk_whole_routes (@: f c.LmxWalkFrame; @: whole c.Lmx; size_t: routes; 
     if: c.lmx_scratch_take(scratch, routes * c.sizeof(c.int), @ room) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_NOMEM
     types := (cast: (@: int) room)
-    if: c.lmx_scratch_take(scratch, routes * sizeof(pointer_probe), @ room) != c.LMX_SCRATCH_OK
-        return: c.LMX_WALK_NOMEM
-    codes := (cast: (@@: void) room)
+    status := lmx_walk_ref_vector(arena, scratch, routes, @ codes)
+    if: status != c.LMX_WALK_OK
+        return: status
     while: r < routes
         status := lmx_walk_load_numeric(arena, c.lmx_graph_value_in(arena, whole, 3U + names + 3U * r), @ formal)
         if: status != c.LMX_WALK_OK
@@ -6840,7 +6965,7 @@ end: lmx_walk_whole_routes
 # checks the form against the selected callable's args part and receives each formal from the field of its name
 # (lmx_call_bind_whole: the implicit `call`, `convert` or `implements` before the body), the suffix operands are evaluated,
 # and the ready phase lays the formals the binder supplied with the suffix inputs (lmx_walk_selected_ready_values).
-fn: lmx_walk_whole_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; @: data c.Lmx; size_t: first; size_t: transport_count; @: contract_inputs c.Lmx; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
+fn: lmx_walk_whole_values_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; @: data c.Lmx; size_t: first; size_t: transport_count; @: contract_inputs c.Lmx; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t; @: value_roots c.LmxExecutionRoots) int
     @: arena c.LmxArena 0
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
@@ -6880,6 +7005,8 @@ fn: lmx_walk_whole_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; 
     values_out[0] := 0
     out_count[0] := 0U
     arena := (cast: (@: c.LmxArena) f\arena)
+    lmx_walk_value_clear(value_p)
+    c.lmx_execution_roots_push(arena, value_roots, (cast: (@: void) value_p), 1U, 0, 0U, (cast: (@: void) callee), 0)
     context := (cast: (@: c.LmxWalkContext) f\context)
     scratch := (cast: (@: c.LmxScratch) context\scratch)
     if: arena = 0 || scratch = 0 || c.lmx_graph_node_in(arena, (cast: (@: void) code)) = 0
@@ -6981,13 +7108,9 @@ fn: lmx_walk_whole_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; 
     if: nformals > (cast: (size_t) -1) / c.sizeof(c.LmxWalkValue)
         return: c.LMX_WALK_NOMEM
     if: nformals != 0U
-        scratch_status := c.lmx_scratch_take(scratch, nformals * c.sizeof(c.LmxWalkValue), @ room)
-        if: scratch_status != c.LMX_SCRATCH_OK
-            if: scratch_status = c.LMX_SCRATCH_NOMEM
-                return: c.LMX_WALK_NOMEM
-            return: c.LMX_WALK_INVALID
-        whole_values := (cast: (@: c.LmxWalkValue) room)
-        c.memset(room, 0, nformals * c.sizeof(c.LmxWalkValue))
+        status := lmx_walk_value_vector(arena, scratch, nformals, @ whole_values)
+        if: status != c.LMX_WALK_OK
+            return: status
     ---
     status := lmx_call_bind_whole(arena, callee, data, nformals, value_p, whole_values, routes, route_formals, route_types, route_codes)
     if: status >= c.LMX_WALK_THROWN
@@ -6996,13 +7119,9 @@ fn: lmx_walk_whole_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; 
     if: status != c.LMX_WALK_OK
         return: status
     # The suffix: the hidden inputs the EXEC carries after the written operand, evaluated as any selected call's.
-    scratch_status := c.lmx_scratch_take(scratch, transport_count * c.sizeof(c.LmxWalkValue), @ room)
-    if: scratch_status != c.LMX_SCRATCH_OK
-        if: scratch_status = c.LMX_SCRATCH_NOMEM
-            return: c.LMX_WALK_NOMEM
-        return: c.LMX_WALK_INVALID
-    written := (cast: (@: c.LmxWalkValue) room)
-    c.memset(room, 0, transport_count * c.sizeof(c.LmxWalkValue))
+    status := lmx_walk_value_vector(arena, scratch, transport_count, @ written)
+    if: status != c.LMX_WALK_OK
+        return: status
     i := 1U
     while: i < transport_count
         current := written + i
@@ -7022,7 +7141,18 @@ fn: lmx_walk_whole_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; 
     if: status != c.LMX_WALK_OK
         return: status
     return: lmx_walk_selected_ready_values(f, code, callee, inputs, binding_p, first, transport_count, 1U, sources, width, written, refs_out, values_out, out_count, whole_values, nformals)
-end: lmx_walk_whole_values
+end: lmx_walk_whole_values_in
+
+fn: lmx_walk_whole_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; @: data c.Lmx; size_t: first; size_t: transport_count; @: contract_inputs c.Lmx; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
+    c.LmxExecutionRoots: value_roots
+    int: status
+    c.memset((cast: (@: void) (@ value_roots)), 0, c.sizeof(c.LmxExecutionRoots))
+    status := lmx_walk_whole_values_in(f, code, callee, data, first, transport_count, contract_inputs, refs_out, values_out, out_count, @ value_roots)
+    # Only the local borrow ends. Returned pending vectors still belong to
+    # the outer call mark, so unlink without truncating their younger spans.
+    if: f != 0
+        c.lmx_execution_roots_remove((cast: (@: c.LmxArena) f\arena), @ value_roots)
+    return: status
 
 fn: lmx_walk_selected_values (@: f c.LmxWalkFrame; @: code c.Lmx; @: callee c.Lmx; @: data c.Lmx; size_t: first; size_t: transport_count; int: op; @: contract_inputs c.Lmx; @@@: refs_out void; @@: values_out c.LmxWalkValue; @: out_count size_t) int
     @: context c.LmxWalkContext 0
@@ -7166,6 +7296,9 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
     @: callee_pool c.LmxPool 0
+    c.LmxExecutionRoots: callee_roots
+    c.LmxExecutionRoots: data_roots
+    c.LmxExecutionRoots: contract_roots
     lmx_walk_value_clear(out)
     if: f = 0
         return: c.LMX_WALK_INVALID
@@ -7180,6 +7313,9 @@ fn: lmx_walk_call_in (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue)
     if: status != c.LMX_WALK_OK
         return: status
     callee_pool := c.lmx_range_cell_pool((cast: (@: c.LmxArena) f\arena), (cast: (@: void) callee))
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ callee_roots, 0, 0U, 0, 0U, (cast: (@: void) callee), 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ data_roots, 0, 0U, 0, 0U, (cast: (@: void) data), 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ contract_roots, 0, 0U, 0, 0U, (cast: (@: void) contract), 0)
     if: callee_pool != 0 && callee_pool\role = c.LMX_POOL_ROLE_FN
         selected_signature := 1
     # A nullary EXEC with no static contract takes its interface from
@@ -7343,6 +7479,9 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     c.LmxScratchMark: mark
     @: context c.LmxWalkContext 0
     @: scratch c.LmxScratch 0
+    @: roots_mark c.LmxExecutionRoots 0
+    c.LmxExecutionRoots: code_roots
+    @: code_roots_p c.LmxExecutionRoots @ code_roots
     int: status
     lmx_walk_value_clear(out)
     if: f = 0 || f\context = 0
@@ -7351,7 +7490,11 @@ fn: lmx_walk_call (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     scratch := (cast: (@: c.LmxScratch) context\scratch)
     if: c.lmx_scratch_mark(scratch, @ mark) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
+    roots_mark := c.lmx_execution_roots_mark((cast: (@: c.LmxArena) f\arena))
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ code_roots, 0, 0U, 0, 0U, (cast: (@: void) code), 0)
+    code_roots_p\scratch := (cast: (@: void) scratch)
     status := lmx_walk_call_in(f, code, out)
+    c.lmx_execution_roots_restore((cast: (@: c.LmxArena) f\arena), roots_mark)
     if: c.lmx_scratch_rewind(scratch, @ mark) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status := c.LMX_WALK_INVALID
     return: status
@@ -7360,6 +7503,11 @@ end: lmx_walk_call
 fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) int
     c.LmxActivation: prim_act
     c.LmxScratchMark: mark
+    @: roots_mark c.LmxExecutionRoots 0
+    @: entry_mark c.LmxExecutionRoots 0
+    c.LmxExecutionRoots: result_roots
+    c.LmxExecutionRoots: temp_roots
+    @: temp_roots_p c.LmxExecutionRoots @ temp_roots
     c.LmxWalkValue: temp
     @: temp_p c.LmxWalkValue @ temp
     c.LmxWalkValue: result_context
@@ -7421,6 +7569,12 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
     # A source-backed primitive evaluates its actuals in the written order of
     # its source body (lmx_walk_prim_source_order); one or no actual has no
     # order to keep. The two index arrays live under this step's mark.
+    roots_mark := c.lmx_execution_roots_mark((cast: (@: c.LmxArena) f\arena))
+    lmx_walk_value_clear(@ temp)
+    lmx_walk_value_clear(@ result_context)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ result_roots, (cast: (@: void) (@ result_context)), 1U, @ raw, 1U, target, 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ temp_roots, (cast: (@: void) (@ temp)), 1U, 0, 0U, (cast: (@: void) code), 0)
+    temp_roots_p\scratch := (cast: (@: void) scratch)
     if: n > 1U && c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 2U) != 0
         if: n > (cast: (size_t) -1) / sizeof(n) / 2U || c.lmx_scratch_take(scratch, n * sizeof(n), @ room) != c.LMX_SCRATCH_OK || room = 0
             status := c.LMX_WALK_NOMEM
@@ -7443,8 +7597,10 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
         dest := lmx_walk_result_dest((cast: (@: c.LmxArena) f\arena), witness, @ temp)
         lmx_walk_value_clear(@ result_context)
         c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) record\fn)
+        entry_mark := c.lmx_execution_roots_mark((cast: (@: c.LmxArena) f\arena))
         c.lmx_activation_push((cast: (@: c.LmxArena) f\arena), @ prim_act, 2, code, refs, (cast: (@: void) values), n, 0)
         said := entry((cast: (@: void) record\owner), refs, n, dest, @ raw, (cast: (@: c.LmxArena) f\arena), code, values, @ result_context)
+        c.lmx_execution_roots_restore((cast: (@: c.LmxArena) f\arena), entry_mark)
         c.lmx_activation_pop((cast: (@: c.LmxArena) f\arena), @ prim_act)
         if: c.lmx_msg_poll_escape() != 0
             status := c.LMX_WALK_STOPPED
@@ -7478,6 +7634,7 @@ fn: lmx_walk_prim (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkValue) in
         f\payload := raw
         lmx_walk_value_ref(out, c.LMX_TYPE_LMX, raw)
     ---
+    c.lmx_execution_roots_restore((cast: (@: c.LmxArena) f\arena), roots_mark)
     if: c.lmx_scratch_rewind(scratch, @ mark) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status := c.LMX_WALK_INVALID
     return: status
@@ -7559,7 +7716,7 @@ fn: lmx_walk_field_target (@: f c.LmxWalkFrame; @: code c.Lmx; @: out c.LmxWalkP
     return: status
 end: lmx_walk_field_target
 
-fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalkValue) int
+fn: lmx_walk_eval_result_in (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalkValue) int
     c.LmxWalkValue: value
     @: value_p c.LmxWalkValue @ value
     c.LmxWalkValue: other
@@ -7593,8 +7750,15 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
     @: root_fields c.VoidArray 0
     @@: args void 0
     @: frame_result c.LmxWalkValue 0
+    c.LmxExecutionRoots: value_roots
+    @: value_roots_p c.LmxExecutionRoots @ value_roots
+    c.LmxExecutionRoots: other_roots
+    c.LmxExecutionRoots: place_roots
     if: f = 0 || operand = 0 || out = 0
         return: c.LMX_WALK_INVALID
+    lmx_walk_value_clear(@ value)
+    lmx_walk_value_clear(@ other)
+    c.memset((cast: (@: void) (@ place)), 0, c.sizeof(c.LmxWalkPlace))
     lmx_walk_value_clear(out)
     op := lmx_walk_node(f, operand)
     if: op = c.LMX_WALK_OP_UNKNOWN || op = c.LMX_WALK_OP_SOURCE_MACHINE
@@ -7632,6 +7796,9 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
                 return: c.LMX_WALK_INVALID
             return: lmx_walk_value_lit(out, c.lmx_size_value_known(root), (cast: (int) suffix))
         return: lmx_walk_value_cell((cast: (@: c.LmxArena) f\arena), root, out)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ value_roots, (cast: (@: void) (@ value)), 1U, 0, 0U, 0, 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ other_roots, (cast: (@: void) (@ other)), 1U, 0, 0U, 0, 0)
+    c.lmx_execution_roots_push((cast: (@: c.LmxArena) f\arena), @ place_roots, 0, 0U, 0, 0U, operand, (cast: (@: void) (@ place)))
     # [guard, source, continuation] (lmx_walk.h.lm1): the source once; an absent one leaves the guard's value absent.
     if: op = c.LMX_WALK_OP_GUARD
         if: code_fields\size != 3U
@@ -7749,6 +7916,7 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         ---
         if: status != c.LMX_WALK_OK
             return: status
+        value_roots_p\held := (cast: (@: void) wholder)
         if: place_p\descriptor != 0
             if: lmx_walk_immutable(f, (cast: (@: void) place_p\storage)) != 0
                 return: c.LMX_WALK_INVALID
@@ -7789,6 +7957,7 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
         status := lmx_walk_slot_place(f, code, 1U, 1, @ wholder, @ index, @ slot)
         if: status != c.LMX_WALK_OK
             return: status
+        value_roots_p\held := (cast: (@: void) wholder)
         status := lmx_walk_eval(f, c.lmx_graph_value_in((cast: (@: c.LmxArena) f\arena), code, 3U), @ value)
         if: status != c.LMX_WALK_OK
             return: status
@@ -8059,7 +8228,21 @@ fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalk
     if: op = c.LMX_WALK_OP_PAD
         return: c.LMX_WALK_OK
     return: c.LMX_WALK_INVALID
-end: lmx_walk_eval_result
+end: lmx_walk_eval_result_in
+
+# The inner operation's local Values are borrowed only while it runs. Restore
+# is pure: it never follows the expired inner spans or performs collection.
+fn: lmx_walk_eval_result (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalkValue) int
+    @: arena c.LmxArena 0
+    @: roots_mark c.LmxExecutionRoots 0
+    int: status
+    if: f = 0
+        return: c.LMX_WALK_INVALID
+    arena := (cast: (@: c.LmxArena) f\arena)
+    roots_mark := c.lmx_execution_roots_mark(arena)
+    status := lmx_walk_eval_result_in(f, operand, out)
+    c.lmx_execution_roots_restore(arena, roots_mark)
+    return: status
 
 fn: lmx_walk_eval (@: f c.LmxWalkFrame; @: operand void; @: out c.LmxWalkValue) int
     c.LmxWalkValue: result
@@ -8767,9 +8950,12 @@ fn: lmx_walk_call_held_values (@: arena c.LmxArena; @: code c.Lmx; @@: source_re
     size_t: i written
     int: said 0
     int: status lmx_walk_call_rows(arena, code, source_refs, supplied, written, rows)
+    c.LmxExecutionRoots: row_roots
+    @: roots_mark c.LmxExecutionRoots c.lmx_execution_roots_mark(arena)
     out[0] := 0
     @: values c.LmxWalkValue (cast: (@: c.LmxWalkValue) rows\values)
     @@: refs void (cast: (@@: void) rows\refs)
+    c.lmx_execution_roots_push(arena, @ row_roots, (cast: (@: void) values), rows\count, refs, rows\count, (cast: (@: void) code), 0)
     while: status = c.LMX_WALK_OK && i < rows\count
         @: item c.LmxWalkValue (values + i)
         int: target 0
@@ -8791,6 +8977,7 @@ fn: lmx_walk_call_held_values (@: arena c.LmxArena; @: code c.Lmx; @@: source_re
         size_t: width rows\count
         said := c.lmx_call_prim_values(arena, code, lmx_call_unary_data(arena, code), refs, width, dest, out, values, result)
     ---
+    c.lmx_execution_roots_restore(arena, roots_mark)
     lmx_walk_call_rows_close(rows)
     if: status = c.LMX_WALK_STOPPED || c.lmx_msg_poll_escape() != 0
         out[0] := 0

@@ -1,5 +1,18 @@
 # Чеклист реализации LMX
 
+**Срез395 — runtime/native GC execution roots общего M11/M13/M14.** Source27:927/Frontend04/Runtime02;
+machine unit и обычный GC fixture PASS n/f/root0/root1 в [общем конвейере](steps/current.md).
+Whole01 genuine G1/G2 quick/fixedpoint31/canonical927, actual G2 targeted4 и Graph3 triple PASS;
+render35/14, fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28273/28277.
+
+- [x] Ограниченные runtime/native root scopes395: working/pending Values, выбранные places, statement/loop/pad/arm
+  cleanup и trampoline return; явный GC, рабочий снимок после очистки physical DATA и последующий reclaim n/f/root0/root1 PASS.
+- [x] Optional REUSE-BUNDLE штатного partial frontend recipe: manifests/ABI24, новые headers,
+  повторное использование неизменных backend/libc и обычный quick G1/G2 PASS.
+- [ ] Общая приёмка live/suspended activation roots, включая остальные receiving/stop/yield и будущий общий кеш M14.
+- [ ] Устранить прежний callable_place_fields refusal: он воспроизводится также на exact accepted394 control;
+  ослабление admission или изменение expected не считается исправлением.
+
 **Срез394 — exact scalar ABI и owned Value общего M11.7/M13.** Source16:925/Frontend05/Runtime11;
 Unit-machine06/Tool selftest, whole03 genuine G1/G2 quick/fixedpoint20 PASS. G2 targeted4 и Graph3 triple PASS;
 render35/14, docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28270/28273. Полный bridge/M13 OPEN. [Текущий WIP](steps/current.md).

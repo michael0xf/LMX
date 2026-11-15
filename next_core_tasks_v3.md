@@ -1,5 +1,42 @@
 # LMX — путь к самосборке и почте (v3)
 
+**2026-11-15, срез395 — корни живого исполнения M11/M13/M14, ограниченные кодовые gates/docs-check PASS.**
+394 принят2972b497 в main. Общий GC до sweep получает existing activation/call_places, полные Values и рабочие строки;
+borrowed operation spans живут в lane arena, включая подготовку до первого activation push. Это временные C-frame/scratch
+дескрипторы, не граф, журнал присваиваний или глобальный registry. Разные сроки локальных и pending spans закрываются
+checkpoint/remove до rewind/free. Само scratch storage удерживается живым владельцем, его слова не являются graph edges.
+Physical pool.profile сохраняется как отдельная графовая зависимость любого живого семейства, не receiving Model.
+Source27:927/Frontend04/Runtime02 и canonical927 PASS. Execution_gc_roots и обычный execution_gc_native
+прошли private n/f/root0/root1; actual G2 targeted4 также PASS во всех четырёх режимах каждого случая.
+Whole01 quick: настоящие G1/G2 по9 smoke и fixedpoint31 PASS. Actual G2 Graph3 triple и render35/14 PASS.
+Fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28273/28277; commit395 прямо main.
+Public resolver/typed Run/receiving/FFI/Foreign-Array, общий кеш/flush и полные M11/M13/M14 остаются OPEN.
+[Общий последовательный конвейер](steps/current.md).
+
+Продолжение395: в native emitter написаны spans рабочих Value, pending actual/hidden vectors и выбранных places;
+их срок задают существующие statement ranges, loop/pad coordinates и границы trampoline. Результат внешнего
+выражения сохраняется при cleanup внутренней ветви. Ограниченная языковая GC-приёмка PASS:
+первый actual во время GC второго, повтор callsite, short-circuit, локальный catch и reclaim,
+рабочий снимок после очистки physical DATA; first/run/take/hold/broken действительно обходятся в forced.
+Штатный partial frontend recipe получил явный optional REUSE-BUNDLE: проверенные backend/libc companions
+берутся из заявленной closure, selected modules и новые headers выпускаются заново; whole recipe сохраняется.
+Приёмка PASS: реальная частичная сборка с manifests/ABI24/новыми headers, затем обычный quick G1/G2;
+неизменные companions частичного цикла не пересобирались.
+
+Private continuation завершён Tool06/hosted Frontend04, partial reuse106/ABI24/94 headers PASS.
+Final Source27:927: extended machine unit11 и ordinary native11 PASS n/f/root0/root1, включая current working snapshot.
+Изолированный test producer использует existing allocators, не копию зарегистрированного Model: copied requirement
+законно удерживается живым исходным candidate через общий copy-carry. Это ребро допуска/GC сохраняется.
+Opaque Cdoor → typed Shape return остаётся открытой частью общего FFI/admission bridge M13; void* lifetime fixture её не закрывает.
+
+Причина forced08 локализована в writer: raw return ABI16 ошибочно считался graph descriptor и создавал self witness
+для opaque указателя. Общий input_is_descriptor(mi,-1) теперь читает Model/callable/graph type и исходный
+return header; тот же header_source используется при SOURCE generation. Исправлены три пути: fn header,
+selected call contract и trampoline. Runtime receive/witness classifier сохранён, как и synthetic callable/Model.
+os_callable_result и whole_arguments PASS n/f/root0/root1 private и actual G2; native GC не форсирует native обходчика.
+callable_place_fields по-прежнему отказывает во всех четырёх режимах также на exact accepted394 control.
+Исправление этого прежнего M11/M14 refusal включено в основной план; исходник/expected не ослаблять.
+
 **2026-11-14, срез394 — exact scalar ABI foundation M11.7/M13; кодовые gates и docs-check PASS.**
 Из source `primitive.description` генерируется C ABI для32 non-reference/non-opaque scalar rows из35:
 None/void не имеют cells, FILE остаётся opaque без угаданного scalar/pointer binding. Source identity и receiving Model
@@ -2744,11 +2781,22 @@ getDescriptor, без изменения возвращаемых адресов
    изменение видимым. Ускорение от кадров и сокращения записей не обещать для любого прямого пути.
    **Корни живого кадра (связь K11/GC).** Перед GC внутри живой или приостановленной активации
    включить её rows, рабочие ссылки, операнды, входы и живые ссылки общего кеша прямого доступа в существующий механизм execution roots
-   по L2 §15, без постоянной таблицы рядом с графом. Текущее маркирование frame.rows не обходит;
-   прежние числовые snapshots имеют ту же границу. В штатном маршруте allocator только растёт,
+   по L2 §15, без постоянной таблицы рядом с графом. До395 маркирование frame.rows не обходило;
+   395 читает runtime rows/Values и временные spans, удерживает scratch chunks без сканирования слов.
+   Source27 прошёл machine unit и отдельный обычный execution_gc_native n/f/root0/root1 private и actual G2:
+   pending actuals, рабочий снимок после очистки physical DATA, циклы, short-circuit, catch и reclaim.
+   Это ограниченная приёмка emitted current/pending roots, не только C ABI callback или обычного owner.
+   В штатном маршруте allocator только растёт,
    а GC вызывается после возврата тела; явный collect внутри живого кадра не имеет этой гарантии.
    Проверить удержание рабочего снимка после перезаписи физического поля, смены chunks,
-   вложенного вызова и stop/yield одинаково у native/обходчика до завершения этого пункта.
+   вложенного вызова и stop/yield одинаково у native/обходчика до завершения всего пункта;
+   оставшиеся receiving/stop/yield и roots будущего общего кеша M14 ещё OPEN.
+   В native emitter ограничить временные roots существующими statement/expression/control scopes, сохраняя
+   child Value через следующий sibling. Базу диапазона получать после persistent own/formal roots;
+   нормальный cleanup нужен также для short-circuit/class/guard arms. Использовать прежние loop/pad координаты
+   для break/continue/catch delivery; payload передавать в rooted pad carrier до unwind. Trampoline закрывает
+   typed-body spans сразу после его возврата и до poll/marshalling. Не удерживать dead C-scope pointers,
+   не вводить журнал истории, большой hoisted Value vector или регистрацию на каждом чтении.
 5. **Ресивер `flush()` — явная точка публикации.** Оставить имя flush. Ресивер без аргументов
    исполняется в code. Сначала dirty собственных локальных значений текущего кадра обновляют общее
    состояние ячеек в прямом порядке полей, затем ожидающие записи общего кеша сохраняются в физический

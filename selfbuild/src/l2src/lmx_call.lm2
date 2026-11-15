@@ -251,6 +251,64 @@ fn: lmx_activation_bind (@: arena c.LmxArena; size_t: code; @: storage void; int
     return: 0
 end: lmx_activation_bind
 
+# Explicit typed borrows, including operations before the first activation.
+# A checkpoint closes an operation, including every nested temporary span.
+fn: lmx_execution_roots_mark (@: arena c.LmxArena) @: c.LmxExecutionRoots
+    if: arena = 0
+        return: 0
+    return: arena\execution_roots
+
+sub: lmx_execution_roots_push (@: arena c.LmxArena; @: roots c.LmxExecutionRoots; @: values void; size_t: value_count; @@: refs void; size_t: ref_count; @: held void; @: place void)
+    if: arena = 0 || roots = 0
+        return
+    roots\prior := arena\execution_roots
+    roots\next := 0
+    roots\lane := (cast: (@: void) arena)
+    @: prior c.LmxExecutionRoots (cast: (@: c.LmxExecutionRoots) roots\prior)
+    if: prior != 0
+        prior\next := roots
+    roots\values := values
+    roots\value_count := value_count
+    if: values = 0
+        roots\value_count := 0U
+    roots\refs := refs
+    roots\ref_count := ref_count
+    if: refs = 0
+        roots\ref_count := 0U
+    roots\held := held
+    roots\place := place
+    roots\scratch := 0
+    arena\execution_roots := roots
+    return
+
+sub: lmx_execution_roots_restore (@: arena c.LmxArena; @: mark c.LmxExecutionRoots)
+    if: arena != 0
+        arena\execution_roots := mark
+        if: mark != 0
+            mark\next := 0
+    ---
+    return
+
+# Remove a helper's local span while younger call-scratch argument spans stay
+# alive. Constant-time unlink; there is no lookup on any value access.
+sub: lmx_execution_roots_remove (@: arena c.LmxArena; @: roots c.LmxExecutionRoots)
+    @: prior c.LmxExecutionRoots 0
+    @: next c.LmxExecutionRoots 0
+    if: arena = 0 || roots = 0 || roots\lane != (cast: (@: void) arena)
+        return
+    prior := (cast: (@: c.LmxExecutionRoots) roots\prior)
+    next := (cast: (@: c.LmxExecutionRoots) roots\next)
+    if: next != 0
+        next\prior := prior
+    else:
+        arena\execution_roots := prior
+    if: prior != 0
+        prior\next := next
+    roots\lane := 0
+    roots\prior := 0
+    roots\next := 0
+    return
+
 # Host/root nullary transport: status is the result, activation int travels through value.
 # This is not the language unary-call data selection; the host executes its complete program graph over itself.
 fn: lmx_call0_mode (@: arena c.LmxArena; @: callable c.Lmx; @: route int; @: value int) int
@@ -272,8 +330,10 @@ fn: lmx_call0_mode (@: arena c.LmxArena; @: callable c.Lmx; @: route int; @: val
         \route := c.LMX_CALL_ROUTE_NATIVE
     c.LmxPrimitiveEntry: entry (cast: (c.LmxPrimitiveEntry) addr)
     c.LmxActivation: act
+    @: roots_mark c.LmxExecutionRoots lmx_execution_roots_mark(arena)
     lmx_activation_push(arena, @ act, 2, callable, 0, 0, 0U, 0)
     st := entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) value), @ out, arena, callable, 0, 0)
+    lmx_execution_roots_restore(arena, roots_mark)
     lmx_activation_pop(arena, @ act)
     if: c.lmx_msg_poll_escape() != 0
         \value := 0
@@ -289,12 +349,21 @@ end: lmx_call0
 fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: lmx_input_values c.LmxWalkValue; @: lmx_result_context c.LmxWalkValue) int
     int: status
     c.LmxWalkValue: result_context
+    c.LmxExecutionRoots: result_roots
+    c.LmxExecutionRoots: input_roots
+    @: roots_mark c.LmxExecutionRoots 0
+    size_t: input_count 0U
     if: out = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
         c.fprintf(c.l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
         c.abort()
     ---
     \out := 0
     c.memset((cast: (@: void) (@ result_context)), 0, c.sizeof(c.LmxWalkValue))
+    roots_mark := lmx_execution_roots_mark(arena)
+    if: lmx_input_values != 0
+        input_count := nargs
+    lmx_execution_roots_push(arena, @ input_roots, (cast: (@: void) lmx_input_values), input_count, refs, nargs, (cast: (@: void) data), 0)
+    lmx_execution_roots_push(arena, @ result_roots, (cast: (@: void) (@ result_context)), 1U, out, 1U, dest, 0)
     c.LmxEntry: addr (cast: (c.LmxEntry) code\native)
     c.LmxActivation: act
     if: addr != 0
@@ -302,6 +371,9 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
         # The native activation's record (slice 254): its inputs are the arrays the entry receives.
         lmx_activation_push(arena, @ act, 2, code, refs, (cast: (@: void) lmx_input_values), nargs, 0)
         status := entry((cast: (@: void) data), refs, nargs, dest, out, arena, code, lmx_input_values, @ result_context)
+        # The entry's stack Values have ended. Drop its typed borrows before
+        # any other runtime action; caller inputs/result remain below them.
+        lmx_execution_roots_restore(arena, @ result_roots)
         lmx_activation_pop(arena, @ act)
     else:
         status := c.lmx_walk_call_prim_dispatch(arena, code, data, refs, nargs, dest, out, lmx_input_values, @ result_context)
@@ -317,6 +389,7 @@ fn: lmx_call_prim_values (@: arena c.LmxArena; @: code c.Lmx; @: data c.Lmx; @@:
             c.memcpy((cast: (@: void) lmx_result_context), (cast: (const: @: void) (@ result_context)), c.sizeof(c.LmxWalkValue))
         ---
     ---
+    lmx_execution_roots_restore(arena, roots_mark)
     return: status
 end: lmx_call_prim_values
 

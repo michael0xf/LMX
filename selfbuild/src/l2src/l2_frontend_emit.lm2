@@ -7384,7 +7384,7 @@ fn: lm_compiler_rw_header_parts (int: mi; int: root) int
         if: c.lm_compiler_rw_plain(result, 2, @ entry) != 0 || c.lm_compiler_rw_put(result, 0, entry) != 0
             return: (cast: (int) (1))
         ty := c.lm_compiler_ret_cell_ty(mi)
-        descriptor := (cast: (int) (c.lm_compiler_input_model(mi, -1) >= 0 || c.lm_compiler_sig_ret(mi) = 16))
+        descriptor := c.lm_compiler_input_is_descriptor(mi, -1)
         if: c.lm_compiler_rw_declared_source(entry, mi, -1) != 0
             return: (cast: (int) (1))
         if: (descriptor != 0 || ty >= 0) && lm_compiler_rw_witness(entry, 1, ty, descriptor) != 0
@@ -19067,7 +19067,7 @@ fn: lm_compiler_rw_call_contract_for (int: parent; int: mi; int: hidden; @: argu
     int: w m_arity_cell[0][mi]
     int: n 0
     int: rty c.lm_compiler_ret_cell_ty(mi)
-    int: descriptor (cast: (int) (c.lm_compiler_input_model(mi, -1) >= 0 || c.lm_compiler_sig_ret(mi) = 16))
+    int: descriptor c.lm_compiler_input_is_descriptor(mi, -1)
     int: nr (cast: (int) (rty >= 0 || descriptor != 0))
     if: arguments != 0 && arguments\written_count >= 0 && arguments\written_count < w
         w := arguments\written_count

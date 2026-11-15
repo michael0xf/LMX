@@ -1,5 +1,16 @@
 # Спецификация реализации ядра LMX: Lmx-граф, примитивы, арена, имена
 
+**Срез395, 2026-11-15 — GC живого исполнения runtime/native; ограниченные кодовые gates PASS.**
+Marker до sweep проходит существующие activation/call_places, рабочие кадры и полные Values.
+Временные borrowed spans принадлежат arena исполнения и снимаются до rewind/free; собственные scratch chunks
+удерживаются явно, их слова не сканируются как граф. Physical pool.profile — отдельная зависимость живого значения.
+Runtime02 и адресные collect/reclaim/pending PRIM/standalone Frame/native C ABI cases прошли n/f/root0/root1.
+Native emitter395 подключает working/pending Values и выбранные places к тем же spans; существующие statement,
+loop/pad и внутренние branch scopes задают cleanup, trampoline снимает roots тела до следующего poll.
+Source27:927/Frontend04: обычный GC fixture прошёл native/обходчик и root0/root1, включая рабочий снимок после
+очистки physical DATA, pending actuals, циклы, short-circuit, catch и последующий reclaim. Whole G1/G2 quick/fixedpoint31 PASS.
+Public resolver/typed Run/receiving/FFI/Foreign-Array, общий кеш/flush и полные M11/M13/M14 остаются OPEN.
+
 **Текущее состояние, 2026-11-14, срез394 — exact scalar ABI foundation; ограниченные кодовые gates и docs-check PASS.**
 Из тех же35 Source rows генерируются header type aliases и profile bodies для32 scalar bindings (§3.2):
 None/void без cells, FILE opaque без угаданного binding. Source identity, C ABI и physical profile остаются раздельными.

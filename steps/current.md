@@ -1,5 +1,53 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — M11/M13/M14: срез395, runtime/native execution GC roots
+
+Работа, commit и push — прямо C:/Nyasha_Planet/LMX, branch main; отдельное дерево Sol не требуется.
+394 принят/отправлен2972b4970e5a5afb59f9ad38e71437f7ce293d3a. Goal ACTIVE.
+Root — единственный code/test/build writer; helpers read-only. Два чужих untracked сохранять и не индексировать.
+Pipeline395: build2/codex_fix250generationchain01/runs/sol-m13-execution-roots-20261115-01;
+artifact stage — build2/codex_fix250generationchain01/sol-m13-execution-roots-01.
+
+Final frozen Source27:927 SHA6bb032864e6a71e911c4e63ad6d286d62c9da21329b1be3a1f474ef3772e6b6c.
+Canonical inputs.sha256 совпадает с Source27; verify repo/stage927 PASS. Code sources после Source24 не менялись.
+Runtime02 prod81a35bb1/observe3c587331; Tool06 SHA77175da3; hosted Frontend04 SHA77e9efc3.
+Partial FE04 переводит только Resolve/Core/Emit с reuse106/ABI24/94 headers.
+Values/Useplan/Lower, проверенные backend394/libc сохранены через новый optional REUSE-BUNDLE.
+Whole01 genuine quick G1/G2, по9 smoke/tool startup/hash PASS; fixedpoint31 PASS,
+включая полную consumed closure348 обоих поколений и Runtime02==G1==G2 prod/observe.
+
+GC до sweep читает activation/call_places, полные Values, старые WalkFrame и GraphFrame rows.
+Borrowed spans в lane arena — временные C-frame/scratch дескрипторы, не граф, журнал или глобальный registry.
+Checkpoint/remove закрываются до rewind/free; scratch chunks удерживаются владельцем, слова не сканируются.
+Physical pool.profile сохраняется отдельно от receiving Model. Native roots используют existing
+statement/loop/pad/arm scopes, сохраняют outer result и закрывают typed-body roots до poll.
+Machine unit11 и обычный native11 PASS n/f/root0/root1: actual GC pending первого аргумента во время второго,
+повтор callsite, short-circuit, catch, последующий reclaim и рабочий снимок после очистки physical DATA.
+Setup использует прежние allocators и C ABI observer; first/run/take/hold/broken действительно обходятся.
+Existing hold.p projection сохранена; новый normal frontend data/code lowering M11.8 остаётся OPEN.
+
+Устранена причина forced08 refusal: raw return ABI16 ошибочно означал descriptor для opaque void*.
+Все три writer paths (header/selected call/trampoline) используют input_is_descriptor(mi,-1):
+Model/mad/semantic graph FT/original callable return header. Новый общий header_source, resolve export125,
+используется также SOURCE writer. Runtime receive/admission не ослаблен.
+Private os_callable_result/whole_arguments PASS4each. Actual G2 targeted01: эти два случая,
+execution_gc_roots и execution_gc_native PASS n/f/root0/root1, SUITE4/0.
+callable_place_fields отказывает4 также на exact accepted394 control: прежняя OPEN M11/M14, expected не менять.
+Inline merge и forest-copy были неверными transient oracles: graph own/copy-carry законно удерживали header.
+Ни эти графовые рёбра, ни GC ради oracle не удалялись. История попыток — в свидетельстве.
+
+Actual G2 Graph build01 SHAe4e054cf и Graph3 interp/native/forced PASS; отсутствующий Model отказывает build4.
+Actual G2 frontend SHA52622a40303bfd690daf8ff2a093176882499cf05b7e0a4ec7cea385e7370478,
+Tool SHAf80f0a460102adb97267978677764a0c13158b2103dea723d7a66c91f381fc82.
+G2 docs render semantics PASS35 paired/14 cases/both snapshots; generated semantics не изменились.
+Fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28273/28277. Все producers terminal;
+owned index26 и diff-check пройдены. Результаты проверки добавлены как выходные annotations, не semantic inputs.
+Commit/push395 — прямо main; после него продолжать общий public primitive resolver/typed execution bridge.
+Грамматика и provenance/semantics-book.md в395 не менялись.
+Public primitive resolver, typed Run/receiving/FFI, Foreign-Array, общий кеш/flush,
+остальные receiving/stop/yield и полные M11/M13/M14/v3 OPEN. Продолжать основной v3 после среза395.
+[Свидетельство395](witnesses/m13-execution-roots-20261115/notes.md).
+
 ## 2026-11-14 — M11.7/M13: срез394, кодовые gates и docs-check PASS
 
 393 принят/отправлен328012416dd2d6349be15bb6e532a430e61c0d62. Goal ACTIVE, предыдущий turn — progress.

@@ -4053,6 +4053,8 @@ fn: lm_compiler_emit_work_decl (int: k) int
     if: c.lm_compiler_own_is_array(own_ty_cell[0][k]) != 0
         if: c.fprintf(out_cell[0], "    LmxWalkValue: %s\n    int: %s_status lmx_walk_value_cell(l2_program_arena, %s_from[0], @ %s)\n    if: %s_status != c.LMX_WALK_OK\n        lmx_call_note_walk_fail(%s_status)\n        return: 0\n    ---\n", cwv_name\data, cwv_name\data, cq_name\data, cwv_name\data, cwv_name\data, cwv_name\data) < 0
             return: 1
+        if: c.lm_compiler_emit_roots_values(cur_mi_cell[0], "    ", "l2_call_arena", (cast: (const: @: char) cwv_name\data), -1, 1, 0, 0) != 0
+            return: 1
         # IDENTIFIER-CODES: the binding's name is the code of the own field's spelling (the unit's table).
         if: own_name_cell[0][k] != 0 && (c.fputs("    if: lmx_activation_bind(l2_program_arena, ", out_cell[0]) < 0 || c.lm_compiler_emit_unit_id_text(own_name_cell[0][k]) != 0 || c.fprintf(out_cell[0], ", 0, c.LMX_TYPE_NONE, @ %s) != 0\n        lmx_call_note_walk_fail(c.LMX_WALK_NOMEM)\n        return: 0\n    ---\n", cwv_name\data) < 0)
             return: 1
@@ -4106,6 +4108,8 @@ fn: lm_compiler_emit_work_decl (int: k) int
         ---
     ---
     if: c.fprintf(out_cell[0], "    int: %s_dirty 0\n", cq_name\data) < 0
+        return: 1
+    if: c.lm_compiler_emit_roots_values(cur_mi_cell[0], "    ", "l2_call_arena", (cast: (const: @: char) cwv_name\data), -1, 1, 0, 0) != 0
         return: 1
     # Slice 254 (design 4.5 B1): a used own field is a binding of this activation for the free inputs of the callees
     # entered from it (lmx_activation_resolve): its place in the graph with the place's domain type -- the same read
@@ -12596,6 +12600,8 @@ fn: lm_compiler_emit_tramp_value_inputs (int: i; int: n) int
         k := k + 1
     if: c.fputs("    ---\n", out_cell[0]) < 0
         return: 1
+    if: c.lm_compiler_emit_roots_values(i, "    ", "lmx_call_arena", "l2_received", -1, n, 1, 0) != 0
+        return: 1
     return: 0
 end: lm_compiler_emit_tramp_value_inputs
 
@@ -12714,6 +12720,8 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
     # may be copied to the caller. Only normal completion reaches result stores.
     if: c.fputs("    \\out: 0\n    LmxWalkValue: l2_actual_result\n    lmx_walk_value_clear(@ l2_actual_result)\n", out_cell[0]) < 0
         return: (cast: (int) (1))
+    if: c.lm_compiler_emit_roots_values(i, "    ", "lmx_call_arena", "l2_actual_result", -1, 1, 0, 0) != 0
+        return: 1
     if: cls != 0
         k := rt
         if: rt < 100
@@ -12723,10 +12731,16 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
     ---
     if: thr != 0 && c.fputs("    @: Lmx l2_tt 0\n", out_cell[0]) < 0
         return: (cast: (int) (1))
+    if: c.lm_compiler_emit_roots_mark_named(i, "    ", "lmx_call_arena", "l2_body_roots", -1) != 0
+        return: 1
     if: c.fputs("    int: l2_ts 0\n    l2_ts: ", out_cell[0]) < 0
         return: (cast: (int) (1))
-    if: lm_compiler_emit_tramp_call(i, n, thr, cls, values) != 0 || c.fputs("\n    if: lmx_msg_poll_escape() != 0\n        return: 0\n", out_cell[0]) < 0
+    if: lm_compiler_emit_tramp_call(i, n, thr, cls, values) != 0 || c.fputs("\n", out_cell[0]) < 0
         return: (cast: (int) (1))
+    if: thr != 0 && c.lm_compiler_roots_enabled(i) != 0 && c.fputs("    l2_gr_l2_actual_result.held: (cast: (@: void) l2_tt)\n", out_cell[0]) < 0
+        return: 1
+    if: c.lm_compiler_emit_roots_restore_named(i, "    ", "lmx_call_arena", "l2_body_roots", -1) != 0 || c.fputs("    if: lmx_msg_poll_escape() != 0\n        return: 0\n", out_cell[0]) < 0
+        return: 1
     if: thr != 0 && c.fputs("    if: l2_ts != 0\n        \\out: (cast: (@: void) l2_tt)\n        return: l2_ts\n", out_cell[0]) < 0
         return: (cast: (int) (1))
     if: thr = 0 && c.fputs("    if: l2_ts != 0\n        return: l2_ts\n", out_cell[0]) < 0
@@ -12744,7 +12758,7 @@ fn: lm_compiler_emit_trampoline (int: i; int: proto) int
     if: cls = 6 && (c.lm_compiler_value_decl_text(rt, 1, "l2_rv", declaration) != 0 || c.fprintf(out_cell[0], "        %s (cast: (@: ", declaration\data) < 0 || c.lm_compiler_write_text(out_cell[0], foreign_name_cell[0][rt - 100]) != 0 || c.fputs(") dest)\n        \\l2_rv: l2_tv\n        \\out: dest\n        lmx_walk_value_foreign(@ l2_actual_result, dest)\n", out_cell[0]) < 0)
         return: (cast: (int) (1))
     if: cls >= 1 && cls <= 5
-        descriptor := (cast: (int) (c.lm_compiler_input_model(i, -1) >= 0 || rt = 16))
+        descriptor := c.lm_compiler_input_is_descriptor(i, -1)
         reference_result := (cast: (int) (descriptor != 0 || c.lm_compiler_pointer_depth(actual_ft) > 0 || actual_ft = c.lm_compiler_array_desc_ty()))
         if: c.lm_compiler_emit_input_value_type(actual_ft, descriptor, result_type) != 0
             return: (cast: (int) (1))
@@ -12849,7 +12863,6 @@ fn: lm_compiler_rw_declared_source (int: entry; int: mi; int: input) int
     @@@: m_node_cell c.LmP0Node (cast: (@@@: c.LmP0Node) (@ c.l2_m_node))
     const: (@@: src_cell char (cast: (const: @@: char) (@ c.l2_src)))
     const: (@: source c.LmP0Node 0)
-    @: field c.LmP0Field
     @: declaration c.L2Declaration 0
     @: contract c.L2TypeContract 0
     @: leaf c.L2TypeContract
@@ -12862,22 +12875,7 @@ fn: lm_compiler_rw_declared_source (int: entry; int: mi; int: input) int
     int: value
     int: receiver -1
     int: answer
-    if: input >= 0
-        source := c.lm_compiler_formal_decl_at(mi, input)
-    else:
-        # The same header coordinate read by collect_method: optional name,
-        # args, then the original result expression. No ABI type reconstruction.
-        if: m_node_cell[0][mi] != 0 && m_node_cell[0][mi]\as != 0 && m_node_cell[0][mi]\as\frame != 0 && m_node_cell[0][mi]\as\frame\body != 0
-            field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (m_node_cell[0][mi]\as\frame\body\first_field)))
-            if: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM
-                field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
-            if: field != 0
-                field := c.lm_compiler_next_active((cast: (@: c.LmP0Field) (field\next)))
-            if: field != 0
-                source := field\value
-            ---
-        ---
-    ---
+    source := c.lm_compiler_header_source(mi, input)
     if: source = 0
         return: (cast: (int) (c.lm_compiler_error(src_cell[0], m_node_cell[0][mi], "a declared header lost its original receiving source")))
     entered := c.lm_compiler_contract_source_begin_at(source, mi, @ saved, @ horizon_on, @ horizon_at)

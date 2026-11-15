@@ -1923,6 +1923,8 @@ fn: lm_compiler_emit_call_result_value (int: mi; int: idx; int: t; const: (@: in
     # One activation-local output,declared before any callable-class arm.
     if: context >= 0 && c.fprintf(out_cell[0], "%sLmxWalkValue: l2_cv%d\n%slmx_walk_value_clear(@ l2_cv%d)\n", ind, context, ind, context) < 0
         return: (cast: (int) (1))
+    if: context >= 0 && lm_compiler_emit_roots_values(mi, ind, "l2_call_arena", "l2_cv", context, 1, 0, 0) != 0
+        return: 1
     # A named-Structure return holds the graph code, spelled `Lmx *` (l2_formal_raw), as l2_emit_formal/l2_emit_sig
     # spell it -- a discarded or captured call to a Structure-returning method must not reach l2_emit_foreign_temp
     # with a code of another space (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2).
@@ -3165,3 +3167,115 @@ fn: lm_compiler_emit_selector_args (const: (@: path c.L2Path); int: k) int
         return: (cast: (int) (c.fprintf(out_cell[0], ", (cast: (size_t) -1), %d", prefix) < 0))
     return: (cast: (int) (c.fprintf(out_cell[0], ", %zuU, %d", selected, prefix) < 0))
 end: lm_compiler_emit_selector_args
+
+# Static native lifetimes use the runtime's typed borrow list. Raw machine
+# functions keep their existing C ABI and consume no extra temporary ids.
+fn: lm_compiler_roots_enabled (int: mi) int
+    return: (cast: (int) (mi >= 0 && c.lm_compiler_m_machine(mi) = 0))
+
+fn: lm_compiler_roots_name (const: (@: prefix char); int: id; @: name char) int
+    int: n
+    if: id < 0
+        n := c.snprintf(name, 96U, "%s", prefix)
+    else:
+        n := c.snprintf(name, 96U, "%s%d", prefix, id)
+    return: (cast: (int) (n < 0 || n >= 96))
+
+fn: lm_compiler_emit_roots_mark_named (int: mi; const: (@: ind char); const: (@: arena char); const: (@: prefix char); int: id) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar96: storage
+    @: name char (cast: (@: char) storage\buffer)
+    if: lm_compiler_roots_enabled(mi) = 0
+        return: 0
+    if: lm_compiler_roots_name(prefix, id, name) != 0
+        return: 1
+    return: (cast: (int) (c.fprintf(out_cell[0], "%s@: LmxExecutionRoots %s lmx_execution_roots_mark(%s)\n", ind, name, arena) < 0))
+
+fn: lm_compiler_emit_roots_restore_named (int: mi; const: (@: ind char); const: (@: arena char); const: (@: prefix char); int: id) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar96: storage
+    @: name char (cast: (@: char) storage\buffer)
+    if: lm_compiler_roots_enabled(mi) = 0
+        return: 0
+    if: lm_compiler_roots_name(prefix, id, name) != 0
+        return: 1
+    return: (cast: (int) (c.fprintf(out_cell[0], "%slmx_execution_roots_restore(%s, %s)\n", ind, arena, name) < 0))
+
+fn: lm_compiler_emit_roots_mark (int: mi; const: (@: ind char); const: (@: arena char); @: id int) int
+    @: tn_cell int (cast: (@: int) (@ c.l2_tn))
+    if: id = 0
+        return: 1
+    \id := -1
+    if: lm_compiler_roots_enabled(mi) = 0
+        return: 0
+    \id := tn_cell[0]
+    tn_cell[0] := tn_cell[0] + 1
+    return: lm_compiler_emit_roots_mark_named(mi, ind, arena, "l2_gr_mark", \id)
+
+fn: lm_compiler_emit_roots_restore (int: mi; const: (@: ind char); const: (@: arena char); int: id) int
+    if: id < 0
+        return: 0
+    return: lm_compiler_emit_roots_restore_named(mi, ind, arena, "l2_gr_mark", id)
+
+# prefix/id denotes the already declared Value or Value array. Clear before
+# attaching an unfilled producer; filled snapshots pass clear=0 instead.
+fn: lm_compiler_emit_roots_values (int: mi; const: (@: ind char); const: (@: arena char); const: (@: prefix char); int: id; int: count; int: array; int: clear) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar96: storage
+    @: name char (cast: (@: char) storage\buffer)
+    if: lm_compiler_roots_enabled(mi) = 0 || count <= 0
+        return: 0
+    if: lm_compiler_roots_name(prefix, id, name) != 0
+        return: 1
+    if: clear != 0
+        if: array != 0
+            if: c.fprintf(out_cell[0], "%sc.memset((cast: (@: void) %s), 0, %dU * c.sizeof(c.LmxWalkValue))\n", ind, name, count) < 0
+                return: 1
+            ---
+        else:
+            if: c.fprintf(out_cell[0], "%slmx_walk_value_clear(@ %s)\n", ind, name) < 0
+                return: 1
+        ---
+    ---
+    if: c.fprintf(out_cell[0], "%sLmxExecutionRoots: l2_gr_%s\n%slmx_execution_roots_push(%s, @ l2_gr_%s, (cast: (@: void) ", ind, name, ind, arena, name) < 0
+        return: 1
+    if: array = 0 && c.fputs("(@ ", out_cell[0]) < 0
+        return: 1
+    if: c.fputs(name, out_cell[0]) < 0
+        return: 1
+    if: array = 0 && c.fputs(")", out_cell[0]) < 0
+        return: 1
+    return: (cast: (int) (c.fprintf(out_cell[0], "), %dU, 0, 0U, 0, 0)\n", count) < 0))
+
+fn: lm_compiler_emit_roots_held (int: mi; const: (@: ind char); const: (@: arena char); const: (@: prefix char); int: id) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar96: storage
+    @: name char (cast: (@: char) storage\buffer)
+    if: lm_compiler_roots_enabled(mi) = 0
+        return: 0
+    if: lm_compiler_roots_name(prefix, id, name) != 0
+        return: 1
+    return: (cast: (int) (c.fprintf(out_cell[0], "%sLmxExecutionRoots: l2_gh_%s\n%slmx_execution_roots_push(%s, @ l2_gh_%s, 0, 0U, 0, 0U, (cast: (@: void) %s), 0)\n", ind, name, ind, arena, name, name) < 0))
+
+fn: lm_compiler_emit_roots_loop_restore (int: mi; const: (@: ind char); int: kind; int: id) int
+    if: id < 0
+        return: 0
+    if: kind = 1
+        return: lm_compiler_emit_roots_restore_named(mi, ind, "l2_call_arena", "l2_pad_roots", id)
+    return: lm_compiler_emit_roots_restore(mi, ind, "l2_call_arena", id)
+
+# Most expression producers belong to the current typed method. Keep the
+# machine gate in the common helper, including producers without a mi input.
+fn: lm_compiler_emit_roots_current_value (const: (@: ind char); const: (@: prefix char); int: id) int
+    @: mi_cell int (cast: (@: int) (@ c.l2_cur_mi))
+    return: lm_compiler_emit_roots_values(mi_cell[0], ind, "l2_call_arena", prefix, id, 1, 0, 0)
+
+fn: lm_compiler_emit_roots_place (int: mi; const: (@: ind char); const: (@: prefix char); int: id) int
+    @@: out_cell c.FILE (cast: (@@: c.FILE) (@ c.l2_out))
+    c.L2FrontendScratchChar96: storage
+    @: name char (cast: (@: char) storage\buffer)
+    if: lm_compiler_roots_enabled(mi) = 0
+        return: 0
+    if: lm_compiler_roots_name(prefix, id, name) != 0
+        return: 1
+    return: (cast: (int) (c.fprintf(out_cell[0], "%sLmxExecutionRoots: l2_gp_%s\n%slmx_execution_roots_push(l2_call_arena, @ l2_gp_%s, 0, 0U, 0, 0U, 0, (cast: (@: void) (@ %s)))\n", ind, name, ind, name, name) < 0))

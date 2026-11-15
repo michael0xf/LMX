@@ -1,5 +1,16 @@
 # LMX kernel implementation specification: the Lmx graph, primitives, the arena, names
 
+**Slice395, 2026-11-15 -- runtime/native execution GC roots; bounded code gates PASS.**
+Before sweep, the marker visits existing activation/call_places, working frames and complete Values.
+Temporary borrowed spans belong to the execution arena and detach before rewind/free; their owning scratch chunks
+are retained explicitly, without treating scratch words as graph edges. Physical pool.profile is a separate live dependency.
+Runtime02 and targeted collect/reclaim/pending PRIM/standalone Frame/native C ABI cases pass n/f/root0/root1.
+The native emitter395 attaches working/pending Values and selected places to the same spans; existing statement,
+loop/pad and inner branch scopes determine cleanup, and the trampoline drops body roots before the next poll.
+Source27:927/Frontend04: the ordinary GC fixture passes native/walker and root0/root1, including a working snapshot after
+clearing physical DATA, pending actuals, loops, short-circuit, catch and subsequent reclamation. Whole G1/G2 quick/fixedpoint31 PASS.
+Public resolver/typed Run/receiving/FFI/Foreign-Array, the shared cache/flush and complete M11/M13/M14 remain OPEN.
+
 **Current state, 2026-11-14, slice394 -- exact scalar ABI foundation; bounded code gates and docs-check PASS.**
 The same35 Source rows generate header type aliases and profile bodies for32 scalar bindings (§3.2):
 None/void have no cells, FILE remains opaque without a guessed binding. Source identity, C ABI and physical profile remain separate.

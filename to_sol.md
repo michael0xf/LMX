@@ -1,5 +1,18 @@
 # Sol 6.1: продолжение LMX после fable2, opus2, sonnet2 и haiku2
 
+**Срез395, 2026-11-15 — runtime/native execution GC roots;394 принят2972b497 прямо main.**
+Source27:927/Frontend04/Runtime02: execution_gc_roots и обычный execution_gc_native PASS n/f/root0/root1,
+включая pending actuals, рабочий снимок после очистки physical DATA, short-circuit, catch и последующий reclaim.
+Borrowed spans используют existing arena/activation/frames/scratch; слова scratch не сканируются как graph edges.
+Native использует существующие statement/loop/pad/arm scopes и закрывает typed-body roots до poll.
+Три return-witness writer paths используют общий semantic input_is_descriptor, не raw C ABI16; admission сохранён.
+Partial REUSE-BUNDLE/новые headers/ABI24 PASS, неизменные backend/libc переиспользованы.
+Whole01 genuine G1/G2 quick/fixedpoint31/canonical927, actual G2 targeted4 и Graph3 triple PASS.
+G2 render35/14/both snapshots, fresh docs-check01 и final indexed01 PASS35/14/27/44/615, links/LF28273/28277.
+callable_place_fields отказывает также на exact394 control: прежняя OPEN M11/M14, expected не менять.
+Public resolver/typed Run/receiving/FFI/Foreign-Array, общий кеш/flush и полные M11/M13/M14 OPEN.
+Продолжать основной v3, goal ACTIVE. Все изменения, commit и push — прямо main, отдельное дерево Sol не требуется.
+
 **Срез394, 2026-11-14 — main, Source16:925/Frontend05/Runtime11.** Unit-machine06 n/f/root0/root1 и Tool selftest PASS;
 all32 exact scalar bindings, owned snapshots, отсутствие без чтения payload, copy/qualification/GC metadata и guards.
 Машинные C ABI assertions остаются native; обычный generated L2 owner проверяется n/f/root0/root1.

@@ -1,0 +1,65 @@
+# The machine row in full-suite generates this existing support module first.
+# The isolated producer and observer use C ABI; run/first/take/broken walk.
+predef: "l2src/lmx_unit_eg_roots_check_execution_gc_roots.lm1"
+
+fn: fresh () @: void
+    return: c.eg_lang_fresh()
+fn: remembered (@: p void; @: trace void) @: void
+    c.eg_lang_note(trace, p)
+    return: p
+fn: first (@: trace void) @: void
+    return: remembered(fresh(); trace)
+fn: collect (@: trace void) int
+    return: c.eg_lang_collect(trace, 1)
+fn: dead (@: trace void) int
+    return: c.eg_lang_collect(trace, 0)
+fn: count (@: trace void) int
+    return: c.eg_lang_count(trace)
+fn: peek (@: p void) int
+    return: c.eg_lang_peek(p)
+fn: take (@: p void; int: second) int
+    return: peek(p) + second
+sub: clear ()
+    # Existing frontend projection of the method's own physical data.
+    hold\p := 0
+fn: hold (@: trace void) int (@: p void 0)
+    p := first(trace)
+    clear()
+    if: collect(trace) != 7
+        return: 86
+    return: peek(p)
+fn: broken () int
+    throws: Bad
+    throw: Bad(3)
+    return: 0
+fn: run (@: trace void) int
+    int: i 0
+    int: status 7
+    while: i < 2
+        if: take(first(trace); collect(trace)) != 80
+            return: 81
+        i := i + 1
+    if: 0 && collect(trace)
+        return: 82
+    if: count(trace) != 2
+        return: 83
+    ---
+        status := take(first(trace); broken())
+        catch: Bad (int: v)
+            status := v + 4
+    ---
+    if: status != 7 || dead(trace) != 7
+        return: 84
+    if: hold(trace) != 73 || dead(trace) != 7
+        return: 87
+    return: 7
+
+fn: boot () int
+    @: trace void c.eg_lang_open()
+    int: status run(trace)
+    if: status = 7 && c.eg_lang_collect(trace, 0) != 7
+        status := 85
+    c.eg_lang_close(trace)
+    return: status
+send: exit(exit_code: boot(); stdout: ""; stderr: "")
+return

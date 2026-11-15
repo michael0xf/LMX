@@ -11,6 +11,9 @@ flush() и frozen требования слотов при S[n] заменены
 - [ ] Обычные, указательные, динамические и явные вызовы fn/sub/catch/Structure идут одним путём
   интерпретатора, включая binding/admission/namespace/result; calls из test/конвертеров — туда же.
   Нет второго dispatcher, подмены args формалами или обязательной графовой упаковки native→native.
+- [x] Приёмка405 pending actual roots: реальный GC в следующем actual,
+  однократный эффект, reclaim после выхода; mutant без span даёт122/126 во всех4 режимах.
+  [Свидетельство](steps/witnesses/m10-pending-actuals-20261115/notes.md); общий DATA binder остаётся OPEN.
 - [ ] Ресивер private: исключает поле из динамических источников; прямой и лексический доступ сохраняются.
   Общий binder/hidden args для native и обходчика, без отдельной системы доступа — [M14](next_core_tasks_v3.md#private-binding-plan).
 - [ ] Root-only сбор data/code; при входе нет инициализаторов; uninit:T сохранён; actual подавляет свой default,

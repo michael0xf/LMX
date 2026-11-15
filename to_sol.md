@@ -134,6 +134,14 @@ automatic native reset и фиксированный Array. Реализация
 actual G2 frontend не менялся. [Свидетельство404](steps/witnesses/m14-native-signature-20261115/notes.md).
 Call/native tables, producer/selection compiled entry/signature/place_spec и удаление tracking пока OPEN.
 
+**405, pending actual lifetime:** GraphRun и GraphTool используют existing ExecutionRoots до
+передачи actuals в activation. Graph data/code/scope удерживаются как graph roots, не WalkPlace.
+Source05:935; Runtime-call-02 normal, GC witness native/forced/root0/root1 и Graph named/finally/whole triples PASS.
+Отрицательный контроль без одного pending span даёт status122/exit126 во всех4 режимах.
+Final docs/index PASS35/14/27/44/615, LF28304; canonical verify935/0 repo/stage PASS.
+Единая data/full-Value binding/private остаются OPEN.
+[Свидетельство405](steps/witnesses/m10-pending-actuals-20261115/notes.md).
+
 **403, ограниченная кодовая приёмка PASS:** full scalar Value проходит call/return/finally/native;
 SOURCE/Model/ABI и pending result до cleanup сохраняются. Числовой результат с доказанным ABI использует
 общий physical capture для адреса и записи в FOREIGN; context остаётся исходным. Live namespace prior-chain

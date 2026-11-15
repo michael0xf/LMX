@@ -298,6 +298,9 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
     int: done 0
     int: value 0
     int: status 0
+    int: prior_failure temps[1]
+    int: failed 0
+    int: finished 0
     temps[0] := temps[0] + 1
     # The common head reader has already selected this target before actuals.
     c.fprintf(f, "        @: Lmx l2_call%d (cast: (@: Lmx) l2_v%d)\n", call_id, selected)
@@ -307,6 +310,15 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
     if: status = 0
         status := lm_graph_emit_address(g, f, scope, expression)
     c.fprintf(f, "), l2_binding%d) != 0\n            %s\n        LmxWalkValue: l2_cv%d\n        lmx_walk_value_clear(@ l2_cv%d)\n", call_id, leave_failure, call_id, call_id)
+    # Actual storage is live before evaluating the first operand. A later
+    # operand may collect; the selected target and pending result share the
+    # same existing root span until this call's success or error cleanup.
+    c.fprintf(f, "        []: @(void) l2_args%d %zuU\n        c.memset((cast: (@: void) l2_args%d), 0, sizeof(l2_args%d))\n        @: LmxExecutionRoots l2_arm%d lmx_execution_roots_mark(lmx_call_arena)\n        LmxExecutionRoots: l2_ar%d\n        lmx_execution_roots_push(lmx_call_arena, @ l2_ar%d, (cast: (@: void) @ l2_cv%d), 1U, l2_args%d, %zuU, (cast: (@: void) l2_call%d), 0)\n", call_id, count + 1U, call_id, call_id, call_id, call_id, call_id, call_id, call_id, count, call_id)
+    failed := temps[0]
+    finished := failed + 1
+    temps[0] := finished + 1
+    temps[1] := failed
+    lm_graph_emit_leave_text(leave_failure, failed, 1)
     # The live target determines how the preserved argument is read. The
     # binding map carries that choice; no lexical prediction is repeated here.
     if: count = 1U && status = 0
@@ -316,7 +328,6 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
         c.fprintf(f, "        if: l2_binding%d[1U] != 0U\n            @: void l2_v%d lmx_graph_get_in(l2_g, ", call_id, value)
         status := lm_graph_emit_address(g, f, scope, expression)
         c.fprintf(f, ", 0U)\n            if: l2_binding%d[1U] = 1U && lmx_graph_eval_value(l2_g, lmx_call_code, l2_v%d, @ l2_v%d) != 0\n                %s\n            if: lmx_graph_call_single_value(l2_g, l2_call%d, l2_v%d, @ l2_cv%d) != 0\n                %s\n            goto: l2_label%d\n", call_id, value, value, leave_failure, call_id, value, call_id, leave_failure, done)
-    c.fprintf(f, "        []: @(void) l2_args%d %zuU\n", call_id, count + 1U)
     while: i < count && status = 0
         holder := expression
         at := i
@@ -346,6 +357,10 @@ fn: lm_graph_emit_call_selected (@: g c.LmxGraph; @: f c.FILE; @: scope c.Lmx; @
         c.fprintf(f, "        int: l2_t%d 0\n        if: lmx_graph_result_int(l2_g, @ l2_cv%d, @ l2_t%d) != 0\n            %s\n", call_id, call_id, call_id, leave_failure)
     if: want_result = 2
         c.fprintf(f, "        @: void l2_v%d 0\n        if: lmx_graph_result_cell(l2_g, @ l2_cv%d, @ l2_v%d) != 0\n            %s\n", call_id, call_id, call_id, leave_failure)
+    c.fprintf(f, "        lmx_execution_roots_restore(lmx_call_arena, l2_arm%d)\n        goto: l2_label%d\n        l2_label%d:\n        lmx_execution_roots_restore(lmx_call_arena, l2_arm%d)\n", call_id, finished, failed, call_id)
+    temps[1] := prior_failure
+    lm_graph_emit_leave_text(leave_failure, prior_failure, 1)
+    c.fprintf(f, "        %s\n        l2_label%d:\n", leave_failure, finished)
     temp[0] := call_id
     return: status
 end: lm_graph_emit_call_selected

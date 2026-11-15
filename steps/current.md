@@ -1,5 +1,32 @@
 # LMX: текущие рабочие инструкции
 
+## 2026-11-15 — шаг405: lifetime уже вычисленных actuals
+
+404 reader prerequisite принят/отправлен cb6d9305 поверх авторского c7f2825f прямо main.
+Текущий срез405 держит pending refs через следующие actual effects/допуск и до activation,
+через existing ExecutionRoots. GraphTool zero-initializes pending array и снимает roots по
+success/error/finally пути. В GraphRun также исправлены прежние ошибочные graph pointers
+в WalkPlace-параметре spans; data/code/scope держатся отдельно как graph roots.
+Run67/Graph83/Walk189 и layouts прежние; FE actual G2 не менялся. Общая DATA/private реализация OPEN.
+Stage403 переиспользован; logs build2/codex_fix250generationchain01/runs/sol-m10-pending-actuals-20261115-01.
+Source05:935 SHA bb425f56e33519ff11f3a79c62cd9004c3efae1708c6c48ebd00117c66005ddd.
+Runtime-call-02 normal PASS98; focused05 graph_scalar_working PASS1/0 nf/root0/root1,
+включая настоящий parsed GraphRun call, native Collect с реальным sweep, ответ80/counter2,
+отдельный pending chunk и его reclaim. Execution_gc_roots также PASS на Runtime02.
+Graph-call-01 normal PASS25906835; named/finally/whole-empty triples PASS.
+Все code producers terminal. Mutant в отдельном sol-m10-pending-mutant-01 удаляет
+только eval_call pending span; его normal runtime PASS, witness во всех4 режимах отказывает
+status122/exit126/counter0. One-line diff подтверждён; основной stage/код не менялся.
+Далее final manifest/docs/index,
+commit/push405, затем full-Value ready inputs и общий DATA binder всех шести форм/private.
+Source01/Runtime01 superseded review; focused01 wrong CLI directory vs object (LD),
+focused02 wrong test int_ref_of projection (126),03 unisolated shared chunk (128),04 missing tail cutter.
+05 поправил только fixture. Runtime02/Graph01 code sources unchanged; повторной whole-самосборки нет.
+Canonical Source05:935, verify repo/stage935/0 PASS. Final indexed docs-index01
+PASS35/14/27/44/615, links/opening, LF28304, exit0. Semantic/grammar sources с c7 не менялись;
+штатная генерация автора сохранена, повторного render не требуется. Working/cached diff-check PASS.
+Все producers terminal; фиксируется explicit owned index10, чужие два untracked сохранены. Goal ACTIVE.
+
 ## 2026-11-15 — шаг404: compiled signature перед удалением native tracking
 
 Авторский c7f2825f принят в main: шесть call/fncall передают actuals, формалы находятся только

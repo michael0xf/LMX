@@ -140,7 +140,100 @@ fn: gs_touch (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out
         c.lmx_walk_value_clear(result)
     return: 0
 
+# The formal's uninit wrapper keeps its first int-reference chunk. The owner
+# fills that chunk before the call, isolating pending actuals in a new chunk.
+# No source edge can then mask a missing pending span during collection.
+fn: gs_pending_collect (@: owner void; @@: refs void; size_t: nargs; @: dest void; @@: out void; @: arena c.LmxArena; @: code c.Lmx; @: inputs c.LmxWalkValue; @: result c.LmxWalkValue) int
+    @: pool c.LmxPool arena\arrays
+    @: pending void 0
+    @: counter void c.lmx_graph_get((cast: (@: c.Lmx) owner), 0U)
+    @: source void 0
+    const: (@: abi c.LmxScalarABI gs_binding("int", @ source))
+    c.LmxWalkValue: value
+    int: number 7
+    if: nargs != 0U || counter = 0 || abi = 0
+        return: 120
+    while: pool != 0
+        if: pool\type = c.LMX_TYPE_GRAPH_INT_REF && pool\tail != 0 && pool\tail != pool\head
+            pending := c.lmx_chunk_data(pool\tail)
+            break
+        pool := pool\next
+    if: pending = 0 || c.lmx_range_cell_pool(arena, pending) = 0
+        return: 121
+    if: c.lmx_gc_sweep(arena, c.lmx_arena_generation_next(arena)) != c.LMX_GC_OK || c.lmx_range_cell_pool(arena, pending) = 0
+        return: 122
+    if: c.lmx_int_store_known(counter, c.lmx_int_value_known(counter) + 1) != 0 || c.lmx_walk_value_foreign_capture(arena, @ number, c.LMX_TYPE_FOREIGN, abi, 0, 0, @ value) != c.LMX_WALK_OK
+        return: 123
+    return: c.lmx_call_result_value(arena, code, @ value, dest, out, result)
+
+fn: gs_pending_actuals () int
+    c.LmxArena: arena
+    @: g c.LmxGraph 0
+    @: root c.Lmx 0
+    @: collect c.Lmx 0
+    @: data c.Lmx 0
+    @: counter void 0
+    @: answer void 0
+    @: pool c.LmxPool 0
+    @: first_chunk c.LmxChunk 0
+    @: target void 0
+    @: pending c.Lmx 0
+    @: file c.FILE 0
+    int: opened 0
+    int: status 0
+    int: number 0
+    c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: c.lmx_arena_open(@ arena) != 0
+        return: 124
+    g := c.lmx_graph_open(@ arena)
+    file := c.fopen("graph_pending_actuals.lm2", "wb")
+    if: g = 0 || file = 0
+        return: 124
+    if: c.fputs("fn: Pending (@: first int; int: second) int\n    return: \\first + second\nend: Pending\n\nfn: Collect () int (int: count 0)\n    return: 7\nend: Collect\n\nint: number 73\nint: answer Pending(@number; Collect())\nanswer := Pending(@number; Collect())\n", file) < 0 || c.fclose(file) != 0
+        return: 124
+    status := c.lm_graph_build_file(g, "graph_pending_actuals.lm2", @ root)
+    c.remove("graph_pending_actuals.lm2")
+    if: status != 0 || root = 0 || c.lmx_graph_space_open(g, root, @ opened) != 0
+        return: 125
+    collect := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Collect", 7U)))
+    data := c.lmx_graph_method_data(g, collect)
+    counter := c.lmx_graph_get(data, 0U)
+    if: collect = 0 || counter = 0
+        return: 125
+    pending := (cast: (@: c.Lmx) c.lmx_graph_resolve(g, root, c.lmx_graph_intern("Pending", 7U)))
+    target := c.lmx_arena_pointer_void_read(c.lmx_graph_get(c.lmx_graph_method_args(g, pending), 0U))
+    pool := c.lmx_range_cell_pool(@ arena, target)
+    target := c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("number", 6U)))
+    if: pool = 0 || pool\type != c.LMX_TYPE_GRAPH_INT_REF || pool\head = 0 || pool\head != pool\tail || c.lmx_graph_kind(g, target) != 1
+        return: 125
+    first_chunk := pool\head
+    while: c.lmx_chunk_cells(first_chunk, pool\stride) < c.lmx_chunk_room(first_chunk, pool\stride)
+        if: c.lmx_graph_ref_int(g, target) = 0
+            return: 125
+    ---
+    collect\native := (cast: (c.LmxEntry) c.gs_pending_collect)
+    status := c.lmx_graph_call(g, root)
+    answer := c.lmx_graph_get(root, c.lmx_graph_named(g, root, c.lmx_graph_intern("answer", 6U)))
+    if: status != 0 || c.lmx_graph_value_int(g, answer, @ number) != 0 || number != 80 || c.lmx_int_value_known(counter) != 2 || arena\activation != 0 || arena\execution_roots != 0
+        c.fprintf(c.stderr, "pending actuals status=%d answer=%d counter=%d\n", status, number, c.lmx_int_value_known(counter))
+        return: 126
+    # Neither an execution span nor its transient pointers survive the call.
+    if: c.lmx_gc_sweep(@ arena, c.lmx_arena_generation_next(@ arena)) != c.LMX_GC_OK
+        return: 127
+    pool := arena\arrays
+    while: pool != 0
+        if: pool\type = c.LMX_TYPE_GRAPH_INT_REF && (pool\head != first_chunk || pool\tail != first_chunk)
+            return: 128
+        pool := pool\next
+    c.lmx_graph_space_close(opened)
+    c.lmx_graph_close(g)
+    c.lmx_arena_release(@ arena)
+    return: 0
+
 fn: gs_working_check () int
+    int: pending_status gs_pending_actuals()
+    if: pending_status != 0
+        return: pending_status
     c.LmxArena: arena
     c.memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     if: c.lmx_arena_open(@ arena) != 0

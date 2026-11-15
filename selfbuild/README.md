@@ -8,6 +8,14 @@ replaces edit tracking/native reset; mandatory executable-code snapshots are can
 Sys\endturn exits through finally to the normal turn boundary; it does not compile by itself.
 Implementation is OPEN; dated receipts below describe earlier code.
 
+Step405 (2026-11-15) retains pending actuals through later argument effects/GC using existing execution roots.
+GraphRun admission/whole-argument/invocation and GraphTool success/error cleanup share those lifetime rules.
+Graph data/code/scope use graph roots; the WalkPlace slot remains a real place or null.
+Source05:935, normal Runtime-call-02 and focused GC witness nf/root0/root1 pass; Graph named/finally/whole
+triples pass. The one-span mutant fails122/126 in all four modes;
+final index is recorded in [evidence405](../steps/witnesses/m10-pending-actuals-20261115/notes.md).
+Unified data binding, six-form execution semantics and private remain OPEN.
+
 Step404's first reader prerequisite (2026-11-15): explicit physical signature headers are shared by
 callable and PRIM consumers. Metadata with five fields needs no fake FN role; SOURCE projection stays
 in the callable adapter. Implements77/Walk189, no new runtime state. Source02:935 canonical/verified,

@@ -4239,6 +4239,8 @@ fn: lmx_graph_invoke_data_value (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; 
     c.LmxWalkValue: destination_value
     c.LmxExecutionRoots: result_roots
     c.LmxExecutionRoots: destination_roots
+    c.LmxExecutionRoots: actual_roots
+    c.LmxExecutionRoots: data_roots
     @: roots_mark c.LmxExecutionRoots 0
     @: destination void 0
     @: result_abi void 0
@@ -4264,6 +4266,9 @@ fn: lmx_graph_invoke_data_value (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; 
     refs := (cast: (@@: void) c.calloc(width + 1U, sizeof(@: void)))
     if: refs = 0
         return: 4
+    roots_mark := c.lmx_execution_roots_mark(g\arena)
+    c.lmx_execution_roots_push(g\arena, @ data_roots, 0, 0U, 0, 0U, (cast: (@: void) data), 0)
+    c.lmx_execution_roots_push(g\arena, @ actual_roots, 0, 0U, refs, width, (cast: (@: void) code), 0)
     while: i < count && status = 0
         slot := i
         if: bindings != 0
@@ -4293,8 +4298,7 @@ fn: lmx_graph_invoke_data_value (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; 
     if: status = 0
         status := lmx_graph_work_flush(g)
     if: status = 0
-        roots_mark := c.lmx_execution_roots_mark(g\arena)
-        c.lmx_execution_roots_push(g\arena, @ result_roots, (cast: (@: void) (@ result_value)), 1U, refs, width, (cast: (@: void) code), (cast: (@: void) data))
+        c.lmx_execution_roots_push(g\arena, @ result_roots, (cast: (@: void) (@ result_value)), 1U, refs, width, (cast: (@: void) code), 0)
         c.lmx_execution_roots_push(g\arena, @ destination_roots, (cast: (@: void) (@ destination_value)), 1U, 0, 0U, 0, 0)
         if: code\native != 0
             if: c.lmx_graph_has_result(g, code) != 0
@@ -4323,8 +4327,8 @@ fn: lmx_graph_invoke_data_value (@: g c.LmxGraph; @: code c.Lmx; @: data c.Lmx; 
         ---
         if: status = 0
             c.memcpy((cast: (@: void) out), (cast: (const: @: void) (@ result_value)), c.sizeof(c.LmxWalkValue))
-        c.lmx_execution_roots_restore(g\arena, roots_mark)
     ---
+    c.lmx_execution_roots_restore(g\arena, roots_mark)
     c.free((cast: (@: void) refs))
     return: status
 end: lmx_graph_invoke_data_value
@@ -4389,6 +4393,9 @@ fn: lmx_graph_call_single_value (@: g c.LmxGraph; @: code c.Lmx; @: given void; 
     int: whole 0
     int: received 0
     int: status 0
+    c.LmxExecutionRoots: actual_roots
+    c.LmxExecutionRoots: code_roots
+    @: roots_mark c.LmxExecutionRoots 0
     if: c.lmx_graph_method(g, code) = 0 || out = 0
         return: 5
     args := c.lmx_graph_method_args(g, code)
@@ -4398,6 +4405,9 @@ fn: lmx_graph_call_single_value (@: g c.LmxGraph; @: code c.Lmx; @: given void; 
     from := (cast: (@: size_t) c.calloc(width + 1U, sizeof(size_t)))
     if: values = 0 || bindings = 0 || from = 0
         status := 4
+    roots_mark := c.lmx_execution_roots_mark(g\arena)
+    c.lmx_execution_roots_push(g\arena, @ code_roots, 0, 0U, 0, 0U, (cast: (@: void) code), 0)
+    c.lmx_execution_roots_push(g\arena, @ actual_roots, 0, 0U, values, width, value, 0)
     if: status = 0 && c.lmx_graph_kind(g, value) = 4 && c.lmx_graph_method(g, (cast: (@: c.Lmx) value)) = 0
         structure := (cast: (@: c.Lmx) value)
         n := c.lmx_graph_count(structure)
@@ -4448,6 +4458,7 @@ fn: lmx_graph_call_single_value (@: g c.LmxGraph; @: code c.Lmx; @: given void; 
     ---
     if: status = 0
         status := lmx_graph_invoke_bound_value(g, code, values, k, bindings, out)
+    c.lmx_execution_roots_restore(g\arena, roots_mark)
     c.free((cast: (@: void) values))
     c.free((cast: (@: void) bindings))
     c.free((cast: (@: void) from))
@@ -4475,6 +4486,13 @@ fn: lmx_graph_eval_call_value (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.
     @: actual void 0
     @: raw void 0
     int: status 4
+    c.LmxExecutionRoots: actual_roots
+    c.LmxExecutionRoots: scope_roots
+    @: roots_mark c.LmxExecutionRoots c.lmx_execution_roots_mark(g\arena)
+    # Earlier actuals remain live while a later actual calls arbitrary code.
+    # The calloc span starts empty; admission fills each existing slot once.
+    c.lmx_execution_roots_push(g\arena, @ scope_roots, 0, 0U, 0, 0U, (cast: (@: void) scope), 0)
+    c.lmx_execution_roots_push(g\arena, @ actual_roots, 0, 0U, values, count, (cast: (@: void) code), 0)
     if: values != 0 && bindings != 0
         status := lmx_graph_bind_call(g, scope, code, expression, bindings)
     if: status = 0 && bindings[count] != 0U
@@ -4483,6 +4501,7 @@ fn: lmx_graph_eval_call_value (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.
             status := lmx_graph_eval_value(g, scope, actual, @ actual)
         if: status = 0
             status := lmx_graph_call_single_value(g, code, actual, out)
+        c.lmx_execution_roots_restore(g\arena, roots_mark)
         c.free((cast: (@: void) values))
         c.free((cast: (@: void) bindings))
         return: status
@@ -4495,6 +4514,7 @@ fn: lmx_graph_eval_call_value (@: g c.LmxGraph; @: scope c.Lmx; @: expression c.
     ---
     if: status = 0
         status := lmx_graph_invoke_bound_value(g, code, values, count, bindings, out)
+    c.lmx_execution_roots_restore(g\arena, roots_mark)
     c.free((cast: (@: void) values))
     c.free((cast: (@: void) bindings))
     return: status
@@ -5271,6 +5291,7 @@ fn: lmx_graph_launch_value (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data 
     int: has 0
     c.LmxWalkValue: returned
     c.LmxExecutionRoots: result_roots
+    c.LmxExecutionRoots: data_roots
     @: roots_mark c.LmxExecutionRoots 0
     int: status 0
     if: state = 0 || c.lmx_graph_kind(g, (cast: (@: void) code)) != 4
@@ -5326,7 +5347,8 @@ fn: lmx_graph_launch_value (@: g c.LmxGraph; @: given_args c.Lmx; @: given_data 
         status := lmx_graph_work_flush(g)
     if: status = 0
         roots_mark := c.lmx_execution_roots_mark(g\arena)
-        c.lmx_execution_roots_push(g\arena, @ result_roots, (cast: (@: void) (@ returned)), 1U, refs, width, (cast: (@: void) code), (cast: (@: void) data))
+        c.lmx_execution_roots_push(g\arena, @ data_roots, 0, 0U, 0, 0U, (cast: (@: void) data), 0)
+        c.lmx_execution_roots_push(g\arena, @ result_roots, (cast: (@: void) (@ returned)), 1U, refs, width, (cast: (@: void) code), 0)
         status := c.lmx_activation_push(g\arena, @ activation, 2, code, refs, 0, width, 0)
         if: status = 0
             status := lmx_graph_work_open_parts(g, code, args, data, model, body, has, @ frame)
